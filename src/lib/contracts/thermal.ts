@@ -12,11 +12,11 @@ export interface TempRange {
   /**
   Absent when nothing warmer exists to switch into.
   */
-  lowC?: number;
+  lowC?: number | undefined;
   /**
   Absent when nothing lighter exists to switch into.
   */
-  highC?: number;
+  highC?: number | undefined;
 }
 
 /**

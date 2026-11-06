@@ -44,10 +44,7 @@ export function worksAtLabel(
   tempUnit: TempUnit,
 ): string | undefined {
   return formatTempRange(
-    {
-      ...(search.from !== undefined && { lowC: search.from }),
-      ...(search.to !== undefined && { highC: search.to }),
-    },
+    { lowC: search.from, highC: search.to },
     tempUnit,
   );
 }
@@ -292,18 +289,19 @@ function SpanBar({
  */
 function AnyControl({
   search,
-  isLive,
   onSearch,
   labelRef,
 }: Readonly<{
   search: ClosetSearch;
-  isLive: boolean;
+  /**
+  Absent until script runs: then a link is all that works.
+  */
   onSearch: ((next: ClosetSearch) => void) | undefined;
   labelRef: RefObject<HTMLHeadingElement | null>;
 }>): JSX.Element | undefined {
   if (search.from === undefined && search.to === undefined) return;
   const cleared = { ...search, from: undefined, to: undefined };
-  if (!isLive || onSearch === undefined) {
+  if (onSearch === undefined) {
     return (
       <Link
         to="/closet"
@@ -321,6 +319,8 @@ function AnyControl({
       className="target text-small text-ink"
       onClick={() => {
         onSearch(cleared);
+        // Equivalent without `?.`: the label is drawn beside this button,
+        // so the ref is set whenever it can be clicked. The `?.` is the type's.
         labelRef.current?.focus();
       }}
     >
@@ -358,7 +358,9 @@ export function WorksAt({
 }: Readonly<WorksAtProps>): JSX.Element {
   const isHydrated = useIsHydrated();
   const labelRef = useRef<HTMLHeadingElement>(null);
-  const isLive = isHydrated && onSearch !== undefined && span !== undefined;
+  // The bar's commit and Any's, once script runs to make them.
+  const liveSearch = isHydrated ? onSearch : undefined;
+  const isLive = liveSearch !== undefined;
   let control: JSX.Element;
   if (span === undefined) {
     control = (
@@ -366,7 +368,9 @@ export function WorksAt({
         <Bracketed>Untested</Bracketed>
       </p>
     );
-  } else if (isLive) {
+  } else if (liveSearch === undefined) {
+    control = <WorksAtForm search={search} span={span} tempUnit={tempUnit} />;
+  } else {
     control = (
       <SpanBar
         // A changed search starts the thumbs from it.
@@ -374,11 +378,9 @@ export function WorksAt({
         search={search}
         span={span}
         tempUnit={tempUnit}
-        onSearch={onSearch}
+        onSearch={liveSearch}
       />
     );
-  } else {
-    control = <WorksAtForm search={search} span={span} tempUnit={tempUnit} />;
   }
   return (
     <section className="flex flex-col gap-2">
@@ -395,8 +397,7 @@ export function WorksAt({
       >
         <AnyControl
           search={search}
-          isLive={isLive}
-          onSearch={onSearch}
+          onSearch={liveSearch}
           labelRef={labelRef}
         />
       </WorksAtHeading>

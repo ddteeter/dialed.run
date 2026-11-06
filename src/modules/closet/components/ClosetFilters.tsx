@@ -80,7 +80,6 @@ const GROUP_CLASS: Readonly<Record<FiltersVariant, string>> = {
 One choice in a group: what it reads, its count, and where it leads.
 */
 interface FilterOption {
-  key: string;
   label: ReactNode;
   count: number;
   isCurrent: boolean;
@@ -129,8 +128,10 @@ function FilterGroup({
     <section className="flex flex-col gap-2">
       <GroupHeading>{title}</GroupHeading>
       <ul className={GROUP_CLASS[variant]}>
-        {options.map((option) => (
-          <li key={option.key}>
+        {/* A group's options are a fixed list in a fixed order, so where
+            one sits is what it is. */}
+        {options.map((option, index) => (
+          <li key={index}>
             {onPick === undefined ? (
               <Link
                 to="/closet"
@@ -174,14 +175,12 @@ function groupOptions(
   const unset = { ...search, group: undefined };
   return [
     {
-      key: "all",
       label: "All",
       count: counts.all,
       isCurrent: search.group === undefined,
       search: unset,
     },
     ...uiGroups.map((group: UiGroup) => ({
-      key: group,
       label: uiGroupLabels[group],
       count: counts.groups.get(group) ?? 0,
       isCurrent: search.group === group,
@@ -201,7 +200,6 @@ function coverageOptions(
 ): FilterOption[] {
   const unset = { ...search, coverage: undefined };
   return verdictCoverages.map((level) => ({
-    key: level,
     label: (
       <>
         <CoverageMark level={level} />

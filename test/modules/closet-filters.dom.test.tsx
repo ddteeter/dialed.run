@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-router";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -21,6 +21,7 @@ import {
   trackPercent,
 } from "../../src/modules/closet/components/WorksAt";
 import type { RailCounts } from "../../src/modules/closet/filters";
+import type { ClosetSearch } from "../../src/modules/closet/inputs";
 
 /**
  * Closet C's rail (R-94, design 174; round 46 #109b, f, h): every control
@@ -80,6 +81,14 @@ const link = (name: RegExp): HTMLElement => screen.getByRole("link", { name });
 const href = (name: RegExp): string | null => link(name).getAttribute("href");
 const button = (name: RegExp): HTMLElement =>
   screen.getByRole("button", { name });
+
+/**
+A rail whose search is its own state, as the route's is: what it asks for, it gets.
+*/
+function Driven() {
+  const [search, setSearch] = useState<ClosetSearch>({ from: 4.4 });
+  return filters({ search, onSearch: setSearch });
+}
 
 function hiddenFields(container: HTMLElement): string[] {
   return [...container.querySelectorAll("input[type='hidden']")].map(
@@ -264,6 +273,12 @@ describe("ClosetFilters: WORKS AT before a script (#109h)", () => {
     expect(screen.getByLabelText("Highest")).toHaveValue(58);
   });
 
+  it("leaves an end nobody asked for empty, with not so much as a NaN", async () => {
+    await rail({ search: { from: 1.1 } });
+    expect(screen.getByLabelText("Lowest")).toHaveValue(34);
+    expect(screen.getByLabelText("Highest")).not.toHaveAttribute("value");
+  });
+
   it("names the unit its fields take", async () => {
     await rail({ tempUnit: "c", span: { lowC: 1, highC: 14 } });
     expect(
@@ -305,6 +320,14 @@ describe("ClosetFilters: WORKS AT before a script (#109h)", () => {
     const any = screen.getByRole("link", { name: "Any" });
     expect(any).toHaveAttribute("href", "/closet?group=tops");
     expect(any).toHaveClass("target", "inline-flex");
+  });
+
+  it("offers Any for an upper end alone, too", async () => {
+    await rail({ search: { to: 7.8 } });
+    expect(screen.getByRole("link", { name: "Any" })).toHaveAttribute(
+      "href",
+      "/closet",
+    );
   });
 
   it("names no unit over Untested before a script, either", async () => {
@@ -400,7 +423,19 @@ describe("ClosetFilters: WORKS AT with a script (#109h)", () => {
       from: undefined,
       to: undefined,
     });
-    expect(screen.getByRole("heading", { name: "Works at" })).toHaveFocus();
+    const label = screen.getByRole("heading", { name: "Works at" });
+    expect(label).toHaveFocus();
+    // Focusable by Any alone, never a stop in the tab order.
+    expect(label).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("starts the thumbs again from a search that changed under them", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(<Driven />);
+    expect(screen.getByRole("slider", { name: "Lowest" })).toHaveValue("40");
+    await user.click(screen.getByRole("button", { name: "Any" }));
+    expect(screen.getByRole("slider", { name: "Lowest" })).toHaveValue("34");
+    expect(screen.getByText("34–58°F")).toBeVisible();
   });
 
   it("offers no Any button while no span is set", async () => {

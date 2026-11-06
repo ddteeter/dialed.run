@@ -103,7 +103,8 @@ export function closetSearch(search: Record<string, unknown>): ClosetSearch {
   const coverage = coverageParam.safeParse(search.coverage);
   const from = endC(search.lowest, search.from, unit);
   const to = endC(search.highest, search.to, unit);
-  const isBackwards = from !== undefined && to !== undefined && from > to;
+  // An open end is no end: nothing is colder than it, or warmer.
+  const isBackwards = (from ?? -Infinity) > (to ?? Infinity);
   return {
     ...(search.retired === true && { retired: true }),
     ...(group.success && { group: group.data }),

@@ -267,35 +267,19 @@ function FilteredLine({
   tempUnit,
 }: Readonly<{ search: ClosetSearch; tempUnit: TempUnit }>) {
   const range = worksAtLabel(search, tempUnit);
-  const parts = [
-    ...(range === undefined
-      ? []
-      : [
-          <Bracketed key="range" step="xs">
-            {range}
-          </Bracketed>,
-        ]),
-    ...(search.coverage === undefined
-      ? []
-      : [
-          <Mono key="coverage" step="xs">
-            {coverageWords[search.coverage]}
-          </Mono>,
-        ]),
-  ];
-  if (parts.length === 0) return;
+  const { coverage } = search;
+  if (range === undefined && coverage === undefined) return;
   return (
     <p data-part="filtered" className="m-0 text-label">
       <Mono step="xs">Filtered: </Mono>
-      {parts.flatMap((part, index) =>
-        index === 0
-          ? [part]
-          : [
-              <Mono key={`between-${String(index)}`} step="xs">
-                {" · "}
-              </Mono>,
-              part,
-            ],
+      {range === undefined ? undefined : (
+        <Bracketed step="xs">{range}</Bracketed>
+      )}
+      {range === undefined || coverage === undefined ? undefined : (
+        <Mono step="xs">{" · "}</Mono>
+      )}
+      {coverage === undefined ? undefined : (
+        <Mono step="xs">{coverageWords[coverage]}</Mono>
       )}
     </p>
   );
@@ -335,6 +319,8 @@ function useFocusAfterClear(search: ClosetSearch) {
   useEffect(() => {
     if (!armedRef.current) return;
     armedRef.current = false;
+    // Equivalent without `?.`: the h1 is drawn on every render, so the ref
+    // is always set by the time an effect runs. The `?.` is the type's.
     headingRef.current?.focus();
   }, [search]);
   return {

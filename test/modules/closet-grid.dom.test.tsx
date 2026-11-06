@@ -758,6 +758,20 @@ describe("ClosetGrid: the rail (R-94)", () => {
       );
     });
     expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
+    // Focusable by the clear alone, never a stop in the tab order.
+    expect(screen.getByRole("heading", { level: 1 })).toHaveAttribute(
+      "tabindex",
+      "-1",
+    );
+
+    // Spent by that one clear: the next filter leaves focus alone.
+    await user.click(within(rail()).getByRole("link", { name: /^Tops/ }));
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+        "2 · Tops",
+      );
+    });
+    expect(screen.getByRole("heading", { level: 1 })).not.toHaveFocus();
   });
 
   it("narrows the grid by group and heads it N · Group", async () => {
@@ -800,6 +814,8 @@ describe("ClosetGrid: the rail (R-94)", () => {
     expect(document.querySelector("[data-part='filtered']")).toHaveTextContent(
       "Filtered: [5–10°] · Covered",
     );
+    // Filtered, and something matches: no "nothing matches".
+    expect(document.querySelector("[data-part='no-matches']")).toBeNull();
   });
 
   it("names only what is set on the FILTERED line", async () => {
@@ -811,9 +827,12 @@ describe("ClosetGrid: the rail (R-94)", () => {
 
   it("names an open span by its one end", async () => {
     await grid({ from: 5 });
-    expect(document.querySelector("[data-part='filtered']")).toHaveTextContent(
-      /^Filtered: \[5°\+\]$/,
-    );
+    const line = document.querySelector("[data-part='filtered']");
+    expect(line).toHaveTextContent(/^Filtered: \[5°\+\]$/);
+    // Nothing drawn for the coverage that is not set, not even empty.
+    expect(
+      [...(line?.children ?? [])].map((part) => part.textContent),
+    ).toStrictEqual(["Filtered: ", "[5°+]"]);
   });
 
   it("has no FILTERED line for a group alone, which the heading says", async () => {
