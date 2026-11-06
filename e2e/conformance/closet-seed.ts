@@ -8,6 +8,7 @@ import {
   runs,
   wardrobeItems,
 } from "../../src/db/schema-core";
+import { unitToC } from "../../src/lib/contracts/temperature";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { withLocalDb } from "../support/local-db";
@@ -88,8 +89,11 @@ export async function seedRoundTwentyTwoGarment(
         weight: "mid",
         color: "Midnight",
         colorHex: "#1f2a44",
-        estTempLowC: 38,
-        estTempHighC: 46,
+        // The board's 38–46°, which is Fahrenheit (the account's unit),
+        // stored as the Celsius the column holds. It held 38 and 46 until
+        // R-94, which only read right while the closet printed Celsius.
+        estTempLowC: unitToC(38, "f"),
+        estTempHighC: unitToC(46, "f"),
         photoKey: `items/${userId}/${itemId}`,
         productId,
         createdAt,

@@ -1,7 +1,4 @@
-import {
-  BAND_COVERED_VERDICTS,
-  CALL_VERDICT_THRESHOLD,
-} from "../../lib/contracts";
+import { CALL_VERDICT_THRESHOLD, coverageOfVerdicts } from "../../lib/contracts";
 import type { CoverageBand } from "../feed";
 
 /**
@@ -38,9 +35,7 @@ export interface Ladder {
 }
 
 export function bandCoverage(band: CoverageBand): BandCoverage {
-  const verdicts = verdictsIn(band);
-  if (verdicts >= BAND_COVERED_VERDICTS) return "covered";
-  return verdicts > 0 ? "partial" : "unknown";
+  return coverageOfVerdicts(verdictsIn(band));
 }
 
 export function verdictsIn(band: CoverageBand): number {

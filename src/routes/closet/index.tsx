@@ -4,23 +4,29 @@ import { requireSession } from "../../modules/auth/functions";
 import { ClosetGrid } from "../../modules/closet/components/ClosetGrid";
 import { listItemsFn } from "../../modules/closet/functions";
 import { closetSearch } from "../../modules/closet/inputs";
+import { viewerUnitsQuery } from "../../modules/feed/functions";
 import { Layout } from "../../ui";
 
 export const Route = createFileRoute("/closet/")({
   // `?retired=true` after a retire, optional so every other link to
-  // /closet omits it. A delete's landing rides history state instead.
+  // /closet omits it, and the rail's filters (R-94). A delete's landing
+  // rides history state instead.
   validateSearch: closetSearch,
   loader: async ({ location }) => {
     await requireSession(location);
-    const listing = await listItemsFn({ data: { includeRetired: true } });
-    return { listing };
+    const [listing, units] = await Promise.all([
+      listItemsFn({ data: { includeRetired: true } }),
+      viewerUnitsQuery(),
+    ]);
+    return { listing, units };
   },
   component: ClosetPage,
 });
 
 function ClosetPage() {
   const search = Route.useSearch();
-  const { listing } = Route.useLoaderData();
+  const navigate = Route.useNavigate();
+  const { listing, units } = Route.useLoaderData();
   // Round 26 #3's "{name} deleted.", from the navigation the delete made:
   // history state, which a link cannot carry (task 128, PR #129 review).
   const deleted = useLocation({
@@ -30,7 +36,13 @@ function ClosetPage() {
     <Layout>
       <ClosetGrid
         listing={listing}
+        tempUnit={units.temp}
         initialShowRetired={search.retired}
+        search={search}
+        // The rail once hydrated: its whole next search.
+        onSearch={(next) => {
+          void navigate({ search: next });
+        }}
         deleted={deleted}
       />
     </Layout>

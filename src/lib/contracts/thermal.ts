@@ -1,6 +1,8 @@
 import type { z } from "zod";
 
 import type { garmentSchema, layerSchema, weightSchema } from "./garments";
+import type { TempUnit } from "./profile";
+import { tempInUnit } from "./temperature";
 
 type Category = z.infer<typeof garmentSchema>["category"];
 type Layer = z.infer<typeof layerSchema>;
@@ -10,11 +12,11 @@ export interface TempRange {
   /**
   Absent when nothing warmer exists to switch into.
   */
-  lowC?: number;
+  lowC?: number | undefined;
   /**
   Absent when nothing lighter exists to switch into.
   */
-  highC?: number;
+  highC?: number | undefined;
 }
 
 /**
@@ -208,10 +210,19 @@ export function estimateTempRange(input: ThermalInput): TempRange | undefined {
  * The band as a user reads it. Open ends render as a direction rather than
  * a number, because "55–79°" claims a light top stops working at 80° and
  * it does not — there is nothing lighter to change into.
+ *
+ * In the reader's unit, and the unit is required. It used to take none and
+ * print the stored Celsius with a bare "°", so a runner on Fahrenheit read
+ * every closet range as Celsius (R-94, design 174).
  */
-export function formatTempRange(range: TempRange): string | undefined {
-  const low = range.lowC === undefined ? undefined : Math.round(range.lowC);
-  const high = range.highC === undefined ? undefined : Math.round(range.highC);
+export function formatTempRange(
+  range: TempRange,
+  unit: TempUnit,
+): string | undefined {
+  const low =
+    range.lowC === undefined ? undefined : tempInUnit(range.lowC, unit);
+  const high =
+    range.highC === undefined ? undefined : tempInUnit(range.highC, unit);
   if (low !== undefined && high !== undefined)
     return `${String(low)}–${String(high)}°`;
   if (low !== undefined) return `${String(low)}°+`;

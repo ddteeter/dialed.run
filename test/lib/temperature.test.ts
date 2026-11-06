@@ -5,7 +5,10 @@ import {
   bandLabel,
   formatTemp,
   precipClassOf,
+  tempInUnit,
+  unitToC,
 } from "../../src/lib/contracts/temperature";
+import type { TempUnit } from "../../src/lib/contracts";
 
 /**
  * `lib/contracts/temperature` had no test of its own — it was executed only
@@ -94,5 +97,58 @@ describe("formatTemp", () => {
     // value where they part: 21.7°C is 71.06°F -> 71; rounded first, 22°C
     // -> 72.
     expect(formatTemp(21.7, "f")).toBe("71°");
+  });
+});
+
+describe("tempInUnit", () => {
+  it("is the whole number a reader sees, in their unit", () => {
+    expect(tempInUnit(3.4, "c")).toBe(3);
+    expect(tempInUnit(3.6, "c")).toBe(4);
+    expect(tempInUnit(0, "f")).toBe(32);
+    expect(tempInUnit(-40, "f")).toBe(-40);
+    expect(tempInUnit(1.1, "f")).toBe(34);
+  });
+});
+
+/**
+What a runner reads after a number goes to Celsius and back.
+*/
+function roundTrip(value: number, unit: TempUnit): string {
+  return String(tempInUnit(unitToC(value, unit), unit));
+}
+
+// Celsius to a tenth: six decimals tells 5.3 from an unrounded 5.26.
+const TENTH = 6;
+
+describe("unitToC", () => {
+  it("takes Celsius as it is, to a tenth", () => {
+    expect(unitToC(5, "c")).toBe(5);
+    expect(unitToC(5.26, "c")).toBeCloseTo(5.3, TENTH);
+    expect(unitToC(-5.26, "c")).toBeCloseTo(-5.3, TENTH);
+  });
+
+  it("converts Fahrenheit, to a tenth", () => {
+    expect(unitToC(32, "f")).toBe(0);
+    expect(unitToC(34, "f")).toBeCloseTo(1.1, TENTH);
+    expect(unitToC(-40, "f")).toBe(-40);
+  });
+
+  /**
+   * Closet C's WORKS AT writes a runner's number into the URL in Celsius
+   * and reads it back in their unit. Every whole degree has to survive
+   * that, or the control moves under the runner's thumb. The span runs
+   * well past any temperature anyone runs in.
+   *
+   * Compared as text, because that is what the runner reads: 0°F comes
+   * back from −17.8°C as `Math.round(-0.04)`, which is −0, and −0 prints
+   * as "0".
+   */
+  it("round-trips every whole degree in both units", () => {
+    for (let fahrenheit = -60; fahrenheit <= 130; fahrenheit += 1) {
+      expect(roundTrip(fahrenheit, "f")).toBe(String(fahrenheit));
+    }
+    for (let celsius = -50; celsius <= 55; celsius += 1) {
+      expect(roundTrip(celsius, "c")).toBe(String(celsius));
+    }
   });
 });

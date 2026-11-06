@@ -10,8 +10,9 @@
  * ink), D-75 / R-112 / R-114 (F's TYPE, the rail by type, and the
  * rail listing a save F kept), and round 43 #93-95 (F's product link, and
  * E's shop page with what came of it, design 163), design-deltas
- * 104 (a select's ▾) and R-176 (a shortened link refused at F's save,
- * design 171) — one journey, one video.
+ * 104 (a select's ▾), R-176 (a shortened link refused at F's save,
+ * design 171) and R-94 (C's rail: GROUP, WORKS AT, COVERAGE, and the
+ * phone's chips, design 174) — one journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
@@ -427,6 +428,104 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await expect(
     page.getByRole("link", { name: /Patagonia Houdini Jacket/ }),
   ).toBeVisible();
+
+  // ---- R-94 · C's rail: GROUP, WORKS AT, COVERAGE --------------------------
+  // Round 16's three groups beside the grid at desk, whole. Every value is
+  // a link to the closet with the search changed, and the counts are the
+  // closet's, not narrowed by the other groups.
+  await scene(page, "C · the rail: GROUP with counts, WORKS AT, COVERAGE");
+  const filters = page.locator("nav[data-part='rail']");
+  await expect(filters.getByRole("link", { name: /^All/ })).toHaveText("All 2");
+  await expect(filters.getByRole("link", { name: /^All/ })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await expect(filters.getByRole("button", { name: /^Untested/ })).toHaveText(
+    /Untested\s*2/u,
+  );
+
+  await scene(page, "C · GROUP narrows the grid, and the heading names it");
+  await filters.getByRole("link", { name: /^Shoes/ }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("1 · Shoes");
+  await expect(
+    page.getByRole("link", { name: /Nike Pegasus 41/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /Patagonia Houdini Jacket/ }),
+  ).toHaveCount(0);
+  await expect(filters.getByRole("link", { name: /^All/ })).toHaveText("All 2");
+  await filters.getByRole("link", { name: /^All/ }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("2 pieces");
+
+  // WORKS AT in the runner's unit, and the bar is the control (round 46
+  // #109h); the URL holds Celsius. End on the lower thumb: from the
+  // closet's warmest end up.
+  await scene(page, "C · WORKS AT: the bar, in your unit");
+  const lowest = filters.getByRole("slider", { name: "Lowest" });
+  const warmest = (await lowest.getAttribute("max")) ?? "";
+  await lowest.focus();
+  await page.keyboard.press("End");
+  await expect(page.locator("[data-part='filtered']")).toHaveText(
+    `Filtered: [${warmest}°+]`,
+  );
+  await expect(page).toHaveURL(/[?&]from=/u);
+  await expect(page).not.toHaveURL(/[?&]unit=/u);
+  await expect(filters.getByRole("button", { name: "Apply" })).toHaveCount(0);
+
+  // #109f: Any lets go of the span and puts focus on the label.
+  await scene(page, "C · Any: the whole span again, focus on the label");
+  await filters.getByRole("button", { name: "Any" }).click();
+  await expect(page.locator("[data-part='filtered']")).toHaveCount(0);
+  await expect(
+    filters.getByRole("heading", { name: "Works at" }),
+  ).toBeFocused();
+
+  // #109f: COVERAGE's levels are toggles; pressing the pressed one clears.
+  await scene(page, "C · COVERAGE: press a level, press it again to clear");
+  const untested = filters.getByRole("button", { name: /^Untested/ });
+  await untested.click();
+  await expect(untested).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("[data-part='filtered']")).toHaveText(
+    /^Filtered:\s*Untested$/u,
+  );
+  await untested.click();
+  await expect(untested).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator("[data-part='filtered']")).toHaveCount(0);
+
+  // #109d: the line above the grid, and Clear filters puts focus on the
+  // count.
+  await scene(page, "C · nothing matches: it says so, and Clear filters");
+  await filters.getByRole("button", { name: /^Covered/ }).click();
+  await expect(
+    page.getByText("Nothing in your closet matches these filters."),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Clear filters" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("2 pieces");
+  await expect(page.getByRole("heading", { level: 1 })).toBeFocused();
+
+  // #109b: below 1040, one chip per group reading GROUP · VALUE; a tap
+  // opens that group's control under the row, one at a time.
+  await scene(page, "C on a phone · a chip per group, one open at a time");
+  await page.setViewportSize({ width: 390, height: 844 });
+  const chips = page.locator("nav[data-part='chips']");
+  await expect(chips).toBeVisible();
+  await expect(filters).toBeHidden();
+  const worksAtChip = chips.getByRole("button", { name: "Works at · Any" });
+  await worksAtChip.click();
+  await expect(worksAtChip).toHaveAttribute("aria-expanded", "true");
+  await expect(chips.getByRole("slider", { name: "Lowest" })).toBeVisible();
+  const groupChip = chips.getByRole("button", { name: "Group · All" });
+  await groupChip.click();
+  await expect(worksAtChip).toHaveAttribute("aria-expanded", "false");
+  await chips.getByRole("link", { name: /^Outer/ }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("1 · Outer");
+  await expect(
+    chips.getByRole("button", { name: "Group · Outer" }),
+  ).toBeVisible();
+  // The group's control stays open under its chip after a pick.
+  await chips.getByRole("link", { name: /^All/ }).click();
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("2 pieces");
 
   // Into a piece and back out of it (task 117). Browser back rather than a
   // link, because that is the gesture the reversal is read from.

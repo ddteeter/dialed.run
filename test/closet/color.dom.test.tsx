@@ -20,6 +20,7 @@ const formProps = {
   submitLabel: "Save",
   pendingLabel: "Saving",
   successMessage: "Saved.",
+  tempUnit: "c" as const,
   photo: {
     upload: () => Promise.resolve({ ok: true as const }),
     remove: () => Promise.resolve(),

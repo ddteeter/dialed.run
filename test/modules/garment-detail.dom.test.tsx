@@ -101,6 +101,7 @@ function garment(
 ): ReactElement {
   return (
     <GarmentDetail
+      tempUnit="c"
       detail={detail(overrides)}
       retire={nothing}
       unretire={nothing}
@@ -585,6 +586,13 @@ describe("GarmentDetail: stats", () => {
       .closest("p");
     expect(line).toHaveTextContent("Works at [4–12°]");
     expect(line).toHaveClass("text-dialed-text");
+  });
+
+  it("says where it works in the runner's unit", async () => {
+    await renderWithRouter(
+      garment({ tempRange: { lowC: 4, highC: 12 } }, { tempUnit: "f" }),
+    );
+    expect(part("stats")).toHaveTextContent("Works at [39–54°]");
   });
 
   it("says where it worked, once retired", async () => {

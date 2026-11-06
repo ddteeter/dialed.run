@@ -13,6 +13,10 @@ import { isInstrumented, repoPath, withoutComments } from "./source-text";
  * does. It cannot see whether the field markup uses `FormField`/`TextField`
  * — that half stays a review question.
  *
+ * A `<form method="get">` is navigation, not a save: it submits search
+ * params to a URL, with no server function and no failure band, so it is
+ * out of scope, and is taken out form by form before the check runs.
+ *
  * `ui/form.tsx` is where the primitives' own `<form>` lives.
  */
 
@@ -24,9 +28,10 @@ const sources: Record<string, string> = import.meta.glob(
 const PRIMITIVE_HOME = "src/ui/form.tsx";
 const RENDERS_FORM = /<form[\s>]/u;
 const WIRED = /\b(?:useFormSubmit|FormShell)\b/u;
+const GET_FORM = /<form\b[^>]*\bmethod="get"[^>]*>[\s\S]*?<\/form>/gu;
 
 function isHandRolledForm(source: string): boolean {
-  const code = withoutComments(source);
+  const code = withoutComments(source).replaceAll(GET_FORM, "");
   return RENDERS_FORM.test(code) && !WIRED.test(code);
 }
 
@@ -64,5 +69,13 @@ describe("forms use the primitives", () => {
       isHandRolledForm("({ shell }: { shell: FormShell }) => <form />"),
     ).toBe(false);
     expect(isHandRolledForm("// a <form action> would be wrong\n")).toBe(false);
+  });
+
+  it("leaves a GET form alone, and not a hand-rolled one beside it", () => {
+    const search = '<form method="get" className="x"><input name="q" /></form>';
+    const bare = "<form onSubmit={go}>x</form>";
+    expect(isHandRolledForm(`return ${search};`)).toBe(false);
+    expect(isHandRolledForm(`return ${bare};`)).toBe(true);
+    expect(isHandRolledForm(`return <>${search}${bare}</>;`)).toBe(true);
   });
 });
