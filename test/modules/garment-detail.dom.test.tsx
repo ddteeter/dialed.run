@@ -805,9 +805,17 @@ describe("GarmentDetail: actions", () => {
     expect(
       within(actions).queryByRole("button", { name: "Retire Long sleeve top" }),
     ).toBeNull();
+    // Named for the piece, as Edit, Retire and Delete are.
     expect(
-      within(actions).getByRole("button", { name: "Unretire" }),
+      within(actions).getByRole("button", {
+        name: "Unretire Long sleeve top",
+      }),
     ).toBeVisible();
+    // The eye gets the bare verb.
+    expect(within(actions).getAllByText("Long sleeve top")).toHaveLength(2);
+    for (const name of within(actions).getAllByText("Long sleeve top")) {
+      expect(name).toHaveClass("sr-only");
+    }
     // No runs, so a real delete is still on offer.
     expect(
       within(actions).getByRole("button", { name: "Delete Long sleeve top" }),
@@ -836,7 +844,9 @@ describe("GarmentDetail: actions", () => {
     );
     const invalidate = vi.spyOn(router, "invalidate");
 
-    await user.click(screen.getByRole("button", { name: "Unretire" }));
+    await user.click(
+      screen.getByRole("button", { name: "Unretire Long sleeve top" }),
+    );
 
     await waitFor(() => {
       expect(invalidate).toHaveBeenCalled();
@@ -856,7 +866,9 @@ describe("GarmentDetail: actions", () => {
       ),
     );
 
-    await user.click(screen.getByRole("button", { name: "Unretire" }));
+    await user.click(
+      screen.getByRole("button", { name: "Unretire Long sleeve top" }),
+    );
     expectBusy(
       within(part("actions")).getAllByRole("button")[0] ?? part("actions"),
     );

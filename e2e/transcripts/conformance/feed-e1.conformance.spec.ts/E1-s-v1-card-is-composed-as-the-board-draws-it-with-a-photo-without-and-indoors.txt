@@ -35,7 +35,6 @@ end of paragraph
 #.#mi
 #° · clear
 end of link, @e#_runner_# :when · #:# A bit warm Wore the shell for a forecast that never showed up. #.#mi #° · clear
-link, Weather data provided by Visual Crossing
 button, Useful, @e#_runner_#’s run, not pressed
 Useful
 end of button, Useful, @e#_runner_#’s run, not pressed

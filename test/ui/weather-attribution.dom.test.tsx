@@ -31,4 +31,20 @@ describe("WeatherAttribution (D-144)", () => {
     expect(rel).toContain("noopener");
     expect(rel).toContain("noreferrer");
   });
+
+  it("is heard and reached by Tab unless it repeats one already said (R-179)", () => {
+    const { unmount } = render(<WeatherAttribution />);
+    const heard = screen.getByRole("link");
+    expect(heard).not.toHaveAttribute("aria-hidden");
+    expect(heard).not.toHaveAttribute("tabindex");
+    unmount();
+
+    render(<WeatherAttribution isRepeat />);
+    // Still drawn, as the licence asks; out of the tree and the Tab order.
+    const drawn = screen.getByText("Weather data provided by Visual Crossing");
+    expect(drawn).toBeVisible();
+    expect(drawn).toHaveAttribute("aria-hidden", "true");
+    expect(drawn).toHaveAttribute("tabindex", "-1");
+    expect(screen.queryByRole("link")).toBeNull();
+  });
 });

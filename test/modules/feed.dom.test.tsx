@@ -16,6 +16,7 @@ import {
   renderFeedScreen,
   unconfirmed,
 } from "./feed-fixtures";
+import { pointConditions } from "../feed/conditions-fixture";
 import { WEATHER_CREDIT } from "../ui/weather-credit";
 
 /**
@@ -253,6 +254,44 @@ describe("Feed: Following", () => {
         "Not marked. Your connection dropped.",
       );
     });
+  });
+});
+
+describe("Feed: Visual Crossing's credit is heard once (R-179)", () => {
+  // Every card with a provider's reading draws the credit, because the
+  // licence is about display. Only the list's first such card keeps it in
+  // the tree and the Tab order; every later one is drawn and unheard.
+  it("is heard on the first credited card and drawn, unheard, on the rest", async () => {
+    const reading = pointConditions({ tempC: 8, feelsLikeC: 6 });
+    await renderFeedScreen(
+      feed({
+        items: [
+          feedItem({ entryId: "01A" }),
+          feedItem({ entryId: "01B", conditions: reading }),
+          feedItem({ entryId: "01C", conditions: reading }),
+        ],
+      }),
+    );
+
+    const posts = [
+      ...document.querySelectorAll<HTMLElement>('[data-part="post"]'),
+    ];
+    const credits = posts.map((post) =>
+      post.querySelector<HTMLElement>(
+        "a[href='https://www.visualcrossing.com/']",
+      ),
+    );
+    // No reading on the first card, so no credit; the first that has one
+    // is the second card, and it is the one heard.
+    expect(credits[0]).toBeNull();
+    expect(credits[1]).not.toHaveAttribute("aria-hidden");
+    expect(credits[1]).not.toHaveAttribute("tabindex");
+    expect(credits[2]).toBeVisible();
+    expect(credits[2]).toHaveAttribute("aria-hidden", "true");
+    expect(credits[2]).toHaveAttribute("tabindex", "-1");
+    expect(screen.getAllByRole("link", { name: WEATHER_CREDIT })).toHaveLength(
+      1,
+    );
   });
 });
 

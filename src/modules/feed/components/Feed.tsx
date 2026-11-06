@@ -4,6 +4,7 @@ import type { ComponentProps, ReactNode } from "react";
 
 import type { Units } from "../../../lib/contracts";
 import { FormStatus, Mono } from "../../../ui";
+import { isProvidersReading } from "../strip";
 import type { FeedItem } from "../feed";
 import { isBacklogWorthOpening } from "../route-decisions";
 import type { CompactConditions as CompactConditionsResult } from "../compact-conditions";
@@ -197,6 +198,11 @@ function FollowingTab({
   // One status region for the screen, however many cards (Accessibility
   // Contract rule 08) — each card's Useful reports its sentence here.
   const [status, setStatus] = useState("");
+  // Visual Crossing's credit is heard on the first card that shows a
+  // provider's reading and drawn, unheard, on every later one (R-179).
+  const firstCredited = items.findIndex((item) =>
+    isProvidersReading(item.conditions),
+  );
 
   if (items.length === 0) {
     return (
@@ -216,7 +222,7 @@ function FollowingTab({
           column, never a gutter, and each keeps SPACE[4] above and below
           (PostCard's own `py-4`). */}
       <div data-part="posts" className="flex flex-col divide-y divide-hairline">
-        {items.map((item) => (
+        {items.map((item, index) => (
           <PostCard
             key={item.entryId}
             item={item}
@@ -224,6 +230,7 @@ function FollowingTab({
             now={now}
             setUseful={setUseful}
             onStatus={setStatus}
+            isCreditRepeated={index > firstCredited}
           />
         ))}
       </div>

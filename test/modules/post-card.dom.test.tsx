@@ -7,6 +7,7 @@ import { VerdictBadge } from "../../src/modules/feed/components/VerdictBadge";
 import type { SetUsefulFn } from "../../src/modules/feed/components/useful-reaction";
 import type { FeedItem } from "../../src/modules/feed/feed";
 import { pointConditions } from "../feed/conditions-fixture";
+import { WEATHER_CREDIT } from "../ui/weather-credit";
 import {
   feedItem,
   MILES,
@@ -65,6 +66,35 @@ describe("PostCard: Garmin's credit (G1)", () => {
   it("is not there for any other run", async () => {
     const post = await card();
     expect(post.querySelector("[data-part='garmin-attribution']")).toBeNull();
+  });
+});
+
+describe("PostCard: Visual Crossing's credit (R-179)", () => {
+  it("is heard on a card alone, and drawn unheard when the list says it repeats", async () => {
+    const reading = pointConditions({ tempC: 8, feelsLikeC: 6 });
+    const alone = await card({ conditions: reading });
+    expect(
+      within(alone).getByRole("link", { name: WEATHER_CREDIT }),
+    ).toBeVisible();
+  });
+
+  it("keeps the credit drawn, out of the tree and the Tab order, on a repeat", async () => {
+    await renderFeedScreen(
+      <PostCard
+        item={feedItem({
+          conditions: pointConditions({ tempC: 8, feelsLikeC: 6 }),
+        })}
+        units={MILES}
+        now={NOW}
+        setUseful={nothing}
+        onStatus={vi.fn()}
+        isCreditRepeated
+      />,
+    );
+    const credit = screen.getByText(WEATHER_CREDIT);
+    expect(credit).toBeVisible();
+    expect(credit).toHaveAttribute("aria-hidden", "true");
+    expect(credit).toHaveAttribute("tabindex", "-1");
   });
 });
 

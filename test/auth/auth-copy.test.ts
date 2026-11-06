@@ -186,11 +186,31 @@ describe("authStatus", () => {
   it("says a band's own kicker", () => {
     expect(
       authStatus({
-        status: "",
+        status: `Nothing saved. ${TURNSTILE_REFUSED}`,
         band: { kicker: NOT_SENT, message: TURNSTILE_REFUSED },
         google: undefined,
       }),
     ).toBe(`Not sent. ${TURNSTILE_REFUSED}`);
+  });
+
+  it("lets the band fall quiet once the form's sentence has cleared (R-179)", () => {
+    // The runner typed after the failure: the hook emptied its sentence,
+    // and the band, still drawn, must not go on saying it.
+    expect(
+      authStatus({
+        status: "",
+        band: { kicker: AUTH_KICKER, message: AUTH_COPY.server },
+        google: undefined,
+      }),
+    ).toBe("");
+    // Google's band is its own control's, and still speaks.
+    expect(
+      authStatus({
+        status: "",
+        band: { kicker: AUTH_KICKER, message: AUTH_COPY.server },
+        google: { kicker: AUTH_KICKER, message: AUTH_COPY.google },
+      }),
+    ).toBe(`${AUTH_KICKER}. ${AUTH_COPY.google}`);
   });
 
   it("keeps the rejection's status on the error it throws", () => {

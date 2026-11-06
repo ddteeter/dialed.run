@@ -35,6 +35,11 @@ export interface PostCardProps {
   now: number;
   setUseful: SetUsefulFn;
   onStatus: (status: string) => void;
+  /**
+   * Whether an earlier card in the list already credits Visual Crossing.
+   * The list decides, because only it knows which card is first.
+   */
+  isCreditRepeated?: boolean;
 }
 
 /**
@@ -56,7 +61,14 @@ function whoseRun(item: FeedItem): string {
 }
 
 export function PostCard(props: Readonly<PostCardProps>) {
-  const { item, units, now, setUseful, onStatus } = props;
+  const {
+    item,
+    units,
+    now,
+    setUseful,
+    onStatus,
+    isCreditRepeated = false,
+  } = props;
   const [photo] = item.photoKeys;
   const second = stripConditions(item.conditions, item.indoor, units);
 
@@ -128,8 +140,12 @@ export function PostCard(props: Readonly<PostCardProps>) {
         </div>
       </Link>
       {/* Outside the link, because it is a link of its own: Visual
-          Crossing's licence asks for the credit near the data (FEED-8). */}
-      {isProvidersReading(item.conditions) ? <WeatherAttribution /> : undefined}
+          Crossing's licence asks for the credit near the data (FEED-8).
+          Every card shows it, because the licence is about display; after
+          the list's first, it is drawn and not heard (R-179). */}
+      {isProvidersReading(item.conditions) ? (
+        <WeatherAttribution isRepeat={isCreditRepeated} />
+      ) : undefined}
       <UsefulButton
         entryId={item.entryId}
         usefulCount={item.usefulCount}

@@ -288,6 +288,10 @@ const CONTRACT_OPENER = "Nothing saved.";
  * fix.'"*). A band's sentence is the band's own, so the region and the
  * block say the same words — and the screen has one region, so Google's
  * band (Au6) speaks through it too, after the form's own if both failed.
+ *
+ * The form's band speaks only while the form's sentence does: that
+ * sentence goes on the runner's first input after the failure (R-179), and
+ * the band, which stays drawn, must not keep saying it in its place.
  */
 export function authStatus({
   status,
@@ -298,7 +302,7 @@ export function authStatus({
   band: ControlFailure | undefined;
   google: ControlFailure | undefined;
 }>): string {
-  const said = band ?? google;
+  const said = (status === "" ? undefined : band) ?? google;
   if (said !== undefined) return `${said.kicker}. ${said.message}`;
   return status.startsWith(CONTRACT_OPENER)
     ? `${AUTH_KICKER}.${status.slice(CONTRACT_OPENER.length)}`
