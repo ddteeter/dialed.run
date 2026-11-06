@@ -2,6 +2,7 @@ import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import type { JSX } from "react";
 
+import { monthDayLabel } from "../../../lib/dates";
 import {
   Bracketed,
   ControlFailureBand,
@@ -28,10 +29,12 @@ import { DeskForm, PickOne } from "./DeskForm";
 import { NotRenamedBand } from "./NotRenamedBand";
 
 /**
- * Desk · Runners, "D8" (round 27 #22). A search and three filters over a
+ * Desk · Runners, "D8" (round 27 #22). A search and four filters over a
  * table of every account; a row click selects, and the selected runner's
- * right column holds Rename (#16) and then Close account (D3's ban panel,
- * moved here from the entry view). **There is no separate runner page.**
+ * right column holds Rename (#16), the flag when one is open (D-161), and
+ * then Close account (D3's ban panel, moved here from the entry view).
+ * **There is no separate runner page.** The flag's words are placeholders
+ * until Design rules (design 176).
  */
 
 type Rename = (input: {
@@ -40,11 +43,15 @@ type Rename = (input: {
 type Ban = (input: {
   data: { userId: string; reason: string; rule: ClosureRule };
 }) => Promise<unknown>;
-type Unban = (input: { data: { userId: string } }) => Promise<unknown>;
+/**
+Reopen account, and Keep account (D-161): an act on the account by id.
+*/
+type OnAccount = (input: { data: { userId: string } }) => Promise<unknown>;
 
 const FILTERS: readonly { value: RunnersFilter["filter"]; label: string }[] = [
   { value: "all", label: "All" },
   { value: "reported", label: "Reported" },
+  { value: "flagged", label: "Flagged" },
   { value: "closed", label: "Closed" },
 ];
 
@@ -168,7 +175,14 @@ function RunnerRow({
         <Mono step="xs">{String(runner.reports)}</Mono>
       </td>
       <td>
-        <Bracketed step="xs">{runner.state}</Bracketed>
+        <span className="flex flex-wrap gap-2">
+          <Bracketed step="xs">{runner.state}</Bracketed>
+          {runner.flaggedAt === undefined ? undefined : (
+            <Bracketed step="xs" className="text-hiviz-text">
+              Flagged
+            </Bracketed>
+          )}
+        </span>
       </td>
     </tr>
   );
@@ -286,39 +300,154 @@ function CloseAccountPanel({
   );
 }
 
-function ReopenPanel({
+/**
+ * A panel with one act on the account: a heading, what is on record, and
+ * a button that runs `act` on the runner (Reopen account, Keep account).
+ * `words.still` names what stays true when the act fails.
+ */
+function AccountActPanel({
   runner,
-  act: unban,
+  act,
   onDone,
-}: Readonly<PanelProps<Unban>>): JSX.Element {
-  const reopen = useControlAction({
-    action: () => unban({ data: { userId: runner.userId } }),
-    kicker: "Still closed",
+  words,
+}: Readonly<
+  PanelProps<OnAccount> & {
+    words: Readonly<{
+      heading: string;
+      said: string;
+      button: string;
+      still: string;
+      isHiviz?: boolean;
+    }>;
+  }
+>): JSX.Element {
+  const control = useControlAction({
+    action: () => act({ data: { userId: runner.userId } }),
+    kicker: words.still,
     onSuccess: onDone,
   });
+  const tone = words.isHiviz === true ? "text-hiviz-text" : undefined;
   return (
-    <section className="flex flex-col gap-3 border border-hairline p-4">
+    <section
+      className={
+        words.isHiviz === true
+          ? "flex flex-col gap-3 border border-hiviz-text p-4"
+          : "flex flex-col gap-3 border border-hairline p-4"
+      }
+    >
       <h2 className="m-0">
-        <Mono step="xs">Account closed</Mono>
+        <Mono step="xs" className={tone}>
+          {words.heading}
+        </Mono>
       </h2>
-      <p className="text-body">{runner.banReason ?? "No reason recorded."}</p>
-      <FormStatus>{reopen.status}</FormStatus>
+      <p className="text-body">{words.said}</p>
+      <FormStatus>{control.status}</FormStatus>
       <button
         type="button"
-        {...inFlight(reopen.pending)}
+        {...inFlight(control.pending)}
         className="target text-left"
         onClick={() => {
-          void reopen.run();
+          void control.run();
         }}
       >
-        <Mono step="xs">Reopen account</Mono>
+        <Mono step="xs">{words.button}</Mono>
       </button>
       <ControlFailureBand
-        failure={reopen.failure}
-        onRetry={reopen.retry}
-        retryRef={reopen.retryRef}
+        failure={control.failure}
+        onRetry={control.retry}
+        retryRef={control.retryRef}
       />
     </section>
+  );
+}
+
+function ReopenPanel(props: Readonly<PanelProps<OnAccount>>): JSX.Element {
+  return (
+    <AccountActPanel
+      {...props}
+      words={{
+        heading: "Account closed",
+        said: props.runner.banReason ?? "No reason recorded.",
+        button: "Reopen account",
+        still: "Still closed",
+      }}
+    />
+  );
+}
+
+/**
+ * An open flag (D-161 1): an intimate-image removal of theirs, and no
+ * decision on the account since. Keep account clears it; Close account,
+ * below, is the other answer. Nothing closes the account by itself.
+ */
+function FlaggedPanel({
+  flaggedAt,
+  ...props
+}: Readonly<PanelProps<OnAccount> & { flaggedAt: number }>): JSX.Element {
+  return (
+    <AccountActPanel
+      {...props}
+      words={{
+        heading: "Flagged",
+        said: `An image they posted was removed as intimate on ${monthDayLabel(flaggedAt)}. Decide whether the account stays.`,
+        button: "Keep account",
+        still: "Still flagged",
+        isHiviz: true,
+      }}
+    />
+  );
+}
+
+/**
+ * The selected runner's right column: Rename, any open flag, then Close
+ * account, or Reopen once closed.
+ */
+function RunnerPanels({
+  runner,
+  acts,
+  onDone,
+}: Readonly<{
+  runner: DeskRunner;
+  acts: Readonly<{
+    rename: Rename;
+    ban: Ban;
+    unban: OnAccount;
+    keep: OnAccount;
+  }>;
+  onDone: () => void;
+}>): JSX.Element {
+  const isClosed = runner.state === "CLOSED";
+  return (
+    <aside
+      aria-label={`@${runner.username ?? runner.email}`}
+      className="flex flex-col gap-4 desk:w-[var(--container-column)]"
+    >
+      <RenamePanel
+        key={`rename-${runner.userId}`}
+        runner={runner}
+        act={acts.rename}
+        onDone={onDone}
+      />
+      {isClosed || runner.flaggedAt === undefined ? undefined : (
+        <FlaggedPanel
+          key={`flag-${runner.userId}`}
+          runner={runner}
+          flaggedAt={runner.flaggedAt}
+          act={acts.keep}
+          onDone={onDone}
+        />
+      )}
+      {isClosed ? (
+        <ReopenPanel runner={runner} act={acts.unban} onDone={onDone} />
+      ) : (
+        <CloseAccountPanel
+          key={`close-${runner.userId}`}
+          runner={runner}
+          act={acts.ban}
+          onDone={onDone}
+        />
+      )}
+    </aside>
   );
 }
 
@@ -326,16 +455,15 @@ export function DeskRunners({
   runners,
   total,
   filter,
-  rename,
-  ban,
-  unban,
+  ...acts
 }: Readonly<{
   runners: readonly DeskRunner[];
   total: number;
   filter: RunnersFilter;
   rename: Rename;
   ban: Ban;
-  unban: Unban;
+  unban: OnAccount;
+  keep: OnAccount;
 }>): JSX.Element {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | undefined>();
@@ -384,27 +512,7 @@ export function DeskRunners({
             Pick a runner to rename or close.
           </p>
         ) : (
-          <aside
-            aria-label={`@${selected.username ?? selected.email}`}
-            className="flex flex-col gap-4 desk:w-[var(--container-column)]"
-          >
-            <RenamePanel
-              key={`rename-${selected.userId}`}
-              runner={selected}
-              act={rename}
-              onDone={refresh}
-            />
-            {selected.state === "CLOSED" ? (
-              <ReopenPanel runner={selected} act={unban} onDone={refresh} />
-            ) : (
-              <CloseAccountPanel
-                key={`close-${selected.userId}`}
-                runner={selected}
-                act={ban}
-                onDone={refresh}
-              />
-            )}
-          </aside>
+          <RunnerPanels runner={selected} acts={acts} onDone={refresh} />
         )}
       </div>
     </section>

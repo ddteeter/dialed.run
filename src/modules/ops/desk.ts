@@ -22,6 +22,7 @@ import { nowSeconds } from "../../lib/now";
 import { maskedAddress } from "../email";
 import {
   adminUserIds,
+  flaggedCountOf,
   overCeilings,
   pendingReviewCount,
   stuckSources,
@@ -58,6 +59,11 @@ export interface TodayCounts {
   readonly screenerUnfinished: number;
   readonly bansThisWeek: number;
   readonly bansAllTime: number;
+  /**
+   * Accounts flagged after an intimate-image removal and not yet decided
+   * (D-161 1): a line on Today, only above zero; never a fourth number.
+   */
+  readonly flaggedAccounts: number;
   /**
    * Jobs the system stopped retrying (Gave up, a section of Today; R-119):
    * Today's rail count and the digest's one extra line.
@@ -166,36 +172,38 @@ export async function todayCounts(): Promise<TodayCounts> {
   const weekAgo = now - WEEK_SECONDS;
   const dayStart = now - (now % DAY_SECONDS);
   const waiting = await pendingReviewCount();
-  const [review, bans, gave, unconfirmed, behind, decided] = await db.batch([
-    db
-      .select({
-        source: reviewQueue.source,
-        rows: count(),
-        oldest: sql<number>`min(${reviewQueue.createdAt})`,
-      })
-      .from(reviewQueue)
-      .where(eq(reviewQueue.status, "pending"))
-      .groupBy(reviewQueue.source),
-    banCountsOf(db, weekAgo),
-    // Grouped by a constant (not `1`, which would name the count), so an
-    // empty table is no row rather than a NULL oldest. A scan of
-    // `gave_up`, which holds only what is still owed an operator: retried
-    // and dropped rows leave it.
-    db
-      .select({
-        rows: count(),
-        oldest: sql<number>`min(${gaveUp.firstFailedAt})`,
-      })
-      .from(gaveUp)
-      .groupBy(sql`'gave_up'`),
-    // The digest's skip mark, by its primary key (OPS-11).
-    db
-      .select({ at: cronCheckpoints.lastRunAt })
-      .from(cronCheckpoints)
-      .where(eq(cronCheckpoints.cronName, DIGEST_UNCONFIRMED)),
-    outboxBehindOf(db),
-    decidedSinceOf(db, dayStart),
-  ]);
+  const [review, bans, flagged, gave, unconfirmed, behind, decided] =
+    await db.batch([
+      db
+        .select({
+          source: reviewQueue.source,
+          rows: count(),
+          oldest: sql<number>`min(${reviewQueue.createdAt})`,
+        })
+        .from(reviewQueue)
+        .where(eq(reviewQueue.status, "pending"))
+        .groupBy(reviewQueue.source),
+      banCountsOf(db, weekAgo),
+      flaggedCountOf(db),
+      // Grouped by a constant (not `1`, which would name the count), so an
+      // empty table is no row rather than a NULL oldest. A scan of
+      // `gave_up`, which holds only what is still owed an operator: retried
+      // and dropped rows leave it.
+      db
+        .select({
+          rows: count(),
+          oldest: sql<number>`min(${gaveUp.firstFailedAt})`,
+        })
+        .from(gaveUp)
+        .groupBy(sql`'gave_up'`),
+      // The digest's skip mark, by its primary key (OPS-11).
+      db
+        .select({ at: cronCheckpoints.lastRunAt })
+        .from(cronCheckpoints)
+        .where(eq(cronCheckpoints.cronName, DIGEST_UNCONFIRMED)),
+      outboxBehindOf(db),
+      decidedSinceOf(db, dayStart),
+    ]);
   const [gaveUpGroup] = gave;
   return {
     waiting,
@@ -212,6 +220,7 @@ export async function todayCounts(): Promise<TodayCounts> {
     ),
     bansThisWeek: bans.find((g) => g.recent === 1)?.rows ?? 0,
     bansAllTime: sumOf(bans),
+    flaggedAccounts: sumOf(flagged),
     gaveUp: gaveUpGroup?.rows ?? 0,
     oldestGaveUpAt: gaveUpGroup?.oldest,
     digestUnconfirmedAt: unconfirmed[0]?.at,

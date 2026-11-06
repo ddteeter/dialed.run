@@ -109,6 +109,7 @@ export {
   type RunnerState,
   type RunnersFilter,
 } from "./runners";
+export { flaggedCountOf } from "./account-flags";
 
 export {
   placeholderHandle,

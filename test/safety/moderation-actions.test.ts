@@ -64,6 +64,7 @@ import {
   renameRecord,
   runnersFilterInput,
   runnersWhere,
+  type RunnersFilter,
   takedownInput,
   unbanUser,
   unbanUserInput,
@@ -217,7 +218,7 @@ The Desk's list, wired as its server function wires it.
 */
 async function deskList(filter: {
   query?: string | undefined;
-  filter: "all" | "reported" | "closed";
+  filter: RunnersFilter["filter"];
 }) {
   const accounts = await listAccounts(core(), {
     query: filter.query,
@@ -228,7 +229,7 @@ async function deskList(filter: {
 
 async function idsFor(filter: {
   query?: string | undefined;
-  filter: "all" | "reported" | "closed";
+  filter: RunnersFilter["filter"];
 }): Promise<string[]> {
   const listed = await deskList(filter);
   return listed.map((runner) => runner.userId);
@@ -1343,16 +1344,19 @@ describe("runnersFilterInput (D8's search and filter)", () => {
     expect(runnersFilterInput.parse({}).filter).toBe("all");
   });
 
-  it("takes reported and closed too", () => {
+  it("takes reported, flagged and closed too", () => {
     expect(runnersFilterInput.parse({ filter: "reported" }).filter).toBe(
       "reported",
+    );
+    expect(runnersFilterInput.parse({ filter: "flagged" }).filter).toBe(
+      "flagged",
     );
     expect(runnersFilterInput.parse({ filter: "closed" }).filter).toBe(
       "closed",
     );
   });
 
-  it("refuses a filter that is not one of the three", () => {
+  it("refuses a filter that is not one of the four", () => {
     expect(runnersFilterInput.safeParse({ filter: "banned" }).success).toBe(
       false,
     );
@@ -1747,6 +1751,7 @@ describe("deskRunners, D8 (round 27 #22)", () => {
         reports: 0,
         state: "CLOSED",
         banReason: "Spam",
+        flaggedAt: undefined,
       },
       {
         userId: older,
@@ -1757,6 +1762,7 @@ describe("deskRunners, D8 (round 27 #22)", () => {
         reports: 1,
         state: "ACTIVE",
         banReason: undefined,
+        flaggedAt: undefined,
       },
     ]);
     expect(await accountCount(core())).toBe(2);
@@ -1825,6 +1831,7 @@ describe("deskRunners, D8 (round 27 #22)", () => {
         reports: 0,
         state: "ACTIVE",
         banReason: undefined,
+        flaggedAt: undefined,
       },
     ]);
   });

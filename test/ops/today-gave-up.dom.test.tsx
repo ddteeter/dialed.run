@@ -39,6 +39,7 @@ function desk(gaveUp: number, oldestGaveUpAt?: number): DeskToday {
       screenerUnfinished: 0,
       bansThisWeek: 0,
       bansAllTime: 0,
+      flaggedAccounts: 0,
       gaveUp,
       oldestGaveUpAt,
       digestUnconfirmedAt: undefined,
@@ -612,5 +613,51 @@ describe("a hold breaker at its ceiling, on Today", () => {
   it("says nothing on an ordinary hour", () => {
     renderToday([], {}, withBreakers([]));
     expect(document.querySelector("[data-part='breaker-over']")).toBeNull();
+  });
+});
+
+function flaggedLine() {
+  return document.querySelector("[data-part='flagged-accounts']");
+}
+
+function flagged(flaggedAccounts: number, outboxBehind = 0): DeskToday {
+  const today = desk(0);
+  return {
+    ...today,
+    counts: { ...today.counts, flaggedAccounts, outboxBehind },
+  };
+}
+
+/**
+ * D-161 (1): accounts flagged after an intimate-image removal, a line
+ * under Today's three numbers, only above zero. What counts is
+ * `todayCounts`' (test/ops/desk.test.ts).
+ */
+describe("flagged accounts, on Today", () => {
+  it("says how many wait for a decision, in hi-viz, with no button", () => {
+    renderToday([], {}, flagged(2));
+    expect(flaggedLine()?.textContent).toBe(
+      "Accounts to decide2 accounts are flagged after an intimate-image removal. Decide each in Runners, under Flagged.",
+    );
+    expect(screen.getByText("Accounts to decide")).toHaveClass(
+      "text-hiviz-text",
+    );
+    expect(flaggedLine()?.previousElementSibling).toBe(
+      screen.getByRole("list", { name: "Today" }),
+    );
+    expect(flaggedLine()?.querySelector("button")).toBeNull();
+  });
+
+  it("says one account in the singular, above a running-behind line", () => {
+    renderToday([], {}, flagged(1, 3));
+    expect(flaggedLine()?.textContent).toBe(
+      "Accounts to decide1 account is flagged after an intimate-image removal. Decide each in Runners, under Flagged.",
+    );
+    expect(runningBehind()?.previousElementSibling).toBe(flaggedLine());
+  });
+
+  it("says nothing when no account is flagged", () => {
+    renderToday([], {}, flagged(0));
+    expect(flaggedLine()).toBeNull();
   });
 });

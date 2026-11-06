@@ -52,6 +52,7 @@ function desk(counts: Partial<TodayCounts> = {}): DeskToday {
       screenerUnfinished: 0,
       bansThisWeek: 0,
       bansAllTime: 0,
+      flaggedAccounts: 0,
       gaveUp: 0,
       oldestGaveUpAt: undefined,
       digestUnconfirmedAt: undefined,

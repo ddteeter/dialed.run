@@ -59,6 +59,7 @@ const ada: DeskRunner = {
   reports: 2,
   state: "ACTIVE",
   banReason: undefined,
+  flaggedAt: undefined,
 };
 
 const bo: DeskRunner = {
@@ -70,6 +71,7 @@ const bo: DeskRunner = {
   reports: 0,
   state: "CLOSED",
   banReason: "Spam accounts",
+  flaggedAt: undefined,
 };
 
 async function renderDesk(overrides: Partial<Props> = {}) {
@@ -78,6 +80,7 @@ async function renderDesk(overrides: Partial<Props> = {}) {
     .mockResolvedValue({ kind: "renamed", username: "runner_4821" });
   const ban = vi.fn<Props["ban"]>().mockResolvedValue({ banned: true });
   const unban = vi.fn<Props["unban"]>().mockResolvedValue({ banned: false });
+  const keep = vi.fn<Props["keep"]>().mockResolvedValue({ kept: true });
   const router = await renderWithRouter(
     <DeskRunners
       runners={[ada, bo]}
@@ -86,10 +89,11 @@ async function renderDesk(overrides: Partial<Props> = {}) {
       rename={rename}
       ban={ban}
       unban={unban}
+      keep={keep}
       {...overrides}
     />,
   );
-  return { rename, ban, unban, router };
+  return { rename, ban, unban, keep, router };
 }
 
 describe("D8's table", () => {
@@ -183,6 +187,106 @@ describe("selecting a runner", () => {
     await user.click(bosRow ?? document.body);
     expect(
       screen.getByRole("complementary", { name: "@bo@example.com" }),
+    ).toBeInTheDocument();
+  });
+});
+
+/**
+6 November 2025, 12:00 UTC: when ada's flag opened.
+*/
+const FLAGGED_AT = Date.UTC(2025, 10, 6, 12) / 1000;
+
+describe("a flagged account (D-161 1) and PENDING DELETE (PR#126-1)", () => {
+  it("offers Flagged among the filters, after Reported", async () => {
+    await renderDesk({ filter: { filter: "flagged" } });
+
+    const filters = screen.getByRole("navigation", { name: "Filter runners" });
+    expect(
+      within(filters)
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toStrictEqual(["All", "Reported", "Flagged", "Closed"]);
+    expect(
+      within(filters).getByRole("link", { name: "Flagged" }),
+    ).toHaveAttribute("aria-current", "page");
+  });
+
+  it("marks a flagged row beside its state, in hi-viz, and no other row", async () => {
+    await renderDesk({ runners: [{ ...ada, flaggedAt: FLAGGED_AT }, bo] });
+
+    const [, first, second] = screen.getAllByRole("row");
+    const mark = within(first ?? document.body).getByText(bracketed("Flagged"));
+    expect(mark).toHaveClass("text-hiviz-text");
+    expect(first).toHaveTextContent("[ACTIVE][Flagged]");
+    expect(
+      within(second ?? document.body).queryByText(bracketed("Flagged")),
+    ).toBeNull();
+  });
+
+  it("draws PENDING DELETE as a state", async () => {
+    await renderDesk({ runners: [{ ...ada, state: "PENDING DELETE" }] });
+
+    expect(screen.getByText(bracketed("PENDING DELETE"))).toBeInTheDocument();
+  });
+
+  it("puts the flag between Rename and Close account, dated, and keeps on Keep account", async () => {
+    const user = userEvent.setup();
+    const { keep, router } = await renderDesk({
+      runners: [{ ...ada, flaggedAt: FLAGGED_AT }],
+    });
+    const invalidate = vi.spyOn(router, "invalidate");
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+
+    const column = screen.getByRole("complementary", { name: "@ada" });
+    expect(
+      within(column)
+        .getAllByRole("heading")
+        .map((h) => h.textContent),
+    ).toStrictEqual(["Rename", "Flagged", "Close account"]);
+    const flagHeading = within(column).getByRole("heading", {
+      name: "Flagged",
+    });
+    expect(flagHeading.firstElementChild).toHaveClass("text-hiviz-text");
+    expect(flagHeading.closest("section")).toHaveClass("border-hiviz-text");
+    expect(
+      within(column).getByText(
+        "An image they posted was removed as intimate on Nov 6. Decide whether the account stays.",
+      ),
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(column).getByRole("button", { name: "Keep account" }),
+    );
+
+    expect(keep).toHaveBeenCalledWith({ data: { userId: "u-ada" } });
+    await waitFor(() => {
+      expect(invalidate).toHaveBeenCalled();
+    });
+  });
+
+  it("says it is still flagged when Keep account fails", async () => {
+    const user = userEvent.setup();
+    const keep = vi
+      .fn<Props["keep"]>()
+      .mockRejectedValue(new TypeError("Failed to fetch"));
+    await renderDesk({ keep, runners: [{ ...ada, flaggedAt: FLAGGED_AT }] });
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+
+    await user.click(screen.getByRole("button", { name: "Keep account" }));
+
+    expect(await screen.findByText("Still flagged")).toBeInTheDocument();
+  });
+
+  it("shows no flag on a closed account, which Reopen answers", async () => {
+    const user = userEvent.setup();
+    await renderDesk({ runners: [{ ...bo, flaggedAt: FLAGGED_AT }] });
+    await user.click(screen.getByRole("button", { name: "—" }));
+
+    expect(
+      screen.queryByRole("button", { name: "Keep account" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Reopen account" }),
     ).toBeInTheDocument();
   });
 });
@@ -313,6 +417,11 @@ describe("Close account (D3)", () => {
     await user.click(screen.getByRole("button", { name: "—" }));
 
     expect(screen.getByText("Spam accounts")).toBeInTheDocument();
+    const closedHeading = screen.getByRole("heading", {
+      name: "Account closed",
+    });
+    expect(closedHeading.firstElementChild).not.toHaveClass("text-hiviz-text");
+    expect(closedHeading.closest("section")).toHaveClass("border-hairline");
     expect(
       screen.queryByRole("button", { name: "Close account" }),
     ).not.toBeInTheDocument();

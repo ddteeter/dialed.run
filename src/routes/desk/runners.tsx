@@ -6,6 +6,7 @@ import {
   banUserAction,
   deskRunnersQuery,
   forceRenameAction,
+  keepAccountAction,
   unbanUserAction,
 } from "../../modules/safety/functions";
 import { runnersFilterInput } from "../../modules/safety/inputs";
@@ -35,6 +36,7 @@ function RunnersPage() {
         rename={forceRenameAction}
         ban={banUserAction}
         unban={unbanUserAction}
+        keep={keepAccountAction}
       />
     </DeskPage>
   );

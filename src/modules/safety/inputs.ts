@@ -208,6 +208,11 @@ export const unbanUserInput = z.object({
 });
 
 /**
+Keep account on a flagged runner (D-161 1): the same account by id.
+*/
+export const keepAccountInput = unbanUserInput;
+
+/**
 The run whose removals its author's page shows (R-140). `runId` is bounded,
 not a ULID: a malformed `/runs/abc` must reach the page's own not-found and
 not fail here first. `since` is a kit page's own `createdAt`.
@@ -223,7 +228,7 @@ export const runRemovalsInput = z.object({
  */
 export const runnersFilterInput = z.object({
   query: z.string().trim().max(254).optional(),
-  filter: z.enum(["all", "reported", "closed"]).default("all"),
+  filter: z.enum(["all", "reported", "flagged", "closed"]).default("all"),
 });
 
 export const banUserInput = z.object({

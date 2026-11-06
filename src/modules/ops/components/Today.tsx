@@ -412,6 +412,25 @@ function BreakerOver({
 }
 
 /**
+ * Accounts flagged after an intimate-image removal and not yet decided
+ * (D-161 1), as a line under the three numbers, only above zero. The
+ * decision is made on Runners' Flagged filter. Placeholder words until
+ * Design rules (design 176).
+ */
+function FlaggedAccounts({
+  count,
+}: Readonly<{ count: number }>): JSX.Element | undefined {
+  if (count === 0) return undefined;
+  const accounts =
+    count === 1 ? "1 account is" : `${String(count)} accounts are`;
+  return (
+    <TodayNotice part="flagged-accounts" kicker="Accounts to decide">
+      {`${accounts} flagged after an intimate-image removal. Decide each in Runners, under Flagged.`}
+    </TodayNotice>
+  );
+}
+
+/**
  * Design 168: queued jobs the morning's drain could not reach, by the
  * skipped-digest line's shape, under Today's three numbers and only above
  * zero — D5's numbers stay three. The wait is in whole hours, as "Oldest ·
@@ -501,6 +520,7 @@ export function Today({
         {today.skipped.map((operator) => (
           <DigestUnconfirmed key={operator.userId} operator={operator} />
         ))}
+        <FlaggedAccounts count={counts.flaggedAccounts} />
         <RunningBehind
           rows={counts.outboxBehind}
           oldestAt={counts.oldestBehindAt}

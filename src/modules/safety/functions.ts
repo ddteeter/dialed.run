@@ -33,6 +33,7 @@ import {
   settleOutbox,
 } from "../ops";
 
+import { keepAccount } from "./account-flags";
 import { banEmail, banUser, reopenEmailFor, unbanUser } from "./bans";
 import {
   accountCount,
@@ -64,6 +65,7 @@ import {
   runnersFilterInput,
   runRemovalsInput,
   unbanUserInput,
+  keepAccountInput,
 } from "./inputs";
 import { removalsOnRun } from "./run-removals";
 import { burstsToRelease, releaseHolds } from "./release";
@@ -264,6 +266,19 @@ export const unbanUserAction = createServerFn({ method: "POST" })
       settle: () => settleOutbox(coreDb(), debt),
     });
     return { banned: false };
+  });
+
+/**
+ * D8's Keep account on a runner flagged after an intimate-image removal
+ * (D-161 1): the operator decided the account stays, which clears the
+ * flag. Admin-only; `account-flags.ts` records it.
+ */
+export const keepAccountAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => keepAccountInput.parse(input))
+  .handler(async ({ data }) => {
+    const actorId = requireAdmin(await verifiedUserId());
+    await keepAccount(coreDb(), data.userId, actorId);
+    return { kept: true };
   });
 
 /**

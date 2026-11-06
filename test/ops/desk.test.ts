@@ -6,6 +6,7 @@ import { inArray } from "drizzle-orm";
 import { user } from "../../src/db/schema-auth";
 import {
   cronCheckpoints,
+  moderationActions,
   outbox,
   reviewQueue,
   userProfiles,
@@ -23,6 +24,7 @@ import {
   todayCounts,
 } from "../../src/modules/ops/desk";
 import { FINGERPRINT_HOLDS_PER_HOUR } from "../../src/modules/safety/breakers";
+import { removalStatements } from "../../src/modules/safety/contracts";
 import { opened } from "../safety/helpers";
 import { operatorOrNotFound } from "../../src/modules/ops/desk-gate";
 
@@ -35,6 +37,22 @@ const DAY = 24 * 60 * 60;
 
 function coreDb() {
   return drizzle(env.DIALED_CORE);
+}
+
+/**
+An intimate-image removal of `ownerId`'s photo, as the Desk records one.
+*/
+function intimateRemoval(ownerId: string) {
+  return {
+    id: newUlid(),
+    actorId: "op",
+    action: "remove" as const,
+    subjectType: "photo" as const,
+    subjectId: newUlid(),
+    subjectOwnerId: ownerId,
+    reason: removalStatements.intimate,
+    createdAt: 500,
+  };
 }
 
 async function queueRow(
@@ -71,12 +89,28 @@ describe("todayCounts", () => {
       screenerUnfinished: 0,
       bansThisWeek: 0,
       bansAllTime: 0,
+      flaggedAccounts: 0,
       gaveUp: 0,
       oldestGaveUpAt: undefined,
       digestUnconfirmedAt: undefined,
       outboxBehind: 0,
       oldestBehindAt: undefined,
     });
+  });
+
+  it("counts each account flagged after an intimate-image removal once (D-161)", async () => {
+    await coreDb().delete(moderationActions);
+    await coreDb()
+      .insert(moderationActions)
+      .values([
+        intimateRemoval("poster"),
+        intimateRemoval("poster"),
+        intimateRemoval("other"),
+      ]);
+
+    const counts = await todayCounts();
+    expect(counts.flaggedAccounts).toBe(2);
+    await coreDb().delete(moderationActions);
   });
 
   it("counts what is pending, and dates the oldest of it", async () => {

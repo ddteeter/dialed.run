@@ -32,6 +32,7 @@ const COUNTS: TodayCounts = {
   screenerUnfinished: 1,
   bansThisWeek: 0,
   bansAllTime: 3,
+  flaggedAccounts: 0,
   gaveUp: 2,
   oldestGaveUpAt: 900_000,
   digestUnconfirmedAt: undefined,

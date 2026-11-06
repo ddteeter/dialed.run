@@ -292,6 +292,7 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "safety/functions.ts banUserAction": "admin",
   "safety/functions.ts denyDomainAction": "admin",
   "safety/functions.ts unbanUserAction": "admin",
+  "safety/functions.ts keepAccountAction": "admin",
   "safety/functions.ts reviewHandleAction": "admin",
   "safety/functions.ts forceRenameAction": "admin",
   "safety/functions.ts deskRunnersQuery": "admin",

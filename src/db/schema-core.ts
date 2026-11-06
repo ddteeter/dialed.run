@@ -1585,8 +1585,18 @@ export const moderationActions = /*#__PURE__*/ sqliteTable(
   {
     id: text("id").primaryKey(),
     actorId: text("actor_id").notNull(),
+    // `keep`: the Desk kept an account flagged after an intimate-image
+    // removal (D-161). A text enum with no CHECK, so no migration.
     action: text("action", {
-      enum: ["remove", "quarantine", "takedown", "ban", "unban", "rename"],
+      enum: [
+        "remove",
+        "quarantine",
+        "takedown",
+        "ban",
+        "unban",
+        "rename",
+        "keep",
+      ],
     }).notNull(),
     // `garment`: a garment's photo, by the garment's id (design 157).
     subjectType: text("subject_type", {
