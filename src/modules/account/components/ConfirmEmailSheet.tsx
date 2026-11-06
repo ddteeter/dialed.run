@@ -34,8 +34,6 @@ interface OwnAddress {
   readonly viewer: ViewerZone;
 }
 
-const OWED: ViewerZone = { homeZone: undefined };
-
 /**
  * "Confirm your email first" (round 26 #11, as round 27 #17 redrew it;
  * seam 7): what a control opens when the server refuses it for want of a
@@ -56,19 +54,18 @@ const OWED: ViewerZone = { homeZone: undefined };
 export function ConfirmEmailSheet({
   open,
   onClose,
-  email,
+  address,
   resend,
-  viewer,
   trigger,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
-  email: string | undefined;
-  resend: Resend;
   /**
-   * The signed-in runner's clock, for the resend limit (R-96 (3)).
+   * The runner's address and clock, once read; undefined while it is
+   * on its way, or if the read failed, and then there is no Resend link.
    */
-  viewer: ViewerZone;
+  address: OwnAddress | undefined;
+  resend: Resend;
   trigger?: ConfirmTrigger | undefined;
 }>): JSX.Element {
   // State rather than a ref, so the effect re-runs once the button exists
@@ -91,15 +88,20 @@ export function ConfirmEmailSheet({
         <h2 className="m-0 font-display text-title uppercase">
           Confirm your email first
         </h2>
-        {email === undefined ? (
+        {address === undefined ? (
           leadAlone
         ) : (
           <>
             {leadAlone}
             <p className="m-0 text-body">
-              We sent a link to <strong>{email}</strong>.
+              We sent a link to <strong>{address.email}</strong>.
             </p>
-            <ResendLink email={email} resend={resend} viewer={viewer} isPill />
+            <ResendLink
+              email={address.email}
+              resend={resend}
+              viewer={address.viewer}
+              isPill
+            />
           </>
         )}
         <button
@@ -158,11 +160,8 @@ export function ConfirmEmailOnRefusal({
     <ConfirmEmailSheet
       open={open}
       onClose={onClose}
-      email={account?.email}
+      address={account}
       resend={resend}
-      // Without the read there is no Resend link to print a clock, so
-      // this owed zone is never shown; it keeps the prop required.
-      viewer={account?.viewer ?? OWED}
       trigger={trigger}
     />
   );

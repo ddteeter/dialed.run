@@ -466,9 +466,8 @@ describe("the confirm-first sheet and the nag", () => {
       <ConfirmEmailSheet
         open
         onClose={onClose}
-        email="maya@example.com"
+        address={{ email: "maya@example.com", viewer: OWED }}
         resend={resend}
-        viewer={OWED}
       />,
     );
     const sheet = screen.getByRole("dialog", {
@@ -501,9 +500,8 @@ describe("the confirm-first sheet and the nag", () => {
       <ConfirmEmailSheet
         open={false}
         onClose={vi.fn()}
-        email="maya@example.com"
+        address={{ email: "maya@example.com", viewer: OWED }}
         resend={resend}
-        viewer={OWED}
       />,
     );
     // Shut, it takes nothing: the page keeps its own focus.
@@ -513,9 +511,8 @@ describe("the confirm-first sheet and the nag", () => {
       <ConfirmEmailSheet
         open
         onClose={vi.fn()}
-        email="maya@example.com"
+        address={{ email: "maya@example.com", viewer: OWED }}
         resend={resend}
-        viewer={OWED}
       />,
     );
     await waitFor(() => {
@@ -536,9 +533,8 @@ describe("the confirm-first sheet and the nag", () => {
         <ConfirmEmailSheet
           open
           onClose={vi.fn()}
-          email="maya@example.com"
+          address={{ email: "maya@example.com", viewer: OWED }}
           resend={resender()}
-          viewer={OWED}
           trigger={trigger}
         />,
       );
@@ -557,9 +553,8 @@ describe("the confirm-first sheet and the nag", () => {
       <ConfirmEmailSheet
         open
         onClose={vi.fn()}
-        email={undefined}
+        address={undefined}
         resend={resender()}
-        viewer={OWED}
         trigger="report"
       />,
     );
@@ -583,9 +578,8 @@ describe("the confirm-first sheet and the nag", () => {
       <ConfirmEmailSheet
         open
         onClose={vi.fn()}
-        email={undefined}
+        address={undefined}
         resend={resender()}
-        viewer={OWED}
       />,
     );
     const sheet = screen.getByRole("dialog", {
