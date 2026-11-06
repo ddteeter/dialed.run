@@ -1,0 +1,102 @@
+# Design: 180 demo narration and e2e purposes
+
+> Plan, not a lane packet: five steps, each its own PR. Owner decisions from
+> the 2026-11-06 session are marked _(owner)_.
+
+## Problem
+
+Demo videos narrate with a caption painted into the page, which covers the
+app's top bar, and which a reviewer on a phone must read rather than hear.
+Every PR re-records its whole feature demo, and the "extend, don't sibling"
+rule means those only grow (feed 887 lines, closet 784), so a one-screen
+change costs minutes of video. Underneath that, the e2e suite serves five
+purposes through one naming scheme, and the only guidance an agent sees
+(`.claude/rules/testing.md`: "smoke tests … cover journeys, never a state
+space") is stale and loads only after the agent has already decided to write
+a test.
+
+## Approach
+
+**Voice.** `scene()` keeps its signature and gains an optional spoken form:
+`scene(page, text, { say })`. On a recording run it renders the line with
+`say -r 280 -o <cache>/<hash>.aiff "<spoken> [[slnc 400]]"`, holds for the
+audio's length instead of `holdFor()`, and appends `{ text, startMs, audio }`
+to a cue list beside `video.webm`. No `-v`: bare `say` speaks the system
+voice from Spoken Content (a Siri voice), which `say -v '?'` never lists. That
+is aperture-ally's finding (`macos/…/SpeechService.swift`, A/B 2026-09-28).
+Rate 280 (≈1.4×) _(owner)_. `for_speech`-style rewrites (symbols, "D-87") live
+in the pure half. Lines are cached by hash of text+rate, so a re-record only
+synthesizes what changed. macOS only _(owner)_; without `say`, captions only.
+
+**Captions leave the page.** No `html::after`. A post-record step
+(`npm run demo:mux`) pads the frame with a caption strip above the 1280×720
+viewport, overlays one PNG per cue (rendered by headless Chromium from
+`captionRule`'s styling and `public/fonts/ibm-plex-mono-*.woff2`) between its
+start and the next, and mixes the audio with `adelay` + `amix`, out to H.264
+`demo.mp4`. PNG overlays because this Homebrew ffmpeg has no `drawtext` or
+`subtitles`; `pad`, `overlay`, `adelay` and `amix` are core. The caption-not-in-
+DOM rule now holds by construction.
+
+**Recordings skip the per-action a11y checks.** CI already runs them on the
+same specs; in a recording they are only latency between frames.
+
+**E2e split by purpose** _(owner: rename earns its cost)_:
+
+| kind | file | written when | not for |
+| --- | --- | --- | --- |
+| unit / dom (vitest) | `*.test.ts(x)` | the default: logic, state space, components | anything a real browser or server hop must prove |
+| journey | `*.journey.spec.ts` | a flow crosses the server boundary: new route, auth gate, server fn wired to a screen. Updated when the flow changes | edge cases, recording |
+| edge case | `*.spec.ts` beside a journey | a case only a real browser shows | what a dom test can reach |
+| conformance | `e2e/conformance/*.conformance.spec.ts` | a screen with a board is built or changes shape | values (tokens etc.) |
+| a11y | none of its own _(owner)_ | never: it rides on every spec. Agents read the coverage report for unreached routes and review their transcript diff (`a11y-judgment`) | |
+| walkthrough | `e2e/walkthroughs/*.walkthrough.spec.ts` | a product story changes; 3–5 total, narrated, committed, run in CI as assertions | per-PR recording |
+| PR demo | `e2e/scratch/` (gitignored) | a PR changes what a user sees. Seeded straight to the state, scoped to the change, real `expect`s, never committed | proof: committed tests carry that |
+
+The table lives in `.claude/rules/testing.md`. The design-doc template's test
+plan asks "which kinds, and why" and points at it, because that is where the
+decision is actually made. `pr-ready` and `pr-demo-video` check it at the end.
+
+## Steps
+
+1. **Voice and caption strip.** `e2e/support/caption.ts` (pure: spoken
+   rewrite, cue list, hold-for-audio, ffmpeg filter-graph builder),
+   `demo.ts` (cue capture, `say` call, a11y off when recording),
+   `scripts/demo-mux.ts` (thin: render PNGs, run ffmpeg), `npm run demo:mux`.
+   _Test:_ vitest on every pure function, 100% Stryker on `caption.ts`;
+   `scene.spec.ts` asserts no caption reaches the DOM. _Done:_ one existing
+   demo (strava, which no active lane owns) recorded with voice and strip,
+   audio within ~200 ms of its cue by ear, app top bar fully visible.
+2. **The decision table.** `testing.md` table replacing line 37, template
+   line, `pr-ready` check. _Test:_ an architecture test fails when a route
+   has no journey and is not in `a11y-coverage.json`'s `unvisited`. _Done:_
+   a fresh agent given a sample packet picks the kinds the table names.
+3. **PR demos go throwaway.** `e2e/scratch/` gitignored and matched by the
+   `demo` project; `pr-demo-video` rewritten around it. _Test:_ knip, tsc and
+   the stop gate pass with a scratch spec present and absent. _Done:_ one
+   real PR ships with a scratch demo under 60 s.
+4. **Rename and split journeys.** `*.demo.spec.ts` → `*.journey.spec.ts`,
+   transcripts moved with them (`snapshotPathTemplate` keys on file path),
+   feed/closet/moderation split into journey plus edge-case files. _Waits for
+   coordinator-2's wave-2 lanes to merge._ _Test:_ full `npm run e2e` and the
+   a11y coverage figure no lower than before. _Done:_ no file over ~400 lines.
+5. **Walkthroughs.** Pick the 3–5 stories, write product-owner narration with
+   a spoken form per line. _Done:_ each records cleanly and passes in CI.
+
+Coordination: tell coordinator-2 before steps 1, 3 and 4 merge, and ask
+before every push (the gate is machine-wide).
+
+## Contract touches
+
+- Schema changes: **none**. Bindings, secrets, queues, crons, CI workflows: **none**.
+- `stryker.conf.json`: the two files that spawn processes (`say` in
+  `demo.ts`, already negated; `scripts/demo-mux.ts`, new) — see the question below.
+
+## Open questions
+
+- **A Stryker negation for `scripts/demo-mux.ts`?** It only spawns Chromium
+  and ffmpeg; every decision it makes moves to `caption.ts`, which stays at
+  100%. An exact-path negation is an exemption, so it is your call. The
+  alternative is unit-testing the argument arrays it passes, which a pure
+  builder already covers.
+- Which 3–5 walkthrough stories? Proposed: first run, logging a run and its
+  verdict, the closet, the feed. Decided at step 5.
