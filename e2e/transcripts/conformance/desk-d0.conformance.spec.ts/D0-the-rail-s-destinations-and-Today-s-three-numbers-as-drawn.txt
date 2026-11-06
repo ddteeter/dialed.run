@@ -32,8 +32,11 @@ end of listitem, level 1, position 5, set size 5
 end of list
 end of navigation, Desk
 main
-region, :day, :month #
-heading, :day, :month #, level 1
+region, :when, :day, :month #
+heading, :when, :day, :month #, level 1
+:when,
+:day, :month #
+end of heading, :when, :day, :month #, level 1
 list, :when
 listitem, level 1, position 1, set size 3
 #
@@ -53,7 +56,7 @@ this week
 # all time
 end of listitem, level 1, position 3, set size 3
 end of list, :when
-end of region, :day, :month #
+end of region, :when, :day, :month #
 region, Gave up
 heading, Gave up, level 2
 status

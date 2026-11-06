@@ -222,6 +222,12 @@ then it receives **one sentence, every time, on every outcome**:
 Then focus moves (field, summary, or the retry button). Announce, then move —
 never move without announcing.
 
+A failure's sentence goes on the runner's first input inside that form,
+silently: no focus move, and nothing announced about the clearing (owner,
+2026-11-06, R-179). Left in place, browse mode met it again on every pass.
+The field messages and the summary stay until the field is fixed or the form
+is sent again; a success's sentence stays.
+
 Field messages themselves are **not** live regions. They are wired with
 `aria-describedby` and the input carries `aria-invalid="true"`. Two live regions
 firing at once means one of them is lost.
