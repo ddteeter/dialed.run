@@ -16,7 +16,8 @@ design screens B1/B2, O2, O4, O5/O6 and the Onboarding artboard's
   distribution. Small model over structured features; auditable and
   correctable. **Explicitly no LLM narration of guesses** (design rule).
   Confidence computed per temp band × condition class; drives the ladder
-  copy, source weighting, and what to ask next. Input: task 090's findings.
+  copy, source weighting, and what to ask next. It starts from the generic
+  chart and learns from v1's verdict history (D-159: no validation study).
 - **Surfaces**: B1 (plan the run) + B2 (the answer, every item carrying its
   evidence), Call tab replaces the teaser, "swap a layer", "why not the X".
 - **Kits** (D-09): kits/kit_items tables, save-as-kit, try-this-kit on post
