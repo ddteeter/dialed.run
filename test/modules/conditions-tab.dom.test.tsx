@@ -449,9 +449,44 @@ describe("ConditionsTab: matched", () => {
       { group: "bottoms", runners: 3 },
       { group: "shoes", runners: 2 },
     ],
+    dialed: {
+      runners: 4,
+      groups: [
+        { group: "tops", runners: 3 },
+        { group: "bottoms", runners: 2 },
+      ],
+    },
     windowDays: 3,
     band,
   } as const;
+
+  it("says what the dialed runners wore, under the bars (round 47 #114)", async () => {
+    await renderFeedScreen(
+      tab({ conditionsFor: () => Promise.resolve(matched) }),
+    );
+
+    const summary = await screen.findByText(
+      "Most got it right in tops. Some added bottoms.",
+    );
+    expect(summary).toHaveAttribute("data-part", "summary");
+    // After the last bar, before the credit.
+    expect(
+      summary.compareDocumentPosition(screen.getByText("Shoes")) &
+        Node.DOCUMENT_POSITION_PRECEDING,
+    ).toBeTruthy();
+  });
+
+  it("has no sentence when none of them called it dialed, and still shows the block", async () => {
+    await renderFeedScreen(
+      tab({
+        conditionsFor: () =>
+          Promise.resolve({ ...matched, dialed: { runners: 0, groups: [] } }),
+      }),
+    );
+
+    await screen.findByText("6 runners logged this");
+    expect(document.querySelector("[data-part='summary']")).toBeNull();
+  });
 
   it("fills the block teal and counts the runners, in the last three days", async () => {
     await renderFeedScreen(
@@ -661,6 +696,7 @@ describe("ConditionsTab: round 25's same-conditions copy", () => {
     status: "matched",
     runners: 6,
     groups: [{ group: "tops", runners: 5 }],
+    dialed: { runners: 0, groups: [] },
     windowDays: 3,
     band,
   } as const;

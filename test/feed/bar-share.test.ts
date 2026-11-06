@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { withShares } from "../../src/modules/feed/bar-share";
+import {
+  SHARE_WORDS,
+  summarySentence,
+  withShares,
+} from "../../src/modules/feed/bar-share";
 
 /**
 The words alone, for rows of these runner counts out of `matched`.
@@ -59,5 +63,74 @@ describe("withShares: round 35 #54's consensus words", () => {
       { row: rows[0], share: "some" },
       { row: rows[1], share: "most" },
     ]);
+  });
+});
+
+describe("summarySentence (round 47 #114)", () => {
+  it("leads with the most-held word, and adds the rest after it", () => {
+    // The Feed board's own: "Most got it right in … Some added …".
+    expect(
+      summarySentence({
+        runners: 6,
+        groups: [
+          { group: "tops", runners: 5 },
+          { group: "bottoms", runners: 4 },
+          { group: "hands_head", runners: 2 },
+        ],
+      }),
+    ).toBe("Most got it right in tops and bottoms. Some added hands / head.");
+  });
+
+  it("says All for a group every dialed runner wore, then Most, then Some", () => {
+    expect(
+      summarySentence({
+        runners: 4,
+        groups: [
+          { group: "bottoms", runners: 4 },
+          { group: "tops", runners: 3 },
+          { group: "shoes", runners: 2 },
+        ],
+      }),
+    ).toBe("All got it right in bottoms. Most added tops. Some added shoes.");
+  });
+
+  it("leads with Some when no group reaches more than half", () => {
+    expect(
+      summarySentence({
+        runners: 6,
+        groups: [
+          { group: "outer", runners: 3 },
+          { group: "shoes", runners: 2 },
+        ],
+      }),
+    ).toBe("Some got it right in outer and shoes.");
+  });
+
+  it("lists three or more in a series", () => {
+    expect(
+      summarySentence({
+        runners: 2,
+        groups: [
+          { group: "tops", runners: 2 },
+          { group: "bottoms", runners: 2 },
+          { group: "socks_extras", runners: 2 },
+        ],
+      }),
+    ).toBe("All got it right in tops, bottoms, and socks / extras.");
+  });
+
+  it("says nothing when nobody dialed, or no group holds two of them", () => {
+    expect(summarySentence({ runners: 0, groups: [] })).toBeUndefined();
+    expect(summarySentence({ runners: 3, groups: [] })).toBeUndefined();
+  });
+});
+
+describe("SHARE_WORDS", () => {
+  it("is a word for every share", () => {
+    expect(SHARE_WORDS).toStrictEqual({
+      all: "All",
+      most: "Most",
+      some: "Some",
+    });
   });
 });

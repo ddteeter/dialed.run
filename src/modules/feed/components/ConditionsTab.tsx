@@ -20,7 +20,7 @@ import {
 } from "../../../ui";
 import type { Place } from "../../onboarding";
 import type { ConsensusBand, ConsensusResult } from "../consensus";
-import { withShares } from "../bar-share";
+import { SHARE_WORDS, summarySentence, withShares } from "../bar-share";
 import type { BarShare } from "../bar-share";
 import { uiGroupLabels } from "../groups";
 import type { ConditionsHome } from "../home";
@@ -402,20 +402,37 @@ function TooFew({
 }
 
 /**
- * A bar's colour in words (round 26 #9: *"Any bar colour also needs a
- * label in words"*, rule 10), in round 35 #54's words: which bar gets
- * which is `withShares`. Pink is every word but Some.
+ * A bar's colour, which is never alone (round 26 #9: *"Any bar colour also
+ * needs a label in words"*, rule 10): its words are `SHARE_WORDS`, in round
+ * 35 #54's words, and which bar gets which is `withShares`. Pink is every
+ * word but Some.
  */
-const BAR_WORD = {
-  all: "All",
-  most: "Most",
-  some: "Some",
-} as const satisfies Record<BarShare, string>;
 const BAR_FILL = {
   all: "bg-action",
   most: "bg-action",
   some: "bg-hairline-2",
 } as const satisfies Record<BarShare, string>;
+
+/**
+ * The line under the bars (Feed board, through round 27; round 47 #114):
+ * what the matched runners who got it right wore. None of them dialed, or
+ * none two to a group, and there is no line.
+ */
+function SummarySentence({
+  dialed,
+}: Readonly<{
+  dialed: Extract<ConsensusResult, { status: "matched" }>["dialed"];
+}>) {
+  const sentence = summarySentence(dialed);
+  return sentence === undefined ? undefined : (
+    <p
+      data-part="summary"
+      className="m-0 border-t border-hairline pt-3 text-body"
+    >
+      {sentence}
+    </p>
+  );
+}
 
 /**
  * No reading has come in for where the runner is — or all we have is a
@@ -500,7 +517,7 @@ function Matched({
                     <span className="flex w-44 items-baseline justify-between gap-2 text-body">
                       {uiGroupLabels[row.group]}
                       <span className="flex items-baseline gap-2 text-muted">
-                        <Mono step="xs">{BAR_WORD[share]}</Mono>
+                        <Mono step="xs">{SHARE_WORDS[share]}</Mono>
                         <Mono>
                           {/* Drawn as a fraction, said as words: a reader
                               speaks "5/6" as "five slash six". */}
@@ -519,6 +536,7 @@ function Matched({
             </ul>
           </>
         )}
+        <SummarySentence dialed={result.dialed} />
         <WeatherAttribution />
       </div>
     </div>
