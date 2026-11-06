@@ -1,5 +1,6 @@
 import type { JSX, ReactNode } from "react";
 
+import { focusOnMount } from "./focus-on-mount";
 import { useHydrated } from "./use-hydrated";
 
 /**
@@ -107,11 +108,4 @@ export function Page({
       {children}
     </div>
   );
-}
-
-/**
-A ref callback: focus the element React has just attached.
-*/
-function focusOnMount(node: HTMLElement | null): void {
-  node?.focus();
 }

@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 
 import { CALL_VERDICT_THRESHOLD } from "../../../lib/contracts";
-import { Mono, StravaConsent } from "../../../ui";
+import { focusOnMount, Mono, StravaConsent } from "../../../ui";
 
 /**
  * What the loop does with what a runner logs — P3's numbered list.
@@ -148,11 +148,4 @@ function StravaOffer({
       <StravaConsent from="onboarding" />
     </div>
   );
-}
-
-/**
-A ref callback: focus the element React has just attached.
-*/
-function focusOnMount(node: HTMLElement | null): void {
-  node?.focus();
 }

@@ -9,6 +9,7 @@ export { DeskSplit, RailCard } from "./DeskSplit";
 export { Digits } from "./Digits";
 export { FileWell } from "./FileWell";
 export { FlowStep, LOG_FLOW } from "./FlowStep";
+export { focusOnMount } from "./focus-on-mount";
 export { Icon, ICONS, TAB_BAR } from "./icons";
 export { DURATION, EASING, STAGGER, TRAVEL } from "./motion";
 export { Layout, SignedOutLayout } from "./Layout";
