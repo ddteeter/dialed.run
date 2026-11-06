@@ -14,6 +14,7 @@ import {
   TextField,
   ToggleField,
   useFormSubmit,
+  focusOnMount,
 } from "../../../ui";
 import { reportReasonLabels, reportReasons } from "../contracts";
 import type { ReportReason, ReportSubjectType } from "../contracts";
@@ -358,11 +359,3 @@ function focusPageHeading(): void {
   heading?.focus();
 }
 
-/**
- * Focuses the receipt's head as it mounts, so the swap is read out. One
- * function for the module, so React calls it once with the element and
- * once with `null` as it goes, never again in between.
- */
-function focusOnMount(node: HTMLElement | null): void {
-  node?.focus();
-}

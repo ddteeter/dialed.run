@@ -10,7 +10,6 @@ import {
   findObservationRow,
   hourBucketFor,
   manualBandsFor,
-  roundCoord,
   toWeatherObservation,
   upsertManualBand,
   upsertRealObservation,
@@ -28,9 +27,13 @@ const OBSERVATION = {
 
 describe("weather cache (103)", () => {
   it("rounds coordinates to 2dp and floors the hour", () => {
-    expect(roundCoord(44.98014)).toBeCloseTo(44.98, 5);
-    expect(roundCoord(-93.2651)).toBeCloseTo(-93.27, 5);
+    // The rounding is lib/coords' rule; the key must use it, not a copy.
     const at = new Date("2026-01-15T07:45:00Z");
+    expect(cacheKeyFor(44.98014, -93.2651, at)).toEqual({
+      latR: 44.98,
+      lngR: -93.27,
+      hourBucket: Math.floor(at.getTime() / 3_600_000),
+    });
     expect(hourBucketFor(at)).toBe(Math.floor(at.getTime() / 3_600_000));
   });
 
