@@ -1263,9 +1263,9 @@ describe("ClosetGrid: the search the router hands it (design 174)", () => {
       "href",
       "/closet?group=tops",
     );
-    expect(within(rail).getByRole("link", { name: /^Outer/ })).toHaveAttribute(
+    expect(within(rail).getByRole("link", { name: /^All/ })).toHaveAttribute(
       "href",
-      "/closet?group=outer&from=4.4&to=10",
+      "/closet?from=4.4&to=10",
     );
   });
 });
