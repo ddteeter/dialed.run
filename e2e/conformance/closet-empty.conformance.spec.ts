@@ -11,7 +11,10 @@ import { withLocalDb } from "../support/local-db";
 import { closetUserId } from "./closet-seed";
 
 /**
- * The closet at desk with no rail, against round 22's ruling 16.
+ * The closet's heading row, empty state and Add tile, against round 22's
+ * ruling 16. The ruling was written for C without its rail; R-94 has put
+ * the rail back beside the grid (design 174), and every rule checked here
+ * still holds with it there.
  *
  * **Ruled, not drawn** — round 22 answered it in words ("drawings due
  * round 23"), so the words are what the board gives to compare against.

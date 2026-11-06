@@ -8,6 +8,7 @@ import {
   wardrobeItems,
 } from "../../src/db/schema-core";
 import { manualConditions } from "../../src/db/schema-weather";
+import { unitToC } from "../../src/lib/contracts/temperature";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { expect, test } from "../support/a11y";
@@ -293,8 +294,9 @@ test("F at the desk · the rail card is round 26's rows, newest first, marked, u
     brand: "Tracksmith",
     productId: newUlid(),
     name: "Harrier",
-    estTempLowC: 38,
-    estTempHighC: 46,
+    // The board's 38–46°F, as the Celsius the column holds (R-94).
+    estTempLowC: unitToC(38, "f"),
+    estTempHighC: unitToC(46, "f"),
     createdAt: now + 3 * 86_400,
   });
   await wear(harrier, { count: 41, dialed: 8, bands: 3 });
