@@ -69,7 +69,7 @@ All new reads are in `modules/feed`; routes only wire. No schema change.
 
 Round 47 (113–119) answered all five. The histogram is cut, the sentence
 rule is confirmed, and every other guess stands. 112b was taken here.
-Design-deltas item 114 holds the sentence's own readings.
+Design-deltas item 137 holds the sentence's own readings.
 
 ## Register changes for the coordinator
 

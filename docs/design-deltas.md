@@ -1006,7 +1006,9 @@ _Nothing from 99 on is open: round 45 answered the last of it._
        never `0/0`. It is said "8 of 9 runs dialed in 38–46°".
        **The ask:** confirm, or draw the ones that should differ.
 
-114. **E2-lite's summary sentence, where round 47 #114 is silent (design
+<!-- Numbered 137: rounds 47 and 48 filed 112–136. A list break, so Prettier keeps the number. -->
+
+137. **E2-lite's summary sentence, where round 47 #114 is silent (design
      178).** The bars count closet groups, not garment types, so the
      sentence names groups as the bars do, in lower case. The Feed board's
      "long sleeve and shorts" reads "tops and bottoms" in the build. The
