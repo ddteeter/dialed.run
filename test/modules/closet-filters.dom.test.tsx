@@ -579,4 +579,18 @@ describe("ClosetFilters: the rail's look", () => {
     expect(link(/^All/)).not.toHaveClass("rounded-pill");
     expect(link(/^All/).closest("ul")).toHaveClass("flex-col");
   });
+
+  it("gives every choice, link or toggle, the 44px target and ink text", async () => {
+    await rail({ onSearch: vi.fn() });
+    for (const choice of [link(/^All/), button(/^Covered/)]) {
+      expect(choice).toHaveClass(
+        "target",
+        "flex",
+        "items-center",
+        "gap-2",
+        "text-ink",
+        "no-underline",
+      );
+    }
+  });
 });
