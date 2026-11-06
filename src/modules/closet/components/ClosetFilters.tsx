@@ -64,11 +64,15 @@ export interface ClosetFiltersProps {
  * toggle, so both are styled — by the attribute's presence, because a
  * link to exactly this page is `aria-current="page"` (the router's) and
  * the chosen COVERAGE link, which leads away to clear it, is `"true"`.
+ * What the two share is its own constant, `target` in it, so a reader —
+ * and the 44px check, which resolves string constants only — sees it.
  */
+const CHOICE_BASE = "target flex items-center gap-2 text-ink no-underline";
+
 const CHOICE_CLASS: Readonly<Record<FiltersVariant, string>> = {
-  rail: "target flex items-center gap-2 text-body text-ink no-underline [&[aria-current]]:font-bold aria-pressed:font-bold",
+  rail: "text-body [&[aria-current]]:font-bold aria-pressed:font-bold",
   chips:
-    "target flex items-center gap-2 rounded-pill border border-hairline px-3 py-1 text-small text-ink no-underline [&[aria-current]]:border-ink [&[aria-current]]:bg-ink [&[aria-current]]:text-ground aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-ground",
+    "rounded-pill border border-hairline px-3 py-1 text-small [&[aria-current]]:border-ink [&[aria-current]]:bg-ink [&[aria-current]]:text-ground aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-ground",
 };
 
 const GROUP_CLASS: Readonly<Record<FiltersVariant, string>> = {
@@ -140,7 +144,7 @@ function FilterGroup({
                 // All while Tops is set — would be called current too.
                 activeOptions={{ exact: true }}
                 aria-current={option.isCurrent ? "true" : undefined}
-                className={CHOICE_CLASS[variant]}
+                className={`${CHOICE_BASE} ${CHOICE_CLASS[variant]}`}
               >
                 <OptionBody option={option} />
               </Link>
@@ -151,7 +155,7 @@ function FilterGroup({
                 onClick={() => {
                   onPick(option.search);
                 }}
-                className={CHOICE_CLASS[variant]}
+                className={`${CHOICE_BASE} ${CHOICE_CLASS[variant]}`}
               >
                 <OptionBody option={option} />
               </button>
