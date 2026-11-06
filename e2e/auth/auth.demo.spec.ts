@@ -247,7 +247,7 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   await scene(page, "O0 · What should runners call you?");
   await expect(page).toHaveURL(/\/onboarding\/handle/u, { timeout: 15_000 });
   await hydrated(page);
-  await expect(page.getByText("Step 1 of 4")).toBeVisible();
+  await expect(page.getByText("Step 1 of 3")).toBeVisible();
   const handleField = page.getByRole("textbox", { name: "Username" });
   await handleField.fill("Admin");
   await expect(handleField).toHaveValue("admin");

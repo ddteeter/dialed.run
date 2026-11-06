@@ -207,7 +207,7 @@ describe("O0's head", () => {
       level: 1,
       name: "What should runners call you?",
     });
-    const kicker = screen.getByText("Step 1 of 4");
+    const kicker = screen.getByText("Step 1 of 3");
     expect(kicker.compareDocumentPosition(heading)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
@@ -269,7 +269,7 @@ describe("O0's re-pick after a moderator's rename (ACC-12; round 27 #16)", () =>
     expect(
       screen.getByRole("textbox", { name: "Username" }),
     ).toHaveAccessibleDescription("3 to 20 letters, numbers or underscores.");
-    expect(screen.queryByText("Step 1 of 4")).toBeNull();
+    expect(screen.queryByText("Step 1 of 3")).toBeNull();
     expect(
       screen.getByRole("button", { name: "Save username" }),
     ).toBeInTheDocument();
@@ -330,7 +330,7 @@ describe("O0's re-pick after a moderator's rename (ACC-12; round 27 #16)", () =>
         onRepicked={onRepicked}
       />,
     );
-    expect(screen.getByText("Step 1 of 4")).toHaveClass("text-muted");
+    expect(screen.getByText("Step 1 of 3")).toHaveClass("text-muted");
     expect(screen.queryByRole("button", { name: /^Keep/u })).toBeNull();
     const user = userEvent.setup();
     await user.type(field(), "dee");

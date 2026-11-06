@@ -4,7 +4,7 @@ import { requireSession } from "../../modules/auth/functions";
 import { addFromTapListFn } from "../../modules/closet/functions";
 import { TapListForm } from "../../modules/onboarding/components/TapListForm";
 import { starterListQuery } from "../../modules/onboarding/functions";
-import { Page } from "../../ui";
+import { OnboardingProgress, Page } from "../../ui";
 
 /**
  * Screen O3. The list arrives already ordered for this runner's climate
@@ -30,7 +30,11 @@ function TapListPage() {
 
   return (
     <main>
-      <Page title="Start your closet" width="panel">
+      <Page
+        title="Start your closet"
+        kicker={<OnboardingProgress at="tapList" />}
+        width="panel"
+      >
         <TapListForm
           entries={starter.entries}
           fold={starter.fold}

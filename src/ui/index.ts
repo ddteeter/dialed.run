@@ -17,6 +17,7 @@ export { ListSection } from "./ListSection";
 export { CoverageMark, VerdictMark } from "./Marks";
 export type { CoverageLevel, VerdictKind } from "./Marks";
 export { Mono } from "./Mono";
+export { OnboardingProgress } from "./OnboardingProgress";
 export { Page } from "./Page";
 export { SlowLabel } from "./SlowLabel";
 export { useTappedSlow } from "./tapped-slow";

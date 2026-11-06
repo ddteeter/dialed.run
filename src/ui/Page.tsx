@@ -46,6 +46,7 @@ const WIDTH_CLASS: Readonly<Record<PageWidth, string>> = {
 
 export function Page({
   title,
+  kicker,
   width = "column",
   headingAction,
   focusTitle = false,
@@ -56,6 +57,11 @@ export function Page({
    * the one, where `RunDetail` renders it.
    */
   title?: string | undefined;
+  /**
+   * Sits above the heading in one group with it, as an onboarding step's
+   * progress does (`OnboardingProgress`, round 47 #120).
+   */
+  kicker?: ReactNode;
   width?: PageWidth | undefined;
   /**
    * Sits opposite the heading, e.g. the "+ Add" link on Runs.
@@ -94,17 +100,38 @@ export function Page({
         // so a heading does not shift when one is added: `justify-between`
         // with a single child puts it exactly where a block-level `h1`
         // sits. `m-0` because the column's `gap-6` owns the spacing.
-        <div className="flex items-center justify-between">
-          <h1
-            ref={focusTitle ? focusOnMount : undefined}
-            tabIndex={focusTitle ? -1 : undefined}
-            className="m-0 font-display text-display uppercase"
-          >
-            {title}
-          </h1>
-          {headingAction}
-        </div>
+        <PageHeading kicker={kicker}>
+          <div className="flex items-center justify-between">
+            <h1
+              ref={focusTitle ? focusOnMount : undefined}
+              tabIndex={focusTitle ? -1 : undefined}
+              className="m-0 font-display text-display uppercase"
+            >
+              {title}
+            </h1>
+            {headingAction}
+          </div>
+        </PageHeading>
       )}
+      {children}
+    </div>
+  );
+}
+
+/**
+ * The heading row, and the kicker over it when there is one: one group,
+ * so the two sit SPACE[2] apart (tokens.js: "Inside a row or chip:
+ * SPACE[2]–SPACE[3]") rather than at the column's gap between groups.
+ */
+function PageHeading({
+  kicker,
+  children,
+}: Readonly<{ kicker: ReactNode; children: ReactNode }>): JSX.Element {
+  return kicker === undefined ? (
+    <>{children}</>
+  ) : (
+    <div className="flex flex-col gap-2">
+      {kicker}
       {children}
     </div>
   );
