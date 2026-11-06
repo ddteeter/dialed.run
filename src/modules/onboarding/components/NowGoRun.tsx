@@ -40,13 +40,14 @@ const PROMISES: readonly string[] = [
  * its own caption gives — it is optional, and it is a reminder mechanism
  * rather than a data source.
  *
- * `again`: the runner is back from a refused Strava receipt's Try again,
- * which returns here when the trip started here (round 39, #66), so focus
- * lands on the offer's heading and the consent is the next thing read.
+ * `shouldFocusOffer`: the runner is back from a refused Strava receipt's
+ * Try again, which returns here when the trip started here (round 39,
+ * #66), so focus lands on the offer's heading and the consent is the next
+ * thing read.
  */
 export function NowGoRun({
-  again = false,
-}: Readonly<{ again?: boolean | undefined }>): JSX.Element {
+  shouldFocusOffer = false,
+}: Readonly<{ shouldFocusOffer?: boolean | undefined }>): JSX.Element {
   return (
     <div className="overflow-hidden rounded-sheet bg-failure text-ink">
       <div className="flex flex-col gap-3 px-5 pb-6 pt-4">
@@ -76,7 +77,7 @@ export function NowGoRun({
           </ol>
         </div>
 
-        <StravaOffer again={again} />
+        <StravaOffer shouldFocus={shouldFocusOffer} />
 
         <div className="flex flex-col gap-3">
           <Link
@@ -125,13 +126,15 @@ function Steps(): JSX.Element {
  * Nothing else." under it, *"because the consent now says it in full and
  * two versions can drift."*
  */
-function StravaOffer({ again }: Readonly<{ again: boolean }>): JSX.Element {
+function StravaOffer({
+  shouldFocus,
+}: Readonly<{ shouldFocus: boolean }>): JSX.Element {
   return (
     <div className="flex flex-col gap-3 rounded-sheet border border-hairline p-4">
       <div className="flex flex-col gap-1">
         <h2
-          ref={again ? focusOnMount : undefined}
-          tabIndex={again ? -1 : undefined}
+          ref={shouldFocus ? focusOnMount : undefined}
+          tabIndex={shouldFocus ? -1 : undefined}
           className="m-0 text-body font-semibold"
         >
           Connect Strava

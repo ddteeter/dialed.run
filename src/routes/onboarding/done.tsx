@@ -30,7 +30,7 @@ function DonePage() {
   return (
     <main>
       <Page width="panel">
-        <NowGoRun again={again === true} />
+        <NowGoRun shouldFocusOffer={again === true} />
       </Page>
     </main>
   );

@@ -19,9 +19,9 @@ import { expectConsentBeforeButton } from "../ui/strava-consent";
  * promise, not a payoff."* So the assertions are about what it says and
  * what it carefully does not.
  */
-async function renderScreen(again?: boolean) {
+async function renderScreen(shouldFocusOffer?: boolean) {
   const rootRoute = createRootRoute({
-    component: () => <NowGoRun again={again} />,
+    component: () => <NowGoRun shouldFocusOffer={shouldFocusOffer} />,
   });
   const router = createRouter({
     routeTree: rootRoute,

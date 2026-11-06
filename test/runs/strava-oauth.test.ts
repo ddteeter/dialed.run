@@ -732,7 +732,10 @@ describe("the trip's origin, beside the nonce (round 39 #66, design 172)", () =>
   });
 
   it("drops a from that is not an origin, never echoing it", () => {
-    for (const from of [null, "", "settings", "onboarding; Domain=evil", 1]) {
+    // What the route passes for a link with no `?from=`: the query's own
+    // answer for a missing key.
+    const absent = new URLSearchParams().get("from");
+    for (const from of [absent, "", "settings", "onboarding; Domain=evil", 1]) {
       expect(cookieFor(from)).toBe(
         `${STRAVA_STATE_COOKIE}=nonce-1; Path=/; Max-Age=600; HttpOnly; Secure; SameSite=Lax`,
       );
