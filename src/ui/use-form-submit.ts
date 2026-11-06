@@ -434,8 +434,16 @@ function useFieldErrors(isPending: boolean, initial: FieldErrors) {
  * Which sentence is the failure's is held beside the sentence rather than
  * as a flag, so nothing that sets the region has to remember to lower one:
  * the listener is held exactly while the region says the failure.
- * Listened for on the form element, so a control not wired through
- * `field()` — a toggle, a select — clears it as well.
+ * Any input whose path runs through the form clears it, so a control not
+ * wired through `field()` — a toggle, a select — clears it as well.
+ *
+ * **Heard on `window`, not on the form**, and this is load-bearing. A
+ * browser runs microtasks between one listener and the next, so a state
+ * update from a listener on the form re-rendered before React's own
+ * handler, which sits higher up, had read the keystroke: the controlled
+ * input was put back to its old value and the typing was lost (O0's
+ * second handle, in Chromium only — happy-dom dispatches without that
+ * checkpoint). `window` is the last stop on the way up, after React's root.
  */
 function useStatus(formRef: RefObject<HTMLFormElement | null>) {
   const [status, setStatus] = useState("");
@@ -443,15 +451,16 @@ function useStatus(formRef: RefObject<HTMLFormElement | null>) {
   const isSayingFailure = status === failureSaid;
 
   useEffect(() => {
-    const form = formRef.current;
-    // A hook whose form has not mounted has nothing to listen on.
-    if (!isSayingFailure || form === null) return;
-    const clear = () => {
-      setStatus("");
+    if (!isSayingFailure) return;
+    const clear = (event: Event) => {
+      const path = event.composedPath();
+      if (path.some((target) => Object.is(target, formRef.current))) {
+        setStatus("");
+      }
     };
-    form.addEventListener("input", clear);
+    globalThis.addEventListener("input", clear);
     return () => {
-      form.removeEventListener("input", clear);
+      globalThis.removeEventListener("input", clear);
     };
   }, [isSayingFailure, formRef]);
 
