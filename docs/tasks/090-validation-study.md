@@ -1,3 +1,5 @@
+**Cut by D-159 (owner, 2026-11-06).** Not to be dispatched.
+
 # Task 090 — Recommendation Validation Study (PARALLEL, NON-BLOCKING — D-02)
 
 Not a code lane. Runs alongside anything, ideally early. Output feeds the

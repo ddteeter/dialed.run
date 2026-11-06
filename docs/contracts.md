@@ -281,7 +281,7 @@ created_at   int
 - A run appears in the feed **only when it has a shared (`runners` or
   `world`) outfit_entry**.
 - The shared post shows the 5-state verdict label. What is never public:
-  aggregate verdict history, coverage charts, per-item flags/notes, thermal level.
+  aggregate verdict history, coverage charts, per-item flags, thermal level.
 
 ### outfit_entry_items
 
@@ -289,7 +289,7 @@ created_at   int
 entry_id   text FK
 item_id    text FK
 flag       text   -- enum: too_much | not_enough, NULLABLE
-note       text   -- NULLABLE, private to the owner
+note       text   -- NULLABLE, private to the owner (cut for v1, D-160; column kept)
 PK (entry_id, item_id)
 ```
 

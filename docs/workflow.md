@@ -86,8 +86,8 @@ Suggested rollout order if you'd rather stagger than run four at once:
 103 (simplest, proves the loop) → 101 + 102 together → 104 (touches the most
 seams) → 105 + 107 after 101 merges.
 
-Task 090 (validation study) is independent of everything — run it whenever,
-ideally early; its output feeds the call epic, not v1.
+Task 090 (validation study) is cut by D-159 and is not dispatched; the call
+epic learns from v1's verdict history instead.
 
 ## Adoption lanes (sequential on main, after the v1 lanes)
 
@@ -210,5 +210,6 @@ Where the old checklist's items went:
 ## After v1
 
 The call epic is next (see `docs/post-mvp.md`); its packets get written the
-same way (design doc template, worktree lanes) once the validation study
-(090) reports and v1 verdict data exists.
+same way (design doc template, worktree lanes) once v1 verdict data exists.
+The engine starts from the generic dressing chart; there is no validation
+study (D-159).
