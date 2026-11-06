@@ -6,7 +6,6 @@ import {
   inFlight,
   useControlAction,
 } from "../../../ui";
-import { HANDLE_COPY } from "../handle-copy";
 import type { HandleClaim, RenameNotice } from "../username";
 import { HandleForm } from "./HandleForm";
 import { HandleStep } from "./HandleStep";
@@ -97,7 +96,7 @@ export function OnboardingHandle({
           <HandleForm
             carry="page"
             claim={claim}
-            hint={HANDLE_COPY.repickHint}
+            isRuleOnly
             submitLabel="Save username"
             pendingLabel="Saving"
             successMessage="Username saved."

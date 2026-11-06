@@ -135,6 +135,8 @@ describe("RunnerAtHandle", () => {
         unfollow={done}
         reportAffordanceFor={reportFor}
       />,
+      // Under /feed, where the router would call a prefix match current.
+      "/feed/u/old_name",
     );
 
     expect(screen.getByText("This runner changed their name.")).toBeVisible();
@@ -142,6 +144,10 @@ describe("RunnerAtHandle", () => {
       "href",
       "/feed",
     );
+    // Back is never where the runner is.
+    expect(
+      screen.getByRole("link", { name: "Back to feed" }),
+    ).not.toHaveAttribute("aria-current");
     // Nobody to follow, report or name.
     expect(screen.queryByRole("heading")).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();

@@ -14,18 +14,21 @@ import {
 import {
   distanceNumber,
   formatDuration,
-  formatPace,
+  paceForms,
+  spokenDuration,
 } from "../../../lib/contracts/measures";
 import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
 import {
   GarminAttribution,
   type ControlFailure,
   ControlFailureBand,
+  describedByFor,
   FormFailureBand,
   FormField,
   FormStatus,
   Mono,
   PendingLabel,
+  Spoken,
   SubmitButton,
   useFormSubmit,
   WeatherAttribution,
@@ -66,21 +69,49 @@ const OPEN_THAT_RUN =
   "target flex items-center justify-center rounded-card bg-ink px-6 py-4 font-display text-body uppercase text-ground no-underline";
 
 /**
+ * Where focus goes when the card takes the well's place. The well held
+ * focus — the runner had just picked a file in it — and its input went
+ * with it, leaving focus on the page itself. So the strip's line takes it,
+ * and a screen reader starts from the card's first words. Only when focus
+ * is lost: a runner who has moved on keeps their place. A ref callback at
+ * module scope, as `focusOnMount` below, so React calls it once as the
+ * strip mounts.
+ */
+export function focusIfLost(line: HTMLElement | null | undefined): void {
+  // A removed element's focus falls to the body, in every browser.
+  if (document.activeElement === document.body) line?.focus();
+}
+
+/**
  * The card's header strip: the file, and REPLACE — *"the only way back"*
- * to the drop zone (round 20).
+ * to the drop zone (round 20). Replace's name carries the file it
+ * replaces, after the word it shows (WCAG 2.5.3).
  */
 function FileStrip({
   label,
+  filename,
   onReplace,
-}: Readonly<{ label: string; onReplace: () => void }>): JSX.Element {
+}: Readonly<{
+  label: string;
+  filename: string;
+  onReplace: () => void;
+}>): JSX.Element {
   return (
     <div className="flex items-center justify-between gap-3 bg-tint px-4 py-2">
       {/* `--quiet`: the strip is tinted, and `--label` is 4.0:1 on the tint. */}
-      <Mono step="xs" className="min-w-0 truncate text-quiet">
-        {label}
-      </Mono>
+      <span
+        ref={focusIfLost}
+        tabIndex={-1}
+        data-part="file-line"
+        className="min-w-0 truncate"
+      >
+        <Mono step="xs" className="text-quiet">
+          {label}
+        </Mono>
+      </span>
       <button
         type="button"
+        aria-label={`Replace ${filename}`}
         onClick={onReplace}
         className="target shrink-0 border-none bg-transparent font-semibold text-cold-text"
       >
@@ -113,17 +144,29 @@ function TimeButton({
 }
 
 /**
-The run in one line: "6.2 mi · 51:38".
+The run in one line: "6.2 mi · 51:38", its time said in words.
 */
 function Headline({
   run,
   units,
 }: Readonly<{ run: RunSummary; units: Units }>): JSX.Element {
+  const distance = `${distanceNumber(run.distanceM, units.distance)} ${units.distance}`;
   return (
     <p className="m-0 font-display text-title uppercase">
-      {`${distanceNumber(run.distanceM, units.distance)} ${units.distance} · ${formatDuration(run.durationS)}`}
+      <Spoken
+        shown={`${distance} · ${formatDuration(run.durationS)}`}
+        said={`${distance}, ${spokenDuration(run.durationS)}`}
+      />
     </p>
   );
+}
+
+/**
+The pace cell, said in words; nothing for a run with no distance.
+*/
+function paceCell(run: RunSummary, units: Units): ReactNode {
+  const pace = paceForms(run.durationS, run.distanceM, units.distance);
+  return pace === undefined ? undefined : <Spoken key="pace" {...pace} />;
 }
 
 /**
@@ -132,16 +175,20 @@ The mono facts line, cells split by a hairline bar as the board draws them.
 function Facts({ children }: Readonly<{ children: ReactNode[] }>): JSX.Element {
   return (
     <p className="m-0 flex flex-wrap items-center gap-x-2 font-mono text-mono-sm uppercase text-label">
-      {children.map((cell, index) => (
-        <span key={String(index)} className="flex items-center gap-2">
-          {index === 0 ? undefined : (
-            <span aria-hidden="true" className="text-hairline-2">
-              |
-            </span>
-          )}
-          {cell}
-        </span>
-      ))}
+      {/* A cell with nothing in it — a run with no distance has no pace —
+          is no cell, so no rule stands before the first one drawn. */}
+      {children
+        .filter((cell) => cell !== undefined)
+        .map((cell, index) => (
+          <span key={String(index)} className="flex items-center gap-2">
+            {index === 0 ? undefined : (
+              <span aria-hidden="true" className="text-hairline-2">
+                |
+              </span>
+            )}
+            {cell}
+          </span>
+        ))}
     </p>
   );
 }
@@ -223,6 +270,9 @@ function StartTimeRow({
   fileSaid: string;
   onTime: (time: string) => void;
 }>): JSX.Element {
+  const hint = `The file said ${fileSaid}. Change it if your watch's clock was off.`;
+  const error = form.fieldErrors.time;
+  const field = form.field("time");
   return (
     <form
       ref={form.formRef}
@@ -236,14 +286,12 @@ function StartTimeRow({
     >
       {/* `FormField` with its own input, as manual entry's start does:
           `TextField` takes text types only, and a time is picked. */}
-      <FormField
-        name="time"
-        label="Start time"
-        hint={`The file said ${fileSaid}. Change it if your watch's clock was off.`}
-        error={form.fieldErrors.time}
-      >
+      <FormField name="time" label="Start time" hint={hint} error={error}>
         <input
-          {...form.field("time")}
+          {...field}
+          // Its hint or its message, whichever shows: `field`'s own
+          // pointer is only ever that message's id, so it is not passed on.
+          aria-describedby={describedByFor("time", { hint, error })}
           ref={focusOnMount}
           id="time"
           type="time"
@@ -387,13 +435,17 @@ export function ParsedCard({
         data-state="parsed"
         className="overflow-hidden rounded-card border border-hairline bg-panel desk:col-start-1 desk:row-start-1"
       >
-        <FileStrip label={`Parsed · ${filename}`} onReplace={onReplace} />
+        <FileStrip
+          label={`Parsed · ${filename}`}
+          filename={filename}
+          onReplace={onReplace}
+        />
         <div className="flex flex-col gap-2 p-4">
           <Headline run={run} units={units} />
           <GarminAttribution deviceName={run.deviceName} />
           <Facts>
             {[
-              formatPace(run.durationS, run.distanceM, units.distance),
+              paceCell(run, units),
               dayLabel(run.startedAt, zone),
               ...(isRetiming
                 ? []
@@ -590,7 +642,7 @@ export function DuplicateCard({
         data-state="duplicate"
         className="overflow-hidden rounded-card border border-hairline bg-panel"
       >
-        <FileStrip label={filename} onReplace={onReplace} />
+        <FileStrip label={filename} filename={filename} onReplace={onReplace} />
         <div className="flex flex-col gap-2 p-4">
           <Mono step="xs" className="text-muted">
             Already logged
@@ -623,7 +675,7 @@ export function DuplicateCard({
         </Link>
       )}
       <p className="m-0 text-center text-small text-muted">
-        Wrong file? Tap Replace above.
+        Wrong file? Replace it.
       </p>
     </>
   );

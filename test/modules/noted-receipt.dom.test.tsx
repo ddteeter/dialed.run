@@ -1,19 +1,38 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { NotedReceipt } from "../../src/modules/feed/components/NotedReceipt";
+import {
+  NotedReceipt,
+  notedAnnouncement,
+} from "../../src/modules/feed/components/NotedReceipt";
+
+function receiptOf(): Element {
+  const receipt = document.querySelector("[data-slot='noted']");
+  if (receipt === null) throw new Error("no receipt");
+  return receipt;
+}
 
 /**
  * A3's Noted block (design round 20): a receipt in the submit's place,
  * with no button in it.
  */
 describe("NotedReceipt", () => {
-  it("announces the sentence when it lands", () => {
+  it("shows the sentence, and is no status region of its own", () => {
     render(<NotedReceipt sentence="Houdini is now 3 of 5 in 41–50°." />);
 
-    const receipt = screen.getByRole("status");
+    // The screen's one region says it (rule 08), through
+    // `notedAnnouncement`; a second here announced the save twice.
+    expect(screen.queryByRole("status")).toBeNull();
+    const receipt = receiptOf();
     expect(receipt).toHaveTextContent("Houdini is now 3 of 5 in 41–50°.");
     expect(receipt).toHaveTextContent(/^Noted/);
+  });
+
+  it("says, for the screen's region, what it shows", () => {
+    expect(notedAnnouncement("Houdini is now 3 of 5 in 41–50°.")).toBe(
+      "Noted. Houdini is now 3 of 5 in 41–50°.",
+    );
+    expect(notedAnnouncement(undefined)).toBe("Noted.");
   });
 
   it("is the teal payoff block, with ink on it", () => {
@@ -22,7 +41,7 @@ describe("NotedReceipt", () => {
     // always ink, inverted block or not.
     render(<NotedReceipt sentence="Houdini is now 3 of 5 in 41–50°." />);
 
-    expect(screen.getByRole("status")).toHaveClass(
+    expect(receiptOf()).toHaveClass(
       "bg-teal",
       "text-accent-ink",
       "rounded-card",
@@ -40,6 +59,6 @@ describe("NotedReceipt", () => {
     // two by that name.
     render(<NotedReceipt sentence="x" />);
 
-    expect(screen.getByRole("status")).toHaveAttribute("data-slot", "noted");
+    expect(receiptOf()).toHaveTextContent(/^Noted/);
   });
 });

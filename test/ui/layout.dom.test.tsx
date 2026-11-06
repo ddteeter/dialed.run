@@ -110,6 +110,29 @@ describe("Layout", () => {
     );
     expect(placeholder).not.toBeNull();
     expect(placeholder).toHaveAttribute("aria-hidden", "true");
+    // The row is still drawn, so nothing moves, but it is no banner: a
+    // landmark holding only furniture was an empty stop in the list.
+    expect(placeholder?.parentElement).toHaveClass("pt-4", "wide:hidden");
+    expect(placeholder?.parentElement?.tagName).toBe("DIV");
+    expect(screen.getAllByRole("banner")).toStrictEqual([
+      document.querySelector("[data-slot='top-bar']"),
+    ]);
+  });
+
+  it("makes the row a banner once it holds the bell", async () => {
+    await renderWithRouter(
+      <Layout bell={<button type="button">Notifications</button>}>page</Layout>,
+    );
+
+    // Two banners: the top bar's header and the bell row. Only one is
+    // displayed at any width.
+    const rows = screen.getAllByRole("banner");
+    expect(rows).toHaveLength(2);
+    expect(rows[1]).toHaveClass("pt-4", "wide:hidden");
+    const [, rowBell] = screen.getAllByRole("button", {
+      name: "Notifications",
+    });
+    expect(rowBell?.closest("header")).toBe(rows[1]);
   });
 });
 
@@ -129,7 +152,7 @@ describe("TabBar", () => {
     const nav = screen.getByRole("navigation", { name: "Main" });
     expect(nav).toBeInTheDocument();
 
-    const launcher = screen.getByRole("button", { name: "Add" });
+    const launcher = screen.getByRole("button", { name: "Add a run" });
     expect(launcher).toHaveAttribute("aria-haspopup", "dialog");
     // Never current, in any state: there is no page for it to be on.
     expect(launcher).not.toHaveAttribute("aria-current");

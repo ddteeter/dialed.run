@@ -1,11 +1,10 @@
 import type { JSX, KeyboardEvent } from "react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { cityLookupInput, cityNotFound } from "../lib/contracts/city-lookup";
 import type { CityLookup } from "../lib/contracts/city-lookup";
 import type { ResolvedPlace } from "../lib/contracts";
 import { FailureBand, PendingLabel, TextField, inFlight } from "./form";
-import { messageIdFor } from "./use-form-submit";
 import type { FieldProps } from "./use-form-submit";
 
 /**
@@ -87,6 +86,7 @@ export function CityFinder({
   const [found, setFound] = useState<ResolvedPlace>();
   const [message, setMessage] = useState<string>();
   const [hasFailed, setHasFailed] = useState(false);
+  const resolvedId = useId();
 
   /**
   A field message, said in the status region too — it is the answer.
@@ -144,13 +144,15 @@ export function CityFinder({
 
   const surrounding = field?.(name);
   const shown = message ?? error;
-  // `id` is `TextField`'s per-instance one (R-165), so the description
-  // names this finder's message rather than one built from the `name`.
-  const own = (_name: string, id: string): FieldProps => ({
+  // The description is `TextField`'s to build: it is handed `shown` as its
+  // error, so it names the message (by its per-instance id, R-165) while
+  // one shows and the hint otherwise. A second pointer from here would only
+  // ever repeat that id, or name one nothing wears.
+  const own = (): FieldProps => ({
     name,
     readOnly: (surrounding?.readOnly ?? false) || isFinding,
     "aria-invalid": shown === undefined ? undefined : true,
-    "aria-describedby": shown === undefined ? undefined : messageIdFor(id),
+    "aria-describedby": undefined,
     onInput: () => {
       surrounding?.onInput();
       setMessage(undefined);
@@ -206,13 +208,16 @@ export function CityFinder({
           data-part="resolved"
           className="flex flex-col gap-3 rounded-card border border-hairline bg-ground p-4"
         >
-          <p className="m-0 text-body">
+          <p id={resolvedId} className="m-0 text-body">
             Weather for <strong>{found.address}</strong>
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               data-part="use-this"
+              // "Use this" alone does not say what this is; the sentence
+              // above it does, so it is the button's description.
+              aria-describedby={resolvedId}
               {...inFlight(using)}
               onClick={() => {
                 onUse(found);

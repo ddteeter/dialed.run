@@ -7,7 +7,7 @@ import type { FeedItem } from "../feed";
 import { postedLabel } from "../posted";
 import { isProvidersReading, stripConditions } from "../strip";
 import { Avatar } from "./Avatar";
-import { Handle } from "./Handle";
+import { Handle, handleText } from "./Handle";
 import { UnderReview } from "./UnderReview";
 import { ConditionsCell } from "./ConditionsCell";
 
@@ -43,6 +43,17 @@ export interface PostCardProps {
  * own shared entries among everyone else's.
  */
 const OWN_SUFFIX = " · You";
+
+/**
+ * Whose run a card's Useful is about, said after "Useful": twenty cards
+ * are twenty Usefuls, and only this tells them apart.
+ */
+function whoseRun(item: FeedItem): string {
+  if (item.isOwn) return "your run";
+  return item.authorUsername === undefined
+    ? "a runner’s run"
+    : `${handleText(item.authorUsername)}’s run`;
+}
 
 export function PostCard(props: Readonly<PostCardProps>) {
   const { item, units, now, setUseful, onStatus } = props;
@@ -125,6 +136,7 @@ export function PostCard(props: Readonly<PostCardProps>) {
         viewerHasReacted={item.viewerHasReacted}
         setUseful={setUseful}
         onStatus={onStatus}
+        whose={whoseRun(item)}
       />
     </article>
   );

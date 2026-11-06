@@ -16,7 +16,8 @@ import { UnconfirmedRefusalAnswer } from "../../src/ui/unconfirmed-refusal";
 
 /**
  * The routes the feed's screens link to, stubbed, so a typed `<Link>`
- * resolves and a click can be followed.
+ * resolves and a click can be followed. The screen itself is at `at`, a
+ * literal path, which outranks a stub's `$param` at the same place.
  */
 function feedRouter(element: ReactElement, at: string) {
   const rootRoute = createRootRoute();
@@ -27,10 +28,12 @@ function feedRouter(element: ReactElement, at: string) {
       component: () => <p>{text}</p>,
     });
   // Under the answer the root mounts, so a control the server refuses for
-  // want of a confirmed address opens the stand-in sheet (D-113).
-  const indexRoute = createRoute({
+  // want of a confirmed address opens the stand-in sheet (D-113). Mounted
+  // where the history starts, so a screen can be put under /feed and its
+  // links' `aria-current` is the router's real answer there.
+  const screenRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: "/",
+    path: at,
     component: () => (
       <UnconfirmedRefusalAnswer gate={CONFIRM_FIRST}>
         {element}
@@ -39,7 +42,7 @@ function feedRouter(element: ReactElement, at: string) {
   });
   return createRouter({
     routeTree: rootRoute.addChildren([
-      indexRoute,
+      screenRoute,
       stub("/feed", "The feed"),
       stub("/feed/entry/$entryId", "An entry"),
       stub("/feed/search", "Search"),

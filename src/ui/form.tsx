@@ -2,7 +2,7 @@ import { useId } from "react";
 import type { ComponentProps, JSX, ReactNode, Ref, RefObject } from "react";
 
 import { Mono } from "./Mono";
-import { messageIdFor } from "./use-form-submit";
+import { describedByFor, hintIdFor, messageIdFor } from "./use-form-submit";
 import type {
   FieldOf,
   FieldProps,
@@ -158,9 +158,12 @@ interface LabelledFieldProps {
    */
   name: string;
   /**
-  One sentence under the control, for what the answer is used for.
-  */
-  hint?: string | undefined;
+   * One sentence under the control, for what the answer is used for.
+   *
+   * A node, not only a string, for a sentence that is drawn one way and
+   * said another — the username rule's "3–20 … _" (`Spoken`).
+   */
+  hint?: ReactNode;
   error?: string | undefined;
   children: ReactNode;
 }
@@ -182,6 +185,11 @@ interface LabelledFieldProps {
  * The hint hides while the field is failing — two sentences under one
  * control, one of them now wrong, is worse than the one that matters
  * alone.
+ *
+ * Each sentence wears an id built from the control's (`hintIdFor`,
+ * `messageIdFor`), and the control names whichever is showing through
+ * `describedByFor` — so a hint is heard with its field, not only seen
+ * under it. A control passed in raw takes the same call.
  */
 function FieldShell({
   name,
@@ -195,11 +203,50 @@ function FieldShell({
       {caption}
       {children}
       {hint !== undefined && error === undefined ? (
-        <span className="text-micro text-muted">{hint}</span>
+        <span id={hintIdFor(name)} className="text-micro text-muted">
+          {hint}
+        </span>
       ) : undefined}
       <FieldMessage name={name} error={error} />
     </>
   );
+}
+
+/**
+ * A control's `field` props, described by whichever of its hint and
+ * message is showing and then by anything `field` already named
+ * (`describedByFor`), for the controls here drawn inside a `FieldShell`.
+ */
+function described(
+  props: FieldProps,
+  controlId: string,
+  sentences: Readonly<{ hint: ReactNode; error: string | undefined }>,
+): FieldProps {
+  return {
+    ...props,
+    "aria-describedby": describedByFor(
+      controlId,
+      sentences,
+      props["aria-describedby"],
+    ),
+  };
+}
+
+/**
+ * `field()`'s props, also described by one more sentence when there is
+ * one — a single option's, which `described` then puts after the field's
+ * own hint or message.
+ */
+function alsoDescribedBy(
+  props: FieldProps,
+  id: string | undefined,
+): FieldProps {
+  if (id === undefined) return props;
+  const named = props["aria-describedby"];
+  return {
+    ...props,
+    "aria-describedby": named === undefined ? id : `${named} ${id}`,
+  };
 }
 
 // The visible legend: `--label`, as the paragraph below says.
@@ -415,7 +462,7 @@ export function TextField({
   onChange: (value: string) => void;
   field: FieldOf;
   error?: string | undefined;
-  hint?: string | undefined;
+  hint?: ReactNode;
   type?: "text" | "email" | "password" | "url" | "date";
   placeholder?: string | undefined;
   /**
@@ -452,7 +499,7 @@ export function TextField({
       action={action}
     >
       <input
-        {...field(name, id)}
+        {...described(field(name, id), id, { hint, error })}
         id={id}
         type={type}
         autoComplete={autoComplete}
@@ -856,11 +903,18 @@ interface ChoosableProps<TOption extends string> {
 }
 
 /**
- * The value of `ChoiceField`'s "—" option: nothing chosen. Exported so a
- * caller that models "nothing chosen" as `undefined` maps it to the select
+ * The value of `ChoiceField`'s "Not set" option: nothing chosen. Exported
+ * so a caller that models "nothing chosen" as `undefined` maps it to the select
  * with the option's own value, not a second copy of it.
  */
 export const NO_CHOICE = "";
+
+/**
+ * What the empty option says when the caller has no placeholder. Words,
+ * not "—": a dash is read as "dash" or as nothing at all, and neither
+ * says the field is unanswered. Manual entry's own select already says it.
+ */
+const NOT_SET = "Not set";
 
 /**
  * A native `<select>` with the arrow drawn as the text mark ▾, inset to match
@@ -934,7 +988,7 @@ export function ChoiceField<TOption extends string>({
   options,
   optionLabels,
   onChange,
-  placeholder = "—",
+  placeholder = NOT_SET,
 }: Readonly<
   Omit<ChoosableProps<TOption>, "field"> & {
     /**
@@ -947,7 +1001,7 @@ export function ChoiceField<TOption extends string>({
     /**
      * What "nothing chosen" means here, when it means something: Edit's
      * product value, which applies until the runner picks their own
-     * (round 43 #94). Otherwise the option reads "—".
+     * (round 43 #94). Otherwise the option reads `NOT_SET`.
      */
     placeholder?: string | undefined;
   }
@@ -957,7 +1011,7 @@ export function ChoiceField<TOption extends string>({
   return (
     <FormField name={name} id={id} label={label} error={error}>
       <Select
-        {...field(name, id)}
+        {...described(field(name, id), id, { hint: undefined, error })}
         id={id}
         value={value}
         onChange={(event) => {
@@ -1079,6 +1133,14 @@ export function ChoiceList<TOption extends string>(
        */
       optionHints?: Readonly<Record<TOption, string>> | undefined;
       /**
+       * The id of a sentence elsewhere on the page that describes one
+       * option, or `undefined` for none — A3's audience line, which is
+       * about the checked radio only, so it is heard with that one and
+       * not with both (a11y judgment audit, 2026-11-04). It joins the
+       * group's own hint or message rather than replacing it.
+       */
+      optionDescribedBy?: ((option: TOption) => string | undefined) | undefined;
+      /**
        * `chips` wraps the options; omitted, they stack one per line.
        *
        * No `= "rows"` default: the stacked layout is what you get by not
@@ -1162,7 +1224,11 @@ export function ChoiceList<TOption extends string>(
             }
           >
             <input
-              {...field(name)}
+              {...described(
+                alsoDescribedBy(field(name), props.optionDescribedBy?.(option)),
+                name,
+                { hint, error },
+              )}
               type="radio"
               value={option}
               checked={value === option}

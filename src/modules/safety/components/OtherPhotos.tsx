@@ -40,6 +40,7 @@ export function OtherPhotos({
   return (
     <PhotoSection
       part="other-photos"
+      level={3}
       title={
         total === 0
           ? "Their other photos"
@@ -69,32 +70,41 @@ export function OtherPhotos({
 
 /**
  * The frame both photo lists on a Review row share (this and
- * `PhotoMatches`): a mono label carrying the count, then the list or the
- * sentence standing in for it. `titleRef` makes the label a place focus
- * can be put by script (MATCHING PHOTOS, once its last garment tile is
- * decided — round 42 #89); it is a label, not a control, so never a tab
- * stop.
+ * `PhotoMatches`, and Review's ReleaseHolds): a mono heading carrying the
+ * count, then the list or the sentence standing in for it. `titleRef`
+ * makes the heading a place focus can be put by script (MATCHING PHOTOS,
+ * once its last garment tile is decided — round 42 #89); it is a heading,
+ * not a control, so never a tab stop.
  */
 export function PhotoSection({
   part,
   title,
+  level,
   titleRef,
   children,
 }: Readonly<{
   part: string;
   title: string;
-  titleRef?: Ref<HTMLSpanElement> | undefined;
+  /**
+   * Where the section sits under Review's h1: 2 beside the page's own
+   * lists (Held in the last day), 3 inside a row of one of them (a row's
+   * other photos, its matches). A screen reader moves by heading, and a
+   * kicker drawn as a span was not one (a11y judgment audit, 2026-11-04).
+   */
+  level: 2 | 3;
+  titleRef?: Ref<HTMLHeadingElement> | undefined;
   children: ReactNode;
 }>): JSX.Element {
+  const Heading = level === 2 ? "h2" : "h3";
   return (
     <div data-part={part} className="flex flex-col gap-2">
-      <span
+      <Heading
         ref={titleRef}
         tabIndex={titleRef === undefined ? undefined : -1}
         className="text-label uppercase"
       >
         <Mono step="xs">{title}</Mono>
-      </span>
+      </Heading>
       {children}
     </div>
   );

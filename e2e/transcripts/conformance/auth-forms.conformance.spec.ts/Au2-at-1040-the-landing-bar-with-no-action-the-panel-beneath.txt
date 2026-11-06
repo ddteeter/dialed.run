@@ -1,8 +1,7 @@
 document
 banner
 link, dialed.run home
-dialed
-.run
+dialed.run
 end of link, dialed.run home
 end of banner
 main
@@ -13,8 +12,14 @@ Email
 textbox, Email
 Password
 Password
-button, Show, # control
-link, Forgot it?
+button, Show password, # control
+Show
+password
+end of button, Show password, # control
+link, Forgot it? Reset your password
+Forgot it?
+Reset your password
+end of link, Forgot it? Reset your password
 button, Log in
 Log in
 end of button, Log in

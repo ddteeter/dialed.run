@@ -1,7 +1,6 @@
 document
 main
-dialed
-.run
+dialed.run
 heading, Create account, level 1
 form
 status
@@ -15,8 +14,11 @@ Date of birth
 Email
 textbox, Email
 Password
-Password
-button, Show, # control
+Password, At least # characters.
+button, Show password, # control
+Show
+password
+end of button, Show password, # control
 At least # characters.
 button, Create account
 Create account

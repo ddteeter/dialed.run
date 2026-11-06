@@ -21,6 +21,7 @@ import type { PhotoStep } from "../../../ui";
 import { ProductLink } from "../../../ui/ProductLink";
 import { garmentLabel } from "../../../lib/garment-label";
 import { isPhotoBeingChecked, photoUrlFor } from "../photo-url";
+import { runsLabel } from "../label";
 import { retiredLabel } from "../retired-label";
 import { kindLabel, typeOf } from "../type-labels";
 import { useRunnerZone } from "./use-runner-zone";
@@ -66,6 +67,17 @@ const VISIBILITY_WORDS = {
 } as const satisfies Record<Exclude<GarmentVisibility, "plain">, string>;
 
 /**
+ * The weight as the line says it: round 22's §AG reads "· midweight", and
+ * "mid" alone said nothing to a reader or a screen reader (a11y judgment
+ * audit, 2026-11-04).
+ */
+const WEIGHT_WORDS = {
+  light: "lightweight",
+  mid: "midweight",
+  heavy: "heavyweight",
+} as const satisfies Record<NonNullable<EffectiveAttributes["weight"]>, string>;
+
+/**
  * One of the words beside §AG's composition, and whether the product lent
  * it: the runner left that field empty and the shop's page filled it
  * (round 43 #94). A lent word is drawn in --quiet, the runner's in ink.
@@ -90,7 +102,10 @@ function attributeWords(
 ): AttributeWord[] {
   const words: AttributeWord[] = [];
   if (effective.weight) {
-    words.push({ word: effective.weight, isLent: item.weight === null });
+    words.push({
+      word: WEIGHT_WORDS[effective.weight],
+      isLent: item.weight === null,
+    });
   }
   if (effective.fabric) {
     words.push({ word: effective.fabric, isLent: item.fabric === null });
@@ -309,16 +324,24 @@ function Stats({ detail }: Readonly<{ detail: Detail }>): JSX.Element {
   const summary = summaryOf(detail);
   const km = Math.round(summary.mileageM / 1000);
   const verdicts = summary.verdictCount;
-  const dialed =
-    verdicts > 0
-      ? ` · ${String(summary.dialedCount)}/${String(verdicts)} dialed`
-      : "";
+  const dialed = String(summary.dialedCount);
   return (
     <div
       data-part="stats"
       className="flex flex-col gap-1 border-y border-hairline py-3 wide:flex-row wide:items-baseline wide:gap-6"
     >
-      <Mono step="md">{`${String(km)} km logged${dialed}`}</Mono>
+      <Mono step="md">
+        {`${String(km)} km logged`}
+        {/* "3/5" is spoken "three slash five": the eye gets the ratio,
+            a screen reader the sentence. */}
+        {verdicts > 0 ? (
+          <>
+            {" · "}
+            <span aria-hidden="true">{`${dialed}/${String(verdicts)} dialed`}</span>
+            <span className="sr-only">{`${dialed} of ${runsLabel(verdicts)} dialed`}</span>
+          </>
+        ) : undefined}
+      </Mono>
       {tempRange ? (
         <p className="m-0 text-dialed-text">
           <Mono>{item.retired ? "Worked at " : "Works at "}</Mono>
@@ -353,7 +376,12 @@ function PairsWith({
             key={pair.item.id}
             className="rounded-pill border border-ink px-3 py-1"
           >
-            <Mono step="xs">{`${pair.item.name} · ${String(pair.count)}`}</Mono>
+            <Mono step="xs">
+              {pair.item.name}
+              {/* The chip draws the count bare; spoken, it says of what. */}
+              <span aria-hidden="true">{` · ${String(pair.count)}`}</span>
+              <span className="sr-only">{`, ${runsLabel(pair.count)} dialed together`}</span>
+            </Mono>
           </li>
         ))}
       </ul>
@@ -765,6 +793,9 @@ export function GarmentDetail({
               className="target inline-flex cursor-pointer items-center rounded-pill border border-hairline bg-transparent px-5 py-3 text-body font-semibold text-ink no-underline"
             >
               Edit
+              {/* Every action names the piece it acts on, for a screen
+                  reader that lands on it alone. */}
+              <span className="sr-only">{` ${label}`}</span>
             </Link>
             <button
               type="button"
@@ -774,6 +805,7 @@ export function GarmentDetail({
               className="target inline-flex cursor-pointer items-center rounded-pill border border-hairline bg-transparent px-5 py-3 text-body font-semibold text-ink no-underline"
             >
               Retire
+              <span className="sr-only">{` ${label}`}</span>
             </button>
           </>
         )}
@@ -788,6 +820,7 @@ export function GarmentDetail({
           className="target ml-auto cursor-pointer border-none bg-transparent px-1 text-body text-quiet underline underline-offset-4"
         >
           Delete
+          <span className="sr-only">{` ${label}`}</span>
         </button>
       </div>
       <ControlFailureBand

@@ -1,7 +1,6 @@
 document
 main
-dialed
-.run
+dialed.run
 heading, Every run has an outfit. Log it., level 1
 paragraph
 A virtual wardrobe for runners: what you wore, on which run, in which weather.

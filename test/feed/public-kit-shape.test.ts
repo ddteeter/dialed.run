@@ -22,7 +22,7 @@ const BARE: PublicKit = {
   handle: "maya_runs",
   day: "Sat Oct 18",
   distance: { value: "6.2", unit: "mi" },
-  time: { value: "52:10", isMoving: true },
+  time: { value: "52:10", said: "52 minutes 10 seconds", isMoving: true },
   pieces: [],
   cardVersion: "0123456789abcdef",
 };

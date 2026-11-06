@@ -131,7 +131,7 @@ test("E1's v1 card is composed as the board draws it, with a photo, without, and
     // Following anyone opens on Following (round 22).
     await expect(
       page.getByRole("button", { name: "Following" }),
-    ).toHaveAttribute("aria-current", "page");
+    ).toHaveAttribute("aria-pressed", "true");
 
     // **The same parts, in the same fixed order**: author and badge,
     // photo, caption, strip, Useful — and a missing one absent.
@@ -203,7 +203,7 @@ test("E1's empty Following says what the board says, word for word", async ({
   // tab away, and the board's empty state is what is there.
   await expect(
     page.getByRole("button", { name: "Your conditions" }),
-  ).toHaveAttribute("aria-current", "page");
+  ).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Following" }).click();
 
   const built = '[data-part="feed"][data-state="empty"]';

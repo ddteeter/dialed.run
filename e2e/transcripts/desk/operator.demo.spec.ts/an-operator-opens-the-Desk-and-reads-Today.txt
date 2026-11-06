@@ -1,21 +1,22 @@
 document
 navigation, Desk
-dialed
-.run
+dialed.run
 Desk
 Operator
 list
 listitem, level 1, position 1, set size 5
-link, :when #, current page
+link, :when # gave up
 :when
 #
-end of link, :when #, current page
+gave up
+end of link, :when # gave up
 end of listitem, level 1, position 1, set size 5
 listitem, level 1, position 2, set size 5
-link, Review #, current page
+link, Review # waiting, current page
 Review
 #
-end of link, Review #, current page
+waiting
+end of link, Review # waiting, current page
 end of listitem, level 1, position 2, set size 5
 listitem, level 1, position 3, set size 5
 link, Access
@@ -24,6 +25,7 @@ end of link, Access
 end of listitem, level 1, position 3, set size 5
 listitem, level 1, position 4, set size 5
 Duplicates
+, not built yet
 end of listitem, level 1, position 4, set size 5
 listitem, level 1, position 5, set size 5
 link, Runners
@@ -41,14 +43,13 @@ end of heading, # waiting, level 2
 list
 listitem, level 1, position 1, set size 3
 button, entry · :id, expanded
-# people
 Nobody reported this.
 reports
 form
 status
 Why it comes down
 combobox, Why it comes down, has popup listbox, not expanded
-option, —, selected, position 1, set size 7
+option, Not set, selected, position 1, set size 7
 option, it shows where someone lives, home, not selected, position 2, set size 7
 option, it's sexual or explicit, explicit, not selected, position 3, set size 7
 option, it's an intimate image shared without consent, intimate, not selected, position 4, set size 7
@@ -65,13 +66,11 @@ end of form
 end of listitem, level 1, position 1, set size 3
 listitem, level 1, position 2, set size 3
 button, profile · :id, not expanded
-# people
 Nobody reported this.
 reports
 end of listitem, level 1, position 2, set size 3
 listitem, level 1, position 3, set size 3
 button, photo · :id, not expanded
-# people
 Nobody reported this.
 classifier
 end of listitem, level 1, position 3, set size 3
@@ -82,14 +81,14 @@ form
 status
 What it is
 combobox, What it is, has popup listbox, not expanded
-option, —, selected, position 1, set size 3
+option, Not set, selected, position 1, set size 3
 option, A photo, photo, not selected, position 2, set size 3
 option, A whole entry, entry, not selected, position 3, set size 3
 end of combobox, What it is, has popup listbox, not expanded
 Its id
 textbox, Its id
 The notice
-textbox, The notice
+textbox, The notice, Who sent it, and its reference.
 Who sent it, and its reference.
 button, Take it down
 Take it down

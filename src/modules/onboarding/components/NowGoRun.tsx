@@ -57,9 +57,9 @@ export function NowGoRun(): JSX.Element {
         </p>
 
         <div className="flex flex-col gap-3">
-          <Mono step="xs" className="text-hiviz-text">
-            What happens as you log
-          </Mono>
+          <h2 className="m-0 text-hiviz-text">
+            <Mono step="xs">What happens as you log</Mono>
+          </h2>
           <ol className="m-0 flex list-none flex-col gap-3 p-0">
             {PROMISES.map((promise, index) => (
               <li key={promise} className="flex items-start gap-3">
@@ -124,7 +124,7 @@ function StravaOffer(): JSX.Element {
   return (
     <div className="flex flex-col gap-3 rounded-sheet border border-hairline p-4">
       <div className="flex flex-col gap-1">
-        <span className="text-body font-semibold">Connect Strava</span>
+        <h2 className="m-0 text-body font-semibold">Connect Strava</h2>
         <span className="text-micro text-muted">
           So we can remind you. Optional.
         </span>

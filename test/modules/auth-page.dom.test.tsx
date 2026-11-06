@@ -21,6 +21,7 @@ import {
   CREDENTIAL_LABELS,
   CredentialFields,
   LoginCrossLink,
+  SESSION_NOTICE_ID,
   SessionNotice,
   TOTALS_LINE,
   useAuthForm,
@@ -186,7 +187,8 @@ describe("Au2 · at rest", () => {
     // "The panel drops its own wordmark, so there is one" — the bar's.
     const own = part("panel")?.querySelector("[data-part='wordmark']");
     expect(own).toHaveClass("wide:hidden");
-    expect(own).toHaveTextContent(/^dialed\.run$/u);
+    // Plain: no brackets. Drawn, then said once by `Wordmark`'s sr-only copy.
+    expect(own).toHaveTextContent(/^dialed\.rundialed\.run$/u);
     expect(
       document.querySelector("[data-part='top-bar'] [data-part='wordmark']"),
     ).not.toBeNull();
@@ -506,8 +508,9 @@ describe("Au6 · a refusal Google's round trip brought back", () => {
  * the password — accepted by the owner, as the account cannot be used.
  */
 describe("item 23 · a closed account", () => {
-  const CLOSED_STATUS =
-    "Account closed. This account was closed for breaking the community rules. Think we got it wrong? Reply to the email we sent you. Or write to desk@dialed.run.";
+  // The kicker alone: the band carries the sentences, and browse mode
+  // reads the band, so the region saying them all again was heard twice.
+  const CLOSED_STATUS = "Account closed.";
 
   it("draws the notice over the form when the ban gate refuses a password log-in", async () => {
     const { user, onSignedIn } = await logIn();
@@ -831,6 +834,18 @@ describe("Au7 · signed out arrival", () => {
     });
   });
 
+  it("reads Password with the notice that its arrival focus skips", async () => {
+    await logIn({ carried: "run" });
+    const password = screen.getByLabelText("Password");
+    expect(password).toHaveAccessibleDescription(
+      "Log in and you're back on your run. What you typed wasn't kept.",
+    );
+    expect(password).toHaveAttribute("aria-describedby", SESSION_NOTICE_ID);
+    expect(document.querySelector(`#${SESSION_NOTICE_ID}`)).toBe(
+      part("session-notice")?.lastElementChild,
+    );
+  });
+
   it("takes focus once: typing in Email after arrival stays in Email", async () => {
     const { user } = await logIn({ carried: "run" });
     await waitFor(() => {
@@ -850,6 +865,9 @@ describe("Au7 · signed out arrival", () => {
     await logIn();
     expect(part("session-notice")).toBeNull();
     expect(screen.getByLabelText("Password")).not.toHaveFocus();
+    expect(screen.getByLabelText("Password")).not.toHaveAttribute(
+      "aria-describedby",
+    );
     expect(part("cross-link")).not.toBeNull();
     expect(screen.getByLabelText("Email")).toHaveValue("");
   });
@@ -912,12 +930,15 @@ describe("PasswordField", () => {
     expect(input).toHaveAttribute("name", "password");
     expect(screen.getByText("At least 10 characters.")).toBeVisible();
 
-    const toggle = screen.getByRole("button", { name: "Show" });
+    // The drawn word starts the name (WCAG 2.5.3), and says what it shows.
+    const toggle = screen.getByRole("button", { name: "Show password" });
+    expect(toggle).toHaveTextContent(/^Show password$/u);
+    expect(within(toggle).getByText("password")).toHaveClass("sr-only");
     expect(toggle).toHaveAttribute("type", "button");
     expect(toggle).toHaveAttribute("aria-controls", "password");
     await user.click(toggle);
     expect(input).toHaveAttribute("type", "text");
-    await user.click(screen.getByRole("button", { name: "Hide" }));
+    await user.click(screen.getByRole("button", { name: "Hide password" }));
     expect(input).toHaveAttribute("type", "password");
   });
 
@@ -928,13 +949,64 @@ describe("PasswordField", () => {
     // is 44 — so the toggle stretches to the box's 48 inside its border
     // and nothing grows it.
     render(<ArrivingPassword isArrival={false} />);
-    const toggle = screen.getByRole("button", { name: "Show" });
+    const toggle = screen.getByRole("button", { name: "Show password" });
     const box = toggle.parentElement;
     expect(box).toHaveClass("field-box", "min-h-field");
     expect(box).not.toHaveClass("py-3");
     expect(toggle).toHaveClass("target", "self-stretch");
     expect(toggle).not.toHaveClass("-my-3");
   });
+
+  it.each([
+    // No sentence of its own and none from the page: no attribute at all.
+    [{}, undefined, "", ""],
+    [
+      { hint: "At least 10 characters." },
+      undefined,
+      "password-hint",
+      "At least 10 characters.",
+    ],
+    [
+      { hint: "At least 10 characters.", error: "Too short." },
+      undefined,
+      "password-message",
+      "Too short.",
+    ],
+    [{}, "notice", "notice", "Signed out."],
+    [
+      { hint: "At least 10 characters." },
+      "notice",
+      "password-hint notice",
+      "At least 10 characters. Signed out.",
+    ],
+  ] as const)(
+    "is described by its own sentence (%o) and then the page's (%s)",
+    (sentences, page, ids, heard) => {
+      render(
+        <>
+          <span id="notice">Signed out.</span>
+          <PasswordField
+            label="Password"
+            autoComplete="current-password"
+            value=""
+            onChange={vi.fn()}
+            field={(name) => ({
+              name,
+              readOnly: false,
+              "aria-invalid": undefined,
+              "aria-describedby": "from-the-form",
+              onInput: vi.fn(),
+            })}
+            {...sentences}
+            describedBy={page}
+          />
+        </>,
+      );
+      const input = screen.getByLabelText("Password");
+      expect(input.getAttribute("aria-describedby") ?? "").toBe(ids);
+      expect(input).toHaveAccessibleDescription(heard);
+    },
+  );
 
   it("focuses when arrival is decided after it has mounted", () => {
     const { rerender } = render(<ArrivingPassword isArrival={false} />);
@@ -1080,6 +1152,8 @@ describe("CredentialFields (round 26 #7, #18)", () => {
     const password = screen.getByLabelText(CREDENTIAL_LABELS.password);
     expect(password).toHaveAttribute("autocomplete", "new-password");
     expect(password).not.toHaveFocus();
+    // No arrival, so no notice to be read with: the hint alone.
+    expect(password).toHaveAttribute("aria-describedby", "password-hint");
     expect(screen.getByText("At least 10 characters.")).toBeVisible();
     expect(email.compareDocumentPosition(password)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
@@ -1101,6 +1175,8 @@ describe("CredentialFields (round 26 #7, #18)", () => {
     const password = screen.getByLabelText(CREDENTIAL_LABELS.password);
     expect(password).toHaveAttribute("autocomplete", "current-password");
     expect(password).toHaveFocus();
+    // Arrival focus skips Au7's notice, so the field points at it.
+    expect(password).toHaveAttribute("aria-describedby", SESSION_NOTICE_ID);
     expect(screen.queryByText(/characters/u)).toBeNull();
   });
 });

@@ -41,9 +41,17 @@ export function Layout({
   return (
     <div className="flex min-h-dvh flex-col bg-ground text-ink">
       <TopBar bell={bell} />
-      <header className="flex items-center justify-end px-5 pt-4 wide:hidden">
-        {bell ?? <div aria-hidden="true" data-slot="notification-bell" />}
-      </header>
+      {/* A banner only when it holds the bell. Without one the row is
+          still drawn, so the page does not move when notifications land,
+          but a landmark holding nothing but a placeholder was an empty
+          stop in the landmarks list. */}
+      {bell === undefined ? (
+        <div className={BELL_ROW}>
+          <div aria-hidden="true" data-slot="notification-bell" />
+        </div>
+      ) : (
+        <header className={BELL_ROW}>{bell}</header>
+      )}
       {/* DS4: "content max 1180 inside SPACE[6] gutters" — the page
           measure lives here rather than on each screen, so a reflowed
           column left-aligns inside the page rather than against the
@@ -151,5 +159,10 @@ function LegalFooter() {
     </footer>
   );
 }
+
+/**
+The phone's bell row, a banner or a plain row (see `Layout`).
+*/
+const BELL_ROW = "flex items-center justify-end px-5 pt-4 wide:hidden";
 
 const FOOTER_LINK = "target text-muted underline underline-offset-4";

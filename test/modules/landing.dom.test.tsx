@@ -55,7 +55,11 @@ describe("Landing, signed out", () => {
     await renderWithRouter(<Landing signedIn={false} />);
     const hero = screen.getByRole("main");
     const mark = hero.querySelector(String.raw`.wide\:hidden`);
-    expect(mark).toHaveTextContent(/^dialed\.run$/u);
+    // Drawn halves, then the one spoken name; no brackets either way.
+    expect(mark).toHaveTextContent(/^dialed\.rundialed\.run$/u);
+    expect(mark?.querySelector(".sr-only")).toHaveTextContent(
+      /^dialed\.run$/u,
+    );
   });
 });
 

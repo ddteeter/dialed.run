@@ -5,18 +5,17 @@ end of banner
 main
 heading, Feed, level 1
 link, Find runners
-button, Following
-button, Your conditions, current page
+button, Following, not pressed
+button, Your conditions, pressed
 status
 Not found yet. Couldn't look that up.
 end of status
-Your conditions
 heading, Where do you run?, level 2
 paragraph
 Location is off. Type your city and we’ll match its weather instead.
 end of paragraph
 Your city
-textbox, Your city, Portland
+textbox, Your city, Portland, Add the state or country. We'll show you the place we found before we use it.
 button, Find
 Find
 end of button, Find
@@ -41,9 +40,9 @@ Closet
 end of link, Closet
 end of listitem, level 1, position 2, set size 5
 listitem, level 1, position 3, set size 5
-button, Add, has popup dialog
+button, Add a run, has popup dialog
 + Add
-end of button, Add, has popup dialog
+end of button, Add a run, has popup dialog
 end of listitem, level 1, position 3, set size 5
 listitem, level 1, position 4, set size 5
 link, Call

@@ -21,6 +21,15 @@ export interface PublicStat {
 }
 
 /**
+ * The pace, with both halves as a screen reader should say them: "8:25"
+ * is read as a time of day and "/mi" as "slash m i", so it is "8 minutes
+ * 25 seconds" and "per mile" (a11y judgment audit, 2026-11-04).
+ */
+export interface PublicPace extends PublicStat {
+  readonly said: PublicStat;
+}
+
+/**
  * One piece of the kit: the closet's name for it ("Tracksmith Brighton
  * Base Layer"), the model alone for the card's one line ("Brighton Base
  * Layer", round 41 #86e: models without brands), what kind of piece it
@@ -58,10 +67,15 @@ export interface PublicKit {
   readonly verdict?: VerdictValue;
   readonly distance: PublicStat;
   /**
-  Moving time when the file had it, else the run's time.
-  */
-  readonly time: { readonly value: string; readonly isMoving: boolean };
-  readonly pace?: PublicStat;
+   * Moving time when the file had it, else the run's time; `said` is it in
+   * words, "51 minutes 38 seconds", where "51:38" reads as a clock.
+   */
+  readonly time: {
+    readonly value: string;
+    readonly said: string;
+    readonly isMoving: boolean;
+  };
+  readonly pace?: PublicPace;
   readonly gain?: PublicStat;
   readonly caption?: string;
   /**

@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -97,6 +97,11 @@ describe("ConditionsTab: waiting", () => {
     // One status region, and nothing said in it yet.
     expect(screen.getByRole("status")).toHaveTextContent(/^$/u);
     expect(screen.getByText("Your conditions")).toHaveClass("font-mono");
+    // The tab above already said it: drawn, not said twice.
+    expect(screen.getByText("Your conditions").parentElement).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
     expect(screen.getByText("Finding weather")).toBeVisible();
     const brackets = block().querySelectorAll(".breathe");
     expect(brackets).toHaveLength(2);
@@ -188,6 +193,9 @@ describe("ConditionsTab: location denied", () => {
 
     expect(await screen.findByText("Where do you run?")).toBeVisible();
     expect(block()).toHaveAttribute("data-state", "location-denied");
+    expect(
+      within(block()).getByText("Your conditions").parentElement,
+    ).toHaveAttribute("aria-hidden", "true");
     expect(
       screen.getByText(
         "Location is off. Type your city and we’ll match its weather instead.",
@@ -497,9 +505,9 @@ describe("ConditionsTab: matched", () => {
     const rows = await screen.findAllByRole("listitem");
     // Colour is never alone (round 26 #9, rule 10): each bar says it too.
     expect(rows.map((row) => row.textContent)).toStrictEqual([
-      "TopsMost5/6",
-      "BottomsSome3/6",
-      "ShoesSome2/6",
+      "TopsMost5/65 of 6 runners",
+      "BottomsSome3/63 of 6 runners",
+      "ShoesSome2/62 of 6 runners",
     ]);
     expect(rows.map((row) => row.dataset.share)).toStrictEqual([
       "most",
@@ -518,7 +526,10 @@ describe("ConditionsTab: matched", () => {
     expect(fills[0]).toHaveClass("bg-action");
     expect(fills[1]).toHaveClass("bg-hairline-2");
     expect(fills[2]).toHaveClass("bg-hairline-2");
-    expect(screen.getByText("5/6")).toHaveClass("font-mono");
+    // The fraction is drawn; a reader hears it in words.
+    expect(screen.getByText("5/6")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("5/6").parentElement).toHaveClass("font-mono");
+    expect(screen.getByText("5 of 6 runners")).toHaveClass("sr-only");
     expect(screen.getByText("Most")).toHaveClass("font-mono");
     expect(screen.getByText("What they wore")).toBeVisible();
   });
@@ -537,9 +548,9 @@ describe("ConditionsTab: matched", () => {
     );
     const rows = await screen.findAllByRole("listitem");
     expect(rows.map((row) => row.textContent)).toStrictEqual([
-      "TopsAll6/6",
-      "BottomsMost4/6",
-      "ShoesMost4/6",
+      "TopsAll6/66 of 6 runners",
+      "BottomsMost4/64 of 6 runners",
+      "ShoesMost4/64 of 6 runners",
     ]);
     const fills = rows.map((row) => row.querySelector(":scope > span > span"));
     expect(fills[0]).toHaveClass("bg-action");
@@ -558,7 +569,7 @@ describe("ConditionsTab: matched", () => {
       }),
     );
     const [alone] = await screen.findAllByRole("listitem");
-    expect(alone).toHaveTextContent("TopsSome2/6");
+    expect(alone).toHaveTextContent("TopsSome2/62 of 6 runners");
     expect(alone?.querySelector(":scope > span > span")).toHaveClass(
       "bg-hairline-2",
     );
@@ -596,6 +607,9 @@ describe("ConditionsTab: what round 22 does not draw", () => {
 
     expect(await screen.findByText("No weather yet")).toBeVisible();
     expect(block()).toHaveAttribute("data-state", "no-weather");
+    expect(
+      within(block()).getByText("Your conditions").parentElement,
+    ).toHaveAttribute("aria-hidden", "true");
     expect(screen.getByRole("link", { name: "Open the Call" })).toBeVisible();
     expect(attribution()).toBeNull();
   });

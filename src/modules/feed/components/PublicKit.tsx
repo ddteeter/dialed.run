@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 
-import { Mono, WeatherAttribution } from "../../../ui";
+import { Mono, Spoken, WeatherAttribution } from "../../../ui";
 import { ProductLink } from "../../../ui/ProductLink";
 import type { PublicKit, PublicPiece } from "../public-kit-shape";
 
@@ -112,11 +112,12 @@ function Conditions({ kit }: Readonly<{ kit: PublicKit }>) {
  * the file measured it, "time" when the run's own clock is all there is.
  */
 function Stats({ kit }: Readonly<{ kit: PublicKit }>) {
-  const stats = [
+  const stats: readonly StatWords[] = [
     kit.distance,
     {
       value: kit.time.value,
       unit: kit.time.isMoving ? "moving" : "time",
+      said: { value: kit.time.said },
     },
     ...(kit.pace === undefined ? [] : [kit.pace]),
     ...(kit.gain === undefined
@@ -129,15 +130,41 @@ function Stats({ kit }: Readonly<{ kit: PublicKit }>) {
         <div key={stat.unit} className="flex flex-col-reverse gap-1">
           <dt>
             <Mono step="xs" className="text-muted">
-              {stat.unit}
+              <Said shown={stat.unit} said={stat.said?.unit} />
             </Mono>
           </dt>
           <dd className="m-0">
-            <Mono step="lg">{stat.value}</Mono>
+            <Mono step="lg">
+              <Said shown={stat.value} said={stat.said?.value} />
+            </Mono>
           </dd>
         </div>
       ))}
     </dl>
+  );
+}
+
+/**
+ * A stat as drawn, and its halves as a screen reader should say them
+ * where the drawn form misreads — the time and the pace.
+ */
+interface StatWords {
+  readonly value: string;
+  readonly unit: string;
+  readonly said?: { readonly value?: string; readonly unit?: string };
+}
+
+/**
+The drawn words, or `Spoken` when they are said some other way.
+*/
+function Said({
+  shown,
+  said,
+}: Readonly<{ shown: string; said: string | undefined }>): JSX.Element {
+  return said === undefined ? (
+    <>{shown}</>
+  ) : (
+    <Spoken shown={shown} said={said} />
   );
 }
 

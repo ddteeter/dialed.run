@@ -90,6 +90,13 @@ describe("PhotoMatches", () => {
 
     const block = part("photo-matches");
     expect(block).toHaveTextContent(/^Matching photos · any runner · 3/u);
+    // Inside a row of Review's h2 list: a heading of its own, one down.
+    expect(
+      screen.getByRole("heading", {
+        level: 3,
+        name: "Matching photos · any runner · 3",
+      }),
+    ).toBeInTheDocument();
     const links = within(block ?? document.body)
       .getAllByRole("link")
       .filter((link) => link.dataset.part !== "match-owner");

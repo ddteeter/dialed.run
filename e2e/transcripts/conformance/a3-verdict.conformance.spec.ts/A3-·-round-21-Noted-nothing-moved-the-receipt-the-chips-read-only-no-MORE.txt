@@ -1,5 +1,4 @@
 document
-banner
 main
 form
 :day :month # · #:#
@@ -8,7 +7,7 @@ paragraph
 end of paragraph
 heading, Did it work?, level 1
 status
-Verdict saved.
+Noted. Logged. No weather came with this run, so no temperature record moved.
 end of status
 group, Did it work?
 button, Way cold, disabled, not pressed
@@ -37,20 +36,18 @@ paragraph
 You run warmer the harder you go. Next time, the Call allows for it.
 end of paragraph
 end of group, Effort · optional
-status
 Noted
 paragraph
-Logged. No weather came with this run, so no band record moved.
+Logged. No weather came with this run, so no temperature record moved.
 end of paragraph
-end of status
 end of form
 end of main
 navigation, Main
 list
 listitem, level 1, position 1, set size 5
-link, Feed, current page
+link, Feed
 Feed
-end of link, Feed, current page
+end of link, Feed
 end of listitem, level 1, position 1, set size 5
 listitem, level 1, position 2, set size 5
 link, Closet
@@ -58,9 +55,9 @@ Closet
 end of link, Closet
 end of listitem, level 1, position 2, set size 5
 listitem, level 1, position 3, set size 5
-button, Add, has popup dialog
+button, Add a run, has popup dialog
 + Add
-end of button, Add, has popup dialog
+end of button, Add a run, has popup dialog
 end of listitem, level 1, position 3, set size 5
 listitem, level 1, position 4, set size 5
 link, Call

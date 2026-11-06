@@ -47,6 +47,11 @@ describe("ReleaseHolds", () => {
         "Reports · 2 waitingApprove all 2" +
         "Screener · 4 waitingApprove all 4",
     );
+    // Beside Review's own lists, under its h1: a heading a screen reader
+    // can move to, at their level.
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Held in the last day" }),
+    ).toBeInTheDocument();
     expect(release).not.toHaveBeenCalled();
   });
 
@@ -174,7 +179,9 @@ describe("ReleaseHolds", () => {
     // No band until a release stops or fails.
     expect(part("failure-band")).toBeNull();
     fireEvent.click(keep);
-    expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: "Approve 5 fingerprint holds?" }),
+    ).toBeNull();
     expect(release).not.toHaveBeenCalled();
   });
 

@@ -46,6 +46,8 @@ test("the open-source page: groups by licence, search, the notices and the tools
   await mit.getByRole("button", { name: /^Show all \d+$/u }).click();
   await expect(mit.getByRole("button", { name: /^Show all/u })).toHaveCount(0);
   expect(await mit.getByRole("listitem").count()).toBeGreaterThan(3);
+  // The button went with the press; focus went to the first row it showed.
+  await expect(mit.getByRole("listitem").nth(3)).toBeFocused();
 
   await scene(page, "Search filters every group by package name");
   const search = page.getByRole("searchbox", { name: "Find a package" });
@@ -57,9 +59,17 @@ test("the open-source page: groups by licence, search, the notices and the tools
 
   await scene(page, "Nothing matches · it says so");
   await search.fill("xyz");
+  // Drawn once, and said once by the search's status region.
   await expect(
-    page.getByText("Nothing we ship or build with is called “xyz”."),
+    page.locator("p", {
+      hasText: "Nothing we ship or build with is called “xyz”.",
+    }),
   ).toBeVisible();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Nothing we ship or build with is called “xyz”." }),
+  ).toHaveCount(1);
   await search.fill("");
 
   await scene(page, "Then the third-party notices");

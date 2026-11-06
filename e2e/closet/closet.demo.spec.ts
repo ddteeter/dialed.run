@@ -329,7 +329,7 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await expect(well.locator('img[src^="/closet/photo/"]')).toBeVisible();
   await expect(page.getByText("Replace")).toBeVisible();
   await expect(
-    page.getByText("light · wind resistant · reflective trim"),
+    page.getByText("lightweight · wind resistant · reflective trim"),
   ).toBeVisible();
   // Round 43 #95: the shop page under the name, its domain beside it.
   const shopPage = page.getByRole("link", { name: "Shop page" });
@@ -385,7 +385,7 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await expect(
     page
       .locator("[data-part='composition']")
-      .getByText("light", { exact: true }),
+      .getByText("lightweight", { exact: true }),
   ).toHaveClass(/text-ink/);
   await expect(page.getByText("Composition · from")).toBeVisible();
   await expect(page.getByText("Body")).toBeVisible();

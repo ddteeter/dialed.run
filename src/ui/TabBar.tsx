@@ -1,82 +1,13 @@
 import {
-  Link,
   useNavigate,
   useRouterState,
   type LinkProps,
 } from "@tanstack/react-router";
 import { useEffect, type JSX } from "react";
 
-import { isLogFlowPath } from "../lib/nav-types";
-import { PendingLabel } from "./form";
 import { Mono } from "./Mono";
+import { TabItem, TabLabel } from "./TabItem";
 import { TABS, bar, tabToLight, useSlowRoute } from "./tabs";
-
-/**
- * One tab.
- *
- * The five used to be written out, on the stated grounds that TanStack
- * checks route paths as literals and "widening them into a shared `string`
- * field would defeat that check". The first half is true and the second is
- * not: `LinkProps["to"]` is the generated union of real routes, not
- * `string`, so a typo here is still a type error — measured, with a made-up
- * path that tsc rejected through this exact prop.
- *
- * It is extracted now because the tab label became a `<Mono step="sm">`,
- * which pushed five identical four-line blocks past the clone gate. They
- * were a clone before that and simply short enough to hide.
- */
-function Tab({
-  to,
-  label,
-  active,
-  held,
-  waiting,
-}: Readonly<{
-  to: NonNullable<LinkProps["to"]>;
-  label: string;
-  active: boolean;
-  /**
-   * Lit because a flow is laid over this tab, rather than because the
-   * runner is on it.
-   */
-  held: boolean;
-  /**
-   * This tab's screen has been loading for over 300ms (round 22, X3): the
-   * label gains breathing brackets while the old screen stays up.
-   */
-  waiting: boolean;
-}>): JSX.Element {
-  return (
-    <li className="text-center">
-      {/* `aria-current` is `Link`'s on the route it is on: it spreads
-          `"page"` last, so a prop passed for the *active* tab is silently
-          overwritten — which is how a mutant that emptied the string once
-          survived a test asserting the attribute. A held tab is not
-          active, so nothing is spread over it and this is ours to set.
-
-          `"true"` and never `"page"`, per the Accessibility Contract's
-          round-12 row: the held tab is the current item in the set, and
-          the runner is not on it. Claiming the page would send somebody
-          to the wrong screen. */}
-      <Link
-        to={to}
-        aria-current={held ? "true" : undefined}
-        className={active ? ACTIVE_LABEL_CLASS : RESTING_LABEL_CLASS}
-      >
-        <Mono step="sm">
-          {/* Only while waiting, so a resting tab's text is its label and
-              nothing else. The equal-width grid means there is no width
-              to hold; `PendingLabel` is here for the brackets. */}
-          {waiting ? (
-            <PendingLabel label={label} pendingLabel={label} pending />
-          ) : (
-            label
-          )}
-        </Mono>
-      </Link>
-    </li>
-  );
-}
 
 /**
  * The bar's one launcher: `+ Add`.
@@ -97,6 +28,8 @@ function Tab({
  * control, same role, a different word because the seat is a different
  * size — see `TopBar`.
  */
+const LAUNCHER_NAME = "Add a run";
+
 function Launcher({
   to,
   label,
@@ -111,11 +44,13 @@ function Launcher({
       <button
         type="button"
         aria-haspopup="dialog"
-        // The glyph is decoration and the word is the name. Without this
-        // the button announces as "plus Add", and the contract's expected
-        // reading is "Add, button, dialog".
-        aria-label={label.replace("+ ", "")}
-        className={`${RESTING_LABEL_CLASS} bg-transparent p-0`}
+        // The glyph is decoration and the word starts the name. Without
+        // this the button announces as "plus Add"; with the bare word it
+        // was "Add" here and "Log a run" in the top bar, two names for one
+        // control. "Add a run" keeps the visible word first (WCAG 2.5.3)
+        // and says what is added.
+        aria-label={LAUNCHER_NAME}
+        className={`tab-label target ${RESTING_LABEL_CLASS} bg-transparent p-0`}
         onClick={() => {
           void navigate({ to });
         }}
@@ -138,9 +73,9 @@ function Launcher({
  * claiming otherwise.
  */
 const ACTIVE_LABEL_CLASS =
-  "tab-label target flex items-center justify-center text-ink no-underline";
+  "flex items-center justify-center text-ink no-underline";
 const RESTING_LABEL_CLASS =
-  "tab-label target flex items-center justify-center text-label no-underline";
+  "flex items-center justify-center text-label no-underline";
 
 /**
  * The five-tab shell footer (docs/product.md §Navigation), **below 720
@@ -197,14 +132,24 @@ export function TabBar() {
           "launcher" in tab ? (
             <Launcher key={tab.to} to={tab.to} label={tab.label} />
           ) : (
-            <Tab
+            <TabItem
               key={tab.to}
               to={tab.to}
-              label={tab.label}
               active={index === active}
-              held={index === active && isLogFlowPath(pathname)}
-              waiting={index === active && isSlow}
-            />
+              itemClass="text-center"
+              activeClass={ACTIVE_LABEL_CLASS}
+              restingClass={RESTING_LABEL_CLASS}
+            >
+              {/* The equal-width grid means there is no width to hold while
+                  waiting; the breathing brackets are here for the label
+                  (round 22, X3: over 300ms, old screen stays up). */}
+              <Mono step="sm">
+                <TabLabel
+                  label={tab.label}
+                  waiting={index === active && isSlow}
+                />
+              </Mono>
+            </TabItem>
           ),
         )}
         {active === undefined ? undefined : (

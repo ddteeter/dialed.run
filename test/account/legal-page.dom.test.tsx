@@ -157,7 +157,9 @@ describe("LegalPage", () => {
       screen.getByRole("heading", { level: 2, name }).closest("section");
     const first = sectionOf("Who we are");
     const second = sectionOf("Your choices");
-    expect(first).toContainElement(screen.getByText("dialed.run"));
+    expect(first).toContainElement(
+      screen.getByText("dialed.run", { selector: "strong" }),
+    );
     expect(first).toContainElement(screen.getByText("us"));
     expect(second).toContainElement(screen.getByText("A note."));
     expect(second).toContainElement(screen.getByRole("table"));
@@ -168,7 +170,9 @@ describe("LegalPage", () => {
     await renderWithRouter(
       <LegalPage doc={DOC} bellState={undefined} bell={bell} />,
     );
-    expect(screen.getByText("dialed.run").tagName).toBe("STRONG");
+    expect(screen.getByText("dialed.run", { selector: "strong" }).tagName).toBe(
+      "STRONG",
+    );
     expect(screen.getByText("hello@dialed.run")).toHaveClass("text-mono-md");
     expect(screen.getByText("hello@dialed.run").closest("code")).not.toBeNull();
     expect(

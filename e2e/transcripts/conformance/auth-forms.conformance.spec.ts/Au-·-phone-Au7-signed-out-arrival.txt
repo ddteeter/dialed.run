@@ -1,7 +1,6 @@
 document
 main
-dialed
-.run
+dialed.run
 You were signed out
 Log in and you're back on your run. What you typed wasn't kept.
 heading, Log in, level 1
@@ -10,9 +9,15 @@ status
 Email
 textbox, Email, closet-#@example.com
 Password
-Password
-button, Show, # control
-link, Forgot it?
+Password, Log in and you're back on your run. What you typed wasn't kept.
+button, Show password, # control
+Show
+password
+end of button, Show password, # control
+link, Forgot it? Reset your password
+Forgot it?
+Reset your password
+end of link, Forgot it? Reset your password
 button, Log in
 Log in
 end of button, Log in

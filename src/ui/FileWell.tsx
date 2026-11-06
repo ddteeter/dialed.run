@@ -1,8 +1,10 @@
+import { useId } from "react";
 import type { JSX, Ref } from "react";
 
 import { FieldMessage, inFlight, PendingLabel } from "./form";
 import { Mono } from "./Mono";
 import { useFileDrop } from "./use-file-drop";
+import { messageIdFor } from "./use-form-submit";
 
 /**
  * The box a file is chosen or dropped into — and, once there is a photo,
@@ -142,6 +144,112 @@ function Title({
   );
 }
 
+/**
+The well's one input, in whichever state the well is.
+*/
+function WellInput({
+  inputRef,
+  accept,
+  hasError,
+  isFilled,
+  pending,
+  ids,
+  message,
+  onFiles,
+}: Readonly<{
+  inputRef: FileWellProps["inputRef"];
+  accept: string;
+  hasError: boolean;
+  isFilled: boolean;
+  pending: FileWellProps["pending"];
+  ids: ReturnType<typeof wellIds>;
+  message: string | undefined;
+  onFiles: FileWellProps["onFiles"];
+}>): JSX.Element {
+  return (
+    <input
+      ref={inputRef}
+      type="file"
+      accept={accept}
+      aria-invalid={hasError ? true : undefined}
+      // Filled, the input sits in Replace's label and that word is its
+      // name. Empty, it sits in the whole well, whose three lines made a
+      // name a sentence long: the title alone names it, and the kicker
+      // and hint describe it, then the message when there is one.
+      aria-labelledby={isFilled ? undefined : ids.title}
+      aria-describedby={
+        isFilled
+          ? message
+          : [ids.kicker, ids.hint, message].filter(Boolean).join(" ")
+      }
+      {...inFlight(pending)}
+      className="sr-only"
+      onChange={(event) => {
+        onFiles(event.target.files);
+      }}
+    />
+  );
+}
+
+/**
+The well once it holds a photo: the preview, Replace (the well's own input)
+and, when the host allows it, Remove.
+*/
+function FilledWell({
+  part,
+  drop,
+  preview,
+  input,
+  onRemove,
+  error,
+}: Readonly<{
+  part: FileWellProps["part"];
+  drop: ReturnType<typeof useFileDrop>;
+  preview: { src: string; alt: string };
+  input: JSX.Element;
+  onRemove: FileWellProps["onRemove"];
+  error: string | undefined;
+}>): JSX.Element {
+  return (
+    <div className="flex flex-col gap-2">
+      <div
+        {...drop.handlers}
+        data-part={part}
+        data-state={drop.isOver ? "drag-over" : "filled"}
+        className={
+          drop.isOver
+            ? "aspect-4/3 w-full wide:max-h-80 rounded-field border-2 border-ink bg-panel"
+            : "aspect-4/3 w-full wide:max-h-80 rounded-field border border-hairline bg-photo"
+        }
+      >
+        <img
+          src={preview.src}
+          alt={preview.alt}
+          className="h-full w-full object-contain"
+        />
+      </div>
+      <div data-part="well-actions" className="flex gap-5">
+        {/* Replace is the well's own input, so a replacement takes the
+            same path — checks, W3's blur, upload — as the first photo. */}
+        <label className="target inline-flex cursor-pointer items-center text-body font-semibold underline underline-offset-4 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink">
+          Replace
+          {input}
+        </label>
+        {onRemove === undefined ? undefined : (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="target cursor-pointer border-none bg-transparent p-0 text-body font-semibold text-quiet underline underline-offset-4"
+          >
+            Remove
+          </button>
+        )}
+      </div>
+      <FieldMessage name={part} error={error} />
+    </div>
+  );
+}
+
 export function FileWell({
   part,
   copy,
@@ -154,58 +262,32 @@ export function FileWell({
   inputRef,
 }: Readonly<FileWellProps>): JSX.Element {
   const drop = useFileDrop(onFiles);
+  const ids = wellIds(useId());
+  const message = error === undefined ? undefined : messageIdFor(part);
+  const isFilled = preview !== undefined && !pending;
   const input = (
-    <input
-      ref={inputRef}
-      type="file"
+    <WellInput
+      inputRef={inputRef}
       accept={accept}
-      aria-invalid={error === undefined ? undefined : true}
-      {...inFlight(pending)}
-      className="sr-only"
-      onChange={(event) => {
-        onFiles(event.target.files);
-      }}
+      hasError={error !== undefined}
+      isFilled={isFilled}
+      pending={pending}
+      ids={ids}
+      message={message}
+      onFiles={onFiles}
     />
   );
 
-  if (preview !== undefined && !pending) {
+  if (isFilled) {
     return (
-      <div className="flex flex-col gap-2">
-        <div
-          {...drop.handlers}
-          data-part={part}
-          data-state={drop.isOver ? "drag-over" : "filled"}
-          className={
-            drop.isOver
-              ? "aspect-4/3 w-full wide:max-h-80 rounded-field border-2 border-ink bg-panel"
-              : "aspect-4/3 w-full wide:max-h-80 rounded-field border border-hairline bg-photo"
-          }
-        >
-          <img
-            src={preview.src}
-            alt={preview.alt}
-            className="h-full w-full object-contain"
-          />
-        </div>
-        <div data-part="well-actions" className="flex gap-5">
-          {/* Replace is the well's own input, so a replacement takes the
-              same path — checks, W3's blur, upload — as the first photo. */}
-          <label className="target inline-flex cursor-pointer items-center text-body font-semibold underline underline-offset-4 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink">
-            Replace
-            {input}
-          </label>
-          {onRemove === undefined ? undefined : (
-            <button
-              type="button"
-              onClick={onRemove}
-              className="target cursor-pointer border-none bg-transparent p-0 text-body font-semibold text-quiet underline underline-offset-4"
-            >
-              Remove
-            </button>
-          )}
-        </div>
-        <FieldMessage name={part} error={error} />
-      </div>
+      <FilledWell
+        part={part}
+        drop={drop}
+        preview={preview}
+        input={input}
+        onRemove={onRemove}
+        error={error}
+      />
     );
   }
 
@@ -220,10 +302,10 @@ export function FileWell({
         // double-quoted constant but not a template literal.
         className={`target ${wellClass(drop.isOver, error)}`}
       >
-        <Mono step="xs" className="text-muted">
+        <Mono id={ids.kicker} step="xs" className="text-muted">
           {copy.kicker}
         </Mono>
-        <span className="text-lead font-bold text-ink">
+        <span id={ids.title} className="text-lead font-bold text-ink">
           <PendingLabel
             label={
               <Title
@@ -237,12 +319,29 @@ export function FileWell({
             pending={pending}
           />
         </span>
-        <span className="text-small text-label">{copy.hint}</span>
+        <span id={ids.hint} className="text-small text-label">
+          {copy.hint}
+        </span>
         {input}
       </label>
       <FieldMessage name={part} error={error} />
     </div>
   );
+}
+
+/**
+The ids of an empty well's three lines, from one `useId()`.
+*/
+function wellIds(base: string): {
+  kicker: string;
+  title: string;
+  hint: string;
+} {
+  return {
+    kicker: `${base}-kicker`,
+    title: `${base}-title`,
+    hint: `${base}-hint`,
+  };
 }
 
 /**

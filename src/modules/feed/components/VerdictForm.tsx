@@ -15,6 +15,7 @@ import { clockLabel, dayLabel } from "../../../lib/dates";
 import {
   distanceNumber,
   formatDuration,
+  spokenDuration,
 } from "../../../lib/contracts/measures";
 import {
   bandLabel,
@@ -35,6 +36,7 @@ import {
   Mono,
   PICKED_AUDIENCES,
   PUBLIC_PREVIEW_LINE,
+  Spoken,
   SubmitButton,
   useFormSubmit,
   RailCard,
@@ -113,7 +115,7 @@ const VERDICT_RESTING = `${VERDICT_BASE} border border-hairline`;
 import { submitVerdictInput } from "../inputs";
 import { BandHistory } from "./BandHistory";
 import { isProvidersReading } from "../strip";
-import { NotedReceipt } from "./NotedReceipt";
+import { NotedReceipt, notedAnnouncement } from "./NotedReceipt";
 import { SpecificsSheet } from "./SpecificsSheet";
 import { VerdictChips } from "./VerdictChips";
 import type { BandSignals } from "../band-signals";
@@ -187,10 +189,19 @@ function RunHeader({
   const zone = entry.conditions?.timeZone;
   const when = `${dayLabel(entry.startedAt, zone)} · ${clockLabel(entry.startedAt, zone)}`;
   const distance = distanceNumber(entry.distanceM, units.distance);
+  // With conditions the board drops the unit to fit the temperature
+  // (`6.2 AT 41°`); a reader still needs it, so it is said, not drawn.
+  // `normal-case`, so the headline's capitals do not spell it out.
   const headline =
-    entry.conditions === undefined
-      ? `${distance} ${units.distance}`
-      : `${distance} at ${formatTemp(entry.conditions.tempC, units.temp)}`;
+    entry.conditions === undefined ? (
+      `${distance} ${units.distance}`
+    ) : (
+      <>
+        {distance}
+        <span className="sr-only normal-case">{` ${units.distance}`}</span>
+        {` at ${formatTemp(entry.conditions.tempC, units.temp)}`}
+      </>
+    );
   return (
     <header
       data-slot="header"
@@ -349,7 +360,10 @@ export function VerdictForm({
     carry: "run",
     schema: submitVerdictInput,
     action: async (values) => submitVerdict({ data: values }),
-    successMessage: "Verdict saved.",
+    // Nothing here: the save is announced once, by Noted's own sentence,
+    // when it lands (`notedAnnouncement` below). A "Verdict saved." first
+    // was a second announcement of the same save.
+    successMessage: "",
     labels: LABELS,
     onSuccess: async () => {
       setNoted({ sentence: await notedSentence() });
@@ -419,7 +433,11 @@ export function VerdictForm({
           }}
         >
           <RunHeader entry={entry} units={units} />
-          <FormStatus>{form.status}</FormStatus>
+          <FormStatus>
+            {noted === undefined
+              ? form.status
+              : notedAnnouncement(noted.sentence)}
+          </FormStatus>
           <FormErrorSummary
             rows={form.summaryRows}
             onFocusField={form.focusField}
@@ -615,10 +633,12 @@ function chipHistory(
  * `privateLine` for PRIVATE, and for PUBLIC what a link preview keeps.
  * SHARED's own sub-line says all it needs.
  *
- * The line is outside the labels and is each radio's description while
- * it shows, so a radio's name stays its label and meaning. The runner's
- * default is what the entry started with, and PUBLIC is never picked for
- * them. An unconfirmed runner may pick any; the save holds the run at
+ * The line is outside the labels, so a radio's name stays its label and
+ * meaning, and it is read straight after the group. It describes the
+ * picked radio alone (`optionDescribedBy`): the line is about that
+ * choice, and on the unpicked two it would say what they do not do. The
+ * runner's default is what the entry started with, and PUBLIC is never
+ * picked for them. An unconfirmed runner may pick any; the save holds the run at
  * PRIVATE (D-50), as `privateLine` says.
  */
 function AudiencePicker({
@@ -633,7 +653,7 @@ function AudiencePicker({
   privateLine: (hintId: string) => ReactNode;
 }>): JSX.Element {
   // SHARED's own sub-line says all it needs; the other two have a line.
-  const hasLine = audience !== "runners";
+  const hasLine = audience === "private" || audience === "world";
   return (
     <div className="flex flex-col gap-2">
       <ChoiceList
@@ -642,11 +662,11 @@ function AudiencePicker({
         options={PICKED_AUDIENCES}
         optionLabels={AUDIENCE_LABELS}
         optionHints={AUDIENCE_HINTS}
+        optionDescribedBy={(option) =>
+          hasLine && option === audience ? SHARE_HINT_ID : undefined
+        }
         value={audience}
-        field={(name) => ({
-          ...field(name),
-          "aria-describedby": hasLine ? SHARE_HINT_ID : undefined,
-        })}
+        field={field}
         onChange={onChange}
       />
       {audience === "private" ? privateLine(SHARE_HINT_ID) : undefined}
@@ -673,13 +693,17 @@ function VerdictRail({
 }: Readonly<{ entry: Entry; units: Units }>): JSX.Element {
   const zone = entry.conditions?.timeZone;
   const { conditions } = entry;
+  const distance = `${distanceNumber(entry.distanceM, units.distance)} ${units.distance}`;
   return (
     <>
       <RailCard
         title={`This run · ${dayLabel(entry.startedAt, zone)} · ${clockLabel(entry.startedAt, zone)}`}
       >
         <Mono step="sm">
-          {`${distanceNumber(entry.distanceM, units.distance)} ${units.distance} · ${formatDuration(entry.durationS)}`}
+          <Spoken
+            shown={`${distance} · ${formatDuration(entry.durationS)}`}
+            said={`${distance}, ${spokenDuration(entry.durationS)}`}
+          />
         </Mono>
         {conditions === undefined ? undefined : (
           <>

@@ -52,6 +52,8 @@ describe("AccountIndex (U1 Account)", () => {
     const email = screen.getByRole("link", { name: /^Email/u });
     expect(email).toHaveAttribute("href", "/account/email");
     expect(email).toHaveTextContent(/^Emailmaya@example\.comChange ›$/u);
+    expect(email).toHaveAccessibleName(/Change$/u);
+    expect(within(email).getByText("›")).toHaveAttribute("aria-hidden", "true");
     expect(screen.getByRole("link", { name: /^Username/u })).toHaveAttribute(
       "href",
       "/account/username",

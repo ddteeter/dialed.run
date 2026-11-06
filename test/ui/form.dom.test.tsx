@@ -29,7 +29,7 @@ import {
   ToggleField,
 } from "../../src/ui/form";
 import { DURATION } from "../../src/ui/motion";
-import { useFormSubmit } from "../../src/ui/use-form-submit";
+import { describedByFor, useFormSubmit } from "../../src/ui/use-form-submit";
 import type { FieldErrors } from "../../src/ui/use-form-submit";
 
 /**
@@ -418,6 +418,13 @@ describe("the mark, the message and the hint", () => {
     render(<Harness action={() => Promise.resolve()} />);
 
     expect(screen.getByText("As it appears on the label.")).toBeVisible();
+    // Heard with the field, not only seen under it (M6) — and a field
+    // with no hint and no message points at nothing.
+    const name = () => screen.getByLabelText("Name");
+    expect(name()).toHaveAccessibleDescription("As it appears on the label.");
+    expect(screen.getByLabelText("Brand")).not.toHaveAttribute(
+      "aria-describedby",
+    );
 
     await user.type(screen.getByLabelText("Brand"), "Patagonia");
     await user.click(screen.getByRole("button", { name: /save/i }));
@@ -426,9 +433,13 @@ describe("the mark, the message and the hint", () => {
       expect(screen.getByText("Give it a name.")).toBeVisible();
     });
     expect(screen.queryByText("As it appears on the label.")).toBeNull();
+    // The description follows: the message, never a hint no longer drawn.
+    expect(name()).toHaveAttribute("aria-describedby", `${name().id}-message`);
+    expect(name()).toHaveAccessibleDescription("Give it a name.");
 
-    await user.type(screen.getByLabelText("Name"), "Houdini");
+    await user.type(name(), "Houdini");
     expect(screen.getByText("As it appears on the label.")).toBeVisible();
+    expect(name()).toHaveAccessibleDescription("As it appears on the label.");
   });
 });
 
@@ -1226,9 +1237,87 @@ describe("the state a submit leaves behind", () => {
     const brand = screen.getByLabelText("Brand");
     expect(message).toHaveAttribute("id", `${brand.id}-message`);
     expect(brand).toHaveAttribute("aria-describedby", message.id);
-    expect(screen.getByLabelText("Name")).not.toHaveAttribute(
-      "aria-describedby",
+    // A valid field is described by its hint, and only that (M6).
+    const name = screen.getByLabelText("Name");
+    expect(name).not.toHaveAttribute("aria-invalid");
+    expect(name).toHaveAttribute("aria-describedby", `${name.id}-hint`);
+    expect(name).toHaveAccessibleDescription("As it appears on the label.");
+  });
+});
+
+describe("describedByFor: the hint or the message, then the rest", () => {
+  // M6. A control is described by whichever of its two sentences
+  // `FieldShell` is drawing — never both, never one that is not there —
+  // and then by whatever `field()` or a caller already named.
+  const HINT = { hint: "One line." };
+  const FAILING = { hint: "One line.", error: "Too long." };
+
+  it("names the hint while it shows, and the message once it fails", () => {
+    expect(describedByFor("note", HINT)).toBe("note-hint");
+    expect(describedByFor("note", FAILING)).toBe("note-message");
+    expect(describedByFor("note", { error: "Too long." })).toBe("note-message");
+    expect(describedByFor("note", {})).toBeUndefined();
+  });
+
+  it("keeps a caller's ids after its own, and says the message once", () => {
+    expect(describedByFor("note", HINT, "note-counter")).toBe(
+      "note-hint note-counter",
     );
+    // `field()` already names the message; it is not named twice.
+    expect(describedByFor("note", FAILING, "note-message note-counter")).toBe(
+      "note-message note-counter",
+    );
+    expect(describedByFor("note", {}, "note-counter")).toBe("note-counter");
+    // An empty answer from `field()` is no id at all.
+    expect(describedByFor("note", {}, "")).toBeUndefined();
+  });
+
+  it("joins a raw TextField's own description to its hint", () => {
+    render(
+      <TextField
+        name="note"
+        label="Note"
+        value=""
+        onChange={vi.fn()}
+        field={(name) => ({
+          name,
+          readOnly: false,
+          "aria-invalid": undefined,
+          "aria-describedby": "elsewhere",
+          onInput: vi.fn(),
+        })}
+        hint="One line."
+      />,
+    );
+    const note = screen.getByLabelText("Note");
+    expect(note).toHaveAttribute(
+      "aria-describedby",
+      `${note.id}-hint elsewhere`,
+    );
+  });
+});
+
+describe("a hint that is not plain text", () => {
+  it("draws the node and names it as the field's description", () => {
+    render(
+      <TextField
+        name="handle"
+        label="Handle"
+        value=""
+        onChange={vi.fn()}
+        field={(name) => restingField(name)}
+        hint={
+          <>
+            <span aria-hidden="true">3–20</span>
+            <span className="sr-only">3 to 20</span> letters.
+          </>
+        }
+      />,
+    );
+    const handle = screen.getByLabelText("Handle");
+    expect(handle).toHaveAttribute("aria-describedby", `${handle.id}-hint`);
+    expect(screen.getByText("3–20")).toBeVisible();
+    expect(handle).toHaveAccessibleDescription(/3 to 20/u);
   });
 });
 
@@ -1615,7 +1704,8 @@ describe("ChoiceField", () => {
 
     const options = screen.getAllByRole("option");
     expect(options.map((option) => option.textContent)).toStrictEqual([
-      "—",
+      // Words, not a dash: "—" was heard as "dash" or as silence.
+      "Not set",
       "Base",
       "Mid",
       "Outer",
@@ -1654,6 +1744,27 @@ describe("ChoiceField", () => {
     const select = screen.getByLabelText("Layer");
     expect(message).toHaveAttribute("id", `${select.id}-message`);
     expect(select).toHaveAttribute("aria-describedby", message.id);
+  });
+
+  it("names the message it draws, whatever its field said", () => {
+    // The description follows the `error` the field shows, so a `field`
+    // that names nothing still leaves the select described by it (M6).
+    render(
+      <ChoiceField
+        name="layer"
+        label="Layer"
+        error="Pick a layer."
+        field={restingField}
+        value=""
+        options={LAYERS}
+        optionLabels={LAYER_LABELS}
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText("Layer")).toHaveAccessibleDescription(
+      "Pick a layer.",
+    );
   });
 });
 
@@ -1757,6 +1868,45 @@ describe("ToggleField", () => {
 function thermalLegend() {
   return screen.getByRole("group", { name: "Do you run warm or cold?" })
     .firstElementChild;
+}
+
+/**
+ * `ChoiceList`'s three thermal answers with "Runs cold" alone described by
+ * a line of its own, and `field()` naming `describedBy` when given one.
+ */
+function renderDescribed(
+  extras: Readonly<{ hint?: string; error?: string; describedBy?: string }>,
+) {
+  return render(
+    <>
+      <ChoiceList
+        name="thermal"
+        legend="Do you run warm or cold?"
+        options={["hot", "mild", "cold"] as const}
+        optionLabels={{
+          hot: "Runs hot",
+          mild: "About average",
+          cold: "Runs cold",
+        }}
+        optionDescribedBy={(option) =>
+          option === "cold" ? "cold-line" : undefined
+        }
+        hint={extras.hint}
+        error={extras.error}
+        value="cold"
+        field={(name) => ({
+          ...restingField(name),
+          "aria-describedby": extras.describedBy,
+        })}
+        onChange={vi.fn()}
+      />
+      <span id="cold-line">Bring gloves.</span>
+    </>,
+  );
+}
+
+function radioNamed(name: string) {
+  return screen.getByRole("radio", { name });
 }
 
 describe("ChoiceList", () => {
@@ -1991,6 +2141,12 @@ describe("ChoiceList", () => {
       hint: "The offset is visible on purpose.",
     });
     expect(screen.getByText("The offset is visible on purpose.")).toBeVisible();
+    // Every radio in the group is described by it (M6).
+    for (const radio of screen.getAllByRole("radio")) {
+      expect(radio).toHaveAccessibleDescription(
+        "The offset is visible on purpose.",
+      );
+    }
     unmount();
 
     renderList(vi.fn(), undefined, "Pick one to carry on.", {
@@ -1998,6 +2154,63 @@ describe("ChoiceList", () => {
     });
     expect(screen.queryByText("The offset is visible on purpose.")).toBeNull();
     expect(screen.getByText("Pick one to carry on.")).toBeVisible();
+    for (const radio of screen.getAllByRole("radio")) {
+      expect(radio).toHaveAccessibleDescription("Pick one to carry on.");
+    }
+  });
+
+  it("describes one option by a sentence of its own, after the group's, and leaves the rest alone", () => {
+    // A3's audience line is about the picked radio only.
+    const { unmount } = renderDescribed({});
+    expect(radioNamed("Runs cold")).toHaveAttribute(
+      "aria-describedby",
+      "cold-line",
+    );
+    expect(radioNamed("Runs cold")).toHaveAccessibleDescription(
+      "Bring gloves.",
+    );
+    expect(radioNamed("Runs hot")).not.toHaveAttribute("aria-describedby");
+    expect(radioNamed("About average")).not.toHaveAttribute("aria-describedby");
+    unmount();
+
+    const second = renderDescribed({ hint: "Pick one." });
+    expect(radioNamed("Runs cold")).toHaveAttribute(
+      "aria-describedby",
+      "thermal-hint cold-line",
+    );
+    expect(radioNamed("Runs hot")).toHaveAttribute(
+      "aria-describedby",
+      "thermal-hint",
+    );
+    second.unmount();
+
+    // `field()`'s own ids stay, ahead of the option's.
+    renderDescribed({
+      error: "Pick one to carry on.",
+      describedBy: "thermal-message",
+    });
+    expect(radioNamed("Runs cold")).toHaveAttribute(
+      "aria-describedby",
+      "thermal-message cold-line",
+    );
+    expect(radioNamed("Runs hot")).toHaveAttribute(
+      "aria-describedby",
+      "thermal-message",
+    );
+  });
+
+  it("keeps an id `field()` names beyond the message, ahead of the option's", () => {
+    // A caller's own extra id, such as a counter, is not the field's
+    // sentence, so nothing else would say it.
+    renderDescribed({ describedBy: "thermal-counter" });
+    expect(radioNamed("Runs cold")).toHaveAttribute(
+      "aria-describedby",
+      "thermal-counter cold-line",
+    );
+    expect(radioNamed("Runs hot")).toHaveAttribute(
+      "aria-describedby",
+      "thermal-counter",
+    );
   });
 });
 

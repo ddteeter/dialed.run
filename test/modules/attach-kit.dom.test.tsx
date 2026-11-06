@@ -604,16 +604,24 @@ describe("AttachKit: the closet picker", () => {
     const user = userEvent.setup();
     await renderWithRouter(attach());
 
-    const filter = screen.getByRole("button", { name: "41° damp" });
+    // The drawn conditions first, then the sheet's own words for it.
+    const filter = screen.getByRole("button", {
+      name: "41° damp, matches conditions",
+    });
     expect(filter).toHaveAttribute("aria-pressed", "true");
     await user.click(filter);
 
     expect(filter).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByRole("button", { name: "Singlet" })).toBeVisible();
     expect(screen.getByText("Tops · 3")).toBeVisible();
-    expect(screen.getByText("Showing 5 of 5")).toBeVisible();
+    expect(
+      screen.getByText("Showing 5 of 5", { selector: ".text-muted" }),
+    ).toBeVisible();
+    // Said in the screen's one region, not changed in silence.
+    expect(screen.getByRole("status")).toHaveTextContent(/^Showing 5 of 5$/u);
     await user.click(filter);
     expect(screen.queryByRole("button", { name: "Singlet" })).toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent(/^Showing 4 of 5$/u);
   });
 
   it("offers no filter at all without conditions to filter by", async () => {

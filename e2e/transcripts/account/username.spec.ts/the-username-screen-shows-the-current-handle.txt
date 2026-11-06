@@ -1,8 +1,7 @@
 document
 banner
 link, dialed.run home
-dialed
-.run
+dialed.run
 end of link, dialed.run home
 navigation, Main
 list
@@ -32,8 +31,9 @@ end of link, Settings
 form
 status
 Username
-textbox, Username, closet_#
-#–# letters, numbers or _. It's on everything you share. You can change it in settings.
+textbox, Username, closet_#, # to # letters, numbers or underscores. It's on everything you share. You can change it in settings.
+# to # letters, numbers or underscores.
+It's on everything you share. You can change it in settings.
 button, Save
 Save
 end of button, Save

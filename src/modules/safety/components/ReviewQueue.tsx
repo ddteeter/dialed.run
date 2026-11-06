@@ -190,11 +190,13 @@ function SubjectPhotos({ row }: Readonly<{ row: QueueRow }>): JSX.Element {
 function ReportedFor({ row }: Readonly<{ row: QueueRow }>): JSX.Element {
   return (
     <span className="flex flex-col gap-1 text-micro">
-      <Bracketed>
-        {row.reporterCount === 1
-          ? "1 person"
-          : `${String(row.reporterCount)} people`}
-      </Bracketed>
+      {row.reporterCount === 0 ? undefined : (
+        <Bracketed>
+          {row.reporterCount === 1
+            ? "1 person"
+            : `${String(row.reporterCount)} people`}
+        </Bracketed>
+      )}
       <ListOfReasons reasons={row.reasons} />
     </span>
   );

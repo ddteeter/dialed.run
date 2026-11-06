@@ -65,6 +65,19 @@ export const TABS = [
 export const LAUNCHER = TABS[2];
 
 /**
+ * When the router may call a bar link the current *page*: on its own path
+ * and nowhere beneath it, whatever the query says.
+ *
+ * TanStack's `Link` sets `aria-current="page"` on a prefix match by
+ * default, so on `/feed/attach/…` and `/feed/entry/…` the Feed tab and the
+ * wordmark both said "current page" while the runner was somewhere else.
+ * A lit tab beneath its own page is the current item in the set, which is
+ * `"true"` and is the bar's to say, not the router's. `includeSearch` is
+ * off because `/feed?view=following` is still the Feed page.
+ */
+export const PAGE_ONLY = { exact: true, includeSearch: false } as const;
+
+/**
  * Whether `route` owns `pathname` — it is the path, or an ancestor of it.
  *
  * A route and not a prefix: `/feed` must not claim `/feedback`, were one

@@ -104,9 +104,11 @@ describe("CityFinder", () => {
     );
     expect(findButton()).toHaveAttribute("type", "button");
     expect(document.querySelector('[data-part="resolved"]')).toBeNull();
-    // Nothing is wrong yet, so the field points at no message.
+    // Nothing is wrong yet, so the field is described by its hint and
+    // points at no message.
     expect(field()).not.toHaveAttribute("aria-invalid");
-    expect(field()).not.toHaveAttribute("aria-describedby");
+    expect(field()).toHaveAccessibleDescription(CITY_HINT);
+    expect(field()).toHaveAttribute("aria-describedby", `${field().id}-hint`);
   });
 
   it("finds once, shows the provider's place, and uses nothing until Use this", async () => {
@@ -129,6 +131,11 @@ describe("CityFinder", () => {
 
     const useThis = screen.getByRole("button", { name: "Use this" });
     expect(useThis).toHaveAttribute("type", "button");
+    // "Use this" alone says nothing; the place it would use is its
+    // description, from the sentence already on screen.
+    expect(useThis).toHaveAccessibleDescription(
+      "Weather for Portland, OR, United States",
+    );
     await user.click(useThis);
     expect(onUse).toHaveBeenCalledWith(PORTLAND);
   });
@@ -198,8 +205,13 @@ describe("CityFinder", () => {
     expect(announce).toHaveBeenCalledWith(message);
     // A field message, not the band: the fix is in the field.
     expect(document.querySelector('[data-part="failure-band"]')).toBeNull();
-    // And the hint steps aside for it.
+    // And the hint steps aside for it, in the description too.
     expect(screen.queryByText(CITY_HINT)).toBeNull();
+    expect(field()).toHaveAccessibleDescription(message);
+    expect(field()).toHaveAttribute(
+      "aria-describedby",
+      `${field().id}-message`,
+    );
   });
 
   it("shows the NOT FOUND YET band when the lookup fails, and Try again asks again", async () => {
@@ -334,6 +346,9 @@ describe("CityFinder", () => {
       screen.getByText("Press Find, or clear the field to skip."),
     ).toBeVisible();
     expect(field()).toHaveAttribute("aria-invalid", "true");
+    expect(field()).toHaveAccessibleDescription(
+      "Press Find, or clear the field to skip.",
+    );
 
     await user.type(field(), "P");
     expect(onInput).toHaveBeenCalled();

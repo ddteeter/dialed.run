@@ -4,21 +4,22 @@ link, Notifications
 end of banner
 main
 status
-link, Back to feed, current page
+link, Back to feed
 heading, Your run, level 1
 Hidden while we check
 Other runners can't see this while we look at it.
 You can still edit or delete it.
+Seen by:
 Shared
 :day :month # · #:#
 #.#mi
-#:# /mi
+# minutes # seconds per mile
 Dialed
 Kit
 list
 listitem, level 1, position 1, set size 1
 Long sleeve
-[Generic]
+Generic
 end of listitem, level 1, position 1, set size 1
 end of list
 Yours
@@ -27,9 +28,9 @@ end of main
 navigation, Main
 list
 listitem, level 1, position 1, set size 5
-link, Feed, current page
+link, Feed, current item
 Feed
-end of link, Feed, current page
+end of link, Feed, current item
 end of listitem, level 1, position 1, set size 5
 listitem, level 1, position 2, set size 5
 link, Closet
@@ -37,9 +38,9 @@ Closet
 end of link, Closet
 end of listitem, level 1, position 2, set size 5
 listitem, level 1, position 3, set size 5
-button, Add, has popup dialog
+button, Add a run, has popup dialog
 + Add
-end of button, Add, has popup dialog
+end of button, Add a run, has popup dialog
 end of listitem, level 1, position 3, set size 5
 listitem, level 1, position 4, set size 5
 link, Call

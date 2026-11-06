@@ -344,6 +344,7 @@ export function AttachKit({
             units={units}
             isOr={suggestion !== "none"}
             picks={{ selected, onToggle: toggle, error: kitError }}
+            onStatus={setSaid}
           />
 
           <FileWell
@@ -449,18 +450,20 @@ function AttachHeader({
  */
 function KitChooser({
   context,
+  picks,
   units,
   isOr,
-  picks,
+  onStatus,
 }: Readonly<{
   context: AttachContext;
-  units: Units;
-  isOr: boolean;
   picks: {
     selected: ReadonlySet<string>;
     onToggle: (itemId: string) => void;
     error: string | undefined;
   };
+  units: Units;
+  isOr: boolean;
+  onStatus: (sentence: string) => void;
 }>): JSX.Element {
   const { conditions } = context;
   const [isFiltered, setIsFiltered] = useState(conditions !== undefined);
@@ -480,6 +483,7 @@ function KitChooser({
         onToggle={picks.onToggle}
         onOpen={setSheetGroup}
         error={picks.error}
+        onStatus={onStatus}
       />
       <KitSheet
         group={openGroup}

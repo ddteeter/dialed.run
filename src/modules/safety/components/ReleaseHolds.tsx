@@ -46,6 +46,7 @@ export function ReleaseHolds({
   return (
     <PhotoSection
       part="release-holds"
+      level={2}
       title="Held in the last day"
       titleRef={landing.titleRef}
     >

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { AlreadyInCloset } from "../../src/modules/closet/components/AlreadyInCloset";
@@ -118,7 +118,20 @@ describe("AlreadyInCloset", () => {
 
     const [first, second, third] = rows();
     expect(first).toHaveTextContent("Tracksmith Harrier");
-    expect(first).toHaveTextContent("41 runs · 8/9 dialed 3–8°");
+    // The drawn line, then what a screen reader gets in its place: the
+    // ratio as words, and the range named as detail names it.
+    expect(first).toHaveTextContent(
+      "41 runs · 8/9 dialed8 of 9 runs dialed, works at 3–8°",
+    );
+    expect(
+      within(first ?? document.body).getByText("8/9 dialed"),
+    ).toHaveAttribute("aria-hidden", "true");
+    expect(
+      within(first ?? document.body).getByText("8 of 9 runs dialed"),
+    ).toHaveClass("sr-only");
+    expect(within(first ?? document.body).getByText(", works at")).toHaveClass(
+      "sr-only",
+    );
     expect(second).toHaveTextContent("Janji Rover Half-zip");
     expect(second).toHaveTextContent(/^Janji Rover Half-zip12 runs · Retired/);
     expect(third).toHaveTextContent("Uniqlo quarter-zip");
@@ -134,8 +147,11 @@ describe("AlreadyInCloset", () => {
     ]);
 
     const [only] = rows();
-    expect(only).toHaveTextContent("Mystery1 run · 1/1 dialed");
+    expect(only).toHaveTextContent(
+      "Mystery1 run · 1/1 dialed1 of 1 run dialed",
+    );
     expect(only?.textContent).toMatch(/dialed$/);
+    expect(screen.queryByText(", works at")).not.toBeInTheDocument();
   });
 
   it("counts a piece never worn as none", () => {

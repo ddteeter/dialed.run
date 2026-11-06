@@ -25,7 +25,7 @@ const MILES: Units = { temp: "f", distance: "mi" };
 async function openSheet(
   user: ReturnType<typeof userEvent.setup>,
 ): Promise<HTMLElement> {
-  await user.click(screen.getByRole("button", { name: "Set ›" }));
+  await user.click(screen.getByRole("button", { name: "Set conditions" }));
   return screen.findByRole("dialog", { name: "No weather saved" });
 }
 
@@ -68,6 +68,24 @@ describe("R: a run before its kit", () => {
     expect(strip).toHaveTextContent("Sat Aug 29 · 6:04 AM · File");
     expect(within(strip).getByText("6.2 mi")).toBeVisible();
     expect(within(strip).getByText("8:20 /mi")).toBeVisible();
+    // Said in words: "8:20 /mi" is read as "slash m i".
+    expect(within(strip).getByText("8:20 /mi")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(
+      within(strip).getByText("8 minutes 20 seconds per mile"),
+    ).toHaveClass("sr-only");
+  });
+
+  it("draws no pace, shown or said, for a run with no distance", async () => {
+    await renderWithRouter(detail(runSummary({ distanceM: 0 })));
+
+    const strip = region("run-strip");
+    expect(within(strip).queryByText(/\/mi/u)).toBeNull();
+    expect(within(strip).queryByText(/per mile/u)).toBeNull();
+    // Not even an empty said half for a reader to land on.
+    expect(strip.querySelector(".sr-only")).toBeNull();
   });
 
   it("names a run entered by hand as the board does, and dates it in UTC with no zone", async () => {
@@ -172,7 +190,7 @@ describe("R: the conditions row", () => {
 
     expect(region("conditions")).toHaveAttribute("data-state", "indoor");
     expect(screen.getByText("Treadmill")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Set ›" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Set conditions" })).toBeNull();
   });
 
   it("says no conditions, and offers Set › into R2b, when the weather never came", async () => {
@@ -184,10 +202,12 @@ describe("R: the conditions row", () => {
     expect(row).toHaveTextContent(
       "No weather came back for this time and place.",
     );
-    expect(within(row).getByRole("button", { name: "Set ›" })).toHaveAttribute(
-      "aria-haspopup",
-      "dialog",
-    );
+    // "Set ›" on screen; the chevron is decoration, so the name says what
+    // it sets instead, the visible word first.
+    const set = within(row).getByRole("button", { name: "Set conditions" });
+    expect(set).toHaveAttribute("aria-haspopup", "dialog");
+    expect(set).toHaveTextContent(/^Set ›$/u);
+    expect(within(set).getByText("›")).toHaveAttribute("aria-hidden", "true");
     // R2b waits to be asked for: nothing is laid over the run on arrival.
     expect(screen.queryByRole("dialog")).toBeNull();
   });
@@ -198,7 +218,7 @@ describe("R: the conditions row", () => {
     );
 
     expect(screen.getByText("No conditions")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Set ›" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Set conditions" })).toBeNull();
   });
 });
 

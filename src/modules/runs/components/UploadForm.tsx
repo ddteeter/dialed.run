@@ -4,7 +4,7 @@ import {
   useQuery,
 } from "@tanstack/react-query";
 import type { JSX } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { Units } from "../../../lib/contracts";
 import { newUlid } from "../../../lib/ids";
@@ -13,6 +13,7 @@ import {
   FileWell,
   FlowStep,
   FormFailureBand,
+  FormStatus,
   LOG_FLOW,
 } from "../../../ui";
 import type { FormFailure } from "../../../ui";
@@ -25,7 +26,8 @@ import type { ImportOutcome } from "../imports";
 import { checkUpload, parseFailureSentence } from "../upload-limits";
 import { GarminImport } from "./GarminImport";
 import type { GarminImportActions } from "./GarminImport";
-import { DuplicateCard, ParsedCard } from "./ParsedCard";
+import { weatherSaid } from "./ConditionsBlock";
+import { DuplicateCard, focusIfLost, ParsedCard } from "./ParsedCard";
 import type { Retime } from "./ParsedCard";
 
 /**
@@ -91,6 +93,11 @@ function freshAttempt(file: File): Attempt {
 interface Watched {
   importId: string;
   label: string;
+  /**
+  The label as a screen reader is told it, where it is not the label: a
+  Garmin import's has a time in it, said in words.
+  */
+  said?: string;
   /**
   What the parsed card's strip names, where it is not the label: a Garmin
   import has no file, so its card reads FROM GARMIN (round 41 #87, G9).
@@ -180,6 +187,24 @@ export function UploadForm(props: Readonly<UploadFormProps>): JSX.Element {
  */
 const BEFORE_THE_RUN = "flex flex-col gap-3 desk:max-w-column";
 
+/**
+ * Focus back into the well, when it has just come back in place of what
+ * had focus — the well of the step before, the card's Replace, a band's
+ * Try again — and taken focus to the page itself with it.
+ */
+function focusWell(zone: HTMLElement | null): void {
+  focusIfLost(zone?.querySelector<HTMLElement>("input[type='file']"));
+}
+
+/**
+ * The step's one status region, mounted outside everything A1 swaps in and
+ * out — the well, the card, the receipt — so what each outcome says is
+ * heard: a region that mounts with its words says nothing.
+ */
+function Told({ said }: Readonly<{ said: string }>): JSX.Element {
+  return <FormStatus>{said}</FormStatus>;
+}
+
 function UploadFlow({
   upload,
   getOutcome,
@@ -197,6 +222,10 @@ function UploadFlow({
   // than a flag, so a timer left over from an import the runner has moved
   // on from marks nothing: it names an import no longer on screen.
   const [stalledId, setStalledId] = useState<string | undefined>();
+  // What the step last told a screen reader, and whether the well has been
+  // left once — after which, coming back, it takes the focus it lost.
+  const [said, setSaid] = useState("");
+  const [hasLeft, setHasLeft] = useState(false);
   // A timer, not a clock read at render time: an import whose row stops
   // changing produces no new data and no re-render, so a stall worked out
   // while rendering could never fire — the one case it exists for. Keyed
@@ -220,6 +249,8 @@ function UploadFlow({
     // die here.
     if (sending !== undefined) return;
     setSending(attempt);
+    setSaid(`Reading ${attempt.file.name}.`);
+    setHasLeft(true);
     // A send starts its own twenty seconds: a retry of a stalled import
     // comes back to the same import, and must not arrive already stalled.
     setStalledId(undefined);
@@ -243,7 +274,9 @@ function UploadFlow({
         },
       });
     } catch (error: unknown) {
-      setFailed({ failure: classifyFailure(error), attempt });
+      const failure = classifyFailure(error);
+      setFailed({ failure, attempt });
+      setSaid(`Nothing saved. ${failure.message}`);
     } finally {
       setSending(undefined);
     }
@@ -259,60 +292,69 @@ function UploadFlow({
       return;
     }
     setRefusal(check.problem);
+    setSaid(check.problem);
     setWatching(undefined);
     setFailed(undefined);
   }
 
   if (watching !== undefined) {
     return (
-      <ImportWatch
-        // A new import is a new watch: its own poll, its own stall timer.
-        key={watching.importId}
-        watched={watching}
-        isStalled={stalledId === watching.importId}
-        config={{ getOutcome, retime, units }}
-        actions={{
-          onFiles,
-          onResend: watching.resend,
-          onReplace: () => {
-            setWatching(undefined);
-          },
-        }}
-      />
+      <>
+        <Told said={said} />
+        <ImportWatch
+          // A new import is a new watch: its own poll, its own stall timer.
+          key={watching.importId}
+          watched={watching}
+          isStalled={stalledId === watching.importId}
+          config={{ getOutcome, retime, units }}
+          actions={{
+            onFiles,
+            onResend: watching.resend,
+            onReplace: () => {
+              setWatching(undefined);
+              setHasLeft(true);
+            },
+            say: setSaid,
+          }}
+        />
+      </>
     );
   }
 
   return (
-    <div className={BEFORE_THE_RUN}>
-      <DropZone
-        filename={sending?.file.name ?? ""}
-        pending={sending !== undefined}
-        error={refusal}
-        onFiles={onFiles}
-      />
-      {failed === undefined ? undefined : (
-        <FormFailureBand
-          failure={failed.failure}
-          onRetry={() => {
-            // The same key: a send that may have landed before the
-            // connection dropped cannot become two uploads.
-            void send(failed.attempt);
-          }}
+    <>
+      <Told said={said} />
+      <div className={BEFORE_THE_RUN} ref={hasLeft ? focusWell : undefined}>
+        <DropZone
+          filename={sending?.file.name ?? ""}
+          pending={sending !== undefined}
+          error={refusal}
+          onFiles={onFiles}
         />
-      )}
-      {garmin === undefined ? undefined : (
-        <GarminImport
-          actions={garmin}
-          units={units}
-          onImport={(started) => {
-            setStalledId(undefined);
-            setRefusal(undefined);
-            setFailed(undefined);
-            setWatching(started);
-          }}
-        />
-      )}
-    </div>
+        {failed === undefined ? undefined : (
+          <FormFailureBand
+            failure={failed.failure}
+            onRetry={() => {
+              // The same key: a send that may have landed before the
+              // connection dropped cannot become two uploads.
+              void send(failed.attempt);
+            }}
+          />
+        )}
+        {garmin === undefined ? undefined : (
+          <GarminImport
+            actions={garmin}
+            units={units}
+            onImport={(started) => {
+              setStalledId(undefined);
+              setRefusal(undefined);
+              setFailed(undefined);
+              setWatching(started);
+            }}
+          />
+        )}
+      </div>
+    </>
   );
 }
 
@@ -332,6 +374,90 @@ interface WatchActions {
   onFiles: (files: FileList | null) => void;
   onResend: () => void;
   onReplace: () => void;
+  /**
+  Tell a screen reader, through the step's one status region.
+  */
+  say: (sentence: string) => void;
+}
+
+/**
+ * What a watched import has to say: the file's news, and the weather's,
+ * which comes later under the same card. Nothing where there is no news —
+ * a row we cannot use, which leaves the well at rest.
+ */
+interface Heard {
+  file: string | undefined;
+  weather: string | undefined;
+}
+
+/**
+ * The words are the screen's own where it has them: the strip's "Parsed",
+ * the receipt's "Already logged", the well's reading label and failure
+ * sentence, the band's kicker and sentence.
+ */
+function heardOf(
+  data: ImportOutcome | undefined,
+  isStalled: boolean,
+  names: { said: string; strip: string },
+): Heard {
+  // Reading first: neither status it waits on is "done" or "duplicate",
+  // so the order changes nothing, and past it there is always an answer.
+  if (data === undefined || isReading(data.status)) {
+    return {
+      file: isStalled
+        ? `Nothing saved. ${STALLED.message}`
+        : `Reading ${names.said}.`,
+      weather: undefined,
+    };
+  }
+  const { run } = data;
+  if (run !== undefined && data.status === "done") {
+    return { file: `Parsed ${names.strip}.`, weather: weatherSaid(run) };
+  }
+  if (run !== undefined && data.status === "duplicate") {
+    return { file: "Already logged.", weather: undefined };
+  }
+  return {
+    file:
+      data.status === "failed"
+        ? parseFailureSentence(data.failureReason, names.said)
+        : undefined,
+    weather: undefined,
+  };
+}
+
+/**
+ * What is new since last time: all of it when the file's news changed,
+ * only the weather when that alone did — so a card whose weather lands
+ * says "Weather found." and not its file again. Asked only when one of the
+ * two changed, so the same file means new weather. Nothing when there is
+ * nothing to say.
+ */
+function newsSince(before: Heard | undefined, now: Heard): string | undefined {
+  const parts =
+    before !== undefined && now.file === before.file
+      ? [now.weather]
+      : [now.file, now.weather];
+  const news = parts.filter((part) => part !== undefined).join(" ");
+  return news === "" ? undefined : news;
+}
+
+/**
+ * Says each piece of news once, as it arrives. The last thing heard is a
+ * ref, not state: it changes nothing on screen.
+ */
+function useTell(
+  file: string | undefined,
+  weather: string | undefined,
+  say: (sentence: string) => void,
+): void {
+  const before = useRef<Heard | undefined>(undefined);
+  useEffect(() => {
+    const now = { file, weather };
+    const news = newsSince(before.current, now);
+    before.current = now;
+    if (news !== undefined) say(news);
+  }, [file, weather, say]);
 }
 
 /**
@@ -352,7 +478,7 @@ function ImportWatch({
   const { importId, label } = watched;
   const strip = watched.strip ?? label;
   const { getOutcome, retime, units } = config;
-  const { onFiles, onResend, onReplace } = actions;
+  const { onFiles, onResend, onReplace, say } = actions;
   const outcome = useQuery({
     // The import alone: the client is this form's own, so nothing else
     // shares its keys — and a new import must never be served the last
@@ -369,6 +495,11 @@ function ImportWatch({
       ),
   });
   const data = outcome.data;
+  const heard = heardOf(data, isStalled, {
+    said: watched.said ?? label,
+    strip,
+  });
+  useTell(heard.file, heard.weather, say);
 
   if (data?.run !== undefined && data.status === "done") {
     return (
@@ -399,7 +530,7 @@ function ImportWatch({
   // stalls like it.
   const isWaiting = data === undefined || isReading(data.status);
   return (
-    <div className={BEFORE_THE_RUN}>
+    <div className={BEFORE_THE_RUN} ref={focusWell}>
       <DropZone
         filename={label}
         pending={isWaiting && !isStalled}

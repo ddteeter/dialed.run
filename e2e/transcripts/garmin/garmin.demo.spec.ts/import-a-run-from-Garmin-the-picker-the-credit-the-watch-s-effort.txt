@@ -1,13 +1,12 @@
 document
 banner
-link, dialed.run home, current page
-dialed
-.run
-end of link, dialed.run home, current page
+link, dialed.run home
+dialed.run
+end of link, dialed.run home
 navigation, Main
 list
 listitem, level 1, position 1, set size 4
-link, Feed, current page
+link, Feed, current item
 end of listitem, level 1, position 1, set size 4
 listitem, level 1, position 2, set size 4
 link, Closet
@@ -26,22 +25,23 @@ button, Log a run, has popup dialog
 end of banner
 main
 status
-link, Back to feed, current page
+link, Back to feed
 heading, Your run, level 1
 paragraph
 Garmin
 end of paragraph
+Seen by:
 Shared
 :day :month # · #:#
 #.#mi
-#:# /mi
+# minutes # seconds per mile
 Dialed
 Indoor
 Kit
 list
 listitem, level 1, position 1, set size 1
 Garmin demo tee
-[Generic]
+Generic
 end of listitem, level 1, position 1, set size 1
 end of list
 Yours

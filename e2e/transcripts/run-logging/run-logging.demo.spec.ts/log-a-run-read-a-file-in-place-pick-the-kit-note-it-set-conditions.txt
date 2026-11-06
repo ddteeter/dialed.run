@@ -1,8 +1,7 @@
 document
 banner
 link, dialed.run home
-dialed
-.run
+dialed.run
 end of link, dialed.run home
 navigation, Main
 list
@@ -29,13 +28,18 @@ end of banner
 main
 heading, Add a run, level 1
 status
+Parsed paused_at_the_light.tcx. Fetching weather.
+end of status
+status
 Parsed · paused_at_the_light.tcx
-button, Replace
+button, Replace paused_at_the_light.tcx
+Replace
+end of button, Replace paused_at_the_light.tcx
 paragraph
-#.# mi · #:#
+#.# mi, # minutes
 end of paragraph
 paragraph
-#:# /mi
+# minutes # seconds per mile
 :day :month #
 button, #:#, change start time
 #:#

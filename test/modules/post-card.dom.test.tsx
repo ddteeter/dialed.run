@@ -257,7 +257,7 @@ describe("PostCard: the strip", () => {
 describe("PostCard: Useful", () => {
   it("reads ♡ USEFUL with no zero when nobody has marked it", async () => {
     await card({ usefulCount: 0 });
-    expect(useful()).toHaveTextContent(/^♡Useful\[Noting\]$/u);
+    expect(useful()).toHaveTextContent(/^♡ Useful\[Noting\]$/u);
     expect(useful()).toHaveAttribute("aria-pressed", "false");
     expect(useful()).toHaveClass("text-quiet");
     expect(useful()).toHaveAttribute("data-part", "reactions");
@@ -265,20 +265,32 @@ describe("PostCard: Useful", () => {
 
   it("reads ♡ 11 USEFUL with a count, and ♥ in pink once the viewer has marked it", async () => {
     await card({ usefulCount: 11 });
-    expect(useful()).toHaveTextContent(/^♡11Useful\[Noting\]$/u);
+    expect(useful()).toHaveTextContent(/^♡11 Useful\[Noting\]$/u);
   });
 
   it("wears the viewer's mark", async () => {
     await card({ usefulCount: 24, viewerHasReacted: true });
-    expect(useful()).toHaveTextContent(/^♥24Useful\[Noting\]$/u);
+    expect(useful()).toHaveTextContent(/^♥24 Useful\[Noting\]$/u);
     expect(useful()).toHaveAttribute("aria-pressed", "true");
     expect(useful()).toHaveClass("font-semibold", "text-cold-text");
     expect(useful()).not.toHaveClass("text-quiet");
   });
 
   it("hides the heart from a screen reader — the pressed state says it", async () => {
-    await card({ usefulCount: 3 });
-    expect(useful()).toHaveAccessibleName("3 Useful");
+    await card({ usefulCount: 3, authorUsername: "trail_7" });
+    // The drawn words first, count and all (WCAG 2.5.3), then whose run.
+    expect(useful()).toHaveAccessibleName("3 Useful, @trail_7’s run");
+    expect(useful()).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("names no zero when nobody has marked it", async () => {
+    await card({ usefulCount: 0 });
+    expect(useful()).toHaveAccessibleName("Useful, a runner’s run");
+  });
+
+  it("calls the viewer's own post their run", async () => {
+    await card({ isOwn: true, authorUsername: "me", usefulCount: 1 });
+    expect(useful()).toHaveAccessibleName("1 Useful, your run");
   });
 
   it("asks to mark it, waits behind [ Noting ], then shows the server's count", async () => {
@@ -299,6 +311,8 @@ describe("PostCard: Useful", () => {
     expect(button).toHaveAttribute("aria-busy", "true");
     expect(screen.getByText("Noting")).toBeVisible();
     expect(button).toHaveAttribute("aria-pressed", "false");
+    // While it waits, the drawn [ Noting ] is the name.
+    expect(button).toHaveAccessibleName("Noting");
 
     // The server's count, not the card's 2 + 1: two others marked it
     // while this card sat open.
@@ -307,8 +321,10 @@ describe("PostCard: Useful", () => {
       expect(button).toHaveAttribute("aria-pressed", "true");
     });
     await waitFor(() => {
-      expect(button).toHaveTextContent(/^♥5Useful\[Noting\]$/u);
+      expect(button).toHaveTextContent(/^♥5 Useful\[Noting\]$/u);
     });
+    // The name follows the server's count, as the drawn words do.
+    expect(button).toHaveAccessibleName("5 Useful, a runner’s run");
     expect(button).not.toHaveAttribute("aria-busy");
   });
 
@@ -329,7 +345,7 @@ describe("PostCard: Useful", () => {
     });
     // Once the leaving digit has rolled away.
     await waitFor(() => {
-      expect(useful()).toHaveTextContent(/^♡1Useful\[Noting\]$/u);
+      expect(useful()).toHaveTextContent(/^♡1 Useful\[Noting\]$/u);
     });
   });
 
@@ -344,7 +360,7 @@ describe("PostCard: Useful", () => {
     await user.click(useful());
 
     await waitFor(() => {
-      expect(useful()).toHaveTextContent(/^♥1Useful\[Noting\]$/u);
+      expect(useful()).toHaveTextContent(/^♥1 Useful\[Noting\]$/u);
     });
   });
 
@@ -365,7 +381,7 @@ describe("PostCard: Useful", () => {
       "Not marked. Your connection dropped.",
     );
     // No optimistic count to take back.
-    expect(useful()).toHaveTextContent(/^♡2Useful\[Noting\]$/u);
+    expect(useful()).toHaveTextContent(/^♡2 Useful\[Noting\]$/u);
   });
 
   it("says Still marked when taking one back fails", async () => {
@@ -489,7 +505,7 @@ describe("PostCard: Useful waits for a confirmed address (round 26 #11; seam 7)"
     });
     // Nothing changed, so the mark and the count stay as they were.
     expect(useful()).toHaveAttribute("aria-pressed", "false");
-    expect(useful()).toHaveTextContent(/^♡2Useful\[Noting\]$/u);
+    expect(useful()).toHaveTextContent(/^♡2 Useful\[Noting\]$/u);
     // A refusal is an answer, not a failure: no band, nothing announced.
     expect(screen.queryByText("Not marked")).toBeNull();
     expect(onStatus).toHaveBeenLastCalledWith("");

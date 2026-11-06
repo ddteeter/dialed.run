@@ -4,9 +4,11 @@ import type { SyntheticEvent, JSX } from "react";
 import type { CarriedForm } from "../../../lib/carried-form";
 import { normalizeUsername, usernameInput } from "../../../lib/contracts";
 import {
+  describedByFor,
   FormField,
   FormFailureBand,
   FormStatus,
+  Spoken,
   SubmitButton,
   useFormSubmit,
 } from "../../../ui";
@@ -41,6 +43,21 @@ function AtMark(): JSX.Element {
 }
 
 /**
+ * The field's hint: the rule, said in words (`HANDLE_COPY.rule`), then
+ * why it matters unless this is the re-pick, which says the rule alone.
+ */
+function HandleHint({
+  isRuleOnly,
+}: Readonly<{ isRuleOnly: boolean }>): JSX.Element {
+  return (
+    <>
+      <Spoken {...HANDLE_COPY.rule} />
+      {isRuleOnly ? undefined : ` ${HANDLE_COPY.ruleReason}`}
+    </>
+  );
+}
+
+/**
  * The handle field and its one submit — O0 and Settings › Username are
  * this form with different words on the button (round 26 #7: "Settings ›
  * Username uses the same field and rule").
@@ -52,7 +69,7 @@ function AtMark(): JSX.Element {
  */
 export function HandleForm({
   initial = "",
-  hint = HANDLE_COPY.hint,
+  isRuleOnly = false,
   claim,
   submitLabel,
   pendingLabel,
@@ -62,9 +79,9 @@ export function HandleForm({
 }: Readonly<{
   initial?: string | undefined;
   /**
-  The field's hint: O0's and Settings' by default, the re-pick's shorter one.
+  The re-pick's shorter hint, the rule alone; O0's and Settings' by default.
   */
-  hint?: string | undefined;
+  isRuleOnly?: boolean | undefined;
   claim: (input: { data: { username: string } }) => Promise<HandleClaim>;
   submitLabel: string;
   pendingLabel: string;
@@ -113,6 +130,10 @@ export function HandleForm({
     void form.submit({ username: typed });
   }
 
+  const error = form.fieldErrors.username;
+  const hint = <HandleHint isRuleOnly={isRuleOnly} />;
+  const field = form.field("username");
+
   return (
     <form
       noValidate
@@ -125,11 +146,14 @@ export function HandleForm({
         name="username"
         label={HANDLE_COPY.label}
         hint={hint}
-        error={form.fieldErrors.username}
+        error={error}
       >
         <AtMark />
         <input
-          {...form.field("username")}
+          {...field}
+          // Its hint or its message, whichever shows: `field`'s own
+          // pointer is only ever that message's id, so it is not passed on.
+          aria-describedby={describedByFor("username", { hint, error })}
           id="username"
           type="text"
           autoComplete="username"

@@ -6,6 +6,7 @@ import type { Units } from "../../../lib/contracts";
 import {
   distanceNumber,
   formatDuration,
+  spokenDuration,
 } from "../../../lib/contracts/measures";
 import { dayLabel } from "../../../lib/dates";
 import { newUlid } from "../../../lib/ids";
@@ -15,6 +16,7 @@ import {
   inFlight,
   Mono,
   Skeleton,
+  Spoken,
 } from "../../../ui";
 import type { ControlFailure } from "../../../ui";
 import type {
@@ -39,6 +41,10 @@ An import the picker started, for A1's own watch to poll from here on.
 export type OnGarminImport = (started: {
   importId: string;
   label: string;
+  /**
+  The label as a screen reader is told it, its time in words.
+  */
+  said: string;
   strip: string;
   resend: () => void;
 }) => void;
@@ -63,8 +69,17 @@ function localZone(): string {
   return new Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
-function rowLabel(row: GarminPickerRow, units: Units): string {
-  return `${dayLabel(row.startedAt, localZone())} · ${distanceNumber(row.distanceM, units.distance)} ${units.distance} · ${formatDuration(row.durationS)}`;
+/**
+ * A row's date, distance and time: "Sat Aug 29 · 6.2 mi · 51:38" as
+ * shown, and with `spokenDuration` as said — "51:38" reads as a time of
+ * day.
+ */
+function rowLabel(
+  row: GarminPickerRow,
+  units: Units,
+  time: (durationS: number) => string = formatDuration,
+): string {
+  return `${dayLabel(row.startedAt, localZone())} · ${distanceNumber(row.distanceM, units.distance)} ${units.distance} · ${time(row.durationS)}`;
 }
 
 /**
@@ -190,6 +205,7 @@ function useImportTap(
       onImport({
         importId: result.importId,
         label: `Garmin · ${rowLabel(row, units)}`,
+        said: `Garmin · ${rowLabel(row, units, spokenDuration)}`,
         // The card's stats line has the date, distance and time (G9).
         strip: "From Garmin",
         resend: () => {
@@ -284,19 +300,22 @@ function PickerRow({
   onImport: () => void;
 }>): JSX.Element {
   const label = rowLabel(row, units);
+  const said = rowLabel(row, units, spokenDuration);
   return (
     <li
       data-part="garmin-row"
       className="flex items-center justify-between gap-3 border-b border-hairline py-2"
     >
       <span className="flex min-w-0 flex-col">
-        <Mono step="sm">{label}</Mono>
+        <Mono step="sm">
+          <Spoken shown={label} said={said} />
+        </Mono>
         <span className="text-small text-quiet">Garmin</span>
       </span>
       {row.runId === undefined ? (
         <button
           type="button"
-          aria-label={`Import ${label}`}
+          aria-label={`Import ${said}`}
           {...inFlight(isPending)}
           onClick={onImport}
           className="target border-none bg-transparent p-0 font-mono text-mono-sm uppercase text-ink"
@@ -307,7 +326,7 @@ function PickerRow({
         <Link
           to="/runs/$runId"
           params={{ runId: row.runId }}
-          aria-label={`Imported: open ${label}`}
+          aria-label={`Imported: open ${said}`}
           className="target font-mono text-mono-sm uppercase text-muted no-underline"
         >
           [Imported] ›

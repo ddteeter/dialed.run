@@ -200,7 +200,7 @@ function StateBlock({
         aria-busy="true"
         className="flex flex-col gap-2 border-b border-hairline py-5"
       >
-        <Eyebrow>Your conditions</Eyebrow>
+        <TabNameEyebrow />
         <BracketHeadline pending>Finding weather</BracketHeadline>
       </div>
     );
@@ -222,6 +222,19 @@ function StateBlock({
     return <TooFew band={state.band} units={units} />;
   }
   return <Matched result={state} units={units} />;
+}
+
+/**
+ * "Your conditions" over a state: the name of the Feed's tab, which sits
+ * straight above it. Drawn, not said: a reader has just heard the tab
+ * say it. `flex` so the hidden wrapper adds no line box of its own.
+ */
+function TabNameEyebrow() {
+  return (
+    <span aria-hidden="true" className="flex">
+      <Eyebrow>Your conditions</Eyebrow>
+    </span>
+  );
 }
 
 function Eyebrow({ children }: Readonly<{ children: ReactNode }>) {
@@ -298,7 +311,7 @@ function CityForm({
       data-state="location-denied"
       className="flex flex-col gap-4 py-5"
     >
-      <Eyebrow>Your conditions</Eyebrow>
+      <TabNameEyebrow />
       <h2 className="m-0 font-display text-title uppercase">
         Where do you run?
       </h2>
@@ -419,7 +432,7 @@ function NoWeather({
       data-state="no-weather"
       className="flex flex-col gap-4 py-5"
     >
-      <Eyebrow>Your conditions</Eyebrow>
+      <TabNameEyebrow />
       <h2 className="m-0 font-display text-title uppercase">No weather yet</h2>
       <p className="m-0 text-lead">
         No weather for {place} yet. It shows after the first reading.
@@ -489,7 +502,14 @@ function Matched({
                       <span className="flex items-baseline gap-2 text-muted">
                         <Mono step="xs">{BAR_WORD[share]}</Mono>
                         <Mono>
-                          {String(row.runners)}/{String(result.runners)}
+                          {/* Drawn as a fraction, said as words: a reader
+                              speaks "5/6" as "five slash six". */}
+                          <span aria-hidden="true">
+                            {String(row.runners)}/{String(result.runners)}
+                          </span>
+                          <span className="sr-only">
+                            {`${String(row.runners)} of ${String(result.runners)} runners`}
+                          </span>
                         </Mono>
                       </span>
                     </span>

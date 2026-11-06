@@ -6,11 +6,16 @@ end of link, Notifications, # new
 end of banner
 main
 heading, Add a run, level 1
+status
+Already logged.
+end of status
 MORNING_RUN_#.GPX
-button, Replace
+button, Replace MORNING_RUN_#.GPX
+Replace
+end of button, Replace MORNING_RUN_#.GPX
 Already logged
 paragraph
-#.# mi · #:#
+#.# mi, # minutes # seconds
 end of paragraph
 paragraph
 :day :month #
@@ -23,7 +28,7 @@ This run is already in your log. Nothing new was added.
 end of paragraph
 link, Open that run
 paragraph
-Wrong file? Tap Replace above.
+Wrong file? Replace it.
 end of paragraph
 paragraph
 No file?
@@ -44,9 +49,9 @@ Closet
 end of link, Closet
 end of listitem, level 1, position 2, set size 5
 listitem, level 1, position 3, set size 5
-button, Add, has popup dialog
+button, Add a run, has popup dialog
 + Add
-end of button, Add, has popup dialog
+end of button, Add a run, has popup dialog
 end of listitem, level 1, position 3, set size 5
 listitem, level 1, position 4, set size 5
 link, Call

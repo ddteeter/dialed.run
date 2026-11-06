@@ -6,7 +6,7 @@ import { NoticeBand } from "./NoticeBand";
 
 /**
  * The appeal line around its address, read from the copy rather than
- * written again, so the band and the status region say the same words.
+ * written again.
  */
 const [BEFORE_ADDRESS, AFTER_ADDRESS] =
   ACCOUNT_CLOSED_COPY.appeal.split(APPEAL_ADDRESS);
@@ -35,7 +35,8 @@ const [BEFORE_ADDRESS, AFTER_ADDRESS] =
  * is also where an appeal goes (D-73): "Reply to the email we sent you."
  * The owner added a fallback line under it, the appeal address
  * (2026-10-12), for a runner who no longer has that email. The address is
- * a `mailto:` link (round 38 #62a); the status region's text is the same.
+ * a `mailto:` link (round 38 #62a). The status region says only the
+ * kicker, "Account closed.", so browse mode does not read the band twice.
  */
 export function AccountClosed(): JSX.Element {
   return (

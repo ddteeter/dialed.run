@@ -24,6 +24,10 @@ import { AUDIENCE_LABELS, Bracketed } from "../../../ui";
  */
 export const PUBLIC_KIT_LINE = "Public: anyone with the link can see it.";
 export const LINK_COPIED = "Link copied.";
+/**
+Said before the bracketed audience, to a reader only.
+*/
+export const AUDIENCE_PREFIX = "Seen by: ";
 export const LINK_NOT_COPIED = "Link not copied.";
 
 /**
@@ -48,9 +52,14 @@ export function OwnerAudience({
   const shown = writableAudienceOf(audience);
   return (
     <div data-part="owner-meta" className="flex flex-col gap-2">
-      <Bracketed step="xs" className="text-ink">
-        {AUDIENCE_LABELS[shown]}
-      </Bracketed>
+      {/* The label alone is a bare "Shared" to a reader; the prefix says
+          what it is the state of. `flex` so the wrapper adds no line box. */}
+      <span className="flex">
+        <span className="sr-only">{AUDIENCE_PREFIX}</span>
+        <Bracketed step="xs" className="text-ink">
+          {AUDIENCE_LABELS[shown]}
+        </Bracketed>
+      </span>
       {shown === "world" ? (
         <p className="m-0 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-small text-muted">
           {PUBLIC_KIT_LINE}

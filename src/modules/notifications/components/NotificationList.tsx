@@ -132,6 +132,11 @@ export function NotificationList({
                 }`}
               />
               <div className="flex flex-col gap-1">
+                {/* The white row and the dot are what the eye gets; a
+                    screen reader gets the word. */}
+                {notification.read ? undefined : (
+                  <span className="sr-only">Unread</span>
+                )}
                 <p className="m-0 text-body">{notification.body}</p>
                 <Mono step="xs" className="text-muted">
                   {dayTimeLabel(notification.createdAt)}

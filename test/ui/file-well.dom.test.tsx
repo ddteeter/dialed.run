@@ -83,6 +83,20 @@ describe("FileWell: empty", () => {
     expect(input).not.toHaveAttribute("aria-invalid");
   });
 
+  it("is named by its title alone, and described by the kicker and hint", () => {
+    // The whole label block made a name a sentence long. The title is
+    // what the runner acts on; the other two lines are said after it.
+    renderWell();
+
+    const input = screen.getByLabelText(/Add a photo/);
+    expect(input).toHaveAccessibleName("Add a photo");
+    expect(input).toHaveAccessibleDescription(
+      "Photo · optional Flat on the floor works best.",
+    );
+    // Two ids and no empty third where a message would go.
+    expect(input.getAttribute("aria-describedby")?.split(" ")).toHaveLength(2);
+  });
+
   it("puts the focus ring on the box, because the input cannot show one", () => {
     renderWell();
 
@@ -189,6 +203,10 @@ describe("FileWell: error", () => {
       "aria-invalid",
       "true",
     );
+    // And the message is heard with the control, after its own lines.
+    expect(screen.getByLabelText(/Add a photo/)).toHaveAccessibleDescription(
+      "Photo · optional Flat on the floor works best. That photo is over 10 MB. Pick a smaller one.",
+    );
   });
 
   it("draws no message when there is no error", () => {
@@ -252,6 +270,23 @@ describe("FileWell: with a photo", () => {
     });
     expect(screen.getByText("Photos must be JPG, PNG or WebP.")).toHaveClass(
       "bg-failure",
+    );
+    // Replace is the name and the message its description: the well's
+    // own lines are not drawn over a photo, so nothing points at them.
+    const replace = screen.getByLabelText("Replace");
+    expect(replace).toHaveAccessibleName("Replace");
+    expect(replace).toHaveAccessibleDescription(
+      "Photos must be JPG, PNG or WebP.",
+    );
+  });
+
+  it("describes Replace by nothing while the photo is fine", () => {
+    renderWell({ preview: { src: "/photo", alt: "Shell" } });
+    expect(screen.getByLabelText("Replace")).not.toHaveAttribute(
+      "aria-describedby",
+    );
+    expect(screen.getByLabelText("Replace")).not.toHaveAttribute(
+      "aria-labelledby",
     );
   });
 });

@@ -80,12 +80,51 @@ export function formatWind(windKph: number, unit: DistanceUnit): string {
  * 8.1-mile run because that is what board D draws.
  */
 export function formatDuration(durationS: number): string {
-  const hours = Math.floor(durationS / 3600);
-  const minutes = Math.floor((durationS % 3600) / 60);
-  const seconds = (durationS % 60).toString().padStart(2, "0");
+  const { hours, minutes, seconds } = clockParts(durationS);
+  const ss = seconds.toString().padStart(2, "0");
   return hours === 0
-    ? `${String(minutes)}:${seconds}`
-    : `${String(hours)}:${minutes.toString().padStart(2, "0")}:${seconds}`;
+    ? `${String(minutes)}:${ss}`
+    : `${String(hours)}:${minutes.toString().padStart(2, "0")}:${ss}`;
+}
+
+/**
+ * A duration's hours, minutes and seconds, the one split both the shown
+ * and the spoken form read, so the two cannot disagree.
+ */
+function clockParts(durationS: number): {
+  hours: number;
+  minutes: number;
+  seconds: number;
+} {
+  return {
+    hours: Math.floor(durationS / 3600),
+    minutes: Math.floor((durationS % 3600) / 60),
+    seconds: durationS % 60,
+  };
+}
+
+/**
+ * "51 minutes 38 seconds" — `formatDuration` as a screen reader should say
+ * it. "51:38" is read as a time of day, and "1:03:41" as a clock. A part
+ * that is zero is left out ("8 minutes", "1 hour 5 seconds"); a duration
+ * of nothing at all is "0 seconds".
+ */
+export function spokenDuration(durationS: number): string {
+  const { hours, minutes, seconds } = clockParts(durationS);
+  const parts = [
+    counted(hours, "hour"),
+    counted(minutes, "minute"),
+    counted(seconds, "second"),
+  ].filter((part) => part !== undefined);
+  return parts.length === 0 ? "0 seconds" : parts.join(" ");
+}
+
+/**
+ * "1 minute", "2 minutes"; nothing for none.
+ */
+function counted(count: number, word: string): string | undefined {
+  if (count === 0) return undefined;
+  return `${String(count)} ${word}${count === 1 ? "" : "s"}`;
 }
 
 /**
@@ -103,24 +142,83 @@ export function formatPace(
   distanceM: number,
   unit: DistanceUnit,
 ): string | undefined {
-  const pace = paceNumber(durationS, distanceM, unit);
-  return pace === undefined ? undefined : `${pace} /${unit}`;
+  return paceForms(durationS, distanceM, unit)?.shown;
 }
 
+const UNIT_WORD: Record<DistanceUnit, string> = {
+  mi: "mile",
+  km: "kilometre",
+};
+
 /**
- * The pace alone, "8:25", for the lines that set the number apart from
- * its unit — the public kit's stats (round 41 #86c) draw the unit as a
- * word of its own under it. `formatPace` is this with the unit glued on,
- * so the two cannot round differently. Nothing with no distance.
+ * The pace alone, "8:25" shown and "8 minutes 25 seconds" said, for the
+ * lines that set the number apart from its unit — the public kit's stats
+ * (round 41 #86c) draw the unit as a word of its own under it (`paceUnit`).
+ * `paceForms` is this with the unit glued on, so the two cannot round
+ * differently. Nothing with no distance.
  */
 export function paceNumber(
   durationS: number,
   distanceM: number,
   unit: DistanceUnit,
-): string | undefined {
+): { shown: string; said: string } | undefined {
+  const seconds = paceSeconds(durationS, distanceM, unit);
+  return seconds === undefined
+    ? undefined
+    : { shown: formatDuration(seconds), said: spokenDuration(seconds) };
+}
+
+/**
+A pace's unit: "/mi" shown, "per mile" said.
+*/
+export function paceUnit(unit: DistanceUnit): { shown: string; said: string } {
+  return { shown: `/${unit}`, said: `per ${UNIT_WORD[unit]}` };
+}
+
+/**
+ * Whole seconds per unit — what `paceNumber` shows and `spokenPace` says.
+ * Nothing with no distance.
+ */
+function paceSeconds(
+  durationS: number,
+  distanceM: number,
+  unit: DistanceUnit,
+): number | undefined {
   return distanceM <= 0
     ? undefined
-    : formatDuration(Math.round((durationS * metresPer(unit)) / distanceM));
+    : Math.round((durationS * metresPer(unit)) / distanceM);
+}
+
+/**
+ * `formatPace` as a screen reader should say it: "8 minutes 15 seconds
+ * per mile". "8:15 /mi" is read as "eight fifteen slash m i". Nothing with
+ * no distance, as `formatPace`.
+ */
+export function spokenPace(
+  durationS: number,
+  distanceM: number,
+  unit: DistanceUnit,
+): string | undefined {
+  return paceForms(durationS, distanceM, unit)?.said;
+}
+
+/**
+ * A pace both ways at once — `formatPace`'s and `spokenPace`'s — for a
+ * screen that shows one and says the other, and must have both or
+ * neither. Nothing with no distance.
+ */
+export function paceForms(
+  durationS: number,
+  distanceM: number,
+  unit: DistanceUnit,
+): { shown: string; said: string } | undefined {
+  const pace = paceNumber(durationS, distanceM, unit);
+  if (pace === undefined) return undefined;
+  const per = paceUnit(unit);
+  return {
+    shown: `${pace.shown} ${per.shown}`,
+    said: `${pace.said} ${per.said}`,
+  };
 }
 
 const FEET_PER_METRE = 3.28084;

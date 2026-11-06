@@ -26,6 +26,22 @@ import type { FollowAction } from "./Follow";
  * name is a step for nothing. A slower answer to an older prefix is
  * dropped rather than shown over the newer one.
  */
+const SEARCHING = "Searching";
+
+function noRunnerCalled(prefix: string): string {
+  return `No runner called @${prefix}.`;
+}
+
+/**
+ * What the screen's status region says when a search answers: the drawn
+ * sentence when there is nobody, a count otherwise — the results sit
+ * under the field and a reader in it would not otherwise know they came.
+ */
+function searchOutcome(prefix: string, count: number): string {
+  if (count === 0) return noRunnerCalled(prefix);
+  return count === 1 ? "1 runner found." : `${String(count)} runners found.`;
+}
+
 export function RunnerSearch({
   search,
   follow,
@@ -39,7 +55,11 @@ export function RunnerSearch({
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searched, setSearched] = useState<string | undefined>();
   const [pending, setPending] = useState(false);
+  // Two voices, one region (rule 08): a row's follow, and the search. A
+  // row reports "" on mount, so one shared value would be wiped by the
+  // very results it announced; the follow speaks over the search instead.
   const [status, setStatus] = useState("");
+  const [said, setSaid] = useState("");
   const [failed, setFailed] = useState<string | undefined>();
   // The prefix of the search whose answer the screen should show.
   const latest = useRef<string>(undefined);
@@ -52,15 +72,19 @@ export function RunnerSearch({
       setResults([]);
       setSearched(undefined);
       setPending(false);
+      setSaid("");
       return;
     }
     setPending(true);
     setFailed(undefined);
+    // The breathing label is drawn for the eye; this is the reader's.
+    setSaid(SEARCHING);
     try {
       const found = await search({ data: { prefix: trimmed } });
       if (latest.current !== trimmed) return;
       setResults(found);
       setSearched(trimmed);
+      setSaid(searchOutcome(trimmed, found.length));
     } catch (error: unknown) {
       // A read that failed, not an empty answer: say so, and offer the
       // same search again rather than "No runner called".
@@ -68,13 +92,15 @@ export function RunnerSearch({
       setResults([]);
       setSearched(undefined);
       setFailed(classifyFailure(error).message);
+      // The band says why; the region stops saying "Searching".
+      setSaid("");
     }
     setPending(false);
   }
 
   return (
     <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6 wide:mx-0">
-      <FormStatus>{status}</FormStatus>
+      <FormStatus>{status === "" ? said : status}</FormStatus>
       <h1 className="m-0 font-display text-title uppercase">Find a runner</h1>
       <div className="field-box flex min-h-12 items-center gap-3 rounded-field border border-hairline bg-ground px-4">
         <input
@@ -110,21 +136,23 @@ export function RunnerSearch({
         />
       )}
       {searched !== undefined && results.length === 0 ? (
-        <p className="m-0 text-body text-quiet">
-          No runner called @{searched}.
-        </p>
+        <p className="m-0 text-body text-quiet">{noRunnerCalled(searched)}</p>
       ) : undefined}
-      <ul className="m-0 flex list-none flex-col p-0">
-        {results.map((result) => (
-          <ResultRow
-            key={result.userId}
-            result={result}
-            follow={follow}
-            unfollow={unfollow}
-            onStatus={setStatus}
-          />
-        ))}
-      </ul>
+      {/* Only with something in it: an empty list is announced as "list,
+          0 items" to a reader for whom nothing has happened yet. */}
+      {results.length === 0 ? undefined : (
+        <ul className="m-0 flex list-none flex-col p-0">
+          {results.map((result) => (
+            <ResultRow
+              key={result.userId}
+              result={result}
+              follow={follow}
+              unfollow={unfollow}
+              onStatus={setStatus}
+            />
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

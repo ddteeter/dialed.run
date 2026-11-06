@@ -17,7 +17,9 @@ import type { Locator, Page } from "@playwright/test";
  * desktop suite.
  */
 export function bar(page: Page): Locator {
-  return page.getByRole("navigation", { name: "Main" }).filter({ visible: true });
+  return page
+    .getByRole("navigation", { name: "Main" })
+    .filter({ visible: true });
 }
 
 /**
@@ -26,13 +28,13 @@ export function bar(page: Page): Locator {
  * It is not in the nav — it is a `<button aria-haspopup="dialog">` beside
  * it, because "a launcher cannot be where you are" (design round 12) — and
  * it says a different word at each width: `+ Add` in the phone bar's
- * glyph-sized seat, `Log a run` in the top bar, which has room for the
- * verb (round 15). Two elements, one hidden, so the name has to be a
- * pattern rather than a string.
+ * glyph-sized seat, named "Add a run", and `Log a run` in the top bar,
+ * which has room for the verb (round 15). Two elements, one hidden, so
+ * the name has to be a pattern rather than a string.
  */
 export function launcher(page: Page): Locator {
   return page
-    .getByRole("button", { name: /^(Add|Log a run)$/ })
+    .getByRole("button", { name: /^(Add a run|Log a run)$/ })
     .filter({ visible: true });
 }
 

@@ -29,13 +29,27 @@ import type { UsefulReactionInput } from "./useful-reaction";
  * The heart is text, as the frames draw it, and hidden from a screen
  * reader: `aria-pressed` already says whether it is marked, and "black
  * heart suit" says nothing.
+ *
+ * **The name is what is drawn, then whose run** (`whose`): "11 Useful,
+ * @trail_7's run". A feed is twenty of these, and "11 Useful" twenty
+ * times says nothing of which card a reader is on. The drawn words lead
+ * the name, count included, because a name that starts anywhere else
+ * fails WCAG 2.5.3 for a speech user who says what they see (axe's
+ * `label-content-name-mismatch` caught "Useful, …" under a drawn "1
+ * Useful").
  */
 export function UsefulButton({
   onStatus,
+  whose,
   ...reaction
 }: Readonly<
   UsefulReactionInput & {
     onStatus: (status: string) => void;
+    /**
+    Whose run, said after the drawn words ("@trail_7's run"): a card in a
+    list needs it, a screen about one entry does not.
+    */
+    whose?: string | undefined;
   }
 >) {
   const { useful, markUseful } = useUsefulReaction(reaction);
@@ -50,6 +64,13 @@ export function UsefulButton({
         type="button"
         data-part="reactions"
         aria-pressed={useful.reacted}
+        // A label rather than sr-only text inside, so the drawn words stay
+        // the only text on screen and a rolling count's leaving digit is
+        // never in the name; dropped while pending, when the name is the
+        // drawn `[ Noting ]`.
+        aria-label={
+          markUseful.pending ? undefined : usefulName(useful.count, whose)
+        }
         {...inFlight(markUseful.pending)}
         onClick={() => {
           void markUseful.run(!useful.reacted);
@@ -68,6 +89,10 @@ export function UsefulButton({
                 {useful.count === 0 ? undefined : (
                   <Digits value={useful.count} />
                 )}
+                {/* The gap draws the space; this one is for the text. A
+                    flex container does not render it, but without it the
+                    button's text is "11Useful", one word, and not in the
+                    name "11 Useful, …" (axe's label-content-name-mismatch). */}{" "}
                 <span>Useful</span>
               </span>
             }
@@ -84,4 +109,13 @@ export function UsefulButton({
       />
     </div>
   );
+}
+
+/**
+ * The words the button draws, heart aside — "11 Useful", and "Useful"
+ * with no zero — then whose run, where there is one to say.
+ */
+function usefulName(count: number, whose: string | undefined): string {
+  const drawn = count === 0 ? "Useful" : `${String(count)} Useful`;
+  return whose === undefined ? drawn : `${drawn}, ${whose}`;
 }

@@ -12,6 +12,7 @@ import { describe, expect, it, vi } from "vitest";
 import { UnconfirmedRefusalAnswer } from "../../src/ui";
 
 import {
+  CHANGE_NAME,
   CONFIRM_LINK,
   PRIVATE_COUNTED,
   PRIVATE_NOT_SHOWN,
@@ -198,21 +199,25 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
     expect(PRIVATE_COUNTED).toBe(
       "Its kit and verdict still count, anonymously, in the guides.",
     );
+    // "Change" first, as drawn, then what it changes.
+    expect(CHANGE_NAME).toBe("Change whether runs count in the guides");
   });
 
   it("opted in, says the run still counts, with Change", async () => {
     const { container } = await renderWithRouter(
       line({ isVerified: true, countInTotals: true }),
     );
-    expect(container.querySelector("#hint")).toHaveTextContent(
+    // The sentences alone: Change sits beside what describes the switch.
+    const hint = container.querySelector("#hint");
+    expect(hint?.textContent).toBe(`${PRIVATE_NOT_SHOWN} ${PRIVATE_COUNTED}`);
+    // Set as A3's shared line is, so the two states read as one line.
+    expect(hint?.parentElement).toHaveClass("text-small", "text-muted");
+    expect(hint?.parentElement).toHaveTextContent(
       `${PRIVATE_NOT_SHOWN} ${PRIVATE_COUNTED} Change`,
     );
-    // Set as A3's shared line is, so the two states read as one line.
-    expect(container.querySelector("#hint")).toHaveClass(
-      "text-small",
-      "text-muted",
-    );
-    expect(screen.getByRole("button", { name: "Change" })).toBeVisible();
+    const change = screen.getByRole("button", { name: CHANGE_NAME });
+    expect(change).toBeVisible();
+    expect(hint).not.toContainElement(change);
   });
 
   it("opted out, is just the first sentence", async () => {
@@ -222,7 +227,7 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
     expect(container.querySelector("#hint")?.textContent).toBe(
       PRIVATE_NOT_SHOWN,
     );
-    expect(screen.queryByRole("button", { name: "Change" })).toBeNull();
+    expect(screen.queryByRole("button", { name: CHANGE_NAME })).toBeNull();
   });
 
   it("unconfirmed, says round 27's line instead, whatever the setting", async () => {
@@ -232,7 +237,7 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
     expect(container.querySelector("#hint")?.textContent).toBe(
       PRIVATE_UNCONFIRMED,
     );
-    expect(screen.queryByRole("button", { name: "Change" })).toBeNull();
+    expect(screen.queryByRole("button", { name: CHANGE_NAME })).toBeNull();
     expect(screen.queryByRole("dialog", { hidden: true })).toBeNull();
   });
 
@@ -277,7 +282,7 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
   it("sets Change as running text, and its sheet says the confirmed lines", async () => {
     const user = userEvent.setup();
     await renderWithRouter(line({ isVerified: true, countInTotals: true }));
-    const change = screen.getByRole("button", { name: "Change" });
+    const change = screen.getByRole("button", { name: CHANGE_NAME });
     expect(change).toHaveClass("target", "text-small", "underline");
     await user.click(change);
     expect(
@@ -292,7 +297,7 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
     await renderWithRouter(line({ isVerified: true, countInTotals: true }));
     expect(screen.queryByRole("dialog")).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Change" }));
+    await user.click(screen.getByRole("button", { name: CHANGE_NAME }));
     const sheet = screen.getByRole("dialog", { name: "Privacy" });
     expect(
       within(sheet).getByRole("heading", { level: 2, name: "Privacy" }),
@@ -307,7 +312,7 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
     const user = userEvent.setup();
     await renderWithRouter(line({ isVerified: true, countInTotals: true }));
 
-    await user.click(screen.getByRole("button", { name: "Change" }));
+    await user.click(screen.getByRole("button", { name: CHANGE_NAME }));
     const dialog = screen.getByRole("dialog", { name: "Privacy" });
     expect(dialog).toBeVisible();
     // The platform's close, as Escape does it (happy-dom has no Escape
@@ -321,7 +326,7 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
 
     // The closed state is the line's, not only the dialog's, so Change
     // opens it again.
-    await user.click(screen.getByRole("button", { name: "Change" }));
+    await user.click(screen.getByRole("button", { name: CHANGE_NAME }));
     expect(screen.getByRole("dialog", { name: "Privacy" })).toBeVisible();
   });
 });
