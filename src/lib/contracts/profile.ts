@@ -141,6 +141,25 @@ export const CALL_VERDICT_THRESHOLD = 15;
 export const BAND_COVERED_VERDICTS = 3;
 
 /**
+How well a count of verdicts knows something: ordinal, none to all.
+*/
+export type VerdictCoverage = "covered" | "partial" | "unknown";
+
+/**
+ * The ladder's rule for a count: `BAND_COVERED_VERDICTS` or more is
+ * covered, fewer but at least one is partial, none is unknown.
+ *
+ * One rule, two readers. The profile ladder counts the verdicts in a
+ * temperature band; Closet C's COVERAGE filter counts the verdicts on a
+ * garment (R-94, owner 2026-11-05: same threshold as the ladder), and
+ * calls the bottom level "untested" on screen.
+ */
+export function coverageOfVerdicts(verdicts: number): VerdictCoverage {
+  if (verdicts >= BAND_COVERED_VERDICTS) return "covered";
+  return verdicts > 0 ? "partial" : "unknown";
+}
+
+/**
  * What O3 sends back: the keys a runner tapped.
  *
  * **Here rather than in `closet/tap-list.ts`, and that is the documented
