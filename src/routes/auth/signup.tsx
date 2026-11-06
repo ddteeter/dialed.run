@@ -1,8 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import type { ReactNode } from "react";
 
 import { PASSWORD_MIN_LENGTH, signUpSchema } from "../../lib/contracts";
-import { turnstileSiteKeyQuery } from "../../modules/account/functions";
+import {
+  signUpPlaceQuery,
+  turnstileSiteKeyQuery,
+} from "../../modules/account/functions";
 import {
   AuthCrossLink,
   AuthLegal,
@@ -12,6 +16,7 @@ import {
   InviteCodeField,
   RequestAccessLink,
   SIGN_UP_LABELS,
+  SignUpClosedHere,
   useAuthForm,
 } from "../../modules/auth/auth-page";
 import { signUp } from "../../modules/auth/credentials";
@@ -33,11 +38,43 @@ export const Route = createFileRoute("/auth/signup")({
   // `error`: a failed Google round trip comes back to sign-up, and says so
   // (Au6). `code`: an invite link's, via `/join`.
   validateSearch: parseSignInSearch,
-  loader: async () => turnstileSiteKeyQuery(),
+  loader: async () => {
+    const [{ siteKey }, { isFromBlockedRegion }] = await Promise.all([
+      turnstileSiteKeyQuery(),
+      signUpPlaceQuery(),
+    ]);
+    return { siteKey, isFromBlockedRegion };
+  },
   component: SignupPage,
 });
 
+/**
+ * Round 39 #69: a request placed in a closed state is told so on load,
+ * in place of the form; everyone else gets the form.
+ */
 function SignupPage() {
+  const search = Route.useSearch();
+  const { isFromBlockedRegion } = Route.useLoaderData();
+  const crossLink = (
+    <AuthCrossLink
+      prompt="Have an account?"
+      to="/auth/login"
+      label="Log in"
+      redirect={search.redirect}
+    />
+  );
+  return (
+    <SignUpClosedHere
+      heading="Create account"
+      isClosed={isFromBlockedRegion}
+      crossLink={crossLink}
+    >
+      <SignupForm crossLink={crossLink} />
+    </SignUpClosedHere>
+  );
+}
+
+function SignupForm({ crossLink }: Readonly<{ crossLink: ReactNode }>) {
   const navigate = useNavigate();
   const search = Route.useSearch();
   const { siteKey } = Route.useLoaderData();
@@ -91,14 +128,7 @@ function SignupPage() {
         />
       }
       requestLink={<RequestAccessLink />}
-      crossLink={
-        <AuthCrossLink
-          prompt="Have an account?"
-          to="/auth/login"
-          label="Log in"
-          redirect={search.redirect}
-        />
-      }
+      crossLink={crossLink}
       onSubmit={() => {
         void form.submit({ inviteCode, birthDate, email, password });
       }}

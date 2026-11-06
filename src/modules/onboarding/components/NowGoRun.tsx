@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 
 import { CALL_VERDICT_THRESHOLD } from "../../../lib/contracts";
-import { Mono, StravaConsent } from "../../../ui";
+import { focusOnMount, Mono, StravaConsent } from "../../../ui";
 
 /**
  * What the loop does with what a runner logs — P3's numbered list.
@@ -38,11 +38,16 @@ const PROMISES: readonly string[] = [
  *
  * The Strava offer is on this screen rather than earlier for the reason
  * its own caption gives — it is optional, and it is a reminder mechanism
- * rather than a data source. *"We read that a run happened. Nothing
- * else."* is the product rule stated to the person it applies to, and it
- * is exactly what the webhook does.
+ * rather than a data source.
+ *
+ * `shouldFocusOffer`: the runner is back from a refused Strava receipt's
+ * Try again, which returns here when the trip started here (round 39,
+ * #66), so focus lands on the offer's heading and the consent is the next
+ * thing read.
  */
-export function NowGoRun(): JSX.Element {
+export function NowGoRun({
+  shouldFocusOffer = false,
+}: Readonly<{ shouldFocusOffer?: boolean | undefined }>): JSX.Element {
   return (
     <div className="overflow-hidden rounded-sheet bg-failure text-ink">
       <div className="flex flex-col gap-3 px-5 pb-6 pt-4">
@@ -72,7 +77,7 @@ export function NowGoRun(): JSX.Element {
           </ol>
         </div>
 
-        <StravaOffer />
+        <StravaOffer shouldFocus={shouldFocusOffer} />
 
         <div className="flex flex-col gap-3">
           <Link
@@ -114,27 +119,33 @@ function Steps(): JSX.Element {
 /**
  * The optional Strava connect.
  *
- * The caption is the product rule as the user sees it — "Strava activity
- * data is never stored, displayed, or used; the webhook's only effect is a
- * notification row" — and saying it here is the point. An offer that
- * explained itself only in a privacy policy would be asking for an OAuth
- * grant on trust.
+ * The consent says what it reads and what it never does, in full, before
+ * the button — saying it here is the point: an offer that explained itself
+ * only in a privacy policy would be asking for an OAuth grant on trust.
+ * Round 39 (#66) retired the shorter "We read that a run happened.
+ * Nothing else." under it, *"because the consent now says it in full and
+ * two versions can drift."*
  */
-function StravaOffer(): JSX.Element {
+function StravaOffer({
+  shouldFocus,
+}: Readonly<{ shouldFocus: boolean }>): JSX.Element {
   return (
     <div className="flex flex-col gap-3 rounded-sheet border border-hairline p-4">
       <div className="flex flex-col gap-1">
-        <h2 className="m-0 text-body font-semibold">Connect Strava</h2>
+        <h2
+          ref={shouldFocus ? focusOnMount : undefined}
+          tabIndex={shouldFocus ? -1 : undefined}
+          className="m-0 text-body font-semibold"
+        >
+          Connect Strava
+        </h2>
         <span className="text-micro text-muted">
           So we can remind you. Optional.
         </span>
       </div>
       {/* Strava's own button in our pill's place, left-aligned (round 26,
           item 21; task 127, STR-7). */}
-      <StravaConsent />
-      <p className="m-0 text-micro text-muted">
-        We read that a run happened. Nothing else.
-      </p>
+      <StravaConsent from="onboarding" />
     </div>
   );
 }

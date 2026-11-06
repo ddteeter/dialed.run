@@ -12,8 +12,15 @@ import { renderWithRouter } from "./run-fixtures";
 function landing(
   result: { ok: true } | { ok: false; reason: string; full: boolean },
   isConfigured = true,
+  from?: "onboarding",
 ) {
-  return <StravaCallbackResult result={result} configured={isConfigured} />;
+  return (
+    <StravaCallbackResult
+      result={result}
+      from={from}
+      configured={isConfigured}
+    />
+  );
 }
 
 const REFUSED = {
@@ -61,16 +68,30 @@ describe("StravaCallbackResult", () => {
     // The reason is the server's diagnostic, not the runner's sentence.
     expect(screen.queryByText("The user declined.")).toBeNull();
     // Try again goes back to T1, where the Strava consent is read before
-    // the official button — never straight to the OAuth redirect.
+    // the official button — never straight to the OAuth redirect — and
+    // says so, so T1 lands focus on its heading (round 39 #66).
     expect(screen.getByRole("link", { name: "Try again" })).toHaveAttribute(
       "href",
-      "/runs/strava",
+      "/runs/strava?again=true",
     );
     expect(screen.getByRole("link", { name: "Not now" })).toHaveAttribute(
       "href",
       "/runs",
     );
     expect(document.querySelector("[data-state='full']")).toBeNull();
+  });
+
+  it("goes back to P3's offer when the trip started there (round 39 #66)", async () => {
+    await renderWithRouter(landing(REFUSED, true, "onboarding"));
+
+    expect(screen.getByRole("link", { name: "Try again" })).toHaveAttribute(
+      "href",
+      "/onboarding/done?again=true",
+    );
+    expect(screen.getByRole("link", { name: "Not now" })).toHaveAttribute(
+      "href",
+      "/runs",
+    );
   });
 
   it("tells the eleventh runner Strava is full, and offers no Try again", async () => {

@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 import { useState } from "react";
 
+import type { StravaOrigin } from "../lib/strava-origin";
 import { PendingLabel } from "./form";
 import { Mono } from "./Mono";
 
@@ -24,13 +25,19 @@ import { Mono } from "./Mono";
  *
  * `data-part="strava-button"` is the one palette exemption besides the
  * Google button: its orange is Strava's, not T1's.
+ *
+ * `from` names a screen other than T1 the trip started on (P3), so a
+ * refused receipt's Try again goes back there (round 39, #66).
  */
-export function StravaButton(): JSX.Element {
+export function StravaButton({
+  from,
+}: Readonly<{ from?: StravaOrigin | undefined }>): JSX.Element {
   const [isConnecting, setIsConnecting] = useState(false);
   return (
     <div className="flex flex-wrap items-center gap-3">
       <Link
         to="/runs/strava-connect"
+        search={{ from }}
         reloadDocument
         data-part="strava-button"
         onClick={() => {

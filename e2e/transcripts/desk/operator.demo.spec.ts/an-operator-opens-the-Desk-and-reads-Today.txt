@@ -96,5 +96,11 @@ Take it down
 end of button, Take it down
 end of form
 end of region, Takedown
+heading, Quarantine · #, level 2
+Quarantine · #
+end of heading, Quarantine · #, level 2
+paragraph
+Nothing is in quarantine.
+end of paragraph
 end of main
 end of document

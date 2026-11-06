@@ -36,8 +36,9 @@ function yearDayLabel(epochSeconds: number): string {
  * Review's quarantine (C12): what is held for NCMEC, newest first, and
  * whether each has been reported. Recording the report starts the year
  * the law asks it be kept from the report (18 U.S.C. §2258A(h)(1)), so
- * the row says when it may go. Undesigned: existing parts and placeholder
- * words (design deltas).
+ * the row says when it may go. Round 39 (#68) confirmed the words; at
+ * zero the section stays, under QUARANTINE · 0, and says so — an
+ * operator should not have to wonder whether the list failed to load.
  */
 export function QuarantineRecords({
   records,
@@ -50,6 +51,9 @@ export function QuarantineRecords({
     <ListSection
       title={`Quarantine · ${String(records.length)}`}
       items={records}
+      whenEmpty={
+        <p className="m-0 text-small text-quiet">Nothing is in quarantine.</p>
+      }
     >
       {(record) => (
         <QuarantineRow

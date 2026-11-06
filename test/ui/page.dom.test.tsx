@@ -74,6 +74,26 @@ describe("Page", () => {
     ).toBeInTheDocument();
   });
 
+  it("leaves the heading out of the tab order and unfocused by default", () => {
+    render(<Page title="Strava">body</Page>);
+
+    const heading = screen.getByRole("heading", { level: 1, name: "Strava" });
+    expect(heading).not.toHaveAttribute("tabindex");
+    expect(heading).not.toHaveFocus();
+  });
+
+  it("lands focus on the heading when asked to (round 39 #66)", () => {
+    render(
+      <Page title="Strava" focusTitle>
+        body
+      </Page>,
+    );
+
+    const heading = screen.getByRole("heading", { level: 1, name: "Strava" });
+    expect(heading).toHaveAttribute("tabindex", "-1");
+    expect(heading).toHaveFocus();
+  });
+
   it("renders no heading at all when the page owns its own", () => {
     // Run detail is the one: `RunDetail` renders the run's heading, so a
     // second empty `h1` above it would be a second, wrong document

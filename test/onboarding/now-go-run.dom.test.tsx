@@ -19,8 +19,10 @@ import { expectConsentBeforeButton } from "../ui/strava-consent";
  * promise, not a payoff."* So the assertions are about what it says and
  * what it carefully does not.
  */
-async function renderScreen() {
-  const rootRoute = createRootRoute({ component: () => <NowGoRun /> });
+async function renderScreen(shouldFocusOffer?: boolean) {
+  const rootRoute = createRootRoute({
+    component: () => <NowGoRun shouldFocusOffer={shouldFocusOffer} />,
+  });
   const router = createRouter({
     routeTree: rootRoute,
     history: createMemoryHistory({ initialEntries: ["/"] }),
@@ -122,14 +124,38 @@ describe("NowGoRun", () => {
     // Strava's official button in the slot (round 26, item 21), which
     // leaves straight for Strava's consent screen.
     // The Strava consent (API Policy §2.1) is read before the button.
-    expectConsentBeforeButton();
+    // It names P3, so a refused receipt's Try again comes back here.
+    expectConsentBeforeButton("/runs/strava-connect?from=onboarding");
     expect(
       screen.getByRole("heading", { level: 2, name: "Connect Strava" }),
     ).toHaveClass("m-0", "text-body", "font-semibold");
-    expect(
-      screen.getByText("We read that a run happened. Nothing else."),
-    ).toBeVisible();
     expect(screen.getByText("So we can remind you. Optional.")).toBeVisible();
+    // Round 39 #66: retired here — the consent says it in full.
+    expect(
+      screen.queryByText("We read that a run happened. Nothing else."),
+    ).toBeNull();
+  });
+
+  it("heads the offer, and leaves focus alone on an ordinary visit", async () => {
+    await renderScreen();
+
+    const offer = screen.getByRole("heading", {
+      level: 2,
+      name: "Connect Strava",
+    });
+    expect(offer).not.toHaveAttribute("tabindex");
+    expect(offer).not.toHaveFocus();
+  });
+
+  it("lands focus on the offer's heading when back from Try again (round 39 #66)", async () => {
+    await renderScreen(true);
+
+    const offer = screen.getByRole("heading", {
+      level: 2,
+      name: "Connect Strava",
+    });
+    expect(offer).toHaveAttribute("tabindex", "-1");
+    expect(offer).toHaveFocus();
   });
 
   it("promises nothing it has not earned", async () => {

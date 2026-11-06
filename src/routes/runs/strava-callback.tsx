@@ -16,20 +16,24 @@ export const Route = createFileRoute("/runs/strava-callback")({
   validateSearch: stravaCallbackSearch,
   loaderDeps: ({ search }) => ({ ...search }),
   loader: async ({ deps }) => {
-    const result = await completeStravaConnectFn({ data: deps });
+    const { result, from } = await completeStravaConnectFn({ data: deps });
     const { configured } = await getStravaStatusFn();
-    return { result, configured };
+    return { result, from, configured };
   },
   component: StravaCallbackPage,
 });
 
 function StravaCallbackPage() {
-  const { result, configured } = Route.useLoaderData();
+  const { result, from, configured } = Route.useLoaderData();
   // No shell here, so the page brings its own landmark (plan 161's
   // `region`).
   return (
     <main>
-      <StravaCallbackResult result={result} configured={configured} />
+      <StravaCallbackResult
+        result={result}
+        from={from}
+        configured={configured}
+      />
     </main>
   );
 }

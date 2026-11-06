@@ -30,7 +30,7 @@ import {
   stravaConnections,
   stravaRevocations,
 } from "../../src/db/schema-core";
-import { STRAVA_CONSENT } from "../../src/lib/copy";
+import { STRAVA_CONSENT, stravaConsentText } from "../../src/lib/copy";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { hydrated, userIdOf } from "../conformance/logging-fixtures";
@@ -53,7 +53,16 @@ const SUBSCRIPTION_ID = 1;
 async function expectConsent(page: Page): Promise<void> {
   const consent = page.locator('[data-slot="strava-consent"]');
   await expect(consent).toBeVisible();
-  await expect(consent.locator("p")).toHaveText([...STRAVA_CONSENT]);
+  await expect(consent.locator("p")).toHaveText(
+    STRAVA_CONSENT.map((paragraph) => stravaConsentText(paragraph)),
+  );
+  // Round 39 #66: the lead-ins run in, semibold.
+  await expect(consent.locator("p [data-part='consent-lead']")).toHaveText([
+    "What we collect:",
+    "How:",
+    "Never:",
+    "To stop:",
+  ]);
 }
 
 test("Strava: connect with the official button, a reminder lands, disconnect", async ({
@@ -109,8 +118,30 @@ test("Strava: connect with the official button, a reminder lands, disconnect", a
       page.getByText("Strava isn\u{2019}t connected. Nothing changed."),
     ).toBeVisible();
     await page.getByRole("link", { name: "Try again" }).click();
-    await expect(page).toHaveURL(/\/runs\/strava$/u);
+    await expect(page).toHaveURL(/\/runs\/strava\?again=true$/u);
+    // Round 39 #66: focus on T1's heading, so the consent is read next.
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Strava" }),
+    ).toBeFocused();
     await expectConsent(page);
+
+    // ---- From P3: Try again goes back to P3's offer -------------------
+    await scene(page, "Started on P3: Try again returns to P3's offer");
+    // P3's button names its screen; the origin rides the state cookie.
+    await page.request.get("/runs/strava-connect?from=onboarding", {
+      maxRedirects: 0,
+    });
+    await page.goto("/runs/strava-callback?error=access_denied");
+    await hydrated(page);
+    await page.getByRole("link", { name: "Try again" }).click();
+    await expect(page).toHaveURL(/\/onboarding\/done\?again=true$/u);
+    await expect(
+      page.getByRole("heading", { level: 2, name: "Connect Strava" }),
+    ).toBeFocused();
+    await expectConsent(page);
+    await expect(
+      page.getByText("We read that a run happened. Nothing else."),
+    ).toHaveCount(0);
 
     // ---- Connected (seeded: the consent screen is Strava's) -----------
     await withLocalDb(async ({ core }) => {
