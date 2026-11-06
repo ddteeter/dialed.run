@@ -784,6 +784,7 @@ export function GarmentDetail({
               pendingLabel="Unretiring"
               pending={bringBack.pending}
             />
+            <span className="sr-only">{` ${label}`}</span>
           </button>
         ) : (
           <>

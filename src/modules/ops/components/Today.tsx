@@ -468,6 +468,10 @@ export function Today({
     <div className="flex flex-col gap-10">
       <section aria-labelledby="desk-today" className="flex flex-col gap-8">
         <h1 id="desk-today" className="font-display text-title uppercase">
+          {/* The board draws the date alone; heard alone, a heading that
+              is only a date says nothing of what the page is (R-179).
+              `normal-case`, so the capitals do not spell the word out. */}
+          <span className="sr-only normal-case">Today, </span>
           {longDayLabel(asOf)}
         </h1>
         <ul aria-label="Today" className="flex flex-col gap-6">

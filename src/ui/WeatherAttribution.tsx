@@ -25,13 +25,26 @@
  * what `ui/` is for. Moved by task 115; `docs/architecture.md` records the
  * boundary change.
  */
-export function WeatherAttribution() {
+export function WeatherAttribution({
+  isRepeat = false,
+}: Readonly<{
+  /**
+   * The same credit again, on a list where an earlier item already says
+   * it: still drawn, and kept out of the accessibility tree and the Tab
+   * order, so a screen reader hears it once rather than once a card
+   * (R-179). The licence asks for the credit to be *displayed* near the
+   * data, and it is; nothing visible changes.
+   */
+  isRepeat?: boolean;
+}>) {
   return (
     <a
       data-target="inline"
       href="https://www.visualcrossing.com/"
       target="_blank"
       rel="noopener noreferrer"
+      aria-hidden={isRepeat ? true : undefined}
+      tabIndex={isRepeat ? -1 : undefined}
       className="text-micro text-muted no-underline"
     >
       Weather data provided by Visual Crossing

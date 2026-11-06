@@ -47,7 +47,9 @@ export function CheckEmail({
           <p className="m-0 pt-4 text-body text-quiet">
             You&apos;re signed in.{" "}
             <Link data-target="inline" to="/" className={FOOT_LINK_CLASS}>
-              Carry on to your closet ›
+              Carry on to your closet{" "}
+              {/* Drawn, not said: the link is already the way in. */}
+              <span aria-hidden="true">›</span>
             </Link>
           </p>
         ) : (

@@ -298,9 +298,15 @@ describe("CheckEmail (Au4)", () => {
     expect(
       screen.getByText(/^You're signed in\./u).closest("p"),
     ).toHaveTextContent("You're signed in. Carry on to your closet ›");
-    expect(
-      screen.getByRole("link", { name: "Carry on to your closet ›" }),
-    ).toHaveAttribute("href", "/");
+    // The chevron is drawn and not said: the link is the way in already.
+    const closet = screen.getByRole("link", {
+      name: "Carry on to your closet",
+    });
+    expect(closet).toHaveAttribute("href", "/");
+    expect(within(closet).getByText("›")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
     expect(screen.queryByRole("link", { name: "Start over" })).toBeNull();
   });
 });

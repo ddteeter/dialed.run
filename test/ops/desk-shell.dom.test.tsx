@@ -248,9 +248,15 @@ describe("Today", () => {
   it("dates the counts, month before day", () => {
     renderToday(desk());
 
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Tuesday, Sep 16" }),
-    ).toBeInTheDocument();
+    // Heard, the heading says what the date is of; seen, it is the date.
+    const heading = screen.getByRole("heading", {
+      level: 1,
+      name: "Today, Tuesday, Sep 16",
+    });
+    expect(within(heading).getByText("Today,")).toHaveClass(
+      "sr-only",
+      "normal-case",
+    );
   });
 
   it("renders the digest's three numbers, in the digest's order", () => {
