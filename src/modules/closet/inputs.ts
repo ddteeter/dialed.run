@@ -65,11 +65,11 @@ export const itemIdInput = z.object({ itemId: ulidSchema });
  * anyone could put on a runner's screen with a crafted link.
  */
 export interface ClosetSearch {
-  retired?: true;
-  group?: UiGroup;
-  coverage?: VerdictCoverage;
-  from?: number;
-  to?: number;
+  retired?: true | undefined;
+  group?: UiGroup | undefined;
+  coverage?: VerdictCoverage | undefined;
+  from?: number | undefined;
+  to?: number | undefined;
 }
 
 const groupParam = z.enum(uiGroups);

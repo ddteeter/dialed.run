@@ -10,7 +10,12 @@ import type { ReactElement } from "react";
 import { useState } from "react";
 import { describe, expect, it } from "vitest";
 
-import { ClosetGrid } from "../../src/modules/closet/components/ClosetGrid";
+import {
+  ClosetGrid,
+  closetHeading,
+  closetScreen,
+} from "../../src/modules/closet/components/ClosetGrid";
+import type { ClosetSearch } from "../../src/modules/closet/inputs";
 import { itemView, listing, wardrobeItem } from "./closet-fixtures";
 
 /**
@@ -51,13 +56,17 @@ const retiredTee = itemView({
   uiGroup: "tops",
 });
 
+function gridElement(): HTMLElement {
+  const grid = document.querySelector<HTMLElement>("[data-part='grid']");
+  if (grid === null) throw new Error("no grid");
+  return grid;
+}
+
 /**
 The grid's cells, as the names they carry, in order.
 */
 function cells(): string[] {
-  const grid = document.querySelector("[data-part='grid']");
-  if (grid === null) throw new Error("no grid");
-  return [...grid.children].map((cell) => cell.textContent);
+  return [...gridElement().children].map((cell) => cell.textContent);
 }
 
 const tile = (): HTMLElement =>
@@ -198,16 +207,17 @@ describe("ClosetGrid: the heading row", () => {
 });
 
 describe("ClosetGrid: one flat grid (§6c.10)", () => {
-  it("has no group headings and no rail", async () => {
+  // The rail's own group labels are R-94's; the grid is still flat.
+  it("puts no group headings and no nested list in the grid", async () => {
     await renderWithRouter(
       <ClosetGrid
         tempUnit="c"
         listing={listing([harrier, genericTop, retiredTee])}
       />,
     );
-    expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
-    expect(document.querySelector("[data-slot='closet-rail']")).toBeNull();
-    expect(screen.getAllByRole("list")).toHaveLength(1);
+    const grid = within(gridElement());
+    expect(grid.queryByRole("heading")).toBeNull();
+    expect(grid.queryByRole("list")).toBeNull();
   });
 
   it("keeps like by like, in screen C's group order, whatever order they arrive in", async () => {
@@ -292,7 +302,7 @@ describe("ClosetGrid: one flat grid (§6c.10)", () => {
       <ClosetGrid tempUnit="c" listing={listing([harrier])} />,
     );
 
-    expect(screen.getByRole("list")).toHaveClass(
+    expect(gridElement()).toHaveClass(
       "grid-cols-[repeat(auto-fill,minmax(180px,1fr))]",
     );
   });
@@ -644,6 +654,187 @@ describe("ClosetGrid: round 26's confirms", () => {
 
     await waitFor(() => {
       expect(screen.getByRole("status")).toHaveTextContent("Vaporfly deleted.");
+    });
+  });
+});
+
+const performed = (verdictCount: number) => ({
+  summary: {
+    runCount: verdictCount,
+    verdictCount,
+    dialedCount: 0,
+    lastWornAt: undefined,
+    mileageM: 0,
+  },
+  buckets: [],
+  pairsWith: [],
+});
+
+const rail = (): HTMLElement => {
+  const found = document.querySelector<HTMLElement>("nav[data-part='rail']");
+  if (found === null) throw new Error("no rail");
+  return found;
+};
+
+describe("ClosetGrid: the rail (R-94)", () => {
+  const tights = itemView({
+    item: wardrobeItem({ id: "01BTM", name: "Tights", category: "bottom" }),
+    isGeneric: false,
+    uiGroup: "bottoms",
+    tempRange: { lowC: -10, highC: 4 },
+    performance: performed(1),
+  });
+  const knownHarrier = { ...harrier, performance: performed(9) };
+  const closet = listing([knownHarrier, tights, genericTop, retiredTee]);
+
+  function grid(search: ClosetSearch = {}) {
+    return renderWithRouter(
+      <ClosetGrid tempUnit="c" listing={closet} search={search} />,
+    );
+  }
+
+  it("draws the rail at desk and the chips below it, both whole", async () => {
+    await grid();
+    expect(rail().parentElement).toHaveClass("hidden", "desk:block");
+    const chips = document.querySelector<HTMLElement>(
+      "nav[data-part='chips']",
+    );
+    if (chips === null) throw new Error("no chips");
+    expect(chips.parentElement).toHaveClass("desk:hidden");
+    // Present in both, whole — the phone's WORKS AT sits in its chip.
+    for (const nav of [rail(), chips]) {
+      const groups = within(nav);
+      expect(
+        groups.getByRole("heading", { name: "Group" }),
+      ).toBeInTheDocument();
+      expect(
+        groups.getByRole("heading", { name: "Works at" }),
+      ).toBeInTheDocument();
+      expect(
+        groups.getByRole("heading", { name: "Coverage" }),
+      ).toBeInTheDocument();
+    }
+  });
+
+  it("narrows the grid by group and heads it N · Group", async () => {
+    await grid({ group: "bottoms" });
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "1 · Bottoms",
+    );
+    expect(cells()).toStrictEqual(["Tights[-10–4°]", "Add garment"]);
+  });
+
+  it("counts what the retired switch admits, not narrowed by the set group", async () => {
+    await grid({ group: "bottoms" });
+    const counts = within(rail());
+    expect(counts.getByRole("link", { name: /^All/ })).toHaveTextContent(
+      "All 3",
+    );
+    expect(counts.getByRole("link", { name: /^Tops/ })).toHaveTextContent(
+      "Tops 2",
+    );
+    expect(counts.getByRole("link", { name: /^Untested/ })).toHaveTextContent(
+      "Untested 1",
+    );
+  });
+
+  it("counts the retired pieces once the switch admits them", async () => {
+    const user = userEvent.setup();
+    await grid();
+    await user.click(screen.getByRole("switch", { name: /Show retired/ }));
+    expect(
+      within(rail()).getByRole("link", { name: /^All/ }),
+    ).toHaveTextContent("All 4");
+  });
+
+  it("narrows by WORKS AT and COVERAGE, and says so on the FILTERED line", async () => {
+    await grid({ from: 5, to: 10, coverage: "covered" });
+    expect(cells()).toStrictEqual(["Tracksmith Harrier[4–12°]", "Add garment"]);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "1 piece",
+    );
+    expect(document.querySelector("[data-part='filtered']")).toHaveTextContent(
+      "Filtered: [5–10°] · Covered",
+    );
+  });
+
+  it("names only what is set on the FILTERED line", async () => {
+    await grid({ coverage: "partial" });
+    expect(document.querySelector("[data-part='filtered']")).toHaveTextContent(
+      /^Filtered: Partial$/,
+    );
+  });
+
+  it("names an open span by its one end", async () => {
+    await grid({ from: 5 });
+    expect(document.querySelector("[data-part='filtered']")).toHaveTextContent(
+      /^Filtered: \[5°\+\]$/,
+    );
+  });
+
+  it("has no FILTERED line for a group alone, which the heading says", async () => {
+    await grid({ group: "tops" });
+    expect(document.querySelector("[data-part='filtered']")).toBeNull();
+  });
+
+  it("says nothing matches, with the way back, and keeps the Add tile", async () => {
+    await grid({ group: "shoes" });
+    const none = document.querySelector("[data-part='no-matches']");
+    expect(none).toHaveTextContent(
+      "Nothing in your closet matches these filters. Clear filters",
+    );
+    expect(screen.getByRole("link", { name: "Clear filters" })).toHaveAttribute(
+      "href",
+      "/closet",
+    );
+    expect(cells()).toStrictEqual(["Add garment"]);
+  });
+
+  it("does not say nothing matches when nothing is filtered", async () => {
+    await renderWithRouter(
+      <ClosetGrid tempUnit="c" listing={listing([retiredTee])} />,
+    );
+    expect(cells()).toStrictEqual(["Add garment"]);
+    expect(document.querySelector("[data-part='no-matches']")).toBeNull();
+  });
+
+  it("draws no filters on an empty closet", async () => {
+    await renderWithRouter(<ClosetGrid tempUnit="c" listing={listing([])} />);
+    expect(screen.queryByRole("navigation")).toBeNull();
+  });
+});
+
+describe("closetHeading", () => {
+  it("counts pieces with no group, and names the group once one is set", () => {
+    expect(closetHeading(47, undefined)).toBe("47 pieces");
+    expect(closetHeading(1, undefined)).toBe("1 piece");
+    expect(closetHeading(8, "hands_head")).toBe("8 · Hands / head");
+  });
+});
+
+describe("closetScreen", () => {
+  it("calls the screen filtered by any one of the rail's filters", () => {
+    const one = listing([harrier]);
+    expect(closetScreen(one, false, {}).isFiltered).toBe(false);
+    expect(closetScreen(one, false, { group: "tops" }).isFiltered).toBe(true);
+    expect(closetScreen(one, false, { coverage: "unknown" }).isFiltered).toBe(
+      true,
+    );
+    expect(closetScreen(one, false, { from: 0 }).isFiltered).toBe(true);
+    expect(closetScreen(one, false, { to: 0 }).isFiltered).toBe(true);
+  });
+
+  it("spans WORKS AT over what the switch admits", () => {
+    const hot = itemView({
+      item: wardrobeItem({ id: "01HOT", retired: true }),
+      tempRange: { lowC: 30, highC: 40 },
+    });
+    expect(closetScreen(listing([harrier, hot]), false, {}).span).toStrictEqual(
+      { lowC: 4, highC: 12 },
+    );
+    expect(closetScreen(listing([harrier, hot]), true, {}).span).toStrictEqual({
+      lowC: 4,
+      highC: 40,
     });
   });
 });
