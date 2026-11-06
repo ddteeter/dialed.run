@@ -973,6 +973,32 @@ _Nothing from 99 on is open: round 45 answered the last of it._
        link.
        **The ask:** confirm, or draw the ones that should differ.
 
+113. **What lane 178 built where the boards are silent (design 178).**
+     G's Recent entries rows (round 35 #53b), the closet tile (board C,
+     round 27 #31b) and the A2/A3 desk rails' band history (round 25).
+     - **G's meta line** is the card strip's own cell: the range the run
+       covered (R-5), `41–43° · Overcast` (teal, as conditions always are),
+       `Indoor`, or nothing. The board drew a single temperature, in muted.
+       The verdict is no longer on the row, because the board drops it.
+     - **A tile never judged** says `NO RUNS YET` before its first run and
+       `NO VERDICT YET` after it, F's own words. Mileage is left off at 0.
+       Every tile's range stays bracketed. Board C brackets `[38–46°]` and
+       not `62–78°`, and nothing says why. The tags (`[GENERIC]`,
+       `[RETIRED]`, `[CHECKING]`) are pills on the photo, as C draws
+       `[GENERIC]`. MOST DIALED / RETIRE? wait with the sort (R46·109m).
+     - **The rails' band is the temperature band alone**, the same band as
+       A3's history line and chips. The board's rows mix `43° DAMP` and
+       `40° RAIN` under `IN 38–46° DAMP`, so the heading's sky is this
+       run's. Each row says its own sky in the app's precipitation words
+       (`dry`, `damp`, `wet`), and its verdict is `VerdictBadge`, so it is
+       teal for dialed and hairline otherwise, not the board's pink and grey.
+     - **With nothing in the band yet**, A2 reads `IN 38–46° DAMP` and A3
+       `BEFORE, IN 38–46° DAMP`, over DS2's "No runs in this band yet.". With
+       fewer than three, A2 counts what there is: `LAST 2 IN …`.
+     - **A3's kit record** is absent for a piece never worn in the band,
+       never `0/0`. It is said "8 of 9 runs dialed in 38–46°".
+       **The ask:** confirm, or draw the ones that should differ.
+
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
 
 ## Answered in round 46 (imported 2026-11-06)

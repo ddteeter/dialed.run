@@ -24,18 +24,24 @@ summary sentence (PR#102-1); the closet tile has no photo, record or mileage
    `ClosetItemView.performance`; no new read. MOST DIALED / RETIRE? badges and
    the sort stay deferred (R46·109m).
 3. **A2/A3 rail band history** (round 25 frames). New `feed/band-runs.ts`:
-   `recentRunsInBand(userId, bandFloorC, precipClass, excludeEntryId)` → the
-   last three verdicted runs in the 5 °C band and precip class, each with
-   day, conditions, verdict and piece names. Built on
-   `verdictedEntriesInBand`, so it is the same "band" as A3's history line
-   and chips. One GET server fn, `bandRunsQuery`. A2 heading
-   `LAST 3 IN 38–46° DAMP`; A3 `BEFORE, IN 38–46° DAMP`. Rows: day, conditions,
-   `VerdictBadge`, piece pills.
+   `recentRunsInBand(userId, bandFloorC, excludeEntryId)` returns the last
+   three verdicted runs in the 5 °C band, each with its day, conditions,
+   verdict and pieces. It reads `verdictedEntriesInBand`, which now hands
+   back the observation it already walked, so this is the same band as
+   A3's history line and its chips: the temperature alone. The board's
+   rows mix DAMP and RAIN under one heading, so the heading's sky is the
+   run's. One GET server fn, `bandRunsQuery`. A2 fetches it after the
+   screen is drawn, as MOST LIKELY does ("only most-likely waits"). A3's
+   loader adds it beside counts and signals. A2's heading is
+   `LAST 3 IN 38–46° DAMP` and A3's `BEFORE, IN 38–46° DAMP`. Each row has
+   its day, conditions, `VerdictBadge` and piece pills.
 4. **A3 kit record** (round 25). `THE KIT YOU'RE JUDGING`: each piece with
    `8/9 DIALED · 38–46°`, from the `bandSignals` the route already loads.
-5. **E2-lite summary sentence** (Feed board, through round 27): "Most got it
-   right in long sleeve and shorts. Some added gloves." Built once Design
-   gives the rule (Q2); the histogram waits on Q1.
+   `runsLabel` moves from `closet/label.ts` to `lib/runs-label.ts` so feed
+   says "8 of 9 runs" as the closet does.
+5. **E2-lite summary sentence and histogram (PR#102-1): deferred.** Design
+   has to give the sentence's rule (Q2) and say whether the histogram is
+   still v1 (Q1). No unwired seam is built, because knip would reject it.
 
 All new reads are in `modules/feed`; routes only wire. No schema change.
 
@@ -44,8 +50,9 @@ All new reads are in `modules/feed`; routes only wire. No schema change.
 - Schema changes needed: **none**
 - New route files: **none** (attach, verdict, me, closet index loaders gain wiring)
 - New bindings/queues/crons: **none**
-- Screens: G, A2 desk, A3 desk, E2-lite, C. One new server fn → a
-  verification-class row.
+- Screens: G, A2 desk, A3 desk, C. One new server fn → a
+  verification-class row. Design-deltas item 113 lists the readings.
+- One fallow drizzle-rhyme grant for `band-runs.ts` (owner, 2026-11-06).
 
 ## Test plan
 
@@ -71,5 +78,6 @@ All new reads are in `modules/feed`; routes only wire. No schema change.
 
 ## Register changes for the coordinator
 
-- On merge: PR#168-1, PR#113-1, PR#101-3 (photo/record/mileage) done;
-  PR#102-1 done or split per Q1/Q2.
+- On merge: PR#168-1, PR#113-1, PR#101-3 (photo/record/mileage) done.
+- PR#102-1 (the E2 sentence and histogram) becomes a deferred row that
+  waits on Design's Q1/Q2.
