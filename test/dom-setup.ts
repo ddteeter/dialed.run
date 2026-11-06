@@ -8,7 +8,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { createCanvas, loadImage } from "canvas";
-import { afterAll, afterEach } from "vitest";
+import { afterAll, afterEach, vi } from "vitest";
 import { z } from "zod";
 
 /**
@@ -94,6 +94,30 @@ Object.defineProperties(HTMLCanvasElement.prototype, {
 
 afterEach(() => {
   cleanup();
+});
+
+/**
+ * Testing Library's `waitFor` (and every `findBy`) knows a fake clock only
+ * through a global named `jest` (PR #135).
+ *
+ * Without one, a `waitFor` under `vi.useFakeTimers()` schedules its own
+ * checks on the fake clock and nothing moves it, so a test had to fake
+ * with `shouldAdvanceTime` — letting the wall clock drive the fake one —
+ * and a busy machine then fired every overdue timer at once, `waitFor`'s
+ * deadline among them. With this, `waitFor` steps the fake clock itself,
+ * fifty milliseconds a turn, and its budget is counted in fake time.
+ *
+ * It does nothing on a real clock: Testing Library checks that
+ * `setTimeout` is a fake before it reaches for `jest` at all.
+ */
+Object.defineProperty(globalThis, "jest", {
+  configurable: true,
+  writable: true,
+  value: {
+    advanceTimersByTime: (ms: number): void => {
+      vi.advanceTimersByTime(ms);
+    },
+  },
 });
 
 /**
