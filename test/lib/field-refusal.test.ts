@@ -24,6 +24,10 @@ describe("fieldRefusalAdapter", () => {
     expect(fieldRefusalAdapter.key).toBe("field-refusal");
   });
 
+  it("keeps its code: it is on the wire too, and the client's read is by it", () => {
+    expect(FIELD_REFUSAL_CODE).toBe("FIELD_REFUSAL");
+  });
+
   it("takes an Error with the code and issues, and a denied link's refusal", () => {
     expect(fieldRefusalAdapter.test(refusal(LINK_ISSUE))).toBe(true);
     expect(fieldRefusalAdapter.test(refusal([]))).toBe(true);
