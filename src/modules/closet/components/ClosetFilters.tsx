@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX, ReactNode } from "react";
-import { useId } from "react";
+import { useId, useState } from "react";
 
 import {
   uiGroupLabels,
@@ -10,26 +10,24 @@ import {
   type UiGroup,
   type VerdictCoverage,
 } from "../../../lib/contracts";
-import { tempInUnit, unitToC } from "../../../lib/contracts/temperature";
-import { formatTempRange } from "../../../lib/contracts/thermal";
-import { Bracketed, CoverageMark, Mono } from "../../../ui";
+import { CoverageMark, Mono } from "../../../ui";
 import type { RailCounts } from "../filters";
 import type { ClosetSearch } from "../inputs";
+import { useIsHydrated } from "./use-is-hydrated";
+import { WorksAt, worksAtLabel } from "./WorksAt";
 
 /**
  * Closet C's three filter groups (R-94, design 174): GROUP with counts,
- * WORKS AT, COVERAGE. One component, drawn as the desk's rail or as the
- * phone's chip row (board C: *"below 1040 the three groups become the
- * phone's filter chips"*).
+ * WORKS AT, COVERAGE — the desk's rail, or below 1040 the phone's chip
+ * row (round 46 #109b).
  *
- * **Every filter works before hydration.** GROUP and COVERAGE are links to
- * the closet with the search changed; WORKS AT is a GET form that names
- * the unit it was typed in, which `closetSearch` converts. Hydrated, the
- * form navigates instead of reloading.
+ * **Every filter works before hydration.** GROUP and COVERAGE are links
+ * to the closet with the search changed, and WORKS AT is a GET form that
+ * names its unit. Hydrated, COVERAGE's levels are toggle buttons and
+ * WORKS AT is its bar (#109f, #109h).
  *
- * **Monochrome** (§AB, and round 16: *"nothing in the rail carries a
- * hue"*): the coverage swatches are ink density and the selected span is
- * ink, not the board's pink (owner, 2026-11-05).
+ * **Monochrome** (§AB; round 16: *"nothing in the rail carries a hue"*):
+ * ink swatches and an ink span (owner, 2026-11-05; #109c).
  */
 
 /**
@@ -53,20 +51,22 @@ export interface ClosetFiltersProps {
   span: { lowC: number; highC: number } | undefined;
   tempUnit: TempUnit;
   /**
-  The hydrated form's navigation, in Celsius; either end may be open.
-  Without one the form submits as a plain GET, as it does before hydration.
+  The hydrated controls' navigation: the whole next search. Without one
+  every control works as it does before hydration.
   */
-  onWorksAt?: ((range: { from?: number; to?: number }) => void) | undefined;
+  onSearch?: ((next: ClosetSearch) => void) | undefined;
 }
 
 /**
  * The look of one choice. A rail row is text, bold when chosen (board C);
  * a chip is a pill, ink when chosen, as every chosen chip in the app is.
+ * The chosen state is `aria-current` on a link and `aria-pressed` on a
+ * toggle, so both are styled.
  */
 const CHOICE_CLASS: Readonly<Record<FiltersVariant, string>> = {
-  rail: "target flex items-center gap-2 text-body text-ink no-underline aria-[current=true]:font-bold",
+  rail: "target flex items-center gap-2 text-body text-ink no-underline aria-[current=true]:font-bold aria-pressed:font-bold",
   chips:
-    "target flex items-center gap-2 rounded-pill border border-hairline px-3 py-1 text-small text-ink no-underline aria-[current=true]:border-ink aria-[current=true]:bg-ink aria-[current=true]:text-ground",
+    "target flex items-center gap-2 rounded-pill border border-hairline px-3 py-1 text-small text-ink no-underline aria-[current=true]:border-ink aria-[current=true]:bg-ink aria-[current=true]:text-ground aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-ground",
 };
 
 const GROUP_CLASS: Readonly<Record<FiltersVariant, string>> = {
@@ -95,19 +95,33 @@ function GroupHeading({ children }: Readonly<{ children: string }>) {
   );
 }
 
+function OptionBody({ option }: Readonly<{ option: FilterOption }>) {
+  return (
+    <>
+      {option.label}{" "}
+      <Mono step="xs" className="text-label">
+        {option.count}
+      </Mono>
+    </>
+  );
+}
+
 /**
- * A group of choices, each a link to the closet with the search changed,
- * so it works before hydration; the chosen one is `aria-current`. GROUP
- * and COVERAGE differ only in their options, so they share this.
+ * A group of choices. As links — the closet with the search changed — each
+ * works before hydration, the chosen one `aria-current`. Given `onPick`,
+ * as toggle buttons instead: `aria-pressed`, at most one pressed, because
+ * pressing the pressed one lets it go (#109f: *"a radio can't be unset"*).
  */
 function FilterGroup({
   title,
   variant,
   options,
+  onPick,
 }: Readonly<{
   title: string;
   variant: FiltersVariant;
   options: readonly FilterOption[];
+  onPick?: ((next: ClosetSearch) => void) | undefined;
 }>): JSX.Element {
   return (
     <section className="flex flex-col gap-2">
@@ -115,17 +129,27 @@ function FilterGroup({
       <ul className={GROUP_CLASS[variant]}>
         {options.map((option) => (
           <li key={option.key}>
-            <Link
-              to="/closet"
-              search={option.search}
-              aria-current={option.isCurrent ? "true" : undefined}
-              className={CHOICE_CLASS[variant]}
-            >
-              {option.label}{" "}
-              <Mono step="xs" className="text-label">
-                {option.count}
-              </Mono>
-            </Link>
+            {onPick === undefined ? (
+              <Link
+                to="/closet"
+                search={option.search}
+                aria-current={option.isCurrent ? "true" : undefined}
+                className={CHOICE_CLASS[variant]}
+              >
+                <OptionBody option={option} />
+              </Link>
+            ) : (
+              <button
+                type="button"
+                aria-pressed={option.isCurrent}
+                onClick={() => {
+                  onPick(option.search);
+                }}
+                className={CHOICE_CLASS[variant]}
+              >
+                <OptionBody option={option} />
+              </button>
+            )}
           </li>
         ))}
       </ul>
@@ -163,8 +187,8 @@ function groupOptions(
 
 /**
  * COVERAGE: covered, partial, untested, each with an ink swatch and a
- * count. Tapping the chosen level again clears it (owner, 2026-11-05):
- * there is no drawn "All" here, and none is added.
+ * count. Choosing the chosen level again clears it (owner, 2026-11-05;
+ * #109f): there is no "All" here, and none is added.
  */
 function coverageOptions(
   search: ClosetSearch,
@@ -185,261 +209,130 @@ function coverageOptions(
   }));
 }
 
+type GroupKey = "group" | "worksAt" | "coverage";
+
 /**
-The asked span as the runner reads it: `34–58°`, `34°+`, `under 58°`.
+The three controls, keyed, so the rail and the chip row draw the same ones.
 */
-export function worksAtLabel(
-  search: ClosetSearch,
-  tempUnit: TempUnit,
-): string | undefined {
-  return formatTempRange(
-    {
-      ...(search.from !== undefined && { lowC: search.from }),
-      ...(search.to !== undefined && { highC: search.to }),
-    },
-    tempUnit,
-  );
-}
-
-function numberOf(value: FormDataEntryValue | null): number | undefined {
-  if (typeof value !== "string" || value.trim() === "") return undefined;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
-
-/**
- * What the hydrated form asks for, in Celsius: each end the runner filled
- * in, converted from their unit; an empty end stays open.
- */
-export function endsInC(
-  form: FormData,
-  tempUnit: TempUnit,
-): { from?: number; to?: number } {
-  const from = numberOf(form.get("from"));
-  const to = numberOf(form.get("to"));
+function useControls(
+  props: Readonly<ClosetFiltersProps>,
+): Readonly<Record<GroupKey, JSX.Element>> {
+  const { variant, search, counts, onSearch } = props;
+  const isHydrated = useIsHydrated();
   return {
-    ...(from !== undefined && { from: unitToC(from, tempUnit) }),
-    ...(to !== undefined && { to: unitToC(to, tempUnit) }),
+    group: (
+      <FilterGroup
+        title="Group"
+        variant={variant}
+        options={groupOptions(search, counts)}
+      />
+    ),
+    worksAt: <WorksAt {...props} />,
+    coverage: (
+      <FilterGroup
+        title="Coverage"
+        variant={variant}
+        options={coverageOptions(search, counts)}
+        onPick={isHydrated ? onSearch : undefined}
+      />
+    ),
   };
 }
 
 /**
- * The span bar: the closet's span as the track, the asked span in ink.
- * Decorative — the two fields beside it are the control and say the
- * numbers — so it is hidden from assistive tech.
+ * Each chip's `GROUP · VALUE` (#109b): unset reads ALL, and WORKS AT's
+ * unset reads ANY.
  */
-function SpanBar({
-  span,
-  search,
-}: Readonly<{
-  span: { lowC: number; highC: number };
-  search: ClosetSearch;
-}>): JSX.Element {
-  const width = span.highC - span.lowC;
-  const at = (tempC: number): number =>
-    width === 0 ? 0 : ((tempC - span.lowC) / width) * 100;
-  const left = Math.max(0, Math.min(100, at(search.from ?? span.lowC)));
-  const right = Math.max(0, Math.min(100, 100 - at(search.to ?? span.highC)));
-  return (
-    <div
-      aria-hidden="true"
-      data-part="span-bar"
-      className="relative h-1.5 rounded-pill bg-hairline"
-    >
-      <div
-        data-part="span"
-        className="absolute inset-y-0 rounded-pill bg-ink"
-        style={{ left: `${String(left)}%`, right: `${String(right)}%` }}
-      />
-    </div>
-  );
+export function chipValues(
+  search: ClosetSearch,
+  tempUnit: TempUnit,
+): Readonly<Record<GroupKey, string>> {
+  return {
+    group: search.group === undefined ? "All" : uiGroupLabels[search.group],
+    worksAt: worksAtLabel(search, tempUnit) ?? "Any",
+    coverage:
+      search.coverage === undefined ? "All" : coverageWords[search.coverage],
+  };
 }
 
-function EndField({
-  name,
-  label,
-  valueC,
-  boundC,
-  tempUnit,
-}: Readonly<{
-  name: "from" | "to";
-  label: string;
-  valueC: number | undefined;
-  boundC: number;
-  tempUnit: TempUnit;
-}>): JSX.Element {
-  const id = `${useId()}-${name}`;
-  return (
-    <span className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-small text-quiet">
-        {label}
-      </label>
-      <input
-        id={id}
-        name={name}
-        type="number"
-        inputMode="numeric"
-        step={1}
-        placeholder={String(tempInUnit(boundC, tempUnit))}
-        defaultValue={
-          valueC === undefined ? undefined : tempInUnit(valueC, tempUnit)
-        }
-        className="target w-16 rounded-field border border-hairline bg-panel px-2 py-1 font-mono text-mono-sm"
-      />
-    </span>
-  );
-}
+const CHIP_TITLES: Readonly<Record<GroupKey, string>> = {
+  group: "Group",
+  worksAt: "Works at",
+  coverage: "Coverage",
+};
+
+const CHIP_ORDER: readonly GroupKey[] = ["group", "worksAt", "coverage"];
 
 /**
- * WORKS AT: a GET form, so it works before hydration (the rest of the
- * rail is links). Empty ends are open ends, and the closet's own bounds
- * are the placeholders. The other filters ride along as hidden fields so
- * a submit keeps them, and `unit` says what was typed.
+ * Below 1040 (#109b): one chip per group, always shown, in the rail's
+ * order, each reading `GROUP · VALUE`. A tap opens that group's control
+ * inline under the row, one open at a time, `aria-expanded`; the open
+ * chip is ink, the rest outlined.
+ *
+ * **Before hydration a chip can open nothing**, so every control is shown
+ * open under the row and every one of them works — links and a GET form —
+ * until the script that makes the row a row arrives.
  */
-function WorksAtForm({
-  search,
-  span,
-  tempUnit,
-  onWorksAt,
-}: Readonly<
-  Pick<ClosetFiltersProps, "search" | "tempUnit" | "onWorksAt"> & {
-    span: { lowC: number; highC: number };
-  }
->): JSX.Element {
+function ChipRow(props: Readonly<ClosetFiltersProps>): JSX.Element {
+  const controls = useControls(props);
+  const isHydrated = useIsHydrated();
+  const [open, setOpen] = useState<GroupKey | undefined>();
+  const id = useId();
+  const values = chipValues(props.search, props.tempUnit);
+  const isShown = (key: GroupKey): boolean => !isHydrated || open === key;
   return (
-    <form
-      method="get"
-      onSubmit={(event) => {
-        if (onWorksAt === undefined) return;
-        event.preventDefault();
-        const form = new FormData(event.currentTarget);
-        onWorksAt(endsInC(form, tempUnit));
-      }}
-      className="flex flex-col gap-2"
-      // A changed search re-mounts the fields with its values.
-      key={`${String(search.from)}-${String(search.to)}`}
+    <nav
+      aria-label="Filter the closet"
+      data-part="chips"
+      className="flex flex-col gap-3"
     >
-      <SpanBar span={span} search={search} />
-      <div className="flex items-end gap-2">
-        <EndField
-          name="from"
-          label="From"
-          valueC={search.from}
-          boundC={span.lowC}
-          tempUnit={tempUnit}
-        />
-        <EndField
-          name="to"
-          label="To"
-          valueC={search.to}
-          boundC={span.highC}
-          tempUnit={tempUnit}
-        />
-        <button
-          type="submit"
-          className="target rounded-pill border border-hairline px-3 py-1 text-small font-semibold"
-        >
-          Apply
-        </button>
-      </div>
-      <input type="hidden" name="unit" value={tempUnit} />
-      {search.group === undefined ? undefined : (
-        <input type="hidden" name="group" value={search.group} />
-      )}
-      {search.coverage === undefined ? undefined : (
-        <input type="hidden" name="coverage" value={search.coverage} />
-      )}
-      {search.retired === true ? (
-        <input type="hidden" name="retired" value="true" />
-      ) : undefined}
-    </form>
+      <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
+        {CHIP_ORDER.map((key) => (
+          <li key={key}>
+            <button
+              type="button"
+              aria-expanded={isShown(key)}
+              aria-controls={`${id}-${key}`}
+              onClick={() => {
+                setOpen(open === key ? undefined : key);
+              }}
+              className="target flex items-center rounded-pill border border-hairline px-3 py-1 text-ink aria-expanded:border-ink aria-expanded:bg-ink aria-expanded:text-ground"
+            >
+              <Mono step="xs">{`${CHIP_TITLES[key]} · ${values[key]}`}</Mono>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {CHIP_ORDER.map((key) => (
+        <div key={key} id={`${id}-${key}`} hidden={!isShown(key)}>
+          {controls[key]}
+        </div>
+      ))}
+    </nav>
   );
 }
 
-/**
- * WORKS AT's heading, and its way out: an `Any` link while a span is set
- * (owner, 2026-11-05), which drops both ends and keeps the rest.
- */
-function WorksAtHeading({ search }: Readonly<{ search: ClosetSearch }>) {
-  const isSet = search.from !== undefined || search.to !== undefined;
+function Rail(props: Readonly<ClosetFiltersProps>): JSX.Element {
+  const controls = useControls(props);
   return (
-    <div className="flex items-baseline justify-between gap-2">
-      <GroupHeading>Works at</GroupHeading>
-      {isSet ? (
-        <Link
-          to="/closet"
-          search={{ ...search, from: undefined, to: undefined }}
-          className="target text-small text-ink"
-        >
-          Any
-        </Link>
-      ) : undefined}
-    </div>
-  );
-}
-
-function WorksAtFilter(
-  props: Readonly<Omit<ClosetFiltersProps, "counts">>,
-): JSX.Element {
-  const { variant, search, span, tempUnit } = props;
-  const body =
-    span === undefined ? (
-      <p className="m-0 text-small text-muted">
-        <Bracketed>Untested</Bracketed>
-      </p>
-    ) : (
-      <WorksAtForm {...props} span={span} />
-    );
-  if (variant === "rail") {
-    return (
-      <section className="flex flex-col gap-2">
-        <WorksAtHeading search={search} />
-        {body}
-      </section>
-    );
-  }
-  const label = worksAtLabel(search, tempUnit);
-  // The phone's one WORKS AT chip, which opens the same form inline
-  // (owner, 2026-11-05).
-  return (
-    <details className="flex flex-col gap-2">
-      <summary className="target flex w-fit cursor-pointer items-center gap-2 rounded-pill border border-hairline px-3 py-1 text-small">
-        <Mono step="xs">Works at</Mono>
-        {label === undefined ? undefined : (
-          <Bracketed step="xs">{label}</Bracketed>
-        )}
-      </summary>
-      <div className="flex flex-col gap-2 pt-2">
-        <WorksAtHeading search={search} />
-        {body}
-      </div>
-    </details>
+    <nav
+      aria-label="Filter the closet"
+      data-part="rail"
+      className="flex flex-col gap-6"
+    >
+      {controls.group}
+      {controls.worksAt}
+      {controls.coverage}
+    </nav>
   );
 }
 
 export function ClosetFilters(
   props: Readonly<ClosetFiltersProps>,
 ): JSX.Element {
-  const { variant, search, counts } = props;
-  return (
-    <nav
-      aria-label="Filter the closet"
-      data-part={variant === "rail" ? "rail" : "chips"}
-      className={
-        variant === "rail" ? "flex flex-col gap-6" : "flex flex-col gap-3"
-      }
-    >
-      <FilterGroup
-        title="Group"
-        variant={variant}
-        options={groupOptions(search, counts)}
-      />
-      <WorksAtFilter {...props} />
-      <FilterGroup
-        title="Coverage"
-        variant={variant}
-        options={coverageOptions(search, counts)}
-      />
-    </nav>
+  return props.variant === "rail" ? (
+    <Rail {...props} />
+  ) : (
+    <ChipRow {...props} />
   );
 }

@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   uiGroupLabels,
@@ -15,7 +15,8 @@ import { isPhotoBeingChecked } from "../photo-url";
 import { filterViews, railCounts, worksAtSpan } from "../filters";
 import type { ClosetSearch } from "../inputs";
 import type { ClosetItemView, ClosetListing } from "../service";
-import { ClosetFilters, coverageWords, worksAtLabel } from "./ClosetFilters";
+import { ClosetFilters, coverageWords } from "./ClosetFilters";
+import { worksAtLabel } from "./WorksAt";
 
 function itemLabel(view: ClosetItemView): string {
   return garmentLabel({
@@ -194,9 +195,10 @@ export interface ClosetGridProps {
   */
   search?: ClosetSearch | undefined;
   /**
-  WORKS AT's hydrated navigation, in Celsius; the route's to wire.
+  The rail's hydrated navigation, to the whole next search; the route's
+  to wire. Without it every filter works as it does before hydration.
   */
-  onWorksAt?: ((range: { from?: number; to?: number }) => void) | undefined;
+  onSearch?: ((next: ClosetSearch) => void) | undefined;
   /**
   Open with retired pieces shown. Set after retiring one, so the runner
   lands on the piece still present and marked, rather than on a grid it
@@ -300,18 +302,41 @@ function FilteredLine({
 }
 
 /**
- * The filters matched nothing (owner, 2026-11-05): say so, and the way
- * back is one link to the whole closet. The Add tile stays below it.
+ * The filters matched nothing (owner, 2026-11-05; round 46 #109d): the
+ * line above the grid in body text, and the way back is one link that
+ * resets all three groups. The Add tile keeps its cell.
  */
-function NoMatches() {
+function NoMatches({ onClear }: Readonly<{ onClear: () => void }>) {
   return (
     <p data-part="no-matches" className="m-0 text-body text-quiet">
       Nothing in your closet matches these filters.{" "}
-      <Link to="/closet" className="target text-ink">
+      <Link to="/closet" onClick={onClear} className="target text-ink">
         Clear filters
       </Link>
     </p>
   );
+}
+
+/**
+ * #109d: after Clear filters, focus goes to the header count — `0 pieces`
+ * no longer, but whatever it now says — so a screen reader hears what the
+ * clear did. Armed by the click and spent when the search it changed
+ * arrives, because the heading is not worth moving to until it is true.
+ */
+function useFocusAfterClear(search: ClosetSearch) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const armedRef = useRef(false);
+  useEffect(() => {
+    if (!armedRef.current) return;
+    armedRef.current = false;
+    headingRef.current?.focus();
+  }, [search]);
+  return {
+    headingRef,
+    arm: () => {
+      armedRef.current = true;
+    },
+  };
 }
 
 function RetiredSwitch({
@@ -371,11 +396,12 @@ export function ClosetGrid({
   deleted,
   tempUnit,
   search = NO_SEARCH,
-  onWorksAt,
+  onSearch,
 }: Readonly<ClosetGridProps>) {
   const [isRetiredShown, setRetiredShown] = useState(initialShowRetired);
   const said = useDeletedStatus(deleted);
   const screen = closetScreen(listing, isRetiredShown, search);
+  const focus = useFocusAfterClear(search);
   // `totalCount`, not the visible rows: a closet holding only retired
   // pieces is not empty, and "add what you run in most" to someone with a
   // full closet reads as data loss.
@@ -385,7 +411,7 @@ export function ClosetGrid({
     counts: screen.counts,
     span: screen.span,
     tempUnit,
-    onWorksAt,
+    onSearch,
   };
 
   return (
@@ -407,7 +433,11 @@ export function ClosetGrid({
             data-part="grid-header"
             className="flex items-center justify-between gap-3"
           >
-            <h1 className="m-0 font-display text-title">
+            <h1
+              ref={focus.headingRef}
+              tabIndex={-1}
+              className="m-0 font-display text-title"
+            >
               {isEmpty ? (
                 <Bracketed>Nothing in here yet</Bracketed>
               ) : (
@@ -445,7 +475,7 @@ export function ClosetGrid({
           </div>
         )}
         {screen.isFiltered && screen.visible.length === 0 ? (
-          <NoMatches />
+          <NoMatches onClear={focus.arm} />
         ) : undefined}
         <Tiles items={screen.visible} tempUnit={tempUnit} />
       </div>

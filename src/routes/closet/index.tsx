@@ -39,16 +39,9 @@ function ClosetPage() {
         tempUnit={units.temp}
         initialShowRetired={search.retired}
         search={search}
-        // WORKS AT once hydrated: the asked ends, in Celsius, replace the
-        // old ones and keep every other filter.
-        onWorksAt={(range) => {
-          void navigate({
-            search: (previous) => ({
-              ...previous,
-              from: range.from,
-              to: range.to,
-            }),
-          });
+        // The rail once hydrated: its whole next search.
+        onSearch={(next) => {
+          void navigate({ search: next });
         }}
         deleted={deleted}
       />

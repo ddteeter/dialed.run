@@ -2,6 +2,7 @@ import {
   RouterProvider,
   createMemoryHistory,
   createRootRoute,
+  createRoute,
   createRouter,
 } from "@tanstack/react-router";
 import { render, screen, waitFor, within } from "@testing-library/react";
@@ -15,7 +16,10 @@ import {
   closetHeading,
   closetScreen,
 } from "../../src/modules/closet/components/ClosetGrid";
-import type { ClosetSearch } from "../../src/modules/closet/inputs";
+import {
+  closetSearch,
+  type ClosetSearch,
+} from "../../src/modules/closet/inputs";
 import { itemView, listing, wardrobeItem } from "./closet-fixtures";
 
 /**
@@ -696,24 +700,60 @@ describe("ClosetGrid: the rail (R-94)", () => {
   it("draws the rail at desk and the chips below it, both whole", async () => {
     await grid();
     expect(rail().parentElement).toHaveClass("hidden", "desk:block");
-    const chips = document.querySelector<HTMLElement>(
-      "nav[data-part='chips']",
-    );
+    const chips = document.querySelector<HTMLElement>("nav[data-part='chips']");
     if (chips === null) throw new Error("no chips");
     expect(chips.parentElement).toHaveClass("desk:hidden");
-    // Present in both, whole — the phone's WORKS AT sits in its chip.
+    // Present in both, whole — the phone's behind its chips (#109b).
     for (const nav of [rail(), chips]) {
       const groups = within(nav);
-      expect(
-        groups.getByRole("heading", { name: "Group" }),
-      ).toBeInTheDocument();
-      expect(
-        groups.getByRole("heading", { name: "Works at" }),
-      ).toBeInTheDocument();
-      expect(
-        groups.getByRole("heading", { name: "Coverage" }),
-      ).toBeInTheDocument();
+      for (const name of [/^Group$/u, /^Works at/u, /^Coverage$/u]) {
+        expect(
+          groups.getByRole("heading", { name, hidden: true }),
+        ).toBeInTheDocument();
+      }
     }
+    expect(
+      within(chips)
+        .getAllByRole("button", { expanded: false })
+        .map((chip) => chip.textContent),
+    ).toStrictEqual(["Group · All", "Works at · Any", "Coverage · All"]);
+  });
+
+  it("puts focus on the heading's count once Clear filters has cleared", async () => {
+    const user = userEvent.setup();
+    const rootRoute = createRootRoute({
+      validateSearch: closetSearch,
+      component: function Page() {
+        return (
+          <ClosetGrid
+            tempUnit="c"
+            listing={closet}
+            search={rootRoute.useSearch()}
+          />
+        );
+      },
+    });
+    const closetRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/closet",
+    });
+    const router = createRouter({
+      routeTree: rootRoute.addChildren([closetRoute]),
+      history: createMemoryHistory({ initialEntries: ["/closet?group=shoes"] }),
+    });
+    await router.load();
+    render(<RouterProvider router={router} />);
+
+    const heading = await screen.findByRole("heading", { level: 1 });
+    expect(heading).toHaveTextContent("0 · Shoes");
+    expect(heading).not.toHaveFocus();
+    await user.click(screen.getByRole("link", { name: "Clear filters" }));
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+        "3 pieces",
+      );
+    });
+    expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
   });
 
   it("narrows the grid by group and heads it N · Group", async () => {

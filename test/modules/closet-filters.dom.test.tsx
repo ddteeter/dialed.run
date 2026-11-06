@@ -5,27 +5,38 @@ import {
   createRouter,
 } from "@tanstack/react-router";
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
+import { renderToString } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import type { UiGroup, VerdictCoverage } from "../../src/lib/contracts";
 import {
   ClosetFilters,
-  endsInC,
+  chipValues,
   type ClosetFiltersProps,
 } from "../../src/modules/closet/components/ClosetFilters";
+import {
+  barRange,
+  trackPercent,
+} from "../../src/modules/closet/components/WorksAt";
 import type { RailCounts } from "../../src/modules/closet/filters";
 
 /**
- * Closet C's rail (R-94, design 174), driven: GROUP and COVERAGE as links
- * that work before hydration, WORKS AT as a GET form that says its unit.
+ * Closet C's rail (R-94, design 174; round 46 #109b, f, h): every control
+ * as it works before hydration — links and a GET form — and as it works
+ * once a script is driving it.
  */
-async function renderWithRouter(element: ReactElement) {
+function routed(element: ReactElement) {
   const rootRoute = createRootRoute({ component: () => element });
-  const router = createRouter({
+  return createRouter({
     routeTree: rootRoute,
     history: createMemoryHistory({ initialEntries: ["/"] }),
   });
+}
+
+async function renderWithRouter(element: ReactElement) {
+  const router = routed(element);
   await router.load();
   return render(<RouterProvider router={router} />);
 }
@@ -46,8 +57,8 @@ const COUNTS: RailCounts = {
   ]),
 };
 
-function rail(props: Partial<ClosetFiltersProps> = {}) {
-  return renderWithRouter(
+function filters(props: Partial<ClosetFiltersProps> = {}): ReactElement {
+  return (
     <ClosetFilters
       variant="rail"
       search={{}}
@@ -55,12 +66,33 @@ function rail(props: Partial<ClosetFiltersProps> = {}) {
       span={{ lowC: 1.1, highC: 14.4 }}
       tempUnit="f"
       {...props}
-    />,
+    />
   );
 }
 
+const rail = (props: Partial<ClosetFiltersProps> = {}) =>
+  renderWithRouter(filters(props));
+
+const chips = (props: Partial<ClosetFiltersProps> = {}) =>
+  rail({ variant: "chips", ...props });
+
 const link = (name: RegExp): HTMLElement => screen.getByRole("link", { name });
 const href = (name: RegExp): string | null => link(name).getAttribute("href");
+const button = (name: RegExp): HTMLElement =>
+  screen.getByRole("button", { name });
+
+function hiddenFields(container: HTMLElement): string[] {
+  return [...container.querySelectorAll("input[type='hidden']")].map(
+    (input) =>
+      `${input.getAttribute("name") ?? ""}=${input.getAttribute("value") ?? ""}`,
+  );
+}
+
+function spanFill(): HTMLElement {
+  const bar = document.querySelector<HTMLElement>("[data-part='span']");
+  if (bar === null) throw new Error("no span");
+  return bar;
+}
 
 describe("ClosetFilters: GROUP", () => {
   it("lists All and the six groups with their counts, a missing one at 0", async () => {
@@ -81,13 +113,17 @@ describe("ClosetFilters: GROUP", () => {
     await rail({ search: { group: "tops", coverage: "partial" } });
     expect(link(/^Tops/)).toHaveAttribute("aria-current", "true");
     expect(link(/^All/)).not.toHaveAttribute("aria-current");
-    // Changing the group keeps the other filters; All drops only the group.
     expect(href(/^Shoes/)).toBe("/closet?group=shoes&coverage=partial");
     expect(href(/^All/)).toBe("/closet?coverage=partial");
   });
+
+  it("stays links once a script drives the rail", async () => {
+    await rail({ onSearch: vi.fn() });
+    expect(link(/^Tops/)).toHaveAttribute("href", "/closet?group=tops");
+  });
 });
 
-describe("ClosetFilters: COVERAGE", () => {
+describe("ClosetFilters: COVERAGE before a script", () => {
   it("names each level with its count and an ink swatch", async () => {
     await rail();
     const covered = link(/^Covered/);
@@ -104,7 +140,7 @@ describe("ClosetFilters: COVERAGE", () => {
     );
   });
 
-  it("sets a level, and clears it when the set level is tapped again", async () => {
+  it("links to a level, and from the set level to none", async () => {
     await rail({ search: { coverage: "partial", group: "tops" } });
     expect(link(/^Partial/)).toHaveAttribute("aria-current", "true");
     expect(link(/^Covered/)).not.toHaveAttribute("aria-current");
@@ -118,38 +154,85 @@ describe("ClosetFilters: COVERAGE", () => {
   });
 });
 
-describe("ClosetFilters: WORKS AT", () => {
-  it("is a GET form to this page, with the closet's bounds as placeholders in the runner's unit", async () => {
+describe("ClosetFilters: COVERAGE with a script (#109f)", () => {
+  it("is toggle buttons, the set level pressed and only it", async () => {
+    await rail({ search: { coverage: "partial" }, onSearch: vi.fn() });
+    expect(button(/^Partial/)).toHaveAttribute("aria-pressed", "true");
+    expect(button(/^Covered/)).toHaveAttribute("aria-pressed", "false");
+    expect(button(/^Partial/)).toHaveAttribute("type", "button");
+    expect(screen.queryByRole("radio")).toBeNull();
+    expect(screen.queryByRole("link", { name: /^Partial/ })).toBeNull();
+  });
+
+  it("sets a level, keeping the other filters", async () => {
+    const user = userEvent.setup();
+    const onSearch = vi.fn();
+    await rail({ search: { group: "tops" }, onSearch });
+    await user.click(button(/^Covered/));
+    expect(onSearch).toHaveBeenCalledExactlyOnceWith({
+      group: "tops",
+      coverage: "covered",
+    });
+  });
+
+  it("lets the pressed level go when it is pressed again", async () => {
+    const user = userEvent.setup();
+    const onSearch = vi.fn();
+    await rail({ search: { coverage: "partial", group: "tops" }, onSearch });
+    await user.click(button(/^Partial/));
+    expect(onSearch).toHaveBeenCalledExactlyOnceWith({
+      coverage: undefined,
+      group: "tops",
+    });
+  });
+});
+
+describe("ClosetFilters: WORKS AT before a script (#109h)", () => {
+  it("is a plain GET form to this page in the runner's unit", async () => {
     await rail();
-    const from = screen.getByLabelText("From");
-    const to = screen.getByLabelText("To");
-    const form = from.closest("form");
+    const lowest = screen.getByLabelText("Lowest");
+    const highest = screen.getByLabelText("Highest");
+    const form = lowest.closest("form");
     expect(form).toHaveAttribute("method", "get");
-    // No `action`: a form without one submits to the page it is on.
     expect(form).not.toHaveAttribute("action");
-    expect(from).toHaveAttribute("placeholder", "34");
-    expect(to).toHaveAttribute("placeholder", "58");
-    expect(from).toHaveDisplayValue("");
-    expect(screen.getByRole("button", { name: "Apply" })).toHaveAttribute(
-      "type",
-      "submit",
+    expect(lowest).toHaveAttribute("placeholder", "34");
+    expect(highest).toHaveAttribute("placeholder", "58");
+    expect(lowest).toHaveDisplayValue("");
+    expect(form).toHaveTextContent(/^Lowest\s*to\s*Highest\s*Apply$/u);
+    expect(
+      screen.getByRole("heading", { name: "Works at · °F" }),
+    ).toBeVisible();
+  });
+
+  it("hides the two labels, and makes Apply a plain text button", async () => {
+    await rail();
+    expect(document.querySelector("label[for$='-from']")).toHaveClass(
+      "sr-only",
     );
+    expect(document.querySelector("label[for$='-to']")).toHaveClass("sr-only");
+    const apply = screen.getByRole("button", { name: "Apply" });
+    expect(apply).toHaveAttribute("type", "submit");
+    expect(apply).toHaveClass("underline");
+    expect(apply).not.toHaveClass("rounded-pill");
   });
 
-  it("opens with the asked ends in the runner's unit", async () => {
+  it("opens with the asked ends in whole degrees of the runner's unit", async () => {
     await rail({ search: { from: 1.1, to: 14.4 } });
-    expect(screen.getByLabelText("From")).toHaveValue(34);
-    expect(screen.getByLabelText("To")).toHaveValue(58);
+    expect(screen.getByLabelText("Lowest")).toHaveValue(34);
+    expect(screen.getByLabelText("Highest")).toHaveValue(58);
   });
 
-  it("names its unit, and carries the other filters only when they are set", async () => {
+  it("names the unit its fields take", async () => {
+    await rail({ tempUnit: "c", span: { lowC: 1, highC: 14 } });
+    expect(
+      screen.getByRole("heading", { name: "Works at · °C" }),
+    ).toBeVisible();
+    expect(screen.getByLabelText("Lowest")).toHaveAttribute("placeholder", "1");
+  });
+
+  it("carries only its unit when nothing else is set", async () => {
     const { container } = await rail();
-    const hidden = (): string[] =>
-      [...container.querySelectorAll("input[type='hidden']")].map(
-        (input) =>
-          `${input.getAttribute("name") ?? ""}=${input.getAttribute("value") ?? ""}`,
-      );
-    expect(hidden()).toStrictEqual(["unit=f"]);
+    expect(hiddenFields(container)).toStrictEqual(["unit=f"]);
   });
 
   it("carries group, coverage and retired through a submit", async () => {
@@ -157,11 +240,7 @@ describe("ClosetFilters: WORKS AT", () => {
       search: { group: "outer", coverage: "covered", retired: true },
       tempUnit: "c",
     });
-    const hidden = [...container.querySelectorAll("input[type='hidden']")].map(
-      (input) =>
-        `${input.getAttribute("name") ?? ""}=${input.getAttribute("value") ?? ""}`,
-    );
-    expect(hidden).toStrictEqual([
+    expect(hiddenFields(container)).toStrictEqual([
       "unit=c",
       "group=outer",
       "coverage=covered",
@@ -169,25 +248,9 @@ describe("ClosetFilters: WORKS AT", () => {
     ]);
   });
 
-  it("navigates in Celsius once hydrated, an empty end left open", async () => {
-    const onWorksAt = vi.fn();
-    await rail({ onWorksAt });
-    fireEvent.change(screen.getByLabelText("From"), {
-      target: { value: "34" },
-    });
-    const isSubmitted = fireEvent.submit(
-      screen.getByRole("button", { name: "Apply" }),
-    );
-    expect(isSubmitted).toBe(false);
-    expect(onWorksAt).toHaveBeenCalledExactlyOnceWith({ from: 1.1 });
-  });
-
-  it("submits as a plain GET when nothing handles it", async () => {
+  it("submits as the browser does, uncaught", async () => {
     await rail();
-    const isSubmitted = fireEvent.submit(
-      screen.getByRole("button", { name: "Apply" }),
-    );
-    expect(isSubmitted).toBe(true);
+    expect(fireEvent.submit(button(/^Apply$/))).toBe(true);
   });
 
   it("offers no Any while no span is set", async () => {
@@ -195,133 +258,241 @@ describe("ClosetFilters: WORKS AT", () => {
     expect(screen.queryByRole("link", { name: "Any" })).toBeNull();
   });
 
-  it("links Any to the closet without the span", async () => {
+  it("links Any to the closet without the span, keeping the rest", async () => {
     await rail({ search: { from: 1.1, group: "tops" } });
-    expect(screen.getByRole("link", { name: "Any" })).toHaveAttribute(
-      "href",
-      "/closet?group=tops",
-    );
+    const any = screen.getByRole("link", { name: "Any" });
+    expect(any).toHaveAttribute("href", "/closet?group=tops");
+    expect(any).toHaveClass("target", "inline-flex");
   });
 
-  it("says Untested and draws no form when no piece states a range", async () => {
-    await rail({ span: undefined });
-    expect(screen.queryByLabelText("From")).toBeNull();
+  it("says Untested and draws no control when no piece states a range", async () => {
+    await rail({ span: undefined, onSearch: vi.fn() });
+    expect(screen.queryByLabelText("Lowest")).toBeNull();
     const worksAt = screen
-      .getByRole("heading", { name: "Works at" })
+      .getByRole("heading", { name: /^Works at/ })
       .closest("section");
     expect(worksAt?.querySelector("p")).toHaveTextContent("[Untested]");
   });
 });
 
-const span = (): HTMLElement => {
-  const bar = document.querySelector<HTMLElement>("[data-part='span']");
-  if (bar === null) throw new Error("no span");
-  return bar;
-};
+describe("ClosetFilters: WORKS AT with a script (#109h)", () => {
+  it("is the bar: two thumbs over the closet's span, and no Apply", async () => {
+    await rail({ search: { from: 4.4 }, onSearch: vi.fn() });
+    const lowest = screen.getByRole("slider", { name: "Lowest" });
+    const highest = screen.getByRole("slider", { name: "Highest" });
+    expect(lowest).toHaveAttribute("min", "34");
+    expect(lowest).toHaveAttribute("max", "58");
+    expect(lowest).toHaveValue("40");
+    expect(highest).toHaveValue("58");
+    expect(highest).toHaveAttribute("step", "1");
+    expect(screen.queryByRole("button", { name: "Apply" })).toBeNull();
+    expect(screen.queryByRole("spinbutton")).toBeNull();
+    expect(screen.getByRole("heading", { name: "Works at" })).toBeVisible();
+    expect(screen.getByText("40–58°F")).toBeVisible();
+  });
+
+  it("asks for the span when a thumb is let go, in Celsius, the rest kept", async () => {
+    const onSearch = vi.fn();
+    await rail({ search: { group: "tops" }, onSearch });
+    const lowest = screen.getByRole("slider", { name: "Lowest" });
+    fireEvent.change(lowest, { target: { value: "40" } });
+    expect(onSearch).not.toHaveBeenCalled();
+    expect(screen.getByText("40–58°F")).toBeVisible();
+    fireEvent.pointerUp(lowest);
+    expect(onSearch).toHaveBeenCalledExactlyOnceWith({
+      group: "tops",
+      from: 4.4,
+      to: undefined,
+    });
+  });
+
+  it("asks from the keyboard too, when the key is let go", async () => {
+    const onSearch = vi.fn();
+    await rail({ onSearch });
+    const highest = screen.getByRole("slider", { name: "Highest" });
+    fireEvent.change(highest, { target: { value: "50" } });
+    fireEvent.keyUp(highest, { key: "ArrowLeft" });
+    expect(onSearch).toHaveBeenCalledExactlyOnceWith({
+      from: undefined,
+      to: 10,
+    });
+  });
+
+  it("never lets the thumbs cross", async () => {
+    await rail({ search: { from: 4.4, to: 7.8 }, onSearch: vi.fn() });
+    const lowest = screen.getByRole("slider", { name: "Lowest" });
+    const highest = screen.getByRole("slider", { name: "Highest" });
+    fireEvent.change(lowest, { target: { value: "55" } });
+    expect(lowest).toHaveValue("46");
+    fireEvent.change(highest, { target: { value: "35" } });
+    expect(highest).toHaveValue("46");
+  });
+
+  it("takes the pointer on its thumbs alone, so the lower one can be reached", async () => {
+    await rail({ onSearch: vi.fn() });
+    expect(screen.getByRole("slider", { name: "Lowest" })).toHaveClass(
+      "pointer-events-none",
+      "[&::-webkit-slider-thumb]:pointer-events-auto",
+      "[&::-moz-range-thumb]:pointer-events-auto",
+      "[&::-webkit-slider-thumb]:bg-ink",
+    );
+  });
+
+  it("offers Any as a button that lets go of both ends and focuses the label", async () => {
+    const user = userEvent.setup();
+    const onSearch = vi.fn();
+    await rail({ search: { from: 4.4, to: 7.8, group: "tops" }, onSearch });
+    expect(screen.queryByRole("link", { name: "Any" })).toBeNull();
+    const any = screen.getByRole("button", { name: "Any" });
+    expect(any).toHaveClass("target");
+    await user.click(any);
+    expect(onSearch).toHaveBeenCalledExactlyOnceWith({
+      group: "tops",
+      from: undefined,
+      to: undefined,
+    });
+    expect(screen.getByRole("heading", { name: "Works at" })).toHaveFocus();
+  });
+
+  it("offers no Any button while no span is set", async () => {
+    await rail({ onSearch: vi.fn() });
+    expect(screen.queryByRole("button", { name: "Any" })).toBeNull();
+  });
+});
 
 describe("ClosetFilters: the span bar", () => {
   it("fills the whole track while nothing is asked", async () => {
-    await rail({ span: { lowC: 0, highC: 20 } });
-    expect(span().style.left).toBe("0%");
-    expect(span().style.right).toBe("0%");
-    expect(document.querySelector("[data-part='span-bar']")).toHaveAttribute(
-      "aria-hidden",
-      "true",
-    );
+    await rail({ span: { lowC: 0, highC: 20 }, onSearch: vi.fn() });
+    expect(spanFill().style.left).toBe("0%");
+    expect(spanFill().style.right).toBe("0%");
   });
 
   it("fills the asked part, from each end", async () => {
-    await rail({ span: { lowC: 0, highC: 20 }, search: { from: 5, to: 15 } });
-    expect(span().style.left).toBe("25%");
-    expect(span().style.right).toBe("25%");
-  });
-
-  it("stays inside the track when an end is asked beyond it", async () => {
-    await rail({ span: { lowC: 0, highC: 20 }, search: { from: -5, to: 40 } });
-    expect(span().style.left).toBe("0%");
-    expect(span().style.right).toBe("0%");
-  });
-
-  it("clamps an end asked past the other bound", async () => {
-    await rail({ span: { lowC: 0, highC: 20 }, search: { from: 30, to: -10 } });
-    expect(span().style.left).toBe("100%");
-    expect(span().style.right).toBe("100%");
-  });
-
-  it("draws a closet of one temperature without dividing by zero", async () => {
-    await rail({ span: { lowC: 5, highC: 5 } });
-    expect(span().style.left).toBe("0%");
-    expect(span().style.right).toBe("100%");
+    await rail({
+      tempUnit: "c",
+      span: { lowC: 0, highC: 20 },
+      search: { from: 5, to: 15 },
+      onSearch: vi.fn(),
+    });
+    expect(spanFill().style.left).toBe("25%");
+    expect(spanFill().style.right).toBe("25%");
   });
 });
 
-describe("ClosetFilters: rail and chips", () => {
+describe("trackPercent and barRange", () => {
+  it("places a value along the track, and a one-degree closet at 0", () => {
+    expect(trackPercent(5, 0, 20)).toBe(25);
+    expect(trackPercent(20, 0, 20)).toBe(100);
+    expect(trackPercent(5, 5, 5)).toBe(0);
+  });
+
+  it("reads an end at its bound as open, and converts the rest", () => {
+    const bounds = { low: 34, high: 58 };
+    expect(barRange({ low: 34, high: 58 }, bounds, "f")).toStrictEqual({});
+    expect(barRange({ low: 40, high: 50 }, bounds, "f")).toStrictEqual({
+      from: 4.4,
+      to: 10,
+    });
+    expect(barRange({ low: 35, high: 57 }, bounds, "f")).toStrictEqual({
+      from: 1.7,
+      to: 13.9,
+    });
+  });
+});
+
+describe("ClosetFilters: the phone's chip row (#109b)", () => {
+  it("draws one chip per group in the rail's order, unset reading ALL and ANY", async () => {
+    await chips();
+    const [row] = within(screen.getByRole("navigation")).getAllByRole("list");
+    if (row === undefined) throw new Error("no chip row");
+    expect(
+      within(row)
+        .getAllByRole("button")
+        .map((each) => each.textContent),
+    ).toStrictEqual(["Group · All", "Works at · Any", "Coverage · All"]);
+  });
+
+  it("reads each set value", () => {
+    expect(
+      chipValues(
+        { group: "tops", from: 1.1, to: 14.4, coverage: "unknown" },
+        "f",
+      ),
+    ).toStrictEqual({ group: "Tops", worksAt: "34–58°", coverage: "Untested" });
+  });
+
+  it("opens nothing until a chip is tapped, then one at a time", async () => {
+    const user = userEvent.setup();
+    await chips();
+    expect(button(/^Group/)).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("link", { name: /^Tops/ })).toBeNull();
+
+    await user.click(button(/^Group/));
+    expect(button(/^Group/)).toHaveAttribute("aria-expanded", "true");
+    expect(link(/^Tops/)).toBeVisible();
+
+    await user.click(button(/^Coverage/));
+    expect(button(/^Group/)).toHaveAttribute("aria-expanded", "false");
+    expect(button(/^Coverage/)).toHaveAttribute("aria-expanded", "true");
+    expect(screen.queryByRole("link", { name: /^Tops/ })).toBeNull();
+
+    await user.click(button(/^Coverage/));
+    expect(button(/^Coverage/)).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("points each chip at the control it opens", async () => {
+    const user = userEvent.setup();
+    await chips({ onSearch: vi.fn() });
+    await user.click(button(/^Works at/));
+    const panel = document.querySelector<HTMLElement>(
+      `#${CSS.escape(button(/^Works at/).getAttribute("aria-controls") ?? "")}`,
+    );
+    if (panel === null) throw new Error("no panel");
+    expect(panel).toBeVisible();
+    expect(within(panel).getByRole("slider", { name: "Lowest" })).toBeVisible();
+  });
+
+  it("draws the open chip in ink and the rest outlined", async () => {
+    await chips();
+    expect(button(/^Group/)).toHaveClass(
+      "rounded-pill",
+      "border-hairline",
+      "aria-expanded:bg-ink",
+      "aria-expanded:text-ground",
+    );
+  });
+
+  it("draws a panel's choices as ink-when-chosen pills that wrap", async () => {
+    const user = userEvent.setup();
+    await chips({ onSearch: vi.fn() });
+    await user.click(button(/^Coverage/));
+    expect(button(/^Covered/)).toHaveClass(
+      "rounded-pill",
+      "aria-pressed:bg-ink",
+      "aria-[current=true]:bg-ink",
+    );
+    expect(button(/^Covered/).closest("ul")).toHaveClass("flex-wrap");
+  });
+
+  it("shows every control open before hydration, where a chip cannot open one", async () => {
+    const router = routed(filters({ variant: "chips" }));
+    await router.load();
+    const html = renderToString(<RouterProvider router={router} />);
+    expect(html).not.toMatch(/\shidden(=""|\s|>)/u);
+    expect(html.match(/aria-expanded="true"/gu)).toHaveLength(3);
+    expect(html).toContain('method="get"');
+  });
+});
+
+describe("ClosetFilters: the rail's look", () => {
   it("draws the rail as text rows, bold when chosen", async () => {
     await rail();
     expect(screen.getByRole("navigation")).toHaveAttribute("data-part", "rail");
-    expect(link(/^All/)).toHaveClass("aria-[current=true]:font-bold");
+    expect(link(/^All/)).toHaveClass(
+      "aria-[current=true]:font-bold",
+      "aria-pressed:font-bold",
+    );
     expect(link(/^All/)).not.toHaveClass("rounded-pill");
     expect(link(/^All/).closest("ul")).toHaveClass("flex-col");
-  });
-
-  it("draws chips as ink-when-chosen pills that wrap", async () => {
-    await rail({ variant: "chips" });
-    expect(screen.getByRole("navigation")).toHaveAttribute(
-      "data-part",
-      "chips",
-    );
-    expect(link(/^All/)).toHaveClass(
-      "rounded-pill",
-      "aria-[current=true]:bg-ink",
-    );
-    expect(link(/^All/).closest("ul")).toHaveClass("flex-wrap");
-  });
-
-  it("folds WORKS AT into one chip that names the asked span", async () => {
-    await rail({ variant: "chips", search: { from: 1.1, to: 14.4 } });
-    const chip = screen.getByText("Works at", { selector: "summary *" });
-    const summary = chip.closest("summary");
-    expect(summary).toHaveTextContent("Works at[34–58°]");
-    expect(summary?.closest("details")).not.toHaveAttribute("open");
-    expect(
-      within(summary?.closest("details") ?? document.body).getByLabelText(
-        "From",
-      ),
-    ).toHaveValue(34);
-  });
-
-  it("names no span on the chip while none is asked", async () => {
-    await rail({ variant: "chips" });
-    const summary = screen
-      .getByText("Works at", { selector: "summary *" })
-      .closest("summary");
-    expect(summary).toHaveTextContent(/^Works at$/);
-  });
-});
-
-function form(entries: Record<string, string>): FormData {
-  const data = new FormData();
-  for (const [name, value] of Object.entries(entries)) data.set(name, value);
-  return data;
-}
-
-describe("endsInC", () => {
-  it("converts each filled end from the runner's unit", () => {
-    expect(endsInC(form({ from: "34", to: "58" }), "f")).toStrictEqual({
-      from: 1.1,
-      to: 14.4,
-    });
-    expect(endsInC(form({ from: "4", to: "12" }), "c")).toStrictEqual({
-      from: 4,
-      to: 12,
-    });
-  });
-
-  it("leaves an empty, blank or unreadable end open", () => {
-    expect(endsInC(form({ from: "", to: "  " }), "c")).toStrictEqual({});
-    expect(endsInC(form({ from: "warm", to: "12" }), "c")).toStrictEqual({
-      to: 12,
-    });
-    expect(endsInC(form({}), "c")).toStrictEqual({});
   });
 });

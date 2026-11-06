@@ -26,15 +26,18 @@ above the grid below 1040.
   in `lib/contracts/profile.ts` (3+ covered, 1–2 partial, 0 untested), which
   `onboarding/ladder.ts` now calls too. The swatch is `CoverageMark`, ink
   only (§AB).
-- **`ClosetFilters.tsx`**: GROUP and COVERAGE are `Link`s with
-  `aria-current`. WORKS AT is a GET form (from/to and Apply, with the other
-  filters as hidden inputs) that works before hydration and navigates on
-  `change` once hydrated. The span is filled in ink (Drew: the board's note
-  beats its pink). Desk layout is `desk:grid-cols-[max-content_minmax(0,1fr)]`,
-  because no rail-width token exists. Below desk the groups become a chip
-  row, and WORKS AT is one `<details>` chip holding the same form (Drew).
-  `useClosetFilters` plus a sub-component per group keep hooks under the
-  gate. This rail is not `DeskSplit`, whose rail is read-only by contract.
+- **`ClosetFilters.tsx`, `WorksAt.tsx`** (round 46 #109 rulings): before
+  hydration GROUP and COVERAGE are links (`aria-current`), and WORKS AT
+  is a GET form: visually hidden "Lowest"/"Highest", whole degrees in the
+  runner's unit, a plain-text Apply, other filters as hidden fields, and
+  `unit`. Once hydrated, COVERAGE becomes `aria-pressed` toggles (pressing
+  the pressed one clears it) and WORKS AT becomes its bar (two range
+  thumbs, ink span, committed on release); `Any` becomes a button that
+  focuses the label. Desk layout is `desk:grid-cols-[max-content_minmax(0,1fr)]`,
+  because no rail-width token exists. Below desk (#109b) there is one chip
+  per group, `GROUP · VALUE` (ALL / ANY), each opening its control under
+  the row with one open at a time; before hydration all three are open.
+  This rail is not `DeskSplit`, whose rail is read-only by contract.
 - **Units**: the control works in whole degrees of the runner's `temp_unit`,
   and the URL holds °C (`tempInUnit`/`unitToC`, `lib/contracts/temperature.ts`).
   **Bug fixed on the way:** `thermal.ts` `formatTempRange` took no unit, so
@@ -46,8 +49,9 @@ above the grid below 1040.
   set.
 - **Clearing** (Drew): GROUP keeps its drawn All. Tapping the selected
   coverage level again clears it, and WORKS AT shows an `Any` link while a
-  range is set. **No matches** (Drew): "Nothing in your closet matches
-  these filters." plus a `Clear filters` link, and the Add tile stays.
+  range is set (#109f confirms both). **No matches** (Drew; #109d): the line
+  "Nothing in your closet matches these filters." with `Clear filters`, and
+  focus goes to the header count.
 
 ## Contract touches
 
@@ -73,6 +77,6 @@ above the grid below 1040.
 
 ## Open questions
 
-None. Drew settled coverage, the phone chip, the fill, the header, clearing
-and the no-match copy (2026-11-05); the coordinator corrected units and the
-no-JS form.
+None. Drew settled coverage, the fill, the header, clearing and the no-match
+copy (2026-11-05). The coordinator corrected units and the no-JS form, and
+round 46 (#109a–m) ruled the rest.

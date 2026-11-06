@@ -10,9 +10,10 @@ import { storageStateFor } from "../support/accounts";
 import { withLocalDb } from "../support/local-db";
 
 /**
- * Closet C's rail before hydration (R-94, design 174): with no script at
- * all, GROUP and COVERAGE are links and WORKS AT is a plain GET form that
- * names the unit it was typed in. The demo drives the hydrated rail; this
+ * Closet C's rail before hydration (R-94, design 174; round 46 #109h):
+ * with no script at all, GROUP and COVERAGE are links and WORKS AT is a
+ * plain GET form — "Lowest" to "Highest", Apply — that names the unit it
+ * was typed in. The demo drives the hydrated rail; this
  * is the page a runner gets while the bundle is still on its way.
  *
  * Two pieces seeded on the closet account, and only those two asserted
@@ -67,10 +68,10 @@ test("WORKS AT filters the closet with no script, in the runner's unit", async (
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/closet");
   const rail = page.locator("nav[data-part='rail']");
-  await expect(rail.getByLabel("From")).toBeVisible();
+  await expect(rail.getByLabel("Lowest")).toBeVisible();
 
-  await rail.getByLabel("From").fill("60");
-  await rail.getByLabel("To").fill("80");
+  await rail.getByLabel("Lowest").fill("60");
+  await rail.getByLabel("Highest").fill("80");
   await rail.getByRole("button", { name: "Apply" }).click();
 
   // The form said what it typed in; the server read it as Fahrenheit.
@@ -84,7 +85,7 @@ test("WORKS AT filters the closet with no script, in the runner's unit", async (
   await expect(
     page.getByRole("link", { name: new RegExp(shell.name, "u") }),
   ).toHaveCount(0);
-  await expect(rail.getByLabel("From")).toHaveValue("60");
+  await expect(rail.getByLabel("Lowest")).toHaveValue("60");
 
   // A group link from here keeps the span, in Celsius now, and the shell
   // (20–40°F) still does not overlap it.
