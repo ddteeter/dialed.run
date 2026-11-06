@@ -336,10 +336,12 @@ function LoaderFailed({
   // keep. A root that failed on a later navigation still holds its last
   // answer, and the shell stays with Try again, which re-runs it.
   const isRootCrash = useRouterState({
-    select: (state) => {
-      const [root] = state.matches;
-      return root?.status === "error" && root.loaderData === undefined;
-    },
+    // The root is the first match, so a crash is a never-answered error
+    // found at index 0. A child's failure is found further along, or not.
+    select: (state) =>
+      state.matches.findIndex(
+        (match) => match.status === "error" && match.loaderData === undefined,
+      ) === 0,
   });
   if (isRootCrash) {
     return (

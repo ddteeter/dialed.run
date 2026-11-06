@@ -29,7 +29,9 @@ export function OnboardingProgress({
   at,
 }: Readonly<{ at: OnboardingStep }>): JSX.Element {
   const index = ONBOARDING_STEPS.findIndex(({ step }) => step === at);
-  const isOptional = ONBOARDING_STEPS[index]?.isOptional === true;
+  const isOptional = ONBOARDING_STEPS.some(
+    (entry) => entry.step === at && entry.isOptional,
+  );
   return (
     <div data-part="onboarding-progress" className="flex flex-col gap-6">
       {/* Each segment is a 2px rule, the only widths under SPACE[1] the

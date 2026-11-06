@@ -8,6 +8,7 @@ import {
   createRouter,
 } from "@tanstack/react-router";
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { useTappedSlow } from "../../src/ui/tapped-slow";
@@ -21,12 +22,32 @@ import { SLOW_ROUTE_MS } from "../../src/ui/tabs";
 function Row({
   to,
   label,
-}: Readonly<{ to: "/closet" | "/feed"; label: string }>) {
+}: Readonly<{ to: "/closet" | "/feed" | "/call"; label: string }>) {
   const { isWaiting, onClick } = useTappedSlow();
   return (
     <Link to={to} onClick={onClick} data-waiting={String(isWaiting)}>
       {label}
     </Link>
+  );
+}
+
+/**
+ * A row that appears only when asked, so a test can mount one while a
+ * load is already under way.
+ */
+function Later() {
+  const [isShown, setIsShown] = useState(false);
+  return isShown ? (
+    <Row to="/call" label="Account" />
+  ) : (
+    <button
+      type="button"
+      onClick={() => {
+        setIsShown(true);
+      }}
+    >
+      show
+    </button>
   );
 }
 
@@ -42,6 +63,7 @@ async function slowApp() {
       <>
         <Row to="/closet" label="Units" />
         <Row to="/feed" label="Privacy" />
+        <Later />
         <Outlet />
       </>
     ),
@@ -141,6 +163,22 @@ describe("useTappedSlow (X3, in-screen links)", () => {
     });
     await elapse(SLOW_ROUTE_MS * 2);
     expect(waiting("Units")).toBe("false");
+  });
+
+  it("starts unpressed when it mounts in the middle of a slow load", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const app = await slowApp();
+
+    act(() => {
+      void app.router.navigate({ to: "/closet" });
+    });
+    await elapse(SLOW_ROUTE_MS);
+    fireEvent.click(screen.getByRole("button", { name: "show" }));
+    await elapse(SLOW_ROUTE_MS * 2);
+
+    // Nobody pressed it: mounting is not tapping.
+    expect(waiting("Account")).toBe("false");
+    await app.release();
   });
 
   it("does not breathe a link nobody pressed, however slow the route", async () => {

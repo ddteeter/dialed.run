@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -486,6 +487,41 @@ describe("the system states' bell (PR #104)", () => {
     expect(document.querySelector("[data-part='failure-band']")).toBeNull();
   });
 
+  it("asks once the page learns it is signed in, not only on its first render", async () => {
+    // The frame is framed by who is looking, and that can change under a
+    // mounted page (the root answering late). The bell follows it.
+    const loadBell = vi.fn<LoadBell>(() =>
+      Promise.resolve(<span>{BELL}</span>),
+    );
+    function SignsIn() {
+      const [isSignedIn, setIsSignedIn] = useState(false);
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              setIsSignedIn(true);
+            }}
+          >
+            sign in
+          </button>
+          <NotFoundState signedIn={isSignedIn} loadBell={loadBell} />
+        </>
+      );
+    }
+    await renderAt(<SignsIn />);
+    expect(loadBell).not.toHaveBeenCalled();
+
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "sign in" }));
+
+    await waitFor(() => {
+      expect(bellIs().length).toBeGreaterThan(0);
+    });
+    expect(loadBell).toHaveBeenCalledOnce();
+  });
+
   it("does not ask for a stranger, who has no shell to put it in", async () => {
     const loadBell = vi.fn<LoadBell>(() =>
       Promise.resolve(<span>{BELL}</span>),
@@ -545,6 +581,21 @@ describe("X2 · root crash", () => {
     // loader has nothing to throw here.
     expect(router.state.matches[0]?.status).toBe("error");
     expect(tabBar()).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Reload" })).toBeNull();
+  });
+
+  it("is not a root crash when the root simply has nothing to answer and a child fails", async () => {
+    // A root with no answer of its own (loaderData undefined) that did not
+    // fail: the failure is the closet's, so it is the band with Try again.
+    await routedApp({
+      signedIn: "unloaded",
+      path: "/closet",
+      failWith: new Error("D1 down"),
+    });
+    await screen.findByText("Our end failed. Your closet is fine.");
+
+    expect(state()).toHaveAttribute("data-state", "loader-failed");
     expect(screen.getByRole("button", { name: "Try again" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Reload" })).toBeNull();
   });
