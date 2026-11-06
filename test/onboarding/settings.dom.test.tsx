@@ -1,10 +1,19 @@
 import {
+  Outlet,
   RouterProvider,
   createMemoryHistory,
   createRootRoute,
+  createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -22,6 +31,7 @@ import {
   SettingsSubPage,
 } from "../../src/modules/onboarding/components/SettingsSubPage";
 import type { CurrentSettings } from "../../src/modules/onboarding/profile";
+import { SLOW_ROUTE_MS } from "../../src/ui/tabs";
 import { carriedSince } from "../ui/carry-spy";
 
 vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
@@ -243,6 +253,65 @@ describe("the index (U1/N)", () => {
     expect(links.at(-1)?.compareDocumentPosition(signOut)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
+  });
+});
+
+describe("the index while a sub-page is slow (X3)", () => {
+  it("breathes the tapped row's label, and says it once", async () => {
+    // Only the timers: the router's own clock reads stay real.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const rootRoute = createRootRoute({ component: () => <Outlet /> });
+      const index = createRoute({
+        getParentRoute: () => rootRoute,
+        path: "/onboarding/settings",
+        component: () => (
+          <SettingsIndex
+            current={ANSWERED}
+            username="maya_runs"
+            runReminderEmail
+            blockedCount={2}
+            signOut={undefined}
+          />
+        ),
+      });
+      const section = createRoute({
+        getParentRoute: () => rootRoute,
+        path: "/onboarding/settings/$section",
+        loader: () =>
+          new Promise<never>(() => {
+            // A sub-page that never arrives.
+          }),
+        component: () => <p>unreachable</p>,
+      });
+      const router = createRouter({
+        routeTree: rootRoute.addChildren([index, section]),
+        history: createMemoryHistory({
+          initialEntries: ["/onboarding/settings"],
+        }),
+      });
+      await act(async () => {
+        await router.load();
+      });
+      render(<RouterProvider router={router} />);
+
+      fireEvent.click(row(/^Units/u));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SLOW_ROUTE_MS);
+      });
+
+      const units = row(/^Units/u);
+      expect(units).toHaveAttribute("data-state", "navigating");
+      expect(units.querySelectorAll(".breathe")).toHaveLength(2);
+      // The brackets are drawn, the label said once: "Units", not
+      // "Units Units" or "left bracket".
+      expect(units).toHaveAccessibleName(/^Units Fahrenheit, miles/u);
+      // The neighbours were not pressed.
+      expect(row(/^Privacy New/u)).not.toHaveAttribute("data-state");
+      expect(document.querySelectorAll(".breathe")).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

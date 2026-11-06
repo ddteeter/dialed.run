@@ -18,10 +18,12 @@ import {
   FormFailureBand,
   FormStatus,
   Mono,
+  PendingLabel,
   PICKED_AUDIENCES,
   SubmitButton,
   ToggleField,
   useFormSubmit,
+  useTappedSlow,
 } from "../../../ui";
 import {
   PUBLIC_DEFAULT_NEEDS_PROFILE,
@@ -70,6 +72,9 @@ export function privacyRowValue(
 
 /**
  * One tap-through row: the setting, what it is now, and the way in.
+ *
+ * A slow sub-page keeps this screen up and breathes brackets on the row's
+ * label (round 22 X3, in-screen links), as the bar breathes on a tab's.
  */
 function SettingsRow({
   to,
@@ -92,16 +97,25 @@ function SettingsRow({
    */
   verb?: string;
 }>): JSX.Element {
+  const { isWaiting, onClick } = useTappedSlow();
   return (
     <li>
       <Link
         to={to}
         params={params}
+        onClick={onClick}
         data-part="settings-row"
+        data-state={isWaiting ? "navigating" : undefined}
         className="target flex items-center justify-between gap-3 border-b border-hairline py-3 text-ink no-underline"
       >
         <span className="flex flex-col gap-1">
-          <span className="text-body font-semibold">{label}</span>
+          <span className="text-body font-semibold">
+            {isWaiting ? (
+              <PendingLabel label={label} pendingLabel={label} pending />
+            ) : (
+              label
+            )}
+          </span>
           <span className="text-small text-muted">{value}</span>
         </span>
         <span className="shrink-0 text-body">
