@@ -9,6 +9,11 @@ import type { DuplicateCandidate } from "./duplicates";
 A candidate as the Desk draws it: its variants and their pieces, summed.
 */
 export interface DuplicateGroup extends DuplicateCandidate {
+  /**
+   * The group's identity for a list: its product ids, which no other
+   * group shares, because `clustersIn` claims each name once.
+   */
+  key: string;
   pieces: number;
 }
 
@@ -28,6 +33,7 @@ export function duplicatesReport(
   const groups = candidates
     .map((candidate) => ({
       ...candidate,
+      key: candidate.products.map((row) => row.id).join(" "),
       pieces: candidate.products.reduce((sum, row) => sum + row.pieces, 0),
     }))
     .toSorted(

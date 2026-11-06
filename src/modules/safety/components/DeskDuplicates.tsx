@@ -47,10 +47,7 @@ export function DeskDuplicates({
       ) : (
         <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(min(300px,100%),1fr))] gap-3 p-0">
           {report.groups.map((group) => (
-            <GroupCard
-              key={group.products.map((row) => row.id).join(" ")}
-              group={group}
-            />
+            <GroupCard key={group.key} group={group} />
           ))}
         </ul>
       )}

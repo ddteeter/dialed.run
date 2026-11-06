@@ -473,6 +473,12 @@ describe("the report the Desk draws", () => {
     ]);
   });
 
+  it("keys each group by its product ids", () => {
+    const [group] = duplicatesReport([candidate("Nike", [14, 5])]).groups;
+
+    expect(group?.key).toBe("Nike-0 Nike-1");
+  });
+
   it("is all zeroes over a clean catalogue", () => {
     expect(duplicatesReport([])).toEqual({ names: 0, pieces: 0, groups: [] });
   });
