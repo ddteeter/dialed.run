@@ -46,6 +46,9 @@ describe("refreshTarget", () => {
         "https://shop.example/p?a=1;b=2",
       ],
       ["0; url=https://shop.example/p,q", "https://shop.example/p,q"],
+      // A label or quote later in the target is part of it, not syntax.
+      ["0; https://shop.example/p?url=x", "https://shop.example/p?url=x"],
+      ["0; url=https://shop.example/p'b'", "https://shop.example/p'b'"],
     ];
     for (const [content, expected] of shapes) {
       expect(targetFor(content), content).toBe(expected);
