@@ -55,7 +55,9 @@ describe("StravaConsent", () => {
     await renderConsent();
 
     const leads = [
-      ...document.querySelectorAll("[data-slot='strava-consent'] strong"),
+      ...document.querySelectorAll(
+        "[data-slot='strava-consent'] [data-part='consent-lead']",
+      ),
     ];
     expect(leads.map((lead) => lead.textContent)).toEqual([
       "What we collect:",
@@ -68,14 +70,15 @@ describe("StravaConsent", () => {
       expect(lead.parentElement?.tagName).toBe("P");
       expect(lead.className).toBe("font-semibold");
     }
-    // Nothing but paragraphs and their lead-ins: no label over a paragraph.
+    // Nothing but paragraphs and their lead-ins: no label over a paragraph,
+    // and no `strong`, which a screen reader announces around each lead-in.
     expect(
       new Set(
         [...document.querySelectorAll("[data-slot='strava-consent'] *")].map(
           (element) => element.tagName,
         ),
       ),
-    ).toEqual(new Set(["P", "STRONG"]));
+    ).toEqual(new Set(["P", "SPAN"]));
   });
 
   it("names where the trip started on the button's link", async () => {

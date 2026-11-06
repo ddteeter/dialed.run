@@ -51,14 +51,19 @@ export function StravaConsent({
 }
 
 /**
- * One run: its lead-in in `strong`, which is what semibold means here (a
- * label the sentence leads with, not stress), then the text.
+ * One run: its lead-in in semibold, then the text. A `span`, not `strong`:
+ * the weight is the board's typography, and `strong` is announced ("strong
+ * … end of strong") around each lead-in, which breaks the consent into
+ * fragments where round 39 wants it *"read as sentences"*.
  */
 function Run({ run }: Readonly<{ run: ConsentRun }>): JSX.Element {
   if (run.lead === undefined) return <>{run.text}</>;
   return (
     <>
-      <strong className="font-semibold">{run.lead}</strong> {run.text}
+      <span data-part="consent-lead" className="font-semibold">
+        {run.lead}
+      </span>{" "}
+      {run.text}
     </>
   );
 }

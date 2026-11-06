@@ -57,7 +57,7 @@ async function expectConsent(page: Page): Promise<void> {
     STRAVA_CONSENT.map((paragraph) => stravaConsentText(paragraph)),
   );
   // Round 39 #66: the lead-ins run in, semibold.
-  await expect(consent.locator("p strong")).toHaveText([
+  await expect(consent.locator("p [data-part='consent-lead']")).toHaveText([
     "What we collect:",
     "How:",
     "Never:",

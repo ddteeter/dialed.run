@@ -13,8 +13,9 @@ D-141, R-159). The board is `design/Round 39 Rulings.dc.html`.
 **#66 · lead-ins.** `STRAVA_CONSENT` (`lib/copy.ts`) becomes paragraphs of
 runs, `{ lead?, text }`, so the lead-ins are data rather than a second
 list that names them. The words stay the owner's, colons included (the
-board's periods are placeholder). `StravaConsent` renders a lead as
-`<strong className="font-semibold">` inside the paragraph, at its size.
+board's periods are placeholder). `StravaConsent` renders a lead as a
+semibold `span` inside the paragraph, at its size — not `strong`, which a
+screen reader announces around each lead-in, breaking the sentences.
 A derived `stravaConsentText(paragraph)` is the plain sentence the tests
 and the e2e compare.
 

@@ -27,17 +27,20 @@ paragraph
 Connecting Strava lets us remind you to log a kit after each run.
 end of paragraph
 paragraph
-What we collect: your Strava athlete id, a token we use only to disconnect, and, for # days, the id, type and time of each new activity so we remind you once. How: through Strava's sign-in and its activity notifications. Never: your activity details, route, pace or anything else about the run.
+What we collect:
+your Strava athlete id, a token we use only to disconnect, and, for # days, the id, type and time of each new activity so we remind you once.
+How:
+through Strava's sign-in and its activity notifications.
+Never:
+your activity details, route, pace or anything else about the run.
 end of paragraph
 paragraph
-To stop: Disconnect in Settings, or remove dialed.run under Strava › Settings › My Apps. Either deletes what we hold from Strava, apart from what we need to finish disconnecting, and we email you to confirm it.
+To stop:
+Disconnect in Settings, or remove dialed.run under Strava › Settings › My Apps. Either deletes what we hold from Strava, apart from what we need to finish disconnecting, and we email you to confirm it.
 end of paragraph
 link, Connect with Strava
 image, Connect with Strava
 end of link, Connect with Strava
-paragraph
-We read that a run happened. Nothing else.
-end of paragraph
 link, I have a run to upload
 link, Done for now
 end of main
