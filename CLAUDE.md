@@ -119,8 +119,8 @@ examples: `lib/contracts/garment-fields.ts` reads `garmentSchema.options`, and
 ## Product rules that are also code rules
 
 - **Verdicts are per-run**, stored as an integer −2..+2 (0 = dialed). Per-item
-  signal is the optional `flag`/`note` on `outfit_entry_items` — there is no
-  per-item verdict. See `docs/contracts.md`.
+  signal is the optional `flag` on `outfit_entry_items` (the per-item note is
+  cut for v1, D-160) — there is no per-item verdict. See `docs/contracts.md`.
 - **Weather is never typed by a human** as the default path. The manual-temp
   fallback exists only when no observation is resolvable; it is stored with
   `source='manual'` and excluded from consensus aggregates, published anonymous
