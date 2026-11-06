@@ -2,6 +2,7 @@ import ipaddr from "ipaddr.js";
 
 import { PageFetchError, readCapped } from "./bounds";
 import { scrapeThroughProxy } from "./firecrawl";
+import { refreshTarget } from "./meta-refresh";
 
 /**
  * The one outbound fetch enrichment makes, and the only place a product URL
@@ -211,12 +212,51 @@ async function refused(
 }
 
 /**
+ * One hop: the next URL when the server redirects, or the page.
+ */
+async function fetchHop(
+  current: URL,
+  fetchImpl: typeof fetch,
+  options: FetchOptions,
+): Promise<URL | FetchedPage> {
+  assertFetchable(current);
+
+  const response = await fetchImpl(current.href, {
+    redirect: "manual",
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+    headers: { accept: "text/html,application/xhtml+xml" },
+  });
+
+  if (response.status >= 300 && response.status < 400) {
+    return redirectTarget(response, current);
+  }
+  // `await`, not a bare `return` of the promise: under workerd the inner
+  // rejection is reported as unhandled before the outer promise adopts
+  // it — twelve of them across the suite, from tests that passed — and
+  // the mutation runner cannot stringify an error that crossed the
+  // isolate boundary, so it crashed the dry run instead of reporting it.
+  if (!response.ok) {
+    return await refused(response, current, fetchImpl, options);
+  }
+  return {
+    finalUrl: current.href,
+    html: await readCapped(response),
+    via: "direct",
+  };
+}
+
+/**
  * Fetch a product page under every bound above.
  *
  * **Redirects are followed by hand**, because `redirect: "follow"` would let
  * hop two land somewhere hop one was checked to prevent — a public URL that
  * 302s to `http://169.254.169.254/` is the whole attack, and the platform
  * hands back only the final response. Each hop is re-validated.
+ *
+ * **A meta refresh is a hop too** (R-176, design 171): a page that sends a
+ * browser on is a redirect whatever status it came with, so it counts
+ * against the same limit and its target passes the same checks — the
+ * proxied page's included, whose next hop is ours to make.
  */
 export async function fetchProductPage(
   rawUrl: string,
@@ -228,31 +268,14 @@ export async function fetchProductPage(
 
   let current = parsed;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
-    assertFetchable(current);
-
-    const response = await fetchImpl(current.href, {
-      redirect: "manual",
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-      headers: { accept: "text/html,application/xhtml+xml" },
-    });
-
-    if (response.status >= 300 && response.status < 400) {
-      current = redirectTarget(response, current);
+    const answer = await fetchHop(current, fetchImpl, options);
+    if (answer instanceof URL) {
+      current = answer;
       continue;
     }
-    // `await`, not a bare `return` of the promise: under workerd the inner
-    // rejection is reported as unhandled before the outer promise adopts
-    // it — twelve of them across the suite, from tests that passed — and
-    // the mutation runner cannot stringify an error that crossed the
-    // isolate boundary, so it crashed the dry run instead of reporting it.
-    if (!response.ok) {
-      return await refused(response, current, fetchImpl, options);
-    }
-    return {
-      finalUrl: current.href,
-      html: await readCapped(response),
-      via: "direct",
-    };
+    const refresh = refreshTarget(answer.html, new URL(answer.finalUrl));
+    if (refresh === undefined) return answer;
+    current = refresh;
   }
   throw new PageFetchError(`More than ${String(MAX_REDIRECTS)} redirects`);
 }

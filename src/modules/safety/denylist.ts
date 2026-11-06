@@ -12,7 +12,7 @@
 import { inArray } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
-import { domainDenylist } from "../../db/schema-core";
+import { domainDenylist, linkLandings } from "../../db/schema-core";
 import { primaryCoreDb } from "../../env";
 import { domainOf } from "../../lib/domain";
 import { columnWhere } from "../../lib/sql/keyed-read";
@@ -39,30 +39,13 @@ function suffixesOf(domain: string): string[] {
 }
 
 /**
- * Which of these links' domains are denied, in one read of the denylist
- * by its key, whatever the batch size (design 163).
- *
- * **The one rule.** The save's refusal and every surface that shows a link
- * ask this, so a link cannot be refused at save and shown somewhere else,
- * or the reverse. The answer is in `domainOf`'s form, so a caller asks
- * `denied.has(domainOf(url))`.
- *
- * The handle is the caller's: a save's refusal reads the primary, and a
- * page reads its replica (owner Q4), where a new denial lands within the
- * same minute its cache already accepts.
- *
- * A link we cannot parse, or that is not https, is never in the answer —
- * it is invalid, which is a different answer with a different message,
- * and conflating them would tell a runner their perfectly good link was
- * blocked.
+ * Which of these domains are denied, by their own row or a parent's, in
+ * one read of the denylist by its key, whatever the batch size.
  */
-export async function deniedDomainsOf(
+async function deniedAmong(
   database: Db,
-  urls: readonly (string | undefined)[],
+  domains: ReadonlySet<string>,
 ): Promise<Set<string>> {
-  const domains = new Set(
-    urls.map((url) => domainOf(url)).filter((domain) => domain !== undefined),
-  );
   const candidates = [...domains].flatMap((domain) => suffixesOf(domain));
   const listed = new Set(
     await columnWhere(
@@ -80,19 +63,104 @@ export async function deniedDomainsOf(
 }
 
 /**
- * Whether this URL's domain is denied: `deniedDomainsOf` for one link, on
- * the primary, for a save's refusal.
+ * Which of these links are denied: by their own domain, or by the domain
+ * enrichment found they land on (R-176, design 171). The answer holds the
+ * links exactly as given, so a caller asks `denied.has(url)`.
+ *
+ * **The one rule** (design 163). The save's refusal and every surface that
+ * shows a link ask this, so a link cannot be refused at save and shown
+ * somewhere else, or the reverse — and a link that redirects somewhere
+ * denied is refused and hidden exactly like one typed there.
+ *
+ * The handle is the caller's: a save's refusal reads the primary, and a
+ * page reads its replica (owner Q4), where a new denial lands within the
+ * same minute its cache already accepts.
+ *
+ * A link we cannot parse, or that is not https, is never in the answer —
+ * it is invalid, which is a different answer with a different message,
+ * and conflating them would tell a runner their perfectly good link was
+ * blocked. A batch with no valid link makes no read.
  */
-export async function isDeniedDomain(
-  url: string | undefined,
-): Promise<boolean> {
-  const denied = await deniedDomainsOf(db(), [url]);
+export async function deniedLinksOf(
+  database: Db,
+  urls: readonly (string | undefined)[],
+): Promise<Set<string>> {
+  const links = new Map<string, string>();
+  const valid: string[] = [];
+  for (const url of urls) {
+    const domain = domainOf(url);
+    if (domain === undefined) continue;
+    links.set(String(url), domain);
+    valid.push(String(url));
+  }
+  if (valid.length === 0) return new Set();
+  const rows = await database
+    .select({ url: linkLandings.url, domain: linkLandings.landedDomain })
+    .from(linkLandings)
+    .where(inArray(linkLandings.url, valid));
+  const landings = new Map(rows.map(({ url, domain }) => [url, domain]));
+  const denied = await deniedAmong(
+    database,
+    new Set([...links.values(), ...landings.values()]),
+  );
+  return new Set(
+    [...links]
+      .filter(
+        ([url, domain]) =>
+          denied.has(domain) || denied.has(String(landings.get(url))),
+      )
+      .map(([url]) => url),
+  );
+}
+
+/**
+ * Whether this link is denied: `deniedLinksOf` for one link, on the
+ * primary, for a save's refusal.
+ */
+export async function isDeniedLink(url: string | undefined): Promise<boolean> {
+  const denied = await deniedLinksOf(db(), [url]);
   return denied.size > 0;
 }
 
 /**
- * Adds a domain to the denylist. Seeded empty (packet §3); the review flow
- * is what fills it.
+ * Whether this link is denied now, by its own domain or the domain
+ * enrichment's read of it landed on — and the landing is recorded first,
+ * so every later read of the link answers the same way (R-176, design
+ * 171). Enrichment asks before it stores anything, and throws the read
+ * away on `true`.
+ *
+ * Only a landing on another domain is a row: a link that lands at home
+ * is answered by its own domain, now and at every later read. A landing
+ * with no https domain has nothing to hold against the denylist, so its
+ * read is refused rather than let past the rule; it leaves no row, so the
+ * link itself is not hidden. Only the proxy, following redirects on its
+ * own network, can arrive at one.
+ *
+ * Primary, like the save's refusal: an operator's new denial holds at
+ * once, and the landing is a write.
+ */
+export async function isDeniedOnLanding(
+  link: string,
+  landedUrl: string,
+): Promise<boolean> {
+  const landed = domainOf(landedUrl);
+  if (landed === undefined) return true;
+  if (landed !== domainOf(link)) {
+    const checkedAt = nowSeconds();
+    await db()
+      .insert(linkLandings)
+      .values({ url: link, landedDomain: landed, checkedAt })
+      .onConflictDoUpdate({
+        target: linkLandings.url,
+        set: { landedDomain: landed, checkedAt },
+      });
+  }
+  return isDeniedLink(link);
+}
+
+/**
+ * Adds a domain to the denylist. Seeded with link shorteners and
+ * redirectors (R-176, migration 0078); the review flow adds the rest.
  *
  * The stored form is whatever `domainOf` produces, so a reviewer pasting a
  * full URL and a reviewer typing a bare host both land on the same row.

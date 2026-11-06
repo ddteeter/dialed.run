@@ -679,3 +679,182 @@ describe("fetchProductPage: through the proxy when the shop refuses a Worker", (
     }
   });
 });
+
+/**
+ * A fetch that answers each URL from a table, so a chain of pages can
+ * be read back in order.
+ */
+function pages(table: Record<string, Response | (() => Response)>) {
+  const impl: typeof fetch = (input) => {
+    const answer = table[urlOf(input)];
+    if (answer === undefined) {
+      return Promise.reject(new Error(`unexpected ${urlOf(input)}`));
+    }
+    return Promise.resolve(typeof answer === "function" ? answer() : answer);
+  };
+  return vi.fn(impl);
+}
+
+function refreshPage(target: string): Response {
+  return new Response(
+    `<html><head><meta http-equiv="refresh" content="0; url=${target}"></head></html>`,
+    { status: 200 },
+  );
+}
+
+/**
+ * Five hops, 3xx and refreshes taking turns, from `/0` to `/5`, then
+ * whatever `extra` serves.
+ */
+function mixedChain(extra: Record<string, () => Response>) {
+  return pages({
+    "https://a.example/0": () =>
+      new Response(undefined, {
+        status: 302,
+        headers: { location: "https://a.example/1" },
+      }),
+    "https://a.example/1": () => refreshPage("https://a.example/2"),
+    "https://a.example/2": () =>
+      new Response(undefined, {
+        status: 301,
+        headers: { location: "https://a.example/3" },
+      }),
+    "https://a.example/3": () => refreshPage("https://a.example/4"),
+    "https://a.example/4": () =>
+      new Response(undefined, {
+        status: 307,
+        headers: { location: "https://a.example/5" },
+      }),
+    ...extra,
+  });
+}
+
+/**
+ * A shop that refuses, and a proxy that lands on a wall whose refresh
+ * points back to the real page, which the shop serves directly.
+ */
+const proxiedRefresh: typeof fetch = (input) => {
+  if (isProxyCall(input)) {
+    return Promise.resolve(
+      Response.json({
+        success: true,
+        data: {
+          rawHtml: '<meta http-equiv="refresh" content="0; url=/real">',
+          metadata: { statusCode: 200, url: "https://landed.example/wall" },
+        },
+      }),
+    );
+  }
+  return Promise.resolve(
+    urlOf(input) === "https://landed.example/real"
+      ? new Response("<html>real</html>")
+      : new Response("blocked", { status: 403 }),
+  );
+};
+
+describe("fetchProductPage: a meta refresh is one more hop (R-176)", () => {
+  it("follows a refresh to the page it names, and reports that page", async () => {
+    const fetchImpl = pages({
+      "https://short.example/x": refreshPage("https://shop.example.com/p"),
+      "https://shop.example.com/p": new Response("<html>product</html>"),
+    });
+    const page = await fetchProductPage("https://short.example/x", fetchImpl);
+    expect(page).toStrictEqual({
+      finalUrl: "https://shop.example.com/p",
+      html: "<html>product</html>",
+      via: "direct",
+    });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("follows a relative refresh, then a 3xx, in one chain", async () => {
+    const fetchImpl = pages({
+      "https://short.example/x": refreshPage("/hop"),
+      "https://short.example/hop": new Response(undefined, {
+        status: 302,
+        headers: { location: "https://shop.example.com/p" },
+      }),
+      "https://shop.example.com/p": new Response("<html>product</html>"),
+    });
+    const page = await fetchProductPage("https://short.example/x", fetchImpl);
+    expect(page.finalUrl).toBe("https://shop.example.com/p");
+  });
+
+  it("refuses a refresh into private space, without asking it", async () => {
+    const fetchImpl = pages({
+      "https://short.example/x": refreshPage(
+        `https://${ipv4(169, 254, 169, 254)}/x`,
+      ),
+    });
+    await expect(
+      fetchProductPage("https://short.example/x", fetchImpl),
+    ).rejects.toThrow(/private or local host/u);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses a refresh to http, without asking it", async () => {
+    const fetchImpl = pages({
+      "https://short.example/x": refreshPage(INSECURE),
+    });
+    await expect(
+      fetchProductPage("https://short.example/x", fetchImpl),
+    ).rejects.toThrow(/non-https/u);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("counts refreshes and 3xx against the same five-hop limit", async () => {
+    // Three 3xx and two refreshes are five hops, and the sixth page is read.
+    const page = await fetchProductPage(
+      "https://a.example/0",
+      mixedChain({
+        "https://a.example/5": () => new Response("<html>end</html>"),
+      }),
+    );
+    expect(page.finalUrl).toBe("https://a.example/5");
+
+    await expect(
+      fetchProductPage(
+        "https://a.example/0",
+        mixedChain({
+          "https://a.example/5": () => refreshPage("https://a.example/6"),
+          "https://a.example/6": () => new Response("<html>end</html>"),
+        }),
+      ),
+    ).rejects.toThrow(/More than 5 redirects/u);
+  });
+
+  it("gives up on a refresh loop between two pages", async () => {
+    const fetchImpl = pages({
+      "https://a.example/1": () => refreshPage("https://a.example/2"),
+      "https://a.example/2": () => refreshPage("https://a.example/1"),
+    });
+    await expect(
+      fetchProductPage("https://a.example/1", fetchImpl),
+    ).rejects.toThrow(/redirects/u);
+    expect(fetchImpl).toHaveBeenCalledTimes(6);
+  });
+
+  it("returns a page whose refresh only reloads it", async () => {
+    const fetchImpl = pages({
+      "https://shop.example.com/p": refreshPage("https://shop.example.com/p"),
+    });
+    const page = await fetchProductPage(
+      "https://shop.example.com/p",
+      fetchImpl,
+    );
+    expect(page.finalUrl).toBe("https://shop.example.com/p");
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("follows a refresh in a proxied page, resolved against where the proxy landed", async () => {
+    const fetchImpl = vi.fn(proxiedRefresh);
+    const page = await fetchProductPage("https://short.example/x", fetchImpl, {
+      proxyApiKey: "fc-key",
+    });
+    expect(page).toStrictEqual({
+      finalUrl: "https://landed.example/real",
+      html: "<html>real</html>",
+      via: "direct",
+    });
+  });
+});

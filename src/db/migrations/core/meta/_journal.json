@@ -540,6 +540,20 @@
       "when": 1793563825637,
       "tag": "0076_add_photo_screenings_created_index",
       "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "6",
+      "when": 1793921048678,
+      "tag": "0077_add_link_landings",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "6",
+      "when": 1793921054512,
+      "tag": "0078_seed_link_shortener_denylist",
+      "breakpoints": true
     }
   ]
 }

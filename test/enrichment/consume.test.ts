@@ -2,7 +2,13 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { gaveUp, products, productSnapshots } from "../../src/db/schema-core";
+import {
+  domainDenylist,
+  gaveUp,
+  linkLandings,
+  products,
+  productSnapshots,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import {
@@ -17,6 +23,11 @@ import {
 import { DEAD_LETTER_REASON } from "../../src/db/gave-up";
 import { listAbandonedEnrichments } from "../../src/modules/enrichment/abandon";
 import { pageFailureReason } from "../../src/modules/enrichment/bounds";
+import {
+  denyDomain,
+  isDeniedLink,
+  isDeniedOnLanding,
+} from "../../src/modules/safety";
 import { nowSeconds } from "../../src/lib/now";
 import samplePhotoBytes from "../fixtures/sample-photo.bin";
 import { gaveUpRow } from "../gave-up-rows";
@@ -183,6 +194,7 @@ function depsWith(fetchImpl: typeof fetch) {
     captureException: vi.fn(),
     fetchImpl,
     model: modelAnswering(COMPOSITION),
+    isLandingDenied: isDeniedOnLanding,
   };
 }
 
@@ -190,7 +202,12 @@ function depsWith(fetchImpl: typeof fetch) {
 Deps with no model configured, which is the unconfigured-worker case.
 */
 function depsWithoutModel(fetchImpl: typeof fetch) {
-  return { db: db(), captureException: vi.fn(), fetchImpl };
+  return {
+    db: db(),
+    captureException: vi.fn(),
+    fetchImpl,
+    isLandingDenied: isDeniedOnLanding,
+  };
 }
 
 function jobFor(productId: string, id = "m1") {
@@ -301,6 +318,108 @@ describe("handleEnrichmentBatch: the happy path", () => {
 
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     expect(await statusOf(productId)).toBe("done");
+  });
+});
+
+/**
+ * A link that 302s to `landing`, which serves the page with an image.
+ */
+function redirectingTo(landing: string) {
+  const impl: typeof fetch = (input) => {
+    const url = urlOf(input);
+    if (url === URL_UNDER_TEST) {
+      return Promise.resolve(
+        new Response(undefined, {
+          status: 302,
+          headers: { location: landing },
+        }),
+      );
+    }
+    return Promise.resolve(
+      url === IMAGE_URL
+        ? new Response(IMAGE_BYTES, {
+            headers: { "content-type": "image/jpeg" },
+          })
+        : new Response(PAGE_WITH_IMAGE),
+    );
+  };
+  return vi.fn(impl);
+}
+
+describe("handleEnrichmentBatch: where the link landed (R-176)", () => {
+  afterEach(async () => {
+    await db().delete(linkLandings);
+    await db()
+      .delete(domainDenylist)
+      .where(eq(domainDenylist.domain, "spam.example"));
+  });
+
+  it("throws away a read that landed on a denied site, and lets the link go", async () => {
+    await denyDomain("spam.example", newUlid());
+    const productId = await pendingProduct({
+      extractionError: "earlier",
+      extractionTries: 2,
+    });
+    const fetchImpl = redirectingTo("https://spam.example/tee");
+    const deps = depsWith(fetchImpl);
+    const message = jobFor(productId);
+
+    await handleEnrichmentBatch(batchOf("dialed-enrichment", [message]), deps);
+
+    expect(message.ack).toHaveBeenCalledTimes(1);
+    expect(deps.captureException).not.toHaveBeenCalled();
+    // The redirect and the landing page: no image was fetched.
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(deps.model.extract).not.toHaveBeenCalled();
+    expect(await snapshotsOf(productId)).toEqual([]);
+    const listed = await env.MEDIA.list({ prefix: `products/${productId}/` });
+    expect(listed.objects).toEqual([]);
+    const row = await rowOf(productId);
+    expect(row.extractionStatus).toBe("none");
+    expect(row.sourceUrl).toBeNull();
+    expect(row.fabricComposition).toBeNull();
+    expect(row.imageKey).toBeNull();
+    expect(row.extractionError).toBeNull();
+    expect(row.extractionTries).toBeNull();
+    // Denied wherever it would show, as a link typed there is.
+    expect(await isDeniedLink(URL_UNDER_TEST)).toBe(true);
+  });
+
+  it("asks with the link as typed and the page it ended on", async () => {
+    const productId = await pendingProduct();
+    const isLandingDenied = vi.fn(() => Promise.resolve(false));
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      {
+        ...depsWith(redirectingTo("https://other.example/tee")),
+        isLandingDenied,
+      },
+    );
+    expect(isLandingDenied).toHaveBeenCalledWith(
+      URL_UNDER_TEST,
+      "https://other.example/tee",
+    );
+  });
+
+  it("reads an allowed landing as before, and remembers where it was", async () => {
+    const productId = await pendingProduct();
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      depsWith(redirectingTo("https://spam.example/tee")),
+    );
+
+    const row = await rowOf(productId);
+    expect(row).toMatchObject({
+      extractionStatus: "done",
+      sourceUrl: URL_UNDER_TEST,
+    });
+    const [snapshot] = await snapshotsOf(productId);
+    expect(snapshot?.url).toBe("https://spam.example/tee");
+
+    // Denied later: the link goes too, though its read has been kept.
+    expect(await isDeniedLink(URL_UNDER_TEST)).toBe(false);
+    await denyDomain("spam.example", newUlid());
+    expect(await isDeniedLink(URL_UNDER_TEST)).toBe(true);
   });
 });
 
