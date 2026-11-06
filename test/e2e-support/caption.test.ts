@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  AFINFO,
+  FFMPEG_CANDIDATES,
+  SAY,
   STRIP_HEIGHT,
   captionPage,
   cuesSchema,
@@ -61,6 +64,17 @@ describe("sayArgs", () => {
     ]);
     // No -v: naming a voice is what loses the Siri one.
     expect(args).not.toContain("-v");
+  });
+});
+
+describe("the tools' paths", () => {
+  it("are fixed system and Homebrew paths, never a PATH lookup", () => {
+    expect(SAY).toBe("/usr/bin/say");
+    expect(AFINFO).toBe("/usr/bin/afinfo");
+    expect(FFMPEG_CANDIDATES).toEqual([
+      "/opt/homebrew/bin/ffmpeg",
+      "/usr/local/bin/ffmpeg",
+    ]);
   });
 });
 
@@ -178,7 +192,17 @@ describe("muxArgs", () => {
   it("with no lines, pads and transcodes, and maps no audio", () => {
     const silent = muxArgs("/r/video.webm", [], "/r/demo.mp4");
     expect(silent.at(silent.indexOf("-filter_complex") + 1)).toBe(graph[0]);
-    expect(silent).not.toContain("[aout]");
-    expect(silent).toContain("[v0]");
+    expect(silent.slice(silent.indexOf("-filter_complex") + 2, -1)).toEqual([
+      "-map",
+      "[v0]",
+      "-c:v",
+      "libx264",
+      "-preset",
+      "slow",
+      "-crf",
+      "22",
+      "-pix_fmt",
+      "yuv420p",
+    ]);
   });
 });
