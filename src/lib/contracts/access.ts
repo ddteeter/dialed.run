@@ -6,7 +6,7 @@
  */
 import { z } from "zod";
 
-import { clockLabel, deviceTimeZone } from "../dates";
+import { viewerClockLabel } from "../dates";
 import { APPEAL_ADDRESS } from "./contact";
 
 /**
@@ -223,7 +223,9 @@ export type FormRefusal =
 export function refusalMessage(result: FormRefusal): string {
   return result.status === "refused"
     ? TURNSTILE_REFUSED
-    : `Too many requests from here. You can send another at ${clockLabel(result.until, deviceTimeZone())}.`;
+    : // A signed-out visitor: the device's clock (Au5; R47·111), marked UTC
+      // when that is what it resolves to, as it does on the server.
+      `Too many requests from here. You can send another at ${viewerClockLabel(result.until, undefined)}.`;
 }
 
 /**

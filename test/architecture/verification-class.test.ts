@@ -221,6 +221,8 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "notifications/functions.ts listNotificationsFn": "unconfirmed",
   "notifications/functions.ts markAllNotificationsReadFn": "unconfirmed",
   "notifications/functions.ts bellStateFn": "unconfirmed",
+  // R-96 (3): a read of the runner's own home zone, seen by no one else.
+  "notifications/functions.ts viewerZoneFn": "unconfirmed",
   // ---- onboarding
   "onboarding/functions.ts callLadderQuery": "unconfirmed",
   "onboarding/functions.ts localeUnitsQuery": "sessionless",

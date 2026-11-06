@@ -71,10 +71,19 @@ function markAll(): HTMLElement {
   return screen.getByRole("button", { name: "Mark all read" });
 }
 
+/**
+A runner whose home zone has not been looked up yet: times read UTC, marked.
+*/
+const OWED = { homeZone: undefined };
+
 describe("NotificationList · the rows", () => {
   it("is S2b when there is nothing: the bracketed QUIET and its one next step", async () => {
     await renderWithRouter(
-      <NotificationList notifications={[]} markAllRead={nothing} />,
+      <NotificationList
+        viewer={OWED}
+        notifications={[]}
+        markAllRead={nothing}
+      />,
     );
 
     expect(screen.getByText("Quiet")).toBeVisible();
@@ -94,6 +103,7 @@ describe("NotificationList · the rows", () => {
   it("renders one row per notification, with its body and its time in mono", async () => {
     await renderWithRouter(
       <NotificationList
+        viewer={OWED}
         notifications={[
           notification({
             id: "01A",
@@ -110,8 +120,22 @@ describe("NotificationList · the rows", () => {
     // A literal for the reason `feed-profiles` carries: deriving the
     // expectation from the same ambient call the component used made the
     // assertion true of any answer, including two different ones.
-    const time = screen.getAllByText("Tue Aug 12, 12:00");
+    const time = screen.getAllByText("Tue Aug 12, 12:00 UTC");
     expect(time[0]).toHaveClass("font-mono");
+  });
+
+  it("reads the times on the runner's home zone once it is known (R-96)", async () => {
+    await renderWithRouter(
+      <NotificationList
+        viewer={{ homeZone: "America/Chicago" }}
+        notifications={[notification({ id: "01A", body: "Ran" })]}
+        markAllRead={nothing}
+      />,
+    );
+
+    // Chicago is five hours behind UTC in August, and unmarked.
+    expect(screen.getByText("Tue Aug 12, 07:00")).toBeVisible();
+    expect(screen.queryByText(/UTC/u)).toBeNull();
   });
 
   it("puts unread on white with a pink dot, and read on the paper in quiet", async () => {
@@ -120,6 +144,7 @@ describe("NotificationList · the rows", () => {
     // Never the hi-viz wash — yellow is failure and nothing else.
     await renderWithRouter(
       <NotificationList
+        viewer={OWED}
         notifications={[
           notification({ id: "01A", read: false }),
           notification({ id: "01B", read: true }),
@@ -152,6 +177,7 @@ describe("NotificationList · the rows", () => {
   it("offers Mark all read only while something is unread", async () => {
     await renderWithRouter(
       <NotificationList
+        viewer={OWED}
         notifications={[notification({ read: true })]}
         markAllRead={nothing}
       />,
@@ -164,6 +190,7 @@ describe("NotificationList · the rows", () => {
     // leave it unread is a button that does nothing.
     await renderWithRouter(
       <NotificationList
+        viewer={OWED}
         notifications={[notification({ read: false, markable: false })]}
         markAllRead={nothing}
       />,
@@ -180,6 +207,7 @@ describe("NotificationList · moderation notices (C8, D-132, D-145)", () => {
   it("reads both outcomes to the reporter, and the hide to the author", async () => {
     await renderWithRouter(
       <NotificationList
+        viewer={OWED}
         notifications={[
           notification({ id: "01A", body: REPORT_OUTCOME.removed }),
           notification({ id: "01B", body: REPORT_OUTCOME.kept }),
@@ -206,6 +234,7 @@ describe("NotificationList · Mark all read", () => {
     const markAllRead = vi.fn(() => Promise.resolve());
     const router = await renderWithRouter(
       <NotificationList
+        viewer={OWED}
         notifications={[notification()]}
         markAllRead={markAllRead}
       />,
@@ -228,6 +257,7 @@ describe("NotificationList · Mark all read", () => {
     const pending = Promise.withResolvers<undefined>();
     await renderWithRouter(
       <NotificationList
+        viewer={OWED}
         notifications={[notification()]}
         markAllRead={() => pending.promise}
       />,
@@ -264,6 +294,7 @@ describe("NotificationList · Mark all read", () => {
     const markAllRead = vi.fn(() => pending.promise);
     await renderWithRouter(
       <NotificationList
+        viewer={OWED}
         notifications={[notification()]}
         markAllRead={markAllRead}
       />,
@@ -284,6 +315,7 @@ describe("NotificationList · Mark all read", () => {
     const user = userEvent.setup();
     await renderWithRouter(
       <NotificationList
+        viewer={OWED}
         notifications={[notification()]}
         markAllRead={() => Promise.reject(new TypeError("fetch failed"))}
       />,
@@ -313,6 +345,7 @@ describe("NotificationList · Mark all read", () => {
       .mockResolvedValueOnce(undefined);
     await renderWithRouter(
       <NotificationList
+        viewer={OWED}
         notifications={[notification()]}
         markAllRead={markAllRead}
       />,

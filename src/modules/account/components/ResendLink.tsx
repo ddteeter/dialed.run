@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
 import { EMAIL_SENDS_PER_HOUR } from "../../../lib/contracts/email";
-import { clockLabel, deviceTimeZone } from "../../../lib/dates";
+import { viewerClockLabel } from "../../../lib/dates";
+import type { ViewerZone } from "../../../lib/dates";
 import {
   ControlFailureBand,
   FailureBand,
@@ -24,11 +25,15 @@ export const SENT_FOR_MS = 60_000;
 const NOT_SENT = "Not sent";
 
 /**
- * Round 26 #11's rate-limit band, naming when the next link can go in the
- * runner's own clock.
+ * Round 26 #11's rate-limit band, naming when the next link can go on the
+ * viewer's clock: the home zone signed in, the device's signed out (Au4;
+ * R47·111), marked UTC when that is the clock.
  */
-export function limitedMessage(until: number): string {
-  return `That's ${String(EMAIL_SENDS_PER_HOUR)} links this hour. You can send another at ${clockLabel(until, deviceTimeZone())}.`;
+export function limitedMessage(
+  until: number,
+  viewer: ViewerZone | undefined,
+): string {
+  return `That's ${String(EMAIL_SENDS_PER_HOUR)} links this hour. You can send another at ${viewerClockLabel(until, viewer)}.`;
 }
 
 /**
@@ -53,9 +58,14 @@ export function limitedMessage(until: number): string {
 export function ResendLink({
   email,
   resend,
+  viewer,
   isPill = false,
 }: Readonly<{
   email: string;
+  /**
+   * The signed-in runner's clock, or `undefined` for a signed-out visitor.
+   */
+  viewer: ViewerZone | undefined;
   resend: (input: { data: { email: string } }) => Promise<ResendResult>;
   isPill?: boolean | undefined;
 }>): JSX.Element {
@@ -83,7 +93,9 @@ export function ResendLink({
   }, [isSent]);
 
   const limited =
-    limitedUntil === undefined ? undefined : limitedMessage(limitedUntil);
+    limitedUntil === undefined
+      ? undefined
+      : limitedMessage(limitedUntil, viewer);
   const status = statusOf(control.status, isSent, limited);
 
   return (

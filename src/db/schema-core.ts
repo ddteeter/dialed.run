@@ -1471,8 +1471,8 @@ export const reviewQueue = /*#__PURE__*/ sqliteTable(
 );
 
 /**
- * Domains product URLs may not point at. Seeded empty; the review flow adds
- * to it. Stored as the bare registrable host, lowercased, which is what the
+ * Domains product URLs may not point at. Seeded with link shorteners and
+ * redirectors (R-176, migration 0078); the review flow adds the rest. Stored as the bare registrable host, lowercased, which is what the
  * save path compares against — never the full URL.
  */
 export const domainDenylist = /*#__PURE__*/ sqliteTable("domain_denylist", {
@@ -1480,6 +1480,22 @@ export const domainDenylist = /*#__PURE__*/ sqliteTable("domain_denylist", {
   addedBy: text("added_by").notNull(),
   reason: text("reason"),
   createdAt: integer("created_at").notNull(),
+});
+
+/**
+ * Where a product link landed when enrichment read it, if not on its own
+ * domain (R-176, design 171). `url` is the link exactly as typed, which is
+ * how a garment and its product hold it; `landed_domain` is in the same
+ * form as `domain_denylist.domain`.
+ *
+ * A landing, not a verdict: the denylist still decides at every read, so
+ * a link whose landing is denied later goes too, and one whose landing is
+ * un-denied comes back. Read and written only by `modules/safety`.
+ */
+export const linkLandings = /*#__PURE__*/ sqliteTable("link_landings", {
+  url: text("url").primaryKey(),
+  landedDomain: text("landed_domain").notNull(),
+  checkedAt: integer("checked_at").notNull(),
 });
 
 /**

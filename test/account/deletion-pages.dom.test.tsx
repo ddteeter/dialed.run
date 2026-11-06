@@ -13,7 +13,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 
 import {
   CURRENT_PASSWORD_WRONG,
@@ -21,7 +21,8 @@ import {
   DELETION_NEEDS_GOOGLE,
   currentPasswordLimited,
 } from "../../src/lib/contracts";
-import { clockLabel, deviceTimeZone, proseDayLabel } from "../../src/lib/dates";
+import { proseDayLabel } from "../../src/lib/dates";
+import type { ViewerZone } from "../../src/lib/dates";
 import { nowSeconds } from "../../src/lib/now";
 import { DeleteAccount } from "../../src/modules/account/components/DeleteAccount";
 import {
@@ -59,6 +60,7 @@ function deleteRow(
     hasPassword?: boolean;
     result?: DeletionResult;
     isReturningFromGoogle?: boolean;
+    viewer?: ViewerZone;
   }> = {},
 ) {
   const request = vi.fn<
@@ -78,6 +80,7 @@ function deleteRow(
       reauth={<button type="button">Continue with Google</button>}
       isReturningFromGoogle={options.isReturningFromGoogle ?? false}
       onScheduled={onScheduled}
+      viewer={options.viewer ?? { homeZone: undefined }}
     />,
   );
   return { request, onScheduled, view, user: userEvent.setup() };
@@ -190,20 +193,50 @@ describe("DeleteAccount (U1's last row)", () => {
     expect(onScheduled).not.toHaveBeenCalled();
   });
 
-  it("says when the tries are used up, in the runner's own time", async () => {
-    const until = 1_760_000_000;
-    const { view, user } = deleteRow({
-      result: { status: "password-limited", until },
-    });
-    await view;
-    const sheet = await openSheet(user);
-    await user.type(within(sheet).getByLabelText("Current password"), "nope");
-    await user.click(
-      within(sheet).getByRole("button", { name: "Delete my account" }),
-    );
-    const limited = currentPasswordLimited(clockLabel(until, deviceTimeZone()));
-    expect(await within(sheet).findAllByText(limited)).not.toHaveLength(0);
-  });
+  it.each([
+    [{ homeZone: "America/Chicago" }, "3:53 AM"],
+    [{ homeZone: undefined }, "8:53 AM UTC"],
+  ])(
+    "says when the tries are used up, on the runner's home clock (%o: %s)",
+    async (viewer, clock) => {
+      // 2025-10-09T08:53:20Z.
+      const until = 1_760_000_000;
+      const { view, user } = deleteRow({
+        result: { status: "password-limited", until },
+        viewer,
+      });
+      await view;
+      const sheet = await openSheet(user);
+      await user.type(within(sheet).getByLabelText("Current password"), "nope");
+      await user.click(
+        within(sheet).getByRole("button", { name: "Delete my account" }),
+      );
+      const limited = currentPasswordLimited(clock);
+      expect(await within(sheet).findAllByText(limited)).not.toHaveLength(0);
+    },
+  );
+
+  it.each([
+    [{ homeZone: "America/Chicago" }, "Mon, Sep 21"],
+    [{ homeZone: undefined }, "Tue, Sep 22"],
+  ])(
+    "names the deletion day on the runner's home zone (R-96 (3); %o: %s)",
+    async (viewer, day) => {
+      // Seven days on is 03:30 UTC on the 22nd: still the 21st in Chicago.
+      const now = vi
+        .spyOn(Date, "now")
+        .mockReturnValue(Date.UTC(2026, 8, 15, 3, 30));
+      onTestFinished(() => {
+        now.mockRestore();
+      });
+      const { view, user } = deleteRow({ viewer });
+      await view;
+      const sheet = await openSheet(user);
+      expect(sheet).toHaveTextContent(
+        `Log in before ${day} to keep everything.`,
+      );
+    },
+  );
 
   it("asks an account with no password for nothing, and for Google again when its sign-in is old", async () => {
     const { view, user, request, onScheduled } = deleteRow({

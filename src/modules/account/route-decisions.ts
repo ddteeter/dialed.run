@@ -12,6 +12,7 @@ import type { LeavingView } from "./deletion";
 import type { TermsPromptView } from "./terms-acceptance";
 import type { LegalDoc } from "./legal-markdown";
 import type { HandleGateAnswer } from "./username";
+import type { ViewerZone } from "../../lib/dates";
 
 /**
  * The pages a signed-in runner with no handle may still reach: O0 itself,
@@ -231,12 +232,14 @@ export function startOverIfNoAddress(
  * to.
  */
 export function checkEmailView(
-  account: { email: string } | undefined,
+  account: { email: string; viewer: ViewerZone } | undefined,
   searchEmail: string,
-): { email: string; isSignedIn: boolean } {
+): { email: string; isSignedIn: boolean; viewer: ViewerZone | undefined } {
   return {
     email: account?.email ?? searchEmail,
     isSignedIn: account !== undefined,
+    // Signed out, no viewer: Au4's resend clock is the device's (R47·111).
+    viewer: account?.viewer,
   };
 }
 
@@ -333,11 +336,16 @@ export function legalDocOrNotFound(doc: LegalDoc | undefined): LegalDoc {
 
 /**
  * `/account/leaving`'s search: the date a request just answered (epoch
- * seconds), for the signed-out "Your account goes on …". Anything else is
- * dropped, and the page answers as it would with none.
+ * seconds), for the signed-out "Your account goes on …", and the zone the
+ * runner's home is in, so that page names the same day the sheet and the
+ * email did (R-96 (3)) — the runner is signed out by then, so there is no
+ * profile to read it from. Only a zone `Intl` accepts is used (see
+ * `homeZoneOf`), so a crafted link can pick a real zone and nothing else.
+ * Anything else is dropped, and the page answers as it would with none.
  */
 export const leavingSearch = z.object({
   on: z.coerce.number().int().positive().optional().catch(undefined),
+  zone: z.string().max(64).optional().catch(undefined),
 });
 
 /**

@@ -233,6 +233,22 @@ describe("leavingSearch and homeIfNothingToSay", () => {
     }
   });
 
+  it("keeps the home zone the redirect carried, and drops one that is not a short string (R-96 (3))", () => {
+    expect(
+      leavingSearch.parse({ on: "1760000000", zone: "America/Chicago" }),
+    ).toStrictEqual({ on: 1_760_000_000, zone: "America/Chicago" });
+    // Kept as a string here; `homeZoneOf` checks it is a zone.
+    expect(leavingSearch.parse({ zone: "Not/AZone" })).toStrictEqual({
+      zone: "Not/AZone",
+    });
+    expect(leavingSearch.parse({ zone: "x".repeat(64) })).toStrictEqual({
+      zone: "x".repeat(64),
+    });
+    for (const zone of [5, ["UTC"], "x".repeat(65)]) {
+      expect(leavingSearch.parse({ zone })).toStrictEqual({ zone: undefined });
+    }
+  });
+
   it("sends a visitor with nothing to see home, and lets a page with something through", () => {
     let thrown: unknown;
     try {
@@ -484,12 +500,15 @@ function thrownBy(run: () => void): unknown {
 
 describe("Au4's decisions", () => {
   it("is about the signed-in runner's own address, or else the one sign-up sent to", () => {
+    const viewer = { homeZone: "Europe/Berlin" };
     expect(
-      checkEmailView({ email: "me@example.com" }, "typed@example.com"),
-    ).toStrictEqual({ email: "me@example.com", isSignedIn: true });
+      checkEmailView({ email: "me@example.com", viewer }, "typed@example.com"),
+    ).toStrictEqual({ email: "me@example.com", isSignedIn: true, viewer });
+    // Signed out, no viewer: the resend clock is the device's (R47·111).
     expect(checkEmailView(undefined, "typed@example.com")).toStrictEqual({
       email: "typed@example.com",
       isSignedIn: false,
+      viewer: undefined,
     });
   });
 

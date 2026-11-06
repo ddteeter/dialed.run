@@ -7,6 +7,7 @@ import {
   outbox,
   stravaConnections,
   stravaRevocations,
+  userProfiles,
 } from "../../src/db/schema-core";
 import { waitUntil } from "../../src/env";
 import { DELETION_GRACE_S } from "../../src/lib/contracts";
@@ -66,6 +67,16 @@ async function sessionFor(userId: string): Promise<string> {
     updatedAt: now,
   });
   return id;
+}
+
+/**
+The runner's home place in Honolulu, as the onboarding lookup leaves it:
+far enough behind UTC that 08:00 UTC is still the day before.
+*/
+async function homeInHonolulu(userId: string): Promise<void> {
+  await db
+    .insert(userProfiles)
+    .values({ userId, timeZone: "Pacific/Honolulu" });
 }
 
 async function sessionsOf(userId: string): Promise<string[]> {
@@ -357,6 +368,42 @@ describe("requestAccountDeletion", () => {
     ]);
   });
 
+  it("names the email's day on the runner's home zone (R-96 (3))", async () => {
+    const mail = fakeMail();
+    const fx = effectsFor(mail);
+    const { userId } = await seedUser();
+    await withPassword(userId);
+    await homeInHonolulu(userId);
+
+    await requestAccountDeletion(
+      db,
+      {
+        userId,
+        currentPassword: "hunter22",
+        checkPassword: checks({ status: "own" }),
+        signedInAt: NOW,
+      },
+      fx.effects,
+      NOW,
+    );
+
+    // 08:00 UTC on the 22nd is still the 21st in Honolulu.
+    const [owed] = await db
+      .select({ payload: outbox.payload })
+      .from(outbox)
+      .where(
+        eq(
+          outbox.dedupeKey,
+          `deletion_scheduled:${userId}:${String(NOW + DELETION_GRACE_S)}`,
+        ),
+      );
+    expect(owed?.payload).toContain('"day":"Thu, Jan 21"');
+    await fx.settled();
+    expect(mail.sent.map((message) => message.subject)).toStrictEqual([
+      "Your dialed.run account goes on Thu, Jan 21",
+    ]);
+  });
+
   it("still schedules the deletion when Strava fails to disconnect, and reports it", async () => {
     const mail = fakeMail();
     const fx = effectsFor(mail);
@@ -465,36 +512,57 @@ describe("leavingView", () => {
       .insert(accountDeletions)
       .values({ userId, requestedAt: NOW, purgeAfter });
 
-    expect(await leavingView(db, userId, undefined)).toStrictEqual({
+    // No profile zone yet: the day is UTC's, unmarked.
+    expect(await leavingView(db, userId, {})).toStrictEqual({
       state: "ask",
-      day: proseDayLabel(purgeAfter),
+      day: "Fri, Jan 22",
     });
     // The pending date wins over whatever the link carried.
-    expect(await leavingView(db, userId, NOW)).toStrictEqual({
-      state: "ask",
-      day: proseDayLabel(purgeAfter),
-    });
+    expect(
+      await leavingView(db, userId, { on: NOW, zone: "Pacific/Honolulu" }),
+    ).toStrictEqual({ state: "ask", day: "Fri, Jan 22" });
+  });
+
+  it("names a signed-in runner's day on their profile's zone, not the link's (R-96 (3))", async () => {
+    const { userId } = await seedUser();
+    await homeInHonolulu(userId);
+    await db
+      .insert(accountDeletions)
+      .values({ userId, requestedAt: NOW, purgeAfter: NOW + DELETION_GRACE_S });
+
+    // 08:00 UTC on the 22nd is still the 21st in Honolulu.
+    expect(
+      await leavingView(db, userId, { zone: "Europe/Berlin" }),
+    ).toStrictEqual({ state: "ask", day: "Thu, Jan 21" });
   });
 
   it("shows nothing to a signed-in runner with no deletion pending", async () => {
     const { userId } = await seedUser();
-    expect(await leavingView(db, userId, NOW)).toStrictEqual({
+    expect(await leavingView(db, userId, { on: NOW })).toStrictEqual({
       state: "none",
     });
   });
 
   it("tells a signed-out runner the date their request answered", async () => {
-    expect(await leavingView(db, undefined, NOW)).toStrictEqual({
+    expect(await leavingView(db, undefined, { on: NOW })).toStrictEqual({
       state: "scheduled",
-      day: proseDayLabel(NOW),
+      day: "Fri, Jan 15",
     });
-    expect(proseDayLabel(NOW)).not.toBe(proseDayLabel(NOW + DELETION_GRACE_S));
+  });
+
+  it("tells it on the zone the redirect carried, and on UTC for one Intl refuses (R-96 (3))", async () => {
+    expect(
+      await leavingView(db, undefined, { on: NOW, zone: "Pacific/Honolulu" }),
+    ).toStrictEqual({ state: "scheduled", day: "Thu, Jan 14" });
+    expect(
+      await leavingView(db, undefined, { on: NOW, zone: "Not/AZone" }),
+    ).toStrictEqual({ state: "scheduled", day: "Fri, Jan 15" });
   });
 
   it("shows nothing to a signed-out visitor with no date", async () => {
-    expect(await leavingView(db, undefined, undefined)).toStrictEqual({
-      state: "none",
-    });
+    expect(
+      await leavingView(db, undefined, { zone: "Pacific/Honolulu" }),
+    ).toStrictEqual({ state: "none" });
   });
 });
 

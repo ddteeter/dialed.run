@@ -4,6 +4,7 @@ import { account } from "../../src/db/schema-auth";
 import {
   notificationPreferences,
   stravaConnections,
+  userProfiles,
 } from "../../src/db/schema-core";
 import { isEmailWanted, notificationSettings } from "../../src/modules/email";
 import {
@@ -218,22 +219,36 @@ describe("the account's settings read", () => {
       createdAt: now,
       updatedAt: now,
     });
+    // The runner's home zone, as the onboarding lookup leaves it: their own
+    // clock for every time the account pages print (R-96 (3)).
+    const berlin = { homeZone: "Europe/Berlin" };
+    await db
+      .insert(userProfiles)
+      .values({ userId: google.userId, timeZone: "Europe/Berlin" });
+    const owed = { homeZone: undefined };
 
     expect(await accountView(db, withPassword.userId)).toStrictEqual({
       email: withPassword.email,
       isVerified: false,
+      viewer: owed,
       hasPassword: true,
     });
     expect(await accountView(db, google.userId)).toStrictEqual({
       email: google.email,
       isVerified: true,
+      viewer: berlin,
       hasPassword: false,
     });
     expect(await accountView(db, undefined)).toBeUndefined();
     expect(await accountView(db, "gone")).toBeUndefined();
 
     expect(await accountPage(db, google.userId)).toStrictEqual({
-      account: { email: google.email, isVerified: true, hasPassword: false },
+      account: {
+        email: google.email,
+        isVerified: true,
+        viewer: berlin,
+        hasPassword: false,
+      },
       username: undefined,
       notifications: { email: google.email, runReminder: true },
       dataExport: { state: "idle" },
@@ -265,10 +280,12 @@ describe("the account's settings read", () => {
     expect(await ownAddressView(db, withPassword.userId)).toStrictEqual({
       email: withPassword.email,
       isVerified: false,
+      viewer: owed,
     });
     expect(await ownAddressView(db, google.userId)).toStrictEqual({
       email: google.email,
       isVerified: true,
+      viewer: berlin,
     });
     await expect(ownAddressView(db, "gone")).rejects.toThrow(
       "signed in to an account that is gone",

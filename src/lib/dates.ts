@@ -310,3 +310,77 @@ export function deviceTimeZone(): string | undefined {
   const zone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
   return isTimeZone(zone) ? zone : undefined;
 }
+
+/**
+ * Whose clock a time that is not a run's reads on (R-96 (3); owner ruling
+ * 2026-11-05).
+ *
+ * A signed-in viewer is `{ homeZone }`: the zone of their home place
+ * (`user_profiles.time_zone`, design 142), looked up from the place and
+ * never typed, or `undefined` while that lookup is still owed. Never a run's
+ * zone, never a cookie, never the browser.
+ *
+ * `undefined` — no viewer — is a signed-out visitor (Au4's resend, Au5's
+ * request, `/takedown`), who has no home place. Their clock is the
+ * device's (owner, 2026-11-05), which is safe only because those clocks
+ * render after a submit, in the browser.
+ */
+export interface ViewerZone {
+  readonly homeZone: string | undefined;
+}
+
+/**
+ * The zone a viewer's clock reads in, as `lib/dates` formatters take it.
+ */
+function clockZoneOf(viewer: ViewerZone | undefined): string | undefined {
+  return viewer === undefined ? deviceTimeZone() : viewer.homeZone;
+}
+
+/**
+ * The label, with " UTC" after it when that is the clock it was read on.
+ *
+ * Marked whenever the zone *resolves* to UTC, not only when it is missing:
+ * a home zone still owed falls back to UTC, and so does a device zone asked
+ * for on the server, where workerd answers "UTC" — so an unmarked UTC time
+ * can never be printed, whichever runtime renders it. A runner whose home
+ * really is UTC reads "UTC" too, which is true. Only times are marked; a
+ * day alone rarely moves with the zone (owner, 2026-11-05).
+ */
+function markedIfUtc(label: string, timeZone: string | undefined): string {
+  return zoneOf(timeZone) === "UTC" ? `${label} UTC` : label;
+}
+
+/**
+ * A notification's day and time on the viewer's clock — "Mon Sep 2, 14:30",
+ * or "Mon Sep 2, 14:30 UTC" while their home zone is unknown.
+ */
+export function viewerDayTimeLabel(
+  epochSeconds: number,
+  viewer: ViewerZone,
+): string {
+  return markedIfUtc(
+    dayTimeLabel(epochSeconds, viewer.homeZone),
+    viewer.homeZone,
+  );
+}
+
+/**
+ * A rate-limit's "send another at" time on the viewer's clock — "6:04 PM",
+ * or "6:04 PM UTC" when that clock is UTC.
+ */
+export function viewerClockLabel(
+  epochSeconds: number,
+  viewer: ViewerZone | undefined,
+): string {
+  const zone = clockZoneOf(viewer);
+  return markedIfUtc(clockLabel(epochSeconds, zone), zone);
+}
+
+/**
+ * A stored home zone, kept only if `Intl` accepts it — the column is
+ * written from a third party's answer, so it is checked again on the way
+ * out (see `isTimeZone`).
+ */
+export function homeZoneOf(stored: string | null | undefined): ViewerZone {
+  return { homeZone: isTimeZone(stored) ? stored : undefined };
+}

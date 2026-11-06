@@ -3,6 +3,7 @@ import type { JSX } from "react";
 
 import { SignedOutPanel } from "../../../ui/SignedOutPanel";
 import type { ResendResult } from "../verification";
+import type { ViewerZone } from "../../../lib/dates";
 import { ResendLink } from "./ResendLink";
 
 /**
@@ -27,9 +28,14 @@ export function CheckEmail({
   email,
   isSignedIn,
   resend,
+  viewer,
 }: Readonly<{
   email: string;
   isSignedIn: boolean;
+  /**
+   * The runner's clock signed in; `undefined` signed out (R47·111).
+   */
+  viewer: ViewerZone | undefined;
   resend: (input: { data: { email: string } }) => Promise<ResendResult>;
 }>): JSX.Element {
   return (
@@ -42,7 +48,7 @@ export function CheckEmail({
         <p className="m-0 text-body text-quiet">
           It works once, for 24 hours. Not there? Check spam, or send it again.
         </p>
-        <ResendLink email={email} resend={resend} />
+        <ResendLink email={email} resend={resend} viewer={viewer} />
         {isSignedIn ? (
           <p className="m-0 pt-4 text-body text-quiet">
             You&apos;re signed in.{" "}

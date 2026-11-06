@@ -6,7 +6,8 @@ import {
   CURRENT_PASSWORD_WRONG,
   currentPasswordLimited,
 } from "../../../lib/contracts";
-import { clockLabel, deviceTimeZone } from "../../../lib/dates";
+import { viewerClockLabel } from "../../../lib/dates";
+import type { ViewerZone } from "../../../lib/dates";
 import { useFormSubmit } from "../../../ui";
 import { AUTH_COPY } from "../auth-copy";
 import type { PasswordChange } from "../change-password";
@@ -24,12 +25,15 @@ const LABELS = {
  * wrong or tried too often (round 28 #10, in the runner's own time), or the
  * new one breached. A change answers nothing.
  */
-function refusalOf(result: PasswordChange): AuthFieldError | undefined {
+function refusalOf(
+  result: PasswordChange,
+  viewer: ViewerZone,
+): AuthFieldError | undefined {
   if (result.status === "wrong") {
     return new AuthFieldError("currentPassword", CURRENT_PASSWORD_WRONG);
   }
   if (result.status === "limited") {
-    const clock = clockLabel(result.until, deviceTimeZone());
+    const clock = viewerClockLabel(result.until, viewer);
     return new AuthFieldError("currentPassword", currentPasswordLimited(clock));
   }
   return result.status === "breached"
@@ -47,10 +51,15 @@ function refusalOf(result: PasswordChange): AuthFieldError | undefined {
  */
 export function ChangePassword({
   change,
+  viewer,
 }: Readonly<{
   change: (input: {
     data: { currentPassword: string; password: string };
   }) => Promise<PasswordChange>;
+  /**
+   * The runner's home zone, for the limit's clock (R-96 (3)).
+   */
+  viewer: ViewerZone;
 }>): JSX.Element {
   const [currentPassword, setCurrentPassword] = useState("");
   const [password, setPassword] = useState("");
@@ -58,7 +67,7 @@ export function ChangePassword({
     carry: "settings",
     schema: changePasswordSchema,
     action: async (values) => {
-      const refusal = refusalOf(await change({ data: values }));
+      const refusal = refusalOf(await change({ data: values }), viewer);
       if (refusal !== undefined) throw refusal;
     },
     successMessage: "Password changed. Every other device was signed out.",
