@@ -188,11 +188,21 @@ export const SIGN_UP_CLOSED_HERE = "Sign-up closed here";
  */
 export function SignUpClosedHere({
   heading,
+  isClosed,
   crossLink,
+  children,
 }: Readonly<{
   heading: string;
+  /**
+   * Whether the request is placed in a closed state. Not, and this is the
+   * form (`children`) untouched: the choice is made here, not in the route,
+   * which may only wire.
+   */
+  isClosed: boolean;
   crossLink: ReactNode;
+  children: ReactNode;
 }>): JSX.Element {
+  if (!isClosed) return <>{children}</>;
   return (
     <SignedOutPanel heading={heading}>
       <div data-part="region-closed" className="flex flex-col gap-4">

@@ -63,10 +63,14 @@ function SignupPage() {
       redirect={search.redirect}
     />
   );
-  return isFromBlockedRegion ? (
-    <SignUpClosedHere heading="Create account" crossLink={crossLink} />
-  ) : (
-    <SignupForm crossLink={crossLink} />
+  return (
+    <SignUpClosedHere
+      heading="Create account"
+      isClosed={isFromBlockedRegion}
+      crossLink={crossLink}
+    >
+      <SignupForm crossLink={crossLink} />
+    </SignUpClosedHere>
   );
 }
 

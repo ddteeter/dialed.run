@@ -123,6 +123,8 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   // Q8: trusts the address.
   "account/functions.ts requestEmailChangeFn": "verified",
   "account/functions.ts turnstileSiteKeyQuery": "sessionless",
+  // Round 39 #69: where the request is placed, read before any account.
+  "account/functions.ts signUpPlaceQuery": "sessionless",
   "account/functions.ts requestAccessFn": "sessionless",
   "account/functions.ts accessDeskQuery": "admin",
   "account/functions.ts createInviteCodeFn": "admin",

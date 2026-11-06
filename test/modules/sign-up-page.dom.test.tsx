@@ -131,10 +131,11 @@ async function renderWithRouter(element: ReactElement) {
   return render(<RouterProvider router={router} />);
 }
 
-async function closedPage() {
+async function closedPage(isClosed = true) {
   await renderWithRouter(
     <SignUpClosedHere
       heading="Create account"
+      isClosed={isClosed}
       crossLink={
         <AuthCrossLink
           prompt="Have an account?"
@@ -142,7 +143,9 @@ async function closedPage() {
           label="Log in"
         />
       }
-    />,
+    >
+      <form aria-label="The sign-up form" />
+    </SignUpClosedHere>,
   );
 }
 
@@ -538,6 +541,15 @@ describe("Au2 · on load in a closed state (round 39 #69)", () => {
       ask,
       logIn,
     ]);
+  });
+
+  it("is the form, untouched, anywhere sign-up is open", async () => {
+    await closedPage(false);
+
+    expect(screen.getByRole("form", { name: "The sign-up form" })).toBeVisible();
+    expect(part("region-closed")).toBeNull();
+    expect(screen.queryByText(REGION_BLOCKED_COPY)).toBeNull();
+    expect(screen.queryByRole("heading")).toBeNull();
   });
 
   it("draws no form, no Google and no Turnstile", async () => {
