@@ -81,12 +81,11 @@ export async function publicRotation(
     shoes: pieces
       .filter((piece) => !piece.retired && isShoes(piece))
       .map((piece) => listed(piece)),
-    retired: pieces
-      .filter((piece) => piece.retired)
-      .map((piece) => listed(piece)),
+    retired: pieces.filter((piece) => piece.retired).map((piece) => listed(piece)),
   };
 }
 
 function isShoes(piece: Piece): boolean {
   return piece.category === "shoes";
 }
+
