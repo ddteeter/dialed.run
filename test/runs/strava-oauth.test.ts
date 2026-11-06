@@ -751,7 +751,8 @@ describe("the trip's origin, beside the nonce (round 39 #66, design 172)", () =>
       nonce: "nonce-1",
       from: undefined,
     });
-    expect(readStateCookie(undefined)).toEqual({
+    // Strict: no cookie still names both halves, as the type promises.
+    expect(readStateCookie(undefined)).toStrictEqual({
       nonce: undefined,
       from: undefined,
     });
