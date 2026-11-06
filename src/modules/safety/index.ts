@@ -251,7 +251,13 @@ export {
   clustersIn,
   duplicateProducts,
   type DuplicateCandidate,
+  type DuplicateVariant,
 } from "./duplicates";
+export {
+  duplicatesReport,
+  type DuplicateGroup,
+  type DuplicatesReport,
+} from "./duplicates-report";
 
 export {
   blockAndDeclineAll,

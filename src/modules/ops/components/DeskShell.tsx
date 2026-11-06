@@ -39,22 +39,25 @@ const LABEL: Readonly<Record<DeskPage, string>> = {
 };
 
 /**
- * Where each built destination lives. A page not in here is not built
- * yet, and its rail entry is text rather than a link (placeholder
- * protocol): Duplicates is task 110's.
+ * Where each destination lives. Every one is built now (Duplicates was
+ * the last, task 110), so the rail has no placeholder entry and a new
+ * page cannot be named without a route to go with it.
  */
-const BUILT: Readonly<
-  Partial<
-    Record<
-      DeskPage,
-      "/desk" | "/desk/review" | "/desk/runners" | "/desk/access"
-    >
+const HREF: Readonly<
+  Record<
+    DeskPage,
+    | "/desk"
+    | "/desk/review"
+    | "/desk/runners"
+    | "/desk/access"
+    | "/desk/duplicates"
   >
 > = {
   today: "/desk",
   review: "/desk/review",
-  runners: "/desk/runners",
   access: "/desk/access",
+  duplicates: "/desk/duplicates",
+  runners: "/desk/runners",
 };
 
 /**
@@ -98,21 +101,10 @@ function RailEntry({
       <RailCount tally={tally} />
     </>
   );
-  const to = BUILT[page];
-  if (to === undefined) {
-    return (
-      <li className="flex items-baseline justify-between gap-6 text-muted">
-        {content}
-        {/* Muted is how the rail draws "not built"; colour alone does not
-            say it to a screen reader. */}
-        <span className="sr-only">, not built yet</span>
-      </li>
-    );
-  }
   return (
     <li>
       <Link
-        to={to}
+        to={HREF[page]}
         // Exact: by default Link marks a prefix match current, so Today
         // ("/desk") read as the current page on every Desk page. The
         // Link sets aria-current itself whenever it matches.

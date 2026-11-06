@@ -290,6 +290,7 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "safety/functions.ts reviewHandleAction": "admin",
   "safety/functions.ts forceRenameAction": "admin",
   "safety/functions.ts deskRunnersQuery": "admin",
+  "safety/functions.ts deskDuplicatesQuery": "admin",
   // Design 136: `/takedown` is for anyone, with or without an account —
   // the person pictured is usually not a runner.
   "safety/functions.ts takedownRequestFn": "sessionless",

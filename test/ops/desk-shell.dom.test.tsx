@@ -2,6 +2,7 @@ import {
   RouterProvider,
   createMemoryHistory,
   createRootRoute,
+  createRoute,
   createRouter,
 } from "@tanstack/react-router";
 import {
@@ -14,6 +15,10 @@ import {
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import {
+  DeskPage,
+  useDeskToday,
+} from "../../src/modules/ops/components/DeskPage";
 import { DeskShell } from "../../src/modules/ops/components/DeskShell";
 import { DeskTodayPage, Today } from "../../src/modules/ops/components/Today";
 import type { DeskToday, TodayCounts } from "../../src/modules/ops/desk";
@@ -114,12 +119,12 @@ describe("DeskShell", () => {
       "Today",
       "Review",
       "Access",
-      "Duplicates, not built yet",
+      "Duplicates",
       "Runners",
     ]);
   });
 
-  it("links the built destinations, and only those", async () => {
+  it("links every destination", async () => {
     await renderWithRouter(
       <DeskShell current="today" today={desk()}>
         <p>page</p>
@@ -134,15 +139,22 @@ describe("DeskShell", () => {
       ["Review", "/desk/review"],
       // D7, task 126 (ACC-5).
       ["Access", "/desk/access"],
+      // D2, task 110: the last to be built.
+      ["Duplicates", "/desk/duplicates"],
       ["Runners", "/desk/runners"],
     ]);
-    // Not yet built: text, not a link that goes nowhere.
-    const duplicates = within(rail()).getByText("Duplicates").closest("li");
-    expect(duplicates).toHaveClass("text-muted");
-    // Muted alone does not say it to a screen reader.
-    expect(
-      within(duplicates ?? document.body).getByText(", not built yet"),
-    ).toHaveClass("sr-only");
+  });
+
+  it("marks Duplicates current on its own page", async () => {
+    await renderWithRouter(
+      <DeskShell current="duplicates" today={desk()}>
+        <p>page</p>
+      </DeskShell>,
+    );
+
+    const current = within(rail()).getByRole("link", { current: "page" });
+    expect(current.textContent).toBe("Duplicates");
+    expect(current).toHaveClass("text-hiviz-text");
   });
 
   it("marks the current destination, in hi-viz", async () => {
@@ -352,5 +364,71 @@ describe("DeskTodayPage", () => {
       expect(invalidate).toHaveBeenCalledTimes(1);
     });
     expect(drop).toHaveBeenCalledWith({ data: { id: "g1" } });
+  });
+});
+
+/**
+ * Renders `page` under a `/desk` layout whose loader returns `today`, the
+ * way every route under the real `/desk` sees it.
+ */
+async function renderUnderDesk(today: DeskToday, page: () => ReactElement) {
+  const rootRoute = createRootRoute();
+  const deskRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "desk",
+    loader: () => today,
+  });
+  const pageRoute = createRoute({
+    getParentRoute: () => deskRoute,
+    // Not `/desk` itself: Today's rail link would be the router's
+    // current page there, whichever entry DeskPage marks.
+    path: "page",
+    component: page,
+  });
+  const router = createRouter({
+    routeTree: rootRoute.addChildren([deskRoute.addChildren([pageRoute])]),
+    history: createMemoryHistory({ initialEntries: ["/desk/page"] }),
+  });
+  await router.load();
+  return render(<RouterProvider router={router} />);
+}
+
+function TodayCountsProbe() {
+  const today = useDeskToday();
+  return <p>{`waiting ${String(today.counts.waiting)}`}</p>;
+}
+
+describe("DeskPage", () => {
+  it("draws the shell with the /desk layout's counts, marking its page", async () => {
+    await renderUnderDesk(desk({ waiting: 4, gaveUp: 3 }), () => (
+      <DeskPage current="duplicates">
+        <p>the page</p>
+      </DeskPage>
+    ));
+
+    expect(await screen.findByText("the page")).toBeTruthy();
+    // One current page, not two: Today's `/desk` is a prefix of every
+    // Desk URL, and a fuzzy match marked it current everywhere.
+    expect(
+      within(rail()).getByRole("link", { current: "page" }).textContent,
+    ).toBe("Duplicates");
+    // The counts come from the layout's loader, through useDeskToday.
+    expect(
+      within(rail())
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toStrictEqual([
+      "Today3 gave up",
+      "Review4 waiting",
+      "Access",
+      "Duplicates",
+      "Runners",
+    ]);
+  });
+
+  it("hands a page the same counts through useDeskToday", async () => {
+    await renderUnderDesk(desk({ waiting: 7 }), () => <TodayCountsProbe />);
+
+    expect(await screen.findByText("waiting 7")).toBeTruthy();
   });
 });

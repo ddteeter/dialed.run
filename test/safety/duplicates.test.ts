@@ -1,14 +1,21 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { drizzle } from "drizzle-orm/d1";
 
-import { brands, products as productsTable } from "../../src/db/schema-core";
+import {
+  brands,
+  products as productsTable,
+  wardrobeItems,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { normalizeIdentity } from "../../src/lib/normalize";
 import {
   clustersIn,
+  DUPLICATES_PRODUCT_CAP,
   duplicateProducts,
+  type DuplicateCandidate,
 } from "../../src/modules/safety/duplicates";
+import { duplicatesReport } from "../../src/modules/safety/duplicates-report";
 
 import { NOW, resetSafetyTables } from "./helpers";
 
@@ -204,11 +211,15 @@ describe("the edges of the matching rule", () => {
   });
 });
 
+/**
+Inserts a brand and its products; returns each product's id by name.
+*/
 async function brandWith(
   name: string,
   products: readonly string[],
-): Promise<string> {
+): Promise<Map<string, string>> {
   const brandId = newUlid();
+  const ids = new Map<string, string>();
   await core()
     .insert(brands)
     .values({
@@ -217,10 +228,12 @@ async function brandWith(
       normalized: normalizeIdentity(name),
     });
   for (const productName of products) {
+    const productId = newUlid();
+    ids.set(productName, productId);
     await core()
       .insert(productsTable)
       .values({
-        id: newUlid(),
+        id: productId,
         brandId,
         name: productName,
         normalizedName: normalizeIdentity(productName),
@@ -228,7 +241,30 @@ async function brandWith(
         createdAt: NOW,
       });
   }
-  return brandId;
+  return ids;
+}
+
+/**
+`count` closet pieces filed under a product, each in its own closet.
+*/
+async function piecesOf(
+  productId: string | undefined,
+  count: number,
+  isRetired = false,
+): Promise<void> {
+  for (let index = 0; index < count; index += 1) {
+    await core()
+      .insert(wardrobeItems)
+      .values({
+        id: newUlid(),
+        userId: newUlid(),
+        category: "bottom",
+        name: "Tights",
+        productId,
+        retired: isRetired,
+        createdAt: NOW,
+      });
+  }
 }
 
 describe("the report over real rows", () => {
@@ -308,5 +344,197 @@ describe("the report over real rows", () => {
     // A limit of one cannot produce a pair, which is the observable
     // difference between a bounded read and an unbounded one.
     expect(await duplicateProducts(1)).toEqual([]);
+  });
+});
+
+describe("the pieces under each name", () => {
+  beforeEach(resetSafetyTables);
+
+  it("counts each variant's pieces and leads with the most-used name", async () => {
+    const ids = await brandWith("Janji", ["Thermal Tight", "Thermal Tights"]);
+    await piecesOf(ids.get("Thermal Tights"), 3);
+    await piecesOf(ids.get("Thermal Tight"), 1);
+
+    const [group] = await duplicateProducts();
+
+    // The probable name is the spelling most runners already chose,
+    // which is why it leads, whatever order the names sort in.
+    expect(
+      group?.products.map((row) => [row.name, row.pieces] as const),
+    ).toEqual([
+      ["Thermal Tights", 3],
+      ["Thermal Tight", 1],
+    ]);
+  });
+
+  it("counts retired pieces, which a merge would re-point too", async () => {
+    const ids = await brandWith("Janji", ["Thermal Tight", "Thermal Tights"]);
+    await piecesOf(ids.get("Thermal Tight"), 2, true);
+
+    const [group] = await duplicateProducts();
+
+    expect(group?.products[0]).toMatchObject({
+      name: "Thermal Tight",
+      pieces: 2,
+    });
+  });
+
+  it("counts a name nobody's closet uses as zero", async () => {
+    await brandWith("Janji", ["Thermal Tight", "Thermal Tights"]);
+
+    const [group] = await duplicateProducts();
+
+    expect(group?.products.map((row) => row.pieces)).toEqual([0, 0]);
+  });
+
+  it("breaks a tie on the name, so the page reads the same every load", async () => {
+    // Inserted in the reverse of the expected order, and with "Tights"
+    // sorting AFTER "Tight": only the tie-break can put them this way.
+    const ids = await brandWith("Janji", ["Thermal Tights", "Thermal Tight"]);
+    await piecesOf(ids.get("Thermal Tights"), 1);
+    await piecesOf(ids.get("Thermal Tight"), 1);
+
+    const [group] = await duplicateProducts();
+
+    expect(group?.products.map((row) => row.name)).toEqual([
+      "Thermal Tight",
+      "Thermal Tights",
+    ]);
+  });
+
+  it("counts only the pieces filed under that product", async () => {
+    const ids = await brandWith("Janji", [
+      "Thermal Tight",
+      "Thermal Tights",
+      "Rapid Short",
+    ]);
+    await piecesOf(ids.get("Rapid Short"), 4);
+    await piecesOf(undefined, 2);
+    await piecesOf(ids.get("Thermal Tight"), 1);
+
+    const [group] = await duplicateProducts();
+
+    expect(group?.products.map((row) => row.pieces)).toEqual([1, 0]);
+  });
+});
+
+function candidate(
+  brand: string,
+  pieces: readonly number[],
+): DuplicateCandidate {
+  return {
+    brand,
+    products: pieces.map((count, index) => ({
+      id: `${brand}-${String(index)}`,
+      name: `${brand} ${String(index)}`,
+      normalizedName: `${brand.toLowerCase()} ${String(index)}`,
+      pieces: count,
+    })),
+  };
+}
+
+describe("the report the Desk draws", () => {
+  it("totals names, groups and pieces for the header count", () => {
+    const report = duplicatesReport([
+      candidate("Nike", [14, 5]),
+      candidate("Tracksmith", [29, 6, 3]),
+    ]);
+
+    expect(report.names).toBe(5);
+    expect(report.groups).toHaveLength(2);
+    expect(report.pieces).toBe(57);
+  });
+
+  it("sorts the groups by pieces affected, most first", () => {
+    const report = duplicatesReport([
+      candidate("Patagonia", [9, 2]),
+      candidate("Tracksmith", [29, 6, 3]),
+      candidate("Nike", [14, 5]),
+    ]);
+
+    expect(
+      report.groups.map((group) => [group.brand, group.pieces] as const),
+    ).toEqual([
+      ["Tracksmith", 38],
+      ["Nike", 19],
+      ["Patagonia", 11],
+    ]);
+  });
+
+  it("breaks a tie on the brand", () => {
+    const report = duplicatesReport([
+      candidate("Ciele", [2, 1]),
+      candidate("Brooks", [3, 0]),
+    ]);
+
+    expect(report.groups.map((group) => group.brand)).toEqual([
+      "Brooks",
+      "Ciele",
+    ]);
+  });
+
+  it("keys each group by its product ids", () => {
+    const [group] = duplicatesReport([candidate("Nike", [14, 5])]).groups;
+
+    expect(group?.key).toBe("Nike-0 Nike-1");
+  });
+
+  it("is all zeroes over a clean catalogue", () => {
+    expect(duplicatesReport([])).toEqual({ names: 0, pieces: 0, groups: [] });
+  });
+});
+
+/**
+ * `filler` distinct products under a brand that sorts first, then one
+ * near-miss pair under a brand that sorts after it: the pair's rows are
+ * the last two the report reads.
+ */
+async function pairAfter(filler: number): Promise<void> {
+  const first = "00000000000000000000000000";
+  const last = "ZZZZZZZZZZZZZZZZZZZZZZZZZZ";
+  await core()
+    .insert(brands)
+    .values([
+      { id: first, name: "Filler", normalized: "filler" },
+      { id: last, name: "Janji", normalized: "janji" },
+    ]);
+  const product = (brandId: string, name: string) =>
+    core()
+      .insert(productsTable)
+      .values({
+        id: newUlid(),
+        brandId,
+        name,
+        normalizedName: name,
+        createdBy: newUlid(),
+        createdAt: NOW,
+      });
+  const [head, ...rest] = [
+    ...Array.from({ length: filler }, (_, index) =>
+      product(first, `model ${String(index).padStart(4, "0")}`),
+    ),
+    product(last, "thermal tight"),
+    product(last, "thermal tights"),
+  ];
+  await core().batch([head, ...rest]);
+}
+
+describe("the report's cap, pinned", () => {
+  beforeEach(resetSafetyTables);
+
+  it("reads exactly DUPLICATES_PRODUCT_CAP rows: a pair ending on it is found", async () => {
+    await pairAfter(DUPLICATES_PRODUCT_CAP - 2);
+    expect(await duplicateProducts()).toHaveLength(1);
+  });
+
+  it("cuts the row after the cap, so a pair straddling it goes unreported", async () => {
+    // The deferral this pins: past the cap, a later brand's near-misses
+    // silently drop out of the report.
+    await pairAfter(DUPLICATES_PRODUCT_CAP - 1);
+    expect(await duplicateProducts()).toEqual([]);
+  });
+
+  it("is 500 products", () => {
+    expect(DUPLICATES_PRODUCT_CAP).toBe(500);
   });
 });

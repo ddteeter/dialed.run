@@ -1,6 +1,6 @@
-import { createFileRoute, getRouteApi } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
-import { DeskShell } from "../../modules/ops/components/DeskShell";
+import { DeskPage } from "../../modules/ops/components/DeskPage";
 import { DeskRunners } from "../../modules/safety/components/DeskRunners";
 import {
   banUserAction,
@@ -9,8 +9,6 @@ import {
   unbanUserAction,
 } from "../../modules/safety/functions";
 import { runnersFilterInput } from "../../modules/safety/inputs";
-
-const desk = getRouteApi("/desk");
 
 /**
  * Desk · Runners, "D8" (round 27 #22): every account, a search, and the
@@ -25,12 +23,11 @@ export const Route = createFileRoute("/desk/runners")({
 });
 
 function RunnersPage() {
-  const today = desk.useLoaderData();
   const { runners, total } = Route.useLoaderData();
   const filter = Route.useSearch();
 
   return (
-    <DeskShell current="runners" today={today}>
+    <DeskPage current="runners">
       <DeskRunners
         runners={runners}
         total={total}
@@ -39,6 +36,6 @@ function RunnersPage() {
         ban={banUserAction}
         unban={unbanUserAction}
       />
-    </DeskShell>
+    </DeskPage>
   );
 }

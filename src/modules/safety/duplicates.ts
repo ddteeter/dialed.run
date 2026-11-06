@@ -33,22 +33,46 @@
  * report starts missing real duplicates, the next step is a proper edit
  * distance with a length-bucketed candidate set, not a phonetic key.
  */
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 
-import { brands, products } from "../../db/schema-core";
+import { brands, products, wardrobeItems } from "../../db/schema-core";
 import { coreDb } from "../../env";
 
 function db() {
   return coreDb();
 }
 
+/**
+One product row in a candidate, with the closet pieces filed under it.
+*/
+export interface DuplicateVariant {
+  id: string;
+  name: string;
+  normalizedName: string;
+  /**
+   * Every `wardrobe_items` row pointing at this product, retired pieces
+   * included: a merge would re-point those too, so they are part of the
+   * mess the report measures.
+   */
+  pieces: number;
+}
+
 export interface DuplicateCandidate {
   brand: string;
   /**
-  The rows that look like the same product, most recent first.
-  */
-  products: readonly { id: string; name: string; normalizedName: string }[];
+   * The rows that look like the same product, most pieces first. The
+   * first is the probable name: the spelling most runners already chose.
+   */
+  products: readonly DuplicateVariant[];
 }
+
+/**
+ * How many product rows one report reads, at most. The cut falls in
+ * `(brand_id, normalized_name)` order, so past it a later brand's
+ * near-misses go unreported and nothing on the page says so — accepted
+ * while the catalogue is far smaller (task 110's PR, Deferred).
+ */
+export const DUPLICATES_PRODUCT_CAP = 500;
 
 /**
  * Products under one brand whose normalised names are near-identical.
@@ -58,7 +82,7 @@ export interface DuplicateCandidate {
  * report that pairs them is one an operator stops reading.
  */
 export async function duplicateProducts(
-  limit = 500,
+  limit = DUPLICATES_PRODUCT_CAP,
 ): Promise<DuplicateCandidate[]> {
   const rows = await db()
     .select({
@@ -69,6 +93,10 @@ export async function duplicateProducts(
       normalizedName: products.normalizedName,
       brandId: products.brandId,
       brandName: brands.name,
+      // Correlated, so each product counts only its own entries in the
+      // `wardrobe_product` index instead of a grouped scan of every
+      // closet in the app.
+      pieces: sql<number>`(select count(*) from ${wardrobeItems} where ${wardrobeItems.productId} = ${products.id})`,
     })
     .from(products)
     .innerJoin(brands, eq(products.brandId, brands.id))
@@ -102,7 +130,7 @@ export async function duplicateProducts(
 
 function candidateFrom(
   brand: string,
-  group: readonly { id: string; name: string; normalizedName: string }[],
+  group: readonly DuplicateVariant[],
   cluster: readonly string[],
 ): DuplicateCandidate {
   return {
@@ -115,8 +143,21 @@ function candidateFrom(
         id: row.id,
         name: row.name,
         normalizedName: row.normalizedName,
-      })),
+        pieces: row.pieces,
+      }))
+      .toSorted(byPiecesThenName),
   };
+}
+
+/**
+ * Most pieces first, so the probable name leads; the name breaks a tie
+ * so the page reads the same on every load.
+ */
+function byPiecesThenName(
+  left: Readonly<{ pieces: number; name: string }>,
+  right: Readonly<{ pieces: number; name: string }>,
+): number {
+  return right.pieces - left.pieces || left.name.localeCompare(right.name);
 }
 
 /**
