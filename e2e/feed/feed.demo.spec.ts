@@ -4,7 +4,9 @@
  * this, round 26 #12), runner search, D (post detail — the strip, the
  * note, the kit), H (someone else's profile), D-11 (useful reactions), the
  * bell counting a run of any age that still owes a verdict (S2), the
- * consensus bars' words as shares of the matched runners (round 35 #54), G's
+ * consensus bars' words as shares of the matched runners (round 35 #54) and
+ * the summary sentence under them (round 47 #114), G's Recent entries rows
+ * (round 35 #53b), G's
  * settings button, `@handle` on the author row and `/feed/u/old` saying the
  * runner changed their name (FEED-10) and a never-held `/feed/u/<handle>` saying
  * "This runner isn't here." (round 28 #11), the author's own under-review
@@ -401,6 +403,12 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       }),
     );
     expect(drawnBars).toStrictEqual(["TopsAll5/5", "BottomsMost3/5"]);
+    // Round 47 #114: under the bars, what the runners who got it right
+    // wore, in the same share words over them. All five called it dialed.
+    await scene(page, "E2-lite · the summary sentence, under the bars");
+    await expect(page.locator('[data-part="summary"]')).toHaveText(
+      "All got it right in tops. Most added bottoms.",
+    );
 
     // Following is a tab away, and its empty state is drawn (E1).
     await scene(page, "E1 · nobody yet, and one way to find someone");
@@ -777,6 +785,26 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     ).toHaveAccessibleName(/Under review, other runners can't see this/u);
     await expect(ownCard.getByText(/· You$/u)).toBeVisible();
     await expect(ownCard.getByText("1 / 2")).toBeVisible();
+
+    // G's Recent entries (round 35 #53b): the link names the run's day and
+    // distance, and the meta line under it carries the tag first.
+    await scene(page, "G · Recent entries name the run: its day and distance");
+    await page.goto("/feed/me");
+    await hydrated(page);
+    await expect(
+      page.getByRole("heading", { name: "Recent entries" }),
+    ).toBeVisible();
+    const ownRow = page.locator("li").filter({
+      has: page.locator(`a[href="/feed/entry/${ownEntryId}"]`),
+    });
+    await expect(ownRow.getByRole("link")).toHaveText(
+      /^[A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2} · \d+\.\d (mi|km)$/u,
+    );
+    await expect(
+      ownRow.locator('[data-part="entry-meta"] > :first-child'),
+    ).toHaveAttribute("data-part", "review-tag");
+    await page.goto("/feed");
+    await hydrated(page);
     await scene(page, "D · HIDDEN WHILE WE CHECK, at the top");
     await ownCard.getByText("Two photos, one too many").click();
     await hydrated(page);
