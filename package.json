@@ -23,6 +23,8 @@
     "postmutate": "rm -rf .stryker-tmp",
     "e2e": "playwright test --project=e2e",
     "demo": "DEMO_SLOWMO=250 playwright test --project=demo",
+    "postdemo": "npm run demo:mux",
+    "demo:mux": "tsx scripts/demo-mux.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . && npm run lint:lockfile",
     "lint:lockfile": "lockfile-lint",

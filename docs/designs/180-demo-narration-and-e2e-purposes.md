@@ -20,7 +20,7 @@ a test.
 **Voice.** `scene()` keeps its signature and gains an optional spoken form:
 `scene(page, text, { say })`. On a recording run it renders the line with
 `say -r 280 -o <cache>/<hash>.aiff "<spoken> [[slnc 400]]"`, holds for the
-audio's length instead of `holdFor()`, and appends `{ text, startMs, audio }`
+audio's length (`afinfo`) instead of `holdFor()`, and appends `{ text, startMs, audio }`
 to a cue list beside `video.webm`. No `-v`: bare `say` speaks the system
 voice from Spoken Content (a Siri voice), which `say -v '?'` never lists. That
 is aperture-ally's finding (`macos/…/SpeechService.swift`, A/B 2026-09-28).
@@ -31,7 +31,7 @@ synthesizes what changed. macOS only _(owner)_; without `say`, captions only.
 **Captions leave the page.** No `html::after`. A post-record step
 (`npm run demo:mux`) pads the frame with a caption strip above the 1280×720
 viewport, overlays one PNG per cue (rendered by headless Chromium from
-`captionRule`'s styling and `public/fonts/ibm-plex-mono-*.woff2`) between its
+the old caption's styling and `public/fonts/ibm-plex-mono-*.woff2`) between its
 start and the next, and mixes the audio with `adelay` + `amix`, out to H.264
 `demo.mp4`. PNG overlays because this Homebrew ffmpeg has no `drawtext` or
 `subtitles`; `pad`, `overlay`, `adelay` and `amix` are core. The caption-not-in-
@@ -42,15 +42,15 @@ same specs; in a recording they are only latency between frames.
 
 **E2e split by purpose** _(owner: rename earns its cost)_:
 
-| kind | file | written when | not for |
-| --- | --- | --- | --- |
-| unit / dom (vitest) | `*.test.ts(x)` | the default: logic, state space, components | anything a real browser or server hop must prove |
-| journey | `*.journey.spec.ts` | a flow crosses the server boundary: new route, auth gate, server fn wired to a screen. Updated when the flow changes | edge cases, recording |
-| edge case | `*.spec.ts` beside a journey | a case only a real browser shows | what a dom test can reach |
-| conformance | `e2e/conformance/*.conformance.spec.ts` | a screen with a board is built or changes shape | values (tokens etc.) |
-| a11y | none of its own _(owner)_ | never: it rides on every spec. Agents read the coverage report for unreached routes and review their transcript diff (`a11y-judgment`) | |
-| walkthrough | `e2e/walkthroughs/*.walkthrough.spec.ts` | a product story changes; 3–5 total, narrated, committed, run in CI as assertions | per-PR recording |
-| PR demo | `e2e/scratch/` (gitignored) | a PR changes what a user sees. Seeded straight to the state, scoped to the change, real `expect`s, never committed | proof: committed tests carry that |
+| kind                | file                                     | written when                                                                                                                           | not for                                          |
+| ------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| unit / dom (vitest) | `*.test.ts(x)`                           | the default: logic, state space, components                                                                                            | anything a real browser or server hop must prove |
+| journey             | `*.journey.spec.ts`                      | a flow crosses the server boundary: new route, auth gate, server fn wired to a screen. Updated when the flow changes                   | edge cases, recording                            |
+| edge case           | `*.spec.ts` beside a journey             | a case only a real browser shows                                                                                                       | what a dom test can reach                        |
+| conformance         | `e2e/conformance/*.conformance.spec.ts`  | a screen with a board is built or changes shape                                                                                        | values (tokens etc.)                             |
+| a11y                | none of its own _(owner)_                | never: it rides on every spec. Agents read the coverage report for unreached routes and review their transcript diff (`a11y-judgment`) |                                                  |
+| walkthrough         | `e2e/walkthroughs/*.walkthrough.spec.ts` | a product story changes; 3–5 total, narrated, committed, run in CI as assertions                                                       | per-PR recording                                 |
+| PR demo             | `e2e/scratch/` (gitignored)              | a PR changes what a user sees. Seeded straight to the state, scoped to the change, real `expect`s, never committed                     | proof: committed tests carry that                |
 
 The table lives in `.claude/rules/testing.md`. The design-doc template's test
 plan asks "which kinds, and why" and points at it, because that is where the
@@ -61,9 +61,10 @@ decision is actually made. `pr-ready` and `pr-demo-video` check it at the end.
 1. **Voice and caption strip.** `e2e/support/caption.ts` (pure: spoken
    rewrite, cue list, hold-for-audio, ffmpeg filter-graph builder),
    `demo.ts` (cue capture, `say` call, a11y off when recording),
-   `scripts/demo-mux.ts` (thin: render PNGs, run ffmpeg), `npm run demo:mux`.
-   _Test:_ vitest on every pure function, 100% Stryker on `caption.ts`;
-   `scene.spec.ts` asserts no caption reaches the DOM. _Done:_ one existing
+   `scripts/demo-mux.ts` (thin: render PNGs, run ffmpeg), `npm run demo:mux`, run by `postdemo`.
+   _Test:_ vitest on every pure function, 100% Stryker on `caption.ts`.
+   `scene.spec.ts` is deleted: `scene()` no longer touches the page, so
+   no caption can reach the DOM by construction. _Done:_ one existing
    demo (strava, which no active lane owns) recorded with voice and strip,
    audio within ~200 ms of its cue by ear, app top bar fully visible.
 2. **The decision table.** `testing.md` table replacing line 37, template

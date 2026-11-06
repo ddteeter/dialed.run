@@ -108,8 +108,27 @@ npm run demo                       # every demo
 npm run demo -- --grep "closet"    # just yours, while iterating
 ```
 
-Output lands at `test-results/<test-dir>/video.webm` (gitignored). `npm run
-e2e` runs the edge-case suite with no video.
+Output lands in `test-results/<test-dir>/`: the raw `video.webm`, and
+`demo.mp4`, which is the one you attach. `npm run demo` runs `npm run
+demo:mux` when the recording passes; run that alone to re-mux without
+re-recording. `npm run e2e` runs the edge-case suite with no video.
+
+### Narration
+
+`scene(page, text, { say })` speaks a line and holds while it plays.
+`text` is the caption, shown in a strip ffmpeg adds above the app, so it
+never covers the top bar and never enters the page. `say` is the spoken
+form, for when the caption's shorthand would sound wrong aloud (an ID
+like "D-87", a measurement); a `·` is read as a pause without one. Write
+lines the way a product owner demoing the screen would say them, and
+put each `scene()` after the screen it describes has loaded, or the
+viewer hears it over a blank page.
+
+The voice is the Mac's system voice (System Settings → Accessibility →
+Spoken Content), through bare `say` at 280 wpm. Rendered lines are cached
+in `node_modules/.cache/demo-voice`, so the first recording of a new line
+holds a little longer before it and later ones do not. macOS only, and
+`ffmpeg` must be installed (Homebrew).
 
 **Record through `npm run demo`, not `playwright test --project=demo`.**
 Pacing and video recording are opt-in, and that script is what turns them
@@ -140,21 +159,16 @@ run has not released the port. Wait for it rather than working around it.
 
 ## Attach to the PR
 
-Transcode first. GitHub accepts `.webm`, but Playwright emits VP8, whose
-playback on iOS Safari is unreliable — and review here is phone-friendly by
-design.
-
-```bash
-ffmpeg -i test-results/<dir>/video.webm \
-  -c:v libx264 -preset slow -crf 22 -pix_fmt yuv420p demo.mp4
-```
+Attach `demo.mp4`, which the mux step has already encoded as H.264 + AAC.
+GitHub accepts `.webm`, but Playwright emits VP8, whose playback on iOS
+Safari is unreliable, and review here is phone-friendly by design.
 
 Reference the local path in the PR body and let `gh` rewrite it to the
 uploaded URL:
 
 ```bash
-gh pr create --body-file pr-body.md --attach demo.mp4
-gh pr comment <n> --attach demo.mp4   # updating an existing PR
+gh pr create --body-file pr-body.md --attach test-results/<dir>/demo.mp4
+gh pr comment <n> --attach test-results/<dir>/demo.mp4   # updating an existing PR
 ```
 
 **Requires `gh >= 2.99.0`** (`--attach` shipped 2026-09-01) and `ffmpeg`.
