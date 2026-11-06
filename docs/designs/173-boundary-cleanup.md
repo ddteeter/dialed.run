@@ -39,7 +39,8 @@ when they should use the viewer's home-place zone (R-96 (3); owner ruling
     suffix (owner ruling, 2026-11-05).
   - **The screens.** These use the viewer's zone:
     - notification times (`NotificationList`);
-    - the rate-limit clocks ("send another at"), which drop `deviceTimeZone()`;
+    - the signed-in rate-limit clocks ("try again at", "send another at"),
+      which drop `deviceTimeZone()` (Au5 keeps it, answer 4);
     - the data-export expiry;
     - the deletion day, on the sheet and in the email.
 
@@ -65,6 +66,10 @@ Two PRs:
    screens do not.
 3. **OtherProfile.** It shows the run's date in the run's zone, falling
    back to the runner's zone, as the public profile does.
+4. **Au5 exception.** The access-request form is for signed-out visitors,
+   who have no profile, so its clock keeps `deviceTimeZone()`. It renders
+   only after a submit, so hydration is safe. `lib/contracts/access.ts` is
+   unchanged.
 
 ## Contract touches
 
