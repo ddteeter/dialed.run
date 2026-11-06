@@ -127,7 +127,11 @@ export function OwnProfile({
                 className="flex items-center justify-between text-body"
               >
                 <span>{item.name}</span>
-                <Mono className="text-muted">[{String(item.wearCount)}]</Mono>
+                {/* The brackets are drawn, not said: `Bracketed` hides them,
+                    so the count is read as its number (PR#286-1). */}
+                <Bracketed className="text-muted">
+                  {String(item.wearCount)}
+                </Bracketed>
               </li>
             )}
           </ListSection>

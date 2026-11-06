@@ -403,9 +403,14 @@ describe("OwnProfile (G): past day one", () => {
         })}
       />,
     );
-    expect(screen.getByText("Houdini").closest("li")).toHaveTextContent(
-      "Houdini[4]",
-    );
+    const worn = screen.getByText("Houdini").closest("li");
+    expect(worn).toHaveTextContent("Houdini[4]");
+    // Drawn, not said: a screen reader hears "4", never "left bracket".
+    expect(
+      [...(worn?.querySelectorAll("[aria-hidden='true']") ?? [])].map(
+        (mark) => mark.textContent,
+      ),
+    ).toStrictEqual(["[", "]"]);
     expect(
       screen.getByRole("link", { name: "Sat, Aug 29 · 8.2 mi" }),
     ).toHaveAttribute("href", "/feed/entry/01E");
