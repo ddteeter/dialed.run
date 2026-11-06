@@ -90,6 +90,7 @@ async function renderDesk(overrides: Partial<Props> = {}) {
       ban={ban}
       unban={unban}
       keep={keep}
+      flagged={0}
       {...overrides}
     />,
   );
@@ -196,19 +197,29 @@ describe("selecting a runner", () => {
 */
 const FLAGGED_AT = Date.UTC(2025, 10, 6, 12) / 1000;
 
-describe("a flagged account (D-161 1) and PENDING DELETE (PR#126-1)", () => {
-  it("offers Flagged among the filters, after Reported", async () => {
-    await renderDesk({ filter: { filter: "flagged" } });
+describe("a flagged account (D-161 1, R47·124) and PENDING DELETE (PR#126-1)", () => {
+  it("offers Flagged last among the filters, with its count, even at 0", async () => {
+    await renderDesk({ filter: { filter: "flagged" }, flagged: 0 });
 
     const filters = screen.getByRole("navigation", { name: "Filter runners" });
     expect(
       within(filters)
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toStrictEqual(["All", "Reported", "Flagged", "Closed"]);
+    ).toStrictEqual(["All", "Reported", "Closed", "Flagged [0]"]);
+    const chip = within(filters).getByRole("link", { name: /^Flagged/u });
+    expect(chip).toHaveAttribute("aria-current", "page");
+    expect(chip).toHaveAttribute("href", "/desk/runners?filter=flagged");
+    expect(within(chip).getByText(bracketed("0"))).toBeInTheDocument();
+  });
+
+  it("counts the flagged accounts on the chip", async () => {
+    await renderDesk({ flagged: 3 });
+
+    const filters = screen.getByRole("navigation", { name: "Filter runners" });
     expect(
-      within(filters).getByRole("link", { name: "Flagged" }),
-    ).toHaveAttribute("aria-current", "page");
+      within(filters).getByRole("link", { name: /^Flagged/u }),
+    ).toHaveTextContent("Flagged [3]");
   });
 
   it("marks a flagged row beside its state, in hi-viz, and no other row", async () => {
@@ -229,12 +240,9 @@ describe("a flagged account (D-161 1) and PENDING DELETE (PR#126-1)", () => {
     expect(screen.getByText(bracketed("PENDING DELETE"))).toBeInTheDocument();
   });
 
-  it("puts the flag between Rename and Close account, dated, and keeps on Keep account", async () => {
+  it("puts the flag at the top of the column, dated, never saying intimate", async () => {
     const user = userEvent.setup();
-    const { keep, router } = await renderDesk({
-      runners: [{ ...ada, flaggedAt: FLAGGED_AT }],
-    });
-    const invalidate = vi.spyOn(router, "invalidate");
+    await renderDesk({ runners: [{ ...ada, flaggedAt: FLAGGED_AT }] });
     await user.click(screen.getByRole("button", { name: "@ada" }));
 
     const column = screen.getByRole("complementary", { name: "@ada" });
@@ -242,7 +250,7 @@ describe("a flagged account (D-161 1) and PENDING DELETE (PR#126-1)", () => {
       within(column)
         .getAllByRole("heading")
         .map((h) => h.textContent),
-    ).toStrictEqual(["Rename", "Flagged", "Close account"]);
+    ).toStrictEqual(["Flagged", "Rename", "Close account"]);
     const flagHeading = within(column).getByRole("heading", {
       name: "Flagged",
     });
@@ -250,18 +258,65 @@ describe("a flagged account (D-161 1) and PENDING DELETE (PR#126-1)", () => {
     expect(flagHeading.closest("section")).toHaveClass("border-hiviz-text");
     expect(
       within(column).getByText(
-        "An image they posted was removed as intimate on Nov 6. Decide whether the account stays.",
+        "A takedown of an image they posted was upheld on Nov 6. Nothing has happened to the account. Keep it, or ban it below.",
       ),
     ).toBeInTheDocument();
-
-    await user.click(
+    expect(document.body.textContent).not.toMatch(/intimate/iu);
+    expect(
       within(column).getByRole("button", { name: "Keep account" }),
-    );
+    ).toHaveClass("rounded-pill", "border-ink", "bg-transparent");
+  });
+
+  it("keeps on Keep account, reloads, and hands focus to the runner's name", async () => {
+    const user = userEvent.setup();
+    const { keep, router } = await renderDesk({
+      runners: [{ ...ada, flaggedAt: FLAGGED_AT }],
+    });
+    const invalidate = vi.spyOn(router, "invalidate");
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+
+    await user.click(screen.getByRole("button", { name: "Keep account" }));
 
     expect(keep).toHaveBeenCalledWith({ data: { userId: "u-ada" } });
     await waitFor(() => {
       expect(invalidate).toHaveBeenCalled();
     });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "@ada" })).toHaveFocus();
+    });
+  });
+
+  it("hands focus to the name after a ban of a flagged runner too", async () => {
+    const user = userEvent.setup();
+    await renderDesk({ runners: [{ ...ada, flaggedAt: FLAGGED_AT }, bo] });
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+    await user.type(screen.getByRole("textbox", { name: /Why/ }), "Serious");
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Which rule/ }),
+      "Post sexual or explicit content",
+    );
+    await user.click(screen.getByRole("button", { name: "Close account" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "@ada" })).toHaveFocus();
+    });
+  });
+
+  it("leaves focus alone after a ban of an unflagged runner", async () => {
+    const user = userEvent.setup();
+    const { ban } = await renderDesk();
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+    await user.type(screen.getByRole("textbox", { name: /Why/ }), "Serious");
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Which rule/ }),
+      "Post sexual or explicit content",
+    );
+    await user.click(screen.getByRole("button", { name: "Close account" }));
+
+    await waitFor(() => {
+      expect(ban).toHaveBeenCalled();
+    });
+    expect(screen.getByRole("button", { name: "@ada" })).not.toHaveFocus();
   });
 
   it("says it is still flagged when Keep account fails", async () => {
@@ -275,6 +330,7 @@ describe("a flagged account (D-161 1) and PENDING DELETE (PR#126-1)", () => {
     await user.click(screen.getByRole("button", { name: "Keep account" }));
 
     expect(await screen.findByText("Still flagged")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "@ada" })).not.toHaveFocus();
   });
 
   it("shows no flag on a closed account, which Reopen answers", async () => {

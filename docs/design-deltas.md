@@ -1045,8 +1045,25 @@ _Nothing from 99 on is open: round 45 answered the last of it._
      - **The screening hold's bell row (owner's words, D-162)** reuses the
        report hide's row: "Photo hidden while we review it. Our automatic
        screening flagged a photo on your run, …".
-       **The ask:** confirm, or draw the flag (mark, chip, panel), Today's
-       line and where the statutory line sits.
+       **ANSWERED by round 47 (R47·124–126), built as drawn:** the flag
+       panel tops D8's column with Design's words and a Keep account outline
+       pill, and Keep, a ban or an unban returns focus to the runner's name;
+       the Flagged (N) chip comes last and shows at 0; FLAGGED ACCOUNTS is
+       Today's fourth number, linking to the filter; the statutory line is
+       MONO.xs `--muted`, sentence case, under the reason. Built without
+       R47·124's "See the takedown": see 127.
+
+<!-- Numbered 127: round 47 filed 113–126. A list break, so Prettier keeps the number. -->
+
+127. **What R47·124's "See the takedown" opens (design 176).** The board
+     says it opens the Review row. An upheld takedown's row is already
+     decided, Review shows only pending rows and takes no parameters, and
+     a decided `/takedown` request leaves RemovalRequests. Nothing on the
+     Desk shows a decided row, so the link is not built (coordinator,
+     2026-11-06). Also: MONO.xs is uppercase in `Mono`, so the sentence-
+     case statutory line writes the xs step's classes out.
+     **The ask:** say what it opens: a read-only decided-row view (a new
+     screen), or something that exists.
 
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
 

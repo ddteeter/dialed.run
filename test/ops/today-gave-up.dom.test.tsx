@@ -5,6 +5,13 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterProvider,
+} from "@tanstack/react-router";
+import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -66,7 +73,20 @@ function job(overrides: Partial<GaveUpJob> = {}): GaveUpJob {
   };
 }
 
-function renderToday(
+/**
+Renders under a router: Today's flagged number is a link (R47·125).
+*/
+async function renderWithRouter(element: ReactElement) {
+  const rootRoute = createRootRoute({ component: () => element });
+  const router = createRouter({
+    routeTree: rootRoute,
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+  await router.load();
+  return render(<RouterProvider router={router} />);
+}
+
+async function renderToday(
   jobs: readonly GaveUpJob[],
   handlers: Partial<Parameters<typeof Today>[0]> = {},
   today = desk(jobs.length, jobs[0]?.firstFailedAt),
@@ -74,7 +94,7 @@ function renderToday(
   const retry = vi.fn(() => Promise.resolve("retried"));
   const drop = vi.fn(() => Promise.resolve());
   const onChanged = vi.fn(() => Promise.resolve());
-  render(
+  await renderWithRouter(
     <Today
       today={today}
       gaveUp={jobs}
@@ -107,45 +127,45 @@ function never(): Promise<unknown> {
 }
 
 describe("Gave up, on Today", () => {
-  it("is one line at zero, with no count", () => {
-    renderToday([]);
+  it("is one line at zero, with no count", async () => {
+    await renderToday([]);
 
     expect(within(section()).getByText("Nothing gave up.")).toBeVisible();
     expect(within(section()).queryByText(/\[/u)).toBeNull();
     expect(rows()).toHaveLength(0);
   });
 
-  it("counts the jobs and dates the oldest, in hi-viz", () => {
-    renderToday([job()]);
+  it("counts the jobs and dates the oldest, in hi-viz", async () => {
+    await renderToday([job()]);
 
     const count = within(section()).getByText(bracketed("1 job · oldest 2d"));
     expect(count).toHaveClass("text-hiviz-text");
   });
 
-  it("draws the count's brackets without saying them (D-150, PR#286-1)", () => {
-    renderToday([job()]);
+  it("draws the count's brackets without saying them (D-150, PR#286-1)", async () => {
+    await renderToday([job()]);
 
     const count = within(section()).getByText(bracketed("1 job · oldest 2d"));
     const hidden = [...count.querySelectorAll('[aria-hidden="true"]')];
     expect(hidden.map((part) => part.textContent)).toEqual(["[", "]"]);
   });
 
-  it("speaks in the plural past one, from the whole table's count", () => {
-    renderToday([job()], {}, desk(3, NOON - 6 * HOUR));
+  it("speaks in the plural past one, from the whole table's count", async () => {
+    await renderToday([job()], {}, desk(3, NOON - 6 * HOUR));
 
     expect(
       within(section()).getByText(bracketed("3 jobs · oldest 6h")),
     ).toBeInTheDocument();
   });
 
-  it("dates no oldest when it has none to date", () => {
-    renderToday([job()], {}, desk(1));
+  it("dates no oldest when it has none to date", async () => {
+    await renderToday([job()], {}, desk(1));
 
     expect(within(section()).getByText(bracketed("1 job"))).toBeInTheDocument();
   });
 
-  it("shows the two newest, then expands in place to show them all", () => {
-    renderToday(
+  it("shows the two newest, then expands in place to show them all", async () => {
+    await renderToday(
       [job({ id: "a" }), job({ id: "b" }), job({ id: "c" })],
       {},
       desk(4, NOON - DAY),
@@ -164,16 +184,16 @@ describe("Gave up, on Today", () => {
     ).toBeNull();
   });
 
-  it("offers no Show all when every job already shows", () => {
-    renderToday([job({ id: "a" }), job({ id: "b" })]);
+  it("offers no Show all when every job already shows", async () => {
+    await renderToday([job({ id: "a" }), job({ id: "b" })]);
 
     expect(
       within(section()).queryByRole("button", { name: /Show all/u }),
     ).toBeNull();
   });
 
-  it("says what each job was doing, why it stopped, and its tries and when", () => {
-    renderToday([job()]);
+  it("says what each job was doing, why it stopped, and its tries and when", async () => {
+    await renderToday([job()]);
 
     const [row] = rows();
     expect(row?.textContent).toBe(
@@ -194,8 +214,8 @@ describe("Gave up, on Today", () => {
     );
   });
 
-  it("names each kind of job as the Desk does", () => {
-    renderToday(
+  it("names each kind of job as the Desk does", async () => {
+    await renderToday(
       [
         job({ id: "e", kind: "enrichment" }),
         job({ id: "i", kind: "import" }),
@@ -212,14 +232,14 @@ describe("Gave up, on Today", () => {
     expect(captions).toStrictEqual(["Enrichment", "Import", "Reminder"]);
   });
 
-  it("says one try in the singular", () => {
-    renderToday([job({ tries: 1 })]);
+  it("says one try in the singular", async () => {
+    await renderToday([job({ tries: 1 })]);
 
     expect(screen.getByText("1 try · last 09:00")).toBeInTheDocument();
   });
 
-  it("keeps the raw error one click away, and only when there is one", () => {
-    renderToday([
+  it("keeps the raw error one click away, and only when there is one", async () => {
+    await renderToday([
       job({ id: "a", rawError: "Page returned 403" }),
       job({ id: "b" }),
     ]);
@@ -237,8 +257,8 @@ describe("Gave up, on Today", () => {
     expect(without?.querySelector("details")).toBeNull();
   });
 
-  it("gives every job but enrichment one Retry, and Drop", () => {
-    renderToday([job()]);
+  it("gives every job but enrichment one Retry, and Drop", async () => {
+    await renderToday([job()]);
 
     const buttons = within(rows()[0] ?? document.body).getAllByRole("button");
     expect(buttons.map((button) => button.textContent)).toStrictEqual([
@@ -247,8 +267,8 @@ describe("Gave up, on Today", () => {
     ]);
   });
 
-  it("gives enrichment its two retries, re-run disabled with no stored page", () => {
-    renderToday([job({ kind: "enrichment", hasStoredPage: false })]);
+  it("gives enrichment its two retries, re-run disabled with no stored page", async () => {
+    await renderToday([job({ kind: "enrichment", hasStoredPage: false })]);
 
     const row = within(rows()[0] ?? document.body);
     expect(
@@ -264,8 +284,8 @@ describe("Gave up, on Today", () => {
     expect(rerun).toHaveClass("text-muted");
   });
 
-  it("does nothing when a disabled re-run is pressed", () => {
-    const { retry } = renderToday([
+  it("does nothing when a disabled re-run is pressed", async () => {
+    const { retry } = await renderToday([
       job({ kind: "enrichment", hasStoredPage: false }),
     ]);
 
@@ -275,7 +295,7 @@ describe("Gave up, on Today", () => {
   });
 
   it("re-runs extraction over a stored page", async () => {
-    const { retry, onChanged } = renderToday([
+    const { retry, onChanged } = await renderToday([
       job({ id: "p", kind: "enrichment", hasStoredPage: true }),
     ]);
     const rerun = screen.getByRole("button", { name: /Re-run extraction/u });
@@ -291,7 +311,7 @@ describe("Gave up, on Today", () => {
   });
 
   it("re-fetches an enrichment job's page", async () => {
-    const { retry } = renderToday([job({ id: "p", kind: "enrichment" })]);
+    const { retry } = await renderToday([job({ id: "p", kind: "enrichment" })]);
 
     fireEvent.click(screen.getByRole("button", { name: /Re-fetch page/u }));
 
@@ -301,7 +321,7 @@ describe("Gave up, on Today", () => {
   });
 
   it("retries, then reloads the page's data, which takes the row away", async () => {
-    const { retry, drop, onChanged } = renderToday([job({ id: "w" })]);
+    const { retry, drop, onChanged } = await renderToday([job({ id: "w" })]);
 
     fireEvent.click(screen.getByRole("button", { name: /^Retry/u }));
 
@@ -313,7 +333,7 @@ describe("Gave up, on Today", () => {
   });
 
   it("drops, quietly", async () => {
-    const { retry, drop, onChanged } = renderToday([job({ id: "w" })]);
+    const { retry, drop, onChanged } = await renderToday([job({ id: "w" })]);
 
     fireEvent.click(screen.getByRole("button", { name: /^Drop/u }));
 
@@ -324,8 +344,8 @@ describe("Gave up, on Today", () => {
     expect(retry).not.toHaveBeenCalled();
   });
 
-  it("breathes on the pressed control while it waits, and only that one", () => {
-    renderToday([job({ id: "a" }), job({ id: "b" })], {
+  it("breathes on the pressed control while it waits, and only that one", async () => {
+    await renderToday([job({ id: "a" }), job({ id: "b" })], {
       retry: never,
     });
 
@@ -350,10 +370,13 @@ describe("Gave up, on Today", () => {
     ["Re-run extraction", /^Re-run extraction/u, "retry"],
   ] as const)(
     "breathes on %s alone while it waits, unavailable to a second press",
-    (_, name, handler) => {
-      renderToday([job({ id: "a", kind: "enrichment", hasStoredPage: true })], {
-        [handler]: never,
-      });
+    async (_, name, handler) => {
+      await renderToday(
+        [job({ id: "a", kind: "enrichment", hasStoredPage: true })],
+        {
+          [handler]: never,
+        },
+      );
 
       const pressed = screen.getByRole("button", { name });
       fireEvent.click(pressed);
@@ -369,8 +392,8 @@ describe("Gave up, on Today", () => {
     },
   );
 
-  it("keeps Drop quiet: bare muted text, never a pill", () => {
-    renderToday([job()]);
+  it("keeps Drop quiet: bare muted text, never a pill", async () => {
+    await renderToday([job()]);
 
     const drop = screen.getByRole("button", { name: /^Drop/u });
     expect(drop).toHaveClass("text-muted");
@@ -382,9 +405,12 @@ describe("Gave up, on Today", () => {
       .fn<() => Promise<unknown>>()
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
       .mockResolvedValue("retried");
-    const { onChanged } = renderToday([job({ id: "a" }), job({ id: "b" })], {
-      retry,
-    });
+    const { onChanged } = await renderToday(
+      [job({ id: "a" }), job({ id: "b" })],
+      {
+        retry,
+      },
+    );
     const [first, second] = rows();
 
     fireEvent.click(
@@ -455,8 +481,8 @@ describe("a digest that skipped an operator, on Today", () => {
     address: "je•••@gmail.com",
   };
 
-  it("names them under the three numbers, in hi-viz, with no button", () => {
-    renderToday([], {}, withSkipped([JESS]));
+  it("names them under the three numbers, in hi-viz, with no button", async () => {
+    await renderToday([], {}, withSkipped([JESS]));
     const line = document.querySelector("[data-part='digest-unconfirmed']");
     expect(line?.textContent).toBe(
       "Digest not emailedToday's digest wasn't sent to @jess. Their email address, je•••@gmail.com, isn't confirmed.",
@@ -470,8 +496,8 @@ describe("a digest that skipped an operator, on Today", () => {
     expect(line?.querySelector("button")).toBeNull();
   });
 
-  it("says one line per operator, and an operator with no handle as one", () => {
-    renderToday(
+  it("says one line per operator, and an operator with no handle as one", async () => {
+    await renderToday(
       [],
       {},
       withSkipped([
@@ -486,8 +512,8 @@ describe("a digest that skipped an operator, on Today", () => {
     );
   });
 
-  it("says nothing when the digest skipped nobody", () => {
-    renderToday([], {}, withSkipped([]));
+  it("says nothing when the digest skipped nobody", async () => {
+    await renderToday([], {}, withSkipped([]));
     expect(
       document.querySelector("[data-part='digest-unconfirmed']"),
     ).toBeNull();
@@ -517,8 +543,8 @@ function behind(
  * `todayCounts`' to decide (test/ops/desk.test.ts).
  */
 describe("an outbox running behind, on Today", () => {
-  it("says how many and how long the oldest has waited, in hi-viz, with no button", () => {
-    renderToday([], {}, behind(12, NOON - 38 * HOUR));
+  it("says how many and how long the oldest has waited, in hi-viz, with no button", async () => {
+    await renderToday([], {}, behind(12, NOON - 38 * HOUR));
     expect(runningBehind()?.textContent).toBe(
       "Running behind12 queued jobs were still due after this morning's run. The oldest has waited 38h.",
     );
@@ -529,15 +555,15 @@ describe("an outbox running behind, on Today", () => {
     expect(runningBehind()?.querySelector("button")).toBeNull();
   });
 
-  it("says one job in the singular, its wait in whole hours however long", () => {
-    renderToday([], {}, behind(1, NOON - 2 * DAY - HOUR - 1));
+  it("says one job in the singular, its wait in whole hours however long", async () => {
+    await renderToday([], {}, behind(1, NOON - 2 * DAY - HOUR - 1));
     expect(runningBehind()?.textContent).toBe(
       "Running behind1 queued job was still due after this morning's run. The oldest has waited 49h.",
     );
   });
 
-  it("sits under the skipped-digest line when both show", () => {
-    renderToday(
+  it("sits under the skipped-digest line when both show", async () => {
+    await renderToday(
       [],
       {},
       behind(3, NOON - HOUR, [
@@ -549,15 +575,15 @@ describe("an outbox running behind, on Today", () => {
     );
   });
 
-  it("leaves out the wait when no oldest is known", () => {
-    renderToday([], {}, behind(2, undefined));
+  it("leaves out the wait when no oldest is known", async () => {
+    await renderToday([], {}, behind(2, undefined));
     expect(runningBehind()?.textContent).toBe(
       "Running behind2 queued jobs were still due after this morning's run.",
     );
   });
 
-  it("says nothing when nothing is behind", () => {
-    renderToday([], {}, behind(0, undefined));
+  it("says nothing when nothing is behind", async () => {
+    await renderToday([], {}, behind(0, undefined));
     expect(runningBehind()).toBeNull();
   });
 });
@@ -574,8 +600,8 @@ function withBreakers(breakers: DeskToday["breakers"]): DeskToday {
 }
 
 describe("a hold breaker at its ceiling, on Today", () => {
-  it("says what stopped and what happens instead, for each cause", () => {
-    renderToday(
+  it("says what stopped and what happens instead, for each cause", async () => {
+    await renderToday(
       [],
       {},
       withBreakers([
@@ -594,8 +620,8 @@ describe("a hold breaker at its ceiling, on Today", () => {
     ]);
   });
 
-  it("sits under the three numbers in hi-viz, with no button", () => {
-    renderToday(
+  it("sits under the three numbers in hi-viz, with no button", async () => {
+    await renderToday(
       [],
       {},
       withBreakers([
@@ -610,54 +636,8 @@ describe("a hold breaker at its ceiling, on Today", () => {
     expect(line?.querySelector("button")).toBeNull();
   });
 
-  it("says nothing on an ordinary hour", () => {
-    renderToday([], {}, withBreakers([]));
+  it("says nothing on an ordinary hour", async () => {
+    await renderToday([], {}, withBreakers([]));
     expect(document.querySelector("[data-part='breaker-over']")).toBeNull();
-  });
-});
-
-function flaggedLine() {
-  return document.querySelector("[data-part='flagged-accounts']");
-}
-
-function flagged(flaggedAccounts: number, outboxBehind = 0): DeskToday {
-  const today = desk(0);
-  return {
-    ...today,
-    counts: { ...today.counts, flaggedAccounts, outboxBehind },
-  };
-}
-
-/**
- * D-161 (1): accounts flagged after an intimate-image removal, a line
- * under Today's three numbers, only above zero. What counts is
- * `todayCounts`' (test/ops/desk.test.ts).
- */
-describe("flagged accounts, on Today", () => {
-  it("says how many wait for a decision, in hi-viz, with no button", () => {
-    renderToday([], {}, flagged(2));
-    expect(flaggedLine()?.textContent).toBe(
-      "Accounts to decide2 accounts are flagged after an intimate-image removal. Decide each in Runners, under Flagged.",
-    );
-    expect(screen.getByText("Accounts to decide")).toHaveClass(
-      "text-hiviz-text",
-    );
-    expect(flaggedLine()?.previousElementSibling).toBe(
-      screen.getByRole("list", { name: "Today" }),
-    );
-    expect(flaggedLine()?.querySelector("button")).toBeNull();
-  });
-
-  it("says one account in the singular, above a running-behind line", () => {
-    renderToday([], {}, flagged(1, 3));
-    expect(flaggedLine()?.textContent).toBe(
-      "Accounts to decide1 account is flagged after an intimate-image removal. Decide each in Runners, under Flagged.",
-    );
-    expect(runningBehind()?.previousElementSibling).toBe(flaggedLine());
-  });
-
-  it("says nothing when no account is flagged", () => {
-    renderToday([], {}, flagged(0));
-    expect(flaggedLine()).toBeNull();
   });
 });

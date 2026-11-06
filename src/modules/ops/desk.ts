@@ -61,7 +61,7 @@ export interface TodayCounts {
   readonly bansAllTime: number;
   /**
    * Accounts flagged after an intimate-image removal and not yet decided
-   * (D-161 1): a line on Today, only above zero; never a fourth number.
+   * (D-161 1): Today's fourth number, shown at 0 (R47·125).
    */
   readonly flaggedAccounts: number;
   /**

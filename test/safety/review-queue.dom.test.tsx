@@ -830,7 +830,9 @@ describe("what a row tells the reviewer", () => {
     expect(line).toHaveTextContent(
       "Intimate means nudity or sexual content (15 U.S.C. § 6851). If it isn't, decline, and remove it under another rule if it breaks one.",
     );
-    expect(line).toHaveClass("text-small", "text-quiet");
+    // R47·126: MONO.xs, --muted, sentence case, on its own line.
+    expect(line).toHaveClass("font-mono", "text-mono-xs", "text-muted");
+    expect(line).not.toHaveClass("uppercase");
   });
 
   it("shows no clock on any other row", () => {

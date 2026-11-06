@@ -1,4 +1,4 @@
-import { useRouter } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import type { JSX, ReactNode } from "react";
 
@@ -26,8 +26,9 @@ import type { GaveUpJob } from "../gave-up";
  * and the digest cannot disagree.
  *
  * Under them, Gave up (D-87; round 29 B·2, D6's rows): the jobs the system
- * stopped retrying. Today's three numbers stay three — Gave up is its own
- * section, and its count is the rail's on Today.
+ * stopped retrying. Gave up is its own section, not a number, and its
+ * count is the rail's on Today. R47·125 adds a fourth number the digest
+ * does not carry: flagged accounts, linking to D8's Flagged filter.
  *
  * Hi-viz marks a number that needs a person, and only when it is above
  * zero; bans are a record, not a task, so they are never hi-viz.
@@ -51,7 +52,10 @@ function Stat({
   count: number;
   needsPerson: boolean;
   children: ReactNode;
-  note: ReactNode;
+  /**
+  Absent for a number the board draws with no line under it (R47·125).
+  */
+  note?: ReactNode;
 }>) {
   const tone = needsPerson && count > 0 ? "text-hiviz-text" : "text-ink";
   return (
@@ -62,9 +66,11 @@ function Stat({
         </Mono>
         <span className="text-lead">{children}</span>
       </span>
-      <Mono step="xs" className="text-muted">
-        {note}
-      </Mono>
+      {note === undefined ? undefined : (
+        <Mono step="xs" className="text-muted">
+          {note}
+        </Mono>
+      )}
     </li>
   );
 }
@@ -412,25 +418,6 @@ function BreakerOver({
 }
 
 /**
- * Accounts flagged after an intimate-image removal and not yet decided
- * (D-161 1), as a line under the three numbers, only above zero. The
- * decision is made on Runners' Flagged filter. Placeholder words until
- * Design rules (design 176).
- */
-function FlaggedAccounts({
-  count,
-}: Readonly<{ count: number }>): JSX.Element | undefined {
-  if (count === 0) return undefined;
-  const accounts =
-    count === 1 ? "1 account is" : `${String(count)} accounts are`;
-  return (
-    <TodayNotice part="flagged-accounts" kicker="Accounts to decide">
-      {`${accounts} flagged after an intimate-image removal. Decide each in Runners, under Flagged.`}
-    </TodayNotice>
-  );
-}
-
-/**
  * Design 168: queued jobs the morning's drain could not reach, by the
  * skipped-digest line's shape, under Today's three numbers and only above
  * zero — D5's numbers stay three. The wait is in whole hours, as "Oldest ·
@@ -513,6 +500,17 @@ export function Today({
           >
             {counts.bansThisWeek === 1 ? "ban" : "bans"} this week
           </Stat>
+          {/* R47·125: after the others, shown at 0, linking to D8's
+              Flagged filter (D-161 1). */}
+          <Stat count={counts.flaggedAccounts} needsPerson>
+            <Link
+              to="/desk/runners"
+              search={{ filter: "flagged" }}
+              className="target text-ink underline underline-offset-4"
+            >
+              flagged {counts.flaggedAccounts === 1 ? "account" : "accounts"}
+            </Link>
+          </Stat>
         </ul>
         {today.breakers.map((reading) => (
           <BreakerOver key={reading.cause} reading={reading} />
@@ -520,7 +518,6 @@ export function Today({
         {today.skipped.map((operator) => (
           <DigestUnconfirmed key={operator.userId} operator={operator} />
         ))}
-        <FlaggedAccounts count={counts.flaggedAccounts} />
         <RunningBehind
           rows={counts.outboxBehind}
           oldestAt={counts.oldestBehindAt}

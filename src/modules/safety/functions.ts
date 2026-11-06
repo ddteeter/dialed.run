@@ -33,7 +33,7 @@ import {
   settleOutbox,
 } from "../ops";
 
-import { keepAccount } from "./account-flags";
+import { flaggedCountOf, keepAccount } from "./account-flags";
 import { banEmail, banUser, reopenEmailFor, unbanUser } from "./bans";
 import {
   accountCount,
@@ -325,9 +325,12 @@ export const deskRunnersQuery = createServerFn({ method: "GET" })
       query: data.query,
       only: runnersWhere(data.filter),
     });
+    const [flagged] = await flaggedCountOf(db);
     return {
       runners: await deskRunners(db, accounts),
       total: await accountCount(db),
+      // R47·124: the Flagged chip's count, shown at 0 too.
+      flagged: flagged?.rows ?? 0,
     };
   });
 

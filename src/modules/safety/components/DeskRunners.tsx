@@ -8,6 +8,7 @@ import {
   ControlFailureBand,
   FormStatus,
   Mono,
+  QUIET_PILL,
   TextField,
   inFlight,
   useControlAction,
@@ -27,14 +28,15 @@ import type { RenameOutcome } from "../rename";
 import type { DeskRunner, RunnersFilter } from "../runners";
 import { DeskForm, PickOne } from "./DeskForm";
 import { NotRenamedBand } from "./NotRenamedBand";
+import { useFocusWhen } from "./use-focus-when";
 
 /**
  * Desk · Runners, "D8" (round 27 #22). A search and four filters over a
  * table of every account; a row click selects, and the selected runner's
- * right column holds Rename (#16), the flag when one is open (D-161), and
- * then Close account (D3's ban panel, moved here from the entry view).
- * **There is no separate runner page.** The flag's words are placeholders
- * until Design rules (design 176).
+ * right column holds the flag when one is open (D-161, R47·124), Rename
+ * (#16), then Close account (D3's ban panel, moved here from the entry
+ * view). **There is no separate runner page.** R47·124: nothing on D8
+ * says "intimate".
  */
 
 type Rename = (input: {
@@ -51,8 +53,9 @@ type OnAccount = (input: { data: { userId: string } }) => Promise<unknown>;
 const FILTERS: readonly { value: RunnersFilter["filter"]; label: string }[] = [
   { value: "all", label: "All" },
   { value: "reported", label: "Reported" },
-  { value: "flagged", label: "Flagged" },
   { value: "closed", label: "Closed" },
+  // R47·124: last, with its count, shown at 0 too.
+  { value: "flagged", label: "Flagged" },
 ];
 
 export const RENAME_LABELS: Readonly<Record<RenameReason, string>> =
@@ -98,7 +101,10 @@ function joinedLabel(joinedAt: number): string {
   return new Date(joinedAt * 1000).toISOString().slice(0, 10);
 }
 
-function Search({ filter }: Readonly<{ filter: RunnersFilter }>): JSX.Element {
+function Search({
+  filter,
+  flagged,
+}: Readonly<{ filter: RunnersFilter; flagged: number }>): JSX.Element {
   const navigate = useNavigate();
   const [query, setQuery] = useState(filter.query ?? "");
   return (
@@ -137,6 +143,12 @@ function Search({ filter }: Readonly<{ filter: RunnersFilter }>): JSX.Element {
             className="target text-body"
           >
             {option.label}
+            {option.value === "flagged" ? (
+              <>
+                {" "}
+                <Bracketed step="xs">{String(flagged)}</Bracketed>
+              </>
+            ) : undefined}
           </Link>
         ))}
       </nav>
@@ -148,11 +160,17 @@ function RunnerRow({
   runner,
   selected,
   onSelect,
+  focusName,
 }: Readonly<{
   runner: DeskRunner;
   selected: boolean;
   onSelect: () => void;
+  /**
+  R47·124: where focus lands once a decision clears the runner's flag.
+  */
+  focusName: boolean;
 }>): JSX.Element {
+  const nameRef = useFocusWhen(focusName);
   return (
     <tr
       aria-selected={selected}
@@ -160,7 +178,12 @@ function RunnerRow({
       className="cursor-pointer border-b border-hairline"
     >
       <td>
-        <button type="button" className="target text-left" onClick={onSelect}>
+        <button
+          ref={nameRef}
+          type="button"
+          className="target text-left"
+          onClick={onSelect}
+        >
           {runner.username === undefined ? "—" : `@${runner.username}`}
         </button>
       </td>
@@ -317,7 +340,7 @@ function AccountActPanel({
       said: string;
       button: string;
       still: string;
-      isHiviz?: boolean;
+      isFlag?: boolean;
     }>;
   }
 >): JSX.Element {
@@ -326,17 +349,17 @@ function AccountActPanel({
     kicker: words.still,
     onSuccess: onDone,
   });
-  const tone = words.isHiviz === true ? "text-hiviz-text" : undefined;
+  const isFlag = words.isFlag === true;
   return (
     <section
       className={
-        words.isHiviz === true
+        isFlag
           ? "flex flex-col gap-3 border border-hiviz-text p-4"
           : "flex flex-col gap-3 border border-hairline p-4"
       }
     >
       <h2 className="m-0">
-        <Mono step="xs" className={tone}>
+        <Mono step="xs" className={isFlag ? "text-hiviz-text" : undefined}>
           {words.heading}
         </Mono>
       </h2>
@@ -345,12 +368,13 @@ function AccountActPanel({
       <button
         type="button"
         {...inFlight(control.pending)}
-        className="target text-left"
+        className={isFlag ? `target ${QUIET_PILL}` : "target text-left"}
         onClick={() => {
           void control.run();
         }}
       >
-        <Mono step="xs">{words.button}</Mono>
+        {/* R47·124: Keep account is an outline pill. */}
+        {isFlag ? words.button : <Mono step="xs">{words.button}</Mono>}
       </button>
       <ControlFailureBand
         failure={control.failure}
@@ -389,10 +413,10 @@ function FlaggedPanel({
       {...props}
       words={{
         heading: "Flagged",
-        said: `An image they posted was removed as intimate on ${monthDayLabel(flaggedAt)}. Decide whether the account stays.`,
+        said: `A takedown of an image they posted was upheld on ${monthDayLabel(flaggedAt)}. Nothing has happened to the account. Keep it, or ban it below.`,
         button: "Keep account",
         still: "Still flagged",
-        isHiviz: true,
+        isFlag: true,
       }}
     />
   );
@@ -406,6 +430,7 @@ function RunnerPanels({
   runner,
   acts,
   onDone,
+  onDecided,
 }: Readonly<{
   runner: DeskRunner;
   acts: Readonly<{
@@ -415,6 +440,10 @@ function RunnerPanels({
     keep: OnAccount;
   }>;
   onDone: () => void;
+  /**
+  After Keep, a ban or an unban: each one clears an open flag (R47·124).
+  */
+  onDecided: () => void;
 }>): JSX.Element {
   const isClosed = runner.state === "CLOSED";
   return (
@@ -422,29 +451,30 @@ function RunnerPanels({
       aria-label={`@${runner.username ?? runner.email}`}
       className="flex flex-col gap-4 desk:w-[var(--container-column)]"
     >
-      <RenamePanel
-        key={`rename-${runner.userId}`}
-        runner={runner}
-        act={acts.rename}
-        onDone={onDone}
-      />
+      {/* R47·124: at the top of the column. */}
       {isClosed || runner.flaggedAt === undefined ? undefined : (
         <FlaggedPanel
           key={`flag-${runner.userId}`}
           runner={runner}
           flaggedAt={runner.flaggedAt}
           act={acts.keep}
-          onDone={onDone}
+          onDone={onDecided}
         />
       )}
+      <RenamePanel
+        key={`rename-${runner.userId}`}
+        runner={runner}
+        act={acts.rename}
+        onDone={onDone}
+      />
       {isClosed ? (
-        <ReopenPanel runner={runner} act={acts.unban} onDone={onDone} />
+        <ReopenPanel runner={runner} act={acts.unban} onDone={onDecided} />
       ) : (
         <CloseAccountPanel
           key={`close-${runner.userId}`}
           runner={runner}
           act={acts.ban}
-          onDone={onDone}
+          onDone={onDecided}
         />
       )}
     </aside>
@@ -455,11 +485,16 @@ export function DeskRunners({
   runners,
   total,
   filter,
+  flagged,
   ...acts
 }: Readonly<{
   runners: readonly DeskRunner[];
   total: number;
   filter: RunnersFilter;
+  /**
+  How many accounts are flagged, for the Flagged chip (R47·124).
+  */
+  flagged: number;
   rename: Rename;
   ban: Ban;
   unban: OnAccount;
@@ -467,9 +502,16 @@ export function DeskRunners({
 }>): JSX.Element {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | undefined>();
+  // The runner whose flag a decision just cleared: focus goes to their
+  // name (R47·124).
+  const [clearedId, setClearedId] = useState<string | undefined>();
   const selected = runners.find((runner) => runner.userId === selectedId);
   const refresh = (): void => {
     void router.invalidate();
+  };
+  const decided = (): void => {
+    if (selected?.flaggedAt !== undefined) setClearedId(selected.userId);
+    refresh();
   };
 
   return (
@@ -478,7 +520,7 @@ export function DeskRunners({
         Runners
       </h1>
       <Bracketed step="xs">{`${String(total)} accounts`}</Bracketed>
-      <Search filter={filter} />
+      <Search filter={filter} flagged={flagged} />
       <div className="flex flex-col gap-6 desk:flex-row">
         <table className="flex-1 text-left">
           <thead>
@@ -500,8 +542,10 @@ export function DeskRunners({
                 key={runner.userId}
                 runner={runner}
                 selected={runner.userId === selectedId}
+                focusName={runner.userId === clearedId}
                 onSelect={() => {
                   setSelectedId(runner.userId);
+                  setClearedId(undefined);
                 }}
               />
             ))}
@@ -512,7 +556,12 @@ export function DeskRunners({
             Pick a runner to rename or close.
           </p>
         ) : (
-          <RunnerPanels runner={selected} acts={acts} onDone={refresh} />
+          <RunnerPanels
+            runner={selected}
+            acts={acts}
+            onDone={refresh}
+            onDecided={decided}
+          />
         )}
       </div>
     </section>
