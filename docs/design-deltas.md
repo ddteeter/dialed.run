@@ -1613,11 +1613,11 @@ entries for them when it merges.
     (since design 128's move to `/desk/review`).
 
 69. **No new accounts from Mississippi or Tennessee. Confirmed, plus a
-    notice on load.** The sentences and the four places stand. **Not built
-    yet:** on load, Au2 shows SIGN-UP CLOSED HERE and the NOT CREATED
-    sentence in place of the form and Google, with Ask for access (to Au5)
-    and "Have an account? Log in". The refusals stay, for a place that
-    changes after the page loads.
+    notice on load.** The sentences and the four places stand. **Built
+    (design 172):** on load, Au2 shows SIGN-UP CLOSED HERE and the NOT
+    CREATED sentence in place of the form and Google, with Ask for access
+    (to Au5) and "Have an account? Log in". The refusals stay, for a place
+    that changes after the page loads.
 
 70. **The 40-hour removal reminder email. Confirmed.** `{UTC minute}`
     renders as "OCT 26 14:20 UTC". **Check:** the build's format matches.

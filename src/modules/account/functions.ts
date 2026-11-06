@@ -8,7 +8,10 @@ import { getRequest } from "@tanstack/react-start/server";
 
 import { coreDb, env, primaryCoreDb, waitUntil } from "../../env";
 import { accountDeletionInput, usernameInput } from "../../lib/contracts";
-import { blockedRegionOf } from "../../lib/contracts/access";
+import {
+  blockedRegionOf,
+  isFromBlockedRegion,
+} from "../../lib/contracts/access";
 import {
   checkCurrentPassword,
   currentSessionId,
@@ -213,6 +216,15 @@ export const requestEmailChangeFn = createServerFn({ method: "POST" })
  */
 export const turnstileSiteKeyQuery = createServerFn({ method: "GET" }).handler(
   () => ({ siteKey: turnstileSiteKey() }),
+);
+
+/**
+ * Whether Au2's request is placed in a state sign-up is closed in (round
+ * 39 #69): read on load through the one gate, so the page says so before
+ * the form. The server's refusal still decides at submit.
+ */
+export const signUpPlaceQuery = createServerFn({ method: "GET" }).handler(
+  () => ({ isFromBlockedRegion: isFromBlockedRegion(getRequest()) }),
 );
 
 /**

@@ -49,11 +49,14 @@ quarantine." under `QUARANTINE · 0`, in BlockedRunners' empty-line style.
 Review's foot is already Takedown, Copyright holds, Quarantine
 (`routes/desk/review.tsx`); the delta line says so.
 
-**#69.** Au2's loader also returns whether the request is placed in a
-blocked state (`isFromBlockedRegion(getRequest())`, the one gate). If so,
-`AuthPage` draws a `RegionClosed` notice in place of the form, Turnstile
-and Google: kicker SIGN-UP CLOSED HERE, `REGION_COPY.signUp`, an Ask for
-access link (ink, to Au5), and the existing "Have an account? Log in". The
+**#69.** Au2's loader also asks `signUpPlaceQuery` (account's
+functions, beside the Turnstile key) whether the request is placed in a
+blocked state — `isFromBlockedRegion(getRequest())`, the one gate. If so,
+the route renders `SignUpClosedHere` (`modules/auth/auth-page.tsx`)
+instead of the form component, so no form, Turnstile or Google is drawn
+and their hooks never run: the refusal's band shape (`FailureBand`, no
+retry) under SIGN-UP CLOSED HERE with `REGION_COPY.signUp`, an Ask for
+access ink pill to Au5, and the existing "Have an account? Log in". The
 refusal bands stay for a place that changes after load.
 
 ## Contract touches

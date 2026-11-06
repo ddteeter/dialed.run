@@ -25,12 +25,14 @@ import {
 import { signUpSchema } from "../../src/lib/contracts";
 import { AUTH_COPY } from "../../src/modules/auth/auth-copy";
 import {
+  AuthCrossLink,
   AuthPage,
   BirthDateField,
   CredentialFields,
   InviteCodeField,
   RequestAccessLink,
   SIGN_UP_LABELS,
+  SignUpClosedHere,
   useAuthForm,
 } from "../../src/modules/auth/auth-page";
 import { signUp } from "../../src/modules/auth/credentials";
@@ -127,6 +129,21 @@ async function renderWithRouter(element: ReactElement) {
   });
   await router.load();
   return render(<RouterProvider router={router} />);
+}
+
+async function closedPage() {
+  await renderWithRouter(
+    <SignUpClosedHere
+      heading="Create account"
+      crossLink={
+        <AuthCrossLink
+          prompt="Have an account?"
+          to="/auth/login"
+          label="Log in"
+        />
+      }
+    />,
+  );
 }
 
 async function signUpPage(
@@ -481,5 +498,57 @@ describe("Au2 · date of birth (design 134)", () => {
       "Not createdEnter your date of birth above, then continue with Google.",
     );
     expect(within(band ?? document.body).queryByRole("link")).toBeNull();
+  });
+});
+
+describe("Au2 · on load in a closed state (round 39 #69)", () => {
+  it("says sign-up is closed here, in the refusal's own sentence", async () => {
+    await closedPage();
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Create account" }),
+    ).toBeVisible();
+    const band = part("failure-band");
+    expect(band).toHaveAttribute("data-state", "region-closed");
+    expect(band).toHaveTextContent(`Sign-up closed here${REGION_BLOCKED_COPY}`);
+    expect(band?.closest("[data-part='region-closed']")).not.toBeNull();
+    // Nothing to retry: the place is the reason.
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("offers Ask for access, to Au5, as the one action, then Log in", async () => {
+    await closedPage();
+
+    const ask = screen.getByRole("link", { name: "Ask for access" });
+    expect(ask).toHaveAttribute("href", "/account/request-access");
+    expect(ask).toHaveClass("target", "bg-ink", "text-ground", "rounded-pill");
+    const logIn = screen.getByRole("link", { name: "Log in" });
+    expect(logIn).toHaveAttribute("href", "/auth/login");
+    expect(logIn.closest("p")).toHaveTextContent("Have an account? Log in");
+    // The band, then Ask for access, then Log in.
+    const band = screen.getByText(REGION_BLOCKED_COPY);
+    expect(
+      band.compareDocumentPosition(ask) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      ask.compareDocumentPosition(logIn) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    // The panel's only two ways on (the layout's own links are outside it).
+    expect(within(screen.getByRole("main")).getAllByRole("link")).toEqual([
+      ask,
+      logIn,
+    ]);
+  });
+
+  it("draws no form, no Google and no Turnstile", async () => {
+    await closedPage();
+
+    expect(document.querySelector("form")).toBeNull();
+    expect(screen.queryByLabelText("Email")).toBeNull();
+    expect(screen.queryByLabelText("Date of birth")).toBeNull();
+    expect(part("google")).toBeNull();
+    expect(part("or-divider")).toBeNull();
+    expect(part("turnstile-slot")).toBeNull();
+    expect(part("request-access")).toBeNull();
   });
 });

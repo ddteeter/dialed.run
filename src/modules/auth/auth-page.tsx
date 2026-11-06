@@ -4,6 +4,7 @@ import type { JSX, ReactNode } from "react";
 import type { z } from "zod";
 
 import {
+  CHALK_PILL,
   FailureBand,
   FormErrorSummary,
   FormStatus,
@@ -17,6 +18,7 @@ import type { ControlFailure, FormShell } from "../../ui";
 import {
   ACCOUNT_CLOSED_COPY,
   IS_INVITE_ONLY,
+  REGION_BLOCKED_COPY,
 } from "../../lib/contracts/access";
 import { AGE_LINE } from "../../lib/contracts/age";
 import { authFailure, authStatus, isAccountClosed } from "./auth-copy";
@@ -161,6 +163,52 @@ export function AuthPage(
         {props.legal}
         {props.crossLink}
       </div>
+    </SignedOutPanel>
+  );
+}
+
+/**
+ * Au2's kicker on load in a closed state (round 39 #69): the state that is
+ * true, as the refusal's NOT CREATED is the thing that did not happen.
+ */
+export const SIGN_UP_CLOSED_HERE = "Sign-up closed here";
+
+/**
+ * Au2 when the request is placed in a state sign-up is closed in (D-141,
+ * R-159; round 39 #69): *"We know the place when the page loads, so
+ * letting someone type their birth date, email and password only to be
+ * refused costs them and buys nothing."* In place of the form, Turnstile
+ * and Google, the refusal's band — the same sentence, so the refusal a
+ * runner may still meet later never says something new — under SIGN-UP
+ * CLOSED HERE, then Ask for access (Au5, which takes the request and tags
+ * its state) and the cross-link to log in. Nothing to retry.
+ *
+ * The refusals stay (`regionRefused`, Google's REGION_BLOCKED) for a
+ * place that changes between load and submit.
+ */
+export function SignUpClosedHere({
+  heading,
+  crossLink,
+}: Readonly<{
+  heading: string;
+  crossLink: ReactNode;
+}>): JSX.Element {
+  return (
+    <SignedOutPanel heading={heading}>
+      <div data-part="region-closed" className="flex flex-col gap-4">
+        <FailureBand
+          kicker={SIGN_UP_CLOSED_HERE}
+          message={REGION_BLOCKED_COPY}
+          state="region-closed"
+        />
+        <Link
+          to="/account/request-access"
+          className={`target no-underline ${CHALK_PILL}`}
+        >
+          Ask for access
+        </Link>
+      </div>
+      {crossLink}
     </SignedOutPanel>
   );
 }
