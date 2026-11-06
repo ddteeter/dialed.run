@@ -17,6 +17,8 @@ import { useState } from "react";
 import type { ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { DURATION } from "../../src/ui/motion";
+
 import {
   INVITE_COPY,
   REGION_BLOCKED_COPY,
@@ -452,6 +454,47 @@ describe("Au2 · date of birth (design 134)", () => {
     expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
   });
 
+  it("leaves focus where it was for a refusal no retry can change, and moves it to the primary for one it can (round 47 #121)", async () => {
+    client.signUp
+      .mockResolvedValueOnce({
+        data: undefined,
+        error: { code: "AGE_REFUSED", status: 403 },
+      })
+      .mockResolvedValueOnce({
+        data: undefined,
+        error: { code: "INTERNAL", status: 500 },
+      });
+    const { user } = await signUpPage();
+    await fill(user, "DIAL-7K3P");
+    const password = screen.getByLabelText("Password");
+    const primary = screen.getByRole("button", { name: "Create account" });
+
+    // Sent from the keyboard, so focus starts in the field.
+    await user.type(password, "{Enter}");
+    await screen.findByText("dialed.run is for runners 18 and over.");
+    await act(async () => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, DURATION.instant * 2);
+      });
+    });
+    // Pressing it again cannot help, so the primary keeps its own name and
+    // does not ask to be pressed.
+    expect(primary).not.toHaveFocus();
+    expect(primary).toHaveAccessibleName("Create account");
+
+    await user.type(password, "{Enter}");
+    await waitFor(() => {
+      expect(primary).toHaveFocus();
+    });
+    // The band has no button of its own: the primary is the retry (Au4).
+    expect(primary).toHaveAccessibleName("Try again");
+    expect(
+      within(part("failure-band") ?? document.body).queryByRole("button"),
+    ).toBeNull();
+    expect(primary).toHaveClass("rounded-pill", "bg-ink", "text-ground");
+    expect(primary).not.toHaveClass("bg-action");
+  });
+
   it("puts a blocked state's refusal in the band as NOT CREATED, with nothing to press", async () => {
     client.signUp.mockResolvedValue({
       data: undefined,
@@ -546,7 +589,9 @@ describe("Au2 · on load in a closed state (round 39 #69)", () => {
   it("is the form, untouched, anywhere sign-up is open", async () => {
     await closedPage(false);
 
-    expect(screen.getByRole("form", { name: "The sign-up form" })).toBeVisible();
+    expect(
+      screen.getByRole("form", { name: "The sign-up form" }),
+    ).toBeVisible();
     expect(part("region-closed")).toBeNull();
     expect(screen.queryByText(REGION_BLOCKED_COPY)).toBeNull();
     expect(screen.queryByRole("heading")).toBeNull();

@@ -1021,6 +1021,30 @@ _Nothing from 99 on is open: round 45 answered the last of it._
 
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
 
+## Answered in round 47 (lane 179, 2026-11-06)
+
+Design answered lane 179's three held questions in round 47, relayed by
+coordinator-2. The board import is the coordinator's, so this section
+records what was built.
+
+- **R47·120 · The onboarding kicker. Changed, built.** Three segments:
+  STEP 1 OF 3 (handle), STEP 2 OF 3 · OPTIONAL (city) and STEP 3 OF 3 ·
+  OPTIONAL (tap list). P2.5 is not a step: it keeps step 3's kicker, with
+  the bar full. `ui/OnboardingProgress` draws both the bar and the kicker
+  from one table. The segments are 2px rules, because the contract allows
+  no other width below SPACE[1] (tokens.js). Round 26's 3px bar and 6px
+  gaps are not contract values.
+- **R47·121 · The auth primary. Built.** Log in and Create account are an
+  ink pill (`SubmitButton`'s `ink` tone), as wide as the form, at
+  `HEIGHT.control` high. The failure band above it has no button: the
+  primary is the retry, relabelled Try again and given focus (Au4). A
+  refusal that a retry cannot change keeps the primary's own label.
+  Google's band keeps its own Try again (Au6). Au2's on-load state
+  (R46·106) keeps Ask for access.
+- **R47·122 · Slow whole-block links. Built.** On a PostCard and on
+  OtherProfile's shared-run rows, the date breathes and the handle stays
+  still, as on every other X3 link (`useTappedSlow` + `SlowLabel`).
+
 ## Answered in round 46 (imported 2026-11-06)
 
 Design answered as `Round 46 Rulings.dc.html`, filed as R46·105–110

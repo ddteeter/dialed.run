@@ -21,9 +21,8 @@ end of link, Forgot it? Reset your password
 Not signed in
 Our end failed. Try again in a moment.
 button, Try again
-button, Log in
-Log in
-end of button, Log in
+Try again
+end of button, Try again
 end of form
 or
 button, Continue with Google

@@ -802,16 +802,20 @@ export function PendingLabel({
 }
 
 /**
- * The two main buttons. `action` is the runner app's: pink, a card,
+ * The three main buttons. `action` is the runner app's: pink, a card,
  * display caps. `chalk` is the Desk's (round 44 #104): a chalk-filled pill
  * in the ground's ink, bold, 44 high, because on the Desk the main action
  * is often a removal and nothing should pull the operator toward it.
+ * `ink` is Auth's Log in and Create account (round 47 #121): an ink pill
+ * the form's width, `HEIGHT.control` high — auth is not a product screen,
+ * so its one button is not the product's pink.
  */
 const SUBMIT_TONE = {
   action:
     "grid min-h-13 place-items-center rounded-card bg-action px-6 py-4 font-display uppercase text-accent-ink",
   chalk:
     "inline-flex min-h-11 items-center justify-center self-start rounded-pill bg-ink px-5 font-bold text-ground",
+  ink: "flex min-h-control w-full items-center justify-center rounded-pill bg-ink px-6 font-bold text-ground",
 } as const;
 
 /**
@@ -852,7 +856,7 @@ export function SubmitButton({
   pendingLabel: string;
   pending: boolean;
   /**
-  `chalk` on the Desk, which has no pink button.
+  `chalk` on the Desk, which has no pink button; `ink` on Auth.
   */
   tone?: keyof typeof SUBMIT_TONE | undefined;
   /**

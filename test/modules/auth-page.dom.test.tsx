@@ -293,9 +293,9 @@ describe("Au4 · form failure", () => {
     expect(band).toHaveTextContent("Not signed in");
     expect(band).toHaveTextContent(AUTH_COPY.server);
     expect(band).not.toHaveTextContent("Nothing saved");
-    // Above the primary, inside the form.
+    // Above the primary, inside the form — the primary now Try again.
     expect(band?.nextElementSibling).toBe(
-      screen.getByRole("button", { name: "Log in" }),
+      screen.getByRole("button", { name: "Try again" }),
     );
     expect(part("form")).toHaveAttribute("data-state", "form-failure");
     expect(screen.getByRole("status")).toHaveTextContent(
@@ -333,7 +333,20 @@ describe("Au4 · form failure", () => {
       })
       .mockResolvedValueOnce({ data: {}, error: undefined });
     await fillAndSubmit(user);
-    await user.click(await screen.findByRole("button", { name: "Try again" }));
+    // Round 47 #121: the band has no button of its own. The retry is the
+    // primary, relabelled Try again (Au4), and the failure puts focus on it.
+    const band = await waitFor(() => {
+      const found = part("failure-band");
+      expect(found).not.toBeNull();
+      return found;
+    });
+    expect(within(band ?? document.body).queryByRole("button")).toBeNull();
+    const primary = screen.getByRole("button", { name: "Try again" });
+    expect(screen.queryByRole("button", { name: "Log in" })).toBeNull();
+    await waitFor(() => {
+      expect(primary).toHaveFocus();
+    });
+    await user.click(primary);
 
     await waitFor(() => {
       expect(onSignedIn).toHaveBeenCalledTimes(1);
