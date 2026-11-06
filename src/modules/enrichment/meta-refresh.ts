@@ -52,21 +52,21 @@ const refreshContent = z
  * usable target is a broken response, but this page loaded.
  */
 export function refreshTarget(html: string, pageUrl: URL): URL | undefined {
-  const here = withoutFragment(pageUrl.href);
   for (const meta of readPage(html).metas) {
     if (meta["http-equiv"]?.toLowerCase() !== "refresh") continue;
     const target = refreshContent.safeParse(meta.content).data;
     if (target === undefined) continue;
     const next = URL.parse(target, pageUrl);
-    return next === null || withoutFragment(next.href) === here
-      ? undefined
-      : next;
+    return next === null || isSameDocument(next, pageUrl) ? undefined : next;
   }
   return undefined;
 }
 
-function withoutFragment(href: string): string {
-  const url = new URL(href);
-  url.hash = "";
-  return url.href;
+/**
+ * Whether `next` is `page` itself, whatever fragment either names.
+ */
+function isSameDocument(next: URL, page: URL): boolean {
+  const here = new URL(page);
+  here.hash = next.hash;
+  return here.href === next.href;
 }

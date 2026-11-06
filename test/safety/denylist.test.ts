@@ -215,10 +215,21 @@ describe("deniedLinksOf, the batched read every surface asks", () => {
     );
   });
 
-  it("is empty for a batch with no links at all", async () => {
+  it("is empty for a batch with no links at all, and makes no read", async () => {
     await denyDomain("spam.example", await makeUser());
-    expect(await deniedLinksOf(core(), [])).toEqual(new Set());
-    expect(await deniedLinksOf(core(), [undefined])).toEqual(new Set());
+    const queries: string[] = [];
+    const watched = drizzle(env.DIALED_CORE, {
+      logger: {
+        logQuery(sql) {
+          queries.push(sql);
+        },
+      },
+    });
+    expect(await deniedLinksOf(watched, [])).toEqual(new Set());
+    expect(await deniedLinksOf(watched, [undefined, "not a url"])).toEqual(
+      new Set(),
+    );
+    expect(queries).toEqual([]);
   });
 
   it("never names an unparseable or http link, which is invalid rather than denied", async () => {

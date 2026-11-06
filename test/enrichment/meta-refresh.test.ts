@@ -39,6 +39,7 @@ describe("refreshTarget", () => {
       ["10; https://shop.example/p", "https://shop.example/p"],
       ["0; url='https://shop.example/p'", "https://shop.example/p"],
       ["0; url=&quot;https://shop.example/p&quot;", "https://shop.example/p"],
+      ["0; url= 'https://shop.example/p'", "https://shop.example/p"],
       ["0;\nurl=https://shop.example/p", "https://shop.example/p"],
       [
         "0; url=https://shop.example/p?a=1;b=2",
@@ -75,6 +76,9 @@ describe("refreshTarget", () => {
       `https://short.example/'https://a.example/x%22`,
     );
     expect(targetFor("0; url='")).toBe("https://short.example/'");
+    expect(targetFor("0; url='https://a.example/x'y")).toBe(
+      "https://short.example/'https://a.example/x'y",
+    );
   });
 
   it("is nothing on a page with no refresh", () => {
