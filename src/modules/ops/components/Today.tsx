@@ -6,6 +6,7 @@ import type { GaveUpKind } from "../../../lib/contracts/gave-up";
 import { outboxBehindSentence } from "../../../lib/copy";
 import { longDayLabel, monthDayLabel, timeOfDay } from "../../../lib/dates";
 import {
+  Bracketed,
   ControlFailureBand,
   FormStatus,
   Mono,
@@ -294,9 +295,9 @@ function GaveUp({
           Gave up
         </h2>
         {count === 0 ? undefined : (
-          <Mono step="sm" className="text-hiviz-text">
-            {`[${String(count)} ${count === 1 ? "job" : "jobs"}${oldest}]`}
-          </Mono>
+          <Bracketed step="sm" className="text-hiviz-text">
+            {`${String(count)} ${count === 1 ? "job" : "jobs"}${oldest}`}
+          </Bracketed>
         )}
       </span>
       <FormStatus>{action.status}</FormStatus>

@@ -121,6 +121,14 @@ describe("Gave up, on Today", () => {
     expect(count).toHaveClass("text-hiviz-text");
   });
 
+  it("draws the count's brackets without saying them (D-150, PR#286-1)", () => {
+    renderToday([job()]);
+
+    const count = within(section()).getByText(bracketed("1 job · oldest 2d"));
+    const hidden = [...count.querySelectorAll('[aria-hidden="true"]')];
+    expect(hidden.map((part) => part.textContent)).toEqual(["[", "]"]);
+  });
+
   it("speaks in the plural past one, from the whole table's count", () => {
     renderToday([job()], {}, desk(3, NOON - 6 * HOUR));
 
