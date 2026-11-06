@@ -49,6 +49,12 @@ describe("every bell-bearing route passes the bell's counts", () => {
     });
   }
 
+  it("draws the bell on A2 and A3, the last two feed routes without it (R-102)", () => {
+    const belled = new Set(bellRoutes.map(([path]) => path));
+    expect(belled).toContain("../../src/routes/feed/attach.$runId.tsx");
+    expect(belled).toContain("../../src/routes/feed/verdict.$entryId.tsx");
+  });
+
   it("leaves no route a count-only bell to load", () => {
     for (const source of Object.values(routeSources)) {
       expect(source).not.toMatch(/unreadNotificationCountFn/u);
