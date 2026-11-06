@@ -81,7 +81,9 @@ board's `PENDING DELETE` state (PR#126-1). Desk Today's ban count scans
 
 1. Hold notice: "Our automatic screening flagged a photo on your run…"; kept:
    "We reviewed the flagged photo on your run and left it up." Terms gain
-   "When reports or our automatic screening hide…", and the version bumps.
+   "When reports or our automatic screening hide…". **Built differently:**
+   no version bump. Version 1 is unpublished and nobody has accepted it,
+   so it is edited in place.
 2. Runner-facing "intimate" labels stay (report reason, `/takedown`). The
    statutory line is stated on the Review row, the Decline hint and a new
    line in the declined email (pointing to desk@ for an ordinary report).
@@ -91,8 +93,20 @@ board's `PENDING DELETE` state (PR#126-1). Desk Today's ban count scans
    Keep, a ban or an unban; Desk Today counts flagged accounts. Placeholder
    words until Design rules (sent to coordinator-2 for the Design batch).
 
+## As built
+
+- Notices: `notices.ts` `screeningNotice` (classifier flag, Approve) and
+  `screeningHoldNotice` (fingerprint hold). Tests in
+  `test/safety/hold-notices.test.ts`.
+- Flag: `safety/account-flags.ts`. Today's count is a line, not a fourth
+  number (D5 keeps three). Placeholders are design-deltas item 113.
+- Coordinator handoff PR#286-1: Today's gave-up bracket is `aria-hidden`.
+- Statutory line: `contracts.ts` `STATUTORY_LINE`, drawn by
+  `components/StatutoryLine.tsx`.
+
 ## Register changes for the coordinator
 
 - design-152 open question 2: answered by D-162 (built here).
 - R-147: built here (D-161).
-- PR#126-1, PR#112-1: built here. No register row exists for either.
+- PR#126-1, PR#112-1, PR#286-1: built here. No register row exists for any
+  of them.
