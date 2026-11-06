@@ -44,8 +44,8 @@ import {
   removalDueLabel,
   reportReasonSchema,
 } from "./contracts";
-import type { ReportReason } from "./contracts";
-import { keptNotice, reporterNotices } from "./notices";
+import type { ReportReason, ReportSubjectType } from "./contracts";
+import { keptNotice, reporterNotices, screeningNotice } from "./notices";
 import { otherPhotosOf, type OtherPhotos } from "./other-photos";
 import { photoMatchesOf, type PhotoMatches } from "./photo-matches";
 import { removedMatchesOf, type RemovedImage } from "./removed-fingerprints";
@@ -835,8 +835,9 @@ export async function resolveReview(
 /**
  * Who a decision here tells (C8; D-132, D-145), read before its batch.
  *
- * - **Approve** tells each reporter it stayed up, and — when reports hid
- *   it — its author, whose hide notice promised to say.
+ * - **Approve** tells each reporter it stayed up, and — when reports or
+ *   automatic screening hid it — its author, whose hide notice promised to
+ *   say (D-162).
  * - **Remove of a product** tells its reporters it went. An entry or a
  *   photo reaches here only when `moderateContent` found it gone (its
  *   author deleted it, and we removed nothing), and a profile's Remove
@@ -860,16 +861,38 @@ async function decisionNotices(
       subjectId,
       "kept",
     );
-    const author =
-      row.source === "reports"
-        ? await keptNotice(db(), subjectType, subjectId)
-        : [];
+    const author = await authorKeptNotice(row.source, subjectType, subjectId);
     return [...reporters, ...author];
   }
   return decision === "remove" && subjectType === "product"
     ? reporterNotices(db(), subjectType, subjectId, "removed")
     : [];
 }
+
+/**
+ * The author's "left it up" an Approve owes, read before its batch: a
+ * report's hide's, or an automatic hold's on a kit photo that is still
+ * held (D-162). A classifier's `review`-band row never hid anything, and
+ * its photo is not held, so its author is told nothing.
+ */
+async function authorKeptNotice(
+  source: ReviewSource,
+  subjectType: ReportSubjectType,
+  subjectId: string,
+): Promise<BatchItem<"sqlite">[]> {
+  if (source === "reports") return keptNotice(db(), subjectType, subjectId);
+  return subjectType === "photo" && automaticSources.has(source)
+    ? screeningNotice(db(), subjectId, "kept")
+    : [];
+}
+
+/**
+The queue sources that are an automatic check (C8, Art. 17(3)(c)).
+*/
+const automaticSources: ReadonlySet<ReviewSource> = new Set([
+  "classifier",
+  "fingerprint",
+]);
 
 /**
  * Whether an automatic check is what brought this subject to a person:
@@ -890,7 +913,7 @@ export async function wasFlaggedAutomatically(
     and(
       eq(reviewQueue.subjectType, subjectType),
       eq(reviewQueue.subjectId, subjectId),
-      inArray(reviewQueue.source, ["classifier", "fingerprint"]),
+      inArray(reviewQueue.source, [...automaticSources]),
     ),
   );
 }

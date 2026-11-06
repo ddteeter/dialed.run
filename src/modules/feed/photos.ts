@@ -35,6 +35,7 @@ import {
   enqueueForReview,
   isHeldAsRemovedCopy,
   screenPhoto,
+  screeningHoldNotice,
   type Classify,
 } from "../safety";
 
@@ -140,7 +141,7 @@ export async function uploadPhoto(
   await env.MEDIA.put(key, stored, {
     httpMetadata: { contentType: "image/jpeg" },
   });
-  const wasHeld = await wasStoredHeld(database, {
+  const wasHeld = await wasStoredHeld(database, input.userId, {
     id: photoId,
     entryId: input.entryId,
     photoKey: key,
@@ -184,12 +185,13 @@ export async function uploadPhoto(
  * Writes the photo's row, held for review when it is a copy of an image
  * removed as intimate (D-147, design 152) and the fingerprint breaker has
  * room (design 164): hidden from everyone but its owner, as a classifier
- * flag is, with a Review row in the same batch. Returns whether it was
- * held. The match is read first, since a batch cannot branch on its own
- * results.
+ * flag is, with a Review row and its uploader's notice (D-162) in the same
+ * batch. Returns whether it was held. The match is read first, since a
+ * batch cannot branch on its own results.
  */
 async function wasStoredHeld(
   database: ReturnType<typeof db>,
+  uploaderId: string,
   row: typeof entryPhotos.$inferInsert & { fingerprint: string },
 ): Promise<boolean> {
   // From the primary (design 143): what was kept is an operator's write,
@@ -214,6 +216,7 @@ async function wasStoredHeld(
       subjectId: row.id,
       source: "fingerprint",
     }),
+    screeningHoldNotice(database, uploaderId, row.id),
   ]);
   return true;
 }

@@ -47,8 +47,10 @@ export type NotificationKind =
  * | strava_reminder | the Strava activity id (`event.object_id`)       |
  * | strava_broken   | the deauthorization event's time                 |
  * | content_removed | the removed entry or photo's id (128 · SAF-8)    |
- * | content_hidden  | the entry or photo a report hid (C8, D-145)      |
- * | content_kept    | the reported entry or photo a person left up     |
+ * | content_hidden  | the entry or photo a report or automatic         |
+ * |                 | screening hid (C8, D-145, D-162)                 |
+ * | content_kept    | the reported or held entry or photo a person     |
+ * |                 | left up                                          |
  * | report_removed  | what the reporter reported, once removed (C8)    |
  * | report_kept     | what the reporter reported, once left up (C8)    |
  * | photo_missing   | the kit photo or garment the Desk cleared because |
