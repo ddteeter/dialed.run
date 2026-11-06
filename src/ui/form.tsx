@@ -602,6 +602,7 @@ export function FailureBand({
   kicker,
   message,
   onRetry,
+  retryLabel = "Try again",
   retryRef,
   part = "failure-band",
   state = "failed",
@@ -615,6 +616,12 @@ export function FailureBand({
    * ends in `children`, or nothing.
    */
   onRetry?: (() => void) | undefined;
+  /**
+   * What the retry says. "Reload" only where the page itself cannot be
+   * redrawn — round 22's root crash, *"this band alone on paper with
+   * 'Reload'"* — since there pressing again means loading the document.
+   */
+  retryLabel?: "Try again" | "Reload";
   retryRef?: RefObject<HTMLButtonElement | null> | undefined;
   /**
    * The name the band's board draws it under. `control-failure` is Au6's,
@@ -646,7 +653,7 @@ export function FailureBand({
           onClick={onRetry}
           className="target cursor-pointer rounded-field border border-ink bg-ink px-4 py-3 text-body font-bold text-ground"
         >
-          Try again
+          {retryLabel}
         </button>
       )}
       {children}

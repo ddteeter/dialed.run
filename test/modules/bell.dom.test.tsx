@@ -6,9 +6,10 @@ import {
 } from "@tanstack/react-router";
 import { render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { NotificationBell } from "../../src/modules/notifications/components/NotificationBell";
+import { bellLoader } from "../../src/modules/notifications/components/bell-loader";
 
 /**
  * The bell, in S2a's three states as round 22 assigned them (item 13): a
@@ -138,5 +139,33 @@ describe("NotificationBell", () => {
     // the glyph would announce twice.
     expect(svg).toHaveAttribute("aria-hidden", "true");
     expect(container.getHTML()).not.toMatch(/animate-|transition|motion-/);
+  });
+});
+
+describe("bellLoader", () => {
+  it("draws the bell from the counts it reads, asking only when called", async () => {
+    // The system states' bell (PR #104): the router hands in the read,
+    // and the page calls it after mount.
+    const read = vi.fn(() =>
+      Promise.resolve({ unreadCount: 5, verdictsWaiting: 3 }),
+    );
+    const load = bellLoader(read);
+    expect(read).not.toHaveBeenCalled();
+
+    await renderWithRouter(await load());
+
+    expect(read).toHaveBeenCalledOnce();
+    expect(bell()).toHaveTextContent(/^3$/u);
+    expect(bell()).toHaveAccessibleName("Notifications, 3 new");
+  });
+
+  it("passes the unread count through on its own", async () => {
+    const load = bellLoader(() =>
+      Promise.resolve({ unreadCount: 4, verdictsWaiting: 0 }),
+    );
+
+    await renderWithRouter(await load());
+
+    expect(bell()).toHaveAccessibleName("Notifications, 4 new");
   });
 });

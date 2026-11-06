@@ -50,6 +50,45 @@ function useViewer(): { isSignedIn: boolean } {
 }
 
 /**
+ * Draws the bell once its counts arrive: the shell's bell for a page no
+ * loader of ours ran for.
+ *
+ * The router renders these states itself and hands them nothing, so
+ * there is no loader to read the counts in (PR #104). `router.tsx` wires
+ * the server call in instead, and the states call it after mount (owner,
+ * 2026-11-06): no other page pays for it, and the bell arrives just after
+ * hydration. A component may not import a server function, so it is a
+ * prop.
+ */
+export type LoadBell = () => Promise<ReactNode>;
+
+/**
+ * The bell, once `loadBell` has drawn it, and nothing until then.
+ *
+ * Nothing either when it fails: a page that is already saying something
+ * failed does not say a second thing about the bell (law 5), and the bell
+ * is back on the next page that loads. Signed out there is no shell, so
+ * nothing is asked for.
+ */
+function useLoadedBell(
+  isSignedIn: boolean,
+  loadBell: LoadBell | undefined,
+): ReactNode {
+  const [bell, setBell] = useState<ReactNode>();
+  useEffect(() => {
+    if (!isSignedIn || loadBell === undefined) return;
+    // No cancel on the way out: a bell that lands after the page has gone
+    // sets state nothing renders, which React ignores.
+    void loadBell()
+      .then(setBell)
+      .catch(() => {
+        // Degrade: the shell without its bell.
+      });
+  }, [isSignedIn, loadBell]);
+  return bell;
+}
+
+/**
  * The frame: the product shell signed in, a bare `<main>` signed out.
  *
  * `Page` on its own is the bare frame — it stamps hydration and sets the
@@ -57,12 +96,18 @@ function useViewer(): { isSignedIn: boolean } {
  */
 function SystemFrame({
   signedIn,
+  loadBell,
   children,
-}: Readonly<{ signedIn: boolean; children: ReactNode }>): JSX.Element {
+}: Readonly<{
+  signedIn: boolean;
+  loadBell: LoadBell | undefined;
+  children: ReactNode;
+}>): JSX.Element {
+  const bell = useLoadedBell(signedIn, loadBell);
   const body = <Page width="panel">{children}</Page>;
   // Signed in, `Layout`'s content is the page's main landmark; signed out
   // there is no shell, so the frame is its own (plan 161's `region`).
-  return signedIn ? <Layout>{body}</Layout> : <main>{body}</main>;
+  return signedIn ? <Layout bell={bell}>{body}</Layout> : <main>{body}</main>;
 }
 
 /**
@@ -75,9 +120,13 @@ function SystemFrame({
  */
 export function NotFoundState({
   signedIn,
-}: Readonly<{ signedIn: boolean }>): JSX.Element {
+  loadBell,
+}: Readonly<{
+  signedIn: boolean;
+  loadBell?: LoadBell | undefined;
+}>): JSX.Element {
   return (
-    <SystemFrame signedIn={signedIn}>
+    <SystemFrame signedIn={signedIn} loadBell={loadBell}>
       <section
         data-part="system-state"
         data-state="not-found"
@@ -113,8 +162,12 @@ const WAY_OUT_CLASS =
 /**
  * The router's not-found screen, framed by who is looking.
  */
-export function NotFound(): JSX.Element {
-  return <NotFoundState signedIn={useViewer().isSignedIn} />;
+export function NotFound({
+  loadBell,
+}: Readonly<{ loadBell?: LoadBell | undefined }>): JSX.Element {
+  return (
+    <NotFoundState signedIn={useViewer().isSignedIn} loadBell={loadBell} />
+  );
 }
 
 /**
@@ -153,13 +206,15 @@ export function LoaderFailedState({
   signedIn,
   message,
   onRetry,
+  loadBell,
 }: Readonly<{
   signedIn: boolean;
   message: string;
   onRetry: () => void;
+  loadBell?: LoadBell | undefined;
 }>): JSX.Element {
   return (
-    <SystemFrame signedIn={signedIn}>
+    <SystemFrame signedIn={signedIn} loadBell={loadBell}>
       <section data-part="system-state" data-state="loader-failed">
         {/* The page's one heading, as X1 has: the band's kicker, said
             first so a screen reader's heading list finds the page. Not
@@ -178,6 +233,36 @@ export function LoaderFailedState({
 const LOADER_FAILED_KICKER = "Didn't load";
 
 /**
+ * X2's root crash: *"A root crash (no shell possible) renders this band
+ * alone on paper with 'Reload'."*
+ *
+ * The root itself failed, so there is no shell to keep and no loader
+ * beneath it to re-run: Reload loads the document again. Paper, no bars,
+ * whoever is looking — the root's own answer about who that is is what
+ * failed.
+ */
+export function RootCrashedState({
+  message,
+  onReload,
+}: Readonly<{ message: string; onReload: () => void }>): JSX.Element {
+  return (
+    <main>
+      <Page width="panel">
+        <section data-part="system-state" data-state="root-crashed">
+          <h1 className="sr-only">{LOADER_FAILED_KICKER}</h1>
+          <FailureBand
+            kicker={LOADER_FAILED_KICKER}
+            message={message}
+            onRetry={onReload}
+            retryLabel="Reload"
+          />
+        </section>
+      </Page>
+    </main>
+  );
+}
+
+/**
  * The router's error screen: the band, framed by who is looking, and Try
  * again re-running the loaders that failed.
  *
@@ -187,11 +272,15 @@ const LOADER_FAILED_KICKER = "Didn't load";
  * routes a lapsed session to sign-in, so this does too, carrying the page
  * as log-in's way back.
  */
-export function RouteFailed(props: Readonly<ErrorComponentProps>): JSX.Element {
+export function RouteFailed(
+  props: Readonly<ErrorComponentProps & { loadBell?: LoadBell | undefined }>,
+): JSX.Element {
   const { kind } = classifyFailure(props.error);
   if (kind === "session") return <SignInAgain />;
-  if (kind === "terms") return <TermsAgain error={props.error} />;
-  return <LoaderFailed error={props.error} />;
+  if (kind === "terms") {
+    return <TermsAgain error={props.error} loadBell={props.loadBell} />;
+  }
+  return <LoaderFailed error={props.error} loadBell={props.loadBell} />;
 }
 
 /**
@@ -203,12 +292,18 @@ export function RouteFailed(props: Readonly<ErrorComponentProps>): JSX.Element {
  */
 function TermsAgain({
   error,
-}: Readonly<{ error: unknown }>): JSX.Element | undefined {
+  loadBell,
+}: Readonly<{
+  error: unknown;
+  loadBell: LoadBell | undefined;
+}>): JSX.Element | undefined {
   const answer = useTermsRefusal();
   useEffect(() => {
     answer?.();
   });
-  return answer === undefined ? <LoaderFailed error={error} /> : undefined;
+  return answer === undefined ? (
+    <LoaderFailed error={error} loadBell={loadBell} />
+  ) : undefined;
 }
 
 /**
@@ -225,11 +320,32 @@ function SignInAgain(): JSX.Element {
   return <Navigate to="/auth/login" search={{ redirect: from }} replace />;
 }
 
-function LoaderFailed({ error }: Readonly<{ error: unknown }>): JSX.Element {
+function LoaderFailed({
+  error,
+  loadBell,
+}: Readonly<{
+  error: unknown;
+  loadBell: LoadBell | undefined;
+}>): JSX.Element {
   const router = useRouter();
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
+  // The first match is the root's: when it is the one in error, nothing
+  // beneath it ever ran and there is no shell to draw.
+  const isRootCrash = useRouterState({
+    select: (state) => state.matches[0]?.status === "error",
+  });
+  if (isRootCrash) {
+    return (
+      <RootCrashedState
+        message={loaderFailureMessage(error, undefined)}
+        onReload={() => {
+          globalThis.location.reload();
+        }}
+      />
+    );
+  }
   const lit = tabToLight(pathname, undefined);
   const label = TABS.find((_tab, index) => index === lit)?.label;
 
@@ -240,6 +356,7 @@ function LoaderFailed({ error }: Readonly<{ error: unknown }>): JSX.Element {
       onRetry={() => {
         void router.invalidate();
       }}
+      loadBell={loadBell}
     />
   );
 }
