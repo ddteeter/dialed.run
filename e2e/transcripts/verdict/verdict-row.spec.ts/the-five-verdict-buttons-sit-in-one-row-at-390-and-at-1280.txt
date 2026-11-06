@@ -1,4 +1,9 @@
 document
+banner
+link, Notifications, # new
+#
+end of link, Notifications, # new
+end of banner
 main
 form
 :day :month # · #:#
