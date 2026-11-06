@@ -28,8 +28,9 @@ Each item was checked again on main at 7a160a1a before any work started.
 2. **PR#288-2: UploadForm logs "Query data cannot be undefined".**
    `getImportOutcome` returns `undefined` for a row this runner cannot see
    yet, and TanStack Query rejects `undefined` data, so the poll counts the
-   answer as an error. The `queryFn` will map that answer to `null`, which
-   the form already treats as "still waiting". The poll budget is
+   answer as an error. The `queryFn` now wraps the answer
+   (`{ answer }`), and `select` unwraps it, so the form sees `undefined`
+   and treats it as "still waiting", as it already did. The poll budget is
    unchanged, because it counts answers and errors alike.
 3. **PR#103-1: dead `prefillAt` and `pickerGroupsInput`.** Delete both and
    their tests. `nearestPriorEntry` stays, because A2 uses it.
