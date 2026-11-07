@@ -22,10 +22,13 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 
 /**
- * Words per minute for `say -r`. About 1.4× the system voice's default,
- * the owner's pick after hearing 280 and 320 (2026-11-06).
+ * Words per minute for `say -r`, by who is watching (owner, 2026-11-06).
+ * A PR demo is reviewed by someone who listens at 1.5x, so it speaks at
+ * about 1.4x the voice's own pace; a walkthrough is a demo for a person
+ * following along, so it speaks at 1x.
  */
-const SPEECH_RATE_WPM = 280;
+export const SPEECH_RATES = { review: 280, walkthrough: 200 } as const;
+export type Pace = keyof typeof SPEECH_RATES;
 
 /**
  * Silence rendered after each line, so consecutive lines do not run
@@ -45,6 +48,14 @@ export const STRIP_HEIGHT = 104;
 export interface Frame {
   readonly width: number;
   readonly height: number;
+}
+
+/**
+ * Which pace a project records at: the walkthrough projects at 1x, and
+ * everything else (journeys, scratch demos) at review pace.
+ */
+export function paceOf(projectName: string): Pace {
+  return projectName.startsWith("walkthrough") ? "walkthrough" : "review";
 }
 
 /**
@@ -117,9 +128,9 @@ export function forSpeech(text: string): string {
  * The cache key for a rendered line. The rate is part of it, so changing
  * the rate re-renders everything rather than mixing two speeds.
  */
-export function speechKey(spoken: string): string {
+export function speechKey(spoken: string, pace: Pace = "review"): string {
   return createHash("sha256")
-    .update(`${String(SPEECH_RATE_WPM)}\n${spoken}`)
+    .update(`${String(SPEECH_RATES[pace])}\n${spoken}`)
     .digest("hex")
     .slice(0, 16);
 }
@@ -130,10 +141,14 @@ export function speechKey(spoken: string): string {
  * voice. Siri voices never appear in `say -v '?'`, so naming one is not
  * possible; leaving it out is how to get one.
  */
-export function sayArgs(spoken: string, out: string): string[] {
+export function sayArgs(
+  spoken: string,
+  out: string,
+  pace: Pace = "review",
+): string[] {
   return [
     "-r",
-    String(SPEECH_RATE_WPM),
+    String(SPEECH_RATES[pace]),
     "-o",
     out,
     `${spoken} [[slnc ${String(TAIL_SILENCE_MS)}]]`,

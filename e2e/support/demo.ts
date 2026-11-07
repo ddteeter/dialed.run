@@ -11,12 +11,13 @@ import {
   SAY,
   durationMs,
   forSpeech,
+  paceOf,
   recordAt as recordAtWhen,
   sayArgs,
   speechKey,
 } from "./caption";
-import type { Cue, Frame } from "./caption";
-import type { Page } from "@playwright/test";
+import type { Cue, Frame, Pace } from "./caption";
+import type { Locator, Page } from "@playwright/test";
 
 /**
  * The base test for `*.demo.spec.ts`. Recording is configured by the `demo`
@@ -49,9 +50,10 @@ const demoSlowMo = Number(process.env.DEMO_SLOWMO ?? 0);
  * The recording in progress: when it started and every line narrated so
  * far. One worker runs the demos, so one recording at a time.
  */
-const recording: { startedAt: number; cues: Cue[] } = {
+const recording: { startedAt: number; cues: Cue[]; pace: Pace } = {
   startedAt: 0,
   cues: [],
+  pace: "review",
 };
 
 /**
@@ -74,8 +76,9 @@ const run = promisify(execFile);
  */
 async function voiced(spoken: string): Promise<string> {
   mkdirSync(VOICE_CACHE, { recursive: true });
-  const file = path.resolve(VOICE_CACHE, `${speechKey(spoken)}.aiff`);
-  if (!existsSync(file)) await run(SAY, sayArgs(spoken, file));
+  const { pace } = recording;
+  const file = path.resolve(VOICE_CACHE, `${speechKey(spoken, pace)}.aiff`);
+  if (!existsSync(file)) await run(SAY, sayArgs(spoken, file, pace));
   return file;
 }
 
@@ -130,6 +133,20 @@ export function recordAt(size: Frame): ReturnType<typeof recordAtWhen> {
 }
 
 /**
+ * Fill a field, and while recording type it a key at a time, so a viewer
+ * sees what goes in rather than a field that is suddenly full. CI fills it
+ * at once.
+ */
+export async function typeSlowly(field: Locator, text: string): Promise<void> {
+  if (demoSlowMo === 0) {
+    await field.fill(text);
+    return;
+  }
+  await field.fill("");
+  await field.pressSequentially(text, { delay: 70 });
+}
+
+/**
  * Layout stamps `html[data-hydrated]` once React attaches; driving
  * controlled inputs before that races hydration's state reset. Shared by
  * every demo spec — one wait, not one copy per journey.
@@ -146,6 +163,7 @@ const paced = base.extend({
     // so a cue lands a few milliseconds late at most.
     recording.startedAt = Date.now();
     recording.cues = [];
+    recording.pace = paceOf(testInfo.project.name);
     await page.addInitScript(() => {
       const layer = "pointer-events:none;z-index:2147483647;position:fixed;";
 

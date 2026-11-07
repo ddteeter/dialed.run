@@ -9,6 +9,7 @@ import {
   durationMs,
   forSpeech,
   muxArgs,
+  paceOf,
   recordAt,
   recordingSchema,
   sayArgs,
@@ -50,6 +51,12 @@ describe("speechKey", () => {
     // sha256("280\nThe Desk"), first 16 hex digits: the rate is hashed
     // with the line, so changing it moves every key.
     expect(speechKey("The Desk")).toBe("335a3f46a406f910");
+    expect(speechKey("The Desk", "review")).toBe("335a3f46a406f910");
+  });
+
+  it("keys a walkthrough's line at its own rate, apart from review's", () => {
+    // sha256("200\nThe Desk"): the same line at 1x is another rendering.
+    expect(speechKey("The Desk", "walkthrough")).toBe("325d19d383137dce");
   });
 });
 
@@ -65,6 +72,24 @@ describe("sayArgs", () => {
     ]);
     // No -v: naming a voice is what loses the Siri one.
     expect(args).not.toContain("-v");
+  });
+
+  it("speaks a walkthrough at 1x, 200 wpm", () => {
+    expect(sayArgs("The Desk", "/c/a.aiff", "walkthrough").slice(0, 2)).toEqual(
+      ["-r", "200"],
+    );
+  });
+});
+
+describe("paceOf", () => {
+  it("is 1x for both walkthrough projects", () => {
+    expect(paceOf("walkthrough")).toBe("walkthrough");
+    expect(paceOf("walkthrough-phone")).toBe("walkthrough");
+  });
+
+  it("is review pace for every other project", () => {
+    expect(paceOf("demo")).toBe("review");
+    expect(paceOf("e2e-walkthrough")).toBe("review");
   });
 });
 
