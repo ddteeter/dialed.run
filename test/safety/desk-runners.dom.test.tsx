@@ -336,7 +336,8 @@ describe("a flagged account (D-161 1, R47·124) and PENDING DELETE (PR#126-1)", 
 
   it("leaves focus alone after a ban of an unflagged runner", async () => {
     const user = userEvent.setup();
-    const { ban } = await renderDesk();
+    const { ban, router } = await renderDesk();
+    const invalidate = vi.spyOn(router, "invalidate");
     await user.click(screen.getByRole("button", { name: "@ada" }));
     await user.type(screen.getByRole("textbox", { name: /Why/ }), "Serious");
     await user.selectOptions(
@@ -347,6 +348,10 @@ describe("a flagged account (D-161 1, R47·124) and PENDING DELETE (PR#126-1)", 
 
     expect(await screen.findByText("Account closed.")).toBeInTheDocument();
     expect(ban).toHaveBeenCalled();
+    // The reload is the decision's last step: focus would have moved by then.
+    await waitFor(() => {
+      expect(invalidate).toHaveBeenCalled();
+    });
     expect(screen.getByRole("button", { name: "@ada" })).not.toHaveFocus();
   });
 
