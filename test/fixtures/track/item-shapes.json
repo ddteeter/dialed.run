@@ -1,0 +1,40 @@
+{
+  "//": "Shapes ITEMS_QUERY returns that items.json (a real recording) does not show: nodes for a field never set (null), set to nothing ({}), a draft item ({} content), a deleted issue (null content), and a pull request (content without issue fields); and the last page's null cursor.",
+  "unset": {
+    "id": "PVTI_unset",
+    "status": null,
+    "lane": null,
+    "content": {
+      "number": 8,
+      "title": "Unset",
+      "state": "OPEN",
+      "url": "https://github.com/ddteeter/dialed.run/issues/8"
+    }
+  },
+  "empty": {
+    "id": "PVTI_empty",
+    "status": {},
+    "lane": {},
+    "content": {
+      "number": 9,
+      "title": "Empty",
+      "state": "OPEN",
+      "url": "https://github.com/ddteeter/dialed.run/issues/9"
+    }
+  },
+  "draft": { "id": "PVTI_draft", "status": null, "lane": null, "content": {} },
+  "deleted": {
+    "id": "PVTI_deleted",
+    "status": null,
+    "lane": null,
+    "content": null
+  },
+  "partial": {
+    "id": "PVTI_partial",
+    "status": { "name": "Ready" },
+    "lane": null,
+    "content": { "number": 10 }
+  },
+  "lastPage": { "hasNextPage": false, "endCursor": null },
+  "nullCursorWithNext": { "hasNextPage": true, "endCursor": null }
+}
