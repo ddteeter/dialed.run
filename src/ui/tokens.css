@@ -152,6 +152,11 @@
    * precomputed — "flat hex, never opacity". Ground-relative, so the
    * inverted block redefines it. Text on it stays ink or --dialed-text. */
   --dialed-tint: #d2f0e9;
+  /* R48·135: a notice — the explanations and quiet notes a screen sets in
+   * a recessed block — is the tint on paper, with no rule (the ring is
+   * the fill's own colour, so it draws nothing and takes no space). */
+  --notice: var(--tint);
+  --notice-rule: var(--tint);
 }
 
 /**
@@ -195,6 +200,10 @@
   /* R-87: hi-viz at low strength on ink. Missing here, an unread row in
    * an inverted block resolved to paper's #FFF9DC against #0B0B0E. */
   --unread: #2a2a14;
+  /* R48·135: "Light-ground notices in the app become --panel with a 1px
+   * --hairline (the marketing ink-block rule)." */
+  --notice: var(--panel);
+  --notice-rule: var(--hairline);
 }
 
 /**

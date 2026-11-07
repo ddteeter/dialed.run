@@ -170,6 +170,26 @@ describe("the T1 port", () => {
     expect(applies).toBe(10);
   });
 
+  it("gives the forms' ink surface R-36's values through the roles they draw in", () => {
+    // Form Contract: idle "1px rule" is `--hairline`, invalid "2px ink (2px
+    // paper on dark)" is `--ink` — `ui/form.tsx`'s field box draws in
+    // exactly those two, so the dark column is the ink surface.
+    expect(hexOf("--hairline", ink)).toBe("#2a2a31");
+    expect(hexOf("--ink", ink)).toBe("#f4f3ef");
+    expect(hexOf("--failure", ink)).toBe(hexOf("--failure", paper));
+  });
+
+  it("draws a notice as the tint on paper and as a ruled panel on ink", () => {
+    // R48·135: "Light-ground notices in the app become --panel with a 1px
+    // --hairline (the marketing ink-block rule)." On paper the rule is the
+    // fill's own colour, so nothing changes there. Not a T1 row: two roles
+    // that point at T1 rows, so their text clears wherever those do.
+    expect(hexOf("--notice", paper)).toBe(hexOf("--tint", paper));
+    expect(hexOf("--notice-rule", paper)).toBe(hexOf("--tint", paper));
+    expect(hexOf("--notice", ink)).toBe(hexOf("--panel", ink));
+    expect(hexOf("--notice-rule", ink)).toBe(hexOf("--hairline", ink));
+  });
+
   it.each(t1)("declares $role at T1's light value", ({ role, light }) => {
     expect([role, hexOf(role, paper)]).toEqual([role, light]);
   });

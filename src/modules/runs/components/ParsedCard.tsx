@@ -98,7 +98,7 @@ function FileStrip({
   onReplace: () => void;
 }>): JSX.Element {
   return (
-    <div className="flex items-center justify-between gap-3 bg-tint px-4 py-2">
+    <div className="flex items-center justify-between gap-3 bg-notice inset-ring-1 inset-ring-notice-rule px-4 py-2">
       {/* `--quiet`: the strip is tinted, and `--label` is 4.0:1 on the tint. */}
       <span
         ref={focusIfLost}

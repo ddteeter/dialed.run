@@ -4,7 +4,7 @@ import {
   createRootRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { render } from "@testing-library/react";
+import { act, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { THEME_KEY, applyTheme } from "../../src/lib/browser/theme";
@@ -68,9 +68,9 @@ describe("applyTheme", () => {
   });
 });
 
-async function renderUnder(loaderData: unknown) {
+async function renderUnder(answer: () => unknown) {
   const rootRoute = createRootRoute({
-    loader: () => loaderData,
+    loader: answer,
     component: ThemeSync,
   });
   const router = createRouter({
@@ -79,6 +79,7 @@ async function renderUnder(loaderData: unknown) {
   });
   await router.load();
   render(<RouterProvider router={router} />);
+  return router;
 }
 
 describe("ThemeSync", () => {
@@ -86,7 +87,7 @@ describe("ThemeSync", () => {
     localStorage.setItem(THEME_KEY, "light");
     root.dataset.theme = "light";
 
-    await renderUnder({ signedIn: true, theme: "dark" });
+    await renderUnder(() => ({ signedIn: true, theme: "dark" }));
 
     expect(root).toHaveAttribute("data-theme", "dark");
     expect(localStorage.getItem(THEME_KEY)).toBe("dark");
@@ -96,7 +97,7 @@ describe("ThemeSync", () => {
     localStorage.setItem(THEME_KEY, "dark");
     root.dataset.theme = "dark";
 
-    await renderUnder({ signedIn: false, theme: "system" });
+    await renderUnder(() => ({ signedIn: false, theme: "system" }));
 
     expect(root).not.toHaveAttribute("data-theme");
     expect(localStorage.getItem(THEME_KEY)).toBeNull();
@@ -106,16 +107,30 @@ describe("ThemeSync", () => {
     localStorage.setItem(THEME_KEY, "dark");
     root.dataset.theme = "dark";
 
-    await renderUnder({ signedIn: false });
+    await renderUnder(() => ({ signedIn: false }));
 
     expect(root).toHaveAttribute("data-theme", "dark");
     expect(localStorage.getItem(THEME_KEY)).toBe("dark");
   });
 
+  it("follows the root's answer when it changes under an open page", async () => {
+    // A sign-in or sign-out invalidates the root, and its new answer has
+    // to reach the page without a reload.
+    let answer = { signedIn: true, theme: "dark" };
+    const router = await renderUnder(() => answer);
+    expect(root).toHaveAttribute("data-theme", "dark");
+
+    answer = { signedIn: false, theme: "system" };
+    await act(() => router.invalidate());
+
+    expect(root).not.toHaveAttribute("data-theme");
+    expect(localStorage.getItem(THEME_KEY)).toBeNull();
+  });
+
   it("ignores a theme it does not know", async () => {
     root.dataset.theme = "dark";
 
-    await renderUnder({ signedIn: true, theme: "sepia" });
+    await renderUnder(() => ({ signedIn: true, theme: "sepia" }));
 
     expect(root).toHaveAttribute("data-theme", "dark");
   });

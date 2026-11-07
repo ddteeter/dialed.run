@@ -32,9 +32,15 @@ import type {
  *   spring wearing a costume. The only motion is the button leaving its
  *   pending state.
  *
- * The design also specifies an ink (dark) surface for every one of these.
- * No form in v1 sits on ink, so the ink half is not written rather than
- * written and untested; `docs/deferred.md` carries it.
+ * The design also specifies an ink (dark) surface for every one of these
+ * (R-36, R48·135): "Border goes 1px rule → 2px ink (2px paper on dark)",
+ * "same geometry, darker rule", the same hi-viz band. Nothing here draws
+ * it separately, because every class below is a T1 role: on a dark page,
+ * a `night` block or an inverted one, `--hairline` is the darker rule
+ * (`#2A2A31`) and `--ink` the 2px paper (`#F4F3EF`), and the band's
+ * `--failure` with ink text does not change. `test/ui/contrast.dom.test.tsx`
+ * pins those values; `test/architecture/palette-only.test.ts` keeps a
+ * fixed colour out of this file.
  */
 
 /**

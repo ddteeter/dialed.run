@@ -82,10 +82,11 @@ describe("startHandleIfNeeded (round 26 #7)", () => {
   it("is asked by the root route on every navigation, with the page being entered", () => {
     // A route file cannot be imported by a test, so the wiring is read:
     // the root's `beforeLoad` is the one road every page, and every
-    // sign-in's `?redirect=`, passes through.
+    // sign-in's `?redirect=`, passes through. Its answer carries the
+    // account's theme (design 185), which `withOwnTheme` adds.
     const [source] = Object.values(rootRoute);
     expect(source).toMatch(
-      /loader: \(\{ location \}\) =>\s*signedInOffTheOpenWeb\(location\.pathname, signedInQuery\)/u,
+      /loader: \(\{ location \}\) =>\s*signedInOffTheOpenWeb\(\s*location\.pathname,\s*withOwnTheme\(signedInQuery, ownThemeQuery\),\s*\)/u,
     );
     expect(source).toMatch(
       /beforeLoad: async \(\{ location \}\) => \{\s*await gateOnHandle\(\{\s*ask: handleGateQuery,\s*pathname: location\.pathname,\s*isInBrowser: typeof document !== "undefined",\s*\}\);/u,
