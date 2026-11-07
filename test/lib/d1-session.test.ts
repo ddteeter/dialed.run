@@ -122,6 +122,7 @@ describe("scopedDb outside a request", () => {
       bookmark: undefined,
       writerId: undefined,
       backwards: undefined,
+      queries: undefined,
     });
   });
 
@@ -364,6 +365,102 @@ describe("scopeOutcome", () => {
 function reporting(reached: string): D1Database {
   return spiedBinding(env.DIALED_CORE, reached).binding;
 }
+
+describe("a tallied scope", () => {
+  it("counts nothing unless asked", async () => {
+    const outcome = await runInD1Scope(undefined, async () => {
+      await selectOne(env.DIALED_CORE);
+      return scopeOutcome();
+    });
+    expect(outcome.queries).toBeUndefined();
+  });
+
+  it("starts at nothing, under the name it was given", async () => {
+    const outcome = await runInD1Scope(
+      undefined,
+      () => Promise.resolve(scopeOutcome()),
+      { tallyAs: "/closet/" },
+    );
+    expect(outcome.queries).toEqual({
+      route: "/closet/",
+      statements: 0,
+      rowsRead: 0,
+    });
+  });
+
+  it("counts every slot's statements, a batch's one each, and their rows", async () => {
+    await env.DIALED_CORE.exec("delete from d1_session_probe");
+    await env.DIALED_CORE.exec(
+      "insert into d1_session_probe values (1), (2), (3)",
+    );
+    const outcome = await runInD1Scope(
+      undefined,
+      async () => {
+        const core = scopedDb(env.DIALED_CORE, "core");
+        await core.all(sql`select * from d1_session_probe`);
+        await core.batch([
+          core.run(sql`select * from d1_session_probe where x = 1`),
+          core.run(sql`select 1`),
+        ]);
+        await primaryDb(env.DIALED_CORE).get(sql`select 1`);
+        await scopedDb(env.DIALED_WEATHER, "weather").all(sql`select 1`);
+        return scopeOutcome();
+      },
+      { tallyAs: "serverFn:abc" },
+    );
+    expect(outcome.queries).toEqual({
+      route: "serverFn:abc",
+      statements: 5,
+      // 3 for the table, 3 for the batch's first read of it, and none for
+      // the selects that read no table.
+      rowsRead: 6,
+    });
+  });
+
+  it("writes once, and counts a write read through raw() as no rows", async () => {
+    await env.DIALED_CORE.exec("delete from d1_session_probe");
+    const outcome = await runInD1Scope(
+      undefined,
+      async () => {
+        await env.DIALED_CORE.exec("insert into d1_session_probe values (9)");
+        await scopedDb(env.DIALED_CORE, "core").values(
+          sql`insert into d1_session_probe values (7) returning x`,
+        );
+        return scopeOutcome();
+      },
+      { tallyAs: "/runs/" },
+    );
+    const rows = await env.DIALED_CORE.prepare(
+      "select count(*) as c from d1_session_probe",
+    ).first<{ c: number }>();
+    expect(rows?.c).toBe(2);
+    expect(outcome.queries).toEqual({
+      route: "/runs/",
+      statements: 1,
+      rowsRead: 0,
+    });
+  });
+
+  it("meters a select read through raw()", async () => {
+    await env.DIALED_CORE.exec("delete from d1_session_probe");
+    await env.DIALED_CORE.exec("insert into d1_session_probe values (1), (2)");
+    const outcome = await runInD1Scope(
+      undefined,
+      async () => {
+        await scopedDb(env.DIALED_CORE, "core").values(
+          sql`select x from d1_session_probe`,
+        );
+        return scopeOutcome();
+      },
+      { tallyAs: "/feed/" },
+    );
+    expect(outcome.queries).toEqual({
+      route: "/feed/",
+      statements: 1,
+      rowsRead: 2,
+    });
+  });
+});
 
 describe("scopeOutcome's ordering alarm", () => {
   it("is quiet when the session moved forward", async () => {

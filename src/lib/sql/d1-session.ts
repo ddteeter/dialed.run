@@ -3,6 +3,11 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
 
+import { countedBatch, countedStatement } from "./counted-statement";
+import type { OnRun } from "./counted-statement";
+import type { QueryTally } from "./query-tally";
+import { addStatement, NO_QUERIES } from "./query-tally";
+
 /**
  * D1 read replication, request side (design 143, decision D-123).
  *
@@ -49,6 +54,19 @@ interface Slot {
 }
 
 /**
+ * A tallied scope's count (design 182, part 2): every statement the
+ * request ran, on any of its three slots, under the name it is reported by.
+ */
+interface RouteQueries extends QueryTally {
+  readonly route: string;
+}
+
+interface Tally {
+  readonly route: string;
+  queries: QueryTally;
+}
+
+/**
  * One request's sessions: core and weather for `scopedDb`, and core's
  * primary for `primaryDb`, which is pinned from the start.
  */
@@ -57,6 +75,7 @@ interface Scope {
   readonly weather: Slot;
   readonly primary: Slot;
   runnerId: string | undefined;
+  readonly tally: Tally | undefined;
 }
 
 const scopes = /*#__PURE__*/ new AsyncLocalStorage<Scope>();
@@ -169,6 +188,18 @@ function sessionOf(
   return slot.open.session;
 }
 
+/**
+ * Where a tallied scope's statements report their runs; none in a scope
+ * that is not tallied, which is every scope a production build makes.
+ */
+function tallyOf(scope: Scope): OnRun | undefined {
+  const { tally } = scope;
+  if (tally === undefined) return undefined;
+  return (rowsRead) => {
+    tally.queries = addStatement(tally.queries, rowsRead);
+  };
+}
+
 const SESSION_ONLY_MESSAGE = "a D1 session offers only prepare and batch";
 
 function sessionOnly(): never {
@@ -197,17 +228,25 @@ class RoutedDatabase implements D1Database {
     const scope = scopes.getStore();
     if (scope === undefined) return this.binding.prepare(query);
     const slot = this.slotIn(scope);
-    if (isWriteStatement(query)) slot.wrote = true;
-    return sessionOf(scope, slot, this.binding).prepare(query);
+    const isWrite = isWriteStatement(query);
+    if (isWrite) slot.wrote = true;
+    const statement = sessionOf(scope, slot, this.binding).prepare(query);
+    const onRun = tallyOf(scope);
+    return onRun === undefined
+      ? statement
+      : countedStatement(statement, !isWrite, onRun);
   }
 
   batch<T = unknown>(
     statements: D1PreparedStatement[],
   ): Promise<D1Result<T>[]> {
     const scope = scopes.getStore();
-    return scope === undefined
-      ? this.binding.batch<T>(statements)
-      : sessionOf(scope, this.slotIn(scope), this.binding).batch<T>(statements);
+    if (scope === undefined) return this.binding.batch<T>(statements);
+    const session = sessionOf(scope, this.slotIn(scope), this.binding);
+    const onRun = tallyOf(scope);
+    return onRun === undefined
+      ? session.batch<T>(statements)
+      : countedBatch(session.batch<T>(statements), onRun);
   }
 
   exec(query: string): Promise<D1ExecResult> {
@@ -266,6 +305,16 @@ export function primaryDb(binding: D1Database) {
   return drizzle(routedDatabase(binding, (scope) => scope.primary));
 }
 
+export interface D1ScopeOptions {
+  /**
+   * Count the request's statements and rows read under this name, for
+   * `scopeOutcome().queries` (design 182, part 2). Only a dev server that
+   * asked for it (`queryTallyEnabled`) passes one: a counted `raw()` or
+   * `first()` read is run twice.
+   */
+  readonly tallyAs?: string | undefined;
+}
+
 /**
  * Run `work` as one request. `deviceBookmark` is the `d1b` cookie's value,
  * which only core carries; weather has one writer, the cron, and nobody
@@ -274,6 +323,7 @@ export function primaryDb(binding: D1Database) {
 export function runInD1Scope<T>(
   deviceBookmark: string | undefined,
   work: () => PromiseLike<T>,
+  { tallyAs }: D1ScopeOptions = {},
 ): Promise<T> {
   const core = newSlot(false);
   core.bookmark = parseBookmark(deviceBookmark);
@@ -282,6 +332,10 @@ export function runInD1Scope<T>(
     weather: newSlot(false),
     primary: newSlot(true),
     runnerId: undefined,
+    tally:
+      tallyAs === undefined
+        ? undefined
+        : { route: tallyAs, queries: NO_QUERIES },
   };
   // Awaited inside the scope: a drizzle builder is lazy (CLAUDE.md, D1
   // query discipline), so one handed back unawaited would otherwise run
@@ -344,6 +398,10 @@ export interface ScopeOutcome {
    * ordering `newerBookmark` relies on.
    */
   readonly backwards: { from: string; reached: string } | undefined;
+  /**
+  What a tallied request asked D1, and under what name; none otherwise.
+  */
+  readonly queries: RouteQueries | undefined;
 }
 
 function backwardsIn(slot: Slot): ScopeOutcome["backwards"] {
@@ -355,13 +413,24 @@ function backwardsIn(slot: Slot): ScopeOutcome["backwards"] {
   return from <= reached ? undefined : { from, reached };
 }
 
+function queriesIn(tally: Tally | undefined): RouteQueries | undefined {
+  return tally === undefined
+    ? undefined
+    : { route: tally.route, ...tally.queries };
+}
+
 /**
 What `runInD1Scope`'s request leaves behind, read before it returns.
 */
 export function scopeOutcome(): ScopeOutcome {
   const scope = scopes.getStore();
   if (scope === undefined) {
-    return { bookmark: undefined, writerId: undefined, backwards: undefined };
+    return {
+      bookmark: undefined,
+      writerId: undefined,
+      backwards: undefined,
+      queries: undefined,
+    };
   }
   const reached = parseBookmark(scope.core.open?.session.getBookmark());
   const replicaSide = newerBookmark(scope.core.bookmark, reached);
@@ -373,6 +442,7 @@ export function scopeOutcome(): ScopeOutcome {
     // Core only: weather and the primary session never open from a
     // bookmark, so they have nothing to go backwards from.
     backwards: backwardsIn(scope.core),
+    queries: queriesIn(scope.tally),
   };
 }
 

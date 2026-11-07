@@ -64,16 +64,21 @@ The path, end to end:
    reads it (`queryTallyEnabled`). CI's `preview` matrix leg builds
    without the flag, so only its `dev` leg reports; that is enough.
 2. **Counting** (`src/lib/sql/d1-session.ts`). `runInD1Scope` takes an
-   optional `{ tally: true }`. In a tallied scope, `RoutedDatabase` hands
-   back statements that count each run, and each statement inside a
-   batch, into the scope, with `meta.rows_read` where D1 gives it. For
-   `raw()`/`first()` on a select, which carry no meta, the dev counter
-   meters the select once more with `all()`, as the test counter does
-   (`test/d1-spy.ts`). That is a second read only on a dev server that
-   asked for it, never a second write. `scopeOutcome()` gains
-   `queries: { statements, rowsRead } | undefined`. The arithmetic (add a
-   statement, add a batch's results) is a pure function in
-   `src/lib/sql/query-tally.ts`, at 100%.
+   optional `{ tallyAs: <route> }`: the scope is tallied, under that name,
+   only when it is given one. (A bare `{ tally: true }` with the name
+   added at the edge was the first draft; it made "tallied" and "named"
+   two facts the edge had to check together, and each check alone an
+   equivalent mutant.) In a tallied scope, `RoutedDatabase` hands back
+   statements that count each run, and each statement inside a batch,
+   into the scope, with `meta.rows_read` where D1 gives it. For
+   `raw()`/`first()` on a select, which carry no meta, the counter meters
+   the select once more with `all()`. That is a second read only on a dev
+   server that asked for it, never a second write. The counting statement
+   is one Proxy, `src/lib/sql/counted-statement.ts`, which
+   `test/d1-spy.ts` now uses too, so the test counter and the dev counter
+   cannot count differently. `scopeOutcome()` gains
+   `queries: { route, statements, rowsRead } | undefined`. The arithmetic
+   is in `src/lib/sql/query-tally.ts`, at 100%.
 3. **Out of the Worker.** `respondInD1Scope`
    (`src/modules/auth/d1-request.ts`) adds
    `x-d1-queries: <route>;<statements>;<rowsRead>` to the response when
@@ -81,7 +86,9 @@ The path, end to end:
    route id or `serverFn:<id>`, `ops/timing.ts`'s `requestNamer`, passed
    in). The count stops when the `Response` exists, the point design
    165's `ms` stops at too: loaders are in it, and a streamed page's
-   deferred data is not.
+   deferred data is not. The header's name, format and parse live
+   together in `src/lib/query-report.ts`, so writer and reader share one
+   definition.
 4. **Into the run.** An e2e fixture beside the a11y fixture listens for
    `response` events and writes one line per response carrying the
    header to `test-results/queries/requests.jsonl`:

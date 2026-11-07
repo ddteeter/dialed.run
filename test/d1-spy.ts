@@ -1,6 +1,11 @@
 import { vi } from "vitest";
 
 import { env } from "../src/env";
+import type { OnRun } from "../src/lib/sql/counted-statement";
+import {
+  countedBatch,
+  countedStatement,
+} from "../src/lib/sql/counted-statement";
 import { isWriteStatement } from "../src/lib/sql/d1-session";
 
 /**
@@ -83,44 +88,44 @@ export interface QueryTally {
 }
 
 /**
- * Run `work` and count what it asks `binding`, bare or through a session.
- *
- * `run()`, `all()` and `batch()` hand back `meta.rows_read`; `raw()` and
- * `first()` carry no meta, and drizzle reads every query with fields
- * through `raw()`. So for a read through either, the counter runs the same
- * statement once more with `all()` for its meta, uncounted. A select
- * cannot change anything, so the second run changes nothing but the
- * count; a write read through `raw()` (`.returning()`) adds no rows read,
- * since running it twice would write twice.
+ * Run `work` and count what it asks `binding`, bare or through a session,
+ * with the counter a tallied request uses (`counted-statement.ts`, which
+ * says how a `raw()` or `first()` read is metered).
  */
 export async function queriesDuring(
   work: () => Promise<unknown>,
   binding: D1Database = env.DIALED_CORE,
 ): Promise<QueryTally> {
   const tally: QueryTally = { statements: [], rowsRead: 0 };
+  const into =
+    (sql: string): OnRun =>
+    (rowsRead) => {
+      tally.statements.push(sql);
+      tally.rowsRead += rowsRead;
+    };
+  const counted = (real: D1PreparedStatement, sql: string) =>
+    countedStatement(real, !isWriteStatement(sql), into(sql));
   const prepare = binding.prepare.bind(binding);
   const batch: D1Database["batch"] = binding.batch.bind(binding);
   const withSession = binding.withSession.bind(binding);
   const spies = [
     vi
       .spyOn(binding, "prepare")
-      .mockImplementation((query) => counted(prepare(query), query, tally)),
+      .mockImplementation((query) => counted(prepare(query), query)),
     vi
       .spyOn(binding, "batch")
       .mockImplementation(<T>(statements: D1PreparedStatement[]) =>
-        batchCounted((real) => batch<T>(real), statements, tally),
+        countedBatch(batch<T>(statements), into("batch")),
       ),
-    vi
-      .spyOn(binding, "withSession")
-      .mockImplementation((constraint) => {
-        const session = withSession(constraint);
-        return {
-          prepare: (query) => counted(session.prepare(query), query, tally),
-          batch: <T>(statements: D1PreparedStatement[]) =>
-            batchCounted((real) => session.batch<T>(real), statements, tally),
-          getBookmark: () => session.getBookmark(),
-        };
-      }),
+    vi.spyOn(binding, "withSession").mockImplementation((constraint) => {
+      const session = withSession(constraint);
+      return {
+        prepare: (query) => counted(session.prepare(query), query),
+        batch: <T>(statements: D1PreparedStatement[]) =>
+          countedBatch(session.batch<T>(statements), into("batch")),
+        getBookmark: () => session.getBookmark(),
+      };
+    }),
   ];
   try {
     await work();
@@ -128,78 +133,6 @@ export async function queriesDuring(
     for (const spy of spies) spy.mockRestore();
   }
   return tally;
-}
-
-/**
-The statement a counted one stands for, so a batch runs the real one.
-*/
-const realOf = new WeakMap<D1PreparedStatement, D1PreparedStatement>();
-
-async function batchCounted<T>(
-  batch: (statements: D1PreparedStatement[]) => Promise<D1Result<T>[]>,
-  statements: D1PreparedStatement[],
-  tally: QueryTally,
-): Promise<D1Result<T>[]> {
-  const results = await batch(
-    statements.map((statement) => realOf.get(statement) ?? statement),
-  );
-  for (const result of results) {
-    tally.statements.push("batch");
-    tally.rowsRead += result.meta.rows_read;
-  }
-  return results;
-}
-
-/**
- * A statement that counts itself into `tally` each time it runs. A Proxy
- * rather than a class: `raw` and `first` are overloaded generics no class
- * can restate, and every other member must still be the real one.
- */
-function counted(
-  real: D1PreparedStatement,
-  sql: string,
-  tally: QueryTally,
-): D1PreparedStatement {
-  const proxy = new Proxy(real, {
-    get(target, property) {
-      switch (property) {
-        case "bind": {
-          return (...values: unknown[]) =>
-            counted(target.bind(...values), sql, tally);
-        }
-        case "run":
-        case "all": {
-          return async () => {
-            const result = await target[property]();
-            tally.statements.push(sql);
-            tally.rowsRead += result.meta.rows_read;
-            return result;
-          };
-        }
-        case "raw":
-        case "first": {
-          return async (...args: unknown[]) => {
-            const method = target[property].bind(target);
-            const result: unknown = await Reflect.apply(method, target, args);
-            tally.statements.push(sql);
-            if (!isWriteStatement(sql)) {
-              const metered = await target.all();
-              tally.rowsRead += metered.meta.rows_read;
-            }
-            return result;
-          };
-        }
-        default: {
-          const value: unknown = Reflect.get(target, property, target);
-          const member: unknown =
-            typeof value === "function" ? value.bind(target) : value;
-          return member;
-        }
-      }
-    },
-  });
-  realOf.set(proxy, real);
-  return proxy;
 }
 
 /**
