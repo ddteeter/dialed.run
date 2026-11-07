@@ -101,8 +101,7 @@ board's `PENDING DELETE` state (PR#126-1). Desk Today's ban count scans
 - Flag: `safety/account-flags.ts`. Placeholders (design-deltas 139) were
   replaced by round 47 (R47·124–126): Today's fourth number, the Flagged
   (N) chip last, the panel atop D8's column, focus to the name. "See the
-  takedown" is not built: nothing on the Desk shows a decided row
-  (design-deltas 140).
+  takedown" is dropped: round 48 #132 answered design-deltas 140.
 - Coordinator handoff PR#286-1: Today's gave-up bracket is `aria-hidden`.
 - Statutory line: `contracts.ts` `STATUTORY_LINE`, drawn by
   `components/StatutoryLine.tsx`.
