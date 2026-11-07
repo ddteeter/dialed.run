@@ -130,15 +130,17 @@ export async function publicKitRead(
 /**
  * The run's day where it was run (R-96), never a time: its observation's
  * zone, else the runner's own place's, else UTC. The profile's kit rows
- * date their runs with it too.
+ * date their runs with it too. `format` is how the day is spelled: the
+ * mono label's "Sat Aug 29" by default, or G's prose "Sat, Aug 29".
  */
 export function runDayOf(
   startedAt: number,
   conditions: Conditions | undefined,
   runnerZone: string | null | undefined,
+  format: (epochSeconds: number, timeZone?: string) => string = dayLabel,
 ): string {
   const zone = conditions?.timeZone ?? runnerZone ?? undefined;
-  return dayLabel(startedAt, isTimeZone(zone) ? zone : undefined);
+  return format(startedAt, isTimeZone(zone) ? zone : undefined);
 }
 
 /**

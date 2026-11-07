@@ -41,6 +41,10 @@ const HOUR = 3600;
 const DAY = 24 * HOUR;
 const THREE_DAYS_AGO = NOW - 3 * DAY;
 const VIEWER = pointConditions({ tempC: 8, feelsLikeC: 7 });
+/**
+What `dialed` holds when no matched entry has a verdict yet.
+*/
+const NOBODY_DIALED = { runners: 0, groups: {} };
 
 type Category = "top" | "bottom" | "gloves" | "shoes";
 
@@ -57,6 +61,7 @@ async function runner(
     precipMm?: number;
     categories?: Category[];
     userId?: string;
+    verdict?: number;
   } = {},
 ): Promise<string> {
   place.next += 1;
@@ -70,7 +75,13 @@ async function runner(
     ),
   );
   const runId = await makeRun({ userId, lat, lng, startedAt: at });
-  await makeEntry({ userId, runId, createdAt: at, itemIds });
+  await makeEntry({
+    userId,
+    runId,
+    createdAt: at,
+    itemIds,
+    ...(options.verdict !== undefined && { verdict: options.verdict }),
+  });
   await makeObservation({
     lat,
     lng,
@@ -111,7 +122,11 @@ describe("matchTally: who matched", () => {
   it("counts a runner inside the band, the precip class and the window", async () => {
     await runner();
     const tally = await matchTally(VIEWER, THREE_DAYS_AGO);
-    expect(tally).toStrictEqual({ runners: 1, groups: { tops: 1 } });
+    expect(tally).toStrictEqual({
+      runners: 1,
+      groups: { tops: 1 },
+      dialed: NOBODY_DIALED,
+    });
   });
 
   it("counts a runner exactly at the band's edge, and not one degree past it", async () => {
@@ -153,6 +168,7 @@ describe("matchTally: who matched", () => {
     expect(await matchTally(VIEWER, THREE_DAYS_AGO)).toStrictEqual({
       runners: 0,
       groups: {},
+      dialed: NOBODY_DIALED,
     });
   });
 
@@ -169,6 +185,39 @@ describe("matchTally: who matched", () => {
     expect(await matchTally(VIEWER, THREE_DAYS_AGO)).toStrictEqual({
       runners: 2,
       groups: { tops: 2, bottoms: 1 },
+      dialed: NOBODY_DIALED,
+    });
+  });
+
+  it("answers an empty tally, nobody dialed, when nobody logged anything", async () => {
+    expect(await matchTally(VIEWER, THREE_DAYS_AGO)).toStrictEqual({
+      runners: 0,
+      groups: {},
+      dialed: NOBODY_DIALED,
+    });
+  });
+
+  it("counts the dialed runners apart, with what they wore when dialed (round 47 #114)", async () => {
+    await runner({ verdict: 0, categories: ["top", "bottom"] });
+    await runner({ verdict: 0, categories: ["top"] });
+    await runner({ verdict: -1, categories: ["top", "gloves"] });
+    await runner({ categories: ["bottom"] });
+
+    expect(await matchTally(VIEWER, THREE_DAYS_AGO)).toStrictEqual({
+      runners: 4,
+      groups: { tops: 3, bottoms: 2, hands_head: 1 },
+      dialed: { runners: 2, groups: { tops: 2, bottoms: 1 } },
+    });
+  });
+
+  it("counts a runner dialed once, with only their dialed entry's kit", async () => {
+    const userId = await runner({ verdict: 0, categories: ["top"] });
+    await runner({ userId, verdict: 1, categories: ["shoes"] });
+
+    expect(await matchTally(VIEWER, THREE_DAYS_AGO)).toStrictEqual({
+      runners: 1,
+      groups: { tops: 1, shoes: 1 },
+      dialed: { runners: 1, groups: { tops: 1 } },
     });
   });
 
@@ -177,6 +226,7 @@ describe("matchTally: who matched", () => {
     expect(await matchTally(VIEWER, THREE_DAYS_AGO)).toStrictEqual({
       runners: 1,
       groups: {},
+      dialed: NOBODY_DIALED,
     });
   });
 
@@ -218,7 +268,11 @@ describe("matchTally: who matched", () => {
 
     const tally = await matchTally(VIEWER, THREE_DAYS_AGO);
 
-    expect(tally).toStrictEqual({ runners: 1, groups: { tops: 1 } });
+    expect(tally).toStrictEqual({
+      runners: 1,
+      groups: { tops: 1 },
+      dialed: NOBODY_DIALED,
+    });
   });
 
   it("finds a match behind two hundred newer entries that do not match", async () => {
@@ -280,8 +334,28 @@ describe("yourConditionsConsensus: the floor and the window", () => {
       status: "matched",
       runners: 5,
       groups: [{ group: "tops", runners: 5 }],
+      dialed: { runners: 0, groups: [] },
       windowDays: 3,
       band,
+    });
+  });
+
+  it("gives the sentence the dialed runners' groups, two runners or more to a group", async () => {
+    await runner({ verdict: 0, categories: ["top", "bottom"] });
+    await runner({ verdict: 0, categories: ["top", "bottom"] });
+    await runner({ verdict: 0, categories: ["top", "shoes"] });
+    await runners(2);
+    const result = await yourConditionsConsensus(VIEWER, NOW);
+    expect(result).toMatchObject({
+      status: "matched",
+      runners: 5,
+      dialed: {
+        runners: 3,
+        groups: [
+          { group: "tops", runners: 3 },
+          { group: "bottoms", runners: 2 },
+        ],
+      },
     });
   });
 
@@ -355,6 +429,7 @@ describe("the totals switch covers the block (U2 folded into count_in_totals)", 
     expect(await matchTally(VIEWER, THREE_DAYS_AGO)).toStrictEqual({
       runners: 4,
       groups: { tops: 4 },
+      dialed: NOBODY_DIALED,
     });
     expect(await yourConditionsConsensus(VIEWER, NOW)).toMatchObject({
       status: "too-few",

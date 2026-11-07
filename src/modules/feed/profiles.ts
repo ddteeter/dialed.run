@@ -17,6 +17,7 @@ import { coreDb } from "../../env";
 import { garmentNamesByIds } from "./garment-names";
 import { readInChunks } from "../../lib/chunked";
 import { bandLabel } from "../../lib/contracts/temperature";
+import { proseDayLabel } from "../../lib/dates";
 import { topByCount } from "../../lib/top-by-count";
 import { observationsForEntries, observationsForRuns } from "./conditions";
 import { recentOwnEntries } from "./own-history";
@@ -31,6 +32,8 @@ import { runnersVisibleTo } from "./runner-visibility";
 import { outfitEntriesSelect } from "./entries-query";
 import { runDayOf } from "./public-kit";
 import { columnWhere } from "../../lib/sql/keyed-read";
+import type { Units } from "../../lib/contracts";
+import type { Conditions } from "./conditions-shape";
 
 function db() {
   return coreDb();
@@ -53,10 +56,25 @@ export interface OwnProfile {
   runCount: number;
   coverage: CoverageBand[];
   mostWornItems: { itemId: string; name: string; wearCount: number }[];
+  /**
+  The viewer's own units: a recent row's distance and temperature are
+  measured values, rendered in them.
+  */
+  units: Units;
+  /**
+  G's Recent entries rows as round 35 #53b draws them: "Sat, Aug 29 · 8.2
+  mi" for the link, the tag and "41° · OVERCAST" on the meta line.
+  */
   recentEntries: {
     entryId: string;
     createdAt: number;
-    verdict: number | null;
+    /**
+    The run's day where it was run, as H dates the same rows (R-96).
+    */
+    day: string;
+    distanceM: number;
+    indoor: boolean;
+    conditions: Conditions | undefined;
     /**
     Hidden from everyone else pending review: G marks it as the card does
     (round 28 #6, round 29 #4).
@@ -103,6 +121,8 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
   const topItemIds = topByCount(wearCounts, 5).map(([itemId]) => itemId);
   const nameById = await garmentNamesByIds(database, topItemIds);
 
+  const recent = profileEntries.slice(0, RECENT_LIMIT);
+
   const [followers, following, runCount] = await Promise.all([
     followerCount(userId),
     followingCount(userId),
@@ -126,12 +146,24 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
       name: nameById.get(itemId) ?? "[removed item]",
       wearCount: wearCounts.get(itemId) ?? 0,
     })),
-    recentEntries: profileEntries.slice(0, RECENT_LIMIT).map((e) => ({
-      entryId: e.id,
-      createdAt: e.createdAt,
-      verdict: e.verdict,
-      underReview: isUnderReviewForAuthor({ ...e, userId }, userId),
-    })),
+    units,
+    recentEntries: recent.map((e) => {
+      const conditions = observations.get(e.runId);
+      return {
+        entryId: e.id,
+        createdAt: e.createdAt,
+        day: runDayOf(
+          e.startedAt,
+          conditions,
+          profile?.timeZone,
+          proseDayLabel,
+        ),
+        distanceM: e.distanceM,
+        indoor: e.indoor,
+        conditions,
+        underReview: isUnderReviewForAuthor({ ...e, userId }, userId),
+      };
+    }),
   };
 }
 

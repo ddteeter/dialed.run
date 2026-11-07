@@ -12,6 +12,9 @@ import type {
   WritableAudience,
 } from "../../../lib/contracts";
 import { clockLabel, dayLabel } from "../../../lib/dates";
+import { runsLabel } from "../../../lib/runs-label";
+import type { BandRun } from "../band-runs";
+import { BandRunsCard } from "./BandRunsCard";
 import {
   distanceNumber,
   formatDuration,
@@ -264,14 +267,16 @@ export function VerdictForm({
    * This runner's history in the run's band, both halves read over the
    * same in-band entries: `counts`, their verdicts keyed −2..+2, for the
    * line beneath the row (R-97); `signals`, each kit garment's record and
-   * the tag use, for the generated chips (round 20). Absent when the run
-   * has no conditions, and therefore no band — then the line is not drawn
-   * and the chips suggest no garment.
+   * the tag use, for the generated chips (round 20) and the rail's kit
+   * record; `runs`, the rail's band history (round 25). Absent when the
+   * run has no conditions, and therefore no band — then the line is not
+   * drawn, the chips suggest no garment and the rail shows the run alone.
    */
   history:
     | {
         counts: Readonly<Record<number, number>>;
         signals: BandSignals;
+        runs: readonly BandRun[];
       }
     | undefined;
   submitVerdict: (input: { data: Record<string, unknown> }) => Promise<unknown>;
@@ -422,7 +427,15 @@ export function VerdictForm({
 
   return (
     <FlowStep step={LOG_FLOW.verdict}>
-      <DeskSplit rail={<VerdictRail entry={entry} units={units} />}>
+      <DeskSplit
+        rail={
+          <VerdictRail
+            entry={entry}
+            units={units}
+            band={railBand(bandFloor, history)}
+          />
+        }
+      >
         <form
           ref={form.formRef}
           noValidate
@@ -680,17 +693,24 @@ function AudiencePicker({
 }
 
 /**
- * A3's rail at the desk (round 25): the run being judged and the kit worn
- * on it, read-only. *"The rail shows the kit being judged."*
+ * A3's rail at the desk (round 25): the run being judged, the kit worn on
+ * it with each piece's record in the band, and the band history beneath,
+ * read-only. *"The rail shows the kit being judged, with each piece's
+ * record in the band, above the same band history as A2."*
  *
- * The board also draws each piece's record in the band and the runner's
- * last runs there. Neither is loaded on this screen yet, so they wait for
- * a read of their own rather than a guess here.
+ * The records are the chips' own (`signals`), so the rail shows the
+ * record a suggested flag comes from. With no band — no conditions — the
+ * kit is listed alone and there is no history to show.
  */
 function VerdictRail({
   entry,
   units,
-}: Readonly<{ entry: Entry; units: Units }>): JSX.Element {
+  band,
+}: Readonly<{
+  entry: Entry;
+  units: Units;
+  band: RailBand | undefined;
+}>): JSX.Element {
   const zone = entry.conditions?.timeZone;
   const { conditions } = entry;
   const distance = `${distanceNumber(entry.distanceM, units.distance)} ${units.distance}`;
@@ -717,12 +737,76 @@ function VerdictRail({
       <RailCard title="The kit you’re judging">
         <ul className="m-0 flex list-none flex-col gap-1 p-0">
           {entry.items.map((item) => (
-            <li key={item.itemId} className="text-body font-semibold">
-              {item.name}
+            <li
+              key={item.itemId}
+              className="flex items-baseline justify-between gap-3"
+            >
+              <span className="text-body font-semibold">{item.name}</span>
+              {band === undefined ? undefined : (
+                <KitRecord
+                  record={band.signals.garments[item.itemId]}
+                  bandFloor={band.floor}
+                  units={units}
+                />
+              )}
             </li>
           ))}
         </ul>
       </RailCard>
+      {band === undefined || conditions === undefined ? undefined : (
+        <BandRunsCard
+          lead={() => "Before, in"}
+          bandFloor={band.floor}
+          precipMm={conditions.precipMm}
+          runs={band.runs}
+          units={units}
+        />
+      )}
     </>
+  );
+}
+
+/**
+The rail's band: its floor and the history read for it, or none without both.
+*/
+function railBand(
+  bandFloor: number | undefined,
+  history: { signals: BandSignals; runs: readonly BandRun[] } | undefined,
+): RailBand | undefined {
+  return bandFloor === undefined || history === undefined
+    ? undefined
+    : { floor: bandFloor, ...history };
+}
+
+interface RailBand {
+  floor: number;
+  signals: BandSignals;
+  runs: readonly BandRun[];
+}
+
+/**
+ * A piece's record in the band, as A3's rail draws it: "8/9 DIALED ·
+ * 38–46°", said "8 of 9 runs dialed in 38–46°". A piece not worn in the
+ * band before has no record to show, so the line is absent.
+ */
+function KitRecord({
+  record,
+  bandFloor,
+  units,
+}: Readonly<{
+  record: BandSignals["garments"][string] | undefined;
+  bandFloor: number;
+  units: Units;
+}>): JSX.Element | undefined {
+  if (record === undefined || record.total === 0) return;
+  const dialed = String(record.dialed);
+  const band = bandLabel(bandFloor, units.temp);
+  return (
+    <Mono step="xs" className="shrink-0 text-muted">
+      <Spoken
+        shown={`${dialed}/${String(record.total)} dialed · ${band}`}
+        said={`${dialed} of ${runsLabel(record.total)} dialed in ${band}`}
+      />
+    </Mono>
   );
 }

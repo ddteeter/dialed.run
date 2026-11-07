@@ -1,7 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
-import { outfitEntries } from "../../db/schema-core";
+import { outfitEntries, runs } from "../../db/schema-core";
 
 /**
  * A runner's own recent entries — the read behind every screen that
@@ -30,6 +30,13 @@ export interface OwnEntryRow {
   verdict: number | null;
   createdAt: number;
   moderationStatus: string;
+  /**
+  The run's own start, distance and indoor flag, for G's Recent entries
+  rows (round 35 #53b). Joined by the run's primary key: a lookup a row.
+  */
+  startedAt: number;
+  distanceM: number;
+  indoor: boolean;
 }
 
 export function recentOwnEntries(
@@ -46,8 +53,12 @@ export function recentOwnEntries(
       verdict: outfitEntries.verdict,
       createdAt: outfitEntries.createdAt,
       moderationStatus: outfitEntries.moderationStatus,
+      startedAt: runs.startedAt,
+      distanceM: runs.distanceM,
+      indoor: runs.indoor,
     })
     .from(outfitEntries)
+    .innerJoin(runs, eq(runs.id, outfitEntries.runId))
     .where(eq(outfitEntries.userId, userId))
     .orderBy(desc(outfitEntries.createdAt))
     .limit(HISTORY_LIMIT);

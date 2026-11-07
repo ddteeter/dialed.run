@@ -1,17 +1,20 @@
 import { Link } from "@tanstack/react-router";
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 
 import {
   uiGroupLabels,
   uiGroups,
+  type DistanceUnit,
   type TempUnit,
   type UiGroup,
 } from "../../../lib/contracts";
 import { formatTempRange } from "../../../lib/contracts/thermal";
+import { wholeDistanceNumber } from "../../../lib/contracts/measures";
 import { Bracketed, Icon, Mono, useListMotion } from "../../../ui";
 import { garmentLabel } from "../../../lib/garment-label";
-import { isPhotoBeingChecked } from "../photo-url";
+import { runsLabel } from "../../../lib/runs-label";
+import { isPhotoBeingChecked, photoUrlFor } from "../photo-url";
 import { filterViews, railCounts, worksAtSpan } from "../filters";
 import { closetSearch, type ClosetSearch } from "../inputs";
 import type { ClosetItemView, ClosetListing } from "../service";
@@ -84,15 +87,6 @@ function AddTile(): JSX.Element {
 }
 
 /**
- * One garment's tile.
- *
- * The tags ride the kicker — `[GENERIC]`, `[RETIRED]` — and a retired tile
- * is otherwise **the same tile, no dimming**: *"retired is a fact, not a
- * disabled state."* The kicker sits above the name on screen but after it
- * in the markup (`order-first`), so the link's accessible name still
- * starts with what the piece is called.
- */
-/**
  * A tile whose photo is being checked (R-69, round 27 #21) is tagged
  * `[CHECKING]`, as round 38 #64 amends `[ONLY YOU]`: it names a state, not
  * an audience, now that private means other runners (D-121). The brackets
@@ -102,43 +96,183 @@ function AddTile(): JSX.Element {
 export const CHECKING_NAME =
   "Being checked, other runners can't see this photo";
 
+/**
+ * The tile's photo (board C, round 27 #31b): full width at 4:5 with no
+ * fixed height, so the grid can reflow, and the hatch that means "no
+ * photo" everywhere when there is none. The tags ride it as board C's
+ * pills, top left. Decorative: the tile's link already names the piece.
+ */
+function TilePhoto({ view }: Readonly<{ view: ClosetItemView }>): JSX.Element {
+  const photo = photoUrlFor(view.item);
+  return (
+    <span
+      data-part="tile-photo"
+      data-state={photo === undefined ? "no-photo" : "photo"}
+      className={`relative order-first block aspect-4/5 w-full ${photo === undefined ? "photo-hatch" : "bg-photo"}`}
+    >
+      {photo === undefined ? undefined : (
+        <img
+          src={photo}
+          alt=""
+          className="absolute inset-0 size-full object-cover"
+        />
+      )}
+      <TileTags view={view} />
+    </span>
+  );
+}
+
+/**
+The tile's tags, `[GENERIC]`, `[RETIRED]` and `[CHECKING]`, as pills on its photo.
+*/
+function TileTags({
+  view,
+}: Readonly<{ view: ClosetItemView }>): JSX.Element | undefined {
+  const isChecking = isPhotoBeingChecked(view.item);
+  if (!isChecking && !view.isGeneric && !view.item.retired) return;
+  return (
+    <span
+      data-part="tile-tags"
+      className="absolute top-2 left-2 flex flex-wrap gap-1"
+    >
+      {view.isGeneric ? (
+        <TilePill>
+          <Bracketed step="xs">Generic</Bracketed>
+        </TilePill>
+      ) : undefined}
+      {view.item.retired ? (
+        <TilePill>
+          <Bracketed step="xs" className="font-semibold text-ink">
+            Retired
+          </Bracketed>
+        </TilePill>
+      ) : undefined}
+      {isChecking ? (
+        <TilePill part="checking-tag">
+          <span aria-hidden="true">
+            <Bracketed step="xs">Checking</Bracketed>
+          </span>
+          <span className="sr-only">{CHECKING_NAME}</span>
+        </TilePill>
+      ) : undefined}
+    </span>
+  );
+}
+
+/**
+One of board C's pills on a tile's photo: chalk ground, so it reads on any photo, muted unless its tag says otherwise.
+*/
+function TilePill({
+  part,
+  children,
+}: Readonly<{
+  part?: string;
+  children: ReactNode;
+}>): JSX.Element {
+  return (
+    <span
+      data-part={part}
+      className="rounded-pill bg-ground px-2 py-1 text-muted"
+    >
+      {children}
+    </span>
+  );
+}
+
+/**
+ * The tile's record (board C): how often the piece was dialed, then the
+ * range it works at and how far it has run. Drawn "8/9 DIALED", said "8
+ * of 9 runs dialed", as F's record line says it (a11y judgment audit,
+ * 2026-11-04). A piece never judged says so: "No runs yet" before its
+ * first run, "No verdict yet" after it. Mileage waits for a first mile.
+ */
+function TileRecord({
+  view,
+  tempUnit,
+  distanceUnit,
+}: Readonly<{
+  view: ClosetItemView;
+  tempUnit: TempUnit;
+  distanceUnit: DistanceUnit;
+}>): JSX.Element {
+  const summary = view.performance?.summary;
+  const miles =
+    summary === undefined || summary.mileageM === 0
+      ? undefined
+      : `${wholeDistanceNumber(summary.mileageM, distanceUnit)} ${distanceUnit}`;
+  return (
+    <>
+      <span data-part="tile-record" className="text-muted">
+        <Mono step="xs">
+          <DialedCount summary={summary} />
+        </Mono>
+      </span>
+      {/* **Muted, never teal.** T2: teal means *dialed* — a verdict — and
+          a garment's working range is not one. Board C draws the band line
+          in `--muted`, and round 16 says coverage is monochrome. */}
+      <span data-part="tile-range" className="text-muted">
+        <Bracketed step="xs">{tempLabel(view, tempUnit)}</Bracketed>
+        {miles === undefined ? undefined : (
+          <Mono step="xs">{` · ${miles}`}</Mono>
+        )}
+      </span>
+    </>
+  );
+}
+
+function DialedCount({
+  summary,
+}: Readonly<{
+  summary: NonNullable<ClosetItemView["performance"]>["summary"] | undefined;
+}>): JSX.Element {
+  if (summary === undefined) return <>No runs yet</>;
+  if (summary.verdictCount === 0) return <>No verdict yet</>;
+  const dialed = String(summary.dialedCount);
+  const judged = String(summary.verdictCount);
+  return (
+    <>
+      <span aria-hidden="true">{`${dialed}/${judged} dialed`}</span>
+      <span className="sr-only">{`${dialed} of ${runsLabel(summary.verdictCount)} dialed`}</span>
+    </>
+  );
+}
+
+/**
+ * One garment's tile, as board C draws it: the photo, then the name, the
+ * record, and the range with the mileage.
+ *
+ * A retired tile is otherwise **the same tile, no dimming**: *"retired is
+ * a fact, not a disabled state."* The photo sits above the name on screen
+ * but after it in the markup (`order-first`), so the link's accessible
+ * name still starts with what the piece is called. MOST DIALED and
+ * RETIRE?, the board's computed badges, wait with its sort (R46·109m).
+ */
 function Tile({
   view,
   tempUnit,
-}: Readonly<{ view: ClosetItemView; tempUnit: TempUnit }>): JSX.Element {
+  distanceUnit,
+}: Readonly<{
+  view: ClosetItemView;
+  tempUnit: TempUnit;
+  distanceUnit: DistanceUnit;
+}>): JSX.Element {
   return (
     <Link
       to="/closet/$itemId"
       params={{ itemId: view.item.id }}
-      className="target row-press flex h-full flex-col gap-1 rounded-tile border border-hairline bg-panel p-3 no-underline"
+      className="target row-press flex h-full flex-col overflow-hidden rounded-tile border border-hairline bg-panel no-underline"
     >
-      <span className="text-body font-semibold">{itemLabel(view)}</span>
-      {view.isGeneric || view.item.retired || isPhotoBeingChecked(view.item) ? (
-        <span className="order-first flex gap-2">
-          {view.isGeneric ? (
-            <Bracketed step="xs" className="text-muted">
-              Generic
-            </Bracketed>
-          ) : undefined}
-          {view.item.retired ? (
-            <Bracketed step="xs" className="font-semibold text-ink">
-              Retired
-            </Bracketed>
-          ) : undefined}
-          {isPhotoBeingChecked(view.item) ? (
-            <span data-part="checking-tag" className="text-muted">
-              <span aria-hidden="true">
-                <Bracketed step="xs">Checking</Bracketed>
-              </span>
-              <span className="sr-only">{CHECKING_NAME}</span>
-            </span>
-          ) : undefined}
+      <span className="flex flex-col gap-1 p-3">
+        <span data-part="tile-name" className="text-body font-semibold">
+          {itemLabel(view)}
         </span>
-      ) : undefined}
-      {/* **Muted, never teal.** T2: teal means *dialed* — a verdict — and
-          a garment's working range is not one. Board C draws the band line
-          in `--muted`, and round 16 says coverage is monochrome. */}
-      <Bracketed className="text-muted">{tempLabel(view, tempUnit)}</Bracketed>
+        <TileRecord
+          view={view}
+          tempUnit={tempUnit}
+          distanceUnit={distanceUnit}
+        />
+      </span>
+      <TilePhoto view={view} />
     </Link>
   );
 }
@@ -146,6 +280,7 @@ function Tile({
 interface TilesProps {
   items: readonly ClosetItemView[];
   tempUnit: TempUnit;
+  distanceUnit: DistanceUnit;
 }
 
 /**
@@ -157,7 +292,11 @@ interface TilesProps {
  * expressed as a move: the tile folds shut where it stood instead of
  * blinking out, and the rest reflow into the space.
  */
-function Tiles({ items, tempUnit }: Readonly<TilesProps>): JSX.Element {
+function Tiles({
+  items,
+  tempUnit,
+  distanceUnit,
+}: Readonly<TilesProps>): JSX.Element {
   const { shown, leaving, listRef } = useListMotion(items, itemKey);
   return (
     <ul
@@ -176,7 +315,7 @@ function Tiles({ items, tempUnit }: Readonly<TilesProps>): JSX.Element {
           className="collapsing-row"
           data-leaving={leaving.has(view.item.id) ? "true" : undefined}
         >
-          <Tile view={view} tempUnit={tempUnit} />
+          <Tile view={view} tempUnit={tempUnit} distanceUnit={distanceUnit} />
         </li>
       ))}
       <AddTile />
@@ -190,6 +329,10 @@ export interface ClosetGridProps {
   The runner's unit: every range on the screen is in it.
   */
   tempUnit: TempUnit;
+  /**
+  The runner's distance unit, for each tile's mileage.
+  */
+  distanceUnit: DistanceUnit;
   /**
   The rail's filters, as the route's search holds them.
   */
@@ -388,6 +531,7 @@ export function ClosetGrid({
   initialShowRetired = false,
   deleted,
   tempUnit,
+  distanceUnit,
   search: routed = NO_SEARCH,
   onSearch,
 }: Readonly<ClosetGridProps>) {
@@ -477,7 +621,11 @@ export function ClosetGrid({
         {screen.isFiltered && screen.visible.length === 0 ? (
           <NoMatches onClear={focus.arm} />
         ) : undefined}
-        <Tiles items={screen.visible} tempUnit={tempUnit} />
+        <Tiles
+          items={screen.visible}
+          tempUnit={tempUnit}
+          distanceUnit={distanceUnit}
+        />
       </div>
     </div>
   );

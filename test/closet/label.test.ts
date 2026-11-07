@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { garmentLabel } from "../../src/lib/garment-label";
-import { runsLabel } from "../../src/modules/closet/label";
+import { runsLabel } from "../../src/lib/runs-label";
 
 /**
  * The stored `brand` column is nullable and `null` is the value under

@@ -4,11 +4,13 @@
  * correction, round 26 item 1; a Garmin TCX of many laps read as the whole
  * run, R-130; a paused TCX read at its elapsed time, D-111),
  * A2 (the picker from the first frame, a kit required, the outfit photo
- * through W3's blur), S1 (the Strava reminder a matching upload clears,
- * round 25), A3 (Noted, with the band the corrected run now has), R1 (manual entry going
- * on to the outfit, R-102), R (the runs list's badges) and R2b (setting
- * conditions by picking a band and a sky, never typing a number — round 26
- * item 2) and deleting a run from its own page (task 128 · SAF-3).
+ * through W3's blur, and at the desk the rail's band history, round 25),
+ * S1 (the Strava reminder a matching upload clears, round 25), A3 (Noted,
+ * with the band the corrected run now has, and the desk rail's band
+ * history), R1 (manual entry going on to the outfit, R-102), R (the runs
+ * list's badges) and R2b (setting conditions by picking a band and a sky,
+ * never typing a number — round 26 item 2) and deleting a run from its
+ * own page (task 128 · SAF-3).
  *
  * Journey: open the closet -> launch the log flow from the bar -> drop a
  * GPX file and watch it read in place -> A2: try Next with nothing chosen,
@@ -312,6 +314,18 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
       page.getByRole("link", { name: /^Notifications\b/u }).first(),
     ).toBeVisible();
     await expect(page.getByText(/0 pieces/u)).toBeVisible();
+    // Round 25's A2 rail at the desk: the run, then the band history behind
+    // MOST LIKELY, fetched once the screen is drawn. This runner has none
+    // in the band yet, so the heading names the band over DS2's words
+    // (round 47 #118).
+    await scene(page, "A2 at the desk · the band history in the rail");
+    const kitRail = page.locator('[data-part="rail"]');
+    await expect(
+      kitRail.getByRole("heading", {
+        name: /^In -?\d+–-?\d+° (dry|damp|wet)$/u,
+      }),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(kitRail).toContainText("No runs in this band yet.");
     await scene(page, "A kit is required — the button never relabels");
     await page.getByRole("button", { name: "Next — did it work?" }).click();
     await expect(page.getByText("Pick at least one piece.")).toBeVisible();
@@ -350,6 +364,17 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
     await expect(
       page.getByRole("link", { name: /^Notifications\b/u }).first(),
     ).toBeVisible();
+    // Round 25's A3 rail: the kit being judged, with no record line for a
+    // piece never worn in the band before (round 47 #119), over the same
+    // band history as A2.
+    const verdictRail = page.locator('[data-part="rail"]');
+    await expect(
+      verdictRail.getByRole("heading", {
+        name: /^Before, in -?\d+–-?\d+° (dry|damp|wet)$/u,
+      }),
+    ).toBeVisible();
+    await expect(verdictRail).toContainText("No runs in this band yet.");
+    await expect(verdictRail).not.toContainText("dialed ·");
     await page.getByRole("button", { name: "Dialed" }).click();
     await page.getByRole("button", { name: "Log it" }).click();
     const noted = page.locator('[data-slot="noted"]');

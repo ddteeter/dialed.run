@@ -22,6 +22,7 @@ import { z } from "zod";
 import type { AttachContext } from "../../src/modules/feed/attach-context";
 import { AttachKit } from "../../src/modules/feed/components/AttachKit";
 import type { PickerGroup } from "../../src/modules/feed/picker";
+import type { BandRun } from "../../src/modules/feed/band-runs";
 import type { PrefillCandidate } from "../../src/modules/feed/prefill";
 import { TERMS_NOT_ACCEPTED_CODE } from "../../src/lib/auth-signal";
 import type { PhotoStep } from "../../src/ui";
@@ -163,6 +164,9 @@ interface Overrides {
   uploadPhoto?: (input: { data: FormData }) => Promise<{ key: string }>;
   renderPhotoStep?: PhotoStep;
   units?: { temp: "f" | "c"; distance: "mi" | "km" };
+  bandRunsFor?: (input: {
+    data: { bandFloorC: number };
+  }) => Promise<readonly BandRun[]>;
 }
 
 function attach(overrides: Overrides = {}) {
@@ -172,6 +176,7 @@ function attach(overrides: Overrides = {}) {
       runId="01RUN"
       context={overrides.context ?? context()}
       prefillFor={overrides.prefillFor ?? (() => Promise.resolve(undefined))}
+      bandRunsFor={overrides.bandRunsFor ?? (() => Promise.resolve([]))}
       attachKit={
         overrides.attachKit ?? (() => Promise.resolve({ entryId: "01NEW" }))
       }
@@ -335,6 +340,123 @@ describe("AttachKit: the rail at the desk (round 25)", () => {
   });
 });
 
+describe("AttachKit: the rail's band history (round 25)", () => {
+  const evidence: BandRun[] = [
+    {
+      id: "01OLD1",
+      runId: "01RUN1",
+      day: "Aug 14",
+      conditions: { ...conditions, tempC: 6 },
+      verdict: 0,
+      pieces: [
+        { itemId: "01P0", name: "Harrier" },
+        { itemId: "01P1", name: "Bandit split" },
+      ],
+    },
+    {
+      id: "01OLD2",
+      runId: "01RUN2",
+      day: "Aug 3",
+      conditions: { ...conditions, tempC: 4, precipMm: 4 },
+      verdict: -1,
+      pieces: [{ itemId: "01P0", name: "Green L/S crew" }],
+    },
+  ];
+
+  it("asks for the run's own band once the screen is drawn, and lists what came", async () => {
+    const bandRunsFor = vi.fn(() => Promise.resolve(evidence));
+    await renderWithRouter(attach({ bandRunsFor }));
+
+    const heading = await within(rail()).findByRole("heading", {
+      name: "Last 2 in 32–41° damp",
+    });
+    // Feels 3°C: the 0–5° band.
+    expect(bandRunsFor).toHaveBeenCalledWith({ data: { bandFloorC: 0 } });
+    const card = heading.closest("section");
+    const rows = card?.querySelectorAll("[data-part='band-run']") ?? [];
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent("Aug 14");
+    expect(rows[0]).toHaveTextContent("43° damp");
+    expect(rows[1]).toHaveTextContent("39° wet");
+    expect(rows[1]).toHaveTextContent("Green L/S crew");
+    expect(card?.querySelector("a, button, input")).toBeNull();
+  });
+
+  it("names the band without a count when nothing is in it yet", async () => {
+    await renderWithRouter(attach({ bandRunsFor: () => Promise.resolve([]) }));
+
+    expect(
+      await within(rail()).findByRole("heading", { name: "In 32–41° damp" }),
+    ).toBeInTheDocument();
+    expect(rail()).toHaveTextContent("No runs in this band yet.");
+  });
+
+  it("keeps the rail to the run while the history is on its way", async () => {
+    await renderWithRouter(
+      attach({ bandRunsFor: () => neverSettles<readonly BandRun[]>() }),
+    );
+    expect(within(rail()).getAllByRole("heading")).toHaveLength(1);
+  });
+
+  it("keeps the rail to the run when the history cannot be read (law 5)", async () => {
+    const bandRunsFor = vi.fn(() => Promise.reject(new Error("D1 down")));
+    await renderWithRouter(attach({ bandRunsFor }));
+    await waitFor(() => {
+      expect(bandRunsFor).toHaveBeenCalled();
+    });
+    expect(within(rail()).getAllByRole("heading")).toHaveLength(1);
+    expect(rail()).not.toHaveTextContent("No runs in this band yet.");
+  });
+
+  it("asks again, and names the new band, when the run's conditions change", async () => {
+    const user = userEvent.setup();
+    const bandRunsFor = vi.fn(() => Promise.resolve(evidence));
+    function Switching() {
+      const [shown, setShown] = useState(context());
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              setShown(
+                context({
+                  conditions: { ...conditions, feelsLikeC: 12, precipMm: 0 },
+                }),
+              );
+            }}
+          >
+            Warmer run
+          </button>
+          {attach({ context: shown, bandRunsFor })}
+        </>
+      );
+    }
+    await renderWithRouter(<Switching />);
+    await within(rail()).findByRole("heading", {
+      name: "Last 2 in 32–41° damp",
+    });
+
+    await user.click(screen.getByRole("button", { name: "Warmer run" }));
+
+    // Feels 12°C: the 10–15° band, and a dry sky.
+    expect(
+      await within(rail()).findByRole("heading", {
+        name: "Last 2 in 50–59° dry",
+      }),
+    ).toBeInTheDocument();
+    expect(bandRunsFor).toHaveBeenLastCalledWith({ data: { bandFloorC: 10 } });
+  });
+
+  it("asks nothing for a run with no conditions, which has no band", async () => {
+    const bandRunsFor = vi.fn(() => Promise.resolve(evidence));
+    await renderWithRouter(
+      attach({ context: context({ conditions: undefined }), bandRunsFor }),
+    );
+    expect(bandRunsFor).not.toHaveBeenCalled();
+    expect(within(rail()).getAllByRole("heading")).toHaveLength(1);
+  });
+});
+
 describe("AttachKit: most likely", () => {
   it("waits on the suggestion alone, with the picker already live", async () => {
     // Round 22, "A2 Waiting": only most-likely changes. The picker, the
@@ -398,6 +520,7 @@ describe("AttachKit: most likely", () => {
             runId={runId}
             context={context()}
             prefillFor={prefillFor}
+            bandRunsFor={() => Promise.resolve([])}
             attachKit={() => Promise.resolve({ entryId: "01NEW" })}
             uploadPhoto={() => Promise.resolve({ key: "k" })}
           />

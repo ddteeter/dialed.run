@@ -104,12 +104,12 @@ function spanFill(): HTMLElement {
 }
 
 describe("ClosetFilters: GROUP", () => {
-  it("lists All and the six groups with their counts, a missing one at 0", async () => {
+  it("lists All and the groups with their counts, and leaves out a group holding nothing (round 47 #112b)", async () => {
     await rail();
     expect(link(/^All/)).toHaveTextContent("All 47");
     expect(link(/^Tops/)).toHaveTextContent("Tops 14");
     expect(link(/^Hands \/ head/)).toHaveTextContent("Hands / head 8");
-    expect(link(/^Socks \/ extras/)).toHaveTextContent("Socks / extras 0");
+    expect(screen.queryByRole("link", { name: /^Socks \/ extras/ })).toBeNull();
   });
 
   it("marks All current with no group set, and only it", async () => {

@@ -973,6 +973,52 @@ _Nothing from 99 on is open: round 45 answered the last of it._
        link.
        **The ask:** confirm, or draw the ones that should differ.
 
+113. **What lane 178 built where the boards are silent (design 178).**
+     **ANSWERED by round 47 (113–119): every guess confirmed.** The E2
+     histogram is cut from v1, and the summary sentence is built to #114's
+     rule. Tiles read `NO RUNS YET`, give no mileage at 0 mi, bracket every
+     range and are complete without badges. An empty band history names
+     the band over "No runs in this band yet.", and a piece with no record
+     in the band has no line. 112b changed, and lane 178 built it: a group
+     holding nothing leaves the rail, and All always shows.
+     G's Recent entries rows (round 35 #53b), the closet tile (board C,
+     round 27 #31b) and the A2/A3 desk rails' band history (round 25).
+     - **G's meta line** is the card strip's own cell: the range the run
+       covered (R-5), `41–43° · Overcast` (teal, as conditions always are),
+       `Indoor`, or nothing. The board drew a single temperature, in muted.
+       The verdict is no longer on the row, because the board drops it.
+     - **A tile never judged** says `NO RUNS YET` before its first run and
+       `NO VERDICT YET` after it, F's own words. Mileage is left off at 0.
+       Every tile's range stays bracketed. Board C brackets `[38–46°]` and
+       not `62–78°`, and nothing says why. The tags (`[GENERIC]`,
+       `[RETIRED]`, `[CHECKING]`) are pills on the photo, as C draws
+       `[GENERIC]`. MOST DIALED / RETIRE? wait with the sort (R46·109m).
+     - **The rails' band is the temperature band alone**, the same band as
+       A3's history line and chips. The board's rows mix `43° DAMP` and
+       `40° RAIN` under `IN 38–46° DAMP`, so the heading's sky is this
+       run's. Each row says its own sky in the app's precipitation words
+       (`dry`, `damp`, `wet`), and its verdict is `VerdictBadge`, so it is
+       teal for dialed and hairline otherwise, not the board's pink and grey.
+     - **With nothing in the band yet**, A2 reads `IN 38–46° DAMP` and A3
+       `BEFORE, IN 38–46° DAMP`, over DS2's "No runs in this band yet.". With
+       fewer than three, A2 counts what there is: `LAST 2 IN …`.
+     - **A3's kit record** is absent for a piece never worn in the band,
+       never `0/0`. It is said "8 of 9 runs dialed in 38–46°".
+       **The ask:** confirm, or draw the ones that should differ.
+
+<!-- Numbered 137: rounds 47 and 48 filed 112–136. A list break, so Prettier keeps the number. -->
+
+137. **E2-lite's summary sentence, where round 47 #114 is silent (design
+     178).** The bars count closet groups, not garment types, so the
+     sentence names groups as the bars do, in lower case. The Feed board's
+     "long sleeve and shorts" reads "tops and bottoms" in the build. The
+     first word that has groups leads with "got it right in" and each one
+     after it says "added", in the order All, Most, Some: "All got it right
+     in bottoms. Most added tops. Some added shoes." Three or more groups
+     take a serial comma: "tops, bottoms, and socks / extras". The sentence
+     sits under the bars, on a hairline, before the weather credit.
+     **The ask:** confirm, or give the wording.
+
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
 
 ## Answered in round 46 (imported 2026-11-06)

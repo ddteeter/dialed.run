@@ -15,6 +15,7 @@ import type {
 import type { SearchResult } from "../../src/modules/feed/search";
 import { renderFeedScreen } from "./feed-fixtures";
 import { queryWeatherCredit } from "../ui/weather-credit";
+import { pointConditions } from "../feed/conditions-fixture";
 
 /**
  * G, H and runner search, as round 22 draws them with only what v1
@@ -36,6 +37,7 @@ function ownProfile(overrides: Partial<OwnProfileData> = {}): OwnProfileData {
     runCount: 0,
     coverage: [],
     mostWornItems: [],
+    units: { temp: "f", distance: "mi" },
     recentEntries: [],
     ...overrides,
   };
@@ -51,6 +53,33 @@ function otherProfile(
     recentPublicEntries: [],
     ...overrides,
   };
+}
+
+/**
+A recent row: the day and distance its link names, and how it went.
+*/
+function recent(
+  overrides: Partial<OwnProfileData["recentEntries"][number]> = {},
+): OwnProfileData["recentEntries"][number] {
+  return {
+    entryId: "01E",
+    createdAt: 1,
+    day: "Sat, Aug 29",
+    distanceM: 13_196.6,
+    indoor: false,
+    conditions: undefined,
+    underReview: false,
+    ...overrides,
+  };
+}
+
+function recentRow(entryId: string): HTMLElement {
+  const row = screen
+    .getAllByRole("link")
+    .find((link) => link.getAttribute("href") === `/feed/entry/${entryId}`)
+    ?.closest("li");
+  if (!row) throw new Error(`no recent row for ${entryId}`);
+  return row;
 }
 
 function part(name: string): HTMLElement | null {
@@ -356,7 +385,7 @@ describe("OwnProfile (G): past day one", () => {
     expect(screen.getByText("Over-dressed")).toBeVisible();
   });
 
-  it("lists the most-worn pieces and links the recent entries", async () => {
+  it("lists the most-worn pieces, and names each recent entry by its day and distance (round 35 #53b)", async () => {
     await renderFeedScreen(
       <OwnProfile
         confirmBand={undefined}
@@ -364,28 +393,110 @@ describe("OwnProfile (G): past day one", () => {
           runCount: 2,
           mostWornItems: [{ itemId: "01A", name: "Houdini", wearCount: 4 }],
           recentEntries: [
-            {
-              entryId: "01E",
-              createdAt: 1,
-              verdict: NOTHING,
-              underReview: false,
-            },
-            { entryId: "01F", createdAt: 2, verdict: 0, underReview: false },
+            recent(),
+            recent({
+              entryId: "01F",
+              day: "Thu, Aug 27",
+              distanceM: 8046.72,
+            }),
           ],
         })}
       />,
     );
-    expect(screen.getByText("Houdini").closest("li")).toHaveTextContent(
-      "Houdini[4]",
+    const worn = screen.getByText("Houdini").closest("li");
+    expect(worn).toHaveTextContent("Houdini[4]");
+    // Drawn, not said: a screen reader hears "4", never "left bracket".
+    expect(
+      [...(worn?.querySelectorAll("[aria-hidden='true']") ?? [])].map(
+        (mark) => mark.textContent,
+      ),
+    ).toStrictEqual(["[", "]"]);
+    expect(
+      screen.getByRole("link", { name: "Sat, Aug 29 · 8.2 mi" }),
+    ).toHaveAttribute("href", "/feed/entry/01E");
+    expect(
+      screen.getByRole("link", { name: "Thu, Aug 27 · 5.0 mi" }),
+    ).toHaveAttribute("href", "/feed/entry/01F");
+    // No tag and no conditions: no meta line at all, never an empty one.
+    expect(part("entry-meta")).toBeNull();
+    expect(document.querySelector('[data-part="review-tag"]')).toBeNull();
+  });
+
+  it("measures a recent entry in the runner's own units", async () => {
+    await renderFeedScreen(
+      <OwnProfile
+        confirmBand={undefined}
+        profile={ownProfile({
+          runCount: 1,
+          units: { temp: "c", distance: "km" },
+          recentEntries: [
+            recent({
+              conditions: pointConditions({
+                tempC: 5,
+                feelsLikeC: 3,
+                condition: "Overcast",
+              }),
+            }),
+          ],
+        })}
+      />,
     );
     expect(
-      screen.getByRole("link", { name: "No verdict yet" }),
-    ).toHaveAttribute("href", "/feed/entry/01E");
-    expect(screen.getByRole("link", { name: "Entry" })).toHaveAttribute(
-      "href",
-      "/feed/entry/01F",
+      screen.getByRole("link", { name: "Sat, Aug 29 · 13.2 km" }),
+    ).toBeVisible();
+    expect(part("entry-meta")).toHaveTextContent("5° · Overcast");
+  });
+
+  it("puts the conditions on the meta line, outside the link", async () => {
+    await renderFeedScreen(
+      <OwnProfile
+        confirmBand={undefined}
+        profile={ownProfile({
+          runCount: 1,
+          recentEntries: [
+            recent({
+              conditions: pointConditions({
+                tempC: 5,
+                feelsLikeC: 3,
+                condition: "Overcast",
+              }),
+            }),
+          ],
+        })}
+      />,
     );
-    expect(document.querySelector('[data-part="review-tag"]')).toBeNull();
+    const link = screen.getByRole("link", { name: "Sat, Aug 29 · 8.2 mi" });
+    const meta = part("entry-meta");
+    expect(meta).toHaveTextContent("41° · Overcast");
+    expect(link.nextElementSibling).toBe(meta);
+    expect(link).not.toContainElement(meta);
+  });
+
+  it("carries the tag alone on the meta line when there are no conditions", async () => {
+    await renderFeedScreen(
+      <OwnProfile
+        confirmBand={undefined}
+        profile={ownProfile({
+          runCount: 1,
+          recentEntries: [recent({ underReview: true })],
+        })}
+      />,
+    );
+    expect(part("entry-meta")?.children).toHaveLength(1);
+    expect(part("entry-meta")?.firstElementChild).toBe(part("review-tag"));
+  });
+
+  it("says Indoor for an indoor run with no conditions", async () => {
+    await renderFeedScreen(
+      <OwnProfile
+        confirmBand={undefined}
+        profile={ownProfile({
+          runCount: 1,
+          recentEntries: [recent({ indoor: true })],
+        })}
+      />,
+    );
+    expect(within(recentRow("01E")).getByText("Indoor")).toBeVisible();
   });
 
   it("marks a recent entry under review with the card's tag, first on the meta line and outside the link (round 35 #53b)", async () => {
@@ -395,19 +506,23 @@ describe("OwnProfile (G): past day one", () => {
         profile={ownProfile({
           runCount: 1,
           recentEntries: [
-            { entryId: "01E", createdAt: 1, verdict: 0, underReview: true },
+            recent({
+              underReview: true,
+              conditions: pointConditions({ tempC: 5, feelsLikeC: 3 }),
+            }),
           ],
         })}
       />,
     );
     // The link's name stays the entry's label; the tag is read once.
-    const link = screen.getByRole("link", { name: "Entry" });
+    const link = screen.getByRole("link", { name: "Sat, Aug 29 · 8.2 mi" });
     expect(link).toHaveAttribute("href", "/feed/entry/01E");
     const tag = part("review-tag");
     expect(tag).toHaveTextContent("Under review, other runners can't see this");
     expect(link).not.toContainElement(tag);
     const meta = part("entry-meta");
     expect(meta?.firstElementChild).toBe(tag);
+    expect(meta).toHaveTextContent("41° · clear");
     expect(link.nextElementSibling).toBe(meta);
   });
 });

@@ -12,7 +12,9 @@
  * E's shop page with what came of it, design 163), design-deltas
  * 104 (a select's ▾), R-176 (a shortened link refused at F's save,
  * design 171) and R-94 (C's rail: GROUP, WORKS AT, COVERAGE, and the
- * phone's chips, design 174) — one journey, one video.
+ * phone's chips, design 174), and the tile's photo, record and range
+ * with the rail's empty groups left out (round 27 #31b, round 47
+ * #112b and #115-117) — one journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
@@ -429,6 +431,23 @@ test("add garments with product identity -> detail in round 22's order -> retire
     page.getByRole("link", { name: /Patagonia Houdini Jacket/ }),
   ).toBeVisible();
 
+  // Board C's tile (round 27 #31b, round 47 #115-117): the photo's place
+  // at 4:5, hatched while there is none, then the name, the record and
+  // the bracketed range. Never worn: NO RUNS YET, and no mileage.
+  await scene(page, "C · each tile: its photo's place, the name, the record");
+  const pegasus = page.getByRole("link", { name: /Nike Pegasus 41/ });
+  await expect(pegasus.locator("[data-part='tile-photo']")).toHaveAttribute(
+    "data-state",
+    "no-photo",
+  );
+  await expect(pegasus.locator("[data-part='tile-record']")).toHaveText(
+    "No runs yet",
+    { ignoreCase: true },
+  );
+  await expect(pegasus.locator("[data-part='tile-range']")).toHaveText(
+    /^\[[^\]]+\]$/u,
+  );
+
   // ---- R-94 · C's rail: GROUP, WORKS AT, COVERAGE --------------------------
   // Round 16's three groups beside the grid at desk, whole. Every value is
   // a link to the closet with the search changed, and the counts are the
@@ -442,6 +461,12 @@ test("add garments with product identity -> detail in round 22's order -> retire
   );
   await expect(filters.getByRole("button", { name: /^Untested/ })).toHaveText(
     /Untested\s*2/u,
+  );
+  // Round 47 #112b: a group the closet holds nothing in is left out, and
+  // All always shows. Two pieces, shoes and an outer: two groups.
+  await expect(filters.getByRole("link", { name: /^Tops/ })).toHaveCount(0);
+  await expect(filters.getByRole("link", { name: /^Outer/ })).toHaveText(
+    "Outer 1",
   );
 
   await scene(page, "C · GROUP narrows the grid, and the heading names it");

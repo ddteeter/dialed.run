@@ -168,9 +168,11 @@ function FilterGroup({
 }
 
 /**
- * GROUP: All, then the six in screen C's order, each with its count. A
- * group the closet holds nothing in still shows, at 0, so the list does
- * not change shape as pieces come and go.
+ * GROUP: All, then the groups in screen C's order, each with its count.
+ * A group the closet holds nothing in is left out, of the rail and of the
+ * chip's control alike, and All always shows (round 47 #112b, which
+ * changed #349's 0 rows). The counts ignore the other filters, so a group
+ * goes only when the runner owns nothing in it.
  */
 function groupOptions(
   search: ClosetSearch,
@@ -184,12 +186,14 @@ function groupOptions(
       isCurrent: search.group === undefined,
       search: unset,
     },
-    ...uiGroups.map((group: UiGroup) => ({
-      label: uiGroupLabels[group],
-      count: counts.groups.get(group) ?? 0,
-      isCurrent: search.group === group,
-      search: { ...unset, group },
-    })),
+    ...uiGroups
+      .map((group: UiGroup) => ({
+        label: uiGroupLabels[group],
+        count: counts.groups.get(group) ?? 0,
+        isCurrent: search.group === group,
+        search: { ...unset, group },
+      }))
+      .filter((option) => option.count > 0),
   ];
 }
 

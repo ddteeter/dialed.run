@@ -37,6 +37,7 @@ function ClosetPage() {
       <ClosetGrid
         listing={listing}
         tempUnit={units.temp}
+        distanceUnit={units.distance}
         initialShowRetired={search.retired}
         search={search}
         // The rail once hydrated: its whole next search.

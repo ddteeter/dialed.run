@@ -55,6 +55,7 @@ function ownProfile(overrides: Partial<OwnProfileData> = {}): OwnProfileData {
     runCount: 0,
     coverage: [],
     mostWornItems: [],
+    units: { temp: "f", distance: "mi" },
     recentEntries: [],
     ...overrides,
   };

@@ -9,7 +9,7 @@ import {
   Sheet,
 } from "../../../ui";
 import type { ControlAction } from "../../../ui";
-import { runsLabel } from "../label";
+import { runsLabel } from "../../../lib/runs-label";
 
 /**
  * What a delete takes and what it leaves, as round 26 #3 lists them

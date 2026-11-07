@@ -21,7 +21,7 @@ import type { PhotoStep } from "../../../ui";
 import { ProductLink } from "../../../ui/ProductLink";
 import { garmentLabel } from "../../../lib/garment-label";
 import { isPhotoBeingChecked, photoUrlFor } from "../photo-url";
-import { runsLabel } from "../label";
+import { runsLabel } from "../../../lib/runs-label";
 import { retiredLabel } from "../retired-label";
 import { kindLabel, typeOf } from "../type-labels";
 import { useRunnerZone } from "./use-runner-zone";

@@ -10,7 +10,11 @@ import {
   WeatherAttribution,
 } from "../../../ui";
 import type { VerdictKind } from "../../../ui";
+import { distanceNumber } from "../../../lib/contracts/measures";
+import type { Units } from "../../../lib/contracts";
 import { bandVerdict } from "../coverage";
+import { stripConditions } from "../strip";
+import { ConditionsCell } from "./ConditionsCell";
 import type { ownProfile } from "../profiles";
 import { BracketHeadline } from "./BracketHeadline";
 import { Avatar } from "./Avatar";
@@ -123,31 +127,22 @@ export function OwnProfile({
                 className="flex items-center justify-between text-body"
               >
                 <span>{item.name}</span>
-                <Mono className="text-muted">[{String(item.wearCount)}]</Mono>
+                {/* The brackets are drawn, not said: `Bracketed` hides them,
+                    so the count is read as its number (PR#286-1). */}
+                <Bracketed className="text-muted">
+                  {String(item.wearCount)}
+                </Bracketed>
               </li>
             )}
           </ListSection>
 
           <ListSection title="Recent entries" items={profile.recentEntries}>
             {(entry) => (
-              <li key={entry.entryId} className="flex flex-col">
-                <Link
-                  to="/feed/entry/$entryId"
-                  params={{ entryId: entry.entryId }}
-                  className="target inline-flex items-center text-body font-semibold text-ink no-underline"
-                >
-                  {entry.verdict === null ? "No verdict yet" : "Entry"}
-                </Link>
-                {/* The card's tag, here too (round 28 #6), first on the
-                    row's meta line and outside the link (round 35 #53b):
-                    the link's name stays the entry's label, and the tag
-                    is read once, as its own text. */}
-                {entry.underReview ? (
-                  <span data-part="entry-meta">
-                    <UnderReview />
-                  </span>
-                ) : undefined}
-              </li>
+              <RecentEntryRow
+                key={entry.entryId}
+                entry={entry}
+                units={profile.units}
+              />
             )}
           </ListSection>
         </>
@@ -230,5 +225,38 @@ function SettingsLink() {
         &rsaquo;
       </span>
     </Link>
+  );
+}
+
+/**
+ * One of G's Recent entries, as round 35 #53b draws it: the link names the
+ * run — "Sat, Aug 29 · 8.2 mi" — and the meta line under it carries the
+ * card's tag first, outside the link (so the link's name stays the row's
+ * label and the tag is read once), then the conditions in the card strip's
+ * own cell: the range the run covered (R-5), or Indoor, or nothing.
+ */
+function RecentEntryRow({
+  entry,
+  units,
+}: Readonly<{ entry: Profile["recentEntries"][number]; units: Units }>) {
+  const conditions = stripConditions(entry.conditions, entry.indoor, units);
+  return (
+    <li className="flex flex-col gap-1 border-t border-hairline py-3">
+      <Link
+        to="/feed/entry/$entryId"
+        params={{ entryId: entry.entryId }}
+        className="target inline-flex items-center text-body font-semibold text-ink"
+      >
+        {`${entry.day} · ${distanceNumber(entry.distanceM, units.distance)} ${units.distance}`}
+      </Link>
+      {conditions !== undefined || entry.underReview ? (
+        <span data-part="entry-meta" className="flex flex-wrap gap-3">
+          {entry.underReview ? <UnderReview /> : undefined}
+          {conditions === undefined ? undefined : (
+            <ConditionsCell cell={conditions} />
+          )}
+        </span>
+      ) : undefined}
+    </li>
   );
 }

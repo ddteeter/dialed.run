@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { drizzle } from "drizzle-orm/d1";
 import { eq } from "drizzle-orm";
 
-import { outfitEntries, userProfiles } from "../../src/db/schema-core";
+import { outfitEntries, runs, userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { follow } from "../../src/modules/feed/follows";
 import { otherProfile, ownProfile } from "../../src/modules/feed/profiles";
@@ -495,7 +495,7 @@ describe("ownProfile: what it leaves out", () => {
     expect(profile.thermalLevel).toBeUndefined();
   });
 
-  it("shows the most recent twenty entries, and their verdicts", async () => {
+  it("shows the most recent twenty entries, newest first", async () => {
     const userId = await makeVerifiedUser();
     for (let index = 0; index < 21; index += 1) {
       await ratedEntry({
@@ -511,10 +511,76 @@ describe("ownProfile: what it leaves out", () => {
 
     expect(profile.entryCount).toBe(21);
     expect(profile.recentEntries).toHaveLength(20);
-    expect(profile.recentEntries[0]).toMatchObject({
-      createdAt: NOW,
+    expect(profile.recentEntries[0]).toMatchObject({ createdAt: NOW });
+  });
+
+  it("names each recent entry's run: its day, distance and conditions (round 35 #53b)", async () => {
+    const userId = await makeVerifiedUser();
+    const outdoors = await ratedEntry({
+      userId,
+      lat: 54.4,
+      feelsLikeC: 3,
       verdict: 0,
+      createdAt: NOW,
     });
+    // 02:00 UTC on Fri 5 Sep is still Thu 4 Sep in the runner's zone, and
+    // an indoor run has no observation to date it by.
+    const lateStart = 1_757_037_600;
+    const indoorRun = await makeRun({ userId, startedAt: lateStart });
+    await db()
+      .update(runs)
+      .set({ indoor: true, distanceM: 8046.72 })
+      .where(eq(runs.id, indoorRun));
+    const indoors = await makeEntry({
+      userId,
+      runId: indoorRun,
+      verdict: 0,
+      createdAt: NOW - DAY,
+      itemIds: [],
+      audience: "runners",
+    });
+    await db()
+      .update(userProfiles)
+      .set({ timeZone: "America/Chicago" })
+      .where(eq(userProfiles.userId, userId));
+
+    const profile = await ownProfile(userId);
+
+    expect(profile.units).toEqual({ temp: "f", distance: "mi" });
+    const [first, second] = profile.recentEntries;
+    expect(first).toMatchObject({
+      entryId: outdoors,
+      day: "Thu, Sep 4",
+      distanceM: 5000,
+      indoor: false,
+      conditions: { feelsLikeC: 3, tempC: 5, condition: "clear" },
+    });
+    expect(second).toMatchObject({
+      entryId: indoors,
+      day: "Thu, Sep 4",
+      distanceM: 8046.72,
+      indoor: true,
+    });
+    expect(second?.conditions).toBeUndefined();
+  });
+
+  it("dates a recent entry in UTC for a runner with no profile row", async () => {
+    // Nothing creates a profile row at signup (contracts §users).
+    const userId = await makeVerifiedUser();
+    const indoorRun = await makeRun({ userId, startedAt: 1_757_037_600 });
+    await makeEntry({
+      userId,
+      runId: indoorRun,
+      verdict: 0,
+      createdAt: NOW,
+      itemIds: [],
+      audience: "runners",
+    });
+    await db().delete(userProfiles).where(eq(userProfiles.userId, userId));
+
+    const profile = await ownProfile(userId);
+
+    expect(profile.recentEntries[0]?.day).toBe("Fri, Sep 5");
   });
 
   it("marks a recent entry reports have hidden, and only that one (round 28 #6)", async () => {

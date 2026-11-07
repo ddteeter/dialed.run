@@ -166,6 +166,11 @@ export type ConsensusResult =
       status: "matched";
       runners: number;
       groups: readonly ConsensusGroup[];
+      /**
+      The dialed runners among them and the groups they wore, two or more
+      to a group: what the summary sentence says (round 47 #114).
+      */
+      dialed: { runners: number; groups: readonly ConsensusGroup[] };
       windowDays: WindowDays;
       band: ConsensusBand;
     }
@@ -205,6 +210,13 @@ function isWithinConsensusBand(
 export interface MatchTally {
   runners: number;
   groups: Partial<Record<UiGroup, number>>;
+  /**
+   * The same count over the matched runners who called it dialed, for the
+   * summary sentence (round 47 #114): "Most got it right in …" is about
+   * the runners who got it right. A runner is dialed if any of their
+   * matching entries is, and their groups here are those entries' alone.
+   */
+  dialed: { runners: number; groups: Partial<Record<UiGroup, number>> };
 }
 
 export async function matchTally(
@@ -222,7 +234,7 @@ export async function matchTally(
   // filter, so the empty list comes out either way. The return saves the
   // cross-database walk.
   // Stryker disable next-line ConditionalExpression
-  if (entries.length === 0) return { runners: 0, groups: {} };
+  if (entries.length === 0) return noTally();
   // In code rather than SQL: the observations live in DIALED_WEATHER, a
   // separate database D1 cannot join to (CLAUDE.md, D1 discipline).
   const observations = await observationsForEntries(database, entries);
@@ -236,19 +248,46 @@ export async function matchTally(
       isWithinConsensusBand(observation, entry.verdict, viewer)
     );
   });
+  const dialed = matching.filter((entry) => entry.verdict === 0);
+  const worn = await wornByRunner(
+    database,
+    matching.map((entry) => entry.id),
+  );
+  const dialedIds = new Set(dialed.map((entry) => entry.id));
   return {
-    runners: new Set(matching.map((entry) => entry.userId)).size,
-    groups: await groupsByRunner(
-      database,
-      matching.map((entry) => entry.id),
-    ),
+    runners: runnersIn(matching),
+    groups: groupCounts(worn),
+    dialed: {
+      runners: runnersIn(dialed),
+      groups: groupCounts(worn.filter((row) => dialedIds.has(row.entryId))),
+    },
   };
 }
 
-async function groupsByRunner(
+/**
+Nobody matched: no runners, no groups, and nobody dialed.
+*/
+function noTally(): MatchTally {
+  return { runners: 0, groups: {}, dialed: { runners: 0, groups: {} } };
+}
+
+function runnersIn(entries: readonly { userId: string }[]): number {
+  return new Set(entries.map((entry) => entry.userId)).size;
+}
+
+interface WornRow {
+  entryId: string;
+  userId: string;
+  group: UiGroup;
+}
+
+/**
+Each garment worn on these entries, as its entry, its runner and its group.
+*/
+async function wornByRunner(
   database: DrizzleD1Database,
   entryIds: readonly string[],
-): Promise<Partial<Record<UiGroup, number>>> {
+): Promise<WornRow[]> {
   // Both reads in chunks: every matching entry in the window and every
   // garment worn on them, each past D1's 100-parameter cap for one
   // statement. The join
@@ -258,6 +297,7 @@ async function groupsByRunner(
     database
       .select({
         itemId: outfitEntryItems.itemId,
+        entryId: outfitEntryItems.entryId,
         userId: outfitEntries.userId,
       })
       .from(outfitEntryItems)
@@ -279,20 +319,32 @@ async function groupsByRunner(
     garments.map((g) => [g.id, uiGroupFor(g.category, g.layer)]),
   );
 
-  // One runner counts at most once per group, however many entries or
-  // items put them there.
-  const runnersByGroup = new Map<UiGroup, Set<string>>();
+  const worn: WornRow[] = [];
   for (const row of itemRows) {
     const group = groupByItemId.get(row.itemId);
     // Equivalent mutant: `itemIds` is built from these very rows, so every
     // one of them has a group unless its garment was deleted between the
-    // two reads. The guard is what keeps that race from writing an
-    // `undefined` key into the counts.
+    // two reads. The guard is what keeps that race from counting a group
+    // of `undefined`.
     // Stryker disable next-line ConditionalExpression
     if (!group) continue;
-    const runners = runnersByGroup.get(group) ?? new Set<string>();
+    worn.push({ entryId: row.entryId, userId: row.userId, group });
+  }
+  return worn;
+}
+
+/**
+ * How many runners wore each group. One runner counts at most once per
+ * group, however many entries or items put them there.
+ */
+function groupCounts(
+  worn: readonly WornRow[],
+): Partial<Record<UiGroup, number>> {
+  const runnersByGroup = new Map<UiGroup, Set<string>>();
+  for (const row of worn) {
+    const runners = runnersByGroup.get(row.group) ?? new Set<string>();
     runners.add(row.userId);
-    runnersByGroup.set(group, runners);
+    runnersByGroup.set(row.group, runners);
   }
   return Object.fromEntries(
     [...runnersByGroup].map(([group, runners]) => [group, runners.size]),
@@ -334,6 +386,10 @@ export async function yourConditionsConsensus(
         status: "matched",
         runners: tally.runners,
         groups: shownGroups(tally.groups),
+        dialed: {
+          runners: tally.dialed.runners,
+          groups: shownGroups(tally.dialed.groups),
+        },
         windowDays,
         band,
       };

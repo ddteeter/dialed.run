@@ -490,6 +490,11 @@
       "count": 1
     },
     {
+      "key": "src/modules/feed/band-runs.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; shownRunsAndKits reads each shown band run's start and its pieces' names for the A2/A3 desk rails",
+      "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline. Lane 178 (design 178, owner 2026-11-06): band-runs.ts's one read for the A2/A3 desk rails matched safety/removed-fingerprints.ts's.",
+      "count": 1
+    },
+    {
       "key": "src/modules/onboarding/profile.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- rhymes with feed/share-default.ts's defaultAudienceFor: same select-by-userId-with-limit-1-then-??-default shape, but a different column with a different default (not-yet-onboarded vs public-by-default) that will evolve on its own product timeline",
       "reason": "Pair A, both sides. See the matching grant on `modules/feed/share-default.ts`: same skeleton, different column, different default, different module, no shared home. Owner's call, 2026-09-21 (task 115).",
       "count": 1

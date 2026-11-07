@@ -39,6 +39,7 @@ import {
   verdictBandCounts,
 } from "./entries";
 import { bandSignalsForEntry } from "./band-signals";
+import { bandRunsInput, recentRunsInBand } from "./band-runs";
 import { followingFeed } from "./feed";
 import { follow, isFollowing, unfollow } from "./follows";
 import { photoUploadFrom, uploadPhoto } from "./photos";
@@ -133,6 +134,13 @@ export const bandSignalsQuery = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     return bandSignalsForEntry(userId, data.entryId, data.bandFloorC);
+  });
+
+export const bandRunsQuery = createServerFn({ method: "GET" })
+  .validator((input: unknown) => bandRunsInput.parse(input))
+  .handler(async ({ data }) => {
+    const userId = await requireUserId();
+    return recentRunsInBand(userId, data.bandFloorC, data.excludeEntryId);
   });
 
 export const itemBandWearStatQuery = createServerFn({ method: "GET" })

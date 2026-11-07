@@ -6,7 +6,7 @@ import { normalizeIdentity } from "../../../lib/normalize";
 import { formatTempRange } from "../../../lib/contracts/thermal";
 import { Mono, RailCard } from "../../../ui";
 import { garmentLabel } from "../../../lib/garment-label";
-import { runsLabel } from "../label";
+import { runsLabel } from "../../../lib/runs-label";
 import { photoUrlFor } from "../photo-url";
 import { retiredMonthLabel } from "../retired-label";
 import type { ClosetItemView } from "../service";

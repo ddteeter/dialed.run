@@ -5,6 +5,7 @@ import { getSession } from "../../modules/auth/functions";
 import { VerdictForm } from "../../modules/feed/components/VerdictForm";
 import { bandContextFor } from "../../modules/feed/route-decisions";
 import {
+  bandRunsQuery,
   bandSignalsQuery,
   entryDetailQuery,
   itemBandWearStatQuery,
@@ -54,15 +55,18 @@ export const Route = createFileRoute("/feed/verdict/$entryId")({
       countInTotals,
       bell,
       ...(await bandContextFor(entry, bandFloorC, async (bandFloor) => {
-        const [counts, signals] = await Promise.all([
+        const [counts, signals, runs] = await Promise.all([
           verdictBandCountsQuery({
             data: { bandFloorC: bandFloor, excludeEntryId: params.entryId },
           }),
           bandSignalsQuery({
             data: { bandFloorC: bandFloor, entryId: params.entryId },
           }),
+          bandRunsQuery({
+            data: { bandFloorC: bandFloor, excludeEntryId: params.entryId },
+          }),
         ]);
-        return { counts, signals };
+        return { counts, signals, runs };
       })),
     };
   },

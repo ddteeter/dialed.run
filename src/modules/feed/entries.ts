@@ -376,6 +376,18 @@ function hasVerdict(
 }
 
 /**
+ * One of a runner's verdicted entries in a band, with the conditions that
+ * placed it there: the A2/A3 rails show them (round 25), and reading them
+ * again would be a second cross-database walk for what this one had.
+ */
+export interface InBandEntry {
+  id: string;
+  runId: string;
+  verdict: number;
+  conditions: Conditions;
+}
+
+/**
  * The user's own verdicted entries whose runs fall in one 5°C band — the
  * walk every "your history in this band" answer is built on.
  *
@@ -391,7 +403,7 @@ export async function verdictedEntriesInBand(
   userId: string,
   targetBandFloorC: number,
   excludeEntryId?: string,
-): Promise<{ id: string; runId: string; verdict: number }[]> {
+): Promise<InBandEntry[]> {
   // Both filters belong in the WHERE clause, and not only to save a scan:
   // filtering after LIMIT 200 returns "the verdicted rows among the first
   // 200", not "the first 200 verdicted rows". A user whose 200 most recent
@@ -426,14 +438,16 @@ export async function verdictedEntriesInBand(
   // weather observation in DIALED_WEATHER, and DIALED_CORE cannot join
   // across databases (CLAUDE.md §D1 query discipline).
   const observations = await observationsForEntries(db(), verdicted);
-  return verdicted.filter((entry) => {
-    const observation = observations.get(entry.runId);
-    return (
-      observation !== undefined &&
-      bandFloorC(judgedFeelsLikeC(observation, entry.verdict)) ===
-        targetBandFloorC
-    );
-  });
+  const placed = verdicted.map((entry) => ({
+    ...entry,
+    conditions: observations.get(entry.runId),
+  }));
+  return placed.filter(
+    (entry): entry is InBandEntry =>
+      entry.conditions !== undefined &&
+      bandFloorC(judgedFeelsLikeC(entry.conditions, entry.verdict)) ===
+        targetBandFloorC,
+  );
 }
 
 /**

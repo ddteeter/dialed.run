@@ -12,6 +12,7 @@ import type { ReactElement, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { entryTags, verdictScale } from "../../src/lib/contracts";
+import type { BandRun } from "../../src/modules/feed/band-runs";
 import type { BandSignals } from "../../src/modules/feed/band-signals";
 import type { Units } from "../../src/lib/contracts";
 import { PUBLIC_PREVIEW_LINE } from "../../src/ui/audience";
@@ -186,6 +187,7 @@ function form(
     bandFloor?: number;
     bandCounts?: Readonly<Record<number, number>>;
     bandSignals?: BandSignals;
+    bandRuns?: readonly BandRun[];
     units?: Units;
     submitVerdict?: (input: {
       data: Record<string, unknown>;
@@ -202,11 +204,13 @@ function form(
       bandFloor={overrides.bandFloor}
       history={
         overrides.bandCounts === undefined &&
-        overrides.bandSignals === undefined
+        overrides.bandSignals === undefined &&
+        overrides.bandRuns === undefined
           ? undefined
           : {
               counts: overrides.bandCounts ?? {},
               signals: overrides.bandSignals ?? { garments: {}, tagUse: {} },
+              runs: overrides.bandRuns ?? [],
             }
       }
       units={overrides.units ?? { temp: "f", distance: "mi" }}
@@ -2134,5 +2138,181 @@ describe("VerdictForm: a lapsed session (Au7, D-155)", () => {
     await renderWithRouter(form());
 
     expect(carriedSince()).toEqual(["run"]);
+  });
+});
+
+/**
+The desk rail.
+*/
+function railOf(): HTMLElement {
+  const rail = document.querySelector<HTMLElement>("[data-part='rail']");
+  if (rail === null) throw new Error("no rail");
+  return rail;
+}
+
+/**
+A kit row in the desk rail, by the piece's name.
+*/
+function kitRow(name: string): HTMLElement {
+  const row = within(railOf()).getByText(name).closest("li");
+  if (row === null) throw new Error(`no kit row for ${name}`);
+  return row;
+}
+
+describe("VerdictForm: the rail's band record and history (round 25)", () => {
+  const damp = {
+    tempC: 5,
+    feelsLikeC: 2,
+    precipMm: 1,
+    condition: "light rain",
+    windKph: 14,
+    source: "visualcrossing" as const,
+    timeZone: "America/Chicago",
+    span: { minTempC: 5, maxTempC: 5, minFeelsLikeC: 2, maxFeelsLikeC: 2 },
+  };
+  const kit = [item("a", "Tracksmith Harrier"), item("b", "Bandit split")];
+  const earlier: BandRun[] = [
+    {
+      id: "01OLD1",
+      runId: "01RUN1",
+      day: "Aug 14",
+      conditions: { ...damp, tempC: 6 },
+      verdict: 0,
+      pieces: [
+        { itemId: "01P0", name: "Harrier" },
+        { itemId: "01P1", name: "Bandit split" },
+      ],
+    },
+    {
+      id: "01OLD2",
+      runId: "01RUN2",
+      day: "Aug 3",
+      conditions: { ...damp, tempC: 4, precipMm: 4 },
+      verdict: -1,
+      pieces: [],
+    },
+  ];
+
+  it("gives each piece its record in the band, drawn n/m and said in words", async () => {
+    await renderWithRouter(
+      form({
+        entry: { conditions: damp, items: kit },
+        bandFloor: 0,
+        bandSignals: {
+          garments: {
+            a: { total: 9, dialed: 8, colder: 1, warmer: 0 },
+            b: { total: 0, dialed: 0, colder: 0, warmer: 0 },
+          },
+          tagUse: {},
+        },
+      }),
+    );
+
+    const harrier = kitRow("Tracksmith Harrier");
+    expect(within(harrier).getByText("8/9 dialed · 32–41°")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(
+      within(harrier).getByText("8 of 9 runs dialed in 32–41°"),
+    ).toHaveClass("sr-only");
+    // Never worn here before: no record, rather than "0/0".
+    expect(kitRow("Bandit split")).toHaveTextContent(/^Bandit split$/);
+  });
+
+  it("says one run in the singular", async () => {
+    await renderWithRouter(
+      form({
+        entry: { conditions: damp, items: kit },
+        bandFloor: 0,
+        bandSignals: {
+          garments: { a: { total: 1, dialed: 1, colder: 0, warmer: 0 } },
+          tagUse: {},
+        },
+      }),
+    );
+    expect(
+      within(kitRow("Tracksmith Harrier")).getByText(
+        "1 of 1 run dialed in 32–41°",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("sets the band history under the kit: day, conditions, verdict and pieces", async () => {
+    await renderWithRouter(
+      form({
+        entry: { conditions: damp, items: kit },
+        bandFloor: 0,
+        bandRuns: earlier,
+      }),
+    );
+
+    const card = within(railOf())
+      .getByRole("heading", { name: "Before, in 32–41° damp" })
+      .closest("section");
+    if (card === null) throw new Error("no history card");
+    const rows = card.querySelectorAll("[data-part='band-run']");
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent("Aug 14");
+    expect(rows[0]).toHaveTextContent("43° damp");
+    expect(
+      rows[0]?.querySelector("[data-part='verdict-badge']"),
+    ).toHaveTextContent("Dialed");
+    expect(
+      [...(rows[0]?.querySelectorAll(":scope ul li") ?? [])].map(
+        (pill) => pill.textContent,
+      ),
+    ).toStrictEqual(["Harrier", "Bandit split"]);
+    // Each row's own sky, whatever the heading's.
+    expect(rows[1]).toHaveTextContent("39° wet");
+    expect(
+      rows[1]?.querySelector("[data-part='verdict-badge']"),
+    ).toHaveTextContent("A bit cold");
+    expect(rows[1]?.querySelector("ul")).toBeNull();
+    // Read-only: a row is never a way to take anything.
+    expect(card.querySelector("a, button, input")).toBeNull();
+  });
+
+  it("says so when there are no runs in the band yet", async () => {
+    await renderWithRouter(
+      form({
+        entry: { conditions: damp, items: kit },
+        bandFloor: 0,
+        bandRuns: [],
+      }),
+    );
+    expect(
+      within(railOf()).getByRole("heading", { name: "Before, in 32–41° damp" }),
+    ).toBeInTheDocument();
+    expect(railOf()).toHaveTextContent("No runs in this band yet.");
+  });
+
+  it("shows no record and no history without a band", async () => {
+    await renderWithRouter(
+      form({
+        entry: { conditions: damp, items: kit },
+        bandRuns: earlier,
+        bandSignals: {
+          garments: { a: { total: 9, dialed: 8, colder: 1, warmer: 0 } },
+          tagUse: {},
+        },
+      }),
+    );
+    expect(railOf()).not.toHaveTextContent("dialed");
+    expect(railOf().querySelector("[data-part='band-run']")).toBeNull();
+  });
+
+  it("shows no history without the band's history", async () => {
+    await renderWithRouter(
+      form({ entry: { conditions: damp, items: kit }, bandFloor: 0 }),
+    );
+    expect(railOf()).not.toHaveTextContent("Before, in");
+  });
+
+  it("shows no history for a run with no conditions to name its sky", async () => {
+    await renderWithRouter(
+      form({ entry: { items: kit }, bandFloor: 0, bandRuns: earlier }),
+    );
+    expect(railOf()).not.toHaveTextContent("Before, in");
   });
 });
