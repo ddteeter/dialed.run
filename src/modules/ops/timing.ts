@@ -7,6 +7,8 @@
  * its time to first byte; the invocation's own wall time, which Workers
  * Logs records beside this line, covers the rest of the body.
  */
+import { SERVER_FN_ROUTE } from "../../lib/query-report";
+
 import { captureException } from "./sentry";
 import { recordServerTiming } from "./vitals";
 
@@ -63,7 +65,7 @@ export function requestNamer(
   };
   return (pathname) =>
     pathname.startsWith(SERVER_FN_PREFIX)
-      ? `serverFn:${pathname.slice(SERVER_FN_PREFIX.length)}`
+      ? `${SERVER_FN_ROUTE}${pathname.slice(SERVER_FN_PREFIX.length)}`
       : namePage()(pathname);
 }
 

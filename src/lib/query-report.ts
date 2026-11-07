@@ -16,6 +16,51 @@ The response header a tallied request carries.
 export const QUERY_HEADER = "x-d1-queries";
 
 /**
+ * How design 165's request names mark a server function call:
+ * `serverFn:<id>`. `modules/ops/timing.ts` names requests with it.
+ */
+export const SERVER_FN_ROUTE = "serverFn:";
+
+/**
+ * A dev server's server function id: base64url of the function's file and
+ * export. (A production build hashes them instead, and nothing there is
+ * tallied.)
+ */
+const devServerFnIdSchema = z.object({
+  file: z.string(),
+  export: z.string(),
+});
+
+const MODULE_FUNCTIONS =
+  /^\/src\/modules\/(?<module>[^/]+)\/functions\.ts(?:\?.*)?$/u;
+const HANDLER_SUFFIX = /_createServerFn_handler$/u;
+
+function devServerFnId(id: string): unknown {
+  try {
+    return JSON.parse(atob(id.replaceAll("-", "+").replaceAll("_", "/")));
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * A route as the report names it: a dev server function's id decoded to
+ * `serverFn:<module>/<export>` (its file, when not a module's
+ * `functions.ts`), so a reader sees `serverFn:notifications/bellStateFn`
+ * rather than base64. Any other name is kept as it came.
+ */
+export function readableRoute(route: string): string {
+  if (!route.startsWith(SERVER_FN_ROUTE)) return route;
+  const parsed = devServerFnIdSchema.safeParse(
+    devServerFnId(route.slice(SERVER_FN_ROUTE.length)),
+  );
+  if (!parsed.success) return route;
+  const { file, export: exported } = parsed.data;
+  const where = MODULE_FUNCTIONS.exec(file)?.groups?.module ?? file;
+  return `${SERVER_FN_ROUTE}${where}/${exported.replace(HANDLER_SUFFIX, "")}`;
+}
+
+/**
  * One request's D1 work: its route (a route id or `serverFn:<id>`, as
  * design 165 names it), statements run, and rows read.
  */
@@ -113,10 +158,11 @@ function spreadOf(values: readonly number[]): Spread {
 }
 
 /**
-Each route's summary, by route name: the shape the baseline stores.
-*/
+ * Each route's summary, by its readable name (`readableRoute`): the shape
+ * the baseline stores.
+ */
 export function summarize(lines: readonly QueryLine[]): QueryBaseline {
-  const byRoute = Map.groupBy(lines, (line) => line.route);
+  const byRoute = Map.groupBy(lines, (line) => readableRoute(line.route));
   const routes: Record<string, z.infer<typeof routeSummarySchema>> = {};
   const groups = [...byRoute].toSorted(([a], [b]) => a.localeCompare(b));
   for (const [route, group] of groups) {

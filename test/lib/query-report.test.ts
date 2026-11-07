@@ -8,7 +8,9 @@ import {
   parseQueryLines,
   QUERY_HEADER,
   queryBaselineSchema,
+  readableRoute,
   renderQueryReport,
+  SERVER_FN_ROUTE,
   summarize,
 } from "../../src/lib/query-report";
 
@@ -61,6 +63,93 @@ describe("the header", () => {
     const route = `/${"a".repeat(1019)}`;
     expect(parseQueryHeader(`${route};1;2`)).toEqual(line(route, 1, 2));
     expect(parseQueryHeader(`${route}a;1;2`)).toBeUndefined();
+  });
+});
+
+/**
+A dev server's id for a function: base64url of its file and export.
+*/
+function devId(file: string, exported: string): string {
+  return btoa(JSON.stringify({ file, export: exported }))
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replaceAll("=", "");
+}
+
+const serverFn = (file: string, exported: string): string =>
+  `serverFn:${devId(file, exported)}`;
+
+describe("readableRoute", () => {
+  it("marks a server function with serverFn:", () => {
+    expect(SERVER_FN_ROUTE).toBe("serverFn:");
+  });
+
+  it("names a module's server function by module and export", () => {
+    expect(
+      readableRoute(
+        serverFn(
+          "/src/modules/notifications/functions.ts?tss-serverfn-split",
+          "bellStateFn_createServerFn_handler",
+        ),
+      ),
+    ).toBe("serverFn:notifications/bellStateFn");
+  });
+
+  it("decodes the id TanStack's dev server sends, - and _ included", () => {
+    // The e2e run's id for safety's fileReportAction: `_` stands for `/`.
+    expect(
+      readableRoute(
+        "serverFn:eyJmaWxlIjoiL3NyYy9tb2R1bGVzL3NhZmV0eS9mdW5jdGlvbnMudHM_dHNzLXNlcnZlcmZuLXNwbGl0IiwiZXhwb3J0IjoiZmlsZVJlcG9ydEFjdGlvbl9jcmVhdGVTZXJ2ZXJGbl9oYW5kbGVyIn0",
+      ),
+    ).toBe("serverFn:safety/fileReportAction");
+    const plus = devId("/src/modules/runs/functions.ts", "a>>b");
+    expect(plus).toContain("-");
+    expect(readableRoute(`serverFn:${plus}`)).toBe("serverFn:runs/a>>b");
+  });
+
+  it("names a module's functions.ts with no query string too", () => {
+    expect(
+      readableRoute(serverFn("/src/modules/runs/functions.ts", "list")),
+    ).toBe("serverFn:runs/list");
+  });
+
+  it.each([
+    "/src/modules/runs/import.ts?tss-serverfn-split",
+    "/app/src/modules/runs/functions.ts",
+    "/src/modules/runs/functions.tsx",
+    "/src/modules/runs/deep/functions.ts",
+    "/src/modules//functions.ts",
+  ])(
+    "keeps the whole file when it is not a module's functions.ts: %s",
+    (file) => {
+      expect(readableRoute(serverFn(file, "go"))).toBe(`serverFn:${file}/go`);
+    },
+  );
+
+  it("drops only a trailing _createServerFn_handler", () => {
+    expect(
+      readableRoute(
+        serverFn(
+          "/src/modules/runs/functions.ts",
+          "a_createServerFn_handler_b",
+        ),
+      ),
+    ).toBe("serverFn:runs/a_createServerFn_handler_b");
+  });
+
+  it.each([
+    ["a route id", "/closet/"],
+    ["unmatched", "unmatched"],
+    ["a name with serverFn: inside", "/x/serverFn:abc"],
+    ["an id that is not base64", "serverFn:%%%"],
+    ["an id that is not JSON", `serverFn:${btoa("not json")}`],
+    [
+      "an id of the wrong shape",
+      `serverFn:${btoa(JSON.stringify({ file: "/a" }))}`,
+    ],
+    ["a production hash", "serverFn:3f9a1c0d2b"],
+  ])("keeps %s as it came", (_label, route) => {
+    expect(readableRoute(route)).toBe(route);
   });
 });
 
@@ -139,6 +228,13 @@ describe("summarize", () => {
     expect(
       queryBaselineSchema.safeParse({ routes: {}, extra: 1 }).success,
     ).toBe(false);
+  });
+
+  it("keys a server function by its readable name, merging its calls", () => {
+    const id = serverFn("/src/modules/runs/functions.ts", "list");
+    const { routes } = summarize([line(id, 1, 1), line(id, 3, 3)]);
+    expect(Object.keys(routes)).toEqual(["serverFn:runs/list"]);
+    expect(routes["serverFn:runs/list"]?.count).toBe(2);
   });
 
   it("summarizes nothing as no routes", () => {
