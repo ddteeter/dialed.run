@@ -80,6 +80,20 @@ Run reminders by email
 end of link, Notifications Run reminders by email
 end of listitem, level 1, position 2, set size 2
 end of list
+heading, Display, level 2
+Display
+end of heading, Display, level 2
+group, Theme
+Theme
+Theme
+end, Theme
+radio, System, checked, position 1, set size 3
+System
+radio, Light, not checked, position 2, set size 3
+Light
+radio, Dark, not checked, position 3, set size 3
+Dark
+end of group, Theme
 heading, Data, level 2
 Data
 end of heading, Data, level 2
