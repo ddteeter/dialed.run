@@ -306,13 +306,14 @@ test("an operator opens the Desk and reads Today", async ({
   await page
     .locator('html[data-hydrated="true"]')
     .waitFor({ state: "attached" });
-  // R-173: inside DeskShell, so on the ink ground with the rail, Review lit.
+  // R-173: inside DeskShell, so on the night ground (dark in both themes,
+  // design 185) with the rail, Review lit.
   await expect(
     page.getByRole("navigation", { name: "Desk" }).getByRole("link", {
       name: /^Review/u,
     }),
   ).toHaveAttribute("aria-current", "page");
-  const ink = page.locator("[data-ground='ink']");
+  const ink = page.locator("[data-ground='night']");
   await expect(
     ink.getByRole("heading", { name: "Review", exact: true, level: 1 }),
   ).toBeVisible();

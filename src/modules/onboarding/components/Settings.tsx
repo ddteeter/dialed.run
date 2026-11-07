@@ -248,7 +248,10 @@ export function SettingsIndex({
       </SettingsGroup>
       {/* R48·133: "A new DISPLAY group after Notifications, before the
           account and data groups." */}
-      <SettingsGroup title="Display">{display}</SettingsGroup>
+      {/* A control, not a row that opens a page, so no list around it. */}
+      <GroupSection title="Display" className="flex flex-col gap-1">
+        {display}
+      </GroupSection>
       <SettingsGroup title="Data">
         <SettingsRow
           to="/runs/strava"
