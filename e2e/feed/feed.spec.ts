@@ -193,6 +193,11 @@ test("your own entry: take back one photo, then the whole entry", async ({
     await expect(page).not.toHaveURL(new RegExp(ownEntryId));
     await page.goto(`/feed/entry/${ownEntryId}`);
     await expect(page).not.toHaveURL(new RegExp(ownEntryId));
+    // It lands on the feed, whose weather is still being found: the
+    // transcript is read when the test ends, so let that settle first.
+    await expect(page.locator("[aria-busy='true']")).toHaveCount(0, {
+      timeout: 20_000,
+    });
   } finally {
     // Only what the deletes above did not reach, if a step failed first.
     await removeSeeded(rows);

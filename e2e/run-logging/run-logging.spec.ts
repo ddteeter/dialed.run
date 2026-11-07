@@ -175,12 +175,6 @@ test("A1 · a pause is part of the run's time (D-111)", async ({ page }) => {
     await expect(card).toContainText(
       formatPace(PAUSED_ELAPSED_SECONDS, PAUSED_METRES, "mi") ?? "",
     );
-    // The transcript is read when the test ends: let the weather lookup
-    // the drop started settle first, whichever way it goes, or the
-    // snapshot records a screen still fetching.
-    await expect(
-      page.getByText("Fetching weather", { exact: true }),
-    ).toHaveCount(0, { timeout: 20_000 });
   } finally {
     await unseed(seeded);
   }
