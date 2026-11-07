@@ -730,7 +730,14 @@ function VerdictRail({
             <Mono step="sm" className="text-dialed-text">
               {`${formatTemp(conditions.tempC, units.temp)}${units.temp.toUpperCase()} ${precipClassOf(conditions.precipMm)} · feels ${formatTemp(conditions.feelsLikeC, units.temp)}`}
             </Mono>
-            <WeatherAttribution />
+            {/* The header above already credits this reading, heard at
+                every width; the rail, the desk's alone, draws it again near
+                its own copy of the data and keeps it unheard (R-179's rule:
+                the licence is about display). A typed reading is no one's
+                to credit. */}
+            {isProvidersReading(conditions) ? (
+              <WeatherAttribution isRepeat />
+            ) : undefined}
           </>
         )}
       </RailCard>
