@@ -218,7 +218,7 @@ describe("Sheet", () => {
     // DS5, "modals with scrims": "a dimmed backdrop is a third grey and
     // turns the phone screen into a dialog". The wash stays on the phone,
     // where the sheet really is a layer over a screen.
-    expect(dialog).toHaveClass("backdrop:bg-ink/60", "wide:backdrop:bg-ground");
+    expect(dialog).toHaveClass("backdrop:bg-scrim/60", "wide:backdrop:bg-ground");
   });
 
   it("keeps the bottom edge it travels from on the phone", () => {

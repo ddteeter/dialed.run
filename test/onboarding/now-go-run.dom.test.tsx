@@ -181,6 +181,13 @@ describe("NowGoRun", () => {
     const heading = screen.getByRole("heading", { name: "Now go run." });
     const band = heading.parentElement;
     expect(band).toHaveClass("bg-failure", "px-5", "pb-6", "pt-4");
+    // Text on an accent is accent ink, on both themes (T2 rule 02): the
+    // band's words and its bar, which `--ink` would turn to chalk on dark.
+    expect(band).toHaveClass("text-accent-ink");
+    expect(band).not.toHaveClass("text-ink");
+    const bars = band?.firstElementChild?.children ?? [];
+    expect(bars).toHaveLength(4);
+    for (const bar of bars) expect(bar).toHaveClass("bg-accent-ink");
     expect(band?.firstElementChild).toHaveAttribute("aria-hidden", "true");
     expect(container.querySelectorAll(".bg-failure")).toHaveLength(1);
     expect(container.querySelector(".ground-ink, [data-ground]")).toBeNull();

@@ -31,18 +31,81 @@
   --chalk: #f4f3ef;
 
   /* ------------------------------------------------------------------
-   * T1 · the pairs — light column. Task 111 adds the dark column here and
-   * nowhere else: every role below is already named, so 111 changes
-   * values rather than call sites.
+   * T1 · the pairs. The ground-relative roles are written once per column,
+   * as `ground-paper` and `ground-ink` below, and `:root` takes paper; the
+   * roles left here are the ones T1 says do not change with the ground.
+   * ------------------------------------------------------------------ */
+  @apply ground-paper;
+
+  /* Does not change with the ground. Text on it is always ink. */
+  --action: var(--course-pink);
+  /* Round 19. The hover/pressed tint of `--action`, and only of it — "a
+   * state, never a resting surface; text stays ink." Does not change with
+   * the ground, like the role it tints. */
+  --action-hover: #ff57a2;
+  /* Does not change with the ground. Text on it is always ink. */
+  --failure: var(--hi-viz);
+  /* The ink those two rows mean, as a role rather than as prose.
    *
-   * The three greys are the reason this table exists. T1's own note on
-   * `--quiet` reads "Full strength, never opacity", and `ink.css` had
-   * already retired `text-night/30` for the same reason (§AB rule 04):
-   * opacity never encodes meaning, and a tint of ink on ink is invisible
-   * the moment the ground flips.
+   * "Text on any accent surface is ink #0B0B0E" — **the fixed colour, not
+   * the role**, which is how `test/ui/contrast.dom.test.tsx` already reads
+   * it. `--ink` says that correctly everywhere except the one place an
+   * accent can sit inside an inverted block, where `--ink` is chalk and a
+   * pink pill would be chalk on pink. The top bar is the first surface in
+   * the product to be that place (DS1's "Log a run").
+   *
+   * So it is deliberately NOT redefined below: "does not change with the
+   * ground" is a sentence about this value, and a role that is absent from
+   * the inverted block is a role that does not change. */
+  --accent-ink: var(--night-run);
+  /* R48·134: "Scrim: #0B0B0E at the table's alpha in both themes." The
+   * wash behind a phone sheet, which is not `--ink`: on a dark page that
+   * is chalk, and a sheet would sit on a white haze. Fixed, like
+   * `--accent-ink`, so no column redefines it. */
+  --scrim: var(--night-run);
+
+  /* ------------------------------------------------------------------
+   * FAMILY — tokens.js. Three families, each with one job: Archivo Black
+   * says it, Archivo explains it, Plex Mono measured it. They never trade
+   * jobs and never share a size.
    * ------------------------------------------------------------------ */
 
-  /* The screen. Paper and ink trade places. */
+  /* Archivo 400/600/700 — interface */
+  --font-family-interface: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  /* Archivo Black — display (one cut) */
+  --font-family-display:
+    "Archivo Black", "Archivo", ui-sans-serif, system-ui, sans-serif;
+  /* IBM Plex Mono 400/500 — every measured value */
+  --font-family-mono:
+    "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* ------------------------------------------------------------------
+   * The top bar's height — derived, not drawn.
+   *
+   * No board gives it a number this file may copy: DS1a draws 60px, and
+   * `tokens.js`'s PRECEDENCE block says a size on a board that is not in
+   * the scale is a COLLAPSE entry rather than a token. But it *is* the sum
+   * of two things that are contracts — one 44px target (Accessibility
+   * Contract 03) with SPACE[2] above and below — so it is derived here
+   * once and read twice: `ui/TopBar` sets the bar to it, and `ui/Sheet`
+   * starts the panel `SPACE[12]` below it (Desktop Contract DS3). Neither
+   * measures the other.
+   * ------------------------------------------------------------------ */
+  --bar-height: calc(44px + 2 * 8px);
+
+  color-scheme: light;
+}
+
+/**
+ * T1 · the light column, every role that changes with the ground.
+ *
+ * The three greys are the reason this table exists. T1's own note on
+ * `--quiet` reads "Full strength, never opacity", and `ink.css` had
+ * already retired `text-night/30` for the same reason (§AB rule 04):
+ * opacity never encodes meaning, and a tint of ink on ink is invisible
+ * the moment the ground flips.
+ */
+@utility ground-paper {
   --ground: var(--chalk);
   /* Primary text, filled buttons, coverage "covered". Always ground's opposite. */
   --ink: var(--night-run);
@@ -82,98 +145,44 @@
   --cold-text: #c21a6b;
   /* Hi-viz at low strength behind unread rows. Hi-viz itself never dims. */
   --unread: #fff9dc;
-  /* Does not change with the ground. Text on it is always ink. */
-  --action: var(--course-pink);
-  /* Round 19. The hover/pressed tint of `--action`, and only of it — "a
-   * state, never a resting surface; text stays ink." Does not change with
-   * the ground, like the role it tints. */
-  --action-hover: #ff57a2;
   /* Round 19. The hover/pressed tint of an ink-filled button: one step
    * toward the ground, so it is ground-relative and the inverted block
    * redefines it. Same rule — a state, never a surface. */
   --ink-hover: #24242b;
-  /* Round 21. Hi-viz as text — on an ink surface only (NowGoRun's eyebrow
-   * sits on the ink block in both themes, so one value serves both).
-   * 17.6:1 there; 1.1:1 on paper, where it is `--ink` instead. */
-  --hiviz-text: #f5ff3d;
   /* Round 21. The matched panel's wash: teal mixed into the ground at 14%,
    * precomputed — "flat hex, never opacity". Ground-relative, so the
    * inverted block redefines it. Text on it stays ink or --dialed-text. */
   --dialed-tint: #d2f0e9;
-  /* Does not change with the ground. Text on it is always ink. */
-  --failure: var(--hi-viz);
-  /* The ink those two rows mean, as a role rather than as prose.
-   *
-   * "Text on any accent surface is ink #0B0B0E" — **the fixed colour, not
-   * the role**, which is how `test/ui/contrast.dom.test.tsx` already reads
-   * it. `--ink` says that correctly everywhere except the one place an
-   * accent can sit inside an inverted block, where `--ink` is chalk and a
-   * pink pill would be chalk on pink. The top bar is the first surface in
-   * the product to be that place (DS1's "Log a run").
-   *
-   * So it is deliberately NOT redefined below: "does not change with the
-   * ground" is a sentence about this value, and a role that is absent from
-   * the inverted block is a role that does not change. */
-  --accent-ink: var(--night-run);
-
-  /* ------------------------------------------------------------------
-   * FAMILY — tokens.js. Three families, each with one job: Archivo Black
-   * says it, Archivo explains it, Plex Mono measured it. They never trade
-   * jobs and never share a size.
-   * ------------------------------------------------------------------ */
-
-  /* Archivo 400/600/700 — interface */
-  --font-family-interface: "Archivo", ui-sans-serif, system-ui, sans-serif;
-  /* Archivo Black — display (one cut) */
-  --font-family-display:
-    "Archivo Black", "Archivo", ui-sans-serif, system-ui, sans-serif;
-  /* IBM Plex Mono 400/500 — every measured value */
-  --font-family-mono:
-    "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
-
-  /* ------------------------------------------------------------------
-   * The top bar's height — derived, not drawn.
-   *
-   * No board gives it a number this file may copy: DS1a draws 60px, and
-   * `tokens.js`'s PRECEDENCE block says a size on a board that is not in
-   * the scale is a COLLAPSE entry rather than a token. But it *is* the sum
-   * of two things that are contracts — one 44px target (Accessibility
-   * Contract 03) with SPACE[2] above and below — so it is derived here
-   * once and read twice: `ui/TopBar` sets the bar to it, and `ui/Sheet`
-   * starts the panel `SPACE[12]` below it (Desktop Contract DS3). Neither
-   * measures the other.
-   * ------------------------------------------------------------------ */
-  --bar-height: calc(44px + 2 * 8px);
-
-  /* Light-first; T1's dark column is task 111. */
-  color-scheme: light;
+  /* Round 21. Hi-viz as text, "on an ink surface only … never text on
+   * paper; there it is --ink" (T1's note): 17.6:1 on ink, 1.1:1 on paper.
+   * T1 gives #F5FF3D in both columns because the block it was written for
+   * was ink in both themes. Headers now invert to paper on a dark page
+   * (T2 rule 04), so the role is ground-relative and paper says `--ink`
+   * (design 185). On a light page nothing changes: the role is only used
+   * inside ink blocks and the Desk, which take the ink column. */
+  --hiviz-text: var(--ink);
+  /* R48·135: a notice — the explanations and quiet notes a screen sets in
+   * a recessed block — is the tint on paper, with no rule (the ring is
+   * the fill's own colour, so it draws nothing and takes no space). */
+  --notice: var(--tint);
+  --notice-rule: var(--tint);
 }
 
 /**
- * T2 rule 04 — the inverted block.
+ * T1 · the dark column, the same roles on ink.
  *
- * "The ink header block on a paper screen becomes a paper header block on
- * an ink screen. That's the brand's contrast move, not a bug." A block
- * that inverts the ground inverts every ground-relative role with it, so
- * the roles are redefined here rather than each element reaching for a
- * different token: `text-muted` inside this means "muted against ink".
+ * Taken three ways, and written once so none of them is a rival copy:
+ * the whole page in the dark theme, an inverted block on a paper page
+ * (T2 rule 04), and a `night` block that is ink in both themes. Which
+ * column an element gets is decided by the selectors at the end of this
+ * file; this block only says what the column is.
  *
- * These are T1's dark-column values, which is not the same job as task
- * 111. 111 puts `data-theme` on the *root* and flips the whole app; this
- * flips one block on a screen whose ground has not changed, and both
- * artboard sets draw it. 111 will reuse these values; it does not own them.
- *
- * `color-scheme` is deliberately not set: this is a block, not a document,
- * and native controls inside it still sit on the page's own ground.
- *
- * **Written once, as a utility, so a second selector can take it at a
- * breakpoint.** Desktop Contract DS0 bend 4: "Phone screens carry an ink
- * header block … At width there is one top bar; per-screen headers drop to
- * a plain TYPE.title above the content." Round 25 says it of A3 in as many
- * words: "the ink header becomes the title line". So a screen's header is
- * `data-ground="ink-until-wide"` — inverted below `wide`, on the page's
- * own ground from it. A second copy of these values for the breakpoint
- * would be a rival truth that nothing makes disagree out loud.
+ * **Written as a utility so a selector can take it at a breakpoint.**
+ * Desktop Contract DS0 bend 4: "Phone screens carry an ink header block …
+ * At width there is one top bar; per-screen headers drop to a plain
+ * TYPE.title above the content." So a screen's header is
+ * `data-ground="ink-until-wide"`, inverted below `wide` and on the page's
+ * own ground from it.
  */
 @utility ground-ink {
   --ground: var(--night-run);
@@ -197,12 +206,93 @@
   /* One step toward an ink ground is lighter, not darker. */
   --ink-hover: #deddd6;
   --dialed-tint: #0a2524;
+  --hiviz-text: var(--hi-viz);
+  /* R-87: hi-viz at low strength on ink. Missing here, an unread row in
+   * an inverted block resolved to paper's #FFF9DC against #0B0B0E. */
+  --unread: #2a2a14;
+  /* R48·135: "Light-ground notices in the app become --panel with a 1px
+   * --hairline (the marketing ink-block rule)." */
+  --notice: var(--panel);
+  --notice-rule: var(--hairline);
 }
 
-[data-ground="ink"] {
+/**
+ * Task 111 · which column an element gets.
+ *
+ * **The page.** T3: "One data-theme attribute on the root, resolved from
+ * prefers-color-scheme unless a stored override exists." The override is
+ * the attribute (`lib/browser/theme.ts` sets it before first paint);
+ * following the system is its absence, so the media query does the
+ * following and nothing has to listen for the system changing. Each
+ * explicit choice wins in both directions. `color-scheme` goes with the
+ * page so native controls and scrollbars follow (T3, "for the lanes").
+ * Switching is a cut: nothing here transitions (T3, "switching is a cut").
+ */
+:root[data-theme="dark"] {
+  @apply ground-ink;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    @apply ground-ink;
+    color-scheme: dark;
+  }
+}
+
+/**
+ * **The inverted block** (T2 rule 04): "The ink header block on a paper
+ * screen becomes a paper header block on an ink screen. That's the
+ * brand's contrast move, not a bug." So it is the *opposite* of the page,
+ * not ink: dark on paper, paper on dark. Every ground-relative role
+ * inverts with it, which is why `text-muted` inside one means "muted
+ * against this block" without the element reaching for another token.
+ *
+ * `.row-press:active` is the same move for the length of a press (R-79):
+ * the doctrine's "Row press" flips the row's ground, and without the roles
+ * its `text-quiet` and `text-muted` children stayed at the page's values
+ * on the flipped ground. `ui/motion.css` paints it from the roles this
+ * gives it.
+ *
+ * `color-scheme` is deliberately not set: this is a block, not a
+ * document. Nothing nests one inverted block in another, so one level is
+ * the whole of it.
+ */
+[data-ground="ink"],
+.row-press:active {
   @apply ground-ink;
 }
 
 [data-ground="ink-until-wide"] {
   @apply max-wide:ground-ink;
+}
+
+:root[data-theme="dark"] :is([data-ground="ink"], .row-press:active) {
+  @apply ground-paper;
+}
+
+:root[data-theme="dark"] [data-ground="ink-until-wide"] {
+  @apply max-wide:ground-paper;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) :is([data-ground="ink"], .row-press:active) {
+    @apply ground-paper;
+  }
+
+  :root:not([data-theme="light"]) [data-ground="ink-until-wide"] {
+    @apply max-wide:ground-paper;
+  }
+}
+
+/**
+ * **Night: ink in both themes.** For what T3 says is dark for everyone,
+ * whatever the runner picked: the Desk ("always dark … it doesn't read
+ * the runner's theme"). It reads nothing from the page, so a dark page
+ * leaves it exactly as a paper one does. (NowGoRun's ink block, which
+ * T1's `--hiviz-text` note calls ink in both themes, went when R49·138b
+ * put P3's body on the page's own ground.)
+ */
+[data-ground="night"] {
+  @apply ground-ink;
 }

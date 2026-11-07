@@ -151,9 +151,12 @@
     background-color var(--dur-instant) var(--ease-snap),
     color var(--dur-instant) var(--ease-snap);
 
+  /* Pressed, the row takes the inverted roles (`ui/tokens.css`, R-79), so
+   * inside it `--ground` is already the flipped ground and `--ink` the
+   * flipped text: painting `--ink` here would paint the page's ground. */
   &:active {
-    background-color: var(--ink);
-    color: var(--ground);
+    background-color: var(--ground);
+    color: var(--ink);
   }
 }
 

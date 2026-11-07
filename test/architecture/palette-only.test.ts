@@ -32,7 +32,7 @@ const sources: Record<string, string> = import.meta.glob(
 
 /**
  * A Tailwind utility whose value is a raw colour: `bg-[#fff]`,
- * `in-data-[theme=dark]:text-[#E3E3E3]`, `border-[rgb(0_0_0)]`. Tested
+ * `dark:text-[#E3E3E3]`, `border-[rgb(0_0_0)]`. Tested
  * against one class token at a time, so it needs no anchoring.
  */
 const RAW_COLOUR = /-\[(?:#[\dA-Fa-f]{3,8}\]|rgba?\(|hsla?\()/u;
@@ -134,9 +134,9 @@ describe("every colour is a T1 role", () => {
       "bg-[#FFFFFF]",
       "border-[#747775]",
       "text-[#1F1F1F]",
-      "in-data-[theme=dark]:bg-[#131314]",
-      "in-data-[theme=dark]:border-[#8E918F]",
-      "in-data-[theme=dark]:text-[#E3E3E3]",
+      "dark:bg-[#131314]",
+      "dark:border-[#8E918F]",
+      "dark:text-[#E3E3E3]",
     ]) {
       expect(constant).toContain(colour);
     }

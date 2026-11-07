@@ -51,6 +51,7 @@ import {
   newInviteInput,
   requestAccessInput,
   resendInput,
+  themeInput,
 } from "./inputs";
 import {
   accessDesk,
@@ -70,6 +71,7 @@ import {
   leavingSearch,
 } from "./route-decisions";
 import { acceptTerms, termsPromptView } from "./terms-acceptance";
+import { ownTheme, setOwnTheme } from "./theme";
 import {
   claimUsername,
   handleGate,
@@ -434,3 +436,23 @@ export async function termsPromptLoader() {
   homeIfNothingToSay(view);
   return view;
 }
+
+/**
+ * The theme for the root's answer (design 185): the runner's, or the
+ * system for nobody (R48·133, "signed out: always system"). Not gated on
+ * the terms or on leaving, because the root asks it for every page such a
+ * runner can still reach, and how the page looks refuses nobody.
+ */
+export const ownThemeQuery = createServerFn({ method: "GET" }).handler(
+  async () => ownTheme(db(), await optionalUserId()),
+);
+
+/**
+ * U1 › Display › Theme, saved at once (R48·133). Unconfirmed runners too:
+ * it is how their own screen looks, and nobody else sees it.
+ */
+export const setThemeFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => themeInput.parse(data))
+  .handler(async ({ data }) =>
+    setOwnTheme(db(), await requireUserId(), data.theme),
+  );

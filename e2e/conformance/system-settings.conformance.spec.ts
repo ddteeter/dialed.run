@@ -28,7 +28,12 @@ test.use({ storageState: storageStateFor("closet") });
  * (`design/docs/product.md`: "Linked from … Settings › About"; plan C9,
  * design 147), which U1 predates.
  */
-const UNDRAWN_GROUP = "About";
+const UNDRAWN_GROUPS: ReadonlySet<string> = new Set([
+  "About",
+  // R48·133 draws DISPLAY and its Theme row on the round's own board
+  // (`design/Round 48 Rulings.dc.html`), after U1 was drawn (design 185).
+  "Display",
+]);
 const UNDRAWN_ROWS: ReadonlySet<string> = new Set([
   "Privacy policy",
   "Terms",
@@ -74,7 +79,9 @@ test("the index: U1's groups and rows, in U1's order, keeping the tab bar", asyn
   const allHeadings = await page
     .getByRole("heading", { level: 2 })
     .allTextContents();
-  const headings = allHeadings.filter((heading) => heading !== UNDRAWN_GROUP);
+  const headings = allHeadings.filter(
+    (heading) => !UNDRAWN_GROUPS.has(heading),
+  );
   const headingsInBoard = inOrder(
     drawn,
     headings.map((heading) => heading.toUpperCase()),

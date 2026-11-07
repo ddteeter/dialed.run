@@ -71,6 +71,13 @@ public_profile   int      -- boolean, NOT NULL DEFAULT 0: Settings › Privacy's
 public_closet    int      -- boolean, NOT NULL DEFAULT 0: "Show my closet", the
                           --  rotation on the public profile; read only while
                           --  public_profile is on, and kept while it is off.
+theme            text     -- 'system' (default) | 'light' | 'dark', NOT NULL:
+                          --  Settings › Display › Theme (R48·133, design
+                          --  185). The account's value, which takes over
+                          --  from the device's cached one on sign-in; the
+                          --  root's signed-in answer carries it. Signed out
+                          --  is always 'system'. modules/account/theme.ts
+                          --  is the one reader and writer.
 ```
 
 ### wardrobe_items

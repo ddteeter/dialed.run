@@ -382,9 +382,9 @@ describe("Au5 · Google in flight", () => {
       "border-[#747775]",
       "bg-[#FFFFFF]",
       "text-[#1F1F1F]",
-      "in-data-[theme=dark]:border-[#8E918F]",
-      "in-data-[theme=dark]:bg-[#131314]",
-      "in-data-[theme=dark]:text-[#E3E3E3]",
+      "dark:border-[#8E918F]",
+      "dark:bg-[#131314]",
+      "dark:text-[#E3E3E3]",
     );
     const answer = Promise.withResolvers<unknown>();
     client.social.mockReturnValue(answer.promise);

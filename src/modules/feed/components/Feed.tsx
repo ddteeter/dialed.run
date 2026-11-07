@@ -116,7 +116,7 @@ export function Feed(props: Readonly<FeedProps>) {
         // A3 in the panel, like the phone.
         <Link
           to="/runs/backlog"
-          className="target flex items-center justify-between gap-3 rounded-none bg-tint px-4 py-3 text-body text-ink no-underline"
+          className="target flex items-center justify-between gap-3 rounded-none bg-notice inset-ring-1 inset-ring-notice-rule px-4 py-3 text-body text-ink no-underline"
         >
           <span>
             <Mono step="sm">{unjudgedCount}</Mono> runs still need a verdict

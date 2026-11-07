@@ -53,7 +53,7 @@ export function NowGoRun({
       {/* The band is the screen's one emphasis (round 49, R49·138b): the
           full bar and the instruction, and nothing else is hi-viz. At
           desk it runs the full column; its bar keeps the measure. */}
-      <div className="flex flex-col gap-3 bg-failure px-5 pb-6 pt-4 text-ink">
+      <div className="flex flex-col gap-3 bg-failure px-5 pb-6 pt-4 text-accent-ink">
         <Steps />
         <h1 className="m-0 font-display text-display uppercase">Now go run.</h1>
       </div>
@@ -119,7 +119,9 @@ function Steps(): JSX.Element {
   return (
     <div aria-hidden="true" className="flex gap-1 desk:max-w-column">
       {[0, 1, 2, 3].map((step) => (
-        <div key={step} className="h-1 flex-1 bg-ink" />
+        // On the hi-viz band, so the accent's ink: `bg-ink` is chalk on a
+        // dark page (T2 rule 02, design 185).
+        <div key={step} className="h-1 flex-1 bg-accent-ink" />
       ))}
     </div>
   );

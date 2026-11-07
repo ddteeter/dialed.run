@@ -211,7 +211,7 @@ function WhatChanged({
     <section
       data-part="what-changed"
       aria-label="What changed"
-      className="flex flex-col gap-2 bg-tint p-4"
+      className="flex flex-col gap-2 bg-notice inset-ring-1 inset-ring-notice-rule p-4"
     >
       <Mono step="xs" className="text-muted">
         What changed

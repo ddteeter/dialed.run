@@ -181,7 +181,7 @@ describe("TermsPrompt · a version bump (round 29 #6)", () => {
     ).toBeVisible();
     const block = screen.getByRole("region", { name: "What changed" });
     expect(block).toHaveAttribute("data-part", "what-changed");
-    expect(block).toHaveClass("bg-tint");
+    expect(block).toHaveClass("bg-notice", "inset-ring-notice-rule");
     expect(within(block).getByText("What changed")).toHaveClass("text-mono-xs");
     expect(
       within(block)

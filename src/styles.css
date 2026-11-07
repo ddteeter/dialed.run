@@ -20,6 +20,27 @@
 @plugin "@tailwindcss/typography";
 
 /*
+ * `dark:` means the page is dark (design 185), the same two ways
+ * `ui/tokens.css` decides it: pinned with `data-theme="dark"`, or
+ * following a dark system with no pin to light. Tailwind's own `dark:`
+ * reads only the media query, so a runner who pinned dark on a light
+ * phone would get the light half. Only what T1 cannot say uses it —
+ * Google's button, whose dark colours are Google's — since a T1 role
+ * already changes with the page.
+ */
+@custom-variant dark {
+  &:where(:root[data-theme="dark"] *) {
+    @slot;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+}
+
+/*
  * The two design contracts, mapped onto Tailwind's theme.
  *
  * `inline` keeps `src/ui/tokens.css` the single runtime source of truth:
@@ -58,8 +79,11 @@
   --color-ink-hover: var(--ink-hover);
   --color-hiviz-text: var(--hiviz-text);
   --color-dialed-tint: var(--dialed-tint);
+  --color-notice: var(--notice);
+  --color-notice-rule: var(--notice-rule);
   --color-failure: var(--failure);
   --color-accent-ink: var(--accent-ink);
+  --color-scrim: var(--scrim);
   /* The two palette colours T1 names in prose rather than in the table.
    * Teal: "Teal as a surface is #00E0C6 on both" (T2 rule 01) — teal as
    * *text* is --dialed-text, a darker cut that clears contrast on paper.

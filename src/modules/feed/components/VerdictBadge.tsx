@@ -22,7 +22,7 @@ export function VerdictBadge({
     <span
       data-part="verdict-badge"
       className={`shrink-0 rounded-pill px-2 py-1 ${
-        verdict === 0 ? "bg-teal text-ink" : "border border-ink"
+        verdict === 0 ? "bg-teal text-accent-ink" : "border border-ink"
       }`}
     >
       <Mono step="xs">{label}</Mono>

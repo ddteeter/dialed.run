@@ -274,7 +274,7 @@ rules hold the split (R-50's bug class, made visible in the path):
 `lib/sql/` (drizzle/D1 helpers, the outbox wire format, queue batches, R2
 paging) is **server-only** — `lib-sql-is-server-only` keeps it out of every
 route file and `.tsx` component; `lib/browser/` (session memo, the zod
-jitless head script) is **client-only** — `lib-browser-is-client-only`
+jitless head script, the theme's device cache and head script) is **client-only** — `lib-browser-is-client-only`
 keeps it out of `src/server.ts`, every `functions.ts`, and the queue
 consumers and cron handlers the Worker entry wires.
 

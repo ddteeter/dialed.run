@@ -81,10 +81,10 @@ export function FollowPill({ toggle }: Readonly<{ toggle: FollowToggle }>) {
       onClick={() => {
         void control.run();
       }}
-      className={`target shrink-0 cursor-pointer rounded-pill px-5 py-2 text-body font-bold text-ink ${
+      className={`target shrink-0 cursor-pointer rounded-pill px-5 py-2 text-body font-bold ${
         isFollowing
-          ? "border border-hairline bg-transparent"
-          : "border-none bg-action"
+          ? "border border-hairline bg-transparent text-ink"
+          : "border-none bg-action text-accent-ink"
       }`}
     >
       <PendingLabel
