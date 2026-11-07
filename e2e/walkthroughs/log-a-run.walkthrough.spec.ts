@@ -29,7 +29,7 @@ test("log a run: the file, its conditions, the kit, the verdict", async ({
   runner,
 }, testInfo) => {
   // Recording pace is not a latency budget; this catches a hang.
-  testInfo.setTimeout(150_000);
+  testInfo.setTimeout(400_000);
 
   const seeded: Seeded = {
     userId: runner.userId,
@@ -52,12 +52,24 @@ test("log a run: the file, its conditions, the kit, the verdict", async ({
   try {
     await page.goto("/closet");
     await hydrated(page);
+    await expect(
+      page.getByRole("link", { name: /Merino half-zip/u }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: /Running tights/u }),
+    ).toBeVisible();
+    await scene(page, "A runner's Closet · two pieces", {
+      say: "This runner went out this morning in two pieces from their Closet: a merino half-zip and running tights. Let's log that run. I'll start from the log button in the bar.",
+    });
     await launcher(page).click();
     await hydrated(page);
     const well = page.locator('[data-part="drop-zone"]');
     await expect(well).toContainText("Drop a file, or browse");
     await scene(page, "Log a run · drop the file from your watch", {
       say: "Logging a run starts with the file from your watch, or any tracking app. Drop it here.",
+    });
+    await scene(page, "This morning's run · a GPX file", {
+      say: "I'll drop in this morning's run, a GPX file, forty minutes long.",
     });
 
     await page.setInputFiles('[data-part="drop-zone"] input[type="file"]', {
@@ -75,14 +87,17 @@ test("log a run: the file, its conditions, the kit, the verdict", async ({
     ).toBeVisible();
     await expect(page).toHaveURL(/\/runs\/new$/u);
     await scene(page, "Read in place · distance, time, pace", {
-      say: "It reads right here, without leaving the page: the distance, the time, the pace, and when you started.",
+      say: "It reads right here, without leaving the page: the distance, the time, forty minutes, the pace, and when you started. If the start time is off, you can change it.",
     });
 
     const conditions = page.locator('[data-slot="conditions"]');
     await expect(conditions).toContainText("36°F", { timeout: 20_000 });
     await conditions.scrollIntoViewIfNeeded();
     await scene(page, "Conditions · found, never typed", {
-      say: "And the conditions come with it, found for when and where you ran. Nobody types the weather.",
+      say: "And the conditions come with it, found for when and where you ran: 36 degrees. Nobody types the weather, so it's a real reading, not a guess from memory.",
+    });
+    await scene(page, "Looks right · on to the kit", {
+      say: "That all looks right, so I'll go on to what I wore.",
     });
 
     await page
@@ -92,11 +107,14 @@ test("log a run: the file, its conditions, the kit, the verdict", async ({
     await expect(
       page.getByRole("heading", { name: "What did you wear?" }),
     ).toBeVisible();
+    await scene(page, "What did you wear? · a tap per piece", {
+      say: "What did you wear? The Kit is picked from your Closet, a tap per piece, so there's nothing to type. I'll tap the half-zip and the tights.",
+    });
     await page.getByRole("button", { name: "Merino half-zip" }).click();
     await page.getByRole("button", { name: "Running tights" }).click();
     await expect(page.getByText(/2 pieces$/u)).toBeVisible();
-    await scene(page, "The kit · picked from your closet", {
-      say: "Next, what you wore. The kit is picked from your closet, a tap per piece.",
+    await scene(page, "The Kit · two pieces", {
+      say: "Two pieces, and the Kit is done. Next: did it work?",
     });
 
     await page.getByRole("button", { name: "Next — did it work?" }).click();
@@ -113,7 +131,23 @@ test("log a run: the file, its conditions, the kit, the verdict", async ({
       await expect(page.getByRole("button", { name: point })).toBeVisible();
     }
     await scene(page, "The verdict · cold to warm, dialed in the middle", {
-      say: "Then the verdict: did it work? Five points, from way cold to way warm, with dialed in the middle.",
+      say: "Then the Verdict: did it work? Five points, from way cold to way warm, with dialed in the middle. It's one Verdict for the whole run, not a score per piece.",
+    });
+
+    const audience = page.getByRole("group", { name: "Who sees this run" });
+    await expect(
+      audience.getByRole("radio", { name: /^Shared/u }),
+    ).toBeChecked();
+    await expect(
+      audience.getByRole("radio", { name: /^Private/u }),
+    ).not.toBeChecked();
+    await expect(audience).toContainText("Runners signed in to dialed.run.");
+    await audience.scrollIntoViewIfNeeded();
+    await scene(page, "Who sees this run · shared, or private", {
+      say: "And who sees this run: it starts as shared, with runners signed in to dialed.run, and one tap makes it private instead. I'll leave it shared.",
+    });
+    await scene(page, "Dialed · then log it", {
+      say: "I was comfortable the whole way, neither cold nor warm, so I'll pick Dialed, and log it.",
     });
 
     await page.getByRole("button", { name: "Dialed" }).click();
