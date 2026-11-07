@@ -27,7 +27,7 @@ export function CompactConditions({
     <div className="flex flex-col gap-2">
       <div
         data-part="compact-conditions"
-        className="flex flex-col gap-1 bg-teal px-5 py-4 text-ink desk:rounded-card"
+        className="flex flex-col gap-1 bg-teal px-5 py-4 text-accent-ink desk:rounded-card"
       >
         <SameConditionsEyebrow band={result.band} units={units} />
         <p className="m-0 text-body font-semibold">

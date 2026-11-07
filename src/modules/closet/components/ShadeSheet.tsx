@@ -227,7 +227,7 @@ export function ShadeSheet({
             : "Tap the photo to sample, or type it."}
         </p>
         {parsed.success || hex.trim() === "" ? undefined : (
-          <span className="self-start bg-failure px-3 py-2 text-small text-ink">
+          <span className="self-start bg-failure px-3 py-2 text-small text-accent-ink">
             {/* No join: React concatenates an array of strings, and a
                   separator between messages this schema can only ever
                   produce one of is a decision nothing could observe. */}
@@ -242,7 +242,7 @@ export function ShadeSheet({
             onClick={() => {
               if (parsed.success) onUse(parsed.data);
             }}
-            className="target cursor-pointer rounded-pill border-none bg-action px-6 py-3 font-display text-body uppercase text-ink"
+            className="target cursor-pointer rounded-pill border-none bg-action px-6 py-3 font-display text-body uppercase text-accent-ink"
           >
             Use this
           </button>

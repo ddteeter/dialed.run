@@ -93,7 +93,7 @@ export type BandCount = (input: {
  * hairline secondary.
  */
 const RETIRE_LOOK =
-  "w-full cursor-pointer rounded-pill border-none bg-action px-4 py-4 text-lead font-bold text-ink";
+  "w-full cursor-pointer rounded-pill border-none bg-action px-4 py-4 text-lead font-bold text-accent-ink";
 const DELETE_LOOK =
   "w-full cursor-pointer rounded-pill border border-ink bg-transparent px-4 py-4 text-body font-semibold text-ink";
 

@@ -143,7 +143,7 @@ export function FieldMessage({
   return (
     <span
       id={messageIdFor(name)}
-      className="self-start bg-failure px-3 py-2 text-small text-ink"
+      className="self-start bg-failure px-3 py-2 text-small text-accent-ink"
     >
       <ErrorWords message={error} />
     </span>

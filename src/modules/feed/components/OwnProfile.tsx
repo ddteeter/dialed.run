@@ -181,7 +181,7 @@ function DayOne() {
       <Link
         data-part="primary-action"
         to="/runs/new"
-        className="target inline-flex items-center rounded-pill bg-action px-6 py-3 text-body font-bold text-ink no-underline"
+        className="target inline-flex items-center rounded-pill bg-action px-6 py-3 text-body font-bold text-accent-ink no-underline"
       >
         Log a run
       </Link>

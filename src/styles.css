@@ -20,6 +20,27 @@
 @plugin "@tailwindcss/typography";
 
 /*
+ * `dark:` means the page is dark (design 185), the same two ways
+ * `ui/tokens.css` decides it: pinned with `data-theme="dark"`, or
+ * following a dark system with no pin to light. Tailwind's own `dark:`
+ * reads only the media query, so a runner who pinned dark on a light
+ * phone would get the light half. Only what T1 cannot say uses it —
+ * Google's button, whose dark colours are Google's — since a T1 role
+ * already changes with the page.
+ */
+@custom-variant dark {
+  &:where(:root[data-theme="dark"] *) {
+    @slot;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+}
+
+/*
  * The two design contracts, mapped onto Tailwind's theme.
  *
  * `inline` keeps `src/ui/tokens.css` the single runtime source of truth:

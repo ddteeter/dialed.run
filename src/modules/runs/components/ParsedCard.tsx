@@ -62,7 +62,7 @@ const retimeSchema = z.object({
  * both of its destinations.
  */
 const PRIMARY_ACTION =
-  "target flex items-center justify-center rounded-card bg-action px-6 py-4 font-display text-body uppercase text-ink desk:col-start-1 desk:row-start-3 desk:self-start desk:justify-self-start";
+  "target flex items-center justify-center rounded-card bg-action px-6 py-4 font-display text-body uppercase text-accent-ink desk:col-start-1 desk:row-start-3 desk:self-start desk:justify-self-start";
 
 const LOOKS_RIGHT = "Looks right — what did you wear?";
 

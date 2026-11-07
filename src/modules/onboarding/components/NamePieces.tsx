@@ -148,7 +148,7 @@ function NextAndSkip({
       <button
         type="button"
         onClick={onDone}
-        className="target grid min-h-13 cursor-pointer place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase text-ink"
+        className="target grid min-h-13 cursor-pointer place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase text-accent-ink"
       >
         Next
       </button>

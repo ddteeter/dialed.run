@@ -397,7 +397,7 @@ export function AttachKit({
               onClick={() => {
                 next([...selected]);
               }}
-              className="target grid min-h-13 place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase text-ink"
+              className="target grid min-h-13 place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase text-accent-ink"
             >
               <PendingLabel
                 label="Next — did it work?"

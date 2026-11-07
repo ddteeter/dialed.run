@@ -645,7 +645,7 @@ function BacklogTable({
                         onClick={() => {
                           onSave(row);
                         }}
-                        className="target flex-1 rounded-card border-none bg-action px-4 font-display text-body uppercase text-ink"
+                        className="target flex-1 rounded-card border-none bg-action px-4 font-display text-body uppercase text-accent-ink"
                       >
                         Log it
                       </button>

@@ -89,7 +89,7 @@ export function RunDetail({
         to="/feed/attach/$runId"
         params={{ runId: run.id }}
         data-slot="primary-action"
-        className="target flex items-center justify-center rounded-card bg-action px-6 py-4 font-display text-body uppercase text-ink no-underline"
+        className="target flex items-center justify-center rounded-card bg-action px-6 py-4 font-display text-body uppercase text-accent-ink no-underline"
       >
         What did you wear?
       </Link>

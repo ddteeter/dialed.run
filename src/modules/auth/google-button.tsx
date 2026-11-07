@@ -216,8 +216,9 @@ function GoogleMark(): JSX.Element {
  * `#1F1F1F` text on light; `#131314`, `#8E918F` and `#E3E3E3` on dark.
  * **These colours are Google's, not T1's**, and `data-part="google-button"`
  * is the one element exempt from the palette check for that reason —
- * nothing else may borrow them. The dark set is keyed on the root's
- * `data-theme="dark"`, which is how task 111's theme will arrive.
+ * nothing else may borrow them. The dark set is `dark:`, which
+ * `src/styles.css` defines as the page being dark, pinned or following
+ * the system (design 185).
  *
  * **The label is Archivo, not Roboto** (decision D-49): the stack has
  * three families by rule. Google's guidelines (updated 2026-07-07) give the
@@ -239,7 +240,7 @@ function GoogleMark(): JSX.Element {
  * so the contract the doc comment above states is one a test can read.
  */
 export const GOOGLE_BUTTON_CLASS =
-  "target flex h-12 w-full cursor-pointer items-center justify-center rounded-pill border border-[#747775] bg-[#FFFFFF] px-6 text-body font-semibold text-[#1F1F1F] in-data-[theme=dark]:border-[#8E918F] in-data-[theme=dark]:bg-[#131314] in-data-[theme=dark]:text-[#E3E3E3]";
+  "target flex h-12 w-full cursor-pointer items-center justify-center rounded-pill border border-[#747775] bg-[#FFFFFF] px-6 text-body font-semibold text-[#1F1F1F] dark:border-[#8E918F] dark:bg-[#131314] dark:text-[#E3E3E3]";
 
 export function GoogleButton({
   google,
