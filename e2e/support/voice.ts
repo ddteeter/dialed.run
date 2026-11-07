@@ -47,27 +47,33 @@ export function relativeSpeed(pace: Pace): number {
  */
 const ELEVENLABS_MAX_SPEED = 1.2;
 
+/**
+ * A hosted engine's settings: its name, and the model and voice a run
+ * gets unless `DEMO_VOICE_MODEL` / `DEMO_VOICE_ID` say otherwise.
+ */
+function hostedEngine<const Name extends string>(
+  name: Name,
+  defaults: Readonly<{ model: string; voice: string }>,
+) {
+  return z.object({
+    engine: z.literal(name),
+    model: z.string().min(1).default(defaults.model),
+    voice: z.string().min(1).default(defaults.voice),
+  });
+}
+
 const engineSchema = z.discriminatedUnion("engine", [
   z.object({ engine: z.literal("say") }),
-  z.object({
-    engine: z.literal("openai"),
-    // The one model that takes `instructions`; OpenAI recommends marin
-    // or cedar "for best quality" (docs read 2026-11-06). It is listed to
-    // shut down 2027-01-06: set DEMO_VOICE_MODEL to its successor.
-    model: z.string().min(1).default("gpt-4o-mini-tts"),
-    voice: z.string().min(1).default("marin"),
-  }),
-  z.object({
-    engine: z.literal("elevenlabs"),
-    // "Most stable on long-form generations" (docs, 2026-11-06).
-    model: z.string().min(1).default("eleven_multilingual_v2"),
-    // No default: list voices with GET /v2/voices?category=premade.
-    voice: z
-      .string({
-        error:
-          "DEMO_VOICE=elevenlabs needs DEMO_VOICE_ID: list voices with GET https://api.elevenlabs.io/v2/voices?category=premade",
-      })
-      .min(1),
+  // The one model that takes `instructions`; OpenAI recommends marin or
+  // cedar "for best quality" (docs read 2026-11-06). It is listed to
+  // shut down 2027-01-06: set DEMO_VOICE_MODEL to its successor.
+  hostedEngine("openai", { model: "gpt-4o-mini-tts", voice: "marin" }),
+  // The owner's pick from an A/B of eight stock voices across v2, v3 and
+  // v4 (2026-11-06): River ("Relaxed, Neutral, Informative") on v4.
+  // Others: GET https://api.elevenlabs.io/v2/voices?category=premade.
+  hostedEngine("elevenlabs", {
+    model: "eleven_v4",
+    voice: "SAz9YHcvj6GT2YYXdXww",
   }),
 ]);
 

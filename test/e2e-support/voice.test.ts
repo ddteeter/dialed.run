@@ -23,7 +23,7 @@ const openai: HostedEngine = {
 };
 const eleven: HostedEngine = {
   engine: "elevenlabs",
-  model: "eleven_multilingual_v2",
+  model: "eleven_v4",
   voice: "voice/1",
 };
 
@@ -56,7 +56,16 @@ describe("engineFrom", () => {
     ).toEqual({ engine: "openai", model: "next-tts", voice: "cedar" });
   });
 
-  it("gives ElevenLabs its long-form model, and the voice it is told", () => {
+  it("gives ElevenLabs the owner's pick, River on v4, unless told otherwise", () => {
+    const river = {
+      engine: "elevenlabs",
+      model: "eleven_v4",
+      voice: "SAz9YHcvj6GT2YYXdXww",
+    };
+    expect(engineFrom({ DEMO_VOICE: "elevenlabs" })).toEqual(river);
+    expect(engineFrom({ DEMO_VOICE: "elevenlabs", DEMO_VOICE_ID: "" })).toEqual(
+      river,
+    );
     expect(
       engineFrom({ DEMO_VOICE: "elevenlabs", DEMO_VOICE_ID: "voice/1" }),
     ).toEqual(eleven);
@@ -72,14 +81,8 @@ describe("engineFrom", () => {
     ).toEqual({ ...eleven, model: "eleven_v3" });
   });
 
-  it("stops the run on an unknown engine, or ElevenLabs with no voice", () => {
+  it("stops the run on an engine it does not know", () => {
     expect(() => engineFrom({ DEMO_VOICE: "polly" })).toThrow();
-    expect(() => engineFrom({ DEMO_VOICE: "elevenlabs" })).toThrow(
-      /needs DEMO_VOICE_ID/u,
-    );
-    expect(() =>
-      engineFrom({ DEMO_VOICE: "elevenlabs", DEMO_VOICE_ID: "" }),
-    ).toThrow();
   });
 });
 
@@ -161,7 +164,7 @@ describe("speechRequest · ElevenLabs", () => {
   it("sends the line and model, at the pace's speed", () => {
     expect(JSON.parse(request.body)).toEqual({
       text: "The Desk",
-      model_id: "eleven_multilingual_v2",
+      model_id: "eleven_v4",
       voice_settings: { speed: 1 },
     });
   });

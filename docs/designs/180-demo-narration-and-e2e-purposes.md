@@ -119,6 +119,10 @@ decision is actually made. `pr-ready` and `pr-demo-video` check it at the end.
    OpenAI takes as `instructions`. OpenAI's `/v1/audio/speech` models shut
    down 2027-01-06 (deprecations page, 2026-10-01), and their replacement
    is Realtime-only, so a later take on OpenAI needs a Realtime adapter.
+   The owner's A/B (2026-11-06, eight stock voices across v2/v3/v4, plus
+   OpenAI marin and cedar) picked ElevenLabs River on `eleven_v4`, now the
+   default for `DEMO_VOICE=elevenlabs`. OpenAI's voices crackled in every
+   take, and cost about 1.7 cents a minute against ElevenLabs's 9.
    _Done:_ each records cleanly and passes in CI.
 
 Coordination: tell coordinator-2 before steps 1, 3 and 4 merge, and ask
