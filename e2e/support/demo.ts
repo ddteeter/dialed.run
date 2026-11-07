@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
@@ -17,6 +18,14 @@ import {
   speechKey,
 } from "./caption";
 import type { Cue, Frame, Pace } from "./caption";
+import {
+  HOSTED_TAIL_MS,
+  engineFrom,
+  hostedFileName,
+  keyVariable,
+  speechRequest,
+} from "./voice";
+import type { HostedEngine } from "./voice";
 import type { Locator, Page } from "@playwright/test";
 
 /**
@@ -72,13 +81,77 @@ const VOICE_CACHE = "node_modules/.cache/demo-voice";
 const run = promisify(execFile);
 
 /**
- * Render `spoken` with the system voice, or reuse an earlier rendering.
+ * The engine this run speaks with (`voice.ts`): `say` unless `DEMO_VOICE`
+ * names a hosted one. Read once, so a bad setting fails before recording.
  */
-async function voiced(spoken: string): Promise<string> {
-  mkdirSync(VOICE_CACHE, { recursive: true });
+const engine = engineFrom(process.env);
+
+/**
+ * Hosted renders, kept outside the repo and `node_modules`: they cost
+ * money, and `npm ci` would throw them away.
+ */
+const HOSTED_CACHE = path.join(homedir(), ".cache", "dialed-voice");
+
+/**
+ * How long a hosted engine may take over one line before the run fails.
+ */
+const HOSTED_TIMEOUT_MS = 120_000;
+
+/**
+ * A line, rendered and cached: the file, and the silence to hold after it.
+ */
+interface Voiced {
+  readonly file: string;
+  readonly tailMs: number;
+}
+
+/**
+ * Render `spoken` with this run's engine, or reuse an earlier rendering.
+ */
+async function voiced(spoken: string): Promise<Voiced> {
   const { pace } = recording;
+  if (engine.engine !== "say") {
+    return { file: await hosted(engine, spoken, pace), tailMs: HOSTED_TAIL_MS };
+  }
+  mkdirSync(VOICE_CACHE, { recursive: true });
   const file = path.resolve(VOICE_CACHE, `${speechKey(spoken, pace)}.aiff`);
   if (!existsSync(file)) await run(SAY, sayArgs(spoken, file, pace));
+  return { file, tailMs: 0 };
+}
+
+async function hosted(
+  chosen: HostedEngine,
+  spoken: string,
+  pace: Pace,
+): Promise<string> {
+  const variable = keyVariable(chosen);
+  const apiKey = process.env[variable] ?? "";
+  if (apiKey === "") {
+    throw new Error(
+      `DEMO_VOICE=${chosen.engine} needs ${variable} set in the shell`,
+    );
+  }
+  const request = speechRequest(chosen, spoken, pace, apiKey);
+  const file = path.join(
+    HOSTED_CACHE,
+    hostedFileName(chosen, spoken, pace, request.extension),
+  );
+  if (existsSync(file)) return file;
+  const response = await fetch(request.url, {
+    method: "POST",
+    headers: request.headers,
+    body: request.body,
+    signal: AbortSignal.timeout(HOSTED_TIMEOUT_MS),
+  });
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(
+      `${chosen.engine} answered ${String(response.status)}: ${detail.slice(0, 300)}`,
+    );
+  }
+  mkdirSync(HOSTED_CACHE, { recursive: true });
+  const audio = await response.arrayBuffer();
+  writeFileSync(file, Buffer.from(audio));
   return file;
 }
 
@@ -112,9 +185,9 @@ export async function scene(
   options: { readonly say?: string } = {},
 ): Promise<void> {
   if (demoSlowMo === 0) return;
-  const audio = await voiced(options.say ?? forSpeech(text));
+  const { file: audio, tailMs } = await voiced(options.say ?? forSpeech(text));
   const { stdout } = await run(AFINFO, [audio]);
-  const holdMs = durationMs(stdout);
+  const holdMs = durationMs(stdout) + tailMs;
   recording.cues.push({
     text,
     startMs: Date.now() - recording.startedAt,

@@ -110,6 +110,15 @@ decision is actually made. `pr-ready` and `pr-demo-video` check it at the end.
    account is shared between widths or added to `DEMO_ACCOUNTS`; first run
    signs up on camera, because that is its story. Seeded straight to each
    story's start, like a scratch demo.
+   **Voice engines** _(owner, 2026-11-06)_: walkthroughs speak at 1x
+   (200 wpm) and act at 800 ms, narrating what they do as well as what
+   they show. `e2e/support/voice.ts` adds two hosted engines for a
+   release-quality take, picked per run with `DEMO_VOICE=openai|elevenlabs`
+   (key from the shell, renders cached in `~/.cache/dialed-voice`); `say`
+   stays the default. Each pace carries a direction in words, which
+   OpenAI takes as `instructions`. OpenAI's `/v1/audio/speech` models shut
+   down 2027-01-06 (deprecations page, 2026-10-01), and their replacement
+   is Realtime-only, so a later take on OpenAI needs a Realtime adapter.
    _Done:_ each records cleanly and passes in CI.
 
 Coordination: tell coordinator-2 before steps 1, 3 and 4 merge, and ask
