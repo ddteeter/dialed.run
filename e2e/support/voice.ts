@@ -9,8 +9,8 @@
  * `DEMO_VOICE=openai|elevenlabs` picks a hosted engine for one run;
  * `DEMO_VOICE_ID` and `DEMO_VOICE_MODEL` override its voice and model.
  * The key comes from `OPENAI_API_KEY` or `ELEVENLABS_API_KEY` in the
- * shell, never from a file: for example
- * `OPENAI_API_KEY=$(security find-generic-password -s openai -w)`.
+ * shell, else from the macOS Keychain (`keychainService`), never from a
+ * file.
  * Only narration text leaves the machine.
  */
 import { createHash } from "node:crypto";
@@ -101,6 +101,16 @@ export function engineFrom(
  */
 export function keyVariable(engine: HostedEngine): string {
   return engine.engine === "openai" ? "OPENAI_API_KEY" : "ELEVENLABS_API_KEY";
+}
+
+/**
+ * The Keychain item a hosted engine's key is read from when its shell
+ * variable is unset, so an agent can run a take without the key passing
+ * through any command it writes. Stored once with
+ * `security add-generic-password -a "$USER" -s <this> -w`.
+ */
+export function keychainService(engine: HostedEngine): string {
+  return `dialed-demo-${engine.engine}`;
 }
 
 /**

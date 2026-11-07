@@ -23,6 +23,7 @@ import {
   engineFrom,
   hostedFileName,
   keyVariable,
+  keychainService,
   speechRequest,
 } from "./voice";
 import type { HostedEngine } from "./voice";
@@ -119,18 +120,41 @@ async function voiced(spoken: string): Promise<Voiced> {
   return { file, tailMs: 0 };
 }
 
+/**
+ * Where macOS keeps `security`: a fixed path, never a PATH lookup.
+ */
+const SECURITY = "/usr/bin/security";
+
+/**
+ * A hosted engine's key: its shell variable, else its Keychain item.
+ * Never logged, and never part of an error message.
+ */
+async function keyFor(chosen: HostedEngine): Promise<string> {
+  const variable = keyVariable(chosen);
+  const fromShell = process.env[variable] ?? "";
+  if (fromShell !== "") return fromShell;
+  const service = keychainService(chosen);
+  try {
+    const { stdout } = await run(SECURITY, [
+      "find-generic-password",
+      "-s",
+      service,
+      "-w",
+    ]);
+    return stdout.trim();
+  } catch {
+    throw new Error(
+      `DEMO_VOICE=${chosen.engine} needs ${variable} in the shell, or a Keychain item: security add-generic-password -a "$USER" -s ${service} -w`,
+    );
+  }
+}
+
 async function hosted(
   chosen: HostedEngine,
   spoken: string,
   pace: Pace,
 ): Promise<string> {
-  const variable = keyVariable(chosen);
-  const apiKey = process.env[variable] ?? "";
-  if (apiKey === "") {
-    throw new Error(
-      `DEMO_VOICE=${chosen.engine} needs ${variable} set in the shell`,
-    );
-  }
+  const apiKey = await keyFor(chosen);
   const request = speechRequest(chosen, spoken, pace, apiKey);
   const file = path.join(
     HOSTED_CACHE,

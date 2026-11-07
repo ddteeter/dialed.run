@@ -6,6 +6,7 @@ import {
   engineFrom,
   hostedFileName,
   keyVariable,
+  keychainService,
   relativeSpeed,
   speechRequest,
 } from "../../e2e/support/voice";
@@ -86,6 +87,13 @@ describe("keyVariable", () => {
   it("names each engine's key", () => {
     expect(keyVariable(openai)).toBe("OPENAI_API_KEY");
     expect(keyVariable(eleven)).toBe("ELEVENLABS_API_KEY");
+  });
+});
+
+describe("keychainService", () => {
+  it("names one Keychain item per engine", () => {
+    expect(keychainService(openai)).toBe("dialed-demo-openai");
+    expect(keychainService(eleven)).toBe("dialed-demo-elevenlabs");
   });
 });
 
