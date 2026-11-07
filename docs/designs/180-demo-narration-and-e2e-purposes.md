@@ -90,7 +90,20 @@ decision is actually made. `pr-ready` and `pr-demo-video` check it at the end.
    coordinator-2's wave-2 lanes to merge._ _Test:_ full `npm run e2e` and the
    a11y coverage figure no lower than before. _Done:_ no file over ~400 lines.
 5. **Walkthroughs.** Pick the 3–5 stories, write product-owner narration with
-   a spoken form per line. _Done:_ each records cleanly and passes in CI.
+   a spoken form per line. Each records at both widths _(owner, 2026-11-06)_:
+   two recording projects, desk 1280×720 and phone 390×844, run the same
+   spec, so one script yields both videos with no mid-video resize. The mux
+   reads the frame size from the recording instead of `caption.ts`'s
+   1280×720 constant. Measured 2026-11-06: a 390×844 viewport in today's
+   fixed 1280×720 video records as a scaled column on grey, which is also
+   what the journeys' mid-video phone switches look like now. The video
+   size follows the viewport (`test.use({ video })`) and the frame size
+   goes into `cues.json`. Also measured: Playwright stops writing frames on
+   a static page, so the video stream can end before the last line does
+   (3.68 s of video, 4.91 s of audio). The mux pads the last frame
+   (`tpad=stop_mode=clone`) to the last line's end, so each cue records its
+   duration too. Once this lands, PR demos record at one width, the one
+   the change shows at; until then, desk. _Done:_ each records cleanly and passes in CI.
 
 Coordination: tell coordinator-2 before steps 1, 3 and 4 merge, and ask
 before every push (the gate is machine-wide).
