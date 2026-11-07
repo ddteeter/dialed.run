@@ -90,7 +90,11 @@ export default defineConfig({
   use: { baseURL: `http://localhost:${String(port)}` },
   // Plan 161, step 3: the a11y coverage figure and the route check, once
   // the whole run is over (a no-op unless it measured).
-  globalTeardown: "./e2e/support/a11y-coverage-teardown.ts",
+  // Design 182, part 2: D1 queries per request, report-only, second.
+  globalTeardown: [
+    "./e2e/support/a11y-coverage-teardown.ts",
+    "./e2e/support/query-report-teardown.ts",
+  ],
   // Plan 161, step 4: each test's screen-reader transcript, checked in.
   // One file per test, with no platform or project suffix: the text is
   // the same on a laptop and in CI, and the default template would make
@@ -176,6 +180,9 @@ export default defineConfig({
       env: {
         PORT: String(port),
         VITE_DEVTOOLS: "off",
+        // Each response says what it asked D1 (design 182); the dev leg
+        // only, since a build made without it folds the counter away.
+        VITE_D1_QUERY_TALLY: "1",
         ...pointServerAtStub(server, stubPort),
       },
       url: `http://localhost:${String(port)}`,
