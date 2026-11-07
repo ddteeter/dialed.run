@@ -29,6 +29,9 @@ export const DEMO_ACCOUNTS = [
   // 163's journey turns a public profile on, which the feed and verdict
   // accounts' pages must not inherit.
   "public-pages",
+  // 185's journey pins the dark theme on the account and the device,
+  // which no other journey's screens may inherit.
+  "theme",
 ] as const;
 export type DemoAccount = (typeof DEMO_ACCOUNTS)[number];
 
