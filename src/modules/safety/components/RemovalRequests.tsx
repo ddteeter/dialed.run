@@ -22,6 +22,7 @@ import { blockRequesterInput } from "../inputs";
 import type { HoldState } from "../takedown-limits";
 import type { PendingTakedownRequest } from "../takedown-requests";
 import { ACTION_BAR } from "./DeskForm";
+import { StatutoryLine } from "./StatutoryLine";
 import { OtherPhotos } from "./OtherPhotos";
 import { PhotoMatches, type DecideMatch } from "./PhotoMatches";
 import { useSettled } from "./use-settled";
@@ -203,6 +204,7 @@ function RemovalRequestRow(props: RowProps): JSX.Element {
         )}
       </span>
       <SubjectLink request={request} />
+      <StatutoryLine />
       <OtherPhotos others={request.otherPhotos} />
       <PhotoMatches found={request.photoMatches} decide={decideMatch} />
       <RequestActions
@@ -529,7 +531,7 @@ function DeclineQuestion({
       <TextField
         name="reason"
         label="Why not"
-        hint="The person who asked is sent this."
+        hint="The person who asked is sent this. Not nude or sexual? Say so."
         value={reason.value}
         onChange={reason.onChange}
         field={form.field}

@@ -21,6 +21,7 @@ import type {
   ReviewSource,
 } from "../review";
 import { PickOne } from "./DeskForm";
+import { StatutoryLine } from "./StatutoryLine";
 import { OtherPhotos } from "./OtherPhotos";
 import {
   PhotoMatches,
@@ -486,6 +487,8 @@ function ReviewRow({
         decide={decideMatch}
       />
       <WhyHere row={row} />
+      {/* Only an intimate-image report starts the 48-hour clock. */}
+      {row.due === undefined ? undefined : <StatutoryLine />}
       {isGarment ? undefined : <SourceTag row={row} />}
       {active ? (
         <RowDecision

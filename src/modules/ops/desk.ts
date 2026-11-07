@@ -22,6 +22,7 @@ import { nowSeconds } from "../../lib/now";
 import { maskedAddress } from "../email";
 import {
   adminUserIds,
+  flaggedCountOf,
   overCeilings,
   pendingReviewCount,
   stuckSources,
@@ -58,6 +59,11 @@ export interface TodayCounts {
   readonly screenerUnfinished: number;
   readonly bansThisWeek: number;
   readonly bansAllTime: number;
+  /**
+   * Accounts flagged after an intimate-image removal and not yet decided
+   * (D-161 1): Today's fourth number, shown at 0 (R47·125).
+   */
+  readonly flaggedAccounts: number;
   /**
    * Jobs the system stopped retrying (Gave up, a section of Today; R-119):
    * Today's rail count and the digest's one extra line.
@@ -120,6 +126,23 @@ function decidedSinceOf(db: ReturnType<typeof coreDb>, since: number) {
     .groupBy(sql`'decided'`);
 }
 
+/**
+ * Closed accounts, grouped by whether `weekAgo` or later closed them. It
+ * reads only the banned rows, through the partial `user_profiles_banned_at`
+ * index (PR#112-1), not every runner. Exported for the test that reads its
+ * plan.
+ */
+export function banCountsOf(db: ReturnType<typeof coreDb>, weekAgo: number) {
+  return db
+    .select({
+      recent: sql<number>`${userProfiles.bannedAt} >= ${weekAgo}`,
+      rows: count(),
+    })
+    .from(userProfiles)
+    .where(isNotNull(userProfiles.bannedAt))
+    .groupBy(sql`1`);
+}
+
 const DAY_SECONDS = 24 * 60 * 60;
 const WEEK_SECONDS = 7 * DAY_SECONDS;
 
@@ -140,11 +163,8 @@ const screenerSources: ReadonlySet<string> = new Set([
  * empty list rather than a row of zeros the code would have to trust is
  * there. Counting still happens in SQL; the Worker only adds two numbers.
  *
- * The review read rides the `review_queue_status_created` index on status.
- * The ban read scans `user_profiles`, which has no index on `banned_at`:
- * one row per runner, read once a day by the digest and when the operator
- * opens the Desk. An index is an additive migration this lane was not
- * listed for, so it is a register item rather than a change here.
+ * The review read rides the `review_queue_status_created` index on status,
+ * and the ban read `user_profiles_banned_at` (`banCountsOf`).
  */
 export async function todayCounts(): Promise<TodayCounts> {
   const db = coreDb();
@@ -152,43 +172,38 @@ export async function todayCounts(): Promise<TodayCounts> {
   const weekAgo = now - WEEK_SECONDS;
   const dayStart = now - (now % DAY_SECONDS);
   const waiting = await pendingReviewCount();
-  const [review, bans, gave, unconfirmed, behind, decided] = await db.batch([
-    db
-      .select({
-        source: reviewQueue.source,
-        rows: count(),
-        oldest: sql<number>`min(${reviewQueue.createdAt})`,
-      })
-      .from(reviewQueue)
-      .where(eq(reviewQueue.status, "pending"))
-      .groupBy(reviewQueue.source),
-    db
-      .select({
-        recent: sql<number>`${userProfiles.bannedAt} >= ${weekAgo}`,
-        rows: count(),
-      })
-      .from(userProfiles)
-      .where(isNotNull(userProfiles.bannedAt))
-      .groupBy(sql`1`),
-    // Grouped by a constant (not `1`, which would name the count), so an
-    // empty table is no row rather than a NULL oldest. A scan of
-    // `gave_up`, which holds only what is still owed an operator: retried
-    // and dropped rows leave it.
-    db
-      .select({
-        rows: count(),
-        oldest: sql<number>`min(${gaveUp.firstFailedAt})`,
-      })
-      .from(gaveUp)
-      .groupBy(sql`'gave_up'`),
-    // The digest's skip mark, by its primary key (OPS-11).
-    db
-      .select({ at: cronCheckpoints.lastRunAt })
-      .from(cronCheckpoints)
-      .where(eq(cronCheckpoints.cronName, DIGEST_UNCONFIRMED)),
-    outboxBehindOf(db),
-    decidedSinceOf(db, dayStart),
-  ]);
+  const [review, bans, flagged, gave, unconfirmed, behind, decided] =
+    await db.batch([
+      db
+        .select({
+          source: reviewQueue.source,
+          rows: count(),
+          oldest: sql<number>`min(${reviewQueue.createdAt})`,
+        })
+        .from(reviewQueue)
+        .where(eq(reviewQueue.status, "pending"))
+        .groupBy(reviewQueue.source),
+      banCountsOf(db, weekAgo),
+      flaggedCountOf(db),
+      // Grouped by a constant (not `1`, which would name the count), so an
+      // empty table is no row rather than a NULL oldest. A scan of
+      // `gave_up`, which holds only what is still owed an operator: retried
+      // and dropped rows leave it.
+      db
+        .select({
+          rows: count(),
+          oldest: sql<number>`min(${gaveUp.firstFailedAt})`,
+        })
+        .from(gaveUp)
+        .groupBy(sql`'gave_up'`),
+      // The digest's skip mark, by its primary key (OPS-11).
+      db
+        .select({ at: cronCheckpoints.lastRunAt })
+        .from(cronCheckpoints)
+        .where(eq(cronCheckpoints.cronName, DIGEST_UNCONFIRMED)),
+      outboxBehindOf(db),
+      decidedSinceOf(db, dayStart),
+    ]);
   const [gaveUpGroup] = gave;
   return {
     waiting,
@@ -205,6 +220,7 @@ export async function todayCounts(): Promise<TodayCounts> {
     ),
     bansThisWeek: bans.find((g) => g.recent === 1)?.rows ?? 0,
     bansAllTime: sumOf(bans),
+    flaggedAccounts: sumOf(flagged),
     gaveUp: gaveUpGroup?.rows ?? 0,
     oldestGaveUpAt: gaveUpGroup?.oldest,
     digestUnconfirmedAt: unconfirmed[0]?.at,

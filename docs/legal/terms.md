@@ -257,8 +257,9 @@ owing you anything.
   posted and are not obliged to, but we act on what we find or are told.
 - **What we can do** when something breaks these terms or the law: remove
   it, change a username, or close the account.
-- **We tell you why.** When reports hide your kit or photo, we tell you in
-  the app, and tell you again if a person leaves it up. When we remove your
+- **We tell you why.** When reports or our automatic screening hide your kit
+  or photo, we tell you in the app, and tell you again if a person leaves it
+  up. When we remove your
   kit or photo, we tell you in the app and by email what was removed and
   which rule it broke, and the email says whether our automatic screening
   flagged it before a person decided. When we close your account, we email

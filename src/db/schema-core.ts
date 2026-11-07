@@ -169,6 +169,12 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     uniqueIndex("user_profiles_username_nocase").on(
       sql`${t.username} COLLATE NOCASE`,
     ),
+    // Desk Today's ban counts (`ops/desk.ts`) and D8's Closed filter read
+    // the banned accounts only (PR#112-1). Partial, so it holds the few
+    // closed accounts rather than every runner.
+    index("user_profiles_banned_at")
+      .on(t.bannedAt)
+      .where(sql`${t.bannedAt} IS NOT NULL`),
   ],
 );
 
@@ -1579,8 +1585,18 @@ export const moderationActions = /*#__PURE__*/ sqliteTable(
   {
     id: text("id").primaryKey(),
     actorId: text("actor_id").notNull(),
+    // `keep`: the Desk kept an account flagged after an intimate-image
+    // removal (D-161). A text enum with no CHECK, so no migration.
     action: text("action", {
-      enum: ["remove", "quarantine", "takedown", "ban", "unban", "rename"],
+      enum: [
+        "remove",
+        "quarantine",
+        "takedown",
+        "ban",
+        "unban",
+        "rename",
+        "keep",
+      ],
     }).notNull(),
     // `garment`: a garment's photo, by the garment's id (design 157).
     subjectType: text("subject_type", {

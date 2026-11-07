@@ -1,4 +1,4 @@
-import { useRouter } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import type { JSX, ReactNode } from "react";
 
@@ -6,6 +6,7 @@ import type { GaveUpKind } from "../../../lib/contracts/gave-up";
 import { outboxBehindSentence } from "../../../lib/copy";
 import { longDayLabel, monthDayLabel, timeOfDay } from "../../../lib/dates";
 import {
+  Bracketed,
   ControlFailureBand,
   FormStatus,
   Mono,
@@ -25,8 +26,9 @@ import type { GaveUpJob } from "../gave-up";
  * and the digest cannot disagree.
  *
  * Under them, Gave up (D-87; round 29 B·2, D6's rows): the jobs the system
- * stopped retrying. Today's three numbers stay three — Gave up is its own
- * section, and its count is the rail's on Today.
+ * stopped retrying. Gave up is its own section, not a number, and its
+ * count is the rail's on Today. R47·125 adds a fourth number the digest
+ * does not carry: flagged accounts, linking to D8's Flagged filter.
  *
  * Hi-viz marks a number that needs a person, and only when it is above
  * zero; bans are a record, not a task, so they are never hi-viz.
@@ -50,7 +52,10 @@ function Stat({
   count: number;
   needsPerson: boolean;
   children: ReactNode;
-  note: ReactNode;
+  /**
+  Absent for a number the board draws with no line under it (R47·125).
+  */
+  note?: ReactNode;
 }>) {
   const tone = needsPerson && count > 0 ? "text-hiviz-text" : "text-ink";
   return (
@@ -61,9 +66,11 @@ function Stat({
         </Mono>
         <span className="text-lead">{children}</span>
       </span>
-      <Mono step="xs" className="text-muted">
-        {note}
-      </Mono>
+      {note === undefined ? undefined : (
+        <Mono step="xs" className="text-muted">
+          {note}
+        </Mono>
+      )}
     </li>
   );
 }
@@ -294,9 +301,9 @@ function GaveUp({
           Gave up
         </h2>
         {count === 0 ? undefined : (
-          <Mono step="sm" className="text-hiviz-text">
-            {`[${String(count)} ${count === 1 ? "job" : "jobs"}${oldest}]`}
-          </Mono>
+          <Bracketed step="sm" className="text-hiviz-text">
+            {`${String(count)} ${count === 1 ? "job" : "jobs"}${oldest}`}
+          </Bracketed>
         )}
       </span>
       <FormStatus>{action.status}</FormStatus>
@@ -492,6 +499,17 @@ export function Today({
             note={`${String(counts.bansAllTime)} all time`}
           >
             {counts.bansThisWeek === 1 ? "ban" : "bans"} this week
+          </Stat>
+          {/* R47·125: after the others, shown at 0, linking to D8's
+              Flagged filter (D-161 1). */}
+          <Stat count={counts.flaggedAccounts} needsPerson>
+            <Link
+              to="/desk/runners"
+              search={{ filter: "flagged" }}
+              className="target inline-flex items-center text-ink underline underline-offset-4"
+            >
+              flagged {counts.flaggedAccounts === 1 ? "account" : "accounts"}
+            </Link>
           </Stat>
         </ul>
         {today.breakers.map((reading) => (

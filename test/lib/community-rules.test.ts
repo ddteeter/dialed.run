@@ -100,6 +100,7 @@ describe("the rule a removal names", () => {
       explicit: "explicit",
       intimate: "explicit",
       harassment: "harassment",
+      othersPhotos: "othersPhotos",
       spam: "spam",
       copyright: "othersWork",
     });

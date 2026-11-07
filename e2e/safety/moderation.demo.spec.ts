@@ -9,7 +9,9 @@
  * C8), and the bell's moderation notices (C8, D-132, D-145): the author's
  * when a report hides their kit, and the reporter's when a person removes
  * what they reported, and a garment photo's owner when a person removes it
- * (R-167, design 159) — one journey, one video.
+ * (R-167, design 159), and D8's flag on the poster of an upheld
+ * intimate-image removal with its Keep account (D-161 1, R47·124) — one
+ * journey, one video.
  *
  * The journey needs `ADMIN_USER_IDS=e2e-desk-operator` in the dev server's
  * `.dev.vars`, which CI's e2e job writes (register R-72). Locally, put the
@@ -38,6 +40,7 @@ import {
 } from "../../src/db/schema-core";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
+import { removalStatements } from "../../src/modules/safety/contracts";
 import { userIdOf } from "../conformance/logging-fixtures";
 import { signInAsOperator } from "../desk/operator";
 import { storageStateFor } from "../support/accounts";
@@ -69,6 +72,8 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   const sharedEntryId = newUlid();
   const garmentId = newUlid();
   const stuckGarmentId = newUlid();
+  const posterId = newUlid();
+  const posterHandle = `poster_${suffix}`;
 
   // One runner with one reported public entry. Scoped to ids generated
   // here — never a bare delete of these tables.
@@ -515,6 +520,60 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
     .selectOption("Post spam, advertising or promotion we have not allowed");
   await page.getByRole("button", { name: "Close account" }).click();
   await expect(page.getByText("[CLOSED]")).toBeVisible();
+
+  // D-161 (1): a runner whose photo a person removed as intimate. The
+  // audit row exactly as moderateContent writes it; nothing else is
+  // seeded, because the flag is read from that row alone.
+  await withLocalDb(async ({ core }) => {
+    await core.insert(user).values({
+      id: posterId,
+      name: posterHandle,
+      email: `${posterHandle}@example.com`,
+      emailVerified: true,
+      createdAt: new Date(now * 1000),
+      updatedAt: new Date(now * 1000),
+    });
+    await core
+      .insert(userProfiles)
+      .values({ userId: posterId, username: posterHandle });
+    await core.insert(moderationActions).values({
+      id: newUlid(),
+      actorId: "e2e-desk-operator",
+      action: "remove",
+      subjectType: "photo",
+      subjectId: newUlid(),
+      subjectOwnerId: posterId,
+      reason: removalStatements.intimate,
+      createdAt: now,
+    });
+  });
+  await page.goto("/desk/runners?filter=flagged");
+  await hydrated(page);
+  await page.getByRole("searchbox").fill(`${posterHandle}@example.com`);
+  await page.getByRole("searchbox").press("Enter");
+  await scene(page, "D8 · Flagged: the poster of an upheld intimate removal");
+  const poster = page.getByRole("button", { name: `@${posterHandle}` });
+  await expect(page.getByRole("row").filter({ has: poster })).toContainText(
+    "[ACTIVE][Flagged]",
+  );
+  await poster.click();
+  const column = page.getByRole("complementary", { name: `@${posterHandle}` });
+  await expect(column.getByRole("heading").first()).toHaveText("Flagged");
+  await expect(column).toContainText(
+    "A takedown of an image they posted was upheld on",
+  );
+  await expect(column).not.toContainText(/intimate/iu);
+
+  await scene(page, "Keep account: the flag clears, and nothing else happens");
+  await column.getByRole("button", { name: "Keep account" }).click();
+  await expect(poster).toHaveCount(0);
+  const kept = await withLocalDb(async ({ core }) =>
+    core
+      .select({ action: moderationActions.action })
+      .from(moderationActions)
+      .where(eq(moderationActions.subjectId, posterId)),
+  );
+  expect(kept.map((row) => row.action)).toStrictEqual(["keep"]);
 
   const left = await withLocalDb(async ({ core }) => ({
     entries: await core

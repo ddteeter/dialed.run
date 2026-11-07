@@ -23,6 +23,7 @@
  */
 import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import type { SQLWrapper } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import type { drizzle } from "drizzle-orm/d1";
 import type {
   SQLiteColumn,
@@ -50,6 +51,7 @@ import {
   type ScreenDecision,
 } from "./classifier/moderation";
 import { ceilingReading } from "./breakers";
+import { screeningNotice } from "./notices";
 import {
   enqueueForReview,
   settleOpenReviews,
@@ -161,13 +163,34 @@ export async function screenPhoto(
   // visible-but-unrecorded (not harmless, because nothing would remember
   // why), or — the one this lane shipped and had to come back for —
   // hidden with nobody told.
+  // A flag that hides a kit photo tells its author (D-162), read before
+  // the batch that hides it.
+  const told = await holdNoticeFor(photo, decision);
   await db().batch([
     screeningInsert(photo, result.scores, decision, now),
     visibilityWrite(photo.scope, photo.photoId, decision),
     ...queueWritesFor(photo, decision),
+    ...told,
   ]);
 
   return outcomeOf[decision];
+}
+
+/**
+ * The author's notice a flag owes (D-162): only a flag hides, and only a
+ * kit photo is seen by anyone but its owner. A garment photo is its
+ * owner's alone, so holding it restricts nothing and tells nobody:
+ * `screeningNotice` reads only a kit photo's row, so a garment's id finds
+ * no author. It reads the author only while the photo is still `pending`,
+ * the state this flag hides it from.
+ */
+function holdNoticeFor(
+  photo: PhotoToScreen,
+  decision: ScreenDecision,
+): Promise<BatchItem<"sqlite">[]> | BatchItem<"sqlite">[] {
+  return decision === "flag"
+    ? screeningNotice(db(), photo.photoId, "hidden")
+    : [];
 }
 
 /**

@@ -18,7 +18,7 @@ import {
   ruleLine,
   type CommunityRule,
 } from "../../lib/contracts/community-rules";
-import { CONTACT_ADDRESS } from "../../lib/contracts/contact";
+import { APPEAL_ADDRESS, CONTACT_ADDRESS } from "../../lib/contracts/contact";
 import { outboxBehindSentence } from "../../lib/copy";
 import { EXPORT_LINK_DAYS } from "../../lib/contracts/data-export";
 import {
@@ -492,7 +492,9 @@ const CONTENT: {
       body:
         template.outcome === "removed"
           ? "We removed the image you asked about from dialed.run."
-          : `We looked at your request and didn't remove anything. Reason: ${template.reason ?? "it isn't what the request described"}.`,
+          : // D-161 (2): what falls outside the statutory line goes
+            // through an ordinary report (owner's words, 2026-11-06).
+            `We looked at your request and didn't remove anything. Reason: ${template.reason ?? "it isn't what the request described"}. If it's a photo of you that you didn't agree to, write to ${APPEAL_ADDRESS} and we'll look at it as an ordinary report.`,
       foot: `Questions? Reply to this email or write to ${CONTACT_ADDRESS}.`,
     };
   },

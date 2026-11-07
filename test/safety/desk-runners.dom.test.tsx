@@ -12,7 +12,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -59,6 +59,7 @@ const ada: DeskRunner = {
   reports: 2,
   state: "ACTIVE",
   banReason: undefined,
+  flaggedAt: undefined,
 };
 
 const bo: DeskRunner = {
@@ -70,6 +71,7 @@ const bo: DeskRunner = {
   reports: 0,
   state: "CLOSED",
   banReason: "Spam accounts",
+  flaggedAt: undefined,
 };
 
 async function renderDesk(overrides: Partial<Props> = {}) {
@@ -78,6 +80,7 @@ async function renderDesk(overrides: Partial<Props> = {}) {
     .mockResolvedValue({ kind: "renamed", username: "runner_4821" });
   const ban = vi.fn<Props["ban"]>().mockResolvedValue({ banned: true });
   const unban = vi.fn<Props["unban"]>().mockResolvedValue({ banned: false });
+  const keep = vi.fn<Props["keep"]>().mockResolvedValue({ kept: true });
   const router = await renderWithRouter(
     <DeskRunners
       runners={[ada, bo]}
@@ -86,10 +89,12 @@ async function renderDesk(overrides: Partial<Props> = {}) {
       rename={rename}
       ban={ban}
       unban={unban}
+      keep={keep}
+      flagged={0}
       {...overrides}
     />,
   );
-  return { rename, ban, unban, router };
+  return { rename, ban, unban, keep, router };
 }
 
 describe("D8's table", () => {
@@ -183,6 +188,236 @@ describe("selecting a runner", () => {
     await user.click(bosRow ?? document.body);
     expect(
       screen.getByRole("complementary", { name: "@bo@example.com" }),
+    ).toBeInTheDocument();
+  });
+});
+
+/**
+6 November 2025, 12:00 UTC: when ada's flag opened.
+*/
+const FLAGGED_AT = Date.UTC(2025, 10, 6, 12) / 1000;
+
+/**
+ * D8 over a list the test swaps, as a reload or another filter would:
+ * "Next list" draws the next one.
+ */
+function NextList({
+  lists,
+}: Readonly<{ lists: readonly (readonly DeskRunner[])[] }>) {
+  const [at, setAt] = useState(0);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setAt(at + 1);
+        }}
+      >
+        Next list
+      </button>
+      <DeskRunners
+        runners={lists[at] ?? []}
+        total={412}
+        filter={{ filter: "all" }}
+        rename={vi.fn<Props["rename"]>()}
+        ban={vi.fn<Props["ban"]>()}
+        unban={vi.fn<Props["unban"]>()}
+        keep={vi.fn<Props["keep"]>().mockResolvedValue({ kept: true })}
+        flagged={1}
+      />
+    </>
+  );
+}
+
+describe("a flagged account (D-161 1, R47·124) and PENDING DELETE (PR#126-1)", () => {
+  it("offers Flagged last among the filters, with its count, even at 0", async () => {
+    await renderDesk({ filter: { filter: "flagged" }, flagged: 0 });
+
+    const filters = screen.getByRole("navigation", { name: "Filter runners" });
+    expect(
+      within(filters)
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toStrictEqual(["All", "Reported", "Closed", "Flagged [0]"]);
+    const chip = within(filters).getByRole("link", { name: /^Flagged/u });
+    expect(chip).toHaveAttribute("aria-current", "page");
+    expect(chip).toHaveAttribute("href", "/desk/runners?filter=flagged");
+    expect(within(chip).getByText(bracketed("0"))).toBeInTheDocument();
+  });
+
+  it("counts the flagged accounts on the chip", async () => {
+    await renderDesk({ flagged: 3 });
+
+    const filters = screen.getByRole("navigation", { name: "Filter runners" });
+    expect(
+      within(filters).getByRole("link", { name: /^Flagged/u }),
+    ).toHaveTextContent("Flagged [3]");
+  });
+
+  it("marks a flagged row beside its state, in hi-viz, and no other row", async () => {
+    await renderDesk({ runners: [{ ...ada, flaggedAt: FLAGGED_AT }, bo] });
+
+    const [, first, second] = screen.getAllByRole("row");
+    const mark = within(first ?? document.body).getByText(bracketed("Flagged"));
+    expect(mark).toHaveClass("text-hiviz-text");
+    expect(first).toHaveTextContent("[ACTIVE][Flagged]");
+    expect(
+      within(second ?? document.body).queryByText(bracketed("Flagged")),
+    ).toBeNull();
+  });
+
+  it("draws PENDING DELETE as a state", async () => {
+    await renderDesk({ runners: [{ ...ada, state: "PENDING DELETE" }] });
+
+    expect(screen.getByText(bracketed("PENDING DELETE"))).toBeInTheDocument();
+  });
+
+  it("puts the flag at the top of the column, dated, never saying intimate", async () => {
+    const user = userEvent.setup();
+    await renderDesk({ runners: [{ ...ada, flaggedAt: FLAGGED_AT }] });
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+
+    const column = screen.getByRole("complementary", { name: "@ada" });
+    expect(
+      within(column)
+        .getAllByRole("heading")
+        .map((h) => h.textContent),
+    ).toStrictEqual(["Flagged", "Rename", "Close account"]);
+    const flagHeading = within(column).getByRole("heading", {
+      name: "Flagged",
+    });
+    expect(flagHeading.firstElementChild).toHaveClass("text-hiviz-text");
+    expect(flagHeading.closest("section")).toHaveClass("border-hiviz-text");
+    expect(
+      within(column).getByText(
+        "A takedown of an image they posted was upheld on Nov 6. Nothing has happened to the account. Keep it, or ban it below.",
+      ),
+    ).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/intimate/iu);
+    expect(
+      within(column).getByRole("button", { name: "Keep account" }),
+    ).toHaveClass("rounded-pill", "border-ink", "bg-transparent");
+  });
+
+  it("keeps on Keep account, reloads, and hands focus to the runner's name", async () => {
+    const user = userEvent.setup();
+    const { keep, router } = await renderDesk({
+      runners: [{ ...ada, flaggedAt: FLAGGED_AT }],
+    });
+    const invalidate = vi.spyOn(router, "invalidate");
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+
+    await user.click(screen.getByRole("button", { name: "Keep account" }));
+
+    expect(keep).toHaveBeenCalledWith({ data: { userId: "u-ada" } });
+    await waitFor(() => {
+      expect(invalidate).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "@ada" })).toHaveFocus();
+    });
+  });
+
+  it("hands focus to the name after a ban of a flagged runner too", async () => {
+    const user = userEvent.setup();
+    await renderDesk({ runners: [{ ...ada, flaggedAt: FLAGGED_AT }, bo] });
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+    await user.type(screen.getByRole("textbox", { name: /Why/ }), "Serious");
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Which rule/ }),
+      "Post sexual or explicit content",
+    );
+    await user.click(screen.getByRole("button", { name: "Close account" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "@ada" })).toHaveFocus();
+    });
+  });
+
+  it("leaves focus alone after a ban of an unflagged runner", async () => {
+    const user = userEvent.setup();
+    const { ban, router } = await renderDesk();
+    const invalidate = vi.spyOn(router, "invalidate");
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+    await user.type(screen.getByRole("textbox", { name: /Why/ }), "Serious");
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Which rule/ }),
+      "Post sexual or explicit content",
+    );
+    await user.click(screen.getByRole("button", { name: "Close account" }));
+
+    expect(await screen.findByText("Account closed.")).toBeInTheDocument();
+    expect(ban).toHaveBeenCalled();
+    // The reload is the decision's last step: focus would have moved by then.
+    await waitFor(() => {
+      expect(invalidate).toHaveBeenCalled();
+    });
+    expect(screen.getByRole("button", { name: "@ada" })).not.toHaveFocus();
+  });
+
+  it("says it is still flagged when Keep account fails", async () => {
+    const user = userEvent.setup();
+    const keep = vi
+      .fn<Props["keep"]>()
+      .mockRejectedValue(new TypeError("Failed to fetch"));
+    await renderDesk({ keep, runners: [{ ...ada, flaggedAt: FLAGGED_AT }] });
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+
+    await user.click(screen.getByRole("button", { name: "Keep account" }));
+
+    expect(await screen.findByText("Still flagged")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "@ada" })).not.toHaveFocus();
+  });
+
+  it("starts each flagged runner's flag afresh", async () => {
+    const user = userEvent.setup();
+    const keep = vi
+      .fn<Props["keep"]>()
+      .mockRejectedValue(new TypeError("Failed to fetch"));
+    await renderDesk({
+      keep,
+      runners: [
+        { ...ada, flaggedAt: FLAGGED_AT },
+        { ...ada, userId: "u-di", username: "di", flaggedAt: FLAGGED_AT },
+      ],
+    });
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+    await user.click(screen.getByRole("button", { name: "Keep account" }));
+    expect(await screen.findByText("Still flagged")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "@di" }));
+
+    expect(screen.queryByText("Still flagged")).not.toBeInTheDocument();
+  });
+
+  it("hands focus to the name once, not to a later list that draws the row again", async () => {
+    const user = userEvent.setup();
+    const flaggedAda = { ...ada, flaggedAt: FLAGGED_AT };
+    await renderWithRouter(
+      <NextList lists={[[flaggedAda, bo], [bo], [ada, bo]]} />,
+    );
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+    await user.click(screen.getByRole("button", { name: "Keep account" }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "@ada" })).toHaveFocus();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Next list" }));
+    await user.click(screen.getByRole("button", { name: "Next list" }));
+
+    expect(screen.getByRole("button", { name: "@ada" })).not.toHaveFocus();
+  });
+
+  it("shows no flag on a closed account, which Reopen answers", async () => {
+    const user = userEvent.setup();
+    await renderDesk({ runners: [{ ...bo, flaggedAt: FLAGGED_AT }] });
+    await user.click(screen.getByRole("button", { name: "—" }));
+
+    expect(
+      screen.queryByRole("button", { name: "Keep account" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Reopen account" }),
     ).toBeInTheDocument();
   });
 });
@@ -313,10 +548,17 @@ describe("Close account (D3)", () => {
     await user.click(screen.getByRole("button", { name: "—" }));
 
     expect(screen.getByText("Spam accounts")).toBeInTheDocument();
+    const closedHeading = screen.getByRole("heading", {
+      name: "Account closed",
+    });
+    expect(closedHeading.firstElementChild).not.toHaveClass("text-hiviz-text");
+    expect(closedHeading.closest("section")).toHaveClass("border-hairline");
     expect(
       screen.queryByRole("button", { name: "Close account" }),
     ).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Reopen account" }));
+    const reopen = screen.getByRole("button", { name: "Reopen account" });
+    expect(reopen).toHaveClass("target", "text-left");
+    await user.click(reopen);
 
     expect(unban).toHaveBeenCalledWith({ data: { userId: "u-bo" } });
   });

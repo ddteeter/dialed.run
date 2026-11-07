@@ -1,7 +1,8 @@
 /**
  * The notices a report's life owes (C8; D-132, D-145): the author's when a
  * report hides their kit or photo and when a person leaves it up, and the
- * reporter's when a person decides. Each is a bell row, the path a
+ * reporter's when a person decides. An automatic hold owes its author the
+ * same two (D-162). Each is a bell row, the path a
  * removal's notice already takes, built here as statements for the batch
  * of the change it reports. A read that decides who is told runs first,
  * because a batch cannot branch on its own results.
@@ -9,7 +10,7 @@
  * **Suspected CSAM is silent** (D-70): a quarantine owes none of these,
  * which its callers decide by never asking for one.
  */
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, ne, type SQL } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { drizzle } from "drizzle-orm/d1";
 
@@ -22,6 +23,8 @@ import {
   HIDDEN_NOTICE,
   KEPT_NOTICE,
   REPORT_OUTCOME,
+  SCREENING_HIDDEN_NOTICE,
+  SCREENING_KEPT_NOTICE,
   type Authored,
   type ReportOutcome,
 } from "./notice-copy";
@@ -61,16 +64,11 @@ const authorOf: Record<
         ),
       ),
   photo: (db, subjectId) =>
-    db
-      .select({ userId: outfitEntries.userId })
-      .from(entryPhotos)
-      .innerJoin(outfitEntries, eq(outfitEntries.id, entryPhotos.entryId))
-      .where(
-        and(
-          eq(entryPhotos.id, subjectId),
-          ne(entryPhotos.screenStatus, heldPhotoStatus),
-        ),
-      ),
+    photoAuthorWhere(
+      db,
+      subjectId,
+      ne(entryPhotos.screenStatus, heldPhotoStatus),
+    ),
 };
 
 /**
@@ -112,6 +110,76 @@ export function hiddenNotice(
     subjectType,
     subjectId,
   );
+}
+
+/**
+ * The notices an automatic hold of a kit photo owes its author (D-162):
+ * the hide, while the photo is still `pending` (one a report already hid
+ * was told then), and the "left it up" on an Approve, while it is still
+ * held (a classifier `review`-band row hid nothing and told nobody).
+ */
+const SCREENING_NOTICES = {
+  hidden: {
+    kind: "content_hidden",
+    status: "pending",
+    body: SCREENING_HIDDEN_NOTICE,
+  },
+  kept: {
+    kind: "content_kept",
+    status: "hidden_pending_review",
+    body: SCREENING_KEPT_NOTICE,
+  },
+} as const;
+
+/**
+ * The hide notice when the uploader is known and the photo row goes in
+ * the same batch: a fingerprint hold at upload. Raised, as a report's
+ * hide is.
+ */
+export function screeningHoldNotice(
+  db: Db,
+  userId: string,
+  photoId: string,
+): BatchItem<"sqlite"> {
+  const { kind, body } = SCREENING_NOTICES.hidden;
+  return notificationRaise(db, { userId, kind, subjectId: photoId, body });
+}
+
+/**
+ * One of the hold's notices, its author read first (`SCREENING_NOTICES`
+ * says while which state): a classifier flag's hide, or an Approve's
+ * "left it up". Nothing for a photo gone since, or past that state.
+ */
+export async function screeningNotice(
+  db: Db,
+  photoId: string,
+  which: keyof typeof SCREENING_NOTICES,
+): Promise<BatchItem<"sqlite">[]> {
+  const { kind, status, body } = SCREENING_NOTICES[which];
+  const authors = await photoAuthorWhere(
+    db,
+    photoId,
+    eq(entryPhotos.screenStatus, status),
+  );
+  return authors.map(({ userId }) =>
+    notificationRaise(db, { userId, kind, subjectId: photoId, body }),
+  );
+}
+
+/**
+ * A kit photo's author, while `status` holds of the photo. A
+ * primary-key probe.
+ */
+function photoAuthorWhere(
+  db: Db,
+  photoId: string,
+  status: SQL,
+): Promise<{ userId: string }[]> {
+  return db
+    .select({ userId: outfitEntries.userId })
+    .from(entryPhotos)
+    .innerJoin(outfitEntries, eq(outfitEntries.id, entryPhotos.entryId))
+    .where(and(eq(entryPhotos.id, photoId), status));
 }
 
 /**

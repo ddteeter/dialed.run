@@ -1033,6 +1033,52 @@ _Nothing from 99 on is open: round 45 answered the last of it._
      sits under the bars, on a hairline, before the weather credit.
      **The ask:** confirm, or give the wording.
 
+<!-- Numbered 139: round 49 used 137 and 138 (138 is the onboarding layout). A list break, so Prettier keeps the number. -->
+
+139. **What lane 176 built where no board draws it (design 176; D-161,
+     D-162).** Words are the owner's where marked; the rest are
+     placeholders.
+     - **D8 Runners, a flagged account (D-161 1).** A fourth filter,
+       Flagged, after Reported. `[Flagged]` in hi-viz beside the row's
+       STATE. Between Rename and Close account, a panel with a hi-viz
+       border and kicker: FLAGGED · "An image they posted was removed as
+       intimate on Nov 6. Decide whether the account stays." · Keep
+       account (Still flagged when it fails). Closed accounts show no flag.
+     - **D8's STATE `PENDING DELETE`** (round 27 #22's drawn value, now
+       built): the runner asked to delete and the purge has not run.
+     - **Today (D5), a line under the three numbers, only above zero:**
+       ACCOUNTS TO DECIDE · "2 accounts are flagged after an intimate-image
+       removal. Decide each in Runners, under Flagged."
+     - **The statutory line (owner's words)**, `text-small` quiet, under
+       the reasons on an intimate-image Review row and under the subject
+       link on every removal request: "Intimate means nudity or sexual
+       content (15 U.S.C. § 6851). If it isn't, decline, and remove it
+       under another rule if it breaks one."
+     - **Remove's reasons gain** "it shows someone who didn't agree to it"
+       (owner's words), after "it harasses someone".
+     - **The screening hold's bell row (owner's words, D-162)** reuses the
+       report hide's row: "Photo hidden while we review it. Our automatic
+       screening flagged a photo on your run, …".
+       **ANSWERED by round 47 (R47·124–126), built as drawn:** the flag
+       panel tops D8's column with Design's words and a Keep account outline
+       pill, and Keep, a ban or an unban returns focus to the runner's name;
+       the Flagged (N) chip comes last and shows at 0; FLAGGED ACCOUNTS is
+       Today's fourth number, linking to the filter; the statutory line is
+       MONO.xs `--muted`, sentence case, under the reason. Built without
+       R47·124's "See the takedown": see 127.
+
+<!-- Numbered 140: after lane 176's 139. A list break, so Prettier keeps the number. -->
+
+140. **What R47·124's "See the takedown" opens (design 176).** The board
+     says it opens the Review row. An upheld takedown's row is already
+     decided, Review shows only pending rows and takes no parameters, and
+     a decided `/takedown` request leaves RemovalRequests. Nothing on the
+     Desk shows a decided row, so the link is not built (coordinator,
+     2026-11-06). Also: MONO.xs is uppercase in `Mono`, so the sentence-
+     case statutory line writes the xs step's classes out.
+     **The ask:** say what it opens: a read-only decided-row view (a new
+     screen), or something that exists.
+
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
 
 ## Answered in round 49 (imported 2026-11-06)

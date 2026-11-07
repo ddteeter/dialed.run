@@ -33,6 +33,7 @@ import {
   settleOutbox,
 } from "../ops";
 
+import { flaggedCountOf, keepAccount } from "./account-flags";
 import { banEmail, banUser, reopenEmailFor, unbanUser } from "./bans";
 import {
   accountCount,
@@ -64,6 +65,7 @@ import {
   runnersFilterInput,
   runRemovalsInput,
   unbanUserInput,
+  keepAccountInput,
 } from "./inputs";
 import { removalsOnRun } from "./run-removals";
 import { burstsToRelease, releaseHolds } from "./release";
@@ -267,6 +269,19 @@ export const unbanUserAction = createServerFn({ method: "POST" })
   });
 
 /**
+ * D8's Keep account on a runner flagged after an intimate-image removal
+ * (D-161 1): the operator decided the account stays, which clears the
+ * flag. Admin-only; `account-flags.ts` records it.
+ */
+export const keepAccountAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => keepAccountInput.parse(input))
+  .handler(async ({ data }) => {
+    const actorId = requireAdmin(await verifiedUserId());
+    await keepAccount(coreDb(), data.userId, actorId);
+    return { kept: true };
+  });
+
+/**
  * A review row about a handle the re-ask flagged (D-97): Keep, which
  * clears the flag, or Rename, the force-rename below with its reasons.
  * Admin-only; the decision lives in `account/handle-review.ts`.
@@ -310,9 +325,12 @@ export const deskRunnersQuery = createServerFn({ method: "GET" })
       query: data.query,
       only: runnersWhere(data.filter),
     });
+    const [flagged] = await flaggedCountOf(db);
     return {
       runners: await deskRunners(db, accounts),
       total: await accountCount(db),
+      // R47·124: the Flagged chip's count, shown at 0 too.
+      flagged: flagged?.rows ?? 0,
     };
   });
 

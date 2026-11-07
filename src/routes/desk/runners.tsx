@@ -6,6 +6,7 @@ import {
   banUserAction,
   deskRunnersQuery,
   forceRenameAction,
+  keepAccountAction,
   unbanUserAction,
 } from "../../modules/safety/functions";
 import { runnersFilterInput } from "../../modules/safety/inputs";
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/desk/runners")({
 });
 
 function RunnersPage() {
-  const { runners, total } = Route.useLoaderData();
+  const { runners, total, flagged } = Route.useLoaderData();
   const filter = Route.useSearch();
 
   return (
@@ -31,10 +32,12 @@ function RunnersPage() {
       <DeskRunners
         runners={runners}
         total={total}
+        flagged={flagged}
         filter={filter}
         rename={forceRenameAction}
         ban={banUserAction}
         unban={unbanUserAction}
+        keep={keepAccountAction}
       />
     </DeskPage>
   );

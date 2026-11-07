@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   entryPhotos,
   moderationActions,
+  notifications,
   removedFingerprints,
   reviewQueue,
   userProfiles,
@@ -23,6 +24,7 @@ import {
 } from "../../src/modules/safety/removed-fingerprints";
 import { pendingReviewQueue } from "../../src/modules/safety/review";
 import type { RemovalReason } from "../../src/modules/safety/contracts";
+import { SCREENING_HIDDEN_NOTICE } from "../../src/modules/safety/notice-copy";
 import {
   copyOf,
   fingerprintOfBytes,
@@ -265,6 +267,40 @@ describe("a copy of a removed image is held for review (D-147)", () => {
       status: "pending",
     });
     expect(classify).not.toHaveBeenCalled();
+  });
+
+  it("tells its uploader it is hidden, in the screening words (D-162)", async () => {
+    const bytes = await sceneJpeg(4);
+    const first = await posted(bytes);
+    await removed("photo", first.photoId);
+
+    const again = await posted(await copyOf(bytes));
+
+    const told = await core()
+      .select({
+        kind: notifications.kind,
+        subjectId: notifications.subjectId,
+        body: notifications.body,
+      })
+      .from(notifications)
+      .where(eq(notifications.userId, again.userId));
+    expect(told).toStrictEqual([
+      {
+        kind: "content_hidden",
+        subjectId: again.photoId,
+        body: SCREENING_HIDDEN_NOTICE,
+      },
+    ]);
+  });
+
+  it("tells nobody when nothing is held", async () => {
+    const kit = await posted(await sceneJpeg(4));
+
+    const told = await core()
+      .select({ id: notifications.id })
+      .from(notifications)
+      .where(eq(notifications.userId, kit.userId));
+    expect(told).toStrictEqual([]);
   });
 
   it("holds one under the fingerprint breaker's ceiling (design 164)", async () => {

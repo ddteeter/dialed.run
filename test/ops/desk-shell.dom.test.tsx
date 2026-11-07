@@ -52,6 +52,7 @@ function desk(counts: Partial<TodayCounts> = {}): DeskToday {
       screenerUnfinished: 0,
       bansThisWeek: 0,
       bansAllTime: 0,
+      flaggedAccounts: 0,
       gaveUp: 0,
       oldestGaveUpAt: undefined,
       digestUnconfirmedAt: undefined,
@@ -64,8 +65,8 @@ function desk(counts: Partial<TodayCounts> = {}): DeskToday {
   };
 }
 
-function renderToday(today: DeskToday) {
-  return render(
+async function renderToday(today: DeskToday) {
+  return renderWithRouter(
     <Today
       today={today}
       gaveUp={[]}
@@ -245,8 +246,8 @@ describe("DeskShell", () => {
 });
 
 describe("Today", () => {
-  it("dates the counts, month before day", () => {
-    renderToday(desk());
+  it("dates the counts, month before day", async () => {
+    await renderToday(desk());
 
     // Heard, the heading says what the date is of; seen, it is the date.
     const heading = screen.getByRole("heading", {
@@ -259,8 +260,8 @@ describe("Today", () => {
     );
   });
 
-  it("renders the digest's three numbers, in the digest's order", () => {
-    renderToday(
+  it("renders the digest's three numbers in its order, then flagged accounts (R47·125)", async () => {
+    await renderToday(
       desk({
         waiting: 4,
         decidedToday: 0,
@@ -268,6 +269,7 @@ describe("Today", () => {
         screenerUnfinished: 1,
         bansThisWeek: 0,
         bansAllTime: 3,
+        flaggedAccounts: 0,
       }),
     );
 
@@ -278,11 +280,24 @@ describe("Today", () => {
       "4waiting for a decisionOldest · 19h",
       "1photo the screener couldn't finishHidden until you look",
       "0bans this week3 all time",
+      "0flagged accounts",
     ]);
   });
 
-  it("puts what needs a person in hi-viz, and nothing at zero or for bans", () => {
-    renderToday(
+  it("links flagged accounts to D8's Flagged filter, in hi-viz above zero, singular at one", async () => {
+    await renderToday(desk({ flaggedAccounts: 1 }));
+
+    const link = screen.getByRole("link", { name: "flagged account" });
+    expect(link).toHaveAttribute("href", "/desk/runners?filter=flagged");
+    const count = link.closest("li")?.querySelector(".font-mono");
+    expect(count).toHaveTextContent("1");
+    expect(count).toHaveClass("text-hiviz-text");
+    // The board draws no line under it: only the count is in mono.
+    expect(link.closest("li")?.querySelectorAll(".font-mono")).toHaveLength(1);
+  });
+
+  it("puts what needs a person in hi-viz, and nothing at zero or for bans", async () => {
+    await renderToday(
       desk({
         waiting: 2,
         decidedToday: 0,
@@ -307,14 +322,14 @@ describe("Today", () => {
     );
   });
 
-  it("says nothing is waiting rather than dating an oldest that does not exist", () => {
-    renderToday(desk());
+  it("says nothing is waiting rather than dating an oldest that does not exist", async () => {
+    await renderToday(desk());
 
     expect(screen.getByText("Nothing waiting")).toBeInTheDocument();
   });
 
-  it("speaks in the plural past one", () => {
-    renderToday(desk({ screenerUnfinished: 2, bansThisWeek: 2 }));
+  it("speaks in the plural past one", async () => {
+    await renderToday(desk({ screenerUnfinished: 2, bansThisWeek: 2 }));
 
     expect(
       screen.getByText("photos the screener couldn't finish"),
@@ -322,8 +337,8 @@ describe("Today", () => {
     expect(screen.getByText("bans this week")).toBeInTheDocument();
   });
 
-  it("speaks in the singular at one", () => {
-    renderToday(desk({ bansThisWeek: 1 }));
+  it("speaks in the singular at one", async () => {
+    await renderToday(desk({ bansThisWeek: 1 }));
 
     expect(screen.getByText("ban this week")).toBeInTheDocument();
   });

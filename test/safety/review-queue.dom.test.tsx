@@ -822,10 +822,24 @@ describe("what a row tells the reviewer", () => {
     ).toBeInTheDocument();
   });
 
+  it("says what intimate means on a row an intimate-image report started (D-161)", () => {
+    renderQueue([
+      row({ reporterCount: 1, reasons: ["intimate"], due: "Due in 31h" }),
+    ]);
+    const line = document.querySelector('[data-part="statutory-line"]');
+    expect(line).toHaveTextContent(
+      "Intimate means nudity or sexual content (15 U.S.C. § 6851). If it isn't, decline, and remove it under another rule if it breaks one.",
+    );
+    // R47·126: MONO.xs, --muted, sentence case, on its own line.
+    expect(line).toHaveClass("font-mono", "text-mono-xs", "text-muted");
+    expect(line).not.toHaveClass("uppercase");
+  });
+
   it("shows no clock on any other row", () => {
     renderQueue([row({ reporterCount: 3 })]);
     expect(screen.queryByText(/Due in|Overdue/u)).toBeNull();
     expect(document.querySelector('[data-part="due"]')).toBeNull();
+    expect(document.querySelector('[data-part="statutory-line"]')).toBeNull();
   });
 
   it("says nobody reported a row the classifier raised", () => {
