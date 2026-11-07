@@ -415,7 +415,7 @@ copyright_holds: subject (entry|photo), owner, entry, the takedown's
                    -- hold (D-146): no purge until the Desk's "Case over".
 ```
 
-Design 183 added (migration `0080_add_corrections_review_audit_follow_notices`):
+Design 183 added (migration `0081_add_corrections_review_audit_follow_notices`):
 
 ```
 product_corrections: id, product_id, user_id, garment_id, field ('name'|
