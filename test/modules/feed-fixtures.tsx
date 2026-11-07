@@ -89,7 +89,6 @@ export function feedItem(overrides: Partial<FeedItem> = {}): FeedItem {
     indoor: false,
     deviceName: undefined,
     verdict: undefined,
-    caption: undefined,
     createdAt: NOW,
     itemNames: [],
     photoKeys: [],

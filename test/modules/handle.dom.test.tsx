@@ -194,7 +194,6 @@ function entry(isUnderReview: boolean): Entry {
     deviceName: undefined,
     verdict: undefined,
     audience: "runners",
-    caption: undefined,
     createdAt: 1_755_000_000,
     items: [],
     photoKeys: [],

@@ -130,9 +130,6 @@ function EntryRow({
           </Mono>
           <VerdictBadge verdict={entry.verdict ?? undefined} />
         </span>
-        {entry.caption === null ? undefined : (
-          <span className="text-body">{entry.caption}</span>
-        )}
       </Link>
     </li>
   );

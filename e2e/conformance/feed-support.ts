@@ -192,7 +192,6 @@ export interface EntrySeed {
   verdict?: number;
   audience?: Audience;
   isIndoor?: boolean;
-  caption?: string;
   category?: "top" | "bottom" | "gloves";
   itemName?: string;
   tags?: ("hands_cold" | "overheated_late" | "chafed")[];
@@ -242,7 +241,6 @@ export async function seedEntry(
       runId,
       verdict: params.verdict,
       audience: params.audience ?? "runners",
-      caption: params.caption,
       createdAt: params.startedAt,
       moderationStatus: params.moderationStatus ?? "ok",
     });

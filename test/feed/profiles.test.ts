@@ -369,7 +369,7 @@ describe("otherProfile", () => {
     ).toStrictEqual([newer, older]);
   });
 
-  it("carries the caption and the verdict, and nothing aggregated", async () => {
+  it("carries the verdict and not the caption the row still holds (D-167), and nothing aggregated", async () => {
     const userId = await makeVerifiedUser();
     const entryId = await ratedEntry({
       userId,
@@ -389,7 +389,6 @@ describe("otherProfile", () => {
       // No zone anywhere: the run's day in UTC.
       day: "Thu Sep 4",
       verdict: -1,
-      caption: "Cold first mile",
     });
     expect(Object.hasOwn(profile ?? {}, "coverage")).toBe(false);
   });

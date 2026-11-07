@@ -116,9 +116,6 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
   const lngR = -122.68;
   const hourBucket = Math.floor(startedAt / 3600);
 
-  const publicCaption = `Chilly first mile, settled in by the bridge — ${suffix}`;
-  const privateCaption = `Private entry that must never leak — ${suffix}`;
-
   // Seed a second runner with one public entry (verdict + conditions +
   // kit) and one private entry, scoped entirely to ids generated above —
   // never a bare delete of these tables.
@@ -177,7 +174,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
         startedAt,
         // Two hours, so the run spans three hour buckets and the feed can
         // show what it actually covered rather than the hour it began in
-        // (R-5). The caption is already written for a run that warms up.
+        // (R-5).
         durationS: 2 * 3600,
         distanceM: 6437,
         lat: latR,
@@ -208,7 +205,6 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
         userId: otherUserId,
         verdict: 0,
         audience: "runners",
-        caption: publicCaption,
         createdAt: startedAt,
       },
       {
@@ -217,7 +213,6 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
         userId: otherUserId,
         verdict: -1,
         audience: "private",
-        caption: privateCaption,
         createdAt: startedAt,
       },
     ]);
@@ -448,10 +443,13 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       "content",
       "noindex",
     );
-    await expect(page.getByText(publicCaption)).toBeVisible();
-    // Their private entry never appears here either — the profile query
-    // only ever selects shared (`runners`) entries.
-    await expect(page.getByText(privateCaption)).toHaveCount(0);
+    // One entry, the public one (Dialed). Their private one (a bit cold)
+    // never appears here either — the profile query only ever selects
+    // shared (`runners`) entries. Told apart by verdict: the caption is
+    // cut for v1 (D-167).
+    await expect(
+      page.locator('[data-part="entries"] [data-part="verdict-badge"]'),
+    ).toHaveText(["Dialed"]);
 
     // Follow them: the label waits for the server, then flips.
     await scene(page, "Following is what puts them in the feed");
@@ -459,16 +457,17 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await expect(page.getByRole("button", { name: "Following" })).toBeVisible();
 
     // Back to the feed — now it opens on Following, and their public
-    // entry is a v1 card: author and badge, caption, strip, Useful.
-    await scene(page, "E1 · the v1 card: author and badge, caption, strip");
+    // entry is a v1 card: author and badge, strip, Useful.
+    await scene(page, "E1 · the v1 card: author and badge, strip");
     await bar(page).getByRole("link", { name: "Feed" }).click();
     await hydrated(page);
     await expect(
       page.getByRole("button", { name: "Following" }),
     ).toHaveAttribute("aria-pressed", "true");
-    const card = page.locator('[data-part="post"]').filter({
-      hasText: publicCaption,
+    const theirs = page.locator('[data-part="post"]').filter({
+      hasText: `@${otherUsername}`,
     });
+    const card = theirs.first();
     await expect(card).toBeVisible();
     // FEED-9: the compact line tops Following — the Portland runners above
     // matched at the city this runner just saved, in round 25's words.
@@ -501,12 +500,15 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await expect(cardCredit).toHaveAttribute("aria-hidden", "true");
     // ...their private entry never does (CLAUDE.md: private entries never
     // appear in feeds or consensus aggregates).
-    await expect(page.getByText(privateCaption)).toHaveCount(0);
+    await expect(theirs).toHaveCount(1);
+    await expect(card.locator('[data-part="verdict-badge"]')).toHaveText(
+      "Dialed",
+    );
 
-    // Open the entry detail (D): the strip with its badge, the note, the
-    // kit as a list.
-    await scene(page, "D · the strip, the note, the kit, then Useful");
-    await card.getByText(publicCaption).click();
+    // Open the entry detail (D): the strip with its badge, then the kit
+    // as a list.
+    await scene(page, "D · the strip, the kit, then Useful");
+    await card.locator('[data-part="run-strip"]').click();
     await hydrated(page);
     await expect(
       page.getByRole("heading", { name: `@${otherUsername}` }),
@@ -584,7 +586,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       await scene(page, "Unconfirmed · Useful is refused, and nothing changes");
       const cardUseful = page
         .locator('[data-part="post"]')
-        .filter({ hasText: publicCaption })
+        .filter({ hasText: `@${otherUsername}` })
         .getByRole("button", { name: /Useful/u });
       await cardUseful.click();
       await expect(confirmFirst).toBeVisible();
@@ -724,7 +726,6 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
         userId: ownerId,
         verdict: 0,
         audience: "runners",
-        caption: "Two photos, one too many",
         createdAt: nowSeconds() - 7000,
       });
       await core.insert(entryPhotos).values(
@@ -767,8 +768,9 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       };
     });
     expect(drawn).toEqual({ rule: "1px solid", padding: "16px 16px" });
+    // Found by its link: the caption that named it is cut (D-167).
     const ownCard = page.locator('[data-part="post"]').filter({
-      hasText: "Two photos, one too many",
+      has: page.locator(`a[href="/feed/entry/${ownEntryId}"]`),
     });
     // Round 29 #4: in the author row, before the badge, in ink — and said
     // aloud as the board's sentence. The card also says YOU, and its photo
@@ -806,7 +808,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await page.goto("/feed");
     await hydrated(page);
     await scene(page, "D · HIDDEN WHILE WE CHECK, at the top");
-    await ownCard.getByText("Two photos, one too many").click();
+    await ownCard.locator('[data-part="run-strip"]').click();
     await hydrated(page);
     const hiddenBand = page.locator('[data-part="notice-band"]');
     await expect(hiddenBand).toContainText(

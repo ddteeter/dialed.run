@@ -37,14 +37,15 @@ const SPARSE = "D Sparse own entry";
 const THEIRS = "D Someone else's entry";
 
 /**
-The parts that are the entry itself — not the phone's bars or header.
-*/
+ * The parts that are the entry itself — not the phone's bars or header.
+ * Not the board's note: the kit caption is cut for v1 (D-167), and round
+ * 48's notices supersede boards where they still draw it.
+ */
 const ENTRY_PARTS = new Set([
   "photo",
   "run-strip",
   "verdict-badge",
   "verdict-prompt",
-  "note",
   "kit",
   "item-flag",
   "tags",
@@ -76,7 +77,7 @@ test("D's sparse own entry is the strip, the prompt in the badge's place, and th
   expect(drawn.parts, "the board has no sparse D").not.toHaveLength(0);
 
   const rows = seeded();
-  // No photo, no caption, no conditions, no verdict: nothing but the run.
+  // No photo, no conditions, no verdict: nothing but the run.
   const { entryId } = await seedEntry(rows, {
     userId: await feedUserId(),
     place: { lat: 62.11, lng: 13.21 },
@@ -110,7 +111,7 @@ test("D's sparse own entry is the strip, the prompt in the badge's place, and th
   }
 });
 
-test("D for someone else's entry: strip with badge, note, kit, tags, Useful, Report", async ({
+test("D for someone else's entry: strip with badge, kit, tags, Useful, Report", async ({
   page,
   baseURL,
 }) => {
@@ -138,7 +139,6 @@ test("D for someone else's entry: strip with badge, note, kit, tags, Useful, Rep
     startedAt: nowSeconds() - 5 * 3600,
     feelsLikeC: 8,
     verdict: 1,
-    caption: "Wore the shell for a forecast that never showed up.",
     tags: ["overheated_late", "chafed"],
   });
 

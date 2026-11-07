@@ -9,32 +9,26 @@ button, Following, pressed
 button, Your conditions, not pressed
 status
 article
-link, @e#_runner_# :when · #:# Dialed Half-zip was right. #.#mi #° · clear
+link, @e#_runner_# :when · #:# Dialed #.#mi #° · clear
 @e#_runner_#
 :when · #:#
 Dialed
-paragraph
-Half-zip was right.
-end of paragraph
 #.#mi
 #° · clear
-end of link, @e#_runner_# :when · #:# Dialed Half-zip was right. #.#mi #° · clear
+end of link, @e#_runner_# :when · #:# Dialed #.#mi #° · clear
 link, Weather data provided by Visual Crossing
 button, Useful, @e#_runner_#’s run, not pressed
 Useful
 end of button, Useful, @e#_runner_#’s run, not pressed
 end of article
 article
-link, @e#_runner_# :when · #:# A bit warm Wore the shell for a forecast that never showed up. #.#mi #° · clear
+link, @e#_runner_# :when · #:# A bit warm #.#mi #° · clear
 @e#_runner_#
 :when · #:#
 A bit warm
-paragraph
-Wore the shell for a forecast that never showed up.
-end of paragraph
 #.#mi
 #° · clear
-end of link, @e#_runner_# :when · #:# A bit warm Wore the shell for a forecast that never showed up. #.#mi #° · clear
+end of link, @e#_runner_# :when · #:# A bit warm #.#mi #° · clear
 button, Useful, @e#_runner_#’s run, not pressed
 Useful
 end of button, Useful, @e#_runner_#’s run, not pressed

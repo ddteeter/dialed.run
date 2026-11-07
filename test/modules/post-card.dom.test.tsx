@@ -18,7 +18,8 @@ import {
 
 /**
  * The v1 post card (round 22, "E1v1 Following"): author and badge, photo,
- * caption, strip, Useful — in that order, and a missing part absent.
+ * strip, Useful — in that order, and a missing part absent. The caption
+ * is cut for v1 (D-167).
  */
 const nothing: Setter = () =>
   Promise.resolve({ status: "set", useful: true, count: 1 });
@@ -103,15 +104,14 @@ describe("PostCard: order and absence", () => {
     const post = await card({
       verdict: 0,
       photoKeys: ["user/01/a.jpg", "user/01/b.jpg"],
-      caption: "Half-zip was right.",
     });
 
     expect(post).toHaveAttribute("data-state", "with-photo");
+    // No caption: cut for v1 (D-167).
     expect(partsOf(post)).toStrictEqual([
       "author",
       "verdict-badge",
       "photo",
-      "caption",
       "run-strip",
       "reactions",
     ]);
@@ -140,7 +140,7 @@ describe("PostCard: order and absence", () => {
     expect(within(post).queryByText(/\d \/ \d/u)).toBeNull();
   });
 
-  it("is a whole post with no photo, caption or verdict: author, strip, Useful", async () => {
+  it("is a whole post with no photo or verdict: author, strip, Useful", async () => {
     const post = await card();
 
     expect(post).toHaveAttribute("data-state", "no-photo");
@@ -148,11 +148,11 @@ describe("PostCard: order and absence", () => {
   });
 
   it("links everything but Useful to the entry", async () => {
-    const post = await card({ entryId: "01A", caption: "A caption" });
+    const post = await card({ entryId: "01A", verdict: 0 });
 
     const link = within(post).getByRole("link");
     expect(link).toHaveAttribute("href", "/feed/entry/01A");
-    expect(link).toHaveTextContent("A caption");
+    expect(link.querySelector('[data-part="run-strip"]')).not.toBeNull();
     expect(link).not.toContainElement(
       within(post).getByRole("button", { name: /Useful/u }),
     );
@@ -455,14 +455,12 @@ describe("PostCard: the author's under-review marker (R-62, D-67; round 29 #4)",
       underReview: true,
       isOwn: true,
       verdict: 0,
-      caption: "Held.",
     });
 
-    expect(partsOf(post).slice(0, 5)).toStrictEqual([
+    expect(partsOf(post).slice(0, 4)).toStrictEqual([
       "author",
       "review-tag",
       "verdict-badge",
-      "caption",
       "run-strip",
     ]);
   });

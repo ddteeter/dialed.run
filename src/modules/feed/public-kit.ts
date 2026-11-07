@@ -117,7 +117,6 @@ export async function publicKitRead(
     ...conditionsOf(conditions, entry.verdict, units),
     ...(verdict !== undefined && { verdict }),
     ...statsOf(run, units),
-    ...(entry.caption !== null && { caption: entry.caption }),
     ...(photos.length > 0 && { photos }),
     pieces,
   };

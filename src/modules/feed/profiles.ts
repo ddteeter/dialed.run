@@ -180,7 +180,6 @@ export interface OtherProfile {
      */
     day: string;
     verdict: number | null;
-    caption: string | null;
   }[];
 }
 
@@ -229,7 +228,6 @@ export function recentPublicEntriesStatement(
       id: outfitEntries.id,
       createdAt: outfitEntries.createdAt,
       verdict: outfitEntries.verdict,
-      caption: outfitEntries.caption,
       // The run's place, start and span, to date it where it was run.
       run: {
         id: runs.id,
@@ -295,7 +293,6 @@ export async function otherProfile(
       entryId: e.id,
       day: runDayOf(e.run.startedAt, observed.get(e.run.id), runnerZone),
       verdict: e.verdict,
-      caption: e.caption,
     })),
   };
 }

@@ -187,12 +187,6 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
         </Link>
       ) : undefined}
 
-      {entry.caption === undefined ? undefined : (
-        <p data-part="note" className="m-0 text-body">
-          {entry.caption}
-        </p>
-      )}
-
       <Kit items={entry.items} />
 
       <Tags tags={tagsOf(entry.tags)} />

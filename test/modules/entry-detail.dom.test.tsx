@@ -43,7 +43,6 @@ function entry(overrides: Partial<Entry> = {}): Entry {
     deviceName: undefined,
     verdict: undefined,
     audience: "runners",
-    caption: undefined,
     createdAt: 1_755_000_000,
     items: [],
     photoKeys: [],
@@ -153,11 +152,11 @@ describe("EntryDetail: Garmin's credit (G1)", () => {
 });
 
 describe("EntryDetail: the order, and what a sparse entry leaves out", () => {
-  it("is photo pager, strip, note, kit, tags, Useful, Report on a full entry", async () => {
+  it("is photo pager, strip, kit, tags, Useful, Report on a full entry", async () => {
+    // No note: the caption is cut for v1 (D-167).
     await renderFeedScreen(
       detail({
         photoKeys: ["a.jpg"],
-        caption: "Wore the shell.",
         items: [item()],
         tags: ["hands_cold"],
         verdict: 1,
@@ -167,7 +166,6 @@ describe("EntryDetail: the order, and what a sparse entry leaves out", () => {
     expect(partsInOrder()).toStrictEqual([
       "photo",
       "run-strip",
-      "note",
       "kit",
       "tags",
       "reactions",
@@ -415,11 +413,6 @@ describe("EntryDetail: the photos", () => {
 });
 
 describe("EntryDetail: the note, the kit and the tags", () => {
-  it("shows the note when there is one", async () => {
-    await renderFeedScreen(detail({ caption: "Wore the shell." }));
-    expect(part("note")).toHaveTextContent("Wore the shell.");
-  });
-
   it("lists the kit, brand first where there is one", async () => {
     await renderFeedScreen(
       detail({

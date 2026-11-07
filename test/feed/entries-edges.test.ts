@@ -388,19 +388,12 @@ describe("submitVerdict writes the whole submission or none of it", () => {
     expect(rows.every((row) => row.flag === null)).toBe(true);
   });
 
-  it("clears a caption back to nothing", async () => {
+  it("neither writes nor reads a caption: the column stays, untouched (D-167)", async () => {
     const { userId, entryId } = await ownEntry();
-    await submitVerdict({
-      userId,
-      entryId,
-      verdict: 0,
-      audience: "runners",
-      tags: [],
-      itemFlags: [],
-      caption: "Windy",
-    });
-    const withCaption = await getEntryDetail(entryId, userId);
-    expect(withCaption?.caption).toBe("Windy");
+    await db()
+      .update(outfitEntries)
+      .set({ caption: "Windy" })
+      .where(eq(outfitEntries.id, entryId));
 
     await submitVerdict({
       userId,
@@ -411,8 +404,15 @@ describe("submitVerdict writes the whole submission or none of it", () => {
       itemFlags: [],
     });
 
-    const cleared = await getEntryDetail(entryId, userId);
-    expect(cleared?.caption).toBeUndefined();
+    // The save leaves the column as it was, and the detail does not read it.
+    const [row] = await db()
+      .select({ caption: outfitEntries.caption })
+      .from(outfitEntries)
+      .where(eq(outfitEntries.id, entryId));
+    expect(row?.caption).toBe("Windy");
+    const detail = await getEntryDetail(entryId, userId);
+    expect(detail).toBeDefined();
+    expect(detail).not.toHaveProperty("caption");
   });
 });
 

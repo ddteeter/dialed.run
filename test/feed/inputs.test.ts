@@ -149,15 +149,10 @@ describe("submitVerdictInput", () => {
     );
   });
 
-  it("caps the caption at 280 characters", () => {
-    expect(
-      submitVerdictInput.safeParse({ ...valid, caption: "a".repeat(280) })
-        .success,
-    ).toBe(true);
-    expect(
-      submitVerdictInput.safeParse({ ...valid, caption: "a".repeat(281) })
-        .success,
-    ).toBe(false);
+  it("no longer takes a caption: cut for v1 (D-167)", () => {
+    // Stripped, so it can never reach the write.
+    const parsed = submitVerdictInput.parse({ ...valid, caption: "Windy" });
+    expect(parsed).not.toHaveProperty("caption");
   });
 
   it("caps the tags at the number of tags there are", () => {

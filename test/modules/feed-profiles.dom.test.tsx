@@ -573,7 +573,6 @@ describe("OtherProfile (H)", () => {
             entryId: "01A",
             day: "Tue Aug 12",
             verdict: -1,
-            caption: NOTHING,
           },
         ],
       }),
@@ -591,7 +590,7 @@ describe("OtherProfile (H)", () => {
     expect(screen.getByRole("status")).toHaveTextContent("");
   });
 
-  it("lists public entries by date, with the verdict and caption each has", async () => {
+  it("lists public entries by date, with the verdict each has (no caption, D-167)", async () => {
     await renderFeedScreen(
       otherScreen({
         recentPublicEntries: [
@@ -599,7 +598,6 @@ describe("OtherProfile (H)", () => {
             entryId: "01A",
             day: "Tue Aug 12",
             verdict: 0,
-            caption: "Rain stopped at mile 2.",
           },
           {
             entryId: "01B",
@@ -607,7 +605,6 @@ describe("OtherProfile (H)", () => {
             // screen prints it and computes none of its own.
             day: "Wed Aug 13",
             verdict: NOTHING,
-            caption: NOTHING,
           },
         ],
       }),
@@ -617,9 +614,9 @@ describe("OtherProfile (H)", () => {
     const second = screen.getByRole("link", { name: /Wed Aug 13/u });
     expect(first).toHaveAttribute("href", "/feed/entry/01A");
     expect(first).toHaveTextContent(
-      /^Tue Aug 12DialedRain stopped at mile 2\.$/u,
+      /^Tue Aug 12Dialed$/u,
     );
-    // No verdict, no badge; no caption, no line.
+    // No verdict, no badge.
     expect(second).toHaveAttribute("href", "/feed/entry/01B");
     expect(second).toHaveTextContent(/^Wed Aug 13$/u);
     expect(second.children).toHaveLength(1);
