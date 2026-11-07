@@ -106,7 +106,11 @@ The path, end to end:
    report-only. `QUERY_RECORD=1` rewrites the baseline. The header
    parse, grouping, p50/max, diff and table are pure, in
    `src/lib/query-report.ts` (in the ratchet), so `e2e/` holds only file
-   and environment glue.
+   and environment glue. A dev server's function id is base64url of its
+   file and export, so the report groups by `readableRoute`'s name,
+   `serverFn:<module>/<export>` (`serverFn:notifications/bellStateFn`),
+   and the baseline's keys are names a reader can follow. Renaming a
+   server function shows in the report as one route gone and one new.
 6. **The baseline** is recorded once from a full CI-style run, after
    dark-theme merges, since it adds a constant read to signed-in document
    loads.
