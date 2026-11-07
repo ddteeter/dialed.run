@@ -34,33 +34,50 @@ Every brief starts with the same preamble:
 
 ## 2 · Deferred work → `<OUT>/deferred.json`
 
-> Find everything that was intended but DEFERRED, and whether it ever got
-> implemented. Most important: deferred items that never came back.
-> Sources: (1) docs/deferred.md — audit EVERY non-retired R-row against code,
-> spot-check ~10 retired rows; (2) Deferred / Out of scope / Follow-up
-> sections in docs/designs/_.md and docs/tasks/_.md; (3) merged PR bodies'
-> Deferred sections (`gh pr list --state merged --limit 500 --json
-number,title,body`); (4) open items in docs/design-deltas.md marked "not
-> built" / "follow-up"; (5) TODO / FIXME / `Pending(` / `[OWNER]` markers in
-> src/. Fan out to helper agents if the volume needs it.
+> Open work lives in GitHub Issues (docs/agents/issue-tracker.md); the
+> build reads every issue itself, so do NOT list or audit issues one by one
+> and do NOT read docs/deferred.md, which is a frozen archive. Your job is
+> what the issues cannot say. Read-only: never create, edit, label or
+> comment on an issue.
 >
-> Classify each item: `open-tracked` (has an R-row, still open),
-> `open-orphaned` (deferred somewhere, no register row, never done — the
-> category that matters most), `done-later`, `register-stale` (the row's
-> status disagrees with the code).
+> **(a) Orphans.** Find everything that was intended but DEFERRED and has
+> no issue. Sources: Deferred / Out of scope / Follow-up sections in
+> docs/designs/_.md and docs/tasks/_.md; merged PR bodies' Deferred sections
+> (`gh pr list --state merged --limit 500 --json number,title,body`); open
+> items in docs/design-deltas.md marked "not built" / "follow-up"; TODO /
+> FIXME / `Pending(` / `[OWNER]` markers in src/. Before calling anything
+> orphaned, search for its issue: `gh issue list -R ddteeter/dialed.run
+--state all --search "<keywords>"` with two or three phrasings. An item
+> with an issue (open or closed) is not yours. One that was built is not
+> yours either. Fan out to helper agents if the volume needs it.
 >
-> **Stable ids.** The previous survey's items are in `<PREV>`. Where an item
-> is the same one, reuse its `id` exactly, even if its class changed — the
-> page's "since the last survey" section matches on id. New items take the
-> form `R-N`, `PR#N-k`, `design-NNN-slug` or `task-NNN-slug`. No duplicate
-> ids.
+> **(b) Stale issues.** Spot-check up to 15 open issues against the code,
+> favouring launch-blocker and important ones and the oldest. Report any
+> whose work the code already does, with the file and line.
 >
-> Write `{"items":[{"id","title","what","deferred_on","source","class",
-"status_in_register","evidence","area","severity","age_days"}]}` with
-> area ∈ closet|runs|weather|feed|safety|auth|ops|ui|a11y|legal|infra|testing|other
-> and severity ∈ launch-blocker|important|minor. Reply with a ~400-word
-> summary leading with orphaned and long-open items, and list which of your
-> top findings you re-checked in code yourself.
+> **(c) Rot.** List open issues (`gh issue list -R ddteeter/dialed.run
+--state open --limit 500 --json number,title,body,milestone`) and flag:
+> one whose `**Trigger:**` line names an event or date that has passed
+> (`trigger-passed`); one with no trigger line (`no-trigger`); one in
+> milestone `friends` still open after friends launch, which you know from
+> docs/launch/ or decisions.md (`friends-after-launch`). These go to the
+> owner as questions; do not judge them yourself.
+>
+> **Stable ids.** The previous survey's items are in `<PREV>`. Where an
+> orphan is the same one, reuse its `id` exactly — the page's "since the
+> last survey" section matches on id. New orphans take the form `PR#N-k`,
+> `design-NNN-slug` or `task-NNN-slug`. No duplicate ids. Issues are
+> `#N` and are never yours to list in `items`.
+>
+> Write `{"items":[{"id","title","what","deferred_on","source",
+"class":"open-orphaned","evidence","area","severity","age_days"}],
+"stale":[{"issue":N,"what","evidence"}],
+"rot":[{"issue":N,"kind","note"}]}` with area ∈
+> closet|runs|weather|feed|safety|auth|ops|ui|a11y|legal|infra|testing|other,
+> severity ∈ launch-blocker|important|minor, and kind ∈
+> trigger-passed|no-trigger|friends-after-launch. Reply with a ~400-word
+> summary leading with the orphans, then stale issues and rot, and list
+> which of your top findings you re-checked in code yourself.
 
 ## 3 · Design track vs screens → `<OUT>/design.json`
 
