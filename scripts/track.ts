@@ -23,20 +23,24 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { promisify } from "node:util";
 
 import {
+  ISSUE_ITEMS_QUERY,
   ITEMS_QUERY,
   PROJECT_NUMBER,
   PROJECT_OWNER,
   PROJECT_QUERY,
+  REPO_NAME,
+  isAlreadyInProject,
   issueNumberFromUrl,
   isRateLimited,
   neverListHits,
   parseAddedItem,
+  parseIssueItem,
   parseItemsPage,
   parseProject,
   selectIssues,
   statusFor,
 } from "./track/core";
-import type { ProjectMeta, TrackedIssue } from "./track/core";
+import type { IssueItem, ProjectMeta, TrackedIssue } from "./track/core";
 
 const run = promisify(execFile);
 
@@ -104,33 +108,46 @@ async function loadProject(): Promise<ProjectMeta> {
   );
 }
 
+async function findItem(meta: ProjectMeta, issue: number): Promise<IssueItem> {
+  return parseIssueItem(
+    await graphql(ISSUE_ITEMS_QUERY, {
+      owner: PROJECT_OWNER,
+      name: REPO_NAME,
+      number: issue,
+    }),
+    meta.id,
+  );
+}
+
 async function itemIdFor(meta: ProjectMeta, issue: number): Promise<string> {
-  const viewed = await gh([
-    "issue",
-    "view",
-    String(issue),
-    "--json",
-    "id",
-    "--jq",
-    ".id",
-  ]);
-  const nodeId = viewed.trim();
-  return parseAddedItem(
-    await graphql(
-      `
-        mutation ($project: ID!, $content: ID!) {
-          addProjectV2ItemById(
-            input: { projectId: $project, contentId: $content }
-          ) {
-            item {
-              id
+  const found = await findItem(meta, issue);
+  if (found.itemId !== undefined) return found.itemId;
+  try {
+    return parseAddedItem(
+      await graphql(
+        `
+          mutation ($project: ID!, $content: ID!) {
+            addProjectV2ItemById(
+              input: { projectId: $project, contentId: $content }
+            ) {
+              item {
+                id
+              }
             }
           }
-        }
-      `,
-      { project: meta.id, content: nodeId },
-    ),
-  );
+        `,
+        { project: meta.id, content: found.issueId },
+      ),
+    );
+  } catch (error) {
+    // The auto-add workflow got there between the look and the add.
+    const message = error instanceof Error ? error.message : String(error);
+    const again = isAlreadyInProject(message)
+      ? await findItem(meta, issue)
+      : undefined;
+    if (again?.itemId === undefined) throw error;
+    return again.itemId;
+  }
 }
 
 async function setStatus(

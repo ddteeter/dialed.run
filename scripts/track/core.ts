@@ -248,10 +248,65 @@ const itemIdSchema = z.object({ item: z.object({ id: z.string() }) });
 const itemAddedSchema = responseOf({ addProjectV2ItemById: itemIdSchema });
 
 /**
-The item id from addProjectV2ItemById, which also returns an existing item.
+The item id from addProjectV2ItemById.
 */
 export function parseAddedItem(raw: unknown): string {
   return itemAddedSchema.parse(raw).data.addProjectV2ItemById.item.id;
+}
+
+/**
+The repository whose issues the Project tracks.
+*/
+export const REPO_NAME = "dialed.run";
+
+export const ISSUE_ITEMS_QUERY = `query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    issue(number: $number) {
+      id
+      projectItems(first: 20) { nodes { id project { id } } }
+    }
+  }
+}`;
+
+const projectItemSchema = z.object({
+  id: z.string(),
+  project: z.object({ id: z.string() }),
+});
+const issueItemsSchema = z.object({
+  id: z.string(),
+  projectItems: z.object({ nodes: z.array(projectItemSchema) }),
+});
+const issueItemsResponseSchema = responseOf({
+  repository: z.object({ issue: issueItemsSchema }),
+});
+
+export interface IssueItem {
+  readonly issueId: string;
+  /**
+  The issue's item in this Project, if it is in it yet.
+  */
+  readonly itemId: string | undefined;
+}
+
+/**
+ * The issue's node id and its item in the Project. The auto-add workflow
+ * adds a new issue on its own, often before `create` gets to, and adding
+ * it again is an error ("Content already exists in this project"), so the
+ * helper looks first and adds only when the item is missing.
+ */
+export function parseIssueItem(raw: unknown, projectId: string): IssueItem {
+  const issue = issueItemsResponseSchema.parse(raw).data.repository.issue;
+  const item = issue.projectItems.nodes.find(
+    (node) => node.project.id === projectId,
+  );
+  return { issueId: issue.id, itemId: item?.id };
+}
+
+/**
+True when an add failed only because the item is already there.
+*/
+export function isAlreadyInProject(message: string): boolean {
+  return message.includes("Content already exists in this project");
 }
 
 const createdIssueUrl = /\/issues\/(\d+)\s*$/;

@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  isAlreadyInProject,
   issueNumberFromUrl,
   isRateLimited,
   neverListHits,
   parseAddedItem,
+  parseIssueItem,
   parseItemsPage,
   parseProject,
   selectIssues,
@@ -12,6 +14,7 @@ import {
   statusFor,
 } from "../../scripts/track/core";
 import type { TrackedIssue } from "../../scripts/track/core";
+import issueItems from "../fixtures/track/issue-items.json";
 import shapes from "../fixtures/track/item-shapes.json";
 import items from "../fixtures/track/items.json";
 import project from "../fixtures/track/project.json";
@@ -217,6 +220,39 @@ describe("parseAddedItem", () => {
 
   it("refuses an error response", () => {
     expect(() => parseAddedItem({ errors: [{ message: "nope" }] })).toThrow();
+  });
+});
+
+describe("parseIssueItem", () => {
+  // issue-items.json is #358's real ISSUE_ITEMS_QUERY answer, recorded after
+  // the auto-add workflow had added it.
+  const projectId = project.data.user.projectV2.id;
+
+  it("finds the issue's item in this Project", () => {
+    expect(parseIssueItem(issueItems, projectId)).toEqual({
+      issueId: "I_kwDOUJJKOM8AAAABdMv7sQ",
+      itemId: "PVTI_lAHOAAUOcc4BqjuazhGuU48",
+    });
+  });
+
+  it("has no item when the issue is only in other Projects", () => {
+    expect(parseIssueItem(issueItems, "PVT_other")).toEqual({
+      issueId: "I_kwDOUJJKOM8AAAABdMv7sQ",
+      itemId: undefined,
+    });
+  });
+});
+
+describe("isAlreadyInProject", () => {
+  it("recognises the duplicate-add error and nothing else", () => {
+    expect(
+      isAlreadyInProject(
+        "gh api failed: gh: Content already exists in this project",
+      ),
+    ).toBe(true);
+    expect(
+      isAlreadyInProject("gh api failed: Could not resolve to a node"),
+    ).toBe(false);
   });
 });
 
