@@ -1,6 +1,7 @@
-import { execFileSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { promisify } from "node:util";
 
 import { test as base } from "./a11y";
 import type { A11y } from "./a11y";
@@ -60,12 +61,21 @@ const recording: { startedAt: number; cues: Cue[] } = {
 const VOICE_CACHE = "node_modules/.cache/demo-voice";
 
 /**
+ * `say` and `afinfo`, awaited rather than run synchronously. Playwright
+ * records the video in this process, so a synchronous call stalls it: the
+ * frames that arrive during a first rendering are stamped late, and the
+ * narration drifted up to seven seconds behind the picture (measured
+ * 2026-11-06, first recording of new lines).
+ */
+const run = promisify(execFile);
+
+/**
  * Render `spoken` with the system voice, or reuse an earlier rendering.
  */
-function voiced(spoken: string): string {
+async function voiced(spoken: string): Promise<string> {
   mkdirSync(VOICE_CACHE, { recursive: true });
   const file = path.resolve(VOICE_CACHE, `${speechKey(spoken)}.aiff`);
-  if (!existsSync(file)) execFileSync(SAY, sayArgs(spoken, file));
+  if (!existsSync(file)) await run(SAY, sayArgs(spoken, file));
   return file;
 }
 
@@ -99,10 +109,9 @@ export async function scene(
   options: { readonly say?: string } = {},
 ): Promise<void> {
   if (demoSlowMo === 0) return;
-  const audio = voiced(options.say ?? forSpeech(text));
-  const holdMs = durationMs(
-    execFileSync(AFINFO, [audio], { encoding: "utf8" }),
-  );
+  const audio = await voiced(options.say ?? forSpeech(text));
+  const { stdout } = await run(AFINFO, [audio]);
+  const holdMs = durationMs(stdout);
   recording.cues.push({
     text,
     startMs: Date.now() - recording.startedAt,

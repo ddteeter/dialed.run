@@ -1,0 +1,163 @@
+/**
+ * Walkthrough · the first run (design 180, step 5): an invite link, a new
+ * account, the confirm email, a handle, onboarding, and the closet it
+ * leaves behind. The sign-up is the story, so this films it rather than
+ * taking the walkthrough fixture's runner; the auth and onboarding
+ * journeys (`e2e/auth/`, `e2e/onboarding/`) carry the edge cases.
+ */
+import { expect, hydrated, scene, test } from "../support/demo";
+import { confirmLinkFor } from "../support/email-links";
+import { ensureInviteCode, turnstileAnswered } from "../support/invites";
+
+/**
+Not a secret: a throwaway account on the local dev database.
+*/
+const PASSPHRASE = ["a", "long", "enough", "passphrase"].join("-");
+
+test("the first run: an invite, an account, a handle, and a closet to start from", async ({
+  page,
+}, testInfo) => {
+  // Recording pace is not a latency budget; this catches a hang.
+  testInfo.setTimeout(150_000);
+  // Both widths sign up, one after the other: an address each.
+  const width = testInfo.project.name.endsWith("phone") ? "p" : "d";
+  const handle = `new_${width}${String(Date.now()).slice(-7)}`;
+  const email = `${handle}@example.com`;
+  const code = await ensureInviteCode();
+
+  await page.goto(`/join?code=${code}`);
+  await expect(page).toHaveURL(/\/auth\/signup\?code=/u, { timeout: 15_000 });
+  await hydrated(page);
+  await expect(
+    page.getByText("dialed.run is invite-only for now."),
+  ).toBeVisible();
+  await expect(page.getByLabel("Invite code")).toHaveValue(code);
+  await scene(page, "Invite-only · the link brings the code", {
+    say: "dialed.run is invite-only for now. An invite link opens sign-up with the code already filled in.",
+  });
+
+  await page.getByLabel("Date of birth").fill("1990-04-21");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(PASSPHRASE);
+  await turnstileAnswered(page);
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page).toHaveURL(/\/account\/check-email/u, { timeout: 15_000 });
+  await hydrated(page);
+  await expect(
+    page.getByRole("heading", { name: "Check your email" }),
+  ).toBeVisible();
+  await expect(page.getByText(`We sent a link to ${email}.`)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Resend link" })).toBeVisible();
+  await scene(page, "Check your email · one link to confirm", {
+    say: "Creating the account sends a link to that address. The screen says where it went, and can send it again.",
+  });
+
+  // The link, opened from the inbox (e2e/support/email-links).
+  await page.goto(await confirmLinkFor(email));
+  await expect(
+    page.getByRole("heading", { name: "Email confirmed" }),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(
+    page.getByText("Your runs can go on the feed now."),
+  ).toBeVisible();
+  await scene(page, "Confirmed · runs can go on the feed", {
+    say: "Opening the link confirms the address, and from now on this runner's runs can go on the feed.",
+  });
+
+  // Signed out still: the feed asks for a log-in, then sends a new
+  // account to pick its handle first.
+  await page.getByRole("link", { name: "Open the feed" }).click();
+  await expect(page).toHaveURL(/\/auth\/login/u, { timeout: 15_000 });
+  await hydrated(page);
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(PASSPHRASE);
+  await page.getByRole("button", { name: "Log in" }).click();
+  await expect(page).toHaveURL(/\/onboarding\/handle/u, { timeout: 15_000 });
+  await hydrated(page);
+  await expect(page.getByText("Step 1 of 4")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "What should runners call you?" }),
+  ).toBeVisible();
+  await scene(page, "Step 1 · a handle runners know you by", {
+    say: "After logging in, the first step is a handle: the name other runners find and follow you by.",
+  });
+  await page.getByRole("textbox", { name: "Username" }).fill(handle);
+  await page.getByRole("button", { name: "Next" }).click();
+
+  await expect(page).toHaveURL(/\/onboarding\/calibrate/u, {
+    timeout: 15_000,
+  });
+  await hydrated(page);
+  await expect(
+    page.getByRole("group", {
+      name: "Compared to people you run with, do you run warm or cold?",
+    }),
+  ).toBeVisible();
+  await scene(page, "One question · do you run warm or cold?", {
+    say: "Then one question: compared to the people you run with, do you run warm or cold? It is the only one this screen needs answered.",
+  });
+  await page.getByLabel(/^Run a little cold/u).check();
+  await page.getByRole("button", { name: "Start running" }).click();
+
+  // The first visit to the tap list compiles its server function on the
+  // dev server; a long wait here is for catching a hang, not a budget.
+  await expect(page.getByText("Closet: 0 pieces")).toBeVisible({
+    timeout: 60_000,
+  });
+  await hydrated(page);
+  await expect(page.getByText("Tap what you own")).toBeVisible();
+  // Checked after every tap: the count is what the tap changes.
+  const tapped = ["Running tights", "Merino base layer", "Running gloves"];
+  for (const [index, piece] of tapped.entries()) {
+    await page.getByRole("checkbox", { name: piece }).check();
+    await expect(
+      page.getByText(`Closet: ${String(index + 1)} pieces`),
+    ).toBeVisible();
+  }
+  await scene(page, "The closet · tap what you own", {
+    say: "Next, the closet. Nothing arrives ticked: the runner taps what they own, and the count goes up with each tap.",
+  });
+  await page.getByRole("button", { name: "Next" }).click();
+
+  // Naming each piece as a product can wait for another day.
+  await expect(page.getByText(/A category can.t remember/u)).toBeVisible({
+    timeout: 15_000,
+  });
+  await page.getByRole("button", { name: "Skip for now" }).click();
+
+  await expect(page.getByRole("heading", { name: "Now go run." })).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(
+    page.getByText(
+      "Next time you finish a run, upload it and tell us what you wore. That’s the whole loop.",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/verdicts we start making the call for you/u),
+  ).toBeVisible();
+  await scene(page, "Now go run · the whole loop", {
+    say: "And that's it. The last screen is an instruction: after a run, upload it and say what you wore. After enough verdicts, the Call starts making the call for you.",
+  });
+
+  await page.getByRole("link", { name: "Done for now" }).click();
+  await expect(page).toHaveURL(/\/$/u, { timeout: 15_000 });
+  await hydrated(page);
+  await page
+    .getByRole("link", { name: "Your closet" })
+    .filter({ visible: true })
+    .click();
+  await expect(page).toHaveURL(/\/closet$/u, { timeout: 15_000 });
+  await hydrated(page);
+  await expect(page.getByRole("heading", { name: "3 pieces" })).toBeVisible();
+  for (const piece of tapped) {
+    const tile = page.getByRole("link", { name: new RegExp(piece, "u") });
+    await expect(tile.locator("[data-part='tile-record']")).toHaveText(
+      "No runs yet",
+      { ignoreCase: true },
+    );
+  }
+  await scene(page, "The closet it starts from · three pieces", {
+    say: "The closet is ready for the first run: the three pieces the runner tapped, each one waiting for its record.",
+  });
+});
