@@ -19,17 +19,18 @@ This file is what every agent needs on every turn. The rest loads when it is
 relevant, so read the file it names when you are doing that work and it has not
 appeared yet:
 
-| file                        | loads when you read or edit                            | covers                                                                                      |
-| --------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| `.claude/rules/schema.md`   | `src/db/**`, `drizzle-*.config.ts`                     | the schema protocol, migration naming, laws 8 and 11                                        |
-| `.claude/rules/routes.md`   | `src/routes/**`, the route tree, a module's `index.ts` | routes are glue, typed routing, the client-bundle rule, route-tree regeneration             |
-| `.claude/rules/ui.md`       | any `.tsx`, any `.css`, `e2e/**`                       | the `@theme` index, contracts outrank artboards, placeholder protocol, icons, motion, forms |
-| `.claude/rules/server.md`   | `src/modules/**/*.ts`, `src/lib/**`, `src/env/**`      | D1 discipline, trust boundaries, server functions, resilience laws 1–7, 8b, 8c, 9, 10       |
-| `.claude/rules/testing.md`  | `test/**`, any test, vitest/stryker config             | the three vitest projects, the mutation ratchet, equivalent mutants                         |
-| skill `pr-ready`            | opening a PR, answering review comments                | self-review, PR body sections, deferring, pushing, review comments                          |
-| skill `crushing-mutants`    | working through surviving mutants                      | the procedure                                                                               |
-| skill `pr-demo-video`       | a user-visible change                                  | recording the demo                                                                          |
-| skill `coordinating-a-wave` | coordinating a wave of parallel lanes                  | lane briefs, ownership, owner and Design rounds, merging, the record, traps                 |
+| file                          | loads when you read or edit                            | covers                                                                                      |
+| ----------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| `.claude/rules/schema.md`     | `src/db/**`, `drizzle-*.config.ts`                     | the schema protocol, migration naming, laws 8 and 11                                        |
+| `.claude/rules/routes.md`     | `src/routes/**`, the route tree, a module's `index.ts` | routes are glue, typed routing, the client-bundle rule, route-tree regeneration             |
+| `.claude/rules/ui.md`         | any `.tsx`, any `.css`, `e2e/**`                       | the `@theme` index, contracts outrank artboards, placeholder protocol, icons, motion, forms |
+| `.claude/rules/server.md`     | `src/modules/**/*.ts`, `src/lib/**`, `src/env/**`      | D1 discipline, trust boundaries, server functions, resilience laws 1–7, 8b, 8c, 9, 10       |
+| `.claude/rules/publishing.md` | always                                                 | what may land in the public repo, its issues and PRs: the never-list and the approve-list   |
+| `.claude/rules/testing.md`    | `test/**`, any test, vitest/stryker config             | the three vitest projects, the mutation ratchet, equivalent mutants                         |
+| skill `pr-ready`              | opening a PR, answering review comments                | self-review, PR body sections, deferring, pushing, review comments                          |
+| skill `crushing-mutants`      | working through surviving mutants                      | the procedure                                                                               |
+| skill `pr-demo-video`         | a user-visible change                                  | recording the demo                                                                          |
+| skill `coordinating-a-wave`   | coordinating a wave of parallel lanes                  | lane briefs, ownership, owner and Design rounds, merging, the record, traps                 |
 
 Code comments that cite "CLAUDE.md law 8b", "§D1 discipline", "§Derive, don't
 mirror" and the like predate this split; the table says where each now lives.
@@ -165,8 +166,8 @@ what you recommend, and wait.
 **"Flag it" is not asking.** Writing a note and moving on turns a question
 the owner never saw into a decision that silently defaulted to _no_. A blocked
 item the owner has not been asked about is not deferred; it is dropped.
-`docs/deferred.md` records what a decision _was_; it does not stand in for
-making one.
+An issue in Needs owner records that a question is open; it does not stand
+in for asking it.
 
 **Check the premise first.** "This needs a schema change so it stops here"
 has been wrong before — the columns already existed. Read before declaring
@@ -270,8 +271,8 @@ are stable because code cites them.
 5. If you change module boundaries or add a queue/cron/binding, update the
    diagram in `docs/architecture.md` in the same PR.
 6. Before opening a PR, use the `pr-ready` skill: self-review, demo video,
-   design deltas, deferred register, the final checks, and a five-sentence
-   summary.
+   design deltas, `Closes #N` and the issues it defers, the final checks,
+   and a five-sentence summary.
 7. **Ship with one background command; a push is not done until its checks
    are green.** `npm run ship -- --body-file=<f>` (guardrails `ship`) pushes,
    opens the PR and waits for CI. Run it with `run_in_background` and you
@@ -293,7 +294,11 @@ are stable because code cites them.
 
 ### Issue tracker
 
-GitHub Issues on ddteeter/dialed.run, through `gh`. See `docs/agents/issue-tracker.md`.
+Open work (build items, Design asks, owner questions, watch items) is GitHub
+Issues on ddteeter/dialed.run, with status in the dialed.run Project; a
+lane opens issues in its scope and closes them with `Closes #N`. See
+`docs/agents/issue-tracker.md`, and `npm run track` for the Project's
+fields. `docs/deferred.md` is a frozen archive.
 
 ### Domain docs
 

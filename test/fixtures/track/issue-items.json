@@ -1,0 +1,17 @@
+{
+  "data": {
+    "repository": {
+      "issue": {
+        "id": "I_kwDOUJJKOM8AAAABdMv7sQ",
+        "projectItems": {
+          "nodes": [
+            {
+              "id": "PVTI_lAHOAAUOcc4BqjuazhGuU48",
+              "project": { "id": "PVT_kwHOAAUOcc4Bqjua" }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

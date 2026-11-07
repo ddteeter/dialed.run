@@ -24,6 +24,13 @@ flowchart for structure) — otherwise skip the diagram.
 
 Bullet list of the tests you will write, by name. Unit vs integration marked.
 
+## Issues
+
+- Closes: the issue numbers this lane finishes (they go in the PR body as
+  `Closes #N`).
+- Opens: anything found or deferred becomes an issue
+  (`docs/agents/issue-tracker.md`); list the numbers here.
+
 ## Open questions
 
 Anything you'd otherwise guess on. Empty is acceptable; wrong guesses are

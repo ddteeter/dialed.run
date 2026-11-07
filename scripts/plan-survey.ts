@@ -1,5 +1,5 @@
 /**
- * Assembles the plan-survey page from the four agents' JSON.
+ * Assembles the plan-survey page from GitHub Issues and the agents' JSON.
  *
  *     npm run plan-survey -- <survey-dir> <out.html> [--previous <data.json | page.html>]
  *     npm run plan-survey -- --extract <page.html> <previous-deferred.json>
@@ -9,16 +9,24 @@
  * because TypeScript's globs skip dot-directories, so nothing would lint or
  * typecheck it there.
  *
- * `<survey-dir>` holds initial-plan.json, deferred.json, design.json,
- * journey.json and narrative.json (shapes in the skill's agents.md and
- * SKILL.md, and below). Writes `<out.html>` and, beside it,
- * `<out>.data.json`: the data the page embeds, which the next run passes
- * back as `--previous`. `--extract` pulls the deferred list out of a
- * published page, for the deferred agent's stable-id step.
+ * `<survey-dir>` holds issues.json and project.json (`gh issue list` and
+ * `npm run track -- list all --json`, SKILL.md step 1), plus the agents'
+ * initial-plan.json, deferred.json, design.json, journey.json and
+ * narrative.json (shapes in the skill's agents.md and SKILL.md, and below).
+ * **The ledger's tracked items are the issues themselves**: every open issue
+ * is `open-tracked` and every issue completed since the last survey is
+ * `done-later`, so nothing has to be patched between runs. The deferred
+ * agent adds only what the issues cannot say: orphans (deferrals with no
+ * issue), open issues the code has already done, and rot.
  *
- * **Every input is agent output**, so each is parsed, not trusted: a brief
- * that drifted from its shape fails here, naming the file, rather than
- * rendering a page with holes in it.
+ * Writes `<out.html>` and, beside it, `<out>.data.json`: the data the page
+ * embeds, which the next run passes back as `--previous`. `--extract` pulls
+ * the deferred list out of a published page, for the deferred agent's
+ * stable-id step.
+ *
+ * **Every input is outside data**, so each is parsed, not trusted: a brief
+ * that drifted from its shape, or a `gh` that changed its JSON, fails here,
+ * naming the file, rather than rendering a page with holes in it.
  *
  * **The brand is read, not copied.** The page takes its palette, roles and
  * faces from `src/ui/tokens.css` at build time — the `:root` block as the
@@ -44,9 +52,10 @@ const deferredClass = z.enum([
   "open-tracked",
   "open-orphaned",
   "done-later",
-  "register-stale",
+  "issue-stale",
 ]);
 const severity = z.enum(["launch-blocker", "important", "minor"]);
+const optionalText = z.string().nullish();
 const deferredItem = z.object({
   id: z.string(),
   title: z.string(),
@@ -54,15 +63,77 @@ const deferredItem = z.object({
   deferred_on: z.string().nullish(),
   source: z.string(),
   class: deferredClass,
-  status_in_register: z.string().nullish(),
   evidence: z.string(),
   area: z.string(),
   severity,
   age_days: z.number().nullish(),
   verified: z.boolean().optional(),
+  /**
+  An issue's link, its milestone and Project status, and its R-id.
+  */
+  url: optionalText,
+  stage: optionalText,
+  status: optionalText,
+  alias: optionalText,
 });
 type DeferredItem = z.infer<typeof deferredItem>;
-const deferredFile = z.object({ items: z.array(deferredItem) });
+
+/**
+What an agent may add: a deferral with no issue.
+*/
+const orphan = deferredItem.extend({ class: z.literal("open-orphaned") });
+const issueNumber = z.number().int().positive();
+/**
+Open issues the code has already done (agents.md brief 2b).
+*/
+const staleFinding = z.object({
+  issue: issueNumber,
+  what: z.string(),
+  evidence: z.string(),
+});
+const rotKind = z.enum([
+  "trigger-passed",
+  "no-trigger",
+  "friends-after-launch",
+]);
+/**
+Open issues that have gone stale on the tracker's own rules (brief 2c).
+*/
+const rotFinding = z.object({
+  issue: issueNumber,
+  kind: rotKind,
+  note: z.string(),
+});
+const orphans = z.array(orphan).default([]);
+const deferredFile = z.object({
+  items: orphans,
+  stale: z.array(staleFinding).default([]),
+  rot: z.array(rotFinding).default([]),
+});
+type DeferredFile = z.infer<typeof deferredFile>;
+
+// ---- GitHub (gh issue list, npm run track -- list all --json) -------------
+
+const label = z.object({ name: z.string() });
+const milestone = z.object({ title: z.string() });
+const ghIssue = z.object({
+  number: issueNumber,
+  title: z.string(),
+  state: z.enum(["OPEN", "CLOSED"]),
+  stateReason: z.string().nullish(),
+  labels: z.array(label),
+  milestone: milestone.nullable(),
+  createdAt: z.iso.datetime(),
+  closedAt: z.iso.datetime().nullable(),
+  url: z.url({ protocol: /^https$/, hostname: /^github\.com$/ }),
+});
+type GhIssue = z.infer<typeof ghIssue>;
+const projectItem = z.object({
+  number: issueNumber,
+  state: z.string(),
+  status: z.string(),
+});
+type ProjectItem = z.infer<typeof projectItem>;
 
 /**
  * The rest of the agents' rows, as agents.md writes them: the text fields,
@@ -162,14 +233,16 @@ const tldrCard = z.tuple([tone, z.string(), z.string()]);
 const narrative = z.object({
   as_of: z.iso.date(),
   verified: z.array(z.string()).default([]),
-  extra_deferred: z.array(deferredItem).default([]),
+  extra_deferred: orphans,
   tldr: z.array(tldrCard),
   text: z.record(z.string(), z.string()),
 });
 
+// A page from before the issues moved keeps its own classes (register-stale).
+const previousItem = deferredItem.extend({ class: z.string() });
 const previousSurvey = z.object({
   as_of: z.string().optional(),
-  deferred: z.array(deferredItem),
+  deferred: z.array(previousItem),
 });
 type PreviousSurvey = z.infer<typeof previousSurvey>;
 
@@ -277,13 +350,204 @@ function duplicateIds(items: readonly DeferredItem[]): string[] {
   return items.map((d) => d.id).filter((id) => seen.has(id) || !seen.add(id));
 }
 
-function readSurvey(surveyDir: string) {
+// ---- issues into ledger entries -------------------------------------------
+
+/**
+ * Never negative: `gh` dates are UTC, so an issue filed this evening can
+ * carry tomorrow's date.
+ */
+const daysBetween = (from: string, to: string): number =>
+  Math.max(0, Math.round((Date.parse(to) - Date.parse(from)) / DAY_MS));
+
+/**
+ * The one `prefix:*` label an issue carries (issue-tracker.md: exactly one
+ * area and one severity each). A missing one fails the build, naming the
+ * issue, because the page has nowhere honest to file it.
+ */
+function labelOf(issue: GhIssue, prefix: string): string {
+  const values = issue.labels
+    .map((label) => label.name)
+    .filter((name) => name.startsWith(`${prefix}:`))
+    .map((name) => name.slice(prefix.length + 1));
+  const [value] = values;
+  if (value === undefined || values.length !== 1) {
+    throw new Error(
+      `issue #${String(issue.number)} has ${String(values.length)} ${prefix}:* labels, not one`,
+    );
+  }
+  return value;
+}
+
+function severityOf(issue: GhIssue): DeferredItem["severity"] {
+  const parsed = severity.safeParse(labelOf(issue, "sev"));
+  if (!parsed.success) {
+    throw new Error(
+      `issue #${String(issue.number)} has an unknown sev:* label`,
+    );
+  }
+  return parsed.data;
+}
+
+/**
+ * When the work was first deferred: for an `R-NN:` issue the register row's
+ * date, carried by the previous survey, else the day the issue was filed.
+ */
+function deferredOn(
+  issue: GhIssue,
+  alias: string | undefined,
+  previous: PreviousSurvey | undefined,
+): string {
+  const created = issue.createdAt.slice(0, 10);
+  const row = previous?.deferred.find((d) => d.id === alias);
+  if (row === undefined) return created;
+  if (
+    row.deferred_on != undefined &&
+    z.iso.date().safeParse(row.deferred_on).success
+  ) {
+    return row.deferred_on;
+  }
+  if (row.age_days == undefined || previous?.as_of === undefined)
+    return created;
+  const start = new Date(Date.parse(previous.as_of) - row.age_days * DAY_MS);
+  return start.toISOString().slice(0, 10);
+}
+
+/**
+ * Closed issues worth a row: completed (a cut or a duplicate is not work
+ * done), and since the last survey so the ledger does not grow forever.
+ */
+function isListed(
+  issue: GhIssue,
+  previous: PreviousSurvey | undefined,
+): boolean {
+  if (issue.state === "OPEN") return true;
+  if (issue.stateReason !== "COMPLETED" || issue.closedAt === null)
+    return false;
+  return previous?.as_of === undefined || issue.closedAt >= previous.as_of;
+}
+
+function issueEntry(
+  issue: GhIssue,
+  context: {
+    readonly asOf: string;
+    readonly status: ReadonlyMap<number, string>;
+    readonly previous: PreviousSurvey | undefined;
+  },
+): DeferredItem {
+  const alias = /^(R-\d+):/.exec(issue.title)?.[1];
+  const since = deferredOn(issue, alias, context.previous);
+  const stage = issue.milestone?.title;
+  const status = context.status.get(issue.number);
+  const isOpen = issue.state === "OPEN";
+  return {
+    id: `#${String(issue.number)}`,
+    title: issue.title,
+    what: `Milestone ${stage ?? "none"} · status ${status === undefined ? "not in the Project" : status || "inbox"}`,
+    deferred_on: since,
+    source: "GitHub issue",
+    class: isOpen ? "open-tracked" : "done-later",
+    evidence: issue.url,
+    area: labelOf(issue, "area"),
+    severity: severityOf(issue),
+    age_days: daysBetween(
+      since,
+      isOpen ? context.asOf : (issue.closedAt ?? context.asOf),
+    ),
+    url: issue.url,
+    stage,
+    status,
+    alias,
+  };
+}
+
+const ROT_LABEL = {
+  "trigger-passed": "its trigger has passed",
+  "no-trigger": "it has no trigger line",
+  "friends-after-launch": "a friends item still open after friends launch",
+} as const;
+
+/**
+ * Folds the agent's issue findings into the issues' own entries: a stale
+ * issue changes class, and rot is appended to what the row says.
+ */
+function annotate(
+  entries: DeferredItem[],
+  agent: DeferredFile,
+): DeferredItem[] {
+  const byId = new Map(entries.map((d) => [d.id, d]));
+  const openEntry = (issue: number): DeferredItem => {
+    const entry = byId.get(`#${String(issue)}`);
+    if (entry?.class !== "open-tracked" && entry?.class !== "issue-stale") {
+      throw new Error(
+        `deferred.json names #${String(issue)}, which is not an open issue`,
+      );
+    }
+    return entry;
+  };
+  for (const stale of agent.stale) {
+    const entry = openEntry(stale.issue);
+    entry.class = "issue-stale";
+    entry.what = `${stale.what} (${entry.what})`;
+    entry.evidence = stale.evidence;
+  }
+  for (const rot of agent.rot) {
+    const entry = openEntry(rot.issue);
+    entry.what = `${entry.what}. Rot: ${ROT_LABEL[rot.kind]}. ${rot.note}`;
+  }
+  return entries;
+}
+
+function issueEntries(
+  surveyDir: string,
+  asOf: string,
+  previous: PreviousSurvey | undefined,
+) {
+  const issues = parseFile(
+    path.join(surveyDir, "issues.json"),
+    z.array(ghIssue),
+  );
+  const project = parseFile(
+    path.join(surveyDir, "project.json"),
+    z.array(projectItem),
+  );
+  const status = new Map(project.map((item) => [item.number, item.status]));
+  const entries = issues
+    .filter((issue) => isListed(issue, previous))
+    .map((issue) => issueEntry(issue, { asOf, status, previous }));
+  return { entries, issues, project };
+}
+
+/**
+ * SKILL.md's done check: every open issue is on the page as tracked (or as
+ * stale), and the Project holds every open issue.
+ */
+function projectCheck(
+  issues: readonly GhIssue[],
+  project: readonly ProjectItem[],
+): string {
+  const inProject = new Set(project.map((item) => item.number));
+  const projectOpen = project.filter((item) => item.state === "OPEN").length;
+  const open = issues.filter((issue) => issue.state === "OPEN");
+  const missing = open
+    .filter((issue) => !inProject.has(issue.number))
+    .map((issue) => `#${String(issue.number)}`);
+  const verdict =
+    missing.length === 0
+      ? "they match"
+      : `not in the Project: ${missing.join(", ")}`;
+  return `${String(open.length)} open issues, ${String(projectOpen)} open in the Project (${verdict})`;
+}
+
+function readSurvey(surveyDir: string, previous: PreviousSurvey | undefined) {
   const read = <T>(name: string, schema: z.ZodType<T>): T =>
     parseFile(path.join(surveyDir, name), schema);
   const words = read("narrative.json", narrative);
   const verified = new Set(words.verified);
+  const agent = read("deferred.json", deferredFile);
+  const tracked = issueEntries(surveyDir, words.as_of, previous);
   const deferred = [
-    ...read("deferred.json", deferredFile).items,
+    ...annotate(tracked.entries, agent),
+    ...agent.items,
     ...words.extra_deferred,
   ].map((d) => ({ ...d, verified: verified.has(d.id) }));
   const dupes = duplicateIds(deferred);
@@ -297,19 +561,22 @@ function readSurvey(surveyDir: string) {
   const story = read("journey.json", journey);
   const days = Math.round((Date.parse(words.as_of) - FIRST_DAY) / DAY_MS);
   return {
-    as_of: words.as_of,
-    narrative: { ...words, days: String(days) },
-    lanes: plan.lanes,
-    techPivots: plan.tech_plan_pivots,
-    deferred,
-    screens: screens.screens,
-    deltaThemes: screens.delta_themes,
-    deltaFollowups: screens.delta_followups_open,
-    phases: story.phases,
-    pivots: story.pivots,
-    launch: story.launch_items,
-    epics: story.post_mvp_epics,
-    stats: story.stats,
+    check: projectCheck(tracked.issues, tracked.project),
+    data: {
+      as_of: words.as_of,
+      narrative: { ...words, days: String(days) },
+      lanes: plan.lanes,
+      techPivots: plan.tech_plan_pivots,
+      deferred,
+      screens: screens.screens,
+      deltaThemes: screens.delta_themes,
+      deltaFollowups: screens.delta_followups_open,
+      phases: story.phases,
+      pivots: story.pivots,
+      launch: story.launch_items,
+      epics: story.post_mvp_epics,
+      stats: story.stats,
+    },
   };
 }
 
@@ -318,10 +585,10 @@ function build(
   out: string,
   previousFile: string | undefined,
 ): void {
-  const data = readSurvey(surveyDir);
-  // Only what the delta needs, so the page does not grow with every run.
   const previous =
     previousFile === undefined ? undefined : readPrevious(previousFile);
+  const { data, check } = readSurvey(surveyDir, previous);
+  // Only what the delta needs, so the page does not grow with every run.
   const embedded =
     previous === undefined
       ? data
@@ -346,7 +613,7 @@ function build(
     .map(([name, items]) => `${name} ${String(items.length)}`)
     .join(", ");
   console.log(
-    `wrote ${out} (${String(data.deferred.length)} deferred items: ${counts})`,
+    `wrote ${out} (${String(data.deferred.length)} deferred items: ${counts})\n${check}`,
   );
 }
 

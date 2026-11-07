@@ -12,15 +12,21 @@ answers as one page:
    packets: shipped, changed by decision, partial, or not built.
 2. **The journey** — phases and pivots from 2026-08-30 to today, each with
    its why.
-3. **Deferred, never returned** — every deferral (register, design docs,
-   packets, PR bodies, design-deltas, code markers), classified as orphaned,
-   tracked, done later, or register-stale. **This is the point of the
-   survey**; the others give it context.
+3. **Deferred, never returned** — every open and recently completed GitHub
+   issue, read by the build, plus every deferral the deferred agent finds
+   with no issue (design docs, packets, PR bodies, design-deltas, code
+   markers), classified as orphaned, tracked, done later, or issue-stale.
+   **This is the point of the survey**; the others give it context.
 4. **Design coverage, launch readiness, post-MVP epics.**
 
-It edits nothing in the repo. Findings that call for a fix or a register row
-are reported to the owner at the end. Making those changes is a separate task,
-done only if the owner asks for it.
+It edits nothing in the repo and writes nothing to GitHub. Findings that
+call for a fix or a new issue are reported to the owner at the end. Making
+those changes is a separate task, done only if the owner asks for it.
+
+**The page needs no patching between runs.** Issues retire themselves: a
+merged PR's `Closes #N` closes the issue, and the next build reads it as
+done. Don't edit the published page's data to mark closures; re-run the
+build instead.
 
 **Cost.** The four agents use about 700k tokens between them (the deferred
 agent is the largest), plus your verification pass. Run the survey when the
@@ -31,6 +37,14 @@ owner asks, not on a schedule they haven't set up.
 ### 1 · Set up, and find the previous run
 
 - `OUT` = a new `survey-<today>/` directory in your scratchpad.
+- Read the tracker into it. These are the build's inputs, read-only:
+
+  ```sh
+  gh issue list -R ddteeter/dialed.run --state all --limit 500 \
+    --json number,title,state,stateReason,labels,milestone,closedAt,createdAt,url > "$OUT/issues.json"
+  npm run -s track -- list all --json > "$OUT/project.json"
+  ```
+
 - The artifact is **"dialed.run Plan vs. Build"**, first published 2026-10-31
   at `https://claude.ai/artifact/EpGLTj7XLSmXY8WLZfiu8C`. If that link
   fails, find it with `Artifact` `action: "list"`.
@@ -53,16 +67,18 @@ The agents report confidently, and in the 2026-10-31 run some of their claims
 needed checking. Before writing anything up:
 
 - **Re-check by hand** every `open-orphaned` item rated important or
-  launch-blocker, and every new `not-built` or `partial` claim in the
-  initial-plan and design results. Read the cited lines; a grep hit is not
-  enough. Example: the dark-theme claim held up only after confirming that the
+  launch-blocker, every `stale` issue, and every new `not-built` or
+  `partial` claim in the initial-plan and design results. For an orphan,
+  also search the issues once more yourself (`gh issue list --search`).
+  Read the cited lines; a grep hit is not enough. Example: the dark-theme claim held up only after confirming that the
   dark values in `tokens.css` color the ink header, not a theme.
 - Correct the JSON where an agent was wrong. Don't add a note saying it
   was wrong.
 - Cross-check the results against each other. A gap the initial-plan agent
   found (a `partial` or `not-built` item with no recorded decision) that has
   no deferred item is a missing orphan. Add it to `extra_deferred` (below).
-- Keep the ids of everything you re-checked for `verified`.
+- Keep the ids of everything you re-checked for `verified` (an issue's id
+  is `#N`).
 
 ### 4 · Write `$OUT/narrative.json`
 
@@ -73,7 +89,7 @@ prose comes from this file:
 {
   "as_of": "YYYY-MM-DD",
   "verified": ["PR#101-1", "plan-102"],
-  "extra_deferred": [{ "...": "same shape as deferred.json items" }],
+  "extra_deferred": [{ "...": "an orphan, same shape as deferred.json items" }],
   "tldr": [
     ["good", "Where we are", "…"],
     ["warn", "What changed", "…"],
@@ -104,6 +120,10 @@ prose comes from this file:
   number from the JSON you just verified.
 - `tldr` tones are `good`, `warn` and `bad`; the tone sets the label's color.
   Keep four cards.
+- The first survey after the move to issues (2026-11-06) compares `#N`
+  rows with the previous page's register rows. Only `R-NN:` issues match
+  their row, so most rows show as both newly open and closed. Say so in
+  `changes_h` rather than reading it as movement.
 - `changes_h` should name the movement, for example "Three orphans closed,
   two new ones". Leave it out on a first run, because that section only shows
   when there is a previous survey.
@@ -115,9 +135,20 @@ prose comes from this file:
 npm run plan-survey -- "$OUT" "$OUT/dialed-plan-vs-build.html" --previous <saved-page>
 ```
 
-- The build parses every input with zod. If an agent's JSON has drifted from
-  its brief, the build fails and names the file and field. Fix the JSON, or
-  ask that agent to correct it.
+- The build parses every input with zod, `gh`'s JSON included. If an agent's
+  JSON has drifted from its brief, the build fails and names the file and
+  field. Fix the JSON, or ask that agent to correct it.
+- The build turns each issue into a ledger row: id `#N` (linked), class
+  `open-tracked` or `done-later` (completed since the previous survey),
+  area and severity from its labels, stage from its milestone, status from
+  the Project. An `R-NN:` issue keeps the register row's age and matches
+  that row in the delta. An issue missing its `area:*` or `sev:*` label
+  fails the build, naming the issue.
+- **Done check.** The build's last line compares the open issues with the
+  Project's: `npm run track -- list all --json`, state `OPEN`. The page's
+  open-tracked count plus its issue-stale count must equal that number. If
+  the line names issues missing from the Project, report them to the owner;
+  adding them to the Project is a write, not part of the survey.
 - The build refuses duplicate deferred ids. Fix those at the source, because
   the delta matches items by id.
 - The build reads the brand from `src/ui/tokens.css`. If a role the template
@@ -135,18 +166,24 @@ In chat, keep it short and give the link:
 
 - what moved since the last survey (newly open, closed);
 - the important orphans, with the verified ones marked;
-- register rows that have gone stale;
-- owner questions that have been waiting the longest.
+- open issues the code has already done (issue-stale);
+- the rot the deferred agent flagged (a passed trigger, no trigger line, a
+  friends item open after friends launch), asked as owner questions in the
+  turn;
+- owner questions that have been waiting the longest (the Project's Needs
+  owner status).
 
-Then offer the follow-ups (a fix, register rows, retiring stale rows) as a
-question, and don't start them. If the root session's context is large
+Then offer the follow-ups (a fix, a new issue per orphan, closing stale
+issues) as a question, and don't start them. If the root session's context is large
 afterwards, say so (global CLAUDE.md, context hygiene).
 
 ## Files
 
 - `agents.md`: the four agent briefs and their output shapes.
-- `scripts/plan-survey.ts` (`npm run plan-survey`): parses `$OUT/*.json`, injects the brand from
-  `src/ui/tokens.css`, and assembles the page. Also `--extract`.
+- `scripts/plan-survey.ts` (`npm run plan-survey`): parses `$OUT/*.json`
+  (the issues and the agents' output), turns issues into ledger rows,
+  injects the brand from `src/ui/tokens.css`, and assembles the page. Also
+  `--extract`.
 - `template.html`: the page, filled from the embedded `D`. It writes no brand
   values of its own, only the report's status hues. The palette, roles and
   fonts all come from `tokens.css` at build time.

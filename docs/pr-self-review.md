@@ -120,13 +120,14 @@ and is exactly the demo worth watching.
 
 A blocked item the owner has not actually been asked about is dropped, not
 deferred. If your diff contains a "flagged for review" note, a
-`docs/deferred.md` row marked `blocked`, or a review reply saying "this
+Needs owner issue opened without asking, or a review reply saying "this
 stops here" — the question goes to them in the turn, with what you
 recommend. See CLAUDE.md §Schema changes: stop means ask.
 
 ## 10. What did you leave undone?
 
-Name it in the PR description **and add a row to `docs/deferred.md`**.
+Name it in the PR description **and open an issue for it** (skill
+`pr-ready`, §Deferring is a write).
 Deliberate omissions with a reason are fine; omissions a reviewer has to
 discover are not, and neither is a deferral that exists only in a review
 thread nobody will re-read.

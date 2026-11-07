@@ -106,4 +106,4 @@ The full set is too large for one context. Fan out:
 5. **Report**, done when every shard has returned and every remaining
    finding is verified or marked `low`: severity first, with counts, the
    dropped artifacts, and what each shard covered. Then the owner triages
-   each finding into a fix, a `docs/deferred.md` row, or a dismissal.
+   each finding into a fix, an issue, or a dismissal.

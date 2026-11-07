@@ -1,0 +1,45 @@
+{
+  "data": {
+    "user": {
+      "projectV2": {
+        "id": "PVT_kwHOAAUOcc4Bqjua",
+        "fields": {
+          "nodes": [
+            { "id": "PVTF_lAHOAAUOcc4Bqjuazho6XcY", "name": "Title" },
+            { "id": "PVTF_lAHOAAUOcc4Bqjuazho6Xcc", "name": "Assignees" },
+            {
+              "id": "PVTSSF_lAHOAAUOcc4Bqjuazho6Xcg",
+              "name": "Status",
+              "options": [
+                { "id": "27530ae7", "name": "Inbox" },
+                { "id": "fc03a054", "name": "Needs owner" },
+                { "id": "d0703720", "name": "Needs Design" },
+                { "id": "99c3c7f9", "name": "Ready" },
+                { "id": "f2ddcb17", "name": "In lane" },
+                { "id": "0ac36633", "name": "In PR" },
+                { "id": "1b53eba8", "name": "Done" }
+              ]
+            },
+            { "id": "PVTF_lAHOAAUOcc4Bqjuazho6Xck", "name": "Labels" },
+            {
+              "id": "PVTF_lAHOAAUOcc4Bqjuazho6Xco",
+              "name": "Linked pull requests"
+            },
+            { "id": "PVTF_lAHOAAUOcc4Bqjuazho6Xcs", "name": "Milestone" },
+            { "id": "PVTF_lAHOAAUOcc4Bqjuazho6Xcw", "name": "Repository" },
+            { "id": "PVTF_lAHOAAUOcc4Bqjuazho6Xc4", "name": "Reviewers" },
+            { "id": "PVTF_lAHOAAUOcc4Bqjuazho6Xc8", "name": "Parent issue" },
+            {
+              "id": "PVTF_lAHOAAUOcc4Bqjuazho6XdA",
+              "name": "Sub-issues progress"
+            },
+            { "id": "PVTF_lAHOAAUOcc4Bqjuazho6XdE", "name": "Created" },
+            { "id": "PVTF_lAHOAAUOcc4Bqjuazho6XdM", "name": "Updated" },
+            { "id": "PVTF_lAHOAAUOcc4Bqjuazho6Xdc", "name": "Closed" },
+            { "id": "PVTF_lAHOAAUOcc4Bqjuazho6XgM", "name": "Lane" }
+          ]
+        }
+      }
+    }
+  }
+}

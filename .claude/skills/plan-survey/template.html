@@ -471,7 +471,7 @@
   .c-open-tracked {
     background: var(--hi-viz);
   }
-  .c-register-stale {
+  .c-issue-stale {
     background: var(--s-stale);
   }
   .c-done-later {
@@ -557,6 +557,10 @@
     font-size: 12px;
     white-space: nowrap;
     color: var(--muted);
+  }
+  td.id a,
+  .li .e a {
+    color: var(--ink);
   }
   td .t {
     font-weight: 600;
@@ -802,11 +806,13 @@
       <div class="eyebrow">Deferred, never returned</div>
       <h2 data-n="deferred_h"></h2>
       <p class="muted">
-        <span data-n="deferred_p"></span> "Orphaned" means it was deferred
-        somewhere, has no register row and was never built. These are the items
-        the register's own rule says get dropped without anyone deciding to drop
-        them. Items marked <span class="vf">VERIFIED</span> were re-checked by
-        hand after the agents reported them.
+        <span data-n="deferred_p"></span> Tracked items are the GitHub issues
+        themselves, read at build time. "Orphaned" means it was deferred
+        somewhere, has no issue and was never built: the items that get dropped
+        without anyone deciding to drop them. "Issue stale" means the issue is
+        open but the code already does it. Items marked
+        <span class="vf">VERIFIED</span> were re-checked by hand after the
+        agents reported them.
       </p>
     </div>
     <h3>The ones that matter</h3>
@@ -918,6 +924,9 @@
       /[&<>"]/g,
       (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
     );
+  // An issue's id links to it; the build only lets a github.com https url in.
+  const idOf = (d) =>
+    d.url ? `<a href="${esc(d.url)}">${esc(d.id)}</a>` : esc(d.id);
 
   // hero stats
   const allItems = D.lanes.flatMap((l) => l.items);
@@ -953,17 +962,23 @@
 
   // changes since the previous survey (ids are kept stable across runs)
   if (D.previous) {
+    // An R-NN issue matches the earlier survey's R-NN row by its alias.
     const prev = new Map(D.previous.deferred.map((d) => [d.id, d]));
-    const now = new Map(D.deferred.map((d) => [d.id, d]));
+    const now = new Map(
+      D.deferred.flatMap((d) => [
+        [d.id, d],
+        ...(d.alias ? [[d.alias, d]] : []),
+      ]),
+    );
     const isOpen = (d) => d && d.class.startsWith("open");
     const added = D.deferred.filter(
-      (d) => isOpen(d) && !isOpen(prev.get(d.id)),
+      (d) => isOpen(d) && !isOpen(prev.get(d.id) || prev.get(d.alias)),
     );
     const closed = D.previous.deferred.filter(
       (d) => isOpen(d) && !isOpen(now.get(d.id)),
     );
     const row = (d) =>
-      `<div class="li" style="grid-template-columns:1fr"><div><b>${esc(d.title)}</b><div class="e">${esc(d.id)} · ${esc(d.area)} · ${esc(d.severity)}</div></div></div>`;
+      `<div class="li" style="grid-template-columns:1fr"><div><b>${esc(d.title)}</b><div class="e">${idOf(d)} · ${esc(d.area)} · ${esc(d.severity)}</div></div></div>`;
     $("changes-p").textContent =
       `Compared with the survey of ${D.previous.as_of}. An item counts as open when its class is orphaned or tracked.`;
     $("changes-cols").innerHTML =
@@ -1041,7 +1056,7 @@
   const CL = [
     ["open-orphaned", "Orphaned"],
     ["open-tracked", "Open, tracked"],
-    ["register-stale", "Register stale"],
+    ["issue-stale", "Issue stale"],
     ["done-later", "Done later"],
   ];
   const callouts = D.deferred
@@ -1114,7 +1129,7 @@
         .map(
           (
             d,
-          ) => `<tr><td class="id">${esc(d.id)}${d.verified ? '<br><span class="vf">VERIFIED</span>' : ""}</td>
+          ) => `<tr><td class="id">${idOf(d)}${d.verified ? '<br><span class="vf">VERIFIED</span>' : ""}</td>
     <td><div class="t">${esc(d.title)}</div><div class="w">${esc(d.what)}</div><div class="e">${esc(d.source)} → ${esc(d.evidence)}</div></td>
     <td style="white-space:nowrap"><span class="dot c-${d.class}"></span>${clsLabel[d.class]}</td><td>${esc(d.area)}</td>
     <td class="sev-${d.severity}" style="white-space:nowrap">${d.severity.replace("-", " ")}</td><td class="age">${d.age_days ?? "–"}d</td></tr>`,
