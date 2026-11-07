@@ -53,7 +53,7 @@ import {
 } from "../../../ui";
 import { photoAcceptAttribute } from "../../../lib/photo-constraints";
 import type { FieldErrors, PhotoStep } from "../../../ui";
-import { httpsUrlProblem, type TempUnit } from "../../../lib/contracts";
+import { productLinkProblem, type TempUnit } from "../../../lib/contracts";
 import type { ProductPlaceholders } from "../form-mapping";
 import {
   garmentFormSchema,
@@ -920,7 +920,7 @@ function LinkField({
         const link = withScheme(value);
         form.markField(
           "productUrl",
-          link === undefined ? undefined : httpsUrlProblem(link),
+          link === undefined ? undefined : productLinkProblem(link),
         );
       }}
       field={form.field}

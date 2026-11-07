@@ -11,7 +11,7 @@
  * `garmentSchema`, and the previous version returned a hand-built object
  * typed as `Garment` that the schema never actually saw.
  */
-import { httpsUrlProblem } from "../../lib/contracts";
+import { productLinkProblem } from "../../lib/contracts";
 import type { FieldErrors } from "../../ui";
 
 import type { GarmentFormValues } from "./form-schema";
@@ -85,5 +85,5 @@ export function storedLinkErrors(
 ): FieldErrors {
   return item.productUrl === null || linkDetail.link !== undefined
     ? {}
-    : { productUrl: httpsUrlProblem(item.productUrl) ?? DENIED_LINK };
+    : { productUrl: productLinkProblem(item.productUrl) ?? DENIED_LINK };
 }

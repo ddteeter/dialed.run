@@ -4,7 +4,7 @@
  */
 import { z } from "zod";
 
-import { httpsUrlSchema } from "./common";
+import { httpsUrlSchema, productLinkSchema } from "./common";
 import { fabricSchema, weightSchema } from "./garments";
 
 // ---- Products (D-26/D-31/D-34) --------------------------------------------
@@ -24,7 +24,7 @@ export const productNameSchema = z.string().min(1).max(120);
 export const productDraftSchema = z.object({
   brand: brandNameSchema,
   name: productNameSchema,
-  sourceUrl: httpsUrlSchema.optional(),
+  sourceUrl: productLinkSchema.optional(),
 });
 export type ProductDraft = z.infer<typeof productDraftSchema>;
 
