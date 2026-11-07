@@ -27,6 +27,9 @@ import { signInAsOperator } from "./operator";
 
 const RUNNER_ID = "e2e-corrections-states";
 const RUNNER_HANDLE = "states_spotter";
+// Sent the name the Desk refuses, and hears the Decline on the bell.
+const FILER_ID = "e2e-corrections-filer";
+const FILER_HANDLE = "name_filer";
 
 interface Seeded {
   brandId: string;
@@ -98,7 +101,13 @@ async function cleanUp(seeded: Seeded): Promise<void> {
       .where(inArray(productCorrections.productId, productIds));
     await core
       .delete(notifications)
-      .where(inArray(notifications.userId, [RUNNER_ID, ...seeded.helperIds]));
+      .where(
+        inArray(notifications.userId, [
+          RUNNER_ID,
+          FILER_ID,
+          ...seeded.helperIds,
+        ]),
+      );
     await core
       .delete(wardrobeItems)
       .where(eq(wardrobeItems.id, seeded.garmentId));
@@ -167,7 +176,7 @@ test("WRONG? takes each field's own input, and opens a field with what was sent"
   }
 });
 
-test("the Desk opens a row's other runners, declines with a reason, and refuses a name the brand has", async ({
+test("the Desk opens a row's other runners, declines with a reason, and refuses a name the brand has, and the bell says so", async ({
   page,
 }) => {
   const seeded = await seed();
@@ -192,7 +201,7 @@ test("the Desk opens a row's other runners, declines with a reason, and refuses 
         {
           id: newUlid(),
           productId: seeded.productId,
-          userId: RUNNER_ID,
+          userId: FILER_ID,
           garmentId: seeded.garmentId,
           field: "name" as const,
           value: seeded.otherName,
@@ -226,6 +235,20 @@ test("the Desk opens a row's other runners, declines with a reason, and refuses 
         "Another product of this brand already has that name. Decline it, and look in Duplicates.",
       ),
     ).toBeVisible();
+    await renamed.getByRole("button", { name: "Decline" }).click();
+    await renamed.getByRole("button", { name: "Confirm" }).click();
+    await expect(renamed).toHaveCount(0);
+
+    // The bell, where the page ends: the Desk's rail counts other specs'
+    // rows, and this runner's bell holds only this.
+    await signInAsKnownUser(page, FILER_ID, FILER_HANDLE);
+    await page.goto("/notifications");
+    await hydrated(page);
+    await expect(
+      page.getByRole("link", {
+        name: `We kept the name on ${seeded.productName} as it is.`,
+      }),
+    ).toHaveAttribute("href", `/closet/${seeded.garmentId}`);
   } finally {
     await cleanUp(seeded);
   }
