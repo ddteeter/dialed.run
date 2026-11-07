@@ -22,7 +22,10 @@ flowchart for structure) — otherwise skip the diagram.
 
 ## Test plan
 
-Bullet list of the tests you will write, by name. Unit vs integration marked.
+Bullet list of the tests you will write, by name. Mark each with its kind
+from `.claude/rules/testing.md` §Which kind of test, and say why a
+Playwright spec is the right kind wherever you plan one: vitest is the
+default. Name the existing journey you extend before creating one.
 
 ## Issues
 

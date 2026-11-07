@@ -67,10 +67,15 @@ decision is actually made. `pr-ready` and `pr-demo-video` check it at the end.
    no caption can reach the DOM by construction. _Done:_ one existing
    demo (strava, which no active lane owns) recorded with voice and strip,
    audio within ~200 ms of its cue by ear, app top bar fully visible.
-2. **The decision table.** `testing.md` table replacing line 37, template
-   line, `pr-ready` check. _Test:_ an architecture test fails when a route
-   has no journey and is not in `a11y-coverage.json`'s `unvisited`. _Done:_
-   a fresh agent given a sample packet picks the kinds the table names.
+2. **The decision table.** `testing.md` table replacing line 37 (today's
+   file names; steps 3–5 add their rows), template line, `pr-ready` check,
+   and CLAUDE.md's index row says to read it when planning tests. No new
+   architecture test: the route check it would make already exists in the
+   coverage teardown (`judge()` in `e2e/support/a11y-coverage.ts`, "no spec
+   visits it, and it is not listed"), and it is a stronger check because it
+   observes a real visit. A static copy would be a second answer to the
+   same question. _Done:_ a fresh agent given a sample packet picks the
+   kinds the table names.
 3. **PR demos go throwaway.** `e2e/scratch/` gitignored and matched by the
    `demo` project; `pr-demo-video` rewritten around it. _Test:_ knip, tsc and
    the stop gate pass with a scratch spec present and absent. _Done:_ one
