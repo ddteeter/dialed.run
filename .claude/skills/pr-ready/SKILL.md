@@ -50,11 +50,24 @@ closing keyword only for an issue this PR is meant to close.
 
 The push gate takes ~26 minutes and Guardrails CI 40–45. **Never wait in the
 foreground** (`docs/proposals/2026-10-12-agent-wait-cost.md` has the cost).
-Run the push and the watch (`gh pr checks <n> --watch`) with
-`run_in_background`, then end the turn; you are woken once when it exits.
-Fast-forward local `main` before pushing a new branch — the gate diffs
-against it. A lane dispatched by a coordinator stops at "ready to ship" and
-does not push at all.
+Ship with `npm run ship -- --body-file=<pr-body.md>` under
+`run_in_background`, then end the turn. It pushes the branch
+(`git push -u origin HEAD`, so it lands on the branch's own name even when
+it tracks `origin/main`), finds or opens its PR, waits for CI, and writes one
+status: `green`, `gate-blocked`, `lock-timeout`, `ci-red` or `error`. You
+are woken once. The machine-wide gate lock queues pushes; you never wait for
+another lane yourself.
+
+- Rebase onto `origin/main` and fast-forward local `main` first: the gate
+  diffs against local `main`.
+- `ship` never force-pushes. A branch you rebased after its first push needs
+  `git push --force-with-lease origin <branch>:<branch>` (backgrounded), then
+  `npm run ship` again to watch CI.
+- `ship` opens the PR from the body file and has no `--attach`. Attach demo
+  videos afterwards with `gh pr comment <n> --attach <file>`
+  (pr-demo-video).
+- On `gate-blocked` or `ci-red`, fix it and ship again. A lane dispatched by a
+  coordinator messages it on `green`; the coordinator merges and cleans up.
 
 A push is not done until its checks are green: CI covers the client-bundle
 build and browser e2e, which the local gates do not.

@@ -19,16 +19,17 @@ This file is what every agent needs on every turn. The rest loads when it is
 relevant, so read the file it names when you are doing that work and it has not
 appeared yet:
 
-| file                       | loads when you read or edit                            | covers                                                                                      |
-| -------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| `.claude/rules/schema.md`  | `src/db/**`, `drizzle-*.config.ts`                     | the schema protocol, migration naming, laws 8 and 11                                        |
-| `.claude/rules/routes.md`  | `src/routes/**`, the route tree, a module's `index.ts` | routes are glue, typed routing, the client-bundle rule, route-tree regeneration             |
-| `.claude/rules/ui.md`      | any `.tsx`, any `.css`, `e2e/**`                       | the `@theme` index, contracts outrank artboards, placeholder protocol, icons, motion, forms |
-| `.claude/rules/server.md`  | `src/modules/**/*.ts`, `src/lib/**`, `src/env/**`      | D1 discipline, trust boundaries, server functions, resilience laws 1–7, 8b, 8c, 9, 10       |
-| `.claude/rules/testing.md` | `test/**`, any test, vitest/stryker config             | the three vitest projects, the mutation ratchet, equivalent mutants                         |
-| skill `pr-ready`           | opening a PR, answering review comments                | self-review, PR body sections, deferring, pushing, review comments                          |
-| skill `crushing-mutants`   | working through surviving mutants                      | the procedure                                                                               |
-| skill `pr-demo-video`      | a user-visible change                                  | recording the demo                                                                          |
+| file                        | loads when you read or edit                            | covers                                                                                      |
+| --------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| `.claude/rules/schema.md`   | `src/db/**`, `drizzle-*.config.ts`                     | the schema protocol, migration naming, laws 8 and 11                                        |
+| `.claude/rules/routes.md`   | `src/routes/**`, the route tree, a module's `index.ts` | routes are glue, typed routing, the client-bundle rule, route-tree regeneration             |
+| `.claude/rules/ui.md`       | any `.tsx`, any `.css`, `e2e/**`                       | the `@theme` index, contracts outrank artboards, placeholder protocol, icons, motion, forms |
+| `.claude/rules/server.md`   | `src/modules/**/*.ts`, `src/lib/**`, `src/env/**`      | D1 discipline, trust boundaries, server functions, resilience laws 1–7, 8b, 8c, 9, 10       |
+| `.claude/rules/testing.md`  | `test/**`, any test, vitest/stryker config             | the three vitest projects, the mutation ratchet, equivalent mutants                         |
+| skill `pr-ready`            | opening a PR, answering review comments                | self-review, PR body sections, deferring, pushing, review comments                          |
+| skill `crushing-mutants`    | working through surviving mutants                      | the procedure                                                                               |
+| skill `pr-demo-video`       | a user-visible change                                  | recording the demo                                                                          |
+| skill `coordinating-a-wave` | coordinating a wave of parallel lanes                  | lane briefs, ownership, owner and Design rounds, merging, the record, traps                 |
 
 Code comments that cite "CLAUDE.md law 8b", "§D1 discipline", "§Derive, don't
 mirror" and the like predate this split; the table says where each now lives.
@@ -271,9 +272,12 @@ are stable because code cites them.
 6. Before opening a PR, use the `pr-ready` skill: self-review, demo video,
    design deltas, deferred register, the final checks, and a five-sentence
    summary.
-7. **A push is not done until its checks are green — and you never wait for
-   them in the foreground.** A lane dispatched by a coordinator stops at
-   "ready to ship" and does not push.
+7. **Ship with one background command; a push is not done until its checks
+   are green.** `npm run ship -- --body-file=<f>` (guardrails `ship`) pushes,
+   opens the PR and waits for CI. Run it with `run_in_background` and you
+   are woken once, with its status. A lane fixes its own gate or CI failure,
+   then tells its coordinator it is green; the coordinator merges (skill
+   `pr-ready`, §Pushing).
 
 ## Forbidden zones (all lanes)
 
