@@ -50,7 +50,9 @@ function Launcher({
         // control. "Add a run" keeps the visible word first (WCAG 2.5.3)
         // and says what is added.
         aria-label={LAUNCHER_NAME}
-        className={`tab-label target ${RESTING_LABEL_CLASS} bg-transparent p-0`}
+        // `w-full`: a button shrinks to its text, where the links' anchors
+        // fill their seat, so without it `+ Add` sits left of its column.
+        className={`tab-label target ${RESTING_LABEL_CLASS} w-full bg-transparent p-0`}
         onClick={() => {
           void navigate({ to });
         }}
