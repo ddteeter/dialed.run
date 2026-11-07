@@ -38,23 +38,30 @@ heading, :when, :day, :month #, level 1
 :day, :month #
 end of heading, :when, :day, :month #, level 1
 list, :when
-listitem, level 1, position 1, set size 3
+listitem, level 1, position 1, set size 4
 #
 waiting for a decision
 Nothing waiting
-end of listitem, level 1, position 1, set size 3
-listitem, level 1, position 2, set size 3
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
 #
 photos
 the screener couldn't finish
 Hidden until you look
-end of listitem, level 1, position 2, set size 3
-listitem, level 1, position 3, set size 3
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
 #
 bans
 this week
 # all time
-end of listitem, level 1, position 3, set size 3
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+#
+link, flagged accounts
+flagged
+accounts
+end of link, flagged accounts
+end of listitem, level 1, position 4, set size 4
 end of list, :when
 end of region, :when, :day, :month #
 region, Gave up
