@@ -11,10 +11,9 @@ description: Use before opening a pull request in dialed.run, before pushing a b
    #2–#5 review: the findings no rule could catch, written as questions.
 2. **Demo what a user would see change.** If a reviewer opening the app would
    see anything different from `main` — including a screen whose behaviour
-   changed behind an unchanged UI — invoke the `pr-demo-video` skill. Work with
-   no user-visible effect needs no video. E2E specs are organised by product
-   feature (`e2e/<feature>/`), never by lane; find the demo that already owns
-   your screens by grepping `Covers:` before creating a new directory.
+   changed behind an unchanged UI — invoke the `pr-demo-video` skill: a
+   throwaway spec in `e2e/scratch/`, scoped to the change. Work with no
+   user-visible effect needs no video.
 3. **Test kinds.** Check every test the branch adds against the table in
    `.claude/rules/testing.md` §Which kind of test. A new e2e spec that a
    dom test could replace gets rewritten as one. A flow the branch changed

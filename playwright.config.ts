@@ -106,7 +106,7 @@ export default defineConfig({
   projects: [
     {
       name: "e2e",
-      testIgnore: ["**/*.demo.spec.ts", "**/*.setup.ts"],
+      testIgnore: ["**/*.demo.spec.ts", "**/*.setup.ts", "scratch/**"],
       // **Depends on `demo-setup` so a signed-in spec can live here.**
       //
       // `verdict-row.spec.ts` needs an owner's session — the verdict screen
@@ -129,7 +129,12 @@ export default defineConfig({
     { name: "demo-setup", testMatch: "**/*.setup.ts" },
     {
       name: "demo",
-      testMatch: "**/*.demo.spec.ts",
+      // Plus a PR's throwaway demo (`e2e/scratch/`, gitignored), but only
+      // while recording: a scratch spec is never an assertion anyone else
+      // runs, so a bare run, CI's included, never sees one (design 180).
+      testMatch: demoSlowMo
+        ? ["**/*.demo.spec.ts", "scratch/**/*.spec.ts"]
+        : "**/*.demo.spec.ts",
       dependencies: ["demo-setup"],
       use: {
         viewport: { width: 1280, height: 720 },

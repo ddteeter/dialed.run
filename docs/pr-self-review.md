@@ -111,8 +111,9 @@ CLAUDE.md, and everything else at least needs to be visible.
 
 ## 9. Would a reviewer opening the app see a difference?
 
-If yes, the demo spec must exist, pass, and be re-recorded onto the PR
-(`pr-demo-video` skill). This includes a screen whose behaviour changed behind
+If yes, record a scratch demo of the change and attach it to the PR
+(`pr-demo-video` skill), and update the committed journey if the flow
+changed (`.claude/rules/testing.md` §Which kind of test). This includes a screen whose behaviour changed behind
 an unchanged UI — swapping stubbed data for a real backend touches no `.tsx`
 and is exactly the demo worth watching.
 

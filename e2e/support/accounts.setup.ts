@@ -29,6 +29,17 @@ import { ensureInviteCode, turnstileAnswered } from "./invites";
 const AUTH_DIR = "node_modules/.cache/dialed-demo-auth";
 
 /**
+ * The accounts this run needs. `scratch` serves only a recording (its
+ * specs run only then, design 180), so a bare run, CI's included, signs
+ * up exactly what it did before: the database the later specs and their
+ * transcripts see is unchanged.
+ */
+const isRecording = Number(process.env.DEMO_SLOWMO ?? 0) !== 0;
+const accountsThisRun = DEMO_ACCOUNTS.filter(
+  (account) => isRecording || account !== "scratch",
+);
+
+/**
  * A handle for this run's account: the demo's name, underscored, and the
  * run's last digits so a second run on the same local database is free —
  * old handles are never reclaimable (round 26 #7).
@@ -48,7 +59,7 @@ setup("create the demo accounts", async ({ browser }, testInfo) => {
   // Sign-up is invite-only (task 126, ACC-5): the harness's own code.
   const inviteCode = await ensureInviteCode();
 
-  for (const account of DEMO_ACCOUNTS) {
+  for (const account of accountsThisRun) {
     const email = `${account}-${suffix}@example.com`;
     const context = await browser.newContext();
     const page = await context.newPage();

@@ -77,9 +77,13 @@ decision is actually made. `pr-ready` and `pr-demo-video` check it at the end.
    same question. _Done:_ a fresh agent given a sample packet picks the
    kinds the table names.
 3. **PR demos go throwaway.** `e2e/scratch/` gitignored and matched by the
-   `demo` project; `pr-demo-video` rewritten around it. _Test:_ knip, tsc and
-   the stop gate pass with a scratch spec present and absent. _Done:_ one
-   real PR ships with a scratch demo under 60 s.
+   `demo` project only while recording (`DEMO_SLOWMO`); `pr-demo-video`
+   rewritten around it. A `scratch` demo account, signed up only when
+   recording, so CI's accounts and the database its transcripts see are
+   unchanged (coordinator-2's ask). _Test:_ knip, tsc and the stop gate pass
+   with a scratch spec present and absent; a full CI-style e2e run leaves
+   every transcript unchanged. _Done:_ one real PR ships with a scratch demo
+   under 60 s.
 4. **Rename and split journeys.** `*.demo.spec.ts` → `*.journey.spec.ts`,
    transcripts moved with them (`snapshotPathTemplate` keys on file path),
    feed/closet/moderation split into journey plus edge-case files. _Waits for

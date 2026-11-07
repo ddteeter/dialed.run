@@ -37,6 +37,9 @@ test/**/__screenshots__/
 demo.mp4
 *.demo.mp4
 playwright-report/
+# A PR's throwaway demo spec (design 180): recorded, attached, never
+# committed. The committed tests carry the proof.
+e2e/scratch/
 eval/pages/
 # Photographs of people. The repo is public, and a corpus of running
 # photos in git is a worse problem than the one it solves — see
