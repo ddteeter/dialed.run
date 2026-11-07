@@ -21,8 +21,9 @@ move into `@utility ground-paper` and the dark roles stay in `ground-ink`
 | `[data-ground="ink"]`, `-until-wide`, `.row-press:active` (R-79)                                     | the **opposite** of the page (T2 rule 04: headers invert too) |
 | `[data-ground="night"]` (new)                                                                        | ink in both themes                                            |
 
-`night` is for what T1/T3 say is dark for everyone: the Desk (`DeskShell`)
-and NowGoRun's block. The OG card and email already use fixed palettes
+`night` is for what T3 says is dark for everyone: the Desk (`DeskShell`).
+NowGoRun's ink block went with R49·138b (P3's body is on the page's ground),
+so its hi-viz band and bar take `--accent-ink` instead. The OG card and email already use fixed palettes
 (`ops/og/palette.ts`, `email/palette.ts`) and are untouched. Coverage marks
 (`ink.css`) switch from `--night-run` to `--ink` (T2 rule 03: coverage
 inverts). `.row-press:active` paints `--ground`/`--ink` after it takes the
@@ -85,7 +86,6 @@ the system by construction.
 
 ## Open questions
 
-- Guess: every existing `data-ground="ink"` block except the Desk and
-  NowGoRun inverts to paper on dark (T2 rule 04, literally). If a block reads
+- Guess: every existing `data-ground="ink"` block inverts to paper on dark (T2 rule 04, literally). If a block reads
   too loud, the fallback is `--panel` + hairline (rule 04's own words).
 - Guess: T3's You-tab header switch is superseded by R48·133's U1 row.

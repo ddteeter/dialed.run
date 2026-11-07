@@ -281,11 +281,12 @@
 }
 
 /**
- * **Night: ink in both themes.** For what T1 and T3 say is dark for
- * everyone, whatever the runner picked: the Desk ("always dark … it
- * doesn't read the runner's theme") and NowGoRun's block ("the block is
- * ink in both themes"). It reads nothing from the page, so a dark page
- * leaves it exactly as a paper one does.
+ * **Night: ink in both themes.** For what T3 says is dark for everyone,
+ * whatever the runner picked: the Desk ("always dark … it doesn't read
+ * the runner's theme"). It reads nothing from the page, so a dark page
+ * leaves it exactly as a paper one does. (NowGoRun's ink block, which
+ * T1's `--hiviz-text` note calls ink in both themes, went when R49·138b
+ * put P3's body on the page's own ground.)
  */
 [data-ground="night"] {
   @apply ground-ink;
