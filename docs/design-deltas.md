@@ -50,7 +50,18 @@ blocker and not a design-delta question — it is a row the lane writes and
 design reviews after the fact. The new NEVER entry says the same thing
 from the other side: _"never a sixth type."_
 
-## Open queue (nothing blocks v1 lanes)
+## Open queue
+
+Open Design asks are GitHub issues with status **Needs Design**: the
+[Design batch view](https://github.com/users/ddteeter/projects/2/views/3)
+of the dialed.run Project. Each round's work order is written from that
+view, and each ruling is imported into an "Answered in round N" section
+below (skill `coordinating-a-wave`). Nothing new is numbered here.
+
+## The queue until 2026-11-06 (archive)
+
+Kept as the design record (design 181). Items still open on that date
+carry **→ #N**, the issue that holds them now.
 
 10. **Dead-lettered work has nowhere a human looks.** **ANSWERED by round 21: drawn as D6 · Gave up; not built.** Raised on PR #72 as
     "DLQ handling UIs on the desk" — and there is no desk: no admin surface
@@ -77,7 +88,7 @@ from the other side: _"never a sixth type."_
     and the digest adds its one line. What the build had to say that no
     board draws is item 55.
 
-11. **Call epic screens** (B1/B2, O2, O4, O5) — already drawn; revisit when
+11. **→ #457.** **Call epic screens** (B1/B2, O2, O4, O5) — already drawn; revisit when
     Epic 200 opens, incl. multi-part fabric display on garment/product
     detail (D-34) if composition surfaces there. The Call tab's own glyph
     is deliberately deferred to the same moment (see round 4, item 7).
@@ -290,7 +301,7 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     is the kind of thing that looks like a bug in a screen reader
     transcript and is not. R-90.
 
-23. **The landing page wears the product shell, and now wears the top
+23. **→ #366.** **The landing page wears the product shell, and now wears the top
     bar.** **ANSWERED by round 21 (its own bar, drawn); not built. R-93.** DS5 reserves this screen — _"no footer, no 'about', no pricing
     in the product bar. The logged-out landing page is a separate page
     with a separate brief"_ — so it is outside the Desktop Contract and
@@ -1010,7 +1021,7 @@ _Nothing from 99 on is open: round 45 answered the last of it._
 
 <!-- Numbered 137: rounds 47 and 48 filed 112–136. A list break, so Prettier keeps the number. -->
 
-137. **E2-lite's summary sentence, where round 47 #114 is silent (design
+137. **→ #412.** **E2-lite's summary sentence, where round 47 #114 is silent (design
      178).** **ANSWERED by round 49 (R49·137): changed, not built.** The
      sentence names garment types, not groups; see round 49 below. The bars count closet groups, not garment types, so the
      sentence names groups as the bars do, in lower case. The Feed board's
