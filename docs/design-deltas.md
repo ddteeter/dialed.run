@@ -1019,9 +1019,9 @@ _Nothing from 99 on is open: round 45 answered the last of it._
      sits under the bars, on a hairline, before the weather credit.
      **The ask:** confirm, or give the wording.
 
-<!-- Numbered 138: lane 178's 137 is the last before it. A list break, so Prettier keeps the number. -->
+<!-- Numbered 139: round 49 used 137 and 138 (138 is the onboarding layout). A list break, so Prettier keeps the number. -->
 
-138. **What lane 176 built where no board draws it (design 176; D-161,
+139. **What lane 176 built where no board draws it (design 176; D-161,
      D-162).** Words are the owner's where marked; the rest are
      placeholders.
      - **D8 Runners, a flagged account (D-161 1).** A fourth filter,
@@ -1053,9 +1053,9 @@ _Nothing from 99 on is open: round 45 answered the last of it._
        MONO.xs `--muted`, sentence case, under the reason. Built without
        R47·124's "See the takedown": see 127.
 
-<!-- Numbered 139: after lane 176's 138. A list break, so Prettier keeps the number. -->
+<!-- Numbered 140: after lane 176's 139. A list break, so Prettier keeps the number. -->
 
-139. **What R47·124's "See the takedown" opens (design 176).** The board
+140. **What R47·124's "See the takedown" opens (design 176).** The board
      says it opens the Review row. An upheld takedown's row is already
      decided, Review shows only pending rows and takes no parameters, and
      a decided `/takedown` request leaves RemovalRequests. Nothing on the

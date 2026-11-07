@@ -38,7 +38,7 @@ const DRAWN_STATS = [
 ];
 /**
  * Round 47 (R47·125) adds a fourth number after the board's three; D0
- * does not draw it yet (design-deltas 138).
+ * does not draw it yet (design-deltas 139).
  */
 const APP_STATS = [...DRAWN_STATS, "flagged accounts"];
 /**
