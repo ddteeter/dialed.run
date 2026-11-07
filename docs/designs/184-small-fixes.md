@@ -64,13 +64,13 @@ because the dark-theme lane rebases onto it before touching onboarding.
 
 - Closes: #427 (PR 1); #442, #385, #486, #363, #406, #412, and #482 if
   reached (PR 2).
-- Opens: a design ask for the 560 measure (below).
+- Opens: #487 (design ask: the 560 measure).
 
 ## Open questions
 
 - **560 is not in `MEASURE`** (tokens.js: "Nothing pins a width that isn't
   in MEASURE"). Guess: the contract wins, so desk content uses
-  `MEASURE.column` (620). Design ask filed.
+  `MEASURE.column` (620). Design ask #487.
 - **P3's primary** is drawn as the ink pill but labelled "as built". Kept
   as built (pink action pill): pink is action, and copy/order are
   unchanged.

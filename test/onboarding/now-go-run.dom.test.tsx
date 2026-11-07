@@ -62,7 +62,8 @@ describe("NowGoRun", () => {
       level: 2,
       name: "What happens as you log",
     });
-    expect(heading).toHaveClass("m-0", "text-hiviz-text");
+    // Muted, not hi-viz: the band is the screen's one emphasis (R49·138b).
+    expect(heading).toHaveClass("m-0", "text-muted");
     expect(within(heading).getByText("What happens as you log")).toHaveClass(
       "text-mono-xs",
     );
@@ -169,6 +170,59 @@ describe("NowGoRun", () => {
       .closest("div")?.parentElement;
 
     expect(page?.textContent).not.toMatch(/congrat|all set|you're ready|nice/i);
+  });
+
+  it("spends hi-viz on the band alone, and keeps the body off ink (R49·138b)", async () => {
+    // P3 is light: the full bar and the instruction are the band, and the
+    // body is on the page's own ground. "Nothing in the light runner app
+    // sits on ink."
+    const { container } = await renderScreen();
+
+    const heading = screen.getByRole("heading", { name: "Now go run." });
+    const band = heading.parentElement;
+    expect(band).toHaveClass("bg-failure", "px-5", "pb-6", "pt-4");
+    expect(band?.firstElementChild).toHaveAttribute("aria-hidden", "true");
+    expect(container.querySelectorAll(".bg-failure")).toHaveLength(1);
+    expect(container.querySelector(".ground-ink, [data-ground]")).toBeNull();
+    expect(container.querySelectorAll(".text-hiviz-text")).toHaveLength(0);
+  });
+
+  it("holds the body and the bar to the measure at desk, but not the band", async () => {
+    // R49·138: "P3's band runs the full column width, and its bar keeps
+    // the 560 measure" — MEASURE.column until Design rules on 560.
+    await renderScreen();
+
+    const heading = screen.getByRole("heading", { name: "Now go run." });
+    const band = heading.parentElement;
+    expect(band).not.toHaveClass("desk:max-w-column");
+    expect(band?.firstElementChild).toHaveClass("flex", "gap-1", "desk:max-w-column");
+    expect(band?.nextElementSibling).toHaveClass(
+      "flex",
+      "flex-col",
+      "gap-5",
+      "desk:max-w-column",
+    );
+  });
+
+  it("splits the promises with hairlines and keeps their numbers muted", async () => {
+    await renderScreen();
+
+    const list = screen.getByRole("list");
+    expect(list).toHaveClass("border-t", "border-hairline", "m-0", "list-none", "p-0");
+    for (const row of screen.getAllByRole("listitem")) {
+      expect(row).toHaveClass("border-b", "border-hairline", "py-3");
+      expect(row.firstElementChild).toHaveClass("text-muted");
+    }
+  });
+
+  it("sets the Strava offer in the panel inset", async () => {
+    await renderScreen();
+
+    const offer = screen
+      .getByRole("heading", { level: 2, name: "Connect Strava" })
+      .closest(".rounded-sheet");
+    expect(offer).toHaveClass("bg-panel", "p-4", "flex", "flex-col", "gap-3");
+    expect(offer).not.toHaveClass("border");
   });
 
   it("keeps the four-step marker out of the accessible tree", async () => {

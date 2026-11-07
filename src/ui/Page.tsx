@@ -31,7 +31,7 @@ import { useHydrated } from "./use-hydrated";
  * one prop with two numbers: they differ in alignment as well as width,
  * and only at width.
  */
-type PageWidth = "panel" | "column";
+type PageWidth = "panel" | "column" | "step" | "close";
 
 const WIDTH_CLASS: Readonly<Record<PageWidth, string>> = {
   // Centred at every width. An act is a panel on the ground, and DS3 is
@@ -42,6 +42,16 @@ const WIDTH_CLASS: Readonly<Record<PageWidth, string>> = {
   // it would otherwise drift away from the primary column of the two-column
   // screens beside it.
   column: "mx-auto max-w-column wide:mx-0",
+  // An onboarding step (round 49, R49·138a): the panel below 1040, and
+  // from 1040 up "no panel" — the step sits in the page column,
+  // left-aligned like every other screen, at a desk measure. The board
+  // writes 560, which MEASURE does not have; the contract wins, so it is
+  // MEASURE.column until Design says otherwise (design 184).
+  step: "mx-auto max-w-panel desk:mx-0 desk:max-w-column",
+  // P3, the close: a step whose hi-viz band "runs the full column width"
+  // at desk, so the page is unbounded there and `NowGoRun` holds its own
+  // body and bar to the measure.
+  close: "mx-auto max-w-panel desk:mx-0 desk:max-w-page",
 };
 
 export function Page({

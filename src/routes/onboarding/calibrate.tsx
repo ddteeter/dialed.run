@@ -8,13 +8,13 @@ import {
   lookUpCityFn,
 } from "../../modules/onboarding/functions";
 import { geolocate } from "../../modules/onboarding/geolocate";
-import { OnboardingProgress, Page } from "../../ui";
+import { OnboardingProgress, OnboardingShell, Page } from "../../ui";
 
 /**
  * Screen O1. No `Layout`: onboarding is a flow rather than a tab, and a
- * tab bar here offers four ways out of a two-minute path. Without the
- * shell there is no landmark, so each onboarding step brings its own
- * `<main>` (plan 161's `region`).
+ * tab bar here offers four ways out of a two-minute path. Each step wears
+ * `OnboardingShell` instead: its `<main>`, and from 1040 up a bar with
+ * only the wordmark (R49·138).
  */
 // fallow-ignore-next-line code-duplication -- two steps of one flow are the same route by mandate: createFileRoute + requireSession + one loader call + Page + a component, which is exactly what server-functions-are-glue requires a route to be, and the branching that would make them differ is what it forbids
 export const Route = createFileRoute("/onboarding/calibrate")({
@@ -30,11 +30,11 @@ function CalibratePage() {
   const navigate = useNavigate();
 
   return (
-    <main>
+    <OnboardingShell>
       <Page
         title="One question does most of the work"
         kicker={<OnboardingProgress at="city" />}
-        width="panel"
+        width="step"
       >
         <CalibrateForm
           defaults={defaults}
@@ -46,6 +46,6 @@ function CalibratePage() {
           }}
         />
       </Page>
-    </main>
+    </OnboardingShell>
   );
 }

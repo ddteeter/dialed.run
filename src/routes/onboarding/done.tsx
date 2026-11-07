@@ -4,7 +4,7 @@ import { requireSession } from "../../modules/auth/functions";
 import { NowGoRun } from "../../modules/onboarding/components/NowGoRun";
 import { completeOnboardingFn } from "../../modules/onboarding/functions";
 import { tryAgainSearch } from "../../lib/strava-origin";
-import { Page } from "../../ui";
+import { OnboardingShell, Page } from "../../ui";
 
 /**
  * Screen P3, and the only place `onboarding_complete` flips.
@@ -28,10 +28,10 @@ export const Route = createFileRoute("/onboarding/done")({
 function DonePage() {
   const { again } = Route.useSearch();
   return (
-    <main>
-      <Page width="panel">
+    <OnboardingShell>
+      <Page width="close">
         <NowGoRun shouldFocusOffer={again === true} />
       </Page>
-    </main>
+    </OnboardingShell>
   );
 }

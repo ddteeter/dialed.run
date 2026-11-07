@@ -1,0 +1,47 @@
+document
+main
+heading, Now go run., level 1
+paragraph
+Next time you finish a run, upload it and tell us what you wore. That’s the whole loop.
+end of paragraph
+heading, What happens as you log, level 2
+What happens as you log
+end of heading, What happens as you log, level 2
+list
+listitem, level 1, position 1, set size 3
+#
+Weather comes with each run, fetched for when and where you ran.
+end of listitem, level 1, position 1, set size 3
+listitem, level 1, position 2, set size 3
+#
+Each piece learns the range it actually works in, for you.
+end of listitem, level 1, position 2, set size 3
+listitem, level 1, position 3, set size 3
+#
+After # verdicts we start making the call for you.
+end of listitem, level 1, position 3, set size 3
+end of list
+heading, Connect Strava, level 2
+So we can remind you. Optional.
+paragraph
+Connecting Strava lets us remind you to log a kit after each run.
+end of paragraph
+paragraph
+What we collect:
+your Strava athlete id, a token we use only to disconnect, and, for # days, the id, type and time of each new activity so we remind you once.
+How:
+through Strava's sign-in and its activity notifications.
+Never:
+your activity details, route, pace or anything else about the run.
+end of paragraph
+paragraph
+To stop:
+Disconnect in Settings, or remove dialed.run under Strava › Settings › My Apps. Either deletes what we hold from Strava, apart from what we need to finish disconnecting, and we email you to confirm it.
+end of paragraph
+link, Connect with Strava
+image, Connect with Strava
+end of link, Connect with Strava
+link, I have a run to upload
+link, Done for now
+end of main
+end of document

@@ -51,6 +51,30 @@ describe("Page", () => {
     expect(column).toHaveClass("mx-auto", "wide:mx-0");
   });
 
+  it("is the panel below 1040 for an onboarding step, and left-aligned at the column from 1040 (R49·138a)", () => {
+    const step = render(<Page width="step">body</Page>).container
+      .firstElementChild;
+    expect(step).toHaveClass(
+      "mx-auto",
+      "max-w-panel",
+      "desk:mx-0",
+      "desk:max-w-column",
+    );
+    expect(step).not.toHaveClass("wide:mx-0");
+  });
+
+  it("lets P3's close run the page column at desk, so its band can (R49·138)", () => {
+    const close = render(<Page width="close">body</Page>).container
+      .firstElementChild;
+    expect(close).toHaveClass(
+      "mx-auto",
+      "max-w-panel",
+      "desk:mx-0",
+      "desk:max-w-page",
+    );
+    expect(close).not.toHaveClass("desk:max-w-column");
+  });
+
   it("keeps the column's own layout whichever width it is", () => {
     // The rest of the column is not a prop, and a mutant that emptied the
     // template would take it with the width.
