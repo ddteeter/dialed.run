@@ -36,7 +36,8 @@ added and says nothing about which screen moved.
    143), which already wraps the binding and records each `prepare` and
    `batch`: add a count of statements run, including each statement inside
    a batch, and the `meta.rows_read` sum from each `D1Result`. No
-   production code changes. A read that legitimately scales (one query per
+   production code changes, beyond exporting `weather/read.ts`'s two chunk
+   sizes so the tests derive their formulas rather than restate them. A read that legitimately scales (one query per
    page of results) asserts its formula, with the reason inline.
 2. **Per-route report from the e2e run.** Wave 3, report-only. A dev-only counter in `src/lib/sql/d1-session.ts` tags each
    request's statements with its route id or `serverFn:<id>` (design 165's
@@ -72,6 +73,33 @@ added and says nothing about which screen moved.
   before it counts as a test.
 - Part 2: unit tests for the pure counter (tagging, p50/max, the baseline
   diff); the report checked once against a full CI-style e2e run.
+
+## What part 1 found
+
+Every read a request waits on (route loaders and server functions, plus
+the `exportData` consumer; about 45) has a scaling test in a
+`test/<module>/*.scaling.test.ts`, 49 in all. Each counts core and weather
+apart with `queryCounts` (`test/d1-spy.ts`).
+
+- **Flat**: every closet, products, runs, notifications, onboarding, feed,
+  account, ops and safety read except the two below: the same core
+  statements for 1 row and 25.
+- **Chunked, legitimately**: core IN lists at `IN_LIST_CHUNK` (80); weather
+  cache reads at `CELLS_PER_ROW_READ` (20) or `CELLS_PER_READ` (30) cells;
+  the Desk's runner list per 80 accounts; `exportData` per 80 entries and
+  runs. The tests assert each formula, deriving the constants from source.
+- **N+1, open as #490**: the Desk's review queue (9 + 5N statements) and
+  takedown requests (2 + 4N), through `otherPhotosOf`, `photoMatchesOf`
+  and `removedMatchesOf`. Safety is another lane's, so the tests assert
+  today's formula until that lands.
+- **Side findings**: `kitsFor`'s IN list sits exactly at D1's
+  100-parameter cap (#491); conditions reads do not de-duplicate weather
+  cache keys (#492).
+- **Out of scope, owner question #493**: cron and queue loops over claimed
+  rows.
+
+Each test was checked once by hand: a per-row query added to one read per
+file made it fail, and reverting made it pass.
 
 ## Open questions
 

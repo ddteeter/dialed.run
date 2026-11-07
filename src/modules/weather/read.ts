@@ -66,7 +66,7 @@ export async function manualReadingsForRuns(
  * latitude, a longitude and an hour — and D1 refuses a statement with
  * more than a hundred, so 33 is the ceiling; 30 leaves a margin.
  */
-const CELLS_PER_READ = 30;
+export const CELLS_PER_READ = 30;
 
 /**
  * Consensus batch read (104's "your conditions" block): real observations
@@ -154,7 +154,7 @@ export async function observationsForRuns(
  * Cells per read in `observationsAtCells`: three bound parameters each,
  * under D1's hundred, with room to spare.
  */
-const CELLS_PER_ROW_READ = 20;
+export const CELLS_PER_ROW_READ = 20;
 
 /**
  * The cached real observations at exactly these cells, as stored rows.
