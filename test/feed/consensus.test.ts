@@ -312,6 +312,23 @@ describe("matchTally: who matched", () => {
     ]);
   });
 
+  it("orders types by rail group before count", async () => {
+    // Shorts outnumber the long sleeve, but C's rail puts tops first.
+    await runner({ verdict: 0, categories: ["bottom"] });
+    await runner({ verdict: 0, categories: ["bottom"] });
+    await runner({ verdict: 0, categories: ["bottom"] });
+    await runner({ verdict: 0, ago: 2 * HOUR });
+    await runner({ verdict: 0, ago: 2 * HOUR });
+
+    const tally = await matchTally(VIEWER, THREE_DAYS_AGO);
+    expect(
+      tally.dialed.types.map(({ type, runners }) => [type, runners]),
+    ).toStrictEqual([
+      ["longSleeve", 2],
+      ["shorts", 3],
+    ]);
+  });
+
   it("counts no type for a piece that has none (R49·137a′)", async () => {
     await runner({ verdict: 0, categories: ["top"], typed: false });
     await runner({ verdict: 0, categories: ["top"], typed: false });
