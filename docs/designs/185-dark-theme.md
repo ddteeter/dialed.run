@@ -80,8 +80,8 @@ the system by construction.
 ## Issues
 
 - Closes: #361, #470, #469, #468.
-- Opens: design-asks for any T1 dark pairing under its floor; owner
-  questions as they come.
+- Opens: #488 (two dark pairings on `--unread` under 4.5:1), #494 (what
+  was built on a reading of R48 and T1–T3).
 
 ## Open questions
 
