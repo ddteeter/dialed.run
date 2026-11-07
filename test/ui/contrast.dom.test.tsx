@@ -84,8 +84,15 @@ function declarations(selector: string): Map<string, string> {
   return found;
 }
 
+/**
+ * The two columns as the app resolves them: the roles that do not change
+ * are declared on `:root`, and each column's ground-relative roles in its
+ * own utility. A role a column leaves out falls through to `:root`, which
+ * is what "does not change with the ground" means in code.
+ */
 const root = declarations(":root");
-const inkBlock = declarations("@utility ground-ink");
+const paper = new Map([...root, ...declarations("@utility ground-paper")]);
+const ink = new Map([...root, ...declarations("@utility ground-ink")]);
 
 /**
  * A role's actual colour, following `var(--x)` as far as it goes.
@@ -97,14 +104,14 @@ const inkBlock = declarations("@utility ground-ink");
  * stopped at the first value would compare a variable name to a hex.
  */
 function hexOf(role: string, block: Map<string, string>): string {
-  let value = block.get(role) ?? root.get(role) ?? "";
+  let value = block.get(role) ?? "";
   // Ten hops is far more than the two the table ever needs; the bound is
   // what stops a circular definition hanging the suite instead of failing.
   for (let hop = 0; hop < 10; hop += 1) {
     const indirect = /^var\((?<name>--\w[\w-]*)\)$/u.exec(value);
     if (indirect === null) break;
     const name = indirect.groups?.name ?? "";
-    value = block.get(name) ?? root.get(name) ?? "";
+    value = block.get(name) ?? "";
   }
   return value.toLowerCase();
 }
@@ -146,38 +153,33 @@ describe("the T1 port", () => {
     // at all.
     expect(t1).toHaveLength(20);
     expect(t1.map((pair) => pair.role)).toContain("--label");
-    expect(root.size).toBeGreaterThan(15);
+    expect(paper.size).toBeGreaterThan(15);
   });
 
-  it("hands the one set of ink values to both grounds that invert", () => {
-    // Written once, as `ground-ink`, and taken by the always-inverted
-    // block and by a screen header that is ink only below `wide` (Desktop
-    // Contract DS0 bend 4). A second copy for the breakpoint would be a
-    // rival truth, so what is pinned is that both selectors apply it.
-    expect(inkBlock.size).toBeGreaterThan(10);
-    expect(tokens).toMatch(
-      /\[data-ground="ink"\]\s*\{\s*@apply ground-ink;\s*\}/u,
-    );
-    expect(tokens).toMatch(
-      /\[data-ground="ink-until-wide"\]\s*\{\s*@apply max-wide:ground-ink;\s*\}/u,
-    );
+  it("writes each column once and has every selector take it", () => {
+    // `ground-paper` and `ground-ink` are the only copies. The page, the
+    // inverted block (both ways round), the breakpoint header and the
+    // night block all apply one of them; a second copy anywhere would be a
+    // rival truth that nothing makes disagree out loud.
+    expect(paper.size - root.size).toBeGreaterThan(10);
+    expect(ink.size - root.size).toBeGreaterThan(10);
+    expect(tokens).toMatch(/:root \{[^}]*@apply ground-paper;/u);
+    const applies = tokens.match(/@apply [\w:-]+;/gu)?.length;
+    // :root, the dark page twice, the inverted block and its breakpoint
+    // header on each page (six), and night.
+    expect(applies).toBe(10);
   });
 
   it.each(t1)("declares $role at T1's light value", ({ role, light }) => {
-    expect([role, hexOf(role, root)]).toEqual([role, light]);
+    expect([role, hexOf(role, paper)]).toEqual([role, light]);
   });
 
-  it.each(t1)(
-    "matches T1's dark value wherever the inverted block redefines $role",
-    ({ role, dark }) => {
-      // Only where it redefines: the ink block is T2 rule 04's inverted
-      // header, not task 111's dark theme, and it deliberately leaves
-      // roles that do not invert alone. Asserting the whole column here
-      // would fail on 111's unfinished work rather than on drift.
-      if (!inkBlock.has(role)) return;
-      expect([role, hexOf(role, inkBlock)]).toEqual([role, dark]);
-    },
-  );
+  it.each(t1)("declares $role at T1's dark value", ({ role, dark }) => {
+    // The whole column, R-87's `--unread` included: the dark theme takes
+    // this set for the page, so a role missing from it is a role that
+    // stays light on a dark screen.
+    expect([role, hexOf(role, ink)]).toEqual([role, dark]);
+  });
 });
 
 /**
@@ -203,7 +205,7 @@ describe("02 · contrast floors, light column", () => {
     ),
   )("%s on %s clears 4.5:1", (text, ground) => {
     expect(
-      contrast(hexOf(text, root), hexOf(ground, root)),
+      contrast(hexOf(text, paper), hexOf(ground, paper)),
     ).toBeGreaterThanOrEqual(4.5);
   });
 
@@ -211,7 +213,7 @@ describe("02 · contrast floors, light column", () => {
     "--label clears 4.5:1 on %s",
     (ground) => {
       expect(
-        contrast(hexOf("--label", root), hexOf(ground, root)),
+        contrast(hexOf("--label", paper), hexOf(ground, paper)),
       ).toBeGreaterThanOrEqual(4.5);
     },
   );
@@ -223,7 +225,7 @@ describe("02 · contrast floors, light column", () => {
     // labels a box that is `bg-ground`. If a form ever lands inside a tint
     // block this becomes a real failure, and the number is here so the
     // next reader does not have to re-derive it.
-    const measured = contrast(hexOf("--label", root), hexOf("--tint", root));
+    const measured = contrast(hexOf("--label", paper), hexOf("--tint", paper));
     expect(measured).toBeGreaterThan(4.3);
     expect(measured).toBeLessThan(4.5);
   });
@@ -235,7 +237,7 @@ describe("02 · contrast floors, light column", () => {
       // not the role. T1's own note on both rows is "does not change",
       // which is why they resolve to the palette rather than to a ground.
       expect(
-        contrast(hexOf("--ink", root), hexOf(accent, root)),
+        contrast(hexOf("--ink", paper), hexOf(accent, paper)),
       ).toBeGreaterThanOrEqual(4.5);
     },
   );
@@ -245,7 +247,7 @@ describe("02 · contrast floors, light column", () => {
     // both" (T2 rule 01) — and `EntryDetail` puts ink on it for the
     // "useful" pill, so it is measured here with the other two.
     expect(
-      contrast(hexOf("--ink", root), hexOf("--split-teal", root)),
+      contrast(hexOf("--ink", paper), hexOf("--split-teal", paper)),
     ).toBeGreaterThanOrEqual(4.5);
   });
 
@@ -253,6 +255,66 @@ describe("02 · contrast floors, light column", () => {
     // Every case above says "clears", which a broken `contrast` returning
     // Infinity would also say. #009F8C is the exact hex round 13 retired,
     // and it is the reason this file exists.
-    expect(contrast("#009f8c", hexOf("--ground", root))).toBeLessThan(4.5);
+    expect(contrast("#009f8c", hexOf("--ground", paper))).toBeLessThan(4.5);
   });
+});
+
+/**
+ * R48·134's build check: "The build checks each pair against tokens.js and
+ * reports any that fail as a delta." The same floors, on the dark column.
+ *
+ * Two pairings miss, both on `--unread` (`#2A2A14`), and they are recorded
+ * rather than skipped so the number is here when Design answers the ask
+ * (design 185). Every other pair below clears.
+ */
+const DARK_MISSES = new Set(["--cold-text on --unread"]);
+
+describe("02 · contrast floors, dark column", () => {
+  it.each(
+    BODY_TEXT.flatMap((text) =>
+      GROUNDS.map((ground) => [text, ground] as const),
+    ).filter(([text, ground]) => !DARK_MISSES.has(`${text} on ${ground}`)),
+  )("%s on %s clears 4.5:1", (text, ground) => {
+    expect(
+      contrast(hexOf(text, ink), hexOf(ground, ink)),
+    ).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each(["--ground", "--panel", "--tint"] as const)(
+    "--label clears 4.5:1 on %s",
+    (ground) => {
+      // On ink `--label` clears `--tint` too (5.0:1), the pairing paper
+      // records as its one miss.
+      expect(
+        contrast(hexOf("--label", ink), hexOf(ground, ink)),
+      ).toBeGreaterThanOrEqual(4.5);
+    },
+  );
+
+  it("records the two pairings on the dark unread tint that do not clear", () => {
+    // 4.16:1 for pink-as-text and 4.31:1 for `--label` on `#2A2A14`. The
+    // bell's unread row carries neither today (its text is `--ink` and
+    // `--quiet`, 13.1:1 and 7.3:1), so neither is drawn yet; they are the
+    // delta R48·134 asks for, not a pass.
+    const cold = contrast(hexOf("--cold-text", ink), hexOf("--unread", ink));
+    const label = contrast(hexOf("--label", ink), hexOf("--unread", ink));
+    expect(cold).toBeGreaterThan(4.1);
+    expect(cold).toBeLessThan(4.5);
+    expect(label).toBeGreaterThan(4.3);
+    expect(label).toBeLessThan(4.5);
+    expect(DARK_MISSES.size).toBe(1);
+  });
+
+  it.each(["--action", "--failure", "--split-teal"] as const)(
+    "accent ink on %s clears 4.5:1 on the dark column too",
+    (accent) => {
+      // T2 rule 02: "Pink, teal and hi-viz surfaces carry #0B0B0E text in
+      // both modes." On ink `--ink` is chalk, so the role that says it is
+      // `--accent-ink`, which no column redefines.
+      expect(hexOf("--accent-ink", ink)).toBe("#0b0b0e");
+      expect(
+        contrast(hexOf("--accent-ink", ink), hexOf(accent, ink)),
+      ).toBeGreaterThanOrEqual(4.5);
+    },
+  );
 });

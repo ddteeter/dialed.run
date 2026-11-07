@@ -11,12 +11,16 @@
  * without a legend, which is the other half of why the axis that moved was
  * this one.
  *
+ * **Drawn in the text colour, so it inverts with the ground** (T2 rule 03:
+ * "Ink is knowledge on paper; paper is knowledge on ink"). `--ink` rather
+ * than the palette's `--night-run`, which would be invisible on ink.
+ *
  * Solid, 135° hatch, hairline. The hatch angle is design's; the 2px-on,
  * 3px-off rhythm reads as texture rather than as stripes at the sizes
  * these marks are used at.
  */
 .ink-covered {
-  background-color: var(--night-run);
+  background-color: var(--ink);
 }
 
 /* The system's one hatch, written once: design's 135°, and the 2-on,
@@ -31,7 +35,7 @@
 }
 
 .ink-partial {
-  --hatch-ink: var(--night-run);
+  --hatch-ink: var(--ink);
 }
 
 /* "No photo", wherever a photo would be (round 27 #31b, round 28 #13):
@@ -47,5 +51,5 @@
  * reason — opacity never encodes meaning (§AB rule 04). An outline is
  * full-strength ink describing an empty amount. */
 .ink-unknown {
-  box-shadow: inset 0 0 0 1px var(--night-run);
+  box-shadow: inset 0 0 0 1px var(--ink);
 }
