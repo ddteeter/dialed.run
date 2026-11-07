@@ -34,13 +34,38 @@ const SPEECH_RATE_WPM = 280;
 const TAIL_SILENCE_MS = 400;
 
 /**
- * The recorded viewport, and the strip ffmpeg adds above it. Mirrors the
- * `demo` project's `video.size` in `playwright.config.ts`, which this file
- * cannot import (the config reads the environment at module scope).
+ * The strip ffmpeg adds above the recorded frame, whatever its width.
  */
-const FRAME_WIDTH = 1280;
-const FRAME_HEIGHT = 720;
 export const STRIP_HEIGHT = 104;
+
+/**
+ * A recorded frame's size: the viewport, which `recordAt` keeps equal to
+ * the video's.
+ */
+export interface Frame {
+  readonly width: number;
+  readonly height: number;
+}
+
+/**
+ * The `test.use()` options that record a spec at `size`: the viewport and
+ * the video together. Playwright's video has a size of its own, fixed per
+ * project, and a viewport smaller than it records as a scaled-down page
+ * on grey (measured 2026-11-06: a phone in the desk frame). Off unless
+ * `isRecording`, like the project's own setting.
+ */
+export function recordAt(
+  size: Frame,
+  isRecording: boolean,
+): {
+  viewport: Frame;
+  video: "off" | { mode: "on"; size: Frame };
+} {
+  return {
+    viewport: size,
+    video: isRecording ? { mode: "on", size } : "off",
+  };
+}
 
 /**
  * One narrated line: the caption shown, when it began relative to the
@@ -54,15 +79,26 @@ export interface Cue {
 
 /**
  * `cues.json`, which `demo.ts` writes beside `video.webm` and the mux step
- * reads back: a file on disk, so it is parsed rather than trusted.
+ * reads back: a file on disk, so it is parsed rather than trusted. The
+ * frame sizes the strip; `endMs`, when the test let go of the page, is how
+ * long the video must last (see `muxArgs`).
  */
-export const cuesSchema = z.array(
-  z.object({
-    text: z.string().min(1),
-    startMs: z.number().int().nonnegative(),
-    audio: z.string().min(1),
-  }),
-);
+const frameSchema = z.object({
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+});
+
+const cueSchema = z.object({
+  text: z.string().min(1),
+  startMs: z.number().int().nonnegative(),
+  audio: z.string().min(1),
+});
+
+export const recordingSchema = z.object({
+  frame: frameSchema,
+  endMs: z.number().int().positive(),
+  cues: z.array(cueSchema),
+});
 
 /**
  * What the voice reads when a spec gives no spoken form. A caption is set
@@ -131,6 +167,11 @@ export function durationMs(afinfo: string): number {
   return Math.round(z.coerce.number().positive().parse(seconds) * 1000);
 }
 
+/**
+ * Below this width a frame is a phone's, and the caption shrinks to fit it.
+ */
+const NARROW_FRAME = 600;
+
 const HTML_ESCAPES: Readonly<Record<string, string>> = {
   "&": "&amp;",
   "<": "&lt;",
@@ -143,21 +184,31 @@ const HTML_ESCAPES: Readonly<Record<string, string>> = {
  * size. Mono, uppercase, pink rule beneath: it has to read as
  * instrumentation laid over the app, never as product chrome. Same pink as
  * the synthetic cursor, the other thing in a recording that is not the
- * product. 22px because the video is watched on a phone, where 1280 wide
- * renders at about a third of its size; two lines at most.
+ * product. Two lines at most. 22px on a desk frame, because the video is
+ * watched on a phone, where 1280 wide renders at about a third of its
+ * size; 16px on a phone frame, which plays near its own size and fits
+ * about 30 characters a line at 22 (measured: a 40-character caption
+ * clamped at 390 wide).
  *
  * `fontUrl` is IBM Plex Mono as a data URL, so the page needs no server.
  */
-export function captionPage(text: string, fontUrl: string): string {
+export function captionPage(
+  text: string,
+  fontUrl: string,
+  width: number,
+): string {
   const escaped = text.replaceAll(
     /[&<>"]/gu,
     (char) => HTML_ESCAPES[char] ?? char,
   );
+  const isNarrow = width < NARROW_FRAME;
+  const fontPx = isNarrow ? 16 : 22;
+  const padPx = isNarrow ? 16 : 32;
   return `<!doctype html><html><head><style>
 @font-face { font-family: "Caption Mono"; font-weight: 500; src: url(${fontUrl}) format("woff2"); }
-html, body { margin: 0; width: ${String(FRAME_WIDTH)}px; height: ${String(STRIP_HEIGHT)}px; background: #0c0c0c; }
-body { box-sizing: border-box; display: flex; align-items: center; padding: 0 32px; border-bottom: 3px solid rgba(255,45,135,0.9); }
-p { margin: 0; color: #f5f5f0; font: 500 22px/1.4 "Caption Mono", ui-monospace, monospace; letter-spacing: 0.06em; text-transform: uppercase; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+html, body { margin: 0; width: ${String(width)}px; height: ${String(STRIP_HEIGHT)}px; background: #0c0c0c; }
+body { box-sizing: border-box; display: flex; align-items: center; padding: 0 ${String(padPx)}px; border-bottom: 3px solid rgba(255,45,135,0.9); }
+p { margin: 0; color: #f5f5f0; font: 500 ${String(fontPx)}px/1.4 "Caption Mono", ui-monospace, monospace; letter-spacing: 0.06em; text-transform: uppercase; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 </style></head><body><p>${escaped}</p></body></html>`;
 }
 
@@ -186,13 +237,29 @@ function shownWhile(scene: Scene, next: Scene | undefined): string {
 }
 
 /**
- * The filter graph: pad the frame with the strip above it, overlay each
- * caption while it is current, delay each line to its start and mix them.
- * Inputs are numbered video, then every caption, then every audio file.
+ * What `muxArgs` needs to know about the recording as a whole.
  */
-function filterGraph(scenes: readonly Scene[]): string {
+export interface Take {
+  readonly frame: Frame;
+  readonly endMs: number;
+}
+
+/**
+ * The filter graph: hold the last frame, pad the frame with the strip
+ * above it, overlay each caption while it is current, delay each line to
+ * its start and mix them. Inputs are numbered video, then every caption,
+ * then every audio file.
+ *
+ * **The hold:** Playwright writes a frame only when the page paints, so
+ * a page that sits still while a line is spoken ends the video stream
+ * early (measured: 3.68 s of video under 4.91 s of speech). `tpad` clones
+ * the last frame for up to `endMs` more, and `-t` cuts the output at
+ * `endMs`, so the picture lasts exactly as long as the test did.
+ */
+function filterGraph(take: Take, scenes: readonly Scene[]): string {
   const count = scenes.length;
-  const pad = `[0:v]pad=${String(FRAME_WIDTH)}:${String(FRAME_HEIGHT + STRIP_HEIGHT)}:0:${String(STRIP_HEIGHT)}:color=0x0c0c0c[v0]`;
+  const { width, height } = take.frame;
+  const pad = `[0:v]tpad=stop_mode=clone:stop_duration=${seconds(take.endMs)},pad=${String(width)}:${String(height + STRIP_HEIGHT)}:0:${String(STRIP_HEIGHT)}:color=0x0c0c0c[v0]`;
   const overlays = scenes.map(
     (scene, index) =>
       `[v${String(index)}][${String(index + 1)}:v]overlay=0:0:enable='${shownWhile(scene, scenes.at(index + 1))}'[v${String(index + 1)}]`,
@@ -211,11 +278,12 @@ function filterGraph(scenes: readonly Scene[]): string {
 
 /**
  * ffmpeg's arguments: the recording, captioned above the frame and voiced,
- * to H.264 + AAC. H.264 because Playwright's VP8 plays unreliably on iOS
+ * to H.264 + AAC, `endMs` long. H.264 because Playwright's VP8 plays unreliably on iOS
  * Safari, and review here is phone-friendly by design.
  */
 export function muxArgs(
   video: string,
+  take: Take,
   scenes: readonly Scene[],
   out: string,
 ): string[] {
@@ -232,7 +300,7 @@ export function muxArgs(
     ...scenes.flatMap((scene) => ["-i", scene.caption]),
     ...scenes.flatMap((scene) => ["-i", scene.audio]),
     "-filter_complex",
-    filterGraph(scenes),
+    filterGraph(take, scenes),
     "-map",
     `[v${String(scenes.length)}]`,
     ...audio,
@@ -244,6 +312,8 @@ export function muxArgs(
     "22",
     "-pix_fmt",
     "yuv420p",
+    "-t",
+    seconds(take.endMs),
     out,
   ];
 }

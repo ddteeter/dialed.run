@@ -64,13 +64,13 @@ lasts under a minute.
 - **Real `expect`s anyway.** The recording fails when what it narrates is
   not on screen, so the video cannot show something the code does not do.
 - **One `test()`**, so one video.
-- **Desk width (1280×720), for now.** The video frame is fixed at desk
-  size, so a phone viewport records as a narrow strip on grey. Until
-  design 180's step 5 sizes the frame from the recording, show a
-  phone-only change by saying so in the PR; the a11y fixture already
-  checks the other width on every committed spec. After step 5: record at
-  the width the change shows at, and both only when it differs between
-  them.
+- **One width: the one the change shows at.** Desk (1280×720) by default;
+  for a phone-only change, such as a sheet or the tab bar, add
+  `...recordAt(PHONE)` (`e2e/support/demo.ts`, `PHONE` from
+  `e2e/support/bars.ts`) to the spec's `test.use()`, which sizes the
+  viewport and the video together. Record both only when the change
+  differs between them. Never `setViewportSize` mid-demo: the video
+  stays the size it started, and the page shrinks into a corner of it.
 - It must pass `npm run lint` and `tsc` while it exists: flat ESLint config
   does not read `.gitignore`. It runs only when recording (`DEMO_SLOWMO`),
   never in a bare run or CI.

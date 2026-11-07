@@ -10,10 +10,11 @@ import {
   SAY,
   durationMs,
   forSpeech,
+  recordAt as recordAtWhen,
   sayArgs,
   speechKey,
 } from "./caption";
-import type { Cue } from "./caption";
+import type { Cue, Frame } from "./caption";
 import type { Page } from "@playwright/test";
 
 /**
@@ -108,6 +109,15 @@ export async function scene(
     audio,
   });
   await page.waitForTimeout(holdMs);
+}
+
+/**
+ * `test.use(recordAt(PHONE))` records a spec at phone size: the viewport
+ * and the video together, so the page fills the frame. Without it, a demo
+ * records at the `demo` project's desk size.
+ */
+export function recordAt(size: Frame): ReturnType<typeof recordAtWhen> {
+  return recordAtWhen(size, demoSlowMo !== 0);
 }
 
 /**
@@ -215,11 +225,23 @@ const paced = base.extend({
       return response;
     };
 
+    // The frame the video was sized to: `recordAt` keeps the two equal,
+    // and so does the `demo` project's default. Read before the test can
+    // resize the page.
+    const frame = page.viewportSize();
     await use(page);
-    if (demoSlowMo !== 0) {
+    if (demoSlowMo !== 0 && frame !== null) {
       writeFileSync(
         testInfo.outputPath("cues.json"),
-        JSON.stringify(recording.cues, undefined, 2),
+        JSON.stringify(
+          {
+            frame,
+            endMs: Date.now() - recording.startedAt,
+            cues: recording.cues,
+          },
+          undefined,
+          2,
+        ),
       );
     }
   },

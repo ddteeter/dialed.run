@@ -23,8 +23,8 @@ import {
   FFMPEG_CANDIDATES,
   STRIP_HEIGHT,
   captionPage,
-  cuesSchema,
   muxArgs,
+  recordingSchema,
 } from "../e2e/support/caption";
 
 const ffmpeg = FFMPEG_CANDIDATES.find((candidate) => existsSync(candidate));
@@ -41,9 +41,7 @@ const cueFiles = readdirSync(RESULTS, { recursive: true, encoding: "utf8" })
 
 const fontUrl = `data:font/woff2;base64,${readFileSync(FONT).toString("base64")}`;
 const browser = await chromium.launch();
-const page = await browser.newPage({
-  viewport: { width: 1280, height: STRIP_HEIGHT },
-});
+const page = await browser.newPage();
 
 try {
   for (const cueFile of cueFiles) {
@@ -53,16 +51,24 @@ try {
       console.warn(`${dir}: no video.webm beside cues.json, skipped`);
       continue;
     }
-    const cues = cuesSchema.parse(JSON.parse(readFileSync(cueFile, "utf8")));
+    const take = recordingSchema.parse(
+      JSON.parse(readFileSync(cueFile, "utf8")),
+    );
+    await page.setViewportSize({
+      width: take.frame.width,
+      height: STRIP_HEIGHT,
+    });
     const scenes = [];
-    for (const [index, cue] of cues.entries()) {
+    for (const [index, cue] of take.cues.entries()) {
       const caption = path.join(dir, `caption-${String(index)}.png`);
-      await page.setContent(captionPage(cue.text, fontUrl));
+      await page.setContent(captionPage(cue.text, fontUrl, take.frame.width));
       await page.screenshot({ path: caption });
       scenes.push({ startMs: cue.startMs, audio: cue.audio, caption });
     }
     const out = path.join(dir, "demo.mp4");
-    execFileSync(ffmpeg, muxArgs(video, scenes, out), { stdio: "inherit" });
+    execFileSync(ffmpeg, muxArgs(video, take, scenes, out), {
+      stdio: "inherit",
+    });
     console.log(`${out} (${String(scenes.length)} lines)`);
   }
 } finally {

@@ -6,18 +6,19 @@ import {
   SAY,
   STRIP_HEIGHT,
   captionPage,
-  cuesSchema,
   durationMs,
   forSpeech,
   muxArgs,
+  recordAt,
+  recordingSchema,
   sayArgs,
   speechKey,
 } from "../../e2e/support/caption";
-import type { Scene } from "../../e2e/support/caption";
+import type { Scene, Take } from "../../e2e/support/caption";
 
 /**
  * The pure half of demo narration (design 180). `demo.ts` and
- * `scripts/demo-mux.ts` spawn `say`, ffprobe, Chromium and ffmpeg, so
+ * `scripts/demo-mux.ts` spawn `say`, afinfo, Chromium and ffmpeg, so
  * every decision they make lives in `caption.ts`, where these reach it.
  */
 describe("forSpeech", () => {
@@ -96,34 +97,104 @@ describe("durationMs", () => {
   });
 });
 
-describe("cuesSchema", () => {
-  it("accepts what demo.ts writes", () => {
-    const cues = [{ text: "The Desk", startMs: 0, audio: "/c/a.aiff" }];
-    expect(cuesSchema.parse(cues)).toEqual(cues);
+describe("recordAt", () => {
+  const phone = { width: 390, height: 844 };
+
+  it("sizes the video to the viewport while recording", () => {
+    expect(recordAt(phone, true)).toEqual({
+      viewport: phone,
+      video: { mode: "on", size: phone },
+    });
   });
 
+  it("records nothing otherwise, at the same viewport", () => {
+    expect(recordAt(phone, false)).toEqual({ viewport: phone, video: "off" });
+  });
+});
+
+describe("recordingSchema", () => {
+  const recording = {
+    frame: { width: 1280, height: 720 },
+    endMs: 9000,
+    cues: [{ text: "The Desk", startMs: 0, audio: "/c/a.aiff" }],
+  };
+
+  it("accepts what demo.ts writes", () => {
+    expect(recordingSchema.parse(recording)).toEqual(recording);
+  });
+
+  const cue = recording.cues[0];
   it.each([
-    ["an empty caption", { text: "", startMs: 0, audio: "/a" }],
-    ["a negative start", { text: "x", startMs: -1, audio: "/a" }],
-    ["a fractional start", { text: "x", startMs: 1.5, audio: "/a" }],
-    ["no audio", { text: "x", startMs: 0, audio: "" }],
-  ])("rejects %s", (_name, cue) => {
-    expect(cuesSchema.safeParse([cue]).success).toBe(false);
+    ["an empty caption", { ...recording, cues: [{ ...cue, text: "" }] }],
+    ["a negative start", { ...recording, cues: [{ ...cue, startMs: -1 }] }],
+    ["a fractional start", { ...recording, cues: [{ ...cue, startMs: 1.5 }] }],
+    ["no audio", { ...recording, cues: [{ ...cue, audio: "" }] }],
+    ["no length", { ...recording, endMs: 0 }],
+    ["a fractional length", { ...recording, endMs: 1.5 }],
+    ["a zero-width frame", { ...recording, frame: { width: 0, height: 720 } }],
+    [
+      "a zero-height frame",
+      { ...recording, frame: { width: 1280, height: 0 } },
+    ],
+    [
+      "a fractional frame",
+      { ...recording, frame: { width: 1.5, height: 720 } },
+    ],
+    [
+      "a fractional height",
+      { ...recording, frame: { width: 1280, height: 7.5 } },
+    ],
+  ])("rejects %s", (_name, bad) => {
+    expect(recordingSchema.safeParse(bad).success).toBe(false);
   });
 });
 
 describe("captionPage", () => {
   it("escapes the caption, so a spec's text cannot break the page", () => {
-    const page = captionPage('the 7" <b>shorts</b> & co', "data:x");
+    const page = captionPage('the 7" <b>shorts</b> & co', "data:x", 1280);
     expect(page).toContain(
       "<p>the 7&quot; &lt;b&gt;shorts&lt;/b&gt; &amp; co</p>",
     );
   });
 
-  it("sizes the page to the strip and loads the font it is given", () => {
-    const page = captionPage("x", "data:font/woff2;base64,AAAA");
-    expect(page).toContain(`width: 1280px; height: ${String(STRIP_HEIGHT)}px;`);
+  it("sizes the page to the frame's width and the strip, and loads the font", () => {
+    const page = captionPage("x", "data:font/woff2;base64,AAAA", 390);
+    expect(page).toContain(`width: 390px; height: ${String(STRIP_HEIGHT)}px;`);
     expect(page).toContain("src: url(data:font/woff2;base64,AAAA)");
+  });
+});
+
+function sizes(page: string): {
+  font: string | undefined;
+  pad: string | undefined;
+} {
+  return {
+    font: /font: 500 (\d+)px/u.exec(page)?.[1],
+    pad: /padding: 0 (\d+)px/u.exec(page)?.[1],
+  };
+}
+
+describe("captionPage's size", () => {
+  it("is 22px on a desk frame, and on anything 600 wide or more", () => {
+    expect(sizes(captionPage("x", "data:x", 1280))).toEqual({
+      font: "22",
+      pad: "32",
+    });
+    expect(sizes(captionPage("x", "data:x", 600))).toEqual({
+      font: "22",
+      pad: "32",
+    });
+  });
+
+  it("is 16px on a phone frame, with half the margin", () => {
+    expect(sizes(captionPage("x", "data:x", 599))).toEqual({
+      font: "16",
+      pad: "16",
+    });
+    expect(sizes(captionPage("x", "data:x", 390))).toEqual({
+      font: "16",
+      pad: "16",
+    });
   });
 });
 
@@ -132,7 +203,8 @@ describe("muxArgs", () => {
     { startMs: 1200, audio: "/c/a.aiff", caption: "/r/caption-0.png" },
     { startMs: 6050, audio: "/c/b.aiff", caption: "/r/caption-1.png" },
   ];
-  const args = muxArgs("/r/video.webm", scenes, "/r/demo.mp4");
+  const take: Take = { frame: { width: 390, height: 844 }, endMs: 9250 };
+  const args = muxArgs("/r/video.webm", take, scenes, "/r/demo.mp4");
   const graph = (args.at(args.indexOf("-filter_complex") + 1) ?? "").split(";");
 
   it("takes the video, then every caption, then every line", () => {
@@ -146,9 +218,9 @@ describe("muxArgs", () => {
     ]);
   });
 
-  it("adds the strip above the frame, so no caption covers the app", () => {
+  it("holds the last frame to the end, then adds the strip above it", () => {
     expect(graph[0]).toBe(
-      `[0:v]pad=1280:${String(720 + STRIP_HEIGHT)}:0:${String(STRIP_HEIGHT)}:color=0x0c0c0c[v0]`,
+      `[0:v]tpad=stop_mode=clone:stop_duration=9.250,pad=390:${String(844 + STRIP_HEIGHT)}:0:${String(STRIP_HEIGHT)}:color=0x0c0c0c[v0]`,
     );
   });
 
@@ -185,12 +257,14 @@ describe("muxArgs", () => {
       "22",
       "-pix_fmt",
       "yuv420p",
+      "-t",
+      "9.250",
       "/r/demo.mp4",
     ]);
   });
 
   it("with no lines, pads and transcodes, and maps no audio", () => {
-    const silent = muxArgs("/r/video.webm", [], "/r/demo.mp4");
+    const silent = muxArgs("/r/video.webm", take, [], "/r/demo.mp4");
     expect(silent.at(silent.indexOf("-filter_complex") + 1)).toBe(graph[0]);
     expect(silent.slice(silent.indexOf("-filter_complex") + 2, -1)).toEqual([
       "-map",
@@ -203,6 +277,8 @@ describe("muxArgs", () => {
       "22",
       "-pix_fmt",
       "yuv420p",
+      "-t",
+      "9.250",
     ]);
   });
 });
