@@ -81,10 +81,12 @@ export function CompositionBlock({
    * piece is a shared product a runner can correct (R-74).
    */
   wrong?: ReactNode;
-}>): JSX.Element | undefined {
+}>): JSX.Element {
   const { verbatim, parts, brand } = composition;
   const hasLabelledParts = parts.length > 1;
-  if (!hasLabelledParts && verbatim === undefined) return undefined;
+  // No block, but WRONG? › stays: a shared product that states nothing
+  // is still one a runner can correct, and it stands alone (R-74).
+  if (!hasLabelledParts && verbatim === undefined) return <>{wrong}</>;
 
   return (
     <section className="flex flex-col gap-2">

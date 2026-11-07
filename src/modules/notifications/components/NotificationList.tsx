@@ -165,8 +165,10 @@ export function NotificationList({
 }
 
 // `target`: the whole row's words are the link, so it takes the 44px hit
-// area rather than the in-sentence exception.
-const LINKED = "target font-semibold text-ink underline underline-offset-4";
+// area rather than the in-sentence exception, and `inline-flex` gives the
+// `<a>` a box for it to grow (`a11y.css` §03).
+const LINKED =
+  "target inline-flex items-center font-semibold text-ink underline underline-offset-4";
 
 /**
  * The row's words, and where they go when the row has somewhere to go

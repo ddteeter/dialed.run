@@ -202,6 +202,19 @@ describe("CompositionBlock: WRONG? › (R-74)", () => {
     expect(line).toHaveTextContent("As labelled by Arc'teryxWrong?");
   });
 
+  it("stands alone when the product states no composition", () => {
+    // What a linked product with nothing stated reads as: the object, empty.
+    render(
+      <CompositionBlock
+        composition={{ verbatim: undefined, parts: [], brand: "Janji" }}
+        wrong={<button type="button">Wrong?</button>}
+      />,
+    );
+    const wrong = screen.getByRole("button", { name: "Wrong?" });
+    expect(wrong.closest("section")).toBeNull();
+    expect(screen.queryByText("Made of")).toBeNull();
+  });
+
   it("keeps the line for WRONG? alone when no brand labelled it", () => {
     render(
       <CompositionBlock

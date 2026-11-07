@@ -1,0 +1,90 @@
+document
+navigation, Desk
+dialed.run
+Desk
+Operator
+list
+listitem, level 1, position 1, set size 6
+link, :when
+:when
+end of link, :when
+end of listitem, level 1, position 1, set size 6
+listitem, level 1, position 2, set size 6
+link, Review # waiting
+Review
+#
+waiting
+end of link, Review # waiting
+end of listitem, level 1, position 2, set size 6
+listitem, level 1, position 3, set size 6
+link, Corrections # waiting, current page
+Corrections
+#
+waiting
+end of link, Corrections # waiting, current page
+end of listitem, level 1, position 3, set size 6
+listitem, level 1, position 4, set size 6
+link, Access
+Access
+end of link, Access
+end of listitem, level 1, position 4, set size 6
+listitem, level 1, position 5, set size 6
+link, Duplicates
+Duplicates
+end of link, Duplicates
+end of listitem, level 1, position 5, set size 6
+listitem, level 1, position 6, set size 6
+link, Runners
+Runners
+end of link, Runners
+end of listitem, level 1, position 6, set size 6
+end of list
+end of navigation, Desk
+main
+region, Corrections
+heading, Corrections, level 1
+# waiting · # decided today
+list
+listitem, level 1, position 1, set size 1
+article, Janji · Rain Shell #
+Name
+·
+# runner
+· oldest
+:month #
+heading, Janji · Rain Shell #, level 2
+term
+Now
+end of term
+definition
+Rain Shell #
+end of definition
+term
+Suggested
+end of term
+definition
+Storm Shell #
+end of definition
+list
+listitem, level 2, position 1, set size 1
+@states_spotter
+·
+:month #
+end of listitem, level 2, position 1, set size 1
+end of list
+form
+status
+status
+Another product of this brand already has that name. Decline it, and look in Duplicates.
+end of status
+button, Apply
+Apply
+end of button, Apply
+button, Decline
+end of form
+end of article, Janji · Rain Shell #
+end of listitem, level 1, position 1, set size 1
+end of list
+end of region, Corrections
+end of main
+end of document
