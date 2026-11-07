@@ -92,7 +92,7 @@ test("import a run from Garmin: the picker, the credit, the watch's effort", asy
       "aria-pressed",
       "true",
     );
-    await page.getByRole("radio", { name: "Dialed" }).click();
+    await page.getByRole("radio", { name: "Dialed", exact: true }).click();
     await page.getByRole("button", { name: "Log it" }).click();
     await expect(page.locator('[data-slot="noted"]')).toBeVisible({
       timeout: 15_000,

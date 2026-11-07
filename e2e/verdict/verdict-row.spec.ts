@@ -109,7 +109,7 @@ const LABELS = ["Way cold", "A bit cold", "Dialed", "A bit warm", "Way warm"];
 function verdictCell(page: Page, name: string) {
   return page
     .locator('[data-slot="verdict-row"] > label')
-    .filter({ has: page.getByRole("radio", { name }) });
+    .filter({ has: page.getByRole("radio", { name, exact: true }) });
 }
 
 async function measureButtons(page: Page, width: string) {

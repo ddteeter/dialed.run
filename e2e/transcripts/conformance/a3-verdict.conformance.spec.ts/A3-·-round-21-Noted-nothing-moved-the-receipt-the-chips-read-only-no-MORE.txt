@@ -14,15 +14,18 @@ heading, Did it work?, level 1
 status
 Noted. Logged. No weather came with this run, so no temperature record moved.
 end of status
-group, Did it work?
-button, Way cold, disabled, not pressed
-button, A bit cold, disabled, not pressed
-button, Dialed, disabled, pressed
+radiogroup, Did it work?
+radio, Way cold, not checked, disabled, position 1, set size 5
+Way cold
+radio, A bit cold, not checked, disabled, position 2, set size 5
+A bit cold
+radio, Dialed, not checked, disabled, position 3, set size 5
 Dialed
-end of button, Dialed, disabled, pressed
-button, A bit warm, disabled, not pressed
-button, Way warm, disabled, not pressed
-end of group, Did it work?
+radio, A bit warm, not checked, disabled, position 4, set size 5
+A bit warm
+radio, Way warm, not checked, disabled, position 5, set size 5
+Way warm
+end of radiogroup, Did it work?
 heading, Anything specific? · optional, level 2
 Anything specific? · optional
 end of heading, Anything specific? · optional, level 2

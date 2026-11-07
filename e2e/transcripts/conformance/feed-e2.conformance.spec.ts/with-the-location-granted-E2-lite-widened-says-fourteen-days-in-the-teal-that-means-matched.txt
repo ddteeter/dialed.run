@@ -29,7 +29,7 @@ All
 end of listitem, level 1, position 1, set size 1
 end of list
 paragraph
-All got it right in tops.
+All got it right in long sleeve.
 end of paragraph
 link, Weather data provided by Visual Crossing
 end of main
