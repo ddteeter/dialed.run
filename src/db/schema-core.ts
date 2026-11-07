@@ -18,6 +18,7 @@ import {
   garmentVisibilities,
   HANDLE_SCREEN_STATES,
   runSources,
+  THEME_CHOICES,
 } from "../lib/contracts";
 import { EMAIL_PREFERENCE_KINDS } from "../lib/contracts/email";
 import { GAVE_UP_KINDS } from "../lib/contracts/gave-up";
@@ -141,6 +142,13 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     publicCloset: integer("public_closet", { mode: "boolean" })
       .notNull()
       .default(false),
+    // Settings › Display › Theme (R48·133, design 185): follow the system,
+    // or pin light or dark. The device caches it for first paint
+    // (`lib/browser/theme.ts`); this is the account's value, which takes
+    // over on sign-in. `modules/account/theme.ts` is the one writer.
+    theme: text("theme", { enum: THEME_CHOICES })
+      .notNull()
+      .default("system"),
   },
   (t) => [
     // The re-ask's sweep reads only the rows it might claim. Partial, so

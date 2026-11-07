@@ -112,6 +112,17 @@ export const distanceUnitSchema = z.enum(["mi", "km"]);
 export type DistanceUnit = z.infer<typeof distanceUnitSchema>;
 
 /**
+ * U1 › Display › Theme (R48·133): follow the system, or pin one ground.
+ * `system` is a choice and not an absence — T3, "back to following the
+ * system has to be a choice you can make, not a state you fall into" — so
+ * it is stored, and it is the column's default. The column reads its
+ * values from this tuple (`db/schema-core.ts`), and the schema is built on it.
+ */
+export const THEME_CHOICES = ["system", "light", "dark"] as const;
+export const themeChoiceSchema = z.enum(THEME_CHOICES);
+export type ThemeChoice = z.infer<typeof themeChoiceSchema>;
+
+/**
  * What the app shows when a person has not chosen. Fahrenheit and miles
  * because the owner is US-based and the calibration tables are authored in
  * Fahrenheit (see `lib/contracts/thermal.ts`); 105 replaces this with a locale guess

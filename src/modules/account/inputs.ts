@@ -5,7 +5,7 @@
  */
 import { z } from "zod";
 
-import { requestAccessSchema } from "../../lib/contracts";
+import { requestAccessSchema, themeChoiceSchema } from "../../lib/contracts";
 import { rowIdSchema } from "../../lib/ids";
 
 /**
@@ -46,9 +46,16 @@ export const newInviteSchema = z.object({
     .max(100, USES_MESSAGE),
 });
 
-export const newInviteInput = newInviteSchema.extend({
+/**
+ * A user-initiated create's key (law 8b), minted when the control mounts
+ * and resent on a retry of that press. One field, so the two creates here
+ * cannot disagree about what a key is.
+ */
+const idempotentPress = z.object({
   idempotencyKey: z.string().min(1).max(64),
 });
+
+export const newInviteInput = newInviteSchema.extend(idempotentPress.shape);
 
 /**
 One request or one code, by id — D7's row actions.
@@ -75,6 +82,9 @@ export const acceptTermsInput = z.object({
  * "Get a copy" (ACC-10): the press's key, minted when the row mounts and
  * resent on a retry of that press (law 8b).
  */
-export const exportRequestInput = z.object({
-  idempotencyKey: z.string().min(1).max(64),
-});
+export const exportRequestInput = idempotentPress;
+
+/**
+U1 › Display › Theme's save (R48·133).
+*/
+export const themeInput = z.object({ theme: themeChoiceSchema });

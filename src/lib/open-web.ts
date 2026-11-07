@@ -32,11 +32,13 @@ export function isOpenWebPath(pathname: string): boolean {
 /**
  * The root loader's answer: "nobody", without asking, on an open-web
  * path — the page must not depend on who is looking — and the session's
- * own answer anywhere else.
+ * own answer anywhere else. Only the asked answer carries anything more
+ * (the theme, design 185), so its absence is how a reader tells "not
+ * asked" from "signed out".
  */
-export async function signedInOffTheOpenWeb(
+export async function signedInOffTheOpenWeb<T extends { signedIn: boolean }>(
   pathname: string,
-  ask: () => Promise<{ signedIn: boolean }>,
-): Promise<{ signedIn: boolean }> {
+  ask: () => Promise<T>,
+): Promise<T | { signedIn: false }> {
   return isOpenWebPath(pathname) ? { signedIn: false } : ask();
 }

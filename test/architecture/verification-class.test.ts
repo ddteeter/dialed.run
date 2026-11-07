@@ -142,6 +142,11 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "account/functions.ts leavingQuery": "sessionless",
   "account/functions.ts termsPromptQuery": "sessionless",
   "account/functions.ts acceptTermsFn": "unconfirmed",
+  // Design 185: the theme, asked by the root for every page; the system
+  // for nobody, and the runner's own look otherwise.
+  "account/functions.ts ownThemeQuery": "sessionless",
+  // R48·133: how the runner's own screen looks, seen by nobody else.
+  "account/functions.ts setThemeFn": "unconfirmed",
   // ---- auth
   "auth/functions.ts getSession": "sessionless",
   "auth/functions.ts signedInQuery": "sessionless",

@@ -3,20 +3,24 @@ import type { ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 
+import { THEME_HEAD_SCRIPT } from "../lib/browser/theme";
 import { ZOD_JITLESS_SCRIPT } from "../lib/browser/zod-jitless";
 import { signedInOffTheOpenWeb } from "../lib/open-web";
 import { confirmEmailOnRefusal } from "../modules/account/components/ConfirmEmailSheet";
 import {
   handleGateQuery,
   ownAccountQuery,
+  ownThemeQuery,
   resendConfirmationFn,
 } from "../modules/account/functions";
 import { gateOnHandle } from "../modules/account/route-decisions";
+import { withOwnTheme } from "../modules/account/theme-answer";
 import { signedInQuery } from "../modules/auth/functions";
 import { SITE_LINKS, SITE_META } from "../modules/ops/og/site-head";
 import { Devtools } from "../ui/Devtools";
 import { SessionLapseAnswer } from "../ui/session-lapse";
 import { TermsRefusalAnswer } from "../ui/terms-refusal";
+import { ThemeSync } from "../ui/ThemeSync";
 import { UnconfirmedRefusalAnswer } from "../ui/unconfirmed-refusal";
 import { VitalsReporter } from "../ui/VitalsReporter";
 
@@ -108,7 +112,12 @@ export const Route = createRootRoute({
     ],
     // zod's JIT off before any module runs, so its `new Function` probe
     // is not a CSP report on every page view (OPS-8, lib/browser/zod-jitless).
-    scripts: [{ children: ZOD_JITLESS_SCRIPT }],
+    // The device's theme on the root before anything paints (design 185,
+    // lib/browser/theme): "cached on the device so the first paint is right".
+    scripts: [
+      { children: ZOD_JITLESS_SCRIPT },
+      { children: THEME_HEAD_SCRIPT },
+    ],
   }),
   // O0 before anything else, on every navigation (round 26 #7): the one
   // place no sign-in redirect, bookmark or typed URL can go around. The
@@ -126,14 +135,17 @@ export const Route = createRootRoute({
   // Never asked on the open web (design 163): a public page is the same
   // for every viewer, so nothing about this one may reach its markup.
   loader: ({ location }) =>
-    signedInOffTheOpenWeb(location.pathname, signedInQuery),
+    signedInOffTheOpenWeb(
+      location.pathname,
+      withOwnTheme(signedInQuery, ownThemeQuery),
+    ),
   staleTime: Infinity,
   shellComponent: RootDocument,
 });
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
@@ -149,6 +161,8 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
             <SessionLapseAnswer>{children}</SessionLapseAnswer>
           </UnconfirmedRefusalAnswer>
         </TermsRefusalAnswer>
+        {/* The account's theme over the device's (design 185). */}
+        <ThemeSync />
         {/* How long each screen takes, by route id (design 165). */}
         <VitalsReporter />
         <Devtools />
