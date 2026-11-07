@@ -14,7 +14,7 @@
  * Turnstile keys in the dev server's `.dev.vars`, which CI's e2e job
  * writes. Locally, put the same lines in yours.
  *
- * Exactly one test() per demo spec.
+ * Exactly one test() per journey spec.
  */
 import { readFile } from "node:fs/promises";
 

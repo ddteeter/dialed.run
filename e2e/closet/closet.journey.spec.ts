@@ -16,7 +16,7 @@
  * with the rail's empty groups left out (round 27 #31b, round 47
  * #112b and #115-117) — one journey, one video.
  *
- * Exactly one test() per demo spec. A second test here would record a
+ * Exactly one test() per journey spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
  * assertions belong in a sibling *.spec.ts.
  *

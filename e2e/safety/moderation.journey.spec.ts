@@ -17,7 +17,7 @@
  * `.dev.vars`, which CI's e2e job writes (register R-72). Locally, put the
  * same line in yours.
  *
- * Exactly one test() per demo spec.
+ * Exactly one test() per journey spec.
  */
 import { readFile } from "node:fs/promises";
 

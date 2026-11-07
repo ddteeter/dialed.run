@@ -2,7 +2,7 @@
  * The Desk's door, and the headers every response leaves with (OPS-7,
  * OPS-8) — the half of `e2e/desk/` that needs no operator.
  *
- * The operator's journey is `operator.demo.spec.ts`.
+ * The operator's journey is `operator.journey.spec.ts`.
  */
 import { createHash } from "node:crypto";
 

@@ -30,7 +30,7 @@ import type { HostedEngine } from "./voice";
 import type { Locator, Page } from "@playwright/test";
 
 /**
- * The base test for `*.demo.spec.ts`. Recording is configured by the `demo`
+ * The base test for `*.journey.spec.ts`. Recording is configured by the `demo`
  * Playwright project; this adds the parts a project cannot express:
  *
  * - a synthetic cursor (dot + click ripple) is drawn where the mouse acts,
@@ -246,7 +246,7 @@ export async function typeSlowly(field: Locator, text: string): Promise<void> {
 /**
  * Layout stamps `html[data-hydrated]` once React attaches; driving
  * controlled inputs before that races hydration's state reset. Shared by
- * every demo spec — one wait, not one copy per journey.
+ * every journey spec — one wait, not one copy per journey.
  */
 export async function hydrated(page: Page): Promise<void> {
   await page

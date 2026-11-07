@@ -12,7 +12,7 @@
  * The photo is not here any more: round 20 moved the outfit photo from A3
  * to A2, and its beat moved with it, to `e2e/run-logging/`.
  *
- * Why this exists separately from feed.demo.spec.ts: that one is the
+ * Why this exists separately from feed.journey.spec.ts: that one is the
  * *reader's* journey (follow, browse, open, mark useful) and its Covers
  * header claims A3 only as a display. Nothing demonstrated the writer's
  * half.

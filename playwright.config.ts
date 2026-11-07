@@ -145,7 +145,7 @@ export default defineConfig({
     {
       name: "e2e",
       testIgnore: [
-        "**/*.demo.spec.ts",
+        "**/*.journey.spec.ts",
         "**/*.setup.ts",
         "scratch/**",
         WALKTHROUGHS,
@@ -176,8 +176,8 @@ export default defineConfig({
       // while recording: a scratch spec is never an assertion anyone else
       // runs, so a bare run, CI's included, never sees one (design 180).
       testMatch: demoSlowMo
-        ? ["**/*.demo.spec.ts", "scratch/**/*.spec.ts"]
-        : "**/*.demo.spec.ts",
+        ? ["**/*.journey.spec.ts", "scratch/**/*.spec.ts"]
+        : "**/*.journey.spec.ts",
       dependencies: ["demo-setup"],
       use: {
         viewport: { width: 1280, height: 720 },

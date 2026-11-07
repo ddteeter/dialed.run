@@ -22,7 +22,7 @@
  * needs the two Garmin lines CI writes (`.dev.vars.example`); the origin
  * is Playwright's to set (`stub-origin.ts`).
  *
- * Exactly one test() per demo spec.
+ * Exactly one test() per journey spec.
  */
 import { GARMIN_OWNER_ID } from "./stub-runs";
 import { hydrated, seedItem, unseed } from "../conformance/logging-fixtures";

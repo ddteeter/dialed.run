@@ -21,7 +21,7 @@
  * journey, one video. Posts are divided by a hairline, not a gutter
  * (round 40 C5b).
  *
- * Exactly one test() per demo spec. A second test here would record a
+ * Exactly one test() per journey spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
  * assertions belong in a sibling *.spec.ts.
  *

@@ -5,9 +5,9 @@
  * Read-only (D-30): nothing on the page acts.
  *
  * Needs `ADMIN_USER_IDS=e2e-desk-operator` in the dev server's
- * `.dev.vars`, as `operator.demo.spec.ts` does.
+ * `.dev.vars`, as `operator.journey.spec.ts` does.
  *
- * Exactly one test() per demo spec.
+ * Exactly one test() per journey spec.
  */
 import { inArray } from "drizzle-orm";
 

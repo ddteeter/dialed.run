@@ -13,7 +13,7 @@
  * session that lapses mid-form goes to log-in and comes back to the form,
  * D-155) — one journey, one video.
  *
- * Exactly one test() per demo spec. A second test here would record a
+ * Exactly one test() per journey spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
  * assertions belong in a sibling *.spec.ts (see home.spec.ts).
  */

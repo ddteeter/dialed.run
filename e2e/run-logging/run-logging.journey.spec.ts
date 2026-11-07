@@ -28,7 +28,7 @@
  * flow over where the runner was, and R-80's other half — the Closet tab
  * stays lit underneath, because `+ Add` is a launcher and not a tab.
  *
- * Exactly one test() per demo spec. A second test here would record a
+ * Exactly one test() per journey spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
  * assertions belong in a sibling *.spec.ts.
  *

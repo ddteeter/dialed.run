@@ -8,7 +8,7 @@
  * from Change email while unconfirmed (round 29 #11–12), and O0's re-pick after a
  * moderator's rename (ACC-12; round 27 #16) — one journey, one video.
  *
- * Exactly one test() per demo spec (see e2e/auth/auth.demo.spec.ts).
+ * Exactly one test() per journey spec (see e2e/auth/auth.journey.spec.ts).
  */
 import type { Page } from "@playwright/test";
 import { eq, sql } from "drizzle-orm";

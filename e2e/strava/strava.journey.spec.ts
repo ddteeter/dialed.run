@@ -21,7 +21,7 @@
  * rule. CI gains the three placeholders with task 125's CI change (owner,
  * 2026-09-26).
  *
- * Exactly one test() per demo spec.
+ * Exactly one test() per journey spec.
  */
 import { and, eq } from "drizzle-orm";
 

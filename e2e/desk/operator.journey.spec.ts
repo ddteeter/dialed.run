@@ -9,7 +9,7 @@
  * `.dev.vars`, which CI's e2e job writes (register R-72, PR #114). Locally,
  * put the same line in yours.
  *
- * Exactly one test() per demo spec.
+ * Exactly one test() per journey spec.
  */
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";

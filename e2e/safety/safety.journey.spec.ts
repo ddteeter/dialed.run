@@ -6,7 +6,7 @@
  * reporter at once (SAF-13), a block hides the blocked runner's entries
  * (SAF-12), and unblocking brings them back.
  *
- * Exactly one test() per demo spec. A second here would record a second
+ * Exactly one test() per journey spec. A second here would record a second
  * video beside the one the reviewer is meant to watch.
  *
  * **What this is for**: the launch gate is a promise about what happens

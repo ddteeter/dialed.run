@@ -2,7 +2,7 @@
  * Walkthrough · the closet (design 180, step 5): a runner's gear, as real
  * products, and what happens when a piece wears out. A product story,
  * narrated, recorded at desk and phone; the closet journey
- * (`e2e/closet/closet.demo.spec.ts`) carries the edge cases.
+ * (`e2e/closet/closet.journey.spec.ts`) carries the edge cases.
  */
 import { bar } from "../support/bars";
 import { hydrated, scene, typeSlowly } from "../support/demo";
