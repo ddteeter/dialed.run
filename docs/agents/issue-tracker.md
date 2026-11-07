@@ -1,8 +1,95 @@
-# Issue tracker: GitHub
+# Issue tracker: GitHub Issues and the dialed.run Project
 
-Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all operations.
+**Open work lives here** (design 181): every build item, Design ask, owner
+question and watch item is an issue on ddteeter/dialed.run, and its workflow
+state lives in one Project, [dialed.run](https://github.com/users/ddteeter/projects/2).
+Law and history stay in the repo: decisions in `docs/decisions.md`, the
+design record in `design/` and `docs/design-deltas.md`, procedures in the
+launch plans. `docs/deferred.md` is a frozen archive; its open rows point at
+their issues.
 
-## Conventions
+Everything you write in an issue is public. `.claude/rules/publishing.md`
+applies to every title, body and comment.
+
+## Where each fact lives
+
+| fact         | where                                                                                                                      | set with                                |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| area         | label `area:*`: closet, feed, safety, desk, auth, onboarding, shell, weather, ops, docs, infra, runs, legal, testing, a11y | `gh issue edit N --add-label area:feed` |
+| kind         | label `kind:*`: build, decision, design-ask, owner-question, watch                                                         | `gh`                                    |
+| severity     | label `sev:*`: launch-blocker (blocks its milestone's stage), important, minor                                             | `gh`                                    |
+| stage        | milestone: friends, public, soon-after-launch, post-v1; none while unknown                                                 | `gh issue edit N --milestone friends`   |
+| status       | Project field: Inbox, Needs owner, Needs Design, Ready, In lane, In PR, Done                                               | `npm run track -- status N ready`       |
+| lane or wave | Project field Lane (text)                                                                                                  | `npm run track -- lane N w3-dark`       |
+| trigger      | the body's first line, `**Trigger:** …`                                                                                    |                                         |
+| links        | the body (R-, D-, design and board ids, PRs), and `Closes #N` in PR bodies                                                 |                                         |
+
+Exactly one area, one kind and one severity label per issue. A wave or an
+epic is a parent issue with sub-issues.
+
+## Filing one
+
+`npm run track -- create` files the issue, checks the title and body
+against the never-list's patterns, and sets its status and lane:
+
+```sh
+npm run track -- create --title "R-74: the WRONG? link needs a corrections table" \
+  --body-file body.md --label area:closet --label kind:build --label sev:important \
+  --milestone friends --status ready [--lane w3-x] [--parent 361]
+```
+
+The body's shape (see #358 for an example):
+
+```md
+**Trigger:** none. Ready now. | the next Design round. | <when to pick it up>
+
+What's wrong or missing, where, and why it matters. Facts from the source.
+
+**Owner's call (YYYY-MM-DD):** … (only when one applies)
+**The ask:** … (design asks and owner questions)
+**Where:** files
+**Links:** R-74 · D-163 · R48·129 · #277
+```
+
+- **A title** leads with its alias when it has one (`R-74: …`, `Design 139: …`).
+- **A lane may open issues within its own scope** without asking (owner,
+  2026-11-06). Closing stays tied to merges: the PR body's `Closes #N`.
+- **Stage unknown:** leave the milestone empty and the status unset (the
+  inbox). Never guess a stage.
+- **Status:** a `kind:owner-question` is Needs owner, a `kind:design-ask` is
+  Needs Design, and anything decided and buildable is Ready.
+
+## The lifecycle
+
+- **Owner questions:** an issue in Needs owner (the _Waiting on me_ view).
+  Ask in the turn too (CLAUDE.md, "Stop means ask"). The answer is a comment
+  on the issue, plus a D-row if it is law. The issue then moves to Ready, or
+  closes if the answer was a cut.
+- **Design asks:** an issue in Needs Design (the _Design batch_ view). Each
+  round's work order is written from it. The ruling is commented on each
+  issue, and the issue moves on (skill `coordinating-a-wave`).
+- **Work:** dispatch sets In lane and Lane. Linking a PR sets In PR; merging
+  it closes the issue and sets Done. Done items archive after 14 days.
+- **Duplicates:** close as a duplicate of the other issue.
+- **Private items:** a work item the owner keeps out of public is a draft
+  item in the private Project, never an issue (`.claude/rules/publishing.md`).
+
+## The helper, `npm run track`
+
+Only the helper writes Project fields, because they sit behind opaque
+GraphQL ids. It uses your own `gh` login, which needs the `project` scope
+(`gh auth refresh -h github.com -s project`).
+
+- `track status N <status>`: set Status by slug (`needs-owner`, `ready`, …).
+- `track lane N <text>`: set Lane; `""` clears it.
+- `track list <status|inbox|all> [--json]`: list the Project's issues.
+- `track check <file>…`: the never-list pattern check, on files.
+- `track create …`: as above.
+
+Views: _Board_ (by status), _Waiting on me_, _Design batch_, _Friends gate_
+(milestone friends, not Done, sliced by label) and _Roadmap_ (by milestone).
+
+## Plain `gh` conventions
 
 - **Create an issue**: `gh issue create --title "..." --body "..."`. Use a heredoc for multi-line bodies.
 - **Read an issue**: `gh issue view <number> --json number,title,body,labels,comments`.

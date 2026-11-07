@@ -6,7 +6,7 @@ Everything that has to exist in Cloudflare, GitHub and third parties before
 This is a **runbook, not a checklist of ideas**: every item here is something
 the code already expects and will fail without. Anything an agent discovers
 that needs a human to create belongs in this file, in the same PR that
-introduces the dependency — the same rule as `docs/deferred.md`.
+introduces the dependency.
 
 The repo has never been deployed. Nothing below has been done yet, and
 `wrangler.jsonc` still carries placeholder D1 ids.

@@ -2,20 +2,20 @@
 
 The one place that lists what we intend to build, at any horizon. Each
 entry points to where its detail lives rather than restating it: a plan, a
-proposal, an epic, a register row. When the detail moves, the pointer
+proposal, an epic, an issue. When the detail moves, the pointer
 moves. When the work merges, the entry is struck through with the PR that
 finished it.
 
 ## Where the rest lives
 
-| what                                  | where                                                                  |
-| ------------------------------------- | ---------------------------------------------------------------------- |
-| Launch: what is built before users    | `docs/launch/development-plan.md`, `docs/launch/before-public-plan.md` |
-| Launch: dashboards, accounts, config  | `docs/launch/deployment-plan.md`                                       |
-| Launch: legal                         | `docs/launch/legal-readiness-plan.md`                                  |
-| Known defects and postponed decisions | `docs/deferred.md` (the register; it is not a backlog of ideas)        |
-| Product epics after the MVP           | `docs/post-mvp.md`                                                     |
-| Undrawn surfaces waiting on design    | `docs/design-deltas.md`, the open queue                                |
+| what                                  | where                                                                     |
+| ------------------------------------- | ------------------------------------------------------------------------- |
+| Launch: what is built before users    | `docs/launch/development-plan.md`, `docs/launch/before-public-plan.md`    |
+| Launch: dashboards, accounts, config  | `docs/launch/deployment-plan.md`                                          |
+| Launch: legal                         | `docs/launch/legal-readiness-plan.md`                                     |
+| Known defects and postponed decisions | GitHub Issues and the dialed.run Project (`docs/agents/issue-tracker.md`) |
+| Product epics after the MVP           | `docs/post-mvp.md`                                                        |
+| Undrawn surfaces waiting on design    | issues in status Needs Design (the Project's Design batch view)           |
 
 ## Soon: development infrastructure
 

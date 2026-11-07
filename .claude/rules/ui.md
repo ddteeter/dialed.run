@@ -63,9 +63,10 @@ inventing design language is not:
   placeholder (the 🔔-emoji bell is the canonical violation).
 - **Icons come from `ui/`'s `<Icon name="…">`** (manifest in
   `src/ui/icons.tsx`). A glyph not in the manifest is itself an undesigned
-  surface: request it via `docs/design-deltas.md`.
-- Add (or extend) the surface's entry in `docs/design-deltas.md`'s open queue
-  in the same PR, and list it under **"Design deltas"** in the PR body.
+  surface: request it as a Design ask.
+- Open (or extend) the surface's Design ask: an issue with
+  `kind:design-ask` in status Needs Design (`docs/agents/issue-tracker.md`),
+  and list it under **"Design deltas"** in the PR body.
 
 ## Motion
 
