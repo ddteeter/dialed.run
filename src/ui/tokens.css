@@ -43,10 +43,6 @@
    * state, never a resting surface; text stays ink." Does not change with
    * the ground, like the role it tints. */
   --action-hover: #ff57a2;
-  /* Round 21. Hi-viz as text — on an ink surface only (NowGoRun's eyebrow
-   * sits on the ink block in both themes, so one value serves both).
-   * 17.6:1 there; 1.1:1 on paper, where it is `--ink` instead. */
-  --hiviz-text: #f5ff3d;
   /* Does not change with the ground. Text on it is always ink. */
   --failure: var(--hi-viz);
   /* The ink those two rows mean, as a role rather than as prose.
@@ -157,6 +153,14 @@
    * precomputed — "flat hex, never opacity". Ground-relative, so the
    * inverted block redefines it. Text on it stays ink or --dialed-text. */
   --dialed-tint: #d2f0e9;
+  /* Round 21. Hi-viz as text, "on an ink surface only … never text on
+   * paper; there it is --ink" (T1's note): 17.6:1 on ink, 1.1:1 on paper.
+   * T1 gives #F5FF3D in both columns because the block it was written for
+   * was ink in both themes. Headers now invert to paper on a dark page
+   * (T2 rule 04), so the role is ground-relative and paper says `--ink`
+   * (design 185). On a light page nothing changes: the role is only used
+   * inside ink blocks and the Desk, which take the ink column. */
+  --hiviz-text: var(--ink);
   /* R48·135: a notice — the explanations and quiet notes a screen sets in
    * a recessed block — is the tint on paper, with no rule (the ring is
    * the fill's own colour, so it draws nothing and takes no space). */
@@ -202,6 +206,7 @@
   /* One step toward an ink ground is lighter, not darker. */
   --ink-hover: #deddd6;
   --dialed-tint: #0a2524;
+  --hiviz-text: var(--hi-viz);
   /* R-87: hi-viz at low strength on ink. Missing here, an unread row in
    * an inverted block resolved to paper's #FFF9DC against #0B0B0E. */
   --unread: #2a2a14;

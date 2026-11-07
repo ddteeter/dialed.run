@@ -195,8 +195,23 @@ describe("the T1 port", () => {
     expect(hexOf("--notice-rule", ink)).toBe(hexOf("--hairline", ink));
   });
 
-  it.each(t1)("declares $role at T1's light value", ({ role, light }) => {
-    expect([role, hexOf(role, paper)]).toEqual([role, light]);
+  it.each(t1.filter((pair) => pair.role !== "--hiviz-text"))(
+    "declares $role at T1's light value",
+    ({ role, light }) => {
+      expect([role, hexOf(role, paper)]).toEqual([role, light]);
+    },
+  );
+
+  it("writes --hiviz-text as T1's note says rather than its light cell", () => {
+    // T1's light cell is #F5FF3D, written for a block that was ink in
+    // both themes; its note says "never text on paper; there it is
+    // --ink". Headers invert to paper on a dark page (T2 rule 04), so the
+    // paper column takes the note (design 185, design-ask #494): ink on
+    // paper, hi-viz on ink. The cell is still what the ink column holds.
+    const cell = t1.find((pair) => pair.role === "--hiviz-text");
+    expect(cell?.light).toBe("#f5ff3d");
+    expect(hexOf("--hiviz-text", paper)).toBe(hexOf("--ink", paper));
+    expect(hexOf("--hiviz-text", ink)).toBe(cell?.light);
   });
 
   it.each(t1)("declares $role at T1's dark value", ({ role, dark }) => {
