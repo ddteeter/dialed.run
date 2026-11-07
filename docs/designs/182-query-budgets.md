@@ -4,6 +4,11 @@
 > we track how many DB queries, and of what type, a core journey takes?").
 > Design 165 already measures speed in production; this is the check
 > before production.
+>
+> **Owner's calls, 2026-11-06:** part 1 covers _every_ list read, not only
+> the six first proposed (#484); part 2 is built in wave 3 too (#485). Both
+> are wave-3 work, shipped as two PRs: part 1 first, part 2 after the
+> lanes changing demo tooling have landed.
 
 ## Problem
 
@@ -33,8 +38,7 @@ added and says nothing about which screen moved.
    a batch, and the `meta.rows_read` sum from each `D1Result`. No
    production code changes. A read that legitimately scales (one query per
    page of results) asserts its formula, with the reason inline.
-2. **Per-route report from the e2e run.** Later, and report-only at
-   first. A dev-only counter in `src/lib/sql/d1-session.ts` tags each
+2. **Per-route report from the e2e run.** Wave 3, report-only. A dev-only counter in `src/lib/sql/d1-session.ts` tags each
    request's statements with its route id or `serverFn:<id>` (design 165's
    keys), behind an env flag the e2e web server sets. The e2e teardown
    writes route → queries (p50/max) and rows read to the CI step summary,
@@ -71,9 +75,8 @@ added and says nothing about which screen moved.
 
 ## Open questions
 
-- Which reads count as lists? Proposed: the six above. The lane greps the
-  module indexes for any other read returning an array of rows a user can
-  grow.
-- Part 2 or not: is a per-route report worth its cost once part 1 covers
-  the N+1s? Recommend part 1 this wave, and part 2 only if part 1 turns up
-  surprises.
+Both resolved by the owner, 2026-11-06:
+
+- Which reads count as lists? **Every one**: any read returning rows a
+  user, or users together, can grow. The inventory is below.
+- Part 2 or not? **Yes, in wave 3**, as its own PR after part 1.
