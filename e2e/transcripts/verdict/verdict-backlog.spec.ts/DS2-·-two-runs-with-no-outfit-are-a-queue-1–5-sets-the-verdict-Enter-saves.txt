@@ -1,0 +1,110 @@
+document
+banner
+link, dialed.run home
+dialed.run
+end of link, dialed.run home
+navigation, Main
+list
+listitem, level 1, position 1, set size 4
+link, Feed
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+link, Closet
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+link, Call
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+link, You
+end of listitem, level 1, position 4, set size 4
+end of list
+end of navigation, Main
+link, Search runners
+link, Notifications, # new
+#
+end of link, Notifications, # new
+button, Log a run, has popup dialog
+end of banner
+main
+heading, Needs a verdict, level 1
+#
+runs · no verdict yet
+table
+rowgroup
+row, Run Conditions Outfit Did it work?
+columnheader, Run
+Run
+end of columnheader, Run
+columnheader, Conditions
+Conditions
+end of columnheader, Conditions
+columnheader, Outfit
+Outfit
+end of columnheader, Outfit
+columnheader, Did it work?
+Did it work?
+end of columnheader, Did it work?
+end of row, Run Conditions Outfit Did it work?
+end of rowgroup
+rowgroup
+row, :day :month # # minutes · #.#mi #° · clear · #mph Same as :day, :month #? Use Pick — :day :month # Way cold A bit cold Dialed A bit warm Way warm, current item
+cell, :day :month # # minutes · #.#mi
+:day :month #
+# minutes
+·
+#.#mi
+end of cell, :day :month # # minutes · #.#mi
+cell, #° · clear · #mph
+#° · clear · #mph
+end of cell, #° · clear · #mph
+cell, Same as :day, :month #? Use Pick — :day :month #
+Same as
+:day, :month #
+?
+button, Use — :day :month #
+Use
+end of button, Use — :day :month #
+link, Pick — :day :month #
+Pick
+end of link, Pick — :day :month #
+end of cell, Same as :day, :month #? Use Pick — :day :month #
+cell, Way cold A bit cold Dialed A bit warm Way warm
+button, Way cold — :day :month #, not pressed
+Way cold
+end of button, Way cold — :day :month #, not pressed
+button, A bit cold — :day :month #, not pressed
+A bit cold
+end of button, A bit cold — :day :month #, not pressed
+button, Dialed — :day :month #, not pressed
+Dialed
+end of button, Dialed — :day :month #, not pressed
+button, A bit warm — :day :month #, not pressed
+A bit warm
+end of button, A bit warm — :day :month #, not pressed
+button, Way warm — :day :month #, not pressed
+Way warm
+end of button, Way warm — :day :month #, not pressed
+end of cell, Way cold A bit cold Dialed A bit warm Way warm
+end of row, :day :month # # minutes · #.#mi #° · clear · #mph Same as :day, :month #? Use Pick — :day :month # Way cold A bit cold Dialed A bit warm Way warm, current item
+end of rowgroup
+end of table
+Keys
+Up and down arrows: move between rows.
+# to #: way cold to way warm.
+Enter: save and go to the next.
+Down arrow: skip.
+Tab: outfit.
+#
+of
+#
+saved
+status
+complementary
+Selected ·
+:day :month #
+#° · clear · #mph
+link, Weather data provided by Visual Crossing
+end of complementary
+end of main
+status
+end of document

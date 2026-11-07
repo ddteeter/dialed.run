@@ -1,12 +1,12 @@
 document
 banner
-link, dialed.run home, current page
+link, dialed.run home
 dialed.run
-end of link, dialed.run home, current page
+end of link, dialed.run home
 navigation, Main
 list
 listitem, level 1, position 1, set size 4
-link, Feed, current page
+link, Feed
 end of listitem, level 1, position 1, set size 4
 listitem, level 1, position 2, set size 4
 link, Closet
@@ -15,7 +15,7 @@ listitem, level 1, position 3, set size 4
 link, Call
 end of listitem, level 1, position 3, set size 4
 listitem, level 1, position 4, set size 4
-link, You
+link, You, current page
 end of listitem, level 1, position 4, set size 4
 end of list
 end of navigation, Main
@@ -26,37 +26,19 @@ end of link, Notifications, # new
 button, Log a run, has popup dialog
 end of banner
 main
-heading, Feed, level 1
-link, Find runners
-link, # runs still need a verdict Clear the queue
-#
-runs still need a verdict
-Clear the queue
-end of link, # runs still need a verdict Clear the queue
-button, Following, pressed
-button, Your conditions, not pressed
-status
-Same conditions · Feels
-#–#°
-·
-dry
+heading, @feed_#, level 1
+@feed_#
+end of heading, @feed_#, level 1
+Portland, OR, United States
+link, Settings
 paragraph
-# runners logged #° and dry in the last # days.
-end of paragraph
-link, Weather data provided by Visual Crossing
-article
-link, @trail_# :when · #:# Dialed #.#mi #–#° · light rain
-@trail_#
-:when · #:#
-Dialed
-#.#mi
-#–#° · light rain
-end of link, @trail_# :when · #:# Dialed #.#mi #–#° · light rain
-button, # Useful, @trail_#’s run, pressed
 #
-Useful
-end of button, # Useful, @trail_#’s run, pressed
-end of article
+Runs
+#
+Following
+#
+Followers
+end of paragraph
 end of main
 status
 end of document

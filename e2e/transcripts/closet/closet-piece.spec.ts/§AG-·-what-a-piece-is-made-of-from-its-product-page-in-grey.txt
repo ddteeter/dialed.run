@@ -1,0 +1,83 @@
+document
+banner
+link, dialed.run home
+dialed.run
+end of link, dialed.run home
+navigation, Main
+list
+listitem, level 1, position 1, set size 4
+link, Feed
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+link, Closet, current item
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+link, Call
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+link, You
+end of listitem, level 1, position 4, set size 4
+end of list
+end of navigation, Main
+link, Search runners
+button, Log a run, has popup dialog
+end of banner
+main
+status
+link, Closet
+paragraph
+Top · Jacket
+end of paragraph
+heading, Patagonia Houdini Jacket, level 1
+link, Shop page
+patagonia.com
+paragraph
+Specs from
+patagonia.com
+· Grey values are from the page
+end of paragraph
+# km logged
+paragraph
+Works at
+#–#°
+end of paragraph
+heading, Composition · from patagonia.com, level 2
+Composition · from
+patagonia.com
+end of heading, Composition · from patagonia.com, level 2
+term
+Body
+end of term
+definition
+#% nylon
+end of definition
+term
+Underarm
+end of term
+definition
+#% polyester · #% elastane
+end of definition
+paragraph
+As labelled by
+Patagonia
+end of paragraph
+paragraph
+lightweight
+·
+synthetic
+end of paragraph
+link, Edit Patagonia Houdini Jacket
+Edit
+Patagonia Houdini Jacket
+end of link, Edit Patagonia Houdini Jacket
+button, Retire Patagonia Houdini Jacket
+Retire
+Patagonia Houdini Jacket
+end of button, Retire Patagonia Houdini Jacket
+button, Delete Patagonia Houdini Jacket
+Delete
+Patagonia Houdini Jacket
+end of button, Delete Patagonia Houdini Jacket
+end of main
+status
+end of document

@@ -1,0 +1,55 @@
+document
+banner
+link, Notifications
+end of banner
+main
+heading, Feed, level 1
+link, Find runners
+button, Following, not pressed
+button, Your conditions, pressed
+status
+heading, Where do you run?, level 2
+paragraph
+Location is off. Type your city and we’ll match its weather instead.
+end of paragraph
+Your city
+textbox, Your city, Add the state or country. We'll show you the place we found before we use it.
+button, Find
+Find
+end of button, Find
+Add the state or country. We'll show you the place we found before we use it.
+paragraph
+Saved to your settings. Change it any time under You.
+end of paragraph
+end of main
+navigation, Main
+list
+listitem, level 1, position 1, set size 5
+link, Feed, current page
+Feed
+end of link, Feed, current page
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Closet
+Closet
+end of link, Closet
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+button, Add a run, has popup dialog
++ Add
+end of button, Add a run, has popup dialog
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Call
+Call
+end of link, Call
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, You
+You
+end of link, You
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Main
+status
+end of document

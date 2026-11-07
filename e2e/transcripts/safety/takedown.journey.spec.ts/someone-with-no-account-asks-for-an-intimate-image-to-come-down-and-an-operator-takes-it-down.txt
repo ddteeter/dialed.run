@@ -49,7 +49,7 @@ heading, # waiting, level 2
 # waiting
 end of heading, # waiting, level 2
 list
-listitem, level 1, position 1, set size 2
+listitem, level 1, position 1, set size 1
 button, entry · :id, expanded
 Due in #h
 heading, Their other photos, level 3
@@ -85,42 +85,7 @@ end of button, Remove
 button, Approve
 button, Remove as suspected CSAM
 end of form
-end of listitem, level 1, position 1, set size 2
-listitem, level 1, position 2, set size 2
-button, photo · :id, not expanded
-image, Reported
-paragraph
-A close match to an image removed as intimate on
-:month #
-,
-# bit
-apart.
-end of paragraph
-heading, Their other photos · #, level 3
-Their other photos · #
-end of heading, Their other photos · #, level 3
-list
-listitem, level 2, position 1, set size 1
-image, Photo :id, on a kit an operator cannot open
-:id
-end of listitem, level 2, position 1, set size 1
-end of list
-heading, Matching photos · any runner · #, level 3
-Matching photos · any runner · #
-end of heading, Matching photos · any runner · #, level 3
-list
-listitem, level 2, position 1, set size 1
-Removed
-:id
-# bit · removed :month #
-link, @poster_#
-@poster_#
-end of link, @poster_#
-end of listitem, level 2, position 1, set size 1
-end of list
-Nobody reported this.
-held on upload
-end of listitem, level 1, position 2, set size 2
+end of listitem, level 1, position 1, set size 1
 end of list
 region, Takedown
 heading, Takedown, level 2
@@ -145,28 +110,8 @@ end of region, Takedown
 heading, Quarantine · #, level 2
 Quarantine · #
 end of heading, Quarantine · #, level 2
-list
-listitem, level 1, position 1, set size 1
-entry
-Held
-:month # #
-Uploader
-:id
-Kept until
-:month # #
-reported to NCMEC :month # #
-·
-E#E-#
-form
-status
-CyberTipline report number
-textbox, CyberTipline report number, E#E-#, Optional. Record it once the report is filed; it is then kept a year from now.
-Optional. Record it once the report is filed; it is then kept a year from now.
-button, Record the NCMEC report
-Record the NCMEC report
-end of button, Record the NCMEC report
-end of form
-end of listitem, level 1, position 1, set size 1
-end of list
+paragraph
+Nothing is in quarantine.
+end of paragraph
 end of main
 end of document

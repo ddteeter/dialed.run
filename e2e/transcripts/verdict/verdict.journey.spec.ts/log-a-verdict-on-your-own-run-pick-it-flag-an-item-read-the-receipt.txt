@@ -21,90 +21,117 @@ end of list
 end of navigation, Main
 link, Search runners
 link, Notifications, # new
-#
-end of link, Notifications, # new
 button, Log a run, has popup dialog
 end of banner
 main
-heading, Needs a verdict, level 1
-#
-runs · no verdict yet
-table
-rowgroup
-row, Run Conditions Outfit Did it work?
-columnheader, Run
-Run
-end of columnheader, Run
-columnheader, Conditions
-Conditions
-end of columnheader, Conditions
-columnheader, Outfit
-Outfit
-end of columnheader, Outfit
-columnheader, Did it work?
-Did it work?
-end of columnheader, Did it work?
-end of row, Run Conditions Outfit Did it work?
-end of rowgroup
-rowgroup
-row, :day :month # # minutes · #.#mi #° · clear · #mph Same as :day, :month #? Use Pick — :day :month # Way cold A bit cold Dialed A bit warm Way warm, current item
-cell, :day :month # # minutes · #.#mi
-:day :month #
-# minutes
+form
+heading, Did it work?, level 1
+:day :month # · #:#
 ·
-#.#mi
-end of cell, :day :month # # minutes · #.#mi
-cell, #° · clear · #mph
-#° · clear · #mph
-end of cell, #° · clear · #mph
-cell, Same as :day, :month #? Use Pick — :day :month #
-Same as
-:day, :month #
-?
-button, Use — :day :month #
-Use
-end of button, Use — :day :month #
-link, Pick — :day :month #
-Pick
-end of link, Pick — :day :month #
-end of cell, Same as :day, :month #? Use Pick — :day :month #
-cell, Way cold A bit cold Dialed A bit warm Way warm
-button, Way cold — :day :month #, not pressed
-Way cold
-end of button, Way cold — :day :month #, not pressed
-button, A bit cold — :day :month #, not pressed
-A bit cold
-end of button, A bit cold — :day :month #, not pressed
-button, Dialed — :day :month #, not pressed
-Dialed
-end of button, Dialed — :day :month #, not pressed
-button, A bit warm — :day :month #, not pressed
-A bit warm
-end of button, A bit warm — :day :month #, not pressed
-button, Way warm — :day :month #, not pressed
-Way warm
-end of button, Way warm — :day :month #, not pressed
-end of cell, Way cold A bit cold Dialed A bit warm Way warm
-end of row, :day :month # # minutes · #.#mi #° · clear · #mph Same as :day, :month #? Use Pick — :day :month # Way cold A bit cold Dialed A bit warm Way warm, current item
-end of rowgroup
-end of table
-Keys
-Up and down arrows: move between rows.
-# to #: way cold to way warm.
-Enter: save and go to the next.
-Down arrow: skip.
-Tab: outfit.
-#
-of
-#
-saved
-status
-complementary
-Selected ·
-:day :month #
-#° · clear · #mph
+#.#
+mi
+at #°
 link, Weather data provided by Visual Crossing
-end of complementary
+status
+group, Did it work?
+button, Way cold, not pressed
+button, A bit cold, pressed
+A bit cold
+end of button, A bit cold, pressed
+button, Dialed, not pressed
+button, A bit warm, not pressed
+button, Way warm, not pressed
+end of group, Did it work?
+paragraph
+Five states.
+Your history in this band:
+#–#°
+·
+#
+cold ·
+#
+dialed ·
+#
+warm
+end of paragraph
+heading, Anything specific? · optional, level 2
+Anything specific? · optional
+end of heading, Anything specific? · optional, level 2
+button, Houdini Jacket not enough, pressed
+button, hands cold, pressed
+button, cold first mile, not pressed
+button, cold throughout, not pressed
+button, overheated late, not pressed
+button, More, anything specific, has popup dialog
+More
+end of button, More, anything specific, has popup dialog
+group, Effort · optional
+Effort · optional
+button, Easy, not pressed
+button, Steady, not pressed
+button, Workout, not pressed
+button, Race, not pressed
+paragraph
+You run warmer the harder you go. Next time, the Call allows for it.
+end of paragraph
+end of group, Effort · optional
+group, Who sees this run
+Who sees this run
+Who sees this run
+end, Who sees this run
+radio, Private Only you., not checked, position 1, set size 3
+Private
+Only you.
+radio, Shared Runners signed in to dialed.run., checked, position 2, set size 3
+Shared
+Runners signed in to dialed.run.
+radio, Public Anyone with the link, no sign-in. Never when or where you ran., not checked, position 3, set size 3
+Public
+Anyone with the link, no sign-in. Never when or where you ran.
+end of group, Who sees this run
+button, Log it
+Log it
+end of button, Log it
+end of form
+heading, This run · :day :month # · #:#, level 2
+This run · :day :month # · #:#
+end of heading, This run · :day :month # · #:#, level 2
+#.# mi, # minutes
+#°F dry · feels #°
+heading, The kit you’re judging, level 2
+The kit you’re judging
+end of heading, The kit you’re judging, level 2
+list
+listitem, level 1, position 1, set size 1
+Houdini Jacket
+# of # runs dialed in #–#°
+end of listitem, level 1, position 1, set size 1
+end of list
+heading, Before, in #–#° dry, level 2
+Before, in #–#° dry
+end of heading, Before, in #–#° dry, level 2
+list
+listitem, level 1, position 1, set size 2
+:month #
+#° dry
+A bit cold
+list
+listitem, level 2, position 1, set size 1
+Houdini Jacket
+end of listitem, level 2, position 1, set size 1
+end of list
+end of listitem, level 1, position 1, set size 2
+listitem, level 1, position 2, set size 2
+:month #
+#° dry
+A bit cold
+list
+listitem, level 2, position 1, set size 1
+Houdini Jacket
+end of listitem, level 2, position 1, set size 1
+end of list
+end of listitem, level 1, position 2, set size 2
+end of list
 end of main
 status
 end of document

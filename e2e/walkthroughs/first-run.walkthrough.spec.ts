@@ -96,12 +96,12 @@ test("the first run: an invite, an account, a handle, and a closet to start from
   await page.getByRole("button", { name: "Log in" }).click();
   await expect(page).toHaveURL(/\/onboarding\/handle/u, { timeout: 15_000 });
   await hydrated(page);
-  await expect(page.getByText("Step 1 of 4")).toBeVisible();
+  await expect(page.getByText("Step 1 of 3")).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "What should runners call you?" }),
   ).toBeVisible();
   await scene(page, "Step 1 · a handle runners know you by", {
-    say: "A new account goes straight to setup. Step one of four is a handle: the name other runners find and follow you by.",
+    say: "A new account goes straight to setup. Step one of three is a handle: the name other runners find and follow you by. It is the only step you have to do; the other two are optional.",
   });
   await scene(page, "Typing a handle", {
     say: "I'll type one, and go on with Next.",
@@ -117,8 +117,9 @@ test("the first run: an invite, an account, a handle, and a closet to start from
     name: "Compared to people you run with, do you run warm or cold?",
   });
   await expect(thermal).toBeVisible();
+  await expect(page.getByText("Step 2 of 3 · Optional")).toBeVisible();
   await scene(page, "One question · do you run warm or cold?", {
-    say: "Then one question: compared to the people you run with, do you run warm or cold? It is the only one this screen needs answered.",
+    say: "Step two, optional, is one question: compared to the people you run with, do you run warm or cold?",
   });
   await expect(
     page.getByText(
@@ -139,11 +140,12 @@ test("the first run: an invite, an account, a handle, and a closet to start from
   });
   await hydrated(page);
   await expect(page.getByText("Tap what you own")).toBeVisible();
+  await expect(page.getByText("Step 3 of 3 · Optional")).toBeVisible();
   await expect(
     page.getByText("Common in your climate · tap to add"),
   ).toBeVisible();
   await scene(page, "The Closet · common pieces to tap", {
-    say: "Next, the Closet. Rather than a form per piece, it offers the pieces common in your climate. Nothing arrives ticked. I'll tap the tights, a merino base layer, and gloves.",
+    say: "Step three, also optional, is the Closet. Rather than a form per piece, it offers the pieces common in your climate. Nothing arrives ticked. I'll tap the tights, a merino base layer, and gloves.",
   });
   // Checked after every tap: the count is what the tap changes.
   const tapped = ["Running tights", "Merino base layer", "Running gloves"];

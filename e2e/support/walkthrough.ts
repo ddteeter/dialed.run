@@ -28,22 +28,28 @@ export interface Runner {
  * up (first run) imports `./demo` instead and films it.
  */
 export const test = demo.extend<{ runner: Runner }>({
-  runner: async ({ browser, baseURL }, use, testInfo) => {
-    const stamp = String(Date.now()).slice(-7);
-    const project = testInfo.project.name.replace("walkthrough", "w");
-    const handle = `${project.replace("-", "_")}_${stamp}`;
-    const email = `${handle}@example.com`;
-    const context = await signUpRunner(browser, {
-      baseURL,
-      email,
-      handle,
-      inviteCode: await ensureInviteCode(),
-      finishOnboarding: true,
-    });
-    const state = await context.storageState();
-    await context.close();
-    await use({ email, handle, userId: await userIdForEmail(email), state });
-  },
+  // A sign-up through the real forms, before the test body (and its own
+  // setTimeout) runs: its own budget, so a loaded machine does not spend
+  // the default 30 s on it.
+  runner: [
+    async ({ browser, baseURL }, use, testInfo) => {
+      const stamp = String(Date.now()).slice(-7);
+      const project = testInfo.project.name.replace("walkthrough", "w");
+      const handle = `${project.replace("-", "_")}_${stamp}`;
+      const email = `${handle}@example.com`;
+      const context = await signUpRunner(browser, {
+        baseURL,
+        email,
+        handle,
+        inviteCode: await ensureInviteCode(),
+        finishOnboarding: true,
+      });
+      const state = await context.storageState();
+      await context.close();
+      await use({ email, handle, userId: await userIdForEmail(email), state });
+    },
+    { timeout: 120_000 },
+  ],
   storageState: async ({ runner }, use) => {
     await use(runner.state);
   },

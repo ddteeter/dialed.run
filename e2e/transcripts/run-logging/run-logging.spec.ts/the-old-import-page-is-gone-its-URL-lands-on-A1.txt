@@ -1,0 +1,40 @@
+document
+banner
+link, dialed.run home
+dialed.run
+end of link, dialed.run home
+navigation, Main
+list
+listitem, level 1, position 1, set size 4
+link, Feed
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+link, Closet
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+link, Call
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+link, You
+end of listitem, level 1, position 4, set size 4
+end of list
+end of navigation, Main
+link, Search runners
+link, Notifications, # new
+button, Log a run, has popup dialog
+end of banner
+main
+heading, Add a run, level 1
+status
+GPX / TCX / FIT
+Drop a file, or browse
+From your watch export or any tracking app.
+Drop a file, or browse, GPX / TCX / FIT From your watch export or any tracking app.
+paragraph
+No file?
+link, Enter the run by hand
+instead.
+end of paragraph
+end of main
+status
+end of document

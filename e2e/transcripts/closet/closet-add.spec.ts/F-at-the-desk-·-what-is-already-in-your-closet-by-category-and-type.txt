@@ -1,0 +1,121 @@
+document
+banner
+link, dialed.run home
+dialed.run
+end of link, dialed.run home
+navigation, Main
+list
+listitem, level 1, position 1, set size 4
+link, Feed
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+link, Closet, current item
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+link, Call
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+link, You
+end of listitem, level 1, position 4, set size 4
+end of list
+end of navigation, Main
+link, Search runners
+button, Log a run, has popup dialog
+end of banner
+main
+status
+link, Closet
+heading, Add a garment, level 1
+form
+Category
+combobox, Category, shoes, has popup listbox, not expanded
+option, Top, top, selected, position 1, set size 8
+option, Bottom, bottom, not selected, position 2, set size 8
+option, Headwear, headwear, not selected, position 3, set size 8
+option, Neckwear, neckwear, not selected, position 4, set size 8
+option, Gloves, gloves, not selected, position 5, set size 8
+option, Socks, socks, not selected, position 6, set size 8
+option, Shoes, shoes, not selected, position 7, set size 8
+option, Accessory, accessory, not selected, position 8, set size 8
+end of combobox, Category, shoes, has popup listbox, not expanded
+group, What is it?
+What is it?
+Brand
+combobox, Brand, Patagonia, has popup listbox, not expanded, # control
+Model / name
+textbox, Model / name, Houdini #
+Product link · optional
+textbox, Product link · optional, We'll read the shop's page for what it's made of. Needs a brand and model., placeholder brand.com/product…
+We'll read the shop's page for what it's made of. Needs a brand and model.
+end of group, What is it?
+group, Attributes
+Attributes
+checkbox, Water resistant, not checked
+Water resistant
+group, Visibility
+Visibility
+Visibility
+end, Visibility
+radio, Plain, not checked, position 1, set size 3
+Plain
+radio, Reflective trim, not checked, position 2, set size 3
+Reflective trim
+radio, Hi-viz, not checked, position 3, set size 3
+Hi-viz
+end of group, Visibility
+group, Color
+Color
+Color
+end, Color
+radio, Black, Pick the nearest. A print is its main color., not checked, position 1, set size 13
+Black
+radio, White, Pick the nearest. A print is its main color., not checked, position 2, set size 13
+White
+radio, Grey, Pick the nearest. A print is its main color., not checked, position 3, set size 13
+Grey
+radio, Navy, Pick the nearest. A print is its main color., not checked, position 4, set size 13
+Navy
+radio, Brown, Pick the nearest. A print is its main color., not checked, position 5, set size 13
+Brown
+radio, Beige, Pick the nearest. A print is its main color., not checked, position 6, set size 13
+Beige
+radio, Red, Pick the nearest. A print is its main color., not checked, position 7, set size 13
+Red
+radio, Orange, Pick the nearest. A print is its main color., not checked, position 8, set size 13
+Orange
+radio, Yellow, Pick the nearest. A print is its main color., not checked, position 9, set size 13
+Yellow
+radio, Green, Pick the nearest. A print is its main color., not checked, position 10, set size 13
+Green
+radio, Blue, Pick the nearest. A print is its main color., not checked, position 11, set size 13
+Blue
+radio, Purple, Pick the nearest. A print is its main color., not checked, position 12, set size 13
+Purple
+radio, Pink, Pick the nearest. A print is its main color., not checked, position 13, set size 13
+Pink
+Pick the nearest. A print is its main color.
+end of group, Color
+end of group, Attributes
+Size
+textbox, Size
+Colorway
+textbox, Colorway
+Photo · optional
+Drop a photo, or browse
+Flat on the floor works best. JPG, PNG or WebP.
+Drop a photo, or browse, Photo · optional Flat on the floor works best. JPG, PNG or WebP.
+button, Add to closet
+Add to closet
+end of button, Add to closet
+end of form
+heading, Already in your closet · Shoes, level 2
+list
+listitem, level 1, position 1, set size 1
+Nike Pegasus #
+# runs · Retired :month #
+Retired
+end of listitem, level 1, position 1, set size 1
+end of list
+end of main
+status
+end of document

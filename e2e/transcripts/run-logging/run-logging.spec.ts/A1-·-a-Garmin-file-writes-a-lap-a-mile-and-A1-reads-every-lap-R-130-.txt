@@ -21,22 +21,20 @@ end of list
 end of navigation, Main
 link, Search runners
 link, Notifications, # new
-#
-end of link, Notifications, # new
 button, Log a run, has popup dialog
 end of banner
 main
 heading, Add a run, level 1
 status
-Parsed paused_at_the_light.tcx. Fetching weather.
+Parsed forerunner_six_laps.tcx. Fetching weather.
 end of status
 status
-Parsed · paused_at_the_light.tcx
-button, Replace paused_at_the_light.tcx
+Parsed · forerunner_six_laps.tcx
+button, Replace forerunner_six_laps.tcx
 Replace
-end of button, Replace paused_at_the_light.tcx
+end of button, Replace forerunner_six_laps.tcx
 paragraph
-#.# mi, # minutes
+#.# mi, # minutes # seconds
 end of paragraph
 paragraph
 # minutes # seconds per mile

@@ -32,34 +32,27 @@ Mark all read
 end of button, Mark all read
 status
 list
-listitem, level 1, position 1, set size 4
-Unread
-paragraph
-We couldn't find the file for the photo of one of your garments, so we took it off. Add it again from your Closet if you'd like it there.
-end of paragraph
-:day :month #, #:# UTC
-end of listitem, level 1, position 1, set size 4
-listitem, level 1, position 2, set size 4
+listitem, level 1, position 1, set size 3
 Unread
 paragraph
 We removed the photo of one of your garments. Reason: it's sexual or explicit.
 end of paragraph
 :day :month #, #:# UTC
-end of listitem, level 1, position 2, set size 4
-listitem, level 1, position 3, set size 4
+end of listitem, level 1, position 1, set size 3
+listitem, level 1, position 2, set size 3
 Unread
 paragraph
 We removed what you reported.
 end of paragraph
 :day :month #, #:# UTC
-end of listitem, level 1, position 3, set size 4
-listitem, level 1, position 4, set size 4
+end of listitem, level 1, position 2, set size 3
+listitem, level 1, position 3, set size 3
 Unread
 paragraph
 Kit hidden while we review it. Someone reported a kit you shared, so other runners can't see it until a person reviews it, usually within a day. It was hidden automatically. We'll tell you what we decide.
 end of paragraph
 :day :month #, #:# UTC
-end of listitem, level 1, position 4, set size 4
+end of listitem, level 1, position 3, set size 3
 end of list
 end of main
 status

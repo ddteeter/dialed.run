@@ -78,7 +78,6 @@ This run · :day :month # · #:#
 end of heading, This run · :day :month # · #:#, level 2
 #.# mi, # minutes
 #°F dry · feels #°
-link, Weather data provided by Visual Crossing
 heading, The kit you’re judging, level 2
 The kit you’re judging
 end of heading, The kit you’re judging, level 2

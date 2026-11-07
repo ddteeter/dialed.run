@@ -3,11 +3,10 @@
  * verdict, flagging a kit item from the generated chips and a tag from A3b,
  * Noted landing in the submit's place with the chips kept read-only and
  * MORE gone (round 21), seeing the verdict on the entry, and re-opening
- * the verdict to find the flag still there — and DS2, the verdict
- * backlog, which is the same act done from a table instead of six sheets.
- * Also A3's PRIVATE sub-line and its Change sheet (D-108 E, round 32 2a),
+ * the verdict to find the flag still there. Also A3's PRIVATE sub-line and its Change sheet (D-108 E, round 32 2a),
  * picked from the audience radiogroup (round 41 #86a).
- * One journey, one video.
+ * One journey, one video. DS2, the verdict backlog — the same act done
+ * from a table instead of six sheets — is `verdict-backlog.spec.ts`'s.
  *
  * The photo is not here any more: round 20 moved the outfit photo from A3
  * to A2, and its beat moved with it, to `e2e/run-logging/`.
@@ -17,7 +16,7 @@
  * header claims A3 only as a display. Nothing demonstrated the writer's
  * half.
  */
-import { eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import {
   outfitEntries,
@@ -344,127 +343,4 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
   await expect(
     page.getByRole("button", { name: "Houdini Jacket not enough" }),
   ).toHaveAttribute("aria-pressed", "true");
-
-  // ---- DS2 · the same act, from a table ------------------------------
-  //
-  // "The phone version is six S1 prompts, each opening an A3 sheet — six
-  // round trips for six decisions the runner can make in twelve seconds
-  // once the conditions and their usual kit are side by side."
-  //
-  // Two imported runs with no outfit, which is what the queue is made of.
-  // Two, because one is a sheet: "only reachable when >=2 runs lack a
-  // verdict; with one, the S1 prompt opens A3 in the panel like the
-  // phone."
-  const backlogRuns = [newUlid(), newUlid()];
-  await withLocalDb(async ({ core, weather }) => {
-    const [row] = await core
-      .select({ id: user.id })
-      .from(user)
-      .where(eq(user.email, email))
-      .limit(1);
-    if (!row) throw new Error("signup did not create a user row");
-
-    for (const [index, id] of backlogRuns.entries()) {
-      // Distinct hours at the same place: an observation is keyed by
-      // rounded lat/lng and hour bucket, so two runs in one hour would be
-      // one row and the second insert a UNIQUE violation.
-      const at = startedAt - (index + 2) * 3600;
-      await core.insert(runs).values({
-        id,
-        userId: row.id,
-        title: `Imported run ${String(index + 1)}`,
-        startedAt: at,
-        durationS: 2400,
-        distanceM: 7000,
-        source: "file",
-        indoor: false,
-        weatherStatus: "attached",
-        lat: latR,
-        lng: lngR,
-      });
-      // Upsert, like the seed above and for the same reason: an
-      // observation is keyed by rounded place and hour, so a second run
-      // of this spec on the same local database would collide rather
-      // than re-seed.
-      await weather
-        .insert(weatherObservations)
-        .values({
-          id: newUlid(),
-          latR,
-          lngR,
-          hourBucket: Math.floor(at / 3600),
-          tempC: 6,
-          feelsLikeC: 4,
-          humidity: 70,
-          windKph: 12,
-          precipMm: 0,
-          condition: "clear",
-          source: "visualcrossing",
-          fetchedAt: at,
-        })
-        .onConflictDoUpdate({
-          target: [
-            weatherObservations.latR,
-            weatherObservations.lngR,
-            weatherObservations.hourBucket,
-          ],
-          set: { tempC: 6, feelsLikeC: 4 },
-        });
-    }
-  });
-
-  await scene(page, "Two runs with no outfit is a queue, not six sheets");
-  await page.goto("/feed");
-  await hydrated(page);
-  await page.getByRole("link", { name: /Clear the queue/ }).click();
-  await hydrated(page);
-
-  // **Counts are relative, not absolute.** This spec seeds and does not
-  // reset the local database, so a developer running it twice has the
-  // previous run's rows still waiting. What is true either way is that
-  // two more arrived, one of them saves, and the saved one is gone next
-  // visit.
-  //
-  // The wait is not decoration: `count()` does not auto-wait, so reading
-  // it straight after a navigation reads zero rows on a table that has
-  // simply not rendered yet.
-  await expect(
-    page.getByRole("heading", { name: "Needs a verdict" }),
-  ).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByRole("row").nth(2)).toBeVisible();
-  const rowsBefore = await page.getByRole("row").count();
-  expect(rowsBefore).toBeGreaterThanOrEqual(3);
-  await scene(page, "Same kit, same conditions — take it and judge it");
-  await page.getByRole("button", { name: "Use" }).first().click();
-
-  // The keyboard is the reason the surface exists: 1–5 sets the verdict,
-  // Enter saves and moves on. The scale is A3's own, not a coarser one.
-  await scene(page, "1–5 sets the verdict, Enter saves — A3's own scale");
-  await page.getByRole("row").nth(1).press("3");
-  await expect(
-    page.getByRole("button", { name: /^Dialed —/ }).first(),
-  ).toHaveAttribute("aria-pressed", "true");
-  await page.getByRole("row").nth(1).press("Enter");
-
-  // "Verdicts saved here count exactly like verdicts from the phone."
-  await expect(page.getByText(/1 of \d+ saved/)).toBeVisible({
-    timeout: 15_000,
-  });
-  // "It leaves the list on the next visit, not on save — motion has no
-  // 'row flies away'."
-  await expect(page.getByRole("row")).toHaveCount(rowsBefore);
-
-  await scene(page, "Next visit, and the row it was is gone");
-  await page.reload();
-  await hydrated(page);
-  await expect(page.getByRole("row")).toHaveCount(rowsBefore - 1);
-
-  // The seed is this spec's to clear. Without it the backlog grows by two
-  // every local run, and the next spec inherits a queue it did not make.
-  await withLocalDb(async ({ core }) => {
-    await core
-      .delete(outfitEntries)
-      .where(inArray(outfitEntries.runId, backlogRuns));
-    await core.delete(runs).where(inArray(runs.id, backlogRuns));
-  });
 });

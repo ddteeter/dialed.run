@@ -1,24 +1,20 @@
 /**
  * Covers: C (the closet, round 22 ruling 16), F (add a garment, ruling
  * 17), Y (garment detail, round 22 `#y`: the photo well, Remove, the
- * retire confirm), §AG (what a garment is made of), §AH (colour as a
- * constraint), round 26 #3 (Y · delete with runs), #4 (F · saved, photo
- * refused), #9 (Show retired (N), "← Closet"), #10 (F at the desk),
- * R-137 (a brand written in any script), round 28 #5 (W3 confirm:
- * Check the blur, Pick another, Use this photo, as the closet's sheet)
- * and #13 (the rail's hatch and "RETIRED MAR 2026", the merge words in
- * ink), D-75 / R-112 / R-114 (F's TYPE, the rail by type, and the
- * rail listing a save F kept), and round 43 #93-95 (F's product link, and
- * E's shop page with what came of it, design 163), design-deltas
- * 104 (a select's ▾), R-176 (a shortened link refused at F's save,
- * design 171) and R-94 (C's rail: GROUP, WORKS AT, COVERAGE, and the
- * phone's chips, design 174), and the tile's photo, record and range
- * with the rail's empty groups left out (round 27 #31b, round 47
+ * retire confirm), §AH (colour as a constraint), round 26 #9 (Show retired
+ * (N)), round 28 #5 (W3 confirm: Check the blur, Use this photo, as the
+ * closet's sheet), D-75 (F's TYPE), round 43 #93 and #95 (F's product
+ * link, and E's shop page), R-94 (C's rail: GROUP, WORKS AT, COVERAGE,
+ * and the phone's chips, design 174), and the tile's photo, record and
+ * range with the rail's empty groups left out (round 27 #31b, round 47
  * #112b and #115-117) — one journey, one video.
  *
  * Exactly one test() per journey spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
- * assertions belong in a sibling *.spec.ts.
+ * assertions belong in a sibling *.spec.ts — `closet.spec.ts` holds F's
+ * order and ▾, its refused links, Pick another, §AG's composition, F at
+ * the desk, a photo lost to a dropped connection, deleting a piece with
+ * runs, and a brand in any script.
  *
  * The journey: an empty closet that says so and offers the dashed tile;
  * two garments added with real brand + product-name identity (product
@@ -26,89 +22,20 @@
  * screen is for), the second with its photo taken in F's well; detail in
  * round 22's order, the photo removed; then one retired through the
  * confirm sheet, landing on the closet where it is still there, last and
- * marked (CLAUDE.md: retire, don't delete). Then round 26's closet: F at
- * the desk beside what is already in the closet, a save whose photo is
- * lost to a dropped connection, and deleting a piece that has runs from
- * the sheet that asks to retire it instead.
+ * marked (CLAUDE.md: retire, don't delete).
  *
  * Round 11's colour rides on the second piece, because that is where it
  * lives on screen: the fifth attribute inside F's already-collapsed group,
- * then the exact shade behind it. Round 10's composition rides on the same
- * piece's detail page — it belongs to the *product*, written by enrichment
- * reading a brand's page, so the demo seeds the product row the save
- * created rather than pretending a runner typed it.
+ * then the exact shade behind it.
  */
-import { eq, sql, type SQL } from "drizzle-orm";
-
-import {
-  outfitEntries,
-  outfitEntryItems,
-  products,
-  runs,
-} from "../../src/db/schema-core";
-import { manualConditions } from "../../src/db/schema-weather";
-import { newUlid } from "../../src/lib/ids";
-import { nowSeconds } from "../../src/lib/now";
-import { userIdOf } from "../conformance/logging-fixtures";
 import { storageStateFor } from "../support/accounts";
 import { bar } from "../support/bars";
-import { expect, scene, test } from "../support/demo";
-import { withLocalDb } from "../support/local-db";
+import { expect, hydrated, scene, test } from "../support/demo";
+import { PNG_1X1 } from "./closet-support";
 
 // Signed in already: the account is created by the `demo-setup` project, so
 // this video opens on the closet rather than on a signup form.
 test.use({ storageState: storageStateFor("closet") });
-
-/** Layout stamps html[data-hydrated] once React attaches; driving
- *  controlled inputs before that races hydration's state reset. */
-async function hydrated(page: import("@playwright/test").Page): Promise<void> {
-  await page
-    .locator('html[data-hydrated="true"]')
-    .waitFor({ state: "attached" });
-}
-
-/**
- * A real 1x1 PNG — small enough to keep the recording quick, and a genuine
- * decodable image, since the closet's photo path decodes and resizes it.
- */
-const PNG_1X1 = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
-  "base64",
-);
-
-/**
- * A real 2x1 PNG, for Pick another: a different shape from `PNG_1X1`, so
- * the photo that ends up attached can be told apart from the first by its
- * proportions alone — the blur step redraws both, so neither name nor
- * bytes survive it.
- */
-const PNG_2X1 = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAADUlEQVR4nGP4zwAE/wEHAAH/4iOeWQAAAABJRU5ErkJggg==",
-  "base64",
-);
-
-/**
- * Whether a server-function request is the photo's upload: the only one
- * sent as multipart form data, so the demo can drop that one alone.
- */
-/**
-Writes the columns an enrichment read owns on the shared Houdini row.
-*/
-async function setHoudiniProduct(columns: {
-  [Key in keyof typeof products.$inferInsert]?:
-    (typeof products.$inferInsert)[Key] | SQL;
-}): Promise<void> {
-  await withLocalDb(async ({ core }) => {
-    await core
-      .update(products)
-      .set(columns)
-      .where(eq(products.name, "Houdini Jacket"));
-  });
-}
-
-function isPhotoUpload(contentType: string | undefined): boolean {
-  return contentType?.includes("multipart/form-data") === true;
-}
 
 test("add garments with product identity -> detail in round 22's order -> retire through the confirm", async ({
   page,
@@ -119,17 +46,6 @@ test("add garments with product identity -> detail in round 22's order -> retire
   // the first paced run of a session also pays Vite's on-demand compile of
   // whatever a real submit reaches. A timeout here is for catching a hang.
   testInfo.setTimeout(150_000);
-  // Products are shared rows, so a previous run's Houdini keeps the read
-  // seeded below; E would show its specs on the first view. Put it back
-  // as an unread product, the state a fresh database starts the save in.
-  await setHoudiniProduct({
-    sourceUrl: sql`NULL`,
-    extractionStatus: "none",
-    extracted: sql`NULL`,
-    fabric: sql`NULL`,
-    fabricComposition: sql`NULL`,
-    fabricParts: sql`NULL`,
-  });
   await page.goto("/closet");
   await hydrated(page);
 
@@ -157,57 +73,10 @@ test("add garments with product identity -> detail in round 22's order -> retire
   // already set from the closet page: wait for F itself before reading it.
   const category = page.getByLabel("Category");
   await expect(category).toBeVisible();
-  // Round 35 #52b: what it is comes first, at every width — and round 43
-  // #93's link after it, since a link reads nothing without a brand and a
-  // model.
-  const order = await page
-    .locator("form", { has: category })
-    .locator(
-      "[name='category'], [name='brand'], [name='name'], [name='productUrl']",
-    )
-    .evaluateAll((controls) =>
-      controls.map((control) => control.getAttribute("name")),
-    );
-  expect(order).toStrictEqual(["category", "brand", "name", "productUrl"]);
-  // Design-deltas 104: the native arrow is gone, and ▾ sits as far in from
-  // the field box's right edge as the label sits from its left (the box's
-  // border and px-4, on both sides).
-  await expect(category).toHaveCSS("appearance", "none");
-  const arrow = category.locator("xpath=following-sibling::*[1]");
-  await expect(arrow).toHaveText("▾");
-  await expect(arrow).toHaveAttribute("aria-hidden", "true");
-  const fieldBox = await category
-    .locator("xpath=ancestor::*[contains(@class, 'field-box')][1]")
-    .boundingBox();
-  const selectBox = await category.boundingBox();
-  const arrowBox = await arrow.boundingBox();
-  if (fieldBox === null || selectBox === null || arrowBox === null) {
-    throw new Error("F's category field or its ▾ is not laid out");
-  }
-  const leftInset = selectBox.x - fieldBox.x;
-  expect(leftInset).toBeGreaterThan(8);
-  expect(
-    fieldBox.x + fieldBox.width - (arrowBox.x + arrowBox.width),
-  ).toBeCloseTo(leftInset, 0);
   await page.getByLabel("Category").selectOption("shoes");
   await page.getByLabel("Brand").fill("Nike");
   await page.getByLabel("Model / name").fill("Pegasus 41");
   await page.getByLabel("Water resistant").check();
-  // R-176 (design 171): a shortener goes wherever its owner points it, so
-  // the denylist starts with them. The save refuses the link on its own
-  // field and keeps the rest of the piece, as for any denied link.
-  await scene(page, "F · a shortened link is refused, and the piece is kept");
-  const shortLink = page.getByLabel(/Product link/);
-  await shortLink.fill("https://bit.ly/pegasus41");
-  await page.getByRole("button", { name: "Add to closet" }).click();
-  await expect(
-    page.getByText(
-      "That link isn't allowed here. The rest of the piece is fine.",
-    ),
-  ).toBeVisible();
-  await expect(page.getByLabel("Brand")).toHaveValue("Nike");
-  await expect(page.getByLabel("Model / name")).toHaveValue("Pegasus 41");
-  await shortLink.fill("");
   await page.getByRole("button", { name: "Add to closet" }).click();
   await expect(
     page.getByRole("heading", { name: "Nike Pegasus 41" }),
@@ -227,21 +96,11 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await page.getByRole("radio", { name: "Jacket" }).check();
   await page.getByLabel("Brand").fill("Patagonia");
   await page.getByLabel("Model / name").fill("Houdini Jacket");
-  // Round 43 #93: checked when the runner leaves the box, never while
-  // typing, and a link pasted without its scheme gets https:// on save.
-  // Only a non-link errors: an explicit http:// is taken (D-166).
-  await scene(page, "F · the product link: checked on leaving the box");
+  // Round 43 #93: a link pasted without its scheme gets https:// on save.
+  await scene(page, "F · the product link, after what it is");
   const link = page.getByLabel(/Product link/);
-  await link.fill("patagonia houdini");
-  await link.blur();
-  await expect(
-    page.getByText("That isn't a link. Paste the address of the shop's page."),
-  ).toBeVisible();
   await link.fill("patagonia.com/houdini");
   await link.blur();
-  await expect(
-    page.getByText("That isn't a link. Paste the address of the shop's page."),
-  ).toHaveCount(0);
   await page.getByLabel("Layer").selectOption("outer");
   await page.getByLabel("Weight").selectOption("light");
   await page.getByLabel("Wind resistant").check();
@@ -270,12 +129,12 @@ test("add garments with product identity -> detail in round 22's order -> retire
   const well = page.locator("[data-part='photo-well']");
   await expect(well).toHaveAttribute("data-state", "empty");
   await page.setInputFiles('[data-part="photo-well"] input[type="file"]', {
-    name: "houdini-first.png",
+    name: "houdini.png",
     mimeType: "image/png",
     buffer: PNG_1X1,
   });
   // Round 28 #5: W3 stays open once auto-blur paints, and nothing is
-  // attached until Use this photo. Pick another swaps the photo in place.
+  // attached until Use this photo.
   await scene(
     page,
     "W3 · check the blur, in a sheet: it waits for your choice",
@@ -291,20 +150,6 @@ test("add garments with product identity -> detail in round 22's order -> retire
     timeout: 20_000,
   });
   await expect(well).toHaveAttribute("data-state", "uploading");
-  const choosing = page.waitForEvent("filechooser");
-  await page
-    .locator("[data-part='photo-check']")
-    .getByText("Pick another", { exact: true })
-    .click();
-  const chooser = await choosing;
-  await chooser.setFiles({
-    name: "houdini.png",
-    mimeType: "image/png",
-    buffer: PNG_2X1,
-  });
-  await expect(use).not.toHaveAttribute("aria-disabled", "true", {
-    timeout: 20_000,
-  });
   await use.click();
   await expect(
     page.getByRole("heading", { name: "Check the blur" }),
@@ -317,17 +162,6 @@ test("add garments with product identity -> detail in round 22's order -> retire
   });
   const preview = well.locator('img[src^="blob:"]');
   await expect(preview).toBeVisible();
-  // The photo attached is the one Pick another chose, not the first: it
-  // is the 2x1 one, twice as wide as it is tall.
-  await expect
-    .poll(() =>
-      preview.evaluate((image: HTMLImageElement) =>
-        image.naturalHeight === 0
-          ? 0
-          : image.naturalWidth / image.naturalHeight,
-      ),
-    )
-    .toBe(2);
   // Use this photo closes W3 back onto the well — its Replace, now.
   await expect(
     page.locator("[data-part='well-actions'] input[type='file']"),
@@ -360,58 +194,6 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await expect(
     page.locator("[data-part='shop-page']").getByText("patagonia.com"),
   ).toBeVisible();
-
-  // §AG. Composition belongs to the product, not to the runner's copy —
-  // enrichment writes it from a brand's page, so the demo writes the row
-  // enrichment would have. Seeded through Drizzle and the real schema.
-  await setHoudiniProduct({
-    // What a read of the pasted page leaves (round 43 #94): done, with
-    // the columns it wrote, and a fabric the runner left empty.
-    extractionStatus: "done",
-    extracted: JSON.stringify({
-      rung: "jsonld",
-      found: { fabric: "synthetic" },
-      written: { fabric: "synthetic", fabricComposition: "100% nylon" },
-    }),
-    fabric: "synthetic",
-    fabricComposition: "100% nylon, GORE-TEX",
-    fabricParts: JSON.stringify([
-      { part: "Body", materials: [{ material: "nylon", pct: 100 }] },
-      {
-        part: "Underarm",
-        materials: [
-          { material: "polyester", pct: 87 },
-          { material: "elastane", pct: 13 },
-        ],
-      },
-    ]),
-  });
-
-  await scene(
-    page,
-    "§AG and round 43 #94 · specs from the page, its values in grey",
-  );
-  await page.reload();
-  await hydrated(page);
-  await expect(page.locator("[data-part='shop-page'] p")).toHaveText(
-    "[Specs from patagonia.com] · Grey values are from the page",
-  );
-  // The fabric the page lent is grey; the runner's own weight stays ink.
-  await expect(
-    page
-      .locator("[data-part='composition']")
-      .getByText("synthetic", { exact: true }),
-  ).toHaveClass(/text-quiet/);
-  await expect(
-    page
-      .locator("[data-part='composition']")
-      .getByText("lightweight", { exact: true }),
-  ).toHaveClass(/text-ink/);
-  await expect(page.getByText("Composition · from")).toBeVisible();
-  await expect(page.getByText("Body")).toBeVisible();
-  await expect(page.getByText("87% polyester · 13% elastane")).toBeVisible();
-  await expect(page.getByText("As labelled by Patagonia")).toBeVisible();
-
   // Round 22's well: Remove takes the photo away — row and storage — and
   // with no photo, detail has no well at all.
   await scene(page, "Y · Remove: the photo goes, and so does the well");
@@ -611,200 +393,4 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await expect(
     page.getByRole("link", { name: /Nike Pegasus 41/ }),
   ).toBeVisible();
-
-  // ---- Round 26 #10 · F at the desk --------------------------------------
-  // The rail holds one card: what is already in the closet in the category
-  // being added, newest first, read-only. It follows the category, and
-  // marks a piece whose brand and name match what is typed.
-  await scene(page, "F at the desk · already in your closet, beside the form");
-  await page.getByRole("link", { name: "Add garment" }).click();
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Add a garment" }),
-  ).toBeVisible();
-  await hydrated(page);
-  // Round 26 #9: the way back reads "← Closet".
-  await expect(
-    page.getByRole("link", { name: "Closet" }).first(),
-  ).toBeVisible();
-  const rail = page.locator("[data-part='rail']");
-  await expect(
-    rail.getByRole("heading", { name: "Already in your closet · Top" }),
-  ).toBeVisible();
-  await expect(rail.getByText("Patagonia Houdini Jacket")).toBeVisible();
-  await page.getByLabel("Brand").fill("Patagonia");
-  await page.getByLabel("Model / name").fill("Houdini Jacket");
-  await expect(rail.getByText("Same name")).toBeVisible();
-
-  // R-112: a picked type narrows the card to it, and says so by name.
-  await scene(page, "F at the desk · a type narrows the card to that type");
-  await page.getByRole("radio", { name: "Jacket" }).check();
-  await expect(
-    rail.getByRole("heading", {
-      name: "Already in your closet · Top · Jacket",
-    }),
-  ).toBeVisible();
-  await expect(rail.getByText("Patagonia Houdini Jacket")).toBeVisible();
-  await page.getByRole("radio", { name: "Half-zip" }).check();
-  await expect(rail.getByText("No half-zips yet.")).toBeVisible();
-
-  // Round 28 #13: no photo is the hatch; a retirement reads by month and
-  // year; SAME NAME and RETIRED are ink, not a verdict's hue.
-  await scene(page, "F at the desk · the hatch, and RETIRED by month and year");
-  await page.getByLabel("Category").selectOption("shoes");
-  await expect(
-    rail.getByRole("heading", { name: "Already in your closet · Shoes" }),
-  ).toBeVisible();
-  await expect(rail.getByText("Retired", { exact: true })).toBeVisible();
-  await expect(
-    rail.getByText(/^0 runs · Retired [A-Z][a-z]{2} \d{4}$/u),
-  ).toBeVisible();
-  await expect(
-    rail.locator("[data-part='thumb'][data-state='no-photo']").first(),
-  ).toBeVisible();
-
-  // ---- Round 26 #4 · saved, photo refused ---------------------------------
-  // A new piece, and its photo lost to a dropped connection: the save is
-  // not undone, the fields go, and Try again re-sends the same file.
-  await scene(
-    page,
-    "F · the connection drops under the photo, not the garment",
-  );
-  await page.getByLabel("Category").selectOption("top");
-  await page.getByRole("radio", { name: "Jacket" }).check();
-  await page.getByLabel("Model / name").fill("Houdini Air");
-  await expect(rail.getByText("Same name")).toHaveCount(0);
-  await expect(rail.getByText("Patagonia Houdini Air")).toHaveCount(0);
-  await page.setInputFiles('[data-part="photo-well"] input[type="file"]', {
-    name: "houdini-air.png",
-    mimeType: "image/png",
-    buffer: PNG_1X1,
-  });
-  // W3 waits for the runner (round 28 #5): nothing is attached until
-  // Use this photo, which waits behind aria-disabled while it blurs.
-  await page
-    .getByRole("button", { name: "Use this photo" })
-    .click({ timeout: 20_000 });
-  await expect(well).toHaveAttribute("data-state", "filled", {
-    timeout: 20_000,
-  });
-  let hasDropped = false;
-  await page.route("**/_serverFn/**", async (route) => {
-    if (
-      !hasDropped &&
-      isPhotoUpload(route.request().headers()["content-type"])
-    ) {
-      hasDropped = true;
-      await route.abort("internetdisconnected");
-      return;
-    }
-    await route.continue();
-  });
-  await page.getByRole("button", { name: "Add to closet" }).click();
-
-  const band = page.locator("[data-part='failure-band']");
-  await expect(band).toContainText("Photo not added");
-  await expect(band).toContainText("Garment saved, photo didn't. Try again?");
-  await expect(band).toContainText("Your connection dropped.");
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Patagonia Houdini Air" }),
-  ).toBeVisible();
-  await expect(page.getByText("Saved to closet · Top · Jacket")).toBeVisible();
-  await expect(page.getByLabel("Model / name")).toHaveCount(0);
-  // R-114: the rail stays, and the piece the save made is one of its rows.
-  await scene(page, "F · saved: the rail lists the piece it just made");
-  await expect(rail.getByText("Patagonia Houdini Air")).toBeVisible();
-  await expect(page.getByLabel("Pick another")).toBeAttached();
-  await expect(page.getByRole("button", { name: "Done" })).toBeVisible();
-
-  await scene(page, "Try again sends the same photo, and lands on the piece");
-  await page.unroute("**/_serverFn/**");
-  await band.getByRole("button", { name: "Try again" }).click();
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Patagonia Houdini Air" }),
-  ).toBeVisible();
-  await expect(well.locator('img[src^="/closet/photo/"]')).toBeVisible();
-
-  // ---- Round 26 #3 · deleting a piece with runs ---------------------------
-  // Three runs in the Houdini Air, two of them in one 5 °C band and one in
-  // the next: seeded as rows, with the bands the runner set, because what
-  // the sheet counts is history and history is not typed into a form.
-  const itemId = new URL(page.url()).pathname.split("/").at(-1) ?? "";
-  const userId = await userIdOf("closet");
-  await withLocalDb(async ({ core, weather }) => {
-    const startedAt = nowSeconds() - 3 * 86_400;
-    for (const [index, tempC] of [6, 8, 12].entries()) {
-      const runId = newUlid();
-      const entryId = newUlid();
-      await core.insert(runs).values({
-        id: runId,
-        userId,
-        title: "Demo run",
-        startedAt: startedAt + index * 86_400,
-        durationS: 2400,
-        distanceM: 8000,
-        lat: 44.98,
-        lng: -93.27,
-        source: "manual",
-        indoor: false,
-      });
-      await weather
-        .insert(manualConditions)
-        .values({ runId, tempC, setAt: startedAt });
-      await core.insert(outfitEntries).values({
-        id: entryId,
-        userId,
-        runId,
-        verdict: 0,
-        audience: "private",
-        createdAt: startedAt + index * 86_400,
-      });
-      await core.insert(outfitEntryItems).values({ entryId, itemId });
-    }
-  });
-
-  await scene(page, "Y · a piece with runs: delete asks to retire it instead");
-  await page.reload();
-  await hydrated(page);
-  await page.getByRole("button", { name: "Delete" }).click();
-  const worn = page.locator(
-    "[data-part='sheet'][data-state='delete-with-runs']",
-  );
-  await expect(
-    worn.getByRole("heading", {
-      name: "Delete the Houdini Air? Retire it instead.",
-    }),
-  ).toBeVisible();
-  await expect(worn.getByText(/^It's on 3 runs\./u)).toBeVisible();
-  await expect(
-    worn.getByText("It comes off the kit of all 3 runs"),
-  ).toBeVisible();
-  await expect(worn.getByText("Its record in 2 bands")).toBeVisible();
-  await expect(worn.getByRole("button", { name: "Cancel" })).toBeFocused();
-
-  await scene(page, "Delete it and its record: straight through, back to C");
-  await worn.getByRole("button", { name: "Delete it and its record" }).click();
-  await expect(
-    page.getByRole("status").filter({ hasText: "deleted" }),
-  ).toHaveText("Houdini Air deleted.");
-  await expect(
-    page.getByRole("link", { name: /Patagonia Houdini Air/ }),
-  ).toHaveCount(0);
-
-  // ---- R-137 · a brand in any script --------------------------------------
-  // The identity key used to keep `[a-z0-9]` and nothing else, so "ミズノ"
-  // normalized to nothing and the save was refused for having no letters.
-  // A letter in any script is a letter now.
-  await scene(page, "F · a brand written in katakana saves like any other");
-  await page.getByRole("link", { name: "Add garment" }).click();
-  await hydrated(page);
-  await page.getByLabel("Brand").fill("ミズノ");
-  await page.getByLabel("Model / name").fill("ウエーブライダー 28");
-  await page.getByLabel("Category").selectOption("shoes");
-  await page.getByRole("button", { name: "Add to closet" }).click();
-  await expect(
-    page.getByRole("heading", { level: 1, name: "ミズノ ウエーブライダー 28" }),
-  ).toBeVisible();
-  await expect(
-    page.getByText("Brand name must contain at least one letter or digit."),
-  ).toHaveCount(0);
 });

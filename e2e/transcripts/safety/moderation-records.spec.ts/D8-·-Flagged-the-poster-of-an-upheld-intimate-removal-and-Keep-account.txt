@@ -1,0 +1,81 @@
+document
+navigation, Desk
+dialed.run
+Desk
+Operator
+list
+listitem, level 1, position 1, set size 5
+link, :when
+:when
+end of link, :when
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Review
+Review
+end of link, Review
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+link, Access
+Access
+end of link, Access
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Duplicates
+Duplicates
+end of link, Duplicates
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, Runners, current page
+Runners
+end of link, Runners, current page
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Desk
+main
+region, Runners
+heading, Runners, level 1
+# accounts
+search
+Handle or email
+searchbox, Handle or email, poster_#@example.com
+navigation, Filter runners
+link, All
+link, Reported
+link, Closed
+link, Flagged #, current page
+Flagged
+#
+end of link, Flagged #, current page
+end of navigation, Filter runners
+end of search
+table
+rowgroup
+row, Handle Email Joined Runs Reports State
+columnheader, Handle
+Handle
+end of columnheader, Handle
+columnheader, Email
+Email
+end of columnheader, Email
+columnheader, Joined
+Joined
+end of columnheader, Joined
+columnheader, Runs
+Runs
+end of columnheader, Runs
+columnheader, Reports
+Reports
+end of columnheader, Reports
+columnheader, State
+State
+end of columnheader, State
+end of row, Handle Email Joined Runs Reports State
+end of rowgroup
+rowgroup
+end of table
+paragraph
+Pick a runner to rename or close.
+end of paragraph
+end of region, Runners
+end of main
+end of document

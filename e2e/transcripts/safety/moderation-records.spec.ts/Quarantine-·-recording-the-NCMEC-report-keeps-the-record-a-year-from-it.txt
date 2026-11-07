@@ -1,0 +1,92 @@
+document
+navigation, Desk
+dialed.run
+Desk
+Operator
+list
+listitem, level 1, position 1, set size 5
+link, :when
+:when
+end of link, :when
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Review, current page
+Review
+end of link, Review, current page
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+link, Access
+Access
+end of link, Access
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Duplicates
+Duplicates
+end of link, Duplicates
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, Runners
+Runners
+end of link, Runners
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Desk
+main
+heading, Review, level 1
+# waiting · # decided today
+heading, # waiting, level 2
+# waiting
+end of heading, # waiting, level 2
+paragraph
+Nothing waiting. The daily digest says so too.
+end of paragraph
+region, Takedown
+heading, Takedown, level 2
+form
+status
+What it is
+combobox, What it is, has popup listbox, not expanded
+option, Not set, selected, position 1, set size 3
+option, A photo, photo, not selected, position 2, set size 3
+option, A whole entry, entry, not selected, position 3, set size 3
+end of combobox, What it is, has popup listbox, not expanded
+Its id
+textbox, Its id
+The notice
+textbox, The notice, Who sent it, and its reference.
+Who sent it, and its reference.
+button, Take it down
+Take it down
+end of button, Take it down
+end of form
+end of region, Takedown
+heading, Quarantine · #, level 2
+Quarantine · #
+end of heading, Quarantine · #, level 2
+list
+listitem, level 1, position 1, set size 1
+entry
+Held
+:month # #
+Uploader
+:id
+Kept until
+:month # #
+reported to NCMEC :month # #
+·
+E#E-#
+form
+status
+Report recorded.
+end of status
+CyberTipline report number
+textbox, CyberTipline report number, E#E-#, Optional. Record it once the report is filed; it is then kept a year from now.
+Optional. Record it once the report is filed; it is then kept a year from now.
+button, Record the NCMEC report
+Record the NCMEC report
+end of button, Record the NCMEC report
+end of form
+end of listitem, level 1, position 1, set size 1
+end of list
+end of main
+end of document

@@ -1,24 +1,19 @@
 /**
  * Covers: A1 (upload, read in place — the parsed card, no import page;
  * at the desk in two columns with the conditions in the rail; the start-time
- * correction, round 26 item 1; a Garmin TCX of many laps read as the whole
- * run, R-130; a paused TCX read at its elapsed time, D-111),
- * A2 (the picker from the first frame, a kit required, the outfit photo
- * through W3's blur, and at the desk the rail's band history, round 25),
- * S1 (the Strava reminder a matching upload clears, round 25), A3 (Noted,
- * with the band the corrected run now has, and the desk rail's band
- * history), R1 (manual entry going on to the outfit, R-102), R (the runs
- * list's badges) and R2b (setting conditions by picking a band and a sky,
- * never typing a number — round 26 item 2) and deleting a run from its
- * own page (task 128 · SAF-3).
+ * correction, round 26 item 1), A2 (the picker from the first frame, a kit
+ * required, the outfit photo through W3's blur, and at the desk the rail's
+ * band history, round 25), S1 (the Strava reminder a matching upload
+ * clears, round 25), A3 (Noted, with the band the corrected run now has,
+ * and the desk rail's band history), R1 (manual entry going on to the
+ * outfit, R-102) and R (the runs list's badges).
  *
  * Journey: open the closet -> launch the log flow from the bar -> drop a
  * GPX file and watch it read in place -> A2: try Next with nothing chosen,
  * pick a piece, add a photo -> A3: log it and read the receipt -> enter a
- * run by hand and land on picking its outfit -> the runs list -> set the
- * conditions of a run the weather gave up on -> the retired import URL
- * lands on A1 -> delete a run -> a six-lap Garmin TCX reads as every lap
- * -> a TCX paused between laps reads at its elapsed time.
+ * run by hand and land on picking its outfit -> the runs list.
+ * `run-logging.spec.ts` holds R2b's conditions by picking, deleting a run,
+ * the retired import URL, and the Garmin TCX reads (R-130, D-111).
  *
  * **It opens on the closet rather than on `/runs/new`, and that is the
  * point of the first beat** (task 117). A `page.goto` is a document load,
@@ -35,16 +30,9 @@
  * Deliberately excluded: Strava OAuth (no credentials, and the connect flow
  * redirects off-app so it can't be recorded).
  */
-import { readFileSync } from "node:fs";
-
 import { eq } from "drizzle-orm";
 
 import { notifications } from "../../src/db/schema-core";
-import {
-  distanceNumber,
-  formatDuration,
-  formatPace,
-} from "../../src/lib/contracts/measures";
 import { clockLabel, timeOfDay } from "../../src/lib/dates";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
@@ -53,7 +41,6 @@ import {
   hydrated,
   seedItem,
   seedObservation,
-  seedRun,
   unseed,
   unseedObservations,
   userIdOf,
@@ -81,34 +68,6 @@ const PNG_1X1 = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
   "base64",
 );
-
-/**
- * The parser suite's Garmin fixture: five 1609.34m auto-laps and a short
- * last lap, as a Forerunner writes them. Its laps sum to 2509.4 seconds and
- * 8459.4 metres; its first lap alone is 482 seconds and one mile, which is
- * what A1 read before R-130.
- */
-const SIX_LAPS = new URL(
-  "../../test/runs/fixtures/multi-lap.tcx",
-  import.meta.url,
-);
-const SIX_LAPS_SECONDS = 2509;
-const SIX_LAPS_METRES = 8459.4;
-
-/**
- * The parser suite's paused fixture: two 600-second laps with the watch
- * paused three minutes between them. Elapsed is 1380 seconds, which is what
- * the card reads since D-111; timer time is the laps' 1200, which is what
- * it read before. Pace on screen is elapsed-based until design 130's read
- * API gives moving pace.
- */
-const PAUSED = new URL(
-  "../../test/runs/fixtures/paused-climb.tcx",
-  import.meta.url,
-);
-const PAUSED_ELAPSED_SECONDS = 1380;
-const PAUSED_TIMER_SECONDS = 1200;
-const PAUSED_METRES = 3800;
 
 /**
  * A start as the parsed card reads it, and as its time input takes it: on
@@ -141,7 +100,7 @@ function hhmmOf(epochSeconds: number): string {
   return timeOfDay(epochSeconds, CHICAGO);
 }
 
-test("log a run: read a file in place, pick the kit, note it, set conditions", async ({
+test("log a run: read a file in place, pick the kit, note it, enter one by hand", async ({
   page,
 }, testInfo) => {
   // Generous, because recording pace is not a latency budget. `scene()`
@@ -149,9 +108,8 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
   // them (R-58), so a recorded run takes minutes where CI's takes seconds.
   testInfo.setTimeout(180_000);
 
-  // A piece to wear, and a run the weather gave up on for R2b — seeded,
-  // because the closet and the provider are other journeys' business.
-  // The conformance fixtures' own seeding and clean-up, so this journey and
+  // A piece to wear — seeded, because the closet is another journey's
+  // business. The conformance fixtures' own seeding and clean-up, so this journey and
   // the specs that share its account take out the same rows.
   const seeded: Seeded = {
     userId: await userIdOf("run-logging"),
@@ -200,12 +158,6 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
       createdAt: fileStart + 5 * 60 + 1800,
     });
   });
-  const staleRunId = await seedRun(seeded, {
-    observed: false,
-    weatherStatus: "failed",
-    startedAt: nowSeconds() - 10 * 86_400,
-  });
-
   try {
     await page.goto("/closet");
     await hydrated(page);
@@ -413,7 +365,7 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
       page.getByRole("heading", { name: "What did you wear?" }),
     ).toBeVisible();
 
-    // ---- R · the list, and R2b ---------------------------------------
+    // ---- R · the list ------------------------------------------------
     await scene(page, "Runs · four badges and one breath");
     await page.goto("/runs");
     await hydrated(page);
@@ -425,90 +377,6 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
         .getByRole("link", { name: /^Notifications, (\d+|more than 9) new$/u })
         .first(),
     ).toHaveAttribute("data-state", "number");
-
-    await scene(page, "No weather came back — set it by picking, never typing");
-    const stale = page.locator('[data-slot="run-row"]').filter({
-      has: page.locator(`a[href="/runs/${staleRunId}"]`),
-    });
-    await expect(stale).toContainText("No weather for this time");
-    await stale.getByRole("button", { name: /Set conditions/u }).click();
-    const sheet = page.getByRole("dialog", { name: "No weather saved" });
-    await expect(sheet).toBeVisible();
-    await sheet
-      .getByRole("button", { name: "Set conditions", exact: true })
-      .click();
-    const picks = page.getByRole("dialog", { name: "Set conditions" });
-    await scene(page, "Two picks, nothing preselected: how warm, and the sky");
-    await expect(picks.getByRole("radio", { checked: true })).toHaveCount(0);
-    await expect(picks.locator("input:not([type='radio'])")).toHaveCount(0);
-    // The band for 10–15 °C, in whichever unit the runner reads.
-    await picks.getByRole("radio").nth(6).check();
-    await picks.getByRole("radio", { name: "Rain" }).check();
-    await picks.getByRole("button", { name: /^Set .+ and rain$/u }).click();
-    await expect(picks).toBeHidden({ timeout: 15_000 });
-    await scene(page, "The badge says the range and the sky, never a midpoint");
-    await expect(stale).toContainText(/Set · .+ · Rain/u, { timeout: 15_000 });
-
-    // ---- The import page is gone --------------------------------------
-    await scene(page, "The old import page is gone — its URL lands on A1");
-    await page.goto(`/runs/import/${newUlid()}`);
-    await hydrated(page);
-    await expect(page).toHaveURL(/\/runs\/new$/u);
-
-    // ---- Delete a run (task 128 · SAF-3) --------------------------------
-    await scene(page, "A run you'd rather not keep — delete it from its page");
-    await page.goto(`/runs/${staleRunId}`);
-    await hydrated(page);
-    await page.getByRole("button", { name: "Delete this run" }).click();
-    await expect(
-      page.getByRole("heading", { name: "Delete this run?" }),
-    ).toBeVisible();
-    await scene(page, "The sheet says what goes with it — then it's gone");
-    await page.getByRole("button", { name: "Delete", exact: true }).click();
-    await expect(page).toHaveURL(/\/runs$/u);
-    await expect(page.locator(`a[href="/runs/${staleRunId}"]`)).toHaveCount(0);
-
-    // ---- A1 · a watch's laps are one run (R-130) ------------------------
-    await scene(page, "A Garmin file writes a lap a mile — A1 reads every lap");
-    await page.goto("/runs/new");
-    await hydrated(page);
-    await page.setInputFiles('[data-part="drop-zone"] input[type="file"]', {
-      name: "forerunner_six_laps.tcx",
-      mimeType: "application/vnd.garmin.tcx+xml",
-      buffer: readFileSync(SIX_LAPS),
-    });
-    await expect(
-      page.getByText("Parsed · forerunner_six_laps.tcx"),
-    ).toBeVisible({ timeout: 20_000 });
-    await scene(page, "Five auto-lap miles and a short last one, all counted");
-    // The card's headline in the app's own formatters: "5.3 mi · 41:49",
-    // where the first lap alone read "1.0 mi · 8:02".
-    await expect(card).toContainText(
-      `${distanceNumber(SIX_LAPS_METRES, "mi")} mi · ${formatDuration(SIX_LAPS_SECONDS)}`,
-    );
-
-    // ---- A1 · a pause is part of the run's time (D-111) -----------------
-    await scene(page, "A run with a stop in it — the watch paused at a light");
-    await page.goto("/runs/new");
-    await hydrated(page);
-    await page.setInputFiles('[data-part="drop-zone"] input[type="file"]', {
-      name: "paused_at_the_light.tcx",
-      mimeType: "application/vnd.garmin.tcx+xml",
-      buffer: readFileSync(PAUSED),
-    });
-    await expect(
-      page.getByText("Parsed · paused_at_the_light.tcx"),
-    ).toBeVisible({ timeout: 20_000 });
-    await scene(page, "A1 reads the time on the clock, the stop included");
-    // "2.4 mi · 23:00", where the laps' timer time read "2.4 mi · 20:00";
-    // the pace beside it is elapsed pace too.
-    await expect(card).toContainText(
-      `${distanceNumber(PAUSED_METRES, "mi")} mi · ${formatDuration(PAUSED_ELAPSED_SECONDS)}`,
-    );
-    await expect(card).not.toContainText(formatDuration(PAUSED_TIMER_SECONDS));
-    await expect(card).toContainText(
-      formatPace(PAUSED_ELAPSED_SECONDS, PAUSED_METRES, "mi") ?? "",
-    );
   } finally {
     await unseed(seeded);
     await unseedObservations(observations);
