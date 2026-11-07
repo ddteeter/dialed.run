@@ -1,9 +1,14 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { blocks, followNotices, notifications } from "../../src/db/schema-core";
+import {
+  blocks,
+  followNotices,
+  notifications,
+  userProfiles,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { follow, unfollow } from "../../src/modules/feed/follows";
 import {
@@ -25,6 +30,41 @@ beforeEach(async () => {
   await deleteAllFrom(core(), [followNotices, blocks]);
   await resetTables();
 });
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+/**
+ * Thirty days, written out rather than read from the module.
+ */
+const THIRTY_DAYS = 30 * 86_400;
+
+/**
+ * Stops the clock at `seconds`, so a test can stand on an exact second.
+ */
+function clockAt(seconds: number): void {
+  vi.spyOn(Date, "now").mockReturnValue(seconds * 1000);
+}
+
+/**
+ * A runner followed you and was rung at `rungAt`; then they unfollowed, the row
+ * was read, and they follow again. Answers how many unread rows you have.
+ */
+async function refollowRungAt(rungAt: number): Promise<number> {
+  const you = await makeUser();
+  const ada = await makeUser();
+  await follow(ada, you);
+  await markRead(you);
+  await unfollow(ada, you);
+  await core()
+    .update(followNotices)
+    .set({ rungAt })
+    .where(eq(followNotices.followerId, ada));
+  await follow(ada, you);
+  const rows = await bellOf(you);
+  return rows.filter((row) => !row.read).length;
+}
 
 async function bellOf(userId: string) {
   return core()
@@ -132,6 +172,45 @@ describe("following rings the bell (D-168)", () => {
     await follow(ada, you);
     const rows = await bellOf(you);
     expect(rows.filter((row) => !row.read)).toHaveLength(0);
+  });
+
+  it("is quiet for 30 days to the second, and rings on the second they end", async () => {
+    clockAt(1_800_000_000);
+    expect(await refollowRungAt(1_800_000_000 - THIRTY_DAYS + 1)).toBe(0);
+    expect(await refollowRungAt(1_800_000_000 - THIRTY_DAYS)).toBe(1);
+  });
+
+  it("stays quiet 29 days on", async () => {
+    clockAt(1_800_000_000);
+    expect(await refollowRungAt(1_800_000_000 - 29 * 86_400)).toBe(0);
+  });
+
+  it("rings a first follow whatever the clock reads", async () => {
+    // Within 30 days of the epoch, a never-rung follower must not be read
+    // as rung at zero.
+    clockAt(1000);
+    const you = await makeUser();
+    const ada = await makeUser({ username: "ada" });
+    await ringFollow(ada, you);
+    expect(await bellOf(you)).toHaveLength(1);
+  });
+
+  it("rings nothing for a follower with no handle yet", async () => {
+    const you = await makeUser();
+    const ada = await makeUser({ username: "ada" });
+    await core()
+      .update(userProfiles)
+      .set({ username: NO_LINK })
+      .where(eq(userProfiles.userId, ada));
+    await ringFollow(ada, you);
+    expect(await bellOf(you)).toHaveLength(0);
+    // The positive control: the same follower rings once they have one.
+    await core()
+      .update(userProfiles)
+      .set({ username: "ada" })
+      .where(eq(userProfiles.userId, ada));
+    await ringFollow(ada, you);
+    expect(await bellOf(you)).toHaveLength(1);
   });
 
   it("rings nothing for a follow that was already there", async () => {

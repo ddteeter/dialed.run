@@ -8,7 +8,6 @@
 import { and, asc, count, desc, eq, gte, inArray, ne, sql } from "drizzle-orm";
 
 import {
-  brands,
   productCorrections,
   products,
   userProfiles,
@@ -26,6 +25,7 @@ import { nowSeconds } from "../../lib/now";
 import { orSqlNull } from "../../lib/sql/sql-null";
 import { notificationInsert } from "../notifications";
 import {
+  brandNameColumn,
   currentValues,
   productFactColumns,
   productPatch,
@@ -74,48 +74,36 @@ export const CORRECTIONS_PAGE = 100;
 
 const DAY_SECONDS = 24 * 60 * 60;
 
-function waitingGroups(db: CoreDb) {
-  return db
-    .select({
-      productId: productCorrections.productId,
-      field: productCorrections.field,
-      value: productCorrections.value,
-      runners: count().as("runners"),
-      firstAt: sql<number>`min(${productCorrections.createdAt})`.as("first_at"),
-    })
-    .from(productCorrections)
-    .where(eq(productCorrections.status, "waiting"))
-    .groupBy(
-      productCorrections.productId,
-      productCorrections.field,
-      productCorrections.value,
-    );
-}
+const byQueueRow = [
+  productCorrections.productId,
+  productCorrections.field,
+  productCorrections.value,
+] as const;
+
+const waitingNow = eq(productCorrections.status, "waiting");
 
 /**
- * The rail's count, in D1's style: rows on the queue. A statement, so
- * Today's one batch carries it; it always answers one row.
+ * The rail's count, in D1's style: rows on the queue, one `1` per row for
+ * the caller to add up. A statement, so Today's one batch carries it.
  */
 export function waitingCorrectionsCountOf(db: CoreDb) {
-  const groups = waitingGroups(db).as("groups");
-  return db.select({ rows: count() }).from(groups);
+  return db
+    .select({ rows: sql<number>`1` })
+    .from(productCorrections)
+    .where(waitingNow)
+    .groupBy(...byQueueRow);
 }
 
 /**
- * Rows decided since midnight UTC, as Review's header counts its own.
+ * Rows decided since midnight UTC, as Review's header counts its own: one
+ * answer per row.
  */
 function decidedTodayOf(db: CoreDb, dayStart: number) {
-  const decided = db
-    .select({ productId: productCorrections.productId })
+  return db
+    .select({ rows: sql<number>`1` })
     .from(productCorrections)
     .where(gte(productCorrections.decidedAt, dayStart))
-    .groupBy(
-      productCorrections.productId,
-      productCorrections.field,
-      productCorrections.value,
-    )
-    .as("decided");
-  return db.select({ rows: count() }).from(decided);
+    .groupBy(...byQueueRow);
 }
 
 /**
@@ -124,23 +112,23 @@ function decidedTodayOf(db: CoreDb, dayStart: number) {
 export async function correctionsQueue(): Promise<CorrectionsQueue> {
   const db = coreDb();
   const now = nowSeconds();
-  const groups = waitingGroups(db).as("groups");
+  const firstAt = sql<number>`min(${productCorrections.createdAt})`;
+  const mostRunners = desc(count());
   const [rows, waiting, decided] = await db.batch([
     db
       .select({
-        productId: groups.productId,
-        field: groups.field,
-        value: groups.value,
-        firstAt: groups.firstAt,
-        // Aliased: D1 answers by column name, so an unaliased `brands.name`
-        // beside `products.name` comes back as the product's.
-        brandName: sql<string>`${brands.name}`.as("brand_name"),
+        productId: productCorrections.productId,
+        field: productCorrections.field,
+        value: productCorrections.value,
+        firstAt,
+        brandName: brandNameColumn(),
         ...productFactColumns(),
       })
-      .from(groups)
-      .innerJoin(products, eq(products.id, groups.productId))
-      .innerJoin(brands, eq(brands.id, products.brandId))
-      .orderBy(desc(groups.runners), asc(groups.firstAt))
+      .from(productCorrections)
+      .innerJoin(products, eq(products.id, productCorrections.productId))
+      .where(waitingNow)
+      .groupBy(...byQueueRow)
+      .orderBy(mostRunners, asc(firstAt))
       .limit(CORRECTIONS_PAGE),
     waitingCorrectionsCountOf(db),
     decidedTodayOf(db, now - (now % DAY_SECONDS)),
@@ -164,8 +152,8 @@ export async function correctionsQueue(): Promise<CorrectionsQueue> {
         )
         .map(({ handle, createdAt, note }) => ({ handle, createdAt, note })),
     })),
-    waiting: waiting[0]?.rows ?? 0,
-    decidedToday: decided[0]?.rows ?? 0,
+    waiting: waiting.length,
+    decidedToday: decided.length,
   };
 }
 
@@ -175,7 +163,6 @@ export async function correctionsQueue(): Promise<CorrectionsQueue> {
  * page rather than one per row.
  */
 async function filersOf(productIds: readonly string[]) {
-  if (productIds.length === 0) return [];
   const distinctIds = [...new Set(productIds)];
   const waitingOnPage = and(
     eq(productCorrections.status, "waiting"),
@@ -367,8 +354,9 @@ export async function declineCorrection({
   key: CorrectionKey;
   reason: DeclineReason;
 }>): Promise<void> {
+  // Nobody left waiting (a repeat) writes nothing: every write below is
+  // keyed on the filers' ids, and an empty `inArray` matches no row.
   const { filers, product } = await toDecide(key, false);
-  if (filers.length === 0) return;
   const said = reason === "none" ? undefined : DECLINE_REASON_LABELS[reason];
   const kept = `We kept the ${CORRECTION_FIELD_NOUNS[key.field]} on ${product.name} as it is.`;
   const db = primaryCoreDb();

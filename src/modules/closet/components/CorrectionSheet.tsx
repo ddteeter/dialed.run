@@ -19,6 +19,7 @@ import {
   FormStatus,
   Icon,
   Mono,
+  NO_CHOICE,
   Sheet,
   SheetReceipt,
   SubmitButton,
@@ -144,9 +145,11 @@ export function CorrectionSheet(
   );
 }
 
-const NO_CONTEXT: CorrectionContextRow = {
-  brandName: "",
-  productName: "",
+/**
+ * What the sheet goes on before it has read the product, or when the read
+ * fails: no quote, no waiting line, and no kicker.
+ */
+const NO_FACTS: Pick<CorrectionContextRow, "current" | "waiting"> = {
   current: {},
   waiting: [],
 };
@@ -155,8 +158,8 @@ function useCorrectionContext(
   isOpen: boolean,
   productId: string,
   load: CorrectionSheetProps["loadContext"],
-): CorrectionContextRow {
-  const [context, setContext] = useState(NO_CONTEXT);
+): CorrectionContextRow | undefined {
+  const [context, setContext] = useState<CorrectionContextRow>();
   useEffect(() => {
     if (!isOpen) return;
     let isCurrent = true;
@@ -186,10 +189,11 @@ function CorrectionForm({
   onSent,
 }: Readonly<CorrectionSheetProps & { onSent: () => void }>): JSX.Element {
   const [field, setField] = useState<CorrectionField | undefined>();
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState<string>(NO_CHOICE);
   const [note, setNote] = useState("");
   const { idempotencyKey } = useIdempotencyKey();
   const context = useCorrectionContext(open, subject.productId, loadContext);
+  const facts = context ?? NO_FACTS;
   const form = useFormSubmit({
     carry: "page",
     schema: fileCorrectionSchema,
@@ -203,7 +207,7 @@ function CorrectionForm({
     },
     confirmTrigger: "correct",
   });
-  const sent = context.waiting.find((row) => row.field === field);
+  const sent = facts.waiting.find((row) => row.field === field);
   return (
     <form
       ref={form.formRef}
@@ -241,7 +245,7 @@ function CorrectionForm({
           setField(picked);
           // A field with one waiting opens with what was sent (R48·129c).
           setValue(
-            context.waiting.find((row) => row.field === picked)?.value ?? "",
+            facts.waiting.find((row) => row.field === picked)?.value ?? "",
           );
         }}
         field={form.field}
@@ -250,7 +254,7 @@ function CorrectionForm({
       {field === undefined ? undefined : (
         <ValueInput
           field={field}
-          label={valueLabel(field, context.current[field])}
+          label={valueLabel(field, facts.current[field])}
           value={value}
           onChange={setValue}
           formField={form.field}
@@ -287,8 +291,10 @@ function CorrectionForm({
  */
 function ProductKicker({
   context,
-}: Readonly<{ context: CorrectionContextRow }>): JSX.Element | undefined {
-  if (context.productName === "") return;
+}: Readonly<{
+  context: CorrectionContextRow | undefined;
+}>): JSX.Element | undefined {
+  if (context === undefined) return;
   return (
     <Mono step="xs" className="text-muted">
       {context.brandName} · {context.productName}
@@ -342,7 +348,7 @@ function ValueInput({
         label={label}
         options={weightSchema.options}
         optionLabels={WEIGHT_LABELS}
-        value={weightSchema.safeParse(value).data ?? ""}
+        value={weightSchema.safeParse(value).data ?? NO_CHOICE}
         onChange={onChange}
       />
     );
@@ -354,7 +360,7 @@ function ValueInput({
         label={label}
         options={fabricSchema.options}
         optionLabels={FABRIC_LABELS}
-        value={fabricSchema.safeParse(value).data ?? ""}
+        value={fabricSchema.safeParse(value).data ?? NO_CHOICE}
         onChange={onChange}
       />
     );

@@ -6,7 +6,7 @@
  * most once in 30 days, so an unfollow and refollow does not ring twice.
  * No email, and no setting (R48·131d).
  */
-import { and, count, eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import {
   blocks,
@@ -122,11 +122,11 @@ export async function ringFollow(
     ]);
     return;
   }
-  const [joined] = await db
-    .select({ n: count() })
-    .from(followNotices)
-    .where(eq(followNotices.notificationId, unread.groupId));
-  const body = followBody(handle, joined?.n ?? 0);
+  const joined = await db.$count(
+    followNotices,
+    eq(followNotices.notificationId, unread.groupId),
+  );
+  const body = followBody(handle, joined);
   const stillUnread = and(
     eq(notifications.id, unread.id),
     eq(notifications.read, false),

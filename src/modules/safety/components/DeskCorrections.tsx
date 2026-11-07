@@ -124,7 +124,7 @@ function CorrectionRow({
       >
         <Mono step="xs" className="text-muted">
           {FIELD_KICKER[group.field]} · {counted(group.filers.length, "runner")}{" "}
-          · oldest {monthDayLabel(group.firstAt, "UTC")}
+          · oldest {monthDayLabel(group.firstAt)}
         </Mono>
         <h2 className="m-0 text-body font-bold wrap-anywhere">{title}</h2>
         <NowAndSuggested group={group} />
@@ -174,7 +174,7 @@ function Filers({
   filers,
 }: Readonly<{ filers: readonly CorrectionFiler[] }>): JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
-  const [newest, ...rest] = filers;
+  const rest = filers.slice(1);
   const shown = isOpen ? filers : filers.slice(0, 1);
   return (
     <div className="flex flex-col gap-1">
@@ -183,7 +183,7 @@ function Filers({
           <FilerLine key={index} filer={filer} />
         ))}
       </ul>
-      {isOpen || newest === undefined || rest.length === 0 ? undefined : (
+      {isOpen || rest.length === 0 ? undefined : (
         <button
           type="button"
           aria-expanded={false}
@@ -205,7 +205,7 @@ function FilerLine({
   const who = filer.handle === null ? "A deleted runner" : `@${filer.handle}`;
   return (
     <li className="text-small wrap-anywhere">
-      {who} · {monthDayLabel(filer.createdAt, "UTC")}
+      {who} · {monthDayLabel(filer.createdAt)}
       {filer.note === null ? undefined : <> · &ldquo;{filer.note}&rdquo;</>}
     </li>
   );
@@ -262,7 +262,6 @@ function DecisionBar({
     action: (values) => decide(values, apply, decline),
     onSuccess: () => router.invalidate(),
     successMessage: isDeclining ? "Declined." : "Applied.",
-    labels: { reason: "Reason" },
     refusal: {
       matches: (result) => !result.applied,
       answer: () => {

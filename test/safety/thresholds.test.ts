@@ -53,6 +53,12 @@ describe("parsing the config", () => {
     expect(parseThresholds(3)).toBeUndefined();
   });
 
+  it("reads only a string, never what something else turns into", () => {
+    // A one-element array stringifies to its element, so JSON.parse alone
+    // would read this as the whole config.
+    expect(parseThresholds([JSON.stringify(INVENTED)])).toBeUndefined();
+  });
+
   it("is nothing for text that is not JSON", () => {
     expect(parseThresholds("{reports:")).toBeUndefined();
   });

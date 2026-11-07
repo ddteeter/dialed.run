@@ -1,4 +1,10 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -247,6 +253,154 @@ describe("WRONG?'s sheet (R48·129)", () => {
     carriedSince();
     renderSheet();
     expect(carriedSince()).toEqual(["page"]);
+  });
+});
+
+describe("WRONG?'s sheet, closer", () => {
+  it("names the dialog for what it asks, then for the receipt", async () => {
+    const user = userEvent.setup();
+    renderSheet();
+    expect(
+      screen.getByRole("dialog", { name: "What's wrong with it?" }),
+    ).toBeVisible();
+    await user.click(screen.getByRole("radio", { name: "Wind" }));
+    await user.click(screen.getByRole("radio", { name: "Yes" }));
+    await user.click(screen.getByRole("button", { name: "Send correction" }));
+    expect(await screen.findByText("Correction sent.")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("dialog", { name: "Correction sent" }),
+    ).toBeVisible();
+  });
+
+  it("keeps the page where it is on send", () => {
+    renderSheet();
+    const button = screen.getByRole("button", { name: "Send correction" });
+    const form = button.closest("form");
+    expect(form).not.toBeNull();
+    if (form === null) return;
+    expect(fireEvent.submit(form)).toBe(false);
+  });
+
+  it("names each field in the summary by its label", async () => {
+    const user = userEvent.setup();
+    renderSheet();
+    await user.click(screen.getByRole("textbox", { name: /How do you know/u }));
+    await user.paste("x".repeat(281));
+    await user.click(screen.getByRole("button", { name: "Send correction" }));
+    expect(
+      await screen.findByRole("button", {
+        name: "How do you know? — Keep it to 280 characters.",
+      }),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: /^Field — /u })).toBeVisible();
+    await user.click(screen.getByRole("radio", { name: "Name" }));
+    await user.click(screen.getByRole("button", { name: "Send correction" }));
+    expect(
+      await screen.findByRole("button", {
+        name: "It should say — Type the name.",
+      }),
+    ).toBeVisible();
+  });
+
+  it("shows no kicker before the product is read", () => {
+    renderSheet({
+      loadContext: vi
+        .fn<CorrectionSheetProps["loadContext"]>()
+        .mockReturnValue(Promise.withResolvers<CorrectionContextRow>().promise),
+    });
+    expect(screen.queryByText("·")).toBeNull();
+    expect(screen.queryByText(/Stryker/u)).toBeNull();
+  });
+
+  it("asks again when it opens, and keeps only the latest product's answer", async () => {
+    const OTHER = "01HZZZZZZZZZZZZZZZZZZZZZZQ";
+    const first = Promise.withResolvers<CorrectionContextRow>();
+    const loadContext = vi
+      .fn<CorrectionSheetProps["loadContext"]>()
+      .mockImplementation(({ data }) =>
+        data.productId === PRODUCT
+          ? first.promise
+          : Promise.resolve({ ...CONTEXT, productName: "Other Jacket" }),
+      );
+    const sheet = (isOpen: boolean, productId: string) => (
+      <UnconfirmedRefusalAnswer gate={{ sheet: vi.fn() }}>
+        <CorrectionSheet
+          open={isOpen}
+          onClose={vi.fn()}
+          subject={{ productId, garmentId: GARMENT }}
+          loadContext={loadContext}
+          fileCorrection={vi.fn()}
+        />
+      </UnconfirmedRefusalAnswer>
+    );
+    const { rerender } = render(sheet(false, PRODUCT));
+    expect(loadContext).not.toHaveBeenCalled();
+    rerender(sheet(true, PRODUCT));
+    expect(loadContext).toHaveBeenCalledWith({ data: { productId: PRODUCT } });
+    rerender(sheet(true, OTHER));
+    expect(await screen.findByText("Janji · Other Jacket")).toBeVisible();
+    first.resolve(CONTEXT);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(screen.queryByText("Janji · AFO Middle Layer")).toBeNull();
+    expect(screen.getByText("Janji · Other Jacket")).toBeVisible();
+  });
+
+  it("opens a field with none waiting empty, whatever was typed or waits elsewhere", async () => {
+    const user = userEvent.setup();
+    renderSheet({
+      loadContext: vi
+        .fn<CorrectionSheetProps["loadContext"]>()
+        .mockResolvedValue({
+          ...CONTEXT,
+          waiting: [
+            { field: "weight", value: "light", createdAt: 1_762_430_400 },
+          ],
+        }),
+    });
+    await screen.findByText("Janji · AFO Middle Layer");
+    await user.click(screen.getByRole("radio", { name: "Name" }));
+    const name = screen.getByRole("textbox", { name: /It should say/u });
+    expect(name).toHaveValue("");
+    expect(name).toHaveAttribute("type", "text");
+    expect(name).toHaveAttribute("name", "value");
+    await user.type(name, "AFO Jacket");
+    await user.click(screen.getByRole("radio", { name: "Composition" }));
+    expect(screen.getByRole("textbox", { name: /It should say/u })).toHaveValue(
+      "",
+    );
+  });
+
+  it("opens weight and fabric on their placeholder, and fabric on one waiting", async () => {
+    const user = userEvent.setup();
+    renderSheet({
+      loadContext: vi
+        .fn<CorrectionSheetProps["loadContext"]>()
+        .mockResolvedValue({
+          ...CONTEXT,
+          waiting: [
+            { field: "fabric", value: "down", createdAt: 1_762_430_400 },
+          ],
+        }),
+    });
+    await screen.findByText("Janji · AFO Middle Layer");
+    await user.click(screen.getByRole("radio", { name: "Weight" }));
+    const weight = screen.getByRole("combobox");
+    expect(within(weight).getAllByRole("option")[0]).toHaveProperty(
+      "selected",
+      true,
+    );
+    await user.click(screen.getByRole("radio", { name: "Fabric" }));
+    expect(screen.getByRole("combobox")).toHaveValue("down");
+  });
+
+  it("opens fabric with none waiting on its placeholder", async () => {
+    const user = userEvent.setup();
+    renderSheet();
+    await screen.findByText("Janji · AFO Middle Layer");
+    await user.click(screen.getByRole("radio", { name: "Fabric" }));
+    expect(
+      within(screen.getByRole("combobox")).getAllByRole("option")[0],
+    ).toHaveProperty("selected", true);
   });
 });
 

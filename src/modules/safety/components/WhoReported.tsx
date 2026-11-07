@@ -80,7 +80,7 @@ function ReporterList({
             ? "A closed account"
             : `@${reporter.handle}`}{" "}
           · {reportReasonLabels[reporter.reason]} ·{" "}
-          {monthDayLabel(reporter.createdAt, "UTC")}
+          {monthDayLabel(reporter.createdAt)}
         </li>
       ))}
     </ul>

@@ -6,7 +6,6 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 
 import {
-  brands,
   productCorrections,
   products,
   wardrobeItems,
@@ -17,7 +16,11 @@ import { NotFoundError } from "../../lib/errors";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import { orSqlNull } from "../../lib/sql/sql-null";
-import { currentValues, productFactColumns } from "./correction-values";
+import {
+  brandNameColumn,
+  currentValues,
+  productFactColumns,
+} from "./correction-values";
 
 /**
  * What the runner says is wrong, and the note they add.
@@ -131,13 +134,10 @@ export async function correctionContext(
   const [product, waiting] = await db.batch([
     db
       .select({
-        // Aliased: D1 answers by column name, so an unaliased `brands.name`
-        // beside `products.name` comes back as the product's.
-        brandName: sql<string>`${brands.name}`.as("brand_name"),
+        brandName: brandNameColumn(),
         ...productFactColumns(),
       })
       .from(products)
-      .innerJoin(brands, eq(brands.id, products.brandId))
       .where(eq(products.id, productId)),
     db
       .select({

@@ -40,15 +40,18 @@ export async function reportersFor(
   const db = primaryCoreDb();
   const auditId = newUlid();
   const at = nowSeconds();
+  // The aliases are the audit table's own column names, read from it.
   const record = db
     .select({
-      id: sql<string>`${auditId}`.as("id"),
-      actorId: sql<string>`${actorId}`.as("actor_id"),
-      action: sql<"opened_reporters">`'opened_reporters'`.as("action"),
+      id: sql<string>`${auditId}`.as(reviewAudit.id.name),
+      actorId: sql<string>`${actorId}`.as(reviewAudit.actorId.name),
+      action: sql<"opened_reporters">`'opened_reporters'`.as(
+        reviewAudit.action.name,
+      ),
       reviewId: reviewQueue.id,
       subjectType: reviewQueue.subjectType,
       subjectId: reviewQueue.subjectId,
-      createdAt: sql<number>`${at}`.as("created_at"),
+      createdAt: sql<number>`${at}`.as(reviewAudit.createdAt.name),
     })
     .from(reviewQueue)
     .where(eq(reviewQueue.id, reviewId));

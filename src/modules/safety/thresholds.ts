@@ -39,12 +39,12 @@ export type ModerationThresholds = z.infer<typeof moderationThresholdsSchema>;
 export function parseThresholds(
   raw: unknown,
 ): ModerationThresholds | undefined {
-  if (typeof raw !== "string" || raw === "") return undefined;
+  if (typeof raw !== "string") return undefined;
   let json: unknown;
   try {
     json = JSON.parse(raw);
   } catch {
-    return undefined;
+    // Not JSON: `json` stays undefined, which the schema refuses.
   }
   return moderationThresholdsSchema.safeParse(json).data;
 }

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import {
@@ -216,9 +216,9 @@ describe("filing a correction (R48·129)", () => {
         "light",
       ),
     ).rejects.toBeInstanceOf(NotFoundError);
-    await expect(
-      file(ada, other.productId, "weight", "light"),
-    ).rejects.toBeInstanceOf(NotFoundError);
+    const notTheProduct = file(ada, other.productId, "weight", "light");
+    await expect(notTheProduct).rejects.toBeInstanceOf(NotFoundError);
+    await expect(notTheProduct).rejects.toThrow("Garment not found.");
     expect(await rowsOf(ada.userId)).toHaveLength(0);
   });
 });
@@ -248,11 +248,20 @@ describe("the sheet's context (R48·129)", () => {
 
   it("is not found for a product that does not exist", async () => {
     const ada = await makeUser();
-    await expect(correctionContext(ada, newUlid())).rejects.toBeInstanceOf(
-      NotFoundError,
-    );
+    const context = correctionContext(ada, newUlid());
+    await expect(context).rejects.toBeInstanceOf(NotFoundError);
+    await expect(context).rejects.toThrow("Product not found.");
   });
 });
+
+const at = (iso: string) => Date.parse(iso) / 1000;
+
+async function decideAt(userId: string, decidedAt: number): Promise<void> {
+  await core()
+    .update(productCorrections)
+    .set({ status: "declined", decidedBy: "op", decidedAt })
+    .where(eq(productCorrections.userId, userId));
+}
 
 describe("the Desk's queue (R48·130)", () => {
   it("groups by product, field and value, most runners first, then oldest", async () => {
@@ -339,8 +348,7 @@ describe("the Desk's queue (R48·130)", () => {
   it("is empty with nothing waiting, and the count is zero", async () => {
     const queue = await correctionsQueue();
     expect(queue).toStrictEqual({ groups: [], waiting: 0, decidedToday: 0 });
-    const [count] = await waitingCorrectionsCountOf(core());
-    expect(count?.rows).toBe(0);
+    expect(await waitingCorrectionsCountOf(core())).toStrictEqual([]);
   });
 
   it("counts rows on the rail, not runners", async () => {
@@ -348,8 +356,61 @@ describe("the Desk's queue (R48·130)", () => {
     await file(await owner(productId), productId, "weight", "light");
     await file(await owner(productId), productId, "weight", "light");
     await file(await owner(productId), productId, "name", "AFO Mid Layer");
-    const [count] = await waitingCorrectionsCountOf(core());
-    expect(count?.rows).toBe(2);
+    expect(await waitingCorrectionsCountOf(core())).toStrictEqual([
+      { rows: 1 },
+      { rows: 1 },
+    ]);
+  });
+
+  it("gives each row only its own runners: same product and field and value", async () => {
+    const afo = await product();
+    const rover = await product("Rover Half-Zip");
+    const ada = await owner(afo.productId, "ada");
+    const bo = await owner(afo.productId, "bo");
+    const cy = await owner(afo.productId, "cy");
+    const di = await owner(rover.productId, "di");
+    await file(ada, afo.productId, "weight", "light");
+    await file(bo, afo.productId, "water", "yes");
+    await file(cy, afo.productId, "wind", "yes");
+    await file(di, rover.productId, "weight", "light");
+    const queue = await correctionsQueue();
+    const rows = queue.groups.map((group) => [
+      group.productName,
+      group.field,
+      group.filers.map((filer) => filer.handle),
+    ]);
+    const ordered = rows.toSorted((left, right) =>
+      JSON.stringify(left).localeCompare(JSON.stringify(right)),
+    );
+    expect(ordered).toStrictEqual([
+      ["AFO Middle Layer", "water", ["bo"]],
+      ["AFO Middle Layer", "weight", ["ada"]],
+      ["AFO Middle Layer", "wind", ["cy"]],
+      ["Rover Half-Zip", "weight", ["di"]],
+    ]);
+  });
+
+  describe("decided today", () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-11-07T15:00:00Z"));
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("counts rows decided since midnight UTC, and none from yesterday", async () => {
+      const { productId } = await product();
+      const early = await owner(productId);
+      const yesterday = await owner(productId);
+      await file(early, productId, "weight", "light");
+      await file(yesterday, productId, "fabric", "merino");
+      await decideAt(early.userId, at("2026-11-07T00:01:00Z"));
+      await decideAt(yesterday.userId, at("2026-11-06T23:59:00Z"));
+      const queue = await correctionsQueue();
+      expect(queue.decidedToday).toBe(1);
+    });
   });
 
   it("shows a page of rows", () => {
@@ -464,9 +525,9 @@ describe("Apply (R48·130)", () => {
 
   it("is not found for a product that does not exist", async () => {
     const key = weightLight(newUlid());
-    await expect(
-      applyCorrection({ actorId: "op", key }),
-    ).rejects.toBeInstanceOf(NotFoundError);
+    const applied = applyCorrection({ actorId: "op", key });
+    await expect(applied).rejects.toBeInstanceOf(NotFoundError);
+    await expect(applied).rejects.toThrow("Product not found.");
   });
 });
 

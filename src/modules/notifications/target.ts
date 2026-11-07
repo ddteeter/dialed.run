@@ -30,8 +30,6 @@ export function notificationTarget(row: {
         ? undefined
         : { to: "profile", handle: row.linkHandle };
     }
-    default: {
-      return undefined;
-    }
   }
+  return undefined;
 }

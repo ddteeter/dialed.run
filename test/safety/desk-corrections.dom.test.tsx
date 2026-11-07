@@ -1,5 +1,6 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
@@ -8,7 +9,14 @@ import {
   type DeskCorrectionsProps,
 } from "../../src/modules/safety/components/DeskCorrections";
 import type { CorrectionGroup } from "../../src/modules/products";
+import { QUIET_CANCEL } from "../../src/ui";
 import { renderWithRouter } from "../modules/run-fixtures";
+import { carriedSince } from "../ui/carry-spy";
+
+vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
+  const { spyOnCarry } = await import("../ui/carry-spy");
+  return spyOnCarry(await importOriginal());
+});
 
 const NOTHING = z.null().parse(JSON.parse("null"));
 const PRODUCT ="01HZZZZZZZZZZZZZZZZZZZZZZP";
@@ -35,6 +43,38 @@ function group(overrides: Partial<CorrectionGroup> = {}): CorrectionGroup {
     ],
     ...overrides,
   };
+}
+
+const NAME_TAKEN =
+  "Another product of this brand already has that name. Decline it, and look in Duplicates.";
+
+/**
+ * Two rows whose order flips on a press, as a reload that re-sorts the
+ * queue does: each row's open state has to follow its own product.
+ */
+function Reorderable({
+  first,
+  second,
+}: Readonly<{ first: CorrectionGroup; second: CorrectionGroup }>) {
+  const [isFlipped, setIsFlipped] = useState(false);
+  const groups = isFlipped ? [second, first] : [first, second];
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setIsFlipped(true);
+        }}
+      >
+        Re-sort
+      </button>
+      <DeskCorrections
+        queue={{ groups, waiting: 2, decidedToday: 0 }}
+        apply={vi.fn<DeskCorrectionsProps["apply"]>()}
+        decline={vi.fn<DeskCorrectionsProps["decline"]>()}
+      />
+    </>
+  );
 }
 
 async function renderQueue(
@@ -234,5 +274,114 @@ describe("the Desk's Corrections (R48·130)", () => {
       "Weight · 3 runners · oldest Nov 2",
       "Fabric · 3 runners · oldest Nov 2",
     ]);
+  });
+
+  it.each([
+    ["name", "Rover", "Rove", "Name"],
+    ["weight", "light", "mid", "Weight"],
+    ["fabric", "merino", "synthetic", "Fabric"],
+    ["wind", "yes", "no", "Wind"],
+    ["water", "no", "yes", "Water"],
+    ["composition", "80% merino", "100% polyester", "Composition"],
+    ["link", "https://example.com/afo", "https://example.com/old", "Link"],
+  ] as const)(
+    "names the %s field %4$s in the row's kicker",
+    async (field, value, now, kicker) => {
+      await renderQueue([group({ field, value, now })]);
+      expect(
+        screen.getByText(`${kicker} · 3 runners · oldest Nov 2`),
+      ).toBeVisible();
+    },
+  );
+
+  it("keeps a row's opened runners with its product when the rows re-sort", async () => {
+    const user = userEvent.setup();
+    const janji = group();
+    const other = group({
+      productId: "01HZZZZZZZZZZZZZZZZZZZZZZR",
+      productName: "Rover",
+      filers: [
+        { handle: "ada", createdAt: NOV_2, note: NOTHING },
+        { handle: "bo", createdAt: NOV_2, note: NOTHING },
+      ],
+    });
+    await renderWithRouter(<Reorderable first={janji} second={other} />);
+    await user.click(screen.getByRole("button", { name: "2 more runners" }));
+    await user.click(screen.getByRole("button", { name: "Re-sort" }));
+    const [top, bottom] = screen.getAllByRole("article");
+    expect(top).toHaveAccessibleName("Janji · Rover");
+    expect(within(top ?? document.body).getAllByRole("listitem")).toHaveLength(
+      1,
+    );
+    expect(
+      within(top ?? document.body).getByRole("button", {
+        name: "1 more runner",
+      }),
+    ).toBeVisible();
+    expect(bottom).toHaveAccessibleName("Janji · AFO Middle Layer");
+    expect(
+      within(bottom ?? document.body).getAllByRole("listitem"),
+    ).toHaveLength(3);
+  });
+
+  it("carries a lapsed decision back to the page (Au7)", async () => {
+    carriedSince();
+    await renderQueue([group()]);
+    expect(carriedSince()).toStrictEqual(["page"]);
+  });
+
+  it.each([
+    ["Apply", "Apply", "Applying"],
+    ["Decline", "Confirm", "Declining"],
+  ])(
+    "names %s's answer by its in-flight verb, %3$s",
+    async (press, answer, verb) => {
+      const user = userEvent.setup();
+      const never = Promise.withResolvers<never>().promise;
+      await renderQueue([group()], {
+        apply: vi.fn<DeskCorrectionsProps["apply"]>().mockReturnValue(never),
+        decline: vi
+          .fn<DeskCorrectionsProps["decline"]>()
+          .mockReturnValue(never),
+      });
+      if (press === "Decline") {
+        await user.click(screen.getByRole("button", { name: "Decline" }));
+      }
+      const button = screen.getByRole("button", { name: answer });
+      await user.click(button);
+      await waitFor(() => {
+        expect(button).toHaveAccessibleName(verb);
+      });
+    },
+  );
+
+  it("draws Cancel as the Desk's quiet cancel, a full target", async () => {
+    const user = userEvent.setup();
+    await renderQueue([group()]);
+    await user.click(screen.getByRole("button", { name: "Decline" }));
+    const cancel = screen.getByRole("button", { name: "Cancel" });
+    expect(cancel).toHaveClass("target", ...QUIET_CANCEL.split(" "));
+  });
+
+  it("has one status region until a name is refused", async () => {
+    await renderQueue([group()]);
+    expect(
+      within(screen.getByRole("article")).getAllByRole("status"),
+    ).toHaveLength(1);
+  });
+
+  it("clears the refusal line when the next decision goes through", async () => {
+    const user = userEvent.setup();
+    await renderQueue([group({ field: "name", value: "Rover" })], {
+      apply: vi
+        .fn<DeskCorrectionsProps["apply"]>()
+        .mockResolvedValueOnce({ applied: false, reason: "name_taken" })
+        .mockResolvedValue({ applied: true }),
+    });
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+    expect(await screen.findByText(NAME_TAKEN)).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+    expect(await screen.findByText("Applied.")).toBeInTheDocument();
+    expect(screen.queryByText(NAME_TAKEN)).toBeNull();
   });
 });

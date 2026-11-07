@@ -4,7 +4,7 @@
  */
 import { sql, type SQL } from "drizzle-orm";
 
-import { products } from "../../db/schema-core";
+import { brands, products } from "../../db/schema-core";
 import { fabricSchema, weightSchema } from "../../lib/contracts/garments";
 import type { CorrectionField } from "../../lib/contracts/product-corrections";
 import { normalizeIdentity } from "../../lib/normalize";
@@ -88,6 +88,17 @@ export function currentValues(
       (entry): entry is [string, string] => typeof entry[1] === "string",
     ),
   );
+}
+
+/**
+ * The product's brand name, for a select from `products`: a scalar
+ * subquery rather than a join, because D1 answers by column name and a
+ * joined `brands.name` beside `products.name` comes back as the product's.
+ * Both sides are named by table: drizzle prints a column bare inside raw
+ * SQL.
+ */
+export function brandNameColumn() {
+  return sql<string>`(select ${brands}.${sql.identifier(brands.name.name)} from ${brands} where ${brands}.${sql.identifier(brands.id.name)} = ${products}.${sql.identifier(products.brandId.name)})`;
 }
 
 /**

@@ -45,6 +45,29 @@ describe("WRONG?'s schema (R48·129)", () => {
     ]);
   });
 
+  it("names each field as a sentence does", () => {
+    expect(CORRECTION_FIELD_NOUNS).toStrictEqual({
+      name: "name",
+      weight: "weight",
+      fabric: "fabric",
+      wind: "wind resistance",
+      water: "water resistance",
+      composition: "composition",
+      link: "link",
+    });
+  });
+
+  it("reports a wrong value as a custom issue on the value", () => {
+    const parsed = fileCorrectionSchema.safeParse({
+      ...base(),
+      field: "name",
+      value: " ",
+    });
+    expect(
+      parsed.error?.issues.map((issue) => [issue.code, issue.path.join(".")]),
+    ).toStrictEqual([["custom", "value"]]);
+  });
+
   it("accepts a value of each field's type, trimmed", () => {
     const ok: [string, string, string][] = [
       ["name", "  AFO Middle Layer ", "AFO Middle Layer"],
@@ -79,6 +102,16 @@ describe("WRONG?'s schema (R48·129)", () => {
     expect(messagesFor("link", "not a link")).toStrictEqual([
       ["value", "That isn't a link. Paste the address of the shop's page."],
     ]);
+  });
+
+  it("trims the note, and counts 280 after the trim", () => {
+    const note = fileCorrectionSchema.parse({
+      ...base(),
+      field: "wind",
+      value: "yes",
+      note: `  ${"x".repeat(280)}  `,
+    }).note;
+    expect(note).toBe("x".repeat(280));
   });
 
   it("takes an optional note of up to 280", () => {
