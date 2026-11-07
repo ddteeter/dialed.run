@@ -48,6 +48,13 @@ describe("the header", () => {
     expect(parseQueryHeader("x/a;1;2\n")).toBeUndefined();
     expect(parseQueryHeader("\n/a;1;2")).toBeUndefined();
     expect(parseQueryHeader(`/a;1;${"9".repeat(400)}`)).toBeUndefined();
+    expect(parseQueryHeader("/a;;2")).toBeUndefined();
+    expect(parseQueryHeader("/a;1;")).toBeUndefined();
+    expect(parseQueryHeader("/a;1.5;2")).toBeUndefined();
+    expect(parseQueryHeader("/a;1e3;2")).toBeUndefined();
+    expect(parseQueryHeader("/a;1;2;")).toBeUndefined();
+    expect(parseQueryHeader("/a; 1;2")).toBeUndefined();
+    expect(parseQueryHeader("/a;1;2 ")).toBeUndefined();
   });
 
   it("caps the value at 1024 characters", () => {

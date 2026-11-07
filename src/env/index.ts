@@ -16,3 +16,4 @@
 
 export { cache, env, waitUntil } from "cloudflare:workers";
 export { coreDb, opsDb, primaryCoreDb, weatherDb } from "./d1";
+export { isQueryTallyEnabled } from "./flags";

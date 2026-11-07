@@ -366,7 +366,51 @@ function reporting(reached: string): D1Database {
   return spiedBinding(env.DIALED_CORE, reached).binding;
 }
 
+/**
+ * A binding whose sessions hand out the statements they prepare, as
+ * themselves, so a test can see whether the routed handle wrapped one.
+ */
+function recordingBinding() {
+  const prepared: D1PreparedStatement[] = [];
+  const real = env.DIALED_CORE;
+  const binding = spiedBinding(real).binding;
+  const withSession = binding.withSession.bind(binding);
+  binding.withSession = (constraint) => {
+    const session = withSession(constraint);
+    return {
+      prepare: (query) => {
+        const statement = session.prepare(query);
+        prepared.push(statement);
+        return statement;
+      },
+      batch: (statements) => session.batch(statements),
+      getBookmark: () => session.getBookmark(),
+    };
+  };
+  return { binding, prepared };
+}
+
 describe("a tallied scope", () => {
+  it("hands back the session's own statements when untallied", async () => {
+    const { binding, prepared } = recordingBinding();
+    const statement = await runInD1Scope(undefined, () =>
+      Promise.resolve(coreDbOver(binding).$client.prepare("select 1")),
+    );
+    expect(prepared).toHaveLength(1);
+    expect(statement).toBe(prepared[0]);
+  });
+
+  it("hands back a counting wrapper only when tallied", async () => {
+    const { binding, prepared } = recordingBinding();
+    const statement = await runInD1Scope(
+      undefined,
+      () => Promise.resolve(coreDbOver(binding).$client.prepare("select 1")),
+      { tallyAs: "/closet/" },
+    );
+    expect(prepared).toHaveLength(1);
+    expect(statement).not.toBe(prepared[0]);
+  });
+
   it("counts nothing unless asked", async () => {
     const outcome = await runInD1Scope(undefined, async () => {
       await selectOne(env.DIALED_CORE);

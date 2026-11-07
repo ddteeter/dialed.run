@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { userProfiles } from "../../src/db/schema-core";
 import { env, waitUntil } from "../../src/env";
@@ -11,6 +11,7 @@ import {
   storedBookmarkOf,
   storeRunnerBookmark,
 } from "../../src/modules/auth/d1-bookmark";
+import type { D1RequestDeps } from "../../src/modules/auth/d1-request";
 import {
   d1RequestDepsFromEnv,
   respondInD1Scope,
@@ -27,22 +28,20 @@ const db = drizzle(env.DIALED_CORE);
 const DEVICE = "00000000-00000001-00000000-" + "0".repeat(32);
 const LATER = "00000000-00000002-00000000-" + "0".repeat(32);
 
-function harness() {
+function harness(nameQueries?: (pathname: string) => string) {
   const deferred: Promise<void>[] = [];
   const captured: { error: unknown; context: Record<string, string> }[] = [];
-  return {
-    deps: {
-      db,
-      defer: (work: Promise<void>) => {
-        deferred.push(work);
-      },
-      capture: (error: unknown, context: Record<string, string>) => {
-        captured.push({ error, context });
-      },
+  const deps: D1RequestDeps = {
+    db,
+    nameQueries,
+    defer: (work: Promise<void>) => {
+      deferred.push(work);
     },
-    deferred,
-    captured,
+    capture: (error: unknown, context: Record<string, string>) => {
+      captured.push({ error, context });
+    },
   };
+  return { deps, deferred, captured };
 }
 
 function requestWith(cookie?: string): Request {
@@ -100,6 +99,14 @@ describe("respondInD1Scope", () => {
       deps,
     );
     expect(response.headers.get("set-cookie")).toBeNull();
+  });
+
+  it("hands back the handler's own response when it adds nothing", async () => {
+    const { deps } = harness();
+    const own = new Response("ok");
+    const response = await respondInD1Scope(requestWith(), () => own, deps);
+    expect(response).toBe(own);
+    expect(response.headers.get("x-d1-queries")).toBeNull();
   });
 
   it("stores the bookmark for a signed-in runner who wrote, after the response", async () => {
@@ -207,9 +214,73 @@ describe("respondInD1Scope", () => {
   });
 });
 
+const named = (pathname: string) => `route:${pathname}`;
+
+const asIs = (pathname: string) => pathname;
+
+describe("respondInD1Scope's query count", () => {
+  it("says nothing unless the request is named, for a request that ran queries", async () => {
+    const { deps } = harness();
+    const response = await respondInD1Scope(
+      requestWith(),
+      async () => {
+        await scopedDb(env.DIALED_CORE, "core").all(sql`select 1`);
+        return new Response("ok");
+      },
+      deps,
+    );
+    expect(response.headers.get("x-d1-queries")).toBeNull();
+  });
+
+  it("names the request by its path and counts what it asked, beside the cookie", async () => {
+    const { deps } = harness(named);
+    const response = await respondInD1Scope(
+      requestWith(),
+      async () => {
+        const core = scopedDb(env.DIALED_CORE, "core");
+        await core.all(sql`select 1`);
+        await core.all(sql`select 2`);
+        return new Response("ok");
+      },
+      deps,
+    );
+    expect(response.headers.get("x-d1-queries")).toBe("route:/closet;2;0");
+    expect(sentBookmark(response)).toBeDefined();
+  });
+
+  it("adds the count alone to a request that read nothing, keeping the response", async () => {
+    const { deps } = harness(named);
+    const response = await respondInD1Scope(
+      requestWith(),
+      () => new Response("body", { status: 202, headers: { "x-own": "1" } }),
+      deps,
+    );
+    expect(response.headers.get("x-d1-queries")).toBe("route:/closet;0;0");
+    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(response.headers.get("x-own")).toBe("1");
+    expect(response.status).toBe(202);
+    expect(await response.text()).toBe("body");
+  });
+});
+
 describe("d1RequestDepsFromEnv", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("names no request's queries on a build without the flag", () => {
+    expect(d1RequestDepsFromEnv(asIs).nameQueries).toBeUndefined();
+  });
+
+  it("names them with the namer it is given when VITE_D1_QUERY_TALLY is 1", () => {
+    vi.stubEnv("VITE_D1_QUERY_TALLY", "1");
+    expect(d1RequestDepsFromEnv(asIs).nameQueries).toBe(asIs);
+    vi.stubEnv("VITE_D1_QUERY_TALLY", "true");
+    expect(d1RequestDepsFromEnv(asIs).nameQueries).toBeUndefined();
+  });
+
   it("stores through the primary and defers with waitUntil", async () => {
-    const deps = d1RequestDepsFromEnv();
+    const deps = d1RequestDepsFromEnv(asIs);
     expect(deps.defer).toBe(waitUntil);
     expect(deps.capture).toBe(captureException);
     const userId = newUlid();

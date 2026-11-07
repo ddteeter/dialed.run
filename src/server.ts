@@ -65,7 +65,8 @@ export default {
       // and its policy names its scripts' hashes instead.
       //
       // Design 165: the response is timed by route id, logged and written
-      // to VITALS.
+      // to VITALS. The same name labels the request's D1 query count, on
+      // a dev server that counts them (design 182).
       const context = requestContext(new URL(request.url).pathname);
       const response = await timeRequest(
         request,
@@ -73,7 +74,7 @@ export default {
           respondInD1Scope(
             request,
             () => startFetch(request, { context }),
-            d1RequestDepsFromEnv(),
+            d1RequestDepsFromEnv(timing.name),
           ),
         timing,
       );

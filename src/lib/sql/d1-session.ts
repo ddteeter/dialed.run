@@ -309,7 +309,7 @@ export interface D1ScopeOptions {
   /**
    * Count the request's statements and rows read under this name, for
    * `scopeOutcome().queries` (design 182, part 2). Only a dev server that
-   * asked for it (`queryTallyEnabled`) passes one: a counted `raw()` or
+   * asked for it (`isQueryTallyEnabled`) passes one: a counted `raw()` or
    * `first()` read is run twice.
    */
   readonly tallyAs?: string | undefined;

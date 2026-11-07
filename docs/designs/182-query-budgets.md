@@ -60,9 +60,13 @@ The path, end to end:
    `webServer.env`. Vite replaces `import.meta.env.VITE_*` in the
    Worker's code as well as the client's, so the dev server sees it, and
    a production build, made without it, folds the counter away. It is not
-   a binding and not `wrangler.jsonc`. `src/env` is the one file that
-   reads it (`queryTallyEnabled`). CI's `preview` matrix leg builds
-   without the flag, so only its `dev` leg reports; that is enough.
+   a binding and not `wrangler.jsonc`. One file reads it,
+   `src/env/flags.ts` (`isQueryTallyEnabled`), which only server code
+   reaches. A production build is made without the flag, so
+   `isQueryTallyEnabled()` is the literal `false` there and the counter
+   and the header are dead code, not merely off. CI's `preview` matrix
+   leg builds without the flag, so only its `dev` leg reports; that is
+   enough.
 2. **Counting** (`src/lib/sql/d1-session.ts`). `runInD1Scope` takes an
    optional `{ tallyAs: <route> }`: the scope is tallied, under that name,
    only when it is given one. (A bare `{ tally: true }` with the name
