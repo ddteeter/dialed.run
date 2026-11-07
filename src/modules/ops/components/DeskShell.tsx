@@ -10,9 +10,11 @@ import type { DeskToday } from "../desk";
  * hi-viz as its only accent, a left rail the runner app never has, and no
  * link to or from the runner app.
  *
- * `data-ground="ink"` is the brand's own inverted block (T2 rule 04): it
- * redefines every ground-relative role, so the tokens below mean "against
- * ink" without a second palette.
+ * `data-ground="night"` is T1's dark column in both themes (design 185):
+ * it redefines every ground-relative role, so the tokens below mean
+ * "against ink" without a second palette, and it reads nothing from the
+ * page. Not `ink`, the inverted block, which turns to paper on a dark page
+ * (T2 rule 04): T3 says the Desk "doesn't read the runner's theme".
  */
 
 /**
@@ -138,7 +140,7 @@ export function DeskShell({
   };
   return (
     <div
-      data-ground="ink"
+      data-ground="night"
       // The rail beside the content from `wide`, above it below: at 320px
       // a rail kept beside the column made the whole Desk scroll sideways
       // (plan 161, step 6; owner 2026-11-03).

@@ -82,16 +82,18 @@ function rail(): HTMLElement {
 }
 
 describe("DeskShell", () => {
-  it("is always dark: the inverted ground, whatever the page around it", async () => {
+  it("is always dark: the night ground, whatever the page or theme around it", async () => {
     const { container } = await renderWithRouter(
       <DeskShell current="today" today={desk()}>
         <p>page</p>
       </DeskShell>,
     );
 
-    expect(container.querySelector('[data-ground="ink"]')).toContainElement(
+    // `night`, not the inverted `ink`, which a dark page turns to paper.
+    expect(container.querySelector('[data-ground="night"]')).toContainElement(
       screen.getByText("page"),
     );
+    expect(container.querySelector('[data-ground="ink"]')).toBeNull();
   });
 
   it("marks itself as the Desk, for an operator", async () => {
