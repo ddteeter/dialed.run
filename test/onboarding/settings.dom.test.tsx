@@ -71,6 +71,7 @@ describe("the index (U1/N)", () => {
         username="maya_runs"
         runReminderEmail
         blockedCount={2}
+        display={undefined}
         signOut={undefined}
       />,
     );
@@ -138,12 +139,17 @@ describe("the index (U1/N)", () => {
         username="maya_runs"
         runReminderEmail
         blockedCount={0}
+        display={<p>the theme row</p>}
         signOut={undefined}
       />,
     );
+    // R48·133: DISPLAY after Review (Notifications), before Data.
     expect(
       screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
-    ).toEqual(["You", "Who sees what", "Review", "Data", "About"]);
+    ).toEqual(["You", "Who sees what", "Review", "Display", "Data", "About"]);
+    expect(
+      screen.getByRole("heading", { name: "Display" }).closest("section"),
+    ).toContainElement(screen.getByText("the theme row"));
     const you = screen.getByRole("heading", { name: "You" }).closest("section");
     expect(
       within(you ?? document.body)
@@ -172,6 +178,7 @@ describe("the index (U1/N)", () => {
         }}
         runReminderEmail={false}
         blockedCount={0}
+        display={undefined}
         signOut={undefined}
       />,
     );
@@ -209,6 +216,7 @@ describe("the index (U1/N)", () => {
         username="maya_runs"
         runReminderEmail
         blockedCount={0}
+        display={undefined}
         signOut={undefined}
       />,
     );
@@ -240,6 +248,7 @@ describe("the index (U1/N)", () => {
         username="maya_runs"
         runReminderEmail
         blockedCount={0}
+        display={undefined}
         signOut={<button type="button">Sign out</button>}
       />,
     );
@@ -261,7 +270,8 @@ describe("the index while a sub-page is slow (X3)", () => {
           username="maya_runs"
           runReminderEmail
           blockedCount={2}
-          signOut={undefined}
+          display={undefined}
+        signOut={undefined}
         />,
         {
           at: "/onboarding/settings",

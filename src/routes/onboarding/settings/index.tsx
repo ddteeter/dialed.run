@@ -4,7 +4,11 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 
-import { usernameQuery } from "../../../modules/account/functions";
+import {
+  ownThemeQuery,
+  setThemeFn,
+  usernameQuery,
+} from "../../../modules/account/functions";
 import { notificationSettingsQuery } from "../../../modules/email/functions";
 import { SignOutButton } from "../../../modules/auth/components/SignOutButton";
 import { signOut } from "../../../modules/auth/credentials";
@@ -15,6 +19,7 @@ import { SettingsIndex } from "../../../modules/onboarding/components/Settings";
 import { settingsQuery } from "../../../modules/onboarding/functions";
 import { blockedRunnersQuery } from "../../../modules/safety/functions";
 import { Page } from "../../../ui";
+import { ThemeSwitch } from "../../../ui/ThemeSwitch";
 
 /**
  * U1 · the settings index (round 22, item 20). Under You, so it keeps the
@@ -23,13 +28,14 @@ import { Page } from "../../../ui";
 export const Route = createFileRoute("/onboarding/settings/")({
   loader: async ({ location }) => {
     await requireSession(location);
-    const [current, { blocked }, bell, { username }, notifications] =
+    const [current, { blocked }, bell, { username }, notifications, theme] =
       await Promise.all([
         settingsQuery(),
         blockedRunnersQuery(),
         bellStateFn(),
         usernameQuery(),
         notificationSettingsQuery(),
+        ownThemeQuery(),
       ]);
     return {
       current,
@@ -37,13 +43,14 @@ export const Route = createFileRoute("/onboarding/settings/")({
       bell,
       username,
       runReminderEmail: notifications.runReminder,
+      theme,
     };
   },
   component: SettingsPage,
 });
 
 function SettingsPage() {
-  const { current, blockedCount, bell, username, runReminderEmail } =
+  const { current, blockedCount, bell, username, runReminderEmail, theme } =
     Route.useLoaderData();
   const router = useRouter();
   const navigate = useNavigate();
@@ -56,6 +63,7 @@ function SettingsPage() {
           username={username}
           blockedCount={blockedCount}
           runReminderEmail={runReminderEmail}
+          display={<ThemeSwitch initial={theme} save={setThemeFn} />}
           signOut={
             <SignOutButton
               signOut={async () => {

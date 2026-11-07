@@ -169,6 +169,7 @@ export function SettingsIndex({
   username,
   blockedCount,
   runReminderEmail,
+  display,
   signOut,
 }: Readonly<{
   current: CurrentSettings;
@@ -181,6 +182,11 @@ export function SettingsIndex({
   Whether the Strava run reminder comes by email (ACC-11).
   */
   runReminderEmail: boolean;
+  /**
+   * DISPLAY's Theme row (R48·133), the route's to wire: it saves through
+   * a server function, which a component may not import.
+   */
+  display: ReactNode;
   /**
   The foot's Sign out, the route's to wire (it needs the router).
   */
@@ -240,6 +246,9 @@ export function SettingsIndex({
           }
         />
       </SettingsGroup>
+      {/* R48·133: "A new DISPLAY group after Notifications, before the
+          account and data groups." */}
+      <SettingsGroup title="Display">{display}</SettingsGroup>
       <SettingsGroup title="Data">
         <SettingsRow
           to="/runs/strava"
