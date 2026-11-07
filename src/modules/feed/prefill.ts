@@ -1,7 +1,8 @@
 /**
  * A2 prefill: "MOST LIKELY · FROM 43° DAMP, AUG 14" — the user's own most
  * recent entry with the nearest |feels-like delta| in the same precip
- * class as the run being attached now.
+ * class as the run being attached now. Each past run is read at its worst
+ * hour, the hour its own conditions are judged at (D-165).
  *
  * **Yes, this is the germ of the Call** — asked on review, and worth
  * saying out loud. "What did this runner wear the last time it felt like
@@ -22,6 +23,7 @@ import { coreDb } from "../../env";
 import { precipClassOf } from "../../lib/contracts/temperature";
 import type { Conditions } from "./conditions";
 import { observationsForEntries } from "./conditions";
+import { judgedFeelsLikeC } from "./judged-conditions";
 import { recentOwnEntries } from "./own-history";
 
 export interface PrefillCandidate {
@@ -38,6 +40,10 @@ export interface PrefillCandidate {
 export interface HistoryEntry {
   id: string;
   runId: string;
+  /**
+   * What decides the hour the entry is read at (`judgedFeelsLikeC`).
+   */
+  verdict: number | null;
   createdAt: number;
 }
 
@@ -83,7 +89,13 @@ export function nearestMatch<T extends HistoryEntry>(
     const observation = observations.get(entry.runId);
     if (!observation || precipClassOf(observation.precipMm) !== targetPrecip)
       continue;
-    const delta = Math.abs(observation.feelsLikeC - target.feelsLikeC);
+    // A past run at its worst hour (D-165, owner 2026-11-06), as its
+    // conditions are read everywhere else. The target is the run being
+    // attached or awaiting a verdict: unrated, so its judged hour is the
+    // starting one, `feelsLikeC` itself.
+    const delta = Math.abs(
+      judgedFeelsLikeC(observation, entry.verdict) - target.feelsLikeC,
+    );
     if (!best || delta < best.feelsLikeDeltaC) {
       best = { entry, conditions: observation, feelsLikeDeltaC: delta };
     }
