@@ -221,7 +221,7 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
   // A3: the five-point scale, coldest to warmest, from the one shared
   // verdictScale rather than a per-screen copy.
   await scene(page, "A3 · five points, coldest to warmest, one scale");
-  await page.getByRole("button", { name: "A bit cold" }).click();
+  await page.getByRole("radio", { name: "A bit cold" }).click();
 
   // R-97: beneath the row, this runner's own history in the run's band —
   // loaded by the route all along, and until round 20 never shown.
@@ -290,9 +290,7 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
   await sharing.getByRole("button", { name: "Done" }).click();
   await expect(sharing).toBeHidden();
   await scene(page, "Back on the form, with everything still picked");
-  await expect(
-    page.getByRole("button", { name: "A bit cold" }),
-  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("radio", { name: "A bit cold" })).toBeChecked();
   await audience.getByRole("radio", { name: /^Shared/u }).check();
 
   await scene(page, "Saving reports the wear rate in this temperature band");
@@ -315,9 +313,7 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
   // receipt is read against it.
   await scene(page, "Noted takes the submit's place — the answer stays");
   await expect(page.getByRole("button", { name: "Log it" })).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "A bit cold" }),
-  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("radio", { name: "A bit cold" })).toBeChecked();
   // Round 21: MORE leaves with share and submit, and a chosen chip keeps
   // its ink and loses its close glyph — a receipt makes no offers.
   await scene(page, "The chips stay, read-only; MORE is gone");

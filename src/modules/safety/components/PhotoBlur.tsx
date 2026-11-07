@@ -619,6 +619,8 @@ function BlurBody({
       <ToggleField
         name="blurFaces"
         label="Blur faces"
+        // A switch (R-84 a): the blur happens as it is flipped.
+        isSwitch
         isOn={isOn}
         onChange={(next) => {
           setIsOn(next);

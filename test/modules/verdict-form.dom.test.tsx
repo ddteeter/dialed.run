@@ -20,6 +20,8 @@ import { verdictHue } from "../../src/ui/verdict-hue";
 import { VerdictForm } from "../../src/modules/feed/components/VerdictForm";
 import type { entryDetailForViewer } from "../../src/modules/feed/entries";
 import { PrivateRunLine } from "../../src/modules/onboarding/components/PrivateRunLine";
+import { UnconfirmedRefusalAnswer } from "../../src/ui/unconfirmed-refusal";
+import type { ConfirmGate } from "../../src/ui/unconfirmed-refusal";
 import { queryWeatherCredit } from "../ui/weather-credit";
 import { carriedSince } from "../ui/carry-spy";
 
@@ -71,7 +73,6 @@ function entry(overrides: Partial<Entry> = {}): Entry {
     deviceName: undefined,
     verdict: undefined,
     audience: "runners",
-    caption: undefined,
     createdAt: 1_755_000_000,
     items: [],
     photoKeys: [],
@@ -104,6 +105,16 @@ const item = (itemId: string, name: string) => ({
  * group is legended with its garment's name, so they are found by role
  * and named rather than by index into a list of comboboxes.
  */
+/**
+ * A verdict's cell: the label its radio sits in, which is what wears the
+ * hue, the brackets and the hit area.
+ */
+function cell(name: string): HTMLElement {
+  const label = screen.getByRole("radio", { name }).closest("label");
+  if (label === null) throw new TypeError(`no cell for ${name}`);
+  return label;
+}
+
 function flagGroups(): HTMLElement[] {
   // `group`, not `radiogroup`: `ChoiceList` renders a real `<fieldset>`
   // with a `<legend>`, which is how the garment's name becomes the
@@ -196,6 +207,7 @@ function form(
       data: { itemId: string; bandFloorC: number };
     }) => Promise<{ worn: number; total: number }>;
     privateLine?: (hintId: string) => ReactNode;
+    isVerified?: boolean;
   } = {},
 ) {
   return (
@@ -217,6 +229,7 @@ function form(
       submitVerdict={overrides.submitVerdict ?? nothing}
       itemBandWearStat={overrides.itemBandWearStat ?? noStat}
       privateLine={overrides.privateLine ?? privateLineStub}
+      isVerified={overrides.isVerified ?? true}
     />
   );
 }
@@ -229,7 +242,7 @@ describe("VerdictForm: the scale", () => {
 
     const labels = verdictScale.map((choice) => choice.label);
     for (const label of labels) {
-      expect(screen.getByRole("button", { name: label })).toBeVisible();
+      expect(screen.getByRole("radio", { name: label })).toBeVisible();
     }
   });
 
@@ -260,7 +273,7 @@ describe("VerdictForm: the scale", () => {
       }),
     );
 
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
 
     expect(
@@ -305,49 +318,45 @@ describe("VerdictForm: the scale", () => {
     // The chosen verdict was an ink inversion plus a pair of brackets, and
     // the brackets are `aria-hidden` because they are a move rather than a
     // word — so a reader heard five identically-named buttons and no
-    // indication of which was picked.
-    //
-    // `aria-pressed` rather than a `radiogroup`: the contract asks for
-    // five radios with arrow-key navigation, which is a behaviour change
-    // this lane may not make. A single-select toggle group is honest about
-    // what the control does today. The radiogroup is R-84.
+    // indication of which was picked. Now they are radios (R-84 c), and
+    // the chosen one is announced as checked.
     const user = userEvent.setup();
     await renderWithRouter(form());
 
-    const pressed = () =>
+    const checked = () =>
       screen
-        // `queryAll`, because "nothing is pressed yet" is a state this
+        // `queryAll`, because "nothing is chosen yet" is a state this
         // asserts and `getAllByRole` throws on an empty match.
-        .queryAllByRole("button", { pressed: true })
-        .map((button) => button.textContent);
+        .queryAllByRole("radio", { checked: true })
+        .map((radio) => radio.closest("label")?.textContent);
+    const verdicts = () =>
+      checked().filter((text) =>
+        verdictScale.some((choice) => text?.includes(choice.label)),
+      );
 
-    expect(pressed()).toEqual([]);
+    expect(verdicts()).toEqual([]);
 
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
 
-    expect(pressed()).toEqual(["[Dialed]"]);
+    expect(verdicts()).toEqual(["[Dialed]"]);
 
-    // And it moves rather than accumulating — two pressed verdicts would
+    // And it moves rather than accumulating — two chosen verdicts would
     // be a distribution, which is a different fact from "how you called
     // it".
-    await user.click(screen.getByRole("button", { name: "Way cold" }));
+    await user.click(screen.getByRole("radio", { name: "Way cold" }));
 
-    expect(pressed()).toEqual(["[Way cold]"]);
+    expect(verdicts()).toEqual(["[Way cold]"]);
   });
 
   it("marks the chosen one, and only that one", async () => {
     const user = userEvent.setup();
     await renderWithRouter(form());
 
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
 
     // Teal, because the chosen cell wears its verdict's hue (round 19).
-    expect(screen.getByRole("button", { name: "Dialed" })).toHaveClass(
-      "bg-teal",
-    );
-    expect(screen.getByRole("button", { name: "Way cold" })).not.toHaveClass(
-      "bg-action",
-    );
+    expect(cell("Dialed")).toHaveClass("bg-teal");
+    expect(cell("Way cold")).not.toHaveClass("bg-action");
     expect(screen.getByRole("button", { name: "Log it" })).toBeEnabled();
   });
 
@@ -366,9 +375,9 @@ describe("VerdictForm: the scale", () => {
       const user = userEvent.setup();
       await renderWithRouter(form());
 
-      await user.click(screen.getByRole("button", { name: label }));
+      await user.click(screen.getByRole("radio", { name: label }));
 
-      const chosen = screen.getByRole("button", { name: label });
+      const chosen = cell(label);
       expect(chosen).toHaveClass(...verdictHue(value).split(" "));
       expect(chosen).not.toHaveClass("bg-ink");
       // A border on the chosen cell too, so choosing swaps a colour
@@ -381,9 +390,9 @@ describe("VerdictForm: the scale", () => {
     const user = userEvent.setup();
     await renderWithRouter(form());
 
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
 
-    const other = screen.getByRole("button", { name: "Way cold" });
+    const other = cell("Way cold");
     expect(other).toHaveClass("border");
     expect(other).not.toHaveClass("bg-ink");
   });
@@ -394,9 +403,9 @@ describe("VerdictForm: the scale", () => {
     const user = userEvent.setup();
     await renderWithRouter(form());
 
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
 
-    const chosen = screen.getByRole("button", { name: "Dialed" });
+    const chosen = cell("Dialed");
     // The two bracket spans, not every span in the button: the label and
     // its brackets are wrapped in one span so they are a single flex item
     // and wrap together as inline content — without that the cell's
@@ -439,19 +448,15 @@ describe("VerdictForm: the scale", () => {
     // delay is only on the chosen row — on the resting one it would make
     // un-choosing linger for a receipt that did not happen.
     expect(chosen).toHaveClass("verdict-lock");
-    expect(screen.getByRole("button", { name: "Way cold" })).not.toHaveClass(
-      "verdict-lock",
-    );
+    expect(cell("Way cold")).not.toHaveClass("verdict-lock");
   });
 
   it("gives an unchosen verdict no brackets to close", async () => {
     await renderWithRouter(form());
 
-    expect(
-      screen
-        .getByRole("button", { name: "Dialed" })
-        .querySelectorAll("[aria-hidden='true']"),
-    ).toHaveLength(0);
+    expect(cell("Dialed").querySelectorAll("[aria-hidden='true']")).toHaveLength(
+      0,
+    );
   });
 
   it("starts from the verdict the entry already has", async () => {
@@ -459,9 +464,8 @@ describe("VerdictForm: the scale", () => {
     // show the form as unanswered.
     await renderWithRouter(form({ entry: { verdict: 0 } }));
 
-    expect(screen.getByRole("button", { name: "Dialed" })).toHaveClass(
-      "bg-teal",
-    );
+    expect(cell("Dialed")).toHaveClass("bg-teal");
+    expect(screen.getByRole("radio", { name: "Dialed" })).toBeChecked();
     expect(screen.getByRole("button", { name: "Log it" })).toBeEnabled();
   });
 
@@ -472,7 +476,7 @@ describe("VerdictForm: the scale", () => {
     >(() => Promise.resolve());
     await renderWithRouter(form({ submitVerdict }));
 
-    await user.click(screen.getByRole("button", { name: "Way warm" }));
+    await user.click(screen.getByRole("radio", { name: "Way warm" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
 
     await waitFor(() => {
@@ -503,7 +507,7 @@ describe("VerdictForm: the row, and the box that was around it", () => {
     // is what a reader entering the group actually hears.
     await renderWithRouter(form({}));
 
-    const group = screen.getByRole("group", { name: /Did it work/i });
+    const group = screen.getByRole("radiogroup", { name: /Did it work/i });
     for (const label of [
       "Way cold",
       "A bit cold",
@@ -511,7 +515,7 @@ describe("VerdictForm: the row, and the box that was around it", () => {
       "A bit warm",
       "Way warm",
     ]) {
-      expect(within(group).getByRole("button", { name: label })).toBeVisible();
+      expect(within(group).getByRole("radio", { name: label })).toBeVisible();
     }
   });
 
@@ -525,7 +529,7 @@ describe("VerdictForm: the row, and the box that was around it", () => {
     // was failing by construction.
     await renderWithRouter(form({}));
 
-    const group = screen.getByRole("group", { name: /Did it work/i });
+    const group = screen.getByRole("radiogroup", { name: /Did it work/i });
     expect(group).not.toHaveClass("field-box");
     expect(group.querySelector(".field-box")).toBeNull();
   });
@@ -545,8 +549,7 @@ describe("VerdictForm: the row, and the box that was around it", () => {
     //   cell this narrow is the padding and not the glyph.
     await renderWithRouter(form({}));
 
-    const button = screen.getByRole("button", { name: "Way cold" });
-    expect(button).toHaveClass(
+    expect(cell("Way cold")).toHaveClass(
       "uppercase",
       "text-center",
       "flex-col",
@@ -554,15 +557,65 @@ describe("VerdictForm: the row, and the box that was around it", () => {
     );
   });
 
+  it("is five radios in a radiogroup: arrows move and choose, space chooses (R-84 c)", async () => {
+    // Accessibility Contract rule 05: "five buttons in a role=radiogroup,
+    // arrow keys move, space selects". Native radios, so the browser's own
+    // group behaviour is what is being relied on, and asserted.
+    const user = userEvent.setup();
+    await renderWithRouter(form());
+
+    const group = screen.getByRole("radiogroup", { name: /Did it work/i });
+    expect(within(group).getAllByRole("radio")).toHaveLength(
+      verdictScale.length,
+    );
+    for (const radio of within(group).getAllByRole("radio")) {
+      expect(radio).toHaveAttribute("name", "verdict");
+    }
+
+    const dialed = screen.getByRole("radio", { name: "Dialed" });
+    dialed.focus();
+    await user.keyboard(" ");
+    expect(dialed).toBeChecked();
+    expect(cell("Dialed")).toHaveClass("bg-teal");
+
+    await user.keyboard("{ArrowRight}");
+    const warm = screen.getByRole("radio", { name: "A bit warm" });
+    expect(warm).toHaveFocus();
+    expect(warm).toBeChecked();
+    expect(dialed).not.toBeChecked();
+
+    await user.keyboard("{ArrowLeft}{ArrowLeft}");
+    expect(screen.getByRole("radio", { name: "A bit cold" })).toBeChecked();
+  });
+
+  it("sends the verdict the keyboard chose", async () => {
+    const user = userEvent.setup();
+    const submitVerdict = vi.fn<
+      (input: { data: Record<string, unknown> }) => Promise<unknown>
+    >(() => Promise.resolve(undefined));
+    await renderWithRouter(form({ submitVerdict }));
+
+    screen.getByRole("radio", { name: "Way cold" }).focus();
+    await user.keyboard(" {ArrowRight}");
+    await user.click(screen.getByRole("button", { name: "Log it" }));
+
+    await waitFor(() => {
+      expect(submitVerdict).toHaveBeenCalledTimes(1);
+    });
+    expect(submitVerdict.mock.calls[0]?.[0].data).toMatchObject({
+      verdict: -1,
+    });
+  });
+
   it("keeps the scale's order, which is the product rule", async () => {
     // Way cold -> way warm. A set of five buttons in any order is still
     // five buttons; the order is what makes the row readable as a scale.
     await renderWithRouter(form({}));
 
-    const group = screen.getByRole("group", { name: /Did it work/i });
+    const group = screen.getByRole("radiogroup", { name: /Did it work/i });
     const names = within(group)
-      .getAllByRole("button")
-      .map((button) => button.textContent);
+      .getAllByRole("radio")
+      .map((radio) => radio.closest("label")?.textContent);
     expect(names).toEqual([
       "Way cold",
       "A bit cold",
@@ -719,7 +772,7 @@ describe("VerdictForm: A3b, every garment's triple", () => {
       }),
     );
 
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
 
     await waitFor(() => {
@@ -781,7 +834,7 @@ describe("VerdictForm: A3b, every garment's triple", () => {
       }),
     );
 
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await openSpecifics(user);
     await user.click(
       within(flagGroup(0)).getByRole("radio", { name: "Too much" }),
@@ -809,7 +862,7 @@ describe("VerdictForm: A3b, every garment's triple", () => {
       }),
     );
 
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     // Set it, then put it back — the chip group's "Fine" is how a runner
     // un-flags, and it must reach the payload as absent rather than as
     // the string "none".
@@ -874,7 +927,7 @@ describe("VerdictForm: the generated chips (round 20)", () => {
       "More ›",
     ]);
 
-    await user.click(screen.getByRole("button", { name: "A bit warm" }));
+    await user.click(screen.getByRole("radio", { name: "A bit warm" }));
     expect(chipNames().slice(0, 3)).toStrictEqual([
       "Shell too much",
       "Cap too much",
@@ -883,7 +936,7 @@ describe("VerdictForm: the generated chips (round 20)", () => {
     expect(chipNames()).toHaveLength(6);
 
     // Changing the verdict recomputes the unchosen chips.
-    await user.click(screen.getByRole("button", { name: "A bit cold" }));
+    await user.click(screen.getByRole("radio", { name: "A bit cold" }));
     expect(chipNames().slice(0, 2)).toStrictEqual([
       "Shell not enough",
       "Cap not enough",
@@ -894,7 +947,7 @@ describe("VerdictForm: the generated chips (round 20)", () => {
     const user = userEvent.setup();
     await renderWithRouter(form({ entry: { items: KIT } }));
 
-    await user.click(screen.getByRole("button", { name: "Way warm" }));
+    await user.click(screen.getByRole("radio", { name: "Way warm" }));
     expect(chipNames()).toStrictEqual([
       "cold first mile",
       "cold throughout",
@@ -914,7 +967,7 @@ describe("VerdictForm: the generated chips (round 20)", () => {
     await renderWithRouter(
       form({ entry: { items: KIT }, bandSignals: SIGNALS, submitVerdict }),
     );
-    await user.click(screen.getByRole("button", { name: "A bit warm" }));
+    await user.click(screen.getByRole("radio", { name: "A bit warm" }));
 
     const shell = screen.getByRole("button", { name: "Shell too much" });
     expect(shell).toHaveAttribute("aria-pressed", "false");
@@ -925,7 +978,7 @@ describe("VerdictForm: the generated chips (round 20)", () => {
 
     // "Chosen chips stay": a cold verdict would suggest "Shell not
     // enough", but the runner already said too much.
-    await user.click(screen.getByRole("button", { name: "A bit cold" }));
+    await user.click(screen.getByRole("radio", { name: "A bit cold" }));
     expect(chipNames().slice(0, 2)).toStrictEqual([
       "Shell too much",
       "Cap not enough",
@@ -971,7 +1024,7 @@ describe("VerdictForm: the generated chips (round 20)", () => {
     await user.click(screen.getByRole("button", { name: "sleeves damp" }));
     await user.click(screen.getByRole("button", { name: "cold first mile" }));
     await user.click(screen.getByRole("button", { name: "cold first mile" }));
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
 
     await waitFor(() => {
@@ -1003,7 +1056,7 @@ describe("VerdictForm: the generated chips (round 20)", () => {
     await renderWithRouter(
       form({ entry: { items: KIT }, bandSignals: SIGNALS }),
     );
-    await user.click(screen.getByRole("button", { name: "A bit warm" }));
+    await user.click(screen.getByRole("radio", { name: "A bit warm" }));
 
     const sheet = await openSpecifics(user);
     const cap = within(sheet).getByRole("group", { name: "Cap" });
@@ -1076,7 +1129,7 @@ describe("VerdictForm: tags and sharing", () => {
       "bg-ink",
     );
 
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
     await waitFor(() => {
       expect(submitVerdict).toHaveBeenCalledTimes(1);
@@ -1097,7 +1150,7 @@ describe("VerdictForm: tags and sharing", () => {
       "bg-ink",
     );
 
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
     await waitFor(() => {
       expect(submitVerdict).toHaveBeenCalledTimes(1);
@@ -1165,6 +1218,91 @@ describe("VerdictForm: tags and sharing", () => {
     expect(screen.queryByText(PUBLIC_PREVIEW_LINE)).toBeNull();
   });
 
+  it("holds an unconfirmed runner at PRIVATE, every option at full strength (R47·123)", async () => {
+    // The entry started SHARED, the runner's default, but D-50 keeps an
+    // unconfirmed runner's run private, so the group says so.
+    await renderWithRouter(
+      form({ entry: { audience: "runners" }, isVerified: false }),
+    );
+
+    const privately = screen.getByRole("radio", { name: /^Private/ });
+    expect(privately).toBeChecked();
+    for (const name of [/^Private/u, /^Shared/u, /^Public/u]) {
+      const radio = screen.getByRole("radio", { name });
+      expect(radio).not.toHaveAttribute("aria-disabled");
+      expect(radio).not.toBeDisabled();
+      // Round 27's line is why none but PRIVATE takes, so every option is
+      // described by it, not only the checked one.
+      expect(radio).toHaveAccessibleDescription("The private line.");
+    }
+  });
+
+  it("opens the confirm sheet from SHARED or PUBLIC without moving the selection (R47·123)", async () => {
+    const user = userEvent.setup();
+    const asked: (string | undefined)[] = [];
+    const gate: ConfirmGate = {
+      sheet: ({ open, trigger }, onClose) => {
+        if (open) asked.push(trigger);
+        return open ? (
+          <div role="dialog" aria-label="Confirm your email first">
+            <button type="button" onClick={onClose}>
+              Not now
+            </button>
+          </div>
+        ) : undefined;
+      },
+    };
+    await renderWithRouter(
+      <UnconfirmedRefusalAnswer gate={gate}>
+        {form({ isVerified: false })}
+      </UnconfirmedRefusalAnswer>,
+    );
+
+    const shared = screen.getByRole("radio", { name: /^Shared/ });
+    await user.click(shared);
+    expect(
+      screen.getByRole("dialog", { name: "Confirm your email first" }),
+    ).toBeVisible();
+    expect(asked.at(-1)).toBe("share");
+    expect(shared).not.toBeChecked();
+    expect(screen.getByRole("radio", { name: /^Private/ })).toBeChecked();
+    // The press leaves focus on the option pressed, which is where a
+    // modal sheet hands it back.
+    expect(shared).toHaveFocus();
+
+    await user.click(screen.getByRole("button", { name: "Not now" }));
+    await user.click(screen.getByRole("radio", { name: /^Public/ }));
+    expect(asked).toEqual(["share", "share"]);
+    expect(screen.getByRole("radio", { name: /^Public/ })).not.toBeChecked();
+  });
+
+  it("sends PRIVATE for an unconfirmed runner, whatever the entry started as", async () => {
+    const user = userEvent.setup();
+    const submitVerdict = vi.fn<
+      (input: { data: Record<string, unknown> }) => Promise<unknown>
+    >(() => Promise.resolve(undefined));
+    await renderWithRouter(
+      form({
+        entry: { audience: "runners" },
+        isVerified: false,
+        submitVerdict,
+      }),
+    );
+
+    // No answer above it (no root), so the press asks nobody, and holds.
+    await user.click(screen.getByRole("radio", { name: /^Shared/ }));
+    expect(screen.getByRole("radio", { name: /^Private/ })).toBeChecked();
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
+
+    await waitFor(() => {
+      expect(submitVerdict).toHaveBeenCalledTimes(1);
+    });
+    expect(submitVerdict.mock.calls[0]?.[0].data).toMatchObject({
+      audience: "private",
+    });
+  });
+
   it("keeps the field's own props on each radio, and points only the picked one at the line", async () => {
     await renderWithRouter(form({ entry: { audience: "private" } }));
     const privately = screen.getByRole("radio", { name: /^Private/ });
@@ -1197,7 +1335,7 @@ describe("VerdictForm: tags and sharing", () => {
         ),
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "chafed" }));
 
     await user.click(
@@ -1223,10 +1361,7 @@ describe("VerdictForm: tags and sharing", () => {
     expect(document.querySelector("#verdict-share-hint")).toHaveTextContent(
       /^Other runners won't see this run\.$/u,
     );
-    expect(screen.getByRole("button", { name: "Dialed" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(screen.getByRole("radio", { name: "Dialed" })).toBeChecked();
     await user.click(screen.getByRole("button", { name: "Log it" }));
     await waitFor(() => {
       expect(submitVerdict).toHaveBeenCalledTimes(1);
@@ -1248,7 +1383,7 @@ describe("VerdictForm: tags and sharing", () => {
     expect(screen.getByRole("radio", { name: /^Shared/ })).toBeChecked();
 
     await user.click(screen.getByRole("radio", { name: /^Public/ }));
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
 
     await waitFor(() => {
@@ -1267,7 +1402,7 @@ describe("VerdictForm: tags and sharing", () => {
     await renderWithRouter(form({ submitVerdict }));
 
     await user.click(screen.getByRole("radio", { name: /^Private/ }));
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
 
     await waitFor(() => {
@@ -1343,7 +1478,7 @@ describe("VerdictForm: what happens after saving", () => {
       }),
     );
 
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
 
     // The band, as board A3 writes it: "Half-zip is now 8 of 9 in
@@ -1379,7 +1514,7 @@ describe("VerdictForm: what happens after saving", () => {
       }),
     );
 
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
 
     const receipt = await waitFor(() => {
@@ -1393,7 +1528,7 @@ describe("VerdictForm: what happens after saving", () => {
     expect(receipt.querySelector("p")).toBeNull();
     expect(screen.queryByText(/Nothing saved/u)).toBeNull();
     expect(screen.queryByRole("button", { name: "Log it" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Dialed" })).toHaveAttribute(
+    expect(screen.getByRole("radio", { name: "Dialed" })).toHaveAttribute(
       "aria-disabled",
       "true",
     );
@@ -1415,7 +1550,7 @@ describe("VerdictForm: what happens after saving", () => {
       }),
     );
 
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
 
     const sentence = await screen.findByText(
@@ -1439,7 +1574,7 @@ describe("VerdictForm: what happens after saving", () => {
       form({ bandFloor: 5, itemBandWearStat }),
     );
 
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
 
     expect(
@@ -1455,7 +1590,7 @@ describe("VerdictForm: what happens after saving", () => {
     const user = userEvent.setup();
     await renderWithRouter(form());
 
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
 
     expect(
@@ -1481,7 +1616,7 @@ describe("VerdictForm: what happens after saving", () => {
         itemBandWearStat: () => Promise.resolve({ worn: 3, total: 5 }),
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
     await screen.findByText(/Houdini is now 3 of 5/, { selector: "p" });
 
@@ -1492,8 +1627,8 @@ describe("VerdictForm: what happens after saving", () => {
     expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
 
     // The answer stays — the chosen verdict still pressed.
-    const dialed = screen.getByRole("button", { name: "Dialed" });
-    expect(dialed).toHaveAttribute("aria-pressed", "true");
+    const dialed = screen.getByRole("radio", { name: "Dialed" });
+    expect(dialed).toBeChecked();
   });
 
   it("is answerable until it is logged — nothing is read-only on the way in", async () => {
@@ -1508,7 +1643,7 @@ describe("VerdictForm: what happens after saving", () => {
 
     for (const step of verdictScale) {
       expect(
-        screen.getByRole("button", { name: step.label }),
+        screen.getByRole("radio", { name: step.label }),
       ).not.toHaveAttribute("aria-disabled");
     }
     expect(screen.getByRole("button", { name: "chafed" })).not.toHaveAttribute(
@@ -1527,19 +1662,16 @@ describe("VerdictForm: what happens after saving", () => {
         itemBandWearStat: () => Promise.resolve({ worn: 3, total: 5 }),
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
     await screen.findByText(/Houdini is now 3 of 5/, { selector: "p" });
 
-    const wayCold = screen.getByRole("button", { name: "Way cold" });
+    const wayCold = screen.getByRole("radio", { name: "Way cold" });
     expect(wayCold).toHaveAttribute("aria-disabled", "true");
     expect(wayCold).not.toBeDisabled();
     await user.click(wayCold);
-    expect(screen.getByRole("button", { name: "Dialed" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expect(wayCold).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("radio", { name: "Dialed" })).toBeChecked();
+    expect(wayCold).not.toBeChecked();
 
     const tag = screen.getByRole("button", { name: "chafed" });
     expect(tag).toHaveAttribute("aria-disabled", "true");
@@ -1570,7 +1702,7 @@ describe("VerdictForm: what happens after saving", () => {
       screen.getByRole("button", { name: "chafed" }).querySelector("svg"),
     ).not.toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
     await screen.findByText(/Houdini is now 3 of 5/, { selector: "p" });
 
@@ -1588,7 +1720,7 @@ describe("VerdictForm: what happens after saving", () => {
       }),
     );
 
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
 
     // The band the contract defines, with the classifier's own sentence —
@@ -1610,7 +1742,7 @@ describe("VerdictForm: what happens after saving", () => {
       .mockReturnValueOnce(pending.promise);
     await renderWithRouter(form({ submitVerdict }));
 
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
     expect(
       await screen.findByText("Our end failed. Nothing changed."),
@@ -1632,7 +1764,7 @@ describe("VerdictForm: the details that go missing silently", () => {
     // while the screen appears to do something.
     const user = userEvent.setup();
     await renderWithRouter(form());
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
 
     let prevented: boolean | undefined;
     const watch = (event: Event) => {
@@ -1663,7 +1795,7 @@ describe("VerdictForm: the details that go missing silently", () => {
       }),
     );
 
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
 
     await waitFor(() => {
@@ -1918,7 +2050,7 @@ describe("VerdictForm: the run header (round 21)", () => {
       heading,
     );
     expect(screen.getAllByText("Did it work?")).toHaveLength(1);
-    expect(screen.getByRole("group", { name: "Did it work?" })).toBeVisible();
+    expect(screen.getByRole("radiogroup", { name: "Did it work?" })).toBeVisible();
   });
 
   it("marks the row when a save is refused for want of a verdict", async () => {
@@ -1929,7 +2061,7 @@ describe("VerdictForm: the run header (round 21)", () => {
 
     await user.click(screen.getByRole("button", { name: "Log it" }));
 
-    const group = screen.getByRole("group", { name: "Did it work?" });
+    const group = screen.getByRole("radiogroup", { name: "Did it work?" });
     expect(group.querySelector("#verdict-message")).not.toBeNull();
   });
 });
@@ -1969,7 +2101,7 @@ describe("VerdictChips and A3b: the 32px chip (round 21)", () => {
       expect(screen.queryByRole("dialog")).toBeNull();
     });
 
-    await user.click(screen.getByRole("button", { name: "A bit warm" }));
+    await user.click(screen.getByRole("radio", { name: "A bit warm" }));
     sheet = await openSpecifics(user);
     expect(within(sheet).getByText("A bit warm · optional")).toBeVisible();
     // A3b's tags are the same 32px chips, in the same seam-gapped row.
@@ -2039,7 +2171,7 @@ describe("VerdictForm: effort from the watch (G5)", () => {
       }),
     );
 
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
 
     await waitFor(() => {
@@ -2070,7 +2202,7 @@ describe("VerdictForm: effort from the watch (G5)", () => {
       within(group).getByRole("button", { name: "Steady" }),
     ).toHaveAttribute("aria-pressed", "true");
 
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
     await waitFor(() => {
       expect(submitVerdict).toHaveBeenCalledTimes(1);
@@ -2097,7 +2229,7 @@ describe("VerdictForm: effort from the watch (G5)", () => {
       within(effortGroup()).getByRole("button", { name: "Steady" }),
     ).toHaveAttribute("aria-pressed", "false");
 
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
     await waitFor(() => {
       expect(submitVerdict).toHaveBeenCalledTimes(1);
@@ -2144,7 +2276,7 @@ describe("VerdictForm: effort from the watch (G5)", () => {
       }),
     );
 
-    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
 
     const race = await waitFor(() => {

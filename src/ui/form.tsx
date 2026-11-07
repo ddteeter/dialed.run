@@ -1085,6 +1085,7 @@ export function ToggleField({
   isOn,
   onChange,
   inputRef,
+  isSwitch = false,
 }: Readonly<{
   name: string;
   label: string;
@@ -1095,12 +1096,21 @@ export function ToggleField({
   The box itself, for a caller that moves focus to it — Privacy's switch, unlocked.
   */
   inputRef?: Ref<HTMLInputElement> | undefined;
+  /**
+   * Announced as a switch, on or off, rather than a box ticked or not:
+   * for a setting that takes effect at once, as W3's blur does
+   * (Accessibility Contract rule 05, R-84). A field saved with its form
+   * stays a checkbox. The control is still a native checkbox underneath,
+   * so space toggles it and the form reads it the same way.
+   */
+  isSwitch?: boolean | undefined;
 }>): JSX.Element {
   return (
     <label className="target flex items-center gap-2 text-body font-semibold">
       <input
         ref={inputRef}
         {...field(name)}
+        role={isSwitch ? "switch" : undefined}
         type="checkbox"
         checked={isOn}
         onChange={(event) => {

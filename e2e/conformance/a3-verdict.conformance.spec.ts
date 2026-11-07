@@ -202,7 +202,7 @@ test("A3's verdict row and chips are composed as the board draws them", async ({
     // and every unit test green, because those prove T1 is ported, never
     // that a surface wears the right role. Compared as roles, so the diff
     // reads "board `--dialed-text`, app `--ink`", not two hex codes.
-    await page.getByRole("button", { name: chosenLabel }).click();
+    await page.getByRole("radio", { name: chosenLabel }).click();
     expect(await fillsOf(page, '[data-slot="verdict-row"]')).toEqual(
       drawnFills,
     );
@@ -299,7 +299,7 @@ test.describe("A3 · round 21", () => {
     await page.goto(`/feed/verdict/${entryId}`);
     await hydrated(page);
     // The board's sheet opened on "A bit warm".
-    await page.getByRole("button", { name: "A bit warm" }).click();
+    await page.getByRole("radio", { name: "A bit warm" }).click();
     await page.getByRole("button", { name: "More, anything specific" }).click();
     const sheet = page.getByRole("dialog", { name: "Anything specific?" });
     await expect(sheet).toBeVisible();
@@ -333,7 +333,7 @@ test.describe("A3 · round 21", () => {
     await page.setViewportSize({ width: 390, height: 900 });
     await page.goto(`/feed/verdict/${entryId}`);
     await hydrated(page);
-    await page.getByRole("button", { name: "Dialed" }).click();
+    await page.getByRole("radio", { name: "Dialed" }).click();
     await page.getByRole("button", { name: "Log it" }).click();
 
     const noted = page.locator('[data-slot="noted"]');
