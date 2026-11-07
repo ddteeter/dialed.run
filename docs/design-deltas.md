@@ -1053,9 +1053,9 @@ _Nothing from 99 on is open: round 45 answered the last of it._
        MONO.xs `--muted`, sentence case, under the reason. Built without
        R47·124's "See the takedown": see 127.
 
-<!-- Numbered 127: round 47 filed 113–126. A list break, so Prettier keeps the number. -->
+<!-- Numbered 139: after lane 176's 138. A list break, so Prettier keeps the number. -->
 
-127. **What R47·124's "See the takedown" opens (design 176).** The board
+139. **What R47·124's "See the takedown" opens (design 176).** The board
      says it opens the Review row. An upheld takedown's row is already
      decided, Review shows only pending rows and takes no parameters, and
      a decided `/takedown` request leaves RemovalRequests. Nothing on the
