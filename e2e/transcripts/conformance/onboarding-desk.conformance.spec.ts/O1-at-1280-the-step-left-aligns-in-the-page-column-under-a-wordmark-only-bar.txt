@@ -1,0 +1,63 @@
+document
+banner
+dialed.run
+end of banner
+main
+Step # of # · Optional
+heading, One question does most of the work, level 1
+form
+status
+group, Compared to people you run with, do you run warm or cold?
+Compared to people you run with, do you run warm or cold?
+Compared to people you run with, do you run warm or cold?
+end, Compared to people you run with, do you run warm or cold?
+radio, Always freezing +#°, The offset is visible on purpose. You'll see it change as we learn., not checked, position 1, set size 5
+Always freezing
++#°
+radio, Run a little cold +#°, The offset is visible on purpose. You'll see it change as we learn., not checked, position 2, set size 5
+Run a little cold
++#°
+radio, About average #°, The offset is visible on purpose. You'll see it change as we learn., not checked, position 3, set size 5
+About average
+#°
+radio, Run a little warm −#°, The offset is visible on purpose. You'll see it change as we learn., not checked, position 4, set size 5
+Run a little warm
+−#°
+radio, Sweating in a t-shirt at #° −#°, The offset is visible on purpose. You'll see it change as we learn., not checked, position 5, set size 5
+Sweating in a t-shirt at #°
+−#°
+The offset is visible on purpose. You'll see it change as we learn.
+end of group, Compared to people you run with, do you run warm or cold?
+Where you run
+textbox, Where you run, Add the state or country. We'll show you the place we found before we use it.
+button, Find
+Find
+end of button, Find
+Add the state or country. We'll show you the place we found before we use it.
+button, Use my location
+Use my location
+end of button, Use my location
+group, Temperature
+Temperature
+Temperature
+end, Temperature
+radio, °F, checked, position 1, set size 2
+°F
+radio, °C, not checked, position 2, set size 2
+°C
+end of group, Temperature
+group, Distance
+Distance
+Distance
+end, Distance
+radio, mi, checked, position 1, set size 2
+mi
+radio, km, not checked, position 2, set size 2
+km
+end of group, Distance
+button, Start running
+Start running
+end of button, Start running
+end of form
+end of main
+end of document

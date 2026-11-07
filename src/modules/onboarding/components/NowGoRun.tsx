@@ -49,26 +49,35 @@ export function NowGoRun({
   shouldFocusOffer = false,
 }: Readonly<{ shouldFocusOffer?: boolean | undefined }>): JSX.Element {
   return (
-    <div className="overflow-hidden rounded-sheet bg-failure text-ink">
-      <div className="flex flex-col gap-3 px-5 pb-6 pt-4">
+    <div className="flex flex-col gap-6">
+      {/* The band is the screen's one emphasis (round 49, R49·138b): the
+          full bar and the instruction, and nothing else is hi-viz. At
+          desk it runs the full column; its bar keeps the measure. */}
+      <div className="flex flex-col gap-3 bg-failure px-5 pb-6 pt-4 text-ink">
         <Steps />
         <h1 className="m-0 font-display text-display uppercase">Now go run.</h1>
       </div>
 
-      <div className="ground-ink flex flex-col gap-5 bg-ground px-5 py-6 text-ink">
+      {/* Light, on the page's own ground: "nothing in the light runner
+          app sits on ink" (R49·138b). Ink is the dark theme's. */}
+      <div className="flex flex-col gap-5 desk:max-w-column">
         <p className="m-0 text-lead">
           Next time you finish a run, upload it and tell us what you wore.
           That&rsquo;s the whole loop.
         </p>
 
         <div className="flex flex-col gap-3">
-          <h2 className="m-0 text-hiviz-text">
+          <h2 className="m-0 text-muted">
             <Mono step="xs">What happens as you log</Mono>
           </h2>
-          <ol className="m-0 flex list-none flex-col gap-3 p-0">
+          {/* Split by hairlines, as the board draws the promises. */}
+          <ol className="m-0 flex list-none flex-col border-t border-hairline p-0">
             {PROMISES.map((promise, index) => (
-              <li key={promise} className="flex items-start gap-3">
-                <Mono step="sm" className="pt-1 text-cold-text">
+              <li
+                key={promise}
+                className="flex items-start gap-3 border-b border-hairline py-3"
+              >
+                <Mono step="sm" className="pt-1 text-muted">
                   {String(index + 1).padStart(2, "0")}
                 </Mono>
                 <span className="text-body">{promise}</span>
@@ -108,7 +117,7 @@ export function NowGoRun({
  */
 function Steps(): JSX.Element {
   return (
-    <div aria-hidden="true" className="flex gap-1">
+    <div aria-hidden="true" className="flex gap-1 desk:max-w-column">
       {[0, 1, 2, 3].map((step) => (
         <div key={step} className="h-1 flex-1 bg-ink" />
       ))}
@@ -130,7 +139,8 @@ function StravaOffer({
   shouldFocus,
 }: Readonly<{ shouldFocus: boolean }>): JSX.Element {
   return (
-    <div className="flex flex-col gap-3 rounded-sheet border border-hairline p-4">
+    // The `--panel` inset (R49·138b), now that the body is on the ground.
+    <div className="flex flex-col gap-3 rounded-sheet bg-panel p-4">
       <div className="flex flex-col gap-1">
         <h2
           ref={shouldFocus ? focusOnMount : undefined}

@@ -7,7 +7,7 @@ import {
   renameNoticeQuery,
 } from "../../modules/account/functions";
 import { requireSession } from "../../modules/auth/functions";
-import { Page } from "../../ui";
+import { OnboardingShell, Page } from "../../ui";
 
 /**
  * O0 · pick a handle (round 26 #7), the first step of onboarding for email
@@ -28,8 +28,8 @@ function HandlePage() {
   const navigate = useNavigate();
 
   return (
-    <main>
-      <Page width="panel">
+    <OnboardingShell>
+      <Page width="step">
         <OnboardingHandle
           notice={notice}
           claim={claimUsernameFn}
@@ -42,6 +42,6 @@ function HandlePage() {
           }}
         />
       </Page>
-    </main>
+    </OnboardingShell>
   );
 }

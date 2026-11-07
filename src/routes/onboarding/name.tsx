@@ -9,7 +9,7 @@ import {
   namingSuggestionsQuery,
 } from "../../modules/onboarding/functions";
 import { skipNamingIfNothingToName } from "../../modules/onboarding/route-decisions";
-import { OnboardingProgress, Page } from "../../ui";
+import { OnboardingProgress, OnboardingShell, Page } from "../../ui";
 
 /**
  * Screen P2.5 — "make them real" (design §AC), between the tap list and
@@ -34,11 +34,11 @@ function NamePage() {
   }>({ brands: [], models: [] });
 
   return (
-    <main>
+    <OnboardingShell>
       <Page
         title="Which ones do you actually reach for?"
         kicker={<OnboardingProgress at="tapList" />}
-        width="panel"
+        width="step"
       >
         <NamePieces
           offer={offer}
@@ -55,6 +55,6 @@ function NamePage() {
           }}
         />
       </Page>
-    </main>
+    </OnboardingShell>
   );
 }
