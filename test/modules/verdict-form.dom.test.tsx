@@ -454,9 +454,9 @@ describe("VerdictForm: the scale", () => {
   it("gives an unchosen verdict no brackets to close", async () => {
     await renderWithRouter(form());
 
-    expect(cell("Dialed").querySelectorAll("[aria-hidden='true']")).toHaveLength(
-      0,
-    );
+    expect(
+      cell("Dialed").querySelectorAll("[aria-hidden='true']"),
+    ).toHaveLength(0);
   });
 
   it("starts from the verdict the entry already has", async () => {
@@ -554,6 +554,26 @@ describe("VerdictForm: the row, and the box that was around it", () => {
       "text-center",
       "flex-col",
       "target",
+    );
+  });
+
+  it("draws the focus ring on the cell, and fills the cell with its radio (R-84 c)", async () => {
+    // The radio holds focus but is invisible, so the ring is the cell's
+    // (`has-[:focus-visible]`). And it fills the cell rather than being
+    // `sr-only`, so a press anywhere on the cell lands on the control.
+    await renderWithRouter(form({}));
+
+    expect(cell("Way cold")).toHaveClass(
+      "has-[:focus-visible]:outline",
+      "has-[:focus-visible]:outline-ink",
+    );
+    expect(screen.getByRole("radio", { name: "Way cold" })).toHaveClass(
+      "absolute",
+      "inset-0",
+      "h-full",
+      "w-full",
+      "appearance-none",
+      "opacity-0",
     );
   });
 
@@ -1289,8 +1309,17 @@ describe("VerdictForm: tags and sharing", () => {
       }),
     );
 
-    // No answer above it (no root), so the press asks nobody, and holds.
+    // No answer above it (no root), so the press asks nobody, and holds,
+    // without throwing.
+    const errors: unknown[] = [];
+    const onError = (event: ErrorEvent): void => {
+      errors.push(event.error);
+      event.preventDefault();
+    };
+    globalThis.addEventListener("error", onError);
     await user.click(screen.getByRole("radio", { name: /^Shared/ }));
+    globalThis.removeEventListener("error", onError);
+    expect(errors).toEqual([]);
     expect(screen.getByRole("radio", { name: /^Private/ })).toBeChecked();
     await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
@@ -2050,7 +2079,9 @@ describe("VerdictForm: the run header (round 21)", () => {
       heading,
     );
     expect(screen.getAllByText("Did it work?")).toHaveLength(1);
-    expect(screen.getByRole("radiogroup", { name: "Did it work?" })).toBeVisible();
+    expect(
+      screen.getByRole("radiogroup", { name: "Did it work?" }),
+    ).toBeVisible();
   });
 
   it("marks the row when a save is refused for want of a verdict", async () => {

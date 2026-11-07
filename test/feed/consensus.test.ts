@@ -75,6 +75,7 @@ async function runner(
     verdict?: number;
     typed?: boolean;
     layer?: "base" | "outer";
+    type?: "tee" | "singlet";
   } = {},
 ): Promise<string> {
   place.next += 1;
@@ -87,7 +88,9 @@ async function runner(
       makeItem({
         userId,
         category,
-        ...(options.typed !== false && { type: TYPE_OF[category] }),
+        ...(options.typed !== false && {
+          type: options.type ?? TYPE_OF[category],
+        }),
         ...(options.layer !== undefined && { layer: options.layer }),
       }),
     ),
@@ -286,6 +289,26 @@ describe("matchTally: who matched", () => {
         group: "tops",
         lastDialedAt: NOW - 2 * HOUR,
       },
+    ]);
+  });
+
+  it("orders types in one rail group by count, then by name, whatever order they are read in", async () => {
+    // Read newest first: tee, then singlet, then long sleeve. All tops.
+    await runner({ verdict: 0, type: "tee" });
+    await runner({ verdict: 0, type: "tee" });
+    await runner({ verdict: 0, type: "singlet", ago: 2 * HOUR });
+    await runner({ verdict: 0, type: "singlet", ago: 2 * HOUR });
+    await runner({ verdict: 0, ago: 3 * HOUR });
+    await runner({ verdict: 0, ago: 3 * HOUR });
+    await runner({ verdict: 0, ago: 3 * HOUR });
+
+    const tally = await matchTally(VIEWER, THREE_DAYS_AGO);
+    expect(
+      tally.dialed.types.map(({ type, runners }) => [type, runners]),
+    ).toStrictEqual([
+      ["longSleeve", 3],
+      ["singlet", 2],
+      ["tee", 2],
     ]);
   });
 

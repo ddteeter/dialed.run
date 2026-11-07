@@ -113,7 +113,8 @@ const CLAUSE_MAX = 3;
 
 /**
  * One clause's types: the three strongest, ties to the most recently
- * dialed, then put in rail group order and by count.
+ * dialed, then put in rail group order. The second sort is stable, so
+ * within a group they stay by count.
  */
 function clauseTypes(types: readonly DialedType[]): DialedType[] {
   return types
@@ -121,11 +122,7 @@ function clauseTypes(types: readonly DialedType[]): DialedType[] {
       (a, b) => b.runners - a.runners || b.lastDialedAt - a.lastDialedAt,
     )
     .slice(0, CLAUSE_MAX)
-    .toSorted(
-      (a, b) =>
-        uiGroups.indexOf(a.group) - uiGroups.indexOf(b.group) ||
-        b.runners - a.runners,
-    );
+    .toSorted((a, b) => uiGroups.indexOf(a.group) - uiGroups.indexOf(b.group));
 }
 
 const SHARE_ORDER = [

@@ -411,7 +411,9 @@ function typeCounts(
     GarmentType,
     { runners: Set<string>; group: UiGroup; lastDialedAt: number }
   >();
-  for (const row of worn) {
+  // In rail order, so the first row a type is seen in carries its
+  // earliest group.
+  for (const row of worn.toSorted(byRail)) {
     const at = dialedAt.get(row.entryId);
     if (at === undefined || row.type === undefined) continue;
     const seen = byType.get(row.type);
@@ -424,9 +426,6 @@ function typeCounts(
       continue;
     }
     seen.runners.add(row.userId);
-    if (uiGroups.indexOf(row.group) < uiGroups.indexOf(seen.group)) {
-      seen.group = row.group;
-    }
     seen.lastDialedAt = Math.max(seen.lastDialedAt, at);
   }
   return [...byType]
@@ -441,15 +440,21 @@ function typeCounts(
 }
 
 /**
+C's rail group order.
+*/
+function byRail(
+  a: Readonly<{ group: UiGroup }>,
+  b: Readonly<{ group: UiGroup }>,
+): number {
+  return uiGroups.indexOf(a.group) - uiGroups.indexOf(b.group);
+}
+
+/**
  * C's rail group order, then most-worn first, then the type's own name:
  * one order whatever order the rows were read in.
  */
 function byRailThenCount(a: DialedType, b: DialedType): number {
-  return (
-    uiGroups.indexOf(a.group) - uiGroups.indexOf(b.group) ||
-    b.runners - a.runners ||
-    a.type.localeCompare(b.type)
-  );
+  return byRail(a, b) || b.runners - a.runners || a.type.localeCompare(b.type);
 }
 
 /**
