@@ -79,7 +79,8 @@ And the moderation thresholds are read from source rather than config.
 - Closes: #358, #387, #410, and the thresholds item (the Project draft).
 - Opens: design-asks #497 (the fold open), #498 (a grouped follow row's
   link), #499 (WRONG? with no composition); owner question #500 (the bell
-  rows' field words, and who Apply tells).
+  rows' field words, and who Apply tells; answered by the owner on
+  2026-11-07: both stay as built).
 
 ## Open questions
 
