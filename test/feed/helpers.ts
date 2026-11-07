@@ -137,6 +137,10 @@ export async function makeItem(params: {
     | "shoes"
     | "accessory";
   layer?: "base" | "mid" | "outer";
+  /**
+  The garment's type, as the contract stores it. None by default.
+  */
+  type?: string;
 }): Promise<string> {
   const itemId = newUlid();
   await coreDb()
@@ -146,6 +150,7 @@ export async function makeItem(params: {
       userId: params.userId,
       category: params.category ?? "top",
       layer: params.layer,
+      type: params.type,
       name: params.name ?? "Test garment",
       origin: "manual",
       createdAt: NOW,

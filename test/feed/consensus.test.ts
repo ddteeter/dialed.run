@@ -44,9 +44,20 @@ const VIEWER = pointConditions({ tempC: 8, feelsLikeC: 7 });
 /**
 What `dialed` holds when no matched entry has a verdict yet.
 */
-const NOBODY_DIALED = { runners: 0, groups: {} };
+const NOBODY_DIALED = { runners: 0, types: [] };
 
 type Category = "top" | "bottom" | "gloves" | "shoes";
+
+/**
+ * The type each category's garment gets, so the sentence's types are
+ * countable (R49·137a′). `typed: false` leaves them untyped.
+ */
+const TYPE_OF = {
+  top: "longSleeve",
+  bottom: "shorts",
+  gloves: "gloves",
+  shoes: "shoes",
+} as const satisfies Record<Category, string>;
 
 /**
  * One runner, one public entry, logged `ago` seconds before NOW at a place
@@ -62,6 +73,8 @@ async function runner(
     categories?: Category[];
     userId?: string;
     verdict?: number;
+    typed?: boolean;
+    layer?: "base" | "outer";
   } = {},
 ): Promise<string> {
   place.next += 1;
@@ -71,7 +84,12 @@ async function runner(
   const userId = options.userId ?? (await makeUser());
   const itemIds = await Promise.all(
     (options.categories ?? ["top"]).map((category) =>
-      makeItem({ userId, category }),
+      makeItem({
+        userId,
+        category,
+        ...(options.typed !== false && { type: TYPE_OF[category] }),
+        ...(options.layer !== undefined && { layer: options.layer }),
+      }),
     ),
   );
   const runId = await makeRun({ userId, lat, lng, startedAt: at });
@@ -197,27 +215,88 @@ describe("matchTally: who matched", () => {
     });
   });
 
-  it("counts the dialed runners apart, with what they wore when dialed (round 47 #114)", async () => {
+  it("counts the dialed runners apart, with the types they wore when dialed (round 47 #114, R49·137)", async () => {
     await runner({ verdict: 0, categories: ["top", "bottom"] });
-    await runner({ verdict: 0, categories: ["top"] });
+    await runner({ verdict: 0, categories: ["top", "bottom"], ago: 2 * HOUR });
+    await runner({ verdict: 0, categories: ["top", "gloves"], ago: 3 * HOUR });
     await runner({ verdict: -1, categories: ["top", "gloves"] });
     await runner({ categories: ["bottom"] });
 
     expect(await matchTally(VIEWER, THREE_DAYS_AGO)).toStrictEqual({
-      runners: 4,
-      groups: { tops: 3, bottoms: 2, hands_head: 1 },
-      dialed: { runners: 2, groups: { tops: 2, bottoms: 1 } },
+      runners: 5,
+      groups: { tops: 4, bottoms: 3, hands_head: 2 },
+      // Two or more to a type, so the one dialed runner's gloves are not
+      // here; each type carries its rail group and its last dialed time.
+      dialed: {
+        runners: 3,
+        types: [
+          {
+            type: "longSleeve",
+            runners: 3,
+            group: "tops",
+            lastDialedAt: NOW - HOUR,
+          },
+          {
+            type: "shorts",
+            runners: 2,
+            group: "bottoms",
+            lastDialedAt: NOW - HOUR,
+          },
+        ],
+      },
     });
   });
 
   it("counts a runner dialed once, with only their dialed entry's kit", async () => {
     const userId = await runner({ verdict: 0, categories: ["top"] });
     await runner({ userId, verdict: 1, categories: ["shoes"] });
+    await runner({ verdict: 0, categories: ["top"], ago: 2 * HOUR });
 
     expect(await matchTally(VIEWER, THREE_DAYS_AGO)).toStrictEqual({
-      runners: 1,
-      groups: { tops: 1, shoes: 1 },
-      dialed: { runners: 1, groups: { tops: 1 } },
+      runners: 2,
+      groups: { tops: 2, shoes: 1 },
+      dialed: {
+        runners: 2,
+        types: [
+          {
+            type: "longSleeve",
+            runners: 2,
+            group: "tops",
+            lastDialedAt: NOW - HOUR,
+          },
+        ],
+      },
+    });
+  });
+
+  it("gives a type the earliest rail group it was worn in, and its latest dialed time", async () => {
+    // Worn as an outer layer and as a top: C's rail puts tops first. And
+    // dialed at three times: the tie-break reads the latest, whichever
+    // order the rows arrive in.
+    await runner({ verdict: 0, layer: "outer", ago: 3 * HOUR });
+    await runner({ verdict: 0, layer: "base", ago: 5 * HOUR });
+    await runner({ verdict: 0, layer: "outer", ago: 2 * HOUR });
+    await runner({ verdict: 0, layer: "base", ago: 4 * HOUR });
+
+    const tally = await matchTally(VIEWER, THREE_DAYS_AGO);
+    expect(tally.dialed.types).toStrictEqual([
+      {
+        type: "longSleeve",
+        runners: 4,
+        group: "tops",
+        lastDialedAt: NOW - 2 * HOUR,
+      },
+    ]);
+  });
+
+  it("counts no type for a piece that has none (R49·137a′)", async () => {
+    await runner({ verdict: 0, categories: ["top"], typed: false });
+    await runner({ verdict: 0, categories: ["top"], typed: false });
+
+    expect(await matchTally(VIEWER, THREE_DAYS_AGO)).toStrictEqual({
+      runners: 2,
+      groups: { tops: 2 },
+      dialed: { runners: 2, types: [] },
     });
   });
 
@@ -334,13 +413,13 @@ describe("yourConditionsConsensus: the floor and the window", () => {
       status: "matched",
       runners: 5,
       groups: [{ group: "tops", runners: 5 }],
-      dialed: { runners: 0, groups: [] },
+      dialed: { runners: 0, types: [] },
       windowDays: 3,
       band,
     });
   });
 
-  it("gives the sentence the dialed runners' groups, two runners or more to a group", async () => {
+  it("gives the sentence the dialed runners' types, two runners or more to a type", async () => {
     await runner({ verdict: 0, categories: ["top", "bottom"] });
     await runner({ verdict: 0, categories: ["top", "bottom"] });
     await runner({ verdict: 0, categories: ["top", "shoes"] });
@@ -351,9 +430,9 @@ describe("yourConditionsConsensus: the floor and the window", () => {
       runners: 5,
       dialed: {
         runners: 3,
-        groups: [
-          { group: "tops", runners: 3 },
-          { group: "bottoms", runners: 2 },
+        types: [
+          expect.objectContaining({ type: "longSleeve", runners: 3 }),
+          expect.objectContaining({ type: "shorts", runners: 2 }),
         ],
       },
     });

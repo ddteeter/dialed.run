@@ -192,7 +192,7 @@ export interface EntrySeed {
   verdict?: number;
   audience?: Audience;
   isIndoor?: boolean;
-  category?: "top" | "bottom" | "gloves";
+  category?: SeededCategory;
   itemName?: string;
   tags?: ("hands_cold" | "overheated_late" | "chafed")[];
   /**
@@ -219,6 +219,8 @@ export async function seedEntry(
       userId: params.userId,
       name: params.itemName ?? "Long sleeve",
       category: params.category ?? "top",
+      // A type, so E2-lite's sentence can name it (R49·137a′).
+      type: SEEDED_TYPE[params.category ?? "top"],
       origin: "manual",
       createdAt: params.startedAt,
     });
@@ -323,6 +325,17 @@ export async function seedFollow(
     createdAt: nowSeconds(),
   });
 }
+
+type SeededCategory = "top" | "bottom" | "gloves";
+
+/**
+The garment type a seeded piece of each category gets.
+*/
+const SEEDED_TYPE = {
+  top: "longSleeve",
+  bottom: "tights",
+  gloves: "gloves",
+} as const satisfies Record<SeededCategory, string>;
 
 /**
  * The `data-part` names inside a region, in document order — the

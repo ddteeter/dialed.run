@@ -5,6 +5,7 @@ import {
   summarySentence,
   withShares,
 } from "../../src/modules/feed/bar-share";
+import type { DialedType } from "../../src/modules/feed/bar-share";
 
 /**
 The words alone, for rows of these runner counts out of `matched`.
@@ -66,62 +67,124 @@ describe("withShares: round 35 #54's consensus words", () => {
   });
 });
 
-describe("summarySentence (round 47 #114)", () => {
-  it("leads with the most-held word, and adds the rest after it", () => {
-    // The Feed board's own: "Most got it right in … Some added …".
+/**
+ * One type the dialed runners wore. `at` is when it was last dialed; the
+ * group is the rail group it sits in.
+ */
+function worn(
+  type: DialedType["type"],
+  runners: number,
+  group: DialedType["group"],
+  at = 0,
+): DialedType {
+  return { type, runners, group, lastDialedAt: at };
+}
+
+describe("summarySentence (round 47 #114, round 49 #137)", () => {
+  it("names types in their own words, leading with the highest tier (137c′)", () => {
+    // The board's own example: "Most got it right in long sleeve and
+    // shorts. Some added gloves."
     expect(
       summarySentence({
         runners: 6,
-        groups: [
-          { group: "tops", runners: 5 },
-          { group: "bottoms", runners: 4 },
-          { group: "hands_head", runners: 2 },
+        types: [
+          worn("gloves", 2, "hands_head"),
+          worn("shorts", 4, "bottoms"),
+          worn("longSleeve", 5, "tops"),
         ],
       }),
-    ).toBe("Most got it right in tops and bottoms. Some added hands / head.");
+    ).toBe("Most got it right in long sleeve and shorts. Some added gloves.");
   });
 
-  it("says All for a group every dialed runner wore, then Most, then Some", () => {
+  it("goes All, then Most, then Some, and never merges a tier (137c′)", () => {
     expect(
       summarySentence({
         runners: 4,
-        groups: [
-          { group: "bottoms", runners: 4 },
-          { group: "tops", runners: 3 },
-          { group: "shoes", runners: 2 },
+        types: [
+          worn("shoes", 2, "shoes"),
+          worn("tee", 3, "tops"),
+          worn("tights", 4, "bottoms"),
         ],
       }),
-    ).toBe("All got it right in bottoms. Most added tops. Some added shoes.");
+    ).toBe("All got it right in tights. Most added tee. Some added shoes.");
   });
 
-  it("leads with Some when no group reaches more than half", () => {
+  it("names each type at its own strength, with no fallback to category (137b′)", () => {
+    // 4 tee, 3 long sleeve and 2 singlet out of 9: all three are Some,
+    // and the singlet is named too, since two wore it.
     expect(
       summarySentence({
-        runners: 6,
-        groups: [
-          { group: "outer", runners: 3 },
-          { group: "shoes", runners: 2 },
+        runners: 9,
+        types: [
+          worn("singlet", 2, "tops"),
+          worn("tee", 4, "tops"),
+          worn("longSleeve", 3, "tops"),
         ],
       }),
-    ).toBe("Some got it right in outer and shoes.");
+    ).toBe("Some got it right in tee, long sleeve, and singlet.");
   });
 
-  it("lists three or more in a series", () => {
+  it("names at most three to a clause, dropping the lowest counts (137b′)", () => {
     expect(
       summarySentence({
-        runners: 2,
-        groups: [
-          { group: "tops", runners: 2 },
-          { group: "bottoms", runners: 2 },
-          { group: "socks_extras", runners: 2 },
+        runners: 10,
+        types: [
+          worn("beanie", 2, "hands_head"),
+          worn("tee", 4, "tops"),
+          worn("shorts", 3, "bottoms"),
+          worn("gloves", 3, "hands_head"),
         ],
       }),
-    ).toBe("All got it right in tops, bottoms, and socks / extras.");
+    ).toBe("Some got it right in tee, shorts, and gloves.");
   });
 
-  it("says nothing when nobody dialed, or no group holds two of them", () => {
-    expect(summarySentence({ runners: 0, groups: [] })).toBeUndefined();
-    expect(summarySentence({ runners: 3, groups: [] })).toBeUndefined();
+  it("breaks a tie at the cut toward the one dialed most recently (137b′)", () => {
+    const types = [
+      worn("tee", 4, "tops"),
+      worn("shorts", 3, "bottoms"),
+      worn("beanie", 2, "hands_head", 100),
+      worn("gloves", 2, "hands_head", 200),
+    ];
+    expect(summarySentence({ runners: 10, types })).toBe(
+      "Some got it right in tee, shorts, and gloves.",
+    );
+    expect(
+      summarySentence({
+        runners: 10,
+        types: types.map((row) =>
+          row.type === "beanie" ? { ...row, lastDialedAt: 300 } : row,
+        ),
+      }),
+    ).toBe("Some got it right in tee, shorts, and beanie.");
+  });
+
+  it("puts a clause's types in C's rail group order, then by count (137c′)", () => {
+    expect(
+      summarySentence({
+        runners: 10,
+        types: [
+          worn("gloves", 4, "hands_head"),
+          worn("shorts", 2, "bottoms"),
+          worn("singlet", 2, "tops"),
+          worn("tee", 3, "tops"),
+        ],
+      }),
+    ).toBe("Some got it right in tee, shorts, and gloves.");
+    expect(
+      summarySentence({
+        runners: 10,
+        types: [
+          worn("singlet", 2, "tops"),
+          worn("tee", 3, "tops"),
+          worn("shorts", 4, "bottoms"),
+        ],
+      }),
+    ).toBe("Some got it right in tee, singlet, and shorts.");
+  });
+
+  it("says nothing when nobody dialed, or no type holds two of them", () => {
+    expect(summarySentence({ runners: 0, types: [] })).toBeUndefined();
+    expect(summarySentence({ runners: 3, types: [] })).toBeUndefined();
   });
 });
 

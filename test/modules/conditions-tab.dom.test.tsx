@@ -451,22 +451,22 @@ describe("ConditionsTab: matched", () => {
     ],
     dialed: {
       runners: 4,
-      groups: [
-        { group: "tops", runners: 3 },
-        { group: "bottoms", runners: 2 },
+      types: [
+        { type: "longSleeve", runners: 3, group: "tops", lastDialedAt: 0 },
+        { type: "shorts", runners: 2, group: "bottoms", lastDialedAt: 0 },
       ],
     },
     windowDays: 3,
     band,
   } as const;
 
-  it("says what the dialed runners wore, under the bars (round 47 #114)", async () => {
+  it("says what the dialed runners wore, by type, under the bars (round 47 #114, R49·137)", async () => {
     await renderFeedScreen(
       tab({ conditionsFor: () => Promise.resolve(matched) }),
     );
 
     const summary = await screen.findByText(
-      "Most got it right in tops. Some added bottoms.",
+      "Most got it right in long sleeve. Some added shorts.",
     );
     expect(summary).toHaveAttribute("data-part", "summary");
     // After the last bar, before the credit.
@@ -480,7 +480,7 @@ describe("ConditionsTab: matched", () => {
     await renderFeedScreen(
       tab({
         conditionsFor: () =>
-          Promise.resolve({ ...matched, dialed: { runners: 0, groups: [] } }),
+          Promise.resolve({ ...matched, dialed: { runners: 0, types: [] } }),
       }),
     );
 
@@ -696,7 +696,7 @@ describe("ConditionsTab: round 25's same-conditions copy", () => {
     status: "matched",
     runners: 6,
     groups: [{ group: "tops", runners: 5 }],
-    dialed: { runners: 0, groups: [] },
+    dialed: { runners: 0, types: [] },
     windowDays: 3,
     band,
   } as const;

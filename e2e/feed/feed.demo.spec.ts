@@ -400,9 +400,10 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     expect(drawnBars).toStrictEqual(["TopsAll5/5", "BottomsMost3/5"]);
     // Round 47 #114: under the bars, what the runners who got it right
     // wore, in the same share words over them. All five called it dialed.
+    // Round 49 #137: it names garment types, not the bars' groups.
     await scene(page, "E2-lite · the summary sentence, under the bars");
     await expect(page.locator('[data-part="summary"]')).toHaveText(
-      "All got it right in tops. Most added bottoms.",
+      "All got it right in long sleeve. Most added tights.",
     );
 
     // Following is a tab away, and its empty state is drawn (E1).

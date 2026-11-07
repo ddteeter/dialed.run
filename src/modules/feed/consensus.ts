@@ -54,6 +54,9 @@ import type { PrecipClass } from "../../lib/contracts/temperature";
 import type { Conditions } from "./conditions";
 import { observationsForEntries, conditionsAt } from "./conditions";
 import { judgedFeelsLikeC } from "./judged-conditions";
+import { garmentTypeOf } from "../../lib/contracts/garment-fields";
+import type { GarmentType } from "../../lib/contracts/garment-fields";
+import type { DialedType } from "./bar-share";
 import type { UiGroup } from "./groups";
 import { uiGroupFor, uiGroups } from "./groups";
 import { publiclyVisibleEntry } from "../safety";
@@ -95,8 +98,9 @@ export function recentPublicEntriesStatement(
   sinceEpochSeconds: number,
   viewerId?: string,
 ) {
-  // Only the four columns the tally reads: the window is unbounded by
+  // Only the five columns the tally reads: the window is unbounded by
   // count now, so every column left out is paid for on every row of it.
+  // `createdAt` is the sentence's tie-break, "dialed most recently".
   return outfitEntriesSelect(
     database,
     {
@@ -104,6 +108,7 @@ export function recentPublicEntriesStatement(
       runId: outfitEntries.runId,
       userId: outfitEntries.userId,
       verdict: outfitEntries.verdict,
+      createdAt: outfitEntries.createdAt,
     },
     // publiclyVisibleEntry(), not a bare audience test: a removed or
     // pending-review entry must not count toward the numbers everyone
@@ -167,10 +172,11 @@ export type ConsensusResult =
       runners: number;
       groups: readonly ConsensusGroup[];
       /**
-      The dialed runners among them and the groups they wore, two or more
-      to a group: what the summary sentence says (round 47 #114).
+      The dialed runners among them and the garment types they wore, two
+      or more to a type: what the summary sentence says (round 47 #114,
+      round 49 R49·137).
       */
-      dialed: { runners: number; groups: readonly ConsensusGroup[] };
+      dialed: { runners: number; types: readonly DialedType[] };
       windowDays: WindowDays;
       band: ConsensusBand;
     }
@@ -211,12 +217,14 @@ export interface MatchTally {
   runners: number;
   groups: Partial<Record<UiGroup, number>>;
   /**
-   * The same count over the matched runners who called it dialed, for the
-   * summary sentence (round 47 #114): "Most got it right in …" is about
-   * the runners who got it right. A runner is dialed if any of their
-   * matching entries is, and their groups here are those entries' alone.
+   * The matched runners who called it dialed, for the summary sentence
+   * (round 47 #114): "Most got it right in …" is about the runners who got
+   * it right. A runner is dialed if any of their matching entries is, and
+   * the types here are those entries' alone. Types, not groups (R49·137a′):
+   * matching still compares kits by group, only the sentence's words
+   * change, and a piece with no type is not counted.
    */
-  dialed: { runners: number; groups: Partial<Record<UiGroup, number>> };
+  dialed: { runners: number; types: readonly DialedType[] };
 }
 
 export async function matchTally(
@@ -253,13 +261,25 @@ export async function matchTally(
     database,
     matching.map((entry) => entry.id),
   );
-  const dialedIds = new Set(dialed.map((entry) => entry.id));
+  return tallyOf(matching, dialed, worn);
+}
+
+/**
+The tally over the matched entries, the dialed ones among them, and what was
+worn on the matched ones.
+*/
+function tallyOf(
+  matching: readonly { id: string; userId: string }[],
+  dialed: readonly { id: string; userId: string; createdAt: number }[],
+  worn: readonly WornRow[],
+): MatchTally {
+  const dialedAt = new Map(dialed.map((entry) => [entry.id, entry.createdAt]));
   return {
     runners: runnersIn(matching),
     groups: groupCounts(worn),
     dialed: {
       runners: runnersIn(dialed),
-      groups: groupCounts(worn.filter((row) => dialedIds.has(row.entryId))),
+      types: typeCounts(worn, dialedAt),
     },
   };
 }
@@ -268,7 +288,7 @@ export async function matchTally(
 Nobody matched: no runners, no groups, and nobody dialed.
 */
 function noTally(): MatchTally {
-  return { runners: 0, groups: {}, dialed: { runners: 0, groups: {} } };
+  return { runners: 0, groups: {}, dialed: { runners: 0, types: [] } };
 }
 
 function runnersIn(entries: readonly { userId: string }[]): number {
@@ -279,6 +299,7 @@ interface WornRow {
   entryId: string;
   userId: string;
   group: UiGroup;
+  type: GarmentType | undefined;
 }
 
 /**
@@ -304,33 +325,56 @@ async function wornByRunner(
       .innerJoin(outfitEntries, eq(outfitEntries.id, outfitEntryItems.entryId))
       .where(inArray(outfitEntryItems.entryId, chunk)),
   );
-  const itemIds = [...new Set(itemRows.map((r) => r.itemId))];
-  const garments = await readInChunks(itemIds, (chunk) =>
-    database
-      .select({
-        id: wardrobeItems.id,
-        category: wardrobeItems.category,
-        layer: wardrobeItems.layer,
-      })
-      .from(wardrobeItems)
-      .where(inArray(wardrobeItems.id, chunk)),
-  );
-  const groupByItemId = new Map(
-    garments.map((g) => [g.id, uiGroupFor(g.category, g.layer)]),
+  const garmentById = await garmentKinds(
+    database,
+    itemRows.map((r) => r.itemId),
   );
 
   const worn: WornRow[] = [];
   for (const row of itemRows) {
-    const group = groupByItemId.get(row.itemId);
+    const garment = garmentById.get(row.itemId);
     // Equivalent mutant: `itemIds` is built from these very rows, so every
     // one of them has a group unless its garment was deleted between the
     // two reads. The guard is what keeps that race from counting a group
     // of `undefined`.
     // Stryker disable next-line ConditionalExpression
-    if (!group) continue;
-    worn.push({ entryId: row.entryId, userId: row.userId, group });
+    if (!garment) continue;
+    worn.push({ entryId: row.entryId, userId: row.userId, ...garment });
   }
   return worn;
+}
+
+/**
+What a garment row says about its kind: the columns the rail group and the
+type are read from.
+*/
+const kindColumns = {
+  id: wardrobeItems.id,
+  category: wardrobeItems.category,
+  layer: wardrobeItems.layer,
+  type: wardrobeItems.type,
+};
+
+/**
+Each garment's rail group and its type, by id, in chunks under D1's
+parameter cap.
+*/
+async function garmentKinds(
+  database: DrizzleD1Database,
+  itemIds: readonly string[],
+): Promise<Map<string, Pick<WornRow, "group" | "type">>> {
+  const garments = await readInChunks([...new Set(itemIds)], (chunk) =>
+    database
+      .select(kindColumns)
+      .from(wardrobeItems)
+      .where(inArray(wardrobeItems.id, chunk)),
+  );
+  return new Map(
+    garments.map((g) => [
+      g.id,
+      { group: uiGroupFor(g.category, g.layer), type: garmentTypeOf(g.type) },
+    ]),
+  );
 }
 
 /**
@@ -348,6 +392,63 @@ function groupCounts(
   }
   return Object.fromEntries(
     [...runnersByGroup].map(([group, runners]) => [group, runners.size]),
+  );
+}
+
+/**
+ * How many dialed runners wore each garment type, two or more to a type
+ * (#114's fewer-than-2 rule, per type under R49·137b′), over the worn rows
+ * of the dialed entries alone — `dialedAt` holds each one's time. A piece
+ * with no type is not counted. Each type carries the earliest rail group
+ * it was worn in, for the sentence's order, and the latest entry it was
+ * dialed on, for its tie-break.
+ */
+function typeCounts(
+  worn: readonly WornRow[],
+  dialedAt: ReadonlyMap<string, number>,
+): DialedType[] {
+  const byType = new Map<
+    GarmentType,
+    { runners: Set<string>; group: UiGroup; lastDialedAt: number }
+  >();
+  for (const row of worn) {
+    const at = dialedAt.get(row.entryId);
+    if (at === undefined || row.type === undefined) continue;
+    const seen = byType.get(row.type);
+    if (seen === undefined) {
+      byType.set(row.type, {
+        runners: new Set([row.userId]),
+        group: row.group,
+        lastDialedAt: at,
+      });
+      continue;
+    }
+    seen.runners.add(row.userId);
+    if (uiGroups.indexOf(row.group) < uiGroups.indexOf(seen.group)) {
+      seen.group = row.group;
+    }
+    seen.lastDialedAt = Math.max(seen.lastDialedAt, at);
+  }
+  return [...byType]
+    .map(([type, seen]) => ({
+      type,
+      runners: seen.runners.size,
+      group: seen.group,
+      lastDialedAt: seen.lastDialedAt,
+    }))
+    .filter((row) => row.runners >= MIN_GROUP_RUNNERS)
+    .toSorted(byRailThenCount);
+}
+
+/**
+ * C's rail group order, then most-worn first, then the type's own name:
+ * one order whatever order the rows were read in.
+ */
+function byRailThenCount(a: DialedType, b: DialedType): number {
+  return (
+    uiGroups.indexOf(a.group) - uiGroups.indexOf(b.group) ||
+    b.runners - a.runners ||
+    a.type.localeCompare(b.type)
   );
 }
 
@@ -386,10 +487,7 @@ export async function yourConditionsConsensus(
         status: "matched",
         runners: tally.runners,
         groups: shownGroups(tally.groups),
-        dialed: {
-          runners: tally.dialed.runners,
-          groups: shownGroups(tally.dialed.groups),
-        },
+        dialed: tally.dialed,
         windowDays,
         band,
       };
