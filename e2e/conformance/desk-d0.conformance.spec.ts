@@ -37,6 +37,11 @@ const DRAWN_STATS = [
   "bans this week",
 ];
 /**
+ * Round 47 (R47·125) adds a fourth number after the board's three; D0
+ * does not draw it yet (design-deltas 113).
+ */
+const APP_STATS = [...DRAWN_STATS, "flagged accounts"];
+/**
  * Every label a rail has ever named, Gave up included: each side is read
  * against all of them, so a label that comes back shows up in its list.
  */
@@ -80,18 +85,21 @@ test("D0: the rail's destinations and Today's three numbers, as drawn", async ({
   );
   expect(labels, "the app's rail, as D0 draws it").toStrictEqual(DRAWN_RAIL);
 
-  // Today's three numbers, in their own list: Gave up's rows sit under it.
+  // Today's numbers, in their own list: Gave up's rows sit under it.
   const stats = page
     .getByRole("main")
     .getByRole("list", { name: "Today" })
     .getByRole("listitem");
-  await expect(stats).toHaveCount(3);
+  await expect(stats).toHaveCount(APP_STATS.length);
   // Singular and plural are the same line; the board draws "1 photo".
   const texts = await stats.allTextContents();
   const lines = texts.map((line) =>
-    line.replace("photos the", "photo the").replace("ban this", "bans this"),
+    line
+      .replace("photos the", "photo the")
+      .replace("ban this", "bans this")
+      .replace(/flagged account$/u, "flagged accounts"),
   );
-  for (const [index, phrase] of DRAWN_STATS.entries()) {
+  for (const [index, phrase] of APP_STATS.entries()) {
     expect(lines[index], `Today's line ${String(index + 1)}`).toContain(phrase);
   }
 });

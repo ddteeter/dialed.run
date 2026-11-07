@@ -179,15 +179,16 @@ export async function screenPhoto(
 /**
  * The author's notice a flag owes (D-162): only a flag hides, and only a
  * kit photo is seen by anyone but its owner. A garment photo is its
- * owner's alone, so holding it restricts nothing and tells nobody.
- * `screeningNotice` reads the author only while the photo is still
- * `pending`, the state this flag hides it from.
+ * owner's alone, so holding it restricts nothing and tells nobody:
+ * `screeningNotice` reads only a kit photo's row, so a garment's id finds
+ * no author. It reads the author only while the photo is still `pending`,
+ * the state this flag hides it from.
  */
 function holdNoticeFor(
   photo: PhotoToScreen,
   decision: ScreenDecision,
 ): Promise<BatchItem<"sqlite">[]> | BatchItem<"sqlite">[] {
-  return decision === "flag" && photo.scope === "entry"
+  return decision === "flag"
     ? screeningNotice(db(), photo.photoId, "hidden")
     : [];
 }

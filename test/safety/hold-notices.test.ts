@@ -208,6 +208,22 @@ describe("an Approve of a held photo tells its author it stayed up (D-162)", () 
     ]);
   });
 
+  it("tells nobody in the screening words for a row no screening raised", async () => {
+    const { userId, photoId } = await kitPhoto("hidden_pending_review");
+    await enqueueForReview(core(), {
+      subjectType: "photo",
+      subjectId: photoId,
+      source: "unscreened",
+    });
+
+    await resolveReview(await queueIdOf(photoId), "op", "approve");
+
+    const notices = await noticesOf(userId);
+    expect(notices.map(({ body }) => body)).not.toContain(
+      SCREENING_KEPT_NOTICE,
+    );
+  });
+
   it("tells nobody when the classifier's row hid nothing (the middle band)", async () => {
     const { userId, photoId } = await kitPhoto();
     await screened(photoId, borderline);

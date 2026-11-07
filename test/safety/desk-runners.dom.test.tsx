@@ -12,7 +12,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -197,6 +197,38 @@ describe("selecting a runner", () => {
 */
 const FLAGGED_AT = Date.UTC(2025, 10, 6, 12) / 1000;
 
+/**
+ * D8 over a list the test swaps, as a reload or another filter would:
+ * "Next list" draws the next one.
+ */
+function NextList({
+  lists,
+}: Readonly<{ lists: readonly (readonly DeskRunner[])[] }>) {
+  const [at, setAt] = useState(0);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setAt(at + 1);
+        }}
+      >
+        Next list
+      </button>
+      <DeskRunners
+        runners={lists[at] ?? []}
+        total={412}
+        filter={{ filter: "all" }}
+        rename={vi.fn<Props["rename"]>()}
+        ban={vi.fn<Props["ban"]>()}
+        unban={vi.fn<Props["unban"]>()}
+        keep={vi.fn<Props["keep"]>().mockResolvedValue({ kept: true })}
+        flagged={1}
+      />
+    </>
+  );
+}
+
 describe("a flagged account (D-161 1, R47·124) and PENDING DELETE (PR#126-1)", () => {
   it("offers Flagged last among the filters, with its count, even at 0", async () => {
     await renderDesk({ filter: { filter: "flagged" }, flagged: 0 });
@@ -313,9 +345,8 @@ describe("a flagged account (D-161 1, R47·124) and PENDING DELETE (PR#126-1)", 
     );
     await user.click(screen.getByRole("button", { name: "Close account" }));
 
-    await waitFor(() => {
-      expect(ban).toHaveBeenCalled();
-    });
+    expect(await screen.findByText("Account closed.")).toBeInTheDocument();
+    expect(ban).toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "@ada" })).not.toHaveFocus();
   });
 
@@ -330,6 +361,45 @@ describe("a flagged account (D-161 1, R47·124) and PENDING DELETE (PR#126-1)", 
     await user.click(screen.getByRole("button", { name: "Keep account" }));
 
     expect(await screen.findByText("Still flagged")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "@ada" })).not.toHaveFocus();
+  });
+
+  it("starts each flagged runner's flag afresh", async () => {
+    const user = userEvent.setup();
+    const keep = vi
+      .fn<Props["keep"]>()
+      .mockRejectedValue(new TypeError("Failed to fetch"));
+    await renderDesk({
+      keep,
+      runners: [
+        { ...ada, flaggedAt: FLAGGED_AT },
+        { ...ada, userId: "u-di", username: "di", flaggedAt: FLAGGED_AT },
+      ],
+    });
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+    await user.click(screen.getByRole("button", { name: "Keep account" }));
+    expect(await screen.findByText("Still flagged")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "@di" }));
+
+    expect(screen.queryByText("Still flagged")).not.toBeInTheDocument();
+  });
+
+  it("hands focus to the name once, not to a later list that draws the row again", async () => {
+    const user = userEvent.setup();
+    const flaggedAda = { ...ada, flaggedAt: FLAGGED_AT };
+    await renderWithRouter(
+      <NextList lists={[[flaggedAda, bo], [bo], [ada, bo]]} />,
+    );
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+    await user.click(screen.getByRole("button", { name: "Keep account" }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "@ada" })).toHaveFocus();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Next list" }));
+    await user.click(screen.getByRole("button", { name: "Next list" }));
+
     expect(screen.getByRole("button", { name: "@ada" })).not.toHaveFocus();
   });
 
@@ -481,7 +551,9 @@ describe("Close account (D3)", () => {
     expect(
       screen.queryByRole("button", { name: "Close account" }),
     ).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Reopen account" }));
+    const reopen = screen.getByRole("button", { name: "Reopen account" });
+    expect(reopen).toHaveClass("target", "text-left");
+    await user.click(reopen);
 
     expect(unban).toHaveBeenCalledWith({ data: { userId: "u-bo" } });
   });

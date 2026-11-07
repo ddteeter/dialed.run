@@ -506,7 +506,7 @@ export function Today({
             <Link
               to="/desk/runners"
               search={{ filter: "flagged" }}
-              className="target text-ink underline underline-offset-4"
+              className="target inline-flex items-center text-ink underline underline-offset-4"
             >
               flagged {counts.flaggedAccounts === 1 ? "account" : "accounts"}
             </Link>

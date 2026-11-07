@@ -292,6 +292,8 @@ describe("Today", () => {
     const count = link.closest("li")?.querySelector(".font-mono");
     expect(count).toHaveTextContent("1");
     expect(count).toHaveClass("text-hiviz-text");
+    // The board draws no line under it: only the count is in mono.
+    expect(link.closest("li")?.querySelectorAll(".font-mono")).toHaveLength(1);
   });
 
   it("puts what needs a person in hi-viz, and nothing at zero or for bans", async () => {

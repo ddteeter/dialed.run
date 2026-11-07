@@ -40,7 +40,9 @@ function core() {
 }
 
 async function runner(email: string): Promise<string> {
-  const userId = await makeUser({ username: email.slice(0, email.indexOf("@")) });
+  const userId = await makeUser({
+    username: email.slice(0, email.indexOf("@")),
+  });
   await core()
     .insert(user)
     .values({
@@ -316,5 +318,21 @@ describe("D8 Runners: state and flag (PR#126-1, D-161 1)", () => {
     await unbanUser(poster, "op");
 
     expect(await listed("flagged")).toStrictEqual([]);
+  });
+});
+
+describe("the flag's reads (D-161 1)", () => {
+  it("looks a removal's decision up through moderation_actions_subject, as account_decision", async () => {
+    const { sql, params } = flaggedCountOf(core()).toSQL();
+    const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
+      .bind(...params)
+      .all<{ detail: string }>();
+    // Today's count is a scan (the doc comment says so); each removal's
+    // decision is a probe of the profile's audit rows.
+    expect(plan.results.map((row) => row.detail)).toStrictEqual([
+      "SCAN moderation_actions USING INDEX moderation_actions_owner",
+      "CORRELATED SCALAR SUBQUERY 1",
+      "SEARCH account_decision USING INDEX moderation_actions_subject (subject_type=? AND subject_id=?)",
+    ]);
   });
 });

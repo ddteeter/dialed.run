@@ -873,7 +873,8 @@ async function decisionNotices(
  * The author's "left it up" an Approve owes, read before its batch: a
  * report's hide's, or an automatic hold's on a kit photo that is still
  * held (D-162). A classifier's `review`-band row never hid anything, and
- * its photo is not held, so its author is told nothing.
+ * its photo is not held, so its author is told nothing; nor is a
+ * garment's owner, whose id `screeningNotice` finds no kit photo for.
  */
 async function authorKeptNotice(
   source: ReviewSource,
@@ -881,7 +882,7 @@ async function authorKeptNotice(
   subjectId: string,
 ): Promise<BatchItem<"sqlite">[]> {
   if (source === "reports") return keptNotice(db(), subjectType, subjectId);
-  return subjectType === "photo" && automaticSources.has(source)
+  return automaticSources.has(source)
     ? screeningNotice(db(), subjectId, "kept")
     : [];
 }

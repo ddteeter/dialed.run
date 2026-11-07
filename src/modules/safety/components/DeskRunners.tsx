@@ -430,7 +430,7 @@ function RunnerPanels({
   runner,
   acts,
   onDone,
-  onDecided,
+  onCleared,
 }: Readonly<{
   runner: DeskRunner;
   acts: Readonly<{
@@ -441,11 +441,18 @@ function RunnerPanels({
   }>;
   onDone: () => void;
   /**
-  After Keep, a ban or an unban: each one clears an open flag (R47·124).
+  After Keep, a ban or an unban of a flagged runner: each one clears the
+  flag (R47·124).
   */
-  onDecided: () => void;
+  onCleared: (userId: string) => void;
 }>): JSX.Element {
   const isClosed = runner.state === "CLOSED";
+  const onDecided =
+    runner.flaggedAt === undefined
+      ? onDone
+      : () => {
+          onCleared(runner.userId);
+        };
   return (
     <aside
       aria-label={`@${runner.username ?? runner.email}`}
@@ -503,15 +510,16 @@ export function DeskRunners({
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | undefined>();
   // The runner whose flag a decision just cleared: focus goes to their
-  // name (R47·124).
-  const [clearedId, setClearedId] = useState<string | undefined>();
+  // name (R47·124), once. It holds only for the list it was cleared in,
+  // so a later list (the reload, another filter) that draws their row
+  // again does not take focus back to it.
+  const [cleared, setCleared] = useState<
+    Readonly<{ userId: string; among: readonly DeskRunner[] }> | undefined
+  >();
+  const clearedId = cleared?.among === runners ? cleared.userId : undefined;
   const selected = runners.find((runner) => runner.userId === selectedId);
   const refresh = (): void => {
     void router.invalidate();
-  };
-  const decided = (): void => {
-    if (selected?.flaggedAt !== undefined) setClearedId(selected.userId);
-    refresh();
   };
 
   return (
@@ -545,7 +553,6 @@ export function DeskRunners({
                 focusName={runner.userId === clearedId}
                 onSelect={() => {
                   setSelectedId(runner.userId);
-                  setClearedId(undefined);
                 }}
               />
             ))}
@@ -560,7 +567,10 @@ export function DeskRunners({
             runner={selected}
             acts={acts}
             onDone={refresh}
-            onDecided={decided}
+            onCleared={(userId) => {
+              setCleared({ userId, among: runners });
+              refresh();
+            }}
           />
         )}
       </div>

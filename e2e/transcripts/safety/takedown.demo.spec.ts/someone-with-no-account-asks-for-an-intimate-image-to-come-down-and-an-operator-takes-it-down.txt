@@ -62,18 +62,22 @@ end of heading, Matching photos · any runner, level 3
 No fingerprint to match by: the photo is gone, or older than fingerprints.
 # person
 It's an intimate image of someone, shared without their consent
+paragraph
+Intimate means nudity or sexual content (# U.S.C. § #). If it isn't, decline, and remove it under another rule if it breaks one.
+end of paragraph
 reports
 form
 status
 Why it comes down
 combobox, Why it comes down, has popup listbox, not expanded
-option, Not set, selected, position 1, set size 7
-option, it shows where someone lives, home, not selected, position 2, set size 7
-option, it's sexual or explicit, explicit, not selected, position 3, set size 7
-option, it's an intimate image shared without consent, intimate, not selected, position 4, set size 7
-option, it harasses someone, harassment, not selected, position 5, set size 7
-option, it's an ad or spam, spam, not selected, position 6, set size 7
-option, it uses someone else's work, copyright, not selected, position 7, set size 7
+option, Not set, selected, position 1, set size 8
+option, it shows where someone lives, home, not selected, position 2, set size 8
+option, it's sexual or explicit, explicit, not selected, position 3, set size 8
+option, it's an intimate image shared without consent, intimate, not selected, position 4, set size 8
+option, it harasses someone, harassment, not selected, position 5, set size 8
+option, it shows someone who didn't agree to it, othersPhotos, not selected, position 6, set size 8
+option, it's an ad or spam, spam, not selected, position 7, set size 8
+option, it uses someone else's work, copyright, not selected, position 8, set size 8
 end of combobox, Why it comes down, has popup listbox, not expanded
 button, Remove
 Remove

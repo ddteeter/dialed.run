@@ -16,7 +16,7 @@
  * Desk's notice after it when one was given (`feed/moderation.ts`), so
  * the read matches the statement as a prefix.
  */
-import { and, inArray, max, sql } from "drizzle-orm";
+import { and, inArray, sql } from "drizzle-orm";
 import type { SQL, SQLWrapper } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 import { alias } from "drizzle-orm/sqlite-core";
@@ -73,7 +73,8 @@ export async function flaggedAtOf(
   const rows = await db
     .select({
       userId: sql<string>`${moderationActions.subjectOwnerId}`,
-      at: max(moderationActions.createdAt),
+      // Never null: a group exists only for a row that matched.
+      at: sql<number>`max(${moderationActions.createdAt})`,
     })
     .from(moderationActions)
     .where(
@@ -83,9 +84,7 @@ export async function flaggedAtOf(
       ),
     )
     .groupBy(moderationActions.subjectOwnerId);
-  return new Map(
-    rows.flatMap(({ userId, at }) => (at === null ? [] : [[userId, at]])),
-  );
+  return new Map(rows.map(({ userId, at }) => [userId, at]));
 }
 
 /**
