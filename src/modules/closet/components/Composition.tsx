@@ -1,4 +1,4 @@
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 
 import type { FabricPart } from "../../../lib/contracts";
 import { Mono } from "../../../ui";
@@ -67,6 +67,7 @@ function materialsLine(part: FabricPart): string {
 export function CompositionBlock({
   composition,
   source,
+  wrong,
 }: Readonly<{
   composition: Composition;
   /**
@@ -75,6 +76,11 @@ export function CompositionBlock({
    * should know whose it is. Absent, the kicker is the plain "Made of".
    */
   source?: string | undefined;
+  /**
+   * §AG's WRONG? ›, at the end of the "As labelled by" line, when the
+   * piece is a shared product a runner can correct (R-74).
+   */
+  wrong?: ReactNode;
 }>): JSX.Element | undefined {
   const { verbatim, parts, brand } = composition;
   const hasLabelledParts = parts.length > 1;
@@ -116,10 +122,15 @@ export function CompositionBlock({
       ) : (
         <p className="m-0 text-body">{verbatim}</p>
       )}
-      {brand === undefined ? undefined : (
-        <p className="m-0 text-muted">
-          <Mono step="xs">As labelled by {brand}</Mono>
-        </p>
+      {brand === undefined && wrong === undefined ? undefined : (
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          {brand === undefined ? undefined : (
+            <p className="m-0 text-muted">
+              <Mono step="xs">As labelled by {brand}</Mono>
+            </p>
+          )}
+          {wrong}
+        </div>
       )}
     </section>
   );

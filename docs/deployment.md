@@ -298,6 +298,7 @@ its first firing.
 | `UNSUBSCRIBE_SECRET`          | **yes**    | Signs unsubscribe links (its own secret, not the auth one). Fails closed: no optional email goes, every link is refused, and `/api/health` names it                                                                                                                                               |
 | `ANALYTICS_SQL_TOKEN`         | strongly   | The daily speed rollup (design 165) cannot read Analytics Engine, so nothing outlives its three months, and the digest says so every day. An account API token with Account › Account Analytics › Read, nothing else                                                                              |
 | `TAKEDOWN_SECRET`             | optional   | Keys the HMAC of a `/takedown` visitor's IP, so the abuse limits (D-118) match a requester by IP as well as email. Without it they match by email alone; nothing fails. Any long random string                                                                                                    |
+| `MODERATION_THRESHOLDS`       | **yes**    | The moderation thresholds, as JSON (`safety/thresholds.ts`). Its value is not in this repo: it is in the owner's private deploy notes. Fails closed: every report hides at once, photo screening pauses (photos stay `pending`), and the hourly sweep reports it until it is right                |
 
 **Vars, not secrets** — printed into the page or read as configuration.
 They live in `wrangler.jsonc`'s `vars` block (owner-approved, 2026-09-26),

@@ -568,6 +568,13 @@
       "when": 1794042864585,
       "tag": "0080_add_user_profiles_theme",
       "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "6",
+      "when": 1794080793582,
+      "tag": "0081_add_corrections_review_audit_follow_notices",
+      "breakpoints": true
     }
   ]
 }

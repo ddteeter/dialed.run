@@ -9,7 +9,6 @@ import {
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import {
-  autoHideReporterThreshold,
   claimForReview,
   distinctReporterCount,
   fileReport,
@@ -17,7 +16,19 @@ import {
   isQueuedForReview,
   pendingReviewQueue,
   reportedSubjectIdsFor,
+  moderationThresholds,
+  reportersToHide,
 } from "../../src/modules/safety";
+
+/**
+ * How many distinct reporters hide a subject for a reason off the clock,
+ * from the test config's invented thresholds (design 183), never a
+ * hand-written number that would pin production's.
+ */
+const autoHideReporterThreshold = reportersToHide(
+  "spam",
+  moderationThresholds(),
+);
 
 import { noPurge } from "../purge-spy";
 import {
@@ -54,7 +65,7 @@ async function reportableEntry(): Promise<string> {
 describe("the distinct-reporter threshold", () => {
   beforeEach(resetSafetyTables);
 
-  it("hides the entry once three DIFFERENT people report it", async () => {
+  it("hides the entry once enough DIFFERENT people report it", async () => {
     const entryId = await reportableEntry();
     expect(await moderationStatusOf(entryId)).toBe("ok");
 
@@ -75,13 +86,17 @@ describe("the distinct-reporter threshold", () => {
       );
     }
 
-    // Only the third crosses it: the first two must leave the entry alone,
-    // or "three reports" would be decoration on a one-report takedown.
-    expect(results).toStrictEqual([
-      { status: "filed", reporterCount: 1, hiddenPendingReview: false },
-      { status: "filed", reporterCount: 2, hiddenPendingReview: false },
-      { status: "filed", reporterCount: 3, hiddenPendingReview: true },
-    ]);
+    // Only the last crosses it: every one before must leave the entry
+    // alone, or the threshold would be decoration on a one-report takedown.
+    expect(results).toStrictEqual(
+      results.map((_, index) => ({
+        status: "filed",
+        reporterCount: index + 1,
+        hiddenPendingReview: index + 1 === autoHideReporterThreshold,
+      })),
+    );
+    expect(results).toHaveLength(autoHideReporterThreshold);
+    expect(autoHideReporterThreshold).toBeGreaterThan(1);
     expect(await moderationStatusOf(entryId)).toBe("hidden_pending_review");
     expect(await isQueuedForReview("entry", entryId)).toBe(true);
   });
@@ -136,7 +151,7 @@ describe("the distinct-reporter threshold", () => {
     expect(await isQueuedForReview("entry", entryId)).toBe(true);
   });
 
-  it("does NOT hide it when one person reports three times", async () => {
+  it("does NOT hide it when one person reports again and again", async () => {
     const entryId = await reportableEntry();
     const reporter = await makeUser();
 
@@ -169,6 +184,8 @@ describe("the distinct-reporter threshold", () => {
     const first = await reportableEntry();
     const second = await reportableEntry();
 
+    // One short of the bar on `first`, and one more on `second`: together
+    // they reach it, so a naive global count would wrongly hide both.
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
       const reporter = await makeUser();
       await fileReport(
@@ -183,9 +200,9 @@ describe("the distinct-reporter threshold", () => {
       );
     }
 
-    // Two reporters on `first` and one on `second` — neither reaches three,
-    // so a naive global count would wrongly hide both.
-    expect(await distinctReporterCount("entry", first)).toBe(2);
+    expect(await distinctReporterCount("entry", first)).toBe(
+      autoHideReporterThreshold - 1,
+    );
     expect(await distinctReporterCount("entry", second)).toBe(1);
     expect(await moderationStatusOf(first)).toBe("ok");
     expect(await moderationStatusOf(second)).toBe("ok");

@@ -44,6 +44,7 @@ function desk(gaveUp: number, oldestGaveUpAt?: number): DeskToday {
       decidedToday: 0,
       oldestWaitingAt: undefined,
       screenerUnfinished: 0,
+      corrections: 0,
       bansThisWeek: 0,
       bansAllTime: 0,
       flaggedAccounts: 0,

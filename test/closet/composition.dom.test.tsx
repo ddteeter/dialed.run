@@ -189,3 +189,27 @@ describe("CompositionBlock: the branch boundary", () => {
     expect(screen.getByText("60% nylon")).toBeVisible();
   });
 });
+
+describe("CompositionBlock: WRONG? › (R-74)", () => {
+  it("ends the as-labelled line", () => {
+    render(
+      <CompositionBlock
+        composition={arcteryx}
+        wrong={<button type="button">Wrong?</button>}
+      />,
+    );
+    const line = screen.getByText("As labelled by Arc'teryx").closest("div");
+    expect(line).toHaveTextContent("As labelled by Arc'teryxWrong?");
+  });
+
+  it("keeps the line for WRONG? alone when no brand labelled it", () => {
+    render(
+      <CompositionBlock
+        composition={{ ...arcteryx, brand: undefined }}
+        wrong={<button type="button">Wrong?</button>}
+      />,
+    );
+    expect(screen.queryByText(/As labelled by/u)).toBeNull();
+    expect(screen.getByRole("button", { name: "Wrong?" })).toBeVisible();
+  });
+});

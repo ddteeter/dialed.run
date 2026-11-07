@@ -1,14 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  autoHideReporterThreshold,
   REMOVAL_DUE_SECONDS,
-  reasonsThatHideAtOnce,
+  reasonsOnTheClock,
   removalDueLabel,
   removalRule,
   removalRuleLine,
   removalStatements,
-  reportersToHide,
   reportReasonLabels,
   reportReasonSchema,
   reportReasons,
@@ -101,29 +99,12 @@ describe("what a report can hide (design 164)", () => {
   });
 });
 
-describe("the auto-hide threshold", () => {
-  it("is the packet's default of three distinct reporters", () => {
-    // Named rather than inlined so the threshold check and the test that
-    // proves three distinct reporters trip it cannot disagree.
-    expect(autoHideReporterThreshold).toBe(3);
-  });
-
-  it("is more than one, or a single reporter could hide anything", () => {
-    expect(autoHideReporterThreshold).toBeGreaterThan(1);
-  });
-});
-
-describe("the reporters each reason needs (design 136, D-117)", () => {
-  it("hides an intimate image on the first report and waits for three on every other", () => {
-    expect(reportersToHide).toStrictEqual({
-      explicit: 3,
-      intimate: 1,
-      harassment: 3,
-      spam: 3,
-      not_theirs: 3,
-      other: 3,
-    });
-    expect(reasonsThatHideAtOnce).toStrictEqual(["intimate"]);
+describe("the TAKE IT DOWN Act's clock (design 136, D-117)", () => {
+  it("runs for an intimate image and no other reason", () => {
+    // A statute's line, not a tunable count: how many reporters hide a
+    // subject is config (`safety/thresholds`), and failing closed there
+    // must never put spam on a 48-hour clock.
+    expect(reasonsOnTheClock).toStrictEqual(["intimate"]);
   });
 
   it("offers a courtesy removal under the rule on photos of other people (D-161)", () => {

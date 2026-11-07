@@ -10,11 +10,11 @@ import {
   Icon,
   Mono,
   Sheet,
+  SheetReceipt,
   SubmitButton,
   TextField,
   ToggleField,
   useFormSubmit,
-  focusOnMount,
 } from "../../../ui";
 import { reportReasonLabels, reportReasons } from "../contracts";
 import type { ReportReason, ReportSubjectType } from "../contracts";
@@ -323,26 +323,18 @@ function IntimateReceipt({
   onDone,
 }: Readonly<{ onDone: () => void }>): JSX.Element {
   return (
-    <div data-part="report-receipt" className="flex flex-col gap-4">
-      <Mono step="xs" className="text-muted">
-        Report sent
-      </Mono>
-      <h2 ref={focusOnMount} tabIndex={-1} className="m-0 text-title font-bold">
-        Thanks for telling us.
-      </h2>
+    <SheetReceipt
+      part="report-receipt"
+      kicker="Report sent"
+      heading="Thanks for telling us."
+      onDone={onDone}
+    >
       <p className="m-0 text-body">
         It&apos;s hidden from everyone now. We&apos;ll review it within a day
         and keep it down if it breaks the rule.
       </p>
       <ElsewhereHelp />
-      <button
-        type="button"
-        onClick={onDone}
-        className="target grid min-h-13 w-full cursor-pointer place-items-center rounded-card border-none bg-ink px-6 font-display text-body uppercase text-ground"
-      >
-        Done
-      </button>
-    </div>
+    </SheetReceipt>
   );
 }
 
@@ -358,4 +350,3 @@ function focusPageHeading(): void {
   heading?.setAttribute("tabindex", "-1");
   heading?.focus();
 }
-

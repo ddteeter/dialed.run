@@ -50,6 +50,7 @@ function desk(counts: Partial<TodayCounts> = {}): DeskToday {
       decidedToday: 0,
       oldestWaitingAt: undefined,
       screenerUnfinished: 0,
+      corrections: 0,
       bansThisWeek: 0,
       bansAllTime: 0,
       flaggedAccounts: 0,
@@ -118,9 +119,11 @@ describe("DeskShell", () => {
       .getAllByRole("listitem")
       .map((item) => item.textContent);
     // D-87's five (D0, round 30): Gave up is a section of Today, not here.
+    // Corrections under Review, above Duplicates (R48·130).
     expect(entries).toStrictEqual([
       "Today",
       "Review",
+      "Corrections",
       "Access",
       "Duplicates",
       "Runners",
@@ -140,6 +143,7 @@ describe("DeskShell", () => {
     ).toStrictEqual([
       ["Today", "/desk"],
       ["Review", "/desk/review"],
+      ["Corrections", "/desk/corrections"],
       // D7, task 126 (ACC-5).
       ["Access", "/desk/access"],
       // D2, task 110: the last to be built.
@@ -188,6 +192,18 @@ describe("DeskShell", () => {
     expect(within(review).getByText("4")).toHaveClass("text-hiviz-text");
     // The rail draws the bare number; the unit is spoken only.
     expect(within(review).getByText("waiting")).toHaveClass("sr-only");
+  });
+
+  it("counts the Corrections queue's rows on its entry (R48·130)", async () => {
+    await renderWithRouter(
+      <DeskShell current="today" today={desk({ corrections: 2 })}>
+        <p>page</p>
+      </DeskShell>,
+    );
+    const corrections = within(rail()).getByRole("link", {
+      name: "Corrections 2 waiting",
+    });
+    expect(within(corrections).getByText("2")).toHaveClass("text-hiviz-text");
   });
 
   it("counts what the system gave up on on the Today entry, in hi-viz", async () => {
@@ -443,6 +459,7 @@ describe("DeskPage", () => {
     ).toStrictEqual([
       "Today3 gave up",
       "Review4 waiting",
+      "Corrections",
       "Access",
       "Duplicates",
       "Runners",

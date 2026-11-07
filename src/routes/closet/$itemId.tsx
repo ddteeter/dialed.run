@@ -15,6 +15,10 @@ import {
   garmentBandCountQuery,
   viewerUnitsQuery,
 } from "../../modules/feed/functions";
+import {
+  correctionContextFn,
+  fileCorrectionFn,
+} from "../../modules/products/functions";
 import { PhotoBeingChecked } from "../../modules/safety/components/NoticeBand";
 import { photoBlurStep } from "../../modules/safety/components/PhotoBlur";
 import { Layout } from "../../ui";
@@ -27,6 +31,11 @@ export const Route = createFileRoute("/closet/$itemId")({
   ),
   component: GarmentDetailPage,
 });
+
+const CORRECTION = {
+  loadContext: correctionContextFn,
+  fileCorrection: fileCorrectionFn,
+};
 
 function GarmentDetailPage() {
   const { detail, units } = Route.useLoaderData();
@@ -45,6 +54,8 @@ function GarmentDetailPage() {
         removePhoto={removePhotoFn}
         renderPhotoStep={photoBlurStep}
         photoChecking={<PhotoBeingChecked />}
+        // §AG's WRONG? sheet (R-74): asked for only when it opens.
+        correction={CORRECTION}
       />
     </Layout>
   );

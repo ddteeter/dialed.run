@@ -24,6 +24,7 @@ export { SlowLabel } from "./SlowLabel";
 export { useTappedSlow } from "./tapped-slow";
 export type { PhotoStep } from "./photo-step";
 export { Sheet } from "./Sheet";
+export { SheetReceipt } from "./SheetReceipt";
 export { ConfirmLink, ConfirmSheet } from "./ConfirmSheet";
 export { Skeleton } from "./Skeleton";
 export { Spoken } from "./Spoken";

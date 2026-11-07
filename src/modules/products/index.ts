@@ -29,3 +29,21 @@ export {
   searchProducts,
 } from "./service";
 export { CURATED_BRANDS } from "./seed-brands";
+export {
+  applyCorrection,
+  correctionsQueue,
+  declineCorrection,
+  waitingCorrectionsCountOf,
+  type ApplyOutcome,
+  type CorrectionFiler,
+  type CorrectionGroup,
+  type CorrectionKey,
+  type CorrectionsQueue,
+} from "./correction-queue";
+export {
+  correctionContext,
+  fileCorrection,
+  type CorrectionContext,
+  type WaitingCorrection,
+} from "./corrections";
+export { correctionKeyInput, declineCorrectionInput } from "./inputs";

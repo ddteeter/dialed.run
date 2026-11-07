@@ -34,8 +34,8 @@ import {
  */
 export const reportReasons = [
   { value: "explicit", label: "The photo shows someone inappropriately" },
-  // Design 136 (D-117), in round 35 #58a's words. The one reason that
-  // hides at once (`reportersToHide`).
+  // Design 136 (D-117), in round 35 #58a's words. The one reason on the
+  // TAKE IT DOWN Act's clock (`reasonsOnTheClock`).
   {
     value: "intimate",
     label: "It's an intimate image of someone, shared without their consent",
@@ -120,38 +120,13 @@ export const reportSubjectsThatHide: readonly ReportSubjectType[] =
   reportSubjectTypes.filter((type) => hiddenByReport[type] !== undefined);
 
 /**
- * Distinct reporters required before a subject is hidden globally pending
- * review (packet §2: "N reports from distinct users (default 3)").
- *
- * Named rather than inlined because two places need to agree on it — the
- * threshold check and the test that proves three distinct reporters trip it
- * where three reports from one person do not.
+ * The reasons on the TAKE IT DOWN Act's 48-hour clock (design 136,
+ * D-117): a report of one starts the clock, alerts the operators, and
+ * sets a review row's due time. A statute's line, not a tunable count, so
+ * it lives here rather than with the thresholds (`./thresholds`), which
+ * say how many reporters any reason needs before a subject is hidden.
  */
-export const autoHideReporterThreshold = 3;
-
-/**
- * Distinct reporters a reason needs before the subject is hidden from
- * everyone (design 136, D-117). An intimate image shared without consent
- * is hidden on the first report: the TAKE IT DOWN Act gives 48 hours to
- * remove a valid one, and three reports would be three more people who saw
- * it. A person still decides, so a false report only hides a thing until
- * they do. Every other reason waits for `autoHideReporterThreshold`.
- */
-export const reportersToHide: Readonly<Record<ReportReason, number>> = {
-  explicit: autoHideReporterThreshold,
-  intimate: 1,
-  harassment: autoHideReporterThreshold,
-  spam: autoHideReporterThreshold,
-  not_theirs: autoHideReporterThreshold,
-  other: autoHideReporterThreshold,
-};
-
-/**
-The reasons that hide on the first report, read from the table above.
-*/
-export const reasonsThatHideAtOnce: readonly ReportReason[] = reportReasons
-  .map((reason) => reason.value)
-  .filter((reason) => reportersToHide[reason] === 1);
+export const reasonsOnTheClock: readonly ReportReason[] = ["intimate"];
 
 /**
  * What "intimate" means on the Desk (D-161 2; owner, 2026-11-06): the

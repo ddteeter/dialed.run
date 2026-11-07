@@ -77,11 +77,17 @@ And the moderation thresholds are read from source rather than config.
 ## Issues
 
 - Closes: #358, #387, #410, and the thresholds item (the Project draft).
-- Opens: design-asks for the reporters list and the followers-list link.
+- Opens: design-asks #497 (the fold open), #498 (a grouped follow row's
+  link), #499 (WRONG? with no composition); owner question #500 (the bell
+  rows' field words, and who Apply tells).
 
 ## Open questions
 
 - Guess: a group follow row links to your own profile until a followers
   list exists.
 - Guess: Apply on a name that collides with another product of the brand is
-  refused with a band, not merged (no Merge, R48·130).
+  refused with a line, not merged (no Merge, R48·130).
+- Found on the board after this doc: the sheet quotes the current value
+  ("It says Mid."), and Decline takes one of three fixed reasons. Built so.
+- The fixed 48-hour clock is its own list (`reasonsOnTheClock`), so failing
+  closed on a missing config never starts it for other reasons.

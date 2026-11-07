@@ -41,7 +41,6 @@ export {
 } from "./blocks";
 
 export {
-  autoHideReporterThreshold,
   garmentRemovalNotice,
   isCopyrightTakedown,
   removalNotice,
@@ -181,6 +180,16 @@ export {
 
 export { classifierFromEnv } from "./classifier/from-env";
 
+// The moderation thresholds, read from config.
+export {
+  moderationThresholds,
+  parseThresholds,
+  photoThresholds,
+  reportersToHide,
+  thresholdsAnomaly,
+  type ModerationThresholds,
+} from "./thresholds";
+
 // D-157: whether a photo has waited the day out, for the Desk's Clear photo.
 export { isStuck } from "./stuck";
 
@@ -188,8 +197,7 @@ export {
   decide,
   imageCategories,
   MODERATION_MODEL,
-  reviewFloors,
-  thresholds,
+  reviewFloorsOf,
   type CategoryScores,
   type ImageCategory,
   type ModerationResult,

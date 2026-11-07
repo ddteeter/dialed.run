@@ -20,6 +20,7 @@ import { coreDb } from "../../env";
 import { calendarDay } from "../../lib/dates";
 import { nowSeconds } from "../../lib/now";
 import { maskedAddress } from "../email";
+import { waitingCorrectionsCountOf } from "../products";
 import {
   adminUserIds,
   flaggedCountOf,
@@ -64,6 +65,11 @@ export interface TodayCounts {
    * (D-161 1): Today's fourth number, shown at 0 (R47·125).
    */
   readonly flaggedAccounts: number;
+  /**
+   * Rows on the Desk's Corrections queue (R48·130): a product, field and
+   * suggested value each, however many runners said it. The rail's count.
+   */
+  readonly corrections: number;
   /**
    * Jobs the system stopped retrying (Gave up, a section of Today; R-119):
    * Today's rail count and the digest's one extra line.
@@ -172,38 +178,47 @@ export async function todayCounts(): Promise<TodayCounts> {
   const weekAgo = now - WEEK_SECONDS;
   const dayStart = now - (now % DAY_SECONDS);
   const waiting = await pendingReviewCount();
-  const [review, bans, flagged, gave, unconfirmed, behind, decided] =
-    await db.batch([
-      db
-        .select({
-          source: reviewQueue.source,
-          rows: count(),
-          oldest: sql<number>`min(${reviewQueue.createdAt})`,
-        })
-        .from(reviewQueue)
-        .where(eq(reviewQueue.status, "pending"))
-        .groupBy(reviewQueue.source),
-      banCountsOf(db, weekAgo),
-      flaggedCountOf(db),
-      // Grouped by a constant (not `1`, which would name the count), so an
-      // empty table is no row rather than a NULL oldest. A scan of
-      // `gave_up`, which holds only what is still owed an operator: retried
-      // and dropped rows leave it.
-      db
-        .select({
-          rows: count(),
-          oldest: sql<number>`min(${gaveUp.firstFailedAt})`,
-        })
-        .from(gaveUp)
-        .groupBy(sql`'gave_up'`),
-      // The digest's skip mark, by its primary key (OPS-11).
-      db
-        .select({ at: cronCheckpoints.lastRunAt })
-        .from(cronCheckpoints)
-        .where(eq(cronCheckpoints.cronName, DIGEST_UNCONFIRMED)),
-      outboxBehindOf(db),
-      decidedSinceOf(db, dayStart),
-    ]);
+  const [
+    review,
+    bans,
+    flagged,
+    gave,
+    unconfirmed,
+    behind,
+    decided,
+    corrections,
+  ] = await db.batch([
+    db
+      .select({
+        source: reviewQueue.source,
+        rows: count(),
+        oldest: sql<number>`min(${reviewQueue.createdAt})`,
+      })
+      .from(reviewQueue)
+      .where(eq(reviewQueue.status, "pending"))
+      .groupBy(reviewQueue.source),
+    banCountsOf(db, weekAgo),
+    flaggedCountOf(db),
+    // Grouped by a constant (not `1`, which would name the count), so an
+    // empty table is no row rather than a NULL oldest. A scan of
+    // `gave_up`, which holds only what is still owed an operator: retried
+    // and dropped rows leave it.
+    db
+      .select({
+        rows: count(),
+        oldest: sql<number>`min(${gaveUp.firstFailedAt})`,
+      })
+      .from(gaveUp)
+      .groupBy(sql`'gave_up'`),
+    // The digest's skip mark, by its primary key (OPS-11).
+    db
+      .select({ at: cronCheckpoints.lastRunAt })
+      .from(cronCheckpoints)
+      .where(eq(cronCheckpoints.cronName, DIGEST_UNCONFIRMED)),
+    outboxBehindOf(db),
+    decidedSinceOf(db, dayStart),
+    waitingCorrectionsCountOf(db),
+  ]);
   const [gaveUpGroup] = gave;
   return {
     waiting,
@@ -221,6 +236,7 @@ export async function todayCounts(): Promise<TodayCounts> {
     bansThisWeek: bans.find((g) => g.recent === 1)?.rows ?? 0,
     bansAllTime: sumOf(bans),
     flaggedAccounts: sumOf(flagged),
+    corrections: sumOf(corrections),
     gaveUp: gaveUpGroup?.rows ?? 0,
     oldestGaveUpAt: gaveUpGroup?.oldest,
     digestUnconfirmedAt: unconfirmed[0]?.at,

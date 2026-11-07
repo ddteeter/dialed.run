@@ -91,5 +91,10 @@ declare namespace Cloudflare {
      * requesters are matched by email alone. Optional, so health does not
      * fail without it. */
     TAKEDOWN_SECRET?: string;
+    /** The moderation thresholds, as JSON (`safety/thresholds.ts`): read
+     * from config rather than source, its value kept with the deploy
+     * checklist's private notes. Absent or malformed: moderation fails
+     * closed, and the hourly sweep tells Sentry. */
+    MODERATION_THRESHOLDS?: string;
   }
 }

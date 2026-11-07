@@ -59,6 +59,8 @@ import {
   TRIP_LOOKBACK_S,
   tripsSince,
   type CeilingReading,
+  thresholdsAnomaly,
+  moderationThresholds,
 } from "../safety";
 
 import { nowSeconds } from "../../lib/now";
@@ -495,6 +497,10 @@ export async function sweepPublicPhotoCopies(
 }
 
 async function runScreeningRetry(anomalies: string[]): Promise<void> {
+  // Moderation fails closed without its config (`safety/thresholds`), and
+  // says so here every hour until the secret is right.
+  const unconfigured = thresholdsAnomaly(moderationThresholds());
+  if (unconfigured !== undefined) anomalies.push(unconfigured);
   // Task 106 §1: re-drive photos still marked `pending` (law 8c).
   // `pending` is the durable marker, so this is reconciliation and the
   // path needs no queue.

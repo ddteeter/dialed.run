@@ -530,6 +530,7 @@ describe("the confirm-first sheet and the nag", () => {
   it.each([
     ["useful", "Marking runs Useful needs a confirmed email."],
     ["report", "Reporting needs a confirmed email."],
+    ["correct", "Sending a correction needs a confirmed email."],
     ["follow", "Following runners needs a confirmed email."],
     ["email-change", "Confirm this address before you change it."],
     ["share", "Sharing needs a confirmed email. This run saves private."],

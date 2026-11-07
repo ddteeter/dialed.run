@@ -322,7 +322,16 @@ follows:        follower_id, followee_id, created_at; PK (follower_id, followee_
 reactions:      entry_id, user_id, kind ('useful'), created_at; PK (entry_id, user_id)
 entry_photos:   id, entry_id, photo_key, position (max 4 per entry)
 notifications:  id, user_id, kind, subject_id, body, read, created_at,
+                link_id NULLABLE -- what the row opens when that is not its
+                  -- subject: the filer's garment for a correction's outcome,
+                  -- the follower for a follow; null for a grouped follow
+                  -- (design 183). `notifications/target.ts` reads it.
                 UNIQUE(user_id, kind, subject_id)  -- dedupe key
+follow_notices: followee_id, follower_id, notification_id, rung_at;
+                UNIQUE(followee_id, follower_id) -- a follower rings a
+                  -- runner at most once in 30 days (R48·131e); the row is
+                  -- kept when the follow is undone. `notification_id` is
+                  -- the bell row the follow joined (grouped while unread).
 strava_connections:  user_id PK, athlete_id, refresh_token,
                      connected_at NULLABLE -- when the grant was made (127)
                      -- refresh_token is kept ONLY to revoke the grant (D-54);
@@ -404,6 +413,27 @@ copyright_holds: subject (entry|photo), owner, entry, the takedown's
                    -- D-130, design 149. Strikes = an owner's holds that
                    -- were not restored. A court action is a litigation
                    -- hold (D-146): no purge until the Desk's "Case over".
+```
+
+Design 183 added (migration `0080_add_corrections_review_audit_follow_notices`):
+
+```
+product_corrections: id, product_id, user_id, garment_id, field ('name'|
+                 'weight'|'fabric'|'wind'|'water'|'composition'|'link'),
+                 value, note NULLABLE, status ('waiting'|'applied'|
+                 'declined'), reason NULLABLE, decided_by NULLABLE,
+                 decided_at NULLABLE, idempotency_key, created_at
+                   -- D-163. UNIQUE(user_id, product_id, field) WHERE
+                   -- waiting: a second correction to the field replaces
+                   -- the first. `value` is the sheet's input as stored:
+                   -- the text, the enum word, or 'yes'/'no'. The fields
+                   -- and their rules are lib/contracts/product-corrections.
+                   -- Apply writes the product and decides every waiting
+                   -- row for the field; Decline only its own value's.
+review_audit:    id, actor_id, action ('opened_reporters'), review_id,
+                 subject_type, subject_id, created_at
+                   -- D-164, R-66: written in the batch that reads a review
+                   -- row's reporters, so they cannot be read unrecorded.
 ```
 
 **One rule for "visible to a stranger".** `audience IN ('runners',

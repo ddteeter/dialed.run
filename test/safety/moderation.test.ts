@@ -1,12 +1,30 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  decide,
+  decide as decideAgainst,
   imageCategories,
-  reviewFloors,
-  thresholds,
+  reviewFloorsOf,
   type CategoryScores,
 } from "../../src/modules/safety/classifier/moderation";
+
+/**
+ * Invented hold scores, not production's (which are config, design 183):
+ * the rule is what is under test, so any numbers with one looser category
+ * do. `violence/graphic` is looser than `sexual`, as a real table may be.
+ */
+const thresholds: CategoryScores = {
+  sexual: 0.6,
+  violence: 0.6,
+  "violence/graphic": 0.5,
+  "self-harm": 0.5,
+  "self-harm/intent": 0.5,
+  "self-harm/instructions": 0.5,
+};
+const reviewFloors = reviewFloorsOf(thresholds);
+
+function decide(scores: CategoryScores) {
+  return decideAgainst(scores, thresholds);
+}
 
 /**
  * All-zero scores, the shape a benign flat-lay produces. Tests raise one
@@ -42,12 +60,12 @@ describe("the threshold rule", () => {
   });
 
   it("uses each category's own threshold, not one shared number", () => {
-    // violence/graphic is looser than sexual. A score of 0.85 is over one
+    // violence/graphic is looser than sexual. A score of 0.55 is over one
     // and under the other, so a single shared threshold would answer this
     // pair identically and this test would fail.
     expect(thresholds["violence/graphic"]).toBeLessThan(thresholds.sexual);
-    expect(decide(clean({ "violence/graphic": 0.85 }))).toBe("flag");
-    expect(decide(clean({ sexual: 0.85 }))).not.toBe("flag");
+    expect(decide(clean({ "violence/graphic": 0.55 }))).toBe("flag");
+    expect(decide(clean({ sexual: 0.55 }))).not.toBe("flag");
   });
 
   it("flags when any single category crosses, not only when several do", () => {
@@ -57,16 +75,16 @@ describe("the threshold rule", () => {
   });
 
   it("does not add categories together", () => {
-    // Four categories at 0.7 is not the same as one at 0.9. A rule that
+    // Four categories at 0.45 is not the same as one at 0.6. A rule that
     // summed or averaged would flag this, and a photo that is mildly
     // nothing-in-particular on several axes is a normal photo.
     expect(
       decide(
         clean({
-          sexual: 0.7,
-          violence: 0.7,
-          "self-harm": 0.7,
-          "violence/graphic": 0.7,
+          sexual: 0.45,
+          violence: 0.45,
+          "self-harm": 0.45,
+          "violence/graphic": 0.45,
         }),
       ),
     ).not.toBe("flag");
@@ -106,7 +124,7 @@ describe("the review band", () => {
   it("keeps every floor below its own threshold", () => {
     // The ordering IS the design: a floor at or above its threshold would
     // make the middle band empty at best, and at worst would swallow the
-    // block decision entirely. Derived from thresholds, so this pins the
+    // block decision entirely. Derived from the holds, so this pins the
     // derivation rather than a pair of hand-written numbers.
     for (const category of imageCategories) {
       expect(reviewFloors[category]).toBeGreaterThan(0);
@@ -115,24 +133,10 @@ describe("the review band", () => {
   });
 });
 
-describe("the thresholds themselves", () => {
-  it("covers every image-capable category", () => {
-    // A category present in the list but missing from the table would read
-    // as `undefined`, and `score >= undefined` is false — so it would
-    // silently never flag. Deriving the check from the list is what stops
-    // the two drifting.
+describe("the categories", () => {
+  it("halves each category's own hold for its floor", () => {
     for (const category of imageCategories) {
-      expect(typeof thresholds[category]).toBe("number");
-    }
-  });
-
-  it("is deliberately high, because the documented failure is over-flagging", () => {
-    // Not a style assertion: the packet's whole worry is false positives on
-    // sports imagery, and a threshold anyone drops to 0.5 in a hurry should
-    // have to change this line and say why.
-    for (const category of imageCategories) {
-      expect(thresholds[category]).toBeGreaterThanOrEqual(0.8);
-      expect(thresholds[category]).toBeLessThanOrEqual(1);
+      expect(reviewFloors[category]).toBe(thresholds[category] / 2);
     }
   });
 

@@ -13,6 +13,8 @@ import {
   entryPhotos,
   entryTags,
   follows,
+  followNotices,
+  productCorrections,
   imports,
   inviteCodes,
   inviteRedemptions,
@@ -576,6 +578,19 @@ async function footprint(seeded: Seeded) {
       .select()
       .from(blocks)
       .where(or(eq(blocks.blockerId, userId), eq(blocks.blockedId, userId))),
+    rings: await core
+      .select()
+      .from(followNotices)
+      .where(
+        or(
+          eq(followNotices.followerId, userId),
+          eq(followNotices.followeeId, userId),
+        ),
+      ),
+    corrections: await core
+      .select()
+      .from(productCorrections)
+      .where(eq(productCorrections.userId, userId)),
     notifications: await core
       .select()
       .from(notifications)
@@ -658,6 +673,8 @@ const GONE = {
   reactions: [],
   follows: [],
   blocks: [],
+  rings: [],
+  corrections: [],
   notifications: [],
   preferences: [],
   verifications: [],
@@ -729,6 +746,22 @@ describe("purgeDueAccounts — a full purge", () => {
       core
         .insert(blocks)
         .values({ blockerId: other.userId, blockedId: third, createdAt: NOW }),
+      core.insert(followNotices).values({
+        followeeId: third,
+        followerId: other.userId,
+        notificationId: newUlid(),
+        rungAt: NOW,
+      }),
+      core.insert(productCorrections).values({
+        id: newUlid(),
+        productId: newUlid(),
+        userId: other.userId,
+        garmentId: newUlid(),
+        field: "weight",
+        value: "light",
+        idempotencyKey: newUlid(),
+        createdAt: NOW,
+      }),
       core
         .insert(reactions)
         .values({ entryId: other.entryId, userId: third, createdAt: NOW }),
@@ -759,6 +792,30 @@ describe("purgeDueAccounts — a full purge", () => {
         { blockerId: runner.userId, blockedId: other.userId, createdAt: NOW },
         { blockerId: other.userId, blockedId: runner.userId, createdAt: NOW },
       ]),
+      core.insert(followNotices).values([
+        {
+          followeeId: other.userId,
+          followerId: runner.userId,
+          notificationId: newUlid(),
+          rungAt: NOW,
+        },
+        {
+          followeeId: runner.userId,
+          followerId: other.userId,
+          notificationId: newUlid(),
+          rungAt: NOW,
+        },
+      ]),
+      core.insert(productCorrections).values({
+        id: newUlid(),
+        productId: newUlid(),
+        userId: runner.userId,
+        garmentId: newUlid(),
+        field: "fabric",
+        value: "merino",
+        idempotencyKey: newUlid(),
+        createdAt: NOW,
+      }),
       core.insert(reports).values([
         {
           id: filedByRunner,

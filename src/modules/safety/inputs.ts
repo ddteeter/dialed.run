@@ -327,3 +327,8 @@ export const removalDecisionInput = z.discriminatedUnion("outcome", [
     reason: declineReasonField,
   }),
 ]);
+
+/**
+ * Opening a review row's WHO REPORTED fold (D-164): the row it is on.
+ */
+export const reportersInput = z.object({ queueId: ulidSchema });

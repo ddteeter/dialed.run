@@ -15,7 +15,6 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { orSqlNull } from "../../src/lib/sql/sql-null";
 import {
-  autoHideReporterThreshold,
   claimForReview,
   fileReport,
   pendingEntryPhotos,
@@ -23,7 +22,19 @@ import {
   pendingReviewQueue,
   reasonsFrom,
   resolveReview,
+  moderationThresholds,
+  reportersToHide,
 } from "../../src/modules/safety";
+
+/**
+ * How many distinct reporters hide a subject for a reason off the clock,
+ * from the test config's invented thresholds (design 183), never a
+ * hand-written number that would pin production's.
+ */
+const autoHideReporterThreshold = reportersToHide(
+  "spam",
+  moderationThresholds(),
+);
 
 import { noPurge } from "../purge-spy";
 import {
@@ -597,7 +608,7 @@ describe("the queue itself", () => {
     // The reviewer's entire basis for a decision. Three people said the
     // photo was explicit and a fourth said it was spam; a row that
     // carried neither fact would be a subject type and a ULID.
-    expect(queued?.reporterCount).toBe(4);
+    expect(queued?.reporterCount).toBe(autoHideReporterThreshold + 1);
     expect(
       [...(queued?.reasons ?? [])].toSorted((one, other) =>
         one.localeCompare(other),
@@ -634,7 +645,7 @@ describe("the queue itself", () => {
     // would weigh it differently, which is the whole reason the count is
     // on the row.
     const queue = await pendingReviewQueue();
-    expect(queue[0]?.reporterCount).toBe(4);
+    expect(queue[0]?.reporterCount).toBe(autoHideReporterThreshold + 1);
   });
 
   it("does not attribute one subject's reports to another", async () => {
@@ -654,8 +665,8 @@ describe("the queue itself", () => {
     // The join is on subject type AND id. Getting it wrong pools every
     // report in the table onto every row, which reads as unanimity.
     const queue = await pendingReviewQueue();
-    expect(queue[0]?.reporterCount).toBe(4);
-    expect(queue[1]?.reporterCount).toBe(3);
+    expect(queue[0]?.reporterCount).toBe(autoHideReporterThreshold + 1);
+    expect(queue[1]?.reporterCount).toBe(autoHideReporterThreshold);
     expect(queue[1]?.reasons).not.toContain("not_theirs");
   });
 

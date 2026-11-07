@@ -39,6 +39,7 @@ import {
 import { reviewPhotoSrc } from "./review-photo-src";
 import { useFocusWhen } from "./use-focus-when";
 import { useSettled } from "./use-settled";
+import { WhoReported, type LoadReporters } from "./WhoReported";
 
 /**
  * The admin review queue. **Undesigned surface** — there is no artboard
@@ -427,7 +428,38 @@ type ReviewRowProps = RowSettleProps &
     decide: Decide;
     reviewHandle: ReviewHandle;
     decideMatch: DecideMatch | undefined;
+    reporters: LoadReporters | undefined;
   }>;
+
+/**
+ * The TAKE IT DOWN Act's 48 hours, on a row an intimate-image report
+ * started; nothing on any other row.
+ */
+function DueTag({
+  due,
+}: Readonly<{ due: QueueRow["due"] }>): JSX.Element | undefined {
+  if (due === undefined) return;
+  return (
+    <span data-part="due" className="text-ink uppercase">
+      <Mono step="xs">{due}</Mono>
+    </span>
+  );
+}
+
+/**
+ * The WHO REPORTED fold, for a row that has reporters and a way to read
+ * them.
+ */
+function ReportersFold({
+  row,
+  reporters,
+}: Readonly<{
+  row: QueueRow;
+  reporters: LoadReporters | undefined;
+}>): JSX.Element | undefined {
+  if (reporters === undefined || row.reporterCount === 0) return;
+  return <WhoReported queueId={row.id} load={reporters} />;
+}
 
 /**
  * A waiting row. Only the row being decided carries the decision, so the
@@ -448,6 +480,7 @@ function ReviewRow({
   decide,
   reviewHandle,
   decideMatch,
+  reporters,
   onSettled,
 }: ReviewRowProps): JSX.Element {
   const opener = useFocusWhen(active && focusOnOpen);
@@ -472,11 +505,7 @@ function ReviewRow({
         {/* The TAKE IT DOWN Act's 48 hours, on a row an intimate-image
             report started: in the header, right, where the age sits
             (round 35 #58b). The brackets stay about people. */}
-        {row.due === undefined ? undefined : (
-          <span data-part="due" className="text-ink uppercase">
-            <Mono step="xs">{row.due}</Mono>
-          </span>
-        )}
+        <DueTag due={row.due} />
       </span>
       <SubjectPhotos row={row} />
       <RemovedMatchLine match={row.removedMatches?.[0]} />
@@ -487,6 +516,10 @@ function ReviewRow({
         decide={decideMatch}
       />
       <WhyHere row={row} />
+      {/* D1: who reported, folded; opening it is logged (D-164). After
+          the photo and before the decision, as the contract's tab order
+          puts it. */}
+      <ReportersFold row={row} reporters={reporters} />
       {/* Only an intimate-image report starts the 48-hour clock. */}
       {row.due === undefined ? undefined : <StatutoryLine />}
       {isGarment ? undefined : <SourceTag row={row} />}
@@ -559,6 +592,11 @@ export function ReviewQueue(
      * it, a garment match is shown and offers nothing.
      */
     decideMatch?: DecideMatch | undefined;
+    /**
+     * The WHO REPORTED fold's read, which logs the look (D-164); without
+     * it, a row offers no fold.
+     */
+    reporters?: LoadReporters | undefined;
   }>,
 ): JSX.Element {
   // Rows leave the list as they are decided; `useSettled` says why that
@@ -592,6 +630,7 @@ export function ReviewQueue(
             decide={props.resolve}
             reviewHandle={props.reviewHandle}
             decideMatch={props.decideMatch}
+            reporters={props.reporters}
             onSettled={(id) => {
               // The row that takes the decided one's place opens next —
               // the one after it, or the one before when it was the last

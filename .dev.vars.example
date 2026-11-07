@@ -52,6 +52,11 @@ PUBLIC_PHOTOS_ORIGIN=
 # `screening-retry` sweep screens the backlog once the key exists. So a
 # missing key degrades visibility, it never fails an upload (law 5).
 # OPENAI_API_KEY=
+# The moderation thresholds, as JSON (design 183, safety/thresholds.ts).
+# Production's value is not in this repo. Unset, moderation fails closed:
+# every report hides at once and photo screening pauses (photos stay
+# `pending`, as with no OPENAI_API_KEY), which is how CI's e2e runs.
+# MODERATION_THRESHOLDS=
 # Who can reach The Desk (/desk), Review included (106; R-173 moved it
 # there from /safety/review). A comma-separated list of user ids; unset or
 # empty means NOBODY is an admin, which fails closed. There is no `vars`

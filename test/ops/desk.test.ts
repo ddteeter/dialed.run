@@ -8,6 +8,7 @@ import {
   cronCheckpoints,
   moderationActions,
   outbox,
+  productCorrections,
   reviewQueue,
   userProfiles,
 } from "../../src/db/schema-core";
@@ -90,6 +91,7 @@ describe("todayCounts", () => {
       bansThisWeek: 0,
       bansAllTime: 0,
       flaggedAccounts: 0,
+      corrections: 0,
       gaveUp: 0,
       oldestGaveUpAt: undefined,
       digestUnconfirmedAt: undefined,
@@ -111,6 +113,32 @@ describe("todayCounts", () => {
     const counts = await todayCounts();
     expect(counts.flaggedAccounts).toBe(2);
     await coreDb().delete(moderationActions);
+  });
+
+  it("counts the Corrections queue's rows, not its runners (R48·130)", async () => {
+    await coreDb().delete(productCorrections);
+    const productId = newUlid();
+    const waiting = (userId: string, value: string) => ({
+      id: newUlid(),
+      productId,
+      userId,
+      garmentId: newUlid(),
+      field: "weight" as const,
+      value,
+      idempotencyKey: newUlid(),
+      createdAt: 1,
+    });
+    await coreDb()
+      .insert(productCorrections)
+      .values([
+        waiting("ada", "light"),
+        waiting("bo", "light"),
+        waiting("cy", "heavy"),
+        { ...waiting("dee", "mid"), status: "applied" },
+      ]);
+    const counts = await todayCounts();
+    expect(counts.corrections).toBe(2);
+    await coreDb().delete(productCorrections);
   });
 
   it("counts what is pending, and dates the oldest of it", async () => {

@@ -7,14 +7,25 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import {
-  autoHideReporterThreshold,
   claimForReview,
   claimLeaseSeconds,
   fileReport,
   pendingReviewQueue,
   reconcileUnhiddenReports,
   releaseStaleClaims,
+  moderationThresholds,
+  reportersToHide,
 } from "../../src/modules/safety";
+
+/**
+ * How many distinct reporters hide a subject for a reason off the clock,
+ * from the test config's invented thresholds (design 183), never a
+ * hand-written number that would pin production's.
+ */
+const autoHideReporterThreshold = reportersToHide(
+  "spam",
+  moderationThresholds(),
+);
 
 import { noPurge } from "../purge-spy";
 import {
