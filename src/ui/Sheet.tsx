@@ -25,9 +25,10 @@ import type { ReactNode } from "react";
  *
  * And **no scrim**: `backdrop:bg-ground`, because DS5 lists "modals with
  * scrims" among the things desktop must not become — *"a dimmed backdrop
- * is a third grey and turns the phone screen into a dialog"*. The ink/60
+ * is a third grey and turns the phone screen into a dialog"*. The 60%
  * wash stays on the phone, where the sheet really is a layer over a
- * screen.
+ * screen, and it is `--scrim` (`#0B0B0E` in both themes, R48·134), not
+ * `--ink`, which a dark page turns to chalk.
  *
  * **Top-aligned means bounded.** A `<dialog>` pinned to `top` with
  * `h-fit` and nothing else will happily extend past the fold, and its
@@ -88,7 +89,7 @@ export function Sheet({
         if (isLocked) event.preventDefault();
       }}
       onClose={onClose}
-      className="sheet-motion fixed inset-x-0 bottom-0 top-auto m-0 w-full max-w-none rounded-t-sheet bg-ground p-6 text-ink backdrop:bg-ink/60 wide:bottom-auto wide:top-[var(--bar-height)] wide:mx-auto wide:mt-12 wide:h-fit wide:max-h-[calc(100dvh-var(--bar-height)-6rem)] wide:max-w-panel wide:overflow-y-auto wide:rounded-sheet wide:backdrop:bg-ground"
+      className="sheet-motion fixed inset-x-0 bottom-0 top-auto m-0 w-full max-w-none rounded-t-sheet bg-ground p-6 text-ink backdrop:bg-scrim/60 wide:bottom-auto wide:top-[var(--bar-height)] wide:mx-auto wide:mt-12 wide:h-fit wide:max-h-[calc(100dvh-var(--bar-height)-6rem)] wide:max-w-panel wide:overflow-y-auto wide:rounded-sheet wide:backdrop:bg-ground"
     >
       {children}
     </dialog>

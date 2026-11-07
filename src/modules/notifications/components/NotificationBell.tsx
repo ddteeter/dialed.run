@@ -82,7 +82,7 @@ export function NotificationBell({
       {mark === "number" ? (
         <Mono
           step="xs"
-          className="-ml-1.5 rounded-pill bg-action px-1 font-semibold text-ink"
+          className="-ml-1.5 rounded-pill bg-action px-1 font-semibold text-accent-ink"
         >
           {number}
         </Mono>

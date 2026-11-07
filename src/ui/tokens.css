@@ -62,6 +62,11 @@
    * ground" is a sentence about this value, and a role that is absent from
    * the inverted block is a role that does not change. */
   --accent-ink: var(--night-run);
+  /* R48·134: "Scrim: #0B0B0E at the table's alpha in both themes." The
+   * wash behind a phone sheet, which is not `--ink`: on a dark page that
+   * is chalk, and a sheet would sit on a white haze. Fixed, like
+   * `--accent-ink`, so no column redefines it. */
+  --scrim: var(--night-run);
 
   /* ------------------------------------------------------------------
    * FAMILY — tokens.js. Three families, each with one job: Archivo Black

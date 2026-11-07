@@ -179,6 +179,11 @@ describe("the T1 port", () => {
     expect(hexOf("--failure", ink)).toBe(hexOf("--failure", paper));
   });
 
+  it("keeps the scrim #0B0B0E in both themes (R48·134)", () => {
+    expect(hexOf("--scrim", paper)).toBe("#0b0b0e");
+    expect(hexOf("--scrim", ink)).toBe("#0b0b0e");
+  });
+
   it("draws a notice as the tint on paper and as a ruled panel on ink", () => {
     // R48·135: "Light-ground notices in the app become --panel with a 1px
     // --hairline (the marketing ink-block rule)." On paper the rule is the
