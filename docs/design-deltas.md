@@ -946,7 +946,8 @@ _Nothing from 99 on is open: round 45 answered the last of it._
 
 <!-- Numbered 104, not 98: round 43 answered 93–98, and the open queue goes on at 99–103. A list break, so Prettier keeps the number. -->
 
-104. **A select's arrow is ▾, inset to match its padding.** Undesigned as
+104. **A select's arrow is ▾, inset to match its padding.** **ANSWERED by
+     round 47 (R47·104): confirmed as built, no frame.** Undesigned as
      a control: no contract draws a select's anatomy, and Chromium drew
      its own arrow a few pixels inside the select, out of line with the
      label 16px in from the left. Built from round 28's drawn Desk
@@ -964,7 +965,8 @@ _Nothing from 99 on is open: round 45 answered the last of it._
 <!-- Numbered 112: rounds 44–46 and R47 filed 104–111. A list break, so Prettier keeps the number. -->
 
 112. **Five things Closet C's rail built where round 46 is silent (PR
-     #349, design 174).**
+     #349, design 174).** **ANSWERED by round 47 (R47·112): a, c, d and e
+     confirmed as built; b changed, and lane 178 built it (fe0a7749).**
      - Without script, below 1040, every chip's panel shows open.
      - A group with 0 pieces is still shown in GROUP.
      - WORKS AT reads `[Untested]`, with no unit, when no piece has a range.
@@ -1009,7 +1011,8 @@ _Nothing from 99 on is open: round 45 answered the last of it._
 <!-- Numbered 137: rounds 47 and 48 filed 112–136. A list break, so Prettier keeps the number. -->
 
 137. **E2-lite's summary sentence, where round 47 #114 is silent (design
-     178).** The bars count closet groups, not garment types, so the
+     178).** **ANSWERED by round 49 (R49·137): changed, not built.** The
+     sentence names garment types, not groups; see round 49 below. The bars count closet groups, not garment types, so the
      sentence names groups as the bars do, in lower case. The Feed board's
      "long sleeve and shorts" reads "tops and bottoms" in the build. The
      first word that has groups leads with "got it right in" and each one
@@ -1021,12 +1024,138 @@ _Nothing from 99 on is open: round 45 answered the last of it._
 
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
 
-## Answered in round 47 (lane 179, 2026-11-06)
+## Answered in round 49 (imported 2026-11-06)
 
-Design answered lane 179's three held questions in round 47, relayed by
-coordinator-2. The board import is the coordinator's, so this section
-records what was built.
+Design answered as `Round 49 Rulings.dc.html`, items 137 (with a
+follow-up, 137a′–c′, that corrects 137a) and 138, the onboarding layout
+at desk width. The board's text is the text of record.
 
+- **R49·137 · E2-lite's summary sentence (open queue 137). Changed; not
+  built.** The sentence names garment **types**, in the tap list's words
+  in lower case ("long sleeve", "shorts", "beanie"), not closet groups and
+  not F's category words (137a′ corrects 137a). Pieces with no type aren't
+  named and count toward no share. Matching still compares kits by group;
+  only the words change.
+  - Tiers (137c′, striking 137b's merge rule): clauses go All, then Most,
+    then Some. The first clause is the highest tier present and reads "got
+    it right in"; each later tier reads "added". Types at one tier share a
+    clause, in C's rail group order and then by count.
+  - Small N (137b′): no fallback to category. Each type is named at its own
+    strength, and #114's fewer-than-2 rule drops a type only when fewer
+    than 2 wore it. A clause names at most 3 types; past 3 the lowest
+    counts drop, ties to the one dialed most recently.
+  - A serial comma (137c): "long sleeve, shorts, and gloves". Example:
+    "Most got it right in long sleeve and shorts. Some added gloves."
+- **R49·138 · Onboarding at desk width. Changed, drawn; not built.** (a)
+  No panel: at ≥1040 each step takes the page column, left-aligned, with
+  content at a 560 measure, and the shell bar shows only the wordmark.
+  Supersedes round 31's AE (centred at 420 on ink) and Remaining Screens'
+  "card is the page". Below 1040 nothing changes. (b) P3 is light: the
+  hi-viz band (full bar plus "Now go run.") is its only emphasis, on
+  `--ground` with `--hairline` rules. Nothing in the light runner app sits
+  on ink; ink is the dark theme's (R48·133–135). (c) O0 and P3 are drawn
+  at 390 and 1280; O1, O3 and P2.5 follow O0. Copy is unchanged.
+
+## Answered in round 48 (imported 2026-11-06)
+
+Design answered as `Round 48 Rulings.dc.html`, items 129–136: the WRONG?
+correction flow (R-74), follow notifications, the takedown link on D8,
+and the dark theme (task 111). It also took the round's seven notices as
+read. The board's text is the text of record. Nothing here is built yet.
+
+- **Notices. Confirmed.** All seven taken as read; none conflicts with a
+  board. Boards still showing the per-item note, the kit caption, "Worn by
+  N" or the histogram are superseded where they show them. Round 43 #93
+  now reads: only a non-URL errors (an explicit http:// is accepted).
+- **R48·129 · WRONG? › on garment detail (R-74). Drawn.**
+  - (a) A sheet, like Report. It needs a confirmed email.
+  - (b) All seven fields: name, weight, fabric, wind, water, composition,
+    link. One field per correction.
+  - (c) Pick a field, then an input of its type (weight and fabric are the
+    104 select; wind and water Yes / No). Composition takes 120
+    characters, name 80. An optional "How do you know?" takes 280, with a
+    counter from 240.
+  - (d) The receipt swaps in place: CORRECTION SENT · "Thanks. We'll check
+    it." · "We'll let you know here when it's fixed or if we keep it as it
+    is." · Done.
+  - (e) The same product and field while one is waiting replaces it, with
+    "You sent "{value}" for {field} on {date}. Sending again replaces it."
+    A different field is a new correction.
+  - (f) The outcome is a bell row, to every runner who filed the row, and
+    no email. Apply: "We fixed the {field} on {product}. Thanks." Decline:
+    "We kept the {field} on {product} as it is.", plus the reason as a
+    second line when one was given. Both open garment detail.
+- **R48·130 · The Desk's Corrections queue. Drawn.** On the rail under
+  Review, above Duplicates, with D1's count style counting rows. One row
+  per product + field + suggested value, with "N RUNNERS". Apply is chalk;
+  Decline is an outline pill with an optional reason. No Merge. Empty: NO
+  CORRECTIONS WAITING.
+- **R48·131 · Follow notifications. Ruled.** (a) "@ada followed you." (b)
+  "@ada and 3 others followed you.": follows group while the row is
+  unread, naming the newest follower. (c) One follower links to their H
+  profile; a group to your followers list. (d) No email, and no setting:
+  in v1 only the Strava reminder emails. (e) Nothing for a blocked runner,
+  and one row per follower per 30 days, so a refollow doesn't ring twice.
+- **R48·132 · D8's See the takedown. Ruled: drop the link.** The panel's
+  date and sentence are enough for Keep or Ban; a decided-row view is a
+  post-v1 Desk history feature.
+- **R48·133 · U1's Theme row. Drawn.** A DISPLAY group after
+  Notifications, "Theme", a segmented SYSTEM / LIGHT / DARK. It applies
+  and saves at once and is cached on the device. Signed out: system.
+- **R48·134 · T1's dark roles. Ruled**, one rule per role; the build checks
+  each pair against tokens.js and reports any that fail as a delta. Text:
+  `--ink` #F4F3EF, `--quiet` #B9B8AE, `--muted` = `--label` =
+  `--placeholder` #8B8B93, on `--ground` #0B0B0E and `--panel`. Retired
+  teal stays retired. Hi-viz bands are #F5FF3D with #0B0B0E text in both
+  themes. The chalk pill is an `--ink` fill with `--ground` text; the
+  outline pill 1px `--ink`; the focus ring 2px `--ink`. Unavailable
+  controls map the light rules to their dark roles (`--muted` words,
+  `--hairline` border). The verdict scale keeps its five hues, with words
+  always #0B0B0E on a filled cell and empty slots in `--hairline`.
+  CoverageMark: `--ink` and `--muted`. The scrim is #0B0B0E at the table's
+  alpha in both themes. Blur unchanged.
+- **R48·135 · Screens without a dark frame. Confirmed:** derive them from
+  T1, with no new boards. On dark, the forms' ink surface takes R-36's 2px
+  #F4F3EF border; light-ground notices become `--panel` with a 1px
+  `--hairline`; photos aren't dimmed; the wordmark's brackets stay
+  `--action`; hi-viz on ink is unchanged. The Desk is already dark.
+- **R48·136 · Fixed surfaces. Changed / ruled.** (a) The OG image is the
+  same for every viewer, and it isn't light: round 31's default card is
+  ground #0B0B0E, rendered once. (b) The marketing site follows the system
+  with no toggle; its round 8 dark board, corrected to T1, is the
+  reference.
+
+## Answered in round 47 (imported 2026-11-06)
+
+Design answered as `Round 47 Rulings.dc.html`, items 104, 112–128: the
+open queue's 104 and 112–113, lane 178's readings (114–119), lane 179's
+three held questions (120–122), lane 176's Desk placeholders (123–126)
+and round 43 #94's three readings (127). The board's text is the text of
+record.
+
+- **R47·104 · Select anatomy. Confirmed as built**, no frame needed: the
+  native arrow hidden, ▾ in `--muted` 16px in from the right border, 24px
+  right padding, `aria-hidden` and no click. One select everywhere, in
+  `FormField`.
+- **R47·112 · Closet C's rail. Confirmed, b changed.** (a) Without
+  script, below 1040, every panel is open, stacked in rail order. (b)
+  **Changed:** a group with 0 pieces leaves the rail and the chip's
+  control; All always shows. Counts still ignore other filters. Built by
+  lane 178 (fe0a7749). (c) `[Untested]` has no unit. (d) An empty closet
+  has no rail. (e) Any is a link before hydration, then a button.
+- **R47·113 · The E2 histogram. Cut from v1.** The Feed board (through
+  round 27) wins: E2-lite is Matched plus the summary sentence. Round 22's
+  and Remaining Screens' histograms are superseded. Recorded by lane 178
+  (#353).
+- **R47·114 · The summary sentence. Confirmed:** dialed verdicts only;
+  round 35 #54's share words over the dialed runners; groups worn by fewer
+  than 2 dropped; no dialed runners, no sentence, and Matched stays. Built
+  by lane 178 (#353); its wording is round 49's 137.
+- **R47·115–119 · Tiles and band history. Confirmed as built** (#353):
+  `NO RUNS YET` with no runs and no mileage at 0 mi; every tile range
+  bracketed; the tile complete without badges; an empty band names the
+  band over "No runs in this band yet."; a piece with no record in the
+  band has no line.
 - **R47·120 · The onboarding kicker. Changed, built.** Three segments:
   STEP 1 OF 3 (handle), STEP 2 OF 3 · OPTIONAL (city) and STEP 3 OF 3 ·
   OPTIONAL (tap list). P2.5 is not a step: it keeps step 3's kicker, with
@@ -1044,6 +1173,31 @@ records what was built.
 - **R47·122 · Slow whole-block links. Built.** On a PostCard and on
   OtherProfile's shared-run rows, the date breathes and the handle stays
   still, as on every other X3 link (`useTappedSlow` + `SlowLabel`).
+- **R47·123 · The audience radiogroup, unconfirmed (R-148). Changed,
+  drawn; not built.** Held at PRIVATE, every option at full strength, none
+  disabled. SHARED or PUBLIC opens #17's sheet without moving the
+  selection, and focus returns to the option pressed. Round 27's line goes
+  under the group, wired to it with `aria-describedby`.
+- **R47·124 · D8's flag. Drawn.** `[FLAGGED]` MONO.xs hi-viz on the row; a
+  Flagged chip with its count, last among the filters; a panel at the top
+  of the right column: kicker FLAGGED, "A takedown of an image they posted
+  was upheld on {date}. Nothing has happened to the account. Keep it, or
+  ban it below.", a See the takedown link (dropped by R48·132) and Keep
+  account as an outline pill. Built on lane 176's branch (design 176).
+- **R47·125 · Today's count. Ruled:** FLAGGED ACCOUNTS, shown even at 0,
+  after Today's existing numbers, linking to D8 with Flagged on. Built on
+  lane 176's branch.
+- **R47·126 · The statutory line. Drawn:** directly under the reason, on
+  its own line, MONO.xs `--muted`, sentence case, wording as built. Built
+  on lane 176's branch.
+- **R47·127 · Round 43 #94's readings. Confirmed as built.** (a) E greys
+  the product-filled words in its existing attribute line; no WEIGHT /
+  FABRIC / WIND grid. (b) A select's empty option shows the product's
+  value; the wind and water toggles have no placeholder and are always the
+  runner's. (c) `https://janji` reads "That isn't a link."
+- **R47·128 · 110k. Not on file:** round 46's order arrived cut off before
+  110k. Design asks for its text again as a new item. Nothing in the build
+  waits on it.
 
 ## Answered in round 46 (imported 2026-11-06)
 

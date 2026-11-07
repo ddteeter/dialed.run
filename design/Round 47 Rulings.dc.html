@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #16161A; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+</style>
+</helmet>
+<div style="font-family: Archivo, Helvetica, sans-serif; background: #16161A; color: #F4F3EF; padding: 48px 40px 88px;">
+  <div style="max-width: 1420px; margin: 0 auto; display: flex; flex-direction: column; gap: 64px;">
+
+    <div style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 28px; border-bottom: 1px solid #2A2A31;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">
+        <span>Round 47 &nbsp;/&nbsp; 104, 112–128 · 2026-11-06</span>
+        <span style="color: #FF2D8A;">dialed.run</span>
+      </div>
+      <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; max-width: 1120px; text-transform: uppercase;">Most guesses stand. The histogram is cut. Two frames settle the rest.</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #8B8B93; max-width: 860px; text-wrap: pretty;">Changed: 112b (empty groups leave the rail), 120 (a three-step bar), 123 (the radiogroup holds at PRIVATE). Drawn: 123 and the Desk's flag (124, 126). <strong style="color: #F4F3EF;">128:</strong> 110k's text was never received. It was missing from round 46's order, which arrived cut off. Please resend it. Values are from tokens.js / T1.</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">123 · A3 · sharing, unconfirmed runner</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">123 · A3 · UNCONFIRMED · HELD AT PRIVATE</span>
+          <div data-screen-label="A3 share radiogroup unconfirmed r47" style="width: 390px; max-width: 100%; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">WHO SEES THIS RUN</span>
+            <div style="display: flex; flex-direction: column; border-top: 1px solid #DCDBD2;">
+              <div style="min-height: 44px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #DCDBD2;"><span style="width: 20px; height: 20px; border-radius: 100px; border: 2px solid #0B0B0E; display: flex; align-items: center; justify-content: center;"><span style="width: 10px; height: 10px; border-radius: 100px; background: #0B0B0E;"></span></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.1em; font-weight: 600;">PRIVATE</span></div>
+              <div style="min-height: 44px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #DCDBD2;"><span style="width: 20px; height: 20px; border-radius: 100px; border: 2px solid #0B0B0E;"></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.1em; font-weight: 600;">SHARED</span></div>
+              <div style="min-height: 44px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #DCDBD2;"><span style="width: 20px; height: 20px; border-radius: 100px; border: 2px solid #0B0B0E;"></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.1em; font-weight: 600;">PUBLIC</span></div>
+            </div>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;"><span style="text-decoration: underline; text-underline-offset: 3px; font-weight: 700;">Confirm your email</span> to share. This run saves private.</p>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 390px; text-wrap: pretty;">Changed from the build. All three options are at full strength and none is disabled (rule 07). Picking SHARED or PUBLIC doesn't move the selection. It opens #17's confirm-email sheet, and on close focus returns to the option that was pressed. Round 27's line sits under the group, in place of PRIVATE's sub-line, and the group's aria-describedby points to it, so the reason is heard before anyone presses. Once the email is confirmed the line goes and the group works normally.</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">124 · 126 · Desk · the D-161 flag</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+
+        <div style="flex: 1 1 560px; max-width: 760px; display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">124 · D8 RUNNERS · FLAGGED FILTER ON · ROW SELECTED</span>
+          <div data-screen-label="D8 flagged r47" style="background: #0B0B0E; border: 1px solid #24242B; padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <span style="height: 36px; padding: 0 14px; border-radius: 100px; border: 1px solid #4A4A52; color: #8B8B93; display: flex; align-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em;">(existing filters)</span>
+              <span style="height: 36px; padding: 0 14px; border-radius: 100px; background: #F4F3EF; color: #0B0B0E; display: flex; align-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; font-weight: 600;">FLAGGED · 2</span>
+            </div>
+            <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 20px;">
+              <div style="display: flex; flex-direction: column; border-top: 1px solid #24242B;">
+                <div style="min-height: 52px; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 0 12px; border-bottom: 1px solid #24242B; background: #1C1C22;"><span style="font-size: 15px; font-weight: 600;">@hillsplits</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">[FLAGGED]</span></div>
+                <div style="min-height: 52px; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 0 12px; border-bottom: 1px solid #24242B;"><span style="font-size: 15px; font-weight: 600;">@k_lopes</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">[FLAGGED]</span></div>
+              </div>
+              <div style="border: 1px solid #24242B; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">FLAGGED</span>
+                <p style="margin: 0; font-size: 15px; line-height: 1.5; text-wrap: pretty;">A takedown of an image they posted was upheld on Nov 4. Nothing has happened to the account. Keep it, or ban it below.</p>
+                <a style="color: #F4F3EF; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; align-self: flex-start; min-height: 44px; display: flex; align-items: center;">See the takedown</a>
+                <span style="align-self: flex-start; height: 44px; padding: 0 20px; border-radius: 100px; border: 1px solid #F4F3EF; display: flex; align-items: center; font-size: 15px; font-weight: 700;">Keep account</span>
+              </div>
+            </div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 760px; text-wrap: pretty;">Mark: [FLAGGED] in MONO.xs hi-viz, at the right of the row where status marks sit. Chip: "Flagged" with its count, last among the filters, in the same style as the others, shown even at 0. Panel: at the top of the right column, above the account's existing actions. Keep account is an outline pill, because Ban keeps its own place and weight. The panel doesn't use the word "intimate" (D-161 keeps it to Review, Decline and the email). See the takedown opens the Review row. After Keep, a ban or an unban, the panel and mark go, and focus moves to the runner's name.</p>
+        </div>
+
+        <div style="flex: 0 0 420px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">126 · REVIEW · INTIMATE-REASON ROW</span>
+          <div data-screen-label="Review intimate row r47" style="background: #0B0B0E; border: 1px solid #24242B; padding: 20px; display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">(kicker as built)</span>
+            <span style="font-size: 15px; font-weight: 600;">(reason as built)</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #8B8B93;">Intimate image as defined in 15 U.S.C. § 6851(a)(5)</span>
+            <div style="height: 120px; border: 1px dashed #4A4A52; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #8B8B93;">(photo and bar as built)</div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 420px; text-wrap: pretty;">Directly under the reason, on a line of its own, in MONO.xs --muted and sentence case (a citation isn't a kicker). It never sits beside the kicker. Wording is as built.</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="rulings" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">Rulings · Round 47</span>
+      <div style="display: flex; flex-direction: column; border: 1px solid #2A2A31;">
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="14">
+          <div style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 170px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;">
+            <span style="font-size: 15px; font-weight: 600;">{{ r.q }}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: {{ r.vc }};">{{ r.v }}</span>
+            <span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">{{ r.a }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const C = '#00E0C6', A = '#F5FF3D', D = '#FF2D8A';
+    const R = (q, v, a) => ({ q, v, a, vc: v.startsWith('CONFIRM') ? C : v.startsWith('DRAWN') || v.includes('DRAWN') ? D : A });
+    const rows = [
+      R('104 · Select anatomy', 'CONFIRMED', 'Native arrow hidden; ▾ in --muted, 16px in from the right border; 24px right padding; aria-hidden, no click. One select everywhere, inside FormField: ChoiceField, F\'s category, the manual run\'s effort. No frame needed.'),
+      R('112a · No script, below 1040', 'CONFIRMED', 'All panels open, stacked in rail order. That\'s the honest fallback.'),
+      R('112b · Empty GROUP', 'CHANGED', 'A group with 0 pieces is left out of the rail and the chip\'s control. "All" always shows. Counts still ignore other filters, so a group only goes when the runner owns nothing in it.'),
+      R('112c · [Untested]', 'CONFIRMED', 'No unit, since there\'s no number.'),
+      R('112d · Empty closet', 'CONFIRMED', 'No rail.'),
+      R('112e · Any', 'CONFIRMED', 'A link before hydration, then a button.'),
+      R('113 · Histogram', 'RULED', 'Cut from v1. The Feed board (through round 27) wins. E2-lite is Matched + the summary sentence. Record it as cut. Round 22\'s and Remaining Screens\' drawings are superseded.'),
+      R('114 · Summary sentence', 'CONFIRMED', 'All four points stand. (1) Dialed verdicts only. (2) Round 35 #54\'s share words, over the dialed runners. (3) Groups worn by fewer than 2 are dropped. (4) No dialed runners, no sentence, and Matched stays.'),
+      R('115 · Empty record', 'CONFIRMED', 'NO RUNS YET with no runs. No mileage at 0 mi.'),
+      R('116 · Brackets', 'CONFIRMED', 'Drawing noise. Every tile range is bracketed.'),
+      R('117 · Badges', 'CONFIRMED', 'The tile is complete for v1 without them.'),
+      R('118 · Band, no runs', 'CONFIRMED', 'The heading still names the band, then "No runs in this band yet."'),
+      R('119 · Piece, no record', 'CONFIRMED', 'No record line.'),
+      R('120 · Step kicker', 'CHANGED', 'Three segments: STEP 1 OF 3 (handle), STEP 2 OF 3 · OPTIONAL (city), STEP 3 OF 3 · OPTIONAL (tap list). P2.5 isn\'t a step. It keeps step 3\'s kicker with the bar full, so skipping it changes nothing. Round 26\'s Strava segment is gone until Strava ships.'),
+      R('121 · Auth primary', 'RULED', 'Yes: Log in and Create account are the ink pill. The failure band above it has no button, and the retry is the primary. Au2\'s on-load notice (R46·106) keeps Ask for access, because that screen has no form or primary. The composition is otherwise unchanged, so no frame.'),
+      R('122 · Whole-block links', 'RULED', 'The date breathes on both PostCard and OtherProfile rows, because it\'s the part that names the run being opened. The handle stays still. No separate signal for whole-card links: one treatment.'),
+      R('123 · Radiogroup, unconfirmed', 'CHANGED · DRAWN', 'Held at PRIVATE, all options at full strength, none disabled. SHARED or PUBLIC opens #17\'s sheet without moving the selection, and focus returns to the option pressed. Round 27\'s line goes under the group and is wired to it with aria-describedby.'),
+      R('124 · D8 flag', 'DRAWN', '[FLAGGED] MONO.xs hi-viz on the row. "Flagged" chip with its count, last among the filters. Panel at the top of the right column: kicker FLAGGED, "A takedown of an image they posted was upheld on {date}. Nothing has happened to the account. Keep it, or ban it below.", a See the takedown link, and Keep account as an outline pill.'),
+      R('125 · Today count', 'RULED', 'Label "FLAGGED ACCOUNTS", shown even at 0, after Today\'s existing numbers. It links to D8 with the Flagged filter on.'),
+      R('126 · Statutory line', 'DRAWN', 'Directly under the reason, on its own line, MONO.xs --muted, sentence case. Wording as built.'),
+      R('127a · E attribute line', 'CONFIRMED', 'Grey the product-filled words in the existing line. No WEIGHT / FABRIC / WIND grid.'),
+      R('127b · Edit placeholders', 'CONFIRMED', 'The select\'s empty option shows the product\'s value. The toggles have no placeholder and are always the runner\'s.'),
+      R('127c · Dotless host', 'CONFIRMED', 'https://janji reads "That isn\'t a link."'),
+      R('128 · 110k', 'RULED', 'Not on file: round 46\'s order arrived cut off before 110k. Please resend its text as a new item. Nothing in the build is waiting on it.'),
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>
