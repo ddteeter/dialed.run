@@ -55,7 +55,7 @@ test("the feed: find a runner, follow them, open their kit, mark it useful", asy
       page.getByRole("link", { name: "Find a runner" }),
     ).toBeVisible();
     await scene(page, "Following · nobody yet", {
-      say: "A new runner follows nobody yet, so it says so, and offers one way in: find a runner.",
+      say: "A new runner follows nobody yet, so it says so, and offers one way in.",
     });
 
     await scene(page, "Find a runner · search by handle", {

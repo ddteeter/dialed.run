@@ -71,7 +71,7 @@ test("the closet: real products, a record per piece, retire not delete", async (
   // Below the fold at both widths: show the fields before naming them.
   await page.getByLabel("Wind resistant").scrollIntoViewIfNeeded();
   await scene(page, "Outer layer · wind resistant", {
-    say: "It goes over everything, so it's the outer layer. And it's a wind shell, so I'll tick wind resistant. That's the detail that matters on a cold, gusty morning.",
+    say: "It goes over everything, so it's the outer layer. And it's a shell that keeps the gusts out, so I'll tick wind resistant. That's the detail that matters on a cold, gusty morning.",
   });
   await page.getByLabel("Layer").selectOption("outer");
   await page.getByLabel("Wind resistant").check();
@@ -92,7 +92,7 @@ test("the closet: real products, a record per piece, retire not delete", async (
     say: "Back in the Closet, there are two pieces now, each one a tile.",
   });
   await scene(page, "Each tile · the piece and its record", {
-    say: "Each tile is the piece and its record. Nothing yet: the record fills in as you log runs in it, and the verdicts say what weather it works in.",
+    say: "Each tile is the piece and its record. Nothing yet: it fills in as you log runs in it, and the verdicts say what weather it works in.",
   });
 
   await scene(page, "Say the shoe wears out", {
@@ -132,6 +132,6 @@ test("the closet: real products, a record per piece, retire not delete", async (
   });
   await retiredSwitch.scrollIntoViewIfNeeded();
   await scene(page, "One switch · show retired", {
-    say: "And this one switch, show retired, hides retired pieces whenever you'd rather not see them.",
+    say: "And this one switch, show retired, tucks them away whenever you'd rather not see them.",
   });
 });

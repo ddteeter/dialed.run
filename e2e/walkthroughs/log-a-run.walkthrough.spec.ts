@@ -114,7 +114,7 @@ test("log a run: the file, its conditions, the kit, the verdict", async ({
     await page.getByRole("button", { name: "Running tights" }).click();
     await expect(page.getByText(/2 pieces$/u)).toBeVisible();
     await scene(page, "The Kit · two pieces", {
-      say: "Two pieces, and the Kit is done. Next: did it work?",
+      say: "Two pieces, and the Kit is done. On to the last question.",
     });
 
     await page.getByRole("button", { name: "Next — did it work?" }).click();

@@ -80,7 +80,7 @@ test("the first run: an invite, an account, a handle, and a closet to start from
     page.getByText("Your runs can go on the feed now."),
   ).toBeVisible();
   await scene(page, "Confirmed · runs can go on the feed", {
-    say: "I'll open the link from the inbox. It confirms the address, and from now on this runner's runs can go on the feed. Then I'll open the feed.",
+    say: "I'll open the link from the inbox. It confirms the address, and from now on this runner's runs can be shared. Then I'll open the feed.",
   });
 
   // Signed out still: the feed asks for a log-in, then sends a new
@@ -179,7 +179,7 @@ test("the first run: an invite, an account, a handle, and a closet to start from
     page.getByText(/verdicts we start making the call for you/u),
   ).toBeVisible();
   await scene(page, "Now go run · the whole loop", {
-    say: "And that's it. The last screen is an instruction: after a run, upload it and say what you wore. After enough verdicts, the Call starts making the call for you.",
+    say: "And that's it. The last screen is an instruction: after a run, upload it and say what you wore. After enough verdicts, the Call starts deciding for you.",
   });
   await scene(page, "Done for now · to the Closet", {
     say: "I'll choose Done for now, and open the Closet from home.",
