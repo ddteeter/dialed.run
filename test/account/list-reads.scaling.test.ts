@@ -109,18 +109,19 @@ async function seededDesk(n: number) {
 }
 
 describe("the Desk's runner list (listAccounts + deskRunners + accountCount)", () => {
-  // A legitimate formula: 1 list + 3 reads per `IN_LIST_CHUNK` (80,
-  // src/lib/chunked.ts:43) of listed accounts + 1 count. A page is at most
-  // `ACCOUNTS_PAGE` (100, src/modules/account/accounts.ts:44), so 1 + 3×2 +
-  // 1 at most; 1 and 25 accounts are both one chunk.
-  it("asks 1 + 3 + 1 for 1 account and for 25", async () => {
+  // A legitimate formula: 1 list + 5 reads per `IN_LIST_CHUNK` (80,
+  // src/lib/chunked.ts) of listed accounts (`deskRunners`: runs, profile
+  // reports, profiles, pending deletions, open flags) + 1 count. A page is
+  // at most `ACCOUNTS_PAGE` (100, src/modules/account/accounts.ts), so
+  // 1 + 5×2 + 1 at most; 1 and 25 accounts are both one chunk.
+  it("asks 1 + 5 + 1 for 1 account and for 25", async () => {
     const one = await seededDesk(1);
     const many = await seededDesk(25);
 
     expect(one.result.runners).toHaveLength(1);
     expect(many.result.runners).toHaveLength(25);
     expect(many.result.total).toBe(25);
-    expect(one.counts.core).toBe(1 + 3 + 1);
+    expect(one.counts.core).toBe(1 + 5 + 1);
     expectFlat(one.counts, many.counts);
   });
 });
