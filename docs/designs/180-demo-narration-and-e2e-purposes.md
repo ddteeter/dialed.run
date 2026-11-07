@@ -97,6 +97,13 @@ decision is actually made. `pr-ready` and `pr-demo-video` check it at the end.
    feed/closet/moderation split into journey plus edge-case files. _Waits for
    coordinator-2's wave-2 lanes to merge._ _Test:_ full `npm run e2e` and the
    a11y coverage figure no lower than before. _Done:_ no file over ~400 lines.
+   **As built:** feed, closet, moderation, run-logging, takedown and verdict
+   split (each journey now under 400 lines). Account (483) and auth (415)
+   stay whole: each carries one fresh account through its life, and every
+   beat leans on the one before, so a split would add a second inline
+   sign-up. Edge cases name things with digit suffixes, which the
+   transcript masks, and a test that ends on a screen still fetching waits
+   for it to settle. Coverage after: 75.32% (baseline 74.74%).
 5. **Walkthroughs.** Four stories _(owner, 2026-11-06)_: first run, logging
    a run and its verdict, the closet, the feed. One spec each in
    `e2e/walkthroughs/`, narrated as a product owner would demo it, with a
