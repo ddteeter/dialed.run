@@ -156,6 +156,10 @@ describe("TabBar", () => {
     expect(launcher).toHaveAttribute("aria-haspopup", "dialog");
     // Never current, in any state: there is no page for it to be on.
     expect(launcher).not.toHaveAttribute("aria-current");
+    // A <button> shrinks to its text where an <a> fills its grid seat, so
+    // without the full width `+ Add` sat at the left of its fifth of the bar
+    // while the four links centred in theirs (owner, 2026-11-06).
+    expect(launcher).toHaveClass("w-full");
     // The seat is still one of five, so the bar still announces "2 of 5".
     expect(nav.querySelectorAll("li")).toHaveLength(5);
 
