@@ -179,15 +179,32 @@ function urlWithScheme(scheme: string): string {
 }
 
 describe("httpsUrlSchema", () => {
-  it("takes https and refuses every other scheme", () => {
-    expect(httpsUrlSchema.safeParse("https://janji.com/rover").success).toBe(
-      true,
+  it("takes https as typed, and refuses every scheme but the web's", () => {
+    expect(httpsUrlSchema.safeParse("https://janji.com/rover").data).toBe(
+      "https://janji.com/rover",
     );
-    expect(httpsUrlSchema.safeParse(urlWithScheme("http")).success).toBe(false);
+    // Exactly as typed: no `URL` normalisation, so no trailing slash.
+    expect(httpsUrlSchema.parse("https://janji.com")).toBe("https://janji.com");
     expect(httpsUrlSchema.safeParse(urlWithScheme("ftp")).success).toBe(false);
     // `javascript:` is why this is a scheme allowlist rather than a
     // "starts with http" check — the value reaches an href.
     expect(httpsUrlSchema.safeParse("javascript:alert(1)").success).toBe(false);
+  });
+
+  it("takes an explicit http:// and gives it back on https (D-166)", () => {
+    // Owner, 2026-11-06: "only a non-URL errors". The output is still
+    // https only, so nothing downstream ever sees http.
+    expect(httpsUrlSchema.parse(`${urlWithScheme("http")}/rover?c=1`)).toBe(
+      "https://janji.com/rover?c=1",
+    );
+    // Either case of the scheme, and only the scheme moves.
+    expect(httpsUrlSchema.parse(`${urlWithScheme("HTTP")}/Rover`)).toBe(
+      "https://janji.com/Rover",
+    );
+    // A path that merely contains "http:" is not rewritten.
+    expect(httpsUrlSchema.parse("https://janji.com/http:x")).toBe(
+      "https://janji.com/http:x",
+    );
   });
 
   it("refuses a string that is not a URL at all", () => {
@@ -207,7 +224,7 @@ describe("httpsUrlSchema", () => {
         expect.objectContaining({ message: notALink }),
       ]);
     }
-    for (const scheme of ["http", "ftp"]) {
+    for (const scheme of ["ftp", "ws"]) {
       expect(
         httpsUrlSchema.safeParse(urlWithScheme(scheme)).error?.issues,
       ).toEqual([
@@ -229,9 +246,13 @@ describe("httpsUrlProblem", () => {
     expect(httpsUrlProblem("not a url")).toBe(notALink);
     expect(httpsUrlProblem("https://janji")).toBe(notALink);
     expect(httpsUrlProblem("javascript:alert(1)")).toBe(notALink);
-    expect(httpsUrlProblem(urlWithScheme("http"))).toBe(
+    expect(httpsUrlProblem(urlWithScheme("ftp"))).toBe(
       "Use a link that starts with https://.",
     );
+  });
+
+  it("has nothing to say of an explicit http:// either (D-166)", () => {
+    expect(httpsUrlProblem(urlWithScheme("http"))).toBeUndefined();
   });
 });
 

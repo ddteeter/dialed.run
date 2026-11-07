@@ -313,12 +313,12 @@ describe("storedLinkErrors: Edit's opening error for a stored link (round 43 #93
     });
   });
 
-  it("opens on the contract's words for a link stored before the https rule", async () => {
+  it("opens on the contract's words for a stored link on a scheme it refuses", async () => {
     const item = await storedItem(BRANDED);
     const database = drizzle(env.DIALED_CORE);
     const [legacy] = await database
       .update(wardrobeItems)
-      .set({ productUrl: ["http:", "//janji.com/rover"].join("") })
+      .set({ productUrl: ["ftp:", "//janji.com/rover"].join("") })
       .where(eq(wardrobeItems.id, item.id))
       .returning();
     expect(legacy && storedLinkErrors(legacy, HIDDEN)).toEqual({

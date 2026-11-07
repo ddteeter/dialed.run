@@ -74,7 +74,8 @@ export function productPlaceholders(
 
 /**
  * Edit's opening error for a stored link it will not show (round 43 #93,
- * state 5): denied since it was saved, or stored before the https rule.
+ * state 5): denied since it was saved, or stored on a scheme the contract
+ * refuses.
  * `linkDetail.link` is closet's one read of it, so a link that read lets
  * through opens clean.
  */
