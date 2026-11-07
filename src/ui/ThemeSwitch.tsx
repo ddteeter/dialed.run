@@ -37,9 +37,14 @@ export const THEME_SAVE_MESSAGE = "This device will keep it.";
 type SaveTheme = (input: { data: { theme: ThemeChoice } }) => Promise<unknown>;
 
 /**
- * The one chain every save joins, and the latest choice's outcome. A
- * failure is only shown for the choice still on screen: an older save
- * that failed after a newer one was made says nothing about the newer.
+ * The one chain every save joins, and whether the latest one failed.
+ *
+ * A new choice clears the band at once: it is about a save the runner has
+ * moved past. A failure is shown only for the latest save, so an older one
+ * failing while a newer is still in flight says nothing. Saves are told
+ * apart by a token, not by their theme: Dark, Light, Dark again is three
+ * saves, and the first Dark's failure is not the third's. Each save holds
+ * a token of its own, and only the latest token's failure is shown.
  */
 function useThemeSave(save: SaveTheme): {
   failed: boolean;
@@ -47,17 +52,19 @@ function useThemeSave(save: SaveTheme): {
 } {
   const [failed, setFailed] = useState(false);
   const chain = useRef<Promise<unknown>>(Promise.resolve());
-  const latest = useRef<ThemeChoice | undefined>(undefined);
+  const latest = useRef<object | undefined>(undefined);
   const store = (theme: ThemeChoice): void => {
-    latest.current = theme;
+    // A fresh token per save, compared by identity.
+    const attempt = {};
+    latest.current = attempt;
+    setFailed(false);
     const previous = chain.current;
     chain.current = (async () => {
       await previous;
       try {
         await save({ data: { theme } });
-        if (latest.current === theme) setFailed(false);
       } catch {
-        if (latest.current === theme) setFailed(true);
+        if (latest.current === attempt) setFailed(true);
       }
     })();
   };

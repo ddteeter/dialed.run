@@ -36,7 +36,10 @@ const band = () =>
 
 describe("ThemeSwitch", () => {
   it("offers SYSTEM / LIGHT / DARK, in that order, with the account's choice checked", () => {
-    const { group, radio } = setUp("dark", vi.fn(() => Promise.resolve()));
+    const { group, radio } = setUp(
+      "dark",
+      vi.fn(() => Promise.resolve()),
+    );
 
     expect(
       within(group)
@@ -50,6 +53,12 @@ describe("ThemeSwitch", () => {
     });
     expect(radio("Dark")).toBeChecked();
     expect(radio("System")).not.toBeChecked();
+    // Nothing has failed yet, and the group is never read-only: a tap is
+    // always taken, even while a save is in flight.
+    expect(band()).toBeNull();
+    for (const input of within(group).getAllByRole("radio")) {
+      expect(input).not.toHaveAttribute("readonly");
+    }
   });
 
   it("changes the page and saves at once, with no Save", async () => {
@@ -120,8 +129,9 @@ describe("ThemeSwitch", () => {
     });
     expect(save).toHaveBeenLastCalledWith({ data: { theme: "light" } });
     expect(
-      within(screen.getByRole("group", { name: "Theme" }))
-        .getAllByRole("radio")[0],
+      within(screen.getByRole("group", { name: "Theme" })).getAllByRole(
+        "radio",
+      )[0],
     ).not.toHaveAttribute("aria-describedby");
   });
 
@@ -151,21 +161,61 @@ describe("ThemeSwitch", () => {
     });
   });
 
-  it("says nothing about an older save that fails after a newer choice", async () => {
+  it("says nothing about an older save that fails while a newer one is in flight", async () => {
     const first = Promise.withResolvers<unknown>();
+    const second = Promise.withResolvers<unknown>();
     const save = vi
       .fn<Save>()
       .mockImplementationOnce(() => first.promise)
-      .mockImplementation(() => Promise.resolve());
+      .mockImplementationOnce(() => second.promise);
     const { radio } = setUp("system", save);
 
     await userEvent.click(radio("Dark"));
     await userEvent.click(radio("Light"));
     first.reject(new Error("down"));
 
+    // The Light save has started, so the Dark failure has been handled.
     await waitFor(() => {
       expect(save).toHaveBeenCalledTimes(2);
     });
+    expect(band()).toBeNull();
+    second.resolve(undefined);
+  });
+
+  it("tells saves apart, not themes: an old Dark failing is not a new Dark's", async () => {
+    const first = Promise.withResolvers<unknown>();
+    const later = Promise.withResolvers<unknown>();
+    const save = vi
+      .fn<Save>()
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementation(() => later.promise);
+    const { radio } = setUp("system", save);
+
+    await userEvent.click(radio("Dark"));
+    await userEvent.click(radio("Light"));
+    await userEvent.click(radio("Dark"));
+    first.reject(new Error("down"));
+
+    await waitFor(() => {
+      expect(save).toHaveBeenCalledTimes(2);
+    });
+    expect(band()).toBeNull();
+    later.resolve(undefined);
+  });
+
+  it("clears the band at once when the runner picks again", async () => {
+    const save = vi
+      .fn<Save>()
+      .mockImplementationOnce(() => Promise.reject(new Error("down")))
+      .mockImplementation(() => Promise.withResolvers<unknown>().promise);
+    const { radio } = setUp("system", save);
+    await userEvent.click(radio("Dark"));
+    await waitFor(() => {
+      expect(band()).not.toBeNull();
+    });
+
+    await userEvent.click(radio("Light"));
+
     expect(band()).toBeNull();
   });
 
