@@ -8,7 +8,7 @@ import {
   lookUpCityFn,
 } from "../../modules/onboarding/functions";
 import { geolocate } from "../../modules/onboarding/geolocate";
-import { Page } from "../../ui";
+import { OnboardingProgress, Page } from "../../ui";
 
 /**
  * Screen O1. No `Layout`: onboarding is a flow rather than a tab, and a
@@ -31,7 +31,11 @@ function CalibratePage() {
 
   return (
     <main>
-      <Page title="One question does most of the work" width="panel">
+      <Page
+        title="One question does most of the work"
+        kicker={<OnboardingProgress at="city" />}
+        width="panel"
+      >
         <CalibrateForm
           defaults={defaults}
           locate={geolocate}

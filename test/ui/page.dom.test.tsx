@@ -155,3 +155,32 @@ describe("Page", () => {
     });
   });
 });
+
+describe("Page's kicker (round 47 #120)", () => {
+  it("sits above the heading, in one group with it", () => {
+    render(
+      <Page title="Start your closet" kicker={<span>Step 3 of 3</span>}>
+        body
+      </Page>,
+    );
+
+    const kicker = screen.getByText("Step 3 of 3");
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(kicker.compareDocumentPosition(heading)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    // One group, SPACE[2] apart, not the column's gap between groups.
+    const group = kicker.parentElement;
+    expect(group).toHaveClass("flex", "flex-col", "gap-2");
+    expect(group).toContainElement(heading);
+  });
+
+  it("adds no group around a heading with no kicker", () => {
+    const { container } = render(<Page title="Runs">body</Page>);
+
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading.parentElement?.parentElement).toBe(
+      container.firstElementChild,
+    );
+  });
+});

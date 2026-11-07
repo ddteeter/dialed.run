@@ -20,6 +20,7 @@ end of listitem, level 1, position 4, set size 4
 end of list
 end of navigation, Main
 link, Search runners
+link, Notifications
 button, Log a run, has popup dialog
 end of banner
 main

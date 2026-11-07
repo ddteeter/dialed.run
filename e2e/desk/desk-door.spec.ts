@@ -33,6 +33,12 @@ test.describe("anyone who is not an operator", () => {
       await expect(page.getByRole("navigation", { name: "Desk" })).toHaveCount(
         0,
       );
+      // A runner's 404 is the signed-in shell, bell included, and the bell
+      // is read after mount (PR #104-1). Wait for it, so the transcript is
+      // the settled page and not whichever side of the read it caught.
+      await expect(
+        page.getByRole("link", { name: /^Notifications/u }),
+      ).toBeVisible();
     });
   });
 });

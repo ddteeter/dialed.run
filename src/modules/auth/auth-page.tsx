@@ -104,6 +104,7 @@ export function AuthPage(
   // has a band beside it: the ban gate's refusal draws none, and Google's
   // closed return is cleared by the submit any band would come from.
   const isClosed = google.closed || isAccountClosed(form.failure, cause);
+  const isRetry = band !== undefined && band.retry !== false;
   const said = isClosed
     ? CLOSED_SAID
     : authStatus({ status: form.status, band, google: google.failure });
@@ -137,24 +138,22 @@ export function AuthPage(
           />
           {props.children}
           {/* The form band with Auth's two words (round 22): "Not signed
-                in", not "Nothing saved". Same block, same place, same Try
-                again — `FormFailureBand` hard-codes the contract's opener,
-                so this is the band it wraps, given the other kicker. A
-                refusal no retry can change (under 18, round 35 #56c) has
-                no Try again, as Google's refusals have none. */}
+                in", not "Nothing saved". Same block, same place, and no
+                button of its own (round 47 #121): the retry is the
+                primary below it. Au4: *"the primary's label becomes Try
+                again (same cell, width fixed) and takes focus."* A refusal
+                no retry can change (under 18, round 35 #56c) keeps the
+                primary's own label and moves focus nowhere. */}
           {band === undefined ? undefined : (
-            <FailureBand
-              kicker={band.kicker}
-              message={band.message}
-              onRetry={band.retry === false ? undefined : form.retry}
-              retryRef={form.retryRef}
-            />
+            <FailureBand kicker={band.kicker} message={band.message} />
           )}
           {props.turnstile}
           <SubmitButton
-            label={submitLabel}
+            label={isRetry ? "Try again" : submitLabel}
             pendingLabel={pendingLabel}
             pending={form.pending}
+            tone="ink"
+            ref={isRetry ? form.retryRef : undefined}
           />
         </form>
         <OrDivider />

@@ -1305,7 +1305,11 @@ describe("VerdictForm: the history line beneath the row (R-97)", () => {
     );
 
     expect(
-      screen.getByText("[41–50°] · 2 cold · 7 dialed · 1 warm"),
+      screen.getByText(
+        (_text, element) =>
+          element?.tagName === "SPAN" &&
+          element.textContent === "[41–50°] · 2 cold · 7 dialed · 1 warm",
+      ),
     ).toBeVisible();
   });
 

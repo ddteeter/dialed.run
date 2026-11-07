@@ -268,9 +268,9 @@ export async function conditionsAt(
   lng: number | undefined,
   nowEpochSeconds: number,
 ): Promise<Conditions | undefined> {
-  // Equivalent mutant, and worth writing down why: `roundCoord(undefined)`
-  // is `NaN`, not 0, so a half-located lookup keys to a cell nothing can
-  // match and answers undefined anyway. The guard says the intent — "we do
+  // Equivalent mutant, and worth writing down why:
+  // `roundCoordinate(undefined)` is `NaN`, not 0, so a half-located lookup
+  // keys to a cell nothing can match and answers undefined anyway. The guard says the intent — "we do
   // not know where you are" — and saves the query.
   // Stryker disable next-line ConditionalExpression,LogicalOperator
   return lat === undefined || lng === undefined

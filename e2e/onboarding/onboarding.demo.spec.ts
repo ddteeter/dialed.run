@@ -49,6 +49,8 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   // That is deliberately the *worst* path: it is the one a denied
   // permission produces, and it has to work.
   await scene(page, "O1 · one question is the whole requirement");
+  // Round 47 #120: three steps, the city the second and optional.
+  await expect(page.getByText("Step 2 of 3 · Optional")).toBeVisible();
   await page.getByLabel(/^Run a little cold/).check();
 
   // Round 22, item 19: "Use my location" is a text button, and a refusal
@@ -108,6 +110,7 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   await expect(page.getByText("Closet: 0 pieces")).toBeVisible({
     timeout: 60_000,
   });
+  await expect(page.getByText("Step 3 of 3 · Optional")).toBeVisible();
   await hydrated(page);
   await expect(page.getByText("Tap what you own")).toBeVisible();
 
@@ -155,6 +158,11 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   await expect(page.getByText(/A category can.t remember/)).toBeVisible({
     timeout: 15_000,
   });
+  // Not a step of its own: the tap list's kicker, with the bar full.
+  await expect(page.getByText("Step 3 of 3 · Optional")).toBeVisible();
+  await expect(
+    page.locator("[data-part='onboarding-progress'] [data-state='done']"),
+  ).toHaveCount(3);
   await expect(page.getByText("0 of 6 named")).toBeVisible();
 
   await page.getByRole("button", { name: "Name it" }).first().click();

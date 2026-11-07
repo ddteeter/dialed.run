@@ -6,7 +6,7 @@ import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { expect, test } from "../support/a11y";
 import { storageStateFor } from "../support/accounts";
-import { cellsOf, openBoard } from "../support/conformance";
+import { cellsOf, hydrated, openBoard } from "../support/conformance";
 import { withLocalDb } from "../support/local-db";
 import { closetUserId } from "./closet-seed";
 
@@ -179,9 +179,7 @@ async function tileHeights(
   page: Page,
 ): Promise<{ add: number; garment: number }> {
   await page.goto("/closet");
-  await page
-    .locator('html[data-hydrated="true"]')
-    .waitFor({ state: "attached" });
+  await hydrated(page);
   const grid = page.locator('[data-part="grid"]');
   const add = await grid
     .getByRole("link", { name: "Add garment" })
@@ -193,8 +191,13 @@ async function tileHeights(
 
 /**
 How many tracks the grid's `auto-fill` resolved to at this width.
+
+Read only once the page has hydrated, as `tileHeights` is: measured
+straight after `goto`, the grid could still be the server's markup, and
+the test flaked once that way (R-186).
 */
 async function columnsOf(page: Page): Promise<number> {
+  await hydrated(page);
   return page
     .locator('[data-part="grid"]')
     .evaluate(

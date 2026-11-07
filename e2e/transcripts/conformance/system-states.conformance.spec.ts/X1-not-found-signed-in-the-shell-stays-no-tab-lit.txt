@@ -1,4 +1,7 @@
 document
+banner
+link, Notifications
+end of banner
 main
 heading, Nothing here, level 1
 paragraph

@@ -1,10 +1,28 @@
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
+import type { ErrorComponentProps } from "@tanstack/react-router";
 import { getGlobalStartContext } from "@tanstack/react-start";
 
 import { routerSsr } from "./lib/csp-nonce";
 import { viewTransitionTypesFor } from "./lib/nav-types";
 import { NotFound, RouteFailed } from "./modules/auth/components/SystemState";
+import { bellLoader } from "./modules/notifications/components/bell-loader";
+import { bellStateFn } from "./modules/notifications/functions";
 import { routeTree } from "./routeTree.gen";
+
+/**
+ * The system states' bell (PR #104): the shell's bell for a page no loader
+ * of ours ran for, read after mount. One function for the module, so the
+ * states' effect sees the same one on every render and asks once.
+ */
+const loadBell = bellLoader(() => bellStateFn());
+
+function NotFoundPage() {
+  return <NotFound loadBell={loadBell} />;
+}
+
+function RouteFailedPage(props: Readonly<ErrorComponentProps>) {
+  return <RouteFailed {...props} loadBell={loadBell} />;
+}
 
 export function getRouter() {
   const router = createTanStackRouter({
@@ -42,8 +60,8 @@ export function getRouter() {
      * the old matches stay up until the new ones resolve — and the tab
      * label's breathing (`ui/tabs`'s `useSlowRoute`) is the only sign.
      */
-    defaultNotFoundComponent: NotFound,
-    defaultErrorComponent: RouteFailed,
+    defaultNotFoundComponent: NotFoundPage,
+    defaultErrorComponent: RouteFailedPage,
     /**
      * The request's CSP nonce (OPS-8), which `server.ts` mints and passes
      * as request context: the framework stamps it on every inline script

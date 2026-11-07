@@ -32,6 +32,7 @@ import {
   SubmitButton,
   useFormSubmit,
   WeatherAttribution,
+  focusOnMount,
 } from "../../../ui";
 import { hasProvidersReading } from "../run-conditions";
 import type { RunSummary } from "../service";
@@ -74,7 +75,7 @@ const OPEN_THAT_RUN =
  * with it, leaving focus on the page itself. So the strip's line takes it,
  * and a screen reader starts from the card's first words. Only when focus
  * is lost: a runner who has moved on keeps their place. A ref callback at
- * module scope, as `focusOnMount` below, so React calls it once as the
+ * module scope, as `ui`'s `focusOnMount` is, so React calls it once as the
  * strip mounts.
  */
 export function focusIfLost(line: HTMLElement | null | undefined): void {
@@ -244,15 +245,6 @@ function WeatherFor({
   );
 }
 
-/**
- * Focus the time field as the row opens (round 26: *"Pressing it replaces
- * the time on the stats line with the row, and focus moves to the
- * field"*). A ref callback at module scope: its identity never changes, so
- * React calls it once as the input mounts and once, with null, as it goes.
- */
-function focusOnMount(input: HTMLInputElement | null): void {
-  input?.focus();
-}
 
 /**
  * A1's START TIME row (round 26, item 1), inside the parsed card: the

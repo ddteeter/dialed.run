@@ -1,11 +1,13 @@
 import { CALL_VERDICT_THRESHOLD, coverageOfVerdicts } from "../../lib/contracts";
+import type { VerdictCoverage } from "../../lib/contracts";
 import type { CoverageBand } from "../feed";
 
 /**
  * How well the app knows one band. O6's three colours: pink covered, teal
- * partial, grey unknown.
+ * partial, grey unknown. The union is the contract's, not restated here
+ * (R-190).
  */
-export type BandCoverage = "covered" | "partial" | "unknown";
+export type BandCoverage = VerdictCoverage;
 
 /**
  * Where a runner is on the ladder, by total verdicts. O6's three states,

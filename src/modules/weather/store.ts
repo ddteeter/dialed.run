@@ -22,6 +22,7 @@ import type { ManualSky, WeatherObservation } from "../../lib/contracts";
 import { chunked, IN_LIST_CHUNK, readInChunks } from "../../lib/chunked";
 import { isTimeZone } from "../../lib/dates";
 import { nowSeconds } from "../../lib/now";
+import { roundCoordinate } from "../../lib/coords";
 import { orSqlNull } from "../../lib/sql/sql-null";
 
 export interface CacheKey {
@@ -32,18 +33,14 @@ export interface CacheKey {
 
 export type ObservationRow = typeof weatherObservations.$inferSelect;
 
-export function roundCoord(value: number): number {
-  return Math.round(value * 100) / 100;
-}
-
 export function hourBucketFor(at: Date): number {
   return Math.floor(at.getTime() / 3_600_000);
 }
 
 export function cacheKeyFor(lat: number, lng: number, at: Date): CacheKey {
   return {
-    latR: roundCoord(lat),
-    lngR: roundCoord(lng),
+    latR: roundCoordinate(lat),
+    lngR: roundCoordinate(lng),
     hourBucket: hourBucketFor(at),
   };
 }

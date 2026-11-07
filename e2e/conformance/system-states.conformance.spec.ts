@@ -53,6 +53,11 @@ test("X1 not found, signed in: the shell stays, no tab lit", async ({
   expect(await builtOrder(page)).toEqual(order);
   expect(await wordsOf(page, "[data-part='system-state']")).toEqual(words);
   await expect(page.locator("[data-slot='tab-indicator']")).toHaveCount(0);
+  // The shell is the whole shell (item 14), bell included: it arrives
+  // after hydration, read by the page itself (PR #104, owner 2026-11-06).
+  await expect(
+    page.getByRole("link", { name: /^Notifications/u }),
+  ).toBeVisible();
 });
 
 test("X2 loader failed: the band, Didn't load, in the shell", async ({

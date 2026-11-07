@@ -1,6 +1,6 @@
 import type { JSX, ReactNode } from "react";
 
-import { Mono } from "../../../ui";
+import { Mono, OnboardingProgress } from "../../../ui";
 import type { RenameNotice } from "../username";
 
 /*
@@ -22,9 +22,9 @@ export function renamedLine(notice: RenameNotice): string {
 }
 
 /**
- * O0's head (round 26 #7): the step kicker over the question, "STEP 1 OF
- * 4 · What should runners call you?". The page's own heading, because the
- * kicker sits above it and `Page`'s `title` has nowhere to put one.
+ * O0's head (round 26 #7; round 47 #120): the bar and step kicker over
+ * the question, "STEP 1 OF 3 · What should runners call you?". The page's
+ * own heading, because the re-pick below swaps both kicker and question.
  *
  * With a `notice`, it is the re-pick a moderator's rename owes (ACC-12;
  * round 27 #16): "USERNAME CHANGED BY A MODERATOR · Pick a new username",
@@ -40,14 +40,13 @@ export function HandleStep({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <Mono
-          step="xs"
-          className={notice === undefined ? "text-muted" : "text-cold-text"}
-        >
-          {notice === undefined
-            ? "Step 1 of 4"
-            : "Username changed by a moderator"}
-        </Mono>
+        {notice === undefined ? (
+          <OnboardingProgress at="handle" />
+        ) : (
+          <Mono step="xs" className="text-cold-text">
+            Username changed by a moderator
+          </Mono>
+        )}
         <h1 className="m-0 font-display text-display uppercase">
           {notice === undefined
             ? "What should runners call you?"

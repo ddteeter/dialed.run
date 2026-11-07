@@ -18,11 +18,10 @@ import { partsExcept, partsIn, wordsOf } from "./auth-parts";
  * and the entry here is deleted rather than forgotten — the A3 spec's
  * mechanism:
  *
- * - `primary-action`: the board's primary is an ink pill; the build's is
- *   the shared `SubmitButton`, which is always pink and carries no
- *   `data-part`. Changing it is the coordinator's (task 120's primitives).
- * - The failure band: the board's has no button and relabels the primary
- *   "Try again"; the shared `FailureBand` always carries its own. Same.
+ * - `primary-action`: the build's primary carries no `data-part`, so it
+ *   is left out of the order. Its look is compared instead: the ink pill
+ *   (round 47 #121), and in Au4 the band with no button and the primary
+ *   relabelled Try again.
  * - "Forgot it?" is drawn on Au2–Au4 and Au7; there is no reset flow to
  *   send it to, so it is absent rather than a dead link.
  * - The Google button's "G" is Google's official image, not the board's
@@ -208,6 +207,11 @@ test.describe("Au · phone", () => {
       "failure-band",
       "google",
     ]);
+    const primary = `${screen("Au4 Server fault")} [data-part='primary-action']`;
+    const drawnPrimary = {
+      fill: await fillOf(page, primary),
+      words: await wordsOf(page, primary),
+    };
     await builtAt390(page, "/auth/login");
     await page.route("**/api/auth/sign-in/email", (route) =>
       route.fulfill({ status: 500, body: "{}" }),
@@ -219,13 +223,13 @@ test.describe("Au · phone", () => {
     await expect(band).toBeVisible({ timeout: 15_000 });
 
     expect(await partsExcept(page, PANEL, ["cross-link"])).toEqual(board.order);
-    // Known gap: the shared band carries its own Try again.
-    expect(await wordsOf(page, `${PANEL} [data-part='failure-band']`)).toEqual([
-      ...(board.words.get("failure-band") ?? []),
-      "TRY AGAIN",
-    ]);
-    board.words.delete("failure-band");
+    // Round 47 #121: the band has no button, and the primary below it is
+    // the retry — the ink pill, relabelled Try again (Au4).
     await expectSameWords(page, board.words, {});
+    const built = `${PANEL} button[type='submit']`;
+    expect(await fillOf(page, built)).toBe(drawnPrimary.fill);
+    expect(await wordsOf(page, built)).toEqual(drawnPrimary.words);
+    await expect(page.locator(built)).toBeFocused();
   });
 
   test("Au5 Google in flight", async ({ page, baseURL }) => {

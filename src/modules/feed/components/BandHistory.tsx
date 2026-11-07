@@ -49,9 +49,14 @@ export function BandHistory({
       ) : (
         <>
           Your history in this band:{" "}
+          {/* The brackets are drawn, not said (D-150), as Bracketed's
+              are; the counts share this one Mono, so the glyphs are
+              hidden here rather than nesting a second Mono. */}
           <Mono step="md">
-            [{bandLabel(bandFloor, units.temp)}] · {cold} cold · {dialed} dialed
-            · {warm} warm
+            <span aria-hidden="true">[</span>
+            {bandLabel(bandFloor, units.temp)}
+            <span aria-hidden="true">]</span> · {cold} cold · {dialed} dialed ·{" "}
+            {warm} warm
           </Mono>
         </>
       )}

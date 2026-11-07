@@ -201,8 +201,8 @@ function form(
  *
  * Now the clock moves only when a test moves it: `user-event` advances it
  * for its own pauses, `elapse` for the form's, and Testing Library's
- * `waitFor` — which recognises fake timers only through a global named
- * `jest` — steps it fifty milliseconds a turn, so its budget is counted in
+ * `waitFor` — which recognises fake timers only through the global `jest`
+ * that `test/dom-setup.ts` installs — steps it fifty milliseconds a turn, so its budget is counted in
  * fake time and a pause in the real world spends none of it. Only the
  * timers are faked: `Date` and `Intl` stay real, because the run's clock
  * is read through them and one test spies on `Intl` itself.
@@ -253,11 +253,6 @@ beforeEach(() => {
   const test: Owner = { isOpen: true };
   clock.owner = test;
   vi.useFakeTimers(ONLY_TIMERS);
-  vi.stubGlobal("jest", {
-    advanceTimersByTime: (ms: number) => {
-      vi.advanceTimersByTime(ms);
-    },
-  });
   // Read once by each `waitFor` as it starts, so a `waitFor` left running
   // by a timed-out test keeps the owner it started under.
   configure({ unstable_advanceTimersWrapper: (work) => move(test, work) });
@@ -304,7 +299,6 @@ afterEach(async () => {
     ).toBe(0);
   } finally {
     clock.moving = undefined;
-    vi.unstubAllGlobals();
     vi.useRealTimers();
     vi.restoreAllMocks();
   }

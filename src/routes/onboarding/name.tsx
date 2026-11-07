@@ -9,7 +9,7 @@ import {
   namingSuggestionsQuery,
 } from "../../modules/onboarding/functions";
 import { skipNamingIfNothingToName } from "../../modules/onboarding/route-decisions";
-import { Page } from "../../ui";
+import { OnboardingProgress, Page } from "../../ui";
 
 /**
  * Screen P2.5 — "make them real" (design §AC), between the tap list and
@@ -35,7 +35,11 @@ function NamePage() {
 
   return (
     <main>
-      <Page title="Which ones do you actually reach for?" width="panel">
+      <Page
+        title="Which ones do you actually reach for?"
+        kicker={<OnboardingProgress at="tapList" />}
+        width="panel"
+      >
         <NamePieces
           offer={offer}
           nameGarment={nameGarmentFn}

@@ -124,7 +124,7 @@ describe("ResendLink", () => {
   });
 
   it("sends to the address it was given, says Sent ✓ for a minute, then rests", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.useFakeTimers();
     const user = userEvent.setup({
       advanceTimers: (ms) => vi.advanceTimersByTime(ms),
     });
@@ -147,8 +147,9 @@ describe("ResendLink", () => {
       "Sent. A new link is on its way. The old one no longer works.",
     );
 
-    // Half the minute (the fake clock also creeps with real time, so the
-    // edges are not asserted to the millisecond).
+    // Half the minute. The clock moves only when the test (or `findBy`,
+    // through dom-setup's `jest`) moves it, so a busy machine cannot fire
+    // the minute early.
     act(() => {
       vi.advanceTimersByTime(SENT_FOR_MS / 2);
     });
@@ -283,7 +284,7 @@ describe("ResendLink", () => {
   });
 
   it("cancels the first minute's timer when a fresh send restarts it", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.useFakeTimers();
     const user = userEvent.setup({
       advanceTimers: (ms) => vi.advanceTimersByTime(ms),
     });

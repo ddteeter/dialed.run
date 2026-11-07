@@ -23,6 +23,11 @@ import {
 } from "../../src/modules/onboarding/components/SettingsSubPage";
 import type { CurrentSettings } from "../../src/modules/onboarding/profile";
 import { carriedSince } from "../ui/carry-spy";
+import {
+  ONLY_TIMERS,
+  renderWithSlowRoute,
+  tapAndWaitSlow,
+} from "../ui/slow-route";
 
 vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
   const { spyOnCarry } = await import("../ui/carry-spy");
@@ -243,6 +248,41 @@ describe("the index (U1/N)", () => {
     expect(links.at(-1)?.compareDocumentPosition(signOut)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
+  });
+});
+
+describe("the index while a sub-page is slow (X3)", () => {
+  it("breathes the tapped row's label, and says it once", async () => {
+    vi.useFakeTimers(ONLY_TIMERS);
+    try {
+      await renderWithSlowRoute(
+        <SettingsIndex
+          current={ANSWERED}
+          username="maya_runs"
+          runReminderEmail
+          blockedCount={2}
+          signOut={undefined}
+        />,
+        {
+          at: "/onboarding/settings",
+          slowPath: "/onboarding/settings/$section",
+        },
+      );
+
+      await tapAndWaitSlow(row(/^Units/u));
+
+      const units = row(/^Units/u);
+      expect(units).toHaveAttribute("data-state", "navigating");
+      expect(units.querySelectorAll(".breathe")).toHaveLength(2);
+      // The brackets are drawn, the label said once: "Units", not
+      // "Units Units" or "left bracket".
+      expect(units).toHaveAccessibleName(/^Units Fahrenheit, miles/u);
+      // The neighbours were not pressed.
+      expect(row(/^Privacy New/u)).not.toHaveAttribute("data-state");
+      expect(document.querySelectorAll(".breathe")).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

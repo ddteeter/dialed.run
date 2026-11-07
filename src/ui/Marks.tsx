@@ -1,5 +1,7 @@
 import type { JSX } from "react";
 
+import type { VerdictCoverage } from "../lib/contracts";
+
 /**
  * The two encoding channels design round 6 §AB settled, as the only two
  * components allowed to draw them.
@@ -12,9 +14,10 @@ import type { JSX } from "react";
  */
 
 /**
-How much is known about a band. Ordinal, and never a hue.
+How much is known about a band. Ordinal, and never a hue. The contract's
+union, not a second copy of it (R-190).
 */
-export type CoverageLevel = "covered" | "partial" | "unknown";
+export type CoverageLevel = VerdictCoverage;
 
 const COVERAGE_FILL: Readonly<Record<CoverageLevel, string>> = {
   covered: "ink-covered",
