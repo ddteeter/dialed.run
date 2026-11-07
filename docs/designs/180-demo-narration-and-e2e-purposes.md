@@ -97,10 +97,19 @@ decision is actually made. `pr-ready` and `pr-demo-video` check it at the end.
    feed/closet/moderation split into journey plus edge-case files. _Waits for
    coordinator-2's wave-2 lanes to merge._ _Test:_ full `npm run e2e` and the
    a11y coverage figure no lower than before. _Done:_ no file over ~400 lines.
-5. **Walkthroughs.** Pick the 3–5 stories, write product-owner narration with
-   a spoken form per line. Each records at both widths _(owner, 2026-11-06)_:
-   two recording projects, desk and phone, run the same spec, so one
-   script yields both videos.
+5. **Walkthroughs.** Four stories _(owner, 2026-11-06)_: first run, logging
+   a run and its verdict, the closet, the feed. One spec each in
+   `e2e/walkthroughs/`, narrated as a product owner would demo it, with a
+   spoken form per line. Each records at desk and phone _(owner)_: two
+   projects, `walkthrough` (desk) and `walkthrough-phone`, match the same
+   files. CI runs the desk project as assertions; the phone project runs
+   only while recording, so CI pays once per story and the two widths
+   never write the same transcript (`snapshotPathTemplate` keys on the
+   file). Each signs up a **fresh runner** in a context the video does not
+   see (the setup's sign-up, extracted from `accounts.setup.ts`), so no
+   account is shared between widths or added to `DEMO_ACCOUNTS`; first run
+   signs up on camera, because that is its story. Seeded straight to each
+   story's start, like a scratch demo.
    _Done:_ each records cleanly and passes in CI.
 
 Coordination: tell coordinator-2 before steps 1, 3 and 4 merge, and ask
@@ -117,5 +126,4 @@ before every push (the gate is machine-wide).
 
 ## Open questions
 
-- Which 3–5 walkthrough stories? Proposed: first run, logging a run and its
-  verdict, the closet, the feed. Decided at step 5.
+- None open. The walkthrough stories were decided 2026-11-06 (step 5).

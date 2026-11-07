@@ -25,6 +25,8 @@
     "demo": "DEMO_SLOWMO=250 playwright test --project=demo",
     "postdemo": "npm run demo:mux",
     "demo:mux": "tsx scripts/demo-mux.ts",
+    "walkthroughs": "DEMO_SLOWMO=250 playwright test --project=walkthrough --project=walkthrough-phone",
+    "postwalkthroughs": "npm run demo:mux",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . && npm run lint:lockfile",
     "lint:lockfile": "lockfile-lint",
