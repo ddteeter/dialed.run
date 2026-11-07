@@ -157,8 +157,9 @@ apart with `queryCounts` (`test/d1-spy.ts`).
 - **Side findings**: `kitsFor`'s IN list sits exactly at D1's
   100-parameter cap (#491); conditions reads do not de-duplicate weather
   cache keys (#492).
-- **Out of scope, owner question #493**: cron and queue loops over claimed
-  rows.
+- **Out of scope, settled by the owner (#493, 2026-11-07)**: cron and queue
+  loops over claimed rows get no scaling tests. They do not carry the
+  scaling risk of per-user reads and journeys.
 
 Each test was checked once by hand: a per-row query added to one read per
 file made it fail, and reverting made it pass.
