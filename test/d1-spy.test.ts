@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { env } from "../src/env";
 import { runInD1Scope, scopedDb } from "../src/lib/sql/d1-session";
-import { queriesDuring } from "./d1-spy";
+import { queriesDuring, queryCounts } from "./d1-spy";
 
 /**
  * The counter the scaling tests stand on (design 182). Its numbers have to
@@ -115,5 +115,26 @@ describe("queriesDuring", () => {
     const after = await queriesDuring(() => Promise.resolve());
     await db().all(sql`SELECT * FROM spy_rows`);
     expect(after.statements).toEqual([]);
+  });
+});
+
+describe("queryCounts", () => {
+  it("counts core and weather apart", async () => {
+    await env.DIALED_WEATHER.exec(
+      "CREATE TABLE IF NOT EXISTS spy_weather (id INTEGER PRIMARY KEY)",
+    );
+    await env.DIALED_WEATHER.exec("DELETE FROM spy_weather");
+    await env.DIALED_WEATHER.exec("INSERT INTO spy_weather (id) VALUES (1)");
+    const counts = await queryCounts(async () => {
+      await db().all(sql`SELECT * FROM spy_rows`);
+      await db().all(sql`SELECT * FROM spy_rows WHERE id = 1`);
+      await drizzle(env.DIALED_WEATHER).all(sql`SELECT * FROM spy_weather`);
+    });
+    expect(counts).toEqual({
+      core: 2,
+      weather: 1,
+      coreRowsRead: 4,
+      weatherRowsRead: 1,
+    });
   });
 });

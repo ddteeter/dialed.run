@@ -201,3 +201,30 @@ function counted(
   realOf.set(proxy, real);
   return proxy;
 }
+
+/**
+ * What `work` asked core and weather, the two databases a list read can
+ * touch (design 182). A scaling test compares two of these.
+ */
+export interface QueryCounts {
+  readonly core: number;
+  readonly weather: number;
+  readonly coreRowsRead: number;
+  readonly weatherRowsRead: number;
+}
+
+export async function queryCounts(
+  work: () => Promise<unknown>,
+): Promise<QueryCounts> {
+  let core: QueryTally | undefined;
+  const weather = await queriesDuring(async () => {
+    core = await queriesDuring(work, env.DIALED_CORE);
+  }, env.DIALED_WEATHER);
+  const counted = core ?? { statements: [], rowsRead: 0 };
+  return {
+    core: counted.statements.length,
+    weather: weather.statements.length,
+    coreRowsRead: counted.rowsRead,
+    weatherRowsRead: weather.rowsRead,
+  };
+}
