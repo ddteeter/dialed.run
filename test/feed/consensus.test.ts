@@ -293,12 +293,13 @@ describe("matchTally: who matched", () => {
   });
 
   it("orders types in one rail group by count, then by name, whatever order they are read in", async () => {
-    // Read newest first: tee, then singlet, then long sleeve. All tops.
+    // Read newest first: tee, then singlet, then long sleeve. All tops, and
+    // neither the read order nor the names alone give the answer.
+    await runner({ verdict: 0, type: "tee" });
     await runner({ verdict: 0, type: "tee" });
     await runner({ verdict: 0, type: "tee" });
     await runner({ verdict: 0, type: "singlet", ago: 2 * HOUR });
     await runner({ verdict: 0, type: "singlet", ago: 2 * HOUR });
-    await runner({ verdict: 0, ago: 3 * HOUR });
     await runner({ verdict: 0, ago: 3 * HOUR });
     await runner({ verdict: 0, ago: 3 * HOUR });
 
@@ -306,17 +307,18 @@ describe("matchTally: who matched", () => {
     expect(
       tally.dialed.types.map(({ type, runners }) => [type, runners]),
     ).toStrictEqual([
-      ["longSleeve", 3],
+      ["tee", 3],
+      ["longSleeve", 2],
       ["singlet", 2],
-      ["tee", 2],
     ]);
   });
 
   it("orders types by rail group before count", async () => {
-    // Shorts outnumber the long sleeve, but C's rail puts tops first.
-    await runner({ verdict: 0, categories: ["bottom"] });
-    await runner({ verdict: 0, categories: ["bottom"] });
-    await runner({ verdict: 0, categories: ["bottom"] });
+    // Gloves outnumber the long sleeve, and sort first by name, but C's
+    // rail puts tops first.
+    await runner({ verdict: 0, categories: ["gloves"] });
+    await runner({ verdict: 0, categories: ["gloves"] });
+    await runner({ verdict: 0, categories: ["gloves"] });
     await runner({ verdict: 0, ago: 2 * HOUR });
     await runner({ verdict: 0, ago: 2 * HOUR });
 
@@ -325,7 +327,7 @@ describe("matchTally: who matched", () => {
       tally.dialed.types.map(({ type, runners }) => [type, runners]),
     ).toStrictEqual([
       ["longSleeve", 2],
-      ["shorts", 3],
+      ["gloves", 3],
     ]);
   });
 
