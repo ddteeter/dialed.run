@@ -302,7 +302,7 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     transcript and is not. R-90.
 
 23. **→ #366.** **The landing page wears the product shell, and now wears the top
-    bar.** **ANSWERED by round 21 (its own bar, drawn); not built. R-93.** DS5 reserves this screen — _"no footer, no 'about', no pricing
+    bar.** **ANSWERED by round 21 (its own bar, drawn); not built. R-93. Scoped by round 50 (R50·151).** DS5 reserves this screen — _"no footer, no 'about', no pricing
     in the product bar. The logged-out landing page is a separate page
     with a separate brief"_ — so it is outside the Desktop Contract and
     task 115 did not redesign it. But it does wear `Layout`, which means a
@@ -1080,6 +1080,56 @@ _Nothing from 99 on is open: round 45 answered the last of it._
      so the panel has no link.
 
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
+
+## Answered in round 50 (imported 2026-11-08)
+
+Design answered as `Round 50 Rulings.dc.html`, items 141–151. It took the
+notices as read: boards that draw a shop product image now read as the
+runner's photo or the no-photo state (D-176). Words settle everything, so
+there are no frames. The board's text is the text of record; each ruling
+is also a comment on its issue.
+
+- **R50·141 · Onboarding's desk measure (#487). Confirmed; built.**
+  `MEASURE.column` (620). R49·138a's 560 was a board measurement and is
+  struck. P3's body and bar are held to 620; its band runs the full column.
+- **R50·142 · The dark unread tint (#488). Ruled; not built.** A rule, not
+  a new value: `--cold-text` and `--label` never sit on `--unread`, in
+  either theme. Keep `#2A2A14`. Both pairs go in the contrast test as
+  forbidden pairs.
+- **R50·143 · The dark theme's open readings (#494). Not built where
+  changed.** (1) Changed: on dark, every ink block takes T2 rule 04's
+  fallback, `--panel` with a 1px `--hairline`. The Desk stays ink.
+  NowGoRun has no ink in either theme (R49·138b). (2) Confirmed: no You
+  header switch. (3) Changed: SYSTEM / LIGHT / DARK in capitals, MONO.xs.
+  (4) Confirmed: the failure copy. (5) Changed: all three CoverageMarks
+  are `--ink`; R48·134's `--muted` applies only to the [Untested] word.
+  (6) Confirmed: those three notices only.
+- **R50·144 · E2-lite's type words (#495). Confirmed; built.** All
+  nineteen; plural types stay plural.
+- **R50·145 · WHO REPORTED, open (#497). Confirmed, plus a count; the
+  count is not built.** One line per reporter, oldest first:
+  `@handle · reason · date`; a closed account reads "A closed account".
+  The label carries the count, `WHO REPORTED · 4 ▸`. No network or day
+  grouping in v1.
+- **R50·146 · A grouped follow row (#498). Confirmed; built in design
+  183.** It opens the runner's own profile for v1.
+- **R50·147 · WRONG? with no composition block (#499). Confirmed; built in
+  design 183.** WRONG? › alone in MONO.xs; no shared product, no WRONG?.
+- **R50·148 · The tied band, R-60 (#402). Ruled; not built.** The word is
+  "Mixed", its mark `--ink`, no colour, no arrow. This replaces rounds
+  10–11's "Split"; whether the mark is still their two-outer-slot mark is
+  asked again as item 152 (#524).
+- **R50·149 · · DAMP on the works-at line (#382). Changed; matches the
+  build.** Cut: the line shows temperature only. Moisture stays on the band
+  history (A2/A3) and the run.
+- **R50·150 · The tap list's length, R-49 (#425). Ruled.** 18 is the
+  total; §AA's 24 is struck. `TAP_LIST`'s comment still says 24.
+- **R50·151 · The landing page, R-93 (#366). Ruled; not built.** (a) `/` is
+  one signed-out screen, the hero as built: primary "Request access" (Au2's
+  flow), then "Have an account? Log in"; signed in, one action, "Your
+  closet". (b) `/what-to-wear`, `/how-it-works` and `/changelog` wait for
+  owner copy (#523), use the signed-out layout and end on Request access;
+  nothing links to them until they exist.
 
 ## Answered in round 49 (imported 2026-11-06)
 
@@ -5260,7 +5310,7 @@ reads "including MONO.xs chips (10px, the type floor — nothing is drawn
 smaller)", and COLLAPSE gained the detail: the boards carry 9px in ~96
 places, and all of them build at 10px padded to a 44px target.
 
-**The tied band — R-60 — is answered as `Split`.** A cold/warm tie fills _both_
+**The tied band — R-60 — is answered as `Split`** (the word is superseded by R50·148's "Mixed"). A cold/warm tie fills _both_
 outer slots in `--ink`, the knowledge colour, with the centre empty and no
 hue at all. Any tie that includes dialed is Dialed. The reasoning is the one
 the owner asked for: _"a tie is not a direction"_, so it never defaults to
