@@ -31,6 +31,7 @@ import {
   NOTE_COUNTER_ID,
   RequestAccess,
   noteAnnouncement,
+  withCounter,
 } from "../../src/modules/account/components/RequestAccess";
 import { refusalMessage } from "../../src/lib/contracts/access";
 import type { AccessDesk, DeskCode } from "../../src/modules/account/invites";
@@ -216,6 +217,26 @@ describe("Au5 · Request access", () => {
     expect(noteAnnouncement(130, 150)).toBe("150 / 140");
     expect(noteAnnouncement(130, 120)).toBeUndefined();
     expect(noteAnnouncement(141, 140)).toBeUndefined();
+  });
+
+  it("adds the counter to the note's description after any id it already names, and only once it shows", () => {
+    // Rendered, the field's own message is put first and named once
+    // (`describedByFor`), so only the function itself shows what it keeps.
+    const field = {
+      name: "note",
+      readOnly: false,
+      "aria-invalid": true as const,
+      "aria-describedby": "note-1-message",
+      onInput: vi.fn<() => void>(),
+    };
+    expect(withCounter(field, 120)).toEqual({
+      ...field,
+      "aria-describedby": `note-1-message ${NOTE_COUNTER_ID}`,
+    });
+    expect(withCounter({ ...field, "aria-describedby": undefined }, 120)).toEqual(
+      { ...field, "aria-describedby": NOTE_COUNTER_ID },
+    );
+    expect(withCounter(field, 119)).toBe(field);
   });
 
   it("sends the request with Turnstile's answer and shows the one receipt", async () => {
