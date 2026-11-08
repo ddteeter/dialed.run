@@ -148,6 +148,11 @@ describe("readableRoute", () => {
       `serverFn:${btoa(JSON.stringify({ file: "/a" }))}`,
     ],
     ["a production hash", "serverFn:3f9a1c0d2b"],
+    // As long as `serverFn:`, so only the prefix check keeps it.
+    [
+      "a path that ends in a dev id",
+      `/feed/me/${devId("/src/modules/runs/functions.ts", "list")}`,
+    ],
   ])("keeps %s as it came", (_label, route) => {
     expect(readableRoute(route)).toBe(route);
   });

@@ -31,16 +31,24 @@ const devServerFnIdSchema = z.object({
   export: z.string(),
 });
 
+/**
+A module's `functions.ts`, with or without the query string Start adds.
+*/
 const MODULE_FUNCTIONS =
   /^\/src\/modules\/(?<module>[^/]+)\/functions\.ts(?:\?.*)?$/u;
 const HANDLER_SUFFIX = /_createServerFn_handler$/u;
 
+/**
+An id decoded, or `undefined` when it is not base64url JSON.
+*/
 function devServerFnId(id: string): unknown {
+  let decoded: unknown;
   try {
-    return JSON.parse(atob(id.replaceAll("-", "+").replaceAll("_", "/")));
+    decoded = JSON.parse(atob(id.replaceAll("-", "+").replaceAll("_", "/")));
   } catch {
-    return undefined;
+    // Not base64, or not JSON: no id, so the name is kept as it came.
   }
+  return decoded;
 }
 
 /**
@@ -56,7 +64,7 @@ export function readableRoute(route: string): string {
   );
   if (!parsed.success) return route;
   const { file, export: exported } = parsed.data;
-  const where = MODULE_FUNCTIONS.exec(file)?.groups?.module ?? file;
+  const where = MODULE_FUNCTIONS.exec(file)?.[1] ?? file;
   return `${SERVER_FN_ROUTE}${where}/${exported.replace(HANDLER_SUFFIX, "")}`;
 }
 
