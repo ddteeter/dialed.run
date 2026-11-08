@@ -1,7 +1,7 @@
 import { appendFileSync, mkdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 
-import { expect, test as base } from "@playwright/test";
+import { expect } from "@playwright/test";
 import type { Page, TestInfo } from "@playwright/test";
 
 import type { Measure } from "./a11y-coverage";
@@ -19,6 +19,8 @@ import { installChecker } from "./a11y-page";
 import { transcriptOf } from "./a11y-transcript";
 import type { PageReport } from "./a11y-walk";
 import { installWalk } from "./a11y-walk";
+// Design 182: D1 queries per request, recorded under every a11y-checked spec.
+import { test as base } from "./query-record";
 
 /**
  * Plan 161, step 1: accessibility checks on every state an e2e spec acts

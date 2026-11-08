@@ -51,17 +51,83 @@ added and says nothing about which screen moved.
    request, and `wrangler d1 insights` ranks queries by rows read on real
    data. `docs/deployment.md` gets one line pointing at the latter.
 
+## Part 2, in detail
+
+The counter lives in the request's D1 scope, the report in the e2e run.
+The path, end to end:
+
+1. **The flag.** `VITE_D1_QUERY_TALLY=1`, set in `playwright.config.ts`'s
+   `webServer.env`. Vite replaces `import.meta.env.VITE_*` in the
+   Worker's code as well as the client's, so the dev server sees it, and
+   a production build, made without it, folds the counter away. It is not
+   a binding and not `wrangler.jsonc`. One file reads it,
+   `src/env/flags.ts` (`isQueryTallyEnabled`), which only server code
+   reaches. A production build is made without the flag, so
+   `isQueryTallyEnabled()` is the literal `false` there and the counter
+   and the header are dead code, not merely off. CI's `preview` matrix
+   leg builds without the flag, so only its `dev` leg reports; that is
+   enough.
+2. **Counting** (`src/lib/sql/d1-session.ts`). `runInD1Scope` takes an
+   optional `{ tallyAs: <route> }`: the scope is tallied, under that name,
+   only when it is given one. (A bare `{ tally: true }` with the name
+   added at the edge was the first draft; it made "tallied" and "named"
+   two facts the edge had to check together, and each check alone an
+   equivalent mutant.) In a tallied scope, `RoutedDatabase` hands back
+   statements that count each run, and each statement inside a batch,
+   into the scope, with `meta.rows_read` where D1 gives it. For
+   `raw()`/`first()` on a select, which carry no meta, the counter meters
+   the select once more with `all()`. That is a second read only on a dev
+   server that asked for it, never a second write. The counting statement
+   is one Proxy, `src/lib/sql/counted-statement.ts`, which
+   `test/d1-spy.ts` now uses too, so the test counter and the dev counter
+   cannot count differently. `scopeOutcome()` gains
+   `queries: { route, statements, rowsRead } | undefined`. The arithmetic
+   is in `src/lib/sql/query-tally.ts`, at 100%.
+3. **Out of the Worker.** `respondInD1Scope`
+   (`src/modules/auth/d1-request.ts`) adds
+   `x-d1-queries: <route>;<statements>;<rowsRead>` to the response when
+   the scope was tallied, with the route named as design 165 names it (a
+   route id or `serverFn:<id>`, `ops/timing.ts`'s `requestNamer`, passed
+   in). The count stops when the `Response` exists, the point design
+   165's `ms` stops at too: loaders are in it, and a streamed page's
+   deferred data is not. The header's name, format and parse live
+   together in `src/lib/query-report.ts`, so writer and reader share one
+   definition.
+4. **Into the run.** An e2e fixture beside the a11y fixture listens for
+   `response` events and writes one line per response carrying the
+   header to `test-results/queries/requests.jsonl`:
+   `{ route, statements, rowsRead }`.
+5. **The report** (`e2e/support/query-report-teardown.ts`, a second entry
+   in `globalTeardown`). It reads the lines and groups them by route
+   (statements p50/max, rows read p50/max, count). It writes a table to
+   `GITHUB_STEP_SUMMARY` under `### D1 queries per request` and compares
+   with `e2e/query-baseline.json`, listing the routes whose p50 or max
+   statements rose, the new routes, and the ones gone. It never throws:
+   report-only. `QUERY_RECORD=1` rewrites the baseline. The header
+   parse, grouping, p50/max, diff and table are pure, in
+   `src/lib/query-report.ts` (in the ratchet), so `e2e/` holds only file
+   and environment glue. A dev server's function id is base64url of its
+   file and export, so the report groups by `readableRoute`'s name,
+   `serverFn:<module>/<export>` (`serverFn:notifications/bellStateFn`),
+   and the baseline's keys are names a reader can follow. Renaming a
+   server function shows in the report as one route gone and one new.
+6. **The baseline** is recorded once from a full CI-style run, after
+   dark-theme merges, since it adds a constant read to signed-in document
+   loads.
+
 ## Contract touches
 
 - Schema changes needed: **none**.
 - New route files: **none**.
-- New bindings/queues/crons: **none**. Part 2's flag is a dev server env
-  var, set in `playwright.config.ts`'s `webServer.env`, not a binding.
+- New bindings/queues/crons: **none**. Part 2's flag is a Vite
+  `VITE_*` variable, set in `playwright.config.ts`'s `webServer.env`,
+  not a binding.
 - `.github/workflows/`: **none**. The summary line goes through
   `GITHUB_STEP_SUMMARY`, as the coverage teardown's does.
-- `src/lib/sql/d1-session.ts` (part 2 only) is in the mutation ratchet: the
-  counter's tag-and-count logic lives in a pure function beside it, at
-  100%.
+- `src/lib/sql/d1-session.ts` and `src/modules/auth/d1-request.ts` (part 2
+  only) are in the mutation ratchet. The counting lives in
+  `src/lib/sql/query-tally.ts` and the report's arithmetic in
+  `src/lib/query-report.ts`, both pure and at 100%.
 
 ## Test plan
 
@@ -95,8 +161,9 @@ apart with `queryCounts` (`test/d1-spy.ts`).
 - **Side findings**: `kitsFor`'s IN list sits exactly at D1's
   100-parameter cap (#491); conditions reads do not de-duplicate weather
   cache keys (#492).
-- **Out of scope, owner question #493**: cron and queue loops over claimed
-  rows.
+- **Out of scope, settled by the owner (#493, 2026-11-07)**: cron and queue
+  loops over claimed rows get no scaling tests. They do not carry the
+  scaling risk of per-user reads and journeys.
 
 Each test was checked once by hand: a per-row query added to one read per
 file made it fail, and reverting made it pass.
