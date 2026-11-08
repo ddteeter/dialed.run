@@ -15,8 +15,6 @@ import { bar } from "../support/bars";
 import { hydrated, scene, typeSlowly } from "../support/demo";
 import { expect, test } from "../support/walkthrough";
 
-const CAPTION = "Chilly first mile, settled in by the bridge.";
-
 test("the feed: find a runner, follow them, open their kit, mark it useful", async ({
   page,
 }, testInfo) => {
@@ -37,7 +35,6 @@ test("the feed: find a runner, follow them, open their kit, mark it useful", asy
     feelsLikeC: 4,
     verdict: 0,
     audience: "runners",
-    caption: CAPTION,
     itemName: "Merino half-zip",
   });
 
@@ -72,10 +69,12 @@ test("the feed: find a runner, follow them, open their kit, mark it useful", asy
 
     await row.getByRole("link", { name: handle }).click();
     await hydrated(page);
-    await expect(page.getByText(CAPTION)).toBeVisible();
+    await expect(
+      page.locator('[data-part="entries"] [data-part="verdict-badge"]'),
+    ).toHaveText(["Dialed"]);
     await expect(page.getByRole("button", { name: "Follow" })).toBeVisible();
     await scene(page, "Their profile · what they shared", {
-      say: "Their profile shows what they've shared: here, one run, with their note about a chilly first mile. I'll follow them.",
+      say: "Their profile shows what they've shared: here, one run, and how it went. I'll follow them.",
     });
     await page.getByRole("button", { name: "Follow" }).click();
     await expect(page.getByRole("button", { name: "Following" })).toBeVisible();
@@ -89,7 +88,7 @@ test("the feed: find a runner, follow them, open their kit, mark it useful", asy
       page.getByRole("button", { name: "Following" }),
     ).toHaveAttribute("aria-pressed", "true");
     const card = page.locator('[data-part="post"]').filter({
-      hasText: CAPTION,
+      hasText: `@${handle}`,
     });
     await expect(card.locator('[data-part="author"]')).toContainText(
       `@${handle}`,
@@ -100,13 +99,13 @@ test("the feed: find a runner, follow them, open their kit, mark it useful", asy
     await expect(card.locator('[data-part="run-strip"]')).toContainText(/\d°/u);
     await card.scrollIntoViewIfNeeded();
     await scene(page, "In your feed · their run and its verdict", {
-      say: "Back on the feed, their run is there: who ran it, the conditions, their note, and the Verdict. They called it dialed.",
+      say: "Back on the feed, their run is there: who ran it, the conditions, and the Verdict. They called it dialed.",
     });
 
     await scene(page, "Opening their run", {
       say: "I'll open it to see what they wore.",
     });
-    await card.getByText(CAPTION).click();
+    await card.locator('[data-part="run-strip"]').click();
     await hydrated(page);
     await expect(
       page.getByRole("heading", { name: `@${handle}` }),

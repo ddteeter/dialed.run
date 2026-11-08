@@ -30,8 +30,6 @@ import { withLocalDb } from "../support/local-db";
 export interface FollowedRunner {
   readonly userId: string;
   readonly username: string;
-  readonly publicCaption: string;
-  readonly privateCaption: string;
   readonly itemId: string;
   readonly publicRunId: string;
   readonly publicEntryId: string;
@@ -50,8 +48,6 @@ export async function seedFollowedRunner(): Promise<FollowedRunner> {
   const runner: FollowedRunner = {
     userId: newUlid(),
     username: `trail_${suffix.slice(-8)}`,
-    publicCaption: `Chilly first mile, settled in by the bridge — ${suffix}`,
-    privateCaption: `Private entry that must never leak — ${suffix}`,
     itemId: newUlid(),
     publicRunId: newUlid(),
     publicEntryId: newUlid(),
@@ -132,7 +128,6 @@ export async function seedFollowedRunner(): Promise<FollowedRunner> {
         userId: runner.userId,
         verdict: 0,
         audience: "runners",
-        caption: runner.publicCaption,
         createdAt: startedAt,
       },
       {
@@ -141,7 +136,6 @@ export async function seedFollowedRunner(): Promise<FollowedRunner> {
         userId: runner.userId,
         verdict: -1,
         audience: "private",
-        caption: runner.privateCaption,
         createdAt: startedAt,
       },
     ]);
@@ -239,7 +233,6 @@ export async function removeFollowedRunner(
 export async function seedFollowedPost(
   rows: Seeded,
   viewerId: string,
-  caption: string,
 ): Promise<{ username: string; entryId: string }> {
   const username = `trail_${String(Date.now()).slice(-8)}`;
   const runnerId = await seedRunner(rows, username);
@@ -248,7 +241,6 @@ export async function seedFollowedPost(
     place: RUNNER_PLACE,
     startedAt: nowSeconds() - 3 * 3600,
     verdict: 0,
-    caption,
   });
   await seedFollow(viewerId, runnerId);
   return { username, entryId };

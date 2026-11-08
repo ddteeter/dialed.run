@@ -69,7 +69,7 @@ test("F puts what it is before its link, and draws its own ▾", async ({
   ).toBeCloseTo(leftInset, 0);
 });
 
-test("F's product link: http is refused on leaving the box, a shortener at the save", async ({
+test("F's product link: a non-link is refused on leaving the box, a shortener at the save", async ({
   page,
 }) => {
   const name = `Pegasus ${String(Date.now()).slice(-6)}`;
@@ -80,16 +80,17 @@ test("F's product link: http is refused on leaving the box, a shortener at the s
   await page.getByLabel("Model / name").fill(name);
   // Round 43 #93: checked when the runner leaves the box, never while
   // typing, and a link pasted without its scheme gets https:// on save.
+  // Only a non-link errors: an explicit http:// is taken (D-166).
   const link = page.getByLabel(/Product link/);
-  await link.fill(["http:", "//nike.com/pegasus"].join(""));
+  await link.fill("nike pegasus");
   await link.blur();
   await expect(
-    page.getByText("Use a link that starts with https://."),
+    page.getByText("That isn't a link. Paste the address of the shop's page."),
   ).toBeVisible();
   await link.fill("nike.com/pegasus");
   await link.blur();
   await expect(
-    page.getByText("Use a link that starts with https://."),
+    page.getByText("That isn't a link. Paste the address of the shop's page."),
   ).toHaveCount(0);
   // R-176 (design 171): a shortener goes wherever its owner points it, so
   // the denylist starts with them. The save refuses the link on its own

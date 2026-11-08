@@ -60,7 +60,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
   // A second runner with one public entry (verdict + conditions + kit) and
   // one private entry.
   const runner = await seedFollowedRunner();
-  const { username: otherUsername, publicCaption, privateCaption } = runner;
+  const { username: otherUsername } = runner;
 
   // A run of the viewer's own from a month ago that never got a verdict:
   // the bell counts it, at any age (FEED-3).
@@ -181,9 +181,10 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     expect(drawnBars).toStrictEqual(["TopsAll5/5", "BottomsMost3/5"]);
     // Round 47 #114: under the bars, what the runners who got it right
     // wore, in the same share words over them. All five called it dialed.
+    // Round 49 #137: it names garment types, not the bars' groups.
     await scene(page, "E2-lite · the summary sentence, under the bars");
     await expect(page.locator('[data-part="summary"]')).toHaveText(
-      "All got it right in tops. Most added bottoms.",
+      "All got it right in long sleeve. Most added tights.",
     );
 
     // Following is a tab away, and its empty state is drawn (E1).
@@ -212,10 +213,13 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       "content",
       "noindex",
     );
-    await expect(page.getByText(publicCaption)).toBeVisible();
-    // Their private entry never appears here either — the profile query
-    // only ever selects shared (`runners`) entries.
-    await expect(page.getByText(privateCaption)).toHaveCount(0);
+    // One entry, the public one (Dialed). Their private one (a bit cold)
+    // never appears here either — the profile query only ever selects
+    // shared (`runners`) entries. Told apart by verdict: the caption is
+    // cut for v1 (D-167).
+    await expect(
+      page.locator('[data-part="entries"] [data-part="verdict-badge"]'),
+    ).toHaveText(["Dialed"]);
 
     // Follow them: the label waits for the server, then flips.
     await scene(page, "Following is what puts them in the feed");
@@ -223,16 +227,17 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await expect(page.getByRole("button", { name: "Following" })).toBeVisible();
 
     // Back to the feed — now it opens on Following, and their public
-    // entry is a v1 card: author and badge, caption, strip, Useful.
-    await scene(page, "E1 · the v1 card: author and badge, caption, strip");
+    // entry is a v1 card: author and badge, strip, Useful.
+    await scene(page, "E1 · the v1 card: author and badge, strip");
     await bar(page).getByRole("link", { name: "Feed" }).click();
     await hydrated(page);
     await expect(
       page.getByRole("button", { name: "Following" }),
     ).toHaveAttribute("aria-pressed", "true");
-    const card = page.locator('[data-part="post"]').filter({
-      hasText: publicCaption,
+    const theirs = page.locator('[data-part="post"]').filter({
+      hasText: `@${otherUsername}`,
     });
+    const card = theirs.first();
     await expect(card).toBeVisible();
     // FEED-9: the compact line tops Following — the Portland runners above
     // matched at the city this runner just saved, in round 25's words.
@@ -265,12 +270,15 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await expect(cardCredit).toHaveAttribute("aria-hidden", "true");
     // ...their private entry never does (CLAUDE.md: private entries never
     // appear in feeds or consensus aggregates).
-    await expect(page.getByText(privateCaption)).toHaveCount(0);
+    await expect(theirs).toHaveCount(1);
+    await expect(card.locator('[data-part="verdict-badge"]')).toHaveText(
+      "Dialed",
+    );
 
-    // Open the entry detail (D): the strip with its badge, the note, the
-    // kit as a list.
-    await scene(page, "D · the strip, the note, the kit, then Useful");
-    await card.getByText(publicCaption).click();
+    // Open the entry detail (D): the strip with its badge, then the kit
+    // as a list.
+    await scene(page, "D · the strip, the kit, then Useful");
+    await card.locator('[data-part="run-strip"]').click();
     await hydrated(page);
     await expect(
       page.getByRole("heading", { name: `@${otherUsername}` }),

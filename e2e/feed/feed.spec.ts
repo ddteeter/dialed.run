@@ -43,14 +43,13 @@ test.use({ storageState: storageStateFor("feed") });
 async function seedOwnEntry(
   rows: Seeded,
   ownerId: string,
-  params: { caption: string; isUnderReview: boolean },
+  params: { isUnderReview: boolean },
 ): Promise<string> {
   const { entryId } = await seedEntry(rows, {
     userId: ownerId,
     place: RUNNER_PLACE,
     startedAt: nowSeconds() - 7200,
     verdict: 0,
-    caption: params.caption,
     moderationStatus: params.isUnderReview ? "hidden_pending_review" : "ok",
   });
   const photoIds = [newUlid(), newUlid()];
@@ -78,13 +77,11 @@ test("your own entry under review is marked to you: on the card, on G, on D", as
 }) => {
   const rows = seeded();
   const viewerId = await feedUserId();
-  const caption = "Two photos, one too many";
   try {
-    await seedFollowedPost(rows, viewerId, `Someone else's run — ${newUlid()}`);
+    await seedFollowedPost(rows, viewerId);
     // D-67: reports have hidden it pending review. Nobody else can see it
     // now — but its author still does, marked, on the card and on D.
     const ownEntryId = await seedOwnEntry(rows, viewerId, {
-      caption,
       isUnderReview: true,
     });
     await page.goto("/feed");
@@ -104,8 +101,9 @@ test("your own entry under review is marked to you: on the card, on G, on D", as
       };
     });
     expect(drawn).toEqual({ rule: "1px solid", padding: "16px 16px" });
+    // Found by its link: the caption that named it is cut (D-167).
     const ownCard = page.locator('[data-part="post"]').filter({
-      hasText: caption,
+      has: page.locator(`a[href="/feed/entry/${ownEntryId}"]`),
     });
     // Round 29 #4: in the author row, before the badge, in ink — and said
     // aloud as the board's sentence. The card also says YOU, and its photo
@@ -143,7 +141,7 @@ test("your own entry under review is marked to you: on the card, on G, on D", as
     // D · HIDDEN WHILE WE CHECK, at the top.
     await page.goto("/feed");
     await hydrated(page);
-    await ownCard.getByText(caption).click();
+    await ownCard.locator('[data-part="run-strip"]').click();
     await hydrated(page);
     const hiddenBand = page.locator('[data-part="notice-band"]');
     await expect(hiddenBand).toContainText(
@@ -163,7 +161,6 @@ test("your own entry: take back one photo, then the whole entry", async ({
   const viewerId = await feedUserId();
   try {
     const ownEntryId = await seedOwnEntry(rows, viewerId, {
-      caption: "Two photos, one too many",
       isUnderReview: false,
     });
     await page.goto(`/feed/entry/${ownEntryId}`);

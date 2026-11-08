@@ -13,7 +13,6 @@ import { eq } from "drizzle-orm";
 
 import { user } from "../../src/db/schema-auth";
 import { reactions } from "../../src/db/schema-core";
-import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import {
   feedUserId,
@@ -52,8 +51,7 @@ test("unconfirmed: Useful, Report and Follow open Confirm first, and Unfollow go
 }) => {
   const rows = seeded();
   const viewerId = await feedUserId();
-  const caption = `Chilly first mile — ${newUlid()}`;
-  const { username, entryId } = await seedFollowedPost(rows, viewerId, caption);
+  const { username, entryId } = await seedFollowedPost(rows, viewerId);
   // The mark the runner left while their address was confirmed.
   await withLocalDb(({ core }) =>
     core
@@ -106,7 +104,7 @@ test("unconfirmed: Useful, Report and Follow open Confirm first, and Unfollow go
     // Useful is refused, and nothing changes.
     const cardUseful = page
       .locator('[data-part="post"]')
-      .filter({ hasText: caption })
+      .filter({ hasText: `@${username}` })
       .getByRole("button", { name: /Useful/u });
     await cardUseful.click();
     await expect(confirmFirst).toBeVisible();

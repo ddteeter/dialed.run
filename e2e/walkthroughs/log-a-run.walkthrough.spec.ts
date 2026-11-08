@@ -150,11 +150,9 @@ test("log a run: the file, its conditions, the kit, the verdict", async ({
       say: "I was comfortable the whole way, neither cold nor warm, so I'll pick Dialed, and log it.",
     });
 
-    await page.getByRole("button", { name: "Dialed" }).click();
-    await expect(page.getByRole("button", { name: "Dialed" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    const dialed = page.getByRole("radio", { name: "Dialed", exact: true });
+    await dialed.click();
+    await expect(dialed).toBeChecked();
     await page.getByRole("button", { name: "Log it" }).click();
     const noted = page.locator('[data-slot="noted"]');
     await expect(noted).toContainText(/Merino half-zip is now 1 of 1 in /u, {
