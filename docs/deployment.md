@@ -504,13 +504,6 @@ needs its own Strava app, not a second subscription.
   the queries the code runs are `src/modules/ops/vitals-queries.ts`.
 
 - **One-time steps (design 187).** Each runs once, at the first deploy.
-  - **Delete the stored shop images** (D-176, #472). Before D-176,
-    enrichment copied a shop's image into MEDIA as
-    `products/<id>/image-<ts>`. Run `npm run shop-images:delete -- --remote`
-    with your own `wrangler login`. It's a dry run that lists every key it
-    would delete, and snapshots under the same prefix are never matched.
-    Read the list, then run it again with `--apply`. If nothing was ever
-    enriched against the real bucket, it lists nothing, and you're done.
   - **Owner: let the marketing site solve Turnstile** (round 31, #367).
     The site's request-access form posts to `/api/access-requests`, and
     the server only accepts a challenge solved on `dialed.run`. In
@@ -710,7 +703,6 @@ costs:**
 | `entries/<user>/<entry>/<photo>`     | Entry photos                                                                    | **From the backup.** Without it, unrecoverable the same way: the entry, its kit and verdict survive, and the photo is a missing image.                          |
 | `quarantine/entries/…`               | Photos copied aside by a suspected-CSAM quarantine, preserved for a year (D-70) | **Not in the backup** (#530). The original was deleted in the same step, so this copy is the only one; the bucket lock (step 3) is what stops it being deleted. |
 | `products/<product>/snapshot-*.html` | The product page enrichment fetched                                             | Re-fetchable. The extracted fields are already in D1; a lost snapshot only means re-running extraction has to fetch the page again.                             |
-| `products/<product>/image-*`         | Shop images stored before D-176 (#472); nothing writes them now                 | Nothing: no screen shows a shop image any more (D-176), and §8's one-time step deletes them.                                                                    |
 | `health-probe`                       | `/api/health`'s probe (a `head`, never written)                                 | Nothing.                                                                                                                                                        |
 
 **`dialed-imports` (`IMPORTS`)** holds uploaded `.fit`/`.gpx`/`.tcx` files
