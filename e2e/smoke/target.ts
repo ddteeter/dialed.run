@@ -4,11 +4,20 @@
  * tested whatever production already serves would pass on the old code,
  * and one that skipped the signed-in check would pass with auth broken.
  */
+import { readFileSync } from "node:fs";
 
 /**
-The Worker's name in `wrangler.jsonc`, the override header's key.
-*/
-const WORKER_NAME = "dialed";
+ * The Worker's name, the override header's key, read from `wrangler.jsonc`
+ * rather than restated: a renamed Worker would otherwise send an override
+ * Cloudflare ignores, and the version check would be the only thing to
+ * notice. Its top-level `name` is the first `"name"` in the file.
+ */
+function workerName(): string {
+  const config = readFileSync("wrangler.jsonc", "utf8");
+  const name = /"name":\s*"(?<name>[^"]+)"/u.exec(config)?.groups?.name;
+  if (name === undefined) throw new Error("wrangler.jsonc names no Worker");
+  return name;
+}
 
 export interface SmokeTarget {
   readonly baseURL: string;
@@ -45,7 +54,7 @@ export function smokeTarget(
     // id as a quoted string. A value Cloudflare cannot parse is ignored,
     // which is why the spec checks the version that answered.
     headers: {
-      "Cloudflare-Workers-Version-Overrides": `${WORKER_NAME}="${versionId}"`,
+      "Cloudflare-Workers-Version-Overrides": `${workerName()}="${versionId}"`,
     },
     account: { email, password },
   };
