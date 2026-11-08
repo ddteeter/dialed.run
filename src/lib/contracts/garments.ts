@@ -147,15 +147,24 @@ export const garmentVisibilities = ["plain", "reflective", "hi_viz"] as const;
 export const garmentVisibilitySchema = z.enum(garmentVisibilities);
 export type GarmentVisibility = z.infer<typeof garmentVisibilitySchema>;
 
-export const layerSchema = z.enum(["base", "mid", "outer"]);
-export const weightSchema = z.enum(["light", "mid", "heavy"]);
-export const fabricSchema = z.enum([
+/**
+ * The three tuples the closet's schemas and the schema's columns both read
+ * (`wardrobe_items`, and `products` for a product's own facts), so a value
+ * added here is one the column takes and the form offers, at once.
+ */
+export const garmentLayers = ["base", "mid", "outer"] as const;
+export const garmentWeights = ["light", "mid", "heavy"] as const;
+export const garmentFabrics = [
   "synthetic",
   "merino",
   "cotton",
   "blend",
   "down",
-]);
+] as const;
+
+export const layerSchema = z.enum(garmentLayers);
+export const weightSchema = z.enum(garmentWeights);
+export const fabricSchema = z.enum(garmentFabrics);
 
 /**
  * The sentences are part of the schema, not of whatever renders it.

@@ -15,10 +15,13 @@ import {
   strangerAudiences,
   WORLD_AUDIENCE,
   effortSources,
+  garmentFabrics,
   garmentVisibilities,
   HANDLE_SCREEN_STATES,
+  garmentLayers,
   runSources,
   THEME_CHOICES,
+  garmentWeights,
 } from "../lib/contracts";
 import { EMAIL_PREFERENCE_KINDS } from "../lib/contracts/email";
 import { GAVE_UP_KINDS } from "../lib/contracts/gave-up";
@@ -150,9 +153,7 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     // or pin light or dark. The device caches it for first paint
     // (`lib/browser/theme.ts`); this is the account's value, which takes
     // over on sign-in. `modules/account/theme.ts` is the one writer.
-    theme: text("theme", { enum: THEME_CHOICES })
-      .notNull()
-      .default("system"),
+    theme: text("theme", { enum: THEME_CHOICES }).notNull().default("system"),
   },
   (t) => [
     // The re-ask's sweep reads only the rows it might claim. Partial, so
@@ -555,10 +556,8 @@ export const products = /*#__PURE__*/ sqliteTable(
     type: text("type"),
     fabricComposition: text("fabric_composition"),
     fabricParts: text("fabric_parts"),
-    weight: text("weight", { enum: ["light", "mid", "heavy"] }),
-    fabric: text("fabric", {
-      enum: ["synthetic", "merino", "cotton", "blend", "down"],
-    }),
+    weight: text("weight", { enum: garmentWeights }),
+    fabric: text("fabric", { enum: garmentFabrics }),
     // mode:"boolean" so the storage detail stops at the data layer. SQLite
     // has no boolean and stores 0/1 either way, so the rebuild the codec
     // triggers changes no stored bytes — what changes is that a component
@@ -759,11 +758,9 @@ export const wardrobeItems = /*#__PURE__*/ sqliteTable(
     // through it. A widened column with a narrow parser beats a column that
     // has to list all 19 values and cannot say which go with which.
     type: text("type"),
-    layer: text("layer", { enum: ["base", "mid", "outer"] }),
-    weight: text("weight", { enum: ["light", "mid", "heavy"] }),
-    fabric: text("fabric", {
-      enum: ["synthetic", "merino", "cotton", "blend", "down"],
-    }),
+    layer: text("layer", { enum: garmentLayers }),
+    weight: text("weight", { enum: garmentWeights }),
+    fabric: text("fabric", { enum: garmentFabrics }),
     // mode:"boolean" so the storage detail stops at the data layer. SQLite
     // has no boolean and stores 0/1 either way, so the rebuild the codec
     // triggers changes no stored bytes — what changes is that a component
