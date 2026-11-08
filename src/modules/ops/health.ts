@@ -20,6 +20,13 @@ export interface HealthReport {
    * is not stale: a fresh deployment, dev and CI have no heartbeat rows.
    */
   staleCrons: readonly CronName[];
+  /**
+   * The Worker version that answered (`CF_VERSION_METADATA`), so a
+   * deploy's smoke test can tell that its version override reached the
+   * version it uploaded: an override Cloudflare does not apply falls back
+   * to the deployment's split without saying so (design 186).
+   */
+  version: string;
   at: number;
 }
 
@@ -122,6 +129,7 @@ export async function checkHealth(): Promise<HealthReport> {
     checks,
     missing,
     staleCrons: stale,
+    version: env.CF_VERSION_METADATA.id,
     at,
   };
 }

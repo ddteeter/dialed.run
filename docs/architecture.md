@@ -679,8 +679,9 @@ flowchart LR
   opening one, so a monitor creates itself (OPS-3). The digest cannot be its
   own dead-man switch — a digest that never runs reports nothing.
 - **Uptime**: free external ping (e.g. UptimeRobot) against `/api/health`,
-  which reports each binding by name. It carries no build info: that would
-  need the `version_metadata` binding, which nobody has added.
+  which reports each binding by name, and the Worker version that
+  answered (`version`, from `CF_VERSION_METADATA`), which the deploy's
+  smoke test checks (design 186).
 - **Backups**: D1 Time Travel gives 30-day point-in-time restore with zero
   setup — the recovery story is "restore to timestamp", and the two
   databases restore independently; the steps are `docs/deployment.md` §9.
@@ -689,8 +690,13 @@ flowchart LR
 - **Deploys**: on a push to `main` with `DEPLOY_ENABLED`, after the unit
   job and both e2e legs, the deploy job applies both databases' migrations
   and then runs `wrangler deploy`, in the `production` environment that
-  holds the Cloudflare secrets. `wrangler rollback` rolls code back and
-  never a migration, which is why migrations stay expand→contract.
+  holds the Cloudflare secrets. After the first deploy it becomes gradual
+  (design 186, the owner's to apply: `docs/ops/gradual-deploy.md`): upload,
+  0% plus a production smoke test through the version override, 10%, then
+  100%. Both versions share D1 and the queues mid-shift. A rollback
+  (`wrangler rollback`) rolls code back and never a migration or data, which is why
+  migrations stay expand→contract and queue messages stay a wire format
+  (laws 8 and 9); `docs/deployment.md` §9.
 - **Abuse without moderators**, built and not:
   - **Built**: Turnstile's verification (`ops/turnstile.ts`, fail closed) and
     widget (`ui/Turnstile.tsx`), which task 126 places on sign-up and request
