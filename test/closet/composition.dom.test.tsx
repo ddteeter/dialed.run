@@ -100,6 +100,20 @@ describe("CompositionBlock (design round 10 §AG)", () => {
     expect(screen.queryByText(/as labelled/i)).toBeNull();
   });
 
+  it("ends on the line itself when neither a brand nor WRONG? follows it", () => {
+    // No empty row after it: the row exists to hold the attribution and
+    // WRONG?, and with neither it would only add a gap.
+    const { container } = render(
+      <CompositionBlock
+        composition={{ verbatim: "100% merino", parts: [], brand: undefined }}
+      />,
+    );
+
+    expect(container.querySelector("section")?.lastElementChild).toBe(
+      screen.getByText("100% merino"),
+    );
+  });
+
   it("credits the brand when there is one", () => {
     render(<CompositionBlock composition={arcteryx} />);
     expect(screen.getByText("As labelled by Arc'teryx")).toBeVisible();

@@ -52,6 +52,12 @@ async function reported(): Promise<{ entryId: string; queueId: string }> {
       noPurge,
     );
   }
+  // One second apart, in filing order. Filed within one second, the
+  // reports tie on `created_at` and fall back to their ULIDs, which are not
+  // monotonic within a millisecond, so "oldest first" would be a coin toss.
+  await core().run(
+    sql.raw("update reports set created_at = created_at + rowid"),
+  );
   const [queued] = await pendingReviewQueue();
   if (queued === undefined) throw new Error("nothing queued");
   return { entryId, queueId: queued.id };
@@ -60,7 +66,7 @@ async function reported(): Promise<{ entryId: string; queueId: string }> {
 describe("opening WHO REPORTED (D-164, R-66)", () => {
   it("answers each reporter, oldest first, with what they picked", async () => {
     const { queueId } = await reported();
-    const reporters =await reportersFor("01OPERATOR", queueId);
+    const reporters = await reportersFor("01OPERATOR", queueId);
     expect(reporters.map((reporter) => reporter.handle)).toStrictEqual(HANDLES);
     expect(reporters[1]?.reason).toBe("harassment");
     expect(reporters[0]?.createdAt).toBeTypeOf("number");

@@ -246,6 +246,31 @@ describe("the cron heartbeat", () => {
     expect(outcome.anomalies).toEqual([expect.stringContaining("screening")]);
   });
 
+  it("says every hour that moderation fails closed until its config is right", async () => {
+    // Without MODERATION_THRESHOLDS every report hides at once and photo
+    // screening pauses (safety/thresholds). Nothing else would tell an
+    // operator, so the screening sweep's firing says it.
+    const configured: unknown = Reflect.get(env, "MODERATION_THRESHOLDS");
+    Reflect.set(env, "MODERATION_THRESHOLDS", undefined);
+    try {
+      const outcome = await handleScheduled({
+        cron: "15 * * * *",
+      } as ScheduledController);
+      expect(outcome.anomalies).toContain(
+        "MODERATION_THRESHOLDS is unset or malformed: every report hides at once and photo screening is paused",
+      );
+    } finally {
+      Reflect.set(env, "MODERATION_THRESHOLDS", configured);
+    }
+    // Configured, the firing says nothing about it.
+    const outcome = await handleScheduled({
+      cron: "15 * * * *",
+    } as ScheduledController);
+    expect(outcome.anomalies).not.toContainEqual(
+      expect.stringContaining("MODERATION_THRESHOLDS"),
+    );
+  });
+
   it("says so when the sweep finds reports that were never acted on", async () => {
     // The gap this covers is a crash between `fileReport`'s insert and its
     // hide. Reproduced by writing the reports directly, which is what that
