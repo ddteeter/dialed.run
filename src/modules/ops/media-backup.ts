@@ -104,6 +104,13 @@ async function didCopy(
   return true;
 }
 
+/**
+ * What the backup holds for a key it has no copy of. R2's listing gives
+ * every object a `customMetadata` (empty when none was set), so this is
+ * the only way the metadata is ever missing.
+ */
+const NOTHING_HELD: Pick<Listed, "customMetadata"> = {};
+
 interface Tally {
   copied: number;
   owed: number;
@@ -123,9 +130,10 @@ async function backUpPrefix(
   ]);
   const copyOf = new Map(copies.map((object) => [object.key, object]));
   for (const original of originals) {
-    const held = copyOf.get(original.key);
+    const { customMetadata: held = {} } =
+      copyOf.get(original.key) ?? NOTHING_HELD;
     copyOf.delete(original.key);
-    if (held?.customMetadata?.[SOURCE_ETAG] === original.etag) continue;
+    if (held[SOURCE_ETAG] === original.etag) continue;
     if (tally.copied >= maxCopies) {
       tally.owed += 1;
       continue;
