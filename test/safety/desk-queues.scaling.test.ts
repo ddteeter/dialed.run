@@ -1,6 +1,9 @@
+import { is } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
+import { getTableConfig, SQLiteTable } from "drizzle-orm/sqlite-core";
 import { beforeEach, describe, expect, it } from "vitest";
 
+import * as coreSchema from "../../src/db/schema-core";
 import {
   blocks,
   brands,
@@ -27,7 +30,7 @@ import { duplicateProducts } from "../../src/modules/safety/duplicates";
 import { quarantinedContentFor } from "../../src/modules/safety/quarantine";
 import { burstsToRelease } from "../../src/modules/safety/release";
 
-import { queryCounts, type QueryCounts } from "../d1-spy";
+import { queriesDuring, queryCounts, type QueryCounts } from "../d1-spy";
 import {
   makeEntry,
   makeRun,
@@ -372,5 +375,57 @@ describe("the Desk's single-read lists", () => {
       async () => duplicateProducts(),
       (candidates) => candidates.length,
     );
+  });
+});
+
+/**
+ * The names a statement gives, as Drizzle quotes them: each CTE's and
+ * column alias's, given once, and each table alias's, given wherever the
+ * copy is joined.
+ */
+function namesGiven(statement: string) {
+  const named = (pattern: RegExp) =>
+    Array.from(statement.matchAll(pattern), (match) => match[1] ?? "");
+  return {
+    once: [
+      ...named(/(?:\bwith|,)\s+"([^"]*)"\s+as\s+\(/giu),
+      ...named(/\bas\s+"([^"]*)"/giu),
+    ],
+    copies: named(/"\w+"\s+"([^"]*)"/gu),
+  };
+}
+
+/**
+Every column of every core table, by its name in SQL.
+*/
+const CORE_COLUMNS = new Set(
+  Object.values(coreSchema)
+    .filter((table) => is(table, SQLiteTable))
+    .flatMap((table) =>
+      getTableConfig(table).columns.map((column) => column.name),
+    ),
+);
+
+describe("the names the per-row reads give (design 188)", () => {
+  it("gives each CTE, alias and joined copy a name of its own, none a column's", async () => {
+    // A column a CTE names as a table's own column is read as that column
+    // in a subquery over the table, so the read quietly compares the table
+    // with itself; an unnamed one is no name at all.
+    await fingerprintRow("photo");
+    await fingerprintRow("entry");
+    const { prepared } = await queriesDuring(async () => pendingReviewQueue());
+
+    const searches = prepared.filter((sql) => sql.includes("json_each"));
+    // Other photos, the probes, the kit and garment searches, and the
+    // removed images: five reads bind their subjects as a list.
+    expect(searches).toHaveLength(5);
+    for (const statement of searches) {
+      const { once, copies } = namesGiven(statement);
+      for (const name of [...once, ...copies]) {
+        expect(name).not.toBe("");
+        expect(CORE_COLUMNS.has(name), name).toBe(false);
+      }
+      expect(once).toStrictEqual([...new Set(once)]);
+    }
   });
 });

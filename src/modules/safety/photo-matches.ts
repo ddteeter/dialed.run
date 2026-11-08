@@ -117,26 +117,33 @@ export async function photoMatchesOf(
   subjects: readonly OtherPhotosSubject[],
 ): Promise<Map<string, PhotoMatches>> {
   if (subjects.length === 0) return new Map();
-  const probes = await probesOf(db, subjects);
-  const [kitsRead, garmentsRead] =
-    probes.length === 0
-      ? [[], []]
-      : await db.batch([kitMatches(db, probes), garmentMatches(db, probes)]);
+  const answerFor = await searchesFor(db, await probesOf(db, subjects));
   return new Map(
     subjects.map((subject) => {
       const key = keyOf(subject);
-      const isSearched = probes.some((probe) => probe.key === key);
-      return [
-        key,
-        isSearched
-          ? matchesFrom(
-              matchesUnder(kitsRead, key),
-              matchesUnder(garmentsRead, key),
-            )
-          : NOTHING_TO_SEARCH_BY,
-      ];
+      return [key, answerFor(key)];
     }),
   );
+}
+
+/**
+ * Runs the searches for every probe at once, and answers a subject's
+ * matches by its key. With no probe there is nothing to search for, and
+ * no batch is sent.
+ */
+async function searchesFor(
+  db: Db,
+  probes: readonly Probe[],
+): Promise<(key: string) => PhotoMatches> {
+  if (probes.length === 0) return () => NOTHING_TO_SEARCH_BY;
+  const [kits, garments] = await db.batch([
+    kitMatches(db, probes),
+    garmentMatches(db, probes),
+  ]);
+  return (key) =>
+    probes.some((probe) => probe.key === key)
+      ? matchesFrom(matchesUnder(kits, key), matchesUnder(garments, key))
+      : NOTHING_TO_SEARCH_BY;
 }
 
 /**
@@ -221,22 +228,7 @@ async function probesOf(
   db: Db,
   subjects: readonly OtherPhotosSubject[],
 ): Promise<Probe[]> {
-  const idsOf = (type: OtherPhotosSubject["subjectType"]) =>
-    subjects
-      .filter((subject) => subject.subjectType === type)
-      .map((subject) => subject.subjectId);
-  const ofSubjects = or(
-    inJsonList(entryPhotos.id, idsOf("photo")),
-    inJsonList(entryPhotos.entryId, idsOf("entry")),
-  );
-  const rows = await db
-    .select({
-      id: entryPhotos.id,
-      entryId: entryPhotos.entryId,
-      fingerprint: entryPhotos.fingerprint,
-    })
-    .from(entryPhotos)
-    .where(and(ofSubjects, isNotNull(entryPhotos.fingerprint)));
+  const rows = await printedPhotosOf(db, subjects);
   return subjects.flatMap((subject) =>
     rows
       .filter((row) => OWN[subject.subjectType](row) === subject.subjectId)
@@ -249,6 +241,27 @@ async function probesOf(
         print: fingerprintSchema.parse(row.fingerprint),
       })),
   );
+}
+
+/**
+ * The fingerprinted photos that are any subject's own, in one statement:
+ * every id is looked for as both a photo's and a kit's. Ids are ULIDs, so
+ * one list serves both, and `OWN` sorts each row to its subject.
+ */
+function printedPhotosOf(db: Db, subjects: readonly OtherPhotosSubject[]) {
+  const ids = subjects.map((subject) => subject.subjectId);
+  const ownOfAny = or(
+    inJsonList(entryPhotos.id, ids),
+    inJsonList(entryPhotos.entryId, ids),
+  );
+  return db
+    .select({
+      id: entryPhotos.id,
+      entryId: entryPhotos.entryId,
+      fingerprint: entryPhotos.fingerprint,
+    })
+    .from(entryPhotos)
+    .where(and(ownOfAny, isNotNull(entryPhotos.fingerprint)));
 }
 
 /**

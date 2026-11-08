@@ -25,6 +25,7 @@ import {
   otherPhotosQuery,
 } from "../../src/modules/safety/other-photos";
 
+import { queriesDuring } from "../d1-spy";
 import { noPurge } from "../purge-spy";
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 import { oweInCore } from "../queue-fakes";
@@ -360,7 +361,13 @@ describe("otherPhotosOf", () => {
   });
 
   it("reads nothing for no subjects", async () => {
-    expect(await otherPhotosOf(core(), [])).toStrictEqual(new Map());
+    let found: unknown;
+    const { prepared } = await queriesDuring(async () => {
+      found = await otherPhotosOf(core(), []);
+    });
+
+    expect(found).toStrictEqual(new Map());
+    expect(prepared).toStrictEqual([]);
   });
 });
 

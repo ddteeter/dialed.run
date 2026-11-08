@@ -86,11 +86,11 @@ export interface QueryTally {
   */
   rowsRead: number;
   /**
-   * The length of the longest statement prepared, batched or not (design
+   * The SQL of every statement prepared, batched or not, in order (design
    * 188): D1 refuses a statement over 100 KB, and a read that spells its
    * inputs into the SQL grows towards that with the page.
    */
-  longestSql: number;
+  readonly prepared: string[];
 }
 
 /**
@@ -102,9 +102,9 @@ export async function queriesDuring(
   work: () => Promise<unknown>,
   binding: D1Database = env.DIALED_CORE,
 ): Promise<QueryTally> {
-  const tally: QueryTally = { statements: [], rowsRead: 0, longestSql: 0 };
+  const tally: QueryTally = { statements: [], rowsRead: 0, prepared: [] };
   const prepared = (query: string) => {
-    tally.longestSql = Math.max(tally.longestSql, query.length);
+    tally.prepared.push(query);
   };
   const into =
     (sql: string): OnRun =>
@@ -170,12 +170,12 @@ export async function queryCounts(
   const weather = await queriesDuring(async () => {
     core = await queriesDuring(work, env.DIALED_CORE);
   }, env.DIALED_WEATHER);
-  const counted = core ?? { statements: [], rowsRead: 0, longestSql: 0 };
+  const counted = core ?? { statements: [], rowsRead: 0, prepared: [] };
   return {
     core: counted.statements.length,
     weather: weather.statements.length,
     coreRowsRead: counted.rowsRead,
     weatherRowsRead: weather.rowsRead,
-    coreLongestSql: counted.longestSql,
+    coreLongestSql: Math.max(0, ...counted.prepared.map((sql) => sql.length)),
   };
 }

@@ -96,4 +96,4 @@ export function distanceBetweenSql(column: SQLiteColumn, other: SQL): SQL {
 /**
  * How many bits each hex digit sets, in value order: its distance from 0.
  */
-const POPCOUNT = quoted(digitDistances("0"));
+const POPCOUNT = quoted(digitDistances(NO_BITS.charAt(0)));

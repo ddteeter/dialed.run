@@ -263,7 +263,7 @@ export async function removedMatchesOf(
   return new Map(
     photos.map((photo) => [
       photo.id,
-      near.filter((row) => row.photoId === photo.id).map((row) => row.image),
+      (near.get(photo.id) ?? []).map((row) => row.image),
     ]),
   );
 }
@@ -284,7 +284,7 @@ export async function removedMatchesOf(
 async function removedImagesNear(
   db: Db,
   photos: readonly Readonly<{ id: string; fingerprint: string }>[],
-): Promise<Readonly<{ photoId: string; image: RemovedImage }>[]> {
+): Promise<Map<string, Readonly<{ photoId: string; image: RemovedImage }>[]>> {
   // Parsed, not trusted, as `keptNear` parses: only a fingerprint this
   // repo wrote is searched by.
   const probes = photos
@@ -293,7 +293,7 @@ async function removedImagesNear(
       print: fingerprintSchema.parse(photo.fingerprint),
     }))
     .filter((probe) => isDistinctive(probe.print));
-  if (probes.length === 0) return [];
+  if (probes.length === 0) return new Map();
   const probe = jsonTable(db, "probe", probes, {
     photoId: jsonField<string>("photoId").as("probe_photo"),
     print: jsonField<string>("print").as("probe_print"),
@@ -331,12 +331,13 @@ async function removedImagesNear(
       asc(bits),
       asc(removedFingerprints.createdAt),
     );
-  return rows.map(({ photoId, image, subjectType, handle }) => ({
+  const images = rows.map(({ photoId, image, subjectType, handle }) => ({
     photoId,
     image: {
       ...image,
       kind: subjectType === "garment" ? "garment" : "kit",
       handle: handle ?? undefined,
-    },
+    } satisfies RemovedImage,
   }));
+  return Map.groupBy(images, (row) => row.photoId);
 }

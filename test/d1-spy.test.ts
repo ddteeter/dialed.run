@@ -38,16 +38,18 @@ describe("queriesDuring", () => {
     expect(tally.rowsRead).toBe(3);
   });
 
-  it("keeps the length of the longest statement prepared, batched ones included (design 188)", async () => {
+  it("keeps the SQL of every statement prepared, batched ones included (design 188)", async () => {
     const long = sql`SELECT * FROM spy_rows WHERE n > 0 AND n < 100`;
     const short = sql`SELECT n FROM spy_rows`;
     const tally = await queriesDuring(async () => {
       await db().batch([db().all(long), db().all(short)]);
       await db().all(short);
     });
-    expect(tally.longestSql).toBe(
-      "SELECT * FROM spy_rows WHERE n > 0 AND n < 100".length,
-    );
+    expect(tally.prepared).toStrictEqual([
+      "SELECT * FROM spy_rows WHERE n > 0 AND n < 100",
+      "SELECT n FROM spy_rows",
+      "SELECT n FROM spy_rows",
+    ]);
   });
 
   it("meters a read through raw(), which carries no meta", async () => {

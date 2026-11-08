@@ -134,6 +134,24 @@ describe("distanceBetweenSql", () => {
     expect(rows.find((row) => row.mine === null)?.distance).toBeNull();
   });
 
+  it("is spelt in as the nearest of several fingerprints", async () => {
+    const several = ["0123456789abcdef", "00000000ffffffff"];
+    const rows = await db()
+      .select({
+        mine: stored.print,
+        distance: sql<number>`${nearestOf(stored.print, several)}`,
+      })
+      .from(stored)
+      .where(sql`${stored.print} is not null`);
+
+    expect(rows).toHaveLength(STORED.length);
+    for (const row of rows) {
+      const mine = row.mine ?? "";
+      const each = several.map((print) => hamming(mine, print));
+      expect(row.distance).toBe(Math.min(...each));
+    }
+  });
+
   it("agrees with the distance that spells the fingerprint in", async () => {
     for (const given of MIXED) {
       const spelt = await db()
