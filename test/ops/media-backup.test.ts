@@ -102,6 +102,20 @@ describe("what it backs up", () => {
 });
 
 describe("copying", () => {
+  it("copies again over a backup object that carries no source etag", async () => {
+    const prefix = freshPrefix();
+    const key = `${prefix}a`;
+    const stored = await env.MEDIA.put(key, "real");
+    // Put there by hand, say, with no metadata at all.
+    await backupBucket().put(key, "stray");
+
+    expect(await run(prefix)).toStrictEqual([]);
+
+    const copy = await backupBucket().get(key);
+    expect(await copy?.text()).toBe("real");
+    expect(copy?.customMetadata).toStrictEqual({ sourceEtag: stored?.etag });
+  });
+
   it("copies a new photo with its metadata and the source's etag", async () => {
     const prefix = freshPrefix();
     const key = `${prefix}item/original.jpg`;
@@ -275,13 +289,51 @@ describe("a photo deleted from MEDIA (#529)", () => {
     await env.MEDIA.delete(key);
     await run(prefix);
     const gone = await backupBucket().head(`${GONE_PREFIX}${key}`);
-    const wentAt = Math.floor((gone?.uploaded.getTime() ?? 0) / 1000);
+    // To the millisecond: exactly 30 days is still kept.
+    const wentAt = (gone?.uploaded.getTime() ?? 0) / 1000;
 
     await run(prefix, { now: wentAt + GONE_RETENTION_S });
     expect(await backupBucket().head(`${GONE_PREFIX}${key}`)).not.toBeNull();
 
     await run(prefix, { now: wentAt + GONE_RETENTION_S + 1 });
     expect(await backupBucket().head(`${GONE_PREFIX}${key}`)).toBeNull();
+  });
+
+  it("deletes expired copies a thousand keys a call, R2's most", async () => {
+    const real = backupBucket();
+    const mine = `${GONE_PREFIX}${freshPrefix()}`;
+    // Exactly two thousand, so a loop that ran once too often would send
+    // an empty third call.
+    const keys = Array.from(
+      { length: 2000 },
+      (_, index) => `${mine}${String(index)}`,
+    );
+    await Promise.all(keys.map((key) => real.put(key, "x")));
+    const batches: number[] = [];
+    const counting: BackupLike = {
+      // gone/ narrowed to this test's keys, whatever others left there.
+      list: (options) =>
+        real.list(
+          options?.prefix === GONE_PREFIX
+            ? { ...options, prefix: mine }
+            : options,
+        ),
+      get: (key: string) => real.get(key),
+      put: (key, value, options) => real.put(key, value, options),
+      delete: (deleted) => {
+        batches.push(Array.isArray(deleted) ? deleted.length : 1);
+        return real.delete(deleted);
+      },
+    };
+
+    await backUpMedia({ source: env.MEDIA, backup: counting }, [], {
+      now: nowSeconds() + 2 * GONE_RETENTION_S,
+      prefixes: [freshPrefix()],
+    });
+
+    expect(batches).toStrictEqual([1000, 1000]);
+    const left = await real.list({ prefix: mine });
+    expect(left.objects).toStrictEqual([]);
   });
 
   it("reports a move that failed, and keeps the copy where it was", async () => {

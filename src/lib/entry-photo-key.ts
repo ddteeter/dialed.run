@@ -9,13 +9,19 @@
  */
 
 /**
+ * The root every entry photo sits under, for code that works on the whole
+ * family rather than one runner's: the photo backup (design 186).
+ */
+export const ENTRY_PHOTO_ROOT = "entries/";
+
+/**
 The prefix every photo of one entry sits under — or, with no entry, every
 entry photo a runner has.
 */
 export function entryPhotoPrefix(userId: string, entryId?: string): string {
   return entryId === undefined
-    ? `entries/${userId}/`
-    : `entries/${userId}/${entryId}/`;
+    ? `${ENTRY_PHOTO_ROOT}${userId}/`
+    : `${ENTRY_PHOTO_ROOT}${userId}/${entryId}/`;
 }
 
 /**

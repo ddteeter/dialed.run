@@ -20,26 +20,19 @@
  * deleted. Without that the backup would keep every photo a runner ever
  * deleted, which the privacy policy does not allow.
  */
-import { entryPhotoPrefix } from "../../lib/entry-photo-key";
-import { garmentPhotoPrefix } from "../../lib/garment-photo-key";
+import { ENTRY_PHOTO_ROOT } from "../../lib/entry-photo-key";
+import { GARMENT_PHOTO_ROOT } from "../../lib/garment-photo-key";
 
 type Source = Pick<R2Bucket, "list" | "get">;
 type Backup = Pick<R2Bucket, "list" | "get" | "put" | "delete">;
 
 /**
-The top-level segment of a key prefix: `items/<user>/` → `items/`.
-*/
-function topLevel(prefix: string): string {
-  return `${prefix.slice(0, prefix.indexOf("/"))}/`;
-}
-
-/**
- * The prefixes copied, read from the key helpers that write them, so a
- * renamed prefix cannot leave the backup copying nothing.
+ * The prefixes copied: the roots the key helpers write under, so a renamed
+ * root cannot leave the backup copying nothing.
  */
 export const BACKED_UP_PREFIXES: readonly string[] = [
-  topLevel(garmentPhotoPrefix("user")),
-  topLevel(entryPhotoPrefix("user")),
+  GARMENT_PHOTO_ROOT,
+  ENTRY_PHOTO_ROOT,
 ];
 
 /**
