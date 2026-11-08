@@ -69,3 +69,31 @@ function distanceSql(column: SQLiteColumn, fingerprint: string): SQL {
   });
   return sql`(${sql.join(digits, PLUS)})`;
 }
+
+/**
+ * How many bits apart two fingerprints are when both are SQL values (design
+ * 188): a stored column and another column, or one read from `json_each`.
+ * What lets one statement search for many subjects' fingerprints at once,
+ * where `nearestOf` spells each fingerprint into the SQL and a page of
+ * subjects would pass D1's 100 KB statement size.
+ *
+ * Per hex digit, each side's value is its place in `HEX_DIGITS` less one
+ * (`instr` counts from 1), the XOR of the two is
+ * `(x | y) - (x & y)` — SQLite has no `^` — and the bits it sets are that
+ * place in `POPCOUNT`. A NULL on either side is a NULL distance, which no
+ * comparison keeps.
+ */
+export function distanceBetweenSql(column: SQLiteColumn, other: SQL): SQL {
+  const digits = Array.from({ length: NO_BITS.length }, (_, index) => {
+    const place = sql.raw(String(index + 1));
+    const mine = sql`(instr(${HEX}, substr(${column}, ${place}, 1)) - 1)`;
+    const theirs = sql`(instr(${HEX}, substr(${other}, ${place}, 1)) - 1)`;
+    return sql`substr(${POPCOUNT}, ((${mine} | ${theirs}) - (${mine} & ${theirs})) + 1, 1)`;
+  });
+  return sql`(${sql.join(digits, PLUS)})`;
+}
+
+/**
+ * How many bits each hex digit sets, in value order: its distance from 0.
+ */
+const POPCOUNT = quoted(digitDistances("0"));

@@ -183,94 +183,70 @@ beforeEach(async () => {
   await resetSafetyTables();
 });
 
-describe("pendingReviewQueue", () => {
-  // N+1 (design 182, #490): per fingerprint-sourced photo row, otherPhotosOf adds
-  // one statement to its batch (src/modules/safety/other-photos.ts:101-105),
-  // photoMatchesOf two round trips of three statements
-  // (src/modules/safety/photo-matches.ts:115-117), and removedMatchesOf one
-  // query per fingerprinted photo
-  // (src/modules/safety/removed-fingerprints.ts:256-259). Issue pending.
-  // The fixed part: the grouped read, subjectsFor's batch of six, and
-  // removedMatchesOf's batch of two.
-  it("asks 9 + 5 statements per fingerprinted photo row", async () => {
-    const one = await countedAt(
-      1,
-      async () => fingerprintRow("photo"),
-      async () => pendingReviewQueue(),
-    );
-    const many = await countedAt(
-      25,
-      async () => fingerprintRow("photo"),
-      async () => pendingReviewQueue(),
-    );
+/**
+ * Asserts a queue asks the same for 1 row as for 25, in statements and in
+ * the length of its longest one (design 188, #490): the per-row subjects
+ * are bound as one JSON list, so neither the count nor the SQL grows.
+ */
+async function flatQueue<T extends readonly unknown[]>(
+  seed: () => Promise<unknown>,
+  read: () => Promise<T>,
+) {
+  const one = await countedAt(1, seed, read);
+  const many = await countedAt(25, seed, read);
+  expect(one.result).toHaveLength(1);
+  expect(many.result).toHaveLength(25);
+  expect(many.counts.core).toBe(one.counts.core);
+  expect(many.counts.coreLongestSql).toBe(one.counts.coreLongestSql);
+  expect(many.counts.coreRowsRead).toBeGreaterThan(one.counts.coreRowsRead);
+  expect(many.counts.weather).toBe(one.counts.weather);
+}
 
-    expect(one.result).toHaveLength(1);
-    expect(many.result).toHaveLength(25);
-    expect(one.counts.core).toBe(9 + 5 * 1);
-    expect(many.counts.core).toBe(9 + 5 * 25);
-    expect(many.counts.coreRowsRead).toBeGreaterThan(one.counts.coreRowsRead);
-    expect(many.counts.weather).toBe(one.counts.weather);
+/**
+D1's cap on one statement's text, in bytes (the SQL here is ASCII).
+*/
+const D1_STATEMENT_LIMIT = 100_000;
+
+describe("pendingReviewQueue", () => {
+  it("asks the same for 1 fingerprinted photo row as for 25", async () => {
+    await flatQueue(
+      async () => fingerprintRow("photo"),
+      async () => pendingReviewQueue(),
+    );
   });
 
-  // N+1 (design 182, #490): an entry row runs the same per-subject reads as a
-  // photo row but one (removedMatchesOf looks a kit's id up as a photo,
-  // finds none and searches nothing): one statement in otherPhotosOf's
-  // batch and photoMatchesOf's three. Issue pending.
-  it("asks 9 + 4 statements per fingerprinted entry row", async () => {
-    const one = await countedAt(
-      1,
+  it("asks the same for 1 fingerprinted entry row as for 25", async () => {
+    await flatQueue(
       async () => fingerprintRow("entry"),
       async () => pendingReviewQueue(),
     );
-    const many = await countedAt(
-      25,
-      async () => fingerprintRow("entry"),
-      async () => pendingReviewQueue(),
-    );
-
-    expect(one.result).toHaveLength(1);
-    expect(many.result).toHaveLength(25);
-    expect(one.counts.core).toBe(9 + 4 * 1);
-    expect(many.counts.core).toBe(9 + 4 * 25);
-    expect(many.counts.coreRowsRead).toBeGreaterThan(one.counts.coreRowsRead);
-    expect(many.counts.weather).toBe(one.counts.weather);
   });
 
   it("asks the same for a page of rows nobody's copies are asked about", async () => {
     // A classifier row on a photo: no at-once report, not a fingerprint
     // match, so none of the per-subject reads run.
-    const one = await countedAt(1, classifierRow, async () =>
-      pendingReviewQueue(),
-    );
-    const many = await countedAt(25, classifierRow, async () =>
-      pendingReviewQueue(),
+    await flatQueue(classifierRow, async () => pendingReviewQueue());
+  });
+
+  it("keeps a full page of fingerprinted rows under D1's statement size", async () => {
+    // A hundred rows, the page's cap. Spelt into the SQL as `nearestOf`
+    // spells a fingerprint, about 1.5 KB each, one search for all of
+    // them would be past the limit; bound as JSON, it is the same text as
+    // for one.
+    const { counts, result } = await countedAt(
+      100,
+      async () => fingerprintRow("photo"),
+      async () => pendingReviewQueue(),
     );
 
-    expect(one.result).toHaveLength(1);
-    expect(many.result).toHaveLength(25);
-    expect(many.counts.core).toBe(one.counts.core);
-    expect(many.counts.coreRowsRead).toBeGreaterThan(one.counts.coreRowsRead);
-    expect(many.counts.weather).toBe(one.counts.weather);
+    expect(result).toHaveLength(100);
+    expect(counts.coreLongestSql).toBeLessThan(D1_STATEMENT_LIMIT);
   });
 });
 
 describe("pendingTakedownRequests", () => {
-  // N+1 (design 182, #490): per request whose link is ours, otherPhotosOf adds
-  // one statement to its batch (src/modules/safety/other-photos.ts:101-105)
-  // and photoMatchesOf a fingerprint read plus a batch of two
-  // (src/modules/safety/photo-matches.ts:115-117). Issue pending. The fixed
-  // part: the list itself and the recorded-photo read, one per
-  // `IN_LIST_CHUNK` (80, src/lib/chunked.ts:43) of requests.
-  it("asks 2 + 4 statements per request for a kit of ours", async () => {
-    const one = await countedAt(1, requestForKit, openTakedowns);
-    const many = await countedAt(25, requestForKit, openTakedowns);
-
-    expect(one.result).toHaveLength(1);
-    expect(many.result).toHaveLength(25);
-    expect(one.counts.core).toBe(2 + 4 * 1);
-    expect(many.counts.core).toBe(2 + 4 * 25);
-    expect(many.counts.coreRowsRead).toBeGreaterThan(one.counts.coreRowsRead);
-    expect(many.counts.weather).toBe(one.counts.weather);
+  it("asks the same for 1 request for a kit of ours as for 25", async () => {
+    await flatQueue(requestForKit, openTakedowns);
   });
 });
 

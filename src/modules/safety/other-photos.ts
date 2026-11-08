@@ -19,7 +19,7 @@
  * runner's handle (round 38 #63a) ride on the same rows: a window count
  * taken before the limit, and a primary-key probe of `user_profiles`.
  */
-import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
+import { and, asc, eq, lte, ne, not, sql, type SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 import { alias } from "drizzle-orm/sqlite-core";
 
@@ -29,6 +29,7 @@ import {
   outfitEntries,
   userProfiles,
 } from "../../db/schema-core";
+import { jsonField, jsonTable } from "../../lib/sql/json-list";
 import { publiclyVisibleEntry } from "./visibility";
 
 type Db = ReturnType<typeof drizzle>;
@@ -76,7 +77,7 @@ export interface OtherPhotos {
 One row of the read: a photo, and what every row repeats.
 */
 type OtherPhotoRow = OtherPhoto &
-  Readonly<{ total: number; handle: string | null }>;
+  Readonly<{ key: string; total: number; handle: string | null }>;
 
 export interface OtherPhotosSubject {
   readonly subjectType: "entry" | "photo";
@@ -90,28 +91,35 @@ export interface OtherPhotosSubject {
 const subjectEntry = alias(outfitEntries, "subject_entry");
 
 /**
+The subject photo, likewise apart from the outer read's `entry_photos`.
+*/
+const subjectPhoto = alias(entryPhotos, "subject_photo");
+
+/**
  * Each subject's other photos, by `subjectType:subjectId`. A subject
  * whose kit is gone, or whose runner has posted nothing else, maps to an
  * empty list.
+ *
+ * **One statement for the page** (design 188, #490): the subjects are one
+ * bound JSON list, each a row the read joins, and each subject's limit
+ * and total are window functions partitioned by it.
  */
 export async function otherPhotosOf(
   db: Db,
   subjects: readonly OtherPhotosSubject[],
 ): Promise<Map<string, OtherPhotos | undefined>> {
-  const [first, ...rest] = subjects.map((subject) =>
-    otherPhotosQuery(db, subject),
-  );
-  if (first === undefined) return new Map();
-  const batched = await db.batch([first, ...rest]);
-  const found = batched.map((rows) => shown(rows));
+  if (subjects.length === 0) return new Map();
+  const rows = await otherPhotosQuery(db, subjects);
   return new Map(
-    subjects.map((subject, index) => [
-      `${subject.subjectType}:${subject.subjectId}`,
-      // The batch answers each query in order, so every index is there;
-      // the type says `undefined` because an index read always may.
-      found[index],
-    ]),
+    subjects.map((subject) => {
+      const key = keyOf(subject);
+      return [key, shown(rows.filter((row) => row.key === key))];
+    }),
   );
+}
+
+function keyOf(subject: OtherPhotosSubject): string {
+  return `${subject.subjectType}:${subject.subjectId}`;
 }
 
 /**
@@ -133,29 +141,89 @@ function shown(rows: readonly OtherPhotoRow[]): OtherPhotos {
 }
 
 /**
- * One subject's read, un-awaited for the batch — exported so its plan can
- * be asked of SQLite.
+ * The columns a bound list of subjects is read back as (`jsonTable`): the
+ * subject's key, its type and its id. Both Desk reads that take a page of
+ * subjects in one statement name them the same way and differ only in the
+ * prefix, which keeps them apart from every column the read touches.
  */
-export function otherPhotosQuery(db: Db, subject: OtherPhotosSubject) {
+export function subjectColumns(prefix: string) {
+  return {
+    key: jsonField<string>("key").as(`${prefix}_key`),
+    subjectType: jsonField<string>("subjectType").as(`${prefix}_type`),
+    subjectId: jsonField<string>("subjectId").as(`${prefix}_id`),
+  };
+}
+
+/**
+ * The subjects as a table the read joins: one row each, the list bound as
+ * one parameter.
+ */
+function subjectTable(db: Db, subjects: readonly OtherPhotosSubject[]) {
+  const keyed = subjects.map((subject) => ({
+    ...subject,
+    key: keyOf(subject),
+  }));
+  // `about_`, not `subject_`: `moderation_actions` has a `subject_type`
+  // and a `subject_id` of its own (`jsonTable`).
+  return jsonTable(db, "subject", keyed, subjectColumns("about"));
+}
+
+type Subject = ReturnType<typeof subjectTable>;
+
+/**
+ * The page's read — exported so its plan can be asked of SQLite. The
+ * subjects are the outer loop (`CROSS JOIN` keeps SQLite from turning
+ * it), so each one's runner is a constant its kits are probed by.
+ */
+export function otherPhotosQuery(
+  db: Db,
+  subjects: readonly OtherPhotosSubject[],
+) {
+  const subject = subjectTable(db, subjects);
+  const runner = runnerOf(db, subject);
+  const ranked = db.$with("ranked").as(
+    db
+      .select({
+        key: subject.key,
+        id: entryPhotos.id,
+        entryId: entryPhotos.entryId,
+        photoKey: entryPhotos.photoKey,
+        canOpen: sql<number>`${publiclyVisibleEntry()}`.as("ranked_can_open"),
+        // Counted over every row the filter keeps for the subject, before
+        // the limit: the total the kicker says (round 38 #63a).
+        total: sql<number>`count(*) over (partition by ${subject.key})`.as(
+          "ranked_total",
+        ),
+        // The runner's handle, by primary key, for the link to D8.
+        handle: sql<
+          string | null
+        >`(SELECT ${userProfiles.username} FROM ${userProfiles} WHERE ${userProfiles.userId} = ${runner})`.as(
+          "ranked_handle",
+        ),
+        place:
+          sql<number>`row_number() over (partition by ${subject.key} order by ${outfitEntries.createdAt} desc, ${entryPhotos.position} asc)`.as(
+            "ranked_place",
+          ),
+      })
+      .from(subject)
+      .crossJoin(outfitEntries)
+      .innerJoin(entryPhotos, eq(entryPhotos.entryId, outfitEntries.id))
+      .where(othersWhere(subject, runner)),
+  );
   return db
+    .with(subject, ranked)
     .select({
-      id: entryPhotos.id,
-      entryId: entryPhotos.entryId,
-      photoKey: entryPhotos.photoKey,
-      canOpen: sql<boolean>`${publiclyVisibleEntry()}`.mapWith(Boolean),
-      // Counted before LIMIT, over every row the filter keeps: the total
-      // the kicker says, from the same read (round 38 #63a).
-      total: sql<number>`count(*) over ()`.mapWith(Number),
-      // The runner's handle, by primary key, for the link to D8.
-      handle: sql<
-        string | null
-      >`(SELECT ${userProfiles.username} FROM ${userProfiles} WHERE ${userProfiles.userId} = ${runnerOf(db, subject)})`,
+      key: ranked.key,
+      id: ranked.id,
+      entryId: ranked.entryId,
+      photoKey: ranked.photoKey,
+      canOpen: sql<boolean>`${ranked.canOpen}`.mapWith(Boolean),
+      total: sql<number>`${ranked.total}`.mapWith(Number),
+      handle: ranked.handle,
     })
-    .from(outfitEntries)
-    .innerJoin(entryPhotos, eq(entryPhotos.entryId, outfitEntries.id))
-    .where(othersWhere(db, subject))
-    .orderBy(desc(outfitEntries.createdAt), asc(entryPhotos.position))
-    .limit(OTHER_PHOTOS_LIMIT);
+    .from(ranked)
+    .where(lte(ranked.place, OTHER_PHOTOS_LIMIT))
+    .orderBy(asc(ranked.key), asc(ranked.place));
 }
 
 /**
@@ -168,12 +236,11 @@ export function otherPhotosQuery(db: Db, subject: OtherPhotosSubject) {
  * to say operators may see private photos for this check (PR #182);
  * `test/safety/other-photos.test.ts` pins the inclusion.
  */
-function othersWhere(db: Db, subject: OtherPhotosSubject) {
-  const runnersOwn = eq(outfitEntries.userId, runnerOf(db, subject));
+function othersWhere(subject: Subject, runner: SQL) {
   return and(
-    runnersOwn,
+    eq(outfitEntries.userId, runner),
     ne(outfitEntries.moderationStatus, "removed"),
-    LEFT_OUT[subject.subjectType](subject.subjectId),
+    not(leftOut(subject)),
   );
 }
 
@@ -190,24 +257,35 @@ function othersWhere(db: Db, subject: OtherPhotosSubject) {
  * `moderation_actions_subject`) outlives the delete. A runner's own
  * delete leaves no audit row, so that case still finds nobody.
  */
-function runnerOf(db: Db, subject: OtherPhotosSubject) {
+function runnerOf(db: Db, subject: Subject): SQL {
   return sql`coalesce((${liveRunnerOf(db, subject)}), (${recordedRunnerOf(db, subject)}))`;
 }
 
 /**
-The runner of the subject as it stands: a photo's kit's, or the kit's. Each a primary-key probe.
-*/
-function liveRunnerOf(db: Db, subject: OtherPhotosSubject) {
-  return subject.subjectType === "photo"
-    ? db
-        .select({ userId: subjectEntry.userId })
-        .from(entryPhotos)
-        .innerJoin(subjectEntry, eq(subjectEntry.id, entryPhotos.entryId))
-        .where(eq(entryPhotos.id, subject.subjectId))
-    : db
-        .select({ userId: subjectEntry.userId })
-        .from(subjectEntry)
-        .where(eq(subjectEntry.id, subject.subjectId));
+ * The runner of the subject as it stands: a photo's kit's, or the kit's.
+ * Each a primary-key probe; the arm for the other type finds nothing.
+ */
+function liveRunnerOf(db: Db, subject: Subject) {
+  const ofPhoto = db
+    .select({ userId: subjectEntry.userId })
+    .from(subjectPhoto)
+    .innerJoin(subjectEntry, eq(subjectEntry.id, subjectPhoto.entryId))
+    .where(
+      and(
+        sql`${subject.subjectType} = 'photo'`,
+        eq(subjectPhoto.id, sql`${subject.subjectId}`),
+      ),
+    );
+  const ofEntry = db
+    .select({ userId: subjectEntry.userId })
+    .from(subjectEntry)
+    .where(
+      and(
+        sql`${subject.subjectType} = 'entry'`,
+        eq(subjectEntry.id, sql`${subject.subjectId}`),
+      ),
+    );
+  return sql`coalesce((${ofPhoto}), (${ofEntry}))`;
 }
 
 /**
@@ -215,14 +293,14 @@ function liveRunnerOf(db: Db, subject: OtherPhotosSubject) {
  * it. Every row about an entry or a photo names its owner
  * (`moderateContent` always has one), so any of them answers.
  */
-function recordedRunnerOf(db: Db, subject: OtherPhotosSubject) {
+function recordedRunnerOf(db: Db, subject: Subject) {
   return db
     .select({ userId: moderationActions.subjectOwnerId })
     .from(moderationActions)
     .where(
       and(
-        eq(moderationActions.subjectType, subject.subjectType),
-        eq(moderationActions.subjectId, subject.subjectId),
+        eq(moderationActions.subjectType, sql`${subject.subjectType}`),
+        eq(moderationActions.subjectId, sql`${subject.subjectId}`),
       ),
     )
     .limit(1);
@@ -230,9 +308,9 @@ function recordedRunnerOf(db: Db, subject: OtherPhotosSubject) {
 
 /**
  * What the row already shows, so it is not listed again: the one photo,
- * or every photo on the kit.
+ * or every photo on the kit. Parenthesised whole, since `not()` spells
+ * `not <condition>`, which binds tighter than the `or` inside it.
  */
-const LEFT_OUT = {
-  photo: (subjectId: string) => ne(entryPhotos.id, subjectId),
-  entry: (subjectId: string) => ne(entryPhotos.entryId, subjectId),
-} as const;
+function leftOut(subject: Subject): SQL {
+  return sql`((${subject.subjectType} = 'photo' and ${entryPhotos.id} = ${subject.subjectId}) or (${subject.subjectType} = 'entry' and ${entryPhotos.entryId} = ${subject.subjectId}))`;
+}
