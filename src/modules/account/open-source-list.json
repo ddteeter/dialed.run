@@ -953,7 +953,7 @@
   "tools": [
     {
       "name": "@cloudflare/vite-plugin",
-      "version": "1.65.0",
+      "version": "1.66.0",
       "licence": "MIT",
       "project": "https://github.com/cloudflare/workers-sdk/tree/vite-plugin-v1/packages/vite-plugin-cloudflare#readme"
     },
@@ -1246,7 +1246,7 @@
     },
     {
       "name": "wrangler",
-      "version": "4.152.0",
+      "version": "4.154.0",
       "licence": "MIT OR Apache-2.0",
       "project": "https://github.com/cloudflare/workers-sdk#readme"
     }
