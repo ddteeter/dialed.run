@@ -46,7 +46,7 @@ Every worktree lives in `.claude/worktrees/<name>`, which is where Claude
 Code puts its own (`isolation: "worktree"` agents, `EnterWorktree`,
 `claude --worktree`). Make yours there too, as the recipes below do, rather
 than beside the checkout: one `git worktree list` and one directory then
-hold all of them, and `~/dev/projects` holds only repos.
+hold all of them, and the checkout's parent folder holds only repos.
 
 - **Tools must skip it.** Each worktree is a full second copy of the
   project inside the checkout, so anything that globs from the root sees

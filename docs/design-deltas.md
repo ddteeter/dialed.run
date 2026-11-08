@@ -3269,7 +3269,7 @@ closed by D-108 after round 32.
   **Resolved: not adopted, D-106.** D-14 and D-54 stand.
 
 **One more ruling, not a conflict: D-105.** The marketing site is a
-separate public repo built with Astro (`~/dev/projects/dialed.run-site`),
+separate public repo built with Astro (`dialed.run-site`),
 deployed to the same Cloudflare account with a scoped token. Guide data
 reaches it as a nightly aggregate JSON that an app cron writes to R2 (bands
 with 5 or more runners only), and changelog entries are drafted by Claude
