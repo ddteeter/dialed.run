@@ -143,8 +143,9 @@ function shown(rows: readonly OtherPhotoRow[]): OtherPhotos {
 /**
  * The columns a bound list of subjects is read back as (`jsonTable`): the
  * subject's key, its type and its id. Both Desk reads that take a page of
- * subjects in one statement name them the same way and differ only in the
- * prefix, which keeps them apart from every column the read touches.
+ * subjects in one statement name them the same way, prefixed with the
+ * table's own name, which keeps them apart from every column the read
+ * touches.
  */
 export function subjectColumns(prefix: string) {
   return {
@@ -163,9 +164,11 @@ function subjectTable(db: Db, subjects: readonly OtherPhotosSubject[]) {
     ...subject,
     key: keyOf(subject),
   }));
-  // `about_`, not `subject_`: `moderation_actions` has a `subject_type`
-  // and a `subject_id` of its own (`jsonTable`).
-  return jsonTable(db, "subject", keyed, subjectColumns("about"));
+  // `about`, not `subject`: `moderation_actions` has a `subject_type` and
+  // a `subject_id` of its own (`jsonTable`). The table's name prefixes its
+  // columns', so one name keeps both apart.
+  const name = "about";
+  return jsonTable(db, name, keyed, subjectColumns(name));
 }
 
 type Subject = ReturnType<typeof subjectTable>;

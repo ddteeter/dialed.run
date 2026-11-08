@@ -277,9 +277,10 @@ const OWN = {
  * list bound as one parameter.
  */
 function probeTable(db: Db, probes: readonly Probe[]) {
-  return jsonTable(db, "probe", probes, {
-    ...subjectColumns("probe"),
-    print: jsonField<string>("print").as("probe_print"),
+  const name = "probe";
+  return jsonTable(db, name, probes, {
+    ...subjectColumns(name),
+    print: jsonField<string>("print").as(`${name}_print`),
   });
 }
 
