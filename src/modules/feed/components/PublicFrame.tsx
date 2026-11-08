@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import type { JSX, ReactNode } from "react";
 
 import { verdictLabel, type VerdictValue } from "../../../lib/contracts";
+import { MARKETING_INVITE_URL, MARKETING_ORIGIN } from "../../../lib/marketing";
 import { Mono, Page, Wordmark, verdictHue } from "../../../ui";
 
 /**
@@ -46,12 +47,6 @@ export function useSignedInAfterLoad(ask: AskSignedIn): {
   }, [ask]);
   return { isSignedIn };
 }
-
-/**
- * The marketing site (D-99), where the invite is asked for and the product
- * is explained. Not a route of this app, so a plain anchor.
- */
-const MARKETING_ORIGIN = "https://dialed.run";
 
 // The bar's one slot in pill form (round 42 #90): hairline for Log in,
 // ink for the way into the app. Written out whole so each can be read as
@@ -403,7 +398,7 @@ export function Invite() {
         dialed.run keeps what you wore on each run and how it felt, then tells
         you what to wear when that weather comes round again.
       </p>
-      <a href={`${MARKETING_ORIGIN}/invite`} className={INTO_APP_CLASS}>
+      <a href={MARKETING_INVITE_URL} className={INTO_APP_CLASS}>
         Request an invite
       </a>
       <Link to="/join" reloadDocument className={FOOT_LINK_CLASS}>

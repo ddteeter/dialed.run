@@ -32,6 +32,7 @@ export {
   isVerified,
 } from "./email-links";
 export { accessGate, turnstileAttempt } from "./access";
+export { receiveAccessRequest } from "./access-endpoint";
 export {
   currentTermsVersion,
   latestAcceptanceOf,

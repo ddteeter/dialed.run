@@ -1,6 +1,7 @@
 {
   "branches": 74.74,
   "unvisited": {
+    "/api/access-requests": "an endpoint: the marketing site's form POST, answered with a 303",
     "/api/health": "an endpoint: JSON, no page",
     "/api/strava": "an endpoint: Strava's webhook",
     "/api/auth/$": "an endpoint: Better Auth's handlers",

@@ -277,6 +277,9 @@ describe("03 · every tappable thing has a 44×44 hit area", () => {
       "src/modules/auth/auth-page.tsx",
       // "Remembered it? Log in" (ACC-4).
       "src/modules/auth/components/ForgotPassword.tsx",
+      // The landing's "Have an account? Log in" under Request access
+      // (Round 50 · 151a, design 187).
+      "src/modules/auth/components/Landing.tsx",
       // "Change emails in Settings › Notifications." and "All notification
       // settings › (asks you to log in)" (round 26 #19).
       "src/modules/email/components/UnsubscribeLanding.tsx",

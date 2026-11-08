@@ -327,6 +327,9 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   // Better Auth's own endpoints, sign-up and sign-in among them.
   "routes/api/auth/$.ts GET": "sessionless",
   "routes/api/auth/$.ts POST": "sessionless",
+  // The marketing site's request-access form (design 187): no account
+  // exists yet, and Turnstile and the visitor limit gate the write.
+  "routes/api/access-requests.ts POST": "sessionless",
   "routes/api/health.ts GET": "sessionless",
   // Strava's handshake and its webhook: a machine, verified by token.
   "routes/api/strava.ts GET": "sessionless",

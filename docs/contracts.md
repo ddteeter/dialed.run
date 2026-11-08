@@ -182,7 +182,8 @@ normalized_name    text          -- UNIQUE(brand_id, normalized_name);
 source_url         text          -- NULLABLE; first pasted product URL;
                                  -- cleared when its read lands on a denied
                                  -- site (R-176), so the next paste fills it
-image_key          text          -- NULLABLE; primary image copied to R2
+image_key          text          -- NULLABLE; never written since D-176
+                                 -- (no shop images); squash drops it (#506)
 category_hint      text          -- NULLABLE garment category enum value
 type               text          -- NULLABLE garment type; the source of
                                  -- wardrobe_items.type, filled by enrichment

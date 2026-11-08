@@ -272,7 +272,7 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/$/u, { timeout: 15_000 });
   await expect(
-    page.getByRole("link", { name: "Create account" }),
+    page.getByRole("link", { name: "Request access" }),
   ).toBeVisible();
 
   // A guarded page, signed out, goes to log-in carrying the way back.

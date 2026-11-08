@@ -26,29 +26,37 @@ async function renderWithRouter(element: ReactElement) {
  * `/` (round 21, item 23): its own bar from 720 up, and the hero's ask.
  */
 describe("Landing, signed out", () => {
-  it("offers Log in in the bar and Create account in the hero, never the tab bar", async () => {
+  it("asks for access in the hero and offers Log in in the bar, never the tab bar", async () => {
     await renderWithRouter(<Landing signedIn={false} />);
 
     const bar = document.querySelector("[data-slot='landing-bar']");
     const [logIn] = screen.getAllByRole("link", { name: "Log in" });
     expect(logIn?.closest("[data-slot='landing-bar']")).toBe(bar);
     expect(document.querySelector("[data-slot='tab-bar']")).toBeNull();
-    const create = screen.getByRole("link", { name: "Create account" });
-    expect(create).toHaveAttribute("href", "/auth/signup");
+    // Round 50 · 151a: Request access is the primary ask (D-173).
+    const ask = screen.getByRole("link", { name: "Request access" });
+    expect(ask).toHaveAttribute("href", "/account/request-access");
+    expect(ask.closest("main")).not.toBeNull();
     // Ink, never pink: "--action belongs to the product's own verbs".
-    expect(create).toHaveClass("bg-ink", "text-ground");
-    expect(create).not.toHaveClass("bg-action");
+    expect(ask).toHaveClass("bg-ink", "text-ground");
+    expect(ask).not.toHaveClass("bg-action");
+    expect(screen.queryByRole("link", { name: "Create account" })).toBeNull();
     expect(
       screen.getByRole("heading", { name: "Every run has an outfit. Log it." }),
     ).toBeVisible();
   });
 
-  it("repeats Log in in the hero only where there is no bar", async () => {
+  it("follows the ask with Have an account? Log in, at every width", async () => {
     await renderWithRouter(<Landing signedIn={false} />);
     const [inBar, inHero] = screen.getAllByRole("link", { name: "Log in" });
     expect(inBar?.closest("[data-slot='landing-bar']")).not.toBeNull();
-    expect(inHero).toHaveClass("wide:hidden");
     expect(inHero).toHaveAttribute("href", "/auth/login");
+    expect(inHero?.closest("main")).not.toBeNull();
+    // Design 154 (#528) part 3: not hidden from 720 up.
+    expect(inHero).not.toHaveClass("wide:hidden");
+    expect(inHero?.parentElement).toHaveTextContent(
+      /^Have an account\? Log in$/u,
+    );
   });
 
   it("keeps the hero's wordmark for the phone only, plain", async () => {
@@ -57,9 +65,7 @@ describe("Landing, signed out", () => {
     const mark = hero.querySelector(String.raw`.wide\:hidden`);
     // Drawn halves, then the one spoken name; no brackets either way.
     expect(mark).toHaveTextContent(/^dialed\.rundialed\.run$/u);
-    expect(mark?.querySelector(".sr-only")).toHaveTextContent(
-      /^dialed\.run$/u,
-    );
+    expect(mark?.querySelector(".sr-only")).toHaveTextContent(/^dialed\.run$/u);
   });
 });
 
@@ -73,7 +79,7 @@ describe("Landing, signed in", () => {
     expect(inHero).toHaveAttribute("href", "/closet");
     expect(inHero).toHaveClass("wide:hidden", "bg-ink");
     expect(screen.queryByRole("link", { name: "Log in" })).toBeNull();
-    expect(screen.queryByRole("link", { name: "Create account" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Request access" })).toBeNull();
   });
 });
 

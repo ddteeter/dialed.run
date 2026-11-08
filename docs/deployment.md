@@ -502,9 +502,125 @@ needs its own Strava app, not a second subscription.
   The layout (which blob is what) is `src/modules/ops/vitals.ts`'s header;
   the queries the code runs are `src/modules/ops/vitals-queries.ts`.
 
-## 9. Restoring a database (D1 Time Travel)
+- **One-time steps (design 187).** Each runs once, at the first deploy.
+  - **Delete the stored shop images** (D-176, #472). Before D-176,
+    enrichment copied a shop's image into MEDIA as
+    `products/<id>/image-<ts>`. Run `npm run shop-images:delete -- --remote`
+    with your own `wrangler login`. It's a dry run that lists every key it
+    would delete, and snapshots under the same prefix are never matched.
+    Read the list, then run it again with `--apply`. If nothing was ever
+    enriched against the real bucket, it lists nothing, and you're done.
+  - **Owner: let the marketing site solve Turnstile** (round 31, #367).
+    The site's request-access form posts to `/api/access-requests`, and
+    the server only accepts a challenge solved on `dialed.run`. In
+    Turnstile → the widget → Hostnames, add `dialed.run` beside the app's
+    host. Check: a request from the live form lands in D7 and the visitor
+    ends on `dialed.run/invite/sent`, not `?error=turnstile`.
 
-D1 keeps 30 days of point-in-time history on the Paid plan, with no setup.
+## 9. Deploying, rolling back and restoring
+
+There is no staging environment (D-171). Production deploys get guard
+rails instead (design 186, #504).
+
+### How a deploy reaches runners
+
+After the first deploy, `ci.yml`'s deploy job does not deploy straight to
+100%. The job is `docs/ops/gradual-deploy.md`, and the owner applies it.
+It:
+
+1. migrates the three databases (as before);
+2. uploads the new version (`wrangler versions upload`), which serves
+   nothing;
+3. deploys it at **0%** beside the version serving now;
+4. runs `e2e/smoke/production.smoke.ts` against it through Cloudflare's
+   version override, so no runner is sent to it first;
+5. on a pass, moves it to 10%, then to 100% ten minutes later. On a
+   failure, it puts the old version back at 100%;
+6. applies cron triggers (`wrangler triggers deploy`), which an upload
+   does not.
+
+**Step 3 exists because of a Cloudflare constraint:** "A version override
+will only be applied if the specified version is in the current
+deployment"
+([version overrides](https://developers.cloudflare.com/workers/versions-and-deployments/version-overrides/)).
+A 0% share counts as in the deployment. A deployment serves at most two
+versions.
+
+**The smoke test checks the version that answered first.**
+`/api/health` names the version (`version`). An override Cloudflare does
+not apply falls back to the deployment's split without saying so, so
+without that check the spec would pass on the old code. The spec is
+read-only: health, the signed-out landing, and logging in as the smoke
+account to read its closet.
+
+**During a shift, both versions share D1, R2 and the queues.** That is
+safe only because migrations are expand→contract (resilience law 8, so
+the old version runs against the new schema) and a queue message is a
+wire format between two deploys (law 9, so either version can consume
+the other's messages). Cloudflare's docs do not say which version runs
+crons and queue consumers mid-shift, so assume either can. A change that
+breaks either law cannot ship this way. Split it across two deploys.
+
+**Secrets:** `wrangler secret put` "creates a new version of the Worker
+and deploys it immediately", which skips every step above. To change a
+secret through the guard rails, use `wrangler versions secret put <NAME>`,
+which only uploads a version, and then deploy that version the same way.
+
+**The smoke account (owner, once, before applying the job):**
+
+- In production, sign up an account that says plainly what it is: handle
+  `smoke_test`, an address you own.
+- Leave every kit private, and turn **off** "Count my runs in anonymous
+  totals". Never log a run as it. D-108's published totals count private
+  runs, and the spec never writes one, so the setting is the second
+  guard.
+- Add one garment named exactly **`Smoke test shirt`**. The spec looks
+  for it.
+- Put its address and password in the GitHub environment `production` as
+  **`SMOKE_EMAIL`** and **`SMOKE_PASSWORD`** (§7's rules: environment, not
+  repository).
+
+To run the same check by hand against a version (find ids with
+`wrangler deployments status`):
+
+```sh
+SMOKE_BASE_URL=https://dialed.run SMOKE_VERSION_ID=<id> \
+  SMOKE_EMAIL=… SMOKE_PASSWORD=… \
+  npx playwright test -c playwright.smoke.config.ts
+```
+
+Any request can be sent to a deployed version the same way:
+`curl -H 'Cloudflare-Workers-Version-Overrides: dialed="<id>"' https://dialed.run/api/health`.
+
+### Rolling back the Worker
+
+```sh
+# The version before the latest, at 100%. A message skips the prompts.
+npx wrangler rollback --message "<why>"
+# Or a named version (wrangler deployments list / versions list).
+npx wrangler rollback <version-id> --message "<why>"
+```
+
+- Mid-shift, `wrangler versions deploy <old-id>@100% --yes` does the same
+  thing and is what the job runs on a failed smoke test.
+- Only the 100 most recent versions can be rolled back to. A rollback is
+  refused if the target version binds an R2 bucket or queue that no
+  longer exists
+  ([rollbacks](https://developers.cloudflare.com/workers/configuration/versions-and-deployments/rollbacks/)).
+- **Rolling back code does not undo data.** "Resources connected to your
+  Worker will not be changed during a rollback": D1, R2 and the queues
+  stay exactly as the bad version left them. Rows it wrote are still
+  there, and so are messages it queued. A bad write needs the restore
+  below, and a bad R2 delete needs §10.
+- **It does not undo migrations either** (below).
+
+### Restoring a database (D1 Time Travel)
+
+D1 keeps 30 days of point-in-time history on the Paid plan (7 on Free),
+to the minute, with no setup
+([Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)).
+Queries in flight when a restore starts are cancelled with an error.
+Bookmarks older than 30 days are invalid.
 A restore is **destructive and in place**: it overwrites the live database.
 
 ```sh
