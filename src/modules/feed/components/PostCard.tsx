@@ -24,9 +24,10 @@ import { VerdictBadge } from "./VerdictBadge";
 /**
  * One post on Following — the v1 card (round 22, "E1v1 Following").
  *
- * **The order is fixed**: author and badge, photo, caption, strip, Useful.
- * Kit and pace left the card for D. **A missing part is absent, never a
- * placeholder**: no photo, no caption, no badge are all whole posts, and
+ * **The order is fixed**: author and badge, photo, strip, Useful. Kit
+ * and pace left the card for D, and the caption is cut for v1 (D-167).
+ * **A missing part is absent, never a placeholder**: no photo, no badge
+ * are whole posts, and
  * the strip is the one part every post has.
  *
  * Everything above Useful is one link to D; Useful is its own control, so
@@ -134,11 +135,6 @@ export function PostCard(props: Readonly<PostCardProps>) {
               </span>
             ) : undefined}
           </span>
-        )}
-        {item.caption === undefined ? undefined : (
-          <p data-part="caption" className="m-0 text-body">
-            {item.caption}
-          </p>
         )}
         <div
           data-part="run-strip"

@@ -219,7 +219,7 @@ describe("publicKitRead: a public kit", () => {
         said: { value: "8 minutes 25 seconds", unit: "per mile" },
       },
       gain: { value: "210", unit: "ft" },
-      caption: "First frosty one.",
+      // No caption, though the row has one: cut for v1 (D-167).
       pieces: [
         // Its domain's parent denied since it was saved: no link to the
         // open web.

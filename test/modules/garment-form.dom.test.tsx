@@ -661,7 +661,7 @@ describe("GarmentForm: no product link for v1 (round 22, item 17)", () => {
     renderForm();
     const link = screen.getByLabelText(/Product link · optional/);
 
-    await user.type(link, ["http:", "//janji.com/afo"].join(""));
+    await user.type(link, ["ftp:", "//janji.com/afo"].join(""));
     expect(
       screen.queryByText("Use a link that starts with https://."),
     ).toBeNull();
@@ -674,6 +674,20 @@ describe("GarmentForm: no product link for v1 (round 22, item 17)", () => {
 
     // Typing clears it, as every field's message does.
     await user.type(link, "x");
+    expect(
+      screen.queryByText("Use a link that starts with https://."),
+    ).toBeNull();
+  });
+
+  it("takes an explicit http:// link on leaving the box (D-166)", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const link = screen.getByLabelText(/Product link · optional/);
+
+    await user.type(link, ["http:", "//janji.com/afo"].join(""));
+    await user.tab();
+
+    expect(link).not.toHaveAttribute("aria-invalid");
     expect(
       screen.queryByText("Use a link that starts with https://."),
     ).toBeNull();

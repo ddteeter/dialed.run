@@ -10,7 +10,7 @@ import { z } from "zod";
 
 import { ACCESS_NOTE_MAX, IS_INVITE_ONLY, inviteCodeField } from "./access";
 import { birthDateField } from "./age";
-import { httpsUrlSchema } from "./common";
+import { productLinkSchema } from "./common";
 
 // ---- Garments: discriminated union on category ----------------------------
 
@@ -189,7 +189,7 @@ const garmentBase = z.strictObject({
   colorName: colorNameSchema.optional(),
   colorHex: colorHexSchema.optional(),
   visibilityLevel: garmentVisibilitySchema.optional(),
-  productUrl: httpsUrlSchema.optional(),
+  productUrl: productLinkSchema.optional(),
   productId: z.string().optional(),
   estTempLowC: z.number().optional(),
   estTempHighC: z.number().optional(),

@@ -77,7 +77,6 @@ export interface PublicKit {
   };
   readonly pace?: PublicPace;
   readonly gain?: PublicStat;
-  readonly caption?: string;
   /**
    * The kit's screened photos as the public bucket serves them (D-153,
    * design 163 step 8): absolute URLs on its own origin, in the kit's
@@ -122,11 +121,6 @@ export function publicKitCardPath(kit: PublicKit): string {
   return `/og/kit/${kit.entryId}?v=${kit.cardVersion}`;
 }
 
-/**
-The most of the caption a preview may carry (round 41 #86c).
-*/
-const DESCRIPTION_MAX = 120;
-
 type HeadMeta =
   | { name: string; content: string }
   | { property: string; content: string }
@@ -136,7 +130,8 @@ type HeadMeta =
  * The page's head. Not public — every reason alike — is `noindex` and
  * nothing else, so it keeps the site's default card and words (round 41
  * #86f). A public kit is `noindex` too (D-53), previews as its own card,
- * and carries no description beyond its caption's first 120 characters.
+ * and carries no description: round 41 #86c's was the caption's first 120
+ * characters, and the caption is cut for v1 (D-167).
  * `origin` is the route's, because a preview fetches the image from
  * outside and needs it absolute.
  */
@@ -147,21 +142,11 @@ export function publicKitHead(
   const noindex = { name: "robots", content: "noindex" };
   if (kit === undefined) return { meta: [noindex] };
   const title = publicKitTitle(kit);
-  const description =
-    kit.caption === undefined
-      ? []
-      : [
-          {
-            property: "og:description",
-            content: kit.caption.slice(0, DESCRIPTION_MAX),
-          },
-        ];
   return {
     meta: [
       noindex,
       { title },
       { property: "og:title", content: title },
-      ...description,
       { property: "og:image", content: `${origin}${publicKitCardPath(kit)}` },
     ],
   };

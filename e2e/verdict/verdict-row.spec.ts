@@ -102,10 +102,20 @@ async function removeEntry({ itemId, runId, entryId }: Ids): Promise<void> {
 // counted: five buttons in a row proves nothing if they are the wrong five.
 const LABELS = ["Way cold", "A bit cold", "Dialed", "A bit warm", "Way warm"];
 
+/**
+ * A verdict's cell: the label its radio sits in (R-84 c), which is what
+ * the board draws and what the brackets frame.
+ */
+function verdictCell(page: Page, name: string) {
+  return page
+    .locator('[data-slot="verdict-row"] > label')
+    .filter({ has: page.getByRole("radio", { name, exact: true }) });
+}
+
 async function measureButtons(page: Page, width: string) {
   const boxes = [];
   for (const label of LABELS) {
-    const button = page.getByRole("button", { name: label });
+    const button = verdictCell(page, label);
     // `toBeVisible` first: `boundingBox()` does not auto-wait, so reading it
     // straight after a `goto` can measure a button the browser has not laid
     // out yet and report a plausible-looking zero.
@@ -154,7 +164,7 @@ async function expectRowFitsPanel(page: Page, width: string): Promise<void> {
   // the grid.
   const row = page
     .locator("form div")
-    .filter({ has: page.getByRole("button", { name: "Way cold" }) })
+    .filter({ has: page.getByRole("radio", { name: "Way cold" }) })
     .last();
   const overflow = await row.evaluate((element) => ({
     scrollWidth: element.scrollWidth,
@@ -186,7 +196,7 @@ async function chooseTwoWordVerdict(page: Page, entryId: string) {
 
   // The two-word label, because a single-word one would wrap to one line and
   // prove nothing about splitting the pair.
-  const chosen = page.getByRole("button", { name: "A bit cold" });
+  const chosen = verdictCell(page, "A bit cold");
   await chosen.click();
 
   // **Wait for the close to finish before measuring.** The brackets animate
@@ -204,7 +214,7 @@ async function chooseTwoWordVerdict(page: Page, entryId: string) {
 
 async function expectBracketsFrameCell(
   page: Page,
-  chosen: ReturnType<Page["getByRole"]>,
+  chosen: ReturnType<typeof verdictCell>,
 ): Promise<void> {
   const cell = await chosen.boundingBox();
   const open = await page.locator(".bracket-close-start").boundingBox();

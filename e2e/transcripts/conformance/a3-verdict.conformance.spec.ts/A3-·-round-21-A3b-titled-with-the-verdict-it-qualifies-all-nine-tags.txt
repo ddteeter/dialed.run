@@ -12,15 +12,18 @@ paragraph
 end of paragraph
 heading, Did it work?, level 1
 status
-group, Did it work?
-button, Way cold, not pressed
-button, A bit cold, not pressed
-button, Dialed, not pressed
-button, A bit warm, pressed
+radiogroup, Did it work?
+radio, Way cold, not checked, position 1, set size 5
+Way cold
+radio, A bit cold, not checked, position 2, set size 5
+A bit cold
+radio, Dialed, not checked, position 3, set size 5
+Dialed
+radio, A bit warm, not checked, position 4, set size 5
 A bit warm
-end of button, A bit warm, pressed
-button, Way warm, not pressed
-end of group, Did it work?
+radio, Way warm, not checked, position 5, set size 5
+Way warm
+end of radiogroup, Did it work?
 heading, Anything specific? · optional, level 2
 Anything specific? · optional
 end of heading, Anything specific? · optional, level 2

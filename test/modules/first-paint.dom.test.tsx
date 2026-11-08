@@ -70,7 +70,6 @@ describe("the status region on first paint", () => {
           deviceName: undefined,
           verdict: undefined,
           audience: "runners",
-          caption: undefined,
           createdAt: NOW,
           items: [],
           photoKeys: [],

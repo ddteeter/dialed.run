@@ -42,6 +42,18 @@ function drawnPost(state: string): string {
   return `${part(CARD, "post")}[data-state="${state}"]`;
 }
 
+/**
+ * A drawn post's parts, less its caption: cut for v1 (D-167), and round
+ * 48's notices supersede boards where they still draw it.
+ */
+async function drawnParts(
+  page: import("@playwright/test").Page,
+  state: string,
+): Promise<string[]> {
+  const parts = await partsIn(page, drawnPost(state));
+  return parts.filter((name) => name !== "caption");
+}
+
 function builtPost(entryId: string): string {
   return `[data-part="post"]:has(a[href="/feed/entry/${entryId}"])`;
 }
@@ -66,9 +78,9 @@ test("E1's v1 card is composed as the board draws it, with a photo, without, and
   // ---- What the board draws ------------------------------------------
   await openBoard(page, BOARD, baseURL);
   const drawn = {
-    withPhoto: await partsIn(page, drawnPost("with-photo")),
-    noPhoto: await partsIn(page, drawnPost("no-photo")),
-    indoor: await partsIn(page, drawnPost("no-conditions")),
+    withPhoto: await drawnParts(page, "with-photo"),
+    noPhoto: await drawnParts(page, "no-photo"),
+    indoor: await drawnParts(page, "no-conditions"),
     dialedFill: await fillOf(
       page,
       `${drawnPost("with-photo")} [data-part="verdict-badge"]`,
@@ -104,7 +116,6 @@ test("E1's v1 card is composed as the board draws it, with a photo, without, and
     startedAt,
     feelsLikeC: 5,
     verdict: 0,
-    caption: "Half-zip was right.",
   });
   const noPhoto = await seedEntry(rows, {
     userId: runner,
@@ -112,7 +123,6 @@ test("E1's v1 card is composed as the board draws it, with a photo, without, and
     startedAt: startedAt - 60,
     feelsLikeC: 8,
     verdict: 1,
-    caption: "Wore the shell for a forecast that never showed up.",
   });
   const indoor = await seedEntry(rows, {
     userId: runner,
@@ -134,7 +144,7 @@ test("E1's v1 card is composed as the board draws it, with a photo, without, and
     ).toHaveAttribute("aria-pressed", "true");
 
     // **The same parts, in the same fixed order**: author and badge,
-    // photo, caption, strip, Useful — and a missing one absent.
+    // photo, strip, Useful — and a missing one absent.
     expect(await partsIn(page, builtPost(withPhoto.entryId))).toEqual(
       drawn.withPhoto,
     );

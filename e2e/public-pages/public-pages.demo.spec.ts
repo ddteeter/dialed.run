@@ -57,7 +57,7 @@ async function pickOnA3(
 ): Promise<void> {
   await page.goto(`/feed/verdict/${entryId}`);
   await hydrated(page);
-  await page.getByRole("button", { name: "A bit cold" }).click();
+  await page.getByRole("radio", { name: "A bit cold" }).click();
   await page.getByRole("radio", { name: audience }).check();
 }
 

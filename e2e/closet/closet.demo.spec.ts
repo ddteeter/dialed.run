@@ -229,17 +229,18 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await page.getByLabel("Model / name").fill("Houdini Jacket");
   // Round 43 #93: checked when the runner leaves the box, never while
   // typing, and a link pasted without its scheme gets https:// on save.
+  // Only a non-link errors: an explicit http:// is taken (D-166).
   await scene(page, "F · the product link: checked on leaving the box");
   const link = page.getByLabel(/Product link/);
-  await link.fill(["http:", "//patagonia.com/houdini"].join(""));
+  await link.fill("patagonia houdini");
   await link.blur();
   await expect(
-    page.getByText("Use a link that starts with https://."),
+    page.getByText("That isn't a link. Paste the address of the shop's page."),
   ).toBeVisible();
   await link.fill("patagonia.com/houdini");
   await link.blur();
   await expect(
-    page.getByText("Use a link that starts with https://."),
+    page.getByText("That isn't a link. Paste the address of the shop's page."),
   ).toHaveCount(0);
   await page.getByLabel("Layer").selectOption("outer");
   await page.getByLabel("Weight").selectOption("light");

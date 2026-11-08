@@ -32,7 +32,6 @@ const KIT: PublicKit = {
   ...BARE,
   conditions: CONDITIONS,
   verdict: -1,
-  caption: "First frosty one.",
 };
 
 describe("publicKitTitle", () => {
@@ -66,7 +65,6 @@ describe("publicKitHead", () => {
         { name: "robots", content: "noindex" },
         { title: "@maya_runs · 38° damp, a bit cold" },
         { property: "og:title", content: "@maya_runs · 38° damp, a bit cold" },
-        { property: "og:description", content: "First frosty one." },
         {
           property: "og:image",
           content:
@@ -76,24 +74,15 @@ describe("publicKitHead", () => {
     });
   });
 
-  it("carries no description beyond the caption's first 120 characters", () => {
-    const long = "x".repeat(130);
-    const head = publicKitHead({ ...KIT, caption: long }, "https://o");
-
-    expect(head.meta).toContainEqual({
-      property: "og:description",
-      content: "x".repeat(120),
-    });
-  });
-
-  it("carries no description at all without a caption", () => {
-    const head = publicKitHead(BARE, "https://o");
-
-    expect(
-      head.meta.some(
-        (meta) => "property" in meta && meta.property === "og:description",
-      ),
-    ).toBe(false);
+  it("carries no description: it was the caption's, cut for v1 (D-167)", () => {
+    for (const kit of [BARE, KIT]) {
+      const head = publicKitHead(kit, "https://o");
+      expect(
+        head.meta.some(
+          (meta) => "property" in meta && meta.property === "og:description",
+        ),
+      ).toBe(false);
+    }
   });
 
   it("is noindex and nothing else when the kit is not public, so it keeps the default card", () => {

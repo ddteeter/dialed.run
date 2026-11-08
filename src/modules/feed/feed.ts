@@ -185,7 +185,6 @@ export function followingFeedStatement(
 export interface FeedItem extends EntryRunFields {
   entryId: string;
   userId: string;
-  caption: string | undefined;
   createdAt: number;
   itemNames: string[];
   photoKeys: string[];
@@ -344,7 +343,6 @@ async function hydrateEntries(
       indoor: run?.indoor ?? false,
       deviceName: run?.deviceName ?? undefined,
       verdict: entry.verdict ?? undefined,
-      caption: entry.caption ?? undefined,
       createdAt: entry.createdAt,
       itemNames: itemRows
         .filter((i) => i.entryId === entry.id)

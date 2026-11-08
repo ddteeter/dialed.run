@@ -314,7 +314,7 @@ describe("a feed card copes with what is missing", () => {
     expect(page.items[0]?.verdict).toBe(0);
   });
 
-  it("reports a captionless entry as captionless", async () => {
+  it("never carries a caption, even one the row still holds (D-167)", async () => {
     const userId = await makeUser();
     const { entryId } = await publicEntry({ userId, lat: 50.11 });
     await db()
@@ -322,16 +322,9 @@ describe("a feed card copes with what is missing", () => {
       .set({ caption: "Windy out" })
       .where(eq(outfitEntries.id, entryId));
 
-    const withCaption = await followingFeed(userId);
-    expect(withCaption.items[0]?.caption).toBe("Windy out");
-
-    await db()
-      .update(outfitEntries)
-      .set({ caption: sqlNull() })
-      .where(eq(outfitEntries.id, entryId));
-
-    const without = await followingFeed(userId);
-    expect(without.items[0]?.caption).toBeUndefined();
+    const page = await followingFeed(userId);
+    expect(page.items).toHaveLength(1);
+    expect(page.items[0]).not.toHaveProperty("caption");
   });
 
   it("answers an empty feed without asking for detail about nothing", async () => {

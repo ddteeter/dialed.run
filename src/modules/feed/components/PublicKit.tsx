@@ -54,11 +54,6 @@ export function PublicKitPage({
           />
           <Conditions kit={kit} />
           <Stats kit={kit} />
-          {kit.caption === undefined ? undefined : (
-            <p data-part="caption" className="m-0 text-lead">
-              {kit.caption}
-            </p>
-          )}
           <Pieces pieces={kit.pieces} />
           {kit.conditions?.isProviders === true ? (
             <WeatherAttribution />

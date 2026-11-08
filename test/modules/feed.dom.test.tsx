@@ -496,7 +496,7 @@ function matched(windowDays: 3 | 14): CompactConditionsResult {
     status: "matched",
     runners: 18,
     groups: [],
-    dialed: { runners: 0, groups: [] },
+    dialed: { runners: 0, types: [] },
     windowDays,
     band: { feelsC: 6.7, minC: 3.7, maxC: 9.7, precip: "damp" },
   };

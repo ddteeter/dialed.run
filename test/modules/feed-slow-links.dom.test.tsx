@@ -19,7 +19,7 @@ import { feedItem, MILES, NOW } from "./feed-fixtures";
 const TO_ENTRY = { at: "/", slowPath: "/feed/entry/$entryId" };
 
 /**
-The profile's wire shape: no caption, and no city, are `null`.
+The profile's wire shape: no city is `null`.
 */
 const NONE = z.null().parse(JSON.parse("null"));
 
@@ -80,8 +80,8 @@ describe("a slow shared run on a profile (H → D)", () => {
           username: "ravi_k",
           cityLabel: NONE,
           recentPublicEntries: [
-            { entryId: "01A", day: "Tue Aug 12", verdict: 0, caption: NONE },
-            { entryId: "01B", day: "Mon Aug 11", verdict: 1, caption: NONE },
+            { entryId: "01A", day: "Tue Aug 12", verdict: 0 },
+            { entryId: "01B", day: "Mon Aug 11", verdict: 1 },
           ],
         }}
         isFollowing={false}

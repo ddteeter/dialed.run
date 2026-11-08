@@ -71,7 +71,6 @@ const KIT: PublicKit = {
     said: { value: "8 minutes 25 seconds", unit: "per mile" },
   },
   gain: { value: "210", unit: "ft" },
-  caption: "First frosty one.",
   pieces: [
     {
       name: "Tracksmith Brighton Base Layer",
@@ -229,10 +228,10 @@ describe("the public kit, signed out", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("gives the caption, then THE KIT with a linked piece opening its product in a new tab", async () => {
+  it("gives THE KIT with a linked piece opening its product in a new tab, and no caption (D-167)", async () => {
     await show(kitPage(KIT));
 
-    expect(screen.getByText("First frosty one.")).toHaveClass("text-lead");
+    expect(document.querySelector('[data-part="caption"]')).toBeNull();
     expect(
       screen.getByRole("heading", { level: 2, name: "The kit · 2" }),
     ).toBeVisible();

@@ -375,7 +375,7 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
     ).toBeVisible();
     await expect(verdictRail).toContainText("No runs in this band yet.");
     await expect(verdictRail).not.toContainText("dialed ·");
-    await page.getByRole("button", { name: "Dialed" }).click();
+    await page.getByRole("radio", { name: "Dialed", exact: true }).click();
     await page.getByRole("button", { name: "Log it" }).click();
     const noted = page.locator('[data-slot="noted"]');
     await expect(noted).toBeVisible({ timeout: 15_000 });

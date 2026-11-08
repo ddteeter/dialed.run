@@ -72,9 +72,9 @@ function optional(value: string): string | undefined {
 /**
  * A typed link with no scheme gets https:// (round 43 #93): runners paste
  * `janji.com/afo` as often as the whole address. One with a scheme keeps
- * it, so an `http://` link still meets the contract's words for it rather
- * than being quietly upgraded to a page that may not exist. Absent stays
- * absent. F's blur check reads the same value the save will.
+ * it here, and the contract decides: an explicit `http://` is taken and
+ * saved on https (D-166), anything else meets the contract's words.
+ * Absent stays absent. F's blur check reads the same value the save will.
  */
 export function withScheme(link: string): string | undefined {
   const typed = optional(link);

@@ -96,6 +96,7 @@ function VerdictPage() {
         units={units}
         submitVerdict={submitVerdictAction}
         itemBandWearStat={itemBandWearStatQuery}
+        isVerified={isVerified}
         privateLine={(hintId) => (
           <PrivateRunLine
             hintId={hintId}

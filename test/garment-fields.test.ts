@@ -13,7 +13,9 @@ import {
   garmentAttributeKeys,
   garmentCategoriesInOrder,
   garmentFieldSpec,
+  garmentTypeOf,
   garmentTypesFor,
+  garmentTypeWord,
 } from "../src/lib/contracts/garment-fields";
 import { TAP_LIST } from "../src/modules/closet/tap-list-data";
 import { ICONS } from "../src/ui/icons";
@@ -193,5 +195,38 @@ describe("the schema column reads the contract's list, not a copy of it", () => 
     expect(wardrobeItems.visibilityLevel.enumValues).toEqual(
       garmentVisibilities,
     );
+  });
+});
+
+describe("garmentTypeWord (R49·137a′)", () => {
+  it("says every type in lower case, split where the contract's name is", () => {
+    expect(allGarmentTypes.map((type) => garmentTypeWord(type))).toEqual([
+      "singlet",
+      "tee",
+      "long sleeve",
+      "half-zip",
+      "jacket",
+      "vest",
+      "sports bra",
+      "shorts",
+      "half tights",
+      "tights",
+      "cap",
+      "beanie",
+      "headband",
+      "neck gaiter",
+      "gloves",
+      "socks",
+      "shoes",
+      "sunglasses",
+      "arm sleeves",
+    ]);
+  });
+});
+
+describe("garmentTypeOf", () => {
+  it("reads a stored type back as the contract's, and anything else as none", () => {
+    expect(garmentTypeOf("longSleeve")).toBe("longSleeve");
+    expect(garmentTypeOf("cardigan")).toBeUndefined();
   });
 });

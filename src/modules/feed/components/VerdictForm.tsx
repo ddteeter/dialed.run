@@ -42,6 +42,7 @@ import {
   Spoken,
   SubmitButton,
   useFormSubmit,
+  useUnconfirmedRefusal,
   RailCard,
   verdictHue,
   WeatherAttribution,
@@ -115,6 +116,21 @@ function verdictChosen(value: VerdictValue): string {
 }
 
 const VERDICT_RESTING = `${VERDICT_BASE} border border-hairline`;
+
+/**
+ * The cell's focus ring. The radio inside it holds focus, so the ring is
+ * drawn on the cell (`has-[:focus-visible]`), as the tap list's chips do.
+ */
+const VERDICT_FOCUS =
+  "cursor-pointer has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink";
+
+/**
+ * The native radio, filling its cell rather than `sr-only`: a pointer
+ * aimed at the cell lands on the control, not on the label's words (the
+ * tap list's chips found this; see `TapListForm`).
+ */
+const VERDICT_RADIO =
+  "absolute inset-0 m-0 h-full w-full cursor-pointer appearance-none opacity-0";
 import { submitVerdictInput } from "../inputs";
 import { BandHistory } from "./BandHistory";
 import { isProvidersReading } from "../strip";
@@ -255,6 +271,7 @@ export function VerdictForm({
   units,
   history,
   privateLine,
+  isVerified,
 }: Readonly<{
   entry: Entry;
   bandFloor: number | undefined;
@@ -291,21 +308,18 @@ export function VerdictForm({
    * reaches another only through its barrel.
    */
   privateLine: (hintId: string) => ReactNode;
+  /**
+   * Whether the runner's address is confirmed. An unconfirmed runner's run
+   * saves private (D-50), so the audience is held at PRIVATE for them
+   * (R47·123).
+   */
+  isVerified: boolean;
 }>) {
-  const [verdict, setVerdict] = useState<number | undefined>(entry.verdict);
-  const [tags, setTags] = useState<Set<string>>(new Set(entry.tags));
-  const [audience, setAudience] = useState<WritableAudience>(
-    writableAudienceOf(entry.audience),
-  );
-  // Seeded from the entry, not from nothing.
-  //
-  // `entry.items[].flag` is what was saved last time, and starting empty
-  // meant re-opening a verdict showed every piece as unflagged — so
-  // saving again silently cleared flags the runner had set.
-  const [flags, setFlags] = useState<Record<string, ItemFlagChoice>>(() =>
-    Object.fromEntries(
-      entry.items.map((item) => [item.itemId, item.flag ?? "none"]),
-    ),
+  const { verdict, setVerdict, tags, setTags, flags, setFlags } =
+    useAnswer(entry);
+  const [audience, setAudience] = useHeldAudience(
+    entry.audience,
+    isVerified,
   );
   // Present once the verdict is saved. The sentence inside it can still be
   // absent: the save landed and only the record's count failed to come
@@ -471,75 +485,21 @@ export function VerdictForm({
             of its own: the board asks "Did it work?" once, in the ink
             header, and a second copy on the paper beneath would be the
             question twice. */}
+          {/* **Five radios in a `radiogroup`** (Accessibility Contract
+            rule 05, R-84 c): arrow keys move between them and choose as
+            they go, space chooses the one focused, and Tab enters on the
+            chosen one, or the first while there is none. They are native
+            radios, so the browser does all three. */}
           <fieldset
+            role="radiogroup"
             aria-labelledby={QUESTION_ID}
             className="m-0 flex flex-col gap-2 border-0 p-0 wide:max-w-panel"
           >
-            <div
-              // The name design's board gives this region
-              // (`data-part="verdict-row"`), so a conformance run can diff
-              // the two against each other rather than the whole screen —
-              // and so a failure reports as "A3 verdict row". `data-slot` is
-              // this repo's existing spelling of the same idea; `top-bar`
-              // and `tab-bar` already match design's names for free.
-              data-slot="verdict-row"
-              className="grid grid-cols-5 gap-1"
-            >
-              {verdictScale.map((choice) => {
-                const isChosen = verdict === choice.value;
-                return (
-                  <button
-                    key={choice.value}
-                    type="button"
-                    // The chosen one was announced to nobody. Visually it is
-                    // an ink inversion plus a pair of brackets, and the
-                    // brackets are `aria-hidden` (they are a move, not a
-                    // word) — so a reader heard five identical buttons and
-                    // no indication of which was picked. Rule 01 is "remove
-                    // every colour and the meaning survives", and here it
-                    // did not.
-                    //
-                    // `aria-pressed`, not a `radiogroup`: the contract asks
-                    // for five radios with arrow-key navigation, which is a
-                    // behaviour change this lane may not make. A
-                    // single-select toggle group is honest about what the
-                    // control does today and announces the state; the
-                    // radiogroup is R-84.
-                    aria-pressed={isChosen}
-                    // Read-only once logged, and still focusable: rule 07
-                    // bans `disabled`, and a receipt is for reading.
-                    aria-disabled={isLocked || undefined}
-                    onClick={() => {
-                      if (!isLocked) setVerdict(choice.value);
-                    }}
-                    // `target` at the site rather than inside
-                    // `VERDICT_BASE`: the 44px hit area is this button's,
-                    // and `targets-and-focus` resolves a double-quoted
-                    // constant but not a template literal — which both of
-                    // these now are, since they share a base.
-                    className={`target ${isChosen ? verdictChosen(choice.value) : VERDICT_RESTING}`}
-                  >
-                    {isChosen ? (
-                      <span
-                        aria-hidden="true"
-                        className={`bracket-close-start ${BRACKET_BASE} left-1`}
-                      >
-                        [
-                      </span>
-                    ) : undefined}
-                    {choice.label}
-                    {isChosen ? (
-                      <span
-                        aria-hidden="true"
-                        className={`bracket-close-end ${BRACKET_BASE} right-1`}
-                      >
-                        ]
-                      </span>
-                    ) : undefined}
-                  </button>
-                );
-              })}
-            </div>
+            <VerdictRow
+              verdict={verdict}
+              isLocked={isLocked}
+              onChoose={setVerdict}
+            />
             <FieldMessage name="verdict" error={form.fieldErrors.verdict} />
           </fieldset>
 
@@ -589,6 +549,7 @@ export function VerdictForm({
             <>
               <AudiencePicker
                 audience={audience}
+                isVerified={isVerified}
                 onChange={setAudience}
                 field={form.field}
                 privateLine={privateLine}
@@ -640,6 +601,117 @@ function chipHistory(
 }
 
 /**
+ * The answer being given, seeded from the entry rather than from nothing:
+ * the verdict, the tags, and each piece's flag.
+ *
+ * `entry.items[].flag` is what was saved last time, and starting empty
+ * meant re-opening a verdict showed every piece as unflagged — so saving
+ * again silently cleared flags the runner had set.
+ */
+function useAnswer(entry: Entry) {
+  const [verdict, setVerdict] = useState<number | undefined>(entry.verdict);
+  const [tags, setTags] = useState<Set<string>>(new Set(entry.tags));
+  const [flags, setFlags] = useState<Record<string, ItemFlagChoice>>(() =>
+    Object.fromEntries(
+      entry.items.map((item) => [item.itemId, item.flag ?? "none"]),
+    ),
+  );
+  return { verdict, setVerdict, tags, setTags, flags, setFlags };
+}
+
+/**
+ * Who sees the run, held at PRIVATE for an unconfirmed runner (R47·123):
+ * what the group shows is what the save sends, so neither says a run will
+ * be shared when D-50 keeps it private.
+ */
+function useHeldAudience(
+  saved: Entry["audience"],
+  isVerified: boolean,
+): readonly [WritableAudience, (audience: WritableAudience) => void] {
+  const [picked, setPicked] = useState<WritableAudience>(
+    writableAudienceOf(saved),
+  );
+  return [isVerified ? picked : "private", setPicked];
+}
+
+/**
+ * A3's verdict row: five native radios, each filling its cell (R-84 c).
+ * Its own component so the form keeps under the complexity bar; the
+ * choosing, locking and drawing of a cell are this row's alone.
+ */
+function VerdictRow({
+  verdict,
+  isLocked,
+  onChoose,
+}: Readonly<{
+  verdict: number | undefined;
+  isLocked: boolean;
+  onChoose: (value: VerdictValue) => void;
+}>): JSX.Element {
+  return (
+    <div
+      // The name design's board gives this region
+      // (`data-part="verdict-row"`), so a conformance run can diff
+      // the two against each other rather than the whole screen —
+      // and so a failure reports as "A3 verdict row". `data-slot` is
+      // this repo's existing spelling of the same idea; `top-bar`
+      // and `tab-bar` already match design's names for free.
+      data-slot="verdict-row"
+      className="grid grid-cols-5 gap-1"
+    >
+      {verdictScale.map((choice) => {
+        const isChosen = verdict === choice.value;
+        return (
+          <label
+            key={choice.value}
+            // `target` at the site rather than inside
+            // `VERDICT_BASE`: the 44px hit area is this cell's,
+            // and `targets-and-focus` resolves a double-quoted
+            // constant but not a template literal — which both of
+            // these now are, since they share a base.
+            className={`target ${VERDICT_FOCUS} ${isChosen ? verdictChosen(choice.value) : VERDICT_RESTING}`}
+          >
+            <input
+              type="radio"
+              name="verdict"
+              value={choice.value}
+              // Announced as checked: the ink inversion and the
+              // brackets are drawn, and the brackets are
+              // `aria-hidden` (rule 01).
+              checked={isChosen}
+              // Read-only once logged, and still focusable: rule
+              // 07 bans `disabled`, and a receipt is for reading.
+              aria-disabled={isLocked || undefined}
+              onChange={() => {
+                if (!isLocked) onChoose(choice.value);
+              }}
+              className={VERDICT_RADIO}
+            />
+            {isChosen ? (
+              <span
+                aria-hidden="true"
+                className={`bracket-close-start ${BRACKET_BASE} left-1`}
+              >
+                [
+              </span>
+            ) : undefined}
+            {choice.label}
+            {isChosen ? (
+              <span
+                aria-hidden="true"
+                className={`bracket-close-end ${BRACKET_BASE} right-1`}
+              >
+                ]
+              </span>
+            ) : undefined}
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
  * Who sees this run (round 41 #86a): A3's share switch became a three-row
  * radiogroup, PRIVATE / SHARED / PUBLIC, each with what it means under its
  * label. Under the group, the line for the audience picked: the route's
@@ -651,20 +723,30 @@ function chipHistory(
  * picked radio alone (`optionDescribedBy`): the line is about that
  * choice, and on the unpicked two it would say what they do not do. The
  * runner's default is what the entry started with, and PUBLIC is never
- * picked for them. An unconfirmed runner may pick any; the save holds the run at
- * PRIVATE (D-50), as `privateLine` says.
+ * picked for them.
+ *
+ * **An unconfirmed runner** (R47·123): the group is held at PRIVATE, every
+ * option at full strength and none disabled. SHARED or PUBLIC opens #17's
+ * confirm-email sheet without moving the selection, and the sheet hands
+ * focus back to the option pressed (a modal dialog returns focus where it
+ * was). Round 27's line, "Confirm your email to share. This run saves
+ * private.", sits under the group and describes every option, since it is
+ * why none but PRIVATE takes; D-108 E puts it before the totals line.
  */
 function AudiencePicker({
   audience,
+  isVerified,
   onChange,
   field,
   privateLine,
 }: Readonly<{
   audience: WritableAudience;
+  isVerified: boolean;
   onChange: (audience: WritableAudience) => void;
   field: (name: string) => FieldProps;
   privateLine: (hintId: string) => ReactNode;
 }>): JSX.Element {
+  const askToConfirm = useUnconfirmedRefusal();
   // SHARED's own sub-line says all it needs; the other two have a line.
   const hasLine = audience === "private" || audience === "world";
   return (
@@ -676,11 +758,18 @@ function AudiencePicker({
         optionLabels={AUDIENCE_LABELS}
         optionHints={AUDIENCE_HINTS}
         optionDescribedBy={(option) =>
-          hasLine && option === audience ? SHARE_HINT_ID : undefined
+          !isVerified || (hasLine && option === audience)
+            ? SHARE_HINT_ID
+            : undefined
         }
         value={audience}
         field={field}
-        onChange={onChange}
+        // Held, a change can only be a press on SHARED or PUBLIC: the
+        // checked radio fires none. So every one asks for the address.
+        onChange={(next) => {
+          if (isVerified) onChange(next);
+          else askToConfirm?.("share");
+        }}
       />
       {audience === "private" ? privateLine(SHARE_HINT_ID) : undefined}
       {audience === "world" ? (

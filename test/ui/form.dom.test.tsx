@@ -1790,6 +1790,43 @@ function restingField(name: string) {
  * `ToggleField` — the checkbox `GarmentForm` wrote twice.
  */
 describe("ToggleField", () => {
+  it("is a checkbox by default, and a switch when asked (R-84 a)", async () => {
+    // Rule 05: a setting that takes effect at once is a switch; a field
+    // saved with its form stays a checkbox. Both are native checkboxes,
+    // so space toggles either.
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <ToggleField
+        name="windResistant"
+        label="Wind resistant"
+        field={restingField}
+        isOn={false}
+        onChange={onChange}
+      />,
+    );
+    const box = screen.getByRole("checkbox", { name: "Wind resistant" });
+    expect(box).not.toHaveAttribute("role");
+    expect(screen.queryByRole("switch")).toBeNull();
+
+    rerender(
+      <ToggleField
+        name="blurFaces"
+        label="Blur faces"
+        field={restingField}
+        isOn
+        isSwitch
+        onChange={onChange}
+      />,
+    );
+    const toggle = screen.getByRole("switch", { name: "Blur faces" });
+    expect(toggle).toHaveAttribute("type", "checkbox");
+    expect(toggle).toBeChecked();
+    toggle.focus();
+    await user.keyboard(" ");
+    expect(onChange).toHaveBeenCalledWith(false);
+  });
+
   it("reports the box's new state, not its old one", async () => {
     const onChange = vi.fn();
     const user = userEvent.setup();

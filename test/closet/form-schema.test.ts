@@ -103,7 +103,7 @@ describe("garmentFormSchema", () => {
     ["brand", "b".repeat(61), "Keep the brand under 60 characters."],
     ["size", "s".repeat(21), "Keep the size under 20 characters."],
     ["color", "c".repeat(31), "Keep the color under 30 characters."],
-    ["productUrl", httpUrl(), "Use a link that starts with https://."],
+    ["productUrl", "ftp://example.com", "Use a link that starts with https://."],
     [
       "productUrl",
       "not a url",
@@ -221,13 +221,7 @@ describe("F's product link (round 43 #93)", () => {
     expect(linkOf(" ".repeat(3))).toBeUndefined();
   });
 
-  it("never upgrades a link typed with http", () => {
-    const result = garmentFormSchema.safeParse({
-      ...VALID,
-      productUrl: httpUrl(),
-    });
-    expect(result.error?.issues[0]?.message).toBe(
-      "Use a link that starts with https://.",
-    );
+  it("takes a link typed with http and saves it on https (D-166)", () => {
+    expect(linkOf(httpUrl())).toBe("https://example.com");
   });
 });

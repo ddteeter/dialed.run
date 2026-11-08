@@ -1,4 +1,6 @@
-import { uiGroupLabels } from "./groups";
+import { garmentTypeWord } from "../../lib/contracts/garment-fields";
+import type { GarmentType } from "../../lib/contracts/garment-fields";
+import { uiGroups } from "./groups";
 import type { UiGroup } from "./groups";
 
 /**
@@ -47,41 +49,80 @@ export const SHARE_WORDS = {
 } as const satisfies Record<BarShare, string>;
 
 /**
- * E2-lite's summary sentence (Feed board, through round 27; round 47
- * #114): what the matched runners who called it dialed wore, in round 35
- * #54's share words over those runners alone — "Most got it right in tops
- * and bottoms. Some added hands / head."
+ * One garment type the dialed runners wore, two or more of them to it:
+ * the sentence's unit (round 49, R49·137a′).
+ */
+export interface DialedType {
+  type: GarmentType;
+  runners: number;
+  /**
+  The earliest of C's rail groups it was worn in, for the clause's order.
+  */
+  group: UiGroup;
+  /**
+  When it was last dialed, for the tie-break past three.
+  */
+  lastDialedAt: number;
+}
+
+/**
+ * E2-lite's summary sentence (Feed board, through round 27; round 47 #114;
+ * round 49 #137): what the matched runners who called it dialed wore, in
+ * round 35 #54's share words over those runners alone — "Most got it
+ * right in long sleeve and shorts. Some added gloves."
  *
- * The first word that has groups leads with "got it right in", and every
- * word after it "added": All, then Most, then Some. The groups are the
- * dialed runners' rows, two runners or more to a row, as the bars are
- * (`shownGroups`), named as the bars name them. No dialed runners, or none
- * two to a group, is no sentence: the block above it still stands.
+ * - **Types, not groups** (137a′): each in the sentence's own word,
+ *   `garmentTypeWord`. No fallback to category (137b′): each type is
+ *   named at its own strength, and #114's fewer-than-2 rule has already
+ *   dropped any that fewer than 2 wore.
+ * - **Tiers** (137c′): clauses go All, then Most, then Some. The first
+ *   reads "got it right in" and each later one "added". There is no merge.
+ * - **At most three to a clause** (137b′): past three, the lowest counts
+ *   drop, ties to the one dialed most recently. Those kept go in C's rail
+ *   group order, then by count.
+ * - **A serial comma** (137c): "long sleeve, shorts, and gloves".
+ *
+ * No dialed runners, or no type two to it, is no sentence: the block
+ * above it still stands.
  */
 export function summarySentence(
-  dialed: Readonly<{
-    runners: number;
-    groups: readonly { group: UiGroup; runners: number }[];
-  }>,
+  dialed: Readonly<{ runners: number; types: readonly DialedType[] }>,
 ): string | undefined {
-  const shares = withShares(dialed.groups, dialed.runners);
+  const shares = withShares(dialed.types, dialed.runners);
   const clauses = SHARE_ORDER.map((share) => ({
     share,
-    groups: shares
-      .filter((bar) => bar.share === share)
-      .map((bar) => bar.row.group),
-  })).filter((clause) => clause.groups.length > 0);
+    types: clauseTypes(
+      shares.filter((bar) => bar.share === share).map((bar) => bar.row),
+    ),
+  })).filter((clause) => clause.types.length > 0);
   if (clauses.length === 0) return undefined;
   const list = new Intl.ListFormat("en");
   return clauses
-    .map(({ share, groups }, index) => {
-      const named = list.format(
-        groups.map((group) => uiGroupLabels[group].toLowerCase()),
-      );
+    .map(({ share, types }, index) => {
+      const named = list.format(types.map((row) => garmentTypeWord(row.type)));
       const verb = index === 0 ? "got it right in" : "added";
       return `${SHARE_WORDS[share]} ${verb} ${named}.`;
     })
     .join(" ");
+}
+
+/**
+The most a clause names (round 49, 137b′).
+*/
+const CLAUSE_MAX = 3;
+
+/**
+ * One clause's types: the three strongest, ties to the most recently
+ * dialed, then put in rail group order. The second sort is stable, so
+ * within a group they stay by count.
+ */
+function clauseTypes(types: readonly DialedType[]): DialedType[] {
+  return types
+    .toSorted(
+      (a, b) => b.runners - a.runners || b.lastDialedAt - a.lastDialedAt,
+    )
+    .slice(0, CLAUSE_MAX)
+    .toSorted((a, b) => uiGroups.indexOf(a.group) - uiGroups.indexOf(b.group));
 }
 
 const SHARE_ORDER = [

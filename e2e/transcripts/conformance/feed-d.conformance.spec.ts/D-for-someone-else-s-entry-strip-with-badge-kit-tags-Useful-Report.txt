@@ -14,9 +14,6 @@ end of heading, @d_runner_#, level 1
 A bit warm
 #° · clear
 link, Weather data provided by Visual Crossing
-paragraph
-Wore the shell for a forecast that never showed up.
-end of paragraph
 Kit
 list
 listitem, level 1, position 1, set size 1

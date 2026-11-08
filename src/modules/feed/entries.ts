@@ -225,7 +225,6 @@ export interface SubmitVerdictInput {
   entryId: string;
   verdict: number;
   audience: WritableAudience;
-  caption?: string | undefined;
   tags: readonly EntryTag[];
   itemFlags: readonly ItemFlagInput[];
   effort?: Effort | undefined;
@@ -302,9 +301,7 @@ export async function submitVerdict(
       .set({
         verdict: input.verdict,
         audience,
-        // A clear-to-null update needs a real SQL NULL, not `undefined`
-        // (drizzle drops `undefined` set-values entirely — see mapUpdateSet).
-        caption: input.caption ?? sql`NULL`,
+        // `caption` is not written: cut for v1 (D-167), column kept.
       })
       .where(eq(outfitEntries.id, input.entryId)),
     database
@@ -350,7 +347,7 @@ export async function submitVerdict(
   // Stryker disable next-line ConditionalExpression
   if (first === undefined) return;
   await database.batch([first, ...rest]);
-  // Design 163: a PUBLIC kit's page shows its verdict and caption, and a
+  // Design 163: a PUBLIC kit's page shows its verdict, and a
   // kit leaving PUBLIC is a retraction; one coming to it replaces the
   // not-public page cached at its path. Either way the edge is told, and
   // a kit that was never PUBLIC has nothing there to purge.
@@ -611,7 +608,6 @@ export interface EntryDetail extends EntryRunFields {
   id: string;
   userId: string;
   audience: Audience;
-  caption: string | undefined;
   createdAt: number;
   items: EntryDetailItem[];
   photoKeys: string[];
@@ -751,7 +747,6 @@ export async function getEntryDetail(
     deviceName: run.deviceName ?? undefined,
     verdict: entry.verdict ?? undefined,
     audience: entry.audience,
-    caption: entry.caption ?? undefined,
     createdAt: entry.createdAt,
     items: entryItemRows.map((row) => {
       const garment = garmentsById.get(row.itemId);

@@ -100,3 +100,31 @@ export function garmentTypesFor(
  */
 export const allGarmentTypes: readonly GarmentType[] =
   garmentCategoriesInOrder.flatMap((category) => garmentTypesFor(category));
+
+/**
+ * Each type as E2-lite's summary sentence says it, in lower case (round
+ * 49, R49·137a′: "the tap-list words in lowercase ("long sleeve",
+ * "shorts", "beanie")").
+ *
+ * Derived from the contract's own name for the type, split at its
+ * capitals, so a new type has a word the day it is added: `longSleeve`
+ * reads "long sleeve", `neckGaiter` "neck gaiter". `halfZip` is the one
+ * the split cannot spell; the closet writes it "Half-zip".
+ *
+ * **A marked guess** (design 184, design ask #495): no list in the build
+ * words every type that way, and F's TYPE chips say "L/S crew" where the
+ * board says "long sleeve".
+ */
+export function garmentTypeWord(type: GarmentType): string {
+  return type === "halfZip"
+    ? "half-zip"
+    : type.replaceAll(/[A-Z]/gu, (capital) => ` ${capital.toLowerCase()}`);
+}
+
+/**
+ * A stored type, read back as the contract's: anything else (none, or a
+ * value the contract no longer has) is no type.
+ */
+export function garmentTypeOf(stored: string | null): GarmentType | undefined {
+  return allGarmentTypes.find((type) => type === stored);
+}

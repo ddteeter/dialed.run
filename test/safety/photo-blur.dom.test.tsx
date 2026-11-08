@@ -350,7 +350,7 @@ describe("with blur turned off", () => {
     });
     detect.mockClear();
 
-    await user.click(screen.getByRole("checkbox", { name: "Blur faces" }));
+    await user.click(screen.getByRole("switch", { name: "Blur faces" }));
 
     // Redrawn through the canvas (task 128 · SAF-2): the original carries
     // the phone's metadata, GPS included, and is never what leaves.
@@ -375,7 +375,7 @@ describe("with blur turned off", () => {
       />,
     );
 
-    await user.click(screen.getByRole("checkbox", { name: "Blur faces" }));
+    await user.click(screen.getByRole("switch", { name: "Blur faces" }));
 
     expect(storage.getItem("dialed.blurFaces")).toBe("off");
   });
@@ -393,7 +393,7 @@ describe("with blur turned off", () => {
       />,
     );
 
-    await user.click(screen.getByRole("checkbox", { name: "Blur faces" }));
+    await user.click(screen.getByRole("switch", { name: "Blur faces" }));
 
     await waitFor(() => {
       expect(screen.queryByText("Tap to blur")).not.toBeInTheDocument();
@@ -416,7 +416,7 @@ describe("with blur turned off", () => {
       "Auto-blur found nothing to cover. Tap the photo or a cell to blur an area.",
     );
 
-    await user.click(screen.getByRole("checkbox", { name: "Blur faces" }));
+    await user.click(screen.getByRole("switch", { name: "Blur faces" }));
 
     // Round 22, item 22: the same paragraph, now saying blur is off —
     // plain body copy, not a warning colour.
@@ -687,7 +687,7 @@ describe("the blur toggle itself", () => {
     // nothing else checks them. Without a name the control has no
     // identity; marked readonly it reads to assistive tech as one a
     // runner cannot change, which is the opposite of what it is.
-    const toggle = screen.getByRole("checkbox", { name: /Blur faces/ });
+    const toggle = screen.getByRole("switch", { name: /Blur faces/ });
     expect(toggle).toHaveAttribute("name", "blurFaces");
     expect(toggle).not.toHaveAttribute("readonly");
   });
@@ -848,7 +848,7 @@ describe("the sentences go to the screen's region, not one of their own", () => 
 
     await waitFor(() => {
       expect(
-        screen.getByRole("checkbox", { name: /Blur faces/ }),
+        screen.getByRole("switch", { name: /Blur faces/ }),
       ).not.toBeChecked();
     });
     expect(announce).not.toHaveBeenCalled();
@@ -1129,9 +1129,9 @@ describe("with blur off from the start (SAF-2)", () => {
       />,
     );
     await screen.findByText("Photo not added");
-    await user.click(screen.getByRole("checkbox", { name: "Blur faces" }));
+    await user.click(screen.getByRole("switch", { name: "Blur faces" }));
     expect(screen.queryByText("Photo not added")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("checkbox", { name: "Blur faces" }));
+    await user.click(screen.getByRole("switch", { name: "Blur faces" }));
     await waitFor(() => {
       expect(toFile).toHaveBeenCalledTimes(3);
     });
@@ -1423,7 +1423,7 @@ describe("W3 waits for the runner (round 28 #5)", () => {
       expect(use).not.toHaveAttribute("aria-disabled");
     });
 
-    await user.click(screen.getByRole("checkbox", { name: "Blur faces" }));
+    await user.click(screen.getByRole("switch", { name: "Blur faces" }));
 
     // The unblurred redraw is not one press from the upload any more.
     expect(use).toHaveAttribute("aria-disabled", "true");
@@ -1500,7 +1500,7 @@ describe("W3 waits for the runner (round 28 #5)", () => {
     await waitFor(() => {
       expect(use).not.toHaveAttribute("aria-disabled");
     });
-    const toggle = screen.getByRole("checkbox", { name: "Blur faces" });
+    const toggle = screen.getByRole("switch", { name: "Blur faces" });
     await user.click(toggle);
     await waitFor(() => {
       expect(use).not.toHaveAttribute("aria-disabled");

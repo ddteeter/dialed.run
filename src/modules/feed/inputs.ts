@@ -69,7 +69,8 @@ export const submitVerdictInput = z.object({
   // The writable subset, so nothing can store `groups` before groups ship
   // (D-109, design 131).
   audience: writableAudienceSchema,
-  caption: z.string().max(280).optional(),
+  // No `caption`: the kit caption is cut for v1 (D-167). The column
+  // stays, and an input that still sends one has it stripped here.
   tags: z.array(entryTagSchema).max(entryTagSchema.options.length),
   itemFlags: z.array(itemFlagInput),
   // Sent only when the runner tapped an effort (G5): the run already holds

@@ -70,6 +70,45 @@ async function priorEntry(params: {
   });
 }
 
+/**
+ * An entry on a run that spans two hours: it set out at `startC` and its
+ * second hour felt like `laterC`, rated `verdict`.
+ */
+async function twoHourEntry(params: {
+  userId: string;
+  lat: number;
+  startC: number;
+  laterC: number;
+  verdict: number;
+}): Promise<string> {
+  const runId = await makeRun({
+    userId: params.userId,
+    lat: params.lat,
+    lng: -93.27,
+    startedAt: NOW,
+    durationS: 2 * HOURS,
+  });
+  for (const [offset, feelsLikeC] of [
+    [0, params.startC],
+    [HOURS, params.laterC],
+  ] as const) {
+    await makeObservation({
+      lat: params.lat,
+      lng: -93.27,
+      startedAt: NOW + offset,
+      tempC: feelsLikeC + 2,
+      feelsLikeC,
+      precipMm: 0,
+    });
+  }
+  return makeEntry({
+    userId: params.userId,
+    runId,
+    createdAt: NOW,
+    verdict: params.verdict,
+  });
+}
+
 beforeEach(async () => {
   await resetTables();
 });
@@ -185,5 +224,65 @@ describe("nearestPriorEntry", () => {
     await priorEntry({ userId: theirs, lat: 49.99, feelsLikeC: 3 });
 
     expect(await nearestPriorEntry(mine, conditions())).toBeUndefined();
+  });
+
+  describe("reads each past run at its worst hour (D-165)", () => {
+    // The target (today's run, 3°) is unrated, so it is its starting hour.
+    // A past run is read where its own conditions are judged: the coldest
+    // hour of one that felt cold, the warmest of one that felt warm, and
+    // the starting hour of one that was dialed.
+    it("a run that felt cold is matched at its coldest hour", async () => {
+      const userId = await makeUser();
+      // Set out at exactly 3° but froze at -4°: 7 away, not 0.
+      const cold = await twoHourEntry({
+        userId,
+        lat: 51.11,
+        startC: 3,
+        laterC: -4,
+        verdict: -1,
+      });
+      const steady = await priorEntry({ userId, lat: 52.22, feelsLikeC: 6 });
+
+      const suggestion = await nearestPriorEntry(userId, conditions());
+
+      expect(suggestion?.entryId).toBe(steady);
+      expect(suggestion?.entryId).not.toBe(cold);
+      expect(suggestion?.feelsLikeDeltaC).toBe(3);
+    });
+
+    it("a run that felt warm is matched at its warmest hour", async () => {
+      const userId = await makeUser();
+      // Set out at -5° (8 away) and warmed to 4° (1 away).
+      const warm = await twoHourEntry({
+        userId,
+        lat: 53.33,
+        startC: -5,
+        laterC: 4,
+        verdict: 2,
+      });
+      await priorEntry({ userId, lat: 54.44, feelsLikeC: 6 });
+
+      const suggestion = await nearestPriorEntry(userId, conditions());
+
+      expect(suggestion?.entryId).toBe(warm);
+      expect(suggestion?.feelsLikeDeltaC).toBe(1);
+    });
+
+    it("a dialed run is matched at the hour it set out in", async () => {
+      const userId = await makeUser();
+      const dialed = await twoHourEntry({
+        userId,
+        lat: 55.55,
+        startC: 3,
+        laterC: -4,
+        verdict: 0,
+      });
+      await priorEntry({ userId, lat: 56.66, feelsLikeC: 6 });
+
+      const suggestion = await nearestPriorEntry(userId, conditions());
+
+      expect(suggestion?.entryId).toBe(dialed);
+      expect(suggestion?.feelsLikeDeltaC).toBe(0);
+    });
   });
 });
