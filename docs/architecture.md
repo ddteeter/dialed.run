@@ -25,6 +25,7 @@ flowchart LR
         R2[(R2: photos)]
         ZC{{Zone cache + CSAM Scanning Tool\neach copy 60 s}}
         R2P[(R2: dialed-public-photos\nPUBLIC_PHOTOS, unguessable keys)]
+        R2B[(R2: dialed-media-backup\nMEDIA_BACKUP)]
         Q[[Queue: imports]]
         QE[[Queue: enrichment]]
         QX[[Queue: exports]]
@@ -41,6 +42,7 @@ flowchart LR
     W --> R2
     W -->|copy a PUBLIC kit's screened photo;\ndelete on every retraction\nand the hourly sweep| R2P
     ZC -->|miss| R2P
+    W -->|daily: copy new and changed photos;\na deleted one's copy goes 30 days later| R2B
     W -->|produce| Q
     Q -->|consume| W
     W -->|produce| QE
@@ -686,7 +688,9 @@ flowchart LR
   setup — the recovery story is "restore to timestamp", and the two
   databases restore independently; the steps are `docs/deployment.md` §9.
   R2 originals are the photo source of truth; derived sizes are
-  regenerable.
+  regenerable. The daily digest copies garment and entry photos into
+  `dialed-media-backup` (`ops/media-backup.ts`, D-172, design 186), and a
+  deleted photo's copy leaves 30 days later; `docs/deployment.md` §10.
 - **Deploys**: on a push to `main` with `DEPLOY_ENABLED`, after the unit
   job and both e2e legs, the deploy job applies both databases' migrations
   and then runs `wrangler deploy`, in the `production` environment that

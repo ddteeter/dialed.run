@@ -6,6 +6,11 @@
 declare namespace Cloudflare {
   interface Env {
     SENTRY_DSN?: string;
+    /** The photo backup's bucket (D-172, design 186), `dialed-media-backup`.
+     * Optional until the owner adds the binding to `wrangler.jsonc`; then
+     * `wrangler types` declares it and this line goes. Absent, the daily
+     * digest says no photo is backed up (law 5). */
+    MEDIA_BACKUP?: R2Bucket;
     /** The speed rollup's Analytics Engine SQL API token (design 165),
      * Account Analytics Read, and the account it reads, a var. Either
      * absent or empty: the rollup reports itself unconfigured in the daily

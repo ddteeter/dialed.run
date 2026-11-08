@@ -739,6 +739,7 @@ describe("the digest reports each kind on its own (OPS-2)", () => {
       "screener-quiet",
       "account-deletion",
       "speed",
+      "media-backup",
     ]);
   });
 
@@ -763,6 +764,16 @@ describe("the digest reports each kind on its own (OPS-2)", () => {
     expect(events.map((event) => event.report.tags)).toStrictEqual([
       { digest: "daily", digest_kind: "speed" },
     ]);
+  });
+
+  it("backs up a new photo into MEDIA_BACKUP on the daily firing (D-172, design 186)", async () => {
+    const key = `items/${newUlid()}/${newUlid()}/original.jpg`;
+    await env.MEDIA.put(key, "photo bytes");
+
+    await handleScheduled(DIGEST, recordingReporter().reporter, {});
+
+    const copy = await env.MEDIA_BACKUP?.get(key);
+    expect(await copy?.text()).toBe("photo bytes");
   });
 
   it("reports each hourly speed finding as its own event on the :30 firing (design 165)", async () => {

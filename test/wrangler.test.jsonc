@@ -60,6 +60,7 @@
     { "binding": "MEDIA", "bucket_name": "dialed-media" },
     { "binding": "IMPORTS", "bucket_name": "dialed-imports" },
     { "binding": "PUBLIC_PHOTOS", "bucket_name": "dialed-public-photos" },
+    { "binding": "MEDIA_BACKUP", "bucket_name": "dialed-media-backup" },
   ],
   "queues": {
     "producers": [
