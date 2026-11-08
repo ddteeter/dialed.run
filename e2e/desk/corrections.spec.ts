@@ -1,5 +1,5 @@
 /**
- * The corrections states the journey (`corrections.demo.spec.ts`) walks
+ * The corrections states the journey (`corrections.journey.spec.ts`) walks
  * past: WRONG?'s input for each kind of field, its refusal of an empty
  * send, a field that opens with what was sent (R48·129c, e), and the
  * Desk's "N more runners", Decline with a reason, and the refused name

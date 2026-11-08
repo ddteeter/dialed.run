@@ -6,9 +6,9 @@
  * (D-164, R-66) — one journey, one video.
  *
  * Needs `ADMIN_USER_IDS=e2e-desk-operator` in the dev server's
- * `.dev.vars`, as `operator.demo.spec.ts` does.
+ * `.dev.vars`, as `operator.journey.spec.ts` does.
  *
- * Exactly one test() per demo spec.
+ * Exactly one test() per journey spec.
  */
 import { and, eq, inArray } from "drizzle-orm";
 
