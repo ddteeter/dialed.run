@@ -685,19 +685,15 @@ photo a runner ever deleted, which the privacy policy does not allow.
 
 **What the daily digest says** (kind `media-backup`): nothing when every
 photo is backed up; "N photos left for the next firing" when the cap was
-reached; "N copies or deletes failed" (the next firing retries them); and
-"MEDIA_BACKUP is not bound" every day until the owner adds the binding.
+reached; and "N copies or deletes failed" (the next firing retries them).
 
 **Owner's setup, once, before friends:**
 
-1. Create the bucket (§2): `wrangler r2 bucket create dialed-media-backup
+1. Create the bucket (§2) **before the deploy that binds it**: the
+   binding is already in `wrangler.jsonc`, and a deploy whose bucket does
+   not exist fails. `wrangler r2 bucket create dialed-media-backup
 --location enam`.
-2. Bind it in `wrangler.jsonc`'s `r2_buckets`:
-   `{ "binding": "MEDIA_BACKUP", "bucket_name": "dialed-media-backup" }`.
-   `test/bindings-conformance.test.ts` fails until it is there. Then run
-   `npm run cf-typegen` and remove `MEDIA_BACKUP` from `src/env/env.d.ts`
-   (it is declared there only until the binding exists).
-3. **Lock `quarantine/` instead of copying it** (#530). In the dashboard:
+2. **Lock `quarantine/` instead of copying it** (#530). In the dashboard:
    R2 → `dialed-media` → Settings → Bucket lock rules → add a rule for
    prefix `quarantine/`, retention **365 days**. Locks refuse deletion and
    overwrite and take precedence over lifecycle rules

@@ -19,9 +19,7 @@ import {
  */
 
 function backupBucket(): R2Bucket {
-  const bucket = env.MEDIA_BACKUP;
-  if (bucket === undefined) throw new Error("the test pool binds MEDIA_BACKUP");
-  return bucket;
+  return env.MEDIA_BACKUP;
 }
 
 /**
@@ -380,20 +378,6 @@ describe("a photo deleted from MEDIA (#529)", () => {
 
     expect(anomalies).toStrictEqual([
       "media-backup: 1 copies or deletes failed; the next firing retries them",
-    ]);
-  });
-});
-
-describe("without the binding", () => {
-  it("backs up nothing and says so every day (law 5)", async () => {
-    const anomalies: string[] = [];
-
-    await backUpMedia({ source: env.MEDIA, backup: undefined }, anomalies, {
-      now: nowSeconds(),
-    });
-
-    expect(anomalies).toStrictEqual([
-      "media-backup: MEDIA_BACKUP is not bound, so no photo is backed up",
     ]);
   });
 });

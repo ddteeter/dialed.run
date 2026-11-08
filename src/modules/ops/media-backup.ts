@@ -186,18 +186,11 @@ async function expireGone(
  * every photo is backed up and nothing failed.
  */
 export async function backUpMedia(
-  buckets: { readonly source: Source; readonly backup: Backup | undefined },
+  buckets: { readonly source: Source; readonly backup: Backup },
   anomalies: string[],
   options: MediaBackupOptions,
 ): Promise<void> {
   const { source, backup } = buckets;
-  if (backup === undefined) {
-    // Law 5: an unbound bucket stops only the backup, and says so daily.
-    anomalies.push(
-      "media-backup: MEDIA_BACKUP is not bound, so no photo is backed up",
-    );
-    return;
-  }
   const tally: Tally = { copied: 0, owed: 0, failed: 0 };
   const maxCopies = options.maxCopies ?? MAX_COPIES_PER_FIRING;
   const prefixes = options.prefixes ?? BACKED_UP_PREFIXES;

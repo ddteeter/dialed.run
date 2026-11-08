@@ -289,7 +289,7 @@ audit's list; where the two differ, the plan is current.
 - **R2 has no versioning**, so the daily digest copies garment and entry
   photos into `dialed-media-backup` (D-172, design 186), and a deleted
   photo's copy leaves 30 days later (#529). `quarantine/` is locked with
-  an R2 bucket lock instead of copied (#530). The bucket, its binding and
+  an R2 bucket lock instead of copied (#530). The bucket and
   the lock are the owner's steps, before friends: `docs/deployment.md`
   §10.
 

@@ -772,7 +772,7 @@ describe("the digest reports each kind on its own (OPS-2)", () => {
 
     await handleScheduled(DIGEST, recordingReporter().reporter, {});
 
-    const copy = await env.MEDIA_BACKUP?.get(key);
+    const copy = await env.MEDIA_BACKUP.get(key);
     expect(await copy?.text()).toBe("photo bytes");
   });
 
