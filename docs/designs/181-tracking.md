@@ -28,23 +28,23 @@ deployment plan). `docs/deferred.md` is frozen as an archive; its closed rows
 keep resolving the R-id citations in code, and each open row becomes an issue
 titled `R-NN: …`.
 
-| fact | where |
-|---|---|
-| area (closet, feed, safety, desk, auth, onboarding, shell, weather, ops, docs, infra) | label `area:*` |
-| kind: build / decision / design-ask / owner-question / watch | label `kind:*` (issue types are org-only) |
-| severity: launch-blocker / important / minor | label `sev:*` |
-| stage: friends / public / soon-after-launch / post-v1 | milestone |
-| status: Inbox → Needs owner → Needs Design → Ready → In lane → In PR → Done | Project field |
-| lane / wave | Project field (text) |
-| trigger ("when X happens") | issue body, first line |
-| links (R-id, D-id, design item, board, PR) | issue body, plus `Closes #N` in PR bodies |
+| fact                                                                                  | where                                     |
+| ------------------------------------------------------------------------------------- | ----------------------------------------- |
+| area (closet, feed, safety, desk, auth, onboarding, shell, weather, ops, docs, infra) | label `area:*`                            |
+| kind: build / decision / design-ask / owner-question / watch                          | label `kind:*` (issue types are org-only) |
+| severity: launch-blocker / important / minor                                          | label `sev:*`                             |
+| stage: friends / public / soon-after-launch / post-v1                                 | milestone                                 |
+| status: Inbox → Needs owner → Needs Design → Ready → In lane → In PR → Done           | Project field                             |
+| lane / wave                                                                           | Project field (text)                      |
+| trigger ("when X happens")                                                            | issue body, first line                    |
+| links (R-id, D-id, design item, board, PR)                                            | issue body, plus `Closes #N` in PR bodies |
 
 A wave or epic is a parent issue with sub-issues.
 
-**The Project "dialed.run".** Views: *Waiting on me* (Needs owner, by
-milestone), *Design batch* (Needs Design; each round's work order is generated
-from it), *Board* (by status), *Friends gate* (milestone friends, not Done, by
-area), *Roadmap* (by milestone). Workflows: add every new repo issue; item
+**The Project "dialed.run".** Views: _Waiting on me_ (Needs owner, by
+milestone), _Design batch_ (Needs Design; each round's work order is generated
+from it), _Board_ (by status), _Friends gate_ (milestone friends, not Done, by
+area), _Roadmap_ (by milestone). Workflows: add every new repo issue; item
 closed → Done; PR merged → linked issues Done; archive Done after 14 days.
 
 **Lifecycle.** Anyone files an issue with labels and milestone; status starts
@@ -69,6 +69,7 @@ uses the user's `gh` auth, and refuses bodies matching never-list patterns
 (emails, phone numbers, tokens) as a backstop to `.claude/rules/publishing.md`.
 
 **Steps** (a stop is an owner approval, asked in the turn):
+
 1. This doc, plus an inventory script: every open item across the surfaces as
    JSON with a source each; counts match a hand count of two surfaces.
 2. The scheme, built empty: labels, milestones, Project, fields, views,
@@ -78,7 +79,7 @@ uses the user's `gh` auth, and refuses bodies matching never-list patterns
 4. Pilot of 5: an R-row, a survey orphan, a design-deltas open item, an owner
    answer (dark theme), a launch-plan item. **Stop** on the issue shape.
 5. Bulk conversion by area in parallel subagents, each body ending `Migrated
-   from <path>:<line>`, including the 13 owner answers (Ready or closed, D-rows
+from <path>:<line>`, including the 13 owner answers (Ready or closed, D-rows
    where law). A publishing check runs first; misfits go to the owner as one
    batch (**stop**). Done when the re-run inventory finds an issue for every
    item.
@@ -125,5 +126,5 @@ any unfixed-vulnerability row goes to the owner before posting.
 3. **Four milestones:** friends, public, soon-after-launch, post-v1.
 4. **Lanes may open issues** within their scope without asking. Closing stays tied to merges.
 5. **Launch plans are split.** Unchecked work items become issues; procedures stay in the plans, linking to them.
-6. **The private home is a local folder outside every repo**, `~/dev/private/dialed.run/` (already created, with the Garmin agreement notes, the monetization notes and a README). Not a companion repo, and not `private/` inside the checkout. The restructure removes `private/` from the primary checkout and its `.git/info/exclude` line, after confirming the copies match, and the publishing rule names the folder.
+6. **The private home is a local folder outside every repo**, named in the owner's user-level instructions rather than in the repo (already created, with the Garmin agreement notes, the monetization notes and a README). Not a companion repo, and not `private/` inside the checkout. The restructure removes `private/` from the primary checkout and its `.git/info/exclude` line, after confirming the copies match, and the publishing rule names the folder.
 7. **Timing:** this lands before wave 3 dispatches.

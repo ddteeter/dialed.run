@@ -65,7 +65,7 @@ Each step is one commit that passes the commit gate.
 ## Contract touches
 
 - Schema: **one additive nullable column**, `removed_fingerprints.photo_id`
-  (migration 0072, decided with Drew on 2026-10-28). It is additive, so
+  (migration 0072, decided with the owner on 2026-10-28). It is additive, so
   the protocol says proceed. The `public-pages` branch also has a
   migration numbered 0071 that it must renumber; whichever branch merges
   second takes the next number.

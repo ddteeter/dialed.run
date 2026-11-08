@@ -16,7 +16,7 @@ board's `PENDING DELETE` state (PR#126-1). Desk Today's ban count scans
 
 1. **Hold notice (D-162).** `safety/notices.ts` gains a screening notice:
    kind `content_hidden`, the same as a report's hide, re-raised. The words
-   say "automatic screening" (pending Drew's wording). Sent from:
+   say "automatic screening" (pending the owner's wording). Sent from:
    - the classifier's `flag` in `screenPhoto`, in its one batch. The author
      is read first, only while the photo is still `pending`, so a photo a
      report already hid is not told twice;
@@ -40,7 +40,7 @@ board's `PENDING DELETE` state (PR#126-1). Desk Today's ban count scans
 3. **Statutory line (D-161 2).** The words only, all owner-approved first:
    the report reason label, `/takedown`'s intro, the Review row's intimate
    line, the Decline question and the declined email. Also a courtesy
-   removal reason mapped to the existing `othersPhotos` rule, if Drew wants
+   removal reason mapped to the existing `othersPhotos` rule, if the owner wants
    one (the open question below).
 4. **PENDING DELETE (PR#126-1).** `RunnerState` gains `PENDING DELETE`,
    derived from an `account_deletions` row. `CLOSED` wins when both hold.
@@ -52,7 +52,7 @@ board's `PENDING DELETE` state (PR#126-1). Desk Today's ban count scans
 - Schema: **one additive index** (item 5). `moderation_actions.action` and
   `review_queue.source` are text enums with no CHECK, so adding `review`
   is TypeScript only. That still changes what `docs/contracts.md` lists for
-  `moderation_actions`, which is why it is a question for Drew.
+  `moderation_actions`, which is why it is a question for the owner.
 - Files outside `safety/`: `feed/photos.ts` (fingerprint hold notice),
   `ops/desk.ts` (comment only), `routes/desk/` runners loader if the
   filter needs it. The coordinator is told about the `feed/` touch because
@@ -77,7 +77,7 @@ board's `PENDING DELETE` state (PR#126-1). Desk Today's ban count scans
 - migration chain test covers 0079. e2e: the Desk transcripts are
   regenerated.
 
-## Owner answers (Drew, 2026-11-06)
+## Owner answers (2026-11-06)
 
 1. Hold notice: "Our automatic screening flagged a photo on your run…"; kept:
    "We reviewed the flagged photo on your run and left it up." Terms gain

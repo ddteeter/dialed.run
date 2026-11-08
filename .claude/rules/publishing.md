@@ -50,4 +50,6 @@ Ask in the turn. Say what the content is, why it doesn't fit the list, and what 
 - **One-time:** publish it, and record "Published with the owner's one-time approval, <date>: <what>" in the PR body or issue. The table doesn't change.
 - **No:** it goes to the private home (see below), never to the repo. A work item answered "no" can instead be a draft item in the private Project, never converted to an issue until the owner says so (owner, 2026-11-06: unfixed security items stay drafts until they are fixed).
 
-Private home: `~/dev/private/dialed.run/`, a local folder outside every repo (owner, 2026-11-06). Never copy from it into the repo, a PR, an issue or a Design prompt. Claude memory is never the only copy.
+Private home: a local folder outside every repo, named in the owner's user-level instructions (owner, 2026-11-06). The repo doesn't name its path. A session that can't see it (a cloud session, a fresh clone) stops and asks, and never creates it. Never copy from it into the repo, a PR, an issue or a Design prompt. Claude memory is never the only copy.
+
+Docs, skills, tests and comments name the owner as "the owner", never by name (owner, 2026-11-06).

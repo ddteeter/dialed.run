@@ -12,7 +12,7 @@ import { hydrated } from "../support/conformance";
  * unlayered rule always beats a layered one, whatever the specificity.
  * It was an `@utility`, so it lived in the utilities layer and never
  * applied: every focused field drew a second square ring on the
- * borderless input inside its box (PR #104, Drew's "two borders"). happy-
+ * borderless input inside its box (PR #104, the owner's "two borders"). happy-
  * dom does not implement cascade layers, so the unit suite could not see
  * it; this reads the computed style the real cascade produced.
  */

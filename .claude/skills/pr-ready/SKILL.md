@@ -73,11 +73,12 @@ another lane yourself.
 
 - Rebase onto `origin/main` and fast-forward local `main` first: the gate
   diffs against local `main`.
-- `ship` never force-pushes. A branch you rebased after its first push needs
-  `git push --force-with-lease origin <branch>:<branch>` (backgrounded), then
-  `npm run ship` again to watch CI.
-- `ship` opens the PR from the body file and has no `--attach`. Attach demo
-  videos afterwards with `gh pr comment <n> --attach <file>`
+- `ship` force-pushes only when asked. A branch you rebased after its first
+  push ships with `npm run ship -- --body-file=<f> --force-with-lease`;
+  without the flag, git's rejection comes back as `error`.
+- `ship` attaches demo videos itself: add `--attach=<file>` (repeatable,
+  optionally `--attach=<file>#<alt text>`). It goes on a new PR as the PR
+  opens, or on an open PR as one comment, posted again on each run
   (pr-demo-video).
 - On `gate-blocked` or `ci-red`, fix it and ship again. A lane dispatched by a
   coordinator messages it on `green`; the coordinator merges and cleans up.
