@@ -4,10 +4,14 @@ import {
   createRootRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { act, render } from "@testing-library/react";
+import { act, render, cleanup } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { THEME_KEY, applyTheme } from "../../src/lib/browser/theme";
+import {
+  THEME_KEY,
+  applyTheme,
+  followOtherTabs,
+} from "../../src/lib/browser/theme";
 import { ThemeSync } from "../../src/ui/ThemeSync";
 
 /**
@@ -65,6 +69,102 @@ describe("applyTheme", () => {
 
   it("keys the device's value where the head script reads it", () => {
     expect(THEME_KEY).toBe("dialed.run:theme");
+  });
+});
+
+/**
+ * What another tab's write looks like here: the browser fires `storage`
+ * at this tab's window, and this tab's own storage is not touched. Left
+ * out, `key` and `newValue` are null: a cleared device, a removed key.
+ */
+function otherTabWrote(init: StorageEventInit = {}): void {
+  globalThis.dispatchEvent(new StorageEvent("storage", init));
+}
+
+describe("followOtherTabs", () => {
+  const unsubscribes: (() => void)[] = [];
+  afterEach(() => {
+    for (const unsubscribe of unsubscribes.splice(0)) unsubscribe();
+  });
+  function follow(target?: HTMLElement): void {
+    unsubscribes.push(followOtherTabs(target));
+  }
+
+  it.each(["light", "dark"] as const)(
+    "pins %s when another tab pins it",
+    (choice) => {
+      follow();
+
+      otherTabWrote({ key: THEME_KEY, newValue: choice });
+
+      expect(root).toHaveAttribute("data-theme", choice);
+    },
+  );
+
+  it("follows the system when another tab removes the pin", () => {
+    root.dataset.theme = "dark";
+    follow();
+
+    otherTabWrote({ key: THEME_KEY });
+
+    expect(root).not.toHaveAttribute("data-theme");
+  });
+
+  it("follows the system when another tab clears the device", () => {
+    root.dataset.theme = "dark";
+    follow();
+
+    otherTabWrote();
+
+    expect(root).not.toHaveAttribute("data-theme");
+  });
+
+  it("reads a value it does not know as the system, as the head script does", () => {
+    root.dataset.theme = "dark";
+    follow();
+
+    otherTabWrote({ key: THEME_KEY, newValue: "sepia" });
+
+    expect(root).not.toHaveAttribute("data-theme");
+  });
+
+  it("ignores another tab's other keys", () => {
+    root.dataset.theme = "dark";
+    follow();
+
+    otherTabWrote({ key: "dialed.run:other", newValue: "light" });
+
+    expect(root).toHaveAttribute("data-theme", "dark");
+  });
+
+  it("paints without writing back, so no tab answers another", () => {
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+    const removeItem = vi.spyOn(Storage.prototype, "removeItem");
+    follow();
+
+    otherTabWrote({ key: THEME_KEY, newValue: "dark" });
+    otherTabWrote({ key: THEME_KEY });
+
+    expect(setItem).not.toHaveBeenCalled();
+    expect(removeItem).not.toHaveBeenCalled();
+  });
+
+  it("writes to the root it is handed", () => {
+    const block = document.createElement("div");
+    follow(block);
+
+    otherTabWrote({ key: THEME_KEY, newValue: "light" });
+
+    expect(block).toHaveAttribute("data-theme", "light");
+    expect(root).not.toHaveAttribute("data-theme");
+  });
+
+  it("stops listening once unsubscribed", () => {
+    followOtherTabs()();
+
+    otherTabWrote({ key: THEME_KEY, newValue: "dark" });
+
+    expect(root).not.toHaveAttribute("data-theme");
   });
 });
 
@@ -132,6 +232,16 @@ describe("ThemeSync", () => {
 
     await renderUnder(() => ({ signedIn: true, theme: "sepia" }));
 
+    expect(root).toHaveAttribute("data-theme", "dark");
+  });
+  it("follows another tab while it is mounted, and stops when it is not", async () => {
+    await renderUnder(() => ({ signedIn: false }));
+
+    otherTabWrote({ key: THEME_KEY, newValue: "dark" });
+    expect(root).toHaveAttribute("data-theme", "dark");
+
+    cleanup();
+    otherTabWrote({ key: THEME_KEY, newValue: "light" });
     expect(root).toHaveAttribute("data-theme", "dark");
   });
 });

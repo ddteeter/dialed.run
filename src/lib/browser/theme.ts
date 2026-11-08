@@ -50,7 +50,34 @@ export function applyTheme(
   choice: ThemeChoice,
   root: HTMLElement = document.documentElement,
 ): void {
+  paint(root, choice);
+  remember(choice);
+}
+
+function paint(root: HTMLElement, choice: ThemeChoice): void {
   if (choice === "system") delete root.dataset.theme;
   else root.dataset.theme = choice;
-  remember(choice);
+}
+
+/**
+ * Follow a theme another tab put on the device (#511). The browser sends
+ * `storage` only to the other tabs of the origin and only on a real change,
+ * so this paints and never writes back: nothing here can loop.
+ *
+ * Read as the head script reads it: `light` or `dark` pins, and anything
+ * else means the system, including a removed key and a cleared storage
+ * (`key` null). Returns the unsubscribe, for an effect's cleanup.
+ */
+export function followOtherTabs(
+  root: HTMLElement = document.documentElement,
+): () => void {
+  const follow = (event: StorageEvent): void => {
+    if (event.key !== THEME_KEY && event.key !== null) return;
+    const value = event.newValue;
+    paint(root, value === "light" || value === "dark" ? value : "system");
+  };
+  globalThis.addEventListener("storage", follow);
+  return () => {
+    globalThis.removeEventListener("storage", follow);
+  };
 }

@@ -83,6 +83,7 @@ the system by construction.
 - Closes: #361, #470, #469, #468.
 - Opens: #488 (two dark pairings on `--unread` under 4.5:1), #494 (what
   was built on a reading of R48 and T1–T3).
+- Follow-up: #511, so an open tab follows a theme changed in another tab (`followOtherTabs` on the `storage` event, mounted by `ThemeSync`; paints only, never writes back).
 
 ## Open questions
 
