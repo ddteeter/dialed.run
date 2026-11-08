@@ -1,0 +1,346 @@
+/**
+ * Covers: A3 (log the verdict), A3b (anything specific) — choosing a
+ * verdict, flagging a kit item from the generated chips and a tag from A3b,
+ * Noted landing in the submit's place with the chips kept read-only and
+ * MORE gone (round 21), seeing the verdict on the entry, and re-opening
+ * the verdict to find the flag still there. Also A3's PRIVATE sub-line and its Change sheet (D-108 E, round 32 2a),
+ * picked from the audience radiogroup (round 41 #86a).
+ * One journey, one video. DS2, the verdict backlog — the same act done
+ * from a table instead of six sheets — is `verdict-backlog.spec.ts`'s.
+ *
+ * The photo is not here any more: round 20 moved the outfit photo from A3
+ * to A2, and its beat moved with it, to `e2e/run-logging/`.
+ *
+ * Why this exists separately from feed.journey.spec.ts: that one is the
+ * *reader's* journey (follow, browse, open, mark useful) and its Covers
+ * header claims A3 only as a display. Nothing demonstrated the writer's
+ * half.
+ */
+import { eq } from "drizzle-orm";
+
+import {
+  outfitEntries,
+  outfitEntryItems,
+  runs,
+  userProfiles,
+  wardrobeItems,
+} from "../../src/db/schema-core";
+import { user } from "../../src/db/schema-auth";
+import { weatherObservations } from "../../src/db/schema-weather";
+import { newUlid } from "../../src/lib/ids";
+import { accountEmail, storageStateFor } from "../support/accounts";
+import { expect, scene, test } from "../support/demo";
+
+// Signed in already: the account is created by the `demo-setup` project, so
+// this video opens on the verdict screen rather than on a signup form.
+test.use({ storageState: storageStateFor("verdict") });
+import { withLocalDb } from "../support/local-db";
+import { nowSeconds } from "../../src/lib/now";
+
+/** Layout stamps html[data-hydrated] once React attaches; driving
+ *  controlled inputs before that races hydration's state reset. */
+async function hydrated(page: import("@playwright/test").Page): Promise<void> {
+  await page
+    .locator('html[data-hydrated="true"]')
+    .waitFor({ state: "attached" });
+}
+
+test("log a verdict on your own run: pick it, flag an item, read the receipt", async ({
+  page,
+}, testInfo) => {
+  // Paced runs (npm run demo) need headroom; at full speed this is quick.
+  testInfo.setTimeout(150_000);
+
+  // The address the setup signed this account up with. The seeding below
+  // has to own its rows — the verdict screen is owner-only.
+  const email = accountEmail("verdict");
+  const itemId = newUlid();
+  const runId = newUlid();
+  const entryId = newUlid();
+  const observationId = newUlid();
+  // Two earlier runs in the same band, the Houdini on both and called
+  // cold — the history A3's chips are generated from. Round 21: a garment
+  // needs two runs in the band to have a record at all, so with one the
+  // chip rule suggests no garment.
+  const priors = [7, 14].map((daysAgo) => ({
+    runId: newUlid(),
+    entryId: newUlid(),
+    daysAgo,
+  }));
+
+  // Coordinates distinct from feed.demo's. Observations are cached by
+  // rounded lat/lng/hour, so sharing them would mean one spec's seed
+  // silently satisfying another's lookup — which is exactly the coupling
+  // that made the first version of this spec pass alone and fail in a full
+  // run.
+  const latR = 40.71;
+  const lngR = -74.01;
+
+  // Seed a run and an un-verdicted entry owned by the account that just
+  // signed up — the verdict screen is owner-only, so the rows have to
+  // belong to this user rather than a fixture one.
+  const startedAt = nowSeconds() - 3600;
+  const priorStart = (daysAgo: number): number => startedAt - daysAgo * 86_400;
+  await withLocalDb(async ({ core }) => {
+    const [row] = await core
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, email))
+      .limit(1);
+    if (!row) throw new Error("signup did not create a user row");
+
+    // Counted, as a new runner is (D-108 D), whatever a previous run of
+    // this spec left behind.
+    await core
+      .insert(userProfiles)
+      .values({ userId: row.id, countInTotals: true })
+      .onConflictDoUpdate({
+        target: userProfiles.userId,
+        set: { countInTotals: true },
+      });
+
+    await core.insert(wardrobeItems).values({
+      id: itemId,
+      userId: row.id,
+      name: "Houdini Jacket",
+      brand: "Patagonia",
+      category: "top",
+      layer: "outer",
+      createdAt: startedAt,
+    });
+    await core.insert(runs).values({
+      id: runId,
+      userId: row.id,
+      title: "Riverside loop",
+      startedAt,
+      durationS: 2700,
+      distanceM: 8000,
+      source: "manual",
+      indoor: false,
+      weatherStatus: "attached",
+      lat: latR,
+      lng: lngR,
+    });
+    await core.insert(outfitEntries).values({
+      id: entryId,
+      userId: row.id,
+      runId,
+      audience: "runners",
+      createdAt: startedAt,
+    });
+    await core.insert(outfitEntryItems).values({ entryId, itemId });
+
+    for (const prior of priors) {
+      await core.insert(runs).values({
+        id: prior.runId,
+        userId: row.id,
+        title: "An earlier loop",
+        startedAt: priorStart(prior.daysAgo),
+        durationS: 2700,
+        distanceM: 8000,
+        source: "manual",
+        indoor: false,
+        weatherStatus: "attached",
+        lat: latR,
+        lng: lngR,
+      });
+      await core.insert(outfitEntries).values({
+        id: prior.entryId,
+        userId: row.id,
+        runId: prior.runId,
+        verdict: -1,
+        audience: "private",
+        createdAt: priorStart(prior.daysAgo),
+      });
+      await core
+        .insert(outfitEntryItems)
+        .values({ entryId: prior.entryId, itemId });
+    }
+  });
+
+  // Seed the conditions this entry was logged in. Without an observation
+  // the screen has no temperature band, and saving takes a different
+  // branch — so this is seeded deliberately rather than left to chance.
+  //
+  // Every run, each at its own hour: the earlier ones have to land in the
+  // same band for their verdicts to count as history here.
+  await withLocalDb(async ({ weather }) => {
+    for (const [id, at] of [
+      [observationId, startedAt],
+      ...priors.map((prior) => [newUlid(), priorStart(prior.daysAgo)] as const),
+    ] as const) {
+      await weather
+        .insert(weatherObservations)
+        .values({
+          id,
+          latR,
+          lngR,
+          hourBucket: Math.floor(at / 3600),
+          tempC: 6,
+          feelsLikeC: 4,
+          humidity: 70,
+          windKph: 12,
+          precipMm: 0,
+          condition: "clear",
+          source: "visualcrossing",
+          fetchedAt: at,
+        })
+        // (lat_r, lng_r, hour_bucket) is the cache key and is UNIQUE, so a
+        // re-run inside the same hour hits the row the last run left.
+        // Upsert rather than insert: the spec has to be re-runnable, and
+        // the values below are the ones its assertions depend on.
+        .onConflictDoUpdate({
+          target: [
+            weatherObservations.latR,
+            weatherObservations.lngR,
+            weatherObservations.hourBucket,
+          ],
+          set: {
+            tempC: 6,
+            feelsLikeC: 4,
+            source: "visualcrossing",
+          },
+        });
+    }
+  });
+
+  // The way in: an entry with no verdict asks for one, once. The panel
+  // wears round 21's --dialed-tint behind a teal border.
+  await page.goto(`/feed/entry/${entryId}`);
+  await hydrated(page);
+  await scene(page, "An entry with no verdict asks for one");
+  const prompt = page.getByRole("link", {
+    name: "You didn’t log a verdict for this run. Add one?",
+  });
+  await expect(prompt).toBeVisible();
+  await prompt.click();
+  await page.waitForURL(`**/feed/verdict/${entryId}`);
+  await hydrated(page);
+
+  // A3: the five-point scale, coldest to warmest, from the one shared
+  // verdictScale rather than a per-screen copy.
+  await scene(page, "A3 · five points, coldest to warmest, one scale");
+  await page.getByRole("radio", { name: "A bit cold" }).click();
+
+  // R-97: beneath the row, this runner's own history in the run's band —
+  // loaded by the route all along, and until round 20 never shown.
+  await scene(page, "Beneath the row: your history in this band");
+  await expect(page.getByText(/^Five states\./)).toBeVisible();
+
+  // Round 20: the chips are generated, never composed. The Houdini was
+  // called cold here last week, so a cold verdict suggests it "not
+  // enough"; tags fill the row to five. Per-item signal is a flag, never a
+  // second verdict (CLAUDE.md).
+  await scene(page, "Five chips, generated from your history in this band");
+  const houdini = page.getByRole("button", {
+    name: "Houdini Jacket not enough",
+  });
+  await houdini.click();
+  await expect(houdini).toHaveAttribute("aria-pressed", "true");
+
+  // MORE › opens A3b: every garment's triple and all nine tags — how
+  // something the chips did not suggest gets said.
+  await scene(page, "MORE opens A3b: every garment, all nine tags");
+  await page.getByRole("button", { name: "More, anything specific" }).click();
+  const sheet = page.getByRole("dialog", { name: "Anything specific?" });
+  await sheet.getByRole("button", { name: "hands cold" }).click();
+  await sheet.getByRole("button", { name: "Done" }).click();
+  await expect(sheet).toBeHidden();
+  await expect(
+    page.getByRole("button", { name: "hands cold" }),
+  ).toHaveAttribute("aria-pressed", "true");
+
+  // D-108 E (round 32, 2a): private still counts, anonymously, and the
+  // runner is told so at the moment they choose it. Change opens the
+  // totals switch as a sheet over the form, so nothing picked is lost.
+  await scene(page, "Private: told it still counts, anonymously");
+  // Round 41 #86a: A3's switch is a radiogroup, PRIVATE / SHARED / PUBLIC.
+  // PUBLIC's own beat is `e2e/public-pages/`'s.
+  const audience = page.getByRole("group", { name: "Who sees this run" });
+  await audience.getByRole("radio", { name: /^Private/u }).check();
+  await expect(
+    page.getByText(
+      "Other runners won't see this run. Its kit and verdict still count, anonymously, in the guides.",
+    ),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Change whether runs count in the guides" })
+    .click();
+  const sharing = page.getByRole("dialog", { name: "Privacy" });
+  const totals = sharing.getByRole("checkbox", {
+    name: "Count my runs in anonymous totals",
+  });
+  await scene(page, "Change opens the setting in a sheet; it saves on toggle");
+  // `click`, not `uncheck`: the switch is not optimistic (§4a), so the box
+  // changes only once the save lands, which `uncheck` reads as a failure.
+  await totals.click();
+  await expect(totals).not.toBeChecked();
+  await expect(
+    sharing.getByText("Off. Your runs leave the guides at tonight's update."),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Other runners won't see this run.", { exact: true }),
+  ).toBeAttached();
+  await totals.click();
+  await expect(totals).toBeChecked();
+  await expect(
+    sharing.getByText("Shared and private runs add their temperature"),
+  ).toBeVisible();
+  await sharing.getByRole("button", { name: "Done" }).click();
+  await expect(sharing).toBeHidden();
+  await scene(page, "Back on the form, with everything still picked");
+  await expect(page.getByRole("radio", { name: "A bit cold" })).toBeChecked();
+  await audience.getByRole("radio", { name: /^Shared/u }).check();
+
+  await scene(page, "Saving reports the wear rate in this temperature band");
+  await page.getByRole("button", { name: "Log it" }).click();
+
+  // With conditions resolved, saving reports the item's wear rate in this
+  // temperature band rather than navigating away — the calibration signal
+  // that makes a verdict worth logging.
+  await expect(
+    page
+      .locator("[data-slot='noted']")
+      .getByText(/Houdini Jacket is now \d+ of \d+/),
+  ).toBeVisible({ timeout: 15_000 });
+  // And said once, by the form's one status region, in the receipt's words.
+  await expect(
+    page.getByRole("status").filter({ hasText: /^Noted\. Houdini Jacket/ }),
+  ).toHaveText(/^Noted\. Houdini Jacket is now \d+ of \d+/);
+  // Round 20: Noted is a receipt in the submit's place. Share and Log it
+  // give way to it, and the answer stays on screen, read-only, so the
+  // receipt is read against it.
+  await scene(page, "Noted takes the submit's place — the answer stays");
+  await expect(page.getByRole("button", { name: "Log it" })).toHaveCount(0);
+  await expect(page.getByRole("radio", { name: "A bit cold" })).toBeChecked();
+  // Round 21: MORE leaves with share and submit, and a chosen chip keeps
+  // its ink and loses its close glyph — a receipt makes no offers.
+  await scene(page, "The chips stay, read-only; MORE is gone");
+  await expect(
+    page.getByRole("button", { name: "More, anything specific" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Houdini Jacket not enough" }),
+  ).toHaveAttribute("aria-disabled", "true");
+
+  // And the verdict is on the entry.
+  await scene(page, "And the verdict is on the entry");
+  await page.goto(`/feed/entry/${entryId}`);
+  // D's badge, by the part lane 123's D names it.
+  const badge = page.locator('[data-part="verdict-badge"]');
+  await expect(badge).toBeVisible({ timeout: 15_000 });
+  await expect(badge).toHaveText("A bit cold");
+
+  // Re-opening it shows what was saved, which is not what it used to do.
+  //
+  // The flag pickers were seeded empty rather than from
+  // `entry.items[].flag`, so coming back here showed every piece as
+  // unflagged — and saving again wrote that emptiness over the flag the
+  // runner had set. Nothing said so; the screen just quietly disagreed
+  // with the database.
+  await page.goto(`/feed/verdict/${entryId}`);
+  await hydrated(page);
+  await expect(
+    page.getByRole("button", { name: "Houdini Jacket not enough" }),
+  ).toHaveAttribute("aria-pressed", "true");
+});

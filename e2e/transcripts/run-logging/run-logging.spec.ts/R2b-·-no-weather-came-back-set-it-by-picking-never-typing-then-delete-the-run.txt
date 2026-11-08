@@ -1,0 +1,36 @@
+document
+banner
+link, dialed.run home
+dialed.run
+end of link, dialed.run home
+navigation, Main
+list
+listitem, level 1, position 1, set size 4
+link, Feed
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+link, Closet
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+link, Call
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+link, You
+end of listitem, level 1, position 4, set size 4
+end of list
+end of navigation, Main
+link, Search runners
+link, Notifications, # new
+button, Log a run, has popup dialog
+end of banner
+main
+heading, Runs, level 1
+No runs yet
+paragraph
+Upload a file or enter one by hand.
+end of paragraph
+link, Log a run
+link, Strava reminders
+end of main
+status
+end of document

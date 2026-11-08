@@ -66,13 +66,23 @@ export interface Seeded {
 }
 
 export async function userIdOf(account: DemoAccount): Promise<string> {
+  return userIdForEmail(accountEmail(account), `the ${account} account`);
+}
+
+/**
+ * The user id behind a signed-up address; `who` names it in the error.
+ */
+export async function userIdForEmail(
+  email: string,
+  who: string = email,
+): Promise<string> {
   return withLocalDb(async ({ core }) => {
     const [row] = await core
       .select({ id: user.id })
       .from(user)
-      .where(eq(user.email, accountEmail(account)))
+      .where(eq(user.email, email))
       .limit(1);
-    if (!row) throw new Error(`no ${account} account — demo-setup did not run`);
+    if (!row) throw new Error(`no ${who} — its sign-up did not run`);
     return row.id;
   });
 }

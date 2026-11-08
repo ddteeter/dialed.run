@@ -19,18 +19,18 @@ This file is what every agent needs on every turn. The rest loads when it is
 relevant, so read the file it names when you are doing that work and it has not
 appeared yet:
 
-| file                          | loads when you read or edit                            | covers                                                                                      |
-| ----------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| `.claude/rules/schema.md`     | `src/db/**`, `drizzle-*.config.ts`                     | the schema protocol, migration naming, laws 8 and 11                                        |
-| `.claude/rules/routes.md`     | `src/routes/**`, the route tree, a module's `index.ts` | routes are glue, typed routing, the client-bundle rule, route-tree regeneration             |
-| `.claude/rules/ui.md`         | any `.tsx`, any `.css`, `e2e/**`                       | the `@theme` index, contracts outrank artboards, placeholder protocol, icons, motion, forms |
-| `.claude/rules/server.md`     | `src/modules/**/*.ts`, `src/lib/**`, `src/env/**`      | D1 discipline, trust boundaries, server functions, resilience laws 1–7, 8b, 8c, 9, 10       |
-| `.claude/rules/publishing.md` | always                                                 | what may land in the public repo, its issues and PRs: the never-list and the approve-list   |
-| `.claude/rules/testing.md`    | `test/**`, any test, vitest/stryker config             | the three vitest projects, the mutation ratchet, equivalent mutants                         |
-| skill `pr-ready`              | opening a PR, answering review comments                | self-review, PR body sections, deferring, pushing, review comments                          |
-| skill `crushing-mutants`      | working through surviving mutants                      | the procedure                                                                               |
-| skill `pr-demo-video`         | a user-visible change                                  | recording the demo                                                                          |
-| skill `coordinating-a-wave`   | coordinating a wave of parallel lanes                  | lane briefs, ownership, owner and Design rounds, merging, the record, traps                 |
+| file                          | loads when you read or edit                                             | covers                                                                                                           |
+| ----------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `.claude/rules/schema.md`     | `src/db/**`, `drizzle-*.config.ts`                                      | the schema protocol, migration naming, laws 8 and 11                                                             |
+| `.claude/rules/routes.md`     | `src/routes/**`, the route tree, a module's `index.ts`                  | routes are glue, typed routing, the client-bundle rule, route-tree regeneration                                  |
+| `.claude/rules/ui.md`         | any `.tsx`, any `.css`, `e2e/**`                                        | the `@theme` index, contracts outrank artboards, placeholder protocol, icons, motion, forms                      |
+| `.claude/rules/server.md`     | `src/modules/**/*.ts`, `src/lib/**`, `src/env/**`                       | D1 discipline, trust boundaries, server functions, resilience laws 1–7, 8b, 8c, 9, 10                            |
+| `.claude/rules/publishing.md` | always                                                                  | what may land in the public repo, its issues and PRs: the never-list and the approve-list                        |
+| `.claude/rules/testing.md`    | `test/**`, any test, vitest/stryker config; read it when planning tests | which kind of test to write (vitest or e2e), the three vitest projects, the mutation ratchet, equivalent mutants |
+| skill `pr-ready`              | opening a PR, answering review comments                                 | self-review, PR body sections, deferring, pushing, review comments                                               |
+| skill `crushing-mutants`      | working through surviving mutants                                       | the procedure                                                                                                    |
+| skill `pr-demo-video`         | a user-visible change                                                   | recording the demo                                                                                               |
+| skill `coordinating-a-wave`   | coordinating a wave of parallel lanes                                   | lane briefs, ownership, owner and Design rounds, merging, the record, traps                                      |
 
 Code comments that cite "CLAUDE.md law 8b", "§D1 discipline", "§Derive, don't
 mirror" and the like predate this split; the table says where each now lives.

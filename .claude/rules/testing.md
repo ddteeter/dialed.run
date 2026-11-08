@@ -34,9 +34,38 @@ working through surviving mutants, the `crushing-mutants` skill and
   (MediaPipe's WASM and model). A fresh worktree needs `npm run build` (or
   `pretest`) to stage that WASM first.
 
-Playwright smoke tests run in CI only and cover journeys, never a state
-space. `vitest run ""` runs the whole suite including Chromium — use
-`--project` and real paths.
+`vitest run ""` runs the whole suite including Chromium — use `--project`
+and real paths.
+
+## Which kind of test, and when
+
+Decide this in the design doc's test plan, before writing any test. Vitest
+is the default; a Playwright spec has to name what only a real browser and
+server can show. The e2e suite runs on one worker in CI (11 minutes at 125
+tests, 2026-11-06), so every spec costs every PR.
+
+| kind                          | file                                               | write or update it when                                                                                                                                                                                                                                       | not for                                                                 |
+| ----------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| unit / dom / browser (vitest) | `*.test.ts`, `*.dom.test.tsx`, `*.browser.test.ts` | the default: logic, every state of a component, every branch                                                                                                                                                                                                  | anything that needs the server hop or a real page                       |
+| journey                       | `e2e/<feature>/*.journey.spec.ts`                     | a flow crosses the server boundary: a new route, a new auth gate, a server function wired to a screen. Update it in the PR that changes the flow. A new route behind an existing gate adds no redirect spec: `test/auth/` and `e2e/auth/` test the gates once | a state space, an edge case, a look                                     |
+| edge case                     | `e2e/<feature>/*.spec.ts`, beside the journey      | a case only a real browser shows (a redirect, a real upload, focus after navigation) and the journey would bloat carrying it                                                                                                                                  | anything a dom test can reach                                           |
+| conformance                   | `e2e/conformance/*.conformance.spec.ts`            | a screen with a board is built or changes shape                                                                                                                                                                                                               | values: tokens and sizes are the contracts' job (`.claude/rules/ui.md`) |
+| PR demo                       | `e2e/scratch/*.spec.ts`, gitignored                | a PR changes what a user sees. Seeded straight to the state, scoped to the change, real `expect`s, recorded and attached                                                                                                                                      | proof: it is never committed and never runs in CI                       |
+| accessibility                 | none of its own                                    | never as a spec. The a11y fixture rides on every e2e test (axe, Tab walk, reflow, transcript)                                                                                                                                                                 | —                                                                       |
+
+What to do about accessibility instead: review your screens' transcript
+diff under `e2e/transcripts/` with the `a11y-judgment` skill. When CI's
+coverage teardown fails with "no spec visits it", the fix is a step in the
+journey that owns that flow, or, for an endpoint with no page, a line in
+`e2e/a11y-coverage.json`'s `unvisited` with the reason.
+
+A PR that changes what a user sees records its video from a throwaway
+spec in `e2e/scratch/` (gitignored), never from the journey (skill
+`pr-demo-video`). The video is for the reviewer; the table above carries
+the proof. Specs are organized by product feature, never by lane: grep
+`Covers:` before you create one. A journey that keeps growing should shed
+its edge cases into a sibling `*.spec.ts`. A flow that grows does not
+need a second journey.
 
 ## `stryker.conf.json`'s `mutate` array is the ratchet
 

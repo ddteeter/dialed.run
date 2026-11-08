@@ -1,0 +1,103 @@
+document
+banner
+link, dialed.run home
+dialed.run
+end of link, dialed.run home
+navigation, Main
+list
+listitem, level 1, position 1, set size 4
+link, Feed
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+link, Closet, current item
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+link, Call
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+link, You
+end of listitem, level 1, position 4, set size 4
+end of list
+end of navigation, Main
+link, Search runners
+link, Notifications, # new
+#
+end of link, Notifications, # new
+button, Log a run, has popup dialog
+end of banner
+main
+form
+heading, Did it work?, level 1
+:day :month # · #:#
+·
+#.#
+mi
+at #°
+link, Weather data provided by Visual Crossing
+status
+Noted. Merino half-zip is now # of # in #–#°.
+end of status
+radiogroup, Did it work?
+radio, Way cold, not checked, disabled, position 1, set size 5
+Way cold
+radio, A bit cold, not checked, disabled, position 2, set size 5
+A bit cold
+radio, Dialed, not checked, disabled, position 3, set size 5
+Dialed
+radio, A bit warm, not checked, disabled, position 4, set size 5
+A bit warm
+radio, Way warm, not checked, disabled, position 5, set size 5
+Way warm
+end of radiogroup, Did it work?
+paragraph
+Five states.
+No runs in this band yet.
+end of paragraph
+heading, Anything specific? · optional, level 2
+Anything specific? · optional
+end of heading, Anything specific? · optional, level 2
+button, cold first mile, disabled, not pressed
+button, cold throughout, disabled, not pressed
+button, overheated late, disabled, not pressed
+button, sleeves damp, disabled, not pressed
+button, chafed, disabled, not pressed
+group, Effort · optional
+Effort · optional
+button, Easy, disabled, not pressed
+button, Steady, disabled, not pressed
+button, Workout, disabled, not pressed
+button, Race, disabled, not pressed
+paragraph
+You run warmer the harder you go. Next time, the Call allows for it.
+end of paragraph
+end of group, Effort · optional
+Noted
+paragraph
+Merino half-zip is now # of # in #–#°.
+end of paragraph
+end of form
+heading, This run · :day :month # · #:#, level 2
+This run · :day :month # · #:#
+end of heading, This run · :day :month # · #:#, level 2
+#.# mi, # minutes
+#°F dry · feels #°
+heading, The kit you’re judging, level 2
+The kit you’re judging
+end of heading, The kit you’re judging, level 2
+list
+listitem, level 1, position 1, set size 2
+Merino half-zip
+end of listitem, level 1, position 1, set size 2
+listitem, level 1, position 2, set size 2
+Running tights
+end of listitem, level 1, position 2, set size 2
+end of list
+heading, Before, in #–#° dry, level 2
+Before, in #–#° dry
+end of heading, Before, in #–#° dry, level 2
+paragraph
+No runs in this band yet.
+end of paragraph
+end of main
+status
+end of document

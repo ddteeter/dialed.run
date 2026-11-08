@@ -1,10 +1,10 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 
-import { expect, test as setup } from "@playwright/test";
+import { test as setup } from "@playwright/test";
 
 import { DEMO_ACCOUNTS, storageStateFor } from "./accounts";
-import { confirmLinkFor } from "./email-links";
-import { ensureInviteCode, turnstileAnswered } from "./invites";
+import { ensureInviteCode } from "./invites";
+import { signUpRunner } from "./runner";
 
 /**
  * Creates every demo's account and saves its session, before any demo runs.
@@ -29,6 +29,17 @@ import { ensureInviteCode, turnstileAnswered } from "./invites";
 const AUTH_DIR = "node_modules/.cache/dialed-demo-auth";
 
 /**
+ * The accounts this run needs. `scratch` serves only a recording (its
+ * specs run only then, design 180), so a bare run, CI's included, signs
+ * up exactly what it did before: the database the later specs and their
+ * transcripts see is unchanged.
+ */
+const isRecording = Number(process.env.DEMO_SLOWMO ?? 0) !== 0;
+const accountsThisRun = DEMO_ACCOUNTS.filter(
+  (account) => isRecording || account !== "scratch",
+);
+
+/**
  * A handle for this run's account: the demo's name, underscored, and the
  * run's last digits so a second run on the same local database is free —
  * old handles are never reclaimable (round 26 #7).
@@ -37,7 +48,7 @@ function demoHandle(account: string, suffix: string): string {
   return `${account.replace("-", "_")}_${suffix.slice(-6)}`;
 }
 
-setup("create the demo accounts", async ({ browser }, testInfo) => {
+setup("create the demo accounts", async ({ browser, baseURL }, testInfo) => {
   // Five signups through a real browser, serially. Nothing here is paced —
   // the setup project is not the demo project — but it is still five round
   // trips through Better Auth.
@@ -48,68 +59,16 @@ setup("create the demo accounts", async ({ browser }, testInfo) => {
   // Sign-up is invite-only (task 126, ACC-5): the harness's own code.
   const inviteCode = await ensureInviteCode();
 
-  for (const account of DEMO_ACCOUNTS) {
+  for (const account of accountsThisRun) {
     const email = `${account}-${suffix}@example.com`;
-    const context = await browser.newContext();
-    const page = await context.newPage();
-
-    // Sign up, open the confirm link, then log in: the same two fields
-    // on both forms, submitted by each form's own button.
-    for (const [path, submit] of [
-      ["/auth/signup", "Create account"],
-      ["/auth/login", "Log in"],
-    ] as const) {
-      await page.goto(path);
-      await page
-        .locator('html[data-hydrated="true"]')
-        .waitFor({ state: "attached" });
-      if (path === "/auth/signup") {
-        await page.getByLabel("Invite code").fill(inviteCode);
-        await page.getByLabel("Date of birth").fill("1990-04-21");
-        await turnstileAnswered(page);
-      }
-      await page.getByLabel("Email").fill(email);
-      await page.getByLabel("Password").fill("a-long-enough-password");
-      await page.getByRole("button", { name: submit }).click();
-      if (path !== "/auth/signup") {
-        continue;
-      }
-
-      await expect(page).toHaveURL(/\/account\/check-email/, {
-        timeout: 15_000,
-      });
-      await page.goto(await confirmLinkFor(email));
-      await expect(
-        page.getByRole("heading", { name: "Email confirmed" }),
-      ).toBeVisible({ timeout: 15_000 });
-    }
-
-    // A new account picks its handle at O0 first (round 26 #7), through
-    // the real form — the same path every runner takes, so the demos'
-    // `@handle`s are ones the rule and the reserved list accepted.
-    await expect(page).toHaveURL(/\/onboarding\/handle/, { timeout: 15_000 });
-    await page
-      .locator('html[data-hydrated="true"]')
-      .waitFor({ state: "attached" });
-    await page
-      .getByRole("textbox", { name: "Username" })
-      .fill(demoHandle(account, suffix));
-    await page.getByRole("button", { name: "Next" }).click();
-
-    // Then O1 (R-52), and `/` sends it back here until
-    // `onboarding_complete` is set. Every demo but `onboarding` wants to
-    // start past that, and `/onboarding/done` is the route that sets it —
-    // the same one P3 uses, rather than a hand-written upsert that could
-    // drift from it.
-    await expect(page).toHaveURL(/\/onboarding\/calibrate/, {
-      timeout: 15_000,
+    // Every demo but `onboarding` starts past onboarding; that one films it.
+    const context = await signUpRunner(browser, {
+      baseURL,
+      email,
+      handle: demoHandle(account, suffix),
+      inviteCode,
+      finishOnboarding: account !== "onboarding",
     });
-    if (account !== "onboarding") {
-      await page.goto("/onboarding/done");
-      await expect(
-        page.getByRole("heading", { name: "Now go run." }),
-      ).toBeVisible({ timeout: 15_000 });
-    }
 
     await context.storageState({ path: storageStateFor(account) });
     await context.close();

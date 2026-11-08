@@ -11,24 +11,27 @@ description: Use before opening a pull request in dialed.run, before pushing a b
    #2–#5 review: the findings no rule could catch, written as questions.
 2. **Demo what a user would see change.** If a reviewer opening the app would
    see anything different from `main` — including a screen whose behaviour
-   changed behind an unchanged UI — invoke the `pr-demo-video` skill. Work with
-   no user-visible effect needs no video. E2E specs are organised by product
-   feature (`e2e/<feature>/`), never by lane; find the demo that already owns
-   your screens by grepping `Covers:` before creating a new directory.
-3. **Design deltas.** Every undesigned surface you shipped is a Design ask:
+   changed behind an unchanged UI — invoke the `pr-demo-video` skill: a
+   throwaway spec in `e2e/scratch/`, scoped to the change. Work with no
+   user-visible effect needs no video.
+3. **Test kinds.** Check every test the branch adds against the table in
+   `.claude/rules/testing.md` §Which kind of test. A new e2e spec that a
+   dom test could replace gets rewritten as one. A flow the branch changed
+   has its journey updated in the same branch.
+4. **Design deltas.** Every undesigned surface you shipped is a Design ask:
    an issue with `kind:design-ask` in status Needs Design
    (`docs/agents/issue-tracker.md`), listed by number under a
    **"Design deltas"** heading in the PR body (`.claude/rules/ui.md`,
    placeholder protocol).
-4. **Issues.** The PR body says `Closes #N` for every issue the PR
+5. **Issues.** The PR body says `Closes #N` for every issue the PR
    finishes, one per line. Merging closes them and the Project marks them
    Done.
-5. **Schema.** A migration is named in the PR body; a destructive one says so
+6. **Schema.** A migration is named in the PR body; a destructive one says so
    explicitly (D-139). An additive column another lane may want is called out.
-6. **Architecture.** If you changed module boundaries or added a
+7. **Architecture.** If you changed module boundaries or added a
    queue/cron/binding, the diagram in `docs/architecture.md` changes in the
    same PR.
-7. **Run** `npm run verify && npm test && npm run build`. `build` is a gate:
+8. **Run** `npm run verify && npm test && npm run build`. `build` is a gate:
    `postbuild` runs `check:bundle`. **A lane dispatched by a coordinator
    skips `verify`** (owner, 2026-10-24): it has no flag to drop its Stryker
    analyzer, the push gate runs that pass in full, and the commit gate has

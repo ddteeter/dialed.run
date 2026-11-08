@@ -13,7 +13,7 @@
  * stack shipped — it was `flex flex-col`, the class was as intended, and
  * the tests were green.
  *
- * Not in `verdict.demo.spec.ts`, because a demo spec is one journey and
+ * Not in `verdict.journey.spec.ts`, because a journey spec is one journey and
  * one video; a geometry check beside it would record a second video next
  * to the one a reviewer is meant to watch.
  */

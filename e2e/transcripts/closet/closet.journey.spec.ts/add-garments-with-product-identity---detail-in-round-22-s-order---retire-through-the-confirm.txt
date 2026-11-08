@@ -1,0 +1,108 @@
+document
+banner
+link, dialed.run home
+dialed.run
+end of link, dialed.run home
+navigation, Main
+list
+listitem, level 1, position 1, set size 4
+link, Feed
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+link, Closet, current page
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+link, Call
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+link, You
+end of listitem, level 1, position 4, set size 4
+end of list
+end of navigation, Main
+link, Search runners
+button, Log a run, has popup dialog
+end of banner
+main
+navigation, Filter the closet
+heading, Group, level 2
+Group
+end of heading, Group, level 2
+list
+listitem, level 1, position 1, set size 3
+link, All #, current page
+All
+#
+end of link, All #, current page
+end of listitem, level 1, position 1, set size 3
+listitem, level 1, position 2, set size 3
+link, Outer #
+Outer
+#
+end of link, Outer #
+end of listitem, level 1, position 2, set size 3
+listitem, level 1, position 3, set size 3
+link, Shoes #
+Shoes
+#
+end of link, Shoes #
+end of listitem, level 1, position 3, set size 3
+end of list
+heading, Works at, level 2
+Works at
+end of heading, Works at, level 2
+#–#°F
+slider, Lowest, #, orientated horizontally, max value #, min value #
+slider, Highest, #, orientated horizontally, max value #, min value #
+heading, Coverage, level 2
+Coverage
+end of heading, Coverage, level 2
+list
+listitem, level 1, position 1, set size 3
+button, Covered #, not pressed
+Covered
+#
+end of button, Covered #, not pressed
+end of listitem, level 1, position 1, set size 3
+listitem, level 1, position 2, set size 3
+button, Partial #, not pressed
+Partial
+#
+end of button, Partial #, not pressed
+end of listitem, level 1, position 2, set size 3
+listitem, level 1, position 3, set size 3
+button, Untested #, not pressed
+Untested
+#
+end of button, Untested #, not pressed
+end of listitem, level 1, position 3, set size 3
+end of list
+end of navigation, Filter the closet
+status
+heading, # pieces, level 1
+Show retired (#)
+switch, Show retired (#), checked
+list
+listitem, level 1, position 1, set size 3
+link, Patagonia Houdini Jacket No runs yet #–#°
+Patagonia Houdini Jacket
+No runs yet
+#–#°
+end of link, Patagonia Houdini Jacket No runs yet #–#°
+end of listitem, level 1, position 1, set size 3
+listitem, level 1, position 2, set size 3
+link, Nike Pegasus # No runs yet Untested Retired
+Nike Pegasus #
+No runs yet
+Untested
+Retired
+end of link, Nike Pegasus # No runs yet Untested Retired
+end of listitem, level 1, position 2, set size 3
+listitem, level 1, position 3, set size 3
+link, Add garment
+Add garment
+end of link, Add garment
+end of listitem, level 1, position 3, set size 3
+end of list
+end of main
+status
+end of document

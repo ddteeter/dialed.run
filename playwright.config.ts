@@ -67,6 +67,44 @@ const serverCommand =
  */
 const demoSlowMo = Number(process.env.DEMO_SLOWMO ?? 0);
 
+/**
+ * A recorded project's options at one size: the viewport and the video
+ * together, so the page fills the frame, at the `demo` project's pacing.
+ */
+function recordedAt(size: { width: number; height: number }) {
+  return {
+    viewport: size,
+    reducedMotion: "no-preference" as const,
+    launchOptions: { slowMo: demoSlowMo },
+    video: demoSlowMo ? { mode: "on" as const, size } : ("off" as const),
+  };
+}
+
+/**
+ * The product walkthroughs (design 180, step 5): the committed, narrated
+ * stories, recorded at both widths. CI runs them at the desk as
+ * assertions; the phone run exists only while recording, so CI pays once
+ * per story and the two never write the same transcript (the template
+ * below keys on the file).
+ */
+const WALKTHROUGHS = "walkthroughs/*.walkthrough.spec.ts";
+const walkthroughProjects = [
+  {
+    name: "walkthrough",
+    testMatch: WALKTHROUGHS,
+    use: recordedAt({ width: 1280, height: 720 }),
+  },
+  ...(demoSlowMo
+    ? [
+        {
+          name: "walkthrough-phone",
+          testMatch: WALKTHROUGHS,
+          use: recordedAt({ width: 390, height: 844 }),
+        },
+      ]
+    : []),
+];
+
 export default defineConfig({
   testDir: "e2e",
   // One worker, because every spec shares one dev server and one local D1 —
@@ -106,7 +144,12 @@ export default defineConfig({
   projects: [
     {
       name: "e2e",
-      testIgnore: ["**/*.demo.spec.ts", "**/*.setup.ts"],
+      testIgnore: [
+        "**/*.journey.spec.ts",
+        "**/*.setup.ts",
+        "scratch/**",
+        WALKTHROUGHS,
+      ],
       // **Depends on `demo-setup` so a signed-in spec can live here.**
       //
       // `verdict-row.spec.ts` needs an owner's session — the verdict screen
@@ -129,7 +172,12 @@ export default defineConfig({
     { name: "demo-setup", testMatch: "**/*.setup.ts" },
     {
       name: "demo",
-      testMatch: "**/*.demo.spec.ts",
+      // Plus a PR's throwaway demo (`e2e/scratch/`, gitignored), but only
+      // while recording: a scratch spec is never an assertion anyone else
+      // runs, so a bare run, CI's included, never sees one (design 180).
+      testMatch: demoSlowMo
+        ? ["**/*.journey.spec.ts", "scratch/**/*.spec.ts"]
+        : "**/*.journey.spec.ts",
       dependencies: ["demo-setup"],
       use: {
         viewport: { width: 1280, height: 720 },
@@ -171,6 +219,7 @@ export default defineConfig({
           : "off",
       },
     },
+    ...walkthroughProjects,
   ],
   webServer: [
     {

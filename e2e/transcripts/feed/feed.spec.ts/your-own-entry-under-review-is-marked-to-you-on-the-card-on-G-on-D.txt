@@ -1,0 +1,64 @@
+document
+banner
+link, dialed.run home
+dialed.run
+end of link, dialed.run home
+navigation, Main
+list
+listitem, level 1, position 1, set size 4
+link, Feed, current item
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+link, Closet
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+link, Call
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+link, You
+end of listitem, level 1, position 4, set size 4
+end of list
+end of navigation, Main
+link, Search runners
+link, Notifications
+button, Log a run, has popup dialog
+end of banner
+main
+status
+link, Back to feed
+heading, Your run, level 1
+Hidden while we check
+Other runners can't see this while we look at it.
+You can still edit or delete it.
+Seen by:
+Shared
+list
+listitem, level 1, position 1, set size 2
+#
+/
+#
+button, Delete photo #
+end of listitem, level 1, position 1, set size 2
+listitem, level 1, position 2, set size 2
+#
+/
+#
+button, Delete photo #
+end of listitem, level 1, position 2, set size 2
+end of list
+:day :month # · #:#
+#.#mi
+# minutes # seconds per mile
+Dialed
+Kit
+list
+listitem, level 1, position 1, set size 1
+Long sleeve
+Generic
+end of listitem, level 1, position 1, set size 1
+end of list
+Yours
+button, Delete this entry
+end of main
+status
+end of document

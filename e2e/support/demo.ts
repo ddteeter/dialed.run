@@ -1,10 +1,36 @@
-import { test as base } from "./a11y";
+import { execFile } from "node:child_process";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import path from "node:path";
+import { promisify } from "node:util";
 
-import { captionRule, holdFor } from "./caption";
-import type { Page } from "@playwright/test";
+import { test as base } from "./a11y";
+import type { A11y } from "./a11y";
+
+import {
+  AFINFO,
+  SAY,
+  durationMs,
+  forSpeech,
+  paceOf,
+  recordAt as recordAtWhen,
+  sayArgs,
+  speechKey,
+} from "./caption";
+import type { Cue, Frame, Pace } from "./caption";
+import {
+  HOSTED_TAIL_MS,
+  engineFrom,
+  hostedFileName,
+  keyVariable,
+  keychainService,
+  speechRequest,
+} from "./voice";
+import type { HostedEngine } from "./voice";
+import type { Locator, Page } from "@playwright/test";
 
 /**
- * The base test for `*.demo.spec.ts`. Recording is configured by the `demo`
+ * The base test for `*.journey.spec.ts`. Recording is configured by the `demo`
  * Playwright project; this adds the parts a project cannot express:
  *
  * - a synthetic cursor (dot + click ripple) is drawn where the mouse acts,
@@ -12,7 +38,9 @@ import type { Page } from "@playwright/test";
  *   reason — animated from rAF, independent of page CSS;
  * - `goto` resolves only after `document.fonts.ready`, so a recording never
  *   opens on fallback-font frames mid-swap (the FOUT window);
- * - `scene()` captions and paces the recording (see below).
+ * - `scene()` narrates and paces the recording (see below);
+ * - while recording, the a11y fixture's checks are off: CI runs them on
+ *   these same journeys, and in a video they are only dead air.
  *
  * Motion is deliberately NOT stripped: demos are a primary review surface
  * and must show the Motion Doctrine's real behavior (owner decision,
@@ -29,49 +57,196 @@ import type { Page } from "@playwright/test";
 const demoSlowMo = Number(process.env.DEMO_SLOWMO ?? 0);
 
 /**
- * Caption the recording and hold a beat, so a viewer can see what is being
- * demonstrated before it happens.
+ * The recording in progress: when it started and every line narrated so
+ * far. One worker runs the demos, so one recording at a time.
+ */
+const recording: { startedAt: number; cues: Cue[]; pace: Pace } = {
+  startedAt: 0,
+  cues: [],
+  pace: "review",
+};
+
+/**
+ * Rendered lines, kept across runs, so a re-record only synthesizes what
+ * changed. The key covers the spoken text and the rate (`speechKey`).
+ */
+const VOICE_CACHE = "node_modules/.cache/demo-voice";
+
+/**
+ * `say` and `afinfo`, awaited rather than run synchronously. Playwright
+ * records the video in this process, so a synchronous call stalls it: the
+ * frames that arrive during a first rendering are stamped late, and the
+ * narration drifted up to seven seconds behind the picture (measured
+ * 2026-11-06, first recording of new lines).
+ */
+const run = promisify(execFile);
+
+/**
+ * The engine this run speaks with (`voice.ts`): `say` unless `DEMO_VOICE`
+ * names a hosted one. Read once, so a bad setting fails before recording.
+ */
+const engine = engineFrom(process.env);
+
+/**
+ * Hosted renders, kept outside the repo and `node_modules`: they cost
+ * money, and `npm ci` would throw them away.
+ */
+const HOSTED_CACHE = path.join(homedir(), ".cache", "dialed-voice");
+
+/**
+ * How long a hosted engine may take over one line before the run fails.
+ */
+const HOSTED_TIMEOUT_MS = 120_000;
+
+/**
+ * A line, rendered and cached: the file, and the silence to hold after it.
+ */
+interface Voiced {
+  readonly file: string;
+  readonly tailMs: number;
+}
+
+/**
+ * Render `spoken` with this run's engine, or reuse an earlier rendering.
+ */
+async function voiced(spoken: string): Promise<Voiced> {
+  const { pace } = recording;
+  if (engine.engine !== "say") {
+    return { file: await hosted(engine, spoken, pace), tailMs: HOSTED_TAIL_MS };
+  }
+  mkdirSync(VOICE_CACHE, { recursive: true });
+  const file = path.resolve(VOICE_CACHE, `${speechKey(spoken, pace)}.aiff`);
+  if (!existsSync(file)) await run(SAY, sayArgs(spoken, file, pace));
+  return { file, tailMs: 0 };
+}
+
+/**
+ * Where macOS keeps `security`: a fixed path, never a PATH lookup.
+ */
+const SECURITY = "/usr/bin/security";
+
+/**
+ * A hosted engine's key: its shell variable, else its Keychain item.
+ * Never logged, and never part of an error message.
+ */
+async function keyFor(chosen: HostedEngine): Promise<string> {
+  const variable = keyVariable(chosen);
+  const fromShell = process.env[variable] ?? "";
+  if (fromShell !== "") return fromShell;
+  const service = keychainService(chosen);
+  try {
+    const { stdout } = await run(SECURITY, [
+      "find-generic-password",
+      "-s",
+      service,
+      "-w",
+    ]);
+    return stdout.trim();
+  } catch {
+    throw new Error(
+      `DEMO_VOICE=${chosen.engine} needs ${variable} in the shell, or a Keychain item: security add-generic-password -a "$USER" -s ${service} -w`,
+    );
+  }
+}
+
+async function hosted(
+  chosen: HostedEngine,
+  spoken: string,
+  pace: Pace,
+): Promise<string> {
+  const apiKey = await keyFor(chosen);
+  const request = speechRequest(chosen, spoken, pace, apiKey);
+  const file = path.join(
+    HOSTED_CACHE,
+    hostedFileName(chosen, spoken, pace, request.extension),
+  );
+  if (existsSync(file)) return file;
+  const response = await fetch(request.url, {
+    method: "POST",
+    headers: request.headers,
+    body: request.body,
+    signal: AbortSignal.timeout(HOSTED_TIMEOUT_MS),
+  });
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(
+      `${chosen.engine} answered ${String(response.status)}: ${detail.slice(0, 300)}`,
+    );
+  }
+  mkdirSync(HOSTED_CACHE, { recursive: true });
+  const audio = await response.arrayBuffer();
+  writeFileSync(file, Buffer.from(audio));
+  return file;
+}
+
+/**
+ * Narrate the next stretch of the recording, and hold while the line is
+ * spoken, so a viewer hears what is being demonstrated before it happens.
  *
- * **This narrates; the `expect` beside it proves.** A caption is a claim
- * about what the next few actions show, and it is checked by the assertion
- * that follows — never instead of one. Write it in the spec, where a
- * reviewer reads it in the diff; nothing here generates text at record
- * time, which is how a video ends up describing intent rather than
- * behaviour.
+ * **This narrates; the `expect` beside it proves.** A line is a claim about
+ * what the next few actions show, and it is checked by the assertion that
+ * follows, never instead of one. Write it in the spec, where a reviewer
+ * reads it in the diff; nothing here generates text at record time, which
+ * is how a video ends up describing intent rather than behaviour.
+ *
+ * `text` is the caption; `say` is the spoken form, when the caption's
+ * shorthand would sound wrong aloud (`forSpeech` handles `·` on its own).
  *
  * **Inert without `DEMO_SLOWMO`.** CI runs these journeys as assertions and
  * has no use for the pause, so this returns immediately and costs nothing.
  *
- * **The text never enters the DOM.** It is the `content` of an `html::after`
- * rule, so it is painted without existing in the document and no locator
- * can match it — `getByText("Closet: 6 pieces")` cannot be satisfied by a
- * caption that happens to say the same words. A caption rendered as a real
- * element would make every narrated assertion vacuous, which is the one way
- * this helper could quietly destroy the suite it decorates.
+ * **It never touches the page.** The caption and the voice are laid over
+ * the recording afterwards by `npm run demo:mux`, from the `cues.json` the
+ * fixture below writes, so no locator can match a caption and nothing
+ * covers the app. The page is only the clock.
  *
- * **A stylesheet rather than `page.evaluate`**, which cannot be used here:
- * `unicorn/isolated-functions` rejects a callback that reaches `document`,
- * and rightly — the callback runs in the browser, where this file's scope
- * does not exist. `addStyleTag` takes a plain string from Node instead.
- *
- * **Each tag carries the whole rule**, rather than a shared box in the init
- * script that scenes only fill the `content` of. The init script runs before
- * the document is parsed, so inserting an element there throws on a null
- * `documentElement` — and an init script that throws takes everything after
- * it down, which silently killed the `data-fonts-ready` poller below and
- * hung every `goto` in the suite. Nothing in the init script is worth that.
- * Superseded tags simply lose to the next by document order.
+ * The cue is stamped after the line is rendered: a first recording of a
+ * new line holds a little longer before it, and a cached one does not.
  */
-export async function scene(page: Page, text: string): Promise<void> {
+export async function scene(
+  page: Page,
+  text: string,
+  options: { readonly say?: string } = {},
+): Promise<void> {
   if (demoSlowMo === 0) return;
-  await page.addStyleTag({ content: captionRule(text) });
-  await page.waitForTimeout(holdFor(text));
+  const { file: audio, tailMs } = await voiced(options.say ?? forSpeech(text));
+  const { stdout } = await run(AFINFO, [audio]);
+  const holdMs = durationMs(stdout) + tailMs;
+  recording.cues.push({
+    text,
+    startMs: Date.now() - recording.startedAt,
+    audio,
+  });
+  await page.waitForTimeout(holdMs);
+}
+
+/**
+ * `test.use(recordAt(PHONE))` records a spec at phone size: the viewport
+ * and the video together, so the page fills the frame. Without it, a demo
+ * records at the `demo` project's desk size.
+ */
+export function recordAt(size: Frame): ReturnType<typeof recordAtWhen> {
+  return recordAtWhen(size, demoSlowMo !== 0);
+}
+
+/**
+ * Fill a field, and while recording type it a key at a time, so a viewer
+ * sees what goes in rather than a field that is suddenly full. CI fills it
+ * at once.
+ */
+export async function typeSlowly(field: Locator, text: string): Promise<void> {
+  if (demoSlowMo === 0) {
+    await field.fill(text);
+    return;
+  }
+  await field.fill("");
+  await field.pressSequentially(text, { delay: 70 });
 }
 
 /**
  * Layout stamps `html[data-hydrated]` once React attaches; driving
  * controlled inputs before that races hydration's state reset. Shared by
- * every demo spec — one wait, not one copy per journey.
+ * every journey spec — one wait, not one copy per journey.
  */
 export async function hydrated(page: Page): Promise<void> {
   await page
@@ -79,8 +254,13 @@ export async function hydrated(page: Page): Promise<void> {
     .waitFor({ state: "attached" });
 }
 
-export const test = base.extend({
-  page: async ({ page }, use) => {
+const paced = base.extend({
+  page: async ({ page }, use, testInfo) => {
+    // The video starts with the page, which exists by the time this runs,
+    // so a cue lands a few milliseconds late at most.
+    recording.startedAt = Date.now();
+    recording.cues = [];
+    recording.pace = paceOf(testInfo.project.name);
     await page.addInitScript(() => {
       const layer = "pointer-events:none;z-index:2147483647;position:fixed;";
 
@@ -169,8 +349,47 @@ export const test = base.extend({
       return response;
     };
 
+    // The frame the video was sized to: `recordAt` keeps the two equal,
+    // and so does the `demo` project's default. Read before the test can
+    // resize the page.
+    const frame = page.viewportSize();
     await use(page);
+    if (demoSlowMo !== 0 && frame !== null) {
+      writeFileSync(
+        testInfo.outputPath("cues.json"),
+        JSON.stringify(
+          {
+            frame,
+            endMs: Date.now() - recording.startedAt,
+            cues: recording.cues,
+          },
+          undefined,
+          2,
+        ),
+      );
+    }
   },
 });
+
+/**
+ * The a11y fixture's stand-in while recording. Its checks run before every
+ * action and walk the page at the end, resizing it twice; CI already runs
+ * them on these journeys, and in a recording they are pauses and a closing
+ * sequence nobody is meant to watch.
+ */
+const SILENT_A11Y: A11y = {
+  checkNow: () => Promise.resolve(),
+  endOfTest: () => Promise.resolve(),
+  findings: () => [],
+};
+
+export const test: typeof paced =
+  demoSlowMo === 0
+    ? paced
+    : paced.extend({
+        // A plain value, not a fixture function: nothing runs to make it,
+        // and the auto fixture it replaces never runs either.
+        a11y: SILENT_A11Y,
+      });
 
 export { expect } from "@playwright/test";

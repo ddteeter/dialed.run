@@ -1,0 +1,49 @@
+document
+banner
+link, dialed.run home
+dialed.run
+end of link, dialed.run home
+navigation, Main
+list
+listitem, level 1, position 1, set size 4
+link, Feed
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+link, Closet
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+link, Call
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+link, You
+end of listitem, level 1, position 4, set size 4
+end of list
+end of navigation, Main
+link, Search runners
+link, Notifications, # new
+#
+end of link, Notifications, # new
+button, Log a run, has popup dialog
+end of banner
+main
+heading, Runs, level 1
+list
+listitem, level 1, position 1, set size 2
+link, #.# mi · :day :month # #°F dry
+#.# mi · :day :month #
+#°F dry
+end of link, #.# mi · :day :month # #°F dry
+Conditions
+end of listitem, level 1, position 1, set size 2
+listitem, level 1, position 2, set size 2
+link, #.# mi · :day :month # No weather for this time
+#.# mi · :day :month #
+No weather for this time
+end of link, #.# mi · :day :month # No weather for this time
+end of listitem, level 1, position 2, set size 2
+end of list
+link, Weather data provided by Visual Crossing
+link, Strava reminders
+end of main
+status
+end of document

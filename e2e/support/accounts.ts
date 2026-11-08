@@ -32,6 +32,9 @@ export const DEMO_ACCOUNTS = [
   // 185's journey pins the dark theme on the account and the device,
   // which no other journey's screens may inherit.
   "theme",
+  // A PR's throwaway demo (`e2e/scratch/`, design 180): a fresh runner
+  // each run, which the scratch spec seeds straight to the state it shows.
+  "scratch",
 ] as const;
 export type DemoAccount = (typeof DEMO_ACCOUNTS)[number];
 

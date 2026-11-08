@@ -1,0 +1,49 @@
+document
+banner
+link, dialed.run home, current page
+dialed.run
+end of link, dialed.run home, current page
+navigation, Main
+list
+listitem, level 1, position 1, set size 4
+link, Feed, current page
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+link, Closet
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+link, Call
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+link, You
+end of listitem, level 1, position 4, set size 4
+end of list
+end of navigation, Main
+link, Search runners
+link, Notifications, # new
+#
+end of link, Notifications, # new
+button, Log a run, has popup dialog
+end of banner
+main
+heading, Feed, level 1
+link, Find runners
+button, Following, not pressed
+button, Your conditions, pressed
+status
+heading, Where do you run?, level 2
+paragraph
+Location is off. Type your city and we’ll match its weather instead.
+end of paragraph
+Your city
+textbox, Your city, Add the state or country. We'll show you the place we found before we use it.
+button, Find
+Find
+end of button, Find
+Add the state or country. We'll show you the place we found before we use it.
+paragraph
+Saved to your settings. Change it any time under You.
+end of paragraph
+end of main
+status
+end of document
