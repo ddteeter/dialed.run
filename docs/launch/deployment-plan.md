@@ -100,7 +100,12 @@ manager.
 **GitHub**: secrets `CLOUDFLARE_API_TOKEN` (Workers Scripts and D1 edit,
 nothing more; `docs/deployment.md` §7) and **`CLOUDFLARE_ACCOUNT_ID`**,
 both in the `production` environment rather than the repository, and
-variable `DEPLOY_ENABLED=true` when ready. The dependency automation's App
+variable `DEPLOY_ENABLED=true` when ready. Before applying the gradual
+deploy job (`docs/ops/gradual-deploy.md`, design 186): **`SMOKE_EMAIL`**
+and **`SMOKE_PASSWORD`**, the production smoke account's, in the same
+environment. The account itself is the owner's to create
+(`docs/deployment.md` §9: handle `smoke_test`, "Count my runs in anonymous
+totals" off, one garment, never a run). The dependency automation's App
 key and Anthropic key go in their own environments
 (`docs/dependencies.md` §Setup).
 
@@ -276,6 +281,11 @@ audit's list; where the two differ, the plan is current.
   harmless cache), and that `wrangler rollback` does not roll back
   migrations.
 - **Do a restore drill** on a scratch database once before friends.
+- **Deploys are gradual** after the first one (design 186, #504): upload,
+  0% plus a production smoke test through the version override, 10%,
+  then 100%. Rolling back is one command. The job, the smoke account and
+  the rollback steps are in `docs/deployment.md` §9, and the job draft is
+  `docs/ops/gradual-deploy.md`, which the owner applies to `ci.yml`.
 - **R2 has no versioning or backup**, and `MEDIA` is the source of truth.
   126's 7-day deletion tombstone (ACC-9) is the mitigation for a bad bulk
   delete; a real R2 backup is soon-after. What each prefix holds, what

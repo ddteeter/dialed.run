@@ -94,6 +94,13 @@ describe("what a healthy report says", () => {
     expect(report.at).toBeGreaterThanOrEqual(before - 5);
     expect(report.at).toBeLessThanOrEqual(before + 5);
   });
+
+  it("names the Worker version that answered, for a deploy's smoke test (design 186)", async () => {
+    const report = await checkHealth();
+
+    expect(report.version).toBe(env.CF_VERSION_METADATA.id);
+    expect(report.version).not.toBe("");
+  });
 });
 
 describe("required configuration (OPS-4)", () => {

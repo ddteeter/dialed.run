@@ -307,11 +307,12 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
     expect(readers).toStrictEqual(["../src/modules/ops/edge-purge.ts"]);
   });
 
-  it("binds the speed beacon's dataset and the deploy version, read only by the beacon", () => {
+  it("binds the speed beacon's dataset and the deploy version, read only by the beacon and health", () => {
     // Design 165 (owner-approved 2026-10-31): `VITALS` and
-    // `CF_VERSION_METADATA`, read only by `src/modules/ops/vitals.ts`. A
-    // dataset renamed here alone would start an empty one, and every
-    // dashboard and check reads the old name.
+    // `CF_VERSION_METADATA`, read by `src/modules/ops/vitals.ts` and, for
+    // a deploy's smoke test (design 186), by `/api/health`. A dataset
+    // renamed here alone would start an empty one, and every dashboard and
+    // check reads the old name.
     const testConfig: unknown = JSON.parse(stripJsonc(testWranglerJsonc));
     for (const [key, expected] of [
       [
@@ -334,7 +335,10 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
         /\.(?:VITALS|CF_VERSION_METADATA)\b/u.test(source),
       )
       .map(([path]) => path);
-    expect(readers).toStrictEqual(["../src/modules/ops/vitals.ts"]);
+    expect(readers).toStrictEqual([
+      "../src/modules/ops/health.ts",
+      "../src/modules/ops/vitals.ts",
+    ]);
   });
 
   it("binds the ops database in both configs, with its own migrations", () => {
