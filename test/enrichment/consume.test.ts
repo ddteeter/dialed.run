@@ -29,7 +29,6 @@ import {
   isDeniedOnLanding,
 } from "../../src/modules/safety";
 import { nowSeconds } from "../../src/lib/now";
-import samplePhotoBytes from "../fixtures/sample-photo.bin";
 import { gaveUpRow } from "../gave-up-rows";
 import { batchOf, fakeMessage } from "../queue-fakes";
 
@@ -40,9 +39,12 @@ import { batchOf, fakeMessage } from "../queue-fakes";
  * status and columns, the snapshot row, and the bytes in the bucket.
  */
 
+/**
+ * A shop image the page advertises. No shop image is ever fetched or
+ * stored (D-176), so nothing in these tests serves one: a fetch of it is
+ * the bug.
+ */
 const IMAGE_URL = "https://cdn.example.com/products/tee.jpg";
-// A real image, because the consumer decodes and re-encodes what it copies.
-const IMAGE_BYTES = new Uint8Array(samplePhotoBytes);
 
 const PAGE_WITH_IMAGE = `<html><head>
 <meta property="og:image" content="${IMAGE_URL}">
@@ -148,26 +150,10 @@ const servingOnlyTee: typeof fetch = (input) =>
     : Promise.reject(new TypeError("down"));
 
 /**
-Serves the page at its URL and the image bytes at the CDN's.
+Serves the page that advertises an image, at any URL.
 */
-const servingPageAndImage: typeof fetch = (input) =>
-  Promise.resolve(
-    urlOf(input) === IMAGE_URL
-      ? new Response(IMAGE_BYTES, {
-          headers: { "content-type": "image/jpeg" },
-        })
-      : new Response(PAGE_WITH_IMAGE),
-  );
-
-/**
-The same page, but the image it advertises is gone.
-*/
-const servingPageWithMissingImage: typeof fetch = (input) =>
-  Promise.resolve(
-    urlOf(input) === IMAGE_URL
-      ? new Response("gone", { status: 404 })
-      : new Response(PAGE_WITH_IMAGE),
-  );
+const servingPageWithImage: typeof fetch = () =>
+  Promise.resolve(new Response(PAGE_WITH_IMAGE));
 
 async function statusOf(productId: string): Promise<string> {
   const row = await rowOf(productId);
@@ -335,13 +321,7 @@ function redirectingTo(landing: string) {
         }),
       );
     }
-    return Promise.resolve(
-      url === IMAGE_URL
-        ? new Response(IMAGE_BYTES, {
-            headers: { "content-type": "image/jpeg" },
-          })
-        : new Response(PAGE_WITH_IMAGE),
-    );
+    return Promise.resolve(new Response(PAGE_WITH_IMAGE));
   };
   return vi.fn(impl);
 }
@@ -693,101 +673,31 @@ describe("reextract", () => {
   });
 });
 
-describe("handleEnrichmentBatch: the primary image", () => {
-  it("copies the image the page advertises, and points the row at it", async () => {
+describe("handleEnrichmentBatch: no shop images (D-176)", () => {
+  it("reads a page that advertises an image without fetching or storing it", async () => {
     const productId = await pendingProduct();
+    const fetchImpl = vi.fn(servingPageWithImage);
+    const deps = depsWith(fetchImpl);
 
-    await handleEnrichmentBatch(
-      batchOf("dialed-enrichment", [jobFor(productId)]),
-      depsWith(vi.fn(servingPageAndImage)),
-    );
-
-    const row = await rowOf(productId);
-    // Filed under the product, beside its snapshots, stamped with the
-    // fetch — the timestamp is the run's, so the prefix is what a test can
-    // name and the bytes are what prove it is the right object.
-    expect(row.imageKey).toMatch(
-      new RegExp(String.raw`^products/${productId}/image-\d+$`, "u"),
-    );
-    // A re-encode of the image rather than the bytes served — `image.ts`
-    // pins the pixels; here it is enough that a picture landed.
-    const stored = await env.MEDIA.get(row.imageKey ?? "");
-    expect(stored?.httpMetadata?.contentType).toBe("image/webp");
-    expect(stored?.size ?? 0).toBeGreaterThan(0);
-  });
-
-  it("copies it once: a later fetch of the same product re-reads the page and not the image", async () => {
-    // Fill-only-what-is-blank, and here that is right — nobody edits an R2
-    // key, so the only question is whether we have already paid for this
-    // image (R-123). Driven through a *second real fetch*: the snapshot is
-    // aged past the reuse window, so the page is fetched again and the
-    // image is the only thing that must not be.
-    const productId = await pendingProduct();
-    const fetchImpl = vi.fn(servingPageAndImage);
-    await handleEnrichmentBatch(
-      batchOf("dialed-enrichment", [jobFor(productId)]),
-      depsWith(fetchImpl),
-    );
-    const first = await rowOf(productId);
-    expect(first.imageKey).not.toBeNull();
-
-    await db()
-      .update(productSnapshots)
-      .set({ fetchedAt: Date.now() - 24 * 60 * 60 * 1000 })
-      .where(eq(productSnapshots.productId, productId));
-    await db()
-      .update(products)
-      .set({ extractionStatus: "pending" })
-      .where(eq(products.id, productId));
-    fetchImpl.mockClear();
-
-    await handleEnrichmentBatch(
-      batchOf("dialed-enrichment", [jobFor(productId, "m2")]),
-      depsWith(fetchImpl),
-    );
-
-    const fetched = fetchImpl.mock.calls.map((call) => urlOf(call[0]));
-    expect(fetched).toStrictEqual([URL_UNDER_TEST]);
-    const after = await rowOf(productId);
-    expect(after.imageKey).toBe(first.imageKey);
-  });
-
-  it("keeps the extraction when the image cannot be fetched", async () => {
-    // A product whose picture 404s is still a product with a composition,
-    // and the page is already stored. Failing the job over the image would
-    // throw away the text (law 5).
-    const productId = await pendingProduct();
-    const deps = depsWith(vi.fn(servingPageWithMissingImage));
-    const message = jobFor(productId);
-
-    await handleEnrichmentBatch(batchOf("dialed-enrichment", [message]), deps);
-
-    expect(message.ack).toHaveBeenCalledTimes(1);
-    const row = await rowOf(productId);
-    expect(row.extractionStatus).toBe("done");
-    expect(row.fabricComposition).toBe("47% merino wool, 53% nylon");
-    expect(row.imageKey).toBeNull();
-    expect(deps.captureException).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "PageFetchError" }),
-      { surface: "enrichment-image", productId },
-    );
-  });
-
-  it("copies nothing, and reports nothing, when the page advertises no image", async () => {
-    // "No image" is not a failure. Without the guard this asks the network
-    // for `undefined` and files the refusal in Sentry, which is an alert
-    // for every product whose shop ships no og:image.
-    const productId = await pendingProduct();
-    const deps = depsWith(serving(PAGE));
     await handleEnrichmentBatch(
       batchOf("dialed-enrichment", [jobFor(productId)]),
       deps,
     );
+
+    // The page, and only the page: the advertised image is never asked for.
+    const fetched = fetchImpl.mock.calls.map((call) => urlOf(call[0]));
+    expect(fetched).toStrictEqual([URL_UNDER_TEST]);
     const row = await rowOf(productId);
     expect(row.extractionStatus).toBe("done");
     expect(row.imageKey).toBeNull();
+    // The snapshot is the product's only object in the bucket.
+    const listed = await env.MEDIA.list({ prefix: `products/${productId}/` });
+    expect(listed.objects.map((object) => object.key)).toStrictEqual([
+      expect.stringMatching(/\/snapshot-\d+\.html$/u),
+    ]);
     expect(deps.captureException).not.toHaveBeenCalled();
   });
+
 });
 
 /**

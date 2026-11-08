@@ -1,16 +1,15 @@
-import { and, desc, eq, gt, isNotNull, sql } from "drizzle-orm";
+import { and, desc, eq, gt, sql } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { dlqBatchHandler, gaveUpClear, gaveUpUpsert } from "../../db/gave-up";
 import { products, productSnapshots } from "../../db/schema-core";
-import { firstColumnWhere, firstRowWhere } from "../../lib/sql/keyed-read";
+import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { consumeEach } from "../../lib/sql/queue-batch";
 import type { ExtractionModel } from "../../lib/contracts";
 import { applyExtraction, type ApplyReport } from "../products";
 import { abandonedBefore } from "./abandon";
 import { PageFetchError, pageFailureReason } from "./bounds";
 import { fetchProductPage } from "./fetch-page";
-import { copyProductImage } from "./image";
 import { runLadder, type LadderResult } from "./ladder";
 import { modelPass } from "./model/rung";
 import { enrichJobSchema } from "./queue-messages";
@@ -142,60 +141,6 @@ async function latestSnapshot(db: Db, productId: string, since: number) {
 }
 
 /**
- * Copy the primary image, once.
- *
- * **Fill-only-what-is-blank, and here that is the right rule** — the
- * opposite of the ledger `applyExtraction` needs. That ledger exists
- * because a person edits a composition and must not have it overwritten;
- * nobody edits an R2 key, so there is no human intent to protect. What is
- * left is "have we already paid for this image", and a non-null key
- * answers it.
- *
- * A later run finding a *different* image therefore does not replace the
- * stored one. That is deliberate and recorded (R-123): refreshing a product
- * image needs a rule about the old object and anything holding its URL, and
- * inventing one here would be guessing.
- *
- * Never throws. A product whose image 404s is still a product with a
- * composition, and the page is already stored — failing the job over the
- * picture would throw away the text (law 5).
- */
-async function copyImageOnce(
-  deps: EnrichmentDeps,
-  productId: string,
-  imageUrl: string | undefined,
-  fetchedAt: number,
-): Promise<void> {
-  if (imageUrl === undefined) return;
-  // Asked in SQL — "does this product already have an image" — rather than
-  // by reading the row and testing the column. A row read would have to
-  // answer for a product that is not there, which cannot happen here
-  // (`applyExtraction` has just written to it) and so would be a branch no
-  // test could reach.
-  const already = await firstColumnWhere(
-    deps.db,
-    products,
-    products.id,
-    and(eq(products.id, productId), isNotNull(products.imageKey)),
-  );
-  if (already !== undefined) return;
-  try {
-    const imageKey = await copyProductImage(
-      productId,
-      imageUrl,
-      deps.fetchImpl ?? fetch,
-      fetchedAt,
-    );
-    await deps.db
-      .update(products)
-      .set({ imageKey })
-      .where(eq(products.id, productId));
-  } catch (error) {
-    deps.captureException(error, { surface: "enrichment-image", productId });
-  }
-}
-
-/**
  * Run the ladder over a stored page and write the result back, updating
  * the snapshot's rung to what this run found — the column's job is to say
  * whether re-running would help, and after a re-run that is a new answer.
@@ -296,8 +241,8 @@ async function dropDeniedSource(db: Db, productId: string): Promise<void> {
  * `snapshot.ts` already accepts.
  *
  * **Where the page landed is checked before anything is kept** (R-176): a
- * link that redirected to a denied site leaves no snapshot, no specs and
- * no image behind, and is denied wherever it would show.
+ * link that redirected to a denied site leaves no snapshot and no specs
+ * behind, and is denied wherever it would show.
  */
 async function fetchAndExtract(
   deps: EnrichmentDeps,
@@ -328,9 +273,6 @@ async function fetchAndExtract(
     page.html,
     result,
   );
-  // After the write-back, so a failed apply does not leave an image copied
-  // for a product whose extraction never landed.
-  await copyImageOnce(deps, productId, result.extracted.imageUrl, fetchedAt);
 }
 
 /**

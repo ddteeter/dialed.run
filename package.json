@@ -43,6 +43,7 @@
     "check:bundle": "tsx scripts/check-bundle.ts",
     "garmin:check": "tsx scripts/garmin-check.ts",
     "plan-survey": "tsx scripts/plan-survey.ts",
+    "shop-images:delete": "tsx scripts/shop-images.ts",
     "ship": "node ./node_modules/guardrails-core/dist/cli.mjs ship",
     "verify": "node ./node_modules/guardrails-core/dist/cli.mjs verify",
     "eval": "tsx eval/run.ts",
