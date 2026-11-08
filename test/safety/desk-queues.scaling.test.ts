@@ -1,6 +1,9 @@
+import { is } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
+import { getTableConfig, SQLiteTable } from "drizzle-orm/sqlite-core";
 import { beforeEach, describe, expect, it } from "vitest";
 
+import * as coreSchema from "../../src/db/schema-core";
 import {
   blocks,
   brands,
@@ -27,7 +30,7 @@ import { duplicateProducts } from "../../src/modules/safety/duplicates";
 import { quarantinedContentFor } from "../../src/modules/safety/quarantine";
 import { burstsToRelease } from "../../src/modules/safety/release";
 
-import { queryCounts, type QueryCounts } from "../d1-spy";
+import { queriesDuring, queryCounts, type QueryCounts } from "../d1-spy";
 import {
   makeEntry,
   makeRun,
@@ -183,94 +186,70 @@ beforeEach(async () => {
   await resetSafetyTables();
 });
 
-describe("pendingReviewQueue", () => {
-  // N+1 (design 182, #490): per fingerprint-sourced photo row, otherPhotosOf adds
-  // one statement to its batch (src/modules/safety/other-photos.ts:101-105),
-  // photoMatchesOf two round trips of three statements
-  // (src/modules/safety/photo-matches.ts:115-117), and removedMatchesOf one
-  // query per fingerprinted photo
-  // (src/modules/safety/removed-fingerprints.ts:256-259). Issue pending.
-  // The fixed part: the grouped read, subjectsFor's batch of six, and
-  // removedMatchesOf's batch of two.
-  it("asks 9 + 5 statements per fingerprinted photo row", async () => {
-    const one = await countedAt(
-      1,
-      async () => fingerprintRow("photo"),
-      async () => pendingReviewQueue(),
-    );
-    const many = await countedAt(
-      25,
-      async () => fingerprintRow("photo"),
-      async () => pendingReviewQueue(),
-    );
+/**
+ * Asserts a queue asks the same for 1 row as for 25, in statements and in
+ * the length of its longest one (design 188, #490): the per-row subjects
+ * are bound as one JSON list, so neither the count nor the SQL grows.
+ */
+async function flatQueue<T extends readonly unknown[]>(
+  seed: () => Promise<unknown>,
+  read: () => Promise<T>,
+) {
+  const one = await countedAt(1, seed, read);
+  const many = await countedAt(25, seed, read);
+  expect(one.result).toHaveLength(1);
+  expect(many.result).toHaveLength(25);
+  expect(many.counts.core).toBe(one.counts.core);
+  expect(many.counts.coreLongestSql).toBe(one.counts.coreLongestSql);
+  expect(many.counts.coreRowsRead).toBeGreaterThan(one.counts.coreRowsRead);
+  expect(many.counts.weather).toBe(one.counts.weather);
+}
 
-    expect(one.result).toHaveLength(1);
-    expect(many.result).toHaveLength(25);
-    expect(one.counts.core).toBe(9 + 5 * 1);
-    expect(many.counts.core).toBe(9 + 5 * 25);
-    expect(many.counts.coreRowsRead).toBeGreaterThan(one.counts.coreRowsRead);
-    expect(many.counts.weather).toBe(one.counts.weather);
+/**
+D1's cap on one statement's text, in bytes (the SQL here is ASCII).
+*/
+const D1_STATEMENT_LIMIT = 100_000;
+
+describe("pendingReviewQueue", () => {
+  it("asks the same for 1 fingerprinted photo row as for 25", async () => {
+    await flatQueue(
+      async () => fingerprintRow("photo"),
+      async () => pendingReviewQueue(),
+    );
   });
 
-  // N+1 (design 182, #490): an entry row runs the same per-subject reads as a
-  // photo row but one (removedMatchesOf looks a kit's id up as a photo,
-  // finds none and searches nothing): one statement in otherPhotosOf's
-  // batch and photoMatchesOf's three. Issue pending.
-  it("asks 9 + 4 statements per fingerprinted entry row", async () => {
-    const one = await countedAt(
-      1,
+  it("asks the same for 1 fingerprinted entry row as for 25", async () => {
+    await flatQueue(
       async () => fingerprintRow("entry"),
       async () => pendingReviewQueue(),
     );
-    const many = await countedAt(
-      25,
-      async () => fingerprintRow("entry"),
-      async () => pendingReviewQueue(),
-    );
-
-    expect(one.result).toHaveLength(1);
-    expect(many.result).toHaveLength(25);
-    expect(one.counts.core).toBe(9 + 4 * 1);
-    expect(many.counts.core).toBe(9 + 4 * 25);
-    expect(many.counts.coreRowsRead).toBeGreaterThan(one.counts.coreRowsRead);
-    expect(many.counts.weather).toBe(one.counts.weather);
   });
 
   it("asks the same for a page of rows nobody's copies are asked about", async () => {
     // A classifier row on a photo: no at-once report, not a fingerprint
     // match, so none of the per-subject reads run.
-    const one = await countedAt(1, classifierRow, async () =>
-      pendingReviewQueue(),
-    );
-    const many = await countedAt(25, classifierRow, async () =>
-      pendingReviewQueue(),
+    await flatQueue(classifierRow, async () => pendingReviewQueue());
+  });
+
+  it("keeps a full page of fingerprinted rows under D1's statement size", async () => {
+    // A hundred rows, the page's cap. Spelt into the SQL as `nearestOf`
+    // spells a fingerprint, about 1.5 KB each, one search for all of
+    // them would be past the limit; bound as JSON, it is the same text as
+    // for one.
+    const { counts, result } = await countedAt(
+      100,
+      async () => fingerprintRow("photo"),
+      async () => pendingReviewQueue(),
     );
 
-    expect(one.result).toHaveLength(1);
-    expect(many.result).toHaveLength(25);
-    expect(many.counts.core).toBe(one.counts.core);
-    expect(many.counts.coreRowsRead).toBeGreaterThan(one.counts.coreRowsRead);
-    expect(many.counts.weather).toBe(one.counts.weather);
+    expect(result).toHaveLength(100);
+    expect(counts.coreLongestSql).toBeLessThan(D1_STATEMENT_LIMIT);
   });
 });
 
 describe("pendingTakedownRequests", () => {
-  // N+1 (design 182, #490): per request whose link is ours, otherPhotosOf adds
-  // one statement to its batch (src/modules/safety/other-photos.ts:101-105)
-  // and photoMatchesOf a fingerprint read plus a batch of two
-  // (src/modules/safety/photo-matches.ts:115-117). Issue pending. The fixed
-  // part: the list itself and the recorded-photo read, one per
-  // `IN_LIST_CHUNK` (80, src/lib/chunked.ts:43) of requests.
-  it("asks 2 + 4 statements per request for a kit of ours", async () => {
-    const one = await countedAt(1, requestForKit, openTakedowns);
-    const many = await countedAt(25, requestForKit, openTakedowns);
-
-    expect(one.result).toHaveLength(1);
-    expect(many.result).toHaveLength(25);
-    expect(one.counts.core).toBe(2 + 4 * 1);
-    expect(many.counts.core).toBe(2 + 4 * 25);
-    expect(many.counts.coreRowsRead).toBeGreaterThan(one.counts.coreRowsRead);
-    expect(many.counts.weather).toBe(one.counts.weather);
+  it("asks the same for 1 request for a kit of ours as for 25", async () => {
+    await flatQueue(requestForKit, openTakedowns);
   });
 });
 
@@ -396,5 +375,57 @@ describe("the Desk's single-read lists", () => {
       async () => duplicateProducts(),
       (candidates) => candidates.length,
     );
+  });
+});
+
+/**
+ * The names a statement gives, as Drizzle quotes them: each CTE's and
+ * column alias's, given once, and each table alias's, given wherever the
+ * copy is joined.
+ */
+function namesGiven(statement: string) {
+  const named = (pattern: RegExp) =>
+    Array.from(statement.matchAll(pattern), (match) => match[1] ?? "");
+  return {
+    once: [
+      ...named(/(?:\bwith|,)\s+"([^"]*)"\s+as\s+\(/giu),
+      ...named(/\bas\s+"([^"]*)"/giu),
+    ],
+    copies: named(/"\w+"\s+"([^"]*)"/gu),
+  };
+}
+
+/**
+Every column of every core table, by its name in SQL.
+*/
+const CORE_COLUMNS = new Set(
+  Object.values(coreSchema)
+    .filter((table) => is(table, SQLiteTable))
+    .flatMap((table) =>
+      getTableConfig(table).columns.map((column) => column.name),
+    ),
+);
+
+describe("the names the per-row reads give (design 188)", () => {
+  it("gives each CTE, alias and joined copy a name of its own, none a column's", async () => {
+    // A column a CTE names as a table's own column is read as that column
+    // in a subquery over the table, so the read quietly compares the table
+    // with itself; an unnamed one is no name at all.
+    await fingerprintRow("photo");
+    await fingerprintRow("entry");
+    const { prepared } = await queriesDuring(async () => pendingReviewQueue());
+
+    const searches = prepared.filter((sql) => sql.includes("json_each"));
+    // Other photos, the probes, the kit and garment searches, and the
+    // removed images: five reads bind their subjects as a list.
+    expect(searches).toHaveLength(5);
+    for (const statement of searches) {
+      const { once, copies } = namesGiven(statement);
+      for (const name of [...once, ...copies]) {
+        expect(name).not.toBe("");
+        expect(CORE_COLUMNS.has(name), name).toBe(false);
+      }
+      expect(once).toStrictEqual([...new Set(once)]);
+    }
   });
 });

@@ -22,6 +22,7 @@ import {
   pendingReviewQueue,
   pendingTakedownRequests,
 } from "../../src/modules/safety";
+import { queriesDuring } from "../d1-spy";
 import { noPurge } from "../purge-spy";
 import { oweInCore } from "../queue-fakes";
 import {
@@ -119,8 +120,25 @@ describe("photoMatchesOf", () => {
     await resetTables();
   });
 
-  it("answers an empty map for no subjects", async () => {
-    expect(await photoMatchesOf(core, [])).toStrictEqual(new Map());
+  it("answers an empty map for no subjects, asking nothing", async () => {
+    let found: unknown;
+    const { prepared } = await queriesDuring(async () => {
+      found = await photoMatchesOf(core, []);
+    });
+
+    expect(found).toStrictEqual(new Map());
+    expect(prepared).toStrictEqual([]);
+  });
+
+  it("sends no search when no subject has a fingerprint", async () => {
+    const legacy = await photo(await kit(), undefined);
+    await photo(await kit(), SUBJECT);
+
+    const { prepared } = await queriesDuring(async () =>
+      photoMatchesOf(core, [{ subjectType: "photo", subjectId: legacy }]),
+    );
+
+    expect(prepared).toHaveLength(1);
   });
 
   it("finds kit and garment photos within the distance, private included, nearest first", async () => {
@@ -295,6 +313,31 @@ describe("photoMatchesOf", () => {
         ],
       ]),
     );
+  });
+
+  it("answers each subject its own matches in one call, and one unprinted as unprinted", async () => {
+    const OTHER = "fedcba9876543210";
+    const one = await photo(await kit(), SUBJECT);
+    const copyOfOne = await photo(await kit(), flipped(SUBJECT, 1n));
+    const two = await photo(await kit(), OTHER);
+    const copyOfTwo = await photo(await kit(), flipped(OTHER, 1n));
+    const legacy = await photo(await kit(), undefined);
+
+    const found = await photoMatchesOf(core, [
+      { subjectType: "photo", subjectId: one },
+      { subjectType: "photo", subjectId: legacy },
+      { subjectType: "photo", subjectId: two },
+    ]);
+
+    const idsFor = (id: string) =>
+      found.get(`photo:${id}`)?.matches.map((match) => match.id);
+    expect(idsFor(one)).toStrictEqual([copyOfOne]);
+    expect(idsFor(two)).toStrictEqual([copyOfTwo]);
+    expect(found.get(`photo:${legacy}`)).toStrictEqual({
+      fingerprinted: false,
+      matches: [],
+      isCutOff: false,
+    });
   });
 
   it("answers each subject apart, in one call", async () => {

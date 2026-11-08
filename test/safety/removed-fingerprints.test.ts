@@ -34,6 +34,7 @@ import {
   withBitsSet,
 } from "../fixtures/scenes";
 
+import { queriesDuring } from "../d1-spy";
 import { makeEntry, makeRun, makeUser, resetTables } from "../feed/helpers";
 import { opened } from "./helpers";
 
@@ -453,13 +454,18 @@ describe("removedMatchesOf", () => {
     ]);
   });
 
-  it("lists nothing for a held photo too plain to match by (design 164)", async () => {
+  it("lists nothing for a held photo too plain to match by, searching for nothing (design 164)", async () => {
     const { photoId } = await printed("0000000000000000");
     await aKept("0000000000000000", 100);
 
-    const found = await removedMatchesOf(core(), [photoId]);
+    let found = new Map<string, unknown>();
+    const { prepared } = await queriesDuring(async () => {
+      found = await removedMatchesOf(core(), [photoId]);
+    });
 
-    expect(found.get(photoId)).toStrictEqual([]);
+    expect(found).toStrictEqual(new Map([[photoId, []]]));
+    // The two fingerprint reads, and no search after them.
+    expect(prepared).toHaveLength(2);
   });
 
   it("names a garment as one, and whose it was", async () => {
