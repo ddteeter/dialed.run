@@ -509,6 +509,12 @@ needs its own Strava app, not a second subscription.
     would delete, and snapshots under the same prefix are never matched.
     Read the list, then run it again with `--apply`. If nothing was ever
     enriched against the real bucket, it lists nothing, and you're done.
+  - **Owner: let the marketing site solve Turnstile** (round 31, #367).
+    The site's request-access form posts to `/api/access-requests`, and
+    the server only accepts a challenge solved on `dialed.run`. In
+    Turnstile → the widget → Hostnames, add `dialed.run` beside the app's
+    host. Check: a request from the live form lands in D7 and the visitor
+    ends on `dialed.run/invite/sent`, not `?error=turnstile`.
 
 ## 9. Restoring a database (D1 Time Travel)
 

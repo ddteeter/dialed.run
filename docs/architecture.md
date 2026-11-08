@@ -34,6 +34,7 @@ flowchart LR
     W --> D1
     W --> D1W
     U -->|sendBeacon on hide:\nPOST /api/vitals| W
+    MK[Marketing site: dialed.run] -->|request-access form:\nPOST /api/access-requests, 303 back| W
     W -->|speed beacon, server timing| AE
     CRON -->|daily rollup via\nSQL API| AE
     W -->|perf_daily| D1O
@@ -165,7 +166,8 @@ Key decisions embedded here:
 - **Server functions are the API.** Mutations and loads are typed server
   functions in modules, invoked from loaders/components — no hand-rolled JSON
   endpoints except `src/routes/api/` for machine callers (Strava webhook,
-  health checks), which parse with zod like any trust boundary.
+  health checks) and the marketing site's request-access form (design
+  187), which parse with zod like any trust boundary.
 - **Route ownership = directory ownership** (see contracts). Route files are
   thin; modules hold logic and components.
 - **View layer**: five-tab shell (`ui/Layout`): Feed · Closet · +Add · Call

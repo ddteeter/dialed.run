@@ -87,7 +87,7 @@ the marketing site needs `POST /api/access-requests` (round 31, #367), and
   (round 31), and the checklist row for the purge script if coordinator-4
   routes it elsewhere.
 
-## Open questions (building on these guesses)
+## Open questions (building on these guesses; filed as Design 154, #528)
 
 - A blocked-region request (`isFromBlockedRegion`) gets the same
   `/invite/sent`. Round 31 has no error code for it, and the waitlist copy

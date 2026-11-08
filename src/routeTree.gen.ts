@@ -27,6 +27,7 @@ import { Route as AccountTermsRouteImport } from './routes/account/terms'
 import { Route as AccountUnsubscribeRouteImport } from './routes/account/unsubscribe'
 import { Route as AccountUsernameRouteImport } from './routes/account/username'
 import { Route as AccountVerifyRouteImport } from './routes/account/verify'
+import { Route as ApiAccessRequestsRouteImport } from './routes/api/access-requests'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiStravaRouteImport } from './routes/api/strava'
 import { Route as ApiVitalsRouteImport } from './routes/api/vitals'
@@ -166,6 +167,11 @@ const AccountUsernameRoute = AccountUsernameRouteImport.update({
 const AccountVerifyRoute = AccountVerifyRouteImport.update({
   id: '/account/verify',
   path: '/account/verify',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAccessRequestsRoute = ApiAccessRequestsRouteImport.update({
+  id: '/api/access-requests',
+  path: '/api/access-requests',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
@@ -439,6 +445,7 @@ export interface FileRoutesByFullPath {
   '/account/unsubscribe': typeof AccountUnsubscribeRoute
   '/account/username': typeof AccountUsernameRoute
   '/account/verify': typeof AccountVerifyRoute
+  '/api/access-requests': typeof ApiAccessRequestsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/strava': typeof ApiStravaRoute
   '/api/vitals': typeof ApiVitalsRoute
@@ -508,6 +515,7 @@ export interface FileRoutesByTo {
   '/account/unsubscribe': typeof AccountUnsubscribeRoute
   '/account/username': typeof AccountUsernameRoute
   '/account/verify': typeof AccountVerifyRoute
+  '/api/access-requests': typeof ApiAccessRequestsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/strava': typeof ApiStravaRoute
   '/api/vitals': typeof ApiVitalsRoute
@@ -579,6 +587,7 @@ export interface FileRoutesById {
   '/account/unsubscribe': typeof AccountUnsubscribeRoute
   '/account/username': typeof AccountUsernameRoute
   '/account/verify': typeof AccountVerifyRoute
+  '/api/access-requests': typeof ApiAccessRequestsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/strava': typeof ApiStravaRoute
   '/api/vitals': typeof ApiVitalsRoute
@@ -651,6 +660,7 @@ export interface FileRouteTypes {
     | '/account/unsubscribe'
     | '/account/username'
     | '/account/verify'
+    | '/api/access-requests'
     | '/api/health'
     | '/api/strava'
     | '/api/vitals'
@@ -720,6 +730,7 @@ export interface FileRouteTypes {
     | '/account/unsubscribe'
     | '/account/username'
     | '/account/verify'
+    | '/api/access-requests'
     | '/api/health'
     | '/api/strava'
     | '/api/vitals'
@@ -790,6 +801,7 @@ export interface FileRouteTypes {
     | '/account/unsubscribe'
     | '/account/username'
     | '/account/verify'
+    | '/api/access-requests'
     | '/api/health'
     | '/api/strava'
     | '/api/vitals'
@@ -861,6 +873,7 @@ export interface RootRouteChildren {
   AccountUnsubscribeRoute: typeof AccountUnsubscribeRoute
   AccountUsernameRoute: typeof AccountUsernameRoute
   AccountVerifyRoute: typeof AccountVerifyRoute
+  ApiAccessRequestsRoute: typeof ApiAccessRequestsRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiStravaRoute: typeof ApiStravaRoute
   ApiVitalsRoute: typeof ApiVitalsRoute
@@ -1033,6 +1046,13 @@ declare module '@tanstack/react-router' {
       path: '/account/verify'
       fullPath: '/account/verify'
       preLoaderRoute: typeof AccountVerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/access-requests': {
+      id: '/api/access-requests'
+      path: '/api/access-requests'
+      fullPath: '/api/access-requests'
+      preLoaderRoute: typeof ApiAccessRequestsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/health': {
@@ -1429,6 +1449,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccountUnsubscribeRoute: AccountUnsubscribeRoute,
   AccountUsernameRoute: AccountUsernameRoute,
   AccountVerifyRoute: AccountVerifyRoute,
+  ApiAccessRequestsRoute: ApiAccessRequestsRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiStravaRoute: ApiStravaRoute,
   ApiVitalsRoute: ApiVitalsRoute,
