@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #16161A; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+</style>
+</helmet>
+<div style="font-family: Archivo, Helvetica, sans-serif; background: #16161A; color: #F4F3EF; padding: 48px 40px 88px;">
+  <div style="max-width: 1420px; margin: 0 auto; display: flex; flex-direction: column; gap: 64px;">
+
+    <div style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 28px; border-bottom: 1px solid #2A2A31;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">
+        <span>Round 50 &nbsp;/&nbsp; 141–151 · 2026-11-08</span>
+        <span style="color: #FF2D8A;">dialed.run</span>
+      </div>
+      <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; max-width: 1120px; text-transform: uppercase;">Most guesses stand. Dark ink blocks go to panel.</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #8B8B93; max-width: 860px; text-wrap: pretty;">Changed: 143.1 (ink blocks take rule 04's fallback on dark), 143.3 (capitals), 143.5 (no --muted mark), 149 (moisture cut). Ruled: 142, 148 and 151 (scope now, full brief in a later round). The notices are taken as read: boards that draw a shop product image now read as the runner's photo or the no-photo state. Words settle everything this round, so there are no frames.</p>
+    </div>
+
+    <div id="rulings" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">Rulings · Round 50</span>
+      <div style="display: flex; flex-direction: column; border: 1px solid #2A2A31;">
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="18">
+          <div style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 170px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;">
+            <span style="font-size: 15px; font-weight: 600;">{{ r.q }}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: {{ r.vc }};">{{ r.v }}</span>
+            <span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">{{ r.a }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const C = '#00E0C6', A = '#F5FF3D', D = '#FF2D8A';
+    const R = (q, v, a) => ({ q, v, a, vc: v.startsWith('CONFIRM') ? C : v.includes('DRAWN') ? D : A });
+    const rows = [
+      R('141 · Desk measure', 'CONFIRMED', 'MEASURE.column (620). 560 was a board measurement and is struck. P3\'s body and bar are held to 620, and its band runs the full column.'),
+      R('142 · Unread tint', 'RULED', 'A rule, not a new value: --cold-text and --label never sit on --unread, in either theme. The unread row uses only --ink and --quiet, as it does today. Keep #2A2A14: a dark enough value to pass (≈#222210) loses most of the tint against --ground. Add both pairs to the contrast test as forbidden pairs.'),
+      R('143.1 · Ink blocks on dark', 'CHANGED', 'All of them take rule 04\'s fallback: --panel with a 1px --hairline. A paper block on a dark page would be the brightest thing on the screen. The Desk stays ink. NowGoRun has no ink in either theme since R49·138b: its band is hi-viz and its body is the theme\'s ground. Correct the build there.'),
+      R('143.2 · You header switch', 'CONFIRMED', 'Superseded by U1\'s Theme row. No switch and no THEME line in the header.'),
+      R('143.3 · Theme labels', 'CHANGED', 'SYSTEM / LIGHT / DARK in capitals, MONO.xs, the same as every other segmented label (PRIVATE / SHARED / PUBLIC).'),
+      R('143.4 · Failure copy', 'CONFIRMED', 'Kicker "Couldn\'t save.", message "This device will keep it.", and Try again resends the same choice.'),
+      R('143.5 · CoverageMark', 'CHANGED', 'None. All three marks are --ink (T2 rule 03). R48·134\'s "--muted" was wrong. It applies only to the [Untested] word beside the mark.'),
+      R('143.6 · Light-ground notices', 'CONFIRMED', 'Those three only. The bordered failure bands aren\'t tinted, so they\'re out of scope.'),
+      R('144 · Type words', 'CONFIRMED', 'All nineteen as listed. Plural types stay plural ("gloves", "socks", "arm sleeves").'),
+      R('145 · WHO REPORTED, open', 'CONFIRMED', 'As guessed: one line per reporter, oldest first, in micro type: @handle · the reason\'s sentence · date. A closed account reads "A closed account". The caret turns ▾ and the caption goes. Add the count to the fold\'s label: WHO REPORTED · 4 ▸. There\'s no network or day grouping in v1: the Desk has no network data, and the dates show any clustering.'),
+      R('146 · Grouped follow target', 'CONFIRMED', 'Your own profile for v1. A followers list is post-v1.'),
+      R('147 · WRONG? alone', 'CONFIRMED', 'Stands alone in MONO.xs where the block would be. No shared product means no WRONG?.'),
+      R('148 · Tied band', 'RULED', 'The word is "Mixed". Its mark is --ink, with no cold or hot colour and no arrow, because there\'s no direction. The ladder\'s symmetric tie-break is unchanged.'),
+      R('149 · · DAMP', 'CHANGED', 'Cut from the garment\'s works-at line. It shows temperature only. Moisture stays on the band history (A2/A3) and the run, where it\'s known.'),
+      R('150 · Tap list length', 'RULED', '18 is the total. The 24 in §AA is struck, and the disclosure states the real remainder.'),
+      R('151a · Landing, v1', 'RULED', 'One screen at /, signed-out layout, the hero as built. Signed out: primary "Request access" (Au2\'s ask-for-access flow), then "Have an account? Log in". Signed in: one action, "Your closet". No other sections until the owner gives copy.'),
+      R('151b · Marketing site', 'RULED', 'Scoped for a later round. /what-to-wear, /how-it-works and /changelog each need owner copy before they\'re drawn. Each will use the signed-out layout and end on Request access. Nothing links to them until they exist.'),
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>
