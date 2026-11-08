@@ -12,10 +12,11 @@ import { SignedOutLayout, Wordmark } from "../../../ui";
  * stays off it."* The bar is `SignedOutLayout`'s; this is the hero.
  *
  * **The hero keeps the primary ask** — that is why the bar's Log in is
- * only hairline — and below 720, where there is no bar, it carries the
- * bar's one action too, so a phone is never left without the way in.
- * The full landing brief is still open (R-93), so the hero is the copy
- * the page already had and nothing new.
+ * only hairline. Round 50 · 151a: signed out, the ask is "Request access"
+ * (public stays invite-only, D-173, so asking is the way in), then "Have
+ * an account? Log in". Signed in it is "Your closet", which below 720,
+ * where there is no bar, the hero carries for the bar. No other sections
+ * until the owner gives copy (151b is #523).
  */
 export function Landing({
   signedIn,
@@ -48,21 +49,28 @@ const PRIMARY_ASK_CLASS =
   "target inline-flex items-center rounded-pill bg-ink px-5 font-bold text-ground no-underline";
 
 /**
- * Create account is the hero's own ask; Log in is the bar's, repeated
- * here only where there is no bar.
+ * Request access, then Log in for someone who already has an account.
+ *
+ * Design 154 (#528) part 3, a guess: the Log in line shows at every width,
+ * though the bar repeats Log in from 720 up, because 151a lists it as the
+ * hero's second line.
  */
 function SignedOutAsk(): JSX.Element {
   return (
-    <div className="flex items-center gap-4">
-      <Link to="/auth/signup" className={PRIMARY_ASK_CLASS}>
-        Create account
+    <div className="flex flex-col items-start gap-4">
+      <Link to="/account/request-access" className={PRIMARY_ASK_CLASS}>
+        Request access
       </Link>
-      <Link
-        to="/auth/login"
-        className="target inline-flex items-center font-semibold text-ink underline underline-offset-4 wide:hidden"
-      >
-        Log in
-      </Link>
+      <p className="m-0 text-body text-quiet">
+        Have an account?{" "}
+        <Link
+          data-target="inline"
+          to="/auth/login"
+          className="font-bold text-ink underline underline-offset-4"
+        >
+          Log in
+        </Link>
+      </p>
     </div>
   );
 }
