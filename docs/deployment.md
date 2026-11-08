@@ -501,6 +501,15 @@ needs its own Strava app, not a second subscription.
   The layout (which blob is what) is `src/modules/ops/vitals.ts`'s header;
   the queries the code runs are `src/modules/ops/vitals-queries.ts`.
 
+- **One-time steps (design 187).** Each runs once, at the first deploy.
+  - **Delete the stored shop images** (D-176, #472). Before D-176,
+    enrichment copied a shop's image into MEDIA as
+    `products/<id>/image-<ts>`. Run `npm run shop-images:delete -- --remote`
+    with your own `wrangler login`. It's a dry run that lists every key it
+    would delete, and snapshots under the same prefix are never matched.
+    Read the list, then run it again with `--apply`. If nothing was ever
+    enriched against the real bucket, it lists nothing, and you're done.
+
 ## 9. Restoring a database (D1 Time Travel)
 
 D1 keeps 30 days of point-in-time history on the Paid plan, with no setup.

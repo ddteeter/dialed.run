@@ -408,7 +408,8 @@ extraction ladder: JSON-LD Product schema → Shopify `/products/<handle>.json`
 → OG tags → LLM rung (page text → `extractedProductSchema` via the
 `ExtractionModel` adapter). Best data wins per field; typed columns get the
 recommender-relevant core, `extracted` JSON keeps the rest and the
-precedence ledger, primary image is copied to R2. Failures mark
+precedence ledger. No shop image is copied or shown (D-176): runners'
+photos are the only pictures. Failures mark
 `extraction_status='failed'` and never surface as user errors — user-entered
 fields are always the floor (law 5). Extraction is idempotent (a redelivery
 reuses a snapshot fetched inside the last hour) and re-runnable over stored
