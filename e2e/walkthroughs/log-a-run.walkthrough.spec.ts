@@ -127,8 +127,11 @@ test("log a run: the file, its conditions, the kit, the verdict", async ({
       "A bit warm",
       "Way warm",
     ];
-    for (const point of scale) {
-      await expect(page.getByRole("button", { name: point })).toBeVisible();
+    const verdicts = page.getByRole("radiogroup", { name: "Did it work?" });
+    for (const [index, point] of scale.entries()) {
+      await expect(verdicts.getByRole("radio").nth(index)).toHaveAccessibleName(
+        point,
+      );
     }
     await scene(page, "The verdict · cold to warm, dialed in the middle", {
       say: "Then the Verdict: did it work? Five points, from way cold to way warm, with dialed in the middle. It's one Verdict for the whole run, not a score per piece.",

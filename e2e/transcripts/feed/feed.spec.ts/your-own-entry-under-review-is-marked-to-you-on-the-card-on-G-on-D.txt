@@ -50,9 +50,6 @@ end of list
 #.#mi
 # minutes # seconds per mile
 Dialed
-paragraph
-Two photos, one too many
-end of paragraph
 Kit
 list
 listitem, level 1, position 1, set size 1

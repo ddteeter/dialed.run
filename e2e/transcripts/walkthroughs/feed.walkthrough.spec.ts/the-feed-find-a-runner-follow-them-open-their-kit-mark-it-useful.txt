@@ -35,9 +35,6 @@ end of heading, @trail_#, level 1
 Dialed
 #° · clear
 link, Weather data provided by Visual Crossing
-paragraph
-Chilly first mile, settled in by the bridge.
-end of paragraph
 Kit
 list
 listitem, level 1, position 1, set size 1

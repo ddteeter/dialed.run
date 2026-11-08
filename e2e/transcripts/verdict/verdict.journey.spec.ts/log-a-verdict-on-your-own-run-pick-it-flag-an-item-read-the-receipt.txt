@@ -33,15 +33,18 @@ mi
 at #°
 link, Weather data provided by Visual Crossing
 status
-group, Did it work?
-button, Way cold, not pressed
-button, A bit cold, pressed
+radiogroup, Did it work?
+radio, Way cold, not checked, position 1, set size 5
+Way cold
+radio, A bit cold, checked, position 2, set size 5
 A bit cold
-end of button, A bit cold, pressed
-button, Dialed, not pressed
-button, A bit warm, not pressed
-button, Way warm, not pressed
-end of group, Did it work?
+radio, Dialed, not checked, position 3, set size 5
+Dialed
+radio, A bit warm, not checked, position 4, set size 5
+A bit warm
+radio, Way warm, not checked, position 5, set size 5
+Way warm
+end of radiogroup, Did it work?
 paragraph
 Five states.
 Your history in this band:
