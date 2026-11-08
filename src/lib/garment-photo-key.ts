@@ -14,11 +14,17 @@ export function photoKeyFor(userId: string, itemId: string): string {
 }
 
 /**
+ * The root every garment photo sits under, for code that works on the
+ * whole family rather than one runner's: the photo backup (design 186).
+ */
+export const GARMENT_PHOTO_ROOT = "items/";
+
+/**
  * Every garment photo a runner has, under one prefix — what the data
  * export lists (task 126, ACC-10).
  */
 export function garmentPhotoPrefix(userId: string): string {
-  return `items/${userId}/`;
+  return `${GARMENT_PHOTO_ROOT}${userId}/`;
 }
 
 /**

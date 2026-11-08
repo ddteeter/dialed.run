@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ENTRY_PHOTO_ROOT,
   entryPhotoIdOf,
   entryPhotoKeyFor,
   entryPhotoPrefix,
@@ -13,6 +14,11 @@ describe("the entry photo key convention", () => {
 
   it("gives an entry's prefix with its trailing slash, so e1 never matches e10", () => {
     expect(entryPhotoPrefix("u1", "e1")).toBe("entries/u1/e1/");
+  });
+
+  it("builds every prefix on one root, entries/ (design 186's backup copies it)", () => {
+    expect(ENTRY_PHOTO_ROOT).toBe("entries/");
+    expect(entryPhotoPrefix("u1").startsWith(ENTRY_PHOTO_ROOT)).toBe(true);
   });
 
   it("gives the runner's whole prefix when no entry is named", () => {

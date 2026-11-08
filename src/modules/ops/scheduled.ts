@@ -25,6 +25,7 @@ import { cronNameFor, type CronName } from "./crons";
 import type { SpeedFinding } from "./perf-checks";
 import { oweDigestEmail, type DigestMail } from "./digest-email";
 import { purgePublicPages } from "./edge-purge";
+import { backUpMedia } from "./media-backup";
 import { checkOutboxBacklog, drainOutbox } from "./outbox";
 import {
   sweepPublicPhotos,
@@ -876,6 +877,7 @@ export const digestKinds = [
   "screener-quiet",
   "account-deletion",
   "speed",
+  "media-backup",
 ] as const;
 
 export type DigestKind = (typeof digestKinds)[number];
@@ -933,6 +935,15 @@ async function runDailyDigest(
     },
     speed: async (anomalies) => {
       await upkeep.speed?.(utcDay(), anomalies);
+    },
+    // The photo backup (D-172, design 186): daily, after the purge, so a
+    // photo the purge just deleted is set aside to expire today.
+    "media-backup": async (anomalies) => {
+      await backUpMedia(
+        { source: env.MEDIA, backup: env.MEDIA_BACKUP },
+        anomalies,
+        { now: nowSeconds() },
+      );
     },
   };
   // Threshold checks fill in as their features land:

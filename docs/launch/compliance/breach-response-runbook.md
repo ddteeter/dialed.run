@@ -105,8 +105,10 @@ breaks, so you can choose.
 - Data altered or deleted in D1: D1 Time Travel, 30 days, restores **in
   place**; note the current bookmark first (`docs/deployment.md` §9).
   Restore `dialed-core` and `dialed-weather` to the same moment.
-- R2 has **no backup or versions** (`docs/deployment.md` §10). A deleted
-  photo is gone; that is a loss of availability and is itself a breach to
+- R2 has **no versions**. Garment and entry photos have a daily copy in
+  `dialed-media-backup`, kept 30 days after a delete (`docs/deployment.md`
+  §10): restore from it only a photo some row still points at. A photo
+  lost from both is a loss of availability and is itself a breach to
   record.
 - Read replicas (D-123) copy D1 to Europe, Asia-Pacific and Oceania. A
   breach of D1 is a breach of every copy.

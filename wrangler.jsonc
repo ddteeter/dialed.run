@@ -123,6 +123,16 @@
       "binding": "PUBLIC_PHOTOS",
       "bucket_name": "dialed-public-photos",
     },
+    // MEDIA_BACKUP (owner-approved, 2026-11-08; D-172, #420, design 186):
+    // the daily digest's copy of MEDIA's garment and entry photos
+    // (src/modules/ops/media-backup.ts). quarantine/ is never copied
+    // (#530); a deleted photo's copy is kept 30 days, then deleted (#529).
+    // Create it (enam) before the deploy that binds it
+    // (docs/deployment.md §2).
+    {
+      "binding": "MEDIA_BACKUP",
+      "bucket_name": "dialed-media-backup",
+    },
   ],
   "queues": {
     "producers": [
