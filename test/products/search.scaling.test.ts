@@ -127,3 +127,56 @@ describe("productsForBrand", () => {
     expect(twentyFive.coreRowsRead).toBeGreaterThan(one.coreRowsRead);
   });
 });
+
+/**
+ * #507: rows the search must not return cost it nothing. One matching
+ * brand (or product) is measured beside one row that does not match, then
+ * beside twenty-five: the rows it reads stay the same. One is there from
+ * the start because a range seek reads the row just past its range, so an
+ * empty neighbourhood would read one row fewer for a reason unrelated to
+ * scaling.
+ */
+describe("the catalogue searches beside rows they must not return (#507)", () => {
+  it("searchBrands reads no more for 25 brands under another prefix", async () => {
+    const prefix = await brandsSharing(1);
+    // Fresh prefixes sort after this one (ULIDs grow), so the first is the
+    // row just past the range in both measurements.
+    await brandsSharing(1);
+    const before = await queryCounts(() => searchBrands(db(), prefix));
+    await brandsSharing(24);
+    let found = 0;
+    const after = await queryCounts(async () => {
+      const result = await searchBrands(db(), prefix);
+      found = result.length;
+    });
+    expect(found).toBe(1);
+    expect(after.coreRowsRead).toBe(before.coreRowsRead);
+  });
+
+  it("searchProducts reads no more for 25 products under another brand or name", async () => {
+    const brand = await brandWith(1);
+    await createOrGetProduct(db(), {
+      brandId: brand.brandId,
+      name: "Trail",
+      createdBy: newUlid(),
+    });
+    const before = await queryCounts(() =>
+      searchProducts(db(), brand.brandId, "racer"),
+    );
+    await brandWith(25);
+    for (let index = 0; index < 24; index += 1) {
+      await createOrGetProduct(db(), {
+        brandId: brand.brandId,
+        name: `Trail ${String(index)}`,
+        createdBy: newUlid(),
+      });
+    }
+    let found = 0;
+    const after = await queryCounts(async () => {
+      const result = await searchProducts(db(), brand.brandId, "racer");
+      found = result.length;
+    });
+    expect(found).toBe(1);
+    expect(after.coreRowsRead).toBe(before.coreRowsRead);
+  });
+});
