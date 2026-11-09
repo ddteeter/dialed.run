@@ -15,6 +15,7 @@ import {
   outfitEntries,
   outfitEntryItems,
   reactions,
+  runConditions,
   runs,
   userProfiles,
   wardrobeItems,
@@ -24,7 +25,9 @@ import {
   weatherObservations,
 } from "../../src/db/schema-weather";
 import { env } from "../../src/env";
+import { entryHalfStatement } from "../../src/modules/feed/run-conditions-entry";
 import { cacheKeyFor } from "../../src/modules/weather";
+import { weatherHalfStatements } from "../../src/modules/weather/run-conditions-copy";
 import type { Audience } from "../../src/lib/contracts";
 import { newUlid } from "../../src/lib/ids";
 
@@ -216,6 +219,26 @@ export async function deleteAllFrom(
  * unscoped scan (consensus's "N of M" counts) need a clean slate rather
  * than relying on per-test-unique fixture data to avoid collisions.
  */
+/**
+ * The copy of every run's conditions the consensus reads (D-175), written
+ * by the real writers: what settling each run and saving each entry would
+ * have written. The seeds here put runs, entries and observations straight
+ * into their tables, past both writers, so a test that reads the
+ * consensus calls this after seeding.
+ */
+export async function syncRunConditions(): Promise<void> {
+  const db = coreDb();
+  const everyRun = await db.select({ id: runs.id }).from(runs);
+  for (const run of everyRun) {
+    const statements = await weatherHalfStatements(db, run.id);
+    for (const statement of statements) await statement;
+  }
+  const everyEntry = await db
+    .select({ id: outfitEntries.id })
+    .from(outfitEntries);
+  for (const entry of everyEntry) await entryHalfStatement(db, entry.id);
+}
+
 export async function resetTables(): Promise<void> {
   await deleteAllFrom(coreDb(), [
     outfitEntryItems,
@@ -223,6 +246,7 @@ export async function resetTables(): Promise<void> {
     notifications,
     reactions,
     outfitEntries,
+    runConditions,
     runs,
     wardrobeItems,
     follows,

@@ -14,7 +14,7 @@ import {
 import { followingFeed } from "../../src/modules/feed/feed";
 import { follow } from "../../src/modules/feed/follows";
 import { otherProfile } from "../../src/modules/feed/profiles";
-import { matchTally } from "../../src/modules/feed/consensus";
+import { matchTally } from "./synced-consensus";
 import { pointConditions } from "../feed/conditions-fixture";
 import {
   makeEntry,

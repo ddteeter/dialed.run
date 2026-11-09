@@ -10,6 +10,7 @@ import {
   matchTally,
   yourConditionsConsensus,
 } from "../../src/modules/feed/consensus";
+import { IN_LIST_CHUNK } from "../../src/lib/chunked";
 import { queryCounts } from "../d1-spy";
 import { pointConditions } from "./conditions-fixture";
 import {
@@ -20,21 +21,22 @@ import {
   makeUser,
   NOW,
   resetTables,
+  syncRunConditions,
 } from "./helpers";
 import {
   DAY,
   HOUR,
   FEELS_LIKE_C,
-  observationWalk,
   PLACE,
   seedEntry,
   seedObservation,
 } from "./scaling-fixture";
 
 /**
- * Design 182: the conditions consensus reads every public entry in its
- * window, so its query count must not grow with the runners in it. Rows
- * read may; the weather side grows only by `observationWalk`'s chunks.
+ * Design 182: the conditions consensus's query count must not grow with
+ * the runners in it. Since #409 it reads the copy of each run's conditions
+ * in core (D-175), so it asks the weather database nothing, and its rows
+ * read grow with the runs that match, not with the window (#507, below).
  */
 
 const VIEWER = pointConditions({ tempC: 8, feelsLikeC: FEELS_LIKE_C });
@@ -74,6 +76,7 @@ async function oneThenTwentyFive<T>(
     await resetTables();
     await before?.();
     await seedRunners(runners, ago);
+    await syncRunConditions();
     let result: T | undefined;
     const counts = await queryCounts(async () => {
       result = await read();
@@ -92,11 +95,12 @@ async function oneThenTwentyFive<T>(
 What one `matchTally` over a window holding `entries` matching ones asks.
 */
 function tallyQueries(entries: number) {
-  const walk = observationWalk(entries);
-  // The window's entries, then `observationsForEntries`'s run chunks,
-  // then `wornByRunner`'s two chunked reads (consensus.ts:282): the kit
-  // rows of the matching entries and their garments, 80 ids a statement.
-  return { core: 1 + walk.core + 2 * walk.core, weather: walk.weather };
+  const chunks = Math.ceil(entries / IN_LIST_CHUNK);
+  // The matching entries, found by the copy of their runs' conditions in
+  // core (D-175), then `wornByRunner`'s two chunked reads: the kit rows of
+  // the matching entries and their garments, 80 ids a statement. Nothing
+  // is asked of the weather database: the copy holds what it answered.
+  return { core: 1 + 2 * chunks, weather: 0 };
 }
 
 describe("matchTally: the same queries for 1 runner or 25 (design 182)", () => {
@@ -274,6 +278,7 @@ async function tallyBeside(
   await setup?.();
   await seedRunners(1, HOUR);
   for (let index = 0; index < unrelated; index += 1) await noise();
+  await syncRunConditions();
   let runners: number | undefined;
   const counts = await queryCounts(async () => {
     const tally = await matchTally(VIEWER, NOW - 3 * DAY);
@@ -291,17 +296,17 @@ describe("matchTally: rows read beside rows it must not return (#507)", () => {
     expect(many.weatherRowsRead).toBe(none.weatherRowsRead);
   });
 
-  it("reads every shared run in the window, whatever it felt like (#409)", async () => {
-    // Today's formula, not the goal: the window's entries are read before
-    // any band is known, then each one's run and cache cell, because the
-    // conditions live in the weather database (consensus.ts). #409's copy
-    // in core bounds the read by band, and this flips to flat.
-    const none = await tallyBeside(0, sharedElsewhere, observedElsewhere);
+  it("reads no more for 25 shared runs that felt 13° warmer (#409)", async () => {
+    // Before #409 this read every shared entry in the window, then each
+    // one's run and cache cell, and grew by at least two rows a run. The
+    // copy's band index (D-175) offers only the runs in the band.
+    // One against twenty-five, not none: the band's range seek reads the
+    // row just past it, so the first run elsewhere costs one row whatever
+    // follows it.
+    const one = await tallyBeside(1, sharedElsewhere, observedElsewhere);
     const many = await tallyBeside(25, sharedElsewhere, observedElsewhere);
-    expect(many.coreRowsRead - none.coreRowsRead).toBeGreaterThanOrEqual(
-      2 * 25,
-    );
-    expect(many.weatherRowsRead).toBeGreaterThan(none.weatherRowsRead);
+    expect(many.coreRowsRead).toBe(one.coreRowsRead);
+    expect(many.weatherRowsRead).toBe(one.weatherRowsRead);
   });
 
   it("reads no more for 25 private entries in the band", async () => {
