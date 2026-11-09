@@ -1,2 +1,0 @@
-ALTER TABLE `user_profiles` ADD `time_zone` text;--> statement-breakpoint
-CREATE INDEX `user_profiles_zone_owed` ON `user_profiles` (`user_id`) WHERE "user_profiles"."time_zone" IS NULL AND "user_profiles"."lat" IS NOT NULL AND "user_profiles"."lng" IS NOT NULL;

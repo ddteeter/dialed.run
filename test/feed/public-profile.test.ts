@@ -251,7 +251,7 @@ async function fullyPopulated(
     .where(eq(outfitEntries.id, held.entryId));
   await core()
     .update(outfitEntryItems)
-    .set({ flag: "too_much", note: "SECRET-NOTE gloves came off" })
+    .set({ flag: "too_much" })
     .where(eq(outfitEntryItems.itemId, layer));
   await core()
     .update(outfitEntryItems)
@@ -440,7 +440,6 @@ describe("publicProfileRead: a public profile", () => {
       "CAPTION",
       "too_much",
       "not_enough",
-      "SECRET-NOTE",
       "Test run",
       "Nike",
       "Tracksmith",

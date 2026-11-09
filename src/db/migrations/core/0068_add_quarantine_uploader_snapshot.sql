@@ -1,1 +1,0 @@
-ALTER TABLE `quarantined_content` ADD `uploader_snapshot` text;

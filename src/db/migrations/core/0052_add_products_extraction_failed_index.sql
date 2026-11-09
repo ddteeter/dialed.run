@@ -1,1 +1,0 @@
-CREATE INDEX `products_extraction_failed` ON `products` (`created_at`) WHERE "products"."extraction_status" = 'failed';

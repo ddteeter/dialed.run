@@ -182,8 +182,6 @@ normalized_name    text          -- UNIQUE(brand_id, normalized_name);
 source_url         text          -- NULLABLE; first pasted product URL;
                                  -- cleared when its read lands on a denied
                                  -- site (R-176), so the next paste fills it
-image_key          text          -- NULLABLE; never written since D-176
-                                 -- (no shop images); squash drops it (#506)
 category_hint      text          -- NULLABLE garment category enum value
 type               text          -- NULLABLE garment type; the source of
                                  -- wardrobe_items.type, filled by enrichment
@@ -297,15 +295,12 @@ created_at   int
 entry_id   text FK
 item_id    text FK
 flag       text   -- enum: too_much | not_enough, NULLABLE
-note       text   -- NULLABLE; cut for v1 (D-160): nothing writes or shows it, the export keeps it
 PK (entry_id, item_id)
 ```
 
 There is **no per-item verdict** — comfort is judged per-run; `flag` carries
 the item-level exception ("gloves too much"). The per-item note is cut for
-v1 (D-160): no input writes it and no read returns it, and the column stays
-until a contract step drops it (law 8). The account export still lists it,
-because what the column holds is the runner's data.
+v1 (D-160), and its column was dropped before the baseline (#408).
 
 ### entry_tags
 
@@ -348,7 +343,7 @@ imports:        id, user_id, r2_key, status ('pending'|'processing'|'done'|'fail
                 garmin_activity_id NULLABLE  -- plan 160; UNIQUE(user_id, garmin_activity_id)
 ```
 
-Task 106 added (migration `0015_trust_and_safety_floor`):
+Task 106 added:
 
 ```
 reports:         id, reporter_id, subject_type ('entry'|'photo'|'profile'|
@@ -416,7 +411,7 @@ copyright_holds: subject (entry|photo), owner, entry, the takedown's
                    -- hold (D-146): no purge until the Desk's "Case over".
 ```
 
-Design 183 added (migration `0081_add_corrections_review_audit_follow_notices`):
+Design 183 added:
 
 ```
 product_corrections: id, product_id, user_id, garment_id, field ('name'|

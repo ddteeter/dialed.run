@@ -539,7 +539,6 @@ export const products = /*#__PURE__*/ sqliteTable(
     name: text("name").notNull(),
     normalizedName: text("normalized_name").notNull(),
     sourceUrl: text("source_url"),
-    imageKey: text("image_key"),
     categoryHint: text("category_hint"),
     // The specific thing this product *is* — singlet, tee, half-zip.
     //
@@ -981,7 +980,6 @@ export const outfitEntryItems = /*#__PURE__*/ sqliteTable(
     entryId: text("entry_id").notNull(),
     itemId: text("item_id").notNull(),
     flag: text("flag", { enum: ["too_much", "not_enough"] }),
-    note: text("note"),
   },
   (t) => [uniqueIndex("entry_items_pk").on(t.entryId, t.itemId)],
 );
@@ -1599,7 +1597,7 @@ export const reviewAudit = /*#__PURE__*/ sqliteTable(
 
 /**
  * Domains product URLs may not point at. Seeded with link shorteners and
- * redirectors (R-176, migration 0078); the review flow adds the rest. Stored as the bare registrable host, lowercased, which is what the
+ * redirectors (R-176, core's seed migration); the review flow adds the rest. Stored as the bare registrable host, lowercased, which is what the
  * save path compares against — never the full URL.
  */
 export const domainDenylist = /*#__PURE__*/ sqliteTable("domain_denylist", {

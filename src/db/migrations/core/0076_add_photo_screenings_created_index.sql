@@ -1,1 +1,0 @@
-CREATE INDEX `photo_screenings_created` ON `photo_screenings` (`created_at`,`decision`);

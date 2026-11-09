@@ -1,1 +1,0 @@
-ALTER TABLE `username_history` ADD `locked_at` integer;

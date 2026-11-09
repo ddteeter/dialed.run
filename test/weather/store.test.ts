@@ -202,11 +202,11 @@ describe("the observation's zone (R-96)", () => {
 });
 
 /**
- * C1 (`0004_drop_observation_run_id`): the cache names no run. Read from
- * the migrated database rather than the drizzle table, which is the thing
- * the migration has to agree with — and with the cache key's UNIQUE index
- * checked too, since a column drop SQLite answers with a table rebuild
- * recreates the indexes and can lose one.
+ * C1: the cache names no run. Read from the migrated database rather
+ * than the drizzle table, which is the thing the migrations have to agree
+ * with — and with the cache key's UNIQUE index checked too, since a column
+ * drop SQLite answers with a table rebuild recreates the indexes and can
+ * lose one.
  */
 describe("the migrated observation table (C1)", () => {
   const names = z.array(z.object({ name: z.string() }));

@@ -358,7 +358,6 @@ describe("handleEnrichmentBatch: where the link landed (R-176)", () => {
     expect(row.extractionStatus).toBe("none");
     expect(row.sourceUrl).toBeNull();
     expect(row.fabricComposition).toBeNull();
-    expect(row.imageKey).toBeNull();
     expect(row.extractionError).toBeNull();
     expect(row.extractionTries).toBeNull();
     // Denied wherever it would show, as a link typed there is.
@@ -689,7 +688,6 @@ describe("handleEnrichmentBatch: no shop images (D-176)", () => {
     expect(fetched).toStrictEqual([URL_UNDER_TEST]);
     const row = await rowOf(productId);
     expect(row.extractionStatus).toBe("done");
-    expect(row.imageKey).toBeNull();
     // The snapshot is the product's only object in the bucket.
     const listed = await env.MEDIA.list({ prefix: `products/${productId}/` });
     expect(listed.objects.map((object) => object.key)).toStrictEqual([

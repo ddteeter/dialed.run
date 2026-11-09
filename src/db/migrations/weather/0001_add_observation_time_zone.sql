@@ -1,1 +1,0 @@
-ALTER TABLE `weather_observations` ADD `time_zone` text;

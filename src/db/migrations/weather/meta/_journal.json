@@ -5,36 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1788633056611,
-      "tag": "0000_weather_observations",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1790134490939,
-      "tag": "0001_add_observation_time_zone",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1790308134718,
-      "tag": "0002_add_manual_conditions",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1790400149149,
-      "tag": "0003_add_manual_conditions_sky",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1792355264647,
-      "tag": "0004_drop_observation_run_id",
+      "when": 1794206592286,
+      "tag": "0000_baseline",
       "breakpoints": true
     }
   ]
