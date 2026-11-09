@@ -195,7 +195,7 @@ export function SettingsIndex({
   return (
     <div className="flex flex-col gap-6">
       <SettingsGroup title="You">
-        {/* U1's first row is Account ("drew.t · email, password"): the
+        {/* U1's first row is Account (the handle, then "· email, password"): the
             handle, the address and the password live behind it (ACC-7/8). */}
         <SettingsRow
           to="/account/$section"

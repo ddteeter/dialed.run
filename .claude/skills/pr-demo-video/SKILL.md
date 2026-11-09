@@ -165,15 +165,17 @@ Attach `demo.mp4`, which the mux step has already encoded as H.264 + AAC.
 Playwright's own VP8 `.webm` plays unreliably on iOS Safari, and review
 here is phone-friendly by design.
 
-Reference the local path in the PR body and let `gh` rewrite it to the
-uploaded URL:
+Attach it when you ship (skill `pr-ready`, §Pushing). `ship` puts it on a
+new PR as the PR opens, or on an open PR as one comment, posted again on
+each run:
 
 ```bash
-gh pr create --body-file pr-body.md --attach test-results/<dir>/demo.mp4
-gh pr comment <n> --attach test-results/<dir>/demo.mp4   # updating an existing PR
+npm run ship -- --body-file=pr-body.md --attach=test-results/<dir>/demo.mp4
 ```
 
-**Requires `gh >= 2.99.0`** (`--attach` shipped 2026-09-01) and `ffmpeg`.
+`ship` uploads through `gh`'s own `--attach`, so it **requires
+`gh >= 2.99.0`** (`--attach` shipped 2026-09-01), and the mux needs `ffmpeg`.
+A failed upload is a warning on ship's status line, never a failed ship.
 Check with `gh --version`; if either is missing, say so in the PR rather than
 inventing an upload path. The scratch spec can stay or go after the PR
 merges: it is never committed either way.

@@ -31,8 +31,8 @@ const auth = createAuth({
 });
 
 const credentials = {
-  name: "Drew Test",
-  email: "drew@example.com",
+  name: "Sam Test",
+  email: "sam@example.com",
   // Not a secret — test fixture credentials for a throwaway in-memory D1.
   password: ["correct", "horse", "battery"].join("-"),
 };

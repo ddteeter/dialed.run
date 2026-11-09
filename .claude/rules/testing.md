@@ -47,7 +47,7 @@ tests, 2026-11-06), so every spec costs every PR.
 | kind                          | file                                               | write or update it when                                                                                                                                                                                                                                       | not for                                                                 |
 | ----------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | unit / dom / browser (vitest) | `*.test.ts`, `*.dom.test.tsx`, `*.browser.test.ts` | the default: logic, every state of a component, every branch                                                                                                                                                                                                  | anything that needs the server hop or a real page                       |
-| journey                       | `e2e/<feature>/*.journey.spec.ts`                     | a flow crosses the server boundary: a new route, a new auth gate, a server function wired to a screen. Update it in the PR that changes the flow. A new route behind an existing gate adds no redirect spec: `test/auth/` and `e2e/auth/` test the gates once | a state space, an edge case, a look                                     |
+| journey                       | `e2e/<feature>/*.journey.spec.ts`                  | a flow crosses the server boundary: a new route, a new auth gate, a server function wired to a screen. Update it in the PR that changes the flow. A new route behind an existing gate adds no redirect spec: `test/auth/` and `e2e/auth/` test the gates once | a state space, an edge case, a look                                     |
 | edge case                     | `e2e/<feature>/*.spec.ts`, beside the journey      | a case only a real browser shows (a redirect, a real upload, focus after navigation) and the journey would bloat carrying it                                                                                                                                  | anything a dom test can reach                                           |
 | conformance                   | `e2e/conformance/*.conformance.spec.ts`            | a screen with a board is built or changes shape                                                                                                                                                                                                               | values: tokens and sizes are the contracts' job (`.claude/rules/ui.md`) |
 | PR demo                       | `e2e/scratch/*.spec.ts`, gitignored                | a PR changes what a user sees. Seeded straight to the state, scoped to the change, real `expect`s, recorded and attached                                                                                                                                      | proof: it is never committed and never runs in CI                       |
@@ -111,16 +111,19 @@ behaviour, not tests that merely execute it.
 ## The push-gate analyzer is not the ratchet
 
 `"stryker"` is required in `guardrails.config.json` at the **`push`** rung: it
-ignores the `mutate` array and mutates the _changed production_ `.ts/.tsx`
-files on the branch. Its cost is a fixed dry run of the whole suite, so it
-sits at push rather than commit — commit freely, expect the wait at
-`git push`. It never sees a weakened test (no production file changed), which
+mutates the _changed production_ `.ts/.tsx` files on the branch, not the
+whole `mutate` array, which it reads only for its scope and its negations.
+Its cost is a fixed dry run of the whole suite, so it sits at push rather
+than commit — commit freely, expect the wait at `git push`. It never sees a weakened test (no production file changed), which
 is why the whole-scope `Mutation` CI job is also a required check.
 
 - A changed `.tsx` is mutated: a component you touch has to stay at 100%.
-- A changed `src/modules/*/functions.ts` is mutated, and those cannot be
-  tested — every mutant survives. There is no grant for this. Say so in the
-  PR and let the owner decide; never write an assertion you do not believe in.
+- A changed file that `stryker.conf.json`'s `mutate` array negates (every
+  `src/modules/*/functions.ts` among them) is **not** mutated at push:
+  guardrails-core appends the array's `!` negations to its own `--mutate`.
+  Read the array for the list rather than restating it here. Those files are
+  kept honest by `test/architecture/server-functions-are-glue.test.ts`, not by
+  Stryker.
 
 ## Equivalent mutants
 

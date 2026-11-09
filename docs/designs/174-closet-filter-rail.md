@@ -22,7 +22,7 @@ above the grid below 1040.
     low to its highest high.
   - `shouldIncludeByTempFilter` moves here from `service.ts`, so the overlap
     rule exists once.
-- **Coverage = the ladder's rule** (Drew, 2026-11-05): `coverageOfVerdicts`
+- **Coverage = the ladder's rule** (the owner, 2026-11-05): `coverageOfVerdicts`
   in `lib/contracts/profile.ts` (3+ covered, 1–2 partial, 0 untested), which
   `onboarding/ladder.ts` now calls too. The swatch is `CoverageMark`, ink
   only (§AB).
@@ -43,13 +43,13 @@ above the grid below 1040.
   **Bug fixed on the way:** `thermal.ts` `formatTempRange` took no unit, so
   °F runners saw °C ranges throughout the closet. The unit is now required,
   and the closet routes load `viewerUnitsQuery`.
-- **Header**: `47 pieces` until a group is set, then `14 · Tops` (Drew: one
+- **Header**: `47 pieces` until a group is set, then `14 · Tops` (the owner: one
   rule, since "Hands / head" doesn't pluralise). A mono
   `FILTERED: [34–58°] · COVERED` line shows while WORKS AT or COVERAGE is
   set.
-- **Clearing** (Drew): GROUP keeps its drawn All. Tapping the selected
+- **Clearing** (the owner): GROUP keeps its drawn All. Tapping the selected
   coverage level again clears it, and WORKS AT shows an `Any` link while a
-  range is set (#109f confirms both). **No matches** (Drew; #109d): the line
+  range is set (#109f confirms both). **No matches** (the owner; #109d): the line
   "Nothing in your closet matches these filters." with `Clear filters`, and
   focus goes to the header count.
 
@@ -77,6 +77,6 @@ above the grid below 1040.
 
 ## Open questions
 
-None. Drew settled coverage, the fill, the header, clearing and the no-match
+None. The owner settled coverage, the fill, the header, clearing and the no-match
 copy (2026-11-05). The coordinator corrected units and the no-JS form, and
 round 46 (#109a–m) ruled the rest.
