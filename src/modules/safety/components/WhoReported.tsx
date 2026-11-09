@@ -22,14 +22,20 @@ export type LoadReporters = (input: {
  * open it stays open: the record is of the look, and a second look in
  * the same sitting is the same one.
  *
- * The list's own look is undrawn (placeholder protocol): one line per
- * reporter, the handle, what they picked and when, in the queue's own
- * type. A design-ask covers it.
+ * The label carries how many reported, `WHO REPORTED · 4 ▸`: the row
+ * counts them already, so the count leaks nothing the row does not say.
+ * Open, one line per reporter, oldest first: the handle, what they picked
+ * and when, in the queue's own type (R50·145, #497).
  */
 export function WhoReported({
   queueId,
+  count,
   load,
-}: Readonly<{ queueId: string; load: LoadReporters }>): JSX.Element {
+}: Readonly<{
+  queueId: string;
+  count: number;
+  load: LoadReporters;
+}>): JSX.Element {
   const [reporters, setReporters] = useState<readonly Reporter[] | undefined>();
   const opening = useControlAction({
     action: async () => {
@@ -50,7 +56,8 @@ export function WhoReported({
         className="target cursor-pointer self-start border-none bg-transparent p-0 text-ink"
       >
         <Mono step="xs">
-          Who reported <span aria-hidden="true">{isOpen ? "▾" : "▸"}</span>
+          {`Who reported · ${String(count)} `}
+          <span aria-hidden="true">{isOpen ? "▾" : "▸"}</span>
         </Mono>
       </button>
       {isOpen ? (

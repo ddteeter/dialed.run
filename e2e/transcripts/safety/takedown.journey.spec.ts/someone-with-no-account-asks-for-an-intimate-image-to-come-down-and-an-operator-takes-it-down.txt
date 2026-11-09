@@ -67,9 +67,9 @@ end of heading, Matching photos · any runner, level 3
 No fingerprint to match by: the photo is gone, or older than fingerprints.
 # person
 It's an intimate image of someone, shared without their consent
-button, Who reported, not expanded
-Who reported
-end of button, Who reported, not expanded
+button, Who reported · #, not expanded
+Who reported · #
+end of button, Who reported · #, not expanded
 paragraph
 Folded. Opening it is logged. Never shown to the author.
 end of paragraph
@@ -81,7 +81,7 @@ form
 status
 Why it comes down
 combobox, Why it comes down, has popup listbox, not expanded
-option, Not set, selected, position 1, set size 8
+option, Not set, not selected, position 1, set size 8
 option, it shows where someone lives, home, not selected, position 2, set size 8
 option, it's sexual or explicit, explicit, not selected, position 3, set size 8
 option, it's an intimate image shared without consent, intimate, not selected, position 4, set size 8
@@ -104,7 +104,7 @@ form
 status
 What it is
 combobox, What it is, has popup listbox, not expanded
-option, Not set, selected, position 1, set size 3
+option, Not set, not selected, position 1, set size 3
 option, A photo, photo, not selected, position 2, set size 3
 option, A whole entry, entry, not selected, position 3, set size 3
 end of combobox, What it is, has popup listbox, not expanded

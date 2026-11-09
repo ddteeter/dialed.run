@@ -393,7 +393,7 @@ describe("Review · removal requests", () => {
     expect(row?.querySelector("q")).toHaveTextContent(/^a photo of me$/u);
     expect(row).toHaveTextContent("sam@example.com");
     const open = screen.getByRole("link", { name: "Open the kit" });
-    expect(open).toHaveAttribute("href", `/feed/entry/${ENTRY}`);
+    expect(open).toHaveAttribute("href", `/desk/kit/${ENTRY}`);
     expect(open).toHaveClass("target");
     expect(screen.getByText("Removal requests · 1")).toBeInTheDocument();
   });
@@ -429,7 +429,7 @@ describe("Review · removal requests", () => {
     );
     expect(screen.getByRole("link", { name: "Open its kit" })).toHaveAttribute(
       "href",
-      `/feed/entry/${ENTRY}`,
+      `/desk/kit/${ENTRY}`,
     );
     expect(
       screen.getByText("Not one of our links: find it from what they wrote."),

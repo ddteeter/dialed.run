@@ -142,6 +142,12 @@ export type HandleReviewValues = z.infer<typeof handleReviewInput>;
 export const copyrightHoldInput = z.object({ holdId: ulidSchema });
 
 /**
+ * The kit the Desk opens (#388), from its URL. An id that is not one reads
+ * as no kit, which the page says in words, rather than an error page.
+ */
+export const deskKitInput = z.object({ entryId: rowIdSchema.catch("") });
+
+/**
  * RECEIVED ON's two refusals (round 39 #73), in design's words. An empty
  * or unreadable day is asked for as a future one is: pick a day.
  */

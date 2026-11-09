@@ -30,7 +30,6 @@ import {
   userProfiles,
 } from "../../db/schema-core";
 import { jsonField, jsonTable } from "../../lib/sql/json-list";
-import { publiclyVisibleEntry } from "./visibility";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -51,14 +50,6 @@ export interface OtherPhoto {
   readonly id: string;
   readonly entryId: string;
   readonly photoKey: string;
-  /**
-   * Whether the kit's page opens for an operator (review S4). The page is
-   * `/feed/entry/$entryId`, which an operator reaches the same way a runner
-   * does, so a private kit or one hidden pending review sends them away. Read
-   * from safety's one visibility rule, without a viewer: an operator the
-   * runner blocked is the one case it misses, and that link bounces.
-   */
-  readonly canOpen: boolean;
 }
 
 /**
@@ -129,11 +120,10 @@ function keyOf(subject: OtherPhotosSubject): string {
 function shown(rows: readonly OtherPhotoRow[]): OtherPhotos {
   const [first] = rows;
   return {
-    photos: rows.map(({ id, entryId, photoKey, canOpen }) => ({
+    photos: rows.map(({ id, entryId, photoKey }) => ({
       id,
       entryId,
       photoKey,
-      canOpen,
     })),
     total: first?.total ?? 0,
     handle: first?.handle ?? undefined,
@@ -191,7 +181,6 @@ export function otherPhotosQuery(
         id: entryPhotos.id,
         entryId: entryPhotos.entryId,
         photoKey: entryPhotos.photoKey,
-        canOpen: sql<number>`${publiclyVisibleEntry()}`.as("ranked_can_open"),
         // Counted over every row the filter keeps for the subject, before
         // the limit: the total the kicker says (round 38 #63a).
         total: sql<number>`count(*) over (partition by ${subject.key})`.as(
@@ -220,7 +209,6 @@ export function otherPhotosQuery(
       id: ranked.id,
       entryId: ranked.entryId,
       photoKey: ranked.photoKey,
-      canOpen: sql<boolean>`${ranked.canOpen}`.mapWith(Boolean),
       total: sql<number>`${ranked.total}`.mapWith(Number),
       handle: ranked.handle,
     })

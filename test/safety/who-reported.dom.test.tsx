@@ -9,16 +9,16 @@ import {
 } from "../../src/modules/safety/components/WhoReported";
 
 const NOTHING = z.null().parse(JSON.parse("null"));
-const QUEUE ="01HZZZZZZZZZZZZZZZZZZZZZZQ";
+const QUEUE = "01HZZZZZZZZZZZZZZZZZZZZZZQ";
 const NOV_6 = Date.UTC(2026, 10, 6, 12) / 1000;
 
 describe("WHO REPORTED (D-164, R-66)", () => {
   it("is folded, says opening it is logged, and asks for nothing yet", () => {
     const load = vi.fn<LoadReporters>();
-    render(<WhoReported queueId={QUEUE} load={load} />);
+    render(<WhoReported queueId={QUEUE} count={2} load={load} />);
     const fold = screen.getByRole("button", { name: /Who reported/u });
     expect(fold).toHaveAttribute("aria-expanded", "false");
-    expect(fold).toHaveTextContent("Who reported ▸");
+    expect(fold).toHaveTextContent("Who reported · 2 ▸");
     expect(
       screen.getByText(
         "Folded. Opening it is logged. Never shown to the author.",
@@ -33,14 +33,14 @@ describe("WHO REPORTED (D-164, R-66)", () => {
       { handle: "ada", reason: "spam", createdAt: NOV_6 },
       { handle: NOTHING, reason: "harassment", createdAt: NOV_6 },
     ]);
-    render(<WhoReported queueId={QUEUE} load={load} />);
+    render(<WhoReported queueId={QUEUE} count={2} load={load} />);
     await user.click(screen.getByRole("button", { name: /Who reported/u }));
     expect(load).toHaveBeenCalledWith({ data: { queueId: QUEUE } });
     const fold = screen.getByRole("button", { name: /Who reported/u });
     await waitFor(() => {
       expect(fold).toHaveAttribute("aria-expanded", "true");
     });
-    expect(fold).toHaveTextContent("Who reported ▾");
+    expect(fold).toHaveTextContent("Who reported · 2 ▾");
     expect(
       screen.getAllByRole("listitem").map((item) => item.textContent),
     ).toStrictEqual([
@@ -53,7 +53,7 @@ describe("WHO REPORTED (D-164, R-66)", () => {
   it("reads once: a second press is the same look", async () => {
     const user = userEvent.setup();
     const load = vi.fn<LoadReporters>().mockResolvedValue([]);
-    render(<WhoReported queueId={QUEUE} load={load} />);
+    render(<WhoReported queueId={QUEUE} count={2} load={load} />);
     await user.click(screen.getByRole("button", { name: /Who reported/u }));
     await waitFor(() => {
       expect(
@@ -72,7 +72,7 @@ describe("WHO REPORTED (D-164, R-66)", () => {
       .mockResolvedValueOnce([
         { handle: "ada", reason: "spam", createdAt: NOV_6 },
       ]);
-    render(<WhoReported queueId={QUEUE} load={load} />);
+    render(<WhoReported queueId={QUEUE} count={2} load={load} />);
     await user.click(screen.getByRole("button", { name: /Who reported/u }));
     const retry = await screen.findByRole("button", { name: /Try again/u });
     expect(screen.getByText(/Still folded/u)).toBeVisible();

@@ -621,8 +621,7 @@ export async function blockAndDeclineAll(
     requesterKey: request.requesterKey ?? requesterKey(request.requesterEmail),
     ipKey: request.ipKey ?? undefined,
   };
-  // The request itself by its id, as well as by its keys: one filed
-  // before migration 0055 has no `requester_key` for the keys to match.
+  // The request itself by its id, as well as by its keys.
   const theirs = or(
     eq(takedownRequests.id, request.id),
     requesterMatches(keys),

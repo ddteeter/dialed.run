@@ -20,15 +20,9 @@
  * the app shows), else the runner's own place's zone, else UTC. A day,
  * never a time (D-151).
  */
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
-import {
-  outfitEntries,
-  outfitEntryItems,
-  runs,
-  userProfiles,
-  wardrobeItems,
-} from "../../db/schema-core";
+import { outfitEntries, runs, userProfiles } from "../../db/schema-core";
 import { coreDb } from "../../env";
 import {
   verdictScale,
@@ -56,7 +50,7 @@ import {
   type EntryCardData,
 } from "../ops";
 import { allowedLinksOf, typeWordOf } from "../closet";
-import { worldVisibleEntry } from "../safety";
+import { kitPiecesSelect, worldVisibleEntry } from "../safety";
 
 import { observationsForRuns, type Conditions } from "./conditions";
 import { judgedFeelsLikeC } from "./judged-conditions";
@@ -206,22 +200,6 @@ function statsOf(
 }
 
 /**
- * The columns a public piece is read from — built on first use, not at
- * module scope, so nothing here keeps the schema alive in a bundle that
- * only names this file.
- */
-function pieceColumns() {
-  return {
-    id: wardrobeItems.id,
-    name: wardrobeItems.name,
-    brand: wardrobeItems.brand,
-    category: wardrobeItems.category,
-    type: wardrobeItems.type,
-    productUrl: wardrobeItems.productUrl,
-  };
-}
-
-/**
  * The pieces, in the order they were put on the kit, each with its kind
  * as the closet's TYPE chip says it, else its category's word (round 42
  * #90), and its product link when closet's one read of it allows it
@@ -232,14 +210,7 @@ async function piecesOf(
   database: Database,
   entryId: string,
 ): Promise<PublicPiece[]> {
-  const rows = await database
-    .select(pieceColumns())
-    .from(outfitEntryItems)
-    .innerJoin(wardrobeItems, eq(wardrobeItems.id, outfitEntryItems.itemId))
-    .where(eq(outfitEntryItems.entryId, entryId))
-    // The order they were attached in: the table has no position column,
-    // and its index would otherwise hand them back by item id.
-    .orderBy(sql`${outfitEntryItems}.rowid`);
+  const rows = await kitPiecesSelect(database, entryId);
   const links = await allowedLinksOf(database, rows);
   return rows.map((row) => {
     const url = links.get(row.id);

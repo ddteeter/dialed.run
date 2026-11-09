@@ -140,31 +140,22 @@ function MorePhotos({
 }
 
 /**
- * One photo: a link to its kit when the operator can open it, the image
- * alone when not. The alt names the photo by its id, so a list of them is
- * not the same name read over and over.
+ * One photo, a link to the Desk's view of its kit (#388), which opens
+ * whatever the kit's audience or state. The alt names the photo by its
+ * id, so a list of them is not the same name read over and over.
  */
 function Thumbnail({ photo }: Readonly<{ photo: OtherPhoto }>): JSX.Element {
-  const image = (
-    <img
-      src={reviewPhotoSrc(photo.photoKey)}
-      alt={
-        photo.canOpen
-          ? `Photo ${photo.id}: open its kit`
-          : `Photo ${photo.id}, on a kit an operator cannot open`
-      }
-      className="h-32 w-auto border border-hairline"
-    />
-  );
-  return photo.canOpen ? (
+  return (
     <Link
-      to="/feed/entry/$entryId"
+      to="/desk/kit/$entryId"
       params={{ entryId: photo.entryId }}
       className="target self-start"
     >
-      {image}
+      <img
+        src={reviewPhotoSrc(photo.photoKey)}
+        alt={`${photo.id}: open its kit`}
+        className="h-32 w-auto border border-hairline"
+      />
     </Link>
-  ) : (
-    image
   );
 }

@@ -112,6 +112,13 @@ describe("which type an edge resolves to", () => {
     expect(navTypeFor("/desk/runners", "/desk/runners", false)).toBe("cut");
   });
 
+  it("types Desk · Kit explicitly, as a cut", () => {
+    // Opened from Review's rows (#388). Asked of navTypeFor, not typeOf, for
+    // the reason the Runners test gives: typeOf falls back to `cut`.
+    expect(navTypeFor("/desk/review", "/desk/kit/e1", false)).toBe("cut");
+    expect(navTypeFor("/feed", "/desk/kit/e1", false)).toBe("cut");
+  });
+
   it("cuts when the path has not changed", () => {
     // A new search param or hash on the screen you are already on. Nothing
     // moved, so nothing should move.

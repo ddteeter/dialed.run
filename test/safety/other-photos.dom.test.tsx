@@ -21,8 +21,8 @@ const KIT = "01JKIT00000000000000000001";
 const PHOTO_1 = "01JPHOTO000000000000000001";
 const PHOTO_2 = "01JPHOTO000000000000000002";
 const PHOTOS: readonly OtherPhoto[] = [
-  { id: PHOTO_1, entryId: KIT, photoKey: "entries/u/k/1", canOpen: true },
-  { id: PHOTO_2, entryId: KIT, photoKey: "entries/u/k/2", canOpen: true },
+  { id: PHOTO_1, entryId: KIT, photoKey: "entries/u/k/1" },
+  { id: PHOTO_2, entryId: KIT, photoKey: "entries/u/k/2" },
 ];
 
 /**
@@ -51,15 +51,15 @@ describe("OtherPhotos", () => {
     // Each named by its id, so a screen reader does not hear one name twice.
     const links = within(block ?? document.body).getAllByRole("link");
     expect(links.map((link) => link.getAttribute("href"))).toStrictEqual([
-      `/feed/entry/${KIT}`,
-      `/feed/entry/${KIT}`,
+      `/desk/kit/${KIT}`,
+      `/desk/kit/${KIT}`,
     ]);
     expect(links.map((link) => link.textContent)).toStrictEqual(["", ""]);
     expect(
-      screen.getByRole("link", { name: `Photo ${PHOTO_1}: open its kit` }),
+      screen.getByRole("link", { name: `${PHOTO_1}: open its kit` }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: `Photo ${PHOTO_2}: open its kit` }),
+      screen.getByRole("link", { name: `${PHOTO_2}: open its kit` }),
     ).toBeInTheDocument();
     expect(links[0]).toHaveClass("target");
     expect(
@@ -107,28 +107,6 @@ describe("OtherPhotos", () => {
     expect(
       within(part("more-photos") ?? document.body).queryByRole("link"),
     ).toBeNull();
-  });
-
-  it("shows a kit an operator cannot open as its image and id, with no link (review S4)", async () => {
-    await renderWithRouter(
-      <OtherPhotos
-        others={others([
-          {
-            id: PHOTO_1,
-            entryId: KIT,
-            photoKey: "entries/u/k/1",
-            canOpen: false,
-          },
-        ])}
-      />,
-    );
-    expect(screen.queryByRole("link")).toBeNull();
-    expect(
-      screen.getByRole("img", {
-        name: `Photo ${PHOTO_1}, on a kit an operator cannot open`,
-      }),
-    ).toHaveAttribute("src", "/desk/review-photo/entries/u/k/1");
-    expect(screen.getByText(PHOTO_1)).toHaveClass("font-mono");
   });
 
   it("says when the runner has posted nothing else, with no count", async () => {
