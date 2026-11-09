@@ -252,6 +252,30 @@ jobs:
           path: reports/stryker-incremental.json
           key: stryker-v1-${{ matrix.slug }}-${{ needs.scopes.outputs.deps }}-${{ github.ref }}-${{ github.sha }}
 
+      # Local seeding (guardrails-core 0.14.0, #543). A fresh worktree's
+      # gate fetches these through scripts/fetch-mutation-seed.sh
+      # (guardrails.config.json `mutationCache.seedFrom`) instead of running
+      # cold. Main pushes only: that is the base every branch's gate diffs
+      # against. The sidecar pins stryker's version, its config and the
+      # lockfile, so a seed from a different setup is discarded locally.
+      # An artifact, not actions/cache: a laptop cannot read the cache.
+      # One artifact per shard; the scopes are disjoint, which the local
+      # merge requires.
+      - name: Fingerprint the report for local seeding
+        if: success() && github.event_name == 'push'
+        run: node ./node_modules/guardrails-core/dist/cli.mjs mutation-fingerprint
+
+      - name: Upload the report for local seeding
+        if: success() && github.event_name == 'push'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stryker-incremental-${{ matrix.slug }}
+          path: |
+            reports/stryker-incremental.json
+            reports/stryker-incremental.fingerprint.json
+          retention-days: 2
+          if-no-files-found: error
+
   # The one context branch protection requires. Scopes come and go from
   # the ratchet; this does not.
   gate:

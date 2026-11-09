@@ -2,6 +2,10 @@
   "baseBranch": "main",
   "enforcement": "block",
   "distribution": "solo",
+  "mutationCache": {
+    "seedFrom": "sh scripts/fetch-mutation-seed.sh",
+    "seedTimeoutSeconds": 120
+  },
   "analyzers": {
     "eslint": "required",
     "tsc": "required",
