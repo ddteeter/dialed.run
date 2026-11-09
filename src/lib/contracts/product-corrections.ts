@@ -12,6 +12,11 @@ import { z } from "zod";
 
 import { ulidSchema } from "../ids";
 import { httpsUrlSchema } from "./common";
+import {
+  hasGarmentAttribute,
+  type GarmentAttributeKey,
+  type GarmentCategory,
+} from "./garment-fields";
 import { fabricSchema, weightSchema } from "./garments";
 
 /**
@@ -30,6 +35,44 @@ export const CORRECTION_FIELDS = [
 export type CorrectionField = (typeof CORRECTION_FIELDS)[number];
 
 const correctionFieldSchema = z.enum(CORRECTION_FIELDS);
+
+/**
+ * The garment attribute a field corrects, where only some categories have
+ * it. Name, composition and link are every product's; a shoe states no
+ * weight and an accessory no wind or water, so WRONG? does not offer them.
+ */
+const CATEGORY_ATTRIBUTES: Readonly<
+  Record<CorrectionField, GarmentAttributeKey | undefined>
+> = {
+  name: undefined,
+  weight: "weight",
+  fabric: "fabric",
+  wind: "windResistant",
+  water: "waterResistant",
+  composition: undefined,
+  link: undefined,
+};
+
+/**
+ * The fields a piece of this category can be corrected on, in the sheet's
+ * order: the closet form's own attributes for the category
+ * (`garmentFieldSpec`), and the three every product has.
+ */
+export function correctionFieldsFor(
+  category: GarmentCategory,
+): readonly CorrectionField[] {
+  return CORRECTION_FIELDS.filter((field) => {
+    const attribute = CATEGORY_ATTRIBUTES[field];
+    return attribute === undefined || hasGarmentAttribute(category, attribute);
+  });
+}
+
+/**
+ * The server's refusal of a field the garment's category does not have,
+ * which the sheet never offers: a stale sheet, after the piece's category
+ * changed in another tab, is the one way to meet it.
+ */
+export const CORRECTION_FIELD_NOT_ON_PIECE = "This piece doesn't have that.";
 
 /**
  * Where a correction is: waiting for the Desk, or decided. One waiting row

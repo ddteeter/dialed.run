@@ -18,6 +18,15 @@ And the moderation thresholds are read from source rather than config.
      a partial unique index). Fields and their inputs come from one table
      in `lib/contracts/product-corrections.ts`, which the sheet, the zod
      schema and the apply step all read (derive, don't mirror).
+   - The sheet offers only the fields the garment's category has
+     (`correctionFieldsFor`, from the closet form's own `garmentFieldSpec`):
+     name, composition and link always; weight, fabric, wind and water
+     where the category asks them. A shoe gets name, water, composition
+     and link. `fileCorrection` refuses any other field as a field issue,
+     so a stale sheet cannot set a fact the piece never shows.
+   - `products.weight`/`fabric` (and `wardrobe_items.layer`/`weight`/
+     `fabric`) read the closet's enum tuples rather than a copy, pinned
+     by `test/garment-fields.test.ts`. No SQL changes.
    - `correctionsQueue`: waiting rows grouped by product + field + value,
      with the runner count. `applyCorrection` writes the product's column
      and resolves the group; `declineCorrection` takes an optional reason.

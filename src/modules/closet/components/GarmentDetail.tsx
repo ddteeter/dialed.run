@@ -642,7 +642,11 @@ function CompositionSection({
   const wrong =
     correction === undefined || item.productId === null ? undefined : (
       <WrongLink
-        subject={{ productId: item.productId, garmentId: item.id }}
+        subject={{
+          productId: item.productId,
+          garmentId: item.id,
+          category: item.category,
+        }}
         actions={correction}
       />
     );

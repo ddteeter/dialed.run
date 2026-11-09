@@ -2,7 +2,7 @@ import type { JSX } from "react";
 import { useEffect, useState } from "react";
 
 import {
-  CORRECTION_FIELDS,
+  correctionFieldsFor,
   CORRECTION_NOTE_COUNTER_FROM,
   CORRECTION_NOTE_MAX,
   fileCorrectionSchema,
@@ -10,6 +10,7 @@ import {
 } from "../../../lib/contracts/product-corrections";
 import { fabricSchema, weightSchema } from "../../../lib/contracts";
 import type { CorrectionField } from "../../../lib/contracts/product-corrections";
+import type { GarmentCategory } from "../../../lib/contracts/garment-fields";
 import { monthDayLabel } from "../../../lib/dates";
 import {
   ChoiceField,
@@ -37,11 +38,13 @@ import {
 
 /**
  * What the sheet is correcting: the shared product, and the runner's own
- * garment it was opened from, which the outcome's bell row opens.
+ * garment it was opened from, which the outcome's bell row opens. The
+ * garment's category says which fields the sheet offers.
  */
 export interface CorrectionSubject {
   productId: string;
   garmentId: string;
+  category: GarmentCategory;
 }
 
 /**
@@ -113,8 +116,8 @@ export interface CorrectionSheetProps {
 }
 
 /**
- * §AG's WRONG? sheet (D-163, R48·129). Like Report: pick one of seven
- * fields, then an input of its type, an optional "How do you know?", and
+ * §AG's WRONG? sheet (D-163, R48·129). Like Report: pick one of the seven
+ * fields the piece's category has, then an input of its type, an optional "How do you know?", and
  * the receipt swaps in place. A field with a correction already waiting
  * opens prefilled with it and says so; sending again replaces it
  * (R48·129c). It needs a confirmed address, which the server says and the
@@ -216,7 +219,8 @@ function CorrectionForm({
       onSubmit={(event) => {
         event.preventDefault();
         void form.submit({
-          ...subject,
+          productId: subject.productId,
+          garmentId: subject.garmentId,
           field,
           value,
           note: note === "" ? undefined : note,
@@ -238,7 +242,7 @@ function CorrectionForm({
       <ChoiceList<CorrectionField>
         name="field"
         legend="Field"
-        options={CORRECTION_FIELDS}
+        options={correctionFieldsFor(subject.category)}
         optionLabels={CORRECTION_FIELD_LABELS}
         value={field}
         onChange={(picked) => {

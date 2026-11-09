@@ -11,8 +11,16 @@ import {
   wardrobeItems,
 } from "../../db/schema-core";
 import { coreDb, primaryCoreDb } from "../../env";
-import type { CorrectionField } from "../../lib/contracts/product-corrections";
+import {
+  CORRECTION_FIELD_NOT_ON_PIECE,
+  correctionFieldsFor,
+  type CorrectionField,
+} from "../../lib/contracts/product-corrections";
 import { NotFoundError } from "../../lib/errors";
+import {
+  FIELD_REFUSAL_CODE,
+  type FieldRefusalOnTheWire,
+} from "../../lib/field-refusal";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import { orSqlNull } from "../../lib/sql/sql-null";
@@ -38,13 +46,29 @@ export interface CorrectionFiling extends CorrectionSaid {
 }
 
 /**
+ * A field the garment's category does not have: weight on a shoe. A field
+ * issue, so the sheet marks the field choice rather than reading "Our end
+ * failed" (`lib/field-refusal`).
+ */
+export class FieldNotOnPieceError extends Error {
+  readonly code = FIELD_REFUSAL_CODE;
+  readonly issues: FieldRefusalOnTheWire["issues"];
+
+  constructor() {
+    super(CORRECTION_FIELD_NOT_ON_PIECE);
+    this.issues = [{ path: ["field"], message: CORRECTION_FIELD_NOT_ON_PIECE }];
+  }
+}
+
+/**
  * Files a correction, or replaces the one this runner has waiting on the
  * same product and field (R48·129e: one row, refiled date). Law 8b: a
  * repeat of the same key changes nothing.
  *
  * The garment must be the runner's and be this product, read from the
  * primary because it authorizes the write; anything else is not found,
- * the same as a garment that does not exist.
+ * the same as a garment that does not exist. The field must be one the
+ * garment's category has (`correctionFieldsFor`), which the sheet offers.
  */
 export async function fileCorrection(
   userId: string,
@@ -61,14 +85,21 @@ export async function fileCorrection(
     eq(productCorrections.idempotencyKey, filing.idempotencyKey),
   );
   const [owned, repeat] = await db.batch([
-    db.select({ id: wardrobeItems.id }).from(wardrobeItems).where(ownsGarment),
+    db
+      .select({ category: wardrobeItems.category })
+      .from(wardrobeItems)
+      .where(ownsGarment),
     db
       .select({ id: productCorrections.id })
       .from(productCorrections)
       .where(sameKey),
   ]);
   if (repeat.length > 0) return;
-  if (owned.length === 0) throw new NotFoundError("Garment not found.");
+  const [garment] = owned;
+  if (garment === undefined) throw new NotFoundError("Garment not found.");
+  if (!correctionFieldsFor(garment.category).includes(filing.field)) {
+    throw new FieldNotOnPieceError();
+  }
   const note = filing.note === "" ? undefined : filing.note;
   const now = nowSeconds();
   const refiled = {

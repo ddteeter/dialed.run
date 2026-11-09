@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   CORRECTION_FIELD_NOUNS,
   CORRECTION_FIELDS,
+  correctionFieldsFor,
   DECLINE_REASON_LABELS,
   DECLINE_REASONS,
   declineCorrectionSchema,
   fileCorrectionSchema,
 } from "../../src/lib/contracts/product-corrections";
+import { garmentCategoriesInOrder } from "../../src/lib/contracts/garment-fields";
 import { newUlid } from "../../src/lib/ids";
 
 const base = () => ({
@@ -159,5 +161,37 @@ describe("Decline's reasons (R48·130)", () => {
         reason: "none",
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("the fields a piece's category has (WRONG? on a shoe)", () => {
+  it("offers what the closet form asks of each category, and always name, composition and link", () => {
+    // The closet form's own attributes per category (`garmentFieldSpec`),
+    // written out: a top has all four, a shoe only water, an accessory none.
+    expect(
+      Object.fromEntries(
+        garmentCategoriesInOrder.map((category) => [
+          category,
+          correctionFieldsFor(category),
+        ]),
+      ),
+    ).toStrictEqual({
+      top: ["name", "weight", "fabric", "wind", "water", "composition", "link"],
+      bottom: [
+        "name",
+        "weight",
+        "fabric",
+        "wind",
+        "water",
+        "composition",
+        "link",
+      ],
+      headwear: ["name", "weight", "fabric", "wind", "composition", "link"],
+      neckwear: ["name", "weight", "fabric", "composition", "link"],
+      gloves: ["name", "weight", "wind", "water", "composition", "link"],
+      socks: ["name", "weight", "fabric", "composition", "link"],
+      shoes: ["name", "water", "composition", "link"],
+      accessory: ["name", "composition", "link"],
+    });
   });
 });

@@ -49,7 +49,7 @@ function renderSheet(overrides: Partial<CorrectionSheetProps> = {}) {
       <CorrectionSheet
         open
         onClose={onClose}
-        subject={{ productId: PRODUCT, garmentId: GARMENT }}
+        subject={{ productId: PRODUCT, garmentId: GARMENT, category: "top" }}
         loadContext={loadContext}
         fileCorrection={fileCorrection}
         {...overrides}
@@ -57,6 +57,12 @@ function renderSheet(overrides: Partial<CorrectionSheetProps> = {}) {
     </UnconfirmedRefusalAnswer>,
   );
   return { loadContext, fileCorrection, onClose, confirmFirst };
+}
+
+function fieldsOffered() {
+  return within(screen.getByRole("group", { name: "Field" }))
+    .getAllByRole("radio")
+    .map((radio) => radio.closest("label")?.textContent);
 }
 
 describe("WRONG?'s sheet (R48·129)", () => {
@@ -74,7 +80,7 @@ describe("WRONG?'s sheet (R48·129)", () => {
     expect(loadContext).toHaveBeenCalledWith({ data: { productId: PRODUCT } });
   });
 
-  it("offers the seven fields, and no value input until one is picked", () => {
+  it("offers a top all seven fields, and no value input until one is picked", () => {
     renderSheet();
     const group = screen.getByRole("group", { name: "Field" });
     expect(
@@ -91,6 +97,42 @@ describe("WRONG?'s sheet (R48·129)", () => {
       "Link",
     ]);
     expect(screen.queryByLabelText(/It should say/u)).toBeNull();
+  });
+
+  it("offers only the fields the piece's category has", () => {
+    // A shoe states no weight, fabric or wind: the closet form never asks,
+    // so a correction to one would set a fact nothing shows.
+    const { unmount } = render(
+      <CorrectionSheet
+        open
+        onClose={vi.fn()}
+        subject={{ productId: PRODUCT, garmentId: GARMENT, category: "shoes" }}
+        loadContext={vi.fn().mockResolvedValue(CONTEXT)}
+        fileCorrection={vi.fn()}
+      />,
+    );
+    expect(fieldsOffered()).toStrictEqual([
+      "Name",
+      "Water",
+      "Composition",
+      "Link",
+    ]);
+    unmount();
+
+    render(
+      <CorrectionSheet
+        open
+        onClose={vi.fn()}
+        subject={{
+          productId: PRODUCT,
+          garmentId: GARMENT,
+          category: "accessory",
+        }}
+        loadContext={vi.fn().mockResolvedValue(CONTEXT)}
+        fileCorrection={vi.fn()}
+      />,
+    );
+    expect(fieldsOffered()).toStrictEqual(["Name", "Composition", "Link"]);
   });
 
   it("quotes what the product says now on the value's label", async () => {
@@ -327,7 +369,7 @@ describe("WRONG?'s sheet, closer", () => {
         <CorrectionSheet
           open={isOpen}
           onClose={vi.fn()}
-          subject={{ productId, garmentId: GARMENT }}
+          subject={{ productId, garmentId: GARMENT, category: "top" }}
           loadContext={loadContext}
           fileCorrection={vi.fn()}
         />

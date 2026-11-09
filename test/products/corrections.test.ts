@@ -13,6 +13,7 @@ import {
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { NotFoundError } from "../../src/lib/errors";
+import { FIELD_REFUSAL_CODE } from "../../src/lib/field-refusal";
 import {
   applyCorrection,
   correctionContext,
@@ -25,6 +26,7 @@ import {
   CORRECTIONS_PAGE,
   type CorrectionKey,
 } from "../../src/modules/products/correction-queue";
+import { FieldNotOnPieceError } from "../../src/modules/products/corrections";
 import {
   createOrGetBrand,
   createOrGetProduct,
@@ -69,9 +71,10 @@ A runner who owns a garment of the product, which is where WRONG? opens.
 async function owner(
   productId: string,
   username?: string,
+  category: NonNullable<Parameters<typeof makeItem>[0]["category"]> = "top",
 ): Promise<{ userId: string; garmentId: string }> {
   const userId = await makeUser(username === undefined ? {} : { username });
-  const garmentId = await makeItem({ userId });
+  const garmentId = await makeItem({ userId, category });
   await core()
     .update(wardrobeItems)
     .set({ productId })
@@ -186,10 +189,7 @@ describe("filing a correction (R48·129)", () => {
     const ordered = statuses.toSorted((left, right) =>
       left.localeCompare(right),
     );
-    expect(ordered).toStrictEqual([
-      "declined",
-      "waiting",
-    ]);
+    expect(ordered).toStrictEqual(["declined", "waiting"]);
   });
 
   it("changes nothing on a repeat of the same key (law 8b)", async () => {
@@ -220,6 +220,29 @@ describe("filing a correction (R48·129)", () => {
     await expect(notTheProduct).rejects.toBeInstanceOf(NotFoundError);
     await expect(notTheProduct).rejects.toThrow("Garment not found.");
     expect(await rowsOf(ada.userId)).toHaveLength(0);
+  });
+
+  it("refuses a field the piece's category does not have, on the field", async () => {
+    // The sheet never offers weight on a shoe; a stale one could still send
+    // it, and the Desk would then set a fact no shoe shows.
+    const { productId } = await product();
+    const ada = await owner(productId, undefined, "shoes");
+    const weight = file(ada, productId, "weight", "light");
+    await expect(weight).rejects.toBeInstanceOf(FieldNotOnPieceError);
+    await expect(weight).rejects.toMatchObject({
+      code: FIELD_REFUSAL_CODE,
+      message: "This piece doesn't have that.",
+      issues: [{ path: ["field"], message: "This piece doesn't have that." }],
+    });
+    expect(await rowsOf(ada.userId)).toHaveLength(0);
+
+    await file(ada, productId, "water", "yes");
+    await file(ada, productId, "link", "https://shop.example/afo");
+    const filed = await rowsOf(ada.userId);
+    expect(filed.map((row) => row.field)).toHaveLength(2);
+    expect(filed.map((row) => row.field)).toEqual(
+      expect.arrayContaining(["water", "link"]),
+    );
   });
 });
 
