@@ -138,12 +138,18 @@ describe("productsForBrand", () => {
  */
 describe("the catalogue searches beside rows they must not return (#507)", () => {
   it("searchBrands reads no more for 25 brands under another prefix", async () => {
-    const prefix = await brandsSharing(1);
-    // Fresh prefixes sort after this one (ULIDs grow), so the first is the
-    // row just past the range in both measurements.
-    await brandsSharing(1);
+    // One stem, two prefixes: "…a" is searched, "…b" never matches it and
+    // sorts straight after it, so "…b" is the row just past the range in
+    // both measurements, whatever other tests left in the shared table.
+    // (Two fresh ULIDs minted in one millisecond need not sort in order.)
+    const stem = `zz${newUlid()}`;
+    const prefix = `${stem}a`;
+    await createOrGetBrand(db(), `${prefix} 0`);
+    await createOrGetBrand(db(), `${stem}b`);
     const before = await queryCounts(() => searchBrands(db(), prefix));
-    await brandsSharing(24);
+    for (let index = 0; index < 24; index += 1) {
+      await createOrGetBrand(db(), `${stem}b ${String(index)}`);
+    }
     let found = 0;
     const after = await queryCounts(async () => {
       const result = await searchBrands(db(), prefix);
