@@ -67,9 +67,9 @@ end of heading, Matching photos · any runner, level 3
 No fingerprint to match by: the photo is gone, or older than fingerprints.
 # person
 It's an intimate image of someone, shared without their consent
-button, Who reported, not expanded
-Who reported
-end of button, Who reported, not expanded
+button, Who reported · #, not expanded
+Who reported · #
+end of button, Who reported · #, not expanded
 paragraph
 Folded. Opening it is logged. Never shown to the author.
 end of paragraph
