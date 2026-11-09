@@ -4,8 +4,7 @@
  * The packet always described this as migration-seeded; it ran at runtime
  * because migrations were a forbidden zone for this lane. With the owner's
  * go-ahead it is now
- * a migration (`src/db/migrations/core/0001_seed.sql` since the squash,
- * D-174), generated from this
+ * `src/db/migrations/core/0002_curated_brand_seed.sql`, generated from this
  * list with ids derived from each brand name, so it is re-runnable and a
  * fresh database gets identical rows.
  */
@@ -67,7 +66,7 @@ export const CURATED_BRANDS: readonly string[] = [
 /**
  * The list itself stays in code as the source the migration was generated
  * from, and as what a future seed addition edits. Seeding is no longer a
- * runtime concern: src/db/migrations/core/0001_seed.sql
+ * runtime concern: src/db/migrations/core/0002_curated_brand_seed.sql
  * inserts these with ids derived from the brand name, so it is
  * re-runnable and produces identical rows on a fresh database.
  *
