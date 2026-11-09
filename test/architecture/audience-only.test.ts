@@ -6,7 +6,7 @@ import { isInstrumented, repoPath } from "./source-text";
  * **The legacy sharing booleans are gone** (D-109, design 131, C2).
  *
  * An entry's audience replaced a boolean column, and so did a runner's
- * default audience. Migration `0046_drop_legacy_sharing_booleans` dropped
+ * default audience. A migration dropped
  * both columns and the two indexes that led on them, so a query naming
  * one now fails at runtime rather than at compile time: drizzle builds
  * whatever SQL it is given, and `sql` templates are only strings to `tsc`.

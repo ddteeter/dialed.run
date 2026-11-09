@@ -1,1 +1,0 @@
-ALTER TABLE `removed_fingerprints` ADD `photo_id` text;

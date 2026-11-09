@@ -1,1 +1,0 @@
-CREATE INDEX `entries_user_public_created` ON `outfit_entries` (`user_id`,`is_public`,`moderation_status`,`created_at`);

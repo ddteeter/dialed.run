@@ -1,1 +1,0 @@
-ALTER TABLE `wardrobe_items` ADD `retired_at` integer;

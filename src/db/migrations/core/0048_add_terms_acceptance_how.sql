@@ -1,1 +1,0 @@
-ALTER TABLE `terms_acceptances` ADD `how` text;

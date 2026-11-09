@@ -1,1 +1,0 @@
-ALTER TABLE `user_profiles` ADD `theme` text DEFAULT 'system' NOT NULL;

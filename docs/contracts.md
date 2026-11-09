@@ -343,7 +343,7 @@ imports:        id, user_id, r2_key, status ('pending'|'processing'|'done'|'fail
                 garmin_activity_id NULLABLE  -- plan 160; UNIQUE(user_id, garmin_activity_id)
 ```
 
-Task 106 added (migration `0015_trust_and_safety_floor`):
+Task 106 added:
 
 ```
 reports:         id, reporter_id, subject_type ('entry'|'photo'|'profile'|
@@ -411,7 +411,7 @@ copyright_holds: subject (entry|photo), owner, entry, the takedown's
                    -- hold (D-146): no purge until the Desk's "Case over".
 ```
 
-Design 183 added (migration `0081_add_corrections_review_audit_follow_notices`):
+Design 183 added:
 
 ```
 product_corrections: id, product_id, user_id, garment_id, field ('name'|

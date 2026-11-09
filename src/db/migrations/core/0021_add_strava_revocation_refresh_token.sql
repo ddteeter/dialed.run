@@ -1,1 +1,0 @@
-ALTER TABLE `strava_revocations` ADD `refresh_token` text;

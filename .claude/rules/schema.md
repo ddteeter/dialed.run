@@ -64,6 +64,20 @@ SQLite rejects. A boolean conversion on an unrelated column takes the search
 index down with it, and nothing in the diff looks wrong. The unit suite
 applies every migration to a fresh D1, which is what catches it.
 
+## The baseline, and never squashing again
+
+Each database's history was squashed once, before the first deploy
+(D-174, #506): `0000_baseline.sql` per database, and core's `0001_seed.sql`
+for the rows the old chain inserted. Numbering continues from there.
+
+**After the first deploy, never squash again.** A deployed database's
+`d1_migrations` table records every name it applied, so a new baseline
+looks unapplied and `wrangler d1 migrations apply` runs it against tables
+that already exist. Fix history forward with a new migration instead.
+
+A seed is data, not schema: `drizzle-kit generate` cannot reproduce one,
+so a seed added later is its own `--custom` migration.
+
 ## Law 11 — number for where it will land, not where you are
 
 Before generating, `git fetch` and look at what is on `main` and in open PRs,

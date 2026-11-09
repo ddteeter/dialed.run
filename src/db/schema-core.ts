@@ -1597,7 +1597,7 @@ export const reviewAudit = /*#__PURE__*/ sqliteTable(
 
 /**
  * Domains product URLs may not point at. Seeded with link shorteners and
- * redirectors (R-176, migration 0078); the review flow adds the rest. Stored as the bare registrable host, lowercased, which is what the
+ * redirectors (R-176, core's seed migration); the review flow adds the rest. Stored as the bare registrable host, lowercased, which is what the
  * save path compares against — never the full URL.
  */
 export const domainDenylist = /*#__PURE__*/ sqliteTable("domain_denylist", {

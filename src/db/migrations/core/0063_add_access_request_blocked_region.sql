@@ -1,1 +1,0 @@
-ALTER TABLE `access_requests` ADD `blocked_region` text;
