@@ -1,5 +1,5 @@
-import { pointSpan } from "../../src/modules/feed/conditions-shape";
-import type { Conditions } from "../../src/modules/feed/conditions-shape";
+import { pointSpan } from "../../src/lib/contracts";
+import type { Conditions } from "../../src/lib/contracts";
 
 /**
  * A viewer's conditions: a live reading, so a span with no width.

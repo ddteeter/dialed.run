@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { Units } from "../../../lib/contracts";
 import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
 import { Bracketed, FieldMessage, Mono, Sheet } from "../../../ui";
-import type { Conditions } from "../conditions-shape";
+import type { Conditions } from "../../../lib/contracts";
 import { uiGroupLabels } from "../groups";
 import type { UiGroup } from "../groups";
 import type { PickerGroup } from "../picker";

@@ -1,6 +1,6 @@
 import type { Units } from "../../lib/contracts";
 import { formatTempRange } from "../../lib/contracts/measures";
-import type { Conditions } from "./conditions-shape";
+import type { Conditions } from "../../lib/contracts";
 
 /**
  * The second cell of a post's run strip — `TEMP · CONDITION` — or what

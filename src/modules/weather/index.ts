@@ -35,6 +35,7 @@ export { forgetManualBand } from "./store";
 export { forgetManualBands } from "./store";
 export type { CacheKey, ObservationRow } from "./store";
 export { manualReadingsForRuns, observationsForRuns } from "./read";
+export { conditionsForRuns, zoneField } from "./run-conditions";
 // The cache reads feed's conditions are assembled from (design 173): feed
 // used to read `weather_observations` itself.
 export { newestObservationAt, observationsAtCells } from "./read";

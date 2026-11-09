@@ -33,7 +33,7 @@ import { outfitEntriesSelect } from "./entries-query";
 import { runDayOf } from "./public-kit";
 import { columnWhere } from "../../lib/sql/keyed-read";
 import type { Units } from "../../lib/contracts";
-import type { Conditions } from "./conditions-shape";
+import type { Conditions } from "../../lib/contracts";
 
 function db() {
   return coreDb();

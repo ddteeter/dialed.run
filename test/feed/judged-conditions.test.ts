@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { verdictScale } from "../../src/lib/contracts";
-import { pointSpan } from "../../src/modules/feed/conditions-shape";
-import type { Conditions } from "../../src/modules/feed/conditions-shape";
+import { pointSpan } from "../../src/lib/contracts";
+import type { Conditions } from "../../src/lib/contracts";
 import { judgedFeelsLikeC } from "../../src/modules/feed/judged-conditions";
 
 /**

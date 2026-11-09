@@ -1,16 +1,11 @@
 /**
- * What a set of conditions *is*, with no way to read one.
+ * What a set of conditions *is*, with no way to read one: the shape the
+ * weather module derives for a run and the feed renders (design 189 moved
+ * it here from `feed/conditions-shape.ts` so weather can build it too).
  *
- * Separate from `conditions.ts` because that file imports `src/env` to
- * reach `DIALED_WEATHER`, and anything importing a value from it drags
- * `cloudflare:workers` along — which breaks the client build and, before
- * that, any test running in jsdom. The types alone would be fine (they
- * erase); `pointSpan` is a value, and a value is what pulls the graph.
- *
- * Same device as `feed/route-decisions.ts` and `runs/not-found.ts`:
- * the part a component or a dom test needs lives in a sibling that
- * imports nothing server-side, and `conditions.ts` re-exports it so
- * callers that are already server-side see one module.
+ * Pure and isomorphic, like the rest of `lib/contracts`: a component may
+ * import it, which is why it never lived beside the reads that need
+ * `src/env`.
  */
 export interface Conditions {
   /**

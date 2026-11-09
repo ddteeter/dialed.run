@@ -30,7 +30,7 @@ export type {
   BacklogRow,
   BacklogSuggestion,
 } from "./backlog";
-export type { Conditions } from "./conditions-shape";
+export type { Conditions } from "../../lib/contracts";
 
 // Task 128 · SAF-3: the delete primitives account deletion (126 · ACC-9)
 // and run deletion call, rather than writing a second delete.
