@@ -56,6 +56,7 @@ import {
   settleOutbox,
 } from "../ops";
 import { screeningDeletes, settleOpenReviews } from "../safety";
+import { clearEntryHalves, deleteRunCopies } from "./run-conditions-entry";
 
 type Db = ReturnType<typeof drizzle>;
 export type Report = typeof captureException;
@@ -127,6 +128,8 @@ export function entryStatements(
     // The verdict prompt's row names the entry, the kit reminder's names
     // the run; nothing else of the runner's names either.
     deleteNotificationsAbout(db, userId, entries),
+    // Before the entries' delete, which is how their runs are found.
+    clearEntryHalves(db, entries),
     db.delete(outfitEntries).where(inArray(outfitEntries.id, entries)),
   ];
 }
@@ -467,6 +470,7 @@ export async function deleteRuns(
         ),
         deleteNotificationsAbout(db, userId, ownedRuns),
         db.delete(imports).where(ofTheseRuns),
+        deleteRunCopies(db, ownedRuns),
         db.delete(runs).where(inArray(runs.id, ownedRuns)),
       ],
       debts: [

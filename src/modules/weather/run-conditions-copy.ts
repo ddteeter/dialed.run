@@ -15,7 +15,7 @@ import { precipClassOf } from "../../lib/contracts/temperature";
 import { inJsonList } from "../../lib/sql/json-list";
 import { conditionsForRuns } from "./run-conditions";
 
-type CoreDb = DrizzleD1Database;
+type CoreDb = DrizzleD1Database<Record<string, unknown>>;
 
 /**
 The weather half's columns, as a run's conditions give them.

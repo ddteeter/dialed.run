@@ -51,6 +51,7 @@ import { newUlid } from "../../lib/ids";
 import { bandFloorC } from "../../lib/contracts/temperature";
 import type { Conditions } from "./conditions";
 import { observationsForEntries, observationsForRuns } from "./conditions";
+import { entryHalfStatement } from "./run-conditions-entry";
 import { judgedFeelsLikeC } from "./judged-conditions";
 import { recentOwnEntries } from "./own-history";
 import { hasReacted, usefulCount } from "./reactions";
@@ -127,10 +128,14 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
     // the way law 8b means: it returns the row the first call made rather
     // than erroring, and it does not quietly rewrite the outfit.
     if (input.verdict !== undefined) {
-      await database
-        .update(outfitEntries)
-        .set({ verdict: input.verdict })
-        .where(eq(outfitEntries.id, existing.id));
+      // With its half of the run's copy, read back from the row it wrote.
+      await database.batch([
+        database
+          .update(outfitEntries)
+          .set({ verdict: input.verdict })
+          .where(eq(outfitEntries.id, existing.id)),
+        entryHalfStatement(database, existing.id),
+      ]);
     }
     // Already idempotent, and by a natural key: a run has exactly one entry
     // (UNIQUE `entries_run`), so the run id *is* the key and no column is
@@ -202,12 +207,16 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
     verdict: input.verdict,
     createdAt: nowSeconds(),
   });
+  // The entry's half of its run's copy (D-175) reads the row back, so it
+  // follows the insert in the same batch.
+  const copy = entryHalfStatement(database, entryId);
   if (input.itemIds.length === 0) {
-    await insertEntry;
+    await database.batch([insertEntry, copy]);
     return entryId;
   }
   await database.batch([
     insertEntry,
+    copy,
     database
       .insert(outfitEntryItems)
       .values(input.itemIds.map((itemId) => ({ entryId, itemId }))),
@@ -304,6 +313,9 @@ export async function submitVerdict(
         // `caption` is not written: cut for v1 (D-167), column kept.
       })
       .where(eq(outfitEntries.id, input.entryId)),
+    // The verdict and audience into the run's copy (D-175), read back
+    // from the row the statement above just wrote.
+    entryHalfStatement(database, input.entryId),
     database
       .delete(entryTagsTable)
       .where(eq(entryTagsTable.entryId, input.entryId)),
