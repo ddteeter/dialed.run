@@ -35,16 +35,41 @@ run, so its rows read grow with every shared run anywhere (D-175).
 
 **PR 2: #409, then #507.**
 
-- A core table `run_conditions` (run id PK, user id, observed-at hour,
-  judged feels-like, band, precip class, source), indexed by time then
-  feels-like. One derive function writes it from every path that changes a
-  run's conditions (weather attach, start-time correction, manual band),
-  idempotently (`INSERT … ON CONFLICT DO UPDATE`, law 1); the hourly
-  weather-retry cron repairs a missing row (law 8c, reconciliation).
-- The consensus reads `run_conditions` joined to `outfit_entries` in core,
-  bounded by window and band, with visibility, moderation and
-  `count_in_totals` still checked live. `source='manual'` stays excluded.
-- A test pins the copy against a live derivation from the weather cache.
+A run's judged feels-like depends on its entry's verdict (`judgedFeelsLikeC`:
+coldest hour if it felt cold, warmest if warm, else the start), and the
+consensus window is the entry's `created_at`. So the copy carries both
+halves, one row per run (`entries_run` is unique), each half written in the
+batch that changes the fact it copies (coordinator-4 approved this shape):
+
+- **`run_conditions`** (core): `run_id` PK, `user_id`; weather's half
+  `feels_like_c`, `min_feels_like_c`, `max_feels_like_c`, `precip_class`,
+  `source`; feed's half `verdict`, `entry_created_at`. A generated column
+  `judged_bucket` applies the `judgedFeelsLikeC` rule in SQL and floors it
+  to a whole degree. Partial index `(precip_class, judged_bucket,
+entry_created_at) WHERE source != 'manual'`.
+- **Weather's half** is written by `setStatus` (`weather/attach.ts`) in the
+  batch that marks a run `attached` or `manual`, and cleared in the batches
+  that set it back to `pending` (`runs/service.ts`, `ops/gave-up.ts`). The
+  hourly weather-retry cron repairs a resolved run with no half and clears
+  a stale one (law 8c, reconciliation).
+- **Feed's half** is written in the batch that creates the entry or
+  records its verdict, and cleared when the entry is retracted. Deleting a
+  run and purging an account delete the row.
+- **Module boundary:** `feed` imports `weather`, never the reverse, so the
+  run-to-conditions derivation (`observationsForRuns` over run rows, now in
+  `feed/conditions.ts`) moves into `weather`, with the `Conditions` shape
+  and `judgedFeelsLikeC` moved to `lib/contracts/` (pure). Feed re-exports
+  what it used. A pure `runConditionsRow()` builds the weather half, so
+  test and e2e seeds call it rather than copying the rule.
+- **The consensus** asks for the seven buckets that can hold ±3° with
+  `judged_bucket IN (…)` and the window, then the exact band check in SQL.
+  Audience, moderation (`publiclyVisibleEntry()`) and `count_in_totals`
+  stay live in the join to `outfit_entries`. The garments worn are read
+  as today.
+- **Pins:** the generated column against `judgedFeelsLikeC` over every
+  verdict; the stored half against a live derivation from the cache.
+- D-108's published totals do not read this table; it holds no notes,
+  photos or places, and its one time is the entry's.
 - #507: scaling tests on the model of `test/safety/desk-queues.scaling.test.ts`
   with `test/d1-spy.ts`: seed 25 rows the read must not return and assert
   rows read stay flat, for the consensus, the feeds and search. Measure the
@@ -55,6 +80,8 @@ run, so its rows read grow with every shared run anywhere (D-175).
 - Schema changes: drop `outfit_entry_items.note`, `products.image_key`
   (destructive, pre-approved by D-139); squash all three chains (D-174);
   PR 2 adds `run_conditions` (additive, D-175). None touches a safety table.
+- Module boundaries: the run-to-conditions derivation moves from `feed` to
+  `weather`; `docs/architecture.md` changes if its diagram names it.
 - New route files, bindings, queues, crons: **none**.
 - Screens: none change. The export's `kit.csv` loses its `note` column.
 
@@ -62,8 +89,10 @@ run, so its rows read grow with every shared run anywhere (D-175).
 
 - vitest `worker`: export tests expect `entry_id,garment_id,flag`;
   `migration-chain.test.ts` holds against the new single-entry chains.
-- vitest `worker`: run-conditions derive/pin test; write-path tests for
-  attach, start-time correction and manual band; cron repair test.
+- vitest `worker`: the generated bucket pinned against `judgedFeelsLikeC`;
+  the stored half pinned against a live derivation; each write path
+  (attach, manual band, start-time correction, Desk retry, entry create,
+  verdict, retract, run delete, purge); the cron repair.
 - vitest `worker`: `*.scaling.test.ts` rows-read cases (#507).
 - No Playwright spec: no screen changes. The CI-style e2e still runs.
 
