@@ -50,6 +50,7 @@ import {
   declineCorrection,
   declineCorrectionInput,
 } from "../products";
+import { deskKitFor } from "./desk-kit";
 import { duplicateProducts } from "./duplicates";
 import { duplicatesReport } from "./duplicates-report";
 import { blockRunner, blockedRunners, unblockRunner } from "./blocks";
@@ -58,6 +59,7 @@ import {
   banUserInput,
   blockRunnerInput,
   copyrightHoldInput,
+  deskKitInput,
   counterNoticeInput,
   denyDomainInput,
   fileReportInput,
@@ -388,6 +390,18 @@ export const deskDuplicatesQuery = createServerFn({ method: "GET" }).handler(
     return duplicatesReport(await duplicateProducts());
   },
 );
+
+/**
+ * The Desk's view of a kit (R-154, #388), whatever its audience or state:
+ * Review's other photos and matches, and a removal request, link here.
+ * `deskKitFor` asks for an operator as well, before it reads.
+ */
+export const deskKitQuery = createServerFn({ method: "GET" })
+  .validator((input: unknown) => deskKitInput.parse(input))
+  .handler(async ({ data }) => {
+    const adminId = requireAdmin(await verifiedUserId());
+    return deskKitFor(coreDb(), adminId, data.entryId);
+  });
 
 /**
  * The Desk's Corrections queue (D-163, R48·130): one row per product,

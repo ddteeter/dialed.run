@@ -48,7 +48,6 @@ import {
 import { distanceBetweenSql } from "../../lib/sql/fingerprint-distance";
 import { inJsonList, jsonField, jsonTable } from "../../lib/sql/json-list";
 import { subjectColumns, type OtherPhotosSubject } from "./other-photos";
-import { publiclyVisibleEntry } from "./visibility";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -64,8 +63,8 @@ export const PHOTO_MATCHES_LIMIT = 12;
  * serves; `distance` is how many bits apart it is, 0 for the same
  * picture. Whose it is — the owner, and their handle when they have one,
  * for the link to D8 (round 39 #71). A kit photo carries its kit, for the
- * link to its page, and whether that kit is shared; a garment photo is
- * never shown to another runner, so it has no page an operator can open.
+ * link to the Desk's view of it (`/desk/kit/$entryId`, #388), and whether
+ * that kit is shared; a garment photo has no kit to open.
  */
 export type PhotoMatch = Readonly<
   {
@@ -78,10 +77,7 @@ export type PhotoMatch = Readonly<
     A kit not shared with runners; a garment, never shown to anyone, is not tagged.
     */
     isPrivate: boolean;
-  } & (
-    | { kind: "kit"; entryId: string; canOpen: boolean }
-    | { kind: "garment"; canOpen: false }
-  )
+  } & ({ kind: "kit"; entryId: string } | { kind: "garment" })
 >;
 
 /**
@@ -190,7 +186,6 @@ function matchesFrom(
     })),
     ...garments.map((row) => ({
       kind: "garment" as const,
-      canOpen: false as const,
       isPrivate: false,
       ...row,
       handle: row.handle ?? undefined,
@@ -387,7 +382,6 @@ function kitMatches(db: Db, probes: readonly Probe[]) {
         id: entryPhotos.id,
         photoKey: entryPhotos.photoKey,
         entryId: entryPhotos.entryId,
-        canOpen: sql<boolean>`${publiclyVisibleEntry()}`.mapWith(Boolean),
         isPrivate: sql<boolean>`${notInArray(outfitEntries.audience, [
           ...strangerAudiences,
         ])}`.mapWith(Boolean),

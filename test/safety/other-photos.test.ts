@@ -95,24 +95,21 @@ describe("otherPhotosOf", () => {
         id: first,
         entryId: newer,
         photoKey: `entries/x/${newer}/${first}.jpg`,
-        canOpen: true,
       },
       {
         id: second,
         entryId: newer,
         photoKey: `entries/x/${newer}/${second}.jpg`,
-        canOpen: true,
       },
       {
         id: sameKit,
         entryId: older,
         photoKey: `entries/x/${older}/${sameKit}.jpg`,
-        canOpen: true,
       },
     ]);
   });
 
-  it("says which kits an operator can open: shared and not hidden (review S4)", async () => {
+  it("lists shared, private and hidden kits alike: each opens on the Desk (#388)", async () => {
     const runner = await makeUser();
     const reported = await photo(await kit(runner, NOW));
     const shared = await photo(await kit(runner, NOW - 1));
@@ -128,14 +125,10 @@ describe("otherPhotosOf", () => {
       { subjectType: "photo", subjectId: reported },
     ]);
 
-    expect(
-      found
-        .get(`photo:${reported}`)
-        ?.photos.map((row) => [row.id, row.canOpen]),
-    ).toStrictEqual([
-      [shared, true],
-      [privately, false],
-      [hidden, false],
+    expect(ids(found.get(`photo:${reported}`))).toStrictEqual([
+      shared,
+      privately,
+      hidden,
     ]);
   });
 

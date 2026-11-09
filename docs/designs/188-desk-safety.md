@@ -50,12 +50,17 @@ state behind `requireAdmin` on the verified id; a removed kit says so. Its
 photos come through `/desk/review-photo/` (`reviewPhotoSrc`). `OtherPhotos`
 links every photo there (the `canOpen` split goes), `PhotoMatches`' kit
 tiles likewise, and `RemovalRequests`' "Open the kit" points at it.
-**No board: built on a marked guess** (design ask sent to coordinator-4):
-the Desk's existing primitives, the kit's runner, audience and state in a
-mono band, then the photos, garments and verdict.
+**No board: built on a marked guess**, Design 153 (#527): the Desk's
+existing primitives, the kit's runner, audience and state in a mono band,
+then the run, verdict and caption, the photos and the garments. The page
+sits under Review in the rail. An id that is not one reads as no kit, in
+words. As built, `OtherPhoto` and `PhotoMatch` lose `canOpen` (and
+`publiclyVisibleEntry` from both reads): every kit opens now, so a tile's
+alt is `{id}: open its kit` for every kit and a garment's stays unlinked.
 
-**#497**: `WHO REPORTED · 4 ▸` in `WhoReported.tsx`, after design 183
-merges.
+**#497**: `WHO REPORTED · 4 ▸` in `WhoReported.tsx` (R50·145). The count is
+the row's `reporterCount`, which the row already says ("3 people"), so a
+closed fold still reads no names.
 
 ## Contract touches
 

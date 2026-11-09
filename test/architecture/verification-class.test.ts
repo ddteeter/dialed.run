@@ -307,6 +307,7 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "safety/functions.ts forceRenameAction": "admin",
   "safety/functions.ts deskRunnersQuery": "admin",
   "safety/functions.ts deskDuplicatesQuery": "admin",
+  "safety/functions.ts deskKitQuery": "admin",
   "safety/functions.ts deskCorrectionsQuery": "admin",
   "safety/functions.ts applyCorrectionFn": "admin",
   "safety/functions.ts declineCorrectionFn": "admin",

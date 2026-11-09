@@ -1429,8 +1429,10 @@ function renderWithFold(queue: readonly QueueRow[]) {
 
 describe("the WHO REPORTED fold on a row (D-164)", () => {
   it("sits on a reported row, after the reasons and before the decision", () => {
-    renderWithFold([row()]);
+    renderWithFold([row({ reporterCount: 4 })]);
     const fold = screen.getByRole("button", { name: /Who reported/u });
+    // Its label counts the row's reporters (R50·145, #497).
+    expect(fold).toHaveTextContent("Who reported · 4 ▸");
     const approve = screen.getByRole("button", { name: "Approve" });
     expect(
       fold.compareDocumentPosition(approve) & Node.DOCUMENT_POSITION_FOLLOWING,

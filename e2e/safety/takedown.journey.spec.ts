@@ -241,7 +241,7 @@ test("someone with no account asks for an intimate image to come down, and an op
   await hydrated(page);
   // The row whose link is the first kit: the requester has three now.
   const request = page.locator("[data-part='removal-request']").filter({
-    has: page.locator(`a[href="/feed/entry/${entryId}"]`),
+    has: page.locator(`a[href="/desk/kit/${entryId}"]`),
   });
   await expect(request.locator("[data-part='due']")).toHaveText("Due in 48h");
   await expect(request).toContainText("[via /takedown]");
@@ -253,21 +253,35 @@ test("someone with no account asks for an intimate image to come down, and an op
   await expect(request).toContainText(requester);
   await expect(
     request.getByRole("link", { name: "Open the kit" }),
-  ).toHaveAttribute("href", `/feed/entry/${entryId}`);
+  ).toHaveAttribute("href", `/desk/kit/${entryId}`);
 
   const others = request.locator("[data-part='other-photos']");
   await others.scrollIntoViewIfNeeded();
   await scene(page, "The runner's other photos, to check for copies");
   await expect(others).toContainText("Their other photos · 1");
-  // The second kit is hidden by its own confirmed request, so its page
-  // would send an operator away: the photo shows with no link (R-154).
-  await expect(others.getByRole("link")).toHaveCount(0);
   await expect(
-    others.getByRole("img", {
-      name: `Photo ${otherPhotoId}, on a kit an operator cannot open`,
-    }),
+    others.getByRole("img", { name: `${otherPhotoId}: open its kit` }),
   ).toHaveAttribute("src", `/desk/review-photo/${otherPhotoKey}`);
   await expect(others).toContainText(otherPhotoId);
+
+  // The second kit is hidden by its own confirmed request, so its feed
+  // page would send an operator away. The Desk's view of it opens (R-154,
+  // #388), saying where review left it.
+  await scene(page, "A hidden kit opens on the Desk, as it stands");
+  await others
+    .getByRole("link", { name: `${otherPhotoId}: open its kit` })
+    .click();
+  await expect(page).toHaveURL(`/desk/kit/${secondEntryId}`);
+  const deskKit = page.locator("[data-part='desk-kit']");
+  await expect(deskKit.getByRole("heading", { level: 1 })).toHaveText("Kit");
+  await expect(deskKit.locator("[data-part='kit-band']")).toContainText(
+    "[hidden pending review]",
+  );
+  await expect(
+    deskKit.getByRole("img", { name: otherPhotoId }),
+  ).toHaveAttribute("src", `/desk/review-photo/${otherPhotoKey}`);
+  await page.goBack();
+  await hydrated(page);
 
   // Round 45 #107: Decline asks why not in the bar's place, and Cancel
   // draws the bar again with what was typed kept.

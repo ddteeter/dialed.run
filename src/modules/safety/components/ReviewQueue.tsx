@@ -458,7 +458,9 @@ function ReportersFold({
   reporters: LoadReporters | undefined;
 }>): JSX.Element | undefined {
   if (reporters === undefined || row.reporterCount === 0) return;
-  return <WhoReported queueId={row.id} load={reporters} />;
+  return (
+    <WhoReported queueId={row.id} count={row.reporterCount} load={reporters} />
+  );
 }
 
 /**

@@ -449,7 +449,7 @@ function SubjectLink({
   }
   return (
     <Link
-      to="/feed/entry/$entryId"
+      to="/desk/kit/$entryId"
       params={{ entryId: subject.entryId }}
       className="target self-start font-bold text-ink underline underline-offset-4"
     >

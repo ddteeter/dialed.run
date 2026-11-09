@@ -160,7 +160,7 @@ export async function isDeniedOnLanding(
 
 /**
  * Adds a domain to the denylist. Seeded with link shorteners and
- * redirectors (R-176, migration 0078); the review flow adds the rest.
+ * redirectors (R-176, core's seed migration); the review flow adds the rest.
  *
  * The stored form is whatever `domainOf` produces, so a reviewer pasting a
  * full URL and a reviewer typing a bare host both land on the same row.

@@ -42,7 +42,6 @@ const MATCHES: readonly PhotoMatch[] = [
     id: PHOTO,
     entryId: KIT,
     photoKey: "entries/u/k/1",
-    canOpen: true,
     isPrivate: false,
     distance: 0,
     ownerId: "u-maya",
@@ -53,7 +52,6 @@ const MATCHES: readonly PhotoMatch[] = [
     id: HIDDEN,
     entryId: KIT,
     photoKey: "entries/u/k/2",
-    canOpen: false,
     isPrivate: true,
     distance: 2,
     ownerId: "u-kim",
@@ -63,7 +61,6 @@ const MATCHES: readonly PhotoMatch[] = [
     kind: "garment",
     id: GARMENT,
     photoKey: "items/u/i/v1/card.webp",
-    canOpen: false,
     distance: 5,
     ownerId: "u-kim",
     handle: undefined,
@@ -81,7 +78,7 @@ const decideOf = (tile: Element | undefined) =>
   });
 
 describe("PhotoMatches", () => {
-  it("lists each match as an operator's image, named, linking only a kit an operator can open", async () => {
+  it("lists each match as an operator's image, named, linking every kit to the Desk's view of it and no garment (#388)", async () => {
     await renderWithRouter(
       <PhotoMatches
         found={{ fingerprinted: true, isCutOff: false, matches: MATCHES }}
@@ -100,8 +97,10 @@ describe("PhotoMatches", () => {
     const links = within(block ?? document.body)
       .getAllByRole("link")
       .filter((link) => link.dataset.part !== "match-owner");
+    // A private kit too: the Desk's view opens whatever its audience.
     expect(links.map((link) => link.getAttribute("href"))).toStrictEqual([
-      `/feed/entry/${KIT}`,
+      `/desk/kit/${KIT}`,
+      `/desk/kit/${KIT}`,
     ]);
     expect(links[0]).toHaveClass("target");
     expect(
@@ -120,7 +119,7 @@ describe("PhotoMatches", () => {
       ],
       [
         "/desk/review-photo/entries/u/k/2",
-        `${HIDDEN}, 2 bits from the reported photo`,
+        `${HIDDEN}, 2 bits from the reported photo: open its kit`,
       ],
       [
         "/desk/review-photo/items/u/i/v1/card.webp",
@@ -172,7 +171,6 @@ describe("PhotoMatches", () => {
               kind: "garment",
               id: GARMENT,
               photoKey: "items/u/i/v1/card.webp",
-              canOpen: false,
               distance: 1,
               ownerId: "u-kim",
               handle: undefined,
@@ -455,7 +453,6 @@ describe("a garment match's takedown", () => {
     kind: "garment",
     id: GARMENT,
     photoKey: "items/u/i/v1/card.webp",
-    canOpen: false,
     distance: 5,
     ownerId: "u-kim",
     handle: "k_lopes",
@@ -750,7 +747,6 @@ function matchesFrom(count: number, runners: number): PhotoMatch[] {
     id: `ph-${String(index)}`,
     entryId: KIT,
     photoKey: `entries/u/k/${String(index)}`,
-    canOpen: true,
     isPrivate: false,
     distance: 1,
     ownerId: `u-${String(index % runners)}`,

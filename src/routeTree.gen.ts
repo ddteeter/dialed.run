@@ -68,6 +68,7 @@ import { Route as TakedownConfirmRouteImport } from './routes/takedown/confirm'
 import { Route as AccountExportTokenRouteImport } from './routes/account/export.$token'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ClosetEditItemIdRouteImport } from './routes/closet/edit.$itemId'
+import { Route as DeskKitEntryIdRouteImport } from './routes/desk/kit.$entryId'
 import { Route as DeskReviewPhotoSplatRouteImport } from './routes/desk/review-photo.$'
 import { Route as FeedAttachRunIdRouteImport } from './routes/feed/attach.$runId'
 import { Route as FeedEntryEntryIdRouteImport } from './routes/feed/entry.$entryId'
@@ -375,6 +376,11 @@ const ClosetEditItemIdRoute = ClosetEditItemIdRouteImport.update({
   path: '/closet/edit/$itemId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DeskKitEntryIdRoute = DeskKitEntryIdRouteImport.update({
+  id: '/kit/$entryId',
+  path: '/kit/$entryId',
+  getParentRoute: () => DeskRouteRoute,
+} as any)
 const DeskReviewPhotoSplatRoute = DeskReviewPhotoSplatRouteImport.update({
   id: '/review-photo/$',
   path: '/review-photo/$',
@@ -492,6 +498,7 @@ export interface FileRoutesByFullPath {
   '/account/export/$token': typeof AccountExportTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/closet/edit/$itemId': typeof ClosetEditItemIdRoute
+  '/desk/kit/$entryId': typeof DeskKitEntryIdRoute
   '/desk/review-photo/$': typeof DeskReviewPhotoSplatRoute
   '/feed/attach/$runId': typeof FeedAttachRunIdRoute
   '/feed/entry/$entryId': typeof FeedEntryEntryIdRoute
@@ -563,6 +570,7 @@ export interface FileRoutesByTo {
   '/account/export/$token': typeof AccountExportTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/closet/edit/$itemId': typeof ClosetEditItemIdRoute
+  '/desk/kit/$entryId': typeof DeskKitEntryIdRoute
   '/desk/review-photo/$': typeof DeskReviewPhotoSplatRoute
   '/feed/attach/$runId': typeof FeedAttachRunIdRoute
   '/feed/entry/$entryId': typeof FeedEntryEntryIdRoute
@@ -636,6 +644,7 @@ export interface FileRoutesById {
   '/account/export/$token': typeof AccountExportTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/closet/edit/$itemId': typeof ClosetEditItemIdRoute
+  '/desk/kit/$entryId': typeof DeskKitEntryIdRoute
   '/desk/review-photo/$': typeof DeskReviewPhotoSplatRoute
   '/feed/attach/$runId': typeof FeedAttachRunIdRoute
   '/feed/entry/$entryId': typeof FeedEntryEntryIdRoute
@@ -710,6 +719,7 @@ export interface FileRouteTypes {
     | '/account/export/$token'
     | '/api/auth/$'
     | '/closet/edit/$itemId'
+    | '/desk/kit/$entryId'
     | '/desk/review-photo/$'
     | '/feed/attach/$runId'
     | '/feed/entry/$entryId'
@@ -781,6 +791,7 @@ export interface FileRouteTypes {
     | '/account/export/$token'
     | '/api/auth/$'
     | '/closet/edit/$itemId'
+    | '/desk/kit/$entryId'
     | '/desk/review-photo/$'
     | '/feed/attach/$runId'
     | '/feed/entry/$entryId'
@@ -853,6 +864,7 @@ export interface FileRouteTypes {
     | '/account/export/$token'
     | '/api/auth/$'
     | '/closet/edit/$itemId'
+    | '/desk/kit/$entryId'
     | '/desk/review-photo/$'
     | '/feed/attach/$runId'
     | '/feed/entry/$entryId'
@@ -1347,6 +1359,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClosetEditItemIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/desk/kit/$entryId': {
+      id: '/desk/kit/$entryId'
+      path: '/kit/$entryId'
+      fullPath: '/desk/kit/$entryId'
+      preLoaderRoute: typeof DeskKitEntryIdRouteImport
+      parentRoute: typeof DeskRouteRoute
+    }
     '/desk/review-photo/$': {
       id: '/desk/review-photo/$'
       path: '/review-photo/$'
@@ -1434,6 +1453,7 @@ interface DeskRouteRouteChildren {
   DeskReviewRoute: typeof DeskReviewRoute
   DeskRunnersRoute: typeof DeskRunnersRoute
   DeskIndexRoute: typeof DeskIndexRoute
+  DeskKitEntryIdRoute: typeof DeskKitEntryIdRoute
   DeskReviewPhotoSplatRoute: typeof DeskReviewPhotoSplatRoute
 }
 
@@ -1444,6 +1464,7 @@ const DeskRouteRouteChildren: DeskRouteRouteChildren = {
   DeskReviewRoute: DeskReviewRoute,
   DeskRunnersRoute: DeskRunnersRoute,
   DeskIndexRoute: DeskIndexRoute,
+  DeskKitEntryIdRoute: DeskKitEntryIdRoute,
   DeskReviewPhotoSplatRoute: DeskReviewPhotoSplatRoute,
 }
 

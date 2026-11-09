@@ -405,11 +405,11 @@ function nameOf(match: Pick<PhotoMatch, "kind" | "id">): string {
  */
 function altOf(match: PhotoMatch): string {
   const near = `${nameOf(match)}, ${String(match.distance)} bits from the reported photo`;
-  return match.canOpen ? `${near}: open its kit` : near;
+  return match.kind === "kit" ? `${near}: open its kit` : near;
 }
 
 /**
-One match: a link to its kit when the operator can open it, the image alone when not.
+One match: a link to the Desk's view of its kit (#388); a garment's image alone.
 */
 function Thumbnail({ match }: Readonly<{ match: PhotoMatch }>): JSX.Element {
   const image = (
@@ -419,10 +419,10 @@ function Thumbnail({ match }: Readonly<{ match: PhotoMatch }>): JSX.Element {
       className="h-32 w-auto border border-hairline"
     />
   );
-  if (!match.canOpen) return image;
+  if (match.kind === "garment") return image;
   return (
     <Link
-      to="/feed/entry/$entryId"
+      to="/desk/kit/$entryId"
       params={{ entryId: match.entryId }}
       className="target self-start"
     >
