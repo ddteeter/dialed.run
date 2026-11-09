@@ -11,6 +11,7 @@ import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import {
   audiences,
+  CONDITIONS_SOURCES,
   colorNames,
   strangerAudiences,
   WORLD_AUDIENCE,
@@ -26,6 +27,7 @@ import {
 import { EMAIL_PREFERENCE_KINDS } from "../lib/contracts/email";
 import { GAVE_UP_KINDS } from "../lib/contracts/gave-up";
 import { HOLD_CAUSES } from "../lib/contracts/hold-causes";
+import { PRECIP_LEVELS } from "../lib/contracts/temperature";
 import {
   CORRECTION_FIELDS,
   CORRECTION_STATUSES,
@@ -909,6 +911,70 @@ export const runs = /*#__PURE__*/ sqliteTable(
     // Scoped to the user: keys are client-generated, so one user's key must
     // never collide with another's.
     uniqueIndex("runs_idempotency").on(t.userId, t.idempotencyKey),
+  ],
+);
+
+/**
+ * A copy of each run's judged conditions, in core (D-175, design 189), so
+ * the conditions consensus reads only the runs in the viewer's band
+ * instead of every shared run in its window and then each one's weather
+ * in the other database.
+ *
+ * One row per run (`entries_run` makes a run's entry unique), written in
+ * two halves, each in the batch that changes the fact it copies:
+ *
+ * - **Weather's half** (`feels_like_c` through `source`): written by
+ *   `weather/attach.ts` `setStatus` in the batch that settles the run as
+ *   `attached` or `manual`, from `conditionsForRuns`. The hourly retry
+ *   cron clears it on a run that is `pending` again.
+ * - **Feed's half** (`verdict`, `entry_created_at`, `entry_shared`):
+ *   written in the batch that creates the entry or saves its verdict and
+ *   audience (`feed/entries.ts`), and cleared when the entry is retracted.
+ *
+ * `judged_feels_like_c` is `judgedFeelsLikeC` in SQL: the coldest hour if
+ * the run felt cold, the warmest if it felt warm, else the start. A test
+ * pins the two against each other. `judged_bucket` floors it to a whole
+ * degree, which is what the band index seeks.
+ *
+ * What this holds is not authority: audience, moderation and the totals
+ * opt-out are still read live from `outfit_entries` and `user_profiles`
+ * in the consensus's join. `entry_shared` only keeps private entries out
+ * of the index, so they cost the read nothing, as they cost the shared
+ * entries' index nothing before. It holds no note, photo, place or start
+ * time, and the published totals (D-108) do not read it.
+ */
+export const runConditions = /*#__PURE__*/ sqliteTable(
+  "run_conditions",
+  {
+    runId: text("run_id").primaryKey(),
+    userId: text("user_id").notNull(),
+    feelsLikeC: real("feels_like_c"),
+    minFeelsLikeC: real("min_feels_like_c"),
+    maxFeelsLikeC: real("max_feels_like_c"),
+    precipClass: text("precip_class", { enum: PRECIP_LEVELS }),
+    source: text("source", { enum: CONDITIONS_SOURCES }),
+    verdict: integer("verdict"),
+    entryCreatedAt: integer("entry_created_at"),
+    entryShared: integer("entry_shared", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    judgedFeelsLikeC: real("judged_feels_like_c").generatedAlwaysAs(
+      sql`CASE WHEN "verdict" < 0 THEN "min_feels_like_c" WHEN "verdict" > 0 THEN "max_feels_like_c" ELSE "feels_like_c" END`,
+      { mode: "virtual" },
+    ),
+    // Floor, for negatives too: CAST truncates toward zero, so the offset
+    // lifts every feels-like a runner could meet above zero first.
+    judgedBucket: integer("judged_bucket").generatedAlwaysAs(
+      sql`CAST("judged_feels_like_c" + 1000 AS INTEGER) - 1000`,
+      { mode: "virtual" },
+    ),
+  },
+  (t) => [
+    index("run_conditions_band")
+      .on(t.precipClass, t.judgedBucket, t.entryCreatedAt)
+      .where(sql`${t.entryShared} = 1 AND ${t.source} != 'manual'`),
+    // The account purge's delete, by runner.
+    index("run_conditions_user").on(t.userId),
   ],
 );
 

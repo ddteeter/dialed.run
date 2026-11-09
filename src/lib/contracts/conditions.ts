@@ -7,6 +7,12 @@
  * import it, which is why it never lived beside the reads that need
  * `src/env`.
  */
+/**
+Where a run's conditions came from: the weather provider, or a band its runner set (B1).
+*/
+export const CONDITIONS_SOURCES = ["visualcrossing", "manual"] as const;
+export type ConditionsSource = (typeof CONDITIONS_SOURCES)[number];
+
 export interface Conditions {
   /**
    * The **starting** hour, still — every reader that had one number before
@@ -18,7 +24,7 @@ export interface Conditions {
   precipMm: number;
   condition: string;
   windKph: number;
-  source: "visualcrossing" | "manual";
+  source: ConditionsSource;
   /**
    * The IANA zone of the place the observation was made (R-96), so a run's
    * date and time render where the run happened rather than in UTC.
