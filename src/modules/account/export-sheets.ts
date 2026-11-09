@@ -353,11 +353,6 @@ export function buildSheets(rows: ExportRows): ExportSheets {
         about: "too_much or not_enough, if you marked it.",
         value: (item) => item.flag,
       },
-      {
-        name: "note",
-        about: "what you wrote about it.",
-        value: (item) => item.note,
-      },
     ],
   };
 

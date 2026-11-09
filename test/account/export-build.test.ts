@@ -101,7 +101,7 @@ async function seedEverything(userId: string) {
   });
   await db
     .insert(outfitEntryItems)
-    .values({ entryId, itemId: garmentId, note: "just right" });
+    .values({ entryId, itemId: garmentId, flag: "not_enough" });
   const entryPhotoKey = `entries/${userId}/${entryId}/${newUlid()}`;
   await env.MEDIA.put(entryPhotoKey, "entry photo");
   await db.insert(entryPhotos).values({
@@ -267,7 +267,7 @@ describe("buildExport", () => {
     );
     expect(textOf(files, `run-files/${seeded.importId}.gpx`)).toBe("<gpx/>");
     expect(textOf(files, "kit.csv")).toBe(
-      `entry_id,garment_id,flag,note\r\n${seeded.entryId},${seeded.garmentId},,just right\r\n`,
+      `entry_id,garment_id,flag\r\n${seeded.entryId},${seeded.garmentId},not_enough\r\n`,
     );
     expect(textOf(files, "runs.csv")).toContain(
       `,run-files/${seeded.importId}.gpx\r\n`,

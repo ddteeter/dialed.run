@@ -316,7 +316,6 @@ describe("exportData and exportFiles", () => {
         entryId: observedEntry,
         itemId: shirtId,
         flag: "too_much",
-        note: "hot, then fine",
       },
       { entryId: observedEntry, itemId: tightsId },
     ]);
@@ -432,12 +431,12 @@ describe("exportData and exportFiles", () => {
       `${bandEntry},${bandRun},,private,,,,${iso(bandAt + 3600)}`,
     ]);
     const [kitHeader, ...kitRows] = linesOf(texts, "kit.csv");
-    expect(kitHeader).toBe("entry_id,garment_id,flag,note");
+    expect(kitHeader).toBe("entry_id,garment_id,flag");
     // Row order within an entry is SQLite's; the set is the ZIP's.
     expect(kitRows.toSorted(byText)).toStrictEqual(
       [
-        `${observedEntry},${shirtId},too_much,"hot, then fine"`,
-        `${observedEntry},${tightsId},,`,
+        `${observedEntry},${shirtId},too_much`,
+        `${observedEntry},${tightsId},`,
       ].toSorted(byText),
     );
     expect(linesOf(texts, "garments.csv")).toStrictEqual([
