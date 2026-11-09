@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { wardrobeItems } from "../src/db/schema-core";
+import { products, wardrobeItems } from "../src/db/schema-core";
 import {
   colorNames,
+  fabricSchema,
   garmentSchema,
   garmentVisibilities,
+  layerSchema,
+  weightSchema,
 } from "../src/lib/contracts";
 import type { GarmentCategory } from "../src/lib/contracts/garment-fields";
 import {
@@ -195,6 +198,20 @@ describe("the schema column reads the contract's list, not a copy of it", () => 
     expect(wardrobeItems.visibilityLevel.enumValues).toEqual(
       garmentVisibilities,
     );
+  });
+
+  it("takes the closet form's layer, weight and fabric", () => {
+    expect(wardrobeItems.layer.enumValues).toEqual(layerSchema.options);
+    expect(wardrobeItems.weight.enumValues).toEqual(weightSchema.options);
+    expect(wardrobeItems.fabric.enumValues).toEqual(fabricSchema.options);
+  });
+
+  it("takes the same weight and fabric for a product's own facts", () => {
+    // A product's facts are what a correction writes and the closet form
+    // pre-fills from, so a value only one side knows is one the Desk would
+    // show as NOW and the WRONG? sheet could never offer.
+    expect(products.weight.enumValues).toEqual(weightSchema.options);
+    expect(products.fabric.enumValues).toEqual(fabricSchema.options);
   });
 });
 

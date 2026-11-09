@@ -100,6 +100,20 @@ describe("CompositionBlock (design round 10 §AG)", () => {
     expect(screen.queryByText(/as labelled/i)).toBeNull();
   });
 
+  it("ends on the line itself when neither a brand nor WRONG? follows it", () => {
+    // No empty row after it: the row exists to hold the attribution and
+    // WRONG?, and with neither it would only add a gap.
+    const { container } = render(
+      <CompositionBlock
+        composition={{ verbatim: "100% merino", parts: [], brand: undefined }}
+      />,
+    );
+
+    expect(container.querySelector("section")?.lastElementChild).toBe(
+      screen.getByText("100% merino"),
+    );
+  });
+
   it("credits the brand when there is one", () => {
     render(<CompositionBlock composition={arcteryx} />);
     expect(screen.getByText("As labelled by Arc'teryx")).toBeVisible();
@@ -187,5 +201,42 @@ describe("CompositionBlock: the branch boundary", () => {
     expect(screen.getAllByRole("term")).toHaveLength(1);
     expect(screen.getByText("Cuff")).toBeVisible();
     expect(screen.getByText("60% nylon")).toBeVisible();
+  });
+});
+
+describe("CompositionBlock: WRONG? › (R-74)", () => {
+  it("ends the as-labelled line", () => {
+    render(
+      <CompositionBlock
+        composition={arcteryx}
+        wrong={<button type="button">Wrong?</button>}
+      />,
+    );
+    const line = screen.getByText("As labelled by Arc'teryx").closest("div");
+    expect(line).toHaveTextContent("As labelled by Arc'teryxWrong?");
+  });
+
+  it("stands alone when the product states no composition", () => {
+    // What a linked product with nothing stated reads as: the object, empty.
+    render(
+      <CompositionBlock
+        composition={{ verbatim: undefined, parts: [], brand: "Janji" }}
+        wrong={<button type="button">Wrong?</button>}
+      />,
+    );
+    const wrong = screen.getByRole("button", { name: "Wrong?" });
+    expect(wrong.closest("section")).toBeNull();
+    expect(screen.queryByText("Made of")).toBeNull();
+  });
+
+  it("keeps the line for WRONG? alone when no brand labelled it", () => {
+    render(
+      <CompositionBlock
+        composition={{ ...arcteryx, brand: undefined }}
+        wrong={<button type="button">Wrong?</button>}
+      />,
+    );
+    expect(screen.queryByText(/As labelled by/u)).toBeNull();
+    expect(screen.getByRole("button", { name: "Wrong?" })).toBeVisible();
   });
 });

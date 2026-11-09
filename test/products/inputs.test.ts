@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { brandSearchInput } from "../../src/modules/products/inputs";
+import { newUlid } from "../../src/lib/ids";
+import {
+  brandSearchInput,
+  correctionContextInput,
+} from "../../src/modules/products/inputs";
 
 /**
  * The server functions' input contracts.
@@ -34,5 +38,21 @@ describe("brandSearchInput", () => {
 
   it("needs a prefix at all", () => {
     expect(brandSearchInput.safeParse({}).success).toBe(false);
+  });
+});
+
+describe("correctionContextInput", () => {
+  it("takes the product's ULID, and nothing else", () => {
+    const productId = newUlid();
+    expect(correctionContextInput.parse({ productId })).toStrictEqual({
+      productId,
+    });
+  });
+
+  it("refuses no product, or one that is not a ULID", () => {
+    expect(correctionContextInput.safeParse({}).success).toBe(false);
+    expect(
+      correctionContextInput.safeParse({ productId: "nope" }).success,
+    ).toBe(false);
   });
 });

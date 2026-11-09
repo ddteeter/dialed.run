@@ -1,0 +1,45 @@
+document
+banner
+link, dialed.run home
+dialed.run
+end of link, dialed.run home
+navigation, Main
+list
+listitem, level 1, position 1, set size 4
+link, Feed
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+link, Closet
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+link, Call
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+link, You
+end of listitem, level 1, position 4, set size 4
+end of list
+end of navigation, Main
+link, Search runners
+link, Notifications, # new, current page
+button, Log a run, has popup dialog
+end of banner
+main
+heading, Notifications, level 1
+button, Mark all read
+Mark all read
+end of button, Mark all read
+status
+list
+listitem, level 1, position 1, set size 1
+Unread
+paragraph
+link, We kept the name on Rain Shell # as it is.
+We kept the name on Rain Shell # as it is.
+end of link, We kept the name on Rain Shell # as it is.
+end of paragraph
+:day :month #, #:# UTC
+end of listitem, level 1, position 1, set size 1
+end of list
+end of main
+status
+end of document

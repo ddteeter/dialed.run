@@ -15,14 +15,21 @@ import {
   strangerAudiences,
   WORLD_AUDIENCE,
   effortSources,
+  garmentFabrics,
   garmentVisibilities,
   HANDLE_SCREEN_STATES,
+  garmentLayers,
   runSources,
   THEME_CHOICES,
+  garmentWeights,
 } from "../lib/contracts";
 import { EMAIL_PREFERENCE_KINDS } from "../lib/contracts/email";
 import { GAVE_UP_KINDS } from "../lib/contracts/gave-up";
 import { HOLD_CAUSES } from "../lib/contracts/hold-causes";
+import {
+  CORRECTION_FIELDS,
+  CORRECTION_STATUSES,
+} from "../lib/contracts/product-corrections";
 import {
   index,
   integer,
@@ -146,9 +153,7 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     // or pin light or dark. The device caches it for first paint
     // (`lib/browser/theme.ts`); this is the account's value, which takes
     // over on sign-in. `modules/account/theme.ts` is the one writer.
-    theme: text("theme", { enum: THEME_CHOICES })
-      .notNull()
-      .default("system"),
+    theme: text("theme", { enum: THEME_CHOICES }).notNull().default("system"),
   },
   (t) => [
     // The re-ask's sweep reads only the rows it might claim. Partial, so
@@ -551,10 +556,8 @@ export const products = /*#__PURE__*/ sqliteTable(
     type: text("type"),
     fabricComposition: text("fabric_composition"),
     fabricParts: text("fabric_parts"),
-    weight: text("weight", { enum: ["light", "mid", "heavy"] }),
-    fabric: text("fabric", {
-      enum: ["synthetic", "merino", "cotton", "blend", "down"],
-    }),
+    weight: text("weight", { enum: garmentWeights }),
+    fabric: text("fabric", { enum: garmentFabrics }),
     // mode:"boolean" so the storage detail stops at the data layer. SQLite
     // has no boolean and stores 0/1 either way, so the rebuild the codec
     // triggers changes no stored bytes — what changes is that a component
@@ -645,6 +648,62 @@ export const productSnapshots = /*#__PURE__*/ sqliteTable(
   ],
 );
 
+/**
+ * A runner's correction to a shared product's fact (D-163; round 48
+ * #129–#130), filed from §AG's WRONG? sheet and applied or declined on the
+ * Desk. Additive: a new table.
+ *
+ * - **One waiting row per runner, product and field**
+ *   (`product_corrections_waiting`, partial): a second correction to the
+ *   same field while the first waits replaces it (R48·129e). A decided
+ *   row leaves the index, so the runner can file again later.
+ * - `value` is the field's value as the sheet's input gives it: the text,
+ *   the enum word, or `yes`/`no` (`lib/contracts/product-corrections`).
+ * - `garment_id` is the piece it was filed from, which the outcome's bell
+ *   row opens (R48·129f).
+ * - `idempotency_key` is law 8b's, minted when the sheet opens.
+ */
+export const productCorrections = /*#__PURE__*/ sqliteTable(
+  "product_corrections",
+  {
+    id: text("id").primaryKey(),
+    productId: text("product_id").notNull(),
+    userId: text("user_id").notNull(),
+    garmentId: text("garment_id").notNull(),
+    field: text("field", { enum: CORRECTION_FIELDS }).notNull(),
+    value: text("value").notNull(),
+    // "How do you know?": optional, the runner's own words.
+    note: text("note"),
+    status: text("status", { enum: CORRECTION_STATUSES })
+      .notNull()
+      .default("waiting"),
+    // Decline's optional reason, word for word: the filer reads it.
+    reason: text("reason"),
+    decidedBy: text("decided_by"),
+    decidedAt: integer("decided_at"),
+    idempotencyKey: text("idempotency_key").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [
+    uniqueIndex("product_corrections_waiting")
+      .on(t.userId, t.productId, t.field)
+      .where(sql`${t.status} = 'waiting'`),
+    uniqueIndex("product_corrections_idempotency").on(
+      t.userId,
+      t.idempotencyKey,
+    ),
+    // The Desk's queue and its rail count: waiting rows, grouped by
+    // product, field and value. Partial, so it holds only the waiting.
+    index("product_corrections_queue")
+      .on(t.productId, t.field, t.value)
+      .where(sql`${t.status} = 'waiting'`),
+    // The queue header's "decided today". Partial: a waiting row has none.
+    index("product_corrections_decided")
+      .on(t.decidedAt)
+      .where(sql`${t.decidedAt} is not null`),
+  ],
+);
+
 export const wardrobeItems = /*#__PURE__*/ sqliteTable(
   "wardrobe_items",
   {
@@ -699,11 +758,9 @@ export const wardrobeItems = /*#__PURE__*/ sqliteTable(
     // through it. A widened column with a narrow parser beats a column that
     // has to list all 19 values and cannot say which go with which.
     type: text("type"),
-    layer: text("layer", { enum: ["base", "mid", "outer"] }),
-    weight: text("weight", { enum: ["light", "mid", "heavy"] }),
-    fabric: text("fabric", {
-      enum: ["synthetic", "merino", "cotton", "blend", "down"],
-    }),
+    layer: text("layer", { enum: garmentLayers }),
+    weight: text("weight", { enum: garmentWeights }),
+    fabric: text("fabric", { enum: garmentFabrics }),
     // mode:"boolean" so the storage detail stops at the data layer. SQLite
     // has no boolean and stores 0/1 either way, so the rebuild the codec
     // triggers changes no stored bytes — what changes is that a component
@@ -1033,6 +1090,30 @@ export const follows = /*#__PURE__*/ sqliteTable(
   (t) => [uniqueIndex("follows_pk").on(t.followerId, t.followeeId)],
 );
 
+/**
+ * When a follower last rang a runner's bell (D-168, R48·131e): one row per
+ * pair, so a follow within 30 days of the last ring says nothing, and an
+ * unfollow and refollow does not ring twice. `notification_id` is the bell
+ * row the follow joined, which a group's count reads. Additive: a new
+ * table. Kept when the follow is undone; both sides go with an account.
+ */
+export const followNotices = /*#__PURE__*/ sqliteTable(
+  "follow_notices",
+  {
+    followeeId: text("followee_id").notNull(),
+    followerId: text("follower_id").notNull(),
+    notificationId: text("notification_id").notNull(),
+    rungAt: integer("rung_at").notNull(),
+  },
+  (t) => [
+    uniqueIndex("follow_notices_pair").on(t.followeeId, t.followerId),
+    // A group's size: the follows that joined one bell row.
+    index("follow_notices_notification").on(t.notificationId),
+    // The purge's other side: a deleted runner's rings on others' bells.
+    index("follow_notices_follower").on(t.followerId),
+  ],
+);
+
 export const reactions = /*#__PURE__*/ sqliteTable(
   "reactions",
   {
@@ -1058,6 +1139,11 @@ export const notifications = /*#__PURE__*/ sqliteTable(
     // must be guarded at the call site.
     subjectId: text("subject_id"),
     body: text("body").notNull(),
+    // What the row opens when that is not its subject: the filer's garment
+    // for a correction's outcome, the follower for a follow (R48·129f,
+    // R48·131c). Null for every other kind, and for a grouped follow row,
+    // which opens the runner's own profile.
+    linkId: text("link_id"),
     read: integer("read", { mode: "boolean" }).notNull().default(false),
     createdAt: integer("created_at").notNull(),
   },
@@ -1481,6 +1567,33 @@ export const reviewQueue = /*#__PURE__*/ sqliteTable(
     index("review_queue_resolved").on(t.resolvedAt),
     // The hold breakers (design 164): one cause's openings since a time.
     index("review_queue_source_opened").on(t.source, t.openedAt),
+  ],
+);
+
+/**
+ * A record of an operator looking at who reported something (D-164, R-66;
+ * round 8's D1): written in the same batch that reads the reporters, so
+ * the names cannot be read without the record. Coordinated reporting is
+ * itself a moderation case, and this is how one is checked later.
+ * Additive: a new table. No foreign key to `review_queue`: the row is the
+ * record whether or not the queue row is later swept.
+ */
+export const reviewAudit = /*#__PURE__*/ sqliteTable(
+  "review_audit",
+  {
+    id: text("id").primaryKey(),
+    actorId: text("actor_id").notNull(),
+    action: text("action", { enum: ["opened_reporters"] }).notNull(),
+    reviewId: text("review_id").notNull(),
+    subjectType: text("subject_type").notNull(),
+    subjectId: text("subject_id").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [
+    index("review_audit_subject").on(t.subjectType, t.subjectId),
+    index("review_audit_actor").on(t.actorId, t.createdAt),
+    // The 3-year sweep (D-131), as for the decisions it sits beside.
+    index("review_audit_created").on(t.createdAt),
   ],
 );
 

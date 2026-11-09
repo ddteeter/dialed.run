@@ -16,7 +16,12 @@ import {
   sql,
 } from "drizzle-orm";
 
-import { notifications, outfitEntries, runs } from "../../db/schema-core";
+import {
+  notifications,
+  outfitEntries,
+  runs,
+  userProfiles,
+} from "../../db/schema-core";
 import { newUlid } from "../../lib/ids";
 import { BELL_NUMBER_CAP } from "./bell-cap";
 import type { BellState } from "./bell-state";
@@ -33,7 +38,10 @@ export type NotificationKind =
   | "content_kept"
   | "report_removed"
   | "report_kept"
-  | "photo_missing";
+  | "photo_missing"
+  | "correction_applied"
+  | "correction_declined"
+  | "followed";
 
 /**
  * What this notification is *about* — the thing it links to, and the key
@@ -55,6 +63,11 @@ export type NotificationKind =
  * | report_kept     | what the reporter reported, once left up (C8)    |
  * | photo_missing   | the kit photo or garment the Desk cleared because |
  * |                 | its file never reached storage (D-157)           |
+ * | correction_     | the runner's correction, once the Desk applied    |
+ * | applied/declined| or declined it (D-163); links to their garment   |
+ * | followed        | the bell row's own group id: follows join it      |
+ * |                 | while it is unread (R48·131b); links to the       |
+ * |                 | follower, or to nobody once it is a group         |
  *
  * A kind with no subject would pass `null`, and SQLite treats NULLs as
  * distinct in a UNIQUE index, so this key would not dedupe it — its guard
@@ -73,6 +86,11 @@ export interface NotificationDraft {
   Omitted for kinds that have no subject — drizzle writes SQL NULL.
   */
   subjectId?: string;
+  /**
+   * What the row opens when that is not its subject (`link_id`): the
+   * filer's garment for a correction's outcome, the follower for a follow.
+   */
+  linkId?: string;
   body: string;
 }
 
@@ -104,6 +122,7 @@ function rowOf(draft: NotificationDraft) {
     userId: draft.userId,
     kind: draft.kind,
     subjectId: draft.subjectId,
+    linkId: draft.linkId,
     body: draft.body,
     read: false,
     createdAt: draft.createdAt ?? nowSeconds(),
@@ -155,12 +174,20 @@ export async function createNotification(
  */
 export async function listNotifications(db: NotificationsDb, userId: string) {
   const markable = and(eq(notifications.read, false), notOwed(db, userId));
+  const followerProfile = and(
+    eq(notifications.kind, "followed"),
+    eq(userProfiles.userId, notifications.linkId),
+  );
   return db
     .select({
       ...getTableColumns(notifications),
       markable: sql<number>`coalesce(${markable}, 0)`.mapWith(Boolean),
+      // The follower's handle as it is now, for a follow row's link
+      // (R48·131c): a handle changes, and the row's body keeps the old one.
+      linkHandle: userProfiles.username,
     })
     .from(notifications)
+    .leftJoin(userProfiles, followerProfile)
     .where(eq(notifications.userId, userId))
     .orderBy(desc(notifications.createdAt), desc(notifications.id))
     .limit(50);

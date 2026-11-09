@@ -415,3 +415,100 @@ describe("GarmentDetail: the photo well at width", () => {
     });
   });
 });
+
+function withCorrection(
+  changes: Readonly<{ productId?: string | null; composition?: Composition }>,
+) {
+  const actions = {
+    loadContext: vi.fn().mockResolvedValue({
+      brandName: "Janji",
+      productName: "Rover",
+      current: {},
+      waiting: [],
+    }),
+    fileCorrection: vi.fn().mockResolvedValue(undefined),
+  };
+  const element = (
+    <GarmentDetail
+      tempUnit="c"
+      detail={{
+        ...detail,
+        item: {
+          ...item,
+          productId:
+            changes.productId === undefined
+              ? item.productId
+              : changes.productId,
+        },
+        composition: changes.composition,
+      }}
+      retire={vi.fn()}
+      unretire={vi.fn()}
+      remove={vi.fn()}
+      uploadPhoto={vi.fn()}
+      removePhoto={vi.fn()}
+      correction={actions}
+    />
+  );
+  return { element, actions };
+}
+
+describe("GarmentDetail: WRONG? › (R-74, R48·129)", () => {
+  const COMPOSITION = { verbatim: "100% merino", parts: [] };
+
+  it("sits on the composition's labelled line and opens the sheet for this piece's product", async () => {
+    const { element, actions } = withCorrection({ composition: COMPOSITION });
+    await renderWithRouter(element);
+    const wrong = screen.getByRole("button", { name: "Wrong?" });
+    expect(wrong.closest("section")).toHaveTextContent("Made of");
+    expect(actions.loadContext).not.toHaveBeenCalled();
+    fireEvent.click(wrong);
+    expect(
+      await screen.findByRole("heading", { name: "What's wrong with it?" }),
+    ).toBeVisible();
+    expect(actions.loadContext).toHaveBeenCalledWith({
+      data: { productId: "prod-1" },
+    });
+  });
+
+  it("stands alone when there is no composition to hang it on", async () => {
+    const { element } = withCorrection({});
+    await renderWithRouter(element);
+    const wrong = screen.getByRole("button", { name: "Wrong?" });
+    expect(wrong.closest("section")).toBeNull();
+    expect(wrong.closest("[data-part='composition']")).not.toBeNull();
+  });
+
+  it("is not offered for a piece with no shared product", async () => {
+    const { element } = withCorrection({
+      productId: unset(),
+      composition: COMPOSITION,
+    });
+    await renderWithRouter(element);
+    expect(screen.queryByRole("button", { name: "Wrong?" })).toBeNull();
+  });
+
+  it("is not offered without the route's actions", async () => {
+    await renderWithRouter(
+      linked(detail.linkDetail, { composition: COMPOSITION }),
+    );
+    expect(screen.queryByRole("button", { name: "Wrong?" })).toBeNull();
+  });
+
+  it("opens a fresh sheet after the last one closed", async () => {
+    const { element, actions } = withCorrection({ composition: COMPOSITION });
+    await renderWithRouter(element);
+    fireEvent.click(screen.getByRole("button", { name: "Wrong?" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Close" }));
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("heading", { name: "What's wrong with it?" }),
+      ).toBeNull();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Wrong?" }));
+    expect(
+      await screen.findByRole("heading", { name: "What's wrong with it?" }),
+    ).toBeVisible();
+    expect(actions.loadContext).toHaveBeenCalledTimes(2);
+  });
+});

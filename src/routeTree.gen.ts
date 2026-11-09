@@ -39,6 +39,7 @@ import { Route as ClosetItemIdRouteImport } from './routes/closet/$itemId'
 import { Route as ClosetNewRouteImport } from './routes/closet/new'
 import { Route as DeskIndexRouteImport } from './routes/desk/index'
 import { Route as DeskAccessRouteImport } from './routes/desk/access'
+import { Route as DeskCorrectionsRouteImport } from './routes/desk/corrections'
 import { Route as DeskDuplicatesRouteImport } from './routes/desk/duplicates'
 import { Route as DeskReviewRouteImport } from './routes/desk/review'
 import { Route as DeskRunnersRouteImport } from './routes/desk/runners'
@@ -227,6 +228,11 @@ const DeskIndexRoute = DeskIndexRouteImport.update({
 const DeskAccessRoute = DeskAccessRouteImport.update({
   id: '/access',
   path: '/access',
+  getParentRoute: () => DeskRouteRoute,
+} as any)
+const DeskCorrectionsRoute = DeskCorrectionsRouteImport.update({
+  id: '/corrections',
+  path: '/corrections',
   getParentRoute: () => DeskRouteRoute,
 } as any)
 const DeskDuplicatesRoute = DeskDuplicatesRouteImport.update({
@@ -454,6 +460,7 @@ export interface FileRoutesByFullPath {
   '/closet/$itemId': typeof ClosetItemIdRoute
   '/closet/new': typeof ClosetNewRoute
   '/desk/access': typeof DeskAccessRoute
+  '/desk/corrections': typeof DeskCorrectionsRoute
   '/desk/duplicates': typeof DeskDuplicatesRoute
   '/desk/review': typeof DeskReviewRoute
   '/desk/runners': typeof DeskRunnersRoute
@@ -524,6 +531,7 @@ export interface FileRoutesByTo {
   '/closet/$itemId': typeof ClosetItemIdRoute
   '/closet/new': typeof ClosetNewRoute
   '/desk/access': typeof DeskAccessRoute
+  '/desk/corrections': typeof DeskCorrectionsRoute
   '/desk/duplicates': typeof DeskDuplicatesRoute
   '/desk/review': typeof DeskReviewRoute
   '/desk/runners': typeof DeskRunnersRoute
@@ -596,6 +604,7 @@ export interface FileRoutesById {
   '/closet/$itemId': typeof ClosetItemIdRoute
   '/closet/new': typeof ClosetNewRoute
   '/desk/access': typeof DeskAccessRoute
+  '/desk/corrections': typeof DeskCorrectionsRoute
   '/desk/duplicates': typeof DeskDuplicatesRoute
   '/desk/review': typeof DeskReviewRoute
   '/desk/runners': typeof DeskRunnersRoute
@@ -669,6 +678,7 @@ export interface FileRouteTypes {
     | '/closet/$itemId'
     | '/closet/new'
     | '/desk/access'
+    | '/desk/corrections'
     | '/desk/duplicates'
     | '/desk/review'
     | '/desk/runners'
@@ -739,6 +749,7 @@ export interface FileRouteTypes {
     | '/closet/$itemId'
     | '/closet/new'
     | '/desk/access'
+    | '/desk/corrections'
     | '/desk/duplicates'
     | '/desk/review'
     | '/desk/runners'
@@ -810,6 +821,7 @@ export interface FileRouteTypes {
     | '/closet/$itemId'
     | '/closet/new'
     | '/desk/access'
+    | '/desk/corrections'
     | '/desk/duplicates'
     | '/desk/review'
     | '/desk/runners'
@@ -1132,6 +1144,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DeskAccessRouteImport
       parentRoute: typeof DeskRouteRoute
     }
+    '/desk/corrections': {
+      id: '/desk/corrections'
+      path: '/corrections'
+      fullPath: '/desk/corrections'
+      preLoaderRoute: typeof DeskCorrectionsRouteImport
+      parentRoute: typeof DeskRouteRoute
+    }
     '/desk/duplicates': {
       id: '/desk/duplicates'
       path: '/duplicates'
@@ -1410,6 +1429,7 @@ declare module '@tanstack/react-router' {
 
 interface DeskRouteRouteChildren {
   DeskAccessRoute: typeof DeskAccessRoute
+  DeskCorrectionsRoute: typeof DeskCorrectionsRoute
   DeskDuplicatesRoute: typeof DeskDuplicatesRoute
   DeskReviewRoute: typeof DeskReviewRoute
   DeskRunnersRoute: typeof DeskRunnersRoute
@@ -1419,6 +1439,7 @@ interface DeskRouteRouteChildren {
 
 const DeskRouteRouteChildren: DeskRouteRouteChildren = {
   DeskAccessRoute: DeskAccessRoute,
+  DeskCorrectionsRoute: DeskCorrectionsRoute,
   DeskDuplicatesRoute: DeskDuplicatesRoute,
   DeskReviewRoute: DeskReviewRoute,
   DeskRunnersRoute: DeskRunnersRoute,

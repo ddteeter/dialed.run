@@ -57,6 +57,7 @@ import {
   settleOpenReviews,
   type ReviewSource,
 } from "./review";
+import { moderationThresholds, photoThresholds } from "./thresholds";
 
 function db() {
   return coreDb();
@@ -111,9 +112,14 @@ export type ScreenOutcome =
  * caller is a photo upload and the runner's save must not fail for a
  * reason that has nothing to do with them (law 5).
  */
+function configuredHolds(): CategoryScores | undefined {
+  return photoThresholds(moderationThresholds());
+}
+
 export async function screenPhoto(
   photo: PhotoToScreen,
   classify: Classify | undefined,
+  holdsOf: () => CategoryScores | undefined = configuredHolds,
 ): Promise<ScreenOutcome> {
   // **No classifier is a state, not a stand-in.** Both upload paths used
   // to pass a fake that rejected with a message nothing read — two copies
@@ -121,6 +127,11 @@ export async function screenPhoto(
   // noticing. An absent classifier answers the same way a broken one
   // does, and says so here once.
   if (!classify) return "deferred";
+  // No thresholds is the same state (`../thresholds`): nothing to decide
+  // against, so the photo waits, and the hourly sweep screens it once the
+  // config is right. Asked before the classifier, so nothing is spent.
+  const holds = holdsOf();
+  if (holds === undefined) return "deferred";
 
   // The call is made OUTSIDE the try and only the await is inside, and the
   // narrowness is the point: a try around the call would also swallow the
@@ -143,7 +154,7 @@ export async function screenPhoto(
     return "deferred";
   }
 
-  const decision = decide(result.scores);
+  const decision = decide(result.scores, holds);
   const now = nowSeconds();
 
   // A flag hides a runner's photo, so it is the one answer the breaker

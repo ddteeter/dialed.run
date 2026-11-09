@@ -262,6 +262,11 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "ops/functions.ts dropGaveUpAction": "admin",
   // ---- products
   "products/functions.ts searchBrandsFn": "unconfirmed",
+  // WRONG? (D-163): a correction reaches the Desk and every runner's
+  // garment, so it waits for a confirmed address; the sheet's own read is
+  // the runner's waiting rows and a shared product's facts.
+  "products/functions.ts fileCorrectionFn": "verified",
+  "products/functions.ts correctionContextFn": "unconfirmed",
   // ---- runs (never shown to anyone)
   "runs/functions.ts submitManualRun": "unconfirmed",
   "runs/functions.ts startFileImport": "unconfirmed",
@@ -302,6 +307,10 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "safety/functions.ts forceRenameAction": "admin",
   "safety/functions.ts deskRunnersQuery": "admin",
   "safety/functions.ts deskDuplicatesQuery": "admin",
+  "safety/functions.ts deskCorrectionsQuery": "admin",
+  "safety/functions.ts applyCorrectionFn": "admin",
+  "safety/functions.ts declineCorrectionFn": "admin",
+  "safety/functions.ts reportersAction": "admin",
   // Design 136: `/takedown` is for anyone, with or without an account —
   // the person pictured is usually not a runner.
   "safety/functions.ts takedownRequestFn": "sessionless",

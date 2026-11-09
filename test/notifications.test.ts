@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import { newUlid } from "../src/lib/ids";
 import { coreDb } from "../src/modules/runs/core-db";
@@ -12,9 +13,11 @@ import {
   unreadNotificationCount,
 } from "../src/modules/notifications";
 import { runsAwaitingVerdict } from "../src/modules/runs";
-import { makeEntry, makeRun, NOW } from "./feed/helpers";
+import { makeEntry, makeRun, makeUser, NOW } from "./feed/helpers";
 import type { NotificationKind } from "../src/modules/notifications";
 import { nowSeconds } from "../src/lib/now";
+
+const NOTHING = z.null().parse(JSON.parse("null"));
 
 const KIT_REMINDER: NotificationKind = "kit_reminder";
 
@@ -434,5 +437,54 @@ describe("mark all read never clears a verdict still owed", () => {
     await markAllNotificationsRead(db, userId);
 
     expect(await unreadNotificationCount(db, otherUserId)).toBe(1);
+  });
+});
+
+describe("what a row links to (design 183)", () => {
+  it("carries a follow row's follower by the handle they have now", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    const followerId = await makeUser({ username: "ada_now" });
+    await createNotification(db, {
+      userId,
+      kind: "followed",
+      subjectId: newUlid(),
+      linkId: followerId,
+      body: "@ada followed you.",
+    });
+    const [row] = await listNotifications(db, userId);
+    expect(row).toMatchObject({ linkId: followerId, linkHandle: "ada_now" });
+  });
+
+  it("reads no handle for any other kind, whatever its link", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    const someone = await makeUser({ username: "not_a_follower" });
+    await createNotification(db, {
+      userId,
+      kind: "correction_applied",
+      subjectId: newUlid(),
+      linkId: someone,
+      body: "We fixed the weight on Harrier. Thanks.",
+    });
+    const [row] = await listNotifications(db, userId);
+    expect(row).toMatchObject({ linkId: someone, linkHandle: NOTHING });
+  });
+
+  it("keeps one row per notification when it has no link", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    await createNotification(db, {
+      userId,
+      kind: "followed",
+      subjectId: newUlid(),
+      body: "@ada and 2 others followed you.",
+    });
+    const rows = await listNotifications(db, userId);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      linkId: NOTHING,
+      linkHandle: NOTHING,
+    });
   });
 });

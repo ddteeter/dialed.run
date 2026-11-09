@@ -26,6 +26,7 @@ import { retiredLabel } from "../retired-label";
 import { kindLabel, typeOf } from "../type-labels";
 import { useRunnerZone } from "./use-runner-zone";
 import { CompositionBlock } from "./Composition";
+import { CorrectionSheet, type CorrectionSheetProps } from "./CorrectionSheet";
 import { BackToCloset } from "./BackToCloset";
 import { DeleteWithRuns, type BandCount } from "./DeleteWithRuns";
 import { GarmentConfirm, type ConfirmKind } from "./GarmentConfirm";
@@ -423,6 +424,11 @@ type GarmentDetailProps = Readonly<{
    * it or fails with it.
    */
   bandCount?: BandCount | undefined;
+  /**
+   * §AG's WRONG? sheet (D-163, R48·129): its two server functions, handed
+   * in by the route. Absent, the piece offers no correction.
+   */
+  correction?: CorrectionActions | undefined;
 }>;
 
 /**
@@ -613,29 +619,56 @@ function GarmentPhoto({
 }
 
 /**
- * §AG's composition and the words beside it; empty, the block hides.
+ * WRONG?'s two server functions, as the route passes them.
+ */
+export type CorrectionActions = Pick<
+  CorrectionSheetProps,
+  "loadContext" | "fileCorrection"
+>;
+
+/**
+ * §AG's composition and the words beside it; empty, the block hides
+ * unless the piece is a shared product, which keeps WRONG? › (R-74).
  */
 function CompositionSection({
   detail,
-}: Readonly<{ detail: Detail }>): JSX.Element {
+  correction,
+}: Readonly<{
+  detail: Detail;
+  correction: CorrectionActions | undefined;
+}>): JSX.Element {
   const { item, composition } = detail;
   const words = attributeWords(detail.effective, item);
+  const wrong =
+    correction === undefined || item.productId === null ? undefined : (
+      <WrongLink
+        subject={{
+          productId: item.productId,
+          garmentId: item.id,
+          category: item.category,
+        }}
+        actions={correction}
+      />
+    );
+  const block =
+    composition === undefined ? undefined : (
+      <CompositionBlock
+        composition={{
+          verbatim: composition.verbatim,
+          parts: composition.parts,
+          brand: item.brand ?? undefined,
+        }}
+        source={detail.linkDetail.specSource}
+        wrong={wrong}
+      />
+    );
   return (
     <div data-part="composition" className="flex flex-col gap-2 empty:hidden">
       {/* §AG: the brand's own label. `brand` is the garment's, which is
           what the runner sees on the label in their hand; a piece with
           no brand gets no "as labelled by" line rather than an invented
-          one. */}
-      {composition === undefined ? undefined : (
-        <CompositionBlock
-          composition={{
-            verbatim: composition.verbatim,
-            parts: composition.parts,
-            brand: item.brand ?? undefined,
-          }}
-          source={detail.linkDetail.specSource}
-        />
-      )}
+          one. With no label to hang it on, WRONG? stands alone. */}
+      {block ?? wrong}
       {words.length > 0 ? (
         <p className="m-0 text-body">
           {words.map(({ word, isLent }, index) => (
@@ -647,6 +680,48 @@ function CompositionSection({
         </p>
       ) : undefined}
     </div>
+  );
+}
+
+/**
+ * `WRONG? ›` and the sheet it opens. A fresh sheet each time it opens, so
+ * a sent one's receipt is not what the next press finds.
+ */
+function WrongLink({
+  subject,
+  actions,
+}: Readonly<{
+  subject: CorrectionSheetProps["subject"];
+  actions: CorrectionActions;
+}>): JSX.Element {
+  const [opened, setOpened] = useState(0);
+  const isOpen = opened > 0;
+  return (
+    <>
+      <button
+        type="button"
+        data-part="wrong"
+        onClick={() => {
+          setOpened((count) => count + 1);
+        }}
+        className="target cursor-pointer border-none bg-transparent p-0 text-ink"
+      >
+        <Mono step="xs">
+          Wrong? <span aria-hidden="true">›</span>
+        </Mono>
+      </button>
+      {isOpen ? (
+        <CorrectionSheet
+          key={opened}
+          open
+          onClose={() => {
+            setOpened(0);
+          }}
+          subject={subject}
+          {...actions}
+        />
+      ) : undefined}
+    </>
   );
 }
 
@@ -726,6 +801,7 @@ export function GarmentDetail({
   photoChecking,
   bandCount = noBandCount,
   tempUnit,
+  correction,
 }: GarmentDetailProps) {
   const { item, isGeneric } = detail;
   const itemId = item.id;
@@ -768,7 +844,7 @@ export function GarmentDetail({
 
       <Stats detail={detail} tempUnit={tempUnit} />
 
-      <CompositionSection detail={detail} />
+      <CompositionSection detail={detail} correction={correction} />
 
       <PairsWith detail={detail} />
 

@@ -246,6 +246,10 @@ flowchart TD
     FEED -->|index.ts only: the removal email| MAIL
     SAFE -->|index.ts only: D8's run counts| RUNS
     SAFE -->|index.ts only: report and review notices, C8| NOTE[modules/notifications]
+    SAFE -->|index.ts only: the Desk's Corrections queue, D-163| PROD
+    PROD -->|index.ts only: a correction's outcome, R48·129f| NOTE
+    FEED -->|index.ts only: a follow's ring, D-168| NOTE
+    OPS -->|index.ts only: the Corrections rail count| PROD
     ACCT -->|index.ts only: Strava revoked on deletion| RUNS
     ACCT -->|index.ts only: the one visibility rule| SAFE
     PURGE[account/purge.ts] -->|index.ts only: SAF-3's deletes| FEED

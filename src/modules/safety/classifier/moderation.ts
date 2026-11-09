@@ -44,29 +44,13 @@ export type CategoryScores = Record<ImageCategory, number>;
 export const MODERATION_MODEL = "omni-moderation-latest";
 
 /**
- * Per-category thresholds.
- *
- * **Provisional until `npm run eval:photos` has run** — the packet requires
- * that measurement before launch, and these numbers are a starting point
- * for it to move, not a result. They are deliberately high: the documented
- * failure mode of this model is over-sensitivity, with revealing swimwear
- * and underwear inside `sexual`, which is ordinary running kit. A false
- * flag hides a runner's own photo from everyone, so the cost of being
- * slightly loose here is borne by the review queue and the cost of being
- * tight is borne by a runner who did nothing wrong.
- *
- * Per-category rather than one number, because the model's own `flagged`
- * boolean bundles categories whose base rates on running photos are
- * nothing alike.
+ * Per-category thresholds are config, not source (`../thresholds`): a
+ * photo scoring at or over its category's is held. Per-category rather
+ * than one number, because the model's own `flagged` boolean bundles
+ * categories whose base rates on running photos are nothing alike, and
+ * its documented failure mode is over-sensitivity, with revealing swimwear
+ * and underwear inside `sexual`, which is ordinary running kit.
  */
-export const thresholds: CategoryScores = {
-  sexual: 0.9,
-  violence: 0.9,
-  "violence/graphic": 0.8,
-  "self-harm": 0.8,
-  "self-harm/intent": 0.8,
-  "self-harm/instructions": 0.8,
-};
 
 /**
  * The floor of the middle band: high enough to be worth a person's eye,
@@ -74,24 +58,29 @@ export const thresholds: CategoryScores = {
  *
  * **Why a band at all** (owner's call on PR #73). Two thresholds and one
  * gap between them: under the floor is published and nobody is troubled,
- * over `thresholds` is hidden and queued, and in between the photo *stays
- * visible* and a reviewer looks at it anyway. The middle band buys
- * calibration without charging a runner for our uncertainty — which is the
- * whole reason `thresholds` above sits as high as it does. A reviewer
+ * over the hold score is hidden and queued, and in between the photo
+ * *stays visible* and a reviewer looks at it anyway. The middle band buys
+ * calibration without charging a runner for our uncertainty. A reviewer
  * agreeing or disagreeing with a borderline score is exactly the signal
  * `npm run eval:photos` cannot produce, because the eval only ever sees
  * photos we chose.
  *
- * Half of each category's threshold, uniformly, and that is a starting
- * point rather than a result — the same standing as `thresholds` and
- * subject to the same measurement. Derived rather than written out so the
- * two cannot drift into an order that makes no sense (a floor above its own
- * threshold would put every flagged photo in the review band and hide
- * nothing); `test/safety/moderation.test.ts` pins that ordering.
+ * Half of each category's hold score, uniformly, derived rather than
+ * configured so the two cannot drift into an order that makes no sense (a
+ * floor above its own threshold would put every flagged photo in the
+ * review band and hide nothing); `test/safety/moderation.test.ts` pins
+ * that ordering.
  */
-export const reviewFloors: CategoryScores = Object.fromEntries(
-  imageCategories.map((category) => [category, thresholds[category] / 2]),
-) as CategoryScores;
+export function reviewFloorsOf(holds: CategoryScores): CategoryScores {
+  return {
+    sexual: holds.sexual / 2,
+    violence: holds.violence / 2,
+    "violence/graphic": holds["violence/graphic"] / 2,
+    "self-harm": holds["self-harm"] / 2,
+    "self-harm/intent": holds["self-harm/intent"] / 2,
+    "self-harm/instructions": holds["self-harm/instructions"] / 2,
+  };
+}
 
 const moderationResultSchema = z.object({
   flagged: z.boolean(),
@@ -126,16 +115,20 @@ export interface ModerationResult {
  */
 export type ScreenDecision = "pass" | "review" | "flag";
 
-export function decide(scores: CategoryScores): ScreenDecision {
+export function decide(
+  scores: CategoryScores,
+  holds: CategoryScores,
+): ScreenDecision {
   const isCrossed = imageCategories.some(
-    (category) => scores[category] >= thresholds[category],
+    (category) => scores[category] >= holds[category],
   );
   if (isCrossed) return "flag";
   // The middle band. Checked only after the block test, so a score over
   // its threshold is never merely "reviewed" — `flag` is the stronger
   // answer and wins wherever both are true.
+  const floors = reviewFloorsOf(holds);
   const isBorderline = imageCategories.some(
-    (category) => scores[category] >= reviewFloors[category],
+    (category) => scores[category] >= floors[category],
   );
   return isBorderline ? "review" : "pass";
 }

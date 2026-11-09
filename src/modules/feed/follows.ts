@@ -10,6 +10,7 @@ import { coreDb } from "../../env";
 import { hasRowWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
 import { countWhere } from "./count-where";
+import { ringFollowQuietly } from "./follow-notices";
 
 function db() {
   return coreDb();
@@ -20,14 +21,17 @@ export async function follow(
   followeeId: string,
 ): Promise<void> {
   if (followerId === followeeId) return; // no self-follow, silently ignored
-  await db()
+  const inserted = await db()
     .insert(follows)
     .values({
       followerId,
       followeeId,
       createdAt: nowSeconds(),
     })
-    .onConflictDoNothing();
+    .onConflictDoNothing()
+    .returning({ at: follows.createdAt });
+  // A follow that was already there rings nothing (R48·131).
+  if (inserted.length > 0) await ringFollowQuietly(followerId, followeeId);
 }
 
 export async function unfollow(

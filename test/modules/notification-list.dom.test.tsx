@@ -50,15 +50,20 @@ function notification(
     body?: string;
     read?: boolean;
     markable?: boolean;
+    kind?: string;
+    linkId?: string;
+    linkHandle?: string;
   } = {},
 ) {
   const isRead = overrides.read ?? false;
   return {
     id: overrides.id ?? "01N",
     userId: "01USER",
-    kind: "kit_reminder",
+    kind: overrides.kind ?? "kit_reminder",
     subjectId: NOTHING,
     body: overrides.body ?? "Log your kit?",
+    linkId: overrides.linkId ?? NOTHING,
+    linkHandle: overrides.linkHandle ?? NOTHING,
     read: isRead,
     createdAt: 1_755_000_000,
     markable: overrides.markable ?? !isRead,
@@ -366,5 +371,99 @@ describe("NotificationList · Mark all read", () => {
       expect(screen.queryByText("Nothing marked")).toBeNull();
     });
     expect(markAllRead).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("NotificationList · where a row goes (R48·129f, R48·131c)", () => {
+  it("opens the garment a correction was filed from", async () => {
+    await renderWithRouter(
+      <NotificationList
+        viewer={OWED}
+        notifications={[
+          notification({
+            kind: "correction_applied",
+            body: "We fixed the weight on AFO Middle Layer. Thanks.",
+            linkId: "01GARMENT",
+          }),
+        ]}
+        markAllRead={nothing}
+      />,
+    );
+    expect(
+      screen.getByRole("link", {
+        name: "We fixed the weight on AFO Middle Layer. Thanks.",
+      }),
+    ).toHaveAttribute("href", "/closet/01GARMENT");
+  });
+
+  it("opens one follower's profile by the handle they have now", async () => {
+    await renderWithRouter(
+      <NotificationList
+        viewer={OWED}
+        notifications={[
+          notification({
+            kind: "followed",
+            body: "@ada followed you.",
+            linkId: "01ADA",
+            linkHandle: "ada_runs",
+          }),
+        ]}
+        markAllRead={nothing}
+      />,
+    );
+    expect(
+      screen.getByRole("link", { name: "@ada followed you." }),
+    ).toHaveAttribute("href", "/feed/u/ada_runs");
+  });
+
+  it("opens the runner's own profile for a group", async () => {
+    await renderWithRouter(
+      <NotificationList
+        viewer={OWED}
+        notifications={[
+          notification({
+            kind: "followed",
+            body: "@ada and 3 others followed you.",
+          }),
+        ]}
+        markAllRead={nothing}
+      />,
+    );
+    const link = screen.getByRole("link", {
+      name: "@ada and 3 others followed you.",
+    });
+    expect(link).toHaveAttribute("href", "/feed/me");
+    expect(link).toHaveClass("underline");
+  });
+
+  it("keeps a decline's reason on its own line", async () => {
+    await renderWithRouter(
+      <NotificationList
+        viewer={OWED}
+        notifications={[
+          notification({
+            kind: "correction_declined",
+            body: "We kept the fabric on Harrier as it is.\nNot enough to go on",
+            linkId: "01GARMENT",
+          }),
+        ]}
+        markAllRead={nothing}
+      />,
+    );
+    expect(
+      screen.getByText(/We kept the fabric on Harrier as it is\./u),
+    ).toHaveClass("whitespace-pre-line");
+  });
+
+  it("is not a link for a kind with nowhere to go", async () => {
+    await renderWithRouter(
+      <NotificationList
+        viewer={OWED}
+        notifications={[notification({ body: "Your run import didn't work" })]}
+        markAllRead={nothing}
+      />,
+    );
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.getByText("Your run import didn't work")).toBeVisible();
   });
 });

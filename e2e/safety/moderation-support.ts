@@ -61,10 +61,11 @@ export function handleOf(prefix: string): string {
 
 /**
  * Opens a Review row by its name, unless it opened itself (round 28 #8:
- * the row's name opens it; there is no "Decide this one").
+ * the row's name opens it; there is no "Decide this one"). It is the
+ * row's first fold: a reported row's WHO REPORTED comes after.
  */
 export async function openRow(row: Locator): Promise<void> {
-  const opener = row.locator("button[aria-expanded]");
+  const opener = row.locator("button[aria-expanded]").first();
   if ((await opener.getAttribute("aria-expanded")) === "false") {
     await opener.click();
   }

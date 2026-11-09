@@ -22,6 +22,7 @@ import {
   courtActionAction,
   recordNcmecReportAction,
   releaseHoldsAction,
+  reportersAction,
   reviewHandleAction,
   reviewQueueQuery,
 } from "../../modules/safety/functions";
@@ -63,6 +64,7 @@ function ReviewPage() {
         resolve={decideReviewAction}
         reviewHandle={reviewHandleAction}
         decideMatch={decideGarmentMatchAction}
+        reporters={reportersAction}
       />
       {/* SAF-6: a removal the queue did not raise — a copyright notice
           naming a photo or an entry. */}

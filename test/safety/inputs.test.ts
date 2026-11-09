@@ -17,6 +17,7 @@ import {
   ncmecReportInput,
   runRemovalsInput,
   releaseHoldsInput,
+  reportersInput,
 } from "../../src/modules/safety/inputs";
 import { isoDayOf } from "../../src/lib/contracts/age";
 import { nowSeconds } from "../../src/lib/now";
@@ -533,5 +534,19 @@ describe("releaseHoldsInput (design 164)", () => {
     ]) {
       expect(releaseHoldsInput.safeParse(bad).success).toBe(false);
     }
+  });
+});
+
+describe("opening WHO REPORTED", () => {
+  it("takes the row's queue ULID, and nothing else", () => {
+    const queueId = newUlid();
+    expect(reportersInput.parse({ queueId })).toStrictEqual({ queueId });
+  });
+
+  it("refuses no row, or one that is not a ULID", () => {
+    // The fold's opening is recorded against this row (D-164): with no
+    // row there is nothing to record it against.
+    expect(reportersInput.safeParse({}).success).toBe(false);
+    expect(reportersInput.safeParse({ queueId: "nope" }).success).toBe(false);
   });
 });

@@ -1407,3 +1407,54 @@ describe("the review queue: a lapsed session (Au7, D-155)", () => {
     expect(carriedSince()).toEqual(["page"]);
   });
 });
+
+function renderWithFold(queue: readonly QueueRow[]) {
+  const reporters = vi
+    .fn<NonNullable<Props["reporters"]>>()
+    .mockResolvedValue([]);
+  render(
+    <ReviewQueue
+      queue={queue}
+      resolve={vi
+        .fn<Props["resolve"]>()
+        .mockResolvedValue({ outcome: "resolved" })}
+      reviewHandle={vi
+        .fn<Props["reviewHandle"]>()
+        .mockResolvedValue({ outcome: "resolved" })}
+      reporters={reporters}
+    />,
+  );
+  return reporters;
+}
+
+describe("the WHO REPORTED fold on a row (D-164)", () => {
+  it("sits on a reported row, after the reasons and before the decision", () => {
+    renderWithFold([row()]);
+    const fold = screen.getByRole("button", { name: /Who reported/u });
+    const approve = screen.getByRole("button", { name: "Approve" });
+    expect(
+      fold.compareDocumentPosition(approve) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("opens by the row's own id", async () => {
+    const user = userEvent.setup();
+    const reporters = renderWithFold([row()]);
+    await user.click(screen.getByRole("button", { name: /Who reported/u }));
+    expect(reporters).toHaveBeenCalledWith({
+      data: { queueId: "01HZZZZZZZZZZZZZZZZZZZZZZZ" },
+    });
+  });
+
+  it("is not on a row nobody reported", () => {
+    renderWithFold([
+      row({ source: "classifier", reporterCount: 0, reasons: [] }),
+    ]);
+    expect(screen.queryByRole("button", { name: /Who reported/u })).toBeNull();
+  });
+
+  it("is not there without the read to open it", () => {
+    renderQueue([row()]);
+    expect(screen.queryByRole("button", { name: /Who reported/u })).toBeNull();
+  });
+});

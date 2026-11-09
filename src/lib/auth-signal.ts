@@ -71,7 +71,7 @@ export const EMAIL_UNCONFIRMED_CODE = "EMAIL_UNCONFIRMED";
  * because `ui/`'s hooks carry it and may not import a module.
  */
 export type ConfirmTrigger =
-  "useful" | "report" | "follow" | "email-change" | "share";
+  "useful" | "report" | "correct" | "follow" | "email-change" | "share";
 
 /**
  * True for the unconfirmed refusal, raised here or cloned back from a

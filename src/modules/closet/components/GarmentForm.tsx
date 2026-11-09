@@ -71,6 +71,7 @@ import {
 } from "./PhotoRefused";
 import { ShadeSheet } from "./ShadeSheet";
 import { garmentTypeLabels, kindLabel, typeOf } from "../type-labels";
+import { FABRIC_LABELS, WEIGHT_LABELS } from "../../../lib/garment-words";
 
 type Category = (typeof garmentCategories)[number];
 
@@ -85,19 +86,6 @@ const LAYER_LABELS: Record<(typeof layerSchema.options)[number], string> = {
   mid: "Mid",
   outer: "Outer",
 };
-const WEIGHT_LABELS: Record<(typeof weightSchema.options)[number], string> = {
-  light: "Light",
-  mid: "Mid",
-  heavy: "Heavy",
-};
-const FABRIC_LABELS: Record<(typeof fabricSchema.options)[number], string> = {
-  synthetic: "Synthetic",
-  merino: "Merino",
-  cotton: "Cotton",
-  blend: "Blend",
-  down: "Down",
-};
-
 /**
 Field name -> human label, for the summary rows the contract requires once
 two or more fields fail at once.

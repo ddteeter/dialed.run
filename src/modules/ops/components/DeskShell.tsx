@@ -19,12 +19,13 @@ import type { DeskToday } from "../desk";
 
 /**
  * Every destination the rail names, in D-87's order (Operator Screens D0,
- * redrawn in round 30). Gave up is not one: it is a section of Today, and
+ * redrawn in round 30), with Corrections under Review (R48·130). Gave up is not one: it is a section of Today, and
  * Today's rail count is its count.
  */
 const DESK_PAGES = [
   "today",
   "review",
+  "corrections",
   "access",
   "duplicates",
   "runners",
@@ -35,6 +36,7 @@ export type DeskPage = (typeof DESK_PAGES)[number];
 const LABEL: Readonly<Record<DeskPage, string>> = {
   today: "Today",
   review: "Review",
+  corrections: "Corrections",
   access: "Access",
   duplicates: "Duplicates",
   runners: "Runners",
@@ -50,6 +52,7 @@ const HREF: Readonly<
     DeskPage,
     | "/desk"
     | "/desk/review"
+    | "/desk/corrections"
     | "/desk/runners"
     | "/desk/access"
     | "/desk/duplicates"
@@ -57,6 +60,7 @@ const HREF: Readonly<
 > = {
   today: "/desk",
   review: "/desk/review",
+  corrections: "/desk/corrections",
   access: "/desk/access",
   duplicates: "/desk/duplicates",
   runners: "/desk/runners",
@@ -137,6 +141,8 @@ export function DeskShell({
   const tallies: Partial<Record<DeskPage, RailTally>> = {
     today: { count: today.counts.gaveUp, counts: "gave up" },
     review: { count: today.counts.waiting, counts: "waiting" },
+    // Under Review, above Duplicates (R48·130), counting queue rows.
+    corrections: { count: today.counts.corrections, counts: "waiting" },
   };
   return (
     <div

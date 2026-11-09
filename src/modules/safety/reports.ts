@@ -42,15 +42,19 @@ import { nowSeconds } from "../../lib/now";
 
 import type { OutboxMessage } from "../../lib/sql/outbox";
 import {
-  autoHideReporterThreshold,
   hiddenByReport,
   REMOVAL_DUE_SECONDS,
-  reasonsThatHideAtOnce,
-  reportersToHide,
+  reasonsOnTheClock,
+  reportReasons,
   type ReportReason,
   type ReportSubjectType,
 } from "./contracts";
 import { adminUserIds } from "./admin";
+import {
+  fewestReportersToHide,
+  moderationThresholds,
+  reportersToHide,
+} from "./thresholds";
 import { blockRunner } from "./blocks";
 import { ceilingReading } from "./breakers";
 import { subjectCacheTagsOf } from "./kit-cache-tags";
@@ -188,13 +192,13 @@ export async function fileReport(
     input.subjectId,
   );
 
-  // The reason sets the bar (design 136, D-117): one report of an
-  // intimate image hides it, every other reason waits for three people.
-  if (reporterCount < reportersToHide[input.reason]) {
+  // The reason sets the bar (design 136, D-117), and the bar is config
+  // (`./thresholds`), one person when it is missing.
+  if (reporterCount < reportersToHide(input.reason, moderationThresholds())) {
     return { status: "filed", reporterCount, hiddenPendingReview: false };
   }
 
-  const isAtOnce = reasonsThatHideAtOnce.includes(input.reason);
+  const isAtOnce = reasonsOnTheClock.includes(input.reason);
   const alerts = isAtOnce
     ? removalAlerts(owe, input.subjectType, input.subjectId, reportedAt)
     : [];
@@ -255,9 +259,14 @@ export async function reconcileUnhiddenReports(
   // when there is none: both the second way over the bar and the time the
   // removal's 48 hours started.
   const firstAtOnce = firstReportHidingAtOnce();
+  // Over by count: as many reporters as the least any reason off the
+  // clock needs. A reason on it is over at its first report, as above.
+  const offTheClock = reportReasons
+    .map((reason) => reason.value)
+    .filter((reason) => !reasonsOnTheClock.includes(reason));
   const enoughReporters = gte(
     countDistinct(reports.reporterId),
-    autoHideReporterThreshold,
+    fewestReportersToHide(offTheClock, moderationThresholds()),
   );
   const over = await database
     .select({

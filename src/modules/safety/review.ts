@@ -40,7 +40,7 @@ import { nowSeconds } from "../../lib/now";
 
 import {
   REMOVAL_DUE_SECONDS,
-  reasonsThatHideAtOnce,
+  reasonsOnTheClock,
   removalDueLabel,
   reportReasonSchema,
 } from "./contracts";
@@ -294,7 +294,7 @@ export interface QueueRow {
 export function firstReportHidingAtOnce(): SQL<number | null> {
   return sql<
     number | null
-  >`min(case when ${inArray(reports.reason, [...reasonsThatHideAtOnce])} then ${reports.createdAt} end)`;
+  >`min(case when ${inArray(reports.reason, [...reasonsOnTheClock])} then ${reports.createdAt} end)`;
 }
 
 /**

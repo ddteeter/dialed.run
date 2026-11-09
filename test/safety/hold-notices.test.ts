@@ -22,7 +22,24 @@ import {
   SCREENING_HIDDEN_NOTICE,
   SCREENING_KEPT_NOTICE,
 } from "../../src/modules/safety/notice-copy";
-import { reviewFloors, thresholds } from "../../src/modules/safety";
+import {
+  moderationThresholds,
+  photoThresholds,
+  reviewFloorsOf,
+} from "../../src/modules/safety";
+
+/**
+ * The test config's invented hold scores (design 183), read back as the
+ * Worker reads them, never production's.
+ */
+function configuredHolds() {
+  const holds = photoThresholds(moderationThresholds());
+  if (holds === undefined)
+    throw new Error("the test config sets no thresholds");
+  return holds;
+}
+const thresholds = configuredHolds();
+const reviewFloors = reviewFloorsOf(thresholds);
 
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 

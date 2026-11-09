@@ -18,7 +18,9 @@ import { readOutboxRow } from "../../src/lib/sql/outbox";
 import { decideReview } from "../../src/modules/feed/moderation";
 import {
   fileReport,
+  moderationThresholds,
   reconcileUnhiddenReports,
+  reportersToHide,
   type ReportReason,
   type ReportSubjectType,
 } from "../../src/modules/safety";
@@ -226,8 +228,9 @@ describe("the author's notice when a report hides their thing (D-145)", () => {
     const author = await addressed();
     const photoId = await photoOn(await entryOf(author));
 
-    await report("photo", photoId, "spam");
-    await report("photo", photoId, "spam");
+    // One short of the test config's bar, then the report that crosses it.
+    const enough = reportersToHide("spam", moderationThresholds());
+    for (let n = 1; n < enough; n += 1) await report("photo", photoId, "spam");
     expect(await told(author)).toStrictEqual([]);
 
     await report("photo", photoId, "spam");

@@ -29,6 +29,11 @@
   // bindings, which a test cannot set from inside the isolate, so without
   // these the env-reading shell of each adapter is unreachable code.
   "vars": {
+    // Invented moderation thresholds, not production's (design 183): the
+    // tests read them back through `moderationThresholds()`, so they check
+    // the mechanism and never pin the real values, which are not in the
+    // repo. Two reporters, the intimate reason one; holds well below 1.
+    "MODERATION_THRESHOLDS": "{\"reports\":{\"explicit\":2,\"intimate\":1,\"harassment\":2,\"spam\":2,\"not_theirs\":2,\"other\":2},\"photos\":{\"sexual\":0.8,\"violence\":0.8,\"violence/graphic\":0.7,\"self-harm\":0.7,\"self-harm/intent\":0.7,\"self-harm/instructions\":0.7}}",
     "VISUAL_CROSSING_API_KEY": "test-key",
     "OPENAI_API_KEY": "test-key",
     // An https origin, as production has, so the auth singleton's wiring

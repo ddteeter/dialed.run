@@ -235,7 +235,7 @@ test("Review · a handle the hourly re-check flagged, and its Keep", async ({
     const handleRow = page
       .getByRole("listitem")
       .filter({ hasText: flaggedHandle });
-    await expect(handleRow.locator("button[aria-expanded]")).toHaveText(
+    await expect(handleRow.locator("button[aria-expanded]").first()).toHaveText(
       `handle · re-check · ${flaggedHandle}`,
     );
     await openRow(handleRow);

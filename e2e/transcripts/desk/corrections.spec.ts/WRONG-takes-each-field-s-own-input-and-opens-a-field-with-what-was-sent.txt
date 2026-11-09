@@ -1,0 +1,106 @@
+document
+banner
+link, dialed.run home
+dialed.run
+end of link, dialed.run home
+navigation, Main
+list
+listitem, level 1, position 1, set size 4
+link, Feed
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+link, Closet, current item
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+link, Call
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+link, You
+end of listitem, level 1, position 4, set size 4
+end of list
+end of navigation, Main
+link, Search runners
+button, Log a run, has popup dialog
+end of banner
+main
+status
+link, Closet
+paragraph
+Top
+end of paragraph
+heading, Janji Rain Shell #, level 1
+# km logged
+paragraph
+Works at
+#–#°
+end of paragraph
+button, Wrong?
+Wrong?
+end of button, Wrong?
+dialog, What's wrong with it?
+dialog, What's wrong with it?
+form
+status
+Janji
+·
+Rain Shell #
+heading, What's wrong with it?, level 2
+button, Close
+paragraph
+This fixes it for every runner. Your own garment keeps what you entered.
+end of paragraph
+group, Field
+Field
+Field
+end, Field
+radio, Name, not checked, position 1, set size 7
+Name
+radio, Weight, not checked, position 2, set size 7
+Weight
+radio, Fabric, not checked, position 3, set size 7
+Fabric
+radio, Wind, not checked, position 4, set size 7
+Wind
+radio, Water, not checked, position 5, set size 7
+Water
+radio, Composition, not checked, position 6, set size 7
+Composition
+radio, Link, not checked, position 7, set size 7
+Link
+end of group, Field
+It says Rain Shell #. It should say
+textbox, It says Rain Shell #. It should say, Storm Shell #
+How do you know? · optional
+textbox, How do you know? · optional
+paragraph
+You sent “
+Storm Shell #
+” for
+name
+on
+:month #
+. Sending again replaces it.
+end of paragraph
+button, Send correction
+Send correction
+end of button, Send correction
+end of form
+end of dialog, What's wrong with it?
+paragraph
+midweight
+end of paragraph
+link, Edit Janji Rain Shell #
+Edit
+Janji Rain Shell #
+end of link, Edit Janji Rain Shell #
+button, Retire Janji Rain Shell #
+Retire
+Janji Rain Shell #
+end of button, Retire Janji Rain Shell #
+button, Delete Janji Rain Shell #
+Delete
+Janji Rain Shell #
+end of button, Delete Janji Rain Shell #
+end of main
+status
+end of document

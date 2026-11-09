@@ -4,33 +4,38 @@ dialed.run
 Desk
 Operator
 list
-listitem, level 1, position 1, set size 5
+listitem, level 1, position 1, set size 6
 link, :when
 :when
 end of link, :when
-end of listitem, level 1, position 1, set size 5
-listitem, level 1, position 2, set size 5
+end of listitem, level 1, position 1, set size 6
+listitem, level 1, position 2, set size 6
 link, Review # waiting, current page
 Review
 #
 waiting
 end of link, Review # waiting, current page
-end of listitem, level 1, position 2, set size 5
-listitem, level 1, position 3, set size 5
+end of listitem, level 1, position 2, set size 6
+listitem, level 1, position 3, set size 6
+link, Corrections
+Corrections
+end of link, Corrections
+end of listitem, level 1, position 3, set size 6
+listitem, level 1, position 4, set size 6
 link, Access
 Access
 end of link, Access
-end of listitem, level 1, position 3, set size 5
-listitem, level 1, position 4, set size 5
+end of listitem, level 1, position 4, set size 6
+listitem, level 1, position 5, set size 6
 link, Duplicates
 Duplicates
 end of link, Duplicates
-end of listitem, level 1, position 4, set size 5
-listitem, level 1, position 5, set size 5
+end of listitem, level 1, position 5, set size 6
+listitem, level 1, position 6, set size 6
 link, Runners
 Runners
 end of link, Runners
-end of listitem, level 1, position 5, set size 5
+end of listitem, level 1, position 6, set size 6
 end of list
 end of navigation, Desk
 main
@@ -62,6 +67,12 @@ end of heading, Matching photos · any runner, level 3
 No fingerprint to match by: the photo is gone, or older than fingerprints.
 # person
 It's an intimate image of someone, shared without their consent
+button, Who reported, not expanded
+Who reported
+end of button, Who reported, not expanded
+paragraph
+Folded. Opening it is logged. Never shown to the author.
+end of paragraph
 paragraph
 Intimate means nudity or sexual content (# U.S.C. § #). If it isn't, decline, and remove it under another rule if it breaks one.
 end of paragraph

@@ -190,7 +190,7 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   const row = page.getByRole("listitem").filter({ hasText: entryId });
   // Round 28 #8: the row's name opens it; there is no "Decide this one".
   await openRow(row);
-  await expect(row.locator("button[aria-expanded]")).toHaveAttribute(
+  await expect(row.locator("button[aria-expanded]").first()).toHaveAttribute(
     "aria-expanded",
     "true",
   );

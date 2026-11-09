@@ -1,4 +1,5 @@
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import type { JSX } from "react";
 
 import { viewerDayTimeLabel } from "../../../lib/dates";
 import type { ViewerZone } from "../../../lib/dates";
@@ -11,6 +12,7 @@ import {
   useControlAction,
 } from "../../../ui";
 import type { listNotifications } from "../service";
+import { notificationTarget, type NotificationTarget } from "../target";
 
 type NotificationRow = Awaited<ReturnType<typeof listNotifications>>[number];
 
@@ -149,7 +151,7 @@ export function NotificationList({
                 {notification.read ? undefined : (
                   <span className="sr-only">Unread</span>
                 )}
-                <p className="m-0 text-body">{notification.body}</p>
+                <NotificationBody notification={notification} />
                 <Mono step="xs" className="text-muted">
                   {viewerDayTimeLabel(notification.createdAt, viewer)}
                 </Mono>
@@ -160,4 +162,70 @@ export function NotificationList({
       )}
     </div>
   );
+}
+
+// `target`: the whole row's words are the link, so it takes the 44px hit
+// area rather than the in-sentence exception, and `inline-flex` gives the
+// `<a>` a box for it to grow (`a11y.css` §03).
+const LINKED =
+  "target inline-flex items-center font-semibold text-ink underline underline-offset-4";
+
+/**
+ * The row's words, and where they go when the row has somewhere to go
+ * (`notificationTarget`). A second line, which a Decline's reason is,
+ * keeps its break (R48·129f).
+ */
+function NotificationBody({
+  notification,
+}: Readonly<{ notification: NotificationRow }>): JSX.Element {
+  const target = notificationTarget(notification);
+  const words = (
+    <span className="whitespace-pre-line">{notification.body}</span>
+  );
+  return (
+    <p className="m-0 text-body">
+      {target === undefined ? (
+        words
+      ) : (
+        <TargetLink target={target} words={words} />
+      )}
+    </p>
+  );
+}
+
+function TargetLink({
+  target,
+  words,
+}: Readonly<{ target: NotificationTarget; words: JSX.Element }>): JSX.Element {
+  switch (target.to) {
+    case "garment": {
+      return (
+        <Link
+          to="/closet/$itemId"
+          params={{ itemId: target.itemId }}
+          className={LINKED}
+        >
+          {words}
+        </Link>
+      );
+    }
+    case "profile": {
+      return (
+        <Link
+          to="/feed/u/$handle"
+          params={{ handle: target.handle }}
+          className={LINKED}
+        >
+          {words}
+        </Link>
+      );
+    }
+    case "own-profile": {
+      return (
+        <Link to="/feed/me" className={LINKED}>
+          {words}
+        </Link>
+      );
+    }
+  }
 }

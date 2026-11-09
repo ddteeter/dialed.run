@@ -16,12 +16,26 @@ import {
   isQueuedForReview,
   pendingEntryPhotos,
   pendingReviewQueue,
-  reviewFloors,
+  moderationThresholds,
+  photoThresholds,
+  reviewFloorsOf,
   screenPhoto,
-  thresholds,
   type CategoryScores,
   type Classify,
 } from "../../src/modules/safety";
+
+/**
+ * The test config's invented hold scores (design 183), read back as the
+ * Worker reads them, never production's.
+ */
+function configuredHolds() {
+  const holds = photoThresholds(moderationThresholds());
+  if (holds === undefined)
+    throw new Error("the test config sets no thresholds");
+  return holds;
+}
+const thresholds = configuredHolds();
+const reviewFloors = reviewFloorsOf(thresholds);
 
 import {
   makeEntry,
@@ -181,7 +195,10 @@ describe("screening a photo", () => {
         bytes: new Uint8Array([1]),
         contentType: "image/jpeg",
       },
-      answering({ flagged: true, scores: scores({ sexual: 0.4 }) }),
+      answering({
+        flagged: true,
+        scores: scores({ sexual: reviewFloors.sexual / 2 }),
+      }),
     );
 
     expect(outcome).toBe("pass");

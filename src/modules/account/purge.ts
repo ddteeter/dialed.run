@@ -50,11 +50,13 @@ import {
   emailVerifications,
   entryPhotos,
   follows,
+  followNotices,
   imports,
   inviteCodes,
   inviteRedemptions,
   notificationPreferences,
   notifications,
+  productCorrections,
   outfitEntries,
   passwordAttempts,
   photoScreenings,
@@ -454,6 +456,12 @@ async function deleteAccountRows(
     blocks.blockedId,
     userId,
   );
+  // A follow's ring (R48·131e), on their bell or someone else's.
+  const eitherRing = involvingEither(
+    followNotices.followerId,
+    followNotices.followeeId,
+    userId,
+  );
   // Every other table here is scoped by one plain `user_id` column, so the
   // per-table deletes are a data table rather than one line each —
   // `reactions_pk` leads with the entry, so that one scans once, as does
@@ -468,6 +476,9 @@ async function deleteAccountRows(
     dataExports,
     termsAcceptances,
     reminderEmailDays,
+    // Corrections they sent (D-163): a decided product keeps its value,
+    // and a waiting one loses one runner from its row.
+    productCorrections,
   ] as const;
   // The trailing rows below share the same "found by nothing but the
   // runner's id" shape as `byUserId`, just on a column that is not always
@@ -486,6 +497,7 @@ async function deleteAccountRows(
   await db.batch([
     db.delete(follows).where(eitherFollow),
     db.delete(blocks).where(eitherBlock),
+    db.delete(followNotices).where(eitherRing),
     // Useful marks they gave others' entries (theirs went with the runs).
     ...byUserId.map((table) =>
       db.delete(table).where(eq(table.userId, userId)),
