@@ -16,10 +16,8 @@ import {
   recordManualObservation,
   retryPendingWeather,
 } from "../../src/modules/weather";
-import {
-  weatherHalfOf,
-  weatherHalfStatements,
-} from "../../src/modules/weather/run-conditions-copy";
+import { weatherHalfOf } from "../../src/lib/contracts";
+import { weatherHalfStatements } from "../../src/modules/weather/run-conditions-copy";
 import {
   cacheKeyFor,
   upsertRealObservation,

@@ -10,25 +10,11 @@ import { eq, sql } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { runConditions, runs } from "../../db/schema-core";
-import type { Conditions } from "../../lib/contracts";
-import { precipClassOf } from "../../lib/contracts/temperature";
+import { weatherHalfOf } from "../../lib/contracts";
 import { inJsonList } from "../../lib/sql/json-list";
 import { conditionsForRuns } from "./run-conditions";
 
 type CoreDb = DrizzleD1Database<Record<string, unknown>>;
-
-/**
-The weather half's columns, as a run's conditions give them.
-*/
-export function weatherHalfOf(conditions: Conditions) {
-  return {
-    feelsLikeC: conditions.feelsLikeC,
-    minFeelsLikeC: conditions.span.minFeelsLikeC,
-    maxFeelsLikeC: conditions.span.maxFeelsLikeC,
-    precipClass: precipClassOf(conditions.precipMm),
-    source: conditions.source,
-  };
-}
 
 // SQL NULL, the value a column with no conditions holds: `undefined`
 // would leave the old half in place on an upsert's update.

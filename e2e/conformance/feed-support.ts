@@ -11,6 +11,7 @@ import {
   notifications,
   outfitEntries,
   outfitEntryItems,
+  runConditions,
   runs,
   userProfiles,
   wardrobeItems,
@@ -23,6 +24,11 @@ import { withLocalDb } from "../support/local-db";
 import { isServerFnCall } from "../support/server-fn";
 import { userIdOf } from "./logging-fixtures";
 import type { Audience } from "../../src/lib/contracts";
+import {
+  isStrangerAudience,
+  pointSpan,
+  weatherHalfOf,
+} from "../../src/lib/contracts";
 
 /**
  * What the feed lane's conformance specs share: who the signed-in runner
@@ -130,6 +136,9 @@ export async function removeSeeded(rows: Seeded): Promise<void> {
     [notifications, notifications.subjectId, rows.entries],
   ];
   await withLocalDb(async ({ core, weather }) => {
+    // The copies of the seeded runs' conditions (D-175), which name only
+    // the run.
+    await deleteByIds(core, runConditions, runConditions.runId, rows.runs);
     for (const [table, column, ids] of coreTeardown) {
       await deleteByIds(core, table, column, ids);
     }
@@ -203,6 +212,38 @@ export interface EntrySeed {
 }
 
 /**
+ * The copy of a seeded run's conditions the consensus reads (D-175), as
+ * settling the run and saving its entry would have written it: the one
+ * reading seeded at its start, which is every hour the cache holds for it.
+ * Built by the writer's own `weatherHalfOf`, not restated here.
+ */
+async function seedRunCopy(
+  runId: string,
+  params: EntrySeed,
+  feelsLikeC: number,
+): Promise<void> {
+  const half = weatherHalfOf({
+    tempC: feelsLikeC + 1,
+    feelsLikeC,
+    precipMm: 0,
+    condition: "clear",
+    windKph: 10,
+    source: "visualcrossing",
+    span: pointSpan(feelsLikeC + 1, feelsLikeC),
+  });
+  await withLocalDb(async ({ core }) => {
+    await core.insert(runConditions).values({
+      runId,
+      userId: params.userId,
+      ...half,
+      verdict: params.verdict,
+      entryCreatedAt: params.startedAt,
+      entryShared: isStrangerAudience(params.audience ?? "runners"),
+    });
+  });
+}
+
+/**
  * A runner's run and its entry, public by default, with one garment worn
  * and, when `feelsLikeC` is given, the reading at its start.
  */
@@ -260,6 +301,7 @@ export async function seedEntry(
       { feelsLikeC: params.feelsLikeC },
       runId,
     );
+    await seedRunCopy(runId, params, params.feelsLikeC);
   }
   return { runId, entryId };
 }

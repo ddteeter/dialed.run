@@ -7,6 +7,8 @@
  * import it, which is why it never lived beside the reads that need
  * `src/env`.
  */
+import { precipClassOf } from "./temperature";
+
 /**
 Where a run's conditions came from: the weather provider, or a band its runner set (B1).
 */
@@ -49,6 +51,22 @@ export interface ConditionsSpan {
   maxTempC: number;
   minFeelsLikeC: number;
   maxFeelsLikeC: number;
+}
+
+/**
+ * Weather's half of a run's copy in core (`run_conditions`, D-175), as the
+ * run's conditions give it: the start, the coldest and warmest hours, the
+ * starting hour's precipitation class and where it came from. Pure, so a
+ * seed that writes the copy directly builds it the way the writer does.
+ */
+export function weatherHalfOf(conditions: Conditions) {
+  return {
+    feelsLikeC: conditions.feelsLikeC,
+    minFeelsLikeC: conditions.span.minFeelsLikeC,
+    maxFeelsLikeC: conditions.span.maxFeelsLikeC,
+    precipClass: precipClassOf(conditions.precipMm),
+    source: conditions.source,
+  };
 }
 
 /**
