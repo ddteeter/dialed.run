@@ -34,6 +34,11 @@ the marketing site needs `POST /api/access-requests` (round 31, #367), and
   deployed, so it runs once at the first deploy if anything is there
   (a row in the deployment checklist is deploy-guards' file, so I'll ask
   coordinator-4).
+- **Dropped after merge (owner, 2026-11-08).** The delete script, its
+  test, `npm run shop-images:delete` and the deployment checklist's
+  one-time step are removed. No R2 bucket has ever been created, so no
+  real `products/<id>/image-*` object exists to delete, and local
+  Miniflare state is disposable.
 
 **PR 2, #367 + #366.**
 
