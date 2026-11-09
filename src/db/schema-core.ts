@@ -539,7 +539,6 @@ export const products = /*#__PURE__*/ sqliteTable(
     name: text("name").notNull(),
     normalizedName: text("normalized_name").notNull(),
     sourceUrl: text("source_url"),
-    imageKey: text("image_key"),
     categoryHint: text("category_hint"),
     // The specific thing this product *is* — singlet, tee, half-zip.
     //
@@ -981,7 +980,6 @@ export const outfitEntryItems = /*#__PURE__*/ sqliteTable(
     entryId: text("entry_id").notNull(),
     itemId: text("item_id").notNull(),
     flag: text("flag", { enum: ["too_much", "not_enough"] }),
-    note: text("note"),
   },
   (t) => [uniqueIndex("entry_items_pk").on(t.entryId, t.itemId)],
 );

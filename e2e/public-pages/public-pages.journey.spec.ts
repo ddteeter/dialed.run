@@ -44,7 +44,6 @@ Coordinates no other demo uses, so no other spec's observation answers ours.
 const LAT_R = 47.61;
 const LNG_R = -122.33;
 
-const NOTE = "Left cuff rubbed the watch.";
 const RUN_TITLE = "Harbor loop past the ferry dock";
 
 /**
@@ -117,7 +116,7 @@ test("make a kit and a profile public, see them as a stranger, take the kit back
       audience: "runners",
       createdAt: startedAt,
     });
-    await core.insert(outfitEntryItems).values({ entryId, itemId, note: NOTE });
+    await core.insert(outfitEntryItems).values({ entryId, itemId });
 
     // Seeded, never stubbed: the observation at the run's rounded place
     // and hour is what the conditions read. Upserted, so a re-run inside
@@ -213,9 +212,8 @@ test("make a kit and a profile public, see them as a stranger, take the kit back
   ).toBeVisible();
   await expect(page.locator("[data-part='stats']")).toBeVisible();
   await expect(page.getByText("Houdini Jacket")).toBeVisible();
-  await scene(page, "Never when or where, and never a note");
+  await scene(page, "Never when or where");
   await expect(page.getByText(RUN_TITLE)).toHaveCount(0);
-  await expect(page.getByText(NOTE)).toHaveCount(0);
   await expect(
     page.getByRole("link", { name: "Request an invite" }),
   ).toBeVisible();

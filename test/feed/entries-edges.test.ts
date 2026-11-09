@@ -328,43 +328,6 @@ describe("submitVerdict writes the whole submission or none of it", () => {
     expect(cleared?.items[0]?.flag).toBeUndefined();
   });
 
-  it("never reads a per-item note back, even to its owner (D-160)", async () => {
-    // The column stays until a contract step drops it (law 8), so a note
-    // stored before the cut is still in the row; the detail must not carry it.
-    const { userId, entryId, itemId } = await ownEntry();
-    await db()
-      .update(outfitEntryItems)
-      .set({ flag: "too_much", note: "Hands cooked" })
-      .where(eq(outfitEntryItems.entryId, entryId));
-
-    const detail = await getEntryDetail(entryId, userId);
-    expect(detail?.items[0]?.itemId).toBe(itemId);
-    expect(detail?.items[0]?.flag).toBe("too_much");
-    expect(detail?.items[0]).not.toHaveProperty("note");
-  });
-
-  it("leaves a stored note alone when the verdict is logged again", async () => {
-    const { userId, entryId, itemId } = await ownEntry();
-    await db()
-      .update(outfitEntryItems)
-      .set({ note: "Hands cooked" })
-      .where(eq(outfitEntryItems.entryId, entryId));
-
-    await submitVerdict({
-      userId,
-      entryId,
-      verdict: 0,
-      audience: "runners",
-      tags: [],
-      itemFlags: [{ itemId, flag: "not_enough" }],
-    });
-    const [row] = await db()
-      .select({ flag: outfitEntryItems.flag, note: outfitEntryItems.note })
-      .from(outfitEntryItems)
-      .where(eq(outfitEntryItems.entryId, entryId));
-    expect(row).toStrictEqual({ flag: "not_enough", note: "Hands cooked" });
-  });
-
   it("ignores a flag for an item the entry does not contain", async () => {
     // The flags arrive from a form; which are legitimate depends on what
     // the entry holds, and a stale client must not be able to flag someone

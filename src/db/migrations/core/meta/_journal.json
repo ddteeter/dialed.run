@@ -575,6 +575,13 @@
       "when": 1794080793582,
       "tag": "0081_add_corrections_review_audit_follow_notices",
       "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "6",
+      "when": 1794206431639,
+      "tag": "0082_drop_item_note_and_product_image_key",
+      "breakpoints": true
     }
   ]
 }
