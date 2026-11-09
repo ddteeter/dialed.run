@@ -99,6 +99,7 @@ wrangler r2 bucket create dialed-media --location enam
 wrangler r2 bucket create dialed-imports --location enam
 wrangler r2 bucket create dialed-guides --location enam
 wrangler r2 bucket create dialed-public-photos --location enam
+wrangler r2 bucket create dialed-media-backup --location enam
 ```
 
 The same region hint as the databases (§1), for the same reason.
@@ -108,6 +109,7 @@ The same region hint as the databases (§1), for the same reason.
 | `dialed-media`         | `MEDIA`                | Garment photos, entry photos                                                          | Indefinite — the app renders these; deleting one breaks a page                                                                        |
 | `dialed-imports`       | `IMPORTS`              | Uploaded `.fit`/`.gpx`/`.tcx`; data export ZIPs                                       | Run files: **until the run or account is deleted** (D-110); a file whose import failed, 30 days. Export ZIPs under `exports/`: 8 days |
 | `dialed-public-photos` | `PUBLIC_PHOTOS`        | Copies of the screened photos on `world` (PUBLIC) kits, served at `photos.dialed.run` | Only while the kit is public: deleted on any retraction (D-153, design 163 step 8)                                                    |
+| `dialed-media-backup`  | `MEDIA_BACKUP`         | Daily copies of `MEDIA`'s garment and entry photos (D-172, design 186)                | A copy while its photo exists; a deleted photo's copy, 30 days (#529). Never `quarantine/` (#530). See §10                            |
 | `dialed-guides`        | (R-134, not yet bound) | `guide-artifact/v1.json`, the nightly anonymous totals                                | Overwritten nightly; read by the marketing site's CI with a read-only token scoped to this bucket                                     |
 
 **No rule expires a run file** (decision D-110). An uploaded file is kept
@@ -503,13 +505,6 @@ needs its own Strava app, not a second subscription.
   the queries the code runs are `src/modules/ops/vitals-queries.ts`.
 
 - **One-time steps (design 187).** Each runs once, at the first deploy.
-  - **Delete the stored shop images** (D-176, #472). Before D-176,
-    enrichment copied a shop's image into MEDIA as
-    `products/<id>/image-<ts>`. Run `npm run shop-images:delete -- --remote`
-    with your own `wrangler login`. It's a dry run that lists every key it
-    would delete, and snapshots under the same prefix are never matched.
-    Read the list, then run it again with `--apply`. If nothing was ever
-    enriched against the real bucket, it lists nothing, and you're done.
   - **Owner: let the marketing site solve Turnstile** (round 31, #367).
     The site's request-access form posts to `/api/access-requests`, and
     the server only accepts a challenge solved on `dialed.run`. In
@@ -659,27 +654,57 @@ then roll the code back. The restore also rewinds `d1_migrations`, so the
 same migration applies again on the next `migrations apply` — fix or
 remove it before the next deploy.
 
-R2 has no point-in-time history; see §10 for what that costs.
+R2 has no point-in-time history; §10 is the photo backup that stands in for it.
 
-## 10. R2 has no backup
+## 10. Backing up R2 (the photo backup)
 
 R2 keeps no versions and has no Time Travel. An object deleted or
-overwritten is gone, and so is a bucket someone deletes. Nothing in this
-app copies either bucket anywhere today. Task 126's account-deletion
-tombstone delays a purge by seven days, which protects against a bad
-account deletion and nothing else.
+overwritten is gone, and so is a bucket someone deletes. So the daily
+digest copies the photos only a runner could replace into a second
+bucket, `dialed-media-backup` (D-172, #420, design 186; the code is
+`src/modules/ops/media-backup.ts`).
+
+**How it works.** Each daily firing lists `MEDIA` and `MEDIA_BACKUP` under
+`items/` and `entries/` and compares them. It copies any object the backup
+lacks, or holds an older copy of (each copy carries its source's etag as
+`sourceEtag`). At most 1000 copies a firing; the rest wait for the next
+day, and the digest says how many. Nothing records "since when", so a
+firing that dies halfway leaves nothing to reconcile: the next one sees
+the same difference.
+
+**A deleted photo leaves the backup 30 days later** (#529). A copy whose
+photo is gone moves to `gone/<key>`, and the firing deletes any `gone/`
+object more than 30 days old. Without that, the backup would keep every
+photo a runner ever deleted, which the privacy policy does not allow.
+
+**What the daily digest says** (kind `media-backup`): nothing when every
+photo is backed up; "N photos left for the next firing" when the cap was
+reached; and "N copies or deletes failed" (the next firing retries them).
+
+**Owner's setup, once, before friends:**
+
+1. Create the bucket (§2) **before the deploy that binds it**: the
+   binding is already in `wrangler.jsonc`, and a deploy whose bucket does
+   not exist fails. `wrangler r2 bucket create dialed-media-backup
+--location enam`.
+2. **Lock `quarantine/` instead of copying it** (#530). In the dashboard:
+   R2 → `dialed-media` → Settings → Bucket lock rules → add a rule for
+   prefix `quarantine/`, retention **365 days**. Locks refuse deletion and
+   overwrite and take precedence over lifecycle rules
+   ([bucket locks](https://developers.cloudflare.com/r2/buckets/bucket-locks/)).
+   The quarantine purge runs a year after the report, which is never
+   earlier than a year after the upload, so the lock never blocks it.
 
 **What is in `dialed-media` (`MEDIA`), by key prefix, and what losing it
 costs:**
 
-| Prefix                               | What                                                                            | If it is lost                                                                                                                                                            |
-| ------------------------------------ | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `items/<user>/<item>/…`              | Garment photos (the original and its variants)                                  | **Unrecoverable.** The garment rows survive in D1 with a `photo_key` pointing at nothing, so the closet shows a garment with no photo. Only the runner has the original. |
-| `entries/<user>/<entry>/<photo>`     | Entry photos                                                                    | **Unrecoverable**, the same way: the entry, its kit and verdict survive, and the photo is a missing image.                                                               |
-| `quarantine/entries/…`               | Photos copied aside by a suspected-CSAM quarantine, preserved for a year (D-70) | **Unrecoverable, and the worst one.** The original was deleted in the same step, so this copy is the only one, and the year's preservation D-70 promises is broken.      |
-| `products/<product>/snapshot-*.html` | The product page enrichment fetched                                             | Re-fetchable. The extracted fields are already in D1; a lost snapshot only means re-running extraction has to fetch the page again.                                      |
-| `products/<product>/image-*`         | Product images enrichment fetched                                               | Re-fetchable by re-running enrichment for the product.                                                                                                                   |
-| `health-probe`                       | `/api/health`'s probe (a `head`, never written)                                 | Nothing.                                                                                                                                                                 |
+| Prefix                               | What                                                                            | If it is lost                                                                                                                                                   |
+| ------------------------------------ | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `items/<user>/<item>/…`              | Garment photos (the original and its variants)                                  | **From the backup** (below). Without it, unrecoverable: the garment row keeps a `photo_key` pointing at nothing, and only the runner has the original.          |
+| `entries/<user>/<entry>/<photo>`     | Entry photos                                                                    | **From the backup.** Without it, unrecoverable the same way: the entry, its kit and verdict survive, and the photo is a missing image.                          |
+| `quarantine/entries/…`               | Photos copied aside by a suspected-CSAM quarantine, preserved for a year (D-70) | **Not in the backup** (#530). The original was deleted in the same step, so this copy is the only one; the bucket lock (step 3) is what stops it being deleted. |
+| `products/<product>/snapshot-*.html` | The product page enrichment fetched                                             | Re-fetchable. The extracted fields are already in D1; a lost snapshot only means re-running extraction has to fetch the page again.                             |
+| `health-probe`                       | `/api/health`'s probe (a `head`, never written)                                 | Nothing.                                                                                                                                                        |
 
 **`dialed-imports` (`IMPORTS`)** holds uploaded `.fit`/`.gpx`/`.tcx` files
 under `imports/<user>/<import>.<ext>`, for as long as the run (§2, D-110),
@@ -691,40 +716,29 @@ re-parse D-110 keeps them for, never a run. **It does not need a backup**:
 a copy of GPS traces somewhere else is a copy the deletion paths cannot
 reach.
 
+The backup holds `items/` and `entries/`. It does not hold
+`quarantine/` (the bucket lock above protects that prefix instead),
+`products/` (re-fetchable) or `health-probe`.
+
+**Restoring a photo from the backup.** Copy it back by key. Restore only a
+photo that some row still points at: a key whose garment or entry row is
+gone was deleted on purpose, and that includes photos removed by
+moderation or a takedown. Restoring one of those would bring back what a
+runner or the Desk removed.
+
+```sh
+# Is it there? (A deleted one is under gone/.)
+wrangler r2 object get dialed-media-backup/<key> --file /tmp/photo --remote
+wrangler r2 object put dialed-media/<key> --file /tmp/photo --remote
+```
+
 **A D1 restore does not bring R2 back with it.** Restoring core to before
-a photo was removed brings back a row whose object the reconcile has
-already deleted: the same missing image as above. There is nothing to
-reconcile it against.
+a photo was removed brings back a row whose object is gone from `MEDIA`.
+If the photo was deleted within the last 30 days, its copy is under
+`gone/<key>` in the backup, and the copy above restores it.
 
-**The options, cheapest first.** None is built. The first needs nothing;
-the other two need a binding or a workflow, which are the owner's.
-
-1. **Accept it until public launch.** Before friends, the photos are few
-   and their owners still have them; everything else a runner logged is in
-   D1 and covered by Time Travel. Say so to the friends cohort. The one
-   prefix this is weakest for is `quarantine/`.
-2. **A second bucket, copied into by a cron.** A `dialed-media-backup`
-   bucket the app only ever writes to, never deletes from, filled by the
-   daily cron copying objects uploaded since its last run (R2's `list`
-   returns each object's upload time; `cron_checkpoints` already holds
-   "since when"). Costs a second copy of storage (R2 standard storage is
-   priced per GB-month; check the current rate on Cloudflare's R2 pricing
-   page) and one write per object. It covers a bad delete or overwrite by
-   the app. It does not cover losing the Cloudflare account. Needs a new
-   R2 binding in `wrangler.jsonc` and a line in
-   `test/bindings-conformance.test.ts`.
-3. **A copy off Cloudflare.** R2 speaks the S3 API, so `rclone sync` with a
-   read-only R2 API token can copy `dialed-media` to another provider on a
-   schedule: a GitHub Actions workflow, or any machine that runs cron. This
-   is the only option that survives losing the account, and it keeps
-   runners' photos with a second processor, which the privacy policy would
-   have to name. Needs a new secret and a workflow file.
-
-For `quarantine/` specifically, R2 **bucket locks** (retention rules that
-refuse deletion for a set period, by prefix) may fit better than a copy.
-Confirm on the R2 docs that they cover this case before relying on it:
-they are newer than the rest of this runbook.
-
-**Recommendation:** option 1 for the friends cohort, and either 2 or 3
-before public launch. 3 if losing the account is a risk worth paying for,
-2 if not.
+**What the backup does not cover.** It is in the same Cloudflare account
+as `MEDIA`, so losing the account loses both. The off-Cloudflare option
+(`rclone sync` with a read-only R2 token, on a schedule) is the one that
+survives that. It needs a workflow, a secret and a line in the privacy
+policy naming a second processor. It is not built.

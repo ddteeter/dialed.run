@@ -27,9 +27,12 @@ import {
   lte,
   not,
   notInArray,
+  or,
   sql,
+  type SQL,
 } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
+import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import {
   entryPhotos,
@@ -42,8 +45,9 @@ import {
   FINGERPRINT_MATCH_DISTANCE,
   fingerprintSchema,
 } from "../../lib/photo-fingerprint";
-import { nearestOf } from "../../lib/sql/fingerprint-distance";
-import type { OtherPhotosSubject } from "./other-photos";
+import { distanceBetweenSql } from "../../lib/sql/fingerprint-distance";
+import { inJsonList, jsonField, jsonTable } from "../../lib/sql/json-list";
+import { subjectColumns, type OtherPhotosSubject } from "./other-photos";
 import { publiclyVisibleEntry } from "./visibility";
 
 type Db = ReturnType<typeof drizzle>;
@@ -100,42 +104,76 @@ export interface PhotoMatches {
 /**
  * Each subject's matches, by `subjectType:subjectId`.
  *
- * **One subject at a time, the subjects side by side.** A subject's
- * search needs its fingerprints first, and a batch cannot branch on its
- * own results, so each is a read and then one batch of its two searches.
- * A page has a handful of such rows, so that is a handful of parallel
- * round trips, against one batch whose results would have to be told
- * apart by index.
+ * **Three statements for the page, however many rows it has** (design
+ * 188, #490). One read finds every subject's fingerprints; a batch cannot
+ * branch on its own results, so the searches follow it, both in one batch,
+ * each searching for every subject at once. A subject's fingerprints reach
+ * the searches as one bound JSON list (`lib/sql/json-list.ts`) and are
+ * compared column to column (`distanceBetweenSql`), so neither the
+ * parameters nor the statement's text grow with the page.
  */
 export async function photoMatchesOf(
   db: Db,
   subjects: readonly OtherPhotosSubject[],
 ): Promise<Map<string, PhotoMatches>> {
-  const answers = await Promise.all(
-    subjects.map(async (subject) => {
-      const own = await fingerprintsOf(db, subject);
-      return [keyOf(subject), await search(db, subject, own)] as const;
+  if (subjects.length === 0) return new Map();
+  const answerFor = await searchesFor(db, await probesOf(db, subjects));
+  return new Map(
+    subjects.map((subject) => {
+      const key = keyOf(subject);
+      return [key, answerFor(key)];
     }),
   );
-  return new Map(answers);
 }
 
 /**
- * One subject's search, or the answer that there was nothing to search
- * by. Its two reads go in one batch; neither needs the other's answer.
+ * Runs the searches for every probe at once, and answers a subject's
+ * matches by its key. With no probe there is nothing to search for, and
+ * no batch is sent.
  */
-async function search(
+async function searchesFor(
   db: Db,
-  subject: OtherPhotosSubject,
-  own: readonly string[],
-): Promise<PhotoMatches> {
-  if (own.length === 0) {
-    return { fingerprinted: false, matches: [], isCutOff: false };
-  }
-  const [kitsRead, garmentsRead] = await db.batch([
-    kitMatches(db, subject, own),
-    garmentMatches(db, own),
+  probes: readonly Probe[],
+): Promise<(key: string) => PhotoMatches> {
+  if (probes.length === 0) return () => NOTHING_TO_SEARCH_BY;
+  const [kits, garments] = await db.batch([
+    kitMatches(db, probes),
+    garmentMatches(db, probes),
   ]);
+  return (key) =>
+    probes.some((probe) => probe.key === key)
+      ? matchesFrom(matchesUnder(kits, key), matchesUnder(garments, key))
+      : NOTHING_TO_SEARCH_BY;
+}
+
+/**
+A subject's matches among a search's rows, each answered under its key.
+*/
+function matchesUnder<T>(
+  rows: readonly Readonly<{ key: string; match: T }>[],
+  key: string,
+): T[] {
+  return rows.filter((row) => row.key === key).map((row) => row.match);
+}
+
+/**
+ * The answer for a subject with no fingerprint — gone already, or
+ * uploaded before fingerprints: "no matches" would say something false.
+ */
+const NOTHING_TO_SEARCH_BY: PhotoMatches = {
+  fingerprinted: false,
+  matches: [],
+  isCutOff: false,
+};
+
+/**
+ * One subject's matches as the row shows them, from its rows of each
+ * search, each nearest first and read one past the limit.
+ */
+function matchesFrom(
+  kitsRead: readonly KitRow[],
+  garmentsRead: readonly GarmentRow[],
+): PhotoMatches {
   // One past the limit was read, to know whether there were more.
   const isCutOff = [kitsRead, garmentsRead].some(
     (rows) => rows.length > PHOTO_MATCHES_LIMIT,
@@ -170,97 +208,228 @@ function keyOf(subject: OtherPhotosSubject): string {
 }
 
 /**
- * The fingerprints a subject is searched by: the photo's own, or every
- * photo's on the kit. A primary-key probe, or the
- * `entry_photos_idempotency` prefix.
+ * One fingerprint a subject is searched by, with whose it is: the
+ * subject's key, which the searches answer under, and the subject itself,
+ * whose own photos a kit search leaves out.
  */
-async function fingerprintsOf(
-  db: Db,
-  subject: OtherPhotosSubject,
-): Promise<string[]> {
-  const rows = await db
-    .select({ fingerprint: entryPhotos.fingerprint })
-    .from(entryPhotos)
-    .where(
-      and(
-        OWN[subject.subjectType](subject.subjectId),
-        isNotNull(entryPhotos.fingerprint),
-      ),
-    );
-  // Parsed, not trusted: these are spelt into SQL (`lib/sql/fingerprint-distance`), and
-  // only a fingerprint this repo wrote may be. A malformed one is a bug,
-  // so it throws rather than quietly searching for nothing.
-  return rows.map(({ fingerprint }) => fingerprintSchema.parse(fingerprint));
+interface Probe {
+  readonly key: string;
+  readonly subjectType: OtherPhotosSubject["subjectType"];
+  readonly subjectId: string;
+  readonly print: string;
 }
 
 /**
-The subject's own photos: the one photo, or every photo on the kit.
-*/
-const OWN = {
-  photo: (subjectId: string) => eq(entryPhotos.id, subjectId),
-  entry: (subjectId: string) => eq(entryPhotos.entryId, subjectId),
-} as const;
+ * Every subject's fingerprints, in one read: a photo's own, or every
+ * photo's on a kit. Served by the primary key and the
+ * `entry_photos_idempotency` prefix.
+ */
+async function probesOf(
+  db: Db,
+  subjects: readonly OtherPhotosSubject[],
+): Promise<Probe[]> {
+  const rows = await printedPhotosOf(db, subjects);
+  return subjects.flatMap((subject) =>
+    rows
+      .filter((row) => OWN[subject.subjectType](row) === subject.subjectId)
+      .map((row) => ({
+        key: keyOf(subject),
+        subjectType: subject.subjectType,
+        subjectId: subject.subjectId,
+        // Parsed, not trusted: a malformed fingerprint is a bug, so it
+        // throws rather than quietly searching for nothing.
+        print: fingerprintSchema.parse(row.fingerprint),
+      })),
+  );
+}
 
 /**
- * Kit photos within the distance, nearest first, the subject's own left
- * out — it is on the row already. Private kits are not left out (D-142):
- * a copy is no less a copy for being posted privately.
+ * The fingerprinted photos that are any subject's own, in one statement:
+ * every id is looked for as both a photo's and a kit's. Ids are ULIDs, so
+ * one list serves both, and `OWN` sorts each row to its subject.
  */
-function kitMatches(
-  db: Db,
-  subject: OtherPhotosSubject,
-  own: readonly string[],
-) {
-  const distance = nearestOf(entryPhotos.fingerprint, own);
-  const notOwn = not(OWN[subject.subjectType](subject.subjectId));
+function printedPhotosOf(db: Db, subjects: readonly OtherPhotosSubject[]) {
+  const ids = subjects.map((subject) => subject.subjectId);
+  const ownOfAny = or(
+    inJsonList(entryPhotos.id, ids),
+    inJsonList(entryPhotos.entryId, ids),
+  );
   return db
     .select({
       id: entryPhotos.id,
-      photoKey: entryPhotos.photoKey,
       entryId: entryPhotos.entryId,
-      canOpen: sql<boolean>`${publiclyVisibleEntry()}`.mapWith(Boolean),
-      isPrivate: sql<boolean>`${notInArray(outfitEntries.audience, [
-        ...strangerAudiences,
-      ])}`.mapWith(Boolean),
-      // fallow-ignore-next-line code-duplication -- kitMatches and garmentMatches read two different photo tables against one fingerprint distance, already factored through nearestOf; kit rows carry an entry, visibility and audience a garment has no column for
-      distance: sql<number>`${distance}`.mapWith(Number),
-      // fallow-ignore-next-line code-duplication -- kitMatches and garmentMatches read two different photo tables against one fingerprint distance, already factored through nearestOf; kit rows carry an entry, visibility and audience a garment has no column for
-      ownerId: outfitEntries.userId,
-      handle: userProfiles.username,
+      fingerprint: entryPhotos.fingerprint,
     })
     .from(entryPhotos)
-    .innerJoin(outfitEntries, eq(outfitEntries.id, entryPhotos.entryId))
-    .leftJoin(userProfiles, eq(userProfiles.userId, outfitEntries.userId))
-    .where(
-      // No `IS NOT NULL`: a photo with no fingerprint has a NULL
-      // distance, which no comparison keeps.
-      and(lte(distance, FINGERPRINT_MATCH_DISTANCE), notOwn),
-    )
-    .orderBy(asc(distance), asc(entryPhotos.id))
-    .limit(PHOTO_MATCHES_LIMIT + 1);
+    .where(and(ownOfAny, isNotNull(entryPhotos.fingerprint)));
 }
 
 /**
- * Garment photos within the distance, nearest first. A garment photo is
- * never shown to another runner, so it has no page to link; the key is
- * its card-sized copy, which the reviewer route serves like any other.
- * A garment with no photo has no fingerprint, so a NULL distance, which
- * no comparison keeps.
+What a subject's own photos share with it: the photo's id, or its kit's.
+*/
+const OWN = {
+  photo: (row: Readonly<{ id: string }>) => row.id,
+  entry: (row: Readonly<{ entryId: string }>) => row.entryId,
+} as const;
+
+/**
+ * The probes as a table the searches join: one row a fingerprint, the
+ * list bound as one parameter.
  */
-function garmentMatches(db: Db, own: readonly string[]) {
-  const distance = nearestOf(wardrobeItems.photoFingerprint, own);
-  return db
-    .select({
-      id: wardrobeItems.id,
-      photoKey: sql<string>`${wardrobeItems.photoKey} || '/card.webp'`,
-      // fallow-ignore-next-line code-duplication -- kitMatches and garmentMatches read two different photo tables against one fingerprint distance, already factored through nearestOf; kit rows carry an entry, visibility and audience a garment has no column for
-      distance: sql<number>`${distance}`.mapWith(Number),
-      ownerId: wardrobeItems.userId,
-      handle: userProfiles.username,
-    })
-    .from(wardrobeItems)
-    .leftJoin(userProfiles, eq(userProfiles.userId, wardrobeItems.userId))
-    .where(lte(distance, FINGERPRINT_MATCH_DISTANCE))
-    .orderBy(asc(distance), asc(wardrobeItems.id))
-    .limit(PHOTO_MATCHES_LIMIT + 1);
+function probeTable(db: Db, probes: readonly Probe[]) {
+  const name = "probe";
+  return jsonTable(db, name, probes, {
+    ...subjectColumns(name),
+    print: jsonField<string>("print").as(`${name}_print`),
+  });
 }
+
+type ProbeTable = ReturnType<typeof probeTable>;
+
+/**
+ * What a match row says of whose photo it is, whichever kind it is: the
+ * owner, and their handle by a primary-key probe of `user_profiles`, for
+ * the link to D8 (round 39 #71).
+ */
+function ownerColumns<Owner extends SQLiteColumn>(
+  ranked: Readonly<{ distance: SQL.Aliased<number> }>,
+  owner: Owner,
+) {
+  return {
+    distance: ranked.distance,
+    ownerId: owner,
+    handle: sql<
+      string | null
+    >`(SELECT ${userProfiles.username} FROM ${userProfiles} WHERE ${userProfiles.userId} = ${owner})`,
+  };
+}
+
+/**
+ * The search both kinds share: the nearest of each subject's fingerprints
+ * to each photo within the distance, then each subject's nearest
+ * `PHOTO_MATCHES_LIMIT + 1`. The photo table is the outer loop (`CROSS
+ * JOIN` keeps SQLite from turning it), so each stored photo is read once
+ * for the whole page, as one subject's search read it before.
+ *
+ * What it answers is a `WITH` to select from, `ranked` to select and join
+ * by, and the filter and order every search ends on.
+ */
+function nearestPerSubject(
+  db: Db,
+  probes: readonly Probe[],
+  photo: Readonly<{ id: SQLiteColumn; print: SQLiteColumn }>,
+  ownPhotos?: (probe: ProbeTable) => SQL,
+) {
+  const probe = probeTable(db, probes);
+  const distance = distanceBetweenSql(photo.print, sql`${probe.print}`);
+  // No `IS NOT NULL`: a photo with no fingerprint has a NULL distance,
+  // which no comparison keeps.
+  const kept = and(
+    lte(distance, FINGERPRINT_MATCH_DISTANCE),
+    ownPhotos === undefined ? undefined : not(ownPhotos(probe)),
+  );
+  const near = db.$with("near").as(
+    db
+      .select({
+        key: probe.key,
+        photoId: photo.id,
+        distance: sql<number>`min(${distance})`.as("near_distance"),
+      })
+      .from(photo.id.table)
+      .crossJoin(probe)
+      .where(kept)
+      .groupBy(sql`${probe.key}`, photo.id),
+  );
+  const ranked = db.$with("ranked").as(
+    db
+      .select({
+        key: near.key,
+        photoId: near.photoId,
+        distance: sql<number>`${near.distance}`
+          .mapWith(Number)
+          .as("ranked_distance"),
+        place:
+          sql<number>`row_number() over (partition by ${near.key} order by ${near.distance}, ${near.photoId})`.as(
+            "ranked_place",
+          ),
+      })
+      .from(near),
+  );
+  return {
+    search: db.with(probe, near, ranked),
+    ranked,
+    // One past the limit, to know whether there were more.
+    isShown: lte(ranked.place, PHOTO_MATCHES_LIMIT + 1),
+    nearestFirst: [asc(ranked.key), asc(ranked.place)] as const,
+  };
+}
+
+/**
+ * Kit photos within the distance of each subject, nearest first, the
+ * subject's own left out — it is on the row already. Private kits are not
+ * left out (D-142): a copy is no less a copy for being posted privately.
+ */
+function kitMatches(db: Db, probes: readonly Probe[]) {
+  const { search, ranked, isShown, nearestFirst } = nearestPerSubject(
+    db,
+    probes,
+    { id: entryPhotos.id, print: entryPhotos.fingerprint },
+    // Parenthesised whole: `not()` spells `not <condition>`, which binds
+    // tighter than the `or` inside it.
+    (probe) =>
+      sql`((${probe.subjectType} = 'photo' and ${entryPhotos.id} = ${probe.subjectId}) or (${probe.subjectType} = 'entry' and ${entryPhotos.entryId} = ${probe.subjectId}))`,
+  );
+  const owner = outfitEntries.userId;
+  return search
+    .select({
+      key: ranked.key,
+      match: {
+        id: entryPhotos.id,
+        photoKey: entryPhotos.photoKey,
+        entryId: entryPhotos.entryId,
+        canOpen: sql<boolean>`${publiclyVisibleEntry()}`.mapWith(Boolean),
+        isPrivate: sql<boolean>`${notInArray(outfitEntries.audience, [
+          ...strangerAudiences,
+        ])}`.mapWith(Boolean),
+        ...ownerColumns(ranked, owner),
+      },
+    })
+    .from(ranked)
+    .innerJoin(entryPhotos, eq(entryPhotos.id, ranked.photoId))
+    .innerJoin(outfitEntries, eq(outfitEntries.id, entryPhotos.entryId))
+    .where(isShown)
+    .orderBy(...nearestFirst);
+}
+
+type KitRow = Awaited<ReturnType<typeof kitMatches>>[number]["match"];
+
+/**
+ * Garment photos within the distance of each subject, nearest first. A
+ * garment photo is never shown to another runner, so it has no page to
+ * link; the key is its card-sized copy, which the reviewer route serves
+ * like any other. A garment with no photo has no fingerprint, so a NULL
+ * distance, which no comparison keeps.
+ */
+function garmentMatches(db: Db, probes: readonly Probe[]) {
+  const { search, ranked, isShown, nearestFirst } = nearestPerSubject(
+    db,
+    probes,
+    { id: wardrobeItems.id, print: wardrobeItems.photoFingerprint },
+  );
+  const owner = wardrobeItems.userId;
+  return search
+    .select({
+      key: ranked.key,
+      match: {
+        id: wardrobeItems.id,
+        photoKey: sql<string>`${wardrobeItems.photoKey} || '/card.webp'`,
+        ...ownerColumns(ranked, owner),
+      },
+    })
+    .from(ranked)
+    .innerJoin(wardrobeItems, eq(wardrobeItems.id, ranked.photoId))
+    .where(isShown)
+    .orderBy(...nearestFirst);
+}
+
+type GarmentRow = Awaited<ReturnType<typeof garmentMatches>>[number]["match"];

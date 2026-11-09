@@ -202,9 +202,9 @@ covers the quarantine; this keeps the ban from tipping off the uploader.
   store. [CHECK: §2703(f)'s 90-day period and renewal.]
 - The `moderation_actions` row stays after the purge (D-70). Its own 3-year
   clock (D-131) comes with C7.
-- **R2 has no backup** (`docs/deployment.md` §10). Losing `quarantine/`
-  breaks the year's preservation. Bucket locks on that prefix are the
-  suggested fix there; not done.
+- `quarantine/` is not in the photo backup (#530). A 365-day R2 bucket
+  lock on that prefix is what keeps the year's preservation: an owner's
+  dashboard step before friends (`docs/deployment.md` §10).
 
 ### The record kept
 

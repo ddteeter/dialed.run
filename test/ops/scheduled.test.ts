@@ -764,6 +764,7 @@ describe("the digest reports each kind on its own (OPS-2)", () => {
       "screener-quiet",
       "account-deletion",
       "speed",
+      "media-backup",
     ]);
   });
 
@@ -788,6 +789,32 @@ describe("the digest reports each kind on its own (OPS-2)", () => {
     expect(events.map((event) => event.report.tags)).toStrictEqual([
       { digest: "daily", digest_kind: "speed" },
     ]);
+  });
+
+  it("backs up a new photo into MEDIA_BACKUP on the daily firing (D-172, design 186)", async () => {
+    const key = `items/${newUlid()}/${newUlid()}/original.jpg`;
+    await env.MEDIA.put(key, "photo bytes");
+
+    await handleScheduled(DIGEST, recordingReporter().reporter, {});
+
+    const copy = await env.MEDIA_BACKUP.get(key);
+    expect(await copy?.text()).toBe("photo bytes");
+  });
+
+  it("expires a deleted photo's backup copy by the firing's own clock (#529)", async () => {
+    const key = `gone/items/${newUlid()}/${newUlid()}`;
+    // R2 stamps the upload with the real clock; the firing reads Date,
+    // moved past the 30 days.
+    await env.MEDIA_BACKUP.put(key, "deleted photo");
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.now() + 31 * 24 * 60 * 60 * 1000);
+    try {
+      await handleScheduled(DIGEST, recordingReporter().reporter, {});
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(await env.MEDIA_BACKUP.head(key)).toBeNull();
   });
 
   it("reports each hourly speed finding as its own event on the :30 firing (design 165)", async () => {

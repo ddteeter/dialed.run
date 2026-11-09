@@ -25,6 +25,7 @@ import {
   otherPhotosQuery,
 } from "../../src/modules/safety/other-photos";
 
+import { queriesDuring } from "../d1-spy";
 import { noPurge } from "../purge-spy";
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 import { oweInCore } from "../queue-fakes";
@@ -295,6 +296,45 @@ describe("otherPhotosOf", () => {
     expect(ids(found.get(`entry:${goneKit}`))).toStrictEqual([other]);
   });
 
+  it("reads each deleted subject's runner from its own audit row, in one call (design 188)", async () => {
+    const audited = async (subjectType: "photo" | "entry") => {
+      const runner = await makeUser();
+      const goneKit = await kit(runner, NOW);
+      const gonePhoto = await photo(goneKit);
+      const other = await photo(await kit(runner, NOW - 1));
+      const subjectId = subjectType === "photo" ? gonePhoto : goneKit;
+      await core().insert(moderationActions).values({
+        id: newUlid(),
+        actorId: "desk",
+        action: "remove",
+        subjectType,
+        subjectId,
+        subjectOwnerId: runner,
+        reason: "it's spam",
+        createdAt: NOW,
+      });
+      await core().delete(entryPhotos).where(eq(entryPhotos.id, gonePhoto));
+      await core().delete(outfitEntries).where(eq(outfitEntries.id, goneKit));
+      return { subjectType, subjectId, other };
+    };
+    // Two runners each way, so an audit read that ignored its subject
+    // would hand at least one of them the other's photos.
+    const subjects = [
+      await audited("photo"),
+      await audited("photo"),
+      await audited("entry"),
+      await audited("entry"),
+    ];
+
+    const found = await otherPhotosOf(core(), subjects);
+
+    for (const { subjectType, subjectId, other } of subjects) {
+      expect(ids(found.get(`${subjectType}:${subjectId}`))).toStrictEqual([
+        other,
+      ]);
+    }
+  });
+
   it("reads the live owner first, not an audit row about the subject", async () => {
     const runner = await makeUser();
     const reported = await photo(await kit(runner, NOW));
@@ -321,40 +361,45 @@ describe("otherPhotosOf", () => {
   });
 
   it("reads nothing for no subjects", async () => {
-    expect(await otherPhotosOf(core(), [])).toStrictEqual(new Map());
+    let found: unknown;
+    const { prepared } = await queriesDuring(async () => {
+      found = await otherPhotosOf(core(), []);
+    });
+
+    expect(found).toStrictEqual(new Map());
+    expect(prepared).toStrictEqual([]);
   });
 });
 
 describe("the read's cost", () => {
   it("probes the runner's kits and each kit's photos by index, never a scan", async () => {
-    for (const subjectType of ["photo", "entry"] as const) {
-      const { sql, params } = otherPhotosQuery(core(), {
-        subjectType,
-        subjectId: newUlid(),
-      }).toSQL();
-      const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
-        .bind(...params)
-        .all<{ detail: string }>();
-      const details = plan.results.map((row) => row.detail).join("\n");
-      // The runner's kits by an index on user_id: the window count reads
-      // every one of them before the limit, so the planner may take either.
-      expect(details).toMatch(
-        /outfit_entries USING INDEX entries_user_(audience_)?created \(user_id=\?\)/,
-      );
-      expect(details).toMatch(
-        /entry_photos USING INDEX entry_photos_idempotency/,
-      );
-      expect(details).toMatch(
-        /moderation_actions USING INDEX moderation_actions_subject/,
-      );
-      // The handle, for the link to D8, by primary key.
-      expect(details).toMatch(
-        /SEARCH user_profiles USING (INTEGER )?PRIMARY KEY|user_profiles USING INDEX sqlite_autoindex_user_profiles/,
-      );
-      expect(details).not.toMatch(
-        /SCAN\s+(outfit_entries|entry_photos|moderation_actions|user_profiles)/i,
-      );
-    }
+    // Both kinds of subject in the one read the page makes (design 188).
+    const { sql, params } = otherPhotosQuery(core(), [
+      { subjectType: "photo", subjectId: newUlid() },
+      { subjectType: "entry", subjectId: newUlid() },
+    ]).toSQL();
+    const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
+      .bind(...params)
+      .all<{ detail: string }>();
+    const details = plan.results.map((row) => row.detail).join("\n");
+    // The runner's kits by an index on user_id: the window count reads
+    // every one of them before the limit, so the planner may take either.
+    expect(details).toMatch(
+      /outfit_entries USING INDEX entries_user_(audience_)?created \(user_id=\?\)/,
+    );
+    expect(details).toMatch(
+      /entry_photos USING INDEX entry_photos_idempotency/,
+    );
+    expect(details).toMatch(
+      /moderation_actions USING INDEX moderation_actions_subject/,
+    );
+    // The handle, for the link to D8, by primary key.
+    expect(details).toMatch(
+      /SEARCH user_profiles USING (INTEGER )?PRIMARY KEY|user_profiles USING INDEX sqlite_autoindex_user_profiles/,
+    );
+    expect(details).not.toMatch(
+      /SCAN\s+(outfit_entries|entry_photos|moderation_actions|user_profiles)/i,
+    );
   });
 });
 

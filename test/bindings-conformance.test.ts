@@ -286,6 +286,9 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
       { binding: "MEDIA", bucket_name: "dialed-media" },
       { binding: "IMPORTS", bucket_name: "dialed-imports" },
       { binding: "PUBLIC_PHOTOS", bucket_name: "dialed-public-photos" },
+      // The photo backup (D-172, design 186): a bucket of its own, never
+      // `dialed-media`, or the backup would be the thing it backs up.
+      { binding: "MEDIA_BACKUP", bucket_name: "dialed-media-backup" },
     ]);
     expect(r2Buckets(testConfig)).toStrictEqual(r2Buckets(config));
   });

@@ -85,6 +85,12 @@ export interface QueryTally {
   The sum of `meta.rows_read` over every statement run.
   */
   rowsRead: number;
+  /**
+   * The SQL of every statement prepared, batched or not, in order (design
+   * 188): D1 refuses a statement over 100 KB, and a read that spells its
+   * inputs into the SQL grows towards that with the page.
+   */
+  readonly prepared: string[];
 }
 
 /**
@@ -96,7 +102,10 @@ export async function queriesDuring(
   work: () => Promise<unknown>,
   binding: D1Database = env.DIALED_CORE,
 ): Promise<QueryTally> {
-  const tally: QueryTally = { statements: [], rowsRead: 0 };
+  const tally: QueryTally = { statements: [], rowsRead: 0, prepared: [] };
+  const prepared = (query: string) => {
+    tally.prepared.push(query);
+  };
   const into =
     (sql: string): OnRun =>
     (rowsRead) => {
@@ -109,9 +118,10 @@ export async function queriesDuring(
   const batch: D1Database["batch"] = binding.batch.bind(binding);
   const withSession = binding.withSession.bind(binding);
   const spies = [
-    vi
-      .spyOn(binding, "prepare")
-      .mockImplementation((query) => counted(prepare(query), query)),
+    vi.spyOn(binding, "prepare").mockImplementation((query) => {
+      prepared(query);
+      return counted(prepare(query), query);
+    }),
     vi
       .spyOn(binding, "batch")
       .mockImplementation(<T>(statements: D1PreparedStatement[]) =>
@@ -120,7 +130,10 @@ export async function queriesDuring(
     vi.spyOn(binding, "withSession").mockImplementation((constraint) => {
       const session = withSession(constraint);
       return {
-        prepare: (query) => counted(session.prepare(query), query),
+        prepare: (query) => {
+          prepared(query);
+          return counted(session.prepare(query), query);
+        },
         batch: <T>(statements: D1PreparedStatement[]) =>
           countedBatch(session.batch<T>(statements), into("batch")),
         getBookmark: () => session.getBookmark(),
@@ -144,6 +157,10 @@ export interface QueryCounts {
   readonly weather: number;
   readonly coreRowsRead: number;
   readonly weatherRowsRead: number;
+  /**
+  The longest statement core was asked, in characters (design 188).
+  */
+  readonly coreLongestSql: number;
 }
 
 export async function queryCounts(
@@ -153,11 +170,12 @@ export async function queryCounts(
   const weather = await queriesDuring(async () => {
     core = await queriesDuring(work, env.DIALED_CORE);
   }, env.DIALED_WEATHER);
-  const counted = core ?? { statements: [], rowsRead: 0 };
+  const counted = core ?? { statements: [], rowsRead: 0, prepared: [] };
   return {
     core: counted.statements.length,
     weather: weather.statements.length,
     coreRowsRead: counted.rowsRead,
     weatherRowsRead: weather.rowsRead,
+    coreLongestSql: Math.max(0, ...counted.prepared.map((sql) => sql.length)),
   };
 }

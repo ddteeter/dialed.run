@@ -38,6 +38,20 @@ describe("queriesDuring", () => {
     expect(tally.rowsRead).toBe(3);
   });
 
+  it("keeps the SQL of every statement prepared, batched ones included (design 188)", async () => {
+    const long = sql`SELECT * FROM spy_rows WHERE n > 0 AND n < 100`;
+    const short = sql`SELECT n FROM spy_rows`;
+    const tally = await queriesDuring(async () => {
+      await db().batch([db().all(long), db().all(short)]);
+      await db().all(short);
+    });
+    expect(tally.prepared).toStrictEqual([
+      "SELECT * FROM spy_rows WHERE n > 0 AND n < 100",
+      "SELECT n FROM spy_rows",
+      "SELECT n FROM spy_rows",
+    ]);
+  });
+
   it("meters a read through raw(), which carries no meta", async () => {
     let values: unknown;
     const tally = await queriesDuring(async () => {
@@ -135,6 +149,7 @@ describe("queryCounts", () => {
       weather: 1,
       coreRowsRead: 4,
       weatherRowsRead: 1,
+      coreLongestSql: "SELECT * FROM spy_rows WHERE id = 1".length,
     });
   });
 });

@@ -43,8 +43,9 @@ bucket).
   is deleted. A runner's deletion therefore reaches the backup within ~31
   days instead of never.
 - A per-firing cap on copies; the remainder is next day's, reported.
-- Unbound `MEDIA_BACKUP` (declared optional until the binding lands):
-  the digest says the backup is not configured (law 5).
+- `MEDIA_BACKUP` is bound in `wrangler.jsonc` in the same PR (owner's
+  permission, 2026-11-08), so the code, the binding and its conformance
+  test land together.
 
 ## Contract touches
 

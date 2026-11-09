@@ -106,7 +106,8 @@ what the policy does not say:
 - Each Workers binding is reached only through `src/env` (CLAUDE.md).
 - Secrets are Workers secrets, never in the repository
   (`docs/deployment.md` §5).
-- D1 has 30 days of point-in-time restore; R2 has no backup
+- D1 has 30 days of point-in-time restore; garment and entry photos have
+  a daily copy in a second R2 bucket, kept 30 days after a delete
   (`docs/deployment.md` §9–§10).
 - Evidence outside the app (NCMEC report context, takedown notes, the
   breach register) is in a private R2 bucket with no Worker binding,

@@ -42,7 +42,12 @@ import {
   HOLD_MATCH_DISTANCE,
   isDistinctive,
 } from "../../lib/photo-fingerprint";
-import { bitsSetSql, nearestOf } from "../../lib/sql/fingerprint-distance";
+import {
+  bitsSetSql,
+  distanceBetweenSql,
+  nearestOf,
+} from "../../lib/sql/fingerprint-distance";
+import { jsonField, jsonTable } from "../../lib/sql/json-list";
 import { ceilingReading } from "./breakers";
 import type { RemovalReason } from "./contracts";
 
@@ -225,7 +230,8 @@ export type RemovedImage = RemovedMatch &
  * page of Review rows, nearest first (round 42: a second removal in range
  * is a repeat upload, and the operator sees it), by photo id. A photo
  * gone since, or with no fingerprint, is not read at all, so the map has
- * no entry for it; one with nothing near has an empty list.
+ * no entry for it; one with nothing near has an empty list. Two
+ * statements and then one, however many photos (design 188).
  */
 export async function removedMatchesOf(
   db: Db,
@@ -253,38 +259,64 @@ export async function removedMatchesOf(
       .where(garments),
   ]);
   const photos = [...kitPhotos, ...garmentPhotos];
-  const answers = await Promise.all(
-    photos.map(
-      async (photo) =>
-        [photo.id, await removedImagesNear(db, photo.fingerprint)] as const,
-    ),
+  const near = await removedImagesNear(db, photos);
+  return new Map(
+    photos.map((photo) => [
+      photo.id,
+      (near.get(photo.id) ?? []).map((row) => row.image),
+    ]),
   );
-  return new Map(answers);
 }
 
 /**
- * The kept fingerprints within the hold's match distance of `fingerprint`,
+ * The kept fingerprints within the hold's match distance of each photo,
  * nearest first and the earliest of equals, each with the Remove that
  * kept it: its subject names the photo where the kept row has no id of
  * its own, and its owner gives the handle. A kept row always has its
  * Remove (one batch writes both, and one sweeps both).
+ *
+ * **One statement for the page** (design 188, #490): the photos'
+ * fingerprints are one bound JSON list, compared column to column
+ * (`distanceBetweenSql`), and the kept rows are the outer loop, each read
+ * once. A fingerprint too plain to match by is left out of the list: near
+ * one of those is near half the uploads (design 164).
  */
 async function removedImagesNear(
   db: Db,
-  fingerprint: string,
-): Promise<RemovedImage[]> {
-  const near = keptNear(fingerprint);
-  if (near === undefined) return [];
+  photos: readonly Readonly<{ id: string; fingerprint: string }>[],
+): Promise<Map<string, Readonly<{ photoId: string; image: RemovedImage }>[]>> {
+  // Parsed, not trusted, as `keptNear` parses: only a fingerprint this
+  // repo wrote is searched by.
+  const probes = photos
+    .map((photo) => ({
+      photoId: photo.id,
+      print: fingerprintSchema.parse(photo.fingerprint),
+    }))
+    .filter((probe) => isDistinctive(probe.print));
+  if (probes.length === 0) return new Map();
+  const probe = jsonTable(db, "probe", probes, {
+    photoId: jsonField<string>("photoId").as("probe_photo"),
+    print: jsonField<string>("print").as("probe_print"),
+  });
+  const bits = distanceBetweenSql(
+    removedFingerprints.fingerprint,
+    sql`${probe.print}`,
+  );
   const rows = await db
+    .with(probe)
     .select({
-      distance: near.distance,
-      removedAt: removedFingerprints.createdAt,
-      keptId: removedFingerprints.id,
-      id: sql<string>`coalesce(${removedFingerprints.photoId}, ${moderationActions.subjectId})`,
+      photoId: sql<string>`${probe.photoId}`,
+      image: {
+        distance: sql<number>`${bits}`.mapWith(Number),
+        removedAt: removedFingerprints.createdAt,
+        keptId: removedFingerprints.id,
+        id: sql<string>`coalesce(${removedFingerprints.photoId}, ${moderationActions.subjectId})`,
+      },
       subjectType: moderationActions.subjectType,
       handle: userProfiles.username,
     })
     .from(removedFingerprints)
+    .crossJoin(probe)
     .innerJoin(
       moderationActions,
       eq(moderationActions.id, removedFingerprints.moderationActionId),
@@ -293,11 +325,19 @@ async function removedImagesNear(
       userProfiles,
       eq(userProfiles.userId, moderationActions.subjectOwnerId),
     )
-    .where(near.within)
-    .orderBy(...near.nearestFirst);
-  return rows.map(({ subjectType, handle, ...row }) => ({
-    ...row,
-    kind: subjectType === "garment" ? "garment" : "kit",
-    handle: handle ?? undefined,
+    .where(lte(bits, HOLD_MATCH_DISTANCE))
+    .orderBy(
+      sql`${probe.photoId}`,
+      asc(bits),
+      asc(removedFingerprints.createdAt),
+    );
+  const images = rows.map(({ photoId, image, subjectType, handle }) => ({
+    photoId,
+    image: {
+      ...image,
+      kind: subjectType === "garment" ? "garment" : "kit",
+      handle: handle ?? undefined,
+    } satisfies RemovedImage,
   }));
+  return Map.groupBy(images, (row) => row.photoId);
 }

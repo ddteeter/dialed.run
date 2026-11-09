@@ -287,11 +287,12 @@ audit's list; where the two differ, the plan is current.
   then 100%. Rolling back is one command. The job, the smoke account and
   the rollback steps are in `docs/deployment.md` §9, and the job draft is
   `docs/ops/gradual-deploy.md`, which the owner applies to `ci.yml`.
-- **R2 has no versioning or backup**, and `MEDIA` is the source of truth.
-  126's 7-day deletion tombstone (ACC-9) is the mitigation for a bad bulk
-  delete; a real R2 backup is soon-after. What each prefix holds, what
-  losing it costs, and three options with a recommendation are in
-  `docs/deployment.md` §10.
+- **R2 has no versioning**, so the daily digest copies garment and entry
+  photos into `dialed-media-backup` (D-172, design 186), and a deleted
+  photo's copy leaves 30 days later (#529). `quarantine/` is locked with
+  an R2 bucket lock instead of copied (#530). The bucket and
+  the lock are the owner's steps, before friends: `docs/deployment.md`
+  §10.
 
 ---
 
