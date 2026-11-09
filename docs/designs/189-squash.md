@@ -70,6 +70,24 @@ entry_created_at) WHERE source != 'manual'`.
   verdict; the stored half against a live derivation from the cache.
 - D-108's published totals do not read this table; it holds no notes,
   photos or places, and its one time is the entry's.
+
+Found while building it (coordinator-4 approved each):
+
+- **`entry_shared`.** Measured first, today's window index is partial on
+  the shared audiences, so private entries cost nothing. A copy indexed by
+  band alone would read every private run in the band; the flag keeps them
+  out of the index. Only `feed/entries.ts` writes an entry's audience or
+  verdict, and `test/architecture/run-conditions-writers.test.ts` pins that
+  every such write batches the entry half.
+- **No in-batch clears in `runs` or `ops`.** A retime sets `pending`, then
+  attaches; if the attach fails it restores the old start and status, and
+  the old half is right again. The cron clears the half of every `pending`
+  run it claims, and settling writes a fresh one.
+- **A run counts once settled.** The live walk counted a run whose later
+  hours were still owed; the copy waits for them (D-156), a few hours.
+- **`judgedFeelsLikeC` stays in `feed`** (its Stryker grant is keyed to
+  the path); only the `Conditions` shape and `weatherHalfOf` moved to
+  `lib/contracts/conditions.ts`. The SQL rule is pinned against it.
 - #507: scaling tests on the model of `test/safety/desk-queues.scaling.test.ts`
   with `test/d1-spy.ts`: seed 25 rows the read must not return and assert
   rows read stay flat, for the consensus, the feeds and search. Measure the
