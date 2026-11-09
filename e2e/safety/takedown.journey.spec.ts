@@ -241,7 +241,11 @@ test("someone with no account asks for an intimate image to come down, and an op
   await hydrated(page);
   // The row whose link is the first kit: the requester has three now.
   const request = page.locator("[data-part='removal-request']").filter({
-    has: page.locator(`a[href="/desk/kit/${entryId}"]`),
+    // By its "Open the kit": the other request's row links this kit too,
+    // among the runner's other photos.
+    has: page.locator(`a[href="/desk/kit/${entryId}"]`, {
+      hasText: "Open the kit",
+    }),
   });
   await expect(request.locator("[data-part='due']")).toHaveText("Due in 48h");
   await expect(request).toContainText("[via /takedown]");

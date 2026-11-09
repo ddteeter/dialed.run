@@ -28,8 +28,7 @@ function kit(overrides: Partial<Kit> = {}): Kit {
     verdict: -1,
     caption: "Cold start",
     createdAt: 1_789_041_600,
-    runTitle: "Morning loop",
-    runStartedAt: 1_789_041_600,
+    run: { title: "Morning loop", startedAt: 1_789_041_600 },
     photos: [
       { id: PHOTO_1, photoKey: "entries/u/k/1", screenStatus: "pass" },
       { id: PHOTO_2, photoKey: "entries/u/k/2", screenStatus: "pending" },
@@ -103,8 +102,7 @@ describe("DeskKit", () => {
     await renderWithRouter(
       <DeskKit
         kit={kit({
-          runTitle: undefined,
-          runStartedAt: undefined,
+          run: undefined,
           caption: undefined,
           verdict: undefined,
         })}
@@ -114,21 +112,6 @@ describe("DeskKit", () => {
     expect(part("kit-run")).toBeNull();
     expect(part("kit-caption")).toBeNull();
     expect(part("kit-verdict")).toHaveTextContent("No verdict");
-  });
-
-  it.each([
-    [
-      "a title but no start",
-      { runTitle: "Morning loop", runStartedAt: undefined },
-    ],
-    [
-      "a start but no title",
-      { runTitle: undefined, runStartedAt: 1_789_041_600 },
-    ],
-  ] as const)("leaves out a run with %s", async (_, run) => {
-    await renderWithRouter(<DeskKit kit={kit(run)} />);
-
-    expect(part("kit-run")).toBeNull();
   });
 
   it("serves every photo through the reviewer route, with its id, and says which is not yet screened", async () => {

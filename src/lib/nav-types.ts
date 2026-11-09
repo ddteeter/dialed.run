@@ -170,7 +170,13 @@ const NAV: readonly Edge[] = [
   // destination rather than a journey (the tab bar's reasoning), and NAV has
   // no Desk rows. Added under the header's ownership rule. Desk · Review
   // too, for the same reason; its old address redirects to it (R-173).
-  { from: "*", to: ["/", "/desk/runners", "/desk/review"], type: "cut" },
+  // The Desk's kit view (#388) is a Desk page too, opened from Review's
+  // rows: a cut, as every Desk page is.
+  {
+    from: "*",
+    to: ["/", "/desk/runners", "/desk/review", "/desk/kit/$entryId"],
+    type: "cut",
+  },
 
   // The open web's pages (design 163, D-154): `/kit/<id>` and `/@handle`,
   // linked from each other with `reloadDocument`, since the root reads no

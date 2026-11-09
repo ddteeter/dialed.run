@@ -140,11 +140,11 @@ function Runner({
 The run the kit was worn on, and when; nothing for a run since deleted.
 */
 function RunLine({ kit }: Readonly<{ kit: Kit }>): JSX.Element | undefined {
-  if (kit.runTitle === undefined || kit.runStartedAt === undefined)
-    return undefined;
+  if (kit.run === undefined) return undefined;
   return (
     <span data-part="kit-run" className="text-body">
-      {kit.runTitle} · <Mono step="sm">{monthDayLabel(kit.runStartedAt)}</Mono>
+      {kit.run.title} ·{" "}
+      <Mono step="sm">{monthDayLabel(kit.run.startedAt)}</Mono>
     </span>
   );
 }

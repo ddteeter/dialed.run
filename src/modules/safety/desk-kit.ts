@@ -40,8 +40,10 @@ export interface DeskKit {
   readonly verdict: number | undefined;
   readonly caption: string | undefined;
   readonly createdAt: number;
-  readonly runTitle: string | undefined;
-  readonly runStartedAt: number | undefined;
+  /**
+  The run it was worn on; nothing for a run since deleted.
+  */
+  readonly run: Readonly<{ title: string; startedAt: number }> | undefined;
   readonly photos: readonly DeskKitPhoto[];
   readonly garments: readonly DeskKitGarment[];
 }
@@ -90,8 +92,9 @@ export async function deskKitFor(
         verdict: outfitEntries.verdict,
         caption: outfitEntries.caption,
         createdAt: outfitEntries.createdAt,
-        runTitle: runs.title,
-        runStartedAt: runs.startedAt,
+        // Drizzle answers a left join's object with none of its columns
+        // as null: one check for a run since deleted.
+        run: { title: runs.title, startedAt: runs.startedAt },
         // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; deskKitFor is the one read of a kit for the Desk, and its pieces already come from kitPiecesSelect, which feed/public-kit.ts shares
       })
       .from(outfitEntries)
@@ -117,8 +120,7 @@ export async function deskKitFor(
     handle: kit.handle ?? undefined,
     verdict: kit.verdict ?? undefined,
     caption: kit.caption ?? undefined,
-    runTitle: kit.runTitle ?? undefined,
-    runStartedAt: kit.runStartedAt ?? undefined,
+    run: kit.run ?? undefined,
     photos,
     garments: garments.map(({ id, name, brand, category }) => ({
       id,

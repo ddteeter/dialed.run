@@ -2,11 +2,12 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { entryPhotos, outfitEntries } from "../../src/db/schema-core";
+import { entryPhotos, outfitEntries, runs } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { AdminRequiredError } from "../../src/modules/safety";
 import { deskKitFor } from "../../src/modules/safety/desk-kit";
+import { deskKitInput } from "../../src/modules/safety/inputs";
 
 import {
   makeEntry,
@@ -108,8 +109,7 @@ describe("deskKitFor", () => {
       verdict: -1,
       caption: "Cold start",
       createdAt: NOW,
-      runTitle: "Test run",
-      runStartedAt: NOW - 3600,
+      run: { title: "Test run", startedAt: NOW - 3600 },
       photos: [
         {
           id: kit.first,
@@ -170,6 +170,18 @@ describe("deskKitFor", () => {
     expect(found?.handle).toMatch(/^runner_/);
   });
 
+  it("answers no run for a kit whose run is gone, and still the kit", async () => {
+    const userId = await makeUser();
+    const runId = await makeRun({ userId });
+    const entryId = await makeEntry({ userId, runId });
+    await core().delete(runs).where(eq(runs.id, runId));
+
+    const found = await asAdmin(async () => deskKitFor(core(), ADMIN, entryId));
+
+    expect(found?.id).toBe(entryId);
+    expect(found).toHaveProperty("run", undefined);
+  });
+
   it("answers nothing for a kit that does not exist", async () => {
     expect(
       await asAdmin(async () => deskKitFor(core(), ADMIN, newUlid())),
@@ -184,5 +196,19 @@ describe("deskKitFor", () => {
         AdminRequiredError,
       );
     });
+  });
+});
+
+describe("deskKitInput", () => {
+  it("takes the kit's id from the URL as it is", () => {
+    const entryId = newUlid();
+    expect(deskKitInput.parse({ entryId })).toStrictEqual({ entryId });
+  });
+
+  it("reads an id that is not one as no kit, rather than failing", () => {
+    expect(deskKitInput.parse({ entryId: "x".repeat(65) })).toStrictEqual({
+      entryId: "",
+    });
+    expect(deskKitInput.parse({})).toStrictEqual({ entryId: "" });
   });
 });
