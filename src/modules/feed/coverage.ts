@@ -1,7 +1,7 @@
 import type { VerdictKind } from "../../ui";
 
 import { bandFloorC } from "../../lib/contracts/temperature";
-import type { Conditions } from "./conditions-shape";
+import type { Conditions } from "../../lib/contracts";
 import { judgedFeelsLikeC } from "./judged-conditions";
 
 /**

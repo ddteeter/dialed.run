@@ -63,6 +63,7 @@ import {
   reactions,
   reminderEmailDays,
   reports,
+  runConditions,
   runs,
   stravaConnections,
   termsAcceptances,
@@ -479,6 +480,8 @@ async function deleteAccountRows(
     // Corrections they sent (D-163): a decided product keeps its value,
     // and a waiting one loses one runner from its row.
     productCorrections,
+    // The copies of their runs' conditions (D-175).
+    runConditions,
   ] as const;
   // The trailing rows below share the same "found by nothing but the
   // runner's id" shape as `byUserId`, just on a column that is not always

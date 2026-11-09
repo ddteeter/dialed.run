@@ -1,18 +1,15 @@
 /**
  * "Your conditions" (E2-lite, D-10/D-16): consensus block only, no stranger
- * cards. Every public entry in the window, via the `entries_shared_created`
- * index, then the weather cache cells of their runs.
- * `source='manual'` observations are excluded from the aggregate.
+ * cards. The entries in the viewer's conditions in the window, found by
+ * the copy of each run's judged conditions in core (`run_conditions`,
+ * D-175, design 189) and its band index, so the read tracks the runs that
+ * match rather than every shared run in the window. `source='manual'`
+ * conditions are excluded from the aggregate.
  *
- * **No LIMIT on the window, deliberately.** The match is decided against
- * weather in DIALED_WEATHER, which SQL here cannot join to, so the filter
- * runs in code — and a `LIMIT 200` ahead of it answered "the matches among
- * the newest 200", hiding every runner in the viewer's conditions behind a
- * busy afternoon somewhere else (PR #102 review). The read is bounded by
- * the window instead. Reading weather first would bound it by the band,
- * but the cache has no index to find cells by hour and feels-like, and
- * nothing maps a cell back to runs; that is an index decision for the
- * owner, recorded in PR #102's Register.
+ * **No LIMIT, deliberately.** A `LIMIT 200` once answered "the matches
+ * among the newest 200", hiding every runner in the viewer's conditions
+ * behind a busy afternoon somewhere else (PR #102 review). The read is
+ * bounded by the band and the window instead.
  *
  * Round 22 set the rules this module now keeps:
  *
@@ -38,11 +35,12 @@
  * is untouched: the block still works for them, since the viewer is never
  * counted anyway.
  */
-import { and, eq, gte, inArray, ne, notExists, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, lte, ne, notExists, sql } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import {
   outfitEntries,
+  runConditions,
   outfitEntryItems,
   userProfiles,
   wardrobeItems,
@@ -52,8 +50,7 @@ import { readInChunks } from "../../lib/chunked";
 import { precipClassOf } from "../../lib/contracts/temperature";
 import type { PrecipClass } from "../../lib/contracts/temperature";
 import type { Conditions } from "./conditions";
-import { observationsForEntries, conditionsAt } from "./conditions";
-import { judgedFeelsLikeC } from "./judged-conditions";
+import { conditionsAt } from "./conditions";
 import { garmentTypeOf } from "../../lib/contracts/garment-fields";
 import type { GarmentType } from "../../lib/contracts/garment-fields";
 import type { DialedType } from "./bar-share";
@@ -99,28 +96,102 @@ export function recentPublicEntriesStatement(
   viewerId?: string,
 ) {
   // Only the five columns the tally reads: the window is unbounded by
-  // count now, so every column left out is paid for on every row of it.
+  // count, so every column left out is paid for on every row of it.
   // `createdAt` is the sentence's tie-break, "dialed most recently".
   return outfitEntriesSelect(
     database,
-    {
-      id: outfitEntries.id,
-      runId: outfitEntries.runId,
-      userId: outfitEntries.userId,
-      verdict: outfitEntries.verdict,
-      createdAt: outfitEntries.createdAt,
-    },
-    // publiclyVisibleEntry(), not a bare audience test: a removed or
-    // pending-review entry must not count toward the numbers everyone
-    // reads (packet: "hidden content must not count"). A missed clause
-    // here hides nothing visibly — it just quietly skews the aggregate.
-    and(
-      publiclyVisibleEntry(),
-      gte(outfitEntries.createdAt, sinceEpochSeconds),
-      viewerId === undefined ? undefined : ne(outfitEntries.userId, viewerId),
-      countsInTotals(database),
-    ),
+    TALLY_COLUMNS,
+    countableEntry(database, sinceEpochSeconds, viewerId),
   );
+}
+
+/**
+The five columns of an entry the tally reads.
+*/
+const TALLY_COLUMNS = {
+  id: outfitEntries.id,
+  runId: outfitEntries.runId,
+  userId: outfitEntries.userId,
+  verdict: outfitEntries.verdict,
+  createdAt: outfitEntries.createdAt,
+};
+
+/**
+ * Which entries the consensus may count, read live from the entry and its
+ * runner whatever narrowed the read (D-175): shared and in standing, in
+ * the window, not the viewer's own, and not a runner who turned totals
+ * off.
+ */
+function countableEntry(
+  database: DrizzleD1Database,
+  sinceEpochSeconds: number,
+  viewerId?: string,
+) {
+  // publiclyVisibleEntry(), not a bare audience test: a removed or
+  // pending-review entry must not count toward the numbers everyone
+  // reads (packet: "hidden content must not count"). A missed clause
+  // here hides nothing visibly — it just quietly skews the aggregate.
+  return and(
+    publiclyVisibleEntry(),
+    gte(outfitEntries.createdAt, sinceEpochSeconds),
+    viewerId === undefined ? undefined : ne(outfitEntries.userId, viewerId),
+    countsInTotals(database),
+  );
+}
+
+/**
+ * The whole degrees a judged feels-like can floor to and still be within
+ * `BAND_HALF_WIDTH_C` of the viewer's: what `run_conditions_band` seeks.
+ * A bucket at an end can hold a run just outside the band, which the
+ * exact check after it drops.
+ */
+export function bandBuckets(feelsLikeC: number): number[] {
+  const lowest = Math.floor(feelsLikeC - BAND_HALF_WIDTH_C);
+  const highest = Math.floor(feelsLikeC + BAND_HALF_WIDTH_C);
+  return Array.from(
+    { length: highest - lowest + 1 },
+    (_unused, offset) => lowest + offset,
+  );
+}
+
+/**
+ * The entries in the viewer's conditions in the window, found by the copy
+ * of their runs' conditions in core (\`run_conditions\`, D-175) rather
+ * than by reading every shared entry in the window and then its weather.
+ *
+ * Driven from the copy's band index, so what it reads tracks the matches:
+ * \`CROSS JOIN\` keeps SQLite from starting at the entries' window index
+ * instead. The partial index's own terms are spelled as it spells them
+ * (literals, not bound values), or SQLite cannot prove the index covers
+ * the query. The entry and its runner are still read live
+ * (\`countableEntry\`); the copy only says which runs are in the band.
+ */
+export function matchingEntriesStatement(
+  database: DrizzleD1Database,
+  viewer: Conditions,
+  sinceEpochSeconds: number,
+  viewerId?: string,
+) {
+  const copy = runConditions;
+  const precipitation = precipClassOf(viewer.precipMm);
+  const buckets = bandBuckets(viewer.feelsLikeC);
+  const distance = sql`abs(${copy.judgedFeelsLikeC} - ${viewer.feelsLikeC})`;
+  return database
+    .select(TALLY_COLUMNS)
+    .from(copy)
+    .crossJoin(outfitEntries)
+    .where(
+      and(
+        eq(copy.precipClass, precipitation),
+        inArray(copy.judgedBucket, buckets),
+        gte(copy.entryCreatedAt, sinceEpochSeconds),
+        sql`${copy.entryShared} = 1`,
+        sql`${copy.source} != 'manual'`,
+        lte(distance, BAND_HALF_WIDTH_C),
+        eq(outfitEntries.runId, copy.runId),
+        countableEntry(database, sinceEpochSeconds, viewerId),
+      ),
+    );
 }
 
 /**
@@ -187,26 +258,6 @@ export type ConsensusResult =
     };
 
 /**
- * The two sides are deliberately asymmetric. The **entry** is compared at
- * the hour its runner actually judged by (`judgedFeelsLikeC`), because that
- * is the temperature their verdict is a statement about. The **viewer** is
- * a live reading with no verdict to be worst relative to, so it stays the
- * point it is. "What did people wear when it felt like it does to me now."
- */
-function isWithinConsensusBand(
-  observation: Conditions,
-  verdict: number | null,
-  viewer: Conditions,
-): boolean {
-  return (
-    observation.source !== "manual" &&
-    precipClassOf(observation.precipMm) === precipClassOf(viewer.precipMm) &&
-    Math.abs(judgedFeelsLikeC(observation, verdict) - viewer.feelsLikeC) <=
-      BAND_HALF_WIDTH_C
-  );
-}
-
-/**
  * Who matched in a window, and which groups each of them wore.
  *
  * Runners, not entries: one runner's several matching posts are one voice.
@@ -233,29 +284,15 @@ export async function matchTally(
   viewerId?: string,
 ): Promise<MatchTally> {
   const database = coreDb();
-  const entries = await recentPublicEntriesStatement(
+  // The band, the precipitation, the manual exclusion and the judging
+  // hour are all decided in SQL now, against the copy in core: no walk to
+  // the weather database, and no row read for a run outside the band.
+  const matching = await matchingEntriesStatement(
     database,
+    viewer,
     sinceEpochSeconds,
     viewerId,
   );
-  // Equivalent mutant: no entries means no observations and nothing to
-  // filter, so the empty list comes out either way. The return saves the
-  // cross-database walk.
-  // Stryker disable next-line ConditionalExpression
-  if (entries.length === 0) return noTally();
-  // In code rather than SQL: the observations live in DIALED_WEATHER, a
-  // separate database D1 cannot join to (CLAUDE.md, D1 discipline).
-  const observations = await observationsForEntries(database, entries);
-  const matching = entries.filter((entry) => {
-    const observation = observations.get(entry.runId);
-    // Both halves matter: an entry whose conditions were never resolved
-    // cannot be compared to the viewer's, and reading one anyway is a
-    // crash on the consensus block rather than a miscount.
-    return (
-      observation !== undefined &&
-      isWithinConsensusBand(observation, entry.verdict, viewer)
-    );
-  });
   const dialed = matching.filter((entry) => entry.verdict === 0);
   const worn = await wornByRunner(
     database,
@@ -287,10 +324,6 @@ function tallyOf(
 /**
 Nobody matched: no runners, no groups, and nobody dialed.
 */
-function noTally(): MatchTally {
-  return { runners: 0, groups: {}, dialed: { runners: 0, types: [] } };
-}
-
 function runnersIn(entries: readonly { userId: string }[]): number {
   return new Set(entries.map((entry) => entry.userId)).size;
 }

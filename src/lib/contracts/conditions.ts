@@ -1,17 +1,20 @@
 /**
- * What a set of conditions *is*, with no way to read one.
+ * What a set of conditions *is*, with no way to read one: the shape the
+ * weather module derives for a run and the feed renders (design 189 moved
+ * it here from `feed/conditions-shape.ts` so weather can build it too).
  *
- * Separate from `conditions.ts` because that file imports `src/env` to
- * reach `DIALED_WEATHER`, and anything importing a value from it drags
- * `cloudflare:workers` along — which breaks the client build and, before
- * that, any test running in jsdom. The types alone would be fine (they
- * erase); `pointSpan` is a value, and a value is what pulls the graph.
- *
- * Same device as `feed/route-decisions.ts` and `runs/not-found.ts`:
- * the part a component or a dom test needs lives in a sibling that
- * imports nothing server-side, and `conditions.ts` re-exports it so
- * callers that are already server-side see one module.
+ * Pure and isomorphic, like the rest of `lib/contracts`: a component may
+ * import it, which is why it never lived beside the reads that need
+ * `src/env`.
  */
+import { precipClassOf } from "./temperature";
+
+/**
+Where a run's conditions came from: the weather provider, or a band its runner set (B1).
+*/
+export const CONDITIONS_SOURCES = ["visualcrossing", "manual"] as const;
+export type ConditionsSource = (typeof CONDITIONS_SOURCES)[number];
+
 export interface Conditions {
   /**
    * The **starting** hour, still — every reader that had one number before
@@ -23,7 +26,7 @@ export interface Conditions {
   precipMm: number;
   condition: string;
   windKph: number;
-  source: "visualcrossing" | "manual";
+  source: ConditionsSource;
   /**
    * The IANA zone of the place the observation was made (R-96), so a run's
    * date and time render where the run happened rather than in UTC.
@@ -48,6 +51,22 @@ export interface ConditionsSpan {
   maxTempC: number;
   minFeelsLikeC: number;
   maxFeelsLikeC: number;
+}
+
+/**
+ * Weather's half of a run's copy in core (`run_conditions`, D-175), as the
+ * run's conditions give it: the start, the coldest and warmest hours, the
+ * starting hour's precipitation class and where it came from. Pure, so a
+ * seed that writes the copy directly builds it the way the writer does.
+ */
+export function weatherHalfOf(conditions: Conditions) {
+  return {
+    feelsLikeC: conditions.feelsLikeC,
+    minFeelsLikeC: conditions.span.minFeelsLikeC,
+    maxFeelsLikeC: conditions.span.maxFeelsLikeC,
+    precipClass: precipClassOf(conditions.precipMm),
+    source: conditions.source,
+  };
 }
 
 /**

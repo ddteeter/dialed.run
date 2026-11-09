@@ -15,7 +15,11 @@
 
 import type { TempUnit } from "./profile";
 
-export type PrecipClass = "dry" | "damp" | "wet";
+/**
+The three precipitation classes, wettest last. The copy of a run's conditions stores one (`run_conditions.precip_class`).
+*/
+export const PRECIP_LEVELS = ["dry", "damp", "wet"] as const;
+export type PrecipClass = (typeof PRECIP_LEVELS)[number];
 
 export function precipClassOf(precipMm: number): PrecipClass {
   if (precipMm <= 0.1) return "dry";

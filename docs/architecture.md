@@ -142,9 +142,12 @@ Key decisions embedded here:
   the first implementation; swapping providers is a one-directory change.
   (The design artboards label the forecast "NWS" — that's a design delta, not
   a decision; see `docs/design-deltas.md`.) Weather also reads/writes
-  `runs.weather_status` in `dialed-core` directly (the only column it
-  touches there) since that status lives on the run, not the cache; other
-  modules reach cached conditions only through weather's `index.ts` reads.
+  `runs.weather_status` in `dialed-core` directly, since that status lives
+  on the run, not the cache, and in the same batch writes its half of
+  `run_conditions`, the copy of a settled run's conditions in core (D-175,
+  design 189). The derivation of a run's conditions from the cache lives in
+  weather (`run-conditions.ts`) for that reason; other modules reach cached
+  conditions only through weather's `index.ts` reads.
   The hourly retry cron is dispatched from `modules/ops/scheduled.ts`.
 
   **Its attribution line is not in the module** (moved by task 115).
@@ -465,13 +468,15 @@ the `:15` firing sweeps everything and deletes objects no row names.
 `PUBLIC_PHOTOS_ORIGIN` is the switch; unset, nothing is copied.
 
 **Your conditions (E2-lite)** — the consensus block only in v1: recent shared
-entries (last 72h, `outfit_entries(audience, moderation_status, created_at)` index) whose
-runs' observations fall within a proximity window of the viewer's current
-conditions (±3°C on feels-like, same precip class), aggregated to
-per-UI-group wear counts ("15/18 wore long sleeve"). Bounded scan window +
-in-Worker aggregation is fine at launch scale; the packet requires EXPLAIN
-output and a row-scan cap. Manual-source observations are excluded. Stranger
-cards and follow CTAs are the full-E2 epic, post-MVP.
+entries (3 days, widened once to 14) whose runs' judged conditions fall
+within a proximity window of the viewer's current conditions (±3°C on
+feels-like, same precip class), aggregated to per-UI-group wear counts
+("15/18 wore long sleeve"). Since #409 (D-175) the match is found in core,
+through `run_conditions`' band index, rather than by reading every shared
+entry in the window and then each run's weather in `DIALED_WEATHER`, so
+what it reads grows with the runs that match. Audience, moderation and the
+totals opt-out are read live in the join. Manual-source conditions are
+excluded. Stranger cards and follow CTAs are the full-E2 epic, post-MVP.
 
 ## Composing across modules
 

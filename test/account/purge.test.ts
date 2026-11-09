@@ -30,6 +30,7 @@ import {
   reminderEmailDays,
   reports,
   reviewQueue,
+  runConditions,
   runs,
   stravaConnections,
   stravaRevocations,
@@ -134,6 +135,24 @@ interface Seeded {
  * everything that names only them. Rows between two runners are seeded by
  * the test, after the "before" snapshot.
  */
+/**
+The copy of the first run's conditions the consensus reads (D-175).
+*/
+function conditionsCopy(runIds: readonly string[], userId: string) {
+  return core.insert(runConditions).values({
+    runId: runIds[0] ?? "",
+    userId,
+    feelsLikeC: 4,
+    minFeelsLikeC: 4,
+    maxFeelsLikeC: 4,
+    precipClass: "dry",
+    source: "visualcrossing",
+    verdict: 0,
+    entryCreatedAt: NOW,
+    entryShared: true,
+  });
+}
+
 async function seedAccount(): Promise<Seeded> {
   const userId = newUlid();
   const tail = userId.toLowerCase();
@@ -197,6 +216,7 @@ async function seedAccount(): Promise<Seeded> {
       audience: "runners",
       createdAt: NOW,
     }),
+    conditionsCopy(runIds, userId),
     core.insert(wardrobeItems).values([
       {
         id: garmentIds[0] ?? "",
@@ -538,6 +558,10 @@ async function footprint(seeded: Seeded) {
       .from(userProfiles)
       .where(eq(userProfiles.userId, userId)),
     runs: await core.select().from(runs).where(eq(runs.userId, userId)),
+    runConditions: await core
+      .select()
+      .from(runConditions)
+      .where(eq(runConditions.userId, userId)),
     manualConditions: await weather
       .select()
       .from(manualConditions)
@@ -663,6 +687,7 @@ const GONE = {
   session: [],
   account: [],
   profile: [],
+  runConditions: [],
   runs: [],
   manualConditions: [],
   entries: [],

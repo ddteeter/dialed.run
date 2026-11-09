@@ -15,6 +15,10 @@ import type { ManualSky } from "../../lib/contracts";
 import type { Ulid } from "../../lib/ids";
 import { weatherProvider } from "./provider";
 import {
+  clearWeatherHalves,
+  weatherHalfStatements,
+} from "./run-conditions-copy";
+import {
   runHourKeys,
   lastSampledHourBucket,
   cacheKeyFor,
@@ -105,6 +109,11 @@ function isResolved(status: WeatherStatus): boolean {
  * Write a run's weather status. A run that resolves — fetched, or a band
  * its runner typed — is off the Desk's Gave up in the same batch (R-119),
  * whichever path resolved it: the hourly cron, an operator's Retry, R2b.
+ *
+ * The same batch writes weather's half of the run's copy in core
+ * (`run_conditions`, D-175), so a settled run and its copy are one fact.
+ * Both callers pinned the weather primary first, so the derivation reads
+ * the observation they just wrote.
  */
 async function setStatus(runId: Ulid, status: WeatherStatus): Promise<void> {
   const db = coreDb();
@@ -116,7 +125,8 @@ async function setStatus(runId: Ulid, status: WeatherStatus): Promise<void> {
     await update;
     return;
   }
-  await db.batch([update, gaveUpClear(db, "weather", runId)]);
+  const copy = await weatherHalfStatements(db, runId);
+  await db.batch([update, gaveUpClear(db, "weather", runId), ...copy]);
 }
 
 /**
@@ -352,6 +362,12 @@ export async function retryPendingWeather(): Promise<RetryCronResult> {
     .orderBy(asc(runs.startedAt))
     .limit(RETRY_BATCH_SIZE);
 
+  // The copy's repair (law 8c): a run owed weather again keeps no half
+  // until it settles, and settling it below writes a fresh one.
+  await clearWeatherHalves(
+    db,
+    candidates.map((candidate) => candidate.id),
+  );
   let attached = 0;
   for (const candidate of candidates) {
     const outcome = await resolveAndAttach(candidate.id as Ulid);

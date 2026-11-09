@@ -10,29 +10,33 @@ import {
   matchTally,
   yourConditionsConsensus,
 } from "../../src/modules/feed/consensus";
+import { IN_LIST_CHUNK } from "../../src/lib/chunked";
 import { queryCounts } from "../d1-spy";
 import { pointConditions } from "./conditions-fixture";
 import {
+  makeEntry,
   makeItem,
   makeObservation,
+  makeRun,
   makeUser,
   NOW,
   resetTables,
+  syncRunConditions,
 } from "./helpers";
 import {
   DAY,
   HOUR,
   FEELS_LIKE_C,
-  observationWalk,
   PLACE,
   seedEntry,
   seedObservation,
 } from "./scaling-fixture";
 
 /**
- * Design 182: the conditions consensus reads every public entry in its
- * window, so its query count must not grow with the runners in it. Rows
- * read may; the weather side grows only by `observationWalk`'s chunks.
+ * Design 182: the conditions consensus's query count must not grow with
+ * the runners in it. Since #409 it reads the copy of each run's conditions
+ * in core (D-175), so it asks the weather database nothing, and its rows
+ * read grow with the runs that match, not with the window (#507, below).
  */
 
 const VIEWER = pointConditions({ tempC: 8, feelsLikeC: FEELS_LIKE_C });
@@ -72,6 +76,7 @@ async function oneThenTwentyFive<T>(
     await resetTables();
     await before?.();
     await seedRunners(runners, ago);
+    await syncRunConditions();
     let result: T | undefined;
     const counts = await queryCounts(async () => {
       result = await read();
@@ -90,11 +95,12 @@ async function oneThenTwentyFive<T>(
 What one `matchTally` over a window holding `entries` matching ones asks.
 */
 function tallyQueries(entries: number) {
-  const walk = observationWalk(entries);
-  // The window's entries, then `observationsForEntries`'s run chunks,
-  // then `wornByRunner`'s two chunked reads (consensus.ts:282): the kit
-  // rows of the matching entries and their garments, 80 ids a statement.
-  return { core: 1 + walk.core + 2 * walk.core, weather: walk.weather };
+  const chunks = Math.ceil(entries / IN_LIST_CHUNK);
+  // The matching entries, found by the copy of their runs' conditions in
+  // core (D-175), then `wornByRunner`'s two chunked reads: the kit rows of
+  // the matching entries and their garments, 80 ids a statement. Nothing
+  // is asked of the weather database: the copy holds what it answered.
+  return { core: 1 + 2 * chunks, weather: 0 };
 }
 
 describe("matchTally: the same queries for 1 runner or 25 (design 182)", () => {
@@ -192,6 +198,125 @@ describe("feedConditions: the same queries for 1 runner or 25", () => {
     expect(one.counts.core).toBe(1 + bothWindows(1).core);
     expect(one.counts.weather).toBe(1 + bothWindows(1).weather);
     expect(twentyFive.counts.weather).toBe(1 + bothWindows(25).weather);
+  });
+});
+
+/**
+ * #507: the rows the consensus reads, beside rows it must not return.
+ * Statement counts cannot tell a read that reads what it shows from one
+ * that reads everything near it, so these count rows read, with one
+ * matching runner and then with twenty-five unrelated rows added.
+ */
+
+/**
+Another cell, where it felt 13° warmer than the viewer's band.
+*/
+const ELSEWHERE = { lat: 45.5, lng: -94.1 };
+const TWENTY_DAYS = 20 * DAY;
+
+/**
+One runner's shared run and entry at `place`, `ago` seconds back.
+*/
+async function unrelatedEntry(params: {
+  place: { lat: number; lng: number };
+  ago: number;
+  audience: "runners" | "private";
+}): Promise<void> {
+  const userId = await makeUser();
+  const at = NOW - params.ago;
+  const runId = await makeRun({
+    userId,
+    ...params.place,
+    startedAt: at,
+    durationS: 60,
+  });
+  await makeEntry({
+    userId,
+    runId,
+    createdAt: at,
+    verdict: 0,
+    audience: params.audience,
+  });
+}
+
+/**
+The observation at `ELSEWHERE`, an hour back.
+*/
+async function observedElsewhere(): Promise<void> {
+  await makeObservation({
+    ...ELSEWHERE,
+    startedAt: NOW - HOUR,
+    tempC: 20,
+    feelsLikeC: FEELS_LIKE_C + 13,
+  });
+}
+
+/**
+The three kinds of row the consensus must not return.
+*/
+async function sharedElsewhere(): Promise<void> {
+  await unrelatedEntry({ place: ELSEWHERE, ago: HOUR, audience: "runners" });
+}
+async function privateInBand(): Promise<void> {
+  await unrelatedEntry({ place: PLACE, ago: HOUR, audience: "private" });
+}
+async function sharedLongAgo(): Promise<void> {
+  await unrelatedEntry({ place: PLACE, ago: TWENTY_DAYS, audience: "runners" });
+}
+
+/**
+ * One matching runner, `unrelated` copies of `noise`, and what one
+ * `matchTally` over the 3-day window asked. The tally must still find
+ * exactly the one runner, so a seed that matched cannot pass as noise.
+ */
+async function tallyBeside(
+  unrelated: number,
+  noise: () => Promise<void>,
+  setup?: () => Promise<void>,
+) {
+  await resetTables();
+  await setup?.();
+  await seedRunners(1, HOUR);
+  for (let index = 0; index < unrelated; index += 1) await noise();
+  await syncRunConditions();
+  let runners: number | undefined;
+  const counts = await queryCounts(async () => {
+    const tally = await matchTally(VIEWER, NOW - 3 * DAY);
+    runners = tally.runners;
+  });
+  expect(runners).toBe(1);
+  return counts;
+}
+
+describe("matchTally: rows read beside rows it must not return (#507)", () => {
+  it("reads no more for 25 shared runs outside the window", async () => {
+    const none = await tallyBeside(0, sharedLongAgo);
+    const many = await tallyBeside(25, sharedLongAgo);
+    expect(many.coreRowsRead).toBe(none.coreRowsRead);
+    expect(many.weatherRowsRead).toBe(none.weatherRowsRead);
+  });
+
+  it("reads no more for 25 shared runs that felt 13° warmer (#409)", async () => {
+    // Before #409 this read every shared entry in the window, then each
+    // one's run and cache cell, and grew by at least two rows a run. The
+    // copy's band index (D-175) offers only the runs in the band.
+    // One against twenty-five, not none: the band's range seek reads the
+    // row just past it, so the first run elsewhere costs one row whatever
+    // follows it.
+    const one = await tallyBeside(1, sharedElsewhere, observedElsewhere);
+    const many = await tallyBeside(25, sharedElsewhere, observedElsewhere);
+    expect(many.coreRowsRead).toBe(one.coreRowsRead);
+    expect(many.weatherRowsRead).toBe(one.weatherRowsRead);
+  });
+
+  it("reads no more for 25 private entries in the band", async () => {
+    // The window's index is partial on the shared audiences, so a private
+    // entry is never read at all. Whatever bounds the read by band must
+    // keep that, or private runs would cost every viewer in their band.
+    const none = await tallyBeside(0, privateInBand);
+    const many = await tallyBeside(25, privateInBand);
+    expect(many.coreRowsRead).toBe(none.coreRowsRead);
+    expect(many.weatherRowsRead).toBe(none.weatherRowsRead);
   });
 });
 

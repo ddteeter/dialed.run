@@ -150,8 +150,8 @@
     },
     {
       "key": "src/modules/feed/consensus.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
-      "reason": "Two equivalent guards: no entries means no observations and nothing to filter, so the empty list comes out either way (the return saves the cross-database walk); and every item row's garment is in the batch that fetched it, so the group lookup only misses if a garment was deleted between the two reads \u2014 which is the race the guard exists for.",
-      "count": 2
+      "reason": "Equivalent mutant: every item row's garment is in the batch that fetched it, so the group lookup in `wornByRunner` only misses if a garment was deleted between the two reads \u2014 which is the race the guard exists for. (Was two guards; #409 removed the empty-window return with the cross-database walk it saved.)",
+      "count": 1
     },
     {
       "key": "src/modules/feed/entries.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",

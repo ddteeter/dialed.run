@@ -224,3 +224,64 @@ describe("the verdict backlog", () => {
     expect(many.counts.weather).toBe(0);
   });
 });
+
+/**
+ * #507: rows the read must not return cost it nothing. Each world holds
+ * one row the read shows and `noise` rows it must not; the rows read are
+ * the same for 1 of them as for 25. (One, not none: a range seek reads
+ * the row just past its range, so an empty neighbourhood reads one fewer
+ * for a reason that has nothing to do with scaling.)
+ */
+function followedBeside(noise: "strangers" | "private") {
+  return async (count: number) => {
+    const viewer = await makeUser();
+    const author = await makeUser();
+    await follow(viewer, author);
+    await seedObservation();
+    await locatedEntry({ userId: author, index: 0 });
+    for (let index = 1; index <= count; index += 1) {
+      await locatedEntry(
+        noise === "strangers"
+          ? { userId: await makeUser(), index }
+          : { userId: author, index, audience: "private" },
+      );
+    }
+    return () => followingFeed(viewer);
+  };
+}
+
+async function oneHandleBeside(count: number) {
+  const viewer = await makeVerifiedUser();
+  await makeVerifiedUser({ username: "pacer_00" });
+  for (let index = 0; index < count; index += 1) {
+    await makeVerifiedUser({
+      username: `zulu_${String(index).padStart(2, "0")}`,
+    });
+  }
+  return () => searchRunners(viewer, "pacer");
+}
+
+describe("the feed's reads beside rows they must not return (#507)", () => {
+  it("followingFeed reads no more for 25 strangers' shared entries", async () => {
+    const one = await measured(1, followedBeside("strangers"));
+    const many = await measured(25, followedBeside("strangers"));
+    expect(many.result.items).toHaveLength(1);
+    expect(many.counts.coreRowsRead).toBe(one.counts.coreRowsRead);
+    expect(many.counts.weatherRowsRead).toBe(one.counts.weatherRowsRead);
+  });
+
+  it("followingFeed reads no more for 25 of a followee's private entries", async () => {
+    const one = await measured(1, followedBeside("private"));
+    const many = await measured(25, followedBeside("private"));
+    expect(many.result.items).toHaveLength(1);
+    expect(many.counts.coreRowsRead).toBe(one.counts.coreRowsRead);
+    expect(many.counts.weatherRowsRead).toBe(one.counts.weatherRowsRead);
+  });
+
+  it("searchRunners reads no more for 25 handles that do not match", async () => {
+    const one = await measured(1, oneHandleBeside);
+    const many = await measured(25, oneHandleBeside);
+    expect(many.result).toHaveLength(1);
+    expect(many.counts.coreRowsRead).toBe(one.counts.coreRowsRead);
+  });
+});

@@ -4,25 +4,25 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
-import {
-  compactConditions,
-  feedConditions,
-} from "../../src/modules/feed/compact-conditions";
+import { compactConditions } from "../../src/modules/feed/compact-conditions";
 import { conditionsHomeStatement } from "../../src/modules/feed/home";
 import { setCountInTotals } from "../../src/modules/onboarding/aggregate-prefs";
 import { newUlid } from "../../src/lib/ids";
 import { pointConditions } from "../feed/conditions-fixture";
 import {
   BAND_HALF_WIDTH_C,
-  consensusAt,
-  matchTally,
   MIN_GROUP_RUNNERS,
   MIN_RUNNERS,
   recentPublicEntriesStatement,
   shownGroups,
   WINDOW_DAYS,
-  yourConditionsConsensus,
 } from "../../src/modules/feed/consensus";
+import {
+  consensusAt,
+  feedConditions,
+  matchTally,
+  yourConditionsConsensus,
+} from "./synced-consensus";
 import {
   makeEntry,
   makeItem,

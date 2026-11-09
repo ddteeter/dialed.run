@@ -26,6 +26,7 @@ erDiagram
     outfit_entries ||--o{ entry_photos : shows
     outfit_entries ||--o{ reactions : gets
     runs ||--o| weather_observations : "occurred during"
+    runs ||--o| run_conditions : "copied into"
 ```
 
 ### users (Better Auth tables + app columns)
@@ -310,6 +311,40 @@ tag        text   -- from the curated list in contracts.ts (cold_first_mile,
                   -- chafed, perfect_warmup, sleeves_damp, ...); no free text
 PK (entry_id, tag)
 ```
+
+### run_conditions (a copy of each run's judged conditions — D-175, design 189)
+
+```
+run_id               text PK         -- the run; one row per run
+user_id              text            -- the runner: the account purge deletes by it
+-- weather's half, written in the batch that settles the run (attached or
+-- manual), cleared by the hourly retry cron while the run is pending again
+feels_like_c         real NULLABLE   -- the starting hour's
+min_feels_like_c     real NULLABLE   -- the coldest hour the run reached
+max_feels_like_c     real NULLABLE   -- the warmest
+precip_class         text NULLABLE   -- dry | damp | wet, the starting hour's
+source               text NULLABLE   -- visualcrossing | manual
+-- feed's half, written in the batch that writes the entry's verdict or
+-- audience, cleared when the entry is retracted
+verdict              integer NULLABLE
+entry_created_at     integer NULLABLE
+entry_shared         integer bool    -- audience is SHARED or PUBLIC
+-- generated (virtual)
+judged_feels_like_c  real            -- judgedFeelsLikeC: coldest if the verdict
+                                     -- is cold, warmest if warm, else the start
+judged_bucket        integer         -- floor(judged_feels_like_c)
+INDEX run_conditions_band (precip_class, judged_bucket, entry_created_at)
+  WHERE entry_shared = 1 AND source != 'manual'
+INDEX run_conditions_user (user_id)
+```
+
+A **copy, not an authority**. The conditions consensus seeks it by band and
+window instead of reading every shared entry in the window and then each
+run's weather in the other database. Audience, moderation and the totals
+opt-out are still read live from `outfit_entries` and `user_profiles` in
+the join. `entry_shared` only keeps private entries out of the index. It
+holds no note, photo, place or start time, and the published totals
+(D-108) do not read it. A run counts once its weather has settled (D-156).
 
 ### Social + system tables
 

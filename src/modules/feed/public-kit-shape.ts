@@ -1,7 +1,7 @@
 /**
  * What a public kit is (round 41 #86c, D-151), with no way to read one —
  * the half a route and a component need, apart from `public-kit.ts`,
- * which reaches `src/env` (the same split as `conditions-shape.ts`).
+ * which reaches `src/env` (the same split as `lib/contracts/conditions.ts`).
  *
  * **Every field is one D-151 lists**, already worded for display in the
  * runner's own units: a signed-out visitor has none of their own. There
