@@ -3,6 +3,7 @@ import type { JSX, ReactNode, Ref } from "react";
 
 import { Mono } from "../../../ui";
 import type { OtherPhoto, OtherPhotos as Others } from "../other-photos";
+import { useKitOriginSearch } from "./kit-origin";
 import { reviewPhotoSrc } from "./review-photo-src";
 
 /**
@@ -149,6 +150,7 @@ function Thumbnail({ photo }: Readonly<{ photo: OtherPhoto }>): JSX.Element {
     <Link
       to="/desk/kit/$entryId"
       params={{ entryId: photo.entryId }}
+      search={useKitOriginSearch()}
       className="target self-start"
     >
       <img

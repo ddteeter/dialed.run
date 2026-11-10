@@ -23,6 +23,7 @@ import type { HoldState } from "../takedown-limits";
 import type { PendingTakedownRequest } from "../takedown-requests";
 import { ACTION_BAR } from "./DeskForm";
 import { StatutoryLine } from "./StatutoryLine";
+import { KitOriginContext, kitOriginAnchor } from "./kit-origin";
 import { OtherPhotos } from "./OtherPhotos";
 import { PhotoMatches, type DecideMatch } from "./PhotoMatches";
 import { useSettled } from "./use-settled";
@@ -164,53 +165,61 @@ function RemovalRequestRow(props: RowProps): JSX.Element {
   const { request, hasFocus, onFocused, onDecided, onBlocked } = props;
   const { decide, block, decideMatch } = props.actions;
   const takeFocus = focusOnce(hasFocus, onFocused);
+  const origin = { from: "request", row: request.id } as const;
   return (
     <li
       ref={takeFocus}
+      id={kitOriginAnchor(origin)}
       tabIndex={-1}
       data-part="removal-request"
       className="flex flex-col gap-3 border-b border-hairline py-4"
     >
-      <span className="flex items-baseline justify-between gap-3">
-        <span className="flex flex-wrap items-baseline gap-2">
-          <span className="text-body font-semibold text-ink">
-            {request.subject?.subjectType ?? "link"}
+      <KitOriginContext value={origin}>
+        <span className="flex items-baseline justify-between gap-3">
+          <span className="flex flex-wrap items-baseline gap-2">
+            <span className="text-body font-semibold text-ink">
+              {request.subject?.subjectType ?? "link"}
+            </span>
+            <span className="text-micro text-quiet">
+              <Bracketed>via /takedown</Bracketed>
+            </span>
+            {request.holdState === undefined ? undefined : (
+              <span data-part="hold-state" className="text-micro text-ink">
+                <Bracketed>{HOLD_WORDS[request.holdState]}</Bracketed>
+              </span>
+            )}
           </span>
+          <span data-part="due" className="text-ink uppercase">
+            <Mono step="xs">{request.due}</Mono>
+          </span>
+        </span>
+        <span className="flex flex-col gap-1">
+          <span className="text-label uppercase">
+            <Mono step="xs">
+              From {request.signature} · signed · good faith
+            </Mono>
+          </span>
+          {request.description === undefined ? undefined : (
+            <q className="text-body">{request.description}</q>
+          )}
           <span className="text-micro text-quiet">
-            <Bracketed>via /takedown</Bracketed>
+            {request.requesterEmail}
           </span>
-          {request.holdState === undefined ? undefined : (
-            <span data-part="hold-state" className="text-micro text-ink">
-              <Bracketed>{HOLD_WORDS[request.holdState]}</Bracketed>
+          {request.relatedIds.length === 0 ? undefined : (
+            <span data-part="related" className="text-micro text-ink">
+              {String(request.relatedIds.length)} more from this requester
             </span>
           )}
         </span>
-        <span data-part="due" className="text-ink uppercase">
-          <Mono step="xs">{request.due}</Mono>
-        </span>
-      </span>
-      <span className="flex flex-col gap-1">
-        <span className="text-label uppercase">
-          <Mono step="xs">From {request.signature} · signed · good faith</Mono>
-        </span>
-        {request.description === undefined ? undefined : (
-          <q className="text-body">{request.description}</q>
-        )}
-        <span className="text-micro text-quiet">{request.requesterEmail}</span>
-        {request.relatedIds.length === 0 ? undefined : (
-          <span data-part="related" className="text-micro text-ink">
-            {String(request.relatedIds.length)} more from this requester
-          </span>
-        )}
-      </span>
-      <SubjectLink request={request} />
-      <StatutoryLine />
-      <OtherPhotos others={request.otherPhotos} />
-      <PhotoMatches found={request.photoMatches} decide={decideMatch} />
-      <RequestActions
-        request={request}
-        acts={{ decide, block, onDecided, onBlocked }}
-      />
+        <SubjectLink request={request} />
+        <StatutoryLine />
+        <OtherPhotos others={request.otherPhotos} />
+        <PhotoMatches found={request.photoMatches} decide={decideMatch} />
+        <RequestActions
+          request={request}
+          acts={{ decide, block, onDecided, onBlocked }}
+        />
+      </KitOriginContext>
     </li>
   );
 }
@@ -451,6 +460,7 @@ function SubjectLink({
     <Link
       to="/desk/kit/$entryId"
       params={{ entryId: subject.entryId }}
+      search={{ from: "request", row: request.id }}
       className="target self-start font-bold text-ink underline underline-offset-4"
     >
       {subject.subjectType === "entry" ? "Open the kit" : "Open its kit"}

@@ -22,6 +22,7 @@ import type {
 } from "../review";
 import { PickOne } from "./DeskForm";
 import { StatutoryLine } from "./StatutoryLine";
+import { KitOriginContext, kitOriginAnchor } from "./kit-origin";
 import { OtherPhotos } from "./OtherPhotos";
 import {
   PhotoMatches,
@@ -490,50 +491,56 @@ function ReviewRow({
   // (round 38 #60); the row stays open.
   const [label, setLabel] = useState(row.subject.label ?? row.subjectId);
   const isGarment = row.subjectType === "garment";
+  const origin = { from: "report", row: row.id } as const;
 
   return (
-    <li className="flex flex-col gap-2 border border-hairline p-3">
-      <span className="flex items-baseline justify-between gap-3">
-        <button
-          ref={opener}
-          type="button"
-          aria-expanded={active}
-          onClick={onActivate}
-          className="target cursor-pointer border-none bg-transparent p-0 text-left text-body font-semibold text-ink"
-        >
-          {rowTitle(row, label)}
-        </button>
-        {isGarment ? <SourceTag row={row} /> : undefined}
-        {/* The TAKE IT DOWN Act's 48 hours, on a row an intimate-image
+    <li
+      id={kitOriginAnchor(origin)}
+      className="flex flex-col gap-2 border border-hairline p-3"
+    >
+      <KitOriginContext value={origin}>
+        <span className="flex items-baseline justify-between gap-3">
+          <button
+            ref={opener}
+            type="button"
+            aria-expanded={active}
+            onClick={onActivate}
+            className="target cursor-pointer border-none bg-transparent p-0 text-left text-body font-semibold text-ink"
+          >
+            {rowTitle(row, label)}
+          </button>
+          {isGarment ? <SourceTag row={row} /> : undefined}
+          {/* The TAKE IT DOWN Act's 48 hours, on a row an intimate-image
             report started: in the header, right, where the age sits
             (round 35 #58b). The brackets stay about people. */}
-        <DueTag due={row.due} />
-      </span>
-      <SubjectPhotos row={row} />
-      <RemovedMatchLine match={row.removedMatches?.[0]} />
-      <OtherPhotos others={row.otherPhotos} />
-      <PhotoMatches
-        found={row.photoMatches}
-        removed={row.removedMatches}
-        decide={decideMatch}
-      />
-      <WhyHere row={row} />
-      {/* D1: who reported, folded; opening it is logged (D-164). After
+          <DueTag due={row.due} />
+        </span>
+        <SubjectPhotos row={row} />
+        <RemovedMatchLine match={row.removedMatches?.[0]} />
+        <OtherPhotos others={row.otherPhotos} />
+        <PhotoMatches
+          found={row.photoMatches}
+          removed={row.removedMatches}
+          decide={decideMatch}
+        />
+        <WhyHere row={row} />
+        {/* D1: who reported, folded; opening it is logged (D-164). After
           the photo and before the decision, as the contract's tab order
           puts it. */}
-      <ReportersFold row={row} reporters={reporters} />
-      {/* Only an intimate-image report starts the 48-hour clock. */}
-      {row.due === undefined ? undefined : <StatutoryLine />}
-      {isGarment ? undefined : <SourceTag row={row} />}
-      {active ? (
-        <RowDecision
-          row={row}
-          decide={decide}
-          reviewHandle={reviewHandle}
-          onSettled={onSettled}
-          onMoved={setLabel}
-        />
-      ) : undefined}
+        <ReportersFold row={row} reporters={reporters} />
+        {/* Only an intimate-image report starts the 48-hour clock. */}
+        {row.due === undefined ? undefined : <StatutoryLine />}
+        {isGarment ? undefined : <SourceTag row={row} />}
+        {active ? (
+          <RowDecision
+            row={row}
+            decide={decide}
+            reviewHandle={reviewHandle}
+            onSettled={onSettled}
+            onMoved={setLabel}
+          />
+        ) : undefined}
+      </KitOriginContext>
     </li>
   );
 }

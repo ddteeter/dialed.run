@@ -12,6 +12,7 @@ import type { PhotoMatch, PhotoMatches as Found } from "../photo-matches";
 import type { RemovedImage, RemovedMatch } from "../removed-fingerprints";
 import { PhotoSection } from "./OtherPhotos";
 import { RemovalDecision } from "./RemovalDecision";
+import { useKitOriginSearch } from "./kit-origin";
 import { reviewPhotoSrc } from "./review-photo-src";
 import { useFocusWhen } from "./use-focus-when";
 import { useSettled } from "./use-settled";
@@ -412,6 +413,7 @@ function altOf(match: PhotoMatch): string {
 One match: a link to the Desk's view of its kit (#388); a garment's image alone.
 */
 function Thumbnail({ match }: Readonly<{ match: PhotoMatch }>): JSX.Element {
+  const search = useKitOriginSearch();
   const image = (
     <img
       src={reviewPhotoSrc(match.photoKey)}
@@ -424,6 +426,7 @@ function Thumbnail({ match }: Readonly<{ match: PhotoMatch }>): JSX.Element {
     <Link
       to="/desk/kit/$entryId"
       params={{ entryId: match.entryId }}
+      search={search}
       className="target self-start"
     >
       {image}

@@ -1092,14 +1092,20 @@ each ruling is also a comment on its issue.
   outer slots filled in `--ink`, the centre empty. R50's "no colour, no
   arrow" describes that mark.
 - **R51·153 · The operator kit view, R-154 (#527). Confirmed and drawn;
-  built in part (#561).** As guessed, plus a run line under the band (date
+  built (design 191).** As guessed, plus a run line under the band (date
   · start time in the run's zone · temperature · moisture · city). Order:
   back link, state band, run line, photos, verdict, garments, notes.
   Read-only. The back link names its origin ("Back to the report", "Back
   to the request"); with no referrer it reads "Back to Review". A removed
   kit shows the band and run line, with "Removed. Photos deleted." where
-  the photos were.
-- **R51·154 · Request access's edge cases (#528). Not built.** (1)
+  the photos were. Built on marked guesses, asked as Design 155: the
+  runner's profile city stands in (no run stores a place), the
+  temperature is the judged feels-like in the operator's unit, the h1 is
+  sr-only and the kit id comes last, and a removed kit keeps its verdict,
+  garments and notes.
+- **R51·154 · Request access's edge cases (#528). Built here
+  (design 191); the sent copy, the note's band and its counter are the
+  marketing site's.** (1)
   Confirmed: a blocked region gets the same redirect to "sent", whose copy
   is true in both cases: "Request sent." / "We hand out invites in small
   batches. If one comes your way, it'll arrive at {email}." (2) Changed: a
@@ -1107,7 +1113,8 @@ each ruling is also a comment on its issue.
   `/invite` with both fields kept, the note's band reads "Keep it under
   {cap} characters.", and the note shows a counter from cap − 40.
   `invalid_email` stays for the email only. (3) Changed: "Have an account?
-  Log in" shows below 720 only.
+  Log in" shows below 720 only. Whether Au5's own counter (from 120 of
+  140) also moves to cap − 40 is asked as Design 156; it stays for now.
 
 ## Answered in round 50 (imported 2026-11-08)
 

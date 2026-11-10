@@ -393,7 +393,12 @@ describe("Review · removal requests", () => {
     expect(row?.querySelector("q")).toHaveTextContent(/^a photo of me$/u);
     expect(row).toHaveTextContent("sam@example.com");
     const open = screen.getByRole("link", { name: "Open the kit" });
-    expect(open).toHaveAttribute("href", `/desk/kit/${ENTRY}`);
+    // Round 51 · 153: the kit's back link returns to this request.
+    expect(open).toHaveAttribute(
+      "href",
+      `/desk/kit/${ENTRY}?from=request&row=01JREQUEST0000000000000001`,
+    );
+    expect(row).toHaveAttribute("id", "request-01JREQUEST0000000000000001");
     expect(open).toHaveClass("target");
     expect(screen.getByText("Removal requests · 1")).toBeInTheDocument();
   });
@@ -429,7 +434,7 @@ describe("Review · removal requests", () => {
     );
     expect(screen.getByRole("link", { name: "Open its kit" })).toHaveAttribute(
       "href",
-      `/desk/kit/${ENTRY}`,
+      `/desk/kit/${ENTRY}?from=request&row=01JREQUEST0000000000000002`,
     );
     expect(
       screen.getByText("Not one of our links: find it from what they wrote."),
