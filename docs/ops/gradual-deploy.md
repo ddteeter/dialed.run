@@ -10,7 +10,8 @@ against the expanded schema).
 `wrangler deploy` (Cloudflare: "the first upload of a new Worker must use
 `wrangler deploy`"), so apply this after the first deploy has run. And the
 smoke account and its two secrets (`docs/deployment.md` §9) must exist,
-because the smoke step fails without them.
+because the smoke step fails without them. The account is a system account,
+invisible to runners (design 193), so §9's steps include marking it.
 
 ## The order, and why
 

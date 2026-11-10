@@ -105,9 +105,12 @@ both in the `production` environment rather than the repository, and
 variable `DEPLOY_ENABLED=true` when ready. Before applying the gradual
 deploy job (`docs/ops/gradual-deploy.md`, design 186): **`SMOKE_EMAIL`**
 and **`SMOKE_PASSWORD`**, the production smoke account's, in the same
-environment. The account itself is the owner's to create
-(`docs/deployment.md` §9: handle `smoke_test`, "Count my runs in anonymous
-totals" off, one garment, never a run). The dependency automation's App
+environment. The account itself is the owner's to create after the first
+deploy, as a **system account**, invisible to runners (design 193, #533):
+`docs/deployment.md` §9's eight steps, including the one
+`wrangler d1 execute` that sets `user_profiles.system_account` before
+the address is confirmed. Handle `smoke_test`, "Count my runs in anonymous
+totals" off, one garment with no brand, never a run. The dependency automation's App
 key and Anthropic key go in their own environments
 (`docs/dependencies.md` §Setup).
 

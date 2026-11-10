@@ -79,6 +79,17 @@ theme            text     -- 'system' (default) | 'light' | 'dark', NOT NULL:
                           --  root's signed-in answer carries it. Signed out
                           --  is always 'system'. modules/account/theme.ts
                           --  is the one reader and writer.
+system_account   int      -- boolean, NOT NULL DEFAULT 0: an account the
+                          --  service runs, not a runner — the production
+                          --  smoke account (design 193, #533). Invisible to
+                          --  runners: runnerInStanding (search, H, /@handle)
+                          --  and the entry rules' author clause (feeds, kits,
+                          --  consensus, "worn by N") hide it, and
+                          --  confirmedUserId refuses its shared writes. No
+                          --  app code writes it; the owner sets it with one
+                          --  `wrangler d1 execute` (docs/deployment.md §9).
+                          --  test/architecture/system-account.test.ts holds
+                          --  both.
 ```
 
 ### wardrobe_items
