@@ -22,49 +22,49 @@
   "packages": [
     {
       "name": "@better-auth/core",
-      "version": "1.7.12",
+      "version": "1.7.15",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com"
     },
     {
       "name": "@better-auth/drizzle-adapter",
-      "version": "1.7.12",
+      "version": "1.7.15",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com/docs/adapters/drizzle"
     },
     {
       "name": "@better-auth/kysely-adapter",
-      "version": "1.7.12",
+      "version": "1.7.15",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com/docs/adapters/kysely"
     },
     {
       "name": "@better-auth/memory-adapter",
-      "version": "1.7.12",
+      "version": "1.7.15",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com"
     },
     {
       "name": "@better-auth/telemetry",
-      "version": "1.7.12",
+      "version": "1.7.15",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com"
     },
     {
       "name": "@better-auth/utils",
-      "version": "0.5.0",
+      "version": "0.5.1",
       "licence": "MIT",
-      "copyright": "Bereket Engida",
+      "copyright": "2024 - present, Bereket Engida",
       "project": "https://github.com/better-auth/utils#readme"
     },
     {
       "name": "@better-fetch/fetch",
-      "version": "1.3.2",
+      "version": "1.3.3",
       "licence": "MIT",
       "copyright": "Bereket Engida",
       "project": "https://github.com/better-auth/better-fetch#readme"
@@ -119,7 +119,7 @@
     },
     {
       "name": "@mediapipe/tasks-vision",
-      "version": "1.1.1",
+      "version": "1.2.0",
       "licence": "Apache-2.0"
     },
     {
@@ -347,7 +347,7 @@
     },
     {
       "name": "better-auth",
-      "version": "1.7.12",
+      "version": "1.7.15",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://better-auth.com"
@@ -577,7 +577,7 @@
     },
     {
       "name": "jose",
-      "version": "6.2.13",
+      "version": "6.2.14",
       "licence": "MIT",
       "copyright": "2018 Filip Skokan",
       "project": "https://github.com/panva/jose"

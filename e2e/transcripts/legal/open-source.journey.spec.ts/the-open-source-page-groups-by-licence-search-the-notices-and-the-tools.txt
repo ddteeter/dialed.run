@@ -153,7 +153,7 @@ listitem, level 1, position 6, set size 116
 link, Project: @better-auth/utils
 Project
 end of link, Project: @better-auth/utils
-© Bereket Engida
+© # - present, Bereket Engida
 end of listitem, level 1, position 6, set size 116
 listitem, level 1, position 7, set size 116
 @better-fetch/fetch
