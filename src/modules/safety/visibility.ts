@@ -107,12 +107,14 @@ export function entryVisibleTo(viewerId: string): SQL | undefined {
 }
 
 /**
- * A ban hides everything its runner posted (packet 106 §4, audit 0.3). The
- * profile's primary key answers it, and a runner with no profile row is
- * not banned — the same default `banStateOf` keeps.
+ * A ban hides everything its runner posted (packet 106 §4, audit 0.3), and
+ * so does being a system account (design 193, #533): the smoke account
+ * never shares a kit, and if one ever were shared nobody would see it or
+ * count it. The profile's primary key answers both, and a runner with no
+ * profile row is neither — the same default `banStateOf` keeps.
  */
 function authorNotBanned(): SQL {
-  return sql`not exists (select 1 from ${userProfiles} where ${userProfiles.userId} = ${outfitEntries.userId} and ${userProfiles.bannedAt} is not null)`;
+  return sql`not exists (select 1 from ${userProfiles} where ${userProfiles.userId} = ${outfitEntries.userId} and (${userProfiles.bannedAt} is not null or ${userProfiles.systemAccount} = 1))`;
 }
 
 /**

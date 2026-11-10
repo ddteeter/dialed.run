@@ -49,10 +49,12 @@ import { offerRunnerBookmark, pinPrimary } from "../../lib/sql/d1-session";
 import {
   AccountLeavingError,
   EmailUnconfirmedError,
+  SystemAccountError,
   TermsNotAcceptedError,
 } from "./auth-error";
 import { storedBookmarkOf } from "./d1-bookmark";
 import { deletionClaimOf, standingFrom } from "./leaving-gate";
+import { systemAccountOf } from "./system-account";
 import {
   optionalUserIdFrom,
   userIdOrThrow,
@@ -111,29 +113,36 @@ export async function agreedUserId(
 
 /**
  * What the verification gate refuses this runner with, or `undefined`
- * when it lets them through: leaving, behind on the terms, and then an
+ * when it lets them through: leaving, behind on the terms, then an
  * address not confirmed — or no account row, which is a runner who is
- * gone (`account`'s `isVerified` reads it the same way). Four seeks, one
- * batch: the fourth is the runner's stored D1 bookmark (design 143).
+ * gone (`account`'s `isVerified` reads it the same way) — and last a
+ * system account (design 193), which never writes what others see. Five
+ * seeks, one batch: the fourth is the runner's stored D1 bookmark
+ * (design 143).
  */
 async function confirmationRefusal(
   db: Db,
   userId: string,
   current: number | undefined,
 ): Promise<Error | undefined> {
-  const [[claim], [latest], [confirmation], [stored]] = await db.batch([
-    deletionClaimOf(db, userId),
-    latestAcceptanceOf(db, userId),
-    emailConfirmationRead(db, userId),
-    storedBookmarkOf(db, userId),
-  ]);
+  const [[claim], [latest], [confirmation], [stored], [system]] =
+    await db.batch([
+      deletionClaimOf(db, userId),
+      latestAcceptanceOf(db, userId),
+      emailConfirmationRead(db, userId),
+      storedBookmarkOf(db, userId),
+      systemAccountOf(db, userId),
+    ]);
   offerRunnerBookmark(userId, stored?.value);
   return (
     agreedRefusal(claim, latest?.version, current) ??
-    (confirmation?.isConfirmed === true
-      ? undefined
-      : new EmailUnconfirmedError())
+    addressRefusal(confirmation?.isConfirmed) ??
+    (system?.value === true ? new SystemAccountError() : undefined)
   );
+}
+
+function addressRefusal(isConfirmed: boolean | undefined): Error | undefined {
+  return isConfirmed === true ? undefined : new EmailUnconfirmedError();
 }
 
 /**
