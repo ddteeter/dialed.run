@@ -1081,6 +1081,34 @@ _Nothing from 99 on is open: round 45 answered the last of it._
 
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
 
+## Answered in round 51 (imported 2026-11-09)
+
+Design answered as `Round 51 Rulings.dc.html`, items 152–154, with 151b
+held for the owner's copy (#523). The board's text is the text of record;
+each ruling is also a comment on its issue.
+
+- **R51·152 · The tied band's mark, R-60 (#524 → #402). Confirmed; not
+  built.** Mixed replaces Split. The mark is the rounds 10–11 one: both
+  outer slots filled in `--ink`, the centre empty. R50's "no colour, no
+  arrow" describes that mark.
+- **R51·153 · The operator kit view, R-154 (#527). Confirmed and drawn;
+  built in part (#561).** As guessed, plus a run line under the band (date
+  · start time in the run's zone · temperature · moisture · city). Order:
+  back link, state band, run line, photos, verdict, garments, notes.
+  Read-only. The back link names its origin ("Back to the report", "Back
+  to the request"); with no referrer it reads "Back to Review". A removed
+  kit shows the band and run line, with "Removed. Photos deleted." where
+  the photos were.
+- **R51·154 · Request access's edge cases (#528). Not built.** (1)
+  Confirmed: a blocked region gets the same redirect to "sent", whose copy
+  is true in both cases: "Request sent." / "We hand out invites in small
+  batches. If one comes your way, it'll arrive at {email}." (2) Changed: a
+  note over its cap gets its own code, `note_too_long`; it returns to
+  `/invite` with both fields kept, the note's band reads "Keep it under
+  {cap} characters.", and the note shows a counter from cap − 40.
+  `invalid_email` stays for the email only. (3) Changed: "Have an account?
+  Log in" shows below 720 only.
+
 ## Answered in round 50 (imported 2026-11-08)
 
 Design answered as `Round 50 Rulings.dc.html`, items 141–151. It took the
