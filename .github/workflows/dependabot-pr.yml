@@ -181,7 +181,7 @@ jobs:
       # hosts are where the action installs from and where Claude reads, and
       # none of them shows a stranger what was requested. Claude's own tool
       # rules below are narrower still; this is the layer it can't argue with.
-      - uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+      - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
         with:
           egress-policy: block
           disable-sudo: true
@@ -213,7 +213,7 @@ jobs:
       # The answer leaves as structured output, which `post` screens.
       # `show_full_output` stays off: these logs are public.
       - id: claude
-        uses: anthropics/claude-code-action@925afb53776cf1a2b738c6bdbed37b4d4000ef13 # v1.0.262
+        uses: anthropics/claude-code-action@4845bacbb38b3c4b15d948f035349786f678e068 # v1.0.267
         env:
           GH_TOKEN: ${{ github.token }}
           CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
