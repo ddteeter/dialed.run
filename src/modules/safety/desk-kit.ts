@@ -22,8 +22,6 @@
 import { asc, eq } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
-import { alias } from "drizzle-orm/sqlite-core";
-
 import {
   entryPhotos,
   outfitEntries,
@@ -35,6 +33,7 @@ import {
   defaultUnits,
   tempUnitSchema,
   type Audience,
+  type Conditions,
   type TempUnit,
 } from "../../lib/contracts";
 import type { PrecipClass } from "../../lib/contracts/temperature";
@@ -121,7 +120,6 @@ export async function deskKitFor(
   entryId: string,
 ): Promise<DeskKit | undefined> {
   requireAdmin(viewerId);
-  const operator = alias(userProfiles, "operator");
   const [kits, photos, garments, units] = await db.batch([
     db
       .select({
@@ -168,9 +166,9 @@ export async function deskKitFor(
       .orderBy(asc(entryPhotos.position)),
     kitPiecesSelect(db, entryId),
     db
-      .select({ tempUnit: operator.tempUnit })
-      .from(operator)
-      .where(eq(operator.userId, viewerId)),
+      .select({ tempUnit: userProfiles.tempUnit })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, viewerId)),
   ]);
   const [kit] = kits;
   if (kit === undefined) return undefined;
@@ -217,13 +215,12 @@ async function runZone(
   }>,
   runnerZone: string | null,
 ): Promise<string | undefined> {
-  let observed: string | undefined;
+  let found = new Map<string, Conditions>();
   try {
-    const found = await conditionsForRuns([run]);
-    observed = found.get(run.id)?.timeZone;
+    found = await conditionsForRuns([run]);
   } catch {
     // The zone only: the kit still opens, dated in the runner's zone.
   }
-  const zone = observed ?? runnerZone;
+  const zone = found.get(run.id)?.timeZone ?? runnerZone;
   return isTimeZone(zone) ? zone : undefined;
 }

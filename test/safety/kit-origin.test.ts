@@ -35,7 +35,8 @@ describe("kitOriginSchema", () => {
 
 describe("kitBackLink", () => {
   it("goes back to Review's top with no origin, or half of one", () => {
-    const review = { label: "Back to Review", hash: undefined };
+    // No anchor at all, not an empty one.
+    const review = { label: "Back to Review" };
     expect(kitBackLink({})).toStrictEqual(review);
     expect(kitBackLink({ from: "report" })).toStrictEqual(review);
     expect(kitBackLink({ row: "r1" })).toStrictEqual(review);

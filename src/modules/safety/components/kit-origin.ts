@@ -31,15 +31,16 @@ export function kitOriginAnchor(origin: KitOrigin): string {
 
 /**
  * The back link's words and the anchor it returns to, from the URL's
- * search. With no origin it reads "Back to Review" and goes to the top.
+ * search. With no origin it reads "Back to Review" and has no anchor, so
+ * it goes to the top.
  */
 export function kitBackLink(search: KitOriginSearch): Readonly<{
   label: string;
-  hash: string | undefined;
+  hash?: string;
 }> {
   const { from, row } = search;
   if (from === undefined || row === undefined) {
-    return { label: "Back to Review", hash: undefined };
+    return { label: "Back to Review" };
   }
   return {
     label: from === "report" ? "Back to the report" : "Back to the request",

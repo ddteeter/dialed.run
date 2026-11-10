@@ -63,11 +63,11 @@ export function DeskKit({
 function BackLink({
   origin,
 }: Readonly<{ origin: KitOriginSearch }>): JSX.Element {
-  const { label, hash } = kitBackLink(origin);
+  const { label, ...anchor } = kitBackLink(origin);
   return (
     <Link
       to="/desk/review"
-      {...(hash === undefined ? {} : { hash })}
+      {...anchor}
       className="target inline-flex items-center gap-2 self-start text-ink no-underline"
     >
       <Icon name="back" size={20} />
