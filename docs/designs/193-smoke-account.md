@@ -30,13 +30,15 @@ gains one clause:
 - `authorNotBanned()` (`safety/visibility.ts`) becomes "author banned or
   system". It sits under `publiclyVisibleEntry` and `worldVisibleEntry`, so
   any entry the account ever shared would be gone from feeds, kit detail,
-  public kits, OG cards, the conditions consensus and "worn by N". That file
-  belongs to w5-mutation, so the change is one line, sequenced through the
-  coordinator.
+  public kits, OG cards, the conditions consensus and "worn by N". The
+  coordinator released that file to this lane for the clause.
 
 **One write gate.** `confirmedUserId` (`auth/terms-gate.ts`, behind
-`verifiedUserId`) refuses a system account, the same way it refuses an
-unconfirmed one. So Follow, Useful, Report, product corrections, email
+`verifiedUserId`) refuses a system account with its own
+`SystemAccountError` (`SYSTEM_ACCOUNT`), after the address check, in the
+batch it already sends (`auth/system-account.ts`'s one seek). The auth
+refusals now share a `CodedError` base, which the new class would
+otherwise have cloned. So Follow, Useful, Report, product corrections, email
 change and the Desk all refuse it, and the account can never ring another
 runner's bell. Own-closet reads and writes stay `requireUserId`.
 
@@ -59,12 +61,13 @@ runner's bell. Own-closet reads and writes stay `requireUserId`.
 (`test/architecture/system-account.test.ts`):
 
 1. `system_account`/`systemAccount` is named only in `schema-core.ts`, the
-   two floors and the write gate. No other file can read or write it.
-2. Default-deny: every production file that names `userProfiles`,
-   `outfitEntries`, `follows` or `reactions` has a row: `gated` (it must call
-   a floor or `verifiedUserId`), `self` (only the viewer's own rows),
-   `operator` (Desk/digest) or `writer`. A new file fails until someone
-   says which. About 90 rows, like `verification-class`.
+   two floors and the write gate, and there only as a read of the column.
+2. Default-deny: every production file that imports `userProfiles`,
+   `outfitEntries`, `follows` or `reactions` from the core schema has a
+   row: `floor` (it must call one), `own`, `actor` (names a runner only as
+   one who did something `verifiedUserId` gated), `operator` or
+   `machinery`. A new file fails until someone says which, and a row for a
+   file that no longer reads one fails too. 65 rows.
 
 **What it may do:** sign in, onboard, keep its closet, read its own pages.
 Nothing that another runner can see. `attachKitAction` stays open, but the
@@ -72,12 +75,13 @@ entry gate hides what it writes, and the deploy steps say it never logs a
 run.
 
 **Lifecycle (owner deploy steps, `deployment-plan.md` + `deployment.md` §9 +
-a Needs-owner issue):** invite code → sign up → **set `system_account = 1`
-before confirming the address** (unconfirmed is already invisible, so no
-moment is findable) → confirm → O0 handle `smoke_test`, default audience
+a Needs-owner issue):** invite code → sign up → O0 handle `smoke_test`
+(this creates the profile row; nothing does at sign-up) → **set
+`system_account = 1` before confirming the address** (unconfirmed is
+already invisible, so no moment is findable) → confirm → default audience
 Private, public profile off, "count in totals" off → add `Smoke test shirt`
 with no brand → secrets in the `production` environment. Removal: Settings ›
-Delete account, the normal purge. Rotation: open question 3.
+Delete account, the normal purge. Rotation: open question 4.
 
 ## Contract touches
 
@@ -85,22 +89,28 @@ Delete account, the normal purge. Rotation: open question 3.
   per the protocol it may proceed, but the brief makes it a stop point.
 - New route files: none. New bindings/queues/crons: **none**.
 - `ci.yml`: the gradual-deploy job exactly as `docs/ops/gradual-deploy.md`
-  drafts it (owner, 2026-11-09).
+  drafts it (owner, 2026-11-09). **When** is open: merged before the first
+  deploy, CI's first `versions upload` would fail (Cloudflare: a new
+  Worker's first upload must be `wrangler deploy`). Asked of the
+  coordinator; the recommendation is a separate PR the owner merges after
+  the first deploy and the smoke account exist.
 - Files other lanes own: `src/modules/safety/visibility.ts` (one clause,
   w5-mutation). Also touched: `feed/runner-visibility.ts`,
   `auth/terms-gate.ts`, `docs/contracts.md` (the column).
 
 ## Test plan
 
-- worker: `runnerInStanding`/search/H/`/@handle` miss a system account and
-  still find an ordinary one (`test/feed/…`).
-- worker: `publiclyVisibleEntry` and `worldVisibleEntry` drop its shared
-  entry. The consensus tally doesn't count it.
-- worker: `confirmedUserId` refuses it; `requireUserId` admits it.
+- worker (`test/safety/system-account.test.ts`): search, H and the open-web
+  profile miss it and still find an ordinary runner; its PUBLIC kit leaves
+  the feed, kit detail, the consensus count and the open web, and stays
+  readable by the account itself; `confirmedUserId` refuses it (after the
+  address) and `confirmedViewerId` is nobody for it.
 - architecture: the two checks above.
-- e2e edge case beside `e2e/feed/feed.journey.spec.ts`: a second runner
-  searches `smoke`, opens `/@smoke_test` signed in and signed out, and gets
-  nothing. A real browser shows the not-found page a dom test can't reach.
+- e2e edge case `e2e/feed/system-account.spec.ts`, beside
+  `feed.journey.spec.ts`: a second runner searches for it, opens H by
+  handle ("This runner isn't here.") and by id (back to the feed), and a
+  signed-out visitor gets `/@handle`'s 404. A real server and browser
+  render those pages; a dom test can't reach them.
   Seeded via the existing e2e seed helpers, with the flag set by SQL as the
   owner will.
 
@@ -111,9 +121,8 @@ Delete account, the normal purge. Rotation: open question 3.
 
 ## Open questions
 
-1. **Schema:** approve `system_account` on `user_profiles` (recommended),
-   versus an `ADMIN_USER_IDS`-style env list (a new var, so a binding stop,
-   and invisible to SQL gates).
+1. **Schema:** approved (owner, 2026-11-10, on #533). The env-list
+   alternative was declined.
 2. **Invite code:** the owner issues one from the Desk to the smoke address
    (recommended).
 3. **Mailbox:** a plus-address on a domain the owner controls (recommended).
