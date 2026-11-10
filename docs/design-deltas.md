@@ -1101,8 +1101,8 @@ each ruling is also a comment on its issue.
   the photos were. Built on marked guesses, asked as Design 155: the
   runner's profile city stands in (no run stores a place), the
   temperature is the judged feels-like in the operator's unit, the h1 is
-  sr-only and the kit id comes last, and a removed kit keeps its verdict,
-  garments and notes.
+  sr-only and the kit id comes last, a removed kit keeps its verdict,
+  garments and notes, and the start time keeps AM/PM (#567).
 - **R51·154 · Request access's edge cases (#528). Built here
   (design 191); the sent copy, the note's band and its counter are the
   marketing site's.** (1)

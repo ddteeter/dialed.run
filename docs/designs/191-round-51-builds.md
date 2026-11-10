@@ -67,15 +67,15 @@ records them for it. In `Landing.tsx` the Log in line takes `wide:hidden`.
 ## Issues
 
 - Closes: #527, #528.
-- Defers: Design 155 (#527's guesses below) and Design 156 (the counter),
-  both for the next round.
+- Defers: #567 (Design 155, #527's guesses below) and #568 (Design 156,
+  the counter), both for the next round.
 - Marketing-repo work (not this repo): 154.1's sent copy, "Request sent." /
   "We hand out invites in small batches. If one comes your way, it'll
   arrive at {email}.", no reply or time promised; the `note_too_long` band
   "Keep it under {cap} characters." with both fields kept; M5's counter
   from cap − 40.
 
-## Open questions (marked guesses; Design 155 for 153, Design 156 for the counter)
+## Open questions (marked guesses; Design 155 #567, Design 156 #568)
 
 - **City:** no run stores a place, so the runner's profile city stands in.
   It is one field, kept easy to drop.
@@ -83,4 +83,6 @@ records them for it. In `Landing.tsx` the Log in line takes `wide:hidden`.
 - **No h1 or kit id on the board:** the h1 "Kit" is kept sr-only, and the
   kit id moves below the notes (the takedown form takes it).
 - **Removed:** verdict, garments and notes still show.
+- **Start time:** the app's 12-hour clock with AM/PM (`clockLabel`); the
+  board draws `7:12` bare.
 - **Counter from cap − 40:** M5's only. Au5 keeps round 28's (from 120).

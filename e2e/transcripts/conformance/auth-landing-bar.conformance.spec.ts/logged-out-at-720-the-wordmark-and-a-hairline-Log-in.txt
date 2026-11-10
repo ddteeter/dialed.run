@@ -11,10 +11,6 @@ paragraph
 A virtual wardrobe for runners: what you wore, on which run, in which weather.
 end of paragraph
 link, Request access
-paragraph
-Have an account?
-link, Log in
-end of paragraph
 end of main
 contentinfo
 paragraph

@@ -25,14 +25,21 @@ test("the landing bar at width, nothing below it, and never a tab bar", async ({
   await expect(page.locator("[data-slot='top-bar']")).toHaveCount(0);
   await expect(page.locator("[data-slot='tab-bar']")).toHaveCount(0);
 
-  // Round 50 · 151a: the hero asks for access, then offers Log in.
-  await scene(page, "The hero: Request access, then Have an account? Log in");
+  // Round 50 · 151a: the hero asks for access. Round 51 · 154.3: from 720
+  // the bar's Log in is enough, so the hero's line is not drawn here.
+  await scene(page, "The hero: Request access; Log in is the bar's");
   const hero = page.getByRole("main");
   await expect(
     hero.getByRole("link", { name: "Request access" }),
   ).toHaveAttribute("href", "/account/request-access");
+  await expect(hero.getByText("Have an account?")).toBeHidden();
+
+  // Below 720 there is no bar, so the hero offers it.
+  await scene(page, "Below 720 · Request access, then Have an account? Log in");
+  await page.setViewportSize({ width: 390, height: 760 });
   await expect(hero.getByText("Have an account?")).toBeVisible();
   await expect(hero.getByRole("link", { name: "Log in" })).toBeVisible();
+  await page.setViewportSize({ width: 1040, height: 760 });
 
   await scene(page, "Auth takes the same bar, with no action");
   await bar.getByRole("link", { name: "Log in" }).click();
