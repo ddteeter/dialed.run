@@ -249,14 +249,14 @@
     },
     {
       "name": "@tanstack/query-core",
-      "version": "5.104.5",
+      "version": "5.105.0",
       "licence": "MIT",
       "copyright": "2021-present Tanner Linsley",
       "project": "https://tanstack.com/query"
     },
     {
       "name": "@tanstack/react-query",
-      "version": "5.104.5",
+      "version": "5.105.0",
       "licence": "MIT",
       "copyright": "2021-present Tanner Linsley",
       "project": "https://tanstack.com/query"
@@ -1007,13 +1007,13 @@
     },
     {
       "name": "@tanstack/devtools-vite",
-      "version": "0.8.5",
+      "version": "0.8.6",
       "licence": "MIT",
       "project": "https://tanstack.com/devtools"
     },
     {
       "name": "@tanstack/react-devtools",
-      "version": "0.10.13",
+      "version": "0.10.14",
       "licence": "MIT",
       "project": "https://tanstack.com/devtools"
     },
