@@ -54,6 +54,8 @@ test.describe("logged out", () => {
     }) => {
       if (baseURL === undefined) throw new Error("no baseURL");
       await compare(page, baseURL, width, "logged out");
+      // Round 51 · 154.3: from 720 the bar's Log in is the only one.
+      await expect(page.getByRole("link", { name: "Log in" })).toHaveCount(1);
     });
   }
 
@@ -63,6 +65,10 @@ test.describe("logged out", () => {
     await hydrated(page);
     await expect(page.locator(BAR)).toBeHidden();
     await expect(page.locator("[data-slot='tab-bar']")).toHaveCount(0);
+    // Round 51 · 154.3: below 720, the hero's line carries Log in.
+    await expect(
+      page.getByRole("main").getByRole("link", { name: "Log in" }),
+    ).toBeVisible();
   });
 });
 

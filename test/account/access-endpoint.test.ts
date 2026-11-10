@@ -148,7 +148,7 @@ describe("receiveAccessRequest", () => {
     expect(await requests()).toHaveLength(5);
   });
 
-  it("takes a request from a blocked state, tagged, with the same receipt (Design 154 part 1)", async () => {
+  it("takes a request from a blocked state, tagged, with the same receipt (Round 51 · 154.1)", async () => {
     const { verify } = verifyAs(true);
     const response = await receiveAccessRequest(
       post(
@@ -167,12 +167,13 @@ describe("receiveAccessRequest", () => {
     ["no address", {}],
     ["an empty address", { email: "" }],
     ["something that isn't an address", { email: "sam" }],
-    // Design 154 part 2: round 31's only field error.
+    // Round 51 · 154.2: invalid_email stays the email's, whatever the note.
     [
-      "a note over the cap",
-      { email: "sam@x.test", note: "n".repeat(ACCESS_NOTE_MAX + 1) },
+      "a bad address beside a note over the cap",
+      { email: "sam", note: "n".repeat(ACCESS_NOTE_MAX + 1) },
     ],
     ["a file for the address", { email: new Blob(["sam@x.test"]) }],
+    ["a file for the note", { email: "sam@x.test", note: new Blob(["n"]) }],
   ])(
     "answers error=invalid_email for %s, without asking Turnstile",
     async (_, fields) => {
@@ -186,6 +187,21 @@ describe("receiveAccessRequest", () => {
       expect(await requests()).toStrictEqual([]);
     },
   );
+
+  it("answers error=note_too_long for a good address and a note over the cap (Round 51 · 154.2)", async () => {
+    const { seen, verify } = verifyAs(true);
+    const response = await receiveAccessRequest(
+      post({
+        email: "sam@x.test",
+        note: "n".repeat(ACCESS_NOTE_MAX + 1),
+        "cf-turnstile-response": "t",
+      }),
+      depsWith(verify),
+    );
+    expectSeeOther(response, "https://dialed.run/invite?error=note_too_long");
+    expect(seen).toStrictEqual([]);
+    expect(await requests()).toStrictEqual([]);
+  });
 
   it("answers error=invalid_email for a body that isn't a form", async () => {
     const { seen, verify } = verifyAs(true);

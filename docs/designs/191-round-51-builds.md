@@ -60,17 +60,25 @@ records them for it. In `Landing.tsx` the Log in line takes `wide:hidden`.
 - `access-endpoint.test.ts` (worker): `note_too_long` vs `invalid_email`.
 - `Landing.dom.test.tsx`: the Log in line carries `wide:hidden`.
 - e2e: extend `e2e/safety/takedown.journey.spec.ts` (Open the kit → back
-  to the request) and its transcript, and `e2e/auth/access-requests.spec.ts`
-  for `note_too_long`. Both already cover these paths in a real browser.
+  to the request) and its transcript, and the landing bar's conformance
+  spec (one Log in from 720; the hero's below). `note_too_long` needs no
+  browser: the endpoint's worker test reads the 303.
 
 ## Issues
 
 - Closes: #527, #528.
-- Opens: none yet.
+- Defers: Design 155 (#527's guesses below) and Design 156 (the counter),
+  both for the next round.
+- Marketing-repo work (not this repo): 154.1's sent copy, "Request sent." /
+  "We hand out invites in small batches. If one comes your way, it'll
+  arrive at {email}.", no reply or time promised; the `note_too_long` band
+  "Keep it under {cap} characters." with both fields kept; M5's counter
+  from cap − 40.
 
-## Open questions (marked guesses, sent to coordinator-5)
+## Open questions (marked guesses; Design 155 for 153, Design 156 for the counter)
 
 - **City:** no run stores a place, so the runner's profile city stands in.
+  It is one field, kept easy to drop.
 - **Temperature:** the judged feels-like in the operator's units, as "41°".
 - **No h1 or kit id on the board:** the h1 "Kit" is kept sr-only, and the
   kit id moves below the notes (the takedown form takes it).
