@@ -21,6 +21,7 @@ todos.json
 !.guardrails/state/recurrence.json
 reports/mutation/
 reports/stryker-incremental.json
+reports/stryker-incremental.fingerprint.json
 .stryker-tmp/
 .claude/worktrees/
 # --- guardrails:end ---

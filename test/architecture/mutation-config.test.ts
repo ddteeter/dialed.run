@@ -8,7 +8,8 @@ function byPath(a: string, b: string): number {
 }
 
 /**
- * Every `.ts` file under `src/lib`, subdirectories included.
+ * Every `.ts` file under `src/lib`, and every `.ts`/`.tsx` file under
+ * `src/modules`, subdirectories included.
  *
  * `import.meta.glob`, not `readdirSync`: these run in the workers pool,
  * which has no real filesystem — `readdir("src/lib")` resolves inside
@@ -16,19 +17,64 @@ function byPath(a: string, b: string): number {
  * directory as it is on disk. Same device `server-functions-are-glue`
  * uses to enumerate modules.
  */
-function libFilesOnDisk(): string[] {
-  return Object.keys(
-    import.meta.glob("../../src/lib/**/*.ts", { query: "?raw" }),
-  ).map((path) => path.replace("../../", ""));
+const filesOnDisk = {
+  lib: repoPaths(import.meta.glob("../../src/lib/**/*.ts", { query: "?raw" })),
+  modules: repoPaths(
+    import.meta.glob("../../src/modules/**/*.{ts,tsx}", { query: "?raw" }),
+  ),
+};
+
+function repoPaths(globbed: Record<string, unknown>): string[] {
+  return Object.keys(globbed).map((path) => path.replace("../../", ""));
 }
 
 /**
-The `src/lib` entries, each as its list of positive paths and globs.
+The entries under a directory, each as its list of positive paths and globs.
 */
-function libEntries(): string[][] {
+function entriesUnder(directory: string): string[][] {
   return strykerConfig.mutate
-    .filter((entry) => entry.startsWith("src/lib/"))
+    .filter((entry) => entry.startsWith(directory))
     .map((entry) => entry.split(",").filter((path) => !path.startsWith("!")));
+}
+
+/**
+ * Every `!` path in the array. A file one names cannot be mutated at all,
+ * so it belongs to no shard (`server-functions-are-glue` holds each to that).
+ */
+const negated = strykerConfig.mutate
+  .flatMap((entry) => entry.split(","))
+  .filter((path) => path.startsWith("!"))
+  .map((path) => ratchetGlob(path.slice(1)));
+
+/**
+ * For each file, how many entries match it. A path named twice inside one
+ * entry still counts once — stryker dedupes within a scope — but two
+ * entries matching it is two shards mutating it.
+ */
+function shardsPerFile(
+  files: readonly string[],
+  entries: readonly string[][],
+): Record<string, number> {
+  return Object.fromEntries(
+    files.map((file) => [
+      file,
+      entries.filter((paths) =>
+        paths.some((path) => ratchetGlob(path).test(file)),
+      ).length,
+    ]),
+  );
+}
+
+/**
+The paths in these entries that match no file on disk.
+*/
+function deadPaths(
+  files: readonly string[],
+  entries: readonly string[][],
+): string[] {
+  return entries
+    .flat()
+    .filter((path) => files.every((file) => !ratchetGlob(path).test(file)));
 }
 
 /**
@@ -130,21 +176,10 @@ describe("stryker.conf.json", () => {
      * entry, because a file matched by two shards is mutated twice for
      * nothing.
      */
-    // For each file, how many entries match it. A path named twice inside
-    // one entry still counts once — stryker dedupes within a scope — but
-    // two entries matching it is two shards mutating it. Sorted, because
-    // the order entries appear in is a sharding decision and not a fact
-    // about coverage.
-    const onDisk = libFilesOnDisk().toSorted(byPath);
-    const matches = Object.fromEntries(
-      onDisk.map((file) => [
-        file,
-        libEntries().filter((paths) =>
-          paths.some((path) => ratchetGlob(path).test(file)),
-        ).length,
-      ]),
-    );
-    expect(matches).toStrictEqual(
+    // Sorted, because the order entries appear in is a sharding decision
+    // and not a fact about coverage.
+    const onDisk = filesOnDisk.lib.toSorted(byPath);
+    expect(shardsPerFile(onDisk, entriesUnder("src/lib/"))).toStrictEqual(
       Object.fromEntries(onDisk.map((file) => [file, 1])),
     );
   });
@@ -153,11 +188,34 @@ describe("stryker.conf.json", () => {
     // The other direction: an entry left pointing at a moved or deleted
     // file matches nothing, and a shard made only of such paths mutates
     // nothing and passes.
-    const onDisk = libFilesOnDisk();
-    const deadPaths = libEntries()
-      .flat()
-      .filter((path) => onDisk.every((file) => !ratchetGlob(path).test(file)));
+    expect(deadPaths(filesOnDisk.lib, entriesUnder("src/lib/"))).toStrictEqual(
+      [],
+    );
+  });
 
-    expect(deadPaths).toStrictEqual([]);
+  it("matches every src/modules file that is not negated to exactly one entry", () => {
+    /**
+     * Two module scopes are split across three entries each (design 190):
+     * `src/modules/**\/*.tsx` by module, and `src/modules/safety`'s `.ts`
+     * as three explicit lists, because each was the longest shard in the
+     * matrix and the safety one hit the 6-hour job limit. Listed rather
+     * than a glob minus negations, for the reason the `src/lib` check above
+     * gives, and with the same cost: a new safety file, or a new module's
+     * first component, joins no shard unless it is listed. This is the
+     * check that catches it. Negated files are left out, since they cannot
+     * be mutated at all.
+     */
+    const onDisk = filesOnDisk.modules
+      .filter((file) => negated.every((glob) => !glob.test(file)))
+      .toSorted(byPath);
+    expect(shardsPerFile(onDisk, entriesUnder("src/modules/"))).toStrictEqual(
+      Object.fromEntries(onDisk.map((file) => [file, 1])),
+    );
+  });
+
+  it("names no src/modules path that matches nothing on disk", () => {
+    expect(
+      deadPaths(filesOnDisk.modules, entriesUnder("src/modules/")),
+    ).toStrictEqual([]);
   });
 });
