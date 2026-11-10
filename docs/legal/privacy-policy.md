@@ -164,8 +164,8 @@ visibility), a product link if you paste one, and a photo if you take one.
 
 For each run you log a kit on: the garments you wore, your verdict (way cold
 to way warm), an optional caption, tags, up to four photos, and optional
-notes and flags on individual garments. Notes and flags on garments are
-never shown to other runners.
+flags on individual garments. Flags on garments are never shown to other
+runners.
 
 ### The social side
 
@@ -295,7 +295,7 @@ clear our own copies when something stops being public.
 
 **Never shown to other runners or the public:** your email, your closet
 (except your rotation, if you show it on your public profile), your
-garment photos, your private kits, notes and flags on garments, your
+garment photos, your private kits, flags on garments, your
 thermal level, your verdict history and coverage, and any run's
 coordinates. The people who run [dialed.run] can see them only for the
 reasons under
@@ -610,6 +610,7 @@ any differently.
 | Photo screening scores                                                        | Deleted with the photo. A locked copy of suspected child sexual abuse material keeps its own, as long as the copy                 |
 | Fingerprints of photos we removed as intimate images shared without consent   | 3 years after the removal, then deleted                                                                                           |
 | Your account, when you delete it                                              | Hidden at once; everything below deleted 7 days later (see [Your choices](#your-choices))                                         |
+| Backups: the database's history, and copies of photos                         | 30 days. Something you delete leaves our backups within 30 days of leaving the app                                                |
 | Suspected child sexual abuse material we removed, and its uploader's details  | One year after we report it to NCMEC, then deleted, unless the law or law enforcement requires longer                             |
 | Usernames you have used                                                       | For good, so nobody else can take them                                                                                            |
 | Copies of photos on public kits, in the public store                          | While the kit is public; deleted when it stops being public, is hidden or removed, or you are banned or leave                     |
@@ -634,10 +635,10 @@ What you can do in the app:
   hidden from everyone at once, and you have 7 days to change your mind by
   signing in and keeping it. After that we delete your account, profile,
   closet, runs, kits, photos, files, follows, blocks, notifications and
-  Strava connection. What stays: your username, reserved for good; reports
-  you filed, without your name; records of moderation decisions and any
-  quarantined material; and products you added to the shared catalogue,
-  no longer linked to you.
+  Strava connection. Our backups lose it within 30 days after that. What
+  stays: your username, reserved for good; reports you filed, without your
+  name; records of moderation decisions and any quarantined material; and
+  products you added to the shared catalogue, no longer linked to you.
 - **Delete a run, a kit or a kit photo**, and **delete or retire a
   garment.**
 - **Change your email address** (confirmed from the new address, with a
