@@ -227,7 +227,7 @@ owing you anything.
   anyone who saw it before then may have kept a copy.
 - **Some things are never shown to other runners**, such as your closet as
   a whole (apart from the rotation you choose to show), your garment
-  photos, notes and flags on garments, and your run's location. The privacy policy has the full list, and says when the people
+  photos, flags on garments, and your run's location. The privacy policy has the full list, and says when the people
   who run [dialed.run] may see them.
 - **Garments you have worn are retired, not deleted.** When you remove a
   garment that is in one of your kits, we retire it so your old kits still
