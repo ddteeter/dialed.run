@@ -17,6 +17,7 @@ import {
   fileTakedownRequest,
   pendingTakedownRequests,
 } from "../../src/modules/safety";
+import { queriesDuring } from "../d1-spy";
 import { noPurge } from "../purge-spy";
 import { oweInCore } from "../queue-fakes";
 
@@ -294,5 +295,28 @@ describe("the open requests, as Review lists them", () => {
     await fileTakedownRequest(core(), request(), deps, NOW);
     await fileTakedownRequest(core(), request(), deps, NOW + 1);
     expect(await pendingTakedownRequests(core(), NOW, 1)).toHaveLength(1);
+  });
+
+  it("looks for no other photos or matches when no request names anything of ours", async () => {
+    // A link that is not ours has no subject, and contributes nothing to
+    // the subjects the two lookups take: with none, neither is asked.
+    await fileTakedownRequest(
+      core(),
+      request({ location: "words only", description: "my photo" }),
+      deps,
+      NOW,
+    );
+
+    let listed: Awaited<ReturnType<typeof pendingTakedownRequests>> = [];
+    const { statements } = await queriesDuring(async () => {
+      listed = await pendingTakedownRequests(core(), NOW);
+    });
+
+    expect(listed.map((row) => row.subject)).toStrictEqual([undefined]);
+    // `ranked` is the other-photos read's window; `fingerprint` is only
+    // selected by the matches read's probe.
+    expect(
+      statements.filter((sql) => /"ranked"|"fingerprint"/u.test(sql)),
+    ).toStrictEqual([]);
   });
 });

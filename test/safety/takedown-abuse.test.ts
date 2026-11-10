@@ -23,6 +23,7 @@ import {
 } from "../../src/modules/safety";
 import { ipKey, requesterKey } from "../../src/modules/safety/requester-key";
 import {
+  confirmTokenHash,
   TAKEDOWN_CAP,
   TAKEDOWN_VALVE_PER_HOUR,
   valveHour,
@@ -674,6 +675,15 @@ describe("what filing decides, at its edges", () => {
     expect(valveHour(3599)).toBe(0);
     expect(valveHour(3600)).toBe(1);
     expect(valveHour(NOW)).toBe(500_000);
+  });
+
+  it("hashes a confirm token as SHA-256 hex, two digits a byte, zero bytes included", async () => {
+    // A fixed vector rather than a random token: SHA-256("abc") has the
+    // bytes 0x01, 0x03 and 0x00 in it, so a byte written without its
+    // leading zero shortens the hash every time, not one run in eight.
+    expect(await confirmTokenHash("abc")).toBe(
+      "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+    );
   });
 });
 
