@@ -37,3 +37,9 @@ call" lands as the first post-MVP epic without migrations.
 | [`plan/`](plan/README.md)     | The original technical plan (htmx-era). Superseded by root `CLAUDE.md` + `docs/`; kept for the record.                                                                | `dialed-plan.zip`                                 |
 
 Reconciled 2026-08-30. Rationale for every divergence: [`docs/decisions.md`](docs/decisions.md).
+
+## Licence and trademarks
+
+The code is licensed under the [GNU AGPL v3](LICENSE). The name dialed.run and
+its logo are not: forks may use the code but not the name or the brand. See
+[`TRADEMARKS.md`](TRADEMARKS.md).
