@@ -4,8 +4,8 @@
  * it, opens its runner page or visits its open-web profile signed out
  * finds nothing, even with the profile set public. The worker suite proves
  * each read. This spec proves the pages a runner actually meets, which
- * only a real server and browser render: H's "isn't here", and the open
- * web's 404.
+ * only a real server and browser render: H's "isn't here", H by id's
+ * redirect, and the open web's 404.
  *
  * The flag is set by SQL, as the owner sets it in production; no app code
  * writes it. The test seeds the account with an id it generated and
@@ -44,13 +44,15 @@ test("a runner can't find the smoke account: not in search, not at H, not on the
       page.getByRole("status").filter({ hasText: nobody }),
     ).toHaveText(nobody);
 
-    // H, by handle and by id (its redirect), says what a gone runner's says.
-    for (const at of [handle, smokeId]) {
-      await page.goto(`/feed/u/${at}`);
-      await hydrated(page);
-      await expect(page.getByText("This runner isn't here.")).toBeVisible();
-      await expect(page.getByText(`@${handle}`)).toHaveCount(0);
-    }
+    // H by handle says what a gone runner's says, and H by id sends the
+    // viewer back to the feed, as for any runner they may not see.
+    await page.goto(`/feed/u/${handle}`);
+    await hydrated(page);
+    await expect(page.getByText("This runner isn't here.")).toBeVisible();
+    await expect(page.getByText(`@${handle}`)).toHaveCount(0);
+    await page.goto(`/feed/u/${smokeId}`);
+    await expect(page).toHaveURL(/\/feed$/u);
+    await expect(page.getByText(`@${handle}`)).toHaveCount(0);
 
     await page.context().clearCookies();
     const openWeb = await page.goto(`/@${handle}`);
