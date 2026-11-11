@@ -1,0 +1,9 @@
+# Design 196 (#483). Every issue here is public and permanent, so a blank
+# issue is off: a person picks a form, and a security problem goes to
+# private reporting instead. Agents file through `npm run track -- create`,
+# which does not use these (docs/agents/issue-tracker.md).
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security problem
+    url: https://github.com/ddteeter/dialed.run/security/advisories/new
+    about: Privately, to the maintainer. Please don't describe an unfixed security problem in a public issue.

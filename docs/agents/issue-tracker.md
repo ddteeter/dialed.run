@@ -59,6 +59,27 @@ What's wrong or missing, where, and why it matters. Facts from the source.
 - **Status:** a `kind:owner-question` is Needs owner, a `kind:design-ask` is
   Needs Design, and anything decided and buildable is Ready.
 
+## Filing one on the web (people, not agents)
+
+A person on github.com picks one of three issue forms
+(`.github/ISSUE_TEMPLATE/`, design 196): **Bug or build item**, **Owner
+question** or **Design ask**. Blank issues are off, and the chooser's
+**Report a security problem** link goes to GitHub's private vulnerability
+reporting (`SECURITY.md`), so an unfixed hole is never described in a
+public issue.
+
+- A form asks for the same fields as the body above, presets its `kind:`
+  label and adds the issue to the Project. It renders each field under a
+  `###` heading, not as the `**Trigger:**` lines `track create` writes.
+  Both are fine; don't rewrite one into the other.
+- A form cannot set the area or severity label, the milestone or the
+  status. Whoever triages the issue adds them.
+- GitHub adds the issue to the Project only when its author can write to
+  the Project. Anyone else's lands outside it: add it with
+  `npm run track -- status N <status>`.
+- `track create` goes through the API, which ignores the forms and the
+  blank-issue setting. Agents keep using it.
+
 ## The lifecycle
 
 - **Owner questions:** an issue in Needs owner (the _Waiting on me_ view).

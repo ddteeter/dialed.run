@@ -1,0 +1,37 @@
+# Design 196 (#483). The fields are the body shape in
+# docs/agents/issue-tracker.md, which stays its one description. A form
+# cannot set the area or severity label; triage adds them.
+name: Bug or build item
+description: Something is wrong or missing in the app.
+labels: ["kind:build"]
+projects: ["ddteeter/2"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Issues here are public and permanent. Leave out personal details, and report a security problem [privately](https://github.com/ddteeter/dialed.run/security/advisories/new) instead.
+  - type: input
+    id: trigger
+    attributes:
+      label: Trigger
+      description: When this should be picked up.
+      value: none. Ready now.
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What
+      description: What is wrong or missing, and why it matters. For a bug, the steps that show it and what you expected.
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Where
+      description: The screen, or the files if you know them.
+  - type: textarea
+    id: links
+    attributes:
+      label: Links
+      description: Related issues, pull requests, decisions (D-NN) or design boards.
