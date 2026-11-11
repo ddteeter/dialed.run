@@ -1,0 +1,96 @@
+name: Supply chain
+
+# Two checks on what a change brings in (design 196, #546):
+#
+#   zizmor             reads the workflows for security mistakes: template
+#                      injection, permissions wider than a job uses,
+#                      credentials left in a checkout, unpinned actions.
+#                      `actionlint` (ci.yml) checks that they are valid;
+#                      this checks that they are safe.
+#   dependency-review  fails a PR that adds a dependency with a known
+#                      vulnerability, before Dependabot would flag it on
+#                      `main`.
+#
+# Every pull request, not only those that touch a workflow or a manifest.
+# Both take seconds, and a `paths:` filter makes a check unusable as a
+# required one: a workflow that does not run reports no context, and a
+# required context that never arrives blocks the merge (mutation.yml has
+# the longer account).
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: supply-chain-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The release binary at a pinned checksum, not the marketplace action, for
+  # the reason `actionlint` gives: the allowed-actions list stays as it is.
+  # Dependabot does not see this pin; bump the version and the checksum
+  # together, by hand (docs/dependencies.md).
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    env:
+      ZIZMOR_VERSION: 1.32.0
+      ZIZMOR_SHA256: bb110cc765eca9cd7efb2e284a956be5974c60027b0970f16397d86208a9957b
+    steps:
+      # Audit first (design 196): reports the hosts this job reaches and
+      # blocks none. It moves to `block` once that list is known and short.
+      - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install zizmor
+        run: |
+          tarball="zizmor-x86_64-unknown-linux-gnu.tar.gz"
+          curl -fsSL -o "$tarball" \
+            "https://github.com/zizmorcore/zizmor/releases/download/v${ZIZMOR_VERSION}/$tarball"
+          echo "$ZIZMOR_SHA256  $tarball" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/zizmor"
+          tar xzf "$tarball" -C "$RUNNER_TEMP/zizmor"
+          rm "$tarball"
+
+      # The token is read-only, and is what lets zizmor run its online
+      # audits: a pinned SHA that is not in the action's own repository, and
+      # an action version with a published advisory.
+      - name: Audit the workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          "$RUNNER_TEMP/zizmor/zizmor" --color=always .
+
+  dependency-review:
+    name: Dependency review
+    # It compares the PR's base and head, so there is nothing to review on
+    # a push.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      # Audit first (design 196): reports the hosts this job reaches and
+      # blocks none. It moves to `block` once that list is known and short.
+      - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Vulnerabilities only. The repository has no licence policy yet, so
+      # none is restated here (design 196, open questions).
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0

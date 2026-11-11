@@ -30,6 +30,12 @@ jobs:
     permissions:
       actions: write
     steps:
+      # Audit first (design 196): reports the hosts this job reaches and
+      # blocks none. It moves to `block` once that list is known and short.
+      - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
       - name: Delete every cache saved under the PR's merge ref
         env:
           GH_TOKEN: ${{ github.token }}

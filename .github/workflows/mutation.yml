@@ -76,6 +76,12 @@ jobs:
       relevant: ${{ steps.changed.outputs.relevant }}
       deps: ${{ steps.deps.outputs.digest }}
     steps:
+      # Audit first (design 196): reports the hosts this job reaches and
+      # blocks none. It moves to `block` once that list is known and short.
+      - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
@@ -182,6 +188,12 @@ jobs:
       matrix:
         include: ${{ fromJSON(needs.scopes.outputs.list) }}
     steps:
+      # Audit first (design 196): reports the hosts this job reaches and
+      # blocks none. It moves to `block` once that list is known and short.
+      - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -284,6 +296,12 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
+      # Audit first (design 196): reports the hosts this job reaches and
+      # blocks none. It moves to `block` once that list is known and short.
+      - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
       - name: Check the shards
         run: |
           scopes='${{ needs.scopes.result }}'

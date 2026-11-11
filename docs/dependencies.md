@@ -175,3 +175,24 @@ packages whose install scripts aren't covered by `allowScripts`
 (workerd, esbuild, canvas, fsevents today). An allowlist would stop a new
 dependency's install script from running at all. It needs the npm that CI
 installs to enforce it, which has not been checked.
+
+## The CI floor
+
+Design 196 (#546). Three checks on the workflows themselves, on top of the
+SHA pins and `actionlint`:
+
+- **`harden-runner` is the first step of every job**, and
+  `test/architecture/workflow-floor.test.ts` fails a job without it. A new
+  job starts at `egress-policy: audit`, which reports the hosts it reaches
+  and blocks none; its run's summary links the report. A job moves to
+  `block`, with that list as `allowed-endpoints`, when the list is short
+  enough to keep. The two Claude review jobs are on `block` already.
+- **`zizmor`** (`supply-chain.yml`) reads `.github/` on every PR for
+  template injection, permissions wider than a job uses, credentials left
+  in a checkout and unpinned actions. Fix a finding; don't ignore it.
+- **Dependency review** (`supply-chain.yml`) fails a PR that adds a
+  dependency with a known vulnerability.
+
+`zizmor` and `actionlint` are release binaries at a pinned checksum, not
+actions, so Dependabot does not see them. Bump the version and the
+checksum together, by hand, from the release's published digest.
