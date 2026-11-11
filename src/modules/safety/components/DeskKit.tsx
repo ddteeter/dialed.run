@@ -2,9 +2,11 @@ import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 
 import { audienceWord, verdictLabel } from "../../../lib/contracts";
-import { monthDayLabel } from "../../../lib/dates";
-import { Bracketed, Mono } from "../../../ui";
+import { formatTemp } from "../../../lib/contracts/temperature";
+import { clockLabel, monthDayLabel } from "../../../lib/dates";
+import { Bracketed, Icon, Mono } from "../../../ui";
 import type { DeskKit as Kit, DeskKitPhoto } from "../desk-kit";
+import { kitBackLink, type KitOriginSearch } from "./kit-origin";
 import { PhotoSection } from "./OtherPhotos";
 import { reviewPhotoSrc } from "./review-photo-src";
 
@@ -22,28 +24,55 @@ const STATE_WORD = {
  * #388), whatever its audience or state: `/feed/entry/$entryId` sends an
  * operator away from a private or hidden kit, as it does any runner.
  *
- * **Design 153 (#527): no board yet, built on a marked guess.** The band
- * first (whose, who may see it, where review left it), then the run, the
- * verdict and caption, the photos and the garments, in the Desk's own
- * primitives. Each photo is served from `/desk/review-photo/` and carries
- * its id, which the takedown form takes; one screening has not passed
- * says how it stands. No kit with the id says so in words.
+ * **Round 51 · 153 (#527).** In the board's order: the back link, the
+ * state band, the run line, the photos (unblurred, as Review shows them),
+ * the verdict, the garments and the notes. Read-only: the actions stay on
+ * the row the operator came from, which the back link names and returns
+ * to. A removed kit keeps its band and run line, and says "Removed.
+ * Photos deleted." where the photos were.
+ *
+ * **Marked guesses (Design 155):** the board draws no heading and no kit
+ * id, so the h1 is for screen readers only and the id, which the takedown
+ * form takes, comes last; a removed kit still shows its verdict, garments
+ * and notes.
  */
 export function DeskKit({
   kit,
-}: Readonly<{ kit: Kit | undefined }>): JSX.Element {
+  origin = {},
+}: Readonly<{
+  kit: Kit | undefined;
+  origin?: KitOriginSearch | undefined;
+}>): JSX.Element {
   return (
     <section data-part="desk-kit" className="flex flex-col gap-6">
-      <h1 className="m-0 font-display text-title uppercase">Kit</h1>
+      <BackLink origin={origin} />
+      <h1 className="sr-only">Kit</h1>
       {kit === undefined ? (
         <p className="m-0 text-body">No kit has this id. It may be deleted.</p>
       ) : (
         <KitBody kit={kit} />
       )}
-      <Link to="/desk/review" className="target self-start text-ink">
-        <Mono step="sm">Back to Review</Mono>
-      </Link>
     </section>
+  );
+}
+
+/**
+ * The way back to the row the operator came from ("Back to the report",
+ * "Back to the request"), or to Review with no origin.
+ */
+function BackLink({
+  origin,
+}: Readonly<{ origin: KitOriginSearch }>): JSX.Element {
+  const { label, ...anchor } = kitBackLink(origin);
+  return (
+    <Link
+      to="/desk/review"
+      {...anchor}
+      className="target inline-flex items-center gap-2 self-start text-ink no-underline"
+    >
+      <Icon name="back" size={20} />
+      <span className="text-body">{label}</span>
+    </Link>
   );
 }
 
@@ -55,27 +84,25 @@ function KitBody({ kit }: Readonly<{ kit: Kit }>): JSX.Element {
         <Bracketed>{audienceWord[kit.audience]}</Bracketed>
         <Bracketed>{STATE_WORD[kit.moderationStatus]}</Bracketed>
       </span>
-      <span className="text-quiet select-all">
-        <Mono step="sm">{kit.id}</Mono>
-      </span>
       <RunLine kit={kit} />
+      {kit.moderationStatus === "removed" ? (
+        <p data-part="kit-photos" className="m-0 text-body">
+          Removed. Photos deleted.
+        </p>
+      ) : (
+        <PhotoSection part="kit-photos" level={2} title={photosTitle(kit)}>
+          <KitList
+            empty="No photos on this kit."
+            className="m-0 flex list-none flex-wrap gap-3 p-0"
+            items={kit.photos.map((photo) => (
+              <KitPhoto key={photo.id} photo={photo} />
+            ))}
+          />
+        </PhotoSection>
+      )}
       <span data-part="kit-verdict" className="text-body">
         {verdictLabel(kit.verdict) ?? "No verdict"}
       </span>
-      {kit.caption === undefined ? undefined : (
-        <p data-part="kit-caption" className="m-0 text-body break-words">
-          {kit.caption}
-        </p>
-      )}
-      <PhotoSection part="kit-photos" level={2} title={photosTitle(kit)}>
-        <KitList
-          empty="No photos on this kit."
-          className="m-0 flex list-none flex-wrap gap-3 p-0"
-          items={kit.photos.map((photo) => (
-            <KitPhoto key={photo.id} photo={photo} />
-          ))}
-        />
-      </PhotoSection>
       <PhotoSection part="kit-garments" level={2} title="Garments">
         <KitList
           empty="No garments on this kit."
@@ -89,6 +116,14 @@ function KitBody({ kit }: Readonly<{ kit: Kit }>): JSX.Element {
           ))}
         />
       </PhotoSection>
+      {kit.caption === undefined ? undefined : (
+        <p data-part="kit-caption" className="m-0 text-body break-words">
+          {kit.caption}
+        </p>
+      )}
+      <span className="text-quiet select-all">
+        <Mono step="sm">{kit.id}</Mono>
+      </span>
     </>
   );
 }
@@ -137,14 +172,29 @@ function Runner({
 }
 
 /**
-The run the kit was worn on, and when; nothing for a run since deleted.
-*/
+ * The run line (Round 51 · 153): when and where, because a report is
+ * often about both. The day and start time in the run's zone, the judged
+ * feels-like in the operator's unit, the moisture and the city, as
+ * `NOV 4 · 7:12 AM · 41° · DAMP · BOSTON`; a part the kit has no value for
+ * is left out. Nothing for a run since deleted.
+ */
 function RunLine({ kit }: Readonly<{ kit: Kit }>): JSX.Element | undefined {
-  if (kit.run === undefined) return undefined;
+  const { run } = kit;
+  if (run === undefined) return undefined;
+  const parts = [
+    monthDayLabel(run.startedAt, run.timeZone),
+    clockLabel(run.startedAt, run.timeZone),
+    run.feelsLikeC === undefined
+      ? undefined
+      : formatTemp(run.feelsLikeC, kit.tempUnit),
+    run.moisture,
+    kit.city,
+  ];
   return (
-    <span data-part="kit-run" className="text-body">
-      {kit.run.title} ·{" "}
-      <Mono step="sm">{monthDayLabel(kit.run.startedAt)}</Mono>
+    <span data-part="kit-run" className="text-ink uppercase">
+      <Mono step="sm">
+        {parts.filter((part) => part !== undefined).join(" · ")}
+      </Mono>
     </span>
   );
 }

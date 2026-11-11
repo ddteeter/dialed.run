@@ -31,9 +31,12 @@ const formSchema = requestAccessSchema.extend({
 });
 
 /**
- * Round 31's error codes, which the marketing site's `/invite` draws.
+ * The error codes the marketing site's `/invite` draws: round 31's three,
+ * and Round 51 · 154.2's `note_too_long`, with which `/invite` keeps both
+ * fields and says "Keep it under {cap} characters." under the note.
  */
-type InviteError = "turnstile" | "invalid_email" | "rate_limited";
+type InviteError =
+  "turnstile" | "invalid_email" | "note_too_long" | "rate_limited";
 
 export interface AccessEndpointDeps {
   /**
@@ -53,20 +56,35 @@ function inviteError(code: InviteError): Response {
 }
 
 /**
- * The body as M5's fields, or nothing. A body that isn't a form, a field
- * that's a file, and an address or note that fails Au5's own schema all
- * read the same way.
+ * The body as M5's fields, or the code that says why not. Only a note over
+ * the cap beside an address that parses is `note_too_long` (Round 51 ·
+ * 154.2); a body that isn't a form, a field that's a file and an address
+ * that fails Au5's own schema are all `invalid_email`, which stays the
+ * email's alone.
  */
 async function formOf(
   request: Request,
-): Promise<z.infer<typeof formSchema> | undefined> {
+): Promise<z.infer<typeof formSchema> | InviteError> {
   let form: FormData;
   try {
     form = await request.formData();
   } catch {
-    return undefined;
+    return "invalid_email";
   }
-  return formSchema.safeParse(Object.fromEntries(form)).data;
+  const parsed = formSchema.safeParse(Object.fromEntries(form));
+  if (parsed.success) return parsed.data;
+  return parsed.error.issues.every((issue) => isNoteTooLong(issue))
+    ? "note_too_long"
+    : "invalid_email";
+}
+
+/**
+ * An issue that is a field over its cap. The note is the only field with
+ * one, so with every issue this kind the address parsed and the note is
+ * too long; a note that's a file is `invalid_type`, not this.
+ */
+function isNoteTooLong(issue: z.core.$ZodIssue): boolean {
+  return issue.code === "too_big";
 }
 
 export async function receiveAccessRequest(
@@ -74,10 +92,7 @@ export async function receiveAccessRequest(
   deps: AccessEndpointDeps,
 ): Promise<Response> {
   const form = await formOf(request);
-  // Design 154 (#528) part 2, a guess: a note over the cap answers
-  // invalid_email too, because that is round 31's only field error and M5
-  // draws email alone.
-  if (form === undefined) return inviteError("invalid_email");
+  if (typeof form === "string") return inviteError(form);
   const result = await requestAccess(
     deps.db,
     {
@@ -95,9 +110,11 @@ export async function receiveAccessRequest(
     deps.verify,
   );
   switch (result.status) {
-    // Design 154 (#528) part 1, a guess: a request from a blocked state is
-    // taken and gets the same receipt. Round 31 has no code for it, and the
-    // waitlist copy is the marketing site's to show.
+    // Round 51 · 154.1 (#528): a request from a blocked state is taken
+    // and gets the same receipt, so the answer doesn't reveal the gate.
+    // The sent page's copy reads true either way ("Request sent." / "We
+    // hand out invites in small batches. If one comes your way, it'll
+    // arrive at {email}."); it is the marketing site's to show.
     case "received": {
       return seeOther(`${MARKETING_INVITE_URL}/sent`);
     }

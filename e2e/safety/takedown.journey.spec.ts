@@ -243,7 +243,8 @@ test("someone with no account asks for an intimate image to come down, and an op
   const request = page.locator("[data-part='removal-request']").filter({
     // By its "Open the kit": the other request's row links this kit too,
     // among the runner's other photos.
-    has: page.locator(`a[href="/desk/kit/${entryId}"]`, {
+    // Round 51 · 153: it carries the row it is opened from.
+    has: page.locator(`a[href^="/desk/kit/${entryId}?from=request&row="]`, {
       hasText: "Open the kit",
     }),
   });
@@ -255,9 +256,14 @@ test("someone with no account asks for an intimate image to come down, and an op
   );
   await expect(request).toContainText("From Sam Asker · signed · good faith");
   await expect(request).toContainText(requester);
+  const requestRow = await request.getAttribute("id");
+  expect(requestRow).toMatch(/^request-/u);
   await expect(
     request.getByRole("link", { name: "Open the kit" }),
-  ).toHaveAttribute("href", `/desk/kit/${entryId}`);
+  ).toHaveAttribute(
+    "href",
+    `/desk/kit/${entryId}?from=request&row=${(requestRow ?? "").slice("request-".length)}`,
+  );
 
   const others = request.locator("[data-part='other-photos']");
   await others.scrollIntoViewIfNeeded();
@@ -275,16 +281,23 @@ test("someone with no account asks for an intimate image to come down, and an op
   await others
     .getByRole("link", { name: `${otherPhotoId}: open its kit` })
     .click();
-  await expect(page).toHaveURL(`/desk/kit/${secondEntryId}`);
+  await expect(page).toHaveURL(
+    new RegExp(String.raw`/desk/kit/${secondEntryId}\?from=request&row=`, "u"),
+  );
   const deskKit = page.locator("[data-part='desk-kit']");
   await expect(deskKit.getByRole("heading", { level: 1 })).toHaveText("Kit");
   await expect(deskKit.locator("[data-part='kit-band']")).toContainText(
     "[hidden pending review]",
   );
+  // Round 51 · 153: when and where, under the band.
+  await expect(deskKit.locator("[data-part='kit-run']")).toBeVisible();
   await expect(
     deskKit.getByRole("img", { name: otherPhotoId }),
   ).toHaveAttribute("src", `/desk/review-photo/${otherPhotoKey}`);
-  await page.goBack();
+  // Read-only: the way on is back to the request it was opened from.
+  await scene(page, "Back to the request the kit was opened from");
+  await deskKit.getByRole("link", { name: "Back to the request" }).click();
+  await expect(page).toHaveURL(`/desk/review#${requestRow ?? ""}`);
   await hydrated(page);
 
   // Round 45 #107: Decline asks why not in the bar's place, and Cancel

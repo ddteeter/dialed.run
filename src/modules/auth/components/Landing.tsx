@@ -51,9 +51,9 @@ const PRIMARY_ASK_CLASS =
 /**
  * Request access, then Log in for someone who already has an account.
  *
- * Design 154 (#528) part 3, a guess: the Log in line shows at every width,
- * though the bar repeats Log in from 720 up, because 151a lists it as the
- * hero's second line.
+ * Round 51 · 154.3 (#528): the Log in line shows below 720 only. From 720
+ * the bar's own Log in is enough, so the line follows the bar's
+ * breakpoint (`wide`).
  */
 function SignedOutAsk(): JSX.Element {
   return (
@@ -61,7 +61,7 @@ function SignedOutAsk(): JSX.Element {
       <Link to="/account/request-access" className={PRIMARY_ASK_CLASS}>
         Request access
       </Link>
-      <p className="m-0 text-body text-quiet">
+      <p className="m-0 text-body text-quiet wide:hidden">
         Have an account?{" "}
         <Link
           data-target="inline"

@@ -238,6 +238,13 @@ describe("on Review's rows", () => {
     expect(part("photo-matches")).toHaveTextContent(
       /^Matching photos · any runner · 1/u,
     );
+    // Round 51 · 153: opened from the report, so the kit can go back to it.
+    expect(
+      screen.getByRole("link", { name: /open its kit$/u }),
+    ).toHaveAttribute(
+      "href",
+      `/desk/kit/${KIT}?from=report&row=01HZZZZZZZZZZZZZZZZZZZZZZZ`,
+    );
   });
 
   it("sits on a removal request whose link is ours", async () => {
@@ -262,6 +269,14 @@ describe("on Review's rows", () => {
     );
     expect(part("photo-matches")).toHaveTextContent(
       /^Matching photos · any runner · 1/u,
+    );
+    expect(
+      within(part("photo-matches") ?? document.body).getByRole("link", {
+        name: /open its kit$/u,
+      }),
+    ).toHaveAttribute(
+      "href",
+      `/desk/kit/${KIT}?from=request&row=01JREQUEST0000000000000001`,
     );
   });
 });

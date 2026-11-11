@@ -46,17 +46,17 @@ describe("Landing, signed out", () => {
     ).toBeVisible();
   });
 
-  it("follows the ask with Have an account? Log in, at every width", async () => {
+  it("follows the ask with Have an account? Log in, below 720 only", async () => {
     await renderWithRouter(<Landing signedIn={false} />);
     const [inBar, inHero] = screen.getAllByRole("link", { name: "Log in" });
     expect(inBar?.closest("[data-slot='landing-bar']")).not.toBeNull();
     expect(inHero).toHaveAttribute("href", "/auth/login");
     expect(inHero?.closest("main")).not.toBeNull();
-    // Design 154 (#528) part 3: not hidden from 720 up.
-    expect(inHero).not.toHaveClass("wide:hidden");
-    expect(inHero?.parentElement).toHaveTextContent(
-      /^Have an account\? Log in$/u,
-    );
+    // Round 51 · 154.3 (#528): from 720 the bar's Log in is enough, so the
+    // whole line goes at the bar's breakpoint.
+    const line = inHero?.parentElement;
+    expect(line).toHaveTextContent(/^Have an account\? Log in$/u);
+    expect(line).toHaveClass("wide:hidden");
   });
 
   it("keeps the hero's wordmark for the phone only, plain", async () => {

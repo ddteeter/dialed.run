@@ -124,7 +124,7 @@ describe("OtherPhotos", () => {
 });
 
 describe("on Review's rows", () => {
-  it("sits on a queue row an intimate report started", async () => {
+  it("sits on a queue row an intimate report started, its kits opened from the report (Round 51 · 153)", async () => {
     const row: QueueRow = {
       id: "01HZZZZZZZZZZZZZZZZZZZZZZZ",
       subjectType: "entry",
@@ -141,9 +141,19 @@ describe("on Review's rows", () => {
       <ReviewQueue queue={[row]} resolve={vi.fn()} reviewHandle={vi.fn()} />,
     );
     expect(part("other-photos")).toHaveTextContent(/^Their other photos · 2/u);
+    expect(
+      screen.getByRole("link", { name: `${PHOTO_1}: open its kit` }),
+    ).toHaveAttribute(
+      "href",
+      `/desk/kit/${KIT}?from=report&row=01HZZZZZZZZZZZZZZZZZZZZZZZ`,
+    );
+    // The row the back link returns to.
+    expect(
+      document.querySelector("#report-01HZZZZZZZZZZZZZZZZZZZZZZZ"),
+    ).toContainElement(part("other-photos"));
   });
 
-  it("sits on a removal request whose link is ours", async () => {
+  it("sits on a removal request whose link is ours, its kits opened from the request (Round 51 · 153)", async () => {
     const request: PendingTakedownRequest = {
       id: "01JREQUEST0000000000000001",
       requesterEmail: "sam@example.com",
@@ -163,5 +173,14 @@ describe("on Review's rows", () => {
       <RemovalRequests requests={[request]} decide={vi.fn()} block={vi.fn()} />,
     );
     expect(part("other-photos")).toHaveTextContent(/^Their other photos · 1/u);
+    expect(
+      screen.getByRole("link", { name: `${PHOTO_1}: open its kit` }),
+    ).toHaveAttribute(
+      "href",
+      `/desk/kit/${KIT}?from=request&row=01JREQUEST0000000000000001`,
+    );
+    expect(
+      document.querySelector("#request-01JREQUEST0000000000000001"),
+    ).toContainElement(part("other-photos"));
   });
 });

@@ -2,13 +2,20 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { entryPhotos, outfitEntries, runs } from "../../src/db/schema-core";
+import {
+  entryPhotos,
+  outfitEntries,
+  runConditions,
+  runs,
+  userProfiles,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { AdminRequiredError } from "../../src/modules/safety";
 import { deskKitFor } from "../../src/modules/safety/desk-kit";
 import { deskKitInput } from "../../src/modules/safety/inputs";
 
+import { makeObservation } from "../feed/helpers";
 import {
   makeEntry,
   makeItem,
@@ -85,7 +92,39 @@ async function hiddenPrivateKit() {
   // Out of order on purpose: the read orders by position.
   const second = await photo(entryId, 1, "pending");
   const first = await photo(entryId, 0, "pass");
-  return { userId, entryId, shell, tights, first, second };
+  return { userId, runId, entryId, shell, tights, first, second };
+}
+
+/**
+ * The run's copy of its conditions in core (D-175): a start of 5°, a span
+ * of 2–9° and DAMP. The kit's verdict is copied too, so the judged
+ * feels-like is the span's cold end for a −1.
+ */
+async function conditionsCopy(
+  runId: string,
+  userId: string,
+  verdict: number,
+): Promise<void> {
+  await core().insert(runConditions).values({
+    runId,
+    userId,
+    feelsLikeC: 5,
+    minFeelsLikeC: 2,
+    maxFeelsLikeC: 9,
+    precipClass: "damp",
+    source: "visualcrossing",
+    verdict,
+  });
+}
+
+async function placeRunner(
+  userId: string,
+  place: Readonly<{ cityLabel: string; timeZone: string }>,
+): Promise<void> {
+  await core()
+    .update(userProfiles)
+    .set(place)
+    .where(eq(userProfiles.userId, userId));
 }
 
 beforeEach(async () => {
@@ -109,7 +148,14 @@ describe("deskKitFor", () => {
       verdict: -1,
       caption: "Cold start",
       createdAt: NOW,
-      run: { title: "Test run", startedAt: NOW - 3600 },
+      run: {
+        startedAt: NOW - 3600,
+        timeZone: undefined,
+        feelsLikeC: undefined,
+        moisture: undefined,
+      },
+      city: undefined,
+      tempUnit: "f",
       photos: [
         {
           id: kit.first,
@@ -138,6 +184,81 @@ describe("deskKitFor", () => {
         },
       ],
     });
+  });
+
+  it("carries the run line: the observation's zone, the judged feels-like, the moisture, the city, in the operator's unit (Round 51 · 153)", async () => {
+    const kit = await hiddenPrivateKit();
+    await conditionsCopy(kit.runId, kit.userId, -1);
+    await placeRunner(kit.userId, {
+      cityLabel: "Boston",
+      timeZone: "America/Chicago",
+    });
+    // makeRun's default place, so the observation is the run's own cell.
+    await makeObservation({
+      lat: 44.98,
+      lng: -93.27,
+      startedAt: NOW - 3600,
+      tempC: 6,
+      feelsLikeC: 4,
+      timeZone: "America/New_York",
+    });
+    await core().insert(userProfiles).values({ userId: ADMIN, tempUnit: "c" });
+
+    const found = await asAdmin(async () =>
+      deskKitFor(core(), ADMIN, kit.entryId),
+    );
+
+    expect(found?.run).toStrictEqual({
+      startedAt: NOW - 3600,
+      timeZone: "America/New_York",
+      feelsLikeC: 2,
+      moisture: "damp",
+    });
+    expect(found?.city).toBe("Boston");
+    expect(found?.tempUnit).toBe("c");
+  });
+
+  it("dates the run in the runner's zone when no observation names one", async () => {
+    const kit = await hiddenPrivateKit();
+    await placeRunner(kit.userId, {
+      cityLabel: "Boston",
+      timeZone: "America/Chicago",
+    });
+
+    const found = await asAdmin(async () =>
+      deskKitFor(core(), ADMIN, kit.entryId),
+    );
+
+    expect(found?.run?.timeZone).toBe("America/Chicago");
+  });
+
+  it("dates the run in UTC when the only zone it has is not one", async () => {
+    const kit = await hiddenPrivateKit();
+    await placeRunner(kit.userId, {
+      cityLabel: "Boston",
+      timeZone: "Mars/Base",
+    });
+
+    const found = await asAdmin(async () =>
+      deskKitFor(core(), ADMIN, kit.entryId),
+    );
+
+    expect(found?.run).toHaveProperty("timeZone", undefined);
+  });
+
+  it("reads Fahrenheit for an operator with no profile", async () => {
+    const kit = await hiddenPrivateKit();
+    // The runner's own unit is not the reader's.
+    await core()
+      .update(userProfiles)
+      .set({ tempUnit: "c" })
+      .where(eq(userProfiles.userId, kit.userId));
+
+    const found = await asAdmin(async () =>
+      deskKitFor(core(), ADMIN, kit.entryId),
+    );
+
+    expect(found?.tempUnit).toBe("f");
   });
 
   it("opens a removed kit, saying so", async () => {
