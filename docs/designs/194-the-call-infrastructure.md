@@ -111,5 +111,3 @@ the release check for every scorer version.
 - **The vision cap's numbers** wait for the eval's cost per photo.
 - **Whether a decision model can re-rank the scorer's shortlist** is a
   replay experiment once the log has verdicts, not a launch dependency.
-- **Design number**: 194 follows the wave-5 allocation as this session
-  understood it; renumber if a lane holds it.
