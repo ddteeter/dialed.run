@@ -30,7 +30,7 @@ Pass specs by reference, never pasted. Each brief contains:
 - Design questions: send them to the coordinator, keep building the rest on clearly marked guesses, and don't block on them;
 - the publishing boundary (`.claude/rules/publishing.md`): never-list, approve-list, otherwise ask. It covers the issues a lane opens, too;
 - before shipping: the full `npm test` (not slices: `test/architecture` has default-deny checks), the CI-style e2e (fresh D1, CI's `.dev.vars` placeholders, `A11Y_COVERAGE=1`, all projects, a free `DIALED_E2E_PORT` with a matching `BETTER_AUTH_URL`), `npm run build`, and `sanctions-check`;
-- ship with `npm run ship -- --body-file=<f>` in the background, attaching demo videos with its `--attach=<video>`, and message the coordinator on `green` with the PR number;
+- ship with `npm run ship -- --body-file=<f>` in the background, attaching demo videos with its `--attach=<video>`, and message the coordinator on `green` with the PR number, the push-gate wall time, whether Stryker reused a cache or seed or ran cold, and the CI time (owner, 2026-11-09: to watch how changes affect the gates);
 - the PR body carries `Closes #N` for every issue the lane finishes. Anything it defers or finds becomes a new issue the lane opens itself, within its scope (labels and milestone per `docs/agents/issue-tracker.md`), listed in the PR's Deferred section. `docs/deferred.md` is a frozen archive;
 - don't edit `docs/decisions.md`: an owner answer the lane gets goes on its issue as a comment, and the coordinator writes the D-row. Design-deltas entries for the lane's own work are fine.
 
