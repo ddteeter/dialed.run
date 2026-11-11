@@ -75,3 +75,10 @@ One PR, no app code.
 - **Licence policy for dependency review:** the repo has none. Proceeding
   on vulnerabilities only until the owner says which licences to refuse.
 - **Guess:** dependency review fails at the action's default severity.
+- **Block mode and the browser install:** every job that runs
+  `playwright install --with-deps` reaches Ubuntu's apt mirrors
+  (`azure.archive.ubuntu.com`, `security.ubuntu.com`), so a `block`
+  allowlist for those jobs must carry them. A cached browser install would
+  shorten those lists and survive a mirror outage like 2026-11-11's, but
+  `--with-deps` still needs apt for system libraries, so the cache alone
+  does not remove the mirrors. Not built here; a separate item if wanted.
