@@ -78,6 +78,31 @@ test("checks before an action, without being asked", async ({ page, a11y }) => {
   expect(a11y.findings().map((finding) => finding.rule)).toContain("image-alt");
 });
 
+test("checks a state a spec only asserts on, once its expect passes (R-189)", async ({
+  page,
+  a11y,
+}) => {
+  await page.route(`**${PROBE}`, (route) =>
+    route.fulfill({ contentType: "text/html", body: PLANTED }),
+  );
+  await page.goto(PROBE);
+  const heading = page.getByRole("heading", { name: "Probe" });
+
+  // An expect that fails is not a state the spec reached.
+  await expect(
+    expect(heading).not.toBeVisible({ timeout: 200 }),
+  ).rejects.toThrow(/toBeVisible/u);
+  await expect(
+    expect(page.getByRole("heading", { name: "Absent" })).toBeVisible({
+      timeout: 200,
+    }),
+  ).rejects.toThrow(/toBeVisible/u);
+  expect(a11y.findings()).toStrictEqual([]);
+
+  await expect(page.getByRole("heading", { name: "Absent" })).not.toBeVisible();
+  expect(a11y.findings().map((finding) => finding.rule)).toContain("image-alt");
+});
+
 /**
  * Step 2's rules: what the end-of-test walk and reflow check report.
  */
@@ -174,6 +199,24 @@ const WIDTHS = `<!doctype html>
   <div class="strip" style="overflow-x:auto;width:200px"><div style="width:600px">Strip</div></div>
 </main></body></html>`;
 
+/*
+ * A page that is the app's as far as the fixture can tell (it loads a
+ * module script), and hydrates late: until then it shows an image with
+ * no alt, which the other-width check would report.
+ */
+const HYDRATES_LATE = `<!doctype html>
+<html lang="en"><head><title>Late hydration</title>${RING}</head>
+<body><main>
+  <h1>Late hydration</h1>
+  <img id="ssr" src="/x.png">
+  <script type="module">
+    setTimeout(() => {
+      document.getElementById("ssr").remove();
+      document.documentElement.dataset.hydrated = "true";
+    }, 1500);
+  </script>
+</main></body></html>`;
+
 async function endFindings(
   page: Page,
   a11y: A11y,
@@ -219,6 +262,13 @@ test("the Tab walk waits out the app's own late focus move", async ({
   a11y,
 }) => {
   expect(await endFindings(page, a11y, LATE)).toStrictEqual([]);
+});
+
+test("the end checks wait for the page to hydrate (#566)", async ({
+  page,
+  a11y,
+}) => {
+  expect(await endFindings(page, a11y, HYDRATES_LATE)).toStrictEqual([]);
 });
 
 test("the other width and 320px are checked", async ({ page, a11y }) => {

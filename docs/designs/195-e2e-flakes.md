@@ -12,44 +12,42 @@ real bug in a screen, and one hid a real accessibility finding.
 **1. `focus-obscured` on `/closet/edit/:id`: the end checks ran before
 hydration.** On the dev server `load` fires before the client code is
 fetched, and `closet-edit.spec.ts` ends on an `expect` the server's HTML
-already satisfies. When hydration lands, the router's scroll restoration
-puts the page at the top, so the stop the Tab walk had just scrolled to is
-off screen when it is measured. Measured: the walk runs ~990–1150 ms after
-navigation and hydration lands ~860–1260 ms. With the CPU throttled 6×, 3 of
-40 runs had the scroll reset inside the walk, and those 3 reported
-`focus-obscured`; no other run did. Fix, in `e2e/support/a11y.ts`: the
-fixture waits for `html[data-hydrated]` before it reads a test's final state
-(the last check, the transcript, the walk). A document with no module script
-(the fixture's probes, a raw endpoint) has nothing to wait for; an app page
-that never hydrates is a checker error. Same sweep after: 0 of 40.
+already satisfies. When hydration lands, the router restores scroll to the
+top, so the stop the Tab walk had just scrolled to is off screen when it is
+measured. With the CPU throttled 6×, 3 of 40 runs had the scroll reset
+inside the walk and those 3 reported `focus-obscured`; no other run did.
+Fix (`e2e/support/a11y.ts`): the fixture waits for `html[data-hydrated]`
+before it reads a test's final state. A document with no module script (the
+fixture's probes) has nothing to wait for; an app page that never hydrates
+is a checker error. Same sweep after: 0 of 40.
 
-**2. `p-as-heading` on `/notifications`: a finding on a state no spec ends
-on.** M's spec held "Mark all read" with a route that never answers, then
-removed the route, which releases the call. The list then re-read itself
-while `finally` deleted the rows; when the delete won, the test ended on the
-empty list, whose "Quiet" is a paragraph drawn at title size. That finding
-is real and shows on every visit to the empty list. Fixes: the spec releases
-the call itself and waits for three read rows; "Quiet" becomes an `<h2>`, as
-every other title-size line in the app is (`NotificationList.tsx`); and a
-new test in the M spec ends on the empty list, so the fixture reads it.
+**2. `p-as-heading` on `/notifications`: a real finding on a state no spec
+ends on.** M's spec held "Mark all read", then removed the route, which
+releases the call. The list re-read itself while `finally` deleted the
+rows; when the delete won, the test ended on the empty list, whose "Quiet"
+is a paragraph drawn at title size. That shows on every visit to the empty
+list. Fixes: the spec releases the call itself and waits for three read
+rows; "Quiet" becomes an `<h2>`, as every other title-size line in the app
+is; a new test in the M spec ends on the empty list.
 
 **3. `corrections.spec.ts:122`, "It should say" read "": a bug in the
-sheet.** `CorrectionSheet` copied the waiting correction into the field when
-the field was picked. A pick that beat the sheet's read of the product left
-it empty for good, beside "You sent…". Fix: the value is derived at render
-(`typed ?? sent?.value`), so it fills when the read lands and never
-overwrites what was typed.
+sheet.** `CorrectionSheet` copied the waiting correction into the field at
+pick time, so a pick that beat the sheet's read of the product stayed
+empty. Fix: the value is derived at render (`typed ?? sent?.value`).
 
 **4. #364: check after a web-first `expect` that passed.** Not the cause of
-any flake above, but the reason #2's finding went unseen is the same gap.
-Every locator matcher ends in `Locator._expect`, so the fixture wraps that
-one method, as it already wraps the actions: no proxy over `expect`, and
+any flake above. Every locator matcher ends in `Locator._expect`, so the
+fixture wraps that one method, as it wraps the actions: no proxy, and
 `.not`, `.soft` and `expect.configure` are covered. A failed matcher is not
-checked. `expect.poll`, `toPass` and `toHaveURL` are not covered. `_expect`
-is private, so the wrapper throws if it is missing and `a11y.spec.ts` pins
-the behaviour. Checked after, not before: the state asserted is the one that
-exists once the matcher passes. **Cost, measured** on the full CI-style
-suite, hook off against on: see the PR body (filled in from the two runs).
+checked; `expect.poll`, `toPass` and `toHaveURL` are not covered. `_expect`
+is private, which is the cost of not proxying: the wrapper throws if it is
+missing or its answer changes shape, and `a11y.spec.ts` pins the behaviour,
+so a Playwright bump fails loudly. Checked after, not before: the asserted
+state exists once the matcher passes. **Cost, measured** on the full
+CI-style suite (dev server, fresh D1), hook off against on: 830 → 864
+checked states, axe time 23.2 s → 24.9 s, wall 613 s → 611 s, 166 tests
+each. No new finding: most asserted states were already checked before an
+action.
 
 ## Contract touches
 

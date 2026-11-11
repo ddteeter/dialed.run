@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 
 import { expect } from "@playwright/test";
 import type { Page, TestInfo } from "@playwright/test";
+import { z } from "zod";
 
 import type { Measure } from "./a11y-coverage";
 import {
@@ -26,17 +27,23 @@ import { test as base } from "./query-record";
  * Plan 161, step 1: accessibility checks on every state an e2e spec acts
  * on, in a real browser with the real stylesheet.
  *
- * **When it checks: before every action, and once at the end.** A spec
+ * **When it checks: before every action, after every web-first `expect`
+ * that passed, and once at the end.** A spec
  * waits for a state and then acts on it, so the moment before a click,
- * fill, navigation or resize is a state the spec meant to reach. Waiting
+ * fill, navigation or resize is a state the spec meant to reach; a state
+ * it only asserts on (a pending label, a band that clears) is the moment
+ * its `expect` passes (R-189, design 195). Waiting
  * for the DOM to go quiet does not work at machine speed: the closet
  * journey makes ~900 mutations in ten seconds and never settles (step 0).
  * So the action methods of `Locator`, `Page`, `Keyboard` and `Mouse` are
- * wrapped, once per worker, to run the check first. A state is checked
+ * wrapped, once per worker, to run the check first, and `Locator`'s
+ * `_expect`, which every web-first matcher on a locator ends in, to run
+ * it after. A state is checked
  * once per test, keyed by a hash of its markup and the viewport width.
  *
  * **Then, at the end of a test that passed** (step 2, `a11y-end.ts`): a
- * Tab walk, the other width, and reflow at 320px. The action wrapper is
+ * Tab walk, the other width, and reflow at 320px, on the hydrated page
+ * (`hydrated` below). The action wrapper is
  * off by then, so the walk's own presses are not states.
  *
  * **What it checks** (`a11y-page.ts`): every axe rule tagged WCAG A or AA,
@@ -196,9 +203,62 @@ function wrap(prototype: object, names: readonly string[]): void {
   }
 }
 
+/**
+ * `Locator._expect`'s answer and its options, as far as the fixture
+ * reads them: whether the matcher matched, and whether it was a `.not`.
+ */
+const expectAnswerSchema = z.object({ matches: z.boolean() });
+const expectOptionsSchema = z.object({ isNot: z.boolean().optional() });
+
+const EXPECT_MOVED =
+  "a11y fixture: Locator._expect is not what it was; Playwright changed it, so asserted states would go unchecked (design 195)";
+
+/**
+ * Whether the matcher passed. An answer or options of another shape is
+ * a Playwright that changed under the fixture, and throws: the check
+ * after an `expect` must never turn itself off in silence.
+ */
+function hasPassed(answer: unknown, options: unknown): boolean {
+  const parsed = expectAnswerSchema.safeParse(answer);
+  const asked = expectOptionsSchema.safeParse(options);
+  if (!parsed.success || !asked.success) throw new TypeError(EXPECT_MOVED);
+  return parsed.data.matches !== (asked.data.isNot ?? false);
+}
+
+/**
+ * R-189: a state a spec asserts on and never acts on is checked when its
+ * `expect` passes. Every web-first matcher on a locator (`toBeVisible`,
+ * `toHaveText`, `toHaveCount`, and their `.not`, `.soft` and
+ * `expect.configure` forms) ends in the locator's `_expect`, so wrapping
+ * that one method reaches them all with no proxy over `expect`. A matcher
+ * that failed or timed out is not a state the spec reached, and is not
+ * checked. `expect.poll`, `toPass` and `toHaveURL` poll a value, not a
+ * locator, and are not covered.
+ *
+ * `_expect` is Playwright's own, not its API: an upgrade that moves it
+ * must fail here, not stop checking in silence.
+ */
+function wrapExpect(prototype: object): void {
+  const original: unknown = Reflect.get(prototype, "_expect");
+  if (typeof original !== "function") throw new TypeError(EXPECT_MOVED);
+  Reflect.set(
+    prototype,
+    "_expect",
+    async function checkedExpect(this: unknown, ...args: unknown[]) {
+      const answer: unknown = await Reflect.apply(original, this, args);
+      const isPassed = hasPassed(answer, args[1]);
+      if (isPassed && worker.current !== undefined) {
+        await checkNow(worker.current);
+      }
+      return answer;
+    },
+  );
+}
+
 function wrapActions(page: Page): void {
   if (worker.isWrapped) return;
   worker.isWrapped = true;
+  wrapExpect(Object.getPrototypeOf(page.locator("html")) as object);
   wrap(Object.getPrototypeOf(page.locator("html")) as object, LOCATOR_ACTIONS);
   wrap(Object.getPrototypeOf(page) as object, PAGE_ACTIONS);
   wrap(Object.getPrototypeOf(page.keyboard) as object, KEYBOARD_ACTIONS);
@@ -255,6 +315,55 @@ async function onSettledPage<T>(
 }
 
 /**
+ * How long a page may take to hydrate once its test is over. A cold dev
+ * server compiles a route's client code on first visit, which CI has
+ * seen take seconds.
+ */
+const HYDRATION_CAP_MS = 15_000;
+
+/**
+ * Waits until the app has hydrated the page a test ended on, before
+ * anything reads its final state (#566, design 195).
+ *
+ * A spec that ends on an `expect` the server's HTML already satisfies
+ * ends before hydration, and on the dev server the client code is not
+ * even fetched until after `load`. Hydration then lands under the end
+ * checks: the router restores scroll to the top, so the stop the Tab
+ * walk had just scrolled to is off screen when it is measured, and
+ * reads as `focus-obscured`.
+ *
+ * The app's documents load a module script and stamp
+ * `html[data-hydrated]` (`src/ui/use-hydrated.ts`); a document with no
+ * module script (the fixture's probes, a raw endpoint) has nothing to
+ * wait for. An app page that never hydrates is a checker error.
+ */
+async function hydrated(
+  page: Page,
+  baseURL: string,
+  collected: Collected,
+): Promise<void> {
+  if (
+    page.isClosed() ||
+    new URL(page.url()).origin !== new URL(baseURL).origin
+  ) {
+    return;
+  }
+  try {
+    await onSettledPage(page, () =>
+      page.waitForFunction(
+        () =>
+          document.documentElement.dataset.hydrated === "true" ||
+          document.querySelector('script[type="module"]') === null,
+        undefined,
+        { timeout: HYDRATION_CAP_MS },
+      ),
+    );
+  } catch (error) {
+    collected.errors.push(`hydration: ${String(error)}`);
+  }
+}
+
+/**
  * Step 2's checks, timed. A page that navigates or closes under them is
  * a checker error, which fails the test like a finding: a check that
  * did not run must not read as one that passed.
@@ -264,6 +373,7 @@ async function runEndOfTest(
   baseURL: string,
   collected: Collected,
 ): Promise<void> {
+  await hydrated(page, baseURL, collected);
   const started = performance.now();
   try {
     await onSettledPage(page, () =>
@@ -383,6 +493,9 @@ export const test = base.extend<{
           endOfTest: () => runEndOfTest(page, appURL, collected),
           findings: () => distinct(collected.findings),
         });
+        if (testInfo.status === testInfo.expectedStatus) {
+          await hydrated(page, appURL, collected);
+        }
         await checkNow(page);
       } finally {
         worker.current = undefined;
