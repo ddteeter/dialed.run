@@ -564,9 +564,9 @@ steps set it before the address is confirmed, because an unconfirmed
 account is already unfindable, so there is no moment anyone could find it.
 
 1. **An invite code.** While sign-up is invite-only, issue one from the
-   Desk (Access) to the smoke address.
-2. **Sign up** with it, using an address you own. Don't confirm the
-   address yet.
+   Desk (Access) to the smoke address (owner, 2026-11-10).
+2. **Sign up** with it, at a plus-address on a mailbox on the owner's
+   domain (owner, 2026-11-10). Don't confirm the address yet.
 3. **O0:** claim the handle `smoke_test`. This creates the profile row the
    next step marks.
 4. **Mark it**, and check that exactly one row says so:
@@ -590,8 +590,9 @@ account is already unfindable, so there is no moment anyone could find it.
    **`SMOKE_EMAIL`** and **`SMOKE_PASSWORD`** (§7's rules: environment, not
    repository).
 
-**Rotation:** change the password in Settings › Password, then update
-`SMOKE_PASSWORD` in the same sitting, yearly or on any suspected leak.
+**Rotation (owner, 2026-11-10):** yearly, or on any suspected leak.
+Change the password in Settings › Password, then update `SMOKE_PASSWORD`
+in the GitHub `production` environment in the same sitting.
 Until both match, the next deploy's smoke step fails closed: it rolls back
 and nothing ships.
 

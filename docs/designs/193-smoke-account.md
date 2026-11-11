@@ -89,11 +89,9 @@ Delete account, the normal purge. Rotation: open question 4.
   per the protocol it may proceed, but the brief makes it a stop point.
 - New route files: none. New bindings/queues/crons: **none**.
 - `ci.yml`: the gradual-deploy job exactly as `docs/ops/gradual-deploy.md`
-  drafts it (owner, 2026-11-09). **When** is open: merged before the first
-  deploy, CI's first `versions upload` would fail (Cloudflare: a new
-  Worker's first upload must be `wrangler deploy`). Asked of the
-  coordinator; the recommendation is a separate PR the owner merges after
-  the first deploy and the smoke account exist.
+  drafts it (owner, 2026-11-09), in a **separate draft PR**: merged before
+  the first deploy, CI's first `versions upload` would fail (Cloudflare: a
+  new Worker's first upload must be `wrangler deploy`).
 - Files other lanes own: `src/modules/safety/visibility.ts` (one clause,
   w5-mutation). Also touched: `feed/runner-visibility.ts`,
   `auth/terms-gate.ts`, `docs/contracts.md` (the column).
@@ -116,17 +114,20 @@ Delete account, the normal purge. Rotation: open question 4.
 
 ## Issues
 
-- Closes: #533 (the code half). Opens: a Needs-owner issue for creating
-  the account, setting the flag, the secrets and rotation.
+- Closes: #533 (the code half). Opens: #574 (Needs owner) for creating
+  the account, setting the flag, the secrets and merging the `ci.yml`
+  draft PR.
 
 ## Open questions
 
-1. **Schema:** approved (owner, 2026-11-10, on #533). The env-list
+All answered (owner, 2026-11-10, recorded on #533):
+
+1. **Schema:** `system_account` on `user_profiles`, approved. The env-list
    alternative was declined.
-2. **Invite code:** the owner issues one from the Desk to the smoke address
-   (recommended).
-3. **Mailbox:** a plus-address on a domain the owner controls (recommended).
-4. **Rotation:** the owner, yearly or on any suspected leak, through
-   Settings › Password and then the `SMOKE_PASSWORD` secret (recommended).
-5. **Handle "taken":** accept that O0 says `smoke_test` is taken
-   (recommended), or pick a less guessable handle.
+2. **Invite code:** the owner issues one from the Desk to the smoke address.
+3. **Mailbox:** a plus-address on a mailbox on the owner's domain.
+4. **Rotation:** yearly, or on any suspected leak: Settings › Password,
+   then `SMOKE_PASSWORD`.
+5. **Handle:** keep `smoke_test`.
+6. **`ci.yml`** (coordinator-5): a separate draft PR, exactly as drafted,
+   which the owner merges after the first deploy and #574.
