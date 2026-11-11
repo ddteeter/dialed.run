@@ -10,8 +10,17 @@ those scopes waits on the longest, 158 minutes (#581).
 
 ## Approach
 
-Two PRs, because the second discards every mutation seed and the first
-should not wait on that.
+Two PRs, because the second runs its new shards cold and the first should
+not wait on that.
+
+What a mutate edit costs, corrected after PR 2's first run (2026-11-11):
+
+- **In CI, only a new or renamed shard runs cold.** `mutation.yml` keys
+  each shard's seed by shard name, so a shard that keeps its name restores
+  main's seed. Nine of the 37 ran cold.
+- **The local push-gate seed is discarded.** Its fingerprint pins the
+  Stryker config, so any edit to `stryker.conf.json` invalidates it until
+  main's next Mutation run uploads a new one.
 
 **PR 1: the pin and the drift.**
 
@@ -61,7 +70,9 @@ groups are the ones its table names.
 ## Issues
 
 - Closes: #556 (PR 1), #581 (PR 2).
-- Opens: none planned.
+- Opens: #587. `modules/ops/outbox-handlers` took 106 minutes cold on
+  PR 2's run, over the target; it is split again once main's next cold
+  run gives per-file times.
 
 ## Open questions
 
