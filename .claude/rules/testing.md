@@ -84,9 +84,12 @@ behaviour, not tests that merely execute it.
   `@tanstack/react-start`, directly or through a barrel), and **every file
   under `src/routes/`**. `test/architecture/server-functions-are-glue.test.ts`
   checks the config's negations against that set in both directions and
-  requires each such file to be glue. Route negations ride on the
-  `src/modules/**/*.tsx` entry because a negation-only entry makes stryker
-  exit non-zero.
+  requires each such file to be glue. Route negations ride on the first
+  `src/modules/<module>/**/*.tsx` entry (`modules/safety (tsx)`) because a
+  negation-only entry makes stryker exit non-zero. A negation may use only
+  `*` and `**` as glob syntax: guardrails-core treats a negation with any
+  other glob character (`{}[]()?+:!@`) as matching every file, which runs
+  every push gate cold (agentic-guardrails-scaffolding#168).
 - **CI runs one shard per entry** (`.github/workflows/mutation.yml` reads the
   array — never restate it there). A module joins the array in the PR that
   finishes it.

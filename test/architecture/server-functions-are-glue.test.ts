@@ -176,26 +176,47 @@ describe("files that cannot be mutation tested are glue", () => {
 });
 
 /**
- * The `!path` entries in `stryker.conf.json`'s `mutate` array, which is
- * where a file is actually excluded.
+ * The `!` entries in `stryker.conf.json`'s `mutate` array, which is where a
+ * file is actually excluded, each as written (without its `!`).
+ *
+ * Read from the `mutate` entries, not the raw file: scanning the text meant
+ * a *comment* mentioning `!some/path.ts` read as a real exclusion — which
+ * happened the moment one explained why negations are the wrong way to
+ * split a scope.
+ *
+ * A negation is a glob, and is matched as one. Most are exact paths, but
+ * `src/routes/@{$handle}.tsx` (a prefixed param, task 129) cannot be
+ * written exactly without a `{`, `}` or `@`, and guardrails-core treats a
+ * negation holding any of those as matching every file
+ * (agentic-guardrails-scaffolding#168), which ran every push gate cold. So
+ * it is `src/routes/*$handle*.tsx`, and the checks below ask what each
+ * negation matches rather than comparing strings.
  */
-const negations = Array.from(
-  // Scanned over the `mutate` entries, not the raw file. Scanning the text
-  // meant a *comment* mentioning `!some/path.ts` read as a real exclusion
-  // — which happened the moment one explained why negations are the wrong
-  // way to split a scope, and reported the file it was warning about as
-  // "excluded for no reason".
-  //
-  // `.tsx?` and `$`: a route file is `.tsx`, and a dynamic segment puts a
-  // `$` in its name. The first version of this matched neither, so it read
-  // `!src/routes/closet/index.tsx` as `…/index.ts` and skipped
-  // `$itemId.tsx` entirely — an exclusion the check could not see. `@`,
-  // `{` and `}` for the same reason: `/@{$handle}` is a prefixed param,
-  // and its file is `@{$handle}.tsx` (task 129, FEED-10). A one-item brace
-  // has no comma, so a glob reads it literally and the negation holds.
-  strykerParsed.mutate.join(",").matchAll(/!(src\/[\w.$@{}/-]+\.tsx?)/g),
-  (match) => match[1] ?? "",
-);
+const negations: string[] = strykerParsed.mutate
+  .flatMap((entry) => entry.split(","))
+  .map((entry) => entry.trim())
+  .filter((entry) => entry.startsWith("!"))
+  .map((entry) => entry.slice(1));
+
+/**
+Is this path excluded by some negation?
+*/
+function isExcluded(path: string): boolean {
+  return negations.some((glob) => ratchetGlob(glob).test(path));
+}
+
+/**
+ * The files a negation names. Every file this test can see is under
+ * `src/modules` or a route; a negation outside them (`src/db/schema-*.ts`,
+ * `e2e/support/*`) is an exact path and names itself.
+ */
+function namedBy(negation: string): string[] {
+  return negation.includes("*")
+    ? Object.keys(sources)
+        .map((globPath) => repoPath(globPath))
+        .filter((path) => ratchetGlob(negation).test(path))
+    : [negation];
+}
 
 /**
 The positive globs — every `mutate` entry that is not a `!` exclusion.
@@ -233,7 +254,8 @@ describe("the mutate exclusions and the untestable files are the same set", () =
     // Checked rather than allowed: the day one of those files joins a
     // positive glob, it stops qualifying here and this fails, instead of
     // hollowing out the scope it just entered.
-    for (const path of negations) {
+    const excluded = negations.flatMap((negation) => namedBy(negation));
+    for (const path of excluded) {
       if (!isInTheRatchet(path)) continue;
       expect(untestable, `${path} is excluded for no reason`).toContain(path);
     }
@@ -258,7 +280,9 @@ describe("the mutate exclusions and the untestable files are the same set", () =
   it("excludes every route, since none of them can be mutated", () => {
     // All of them, not only the ones that fail to import — see `isRoute`.
     for (const path of routeFiles) {
-      expect(negations, `${path} is a route and not excluded`).toContain(path);
+      expect(isExcluded(path), `${path} is a route and not excluded`).toBe(
+        true,
+      );
     }
   });
 
@@ -276,10 +300,37 @@ describe("the mutate exclusions and the untestable files are the same set", () =
         path.startsWith(`${modulePath}/`),
       );
       for (const path of inScope) {
-        expect(negations, `${path} is untestable and not excluded`).toContain(
-          path,
+        expect(isExcluded(path), `${path} is untestable and not excluded`).toBe(
+          true,
         );
       }
     }
+  });
+
+  it("names one route per route negation, so a glob there excludes no more than a path would", () => {
+    // `*$handle*` is a glob only to dodge guardrails-core#168. Matching two
+    // routes would not cost coverage (every route is excluded anyway), but
+    // it would make the next negation read as a pattern to copy.
+    const named = Object.fromEntries(
+      negations
+        .filter((negation) => negation.startsWith("src/routes/"))
+        .map((negation) => [negation, namedBy(negation).length]),
+    );
+    expect(named).toStrictEqual(
+      Object.fromEntries(Object.keys(named).map((negation) => [negation, 1])),
+    );
+    expect(namedBy("src/routes/*$handle*.tsx")).toStrictEqual([
+      "src/routes/@{$handle}.tsx",
+    ]);
+  });
+
+  it("writes every negation with only the glob syntax guardrails-core models", () => {
+    // `negationMatcher` models `*` and `**`; for anything else it returns a
+    // matcher that matches every file, which empties the gate's file list,
+    // deletes the incremental cache and skips the CI seed, all silently.
+    const unmodelled = negations.filter((negation) =>
+      /[{}[\]()?+:!@]/u.test(negation),
+    );
+    expect(unmodelled).toStrictEqual([]);
   });
 });

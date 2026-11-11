@@ -69,6 +69,9 @@ describe("photo validation", () => {
 });
 
 describe("photo pipeline: store + retrieve + benchmark", () => {
+  // No timeout of its own: vitest.config.ts gives 20s under `npm test` and
+  // 60s under Stryker's serial dry run, where this encode has run past 20s
+  // and failed a mutation shard's initial test run (PR #571).
   it("stores the original and all 3 derived sizes, retrievable owner-scoped", async () => {
     const client = db();
     const userId = newUlid();
@@ -143,7 +146,7 @@ describe("photo pipeline: store + retrieve + benchmark", () => {
 
     const original = await env.MEDIA.get(`${result.photoKey}/original.jpg`);
     expect(original).not.toBeNull();
-  }, 20_000);
+  });
 
   it("degrades independently of the item: a photo failure never touches the saved item", async () => {
     const client = db();
