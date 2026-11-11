@@ -606,7 +606,7 @@ To run the same check by hand against a version (find ids with
 ```sh
 SMOKE_BASE_URL=https://dialed.run SMOKE_VERSION_ID=<id> \
   SMOKE_EMAIL=… SMOKE_PASSWORD=… \
-  npx playwright test -c playwright.smoke.config.ts
+  npx playwright test --config playwright.smoke.config.ts
 ```
 
 Any request can be sent to a deployed version the same way:

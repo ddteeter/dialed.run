@@ -79,7 +79,7 @@ queue message is a wire format between two deploys (law 9).
 - name: Smoke-test the new version in production
   id: smoke
   # The override can take "up to a couple of seconds" to propagate.
-  run: sleep 10 && npx playwright test -c playwright.smoke.config.ts
+  run: sleep 10 && npx playwright test --config playwright.smoke.config.ts
   env:
     SMOKE_BASE_URL: https://dialed.run
     SMOKE_VERSION_ID: ${{ steps.upload.outputs.new }}
@@ -115,6 +115,12 @@ queue message is a wire format between two deploys (law 9).
 ```
 
 Notes for the owner:
+
+- The smoke step spells Playwright's `-c` as `--config` (owner,
+  2026-11-10). knip 6.44.1's npx resolver aliases `-c` to npx's `--call`
+  across every word, so with `-c` the config's path was read as a command
+  and the commit gate reported an unlisted binary. The two spellings are
+  the same Playwright option.
 
 - `SMOKE_BASE_URL` is the production origin (`BETTER_AUTH_URL`). Before
   the custom domain exists, use the `workers.dev` URL.
