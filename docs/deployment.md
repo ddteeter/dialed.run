@@ -523,8 +523,10 @@ It:
 3. deploys it at **0%** beside the version serving now;
 4. runs `e2e/smoke/production.smoke.ts` against it through Cloudflare's
    version override, so no runner is sent to it first;
-5. on a pass, moves it to 10%, then to 100% ten minutes later. On a
-   failure, it puts the old version back at 100%;
+5. on a pass, moves it to 100%. On a failure, it puts the old version
+   back at 100%. There is no 10% soak until #505 gives one an error-rate
+   signal to watch (owner, 2026-11-10), so after a deploy the owner watches
+   Sentry and rolls back by hand;
 6. applies cron triggers (`wrangler triggers deploy`), which an upload
    does not.
 

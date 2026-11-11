@@ -295,8 +295,9 @@ audit's list; where the two differ, the plan is current.
   migrations.
 - **Do a restore drill** on a scratch database once before friends.
 - **Deploys are gradual** after the first one (design 186, #504): upload,
-  0% plus a production smoke test through the version override, 10%,
-  then 100%. Rolling back is one command. The job, the smoke account and
+  0% plus a production smoke test through the version override, then
+  100% (no 10% soak until #505 can watch one; owner, 2026-11-10). Rolling
+  back is one command. The job, the smoke account and
   the rollback steps are in `docs/deployment.md` §9, and the job draft is
   `docs/ops/gradual-deploy.md`, which the owner applies to `ci.yml`.
 - **R2 has no versioning**, so the daily digest copies garment and entry
