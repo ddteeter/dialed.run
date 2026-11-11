@@ -12,8 +12,9 @@ import {
   openBoard,
   part,
 } from "../support/conformance";
+import { signInAsKnownUser } from "../support/known-user";
 import { withLocalDb } from "../support/local-db";
-import { feedUserId, holdForever, removeSeeded, seeded } from "./feed-support";
+import { feedUserId, removeSeeded, seeded } from "./feed-support";
 
 /**
  * M, redrawn to S2c — round 22's "M Mark all read in flight" — and the
@@ -96,13 +97,27 @@ test("M in flight: white-and-dot rows, and Mark all read breathing in place", as
     expect(dots[0]).toBe(drawn.dotFill);
 
     // **In flight, the label breathes in place** and nothing else moves.
-    await page.route("**/_serverFn/**", holdForever);
+    const held = Promise.withResolvers<undefined>();
+    await page.route("**/_serverFn/**", async (route) => {
+      await held.promise;
+      await route.continue();
+    });
     await page.getByRole("button", { name: "Mark all read" }).click();
     const markAll = '[data-part="mark-all"][data-state="pending"]';
     await page.locator(markAll).waitFor();
     expect(upper(await leavesOf(page, markAll))).toEqual(drawn.marking);
     const inFlight = await fillsOf(page, '[data-part="notification-list"]');
     expect(inFlight.slice(0, drawn.rowFills.length)).toEqual(drawn.rowFills);
+    // Let the call land, and wait for what it does (#566). Taking the
+    // route away releases a held call, so it used to land on its own
+    // while the spec went on: the list re-read itself in a race with the
+    // teardown below, and when the rows were deleted first the test ended
+    // on the empty screen instead of three read rows.
+    held.resolve(undefined);
+    await expect(page.locator('[data-part="mark-all"]')).toHaveCount(0);
+    await expect(
+      page.locator('[data-part="notification-row"][data-state="read"]'),
+    ).toHaveCount(drafts.length);
     await page.unrouteAll({ behavior: "ignoreErrors" });
 
     // **At desk it is the panel** (DS3, R-102): 390 wide, not the column.
@@ -128,4 +143,25 @@ test("the bell is on the feed's own screens (R-102)", async ({ page }) => {
         .filter({ visible: true }),
     ).toHaveCount(1);
   }
+});
+
+/**
+ * S2b, the empty list. No other spec ends on it, so the a11y fixture
+ * never read it: it carried a `p-as-heading` finding that showed only
+ * when M's teardown beat M's own reload (#566). A runner of its own,
+ * because the feed's runner has rows whenever another spec has left one.
+ */
+test.describe("with nothing to show", () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test("S2b: an empty list says Quiet, as a heading", async ({ page }) => {
+    await signInAsKnownUser(page, "e2e-quiet-bell", "quiet_bell");
+    await page.setViewportSize(PHONE);
+    await page.goto("/notifications");
+    await hydrated(page);
+    await expect(
+      page.getByRole("heading", { level: 2, name: "Quiet" }),
+    ).toBeVisible();
+    await expect(page.locator('[data-part="mark-all"]')).toHaveCount(0);
+  });
 });

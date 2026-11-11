@@ -108,7 +108,9 @@ export function NotificationList({
           data-state="empty"
           className="flex flex-col gap-3 py-8"
         >
-          <p className="m-0 font-display text-title uppercase">
+          {/* A heading, as every other title-size line in the app is: a
+              paragraph drawn as one is axe's `p-as-heading` (#566). */}
+          <h2 className="m-0 font-display text-title uppercase">
             {/* Drawn, not said (D-150): a reader hears "Quiet". */}
             <span aria-hidden="true" className="text-action">
               [
@@ -117,7 +119,7 @@ export function NotificationList({
             <span aria-hidden="true" className="text-action">
               ]
             </span>
-          </p>
+          </h2>
           <p className="m-0 text-lead">
             Log a run and we&rsquo;ll ask you one question about it.
             That&rsquo;s most of what lands here.

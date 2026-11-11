@@ -91,10 +91,11 @@ describe("NotificationList · the rows", () => {
       />,
     );
 
-    expect(screen.getByText("Quiet")).toBeVisible();
-    expect(screen.getByText("Quiet").closest("p")).toHaveTextContent(
-      /^\[ Quiet \]$/u,
-    );
+    // A heading under the screen's own, not a paragraph drawn as one
+    // (axe's `p-as-heading`, #566).
+    const quiet = screen.getByRole("heading", { level: 2, name: "Quiet" });
+    expect(quiet).toBeVisible();
+    expect(quiet).toHaveTextContent(/^\[ Quiet \]$/u);
     // Drawn, not said (D-150): both glyphs are hidden from a reader, so
     // the headline is heard as "Quiet".
     const glyphs = screen.getAllByText(/^[[\]]$/u);
