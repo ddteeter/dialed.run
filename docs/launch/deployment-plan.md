@@ -111,7 +111,7 @@ deploy, as a **system account**, invisible to runners (design 193, #533):
 `wrangler d1 execute` that sets `user_profiles.system_account` before
 the address is confirmed. Handle `smoke_test`, "Count my runs in anonymous
 totals" off, one garment with no brand, never a run. The owner's steps
-are tracked as #574. **The job itself is a draft PR** (ci/gradual-deploy),
+are tracked as #574. **The job itself is draft PR #575** (`ci/gradual-deploy`),
 exactly as `docs/ops/gradual-deploy.md` drafts it: the owner merges it only
 after the first `wrangler deploy` and once #574 is done, because a new
 Worker's first upload must be `wrangler deploy` and the smoke step fails
