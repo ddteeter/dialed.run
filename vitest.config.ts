@@ -63,6 +63,16 @@ const BROWSER_TESTS = "test/**/*.browser.test.ts";
  * that rather than a flag someone must remember to pass. `npm test` and CI's
  * test job keep 20s, so a test that genuinely hangs still fails promptly
  * there. Owner's call, 2026-09-25.
+ *
+ * **Hooks share it.** Left alone, a hook keeps vitest's own 10s, half a
+ * test's deadline and a sixth of it under stryker, so the same starved
+ * harness that no longer fails a test still failed its `beforeEach`: twice
+ * on PR #572 the `lib/contracts/thermal` shard's dry run died on `Hook
+ * timed out in 10000ms` in `test/feed/run-span.test.ts`, whose table reset
+ * takes milliseconds alone (#566, design 199). Every project below sets
+ * `hookTimeout` beside `testTimeout`;
+ * `test/architecture/harness-timeouts.test.ts` keeps a new project from
+ * forgetting it.
  */
 const TEST_TIMEOUT_MS =
   process.env.STRYKER_MUTATOR_WORKER === undefined ? 20_000 : 60_000;
@@ -159,6 +169,7 @@ export default defineConfig(async () => {
             // harness wedged. Stryker gets longer still: see
             // TEST_TIMEOUT_MS.
             testTimeout: TEST_TIMEOUT_MS,
+            hookTimeout: TEST_TIMEOUT_MS,
             include: ["test/**/*.test.{ts,tsx}"],
             exclude: [DOM_TESTS, BROWSER_TESTS],
             setupFiles: ["test/apply-migrations.ts"],
@@ -168,6 +179,7 @@ export default defineConfig(async () => {
           test: {
             name: "ui",
             testTimeout: TEST_TIMEOUT_MS,
+            hookTimeout: TEST_TIMEOUT_MS,
             environment: "happy-dom",
             include: [DOM_TESTS],
             setupFiles: ["test/dom-setup.ts"],
@@ -177,6 +189,7 @@ export default defineConfig(async () => {
           test: {
             name: "browser",
             testTimeout: TEST_TIMEOUT_MS,
+            hookTimeout: TEST_TIMEOUT_MS,
             include: [BROWSER_TESTS],
             browser: {
               enabled: true,
