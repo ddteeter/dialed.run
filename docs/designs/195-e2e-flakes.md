@@ -44,10 +44,12 @@ is private, which is the cost of not proxying: the wrapper throws if it is
 missing or its answer changes shape, and `a11y.spec.ts` pins the behaviour,
 so a Playwright bump fails loudly. Checked after, not before: the asserted
 state exists once the matcher passes. **Cost, measured** on the full
-CI-style suite (dev server, fresh D1), hook off against on: 830 → 864
-checked states, axe time 23.2 s → 24.9 s, wall 613 s → 611 s, 166 tests
-each. No new finding: most asserted states were already checked before an
-action.
+CI-style suite (dev server, fresh D1), hook off against on: 838 → 872
+checked states, axe time 23.8 s → 25.1 s, wall 608 s → 610 s. No new
+finding: most asserted states were already checked before an action.
+
+Trap: a run with `A11Y_RECORD=1` rewrites `e2e/a11y-coverage.json` with its
+own figure. Measure without it, or restore the file.
 
 ## Contract touches
 
