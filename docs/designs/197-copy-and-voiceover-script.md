@@ -69,7 +69,7 @@ check without saying what the build should speak.
 - Closes: none. #365 stays open until the owner's run on the first deployed
   build; #523 stays open until the copy is approved and with Design. The PR
   references both without `Closes`.
-- Opens: one, for the screens with no final-state transcript.
+- Opens: #582, the states with no final-state transcript.
 
 ## Open questions
 

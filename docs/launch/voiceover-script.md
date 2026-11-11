@@ -147,7 +147,7 @@ value: "5.2 miles", not "N".
 at the end of a test, so some states have none: an open sheet, the
 tap-list, Turnstile. Those steps say "no transcript" and give the rule the
 screen must meet. What VoiceOver says there is new information; write it
-down even when it passes.
+down even when it passes. They are listed in #582.
 
 If a screen and its transcript disagree, the transcript is right and this
 script is stale: say so in the log.
@@ -658,6 +658,11 @@ Source: `conformance/notifications-m.conformance.spec.ts/M-in-flight-white-and-d
 You should hear "Notifications", heading 1, and a list. Each row is its
 sentence, such as "New run on Strava — log your kit?", then its date and
 time.
+
+With nothing in it
+(`conformance/notifications-m.conformance.spec.ts/with-nothing-to-show-S2b-an-empty-list-says-Quiet-as-a-heading.txt`):
+"Quiet", heading 2, and "Log a run and we'll ask you one question about
+it. That's most of what lands here."
 
 No transcript has an unread row or the "Mark all read" button in it.
 Unread is drawn as a white row and a dot: an unread row must **say** it is
