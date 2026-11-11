@@ -15,6 +15,21 @@ import {
 } from "../../lib/auth-signal";
 
 /**
+ * What every refusal here is: an `Error` with a `code`, the own property
+ * that survives the RPC boundary (see `AuthRequiredError`), and a `name`.
+ * Each refusal below is its words and its code, and nothing else.
+ */
+class CodedError<TCode extends string> extends Error {
+  readonly code: TCode;
+
+  constructor(code: TCode, message: string, name: string) {
+    super(message);
+    this.code = code;
+    this.name = name;
+  }
+}
+
+/**
  * The single unauthenticated signal.
  *
  * `instanceof` is deliberately NOT the detection mechanism: a server
@@ -24,12 +39,9 @@ import {
  * checks. Use the guard, never `instanceof`, on anything that came back
  * from a server function.
  */
-export class AuthRequiredError extends Error {
-  readonly code = AUTH_REQUIRED_CODE;
-
+export class AuthRequiredError extends CodedError<typeof AUTH_REQUIRED_CODE> {
   constructor() {
-    super("Sign in required.");
-    this.name = "AuthRequiredError";
+    super(AUTH_REQUIRED_CODE, "Sign in required.", "AuthRequiredError");
   }
 }
 
@@ -52,12 +64,15 @@ const ACCOUNT_LEAVING_CODE = "ACCOUNT_LEAVING";
  * which the root route already puts in front of them; this is the server
  * saying so to a client that went round it.
  */
-export class AccountLeavingError extends Error {
-  readonly code = ACCOUNT_LEAVING_CODE;
-
+export class AccountLeavingError extends CodedError<
+  typeof ACCOUNT_LEAVING_CODE
+> {
   constructor() {
-    super("This account is set to be deleted.");
-    this.name = "AccountLeavingError";
+    super(
+      ACCOUNT_LEAVING_CODE,
+      "This account is set to be deleted.",
+      "AccountLeavingError",
+    );
   }
 }
 
@@ -71,12 +86,15 @@ export class AccountLeavingError extends Error {
  * client that went round it, and the client answers it by opening the
  * prompt (decision D-96).
  */
-export class TermsNotAcceptedError extends Error {
-  readonly code = TERMS_NOT_ACCEPTED_CODE;
-
+export class TermsNotAcceptedError extends CodedError<
+  typeof TERMS_NOT_ACCEPTED_CODE
+> {
   constructor() {
-    super("Accept the current terms first.");
-    this.name = "TermsNotAcceptedError";
+    super(
+      TERMS_NOT_ACCEPTED_CODE,
+      "Accept the current terms first.",
+      "TermsNotAcceptedError",
+    );
   }
 }
 
@@ -88,11 +106,36 @@ export class TermsNotAcceptedError extends Error {
  * terms refusal's reason: the runner is signed in. The client answers it
  * by opening "Confirm your email first", never a failure band.
  */
-export class EmailUnconfirmedError extends Error {
-  readonly code = EMAIL_UNCONFIRMED_CODE;
-
+export class EmailUnconfirmedError extends CodedError<
+  typeof EMAIL_UNCONFIRMED_CODE
+> {
   constructor() {
-    super("Confirm your email first.");
-    this.name = "EmailUnconfirmedError";
+    super(
+      EMAIL_UNCONFIRMED_CODE,
+      "Confirm your email first.",
+      "EmailUnconfirmedError",
+    );
+  }
+}
+
+/**
+ * The code a system account's refusal carries (design 193, #533). The
+ * smoke account signs in and reads its own closet; it never writes what
+ * another runner can see, so `verifiedUserId` refuses it. No screen
+ * answers this code: the account is driven by a spec, not a person.
+ */
+const SYSTEM_ACCOUNT_CODE = "SYSTEM_ACCOUNT";
+
+/**
+ * A system account asking for a write other runners would see: a follow,
+ * a Useful, a report, a correction, the Desk.
+ */
+export class SystemAccountError extends CodedError<typeof SYSTEM_ACCOUNT_CODE> {
+  constructor() {
+    super(
+      SYSTEM_ACCOUNT_CODE,
+      "This account can't do that.",
+      "SystemAccountError",
+    );
   }
 }

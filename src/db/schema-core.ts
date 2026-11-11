@@ -156,6 +156,16 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     // (`lib/browser/theme.ts`); this is the account's value, which takes
     // over on sign-in. `modules/account/theme.ts` is the one writer.
     theme: text("theme", { enum: THEME_CHOICES }).notNull().default("system"),
+    // An account the service runs, not a runner: the production smoke
+    // account (design 193, #533). Invisible to runners by the same floors
+    // that hide a ban: `runnerInStanding` for the runner, the entry rules'
+    // author clause for what it posts, and `confirmedUserId` refuses its
+    // shared writes. **No app code writes it**: the owner sets it with one
+    // `wrangler d1 execute` (docs/deployment.md §9), and
+    // `test/architecture/system-account.test.ts` keeps it that way.
+    systemAccount: integer("system_account", { mode: "boolean" })
+      .notNull()
+      .default(false),
   },
   (t) => [
     // The re-ask's sweep reads only the rows it might claim. Partial, so

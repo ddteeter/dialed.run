@@ -105,9 +105,17 @@ both in the `production` environment rather than the repository, and
 variable `DEPLOY_ENABLED=true` when ready. Before applying the gradual
 deploy job (`docs/ops/gradual-deploy.md`, design 186): **`SMOKE_EMAIL`**
 and **`SMOKE_PASSWORD`**, the production smoke account's, in the same
-environment. The account itself is the owner's to create
-(`docs/deployment.md` §9: handle `smoke_test`, "Count my runs in anonymous
-totals" off, one garment, never a run). The dependency automation's App
+environment. The account itself is the owner's to create after the first
+deploy, as a **system account**, invisible to runners (design 193, #533):
+`docs/deployment.md` §9's eight steps, including the one
+`wrangler d1 execute` that sets `user_profiles.system_account` before
+the address is confirmed. Handle `smoke_test`, "Count my runs in anonymous
+totals" off, one garment with no brand, never a run. The owner's steps
+are tracked as #574. **The job itself is draft PR #575** (`ci/gradual-deploy`),
+exactly as `docs/ops/gradual-deploy.md` drafts it: the owner merges it only
+after the first `wrangler deploy` and once #574 is done, because a new
+Worker's first upload must be `wrangler deploy` and the smoke step fails
+without the account. The dependency automation's App
 key and Anthropic key go in their own environments
 (`docs/dependencies.md` §Setup).
 
@@ -287,8 +295,9 @@ audit's list; where the two differ, the plan is current.
   migrations.
 - **Do a restore drill** on a scratch database once before friends.
 - **Deploys are gradual** after the first one (design 186, #504): upload,
-  0% plus a production smoke test through the version override, 10%,
-  then 100%. Rolling back is one command. The job, the smoke account and
+  0% plus a production smoke test through the version override, then
+  100% (no 10% soak until #505 can watch one; owner, 2026-11-10). Rolling
+  back is one command. The job, the smoke account and
   the rollback steps are in `docs/deployment.md` §9, and the job draft is
   `docs/ops/gradual-deploy.md`, which the owner applies to `ci.yml`.
 - **R2 has no versioning**, so the daily digest copies garment and entry

@@ -523,8 +523,10 @@ It:
 3. deploys it at **0%** beside the version serving now;
 4. runs `e2e/smoke/production.smoke.ts` against it through Cloudflare's
    version override, so no runner is sent to it first;
-5. on a pass, moves it to 10%, then to 100% ten minutes later. On a
-   failure, it puts the old version back at 100%;
+5. on a pass, moves it to 100%. On a failure, it puts the old version
+   back at 100%. There is no 10% soak until #505 gives one an error-rate
+   signal to watch (owner, 2026-11-10), so after a deploy the owner watches
+   Sentry and rolls back by hand;
 6. applies cron triggers (`wrangler triggers deploy`), which an upload
    does not.
 
@@ -555,19 +557,50 @@ and deploys it immediately", which skips every step above. To change a
 secret through the guard rails, use `wrangler versions secret put <NAME>`,
 which only uploads a version, and then deploy that version the same way.
 
-**The smoke account (owner, once, before applying the job):**
+**The smoke account (owner, once, after the first deploy and before
+applying the job).** It is a **system account** (design 193, #533):
+invisible to runners, with no findable profile, no search result and no
+counts, and refused every write another runner would see. The mark is the
+column `user_profiles.system_account`, which no app code writes. These
+steps set it before the address is confirmed, because an unconfirmed
+account is already unfindable, so there is no moment anyone could find it.
 
-- In production, sign up an account that says plainly what it is: handle
-  `smoke_test`, an address you own.
-- Leave every kit private, and turn **off** "Count my runs in anonymous
-  totals". Never log a run as it. D-108's published totals count private
-  runs, and the spec never writes one, so the setting is the second
-  guard.
-- Add one garment named exactly **`Smoke test shirt`**. The spec looks
-  for it.
-- Put its address and password in the GitHub environment `production` as
-  **`SMOKE_EMAIL`** and **`SMOKE_PASSWORD`** (§7's rules: environment, not
-  repository).
+1. **An invite code.** While sign-up is invite-only, issue one from the
+   Desk (Access) to the smoke address (owner, 2026-11-10).
+2. **Sign up** with it, at a plus-address on a mailbox on the owner's
+   domain (owner, 2026-11-10). Don't confirm the address yet.
+3. **O0:** claim the handle `smoke_test`. This creates the profile row the
+   next step marks.
+4. **Mark it**, and check that exactly one row says so:
+
+   ```sh
+   npx wrangler d1 execute dialed-core --remote --command \
+     "UPDATE user_profiles SET system_account = 1 WHERE username = 'smoke_test'"
+   npx wrangler d1 execute dialed-core --remote --command \
+     "SELECT user_id, username FROM user_profiles WHERE system_account = 1"
+   ```
+
+5. **Confirm the address** from the email.
+6. **Settings:** default audience **Private**, "Public profile" off (the
+   default), and "Count my runs in anonymous totals" **off**. Never log a
+   run as it. D-108's published totals count private runs, and the spec
+   never writes one, so the setting is the second guard.
+7. **Add one garment** named exactly **`Smoke test shirt`**, with **no
+   brand**. A brand would create a shared product row other runners could
+   meet in autocomplete. The spec looks for this name.
+8. Put its address and password in the GitHub environment `production` as
+   **`SMOKE_EMAIL`** and **`SMOKE_PASSWORD`** (§7's rules: environment, not
+   repository).
+
+**Rotation (owner, 2026-11-10):** yearly, or on any suspected leak.
+Change the password in Settings › Password, then update `SMOKE_PASSWORD`
+in the GitHub `production` environment in the same sitting.
+Until both match, the next deploy's smoke step fails closed: it rolls back
+and nothing ships.
+
+**Removal:** sign in as it and use Settings › Delete account. The normal
+purge removes it. Remove the two secrets and the gradual job's smoke step
+first, or every deploy rolls back.
 
 To run the same check by hand against a version (find ids with
 `wrangler deployments status`):
@@ -575,7 +608,7 @@ To run the same check by hand against a version (find ids with
 ```sh
 SMOKE_BASE_URL=https://dialed.run SMOKE_VERSION_ID=<id> \
   SMOKE_EMAIL=… SMOKE_PASSWORD=… \
-  npx playwright test -c playwright.smoke.config.ts
+  npx playwright test --config playwright.smoke.config.ts
 ```
 
 Any request can be sent to a deployed version the same way:

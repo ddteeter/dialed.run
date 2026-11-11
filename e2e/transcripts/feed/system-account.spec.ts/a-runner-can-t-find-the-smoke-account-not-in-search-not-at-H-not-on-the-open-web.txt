@@ -1,0 +1,22 @@
+document
+banner
+link, dialed.run home
+dialed.run
+end of link, dialed.run home
+link, Log in
+end of banner
+main
+#
+heading, Nothing to see at this link, level 1
+paragraph
+A profile shows here only when its runner makes it public.
+end of paragraph
+link, What is dialed.run?
+end of main
+contentinfo
+paragraph
+link, Privacy
+link, Terms
+end of paragraph
+end of contentinfo
+end of document

@@ -10,7 +10,8 @@ against the expanded schema).
 `wrangler deploy` (Cloudflare: "the first upload of a new Worker must use
 `wrangler deploy`"), so apply this after the first deploy has run. And the
 smoke account and its two secrets (`docs/deployment.md` §9) must exist,
-because the smoke step fails without them.
+because the smoke step fails without them. The account is a system account,
+invisible to runners (design 193), so §9's steps include marking it.
 
 ## The order, and why
 
@@ -21,7 +22,9 @@ because the smoke step fails without them.
    ([version overrides](https://developers.cloudflare.com/workers/versions-and-deployments/version-overrides/)).
 3. **Smoke** it through the override. On failure, put the old version back
    at 100%, which removes only the 0% share no runner was sent to.
-4. **10%** for ten minutes, then **100%**.
+4. **100%**, straight away. There is no 10% soak until #505 gives it a
+   signal to watch (owner, 2026-11-10): with nothing watching, ten minutes
+   at 10% only delayed a bad version reaching everyone.
 5. **`wrangler triggers deploy`**: `versions upload` does not apply cron
    triggers
    ([deployment management](https://developers.cloudflare.com/workers/versions-and-deployments/deployment-management/)).
@@ -78,7 +81,7 @@ queue message is a wire format between two deploys (law 9).
 - name: Smoke-test the new version in production
   id: smoke
   # The override can take "up to a couple of seconds" to propagate.
-  run: sleep 10 && npx playwright test -c playwright.smoke.config.ts
+  run: sleep 10 && npx playwright test --config playwright.smoke.config.ts
   env:
     SMOKE_BASE_URL: https://dialed.run
     SMOKE_VERSION_ID: ${{ steps.upload.outputs.new }}
@@ -94,14 +97,13 @@ queue message is a wire format between two deploys (law 9).
     CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-- name: Shift 10%, then 100%
-  run: |
-    npx wrangler versions deploy \
-      ${{ steps.upload.outputs.new }}@10% ${{ steps.current.outputs.old }}@90% \
-      --yes --message "10% ${GITHUB_SHA::12}"
-    sleep 600
-    npx wrangler versions deploy ${{ steps.upload.outputs.new }}@100% \
-      --yes --message "100% ${GITHUB_SHA::12}"
+# Straight to 100% after the smoke test (owner, 2026-11-10). A 10%
+# soak comes back with #505, which gives it a signal to watch: with
+# nothing watching, it only delayed a bad version by ten minutes.
+- name: Shift to 100%
+  run: >
+    npx wrangler versions deploy ${{ steps.upload.outputs.new }}@100%
+    --yes --message "100% ${GITHUB_SHA::12}"
   env:
     CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -115,12 +117,18 @@ queue message is a wire format between two deploys (law 9).
 
 Notes for the owner:
 
+- The smoke step spells Playwright's `-c` as `--config` (owner,
+  2026-11-10). knip 6.44.1's npx resolver aliases `-c` to npx's `--call`
+  across every word, so with `-c` the config's path was read as a command
+  and the commit gate reported an unlisted binary. The two spellings are
+  the same Playwright option.
 - `SMOKE_BASE_URL` is the production origin (`BETTER_AUTH_URL`). Before
   the custom domain exists, use the `workers.dev` URL.
-- The ten minutes at 10% are watched by nothing yet. Rolling back on
-  error rate is #505, at public. Until then, the owner watches Sentry and
-  rolls back by hand (`docs/deployment.md` §9).
-- "Take the failed version out" also runs if the 10% step fails partway.
-  That is the right undo there too.
-- The job's timeout must allow the ten-minute wait. The default (six
-  hours) does.
+- **The smoke test is the only automatic check.** A bug it can't reach
+  ships to everyone at once. Rolling back on error rate is #505, at
+  public, and the 10% soak returns with it. Until then, the owner watches
+  Sentry after a deploy and rolls back by hand (`docs/deployment.md` §9).
+- "Take the failed version out" runs only when a step _before_ it fails:
+  the upload, the 0% deploy or the smoke test. If the shift to 100% itself
+  fails, the deployment stays as the 0% step left it, the old version at
+  100%, so nothing needs undoing.
