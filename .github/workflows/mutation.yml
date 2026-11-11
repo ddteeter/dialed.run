@@ -85,6 +85,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          # The fetch below is of a public repository and needs no token.
+          persist-credentials: false
 
       # Each scope gets a short, stable name, and the job name uses that
       # rather than the glob. The glob is not a name: the components scope
@@ -162,7 +164,7 @@ jobs:
         env:
           BASE: ${{ github.event.pull_request.base.ref }}
         run: |
-          if [ "${{ github.event_name }}" != "pull_request" ]; then
+          if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -195,6 +197,8 @@ jobs:
           egress-policy: audit
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -252,7 +256,13 @@ jobs:
       # another run would fold in results for files outside this scope.
       # A shard's `--mutate` is one fixed glob from the ratchet, so the
       # stored report and the run always describe the same set.
-      - run: npx stryker run --incremental --mutate "${{ matrix.mutate }}"
+      #
+      # The glob reaches the script through `env`: it is text from
+      # stryker.conf.json, which a PR can edit, and an expression expanded
+      # inside a script is run as script.
+      - run: npx stryker run --incremental --mutate "$MUTATE"
+        env:
+          MUTATE: ${{ matrix.mutate }}
 
       # Only on success: a shard that failed recorded a survived mutant,
       # and storing that would keep the survivor "known" instead of
@@ -303,9 +313,10 @@ jobs:
           egress-policy: audit
 
       - name: Check the shards
+        env:
+          scopes: ${{ needs.scopes.result }}
+          shards: ${{ needs.mutate.result }}
         run: |
-          scopes='${{ needs.scopes.result }}'
-          shards='${{ needs.mutate.result }}'
           echo "scopes: $scopes · shards: $shards"
           # `skipped` is the honest pass: this PR changed nothing the
           # ratchet covers. Anything other than success or skipped —
