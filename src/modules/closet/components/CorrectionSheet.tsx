@@ -192,7 +192,8 @@ function CorrectionForm({
   onSent,
 }: Readonly<CorrectionSheetProps & { onSent: () => void }>): JSX.Element {
   const [field, setField] = useState<CorrectionField | undefined>();
-  const [value, setValue] = useState<string>(NO_CHOICE);
+  // What the runner typed or picked for this field; nothing until they do.
+  const [typed, setTyped] = useState<string>();
   const [note, setNote] = useState("");
   const { idempotencyKey } = useIdempotencyKey();
   const context = useCorrectionContext(open, subject.productId, loadContext);
@@ -211,6 +212,10 @@ function CorrectionForm({
     confirmTrigger: "correct",
   });
   const sent = facts.waiting.find((row) => row.field === field);
+  // A field with one waiting opens with what was sent (R48·129c). Read
+  // here, not when the field is picked: a pick can beat the sheet's read
+  // of the product, and the field would stay empty beside "You sent…".
+  const value = typed ?? sent?.value ?? NO_CHOICE;
   return (
     <form
       ref={form.formRef}
@@ -247,10 +252,7 @@ function CorrectionForm({
         value={field}
         onChange={(picked) => {
           setField(picked);
-          // A field with one waiting opens with what was sent (R48·129c).
-          setValue(
-            facts.waiting.find((row) => row.field === picked)?.value ?? "",
-          );
+          setTyped(undefined);
         }}
         field={form.field}
         error={form.fieldErrors.field}
@@ -260,7 +262,7 @@ function CorrectionForm({
           field={field}
           label={valueLabel(field, facts.current[field])}
           value={value}
-          onChange={setValue}
+          onChange={setTyped}
           formField={form.field}
           error={form.fieldErrors.value}
         />

@@ -412,6 +412,78 @@ describe("WRONG?'s sheet, closer", () => {
     );
   });
 
+  it("fills a field picked before the product is read, once it is, and keeps what was typed by then (#566)", async () => {
+    const user = userEvent.setup();
+    const read = Promise.withResolvers<CorrectionContextRow>();
+    renderSheet({
+      loadContext: vi
+        .fn<CorrectionSheetProps["loadContext"]>()
+        .mockReturnValue(read.promise),
+    });
+    const waiting = [
+      { field: "name" as const, value: "AFO Jacket", createdAt: 1_762_430_400 },
+      { field: "link" as const, value: "https://a.example", createdAt: 1 },
+    ];
+    await user.click(screen.getByRole("radio", { name: "Link" }));
+    await user.type(
+      screen.getByRole("textbox", { name: /It should say/u }),
+      "https://b.example",
+    );
+    await user.click(screen.getByRole("radio", { name: "Name" }));
+    expect(screen.getByRole("textbox", { name: /It should say/u })).toHaveValue(
+      "",
+    );
+    read.resolve({ ...CONTEXT, waiting });
+    await screen.findByText("Janji · AFO Middle Layer");
+    expect(screen.getByRole("textbox", { name: /It should say/u })).toHaveValue(
+      "AFO Jacket",
+    );
+    expect(screen.getByText(/Sending again replaces it\./u)).toBeVisible();
+  });
+
+  it("keeps what is being typed when the product is read under it, an emptied field included", async () => {
+    const user = userEvent.setup();
+    const read = Promise.withResolvers<CorrectionContextRow>();
+    renderSheet({
+      loadContext: vi
+        .fn<CorrectionSheetProps["loadContext"]>()
+        .mockReturnValue(read.promise),
+    });
+    await user.click(screen.getByRole("radio", { name: "Name" }));
+    const name = screen.getByRole("textbox", { name: /It should say/u });
+    await user.type(name, "My Jacket");
+    read.resolve({
+      ...CONTEXT,
+      waiting: [{ field: "name", value: "AFO Jacket", createdAt: 1 }],
+    });
+    await screen.findByText("Janji · AFO Middle Layer");
+    expect(screen.getByRole("textbox", { name: /It should say/u })).toHaveValue(
+      "My Jacket",
+    );
+    await user.clear(screen.getByRole("textbox", { name: /It should say/u }));
+    expect(screen.getByRole("textbox", { name: /It should say/u })).toHaveValue(
+      "",
+    );
+  });
+
+  it("leaves a prefilled field empty once the runner empties it", async () => {
+    const user = userEvent.setup();
+    renderSheet({
+      loadContext: vi
+        .fn<CorrectionSheetProps["loadContext"]>()
+        .mockResolvedValue({
+          ...CONTEXT,
+          waiting: [{ field: "name", value: "AFO Jacket", createdAt: 1 }],
+        }),
+    });
+    await screen.findByText("Janji · AFO Middle Layer");
+    await user.click(screen.getByRole("radio", { name: "Name" }));
+    const name = screen.getByRole("textbox", { name: /It should say/u });
+    expect(name).toHaveValue("AFO Jacket");
+    await user.clear(name);
+    expect(name).toHaveValue("");
+  });
+
   it("opens weight and fabric on their placeholder, and fabric on one waiting", async () => {
     const user = userEvent.setup();
     renderSheet({
