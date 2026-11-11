@@ -50,6 +50,51 @@ test("a probe page is read top to bottom, once", async ({ page }) => {
   ]);
 });
 
+test("a box ticked since it was rendered is read as checked, and the page is left as it was", async ({
+  page,
+}) => {
+  await page.setContent(`
+    <main>
+      <label><input type="checkbox" id="was-off"> Tights</label>
+      <label><input type="checkbox" id="was-on" checked> Beanie</label>
+      <label><input type="checkbox" id="untouched"> Gloves</label>
+      <label><input type="radio" name="unit" id="f" checked> F</label>
+      <label><input type="radio" name="unit" id="c"> C</label>
+    </main>`);
+  await page.locator("#was-off").check();
+  await page.locator("#was-on").uncheck();
+  await page.locator("#c").check();
+
+  const spoken = await transcriptOf(page);
+  expect(
+    spoken.filter((phrase) => /^(?:checkbox|radio),/u.test(phrase)),
+  ).toEqual([
+    "checkbox, Tights, checked",
+    "checkbox, Beanie, not checked",
+    "checkbox, Gloves, not checked",
+    "radio, F, not checked, position 1, set size 2",
+    "radio, C, checked, position 2, set size 2",
+  ]);
+  // The attributes are as the page wrote them, and the state as the
+  // test left it.
+  expect(
+    await page
+      .locator("input")
+      .evaluateAll((inputs) =>
+        inputs.map((input) => [
+          input.hasAttribute("checked"),
+          (input as HTMLInputElement).checked,
+        ]),
+      ),
+  ).toEqual([
+    [false, true],
+    [true, false],
+    [false, false],
+    [true, false],
+    [false, true],
+  ]);
+});
+
 test("what differs between runs is normalized, and structure is not", () => {
   expect(normalize("Kit 01M6H3VMJB8Y4HRSP8T7FPRGG8, closet_17")).toBe(
     "Kit :id, closet_#",

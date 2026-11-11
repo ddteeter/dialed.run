@@ -132,6 +132,11 @@ const MONTH_NAME = namesOf([
 ]);
 
 /**
+The native controls whose checked state lives in a property.
+*/
+const NATIVE_BOXES = 'input[type="checkbox"], input[type="radio"]';
+
+/**
  * Guidepup's reader, as `globalThis.__guidepup.virtual`.
  */
 export async function loadReader(page: Page): Promise<void> {
@@ -144,9 +149,20 @@ export async function loadReader(page: Page): Promise<void> {
 export async function transcriptOf(page: Page): Promise<string[]> {
   await loadReader(page);
   const phrases = await page.evaluate(
-    async ({ end, max }) => {
+    async ({ end, max, boxes }) => {
       const reader = globalThis.__guidepup?.virtual;
       if (reader === undefined) return [];
+      // Guidepup reads a native checkbox or radio's state from its
+      // `checked` attribute, which is only its state as first rendered:
+      // one ticked since then reads "not checked". So the attribute
+      // follows the property while the reader is on the page, and is put
+      // back after. Changing it does not move the property: where the two
+      // differ the control has been set since render, and the attribute
+      // no longer drives it.
+      const stale = [
+        ...globalThis.document.querySelectorAll<HTMLInputElement>(boxes),
+      ].filter((input) => input.checked !== input.hasAttribute("checked"));
+      for (const input of stale) input.toggleAttribute("checked");
       await reader.start({
         container: globalThis.document.body,
         displayCursor: false,
@@ -159,9 +175,10 @@ export async function transcriptOf(page: Page): Promise<string[]> {
         return await reader.spokenPhraseLog();
       } finally {
         await reader.stop();
+        for (const input of stale) input.toggleAttribute("checked");
       }
     },
-    { end: END, max: MAX_PHRASES },
+    { end: END, max: MAX_PHRASES, boxes: NATIVE_BOXES },
   );
   return phrases.map((phrase) => normalize(phrase));
 }
