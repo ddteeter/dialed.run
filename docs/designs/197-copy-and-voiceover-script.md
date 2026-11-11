@@ -56,9 +56,13 @@ check without saying what the build should speak.
 
 ## Test plan
 
-No code, so no new test. The full `npm test` on the final head (it scans
-docs), `npm run build` and `sanctions-check`. The e2e suite is not run:
-nothing under `e2e/` or `src/` changes.
+- `test/architecture/voiceover-script-transcripts.test.ts` (vitest,
+  `worker`): every transcript path the script names exists, and the script
+  names more than twenty, so it cannot pass on nothing. A renamed test
+  moves its transcript; this is what notices.
+- The full `npm test` on the final head, `npm run build` and
+  `sanctions-check`. The e2e suite is not run: nothing under `e2e/` or
+  `src/` changes.
 
 ## Issues
 
@@ -73,7 +77,5 @@ nothing under `e2e/` or `src/` changes.
   is the owner's alone). The draft says so and points at uploading the
   watch's file. Whether to say anything about later is the owner's call,
   asked with the draft.
-- **Drift.** The script restates transcript text, and a renamed test moves
-  its transcript. A test that every transcript path the script names exists
-  would catch that; it is outside this lane's files, so it is asked of the
-  coordinator, not written.
+- **Drift**, answered by the coordinator (2026-11-10): the path test above
+  is in this lane.

@@ -249,7 +249,7 @@ Do, in order:
    that ends "One field needs a fix.", and then land on the Email field,
    which reads its message with it. No transcript covers this on Create
    account; the same pattern on Log in
-   (`…/Au-·-phone-Au3-wrong-password-on-Password.txt`) is "Not signed in.
+   (`conformance/auth-forms.conformance.spec.ts/Au-·-phone-Au3-wrong-password-on-Password.txt`) is "Not signed in.
    One field needs a fix." and then "Password, That password doesn't match
    this email."
 2. Double tap "Show password". Move back to it. It must now say that the
@@ -395,7 +395,7 @@ You should hear, on a first run with no history:
 - "Not now —", link "leave it in the queue"
 
 While it looks for a suggestion the same file's neighbour
-(`…-waiting-only-most-likely-waits-in-the-board-s-words-and-frame.txt`)
+(`conformance/a2-attach.conformance.spec.ts/A2-·-before-a-suggestion-waiting-only-most-likely-waits-in-the-board-s-words-and-frame.txt`)
 has "Most likely", "Checking what you wore at N degrees", and the heading
 becomes "Or pick from the closet".
 
@@ -431,7 +431,7 @@ Do:
 
 1. Double tap "A bit warm". It says checked; the others do not.
 2. Double tap "More, anything specific". A dialog opens
-   (`…/A3-·-round-21-A3b-titled-with-the-verdict-it-qualifies-all-nine-tags.txt`):
+   (`conformance/a3-verdict.conformance.spec.ts/A3-·-round-21-A3b-titled-with-the-verdict-it-qualifies-all-nine-tags.txt`):
    "Anything specific?", heading 2; "A bit warm · optional"; one group per
    piece, named for the piece, with radios "Fine", "Too much", "Not
    enough"; "Tags", heading 3; nine tag buttons; button "Done". Swipe right
@@ -439,7 +439,7 @@ Do:
    piece and double tap "Done".
 3. Back on the page, the flag is a pressed button named for the piece and
    the flag, such as "Half-zip too much"
-   (`verdict/verdict.journey.spec.ts/…read-the-receipt.txt` has "Houdini
+   (`verdict/verdict.journey.spec.ts/log-a-verdict-on-your-own-run-pick-it-flag-an-item-read-the-receipt.txt` has "Houdini
    Jacket not enough"). It must say which piece it flags.
 
 **2.7 Saving.** Double tap "Log it".
@@ -485,7 +485,7 @@ You should hear:
 - link "Add garment"
 
 With nothing in it
-(`…/the-empty-closet-says-what-ruling-16-says-and-offers-the-dashed-tile.txt`):
+(`conformance/closet-empty.conformance.spec.ts/the-empty-closet-says-what-ruling-16-says-and-offers-the-dashed-tile.txt`):
 "Nothing in here yet", heading 1; "Add what you run in most. Three pieces
 is enough to start."; link "Add garment".
 
@@ -549,7 +549,8 @@ Before friends there is nobody to follow but your second account, and "Your
 conditions" will have too few runners. Both states are below.
 
 **4.1 Following (E1).** Double tap "Feed".
-Source: `conformance/feed-e1.conformance.spec.ts/`, both files.
+Sources: `conformance/feed-e1.conformance.spec.ts/E1-s-empty-Following-says-what-the-board-says-word-for-word.txt`
+and `conformance/feed-e1.conformance.spec.ts/E1-s-v1-card-is-composed-as-the-board-draws-it-with-a-photo-without-and-indoors.txt`.
 
 With nobody followed, you should hear:
 
@@ -611,12 +612,13 @@ You should hear:
 - button "Report this entry"
 
 Do: double tap "Useful". It becomes "N Useful", pressed
-(`walkthroughs/feed.walkthrough.spec.ts/…mark-it-useful.txt`). Check the
+(`walkthroughs/feed.walkthrough.spec.ts/the-feed-find-a-runner-follow-them-open-their-kit-mark-it-useful.txt`). Check the
 kit is announced as a list.
 
 **4.5 Your conditions (E2-lite).** Back to the feed; double tap "Your
 conditions". Safari will ask for your location; that dialog is Apple's.
-Source: `conformance/feed-e2.conformance.spec.ts/`, four files.
+Sources: `conformance/feed-e2.conformance.spec.ts/with-the-location-granted-E2-lite-no-matches-is-the-privacy-floor-said-the-board-s-way.txt`
+and `conformance/feed-e2.conformance.spec.ts/with-the-location-granted-E2-lite-widened-says-fourteen-days-in-the-teal-that-means-matched.txt`.
 
 Too few runners (what you will get before friends):
 
