@@ -255,9 +255,14 @@ describe("AttachKit: the header", () => {
         name: "What did you wear?",
       }),
     ).toBeVisible();
-    expect(
-      within(header).getByText("6.2 mi · 41°F damp · 0 pieces"),
-    ).toBeVisible();
+    const line = within(header).getByText("6.2 mi · 41°F damp · 0 pieces");
+    expect(line).toBeVisible();
+    // Round 52 #158: drawn for the eye, said in words.
+    expect(line).toHaveAttribute("aria-hidden", "true");
+    expect(line.nextElementSibling).toHaveClass("sr-only");
+    expect(line.nextElementSibling).toHaveTextContent(
+      "6.2 miles, 41 degrees Fahrenheit, damp, 0 pieces",
+    );
     // Nothing to announce until something happens.
     expect(screen.getByRole("status")).toHaveTextContent(/^$/u);
   });
@@ -287,6 +292,9 @@ describe("AttachKit: the header", () => {
     await renderWithRouter(attach({ units: { temp: "c", distance: "km" } }));
 
     expect(screen.getByText("10.0 km · 5°C damp · 0 pieces")).toBeVisible();
+    expect(
+      screen.getByText("10.0 kilometres, 5 degrees Celsius, damp, 0 pieces"),
+    ).toHaveClass("sr-only");
   });
 
   it("credits Visual Crossing under the sub-line that carries its reading (D-144)", async () => {
@@ -324,9 +332,17 @@ describe("AttachKit: the rail at the desk (round 25)", () => {
       within(rail()).getByRole("heading", { name: "This run" }),
     ).toBeInTheDocument();
     expect(rail()).toHaveTextContent("6.2 mi");
-    expect(within(rail()).getByText("41°F damp")).toHaveClass(
-      "text-dialed-text",
+    const reading = within(rail()).getByText("41°F damp");
+    expect(reading.parentElement).toHaveClass("text-dialed-text");
+    // Round 52 #158: both of the rail's lines are said in words.
+    expect(reading.nextElementSibling).toHaveTextContent(
+      "41 degrees Fahrenheit, damp",
     );
+    expect(within(rail()).getByText("6.2 mi")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(rail()).toHaveTextContent("6.2 miles");
     expect(rail().querySelector("input, button, [role='radio']")).toBeNull();
   });
 

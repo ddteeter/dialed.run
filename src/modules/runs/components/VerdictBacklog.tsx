@@ -3,15 +3,9 @@ import type { JSX, KeyboardEvent } from "react";
 import { Fragment, useState } from "react";
 
 import type { VerdictValue } from "../../../lib/contracts";
-import {
-  formatDistance,
-  formatDuration,
-  formatWind,
-  spokenDuration,
-} from "../../../lib/contracts/measures";
+import { measuredLine } from "../../../lib/contracts/measures";
 import type { Units } from "../../../lib/contracts";
 import { dayLabel, proseDayLabel } from "../../../lib/dates";
-import { formatTemp } from "../../../lib/contracts/temperature";
 import {
   Bracketed,
   classifyFailure,
@@ -106,12 +100,19 @@ function runDay(row: BacklogRow): string {
  * humidity is in the observations table but not in `Conditions`, and wind
  * *direction* is not stored at all.
  */
-function conditionsLine(conditions: Conditions, units: Units): string {
-  return [
-    formatTemp(conditions.tempC, units.temp),
-    conditions.condition,
-    formatWind(conditions.windKph, units.distance),
-  ].join(" · ");
+function conditionsLine(
+  conditions: Conditions,
+  units: Units,
+): { shown: string; said: string } {
+  // A line of measures (round 52 #158): drawn, and said in words.
+  return measuredLine(
+    [
+      [{ kind: "temp", tempC: conditions.tempC }],
+      [{ kind: "word", word: conditions.condition }],
+      [{ kind: "wind", windKph: conditions.windKph }],
+    ],
+    units,
+  );
 }
 
 /**
@@ -276,7 +277,9 @@ function BacklogRail({
           {row.conditions === undefined ? (
             <p className="m-0 text-body">No weather on this run.</p>
           ) : (
-            <Mono step="lg">{conditionsLine(row.conditions, units)}</Mono>
+            <Mono step="lg">
+              <Spoken {...conditionsLine(row.conditions, units)} />
+            </Mono>
           )}
         </div>
       }
@@ -592,17 +595,23 @@ function BacklogTable({
                         row is tinted, and `--muted` is 4.0:1 on the tint. */}
                     <Mono step="sm" className="text-quiet">
                       <Spoken
-                        shown={formatDuration(row.durationS)}
-                        said={spokenDuration(row.durationS)}
-                      />{" "}
-                      · {formatDistance(row.distanceM, units.distance)}
+                        {...measuredLine(
+                          [
+                            [{ kind: "duration", durationS: row.durationS }],
+                            [{ kind: "distance", distanceM: row.distanceM }],
+                          ],
+                          units,
+                        )}
+                      />
                     </Mono>
                   </td>
                   <td className="block px-2 py-2 desk:table-cell">
                     <Mono step="sm" className="text-quiet">
-                      {row.conditions === undefined
-                        ? "No conditions"
-                        : conditionsLine(row.conditions, units)}
+                      {row.conditions === undefined ? (
+                        "No conditions"
+                      ) : (
+                        <Spoken {...conditionsLine(row.conditions, units)} />
+                      )}
                     </Mono>
                   </td>
                   <td className="block px-2 py-2 desk:table-cell">

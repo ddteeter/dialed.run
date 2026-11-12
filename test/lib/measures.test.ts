@@ -369,6 +369,22 @@ describe("measuredLine", () => {
     });
   });
 
+  it("draws a duration on the clock and says it in words", () => {
+    // The receipt's "6.2 mi · 51:38".
+    expect(
+      measuredLine(
+        [
+          [{ kind: "distance", distanceM: 9978, spaced: true }],
+          [{ kind: "duration", durationS: 3098 }],
+        ],
+        miles,
+      ),
+    ).toStrictEqual({
+      shown: "6.2 mi · 51:38",
+      said: "6.2 miles, 51 minutes 38 seconds",
+    });
+  });
+
   it("draws a distance glued or spaced, and says it in miles", () => {
     expect(
       measuredLine(

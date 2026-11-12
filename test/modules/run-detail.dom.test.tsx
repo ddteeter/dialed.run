@@ -138,6 +138,27 @@ describe("R: the conditions row", () => {
     expect(block).toHaveTextContent("41°F");
     expect(block).toHaveTextContent("damp");
     expect(block).toHaveTextContent("Feels 36° · 88% hum · 9mph · Light rain");
+    // Round 52 #158: each line of measures is drawn for the eye and said
+    // in words, once.
+    const feels = within(block).getByText(
+      "Feels 36° · 88% hum · 9mph · Light rain",
+    );
+    expect(feels).toHaveAttribute("aria-hidden", "true");
+    expect(feels.nextElementSibling).toHaveClass("sr-only");
+    expect(feels.nextElementSibling).toHaveTextContent(
+      "Feels like 36 degrees, 88 percent humidity, wind 9 miles per hour, Light rain",
+    );
+    expect(within(block).getByText("41°F")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(within(block).getByText("damp")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(within(block).getByText("41 degrees Fahrenheit, damp")).toHaveClass(
+      "sr-only",
+    );
     expect(
       within(block).getByRole("link", {
         name: "Weather data provided by Visual Crossing",
@@ -164,6 +185,8 @@ describe("R: the conditions row", () => {
     // (round 26, item 2).
     expect(block).toHaveTextContent("50–59°Rain");
     expect(block).not.toHaveTextContent("55°");
+    // A band has no unit letter, so it is said as drawn (round 52 #158).
+    expect(block.querySelector("[aria-hidden], .sr-only")).toBeNull();
     expect(block).not.toHaveTextContent("Feels");
     expect(within(block).queryByRole("link")).toBeNull();
   });

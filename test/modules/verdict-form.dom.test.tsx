@@ -2016,11 +2016,15 @@ describe("VerdictForm: the run header (round 21)", () => {
       "aria-hidden",
       "true",
     );
-    expect(within(rail).getByText("6.2 mi, 51 minutes 38 seconds")).toHaveClass(
-      "sr-only",
-    );
-    expect(within(rail).getByText("41°F damp · feels 36°")).toHaveClass(
-      "text-dialed-text",
+    expect(
+      within(rail).getByText("6.2 miles, 51 minutes 38 seconds"),
+    ).toHaveClass("sr-only");
+    // Round 52 #158: the receipt's reading, drawn and said in words.
+    const reading = within(rail).getByText("41°F damp · feels 36°");
+    expect(reading.parentElement).toHaveClass("text-dialed-text");
+    expect(reading).toHaveAttribute("aria-hidden", "true");
+    expect(reading.nextElementSibling).toHaveTextContent(
+      "41 degrees Fahrenheit, damp, feels like 36 degrees",
     );
     expect(
       within(rail).getByRole("heading", { name: "The kit you’re judging" }),

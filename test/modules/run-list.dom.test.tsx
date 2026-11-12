@@ -144,7 +144,13 @@ describe("R: the badges, and the one breath", () => {
     await renderWithRouter(list([runSummary()]));
 
     const row = onlyRow();
-    expect(within(row).getByText("41°F damp")).toHaveClass("text-dialed-text");
+    const reading = within(row).getByText("41°F damp");
+    expect(reading.parentElement).toHaveClass("text-dialed-text");
+    // Round 52 #158: drawn for the eye, said in words.
+    expect(reading).toHaveAttribute("aria-hidden", "true");
+    expect(reading.nextElementSibling).toHaveTextContent(
+      "41 degrees Fahrenheit, damp",
+    );
     const badge = within(row).getByText("Conditions");
     expect(badge).toHaveClass("border-hairline", "text-label");
     expect(within(row).queryByRole("button")).toBeNull();

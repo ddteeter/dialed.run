@@ -4,12 +4,13 @@ import { useState } from "react";
 
 import type { Units } from "../../../lib/contracts";
 import { dayLabel } from "../../../lib/dates";
-import { distanceNumber } from "../../../lib/contracts/measures";
-import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
+import { distanceNumber, measuredLine } from "../../../lib/contracts/measures";
+import { precipClassOf } from "../../../lib/contracts/temperature";
 import {
   Bracketed,
   GarminAttribution,
   Mono,
+  Spoken,
   WeatherAttribution,
 } from "../../../ui";
 import {
@@ -167,10 +168,20 @@ function MetaLine({
         </Mono>
       );
     }
-    const temp = `${formatTemp(conditions.tempC, units.temp)}${units.temp.toUpperCase()}`;
+    // A line of measures (round 52 #158): drawn, and said in words.
     return (
       <Mono step="sm" className="text-dialed-text">
-        {`${temp} ${precipClassOf(conditions.precipMm)}`}
+        <Spoken
+          {...measuredLine(
+            [
+              [
+                { kind: "temp", tempC: conditions.tempC, withLetter: true },
+                { kind: "word", word: precipClassOf(conditions.precipMm) },
+              ],
+            ],
+            units,
+          )}
+        />
       </Mono>
     );
   }

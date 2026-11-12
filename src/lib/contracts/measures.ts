@@ -280,6 +280,7 @@ export const formatTempRange = (
  * - `range`: `formatTempRange`'s "38–46°", collapsed as it collapses.
  * - `humidity`: "80% hum". `wind`: `formatWind`'s "6mph".
  * - `distance`: "8.2mi", or "6.2 mi" `spaced`, as A2's header sets it.
+ * - `duration`: `formatDuration`'s "51:38", said by `spokenDuration`.
  * - `word`: anything already in words (a sky, a precip class, a
  *   condition, a day or a time), drawn and said as it is.
  */
@@ -294,6 +295,7 @@ type MeasuredPart =
   | Readonly<{ kind: "humidity"; percent: number }>
   | Readonly<{ kind: "wind"; windKph: number }>
   | Readonly<{ kind: "distance"; distanceM: number; spaced?: boolean }>
+  | Readonly<{ kind: "duration"; durationS: number }>
   | Readonly<{ kind: "word"; word: string }>;
 
 /**
@@ -350,6 +352,9 @@ function shownPart(part: MeasuredPart, units: Units): string {
         ? `${distanceNumber(part.distanceM, units.distance)} ${units.distance}`
         : formatDistance(part.distanceM, units.distance);
     }
+    case "duration": {
+      return formatDuration(part.durationS);
+    }
     case "word": {
       return part.word;
     }
@@ -379,6 +384,9 @@ function saidPart(part: MeasuredPart, units: Units): string {
     }
     case "distance": {
       return `${distanceNumber(part.distanceM, units.distance)} ${UNIT_WORD[units.distance]}s`;
+    }
+    case "duration": {
+      return spokenDuration(part.durationS);
     }
     case "word": {
       return part.word;

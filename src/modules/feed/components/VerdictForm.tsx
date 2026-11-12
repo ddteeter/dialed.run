@@ -15,11 +15,7 @@ import { clockLabel, dayLabel } from "../../../lib/dates";
 import { runsLabel } from "../../../lib/runs-label";
 import type { BandRun } from "../band-runs";
 import { BandRunsCard } from "./BandRunsCard";
-import {
-  distanceNumber,
-  formatDuration,
-  spokenDuration,
-} from "../../../lib/contracts/measures";
+import { distanceNumber, measuredLine } from "../../../lib/contracts/measures";
 import {
   bandLabel,
   formatTemp,
@@ -317,10 +313,7 @@ export function VerdictForm({
 }>) {
   const { verdict, setVerdict, tags, setTags, flags, setFlags } =
     useAnswer(entry);
-  const [audience, setAudience] = useHeldAudience(
-    entry.audience,
-    isVerified,
-  );
+  const [audience, setAudience] = useHeldAudience(entry.audience, isVerified);
   // Present once the verdict is saved. The sentence inside it can still be
   // absent: the save landed and only the record's count failed to come
   // back, and the receipt is not held hostage to it.
@@ -803,22 +796,58 @@ function VerdictRail({
 }>): JSX.Element {
   const zone = entry.conditions?.timeZone;
   const { conditions } = entry;
-  const distance = `${distanceNumber(entry.distanceM, units.distance)} ${units.distance}`;
   return (
     <>
       <RailCard
         title={`This run · ${dayLabel(entry.startedAt, zone)} · ${clockLabel(entry.startedAt, zone)}`}
       >
         <Mono step="sm">
+          {/* Lines of measures (round 52 #158): drawn, and said in
+              words. */}
           <Spoken
-            shown={`${distance} · ${formatDuration(entry.durationS)}`}
-            said={`${distance}, ${spokenDuration(entry.durationS)}`}
+            {...measuredLine(
+              [
+                [
+                  {
+                    kind: "distance",
+                    distanceM: entry.distanceM,
+                    spaced: true,
+                  },
+                ],
+                [{ kind: "duration", durationS: entry.durationS }],
+              ],
+              units,
+            )}
           />
         </Mono>
         {conditions === undefined ? undefined : (
           <>
             <Mono step="sm" className="text-dialed-text">
-              {`${formatTemp(conditions.tempC, units.temp)}${units.temp.toUpperCase()} ${precipClassOf(conditions.precipMm)} · feels ${formatTemp(conditions.feelsLikeC, units.temp)}`}
+              <Spoken
+                {...measuredLine(
+                  [
+                    [
+                      {
+                        kind: "temp",
+                        tempC: conditions.tempC,
+                        withLetter: true,
+                      },
+                      {
+                        kind: "word",
+                        word: precipClassOf(conditions.precipMm),
+                      },
+                    ],
+                    [
+                      {
+                        kind: "temp",
+                        tempC: conditions.feelsLikeC,
+                        feels: "feels",
+                      },
+                    ],
+                  ],
+                  units,
+                )}
+              />
             </Mono>
             {/* The header above already credits this reading, heard at
                 every width; the rail, the desk's alone, draws it again near
