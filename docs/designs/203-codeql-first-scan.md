@@ -20,7 +20,7 @@ code; none is dismissed.
 | 2     | `src/modules/account/licence-text.ts`   | bracketed parts removed once, so brackets could remain           | fixed: a holder's name keeps no angle bracket at all                                                        |
 | 1     | `src/modules/account/legal-markdown.ts` | comments removed once, so a comment opener could remain          | fixed: comments are removed until none is left, an unclosed one to the end of the text                      |
 | 3     | `test/lib/community-rules.test.ts`      | the test's own copy of alert 1's expression                      | fixed: the test calls the module's function, not a copy                                                     |
-| 4, 5  | `e2e/desk/desk-door.spec.ts`            | a test's reading of script tags is case-sensitive                | fixed: it reads them in any case                                                                            |
+| 4, 5  | `e2e/desk/desk-door.spec.ts`            | a test's reading of script tags is case-sensitive                | fixed: it reads them in any case, with any closing tag                                                      |
 
 Inputs, for the record: the placeholder handle is not a secret; licence
 texts come from installed packages at build time; legal texts are this
