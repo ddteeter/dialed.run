@@ -28,7 +28,9 @@ human to decide, never a verdict.
   datetime-local, date, password and file inputs printed with no role; an
   option's `value` read after its label; a closed `<details>` read as if
   open; an empty live region printed as "status"; `aria-controls` voiced
-  as "# control". (`checked` read from the attribute and not the state
+  as "# control"; the page behind an open sheet listed with it (the
+  reader starts at the top whatever is open; `Sheet` uses `showModal`, so
+  in a browser that page is inert). (`checked` read from the attribute and not the state
   was one until 2026-11-11: `e2e/support/a11y-transcript.ts` now reads
   the state, so a wrong "checked" or "not checked" is a finding.)
 - **The contract.** `docs/designs/112-accessibility.md` (the rules) and

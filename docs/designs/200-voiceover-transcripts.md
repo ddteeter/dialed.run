@@ -10,67 +10,70 @@ four screens have one at desk width only (#582). The script can only say
 
 ## Approach
 
-A test that ends on each state at 390 wide. No new spec file and no new
-journey: each state goes in the spec that already owns its screen.
+A test that ends on each state at 390 wide, in the spec that already owns
+its screen. No new spec file and no new journey. A sibling seeded straight
+to the state where a test passes through it and moves on; an existing test
+ended at the phone's width where nothing it asserts is about the desk; two
+states in one final state where the script walks them in a row.
 
-- **A sibling seeded straight to the state**, where a test passes through
-  it and moves on (an open sheet it then closes): sign in, seed, open, one
-  or two actions, end. Cheaper than replaying the flow.
-- **An existing test that ends at the phone's width**, where its final
-  state is already the one wanted and nothing it asserts is about the
-  desk: no new test, and its transcript becomes the phone's.
-- **Two states in one final state**, where the script walks them in a row
-  on one screen (Create account refused, then its password shown; A1's
-  conditions arrived, then its start-time row open).
+| state (#582)                                   | where it ends                                                     |
+| ---------------------------------------------- | ----------------------------------------------------------------- |
+| Create account refused; its password shown     | `conformance/auth-forms`, one test                                |
+| first-run username                             | `account/username`                                                |
+| O3 tap-list; P2.5 with a piece open            | `conformance/onboarding-desk`, two tests                          |
+| A1 conditions arrived; its start-time row open | `run-logging/run-logging`, one test                               |
+| A2 suggestion offered; A2b category sheet      | `conformance/a2-attach`, two tests                                |
+| retire confirm                                 | `conformance/closet-detail`                                       |
+| H after Follow; search with a hit              | `conformance/feed-gh`, `feed/feed-unconfirmed`                    |
+| Notifications, unread and Mark all read        | `conformance/notifications-m`                                     |
+| Settings › Privacy; delete-account sheet       | `conformance/system-settings`, two tests                          |
+| phone width: closet grid, Add a garment        | existing tests in `conformance/closet-empty`, `closet/closet-add` |
 
-| state (#582)                                     | spec                                                                   |
-| ------------------------------------------------ | ---------------------------------------------------------------------- |
-| Create account refused; password shown           | `conformance/auth-forms`                                               |
-| Turnstile                                        | see Open questions                                                     |
-| first-run username                               | `account/username`                                                     |
-| O3 tap-list; P2.5 with brand suggestions         | `conformance/onboarding-desk`                                          |
-| the + Add sheet                                  | `conformance/a1-upload`                                                |
-| A1 conditions arrived, start-time row open       | `run-logging/run-logging`                                              |
-| A2 suggestion offered; A2b category sheet        | `conformance/a2-attach`                                                |
-| retire confirm                                   | `conformance/closet-detail`                                            |
-| H after Follow; search with a hit                | `conformance/feed-gh`, `feed/feed-unconfirmed`                         |
-| Notifications, unread and Mark all read          | `conformance/notifications-m`                                          |
-| Settings › Privacy; delete-account sheet         | `conformance/system-settings`                                          |
-| phone width: closet grid, Add a garment, receipt | `conformance/closet-empty`, `closet/closet-add`, `verdict/verdict-row` |
+No test for three:
 
-Then, once #584 has merged, the script's "no transcript" steps take the
-expected speech and `voiceover-script-transcripts.test.ts` pins the new
-paths.
+- **Turnstile** cannot be transcribed: e2e runs Cloudflare's always-pass
+  key, where the widget draws nothing, and a real challenge is a
+  cross-origin frame the reader cannot enter. The script says so.
+- **The + Add sheet** is not a state: the launcher navigates to A1, which
+  has a 390 transcript. The script's line is corrected.
+- **The receipt at 390** has a transcript already (`conformance/a3-verdict`).
 
-Each new transcript is reviewed with the `a11y-judgment` skill before it
-is committed. One that reads wrong is a finding: fixed here if it is
-small and changes no wording or drawn composition, otherwise the
-coordinator's.
+**The reader read `checked` from the attribute.** Guidepup takes a native
+checkbox or radio's state from its `checked` attribute, so one ticked
+since render was transcribed "not checked". `transcriptOf` now mirrors the
+property onto the attribute while it reads, and puts it back. Seven
+existing transcripts change by one line each, a picked radio.
+
+Each new transcript was reviewed with the `a11y-judgment` skill.
 
 ## Contract touches
 
 - Schema changes needed: **none**
 - New route files: **none**
 - New bindings/queues/crons: **none**
-- Screens: none built. Any a11y fix a new end state surfaces is listed in
-  the PR.
+- Screens: none built. One a11y fix: P2.5's "Name it" buttons carry
+  their piece's name, visually hidden (`NamePieces.tsx`).
 
 ## Test plan
 
 - edge case / conformance (Playwright): the tests above. A transcript is
   the a11y fixture's reading of a real page after the server hop, which no
   dom test produces.
-- Cost: the number of tests added and the e2e job's time before and
-  after are recorded here once measured.
+- Cost, measured on this machine's CI-style run (fresh D1, all projects,
+  `A11Y_COVERAGE=1`): 13 tests added and 2 moved to the phone's width;
+  168 → 181 tests; the dev-server run 10.2 → 11.9 min, the production
+  build's 9.6 min. CI's `e2e` job time is in the PR body.
+- dom (`test/onboarding/name-pieces.dom.test.tsx`): each Name it button
+  is named for its piece.
+- `e2e/support/a11y-transcript.spec.ts`: a box ticked since render reads
+  as checked, and the page is left as it was.
 
 ## Issues
 
 - Closes: #582.
-- Opens: one per finding that is not fixed here.
+- Opens: #589, #591, #592, #593, #594 (Design asks) and #590, #595
+  (owner questions), one per finding not fixed here.
 
 ## Open questions
 
-- Turnstile. The e2e environment runs Cloudflare's always-pass test key
-  with `interaction-only`, so the widget draws nothing, and a real
-  challenge is a cross-origin frame the reader cannot enter. What can be
-  captured is what the page says when the check does not load.
+- None.
