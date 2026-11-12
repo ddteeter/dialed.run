@@ -106,3 +106,36 @@ test("the index: U1's groups and rows, in U1's order, keeping the tab bar", asyn
     page.locator("[data-slot='tab-bar']").getByRole("link", { name: "You" }),
   ).toHaveClass(/text-ink/u);
 });
+
+// Two of Settings' own states no board is compared with here. Each ends
+// at the phone's width so what a screen reader is given is checked in
+// (#582). Neither changes anything: the closet account is other specs'.
+test("Privacy at 390: who sees new runs, and the two switches", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto("/onboarding/settings/sharing");
+  await hydrated(page);
+
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Privacy" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("checkbox", { name: "Count my runs in anonymous totals" }),
+  ).toBeChecked();
+});
+
+test("Delete account at 390: the sheet, open and not confirmed", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto("/account/sign-in");
+  await hydrated(page);
+
+  await page.getByRole("button", { name: /^Delete account/u }).click();
+  const sheet = page.getByRole("dialog", { name: "Delete your account?" });
+  await expect(sheet).toBeVisible();
+  await expect(
+    sheet.getByRole("button", { name: "Delete my account" }),
+  ).toBeVisible();
+});

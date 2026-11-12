@@ -16,6 +16,7 @@
 import { nowSeconds } from "../../src/lib/now";
 import { storageStateFor } from "../support/accounts";
 import { expect, test } from "../support/a11y";
+import { PHONE } from "../support/bars";
 import { hydrated } from "../support/demo";
 import {
   PNG_1X1,
@@ -31,6 +32,9 @@ test.use({ storageState: storageStateFor("closet") });
 test("F puts what it is before its link, and draws its own ▾", async ({
   page,
 }) => {
+  // At the phone's width: the rules below hold at every width, and the
+  // transcript is then what a phone's screen reader is given (#582).
+  await page.setViewportSize(PHONE);
   await page.goto("/closet/new");
   await hydrated(page);
   const category = page.getByLabel("Category");

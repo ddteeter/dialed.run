@@ -1,86 +1,28 @@
 document
-banner
-link, dialed.run home
-dialed.run
-end of link, dialed.run home
-navigation, Main
-list
-listitem, level 1, position 1, set size 4
-link, Feed
-end of listitem, level 1, position 1, set size 4
-listitem, level 1, position 2, set size 4
-link, Closet, current page
-end of listitem, level 1, position 2, set size 4
-listitem, level 1, position 3, set size 4
-link, Call
-end of listitem, level 1, position 3, set size 4
-listitem, level 1, position 4, set size 4
-link, You
-end of listitem, level 1, position 4, set size 4
-end of list
-end of navigation, Main
-link, Search runners
-button, Log a run, has popup dialog
-end of banner
 main
-navigation, Filter the closet
-heading, Group, level 2
-Group
-end of heading, Group, level 2
-list
-listitem, level 1, position 1, set size 2
-link, All #, current page
-All
-#
-end of link, All #, current page
-end of listitem, level 1, position 1, set size 2
-listitem, level 1, position 2, set size 2
-link, Tops #
-Tops
-#
-end of link, Tops #
-end of listitem, level 1, position 2, set size 2
-end of list
-heading, Works at, level 2
-Works at
-end of heading, Works at, level 2
-paragraph
-Untested
-end of paragraph
-heading, Coverage, level 2
-Coverage
-end of heading, Coverage, level 2
-list
-listitem, level 1, position 1, set size 3
-button, Covered #, not pressed
-Covered
-#
-end of button, Covered #, not pressed
-end of listitem, level 1, position 1, set size 3
-listitem, level 1, position 2, set size 3
-button, Partial #, not pressed
-Partial
-#
-end of button, Partial #, not pressed
-end of listitem, level 1, position 2, set size 3
-listitem, level 1, position 3, set size 3
-button, Untested #, not pressed
-Untested
-#
-end of button, Untested #, not pressed
-end of listitem, level 1, position 3, set size 3
-end of list
-end of navigation, Filter the closet
 status
 heading, # pieces, level 1
 Show retired (#)
-switch, Show retired (#), not checked
+switch, Show retired (#), checked
 paragraph
 #
 of
 #
 pieces are still generic — name the ones you reach for.
 end of paragraph
+navigation, Filter the closet
+list
+listitem, level 1, position 1, set size 3
+button, Group · All, # control, not expanded
+end of listitem, level 1, position 1, set size 3
+listitem, level 1, position 2, set size 3
+button, Works at · Any, # control, not expanded
+end of listitem, level 1, position 2, set size 3
+listitem, level 1, position 3, set size 3
+button, Coverage · All, # control, not expanded
+end of listitem, level 1, position 3, set size 3
+end of list
+end of navigation, Filter the closet
 list
 listitem, level 1, position 1, set size 3
 link, Harrier No runs yet Untested Generic
@@ -106,5 +48,34 @@ end of link, Add garment
 end of listitem, level 1, position 3, set size 3
 end of list
 end of main
+navigation, Main
+list
+listitem, level 1, position 1, set size 5
+link, Feed
+Feed
+end of link, Feed
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Closet, current page
+Closet
+end of link, Closet, current page
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+button, Add a run, has popup dialog
++ Add
+end of button, Add a run, has popup dialog
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Call
+Call
+end of link, Call
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, You
+You
+end of link, You
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Main
 status
 end of document

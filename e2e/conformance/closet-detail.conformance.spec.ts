@@ -356,3 +356,22 @@ async function visibleCells(page: Page, selector: string): Promise<string[]> {
   );
   return raw.filter((cell) => cell !== "").map((cell) => tightBrackets(cell));
 }
+
+// The test above closes the sheet, so no transcript had it open. This one
+// ends on it, at the phone's width, so what a screen reader is given
+// while the confirm is up is checked in (#582).
+test("the retire confirm, open at 390, with focus on Keep it", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await openDetail(page, seed());
+  await page
+    .locator('[data-part="actions"]')
+    .getByRole("button", { name: "Retire" })
+    .click();
+
+  await expect(
+    page.locator('[data-part="sheet"][data-state="confirm-retire"]'),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Keep it" })).toBeFocused();
+});

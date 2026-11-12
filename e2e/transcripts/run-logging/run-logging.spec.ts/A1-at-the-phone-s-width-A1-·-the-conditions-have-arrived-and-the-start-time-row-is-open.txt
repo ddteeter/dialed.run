@@ -1,0 +1,84 @@
+document
+banner
+link, Notifications, # new
+end of banner
+main
+heading, Add a run, level 1
+status
+Parsed morning_run.gpx. Weather found.
+end of status
+status
+Parsed · morning_run.gpx
+button, Replace morning_run.gpx
+Replace
+end of button, Replace morning_run.gpx
+paragraph
+#.# mi, # minutes
+end of paragraph
+paragraph
+# minutes # seconds per mile
+:day :month #
+end of paragraph
+form
+Start time
+Start time, #:#, The file said #:#. Change it if your watch's clock was off.
+The file said #:#. Change it if your watch's clock was off.
+button, Get weather
+Get weather
+end of button, Get weather
+end of form
+Conditions · auto-attached
+paragraph
+#°F
+dry
+end of paragraph
+Feels
+#°
+·
+#
+% hum ·
+#mph
+·
+overcast
+paragraph
+Never typed by hand. Wrong time? Change it on the run card and we’ll get the weather for it.
+end of paragraph
+link, Weather data provided by Visual Crossing
+link, Looks right — what did you wear?
+paragraph
+No file?
+link, Enter the run by hand
+instead.
+end of paragraph
+end of main
+navigation, Main
+list
+listitem, level 1, position 1, set size 5
+link, Feed
+Feed
+end of link, Feed
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Closet
+Closet
+end of link, Closet
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+button, Add a run, has popup dialog
++ Add
+end of button, Add a run, has popup dialog
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Call
+Call
+end of link, Call
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, You
+You
+end of link, You
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Main
+status
+end of document

@@ -1,0 +1,81 @@
+document
+banner
+link, Notifications
+end of banner
+main
+heading, Privacy, level 1
+link, Settings, current page
+Settings
+end of link, Settings, current page
+heading, Who sees new runs, level 2
+Who sees new runs
+end of heading, Who sees new runs, level 2
+form
+status
+group, Who sees new runs
+Who sees new runs
+Who sees new runs
+end, Who sees new runs
+radio, Private, not checked, position 1, set size 2
+Private
+radio, Shared, checked, position 2, set size 2
+Shared
+end of group, Who sees new runs
+paragraph
+Public is a choice here once your profile is public. You can still make any one run public.
+end of paragraph
+button, Save
+Save
+end of button, Save
+end of form
+separator, orientated horizontally, max value #, min value #
+heading, Public profile · Saves as you switch, level 2
+Public profile · Saves as you switch
+end of heading, Public profile · Saves as you switch, level 2
+checkbox, Public profile, Off. Anyone signed out who opens app.dialed.run/@closet_# sees nothing. Public runs still open from their own links., not checked
+Public profile
+paragraph
+Off. Anyone signed out who opens app.dialed.run/@closet_# sees nothing. Public runs still open from their own links.
+end of paragraph
+separator, orientated horizontally, max value #, min value #
+heading, Anonymous totals · Saves as you switch, level 2
+Anonymous totals · Saves as you switch
+end of heading, Anonymous totals · Saves as you switch, level 2
+checkbox, Count my runs in anonymous totals, Shared and private runs add their temperature, kit and verdict to the guides and reports. Shared runs also count in Same conditions, which other runners see. Never your name, notes, photos, when you ran, or anywhere more precise than a broad climate zone., checked
+Count my runs in anonymous totals
+paragraph
+Shared and private runs add their temperature, kit and verdict to the guides and reports. Shared runs also count in Same conditions, which other runners see. Never your name, notes, photos, when you ran, or anywhere more precise than a broad climate zone.
+end of paragraph
+link, How the guides are made
+end of main
+navigation, Main
+list
+listitem, level 1, position 1, set size 5
+link, Feed
+Feed
+end of link, Feed
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Closet
+Closet
+end of link, Closet
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+button, Add a run, has popup dialog
++ Add
+end of button, Add a run, has popup dialog
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Call
+Call
+end of link, Call
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, You, current item
+You
+end of link, You, current item
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Main
+status
+end of document

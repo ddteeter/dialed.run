@@ -20,14 +20,18 @@ import {
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import {
+  gpx,
   hydrated,
+  seedObservation,
   seedRun,
   unseed,
+  unseedObservations,
   userIdOf,
 } from "../conformance/logging-fixtures";
 import type { Seeded } from "../conformance/logging-fixtures";
 import { storageStateFor } from "../support/accounts";
 import { expect, test } from "../support/a11y";
+import { PHONE } from "../support/bars";
 
 test.use({ storageState: storageStateFor("run-logging") });
 
@@ -178,4 +182,52 @@ test("A1 · a pause is part of the run's time (D-111)", async ({ page }) => {
   } finally {
     await unseed(seeded);
   }
+});
+
+/**
+ * A1 as the phone has it once the file is read: the parsed card with its
+ * conditions arrived, and the start-time row open in place. It ends here
+ * so what a screen reader says on both is checked in (#582); the journey
+ * walks the same beat at the desk and goes on.
+ */
+test.describe("A1 at the phone's width", () => {
+  // The seeded observation is Chicago's, and the card reads on the
+  // device's clock until its conditions land.
+  test.use({ viewport: PHONE, timezoneId: "America/Chicago" });
+
+  test("A1 · the conditions have arrived, and the start-time row is open", async ({
+    page,
+  }) => {
+    const seeded = await seededFor();
+    // Hours ago, so it never reads as a run already logged.
+    const fileStart = (Math.floor(nowSeconds() / 3600) - 5) * 3600 + 4 * 60;
+    const observations = [
+      await seedObservation(Math.floor(fileStart / 3600), {
+        tempC: 2,
+        precipMm: 0,
+      }),
+    ];
+    try {
+      await page.goto("/runs/new");
+      await hydrated(page);
+      await page.setInputFiles('[data-part="drop-zone"] input[type="file"]', {
+        name: "morning_run.gpx",
+        mimeType: "application/gpx+xml",
+        buffer: gpx(fileStart, 6),
+      });
+      await expect(page.getByText("Parsed · morning_run.gpx")).toBeVisible({
+        timeout: 20_000,
+      });
+      await expect(page.locator('[data-slot="conditions"]')).toContainText(
+        "36°F",
+        { timeout: 20_000 },
+      );
+
+      await page.getByRole("button", { name: /, change start time$/u }).click();
+      await expect(page.getByLabel("Start time")).toBeFocused();
+    } finally {
+      await unseed(seeded);
+      await unseedObservations(observations);
+    }
+  });
 });

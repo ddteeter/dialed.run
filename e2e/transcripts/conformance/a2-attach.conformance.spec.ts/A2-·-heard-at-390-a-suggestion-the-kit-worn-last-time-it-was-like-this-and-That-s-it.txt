@@ -1,0 +1,88 @@
+document
+banner
+link, Notifications, # new
+#
+end of link, Notifications, # new
+end of banner
+main
+heading, What did you wear?, level 1
+#.# mi · #°F damp · # pieces
+link, Weather data provided by Visual Crossing
+status
+Most likely · from
+#° damp
+,
+:day :month #
+list
+listitem, level 1, position 1, set size 2
+Conformance top
+end of listitem, level 1, position 1, set size 2
+listitem, level 1, position 2, set size 2
+Conformance tights
+end of listitem, level 1, position 2, set size 2
+end of list
+button, That’s it
+button, Change
+region, Or pick from the closet
+heading, Or pick from the closet, level 2
+Or pick from the closet
+end of heading, Or pick from the closet, level 2
+button, #° damp, matches conditions, pressed
+#° damp
+end of button, #° damp, matches conditions, pressed
+Showing # of #
+Tops · # of # match
+button, All Tops, has popup dialog
+All ›
+end of button, All Tops, has popup dialog
+button, Conformance top, not pressed
+Bottoms · # of # match
+button, All Bottoms, has popup dialog
+All ›
+end of button, All Bottoms, has popup dialog
+button, Conformance tights, not pressed
+end of region, Or pick from the closet
+Outfit photo · optional
+Add a photo
+Flat on the floor works best.
+Add a photo, Outfit photo · optional Flat on the floor works best.
+button, Next — did it work?
+Next — did it work?
+end of button, Next — did it work?
+paragraph
+Not now —
+link, leave it in the queue
+.
+end of paragraph
+end of main
+navigation, Main
+list
+listitem, level 1, position 1, set size 5
+link, Feed
+Feed
+end of link, Feed
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Closet
+Closet
+end of link, Closet
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+button, Add a run, has popup dialog
++ Add
+end of button, Add a run, has popup dialog
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Call
+Call
+end of link, Call
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, You
+You
+end of link, You
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Main
+status
+end of document
