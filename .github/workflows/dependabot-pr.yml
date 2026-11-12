@@ -27,14 +27,23 @@ name: Dependabot PR
 # PINS. Every `uses:` is a full commit SHA with its version in a comment. A
 # tag can be repointed by whoever controls it, and these jobs hold the
 # merge token and the Anthropic key. Dependabot keeps the pins current.
+# zizmor flags every use of this trigger, because it runs with the repo's
+# secrets on an event a stranger can cause. GATES and NO PR CODE above are
+# why it is safe here; docs/dependencies.md has the review (owner,
+# 2026-11-11).
 on:
-  pull_request_target:
+  pull_request_target: # zizmor: ignore[dangerous-triggers]
     types: [opened, reopened, synchronize]
 
 permissions: {}
 
 jobs:
-  classify:
+  # zizmor flags the `github.actor` clause below as a spoofable gate. It
+  # is not the gate: the author and head-repository clauses are, and it can
+  # only skip a run they have already let through (owner, 2026-11-11). The
+  # ignore sits on the job's line because a comment inside the folded `if:`
+  # would be part of the expression.
+  classify: # zizmor: ignore[bot-conditions]
     # The third clause only SKIPS: a synchronize someone other than
     # Dependabot caused is the open-source-list commit (oss-list-commit.yml),
     # and the decision made on Dependabot's own push already stands:
@@ -216,6 +225,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
+          persist-credentials: false
 
       # Read, Grep and Glob over the repo; web reads only from GitHub and
       # the npm registry; `gh` only to read releases, with this job's

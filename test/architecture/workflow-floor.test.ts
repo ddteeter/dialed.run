@@ -105,6 +105,32 @@ describe("every workflow job", () => {
   });
 });
 
+describe("zizmor's ignores", () => {
+  it("are the three reviewed lines and no more, each naming its rule", () => {
+    // An ignore is a finding someone decided to keep. A fourth needs the
+    // owner's say-so and a reason beside it, as these have.
+    const ignores = Object.entries(workflows).flatMap(([path, source]) =>
+      Array.from(
+        source.matchAll(/^ {2}(\S+): # zizmor: ignore\[([\w-]+)\]$/gm),
+        (match) =>
+          [path.slice(path.lastIndexOf("/") + 1), match[1], match[2]].join(" "),
+      ),
+    );
+    expect(new Set(ignores)).toEqual(
+      new Set([
+        "dependabot-pr.yml classify bot-conditions",
+        "dependabot-pr.yml pull_request_target dangerous-triggers",
+        "oss-list-commit.yml workflow_run dangerous-triggers",
+      ]),
+    );
+    expect(ignores).toHaveLength(3);
+    const mentions = Object.values(workflows)
+      .join("\n")
+      .split("zizmor: ignore[").length;
+    expect(mentions - 1).toBe(ignores.length);
+  });
+});
+
 /**
 The `kind:` labels the tracker doc lists, read from its table row.
 */
