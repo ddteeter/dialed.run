@@ -8,10 +8,17 @@ part a person has to do, on a real iPhone, before friends get access
 (`docs/launch/deployment-plan.md` §11, stage 1). Run it again before public launch, and
 after any change to a flow below.
 
+**New to VoiceOver? Follow `voiceover-script.md`.** It is this checklist
+step by step (#365): how to turn VoiceOver on and make each gesture, what
+each screen should say, taken from its `e2e/transcripts/` file, and what
+counts as a failure. This file stays the short form, and the place each run
+is logged.
+
 Record each run at the bottom of this file: the date, the iOS and Safari
 versions, who ran it, and every failure, with the screen and what was said.
-A failure is fixed or written into `docs/deferred.md` with the owner's
-decision. It is never left as a note here.
+A failure becomes an issue (`docs/agents/issue-tracker.md`), fixed or
+deferred by the owner's decision, and the row carries its number. It is
+never left as a note here.
 
 ## Before you start
 
@@ -37,7 +44,7 @@ up as something unsaid, said twice, or said in the wrong order.
    whole screen without stopping.
 3. **The rotor's Landmarks** finds the banner, the main content and the tab
    bar's navigation.
-4. **Every control says what it is and what it does**: "Log a run, button",
+4. **Every control says what it is and what it does**: "Add a run, button",
    not "button" or "plus". An icon-only control has a name. A selected tab
    or chip says "selected".
 5. **Brackets are drawn, not said.** You hear "dialed.run", not "left
@@ -49,8 +56,9 @@ up as something unsaid, said twice, or said in the wrong order.
 7. **A sheet or dialog keeps VoiceOver inside it** until it closes. Two-finger
    scrub (Z) closes it, and focus returns to what opened it.
 8. **Pending is announced.** A button that is working says so ("Saving"),
-   and the result is said once without your moving there: "Run logged.",
-   "Nothing saved. One field needs a fix." (`docs/product.md` §Forms).
+   and the result is said once without your moving there: "Noted." and
+   its sentence after a verdict, "Nothing saved. One field needs a fix."
+   after a refusal (`docs/product.md` §Forms).
 
 ## The flows
 
@@ -59,9 +67,9 @@ listed.
 
 ### 1. Join and set up
 
-- [ ] Home: the hero heading is read first after the bar, and "Log in",
-      "Create an account" and "Request access" are links or buttons by
-      those names.
+- [ ] Home: the hero heading is read first after the wordmark, and
+      "Request access" and "Log in" are links by those names. "Create an
+      account" is a link on Log in.
 - [ ] Create an account: each field's label is read with the field. A wrong email is
       announced once, as the field's message, when you submit. The password
       reveal says whether the password is shown.
@@ -89,7 +97,8 @@ listed.
       returns focus to the item that opened it.
 - [ ] A3, the verdict: the five verdicts are read in order with the chosen
       one "selected". A per-item flag says which item it flags.
-- [ ] Saving: "Run logged." is said once, and you land on the receipt.
+- [ ] Saving: "Noted." and its sentence are said once, and you land on
+      the receipt.
 - [ ] The whole loop, Screen Curtain on, from + Add to the receipt.
 
 ### 3. The closet
