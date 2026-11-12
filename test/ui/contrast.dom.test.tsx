@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
@@ -165,9 +166,60 @@ describe("the T1 port", () => {
     expect(ink.size - root.size).toBeGreaterThan(10);
     expect(tokens).toMatch(/:root \{[^}]*@apply ground-paper;/u);
     const applies = tokens.match(/@apply [\w:-]+;/gu)?.length;
-    // :root, the dark page twice, the inverted block and its breakpoint
-    // header on each page (six), and night.
-    expect(applies).toBe(10);
+    // :root, the dark page twice, the ink block and its breakpoint header,
+    // the dark page's panel block, panel header and row press (each twice:
+    // the attribute and the media query), and night.
+    expect(applies).toBe(12);
+  });
+
+  it("puts a dark page's ink blocks on rule 04's fallback, --panel with a hairline (R50·143.1)", () => {
+    // The fallback moves only the ground, so the block keeps the dark
+    // column's roles and needs no copy of them.
+    const panel = declarations("@utility ground-panel");
+    expect([...panel]).toEqual([["--ground", "var(--panel)"]]);
+    expect(tokens).toMatch(
+      /@utility ground-panel \{[^}]*@apply inset-ring-1 inset-ring-hairline;/u,
+    );
+    // Both ways the page is dark, and both kinds of block. Never paper:
+    // "a paper block on a dark page would be the brightest thing on the
+    // screen". Only a row press still inverts.
+    for (const page of [
+      String.raw`:root\[data-theme="dark"\]`,
+      String.raw`:root:not\(\[data-theme="light"\]\)`,
+    ]) {
+      expect(tokens).toMatch(
+        new RegExp(
+          String.raw`${page} \[data-ground="ink"\] \{\s*@apply ground-panel;`,
+          "u",
+        ),
+      );
+      expect(tokens).toMatch(
+        new RegExp(
+          String.raw`${page} \[data-ground="ink-until-wide"\] \{\s*@apply max-wide:ground-panel;`,
+          "u",
+        ),
+      );
+      expect(tokens).toMatch(
+        new RegExp(
+          String.raw`${page} \.row-press:active \{\s*@apply ground-paper;`,
+          "u",
+        ),
+      );
+    }
+    expect(tokens).not.toMatch(
+      /\[data-ground="ink[^\]]*\][^{]*\{\s*@apply[^;]*ground-paper/u,
+    );
+    // The Desk reads nothing from the page.
+    expect(tokens).toMatch(/\[data-ground="night"\] \{\s*@apply ground-ink;/u);
+  });
+
+  it("gives a dark page's ink block eyebrows hi-viz on --panel (#494 item 7)", () => {
+    // With no block turning paper, `--hiviz-text` is hi-viz wherever it is
+    // used: on ink on a light page, on `--panel` on a dark one.
+    expect(hexOf("--hiviz-text", ink)).toBe("#f5ff3d");
+    expect(
+      contrast(hexOf("--hiviz-text", ink), hexOf("--panel", ink)),
+    ).toBeGreaterThan(16);
   });
 
   it("gives the forms' ink surface R-36's values through the roles they draw in", () => {
@@ -238,18 +290,29 @@ const GROUNDS = ["--ground", "--panel", "--tint", "--unread"] as const;
  */
 const BODY_TEXT = ["--ink", "--quiet", "--cold-text", "--dialed-text"] as const;
 
+/**
+ * R50·142: "A rule, not a new value: --cold-text and --label never sit on
+ * --unread, in either theme. The unread row uses only --ink and --quiet."
+ * So these are not floors to measure: they are pairs nothing may draw.
+ */
+const FORBIDDEN_ON_UNREAD = ["--cold-text", "--label"] as const;
+
+const isForbidden = (text: string, ground: string): boolean =>
+  ground === "--unread" &&
+  FORBIDDEN_ON_UNREAD.some((forbidden) => forbidden === text);
+
+const floorPairs = BODY_TEXT.flatMap((text) =>
+  GROUNDS.map((ground) => [text, ground] as const),
+).filter(([text, ground]) => !isForbidden(text, ground));
+
 describe("02 · contrast floors, light column", () => {
-  it.each(
-    BODY_TEXT.flatMap((text) =>
-      GROUNDS.map((ground) => [text, ground] as const),
-    ),
-  )("%s on %s clears 4.5:1", (text, ground) => {
+  it.each(floorPairs)("%s on %s clears 4.5:1", (text, ground) => {
     expect(
       contrast(hexOf(text, paper), hexOf(ground, paper)),
     ).toBeGreaterThanOrEqual(4.5);
   });
 
-  it.each(["--ground", "--panel", "--unread"] as const)(
+  it.each(["--ground", "--panel"] as const)(
     "--label clears 4.5:1 on %s",
     (ground) => {
       expect(
@@ -302,19 +365,10 @@ describe("02 · contrast floors, light column", () => {
 /**
  * R48·134's build check: "The build checks each pair against tokens.js and
  * reports any that fail as a delta." The same floors, on the dark column.
- *
- * Two pairings miss, both on `--unread` (`#2A2A14`), and they are recorded
- * rather than skipped so the number is here when Design answers the ask
- * (design 185). Every other pair below clears.
+ * Every pair clears except the two R50·142 forbids, which are not drawn.
  */
-const DARK_MISSES = new Set(["--cold-text on --unread"]);
-
 describe("02 · contrast floors, dark column", () => {
-  it.each(
-    BODY_TEXT.flatMap((text) =>
-      GROUNDS.map((ground) => [text, ground] as const),
-    ).filter(([text, ground]) => !DARK_MISSES.has(`${text} on ${ground}`)),
-  )("%s on %s clears 4.5:1", (text, ground) => {
+  it.each(floorPairs)("%s on %s clears 4.5:1", (text, ground) => {
     expect(
       contrast(hexOf(text, ink), hexOf(ground, ink)),
     ).toBeGreaterThanOrEqual(4.5);
@@ -331,20 +385,6 @@ describe("02 · contrast floors, dark column", () => {
     },
   );
 
-  it("records the two pairings on the dark unread tint that do not clear", () => {
-    // 4.16:1 for pink-as-text and 4.31:1 for `--label` on `#2A2A14`. The
-    // bell's unread row carries neither today (its text is `--ink` and
-    // `--quiet`, 13.1:1 and 7.3:1), so neither is drawn yet; they are the
-    // delta R48·134 asks for, not a pass.
-    const cold = contrast(hexOf("--cold-text", ink), hexOf("--unread", ink));
-    const label = contrast(hexOf("--label", ink), hexOf("--unread", ink));
-    expect(cold).toBeGreaterThan(4.1);
-    expect(cold).toBeLessThan(4.5);
-    expect(label).toBeGreaterThan(4.3);
-    expect(label).toBeLessThan(4.5);
-    expect(DARK_MISSES.size).toBe(1);
-  });
-
   it.each(["--action", "--failure", "--split-teal"] as const)(
     "accent ink on %s clears 4.5:1 on the dark column too",
     (accent) => {
@@ -357,4 +397,69 @@ describe("02 · contrast floors, dark column", () => {
       ).toBeGreaterThanOrEqual(4.5);
     },
   );
+});
+
+/**
+ * Every source file under `src/`, as text. Read through `node:fs` for the
+ * reason the file header gives. The directory is a path string, not a
+ * `URL`: happy-dom replaces the global `URL`, and `readdirSync` rejects
+ * its instances (`read` gets away with it because `readFileSync` does not
+ * check the scheme the same way).
+ */
+function sourceFiles(): Map<string, string> {
+  const root = fileURLToPath(import.meta.url).replace(
+    /test\/ui\/[^/]+$/u,
+    "src/",
+  );
+  const paths = readdirSync(root, { recursive: true })
+    .map(String)
+    .filter((path) => /\.tsx?$/u.test(path));
+  return new Map(paths.map((path) => [path, read(`../../src/${path}`)]));
+}
+
+describe("142 · what never sits on the unread tint", () => {
+  it.each(FORBIDDEN_ON_UNREAD)(
+    "states %s on --unread as forbidden in both columns, rather than measuring it",
+    (text) => {
+      // Kept out of every floor above in both columns, so the rule is the
+      // only thing said about the pair. A pass here does not depend on the
+      // ratio, which is why `#2A2A14` stays (R50·142).
+      for (const column of [paper, ink]) {
+        expect(hexOf(text, column)).toMatch(/^#[\da-f]{6}$/u);
+        expect(hexOf("--unread", column)).toMatch(/^#[\da-f]{6}$/u);
+      }
+      expect(floorPairs).not.toContainEqual([text, "--unread"]);
+      expect(floorPairs).toContainEqual(["--ink", "--unread"]);
+      expect(floorPairs).toContainEqual(["--quiet", "--unread"]);
+    },
+  );
+
+  it("finds no file that draws the unread tint and either forbidden role", () => {
+    // Coarse on purpose: a file that paints `bg-unread` keeps
+    // `text-cold-text` and `text-label` out entirely. The unread row is
+    // `--ink` and `--quiet` only. Nothing paints `bg-unread` today (the
+    // bell's unread row is a white row with a pink dot), so this guards
+    // the next one.
+    const files = sourceFiles();
+    expect(files.size).toBeGreaterThan(100);
+    const offenders = [...files]
+      .filter(([, text]) => text.includes("bg-unread"))
+      .filter(([, text]) =>
+        FORBIDDEN_ON_UNREAD.some((role) =>
+          text.includes(`text-${role.slice(2)}`),
+        ),
+      )
+      .map(([path]) => path);
+    expect(offenders).toEqual([]);
+  });
+
+  it("would catch a file that broke the rule", () => {
+    // The scan above returns nothing today, which a scan that read nothing
+    // would also return. The same predicate on a made-up row.
+    const row = '<li className="bg-unread text-label">';
+    expect(row.includes("bg-unread")).toBe(true);
+    expect(
+      FORBIDDEN_ON_UNREAD.some((role) => row.includes(`text-${role.slice(2)}`)),
+    ).toBe(true);
+  });
 });

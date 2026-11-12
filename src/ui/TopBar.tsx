@@ -35,7 +35,9 @@ import { Wordmark } from "./Wordmark";
  * with the block (`ui/a11y.css`), and `--cold-text` resolves to
  * `--course-pink` inside it and to #C21A6B outside, which is exactly round
  * 15's rule for the underline (*"--action on ink, --cold-text on paper"*)
- * written once.
+ * written once. On a dark page the bar is rule 04's fallback rather than
+ * paper, `--panel` with a hairline (R50·143.1, `ground-panel` in
+ * `ui/tokens.css`), and it keeps the dark column's roles.
  *
  * The bell is `Layout`'s own node in a second seat, and the list it opens
  * is still the `/notifications` route — which at width *is* DS3's centred
