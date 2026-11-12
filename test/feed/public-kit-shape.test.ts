@@ -26,7 +26,12 @@ const BARE: PublicKit = {
   pieces: [],
   cardVersion: "0123456789abcdef",
 };
-const CONDITIONS = { feelsLike: "38°", sky: "damp", isProviders: true };
+const CONDITIONS = {
+  feelsLike: "38°",
+  sky: "damp",
+  said: "38 degrees, damp",
+  isProviders: true,
+};
 
 const KIT: PublicKit = {
   ...BARE,

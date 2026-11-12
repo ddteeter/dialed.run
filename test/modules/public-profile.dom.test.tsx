@@ -43,7 +43,12 @@ const PROFILE: PublicProfile = {
     {
       entryId: IDS[0],
       day: "Sat Oct 18",
-      conditions: { feelsLike: "38°", sky: "damp", isProviders: true },
+      conditions: {
+        feelsLike: "38°",
+        sky: "damp",
+        said: "38 degrees, damp",
+        isProviders: true,
+      },
       verdict: -1,
       distance: { value: "6.2", unit: "mi" },
     },
@@ -147,7 +152,13 @@ describe("the public profile, signed out", () => {
     const first = within(rows[0] ?? document.body).getByRole("link");
     expect(first).toHaveAttribute("href", `/kit/${IDS[0]}`);
     expect(first).toHaveTextContent(
-      /^38° dampSat Oct 18 · 6\.2 miA bit cold$/u,
+      /^38° damp38 degrees, dampSat Oct 18 · 6\.2 miA bit cold$/u,
+    );
+    // Round 52 #158: the conditions drawn for the eye, said in words.
+    expect(within(first).getByText("38 degrees, damp")).toHaveClass("sr-only");
+    expect(within(first).getByText("damp").parentElement).toHaveAttribute(
+      "aria-hidden",
+      "true",
     );
     // The measured word teal, as teal always means measured conditions.
     expect(within(first).getByText("damp")).toHaveClass("text-dialed-text");
@@ -279,7 +290,12 @@ describe("the public profile, signed out", () => {
             entryId: IDS[0],
             day: "Sat Oct 18",
             distance: { value: "6.2", unit: "mi" },
-            conditions: { feelsLike: "38°", sky: "damp", isProviders: false },
+            conditions: {
+              feelsLike: "38°",
+              sky: "damp",
+              said: "38 degrees, damp",
+              isProviders: false,
+            },
           },
           ...rest,
         ],
