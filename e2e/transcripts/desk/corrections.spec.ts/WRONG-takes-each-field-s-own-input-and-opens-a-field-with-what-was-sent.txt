@@ -53,7 +53,7 @@ group, Field
 Field
 Field
 end, Field
-radio, Name, not checked, position 1, set size 7
+radio, Name, checked, position 1, set size 7
 Name
 radio, Weight, not checked, position 2, set size 7
 Weight

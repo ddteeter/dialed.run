@@ -19,7 +19,7 @@ radio, Way cold, not checked, disabled, position 1, set size 5
 Way cold
 radio, A bit cold, not checked, disabled, position 2, set size 5
 A bit cold
-radio, Dialed, not checked, disabled, position 3, set size 5
+radio, Dialed, checked, disabled, position 3, set size 5
 Dialed
 radio, A bit warm, not checked, disabled, position 4, set size 5
 A bit warm
