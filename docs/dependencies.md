@@ -189,7 +189,8 @@ SHA pins and `actionlint`:
   enough to keep. The two Claude review jobs are on `block` already.
 - **`zizmor`** (`supply-chain.yml`) reads `.github/` on every PR for
   template injection, permissions wider than a job uses, credentials left
-  in a checkout and unpinned actions. Fix a finding; don't ignore it.
+  in a checkout and unpinned actions. Fix a finding. An ignore is for a line the owner has reviewed, with its
+  reason beside it; the same test pins the list.
 - **Dependency review** (`supply-chain.yml`) fails a PR that adds a
   dependency with a known vulnerability.
 

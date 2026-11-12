@@ -135,7 +135,11 @@ jobs:
           private-key: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
           permission-contents: write
 
-      - if: steps.pr.outputs.current == 'true'
+      # The checkout keeps the App's token, which zizmor flags: the push
+      # below is what it is for. Nothing after this step uploads or runs
+      # anything from the checkout, and that step holds the same token in
+      # its environment (owner, 2026-11-11).
+      - if: steps.pr.outputs.current == 'true' # zizmor: ignore[artipacked]
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
