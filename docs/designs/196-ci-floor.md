@@ -22,12 +22,12 @@ One PR, no app code.
     so the allowed-actions list does not grow.
   - `dependency-review`: known vulnerabilities, and an allow-list of the
     licences AGPL-3.0, the repo's own, can combine with.
-  - `lockfile`: `gh actions-lock --verify`.
 - **The zizmor pass** (item 4): findings fixed in `ci.yml`, `mutation.yml`
   and `dependabot-pr.yml`. Four are by design and carry an inline ignore
   with its reason.
-- **`.github/workflows/actions.lock`** (item 6). The SHA pins stay; the
-  lockfile pins the same commits and what the actions use themselves.
+- **No workflow lockfile** (item 6, #601). It was generated and removed:
+  the runner refuses SHA-pinned `uses:` lines against the tag-keyed
+  entries `gh actions-lock` writes, and #546 keeps the SHA pins.
 - **Issue forms** (#483): `config.yml` (no blank issues, a link to private
   reporting) and three forms with the tracker's fields, a `kind:` label and
   the Project. Triage adds the area and severity labels.
@@ -47,15 +47,15 @@ One PR, no app code.
   pin; zizmor's ignores are the four reviewed ones; each form presets a
   documented `kind:` label, joins the Project and has the body fields;
   blank issues stay off.
-- The workflows run on this PR's own CI: `actionlint`, `zizmor`, the
-  lockfile check and the audit reports.
+- The workflows run on this PR's own CI: `actionlint`, `zizmor` and the
+  audit reports.
 
 ## Issues
 
 - Closes: #483, #546.
 - Opens: #599 (the owner-only settings), #600 (audited jobs to `block`),
-  #601 (the first Dependabot action bump against the lockfile), #596 (a
-  licence permission for the FIT SDK).
+  #601 (the workflow lockfile against SHA pins), #596 (a licence
+  permission for the FIT SDK).
 
 ## Open questions
 

@@ -178,7 +178,7 @@ installs to enforce it, which has not been checked.
 
 ## The CI floor
 
-Design 196 (#546). Four checks on the workflows themselves, on top of the
+Design 196 (#546). Three checks on the workflows themselves, on top of the
 SHA pins and `actionlint`:
 
 - **`harden-runner` is the first step of every job**, and
@@ -196,29 +196,14 @@ SHA pins and `actionlint`:
   dependency with a known vulnerability, or with a licence that is not on
   the workflow's list of licences an AGPL-3.0 work can combine with. A new
   licence is the owner's call; `@garmin/fitsdk` is exempted by name.
-- **The workflow lockfile**, `.github/workflows/actions.lock`, records the
-  commit of every action the workflows use and of what those actions use
-  themselves (today, the `setup-bun` inside claude-code-action). GitHub
-  refuses a run whose action is not the commit recorded, and the
-  `lockfile` job (`supply-chain.yml`) fails a PR where the two disagree.
 
-**Relocking**, after adding a workflow or an action, or bumping one by
-hand. It needs GitHub's extension
-(`gh extension install github/gh-actions-lock`):
-
-1. `gh actions-lock`. It updates `actions.lock`, and it also rewrites
-   every `uses:` line from its commit SHA to a tag.
-2. `git checkout -- .github/workflows/*.yml` puts the SHA pins back, if
-   your own workflow edits were committed first. The pins stay: they are a
-   repository setting, and the lockfile pins the same commits either way.
-3. `gh actions-lock --verify` should end "All N workflows valid". Its
-   warning that actions are pinned to a bare SHA is expected.
-4. Read the lockfile's diff. It pins a commit; it does not vet it.
-
-Dependabot regenerates an action's entry in its own update PR, but it
-does not add a new workflow to the lockfile.
+**No workflow lockfile yet** (#601). GitHub's `actions.lock` was generated
+and then removed: `gh actions-lock` 0.4.1 writes entries keyed by tag, its
+`--verify` accepts SHA-pinned `uses:` lines against them, and the runner
+does not. Every workflow failed at startup with "The lockfile is missing"
+for each SHA-pinned action. Until the two agree, the SHA pins stay and the
+lockfile waits.
 
 `zizmor` and `actionlint` are release binaries at a pinned checksum, not
 actions, so Dependabot does not see them. Bump the version and the
-checksum together, by hand, from the release's published digest. The
-`gh actions-lock` extension is pinned by version in the same way.
+checksum together, by hand, from the release's published digest.
