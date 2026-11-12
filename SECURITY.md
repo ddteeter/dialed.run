@@ -10,8 +10,8 @@ Only the maintainer sees the report.
 Please don't open a public issue, pull request or discussion that describes
 an unfixed problem.
 
-Say what you found, where, and how to reproduce it. You'll get a reply
-there, and the report stays private until a fix is out.
+Say what you found, where, and how to reproduce it. This is a one-person
+project: replies come in that report, as soon as time allows.
 
 ## Scope
 
