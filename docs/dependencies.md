@@ -193,7 +193,9 @@ SHA pins and `actionlint`:
   line the owner has reviewed, with its reason beside it; the same test
   pins the list.
 - **Dependency review** (`supply-chain.yml`) fails a PR that adds a
-  dependency with a known vulnerability.
+  dependency with a known vulnerability, or with a licence that is not on
+  the workflow's list of licences an AGPL-3.0 work can combine with. A new
+  licence is the owner's call; `@garmin/fitsdk` is exempted by name.
 - **The workflow lockfile**, `.github/workflows/actions.lock`, records the
   commit of every action the workflows use and of what those actions use
   themselves (today, the `setup-bun` inside claude-code-action). GitHub

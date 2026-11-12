@@ -72,8 +72,10 @@ One PR, no app code.
 - **Owner only:** CodeQL default setup, private vulnerability reporting
   (both off today), the GitHub Mobile check, and whether `zizmor` joins the
   ruleset's required checks.
-- **Licence policy for dependency review:** the repo has none. Proceeding
-  on vulnerabilities only until the owner says which licences to refuse.
+- **Licence policy (answered, owner 2026-11-11):** an allow-list of what
+  AGPL-3.0, the repo's own licence, can combine with.
+- **zizmor's by-design findings (answered, owner 2026-11-11):** four
+  inline ignores, each with its reason, pinned by the test.
 - **Guess:** dependency review fails at the action's default severity.
 - **Block mode and the browser install:** every job that runs
   `playwright install --with-deps` reaches Ubuntu's apt mirrors
