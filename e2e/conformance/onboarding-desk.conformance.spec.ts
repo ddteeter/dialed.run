@@ -5,6 +5,9 @@ import type { Locator, Page } from "@playwright/test";
 
 import { storageStateFor } from "../support/accounts";
 import { fillOf, hydrated } from "../support/conformance";
+import { signInAsKnownUser } from "../support/known-user";
+import type { Seeded } from "./logging-fixtures";
+import { seedItem, unseed } from "./logging-fixtures";
 
 const UNFILLED = "transparent";
 
@@ -48,9 +51,7 @@ function columnMeasure(): number {
   return Number(found?.groups?.px);
 }
 
-async function box(
-  locator: Locator,
-): Promise<{ x: number; width: number }> {
+async function box(locator: Locator): Promise<{ x: number; width: number }> {
   const found = await locator.boundingBox();
   if (found === null) throw new Error("not laid out");
   return found;
@@ -107,4 +108,51 @@ test("P3 at 390: the body is light as well", async ({ page }) => {
 
   expect(await fillOf(page, BODY)).toBe(UNFILLED);
   await expect(page.locator(BAR)).toBeHidden();
+});
+
+// O3 and P2.5 have no drawing at 390 to compare with here; they end at
+// the phone's width so what a screen reader says on each is checked in
+// (#582). Nothing is saved: the closet account's closet is other specs'.
+test("O3 at 390: every row is a checkbox, and the counter counts the taps", async ({
+  page,
+}) => {
+  await open(page, "/onboarding/taplist", 390);
+
+  await page.getByRole("checkbox", { name: "Running tights" }).check();
+  await page.getByRole("checkbox", { name: "Beanie" }).check();
+  await expect(page.getByText("Closet: 2 pieces")).toBeVisible();
+  await expect(
+    page.getByRole("checkbox", { name: "Running tights" }),
+  ).toBeChecked();
+});
+
+test.describe("P2.5, for a runner with generic pieces", () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  const seeded: Seeded = {
+    userId: "e2e-naming",
+    runIds: [],
+    itemIds: [],
+    entryIds: [],
+  };
+
+  test.afterEach(async () => {
+    await unseed(seeded);
+  });
+
+  test("P2.5 at 390: a piece open for naming, with brands on offer", async ({
+    page,
+  }) => {
+    await signInAsKnownUser(page, seeded.userId, "naming_pieces");
+    await seedItem(seeded, "Merino base layer", "top");
+    await seedItem(seeded, "Running tights", "bottom");
+    await open(page, "/onboarding/name", 390);
+
+    await expect(page.getByText("0 of 2 named")).toBeVisible();
+    await page.getByRole("button", { name: "Name it" }).first().click();
+    await page.getByLabel("Brand").fill("Sm");
+    await expect(
+      page.locator("datalist[id^='brands-'] option"),
+    ).not.toHaveCount(0);
+  });
 });

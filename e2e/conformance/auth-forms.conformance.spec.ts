@@ -340,6 +340,37 @@ test.describe("Au · phone", () => {
     await expect(page.getByLabel("Email")).toHaveValue(email);
     await expect(page.getByLabel("Password")).toBeFocused();
   });
+
+  // No board draws these two: they end here so the screen reader's words
+  // for a refused field on Create account, and for a password that is
+  // shown, are checked in (#582). Au3 is the same pattern on Log in.
+  test("Au1 refused: the email to fix, and the password shown", async ({
+    page,
+  }) => {
+    await builtAt390(page, "/auth/signup");
+    await page.getByLabel("Invite code").fill("DIAL-TEST");
+    await page.getByLabel("Date of birth").fill("1990-04-21");
+    await page.getByLabel("Email").fill("dana.example.com");
+    await page
+      .getByLabel("Password", { exact: true })
+      .fill("a-long-enough-password");
+    await page.getByRole("button", { name: "Create account" }).click();
+
+    await expect(
+      page.getByText("That does not look like an email address."),
+    ).toBeVisible();
+    await expect(page.getByLabel("Email")).toBeFocused();
+    await expect(page.locator(`${PANEL} [data-part='form']`)).toHaveAttribute(
+      "data-state",
+      "field-failure",
+    );
+
+    await page.getByRole("button", { name: "Show password" }).click();
+    await expect(page.getByLabel("Password", { exact: true })).toHaveAttribute(
+      "type",
+      "text",
+    );
+  });
 });
 
 test("Au2 at 1040: the landing bar with no action, the panel beneath", async ({
