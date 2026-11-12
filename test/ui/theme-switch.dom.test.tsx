@@ -61,6 +61,23 @@ describe("ThemeSwitch", () => {
     }
   });
 
+  it("draws the words as MONO.xs capitals and speaks them in sentence case", () => {
+    // R50·143.3: capitals like every other segmented label. Round 52's
+    // Accessibility Contract: the names heard are "System", "Light",
+    // "Dark", which is the string; the capitals are Mono's CSS.
+    const { group } = setUp(
+      "system",
+      vi.fn(() => Promise.resolve()),
+    );
+    for (const name of ["System", "Light", "Dark"]) {
+      expect(within(group).getByText(name)).toHaveClass(
+        "font-mono",
+        "text-mono-xs",
+        "uppercase",
+      );
+    }
+  });
+
   it("changes the page and saves at once, with no Save", async () => {
     const save = vi.fn<Save>(() => Promise.resolve());
     const { radio } = setUp("system", save);

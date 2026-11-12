@@ -1332,6 +1332,17 @@ describe("VerdictForm: tags and sharing", () => {
     });
   });
 
+  it("draws the audience words as MONO.xs capitals, heard in sentence case (round 41 #86a)", async () => {
+    await renderWithRouter(form({ entry: { audience: "private" } }));
+    for (const word of ["Private", "Shared", "Public"]) {
+      expect(screen.getByText(word)).toHaveClass(
+        "font-mono",
+        "text-mono-xs",
+        "uppercase",
+      );
+    }
+  });
+
   it("keeps the field's own props on each radio, and points only the picked one at the line", async () => {
     await renderWithRouter(form({ entry: { audience: "private" } }));
     const privately = screen.getByRole("radio", { name: /^Private/ });

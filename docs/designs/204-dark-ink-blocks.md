@@ -33,8 +33,13 @@ unread tint into a rule: `--cold-text` and `--label` never sit on `--unread`.
 - **143.3.** `ChoiceList` gains an opt-in `optionStep` that sets each option's
   words in `Mono` at that step; ThemeSwitch passes `"xs"`. `THEME_LABELS`
   stays "System" / "Light" / "Dark", so the drawn capitals are CSS and the
-  spoken names are sentence case (Accessibility Contract, round 52). Needs
-  `src/ui/form.tsx` (asked of the coordinator).
+  spoken names are sentence case (Accessibility Contract, round 52).
+- **#610, the audience labels.** Checking 143.3's premise found the same
+  drift on built screens: round 41's board draws A3's audience options and
+  Settings › Privacy's default as MONO.xs capitals, and the build drew them
+  as body text. Both `ChoiceList`s pass `optionStep="xs"`;
+  `AUDIENCE_LABELS` stays sentence case for the reason `ui/audience.ts`
+  gives.
 - **143.5.** CoverageMarks are already `--ink`. `WorksAt`'s [Untested] is
   `text-muted`, which resolves to `#8B8B93` on the dark page; pinned.
 - **142.** `contrast.dom.test.tsx` drops `DARK_MISSES` and the recorded
@@ -48,7 +53,8 @@ unread tint into a rule: `--cold-text` and `--label` never sit on `--unread`.
 - Schema changes needed: **none**
 - New route files: none
 - New bindings/queues/crons: **none**
-- Screens: every screen with an ink block, on dark; U1's Theme row.
+- Screens: every screen with an ink block, on dark; U1's Theme row; A3's
+  audience group and Settings › Privacy's default (#610).
 
 ## Test plan
 
@@ -67,4 +73,4 @@ unread tint into a rule: `--cold-text` and `--label` never sit on `--unread`.
 
 ## Issues
 
-Closes #488, #494.
+Closes #488, #494, #610.

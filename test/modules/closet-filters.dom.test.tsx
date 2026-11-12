@@ -342,6 +342,10 @@ describe("ClosetFilters: WORKS AT before a script (#109h)", () => {
       .getByRole("heading", { name: /^Works at/ })
       .closest("section");
     expect(worksAt?.querySelector("p")).toHaveTextContent("[Untested]");
+    // R50·143.5: `--muted` is for this word only, never the mark. The role
+    // is ground-relative, so on a dark page it reads T1's dark `--muted`
+    // (#8B8B93), which `test/ui/contrast.dom.test.tsx` pins.
+    expect(worksAt?.querySelector("p")).toHaveClass("text-muted");
     // No numbers, so no unit for them to be in.
     expect(screen.getByRole("heading", { name: "Works at" })).toBeVisible();
   });
