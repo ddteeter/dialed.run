@@ -1081,6 +1081,56 @@ _Nothing from 99 on is open: round 45 answered the last of it._
 
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
 
+## Answered in round 52 (imported 2026-11-11)
+
+Design answered as `Round 52 Rulings.dc.html`, items 155–161. The board's
+text is the text of record; each ruling is also a comment on its issue.
+Every screen stays as drawn. `Accessibility Contract.dc.html` is imported
+with it: four new rows (157–160), the launcher's row changed (161), and
+the Theme switch's row corrected to R48·133 and R50·143.3 (no line
+beneath, "System, radio, 1 of 3, selected"). The notices were taken as
+read. Design's note says H's board draws both empty states (the owner's
+line for the followed state, #590); no board file in the export changed,
+so the line is recorded on #590 until one does.
+
+- **R52·155 · The operator kit view's run line (#567). Two changed, four
+  confirmed; partly built.** (1) Changed: no city on the run line until
+  runs carry a place, because a home city on a run logged elsewhere would
+  mislead an operator judging where. The line reads
+  `NOV 4 · 7:12 AM · 41° · DAMP`. (2) Confirmed: the judged feels-like in
+  the operator's units. (3) Confirmed: the h1 is visually hidden and reads
+  "Kit by @handle"; the kit id sits below the notes, MONO.xs `--muted`,
+  selectable. (4) Confirmed: a removed kit keeps its verdict, garments and
+  notes. (5) Confirmed: the back link returns to the originating row,
+  scrolled to it, with focus on the row. (6) Changed on the board: the
+  start time is `7:12 AM` in the run's zone, which is what was built.
+- **R52·156 · The note counter (#568). Ruled; nothing to build here.**
+  The cap − 40 counter is M5 only. Au5 keeps round 28's counter, which
+  appears at 120 of 140.
+- **R52·157 · Follow on a list row (#589). Confirmed; not built yet.**
+  Where the pill sits in a list of runners its name carries the handle,
+  visually hidden: "Follow @handle", "Following @handle", and the
+  in-flight pair. H's header keeps the bare labels, because the h1 names
+  the runner.
+- **R52·158 · Measured lines (#591). Confirmed and widened; not built
+  yet.** A line of abbreviated measures keeps its drawn text
+  `aria-hidden` and carries a visually hidden spoken form: full words,
+  commas between parts, units spelled out. One rule for A1's conditions,
+  the kit card's conditions, the receipt and the Desk's run line. The row
+  says "the runner's own units"; on the Desk the reader is the operator
+  and 155.2 keeps the operator's units, so the build reads it as the
+  viewer's units.
+- **R52·159 · A2's Change (#592). Confirmed; not built yet.** The button
+  is named "Change the kit"; the visible word stays "Change".
+- **R52·160 · The Delete account row (#593). Confirmed; not built yet.**
+  One button named "Delete account", the sentence as its description, the
+  right-edge "Delete" hidden from screen readers.
+- **R52·161 · The log-flow launcher (#594). Changed in the contract; not
+  built yet.** The launcher stays a button and loses `aria-haspopup`,
+  because the flow is three screens and no dialog opens. It is named "Add
+  a run" in the tab bar and "Log a run" in the top bar. The owner's
+  VoiceOver run (#365) confirms it.
+
 ## Answered in round 51 (imported 2026-11-09)
 
 Design answered as `Round 51 Rulings.dc.html`, items 152–154, with 151b
@@ -1113,8 +1163,7 @@ each ruling is also a comment on its issue.
   `/invite` with both fields kept, the note's band reads "Keep it under
   {cap} characters.", and the note shows a counter from cap − 40.
   `invalid_email` stays for the email only. (3) Changed: "Have an account?
-  Log in" shows below 720 only. Whether Au5's own counter (from 120 of
-  140) also moves to cap − 40 is asked as Design 156; it stays for now.
+  Log in" shows below 720 only. Whether Au5's own counter (from 120 of 140) also moves to cap − 40 is asked as Design 156; it stays for now.
 
 ## Answered in round 50 (imported 2026-11-08)
 
@@ -1146,8 +1195,7 @@ is also a comment on its issue.
   `@handle · reason · date`; a closed account reads "A closed account".
   The label carries the count, `WHO REPORTED · 4 ▸`. No network or day
   grouping in v1.
-- **R50·146 · A grouped follow row (#498). Confirmed; built in design
-  183.** It opens the runner's own profile for v1.
+- **R50·146 · A grouped follow row (#498). Confirmed; built in design 183.** It opens the runner's own profile for v1.
 - **R50·147 · WRONG? with no composition block (#499). Confirmed; built in
   design 183.** WRONG? › alone in MONO.xs; no shared product, no WRONG?.
 - **R50·148 · The tied band, R-60 (#402). Ruled; not built.** The word is

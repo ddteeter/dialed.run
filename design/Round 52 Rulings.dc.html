@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #16161A; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+</style>
+</helmet>
+<div style="font-family: Archivo, Helvetica, sans-serif; background: #16161A; color: #F4F3EF; padding: 48px 40px 88px;">
+  <div style="max-width: 1420px; margin: 0 auto; display: flex; flex-direction: column; gap: 64px;">
+
+    <div style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 28px; border-bottom: 1px solid #2A2A31;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">
+        <span>Round 52 &nbsp;/&nbsp; 155–161 · 2026-11-11</span>
+        <span style="color: #FF2D8A;">dialed.run</span>
+      </div>
+      <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; max-width: 1120px; text-transform: uppercase;">Say whose it is. Don't promise a dialog.</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #8B8B93; max-width: 860px; text-wrap: pretty;">Every screen stays as drawn. The Accessibility Contract is updated for 157–161: four new rows, plus the launcher row and a stale Theme row corrected. Changed: 155.1 (no city) and 155.6 (AM/PM, in the run's zone). The notices are taken as read, and H's board should draw both empty states.</p>
+    </div>
+
+    <div id="rulings" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">Rulings · Round 52</span>
+      <div style="display: flex; flex-direction: column; border: 1px solid #2A2A31;">
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="12">
+          <div style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 170px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;">
+            <span style="font-size: 15px; font-weight: 600;">{{ r.q }}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: {{ r.vc }};">{{ r.v }}</span>
+            <span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">{{ r.a }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const C = '#00E0C6', A = '#F5FF3D', D = '#FF2D8A';
+    const R = (q, v, a) => ({ q, v, a, vc: v.startsWith('CONFIRM') ? C : v.includes('DRAWN') ? D : A });
+    const rows = [
+      R('155.1 · City', 'CHANGED', 'No city on the run line until runs carry a place. A home city on a run logged elsewhere would mislead an operator judging "where". The line reads NOV 4 · 7:12 AM · 41° · DAMP.'),
+      R('155.2 · Temperature', 'CONFIRMED', 'The judged feels-like, in the operator\'s units.'),
+      R('155.3 · Heading, kit id', 'CONFIRMED', 'h1 visually hidden: "Kit by @handle". Kit id below the notes, MONO.xs --muted, selectable so it can be copied into the takedown form.'),
+      R('155.4 · Removed kit', 'CONFIRMED', 'Verdict, garments and notes stay, and only the photos are replaced.'),
+      R('155.5 · Back link', 'CONFIRMED', 'Returns to the originating row, scrolled to it, with focus on the row.'),
+      R('155.6 · Start time', 'CHANGED', '7:12 AM, from the app\'s 12-hour clock, in the run\'s zone (R46·107: Desk screens use the run\'s own time).'),
+      R('156 · Note counter', 'RULED', 'M5 only. Au5 keeps round 28\'s counter, which appears at 120 of 140.'),
+      R('157 · Follow on a search row', 'CONFIRMED', '"Follow @handle" / "Following @handle", handle visually hidden, and the in-flight pair carries it too. H\'s header keeps the bare labels. Added to the contract.'),
+      R('158 · Measured lines', 'CONFIRMED', 'The drawn line is unchanged and aria-hidden, with a visually hidden spoken form: "Feels like 33 degrees, 80 percent humidity, wind 6 miles per hour, overcast." One rule for every measured line: A1, the kit card\'s conditions, the receipt and the Desk run line. Units follow the runner\'s setting. New contract row "Measured lines".'),
+      R('159 · Change', 'CONFIRMED', '"Change the kit", with the visible word unchanged. "That\'s it" stays. Added to the contract.'),
+      R('160 · Delete row', 'CONFIRMED', 'Name "Delete account". The sentence is its description. The right-edge "Delete" is aria-hidden. Added to the contract.'),
+      R('161 · Launcher', 'CHANGED', 'Keep the button and drop aria-haspopup. It\'s named "Add a run" in the tab bar ("+ Add" visible) and "Log a run" in the top bar. The contract row now reads "Add a run, button". Ruled now: the VoiceOver run confirms it, and needs a new item only if what\'s heard differs.'),
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>
