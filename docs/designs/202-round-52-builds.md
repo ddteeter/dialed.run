@@ -53,6 +53,13 @@ added to this doc in that PR.
 ## Open questions
 
 - R52·157 writes the in-flight names with an ellipsis ("Following
-  @handle…"). The build has no ellipsis in any in-flight name: the
-  brackets are hidden and `aria-busy` says it is working. Built as
-  "Following @handle", busy; say if the mark itself is wanted.
+  @handle…") and its example ends "button, pressed". The pill has neither
+  today, on H or on a row: in flight its brackets are hidden and
+  `aria-busy` says it is working, and the followed state is its name,
+  with no `aria-pressed`. Built as "Following @handle", busy, and not
+  pressed. Sent to the coordinator: whether the mark and the pressed
+  state are wanted, which would change H's pill too.
+- R52·160's row is built as a button laid over the row, holding no text.
+  With the sentence inside the button its visible text was more than its
+  name, which axe reports (WCAG 2.5.3, label-content-name-mismatch). It
+  is heard as ruled and drawn as before.
