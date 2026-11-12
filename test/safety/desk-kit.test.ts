@@ -154,7 +154,6 @@ describe("deskKitFor", () => {
         feelsLikeC: undefined,
         moisture: undefined,
       },
-      city: undefined,
       tempUnit: "f",
       photos: [
         {
@@ -186,7 +185,7 @@ describe("deskKitFor", () => {
     });
   });
 
-  it("carries the run line: the observation's zone, the judged feels-like, the moisture, the city, in the operator's unit (Round 51 · 153)", async () => {
+  it("carries the run line: the observation's zone, the judged feels-like and the moisture, in the operator's unit, and no city (Round 51 · 153)", async () => {
     const kit = await hiddenPrivateKit();
     await conditionsCopy(kit.runId, kit.userId, -1);
     await placeRunner(kit.userId, {
@@ -214,7 +213,8 @@ describe("deskKitFor", () => {
       feelsLikeC: 2,
       moisture: "damp",
     });
-    expect(found?.city).toBe("Boston");
+    // Round 52 #155.1: no city, not even the runner's own.
+    expect(found).not.toHaveProperty("city");
     expect(found?.tempUnit).toBe("c");
   });
 

@@ -1,10 +1,14 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 
-import { audienceWord, verdictLabel } from "../../../lib/contracts";
-import { formatTemp } from "../../../lib/contracts/temperature";
+import {
+  audienceWord,
+  defaultUnits,
+  verdictLabel,
+} from "../../../lib/contracts";
+import { measuredLine } from "../../../lib/contracts/measures";
 import { clockLabel, monthDayLabel } from "../../../lib/dates";
-import { Bracketed, Icon, Mono } from "../../../ui";
+import { Bracketed, Icon, Mono, Spoken } from "../../../ui";
 import type { DeskKit as Kit, DeskKitPhoto } from "../desk-kit";
 import { kitBackLink, type KitOriginSearch } from "./kit-origin";
 import { PhotoSection } from "./OtherPhotos";
@@ -31,9 +35,9 @@ const STATE_WORD = {
  * to. A removed kit keeps its band and run line, and says "Removed.
  * Photos deleted." where the photos were.
  *
- * **Marked guesses (Design 155):** the board draws no heading and no kit
- * id, so the h1 is for screen readers only and the id, which the takedown
- * form takes, comes last; a removed kit still shows its verdict, garments
+ * **Round 52 #155:** the h1 is for screen readers only and reads "Kit by
+ * @handle"; the id, which the takedown form takes, comes last in MONO.xs
+ * `--muted`, selectable; a removed kit still shows its verdict, garments
  * and notes.
  */
 export function DeskKit({
@@ -46,7 +50,7 @@ export function DeskKit({
   return (
     <section data-part="desk-kit" className="flex flex-col gap-6">
       <BackLink origin={origin} />
-      <h1 className="sr-only">Kit</h1>
+      <h1 className="sr-only">{kitTitle(kit)}</h1>
       {kit === undefined ? (
         <p className="m-0 text-body">No kit has this id. It may be deleted.</p>
       ) : (
@@ -121,8 +125,8 @@ function KitBody({ kit }: Readonly<{ kit: Kit }>): JSX.Element {
           {kit.caption}
         </p>
       )}
-      <span className="text-quiet select-all">
-        <Mono step="sm">{kit.id}</Mono>
+      <span data-part="kit-id" className="text-muted select-all">
+        <Mono step="xs">{kit.id}</Mono>
       </span>
     </>
   );
@@ -172,28 +176,44 @@ function Runner({
 }
 
 /**
- * The run line (Round 51 · 153): when and where, because a report is
- * often about both. The day and start time in the run's zone, the judged
- * feels-like in the operator's unit, the moisture and the city, as
- * `NOV 4 · 7:12 AM · 41° · DAMP · BOSTON`; a part the kit has no value for
- * is left out. Nothing for a run since deleted.
+ * The page's name: whose kit, as the band names them (round 52 #155.3).
+ */
+function kitTitle(kit: Kit | undefined): string {
+  if (kit === undefined) return "Kit";
+  const whose = kit.handle === undefined ? kit.runnerId : `@${kit.handle}`;
+  return `Kit by ${whose}`;
+}
+
+/**
+ * The run line (Round 51 · 153, round 52 #155): when, and in what. The
+ * day and start time in the run's zone, the judged feels-like in the
+ * operator's unit and the moisture, as `NOV 4 · 7:12 AM · 41° · DAMP`; a
+ * part the kit has no value for is left out. No city: no run stores a
+ * place (#155.1). A line of measures, said in words (#158). Nothing for a
+ * run since deleted.
  */
 function RunLine({ kit }: Readonly<{ kit: Kit }>): JSX.Element | undefined {
   const { run } = kit;
   if (run === undefined) return undefined;
-  const parts = [
-    monthDayLabel(run.startedAt, run.timeZone),
-    clockLabel(run.startedAt, run.timeZone),
-    run.feelsLikeC === undefined
-      ? undefined
-      : formatTemp(run.feelsLikeC, kit.tempUnit),
-    run.moisture,
-    kit.city,
-  ];
+  const line = measuredLine(
+    [
+      [{ kind: "word", word: monthDayLabel(run.startedAt, run.timeZone) }],
+      [{ kind: "word", word: clockLabel(run.startedAt, run.timeZone) }],
+      ...(run.feelsLikeC === undefined
+        ? []
+        : [[{ kind: "temp", tempC: run.feelsLikeC } as const]]),
+      ...(run.moisture === undefined
+        ? []
+        : [[{ kind: "word", word: run.moisture } as const]]),
+    ],
+    // The line has no distance; the operator's temperature unit is all
+    // it reads.
+    { temp: kit.tempUnit, distance: defaultUnits.distance },
+  );
   return (
     <span data-part="kit-run" className="text-ink uppercase">
       <Mono step="sm">
-        {parts.filter((part) => part !== undefined).join(" · ")}
+        <Spoken {...line} />
       </Mono>
     </span>
   );

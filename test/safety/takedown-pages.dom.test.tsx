@@ -403,6 +403,22 @@ describe("Review · removal requests", () => {
     expect(screen.getByText("Removal requests · 1")).toBeInTheDocument();
   });
 
+  it("focuses the request a kit was opened from, back from it (round 52 #155.5)", async () => {
+    globalThis.location.hash = "#request-01JREQUEST0000000000000001";
+    try {
+      await renderWithRouter(
+        <RemovalRequests
+          requests={[pending()]}
+          decide={vi.fn<DecideFn>()}
+          block={vi.fn<BlockFn>()}
+        />,
+      );
+      expect(part("removal-request")).toHaveFocus();
+    } finally {
+      globalThis.location.hash = "";
+    }
+  });
+
   it("leaves out the description's line when there is none", async () => {
     await renderWithRouter(
       <RemovalRequests

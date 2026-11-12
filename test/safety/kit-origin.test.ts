@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   kitBackLink,
   kitOriginSchema,
+  rowFromHash,
 } from "../../src/modules/safety/components/kit-origin";
 
 /**
@@ -51,5 +52,18 @@ describe("kitBackLink", () => {
       label: "Back to the request",
       hash: "request-q1",
     });
+  });
+});
+
+describe("rowFromHash", () => {
+  it("reads the row a back link's hash names, for its own list only", () => {
+    // Round 52 #155.5: back from a kit, the row it was opened from.
+    expect(rowFromHash("#report-01JROW", "report")).toBe("01JROW");
+    expect(rowFromHash("#request-01JREQ", "request")).toBe("01JREQ");
+    expect(rowFromHash("#request-01JREQ", "report")).toBeUndefined();
+    expect(rowFromHash("report-01JROW", "report")).toBeUndefined();
+    expect(rowFromHash("", "report")).toBeUndefined();
+    // A hash with the prefix and no row is no row.
+    expect(rowFromHash("#report-", "report")).toBeUndefined();
   });
 });

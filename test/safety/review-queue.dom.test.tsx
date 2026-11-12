@@ -47,6 +47,38 @@ function renderQueue(
   return { resolve, reviewHandle };
 }
 
+describe("back from a kit", () => {
+  it("opens and focuses the row the kit was opened from (round 52 #155.5)", () => {
+    globalThis.location.hash = "#report-01HYYYYYYYYYYYYYYYYYYYYYYY";
+    try {
+      renderQueue([
+        row(),
+        row({ id: "01HYYYYYYYYYYYYYYYYYYYYYYY", subjectId: "e-2" }),
+      ]);
+
+      const second = screen.getByRole("button", { name: "entry · e-2" });
+      expect(second).toHaveAttribute("aria-expanded", "true");
+      expect(
+        screen.getByRole("button", { name: "entry · e-1" }),
+      ).toHaveAttribute("aria-expanded", "false");
+      expect(second.closest("li")).toHaveFocus();
+      expect(second.closest("li")).toHaveAttribute("tabindex", "-1");
+    } finally {
+      globalThis.location.hash = "";
+    }
+  });
+
+  it("opens the first row and moves nothing with no row in the hash", () => {
+    renderQueue([row(), row({ id: "b", subjectId: "e-2" })]);
+
+    expect(screen.getByRole("button", { name: "entry · e-1" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(document.body).toHaveFocus();
+  });
+});
+
 describe("an empty queue", () => {
   it("says so, and says the digest agrees", () => {
     renderQueue([]);
