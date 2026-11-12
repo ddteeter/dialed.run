@@ -50,6 +50,17 @@ groups are the ones its table names.
   `safety/inputs` (~123) and `lib/contracts/garments` (~97), which are one
   file each and belong to #570.
 
+**PR 3: the 0.14.2 pin (#608).** Pin guardrails-core 0.14.2.
+
+- `ship` now reads the workflow runs on the commit it pushed. A run that
+  failed to start is `ci-red`, a required check that never reported is
+  `ci-red`, and ship confirms the push reached origin. A lane no longer
+  checks the run list by hand after a `green`.
+- Its note wires nothing. Its one superseded phrase has no match in this
+  repo's instructions, so no rule or skill changes.
+- `init` shows what `docs/guardrails/init-drift.md` says to expect, and the
+  templates still hold nothing the repo lacks.
+
 ## Contract touches
 
 - Schema changes: **none**. Routes: **none**. Bindings/queues/crons: **none**.
@@ -69,7 +80,7 @@ groups are the ones its table names.
 
 ## Issues
 
-- Closes: #556 (PR 1), #581 (PR 2).
+- Closes: #556 (PR 1), #581 (PR 2), #608 (PR 3).
 - Opens: #587. `modules/ops/outbox-handlers` took 106 minutes cold on
   PR 2's run, over the target; it is split again once main's next cold
   run gives per-file times.

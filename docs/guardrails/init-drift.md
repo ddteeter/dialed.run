@@ -16,8 +16,8 @@ This file is the repo's, not guardrails'. `init` does not write it.
   not the merge would write anything.
 - A warning that `core.hooksPath` is already set. The hooks are active.
 
-Checked on 0.14.0 and 0.14.1. A different list is not expected: stop and
-ask the owner.
+Checked on 0.14.0, 0.14.1 and 0.14.2. A different list is not expected:
+stop and ask the owner.
 
 ## Why each drifted file must stay as it is
 
