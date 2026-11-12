@@ -175,3 +175,35 @@ packages whose install scripts aren't covered by `allowScripts`
 (workerd, esbuild, canvas, fsevents today). An allowlist would stop a new
 dependency's install script from running at all. It needs the npm that CI
 installs to enforce it, which has not been checked.
+
+## The CI floor
+
+Design 196 (#546). Three checks on the workflows themselves, on top of the
+SHA pins and `actionlint`:
+
+- **`harden-runner` is the first step of every job**, and
+  `test/architecture/workflow-floor.test.ts` fails a job without it. A new
+  job starts at `egress-policy: audit`, which reports the hosts it reaches
+  and blocks none; its run's summary links the report. A job moves to
+  `block`, with that list as `allowed-endpoints`, when the list is short
+  enough to keep. The two Claude review jobs are on `block` already.
+- **`zizmor`** (`supply-chain.yml`) reads `.github/` on every PR for
+  template injection, permissions wider than a job uses, credentials left
+  in a checkout and unpinned actions. Fix a finding. An ignore is for a
+  line the owner has reviewed, with its reason beside it; the same test
+  pins the list.
+- **Dependency review** (`supply-chain.yml`) fails a PR that adds a
+  dependency with a known vulnerability, or with a licence that is not on
+  the workflow's list of licences an AGPL-3.0 work can combine with. A new
+  licence is the owner's call; `@garmin/fitsdk` is exempted by name.
+
+**No workflow lockfile yet** (#601). GitHub's `actions.lock` was generated
+and then removed: `gh actions-lock` 0.4.1 writes entries keyed by tag, its
+`--verify` accepts SHA-pinned `uses:` lines against them, and the runner
+does not. Every workflow failed at startup with "The lockfile is missing"
+for each SHA-pinned action. Until the two agree, the SHA pins stay and the
+lockfile waits.
+
+`zizmor` and `actionlint` are release binaries at a pinned checksum, not
+actions, so Dependabot does not see them. Bump the version and the
+checksum together, by hand, from the release's published digest.

@@ -18,8 +18,12 @@ name: Commit the open-source list
 #   push starts CI only once someone approves the run, which is the one
 #   manual step dialed.run-site still has. The App's key is minted only
 #   after every check above has passed.
+#
+# zizmor flags every use of this trigger, because it runs with a write
+# token after a run a stranger could have caused. The checks above are why
+# it is safe here; docs/dependencies.md has the review (owner, 2026-11-11).
 on:
-  workflow_run:
+  workflow_run: # zizmor: ignore[dangerous-triggers]
     workflows: ["Open-source list"]
     types: [completed]
 
@@ -50,6 +54,12 @@ jobs:
       HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
       LIST: src/modules/account/open-source-list.json
     steps:
+      # Audit first (design 196): reports the hosts this job reaches and
+      # blocks none. It moves to `block` once that list is known and short.
+      - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
       - name: Check this is Dependabot's open npm PR, at the SHA that was built
         id: pr
         env:
@@ -125,7 +135,11 @@ jobs:
           private-key: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
           permission-contents: write
 
-      - if: steps.pr.outputs.current == 'true'
+      # The checkout keeps the App's token, which zizmor flags: the push
+      # below is what it is for. Nothing after this step uploads or runs
+      # anything from the checkout, and that step holds the same token in
+      # its environment (owner, 2026-11-11).
+      - if: steps.pr.outputs.current == 'true' # zizmor: ignore[artipacked]
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
