@@ -24,7 +24,10 @@ end of listitem, level 1, position 1, set size 2
 listitem, level 1, position 2, set size 2
 Running tights
 Bottom · Generic
-button, Name it
+button, Name it Running tights
+Name it
+Running tights
+end of button, Name it Running tights
 end of listitem, level 1, position 2, set size 2
 end of list
 #
