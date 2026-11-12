@@ -55,8 +55,8 @@ function nonceIn(headers: Record<string, string>): string {
 The opening tag of every `<script>` without a `src`: the inline ones.
 */
 function inlineScriptTags(html: string): string[] {
-  return (html.match(/<script\b[^>]*>/g) ?? []).filter(
-    (tag) => !/\ssrc=/.test(tag),
+  return (html.match(/<script\b[^>]*>/gi) ?? []).filter(
+    (tag) => !/\ssrc=/i.test(tag),
   );
 }
 
@@ -72,13 +72,14 @@ The text of every `<script>` without a `src`, as the browser hashes it.
 */
 function inlineScriptBodies(html: string): string[] {
   // React escapes `>` in an attribute, so the first one ends the tag.
-  return (html.match(/<script\b[^>]*>[\s\S]*?<\/script>/g) ?? [])
-    .filter((element) => !/^<script\b[^>]*\ssrc=/.test(element))
-    .map((element) =>
-      element
-        .slice(element.indexOf(">") + 1, -"</script>".length)
-        .replaceAll(/\r\n?/g, "\n"),
-    );
+  const scripts =
+    /<script\b(?<attributes>[^>]*)>(?<body>[\s\S]*?)<\/script\b[^>]*>/gi;
+  return Array.from(html.matchAll(scripts), (match) => ({
+    attributes: match.groups?.attributes ?? "",
+    body: match.groups?.body ?? "",
+  }))
+    .filter((script) => !/\ssrc=/i.test(script.attributes))
+    .map((script) => script.body.replaceAll(/\r\n?/g, "\n"));
 }
 
 /**

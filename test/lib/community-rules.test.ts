@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import terms from "../../docs/legal/terms.md?raw";
-import { parseLegalDoc } from "../../src/modules/account/legal-markdown";
+import {
+  parseLegalDoc,
+  withoutSourceComments,
+} from "../../src/modules/account/legal-markdown";
 import {
   COMMUNITY_RULES_PATH,
   communityRuleKeys,
@@ -84,7 +87,7 @@ describe("where the rules are read (round 40 C3)", () => {
     const [path, id] = COMMUNITY_RULES_PATH.split("#", 2);
     expect(path).toBe("/terms");
     // The source's notes-to-self comment is dropped, as the page drops it.
-    const shown = terms.replaceAll(/<!--[\s\S]*?-->/gu, "");
+    const shown = withoutSourceComments(terms);
     expect(parseLegalDoc(shown).contents).toContainEqual({
       id,
       title: "The rules",

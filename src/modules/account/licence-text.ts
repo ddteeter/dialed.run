@@ -72,12 +72,28 @@ export function holderOf(line: string): string | undefined {
   if (!isLine || PLACEHOLDER.test(line)) return undefined;
   const rest = line.slice(at).replace(MARK, "");
   if (!/^[\d(©\p{Lu}]/u.test(rest) || PROSE.test(rest)) return undefined;
-  const holder = rest
-    .replaceAll(/<[^<>]*>|\(https?:[^()]*\)/gu, "")
+  const holder = withoutBracketed(rest)
+    .replaceAll(/\(https?:[^()]*\)/gu, "")
     .replaceAll(/\s+/gu, " ")
     .replace(/[.,;]$/u, "")
     .trim();
   return holder === "" ? undefined : holder;
+}
+
+/**
+ * A line without what its angle brackets hold: `Name <address>` is
+ * `Name `. Cut at each `<` and kept from the `>` that closes it, so no
+ * bracket is left to pair up afterwards; one with no partner is dropped
+ * and what follows it kept.
+ */
+function withoutBracketed(line: string): string {
+  return line
+    .split("<")
+    .map((part, index) =>
+      index === 0 ? part : part.slice(part.indexOf(">") + 1),
+    )
+    .join("")
+    .replaceAll(">", "");
 }
 
 /**

@@ -43,11 +43,24 @@ export function placeholderHandle(digits: number = randomDigits()): string {
 }
 
 /**
-Four digits from the platform's CSPRNG — a handle is not a secret, but the lint is right that `Math.random` should not be reached for.
-*/
+ * The draws that are kept: 0 to 59,999, six of each four-digit number. A
+ * 16-bit draw reaches 65,535, and reducing all of them would make 0000 to
+ * 5535 a seventh likelier than the rest.
+ */
+const DRAW_LIMIT = 60_000;
+
+/**
+ * Four digits from the platform's CSPRNG, each as likely as any other: a
+ * draw at or past `DRAW_LIMIT` is drawn again (about one in twelve). A
+ * handle is not a secret, but the lint is right that `Math.random` should
+ * not be reached for.
+ */
 function randomDigits(): number {
-  const [value = 0] = crypto.getRandomValues(new Uint16Array(1));
-  return value % 10_000;
+  const draw = new Uint16Array(1);
+  for (;;) {
+    const [value = 0] = crypto.getRandomValues(draw);
+    if (value < DRAW_LIMIT) return value % 10_000;
+  }
 }
 
 export interface RenameRecordInput {
