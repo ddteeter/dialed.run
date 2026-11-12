@@ -97,14 +97,28 @@ describe("DeleteAccount (U1's last row)", () => {
     await view;
     const row = document.querySelector("[data-part='delete-account']");
     expect(row).toHaveClass("border-t-2", "border-ink");
-    const open = screen.getByRole("button", { name: /^Delete account/u });
-    expect(open).toHaveTextContent(
+    // Round 52 #160: named by its title alone, described by its
+    // sentence, and the word at the right edge is for the eye only.
+    const open = screen.getByRole("button", { name: "Delete account" });
+    expect(open).toHaveAccessibleDescription(
+      "Deleted after 7 days. Log in before then to keep it.",
+    );
+    // The button lies over the row and holds none of its words (WCAG
+    // 2.5.3: a control's visible text has to be in its name), and the
+    // words are heard once, through it.
+    expect(open).toBeEmptyDOMElement();
+    expect(open).toHaveClass("absolute", "inset-0");
+    expect(open.parentElement).toHaveClass("relative");
+    expect(open.parentElement).toHaveTextContent(
       /^Delete accountDeleted after 7 days\. Log in before then to keep it\.Delete$/u,
     );
+    expect(
+      [...(open.parentElement?.children ?? [])].map(
+        (child) => child.getAttribute("aria-hidden") === "true",
+      ),
+    ).toEqual([false, true, true]);
     // Pink as text is `--cold-text`; `--action` is a surface (tokens.css).
-    expect(within(open).getByText("Delete account")).toHaveClass(
-      "text-cold-text",
-    );
+    expect(screen.getByText("Delete account")).toHaveClass("text-cold-text");
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 

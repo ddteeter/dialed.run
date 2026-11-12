@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { classifyFailure, FailureBand, FormStatus, Mono } from "../../../ui";
 import type { SearchResult } from "../search";
 import { Avatar } from "./Avatar";
-import { Handle } from "./Handle";
+import { Handle, handleText } from "./Handle";
 import { FollowBand, FollowPill, useFollowToggle } from "./Follow";
 import type { FollowAction } from "./Follow";
 
@@ -186,7 +186,7 @@ function ResultRow({
         >
           <Handle username={result.username} />
         </Link>
-        <FollowPill toggle={toggle} />
+        <FollowPill toggle={toggle} handle={handleText(result.username)} />
       </div>
       {/* Under the whole row, never squeezed beside the pill (§4a). */}
       <FollowBand toggle={toggle} />

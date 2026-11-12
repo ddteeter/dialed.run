@@ -46,11 +46,7 @@ Get a copy
 end of button, Get a copy
 end of listitem, level 1, position 1, set size 1
 end of list
-button, Delete account Deleted after # days. Log in before then to keep it. Delete
-Delete account
-Deleted after # days. Log in before then to keep it.
-Delete
-end of button, Delete account Deleted after # days. Log in before then to keep it. Delete
+button, Delete account, Deleted after # days. Log in before then to keep it.
 dialog, Delete your account?
 dialog, Delete your account?
 form
@@ -83,9 +79,9 @@ Closet
 end of link, Closet
 end of listitem, level 1, position 2, set size 5
 listitem, level 1, position 3, set size 5
-button, Add a run, has popup dialog
+button, Add a run
 + Add
-end of button, Add a run, has popup dialog
+end of button, Add a run
 end of listitem, level 1, position 3, set size 5
 listitem, level 1, position 4, set size 5
 link, Call

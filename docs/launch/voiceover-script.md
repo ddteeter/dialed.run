@@ -363,10 +363,11 @@ step by step, then once with Screen Curtain (2.8).
 in the tab bar and double tap it.
 Source: `conformance/a1-upload.conformance.spec.ts/A1-·-upload-at-rest-the-drop-zone-says-what-the-board-says.txt`.
 
-The button says it opens a dialog. What opens is this screen, laid over
-the tab you were on: there is no separate sheet, and the tab bar stays,
-with the tab you came from still marked current. Write down what VoiceOver
-calls the button, and whether what followed is what that led you to expect.
+You should hear "Add a run, button", and no word about a dialog or a
+pop-up (round 52 #161). What opens is this screen, laid over the tab you
+were on: there is no separate sheet, and the tab bar stays, with the tab
+you came from still marked current. Write down what VoiceOver calls the
+button; a new item is needed only if it differs.
 
 On the screen, you should hear:
 
@@ -445,8 +446,8 @@ Do: double tap two pieces. Each must then say it is pressed or selected.
 On a later run, when a suggestion is offered
 (`conformance/a2-attach.conformance.spec.ts/A2-·-heard-at-390-a-suggestion-the-kit-worn-last-time-it-was-like-this-and-That-s-it.txt`),
 after the header you should hear "Most likely · from N degrees damp, the
-date", a list of the pieces, button "That's it" and button "Change", and
-the picker's heading becomes "Or pick from the closet". "That's it" must be
+date", a list of the pieces, button "That's it" and button "Change the
+kit" (drawn as "Change"), and the picker's heading becomes "Or pick from the closet". "That's it" must be
 within one or two swipes of the list.
 
 **2.5 The category sheet (A2b).** Double tap "All Tops".
@@ -641,7 +642,8 @@ name". Type a name nobody has: without moving you should hear "No runner
 called @, the name." Type your second account's handle
 (`feed/feed-unconfirmed.spec.ts/search-finds-a-runner-who-has-confirmed-as-a-row-with-Follow.txt`):
 without moving you should hear "N runner found.", and the list has one
-row, link "@handle" and then button "Follow". Double tap the link.
+row, link "@handle" and then button "Follow @handle" (drawn as "Follow").
+Double tap the link.
 
 **4.3 Someone else's profile (H).**
 Source: `conformance/feed-gh.conformance.spec.ts/H-with-nothing-public-keeps-its-header-and-Follow-and-says-so-plainly.txt`.
@@ -771,8 +773,9 @@ again: it must say the new state each time.
 **5.4 Delete account.** Settings › Account, the last row.
 Source: `conformance/system-settings.conformance.spec.ts/Delete-account-at-390-the-sheet-open-and-not-confirmed.txt`.
 
-The row is a button: "Delete account", "Deleted after 7 days. Log in
-before then to keep it.", "Delete". Double tap it. You should hear:
+The row is a button named "Delete account", with "Deleted after 7 days.
+Log in before then to keep it." as its description. The "Delete" drawn at
+its right edge is not spoken. Double tap it. You should hear:
 
 - a dialog "Delete your account?", and the same words as heading 2
 - "Your runs, closet, entries and photos go in N days. Shared runs leave the feed now. Log in before the date to keep everything."

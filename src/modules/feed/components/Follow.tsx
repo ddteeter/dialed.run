@@ -71,8 +71,16 @@ export function useFollowToggle({
 /**
  * The pill. Follow is the primary, in the action pink; Following drops to
  * a hairline, because following again is not the thing to do next.
+ *
+ * **On a list row its name carries the handle** (round 52 #157): heard
+ * alone, a row's pill said "Follow" and not whose. `handle` is that
+ * runner's, as drawn beside it, visually hidden and in every state. H's
+ * header passes none: its h1 names the runner.
  */
-export function FollowPill({ toggle }: Readonly<{ toggle: FollowToggle }>) {
+export function FollowPill({
+  toggle,
+  handle,
+}: Readonly<{ toggle: FollowToggle; handle?: string | undefined }>) {
   const { isFollowing, control } = toggle;
   return (
     <button
@@ -92,6 +100,9 @@ export function FollowPill({ toggle }: Readonly<{ toggle: FollowToggle }>) {
         pendingLabel={isFollowing ? "Unfollowing" : "Following"}
         pending={control.pending}
       />
+      {handle === undefined ? undefined : (
+        <span className="sr-only">{` ${handle}`}</span>
+      )}
     </button>
   );
 }

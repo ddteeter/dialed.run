@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type { JSX, ReactNode } from "react";
 
 import {
@@ -74,28 +74,42 @@ export function DeleteAccount({
   // the first time: closed and opened again from the row, it is the
   // ordinary confirm.
   const [hasClosed, setHasClosed] = useState(false);
+  const titleId = useId();
+  const sentenceId = useId();
   return (
     <section
       data-part="delete-account"
       className="flex flex-col border-t-2 border-ink pt-3"
     >
-      <button
-        type="button"
-        onClick={() => {
-          setIsOpen(true);
-        }}
-        className="target flex cursor-pointer items-center justify-between gap-3 border-none bg-transparent p-0 py-3 text-left"
-      >
-        <span className="flex flex-col gap-1">
-          <span className="text-body font-semibold text-cold-text">
+      {/* Round 52 #160: one button, named by its title and described by
+          its sentence, and the word at the right edge is for the eye
+          only. The button lies over the row and holds no text of its own:
+          with the sentence inside it, its visible text was more than its
+          name, which is WCAG 2.5.3's failure (axe,
+          label-content-name-mismatch). The row's words are hidden from
+          the reading order so they are heard once, through the button. */}
+      <div className="relative flex items-center justify-between gap-3 py-3">
+        <button
+          type="button"
+          aria-labelledby={titleId}
+          aria-describedby={sentenceId}
+          onClick={() => {
+            setIsOpen(true);
+          }}
+          className="target absolute inset-0 cursor-pointer border-none bg-transparent p-0"
+        />
+        <span aria-hidden="true" className="flex flex-col gap-1">
+          <span id={titleId} className="text-body font-semibold text-cold-text">
             Delete account
           </span>
-          <span className="text-small text-muted">
+          <span id={sentenceId} className="text-small text-muted">
             Deleted after 7 days. Log in before then to keep it.
           </span>
         </span>
-        <span className="shrink-0 text-body text-ink">Delete</span>
-      </button>
+        <span aria-hidden="true" className="shrink-0 text-body text-ink">
+          Delete
+        </span>
+      </div>
       {isOpen ? (
         <DeleteSheet
           hasPassword={hasPassword}

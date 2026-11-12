@@ -121,10 +121,9 @@ describe("Tab switch: the indicator slides under the label", () => {
     // The seat is still in the bar — it is the indicator that stays away,
     // not the way in. A button rather than a link, per the Accessibility
     // Contract: a launcher cannot be where you are.
-    expect(screen.getByRole("button", { name: "Add a run" })).toHaveAttribute(
-      "aria-haspopup",
-      "dialog",
-    );
+    expect(
+      screen.getByRole("button", { name: "Add a run" }),
+    ).not.toHaveAttribute("aria-haspopup");
     unmount();
   });
 
@@ -345,8 +344,7 @@ describe("Tab switch: the indicator slides under the label", () => {
     });
 
     // It still navigates — the flow is three routes, and `rise` is what
-    // makes that read as a layer. `haspopup` describes what the runner
-    // gets, not which element implements it. The navigation is not awaited
+    // makes that read as a layer. The navigation is not awaited
     // by the handler, so the assertion waits for the router rather than
     // the click.
     //

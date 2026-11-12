@@ -15,14 +15,14 @@ import { TABS, bar, tabToLight, useSlowRoute } from "./tabs";
  * **A button, never a link** (Accessibility Contract, round 12) — "a
  * launcher cannot be where you are". An anchor announces a destination
  * and can be marked current; this opens the log flow *over* wherever the
- * runner already is, which is what `aria-haspopup="dialog"` says. It is
- * the reason the contract's "five `<a aria-current>`" now reads as four
- * links and one button.
+ * runner already is. It is the reason the contract's "five `<a
+ * aria-current>`" now reads as four links and one button.
  *
- * It still navigates, because the flow is three routes rather than a
+ * It navigates, because the flow is three routes rather than a
  * `<dialog>` — `rise` is what makes that read as a layer
- * (`src/lib/nav-types.ts`). `haspopup` describes what the runner gets,
- * not which element implements it.
+ * (`src/lib/nav-types.ts`). So it carries no `aria-haspopup` (round 52
+ * #161): the attribute promised a dialog that never opened, and the
+ * contract's row now reads "Add a run, button".
  *
  * **The wide bar has its own**, saying "Log a run" (round 15). Same
  * control, same role, a different word because the seat is a different
@@ -43,7 +43,6 @@ function Launcher({
     <li className="text-center">
       <button
         type="button"
-        aria-haspopup="dialog"
         // The glyph is decoration and the word starts the name. Without
         // this the button announces as "plus Add"; with the bare word it
         // was "Add" here and "Log a run" in the top bar, two names for one

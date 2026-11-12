@@ -21,7 +21,7 @@ end of list
 end of navigation, Main
 link, Search runners
 link, Notifications, # new
-button, Log a run, has popup dialog
+button, Log a run
 end of banner
 main
 status

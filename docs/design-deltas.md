@@ -1107,11 +1107,14 @@ so the line is recorded on #590 until one does.
 - **R52·156 · The note counter (#568). Ruled; nothing to build here.**
   The cap − 40 counter is M5 only. Au5 keeps round 28's counter, which
   appears at 120 of 140.
-- **R52·157 · Follow on a list row (#589). Confirmed; not built yet.**
-  Where the pill sits in a list of runners its name carries the handle,
-  visually hidden: "Follow @handle", "Following @handle", and the
+- **R52·157 · Follow on a list row (#589). Confirmed; built (design
+  202).** Where the pill sits in a list of runners its name carries the
+  handle, visually hidden: "Follow @handle", "Following @handle", and the
   in-flight pair. H's header keeps the bare labels, because the h1 names
-  the runner.
+  the runner. As built, the in-flight names are "Following @handle" and
+  "Unfollowing @handle" with `aria-busy`, with no ellipsis and no
+  `aria-pressed`: the pill has neither on H today, and they are in the
+  contract's row but not the ruling. Asked back as #605.
 - **R52·158 · Measured lines (#591). Confirmed and widened; not built
   yet.** A line of abbreviated measures keeps its drawn text
   `aria-hidden` and carries a visually hidden spoken form: full words,
@@ -1120,13 +1123,16 @@ so the line is recorded on #590 until one does.
   says "the runner's own units"; on the Desk the reader is the operator
   and 155.2 keeps the operator's units, so the build reads it as the
   viewer's units.
-- **R52·159 · A2's Change (#592). Confirmed; not built yet.** The button
-  is named "Change the kit"; the visible word stays "Change".
-- **R52·160 · The Delete account row (#593). Confirmed; not built yet.**
-  One button named "Delete account", the sentence as its description, the
-  right-edge "Delete" hidden from screen readers.
-- **R52·161 · The log-flow launcher (#594). Changed in the contract; not
-  built yet.** The launcher stays a button and loses `aria-haspopup`,
+- **R52·159 · A2's Change (#592). Confirmed; built (design 202).** The
+  button is named "Change the kit"; the visible word stays "Change".
+- **R52·160 · The Delete account row (#593). Confirmed; built (design
+  202).** One button named "Delete account", the sentence as its
+  description, the right-edge "Delete" hidden from screen readers. As
+  built, the button lies over the row and holds no text: with the sentence
+  inside it, its visible text was more than its name (WCAG 2.5.3). The row
+  is drawn as before. The contract row's markup is asked back as #605.
+- **R52·161 · The log-flow launcher (#594). Changed in the contract;
+  built (design 202).** The launcher stays a button and loses `aria-haspopup`,
   because the flow is three screens and no dialog opens. It is named "Add
   a run" in the tab bar and "Log a run" in the top bar. The owner's
   VoiceOver run (#365) confirms it.

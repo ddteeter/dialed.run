@@ -730,6 +730,8 @@ function MostLikely({
           className="target font-semibold underline underline-offset-4"
         >
           Change
+          {/* Round 52 #159: heard alone, "Change" did not say what. */}
+          <span className="sr-only"> the kit</span>
         </button>
       </div>
     </div>
