@@ -681,6 +681,7 @@ describe("Follow, on the control-failure pattern", () => {
     await renderFeedScreen(followScreen({ follow }));
     const button = screen.getByRole("button", { name: "Follow" });
     expect(button).toHaveClass("bg-action");
+    expect(button.querySelector(".sr-only")).toBeNull();
 
     await user.click(button);
 
@@ -690,6 +691,40 @@ describe("Follow, on the control-failure pattern", () => {
     });
     expect(button).toHaveClass("border-hairline");
     expect(button).not.toHaveClass("bg-action");
+  });
+
+  it("keeps the handle in a row's pill in all four states", async () => {
+    // Round 52 #157: all four states on a row, "Following @ana" while a
+    // follow is out and "Unfollowing @ana" while one is taken back. H's
+    // header keeps the bare words, because its h1 names the runner.
+    const user = userEvent.setup();
+    const out = Promise.withResolvers<undefined>();
+    const back = Promise.withResolvers<undefined>();
+    await renderFeedScreen(
+      <RunnerSearch
+        search={() => Promise.resolve(results("ana"))}
+        follow={() => out.promise}
+        unfollow={() => back.promise}
+      />,
+    );
+    await user.type(screen.getByLabelText("Search by name"), "A");
+    const pill = await screen.findByRole("button", { name: "Follow @ana" });
+
+    await user.click(pill);
+    expect(pill).toHaveAttribute("aria-busy", "true");
+    expect(pill).toHaveAccessibleName("Following @ana");
+    out.resolve(undefined);
+    await waitFor(() => {
+      expect(pill).not.toHaveAttribute("aria-busy");
+    });
+    expect(pill).toHaveAccessibleName("Following @ana");
+
+    await user.click(pill);
+    expect(pill).toHaveAccessibleName("Unfollowing @ana");
+    back.resolve(undefined);
+    await waitFor(() => {
+      expect(pill).toHaveAccessibleName("Follow @ana");
+    });
   });
 
   it("waits behind [ Following ] without flipping first", async () => {
@@ -798,14 +833,21 @@ describe("RunnerSearch", () => {
     expect(
       within(ana ?? document.body).getByRole("link", { name: "@ana" }),
     ).toHaveAttribute("href", "/feed/u/ana");
-    expect(
-      within(ana ?? document.body).getByRole("button", { name: "Follow" }),
-    ).toBeVisible();
+    // Round 52 #157: on a row the pill says whose it is, behind the
+    // visible word; the row still draws the handle once.
+    const anaPill = within(ana ?? document.body).getByRole("button", {
+      name: "Follow @ana",
+    });
+    expect(anaPill).toBeVisible();
+    expect(anaPill.lastElementChild).toHaveClass("sr-only");
+    expect(anaPill.lastElementChild?.textContent).toBe(" @ana");
     // Each row knows whether the viewer already follows them.
     expect(
-      within(andy ?? document.body).getByRole("button", { name: "Following" }),
+      within(andy ?? document.body).getByRole("button", {
+        name: "Following @andy",
+      }),
     ).toBeVisible();
-    expect(ana).toHaveTextContent(/^A@anaFollow/u);
+    expect(ana).toHaveTextContent(/^A@anaFollow.* @ana$/u);
   });
 
   it("breathes its trailing label while a search is out, and only then", async () => {
@@ -1022,7 +1064,9 @@ describe("RunnerSearch", () => {
       />,
     );
     await user.type(screen.getByLabelText("Search by name"), "A");
-    await user.click(await screen.findByRole("button", { name: "Follow" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Follow @ana" }),
+    );
 
     const band = await screen.findByText("Not following");
     const row = screen.getByRole("listitem");
