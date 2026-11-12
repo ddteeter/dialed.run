@@ -1,0 +1,40 @@
+document
+main
+Step # of # · Optional
+heading, Which ones do you actually reach for?, level 1
+paragraph
+Name those. A category can’t remember — a product can.
+end of paragraph
+list
+listitem, level 1, position 1, set size 2
+Merino base layer
+Top · Generic
+form
+status
+Brand
+combobox, Brand, Sm, has popup listbox, not expanded, # control
+Model
+combobox, Model, has popup listbox, not expanded, # control
+Brand alone is enough.
+button, Save
+Save
+end of button, Save
+end of form
+end of listitem, level 1, position 1, set size 2
+listitem, level 1, position 2, set size 2
+Running tights
+Bottom · Generic
+button, Name it Running tights
+Name it
+Running tights
+end of button, Name it Running tights
+end of listitem, level 1, position 2, set size 2
+end of list
+#
+of
+#
+named
+button, Next
+button, Skip for now
+end of main
+end of document

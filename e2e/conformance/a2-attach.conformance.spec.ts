@@ -11,11 +11,15 @@ import {
 } from "../support/conformance";
 import type { Seeded } from "./logging-fixtures";
 import {
+  BOARD_MORNING,
   hydrated,
   lookOf,
+  seedEntry,
   seedItem,
+  seedObservation,
   seedRun,
   unseed,
+  unseedObservations,
   userIdOf,
 } from "./logging-fixtures";
 
@@ -169,5 +173,80 @@ test.describe("A2 · before a suggestion", () => {
 
     const picker = await signatureOf(page, '[data-slot="closet-picker"]');
     expect(picker[0]?.[0]).toBe(drawnPicker[0]?.[0]);
+  });
+});
+
+/**
+ * Two states no board is compared with here. Each ends at the phone's
+ * width so what a screen reader says on it is checked in (#582): the
+ * suggestion offered, and a category's sheet open over the picker.
+ */
+test.describe("A2 · heard at 390", () => {
+  let seeded: Seeded;
+  let runId: string;
+  let observations: string[] = [];
+
+  test.beforeEach(async ({ page }) => {
+    seeded = {
+      userId: await userIdOf("run-logging"),
+      runIds: [],
+      itemIds: [],
+      entryIds: [],
+    };
+    await unseed(seeded);
+    runId = await seedRun(seeded, {
+      observed: true,
+      weatherStatus: "attached",
+    });
+    await seedItem(seeded, "Conformance top", "top");
+    await seedItem(seeded, "Conformance tights", "bottom");
+    await page.setViewportSize({ width: 390, height: 900 });
+  });
+
+  test.afterEach(async () => {
+    await unseed(seeded);
+    await unseedObservations(observations);
+    observations = [];
+  });
+
+  test("a suggestion: the kit worn last time it was like this, and That's it", async ({
+    page,
+  }) => {
+    // The same kit a week before, in the same weather as this run's.
+    const lastWeek = BOARD_MORNING - 7 * 86_400;
+    observations = [
+      await seedObservation(Math.floor(lastWeek / 3600), {
+        tempC: 5,
+        precipMm: 1,
+      }),
+    ];
+    const worn = await seedRun(seeded, {
+      observed: false,
+      weatherStatus: "attached",
+      startedAt: lastWeek,
+    });
+    await seedEntry(seeded, worn, seeded.itemIds);
+
+    await page.goto(`/feed/attach/${runId}`);
+    await hydrated(page);
+
+    await expect(page.locator(MOST_LIKELY)).toHaveAttribute(
+      "data-state",
+      "suggestion",
+      { timeout: 15_000 },
+    );
+    await expect(page.getByRole("button", { name: "That’s it" })).toBeVisible();
+  });
+
+  test("A2b: a category's sheet, open over the picker", async ({ page }) => {
+    await page.goto(`/feed/attach/${runId}`);
+    await hydrated(page);
+
+    await page.getByRole("button", { name: "All Tops" }).click();
+    const sheet = page.getByRole("dialog", { name: "Tops" });
+    await expect(sheet).toBeVisible();
+    await expect(
+      sheet.getByRole("checkbox", { name: /^Conformance top/u }),
+    ).toBeVisible();
   });
 });

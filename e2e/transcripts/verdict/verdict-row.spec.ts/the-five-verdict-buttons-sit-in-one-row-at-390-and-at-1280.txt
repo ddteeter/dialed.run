@@ -15,7 +15,7 @@ status
 radiogroup, Did it work?
 radio, Way cold, not checked, position 1, set size 5
 Way cold
-radio, A bit cold, not checked, position 2, set size 5
+radio, A bit cold, checked, position 2, set size 5
 A bit cold
 radio, Dialed, not checked, position 3, set size 5
 Dialed

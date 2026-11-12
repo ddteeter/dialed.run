@@ -1,27 +1,4 @@
 document
-banner
-link, dialed.run home
-dialed.run
-end of link, dialed.run home
-navigation, Main
-list
-listitem, level 1, position 1, set size 4
-link, Feed
-end of listitem, level 1, position 1, set size 4
-listitem, level 1, position 2, set size 4
-link, Closet, current item
-end of listitem, level 1, position 2, set size 4
-listitem, level 1, position 3, set size 4
-link, Call
-end of listitem, level 1, position 3, set size 4
-listitem, level 1, position 4, set size 4
-link, You
-end of listitem, level 1, position 4, set size 4
-end of list
-end of navigation, Main
-link, Search runners
-button, Log a run, has popup dialog
-end of banner
 main
 status
 link, Closet
@@ -145,17 +122,42 @@ textbox, Size
 Colorway
 textbox, Colorway
 Photo · optional
-Drop a photo, or browse
+Add a photo
 Flat on the floor works best. JPG, PNG or WebP.
-Drop a photo, or browse, Photo · optional Flat on the floor works best. JPG, PNG or WebP.
+Add a photo, Photo · optional Flat on the floor works best. JPG, PNG or WebP.
 button, Add to closet
 Add to closet
 end of button, Add to closet
 end of form
-heading, Already in your closet · Top, level 2
-paragraph
-No tops yet.
-end of paragraph
 end of main
+navigation, Main
+list
+listitem, level 1, position 1, set size 5
+link, Feed
+Feed
+end of link, Feed
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Closet, current item
+Closet
+end of link, Closet, current item
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+button, Add a run, has popup dialog
++ Add
+end of button, Add a run, has popup dialog
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Call
+Call
+end of link, Call
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, You
+You
+end of link, You
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Main
 status
 end of document

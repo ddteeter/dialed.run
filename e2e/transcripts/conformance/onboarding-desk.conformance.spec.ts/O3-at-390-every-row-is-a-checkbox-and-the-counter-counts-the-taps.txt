@@ -1,0 +1,55 @@
+document
+main
+Step # of # · Optional
+heading, Start your closet, level 1
+form
+status
+group, Common in your climate · tap to add
+Common in your climate · tap to add
+Common in your climate · tap to add
+end, Common in your climate · tap to add
+checkbox, Short sleeve tee, not checked
+Short sleeve tee
+checkbox, #" shorts, not checked
+#" shorts
+checkbox, #" shorts, not checked
+#" shorts
+checkbox, Singlet, not checked
+Singlet
+checkbox, Wind shell, not checked
+Wind shell
+checkbox, Running vest, not checked
+Running vest
+checkbox, Rain jacket, not checked
+Rain jacket
+checkbox, Arm warmers, not checked
+Arm warmers
+checkbox, Running tights, checked
+Running tights
+checkbox, Merino base layer, not checked
+Merino base layer
+checkbox, Running gloves, not checked
+Running gloves
+checkbox, Beanie, checked
+Beanie
+checkbox, Buff, not checked
+Buff
+checkbox, Long sleeve quarter-zip, not checked
+Long sleeve quarter-zip
+button, Everything else · # more, not expanded
+Everything else ·
+#
+more
+end of button, Everything else · # more, not expanded
+end of group, Common in your climate · tap to add
+Closet:
+#
+pieces
+Tap what you own
+button, Next
+Next
+end of button, Next
+button, Skip for now
+end of form
+end of main
+end of document

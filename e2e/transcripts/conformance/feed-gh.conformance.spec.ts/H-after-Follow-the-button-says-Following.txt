@@ -1,0 +1,54 @@
+document
+banner
+link, Notifications
+end of banner
+main
+status
+link, Back to feed
+heading, @ravi_k, level 1
+@ravi_k
+end of heading, @ravi_k, level 1
+button, Following
+Following
+end of button, Following
+paragraph
+No shared runs yet.
+end of paragraph
+paragraph
+Follow
+@ravi_k
+and their shared runs will show in your feed.
+end of paragraph
+button, Report or block ravi_k
+end of main
+navigation, Main
+list
+listitem, level 1, position 1, set size 5
+link, Feed, current item
+Feed
+end of link, Feed, current item
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Closet
+Closet
+end of link, Closet
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+button, Add a run, has popup dialog
++ Add
+end of button, Add a run, has popup dialog
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Call
+Call
+end of link, Call
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, You
+You
+end of link, You
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Main
+status
+end of document

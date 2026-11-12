@@ -215,6 +215,10 @@ function PieceRow({
             className="target shrink-0 cursor-pointer rounded-pill border border-hairline bg-transparent px-4 py-2"
           >
             <Mono step="xs">Name it</Mono>
+            {/* Which piece, for a reader that hears the button alone: one
+                per row would otherwise all say "Name it" (#582). The
+                row's own name, as garment detail's Edit and Retire do. */}
+            <span className="sr-only">{` ${label}`}</span>
           </button>
         )}
       </div>

@@ -84,7 +84,7 @@ const counter = () => screen.getByText(/of \d+ named$/);
  * first row is always "Running tights", which is closet order (rule 02).
  */
 async function nameFirst(user: ReturnType<typeof userEvent.setup>) {
-  const [first] = screen.getAllByRole("button", { name: "Name it" });
+  const [first] = screen.getAllByRole("button", { name: /^Name it /u });
   await user.click(first ?? screen.getByRole("button", { name: "Next" }));
 }
 
@@ -102,7 +102,9 @@ describe("NamePieces", () => {
     // screen that showed three would be claiming to know a stranger.
     renderScreen();
 
-    expect(screen.getAllByRole("button", { name: "Name it" })).toHaveLength(5);
+    expect(screen.getAllByRole("button", { name: /^Name it /u })).toHaveLength(
+      5,
+    );
     expect(
       screen.getByRole("button", { name: /Everything else/ }),
     ).toHaveTextContent("Everything else · 1 more");
@@ -143,7 +145,9 @@ describe("NamePieces", () => {
     expect(screen.getByLabelText("Model")).toBeVisible();
     expect(screen.getByText("Brand alone is enough.")).toBeVisible();
     // Still a list of six offers, one of which is open.
-    expect(screen.getByText("Merino base layer")).toBeVisible();
+    expect(
+      screen.getByText("Merino base layer", { ignore: ".sr-only" }),
+    ).toBeVisible();
   });
 
   it("asks for no link and no photo", async () => {
@@ -227,7 +231,9 @@ describe("NamePieces", () => {
       expect(screen.getByText("Smartwool · No model")).toBeVisible();
     });
     expect(counter().textContent).toBe("0 of 6 named");
-    expect(screen.getAllByRole("button", { name: "Name it" })).toHaveLength(5);
+    expect(screen.getAllByRole("button", { name: /^Name it /u })).toHaveLength(
+      5,
+    );
   });
 
   it("asks the schema's question when the brand is blank", async () => {
@@ -299,7 +305,9 @@ describe("NamePieces", () => {
 
     await user.click(screen.getByRole("button", { name: /Everything else/ }));
 
-    expect(screen.getByText("Running socks")).toBeVisible();
+    expect(
+      screen.getByText("Running socks", { ignore: ".sr-only" }),
+    ).toBeVisible();
     expect(screen.getByRole("button", { name: "Fewer" })).toHaveAttribute(
       "aria-expanded",
       "true",
@@ -365,7 +373,33 @@ describe("NamePieces", () => {
     await waitFor(() => {
       expect(screen.getByText("Smartwool Intraknit 200")).toBeVisible();
     });
-    expect(screen.getAllByRole("button", { name: "Name it" })).toHaveLength(4);
+    expect(screen.getAllByRole("button", { name: /^Name it /u })).toHaveLength(
+      4,
+    );
+  });
+
+  it("names each offer for its piece, behind the visible words", () => {
+    // Heard alone, five buttons that all say "Name it" name nothing. The
+    // piece is in the name and not on screen twice: the visible label is
+    // still the two words, which start the name (WCAG 2.5.3).
+    renderScreen();
+
+    const offers = screen.getAllByRole("button", { name: /^Name it /u });
+    expect(offers.filter((offer) => offer.hasAttribute("aria-label"))).toEqual(
+      [],
+    );
+    expect(offers.map((offer) => offer.textContent)).toEqual([
+      "Name it Running tights",
+      "Name it Merino base layer",
+      "Name it Beanie",
+      "Name it Running gloves",
+      "Name it Short sleeve tee",
+    ]);
+    for (const offer of offers) {
+      const [visible, hidden] = offer.children;
+      expect(visible).toHaveTextContent(/^Name it$/u);
+      expect(hidden).toHaveClass("sr-only");
+    }
   });
 
   it("hides the offer while its own form is open", async () => {
@@ -376,7 +410,9 @@ describe("NamePieces", () => {
 
     await nameFirst(user);
 
-    expect(screen.getAllByRole("button", { name: "Name it" })).toHaveLength(4);
+    expect(screen.getAllByRole("button", { name: /^Name it /u })).toHaveLength(
+      4,
+    );
   });
 
   it("wires each field to its own suggestion list", async () => {

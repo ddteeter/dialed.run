@@ -22,7 +22,7 @@ import {
 } from "../conformance/feed-support";
 import { storageStateFor } from "../support/accounts";
 import { expect, test } from "../support/a11y";
-import { bar } from "../support/bars";
+import { PHONE, bar } from "../support/bars";
 import { hydrated } from "../support/demo";
 import { withLocalDb } from "../support/local-db";
 import { seedFollowedPost } from "./followed-runner";
@@ -183,6 +183,29 @@ test("search never finds a runner who has not confirmed their address", async ({
     await expect(
       page.getByRole("status").filter({ hasText: nobody }),
     ).toHaveText(nobody);
+  } finally {
+    await removeSeeded(rows);
+  }
+});
+
+// The other side of the rule, at the phone's width: a confirmed runner is
+// found. It ends on the result so what a screen reader is given for a hit
+// is checked in (#582).
+test("search finds a runner who has confirmed, as a row with Follow", async ({
+  page,
+}) => {
+  const rows = seeded();
+  const username = `found_${String(Date.now()).slice(-8)}`;
+  await seedRunner(rows, username);
+  try {
+    await page.setViewportSize(PHONE);
+    await page.goto("/feed/search");
+    await hydrated(page);
+    await page.getByPlaceholder("Search by name").fill(username);
+
+    const row = page.getByRole("listitem").filter({ hasText: username });
+    await expect(row.getByRole("link", { name: username })).toBeVisible();
+    await expect(row.getByRole("button", { name: "Follow" })).toBeVisible();
   } finally {
     await removeSeeded(rows);
   }

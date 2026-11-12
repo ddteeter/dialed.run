@@ -112,3 +112,23 @@ test("H with nothing public keeps its header and Follow, and says so plainly", a
     await removeSeeded(rows);
   }
 });
+
+// Not drawn: H's header once the runner is followed. It ends here so
+// what the button says afterwards is checked in (#582).
+test("H after Follow: the button says Following", async ({ page }) => {
+  const rows = seeded();
+  const runner = await seedRunner(rows, "ravi_k");
+  try {
+    await page.setViewportSize(PHONE);
+    await page.goto(`/feed/u/${runner}`);
+    await hydrated(page);
+
+    await page.getByRole("button", { name: "Follow" }).click();
+    await expect(page.getByRole("button", { name: "Following" })).toBeVisible({
+      timeout: 15_000,
+    });
+  } finally {
+    await unfollowEveryone(await feedUserId());
+    await removeSeeded(rows);
+  }
+});

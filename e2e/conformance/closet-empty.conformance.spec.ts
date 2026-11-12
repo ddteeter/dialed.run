@@ -6,6 +6,7 @@ import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { expect, test } from "../support/a11y";
 import { storageStateFor } from "../support/accounts";
+import { PHONE } from "../support/bars";
 import { cellsOf, hydrated, openBoard } from "../support/conformance";
 import { withLocalDb } from "../support/local-db";
 import { closetUserId } from "./closet-seed";
@@ -170,6 +171,12 @@ test("the heading row counts the pieces on the left, the switch on the right", a
   const cells = await cellsOf(page, '[data-part="grid"]');
   expect(cells.at(-2)).toMatch(/^OLD SINGLET .*\[ RETIRED \]/u);
   expect(cells.at(-1)).toBe("ADD GARMENT");
+
+  // It ends at the phone's width, with the same grid on it, so the
+  // transcript is what a phone's screen reader is given (#582).
+  await page.setViewportSize(PHONE);
+  await expect(page.locator("[data-slot='tab-bar']")).toBeVisible();
+  await expect(toggle).toBeChecked();
 });
 
 /**

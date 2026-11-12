@@ -1,0 +1,96 @@
+document
+main
+status
+link, Closet
+paragraph
+Top · Half-zip · M
+end of paragraph
+heading, Janji Rover Half-zip, level 1
+paragraph
+Midnight
+end of paragraph
+image, Janji Rover Half-zip
+Replace
+Replace
+button, Remove
+# km logged
+·
+# of # runs dialed
+paragraph
+Works at
+#–#°
+end of paragraph
+button, Wrong?
+Wrong?
+end of button, Wrong?
+paragraph
+midweight
+end of paragraph
+heading, Pairs with · when dialed, level 2
+Pairs with · when dialed
+end of heading, Pairs with · when dialed, level 2
+list
+listitem, level 1, position 1, set size 2
+Bandit #" Split
+, # runs dialed together
+end of listitem, level 1, position 1, set size 2
+listitem, level 1, position 2, set size 2
+Thin gloves
+, # runs dialed together
+end of listitem, level 1, position 2, set size 2
+end of list
+link, Edit Janji Rover Half-zip
+Edit
+Janji Rover Half-zip
+end of link, Edit Janji Rover Half-zip
+button, Retire Janji Rover Half-zip
+Retire
+Janji Rover Half-zip
+end of button, Retire Janji Rover Half-zip
+button, Delete Janji Rover Half-zip
+Delete
+Janji Rover Half-zip
+end of button, Delete Janji Rover Half-zip
+dialog, Retire the Rover Half-zip?
+dialog, Retire the Rover Half-zip?
+heading, Retire the Rover Half-zip?, level 2
+paragraph
+It leaves the closet and the picker. Its # runs and verdicts stay, and still count. You can bring it back.
+end of paragraph
+button, Retire
+Retire
+end of button, Retire
+button, Keep it
+end of dialog, Retire the Rover Half-zip?
+end of main
+navigation, Main
+list
+listitem, level 1, position 1, set size 5
+link, Feed
+Feed
+end of link, Feed
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Closet, current item
+Closet
+end of link, Closet, current item
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+button, Add a run, has popup dialog
++ Add
+end of button, Add a run, has popup dialog
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Call
+Call
+end of link, Call
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, You
+You
+end of link, You
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Main
+status
+end of document

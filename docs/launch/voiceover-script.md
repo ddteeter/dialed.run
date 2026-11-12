@@ -143,11 +143,15 @@ settings. A different word for the same fact is not a failure.
 they are written N, "the date" and "the time". You should hear the real
 value: "5.2 miles", not "N".
 
-**Where no transcript exists, the script says so.** A transcript is taken
-at the end of a test, so some states have none: an open sheet, the
-tap-list, Turnstile. Those steps say "no transcript" and give the rule the
-screen must meet. What VoiceOver says there is new information; write it
-down even when it passes. They are listed in #582.
+**One step has no transcript: Turnstile (1.3).** The tests run on
+Cloudflare's always-pass key, where the widget draws nothing, and a real
+challenge is Cloudflare's own frame, which the virtual reader cannot enter.
+That step gives the rule the screen must meet. What VoiceOver says there is
+new information; write it down even when it passes.
+
+**A transcript of an open sheet also lists the page behind it.** The
+virtual reader starts at the top of the page whatever is open. VoiceOver
+must not: with a sheet open, only the sheet's lines should be reachable.
 
 If a screen and its transcript disagree, the transcript is right and this
 script is stale: say so in the log.
@@ -245,34 +249,32 @@ You should hear:
 Do, in order:
 
 1. Type an email with no "@" and a valid everything else, then double tap
-   "Create account". You should hear, once and without moving, one sentence
-   that ends "One field needs a fix.", and then land on the Email field,
-   which reads its message with it. No transcript covers this on Create
-   account; the same pattern on Log in
-   (`conformance/auth-forms.conformance.spec.ts/Au-·-phone-Au3-wrong-password-on-Password.txt`) is "Not signed in.
-   One field needs a fix." and then "Password, That password doesn't match
-   this email."
-2. Double tap "Show password". Move back to it. It must now say that the
-   password is shown, by a new name or a state. No transcript.
+   "Create account"
+   (`conformance/auth-forms.conformance.spec.ts/Au-·-phone-Au1-refused-the-email-to-fix-and-the-password-shown.txt`).
+   You should hear, once and without moving, "Not signed in. One field
+   needs a fix.", and then land on the Email field, which reads its message
+   with it and says it is invalid: "Email, That does not look like an email
+   address."
+2. Double tap "Show password". Move back to it. In the same transcript the
+   button is now "Hide password", and the field reads what you typed.
 3. Listen to "Date of birth" closely: it is a date control, and the
    transcript shows its label but not how a reader operates it. Write down
    what VoiceOver calls it and whether you could set it.
 4. Fix the email and create the account.
 
-**1.3 Turnstile**, if it appears. No transcript. It must either pass by
-itself and say that it is checking, or be reachable by swiping and passable
-by double tap.
+**1.3 Turnstile**, if it appears. No transcript, and there cannot be one
+(part 2). It must either pass by itself and say that it is checking, or be
+reachable by swiping and passable by double tap.
 
 **1.4 Username.**
-Source: `account/username.spec.ts/the-username-screen-shows-the-current-handle.txt`,
-which is the Settings copy of this screen at desk width; the first-run step
-has no transcript of its own.
+Source: `account/username.spec.ts/a-runner-with-no-handle-yet-O0-anywhere-they-go-they-are-asked-for-a-username-first.txt`.
 
 You should hear:
 
-- "Username", heading 1
+- "Step N of N"
+- "What should runners call you?", heading 1
 - text field "Username", with "N to N letters, numbers or underscores. It's on everything you share. You can change it in settings."
-- button "Save"
+- button "Next"
 
 **1.5 Calibrate (O1).**
 Source: `conformance/onboarding-desk.conformance.spec.ts/O1-at-390-nothing-changes-no-bar-and-the-panel.txt`.
@@ -296,13 +298,41 @@ Do: double tap "Run a little cold". Move away and back: it says checked,
 and the other four do not. Check the group's question is heard when you
 enter the group, not only once at the top.
 
-**1.6 The tap-list (O3).** No transcript. Each item must say its name and
-whether it is checked, and say the new state when you double tap it.
+**1.6 The tap-list (O3).**
+Source: `conformance/onboarding-desk.conformance.spec.ts/O3-at-390-every-row-is-a-checkbox-and-the-counter-counts-the-taps.txt`.
 
-**1.7 Name the pieces (P2.5).** No transcript. Type two letters in a Brand
-field: the suggestions must be announced when they appear and be reachable
-by swiping. The skip must be reachable without passing through every field
-(try the rotor on Links and on Buttons).
+You should hear:
+
+- "Step N of N · Optional"
+- "Start your closet", heading 1
+- a group "Common in your climate · tap to add": one checkbox per piece, by its name, such as "Short sleeve tee", "Running tights", "Beanie", none checked
+- button "Everything else · N more", collapsed
+- "Closet: N pieces", "Tap what you own"
+- button "Next", button "Skip for now"
+
+Do: double tap "Running tights" and "Beanie". Each says checked (the
+transcript has those two checked), and "Closet:" counts them. Write down
+whether the new count was spoken without your moving.
+
+**1.7 Name the pieces (P2.5).**
+Source: `conformance/onboarding-desk.conformance.spec.ts/P2-5-for-a-runner-with-generic-pieces-P2-5-at-390-a-piece-open-for-naming-with-brands-on-offer.txt`.
+
+You should hear:
+
+- "Step N of N · Optional"
+- "Which ones do you actually reach for?", heading 1
+- "Name those. A category can't remember — a product can."
+- a list, one item per piece: its name, its type and "Generic" ("Bottom · Generic"), and a button named for it, "Name it Running tights"
+- "N of N named"
+- button "Next", button "Skip for now"
+
+Do: double tap "Name it" on one piece. In its place you should hear text
+fields "Brand" and "Model", each with a list of suggestions, "Brand alone
+is enough." and button "Save". Type two letters in Brand. The suggestions
+are the browser's own list, which a transcript cannot show: write down
+whether VoiceOver announced them and whether you could reach them. "Skip
+for now" must be reachable without passing through every field (try the
+rotor on Buttons).
 
 **1.8 Now go run (P3).**
 Source: `conformance/onboarding-desk.conformance.spec.ts/P3-at-390-the-body-is-light-as-well.txt`.
@@ -333,9 +363,10 @@ step by step, then once with Screen Curtain (2.8).
 in the tab bar and double tap it.
 Source: `conformance/a1-upload.conformance.spec.ts/A1-·-upload-at-rest-the-drop-zone-says-what-the-board-says.txt`.
 
-The button opens a sheet first. No transcript covers the open sheet:
-VoiceOver must land inside it, stay inside it, and the scrub must close it
-and return you to "Add a run".
+The button says it opens a dialog. What opens is this screen, laid over
+the tab you were on: there is no separate sheet, and the tab bar stays,
+with the tab you came from still marked current. Write down what VoiceOver
+calls the button, and whether what followed is what that led you to expect.
 
 On the screen, you should hear:
 
@@ -347,11 +378,15 @@ Do: double tap the file control. The iOS file picker opens (it is Apple's;
 not under test). Choose your run file.
 
 **2.2 The parsed card (A1).**
-Source: `run-logging/run-logging.spec.ts/A1-·-a-pause-is-part-of-the-run-s-time-D-111-.txt`
-(desk width; your file's name replaces the one in it).
+Source: `run-logging/run-logging.spec.ts/A1-at-the-phone-s-width-A1-·-the-conditions-have-arrived-and-the-start-time-row-is-open.txt`
+(your file's name replaces the one in it; it has the start-time row open,
+which is 2.3).
 
 Without moving, you should hear the status: "Parsed, your file's name.
 Fetching weather."
+(`run-logging/run-logging.spec.ts/A1-·-a-pause-is-part-of-the-run-s-time-D-111-.txt`, desk width),
+and then, when the conditions arrive, "Parsed, your file's name. Weather
+found."
 
 Then, stepping through:
 
@@ -362,18 +397,25 @@ Then, stepping through:
 - "N minutes N seconds per mile"
 - the date
 - button "the time, change start time"
-- "Fetching weather", and then the conditions once they arrive. The
-  transcript ends before they do: write down what is said when they land,
-  and whether it was said without your moving.
+- "Conditions · auto-attached"
+- "N degrees", "dry"
+- "Feels N degrees · N % hum · N mph · overcast"
+- "Never typed by hand. Wrong time? Change it on the run card and we'll get the weather for it."
+- link "Weather data provided by Visual Crossing"
 - link "Looks right — what did you wear?"
 
 Check: distance, time and pace are heard as values with their units, not
-as bare digits.
+as bare digits. Write down how VoiceOver reads the "Feels" line.
 
-**2.3 Changing the start time.** Double tap the start-time button. No
-transcript. The row must open in place, VoiceOver must move into it, and
-when you change the time the new conditions must be announced when they
-arrive. Close it and continue with "Looks right — what did you wear?".
+**2.3 Changing the start time.** Double tap the start-time button. Same
+source. In the button's place you should hear:
+
+- the time field "Start time", holding the time, with "The file said the time. Change it if your watch's clock was off."
+- button "Get weather"
+
+VoiceOver must move into the field when the row opens. Change the time and
+double tap "Get weather": the new conditions must be announced when they
+arrive. Then continue with "Looks right — what did you wear?".
 
 **2.4 Attach the kit (A2).**
 Source: `conformance/a2-attach.conformance.spec.ts/A2-·-before-a-suggestion-no-suggestion-one-line-no-card-and-the-picker-loses-its-OR.txt`.
@@ -400,10 +442,26 @@ has "Most likely", "Checking what you wore at N degrees", and the heading
 becomes "Or pick from the closet".
 
 Do: double tap two pieces. Each must then say it is pressed or selected.
-On a later run, when a suggestion is offered, "That's it" must be within
-one or two swipes of the heading; no transcript covers the suggestion.
+On a later run, when a suggestion is offered
+(`conformance/a2-attach.conformance.spec.ts/A2-·-heard-at-390-a-suggestion-the-kit-worn-last-time-it-was-like-this-and-That-s-it.txt`),
+after the header you should hear "Most likely · from N degrees damp, the
+date", a list of the pieces, button "That's it" and button "Change", and
+the picker's heading becomes "Or pick from the closet". "That's it" must be
+within one or two swipes of the list.
 
-**2.5 The category sheet (A2b).** Double tap "All Tops". No transcript.
+**2.5 The category sheet (A2b).** Double tap "All Tops".
+Source: `conformance/a2-attach.conformance.spec.ts/A2-·-heard-at-390-A2b-a-category-s-sheet-open-over-the-picker.txt`.
+
+In the sheet you should hear:
+
+- a dialog "Tops", and "Tops", heading 2
+- "N of N match N degrees damp", "N selected"
+- search field "Search"
+- button "Matches conditions", pressed
+- a list, one checkbox per piece: its name and its record, such as "Half-zip untested", not checked
+- button "Done"
+
+Do: double tap a piece. It says checked, and "N selected" counts it.
 VoiceOver must land in the sheet and stay in it; the scrub closes it and
 you are back on "All Tops".
 
@@ -443,15 +501,18 @@ Do:
    Jacket not enough"). It must say which piece it flags.
 
 **2.7 Saving.** Double tap "Log it".
-Source: `walkthroughs/log-a-run.walkthrough.spec.ts/log-a-run-the-file-its-conditions-the-kit-the-verdict.txt`
-(desk width).
+Sources: `conformance/a3-verdict.conformance.spec.ts/A3-·-round-21-Noted-nothing-moved-the-receipt-the-chips-read-only-no-MORE.txt`
+(a run with no weather) and
+`walkthroughs/log-a-run.walkthrough.spec.ts/log-a-run-the-file-its-conditions-the-kit-the-verdict.txt`
+(with weather; desk width).
 
 Without moving, you should hear once: "Noted." and one sentence, such as
 "Merino half-zip is now N of N in N to N degrees." With no weather it is
 "Logged. No weather came with this run, so no temperature record moved."
 
 Then the screen is the receipt: the same heading, the five verdicts and
-the tags now dimmed, "Noted" and the sentence again as text, and under
+the tags now dimmed, with the verdict you picked still checked, "Noted"
+and the sentence again as text, and under
 them "This run", "The kit you're judging" and "Before, in N to N degrees",
 each a heading 2.
 
@@ -466,36 +527,34 @@ even if you recovered. Three-finger triple tap again when done.
 ### Flow 3. The closet
 
 **3.1 The grid (C).** Double tap "Closet" in the tab bar.
-Sources: `walkthroughs/first-run.walkthrough.spec.ts/the-first-run-an-invite-an-account-a-handle-and-a-closet-to-start-from.txt`
-and `conformance/closet-empty.conformance.spec.ts/the-heading-row-counts-the-pieces-on-the-left-the-switch-on-the-right.txt`
-(both desk width).
+Source: `conformance/closet-empty.conformance.spec.ts/the-heading-row-counts-the-pieces-on-the-left-the-switch-on-the-right.txt`.
 
 You should hear:
 
-- a navigation "Filter the closet":
-  "Group", heading 2, with links "All N" (current page), "Tops N", "Bottoms N", "Hands / head N";
-  "Works at", heading 2, with sliders "Lowest" and "Highest";
-  "Coverage", heading 2, with buttons "Covered N", "Partial N", "Untested N", not pressed
 - "N pieces", heading 1
 - switch "Show retired (N)", when something is retired
 - "N of N pieces are still generic — name the ones you reach for."
+- a navigation "Filter the closet": three buttons, each collapsed: "Group · All", "Works at · Any", "Coverage · All"
 - a list, one link per piece, each a single stop: its name, "No runs yet"
-  or its runs, its range "N to N degrees" or "Untested", and "Generic"
-  where it is
+  or its runs, its range "N to N degrees" or "Untested", "Generic" where
+  it is, and "Retired" where it is
 - link "Add garment"
+
+At desk width the three filters are open beside the grid instead
+(`walkthroughs/first-run.walkthrough.spec.ts/the-first-run-an-invite-an-account-a-handle-and-a-closet-to-start-from.txt`).
 
 With nothing in it
 (`conformance/closet-empty.conformance.spec.ts/the-empty-closet-says-what-ruling-16-says-and-offers-the-dashed-tile.txt`):
 "Nothing in here yet", heading 1; "Add what you run in most. Three pieces
-is enough to start."; link "Add garment".
+is enough to start."; link "Add garment" (desk width).
 
-Do: double tap "Tops N". It becomes the current page and the others do
-not. Double tap "Untested N": it says pressed. Check each piece is one
-stop, not a photo, then a name, then a type.
+Do: double tap "Group · All". It says expanded, and its choices follow. No
+transcript has a filter open: write down what the choices say. Pick Tops:
+the button must then say what you picked. Check each piece is one stop,
+not a photo, then a name, then a type.
 
 **3.2 Add a garment (F).** Double tap "Add garment".
-Source: `closet/closet-add.spec.ts/F-puts-what-it-is-before-its-link-and-draws-its-own-▾.txt`
-(desk width).
+Source: `closet/closet-add.spec.ts/F-puts-what-it-is-before-its-link-and-draws-its-own-▾.txt`.
 
 You should hear:
 
@@ -508,9 +567,8 @@ You should hear:
 - a group "Visibility": Plain, Reflective trim, Hi-viz
 - a group "Color" of 13 radios, each with "Pick the nearest. A print is its main color."
 - text fields "Size" and "Colorway"
-- the photo control: "Drop a photo, or browse, Photo · optional. Flat on the floor works best. JPG, PNG or WebP."
+- the photo control: "Add a photo, Photo · optional. Flat on the floor works best. JPG, PNG or WebP."
 - button "Add to closet"
-- "Already in your closet · Top", heading 2
 
 Do: change Category to Shoes; the Type group must now read shoe types.
 Type two letters in Brand: suggestions must be announced and reachable.
@@ -532,10 +590,13 @@ You should hear:
 - "Pairs with · when dialed", heading 2, and its list
 - link "Edit, the name", button "Retire, the name", button "Delete, the name"
 
-Do: double tap "Retire". No transcript has the confirm open: it must be a
-dialog VoiceOver stays inside, its confirm must say what it retires, and
-the scrub must close it and return you to "Retire". On a piece that has
-runs, double tap "Delete"
+Do: double tap "Retire"
+(`conformance/closet-detail.conformance.spec.ts/the-retire-confirm-open-at-390-with-focus-on-Keep-it.txt`):
+a dialog "Retire the, name?", heading 2; "It leaves the closet and the
+picker. Its N runs and verdicts stay, and still count. You can bring it
+back."; buttons "Retire" and "Keep it". VoiceOver must land on "Keep it"
+and stay inside the dialog, and the scrub must close it and return you to
+"Retire". On a piece that has runs, double tap "Delete"
 (`conformance/closet-round26.conformance.spec.ts/Y-·-deleting-a-piece-with-runs-is-round-26-s-sheet-word-for-word.txt`):
 a dialog "Delete the, name? Retire it instead.", heading 2; "It's on N
 runs. Retiring takes it out of the picker and keeps everything it taught
@@ -577,9 +638,10 @@ Source: `feed/feed-unconfirmed.spec.ts/search-never-finds-a-runner-who-has-not-c
 
 You should hear "Find a runner", heading 1, and a search field "Search by
 name". Type a name nobody has: without moving you should hear "No runner
-called @, the name." Type your second account's handle: no transcript
-covers a hit; the result, or how many there are, must be announced when it
-arrives. Double tap the result.
+called @, the name." Type your second account's handle
+(`feed/feed-unconfirmed.spec.ts/search-finds-a-runner-who-has-confirmed-as-a-row-with-Follow.txt`):
+without moving you should hear "N runner found.", and the list has one
+row, link "@handle" and then button "Follow". Double tap the link.
 
 **4.3 Someone else's profile (H).**
 Source: `conformance/feed-gh.conformance.spec.ts/H-with-nothing-public-keeps-its-header-and-Follow-and-says-so-plainly.txt`.
@@ -592,9 +654,10 @@ You should hear:
 - their shared runs, or "No shared runs yet." and "Follow @handle and their shared runs will show in your feed."
 - button "Report or block, the handle"
 
-Do: double tap "Follow". No transcript has the followed state: the button
-must now say that you follow them, by a new name or a state, and say so
-without your leaving it.
+Do: double tap "Follow"
+(`conformance/feed-gh.conformance.spec.ts/H-after-Follow-the-button-says-Following.txt`).
+The button's name becomes "Following", and it must say so without your
+leaving it. Write down what was spoken while it worked.
 
 **4.4 Post detail (D).** Open one of their runs.
 Source: `conformance/feed-d.conformance.spec.ts/D-for-someone-else-s-entry-strip-with-badge-kit-tags-Useful-Report.txt`.
@@ -664,10 +727,13 @@ With nothing in it
 "Quiet", heading 2, and "Log a run and we'll ask you one question about
 it. That's most of what lands here."
 
-No transcript has an unread row or the "Mark all read" button in it.
-Unread is drawn as a white row and a dot: an unread row must **say** it is
-unread, and "Mark all read" must be a button by that name that announces
-its result. Write down exactly what an unread row says.
+With something unread
+(`conformance/notifications-m.conformance.spec.ts/M-at-rest-two-unread-rows-one-read-and-Mark-all-read.txt`):
+button "Mark all read" comes before the list, and an unread row starts
+with "Unread", then its sentence, then its date and time. A read row has
+no such word. Double tap "Mark all read": the button goes and no row says
+"Unread" (the first source above is that state). Write down what was
+spoken when it finished.
 
 **5.3 Settings.** From "You", double tap "Settings".
 Source: `conformance/system-settings.conformance.spec.ts/the-index-U1-s-groups-and-rows-in-U1-s-order-keeping-the-tab-bar.txt`.
@@ -684,15 +750,36 @@ You should hear:
 - button "Sign out"
 
 Do: rotor to Headings and swipe down: all six sections, in that order.
-Open "Privacy". No transcript covers it: each switch must say its label
-and whether it is on, and say the new state when you double tap it. Turn
-"Count my runs in anonymous totals" off and on again.
+Open "Privacy".
+Source: `conformance/system-settings.conformance.spec.ts/Privacy-at-390-who-sees-new-runs-and-the-two-switches.txt`.
 
-**5.4 Delete account.** Settings › Account, the last row. No transcript.
+You should hear:
+
+- "Privacy", heading 1, and link "Settings"
+- "Who sees new runs", heading 2, and a group of the same name: radios "Private" and "Shared", one checked
+- "Public is a choice here once your profile is public. You can still make any one run public."
+- button "Save"
+- "Public profile · Saves as you switch", heading 2, and checkbox "Public profile", not checked, with its sentence, which starts "Off."
+- "Anonymous totals · Saves as you switch", heading 2, and checkbox "Count my runs in anonymous totals", checked, with its sentence
+- link "How the guides are made"
+
+The two are drawn as switches and exposed as checkboxes, so VoiceOver may
+call them either. Turn "Count my runs in anonymous totals" off and on
+again: it must say the new state each time.
+
+**5.4 Delete account.** Settings › Account, the last row.
+Source: `conformance/system-settings.conformance.spec.ts/Delete-account-at-390-the-sheet-open-and-not-confirmed.txt`.
+
 The row is a button: "Delete account", "Deleted after 7 days. Log in
-before then to keep it." Double tap it. It must open a dialog VoiceOver
-stays inside, the confirm must say what it deletes, and the scrub must
-close it and return you to the row. **Close it. Do not confirm.**
+before then to keep it.", "Delete". Double tap it. You should hear:
+
+- a dialog "Delete your account?", and the same words as heading 2
+- "Your runs, closet, entries and photos go in N days. Shared runs leave the feed now. Log in before the date to keep everything."
+- the password field "Current password"
+- button "Delete my account", button "Keep it"
+
+VoiceOver must stay inside the dialog, and the scrub must close it and
+return you to the row. **Close it. Do not confirm.**
 
 ## 5. Logging the run
 
@@ -709,7 +796,8 @@ many failures.
 - **Each failure becomes an issue** (`docs/agents/issue-tracker.md`), fixed
   before friends or deferred by the owner's decision, and the row carries
   its number. It is never left as a note alone.
-- Also write down, outside the table, what VoiceOver said at every "no
-  transcript" step. That is the only record of those states.
+- Also write down, outside the table, what VoiceOver said at Turnstile
+  (1.3) and wherever a step asks you to write something down. That is the
+  only record of those.
 - If a step in this script was wrong or unclear, say so: the script is
   fixed with the failures.

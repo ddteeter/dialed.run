@@ -1,0 +1,103 @@
+document
+banner
+link, Notifications
+end of banner
+main
+heading, Account, level 1
+link, Settings
+Settings
+end of link, Settings
+heading, Sign-in, level 2
+Sign-in
+end of heading, Sign-in, level 2
+list
+listitem, level 1, position 1, set size 3
+link, Email closet-#@example.com Change
+Email
+closet-#@example.com
+Change
+end of link, Email closet-#@example.com Change
+end of listitem, level 1, position 1, set size 3
+listitem, level 1, position 2, set size 3
+link, Username @closet_#
+Username
+@closet_#
+end of link, Username @closet_#
+end of listitem, level 1, position 2, set size 3
+listitem, level 1, position 3, set size 3
+link, Password Change the password you log in with
+Password
+Change the password you log in with
+end of link, Password Change the password you log in with
+end of listitem, level 1, position 3, set size 3
+end of list
+button, Sign out everywhere
+Sign out everywhere
+end of button, Sign out everywhere
+heading, Your data, level 2
+Your data
+end of heading, Your data, level 2
+list
+listitem, level 1, position 1, set size 1
+Export your data
+Runs, closet, entries and photos
+button, Get a copy
+Get a copy
+end of button, Get a copy
+end of listitem, level 1, position 1, set size 1
+end of list
+button, Delete account Deleted after # days. Log in before then to keep it. Delete
+Delete account
+Deleted after # days. Log in before then to keep it.
+Delete
+end of button, Delete account Deleted after # days. Log in before then to keep it. Delete
+dialog, Delete your account?
+dialog, Delete your account?
+form
+status
+heading, Delete your account?, level 2
+paragraph
+Your runs, closet, entries and photos go in # days. Shared runs leave the feed now. Log in before
+:day, :month #
+to keep everything.
+end of paragraph
+Current password
+Current password
+button, Delete my account
+Delete my account
+end of button, Delete my account
+button, Keep it
+end of form
+end of dialog, Delete your account?
+end of main
+navigation, Main
+list
+listitem, level 1, position 1, set size 5
+link, Feed
+Feed
+end of link, Feed
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Closet
+Closet
+end of link, Closet
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+button, Add a run, has popup dialog
++ Add
+end of button, Add a run, has popup dialog
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Call
+Call
+end of link, Call
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, You
+You
+end of link, You
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Main
+status
+end of document

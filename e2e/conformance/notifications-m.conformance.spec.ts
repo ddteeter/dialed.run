@@ -36,29 +36,15 @@ function upper(leaves: readonly { text: string }[]): string[] {
   return leaves.map((leaf) => leaf.text.toUpperCase());
 }
 
-test("M in flight: white-and-dot rows, and Mark all read breathing in place", async ({
-  page,
-  baseURL,
-}) => {
-  if (baseURL === undefined) throw new Error("no baseURL");
-
-  await openBoard(page, BOARD, baseURL);
-  const drawnDots = await fillsOf(
-    page,
-    `${part(M, "notification-row")}[data-state="unread"]`,
-  );
-  const drawnLeaves = await leavesOf(page, part(M, "mark-all"));
-  const drawn = {
-    rowFills: await fillsOf(page, part(M, "notification-list")),
-    dotFill: drawnDots[0],
-    marking: upper(drawnLeaves),
-  };
-  expect(drawn.rowFills, "the board has no M rows").not.toHaveLength(0);
-
+/**
+ * The board's three rows for the feed account: two unread, then one read,
+ * newest first. Their ids go on `rows`, to be taken out with it.
+ */
+async function seedBoardRows(
+  rows: ReturnType<typeof seeded>,
+): Promise<readonly { body: string; read: boolean; createdAt: number }[]> {
   const userId = await feedUserId();
-  const rows = seeded();
   const now = nowSeconds();
-  // The board's three: two unread, then one read — newest first.
   const drafts = [
     { body: "Your run import didn't work.", read: false, createdAt: now },
     {
@@ -81,6 +67,30 @@ test("M in flight: white-and-dot rows, and Mark all read breathing in place", as
       });
     }
   });
+  return drafts;
+}
+
+test("M in flight: white-and-dot rows, and Mark all read breathing in place", async ({
+  page,
+  baseURL,
+}) => {
+  if (baseURL === undefined) throw new Error("no baseURL");
+
+  await openBoard(page, BOARD, baseURL);
+  const drawnDots = await fillsOf(
+    page,
+    `${part(M, "notification-row")}[data-state="unread"]`,
+  );
+  const drawnLeaves = await leavesOf(page, part(M, "mark-all"));
+  const drawn = {
+    rowFills: await fillsOf(page, part(M, "notification-list")),
+    dotFill: drawnDots[0],
+    marking: upper(drawnLeaves),
+  };
+  expect(drawn.rowFills, "the board has no M rows").not.toHaveLength(0);
+
+  const rows = seeded();
+  const drafts = await seedBoardRows(rows);
 
   try {
     await page.setViewportSize(PHONE);
@@ -127,6 +137,30 @@ test("M in flight: white-and-dot rows, and Mark all read breathing in place", as
       .locator("xpath=ancestor::div[contains(@class, 'max-w-panel')]");
     const box = await panel.boundingBox();
     expect(box?.width).toBeLessThanOrEqual(390);
+  } finally {
+    await removeSeeded(rows);
+  }
+});
+
+// The test above ends with every row read. This one ends before Mark all
+// read is pressed, so what a screen reader is given for an unread row and
+// for the button is checked in (#582).
+test("M at rest: two unread rows, one read, and Mark all read", async ({
+  page,
+}) => {
+  const rows = seeded();
+  await seedBoardRows(rows);
+  try {
+    await page.setViewportSize(PHONE);
+    await page.goto("/notifications");
+    await hydrated(page);
+
+    await expect(
+      page.locator('[data-part="notification-row"][data-state="unread"]'),
+    ).toHaveCount(2);
+    await expect(
+      page.getByRole("button", { name: "Mark all read" }),
+    ).toBeVisible();
   } finally {
     await removeSeeded(rows);
   }

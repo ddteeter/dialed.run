@@ -48,7 +48,7 @@ radio, Tee, not checked, position 2, set size 7
 Tee
 radio, L/S crew, not checked, position 3, set size 7
 L/S crew
-radio, Half-zip, not checked, position 4, set size 7
+radio, Half-zip, checked, position 4, set size 7
 Half-zip
 radio, Jacket, not checked, position 5, set size 7
 Jacket
