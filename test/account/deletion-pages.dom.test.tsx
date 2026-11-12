@@ -97,7 +97,16 @@ describe("DeleteAccount (U1's last row)", () => {
     await view;
     const row = document.querySelector("[data-part='delete-account']");
     expect(row).toHaveClass("border-t-2", "border-ink");
-    const open = screen.getByRole("button", { name: /^Delete account/u });
+    // Round 52 #160: named by its title alone, described by its
+    // sentence, and the word at the right edge is for the eye only.
+    const open = screen.getByRole("button", { name: "Delete account" });
+    expect(open).toHaveAccessibleDescription(
+      "Deleted after 7 days. Log in before then to keep it.",
+    );
+    expect(within(open).getByText("Delete")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
     expect(open).toHaveTextContent(
       /^Delete accountDeleted after 7 days\. Log in before then to keep it\.Delete$/u,
     );
