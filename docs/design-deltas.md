@@ -1776,6 +1776,11 @@ design has answered 86.
       becomes "shared with runners on dialed.run", and `/privacy` gains
       "What anyone can see" (the owner's legal text). D-58's signed-out
       `/feed/entry` page is unchanged.
+      **Since changed for one state (owner, 2026-11-11, #590; built in
+      design 201):** once the runner is followed, the line under H's "No
+      shared runs yet." reads "Their shared runs will show in your feed."
+      It used to keep asking for the follow. Before Follow it is as ruled.
+      Design is told in round 52's notices.
     - **b. Settings › Privacy** gains a PUBLIC PROFILE group between NEW
       RUNS and ANONYMOUS TOTALS. "Show my closet" shows only while the
       profile is on and keeps its value while hidden. With the profile off,
