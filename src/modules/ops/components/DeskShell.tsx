@@ -13,8 +13,10 @@ import type { DeskToday } from "../desk";
  * `data-ground="night"` is T1's dark column in both themes (design 185):
  * it redefines every ground-relative role, so the tokens below mean
  * "against ink" without a second palette, and it reads nothing from the
- * page. Not `ink`, the inverted block, which turns to paper on a dark page
- * (T2 rule 04): T3 says the Desk "doesn't read the runner's theme".
+ * page. Not `ink`, the ink block, which becomes `--panel` with a hairline
+ * on a dark page (R50·143.1, rule 04's fallback): T3 says the Desk
+ * "doesn't read the runner's theme", and R50·143.1 that "the Desk stays
+ * ink".
  */
 
 /**
