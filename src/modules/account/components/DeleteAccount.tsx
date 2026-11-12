@@ -82,18 +82,23 @@ export function DeleteAccount({
       className="flex flex-col border-t-2 border-ink pt-3"
     >
       {/* Round 52 #160: one button, named by its title and described by
-          its sentence. The word at the right edge repeats the title for
-          the eye, so it is hidden from the name. */}
-      <button
-        type="button"
-        aria-labelledby={titleId}
-        aria-describedby={sentenceId}
-        onClick={() => {
-          setIsOpen(true);
-        }}
-        className="target flex cursor-pointer items-center justify-between gap-3 border-none bg-transparent p-0 py-3 text-left"
-      >
-        <span className="flex flex-col gap-1">
+          its sentence, and the word at the right edge is for the eye
+          only. The button lies over the row and holds no text of its own:
+          with the sentence inside it, its visible text was more than its
+          name, which is WCAG 2.5.3's failure (axe,
+          label-content-name-mismatch). The row's words are hidden from
+          the reading order so they are heard once, through the button. */}
+      <div className="relative flex items-center justify-between gap-3 py-3">
+        <button
+          type="button"
+          aria-labelledby={titleId}
+          aria-describedby={sentenceId}
+          onClick={() => {
+            setIsOpen(true);
+          }}
+          className="target absolute inset-0 cursor-pointer border-none bg-transparent p-0"
+        />
+        <span aria-hidden="true" className="flex flex-col gap-1">
           <span id={titleId} className="text-body font-semibold text-cold-text">
             Delete account
           </span>
@@ -104,7 +109,7 @@ export function DeleteAccount({
         <span aria-hidden="true" className="shrink-0 text-body text-ink">
           Delete
         </span>
-      </button>
+      </div>
       {isOpen ? (
         <DeleteSheet
           hasPassword={hasPassword}

@@ -103,17 +103,22 @@ describe("DeleteAccount (U1's last row)", () => {
     expect(open).toHaveAccessibleDescription(
       "Deleted after 7 days. Log in before then to keep it.",
     );
-    expect(within(open).getByText("Delete")).toHaveAttribute(
-      "aria-hidden",
-      "true",
-    );
-    expect(open).toHaveTextContent(
+    // The button lies over the row and holds none of its words (WCAG
+    // 2.5.3: a control's visible text has to be in its name), and the
+    // words are heard once, through it.
+    expect(open).toBeEmptyDOMElement();
+    expect(open).toHaveClass("absolute", "inset-0");
+    expect(open.parentElement).toHaveClass("relative");
+    expect(open.parentElement).toHaveTextContent(
       /^Delete accountDeleted after 7 days\. Log in before then to keep it\.Delete$/u,
     );
+    expect(
+      [...(open.parentElement?.children ?? [])].map(
+        (child) => child.getAttribute("aria-hidden") === "true",
+      ),
+    ).toEqual([false, true, true]);
     // Pink as text is `--cold-text`; `--action` is a surface (tokens.css).
-    expect(within(open).getByText("Delete account")).toHaveClass(
-      "text-cold-text",
-    );
+    expect(screen.getByText("Delete account")).toHaveClass("text-cold-text");
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
