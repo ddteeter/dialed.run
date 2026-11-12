@@ -1113,7 +1113,8 @@ so the line is recorded on #590 until one does.
   in-flight pair. H's header keeps the bare labels, because the h1 names
   the runner. As built, the in-flight names are "Following @handle" and
   "Unfollowing @handle" with `aria-busy`, with no ellipsis and no
-  `aria-pressed`: the pill has neither on H today.
+  `aria-pressed`: the pill has neither on H today, and they are in the
+  contract's row but not the ruling. Asked back as #605.
 - **R52·158 · Measured lines (#591). Confirmed and widened; not built
   yet.** A line of abbreviated measures keeps its drawn text
   `aria-hidden` and carries a visually hidden spoken form: full words,
@@ -1129,7 +1130,7 @@ so the line is recorded on #590 until one does.
   description, the right-edge "Delete" hidden from screen readers. As
   built, the button lies over the row and holds no text: with the sentence
   inside it, its visible text was more than its name (WCAG 2.5.3). The row
-  is drawn as before.
+  is drawn as before. The contract row's markup is asked back as #605.
 - **R52·161 · The log-flow launcher (#594). Changed in the contract;
   built (design 202).** The launcher stays a button and loses `aria-haspopup`,
   because the flow is three screens and no dialog opens. It is named "Add
