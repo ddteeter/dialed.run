@@ -521,7 +521,7 @@
     },
     {
       "name": "fast-xml-parser",
-      "version": "5.11.2",
+      "version": "5.12.0",
       "licence": "MIT",
       "copyright": "2017 Amit Kumar Gupta",
       "project": "https://github.com/NaturalIntelligence/fast-xml-parser#readme"
@@ -564,7 +564,7 @@
     },
     {
       "name": "is-unsafe",
-      "version": "2.0.2",
+      "version": "2.0.3",
       "licence": "MIT",
       "copyright": "2026 Natural Intelligence",
       "project": "https://github.com/NaturalIntelligence/is-unsafe#readme"
@@ -866,7 +866,7 @@
     },
     {
       "name": "strnum",
-      "version": "2.4.2",
+      "version": "2.5.1",
       "licence": "MIT",
       "copyright": "2021 Natural Intelligence",
       "project": "https://github.com/NaturalIntelligence/strnum#readme"
