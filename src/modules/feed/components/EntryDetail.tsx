@@ -7,7 +7,7 @@ import type { Units } from "../../../lib/contracts";
 // Type only, so nothing of safety reaches the client bundle: the shape the
 // route hands in is checked against the real component.
 import type { NoticeBand as NoticeBandShape } from "../../safety";
-import { formatDistance, paceForms } from "../../../lib/contracts/measures";
+import { measuredLine, paceForms } from "../../../lib/contracts/measures";
 import {
   Bracketed,
   FormStatus,
@@ -241,7 +241,15 @@ function RunStrip({
         {runWhenLabel(entry.startedAt, entry.conditions?.timeZone)}
       </Mono>
       <div className="flex flex-wrap items-baseline gap-3">
-        <Mono step="lg">{formatDistance(entry.distanceM, units.distance)}</Mono>
+        {/* Drawn as "8.2mi", said "8.2 miles" (round 52 #158). */}
+        <Mono step="lg">
+          <Spoken
+            {...measuredLine(
+              [[{ kind: "distance", distanceM: entry.distanceM }]],
+              units,
+            )}
+          />
+        </Mono>
         {pace === undefined ? undefined : (
           <Mono className="text-quiet">
             <Spoken {...pace} />

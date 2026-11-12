@@ -1,5 +1,5 @@
 import type { Units } from "../../lib/contracts";
-import { formatTempRange } from "../../lib/contracts/measures";
+import { measuredLine } from "../../lib/contracts/measures";
 import type { Conditions } from "../../lib/contracts";
 
 /**
@@ -10,9 +10,12 @@ import type { Conditions } from "../../lib/contracts";
  * Conditions win over the indoor flag: a run with a real observation
  * attached has conditions to show whatever it was marked. The temperature
  * is the range the run actually covered (R-5), in the viewer's own unit.
+ * A line of measures (round 52 #158): drawn, and said in words.
  */
 export type StripConditions =
-  { kind: "conditions"; text: string } | { kind: "indoor" } | undefined;
+  | { kind: "conditions"; shown: string; said: string }
+  | { kind: "indoor" }
+  | undefined;
 
 export function stripConditions(
   conditions: Conditions | undefined,
@@ -20,14 +23,21 @@ export function stripConditions(
   units: Units,
 ): StripConditions {
   if (conditions !== undefined) {
-    const temperature = formatTempRange(
-      conditions.span.minTempC,
-      conditions.span.maxTempC,
-      units.temp,
-    );
     return {
       kind: "conditions",
-      text: `${temperature} · ${conditions.condition}`,
+      ...measuredLine(
+        [
+          [
+            {
+              kind: "range",
+              minC: conditions.span.minTempC,
+              maxC: conditions.span.maxTempC,
+            },
+          ],
+          [{ kind: "word", word: conditions.condition }],
+        ],
+        units,
+      ),
     };
   }
   return isIndoor ? { kind: "indoor" } : undefined;

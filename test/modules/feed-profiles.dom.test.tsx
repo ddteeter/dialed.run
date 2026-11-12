@@ -411,11 +411,17 @@ describe("OwnProfile (G): past day one", () => {
         (mark) => mark.textContent,
       ),
     ).toStrictEqual(["[", "]"]);
+    const latest = screen.getByRole("link", {
+      name: "Sat, Aug 29, 8.2 miles",
+    });
+    expect(latest).toHaveAttribute("href", "/feed/entry/01E");
+    // Drawn as before, said in words (round 52 #158).
+    expect(within(latest).getByText("Sat, Aug 29 · 8.2 mi")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
     expect(
-      screen.getByRole("link", { name: "Sat, Aug 29 · 8.2 mi" }),
-    ).toHaveAttribute("href", "/feed/entry/01E");
-    expect(
-      screen.getByRole("link", { name: "Thu, Aug 27 · 5.0 mi" }),
+      screen.getByRole("link", { name: "Thu, Aug 27, 5.0 miles" }),
     ).toHaveAttribute("href", "/feed/entry/01F");
     // No tag and no conditions: no meta line at all, never an empty one.
     expect(part("entry-meta")).toBeNull();
@@ -442,7 +448,7 @@ describe("OwnProfile (G): past day one", () => {
       />,
     );
     expect(
-      screen.getByRole("link", { name: "Sat, Aug 29 · 13.2 km" }),
+      screen.getByRole("link", { name: "Sat, Aug 29, 13.2 kilometres" }),
     ).toBeVisible();
     expect(part("entry-meta")).toHaveTextContent("5° · Overcast");
   });
@@ -465,7 +471,7 @@ describe("OwnProfile (G): past day one", () => {
         })}
       />,
     );
-    const link = screen.getByRole("link", { name: "Sat, Aug 29 · 8.2 mi" });
+    const link = screen.getByRole("link", { name: "Sat, Aug 29, 8.2 miles" });
     const meta = part("entry-meta");
     expect(meta).toHaveTextContent("41° · Overcast");
     expect(link.nextElementSibling).toBe(meta);
@@ -515,7 +521,7 @@ describe("OwnProfile (G): past day one", () => {
       />,
     );
     // The link's name stays the entry's label; the tag is read once.
-    const link = screen.getByRole("link", { name: "Sat, Aug 29 · 8.2 mi" });
+    const link = screen.getByRole("link", { name: "Sat, Aug 29, 8.2 miles" });
     expect(link).toHaveAttribute("href", "/feed/entry/01E");
     const tag = part("review-tag");
     expect(tag).toHaveTextContent("Under review, other runners can't see this");

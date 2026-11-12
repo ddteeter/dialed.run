@@ -84,7 +84,11 @@ describe("stripConditions", () => {
         false,
         miles,
       ),
-    ).toStrictEqual({ kind: "conditions", text: "41° · Rain" });
+    ).toStrictEqual({
+      kind: "conditions",
+      shown: "41° · Rain",
+      said: "41 degrees, Rain",
+    });
   });
 
   it("gives the range the run covered, in the viewer's unit", () => {
@@ -96,7 +100,8 @@ describe("stripConditions", () => {
       stripConditions(warming, false, { temp: "c", distance: "km" }),
     ).toStrictEqual({
       kind: "conditions",
-      text: "5–10° · Clear",
+      shown: "5–10° · Clear",
+      said: "5 to 10 degrees, Clear",
     });
   });
 

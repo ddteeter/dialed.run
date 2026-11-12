@@ -214,9 +214,13 @@ describe("EntryDetail: the run strip", () => {
 
     const strip = part("run-strip");
     expect(strip).toHaveTextContent(
-      "Tue Aug 12 · 6:30 AM5.0mi8:40 /mi8 minutes 40 seconds per mile",
+      "Tue Aug 12 · 6:30 AM5.0mi5.0 miles8:40 /mi8 minutes 40 seconds per mile",
     );
-    expect(screen.getByText("5.0mi")).toHaveClass("font-mono", "text-mono-lg");
+    // The distance is drawn "5.0mi" and said "5.0 miles" (round 52 #158).
+    const distance = screen.getByText("5.0mi");
+    expect(distance.parentElement).toHaveClass("font-mono", "text-mono-lg");
+    expect(distance).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("5.0 miles")).toHaveClass("sr-only");
     // The pace is drawn as the board draws it and said in words: "8:40
     // /mi" reads as "eight forty slash m i".
     const pace = screen.getByText("8:40 /mi");
@@ -230,7 +234,9 @@ describe("EntryDetail: the run strip", () => {
   it("leaves pace out of a run with no distance — no empty cell for it", async () => {
     await renderFeedScreen(detail({ distanceM: 0 }));
     expect(part("run-strip")).not.toHaveTextContent("/mi");
-    expect(screen.getByText("0.0mi").parentElement?.children).toHaveLength(1);
+    expect(
+      screen.getByText("0.0mi").parentElement?.parentElement?.children,
+    ).toHaveLength(1);
   });
 
   it("carries the badge when there is a verdict, and loses it when there is none", async () => {
@@ -255,7 +261,10 @@ describe("EntryDetail: the run strip", () => {
       }),
     );
 
-    expect(screen.getByText("46° · Wind")).toHaveClass("text-dialed-text");
+    const reading = screen.getByText("46° · Wind");
+    expect(reading.parentElement).toHaveClass("text-dialed-text");
+    expect(reading).toHaveAttribute("aria-hidden", "true");
+    expect(reading.nextElementSibling).toHaveTextContent("46 degrees, Wind");
     expect(screen.getByText("Tue Aug 12 · 1:30 AM")).toBeVisible();
   });
 
