@@ -180,7 +180,8 @@ test("log a run: read a file in place, pick the kit, note it, enter one by hand"
     await expect(
       bar(page).getByRole("link", { name: "Closet" }),
     ).toHaveAttribute("aria-current", "true");
-    await expect(launcher(page)).toHaveAttribute("aria-haspopup", "dialog");
+    // Round 52 #161: a button that navigates, promising no dialog.
+    await expect(launcher(page)).not.toHaveAttribute("aria-haspopup");
     await expect(bar(page).locator('[aria-current="page"]')).toHaveCount(0);
 
     // ---- A1 · the file reads in place --------------------------------

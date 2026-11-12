@@ -25,7 +25,7 @@ export function bar(page: Page): Locator {
 /**
  * The log-flow launcher, whichever seat it is in.
  *
- * It is not in the nav — it is a `<button aria-haspopup="dialog">` beside
+ * It is not in the nav — it is a `<button>` beside
  * it, because "a launcher cannot be where you are" (design round 12) — and
  * it says a different word at each width: `+ Add` in the phone bar's
  * glyph-sized seat, named "Add a run", and `Log a run` in the top bar,

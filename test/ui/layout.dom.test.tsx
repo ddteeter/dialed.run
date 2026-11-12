@@ -143,8 +143,9 @@ describe("TabBar", () => {
     // would compile and silently stop being checked.
     //
     // Four, not five: the Accessibility Contract's round-12 row makes
-    // `+ Add` a `<button aria-haspopup="dialog">` — "a launcher cannot be
-    // where you are", so it is not an anchor that could claim to be.
+    // `+ Add` a `<button>` — "a launcher cannot be where you are", so it
+    // is not an anchor that could claim to be. Round 52 #161 took its
+    // `aria-haspopup`: it navigates, and no dialog opens.
     await renderWithRouter(<TabBar />);
 
     // The contract's own name for the bar, which is what a screen reader
@@ -153,7 +154,7 @@ describe("TabBar", () => {
     expect(nav).toBeInTheDocument();
 
     const launcher = screen.getByRole("button", { name: "Add a run" });
-    expect(launcher).toHaveAttribute("aria-haspopup", "dialog");
+    expect(launcher).not.toHaveAttribute("aria-haspopup");
     // Never current, in any state: there is no page for it to be on.
     expect(launcher).not.toHaveAttribute("aria-current");
     // A <button> shrinks to its text where an <a> fills its grid seat, so

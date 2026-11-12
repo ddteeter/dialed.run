@@ -65,7 +65,8 @@ const RESTING_LINK_CLASS =
  *
  * *"The phone's floating action sits in the tab bar; at width it's the
  * pink pill in the top bar."* Same control as `TabBar`'s launcher and the
- * same role — a `<button aria-haspopup="dialog">`, never a link, because
+ * same role — a `<button>` with no `aria-haspopup` (round 52 #161: it
+ * navigates), never a link, because
  * *"a launcher cannot be where you are"* — with the word the wider seat
  * has room for (round 15). No `aria-label`: the visible text is the name,
  * which is the whole reason the two seats are two elements.
@@ -84,7 +85,6 @@ function BarLauncher({
   return (
     <button
       type="button"
-      aria-haspopup="dialog"
       className="target inline-flex items-center justify-center rounded-pill bg-action px-4 text-body font-bold text-accent-ink"
       onClick={() => {
         void navigate({ to });

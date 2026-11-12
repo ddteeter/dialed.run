@@ -137,7 +137,8 @@ describe("TopBar", () => {
     // controls. Same role as the phone's — "a launcher cannot be where
     // you are".
     const launcher = screen.getByRole("button", { name: "Log a run" });
-    expect(launcher).toHaveAttribute("aria-haspopup", "dialog");
+    // Round 52 #161: it navigates, so it promises no dialog.
+    expect(launcher).not.toHaveAttribute("aria-haspopup");
     expect(launcher).not.toHaveAttribute("aria-current");
     // T1: "text on an accent is always ink" — the fixed colour. Inside
     // this block `--ink` is chalk, so `text-ink` would put chalk on pink.
@@ -146,9 +147,8 @@ describe("TopBar", () => {
 
   it("opens the flow from the pill, which is not a link", async () => {
     // It still navigates — the flow is three routes, and `rise` is what
-    // makes that read as a layer (`src/lib/nav-types.ts`). `haspopup`
-    // describes what the runner gets, not which element implements it, so
-    // there is no anchor here to find.
+    // makes that read as a layer (`src/lib/nav-types.ts`). A button and
+    // not an anchor, so there is no anchor here to find.
     const router = await renderAt("/closet", <TopBar />);
     expect(screen.queryByRole("link", { name: "Log a run" })).toBeNull();
 

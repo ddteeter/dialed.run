@@ -101,8 +101,10 @@ describe("TabBar", () => {
     }
     // First paint already carries the launcher's shape, so a runner on a
     // slow connection does not meet a link that becomes a button
-    // (Accessibility Contract, round 12).
-    expect(html).toContain('aria-haspopup="dialog"');
+    // (Accessibility Contract, round 12). It promises no dialog (round 52
+    // #161): it navigates.
+    expect(html).toMatch(/<button type="button" aria-label="Add a run"/u);
+    expect(html).not.toContain("aria-haspopup");
   });
 });
 
