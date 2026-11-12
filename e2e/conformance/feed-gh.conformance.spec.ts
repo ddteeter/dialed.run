@@ -113,8 +113,8 @@ test("H with nothing public keeps its header and Follow, and says so plainly", a
   }
 });
 
-// Not drawn: H's header once the runner is followed. It ends here so
-// what the button says afterwards is checked in (#582).
+// Not drawn: H once the runner is followed. It ends here so what the
+// button and the line under it say afterwards is checked in (#582, #590).
 test("H after Follow: the button says Following", async ({ page }) => {
   const rows = seeded();
   const runner = await seedRunner(rows, "ravi_k");
@@ -123,10 +123,16 @@ test("H after Follow: the button says Following", async ({ page }) => {
     await page.goto(`/feed/u/${runner}`);
     await hydrated(page);
 
+    const line = page.locator('[data-part="entries"] > p').nth(1);
+    await expect(line).toHaveText(
+      "Follow @ravi_k and their shared runs will show in your feed.",
+    );
     await page.getByRole("button", { name: "Follow" }).click();
     await expect(page.getByRole("button", { name: "Following" })).toBeVisible({
       timeout: 15_000,
     });
+    // #590: once followed, the line stops asking for the follow.
+    await expect(line).toHaveText("Their shared runs will show in your feed.");
   } finally {
     await unfollowEveryone(await feedUserId());
     await removeSeeded(rows);

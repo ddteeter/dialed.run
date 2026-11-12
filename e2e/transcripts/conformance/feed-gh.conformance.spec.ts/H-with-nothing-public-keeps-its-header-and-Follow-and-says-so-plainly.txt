@@ -15,9 +15,7 @@ paragraph
 No shared runs yet.
 end of paragraph
 paragraph
-Follow
-@ravi_k
-and their shared runs will show in your feed.
+Follow @ravi_k and their shared runs will show in your feed.
 end of paragraph
 button, Report or block ravi_k
 end of main

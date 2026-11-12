@@ -527,6 +527,13 @@ describe("OwnProfile (G): past day one", () => {
   });
 });
 
+/**
+H's empty state, its second line: the one under "No shared runs yet."
+*/
+function emptyLine(): Element | undefined {
+  return part("entries")?.children[1];
+}
+
 describe("OtherProfile (H)", () => {
   it("keeps its header and Follow with nothing public, and says so plainly", async () => {
     await renderFeedScreen(otherScreen());
@@ -542,6 +549,40 @@ describe("OtherProfile (H)", () => {
     ).toBeVisible();
     // Their silence, not a next step: no brackets.
     expect(part("entries")?.textContent).not.toMatch(/\[/u);
+  });
+
+  it("stops asking for a follow once they are followed, and asks again after an unfollow", async () => {
+    // #590: the line turns with the pill, on the server's answer and not
+    // before it, and it is said by nothing but itself.
+    const user = userEvent.setup();
+    const answer = Promise.withResolvers<undefined>();
+    await renderFeedScreen(followScreen({ follow: () => answer.promise }));
+    const ask = "Follow @ravi_k and their shared runs will show in your feed.";
+    const followed = "Their shared runs will show in your feed.";
+
+    await user.click(screen.getByRole("button", { name: "Follow" }));
+    expect(emptyLine()).toHaveTextContent(ask, { normalizeWhitespace: false });
+
+    answer.resolve(undefined);
+    await waitFor(() => {
+      expect(emptyLine()?.textContent).toBe(followed);
+    });
+    expect(screen.getByText("No shared runs yet.")).toBeVisible();
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+    expect(emptyLine()?.closest("[aria-live], [role='status']")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Following" }));
+    await waitFor(() => {
+      expect(emptyLine()?.textContent).toBe(ask);
+    });
+  });
+
+  it("opens on the followed line for a runner already followed", async () => {
+    await renderFeedScreen(followScreen({ isFollowing: true }));
+
+    expect(emptyLine()?.textContent).toBe(
+      "Their shared runs will show in your feed.",
+    );
   });
 
   it("shows no counts — a stranger's follower count is a status number", async () => {
@@ -613,9 +654,7 @@ describe("OtherProfile (H)", () => {
     const first = screen.getByRole("link", { name: /Tue Aug 12/u });
     const second = screen.getByRole("link", { name: /Wed Aug 13/u });
     expect(first).toHaveAttribute("href", "/feed/entry/01A");
-    expect(first).toHaveTextContent(
-      /^Tue Aug 12Dialed$/u,
-    );
+    expect(first).toHaveTextContent(/^Tue Aug 12Dialed$/u);
     // No verdict, no badge.
     expect(second).toHaveAttribute("href", "/feed/entry/01B");
     expect(second).toHaveTextContent(/^Wed Aug 13$/u);

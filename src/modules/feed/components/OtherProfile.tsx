@@ -87,8 +87,14 @@ export function OtherProfile({
           className="flex flex-col gap-3"
         >
           <p className="m-0 text-lead">No shared runs yet.</p>
+          {/* Once followed, the line stops asking for what is done (#590,
+              owner 2026-11-11). It turns with the pill, on the server's
+              answer, and is not a live region: the pill's new name is the
+              one thing announced. */}
           <p className="m-0 text-body text-quiet">
-            Follow {name} and their shared runs will show in your feed.
+            {toggle.isFollowing
+              ? "Their shared runs will show in your feed."
+              : `Follow ${name} and their shared runs will show in your feed.`}
           </p>
           <ReportFoot>{reportAffordance}</ReportFoot>
         </div>

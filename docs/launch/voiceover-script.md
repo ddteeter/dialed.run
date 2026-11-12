@@ -657,7 +657,8 @@ You should hear:
 Do: double tap "Follow"
 (`conformance/feed-gh.conformance.spec.ts/H-after-Follow-the-button-says-Following.txt`).
 The button's name becomes "Following", and it must say so without your
-leaving it. Write down what was spoken while it worked.
+leaving it. The line under "No shared runs yet." becomes "Their shared
+runs will show in your feed." Write down what was spoken while it worked.
 
 **4.4 Post detail (D).** Open one of their runs.
 Source: `conformance/feed-d.conformance.spec.ts/D-for-someone-else-s-entry-strip-with-badge-kit-tags-Useful-Report.txt`.
