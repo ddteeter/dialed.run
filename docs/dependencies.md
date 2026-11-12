@@ -178,7 +178,7 @@ installs to enforce it, which has not been checked.
 
 ## The CI floor
 
-Design 196 (#546). Three checks on the workflows themselves, on top of the
+Design 196 (#546). Four checks on the workflows themselves, on top of the
 SHA pins and `actionlint`:
 
 - **`harden-runner` is the first step of every job**, and
@@ -189,11 +189,34 @@ SHA pins and `actionlint`:
   enough to keep. The two Claude review jobs are on `block` already.
 - **`zizmor`** (`supply-chain.yml`) reads `.github/` on every PR for
   template injection, permissions wider than a job uses, credentials left
-  in a checkout and unpinned actions. Fix a finding. An ignore is for a line the owner has reviewed, with its
-  reason beside it; the same test pins the list.
+  in a checkout and unpinned actions. Fix a finding. An ignore is for a
+  line the owner has reviewed, with its reason beside it; the same test
+  pins the list.
 - **Dependency review** (`supply-chain.yml`) fails a PR that adds a
   dependency with a known vulnerability.
+- **The workflow lockfile**, `.github/workflows/actions.lock`, records the
+  commit of every action the workflows use and of what those actions use
+  themselves (today, the `setup-bun` inside claude-code-action). GitHub
+  refuses a run whose action is not the commit recorded, and the
+  `lockfile` job (`supply-chain.yml`) fails a PR where the two disagree.
+
+**Relocking**, after adding a workflow or an action, or bumping one by
+hand. It needs GitHub's extension
+(`gh extension install github/gh-actions-lock`):
+
+1. `gh actions-lock`. It updates `actions.lock`, and it also rewrites
+   every `uses:` line from its commit SHA to a tag.
+2. `git checkout -- .github/workflows/*.yml` puts the SHA pins back, if
+   your own workflow edits were committed first. The pins stay: they are a
+   repository setting, and the lockfile pins the same commits either way.
+3. `gh actions-lock --verify` should end "All N workflows valid". Its
+   warning that actions are pinned to a bare SHA is expected.
+4. Read the lockfile's diff. It pins a commit; it does not vet it.
+
+Dependabot regenerates an action's entry in its own update PR, but it
+does not add a new workflow to the lockfile.
 
 `zizmor` and `actionlint` are release binaries at a pinned checksum, not
 actions, so Dependabot does not see them. Bump the version and the
-checksum together, by hand, from the release's published digest.
+checksum together, by hand, from the release's published digest. The
+`gh actions-lock` extension is pinned by version in the same way.

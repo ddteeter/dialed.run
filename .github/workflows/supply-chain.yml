@@ -1,6 +1,6 @@
 name: Supply chain
 
-# Two checks on what a change brings in (design 196, #546):
+# Three checks on what a change brings in (design 196, #546):
 #
 #   zizmor             reads the workflows for security mistakes: template
 #                      injection, permissions wider than a job uses,
@@ -10,9 +10,10 @@ name: Supply chain
 #   dependency-review  fails a PR that adds a dependency with a known
 #                      vulnerability, before Dependabot would flag it on
 #                      `main`.
+#   lockfile           fails a PR whose workflows and actions.lock disagree.
 #
 # Every pull request, not only those that touch a workflow or a manifest.
-# Both take seconds, and a `paths:` filter makes a check unusable as a
+# Each takes seconds, and a `paths:` filter makes a check unusable as a
 # required one: a workflow that does not run reports no context, and a
 # required context that never arrives blocks the merge (mutation.yml has
 # the longer account).
@@ -94,3 +95,43 @@ jobs:
       # Vulnerabilities only. The repository has no licence policy yet, so
       # none is restated here (design 196, open questions).
       - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+
+  # .github/workflows/actions.lock records the commit of every action the
+  # workflows use, and of what those actions use themselves, and GitHub
+  # stops a run whose action is not the commit recorded. This fails a PR
+  # that adds or bumps an action without relocking it, before that run
+  # would be refused (docs/dependencies.md has the relock steps).
+  #
+  # The extension is GitHub's own, pinned by version. Dependabot does not
+  # see this pin; bump it by hand.
+  lockfile:
+    name: Workflow lockfile
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    env:
+      ACTIONS_LOCK_VERSION: v0.4.1
+    steps:
+      # Audit first (design 196): reports the hosts this job reaches and
+      # blocks none. It moves to `block` once that list is known and short.
+      - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install gh actions-lock
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh extension install github/gh-actions-lock --pin "$ACTIONS_LOCK_VERSION"
+
+      # `--verify` writes nothing. It warns that the `uses:` lines are
+      # commit SHAs, not tags; that is deliberate here (the SHA pins stay),
+      # and the lockfile pins the same commits either way.
+      - name: Verify the lockfile
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh actions-lock --verify
