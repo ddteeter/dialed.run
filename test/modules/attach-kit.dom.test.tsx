@@ -627,7 +627,15 @@ describe("AttachKit: most likely", () => {
       }),
     );
 
-    await user.click(await screen.findByRole("button", { name: "Change" }));
+    // Round 52 #159: named for what it changes; the visible word is the
+    // one word.
+    const change = await screen.findByRole("button", {
+      name: "Change the kit",
+    });
+    expect(change.firstChild?.textContent).toBe("Change");
+    expect(change.lastElementChild).toHaveClass("sr-only");
+    expect(change.lastElementChild?.textContent).toBe(" the kit");
+    await user.click(change);
     expect(screen.getByText("6.2 mi · 41°F damp · 1 piece")).toBeVisible();
   });
 
@@ -674,7 +682,9 @@ describe("AttachKit: most likely", () => {
       attach({ prefillFor: () => Promise.resolve(candidate()) }),
     );
 
-    await user.click(await screen.findByRole("button", { name: "Change" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Change the kit" }),
+    );
 
     expect(document.querySelector("[data-slot='most-likely']")).toBeNull();
     expect(screen.getByRole("button", { name: "Houdini" })).toHaveAttribute(
