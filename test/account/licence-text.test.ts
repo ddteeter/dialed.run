@@ -70,6 +70,9 @@ describe("holderOf", () => {
     ["Copyright 2020 Spaced .", "2020 Spaced"],
     ["Copyright 2020 Name<n@x.y>", "2020 Name"],
     ["Copyright 2020 A <a@x.y> and B <b@x.y>", "2020 A and B"],
+    // Taking a bracketed part out must not leave brackets behind.
+    ["Copyright 2020 A <<x>b> c", "2020 A b c"],
+    ["Copyright 2020 A > B < C", "2020 A B C"],
     ["Copyright 2020 Wide   Gap", "2020 Wide Gap"],
     [`Copyright 2020 Old Site (${insecure("old.example")})`, "2020 Old Site"],
     [

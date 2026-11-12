@@ -359,18 +359,36 @@ function isEveryLineKnown(
   return !items.includes(undefined);
 }
 
+const COMMENT_OPEN = "<!--";
+const COMMENT_CLOSE = "-->";
+
 /**
- * A notes-to-self comment in a text's source, which the page never shows:
+ * A text without its notes-to-self comments, which the page never shows:
  * the one at the top of each file says how to publish it.
+ *
+ * Until none is left, not once: taking a comment out can bring the halves
+ * of another together, and a single pass would leave that one in. A
+ * comment that is never closed runs to the end of the text, as it would in
+ * a browser.
  */
-const SOURCE_COMMENT = /<!--[\s\S]*?-->/gu;
+export function withoutSourceComments(text: string): string {
+  let shown = text;
+  for (;;) {
+    const open = shown.indexOf(COMMENT_OPEN);
+    if (open === -1) return shown;
+    const close = shown.indexOf(COMMENT_CLOSE, open + COMMENT_OPEN.length);
+    const rest = close === -1 ? "" : shown.slice(close + COMMENT_CLOSE.length);
+    shown = shown.slice(0, open) + rest;
+  }
+}
 
 /**
  * The text a page may show: everything after the front matter, with the
  * source's comments dropped — or nothing, for a text not marked published.
  */
 export function publishedText(text: string): string | undefined {
-  return publishedFrontMatter(text)?.body.replaceAll(SOURCE_COMMENT, "");
+  const body = publishedFrontMatter(text)?.body;
+  return body === undefined ? undefined : withoutSourceComments(body);
 }
 
 /**

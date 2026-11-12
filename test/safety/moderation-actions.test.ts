@@ -1435,6 +1435,25 @@ describe("forceRename (round 27 #16), through account's rules", () => {
     expect(placeholderHandle()).toMatch(/^runner_\d{4}$/u);
   });
 
+  it("draws again at the cut-off, so no four digits are likelier than others", () => {
+    // 60,000 is the first draw refused: reduced, it would be a seventh
+    // 0000. 59,999 is the last one kept.
+    const draws = [60_000, 65_535, 59_999, 60_000, 12];
+    const random = vi
+      .spyOn(globalThis.crypto, "getRandomValues")
+      .mockImplementation((array) => {
+        if (array instanceof Uint16Array) array.fill(draws.shift() ?? 0);
+        return array;
+      });
+    try {
+      expect(placeholderHandle()).toBe("runner_9999");
+      expect(placeholderHandle()).toBe("runner_0012");
+      expect(draws).toStrictEqual([]);
+    } finally {
+      random.mockRestore();
+    }
+  });
+
   it("swaps the handle, locks the old one, owes a re-pick and records it", async () => {
     const runner = await makeUser({ username: "rudename" });
 

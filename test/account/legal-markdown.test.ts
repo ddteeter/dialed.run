@@ -7,6 +7,7 @@ import {
   parseLegalDoc,
   plainText,
   publishedText,
+  withoutSourceComments,
 } from "../../src/modules/account/legal-markdown";
 
 /**
@@ -405,5 +406,18 @@ describe("publishedText", () => {
       ),
     ).toBe("\n# T\n\nKept.\n\nKept too.");
     expect(publishedText(`${MARK}<!---->Kept.`)).toBe("Kept.");
+  });
+
+  it("removes a comment that taking another out would form", () => {
+    expect(withoutSourceComments("a<!-<!-- x -->- y -->b")).toBe("ab");
+    expect(publishedText(`${MARK}a<!-<!-- x -->- y -->b`)).toBe("ab");
+  });
+
+  it("drops an unclosed comment to the end, and keeps a closer with no opener", () => {
+    expect(withoutSourceComments("kept<!-- never closed")).toBe("kept");
+    expect(withoutSourceComments("-->a<!--b-->c")).toBe("-->ac");
+    // The opener's own dashes do not close it.
+    expect(withoutSourceComments("a<!-->b-->c")).toBe("ac");
+    expect(withoutSourceComments("no comment")).toBe("no comment");
   });
 });

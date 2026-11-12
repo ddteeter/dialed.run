@@ -72,8 +72,10 @@ export function holderOf(line: string): string | undefined {
   if (!isLine || PLACEHOLDER.test(line)) return undefined;
   const rest = line.slice(at).replace(MARK, "");
   if (!/^[\d(©\p{Lu}]/u.test(rest) || PROSE.test(rest)) return undefined;
+  // An address in angle brackets and a site in parentheses go; so does any
+  // angle bracket left over, so a name never holds one.
   const holder = rest
-    .replaceAll(/<[^<>]*>|\(https?:[^()]*\)/gu, "")
+    .replaceAll(/<[^<>]*>|[<>]|\(https?:[^()]*\)/gu, "")
     .replaceAll(/\s+/gu, " ")
     .replace(/[.,;]$/u, "")
     .trim();
