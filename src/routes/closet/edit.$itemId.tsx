@@ -21,10 +21,8 @@ import { viewerUnitsQuery } from "../../modules/feed/functions";
 import { photoBlurStep } from "../../modules/safety/components/PhotoBlur";
 import { searchBrandsFn } from "../../modules/products/functions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
-import { bellLoader } from "../../modules/notifications/components/bell-loader";
 import { bellStateFn } from "../../modules/notifications/functions";
-import { NotFoundState } from "../../modules/auth/components/SystemState";
-import { PIECE_NOT_FOUND } from "../../modules/closet/piece-not-found";
+import { PieceNotFoundPage } from "../../named-not-found";
 
 const garmentPage = garmentLoader(
   requireSession,
@@ -40,11 +38,6 @@ function nearbyBut(itemId: string) {
   return closetNearbyFn({ data: { exceptItemId: itemId } });
 }
 
-/**
-The not-found's bell, read after mount (as the router's own not-found does).
-*/
-const loadBell = bellLoader(() => bellStateFn());
-
 export const Route = createFileRoute("/closet/edit/$itemId")({
   // Round 54 · 168.2: edit, as add, has "Already in your closet" beside it.
   loader: async (context) => {
@@ -55,9 +48,7 @@ export const Route = createFileRoute("/closet/edit/$itemId")({
     return { ...page, nearby };
   },
   // Round 55 · 185: the missing thing named, in its own column.
-  notFoundComponent: () => (
-    <NotFoundState signedIn loadBell={loadBell} subject={PIECE_NOT_FOUND} />
-  ),
+  notFoundComponent: PieceNotFoundPage,
   component: EditGarmentPage,
 });
 

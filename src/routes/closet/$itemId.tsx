@@ -22,15 +22,8 @@ import {
 import { PhotoBeingChecked } from "../../modules/safety/components/NoticeBand";
 import { photoBlurStep } from "../../modules/safety/components/PhotoBlur";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
-import { bellLoader } from "../../modules/notifications/components/bell-loader";
 import { bellStateFn } from "../../modules/notifications/functions";
-import { NotFoundState } from "../../modules/auth/components/SystemState";
-import { PIECE_NOT_FOUND } from "../../modules/closet/piece-not-found";
-
-/**
-The not-found's bell, read after mount (as the router's own not-found does).
-*/
-const loadBell = bellLoader(() => bellStateFn());
+import { PieceNotFoundPage } from "../../named-not-found";
 
 export const Route = createFileRoute("/closet/$itemId")({
   loader: garmentLoader(
@@ -40,9 +33,7 @@ export const Route = createFileRoute("/closet/$itemId")({
     bellStateFn,
   ),
   // Round 55 · 185: the missing thing named, in its own column.
-  notFoundComponent: () => (
-    <NotFoundState signedIn loadBell={loadBell} subject={PIECE_NOT_FOUND} />
-  ),
+  notFoundComponent: PieceNotFoundPage,
   component: GarmentDetailPage,
 });
 

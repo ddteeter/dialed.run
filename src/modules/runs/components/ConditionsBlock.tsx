@@ -3,7 +3,7 @@ import type { JSX, ReactNode } from "react";
 import type { Units } from "../../../lib/contracts";
 import { measuredLine } from "../../../lib/contracts/measures";
 import { precipClassOf } from "../../../lib/contracts/temperature";
-import { Mono, PendingLabel, Spoken, WeatherAttribution } from "../../../ui";
+import { Mono, Spoken, WeatherAttribution } from "../../../ui";
 import { setBandForms, SKY_WORDS } from "../run-conditions";
 import type { RunConditions, RunSummary } from "../service";
 
@@ -108,19 +108,6 @@ export function ConditionsBlock({
  */
 function setSaid(band: string, sky: string | undefined): string {
   return sky === undefined ? band : `${band}, ${sky.toLowerCase()}`;
-}
-
-/**
- * The weather is still being asked for: no badge, no block — the line
- * breathes (round 22, R: *"Pending isn't a badge; the meta line
- * breathes"*).
- */
-export function FetchingWeather(): JSX.Element {
-  return (
-    <Mono step="xs" className="text-muted">
-      <PendingLabel label="" pendingLabel="Fetching weather" pending />
-    </Mono>
-  );
 }
 
 /**
