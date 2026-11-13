@@ -2,7 +2,10 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import { viewerUnitsQuery } from "../../modules/feed/functions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
+import { bellLoader } from "../../modules/notifications/components/bell-loader";
 import { bellStateFn } from "../../modules/notifications/functions";
+import { NotFoundState } from "../../modules/auth/components/SystemState";
+import { RUN_NOT_FOUND } from "../../modules/runs/run-not-found";
 import { DeleteRun } from "../../modules/runs/components/DeleteRun";
 import { RunRemovals } from "../../modules/safety/components/RunRemovals";
 import { runRemovalsQuery } from "../../modules/safety/functions";
@@ -15,6 +18,11 @@ import {
 } from "../../modules/runs/functions";
 import { beforeItsEntry, runOrNotFound } from "../../modules/runs/not-found";
 import { Page } from "../../ui";
+
+/**
+The not-found's bell, read after mount (as the router's own not-found does).
+*/
+const loadBell = bellLoader(() => bellStateFn());
 
 export const Route = createFileRoute("/runs/$runId")({
   loader: async ({ params }) => {
@@ -31,6 +39,10 @@ export const Route = createFileRoute("/runs/$runId")({
       removals,
     };
   },
+  // Round 55 · 185: the missing thing named, in its own column.
+  notFoundComponent: () => (
+    <NotFoundState signedIn loadBell={loadBell} subject={RUN_NOT_FOUND} />
+  ),
   component: RunDetailPage,
 });
 
