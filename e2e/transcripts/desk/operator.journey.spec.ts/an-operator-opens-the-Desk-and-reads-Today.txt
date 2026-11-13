@@ -1,44 +1,57 @@
 document
-navigation, Desk
+banner
 dialed.run
 Desk
-Operator
+@desk_operator ·
+Operator ·
+button, Sign out
+Sign out
+end of button, Sign out
+end of banner
+navigation, Desk
 list
-listitem, level 1, position 1, set size 6
+listitem, level 1, position 1, set size 7
 link, :when # gave up
 :when
 #
 gave up
 end of link, :when # gave up
-end of listitem, level 1, position 1, set size 6
-listitem, level 1, position 2, set size 6
+end of listitem, level 1, position 1, set size 7
+listitem, level 1, position 2, set size 7
 link, Review # waiting, current page
 Review
 #
 waiting
 end of link, Review # waiting, current page
-end of listitem, level 1, position 2, set size 6
-listitem, level 1, position 3, set size 6
+end of listitem, level 1, position 2, set size 7
+listitem, level 1, position 3, set size 7
 link, Corrections
 Corrections
 end of link, Corrections
-end of listitem, level 1, position 3, set size 6
-listitem, level 1, position 4, set size 6
+end of listitem, level 1, position 3, set size 7
+listitem, level 1, position 4, set size 7
 link, Access
 Access
 end of link, Access
-end of listitem, level 1, position 4, set size 6
-listitem, level 1, position 5, set size 6
+end of listitem, level 1, position 4, set size 7
+listitem, level 1, position 5, set size 7
 link, Duplicates
 Duplicates
 end of link, Duplicates
-end of listitem, level 1, position 5, set size 6
-listitem, level 1, position 6, set size 6
+end of listitem, level 1, position 5, set size 7
+listitem, level 1, position 6, set size 7
+link, Codes
+Codes
+end of link, Codes
+end of listitem, level 1, position 6, set size 7
+listitem, level 1, position 7, set size 7
 link, Runners
 Runners
 end of link, Runners
-end of listitem, level 1, position 6, set size 6
+end of listitem, level 1, position 7, set size 7
 end of list
+Screening · Holding
+Last digest · #:#
 end of navigation, Desk
 main
 heading, Review, level 1
@@ -48,9 +61,15 @@ waiting
 end of heading, waiting, level 2
 list
 listitem, level 1, position 1, set size 3
-button, entry · :id, expanded
+button, entry · #M#…#S#Q [reports] #h, expanded
+:id
+entry
+· #M#…#S#Q
+[reports]
+end, :id
+#h
+end of button, entry · #M#…#S#Q [reports] #h, expanded
 Nobody reported this.
-reports
 form
 status
 Why it comes down
@@ -72,14 +91,26 @@ button, Remove as suspected CSAM
 end of form
 end of listitem, level 1, position 1, set size 3
 listitem, level 1, position 2, set size 3
-button, profile · :id, not expanded
+button, profile · #M#…#C#W [reports] Nobody reported this. #h, not expanded
+:id
+profile
+· #M#…#C#W
+[reports]
+end, :id
 Nobody reported this.
-reports
+#h
+end of button, profile · #M#…#C#W [reports] Nobody reported this. #h, not expanded
 end of listitem, level 1, position 2, set size 3
 listitem, level 1, position 3, set size 3
-button, photo · :id, not expanded
+button, photo · #M#…#EKR [classifier] Nobody reported this. #h, not expanded
+:id
+photo
+· #M#…#EKR
+[classifier]
+end, :id
 Nobody reported this.
-classifier
+#h
+end of button, photo · #M#…#EKR [classifier] Nobody reported this. #h, not expanded
 end of listitem, level 1, position 3, set size 3
 end of list
 region, Takedown

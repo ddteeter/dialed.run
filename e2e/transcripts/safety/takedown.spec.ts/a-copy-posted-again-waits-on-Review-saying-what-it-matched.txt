@@ -1,42 +1,55 @@
 document
-navigation, Desk
+banner
 dialed.run
 Desk
-Operator
+@desk_operator ·
+Operator ·
+button, Sign out
+Sign out
+end of button, Sign out
+end of banner
+navigation, Desk
 list
-listitem, level 1, position 1, set size 6
+listitem, level 1, position 1, set size 7
 link, :when
 :when
 end of link, :when
-end of listitem, level 1, position 1, set size 6
-listitem, level 1, position 2, set size 6
+end of listitem, level 1, position 1, set size 7
+listitem, level 1, position 2, set size 7
 link, Review # waiting, current page
 Review
 #
 waiting
 end of link, Review # waiting, current page
-end of listitem, level 1, position 2, set size 6
-listitem, level 1, position 3, set size 6
+end of listitem, level 1, position 2, set size 7
+listitem, level 1, position 3, set size 7
 link, Corrections
 Corrections
 end of link, Corrections
-end of listitem, level 1, position 3, set size 6
-listitem, level 1, position 4, set size 6
+end of listitem, level 1, position 3, set size 7
+listitem, level 1, position 4, set size 7
 link, Access
 Access
 end of link, Access
-end of listitem, level 1, position 4, set size 6
-listitem, level 1, position 5, set size 6
+end of listitem, level 1, position 4, set size 7
+listitem, level 1, position 5, set size 7
 link, Duplicates
 Duplicates
 end of link, Duplicates
-end of listitem, level 1, position 5, set size 6
-listitem, level 1, position 6, set size 6
+end of listitem, level 1, position 5, set size 7
+listitem, level 1, position 6, set size 7
+link, Codes
+Codes
+end of link, Codes
+end of listitem, level 1, position 6, set size 7
+listitem, level 1, position 7, set size 7
 link, Runners
 Runners
 end of link, Runners
-end of listitem, level 1, position 6, set size 6
+end of listitem, level 1, position 7, set size 7
 end of list
+Screening · OK
+Last digest · Not yet
 end of navigation, Desk
 main
 heading, Review, level 1
@@ -46,7 +59,15 @@ waiting
 end of heading, waiting, level 2
 list
 listitem, level 1, position 1, set size 1
-button, photo · :id, expanded
+button, photo · #M#…#PGX · @poster_# [held on upload] #m, expanded
+:id
+photo
+· #M#…#PGX
+· @poster_#
+[held on upload]
+end, :id
+#m
+end of button, photo · #M#…#PGX · @poster_# [held on upload] #m, expanded
 image, Reported
 paragraph
 A close match to an image removed as intimate on
@@ -55,6 +76,7 @@ A close match to an image removed as intimate on
 # bit
 apart.
 end of paragraph
+Nobody reported this.
 heading, Their other photos, level 3
 Their other photos
 end of heading, Their other photos, level 3
@@ -70,8 +92,6 @@ Removed
 link, @poster_#
 end of listitem, level 2, position 1, set size 1
 end of list
-Nobody reported this.
-held on upload
 form
 status
 Why it comes down

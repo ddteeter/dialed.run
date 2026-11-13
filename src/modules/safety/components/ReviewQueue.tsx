@@ -431,8 +431,10 @@ function RowHead({
       title={label}
       className="truncate font-mono text-mono-sm"
     >
-      <span className="uppercase">{`${rowKind(row)} · `}</span>
-      {headName(row, label)}
+      {/* The separators outside the capitals' span: a space at its end is
+          dropped from what is heard ("photo ·01M7…"). */}
+      <span className="uppercase">{rowKind(row)}</span>
+      {` · ${headName(row, label)}`}
       {owner === undefined ? undefined : ` · @${owner}`}{" "}
       <span data-part="source" className="uppercase">
         {`[${SOURCE_TAGS[row.source]}]`}
