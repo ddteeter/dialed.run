@@ -155,7 +155,7 @@ test("log a run: read a file in place, pick the kit, note it, enter one by hand"
       userId: seeded.userId,
       kind: "strava_reminder",
       subjectId: newUlid(),
-      body: "New run on Strava · Add it here: upload the file, then what you wore",
+      body: "New run on Strava. Upload its file, then add what you wore.",
       createdAt: fileStart + 5 * 60 + 1800,
     });
   });

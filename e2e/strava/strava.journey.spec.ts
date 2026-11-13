@@ -172,7 +172,7 @@ test("Strava: connect with the official button, a reminder lands, disconnect", a
       await page.goto("/notifications");
       await expect(
         page.getByText(
-          "New run on Strava · Add it here: upload the file, then what you wore",
+          "New run on Strava. Upload its file, then add what you wore.",
         ),
       ).toBeVisible({ timeout: 1000 });
     }).toPass({ timeout: 30_000 });
