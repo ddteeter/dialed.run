@@ -110,17 +110,27 @@ const TYPE_WORDS: ReadonlyMap<string, string> = new Map(
 );
 
 /**
- * The tile's well (Round 55 · 239): a 72 square, the hatch that means "no
- * photo" with the piece's type word in it, as the closet's tiles draw it.
+ * The tile's well (Round 55 · 239): a 72 square holding the piece's photo,
+ * cropped to fill it as the closet's tile crops it, or — with no photo —
+ * the hatch that means "no photo" with the piece's type word in it.
  * Pressed is a 2px pink ring outside a 2px `--ground` gap, never an ink
  * fill. Decorative: the name under it is the button's name.
  */
 const TILE_WELL_CLASS = {
-  pressed:
-    "photo-hatch flex size-18 items-center justify-center rounded-field font-display text-small uppercase text-muted ring-2 ring-action ring-offset-2 ring-offset-ground",
-  resting:
-    "photo-hatch flex size-18 items-center justify-center rounded-field font-display text-small uppercase text-muted",
+  hatch: {
+    pressed:
+      "photo-hatch flex size-18 items-center justify-center rounded-field font-display text-small uppercase text-muted ring-2 ring-action ring-offset-2 ring-offset-ground",
+    resting:
+      "photo-hatch flex size-18 items-center justify-center rounded-field font-display text-small uppercase text-muted",
+  },
+  photo: {
+    pressed:
+      "relative size-18 overflow-hidden rounded-field bg-photo ring-2 ring-action ring-offset-2 ring-offset-ground",
+    resting: "relative size-18 overflow-hidden rounded-field bg-photo",
+  },
 } as const;
+
+const TILE_PHOTO_CLASS = "absolute inset-0 size-full object-cover";
 
 /**
  * One piece, as a tile: pressed when it is in the kit. The full name —
@@ -137,6 +147,7 @@ function PieceTile({
   pressed: boolean;
   onToggle: () => void;
 }>): JSX.Element {
+  const well = item.photo === undefined ? TILE_WELL_CLASS.hatch : TILE_WELL_CLASS.photo;
   return (
     <button
       type="button"
@@ -147,9 +158,13 @@ function PieceTile({
       <span
         data-part="tile-well"
         aria-hidden="true"
-        className={pressed ? TILE_WELL_CLASS.pressed : TILE_WELL_CLASS.resting}
+        className={pressed ? well.pressed : well.resting}
       >
-        {TYPE_WORDS.get(item.category)}
+        {item.photo === undefined ? (
+          TYPE_WORDS.get(item.category)
+        ) : (
+          <img src={item.photo} alt="" className={TILE_PHOTO_CLASS} />
+        )}
       </span>
       <span className="line-clamp-2 text-small">{fullName(item)}</span>
     </button>

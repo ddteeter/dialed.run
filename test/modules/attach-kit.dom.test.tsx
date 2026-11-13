@@ -98,6 +98,7 @@ function piece(
     layer: NOTHING,
     matches: true,
     untested: false,
+    photo: undefined,
     ...overrides,
   };
 }
@@ -861,12 +862,58 @@ describe("AttachKit: the closet picker", () => {
     expect(well).toHaveClass("photo-hatch", "size-18", "rounded-field");
     expect(well).toHaveAttribute("aria-hidden", "true");
     expect(well).toHaveTextContent(/^Top$/u);
+    expect(well).not.toHaveClass("bg-photo");
+    expect(well?.querySelector("img")).toBeNull();
     const name = screen.getByText("Patagonia Houdini");
     expect(name).toHaveClass("line-clamp-2", "text-small");
     expect(well?.nextElementSibling).toBe(name);
     // A piece with no brand is named by its name alone, its word its own.
     const tights = screen.getByRole("button", { name: "Tights" });
     expect(tights).toHaveTextContent(/^BottomTights$/u);
+  });
+
+  it("fills the 72 square with the piece's photo, ringed when pressed", async () => {
+    // Round 55 · 239: a piece with a photo shows it, cropped to fill the
+    // square; the hatch and the type word are for a piece without one.
+    const user = userEvent.setup();
+    const photoUrl = "/closet/photo/houdini/card?v=v1";
+    const pictured = context({
+      groups: [
+        {
+          group: "tops",
+          items: [piece(HOUDINI, "Houdini", { photo: photoUrl })],
+          matchCount: 1,
+          hiddenByFilterCount: 0,
+        },
+      ],
+    });
+    await renderWithRouter(attach({ context: pictured }));
+
+    const tile = screen.getByRole("button", { name: "Houdini" });
+    const well = tile.querySelector("[data-part='tile-well']");
+    expect(well).toHaveClass(
+      "size-18",
+      "rounded-field",
+      "bg-photo",
+      "overflow-hidden",
+      "relative",
+    );
+    expect(well).not.toHaveClass("photo-hatch");
+    expect(well).toHaveAttribute("aria-hidden", "true");
+    expect(well).not.toHaveTextContent("Top");
+    const img = well?.querySelector("img");
+    expect(img).toHaveAttribute("src", photoUrl);
+    expect(img).toHaveAttribute("alt", "");
+    expect(img).toHaveClass("absolute", "inset-0", "size-full", "object-cover");
+    const ring = [
+      "ring-2",
+      "ring-action",
+      "ring-offset-2",
+      "ring-offset-ground",
+    ];
+    expect(well).not.toHaveClass(...ring);
+    await user.click(tile);
+    expect(well).toHaveClass("bg-photo", ...ring);
   });
 
   it("draws no chip row when every group is a row", async () => {
