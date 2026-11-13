@@ -39,6 +39,15 @@ describe("where a bell row goes", () => {
     });
   });
 
+  it("opens the upload for a run that landed on Strava (R55·183)", () => {
+    expect(
+      notificationTarget(row("strava_reminder", "01S", "x")),
+    ).toStrictEqual({ to: "upload" });
+    expect(notificationTarget(row("strava_reminder"))).toStrictEqual({
+      to: "upload",
+    });
+  });
+
   it("goes nowhere for any other kind", () => {
     expect(notificationTarget(row("kit_reminder", "01R", "x"))).toBeUndefined();
   });

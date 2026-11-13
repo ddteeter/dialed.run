@@ -6,7 +6,8 @@
 export type NotificationTarget =
   | { readonly to: "garment"; readonly itemId: string }
   | { readonly to: "profile"; readonly handle: string }
-  | { readonly to: "own-profile" };
+  | { readonly to: "own-profile" }
+  | { readonly to: "upload" };
 
 export function notificationTarget(row: {
   readonly kind: string;
@@ -29,6 +30,11 @@ export function notificationTarget(row: {
       return row.linkHandle === null
         ? undefined
         : { to: "profile", handle: row.linkHandle };
+    }
+    // A run landed on Strava: the upload, where its file goes (R55·183).
+    // The day it arrived is to be filled in once the upload takes one.
+    case "strava_reminder": {
+      return { to: "upload" };
     }
   }
   return undefined;
