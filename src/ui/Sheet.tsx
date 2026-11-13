@@ -73,7 +73,7 @@ export function Sheet({
     // Stryker disable next-line ConditionalExpression
     if (!dialog) return;
     if (open && !dialog.open) {
-      const under = openSheetBelow(dialog);
+      const under = openSheetBelow();
       dialog.showModal();
       if (under !== undefined) stack(dialog, under);
     } else if (!open && dialog.open) {
@@ -116,16 +116,15 @@ const SHEET_CLASS =
 
 /**
  * The sheet already open beneath one about to open, if any. Design 165:
- * "never more than two", so one is all there can be.
+ * "never more than two", so one is all there can be. Asked before the new
+ * one's `showModal()`, so the only open sheet is the other one.
  */
-function openSheetBelow(
-  dialog: HTMLDialogElement,
-): HTMLDialogElement | undefined {
-  return [
-    ...document.querySelectorAll<HTMLDialogElement>(
+function openSheetBelow(): HTMLDialogElement | undefined {
+  return (
+    document.querySelector<HTMLDialogElement>(
       "dialog[data-slot='sheet'][open]",
-    ),
-  ].find((sheet) => sheet !== dialog);
+    ) ?? undefined
+  );
 }
 
 /**
