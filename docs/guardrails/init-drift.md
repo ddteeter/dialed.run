@@ -24,8 +24,8 @@ stop and ask the owner.
 - **`.githooks/pre-push`** runs `sanctions-check` after the gate. The
   template does not, and without it a copied Stryker directive passes every
   local gate and fails CI an hour later.
-- **`.github/workflows/guardrails.yml`** pins its actions to commit SHAs (a
-  repository setting requires that), and has a concurrency group, a
+- **`.github/workflows/guardrails.yml`** names a full version tag on every
+  action, locked in `actions.lock` (D-182), and has a concurrency group, a
   Chromium install and a MediaPipe staging step. The template has floating
   tags and none of the other three, and the job fails without them. The
   comments in the file give each reason.

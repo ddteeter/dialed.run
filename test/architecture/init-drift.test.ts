@@ -23,12 +23,12 @@ describe("what a forced guardrails init would remove", () => {
     expect(sanctions).toBeGreaterThan(gate);
   });
 
-  it("pins every action in guardrails.yml to a commit SHA", () => {
+  it("names a full version tag on every action in guardrails.yml, not the template's floating major", () => {
     const uses = guardrailsWorkflow
       .split("\n")
       .filter((line) => /^\s*(- )?uses:/.test(line));
     expect(uses.length).toBeGreaterThan(0);
-    expect(uses.filter((line) => !/@[0-9a-f]{40}( |$)/.test(line))).toEqual([]);
+    expect(uses.filter((line) => !/@v\d+\.\d+\.\d+$/.test(line.trim()))).toEqual([]);
   });
 
   it.each([

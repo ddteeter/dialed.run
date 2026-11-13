@@ -82,9 +82,11 @@ PR that adds the workflows has merged:
      `anthropics/claude-code-action@*`, `step-security/harden-runner@*`,
      `dependabot/fetch-metadata@*`, and `oven-sh/setup-bun@*`, which
      claude-code-action runs inside itself. An action an allowed action
-     calls must be allowed too; `grep uses:` its `action.yml` at the pinned
-     SHA when bumping it.
-   - Require actions to be pinned to a full-length commit SHA.
+     calls must be allowed too; when bumping it, read the `uses:` list
+     `actions.lock` records under its entry.
+   - Require actions to be pinned to a full-length commit SHA. It stays on:
+     GitHub counts a workflow listed in `.github/workflows/actions.lock` as
+     pinned, so tag `uses:` lines pass it (D-182).
 7. **Branch protection on `main`**: add `e2e (build)` to the required
    checks.
 
@@ -179,7 +181,7 @@ installs to enforce it, which has not been checked.
 ## The CI floor
 
 Design 196 (#546). Three checks on the workflows themselves, on top of the
-SHA pins and `actionlint`:
+lockfile and `actionlint`:
 
 - **`harden-runner` is the first step of every job**, and
   `test/architecture/workflow-floor.test.ts` fails a job without it. A new
@@ -197,12 +199,21 @@ SHA pins and `actionlint`:
   the workflow's list of licences an AGPL-3.0 work can combine with. A new
   licence is the owner's call; `@garmin/fitsdk` is exempted by name.
 
-**No workflow lockfile yet** (#601). GitHub's `actions.lock` was generated
-and then removed: `gh actions-lock` 0.4.1 writes entries keyed by tag, its
-`--verify` accepts SHA-pinned `uses:` lines against them, and the runner
-does not. Every workflow failed at startup with "The lockfile is missing"
-for each SHA-pinned action. Until the two agree, the SHA pins stay and the
-lockfile waits.
+**The workflow lockfile** (D-182, #601). Every `uses:` names a full version
+tag (`actions/checkout@v7.0.1`, never `@v7` or a commit), and
+`.github/workflows/actions.lock` records the commit each tag resolved to,
+transitive actions included (claude-code-action's `oven-sh/setup-bun`).
+The lock is generated: run `gh actions-lock` (the `github/gh-actions-lock`
+extension) and commit what it writes; never edit it by hand, and
+`gh actions-lock --no-fix` checks it without writing. Dependabot
+regenerates a workflow's entry in its own action-bump PR, but only for a
+workflow already in the lock: **a new workflow is onboarded by hand**, by
+running `gh actions-lock` in the PR that adds it.
+`test/architecture/workflow-floor.test.ts` fails a `uses:` that is not a
+full tag, and a workflow whose actions differ from the lock's list for it.
+An earlier attempt (before D-182) kept the SHA pins beside a tag-keyed
+lock, and every workflow failed at startup with "The lockfile is missing";
+the two do not mix.
 
 `zizmor` and `actionlint` are release binaries at a pinned checksum, not
 actions, so Dependabot does not see them. Bump the version and the

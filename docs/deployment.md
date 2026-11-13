@@ -381,7 +381,7 @@ needs its own Strava app, not a second subscription.
   spend-capped Anthropic key, and the repository settings that go with
   them: auto-merge on, Dependabot alerts and security updates on, fork PRs
   approved for every outside contributor, allowed actions limited, SHA pins
-  required. The steps are `docs/dependencies.md` §Setup. None of it blocks
+  required (the workflow lockfile satisfies it, D-182). The steps are `docs/dependencies.md` §Setup. None of it blocks
   the first deploy, and all of it should be in place before friends are.
 - **Variable `DEPLOY_ENABLED=true`** — `ci.yml`'s deploy job is gated on it
   and skips otherwise. It is deliberately opt-in so the first deploy is a
