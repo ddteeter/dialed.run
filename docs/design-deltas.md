@@ -1128,7 +1128,7 @@ line for the followed state, #590); no board file in the export changed,
 so the line is recorded on #590 until one does.
 
 - **R52·155 · The operator kit view's run line (#567). Two changed, four
-  confirmed; partly built.** (1) Changed: no city on the run line until
+  confirmed; built (design 202).** (1) Changed: no city on the run line until
   runs carry a place, because a home city on a run logged elsewhere would
   mislead an operator judging where. The line reads
   `NOV 4 · 7:12 AM · 41° · DAMP`. (2) Confirmed: the judged feels-like in
@@ -1138,6 +1138,10 @@ so the line is recorded on #590 until one does.
   notes. (5) Confirmed: the back link returns to the originating row,
   scrolled to it, with focus on the row. (6) Changed on the board: the
   start time is `7:12 AM` in the run's zone, which is what was built.
+  As built: the city and the profile-city read behind it are gone; the h1
+  reads "Kit by @handle", or the account id with no handle; the id is
+  MONO.xs `--muted` and selectable; back from a kit, the row named in the
+  link's anchor takes focus, and in Review it is the row that opens.
 - **R52·156 · The note counter (#568). Ruled; nothing to build here.**
   The cap − 40 counter is M5 only. Au5 keeps round 28's counter, which
   appears at 120 of 140.
@@ -1149,14 +1153,24 @@ so the line is recorded on #590 until one does.
   "Unfollowing @handle" with `aria-busy`, with no ellipsis and no
   `aria-pressed`: the pill has neither on H today, and they are in the
   contract's row but not the ruling. Asked back as #605.
-- **R52·158 · Measured lines (#591). Confirmed and widened; not built
-  yet.** A line of abbreviated measures keeps its drawn text
+- **R52·158 · Measured lines (#591). Confirmed and widened; built
+  (design 202).** A line of abbreviated measures keeps its drawn text
   `aria-hidden` and carries a visually hidden spoken form: full words,
   commas between parts, units spelled out. One rule for A1's conditions,
   the kit card's conditions, the receipt and the Desk's run line. The row
   says "the runner's own units"; on the Desk the reader is the operator
   and 155.2 keeps the operator's units, so the build reads it as the
-  viewer's units.
+  viewer's units. As built, one function (`measuredLine`,
+  `lib/contracts/measures.ts`) draws each line and says it from one list
+  of parts. Besides the four named lines it covers A2's header and rail,
+  A1's facts and start-time row, the runs list, the verdict backlog, D's
+  and the feed card's distance, G's recent entries, and `/kit`'s and the
+  public profile's conditions. Round 53 · 162.3 then widened it to every
+  temperature range: Your conditions' eyebrow and the band history card's
+  heading are built here. The kit picker's group counts and the band
+  history's rows were listed by 162.3, but each shows one temperature, not
+  the band, so the single-temperature rule applies. A bare "41° damp"
+  stays as drawn.
 - **R52·159 · A2's Change (#592). Confirmed; built (design 202).** The
   button is named "Change the kit"; the visible word stays "Change".
 - **R52·160 · The Delete account row (#593). Confirmed; built (design
