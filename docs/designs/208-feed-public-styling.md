@@ -45,8 +45,9 @@ and `ReportAffordance`:
   fell back to a different system face. The outline is now the same "♥"
   with a 1px stroke and no fill (E2-08). The indent takes 7b's
   `PendingLabel` `align="start"` (E1-07, N2-09).
-- **Phone bell (Design 169, #623, 7b's):** `PhoneBell` goes last in the
-  first row of Feed, G, H, D, search, A2 and A3, after 7b merges.
+- **Phone bell (Design 169, #623):** 7b seats `PhoneBell` in Feed, G, H,
+  D, search, A2 and A3 itself, so its R-102 conformance test is green on
+  its own PR; this lane rebases onto it and keeps 7b's seat.
 - **Public pages (PublicFrame, PublicProfile):** the bar is an ink block
   (`data-ground="ink"`, a panel in dark), and Log in is a 1px `--ink`
   outline on it (E2-06). Desk rows are `auto 1fr`, so the invite follows
