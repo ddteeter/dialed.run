@@ -144,8 +144,9 @@ function CopyLinkPill({
   onStatus,
 }: Readonly<{ entryId: string; onStatus: (sentence: string) => void }>) {
   const [state, setState] = useState<PillState>("rest");
+  // No "already at rest" guard: at rest the timer sets "rest" again, which
+  // React drops, so a guard would be a branch nothing can observe.
   useEffect(() => {
-    if (state === "rest") return;
     const timer = globalThis.setTimeout(() => {
       setState("rest");
     }, COPY_HOLD_MS);

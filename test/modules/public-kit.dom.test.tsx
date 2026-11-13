@@ -313,6 +313,11 @@ describe("the public kit, signed out", () => {
     );
     expect(link("Request access")).toHaveClass("bg-ink", "rounded-pill");
     expect(link("Have a code? Join")).toHaveAttribute("href", "/join");
+    expect(link("Have a code? Join")).toHaveClass(
+      "target",
+      "text-muted",
+      "underline",
+    );
   });
 
   it("has Log in in the bar, and the wordmark home", async () => {

@@ -823,6 +823,40 @@ describe("EntryDetail: the owner meta (round 41 #86a)", () => {
     }
   });
 
+  it("holds a refusal its full time when it follows a copy mid-hold", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const refuse = vi.spyOn(navigator.clipboard, "writeText");
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      await renderFeedScreen(
+        detail({ audience: "world" }, { viewerId: OWNER }),
+      );
+      const pill = screen.getByRole("button", { name: "Copy link" });
+      refuse.mockResolvedValueOnce(undefined);
+      await user.click(pill);
+      await waitFor(() => {
+        expect(pill).toHaveAttribute("data-state", "copied");
+      });
+      await vi.advanceTimersByTimeAsync(COPY_HOLD_MS / 2);
+      refuse.mockRejectedValueOnce(new Error("denied"));
+      await user.click(pill);
+      await waitFor(() => {
+        expect(pill).toHaveAttribute("data-state", "refused");
+      });
+      // The copy's own timer would have ended the hold here; it was cleared.
+      await vi.advanceTimersByTimeAsync(COPY_HOLD_MS / 2 + 100);
+      expect(pill).toHaveAttribute("data-state", "refused");
+      expect(shownWord(pill)).toBe("Not copied");
+      await vi.advanceTimersByTimeAsync(COPY_HOLD_MS);
+      await waitFor(() => {
+        expect(pill).toHaveAttribute("data-state", "rest");
+      });
+    } finally {
+      refuse.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
   it("builds the address from the origin it is given", () => {
     expect(publicKitUrl("01ENTRY", "https://app.dialed.run")).toBe(
       "https://app.dialed.run/kit/01ENTRY",
@@ -849,5 +883,7 @@ function shownWord(pill: HTMLElement): string | undefined {
     (word) => !word.classList.contains("invisible"),
   );
   expect(words).toHaveLength(1);
+  // In the shared cell, like the unseen ones, so the pill never resizes.
+  expect(words[0]).toHaveClass("col-start-1", "row-start-1", "text-center");
   return words[0]?.textContent;
 }
