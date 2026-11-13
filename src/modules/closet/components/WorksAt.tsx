@@ -175,12 +175,17 @@ function Thumb({
   label,
   value,
   bounds,
+  shift,
   onValue,
   onCommit,
 }: Readonly<{
   label: "Lowest" | "Highest";
   value: number;
   bounds: { low: number; high: number };
+  /**
+  Where the thumb is drawn from its value, so two never overlap.
+  */
+  shift: string;
   onValue: (value: number) => void;
   onCommit: () => void;
 }>): JSX.Element {
@@ -198,40 +203,102 @@ function Thumb({
       onPointerUp={onCommit}
       onKeyUp={onCommit}
       className={THUMB_CLASS}
+      style={{ transform: shift }}
     />
   );
 }
 
 /**
- * #109h with script: the bar is the control. The readout above it is the
- * span as set (`18–72°F`, as #109b draws it, said "18 to 72 degrees
- * Fahrenheit"); it moves with the thumbs,
- * and the search changes when a thumb is let go — one history entry for
- * one drag, replaced rather than pushed, since a span is one setting.
+ * Round 55 · 192: thumbs always sit at least 24 apart, centre to centre.
+ * A narrower range draws its span at 24, centred on the true values, and
+ * each thumb steps half the shortfall outward. A translate's percentage
+ * is of the input's own width, which is the track's, so the shortfall is
+ * one CSS length and needs no measuring.
  */
-function SpanBar({
-  search,
-  span,
+export function thumbSpread(spanPercent: number): string {
+  return `max(0px, 24px - ${String(spanPercent)}%) / 2`;
+}
+
+/**
+ * The value WORKS AT's header shows (Round 55 · 192): `Any` while neither
+ * end is set, and otherwise the span's exact whole degrees with the
+ * unit's letter, `39–46°F`, where an open end reads as the closet's own
+ * bound, as the bar draws it.
+ */
+function WorksAtValue({
+  ends,
+  isSet,
   tempUnit,
-  onSearch,
 }: Readonly<{
-  search: ClosetSearch;
-  span: { lowC: number; highC: number };
+  ends: { low: number; high: number };
+  isSet: boolean;
   tempUnit: TempUnit;
-  onSearch: (next: ClosetSearch) => void;
 }>): JSX.Element {
-  const bounds = {
+  return (
+    <span data-part="works-at-value" className="text-ink">
+      <Mono step="sm">
+        {isSet ? (
+          <Spoken {...spanInUnit(ends.low, ends.high, tempUnit)} />
+        ) : (
+          "Any"
+        )}
+      </Mono>
+    </span>
+  );
+}
+
+/**
+The closet's span in the runner's unit, the bar's two bounds.
+*/
+function boundsOf(
+  span: { lowC: number; highC: number },
+  tempUnit: TempUnit,
+): { low: number; high: number } {
+  return {
     low: tempInUnit(span.lowC, tempUnit),
     high: tempInUnit(span.highC, tempUnit),
   };
-  const [ends, setEnds] = useState({
+}
+
+/**
+The asked ends in the runner's unit, an open end at the closet's bound.
+*/
+function endsOf(
+  search: ClosetSearch,
+  bounds: { low: number; high: number },
+  tempUnit: TempUnit,
+): { low: number; high: number } {
+  return {
     low:
       search.from === undefined
         ? bounds.low
         : tempInUnit(search.from, tempUnit),
     high:
       search.to === undefined ? bounds.high : tempInUnit(search.to, tempUnit),
-  });
+  };
+}
+
+/**
+ * #109h with script: the bar is the control. Its value sits in the header
+ * row (Round 55 · 192) and moves with the thumbs, and the search changes
+ * when a thumb is let go — one history entry for one drag, replaced
+ * rather than pushed, since a span is one setting.
+ */
+function SpanBar({
+  search,
+  span,
+  tempUnit,
+  onSearch,
+  labelRef,
+}: Readonly<{
+  search: ClosetSearch;
+  span: { lowC: number; highC: number };
+  tempUnit: TempUnit;
+  onSearch: (next: ClosetSearch) => void;
+  labelRef: RefObject<HTMLHeadingElement | null>;
+}>): JSX.Element {
+  const bounds = boundsOf(span, tempUnit);
+  const [ends, setEnds] = useState(endsOf(search, bounds, tempUnit));
   const commit = (): void => {
     onSearch({
       ...search,
@@ -242,24 +309,38 @@ function SpanBar({
   };
   const left = trackPercent(ends.low, bounds.low, bounds.high);
   const right = 100 - trackPercent(ends.high, bounds.low, bounds.high);
+  const spread = thumbSpread(100 - left - right);
   return (
-    <div className="flex flex-col gap-2">
-      <Mono step="sm" className="text-ink">
-        <Spoken {...spanInUnit(ends.low, ends.high, tempUnit)} />
-      </Mono>
+    <>
+      <WorksAtHeading label="Works at" labelRef={labelRef}>
+        <WorksAtValue
+          ends={ends}
+          isSet={ends.low > bounds.low || ends.high < bounds.high}
+          tempUnit={tempUnit}
+        />
+        <ClearControl
+          search={search}
+          onSearch={onSearch}
+          labelRef={labelRef}
+        />
+      </WorksAtHeading>
       {/* 44 high, so each thumb's input is a full target (rule 03). */}
       <div data-part="span-bar" className="relative h-11">
         <div className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-pill bg-hairline">
           <div
             data-part="span"
             className="absolute inset-y-0 rounded-pill bg-ink"
-            style={{ left: `${String(left)}%`, right: `${String(right)}%` }}
+            style={{
+              left: `calc(${String(left)}% - ${spread})`,
+              right: `calc(${String(right)}% - ${spread})`,
+            }}
           />
         </div>
         <Thumb
           label="Lowest"
           value={ends.low}
           bounds={bounds}
+          shift={`translateX(calc(${spread} * -1))`}
           onValue={(value) => {
             setEnds({ ...ends, low: Math.min(value, ends.high) });
           }}
@@ -269,24 +350,26 @@ function SpanBar({
           label="Highest"
           value={ends.high}
           bounds={bounds}
+          shift={`translateX(calc(${spread}))`}
           onValue={(value) => {
             setEnds({ ...ends, high: Math.max(value, ends.low) });
           }}
           onCommit={commit}
         />
       </div>
-    </div>
+    </>
   );
 }
 
 /**
- * WORKS AT's label line, and its way out while a span is set (round 46
- * #109f): `Any`, right-aligned and 44 high. With script it is a button
- * that lets go of both ends — the bar back to the closet's full span —
- * and puts focus on the label; with none it is a link to the closet
- * without the span.
+ * WORKS AT's way out while a span is set (round 46 #109f), named Clear and
+ * in the header row beside the value (Round 55 · 192), so setting a span
+ * adds no row and COVERAGE never moves. With script it is a button that
+ * lets go of both ends — the bar back to the closet's full span — and puts
+ * focus on the label; with none it is a link to the closet without the
+ * span.
  */
-function AnyControl({
+function ClearControl({
   search,
   onSearch,
   labelRef,
@@ -306,16 +389,16 @@ function AnyControl({
         to="/closet"
         search={cleared}
         activeOptions={{ exact: true }}
-        className="target inline-flex items-center justify-center text-small text-ink"
+        className={CLEAR_CLASS}
       >
-        Any
+        Clear
       </Link>
     );
   }
   return (
     <button
       type="button"
-      className="target text-small text-ink"
+      className={CLEAR_CLASS}
       onClick={() => {
         onSearch(cleared);
         // Equivalent without `?.`: the label is drawn beside this button,
@@ -324,11 +407,23 @@ function AnyControl({
         labelRef.current?.focus();
       }}
     >
-      Any
+      Clear
     </button>
   );
 }
 
+/**
+ * Clear, as board 192 draws it: underlined, so it reads as a control, and
+ * a full target whose row is already 44 high.
+ */
+const CLEAR_CLASS =
+  "target inline-flex items-center text-small font-bold text-ink underline";
+
+/**
+ * WORKS AT's header row: the label at the left, the value and Clear at
+ * the right. Always a target's height, so Clear arriving changes nothing
+ * around it (C-14: the row grew 10px).
+ */
 function WorksAtHeading({
   label,
   labelRef,
@@ -336,16 +431,19 @@ function WorksAtHeading({
 }: Readonly<{
   label: string;
   labelRef: RefObject<HTMLHeadingElement | null>;
-  children: ReactNode;
+  children?: ReactNode;
 }>) {
   return (
-    <div className="flex items-center justify-between gap-2">
+    <div
+      data-part="works-at-header"
+      className="flex min-h-11 items-center justify-between gap-2"
+    >
       <h2 ref={labelRef} tabIndex={-1} className="m-0">
         <Mono step="xs" className="text-label">
           {label}
         </Mono>
       </h2>
-      {children}
+      <span className="flex items-center gap-3">{children}</span>
     </div>
   );
 }
@@ -360,44 +458,54 @@ export function WorksAt({
   const labelRef = useRef<HTMLHeadingElement>(null);
   // The bar's commit and Any's, once script runs to make them.
   const liveSearch = isHydrated ? onSearch : undefined;
-  const isLive = liveSearch !== undefined;
-  let control: JSX.Element;
-  if (span === undefined) {
-    control = (
-      <p className="m-0 text-small text-muted">
-        <Bracketed>Untested</Bracketed>
-      </p>
-    );
-  } else if (liveSearch === undefined) {
-    control = <WorksAtForm search={search} span={span} tempUnit={tempUnit} />;
-  } else {
-    control = (
-      <SpanBar
-        // A changed search starts the thumbs from it.
-        key={`${String(search.from)}-${String(search.to)}`}
-        search={search}
-        span={span}
-        tempUnit={tempUnit}
-        onSearch={liveSearch}
-      />
+  if (span !== undefined && liveSearch !== undefined) {
+    return (
+      <section className="flex flex-col gap-2">
+        <SpanBar
+          // A changed search starts the thumbs from it.
+          key={`${String(search.from)}-${String(search.to)}`}
+          search={search}
+          span={span}
+          tempUnit={tempUnit}
+          onSearch={liveSearch}
+          labelRef={labelRef}
+        />
+      </section>
     );
   }
   return (
     <section className="flex flex-col gap-2">
       <WorksAtHeading
         // #109h: the no-script fields' label names the unit they take
-        // (`WORKS AT · °F`); the bar's readout says it, and with no span
-        // there are no numbers for a unit to belong to.
+        // (`WORKS AT · °F`); with no span there are no numbers for a unit
+        // to belong to, and no value to show.
         label={
-          span === undefined || isLive
-            ? "Works at"
-            : `Works at · ${UNIT_MARK[tempUnit]}`
+          span === undefined ? "Works at" : `Works at · ${UNIT_MARK[tempUnit]}`
         }
         labelRef={labelRef}
       >
-        <AnyControl search={search} onSearch={liveSearch} labelRef={labelRef} />
+        {span === undefined ? undefined : (
+          <>
+            <WorksAtValue
+              ends={endsOf(search, boundsOf(span, tempUnit), tempUnit)}
+              isSet={search.from !== undefined || search.to !== undefined}
+              tempUnit={tempUnit}
+            />
+            <ClearControl
+              search={search}
+              onSearch={undefined}
+              labelRef={labelRef}
+            />
+          </>
+        )}
       </WorksAtHeading>
-      {control}
+      {span === undefined ? (
+        <p className="m-0 text-small text-muted">
+          <Bracketed>Untested</Bracketed>
+        </p>
+      ) : (
+        <WorksAtForm search={search} span={span} tempUnit={tempUnit} />
+      )}
     </section>
   );
 }

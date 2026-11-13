@@ -1353,7 +1353,7 @@ describe("ClosetGrid: the search the router hands it (design 174)", () => {
     );
     // Any drops the span for good, rather than landing on a URL that
     // brings it back from `lowest`.
-    expect(within(rail).getByRole("link", { name: "Any" })).toHaveAttribute(
+    expect(within(rail).getByRole("link", { name: "Clear" })).toHaveAttribute(
       "href",
       "/closet?group=tops",
     );

@@ -286,7 +286,7 @@ test("add garments with product identity -> detail in round 22's order -> retire
 
   // #109f: Any lets go of the span and puts focus on the label.
   await scene(page, "C · Any: the whole span again, focus on the label");
-  await filters.getByRole("button", { name: "Any" }).click();
+  await filters.getByRole("button", { name: "Clear" }).click();
   await expect(page.locator("[data-part='filtered']")).toHaveCount(0);
   await expect(
     filters.getByRole("heading", { name: "Works at" }),

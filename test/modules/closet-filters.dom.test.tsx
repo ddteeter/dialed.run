@@ -4,7 +4,7 @@ import {
   createRootRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { drawnText } from "./spoken-text";
+import { drawnText, saidText } from "./spoken-text";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState, type ReactElement } from "react";
@@ -19,6 +19,7 @@ import {
 } from "../../src/modules/closet/components/ClosetFilters";
 import {
   barRange,
+  thumbSpread,
   trackPercent,
 } from "../../src/modules/closet/components/WorksAt";
 import type { RailCounts } from "../../src/modules/closet/filters";
@@ -148,7 +149,7 @@ describe("ClosetFilters: GROUP", () => {
     expect(link(/^Covered/)).not.toHaveAttribute("aria-current");
   });
 
-  it("never calls Any current, though its search is a part of this one's", async () => {
+  it("never calls Clear current, though its search is a part of this one's", async () => {
     const router = createRouter({
       routeTree: createRootRoute({
         component: () => filters({ search: { from: 1.1, group: "tops" } }),
@@ -159,7 +160,7 @@ describe("ClosetFilters: GROUP", () => {
     });
     await router.load();
     render(<RouterProvider router={router} />);
-    expect(screen.getByRole("link", { name: "Any" })).not.toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Clear" })).not.toHaveAttribute(
       "aria-current",
     );
   });
@@ -311,21 +312,50 @@ describe("ClosetFilters: WORKS AT before a script (#109h)", () => {
     expect(fireEvent.submit(button(/^Apply$/))).toBe(true);
   });
 
-  it("offers no Any while no span is set", async () => {
+  it("offers no Clear while no span is set", async () => {
     await rail();
-    expect(screen.queryByRole("link", { name: "Any" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Clear" })).toBeNull();
   });
 
-  it("links Any to the closet without the span, keeping the rest", async () => {
+  it("links Clear to the closet without the span, keeping the rest", async () => {
     await rail({ search: { from: 1.1, group: "tops" } });
-    const any = screen.getByRole("link", { name: "Any" });
-    expect(any).toHaveAttribute("href", "/closet?group=tops");
-    expect(any).toHaveClass("target", "inline-flex");
+    const clear = screen.getByRole("link", { name: "Clear" });
+    expect(clear).toHaveAttribute("href", "/closet?group=tops");
+    // Round 55 · 192: underlined and bold, so it reads as a control.
+    expect(clear).toHaveClass(
+      "target",
+      "inline-flex",
+      "items-center",
+      "text-small",
+      "font-bold",
+      "text-ink",
+      "underline",
+    );
   });
 
-  it("offers Any for an upper end alone, too", async () => {
+  it("puts the value and Clear in the header row, with the unit (192)", async () => {
+    await rail({ search: { from: 1.1 } });
+    const header = screen
+      .getByRole("heading", { name: /^Works at/ })
+      .closest("[data-part='works-at-header']");
+    expect(header).toHaveClass("min-h-11", "items-center", "justify-between");
+    // An open end reads as the closet's bound: exact numbers, with the unit.
+    const value = header?.querySelector("[data-part='works-at-value']");
+    expect(drawnText(value)).toBe("34–58°F");
+    expect(saidText(value)).toBe("34 to 58 degrees Fahrenheit");
+    expect(within(header as HTMLElement).getByRole("link", { name: "Clear" })).toBeVisible();
+  });
+
+  it("reads Any in the header while no span is set", async () => {
+    await rail();
+    expect(
+      document.querySelector("[data-part='works-at-value']"),
+    ).toHaveTextContent(/^Any$/);
+  });
+
+  it("offers Clear for an upper end alone, too", async () => {
     await rail({ search: { to: 7.8 } });
-    expect(screen.getByRole("link", { name: "Any" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Clear" })).toHaveAttribute(
       "href",
       "/closet",
     );
@@ -419,14 +449,14 @@ describe("ClosetFilters: WORKS AT with a script (#109h)", () => {
     );
   });
 
-  it("offers Any as a button that lets go of both ends and focuses the label", async () => {
+  it("offers Clear as a button that lets go of both ends and focuses the label", async () => {
     const user = userEvent.setup();
     const onSearch = vi.fn();
     await rail({ search: { from: 4.4, to: 7.8, group: "tops" }, onSearch });
-    expect(screen.queryByRole("link", { name: "Any" })).toBeNull();
-    const any = screen.getByRole("button", { name: "Any" });
-    expect(any).toHaveClass("target");
-    await user.click(any);
+    expect(screen.queryByRole("link", { name: "Clear" })).toBeNull();
+    const clear = screen.getByRole("button", { name: "Clear" });
+    expect(clear).toHaveClass("target", "font-bold", "underline");
+    await user.click(clear);
     expect(onSearch).toHaveBeenCalledExactlyOnceWith({
       group: "tops",
       from: undefined,
@@ -434,7 +464,7 @@ describe("ClosetFilters: WORKS AT with a script (#109h)", () => {
     });
     const label = screen.getByRole("heading", { name: "Works at" });
     expect(label).toHaveFocus();
-    // Focusable by Any alone, never a stop in the tab order.
+    // Focusable by Clear alone, never a stop in the tab order.
     expect(label).toHaveAttribute("tabindex", "-1");
   });
 
@@ -442,22 +472,22 @@ describe("ClosetFilters: WORKS AT with a script (#109h)", () => {
     const user = userEvent.setup();
     await renderWithRouter(<Driven />);
     expect(screen.getByRole("slider", { name: "Lowest" })).toHaveValue("40");
-    await user.click(screen.getByRole("button", { name: "Any" }));
+    await user.click(screen.getByRole("button", { name: "Clear" }));
     expect(screen.getByRole("slider", { name: "Lowest" })).toHaveValue("34");
-    expect(screen.getByText("34–58°F")).toBeVisible();
+    expect(screen.getByText("Any")).toBeVisible();
   });
 
-  it("offers no Any button while no span is set", async () => {
+  it("offers no Clear button while no span is set", async () => {
     await rail({ onSearch: vi.fn() });
-    expect(screen.queryByRole("button", { name: "Any" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Clear" })).toBeNull();
   });
 });
 
 describe("ClosetFilters: the span bar", () => {
   it("fills the whole track while nothing is asked", async () => {
     await rail({ span: { lowC: 0, highC: 20 }, onSearch: vi.fn() });
-    expect(spanFill().style.left).toBe("0%");
-    expect(spanFill().style.right).toBe("0%");
+    expect(spanFill().style.left).toBe("calc(0% - max(0px, 24px - 100%) / 2)");
+    expect(spanFill().style.right).toBe("calc(0% - max(0px, 24px - 100%) / 2)");
   });
 
   it("fills the asked part, from each end", async () => {
@@ -467,8 +497,30 @@ describe("ClosetFilters: the span bar", () => {
       search: { from: 5, to: 15 },
       onSearch: vi.fn(),
     });
-    expect(spanFill().style.left).toBe("25%");
-    expect(spanFill().style.right).toBe("25%");
+    expect(spanFill().style.left).toBe("calc(25% - max(0px, 24px - 50%) / 2)");
+    expect(spanFill().style.right).toBe("calc(25% - max(0px, 24px - 50%) / 2)");
+  });
+
+  it("spreads the thumbs half the shortfall each way, so they sit 24 apart", async () => {
+    // Round 55 · 192: a narrow range draws its span at 24, centred.
+    await rail({
+      tempUnit: "c",
+      span: { lowC: 0, highC: 20 },
+      search: { from: 8, to: 12 },
+      onSearch: vi.fn(),
+    });
+    expect(screen.getByRole("slider", { name: "Lowest" }).style.transform).toBe(
+      "translateX(calc(max(0px, 24px - 20%) / 2 * -1))",
+    );
+    expect(screen.getByRole("slider", { name: "Highest" }).style.transform).toBe(
+      "translateX(calc(max(0px, 24px - 20%) / 2))",
+    );
+  });
+});
+
+describe("thumbSpread", () => {
+  it("is the shortfall from 24, halved, and never negative", () => {
+    expect(thumbSpread(7)).toBe("max(0px, 24px - 7%) / 2");
   });
 });
 
