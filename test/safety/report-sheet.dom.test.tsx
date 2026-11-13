@@ -449,6 +449,38 @@ describe("filing a report", () => {
     expect(both).toHaveAttribute("aria-busy", "true");
   });
 
+  it("shows Sending on Send report alone when that is the one pressed", async () => {
+    const user = userEvent.setup();
+    const fileReport = vi.fn<SheetProps["fileReport"]>(
+      () =>
+        new Promise(() => {
+          // Never settles.
+        }),
+    );
+    renderSheet({ fileReport });
+    await user.click(
+      screen.getByRole("radio", { name: "Harassment aimed at someone" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Send report" }));
+    const send = await screen.findByRole("button", { name: "Sending" });
+    expect(send).toHaveAttribute("aria-busy", "true");
+    const both = screen.getByRole("button", {
+      name: "Send report and block mark_t",
+    });
+    expect(both).not.toHaveAttribute("aria-busy", "true");
+    expect(both).toHaveTextContent(/^Send and block/);
+  });
+
+  it("shows no Sending anywhere before anything is sent", () => {
+    renderSheet();
+    expect(
+      screen.getByRole("button", { name: "Send report" }),
+    ).not.toHaveAttribute("aria-busy", "true");
+    expect(
+      screen.getByRole("button", { name: "Send report and block mark_t" }),
+    ).not.toHaveAttribute("aria-busy", "true");
+  });
+
   it("never disables the submit button", async () => {
     const user = userEvent.setup();
     renderSheet();

@@ -2973,7 +2973,7 @@ describe("PendingLabel", () => {
  * R54·167: one primary per surface, and the width rule; R55·179–180: the
  * field box and the summary.
  */
-function submit(tone?: "action" | "ink" | "chalk"): HTMLElement {
+function submit(tone?: "action" | "ink" | "chalk" | "secondary"): HTMLElement {
   render(
     <form>
       <SubmitButton
@@ -3022,6 +3022,47 @@ describe("the primary by surface, and its width (R54·167)", () => {
       ...HUG_AT_WIDE,
     );
     expect(button).not.toHaveClass("bg-action", "uppercase");
+  });
+
+  it("draws a hairline-pill submit for P2.5's Save, its border kept (R55·229)", () => {
+    const button = submit("secondary");
+    expect(button).toHaveAttribute("type", "submit");
+    expect(button).toHaveClass(
+      "target",
+      "cursor-pointer",
+      "rounded-pill",
+      "border",
+      "border-hairline",
+      "bg-transparent",
+      "min-h-control",
+      "font-semibold",
+      "text-ink",
+      ...HUG_AT_WIDE,
+    );
+    // The filled tones' `border-none` would erase the hairline.
+    expect(button).not.toHaveClass("border-none", "bg-ink", "bg-action");
+  });
+
+  it("keeps the filled tones borderless", () => {
+    for (const tone of ["action", "ink", "chalk"] as const) {
+      const { unmount } = render(
+        <form>
+          <SubmitButton
+            label={tone}
+            pendingLabel="…"
+            pending={false}
+            tone={tone}
+          />
+        </form>,
+      );
+      expect([
+        tone,
+        screen
+          .getByRole("button", { name: tone })
+          .classList.contains("border-none"),
+      ]).toEqual([tone, true]);
+      unmount();
+    }
   });
 
   it("leaves the Desk's chalk pill at its own size, beside its row", () => {

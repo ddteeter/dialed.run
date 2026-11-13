@@ -80,10 +80,7 @@ export function Sheet({
   isModal?: boolean | undefined;
   children: ReactNode;
 }>) {
-  const dialogRef = useSheetDialog(open, isModal);
-  const close = () => {
-    if (!isLocked) dialogRef.current?.close();
-  };
+  const { dialogRef, closeRef } = useSheetDialog(open, isModal);
 
   return (
     <dialog
@@ -97,8 +94,11 @@ export function Sheet({
       onKeyDown={(event) => {
         // A modal's Escape is the platform's cancel; a dialog opened with
         // `show()` has none, so its Escape is this.
-        if (!isModal && event.key === "Escape") close();
+        if (!isModal && !isLocked && event.key === "Escape") {
+          event.currentTarget.close();
+        }
       }}
+
       onScroll={(event) => {
         const box = event.currentTarget;
         box.dataset.scrolled = String(box.scrollTop > 0);
@@ -114,7 +114,9 @@ export function Sheet({
         label={label}
         kicker={kicker}
         isLocked={isLocked}
-        onClose={close}
+        onClose={() => {
+          if (!isLocked) closeRef.current();
+        }}
       />
       <div className="flex flex-col px-6 pb-6 has-[[data-part=sheet-footer]]:pb-0">
         {children}
@@ -126,12 +128,20 @@ export function Sheet({
 /**
  * Opens and shuts the dialog to match `open`: `showModal()` for a sheet,
  * `show()` for a pane, and a stacked pair marked as such (Design 165).
+ *
+ * It also hands back the ✕'s close, made here where the dialog is already
+ * in hand: the ✕ cannot be pressed before the dialog exists, so asking a
+ * ref for it at press time was a check no press could fail.
  */
 function useSheetDialog(
   isOpen: boolean,
   isModal: boolean,
-): RefObject<HTMLDialogElement | undefined> {
+): {
+  dialogRef: RefObject<HTMLDialogElement | undefined>;
+  closeRef: RefObject<() => void>;
+} {
   const dialogRef = useRef<HTMLDialogElement | undefined>(undefined);
+  const closeRef = useRef<() => void>(notYetOpen);
   useEffect(() => {
     const dialog = dialogRef.current;
     // Equivalent mutant: React attaches refs before it runs effects, and
@@ -140,6 +150,9 @@ function useSheetDialog(
     // includes undefined — not the runtime's.
     // Stryker disable next-line ConditionalExpression
     if (!dialog) return;
+    closeRef.current = () => {
+      dialog.close();
+    };
     if (isOpen && !dialog.open) {
       if (!isModal) {
         dialog.show();
@@ -152,7 +165,14 @@ function useSheetDialog(
       dialog.close();
     }
   }, [isOpen, isModal]);
-  return dialogRef;
+  return { dialogRef, closeRef };
+}
+
+/**
+ * The ✕'s close before the dialog has mounted, which no press can reach.
+ */
+function notYetOpen(): void {
+  // Nothing is open to close.
 }
 
 /**

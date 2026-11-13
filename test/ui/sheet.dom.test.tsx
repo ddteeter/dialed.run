@@ -377,7 +377,10 @@ describe("Sheet in dark, and stacked (Design 165)", () => {
 describe("Sheet's own head, foot and pane (R55·173, R54·164.4, R55·202)", () => {
   it("shows its label as the TYPE.title heading, with the ✕ in its own column", () => {
     render(<Controlled initiallyOpen />);
-    const heading = screen.getByRole("heading", { level: 2, name: "Pick a kit" });
+    const heading = screen.getByRole("heading", {
+      level: 2,
+      name: "Pick a kit",
+    });
     expect(heading).toHaveClass("font-display", "text-title");
     expect(heading).toHaveAttribute("tabindex", "-1");
     const close = screen.getByRole("button", { name: "Close" });
@@ -394,6 +397,12 @@ describe("Sheet's own head, foot and pane (R55·173, R54·164.4, R55·202)", () 
       </Sheet>,
     );
     expect(head()?.textContent).toBe("Thanks.");
+    // Not an empty line where a kicker would go: the title stands alone.
+    const title = screen.getByRole("heading", {
+      name: "Thanks.",
+      hidden: true,
+    });
+    expect(title.parentElement?.children).toHaveLength(1);
     rerender(
       <Sheet open onClose={vi.fn()} kicker="Report sent" label="Thanks.">
         <p>body</p>
@@ -458,7 +467,12 @@ describe("Sheet's own head, foot and pane (R55·173, R54·164.4, R55·202)", () 
       </Sheet>,
     );
     const foot = sheet2().querySelector("[data-part='sheet-footer']");
-    expect(foot).toHaveClass("sticky", "bottom-0", "border-t", "border-hairline");
+    expect(foot).toHaveClass(
+      "sticky",
+      "bottom-0",
+      "border-t",
+      "border-hairline",
+    );
     expect(foot?.parentElement).toHaveClass(
       "pb-6",
       "has-[[data-part=sheet-footer]]:pb-0",
@@ -530,6 +544,15 @@ describe("Sheet's own head, foot and pane (R55·173, R54·164.4, R55·202)", () 
 });
 
 describe("focusSheetHeading", () => {
+  it("does nothing in a dialog that has no heading", () => {
+    render(
+      <dialog open>
+        <div ref={focusSheetHeading}>step</div>
+      </dialog>,
+    );
+    expect(document.body).toHaveFocus();
+  });
+
   it("focuses the heading of the sheet it is attached in", async () => {
     render(
       <Sheet open onClose={vi.fn()} label="Check the blur">

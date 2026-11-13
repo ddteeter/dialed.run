@@ -878,31 +878,37 @@ const HUG_WIDE_CLASS =
   "w-full wide:w-auto wide:min-w-50 wide:self-start wide:in-data-[slot=sheet]:w-full wide:in-data-[slot=sheet]:self-stretch";
 
 const SUBMIT_TONE = {
-  action: `grid min-h-13 place-items-center rounded-card bg-action px-6 py-4 font-display uppercase text-accent-ink ${HUG_WIDE_CLASS}`,
+  action: `grid min-h-13 place-items-center rounded-card border-none bg-action px-6 py-4 font-display uppercase text-accent-ink ${HUG_WIDE_CLASS}`,
   chalk:
-    "inline-flex min-h-11 items-center justify-center self-start rounded-pill bg-ink px-5 font-bold text-ground",
-  ink: `flex min-h-control items-center justify-center rounded-pill bg-ink px-6 font-bold text-ground ${HUG_WIDE_CLASS}`,
+    "inline-flex min-h-11 items-center justify-center self-start rounded-pill border-none bg-ink px-5 font-bold text-ground",
+  ink: `flex min-h-control items-center justify-center rounded-pill border-none bg-ink px-6 font-bold text-ground ${HUG_WIDE_CLASS}`,
+  /**
+   * The secondary, on every surface (R54·167.1): a hairline pill, 48 high,
+   * the same width rule as the primary beside it. Never alone — a lone
+   * action is the primary and takes its surface's kind. Its tertiary is a
+   * text link. A tone too, for the hairline-pill Save that is a form's
+   * submit (P2.5, R55·229).
+   */
+  secondary: `flex min-h-control items-center justify-center rounded-pill border border-hairline bg-transparent px-6 font-semibold text-ink ${HUG_WIDE_CLASS}`,
 } as const;
 
 /**
- * The secondary, on every surface (R54·167.1): a hairline pill, 48 high,
- * the same width rule as the primary beside it. Never alone — a lone
- * action is the primary and takes its surface's kind. Its tertiary is a
- * text link.
+ * The secondary as a class, for a press that is not a form's submit:
+ * Keep it, Send and block.
  */
-export const SECONDARY_PILL = `target flex min-h-control cursor-pointer items-center justify-center rounded-pill border border-hairline bg-transparent px-6 text-body font-semibold text-ink ${HUG_WIDE_CLASS}`;
+export const SECONDARY_PILL = `target cursor-pointer text-body ${SUBMIT_TONE.secondary}`;
 
 /**
  * The Desk's main action as a class, for the one Desk press that is not a
  * form's submit (the copyright hold's).
  */
-export const CHALK_PILL = `cursor-pointer border-none text-body ${SUBMIT_TONE.chalk}`;
+export const CHALK_PILL = `cursor-pointer text-body ${SUBMIT_TONE.chalk}`;
 
 /**
  * The account and confirm primary as a class, for a press that is not a
  * form's submit: a confirm sheet's verb, Keep my account (R54·167.1).
  */
-export const INK_PILL = `target cursor-pointer border-none text-body ${SUBMIT_TONE.ink}`;
+export const INK_PILL = `target cursor-pointer text-body ${SUBMIT_TONE.ink}`;
 
 /**
  * A Desk decision that is not the bar's main one (Keep, Approve, Decline),
@@ -939,7 +945,7 @@ export function SubmitButton({
   pendingLabel: string;
   pending: boolean;
   /**
-  `chalk` on the Desk, which has no pink button; `ink` on Auth.
+  `chalk` on the Desk; `ink` on account, settings and confirms; `secondary` for a hairline-pill submit.
   */
   tone?: keyof typeof SUBMIT_TONE | undefined;
   /**
@@ -952,7 +958,7 @@ export function SubmitButton({
       ref={ref}
       type="submit"
       {...inFlight(pending)}
-      className={`target border-none text-body ${SUBMIT_TONE[tone]} ${
+      className={`target text-body ${SUBMIT_TONE[tone]} ${
         pending ? "cursor-default" : "cursor-pointer"
       }`}
     >

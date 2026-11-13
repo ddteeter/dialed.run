@@ -110,8 +110,8 @@ export function ReportSheet({
   const [reason, setReason] = useState<ReportReason | undefined>();
   const [note, setNote] = useState("");
   // Which of W1's two buttons sent it (R54·166.6), so only that one shows
-  // its in-flight label.
-  const [isBlocking, setIsBlocking] = useState(false);
+  // its in-flight label. Nothing until the first send.
+  const [sentBy, setSentBy] = useState<"report" | "block">();
   // Round 42: an intimate-image report swaps the sheet for its receipt
   // rather than closing, so the other sites are said where it was sent.
   const [isReceipt, setIsReceipt] = useState(false);
@@ -195,7 +195,7 @@ export function ReportSheet({
     // The submit guards itself, but the label would still move to the
     // other button mid-flight.
     if (form.pending) return;
-    setIsBlocking(isAlsoBlocking);
+    setSentBy(isAlsoBlocking ? "block" : "report");
     void form.submit({
       subjectType: subject.type,
       subjectId: subject.id,
@@ -285,12 +285,12 @@ export function ReportSheet({
           <SubmitButton
             label="Send report"
             pendingLabel="Sending"
-            pending={form.pending && !isBlocking}
+            pending={form.pending && sentBy === "report"}
           />
           {blockableName === undefined ? undefined : (
             <SendAndBlock
               name={blockableName}
-              pending={form.pending && isBlocking}
+              pending={form.pending && sentBy === "block"}
               onSend={() => {
                 send(true);
               }}
