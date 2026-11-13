@@ -1,7 +1,7 @@
 /**
  * Covers: `/open-source` (round 29 #9; plan C9; D-137) — reached from the
  * signed-out footer, the thank-you, the type group first, a licence's text
- * opened once, Show all, the search and its empty line, the
+ * opened once, Show all, the search, its empty line and its clear, the
  * third-party notices, and the tools we build with, last (round 40 #82;
  * design 151). One journey, one video.
  */
@@ -37,7 +37,7 @@ test("the open-source page: groups by licence, search, the notices and the tools
     has: page.getByRole("heading", { level: 2, name: "MIT" }),
   });
   await mit.getByText("Read the MIT licence").click();
-  await expect(mit.locator("pre").first()).toContainText(
+  await expect(mit.locator("details p").first()).toContainText(
     "Permission is hereby granted",
   );
 
@@ -70,7 +70,11 @@ test("the open-source page: groups by licence, search, the notices and the tools
       .getByRole("status")
       .filter({ hasText: "Nothing we ship or build with is called “xyz”." }),
   ).toHaveCount(1);
-  await search.fill("");
+  // R55·226: the pack's clear, shown only while there is text.
+  await page.getByRole("button", { name: "Clear" }).click();
+  await expect(search).toHaveValue("");
+  await expect(search).toBeFocused();
+  await expect(page.getByRole("button", { name: "Clear" })).toHaveCount(0);
 
   await scene(page, "Then the third-party notices");
   const notices = page.getByRole("heading", {

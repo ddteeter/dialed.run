@@ -265,7 +265,7 @@ describe("OpenSourcePage", () => {
     // were a list of identical links.
     const project = within(react).getByRole("link", { name: "Project: react" });
     expect(project).toHaveAttribute("href", "https://react.dev/");
-    expect(project).toHaveClass("target-line", "underline");
+    expect(project).toHaveClass("target-line", "text-body", "underline");
     expect(project).toHaveTextContent(/^Project$/u);
     expect(
       within(react).getByText("© Meta Platforms, Inc. and affiliates"),

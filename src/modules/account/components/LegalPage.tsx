@@ -431,9 +431,12 @@ function InlineView({
       );
     }
     case "code": {
-      // R55·223: MONO.md, and a file name never breaks.
+      // R55·223: MONO.md, and a file name never breaks. A box of its own
+      // takes the next line whole rather than breaking at a hyphen; only a
+      // name longer than the line itself breaks, so a 320 screen never
+      // scrolls sideways (plan 161's reflow check).
       return (
-        <code className="whitespace-nowrap">
+        <code className="inline-block max-w-full wrap-anywhere">
           <Mono step="md">{inline.text}</Mono>
         </code>
       );

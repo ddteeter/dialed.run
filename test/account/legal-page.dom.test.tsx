@@ -285,7 +285,11 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
     // Inline code is MONO.md, and never breaks.
     const main = within(notice).getByText("main");
     expect(main).toHaveClass("text-mono-md");
-    expect(main.closest("code")).toHaveClass("whitespace-nowrap");
+    expect(main.closest("code")).toHaveClass(
+      "inline-block",
+      "max-w-full",
+      "wrap-anywhere",
+    );
     // Drawn once: not again as a quote in the text.
     expect(screen.queryByText(/DRAFT/u)).toBeNull();
     // Another quote stays a quote.

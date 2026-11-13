@@ -378,7 +378,7 @@ function PieceRow({
           <a
             href={piece.project}
             aria-label={`Project: ${piece.name}`}
-            className="target-line inline-block shrink-0 text-small text-ink underline underline-offset-4"
+            className="target-line inline-block shrink-0 text-body text-ink underline underline-offset-4"
           >
             Project
           </a>

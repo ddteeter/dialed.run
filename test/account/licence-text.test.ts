@@ -112,6 +112,9 @@ describe("holderOf", () => {
     "Copyright (c)",
     "Copyright (c) <a@b.c>",
     "(c) the Licensor may",
+    // Apache 2.0's third condition, not a holder.
+    "      (c) You must retain, in the Source form of any Derivative Works",
+    "(C) Your Name",
     "Permission is hereby granted",
     "",
   ])("finds no holder in %j", (line) => {

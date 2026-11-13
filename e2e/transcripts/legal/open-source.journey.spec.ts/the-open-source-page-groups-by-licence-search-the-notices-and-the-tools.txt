@@ -73,7 +73,66 @@ The typefaces you read everything in.
 end of paragraph
 group
 Read the licence text
-SIL OPEN FONT LICENSE Version #.# - # :month # ----------------------------------------------------------- PREAMBLE The goals of the Open Font License (OFL) are to stimulate worldwide development of collaborative font projects, to support the font creation efforts of academic and linguistic communities, and to provide a free and open framework in which fonts may be shared and improved in partnership with others. The OFL allows the licensed fonts to be used, studied, modified and redistributed freely as long as they are not sold by themselves. The fonts, including any derivative works, can be bundled, embedded, redistributed and/or sold with any software provided that any reserved names are not used by derivative works. The fonts and derivatives, however, cannot be released under any other type of license. The requirement for fonts to remain under this license does not apply to any document created using the fonts or their derivatives. DEFINITIONS "Font Software" refers to the set of files released by the Copyright Holder(s) under this license and clearly marked as such. This may include source files, build scripts and documentation. "Reserved Font Name" refers to any names specified as such after the copyright statement(s). "Original Version" refers to the collection of Font Software components as distributed by the Copyright Holder(s). "Modified Version" refers to any derivative made by adding to, deleting, or substituting -- in part or in whole -- any of the components of the Original Version, by changing formats or by porting the Font Software to a new environment. "Author" refers to any designer, engineer, programmer, technical writer or other person who contributed to the Font Software. PERMISSION & CONDITIONS Permission is hereby granted, free of charge, to any person obtaining a copy of the Font Software, to use, study, copy, merge, embed, modify, redistribute, and sell modified and unmodified copies of the Font Software, subject to the following conditions: #) Neither the Font Software nor any of its individual components, in Original or Modified Versions, may be sold by itself. #) Original or Modified Versions of the Font Software may be bundled, redistributed and/or sold with any software, provided that each copy contains the above copyright notice and this license. These can be included either as stand-alone text files, human-readable headers or in the appropriate machine-readable metadata fields within text or binary files as long as those fields can be easily viewed by the user. #) No Modified Version of the Font Software may use the Reserved Font Name(s) unless explicit written permission is granted by the corresponding Copyright Holder. This restriction only applies to the primary font name as presented to the users. #) The name(s) of the Copyright Holder(s) or the Author(s) of the Font Software shall not be used to promote, endorse or advertise any Modified Version, except to acknowledge the contribution(s) of the Copyright Holder(s) and the Author(s) or with their explicit written permission. #) The Font Software, modified or unmodified, in part or in whole, must be distributed entirely under this license, and must not be distributed under any other license. The requirement for fonts to remain under this license does not apply to any document created using the Font Software. TERMINATION This license becomes null and void if any of the above conditions are not met. DISCLAIMER THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM OTHER DEALINGS IN THE FONT SOFTWARE.
+paragraph
+SIL OPEN FONT LICENSE Version #.# - # :month #
+end of paragraph
+paragraph
+PREAMBLE
+end of paragraph
+paragraph
+The goals of the Open Font License (OFL) are to stimulate worldwide development of collaborative font projects, to support the font creation efforts of academic and linguistic communities, and to provide a free and open framework in which fonts may be shared and improved in partnership with others.
+end of paragraph
+paragraph
+The OFL allows the licensed fonts to be used, studied, modified and redistributed freely as long as they are not sold by themselves. The fonts, including any derivative works, can be bundled, embedded, redistributed and/or sold with any software provided that any reserved names are not used by derivative works. The fonts and derivatives, however, cannot be released under any other type of license. The requirement for fonts to remain under this license does not apply to any document created using the fonts or their derivatives.
+end of paragraph
+paragraph
+DEFINITIONS
+end of paragraph
+paragraph
+"Font Software" refers to the set of files released by the Copyright Holder(s) under this license and clearly marked as such. This may include source files, build scripts and documentation.
+end of paragraph
+paragraph
+"Reserved Font Name" refers to any names specified as such after the copyright statement(s).
+end of paragraph
+paragraph
+"Original Version" refers to the collection of Font Software components as distributed by the Copyright Holder(s).
+end of paragraph
+paragraph
+"Modified Version" refers to any derivative made by adding to, deleting, or substituting -- in part or in whole -- any of the components of the Original Version, by changing formats or by porting the Font Software to a new environment.
+end of paragraph
+paragraph
+"Author" refers to any designer, engineer, programmer, technical writer or other person who contributed to the Font Software.
+end of paragraph
+paragraph
+PERMISSION & CONDITIONS
+end of paragraph
+paragraph
+Permission is hereby granted, free of charge, to any person obtaining a copy of the Font Software, to use, study, copy, merge, embed, modify, redistribute, and sell modified and unmodified copies of the Font Software, subject to the following conditions:
+end of paragraph
+paragraph
+#) Neither the Font Software nor any of its individual components, in Original or Modified Versions, may be sold by itself.
+end of paragraph
+paragraph
+#) Original or Modified Versions of the Font Software may be bundled, redistributed and/or sold with any software, provided that each copy contains the above copyright notice and this license. These can be included either as stand-alone text files, human-readable headers or in the appropriate machine-readable metadata fields within text or binary files as long as those fields can be easily viewed by the user.
+end of paragraph
+paragraph
+#) No Modified Version of the Font Software may use the Reserved Font Name(s) unless explicit written permission is granted by the corresponding Copyright Holder. This restriction only applies to the primary font name as presented to the users.
+end of paragraph
+paragraph
+#) The name(s) of the Copyright Holder(s) or the Author(s) of the Font Software shall not be used to promote, endorse or advertise any Modified Version, except to acknowledge the contribution(s) of the Copyright Holder(s) and the Author(s) or with their explicit written permission.
+end of paragraph
+paragraph
+#) The Font Software, modified or unmodified, in part or in whole, must be distributed entirely under this license, and must not be distributed under any other license. The requirement for fonts to remain under this license does not apply to any document created using the Font Software.
+end of paragraph
+paragraph
+TERMINATION
+end of paragraph
+paragraph
+This license becomes null and void if any of the above conditions are not met.
+end of paragraph
+paragraph
+DISCLAIMER THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM OTHER DEALINGS IN THE FONT SOFTWARE.
+end of paragraph
 end of group
 list
 listitem, level 1, position 1, set size 3
@@ -104,7 +163,15 @@ heading, MIT, level 2
 #
 group
 Read the MIT licence
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+paragraph
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+end of paragraph
+paragraph
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+end of paragraph
+paragraph
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+end of paragraph
 end of group
 list
 listitem, level 1, position 1, set size 116
@@ -493,7 +560,24 @@ group
 Licence: cookie-es
 Licence
 end, Licence: cookie-es
-Cookie-es copyright (c) Pooya Parsa <pooya@pi#.io> Cookie parsing based on https://github.com/jshttp/cookie Set-Cookie parsing based on https://github.com/nfriedly/set-cookie-parser Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+paragraph
+Cookie-es copyright (c) Pooya Parsa <pooya@pi#.io>
+end of paragraph
+paragraph
+Cookie parsing based on https://github.com/jshttp/cookie
+end of paragraph
+paragraph
+Set-Cookie parsing based on https://github.com/nfriedly/set-cookie-parser
+end of paragraph
+paragraph
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+end of paragraph
+paragraph
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+end of paragraph
+paragraph
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+end of paragraph
 end of group
 end of listitem, level 1, position 48, set size 116
 listitem, level 1, position 49, set size 116
@@ -589,7 +673,18 @@ group
 Licence: html-to-text
 Licence
 end, Licence: html-to-text
-Portions Copyright (c) #-# werk# <malte@werk#.de> Portions Copyright (c) #-# KillyMXI <killy@mxii.eu.org> Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+paragraph
+Portions Copyright (c) #-# werk# <malte@werk#.de> Portions Copyright (c) #-# KillyMXI <killy@mxii.eu.org>
+end of paragraph
+paragraph
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+end of paragraph
+paragraph
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+end of paragraph
+paragraph
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+end of paragraph
 end of group
 end of listitem, level 1, position 60, set size 116
 listitem, level 1, position 61, set size 116
@@ -939,7 +1034,15 @@ group
 Licence: seroval
 Licence
 end, Licence: seroval
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice (including the next paragraph) shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+paragraph
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+end of paragraph
+paragraph
+The above copyright notice and this permission notice (including the next paragraph) shall be included in all copies or substantial portions of the Software.
+end of paragraph
+paragraph
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+end of paragraph
 end of group
 end of listitem, level 1, position 103, set size 116
 listitem, level 1, position 104, set size 116
@@ -953,7 +1056,15 @@ group
 Licence: seroval-plugins
 Licence
 end, Licence: seroval-plugins
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice (including the next paragraph) shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+paragraph
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+end of paragraph
+paragraph
+The above copyright notice and this permission notice (including the next paragraph) shall be included in all copies or substantial portions of the Software.
+end of paragraph
+paragraph
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+end of paragraph
 end of group
 end of listitem, level 1, position 104, set size 116
 listitem, level 1, position 105, set size 116
@@ -1059,7 +1170,21 @@ heading, BSD-#-Clause, level 2
 #
 group
 Read the BSD-#-Clause licence
-All rights reserved. Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met: Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution. THIS IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+paragraph
+All rights reserved.
+end of paragraph
+paragraph
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+end of paragraph
+paragraph
+Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+end of paragraph
+paragraph
+Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+end of paragraph
+paragraph
+THIS IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+end of paragraph
 end of group
 list
 listitem, level 1, position 1, set size 3
@@ -1094,7 +1219,102 @@ heading, Apache #.#, level 2
 #
 group
 Read the Apache #.# licence
-Version #.#, :month # http://www.apache.org/licenses/ TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION #. Definitions. "License" shall mean the terms and conditions for use, reproduction, and distribution as defined by Sections # through # of this document. "Licensor" shall mean the copyright owner or entity authorized by the copyright owner that is granting the License. "Legal Entity" shall mean the union of the acting entity and all other entities that control, are controlled by, or are under common control with that entity. For the purposes of this definition, "control" means (i) the power, direct or indirect, to cause the direction or management of such entity, whether by contract or otherwise, or (ii) ownership of fifty percent (#%) or more of the outstanding shares, or (iii) beneficial ownership of such entity. "You" (or "Your") shall mean an individual or Legal Entity exercising permissions granted by this License. "Source" form shall mean the preferred form for making modifications, including but not limited to software source code, documentation source, and configuration files. "Object" form shall mean any form resulting from mechanical transformation or translation of a Source form, including but not limited to compiled object code, generated documentation, and conversions to other media types. "Work" shall mean the work of authorship, whether in Source or Object form, made available under the License, as indicated by a copyright notice that is included in or attached to the work (an example is provided in the Appendix below). "Derivative Works" shall mean any work, whether in Source or Object form, that is based on (or derived from) the Work and for which the editorial revisions, annotations, elaborations, or other modifications represent, as a whole, an original work of authorship. For the purposes of this License, Derivative Works shall not include works that remain separable from, or merely link (or bind by name) to the interfaces of, the Work and Derivative Works thereof. "Contribution" shall mean any work of authorship, including the original version of the Work and any modifications or additions to that Work or Derivative Works thereof, that is intentionally submitted to Licensor for inclusion in the Work by the copyright owner or by an individual or Legal Entity authorized to submit on behalf of the copyright owner. For the purposes of this definition, "submitted" means any form of electronic, verbal, or written communication sent to the Licensor or its representatives, including but not limited to communication on electronic mailing lists, source code control systems, and issue tracking systems that are managed by, or on behalf of, the Licensor for the purpose of discussing and improving the Work, but excluding communication that is conspicuously marked or otherwise designated in writing by the copyright owner as "Not a Contribution." "Contributor" shall mean Licensor and any individual or Legal Entity on behalf of whom a Contribution has been received by Licensor and subsequently incorporated within the Work. #. Grant of Copyright License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare Derivative Works of, publicly display, publicly perform, sublicense, and distribute the Work and such Derivative Works in Source or Object form. #. Grant of Patent License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable (except as stated in this section) patent license to make, have made, use, offer to sell, sell, import, and otherwise transfer the Work, where such license applies only to those patent claims licensable by such Contributor that are necessarily infringed by their Contribution(s) alone or by combination of their Contribution(s) with the Work to which such Contribution(s) was submitted. If You institute patent litigation against any entity (including a cross-claim or counterclaim in a lawsuit) alleging that the Work or a Contribution incorporated within the Work constitutes direct or contributory patent infringement, then any patent licenses granted to You under this License for that Work shall terminate as of the date such litigation is filed. #. Redistribution. You may reproduce and distribute copies of the Work or Derivative Works thereof in any medium, with or without modifications, and in Source or Object form, provided that You meet the following conditions: (a) You must give any other recipients of the Work or Derivative Works a copy of this License; and (b) You must cause any modified files to carry prominent notices stating that You changed the files; and that You distribute, all copyright, patent, trademark, and attribution notices from the Source form of the Work, excluding those notices that do not pertain to any part of the Derivative Works; and (d) If the Work includes a "NOTICE" text file as part of its distribution, then any Derivative Works that You distribute must include a readable copy of the attribution notices contained within such NOTICE file, excluding those notices that do not pertain to any part of the Derivative Works, in at least one of the following places: within a NOTICE text file distributed as part of the Derivative Works; within the Source form or documentation, if provided along with the Derivative Works; or, within a display generated by the Derivative Works, if and wherever such third-party notices normally appear. The contents of the NOTICE file are for informational purposes only and do not modify the License. You may add Your own attribution notices within Derivative Works that You distribute, alongside or as an addendum to the NOTICE text from the Work, provided that such additional attribution notices cannot be construed as modifying the License. You may add Your own copyright statement to Your modifications and may provide additional or different license terms and conditions for use, reproduction, or distribution of Your modifications, or for any such Derivative Works as a whole, provided Your use, reproduction, and distribution of the Work otherwise complies with the conditions stated in this License. #. Submission of Contributions. Unless You explicitly state otherwise, any Contribution intentionally submitted for inclusion in the Work by You to the Licensor shall be under the terms and conditions of this License, without any additional terms or conditions. Notwithstanding the above, nothing herein shall supersede or modify the terms of any separate license agreement you may have executed with Licensor regarding such Contributions. #. Trademarks. This License does not grant permission to use the trade names, trademarks, service marks, or product names of the Licensor, except as required for reasonable and customary use in describing the origin of the Work and reproducing the content of the NOTICE file. #. Disclaimer of Warranty. Unless required by applicable law or agreed to in writing, Licensor provides the Work (and each Contributor provides its Contributions) on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied, including, without limitation, any warranties or conditions of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A PARTICULAR PURPOSE. You are solely responsible for determining the appropriateness of using or redistributing the Work and assume any risks associated with Your exercise of permissions under this License. #. Limitation of Liability. In no event and under no legal theory, whether in tort (including negligence), contract, or otherwise, unless required by applicable law (such as deliberate and grossly negligent acts) or agreed to in writing, shall any Contributor be liable to You for damages, including any direct, indirect, special, incidental, or consequential damages of any character arising as a result of this License or out of the use or inability to use the Work (including but not limited to damages for loss of goodwill, work stoppage, computer failure or malfunction, or any and all other commercial damages or losses), even if such Contributor has been advised of the possibility of such damages. #. Accepting Warranty or Additional Liability. While redistributing the Work or Derivative Works thereof, You may choose to offer, and charge a fee for, acceptance of support, warranty, indemnity, or other liability obligations and/or rights consistent with this License. However, in accepting such obligations, You may act only on Your own behalf and on Your sole responsibility, not on behalf of any other Contributor, and only if You agree to indemnify, defend, and hold each Contributor harmless for any liability incurred by, or claims asserted against, such Contributor by reason of your accepting any such warranty or additional liability. END OF TERMS AND CONDITIONS APPENDIX: How to apply the Apache License to your work. To apply the Apache License to your work, attach the following boilerplate notice, with the fields enclosed by brackets "[]" replaced with your own identifying information. (Don't include the brackets!) The text should be enclosed in the appropriate comment syntax for the file format. We also recommend that a file or class name and description of purpose be included on the same "printed page" as the copyright notice for easier identification within third-party archives. Licensed under the Apache License, Version #.# (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-#.# Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+paragraph
+Version #.#, :month # http://www.apache.org/licenses/
+end of paragraph
+paragraph
+TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+end of paragraph
+paragraph
+#. Definitions.
+end of paragraph
+paragraph
+"License" shall mean the terms and conditions for use, reproduction, and distribution as defined by Sections # through # of this document.
+end of paragraph
+paragraph
+"Licensor" shall mean the copyright owner or entity authorized by the copyright owner that is granting the License.
+end of paragraph
+paragraph
+"Legal Entity" shall mean the union of the acting entity and all other entities that control, are controlled by, or are under common control with that entity. For the purposes of this definition, "control" means (i) the power, direct or indirect, to cause the direction or management of such entity, whether by contract or otherwise, or (ii) ownership of fifty percent (#%) or more of the outstanding shares, or (iii) beneficial ownership of such entity.
+end of paragraph
+paragraph
+"You" (or "Your") shall mean an individual or Legal Entity exercising permissions granted by this License.
+end of paragraph
+paragraph
+"Source" form shall mean the preferred form for making modifications, including but not limited to software source code, documentation source, and configuration files.
+end of paragraph
+paragraph
+"Object" form shall mean any form resulting from mechanical transformation or translation of a Source form, including but not limited to compiled object code, generated documentation, and conversions to other media types.
+end of paragraph
+paragraph
+"Work" shall mean the work of authorship, whether in Source or Object form, made available under the License, as indicated by a copyright notice that is included in or attached to the work (an example is provided in the Appendix below).
+end of paragraph
+paragraph
+"Derivative Works" shall mean any work, whether in Source or Object form, that is based on (or derived from) the Work and for which the editorial revisions, annotations, elaborations, or other modifications represent, as a whole, an original work of authorship. For the purposes of this License, Derivative Works shall not include works that remain separable from, or merely link (or bind by name) to the interfaces of, the Work and Derivative Works thereof.
+end of paragraph
+paragraph
+"Contribution" shall mean any work of authorship, including the original version of the Work and any modifications or additions to that Work or Derivative Works thereof, that is intentionally submitted to Licensor for inclusion in the Work by the copyright owner or by an individual or Legal Entity authorized to submit on behalf of the copyright owner. For the purposes of this definition, "submitted" means any form of electronic, verbal, or written communication sent to the Licensor or its representatives, including but not limited to communication on electronic mailing lists, source code control systems, and issue tracking systems that are managed by, or on behalf of, the Licensor for the purpose of discussing and improving the Work, but excluding communication that is conspicuously marked or otherwise designated in writing by the copyright owner as "Not a Contribution."
+end of paragraph
+paragraph
+"Contributor" shall mean Licensor and any individual or Legal Entity on behalf of whom a Contribution has been received by Licensor and subsequently incorporated within the Work.
+end of paragraph
+paragraph
+#. Grant of Copyright License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare Derivative Works of, publicly display, publicly perform, sublicense, and distribute the Work and such Derivative Works in Source or Object form.
+end of paragraph
+paragraph
+#. Grant of Patent License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable (except as stated in this section) patent license to make, have made, use, offer to sell, sell, import, and otherwise transfer the Work, where such license applies only to those patent claims licensable by such Contributor that are necessarily infringed by their Contribution(s) alone or by combination of their Contribution(s) with the Work to which such Contribution(s) was submitted. If You institute patent litigation against any entity (including a cross-claim or counterclaim in a lawsuit) alleging that the Work or a Contribution incorporated within the Work constitutes direct or contributory patent infringement, then any patent licenses granted to You under this License for that Work shall terminate as of the date such litigation is filed.
+end of paragraph
+paragraph
+#. Redistribution. You may reproduce and distribute copies of the Work or Derivative Works thereof in any medium, with or without modifications, and in Source or Object form, provided that You meet the following conditions:
+end of paragraph
+paragraph
+(a) You must give any other recipients of the Work or Derivative Works a copy of this License; and
+end of paragraph
+paragraph
+(b) You must cause any modified files to carry prominent notices stating that You changed the files; and
+end of paragraph
+paragraph
+(c) You must retain, in the Source form of any Derivative Works that You distribute, all copyright, patent, trademark, and attribution notices from the Source form of the Work, excluding those notices that do not pertain to any part of the Derivative Works; and
+end of paragraph
+paragraph
+(d) If the Work includes a "NOTICE" text file as part of its distribution, then any Derivative Works that You distribute must include a readable copy of the attribution notices contained within such NOTICE file, excluding those notices that do not pertain to any part of the Derivative Works, in at least one of the following places: within a NOTICE text file distributed as part of the Derivative Works; within the Source form or documentation, if provided along with the Derivative Works; or, within a display generated by the Derivative Works, if and wherever such third-party notices normally appear. The contents of the NOTICE file are for informational purposes only and do not modify the License. You may add Your own attribution notices within Derivative Works that You distribute, alongside or as an addendum to the NOTICE text from the Work, provided that such additional attribution notices cannot be construed as modifying the License.
+end of paragraph
+paragraph
+You may add Your own copyright statement to Your modifications and may provide additional or different license terms and conditions for use, reproduction, or distribution of Your modifications, or for any such Derivative Works as a whole, provided Your use, reproduction, and distribution of the Work otherwise complies with the conditions stated in this License.
+end of paragraph
+paragraph
+#. Submission of Contributions. Unless You explicitly state otherwise, any Contribution intentionally submitted for inclusion in the Work by You to the Licensor shall be under the terms and conditions of this License, without any additional terms or conditions. Notwithstanding the above, nothing herein shall supersede or modify the terms of any separate license agreement you may have executed with Licensor regarding such Contributions.
+end of paragraph
+paragraph
+#. Trademarks. This License does not grant permission to use the trade names, trademarks, service marks, or product names of the Licensor, except as required for reasonable and customary use in describing the origin of the Work and reproducing the content of the NOTICE file.
+end of paragraph
+paragraph
+#. Disclaimer of Warranty. Unless required by applicable law or agreed to in writing, Licensor provides the Work (and each Contributor provides its Contributions) on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied, including, without limitation, any warranties or conditions of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A PARTICULAR PURPOSE. You are solely responsible for determining the appropriateness of using or redistributing the Work and assume any risks associated with Your exercise of permissions under this License.
+end of paragraph
+paragraph
+#. Limitation of Liability. In no event and under no legal theory, whether in tort (including negligence), contract, or otherwise, unless required by applicable law (such as deliberate and grossly negligent acts) or agreed to in writing, shall any Contributor be liable to You for damages, including any direct, indirect, special, incidental, or consequential damages of any character arising as a result of this License or out of the use or inability to use the Work (including but not limited to damages for loss of goodwill, work stoppage, computer failure or malfunction, or any and all other commercial damages or losses), even if such Contributor has been advised of the possibility of such damages.
+end of paragraph
+paragraph
+#. Accepting Warranty or Additional Liability. While redistributing the Work or Derivative Works thereof, You may choose to offer, and charge a fee for, acceptance of support, warranty, indemnity, or other liability obligations and/or rights consistent with this License. However, in accepting such obligations, You may act only on Your own behalf and on Your sole responsibility, not on behalf of any other Contributor, and only if You agree to indemnify, defend, and hold each Contributor harmless for any liability incurred by, or claims asserted against, such Contributor by reason of your accepting any such warranty or additional liability.
+end of paragraph
+paragraph
+END OF TERMS AND CONDITIONS
+end of paragraph
+paragraph
+APPENDIX: How to apply the Apache License to your work.
+end of paragraph
+paragraph
+To apply the Apache License to your work, attach the following boilerplate notice, with the fields enclosed by brackets "[]" replaced with your own identifying information. (Don't include the brackets!) The text should be enclosed in the appropriate comment syntax for the file format. We also recommend that a file or class name and description of purpose be included on the same "printed page" as the copyright notice for easier identification within third-party archives.
+end of paragraph
+paragraph
+Licensed under the Apache License, Version #.# (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
+end of paragraph
+paragraph
+http://www.apache.org/licenses/LICENSE-#.#
+end of paragraph
+paragraph
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+end of paragraph
 end of group
 list
 listitem, level 1, position 1, set size 3
@@ -1103,7 +1323,7 @@ listitem, level 1, position 1, set size 3
 link, Project: @cf-wasm/photon
 Project
 end of link, Project: @cf-wasm/photon
-© You must retain, in the Source form of any Derivative Works; #, Silvia O'Dwyer
+© #, Silvia O'Dwyer
 end of listitem, level 1, position 1, set size 3
 listitem, level 1, position 2, set size 3
 @mediapipe/tasks-vision
@@ -1125,267 +1345,157 @@ heading, MPL-#.#, level 2
 #
 group
 Read the MPL-#.# licence
-================================== #. Definitions -------------- #.#. "Contributor" means each individual or legal entity that creates, contributes to the creation of, or owns Covered Software. #.#. "Contributor Version" means the combination of the Contributions of others (if any) used by a Contributor and that particular Contributor's Contribution. #.#. "Contribution" means Covered Software of a particular Contributor. #.#. "Covered Software" means Source Code Form to which the initial Contributor has attached the notice in Exhibit A, the Executable Form of such Source Code Form, and Modifications of such Source Code Form, in each case including portions thereof. #.#. "Incompatible With Secondary Licenses" means (a) that the initial Contributor has attached the notice described in Exhibit B to the Covered Software; or (b) that the Covered Software was made available under the terms of version #.# or earlier of the License, but not also under the terms of a Secondary License. #.#. "Executable Form" means any form of the work other than Source Code Form. #.#. "Larger Work" means a work that combines Covered Software with other material, in a separate file or files, that is not Covered Software. #.#. "License" means this document. #.#. "Licensable" means having the right to grant, to the maximum extent possible, whether at the time of the initial grant or subsequently, any and all of the rights conveyed by this License. #.#. "Modifications" means any of the following: (a) any file in Source Code Form that results from an addition to, deletion from, or modification of the contents of Covered Software; or (b) any new file in Source Code Form that contains any Covered Software. #.#. "Patent Claims" of a Contributor means any patent claim(s), including without limitation, method, process, and apparatus claims, in any patent Licensable by such Contributor that would be infringed, but for the grant of the License, by the making, using, selling, offering for sale, having made, import, or transfer of either its Contributions or its Contributor Version. #.#. "Secondary License" means either the GNU General Public License, Version #.#, the GNU Lesser General Public License, Version #.#, the GNU Affero General Public License, Version #.#, or any later versions of those licenses. #.#. "Source Code Form" means the form of the work preferred for making modifications. #.#. "You" (or "Your") means an individual or a legal entity exercising rights under this License. For legal entities, "You" includes any entity that controls, is controlled by, or is under common control with You. For purposes of this definition, "control" means (a) the power, direct or indirect, to cause the direction or management of such entity, whether by contract or otherwise, or (b) ownership of more than fifty percent (#%) of the outstanding shares or beneficial ownership of such entity. #. License Grants and Conditions -------------------------------- #.#. Grants Each Contributor hereby grants You a world-wide, royalty-free, non-exclusive license: (a) under intellectual property rights (other than patent or trademark) Licensable by such Contributor to use, reproduce, make available, modify, display, perform, distribute, and otherwise exploit its Contributions, either on an unmodified basis, with Modifications, or as part of a Larger Work; and (b) under Patent Claims of such Contributor to make, use, sell, offer for sale, have made, import, and otherwise transfer either its Contributions or its Contributor Version. #.#. Effective Date The licenses granted in Section #.# with respect to any Contribution become effective for each Contribution on the date the Contributor first distributes such Contribution. #.#. Limitations on Grant Scope The licenses granted in this Section # are the only rights granted under this License. No additional rights or licenses will be implied from the distribution or licensing of Covered Software under this License. Notwithstanding Section #.#(b) above, no patent license is granted by a Contributor: (a) for any code that a Contributor has removed from Covered Software; or (b) for infringements caused by: (i) Your and any other third party's modifications of Covered Software, or (ii) the combination of its Contributions with other software (except as part of its Contributor Version); or (c) under Patent Claims infringed by Covered Software in the absence of its Contributions. This License does not grant any rights in the trademarks, service marks, or logos of any Contributor (except as may be necessary to comply with the notice requirements in Section #.#). #.#. Subsequent Licenses No Contributor makes additional grants as a result of Your choice to distribute the Covered Software under a subsequent version of this License (see Section #.#) or under the terms of a Secondary License (if permitted under the terms of Section #.#). #.#. Representation Each Contributor represents that the Contributor believes its Contributions are its original creation(s) or it has sufficient rights to grant the rights to its Contributions conveyed by this License. #.#. Fair Use This License is not intended to limit any rights You have under applicable copyright doctrines of fair use, fair dealing, or other equivalents. #.#. Conditions Sections #.#, #.#, #.#, and #.# are conditions of the licenses granted in Section #.#. #. Responsibilities ------------------- #.#. Distribution of Source Form All distribution of Covered Software in Source Code Form, including any Modifications that You create or to which You contribute, must be under the terms of this License. You must inform recipients that the Source Code Form of the Covered Software is governed by the terms of this License, and how they can obtain a copy of this License. You may not attempt to alter or restrict the recipients' rights in the Source Code Form. #.#. Distribution of Executable Form If You distribute Covered Software in Executable Form then: (a) such Covered Software must also be made available in Source Code Form, as described in Section #.#, and You must inform recipients of the Executable Form how they can obtain a copy of such Source Code Form by reasonable means in a timely manner, at a charge no more than the cost of distribution to the recipient; and (b) You may distribute such Executable Form under the terms of this License, or sublicense it under different terms, provided that the license for the Executable Form does not attempt to limit or alter the recipients' rights in the Source Code Form under this License. #.#. Distribution of a Larger Work You may create and distribute a Larger Work under terms of Your choice, provided that You also comply with the requirements of this License for the Covered Software. If the Larger Work is a combination of Covered Software with a work governed by one or more Secondary Licenses, and the Covered Software is not Incompatible With Secondary Licenses, this License permits You to additionally distribute such Covered Software under the terms of such Secondary License(s), so that the recipient of the Larger Work may, at their option, further distribute the Covered Software under the terms of either this License or such Secondary License(s). #.#. Notices You may not remove or alter the substance of any license notices (including copyright notices, patent notices, disclaimers of warranty, or limitations of liability) contained within the Source Code Form of the Covered Software, except that You may alter any license notices to the extent required to remedy known factual inaccuracies. #.#. Application of Additional Terms You may choose to offer, and to charge a fee for, warranty, support, indemnity or liability obligations to one or more recipients of Covered Software. However, You may do so only on Your own behalf, and not on behalf of any Contributor. You must make it absolutely clear that any such warranty, support, indemnity, or liability obligation is offered by You alone, and You hereby agree to indemnify every Contributor for any liability incurred by such Contributor as a result of warranty, support, indemnity or liability terms You offer. You may include additional disclaimers of warranty and limitations of liability specific to any jurisdiction. #. Inability to Comply Due to Statute or Regulation --------------------------------------------------- If it is impossible for You to comply with any of the terms of this License with respect to some or all of the Covered Software due to statute, judicial order, or regulation then You must: (a) comply with the terms of this License to the maximum extent possible; and (b) describe the limitations and the code they affect. Such description must be placed in a text file included with all distributions of the Covered Software under this License. Except to the extent prohibited by statute or regulation, such description must be sufficiently detailed for a recipient of ordinary skill to be able to understand it. #. Termination -------------- #.#. The rights granted under this License will terminate automatically if You fail to comply with any of its terms. However, if You become compliant, then the rights granted under this License from a particular Contributor are reinstated (a) provisionally, unless and until such Contributor explicitly and finally terminates Your grants, and (b) on an ongoing basis, if such Contributor fails to notify You of the non-compliance by some reasonable means prior to # days after You have come back into compliance. Moreover, Your grants from a particular Contributor are reinstated on an ongoing basis if such Contributor notifies You of the non-compliance by some reasonable means, this is the first time You have received notice of non-compliance with this License from such Contributor, and You become compliant prior to # days after Your receipt of the notice. #.#. If You initiate litigation against any entity by asserting a patent infringement claim (excluding declaratory judgment actions, counter-claims, and cross-claims) alleging that a Contributor Version directly or indirectly infringes any patent, then the rights granted to You by any and all Contributors for the Covered Software under Section #.# of this License shall terminate. #.#. In the event of termination under Sections #.# or #.# above, all end user license agreements (excluding distributors and resellers) which have been validly granted by You or Your distributors under this License prior to termination shall survive termination. ************************************************************************ * * * #. Disclaimer of Warranty * * ------------------------- * * * * Covered Software is provided under this License on an "as is" * * basis, without warranty of any kind, either expressed, implied, or * * statutory, including, without limitation, warranties that the * * Covered Software is free of defects, merchantable, fit for a * * particular purpose or non-infringing. The entire risk as to the * * quality and performance of the Covered Software is with You. * * Should any Covered Software prove defective in any respect, You * * (not any Contributor) assume the cost of any necessary servicing, * * repair, or correction. This disclaimer of warranty constitutes an * * essential part of this License. No use of any Covered Software is * * authorized under this License except under this disclaimer. * * * ************************************************************************ ************************************************************************ * * * #. Limitation of Liability * * -------------------------- * * * * Under no circumstances and under no legal theory, whether tort * * (including negligence), contract, or otherwise, shall any * * Contributor, or anyone who distributes Covered Software as * * permitted above, be liable to You for any direct, indirect, * * special, incidental, or consequential damages of any character * * including, without limitation, damages for lost profits, loss of * * goodwill, work stoppage, computer failure or malfunction, or any * * and all other commercial damages or losses, even if such party * * shall have been informed of the possibility of such damages. This * * limitation of liability shall not apply to liability for death or * * personal injury resulting from such party's negligence to the * * extent applicable law prohibits such limitation. Some * * jurisdictions do not allow the exclusion or limitation of * * incidental or consequential damages, so this exclusion and * * limitation may not apply to You. * * * ************************************************************************ #. Litigation ------------- Any litigation relating to this License may be brought only in the courts of a jurisdiction where the defendant maintains its principal place of business and such litigation shall be governed by laws of that jurisdiction, without reference to its conflict-of-law provisions. Nothing in this Section shall prevent a party's ability to bring cross-claims or counter-claims. #. Miscellaneous ---------------- This License represents the complete agreement concerning the subject matter hereof. If any provision of this License is held to be unenforceable, such provision shall be reformed only to the extent necessary to make it enforceable. Any law or regulation which provides that the language of a contract shall be construed against the drafter shall not be used to construe this License against a Contributor. #. Versions of the License --------------------------- #.#. New Versions Mozilla Foundation is the license steward. Except as provided in Section #.#, no one other than the license steward has the right to modify or publish new versions of this License. Each version will be given a distinguishing version number. #.#. Effect of New Versions You may distribute the Covered Software under the terms of the version of the License under which You originally received the Covered Software, or under the terms of any subsequent version published by the license steward. #.#. Modified Versions If you create software not governed by this License, and you want to create a new license for such software, you may create and use a modified version of this License if you rename the license and remove any references to the name of the license steward (except to note that such modified license differs from this License). #.#. Distributing Source Code Form that is Incompatible With Secondary Licenses If You choose to distribute Source Code Form that is Incompatible With Secondary Licenses under the terms of this version of the License, the notice described in Exhibit B of this License must be attached. Exhibit A - Source Code Form License Notice ------------------------------------------- This Source Code Form is subject to the terms of the Mozilla Public License, v. #.#. If a copy of the MPL was not distributed with this file, You can obtain one at <http://mozilla.org/MPL/#.#/>. If it is not possible or desirable to put the notice in a particular file, then You may include the notice in a location (such as a LICENSE file in a relevant directory) where a recipient would be likely to look for such a notice. You may add additional accurate notices of copyright ownership. Exhibit B - "Incompatible With Secondary Licenses" Notice --------------------------------------------------------- This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. #.#.
-end of group
-list
-listitem, level 1, position 1, set size 3
-@cf-wasm/resvg
-#.#.#
-link, Project: @cf-wasm/resvg
-Project
-end of link, Project: @cf-wasm/resvg
-© yisibl
-end of listitem, level 1, position 1, set size 3
-listitem, level 1, position 2, set size 3
-@cf-wasm/satori
-#.#.#
-link, Project: @cf-wasm/satori
-Project
-end of link, Project: @cf-wasm/satori
-© Shu Ding
-end of listitem, level 1, position 2, set size 3
-listitem, level 1, position 3, set size 3
-@resvg/resvg-wasm
-#.#.#
-link, Project: @resvg/resvg-wasm
-Project
-end of link, Project: @resvg/resvg-wasm
-end of listitem, level 1, position 3, set size 3
-end of list
-button, Show all #
-end of region, MPL-#.#
-region, @garmin/fitsdk licence
-heading, @garmin/fitsdk licence, level 2
-#
-group
-Read the licence text
-This Flexible and Interoperable Data Transfer (FIT) Protocol License Agreement (this "Agreement") is a binding agreement between Garmin International, Inc. and its affiliates (collectively, "Garmin") and the person or entity using the Licensed Technology (each, a "Licensee" or "you"). As used in this Agreement, the "Licensed Technology" means Garmin's Flexible and Interoperable Data Transfer ("FIT") software development kit ("SDK") that includes documentation describing the FIT protocol and related source code files. PLEASE READ THIS AGREEMENT CAREFULLY BEFORE USING THE LICENSED TECHNOLOGY. BY USING THE LICENSED TECHNOLOGY, YOU SIGNIFY YOUR AGREEMENT TO THESE TERMS AND REPRESENT AND WARRANT THAT: (A) YOU ARE OF LEGAL AGE TO ENTER INTO THIS AGREEMENT; AND (B), IF LICENSEE IS A CORPORATION, GOVERNMENTAL ORGANIZATION, OR OTHER LEGAL ENTITY, YOU HAVE THE RIGHT, POWER, AND AUTHORITY TO ENTER INTO THIS AGREEMENT ON BEHALF OF LICENSEE AND BIND LICENSEE TO ITS TERMS. IF YOU DO NOT AGREE TO THE TERMS OF THIS AGREEMENT, GARMIN WILL NOT AND DOES NOT LICENSE THE LICENSED TECHNOLOGY TO YOU, AND YOU MUST NOT USE THE LICENSED TECHNOLOGY AND MUST DELETE ALL COPIES OF THE LICENSED TECHNOLOGY. #. Grant and Scope. Subject to and conditioned upon Licensee's strict compliance with all terms and conditions set forth in this Agreement, Garmin hereby grants to Licensee a non-exclusive, royalty-free, non-transferable, non-sublicensable, limited license to use the Licensed Technology for Licensee's internal business purposes, including to use the FIT protocol in any software created by Licensee and to create modifications of the Licensed Technology ("Modifications") subject to the restrictions in Section #. The Licensed Technology is licensed, not sold, to Licensee by Garmin and Licensee does not have or obtain any ownership interest in the Licensed Technology, or in any related intellectual property rights. Garmin reserves all rights not expressly granted to Licensee in this Agreement. #. Use Restrictions. Licensee shall not, and shall not permit any third party to, directly or indirectly: a. remove, delete, efface, alter, obscure, translate, combine, supplement or otherwise change any trademarks or proprietary marks, notices, or symbols relating to the Licensed Technology; b. use the Licensed Technology in any manner or for any purpose that infringes, misappropriates, or otherwise violates any intellectual property right or other right of any person or entity; c. except as set forth herein, rent, lease, lend, sell, sublicense, assign, distribute, publish, transfer or otherwise make available the Licensed Technology, or any features or functionality of the Licensed Technology, to any third party for any reason; d. distribute the Licensed Technology or any derivatives thereof so that any part of it becomes subject to any license that requires that the Licensed Technology or any of Garmin's other intellectual property be disclosed or distributed in source code form, or that others have the right to modify it; e. use the Licensed Technology in violation of any law, regulation or rule; f. use the Licensed Technology for purposes of benchmarking or a competitive analysis of the Licensed Technology; g. use the Licensed Technology in or in connection with the design, construction, maintenance, operation, or use of any hazardous environments, systems or applications, any safety response systems or other safety-critical applications or any other use or application in which the use or failure of the Licensed Technology could lead to personal injury or physical or property damage; or h. fail to comply with all definitions and provisions in the FIT protocol or deviate from the standards as defined in the FIT protocol and related documentation. #. Interoperability and Compatibility. Licensee agrees to maintain the features within the Licensed Technology that provide for interoperability between systems and compatibility with previous and future release versions of the FIT protocol. Any Modifications are permissible only if the interoperability of the FIT protocol is maintained. #. Confidentiality. In connection with this Agreement, Garmin may disclose or make available Confidential Information to Licensee. "Confidential Information" means information in any form or medium (whether oral, written, electronic or other) that: (a) if disclosed in writing or other tangible form or medium, is marked "confidential" or "proprietary"; or (b) if disclosed orally or in another intangible form or medium, is identified by Garmin as confidential or proprietary when disclosed and later summarized and marked "confidential" or "proprietary" in writing by Garmin. Without limiting the foregoing, the Licensed Technology is Confidential Information of Garmin. Confidential Information does not include information that Licensee can demonstrate by written or other documentary records: (#) was rightfully known to Licensee without restriction on use or disclosure prior to such information being disclosed or made available to Licensee in connection with this Agreement; (#) was or becomes generally known by the public other than by Licensee's noncompliance with this Agreement; (#) was or is received by Licensee on a non-confidential basis from a third party that was not or is not under any obligation to maintain its confidentiality; or (#) was independently developed by Licensee without reference to or use of any Confidential Information. Licensee shall: (A) not access or use Confidential Information other than as necessary to exercise its rights or perform its obligations under and in accordance with this Agreement; (B) safeguard the Confidential Information from unauthorized use, access or disclosure using at least the degree of care it uses to protect its sensitive information and in no event less than a reasonable degree of care; and (C) promptly notify Garmin of any unauthorized use or disclosure of Confidential Information and take all reasonable steps to prevent further unauthorized use or disclosure. If Licensee is compelled by applicable law to disclose any Confidential Information then, to the extent permitted by applicable law, Licensee will: (i) promptly, and prior to such disclosure, notify Garmin in writing of such requirement so that Garmin can, at Garmin's option, seek a protective order or other remedy or waive its rights under this paragraph; and (ii), at Garmin's expense, provide reasonable assistance to Garmin in opposing such disclosure or seeking a protective order or other limitations on disclosure. Subject to the preceding sentence, Licensee will disclose only that portion of the Confidential Information that, on the advice of legal counsel, Licensee is legally required to disclose and, on Garmin's request, will use commercially reasonable efforts to obtain assurances from the applicable court or other presiding authority that such Confidential Information will be afforded confidential treatment. #. License to Feedback and Modifications. If you provide any Feedback to Garmin or if you create any Modifications: (a) you grant to Garmin a worldwide, non-exclusive, royalty-free, transferable, sublicensable, perpetual and irrevocable license to use and otherwise exploit such Feedback or Modifications in connection with any Garmin products, applications and services; (b) Garmin shall be free to use, disclose, reproduce, distribute and otherwise commercialize all Feedback that you provide or Modifications you create without obligation or restriction of any kind on account of intellectual property rights or otherwise; (c) you waive all rights to be compensated or seek compensation for your Feedback or Modifications; and (d) Feedback or Modifications, even if marked confidential, shall not create any confidentiality obligations on Garmin. #. No Warranties. LICENSEE AGREES THAT THE USE OF THE LICENSED TECHNOLOGY IS PROVIDED "AS IS", WITHOUT TECHNICAL SUPPORT FROM GARMIN AND WITH ALL FAULTS AND DEFECTS WITHOUT WARRANTY OF ANY KIND. GARMIN MAKES NO CONDITIONS, WARRANTIES OR REPRESENTATIONS ABOUT THE SUITABILITY, RELIABILITY, USABILITY, SECURITY, QUALITY, CAPACITY, PERFORMANCE, AVAILABILITY, TIMELINESS OR ACCURACY OF THE LICENSED TECHNOLOGY AND OR ANY OTHER PRODUCTS OR SERVICES OR INFORMATION SUPPLIED UNDER THIS AGREEMENT. GARMIN EXPRESSLY DISCLAIMS ALL CONDITIONS, WARRANTIES AND REPRESENTATIONS, EXPRESS, IMPLIED OR STATUTORY INCLUDING, BUT NOT LIMITED TO, IMPLIED CONDITIONS OR WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, DURABILITY, TITLE AND NON-INFRINGEMENT, WHETHER ARISING BY USAGE OF TRADE, COURSE OF DEALING, COURSE OF PERFORMANCE OR OTHERWISE. WITHOUT LIMITING THE FOREGOING, GARMIN MAKES NO WARRANTY OF ANY KIND THAT THE LICENSED TECHNOLOGY, OR ANY PRODUCTS OR RESULTS OF THE USE THEREOF, WILL MEET LICENSEE'S OR OTHER PERSONS' REQUIREMENTS, OPERATE WITHOUT INTERRUPTION, ACHIEVE ANY INTENDED RESULT, BE COMPATIBLE OR WORK WITH ANY SOFTWARE, SYSTEMS, OR OTHER SERVICES, OR BE SECURE, ACCURATE, COMPLETE, FREE OF HARMFUL CODE OR ERROR FREE. #. Indemnification; Licensee's Responsibility. Licensee agrees to indemnify and hold harmless Garmin and its officers, directors, shareholders, managers, members, partners, employees, agents, subcontractors, successors and assigns for all losses, damages, deficiencies, claims, actions, judgments, settlements, interest, awards, penalties, fines, costs or expenses of whatever kind, including reasonable attorneys' fees and the costs of enforcing any right to indemnification hereunder, arising out of or related to (a) Licensee's breach of this Agreement, (b) Licensee's use of the products that are related to the Licensee's use of the Licensed Technology. Licensee is responsible and liable for all uses of the Licensed Technology through access thereto provided or enabled by Licensee, directly or indirectly. #. Limitation of Liability. TO THE MAXIMUM EXTENT PERMITTED UNDER APPLICABLE LAW, IN NO EVENT WILL GARMIN, OR ANY OF ITS LICENSORS, SERVICE PROVIDERS OR SUPPLIERS, BE LIABLE UNDER OR IN CONNECTION WITH THIS AGREEMENT OR ITS SUBJECT MATTER UNDER ANY LEGAL OR EQUITABLE THEORY, INCLUDING BREACH OF CONTRACT, TORT (INCLUDING NEGLIGENCE), STRICT LIABILITY OR OTHERWISE, FOR ANY (A) INCREASED COSTS, DIMINUTION IN VALUE OR LOST BUSINESS, PRODUCTION, REVENUES OR PROFITS, (B) LOSS OF GOODWILL OR REPUTATION, (C) USE, INABILITY TO USE, LOSS, INTERRUPTION, DELAY OR RECOVERY OF ANY LICENSED TECHNOLOGY, (D) LOSS, DAMAGE, CORRUPTION OR RECOVERY OF DATA, OR BREACH OF DATA OR SYSTEM SECURITY, (E) COST OF REPLACEMENT GOODS OR SERVICES OR (F) CONSEQUENTIAL, INCIDENTAL, DIRECT, INDIRECT, EXEMPLARY, SPECIAL, ENHANCED OR PUNITIVE DAMAGES, IN EACH CASE, REGARDLESS OF WHETHER GARMIN WAS ADVISED OF THE POSSIBILITY OF SUCH LOSSES OR DAMAGES OR SUCH LOSSES OR DAMAGES WERE OTHERWISE FORESEEABLE. IN NO EVENT WILL THE AGGREGATE LIABILITY OF GARMIN TO LICENSEE ARISING OUT OF OR RELATED TO THIS AGREEMENT, WHETHER ARISING UNDER OR RELATED TO BREACH OF CONTRACT, TORT (INCLUDING NEGLIGENCE), STRICT LIABILITY OR ANY OTHER LEGAL OR EQUITABLE THEORY, EXCEED $#. THE FOREGOING LIMITATIONS APPLY EVEN IF ANY REMEDY FAILS OF ITS ESSENTIAL PURPOSE. #. Term and Termination. If Licensee breaches any of the terms of this Agreement, Garmin may immediately terminate this Agreement. In addition, Garmin or Licensee may terminate this Agreement with or without cause upon delivery of # days' written notice to the other party. Upon any such termination, (a) all rights of Licensee under this Agreement (including the license granted to Licensee hereunder) shall cease, (b) Licensee must immediately stop use of (including product development of devices relating Licensed Technology and any Confidential Information; provided, however, Licensee shall not be required to delete electronic copies of Confidential Information generated automatically by archival or data backup systems, so long as such copies are not accessed or used in any manner that violates the terms or conditions of this Agreement. Any information retained pursuant to the preceding sentence will continue to receive the protections of Confidential Information hereunder. Upon request by Garmin, Licensee will certify to Garmin in writing that it has complied with the requirements of this paragraph. All rights, obligations or provisions under this Agreement that, by their nature, should survive termination or expiration of this Agreement will survive any expiration or termination of this Agreement, including Sections #, #, #, #, #, #, and #. #. No Support; Updates. This Agreement does not entitle Licensee to any support for the Licensed Technology. Licensee acknowledges that Garmin may update or modify the Licensed Technology from time to time and at Garmin's sole discretion (in each instance, an "Update"), and may require Licensee to obtain and use the most recent version of the Licensed Technology. Licensee is required to make any changes to Licensee's products, services, operating environment, equipment or other property that are required for integration as a result of such Update at Licensee's sole cost and expense. Licensee's continued use of the Licensed Technology following an Update constitutes Licensee's binding acceptance of the Update. #. Miscellaneous. a. Relationship of the Parties. The relationship between Garmin and Licensee is that of independent contractors. Nothing contained in this Agreement will be construed as creating any agency, partnership, joint venture or other form of joint enterprise, employment or fiduciary relationship between the parties, and neither party shall have authority to contract for or bind the other party in any manner whatsoever. b. Notices. Any notice, request, consent, claim, demand, waiver or other communication under this Agreement will only have legal effect if in writing. Licensee must send all such notices or other communications in writing to Garmin at the following address: # East #st Street, Olathe, Kansas #, Attention: Legal Department. All such notices will be deemed effectively given: (#) when received, if delivered by hand, with signed confirmation of receipt; (#) when received, if sent by a nationally recognized overnight courier, signature required; and (#) on the fifth day after the date mailed by certified or registered mail, return receipt requested, postage prepaid. Notwithstanding the foregoing, Licensee hereby consents to receiving electronic communications from Garmin. Licensee agrees that any notices, agreements, disclosures or other communications that Garmin sends to Licensee electronically will satisfy any legal communication requirements, including that such communications be in writing. c. Severability. Licensee agrees that if any part of this Agreement is found to be invalid, illegal or unenforceable, the remaining terms will remain in effect for the Licensee and for Garmin. On such determination that any term or other provision is invalid, illegal, or unenforceable, Garmin and Licensee shall negotiate in good faith to modify this Agreement so as to effect the original intent of the parties as closely as possible in a mutually acceptable manner in order that the transactions contemplated hereby be consummated as originally contemplated to the greatest extent possible. d. Governing Law and Forum Selection. This Agreement shall be governed by the laws of the state of Kansas, without regard to any conflicts of laws principles. The parties agree that any dispute arising out of this Agreement shall be litigated in the federal or state courts in the state of Kansas. The parties hereby agree to the exclusive jurisdiction and venue of such courts. THE PARTIES HEREBY WAIVE A TRIAL BY JURY WITH RESPECT TO ANY DISPUTE ARISING OUT OF THIS AGREEMENT. e. Entire Agreement. This Agreement constitutes the sole and entire agreement of the parties hereto with respect to the subject matter of this Agreement and supersedes all prior and contemporaneous understandings, agreements, representations and warranties, both written and oral, with respect to such subject matter. f. Assignment. Licensee shall not assign this Agreement, whether voluntarily, involuntarily, by operation of law, by merger or otherwise, without Garmin's prior written consent. For purposes of this Agreement, a change of control will be deemed an assignment. No assignment, delegation or transfer will relieve Licensee of any of its obligations or performance under this Agreement. Any purported assignment, delegation, or transfer in violation of this Section is void. This Agreement is binding on and inures to the benefit of the parties hereto and their respective successors and permitted assigns. g. Amendment. This Agreement may be amended from time to time by Garmin in its sole discretion. Licensee is responsible for reviewing and becoming familiar with any such amendment. Licensee's continued use of the Licensed Technology after such amendment signifies Licensee's agreement to and acceptance of this Agreement, as amended. Any other attempt to alter or amend these terms and conditions will be null and void, unless otherwise agreed to in a written agreement signed by both Licensee and Garmin. h. Force Majeure. In no event will Garmin be liable or responsible to Licensee, or be deemed to have defaulted under or breached this Agreement, for any failure or delay in fulfilling or performing any term of this Agreement when and to the extent such failure or delay is caused by any circumstances beyond Garmin's reasonable control, including acts of God, flood, fire, earthquake or explosion, war, terrorism, invasion, riot or other civil unrest, embargoes or blockades, national or regional emergency, epidemics, pandemics, diseases, strikes, labor stoppages or slowdowns or other industrial disturbances, passage or change of law or any other action taken by a governmental or public authority, including imposing an export or import restriction, quota, quarantine restrictions or other restriction or prohibition or any complete or partial government shutdown. i. No Third-Party Beneficiaries. Except as expressly set forth herein, this Agreement is for the sole benefit of the parties hereto and their respective successors and permitted assigns and nothing herein is intended to or will confer on any other person or entity any legal or equitable right, benefit or remedy of any nature whatsoever under or by reason of this Agreement. j. Waiver. No waiver by either party of any of the provisions hereof is effective unless explicitly set forth in writing and signed by the party so waiving. No failure to exercise, or delay in exercising, any rights, remedy, power or privilege arising from this Agreement will operate or be construed as a waiver thereof; nor will any single or partial exercise of any right, remedy, power or privilege hereunder preclude any other or further exercise thereof or the exercise of any other right, remedy, power or privilege. k. Equitable Relief. Licensee acknowledges and agrees that a breach or threatened breach by Licensee of any of its obligations under this Agreement would cause Garmin irreparable harm for which monetary damages may not be an adequate remedy and that, in the event of such breach or threatened breach, Garmin will be entitled to seek equitable relief, including a restraining order, an injunction, specific performance, and any other relief that may be available from any court of competent jurisdiction, without any requirement to post a bond or other security, or to prove actual damages or that monetary damages are not an adequate remedy. Such remedies are not exclusive and are in addition to all other remedies that may be available at law, in equity or otherwise. Last updated: :month #, #
-end of group
-list
-listitem, level 1, position 1, set size 1
-@garmin/fitsdk
-#.#.#
-link, Project: @garmin/fitsdk
-Project
-end of link, Project: @garmin/fitsdk
-© Modifications or Licensee's services, designs and/or; Licensee shall delete all copies of the
-end of listitem, level 1, position 1, set size 1
-end of list
-end of region, @garmin/fitsdk licence
-region, BSD-#-Clause
-heading, BSD-#-Clause, level 2
-#
-group
-Read the BSD-#-Clause licence
-All rights reserved. Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met: #. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer. #. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution. #. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-end of group
-list
-listitem, level 1, position 1, set size 1
-deepmerge-ts
-#.#.#
-link, Project: deepmerge-ts
-Project
-end of link, Project: deepmerge-ts
-© #, Rebecca Stevens
-end of listitem, level 1, position 1, set size 1
-end of list
-end of region, BSD-#-Clause
-region, ISC
-heading, ISC, level 2
-#
-group
-Read the ISC licence
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies. THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-end of group
-list
-listitem, level 1, position 1, set size 1
-css-color-keywords
-#.#.#
-link, Project: css-color-keywords
-Project
-end of link, Project: css-color-keywords
-© #, Jakob Krigovsky
-end of listitem, level 1, position 1, set size 1
-end of list
-end of region, ISC
-region, Unlicense
-heading, Unlicense, level 2
-#
-group
-Read the licence text
-This is free and unencumbered software released into the public domain. Anyone is free to copy, modify, publish, use, compile, sell, or distribute this software, either in source code form or as a compiled binary, for any purpose, commercial or non-commercial, and by any means. In jurisdictions that recognize copyright laws, the author or authors of this software dedicate any and all copyright interest in the software to the public domain. We make this dedication for the benefit of the public at large and to the detriment of our heirs and successors. We intend this dedication to be an overt act of relinquishment in perpetuity of all present and future rights to this software under copyright law. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. For more information, please refer to <http://unlicense.org/>
-end of group
-list
-listitem, level 1, position 1, set size 1
-isbot
-#.#.#
-link, Project: isbot
-Project
-end of link, Project: isbot
-end of listitem, level 1, position 1, set size 1
-end of list
-end of region, Unlicense
-region, Third-party notices
-heading, Third-party notices, level 2
-heading, List of Dirty, Naughty, Obscene, and Otherwise Bad Words, level 3
-list
-listitem, level 1, position 1, set size 5
-strong
-Where:
-end of strong
-code
-src/lib/contracts/profanity-words.txt
-end of code
-, one entry per line as upstream publishes it, read by
-code
-src/lib/contracts/profanity.ts
-end of code
-(the instant half of a handle's word check, task #).
-end of listitem, level 1, position 1, set size 5
-listitem, level 1, position 2, set size 5
-strong
-Source:
-end of strong
-github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words, file
-code
-en
-end of code
-, fetched #-#-#.
-end of listitem, level 1, position 2, set size 5
-listitem, level 1, position 3, set size 5
-strong
-Copyright:
-end of strong
-© Shutterstock, Inc. and contributors.
-end of listitem, level 1, position 3, set size 5
-listitem, level 1, position 4, set size 5
-strong
-Licence:
-end of strong
-Creative Commons Attribution #.# International (CC BY #.#), https://creativecommons.org/licenses/by/#.#/.
-end of listitem, level 1, position 4, set size 5
-listitem, level 1, position 5, set size 5
-strong
-Changes:
-end of strong
-the one entry with no letter or digit (an emoji, which no handle can contain) is left out. The list is otherwise unedited. Which entries the app actually refuses is decided in
-code
-src/lib/contracts/profanity.ts
-end of code
-(
-code
-INNOCENT_IN_HANDLES
-end of code
-names the listed words it lets through), not by editing the list.
-end of listitem, level 1, position 5, set size 5
-end of list
-heading, Weather data, level 3
-list
-listitem, level 1, position 1, set size 2
-strong
-Source:
-end of strong
-Visual Crossing Corporation.
-end of listitem, level 1, position 1, set size 2
-listitem, level 1, position 2, set size 2
-strong
-Attribution:
-end of strong
-"Weather data provided by Visual Crossing", linked to https://www.visualcrossing.com/, beside the conditions in the app (
-code
-src/ui/WeatherAttribution.tsx
-end of code
-) and under every guide or report built from them, as Visual Crossing's licence requires (D-#). This list is not its primary location.
-end of listitem, level 1, position 2, set size 2
-end of list
-heading, Face detection model, level 3
-list
-listitem, level 1, position 1, set size 2
-strong
-What:
-end of strong
-the MediaPipe face detection model and runtime, served from our own site to run in your browser.
-end of listitem, level 1, position 1, set size 2
-listitem, level 1, position 2, set size 2
-strong
-Licence:
-end of strong
-the
-code
-@mediapipe/tasks-vision
-end of code
-package is Apache License #.# and ships no separate NOTICE file. The BlazeFace short-range model (
-code
-blaze_face_short_range.tflite
-end of code
-) is Apache License #.#, per Google's MediaPipe BlazeFace model card (short range), read #-#-#.
-end of listitem, level 1, position 2, set size 2
-end of list
-heading, Climate zones, level 3
-list
-listitem, level 1, position 1, set size 3
-strong
-What:
-end of strong
-Köppen-Geiger climate classification maps, used to place runs in broad climate zones when anonymous totals are built (D-#).
-end of listitem, level 1, position 1, set size 3
-listitem, level 1, position 2, set size 3
-strong
-Source:
-end of strong
-the #–#, #.#° (about # km) map from Beck, H. E., McVicar, T. R., Vergopolan, N., Berg, A., Lutsko, N. J., Dufour, A., Zeng, Z., Jiang, X., van Dijk, A. I. J. M., and Miralles, D. G. (#). High-resolution (# km) Köppen-Geiger maps for #–# based on constrained CMIP# projections. Scientific Data #, #. https://doi.org/#.#/s#-#-#-#. Data: https://doi.org/#.#/m#.figshare.#.
-end of listitem, level 1, position 2, set size 3
-listitem, level 1, position 3, set size 3
-strong
-Licence:
-end of strong
-Creative Commons Attribution #.# International (CC BY #.#), https://creativecommons.org/licenses/by/#.#/. We use the map unmodified as a point lookup; the zone labels on dialed.run are derived from it.
-end of listitem, level 1, position 3, set size 3
-end of list
-end of region, Third-party notices
-region, Tools we build with
-heading, Tools we build with, level 2
-# · Not shipped
 paragraph
-We build and test dialed.run with these. None of them ships in the app, so each is credited by name and licence.
+#. Definitions
 end of paragraph
-list
-listitem, level 1, position 1, set size 3
-@cloudflare/vite-plugin
-#.#.#
-link, Project: @cloudflare/vite-plugin
-Project
-end of link, Project: @cloudflare/vite-plugin
-MIT
-end of listitem, level 1, position 1, set size 3
-listitem, level 1, position 2, set size 3
-@cloudflare/vitest-pool-workers
-#.#.#
-link, Project: @cloudflare/vitest-pool-workers
-Project
-end of link, Project: @cloudflare/vitest-pool-workers
-MIT
-end of listitem, level 1, position 2, set size 3
-listitem, level 1, position 3, set size 3
-@eslint/js
-#.#.#
-link, Project: @eslint/js
-Project
-end of link, Project: @eslint/js
-MIT
-end of listitem, level 1, position 3, set size 3
-end of list
-button, Show all #
-end of region, Tools we build with
-end of article
-end of main
-contentinfo
 paragraph
-link, Privacy
-link, Terms
-link, Copyright
-link, Open source, current page
-link, Report an intimate image
+#.#. "Contributor" means each individual or legal entity that creates, contributes to the creation of, or owns Covered Software.
 end of paragraph
-end of contentinfo
-end of document
+paragraph
+#.#. "Contributor Version" means the combination of the Contributions of others (if any) used by a Contributor and that particular Contributor's Contribution.
+end of paragraph
+paragraph
+#.#. "Contribution" means Covered Software of a particular Contributor.
+end of paragraph
+paragraph
+#.#. "Covered Software" means Source Code Form to which the initial Contributor has attached the notice in Exhibit A, the Executable Form of such Source Code Form, and Modifications of such Source Code Form, in each case including portions thereof.
+end of paragraph
+paragraph
+#.#. "Incompatible With Secondary Licenses" means
+end of paragraph
+paragraph
+(a) that the initial Contributor has attached the notice described in Exhibit B to the Covered Software; or
+end of paragraph
+paragraph
+(b) that the Covered Software was made available under the terms of version #.# or earlier of the License, but not also under the terms of a Secondary License.
+end of paragraph
+paragraph
+#.#. "Executable Form" means any form of the work other than Source Code Form.
+end of paragraph
+paragraph
+#.#. "Larger Work" means a work that combines Covered Software with other material, in a separate file or files, that is not Covered Software.
+end of paragraph
+paragraph
+#.#. "License" means this document.
+end of paragraph
+paragraph
+#.#. "Licensable" means having the right to grant, to the maximum extent possible, whether at the time of the initial grant or subsequently, any and all of the rights conveyed by this License.
+end of paragraph
+paragraph
+#.#. "Modifications" means any of the following:
+end of paragraph
+paragraph
+(a) any file in Source Code Form that results from an addition to, deletion from, or modification of the contents of Covered Software; or
+end of paragraph
+paragraph
+(b) any new file in Source Code Form that contains any Covered Software.
+end of paragraph
+paragraph
+#.#. "Patent Claims" of a Contributor means any patent claim(s), including without limitation, method, process, and apparatus claims, in any patent Licensable by such Contributor that would be infringed, but for the grant of the License, by the making, using, selling, offering for sale, having made, import, or transfer of either its Contributions or its Contributor Version.
+end of paragraph
+paragraph
+#.#. "Secondary License" means either the GNU General Public License, Version #.#, the GNU Lesser General Public License, Version #.#, the GNU Affero General Public License, Version #.#, or any later versions of those licenses.
+end of paragraph
+paragraph
+#.#. "Source Code Form" means the form of the work preferred for making modifications.
+end of paragraph
+paragraph
+#.#. "You" (or "Your") means an individual or a legal entity exercising rights under this License. For legal entities, "You" includes any entity that controls, is controlled by, or is under common control with You. For purposes of this definition, "control" means (a) the power, direct or indirect, to cause the direction or management of such entity, whether by contract or otherwise, or (b) ownership of more than fifty percent (#%) of the outstanding shares or beneficial ownership of such entity.
+end of paragraph
+paragraph
+#. License Grants and Conditions
+end of paragraph
+paragraph
+#.#. Grants
+end of paragraph
+paragraph
+Each Contributor hereby grants You a world-wide, royalty-free, non-exclusive license:
+end of paragraph
+paragraph
+(a) under intellectual property rights (other than patent or trademark) Licensable by such Contributor to use, reproduce, make available, modify, display, perform, distribute, and otherwise exploit its Contributions, either on an unmodified basis, with Modifications, or as part of a Larger Work; and
+end of paragraph
+paragraph
+(b) under Patent Claims of such Contributor to make, use, sell, offer for sale, have made, import, and otherwise transfer either its Contributions or its Contributor Version.
+end of paragraph
+paragraph
+#.#. Effective Date
+end of paragraph
+paragraph
+The licenses granted in Section #.# with respect to any Contribution become effective for each Contribution on the date the Contributor first distributes such Contribution.
+end of paragraph
+paragraph
+#.#. Limitations on Grant Scope
+end of paragraph
+paragraph
+The licenses granted in this Section # are the only rights granted under this License. No additional rights or licenses will be implied from the distribution or licensing of Covered Software under this License. Notwithstanding Section #.#(b) above, no patent license is granted by a Contributor:
+end of paragraph
+paragraph
+(a) for any code that a Contributor has removed from Covered Software; or
+end of paragraph
+paragraph
+(b) for infringements caused by: (i) Your and any other third party's modifications of Covered Software, or (ii) the combination of its Contributions with other software (except as part of its Contributor Version); or
+end of paragraph
+paragraph
+(c) under Patent Claims infringed by Covered Software in the absence of its Contributions.
+end of paragraph
+paragraph
+This License does not grant any rights in the trademarks, service marks, or logos of any Contributor (except as may be necessary to comply with the notice requirements in Section #.#).
+end of paragraph
+paragraph
+#.#. Subsequent Licenses
+end of paragraph
+paragraph
+No Contributor makes additional grants as a result of Your choice to distribute the Covered Software under a subsequent version of this License (see Section #.#) or under the terms of a Secondary License (if permitted under the terms of Section #.#).
+end of paragraph
+paragraph
+#.#. Representation
+end of paragraph
+paragraph
+Each Contributor represents that the Contributor believes its Contributions are its original creation(s) or it has sufficient rights to grant the rights to its Contributions conveyed by this License.
+end of paragraph
+paragraph
+#.#. Fair Use
+end of paragraph
+paragraph
+This License is not intended to limit any rights You have under applicable copyright doctrines of fair use, fair dealing, or other equivalents.
+end of paragraph
+paragraph
+#.#. Conditions
+end of paragraph
+paragraph
+Sections #.#, #.#, #.#, and #.# are conditions of the licenses granted in Section #.#.
+end of paragraph
+paragraph
+#. Responsibilities
+end of paragraph
+paragraph
+#.#. Distribution of Source Form
+end of paragraph
+paragraph
+All distribution of Covered Software in Source Code Form, including any Modifications that You create or to which You contribute, must be under the terms of this License. You must inform recipients that the Source Code Form of the Covered Software is governed by the terms of this License, and how they can obtain a copy of this License. You may not attempt to alter or restrict the recipients' rights in the Source Code Form.
+end of paragraph
+paragraph
+#.#. Distribution of Executable Form
+end of paragraph
+paragraph
+If You distribute Covered Software in Executable Form then:
+end of paragraph
+paragraph
+(a) such Covered Software must also be made available in Source Code Form, as described in Section #.#, and You must inform recipients of the Executable Form how they can obtain a copy of such Source Code Form by reasonable means in a timely manner, at a charge no more than the cost of distribution to the recipient; and
+end of paragraph
+paragraph
+(b) You may distribute such Executable Form under the terms of this License, or sublicense it under different terms, provided that the license for the Executable Form does not attempt to limit or alter the recipients' rights in the Source Code Form under this License.
+end of paragraph
+paragraph
+#.#. Distribution of a Larger Work
+end of paragraph
+paragraph
+You may create and distribute a Larger Work under terms of Your choice, provided that You also comply with the requirements of this License for the Covered Software. If the Larger Work is a combination of Covered Software with a work governed by one or more Secondary Licenses, and the Covered Software is not Incompatible With Secondary Licenses, this License permits You to additionally distribute such Covered Software under the terms of such Secondary License(s), so that the recipient of the Larger Work may, at their option, further distribute the Covered Software under the terms of either this License or such Secondary License(s).
+end of paragraph
+paragraph
+#.#. Notices
+end of paragraph
+paragraph
+You may not remove or alter the substance of any license notices (including copyright notices, patent notices, disclaimers of warranty, or limitations of liability) contained within the Source Code Form of the Covered Software, except that You may alter any license notices to the extent required to remedy known factual inaccuracies.
+end of paragraph
+paragraph

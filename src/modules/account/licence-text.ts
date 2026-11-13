@@ -72,6 +72,11 @@ export function holderOf(line: string): string | undefined {
   if (!isLine || PLACEHOLDER.test(line)) return undefined;
   const rest = line.slice(at).replace(MARK, "");
   if (!/^[\d(©\p{Lu}]/u.test(rest) || PROSE.test(rest)) return undefined;
+  // A line led by a bare "(c)" is a holder only with a year after it:
+  // Apache 2.0's clause "(c) You must retain, in the Source form…" is the
+  // licence's third condition, and reading it as a holder dropped it from
+  // the text the page prints.
+  if (/^\(c\)/iu.test(line.slice(at)) && !/^\d/u.test(rest)) return undefined;
   const holder = withoutBracketed(rest)
     .replaceAll(/\(https?:[^()]*\)/gu, "")
     .replaceAll(/\s+/gu, " ")
