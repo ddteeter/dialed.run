@@ -86,9 +86,6 @@ export function ConfirmEmailSheet({
   return (
     <Sheet open={open} onClose={onClose} label="Confirm your email first">
       <div data-part="confirm-email-sheet" className="flex flex-col gap-4">
-        <h2 className="m-0 font-display text-title uppercase">
-          Confirm your email first
-        </h2>
         {address === undefined ? (
           leadAlone
         ) : (

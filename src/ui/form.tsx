@@ -829,27 +829,55 @@ const PENDING_ALIGN: Readonly<Record<PendingAlign, string>> = {
 };
 
 /**
- * The three main buttons. `action` is the runner app's: pink, a card,
- * display caps. `chalk` is the Desk's (round 44 #104): a chalk-filled pill
- * in the ground's ink, bold, 44 high, because on the Desk the main action
- * is often a removal and nothing should pull the operator toward it.
- * `ink` is Auth's Log in and Create account (round 47 #121): an ink pill
- * the form's width, `HEIGHT.control` high — auth is not a product screen,
- * so its one button is not the product's pink.
+ * One primary per surface, and its kind says what kind of surface it is
+ * (R54·167.1):
+ *
+ * - `action`, the product flow (A1–A3, manual entry, O1–O3, P3, Add
+ *   garment, W1): pink display caps at RADIUS.card, 52 high — the one
+ *   filled button that is not a pill (167.3's exception to RADIUS_RULES'
+ *   "filled action buttons are always pill").
+ * - `ink`, account, signed-out, settings Save and confirm sheets: an ink
+ *   pill, `HEIGHT.control` high. Not the product's pink, because these
+ *   are not product screens.
+ * - `chalk`, the Desk's (round 44 #104): a chalk-filled pill in the
+ *   ground's ink, 44 high, because on the Desk the main action is often a
+ *   removal and nothing should pull the operator toward it.
+ *
+ * **Width** (167.2): below 720 a button is full width and stacked. At
+ * ≥720 in a column it hugs its label — SPACE 6 a side, 200 minimum —
+ * left-aligned. Inside a desk drawer it is the drawer's full width again,
+ * stacked: the drawer is a 390 column, so hugging there would leave
+ * ragged buttons (`in-data-[slot=sheet]`).
  */
+const HUG_WIDE_CLASS =
+  "w-full wide:w-auto wide:min-w-50 wide:self-start wide:in-data-[slot=sheet]:w-full wide:in-data-[slot=sheet]:self-stretch";
+
 const SUBMIT_TONE = {
-  action:
-    "grid min-h-13 place-items-center rounded-card bg-action px-6 py-4 font-display uppercase text-accent-ink",
+  action: `grid min-h-13 place-items-center rounded-card bg-action px-6 py-4 font-display uppercase text-accent-ink ${HUG_WIDE_CLASS}`,
   chalk:
     "inline-flex min-h-11 items-center justify-center self-start rounded-pill bg-ink px-5 font-bold text-ground",
-  ink: "flex min-h-control w-full items-center justify-center rounded-pill bg-ink px-6 font-bold text-ground",
+  ink: `flex min-h-control items-center justify-center rounded-pill bg-ink px-6 font-bold text-ground ${HUG_WIDE_CLASS}`,
 } as const;
+
+/**
+ * The secondary, on every surface (R54·167.1): a hairline pill, 48 high,
+ * the same width rule as the primary beside it. Never alone — a lone
+ * action is the primary and takes its surface's kind. Its tertiary is a
+ * text link.
+ */
+export const SECONDARY_PILL = `target flex min-h-control cursor-pointer items-center justify-center rounded-pill border border-hairline bg-transparent px-6 text-body font-semibold text-ink ${HUG_WIDE_CLASS}`;
 
 /**
  * The Desk's main action as a class, for the one Desk press that is not a
  * form's submit (the copyright hold's).
  */
 export const CHALK_PILL = `cursor-pointer border-none text-body ${SUBMIT_TONE.chalk}`;
+
+/**
+ * The account and confirm primary as a class, for a press that is not a
+ * form's submit: a confirm sheet's verb, Keep my account (R54·167.1).
+ */
+export const INK_PILL = `target cursor-pointer border-none text-body ${SUBMIT_TONE.ink}`;
 
 /**
  * A Desk decision that is not the bar's main one (Keep, Approve, Decline),
@@ -1401,7 +1429,7 @@ export function FormEnd({
   form: Pick<FormShell, "failure" | "retry" | "retryRef" | "pending">;
   label: string;
   pendingLabel: string;
-  tone?: "action" | "chalk" | undefined;
+  tone?: keyof typeof SUBMIT_TONE | undefined;
 }>): JSX.Element {
   return (
     <>

@@ -150,27 +150,48 @@ describe("what the sheet promises", () => {
     // Each sentence is a promise the code keeps, so the copy is pinned:
     // a person reads it, the entry goes from your feed immediately, and
     // the author is never told who reported them.
-    expect(
-      screen.getByText(/A person reads it within a day/),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/hidden from your feed straight away/),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/never told who\s+reported it/),
-    ).toBeInTheDocument();
+    const next = screen.getByText(/never told who\s+reported it/);
+    expect(next).toHaveTextContent(
+      /^A person reads it within a day\. The entry is hidden from your feed straight away, whatever we decide\./,
+    );
   });
 
-  it("names the author in the block option", () => {
+  it("says it again in one line in the pinned footer, over Send report (R54·164.4)", () => {
     renderSheet();
-    expect(
-      screen.getByRole("checkbox", { name: "Block mark_t as well" }),
-    ).toBeInTheDocument();
+    const line = document.querySelector("[data-part='report-consequence']");
+    expect(line).toHaveTextContent(
+      "A person reads it within a day. It's hidden from your feed straight away.",
+    );
+    const foot = line?.closest("[data-part='sheet-footer']");
+    expect(foot?.firstElementChild).toBe(line);
+    expect(foot).toContainElement(
+      screen.getByRole("button", { name: "Send report", hidden: true }),
+    );
+  });
+
+  it("offers blocking as a second button that names both acts and the author (R54·166.6)", () => {
+    renderSheet();
+    const both = screen.getByRole("button", {
+      name: "Send report and block mark_t",
+    });
+    expect(both).toHaveAttribute("type", "button");
+    expect(both).toHaveTextContent("Send and block");
+    expect(both).toHaveClass("rounded-pill", "border-hairline");
+    // Under it, what blocking does.
+    expect(both.nextElementSibling).toHaveTextContent(
+      "Blocking hides all of mark_t's runs from you. They aren't told.",
+    );
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
 
   it("does not offer a block when there is nobody to block", () => {
     renderSheet({ canBlock: false, subject: anonymousSubject });
-    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /and block/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      document.querySelector("[data-part='block-consequence']"),
+    ).not.toBeInTheDocument();
   });
 
   it("avoids inventing a name when the subject has no author", () => {
@@ -222,9 +243,8 @@ describe("filing a report", () => {
       screen.getByRole("radio", { name: "Harassment aimed at someone" }),
     );
     await user.click(
-      screen.getByRole("checkbox", { name: "Block mark_t as well" }),
+      screen.getByRole("button", { name: "Send report and block mark_t" }),
     );
-    await user.click(screen.getByRole("button", { name: "Send report" }));
 
     // One call, not two. A reporter who ticked the box and lost a second
     // request would be told the report worked while the block silently
@@ -384,12 +404,57 @@ describe("filing a report", () => {
     });
   });
 
+  it("sends Send report without the block, though the author could be blocked", async () => {
+    const user = userEvent.setup();
+    const { fileReport } = renderSheet();
+    await user.click(
+      screen.getByRole("radio", { name: "Harassment aimed at someone" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Send report" }));
+    await waitFor(() => {
+      expect(fileReport).toHaveBeenCalledTimes(1);
+    });
+    const [call] = vi.mocked(fileReport).mock.calls;
+    expect(call?.[0].data.alsoBlock).toBe(false);
+  });
+
+  it("shows Sending only on the button that sent it, and takes no second send meanwhile", async () => {
+    const user = userEvent.setup();
+    // Never settles, so the send stays in flight for the whole test.
+    const fileReport = vi.fn<SheetProps["fileReport"]>(
+      () =>
+        new Promise(() => {
+          // Never settles.
+        }),
+    );
+    renderSheet({ fileReport });
+    await user.click(
+      screen.getByRole("radio", { name: "Harassment aimed at someone" }),
+    );
+    const both = screen.getByRole("button", {
+      name: "Send report and block mark_t",
+    });
+    await user.click(both);
+    await waitFor(() => {
+      expect(both).toHaveAttribute("aria-busy", "true");
+    });
+    const send = screen.getByRole("button", {
+      name: /^(Send report|Sending)$/,
+    });
+    expect(send).not.toHaveAttribute("aria-busy", "true");
+
+    // Pressing Send report now neither sends again nor moves the label.
+    await user.click(send);
+    expect(fileReport).toHaveBeenCalledTimes(1);
+    expect(both).toHaveAttribute("aria-busy", "true");
+  });
+
   it("never disables the submit button", async () => {
     const user = userEvent.setup();
     renderSheet();
 
     await user.click(screen.getByRole("radio", { name: "Something else" }));
-    const button = screen.getByRole("button", { name: /Send report|Sending/ });
+    const button = screen.getByRole("button", { name: "Send report" });
 
     // The forms contract: `disabled` drops focus and stops announcing, so
     // the guard is aria-disabled plus a handler-level double-submit check.
@@ -418,15 +483,8 @@ describe("the block offer needs somebody to name", () => {
     renderSheet({ subject: anonymousSubject, canBlock: true });
 
     expect(
-      screen.queryByRole("checkbox", { name: /^Block/ }),
+      screen.queryByRole("button", { name: /block/ }),
     ).not.toBeInTheDocument();
-  });
-
-  it("still offers it, named, when there is an author", () => {
-    renderSheet();
-    expect(
-      screen.getByRole("checkbox", { name: "Block mark_t as well" }),
-    ).toBeInTheDocument();
   });
 
   it("sends no block field at all when there is nobody to block", async () => {

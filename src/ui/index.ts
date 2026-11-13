@@ -24,7 +24,7 @@ export { PhoneBell } from "./PhoneBell";
 export { SlowLabel } from "./SlowLabel";
 export { useTappedSlow } from "./tapped-slow";
 export type { PhotoStep } from "./photo-step";
-export { Sheet } from "./Sheet";
+export { focusSheetHeading, Sheet, SheetFooter } from "./Sheet";
 export { SheetReceipt } from "./SheetReceipt";
 export { ConfirmLink, ConfirmSheet } from "./ConfirmSheet";
 export { Skeleton } from "./Skeleton";
@@ -48,6 +48,7 @@ export {
   PendingLabel,
   QUIET_CANCEL,
   QUIET_PILL,
+  SECONDARY_PILL,
   Select,
   SubmitButton,
   TextField,

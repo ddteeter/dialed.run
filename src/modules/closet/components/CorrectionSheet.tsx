@@ -18,7 +18,6 @@ import {
   FormErrorSummary,
   FormFailureBand,
   FormStatus,
-  Icon,
   Mono,
   NO_CHOICE,
   Sheet,
@@ -132,7 +131,8 @@ export function CorrectionSheet(
     <Sheet
       open={open}
       onClose={onClose}
-      label={isReceipt ? "Correction sent" : "What's wrong with it?"}
+      label={isReceipt ? "Thanks. We'll check it." : "What's wrong with it?"}
+      kicker={isReceipt ? "Correction sent" : undefined}
     >
       {isReceipt ? (
         <CorrectionReceipt onDone={onClose} />
@@ -185,7 +185,6 @@ function useCorrectionContext(
 
 function CorrectionForm({
   open,
-  onClose,
   subject,
   loadContext,
   fileCorrection,
@@ -240,7 +239,6 @@ function CorrectionForm({
         onFocusField={form.focusField}
       />
       <ProductKicker context={context} />
-      <SheetHead title="What's wrong with it?" onClose={onClose} />
       <p className="m-0 text-small text-quiet">
         This fixes it for every runner. Your own garment keeps what you entered.
       </p>
@@ -305,25 +303,6 @@ function ProductKicker({
     <Mono step="xs" className="text-muted">
       {context.brandName} · {context.productName}
     </Mono>
-  );
-}
-
-function SheetHead({
-  title,
-  onClose,
-}: Readonly<{ title: string; onClose: () => void }>): JSX.Element {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <h2 className="text-lead font-semibold">{title}</h2>
-      <button
-        type="button"
-        aria-label="Close"
-        onClick={onClose}
-        className="target inline-flex cursor-pointer items-center justify-center border-none bg-transparent p-0 text-ink"
-      >
-        <Icon name="close" size={20} />
-      </button>
-    </div>
   );
 }
 
@@ -434,11 +413,7 @@ function CorrectionReceipt({
   onDone,
 }: Readonly<{ onDone: () => void }>): JSX.Element {
   return (
-    <SheetReceipt
-      part="correction-receipt"
-      kicker="Correction sent"
-      heading="Thanks. We'll check it."
-      onDone={onDone}
+    <SheetReceipt part="correction-receipt" onDone={onDone}
     >
       <p className="m-0 text-body">
         We&apos;ll let you know here when it&apos;s fixed or if we keep it as it

@@ -121,11 +121,19 @@ describe("W1's intimate-image receipt", () => {
     expect(head).toHaveAttribute("tabindex", "-1");
     const receipt = document.querySelector("[data-part='report-receipt']");
     expect(receipt).toHaveTextContent(
-      /^Report sentThanks for telling us\.It's hidden from everyone now\. We'll review it within a day and keep it down if it breaks the rule\.If it's on other sites too.*leaves it\.Done$/u,
+      /^It's hidden from everyone now\. We'll review it within a day and keep it down if it breaks the rule\.If it's on other sites too.*leaves it\.Done$/u,
     );
     expect(receipt?.lastElementChild?.previousElementSibling).toBe(elsewhere());
     expect(screen.queryByRole("button", { name: "Send report" })).toBeNull();
-    expect(screen.getByRole("dialog", { name: "Report sent" })).toBeVisible();
+    // The sheet's own head carries the receipt's kicker and heading
+    // (R55·173).
+    const dialog = screen.getByRole("dialog", {
+      name: "Thanks for telling us.",
+    });
+    expect(dialog).toBeVisible();
+    expect(
+      dialog.querySelector("[data-part='sheet-header']"),
+    ).toHaveTextContent(/^Report sentThanks for telling us\.$/);
     // Still open: nothing has closed it yet.
     expect(onClose).not.toHaveBeenCalled();
     expect(onFiled).not.toHaveBeenCalled();

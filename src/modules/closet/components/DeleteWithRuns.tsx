@@ -171,7 +171,6 @@ export function DeleteWithRuns({
         data-state="delete-with-runs"
         className="flex flex-col gap-4"
       >
-        <h2 className="m-0 font-display text-heading">{heading}</h2>
         <p className="m-0 text-body">
           {`It's on ${runsLabel(runCount)}. Retiring takes it out of the picker and keeps everything it taught you.`}
         </p>

@@ -7,13 +7,15 @@ import {
   FormErrorSummary,
   FormFailureBand,
   FormStatus,
-  Icon,
+  inFlight,
   Mono,
+  PendingLabel,
+  SECONDARY_PILL,
   Sheet,
+  SheetFooter,
   SheetReceipt,
   SubmitButton,
   TextField,
-  ToggleField,
   useFormSubmit,
 } from "../../../ui";
 import { reportReasonLabels, reportReasons } from "../contracts";
@@ -107,7 +109,9 @@ export function ReportSheet({
   // fact, and having two spellings of it is how one of them gets missed.
   const [reason, setReason] = useState<ReportReason | undefined>();
   const [note, setNote] = useState("");
-  const [alsoBlock, setAlsoBlock] = useState(false);
+  // Which of W1's two buttons sent it (R54·166.6), so only that one shows
+  // its in-flight label.
+  const [isBlocking, setIsBlocking] = useState(false);
   // Round 42: an intimate-image report swaps the sheet for its receipt
   // rather than closing, so the other sites are said where it was sent.
   const [isReceipt, setIsReceipt] = useState(false);
@@ -142,7 +146,12 @@ export function ReportSheet({
       globalThis.setTimeout(focusPageHeading, 0);
     };
     return (
-      <Sheet open={open} onClose={closeReceipt} label="Report sent">
+      <Sheet
+        open={open}
+        onClose={closeReceipt}
+        kicker="Report sent"
+        label="Thanks for telling us."
+      >
         <IntimateReceipt onDone={closeReceipt} />
       </Sheet>
     );
@@ -182,6 +191,20 @@ export function ReportSheet({
   // a profile that is the handle the title already says, so it goes.
   const isLabelled = subject.type !== "profile";
 
+  function send(isAlsoBlocking: boolean): void {
+    // The submit guards itself, but the label would still move to the
+    // other button mid-flight.
+    if (form.pending) return;
+    setIsBlocking(isAlsoBlocking);
+    void form.submit({
+      subjectType: subject.type,
+      subjectId: subject.id,
+      reason,
+      note: note === "" ? undefined : note,
+      alsoBlock: blockableName === undefined ? undefined : isAlsoBlocking,
+    });
+  }
+
   return (
     <Sheet open={open} onClose={onClose} label={title}>
       <form
@@ -190,13 +213,7 @@ export function ReportSheet({
         className="flex flex-col gap-4"
         onSubmit={(event) => {
           event.preventDefault();
-          void form.submit({
-            subjectType: subject.type,
-            subjectId: subject.id,
-            reason,
-            note: note === "" ? undefined : note,
-            alsoBlock: blockableName === undefined ? undefined : alsoBlock,
-          });
+          send(false);
         }}
       >
         <FormStatus>{form.status}</FormStatus>
@@ -206,22 +223,8 @@ export function ReportSheet({
           onFocusField={form.focusField}
         />
 
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lead font-semibold">{title}</h2>
-          {/* W1's ✕ (round 22, item 21): "closes and discards without
-              confirm". A button, not the form's reset — nothing is asked,
-              and the caller mounts a fresh sheet for the next report. */}
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={onClose}
-            className="target inline-flex cursor-pointer items-center justify-center border-none bg-transparent p-0 text-ink"
-          >
-            <Icon name="close" size={20} />
-          </button>
-        </div>
         {isLabelled ? (
-          <p className="text-micro text-quiet">{subject.label}</p>
+          <p className="m-0 text-micro text-quiet">{subject.label}</p>
         ) : undefined}
 
         {/* Yes, this is valid TSX, and it is not a trick. A JSX element
@@ -257,6 +260,8 @@ export function ReportSheet({
           autoComplete="off"
         />
 
+        {/* The full paragraph at the body's end; the footer says it in one
+            line (R54·164.4). */}
         <section className="flex flex-col gap-1 text-micro text-quiet">
           <h3>
             <Mono step="xs">What happens next</Mono>
@@ -267,29 +272,75 @@ export function ReportSheet({
           </p>
         </section>
 
-        <FormFailureBand
-          failure={form.failure}
-          onRetry={form.retry}
-          retryRef={form.retryRef}
-        />
-
-        <SubmitButton
-          label="Send report"
-          pendingLabel="Sending"
-          pending={form.pending}
-        />
-
-        {blockableName === undefined ? undefined : (
-          <ToggleField
-            name="alsoBlock"
-            label={`Block ${blockableName} as well`}
-            isOn={alsoBlock}
-            onChange={setAlsoBlock}
-            field={form.field}
+        <SheetFooter>
+          <p data-part="report-consequence" className="m-0 text-small text-quiet">
+            A person reads it within a day. It&apos;s hidden from your feed
+            straight away.
+          </p>
+          <FormFailureBand
+            failure={form.failure}
+            onRetry={form.retry}
+            retryRef={form.retryRef}
           />
-        )}
+          <SubmitButton
+            label="Send report"
+            pendingLabel="Sending"
+            pending={form.pending && !isBlocking}
+          />
+          {blockableName === undefined ? undefined : (
+            <SendAndBlock
+              name={blockableName}
+              pending={form.pending && isBlocking}
+              onSend={() => {
+                send(true);
+              }}
+            />
+          )}
+        </SheetFooter>
       </form>
     </Sheet>
+  );
+}
+
+/**
+ * W1's second way to finish (R54·166.6): "Send and block", a hairline pill
+ * under Send report, with what blocking does beneath it. It does both, so
+ * it is named for both, handle included: "Send report and block
+ * {handle}". It replaced a tick box under the primary, which a runner
+ * read past on the way to the big button (audit P2b-03).
+ *
+ * A button rather than a second submit, so the form's own submit — Enter
+ * in the note — stays plain Send report.
+ */
+function SendAndBlock({
+  name,
+  pending,
+  onSend,
+}: Readonly<{
+  name: string;
+  pending: boolean;
+  onSend: () => void;
+}>): JSX.Element {
+  return (
+    <>
+      <button
+        type="button"
+        aria-label={`Send report and block ${name}`}
+        {...inFlight(pending)}
+        onClick={onSend}
+        className={SECONDARY_PILL}
+      >
+        <PendingLabel
+          label="Send and block"
+          pendingLabel="Sending"
+          pending={pending}
+        />
+      </button>
+      <p data-part="block-consequence" className="m-0 text-small text-quiet">
+        Blocking hides all of {name}&apos;s runs from you. They aren&apos;t
+        told.
+      </p>
+    </>
   );
 }
 
@@ -326,12 +377,7 @@ function IntimateReceipt({
   onDone,
 }: Readonly<{ onDone: () => void }>): JSX.Element {
   return (
-    <SheetReceipt
-      part="report-receipt"
-      kicker="Report sent"
-      heading="Thanks for telling us."
-      onDone={onDone}
-    >
+    <SheetReceipt part="report-receipt" onDone={onDone}>
       <p className="m-0 text-body">
         It&apos;s hidden from everyone now. We&apos;ll review it within a day
         and keep it down if it breaks the rule.

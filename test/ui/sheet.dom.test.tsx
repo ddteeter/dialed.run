@@ -1,9 +1,9 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { Sheet } from "../../src/ui/Sheet";
+import { focusSheetHeading, Sheet, SheetFooter } from "../../src/ui/Sheet";
 
 /**
  * The `<dialog>` primitive, opened and closed.
@@ -199,28 +199,39 @@ describe("Sheet", () => {
     expect(sheet()).toHaveAttribute("aria-label", "Pick a kit");
   });
 
-  it("becomes DS3's panel at width: top-aligned, 390, and no scrim", () => {
+  it("is the desk drawer at width: 390, under the bar, at the right, no scrim (R54·164.1)", () => {
     render(<Controlled initiallyOpen />);
     const dialog = sheet();
 
-    // "It sits SPACE[12] below the bar, top-aligned, **never vertically
-    // centred** — a flow's first step and its fifth should start at the
-    // same y." `top` is the bar's own height, read from the variable the
-    // bar sets itself, so neither measures the other.
+    // "A 390 drawer, 24 under the top bar and 24 from the right edge."
+    // `top` is the bar's own height, read from the variable the bar sets
+    // itself, so neither measures the other; still never centred.
     expect(dialog).toHaveClass(
       "wide:bottom-auto",
-      "wide:top-[var(--bar-height)]",
-      "wide:mt-12",
+      "wide:top-[calc(var(--bar-height)+1.5rem)]",
+      "wide:left-auto",
+      "wide:right-6",
+      "wide:max-w-panel",
+      "wide:rounded-sheet",
     );
-    // Width 390 and sheet radius — the panel rule's other two numbers,
-    // both from MEASURE and RADIUS rather than from the board.
-    expect(dialog).toHaveClass("wide:max-w-panel", "wide:rounded-sheet");
-    // DS5, "modals with scrims": "a dimmed backdrop is a third grey and
-    // turns the phone screen into a dialog". The wash stays on the phone,
-    // where the sheet really is a layer over a screen.
+    // Its own surface, hairline and lift, so it reads as a layer on a
+    // page that stays: the opaque ground backdrop painted over the bar.
+    expect(dialog).toHaveClass("wide:ground-drawer");
+    // DS5, "modals with scrims": no dimmed backdrop at width. The page is
+    // visible and undimmed; `showModal` is what makes it inert.
     expect(dialog).toHaveClass(
       "backdrop:bg-scrim/60",
-      "wide:backdrop:bg-ground",
+      "wide:backdrop:bg-transparent",
+    );
+    expect(dialog.className).not.toMatch(/wide:backdrop:bg-ground/);
+  });
+
+  it("folds a long sheet: capped, scrolling inside (R54·164.4)", () => {
+    render(<Controlled initiallyOpen />);
+    expect(sheet()).toHaveClass(
+      "max-h-[var(--sheet-cap)]",
+      "overflow-y-auto",
+      "wide:max-h-[calc(100dvh-var(--bar-height)-3rem)]",
     );
   });
 
@@ -305,8 +316,11 @@ describe("Sheet in dark, and stacked (Design 165)", () => {
       "backdrop:bg-scrim/60",
     );
     // The grabber is the utility's `::before`, not a child: the sheet's
-    // own content is still its first element.
-    expect(sheet().firstElementChild).toHaveTextContent("Sheet body");
+    // header is still its first element.
+    expect(sheet().firstElementChild).toHaveAttribute(
+      "data-part",
+      "sheet-header",
+    );
   });
 
   it("marks a lone sheet as nothing stacked", async () => {
@@ -359,3 +373,183 @@ describe("Sheet in dark, and stacked (Design 165)", () => {
     }
   });
 });
+
+describe("Sheet's own head, foot and pane (R55·173, R54·164.4, R55·202)", () => {
+  it("shows its label as the TYPE.title heading, with the ✕ in its own column", () => {
+    render(<Controlled initiallyOpen />);
+    const heading = screen.getByRole("heading", { level: 2, name: "Pick a kit" });
+    expect(heading).toHaveClass("font-display", "text-title");
+    expect(heading).toHaveAttribute("tabindex", "-1");
+    const close = screen.getByRole("button", { name: "Close" });
+    // Its own 44 column: a long title wraps beside it, never around it.
+    expect(close).toHaveClass("target", "w-11", "shrink-0");
+    expect(heading.parentElement).toHaveClass("min-w-0", "flex-1");
+    expect(close).not.toHaveAttribute("aria-disabled");
+  });
+
+  it("puts a kicker over the heading only when it has one", () => {
+    const { rerender } = render(
+      <Sheet open onClose={vi.fn()} label="Thanks.">
+        <p>body</p>
+      </Sheet>,
+    );
+    expect(head()?.textContent).toBe("Thanks.");
+    rerender(
+      <Sheet open onClose={vi.fn()} kicker="Report sent" label="Thanks.">
+        <p>body</p>
+      </Sheet>,
+    );
+    expect(head()?.textContent).toBe("Report sentThanks.");
+    expect(screen.getByText("Report sent")).toHaveClass("text-muted");
+  });
+
+  it("closes on the ✕, through onClose", async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    render(<Controlled initiallyOpen onClose={onClose} />);
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+    expect(sheet().open).toBe(false);
+  });
+
+  it("holds the ✕ while it is locked", async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <Sheet open isLocked onClose={onClose} label="Thanks.">
+        <p>body</p>
+      </Sheet>,
+    );
+    const close = screen.getByRole("button", { name: "Close" });
+    expect(close).toHaveAttribute("aria-disabled", "true");
+    await user.click(close);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(sheet2().open).toBe(true);
+  });
+
+  it("pins its head, which takes its hairline only once the body has scrolled", () => {
+    render(<Controlled initiallyOpen />);
+    const head = sheet().querySelector("[data-part='sheet-header']");
+    expect(head).toHaveClass(
+      "sticky",
+      "top-0",
+      "border-transparent",
+      "group-data-[scrolled=true]:border-hairline",
+    );
+    expect(sheet()).toHaveClass("group");
+
+    sheet().scrollTop = 40;
+    fireEvent.scroll(sheet());
+    expect(sheet()).toHaveAttribute("data-scrolled", "true");
+    sheet().scrollTop = 0;
+    fireEvent.scroll(sheet());
+    expect(sheet()).toHaveAttribute("data-scrolled", "false");
+  });
+
+  it("pins a footer under the body, ruled on top, and drops the body's foot padding for it", () => {
+    render(
+      <Sheet open onClose={vi.fn()} label="Report">
+        <p>body</p>
+        <SheetFooter>
+          <button type="button">Send</button>
+        </SheetFooter>
+      </Sheet>,
+    );
+    const foot = sheet2().querySelector("[data-part='sheet-footer']");
+    expect(foot).toHaveClass("sticky", "bottom-0", "border-t", "border-hairline");
+    expect(foot?.parentElement).toHaveClass(
+      "pb-6",
+      "has-[[data-part=sheet-footer]]:pb-0",
+    );
+  });
+
+  it("opens as a pane with show(), not showModal(), when it is not modal", async () => {
+    const show = vi.spyOn(HTMLDialogElement.prototype, "show");
+    const showModal = vi.spyOn(HTMLDialogElement.prototype, "showModal");
+    try {
+      render(
+        <Sheet open isModal={false} onClose={vi.fn()} label="Runner">
+          <p>pane</p>
+        </Sheet>,
+      );
+      await waitFor(() => {
+        expect(sheet2().open).toBe(true);
+      });
+      expect(show).toHaveBeenCalledOnce();
+      expect(showModal).not.toHaveBeenCalled();
+    } finally {
+      show.mockRestore();
+      showModal.mockRestore();
+    }
+  });
+
+  it("closes a pane on Escape, which a modal leaves to the platform", async () => {
+    const onClose = vi.fn();
+    const { rerender } = render(
+      <Sheet open isModal={false} onClose={onClose} label="Runner">
+        <p>pane</p>
+      </Sheet>,
+    );
+    fireEvent.keyDown(sheet2(), { key: "Enter" });
+    expect(sheet2().open).toBe(true);
+    fireEvent.keyDown(sheet2(), { key: "Escape" });
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+
+    // A modal's Escape is the dialog's own cancel; the key handler must
+    // not close it a second way (or close it while it is locked).
+    const close = vi.spyOn(HTMLDialogElement.prototype, "close");
+    try {
+      rerender(
+        <Sheet open isModal onClose={onClose} label="Runner">
+          <p>pane</p>
+        </Sheet>,
+      );
+      close.mockClear();
+      fireEvent.keyDown(sheet2(), { key: "Escape" });
+      expect(close).not.toHaveBeenCalled();
+    } finally {
+      close.mockRestore();
+    }
+  });
+
+  it("does not close a locked pane on Escape", () => {
+    const onClose = vi.fn();
+    render(
+      <Sheet open isLocked isModal={false} onClose={onClose} label="Runner">
+        <p>pane</p>
+      </Sheet>,
+    );
+    fireEvent.keyDown(sheet2(), { key: "Escape" });
+    expect(onClose).not.toHaveBeenCalled();
+    expect(sheet2().open).toBe(true);
+  });
+});
+
+describe("focusSheetHeading", () => {
+  it("focuses the heading of the sheet it is attached in", async () => {
+    render(
+      <Sheet open onClose={vi.fn()} label="Check the blur">
+        <div ref={focusSheetHeading}>step</div>
+      </Sheet>,
+    );
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { name: "Check the blur", hidden: true }),
+      ).toHaveFocus();
+    });
+  });
+});
+
+function head(): Element | null {
+  return sheet2().querySelector("[data-part='sheet-header']");
+}
+
+function sheet2(): HTMLDialogElement {
+  const dialog = document.querySelector("dialog");
+  if (dialog === null) throw new Error("no sheet");
+  return dialog;
+}

@@ -12,7 +12,7 @@ import {
   Icon,
   inFlight,
   Mono,
-  PHOTO_STEP_LABEL,
+  focusSheetHeading,
   ToggleField,
 } from "../../../ui";
 import type { ControlFailure, PhotoStep } from "../../../ui";
@@ -201,15 +201,11 @@ export function PhotoBlur({
   What was wrong with the last file Pick another was given, if anything.
   */
   const [pickProblem, setPickProblem] = useState<string>();
-  const [heading, setHeading] = useState<HTMLHeadingElement>();
-
-  useEffect(() => {
-    heading?.focus();
-  }, [heading]);
 
   return (
     <div
       data-part="photo-check"
+      ref={focusSheetHeading}
       className="flex flex-col gap-3"
       // It only catches Escape bubbling up from the controls inside, so it
       // is no control itself (jsx-a11y's documented case for the role).
@@ -218,24 +214,15 @@ export function PhotoBlur({
         if (event.key === "Escape") onCancel();
       }}
     >
-      <div className="flex items-center justify-between gap-3">
-        <h2
-          ref={(node) => {
-            setHeading(node ?? undefined);
-          }}
-          tabIndex={-1}
-          className="m-0 font-display text-heading"
-        >
-          {PHOTO_STEP_LABEL}
-        </h2>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="target cursor-pointer border-none bg-transparent p-0 text-body font-semibold text-label"
-        >
-          Cancel
-        </button>
-      </div>
+      {/* The sheet's heading is W3's head (R55·173), and it takes focus
+          as the step opens; Cancel stays the step's own way out. */}
+      <button
+        type="button"
+        onClick={onCancel}
+        className="target cursor-pointer self-end border-none bg-transparent p-0 text-body font-semibold text-label"
+      >
+        Cancel
+      </button>
       <BlurBody
         key={another?.key}
         file={another?.file ?? file}

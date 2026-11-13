@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import type { JSX, ReactNode } from "react";
 
-import { ControlFailureBand, FormStatus, inFlight, PendingLabel } from "./form";
+import {
+  ControlFailureBand,
+  FormStatus,
+  inFlight,
+  INK_PILL,
+  PendingLabel,
+  SECONDARY_PILL,
+} from "./form";
 import { Sheet } from "./Sheet";
 import { useControlAction } from "./use-control-action";
 import type { ControlAction } from "./use-control-action";
@@ -149,9 +156,7 @@ export function ConfirmSheet({
   return (
     <Sheet open={open} onClose={onClose} label={heading}>
       <div data-part="sheet" data-state={state} className="flex flex-col gap-4">
-        {/* TYPE.title, so it can't read as page text (Design 165). A guess
-            in both themes until Design 173 (#643) says which. */}
-        <h2 className="m-0 font-display text-title">{heading}</h2>
+        {/* The heading is the sheet's own (R55·173). */}
         <p className="m-0 text-body text-quiet">{body}</p>
         <button
           type="button"
@@ -160,7 +165,7 @@ export function ConfirmSheet({
           onClick={() => {
             void action.run();
           }}
-          className="target w-full cursor-pointer rounded-pill border-none bg-ink px-4 py-4 text-lead font-bold text-ground"
+          className={INK_PILL}
         >
           <PendingLabel
             label={verb}
@@ -179,7 +184,7 @@ export function ConfirmSheet({
             setKeep(node ?? undefined);
           }}
           onClick={onClose}
-          className="target w-full cursor-pointer rounded-pill border border-hairline bg-transparent px-4 py-4 text-lead font-semibold text-ink"
+          className={SECONDARY_PILL}
         >
           Keep it
         </button>

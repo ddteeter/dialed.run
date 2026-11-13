@@ -22,6 +22,7 @@ import type {
 } from "../../src/modules/safety/blur/pipeline";
 import type { DetectionOutcome } from "../../src/modules/safety/blur/detect";
 import type { BlurRegion } from "../../src/modules/safety/blur/regions";
+import { PHOTO_STEP_LABEL, Sheet } from "../../src/ui";
 
 /**
  * jsdom's `getContext("2d")` is null, so the pixels are injected and what
@@ -1218,27 +1219,30 @@ describe("W3 waits for the runner (round 28 #5)", () => {
   });
 
   it("draws the head, and the foot under the cells", async () => {
+    // The head is the sheet's own (R55·173); W3 is only ever a sheet's.
     const { pipeline } = fakePipeline();
     render(
-      <PhotoBlur
-        file={PHOTO}
-        onReady={vi.fn()}
-        onCancel={noop}
-        pipeline={pipeline}
-        storage={emptyStorage()}
-      />,
+      <Sheet open onClose={noop} label={PHOTO_STEP_LABEL}>
+        <PhotoBlur
+          file={PHOTO}
+          onReady={vi.fn()}
+          onCancel={noop}
+          pipeline={pipeline}
+          storage={emptyStorage()}
+        />
+      </Sheet>,
     );
 
     expect(
-      screen.getByRole("heading", { name: "Check the blur" }),
+      screen.getByRole("heading", { name: "Check the blur", hidden: true }),
     ).toBeInTheDocument();
-    const cancel = screen.getByRole("button", { name: "Cancel" });
-    const use = screen.getByRole("button", { name: "Use this photo" });
+    const cancel = screen.getByRole("button", { name: "Cancel", hidden: true });
+    const use = screen.getByRole("button", { name: "Use this photo", hidden: true });
     const another = screen.getByLabelText("Pick another");
     expect(cancel).toHaveAttribute("type", "button");
     expect(use).toHaveAttribute("type", "button");
     // Under the cells, in the board's order.
-    const cells = await screen.findByRole("group", { name: "Blur by area" });
+    const cells = await screen.findByRole("group", { name: "Blur by area", hidden: true });
     expect(cells.compareDocumentPosition(use)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
@@ -1250,16 +1254,21 @@ describe("W3 waits for the runner (round 28 #5)", () => {
   it("puts focus on the heading, so Tab reaches the cells before the primary", async () => {
     const { pipeline } = fakePipeline();
     render(
-      <PhotoBlur
-        file={PHOTO}
-        onReady={vi.fn()}
-        onCancel={noop}
-        pipeline={pipeline}
-        storage={emptyStorage()}
-      />,
+      <Sheet open onClose={noop} label={PHOTO_STEP_LABEL}>
+        <PhotoBlur
+          file={PHOTO}
+          onReady={vi.fn()}
+          onCancel={noop}
+          pipeline={pipeline}
+          storage={emptyStorage()}
+        />
+      </Sheet>,
     );
 
-    const heading = screen.getByRole("heading", { name: "Check the blur" });
+    const heading = screen.getByRole("heading", {
+      name: "Check the blur",
+      hidden: true,
+    });
     await waitFor(() => {
       expect(heading).toHaveFocus();
     });
@@ -1551,19 +1560,26 @@ describe("W3 waits for the runner (round 28 #5)", () => {
     const { pipeline } = fakePipeline();
     const user = userEvent.setup();
     render(
-      <PhotoBlur
-        file={PHOTO}
-        onReady={vi.fn()}
-        onCancel={onCancel}
-        pipeline={pipeline}
-        storage={emptyStorage()}
-      />,
+      <Sheet open onClose={noop} label={PHOTO_STEP_LABEL}>
+        <PhotoBlur
+          file={PHOTO}
+          onReady={vi.fn()}
+          onCancel={onCancel}
+          pipeline={pipeline}
+          storage={emptyStorage()}
+        />
+      </Sheet>,
     );
-    const heading = screen.getByRole("heading", { name: "Check the blur" });
+    const heading = screen.getByRole("heading", {
+      name: "Check the blur",
+      hidden: true,
+    });
     await waitFor(() => {
       expect(heading).toHaveFocus();
     });
 
+    // From inside the step: the sheet's own Escape is the dialog's.
+    screen.getByRole("button", { name: "Use this photo", hidden: true }).focus();
     await user.keyboard("a");
     expect(onCancel).not.toHaveBeenCalled();
     await user.keyboard("{Escape}");

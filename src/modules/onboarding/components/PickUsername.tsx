@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { JSX, ReactNode } from "react";
 
-import { Icon, Sheet } from "../../../ui";
+import { Sheet } from "../../../ui";
 
 /**
  * Settings › Privacy's PUBLIC PROFILE group before the runner has a
@@ -52,17 +52,6 @@ export function NoHandleYet({
       </button>
       <Sheet open={isOpen} onClose={close} label="Username">
         <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="m-0 text-lead font-semibold">Username</h2>
-            <button
-              type="button"
-              aria-label="Close"
-              onClick={close}
-              className="target inline-flex cursor-pointer items-center justify-center border-none bg-transparent p-0 text-ink"
-            >
-              <Icon name="close" size={20} />
-            </button>
-          </div>
           {isOpen ? pickUsername(onClaimed) : undefined}
         </div>
       </Sheet>

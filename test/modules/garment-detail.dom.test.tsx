@@ -165,6 +165,16 @@ function sheet(): HTMLElement {
   return open ?? part("sheet");
 }
 
+/**
+ * The open sheet's heading, which is the sheet's own (R55·173), above the
+ * confirm's `data-part='sheet'` body.
+ */
+function sheetHeading(name: string): HTMLElement {
+  const dialog = document.querySelector<HTMLElement>("dialog[open]");
+  if (dialog === null) throw new Error("no open sheet");
+  return within(dialog).getByRole("heading", { level: 2, name });
+}
+
 describe("GarmentDetail: the order round 22 fixes", () => {
   it("runs identity, photo, stats, composition, pairs with, actions", async () => {
     await renderWithRouter(
@@ -903,7 +913,7 @@ describe("GarmentDetail: the retire confirm (round 22)", () => {
     expect(sheet().closest("dialog")).toHaveAttribute("open");
     expect(sheet()).toHaveAttribute("data-state", "confirm-retire");
     expect(
-      within(sheet()).getByRole("heading", { name: "Retire the Harrier?" }),
+      sheetHeading("Retire the Harrier?"),
     ).toBeVisible();
     expect(
       within(sheet()).getByText(
@@ -1059,7 +1069,7 @@ describe("GarmentDetail: the delete confirm (round 22)", () => {
     // No runs, so round 26's sheet is not on the page at all.
     expect(document.querySelectorAll("[data-part='sheet']")).toHaveLength(1);
     expect(
-      within(sheet()).getByRole("heading", { name: "Delete the Harrier?" }),
+      sheetHeading("Delete the Harrier?"),
     ).toBeVisible();
     expect(
       within(sheet()).getByText(
@@ -1125,9 +1135,7 @@ describe("GarmentDetail: deleting a piece with runs (round 26 #3)", () => {
     expect(remove).not.toHaveBeenCalled();
     expect(sheet()).toHaveAttribute("data-state", "delete-with-runs");
     expect(
-      within(sheet()).getByRole("heading", {
-        name: "Delete the Harrier? Retire it instead.",
-      }),
+      sheetHeading("Delete the Harrier? Retire it instead."),
     ).toBeVisible();
     expect(within(sheet()).getByText(/^It's on 14 runs\./)).toBeVisible();
     expect(

@@ -219,9 +219,6 @@ function DeleteSheet({
         }}
       >
         <FormStatus>{form.status}</FormStatus>
-        {/* TYPE.title (Design 165); both themes is a guess until Design
-            173 (#643). */}
-        <h2 className="m-0 font-display text-title">Delete your account?</h2>
         <p className="m-0 text-body text-quiet">
           Your runs, closet, entries and photos go in 7 days. Shared runs leave
           the feed now. Log in before {day} to keep everything.
