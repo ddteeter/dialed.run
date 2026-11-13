@@ -516,6 +516,20 @@ describe("OpenSourcePage", () => {
     expect(weather.parentElement?.parentElement?.children).toHaveLength(2);
   });
 
+  it("counts packages when a package and a notice both match", async () => {
+    const user = userEvent.setup();
+    await renderPage([
+      { ...MIT, pieces: [{ name: "weather-lib", version: "1.0.0" }] },
+    ]);
+    await user.type(search(), "weather");
+    expect(rowNames("MIT")).toEqual(["weather-lib"]);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /^1 package matches\.$/u,
+    );
+    expect(screen.queryByText(/^Nothing we ship/u)).toBeNull();
+    expect(contentsLinks()).toEqual(["MIT", "Third-party notices"]);
+  });
+
   it("finds a notice by its words, and the contents follow (R55·225)", async () => {
     const user = userEvent.setup();
     await renderPage();
@@ -566,6 +580,7 @@ describe("OpenSourcePage", () => {
     expect(heading.parentElement).toHaveClass("justify-between");
     // Not a legal text's section: no hairline above it.
     expect(section("MIT")).not.toHaveClass("border-t");
+    expect(section("MIT")).toHaveClass("flex", "flex-col", "gap-4", "pt-4");
   });
 
   it("puts Project at the end of the row's first line", async () => {
@@ -606,7 +621,10 @@ describe("OpenSourcePage", () => {
     const read = within(section("MIT")).getByText("Read the MIT licence");
     expect(read.closest("details")).toHaveClass("group");
     expect(read.querySelector("svg")).toHaveClass("group-open:rotate-90");
-    expect(read.querySelector(":scope svg path")).toHaveAttribute("d", "M9 5l7 7-7 7");
+    expect(read.querySelector(":scope svg path")).toHaveAttribute(
+      "d",
+      "M9 5l7 7-7 7",
+    );
     expect(read).toHaveClass("[&::-webkit-details-marker]:hidden");
     const paragraphs = read.closest("details")?.querySelectorAll("p") ?? [];
     expect([...paragraphs].map((paragraph) => paragraph.textContent)).toEqual([
