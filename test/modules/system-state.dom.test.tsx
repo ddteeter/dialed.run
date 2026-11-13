@@ -98,6 +98,56 @@ describe("X1 · not found", () => {
       "true",
     );
   });
+
+  it("sits in the panel when nothing is named", async () => {
+    await renderAt(<NotFoundState signedIn />);
+    expect(state()?.parentElement).toHaveClass("max-w-panel");
+  });
+
+  it("names a subject: its sentence, its way out, and its screen's column (R55·185)", async () => {
+    await renderAt(
+      <NotFoundState
+        signedIn
+        subject={{
+          sentence: "That piece isn't in your closet. It may have been deleted.",
+          to: "/closet",
+          label: "Go to your closet",
+          width: "column",
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "That piece isn't in your closet. It may have been deleted.",
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText(/This page doesn't exist/)).toBeNull();
+    const wayOut = screen.getByRole("link", { name: "Go to your closet" });
+    expect(wayOut).toHaveAttribute("href", "/closet");
+    expect(wayOut).toHaveClass("rounded-pill", "border-hairline", "text-ink");
+    expect(screen.queryByRole("link", { name: "Go to your feed" })).toBeNull();
+    expect(state()?.parentElement).toHaveClass("max-w-column");
+    expect(state()?.parentElement).not.toHaveClass("max-w-panel");
+  });
+
+  it("keeps a subject's own way out signed out too", async () => {
+    await renderAt(
+      <NotFoundState
+        signedIn={false}
+        subject={{
+          sentence: "That run isn't in your runs. It may have been deleted.",
+          to: "/runs",
+          label: "Go to your runs",
+          width: "column",
+        }}
+      />,
+    );
+    expect(
+      screen.getByRole("link", { name: "Go to your runs" }),
+    ).toHaveAttribute("href", "/runs");
+    expect(screen.queryByRole("link", { name: "Log in" })).toBeNull();
+  });
 });
 
 describe("X2 · loader failed", () => {
