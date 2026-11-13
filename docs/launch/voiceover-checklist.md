@@ -42,8 +42,10 @@ up as something unsaid, said twice, or said in the wrong order.
 2. **The rotor's Headings** lists one level-1 heading, the screen's title,
    with the sections under it. Two-finger swipe up (read all) reads the
    whole screen without stopping.
-3. **The rotor's Landmarks** finds the banner, the main content and the tab
-   bar's navigation.
+3. **The rotor's Landmarks** finds the main content and the tab bar's
+   navigation on a phone. At desk width it finds the banner (the top bar)
+   as well. A phone has no banner: its bell sits at the end of the screen's
+   first row (Design 169).
 4. **Every control says what it is and what it does**: "Add a run, button",
    not "button" or "plus". An icon-only control has a name. A selected tab
    or chip says "selected".

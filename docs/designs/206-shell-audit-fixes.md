@@ -11,12 +11,31 @@ Round 54 (Design 164–170) decides is left alone.
 
 ## Approach
 
-Fix each finding once, where it starts:
+Fix each finding once, where it starts. Round 54 then added two rulings to
+this lane: Design 169 (#623) and Design 165 (#619).
+
+- **Design 169: the bell joins each screen's first row.**
+  - `Layout` drops the phone's empty bell row and provides the bell to a
+    `PhoneBell` seat (`src/ui/PhoneBell.tsx`).
+  - `Page` seats it at the end of the title row, after `headingAction`. A
+    new `back` slot puts a sub-page's back link above the title, with the
+    bell in its row.
+  - Screens that draw their own first row seat it themselves:
+    notifications, the Call, A1, the backlog, the closet, X1 and X2.
+  - The closet routes gain the bell. `garmentLoader` reads it after the
+    session gate.
+  - Feed's seven screens are 7d's to seat.
+- **Design 165: the dark phone sheet.**
+  - Below 720 in dark, a sheet takes `ground-sheet`: `--panel`, a hairline
+    over the top and sides, and a 36×4 grabber in `--hairline-2`.
+  - Two stacked sheets mark themselves. The lower one stays at least 48
+    taller than the upper, and the upper's edge is `--hairline-2`.
+  - Headings in ConfirmSheet and DeleteAccount are `text-title`. Both
+    themes is a guess until Design 173 (#643).
 
 - **Bell** (A-08, B-03, E1-10, F-06, D1-17, E2-11, G-23).
-  `NotificationBell` centres its glyph. The count or dot moves from beside
-  the glyph to an absolutely placed mark on its corner. The phone bell keeps
-  its row and its horizontal place (Design 169).
+  `NotificationBell` centres its glyph in its 44 target. The count or dot
+  moves from beside the glyph to an absolutely placed mark on its corner.
 - **Footer** (A-03, B-14). The gaps come from padding, not `gap-x`. Every
   link is wider than 44px, so `target`'s `min-width` stops padding "Terms"
   alone. The phone still wraps, and each line stays 44 high (the target
@@ -67,13 +86,14 @@ Fix each finding once, where it starts:
 ## Issues
 
 - Closes: #632 (except the parts handed to 7d and Round 54, listed on the
-  issue).
+  issue), #619, #623.
 - Refs: #627, #628 (findings ticked "done in 7b").
 
 ## Open questions
 
-- Phone bell: centring the glyph vertically moves it about 12px down inside
-  its row. Its horizontal place doesn't change. Guess: acceptable, since
-  169 decides the row itself.
+- Sheet headings at TYPE.title in both themes is a guess; Design 173
+  (#643) decides.
+- X2 (loader failed) has no first row of its own, so it gets one for the
+  bell above the band. This is a guess.
 - The footer's 44px lines on a phone are the target rule, not a defect. Only
   the gaps change.

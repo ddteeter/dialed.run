@@ -199,12 +199,14 @@ On every screen:
    one level 1 heading.
 4. Then do what the step says.
 
-Phone screens start with the banner (the Notifications link, once signed
-in) and end with the tab bar, a navigation named "Main": link "Feed", link
-"Closet", button "Add a run", link "Call", link "You". They are listed
-once here and not repeated per screen. A few transcripts were read at desk
-width, where the same five destinations sit in the banner instead; those
-steps say so, and the content between is the same.
+Phone screens end with the tab bar, a navigation named "Main": link
+"Feed", link "Closet", button "Add a run", link "Call", link "You". It is
+listed once here and not repeated per screen. Signed in, the Notifications
+link is part of the screen itself: the last thing on its first row, after
+the title (or after the back link on a sub-page). A phone has no banner. A
+few transcripts were read at desk width, where the same five destinations
+and the Notifications link sit in the banner instead; those steps say so,
+and the content between is the same.
 
 ### Flow 1. Join and set up
 
@@ -720,7 +722,7 @@ You should hear:
 
 Check: each number is heard with its word, in that order.
 
-**5.2 Notifications.** The banner's link is "Notifications", or
+**5.2 Notifications.** The link after the screen's title is "Notifications", or
 "Notifications, N new" when something is unread. Double tap it.
 Source: `conformance/notifications-m.conformance.spec.ts/M-in-flight-white-and-dot-rows-and-Mark-all-read-breathing-in-place.txt`.
 
