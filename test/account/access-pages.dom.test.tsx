@@ -726,6 +726,9 @@ describe("D7 · Access", () => {
       "wide:col-span-full",
     );
     expect(cells).not.toHaveClass("text-quiet");
+    // Nothing went wrong on it, so the row is its cells alone: no empty
+    // full-width line under them.
+    expect(rowOf("DIAL-TR8K").children).toHaveLength(1);
     expect(rowOf("DIAL-TR8K")).toHaveClass(
       "wide:grid",
       "wide:grid-cols-subgrid",

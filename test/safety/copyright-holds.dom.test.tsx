@@ -333,6 +333,39 @@ describe("CopyrightHolds", () => {
     },
   );
 
+  it("says what a settled row did above the holds still left", async () => {
+    const act = vi.fn<CaseOverFn>().mockResolvedValue({ outcome: "recorded" });
+    render(
+      <CopyrightHolds
+        holds={[inCourt(), held({ id: "01JABCDEFGHJKMNPQRSTVWXYZ1" })]}
+        counterNotice={vi.fn<CounterFn>()}
+        courtAction={vi.fn<CourtFn>()}
+        caseOverDelete={act}
+        caseOverRestore={vi.fn<CaseOverFn>()}
+      />,
+    );
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Case over: delete" }));
+    await user.click(screen.getByRole("button", { name: "Delete it" }));
+
+    const heading = await screen.findByRole("heading", {
+      name: "Copyright holds · 1",
+    });
+    const said = part("holds-said");
+    expect(said?.textContent).toBe("Case over. It is deleted.");
+    // One hold is left, so the answer sits above the list's kicker.
+    expect(
+      said === null
+        ? 0
+        : said.compareDocumentPosition(heading) &
+            Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      document.querySelectorAll("[data-part='copyright-hold']"),
+    ).toHaveLength(1);
+  });
+
   it.each([
     ["Case over: delete", "Delete it for good? It can't be put back."],
     ["Case over: restore", "Put it back where it was?"],
