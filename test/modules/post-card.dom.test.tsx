@@ -399,6 +399,8 @@ describe("PostCard: Useful", () => {
     });
     expect(button).toHaveAttribute("aria-busy", "true");
     expect(screen.getByText("Noting")).toBeVisible();
+    // Set flush to the card's edge, where the heart starts (E1-07, N2-09).
+    expect(button.querySelector(".grid")).toHaveClass("justify-items-start");
     expect(button).toHaveAttribute("aria-pressed", "false");
     // While it waits, the drawn [ Noting ] is the name.
     expect(button).toHaveAccessibleName("Noting");

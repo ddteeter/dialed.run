@@ -80,7 +80,10 @@ export function UsefulButton({
         }`}
       >
         <Mono step="sm">
+          {/* Flush to the card's left edge, so "[ Noting ]" starts where
+              the heart does rather than centring under it (E1-07, N2-09). */}
           <PendingLabel
+            align="start"
             pending={markUseful.pending}
             pendingLabel="Noting"
             label={
