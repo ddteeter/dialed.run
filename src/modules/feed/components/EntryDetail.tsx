@@ -143,7 +143,7 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
         >
           <Icon name="back" size={20} />
         </Link>
-        <h1 className="m-0 flex-1 font-display text-heading">
+        <h1 className="m-0 min-w-0 flex-1 font-display text-heading wrap-anywhere">
           {isOwn ? "Your run" : <Handle username={entry.authorUsername} />}
         </h1>
         <PhoneBell />
