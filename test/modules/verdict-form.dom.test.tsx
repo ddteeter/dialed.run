@@ -1954,9 +1954,12 @@ describe("VerdictForm: the run header (round 21)", () => {
     // the headline is its reading, and below the desk the rail that also
     // credits it is not drawn.
     const credit = queryWeatherCredit(header);
-    // The phone's day and time share their row with the bell (Design 169.1).
+    // "← Back" above it all, at both widths, sharing its row with the
+    // phone's bell (Round 55 · 242; Design 169.1).
+    const back = within(header).getByRole("link", { name: "Back" });
     expect([...header.children]).toEqual([
-      phoneWhen.parentElement,
+      back.parentElement,
+      phoneWhen,
       phoneHeadline,
       question,
       deskLine,
@@ -2554,8 +2557,41 @@ describe("VerdictForm: the rail's band record and history (round 25)", () => {
   });
 });
 
+describe("VerdictForm: the way back, the Garmin credit and the foot (Round 55 · 242, D2-12, D2-01)", () => {
+  it("goes back to the run the verdict is for", async () => {
+    await renderWithRouter(
+      form({ entry: { runId: "01JRAN00000000000000000009" } }),
+    );
+    const back = screen.getByRole("link", { name: "Back" });
+    expect(back).toHaveAttribute("href", "/runs/01JRAN00000000000000000009");
+    expect(back).toHaveClass("target", "inline-flex", "text-ink");
+  });
+
+  it("credits Garmin under the title for a run that came through it, once", async () => {
+    await renderWithRouter(form({ entry: { deviceName: "Garmin" } }));
+    const header = screen.getByRole("banner");
+    const credits = screen.getAllByText("Garmin");
+    expect(credits).toHaveLength(1);
+    expect(credits[0]?.parentElement).toBe(header);
+    expect(credits[0]?.previousElementSibling).toBe(
+      within(header).getByRole("heading", { level: 1 }),
+    );
+  });
+
+  it("credits no one for a run the runner brought themselves", async () => {
+    await renderWithRouter(form());
+    expect(screen.queryByText("Garmin")).toBeNull();
+  });
+
+  it("leaves room under Log it, so it never sits on the page's bottom edge", async () => {
+    await renderWithRouter(form());
+    const submit = screen.getByRole("button", { name: "Log it" });
+    expect(submit.closest("form")).toHaveClass("pt-6", "pb-8");
+  });
+});
+
 describe("VerdictForm: the phone's bell (Design 169.1)", () => {
-  it("ends the header's first row, the run's day and time, on the phone only", async () => {
+  it("ends the header's first row, the way back, at every width", async () => {
     await renderWithRouter(withBell(form()));
     const seat = screen
       .getByRole("button", { name: "Notifications" })
@@ -2563,8 +2599,8 @@ describe("VerdictForm: the phone's bell (Design 169.1)", () => {
     const row = seat?.parentElement;
     expect(row?.parentElement).toHaveAttribute("data-slot", "header");
     expect(row?.parentElement?.firstElementChild).toBe(row);
-    expect(row).toHaveClass("wide:hidden");
-    expect(row?.firstElementChild).toHaveTextContent(/ · /u);
+    expect(row).not.toHaveClass("wide:hidden");
+    expect(row?.firstElementChild).toHaveAccessibleName("Back");
     expect(row?.lastElementChild).toBe(seat);
   });
 });

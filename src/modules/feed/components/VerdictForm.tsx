@@ -14,13 +14,11 @@ import type {
 import { clockLabel, dayLabel } from "../../../lib/dates";
 import { runsLabel } from "../../../lib/runs-label";
 import type { BandRun } from "../band-runs";
+import { BackToRun } from "./BackToRun";
 import { BandRunsCard } from "./BandRunsCard";
-import {
-  bandForms,
-  distanceNumber,
-  measuredLine,
-} from "../../../lib/contracts/measures";
-import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
+import { ThisRunCard } from "./ThisRunCard";
+import { bandForms, distanceNumber } from "../../../lib/contracts/measures";
+import { formatTemp } from "../../../lib/contracts/temperature";
 import {
   AUDIENCE_HINTS,
   AUDIENCE_LABELS,
@@ -31,6 +29,7 @@ import {
   FormErrorSummary,
   FormFailureBand,
   FormStatus,
+  GarminAttribution,
   LOG_FLOW,
   Mono,
   PhoneBell,
@@ -228,12 +227,15 @@ function RunHeader({
       data-ground="ink-until-wide"
       className="-mx-5 -mt-6 flex flex-col gap-2 bg-ground px-5 py-5 text-ink wide:mx-0 wide:mt-0 wide:gap-1 wide:px-0 wide:py-0"
     >
-      <div className="flex items-center justify-between gap-3 wide:hidden">
-        <Mono step="xs" className="text-muted wide:hidden">
-          {when}
-        </Mono>
+      {/* "← Back" above the title at both widths, sharing its row with
+          the phone's bell (Round 55 · 242; Design 169.1). */}
+      <div className="flex items-center justify-between gap-3">
+        <BackToRun runId={entry.runId} />
         <PhoneBell />
       </div>
+      <Mono step="xs" className="text-muted wide:hidden">
+        {when}
+      </Mono>
       <p className="m-0 font-display text-display uppercase wide:hidden">
         {headline}
       </p>
@@ -243,6 +245,9 @@ function RunHeader({
       >
         {LABELS.verdict}
       </h1>
+      {/* The run came through Garmin's API: its credit is the first line
+          under the title (G1; D2-12), once on the screen. */}
+      <GarminAttribution deviceName={entry.deviceName} />
       <Mono step="xs" className="hidden text-dialed-text wide:block">
         {when} · {headline}
       </Mono>
@@ -463,7 +468,9 @@ export function VerdictForm({
         <form
           ref={form.formRef}
           noValidate
-          className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6 wide:max-w-column"
+          // `pb-8`, as A2's column has: at the desk the shell has no tab bar
+          // to clear, and Log it sat flush on the page's bottom (D2-01).
+          className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6 pb-8 wide:max-w-column"
           onSubmit={(event) => {
             event.preventDefault();
             void form.submit(payload());
@@ -811,72 +818,10 @@ function VerdictRail({
   units: Units;
   band: RailBand | undefined;
 }>): JSX.Element {
-  const zone = entry.conditions?.timeZone;
   const { conditions } = entry;
   return (
     <>
-      <RailCard
-        title={`This run · ${dayLabel(entry.startedAt, zone)} · ${clockLabel(entry.startedAt, zone)}`}
-      >
-        <Mono step="sm">
-          {/* Lines of measures (round 52 #158): drawn, and said in
-              words. */}
-          <Spoken
-            {...measuredLine(
-              [
-                [
-                  {
-                    kind: "distance",
-                    distanceM: entry.distanceM,
-                    spaced: true,
-                  },
-                ],
-                [{ kind: "duration", durationS: entry.durationS }],
-              ],
-              units,
-            )}
-          />
-        </Mono>
-        {conditions === undefined ? undefined : (
-          <>
-            <Mono step="sm" className="text-dialed-text">
-              <Spoken
-                {...measuredLine(
-                  [
-                    [
-                      {
-                        kind: "temp",
-                        tempC: conditions.tempC,
-                        withLetter: true,
-                      },
-                      {
-                        kind: "word",
-                        word: precipClassOf(conditions.precipMm),
-                      },
-                    ],
-                    [
-                      {
-                        kind: "temp",
-                        tempC: conditions.feelsLikeC,
-                        feels: "feels",
-                      },
-                    ],
-                  ],
-                  units,
-                )}
-              />
-            </Mono>
-            {/* The header above already credits this reading, heard at
-                every width; the rail, the desk's alone, draws it again near
-                its own copy of the data and keeps it unheard (R-179's rule:
-                the licence is about display). A typed reading is no one's
-                to credit. */}
-            {isProvidersReading(conditions) ? (
-              <WeatherAttribution isRepeat />
-            ) : undefined}
-          </>
-        )}
-      </RailCard>
+      <ThisRunCard run={entry} units={units} />
       <RailCard title="The kit you’re judging">
         <ul className="m-0 flex list-none flex-col gap-1 p-0">
           {entry.items.map((item) => (
