@@ -19,7 +19,9 @@ describe("AddRunShell", () => {
       level: 1,
       name: "Add a run",
     });
-    expect(heading.parentElement).toHaveClass(
+    // The title shares its row with the phone's bell (Design 169.1).
+    expect(heading.parentElement).toHaveClass("flex", "justify-between");
+    expect(heading.parentElement?.parentElement).toHaveClass(
       "max-w-column",
       "wide:mx-0",
       "desk:max-w-page",

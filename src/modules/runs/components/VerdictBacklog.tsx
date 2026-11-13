@@ -12,6 +12,7 @@ import {
   ControlFailureBand,
   Mono,
   PendingLabel,
+  PhoneBell,
   Spoken,
   verdictHue,
   WeatherAttribution,
@@ -425,15 +426,20 @@ export function VerdictBacklog({
   return (
     <div className="mx-auto flex w-full max-w-panel flex-col gap-6 px-6 py-8 desk:mx-0 desk:grid desk:max-w-page desk:grid-cols-[1.55fr_1fr] desk:items-start desk:gap-6">
       <div className="flex min-w-0 flex-col gap-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-4">
-          <h1 className="m-0 font-display text-title uppercase">
-            Needs a verdict
-          </h1>
-          {current === undefined ? undefined : (
-            <Mono step="sm" className="text-muted">
-              {rows.length} runs · no verdict yet
-            </Mono>
-          )}
+        {/* The phone's bell ends the first row and stays on it while the
+            title and its count wrap (Design 169.1). */}
+        <div className="flex items-start gap-3">
+          <div className="flex flex-1 flex-wrap items-baseline justify-between gap-4">
+            <h1 className="m-0 font-display text-title uppercase">
+              Needs a verdict
+            </h1>
+            {current === undefined ? undefined : (
+              <Mono step="sm" className="text-muted">
+                {rows.length} runs · no verdict yet
+              </Mono>
+            )}
+          </div>
+          <PhoneBell />
         </div>
 
         {current === undefined ? (

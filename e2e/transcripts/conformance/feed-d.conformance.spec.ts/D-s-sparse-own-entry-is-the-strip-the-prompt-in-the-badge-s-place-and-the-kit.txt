@@ -1,13 +1,11 @@
 document
-banner
-link, Notifications, # new
-#
-end of link, Notifications, # new
-end of banner
 main
 status
 link, Back to feed
 heading, Your run, level 1
+link, Notifications, # new
+#
+end of link, Notifications, # new
 Seen by:
 Private
 :day :month # · #:#

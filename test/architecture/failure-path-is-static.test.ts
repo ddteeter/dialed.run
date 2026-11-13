@@ -146,11 +146,14 @@ describe("the failure path is deliberately static", () => {
     const form = withoutComments(sources["../../src/ui/form.tsx"] ?? "");
     if (isInstrumented(form)) return;
     const pending = components(form).find(([name]) => name === "PendingLabel");
-    expect(pending?.[1]).toContain('className="breathe"');
+    // The brackets sit inline either side of the words (`breathe mr-1`,
+    // `breathe ml-1`), so a wrap keeps `]` after the last word.
+    expect(pending?.[1]).toMatch(/className="breathe mr-1"/u);
+    expect(pending?.[1]).toMatch(/className="breathe ml-1"/u);
     // And `SubmitButton` no longer draws them itself — it delegates, which
     // is what keeps nine controls from growing nine sets of brackets.
     const submit = components(form).find(([name]) => name === "SubmitButton");
-    expect(submit?.[1]).not.toContain('className="breathe"');
+    expect(submit?.[1]).not.toMatch(/className="breathe\b/u);
     expect(submit?.[1]).toContain("<PendingLabel");
   });
 });

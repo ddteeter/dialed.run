@@ -66,7 +66,11 @@ export function ListSection<TItem>({
       </h2>
     ) : (
       <h2>
-        <Mono step="xs">{title}</Mono>
+        {/* Muted, as every section kicker is: in the ground's own ink it
+            read brighter than the field labels beneath it (#627 G-13). */}
+        <Mono step="xs" className="text-muted">
+          {title}
+        </Mono>
       </h2>
     );
 

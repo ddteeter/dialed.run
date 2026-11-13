@@ -80,6 +80,11 @@ describe("ExportRow", () => {
     expect(
       within(row()).getByRole("button", { name: "Get a copy" }),
     ).toBeInTheDocument();
+    // Flush with the row's right edge, not floated inward by the width
+    // its pending label reserves (#632 B-09).
+    expect(within(row()).getByText("Get a copy").parentElement).toHaveClass(
+      "justify-items-end",
+    );
   });
 
   it("asks once per press, with a fresh key after each the server took, then reloads the row", async () => {

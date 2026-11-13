@@ -19,13 +19,15 @@ import { garmentLoader } from "../../modules/closet/garment-page";
 import { viewerUnitsQuery } from "../../modules/feed/functions";
 import { photoBlurStep } from "../../modules/safety/components/PhotoBlur";
 import { searchBrandsFn } from "../../modules/products/functions";
-import { Layout } from "../../ui";
+import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
+import { bellStateFn } from "../../modules/notifications/functions";
 
 export const Route = createFileRoute("/closet/edit/$itemId")({
   loader: garmentLoader(
     requireSession,
     (itemId) => getItemFn({ data: { itemId } }),
     viewerUnitsQuery,
+    bellStateFn,
   ),
   component: EditGarmentPage,
 });
@@ -35,11 +37,11 @@ async function handleBrandInput(prefix: string) {
 }
 
 function EditGarmentPage() {
-  const { detail, units } = Route.useLoaderData();
+  const { detail, units, bell } = Route.useLoaderData();
   const navigate = useNavigate();
 
   return (
-    <Layout>
+    <BelledLayout {...bell}>
       <GarmentForm
         heading={`Edit ${detail.item.name}`}
         tempUnit={units.temp}
@@ -71,6 +73,6 @@ function EditGarmentPage() {
           renderStep: photoBlurStep,
         }}
       />
-    </Layout>
+    </BelledLayout>
   );
 }

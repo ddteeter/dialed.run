@@ -2,6 +2,7 @@ document
 main
 status
 link, Closet
+link, Notifications
 paragraph
 Top · Half-zip · M
 end of paragraph

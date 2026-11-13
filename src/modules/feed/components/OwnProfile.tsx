@@ -6,6 +6,7 @@ import {
   Icon,
   ListSection,
   Mono,
+  PhoneBell,
   Spoken,
   VerdictMark,
   WeatherAttribution,
@@ -70,8 +71,11 @@ export function OwnProfile({
       <div data-part="header" className="flex flex-col gap-3">
         <div className="flex items-center gap-4">
           <Avatar name={profile.username ?? "You"} size="large" />
-          <div className="flex flex-1 flex-col gap-1">
-            <h1 className="m-0 text-heading">
+          {/* `min-w-0` and `wrap-anywhere`: at 320 (reflow) a long handle
+              breaks rather than push Settings and the bell off the row,
+              as another runner's does. */}
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <h1 className="m-0 text-heading wrap-anywhere">
               {profile.username === undefined ? (
                 "You"
               ) : (
@@ -83,6 +87,7 @@ export function OwnProfile({
             )}
           </div>
           <SettingsButton />
+          <PhoneBell />
         </div>
         <p data-part="counts" className="m-0 flex gap-5 text-muted">
           <Count value={profile.runCount} label="Runs" />

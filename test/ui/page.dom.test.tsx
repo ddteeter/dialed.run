@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { Page } from "../../src/ui/Page";
+import { BellProvider } from "../../src/ui/PhoneBell";
 
 /**
  * The content column seven authenticated routes sit in.
@@ -145,10 +146,65 @@ describe("Page", () => {
 
     const heading = screen.getByRole("heading", { level: 1, name: "Runs" });
     const headingAction = screen.getByRole("button", { name: "+ Add" });
-    // Siblings, not merely both on the page — the row is what puts the
-    // action opposite the heading rather than under it.
-    expect(headingAction.parentElement).toBe(heading.parentElement);
+    // In the heading's row, not merely both on the page — the row is what
+    // puts the action opposite the heading rather than under it. The
+    // action and the phone's bell share the row's far end (Design 169.1).
+    expect(headingAction.parentElement?.parentElement).toBe(
+      heading.parentElement,
+    );
     expect(heading.parentElement).toHaveClass("justify-between");
+  });
+
+  it("ends the heading row in the phone's bell, after the action (Design 169.1)", () => {
+    render(
+      <BellProvider value={<button type="button">Notifications</button>}>
+        <Page title="Feed" headingAction={<a href="#find">Find runners</a>}>
+          body
+        </Page>
+      </BellProvider>,
+    );
+    const heading = screen.getByRole("heading", { level: 1, name: "Feed" });
+    const end = screen.getByRole("link", {
+      name: "Find runners",
+    }).parentElement;
+    expect(end?.parentElement).toBe(heading.parentElement);
+    expect(end).toHaveClass("flex", "items-center", "gap-3");
+    expect(end?.lastElementChild).toHaveAttribute(
+      "data-slot",
+      "notification-bell",
+    );
+  });
+
+  it("puts a sub-page's back link above the heading, sharing its row with the bell (Design 169.1)", () => {
+    render(
+      <BellProvider value={<button type="button">Notifications</button>}>
+        <Page title="Privacy" back={<a href="#back">Settings</a>}>
+          body
+        </Page>
+      </BellProvider>,
+    );
+    const back = screen.getByRole("link", { name: "Settings" });
+    const row = back.parentElement;
+    expect(row).toHaveAttribute("data-part", "page-back");
+    expect(row).toHaveClass("flex", "items-center", "justify-between");
+    expect(row?.lastElementChild).toHaveAttribute(
+      "data-slot",
+      "notification-bell",
+    );
+    // Above the heading, and the heading row holds no second bell.
+    const heading = screen.getByRole("heading", { level: 1, name: "Privacy" });
+    expect(
+      (row?.compareDocumentPosition(heading) ?? 0) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      screen.getAllByRole("button", { name: "Notifications" }),
+    ).toHaveLength(1);
+  });
+
+  it("draws no back row without a back link", () => {
+    render(<Page title="Runs">body</Page>);
+    expect(document.querySelector("[data-part='page-back']")).toBeNull();
   });
 
   it("renders the heading row even with no action, so adding one moves nothing", () => {

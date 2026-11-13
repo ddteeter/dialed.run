@@ -1,6 +1,7 @@
 import type { JSX, ReactNode } from "react";
 
 import { focusOnMount } from "./focus-on-mount";
+import { PhoneBell } from "./PhoneBell";
 import { useHydrated } from "./use-hydrated";
 
 /**
@@ -62,6 +63,7 @@ export function Page({
   kicker,
   width = "column",
   headingAction,
+  back,
   focusTitle = false,
   children,
 }: Readonly<{
@@ -88,6 +90,12 @@ export function Page({
    */
   headingAction?: ReactNode;
   /**
+   * A sub-page's way back. It sits above the heading, where a back link
+   * belongs, and the phone's bell shares its row (Design 169.1), so the
+   * heading row then holds no bell.
+   */
+  back?: ReactNode;
+  /**
    * Lands focus on the heading when the page mounts — for a screen arrived
    * at from somewhere that said to read it again, as T1 is from a refused
    * Strava receipt's Try again (round 39, #66). Off by default.
@@ -108,13 +116,22 @@ export function Page({
       // wraps on a device this lane is not here to touch.
       className={`flex w-full ${WIDTH_CLASS[width]} flex-col gap-6 px-6 py-8`}
     >
+      {back === undefined ? undefined : (
+        <div
+          data-part="page-back"
+          className="flex items-center justify-between"
+        >
+          {back}
+          <PhoneBell />
+        </div>
+      )}
       {title === undefined ? undefined : (
         // The row is unconditional rather than appearing with `headingAction`,
         // so a heading does not shift when one is added: `justify-between`
         // with a single child puts it exactly where a block-level `h1`
         // sits. `m-0` because the column's `gap-6` owns the spacing.
         <PageHeading kicker={kicker}>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <h1
               ref={focusTitle ? focusOnMount : undefined}
               tabIndex={focusTitle ? -1 : undefined}
@@ -122,7 +139,13 @@ export function Page({
             >
               {title}
             </h1>
-            {headingAction}
+            {/* The title's action, then the phone's bell: the bell is the
+                row's last thing (Design 169.1), unless a back row above
+                already holds it. */}
+            <div className="flex items-center gap-3">
+              {headingAction}
+              {back === undefined ? <PhoneBell /> : undefined}
+            </div>
           </div>
         </PageHeading>
       )}

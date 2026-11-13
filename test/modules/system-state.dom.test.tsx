@@ -65,10 +65,20 @@ describe("X1 · not found", () => {
     ).toBeVisible();
     const wayOut = screen.getByRole("link", { name: "Go to your feed" });
     expect(wayOut).toHaveAttribute("href", "/feed");
-    // The way out is the ink pill: pink is the product's own verbs, and
-    // leaving a 404 is not one.
-    expect(wayOut).toHaveClass("rounded-pill", "bg-ink", "text-ground");
+    // The way out is X1's hairline pill (#632 A-04): pink is the
+    // product's own verbs, and leaving a 404 is not one — nor is it the
+    // screen's primary, so it is not the filled ink pill either.
+    expect(wayOut).toHaveClass(
+      "rounded-pill",
+      "border",
+      "border-hairline",
+      "text-ink",
+    );
     expect(wayOut).not.toHaveClass("bg-action");
+    expect(wayOut).not.toHaveClass("bg-ink");
+    // "404" is a small muted kicker, not a second headline.
+    expect(screen.getByText("404")).toHaveClass("font-mono", "text-muted");
+    expect(screen.getByText("404")).not.toHaveClass("text-display");
     // No brackets on the headline: this is neither a wait nor a next step.
     expect(state()).not.toHaveTextContent("[");
   });
@@ -81,9 +91,12 @@ describe("X1 · not found", () => {
     expect(document.querySelector("[data-slot='landing-bar']")).toBeNull();
     const logIn = screen.getByRole("link", { name: "Log in" });
     expect(logIn).toHaveAttribute("href", "/auth/login");
-    expect(logIn).toHaveClass("rounded-pill", "bg-ink", "text-ground");
+    expect(logIn).toHaveClass("rounded-pill", "border-hairline", "text-ink");
     expect(screen.queryByRole("link", { name: "Go to your feed" })).toBeNull();
-    expect(screen.getByText("404")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("404").parentElement).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
   });
 });
 

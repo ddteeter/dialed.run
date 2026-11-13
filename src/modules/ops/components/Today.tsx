@@ -165,6 +165,10 @@ function JobControl({
           label={label}
           pendingLabel={pendingLabel}
           pending={pending}
+          // Bare text (Drop) sits flush with the row's left edge, so the
+          // wider [Dropping] layer must not centre it away; a pill centres
+          // (#627 G-21).
+          align={className === BARE ? "start" : "center"}
         />
       </Mono>
     </button>

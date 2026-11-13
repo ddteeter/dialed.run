@@ -41,6 +41,8 @@ describe("with nothing to show and an empty node", () => {
     );
 
     expect(screen.getByText("Blocked")).toBeInTheDocument();
+    // A muted kicker, not the ground's ink (#627 G-13).
+    expect(screen.getByText("Blocked")).toHaveClass("font-mono", "text-muted");
     expect(screen.getByText("Nobody. That's normal.")).toBeInTheDocument();
     // No empty <ul>, or the message would sit under a phantom list.
     expect(screen.queryByRole("list")).not.toBeInTheDocument();

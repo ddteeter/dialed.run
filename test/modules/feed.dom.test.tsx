@@ -15,6 +15,8 @@ import {
   NOW,
   renderFeedScreen,
   unconfirmed,
+  expectBellEnding,
+  withBell,
 } from "./feed-fixtures";
 import { pointConditions } from "../feed/conditions-fixture";
 import { WEATHER_CREDIT } from "../ui/weather-credit";
@@ -535,5 +537,12 @@ describe("E1's compact line (FEED-9)", () => {
     expect(
       document.querySelector("[data-part='compact-conditions']"),
     ).toBeNull();
+  });
+});
+
+describe("Feed: the phone's bell (Design 169.1)", () => {
+  it("ends the title row, after Find runners", async () => {
+    await renderFeedScreen(withBell(feed()));
+    expectBellEnding(screen.getByRole("heading", { name: "Feed" }));
   });
 });

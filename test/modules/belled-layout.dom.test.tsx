@@ -9,6 +9,7 @@ import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
 
 import { BelledLayout } from "../../src/modules/notifications/components/BelledLayout";
+import { PhoneBell } from "../../src/ui";
 
 /**
  * `Layout` with the bell already in its slot — the wiring seven routes
@@ -42,10 +43,11 @@ describe("BelledLayout", () => {
   it("carries the waiting count to the bell in both seats", async () => {
     await renderWithRouter(
       <BelledLayout unreadCount={1} verdictsWaiting={3}>
-        page
+        <PhoneBell />
       </BelledLayout>,
     );
 
+    // The top bar's, and the screen's seat on the phone (Design 169.1).
     expect(bells()).toHaveLength(2);
     for (const bell of bells()) expect(bell).toHaveTextContent(/^3$/u);
   });

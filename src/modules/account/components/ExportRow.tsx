@@ -149,6 +149,8 @@ function ExportAction({
         label={state.state === "failed" ? "Try again" : "Get a copy"}
         pendingLabel="Preparing"
         pending={pending}
+        // Flush right, the row's edge (#632 B-09).
+        align="end"
       />
     </button>
   );

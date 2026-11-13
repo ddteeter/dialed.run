@@ -260,7 +260,7 @@ const NAV: readonly Edge[] = [
 `/closet/$itemId` matches `/closet/abc`; `/@{$handle}` matches `/@maya`;
 `*` matches anything.
 */
-function isMatch(pattern: string, pathname: string): boolean {
+export function isRoutePath(pattern: string, pathname: string): boolean {
   if (pattern === "*") return true;
   const wanted = pattern.split("/");
   const got = pathname.split("/");
@@ -294,8 +294,8 @@ function isAnyMatch(
   pathname: string,
 ): boolean {
   return typeof patterns === "string"
-    ? isMatch(patterns, pathname)
-    : patterns.some((pattern) => isMatch(pattern, pathname));
+    ? isRoutePath(patterns, pathname)
+    : patterns.some((pattern) => isRoutePath(pattern, pathname));
 }
 
 /**

@@ -9,6 +9,7 @@ import {
   inFlight,
   Mono,
   PendingLabel,
+  PhoneBell,
   useControlAction,
 } from "../../../ui";
 import type { listNotifications } from "../service";
@@ -73,28 +74,36 @@ export function NotificationList({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="m-0 font-display text-display uppercase">
-          Notifications
-        </h1>
-        {hasMarkable ? (
-          <button
-            type="button"
-            data-part="mark-all"
-            data-state={marking.pending ? "pending" : "rest"}
-            {...inFlight(marking.pending)}
-            onClick={() => {
-              void marking.run();
-            }}
-            className="target cursor-pointer border-none bg-transparent p-0 text-body font-semibold text-ink"
-          >
-            <PendingLabel
-              label="Mark all read"
-              pendingLabel="Marking"
-              pending={marking.pending}
-            />
-          </button>
-        ) : undefined}
+      {/* The phone's bell ends the first row (Design 169.1) and stays on
+          it: the title and Mark all read wrap inside the row's left part,
+          never the bell. At 320 (reflow) NOTIFICATIONS is wider than what
+          the bell leaves it, so the word may break rather than push the
+          bell off the screen. */}
+      <div className="flex items-start gap-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-4">
+          <h1 className="m-0 min-w-0 font-display text-display uppercase wrap-anywhere">
+            Notifications
+          </h1>
+          {hasMarkable ? (
+            <button
+              type="button"
+              data-part="mark-all"
+              data-state={marking.pending ? "pending" : "rest"}
+              {...inFlight(marking.pending)}
+              onClick={() => {
+                void marking.run();
+              }}
+              className="target cursor-pointer border-none bg-transparent p-0 text-body font-semibold text-ink"
+            >
+              <PendingLabel
+                label="Mark all read"
+                pendingLabel="Marking"
+                pending={marking.pending}
+              />
+            </button>
+          ) : undefined}
+        </div>
+        <PhoneBell />
       </div>
       <ControlFailureBand
         failure={marking.failure}
@@ -166,11 +175,13 @@ export function NotificationList({
   );
 }
 
-// `target`: the whole row's words are the link, so it takes the 44px hit
-// area rather than the in-sentence exception, and `inline-flex` gives the
-// `<a>` a box for it to grow (`a11y.css` §03).
+// `target-line`: the whole row's words are the link, so it takes the 44px
+// hit area rather than the in-sentence exception — but from a pseudo-element
+// inside the row's padding, not a box grown to 44 (`a11y.css` §03, #628
+// N2-01). The grown box floated one-line words off the dot and pushed the
+// time a line away, so linked and plain rows had different shapes.
 const LINKED =
-  "target inline-flex items-center font-semibold text-ink underline underline-offset-4";
+  "target-line inline-block font-semibold text-ink underline underline-offset-4";
 
 /**
  * The row's words, and where they go when the row has somewhere to go

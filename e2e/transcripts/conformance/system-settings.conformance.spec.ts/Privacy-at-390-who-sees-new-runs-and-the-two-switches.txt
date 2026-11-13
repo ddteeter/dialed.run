@@ -1,12 +1,10 @@
 document
-banner
-link, Notifications
-end of banner
 main
-heading, Privacy, level 1
 link, Settings, current page
 Settings
 end of link, Settings, current page
+link, Notifications
+heading, Privacy, level 1
 heading, Who sees new runs, level 2
 Who sees new runs
 end of heading, Who sees new runs, level 2

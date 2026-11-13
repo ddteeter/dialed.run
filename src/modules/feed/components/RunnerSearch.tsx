@@ -1,7 +1,13 @@
 import { Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 
-import { classifyFailure, FailureBand, FormStatus, Mono } from "../../../ui";
+import {
+  classifyFailure,
+  FailureBand,
+  FormStatus,
+  Mono,
+  PhoneBell,
+} from "../../../ui";
 import type { SearchResult } from "../search";
 import { Avatar } from "./Avatar";
 import { Handle, handleText } from "./Handle";
@@ -101,7 +107,10 @@ export function RunnerSearch({
   return (
     <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6 wide:mx-0">
       <FormStatus>{status === "" ? said : status}</FormStatus>
-      <h1 className="m-0 font-display text-title uppercase">Find a runner</h1>
+      <div className="flex items-start justify-between gap-3">
+        <h1 className="m-0 font-display text-title uppercase">Find a runner</h1>
+        <PhoneBell />
+      </div>
       <div className="field-box flex min-h-12 items-center gap-3 rounded-field border border-hairline bg-ground px-4">
         <input
           type="search"

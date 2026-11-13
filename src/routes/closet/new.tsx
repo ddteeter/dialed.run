@@ -12,7 +12,9 @@ import {
 import { viewerUnitsQuery } from "../../modules/feed/functions";
 import { photoBlurStep } from "../../modules/safety/components/PhotoBlur";
 import { searchBrandsFn } from "../../modules/products/functions";
-import { Layout, useIdempotencyKey } from "../../ui";
+import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
+import { bellStateFn } from "../../modules/notifications/functions";
+import { useIdempotencyKey } from "../../ui";
 
 export const Route = createFileRoute("/closet/new")({
   // D-102's name for the page, in round 30 #4b's words.
@@ -20,11 +22,12 @@ export const Route = createFileRoute("/closet/new")({
   loader: async ({ location }) => {
     await requireSession(location);
     // F at the desk's rail card (round 26 #10, task 128 · SAF-18).
-    const [nearby, units] = await Promise.all([
+    const [nearby, units, bell] = await Promise.all([
       closetNearbyFn(),
       viewerUnitsQuery(),
+      bellStateFn(),
     ]);
-    return { nearby, units };
+    return { nearby, units, bell };
   },
   component: NewGarmentPage,
 });
@@ -36,10 +39,10 @@ async function handleBrandInput(prefix: string) {
 function NewGarmentPage() {
   const navigate = useNavigate();
   const { idempotencyKey, rotate } = useIdempotencyKey();
-  const { nearby, units } = Route.useLoaderData();
+  const { nearby, units, bell } = Route.useLoaderData();
 
   return (
-    <Layout>
+    <BelledLayout {...bell}>
       <GarmentForm
         heading="Add a garment"
         tempUnit={units.temp}
@@ -67,6 +70,6 @@ function NewGarmentPage() {
           renderStep: photoBlurStep,
         }}
       />
-    </Layout>
+    </BelledLayout>
   );
 }

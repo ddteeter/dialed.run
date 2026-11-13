@@ -218,7 +218,10 @@ describe("Sheet", () => {
     // DS5, "modals with scrims": "a dimmed backdrop is a third grey and
     // turns the phone screen into a dialog". The wash stays on the phone,
     // where the sheet really is a layer over a screen.
-    expect(dialog).toHaveClass("backdrop:bg-scrim/60", "wide:backdrop:bg-ground");
+    expect(dialog).toHaveClass(
+      "backdrop:bg-scrim/60",
+      "wide:backdrop:bg-ground",
+    );
   });
 
   it("keeps the bottom edge it travels from on the phone", () => {
@@ -227,5 +230,132 @@ describe("Sheet", () => {
     // just below itself rather than from the bottom of a monitor.
     render(<Controlled initiallyOpen />);
     expect(sheet()).toHaveClass("bottom-0", "rounded-t-sheet", "sheet-motion");
+  });
+});
+
+/**
+ * Two sheets at once (Design 165): an options sheet, and the confirm it
+ * opens.
+ */
+function TwoSheets() {
+  const [lower, setLower] = useState(false);
+  const [upper, setUpper] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setLower(true);
+        }}
+      >
+        Options
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setUpper(true);
+        }}
+      >
+        Confirm
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setLower(false);
+        }}
+      >
+        Shut lower
+      </button>
+      <Sheet
+        open={lower}
+        label="This run"
+        onClose={() => {
+          setLower(false);
+        }}
+      >
+        <p>Options</p>
+      </Sheet>
+      <Sheet
+        open={upper}
+        label="Delete this run?"
+        onClose={() => {
+          setUpper(false);
+        }}
+      >
+        <p>Confirm</p>
+        <button
+          type="button"
+          onClick={() => {
+            setUpper(false);
+          }}
+        >
+          Keep it
+        </button>
+      </Sheet>
+    </>
+  );
+}
+
+describe("Sheet in dark, and stacked (Design 165)", () => {
+  it("takes the panel, its edge and its grabber only on a dark phone", () => {
+    render(<Controlled />);
+    expect(sheet()).toHaveClass(
+      "bg-ground",
+      "max-wide:dark:ground-sheet",
+      "backdrop:bg-scrim/60",
+    );
+    // The grabber is the utility's `::before`, not a child: the sheet's
+    // own content is still its first element.
+    expect(sheet().firstElementChild).toHaveTextContent("Sheet body");
+  });
+
+  it("marks a lone sheet as nothing stacked", async () => {
+    const user = userEvent.setup();
+    render(<TwoSheets />);
+    await user.click(screen.getByRole("button", { name: "Options" }));
+    expect(screen.getByLabelText("This run")).not.toHaveAttribute(
+      "data-stacked",
+    );
+  });
+
+  it("holds the lower sheet 48 taller than the upper, and steps the upper's edge up", async () => {
+    const user = userEvent.setup();
+    render(<TwoSheets />);
+    await user.click(screen.getByRole("button", { name: "Options" }));
+    await user.click(
+      screen.getByRole("button", { name: "Confirm", hidden: true }),
+    );
+
+    const lower = screen.getByLabelText("This run");
+    const upper = screen.getByLabelText("Delete this run?");
+    expect(upper).toHaveAttribute("data-stacked", "over");
+    expect(lower).toHaveAttribute("data-stacked", "under");
+    // happy-dom lays nothing out, so the upper sheet measures 0.
+    expect(lower.style.getPropertyValue("--over-height")).toBe("0px");
+    expect(lower).toHaveClass(
+      "max-wide:data-[stacked=under]:min-h-[calc(var(--over-height)+3rem)]",
+    );
+    expect(upper).toHaveClass(
+      "max-wide:dark:data-[stacked=over]:border-hairline-2",
+    );
+  });
+
+  it.each([
+    ["the upper one closes", "Keep it"],
+    ["the lower one closes first", "Shut lower"],
+  ])("ends the stack when %s", async (_case, press) => {
+    const user = userEvent.setup();
+    render(<TwoSheets />);
+    await user.click(screen.getByRole("button", { name: "Options" }));
+    await user.click(
+      screen.getByRole("button", { name: "Confirm", hidden: true }),
+    );
+    await user.click(screen.getByRole("button", { name: press, hidden: true }));
+
+    for (const label of ["This run", "Delete this run?"]) {
+      const one = screen.getByLabelText(label);
+      expect(one).not.toHaveAttribute("data-stacked");
+      expect(one.style.getPropertyValue("--over-height")).toBe("");
+    }
   });
 });

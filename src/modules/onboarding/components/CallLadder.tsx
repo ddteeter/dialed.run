@@ -6,6 +6,7 @@ import {
   Bracketed,
   CoverageMark,
   Mono,
+  PhoneBell,
   Spoken,
   WeatherAttribution,
 } from "../../../ui";
@@ -50,9 +51,14 @@ export function CallLadder({
         data-ground="ink"
         className="flex flex-col gap-2 bg-ground p-5 text-ink"
       >
-        <Mono step="xs" className="text-muted">
-          The Call
-        </Mono>
+        {/* The header's first row ends in the phone's bell, inverse on
+            the ink with the rest of the block (Design 169.1). */}
+        <div className="flex items-center justify-between">
+          <Mono step="xs" className="text-muted">
+            The Call
+          </Mono>
+          <PhoneBell />
+        </div>
         <h1 className="m-0 font-display text-display">Learning your body.</h1>
       </header>
 

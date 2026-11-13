@@ -260,3 +260,14 @@ describe("the ported value contract (design/tokens.js)", () => {
     }
   });
 });
+
+describe("the base rules", () => {
+  it("hides the browser's own clear glyph on every search field (#632 E2-05)", () => {
+    // One rule for every `type="search"` field, not one per field: the
+    // runner search, the kit picker, the Desk's runner filter and the
+    // open-source page each had the native glyph.
+    expect(styles).toMatch(
+      /input\[type="search"\]::-webkit-search-cancel-button \{\s*appearance: none;\s*\}/u,
+    );
+  });
+});

@@ -1,12 +1,10 @@
 document
-banner
-link, Notifications, # new, current page
-end of banner
 main
 heading, Notifications, level 1
 button, Mark all read
 Mark all read
 end of button, Mark all read
+link, Notifications, # new, current page
 status
 list
 listitem, level 1, position 1, set size 3

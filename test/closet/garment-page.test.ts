@@ -4,6 +4,7 @@ import type { Units } from "../../src/lib/contracts";
 import { garmentLoader } from "../../src/modules/closet/garment-page";
 
 const FAHRENHEIT: Units = { temp: "f", distance: "mi" };
+const BELL = { unreadCount: 2, verdictsWaiting: 1 };
 const AT_DETAIL = { params: { itemId: "01ITEM" }, location: "/closet/01ITEM" };
 
 describe("garmentLoader", () => {
@@ -16,11 +17,13 @@ describe("garmentLoader", () => {
         return Promise.resolve({ id: itemId });
       },
       () => Promise.resolve(FAHRENHEIT),
+      () => Promise.resolve(BELL),
     );
 
     await expect(load(AT_DETAIL)).resolves.toStrictEqual({
       detail: { id: "01ITEM" },
       units: FAHRENHEIT,
+      bell: BELL,
     });
     expect(asked).toStrictEqual(["01ITEM"]);
   });
@@ -40,6 +43,10 @@ describe("garmentLoader", () => {
         events.push("units");
         return Promise.resolve(FAHRENHEIT);
       },
+      () => {
+        events.push("bell");
+        return Promise.resolve(BELL);
+      },
     );
 
     await expect(load(AT_DETAIL)).rejects.toThrow(Error);
@@ -50,8 +57,9 @@ describe("garmentLoader", () => {
     ]);
   });
 
-  it("asks for the units before the piece has come back", async () => {
+  it("asks for the units and the bell before the piece has come back", async () => {
     let isUnitsAsked = false;
+    let isBellAsked = false;
     const detail = Promise.withResolvers<string>();
     const page = garmentLoader(
       () => Promise.resolve(),
@@ -60,15 +68,21 @@ describe("garmentLoader", () => {
         isUnitsAsked = true;
         return Promise.resolve(FAHRENHEIT);
       },
+      () => {
+        isBellAsked = true;
+        return Promise.resolve(BELL);
+      },
     )(AT_DETAIL);
 
     // Past the gate's own await, with the piece still outstanding.
     await Promise.resolve();
     expect(isUnitsAsked).toBe(true);
+    expect(isBellAsked).toBe(true);
     detail.resolve("01ITEM");
     await expect(page).resolves.toStrictEqual({
       detail: "01ITEM",
       units: FAHRENHEIT,
+      bell: BELL,
     });
   });
 });

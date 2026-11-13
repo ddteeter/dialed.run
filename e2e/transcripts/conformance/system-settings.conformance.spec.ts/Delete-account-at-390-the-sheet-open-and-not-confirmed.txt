@@ -1,12 +1,10 @@
 document
-banner
-link, Notifications
-end of banner
 main
-heading, Account, level 1
 link, Settings
 Settings
 end of link, Settings
+link, Notifications
+heading, Account, level 1
 heading, Sign-in, level 2
 Sign-in
 end of heading, Sign-in, level 2
@@ -89,9 +87,9 @@ Call
 end of link, Call
 end of listitem, level 1, position 4, set size 5
 listitem, level 1, position 5, set size 5
-link, You
+link, You, current item
 You
-end of link, You
+end of link, You, current item
 end of listitem, level 1, position 5, set size 5
 end of list
 end of navigation, Main

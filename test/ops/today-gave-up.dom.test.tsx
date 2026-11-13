@@ -289,6 +289,15 @@ describe("Gave up, on Today", () => {
       "Retry[Retrying]",
       "Drop[Dropping]",
     ]);
+    // Bare Drop is flush with the row's edge; the Retry pill centres
+    // (#627 G-21).
+    const [retry, drop] = buttons;
+    expect(
+      within(drop ?? document.body).getByText("Drop").parentElement,
+    ).toHaveClass("justify-items-start");
+    expect(
+      within(retry ?? document.body).getByText("Retry").parentElement,
+    ).toHaveClass("place-items-center");
   });
 
   it("gives enrichment its two retries, re-run disabled with no stored page", async () => {

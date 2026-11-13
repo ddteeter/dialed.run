@@ -1,7 +1,7 @@
 import { useRouterState, type LinkProps } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import { isLogFlowPath } from "../lib/nav-types";
+import { isLogFlowPath, isRoutePath } from "../lib/nav-types";
 
 /**
  * The bar's destinations, and which seat is lit.
@@ -38,11 +38,21 @@ export const TABS = [
   // Settings and the blocked list are under You (round 22, item 20: "Index
   // keeps the tab bar (it's under You); sub-pages keep it too"), but their
   // routes live in other directories — so the tab names them, rather than
-  // the bar lighting nothing on a screen it is supposed to hold.
+  // the bar lighting nothing on a screen it is supposed to hold. The
+  // account pages are Settings sub-pages too, reached from the same index
+  // (#632 B-04), and round 22's R list and run detail boards light YOU
+  // (#632 D1-19). `/runs` owning `/runs/new` changes nothing there: the log
+  // flow lights the tab the runner came from (`tabToLight`), never by path.
   {
     to: "/feed/me",
     label: "You",
-    also: ["/onboarding/settings", "/safety/blocked"],
+    also: [
+      "/onboarding/settings",
+      "/safety/blocked",
+      "/account/$section",
+      "/account/username",
+      "/runs",
+    ],
   },
 ] as const satisfies readonly {
   to: NonNullable<LinkProps["to"]>;
@@ -81,10 +91,13 @@ export const PAGE_ONLY = { exact: true, includeSearch: false } as const;
  * Whether `route` owns `pathname` — it is the path, or an ancestor of it.
  *
  * A route and not a prefix: `/feed` must not claim `/feedback`, were one
- * ever to exist.
+ * ever to exist. Compared segment by segment, as many as the route has, so
+ * a param such as `/account/$section` owns `/account/email` the way the
+ * router's own pattern does.
  */
 function isOwnerOf(route: string, pathname: string): boolean {
-  return pathname === route || pathname.startsWith(`${route}/`);
+  const depth = route.split("/").length;
+  return isRoutePath(route, pathname.split("/").slice(0, depth).join("/"));
 }
 
 /**

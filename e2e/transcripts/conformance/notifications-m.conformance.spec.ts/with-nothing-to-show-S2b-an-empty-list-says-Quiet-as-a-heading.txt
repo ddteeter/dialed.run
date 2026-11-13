@@ -1,9 +1,7 @@
 document
-banner
-link, Notifications, current page
-end of banner
 main
 heading, Notifications, level 1
+link, Notifications, current page
 status
 heading, Quiet, level 2
 Quiet

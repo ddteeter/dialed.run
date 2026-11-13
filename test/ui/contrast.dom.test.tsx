@@ -167,9 +167,9 @@ describe("the T1 port", () => {
     expect(tokens).toMatch(/:root \{[^}]*@apply ground-paper;/u);
     const applies = tokens.match(/@apply [\w:-]+;/gu)?.length;
     // :root, the dark page twice, the ink block and its breakpoint header,
-    // the dark page's panel block, panel header and row press (each twice:
-    // the attribute and the media query), and night.
-    expect(applies).toBe(12);
+    // the dark page's panel block, its bottom-ruled bar, panel header and
+    // row press (each twice: the attribute and the media query), and night.
+    expect(applies).toBe(14);
   });
 
   it("puts a dark page's ink blocks on rule 04's fallback, --panel with a hairline (R50·143.1)", () => {
@@ -211,6 +211,43 @@ describe("the T1 port", () => {
     );
     // The Desk reads nothing from the page.
     expect(tokens).toMatch(/\[data-ground="night"\] \{\s*@apply ground-ink;/u);
+  });
+
+  it("rules a full-bleed dark block underneath only, on the same panel (#632 R-01)", () => {
+    const ruled = declarations("@utility ground-panel-ruled");
+    expect([...ruled]).toEqual([["--ground", "var(--panel)"]]);
+    expect(tokens).toMatch(
+      /@utility ground-panel-ruled \{[^}]*box-shadow: inset 0 -1px 0 var\(--hairline\);/u,
+    );
+    for (const page of [
+      String.raw`:root\[data-theme="dark"\]`,
+      String.raw`:root:not\(\[data-theme="light"\]\)`,
+    ]) {
+      expect(tokens).toMatch(
+        new RegExp(
+          String.raw`${page} \[data-ground="ink"\]\[data-edge="bottom"\] \{\s*@apply ground-panel-ruled;`,
+          "u",
+        ),
+      );
+    }
+  });
+
+  it("gives a dark phone sheet the panel, a hairline on three sides and a grabber (Design 165)", () => {
+    expect([...declarations("@utility ground-sheet")]).toEqual([
+      ["--ground", "var(--panel)"],
+    ]);
+    const sheet = tokens.slice(tokens.indexOf("@utility ground-sheet") + 1);
+    expect(sheet).toMatch(/^[^@]*border: 1px solid var\(--hairline\);/u);
+    expect(sheet).toMatch(/^[^@]*border-bottom-width: 0;/u);
+    expect(sheet).toMatch(
+      /^[^@]*&::before \{[^}]*width: 36px;[^}]*height: 4px;[^}]*background: var\(--hairline-2\);/u,
+    );
+  });
+
+  it("gives night the browser's dark controls, whatever the runner's theme (#627 P3-02)", () => {
+    expect(tokens).toMatch(
+      /\[data-ground="night"\] \{[^}]*color-scheme: dark;/u,
+    );
   });
 
   it("gives a dark page's ink block eyebrows hi-viz on --panel (#494 item 7)", () => {

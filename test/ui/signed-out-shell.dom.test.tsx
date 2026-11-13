@@ -125,7 +125,12 @@ describe("SignedOutLayout", () => {
     ]);
     for (const link of links) {
       expect(link).toHaveClass("target", "text-muted", "underline");
+      // #632 A-03: every gap is the links' own padding, so a word under
+      // 44px wide ("Terms") no longer carries a wider gap than the rest.
+      expect(link).toHaveClass("inline-flex", "items-center", "px-2");
     }
+    expect(links[0]?.parentElement).toHaveClass("-mx-2", "flex", "flex-wrap");
+    expect(links[0]?.parentElement).not.toHaveClass("gap-x-4");
   });
 });
 

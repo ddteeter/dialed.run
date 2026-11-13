@@ -23,6 +23,7 @@ import {
   FormFailureBand,
   FormField,
   FormStatus,
+  PendingLabel,
   QUIET_CANCEL,
   QUIET_PILL,
   Select,
@@ -693,6 +694,10 @@ describe("FailureBand's other endings", () => {
     expect(band).toHaveAttribute("data-part", "failure-band");
     expect(band).toHaveAttribute("data-state", "failed");
     expect(band).toHaveClass("border", "border-ink");
+    // A filled action button is always a pill (RADIUS_RULES; #632 A-07).
+    expect(screen.getByRole("button", { name: "Try again" })).toHaveClass(
+      "rounded-pill",
+    );
     await userEvent
       .setup()
       .click(screen.getByRole("button", { name: "Try again" }));
@@ -2049,6 +2054,8 @@ describe("ChoiceList", () => {
     const words = screen.getByText("Runs hot");
     expect(words.tagName).toBe("SPAN");
     expect(words).toHaveClass("font-mono", "text-mono-xs", "uppercase");
+    // Regular, whatever the row's own label weight (#632 R-02).
+    expect(words).toHaveClass("font-normal");
     expect(screen.getByRole("radio", { name: "Runs hot" })).toBeInTheDocument();
 
     // With a hint, the words are still Mono and the hint is not.
@@ -2766,5 +2773,71 @@ describe("a message drawn in marks is said in words (R-179)", () => {
     expect(
       screen.getByRole("button", { name: "Name — Give it a name." }),
     ).toBeVisible();
+  });
+});
+
+function pendingLayers(): {
+  box: Element;
+  rest: HTMLElement;
+  waiting: HTMLElement;
+} {
+  const rest = screen.getByText("Get a copy");
+  const box = rest.parentElement;
+  if (box === null) throw new Error("no label box");
+  return { box, rest, waiting: screen.getByText("Preparing") };
+}
+
+describe("PendingLabel", () => {
+  it("centres the shorter label in the longer one's width by default", () => {
+    render(
+      <PendingLabel
+        label="Get a copy"
+        pendingLabel="Preparing"
+        pending={false}
+      />,
+    );
+    const { box, rest, waiting } = pendingLayers();
+    expect(box).toHaveClass("grid", "place-items-center");
+    // One cell for both, so the control never resizes when it flips.
+    expect(rest).toHaveClass("[grid-area:1/1]");
+    expect(waiting).toHaveClass("[grid-area:1/1]");
+    expect(waiting).toHaveStyle({ visibility: "hidden" });
+  });
+
+  it.each([
+    ["start", "justify-items-start"],
+    ["end", "justify-items-end"],
+  ] as const)(
+    "sets the label flush to the %s edge when asked (#632 B-09)",
+    (align, edge) => {
+      render(
+        <PendingLabel
+          label="Get a copy"
+          pendingLabel="Preparing"
+          pending
+          align={align}
+        />,
+      );
+      const { box, rest } = pendingLayers();
+      expect(box).toHaveClass("grid", "items-center", edge);
+      expect(box).not.toHaveClass("place-items-center");
+      expect(rest).toHaveStyle({ visibility: "hidden" });
+    },
+  );
+
+  it("keeps its brackets on the words when they wrap: inline text, not a flex row (#632 P2a-03)", () => {
+    render(
+      <PendingLabel label="Get a copy" pendingLabel="Preparing" pending />,
+    );
+    const { waiting } = pendingLayers();
+    expect(waiting).not.toHaveClass("flex");
+    expect(waiting).toHaveTextContent(/^\[Preparing\]$/u);
+    const [open, close] = [...waiting.querySelectorAll("[aria-hidden='true']")];
+    expect(open).toHaveTextContent("[");
+    expect(open).toHaveClass("breathe", "mr-1");
+    expect(close).toHaveTextContent("]");
+    expect(close).toHaveClass("breathe", "ml-1");
+    // No space between a bracket and its word, so no place to break.
+    expect(waiting.textContent).toBe("[Preparing]");
   });
 });

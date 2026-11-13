@@ -1,8 +1,6 @@
 document
-banner
-link, Notifications
-end of banner
 main
+link, Notifications
 heading, Nothing here, level 1
 paragraph
 This page doesn't exist, or it's an entry its runner has made private.

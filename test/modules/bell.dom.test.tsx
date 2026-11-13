@@ -35,6 +35,12 @@ function bell(): HTMLElement {
   return screen.getByRole("link", { name: /^Notifications/u });
 }
 
+function glyph(): Element {
+  const box = bell().querySelector('[data-slot="bell-glyph"]');
+  if (box === null) throw new Error("no bell glyph box");
+  return box;
+}
+
 describe("NotificationBell", () => {
   it("is a link to the notifications screen", async () => {
     await renderWithRouter(
@@ -100,7 +106,30 @@ describe("NotificationBell", () => {
     expect(bell()).toHaveClass("text-ink");
     // A measured count, so it is mono — and only the count: no dot too.
     expect(screen.getByText("3")).toHaveClass("font-mono");
-    expect(bell().children).toHaveLength(2);
+    expect(glyph().children).toHaveLength(2);
+  });
+
+  it("centres its glyph like the search glyph beside it, and hangs the mark on the glyph's corner", async () => {
+    // #632 (A-08 and its six repeats): `items-start` pinned the glyph to
+    // the top of its 44px target, 12px above the search glyph. The mark
+    // is placed on the glyph's own box, so centring the glyph does not
+    // drag the mark down with it — or lift the glyph with the mark.
+    await renderWithRouter(
+      <NotificationBell unreadCount={0} verdictsWaiting={3} />,
+    );
+    expect(bell()).toHaveClass("items-center", "justify-center");
+    expect(bell()).not.toHaveClass("items-start");
+    expect(glyph()).toHaveClass("relative");
+    expect(screen.getByText("3")).toHaveClass("absolute", "top-0", "left-3.5");
+  });
+
+  it("hangs the dot on the glyph's corner too", async () => {
+    await renderWithRouter(
+      <NotificationBell unreadCount={2} verdictsWaiting={0} />,
+    );
+    const dot = glyph().lastElementChild;
+    expect(dot).toHaveClass("absolute", "top-0", "left-3.5", "bg-action");
+    expect(glyph().children).toHaveLength(2);
   });
 
   it("counts a single waiting run", async () => {

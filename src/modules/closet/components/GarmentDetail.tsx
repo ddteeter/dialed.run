@@ -13,6 +13,7 @@ import {
   inFlight,
   Mono,
   PendingLabel,
+  PhoneBell,
   Spoken,
   useControlAction,
   PHOTO_STILL_ON,
@@ -834,7 +835,11 @@ export function GarmentDetail({
       <FormStatus>{photo.status || lifecycle.status}</FormStatus>
 
       <div data-part="identity" className="flex flex-col gap-1">
-        <BackToCloset />
+        {/* The back link's row ends in the phone's bell (Design 169.1). */}
+        <div className="flex items-center justify-between">
+          <BackToCloset />
+          <PhoneBell />
+        </div>
         <IdentityKicker item={item} isGeneric={isGeneric} />
         <h1 className="m-0 font-display text-title">{label}</h1>
         <ShopPage detail={detail} />

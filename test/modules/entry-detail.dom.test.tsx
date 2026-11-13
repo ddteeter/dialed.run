@@ -14,7 +14,13 @@ import { NoticeBand } from "../../src/modules/safety/components/NoticeBand";
 import type { SetUsefulFn } from "../../src/modules/feed/components/useful-reaction";
 import type { entryDetailForViewer } from "../../src/modules/feed/entries";
 import { pointConditions } from "../feed/conditions-fixture";
-import { MILES, renderFeedScreen, unconfirmed } from "./feed-fixtures";
+import {
+  expectBellEnding,
+  MILES,
+  renderFeedScreen,
+  unconfirmed,
+  withBell,
+} from "./feed-fixtures";
 import { useUnconfirmedRefusal } from "../../src/ui/unconfirmed-refusal";
 import { bracketed } from "../ui/bracketed";
 
@@ -750,5 +756,12 @@ describe("EntryDetail: the owner meta (round 41 #86a)", () => {
     expect(publicKitUrl("01ENTRY", "http://localhost:5173")).toBe(
       "http://localhost:5173/kit/01ENTRY",
     );
+  });
+});
+
+describe("EntryDetail: the phone's bell (Design 169.1)", () => {
+  it("ends the back and title row", async () => {
+    await renderFeedScreen(withBell(detail()));
+    expectBellEnding(screen.getByRole("link", { name: "Back to feed" }));
   });
 });

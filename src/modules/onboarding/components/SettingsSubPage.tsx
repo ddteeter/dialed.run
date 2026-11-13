@@ -82,8 +82,9 @@ export function SettingsSubPage({
   children: ReactNode;
 }>): JSX.Element {
   return (
-    <Page title={title} width="column">
-      <SettingsBack to={back} />
+    // The back link above the title, where Design 169.1 puts it, sharing
+    // its row with the phone's bell.
+    <Page title={title} width="column" back={<SettingsBack to={back} />}>
       {children}
     </Page>
   );

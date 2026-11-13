@@ -118,6 +118,9 @@ export function TopBar({ bell }: Readonly<{ bell?: ReactNode }>): JSX.Element {
   return (
     <header
       data-ground="ink"
+      // Full-bleed, so on a dark page only its bottom edge is ruled
+      // (#632 R-01; `tokens.css`, `ground-panel-ruled`).
+      data-edge="bottom"
       data-slot="top-bar"
       className="hidden bg-ground px-6 text-ink wide:block"
     >

@@ -4,6 +4,7 @@ status
 Garment saved, photo didn't. Try again?
 end of status
 link, Closet
+link, Notifications
 Saved to closet · Top · Half-zip
 heading, Janji Rover Half-zip, level 1
 Photo · optional

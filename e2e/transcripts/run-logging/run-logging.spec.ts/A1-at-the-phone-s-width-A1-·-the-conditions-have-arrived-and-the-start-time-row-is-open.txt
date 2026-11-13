@@ -1,9 +1,7 @@
 document
-banner
-link, Notifications, # new
-end of banner
 main
 heading, Add a run, level 1
+link, Notifications, # new
 status
 Parsed morning_run.gpx. Weather found.
 end of status

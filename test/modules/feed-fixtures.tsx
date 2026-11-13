@@ -5,13 +5,15 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { renderToString } from "react-dom/server";
+import { expect } from "vitest";
 
 import { EMAIL_UNCONFIRMED_CODE } from "../../src/lib/auth-signal";
 import type { FeedItem } from "../../src/modules/feed/feed";
 import type { ConfirmGate } from "../../src/ui";
+import { BellProvider } from "../../src/ui/PhoneBell";
 import { UnconfirmedRefusalAnswer } from "../../src/ui/unconfirmed-refusal";
 
 /**
@@ -134,4 +136,29 @@ export function unconfirmed(): Promise<never> {
       code: EMAIL_UNCONFIRMED_CODE,
     }),
   );
+}
+
+/**
+ * A screen under a belled `Layout`, as every feed route draws it: the bell
+ * it was given, for the screen's `PhoneBell` to seat.
+ */
+export function withBell(element: ReactElement): ReactElement {
+  return (
+    <BellProvider value={<button type="button">Notifications</button>}>
+      {element}
+    </BellProvider>
+  );
+}
+
+/**
+ * Design 169.1: the phone's bell is the last thing on the screen's own
+ * first row, the row that holds `first`.
+ */
+export function expectBellEnding(first: HTMLElement): void {
+  const seat = screen
+    .getByRole("button", { name: "Notifications" })
+    .closest("[data-slot='notification-bell']");
+  expect(seat).toHaveClass("wide:hidden");
+  expect(seat?.parentElement).toContainElement(first);
+  expect(seat?.parentElement?.lastElementChild).toBe(seat);
 }

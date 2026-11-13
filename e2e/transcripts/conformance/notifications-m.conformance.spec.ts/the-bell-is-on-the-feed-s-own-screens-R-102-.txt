@@ -1,10 +1,8 @@
 document
-banner
-link, Notifications
-end of banner
 main
 status
 heading, Find a runner, level 1
+link, Notifications
 searchbox, Search by name, placeholder Search by name
 end of main
 navigation, Main

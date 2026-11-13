@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { ComponentProps, ReactNode } from "react";
 
 import type { Units } from "../../../lib/contracts";
-import { FormStatus, Mono } from "../../../ui";
+import { FormStatus, Mono, PhoneBell } from "../../../ui";
 import { isProvidersReading } from "../strip";
 import type { FeedItem } from "../feed";
 import { isBacklogWorthOpening } from "../route-decisions";
@@ -101,14 +101,15 @@ export function Feed(props: Readonly<FeedProps>) {
     // with the wide screens' primary column".
     <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6 wide:mx-0 wide:px-6">
       {confirmBand}
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-title uppercase">Feed</h1>
+      <div className="flex items-center gap-3">
+        <h1 className="mr-auto font-display text-title uppercase">Feed</h1>
         <Link
           to="/feed/search"
           className="target inline-flex items-center text-body font-semibold text-cold-text"
         >
           Find runners
         </Link>
+        <PhoneBell />
       </div>
       {isBacklogWorthOpening(unjudgedCount) ? (
         // DS2's own entry point — "reached from 'Clear the queue ›' on X".

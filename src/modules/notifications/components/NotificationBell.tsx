@@ -74,22 +74,30 @@ export function NotificationBell({
       to="/notifications"
       aria-label={name[mark]}
       data-state={mark}
-      className={`target flex items-start no-underline ${
+      // Centred in its 44 target, as the search glyph beside it is, so the
+      // desk bar's right-hand three share one line (#632) and the phone
+      // seat's glyph ends on the gutter (Design 169.1, `PhoneBell`). The
+      // mark rides the glyph's corner from a box of its own rather than
+      // lifting the glyph with it: `items-start` did that, and the bell
+      // sat 12px high.
+      className={`target flex items-center justify-center no-underline ${
         mark === "quiet" ? "text-muted" : "text-ink"
       }`}
     >
-      <Icon name="bell" size={20} />
-      {mark === "number" ? (
-        <Mono
-          step="xs"
-          className="-ml-1.5 rounded-pill bg-action px-1 font-semibold text-accent-ink"
-        >
-          {number}
-        </Mono>
-      ) : undefined}
-      {mark === "dot" ? (
-        <span className="-ml-1.5 block size-2 rounded-pill bg-action" />
-      ) : undefined}
+      <span data-slot="bell-glyph" className="relative flex">
+        <Icon name="bell" size={20} />
+        {mark === "number" ? (
+          <Mono
+            step="xs"
+            className="absolute top-0 left-3.5 rounded-pill bg-action px-1 font-semibold text-accent-ink"
+          >
+            {number}
+          </Mono>
+        ) : undefined}
+        {mark === "dot" ? (
+          <span className="absolute top-0 left-3.5 block size-2 rounded-pill bg-action" />
+        ) : undefined}
+      </span>
     </Link>
   );
 }
