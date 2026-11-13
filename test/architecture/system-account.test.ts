@@ -86,6 +86,7 @@ const READERS: Readonly<Record<string, Reason>> = {
   "src/modules/notifications/service.ts": "actor",
   "src/modules/notifications/viewer-zone.ts": "own",
   "src/modules/onboarding/aggregate-prefs.ts": "own",
+  "src/modules/onboarding/privacy-review.ts": "own",
   "src/modules/onboarding/profile.ts": "own",
   "src/modules/onboarding/public-profile.ts": "own",
   "src/modules/onboarding/starter-list.ts": "own",
