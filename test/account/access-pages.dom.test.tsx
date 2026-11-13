@@ -844,6 +844,19 @@ describe("D7 · Access", () => {
     expect(used.getByText("DIAL-7K3P")).toHaveClass("text-quiet");
     expect(used.getByText("DIAL-7K3P")).not.toHaveClass("line-through");
     expect(used.getByText("1 / 1")).toHaveClass("text-quiet");
+    // R56·244.7: the heads are drawn only, so each cell names itself to a
+    // reader, its label hidden from sight.
+    expect(used.getByText("Age")).toHaveClass("sr-only");
+    expect(used.getByText("Age").nextElementSibling).toHaveClass("text-muted");
+    expect(used.getByText("Uses")).toHaveClass("sr-only");
+    expect(used.getByText("Uses").nextElementSibling).toHaveTextContent(
+      /^1 \/ 1$/u,
+    );
+    expect(used.getByText("Uses").parentElement).toHaveClass(
+      "whitespace-nowrap",
+      "wide:text-right",
+    );
+    expect(used.getByText("Age").parentElement).toHaveClass("wide:text-right");
     expect(used.queryByRole("button")).toBeNull();
     expect(rowOf("DIAL-7K3P")).toHaveAttribute("data-state", "spent");
     const revoked = within(rowOf("DIAL-H2XN"));

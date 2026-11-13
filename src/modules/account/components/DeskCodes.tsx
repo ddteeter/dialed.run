@@ -294,12 +294,20 @@ function CodeRow({
           ) : undefined}
         </span>
         <CodeWho code={code} onMore={onMore} />
-        <Mono step="xs" className="text-muted wide:text-right">
-          {ageLabel(code.createdAt, state.asOf)}
-        </Mono>
-        <Mono step="sm" className={`whitespace-nowrap wide:text-right ${tone}`}>
-          {usesLine(code)}
-        </Mono>
+        {/* R56·244.7: the column heads are drawn only, so each cell
+            names itself to a reader ("Age 3d", "Uses 29 / 1,000,000"). */}
+        <span className="wide:text-right">
+          <span className="sr-only">Age </span>
+          <Mono step="xs" className="text-muted">
+            {ageLabel(code.createdAt, state.asOf)}
+          </Mono>
+        </span>
+        <span className="whitespace-nowrap wide:text-right">
+          <span className="sr-only">Uses </span>
+          <Mono step="sm" className={tone}>
+            {usesLine(code)}
+          </Mono>
+        </span>
         <CodeActions
           code={code}
           isHeld={state.isHeld}
