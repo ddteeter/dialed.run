@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   FormFailureBand,
   FormStatus,
+  Mono,
   SubmitButton,
   TextField,
   useFormSubmit,
@@ -56,9 +57,9 @@ export function NameRowForm({
     data: { itemId: string } & NameIdentity;
   }) => Promise<NamedResult>;
   /**
-   * Names, not ids, and keyed by name — on purpose. A `<datalist>` can
-   * only offer text to an `<input>`, and the runner may type a brand that
-   * is on no list at all, so what the form sends is the name either way
+   * Names, not ids, and keyed by name — on purpose. A chip only fills
+   * the field with text, and the runner may type a brand that is on no
+   * list at all, so what the form sends is the name either way
    * and the server resolves it: `createOrGetBrand` and `resolveProduct`
    * find-or-create the row on the *normalized* name, which is where the
    * system-level ids are minted. The name is a safe React key because the
@@ -107,13 +108,16 @@ export function NameRowForm({
         field={form.field}
         error={form.fieldErrors.brand}
         autoComplete="off"
-        list={`brands-${itemId}`}
       />
-      <datalist id={`brands-${itemId}`}>
-        {brandOptions.map((option) => (
-          <option key={option} value={option} />
-        ))}
-      </datalist>
+      <SuggestionChips
+        options={brandOptions}
+        onPick={(option) => {
+          setBrand(option);
+          onBrandInput(option);
+          // A picked brand answers "Which brand?" as typing one would.
+          form.markField("brand", undefined);
+        }}
+      />
 
       <TextField
         name="model"
@@ -123,21 +127,57 @@ export function NameRowForm({
         field={form.field}
         error={form.fieldErrors.model}
         autoComplete="off"
-        list={`models-${itemId}`}
       />
-      <datalist id={`models-${itemId}`}>
-        {modelOptions.map((option) => (
-          <option key={option} value={option} />
-        ))}
-      </datalist>
-      <span className="text-micro text-muted">Brand alone is enough.</span>
+      <SuggestionChips options={modelOptions} onPick={setModel} />
 
       <FormFailureBand
         failure={form.failure}
         onRetry={form.retry}
         retryRef={form.retryRef}
       />
-      <SubmitButton label="Save" pendingLabel="Saving" pending={form.pending} />
+      {/* Save with the form's note beside it (AC2a, R55·229). An empty
+          save's message under Brand says it instead, so the note goes. */}
+      <div data-part="save-row" className="flex flex-wrap items-center gap-3">
+        <SubmitButton
+          label="Save"
+          pendingLabel="Saving"
+          pending={form.pending}
+        />
+        {form.fieldErrors.brand === undefined ? (
+          <span className="text-small text-quiet">Brand alone is enough.</span>
+        ) : undefined}
+      </div>
     </form>
+  );
+}
+
+/**
+ * Suggestions as chips under their field (AC2a, R55·229), where a
+ * `<datalist>` drew the browser's own ▼ in the field. A tap fills the
+ * field; anything else is still typed. None, nothing drawn.
+ */
+function SuggestionChips({
+  options,
+  onPick,
+}: Readonly<{
+  options: readonly string[];
+  onPick: (option: string) => void;
+}>): JSX.Element | undefined {
+  if (options.length === 0) return undefined;
+  return (
+    <div data-part="suggestions" className="flex flex-wrap gap-2">
+      {options.map((option) => (
+        <button
+          key={option}
+          type="button"
+          onClick={() => {
+            onPick(option);
+          }}
+          className="target cursor-pointer rounded-pill border border-hairline bg-transparent px-3 py-2 text-quiet"
+        >
+          <Mono step="xs">{option}</Mono>
+        </button>
+      ))}
+    </div>
   );
 }

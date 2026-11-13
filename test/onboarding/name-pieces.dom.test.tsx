@@ -83,6 +83,10 @@ const counter = () => screen.getByText(/of \d+ named$/);
  * call site, so no test needs a non-null assertion to reach it — and the
  * first row is always "Running tights", which is closet order (rule 02).
  */
+function pieceRows(): Element[] {
+  return [...document.querySelectorAll("[data-part='piece-row']")];
+}
+
 async function nameFirst(user: ReturnType<typeof userEvent.setup>) {
   const [first] = screen.getAllByRole("button", { name: /^Name it /u });
   await user.click(first ?? screen.getByRole("button", { name: "Next" }));
@@ -236,6 +240,75 @@ describe("NamePieces", () => {
     );
   });
 
+  it("edges the open row in 2px ink, the rest in hairline, and sets the note beside Save (AC2a, R55·229)", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    for (const row of pieceRows()) {
+      expect(row).toHaveClass("border", "border-hairline");
+    }
+
+    await nameFirst(user);
+
+    const [open, ...rest] = pieceRows();
+    expect(open).toHaveClass("border-2", "border-ink");
+    expect(open).not.toHaveClass("border-hairline");
+    for (const row of rest) expect(row).toHaveClass("border-hairline");
+    const save = screen.getByRole("button", { name: "Save" });
+    const note = screen.getByText("Brand alone is enough.");
+    expect(save.parentElement).toBe(note.parentElement);
+    expect(save.nextElementSibling).toBe(note);
+    expect(save.parentElement).toHaveClass("flex", "items-center");
+    expect(note).toHaveClass("text-small", "text-quiet");
+  });
+
+  it("puts the empty save's message in the note's place, never both (R55·229)", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await nameFirst(user);
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(
+      await screen.findByText("Which brand? That alone is enough."),
+    ).toBeVisible();
+    expect(screen.queryByText("Brand alone is enough.")).toBeNull();
+  });
+
+  it("edges a named row in teal, its MATCHED line teal too (AC3a, R55·229)", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await nameFirst(user);
+    await user.type(screen.getByLabelText("Brand"), "Smartwool");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    const subtitle = await screen.findByText("Top · Matched");
+    expect(subtitle).toHaveClass("text-dialed-text");
+    expect(subtitle).not.toHaveClass("text-muted");
+    const row = subtitle.closest("[data-part='piece-row']");
+    expect(row).toHaveClass("border", "border-teal");
+    expect(row).not.toHaveClass("border-ink", "border-hairline");
+  });
+
+  it("keeps a brand-only row's edge and line quiet: it is not finished", async () => {
+    const user = userEvent.setup();
+    renderScreen({
+      result: {
+        label: "Running tights",
+        subtitle: "Smartwool · No model",
+        isNamed: false,
+      },
+    });
+    await nameFirst(user);
+    await user.type(screen.getByLabelText("Brand"), "Smartwool");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    const subtitle = await screen.findByText("Smartwool · No model");
+    expect(subtitle).toHaveClass("text-muted");
+    expect(subtitle.closest("[data-part='piece-row']")).toHaveClass(
+      "border-hairline",
+    );
+  });
+
   it("asks the schema's question when the brand is blank", async () => {
     // Error copy lives in the schema, and this one has to agree with the
     // caption above it rather than demanding both fields.
@@ -251,7 +324,7 @@ describe("NamePieces", () => {
     ).toBeVisible();
   });
 
-  it("suggests brands as they are typed, and models from that brand", async () => {
+  it("suggests brands as they are typed, and models from that brand, as chips under each field (R55·229)", async () => {
     const user = userEvent.setup();
     const { onBrandInput } = renderScreen();
 
@@ -259,14 +332,79 @@ describe("NamePieces", () => {
     await user.type(screen.getByLabelText("Brand"), "Smart");
 
     expect(onBrandInput).toHaveBeenLastCalledWith("Smart");
-    // A `<datalist>` carries its suggestions as option *values*, not as
-    // text, so this reads the attribute rather than the accessible name —
-    // which is also why the chips design drew are a datalist here: the
-    // browser's own control, not a hand-built listbox.
-    const models = [
-      ...document.querySelectorAll("datalist[id^='models-'] option"),
-    ].map((option) => option.getAttribute("value"));
-    expect(models).toEqual(["Intraknit 200", "Classic 150"]);
+    // Chips, not a `<datalist>`: no browser ▼ in the field (F-04).
+    expect(document.querySelector("datalist")).toBeNull();
+    expect(screen.getByLabelText("Brand")).not.toHaveAttribute("list");
+    const [brands, models] = document.querySelectorAll(
+      "[data-part='suggestions']",
+    );
+    expect(
+      [...(brands?.querySelectorAll("button") ?? [])].map(
+        (chip) => chip.textContent,
+      ),
+    ).toEqual(["Smartwool", "Smartwater"]);
+    expect(
+      [...(models?.querySelectorAll("button") ?? [])].map(
+        (chip) => chip.textContent,
+      ),
+    ).toEqual(["Intraknit 200", "Classic 150"]);
+    const modelChips = models?.querySelectorAll("button") ?? [];
+    for (const chip of modelChips) {
+      expect(chip).toHaveAttribute("type", "button");
+      expect(chip).toHaveClass("rounded-pill", "border-hairline", "target");
+      expect(chip.firstElementChild).toHaveClass("font-mono", "uppercase");
+    }
+    // Each row of chips sits under its own field.
+    expect(
+      screen
+        .getByLabelText("Model")
+        .compareDocumentPosition(brands ?? document.body),
+    ).toBe(Node.DOCUMENT_POSITION_PRECEDING);
+  });
+
+  it("fills the field from a chip, asks for that brand's models, and saves it", async () => {
+    const user = userEvent.setup();
+    const { onBrandInput, nameGarment } = renderScreen();
+    await nameFirst(user);
+
+    await user.click(screen.getByRole("button", { name: "Smartwool" }));
+    expect(screen.getByLabelText("Brand")).toHaveValue("Smartwool");
+    expect(onBrandInput).toHaveBeenLastCalledWith("Smartwool");
+    await user.click(screen.getByRole("button", { name: "Classic 150" }));
+    expect(screen.getByLabelText("Model")).toHaveValue("Classic 150");
+    expect(nameGarment).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(nameGarment).toHaveBeenCalledWith({
+      data: {
+        itemId: "running-tights",
+        brand: "Smartwool",
+        model: "Classic 150",
+      },
+    });
+  });
+
+  it("clears the empty save's message when a brand chip is picked", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await nameFirst(user);
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await screen.findByText("Which brand? That alone is enough.");
+
+    await user.click(screen.getByRole("button", { name: "Smartwool" }));
+
+    expect(screen.queryByText("Which brand? That alone is enough.")).toBeNull();
+    expect(screen.getByText("Brand alone is enough.")).toBeVisible();
+  });
+
+  it("draws no chips where there are no suggestions", async () => {
+    const user = userEvent.setup();
+    renderScreen({ models: [] });
+    await nameFirst(user);
+
+    expect(document.querySelectorAll("[data-part='suggestions']")).toHaveLength(
+      1,
+    );
   });
 
   it("tells the runner nothing the build cannot back up", async () => {
@@ -413,40 +551,6 @@ describe("NamePieces", () => {
     expect(screen.getAllByRole("button", { name: /^Name it /u })).toHaveLength(
       4,
     );
-  });
-
-  it("wires each field to its own suggestion list", async () => {
-    // The ids are per-row, because five rows would otherwise share one
-    // datalist and offer a brand's models against a different garment.
-    const user = userEvent.setup();
-    renderScreen();
-
-    await nameFirst(user);
-
-    const brand = screen.getByLabelText("Brand");
-    const model = screen.getByLabelText("Model");
-    expect(model).toHaveAttribute("name", "model");
-    expect(brand).toHaveAttribute("name", "brand");
-    // The `list` on each input names a datalist that exists, and the two
-    // are different lists — one row's brands must not be offered as
-    // another's models.
-    const lists = [brand, model].map((input) => input.getAttribute("list"));
-    expect(new Set(lists).size).toBe(2);
-    for (const id of lists) {
-      expect(document.querySelector(`#${id ?? ""}`)).not.toBeNull();
-    }
-  });
-
-  it("offers the brands it was given", async () => {
-    const user = userEvent.setup();
-    renderScreen();
-
-    await nameFirst(user);
-
-    const brands = [
-      ...document.querySelectorAll("datalist[id^='brands-'] option"),
-    ].map((option) => option.getAttribute("value"));
-    expect(brands).toEqual(["Smartwool", "Smartwater"]);
   });
 
   it("never lets the browser submit the naming form itself", async () => {
