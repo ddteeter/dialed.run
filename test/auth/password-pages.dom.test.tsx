@@ -137,7 +137,9 @@ describe("ForgotPassword", () => {
     ).toBeVisible();
     const remembered = screen.getByText(/^Remembered it\?/u);
     expect(remembered.closest("p")).toHaveTextContent("Remembered it? Log in");
-    const login = screen.getByRole("link", { name: "Log in" });
+    const login = within(screen.getByRole("main")).getByRole("link", {
+      name: "Log in",
+    });
     expect(login).toHaveAttribute("href", "/auth/login");
     expect(login).toHaveClass("underline");
     await user.type(
@@ -231,7 +233,9 @@ describe("ResetPassword", () => {
     expect(
       screen.getByText("Log in with it. Every other device was signed out."),
     ).toBeVisible();
-    const login = screen.getByRole("link", { name: "Log in" });
+    const login = within(screen.getByRole("main")).getByRole("link", {
+      name: "Log in",
+    });
     expect(login).toHaveAttribute("href", "/auth/login");
     expect(login).toHaveClass("bg-ink");
   });

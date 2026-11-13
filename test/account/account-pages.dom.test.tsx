@@ -360,10 +360,9 @@ describe("CheckEmail (Au4)", () => {
     const startOver = screen.getByRole("link", { name: "Start over" });
     expect(startOver).toHaveAttribute("href", "/auth/signup");
     expect(startOver).toHaveClass("underline");
-    expect(screen.getByRole("link", { name: "Log in" })).toHaveAttribute(
-      "href",
-      "/auth/login",
-    );
+    expect(
+      within(screen.getByRole("main")).getByRole("link", { name: "Log in" }),
+    ).toHaveAttribute("href", "/auth/login");
     expect(
       screen.getByText(/^Wrong address\?/u).closest("p"),
     ).toHaveTextContent("Wrong address? Start over");

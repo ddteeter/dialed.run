@@ -177,8 +177,13 @@ describe("Au2 · at rest", () => {
     ]);
     // "A signed-out page never shows the tab bar."
     expect(document.querySelector("[data-slot='tab-bar']")).toBeNull();
-    // The landing bar with no action — the cross-link does its job.
-    expect(document.querySelector("[data-part='bar-actions']")).toBeNull();
+    // The one signed-out frame (R55·176): on the log-in page the bar drops
+    // its own Log in and keeps Request access.
+    const actions = document.querySelector("[data-part='bar-actions']");
+    expect(actions?.querySelector("a[href='/auth/login']")).toBeNull();
+    expect(
+      actions?.querySelector("a[href='/account/request-access']"),
+    ).not.toBeNull();
     expect(screen.getByRole("heading", { name: "Log in" })).toBeVisible();
   });
 

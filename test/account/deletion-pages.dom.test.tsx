@@ -356,20 +356,16 @@ describe("Leaving (round 27 #14)", () => {
         "You're signed out on every device. Changed your mind? Log in before then and choose to keep it.",
       ),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Log in" })).toHaveAttribute(
-      "href",
-      "/auth/login",
-    );
+    expect(
+      within(screen.getByRole("main")).getByRole("link", { name: "Log in" }),
+    ).toHaveAttribute("href", "/auth/login");
     expect(
       screen.getByRole("link", { name: "Open dialed.run" }),
     ).toHaveAttribute("href", "/");
     // Log in is the primary way back, Open dialed.run the secondary one.
-    expect(screen.getByRole("link", { name: "Log in" })).toHaveClass(
-      "target",
-      "rounded-pill",
-      "bg-ink",
-      "text-ground",
-    );
+    expect(
+      within(screen.getByRole("main")).getByRole("link", { name: "Log in" }),
+    ).toHaveClass("target", "rounded-pill", "bg-ink", "text-ground");
     expect(screen.getByRole("link", { name: "Open dialed.run" })).toHaveClass(
       "target",
       "rounded-pill",

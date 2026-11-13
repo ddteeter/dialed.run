@@ -22,6 +22,7 @@ import {
   tabToLight,
   useTermsRefusal,
 } from "../../../ui";
+import { SignedOutFrame } from "../../../ui/SignedOutFrame";
 
 /**
  * Round 22's system states (`X Not found`, `X Loader failed`), which
@@ -112,10 +113,27 @@ function SystemFrame({
   children: ReactNode;
 }>): JSX.Element {
   const bell = useLoadedBell(signedIn, loadBell);
+  if (!signedIn) return <SignedOutBody>{children}</SignedOutBody>;
   const body = <Page width={width}>{children}</Page>;
-  // Signed in, `Layout`'s content is the page's main landmark; signed out
-  // there is no shell, so the frame is its own (plan 161's `region`).
-  return signedIn ? <Layout bell={bell}>{body}</Layout> : <main>{body}</main>;
+  // Signed in, `Layout`'s content is the page's main landmark.
+  return <Layout bell={bell}>{body}</Layout>;
+}
+
+/**
+ * Signed out, the one signed-out frame (R55·174, 176): the body in the
+ * 620 column, centred, 96 under the bar at width, in the 20 gutter on the
+ * phone. Its own `<main>`, as the frame has none (plan 161's `region`).
+ */
+function SignedOutBody({
+  children,
+}: Readonly<{ children: ReactNode }>): JSX.Element {
+  return (
+    <SignedOutFrame>
+      <main className="flex-1 px-5 pt-12 pb-16 wide:px-6 wide:pt-24">
+        <div className="mx-auto w-full max-w-column">{children}</div>
+      </main>
+    </SignedOutFrame>
+  );
 }
 
 /**
@@ -219,11 +237,31 @@ function WayOut({
       Go to your feed
     </Link>
   ) : (
-    <Link to="/auth/login" className={WAY_OUT_CLASS}>
-      Log in
-    </Link>
+    <>
+      <Link to="/auth/login" className={SIGNED_OUT_WAY_OUT_CLASS}>
+        Log in
+      </Link>
+      {/* R55·174: at width the frame's bar already offers it. */}
+      <p className="m-0 text-body text-quiet wide:hidden">
+        No account?{" "}
+        <Link
+          data-target="inline"
+          to="/account/request-access"
+          className="font-bold text-ink underline underline-offset-4"
+        >
+          Request access
+        </Link>
+      </p>
+    </>
   );
 }
+
+/**
+ * Signed out, X1's Log in is the ink pill (R55·174): the page's one way
+ * on, the phone's full width and its own width at the desk.
+ */
+const SIGNED_OUT_WAY_OUT_CLASS =
+  "target inline-flex items-center justify-center self-stretch rounded-pill bg-ink px-6 font-bold text-ground no-underline wide:self-start";
 
 /**
  * X1's way out is the hairline pill (#632 A-04): leaving a 404 is not the
@@ -280,23 +318,41 @@ export function LoaderFailedState({
   message,
   onRetry,
   loadBell,
+  title,
 }: Readonly<{
   signedIn: boolean;
   message: string;
   onRetry: () => void;
   loadBell?: LoadBell | undefined;
+  /**
+  The title of the screen this replaces, from its route (`staticData.title`).
+  */
+  title?: string | undefined;
 }>): JSX.Element {
   return (
     <SystemFrame signedIn={signedIn} loadBell={loadBell}>
-      <section data-part="system-state" data-state="loader-failed">
+      <section
+        data-part="system-state"
+        data-state="loader-failed"
+        className="flex flex-col gap-4"
+      >
         {/* The page's one heading, as X1 has: the band's kicker, said
             first so a screen reader's heading list finds the page. Not
             drawn, because the band already shows the words. */}
         <h1 className="sr-only">{LOADER_FAILED_KICKER}</h1>
-        {/* The band is the screen's first part and draws no row of its
-            own, so the phone's bell takes one above it (Design 169.2:
-            "every signed-in screen"). */}
-        <div className="flex justify-end">
+        {/* R55·186: X2 keeps the first row of the screen it replaces —
+            its title, with the phone's bell at its end — and the band
+            starts under it. A screen with no title keeps the bell's row
+            alone. The bell never waits for the page. */}
+        <div
+          data-part="first-row"
+          className="flex items-center justify-end gap-3"
+        >
+          {title === undefined ? undefined : (
+            <p className="m-0 mr-auto font-display text-display uppercase">
+              {title}
+            </p>
+          )}
           <PhoneBell />
         </div>
         <FailureBand
@@ -422,6 +478,9 @@ function LoaderFailed({
         (match) => match.status === "error" && match.loaderData === undefined,
       ) === 0,
   });
+  const title = useRouterState({
+    select: (state) => failedScreenTitle(state.matches),
+  });
   if (isRootCrash) {
     return (
       <RootCrashedState
@@ -443,6 +502,30 @@ function LoaderFailed({
         void router.invalidate();
       }}
       loadBell={loadBell}
+      title={title}
     />
   );
+}
+
+declare module "@tanstack/react-router" {
+  interface StaticDataRouteOption {
+    /**
+     * The screen's first-row title, as the screen draws it (R55·186): what
+     * X2 keeps above its band when this route's loader fails.
+     */
+    title?: string;
+  }
+}
+
+/**
+ * The title of the screen that failed: the deepest failed match's own.
+ */
+function failedScreenTitle(
+  matches: readonly {
+    status: string;
+    staticData: { title?: string | undefined };
+  }[],
+): string | undefined {
+  return matches.findLast((match) => match.status === "error")?.staticData
+    .title;
 }

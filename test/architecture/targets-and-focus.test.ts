@@ -277,15 +277,21 @@ describe("03 · every tappable thing has a 44×44 hit area", () => {
       "src/modules/auth/auth-page.tsx",
       // "Remembered it? Log in" (ACC-4).
       "src/modules/auth/components/ForgotPassword.tsx",
-      // The landing's "Have an account? Log in" under Request access
-      // (Round 50 · 151a, design 187).
+      // The landing's "Have a code? Create an account" (Round 55 · 175,
+      // 176's cross-link wording).
       "src/modules/auth/components/Landing.tsx",
+      // The signed-out 404's "No account? Request access", on the phone
+      // (Round 55 · 174).
+      "src/modules/auth/components/SystemState.tsx",
       // "Change emails in Settings › Notifications." and "All notification
       // settings › (asks you to log in)" (round 26 #19).
       "src/modules/email/components/UnsubscribeLanding.tsx",
       "src/modules/email/components/UnsubscribeLanding.tsx",
       // "Not now — leave it in the queue." (Product Screens A2).
       "src/modules/feed/components/AttachKit.tsx",
+      // The public pages' invite, "Have a code? Create an account" (Round
+      // 55 · 176).
+      "src/modules/feed/components/PublicFrame.tsx",
       // The ban band's "Or write to desk@dialed.run.", whose address is a
       // mailto link (round 38 #62a).
       "src/modules/safety/components/AccountClosed.tsx",

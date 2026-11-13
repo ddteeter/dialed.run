@@ -136,12 +136,42 @@ describe("the public profile, signed out", () => {
   it("names the runner in TYPE.display, then Kits with how many", async () => {
     await show(profilePage(PROFILE));
 
-    expect(
-      screen.getByRole("heading", { level: 1, name: "@maya_runs" }),
-    ).toHaveClass("font-display", "text-display");
+    const handle = screen.getByRole("heading", { level: 1 });
+    expect(handle).toHaveTextContent(/^@maya_runs$/u);
+    expect(handle).toHaveClass("font-display", "text-display");
+    expect(handle).not.toHaveClass("text-title");
+    expect(handle).not.toHaveClass("wrap-anywhere");
     const kits = screen.getByRole("heading", { level: 2, name: "Kits 12" });
     expect(kits).toHaveClass("font-display", "text-heading");
+    // The count at the row's right, as the boards draw it (#633 A-15).
+    expect(kits).toHaveClass("flex", "justify-between");
     expect(within(kits).getByText("12")).toHaveClass("text-mono-md");
+  });
+
+  it("breaks the handle only after an underscore, never inside a word (R55·218a)", async () => {
+    await show(profilePage(PROFILE));
+    const handle = screen.getByRole("heading", { level: 1 });
+    // "@maya_" then a break opportunity, then "runs".
+    const wbr = handle.querySelector("wbr");
+    expect(handle.querySelectorAll("wbr")).toHaveLength(1);
+    expect(wbr?.previousSibling?.textContent).toBe("_");
+    expect(wbr?.nextSibling?.textContent).toBe("runs");
+    expect(handle.firstChild?.textContent).toBe("@");
+  });
+
+  it("steps a handle past 17 characters down to TYPE.title (R55·218a)", async () => {
+    const at17 = "a_seventeen_chars";
+    expect(at17).toHaveLength(17);
+    const { unmount } = await show(profilePage({ ...PROFILE, handle: at17 }));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveClass(
+      "text-display",
+    );
+    unmount();
+    await show(profilePage({ ...PROFILE, handle: `${at17}x` }));
+    const longer = screen.getByRole("heading", { level: 1 });
+    expect(longer).toHaveClass("m-0", "font-display", "text-title");
+    expect(longer).not.toHaveClass("text-display");
+    expect(longer.querySelectorAll("wbr")).toHaveLength(2);
   });
 
   it("lists each kit as a link to its own page: conditions, day and distance, verdict", async () => {
@@ -198,10 +228,49 @@ describe("the public profile, signed out", () => {
     expect(tile).toHaveAttribute("aria-hidden", "true");
     expect(link(/Sat Oct 18/u)).toHaveClass(
       "target",
-      "flex",
+      "grid",
+      "grid-cols-[auto_minmax(0,1fr)_auto]",
       "items-center",
       "border-b",
-      "desk:flex-col",
+      "desk:grid-cols-[minmax(0,1fr)_auto]",
+      "desk:border-b-0",
+    );
+  });
+
+  it("puts the verdict chip on the conditions' row at the desk, the day under both (#633 A-15)", async () => {
+    await show(profilePage(PROFILE));
+    const row = link(/Sat Oct 18/u);
+    const [tile, conditions, day, chip] = [...row.children];
+    expect(tile?.querySelector("[data-part='kit-tile']")).not.toBeNull();
+    expect(tile).toHaveClass(
+      "row-span-2",
+      "desk:col-span-2",
+      "desk:row-span-1",
+    );
+    expect(conditions).toHaveClass(
+      "col-start-2",
+      "row-start-1",
+      "text-body",
+      "font-semibold",
+      "desk:col-start-1",
+      "desk:row-start-2",
+    );
+    expect(day).toHaveTextContent(/Sat Oct 18/u);
+    expect(day).toHaveClass(
+      "col-start-2",
+      "row-start-2",
+      "desk:col-span-2",
+      "desk:col-start-1",
+      "desk:row-start-3",
+    );
+    expect(chip?.querySelector("[data-part='verdict-chip']")).not.toBeNull();
+    expect(chip).toHaveClass(
+      "col-start-3",
+      "row-span-2",
+      "row-start-1",
+      "desk:col-start-2",
+      "desk:row-span-1",
+      "desk:row-start-2",
     );
   });
 
@@ -402,7 +471,7 @@ describe("the public profile, signed out", () => {
     }
   });
 
-  it("sits in DS1's columns at the desk while it has a rail, bar and foot on the same measure", async () => {
+  it("sits in DS1's columns at the desk while it has a rail", async () => {
     await show(profilePage(PROFILE));
 
     expect(screen.getByRole("main")).toHaveClass(
@@ -413,14 +482,6 @@ describe("the public profile, signed out", () => {
       // Row 1 is the column's own height; the rail's extra height goes to
       // row 2, so the pitch follows the kits instead of a hole (N2-17).
       "desk:grid-rows-[auto_1fr]",
-    );
-    expect(part("top-bar")?.firstElementChild).toHaveClass(
-      "max-w-column",
-      "desk:max-w-page",
-    );
-    expect(part("public-foot")?.firstElementChild).toHaveClass(
-      "max-w-column",
-      "desk:max-w-page",
     );
   });
 
@@ -439,12 +500,7 @@ describe("the public profile, signed out", () => {
     expect(part("rail")).toBeNull();
     expect(screen.getByRole("main")).toHaveClass("max-w-column");
     expect(screen.getByRole("main")).not.toHaveClass("desk:grid");
-    expect(part("top-bar")?.firstElementChild).not.toHaveClass(
-      "desk:max-w-page",
-    );
-    expect(part("public-foot")?.firstElementChild).not.toHaveClass(
-      "desk:max-w-page",
-    );
+    expect(screen.getByRole("main")).not.toHaveClass("desk:max-w-page");
   });
 
   it("closes with the invite, after the rail on the phone and under the kits at the desk", async () => {
@@ -452,22 +508,26 @@ describe("the public profile, signed out", () => {
 
     const invite = part("invite");
     expect(invite?.parentElement).toHaveClass("desk:col-start-1", "px-6");
-    expect(screen.getByRole("main").lastElementChild).toBe(
+    // The invite closes the page; only the page's own Report link follows.
+    expect(part("public-foot")?.previousElementSibling).toBe(
       invite?.parentElement,
     );
-    expect(link("Request access")).toBeVisible();
+    expect(
+      within(invite ?? document.body).getByRole("link", {
+        name: "Request access",
+      }),
+    ).toBeVisible();
   });
 
-  it("ends with Report this profile, the link filled in, then Privacy and Terms", async () => {
+  it("ends its body with Report this profile, the link filled in", async () => {
     await show(profilePage(PROFILE));
 
     const foot = within(part("public-foot") ?? document.body);
     const links = foot.getAllByRole("link");
     expect(links.map((each) => each.textContent)).toStrictEqual([
       "Report this profile",
-      "Privacy",
-      "Terms",
     ]);
+    expect(screen.getByRole("main").lastElementChild).toBe(part("public-foot"));
     expect(links[0]).toHaveAttribute(
       "href",
       `/takedown?location=${encodeURIComponent("https://dialed.run/@maya_runs")}`,
@@ -501,9 +561,14 @@ describe("the public profile, once the browser knows who is looking", () => {
     ).toHaveAttribute("href", "/feed/u/maya_runs");
     expect(link("Open in the app")).toHaveClass("bg-ink", "text-ground");
     expect(part("invite")).toBeNull();
-    // Nothing closes the page for a runner: the rail is the last thing.
-    expect(screen.getByRole("main").lastElementChild).toBe(part("rail"));
+    // Nothing closes the page for a runner: the rail, then the Report link.
+    expect(part("public-foot")?.previousElementSibling).toBe(part("rail"));
     expect(link("Report this profile")).toBeVisible();
+    // The way into the app takes Log in's and Request access's place.
+    const bar = within(part("top-bar") ?? document.body);
+    expect(bar.queryByRole("link", { name: "Log in" })).toBeNull();
+    expect(bar.queryByRole("link", { name: "Request access" })).toBeNull();
+    expect(link("Open in the app")).toHaveAttribute("data-part", "bar-actions");
   });
 });
 
