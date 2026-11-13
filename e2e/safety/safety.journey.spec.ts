@@ -166,7 +166,7 @@ test("report a runner, block them, and take the block back", async ({
     page.getByText(/A person reads it within a day\. The entry/),
   ).toBeVisible();
   await expect(
-    page.getByText(/hidden from your feed straight away/),
+    page.getByText(/The entry is hidden from your feed straight away/),
   ).toBeVisible();
   await expect(page.getByText(/never told who/)).toBeVisible();
 
