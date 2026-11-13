@@ -266,7 +266,8 @@ test("log a run: read a file in place, pick the kit, note it, enter one by hand"
     await expect(
       page.getByRole("link", { name: /^Notifications\b/u }).first(),
     ).toBeVisible();
-    await expect(page.getByText(/0 pieces/u)).toBeVisible();
+    // The drawn line; its said twin is visually hidden (round 52 #158).
+    await expect(page.getByText(/· 0 pieces/u)).toBeVisible();
     // Round 25's A2 rail at the desk: the run, then the band history behind
     // MOST LIKELY, fetched once the screen is drawn. This runner has none
     // in the band yet, so the heading names the band over DS2's words
@@ -275,7 +276,7 @@ test("log a run: read a file in place, pick the kit, note it, enter one by hand"
     const kitRail = page.locator('[data-part="rail"]');
     await expect(
       kitRail.getByRole("heading", {
-        name: /^In -?\d+–-?\d+° (dry|damp|wet)$/u,
+        name: /^In (minus )?\d+ to (minus )?\d+ degrees, (dry|damp|wet)$/u,
       }),
     ).toBeVisible({ timeout: 15_000 });
     await expect(kitRail).toContainText("No runs in this band yet.");
@@ -284,7 +285,7 @@ test("log a run: read a file in place, pick the kit, note it, enter one by hand"
     await expect(page.getByText("Pick at least one piece.")).toBeVisible();
 
     await page.getByRole("button", { name: "Demo half-zip" }).click();
-    await expect(page.getByText(/1 piece$/u)).toBeVisible();
+    await expect(page.getByText(/· 1 piece$/u)).toBeVisible();
     await expect(page.getByText("Pick at least one piece.")).toHaveCount(0);
 
     await scene(page, "The outfit photo lives here now, through the blur");
@@ -323,7 +324,7 @@ test("log a run: read a file in place, pick the kit, note it, enter one by hand"
     const verdictRail = page.locator('[data-part="rail"]');
     await expect(
       verdictRail.getByRole("heading", {
-        name: /^Before, in -?\d+–-?\d+° (dry|damp|wet)$/u,
+        name: /^Before, in (minus )?\d+ to (minus )?\d+ degrees, (dry|damp|wet)$/u,
       }),
     ).toBeVisible();
     await expect(verdictRail).toContainText("No runs in this band yet.");

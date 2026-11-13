@@ -20,7 +20,7 @@ end of paragraph
 paragraph
 :day :month #
 #:#
-#°F damp
+# degrees Fahrenheit, damp
 end of paragraph
 link, Weather data provided by Visual Crossing
 paragraph

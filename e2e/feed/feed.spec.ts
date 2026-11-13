@@ -131,8 +131,10 @@ test("your own entry under review is marked to you: on the card, on G, on D", as
     const ownRow = page.locator("li").filter({
       has: page.locator(`a[href="/feed/entry/${ownEntryId}"]`),
     });
-    await expect(ownRow.getByRole("link")).toHaveText(
-      /^[A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2} · \d+\.\d (mi|km)$/u,
+    // Drawn "Sat, Aug 29 · 8.2 mi", said "Sat, Aug 29, 8.2 miles"
+    // (round 52 #158).
+    await expect(ownRow.getByRole("link")).toHaveAccessibleName(
+      /^[A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2}, \d+\.\d (miles|kilometres)$/u,
     );
     await expect(
       ownRow.locator('[data-part="entry-meta"] > :first-child'),

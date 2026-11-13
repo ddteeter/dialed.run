@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import type { Units } from "../../../lib/contracts";
 import { dayLabel } from "../../../lib/dates";
-import { distanceNumber, measuredLine } from "../../../lib/contracts/measures";
+import { measuredLine } from "../../../lib/contracts/measures";
 import { precipClassOf } from "../../../lib/contracts/temperature";
 import {
   Bracketed,
@@ -75,7 +75,31 @@ export function RunList({
           >
             <RunLink run={run}>
               <span className="text-body font-semibold">
-                {`${distanceNumber(run.distanceM, units.distance)} ${units.distance} · ${dayLabel(run.startedAt, run.conditions?.timeZone)}`}
+                {/* "6.2 mi · Thu Nov 12", said "6.2 miles, Thu Nov 12"
+                    (round 52 #158). */}
+                <Spoken
+                  {...measuredLine(
+                    [
+                      [
+                        {
+                          kind: "distance",
+                          distanceM: run.distanceM,
+                          spaced: true,
+                        },
+                      ],
+                      [
+                        {
+                          kind: "word",
+                          word: dayLabel(
+                            run.startedAt,
+                            run.conditions?.timeZone,
+                          ),
+                        },
+                      ],
+                    ],
+                    units,
+                  )}
+                />
               </span>
               {/* Once per row: a header line would claim the whole of a
                   mixed list (G1). */}

@@ -9,10 +9,10 @@ heading, @d_runner_#, level 1
 @d_runner_#
 end of heading, @d_runner_#, level 1
 :day :month # · #:#
-#.#mi
+#.# miles
 # minutes # seconds per mile
 A bit warm
-#° · clear
+# degrees, clear
 link, Weather data provided by Visual Crossing
 Kit
 list

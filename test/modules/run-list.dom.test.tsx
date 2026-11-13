@@ -75,7 +75,11 @@ describe("R: a row", () => {
     const lateSaturday = Math.floor(Date.UTC(2026, 7, 30, 1, 30) / 1000);
     await renderWithRouter(list([runSummary({ startedAt: lateSaturday })]));
 
-    expect(within(onlyRow()).getByText("6.2 mi · Sat Aug 29")).toBeVisible();
+    const title = within(onlyRow()).getByText("6.2 mi · Sat Aug 29");
+    expect(title).toBeVisible();
+    // Said in words (round 52 #158).
+    expect(title).toHaveAttribute("aria-hidden", "true");
+    expect(title.nextElementSibling).toHaveTextContent("6.2 miles, Sat Aug 29");
   });
 
   it("credits Garmin once on each Garmin row, and on no other (G1)", async () => {

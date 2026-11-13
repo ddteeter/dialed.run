@@ -8,11 +8,7 @@ link, Find runners
 button, Following, not pressed
 button, Your conditions, pressed
 status
-Same conditions · Feels
-#–#°
-·
-dry
-· # days
+Same conditions, feels like # to # degrees, dry, # days
 heading, # runners logged this, level 2
 #
 runners logged this
