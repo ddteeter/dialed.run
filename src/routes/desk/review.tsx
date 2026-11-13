@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 
 import { DeskPage, useDeskToday } from "../../modules/ops/components/DeskPage";
 import { ReviewHeading } from "../../modules/ops/components/ReviewHeading";
@@ -40,6 +40,7 @@ export const Route = createFileRoute("/desk/review")({
 
 function ReviewPage() {
   const today = useDeskToday();
+  const router = useRouter();
   const { queue, requests, quarantine, holds, bursts, burstsSince } =
     Route.useLoaderData();
 
@@ -65,6 +66,9 @@ function ReviewPage() {
         reviewHandle={reviewHandleAction}
         decideMatch={decideGarmentMatchAction}
         reporters={reportersAction}
+        onDecided={() => {
+          void router.invalidate();
+        }}
       />
       {/* SAF-6: a removal the queue did not raise — a copyright notice
           naming a photo or an entry. */}

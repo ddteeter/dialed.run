@@ -218,7 +218,11 @@ function RemovalRequestRow(props: RowProps): JSX.Element {
           {request.description === undefined ? undefined : (
             <q className="text-body">{request.description}</q>
           )}
-          <span className="text-micro text-quiet">
+          {/* The only way to tell who filed: wrapped, never cut (P3-05). */}
+          <span
+            data-part="requester"
+            className="text-micro text-quiet wrap-anywhere"
+          >
             {request.requesterEmail}
           </span>
           {request.relatedIds.length === 0 ? undefined : (
@@ -298,8 +302,7 @@ function RequestActions({
     );
   }
   return (
-    <div data-part="request-actions" className={ACTION_BAR}>
-      <RemoveForm deciding={deciding} />
+    <RemoveForm deciding={deciding}>
       <button
         ref={declinedFrom.ref}
         type="button"
@@ -320,7 +323,7 @@ function RequestActions({
       >
         Block and decline all
       </button>
-    </div>
+    </RemoveForm>
   );
 }
 
@@ -484,9 +487,15 @@ function SubjectLink({
   );
 }
 
+/**
+ * Take it down, and the bar it leads: its failure band goes above the
+ * whole bar, as `DeskForm` puts one, so the buttons stay one row (P3-01).
+ * `children` are the bar's other presses, which submit nothing.
+ */
 function RemoveForm({
   deciding,
-}: Readonly<{ deciding: Deciding }>): JSX.Element {
+  children,
+}: Readonly<{ deciding: Deciding; children: ReactNode }>): JSX.Element {
   const { requestId, decide, onDecided } = deciding;
   const form = useFormSubmit({
     carry: "page",
@@ -508,12 +517,15 @@ function RemoveForm({
         onRetry={form.retry}
         retryRef={form.retryRef}
       />
-      <SubmitButton
-        tone="chalk"
-        label="Take it down"
-        pendingLabel="Taking it down"
-        pending={form.pending}
-      />
+      <div data-part="request-actions" className={ACTION_BAR}>
+        <SubmitButton
+          tone="chalk"
+          label="Take it down"
+          pendingLabel="Taking it down"
+          pending={form.pending}
+        />
+        {children}
+      </div>
     </FormElement>
   );
 }

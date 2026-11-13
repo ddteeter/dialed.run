@@ -241,10 +241,13 @@ function Matches({
           }
         >
           <Thumbnail match={match} />
-          <span className="text-quiet">
+          <span className={CAPTION_CLASS}>
             <Mono step="xs">{nameOf(match)}</Mono>
           </span>
-          <span data-part="match-distance" className="text-quiet uppercase">
+          <span
+            data-part="match-distance"
+            className={`${CAPTION_CLASS} uppercase`}
+          >
             <Mono step="xs">{distanceLabel(match.distance)}</Mono>
             {match.isPrivate ? (
               <>
@@ -277,10 +280,10 @@ function RemovedTile({
       <span className="flex h-32 w-32 items-center justify-center border border-hairline text-quiet">
         <Mono step="xs">Removed</Mono>
       </span>
-      <span className="text-quiet">
+      <span className={CAPTION_CLASS}>
         <Mono step="xs">{nameOf(image)}</Mono>
       </span>
-      <span className="text-quiet">
+      <span className={CAPTION_CLASS}>
         <Mono step="xs">
           {`${bitsLabel(image.distance)} · removed ${monthDayLabel(image.removedAt)}`}
         </Mono>
@@ -374,6 +377,12 @@ function distanceLabel(distance: number): string {
 }
 
 /**
+ * A tile's caption line: the mono step's own line-height, so the lines
+ * under a tile read as one caption stack, not body paragraphs (G-19).
+ */
+const CAPTION_CLASS = "text-mono-xs text-quiet";
+
+/**
  * Whose the photo is: their @handle, opening them in D8. A runner with no
  * handle cannot be searched for there, so nothing is offered.
  */
@@ -386,9 +395,11 @@ function Owner({
       data-part="match-owner"
       to="/desk/runners"
       search={{ query: handle, filter: "all" }}
-      className="target self-start text-ink"
+      // A handle in its own case, underlined as a link (G-19): MONO.xs's
+      // classes written out, since `Mono`'s xs step is uppercase.
+      className="target self-start font-mono text-mono-xs text-ink underline underline-offset-4"
     >
-      <Mono step="xs">{`@${handle}`}</Mono>
+      {`@${handle}`}
     </Link>
   );
 }

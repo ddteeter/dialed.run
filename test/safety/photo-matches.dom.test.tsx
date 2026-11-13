@@ -157,7 +157,22 @@ describe("PhotoMatches", () => {
       "/desk/runners?query=maya_runs&filter=all",
       "/desk/runners?query=k_lopes&filter=all",
     ]);
-    expect(owners[0]).toHaveClass("target");
+    expect(owners[0]).toHaveClass(
+      "target",
+      "font-mono",
+      "text-mono-xs",
+      "underline",
+    );
+    // In the handle's own case: no uppercase step anywhere in it (G-19).
+    expect(owners[0]).not.toHaveClass("uppercase");
+    expect(owners[0]?.querySelector(".uppercase")).toBeNull();
+    for (const line of distances) {
+      expect(line).toHaveClass("text-mono-xs", "text-quiet");
+      expect(line.previousElementSibling).toHaveClass(
+        "text-mono-xs",
+        "text-quiet",
+      );
+    }
   });
 
   it("says a bit in the singular", async () => {

@@ -159,7 +159,12 @@ function GarmentPhoto({
         />
       </span>
       {line === undefined ? undefined : (
-        <span data-part="garment-line" className="text-quiet">
+        // The wrapper takes the mono step's line-height too, or two lines
+        // of 10px mono sit a body line apart (N3-13).
+        <span
+          data-part="garment-line"
+          className="block text-mono-xs text-quiet"
+        >
           <Mono step="xs">{line}</Mono>
         </span>
       )}
@@ -196,7 +201,7 @@ function SubjectPhotos({ row }: Readonly<{ row: QueueRow }>): JSX.Element {
  */
 function ReportedFor({ row }: Readonly<{ row: QueueRow }>): JSX.Element {
   return (
-    <span className="flex flex-col gap-1 text-micro">
+    <span className="flex flex-col gap-1 text-small">
       {row.reporterCount === 0 ? undefined : (
         <Bracketed>
           {row.reporterCount === 1
@@ -382,7 +387,9 @@ function WhyHere({ row }: Readonly<{ row: QueueRow }>): JSX.Element {
       : STUCK_LINES[row.source];
   if (line === undefined) return <ReportedFor row={row} />;
   return (
-    <p data-part="why-here" className="m-0 text-body">
+    // The same step and tone as what reporters said, its neighbour's
+    // line of the same kind (N3-13).
+    <p data-part="why-here" className="m-0 text-small text-quiet">
       {line}
     </p>
   );
@@ -413,7 +420,10 @@ function rowTitle(row: QueueRow, label: string): string {
  */
 function SourceTag({ row }: Readonly<{ row: QueueRow }>): JSX.Element {
   return (
-    <span data-part="source" className="text-micro text-quiet">
+    <span
+      data-part="source"
+      className="shrink-0 text-micro whitespace-nowrap text-quiet"
+    >
       <Bracketed>{SOURCE_TAGS[row.source]}</Bracketed>
     </span>
   );
@@ -445,7 +455,10 @@ function DueTag({
 }: Readonly<{ due: QueueRow["due"] }>): JSX.Element | undefined {
   if (due === undefined) return;
   return (
-    <span data-part="due" className="text-ink uppercase">
+    <span
+      data-part="due"
+      className="shrink-0 whitespace-nowrap text-ink uppercase"
+    >
       <Mono step="xs">{due}</Mono>
     </span>
   );
@@ -510,7 +523,10 @@ function ReviewRow({
             type="button"
             aria-expanded={active}
             onClick={onActivate}
-            className="target cursor-pointer border-none bg-transparent p-0 text-left text-body font-semibold text-ink"
+            // 168.3: one line, the whole title in `title`; the tags beside
+            // it keep their width (G-08, N3-10).
+            title={rowTitle(row, label)}
+            className="target min-w-0 cursor-pointer truncate border-none bg-transparent p-0 text-left text-body font-semibold text-ink"
           >
             {rowTitle(row, label)}
           </button>
@@ -529,12 +545,13 @@ function ReviewRow({
           decide={decideMatch}
         />
         <WhyHere row={row} />
+        {/* Only an intimate-image report starts the 48-hour clock; its
+          line goes directly under the reason (R47·126). */}
+        {row.due === undefined ? undefined : <StatutoryLine />}
         {/* D1: who reported, folded; opening it is logged (D-164). After
           the photo and before the decision, as the contract's tab order
           puts it. */}
         <ReportersFold row={row} reporters={reporters} />
-        {/* Only an intimate-image report starts the 48-hour clock. */}
-        {row.due === undefined ? undefined : <StatutoryLine />}
         {isGarment ? undefined : <SourceTag row={row} />}
         {active ? (
           <RowDecision
@@ -611,6 +628,11 @@ export function ReviewQueue(
      * it, a row offers no fold.
      */
     reporters?: LoadReporters | undefined;
+    /**
+     * After a row is decided: the route reloads, so the heading's count
+     * and the rail's say what is now true.
+     */
+    onDecided?: (() => void) | undefined;
   }>,
 ): JSX.Element {
   // Rows leave the list as they are decided; `useSettled` says why that
@@ -629,10 +651,11 @@ export function ReviewQueue(
 
   return (
     <div className="flex flex-col gap-4">
+      {/* No count of its own: Review's heading carries it (round 44
+        #106), and `onDecided` keeps that one current (G-07). */}
       <ListSection
         title="waiting"
         items={waiting}
-        count
         whenEmpty={<NothingWaiting hasDecided={hasDecided} />}
       >
         {(row) => (
@@ -657,6 +680,7 @@ export function ReviewQueue(
               setChosen((waiting[at + 1] ?? waiting[at - 1])?.id);
               setHasDecided(true);
               settle(id);
+              props.onDecided?.();
             }}
           />
         )}

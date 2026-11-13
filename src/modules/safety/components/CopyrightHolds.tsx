@@ -27,7 +27,7 @@ import {
   counterNoticeInputFor,
   RECEIVED_ON_COPY,
 } from "../inputs";
-import { ACTION_BAR, DeskForm } from "./DeskForm";
+import { ACTION_BAR, DeskForm, RECORD_PANEL, RecordHead } from "./DeskForm";
 import { useSettled } from "./use-settled";
 
 type HoldAct<R, V = { holdId: string }> = (input: { data: V }) => Promise<R>;
@@ -64,17 +64,22 @@ export function CopyrightHolds({
   // What a settled row answered: the row has gone, so the list says it.
   const [said, setSaid] = useState("");
   if (holds.length === 0) return undefined;
+  const saidLine =
+    said === "" ? undefined : (
+      <p data-part="holds-said" className="m-0 text-body">
+        {said}
+      </p>
+    );
   return (
     <div data-part="copyright-holds" className="flex flex-col gap-2">
       <FormStatus>{said}</FormStatus>
-      {said === "" ? undefined : (
-        <p data-part="holds-said" className="m-0 text-body">
-          {said}
-        </p>
-      )}
+      {remaining.length === 0 ? undefined : saidLine}
+      {/* Once the last hold settles, the section keeps its kicker over what
+          it did, rather than leaving the line loose under Takedown (G-22). */}
       <ListSection
         title={`Copyright holds · ${String(remaining.length)}`}
         items={remaining}
+        whenEmpty={saidLine}
       >
         {(hold) => (
           <HoldRow
@@ -180,11 +185,15 @@ function HoldRow({
     setHeld({ ...held, ...result });
   };
   return (
-    <li
-      data-part="copyright-hold"
-      className="flex flex-col gap-3 border-b border-hairline py-4"
-    >
+    <li data-part="copyright-hold" className={RECORD_PANEL}>
       <HoldFacts held={held} />
+      {/* What the last step did, as the row's state, above the next
+          question rather than under its buttons (G-22). */}
+      {said === "" ? undefined : (
+        <p data-part="hold-said" className="m-0 text-body">
+          {said}
+        </p>
+      )}
       {nextAction(held, {
         counter: (
           <CounterNotice
@@ -214,11 +223,6 @@ function HoldRow({
           />
         ),
       })}
-      {said === "" ? undefined : (
-        <p data-part="hold-said" className="text-body">
-          {said}
-        </p>
-      )}
     </li>
   );
 }
@@ -231,14 +235,14 @@ function HoldFacts({
 }: Readonly<{ held: CopyrightHoldSummary }>): JSX.Element {
   return (
     <>
-      <span className="flex items-baseline justify-between gap-3">
-        <span className="text-body font-semibold text-ink">
-          {held.subjectType} <Mono step="xs">{held.subjectId}</Mono>
-        </span>
-        <span data-part="hidden-at" className="text-ink uppercase">
-          <Mono step="xs">Hidden {monthDayLabel(held.hiddenAt)}</Mono>
-        </span>
-      </span>
+      <RecordHead
+        subjectType={held.subjectType}
+        subjectId={held.subjectId}
+        date={{
+          part: "hidden-at",
+          label: `Hidden ${monthDayLabel(held.hiddenAt)}`,
+        }}
+      />
       <span className="flex flex-col gap-1">
         <span data-part="owner" className="text-micro text-quiet">
           <Mono step="xs">

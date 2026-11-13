@@ -131,3 +131,38 @@ export function PickOne<T extends string>(
     />
   );
 }
+
+/**
+ * A held record on Review's foot, a copyright hold or a quarantine record
+ * (round 39 #73, G-13): a panel, not a ruled line, like the queue's rows.
+ */
+export const RECORD_PANEL =
+  "flex flex-col gap-3 border border-hairline bg-panel p-4";
+
+/**
+ * The record's head, as round 39 draws it: what it is and its id, a
+ * hi-viz MONO.xs kicker (`PHOTO · ph_3c0a`), with its date at the right.
+ */
+export function RecordHead({
+  subjectType,
+  subjectId,
+  date,
+}: Readonly<{
+  subjectType: string;
+  subjectId: string;
+  /**
+  The date's part name and its words ("Hidden Oct 23").
+  */
+  date: Readonly<{ part: string; label: string }>;
+}>): JSX.Element {
+  return (
+    <span className="flex items-baseline justify-between gap-3">
+      <Mono step="xs" className="min-w-0 text-hiviz-text wrap-anywhere">
+        {`${subjectType} · ${subjectId}`}
+      </Mono>
+      <span data-part={date.part} className="text-ink uppercase">
+        <Mono step="xs">{date.label}</Mono>
+      </span>
+    </span>
+  );
+}

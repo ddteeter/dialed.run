@@ -912,6 +912,13 @@ describe("while an action is in flight", () => {
 });
 
 describe("Takedown (SAF-6)", () => {
+  it("heads its section with a kicker, like its siblings on Review (G-15)", () => {
+    render(<Takedown takeDown={vi.fn()} />);
+    const heading = screen.getByRole("heading", { level: 2, name: "Takedown" });
+    expect(heading).not.toHaveClass("font-display");
+    expect(heading.firstElementChild).toHaveClass("font-mono", "text-mono-xs");
+  });
+
   it("opens with nothing chosen", () => {
     render(<Takedown takeDown={vi.fn()} />);
     const picker = screen.getByRole("combobox", {

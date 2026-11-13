@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { JSX } from "react";
 
-import { TextField, useFormSubmit } from "../../../ui";
+import { Mono, TextField, useFormSubmit } from "../../../ui";
 import { takedownInput } from "../inputs";
 import { DeskForm, PickOne } from "./DeskForm";
 
@@ -64,11 +64,10 @@ export function Takedown({
 
   return (
     <section aria-labelledby="desk-takedown" className="flex flex-col gap-6">
-      <h2
-        id="desk-takedown"
-        className="m-0 font-display text-heading uppercase"
-      >
-        Takedown
+      {/* A kicker, like its siblings under the queue, Copyright holds and
+          Quarantine (G-15; round 28 #8's "TAKEDOWN · FROM A NOTICE"). */}
+      <h2 id="desk-takedown" className="m-0">
+        <Mono step="xs">Takedown</Mono>
       </h2>
       <DeskForm
         form={form}
