@@ -783,6 +783,8 @@ describe("EntryDetail: the owner meta (round 41 #86a)", () => {
         detail({ audience: "world" }, { viewerId: OWNER }),
       );
       const pill = screen.getByRole("button", { name: "Copy link" });
+      // Long after mount, so the hold is timed from the press, not the page.
+      await vi.advanceTimersByTimeAsync(COPY_HOLD_MS * 2);
       await user.click(pill);
       await waitFor(() => {
         expect(pill).toHaveAttribute("data-state", "copied");
