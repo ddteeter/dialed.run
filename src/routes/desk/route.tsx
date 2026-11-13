@@ -35,6 +35,7 @@ function DeskLayout() {
     <DeskSignOutProvider
       value={
         <SignOutButton
+          isDeskBar
           signOut={async () => {
             await signOut();
             // The shell reads "signed in" once, at the root; tell it.

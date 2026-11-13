@@ -192,7 +192,10 @@ test("an operator opens the Desk and reads Today", async ({
   // and Sign out at its right; the rail's foot says screening is fine.
   const bar = page.getByRole("banner");
   await expect(bar.getByText("Desk", { exact: true })).toBeVisible();
-  await expect(bar.getByRole("button", { name: "Sign out" })).toBeVisible();
+  // The bar's Sign out is mono capitals, underlined, at its right edge.
+  const signOut = bar.getByRole("button", { name: "Sign out" });
+  await expect(signOut).toBeVisible();
+  await expect(signOut).toHaveCSS("text-transform", "uppercase");
   const rail = page.getByRole("navigation", { name: "Desk" });
   await expect(rail.getByText("Screening · OK")).toBeVisible();
   await expect(rail.getByRole("link", { name: "Today" })).toHaveAttribute(
