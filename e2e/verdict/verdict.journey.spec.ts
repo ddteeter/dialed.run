@@ -239,16 +239,23 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
   await expect(houdini).toHaveAttribute("aria-pressed", "true");
 
   // MORE › opens A3b: every garment's triple and all nine tags — how
-  // something the chips did not suggest gets said.
+  // something the chips did not suggest gets said. At the desk it is a
+  // push into the column, not a sheet (Round 54 · 164.3): the URL
+  // changes, and Done comes back to A3 with the answer still on it.
   await scene(page, "MORE opens A3b: every garment, all nine tags");
   await page.getByRole("button", { name: "More, anything specific" }).click();
-  const sheet = page.getByRole("dialog", { name: "Anything specific?" });
-  await sheet.getByRole("button", { name: "hands cold" }).click();
-  await sheet.getByRole("button", { name: "Done" }).click();
-  await expect(sheet).toBeHidden();
+  await page.waitForURL(/[?&]specifics=true\b/u);
+  await expect(
+    page.getByRole("heading", { name: "Anything specific?", level: 1 }),
+  ).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: "hands cold" }).click();
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(page).not.toHaveURL(/[?&]specifics=/u);
   await expect(
     page.getByRole("button", { name: "hands cold" }),
   ).toHaveAttribute("aria-pressed", "true");
+  await expect(houdini).toHaveAttribute("aria-pressed", "true");
 
   // D-108 E (round 32, 2a): private still counts, anonymously, and the
   // runner is told so at the moment they choose it. Change opens the
