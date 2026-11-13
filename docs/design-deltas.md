@@ -1081,16 +1081,542 @@ _Nothing from 99 on is open: round 45 answered the last of it._
 
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
 
+## Answered in round 55 (imported 2026-11-13)
+
+Design answered as `Round 55 Rulings.dc.html`, items 171–242 (182 in two
+rows). The board's text is the text of record; each ruling is also a
+comment on its issue. Most items were relayed in groups, on #633–#639,
+and four have their own issue. Design re-checked its answers against the
+part 2 screenshots and revised seven rows (176, 205, 220, 221, 223, 231
+and 236); the board holds the revised text, and on the issues the revised
+comment replaces the earlier rows. 202 changes R54·168.3's collapse: below
+`desk` a picked row's detail pane opens as the 164.1 drawer, not under the
+table. Round 54's rulings stand, and the notices were taken as read.
+
+### Items with their own issue
+
+- **R55·171 · Copy link, refused (#641). Drawn; built (#651, design
+  208).** The pill keeps its hairline edge and no fill and reads "Not
+  copied" for 2000ms, then "Copy link" again. Its width is set by its
+  longest label, so nothing shifts. Screen readers hear "Link not
+  copied." No colour change and no icon: the word is the state. This
+  confirms the owner's call of 2026-11-12, which #651 built.
+- **R55·172 · Owner meta audience tags (#642). Confirmed; built (#651,
+  design 208).** All three tags in every state, `[PUBLIC]`, `[SHARED]`
+  and `[PRIVATE]`, in MONO.xs, the current one in ink and the other two
+  `--muted`. The row reads the same whichever is current.
+- **R55·173 · Sheet heading step (#643). Ruled.** (a) TYPE.title in light
+  too. (b) Every sheet and drawer heading takes it: confirms, pickers,
+  forms, receipts and the report. The ✕ sits in its own 44 column at the
+  right, so a two-line title wraps in its own column, never around the ✕.
+- **R55·186 · X2 phone bell (#648). Ruled.** Its own row, but not an empty
+  one: X2 keeps the first row of the screen it replaces (that screen's
+  title, with the bell at its end), and the band starts under it. The
+  bell never waits for the page to load.
+
+### Auth, landing, account, notifications and safety (#633)
+
+- **R55·174 · Signed-out 404 (#633). Drawn.** It wears the signed-out
+  frame (176). X1's body sits in the 620 column, centred at desk and in
+  the 20 gutter on the phone: "404" as a MONO.xs kicker, NOTHING HERE at
+  TYPE.display, the sentence, and Log in as the ink pill. On the phone
+  "No account? Request access" follows; at desk the bar already offers
+  it.
+- **R55·175 · Landing at desk (#633). Drawn.** The hero sits on
+  MEASURE.page's left edge, 96 under the bar, at MARKETING.hero (76 at
+  1280). The headline breaks by sentence: "LOG IT." always starts its own
+  line, and the first sentence balances over two (EVERY RUN HAS / AN
+  OUTFIT.); at 390 it takes three. The right half is the image slot,
+  still open under #523. Signed out at desk the hero has no button (the
+  bar holds Request access); at 390 it carries the pill. Signed in, it
+  never repeats the bar's Log a run and ends on "Go to your feed".
+- **R55·176 · One signed-out frame (#633). Ruled (revised).** One frame on
+  every signed-out page: landing, auth, request access, takedown, legal,
+  /open-source, public profile and kit, and the 404. The bar is 64 tall
+  at desk and 56 on the phone, shown at every width, with the content
+  edge on MEASURE.page. The wordmark is the pink-bracketed `[dialed.run]`
+  at TYPE.title. Right side: Log in as a text link and, at ≥720, Request
+  access as the 44 pink pill; a page that is one of those two drops its
+  own. A signed-in runner on a public page sees "Open in the app" (ink
+  pill) in their place. Footer: the five links. A page's own report link
+  ("Report this profile") sits at the foot of its body. "Request access"
+  everywhere, and "Request an invite" goes. Cross-links are quiet text
+  with a bold ink underlined link: "Have a code? Join" becomes "Have a
+  code? Create an account".
+- **R55·177 · Two failure bands (#633). Ruled.** One band at a time. The
+  newest failure replaces the older one, at the control that failed: a
+  form refusal above Create account, a Google refusal under the Google
+  button. Pressing either control again clears the band. A band never
+  repeats a line the page already shows, so the code band drops its own
+  "Request access" because "No code? Request access" sits under it. Log
+  in follows the same rule.
+- **R55·178 · Sign-up closing lines (#633). Confirmed.** The boards stand.
+  "No code? Request access" is left-aligned with the legal lines; only
+  the foot cross-link is centred. "dialed.run is invite-only for now." is
+  TYPE.small in `--quiet`, 8 under the title.
+- **R55·179 · Field fill and edge (#633). Drawn.** Fill: `--panel` in both
+  themes (white on paper, #16161B on ink). Rest edge: 1px `--hairline` in
+  light and 1px `--hairline-2` in dark, because `--hairline` disappears
+  against `--panel` there. Focused: a 2px `--ink` edge drawn inward.
+  Error: the same 2px `--ink` edge, plus the hi-viz message at the
+  field's full width. The fill never changes with state.
+- **R55·180 · Error summary (#633). Drawn.** Kicker, sentence and list sit
+  at an 8 rhythm. Rows are 8 apart, and a wrapped row keeps 1.4 leading
+  so it reads as one link. Each row's 44 target grows by padding with an
+  equal negative margin, adding no layout height. A field message fills
+  its field's width at every size, so in a two-up row both messages line
+  up.
+- **R55·181 · Receipts take the title (#633). Confirmed.** The receipt
+  replaces the form's title: a teal (`--dialed-text`) MONO.xs kicker,
+  then the receipt title as the TYPE.display line. Teal on every done
+  receipt: Request access, Takedown, Takedown confirm, Unsubscribed,
+  Confirmed, Email confirmed, Password set.
+- **R55·182 · Row end and both Sign outs (#633). Ruled (182.1, 182.2).**
+  (182.1) Two kinds of row. A row that does something ends in one bold
+  `--cold-text` verb with no chevron: every Account row (Change, Change,
+  Change, Sign out, Get a copy, Delete). A row that goes somewhere ends in
+  a chevron with no verb: every Settings index row, whose state ("Not
+  answered") moves to the subtitle. Delete account's label is ink: the
+  verb carries the danger. (182.2) Sign out everywhere becomes the last
+  SIGN-IN row: "Every device", subtitle "Signs out your phone and other
+  browsers", verb Sign out. Settings' Sign out is the index's last row,
+  alone in its group: "Signed in as @handle", verb Sign out. No centred
+  links, no lone pill.
+- **R55·183 · Notification rows (#633). Drawn.** Every row is TYPE.body
+  400, with no underline. A row that opens something gets a `--muted`
+  chevron at the right. Unread: the pink dot and ink. Read: no dot and
+  `--quiet`, on every row. The Strava row reads "New run on Strava. Upload
+  its file, then add what you wore." and opens the upload with that run's
+  date filled in. A row that opens nothing (a failed import) has no
+  chevron. The owner's note on #633 (2026-11-13) reads "that run's date"
+  as the calendar day the notification arrived, since no activity data is
+  stored or read.
+- **R55·184 · Mark all read, desk list, empty (#633). Drawn.** (a) A 44
+  row above the list: the unread count in MONO.xs at the left, Mark all
+  read at the right. Once all are read the row stays and reads ALL READ,
+  so the list never jumps. (b) One `--panel` list with hairline dividers,
+  a hairline edge and RADIUS.card at desk, edge to edge with no radius on
+  the phone. Unread is the dot, never a fill. (c) S2b stands: `[ QUIET ]`
+  and its sentence centred in the ruled panel.
+
+### The closet (#634)
+
+- **R55·185 · System state column, not-found (#634). Ruled.** A system
+  state takes the column and gutter of the screen it replaces: the
+  closet's MEASURE.page and 16 phone gutter, or the 620 column elsewhere.
+  Retrying never moves it. Not-found names the thing. Piece: "That piece
+  isn't in your closet. It may have been deleted." → Go to your closet.
+  Run: "That run isn't in your runs. It may have been deleted." → Go to
+  your runs. An entry keeps its sentence → Go to your feed.
+- **R55·187 · Grid row height, Add tile (#634). Drawn.** Names clamp to
+  two lines with an ellipsis, and the full name is the accessible name.
+  Two lines are always reserved, so every tile is one height and record
+  lines line up. The grid well is square (the piece page keeps the whole
+  photo). Add follows the last tile when there's room; when the count
+  fills the last row, Add becomes one 56-tall dashed row across the grid,
+  "+ Add a piece". The phone list ends the same way.
+- **R55·188 · New runner's closet (#634). Drawn.** The phone grid is two
+  columns at every count. A photo-less starter shows the hatch with its
+  category word at TYPE.heading in `--muted`, plus its `[GENERIC]` pill,
+  in the same square well as a photo tile, so mixed grids keep their
+  rows. Fifteen starters take about five phone screens, not 24.
+- **R55·189 · Range slot with no range (#634). Ruled.** Left out. A tile
+  without a range shows its record line only, and mileage joins that line
+  ("3/17 DIALED · 109 MI"). "Untested" keeps only the rail's meaning: no
+  verdicts.
+- **R55·190 · F title, "What is it?" (#634). Confirmed.** Sentence case at
+  TYPE.title: "Add a garment", "Edit Rover Half-zip". "What is it?" takes
+  the next group's rule: a hairline above, 24 above, 12 below to BRAND.
+- **R55·191 · Closet board differences (#634). Confirmed, one changed.**
+  The boards stand for (a) the two-column composition table, (b)
+  right-aligned rail counts, (d) the swatch inside the field before the
+  hex, and (e) "AS LABELLED BY …" tight under the composition. (c)
+  changes: the colourway swatch takes a 1px `--hairline-2` edge in both
+  themes, because `--hairline` doesn't separate navy from ink.
+- **R55·192 · WORKS AT, narrow range (#634). Drawn.** Thumbs always sit at
+  least 24 apart, centre to centre. A narrower range draws its span at
+  24, centred on the true values, and the readout keeps the exact
+  numbers. Reset moves into the header row: WORKS AT at the left, the
+  value and Clear at the right. Unset, it reads ANY. No row is ever added,
+  so COVERAGE never moves.
+- **R55·193 · Already in your closet (#634). Ruled.** In-use pieces first,
+  most worn first, then retired ones. RETIRED appears once, as the tag at
+  the right, and the meta line drops it. The card shows five and closes
+  on "+ 5 more tops", which opens the closet filtered to that type.
+
+### The Desk (#635, and #622 for 202–203)
+
+- **R55·194 · Desk shell (#635). Confirmed.** The board stands. Top bar:
+  `[dialed] DESK` at the left, `@handle · OPERATOR · SIGN OUT` at the
+  right. The current rail item gets a 2px hi-viz bar on its left edge, a
+  `--panel` fill and bold text. Hi-viz text is kept for counts that need a
+  person. The wordmark is `[dialed]`. The rail footer stays, pinned to the
+  rail's foot: `SCREENING · OK / LAST DIGEST · 07:00`. The board draws only
+  the healthy footer; the owner's note on #635 (2026-11-13) adds
+  `SCREENING · HOLDING` in hi-viz while any screening breaker is over its
+  hourly ceiling, and `LAST DIGEST · NOT YET` before the digest's first
+  run (otherwise its time as HH:MM UTC).
+- **R55·195 · Desk on a phone (#635). Drawn.** A 48 top row with
+  `[dialed] DESK` and Sign out. Under it, one sticky row of the seven
+  destinations with their counts, scrolling sideways; the current one has
+  a 2px hi-viz underline and is scrolled into view on load. The heading
+  starts about 110 down, not 470.
+- **R55·196 · Today's numbers (#635). Confirmed.** Four `--panel` cards,
+  two by two at 620 and on a phone. Each has a TYPE.display numeral, its
+  TYPE.body label and a MONO.xs caption. Numerals that need a person are
+  hi-viz above zero, and so is "HIDDEN UNTIL YOU LOOK" (`--muted` at
+  zero). Flagged accounts' caption: "NONE FLAGGED" at zero, otherwise
+  "OLDEST · 2D". The card opens Runners → Flagged.
+- **R55·197 · Review rows, removal requests (#635). Drawn.** The boards
+  stand for both. A `--panel` row at RADIUS.card, 12 apart, with 16
+  padding: a head strip (`KIND · id · @owner [SOURCE]` in MONO.sm at the
+  left, age or clock at the right), a hairline, the body, a hairline, the
+  bar. Ids show their first and last four characters. A closed row is its
+  head strip, a one-line summary and a chevron; the whole strip is the
+  button, and it opens in place. The clock is bold hi-viz text. OVERDUE is
+  a filled hi-viz tag with ink text. Removal requests take the same head:
+  `ENTRY · id · @owner [VIA /TAKEDOWN]`. This conflicts with R54·168.3's
+  Review row opening the kit in the detail pane, so #644 has gone back to
+  Design for Round 56.
+- **R55·198 · Their other photos (#635). Drawn.** Fixed square tiles, 96
+  at desk, six across, and three across on a phone at the column's width.
+  Each id is shortened to its first and last four characters, with the
+  full id as the tooltip and accessible name. The block moves below the
+  reason and WHO REPORTED, just above the bar.
+- **R55·199 · Copyright hold presses (#635). Ruled.** Restore keeps the
+  chalk. Delete is the hairline pill and opens its confirm. Once the court
+  action is recorded, Take it down leaves the bar, so there are two
+  presses.
+- **R55·200 · Used-by cell (#635). Drawn.** MONO.xs "29 USED", then the
+  first five handles as links to Runners. "+ 24 more" opens the code in
+  the detail pane with the full list. Uses read "29 / 1,000,000",
+  grouped, and a code with no cap reads "29 / NO LIMIT". An unused code
+  reads NOT USED YET.
+- **R55·201 · Runners tones (#635). Confirmed.** Reports: non-zero hi-viz,
+  zero `--muted`. `[ACTIVE]` `--muted`. `[CLOSED]` and `[PENDING DELETE]`
+  ink-inverse. `[FLAGGED]` hi-viz.
+- **R55·202 · Detail pane threshold (#622). Changed.** `desk` (1040)
+  stands, with no 1280 step. Below `desk`, a picked row's pane no longer
+  drops under the table: it opens as the desk drawer (164.1) over the
+  table, and the picked row stays marked. This settles the first collapse
+  in "Built from round 54 · 168.3" below and changes its below-`desk`
+  half; it builds with #618's drawer.
+- **R55·203 · Detail pane width (#622). Confirmed.** The 2fr/1fr track
+  stands. No 320 MEASURE.
+
+### Feed, profiles, entry detail, search and public pages (#636)
+
+- **R55·204 · Own card author line (#636). Ruled.** A relative time drops
+  the clock: "1H AGO · YOU". A separator is bound to the item after it (a
+  no-break space before "·"), so it never ends a line. `[UNDER REVIEW]`
+  and the badge keep the handle's line, and the meta wraps under it as a
+  whole.
+- **R55·205 · Feed card rhythm (#636). Drawn (revised).** Posts are split
+  by an 8 `--tint` band from edge to edge, and the strip keeps its
+  `--hairline` rules. There's 16 above and below the content. Useful's 44
+  target grows into the band with a negative margin. The avatar is
+  centred on the handle's line. The watch name joins the meta line ("TUE
+  NOV 3 · 6:49 PM · FORERUNNER 265") and truncates. The verdict badge
+  keeps the byline's right end. Useful stays "♡ N USEFUL", so the byline
+  stays two lines.
+- **R55·206 · Photo loading and failed (#636). Drawn.** Loading: the slot
+  is `--photo` at the photo's ratio. Failed: it stays `--photo`, with the
+  hatch and MONO.xs "PHOTO DIDN'T LOAD" at the bottom left. The img is
+  hidden on error, so there's no browser icon and no outline. Dark is the
+  same with its own `--photo`.
+- **R55·207 · Crops, counter, pager (#636). Drawn.** 4:5 on the card and
+  D, square on the public tile. The counter sits bottom right everywhere:
+  MONO.xs ink on a `--ground` chip. On D at desk the photo is capped at
+  560 tall, centred on `--photo` in the column. Two 44 round `--ground`
+  buttons with a hairline sit inside its left and right edges, each
+  hidden at its end, and the arrow keys work too.
+- **R55·208 · Your conditions bars (#636). Confirmed.** The board: a fixed
+  96 track at every width, with the name and count together beside it
+  ("Tops 12"). Rows are garment types.
+- **R55·209 · G sections (#636). Confirmed, (f) drawn.** (a) AB3: square
+  slots 16 tall, word bold. (b) Singular: "1 RUN". (c) Brand and model,
+  "[39 RUNS]". (d) Header counts in ink. (e) The count beside its band.
+  (f) One next step, "Your last run has no kit yet.", with the pink caps
+  ADD YOUR KIT, then the Settings row.
+- **R55·210 · Run row on G and H (#636). Drawn.** One row for both
+  profiles. The date is the link (TYPE.body 600, underlined). Under it,
+  one MONO.sm line: conditions · verdict in its colour · distance, with
+  `[UNDER REVIEW]` at the line's end. About 60 tall, with hairlines
+  between rows and after the last. At desk the row runs the 620 column,
+  with no right-hand cell.
+- **R55·211 · Confirm band (#636). Confirmed.** R29: flush under the
+  header with one hairline below, the sentence on one line, and Resend
+  link in `--cold-text`.
+- **R55·212 · D kit list (#636). Confirmed.** The public kit's row: a
+  hairline between pieces, the name at TYPE.body with 1.35 leading, and
+  the type word in MONO.xs at the right.
+- **R55·213 · D delete link (#636). Confirmed.** R27: TYPE.body 600,
+  `--cold-text`, underlined, under YOURS.
+- **R55·214 · Report or block a profile (#636). Drawn.** Its own sheet,
+  "Report or block @handle", at TYPE.title, with profile reasons only.
+  The footer holds SEND REPORT (pink caps), "Send and block" (hairline
+  pill), and "Block without reporting" as a text link. A block alone
+  needs no reason and asks only for its confirm.
+- **R55·215 · W1 way-out line (#636). Confirmed.** R37: inside the chosen
+  row of the one-card list, under the reason's words, in TYPE.small.
+- **R55·216 · City finder line (#636). Ruled.** Before Use this: "We'll
+  save it to your settings. Change it any time under You." After: "Saved
+  to your settings." Not found: no line.
+- **R55·217 · Search results (#636). Ruled.** A second MONO.xs line per
+  row: "41 RUNS · SINCE OCT 2026". The avatar shows their photo when they
+  have one. In a list, Follow is the 44 hairline pill and Following is
+  `--muted` text, so the only pink is Log a run.
+- **R55·218 · Public profile (#636). Ruled.** (a) Past 17 characters the
+  handle steps down from TYPE.display to TYPE.title and may break only
+  after "\_" (`wbr`), never inside a word. (b) and (c) are the boards. (d)
+  is drawn: each rail group shows its first five and closes on "+ N
+  more", which opens the full rotation. A group of six shows all six.
+  Retired folds to one line.
+- **R55·219 · Public kit body (#636). Confirmed.** R41 and R42: ruled
+  stats, kit rows ruled top and bottom with 600 names, the ink invite
+  card with the full-width pink Request access (176 wording), and "What
+  is dialed.run?" pink at 600. Three stats fill three tracks.
+- **R55·231 · Call coverage (#636). Drawn (revised).** One strip of square
+  band cells over an axis, and a one-line legend listing only the states
+  present. The card counts toward the Call's threshold: "15 OF 15
+  NEEDED". The coverage head counts every verdict: "44 VERDICTS IN ALL".
+  Each cell's count sits under its axis label. With all fifteen logged,
+  the page ends on its sentence and a "Log another run" link.
+
+### The legal pages and /open-source (#637)
+
+- **R55·220 · Wide legal table (#637). Drawn (revised).** Below desk, each
+  row becomes a `--panel` card: the processor as its heading, then label
+  and value pairs. At desk the contents rail stays, and the table breaks
+  out to the right, from the text's left edge to MEASURE.page's right
+  edge, with one line per cell where it fits. Two-column tables stay
+  tables at both widths.
+- **R55·221 · The name in brackets (#637). Confirmed (revised).** Titles
+  are the boards' short names: Privacy policy, Terms of use, Copyright.
+  In prose the name is plain dialed.run in ink, with no brackets and no
+  bold. A draft marker, while one shows, is its sentence on a hi-viz
+  highlight, led by a MONO.xs OWNER tag, with no brackets.
+- **R55·222 · Heading levels (#637). Ruled.** Section: TYPE.title in the
+  display face, with a hairline above and 48 above that. Sub-section:
+  TYPE.heading. List lead-ins: TYPE.body 600. Text stays TYPE.lead in the
+  620 measure.
+- **R55·223 · Draft notice (#637). Drawn (revised).** The app's notice
+  block (`--tint`, RADIUS.none) under the title and above the contents at
+  both widths: MONO.xs DRAFT, "Not reviewed by a lawyer yet." in ink,
+  then the provenance in TYPE.small `--quiet` inside the same block.
+  Inline code is MONO.md, and file names never break.
+- **R55·224 · Email addresses (#637). Changed.** Every email address is a
+  mailto link in the link style, including Contact sections and the
+  copyright agent. R27's plain address changes.
+- **R55·225 · Third-party notices (#637). Confirmed.** R39's four rows.
+  Search filters them, and the rail filters with them.
+- **R55·226 · Browser glyphs (#637). Ruled.** Disclosure: the text link
+  "Read the licence text" with the icon set's chevron, turning when open.
+  Clear: the icon set's ✕ in ink at a 44 target, shown only when the
+  field has text. No browser glyphs.
+
+### Onboarding, settings and the Call (#638)
+
+- **R55·227 · O1 question (#638). Confirmed.** TYPE.heading, directly over
+  the answers. Any legend that is a question gets the same. A name legend
+  (WHERE YOU RUN, TEMPERATURE) stays MONO.xs.
+- **R55·228 · O1 Where you run (#638). Confirmed.** (a)–(d) as guessed.
+  Place name: city, region, country. The region is its postal
+  abbreviation where one exists ("MINNEAPOLIS, MN, UNITED STATES") and its
+  name otherwise. County and district are always dropped. The chip is one
+  line at field height and truncates at its end.
+- **R55·229 · P2.5 naming row (#638). Confirmed.** AC2a and AC3a without
+  the payout lines. Open: a 2px ink edge, Save as the hairline pill with
+  "Brand alone is enough." beside it, and suggestions as chips. Empty
+  save: the error replaces the note. Named: a teal edge and the teal
+  "BOTTOM · MATCHED".
+- **R55·230 · Settings REVIEW (#638). Confirmed.** The board's groups:
+  Blocked runners and Notifications move under WHO SEES WHAT. REVIEW is a
+  pink tag on the Privacy row. It shows when a privacy setting has been
+  added or changed since the runner last opened Privacy, and clears when
+  they open it. The owner's note on #638 (2026-11-13) says how: a nullable
+  per-runner "last opened Privacy" time against a privacy-settings
+  revision date kept in code; opening Privacy stamps it, and a new account
+  starts stamped.
+
+(231, the Call's coverage, was relayed on #636 and is listed there.)
+
+### Runs, upload, manual entry, attach and verdict (#639)
+
+- **R55·232 · A1 long primary (#639). Ruled.** Shorter: "WHAT DID YOU
+  WEAR?". Moving on is what confirms the parse. A button label never
+  wraps, so no centring rule is needed (`tokens.js`'s RADIUS_RULES cites
+  it).
+- **R55·233 · No conditions block (#639). Drawn.** The slot keeps the
+  block's size. Waiting: a 1px `--hairline-2` outline at RADIUS.card, with
+  MONO.xs "FETCHING WEATHER" at the top left and "Usually under a minute.
+  You can go on without it." Treadmill: the ink block reads "INDOOR ·
+  TREADMILL", with "NO WEATHER FOR AN INDOOR RUN" under it. At desk the
+  block sits in the 620 column (168), not a rail. Run detail uses the
+  same two.
+- **R55·234 · Wrong file (#639). Confirmed.** The board: "Wrong file? Tap
+  REPLACE above.", with REPLACE in `--cold-text`.
+- **R55·235 · Runs list (#639). Drawn.** (a) Month headings in MONO.xs
+  with that month's count. One 64 row: the date, one mono line
+  (conditions · distance · watch), and the verdict and kit marks at the
+  right. Badges only for exceptions. The list ends on "THAT'S EVERY RUN ·
+  SINCE AUG 2026". (b) The board: every badge 22 tall. (c) "STRAVA
+  REMINDERS · ON ›" moves to a line under the title.
+- **R55·236 · Verdict backlog (#639). Drawn (revised).** At desk the table
+  takes MEASURE.page. The rail goes: the picked row is marked in the
+  table, so the "Selected" card is dropped, and the credit sits once under
+  the table. One line per cell: date, run (time · distance), conditions,
+  outfit (the suggestion with Use and Pick, or the kit truncated), then
+  the five verdict segments inline. Dates and numbers never break. On a
+  phone, one card per run as S1: date, run, conditions, kit, the five
+  segments. LOG IT appears on a card once a verdict is picked.
+- **R55·237 · Empty backlog (#639). Drawn.** The title is VERDICTS, at the
+  runs pages' TYPE.display step, so it's true at zero. The count line
+  reads `[ALL LOGGED]` in teal, then "Every run has a verdict. Your next
+  one shows up here once it's logged." and "Go to your runs".
+- **R55·238 · T1 Strava (#639). Confirmed.** R39 for both states.
+  Connected: the title, then "Connected as {athlete}. We'll remind you
+  when a run lands.", then Disconnect as a text link that opens its
+  confirm.
+- **R55·239 · A2 picker tiles (#639). Drawn.** A 72 square: the photo when
+  there is one, otherwise the hatch with the type word. The full name
+  sits under the tile in TYPE.small, clamped to two lines. Pressed: a 2px
+  pink ring outside a 2px `--ground` gap.
+- **R55·240 · A2 suggestion and waiting (#639). Confirmed.** The board:
+  outlined mono pills, Change as the outlined pill beside That's it, and
+  the waiting line left-aligned with pink brackets. The conditions chip
+  stays while waiting.
+- **R55·241 · A2 attached photo (#639). Confirmed.** The board's 76
+  thumbnail at RADIUS.field, beside the add box, at both widths. Pressing
+  it opens the full photo.
+- **R55·242 · Back link, This run card (#639). Confirmed.** "← Back" above
+  the title at both widths. A2's This run card matches A3's.
+
+## Answered in round 54 (imported 2026-11-13)
+
+Design answered as `Round 54 Rulings.dc.html`, items 164–170 (dated
+2026-11-12; seven answers settling 37 styling-audit findings). The board's
+text is the text of record; each ruling is also a comment on its issue.
+`design/tokens.js`'s RADIUS_RULES is updated with it (167.3, with 167.2's
+widths). 168.3 was built by #650 (design 207; see "Built from round 54 ·
+168.3" below), 165 and 169 by #649, and 170 by #651. 166.3 and 167.1
+became D-185 and D-186. The notices (D-144, DS5) were taken as read.
+
+- **R54·164 · The desk sheet (#618). Changed, drawn and ruled.** (164.1,
+  changed) At ≥720 the page and top bar stay visible, undimmed and inert,
+  with no scrim (DS5). The sheet is a 390 drawer, 24 under the top bar and
+  24 from the right edge, taking `--card` in light and `--panel` in dark, a
+  1px `--hairline` all round, RADIUS.sheet and one soft lift. The opaque
+  ground backdrop goes. At 1280 it covers the column's right edge, as
+  intended. (164.2, drawn) A confirm (delete run) fits its content:
+  title, sentence, Delete as an ink pill, Keep it as a hairline pill, full
+  drawer width. Esc, the ✕ and Keep it close it; focus goes into the
+  drawer and back to the trigger on close. (164.3, ruled) A2b and A3b at
+  desk are a push into the 620 column, not a sheet, as round 25 said: back
+  link, title, meta, search, one card of checkboxes, then Done as the pink
+  caps button at content width. The URL changes, and the back link keeps
+  the picks. Rule: a list that can grow pushes; a question about the
+  current screen gets a sheet. (164.4, drawn) A long drawer runs the
+  window's height less 24 top and bottom. Header and footer are pinned
+  and the body scrolls. The footer holds the one-line consequence and both
+  actions, so Send report is always in view; "What happens next" moves to
+  the body's end. The fold is marked by the footer's hairline and the
+  body's last row cut against it, with no fade. The header gains its
+  hairline once the body scrolls. The same applies on phone once a sheet
+  passes 90% of the viewport's height.
+- **R54·165 · Dark phone sheet (#619). Confirmed and extended; built
+  (#649).** The sheet takes `--panel`, a 1px `--hairline` over the top
+  corners and down the sides, a 36×4 `--hairline-strong` grabber and a
+  TYPE.title heading. Stacked: the lower sheet takes a second 60% scrim
+  and sits at least 48 taller, and the upper one's edge is
+  `--hairline-strong`. Never more than two. Light is unchanged (`--ground`,
+  no hairline). Dark Delete is the inverse ink pill.
+- **R54·166 · Checkbox, radio and switch (#620). Drawn, confirmed and
+  ruled.** (166.1, drawn) Checkbox: a 20 square, RADIUS.tight, 2px ink
+  edge; on, an ink fill with a `--ground` tick. Focus: a 2px `--ground`
+  gap, then a 2px pink ring. Unavailable: a `--hairline` edge, a `--muted`
+  label, not focusable, with a reason line. Dark inverts ink and ground. A
+  44 target covers the label. The switch is a 48×28 track with a 2px ink
+  edge and an ink knob, filling pink when on. (166.2, confirmed) Radio: an
+  ink ring with a 10 ink dot. The chosen ChoiceList row takes a 2px ink
+  edge drawn inward, following the card's corners at its ends. The ring
+  and edge mark the choice, never weight. Every ChoiceList is one card
+  with hairline dividers, so W1's reasons and Privacy become one card too.
+  (166.3, ruled; D-185) Saves the moment you change it: a pink switch at
+  the row's right, announced "Saved", with no "· SAVES AS YOU SWITCH"
+  eyebrow. Goes with a submit (a form option or a consent): a checkbox.
+  One of several, waiting for Save or Next: a radio. Filters stay chips
+  (R46·109). So Public profile, anonymous totals and notification
+  settings are switches; indoor/treadmill, wind and water resistant, and
+  the A2b picks are checkboxes. (166.4, ruled) The audience picker is one
+  card, three rows, ink rings, as rounds 41 and 47 drew it; the three-card
+  build goes. (166.5, ruled) Choice labels are 400 always. Name labels are
+  MONO.sm capitals at 400: PRIVATE / SHARED / PUBLIC match SYSTEM / LIGHT
+  / DARK. Sentence labels (W1 reasons, O1) are TYPE.body 400. A switch
+  row's label is TYPE.body 600, because it names the row. (166.6,
+  confirmed) W1's block option is the board's second button, "Send and
+  block", a hairline pill under Send report with a consequence line
+  beneath; accessible name "Send report and block {handle}". The tick box
+  goes.
+- **R54·167 · Primary buttons (#621). Ruled and changed.** (167.1, ruled;
+  D-186) Product flow: pink caps at RADIUS.card, 52. Account, signed-out,
+  settings Save and confirm sheets: ink pill, 48. Shell and marketing:
+  pink pill, 44. Secondary is always the hairline pill, tertiary a text
+  link. A hairline pill is never alone: if it is the only action, it is
+  the primary and takes the surface's primary kind. P3 takes the pink caps
+  primary with "Done for now" as its hairline pill. Forgot, reset,
+  unsubscribe, takedown, in-app request access and settings Save move to
+  the ink pill. (167.2, ruled) At ≥720 in a column, buttons hug the label
+  (SPACE 6 a side, 200 minimum), left-aligned, primary first in a row
+  with a 12 gap, never spanning the 620. Inside a desk drawer: full drawer
+  width, stacked. Below 720: full width, stacked. (167.3, changed)
+  RADIUS_RULES' "Filled action buttons are always pill" gains one
+  exception: the product-flow primary is RADIUS.card. Its caps don't wrap
+  either: shorten the copy. `tokens.js` is updated with this import.
+- **R54·168 · The column (#622). Ruled and drawn; 168.3 built (#650).**
+  (168.1, ruled) At ≥720 every runner screen is one MEASURE.column (620),
+  centred in the window at 1280 and 1440. That includes run detail, edit
+  garment and the Call, which lose the 390 panel, and profiles, which lose
+  their 4px offset. (168.2, ruled) Exceptions, inside MEASURE.page (1180)
+  centred: the closet list grid uses the full 1180; Add and edit garment
+  at ≥1040 put the 620 form at the page's left, with "Already in your
+  closet" as a rail in the rest of the 1180, and below 1040 the rail drops
+  under the form. Feed X isn't in v1, so Feed is centred. (168.3, drawn)
+  Runners, Codes and Review fill the width beside the rail (up to 1180),
+  with a 320 sticky detail pane at ≥1280. Cells hold one line each:
+  handles and emails truncate, dates don't break, numbers right-align.
+  Today, Corrections, Duplicates, Requests and Gave up keep 620. Built by
+  #650 with two collapses (see below), which R55·202–203 answer. Review's
+  pane is in dispute: R55·197 draws Review's rows opening in place with no
+  pane, and #644 has gone back to Design for Round 56.
+- **R54·169 · The bell (#623). Drawn and confirmed; built (#649).**
+  (169.1, drawn) The empty row goes. The bell sits in a 44 target at the
+  end of the screen's first row: right of the title (after Find runners on
+  Feed), inverse inside A2's ink header, and sharing the back link's row
+  on sub-pages, where the back link moves above the title. (169.2,
+  confirmed) On every signed-in screen at both widths, including the
+  closet list, piece, new and edit, Blocked runners and pushes. At desk it
+  has a fixed top-bar slot between search and Log a run, so nothing shifts
+  between tabs.
+- **R54·170 · Per-card credit (#624). Drawn; built (#651).** "VISUAL
+  CROSSING", MONO.xs `--muted` and underlined, at the right end of the
+  conditions strip, linked, with the accessible name "Weather data
+  provided by Visual Crossing". Same with or without a photo. The
+  sentence line under every card goes. The full sentence appears once per
+  screen: under the band, or in the conditions block or ink header on
+  detail screens. Indoor and no-conditions runs carry no credit.
+
 ## Built from round 54 · 168.3 (wave 7, design 207)
 
 How the Desk's wide pages (Round 54 · 168.3, #622) were built for #627,
-with what the scale made of the drawing. The coordinator is putting the two
-collapses to Design as a Round 55 CONFIRM item.
+with what the scale made of the drawing. Round 55 answered both collapses
+(202, 203): see that section.
 
 - **COLLAPSE · the 1280 threshold → `desk` (1040).** The pane sits beside
   the table from BREAKPOINT.desk, since 1280 is not a breakpoint
   (`tokens.js`: "write them with these exact values, nothing else"). Below
-  `desk` it drops under the table, as drawn.
+  `desk` it drops under the table, as drawn. **Superseded by R55·202:**
+  below `desk` the pane opens as the 164.1 desk drawer (wave 8).
 - **COLLAPSE · the 320 pane → a grid track.** 320 is not a MEASURE, and
   "rails inherit from the grid, not from a px": table and pane are
   `minmax(0,2fr) minmax(0,1fr)`, about 340 wide at 1280 and 260 at 1040.
@@ -1103,9 +1629,9 @@ collapses to Design as a Round 55 CONFIRM item.
   the grid, their actions included.
 - **Codes:** one grid with a subgrid per row, one line a cell, and no pane:
   the ruling draws nothing for a code's pane.
-- **Not built yet:** Review's row opening the kit view in the pane
-  (R51·153). Review has the wide frame and one-line titles; the pane is
-  #644.
+- **Not built:** Review's row opening the kit view in the pane
+  (R51·153, #644). R55·197 since draws Review's rows opening in place with
+  no pane, so #644 is back with Design for Round 56.
 
 ## Answered in round 53 (imported 2026-11-12)
 

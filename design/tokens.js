@@ -151,7 +151,8 @@ export const RADIUS = {
 export const RADIUS_RULES = [
   'The 26px phone-artboard corner is the drawing\'s device frame, not a token. Nothing in-app uses it.',
   'A card inside a sheet steps down one radius (sheet → card). Never nest the same radius twice.',
-  'Filled action buttons are always pill. Text in a pill never wraps — shorten the copy.',
+  'Filled action buttons are pill, with one exception (round 54 #167.3): the product-flow primary (pink caps) is RADIUS.card. Text in a button never wraps. Shorten the copy (round 55 #232).',
+  'Round 54 #167.2: at ≥720 in a column, buttons hug the label (SPACE[6] each side, 200 minimum), left-aligned. In a desk drawer and below 720 they are full width and stacked.',
 ];
 
 /**
