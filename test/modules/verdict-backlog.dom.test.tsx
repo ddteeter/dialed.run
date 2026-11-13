@@ -147,8 +147,25 @@ describe("VerdictBacklog: what a row offers", () => {
       screen.getAllByRole("columnheader").map((cell) => cell.textContent),
       // Round 16: the header asks A3's question. It used to read
       // "Verdict · 1–5", and a reviewer could not tell what the digits were.
-    ).toStrictEqual(["Run", "Conditions", "Outfit", "Did it work?"]);
+      // Round 55 · 236: the date has a column of its own.
+    ).toStrictEqual(["Date", "Run", "Conditions", "Outfit", "Did it work?"]);
     expect(rowsOf()).toHaveLength(1);
+    // One line per cell at the desk: dates and numbers never break.
+    const cells = within(rowsOf()[0] ?? document.body).getAllByRole("cell");
+    expect(cells).toHaveLength(5);
+    for (const cell of cells) {
+      expect(cell).toHaveClass(
+        "block",
+        "desk:table-cell",
+        "desk:px-2",
+        "desk:py-1",
+        "desk:align-middle",
+        "desk:whitespace-nowrap",
+      );
+    }
+    // The outfit takes what is left, and truncates in it.
+    expect(cells[3]).toHaveClass("desk:w-full", "desk:max-w-0");
+    expect(screen.getByText(/^Same as /u)).toHaveClass("min-w-0", "truncate");
   });
 
   it("offers the kit the runner wore in the nearest conditions", async () => {
@@ -206,8 +223,14 @@ describe("VerdictBacklog: what a row offers", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
 
-    expect(screen.getByText("Janji half-zip")).toBeInTheDocument();
-    expect(screen.getByText("Bandit split")).toBeInTheDocument();
+    // Round 55 · 236: one line of names, truncated at the desk.
+    const kit = screen.getByText("Janji half-zip, Bandit split");
+    expect(kit).toHaveClass(
+      "block",
+      "text-small",
+      "text-quiet",
+      "desk:truncate",
+    );
     expect(screen.queryByRole("button", { name: /^Use — / })).toBeNull();
   });
 });
@@ -395,7 +418,9 @@ describe("VerdictBacklog: saving", () => {
     });
     expect(rowsOf()).toHaveLength(2);
     expect(rowsOf()[0]).toHaveAttribute("data-saved", "true");
-    expect(rowsOf()[0]).toHaveClass("bg-tint");
+    // The tint is the picked row's (Round 55 · 236), which has moved on.
+    expect(rowsOf()[0]).toHaveClass("desk:bg-transparent");
+    expect(rowsOf()[1]).toHaveClass("desk:bg-tint");
   });
 
   it("asks for the outfit first, because A3 does too", async () => {
@@ -449,7 +474,13 @@ describe("VerdictBacklog: saving", () => {
     // not say which row. Marked by border weight, never by hue — "pink is
     // action, never failure".
     expect(rowsOf()[0]).toHaveAttribute("data-failed", "true");
-    expect(rowsOf()[0]).toHaveClass("border-b-2", "border-ink");
+    // A card's whole edge below the desk; the bottom rule at it.
+    expect(rowsOf()[0]).toHaveClass(
+      "border-2",
+      "border-ink",
+      "desk:border-x-0",
+      "desk:border-t-0",
+    );
   });
 
   it("clears the failure mark when the row is tried again", async () => {
@@ -472,14 +503,19 @@ describe("VerdictBacklog: saving", () => {
     // names what is still true: the run is not logged.
     const band = document.querySelector("[data-slot='row-failure']");
     expect(band?.previousElementSibling).toBe(rowsOf()[0]);
-    expect(band?.querySelector("td")).toHaveAttribute("colspan", "4");
+    expect(band?.querySelector("td")).toHaveAttribute("colspan", "5");
     expect(band).toHaveTextContent("Not logged");
     expect(band).not.toHaveTextContent("Nothing saved");
     expect(band).toHaveTextContent("Our end failed. Nothing changed.");
     expect(band?.querySelector("[data-part='failure-band']")).not.toBeNull();
-    // On the row being worked, the band shows below the desk as well.
+    // Under its card below the desk, under its row from it up.
     expect(band).toHaveClass("block", "desk:table-row");
-    expect(band).not.toHaveClass("hidden");
+    expect(band?.querySelector("td")).toHaveClass(
+      "block",
+      "desk:table-cell",
+      "desk:px-2",
+      "desk:pb-3",
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     await waitFor(() => {
@@ -505,9 +541,7 @@ describe("VerdictBacklog: saving", () => {
     fireEvent.keyDown(here(), { key: "ArrowDown" });
 
     const band = document.querySelector("[data-slot='row-failure']");
-    expect(band).not.toBeNull();
-    // Waiting its turn below the desk, like the row it belongs to.
-    expect(band).toHaveClass("hidden", "desk:table-row");
+    expect(band?.previousElementSibling).toBe(rowsOf()[0]);
     expect(rowsOf()[0]).toHaveAttribute("data-failed", "true");
   });
 
@@ -547,9 +581,16 @@ describe("VerdictBacklog: what each state is drawn as", () => {
         "rounded-none",
         "font-mono",
         // MONO.xs is the floor everywhere (`tokens.js`), which is what the
-        // board's own 9px would have broken.
+        // board's own 9px would have broken — and in capitals, as the
+        // step is everywhere else (D1-11).
         "text-mono-xs",
+        "uppercase",
+        // Narrow on a card, so "Dialed" clears its borders at 390.
+        "px-0.5",
+        "desk:px-2",
       );
+      // The capitals are CSS: the name a reader hears stays in words.
+      expect(slot(name).textContent).toMatch(/^[A-Z][a-z ]+$/u);
     }
 
     fireEvent.click(slot(/^Way cold/));
@@ -586,25 +627,31 @@ describe("VerdictBacklog: what each state is drawn as", () => {
       }),
     ]);
 
-    const rail = document.querySelector("[data-slot='backlog-rail']");
-    expect(rail?.textContent).toContain("Wed Sep 2");
-    expect(rail?.textContent).not.toContain("Thu Sep 3");
-    expect(screen.getAllByText("Wed Sep 2").length).toBeGreaterThan(0);
+    expect(screen.getByRole("cell", { name: "Wed Sep 2" })).toBeVisible();
+    expect(screen.queryByText("Thu Sep 3")).toBeNull();
+    expect(slot(/^Dialed/)).toHaveAccessibleName("Dialed — Wed Sep 2");
   });
 
   it("dates a row with no known zone in UTC", async () => {
     const lateEvening = Math.floor(Date.UTC(2026, 8, 3, 3, 30) / 1000);
     await renderTable([row({ startedAt: lateEvening })]);
 
-    const rail = document.querySelector("[data-slot='backlog-rail']");
-    expect(rail?.textContent).toContain("Thu Sep 3");
+    const date = screen.getByText("Thu Sep 3");
+    // A body line on a card; the mono date column at the desk.
+    expect(date).toHaveClass(
+      "text-body",
+      "font-semibold",
+      "desk:font-mono",
+      "desk:text-mono-sm",
+      "desk:font-normal",
+      "desk:uppercase",
+    );
   });
 
   it("writes the conditions as one measured line", async () => {
     // The actual temperature, the condition, the wind in the viewer's own
-    // units — mono, with the brand's separator. The row and the rail
-    // render the same line, which is why it is a function rather than two
-    // pieces of markup.
+    // units — mono, with the brand's separator, in the dialed text colour
+    // (Round 55 · 236).
     //
     // This asserted "37° · Clear · WIND 9": feels-like where DS2 draws the
     // actual temperature, and the fixture's 9 kph printed as 9 to a viewer
@@ -613,7 +660,9 @@ describe("VerdictBacklog: what each state is drawn as", () => {
     // what caught it. 5°C is 41°F; 9 km/h is 6 mph.
     await renderTable([row()]);
 
-    expect(screen.getAllByText("41° · Clear · 6mph")).toHaveLength(2);
+    const line = screen.getByText("41° · Clear · 6mph");
+    expect(line).toHaveAttribute("aria-hidden", "true");
+    expect(line.parentElement).toHaveClass("text-mono-sm", "text-dialed-text");
   });
 
   it("says how long and how far, in the viewer's own units", async () => {
@@ -626,12 +675,40 @@ describe("VerdictBacklog: what each state is drawn as", () => {
     expect(screen.getByText("40 minutes, 5.0 miles")).toHaveClass("sr-only");
   });
 
-  it("draws a resting row with a hairline and no wash", async () => {
-    await renderTable([row()]);
+  it("draws a run as a card below the desk and a row on a hairline at it, the picked one tinted", async () => {
+    await renderTable([row(), bare]);
 
-    const [only] = rowsOf();
-    expect(only).toHaveClass("row-press", "border-b", "border-hairline");
-    expect(only).not.toHaveClass("bg-tint");
+    const [picked, resting] = rowsOf();
+    const shape = [
+      "row-press",
+      "flex",
+      "flex-col",
+      "gap-2",
+      "rounded-card",
+      "border",
+      "bg-panel",
+      "p-4",
+      "desk:table-row",
+      "desk:rounded-none",
+      "desk:border-x-0",
+      "desk:border-t-0",
+      "desk:p-0",
+    ];
+    expect(resting).toHaveClass(
+      ...shape,
+      "border-hairline",
+      "desk:bg-transparent",
+    );
+    expect(resting).not.toHaveClass("desk:bg-tint");
+    // Round 55 · 236: the picked row is marked in the table, so no rail.
+    expect(picked).toHaveAttribute("aria-current", "true");
+    expect(picked).toHaveClass(...shape, "border-hairline", "desk:bg-tint");
+    expect(screen.getByRole("table").querySelector("tbody")).toHaveClass(
+      "flex",
+      "flex-col",
+      "gap-3",
+      "desk:table-row-group",
+    );
   });
 
   it("spells out every key it claims, beside what it does", async () => {
@@ -732,68 +809,102 @@ describe("VerdictBacklog: what each state is drawn as", () => {
   });
 });
 
-describe("VerdictBacklog: the rail", () => {
-  it("shows the selected run's conditions, and follows the selection", async () => {
+describe("VerdictBacklog: no rail (Round 55 · 236)", () => {
+  it("credits the weather once, under the table, and carries none of design's notes", async () => {
     await renderTable([row(), bare]);
 
-    const rail = document.querySelector("[data-slot='backlog-rail']");
-    expect(rail?.textContent).toContain("Selected");
-    // Every row here shares one observation, so what proves the rail
-    // follows the selection is the day it names.
-    expect(rail?.textContent).toContain("Sep 2");
-
-    fireEvent.keyDown(here(), { key: "ArrowDown" });
-    expect(rail?.textContent).toContain("Sep 4");
-  });
-
-  it("attributes the weather it shows, and carries none of design's notes", async () => {
-    await renderTable([row()]);
-
-    const rail = document.querySelector("[data-slot='backlog-rail']");
+    expect(document.querySelector("[data-slot='backlog-rail']")).toBeNull();
+    expect(screen.queryByText(/^Selected/u)).toBeNull();
     // Visual Crossing's free tier requires attribution wherever conditions
-    // are shown, and the rail shows them.
-    expect(rail?.textContent).toContain(
-      "Weather data provided by Visual Crossing",
+    // are shown.
+    const credits = screen.getAllByText(/Weather data provided by/u);
+    expect(credits).toHaveLength(1);
+    const table = screen.getByRole("table");
+    expect(
+      table.compareDocumentPosition(credits[0] as Node) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    // "Verdicts saved here count exactly like verdicts from the phone" is
+    // a `data-annotation` on the Desktop Contract, never copy.
+    expect(document.body.textContent).not.toContain(
+      "count exactly like verdicts",
     );
-    // This test used to assert the opposite — that the rail said
-    // "Verdicts saved here count exactly like verdicts from the phone".
-    // That sentence is a `data-annotation` on the Desktop Contract: design
-    // explaining the table to us, not copy for a runner. The architecture
-    // test `annotations-are-not-copy` guards the whole class; this pins
-    // the instance that shipped.
-    expect(rail?.textContent).not.toContain("count exactly like verdicts");
   });
 
-  it("says there is no weather on a run with none, and still takes a verdict", async () => {
-    // Round 22, item 18: "No conditions: rail sentence 'No weather on
-    // this run.' — verdict still allowed."
+  it("still takes a verdict on a run with no weather", async () => {
     await renderTable([row({ conditions: undefined, suggestion: undefined })]);
 
-    const rail = document.querySelector("[data-slot='backlog-rail']");
-    expect(rail?.textContent).toContain("Selected");
-    expect(rail?.textContent).toContain("No weather on this run.");
+    expect(screen.getByText("No conditions")).toHaveClass("text-quiet");
     expect(
       screen.getByRole("button", { name: /^Dialed —/ }),
     ).not.toHaveAttribute("aria-disabled");
-    // The note and the attribution are not conditional on it.
-    expect(rail?.textContent).toContain(
-      "Weather data provided by Visual Crossing",
+  });
+});
+
+describe("VerdictBacklog: the head", () => {
+  it("is VERDICTS at the runs pages' display step, with the count oldest first", async () => {
+    await renderTable([row(), bare]);
+
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      /^Verdicts$/u,
+    );
+    expect(screen.getByRole("heading", { level: 1 })).toHaveClass(
+      "font-display",
+      "text-display",
+      "uppercase",
+    );
+    expect(screen.getByText(/^2 need one · oldest first$/u)).toHaveClass(
+      "text-muted",
+    );
+  });
+
+  it("says the status flush left, not centred", async () => {
+    await renderTable([row()]);
+
+    expect(screen.getByRole("status").firstElementChild).toHaveClass(
+      "justify-items-start",
     );
   });
 });
 
-describe("VerdictBacklog: all logged (round 22, item 18)", () => {
-  it("says [ ALL LOGGED ] when there is nothing to clear, and draws no table", async () => {
+describe("VerdictBacklog: all logged (Round 55 · 237)", () => {
+  it("says [ALL LOGGED] in the dialed text colour, what comes next, and the way to runs", async () => {
     // Reachable by typing the URL with an empty queue.
     await renderTable([]);
 
-    expect(screen.getByText(bracketed("All logged"))).toBeVisible();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      /^Verdicts$/u,
+    );
+    const empty = document.querySelector("[data-slot='all-logged']");
+    expect(
+      [...(empty?.children ?? [])].map((line) => line.textContent),
+    ).toEqual([
+      "[All logged]",
+      "Every run has a verdict. Your next one shows up here once it’s logged.",
+      "Go to your runs",
+    ]);
+    expect(screen.getByText(bracketed("All logged"))).toHaveClass(
+      "text-dialed-text",
+    );
+    expect(screen.getByText(/^Every run has a verdict\./u)).toHaveClass(
+      "text-lead",
+    );
+    const link = screen.getByRole("link", { name: "Go to your runs" });
+    expect(link).toHaveAttribute("href", "/runs");
+    expect(link).toHaveClass(
+      "target",
+      "inline-flex",
+      "items-center",
+      "self-start",
+      "font-bold",
+      "text-cold-text",
+    );
     expect(screen.queryByRole("table")).toBeNull();
-    expect(document.querySelector("[data-slot='backlog-rail']")).toBeNull();
-    expect(screen.queryByText(/runs · no verdict yet/)).toBeNull();
+    expect(screen.queryByText(/need one/u)).toBeNull();
+    expect(screen.queryByText(/Weather data provided by/u)).toBeNull();
   });
 
-  it("clears to [ ALL LOGGED ] when the last row lands, and asks for the bar's count again", async () => {
+  it("clears to [ALL LOGGED] when the last row lands, and asks for the bar's count again", async () => {
     const saveRow = vi.fn().mockResolvedValue({ entryId: "01NEW" });
     const invalidate = await renderTableWatching([row()], saveRow);
 
@@ -822,22 +933,50 @@ describe("VerdictBacklog: all logged (round 22, item 18)", () => {
   });
 });
 
-describe("VerdictBacklog: 720–1039, one run at a time", () => {
-  it("draws only the selected row below the desk, and every row from it up", async () => {
-    // Round 22, item 18: "720–1039: no table; A3 one at a time in the
-    // panel." One markup, two layouts: the classes are the rule.
+describe("VerdictBacklog: below the desk, one card per run (Round 55 · 236)", () => {
+  it("draws every run as a card, and a table from the desk up", async () => {
     await renderTable([row(), bare]);
 
-    expect(rowsOf()[0]).toHaveClass("flex", "desk:table-row");
-    expect(rowsOf()[0]).not.toHaveClass("hidden");
-    expect(rowsOf()[1]).toHaveClass("hidden", "desk:table-row");
+    for (const each of rowsOf()) {
+      expect(each).toHaveClass("flex", "rounded-card", "desk:table-row");
+      expect(each).not.toHaveClass("hidden");
+    }
     expect(screen.getByRole("table")).toHaveClass("block", "desk:table");
-    // The count heads the queue while there is one to count.
-    // Round 25: DS2 reads "6 RUNS · NO VERDICT YET".
-    expect(screen.getByText(/^2 runs · no verdict yet$/u)).toBeVisible();
+    // The five segments sit in a row of five on a card, inline at the desk.
+    const segments = within(rowsOf()[0] ?? document.body).getByRole("button", {
+      name: /^Way cold/,
+    }).parentElement;
+    expect(segments).toHaveClass("grid", "grid-cols-5", "gap-1", "desk:flex");
+    // Nothing to skip to: every run is on the page.
+    expect(screen.queryByRole("button", { name: "Skip" })).toBeNull();
   });
 
-  it("logs the row with A3's own verb where there is no Enter to press", async () => {
+  it("shows LOG IT on a card only once a verdict is picked", async () => {
+    await renderTable([row(), bare]);
+
+    expect(screen.queryByRole("button", { name: "Log it" })).toBeNull();
+    fireEvent.click(
+      within(rowsOf()[1] ?? document.body).getByRole("button", {
+        name: /^Dialed —/,
+      }),
+    );
+
+    const logIt = within(rowsOf()[1] ?? document.body).getByRole("button", {
+      name: "Log it",
+    });
+    expect(screen.getAllByRole("button", { name: "Log it" })).toHaveLength(1);
+    expect(logIt).toHaveClass(
+      "target",
+      "w-full",
+      "rounded-card",
+      "bg-action",
+      "font-display",
+      "uppercase",
+      "desk:hidden",
+    );
+  });
+
+  it("logs the card with A3's own verb where there is no Enter to press", async () => {
     const saveRow = vi.fn().mockResolvedValue({ entryId: "01NEW" });
     await renderTable([row(), bare], saveRow);
 
@@ -847,9 +986,7 @@ describe("VerdictBacklog: 720–1039, one run at a time", () => {
         name: /^A bit warm —/,
       }),
     );
-    const [logIt] = screen.getAllByRole("button", { name: "Log it" });
-    if (logIt === undefined) throw new Error("no Log it");
-    fireEvent.click(logIt);
+    fireEvent.click(screen.getByRole("button", { name: "Log it" }));
 
     await waitFor(() => {
       expect(saveRow).toHaveBeenCalledWith({
@@ -860,18 +997,6 @@ describe("VerdictBacklog: 720–1039, one run at a time", () => {
         },
       });
     });
-  });
-
-  it("skips to the next run, and back to the last at the end", async () => {
-    await renderTable([row(), bare]);
-
-    const [skip] = screen.getAllByRole("button", { name: "Skip" });
-    if (skip === undefined) throw new Error("no Skip");
-    fireEvent.click(skip);
-
-    expect(rowsOf()[1]).toHaveAttribute("aria-current", "true");
-    expect(rowsOf()[1]).not.toHaveClass("hidden");
-    expect(rowsOf()[0]).toHaveClass("hidden");
   });
 });
 

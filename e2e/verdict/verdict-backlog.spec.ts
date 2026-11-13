@@ -129,7 +129,7 @@ test("DS2 · two runs with no outfit are a queue: 1–5 sets the verdict, Enter 
     // it straight after a navigation reads zero rows on a table that has
     // simply not rendered yet.
     await expect(
-      page.getByRole("heading", { name: "Needs a verdict" }),
+      page.getByRole("heading", { level: 1, name: "Verdicts" }),
     ).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("row").nth(2)).toBeVisible();
     const rowsBefore = await page.getByRole("row").count();
