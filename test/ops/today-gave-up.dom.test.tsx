@@ -176,6 +176,13 @@ describe("Gave up, on Today", () => {
     const more = within(section()).getByRole("button", {
       name: "+ 2 more · Show all",
     });
+    // The list carries its closing rule, not Show all (N3-14).
+    expect(rows()[0]?.parentElement).toHaveClass("border-b", "border-hairline");
+    expect(more).not.toHaveClass("border-t");
+    // Display type is uppercase (G-15).
+    expect(
+      within(section()).getByRole("heading", { name: "Gave up" }),
+    ).toHaveClass("uppercase");
 
     fireEvent.click(more);
 
@@ -256,6 +263,22 @@ describe("Gave up, on Today", () => {
       within(withError ?? document.body).getByText("Page returned 403"),
     ).toBeInTheDocument();
     expect(without?.querySelector("details")).toBeNull();
+    // Review's text mark, not the browser's triangle, and a target that
+    // overlaps the gaps rather than widening them (G-21).
+    const summary = details?.querySelector("summary");
+    expect(summary).toHaveClass(
+      "target",
+      "-my-3",
+      "list-none",
+      "[&::-webkit-details-marker]:hidden",
+    );
+    const [closed, open] =
+      summary?.querySelectorAll("[aria-hidden='true']") ?? [];
+    expect(closed).toHaveTextContent(/^▸$/u);
+    expect(closed).toHaveClass("group-open:hidden");
+    expect(open).toHaveTextContent(/^▾$/u);
+    expect(open).toHaveClass("hidden", "group-open:inline");
+    expect(details).toHaveClass("group");
   });
 
   it("gives every job but enrichment one Retry, and Drop", async () => {

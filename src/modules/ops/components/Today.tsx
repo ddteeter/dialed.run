@@ -204,10 +204,19 @@ function JobRow({ job, asOf, inFlight, band, onPress }: JobRowProps) {
           {`${tries} · last ${lastTryOf(job.lastFailedAt, asOf)}`}
         </Mono>
         {job.rawError === undefined ? undefined : (
-          <details>
-            <summary className="target cursor-pointer">
+          // Review's fold mark, the text ▸ in the label's colour, not the
+          // browser's triangle; its 44 target overlaps the gaps around it,
+          // so a row with it is spaced like one without (G-21).
+          <details className="group">
+            <summary className="target -my-3 flex cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden">
               <Mono step="xs" className="text-muted">
-                Raw error
+                {"Raw error "}
+                <span aria-hidden="true" className="group-open:hidden">
+                  ▸
+                </span>
+                <span aria-hidden="true" className="hidden group-open:inline">
+                  ▾
+                </span>
               </Mono>
             </summary>
             <Mono step="md" className="text-quiet">
@@ -297,7 +306,10 @@ function GaveUp({
   return (
     <section aria-labelledby="desk-gave-up" className="flex flex-col gap-3">
       <span className="flex items-baseline gap-4">
-        <h2 id="desk-gave-up" className="m-0 font-display text-heading">
+        <h2
+          id="desk-gave-up"
+          className="m-0 font-display text-heading uppercase"
+        >
           Gave up
         </h2>
         {count === 0 ? undefined : (
@@ -310,7 +322,9 @@ function GaveUp({
       {count === 0 ? (
         <p className="m-0 text-muted">Nothing gave up.</p>
       ) : (
-        <ul className="m-0 flex list-none flex-col p-0">
+        // The list carries its own closing rule, full width, whether or not
+        // Show all follows it (N3-14).
+        <ul className="m-0 flex list-none flex-col border-b border-hairline p-0">
           {shown.map((job) => (
             <JobRow
               key={job.id}
@@ -338,7 +352,7 @@ function GaveUp({
       {!isExpanded && more > 0 ? (
         <button
           type="button"
-          className="target cursor-pointer self-start border-t border-hairline pt-3 text-muted"
+          className="target cursor-pointer self-start text-muted"
           onClick={() => {
             setExpanded(true);
           }}

@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { DeskKit } from "../../src/modules/safety/components/DeskKit";
@@ -64,9 +64,23 @@ describe("DeskKit", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Kit by @k_lopes" }),
     ).toHaveClass("sr-only");
+    // R51·153: one bordered strip, dot-separated, the handle in its own
+    // case and the words in capitals (G-18).
     expect(part("kit-band")).toHaveTextContent(
-      "@k_lopes[private][hidden pending review]",
+      /^@k_lopes · private · hidden pending review$/u,
     );
+    expect(part("kit-band")).toHaveClass(
+      "border",
+      "border-hairline",
+      "items-center",
+      "font-mono",
+    );
+    expect(part("kit-band")).not.toHaveClass("uppercase");
+    expect(part("kit-band")?.lastElementChild).toHaveClass("uppercase");
+    expect(screen.getByRole("link", { name: "@k_lopes" })).not.toHaveClass(
+      "uppercase",
+    );
+    expect(part("kit-band")?.nextElementSibling).toBe(part("kit-run"));
     expect(screen.getByRole("link", { name: "@k_lopes" })).toHaveAttribute(
       "href",
       "/desk/runners?query=k_lopes&filter=all",
@@ -79,8 +93,8 @@ describe("DeskKit", () => {
   });
 
   it.each([
-    ["runners", "ok", "[shared][live]"],
-    ["private", "removed", "[private][removed]"],
+    ["runners", "ok", " · shared · live"],
+    ["private", "removed", " · private · removed"],
   ] as const)(
     "says %s as the audience's word and %s as review's",
     async (audience, moderationStatus, words) => {
@@ -96,7 +110,7 @@ describe("DeskKit", () => {
     await renderWithRouter(<DeskKit kit={kit({ handle: undefined })} />);
 
     expect(part("kit-band")).toHaveTextContent(
-      /^01JRUNNER00000000000000001\[/u,
+      /^01JRUNNER00000000000000001 · /u,
     );
     expect(screen.queryByRole("link", { name: /^@/u })).not.toBeInTheDocument();
     expect(
@@ -143,7 +157,7 @@ describe("DeskKit", () => {
       /^Sep 10, 8:00 AM, 41 degrees, damp$/u,
     );
     expect(drawn.nextElementSibling).toHaveClass("sr-only", "normal-case");
-    expect(part("kit-run")).toHaveClass("uppercase");
+    expect(part("kit-run")).toHaveClass("uppercase", "text-muted");
     expect(part("kit-run")?.firstElementChild).toHaveClass("font-mono");
   });
 
@@ -210,7 +224,7 @@ describe("DeskKit", () => {
     expect(
       screen.queryByRole("heading", { name: /^Photos/u }),
     ).not.toBeInTheDocument();
-    expect(part("kit-band")).toHaveTextContent("[removed]");
+    expect(part("kit-band")).toHaveTextContent(/ · removed$/u);
     expect(part("kit-run")).toHaveTextContent(/^Sep 10/u);
   });
 
@@ -234,6 +248,8 @@ describe("DeskKit", () => {
       const back = screen.getByRole("link", { name: label });
       expect(back).toHaveAttribute("href", href);
       expect(back).toHaveClass("target");
+      // The board underlines its words (G-18).
+      expect(within(back).getByText(label)).toHaveClass("underline");
     },
   );
 
