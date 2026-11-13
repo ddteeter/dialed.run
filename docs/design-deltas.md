@@ -3899,6 +3899,10 @@ block; the rest already matched. Not built: the 10px gutter, which waits
 for design to name a T1 role (posts keep their hairline meanwhile).
 `e2e/conformance/feed-board.conformance.spec.ts` compares the own card
 against the board.
+**Since changed (design 208, #632 E2-08):** zero Useful's "♡" is drawn as
+the filled heart's own "♥" with a 1px stroke and no fill. "♡" is not in
+the shipped Plex Mono subset and fell back to a smaller, lighter system
+glyph; the board's outline heart is unchanged.
 
 **Conflicts for the owner.** None of these was adopted by the import. Each
 quotes both sides and ends with a recommendation. **All four are resolved

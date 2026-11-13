@@ -178,13 +178,20 @@ test("E1's v1 card is composed as the board draws it, with a photo, without, and
     expect(strip).toHaveLength(drawn.indoorStrip.length);
     expect(strip.slice(1)).toEqual(drawn.indoorStrip.slice(1));
 
-    // **Zero Useful reads "♡ USEFUL"**, with no zero.
-    expect(
-      await spoken(
-        page,
-        `${builtPost(indoor.entryId)} [data-part="reactions"]`,
-      ),
-    ).toBe(drawn.zeroUseful);
+    // **Zero Useful reads "♡ USEFUL"**, with no zero. The board's "♡" is
+    // not in the shipped Plex Mono subset, so it is drawn as the filled
+    // heart's own "♥" with a stroke and no fill (#632 E2-08): the same
+    // outline, in one face with the filled one.
+    const reactions = `${builtPost(indoor.entryId)} [data-part="reactions"]`;
+    expect(await spoken(page, reactions)).toBe(
+      drawn.zeroUseful.replace("♡", "♥"),
+    );
+    const outline = page.locator(reactions).getByText("♥", { exact: true });
+    await expect(outline).toHaveCSS(
+      "-webkit-text-fill-color",
+      "rgba(0, 0, 0, 0)",
+    );
+    await expect(outline).toHaveCSS("-webkit-text-stroke-width", "1px");
   } finally {
     await removeSeeded(rows);
   }

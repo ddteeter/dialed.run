@@ -145,31 +145,28 @@ export function PostCard(props: Readonly<PostCardProps>) {
           )}
           <div
             data-part="run-strip"
-            className="flex min-h-target items-center gap-3 border-y border-hairline"
+            className="flex min-h-target items-center gap-3 border-y border-hairline whitespace-nowrap"
           >
-            <span className="flex min-w-0 items-center gap-3 whitespace-nowrap">
-              {/* Drawn as "8.1 MI", with the space the Feed board draws
+            {/* Drawn as "8.1 MI", with the space the Feed board draws
                 (E1-08); said "8.1 miles" (round 52 #158). */}
-              <Mono className="shrink-0">
-                <SpokenDistance distanceM={item.distanceM} units={units} />
-              </Mono>
-              {second === undefined ? undefined : (
-                <>
-                  {/* A rule between two cells, not a value: nothing to
-                    read. A 1px rule, as the boards draw it, centred on the
-                    line rather than a body-size "|" below it (E1-08). */}
-                  <span
-                    aria-hidden="true"
-                    className="h-3 w-px shrink-0 bg-hairline"
-                  />
-                  {/* At 320 the sky word truncates before the credit wraps
+            <Mono className="shrink-0">
+              <SpokenDistance distanceM={item.distanceM} units={units} />
+            </Mono>
+            {second === undefined ? undefined : (
+              <>
+                {/* A rule between two cells, not a value: nothing to read.
+                    The board's "|", in the strip's mono and centred on its
+                    line, not a body-size sans one below it (E1-08). */}
+                <span aria-hidden="true" className="shrink-0 text-hairline">
+                  <Mono>|</Mono>
+                </span>
+                {/* At 320 the sky word truncates before the credit wraps
                     (Round 54 · 170). */}
-                  <span className="min-w-0 truncate">
-                    <ConditionsCell cell={second} />
-                  </span>
-                </>
-              )}
-            </span>
+                <span className="min-w-0 truncate">
+                  <ConditionsCell cell={second} />
+                </span>
+              </>
+            )}
             {isCredited ? (
               // The room the strip keeps for the credit lying over its end:
               // the label's own words, in its own step, never seen.

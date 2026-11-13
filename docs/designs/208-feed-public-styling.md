@@ -20,7 +20,9 @@ and `ReportAffordance`:
   an outlined **Copy link** pill and a **Change** link (N2-06). Copy link
   confirms as AF1 does: for 2000ms it reads "Copied" with an ink fill, and
   keeps its name (P2b-01).
-- **Feed:** the run strip's divider is a centred 1px rule, and the
+- **Feed:** the run strip's divider is the board's "|" in the strip's
+  mono, on a centred row, and each part is a cell of the strip, as the
+  board's are (E1's conformance spec counts them); the
   distance is spaced "5.0 mi" through `measuredLine`'s existing `spaced`
   part, so `formatDistance` is unchanged (E1-08). `SpokenDistance` draws
   it for the card and A2's rail. **The card's credit is Design 170's

@@ -255,7 +255,7 @@ function heart(): HTMLElement {
 }
 
 function divider(post: HTMLElement): HTMLElement | null {
-  return strip(post).querySelector<HTMLElement>(".w-px");
+  return strip(post).querySelector<HTMLElement>(".text-hairline");
 }
 
 const credit = () =>
@@ -274,7 +274,7 @@ describe("PostCard: the strip", () => {
     });
 
     expect(strip(post)).toHaveTextContent(
-      "5.0 mi5.0 miles41° · Rain41 degrees, RainVisual Crossing",
+      "5.0 mi5.0 miles|41° · Rain41 degrees, RainVisual Crossing",
     );
     // Round 52 #158: drawn for the eye, said in words, once each.
     const reading = screen.getByText("41° · Rain");
@@ -283,11 +283,15 @@ describe("PostCard: the strip", () => {
     expect(screen.getByText("41 degrees, Rain")).toHaveClass("sr-only");
     // Spaced, as the Feed board writes "8.1 MI" (E1-08).
     expect(screen.getByText("5.0 mi").parentElement).toHaveClass("font-mono");
-    // The divider is a 1px rule, not a "|" glyph below the line.
+    // The board's "|", in the strip's mono on a centred row, not a
+    // body-size sans one below the line (E1-08); a cell of the strip's
+    // own, as the board's are.
     const rule = divider(post);
-    expect(rule).toHaveClass("h-3", "w-px", "bg-hairline");
     expect(rule).toHaveAttribute("aria-hidden", "true");
-    expect(rule).toBeEmptyDOMElement();
+    expect(rule).toHaveTextContent(/^\|$/u);
+    expect(rule?.firstElementChild).toHaveClass("font-mono");
+    expect(rule?.parentElement).toBe(strip(post));
+    expect(strip(post)).toHaveClass("items-center", "whitespace-nowrap");
     // The sky word truncates before the credit wraps.
     expect(reading.closest(".truncate")).toHaveClass("min-w-0");
     expect(screen.getByText("5.0 miles")).toHaveClass("sr-only");
@@ -296,7 +300,7 @@ describe("PostCard: the strip", () => {
   it("reads INDOOR when the run was indoors and has no conditions", async () => {
     const post = await card({ indoor: true });
 
-    expect(strip(post)).toHaveTextContent("5.0 mi5.0 milesIndoor");
+    expect(strip(post)).toHaveTextContent("5.0 mi5.0 miles|Indoor");
     expect(divider(post)).not.toBeNull();
     expect(screen.getByText("Indoor")).toHaveClass("text-muted", "font-mono");
   });
