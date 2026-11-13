@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 import { useEffect, useState } from "react";
 
 import type { Units } from "../../../lib/contracts";
@@ -22,12 +22,13 @@ import {
   FileWell,
   FlowStep,
   FormStatus,
+  GarminAttribution,
+  Icon,
   inFlight,
   LOG_FLOW,
   Mono,
   PendingLabel,
   PhoneBell,
-  RailCard,
   Spoken,
   useControlAction,
   usePhotoPick,
@@ -36,13 +37,15 @@ import {
 import type { PhotoStep } from "../../../ui";
 import type { AttachContext } from "../attach-context";
 import type { BandRun } from "../band-runs";
+import { BackToRun } from "./BackToRun";
 import { BandRunsCard } from "./BandRunsCard";
 import { kitChoice, PHOTO_NOT_SENT } from "../attach-rules";
 import type { UiGroup } from "../groups";
+import { isAtDesk } from "../kit-push";
 import type { PrefillCandidate } from "../prefill";
 import { isProvidersReading } from "../strip";
-import { KitList, KitSheet, conditionsWords } from "./KitPicker";
-import { SpokenDistance } from "./SpokenDistance";
+import { KitList, KitPage, KitSheet, conditionsWords } from "./KitPicker";
+import { ThisRunCard } from "./ThisRunCard";
 
 /**
  * Attach the kit (screen A2), built to round 22's two frames and round
@@ -138,6 +141,29 @@ interface AttachKitProps {
   The run, its conditions and the closet, from the route's loader.
   */
   context: AttachContext;
+  /**
+   * What the run's summary adds for the rail's This run card (Round 55 ·
+   * 242) and the Garmin credit (D2-12): when it started, how long it
+   * took, and who to credit for its data.
+   */
+  run: {
+    startedAt: number;
+    durationS: number;
+    deviceName: string | undefined;
+  };
+  /**
+   * The category A2b has pushed to at the desk (Round 54 · 164.3), from
+   * A2's URL, or none: A2 itself.
+   */
+  pushed: UiGroup | undefined;
+  /**
+  Push to a category's page — the route's, since it owns the URL.
+  */
+  onPush: (group: UiGroup) => void;
+  /**
+  Come back from it to A2, with the picks it made.
+  */
+  onPushDone: () => void;
   prefillFor: (input: {
     data: { runId: string };
   }) => Promise<PrefillCandidate | undefined>;
@@ -271,23 +297,15 @@ function useHeldPhoto({
   };
 }
 
-export function AttachKit({
-  runId,
-  units,
-  context,
-  prefillFor,
-  bandRunsFor,
-  attachKit,
-  uploadPhoto,
-  renderPhotoStep,
-}: Readonly<AttachKitProps>): JSX.Element {
+export function AttachKit(props: Readonly<AttachKitProps>): JSX.Element {
+  const { runId, units, context, run, attachKit } = props;
   const navigate = useNavigate();
-  const suggestion = useSuggestion(prefillFor, runId);
+  const suggestion = useSuggestion(props.prefillFor, runId);
   const [isCardOpen, setIsCardOpen] = useState(true);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [kitError, setKitError] = useState<string | undefined>();
   const [said, setSaid] = useState("");
-  const held = useHeldPhoto({ renderPhotoStep, uploadPhoto });
+  const held = useHeldPhoto(props);
   // The entry the attach made, once it has. From then on Next only sends
   // the photo and goes on: attaching again would be answered with this same
   // entry and the kit it already has.
@@ -355,89 +373,114 @@ export function AttachKit({
         rail={
           <AttachRail
             context={context}
+            run={run}
             units={units}
-            bandRunsFor={bandRunsFor}
+            bandRunsFor={props.bandRunsFor}
           />
         }
       >
         <div className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6 pb-8 wide:max-w-column">
-          <AttachHeader context={context} units={units} count={selected.size} />
-          <FormStatus>{attach.status === "" ? said : attach.status}</FormStatus>
-
-          <MostLikely
-            suggestion={suggestion}
-            isOpen={isCardOpen}
-            conditions={conditions}
-            units={units}
-            names={names}
-            onAccept={next}
-            onChange={(itemIds) => {
-              setSelected(new Set(itemIds));
-              setIsCardOpen(false);
-            }}
-          />
-
-          <KitChooser
-            context={context}
-            units={units}
-            isOr={suggestion !== "none"}
-            picks={{ selected, onToggle: toggle, error: kitError }}
-            onStatus={setSaid}
-          />
-
-          <FileWell
-            part="photo-well"
-            copy={{
-              kicker: "Outfit photo · optional",
-              label: "Add a photo",
-              wideLabel: "Drop a photo, or browse",
-              overLabel: "Let go to add it",
-              pendingLabel: "Adding",
-              hint: "Flat on the floor works best.",
-            }}
-            pending={held.isBusy}
-            accept={photoAcceptAttribute}
-            error={held.photoError}
-            preview={held.preview}
-            onRemove={held.remove}
-            onFiles={held.onPhotoFiles}
-            inputRef={held.pick.wellRef}
-          />
-          {held.pick.step(setSaid)}
-
-          <div className="flex flex-col gap-3">
-            <button
-              type="button"
-              data-slot="primary-action"
-              {...inFlight(attach.pending)}
-              onClick={() => {
-                next([...selected]);
-              }}
-              className="target grid min-h-13 place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase text-accent-ink"
-            >
-              <PendingLabel
-                label="Next — did it work?"
-                pendingLabel="Attaching"
-                pending={attach.pending}
+          <PushFrame
+            groups={context.groups}
+            pushed={props.pushed}
+            page={(group) => (
+              <KitPage
+                group={group}
+                conditions={conditions}
+                units={units}
+                selected={selected}
+                onToggle={toggle}
+                back={<BackToAttach runId={runId} />}
+                onDone={props.onPushDone}
               />
-            </button>
-            <ControlFailureBand
-              failure={attach.failure}
-              onRetry={attach.retry}
-              retryRef={attach.retryRef}
+            )}
+          >
+            <AttachHeader
+              run={{ runId, deviceName: run.deviceName }}
+              context={context}
+              units={units}
+              count={selected.size}
             />
-            <p className="m-0 text-center text-small text-muted">
-              Not now —{" "}
-              <Link
-                to="/runs"
-                data-target="inline"
-                className="font-semibold text-cold-text"
+            <FormStatus>
+              {attach.status === "" ? said : attach.status}
+            </FormStatus>
+
+            <MostLikely
+              suggestion={suggestion}
+              isOpen={isCardOpen}
+              conditions={conditions}
+              units={units}
+              names={names}
+              onAccept={next}
+              onChange={(itemIds) => {
+                setSelected(new Set(itemIds));
+                setIsCardOpen(false);
+              }}
+            />
+
+            <KitChooser
+              context={context}
+              units={units}
+              isOr={suggestion !== "none"}
+              picks={{ selected, onToggle: toggle, error: kitError }}
+              onStatus={setSaid}
+              onPush={props.onPush}
+            />
+
+            <FileWell
+              part="photo-well"
+              copy={{
+                kicker: "Outfit photo · optional",
+                label: "Add a photo",
+                wideLabel: "Drop a photo, or browse",
+                overLabel: "Let go to add it",
+                pendingLabel: "Adding",
+                hint: "Flat on the floor works best.",
+              }}
+              pending={held.isBusy}
+              accept={photoAcceptAttribute}
+              error={held.photoError}
+              preview={held.preview}
+              onRemove={held.remove}
+              onFiles={held.onPhotoFiles}
+              inputRef={held.pick.wellRef}
+            />
+            {held.pick.step(setSaid)}
+
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                data-slot="primary-action"
+                {...inFlight(attach.pending)}
+                onClick={() => {
+                  next([...selected]);
+                }}
+                className="target grid min-h-13 place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase text-accent-ink"
               >
-                leave it in the queue
-              </Link>
-              .
-            </p>
-          </div>
+                <PendingLabel
+                  label="Next — did it work?"
+                  pendingLabel="Attaching"
+                  pending={attach.pending}
+                />
+              </button>
+              <ControlFailureBand
+                failure={attach.failure}
+                onRetry={attach.retry}
+                retryRef={attach.retryRef}
+              />
+              <p className="m-0 text-center text-small text-muted">
+                Not now —{" "}
+                <Link
+                  to="/runs"
+                  data-target="inline"
+                  className="font-semibold text-cold-text"
+                >
+                  leave it in the queue
+                </Link>
+                .
+              </p>
+            </div>
+          </PushFrame>
         </div>
       </DeskSplit>
     </FlowStep>
@@ -448,10 +491,15 @@ export function AttachKit({
  * A2's header: the question, and the sub-line counting the kit so far.
  */
 function AttachHeader({
+  run,
   context,
   units,
   count,
 }: Readonly<{
+  /**
+  The run's id for the way back, and who to credit for its data.
+  */
+  run: { runId: string; deviceName: string | undefined };
   context: AttachContext;
   units: Units;
   count: number;
@@ -466,12 +514,18 @@ function AttachHeader({
       data-ground="ink-until-wide"
       className="-mx-5 -mt-6 flex flex-col gap-1 bg-ground px-5 py-5 text-ink wide:mx-0 wide:mt-0 wide:px-0 wide:py-0"
     >
-      <div className="flex items-start justify-between gap-3">
-        <h1 className="m-0 font-display text-heading wide:text-title">
-          What did you wear?
-        </h1>
+      {/* "← Back" above the title at both widths, sharing its row with
+          the phone's bell (Round 55 · 242; Design 169.1). */}
+      <div className="flex items-center justify-between gap-3">
+        <BackToRun runId={run.runId} />
         <PhoneBell />
       </div>
+      <h1 className="m-0 font-display text-heading wide:text-title">
+        What did you wear?
+      </h1>
+      {/* The run came through Garmin's API: its credit is the first line
+          under the title (G1; D2-12), once on the screen. */}
+      <GarminAttribution deviceName={run.deviceName} />
       <Mono step="xs" className="text-dialed-text">
         <Spoken {...subLine(context, units, count)} />
       </Mono>
@@ -486,6 +540,53 @@ function AttachHeader({
 }
 
 /**
+ * A2's column, or A2b pushed into it (Round 54 · 164.3) when the URL names
+ * a category the closet has. A2 is then hidden rather than gone: it is
+ * still this screen, so the picks and a held photo are there when the
+ * runner comes back.
+ */
+function PushFrame({
+  groups,
+  pushed,
+  page,
+  children,
+}: Readonly<{
+  groups: AttachContext["groups"];
+  pushed: UiGroup | undefined;
+  page: (group: AttachContext["groups"][number]) => ReactNode;
+  children: ReactNode;
+}>): JSX.Element {
+  const group = groups.find((each) => each.group === pushed);
+  return (
+    <>
+      {group === undefined ? undefined : page(group)}
+      <div hidden={group !== undefined} className="flex flex-col gap-6">
+        {children}
+      </div>
+    </>
+  );
+}
+
+/**
+ * A2b's way back to A2 at the desk: the board's back link names the screen
+ * it returns to (Round 54 · 164b). A2 is the same page with no category
+ * pushed, so the picks come back with it.
+ */
+function BackToAttach({ runId }: Readonly<{ runId: string }>): JSX.Element {
+  return (
+    <Link
+      to="/feed/attach/$runId"
+      params={{ runId }}
+      search={{}}
+      className="target inline-flex items-center gap-2 self-start text-body text-ink no-underline"
+    >
+      <Icon name="back" size={20} />
+      What did you wear?
+    </Link>
+  );
+}
+
+/**
  * The picker and the sheet a group opens into, with the filter and the
  * open group they share. What is picked is the screen's, so it comes in.
  */
@@ -495,6 +596,7 @@ function KitChooser({
   units,
   isOr,
   onStatus,
+  onPush,
 }: Readonly<{
   context: AttachContext;
   picks: {
@@ -505,6 +607,7 @@ function KitChooser({
   units: Units;
   isOr: boolean;
   onStatus: (sentence: string) => void;
+  onPush: (group: UiGroup) => void;
 }>): JSX.Element {
   const { conditions } = context;
   const [isFiltered, setIsFiltered] = useState(conditions !== undefined);
@@ -522,7 +625,12 @@ function KitChooser({
         isOr={isOr}
         selected={picks.selected}
         onToggle={picks.onToggle}
-        onOpen={setSheetGroup}
+        // A list that can grow pushes at the desk (Round 54 · 164.3);
+        // below it the sheet stays as it is.
+        onOpen={(group) => {
+          if (isAtDesk()) onPush(group);
+          else setSheetGroup(group);
+        }}
         error={picks.error}
         onStatus={onStatus}
       />
@@ -553,10 +661,12 @@ function KitChooser({
  */
 function AttachRail({
   context,
+  run,
   units,
   bandRunsFor,
 }: Readonly<{
   context: AttachContext;
+  run: AttachKitProps["run"];
   units: Units;
   bandRunsFor: AttachKitProps["bandRunsFor"];
 }>): JSX.Element {
@@ -564,16 +674,10 @@ function AttachRail({
   const history = useBandRuns(bandRunsFor, conditions);
   return (
     <>
-      <RailCard title="This run">
-        <Mono step="sm">
-          <SpokenDistance distanceM={context.distanceM} units={units} />
-        </Mono>
-        {conditions === undefined ? undefined : (
-          <Mono step="sm" className="text-dialed-text">
-            <Spoken {...measuredLine([readingOf(conditions)], units)} />
-          </Mono>
-        )}
-      </RailCard>
+      <ThisRunCard
+        run={{ ...run, distanceM: context.distanceM, conditions }}
+        units={units}
+      />
       {history === undefined ? undefined : (
         <BandRunsCard
           lead={lastRunsLead}
@@ -671,8 +775,10 @@ function MostLikely({
         <Mono step="xs" className="text-muted">
           Most likely
         </Mono>
-        <span className="text-body font-semibold">
+        {/* Left-aligned, with the board's pink brackets (Round 55 · 240). */}
+        <span className="text-body font-semibold [&_.breathe]:text-action">
           <PendingLabel
+            align="start"
             label=""
             pendingLabel={
               temp === undefined
@@ -724,20 +830,25 @@ function MostLikely({
         Most likely · from {conditionsWords(suggestion.conditions, units)},{" "}
         {dayLabel(suggestion.createdAt, suggestion.conditions.timeZone)}
       </Mono>
-      <ul className="m-0 flex list-none flex-col gap-1 p-0">
+      {/* The pieces as outlined mono pills, and Change as the outlined
+          pill beside That's it (Round 55 · 240). */}
+      <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
         {shown.map((itemId) => (
-          <li key={itemId} className="text-body font-semibold">
-            {names.get(itemId)}
+          <li
+            key={itemId}
+            className="rounded-pill border border-accent-ink px-2 py-1"
+          >
+            <Mono step="sm">{names.get(itemId)}</Mono>
           </li>
         ))}
       </ul>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={() => {
             onAccept(shown);
           }}
-          className="target rounded-pill bg-ink px-5 py-2 font-semibold text-ground"
+          className="target flex-1 rounded-pill bg-ink px-5 py-3 font-semibold text-ground"
         >
           That&rsquo;s it
         </button>
@@ -746,7 +857,7 @@ function MostLikely({
           onClick={() => {
             onChange(shown);
           }}
-          className="target font-semibold underline underline-offset-4"
+          className="target rounded-pill border border-accent-ink bg-transparent px-4 py-3 font-semibold text-accent-ink"
         >
           Change
           {/* Round 52 #159: heard alone, "Change" did not say what. */}

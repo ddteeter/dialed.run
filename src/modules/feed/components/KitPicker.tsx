@@ -1,9 +1,10 @@
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 import { useState } from "react";
 
+import { garmentCategoryLabels } from "../../../lib/contracts";
 import type { Units } from "../../../lib/contracts";
 import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
-import { Bracketed, FieldMessage, Mono, Sheet } from "../../../ui";
+import { Bracketed, FieldMessage, Icon, Mono, Sheet } from "../../../ui";
 import type { Conditions } from "../../../lib/contracts";
 import { uiGroupLabels } from "../groups";
 import type { UiGroup } from "../groups";
@@ -57,18 +58,81 @@ export function conditionsWords(conditions: Conditions, units: Units): string {
 }
 
 /**
- * One piece, as a tile: pressed when it is in the kit.
+ * The conditions filter chip, A2's ("41° damp") and A2b's ("Matches
+ * conditions"), in one class string per state, keyed off `aria-pressed`
+ * (D2-04, N1-17). On, it takes the board's teal fill and the `close`
+ * glyph — the filter is applied, and this is what removes it; off, it is
+ * the outline every other chip wears.
  *
- * The board draws a photo swatch; the picker's rows carry no photo yet, so
- * the tile carries the garment's name, which is what a runner reads to
- * choose it anyway.
+ * **Drawn at 32, hit at 44**, as A3's chips are (round 21, ask 4): `h-8`
+ * is the pill, sized to its words, and `target-seam` the target, six
+ * pixels proud above and below. `target` grew the box itself to 44 next to
+ * 10px mono, which read as a large empty button. Both rows it sits in
+ * leave at least SPACE[3] above and below it, so the seam never overlaps a
+ * neighbour's target.
+ */
+const FILTER_CHIP_CLASS = {
+  on: "target-seam flex h-8 items-center gap-1 self-start rounded-pill border border-teal bg-teal px-3 text-accent-ink",
+  off: "target-seam flex h-8 items-center gap-1 self-start rounded-pill border border-hairline px-3 text-quiet",
+} as const;
+
+function FilterChip({
+  isOn,
+  label,
+  onToggle,
+  children,
+}: Readonly<{
+  isOn: boolean;
+  label?: string | undefined;
+  onToggle: () => void;
+  children: ReactNode;
+}>): JSX.Element {
+  return (
+    <button
+      type="button"
+      aria-pressed={isOn}
+      aria-label={label}
+      onClick={onToggle}
+      className={isOn ? FILTER_CHIP_CLASS.on : FILTER_CHIP_CLASS.off}
+    >
+      <Mono step="xs">{children}</Mono>
+      {isOn ? <Icon name="close" size={12} /> : undefined}
+    </button>
+  );
+}
+
+/**
+The word a category goes by, for a tile with no photo.
+*/
+const TYPE_WORDS: ReadonlyMap<string, string> = new Map(
+  Object.entries(garmentCategoryLabels),
+);
+
+/**
+ * The tile's well (Round 55 · 239): a 72 square, the hatch that means "no
+ * photo" with the piece's type word in it, as the closet's tiles draw it.
+ * Pressed is a 2px pink ring outside a 2px `--ground` gap, never an ink
+ * fill. Decorative: the name under it is the button's name.
+ */
+const TILE_WELL_CLASS = {
+  pressed:
+    "photo-hatch flex size-18 items-center justify-center rounded-field font-display text-small uppercase text-muted ring-2 ring-action ring-offset-2 ring-offset-ground",
+  resting:
+    "photo-hatch flex size-18 items-center justify-center rounded-field font-display text-small uppercase text-muted",
+} as const;
+
+/**
+ * One piece, as a tile: pressed when it is in the kit. The full name —
+ * brand and name, as A2b's rows read it — sits under the well in
+ * TYPE.small, clamped to two lines, so a long name is never cut inside
+ * the tile (Round 55 · 239).
  */
 function PieceTile({
-  name,
+  item,
   pressed,
   onToggle,
 }: Readonly<{
-  name: string;
+  item: PickerItem;
   pressed: boolean;
   onToggle: () => void;
 }>): JSX.Element {
@@ -77,23 +141,34 @@ function PieceTile({
       type="button"
       aria-pressed={pressed}
       onClick={onToggle}
-      className={
-        pressed
-          ? "target flex size-16 shrink-0 items-end overflow-hidden rounded-field border-2 border-ink bg-ink p-1 text-left text-micro text-ground"
-          : "target flex size-16 shrink-0 items-end overflow-hidden rounded-field border border-hairline bg-panel p-1 text-left text-micro text-ink"
-      }
+      className="flex w-18 shrink-0 cursor-pointer flex-col gap-2 border-none bg-transparent p-0 text-left text-ink"
     >
-      {name}
+      <span
+        data-part="tile-well"
+        aria-hidden="true"
+        className={pressed ? TILE_WELL_CLASS.pressed : TILE_WELL_CLASS.resting}
+      >
+        {TYPE_WORDS.get(item.category)}
+      </span>
+      <span className="line-clamp-2 text-small">{fullName(item)}</span>
     </button>
   );
+}
+
+/**
+"Janji Rover Half-zip": the brand, when there is one, then the name.
+*/
+function fullName(item: PickerItem): string {
+  return item.brand === null ? item.name : `${item.brand} ${item.name}`;
 }
 
 /**
  * A2's closet picker: live from the first frame (round 22, "A2 Waiting":
  * *"Picker is live and unfiltered while waiting"*), a row of tiles for the
  * pieces a kit is built around, and a chip for each of the rest. Every
- * "ALL ›" and "+ CATEGORY" opens A2b for that group — *"never a route,
- * never in place"* (round 20).
+ * "ALL ›" and "+ CATEGORY" opens A2b for that group: a sheet below the
+ * desk, as round 20 drew it, and a push into the column at the desk
+ * (Round 54 · 164.3, which supersedes round 20's *"never a route"* there).
  */
 // fallow-ignore-next-line code-duplication -- a ten-prop signature that matches closet/components/GarmentForm.tsx only by destructuring one prop per line; one picks a kit, the other edits a garment, and they share nothing to extract
 export function KitList({
@@ -147,34 +222,34 @@ export function KitList({
       aria-labelledby="closet-picker-heading"
       className="flex flex-col gap-3"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="closet-picker-heading" className="m-0 text-muted">
-          <Mono step="xs">
-            {isOr ? "Or pick from the closet" : "From the closet"}
+      {/* The heading has its row, and the chip and its count the row
+          under it (D2-05): side by side, the longer "Or pick" heading
+          wrapped the chip to the left while the shorter one left it at
+          the right, so one control sat in two places. */}
+      <h2 id="closet-picker-heading" className="m-0 text-muted">
+        <Mono step="xs">
+          {isOr ? "Or pick from the closet" : "From the closet"}
+        </Mono>
+      </h2>
+      {conditions === undefined ? undefined : (
+        <div className="flex flex-wrap items-center gap-2">
+          <FilterChip
+            isOn={isFiltered}
+            // The drawn conditions first, then what the chip does, in
+            // the words the sheet's own chip uses.
+            label={`${conditionsWords(conditions, units)}, matches conditions`}
+            onToggle={() => {
+              onFilter(!isFiltered);
+              onStatus(showingLine(!isFiltered));
+            }}
+          >
+            {conditionsWords(conditions, units)}
+          </FilterChip>
+          <Mono step="xs" className="text-muted">
+            {showingLine(isFiltered)}
           </Mono>
-        </h2>
-        {conditions === undefined ? undefined : (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              aria-pressed={isFiltered}
-              // The drawn conditions first, then what the chip does, in
-              // the words the sheet's own chip uses.
-              aria-label={`${conditionsWords(conditions, units)}, matches conditions`}
-              onClick={() => {
-                onFilter(!isFiltered);
-                onStatus(showingLine(!isFiltered));
-              }}
-              className="target flex items-center rounded-pill border border-hairline px-3 text-quiet"
-            >
-              <Mono step="xs">{conditionsWords(conditions, units)}</Mono>
-            </button>
-            <Mono step="xs" className="text-muted">
-              {showingLine(isFiltered)}
-            </Mono>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
       <div data-slot="kit-list" className="flex flex-col gap-3">
         {rows.map((group) => (
           <div key={group.group} className="flex flex-col gap-2">
@@ -194,11 +269,13 @@ export function KitList({
                 <Mono step="xs">All &rsaquo;</Mono>
               </button>
             </div>
-            <div className="flex gap-2 overflow-x-auto">
+            {/* `-m-1 p-1`: the pressed ring sits 4px outside the well,
+                and a scrolling row clips what overflows it. */}
+            <div className="-m-1 flex gap-2 overflow-x-auto p-1">
               {shown(group).map((item) => (
                 <PieceTile
                   key={item.id}
-                  name={item.name}
+                  item={item}
                   pressed={selected.has(item.id)}
                   onToggle={() => {
                     onToggle(item.id);
@@ -269,34 +346,101 @@ export function KitSheet({
       {group === undefined ? undefined : (
         // Keyed by the group, so opening a second category starts its own
         // search and its own filter rather than inheriting the last one's.
-        <SheetBody
+        <PickBody
           key={group.group}
+          layout="sheet"
           group={group}
           conditions={conditions}
           units={units}
           selected={selected}
           onToggle={onToggle}
-          onClose={onClose}
+          onDone={onClose}
         />
       )}
     </Sheet>
   );
 }
 
-function SheetBody({
+/**
+ * A2b at the desk (Round 54 · 164.3): not a sheet but a push into the 620
+ * column — *"A list that can grow pushes."* The back link to A2, the title,
+ * the meta, search, one card of checkboxes, then Done as the flow's pink
+ * caps button at content width. Both ways out keep the picks: they are
+ * A2's, and A2 is still there behind this page.
+ */
+export function KitPage({
   group,
   conditions,
   units,
   selected,
   onToggle,
-  onClose,
+  back,
+  onDone,
 }: Readonly<{
   group: PickerGroup;
   conditions: Conditions | undefined;
   units: Units;
   selected: ReadonlySet<string>;
   onToggle: (itemId: string) => void;
-  onClose: () => void;
+  back: ReactNode;
+  onDone: () => void;
+}>): JSX.Element {
+  return (
+    <div data-slot="kit-page" className="flex flex-col gap-6">
+      {back}
+      <PickBody
+        key={group.group}
+        layout="push"
+        group={group}
+        conditions={conditions}
+        units={units}
+        selected={selected}
+        onToggle={onToggle}
+        onDone={onDone}
+      />
+    </div>
+  );
+}
+
+/**
+ * The sheet and the push are one body; what differs is the frame. In the
+ * push the title is the page's heading, the checkboxes sit in one card,
+ * and Done is the flow's forward action (Round 54 · 167).
+ */
+type PickLayout = "sheet" | "push";
+
+const PICK_TITLE_CLASS: Readonly<Record<PickLayout, string>> = {
+  sheet: "m-0 font-display text-heading",
+  push: "m-0 font-display text-title",
+};
+
+const PICK_LIST_CLASS: Readonly<Record<PickLayout, string>> = {
+  sheet: "m-0 flex list-none flex-col gap-1 p-0",
+  push: "m-0 flex list-none flex-col gap-1 rounded-card border border-hairline bg-panel px-4 py-2",
+};
+
+const PICK_DONE_CLASS: Readonly<Record<PickLayout, string>> = {
+  sheet:
+    "target cursor-pointer rounded-pill border border-hairline bg-transparent px-6 py-3 text-body font-semibold",
+  push: "target grid min-h-13 cursor-pointer place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase text-accent-ink",
+};
+
+function PickBody({
+  layout,
+  group,
+  conditions,
+  units,
+  selected,
+  onToggle,
+  onDone,
+}: Readonly<{
+  layout: PickLayout;
+  group: PickerGroup;
+  conditions: Conditions | undefined;
+  units: Units;
+  selected: ReadonlySet<string>;
+  onToggle: (itemId: string) => void;
+  onDone: () => void;
 }>): JSX.Element {
   const [query, setQuery] = useState("");
   const [isFiltered, setIsFiltered] = useState(
@@ -305,16 +449,23 @@ function SheetBody({
   const label = uiGroupLabels[group.group];
   const needle = query.toLowerCase();
   const shownHere: Shown = isFiltered ? matchingOnly : everything;
-  // Brand and name as the row reads them. `join` writes a null brand as
-  // nothing, so a piece with none is found by its name alone.
+  // Brand and name as the row reads them, so a piece with no brand is
+  // found by its name alone.
   const found = shownHere(group).filter((item) =>
-    [item.brand, item.name].join(" ").toLowerCase().includes(needle),
+    fullName(item).toLowerCase().includes(needle),
   );
   const chosen = group.items.filter((item) => selected.has(item.id)).length;
+  // The page's heading in the push; the sheet's own title in the sheet.
+  const Title = layout === "push" ? "h1" : "h2";
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-1">
+        {/* The pushed page's heading. In the sheet, the sheet's own label
+            is the title (#643). */}
+        {layout === "push" ? (
+          <Title className={PICK_TITLE_CLASS[layout]}>{label}</Title>
+        ) : undefined}
         <Mono step="xs" className="text-muted">
           {conditions === undefined
             ? `${String(group.items.length)} pieces`
@@ -337,18 +488,16 @@ function SheetBody({
         />
       </label>
       {conditions === undefined ? undefined : (
-        <button
-          type="button"
-          aria-pressed={isFiltered}
-          onClick={() => {
+        <FilterChip
+          isOn={isFiltered}
+          onToggle={() => {
             setIsFiltered(!isFiltered);
           }}
-          className="target flex items-center self-start rounded-pill border border-hairline px-3 text-quiet"
         >
-          <Mono step="xs">Matches conditions</Mono>
-        </button>
+          Matches conditions
+        </FilterChip>
       )}
-      <ul className="m-0 flex list-none flex-col gap-1 p-0">
+      <ul className={PICK_LIST_CLASS[layout]}>
         {found.map((item) => (
           <li key={item.id}>
             <label className="target flex items-center gap-3 text-body">
@@ -359,10 +508,7 @@ function SheetBody({
                   onToggle(item.id);
                 }}
               />
-              <span>
-                {item.brand === null ? "" : `${item.brand} `}
-                {item.name}
-              </span>
+              <span>{fullName(item)}</span>
               {item.untested ? (
                 <Bracketed className="text-muted">untested</Bracketed>
               ) : undefined}
@@ -377,8 +523,8 @@ function SheetBody({
       ) : undefined}
       <button
         type="button"
-        onClick={onClose}
-        className="target cursor-pointer rounded-pill border border-hairline bg-transparent px-6 py-3 text-body font-semibold"
+        onClick={onDone}
+        className={PICK_DONE_CLASS[layout]}
       >
         Done
       </button>

@@ -1,14 +1,15 @@
 /**
  * Covers: Import from Garmin on A1 (plan 160, phase 1; design G3), the
  * hand-off to A1's own parsed card, Garmin's credit on it (G1), A3's
- * effort read from the watch (G5), the credit on the runs list, and the
- * picker marking a run already here.
+ * effort read from the watch (G5), the credit on A2 and A3 (D2-12) and on
+ * the runs list, and the picker marking a run already here.
  *
  * Journey: the owner opens A1 -> the picker lists their last runs on
  * Garmin -> a tap imports the newest -> the parsed card lands, credited to
- * Garmin -> A2: pick a piece -> A3 opens with the effort the watch rated
- * (2 of 10: easy) already picked -> log it -> the runs list credits
- * Garmin -> back on A1 the run reads IMPORTED and opens its entry.
+ * Garmin -> A2, credited to Garmin: pick a piece -> A3, credited too,
+ * opens with the effort the watch rated (2 of 10: easy) already picked ->
+ * log it -> the runs list credits Garmin -> back on A1 the run reads
+ * IMPORTED and opens its entry.
  *
  * **The whole app, end to end, against a stub.** Garmin's Personal API is
  * `e2e/garmin/stub-server.ts`, which Playwright starts beside the dev
@@ -72,18 +73,26 @@ test("import a run from Garmin: the picker, the credit, the watch's effort", asy
     });
     await scene(page, "A1's own parsed card, credited to Garmin");
     await expect(picker).toHaveCount(0);
-    await page
-      .getByRole("link", { name: "What did you wear?" })
-      .click();
+    await page.getByRole("link", { name: "What did you wear?" }).click();
     await hydrated(page);
 
     // ---- A2 → A3 · the effort the watch rated ---------------------------
+    // Both steps credit Garmin under their title, once (D2-12; G1).
+    const garminCredit = page.locator('[data-part="garmin-attribution"]');
+    await expect(garminCredit).toHaveCount(1);
+    await expect(
+      page.locator('[data-slot="header"] [data-part="garmin-attribution"]'),
+    ).toBeVisible();
     await page.getByRole("button", { name: "Garmin demo tee" }).click();
     await page.getByRole("button", { name: "Next — did it work?" }).click();
     await page.waitForURL("**/feed/verdict/**");
     await hydrated(page);
 
     await scene(page, "A3 · the effort is the watch's own rating: 2 of 10");
+    await expect(garminCredit).toHaveCount(1);
+    await expect(
+      page.locator('[data-slot="header"] [data-part="garmin-attribution"]'),
+    ).toBeVisible();
     const effort = page.getByRole("group", { name: "Effort" });
     await expect(effort).toHaveAccessibleDescription(
       "From your watch, rated 2 of 10",
