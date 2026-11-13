@@ -257,6 +257,7 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
     // Set as Change is: a press in running text.
     expect(confirm).toHaveClass(
       "target",
+      "-my-3.5",
       "text-small",
       "font-semibold",
       "text-ink",
@@ -283,7 +284,8 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
     const user = userEvent.setup();
     await renderWithRouter(line({ isVerified: true, countInTotals: true }));
     const change = screen.getByRole("button", { name: CHANGE_NAME });
-    expect(change).toHaveClass("target", "text-small", "underline");
+    // A 44 target that does not grow the line it sits on (D2-06).
+    expect(change).toHaveClass("target", "-my-3.5", "text-small", "underline");
     await user.click(change);
     expect(
       within(screen.getByRole("dialog", { name: "Privacy" })).getByRole(
