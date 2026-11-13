@@ -40,9 +40,10 @@ that a ruling changes is built to the ruling.
   at TYPE.title, and "What is it?" takes the group rule. At ≥1040 the 620
   form sits at the page's left with "Already in your closet" as a rail in
   the rest of 1180. Below that, the rail drops under the form. The card
-  lists in-use pieces first (most worn first), then retired, five shown,
-  closing on "+ N more {type}" to the filtered closet. RETIRED appears
-  once, as a tag.
+  is the closet group the piece would be filed in, as C files it (Round
+  56 · 248): a picked type's pieces first, then in-use pieces most worn
+  first, then retired, five shown. From six pieces up it closes on "See
+  all {N} in {Group}" to C on that group. RETIRED appears once, as a tag.
 - **Delete (C-15):** a fixed label column for GOES/STAYS.
 - **Photo well (C-04, N1-07):** `src/ui/FileWell.tsx` clips the photo to
   the well's rounded 4:3 frame at every width, so a square or portrait
