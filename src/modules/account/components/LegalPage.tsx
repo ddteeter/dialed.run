@@ -90,15 +90,11 @@ export const LEGAL_TITLES: Readonly<Record<LegalSlug, string>> = {
  * "DRAFT: …" — the banner the owner removes on publishing.
  */
 function isDraftBanner(block: BodyBlock): boolean {
+  // A quote always holds one paragraph, so it has a first inline; any
+  // other block has no lead to read.
+  const lead = block.kind === "quote" ? block.inlines[0] : undefined;
   return (
-    block.kind === "quote" &&
-    block.inlines
-      .slice(0, 1)
-      .some(
-        (first) =>
-          first.kind === "strong" &&
-          /^DRAFT\b/u.test(plainText(first.children)),
-      )
+    lead?.kind === "strong" && /^DRAFT\b/u.test(plainText(lead.children))
   );
 }
 

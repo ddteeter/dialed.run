@@ -341,9 +341,11 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
       screen.getByRole("heading", { level: 1 }).nextElementSibling,
     ).toBeNull();
     expect(screen.getAllByRole("blockquote")).toHaveLength(6);
-    expect(
-      screen.getByText("DRAFT", { selector: "strong" }).closest("p"),
-    ).not.toBeNull();
+    const paragraphBold = screen.getByText("DRAFT", { selector: "strong" });
+    expect(paragraphBold.closest("p")).not.toBeNull();
+    // Bold that opens a paragraph is not a list item's lead-in.
+    expect(paragraphBold).toHaveClass("font-semibold");
+    expect(paragraphBold).not.toHaveClass("text-body");
   });
 
   it("writes the name plain, in prose, headings and the contents", async () => {
