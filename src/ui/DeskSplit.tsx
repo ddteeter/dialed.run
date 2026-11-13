@@ -44,7 +44,10 @@ export function RailCard({
   isHeading = false,
   children,
 }: Readonly<{
-  title: string;
+  /**
+  Words, or words drawn one way and said another (`Spoken`).
+  */
+  title: ReactNode;
   isHeading?: boolean;
   children: ReactNode;
 }>): JSX.Element {

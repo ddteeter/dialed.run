@@ -2467,7 +2467,7 @@ describe("VerdictForm: the rail's band record and history (round 25)", () => {
     );
 
     const card = within(railOf())
-      .getByRole("heading", { name: "Before, in 32–41° damp" })
+      .getByRole("heading", { name: "Before, in 32 to 41 degrees, damp" })
       .closest("section");
     if (card === null) throw new Error("no history card");
     const rows = card.querySelectorAll("[data-part='band-run']");
@@ -2501,7 +2501,9 @@ describe("VerdictForm: the rail's band record and history (round 25)", () => {
       }),
     );
     expect(
-      within(railOf()).getByRole("heading", { name: "Before, in 32–41° damp" }),
+      within(railOf()).getByRole("heading", {
+        name: "Before, in 32 to 41 degrees, damp",
+      }),
     ).toBeInTheDocument();
     expect(railOf()).toHaveTextContent("No runs in this band yet.");
   });

@@ -1,12 +1,9 @@
 import type { JSX } from "react";
 
 import type { Units } from "../../../lib/contracts";
-import {
-  bandLabel,
-  formatTemp,
-  precipClassOf,
-} from "../../../lib/contracts/temperature";
-import { Mono, RailCard } from "../../../ui";
+import { measuredLine } from "../../../lib/contracts/measures";
+import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
+import { Mono, RailCard, Spoken } from "../../../ui";
 import type { BandRun } from "../band-runs";
 import { VerdictBadge } from "./VerdictBadge";
 
@@ -42,9 +39,28 @@ export function BandRunsCard({
   runs: readonly BandRun[];
   units: Units;
 }>): JSX.Element {
-  const band = `${bandLabel(bandFloor, units.temp)} ${precipClassOf(precipMm)}`;
+  // The band is a range, said in words (round 53 #162.3): "38–46°" is
+  // read as a dash, a minus or nothing. A band is five degrees Celsius
+  // wide from its floor, as `bandLabel` draws it.
+  const band = measuredLine(
+    [
+      [
+        { kind: "range", minC: bandFloor, maxC: bandFloor + 5 },
+        { kind: "word", word: precipClassOf(precipMm) },
+      ],
+    ],
+    units,
+  );
+  const opening = lead(runs.length);
   return (
-    <RailCard title={`${lead(runs.length)} ${band}`}>
+    <RailCard
+      title={
+        <Spoken
+          shown={`${opening} ${band.shown}`}
+          said={`${opening} ${band.said.charAt(0).toLowerCase()}${band.said.slice(1)}`}
+        />
+      }
+    >
       {runs.length === 0 ? (
         <p className="m-0 text-small text-muted">No runs in this band yet.</p>
       ) : (

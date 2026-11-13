@@ -384,10 +384,15 @@ describe("AttachKit: the rail's band history (round 25)", () => {
     await renderWithRouter(attach({ bandRunsFor }));
 
     const heading = await within(rail()).findByRole("heading", {
-      name: "Last 2 in 32–41° damp",
+      name: "Last 2 in 32 to 41 degrees, damp",
     });
     // Feels 3°C: the 0–5° band.
     expect(bandRunsFor).toHaveBeenCalledWith({ data: { bandFloorC: 0 } });
+    // Round 53 #162.3: the band is drawn as a range and said in words.
+    expect(within(heading).getByText("Last 2 in 32–41° damp")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
     const card = heading.closest("section");
     const rows = card?.querySelectorAll("[data-part='band-run']") ?? [];
     expect(rows).toHaveLength(2);
@@ -402,7 +407,9 @@ describe("AttachKit: the rail's band history (round 25)", () => {
     await renderWithRouter(attach({ bandRunsFor: () => Promise.resolve([]) }));
 
     expect(
-      await within(rail()).findByRole("heading", { name: "In 32–41° damp" }),
+      await within(rail()).findByRole("heading", {
+        name: "In 32 to 41 degrees, damp",
+      }),
     ).toBeInTheDocument();
     expect(rail()).toHaveTextContent("No runs in this band yet.");
   });
@@ -449,7 +456,7 @@ describe("AttachKit: the rail's band history (round 25)", () => {
     }
     await renderWithRouter(<Switching />);
     await within(rail()).findByRole("heading", {
-      name: "Last 2 in 32–41° damp",
+      name: "Last 2 in 32 to 41 degrees, damp",
     });
 
     await user.click(screen.getByRole("button", { name: "Warmer run" }));
@@ -457,7 +464,7 @@ describe("AttachKit: the rail's band history (round 25)", () => {
     // Feels 12°C: the 10–15° band, and a dry sky.
     expect(
       await within(rail()).findByRole("heading", {
-        name: "Last 2 in 50–59° dry",
+        name: "Last 2 in 50 to 59 degrees, dry",
       }),
     ).toBeInTheDocument();
     expect(bandRunsFor).toHaveBeenLastCalledWith({ data: { bandFloorC: 10 } });
