@@ -402,10 +402,14 @@ describe("Sign out everywhere (ACC-7)", () => {
     const signOut = vi.fn().mockReturnValue(done.promise);
     await renderWithRouter(<SignOutButton isEverywhere signOut={signOut} />);
 
-    const button = screen.getByRole("button", { name: "Sign out everywhere" });
+    // R55·182.2: the last SIGN-IN row, "Every device", its verb Sign out.
+    const button = screen.getByRole("button", { name: "Sign out" });
+    expect(button).toHaveAccessibleDescription(
+      "Every device Signs out your phone and other browsers",
+    );
     await user.click(button);
     expect(signOut).toHaveBeenCalledTimes(1);
-    expect(button).toHaveTextContent("Signing out everywhere");
+    expect(button).toHaveTextContent("Signing out");
     done.resolve(undefined);
     await waitFor(() => {
       expect(button).not.toHaveAttribute("aria-busy");

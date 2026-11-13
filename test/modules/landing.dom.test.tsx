@@ -121,57 +121,43 @@ describe("SignOutButton", () => {
     expect(signOut).toHaveBeenCalledTimes(2);
   });
 
-  it("is a centred body-size link everywhere but the Desk bar", async () => {
-    await renderWithRouter(<SignOutButton signOut={vi.fn()} />);
-    const button = screen.getByRole("button", { name: "Sign out" });
-    expect(button).toHaveClass("self-center", "p-0", "text-body", "font-semibold");
-    expect(button).not.toHaveClass("font-mono", "uppercase");
-    expect(button.parentElement).toHaveClass("flex", "flex-col", "gap-3");
-    expect(button.parentElement).not.toHaveAttribute("data-part");
-  });
-
-  it("is the Desk bar's mono, underlined Sign out at the bar's right (R55·194)", async () => {
-    const user = userEvent.setup();
-    const done = Promise.withResolvers<undefined>();
-    const signOut = vi.fn().mockReturnValue(done.promise);
-    await renderWithRouter(<SignOutButton isDeskBar signOut={signOut} />);
-    const button = screen.getByRole("button", { name: "Sign out" });
-    expect(button).toHaveClass(
-      "font-mono",
-      "text-mono-xs",
-      "uppercase",
-      "underline",
-      "underline-offset-4",
-      "text-ink",
-      "px-1",
+  it("is Settings' last row: who is signed in, on this phone, and the verb (R55·182.2)", async () => {
+    await renderWithRouter(
+      <SignOutButton username="maya_runs" signOut={vi.fn()} />,
     );
-    expect(button).not.toHaveClass("self-center", "p-0", "text-body", "font-semibold");
-    const root = button.closest("[data-part='desk-sign-out']");
-    expect(root).toHaveClass("flex", "flex-col", "items-end");
-    expect(root).not.toHaveClass("gap-3");
-
-    await user.click(button);
-    expect(signOut).toHaveBeenCalledTimes(1);
-    expect(button).toHaveAttribute("aria-busy", "true");
-    expect(button).toHaveTextContent("Signing out");
-    done.resolve(undefined);
-    await waitFor(() => {
-      expect(button).not.toHaveAttribute("aria-busy");
-    });
+    const button = screen.getByRole("button", { name: "Sign out" });
+    expect(button).toHaveAccessibleDescription(
+      "Signed in as @maya_runs On this phone",
+    );
+    // One bold --cold-text verb at the row's end, and no chevron.
+    expect(button).toHaveClass("font-bold", "text-cold-text");
+    const row = button.parentElement;
+    expect(row?.lastElementChild).toBe(button);
+    expect(row).toHaveClass("justify-between", "border-b");
+    expect(row?.querySelector("svg")).toBeNull();
+    expect(screen.getByText("On this phone")).toHaveClass("text-muted");
+    expect(screen.getByText("Signed in as @maya_runs")).toHaveClass(
+      "font-semibold",
+    );
+    expect(screen.queryByText(/Every device/u)).toBeNull();
   });
 
-  it("says Still signed in from the Desk bar too, under the bar's right edge", async () => {
-    const user = userEvent.setup();
-    const signOut = vi.fn().mockRejectedValueOnce(new Error("down"));
-    await renderWithRouter(<SignOutButton isDeskBar signOut={signOut} />);
-
-    await user.click(screen.getByRole("button", { name: "Sign out" }));
-    const band = await screen.findByText("Still signed in");
-    expect(band.closest("[data-part='desk-sign-out']")).not.toBeNull();
+  it("says only Signed in for an account with no handle yet", async () => {
+    await renderWithRouter(<SignOutButton signOut={vi.fn()} />);
+    expect(
+      screen.getByRole("button", { name: "Sign out" }),
+    ).toHaveAccessibleDescription("Signed in On this phone");
   });
 
-  it("says Sign out everywhere on Account", async () => {
-    await renderWithRouter(<SignOutButton isEverywhere signOut={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "Sign out everywhere" })).toBeInTheDocument();
+  it("is Account's Every device row, whatever the handle", async () => {
+    await renderWithRouter(
+      <SignOutButton isEverywhere username="maya_runs" signOut={vi.fn()} />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Sign out" }),
+    ).toHaveAccessibleDescription(
+      "Every device Signs out your phone and other browsers",
+    );
+    expect(screen.queryByText(/Signed in as/u)).toBeNull();
   });
 });

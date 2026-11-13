@@ -51,19 +51,28 @@ describe("AccountIndex (U1 Account)", () => {
     );
     const email = screen.getByRole("link", { name: /^Email/u });
     expect(email).toHaveAttribute("href", "/account/email");
-    expect(email).toHaveTextContent(/^Emailmaya@example\.comChange ›$/u);
+    expect(email).toHaveTextContent(/^Emailmaya@example\.comChange$/u);
     expect(email).toHaveAccessibleName(/Change$/u);
-    expect(within(email).getByText("›")).toHaveAttribute("aria-hidden", "true");
     expect(screen.getByRole("link", { name: /^Username/u })).toHaveAttribute(
       "href",
       "/account/username",
     );
     expect(screen.getByRole("link", { name: /^Username/u })).toHaveTextContent(
-      "@maya_runs",
+      /^Username@maya_runsChange$/u,
     );
     const password = screen.getByRole("link", { name: /^Password/u });
     expect(password).toHaveAttribute("href", "/account/password");
-    expect(password).toHaveTextContent("Change the password you log in with");
+    expect(password).toHaveTextContent(
+      /^PasswordChange the password you log in withChange$/u,
+    );
+    // R55·182.1: every Account row ends in one bold --cold-text verb, and
+    // no chevron.
+    for (const link of [email, password]) {
+      expect(link.querySelector("svg")).toBeNull();
+      const verb = within(link).getByText("Change");
+      expect(verb).toHaveClass("font-bold", "text-cold-text");
+      expect(link.lastElementChild).toBe(verb);
+    }
     // The nag sits first, then the rows, then signing out everywhere, the
     // export and — last, round 27 #14 — deleting the account.
     const order = Array.from(
@@ -72,6 +81,13 @@ describe("AccountIndex (U1 Account)", () => {
     );
     expect(order[0]).toBe("the band");
     expect(order.slice(-3)).toStrictEqual(["everywhere", "export", "delete"]);
+    // R55·182.2: signing out everywhere is SIGN-IN's last row.
+    const signIn = screen
+      .getByRole("heading", { name: "Sign-in" })
+      .closest("section");
+    const rows = signIn?.querySelectorAll("li");
+    expect(rows).toHaveLength(4);
+    expect(rows?.[3]).toHaveTextContent(/^everywhere$/u);
   });
 
   it("puts the export row under Your data (ACC-10)", async () => {

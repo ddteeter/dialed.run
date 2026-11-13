@@ -59,6 +59,13 @@ const ANSWERED: CurrentSettings = {
   username: "maya_runs",
 };
 
+/**
+Opening Privacy's stamp, answered at once.
+*/
+function SEEN(): Promise<undefined> {
+  return Promise.resolve(undefined);
+}
+
 function row(name: RegExp) {
   return screen.getByRole("link", { name });
 }
@@ -70,6 +77,7 @@ describe("the index (U1/N)", () => {
         current={ANSWERED}
         username="maya_runs"
         runReminderEmail
+        isPrivacyReviewDue={false}
         blockedCount={2}
         display={undefined}
         signOut={undefined}
@@ -80,7 +88,7 @@ describe("the index (U1/N)", () => {
     // and what else lives behind it.
     expect(row(/^Account/u)).toHaveAttribute("href", "/account/sign-in");
     expect(row(/^Account/u)).toHaveTextContent(
-      /^Account@maya_runs · email, password›$/u,
+      /^Account@maya_runs · email, password$/u,
     );
     // ACC-11: the one email a runner can switch.
     expect(row(/^Notifications/u)).toHaveAttribute(
@@ -105,25 +113,25 @@ describe("the index (U1/N)", () => {
       "/onboarding/settings/sharing",
     );
     expect(row(/^Privacy New/u)).toHaveTextContent(
-      /^PrivacyNew runs shared · Counted in totals›$/u,
+      /^PrivacyNew runs shared · Counted in totals$/u,
     );
     // Settings › About (ACC-13, D-52; round 28 #7): the legal texts.
     expect(row(/^Privacy policy/u)).toHaveAttribute("href", "/privacy");
     expect(row(/^Privacy policy/u)).toHaveTextContent(
-      /^Privacy policyWhat we keep, and who sees it›$/u,
+      /^Privacy policyWhat we keep, and who sees it$/u,
     );
     expect(row(/^Terms/u)).toHaveAttribute("href", "/terms");
     expect(row(/^Terms/u)).toHaveTextContent(
-      /^TermsThe rules for using dialed\.run›$/u,
+      /^TermsThe rules for using dialed\.run$/u,
     );
     expect(row(/^Copyright/u)).toHaveAttribute("href", "/copyright");
     expect(row(/^Copyright/u)).toHaveTextContent(
-      /^CopyrightReport something of yours posted here›$/u,
+      /^CopyrightReport something of yours posted here$/u,
     );
     // Round 29 #9 (plan C9): after Copyright.
     expect(row(/^Open source/u)).toHaveAttribute("href", "/open-source");
     expect(row(/^Open source/u)).toHaveTextContent(
-      /^Open sourceWhat dialed\.run is built on›$/u,
+      /^Open sourceWhat dialed\.run is built on$/u,
     );
     expect(row(/^Blocked runners/u)).toHaveAttribute("href", "/safety/blocked");
     expect(row(/^Blocked runners/u)).toHaveTextContent("2 blocked");
@@ -138,15 +146,30 @@ describe("the index (U1/N)", () => {
         current={ANSWERED}
         username="maya_runs"
         runReminderEmail
+        isPrivacyReviewDue={false}
         blockedCount={0}
         display={<p>the theme row</p>}
         signOut={undefined}
       />,
     );
-    // R48·133: DISPLAY after Review (Notifications), before Data.
+    // R48·133: DISPLAY after Notifications, before Data. R55·230: no
+    // REVIEW group; Privacy, Blocked runners and Notifications are WHO
+    // SEES WHAT.
     expect(
       screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
-    ).toEqual(["You", "Who sees what", "Review", "Display", "Data", "About"]);
+    ).toEqual(["You", "Who sees what", "Display", "Data", "About"]);
+    const whoSees = screen
+      .getByRole("heading", { name: "Who sees what" })
+      .closest("section");
+    expect(
+      within(whoSees ?? document.body)
+        .getAllByRole("link")
+        .map((link) => link.getAttribute("href")),
+    ).toEqual([
+      "/onboarding/settings/sharing",
+      "/safety/blocked",
+      "/account/notifications",
+    ]);
     const display = screen
       .getByRole("heading", { name: "Display" })
       .closest("section");
@@ -180,6 +203,7 @@ describe("the index (U1/N)", () => {
           username: undefined,
         }}
         runReminderEmail={false}
+        isPrivacyReviewDue={false}
         blockedCount={0}
         display={undefined}
         signOut={undefined}
@@ -190,12 +214,12 @@ describe("the index (U1/N)", () => {
       "Run reminders in the app only",
     );
     expect(row(/^Privacy New/u)).toHaveTextContent(
-      /^PrivacyNew runs private · Not counted›$/u,
+      /^PrivacyNew runs private · Not counted$/u,
     );
     expect(row(/^How you run/u)).toHaveTextContent("−4° offset");
     expect(row(/^Blocked runners/u)).toHaveTextContent("0 blocked");
     // An account that has not reached O0 has no handle to show.
-    expect(row(/^Account/u)).toHaveTextContent(/^AccountEmail, password›$/u);
+    expect(row(/^Account/u)).toHaveTextContent(/^AccountEmail, password$/u);
   });
 
   it("states both Privacy settings on its row, each its own way (round 38 #61b)", () => {
@@ -211,45 +235,80 @@ describe("the index (U1/N)", () => {
     ).toBe("New runs public · Counted in totals");
   });
 
-  it("asks the unanswered calibration as the ruling words it", async () => {
-    // "'How you run' · 'Not answered' in --muted · 'Answer ›'."
+  it("ends every row in a chevron and no verb, the unanswered state in the subtitle (R55·182.1)", async () => {
     await renderWithRouter(
       <SettingsIndex
         current={{ ...ANSWERED, thermalLevel: undefined }}
         username="maya_runs"
         runReminderEmail
+        isPrivacyReviewDue={false}
         blockedCount={0}
         display={undefined}
         signOut={undefined}
       />,
     );
     const calibration = row(/^How you run/u);
-    expect(calibration).toHaveTextContent(/^How you runNot answeredAnswer ›$/u);
+    expect(calibration).toHaveTextContent(/^How you runNot answered$/u);
     expect(within(calibration).getByText("Not answered")).toHaveClass(
       "text-muted",
     );
-    expect(row(/^Units/u)).toHaveTextContent(/›$/u);
-    expect(row(/^Units/u)).not.toHaveTextContent("Answer");
-    // The "›" is drawn, not said: the verb stays in the name, the glyph
-    // leaves it.
-    expect(calibration).toHaveAccessibleName("How you run Not answered Answer");
-    expect(row(/^Units/u)).toHaveAccessibleName(/[^›]$/u);
-    expect(within(calibration).getByText("›")).toHaveAttribute(
-      "aria-hidden",
-      "true",
-    );
-    expect(within(row(/^Units/u)).getByText("›")).toHaveAttribute(
-      "aria-hidden",
-      "true",
-    );
+    // The chevron is drawn, not said: the link is already the way in.
+    expect(calibration).toHaveAccessibleName("How you run Not answered");
+    for (const link of screen.getAllByRole("link")) {
+      const chevrons = link.querySelectorAll("svg");
+      expect(chevrons).toHaveLength(1);
+      expect(chevrons[0]).toHaveAttribute("aria-hidden", "true");
+      expect(chevrons[0]).toHaveClass("text-muted");
+      expect(link.lastElementChild?.lastElementChild).toBe(chevrons[0]);
+      expect(link.querySelector(".text-cold-text")).toBeNull();
+    }
   });
 
-  it("puts the caller's sign-out at the foot", async () => {
+  it("tags Privacy REVIEW while a privacy setting is new to the runner, before its chevron (R55·230)", async () => {
     await renderWithRouter(
       <SettingsIndex
         current={ANSWERED}
         username="maya_runs"
         runReminderEmail
+        isPrivacyReviewDue
+        blockedCount={0}
+        display={undefined}
+        signOut={undefined}
+      />,
+    );
+    const privacy = row(/^Privacy New/u);
+    const tag = within(privacy).getByText("Review");
+    expect(tag).toHaveClass("font-mono", "uppercase", "text-cold-text");
+    expect(tag.nextElementSibling?.tagName).toBe("svg");
+    expect(privacy).toHaveAccessibleName(
+      "Privacy New runs shared · Counted in totals Review",
+    );
+    // One row carries it, and no other.
+    expect(screen.getAllByText("Review")).toHaveLength(1);
+  });
+
+  it("draws no tag on Privacy once it has been opened", async () => {
+    await renderWithRouter(
+      <SettingsIndex
+        current={ANSWERED}
+        username="maya_runs"
+        runReminderEmail
+        isPrivacyReviewDue={false}
+        blockedCount={0}
+        display={undefined}
+        signOut={undefined}
+      />,
+    );
+    expect(screen.queryByText("Review")).toBeNull();
+  });
+
+  it("puts the caller's sign-out last, alone in its own list (R55·182.2)", async () => {
+    await renderWithRouter(
+      <SettingsIndex
+        current={ANSWERED}
+        username="maya_runs"
+        runReminderEmail
+        isPrivacyReviewDue={false}
         blockedCount={0}
         display={undefined}
         signOut={<button type="button">Sign out</button>}
@@ -260,6 +319,12 @@ describe("the index (U1/N)", () => {
     expect(links.at(-1)?.compareDocumentPosition(signOut)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
+    const item = signOut.closest("li");
+    const list = item?.parentElement;
+    expect(list?.tagName).toBe("UL");
+    expect(list?.children).toHaveLength(1);
+    expect(list).toHaveClass("border-t", "border-hairline");
+    expect(list?.closest("section")).toBeNull();
   });
 });
 
@@ -272,6 +337,7 @@ describe("the index while a sub-page is slow (X3)", () => {
           current={ANSWERED}
           username="maya_runs"
           runReminderEmail
+          isPrivacyReviewDue={false}
           blockedCount={2}
           display={undefined}
         signOut={undefined}
@@ -361,6 +427,7 @@ describe("the sub-pages", () => {
         saveCountInTotals={saveCountInTotals}
         savePublicProfile={vi.fn()}
         pickUsername={vi.fn()}
+        markPrivacySeen={SEEN}
       />,
     );
     expect(
@@ -380,6 +447,7 @@ describe("the sub-pages", () => {
         saveCountInTotals={saveCountInTotals}
         savePublicProfile={vi.fn()}
         pickUsername={vi.fn()}
+        markPrivacySeen={SEEN}
       />,
     );
     expect(
@@ -398,6 +466,56 @@ describe("the sub-pages", () => {
       }),
     ).toBeChecked();
     expect(saveCountInTotals).not.toHaveBeenCalled();
+  });
+
+  it("stamp Privacy as seen when it opens, and Units does not (R55·230)", async () => {
+    const markPrivacySeen = vi.fn(SEEN);
+    const page = (section: "units" | "sharing") => (
+      <SettingsSectionPage
+        section={section}
+        current={ANSWERED}
+        isVerified
+        saveUnits={vi.fn()}
+        saveSharing={vi.fn()}
+        saveCountInTotals={vi.fn()}
+        savePublicProfile={vi.fn()}
+        pickUsername={vi.fn()}
+        markPrivacySeen={markPrivacySeen}
+      />
+    );
+    const { unmount } = await renderWithRouter(page("units"));
+    expect(markPrivacySeen).not.toHaveBeenCalled();
+    unmount();
+    await renderWithRouter(page("sharing"));
+    await waitFor(() => {
+      expect(markPrivacySeen).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("open Privacy the same when the stamp fails, and say nothing of it", async () => {
+    const markPrivacySeen = vi.fn(() => Promise.reject(new Error("down")));
+    await renderWithRouter(
+      <SettingsSectionPage
+        section="sharing"
+        current={ANSWERED}
+        isVerified
+        saveUnits={vi.fn()}
+        saveSharing={vi.fn()}
+        saveCountInTotals={vi.fn()}
+        savePublicProfile={vi.fn()}
+        pickUsername={vi.fn()}
+        markPrivacySeen={markPrivacySeen}
+      />,
+    );
+    await waitFor(() => {
+      expect(markPrivacySeen).toHaveBeenCalledTimes(1);
+    });
+    // A rejection left unhandled fails the run; this one is caught.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Privacy" }),
+    ).toBeVisible();
+    expect(screen.queryByText("down")).toBeNull();
   });
 
   it("save units, and only units, from their own form", async () => {
@@ -433,6 +551,7 @@ describe("the sub-pages", () => {
         saveCountInTotals={vi.fn()}
         savePublicProfile={vi.fn()}
         pickUsername={vi.fn()}
+        markPrivacySeen={SEEN}
       />,
     );
     const [newRuns, profile, totals] = screen.getAllByRole("heading", {
@@ -511,6 +630,7 @@ describe("the sub-pages", () => {
         saveCountInTotals={vi.fn()}
         savePublicProfile={vi.fn()}
         pickUsername={vi.fn()}
+        markPrivacySeen={SEEN}
       />,
     );
     expect(

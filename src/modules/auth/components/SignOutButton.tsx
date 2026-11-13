@@ -1,36 +1,34 @@
+import { useId } from "react";
 import type { JSX } from "react";
 
 import { PendingLabel, inFlight, useControlAction } from "../../../ui";
 import { ControlFailureBand } from "../../../ui";
 
-type SignOutButtonProps = Readonly<
-  | {
-      signOut: () => Promise<unknown>;
-      /**
-       * The Desk top bar's Sign out (R55·194): mono caps, underlined, at
-       * the bar's right, its failure band hanging under that edge.
-       */
-      isDeskBar: true;
-      isEverywhere?: never;
-    }
-  | {
-      signOut: () => Promise<unknown>;
-      isDeskBar?: false | undefined;
-      /**
-       * ACC-7's "Sign out everywhere", on Settings › Account: every session
-       * this account has, this device's included.
-       */
-      isEverywhere?: boolean | undefined;
-    }
->;
-
-const BUTTON =
-  "target cursor-pointer self-center border-none bg-transparent p-0 text-body font-semibold text-ink underline underline-offset-4";
-const DESK_BUTTON =
-  "target cursor-pointer border-none bg-transparent px-1 font-mono text-mono-xs text-ink uppercase underline underline-offset-4";
+/**
+ * The row's two lines, for each of the two sign-outs (R55·182.2): Account's
+ * "Every device", the last SIGN-IN row, and Settings' own, the index's last
+ * row, alone in its group.
+ */
+function rowLines(
+  isEverywhere: boolean,
+  username: string | undefined,
+): { title: string; subtitle: string } {
+  if (isEverywhere) {
+    return {
+      title: "Every device",
+      subtitle: "Signs out your phone and other browsers",
+    };
+  }
+  return {
+    title: username === undefined ? "Signed in" : `Signed in as @${username}`,
+    subtitle: "On this phone",
+  };
+}
 
 /**
- * U1's "Sign out", at the foot of the settings index.
+ * A sign-out row (R55·182): what it signs out, and one bold `--cold-text`
+ * verb at its end, "Sign out", with no chevron, as every row that does
+ * something ends. The caller puts it in its list.
  *
  * It lived on `/` until round 21 gave the landing page its own bar with
  * one action and nothing else; settings is where U1 draws it. A control
@@ -39,33 +37,56 @@ const DESK_BUTTON =
  * the one outcome that must never be silent, since a runner who walks
  * away believing they are signed out on a shared machine is not.
  */
-export function SignOutButton(props: SignOutButtonProps): JSX.Element {
-  const isDeskBar = props.isDeskBar === true;
-  const isEverywhere = props.isEverywhere === true;
+export function SignOutButton({
+  signOut,
+  isEverywhere = false,
+  username,
+}: Readonly<{
+  signOut: () => Promise<unknown>;
+  /**
+   * ACC-7's "Sign out everywhere", on Settings › Account: every session
+   * this account has, this device's included.
+   */
+  isEverywhere?: boolean | undefined;
+  /**
+  Settings' row names who is signed in, by handle once there is one.
+  */
+  username?: string | undefined;
+}>): JSX.Element {
   const control = useControlAction<[]>({
-    action: props.signOut,
+    action: signOut,
     kicker: "Still signed in",
   });
+  const lines = rowLines(isEverywhere, username);
+  const linesId = useId();
 
   return (
-    <div
-      className={isDeskBar ? "flex flex-col items-end" : "flex flex-col gap-3"}
-      data-part={isDeskBar ? "desk-sign-out" : undefined}
-    >
-      <button
-        type="button"
-        {...inFlight(control.pending)}
-        onClick={() => {
-          void control.run();
-        }}
-        className={isDeskBar ? DESK_BUTTON : BUTTON}
-      >
-        <PendingLabel
-          label={isEverywhere ? "Sign out everywhere" : "Sign out"}
-          pendingLabel={isEverywhere ? "Signing out everywhere" : "Signing out"}
-          pending={control.pending}
-        />
-      </button>
+    <div data-part="sign-out-row" className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3 border-b border-hairline py-3">
+        {/* The button is the verb alone; the row's lines describe it, so
+            "Sign out" is heard with what it signs out. */}
+        <span id={linesId} className="flex min-w-0 flex-col gap-1">
+          <span className="text-body font-semibold">{lines.title}</span>
+          <span className="text-small text-muted">{lines.subtitle}</span>
+        </span>
+        <button
+          type="button"
+          {...inFlight(control.pending)}
+          aria-describedby={linesId}
+          onClick={() => {
+            void control.run();
+          }}
+          className="target shrink-0 cursor-pointer border-none bg-transparent p-0 text-body font-bold text-cold-text"
+        >
+          <PendingLabel
+            label="Sign out"
+            pendingLabel="Signing out"
+            pending={control.pending}
+            // Flush right, the row's edge, as the export row's verb.
+            align="end"
+          />
+        </button>
+      </div>
       <ControlFailureBand
         failure={control.failure}
         onRetry={control.retry}

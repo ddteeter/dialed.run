@@ -92,7 +92,7 @@ async function openSheet(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("DeleteAccount (U1's last row)", () => {
-  it("is set apart by a 2px rule, its title in the action colour as text, and says what happens", async () => {
+  it("is set apart by a 2px rule, its verb in the action colour as text, and says what happens", async () => {
     const { view } = deleteRow();
     await view;
     const row = document.querySelector("[data-part='delete-account']");
@@ -117,8 +117,15 @@ describe("DeleteAccount (U1's last row)", () => {
         (child) => child.getAttribute("aria-hidden") === "true",
       ),
     ).toEqual([false, true, true]);
-    // Pink as text is `--cold-text`; `--action` is a surface (tokens.css).
-    expect(screen.getByText("Delete account")).toHaveClass("text-cold-text");
+    // R55·182.1: the label is ink, and the verb carries the danger, bold
+    // in `--cold-text` (pink as text; `--action` is a surface).
+    expect(screen.getByText("Delete account")).not.toHaveClass(
+      "text-cold-text",
+    );
+    expect(screen.getByText("Delete")).toHaveClass(
+      "font-bold",
+      "text-cold-text",
+    );
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 

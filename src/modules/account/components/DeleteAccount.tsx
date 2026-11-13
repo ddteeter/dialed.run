@@ -50,7 +50,7 @@ interface DeleteAccountSeams {
 
 /**
  * U1's last row, "Delete account" (ACC-9; round 27 #14): set apart by a
- * 2px rule, its title in the action colour, and a sheet that asks once
+ * 2px rule, its verb in the action colour, and a sheet that asks once
  * more — with the current password, or, for an account made with Google,
  * a fresh Google sign-in.
  */
@@ -99,14 +99,18 @@ export function DeleteAccount({
           className="target absolute inset-0 cursor-pointer border-none bg-transparent p-0"
         />
         <span aria-hidden="true" className="flex flex-col gap-1">
-          <span id={titleId} className="text-body font-semibold text-cold-text">
+          <span id={titleId} className="text-body font-semibold">
             Delete account
           </span>
           <span id={sentenceId} className="text-small text-muted">
             Deleted after 7 days. Log in before then to keep it.
           </span>
         </span>
-        <span aria-hidden="true" className="shrink-0 text-body text-ink">
+        {/* R55·182.1: the label is ink, and the verb carries the danger. */}
+        <span
+          aria-hidden="true"
+          className="shrink-0 text-body font-bold text-cold-text"
+        >
           Delete
         </span>
       </div>

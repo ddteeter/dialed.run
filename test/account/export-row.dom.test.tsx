@@ -85,6 +85,10 @@ describe("ExportRow", () => {
     expect(within(row()).getByText("Get a copy").parentElement).toHaveClass(
       "justify-items-end",
     );
+    // R55·182.1: an Account row ends in one bold --cold-text verb.
+    expect(
+      within(row()).getByRole("button", { name: "Get a copy" }),
+    ).toHaveClass("font-bold", "text-cold-text");
   });
 
   it("asks once per press, with a fresh key after each the server took, then reloads the row", async () => {
@@ -169,6 +173,7 @@ describe("ExportRow", () => {
     const download = within(row()).getByRole("link", { name: "Download" });
     expect(download).toHaveAttribute("href", `/account/export/${token}`);
     expect(download).toHaveAttribute("download");
+    expect(download).toHaveClass("font-bold", "text-cold-text", "no-underline");
     expect(within(row()).queryByRole("button")).toBeNull();
   });
 

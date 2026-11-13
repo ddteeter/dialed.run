@@ -218,6 +218,7 @@ function privacy(
       saveCountInTotals={vi.fn()}
       savePublicProfile={savePublicProfile}
       pickUsername={pickUsername}
+      markPrivacySeen={() => Promise.resolve()}
     />
   );
 }
