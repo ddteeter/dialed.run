@@ -12,6 +12,7 @@ import {
   retimeRunFn,
   startFileImport,
 } from "../../modules/runs/functions";
+import { newRunSearch } from "../../modules/runs/inputs";
 import { AddRunShell } from "../../modules/runs/components/AddRunShell";
 
 /**
@@ -32,11 +33,14 @@ export const Route = createFileRoute("/runs/new")({
     ]);
     return { units, bell, hasGarmin };
   },
+  validateSearch: newRunSearch,
   component: NewRunPage,
 });
 
 function NewRunPage() {
   const { units, bell, hasGarmin } = Route.useLoaderData();
+  // Round 55 · 183: a Strava reminder's day, carried on to R1's Started.
+  const search = Route.useSearch();
 
   return (
     <BelledLayout {...bell}>
@@ -59,6 +63,7 @@ function NewRunPage() {
           No file?{" "}
           <Link
             to="/runs/manual"
+            search={search}
             data-target="inline"
             className="font-semibold text-cold-text"
           >

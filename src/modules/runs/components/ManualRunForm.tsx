@@ -82,17 +82,29 @@ export interface ManualRunFormProps {
   submitRun: (input: {
     data: z.infer<typeof manualRunInput>;
   }) => Promise<{ id: string }>;
+  /**
+   * The day to start from, when the runner came from a Strava reminder
+   * (Round 55 · 183): the day it arrived, "2026-11-12".
+   */
+  startedOn?: string | undefined;
 }
 
-export function ManualRunForm({ submitRun }: Readonly<ManualRunFormProps>) {
+/**
+ * Started's first value: blank, or a carried day at its first minute. A
+ * `datetime-local` holds a day only with a time, and 00:00 claims none:
+ * the runner sets the hour (a guess for Design, design 212).
+ */
+export function startedFrom(day: string | undefined): string {
+  return day === undefined ? "" : `${day}T00:00`;
+}
+
+export function ManualRunForm({
+  submitRun,
+  startedOn,
+}: Readonly<ManualRunFormProps>) {
   const navigate = useNavigate();
   const [title, setTitle] = useState("Morning run");
-  // Equivalent mutant on the initial value: anything stryker substitutes
-  // is not a parseable datetime either, so `toEpochSeconds` answers NaN
-  // for both and the schema refuses both. The empty string is what a
-  // `datetime-local` renders as blank.
-  // Stryker disable next-line StringLiteral
-  const [startedAt, setStartedAt] = useState("");
+  const [startedAt, setStartedAt] = useState(startedFrom(startedOn));
   const [minutes, setMinutes] = useState("30");
   const [distanceKm, setDistanceKm] = useState("5");
   const [indoor, setIndoor] = useState(false);

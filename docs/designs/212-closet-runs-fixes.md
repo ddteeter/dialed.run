@@ -70,6 +70,14 @@ that a ruling changes is built to the ruling.
 - **Strava (D1-15, P2a-09, 238):** the callback page wears the shell and
   R39's receipt. Connected reads as one sentence, and Disconnect is a text
   link.
+- **Strava reminder (Round 55 · 183, from #633):** the row reads "New run
+  on Strava. Upload its file, then add what you wore." It opens
+  `/runs/new?date=<day>`, the day the row arrived in the runner's home
+  zone, never anything from the activity (owner, 2026-11-13). A1 has no
+  date field, so the day is "filled in" where the flow has one: carried
+  on to R1, whose Started starts at that day's 00:00 (coordinator,
+  2026-11-13; a design delta for Round 56, in case Design meant a line on
+  A1 naming the day).
 - **Conditions sheet (P2a-04):** the duplicate caption goes. The visible
   title follows #643 (8a).
 - **Garmin picker (P2a-05):** sans rows, and the action is centred.
