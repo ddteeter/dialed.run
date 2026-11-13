@@ -235,6 +235,30 @@ friends. The owner chose **$25 a month of overage** (owner, 2026-11-13).
   should be about $0. A real spike at public launch could trip it and take
   the site down.
 
+#### What the Workers limit doesn't cover
+
+The limit stops Worker invocations only. Every other paid service below
+bills on its own, keeps running after the Workers limit trips, and has its
+own brake or none. A Worker that is blocked stops calling most of them, but
+it stops nothing already stored or queued.
+
+| service                             | billed for                                                                            | brake                                                                     |
+| ----------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Cloudflare D1 (core, weather, ops)  | rows read and written, storage                                                        | §1 usage notifications only. No spending limit yet.                       |
+| Cloudflare R2 (every bucket)        | storage and operations                                                                | §1 usage notifications only. No spending limit yet.                       |
+| Cloudflare Queues                   | queue operations (the consumer's invocations count under Workers)                     | None of its own; check its usage in the dashboard. No spending limit yet. |
+| Cloudflare Email Sending            | messages past the included 3,000 a month                                              | §1 usage notifications only. No spending limit yet.                       |
+| Cloudflare Workers Analytics Engine | data points written and queried, where Cloudflare bills them (check its pricing page) | None of its own. No spending limit yet.                                   |
+| Cloudflare Workers Observability    | logs and traces past the plan's included volume (design 165)                          | The sampling rate in `wrangler.jsonc`. No spending limit yet.             |
+| OpenAI                              | extraction calls (moderation is free)                                                 | The project's monthly budget limit (table above).                         |
+| Visual Crossing                     | weather records                                                                       | The plan; Metered has no daily cap (table above).                         |
+| Firecrawl                           | product-link scrapes                                                                  | The plan's credit cap (table above).                                      |
+| Anthropic                           | dependency-major reviews and the a11y transcript review in CI                         | The workspace's monthly spend limit (table above).                        |
+| Sentry                              | events and cron monitors past the plan's quota                                        | The plan's quota.                                                         |
+
+Cloudflare says more products are coming to Spend Management. When D1, R2
+or Email Sending gain a limit, add one here.
+
 Sources:
 
 - [changelog](https://developers.cloudflare.com/changelog/post/2026-11-13-spend-management/)
