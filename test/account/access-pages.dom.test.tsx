@@ -542,6 +542,10 @@ describe("D7 · Access", () => {
     expect(
       screen.getByRole("heading", { name: "Codes" }).parentElement,
     ).not.toHaveClass("max-w-column");
+    // Only the code list takes the width; its form keeps the column.
+    expect(
+      document.querySelector("[data-part='new-code']")?.parentElement,
+    ).toHaveClass("max-w-column");
     const email = screen.getByText("sam@example.com");
     expect(email).toHaveClass("min-w-0", "wrap-anywhere");
     expect(email.parentElement).toHaveClass("min-w-0", "flex-wrap");

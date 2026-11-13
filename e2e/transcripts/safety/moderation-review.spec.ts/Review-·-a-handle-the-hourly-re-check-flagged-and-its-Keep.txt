@@ -10,11 +10,9 @@ link, :when
 end of link, :when
 end of listitem, level 1, position 1, set size 6
 listitem, level 1, position 2, set size 6
-link, Review # waiting, current page
+link, Review, current page
 Review
-#
-waiting
-end of link, Review # waiting, current page
+end of link, Review, current page
 end of listitem, level 1, position 2, set size 6
 listitem, level 1, position 3, set size 6
 link, Corrections
@@ -41,14 +39,16 @@ end of navigation, Desk
 main
 heading, Review, level 1
 # waiting · # decided today
-heading, # waiting, level 2
-# waiting
-end of heading, # waiting, level 2
+heading, waiting, level 2
+waiting
+end of heading, waiting, level 2
 paragraph
 Nothing waiting. The daily digest says so too.
 end of paragraph
 region, Takedown
 heading, Takedown, level 2
+Takedown
+end of heading, Takedown, level 2
 form
 status
 What it is

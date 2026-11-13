@@ -704,14 +704,17 @@ function CodesSection({
       <Mono step="xs" className="text-muted">
         {codeCounts(codes)}
       </Mono>
-      <NewCodeForm
-        createCode={actions.createCode}
-        onCreated={async (code) => {
-          setMade((previous) => [...previous, code]);
-          setMadeStatus(madeLine(code, await wasCopied(code)));
-          await onChanged();
-        }}
-      />
+      {/* The form keeps the column; only the list takes the width. */}
+      <div className="max-w-column">
+        <NewCodeForm
+          createCode={actions.createCode}
+          onCreated={async (code) => {
+            setMade((previous) => [...previous, code]);
+            setMadeStatus(madeLine(code, await wasCopied(code)));
+            await onChanged();
+          }}
+        />
+      </div>
       <p role="status" data-part="status-line" className="m-0">
         <Mono step="xs">{madeStatus}</Mono>
       </p>

@@ -196,10 +196,14 @@ function Search({
  */
 function StateTags({ runner }: Readonly<{ runner: DeskRunner }>): JSX.Element {
   return (
-    <span className="flex gap-2 whitespace-nowrap">
-      <Bracketed step="sm">{runner.state}</Bracketed>
+    // Each tag whole; on a phone (a guess) the two may stack, leaving the
+    // handle room.
+    <span className="flex flex-wrap gap-x-2 wide:flex-nowrap">
+      <Bracketed step="sm" className="whitespace-nowrap">
+        {runner.state}
+      </Bracketed>
       {runner.flaggedAt === undefined ? undefined : (
-        <Bracketed step="sm" className="text-hiviz-text">
+        <Bracketed step="sm" className="whitespace-nowrap text-hiviz-text">
           Flagged
         </Bracketed>
       )}
@@ -565,7 +569,8 @@ function RunnerHead({ runner }: Readonly<{ runner: DeskRunner }>): JSX.Element {
       </span>
       <StateTags runner={runner} />
       <Mono step="xs" className="text-muted">
-        {`${counted(runner.runs, "run")} · ${counted(runner.reports, "report")} on name · joined ${joinedLabel(runner.joinedAt)}`}
+        {`${counted(runner.runs, "run")} · ${counted(runner.reports, "report")} on name · `}
+        <span className="whitespace-nowrap">{`joined ${joinedLabel(runner.joinedAt)}`}</span>
       </Mono>
     </div>
   );

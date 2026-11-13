@@ -39,14 +39,16 @@ end of navigation, Desk
 main
 heading, Review, level 1
 # waiting · # decided today
-heading, # waiting, level 2
-# waiting
-end of heading, # waiting, level 2
+heading, waiting, level 2
+waiting
+end of heading, waiting, level 2
 paragraph
 Nothing waiting. The daily digest says so too.
 end of paragraph
 region, Takedown
 heading, Takedown, level 2
+Takedown
+end of heading, Takedown, level 2
 form
 status
 What it is
@@ -70,9 +72,8 @@ Quarantine · #
 end of heading, Quarantine · #, level 2
 list
 listitem, level 1, position 1, set size 1
-entry
-Held
-:month # #
+entry · :id
+Held :month # #
 Uploader
 :id
 Kept until
@@ -80,17 +81,9 @@ Kept until
 reported to NCMEC :month # #
 ·
 E#E-#
-form
 status
 Report recorded.
 end of status
-CyberTipline report number
-textbox, CyberTipline report number, E#E-#, Optional. Record it once the report is filed; it is then kept a year from now.
-Optional. Record it once the report is filed; it is then kept a year from now.
-button, Record the NCMEC report
-Record the NCMEC report
-end of button, Record the NCMEC report
-end of form
 end of listitem, level 1, position 1, set size 1
 end of list
 end of main

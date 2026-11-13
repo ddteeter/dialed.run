@@ -136,7 +136,13 @@ describe("D8's table", () => {
     expect(runs).toHaveClass("text-right", "max-wide:hidden");
     expect(reports).toHaveClass("text-right");
     expect(reports).not.toHaveClass("max-wide:hidden");
-    expect(state?.firstElementChild).toHaveClass("whitespace-nowrap");
+    expect(state?.firstElementChild).toHaveClass(
+      "flex-wrap",
+      "wide:flex-nowrap",
+    );
+    expect(state?.firstElementChild?.firstElementChild).toHaveClass(
+      "whitespace-nowrap",
+    );
     expect(
       within(handle ?? document.body).getByTitle("ada@example.com"),
     ).toHaveClass("wide:hidden");
@@ -291,9 +297,12 @@ describe("selecting a runner", () => {
     await renderDesk({ runners: [{ ...ada, runs: 1, reports: 1 }] });
     await user.click(screen.getByRole("button", { name: "@ada" }));
 
-    expect(
-      screen.getByText("1 run · 1 report on name · joined 2025-09-04"),
-    ).toBeInTheDocument();
+    const line = screen.getByText(/^joined 2025-09-04$/u);
+    // The date never breaks from its word (168.3).
+    expect(line).toHaveClass("whitespace-nowrap");
+    expect(line.parentElement).toHaveTextContent(
+      /^1 run · 1 report on name · joined 2025-09-04$/u,
+    );
   });
 
   it("names a runner with no handle by their email", async () => {

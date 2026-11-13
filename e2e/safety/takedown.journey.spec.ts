@@ -289,8 +289,9 @@ test("someone with no account asks for an intimate image to come down, and an op
   await expect(deskKit.getByRole("heading", { level: 1 })).toHaveText(
     /^Kit by @/u,
   );
+  // R51·153's strip: `@handle · AUDIENCE · STATE`.
   await expect(deskKit.locator("[data-part='kit-band']")).toContainText(
-    "[hidden pending review]",
+    " · hidden pending review",
   );
   // Round 51 · 153: when and where, under the band.
   await expect(deskKit.locator("[data-part='kit-run']")).toBeVisible();
