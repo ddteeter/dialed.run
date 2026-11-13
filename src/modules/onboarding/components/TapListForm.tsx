@@ -36,9 +36,13 @@ const ENOUGH_TO_START = 6;
  * be a hue. What is left is ink — the chip fills, the text reverses — and
  * `tap-list-form.dom.test.tsx` asserts both states so a later restyle
  * cannot quietly reintroduce a coloured tick.
+ *
+ * **Both carry a 1px border** (#630 P1-07): ink on ink when tapped, so a
+ * chip keeps its width and its neighbours do not creep left under the
+ * finger, nor a chip near a line's end change rows.
  */
 const CHIP_ON =
-  "target relative flex items-center justify-center rounded-pill bg-ink px-3 py-2 text-ground has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink";
+  "target relative flex items-center justify-center rounded-pill border border-ink bg-ink px-3 py-2 text-ground has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink";
 const CHIP_OFF =
   "target relative flex items-center justify-center rounded-pill border border-hairline px-3 py-2 text-quiet has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink";
 

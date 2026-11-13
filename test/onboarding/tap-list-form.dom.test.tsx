@@ -351,6 +351,10 @@ describe("TapListForm", () => {
 
     expect(chip()).toHaveClass("bg-ink");
     expect(chip()).toHaveClass("text-ground");
+    // The same 1px edge either way, so a tap does not change its width
+    // (#630 P1-07).
+    expect(chip()).toHaveClass("border", "border-ink");
+    expect(chip()).not.toHaveClass("border-hairline");
     expect(chip()?.className).not.toMatch(/pink|teal|hi-viz/);
   });
 
