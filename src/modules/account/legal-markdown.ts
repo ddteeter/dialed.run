@@ -283,6 +283,74 @@ export function plainText(inlines: readonly Inline[]): string {
 }
 
 /**
+A block inside a section: anything but the H2 that opens one.
+*/
+export type BodyBlock = Exclude<Block, { kind: "section" }>;
+
+export interface Section {
+  readonly id: string;
+  readonly heading: readonly Inline[];
+  readonly blocks: readonly BodyBlock[];
+}
+
+/**
+ * The blocks under the title before the first H2, then each H2 with what
+ * follows it up to the next — so "Back to contents" closes a section rather
+ * than being a block of its own in the text.
+ *
+ * Pure, and isomorphic: the pages split a parsed text with it in the
+ * browser, and nothing here reaches the parser (its packages are
+ * side-effect free, so the bundle drops them).
+ */
+export function sectionsOf(blocks: readonly Block[]): {
+  readonly preamble: readonly BodyBlock[];
+  readonly sections: readonly Section[];
+} {
+  const preamble: BodyBlock[] = [];
+  const sections: {
+    id: string;
+    heading: readonly Inline[];
+    blocks: BodyBlock[];
+  }[] = [];
+  for (const block of blocks) {
+    if (block.kind === "section") {
+      sections.push({ id: block.id, heading: block.inlines, blocks: [] });
+    } else {
+      (sections.at(-1)?.blocks ?? preamble).push(block);
+    }
+  }
+  return { preamble, sections };
+}
+
+/**
+ * What a section says, heading and blocks, as one plain string: what
+ * `/open-source`'s search finds a third-party notice by (R55·225).
+ */
+export function sectionText(section: Section): string {
+  return [
+    section.heading,
+    ...section.blocks.flatMap((block) => blockInlines(block)),
+  ]
+    .map((inlines) => plainText(inlines))
+    .join(" ");
+}
+
+function blockInlines(block: BodyBlock): readonly (readonly Inline[])[] {
+  switch (block.kind) {
+    case "list":
+    case "numbered": {
+      return block.items;
+    }
+    case "table": {
+      return [...block.head, ...block.rows.flat()];
+    }
+    default: {
+      return [block.inlines];
+    }
+  }
+}
+
+/**
  * The owner's word that a text is final (review of PR #130): front matter
  * at the very top of the file, opening with `published: true` —
  *

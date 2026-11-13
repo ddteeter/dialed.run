@@ -13,6 +13,10 @@ import { NotificationBell } from "../modules/notifications/components/Notificati
 export const Route = createFileRoute("/terms")({
   loader: () => legalPageLoader("terms"),
   component: () => (
-    <LegalPage {...Route.useLoaderData()} bell={NotificationBell} />
+    <LegalPage
+      {...Route.useLoaderData()}
+      slug="terms"
+      bell={NotificationBell}
+    />
   ),
 });

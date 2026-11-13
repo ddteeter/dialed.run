@@ -226,7 +226,7 @@ describe("OpenSourcePage", () => {
       within(mit).queryByText("The typefaces you read everything in."),
     ).toBeNull();
     // A licence group has no line of its own, not even an empty one.
-    expect(mit.querySelector("p")).toBeNull();
+    expect(mit.querySelector(":scope > p")).toBeNull();
   });
 
   it("prints each group's licence once, closed until asked for, and offers none where there is no text", async () => {
@@ -234,13 +234,13 @@ describe("OpenSourcePage", () => {
     const mit = section("MIT");
     const read = within(mit).getByText("Read the MIT licence");
     expect(read.tagName).toBe("SUMMARY");
-    expect(read).toHaveClass("target", "underline");
+    expect(read).toHaveClass("target-line", "underline", "list-none");
     // Its own words already say whose licence it is.
     expect(read).not.toHaveAttribute("aria-label");
     expect(read).toHaveAccessibleName("Read the MIT licence");
     const details = read.closest("details");
     expect(details).not.toHaveAttribute("open");
-    expect(details?.querySelector("pre")).toHaveTextContent(
+    expect(details?.querySelector("p")).toHaveTextContent(
       "Permission is hereby granted, free of charge",
     );
     // Above the rows.
@@ -265,7 +265,7 @@ describe("OpenSourcePage", () => {
     // were a list of identical links.
     const project = within(react).getByRole("link", { name: "Project: react" });
     expect(project).toHaveAttribute("href", "https://react.dev/");
-    expect(project).toHaveClass("target", "underline");
+    expect(project).toHaveClass("target-line", "underline");
     expect(project).toHaveTextContent(/^Project$/u);
     expect(
       within(react).getByText("© Meta Platforms, Inc. and affiliates"),
@@ -287,7 +287,12 @@ describe("OpenSourcePage", () => {
     const showAll = within(section("MIT")).getByRole("button", {
       name: "Show all 5",
     });
-    expect(showAll).toHaveClass("target", "underline");
+    expect(showAll).toHaveClass(
+      "target",
+      "w-full",
+      "rounded-pill",
+      "border-ink",
+    );
     // Every row keyed by its own name and version: React says nothing.
     const errors = vi.spyOn(console, "error");
     await user.click(showAll);
@@ -321,7 +326,7 @@ describe("OpenSourcePage", () => {
     expect(notice.tagName).toBe("SUMMARY");
     // Drawn "Notice", heard with the package's name.
     expect(notice).toHaveAccessibleName("Notice: photon");
-    expect(notice.closest("details")?.querySelector("pre")).toHaveTextContent(
+    expect(notice.closest("details")?.querySelector("p")).toHaveTextContent(
       "This product includes…",
     );
     await user.click(
@@ -330,7 +335,7 @@ describe("OpenSourcePage", () => {
     const seroval = within(section("MIT")).getAllByRole("listitem")[4];
     const own = within(seroval ?? document.body).getByText("Licence");
     expect(own).toHaveAccessibleName("Licence: seroval");
-    expect(own.closest("details")?.querySelector("pre")).toHaveTextContent(
+    expect(own.closest("details")?.querySelector("p")).toHaveTextContent(
       "MIT, with a clause of its own",
     );
   });
@@ -403,10 +408,12 @@ describe("OpenSourcePage", () => {
     expect(
       screen.queryByRole("heading", { name: "SIL Open Font License 1.1" }),
     ).toBeNull();
-    // The notices are not a group, and stay.
+    // No notice says "re", so the notices go too, and the contents with
+    // them (R55·225).
     expect(
-      screen.getByRole("heading", { level: 2, name: "Third-party notices" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("heading", { level: 2, name: "Third-party notices" }),
+    ).toBeNull();
+    expect(contentsLinks()).toEqual(["MIT"]);
     await user.type(field, "act-dom");
     expect(screen.getByRole("status")).toHaveTextContent(
       /^1 package matches\.$/u,
@@ -498,5 +505,119 @@ describe("OpenSourcePage", () => {
     expect(
       within(notices).getByRole("link", { name: "Back to contents" }),
     ).toHaveAttribute("href", "#contents");
+    // R39's rows: each a bold heading on a hairline.
+    const weather = within(notices).getByRole("heading", {
+      level: 3,
+      name: "Weather data",
+    });
+    expect(weather).toHaveClass("text-body", "font-bold");
+    expect(weather.parentElement?.tagName).toBe("LI");
+    expect(weather.parentElement).toHaveClass("border-t", "border-hairline");
+    expect(weather.parentElement?.parentElement?.children).toHaveLength(2);
+  });
+
+  it("finds a notice by its words, and the contents follow (R55·225)", async () => {
+    const user = userEvent.setup();
+    await renderPage();
+    await user.type(search(), " CROSSING ");
+    const notices = section("Third-party notices");
+    expect(
+      within(notices)
+        .getAllByRole("heading", { level: 3 })
+        .map((heading) => heading.textContent),
+    ).toEqual(["Weather data"]);
+    expect(screen.queryByRole("heading", { name: "MIT" })).toBeNull();
+    expect(contentsLinks()).toEqual(["Third-party notices"]);
+    // Something matched, so the no-match line is not drawn.
+    expect(screen.queryByText(/^Nothing we ship/u)).toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /^0 packages match\.$/u,
+    );
+    await user.clear(search());
+    await user.type(search(), "climate");
+    expect(
+      within(section("Third-party notices"))
+        .getAllByRole("heading", { level: 3 })
+        .map((heading) => heading.textContent),
+    ).toEqual(["Climate zones"]);
+  });
+
+  it("counts what a search leaves in the contents, as a tally of plain rows", async () => {
+    const user = userEvent.setup();
+    await renderPage();
+    const contents = screen.getByRole("navigation", { name: "Contents" });
+    for (const link of within(contents).getAllByRole("link")) {
+      expect(link).toHaveClass("target-line", "no-underline");
+      expect(link).not.toHaveClass("underline");
+    }
+    await user.type(search(), "re");
+    const [mit] = within(
+      screen.getByRole("navigation", { name: "Contents" }),
+    ).getAllByRole("listitem");
+    expect(mit?.querySelector(".text-mono-md")).toHaveTextContent(/^2$/u);
+  });
+
+  it("sets a group's count at the end of its heading's line", async () => {
+    await renderPage();
+    const heading = screen.getByRole("heading", { level: 2, name: "MIT" });
+    expect(heading).toHaveClass("font-display", "text-title");
+    const count = within(section("MIT")).getByText("5");
+    expect(count.parentElement).toBe(heading.parentElement);
+    expect(heading.parentElement).toHaveClass("justify-between");
+    // Not a legal text's section: no hairline above it.
+    expect(section("MIT")).not.toHaveClass("border-t");
+  });
+
+  it("puts Project at the end of the row's first line", async () => {
+    await renderPage();
+    const [react] = within(section("MIT")).getAllByRole("listitem");
+    const project = within(react ?? document.body).getByRole("link", {
+      name: "Project: react",
+    });
+    expect(project.parentElement?.lastElementChild).toBe(project);
+    expect(project.parentElement).toHaveClass("justify-between");
+  });
+
+  it("clears the search with the pack's ✕, shown only while there is text (R55·226)", async () => {
+    const user = userEvent.setup();
+    await renderPage();
+    expect(screen.queryByRole("button", { name: "Clear" })).toBeNull();
+    await user.type(search(), "zod");
+    const clear = screen.getByRole("button", { name: "Clear" });
+    expect(clear).toHaveClass("target", "text-ink");
+    expect(clear.querySelector(":scope svg path")).toHaveAttribute(
+      "d",
+      "M5 5l14 14M19 5L5 19",
+    );
+    await user.click(clear);
+    expect(search()).toHaveValue("");
+    expect(search()).toHaveFocus();
+    expect(screen.queryByRole("button", { name: "Clear" })).toBeNull();
+    expect(rowNames("MIT")).toEqual(["react", "zod", "clsx"]);
+  });
+
+  it("opens a text by a link with the pack's chevron, and wraps its words as paragraphs (R55·226, A-12)", async () => {
+    await renderPage([
+      {
+        ...MIT,
+        text: "Permission is hereby granted,\nfree of charge.\n\nTHE SOFTWARE IS PROVIDED.",
+      },
+    ]);
+    const read = within(section("MIT")).getByText("Read the MIT licence");
+    expect(read.closest("details")).toHaveClass("group");
+    expect(read.querySelector("svg")).toHaveClass("group-open:rotate-90");
+    expect(read.querySelector(":scope svg path")).toHaveAttribute("d", "M9 5l7 7-7 7");
+    expect(read).toHaveClass("[&::-webkit-details-marker]:hidden");
+    const paragraphs = read.closest("details")?.querySelectorAll("p") ?? [];
+    expect([...paragraphs].map((paragraph) => paragraph.textContent)).toEqual([
+      "Permission is hereby granted, free of charge.",
+      "THE SOFTWARE IS PROVIDED.",
+    ]);
   });
 });
+
+function contentsLinks() {
+  return within(screen.getByRole("navigation", { name: "Contents" }))
+    .getAllByRole("link")
+    .map((link) => link.textContent);
+}

@@ -7,6 +7,8 @@ import {
   parseLegalDoc,
   plainText,
   publishedText,
+  sectionsOf,
+  sectionText,
   withoutSourceComments,
 } from "../../src/modules/account/legal-markdown";
 
@@ -419,5 +421,58 @@ describe("publishedText", () => {
     // The opener's own dashes do not close it.
     expect(withoutSourceComments("a<!-->b-->c")).toBe("ac");
     expect(withoutSourceComments("no comment")).toBe("no comment");
+  });
+});
+
+describe("sectionsOf", () => {
+  it("splits the blocks before the first H2 from each H2 and what follows it", () => {
+    const { preamble, sections } = sectionsOf(
+      parseLegalDoc("# T\n\nBefore.\n\n## One\n\nA.\n\nB.\n\n## Two\n\nC.")
+        .blocks,
+    );
+    expect(preamble.map((block) => block.kind)).toEqual(["paragraph"]);
+    expect(
+      sections.map((section) => [
+        section.id,
+        plainText(section.heading),
+        section.blocks.length,
+      ]),
+    ).toEqual([
+      ["one", "One", 2],
+      ["two", "Two", 1],
+    ]);
+  });
+});
+
+describe("sectionText", () => {
+  it("reads a section's heading and every kind of block as plain words", () => {
+    const [section] = sectionsOf(
+      parseLegalDoc(
+        [
+          "# T",
+          "",
+          "## Weather **data**",
+          "",
+          "### Sub",
+          "",
+          "Para `code`.",
+          "",
+          "> Quote.",
+          "",
+          "- Item one",
+          "- [Item two](https://x.test)",
+          "",
+          "3. Third",
+          "",
+          "| Head | Two |",
+          "| ---- | --- |",
+          "| Cell | Last |",
+        ].join("\n"),
+      ).blocks,
+    ).sections;
+    if (section === undefined) throw new Error("no section");
+    expect(sectionText(section)).toBe(
+      "Weather data Sub Para code. Quote. Item one Item two Third Head Two Cell Last",
+    );
   });
 });
