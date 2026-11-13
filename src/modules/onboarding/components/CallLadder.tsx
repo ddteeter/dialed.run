@@ -45,21 +45,22 @@ export function CallLadder({
 
   return (
     <div className="flex flex-col gap-6">
-      {/* K's ink header: the tab's name as the eyebrow, and the heading
-          saying what the screen is doing rather than what it is called. */}
+      {/* K's ink header, the heading saying what the screen is doing
+          rather than what it is called (#630 F-02). Full-bleed at the top
+          of the phone screen; from `wide` the one top bar takes over and
+          it drops to a plain title (Desktop Contract DS0 bend 4); on a
+          dark page it is the panel (R50·143). No eyebrow: the countdown's
+          kicker already says THE CALL, and once is enough. */}
       <header
-        data-ground="ink"
-        className="flex flex-col gap-2 bg-ground p-5 text-ink"
+        data-ground="ink-until-wide"
+        className="-mx-6 -mt-8 flex items-start justify-between gap-3 bg-ground px-6 pb-6 pt-8 text-ink wide:mx-0 wide:mt-0 wide:p-0"
       >
-        {/* The header's first row ends in the phone's bell, inverse on
-            the ink with the rest of the block (Design 169.1). */}
-        <div className="flex items-center justify-between">
-          <Mono step="xs" className="text-muted">
-            The Call
-          </Mono>
-          <PhoneBell />
-        </div>
-        <h1 className="m-0 font-display text-display">Learning your body.</h1>
+        <h1 className="m-0 font-display text-display wide:text-title">
+          Learning your body.
+        </h1>
+        {/* The row ends in the phone's bell, inverse on the ink with the
+            rest of the block (Design 169.1). */}
+        <PhoneBell />
       </header>
 
       <Countdown ladder={ladder} />
