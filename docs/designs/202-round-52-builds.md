@@ -42,7 +42,7 @@ Desk's run line is in both.
   Desk's run line (`DeskKit`).
 - **In, the same kind:** the verdict backlog's conditions and its time and
   distance; A2's header and rail; A1's start-time "was" text and facts
-  line; the runs list's reading; A1's headline (the provider's "36°F" and
+  line; the runs list's reading and its row title ("6.2 mi · Thu Nov 12"); A1's headline (the provider's "36°F" and
   its class); the feed card's and D's distance; G's recent entries;
   `/kit`'s and the public profile's "38° damp". A temperature with its
   °F/°C letter is an abbreviated measure.
