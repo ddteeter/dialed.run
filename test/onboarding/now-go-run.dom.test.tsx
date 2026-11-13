@@ -94,14 +94,14 @@ describe("NowGoRun", () => {
     expect(numbers).toEqual(["01", "02", "03"]);
   });
 
-  it("draws four completed steps, one per onboarding screen", async () => {
-    // O1, O3, P2.5, P3. All filled, because arriving here is the end —
+  it("draws three completed steps, one per onboarding step, as the steps do (#630 F-09)", async () => {
+    // The handle, the city, the tap list. All filled, because arriving here is the end —
     // which is also why it is decoration rather than a progressbar.
     await renderScreen();
 
     const marker = document.querySelector("[aria-hidden='true']");
 
-    expect(marker?.childElementCount).toBe(4);
+    expect(marker?.childElementCount).toBe(3);
   });
 
   it("offers both ways out, and neither is a dead end", async () => {
@@ -195,13 +195,16 @@ describe("NowGoRun", () => {
 
     const heading = screen.getByRole("heading", { name: "Now go run." });
     const band = heading.parentElement;
-    expect(band).toHaveClass("bg-failure", "px-5", "pb-6", "pt-4");
+    expect(band).toHaveClass("bg-failure", "px-6", "desk:px-5", "pb-6", "pt-4");
+    // Full-bleed below desk, flush under the bar; in the column at desk
+    // (#630 F-09).
+    expect(band).toHaveClass("-mx-6", "-mt-8", "desk:mx-0", "desk:mt-0");
     // Text on an accent is accent ink, on both themes (T2 rule 02): the
     // band's words and its bar, which `--ink` would turn to chalk on dark.
     expect(band).toHaveClass("text-accent-ink");
     expect(band).not.toHaveClass("text-ink");
     const bars = band?.firstElementChild?.children ?? [];
-    expect(bars).toHaveLength(4);
+    expect(bars).toHaveLength(3);
     for (const bar of bars) expect(bar).toHaveClass("bg-accent-ink");
     expect(band?.firstElementChild).toHaveAttribute("aria-hidden", "true");
     expect(container.querySelectorAll(".bg-failure")).toHaveLength(1);
@@ -257,7 +260,7 @@ describe("NowGoRun", () => {
     expect(offer).not.toHaveClass("border");
   });
 
-  it("keeps the four-step marker out of the accessible tree", async () => {
+  it("keeps the step marker out of the accessible tree", async () => {
     // It restates the heading, and a progress bar that is always complete
     // reports nothing. So it is decoration, and announced as none.
     await renderScreen();

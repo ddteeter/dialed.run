@@ -20,6 +20,12 @@ const ONBOARDING_STEPS = [
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number]["step"];
 
 /**
+ * How many steps there are: P3's full bar draws one segment for each, so
+ * the close cannot show a bar the steps before it do not (#630 F-09).
+ */
+export const ONBOARDING_STEP_COUNT = ONBOARDING_STEPS.length;
+
+/**
  * The progress bar and the step kicker over an onboarding step's heading:
  * "STEP 2 OF 3 · OPTIONAL". The words are typed in sentence case and set
  * in capitals by `Mono`, so a screen reader hears words, not letters. The

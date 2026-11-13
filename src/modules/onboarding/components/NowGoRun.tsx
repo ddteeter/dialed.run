@@ -2,13 +2,8 @@ import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 
 import { CALL_VERDICT_THRESHOLD } from "../../../lib/contracts";
-import {
-  ACTION_PRIMARY,
-  focusOnMount,
-  Mono,
-  SECONDARY_PILL,
-  StravaConsent,
-} from "../../../ui";
+import { focusOnMount, Mono, StravaConsent } from "../../../ui";
+import { ONBOARDING_STEP_COUNT } from "../../../ui/OnboardingProgress";
 
 /**
  * What the loop does with what a runner logs — P3's numbered list.
@@ -58,8 +53,13 @@ export function NowGoRun({
     <div className="flex flex-col gap-6">
       {/* The band is the screen's one emphasis (round 49, R49·138b): the
           full bar and the instruction, and nothing else is hi-viz. At
-          desk it runs the full column; its bar keeps the measure. */}
-      <div className="flex flex-col gap-3 bg-failure px-5 pb-6 pt-4 text-accent-ink">
+          desk it runs the full column; its bar keeps the measure. Below
+          desk it bleeds to both screen edges, flush under the wordmark
+          bar, its words on the page's gutter (#630 F-09). */}
+      <div
+        data-part="close-band"
+        className="-mx-6 -mt-8 flex flex-col gap-3 bg-failure px-6 pb-6 pt-4 text-accent-ink desk:mx-0 desk:mt-0 desk:px-5"
+      >
         <Steps />
         <h1 className="m-0 font-display text-display uppercase">Now go run.</h1>
       </div>
@@ -94,13 +94,17 @@ export function NowGoRun({
 
         <StravaOffer shouldFocus={shouldFocusOffer} />
 
-        {/* R54·167.1: the product's pink caps primary, then "Done for
-            now" as its hairline pill; 167.2's width rule for both. */}
-        <div className="flex flex-col gap-3 wide:flex-row">
-          <Link to="/runs/new" className={`target ${ACTION_PRIMARY}`}>
+        <div className="flex flex-col gap-3">
+          <Link
+            to="/runs/new"
+            className="target flex items-center justify-center rounded-pill bg-action px-4 py-4 text-center font-display text-body uppercase text-accent-ink"
+          >
             I have a run to upload
           </Link>
-          <Link to="/" className={`target ${SECONDARY_PILL}`}>
+          <Link
+            to="/"
+            className="target flex items-center justify-center rounded-pill border border-hairline px-4 py-4 text-center text-body font-semibold text-ink"
+          >
             Done for now
           </Link>
         </div>
@@ -110,17 +114,18 @@ export function NowGoRun({
 }
 
 /**
- * Four filled segments: onboarding is over.
+ * Every segment filled, one per onboarding step (#630 F-09: the steps
+ * draw three, and the close drew four): onboarding is over.
  *
  * `aria-hidden`, because it is the same fact the heading states and a
- * screen reader announcing "list, four items, blank" is noise. It is not a
- * `progressbar` either — a progress bar that is always complete reports
+ * screen reader announcing "list, three items, blank" is noise. It is not
+ * a `progressbar` either — a progress bar that is always complete reports
  * nothing.
  */
 function Steps(): JSX.Element {
   return (
     <div aria-hidden="true" className="flex gap-1 desk:max-w-column">
-      {[0, 1, 2, 3].map((step) => (
+      {Array.from({ length: ONBOARDING_STEP_COUNT }, (_, step) => (
         // On the hi-viz band, so the accent's ink: `bg-ink` is chalk on a
         // dark page (T2 rule 02, design 185).
         <div key={step} className="h-1 flex-1 bg-accent-ink" />

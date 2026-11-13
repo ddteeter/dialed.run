@@ -70,11 +70,15 @@ describe("StravaButton", () => {
     await renderButton();
     document.addEventListener("click", stayOnPage);
 
+    // At rest nothing sits beside it, so nothing wraps under it at 390
+    // (#630 F-07): the link is the row's one child.
+    expect(screen.queryByText("Connecting")).toBeNull();
+    const link = screen.getByRole("link", { name: "Connect with Strava" });
+    expect(link.parentElement?.children).toHaveLength(1);
+
+    await user.click(link);
+
     const pending = screen.getByText("Connecting");
-    expect(pending).toHaveStyle({ visibility: "hidden" });
-
-    await user.click(screen.getByRole("link", { name: "Connect with Strava" }));
-
     expect(pending).not.toHaveStyle({ visibility: "hidden" });
     expect(pending).toHaveTextContent("[Connecting]");
     // The asset is untouched: same name, same file.
