@@ -277,7 +277,8 @@ export const formatTempRange = (
  *
  * - `temp`: "33°", or "41°F" `withLetter`, or "Feels 33°" with `feels`
  *   (its case is the line's: A1 starts with it, the receipt does not).
- * - `range`: `formatTempRange`'s "38–46°", collapsed as it collapses.
+ * - `range`: `formatTempRange`'s "38–46°", collapsed as it collapses,
+ *   "feels" as a temperature's.
  * - `humidity`: "80% hum". `wind`: `formatWind`'s "6mph".
  * - `distance`: "8.2mi", or "6.2 mi" `spaced`, as A2's header sets it.
  * - `duration`: `formatDuration`'s "51:38", said by `spokenDuration`.
@@ -291,7 +292,12 @@ type MeasuredPart =
       withLetter?: boolean;
       feels?: "Feels" | "feels";
     }>
-  | Readonly<{ kind: "range"; minC: number; maxC: number }>
+  | Readonly<{
+      kind: "range";
+      minC: number;
+      maxC: number;
+      feels?: "Feels" | "feels";
+    }>
   | Readonly<{ kind: "humidity"; percent: number }>
   | Readonly<{ kind: "wind"; windKph: number }>
   | Readonly<{ kind: "distance"; distanceM: number; spaced?: boolean }>
@@ -339,7 +345,8 @@ function shownPart(part: MeasuredPart, units: Units): string {
       return `${feels}${formatTemp(part.tempC, units.temp)}${letter}`;
     }
     case "range": {
-      return formatTempRange(part.minC, part.maxC, units.temp);
+      const feels = part.feels === undefined ? "" : `${part.feels} `;
+      return `${feels}${formatTempRange(part.minC, part.maxC, units.temp)}`;
     }
     case "humidity": {
       return `${String(Math.round(part.percent))}% hum`;
@@ -370,9 +377,12 @@ function saidPart(part: MeasuredPart, units: Units): string {
       return `${feels}${degrees(tempInUnit(part.tempC, units.temp))}${letter}`;
     }
     case "range": {
+      const feels = part.feels === undefined ? "" : "feels like ";
       const low = tempInUnit(part.minC, units.temp);
       const high = tempInUnit(part.maxC, units.temp);
-      return low === high ? degrees(low) : `${signed(low)} to ${degrees(high)}`;
+      const span =
+        low === high ? degrees(low) : `${signed(low)} to ${degrees(high)}`;
+      return `${feels}${span}`;
     }
     case "humidity": {
       return `${String(Math.round(part.percent))} percent humidity`;

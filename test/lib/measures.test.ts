@@ -416,6 +416,23 @@ describe("measuredLine", () => {
     });
   });
 
+  it("says a range felt as one, as Your conditions draws it (round 53 #162.3)", () => {
+    expect(
+      measuredLine(
+        [
+          [{ kind: "word", word: "Same conditions" }],
+          [{ kind: "range", minC: 5, maxC: 8, feels: "Feels" }],
+          [{ kind: "word", word: "damp" }],
+          [{ kind: "range", minC: 5, maxC: 5.2, feels: "feels" }],
+        ],
+        miles,
+      ),
+    ).toStrictEqual({
+      shown: "Same conditions · Feels 41–46° · damp · feels 41°",
+      said: "Same conditions, feels like 41 to 46 degrees, damp, feels like 41 degrees",
+    });
+  });
+
   it("says one degree and one mile an hour in the singular, and minus for a hyphen", () => {
     expect(
       measuredLine(
