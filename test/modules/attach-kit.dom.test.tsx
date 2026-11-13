@@ -924,7 +924,17 @@ describe("AttachKit: A2b, one category as a sheet", () => {
     await user.click(screen.getByRole("button", { name: "All Tops" }));
     const sheet = await screen.findByRole("dialog", { name: "Tops" });
 
-    expect(within(sheet).getByRole("heading", { name: "Tops" })).toBeVisible();
+    // A sheet's own title, list and Done — the push's are the page's
+    // (Round 54 · 164.3), so these are the sheet's alone.
+    const title = within(sheet).getByRole("heading", { name: "Tops" });
+    expect(title.tagName).toBe("H2");
+    expect(title).toHaveClass("text-heading");
+    expect(title).not.toHaveClass("text-title");
+    expect(within(sheet).getByRole("list")).toHaveClass("p-0");
+    expect(within(sheet).getByRole("list")).not.toHaveClass("rounded-card");
+    const done = within(sheet).getByRole("button", { name: "Done" });
+    expect(done).toHaveClass("rounded-pill", "border-hairline");
+    expect(done).not.toHaveClass("bg-action");
     expect(within(sheet).getByText("2 of 3 match 41° damp")).toBeVisible();
     expect(within(sheet).getByText("0 selected")).toBeVisible();
     expect(within(sheet).getByText("Hidden by the filter · 1")).toBeVisible();
