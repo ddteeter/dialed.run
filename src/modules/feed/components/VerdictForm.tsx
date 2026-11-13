@@ -1,4 +1,4 @@
-import type { JSX, ReactNode } from "react";
+import type { ComponentProps, JSX, ReactNode } from "react";
 import { useState } from "react";
 
 import {
@@ -136,6 +136,9 @@ import {
   type NotedSentence,
 } from "./NotedReceipt";
 import { SpecificsSheet } from "./SpecificsSheet";
+import { SpecificsPage } from "./SpecificsPage";
+import { PushFrame } from "./PushPage";
+import { isAtDesk } from "../kit-push";
 import { VerdictChips } from "./VerdictChips";
 import type { BandSignals } from "../band-signals";
 import { EffortField, useEffortPick } from "./EffortField";
@@ -281,6 +284,8 @@ export function VerdictForm({
   history,
   privateLine,
   isVerified,
+  // The flow's own move rather than the screen's: A3b's push.
+  ...step
 }: Readonly<{
   entry: Entry;
   bandFloor: number | undefined;
@@ -323,6 +328,12 @@ export function VerdictForm({
    * (R47·123).
    */
   isVerified: boolean;
+  /**
+   * A3b at the desk (Round 54 · 164.3): whether it is pushed, from A3's
+   * URL, and the route's two moves, since it owns the URL — to the page,
+   * and back to A3 with the answer still on it.
+   */
+  push: { isPushed: boolean; onPush: () => void; onDone: () => void };
 }>) {
   const { verdict, setVerdict, tags, setTags, flags, setFlags } =
     useAnswer(entry);
@@ -333,7 +344,6 @@ export function VerdictForm({
   const [noted, setNoted] = useState<{
     sentence: NotedSentence | undefined;
   }>();
-  const [sheetOpen, setSheetOpen] = useState(false);
   const effort = useEffortPick(entry.effort);
   // `entry.id`, not an `entryId` prop beside it — the same duplication
   // EntryDetail carried: two sources for one fact, one from the URL params
@@ -444,6 +454,15 @@ export function VerdictForm({
     setTags((prev) => toggledIn(prev, tag));
   }
 
+  // A3b's answer, the sheet's and the page's: A3's own, not a copy.
+  const answer = { flagFor, onFlag: setFlag, tags, onTag: toggleTag };
+  const specifics = useSpecifics(step.push, {
+    verdict,
+    items: entry.items,
+    answer,
+    field: form.field,
+  });
+
   /**
    * A chip toggles the one choice it names. A pressed garment chip goes
    * back to Fine, not to the other direction — un-choosing is all a second
@@ -476,18 +495,19 @@ export function VerdictForm({
             void form.submit(payload());
           }}
         >
-          <RunHeader entry={entry} units={units} />
-          <FormStatus>
-            {noted === undefined
-              ? form.status
-              : notedAnnouncement(noted.sentence)}
-          </FormStatus>
-          <FormErrorSummary
-            rows={form.summaryRows}
-            onFocusField={form.focusField}
-            summaryRef={form.summaryRef}
-          />
-          {/* **One row at every width — in the 390 panel too; never a
+          <PushFrame pushed={specifics.page}>
+            <RunHeader entry={entry} units={units} />
+            <FormStatus>
+              {noted === undefined
+                ? form.status
+                : notedAnnouncement(noted.sentence)}
+            </FormStatus>
+            <FormErrorSummary
+              rows={form.summaryRows}
+              onFocusField={form.focusField}
+              summaryRef={form.summaryRef}
+            />
+            {/* **One row at every width — in the 390 panel too; never a
             stack, never wider than the panel** (design round 17). It was
             `flex flex-col`, which put five full-width buttons in a tall
             column and, at desk, a tall column beside a screen of empty
@@ -502,88 +522,78 @@ export function VerdictForm({
             of its own: the board asks "Did it work?" once, in the ink
             header, and a second copy on the paper beneath would be the
             question twice. */}
-          {/* **Five radios in a `radiogroup`** (Accessibility Contract
+            {/* **Five radios in a `radiogroup`** (Accessibility Contract
             rule 05, R-84 c): arrow keys move between them and choose as
             they go, space chooses the one focused, and Tab enters on the
             chosen one, or the first while there is none. They are native
             radios, so the browser does all three. */}
-          <fieldset
-            role="radiogroup"
-            aria-labelledby={QUESTION_ID}
-            className="m-0 flex flex-col gap-2 border-0 p-0 wide:max-w-panel"
-          >
-            <VerdictRow
-              verdict={verdict}
-              isLocked={isLocked}
-              onChoose={setVerdict}
-            />
-            <FieldMessage name="verdict" error={form.fieldErrors.verdict} />
-          </fieldset>
+            <fieldset
+              role="radiogroup"
+              aria-labelledby={QUESTION_ID}
+              className="m-0 flex flex-col gap-2 border-0 p-0 wide:max-w-panel"
+            >
+              <VerdictRow
+                verdict={verdict}
+                isLocked={isLocked}
+                onChoose={setVerdict}
+              />
+              <FieldMessage name="verdict" error={form.fieldErrors.verdict} />
+            </fieldset>
 
-          {history === undefined || bandFloor === undefined ? undefined : (
-            <BandHistory
-              counts={history.counts}
-              bandFloor={bandFloor}
-              units={units}
-            />
-          )}
+            {history === undefined || bandFloor === undefined ? undefined : (
+              <BandHistory
+                counts={history.counts}
+                bandFloor={bandFloor}
+                units={units}
+              />
+            )}
 
-          {/* **Chips, never a `<select>`** (design round 16), and since
+            {/* **Chips, never a `<select>`** (design round 16), and since
             round 20 generated rather than listed: five, chosen from this
             runner's history in the band, with everything else one tap away
             in A3b. */}
-          <VerdictChips
-            chips={chips}
-            chosenFlags={chosenFlags}
-            chosenTags={tags}
-            readOnly={isLocked}
-            onToggle={toggleChip}
-            onMore={() => {
-              setSheetOpen(true);
-            }}
-          />
-          <SpecificsSheet
-            open={sheetOpen}
-            onClose={() => {
-              setSheetOpen(false);
-            }}
-            verdict={verdict}
-            items={entry.items}
-            answer={{ flagFor, onFlag: setFlag, tags, onTag: toggleTag }}
-            field={form.field}
-          />
+            <VerdictChips
+              chips={chips}
+              chosenFlags={chosenFlags}
+              chosenTags={tags}
+              readOnly={isLocked}
+              onToggle={toggleChip}
+              onMore={specifics.onMore}
+            />
+            {specifics.sheet}
 
-          <EffortField
-            effort={effort.effort}
-            watchRpe={effort.watchRpe}
-            readOnly={isLocked}
-            onPick={effort.pick}
-          />
+            <EffortField
+              effort={effort.effort}
+              watchRpe={effort.watchRpe}
+              readOnly={isLocked}
+              onPick={effort.pick}
+            />
 
-          {isLocked ? (
-            <NotedReceipt sentence={noted.sentence} />
-          ) : (
-            <>
-              <AudiencePicker
-                audience={audience}
-                isVerified={isVerified}
-                onChange={setAudience}
-                field={form.field}
-                privateLine={privateLine}
-              />
+            {isLocked ? (
+              <NotedReceipt sentence={noted.sentence} />
+            ) : (
+              <>
+                <AudiencePicker
+                  audience={audience}
+                  isVerified={isVerified}
+                  onChange={setAudience}
+                  field={form.field}
+                  privateLine={privateLine}
+                />
 
-              <FormFailureBand
-                failure={form.failure}
-                onRetry={form.retry}
-                retryRef={form.retryRef}
-              />
-              <SubmitButton
-                label="Log it"
-                pendingLabel="Logging"
-                pending={form.pending}
-              />
-            </>
-          )}
+                <FormFailureBand
+                  failure={form.failure}
+                  onRetry={form.retry}
+                  retryRef={form.retryRef}
+                />
+                <SubmitButton
+                  label="Log it"
+                  pendingLabel="Logging"
+                  pending={form.pending}
+                />
+              </>
+            )}
+          </PushFrame>
         </form>
       </DeskSplit>
     </FlowStep>
@@ -898,4 +908,43 @@ function KitRecord({
       />
     </Mono>
   );
+}
+
+/**
+ * A3b's two surfaces, of which one is drawn (Round 54 · 164.3): the page
+ * pushed into the column at the desk, or the sheet below it. Never both —
+ * they hold the same radios, and one form cannot hold two groups of one
+ * name. MORE pushes or opens by the width when it is pressed.
+ */
+function useSpecifics(
+  push: { isPushed: boolean; onPush: () => void; onDone: () => void },
+  body: Omit<ComponentProps<typeof SpecificsPage>, "back" | "onDone">,
+): { page: ReactNode; sheet: ReactNode; onMore: () => void } {
+  const [isOpen, setIsOpen] = useState(false);
+  const onMore = (): void => {
+    if (isAtDesk()) push.onPush();
+    else setIsOpen(true);
+  };
+  if (push.isPushed) {
+    return {
+      page: (
+        <SpecificsPage back={LABELS.verdict} onDone={push.onDone} {...body} />
+      ),
+      sheet: undefined,
+      onMore,
+    };
+  }
+  return {
+    page: undefined,
+    sheet: (
+      <SpecificsSheet
+        open={isOpen}
+        onClose={() => {
+          setIsOpen(false);
+        }}
+        {...body}
+      />
+    ),
+    onMore,
+  };
 }

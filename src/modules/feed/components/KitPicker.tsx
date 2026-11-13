@@ -8,7 +8,9 @@ import { Bracketed, FieldMessage, Icon, Mono, Sheet } from "../../../ui";
 import type { Conditions } from "../../../lib/contracts";
 import { uiGroupLabels } from "../groups";
 import type { UiGroup } from "../groups";
+import { useIsAtDesk } from "../kit-push";
 import type { PickerGroup } from "../picker";
+import { PUSH_TITLE_CLASS, PushDone, PushPage } from "./PushPage";
 
 /**
  * The groups A2 draws as a row of tiles; the rest are "+ CATEGORY" chips.
@@ -147,7 +149,8 @@ function PieceTile({
   pressed: boolean;
   onToggle: () => void;
 }>): JSX.Element {
-  const well = item.photo === undefined ? TILE_WELL_CLASS.hatch : TILE_WELL_CLASS.photo;
+  const well =
+    item.photo === undefined ? TILE_WELL_CLASS.hatch : TILE_WELL_CLASS.photo;
   return (
     <button
       type="button"
@@ -224,6 +227,9 @@ export function KitList({
   const rows = groups.filter((group) => ROW_GROUPS.has(group.group));
   const chips = groups.filter((group) => !ROW_GROUPS.has(group.group));
   const shown: Shown = isFiltered ? matchingOnly : everything;
+  // What a press does at this width, said before it is pressed: a sheet
+  // below the desk, a push at it (Round 54 · 164.3).
+  const opens = useIsAtDesk() ? undefined : "dialog";
   const countLine = isFiltered ? matchLine : totalLine;
   const total = groups.reduce((sum, group) => sum + group.items.length, 0);
   const showingLine = (isOn: boolean): string => {
@@ -275,7 +281,7 @@ export function KitList({
               </Mono>
               <button
                 type="button"
-                aria-haspopup="dialog"
+                aria-haspopup={opens}
                 aria-label={`All ${uiGroupLabels[group.group]}`}
                 onClick={() => {
                   onOpen(group.group);
@@ -307,7 +313,7 @@ export function KitList({
               <button
                 key={group.group}
                 type="button"
-                aria-haspopup="dialog"
+                aria-haspopup={opens}
                 onClick={() => {
                   onOpen(group.group);
                 }}
@@ -402,8 +408,7 @@ export function KitPage({
   onDone: () => void;
 }>): JSX.Element {
   return (
-    <div data-slot="kit-page" className="flex flex-col gap-6">
-      {back}
+    <PushPage slot="kit-page" back={back}>
       <PickBody
         key={group.group}
         layout="push"
@@ -414,7 +419,7 @@ export function KitPage({
         onToggle={onToggle}
         onDone={onDone}
       />
-    </div>
+    </PushPage>
   );
 }
 
@@ -427,7 +432,7 @@ type PickLayout = "sheet" | "push";
 
 const PICK_TITLE_CLASS: Readonly<Record<PickLayout, string>> = {
   sheet: "m-0 font-display text-heading",
-  push: "m-0 font-display text-title",
+  push: PUSH_TITLE_CLASS,
 };
 
 const PICK_LIST_CLASS: Readonly<Record<PickLayout, string>> = {
@@ -437,9 +442,6 @@ const PICK_LIST_CLASS: Readonly<Record<PickLayout, string>> = {
 
 const SHEET_DONE_CLASS =
   "target cursor-pointer rounded-pill border border-hairline bg-transparent px-6 py-3 text-body font-semibold";
-
-const PUSH_DONE_CLASS =
-  "target grid min-h-13 cursor-pointer place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase text-accent-ink";
 
 function PickBody({
   layout,
@@ -537,13 +539,13 @@ function PickBody({
           Hidden by the filter · {group.hiddenByFilterCount}
         </Mono>
       ) : undefined}
-      <button
-        type="button"
-        onClick={onDone}
-        className={layout === "push" ? PUSH_DONE_CLASS : SHEET_DONE_CLASS}
-      >
-        Done
-      </button>
+      {layout === "push" ? (
+        <PushDone onDone={onDone} />
+      ) : (
+        <button type="button" onClick={onDone} className={SHEET_DONE_CLASS}>
+          Done
+        </button>
+      )}
     </div>
   );
 }

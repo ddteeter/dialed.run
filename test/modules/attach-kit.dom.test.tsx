@@ -30,7 +30,7 @@ import type { PhotoStep } from "../../src/ui";
 import { TermsRefusalAnswer } from "../../src/ui";
 import { expectAvailable, expectBusy } from "../ui/unavailable";
 import { queryWeatherCredit, WEATHER_CREDIT } from "../ui/weather-credit";
-import { expectBellEnding, withBell } from "./feed-fixtures";
+import { atWidth, expectBellEnding, withBell } from "./feed-fixtures";
 
 /**
  * Attach the kit (screen A2), to round 22's two frames and round 20's
@@ -1863,15 +1863,6 @@ describe("AttachKit: the suggestion and waiting cards (Round 55 · 240)", () => 
 /**
 A window at the desk, or below it, as `matchMedia` answers.
 */
-function atWidth(isDesk: boolean): void {
-  vi.stubGlobal(
-    "matchMedia",
-    vi.fn((query: string) => ({
-      matches: isDesk && query === "(min-width: 1040px)",
-    })),
-  );
-}
-
 describe("AttachKit: A2b at the desk is a push (Round 54 · 164.3)", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -1906,7 +1897,8 @@ describe("AttachKit: A2b at the desk is a push (Round 54 · 164.3)", () => {
 
     const page = region("kit-page");
     const back = within(page).getByRole("link", { name: "What did you wear?" });
-    expect(back).toHaveAttribute("href", "/feed/attach/01RUN");
+    // The same page with nothing pushed: the harness renders A2 at "/".
+    expect(back).toHaveAttribute("href", "/");
     expect(page.firstElementChild).toBe(back);
     const title = within(page).getByRole("heading", { level: 1 });
     expect(title).toHaveTextContent("Tops");
@@ -1964,6 +1956,28 @@ describe("AttachKit: A2b at the desk is a push (Round 54 · 164.3)", () => {
       screen.getByRole("button", { name: "Patagonia Houdini" }),
     ).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("6.2 mi · 41°F damp · 1 piece")).toBeVisible();
+  });
+
+  it("says a sheet opens below the desk, and nothing of the kind at it", async () => {
+    // What the press does at this width, said before it is pressed: a
+    // push opens no dialog. The window is read again as it is resized.
+    const width = atWidth(false);
+    await renderWithRouter(attach());
+    const all = screen.getByRole("button", { name: "All Tops" });
+    const chip = screen.getByRole("button", { name: "+ Hands / head 1" });
+    expect(all).toHaveAttribute("aria-haspopup", "dialog");
+    expect(chip).toHaveAttribute("aria-haspopup", "dialog");
+
+    act(() => {
+      width.resize(true);
+    });
+    expect(all).not.toHaveAttribute("aria-haspopup");
+    expect(chip).not.toHaveAttribute("aria-haspopup");
+
+    act(() => {
+      width.resize(false);
+    });
+    expect(all).toHaveAttribute("aria-haspopup", "dialog");
   });
 
   it("draws A2 when the pushed category is not one the closet has", async () => {

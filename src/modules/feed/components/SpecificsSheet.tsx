@@ -58,54 +58,15 @@ export function SpecificsSheet({
   answer,
   field,
 }: Readonly<SpecificsSheetProps>) {
-  const { flagFor, onFlag, tags, onTag } = answer;
-  // Looked up directly rather than through `verdictLabel`, which takes a
-  // number: no verdict simply finds no step.
-  const label = verdictScale.find((step) => step.value === verdict)?.label;
   return (
     <Sheet open={open} onClose={onClose} label="Anything specific?">
       <div className="flex flex-col gap-6">
+        {/* The sheet's label is its title (#643); this is the line under it. */}
         <Mono step="xs" className="text-muted">
-          {label === undefined ? "Optional" : `${label} · optional`}
+          {specificsLine(verdict)}
         </Mono>
 
-        {items.map((item) => (
-          // One group per garment, legended with its name, so a reader
-          // entering the group hears which piece it is about.
-          <ChoiceList
-            key={item.itemId}
-            name={`flag-${item.itemId}`}
-            legend={item.name}
-            layout="chips"
-            options={ITEM_FLAG_OPTIONS}
-            optionLabels={ITEM_FLAG_LABELS}
-            value={flagFor(item.itemId)}
-            field={field}
-            onChange={(next) => {
-              onFlag(item.itemId, next);
-            }}
-          />
-        ))}
-
-        <section className="flex flex-col gap-2">
-          <h3>
-            <Mono step="xs">Tags</Mono>
-          </h3>
-          <ChipRow>
-            {entryTags.map((tag) => (
-              <ChipToggle
-                key={tag}
-                pressed={tags.has(tag)}
-                readOnly={false}
-                onToggle={() => {
-                  onTag(tag);
-                }}
-              >
-                {tagLabel(tag)}
-              </ChipToggle>
-            ))}
-          </ChipRow>
-        </section>
+        <SpecificsBody items={items} answer={answer} field={field} />
 
         <button
           type="button"
@@ -116,5 +77,69 @@ export function SpecificsSheet({
         </button>
       </div>
     </Sheet>
+  );
+}
+
+/**
+ * The line under A3b's title: the verdict these specifics qualify, or the
+ * "optional" alone before one. Looked up directly rather than through
+ * `verdictLabel`, which takes a number: no verdict simply finds no step.
+ */
+export function specificsLine(verdict: number | undefined): string {
+  const label = verdictScale.find((step) => step.value === verdict)?.label;
+  return label === undefined ? "Optional" : `${label} · optional`;
+}
+
+/**
+ * A3b's body, between its title and Done: a group per garment, then the
+ * tags. The sheet below the desk and the push at it (Round 54 · 164.3)
+ * draw it alike.
+ */
+export function SpecificsBody({
+  items,
+  answer,
+  field,
+}: Readonly<Pick<SpecificsSheetProps, "items" | "answer" | "field">>) {
+  const { flagFor, onFlag, tags, onTag } = answer;
+  return (
+    <>
+      {items.map((item) => (
+        // One group per garment, legended with its name, so a reader
+        // entering the group hears which piece it is about.
+        <ChoiceList
+          key={item.itemId}
+          name={`flag-${item.itemId}`}
+          legend={item.name}
+          layout="chips"
+          options={ITEM_FLAG_OPTIONS}
+          optionLabels={ITEM_FLAG_LABELS}
+          value={flagFor(item.itemId)}
+          field={field}
+          onChange={(next) => {
+            onFlag(item.itemId, next);
+          }}
+        />
+      ))}
+
+      <section className="flex flex-col gap-2">
+        <h3>
+          <Mono step="xs">Tags</Mono>
+        </h3>
+        <ChipRow>
+          {entryTags.map((tag) => (
+            <ChipToggle
+              key={tag}
+              pressed={tags.has(tag)}
+              readOnly={false}
+              onToggle={() => {
+                onTag(tag);
+              }}
+            >
+              {tagLabel(tag)}
+            </ChipToggle>
+          ))}
+        </ChipRow>
+      </section>
+    </>
   );
 }

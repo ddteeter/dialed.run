@@ -1,12 +1,18 @@
 import { readFileSync } from "node:fs";
 
+import { act, renderHook } from "@testing-library/react";
+import { createElement } from "react";
+import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   DESK_MEDIA_QUERY,
   attachSearch,
   isAtDesk,
+  useIsAtDesk,
+  verdictSearch,
 } from "../../src/modules/feed/kit-push";
+import { atWidth } from "./feed-fixtures";
 
 /**
  * A2b's push at the desk (Round 54 · 164.3): the category it pushed to
@@ -20,6 +26,63 @@ describe("attachSearch", () => {
   it("reads anything else as no push, rather than refusing the page", () => {
     expect(attachSearch.parse({ pick: "socks-and-sandals" })).toEqual({});
     expect(attachSearch.parse({})).toEqual({});
+  });
+});
+
+describe("verdictSearch", () => {
+  it("reads A3b's push from the URL", () => {
+    expect(verdictSearch.parse({ specifics: true })).toEqual({
+      specifics: true,
+    });
+  });
+
+  it("reads anything else as no push, rather than refusing the page", () => {
+    expect(verdictSearch.parse({ specifics: "yes" })).toEqual({});
+    expect(verdictSearch.parse({})).toEqual({});
+  });
+});
+
+function Probe() {
+  return useIsAtDesk() ? "desk" : "below";
+}
+
+describe("useIsAtDesk", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("follows the window across the breakpoint", () => {
+    const width = atWidth(true);
+    const { result } = renderHook(() => useIsAtDesk());
+    expect(result.current).toBe(true);
+    act(() => {
+      width.resize(false);
+    });
+    expect(result.current).toBe(false);
+  });
+
+  it("stops listening once nothing reads it", () => {
+    const query = {
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    vi.stubGlobal("matchMedia", (asked: string) =>
+      asked === DESK_MEDIA_QUERY ? query : undefined,
+    );
+    const { unmount } = renderHook(() => useIsAtDesk());
+    const [[type, listener]] = query.addEventListener.mock.calls as [
+      [string, () => void],
+    ];
+    expect(type).toBe("change");
+    unmount();
+    expect(query.removeEventListener).toHaveBeenCalledWith("change", listener);
+  });
+
+  it("is below the desk on the server, which has no window", () => {
+    // A window at the desk is not consulted: the server draws the sheet.
+    atWidth(true);
+    expect(renderToString(createElement(Probe))).toBe("below");
   });
 });
 

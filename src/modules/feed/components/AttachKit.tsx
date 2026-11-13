@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import type { JSX, ReactNode } from "react";
+import type { JSX } from "react";
 import { useEffect, useState } from "react";
 
 import type { Units } from "../../../lib/contracts";
@@ -23,7 +23,6 @@ import {
   FlowStep,
   FormStatus,
   GarminAttribution,
-  Icon,
   inFlight,
   LOG_FLOW,
   Mono,
@@ -45,6 +44,7 @@ import { isAtDesk } from "../kit-push";
 import type { PrefillCandidate } from "../prefill";
 import { isProvidersReading } from "../strip";
 import { KitList, KitPage, KitSheet, conditionsWords } from "./KitPicker";
+import { PushBack, PushFrame } from "./PushPage";
 import { ThisRunCard } from "./ThisRunCard";
 
 /**
@@ -361,6 +361,10 @@ export function AttachKit(props: Readonly<AttachKitProps>): JSX.Element {
   }
 
   const conditions = context.conditions;
+  // A2b pushed at the desk, when the URL names a category the closet has.
+  const pushedGroup = context.groups.find(
+    (group) => group.group === props.pushed,
+  );
   const names = new Map(
     context.groups.flatMap((group) =>
       group.items.map((item) => [item.id, item.name] as const),
@@ -381,19 +385,19 @@ export function AttachKit(props: Readonly<AttachKitProps>): JSX.Element {
       >
         <div className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6 pb-8 wide:max-w-column">
           <PushFrame
-            groups={context.groups}
-            pushed={props.pushed}
-            page={(group) => (
-              <KitPage
-                group={group}
-                conditions={conditions}
-                units={units}
-                selected={selected}
-                onToggle={toggle}
-                back={<BackToAttach runId={runId} />}
-                onDone={props.onPushDone}
-              />
-            )}
+            pushed={
+              pushedGroup === undefined ? undefined : (
+                <KitPage
+                  group={pushedGroup}
+                  conditions={conditions}
+                  units={units}
+                  selected={selected}
+                  onToggle={toggle}
+                  back={<PushBack>What did you wear?</PushBack>}
+                  onDone={props.onPushDone}
+                />
+              )
+            }
           >
             <AttachHeader
               run={{ runId, deviceName: run.deviceName }}
@@ -536,53 +540,6 @@ function AttachHeader({
         <WeatherAttribution />
       ) : undefined}
     </header>
-  );
-}
-
-/**
- * A2's column, or A2b pushed into it (Round 54 · 164.3) when the URL names
- * a category the closet has. A2 is then hidden rather than gone: it is
- * still this screen, so the picks and a held photo are there when the
- * runner comes back.
- */
-function PushFrame({
-  groups,
-  pushed,
-  page,
-  children,
-}: Readonly<{
-  groups: AttachContext["groups"];
-  pushed: UiGroup | undefined;
-  page: (group: AttachContext["groups"][number]) => ReactNode;
-  children: ReactNode;
-}>): JSX.Element {
-  const group = groups.find((each) => each.group === pushed);
-  return (
-    <>
-      {group === undefined ? undefined : page(group)}
-      <div hidden={group !== undefined} className="flex flex-col gap-6">
-        {children}
-      </div>
-    </>
-  );
-}
-
-/**
- * A2b's way back to A2 at the desk: the board's back link names the screen
- * it returns to (Round 54 · 164b). A2 is the same page with no category
- * pushed, so the picks come back with it.
- */
-function BackToAttach({ runId }: Readonly<{ runId: string }>): JSX.Element {
-  return (
-    <Link
-      to="/feed/attach/$runId"
-      params={{ runId }}
-      search={{}}
-      className="target inline-flex items-center gap-2 self-start text-body text-ink no-underline"
-    >
-      <Icon name="back" size={20} />
-      What did you wear?
-    </Link>
   );
 }
 

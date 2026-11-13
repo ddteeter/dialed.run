@@ -6,11 +6,12 @@ import {
   createRouter,
 } from "@tanstack/react-router";
 import { drawnText } from "./spoken-text";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import type { MatcherFunction } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactElement, ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import type { JSX, ReactElement, ReactNode } from "react";
+import { useState } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { entryTags, verdictScale } from "../../src/lib/contracts";
 import type { BandRun } from "../../src/modules/feed/band-runs";
@@ -25,7 +26,7 @@ import { UnconfirmedRefusalAnswer } from "../../src/ui/unconfirmed-refusal";
 import type { ConfirmGate } from "../../src/ui/unconfirmed-refusal";
 import { queryWeatherCredit } from "../ui/weather-credit";
 import { carriedSince } from "../ui/carry-spy";
-import { withBell } from "./feed-fixtures";
+import { atWidth, withBell } from "./feed-fixtures";
 
 vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
   const { spyOnCarry } = await import("../ui/carry-spy");
@@ -210,6 +211,7 @@ function form(
     }) => Promise<{ worn: number; total: number }>;
     privateLine?: (hintId: string) => ReactNode;
     isVerified?: boolean;
+    push?: { isPushed: boolean; onPush: () => void; onDone: () => void };
   } = {},
 ) {
   return (
@@ -232,9 +234,16 @@ function form(
       itemBandWearStat={overrides.itemBandWearStat ?? noStat}
       privateLine={overrides.privateLine ?? privateLineStub}
       isVerified={overrides.isVerified ?? true}
+      push={overrides.push ?? NOT_PUSHED}
     />
   );
 }
+
+function stays(): void {
+  // Not pushed, and nowhere to go.
+}
+
+const NOT_PUSHED = { isPushed: false, onPush: stays, onDone: stays };
 
 describe("VerdictForm: the scale", () => {
   it("offers every verdict the contract defines, in order", async () => {
@@ -2602,5 +2611,151 @@ describe("VerdictForm: the phone's bell (Design 169.1)", () => {
     expect(row).not.toHaveClass("wide:hidden");
     expect(row?.firstElementChild).toHaveAccessibleName("Back");
     expect(row?.lastElementChild).toBe(seat);
+  });
+});
+
+describe("VerdictForm: A3b at the desk is a push (Round 54 · 164.3)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("pushes from MORE at the desk instead of opening the sheet", async () => {
+    const user = userEvent.setup();
+    atWidth(true);
+    const onPush = vi.fn();
+    await renderWithRouter(form({ push: { ...NOT_PUSHED, onPush } }));
+
+    await user.click(
+      screen.getByRole("button", { name: "More, anything specific" }),
+    );
+    expect(onPush).toHaveBeenCalledTimes(1);
+    expect(document.querySelector("dialog[open]")).toBeNull();
+  });
+
+  it("opens the sheet below the desk, and pushes nowhere", async () => {
+    const user = userEvent.setup();
+    atWidth(false);
+    const onPush = vi.fn();
+    await renderWithRouter(form({ push: { ...NOT_PUSHED, onPush } }));
+
+    const sheet = await openSpecifics(user);
+    expect(sheet).toBe(document.querySelector("dialog[open]"));
+    expect(onPush).not.toHaveBeenCalled();
+  });
+
+  it("says MORE opens a dialog below the desk, and nothing of the kind at it", async () => {
+    const width = atWidth(false);
+    await renderWithRouter(form());
+    const more = screen.getByRole("button", {
+      name: "More, anything specific",
+    });
+    expect(more).toHaveAttribute("aria-haspopup", "dialog");
+    act(() => {
+      width.resize(true);
+    });
+    expect(more).not.toHaveAttribute("aria-haspopup");
+  });
+
+  it("draws the pushed page in A3's place: back, title, the garments and tags, Done", async () => {
+    await renderWithRouter(
+      form({
+        entry: { items: KIT, verdict: 1 },
+        push: { ...NOT_PUSHED, isPushed: true },
+      }),
+    );
+
+    const page = screen
+      .getByRole("heading", { level: 1, name: "Anything specific?" })
+      .closest("[data-slot='specifics-page']");
+    if (!(page instanceof HTMLElement))
+      throw new TypeError("no specifics page");
+    const back = within(page).getByRole("link", { name: "Did it work?" });
+    // The same page with nothing pushed: the harness renders A3 at "/".
+    expect(back).toHaveAttribute("href", "/");
+    expect(page.firstElementChild).toBe(back);
+    const title = within(page).getByRole("heading", { level: 1 });
+    expect(title).toHaveClass("font-display", "text-title");
+    expect(within(page).getByText("A bit warm · optional")).toBeVisible();
+    expect(within(page).getByRole("group", { name: "Shell" })).toBeVisible();
+    expect(within(page).getByRole("group", { name: "Cap" })).toBeVisible();
+    for (const tag of entryTags) {
+      expect(
+        within(page).getByRole("button", { name: tag.replaceAll("_", " ") }),
+      ).toBeVisible();
+    }
+    const done = within(page).getByRole("button", { name: "Done" });
+    expect(done).toHaveClass("bg-action", "uppercase", "font-display");
+    expect(page.lastElementChild).toBe(done);
+    // A3 is not drawn, but it is still there, holding the answer; the
+    // sheet is not, so the page's radios are the form's only ones.
+    expect(
+      screen
+        .getByRole("button", { name: "Log it", hidden: true })
+        .closest("[hidden]"),
+    ).not.toBeNull();
+    expect(document.querySelector("dialog")).toBeNull();
+    expect(
+      document.querySelectorAll(`input[name='flag-${CSS.escape(CAP)}']`),
+    ).toHaveLength(3);
+  });
+
+  it("keeps the answer made on the page when it comes back to A3, and sends it", async () => {
+    const user = userEvent.setup();
+    const submitVerdict = vi.fn<
+      (input: { data: Record<string, unknown> }) => Promise<unknown>
+    >(() => Promise.resolve());
+    const onDone = vi.fn();
+    function Pushed(): JSX.Element {
+      const [isPushed, setIsPushed] = useState(false);
+      return form({
+        entry: { items: KIT },
+        bandSignals: SIGNALS,
+        submitVerdict,
+        push: {
+          isPushed,
+          onPush: () => {
+            setIsPushed(true);
+          },
+          onDone: () => {
+            onDone();
+            setIsPushed(false);
+          },
+        },
+      });
+    }
+    atWidth(true);
+    await renderWithRouter(<Pushed />);
+    await user.click(screen.getByRole("radio", { name: "A bit warm" }));
+    await user.click(
+      screen.getByRole("button", { name: "More, anything specific" }),
+    );
+
+    const page = document.querySelector("[data-slot='specifics-page']");
+    if (!(page instanceof HTMLElement))
+      throw new TypeError("no specifics page");
+    expect(within(page).getByText("A bit warm · optional")).toBeVisible();
+    const cap = within(page).getByRole("group", { name: "Cap" });
+    await user.click(within(cap).getByRole("radio", { name: "Not enough" }));
+    await user.click(within(page).getByRole("button", { name: "hands cold" }));
+    await user.click(within(page).getByRole("button", { name: "Done" }));
+
+    expect(onDone).toHaveBeenCalledTimes(1);
+    expect(document.querySelector("[data-slot='specifics-page']")).toBeNull();
+    expect(screen.getByRole("radio", { name: "A bit warm" })).toBeChecked();
+    expect(
+      screen.getByRole("button", { name: "Cap not enough" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByRole("button", { name: "Log it" }));
+    await waitFor(() => {
+      expect(submitVerdict).toHaveBeenCalledTimes(1);
+    });
+    expect(submitVerdict.mock.calls[0]?.[0]?.data).toMatchObject({
+      verdict: 1,
+      tags: ["hands_cold"],
+      itemFlags: [
+        { itemId: SHELL, flag: undefined },
+        { itemId: CAP, flag: "not_enough" },
+      ],
+    });
   });
 });
