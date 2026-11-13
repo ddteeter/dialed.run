@@ -1081,6 +1081,40 @@ _Nothing from 99 on is open: round 45 answered the last of it._
 
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
 
+## Answered in round 53 (imported 2026-11-12)
+
+Design answered as `Round 53 Rulings.dc.html`, items 162–163. The board's
+text is the text of record, and it draws the /how-it-works page itself;
+each ruling is also a comment on its issue. `Accessibility Contract.dc.html`
+is imported with it: three of round 52's rows are corrected.
+
+- **R53·162 · Round 52's contract rows (#605). Two confirmed, one
+  changed.** (1) Confirmed: the ellipsis and "pressed" in Follow on a list
+  row were the example's shorthand; four names with the handle, no
+  ellipsis, no pressed state, in flight announced busy, as built. H's pill
+  is unchanged. (2) Confirmed: the Delete account row's button is laid
+  over the row with no visible text inside it; the title, sentence and
+  "Delete" sit outside and are aria-hidden, as built. (3) Changed: a bare
+  single temperature with a sky word ("41° damp") stays as drawn, but a
+  temperature range always takes the spoken form, "38 to 46 degrees",
+  because "38–46°" is read inconsistently. The kit picker's counts, the
+  band-runs card and Your conditions are therefore inside Measured lines;
+  that build goes with #591.
+- **R53·163 · /how-it-works (#611 → #523). Drawn; not built.** M4's legal
+  layout at 1180 and 390 (240 sticky contents, 620 measure), from the
+  owner's copy of 2026-11-12. (a) The loop is an `<ol>`, MONO 01–04 in a
+  fixed column with the bold lead running into its sentence; "Coming
+  next" is a `--panel` inset. (b) The guides list is a `<dl>`, MONO.xs
+  capitals terms in a 160 column on desk, stacked on phone; the section
+  keeps `id="totals"`. (c) Questions are h3 headings with the answers
+  always open (FAQPage). (d) The top bar's pink Request access pill, and
+  a closing 52 pink pill after Questions, with "Have an account? Log in"
+  under it below 720. "Request access" replaces "Request an invite" on
+  every marketing page, and What to wear stays out of the bar until its
+  page exists. (e) Ruled: this supersedes round 27's M4 draft, and R31's
+  M4 verdict-scale component is dropped. The page does not go live before
+  the runner-facing Garmin connection does (D-149).
+
 ## Answered in round 52 (imported 2026-11-11)
 
 Design answered as `Round 52 Rulings.dc.html`, items 155–161. The board's
