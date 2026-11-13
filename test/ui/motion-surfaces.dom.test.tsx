@@ -397,6 +397,40 @@ describe("Tab switch: the indicator slides under the label", () => {
     expect(activeTabIndex("/runs/manual", tabs)).toBeUndefined();
   });
 
+  it("lets a route param own any one segment, and what is beneath it", () => {
+    const tabs = [{ to: "/feed" }, { to: "/me", also: ["/account/$section"] }];
+    expect(activeTabIndex("/account/email", tabs)).toBe(1);
+    expect(activeTabIndex("/account/email/more", tabs)).toBe(1);
+    // A param is never the empty segment, and never more than one.
+    expect(activeTabIndex("/account/", tabs)).toBeUndefined();
+    expect(activeTabIndex("/account", tabs)).toBeUndefined();
+    expect(activeTabIndex("/accounts/email", tabs)).toBeUndefined();
+  });
+
+  it("lights You on the pages it holds that live elsewhere (#632 B-04, D1-19)", () => {
+    const you = 4;
+    for (const path of [
+      "/feed/me",
+      "/onboarding/settings",
+      "/onboarding/settings/sharing",
+      "/safety/blocked",
+      "/account/sign-in",
+      "/account/notifications",
+      "/account/username",
+      "/runs",
+      "/runs/run_1",
+      "/runs/backlog",
+    ]) {
+      expect(activeTabIndex(path), path).toBe(you);
+    }
+    // The log flow still answers by where the runner came from, not by
+    // path, though `/runs` now owns `/runs/new`.
+    expect(tabToLight("/runs/new", 1)).toBe(1);
+    expect(tabToLight("/runs/manual", undefined)).toBeUndefined();
+    expect(activeTabIndex("/feed")).toBe(0);
+    expect(activeTabIndex("/runsheet")).toBeUndefined();
+  });
+
   it("gives a launcher no seat, however well it owns the path", () => {
     // The launcher is skipped before ownership is even asked, so a path
     // it would otherwise win outright still lights nothing.

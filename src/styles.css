@@ -228,3 +228,14 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/*
+ * The browser's own clear button on a search field (#632 E2-05), on every
+ * `type="search"` input at once rather than per field: a glyph in a colour
+ * the palette does not have, at a weight the icon pack does not draw, set
+ * wherever the field's padding left it. A field that wants a clear control
+ * draws the pack's `close`; Escape still clears a search field natively.
+ */
+input[type="search"]::-webkit-search-cancel-button {
+  appearance: none;
+}

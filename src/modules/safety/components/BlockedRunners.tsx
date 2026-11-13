@@ -153,6 +153,8 @@ function BlockedRow({
               label="Unblock"
               pendingLabel="Unblocking"
               pending={control.pending}
+              // Flush right, the row's edge (#632 B-09).
+              align="end"
             />
           </Mono>
         </button>

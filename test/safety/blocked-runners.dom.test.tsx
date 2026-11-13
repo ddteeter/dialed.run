@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -143,6 +143,10 @@ describe("Unblock as a control that can fail (round 22, item 21)", () => {
     expect(button).not.toHaveAttribute("disabled");
     expect(button).toHaveTextContent("Unblocking");
     expect(button.querySelectorAll(".breathe")).toHaveLength(2);
+    // Flush with the row's right edge (#632 B-09).
+    expect(within(button).getByText("Unblock").parentElement).toHaveClass(
+      "justify-items-end",
+    );
 
     // A second press while it waits sends nothing more.
     await user.click(button);

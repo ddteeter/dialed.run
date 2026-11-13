@@ -43,6 +43,8 @@ describe("TopBar", () => {
     // selector, so "the ring inverts with the bar" is derived rather than
     // written a second time. The product's first user of the block.
     expect(bar()).toHaveAttribute("data-ground", "ink");
+    // Full-bleed: ruled underneath only on a dark page (#632 R-01).
+    expect(bar()).toHaveAttribute("data-edge", "bottom");
     expect(bar()).toHaveClass("bg-ground", "text-ink");
   });
 

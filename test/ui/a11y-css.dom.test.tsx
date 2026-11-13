@@ -157,4 +157,15 @@ describe("03 · 44px targets", () => {
     expect(seam).toMatch(/&::before\s*\{[^}]*inset: -6px 0;/u);
     expect(seam).not.toMatch(/min-height|min-width/u);
   });
+
+  it("gives a one-line link 44 from a pseudo-element, not a taller box (#628 N2-01)", () => {
+    // TYPE.body is 15px at 1.5: a 22.5 line, plus 11 above and below.
+    const line = blockAfter("@utility target-line");
+    expect(line).toContain("position: relative");
+    expect(line).toContain("min-width: 44px");
+    expect(line).not.toMatch(/min-height/u);
+    expect(line).toMatch(/&::before\s*\{[^}]*content: "";/u);
+    expect(line).toMatch(/&::before\s*\{[^}]*position: absolute;/u);
+    expect(line).toMatch(/&::before\s*\{[^}]*inset: -11px 0;/u);
+  });
 });

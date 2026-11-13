@@ -166,11 +166,13 @@ export function NotificationList({
   );
 }
 
-// `target`: the whole row's words are the link, so it takes the 44px hit
-// area rather than the in-sentence exception, and `inline-flex` gives the
-// `<a>` a box for it to grow (`a11y.css` §03).
+// `target-line`: the whole row's words are the link, so it takes the 44px
+// hit area rather than the in-sentence exception — but from a pseudo-element
+// inside the row's padding, not a box grown to 44 (`a11y.css` §03, #628
+// N2-01). The grown box floated one-line words off the dot and pushed the
+// time a line away, so linked and plain rows had different shapes.
 const LINKED =
-  "target inline-flex items-center font-semibold text-ink underline underline-offset-4";
+  "target-line inline-block font-semibold text-ink underline underline-offset-4";
 
 /**
  * The row's words, and where they go when the row has somewhere to go

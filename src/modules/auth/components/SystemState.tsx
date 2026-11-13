@@ -13,6 +13,7 @@ import { returnPathOf } from "../../../lib/return-path";
 import {
   FailureBand,
   Layout,
+  Mono,
   Page,
   TABS,
   classifyFailure,
@@ -132,8 +133,13 @@ export function NotFoundState({
         data-state="not-found"
         className="flex flex-col items-start gap-4"
       >
-        <span aria-hidden="true" className="font-display text-display">
-          404
+        {/* X1 draws "404" as a small muted kicker over the one headline
+            (#632 A-04), as the public pages' own not-found does; at the
+            display step it read as a second headline. */}
+        <span aria-hidden="true">
+          <Mono step="xs" className="text-muted">
+            404
+          </Mono>
         </span>
         <h1 className="m-0 font-display text-display uppercase">
           Nothing here
@@ -156,8 +162,12 @@ export function NotFoundState({
   );
 }
 
+/**
+ * X1's way out is the hairline pill (#632 A-04): leaving a 404 is not the
+ * screen's own action, so it is neither pink nor the filled ink pill.
+ */
 const WAY_OUT_CLASS =
-  "target inline-flex items-center rounded-pill bg-ink px-5 font-bold text-ground no-underline";
+  "target inline-flex items-center rounded-pill border border-hairline px-5 font-semibold text-ink no-underline";
 
 /**
  * The router's not-found screen, framed by who is looking.

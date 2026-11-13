@@ -165,6 +165,30 @@ summary:focus-visible,
 }
 
 /* ------------------------------------------------------------------
+ * 03 · THE LINE TARGET — a 44 hit area on one line of body text
+ *
+ * The seam's move for a link that is a row's whole words rather than a
+ * sentence's part (a notifications row, #628 N2-01). `target` grew the
+ * link's box to 44, so a one-line link stood a third taller than the row
+ * beside it, its words floated off the unread dot and the time below fell
+ * away. Here the box stays the line, and the hit area is a pseudo-element
+ * eleven pixels proud above and below: one TYPE.body line is 22.5, and
+ * 22.5 + 11 + 11 clears 44. The row's own padding (SPACE[3]) holds it, so
+ * neighbouring rows' targets never overlap. `inline-block` at the site, so
+ * a two-line link is one box.
+ * ------------------------------------------------------------------ */
+@utility target-line {
+  position: relative;
+  min-width: 44px;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -11px 0;
+  }
+}
+
+/* ------------------------------------------------------------------
  * 06 · FOCUS IS NOT HIDDEN — under the tab bar
  *
  * WCAG 2.4.11: a control that takes focus is not entirely covered. On a

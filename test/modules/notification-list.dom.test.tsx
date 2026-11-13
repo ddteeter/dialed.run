@@ -395,6 +395,14 @@ describe("NotificationList · where a row goes (R48·129f, R48·131c)", () => {
         name: "We fixed the weight on AFO Middle Layer. Thanks.",
       }),
     ).toHaveAttribute("href", "/closet/01GARMENT");
+    // The words keep the row's shape: a 44 hit area from the row's own
+    // padding, not a 44-tall box (#628 N2-01).
+    const link = screen.getByRole("link", {
+      name: "We fixed the weight on AFO Middle Layer. Thanks.",
+    });
+    expect(link).toHaveClass("target-line", "inline-block");
+    expect(link).not.toHaveClass("target");
+    expect(link).not.toHaveClass("inline-flex");
   });
 
   it("opens one follower's profile by the handle they have now", async () => {

@@ -74,22 +74,30 @@ export function NotificationBell({
       to="/notifications"
       aria-label={name[mark]}
       data-state={mark}
-      className={`target flex items-start no-underline ${
+      // Centred on the cross axis, as the search glyph beside it is, so the
+      // bar's right-hand three share one line (#632). The mark rides the
+      // glyph's corner from a box of its own rather than lifting the
+      // glyph with it: `items-start` did that, and the bell sat 12px high.
+      // Centred on the main axis only at desk, where the bar spaces its
+      // targets; the phone row is Design 169's.
+      className={`target flex items-center no-underline wide:justify-center ${
         mark === "quiet" ? "text-muted" : "text-ink"
       }`}
     >
-      <Icon name="bell" size={20} />
-      {mark === "number" ? (
-        <Mono
-          step="xs"
-          className="-ml-1.5 rounded-pill bg-action px-1 font-semibold text-accent-ink"
-        >
-          {number}
-        </Mono>
-      ) : undefined}
-      {mark === "dot" ? (
-        <span className="-ml-1.5 block size-2 rounded-pill bg-action" />
-      ) : undefined}
+      <span data-part="bell-glyph" className="relative flex">
+        <Icon name="bell" size={20} />
+        {mark === "number" ? (
+          <Mono
+            step="xs"
+            className="absolute top-0 left-3.5 rounded-pill bg-action px-1 font-semibold text-accent-ink"
+          >
+            {number}
+          </Mono>
+        ) : undefined}
+        {mark === "dot" ? (
+          <span className="absolute top-0 left-3.5 block size-2 rounded-pill bg-action" />
+        ) : undefined}
+      </span>
     </Link>
   );
 }

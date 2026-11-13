@@ -658,7 +658,7 @@ export function FailureBand({
           ref={retryRef}
           type="button"
           onClick={onRetry}
-          className="target cursor-pointer rounded-field border border-ink bg-ink px-4 py-3 text-body font-bold text-ground"
+          className="target cursor-pointer rounded-pill border border-ink bg-ink px-4 py-3 text-body font-bold text-ground"
         >
           {retryLabel}
         </button>
@@ -775,13 +775,21 @@ export function PendingLabel({
   label,
   pendingLabel,
   pending,
+  align = "center",
 }: Readonly<{
   label: ReactNode;
   pendingLabel: string;
   pending: boolean;
+  /**
+  Where the shorter label sits inside the longer one's width. Centred by
+  default, which is right for a button that centres its words; a text
+  control set flush to a column's edge says which edge, or its word floats
+  inward by half the difference (#632 B-09, E1-07).
+  */
+  align?: PendingAlign | undefined;
 }>): JSX.Element {
   return (
-    <span className="grid place-items-center">
+    <span className={PENDING_ALIGN[align]}>
       <span
         className="[grid-area:1/1]"
         // `undefined`, not `"visible"`: an explicit "visible" and an
@@ -792,21 +800,33 @@ export function PendingLabel({
       >
         {label}
       </span>
+      {/* Inline, not a flex row (#632 P2a-03, E1-06): a flex row made the
+          words one item, so when they wrapped that item took the whole
+          width and pushed `]` to the far edge. As text, each bracket is
+          glued to the word beside it — there is no space to break at. */}
       <span
-        className="flex gap-1 [grid-area:1/1]"
+        className="[grid-area:1/1]"
         style={{ visibility: pending ? undefined : "hidden" }}
       >
-        <span className="breathe" aria-hidden="true">
+        <span className="breathe mr-1" aria-hidden="true">
           [
         </span>
         {pendingLabel}
-        <span className="breathe" aria-hidden="true">
+        <span className="breathe ml-1" aria-hidden="true">
           ]
         </span>
       </span>
     </span>
   );
 }
+
+type PendingAlign = "start" | "center" | "end";
+
+const PENDING_ALIGN: Readonly<Record<PendingAlign, string>> = {
+  start: "grid items-center justify-items-start",
+  center: "grid place-items-center",
+  end: "grid items-center justify-items-end",
+};
 
 /**
  * The three main buttons. `action` is the runner app's: pink, a card,
@@ -1346,7 +1366,18 @@ function OptionLabel({
 }>): JSX.Element {
   const text =
     said === undefined ? label : <Spoken shown={label} said={said} />;
-  const words = step === undefined ? text : <Mono step={step}>{text}</Mono>;
+  // `font-normal`: a row's label is `font-semibold`, written for body-text
+  // labels, and a `Mono` label inherited it, so PRIVATE / SHARED came out
+  // bold beside the Theme chips' regular SYSTEM / LIGHT / DARK (#632 R-02).
+  // MONO.xs is regular everywhere.
+  const words =
+    step === undefined ? (
+      text
+    ) : (
+      <Mono step={step} className="font-normal">
+        {text}
+      </Mono>
+    );
   if (hint === undefined) return <>{words}</>;
   return (
     <span className="flex flex-col gap-1">

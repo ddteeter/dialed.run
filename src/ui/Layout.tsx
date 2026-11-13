@@ -134,27 +134,34 @@ function LegalFooter() {
       data-part="legal-footer"
       className="border-t border-hairline px-6 py-4 text-small text-muted"
     >
-      <p className="mx-auto m-0 flex w-full max-w-page flex-wrap gap-x-4">
-        <Link to="/privacy" className={FOOTER_LINK}>
-          Privacy
-        </Link>
-        <Link to="/terms" className={FOOTER_LINK}>
-          Terms
-        </Link>
-        <Link to="/copyright" className={FOOTER_LINK}>
-          Copyright
-        </Link>
-        {/* Round 29 #9: after Copyright, as "Open source" (plan C9). */}
-        <Link to="/open-source" className={FOOTER_LINK}>
-          Open source
-        </Link>
-        {/* Design 136: the TAKE IT DOWN Act asks for the way to request a
+      {/* The gaps are the links' own padding, not `gap-x` (#632 A-03):
+          `target`'s 44px minimum width padded only the links narrower than
+          it ("Terms"), so one gap came out wider than the rest. Padded,
+          every link clears 44 and every gap is the same 16px. The row's
+          negative margin keeps the first word on the gutter. */}
+      <p className="m-0 mx-auto w-full max-w-page">
+        <span className="-mx-2 flex flex-wrap">
+          <Link to="/privacy" className={FOOTER_LINK}>
+            Privacy
+          </Link>
+          <Link to="/terms" className={FOOTER_LINK}>
+            Terms
+          </Link>
+          <Link to="/copyright" className={FOOTER_LINK}>
+            Copyright
+          </Link>
+          {/* Round 29 #9: after Copyright, as "Open source" (plan C9). */}
+          <Link to="/open-source" className={FOOTER_LINK}>
+            Open source
+          </Link>
+          {/* Design 136: the TAKE IT DOWN Act asks for the way to request a
             removal to be clear and conspicuous, so it is on every page.
             Placeholder words, after round 27 #12's three (design deltas
             item 58). */}
-        <Link to="/takedown" className={FOOTER_LINK}>
-          Report an intimate image
-        </Link>
+          <Link to="/takedown" className={FOOTER_LINK}>
+            Report an intimate image
+          </Link>
+        </span>
       </p>
     </footer>
   );
@@ -165,4 +172,5 @@ The phone's bell row, a banner or a plain row (see `Layout`).
 */
 const BELL_ROW = "flex items-center justify-end px-5 pt-4 wide:hidden";
 
-const FOOTER_LINK = "target text-muted underline underline-offset-4";
+const FOOTER_LINK =
+  "target inline-flex items-center px-2 text-muted underline underline-offset-4";
