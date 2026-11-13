@@ -78,9 +78,14 @@ that a ruling changes is built to the ruling.
   row is stable. 72-square picker tiles. A 76 attached-photo thumb.
   "← Back" above the title. A2's This run card matches A3's. The Garmin
   credit on A2/A3 for Garmin runs. PrivateRunLine's inline Change drops
-  the 44 box's line stretch (D2-06; coordinator, 2026-11-13: this lane's). At desk, A2b/A3b are routes in the 620
-  column (back, title, meta, search, one card of checkboxes, Done). The
-  phone keeps the sheet.
+  the 44 box's line stretch (D2-06; coordinator, 2026-11-13: this lane's).
+  At desk, A2b and A3b are pages in the 620 column (back, title, meta,
+  search, one card of checkboxes, Done), and the phone keeps the sheet.
+  164.3's "the URL changes" is met by a search parameter on the screen's
+  own route (`?pick=<group>` on A2, `?specifics` on A3), not a child
+  route. The screen underneath stays mounted, so a held photo, which no
+  URL can carry, and the picks survive the push (coordinator,
+  2026-11-13).
 
 The bespoke controls (ClosetGrid's Show retired, ManualRunForm's
 treadmill box, VerdictForm's audience picker, KitPicker) move onto 8a's
@@ -89,8 +94,8 @@ set after #620 merges, in this PR if the timing allows.
 ## Contract touches
 
 - Schema changes: **none**. The zod message move is in `lib/contracts/runs.ts`.
-- New route files: the A2b/A3b push routes under `src/routes/feed/`
-  (coordinator, 2026-11-13: this lane's).
+- New route files: **none**. A2b and A3b are search parameters on the
+  A2 and A3 routes (see Approach).
 - New bindings/queues/crons: **none**
 - Screens: C, F, F-detail, A1, A2, A2b, A3, A3b, R1/R2a/R2b, runs list, S1
   backlog, T1/T3c. Round 54/55 deltas are the docs pass's.
@@ -102,7 +107,8 @@ set after #620 merges, in this PR if the timing allows.
   detail mileage units, the kicker, the rail order and overflow, the list's
   month groups, backlog cards and the empty state, the callback receipt,
   and the time-zone rule.
-- `worker`: the manual-run schema message, and the A2b/A3b route loaders.
+- `worker`: the manual-run schema message. `ui`: the push pages' search
+  parsing (`kit-push.ts`).
 - e2e: extend the existing closet, runs and attach journeys for 164.3's
   desk push and the conformance specs. No new journey.
 
