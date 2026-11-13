@@ -42,6 +42,7 @@ import type { UiGroup } from "../groups";
 import type { PrefillCandidate } from "../prefill";
 import { isProvidersReading } from "../strip";
 import { KitList, KitSheet, conditionsWords } from "./KitPicker";
+import { SpokenDistance } from "./SpokenDistance";
 
 /**
  * Attach the kit (screen A2), built to round 22's two frames and round
@@ -565,20 +566,7 @@ function AttachRail({
     <>
       <RailCard title="This run">
         <Mono step="sm">
-          <Spoken
-            {...measuredLine(
-              [
-                [
-                  {
-                    kind: "distance",
-                    distanceM: context.distanceM,
-                    spaced: true,
-                  },
-                ],
-              ],
-              units,
-            )}
-          />
+          <SpokenDistance distanceM={context.distanceM} units={units} />
         </Mono>
         {conditions === undefined ? undefined : (
           <Mono step="sm" className="text-dialed-text">

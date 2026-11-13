@@ -82,6 +82,11 @@ describe("Feed: the tabs", () => {
     const conditions = screen.getByRole("button", { name: "Your conditions" });
     expect(conditions).toHaveAttribute("aria-pressed", "false");
     expect(conditions).toHaveClass("text-label");
+    // Both tabs carry the 2px rule, the resting one transparent, so the
+    // labels share one baseline and do not swap heights (E1-16a).
+    expect(conditions).toHaveClass("border-b-2", "border-transparent");
+    expect(following).toHaveClass("border-b-2");
+    expect(following).not.toHaveClass("border-transparent");
   });
 
   it("opens on Your conditions with no follows, marked in teal", async () => {

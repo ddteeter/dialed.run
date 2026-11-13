@@ -196,9 +196,11 @@ function Rotation({
 
 const PIECE_CLASS =
   "flex items-baseline justify-between gap-3 border-b border-hairline pb-2 text-body text-ink";
-// Retired: --quiet and struck through, as D7 marks a revoked code.
+// Retired: --quiet, and the name struck through, as D7 marks a revoked
+// code. Only the name: the board leaves the mileage and the type clean,
+// and a line through "50 MI" says the mileage is void (N2-19).
 const RETIRED_PIECE_CLASS =
-  "flex items-baseline justify-between gap-3 border-b border-hairline pb-2 text-body text-quiet line-through";
+  "flex items-baseline justify-between gap-3 border-b border-hairline pb-2 text-body text-quiet";
 
 function RotationGroup({
   title,
@@ -217,7 +219,9 @@ function RotationGroup({
       itemClassName={isRetired ? RETIRED_PIECE_CLASS : PIECE_CLASS}
       row={(piece) => (
         <>
-          <span>{piece.name}</span>
+          <span className={isRetired ? "line-through" : undefined}>
+            {piece.name}
+          </span>
           <Mono step="xs" className="shrink-0">
             {piece.detail}
           </Mono>

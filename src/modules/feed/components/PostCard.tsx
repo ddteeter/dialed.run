@@ -1,12 +1,11 @@
 import { Link } from "@tanstack/react-router";
 
 import type { Units } from "../../../lib/contracts";
-import { measuredLine } from "../../../lib/contracts/measures";
 import {
+  CREDIT_LABEL,
   GarminAttribution,
   Mono,
   SlowLabel,
-  Spoken,
   useTappedSlow,
   WeatherAttribution,
 } from "../../../ui";
@@ -20,6 +19,7 @@ import { ConditionsCell } from "./ConditionsCell";
 
 import { UsefulButton } from "./UsefulButton";
 import type { SetUsefulFn } from "./useful-reaction";
+import { SpokenDistance } from "./SpokenDistance";
 import { VerdictBadge } from "./VerdictBadge";
 
 /**
@@ -82,6 +82,7 @@ export function PostCard(props: Readonly<PostCardProps>) {
   // X3 on a whole-card link: the date breathes, the handle stays still
   // (round 47 #122).
   const { isWaiting, onClick } = useTappedSlow();
+  const isCredited = isProvidersReading(item.conditions);
 
   return (
     <article
@@ -89,85 +90,106 @@ export function PostCard(props: Readonly<PostCardProps>) {
       data-state={photo === undefined ? "no-photo" : "with-photo"}
       className="flex flex-col gap-3 py-4"
     >
-      <Link
-        to="/feed/entry/$entryId"
-        params={{ entryId: item.entryId }}
-        onClick={onClick}
-        className="target flex flex-col gap-3 text-ink no-underline"
-      >
-        <div data-part="author" className="flex items-center gap-3">
-          <Avatar name={item.authorUsername ?? "A runner"} size="small" />
-          <span className="flex min-w-0 flex-1 flex-col wrap-anywhere">
-            <span className="text-body">
-              <Handle username={item.authorUsername} />
-            </span>
-            <Mono step="xs" className="text-muted">
-              <SlowLabel
-                label={postedLabel(
-                  item.startedAt,
-                  now,
-                  item.conditions?.timeZone,
-                )}
-                isWaiting={isWaiting}
-              />
-              {item.isOwn ? OWN_SUFFIX : undefined}
-            </Mono>
-            <GarminAttribution deviceName={item.deviceName} />
-          </span>
-          <span className="flex items-center gap-2">
-            {item.underReview ? <UnderReview /> : undefined}
-            <VerdictBadge verdict={item.verdict} />
-          </span>
-        </div>
-        {photo === undefined ? undefined : (
-          // The first photo, carrying only its `1 / N` counter, bottom
-          // right (the Feed board's E1): the rest are D's pager. A lone
-          // photo carries no counter (round 35 #53c).
-          <span className="relative block">
-            <img
-              data-part="photo"
-              src={`/feed/photo/${photo}`}
-              alt=""
-              className="aspect-video w-full rounded-card object-cover"
-            />
-            {item.photoKeys.length > 1 ? (
-              <span className="absolute right-3 bottom-3 rounded-tight bg-ground px-2 py-1 text-ink">
-                <Mono step="xs">1 / {String(item.photoKeys.length)}</Mono>
-              </span>
-            ) : undefined}
-          </span>
-        )}
-        <div
-          data-part="run-strip"
-          className="flex gap-3 border-y border-hairline py-2"
+      {/* The credit is a link of its own, so it cannot sit inside the
+          card's: it lies over the strip's right end (Round 54 · 170), and
+          the strip keeps that end clear with an unseen copy of its words.
+          The strip is the link's last part, so the two share a bottom. */}
+      <div className="relative">
+        <Link
+          to="/feed/entry/$entryId"
+          params={{ entryId: item.entryId }}
+          onClick={onClick}
+          className="target flex flex-col gap-3 text-ink no-underline"
         >
-          {/* Drawn as "8.2mi", said "8.2 miles" (round 52 #158). */}
-          <Mono>
-            <Spoken
-              {...measuredLine(
-                [[{ kind: "distance", distanceM: item.distanceM }]],
-                units,
-              )}
-            />
-          </Mono>
-          {second === undefined ? undefined : (
-            <>
-              {/* A rule between two cells, not a value: nothing to read. */}
-              <span aria-hidden="true" className="text-hairline">
-                |
+          <div data-part="author" className="flex items-center gap-3">
+            <Avatar name={item.authorUsername ?? "A runner"} size="small" />
+            <span className="flex min-w-0 flex-1 flex-col wrap-anywhere">
+              <span className="text-body">
+                <Handle username={item.authorUsername} />
               </span>
-              <ConditionsCell cell={second} />
-            </>
+              <Mono step="xs" className="text-muted">
+                <SlowLabel
+                  label={postedLabel(
+                    item.startedAt,
+                    now,
+                    item.conditions?.timeZone,
+                  )}
+                  isWaiting={isWaiting}
+                />
+                {item.isOwn ? OWN_SUFFIX : undefined}
+              </Mono>
+              <GarminAttribution deviceName={item.deviceName} />
+            </span>
+            <span className="flex items-center gap-2">
+              {item.underReview ? <UnderReview /> : undefined}
+              <VerdictBadge verdict={item.verdict} />
+            </span>
+          </div>
+          {photo === undefined ? undefined : (
+            // The first photo, carrying only its `1 / N` counter, bottom
+            // right (the Feed board's E1): the rest are D's pager. A lone
+            // photo carries no counter (round 35 #53c).
+            <span className="relative block">
+              <img
+                data-part="photo"
+                src={`/feed/photo/${photo}`}
+                alt=""
+                className="aspect-video w-full rounded-card object-cover"
+              />
+              {item.photoKeys.length > 1 ? (
+                <span className="absolute right-3 bottom-3 rounded-tight bg-ground px-2 py-1 text-ink">
+                  <Mono step="xs">1 / {String(item.photoKeys.length)}</Mono>
+                </span>
+              ) : undefined}
+            </span>
           )}
-        </div>
-      </Link>
-      {/* Outside the link, because it is a link of its own: Visual
-          Crossing's licence asks for the credit near the data (FEED-8).
-          Every card shows it, because the licence is about display; after
-          the list's first, it is drawn and not heard (R-179). */}
-      {isProvidersReading(item.conditions) ? (
-        <WeatherAttribution isRepeat={isCreditRepeated} />
-      ) : undefined}
+          <div
+            data-part="run-strip"
+            className="flex min-h-target items-center gap-3 border-y border-hairline"
+          >
+            <span className="flex min-w-0 items-center gap-3 whitespace-nowrap">
+              {/* Drawn as "8.1 MI", with the space the Feed board draws
+                (E1-08); said "8.1 miles" (round 52 #158). */}
+              <Mono className="shrink-0">
+                <SpokenDistance distanceM={item.distanceM} units={units} />
+              </Mono>
+              {second === undefined ? undefined : (
+                <>
+                  {/* A rule between two cells, not a value: nothing to
+                    read. A 1px rule, as the boards draw it, centred on the
+                    line rather than a body-size "|" below it (E1-08). */}
+                  <span
+                    aria-hidden="true"
+                    className="h-3 w-px shrink-0 bg-hairline"
+                  />
+                  {/* At 320 the sky word truncates before the credit wraps
+                    (Round 54 · 170). */}
+                  <span className="min-w-0 truncate">
+                    <ConditionsCell cell={second} />
+                  </span>
+                </>
+              )}
+            </span>
+            {isCredited ? (
+              // The room the strip keeps for the credit lying over its end:
+              // the label's own words, in its own step, never seen.
+              <Mono step="xs" className="invisible ml-auto shrink-0">
+                {CREDIT_LABEL}
+              </Mono>
+            ) : undefined}
+          </div>
+        </Link>
+        {/* Visual Crossing's licence asks for the credit near the data
+          (FEED-8), so every card with the provider's reading carries it:
+          on the card the label, heard by the sentence (Round 54 · 170).
+          After the list's first, it is drawn and not heard (R-179). An
+          indoor run, or one with no conditions, has no credit. */}
+        {isCredited ? (
+          <span className="absolute right-0 bottom-0 flex min-h-target items-center">
+            <WeatherAttribution isCompact isRepeat={isCreditRepeated} />
+          </span>
+        ) : undefined}
+      </div>
       <UsefulButton
         entryId={item.entryId}
         usefulCount={item.usefulCount}

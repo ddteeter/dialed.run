@@ -337,10 +337,13 @@ describe("the public profile, signed out", () => {
     expect(pegasus).toHaveClass("text-ink");
     expect(pegasus).not.toHaveClass("line-through");
     expect(rotation.getByText("Tights")).toHaveClass("text-mono-xs");
-    expect(rotation.getByText("Pegasus 40").closest("li")).toHaveClass(
-      "text-quiet",
-      "line-through",
-    );
+    // Retired: the row --quiet, the name alone struck (N2-19); the
+    // mileage and type stay readable, as the board draws them.
+    const retired = rotation.getByText("Pegasus 40");
+    expect(retired).toHaveClass("line-through");
+    expect(retired.closest("li")).toHaveClass("text-quiet");
+    expect(retired.closest("li")).not.toHaveClass("line-through");
+    expect(retired.nextElementSibling).not.toHaveClass("line-through");
     // A piece never links to its runs.
     expect(rotation.queryAllByRole("link")).toHaveLength(0);
   });
@@ -407,6 +410,9 @@ describe("the public profile, signed out", () => {
       "desk:grid",
       "desk:max-w-page",
       "desk:grid-cols-[minmax(0,var(--container-column))_minmax(0,1fr)]",
+      // Row 1 is the column's own height; the rail's extra height goes to
+      // row 2, so the pitch follows the kits instead of a hole (N2-17).
+      "desk:grid-rows-[auto_1fr]",
     );
     expect(part("top-bar")?.firstElementChild).toHaveClass(
       "max-w-column",
@@ -449,7 +455,7 @@ describe("the public profile, signed out", () => {
     expect(screen.getByRole("main").lastElementChild).toBe(
       invite?.parentElement,
     );
-    expect(link("Request an invite")).toBeVisible();
+    expect(link("Request access")).toBeVisible();
   });
 
   it("ends with Report this profile, the link filled in, then Privacy and Terms", async () => {

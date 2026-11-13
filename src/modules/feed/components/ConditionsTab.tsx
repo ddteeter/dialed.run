@@ -159,7 +159,7 @@ export function ConditionsTab({
  */
 function ResolvedPlace({ address }: Readonly<{ address: string }>) {
   return (
-    <p data-part="resolved-place" className="m-0 pt-5 text-muted">
+    <p data-part="resolved-place" className="m-0 text-muted">
       <Mono step="xs">Weather for {address}</Mono>
     </p>
   );
@@ -494,7 +494,7 @@ function Matched({
       <div
         data-part="match-block"
         data-state={isWidened ? "widened" : "matched"}
-        className="flex flex-col gap-2 bg-teal px-5 py-5 text-accent-ink desk:rounded-card"
+        className="flex flex-col gap-2 rounded-card bg-teal px-5 py-5 text-accent-ink"
       >
         <SameConditionsEyebrow
           band={result.band}

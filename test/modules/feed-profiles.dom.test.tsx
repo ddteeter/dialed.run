@@ -699,7 +699,9 @@ describe("Follow, on the control-failure pattern", () => {
     await waitFor(() => {
       expect(button).toHaveAccessibleName("Following");
     });
-    expect(button).toHaveClass("border-hairline");
+    // The outline pill is 1px --ink (R48·134): a hairline all but
+    // vanished on dark (E1-16b).
+    expect(button).toHaveClass("border-ink");
     expect(button).not.toHaveClass("bg-action");
   });
 
@@ -864,16 +866,18 @@ describe("RunnerSearch", () => {
     const user = userEvent.setup();
     const pending = Promise.withResolvers<SearchResult[]>();
     await renderFeedScreen(searchScreen(() => pending.promise));
-    const label = screen.getByText("Searching").parentElement;
-    expect(label).toHaveStyle({ visibility: "hidden" });
+    // Absent at rest, so it holds no width that would end the input short
+    // of the field's edge (E2-05).
+    expect(screen.queryByText("Searching", { selector: "span" })).toBeNull();
 
     await user.type(screen.getByLabelText("Search by name"), "A");
-    expect(label).not.toHaveStyle({ visibility: "hidden" });
-    expect(label?.querySelectorAll(".breathe")).toHaveLength(2);
+    const label = screen.getByText("Searching", { selector: "span" });
+    expect(label.parentElement).toHaveAttribute("aria-hidden", "true");
+    expect(label.querySelectorAll(".breathe")).toHaveLength(2);
 
     pending.resolve([]);
     await waitFor(() => {
-      expect(label).toHaveStyle({ visibility: "hidden" });
+      expect(screen.queryByText("Searching", { selector: "span" })).toBeNull();
     });
   });
 
@@ -887,13 +891,11 @@ describe("RunnerSearch", () => {
     const pending = Promise.withResolvers<SearchResult[]>();
     await renderFeedScreen(searchScreen(() => pending.promise));
     const box = screen.getByLabelText("Search by name");
-    const label = screen.getByText("Searching").parentElement;
-
     await user.type(box, "A");
-    expect(label).not.toHaveStyle({ visibility: "hidden" });
+    expect(screen.getByText("Searching", { selector: "span" })).toBeVisible();
     await user.clear(box);
 
-    expect(label).toHaveStyle({ visibility: "hidden" });
+    expect(screen.queryByText("Searching", { selector: "span" })).toBeNull();
     pending.resolve([]);
   });
 

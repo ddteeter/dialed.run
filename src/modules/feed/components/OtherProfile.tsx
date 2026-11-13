@@ -59,7 +59,7 @@ export function OtherProfile({
   const name = handleText(profile.username);
 
   return (
-    <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6 wide:mx-0">
+    <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6 wide:mx-0 wide:px-6">
       <FormStatus>{status}</FormStatus>
       {/* `exact`: the router marks a prefix match current, and this page
           sits under /feed. */}
@@ -75,14 +75,16 @@ export function OtherProfile({
         <PhoneBell />
       </div>
       <div data-part="header" className="flex flex-col items-start gap-4">
-        <div className="flex items-center gap-4">
+        <div className="flex min-w-0 items-center gap-4">
           <Avatar name={profile.username ?? name} size="large" />
-          <div className="flex flex-col gap-1">
+          <div className="flex min-w-0 flex-col gap-1">
             <h1 className="m-0 text-heading wrap-anywhere">
               <Handle username={profile.username} />
             </h1>
             {profile.cityLabel === null ? undefined : (
-              <Mono className="text-muted">{profile.cityLabel}</Mono>
+              <Mono className="text-muted wrap-anywhere">
+                {profile.cityLabel}
+              </Mono>
             )}
           </div>
         </div>

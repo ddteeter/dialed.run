@@ -91,7 +91,7 @@ export function FollowPill({
       }}
       className={`target shrink-0 cursor-pointer rounded-pill px-5 py-2 text-body font-bold ${
         isFollowing
-          ? "border border-hairline bg-transparent text-ink"
+          ? "border border-ink bg-transparent text-ink"
           : "border-none bg-action text-accent-ink"
       }`}
     >

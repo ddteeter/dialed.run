@@ -16,14 +16,20 @@ export function BracketHeadline({
   children,
   pending = false,
 }: Readonly<{ children: ReactNode; pending?: boolean }>) {
-  const bracket = pending ? "breathe text-action" : "text-action";
+  // Inline, not a flex row (E1-06): words that wrap take the line they
+  // need, and each bracket stays with the word beside it, with no
+  // whitespace between them. A flex row gave the words the whole width
+  // and flung the closing bracket to the far edge. The same mechanism as
+  // `PendingLabel`'s pending layer.
+  const opening = pending ? "breathe mr-2 text-action" : "mr-2 text-action";
+  const closing = pending ? "breathe ml-2 text-action" : "ml-2 text-action";
   return (
-    <h2 className="m-0 flex gap-2 font-display text-display uppercase">
-      <span aria-hidden="true" className={bracket}>
+    <h2 className="m-0 font-display text-display uppercase">
+      <span aria-hidden="true" className={opening}>
         [
       </span>
-      <span>{children}</span>
-      <span aria-hidden="true" className={bracket}>
+      {children}
+      <span aria-hidden="true" className={closing}>
         ]
       </span>
     </h2>

@@ -172,14 +172,15 @@ export function ReportSheet({
   const neverTold =
     subject.authorName === undefined
       ? "They are never told who reported it."
-      : `${subject.authorName} is never told who reported it.`;
+      : `@${subject.authorName} is never told who reported it.`;
 
   // Round 26 #7 (SAF-15): the sheet names whose entry it is, by handle,
-  // once there is a handle to name.
-  const title =
-    subject.authorName === undefined
-      ? "Report this entry"
-      : `Report @${subject.authorName}'s entry?`;
+  // once there is a handle to name. A profile is the runner, not an entry
+  // of theirs (owner, 2026-11-12, E1-12).
+  const title = titleOf(subject);
+  // The line under the title names what is reported — an entry's run. On
+  // a profile that is the handle the title already says, so it goes.
+  const isLabelled = subject.type !== "profile";
 
   return (
     <Sheet open={open} onClose={onClose} label={title}>
@@ -219,7 +220,9 @@ export function ReportSheet({
             <Icon name="close" size={20} />
           </button>
         </div>
-        <p className="text-micro text-quiet">{subject.label}</p>
+        {isLabelled ? (
+          <p className="text-micro text-quiet">{subject.label}</p>
+        ) : undefined}
 
         {/* Yes, this is valid TSX, and it is not a trick. A JSX element
             takes explicit type arguments exactly as a call does
@@ -349,4 +352,15 @@ function focusPageHeading(): void {
   const heading = document.querySelector<HTMLElement>("h1");
   heading?.setAttribute("tabindex", "-1");
   heading?.focus();
+}
+
+/**
+ * The sheet's title: whose entry it is, or which runner, by handle once
+ * there is one (round 26 #7; owner, 2026-11-12, for a profile).
+ */
+function titleOf(subject: ReportSubject): string {
+  if (subject.authorName === undefined) return "Report this entry";
+  return subject.type === "profile"
+    ? `Report @${subject.authorName}?`
+    : `Report @${subject.authorName}'s entry?`;
 }

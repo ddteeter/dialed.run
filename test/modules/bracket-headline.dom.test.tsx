@@ -26,6 +26,19 @@ describe("BracketHeadline", () => {
       expect(mark).toHaveClass("text-action");
       expect(mark).not.toHaveClass("breathe");
     }
+    expect(marks[0]).toHaveClass("mr-2");
+    expect(marks[1]).toHaveClass("ml-2");
+  });
+
+  it("is inline text, so a wrapped headline keeps each bracket on its word (E1-06)", () => {
+    render(<BracketHeadline>Finding weather</BracketHeadline>);
+    const heading = screen.getByRole("heading", { level: 2 });
+    expect(heading).not.toHaveClass("flex");
+    expect(heading).toHaveClass("font-display", "text-display", "uppercase");
+    // Brackets and words in one line box, with nothing between them that
+    // a line could break at.
+    expect(heading.textContent).toBe("[Finding weather]");
+    expect(heading.childNodes[1]?.nodeType).toBe(Node.TEXT_NODE);
   });
 
   it("breathes its brackets, and only its brackets, while pending", () => {
@@ -33,9 +46,9 @@ describe("BracketHeadline", () => {
       <BracketHeadline pending>Finding weather</BracketHeadline>,
     );
 
-    for (const mark of brackets(container)) {
-      expect(mark).toHaveClass("breathe", "text-action");
-    }
+    const [opening, closing] = brackets(container);
+    expect(opening).toHaveClass("breathe", "mr-2", "text-action");
+    expect(closing).toHaveClass("breathe", "ml-2", "text-action");
     expect(screen.getByText("Finding weather")).not.toHaveClass("breathe");
   });
 });

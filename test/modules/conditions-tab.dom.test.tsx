@@ -508,9 +508,9 @@ describe("ConditionsTab: matched", () => {
     ).toBeVisible();
     expect(block()).toHaveAttribute("data-state", "matched");
     expect(block()).toHaveClass("bg-teal");
-    // Square on the phone; RADIUS.card at desk, where it no longer runs
-    // edge to edge (the Feed board's E2-lite desk).
-    expect(block()).toHaveClass("desk:rounded-card");
+    // RADIUS.card at every width: Round 54 · 170's board draws the band as
+    // a card inset in the gutters at 390 too (N2-11).
+    expect(block()).toHaveClass("rounded-card");
     expect(block()).toHaveTextContent(
       "Same conditions · Feels [41–46°] · damp · 3 days",
     );
