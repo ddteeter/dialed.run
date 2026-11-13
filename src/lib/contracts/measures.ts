@@ -371,13 +371,15 @@ function shownPart(part: MeasuredPart, units: Units): string {
 function saidPart(part: MeasuredPart, units: Units): string {
   switch (part.kind) {
     case "temp": {
-      const feels = part.feels === undefined ? "" : "feels like ";
+      const feels =
+        part.feels === undefined ? "" : `${part.feels.toLowerCase()} like `;
       const letter =
         part.withLetter === true ? ` ${TEMP_UNIT_WORD[units.temp]}` : "";
       return `${feels}${degrees(tempInUnit(part.tempC, units.temp))}${letter}`;
     }
     case "range": {
-      const feels = part.feels === undefined ? "" : "feels like ";
+      const feels =
+        part.feels === undefined ? "" : `${part.feels.toLowerCase()} like `;
       const low = tempInUnit(part.minC, units.temp);
       const high = tempInUnit(part.maxC, units.temp);
       const span =
