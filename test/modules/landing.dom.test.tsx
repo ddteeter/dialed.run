@@ -149,6 +149,55 @@ describe("SignOutButton", () => {
     ).toHaveAccessibleDescription("Signed in On this phone");
   });
 
+  it("is the Desk bar's mono, underlined Sign out at the bar's right, with no row (R55·194)", async () => {
+    const user = userEvent.setup();
+    const done = Promise.withResolvers<undefined>();
+    const signOut = vi.fn().mockReturnValue(done.promise);
+    await renderWithRouter(<SignOutButton isDeskBar signOut={signOut} />);
+    const button = screen.getByRole("button", { name: "Sign out" });
+    expect(button).toHaveClass(
+      "font-mono",
+      "text-mono-xs",
+      "uppercase",
+      "underline",
+      "underline-offset-4",
+      "text-ink",
+      "px-1",
+    );
+    expect(button).not.toHaveClass(
+      "self-center",
+      "p-0",
+      "text-body",
+      "font-semibold",
+      "text-cold-text",
+    );
+    const root = button.closest("[data-part='desk-sign-out']");
+    expect(root).toHaveClass("flex", "flex-col", "items-end");
+    expect(root).not.toHaveClass("gap-3");
+    expect(document.querySelector("[data-part='sign-out-row']")).toBeNull();
+    expect(screen.queryByText(/Signed in|On this phone/u)).toBeNull();
+    expect(button).not.toHaveAttribute("aria-describedby");
+
+    await user.click(button);
+    expect(signOut).toHaveBeenCalledTimes(1);
+    expect(button).toHaveAttribute("aria-busy", "true");
+    expect(button).toHaveTextContent("Signing out");
+    done.resolve(undefined);
+    await waitFor(() => {
+      expect(button).not.toHaveAttribute("aria-busy");
+    });
+  });
+
+  it("says Still signed in from the Desk bar too", async () => {
+    const user = userEvent.setup();
+    const signOut = vi.fn().mockRejectedValueOnce(new Error("down"));
+    await renderWithRouter(<SignOutButton isDeskBar signOut={signOut} />);
+
+    await user.click(screen.getByRole("button", { name: "Sign out" }));
+    const band = await screen.findByText("Still signed in");
+    expect(band.closest("[data-part='desk-sign-out']")).not.toBeNull();
+  });
+
   it("is Account's Every device row, whatever the handle", async () => {
     await renderWithRouter(
       <SignOutButton isEverywhere username="maya_runs" signOut={vi.fn()} />,
