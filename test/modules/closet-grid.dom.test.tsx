@@ -5,6 +5,7 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
+import { drawnText, saidText } from "./spoken-text";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
@@ -524,8 +525,12 @@ describe("ClosetGrid: the tile's photo and record (board C, round 27 #31b)", () 
     expect(record?.querySelector(".sr-only")).toHaveTextContent(
       /^8 of 9 runs dialed$/,
     );
-    expect(partOf(tile, "tile-range")).toHaveTextContent(
+    expect(drawnText(partOf(tile, "tile-range"))).toMatch(
       /^\[39–54°\] · 142 mi$/,
+    );
+    // Round 53 · 162.3: a range always takes the spoken form.
+    expect(saidText(partOf(tile, "tile-range"))).toBe(
+      "39 to 54 degrees · 142 mi",
     );
   });
 
@@ -534,9 +539,8 @@ describe("ClosetGrid: the tile's photo and record (board C, round 27 #31b)", () 
     await renderWithRouter(
       <ClosetGrid tempUnit="c" distanceUnit="km" listing={listing([worn])} />,
     );
-    expect(
-      partOf(tileOf(/^Tracksmith Harrier/), "tile-range"),
-    ).toHaveTextContent(/^\[4–12°\] · 229 km$/);
+    const range = partOf(tileOf(/^Tracksmith Harrier/), "tile-range");
+    expect(drawnText(range)).toMatch(/^\[4–12°\] · 229 km$/);
   });
 
   it("says one run, not one runs", async () => {
@@ -568,7 +572,7 @@ describe("ClosetGrid: the tile's photo and record (board C, round 27 #31b)", () 
     );
     const tile = tileOf(/^Tracksmith Harrier/);
     expect(partOf(tile, "tile-record")).toHaveTextContent(/^No runs yet$/);
-    expect(partOf(tile, "tile-range")).toHaveTextContent(/^\[4–12°\]$/);
+    expect(drawnText(partOf(tile, "tile-range"))).toMatch(/^\[4–12°\]$/);
   });
 
   it("says No verdict yet for a piece worn but never judged", async () => {
@@ -600,9 +604,8 @@ describe("ClosetGrid: the tile's photo and record (board C, round 27 #31b)", () 
         listing={listing([indoorsOnly])}
       />,
     );
-    expect(
-      partOf(tileOf(/^Tracksmith Harrier/), "tile-range"),
-    ).toHaveTextContent(/^\[4–12°\]$/);
+    const range = partOf(tileOf(/^Tracksmith Harrier/), "tile-range");
+    expect(drawnText(range)).toMatch(/^\[4–12°\]$/);
   });
 
   it("names the piece first, then its record, in the link's name", async () => {
@@ -694,7 +697,7 @@ describe("ClosetGrid: what a tile says", () => {
       />,
     );
 
-    expect(screen.getByRole("link", { name: /Harrier/ })).toHaveTextContent(
+    expect(drawnText(screen.getByRole("link", { name: /Harrier/ }))).toContain(
       "[39–54°]",
     );
   });
@@ -708,9 +711,9 @@ describe("ClosetGrid: what a tile says", () => {
       />,
     );
 
-    expect(screen.getByRole("link", { name: /Harrier/ })).toHaveTextContent(
-      "[4–12°]",
-    );
+    const harrierTile = screen.getByRole("link", { name: /Harrier/ });
+    expect(drawnText(harrierTile)).toContain("[4–12°]");
+    expect(harrierTile).toHaveAccessibleName(/4 to 12 degrees/);
     expect(
       screen.getByRole("link", { name: /Long sleeve top/ }),
     ).toHaveTextContent("[Untested]");
@@ -1025,7 +1028,7 @@ describe("ClosetGrid: the rail (R-94)", () => {
     expect(
       within(chips)
         .getAllByRole("button", { expanded: false })
-        .map((chip) => chip.textContent),
+        .map((chip) => drawnText(chip)),
     ).toStrictEqual(["Group · All", "Works at · Any", "Coverage · All"]);
   });
 
@@ -1122,9 +1125,9 @@ describe("ClosetGrid: the rail (R-94)", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "1 piece",
     );
-    expect(document.querySelector("[data-part='filtered']")).toHaveTextContent(
-      "Filtered: [5–10°] · Covered",
-    );
+    const filtered = document.querySelector("[data-part='filtered']");
+    expect(drawnText(filtered)).toBe("Filtered: [5–10°] · Covered");
+    expect(saidText(filtered)).toBe("Filtered: 5 to 10 degrees · Covered");
     // Filtered, and something matches: no "nothing matches".
     expect(document.querySelector("[data-part='no-matches']")).toBeNull();
   });
@@ -1139,10 +1142,11 @@ describe("ClosetGrid: the rail (R-94)", () => {
   it("names an open span by its one end", async () => {
     await grid({ from: 5 });
     const line = document.querySelector("[data-part='filtered']");
-    expect(line).toHaveTextContent(/^Filtered: \[5°\+\]$/);
+    expect(drawnText(line)).toMatch(/^Filtered: \[5°\+\]$/);
+    expect(saidText(line)).toBe("Filtered: 5 degrees and up");
     // Nothing drawn for the coverage that is not set, not even empty.
     expect(
-      [...(line?.children ?? [])].map((part) => part.textContent),
+      [...(line?.children ?? [])].map((part) => drawnText(part)),
     ).toStrictEqual(["Filtered: ", "[5°+]"]);
   });
 
@@ -1254,7 +1258,7 @@ describe("ClosetGrid: the search the router hands it (design 174)", () => {
     await routedAt("/closet?lowest=40&highest=50&unit=f&group=tops");
     const rail = document.querySelector<HTMLElement>("nav[data-part='rail']");
     if (rail === null) throw new Error("no rail");
-    expect(document.querySelector("[data-part='filtered']")).toHaveTextContent(
+    expect(drawnText(document.querySelector("[data-part='filtered']"))).toBe(
       "Filtered: [40–50°]",
     );
     // Any drops the span for good, rather than landing on a URL that

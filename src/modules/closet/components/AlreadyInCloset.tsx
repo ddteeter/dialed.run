@@ -3,8 +3,8 @@ import type { JSX } from "react";
 import type { garmentCategories, TempUnit } from "../../../lib/contracts";
 import type { GarmentType } from "../../../lib/contracts/garment-fields";
 import { normalizeIdentity } from "../../../lib/normalize";
-import { formatTempRange } from "../../../lib/contracts/thermal";
-import { Mono, RailCard } from "../../../ui";
+import { worksAtForms } from "../../../lib/contracts/measures";
+import { Mono, RailCard, Spoken } from "../../../ui";
 import { garmentLabel } from "../../../lib/garment-label";
 import { runsLabel } from "../../../lib/runs-label";
 import { photoUrlFor } from "../photo-url";
@@ -67,7 +67,7 @@ function RecordLine({
   const range =
     view.tempRange === undefined
       ? undefined
-      : formatTempRange(view.tempRange, tempUnit);
+      : worksAtForms(view.tempRange, tempUnit);
   return (
     <>
       {`${worn} · `}
@@ -79,8 +79,9 @@ function RecordLine({
       </span>
       {range === undefined ? undefined : (
         <>
-          <span className="sr-only">, works at</span>
-          {` ${range}`}
+          <span className="sr-only">, works at</span>{" "}
+          {/* "40–58°" drawn, "40 to 58 degrees" said (round 53 · 162.3). */}
+          <Spoken {...range} />
         </>
       )}
     </>

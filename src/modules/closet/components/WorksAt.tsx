@@ -4,8 +4,8 @@ import { useId, useRef, useState } from "react";
 
 import type { TempUnit } from "../../../lib/contracts";
 import { tempInUnit, unitToC } from "../../../lib/contracts/temperature";
-import { formatTempRange } from "../../../lib/contracts/thermal";
-import { Bracketed, Mono } from "../../../ui";
+import { spanInUnit, worksAtForms } from "../../../lib/contracts/measures";
+import { Bracketed, Mono, Spoken } from "../../../ui";
 import type { ClosetSearch } from "../inputs";
 import { useIsHydrated } from "./use-is-hydrated";
 
@@ -37,13 +37,14 @@ export interface WorksAtProps {
 }
 
 /**
-The asked span as the runner reads it: `34–58°`, `34°+`, `under 58°`.
-*/
+ * The asked span as the runner reads it, `34–58°`, `34°+` or `under 58°`,
+ * and as it is said, "34 to 58 degrees" (round 53 · 162.3).
+ */
 export function worksAtLabel(
   search: ClosetSearch,
   tempUnit: TempUnit,
-): string | undefined {
-  return formatTempRange({ lowC: search.from, highC: search.to }, tempUnit);
+): { shown: string; said: string } | undefined {
+  return worksAtForms({ lowC: search.from, highC: search.to }, tempUnit);
 }
 
 const UNIT_MARK: Readonly<Record<TempUnit, string>> = { f: "°F", c: "°C" };
@@ -203,7 +204,8 @@ function Thumb({
 
 /**
  * #109h with script: the bar is the control. The readout above it is the
- * span as set (`18–72°F`, as #109b draws it); it moves with the thumbs,
+ * span as set (`18–72°F`, as #109b draws it, said "18 to 72 degrees
+ * Fahrenheit"); it moves with the thumbs,
  * and the search changes when a thumb is let go — one history entry for
  * one drag, replaced rather than pushed, since a span is one setting.
  */
@@ -243,7 +245,7 @@ function SpanBar({
   return (
     <div className="flex flex-col gap-2">
       <Mono step="sm" className="text-ink">
-        {`${String(ends.low)}–${String(ends.high)}${UNIT_MARK[tempUnit]}`}
+        <Spoken {...spanInUnit(ends.low, ends.high, tempUnit)} />
       </Mono>
       {/* 44 high, so each thumb's input is a full target (rule 03). */}
       <div data-part="span-bar" className="relative h-11">

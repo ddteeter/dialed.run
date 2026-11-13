@@ -4,7 +4,7 @@ import type { JSX, ReactNode } from "react";
 
 import type { GarmentVisibility, TempUnit } from "../../../lib/contracts";
 import { photoAcceptAttribute } from "../../../lib/photo-constraints";
-import { formatTempRange } from "../../../lib/contracts/thermal";
+import { worksAtForms } from "../../../lib/contracts/measures";
 import {
   Bracketed,
   ControlFailureBand,
@@ -13,6 +13,7 @@ import {
   inFlight,
   Mono,
   PendingLabel,
+  Spoken,
   useControlAction,
   PHOTO_STILL_ON,
   usePhotoPick,
@@ -325,6 +326,8 @@ function Stats({
   tempUnit,
 }: Readonly<{ detail: Detail; tempUnit: TempUnit }>): JSX.Element {
   const { item, tempRange } = detail;
+  const range =
+    tempRange === undefined ? undefined : worksAtForms(tempRange, tempUnit);
   const summary = summaryOf(detail);
   const km = Math.round(summary.mileageM / 1000);
   const verdicts = summary.verdictCount;
@@ -346,10 +349,13 @@ function Stats({
           </>
         ) : undefined}
       </Mono>
-      {tempRange ? (
+      {range ? (
         <p className="m-0 text-dialed-text">
           <Mono>{item.retired ? "Worked at " : "Works at "}</Mono>
-          <Bracketed>{formatTempRange(tempRange, tempUnit)}</Bracketed>
+          {/* "40–58°" drawn, "40 to 58 degrees" said (round 53 · 162.3). */}
+          <Bracketed>
+            <Spoken {...range} />
+          </Bracketed>
         </p>
       ) : (
         <p className="m-0 text-muted">

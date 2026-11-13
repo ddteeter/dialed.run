@@ -9,9 +9,11 @@ import {
   type TempUnit,
   type UiGroup,
 } from "../../../lib/contracts";
-import { formatTempRange } from "../../../lib/contracts/thermal";
-import { wholeDistanceNumber } from "../../../lib/contracts/measures";
-import { Bracketed, Icon, Mono, useListMotion } from "../../../ui";
+import {
+  wholeDistanceNumber,
+  worksAtForms,
+} from "../../../lib/contracts/measures";
+import { Bracketed, Icon, Mono, Spoken, useListMotion } from "../../../ui";
 import { garmentLabel } from "../../../lib/garment-label";
 import { runsLabel } from "../../../lib/runs-label";
 import { isPhotoBeingChecked, photoUrlFor } from "../photo-url";
@@ -29,11 +31,16 @@ function itemLabel(view: ClosetItemView): string {
   });
 }
 
-function tempLabel(view: ClosetItemView, tempUnit: TempUnit): string {
-  // "Untested" is uppercased by <Bracketed> in CSS.
-  return view.tempRange
-    ? (formatTempRange(view.tempRange, tempUnit) ?? "Untested")
-    : "Untested";
+/**
+ * The tile's range, drawn "40–58°" and said "40 to 58 degrees" (round 53 ·
+ * 162.3), or "Untested", which <Bracketed> uppercases in CSS.
+ */
+function tempLabel(view: ClosetItemView, tempUnit: TempUnit): ReactNode {
+  const range =
+    view.tempRange === undefined
+      ? undefined
+      : worksAtForms(view.tempRange, tempUnit);
+  return range === undefined ? "Untested" : <Spoken {...range} />;
 }
 
 const itemKey = (view: ClosetItemView): string => view.item.id;
@@ -416,7 +423,9 @@ function FilteredLine({
     <p data-part="filtered" className="m-0 text-label">
       <Mono step="xs">Filtered: </Mono>
       {range === undefined ? undefined : (
-        <Bracketed step="xs">{range}</Bracketed>
+        <Bracketed step="xs">
+          <Spoken {...range} />
+        </Bracketed>
       )}
       {range === undefined || coverage === undefined ? undefined : (
         <Mono step="xs">{" · "}</Mono>
