@@ -1,8 +1,8 @@
 import type { JSX } from "react";
 
 import type { Units } from "../../../lib/contracts";
-import { bandLabel } from "../../../lib/contracts/temperature";
-import { Mono } from "../../../ui";
+import { bandForms } from "../../../lib/contracts/measures";
+import { Mono, Spoken } from "../../../ui";
 
 /**
  * A3's line beneath the verdict row: this runner's own verdicts in the
@@ -54,7 +54,9 @@ export function BandHistory({
               hidden here rather than nesting a second Mono. */}
           <Mono step="md">
             <span aria-hidden="true">[</span>
-            {bandLabel(bandFloor, units.temp)}
+            {/* "38–46°" drawn, "38 to 46 degrees" said (round 53 ·
+                162.3). */}
+            <Spoken {...bandForms(bandFloor, units.temp)} />
             <span aria-hidden="true">]</span> · {cold} cold · {dialed} dialed ·{" "}
             {warm} warm
           </Mono>

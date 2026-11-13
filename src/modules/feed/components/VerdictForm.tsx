@@ -15,12 +15,12 @@ import { clockLabel, dayLabel } from "../../../lib/dates";
 import { runsLabel } from "../../../lib/runs-label";
 import type { BandRun } from "../band-runs";
 import { BandRunsCard } from "./BandRunsCard";
-import { distanceNumber, measuredLine } from "../../../lib/contracts/measures";
 import {
-  bandLabel,
-  formatTemp,
-  precipClassOf,
-} from "../../../lib/contracts/temperature";
+  bandForms,
+  distanceNumber,
+  measuredLine,
+} from "../../../lib/contracts/measures";
+import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
 import {
   AUDIENCE_HINTS,
   AUDIENCE_LABELS,
@@ -130,7 +130,11 @@ const VERDICT_RADIO =
 import { submitVerdictInput } from "../inputs";
 import { BandHistory } from "./BandHistory";
 import { isProvidersReading } from "../strip";
-import { NotedReceipt, notedAnnouncement } from "./NotedReceipt";
+import {
+  NotedReceipt,
+  notedAnnouncement,
+  type NotedSentence,
+} from "./NotedReceipt";
 import { SpecificsSheet } from "./SpecificsSheet";
 import { VerdictChips } from "./VerdictChips";
 import type { BandSignals } from "../band-signals";
@@ -317,7 +321,9 @@ export function VerdictForm({
   // Present once the verdict is saved. The sentence inside it can still be
   // absent: the save landed and only the record's count failed to come
   // back, and the receipt is not held hostage to it.
-  const [noted, setNoted] = useState<{ sentence: string | undefined }>();
+  const [noted, setNoted] = useState<{
+    sentence: NotedSentence | undefined;
+  }>();
   const [sheetOpen, setSheetOpen] = useState(false);
   const effort = useEffortPick(entry.effort);
   // `entry.id`, not an `entryId` prop beside it — the same duplication
@@ -343,14 +349,21 @@ export function VerdictForm({
    * runner invited to log a verdict that was already logged. A count that
    * does not come back leaves the receipt without its sentence instead.
    */
-  async function notedSentence(): Promise<string | undefined> {
+  async function notedSentence(): Promise<NotedSentence | undefined> {
     const plan = notedPlan(bandFloor, entry.items);
-    if (plan.kind === "nothing-moved") return plan.sentence;
+    if (plan.kind === "nothing-moved") {
+      return { shown: plan.sentence, said: plan.sentence };
+    }
     try {
       const stat = await itemBandWearStat({
         data: { itemId: plan.itemId, bandFloorC: plan.bandFloorC },
       });
-      return `${plan.name} is now ${String(stat.worn)} of ${String(stat.total)} in ${bandLabel(plan.bandFloorC, units.temp)}.`;
+      const record = `${plan.name} is now ${String(stat.worn)} of ${String(stat.total)} in`;
+      const band = bandForms(plan.bandFloorC, units.temp);
+      return {
+        shown: `${record} ${band.shown}.`,
+        said: `${record} ${band.said}.`,
+      };
     } catch {
       // The count did not come back; the save it would describe did land.
     }
@@ -912,7 +925,8 @@ interface RailBand {
 
 /**
  * A piece's record in the band, as A3's rail draws it: "8/9 DIALED ·
- * 38–46°", said "8 of 9 runs dialed in 38–46°". A piece not worn in the
+ * 38–46°", said "8 of 9 runs dialed in 38 to 46 degrees" (round 53 ·
+ * 162.3). A piece not worn in the
  * band before has no record to show, so the line is absent.
  */
 function KitRecord({
@@ -926,12 +940,12 @@ function KitRecord({
 }>): JSX.Element | undefined {
   if (record === undefined || record.total === 0) return;
   const dialed = String(record.dialed);
-  const band = bandLabel(bandFloor, units.temp);
+  const band = bandForms(bandFloor, units.temp);
   return (
     <Mono step="xs" className="shrink-0 text-muted">
       <Spoken
-        shown={`${dialed}/${String(record.total)} dialed · ${band}`}
-        said={`${dialed} of ${runsLabel(record.total)} dialed in ${band}`}
+        shown={`${dialed}/${String(record.total)} dialed · ${band.shown}`}
+        said={`${dialed} of ${runsLabel(record.total)} dialed in ${band.said}`}
       />
     </Mono>
   );
