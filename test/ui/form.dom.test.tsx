@@ -3114,9 +3114,9 @@ describe("the primary by surface, and its width (R54·167)", () => {
   });
 
   it("gives a press that is not a submit the same ink pill", () => {
+    expect(INK_PILL.split(" ")).not.toContain("target");
     expect(INK_PILL.split(" ")).toStrictEqual(
       expect.arrayContaining([
-        "target",
         "cursor-pointer",
         "border-none",
         "text-body",
@@ -3129,9 +3129,9 @@ describe("the primary by surface, and its width (R54·167)", () => {
   });
 
   it("draws the secondary as the hairline pill, 48, on the same width rule", () => {
+    expect(SECONDARY_PILL.split(" ")).not.toContain("target");
     expect(SECONDARY_PILL.split(" ")).toStrictEqual(
       expect.arrayContaining([
-        "target",
         "cursor-pointer",
         "rounded-pill",
         "border",

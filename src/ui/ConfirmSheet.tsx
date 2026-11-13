@@ -165,7 +165,7 @@ export function ConfirmSheet({
           onClick={() => {
             void action.run();
           }}
-          className={INK_PILL}
+          className={`target ${INK_PILL}`}
         >
           <PendingLabel
             label={verb}
@@ -184,7 +184,7 @@ export function ConfirmSheet({
             setKeep(node ?? undefined);
           }}
           onClick={onClose}
-          className={SECONDARY_PILL}
+          className={`target ${SECONDARY_PILL}`}
         >
           Keep it
         </button>

@@ -273,7 +273,10 @@ export function ReportSheet({
         </section>
 
         <SheetFooter>
-          <p data-part="report-consequence" className="m-0 text-small text-quiet">
+          <p
+            data-part="report-consequence"
+            className="m-0 text-small text-quiet"
+          >
             A person reads it within a day. It&apos;s hidden from your feed
             straight away.
           </p>
@@ -328,7 +331,7 @@ function SendAndBlock({
         aria-label={`Send report and block ${name}`}
         {...inFlight(pending)}
         onClick={onSend}
-        className={SECONDARY_PILL}
+        className={`target ${SECONDARY_PILL}`}
       >
         <PendingLabel
           label="Send and block"

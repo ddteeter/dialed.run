@@ -894,9 +894,10 @@ const SUBMIT_TONE = {
 
 /**
  * The secondary as a class, for a press that is not a form's submit:
- * Keep it, Send and block.
+ * Keep it, Send and block. The site writes `target` beside it, where the
+ * hit-area check reads each site's class.
  */
-export const SECONDARY_PILL = `target cursor-pointer text-body ${SUBMIT_TONE.secondary}`;
+export const SECONDARY_PILL = `cursor-pointer text-body ${SUBMIT_TONE.secondary}`;
 
 /**
  * The Desk's main action as a class, for the one Desk press that is not a
@@ -907,8 +908,9 @@ export const CHALK_PILL = `cursor-pointer text-body ${SUBMIT_TONE.chalk}`;
 /**
  * The account and confirm primary as a class, for a press that is not a
  * form's submit: a confirm sheet's verb, Keep my account (R54·167.1).
+ * The site writes `target` beside it, as it does for `CHALK_PILL`.
  */
-export const INK_PILL = `target cursor-pointer text-body ${SUBMIT_TONE.ink}`;
+export const INK_PILL = `cursor-pointer text-body ${SUBMIT_TONE.ink}`;
 
 /**
  * A Desk decision that is not the bar's main one (Keep, Approve, Decline),
