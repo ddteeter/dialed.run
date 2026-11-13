@@ -216,10 +216,15 @@ function FilledWell({
         {...drop.handlers}
         data-part={part}
         data-state={drop.isOver ? "drag-over" : "filled"}
+        // `overflow-hidden` is what holds the 4:3: a box with an aspect
+        // ratio still grows to fit its content, so a square or portrait
+        // photo stretched the well past 4:3 on the phone and covered its
+        // rounded corners (C-04, N1-07). Clipped, the photo is contained
+        // in the well at every width.
         className={
           drop.isOver
-            ? "aspect-4/3 w-full wide:max-h-80 rounded-field border-2 border-ink bg-panel"
-            : "aspect-4/3 w-full wide:max-h-80 rounded-field border border-hairline bg-photo"
+            ? "aspect-4/3 w-full overflow-hidden wide:max-h-80 rounded-field border-2 border-ink bg-panel"
+            : "aspect-4/3 w-full overflow-hidden wide:max-h-80 rounded-field border border-hairline bg-photo"
         }
       >
         <img

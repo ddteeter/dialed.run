@@ -115,6 +115,25 @@ describe("DeleteWithRuns: what it says", () => {
     ]);
   });
 
+  it("lines every sentence up on one label column, the last line under them (C-15)", async () => {
+    sheet();
+    await afterTheCount();
+    const cost = document.querySelector("[data-part='cost']");
+    expect(cost).toHaveClass(
+      "grid",
+      "grid-cols-[max-content_minmax(0,1fr)]",
+      "gap-x-3",
+    );
+    const list = cost?.querySelector("ul");
+    expect(list).toHaveClass("col-span-2", "grid", "grid-cols-subgrid");
+    const rowsShown = list?.querySelectorAll("li") ?? [];
+    for (const row of rowsShown) {
+      expect(row).toHaveClass("col-span-2", "grid", "grid-cols-subgrid");
+    }
+    expect(screen.getByText("If you delete it")).toHaveClass("col-span-2");
+    expect(screen.getByText("This can't be undone.")).toHaveClass("col-start-2");
+  });
+
   it("marks what goes and what stays in ink, never a verdict's hue (round 28 #13)", async () => {
     sheet();
     await afterTheCount();

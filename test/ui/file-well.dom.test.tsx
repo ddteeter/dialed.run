@@ -223,6 +223,9 @@ describe("FileWell: with a photo", () => {
 
     expect(well()).toHaveAttribute("data-state", "filled");
     expect(well()).toHaveClass("border", "border-hairline", "bg-photo");
+    // C-04: clipped to its 4:3, so a square or portrait photo is contained
+    // in the well rather than stretching it past its rounded corners.
+    expect(well()).toHaveClass("aspect-4/3", "overflow-hidden");
     expect(screen.getByRole("img", { name: "Shell" })).toHaveAttribute(
       "src",
       "/photo",
@@ -253,6 +256,7 @@ describe("FileWell: with a photo", () => {
     fireEvent.dragOver(well(), { dataTransfer: transferWith(png()) });
     expect(well()).toHaveAttribute("data-state", "drag-over");
     expect(well()).toHaveClass("border-2", "border-ink", "bg-panel");
+    expect(well()).toHaveClass("aspect-4/3", "overflow-hidden");
 
     fireEvent.drop(well(), { dataTransfer: transferWith(png()) });
     expect(onFiles).toHaveBeenCalledTimes(1);
