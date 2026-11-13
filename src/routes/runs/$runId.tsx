@@ -40,7 +40,7 @@ function RunDetailPage() {
 
   return (
     <BelledLayout {...bell}>
-      <Page title="Run" width="panel">
+      <Page title="Run">
         {/* R-140: an entry the Desk removed, in its place. */}
         <RunRemovals removals={removals} />
         <RunDetail

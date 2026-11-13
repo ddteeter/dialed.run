@@ -130,13 +130,19 @@ test("M in flight: white-and-dot rows, and Mark all read breathing in place", as
     ).toHaveCount(drafts.length);
     await page.unrouteAll({ behavior: "ignoreErrors" });
 
-    // **At desk it is the panel** (DS3, R-102): 390 wide, not the column.
+    // **At desk it is the centred column** (Round 54 · 168.1), no longer
+    // the 390 panel: wider than the panel, and centred.
     await page.setViewportSize(DESK);
-    const panel = page
+    const column = page
       .getByRole("heading", { name: "Notifications" })
-      .locator("xpath=ancestor::div[contains(@class, 'max-w-panel')]");
-    const box = await panel.boundingBox();
-    expect(box?.width).toBeLessThanOrEqual(390);
+      .locator("xpath=ancestor::div[contains(@class, 'max-w-column')]");
+    const box = await column.boundingBox();
+    const main = await page.getByRole("main").boundingBox();
+    expect(box?.width).toBeGreaterThan(390);
+    if (box === null || main === null) throw new Error("not laid out");
+    expect(
+      Math.abs(box.x - main.x - (main.width - box.width) / 2),
+    ).toBeLessThanOrEqual(1);
   } finally {
     await removeSeeded(rows);
   }

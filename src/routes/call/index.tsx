@@ -29,7 +29,7 @@ function CallPage() {
 
   return (
     <BelledLayout {...bell}>
-      <Page width="panel">
+      <Page>
         <CallLadder ladder={ladder} />
       </Page>
     </BelledLayout>

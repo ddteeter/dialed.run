@@ -463,7 +463,7 @@ export function VerdictForm({
         <form
           ref={form.formRef}
           noValidate
-          className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6 wide:mx-0 wide:max-w-column"
+          className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6 wide:max-w-column"
           onSubmit={(event) => {
             event.preventDefault();
             void form.submit(payload());

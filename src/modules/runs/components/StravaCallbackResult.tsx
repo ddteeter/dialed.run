@@ -50,7 +50,7 @@ export function StravaCallbackResult({
   configured: boolean;
 }>): JSX.Element {
   return (
-    <Page width="panel" title="Strava">
+    <Page title="Strava">
       {result.ok ? (
         <Connected />
       ) : (

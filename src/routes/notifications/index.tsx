@@ -32,7 +32,7 @@ function NotificationsPage() {
 
   return (
     <BelledLayout {...bell}>
-      <Page width="panel">
+      <Page>
         <NotificationList
           notifications={notifications}
           markAllRead={markAllNotificationsReadFn}

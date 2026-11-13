@@ -6,6 +6,8 @@ import type { GarmentVisibility, TempUnit } from "../../../lib/contracts";
 import { photoAcceptAttribute } from "../../../lib/photo-constraints";
 import { worksAtForms } from "../../../lib/contracts/measures";
 import {
+  COLUMN,
+  PHOTO_STILL_ON,
   Bracketed,
   ControlFailureBand,
   FileWell,
@@ -16,7 +18,6 @@ import {
   PhoneBell,
   Spoken,
   useControlAction,
-  PHOTO_STILL_ON,
   usePhotoPick,
 } from "../../../ui";
 import type { PhotoStep } from "../../../ui";
@@ -831,7 +832,7 @@ export function GarmentDetail({
   const { bringBack, setConfirming } = lifecycle;
 
   return (
-    <div className="mx-auto flex w-full max-w-column wide:mx-0 flex-col gap-5 px-4 py-8 wide:px-6">
+    <div className={`${COLUMN} flex flex-col gap-5 px-4 py-8 wide:px-6`}>
       <FormStatus>{photo.status || lifecycle.status}</FormStatus>
 
       <div data-part="identity" className="flex flex-col gap-1">

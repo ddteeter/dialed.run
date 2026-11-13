@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { Page } from "../../src/ui/Page";
+import { COLUMN, Page } from "../../src/ui/Page";
 import { BellProvider } from "../../src/ui/PhoneBell";
 
 /**
@@ -35,45 +35,35 @@ describe("Page", () => {
     expect(column).not.toHaveClass("max-w-column");
   });
 
-  it("centres the panel at every width and the column only below 720", () => {
-    // DS3's reflow rule, and the one place the two widths differ beyond a
-    // number: a reflowed screen is "left-aligned inside the page measure,
-    // not centred, so it lines up with the wide screens' primary column",
-    // where a panel is centred wherever it is. `mx-auto` survives on the
-    // column because below 720 the viewport is narrower than 620 and it
-    // does nothing; `wide:mx-0` is what takes it away once it would.
-    const panel = render(<Page width="panel">body</Page>).container
-      .firstElementChild;
-    expect(panel).toHaveClass("mx-auto");
-    expect(panel).not.toHaveClass("wide:mx-0");
-
-    const column = render(<Page width="column">body</Page>).container
-      .firstElementChild;
-    expect(column).toHaveClass("mx-auto", "wide:mx-0");
+  it("centres the column at every width, never left-aligned at 720 (168.1)", () => {
+    // Round 54 · 168.1 replaces DS3's "left-aligned inside the page
+    // measure": at >=720 every runner screen is one MEASURE.column,
+    // centred. A `wide:mx-0` or `desk:mx-0` anywhere on it would undo that.
+    for (const width of ["panel", "column", "step", "close"] as const) {
+      const page = render(<Page width={width}>body</Page>).container
+        .firstElementChild;
+      expect(page).toHaveClass("mx-auto");
+      expect(page?.className).not.toMatch(/(?:wide|desk):mx-0/u);
+    }
   });
 
-  it("is the panel below 1040 for an onboarding step, and left-aligned at the column from 1040 (R49·138a)", () => {
-    const step = render(<Page width="step">body</Page>).container
-      .firstElementChild;
-    expect(step).toHaveClass(
+  it("is COLUMN by default, the class a screen drawing its own column takes", () => {
+    const column = render(<Page>body</Page>).container.firstElementChild;
+    expect(column).toHaveClass(...COLUMN.split(" "));
+    expect(COLUMN.split(" ")).toStrictEqual([
       "mx-auto",
-      "max-w-panel",
-      "desk:mx-0",
-      "desk:max-w-column",
-    );
-    expect(step).not.toHaveClass("wide:mx-0");
+      "w-full",
+      "max-w-column",
+    ]);
   });
 
-  it("lets P3's close run the page column at desk, so its band can (R49·138)", () => {
-    const close = render(<Page width="close">body</Page>).container
-      .firstElementChild;
-    expect(close).toHaveClass(
-      "mx-auto",
-      "max-w-panel",
-      "desk:mx-0",
-      "desk:max-w-page",
-    );
-    expect(close).not.toHaveClass("desk:max-w-column");
+  it("is the panel on a phone and the column from 720 for an onboarding step and P3's close (#654)", () => {
+    for (const width of ["step", "close"] as const) {
+      const page = render(<Page width={width}>body</Page>).container
+        .firstElementChild;
+      expect(page).toHaveClass("max-w-panel", "wide:max-w-column");
+      expect(page).not.toHaveClass("desk:max-w-page");
+    }
   });
 
   it("lets a Desk table run to the page measure, left-aligned (168.3)", () => {

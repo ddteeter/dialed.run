@@ -360,7 +360,7 @@ export function AttachKit({
           />
         }
       >
-        <div className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6 pb-8 wide:mx-0 wide:max-w-column">
+        <div className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6 pb-8 wide:max-w-column">
           <AttachHeader context={context} units={units} count={selected.size} />
           <FormStatus>{attach.status === "" ? said : attach.status}</FormStatus>
 
