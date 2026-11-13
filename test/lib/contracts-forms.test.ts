@@ -307,6 +307,20 @@ describe("runDraftSchema", () => {
     expect(result.data?.indoor).toBe(false);
   });
 
+  it("asks for a start when the date was left blank, not zod's NaN text (P2a-01)", () => {
+    // `datetime-local` left empty is "", which the form turns into NaN.
+    expect(
+      messagesFor(runDraftSchema, { ...runDraft, startedAt: NaN }, "startedAt"),
+    ).toStrictEqual(["Pick when the run started."]);
+    expect(
+      messagesFor(
+        runDraftSchema,
+        { ...runDraft, startedAt: undefined },
+        "startedAt",
+      ),
+    ).toStrictEqual(["Pick when the run started."]);
+  });
+
   it("insists the three measurements are positive whole-ish numbers", () => {
     expect(
       messagesFor(runDraftSchema, { ...runDraft, startedAt: 0 }, "startedAt"),
