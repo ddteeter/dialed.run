@@ -1,19 +1,44 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 
-import { DeskDetail } from "../../src/ui/DeskDetail";
+import { act, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { renderToString } from "react-dom/server";
+import { describe, expect, it, vi } from "vitest";
+
+import { DESK_MEDIA_QUERY, DeskDetail } from "../../src/ui/DeskDetail";
+import { atWidth } from "./desk-width";
+
+/**
+ * Read off disk, through a path in a variable: Vite rewrites a literal
+ * `new URL("…", import.meta.url)` into a served asset URL, which
+ * `readFileSync` refuses.
+ */
+const read = (path: string): string =>
+  readFileSync(new URL(path, import.meta.url), "utf8");
+const styles = read("../../src/styles.css");
+
+const PICKED = { name: "@ada", detail: <p>the detail</p> };
+
+function table(
+  picked: typeof PICKED | undefined,
+  onUnpick: () => void = vi.fn<() => void>(),
+) {
+  return (
+    <DeskDetail picked={picked} idle={<p>Pick one.</p>} onUnpick={onUnpick}>
+      <p>the table</p>
+    </DeskDetail>
+  );
+}
 
 /**
  * A Desk table and its detail pane (168.3, R55·203): the frame Runners
- * and Codes share.
+ * and Codes share. From desk the pane sits beside the table; below it,
+ * the picked thing opens as the desk drawer over it (R55·202).
  */
-describe("DeskDetail", () => {
+describe("DeskDetail at desk", () => {
   it("puts the table beside the pane on a 2fr/1fr track from desk, top-aligned", () => {
-    const { container } = render(
-      <DeskDetail picked={undefined}>
-        <p>the table</p>
-      </DeskDetail>,
-    );
+    atWidth(true);
+    const { container } = render(table(undefined));
     expect(container.firstElementChild).toHaveClass(
       "grid",
       "items-start",
@@ -22,24 +47,15 @@ describe("DeskDetail", () => {
   });
 
   it("holds the idle line while nothing is picked, and no pane", () => {
-    render(
-      <DeskDetail picked={undefined} idle={<p>Pick one.</p>}>
-        <p>the table</p>
-      </DeskDetail>,
-    );
+    atWidth(true);
+    render(table(undefined));
     expect(screen.getByText("Pick one.")).toBeVisible();
     expect(screen.queryByRole("complementary")).toBeNull();
   });
 
   it("draws the picked thing in a named, sticky --panel pane instead", () => {
-    render(
-      <DeskDetail
-        picked={{ name: "@ada", detail: <p>the detail</p> }}
-        idle={<p>Pick one.</p>}
-      >
-        <p>the table</p>
-      </DeskDetail>,
-    );
+    atWidth(true);
+    render(table(PICKED));
     const pane = screen.getByRole("complementary", { name: "@ada" });
     expect(pane).toHaveTextContent("the detail");
     expect(pane).toHaveClass(
@@ -49,5 +65,75 @@ describe("DeskDetail", () => {
       "desk:top-6",
     );
     expect(screen.queryByText("Pick one.")).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+});
+
+describe("DeskDetail below desk (R55·202)", () => {
+  it("opens the picked thing as a non-modal drawer named for it, the table still there", () => {
+    atWidth(false);
+    render(table(PICKED));
+    const drawer = screen.getByRole("dialog", { name: "@ada" });
+    expect(drawer).toHaveAttribute("open");
+    expect(drawer).toHaveTextContent("the detail");
+    // `show()`, not `showModal()`: the table beside it stays live.
+    expect(screen.getByText("the table")).toBeVisible();
+    expect(screen.queryByRole("complementary")).toBeNull();
+  });
+
+  it("unpicks when the drawer's ✕ closes it", async () => {
+    atWidth(false);
+    const onUnpick = vi.fn<() => void>();
+    render(table(PICKED, onUnpick));
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(onUnpick).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the idle line under the table while nothing is picked", () => {
+    atWidth(false);
+    render(table(undefined));
+    expect(screen.getByText("Pick one.")).toBeVisible();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("moves the picked thing between drawer and pane as the window crosses desk", () => {
+    const window = atWidth(false);
+    const { unmount } = render(table(PICKED));
+    expect(screen.getByRole("dialog", { name: "@ada" })).toBeInTheDocument();
+    act(() => {
+      window.resize(true);
+    });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("complementary", { name: "@ada" })).toBeVisible();
+    // And stops listening once it is gone.
+    expect(window.listening()).toBe(1);
+    unmount();
+    expect(window.listening()).toBe(0);
+  });
+});
+
+describe("DeskDetail with no window to ask", () => {
+  it("is the pane, as the server sends it", () => {
+    vi.stubGlobal("matchMedia", undefined);
+    try {
+      render(table(PICKED));
+      expect(screen.getByRole("complementary", { name: "@ada" })).toBeVisible();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("sends the pane from the server whatever the window, so hydration agrees", () => {
+    atWidth(false);
+    const html = renderToString(table(PICKED));
+    expect(html).toContain('data-part="desk-pane"');
+    expect(html).not.toContain("<dialog");
+  });
+});
+
+describe("what DeskDetail restates, pinned to its source", () => {
+  it("the desk media query is the theme's desk breakpoint", () => {
+    const width = /--breakpoint-desk:\s*(\d+px);/u.exec(styles)?.[1];
+    expect(DESK_MEDIA_QUERY).toBe(`(min-width: ${String(width)})`);
   });
 });

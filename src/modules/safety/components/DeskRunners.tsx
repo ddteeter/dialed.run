@@ -710,6 +710,9 @@ export function DeskRunners({
       <Search filter={filter} counts={counts} />
       {/* 168.3: the table and its pane (DeskDetail). */}
       <DeskDetail
+        onUnpick={() => {
+          setSelectedId(undefined);
+        }}
         idle={
           <p className="m-0 text-small text-quiet">
             Pick a runner to rename or close.

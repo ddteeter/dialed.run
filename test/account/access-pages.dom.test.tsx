@@ -41,6 +41,7 @@ import type { AccessDesk, DeskCode } from "../../src/modules/account/invites";
 import type { TurnstileApi } from "../../src/ui/Turnstile";
 import { bracketed } from "../ui/bracketed";
 import { carriedSince } from "../ui/carry-spy";
+import { atWidth } from "../ui/desk-width";
 
 vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
   const { spyOnCarry } = await import("../ui/carry-spy");
@@ -876,6 +877,7 @@ describe("D7 · Access", () => {
   });
 
   it("names five runners, then opens the rest in the pane from + N more (R55·200)", async () => {
+    atWidth(true);
     const many = Array.from({ length: 29 }, (_, n) => `@runner_${String(n)}`);
     const { user } = await desk({
       desk: {
@@ -912,6 +914,29 @@ describe("D7 · Access", () => {
         .getAllByRole("link")
         .map((link) => link.textContent),
     ).toStrictEqual(many);
+  });
+
+  it("opens the rest as the drawer below desk, and its ✕ puts it away (R55·202)", async () => {
+    atWidth(false);
+    const many = Array.from({ length: 6 }, (_, n) => `@runner_${String(n)}`);
+    const { user } = await desk({
+      desk: {
+        ...DESK,
+        codes: [code({ id: "big", code: "DIAL-TEST", usedBy: many })],
+      },
+    });
+    await user.click(
+      within(rowOf("DIAL-TEST")).getByRole("button", { name: "+ 1 more" }),
+    );
+    const drawer = screen.getByRole("dialog", { name: "DIAL-TEST" });
+    expect(
+      within(drawer)
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toStrictEqual(many);
+    expect(screen.queryByRole("complementary")).toBeNull();
+    await user.click(within(drawer).getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("offers no + more for five runners or fewer", async () => {

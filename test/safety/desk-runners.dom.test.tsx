@@ -13,7 +13,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState, type ReactElement } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   DeskRunners,
@@ -27,6 +27,7 @@ import {
 import type { DeskRunner } from "../../src/modules/safety/runners";
 import { bracketed } from "../ui/bracketed";
 import { carriedSince } from "../ui/carry-spy";
+import { atWidth } from "../ui/desk-width";
 
 vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
   const { spyOnCarry } = await import("../ui/carry-spy");
@@ -98,6 +99,11 @@ async function renderDesk(overrides: Partial<Props> = {}) {
   );
   return { rename, ban, unban, keep, router };
 }
+
+// At desk unless a case says otherwise: the pane beside the table.
+beforeEach(() => {
+  atWidth(true);
+});
 
 describe("D8's table", () => {
   it("counts every account and draws one row per runner", async () => {
@@ -324,6 +330,24 @@ describe("selecting a runner", () => {
     expect(
       screen.queryByText("Pick a runner to rename or close."),
     ).not.toBeInTheDocument();
+  });
+
+  it("opens the picked runner as the drawer below desk, the row still marked (R55·202)", async () => {
+    atWidth(false);
+    const user = userEvent.setup();
+    await renderDesk();
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+
+    expect(screen.getByRole("row", { selected: true })).toHaveTextContent(
+      /^@ada/u,
+    );
+    const drawer = screen.getByRole("dialog", { name: "@ada" });
+    expect(drawer).toHaveTextContent("Close account");
+    expect(screen.queryByRole("complementary")).toBeNull();
+    // Its ✕ unpicks: the row is no longer marked, and the drawer is gone.
+    await user.click(within(drawer).getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("row", { selected: true })).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("counts one run and one report in the singular", async () => {

@@ -614,6 +614,9 @@ function CodesSection({
         <Mono step="xs">{madeStatus}</Mono>
       </p>
       <DeskDetail
+        onUnpick={() => {
+          setOpenId(undefined);
+        }}
         picked={
           open === undefined
             ? undefined
