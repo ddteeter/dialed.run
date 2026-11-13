@@ -150,6 +150,11 @@ interface AttachKitProps {
     startedAt: number;
     durationS: number;
     deviceName: string | undefined;
+    /**
+     * The clock the run reads on (P2a-02): its own zone, else its
+     * runner's home zone, as the run summary resolves it.
+     */
+    clockZone: string | undefined;
   };
   /**
    * The category A2b has pushed to at the desk (Round 54 · 164.3), from

@@ -831,7 +831,12 @@ function VerdictRail({
   const { conditions } = entry;
   return (
     <>
-      <ThisRunCard run={entry} units={units} />
+      {/* A3's entry carries no home zone, so its clock is the run's own,
+          and a run without one reads on UTC, marked. */}
+      <ThisRunCard
+        run={{ ...entry, clockZone: entry.conditions?.timeZone }}
+        units={units}
+      />
       <RailCard title="The kit you’re judging">
         <ul className="m-0 flex list-none flex-col gap-1 p-0">
           {entry.items.map((item) => (

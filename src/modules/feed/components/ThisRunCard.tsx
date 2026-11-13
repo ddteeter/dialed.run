@@ -3,7 +3,7 @@ import type { JSX } from "react";
 import type { Units } from "../../../lib/contracts";
 import { measuredLine } from "../../../lib/contracts/measures";
 import { precipClassOf } from "../../../lib/contracts/temperature";
-import { clockLabel, dayLabel } from "../../../lib/dates";
+import { dayLabel, viewerClockLabel } from "../../../lib/dates";
 import { Mono, RailCard, Spoken, WeatherAttribution } from "../../../ui";
 import type { Conditions } from "../conditions";
 import { isProvidersReading } from "../strip";
@@ -14,8 +14,10 @@ import { isProvidersReading } from "../strip";
  * long, and the conditions it was run in. One component, so the two steps
  * of one flow cannot describe the same run two ways.
  *
- * The day and time read on the run's own zone (R-96, from the
- * observation), as A3's header does.
+ * The day and time read on the run's clock, `clockZone`: on A2 the run
+ * summary's (the run's own zone, else its runner's home zone), on A3 the
+ * run's own zone alone. A time read on UTC says so, as the runs list's
+ * does — an unmarked UTC time is never printed (P2a-02).
  */
 export function ThisRunCard({
   run,
@@ -25,15 +27,18 @@ export function ThisRunCard({
     startedAt: number;
     distanceM: number;
     durationS: number;
+    clockZone: string | undefined;
     conditions: Conditions | undefined;
   };
   units: Units;
 }>): JSX.Element {
-  const { conditions } = run;
-  const zone = conditions?.timeZone;
+  const { conditions, clockZone } = run;
+  // `homeZone` is the clock's name in `lib/dates`; here it is the run's,
+  // which `runs/run-clock.ts` reads the same way.
+  const clock = viewerClockLabel(run.startedAt, { homeZone: clockZone });
   return (
     <RailCard
-      title={`This run · ${dayLabel(run.startedAt, zone)} · ${clockLabel(run.startedAt, zone)}`}
+      title={`This run · ${dayLabel(run.startedAt, clockZone)} · ${clock}`}
     >
       <Mono step="sm">
         {/* Lines of measures (round 52 #158): drawn, and said in words. */}

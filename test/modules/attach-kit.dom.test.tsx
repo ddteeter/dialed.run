@@ -180,6 +180,7 @@ interface RunFacts {
   startedAt: number;
   durationS: number;
   deviceName: string | undefined;
+  clockZone: string | undefined;
 }
 
 /**
@@ -189,6 +190,7 @@ const RUN: RunFacts = {
   startedAt: Math.floor(Date.UTC(2026, 7, 29, 11, 4) / 1000),
   durationS: 3098,
   deviceName: undefined,
+  clockZone: "America/Chicago",
 };
 
 const noPush = () => {
@@ -377,6 +379,34 @@ describe("AttachKit: the rail at the desk (round 25)", () => {
     );
     expect(rail()).toHaveTextContent("6.2 miles, 51 minutes 38 seconds");
     expect(rail().querySelector("input, button, [role='radio']")).toBeNull();
+  });
+
+  it("reads the run on its summary's clock, not the reading's zone", async () => {
+    // P2a-02: the run's zone, else its runner's home zone, resolved by the
+    // run summary. Here the summary says New York while the reading says
+    // Chicago: the card follows the summary.
+    await renderWithRouter(attach({ run: { clockZone: "America/New_York" } }));
+
+    expect(
+      within(rail()).getByRole("heading", {
+        name: "This run · Sat Aug 29 · 7:04 AM",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("marks a run with no clock as UTC rather than print it bare", async () => {
+    await renderWithRouter(
+      attach({
+        run: { clockZone: undefined },
+        context: context({ conditions: undefined }),
+      }),
+    );
+
+    expect(
+      within(rail()).getByRole("heading", {
+        name: "This run · Sat Aug 29 · 11:04 AM UTC",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("names no conditions for a run with none", async () => {

@@ -2014,6 +2014,22 @@ describe("VerdictForm: the run header (round 21)", () => {
     expect(screen.getByText(wholeText("10.0 km at 5°"))).toBeVisible();
   });
 
+  it("reads the rail's run on the run's own zone, and a run with none on UTC, marked", async () => {
+    // A3's entry carries no home zone (P2a-02's fallback is A2's): with no
+    // zone of its own, the card says UTC rather than print it bare.
+    await renderWithRouter(
+      form({ entry: { startedAt: SAT_MORNING, conditions: undefined } }),
+    );
+
+    const rail = document.querySelector<HTMLElement>("[data-part='rail']");
+    if (rail === null) throw new TypeError("no rail");
+    expect(
+      within(rail).getByRole("heading", {
+        name: "This run · Sat Aug 29 · 11:04 AM UTC",
+      }),
+    ).toBeInTheDocument();
+  });
+
   it("sets the run and the kit being judged in the desk's rail, read-only", async () => {
     // Round 25: A3 at the desk is DS1's two columns, the rail holding
     // "the kit being judged" and the run — never an input.
