@@ -1078,9 +1078,13 @@ describe("with blur off from the start (SAF-2)", () => {
         "This photo couldn't be prepared without blur. Turn blur on, or pick another photo.",
       ),
     ).toBeInTheDocument();
-    expect(announce).toHaveBeenCalledExactlyOnceWith(
-      "This photo couldn't be prepared without blur. Turn blur on, or pick another photo.",
-    );
+    // The band can paint a tick before the sentence is announced, so the
+    // announcement is waited for rather than read straight after.
+    await waitFor(() => {
+      expect(announce).toHaveBeenCalledExactlyOnceWith(
+        "This photo couldn't be prepared without blur. Turn blur on, or pick another photo.",
+      );
+    });
     expect(toFile).toHaveBeenCalledTimes(1);
     expect(onReady).not.toHaveBeenCalled();
   });
