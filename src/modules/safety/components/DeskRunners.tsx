@@ -154,7 +154,7 @@ function Search({
         });
       }}
     >
-      <label className="flex flex-col gap-2">
+      <label className="target flex flex-col gap-2">
         <Mono step="xs" className="text-muted">
           Handle or email
         </Mono>
@@ -228,6 +228,12 @@ function handleOf(runner: DeskRunner): string {
 const CELL = "px-3 py-3 align-baseline";
 const NUMBER_CELL = `${CELL} text-right`;
 const WIDE_CELL = "max-wide:hidden";
+/**
+ * Holds a cell's text to the cell's share of the table, so it truncates
+ * rather than widening its column: a one-track grid whose track may shrink
+ * to nothing has no minimum width of its own, and pins none (DS4).
+ */
+const CUT = "grid grid-cols-[minmax(0,1fr)]";
 
 const COLUMNS: readonly { heading: string; className: string }[] = [
   { heading: "Handle", className: CELL },
@@ -263,29 +269,30 @@ function RunnerRow({
       className="group cursor-pointer border-b border-hairline aria-selected:bg-panel"
     >
       <td
-        className={`${CELL} w-full max-w-0 border-l-3 border-transparent group-aria-selected:border-hi-viz wide:w-1/4`}
+        className={`${CELL} w-full border-l-3 border-transparent group-aria-selected:border-hi-viz wide:w-1/4`}
       >
-        <button
-          ref={nameRef}
-          type="button"
-          title={handle}
-          className="target block w-full truncate text-left font-semibold"
-          onClick={onSelect}
-        >
-          {handle}
-        </button>
-        <span
-          title={runner.email}
-          className="block truncate text-small text-quiet wide:hidden"
-        >
-          {runner.email}
+        <span className={CUT}>
+          <button
+            ref={nameRef}
+            type="button"
+            title={handle}
+            className="target block w-full truncate text-left font-semibold"
+            onClick={onSelect}
+          >
+            {handle}
+          </button>
+          <span
+            title={runner.email}
+            className="block truncate text-small text-quiet wide:hidden"
+          >
+            {runner.email}
+          </span>
         </span>
       </td>
-      <td
-        title={runner.email}
-        className={`${CELL} ${WIDE_CELL} w-1/3 max-w-0 truncate`}
-      >
-        {runner.email}
+      <td title={runner.email} className={`${CELL} ${WIDE_CELL} w-1/3`}>
+        <span className={CUT}>
+          <span className="truncate">{runner.email}</span>
+        </span>
       </td>
       <td className={`${CELL} ${WIDE_CELL} whitespace-nowrap`}>
         <Mono step="md">{joinedLabel(runner.joinedAt)}</Mono>

@@ -131,7 +131,15 @@ describe("D8's table", () => {
       "truncate",
     );
     expect(email).toHaveAttribute("title", "ada@example.com");
-    expect(email).toHaveClass("truncate", "max-wide:hidden");
+    expect(email).toHaveClass("max-wide:hidden", "w-1/3");
+    // Truncated inside a one-track grid, so the column never widens to the
+    // text, and no width is pinned (DS4).
+    const cut = email?.firstElementChild;
+    expect(cut).toHaveClass("grid", "grid-cols-[minmax(0,1fr)]");
+    expect(cut?.firstElementChild).toHaveClass("truncate");
+    expect(
+      within(handle ?? document.body).getByRole("button").parentElement,
+    ).toHaveClass("grid", "grid-cols-[minmax(0,1fr)]");
     expect(joined).toHaveClass("whitespace-nowrap", "max-wide:hidden");
     expect(runs).toHaveClass("text-right", "max-wide:hidden");
     expect(reports).toHaveClass("text-right");
