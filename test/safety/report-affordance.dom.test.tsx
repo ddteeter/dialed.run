@@ -110,7 +110,7 @@ describe("whether the block is offered alongside", () => {
     await user.click(screen.getByRole("button", { name: REPORT }));
 
     expect(
-      screen.getByRole("button", { name: "Send report and block mark_t" }),
+      screen.getByRole("button", { name: "Send and block" }),
     ).toBeInTheDocument();
   });
 

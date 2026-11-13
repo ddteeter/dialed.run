@@ -30,6 +30,7 @@ end of button, Delete Pegasus #
 dialog, Delete the Pegasus #? Retire it instead.
 dialog, Delete the Pegasus #? Retire it instead.
 heading, Delete the Pegasus #? Retire it instead., level 2
+button, Close
 paragraph
 It's on # runs. Retiring takes it out of the picker and keeps everything it taught you.
 end of paragraph

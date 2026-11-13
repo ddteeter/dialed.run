@@ -1237,12 +1237,18 @@ describe("W3 waits for the runner (round 28 #5)", () => {
       screen.getByRole("heading", { name: "Check the blur", hidden: true }),
     ).toBeInTheDocument();
     const cancel = screen.getByRole("button", { name: "Cancel", hidden: true });
-    const use = screen.getByRole("button", { name: "Use this photo", hidden: true });
+    const use = screen.getByRole("button", {
+      name: "Use this photo",
+      hidden: true,
+    });
     const another = screen.getByLabelText("Pick another");
     expect(cancel).toHaveAttribute("type", "button");
     expect(use).toHaveAttribute("type", "button");
     // Under the cells, in the board's order.
-    const cells = await screen.findByRole("group", { name: "Blur by area", hidden: true });
+    const cells = await screen.findByRole("group", {
+      name: "Blur by area",
+      hidden: true,
+    });
     expect(cells.compareDocumentPosition(use)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
@@ -1579,7 +1585,9 @@ describe("W3 waits for the runner (round 28 #5)", () => {
     });
 
     // From inside the step: the sheet's own Escape is the dialog's.
-    screen.getByRole("button", { name: "Use this photo", hidden: true }).focus();
+    screen
+      .getByRole("button", { name: "Use this photo", hidden: true })
+      .focus();
     await user.keyboard("a");
     expect(onCancel).not.toHaveBeenCalled();
     await user.keyboard("{Escape}");

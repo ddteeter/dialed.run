@@ -47,9 +47,10 @@ end of list
 button, Delete account, Deleted after # days. Log in before then to keep it.
 dialog, Delete your account?
 dialog, Delete your account?
+heading, Delete your account?, level 2
+button, Close
 form
 status
-heading, Delete your account?, level 2
 paragraph
 Your runs, closet, entries and photos go in # days. Shared runs leave the feed now. Log in before
 :day, :month #

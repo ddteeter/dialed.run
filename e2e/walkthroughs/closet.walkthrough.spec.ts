@@ -106,7 +106,9 @@ test("the closet: real products, a record per piece, retire not delete", async (
     .click();
   const sheet = page.locator("[data-part='sheet']");
   await expect(
-    sheet.getByRole("heading", { name: "Retire the Pegasus 41?" }),
+    page
+      .locator("dialog[open]")
+      .getByRole("heading", { name: "Retire the Pegasus 41?" }),
   ).toBeVisible();
   await expect(sheet).toContainText("It leaves the closet and the picker.");
   await expect(sheet).toContainText("You can bring it back.");

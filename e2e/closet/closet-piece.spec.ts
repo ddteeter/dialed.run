@@ -226,8 +226,9 @@ test("F · the photo is refused and the piece is kept; deleting it with runs ask
     const worn = page.locator(
       "[data-part='sheet'][data-state='delete-with-runs']",
     );
+    // The heading is the sheet's own, over the body (R55·173).
     await expect(
-      worn.getByRole("heading", {
+      page.locator("dialog[open]").getByRole("heading", {
         name: "Delete the Houdini Air? Retire it instead.",
       }),
     ).toBeVisible();

@@ -169,13 +169,15 @@ describe("what the sheet promises", () => {
     );
   });
 
-  it("offers blocking as a second button that names both acts and the author (R54·166.6)", () => {
+  it("offers blocking as a second button, named by its words and described by whom it blocks (R54·166.6)", () => {
     renderSheet();
-    const both = screen.getByRole("button", {
-      name: "Send report and block mark_t",
-    });
+    const both = screen.getByRole("button", { name: "Send and block" });
     expect(both).toHaveAttribute("type", "button");
-    expect(both).toHaveTextContent("Send and block");
+    // The handle is heard with it, as the description: a name that left
+    // out its visible words would fail label-in-name (WCAG 2.5.3).
+    expect(both).toHaveAccessibleDescription(
+      "Blocking hides all of mark_t's runs from you. They aren't told.",
+    );
     expect(both).toHaveClass("rounded-pill", "border-hairline");
     // Under it, what blocking does.
     expect(both.nextElementSibling).toHaveTextContent(
@@ -242,9 +244,7 @@ describe("filing a report", () => {
     await user.click(
       screen.getByRole("radio", { name: "Harassment aimed at someone" }),
     );
-    await user.click(
-      screen.getByRole("button", { name: "Send report and block mark_t" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Send and block" }));
 
     // One call, not two. A reporter who ticked the box and lost a second
     // request would be told the report worked while the block silently
@@ -431,16 +431,13 @@ describe("filing a report", () => {
     await user.click(
       screen.getByRole("radio", { name: "Harassment aimed at someone" }),
     );
-    const both = screen.getByRole("button", {
-      name: "Send report and block mark_t",
-    });
+    const both = screen.getByRole("button", { name: "Send and block" });
     await user.click(both);
     await waitFor(() => {
       expect(both).toHaveAttribute("aria-busy", "true");
     });
-    const send = screen.getByRole("button", {
-      name: /^(Send report|Sending)$/,
-    });
+    // Send report keeps its own words: only the pressed one says Sending.
+    const send = screen.getByRole("button", { name: "Send report" });
     expect(send).not.toHaveAttribute("aria-busy", "true");
 
     // Pressing Send report now neither sends again nor moves the label.
@@ -464,9 +461,7 @@ describe("filing a report", () => {
     await user.click(screen.getByRole("button", { name: "Send report" }));
     const send = await screen.findByRole("button", { name: "Sending" });
     expect(send).toHaveAttribute("aria-busy", "true");
-    const both = screen.getByRole("button", {
-      name: "Send report and block mark_t",
-    });
+    const both = screen.getByRole("button", { name: "Send and block" });
     expect(both).not.toHaveAttribute("aria-busy", "true");
     expect(both).toHaveTextContent(/^Send and block/);
   });
@@ -477,7 +472,7 @@ describe("filing a report", () => {
       screen.getByRole("button", { name: "Send report" }),
     ).not.toHaveAttribute("aria-busy", "true");
     expect(
-      screen.getByRole("button", { name: "Send report and block mark_t" }),
+      screen.getByRole("button", { name: "Send and block" }),
     ).not.toHaveAttribute("aria-busy", "true");
   });
 

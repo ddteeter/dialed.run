@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import {
   ChoiceList,
@@ -307,10 +307,16 @@ export function ReportSheet({
 
 /**
  * W1's second way to finish (R54·166.6): "Send and block", a hairline pill
- * under Send report, with what blocking does beneath it. It does both, so
- * it is named for both, handle included: "Send report and block
- * {handle}". It replaced a tick box under the primary, which a runner
- * read past on the way to the big button (audit P2b-03).
+ * under Send report, with what blocking does beneath it. It replaced a
+ * tick box under the primary, which a runner read past on the way to the
+ * big button (audit P2b-03).
+ *
+ * **Its name is its words; the handle is its description.** 166.6 named it
+ * "Send report and block {handle}", but a name that does not contain the
+ * visible label fails WCAG 2.5.3 (axe's `label-content-name-mismatch`): a
+ * voice user who says "Send and block" would not reach it. So the name is
+ * "Send and block", and the line under it, which names whom it blocks, is
+ * its description. A screen reader still hears both acts and the handle.
  *
  * A button rather than a second submit, so the form's own submit — Enter
  * in the note — stays plain Send report.
@@ -324,11 +330,12 @@ function SendAndBlock({
   pending: boolean;
   onSend: () => void;
 }>): JSX.Element {
+  const consequenceId = useId();
   return (
     <>
       <button
         type="button"
-        aria-label={`Send report and block ${name}`}
+        aria-describedby={consequenceId}
         {...inFlight(pending)}
         onClick={onSend}
         className={`target ${SECONDARY_PILL}`}
@@ -339,7 +346,11 @@ function SendAndBlock({
           pending={pending}
         />
       </button>
-      <p data-part="block-consequence" className="m-0 text-small text-quiet">
+      <p
+        id={consequenceId}
+        data-part="block-consequence"
+        className="m-0 text-small text-quiet"
+      >
         Blocking hides all of {name}&apos;s runs from you. They aren&apos;t
         told.
       </p>

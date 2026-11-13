@@ -362,7 +362,9 @@ test("add garments with product identity -> detail in round 22's order -> retire
     .click();
   const sheet = page.locator("[data-part='sheet']");
   await expect(
-    sheet.getByRole("heading", { name: "Retire the Pegasus 41?" }),
+    page
+      .locator("dialog[open]")
+      .getByRole("heading", { name: "Retire the Pegasus 41?" }),
   ).toBeVisible();
   await expect(sheet.getByRole("button", { name: "Keep it" })).toBeFocused();
 

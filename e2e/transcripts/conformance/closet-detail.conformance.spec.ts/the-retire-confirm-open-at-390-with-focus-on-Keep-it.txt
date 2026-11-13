@@ -55,6 +55,7 @@ end of button, Delete Janji Rover Half-zip
 dialog, Retire the Rover Half-zip?
 dialog, Retire the Rover Half-zip?
 heading, Retire the Rover Half-zip?, level 2
+button, Close
 paragraph
 It leaves the closet and the picker. Its # runs and verdicts stay, and still count. You can bring it back.
 end of paragraph

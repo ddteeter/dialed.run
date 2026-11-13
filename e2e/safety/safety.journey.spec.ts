@@ -108,15 +108,17 @@ test("report a runner, block them, and take the block back", async ({
   });
 
   // W1 from an entry (round 22, item 21): the foot link, reasons and an
-  // optional note, and no block toggle — and ✕ throws the draft away.
+  // optional note, and no block offer — and ✕ throws the draft away.
   await page.goto(`/feed/entry/${entryId}`);
   await hydrated(page);
-  await scene(page, "W1 from an entry · a foot link, and no block toggle");
+  await scene(page, "W1 from an entry · a foot link, and no block offer");
   await page.getByRole("button", { name: "Report this entry" }).click();
   await page.getByRole("radio", { name: "It's an ad, or it's spam" }).click();
-  await expect(page.locator("dialog[open]").getByRole("checkbox")).toHaveCount(
-    0,
-  );
+  await expect(
+    page
+      .locator("dialog[open]")
+      .getByRole("button", { name: "Send and block" }),
+  ).toHaveCount(0);
   await scene(page, "✕ closes and discards, with no confirm");
   await page.getByRole("button", { name: "Close" }).click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
@@ -156,17 +158,25 @@ test("report a runner, block them, and take the block back", async ({
     .click();
 
   await scene(page, "Three promises, and the code keeps all three");
-  await expect(page.getByText(/A person reads it within a day/)).toBeVisible();
+  // The footer says it in one line over Send report; the body has it whole.
+  await expect(page.locator("[data-part='report-consequence']")).toContainText(
+    "A person reads it within a day",
+  );
+  await expect(
+    page.getByText(/A person reads it within a day\. The entry/),
+  ).toBeVisible();
   await expect(
     page.getByText(/hidden from your feed straight away/),
   ).toBeVisible();
   await expect(page.getByText(/never told who/)).toBeVisible();
 
   await scene(page, "Blocking rides with the report, not a second request");
-  await page
-    .getByRole("checkbox", { name: `Block ${strangerName} as well` })
-    .click();
-  await page.getByRole("button", { name: "Send report" }).click();
+  // "Send and block" (R54·166.6): one press sends both, and names whom.
+  const both = page.getByRole("button", { name: "Send and block" });
+  await expect(both).toHaveAccessibleDescription(
+    `Blocking hides all of ${strangerName}'s runs from you. They aren't told.`,
+  );
+  await both.click();
   // Wait for the report to land before navigating. Without this the goto
   // below raced the server function: the block row was written, but after
   // the blocked-runners page had already read an empty list — which is a
