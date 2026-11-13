@@ -117,7 +117,7 @@ describe("NotificationBell", () => {
     await renderWithRouter(
       <NotificationBell unreadCount={0} verdictsWaiting={3} />,
     );
-    expect(bell()).toHaveClass("items-center", "wide:justify-center");
+    expect(bell()).toHaveClass("items-center", "justify-center");
     expect(bell()).not.toHaveClass("items-start");
     expect(glyph()).toHaveClass("relative");
     expect(screen.getByText("3")).toHaveClass("absolute", "top-0", "left-3.5");

@@ -271,6 +271,33 @@
 }
 
 /**
+ * **A phone sheet on a dark page** (Design 165): the panel, with a 1px
+ * hairline that follows the top corners and runs down both sides. In dark
+ * the sheet, the 60% scrim and the page behind were all `#0B0B0E`, so the
+ * sheet had no edge at all. No bottom edge: the sheet sits on the
+ * window's. A border, not the panel's inset ring, because the ring draws
+ * all four sides.
+ */
+@utility ground-sheet {
+  --ground: var(--panel);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 0;
+
+  /* The grabber: 36×4 in the stronger hairline, centred over the sheet's
+     content. A pseudo-element, so it is furniture to assistive tech and
+     adds nothing to the sheet's own children. */
+  &::before {
+    content: "";
+    display: block;
+    width: 36px;
+    height: 4px;
+    margin: -12px auto 12px;
+    border-radius: var(--radius-pill);
+    background: var(--hairline-2);
+  }
+}
+
+/**
  * **The ink block** (T2 rule 04): ink on a paper page. Every
  * ground-relative role takes the dark column with it, which is why
  * `text-muted` inside one means "muted against this block" without the

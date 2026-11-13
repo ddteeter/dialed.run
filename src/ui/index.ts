@@ -20,6 +20,7 @@ export { Mono } from "./Mono";
 export { OnboardingProgress } from "./OnboardingProgress";
 export { OnboardingShell } from "./OnboardingShell";
 export { Page } from "./Page";
+export { PhoneBell } from "./PhoneBell";
 export { SlowLabel } from "./SlowLabel";
 export { useTappedSlow } from "./tapped-slow";
 export type { PhotoStep } from "./photo-step";

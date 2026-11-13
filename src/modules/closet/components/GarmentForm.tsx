@@ -40,6 +40,7 @@ import {
   FormField,
   FormStatus,
   Mono,
+  PhoneBell,
   Select,
   Spoken,
   SubmitButton,
@@ -658,7 +659,11 @@ export function GarmentForm({
       {/* The one status region, outside both views: the sentence that
           says the photo did not go up is written as the fields leave. */}
       <FormStatus>{well.removal.status || form.status}</FormStatus>
-      {back}
+      {/* The back link's row ends in the phone's bell (Design 169.1). */}
+      <div className="flex items-center justify-between">
+        {back}
+        <PhoneBell />
+      </div>
       <HeadingAndView
         heading={heading}
         values={values}

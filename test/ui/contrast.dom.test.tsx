@@ -232,6 +232,18 @@ describe("the T1 port", () => {
     }
   });
 
+  it("gives a dark phone sheet the panel, a hairline on three sides and a grabber (Design 165)", () => {
+    expect([...declarations("@utility ground-sheet")]).toEqual([
+      ["--ground", "var(--panel)"],
+    ]);
+    const sheet = tokens.slice(tokens.indexOf("@utility ground-sheet") + 1);
+    expect(sheet).toMatch(/^[^@]*border: 1px solid var\(--hairline\);/u);
+    expect(sheet).toMatch(/^[^@]*border-bottom-width: 0;/u);
+    expect(sheet).toMatch(
+      /^[^@]*&::before \{[^}]*width: 36px;[^}]*height: 4px;[^}]*background: var\(--hairline-2\);/u,
+    );
+  });
+
   it("gives night the browser's dark controls, whatever the runner's theme (#627 P3-02)", () => {
     expect(tokens).toMatch(
       /\[data-ground="night"\] \{[^}]*color-scheme: dark;/u,

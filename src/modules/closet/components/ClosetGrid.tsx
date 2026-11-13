@@ -13,7 +13,14 @@ import {
   wholeDistanceNumber,
   worksAtForms,
 } from "../../../lib/contracts/measures";
-import { Bracketed, Icon, Mono, Spoken, useListMotion } from "../../../ui";
+import {
+  Bracketed,
+  Icon,
+  Mono,
+  PhoneBell,
+  Spoken,
+  useListMotion,
+} from "../../../ui";
 import { garmentLabel } from "../../../lib/garment-label";
 import { runsLabel } from "../../../lib/runs-label";
 import { isPhotoBeingChecked, photoUrlFor } from "../photo-url";
@@ -598,14 +605,18 @@ export function ClosetGrid({
               )}
             </h1>
             {/* Only when there is something to show: a switch that changes
-                nothing is a dead control. */}
-            {screen.retiredCount > 0 ? (
-              <RetiredSwitch
-                count={screen.retiredCount}
-                isOn={isRetiredShown}
-                onToggle={setRetiredShown}
-              />
-            ) : undefined}
+                nothing is a dead control. Then the phone's bell, the row's
+                last thing (Design 169.1). */}
+            <div className="flex items-center gap-3">
+              {screen.retiredCount > 0 ? (
+                <RetiredSwitch
+                  count={screen.retiredCount}
+                  isOn={isRetiredShown}
+                  onToggle={setRetiredShown}
+                />
+              ) : undefined}
+              <PhoneBell />
+            </div>
           </div>
           <FilteredLine search={search} tempUnit={tempUnit} />
           {isEmpty ? (

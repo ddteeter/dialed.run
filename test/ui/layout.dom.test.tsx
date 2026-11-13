@@ -9,6 +9,7 @@ import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
 
 import { Layout } from "../../src/ui/Layout";
+import { PhoneBell } from "../../src/ui/PhoneBell";
 import { TabBar } from "../../src/ui/TabBar";
 
 /**
@@ -49,24 +50,52 @@ describe("Layout", () => {
     });
   });
 
-  it("renders the caller's bell in both seats", async () => {
+  it("renders the caller's bell in the top bar, and in the screen's own seat on the phone", async () => {
     await renderWithRouter(
-      <Layout bell={<button type="button">Notifications</button>}>page</Layout>,
+      <Layout bell={<button type="button">Notifications</button>}>
+        <div data-testid="first-row">
+          <h1>Page</h1>
+          <PhoneBell />
+        </div>
+      </Layout>,
     );
 
-    // Two, and deliberately: the bell sits in the top bar at width and in
-    // the per-screen header below it (Desktop Contract bend 4), and those
-    // are two elements because `data-ground="ink"` cannot be applied per
-    // breakpoint — an attribute has no `wide:` and the roles it redefines
-    // are inherited. Only one is ever displayed.
+    // Two, and deliberately: the bell sits in the top bar at width and at
+    // the end of the screen's first row below it (Design 169.1). Those are
+    // two elements because `data-ground="ink"` cannot be applied per
+    // breakpoint. Only one is ever displayed.
     const bells = screen.getAllByRole("button", { name: "Notifications" });
-    // One in the bar and one in the header below it, in that DOM order —
-    // asked of each bell rather than of the bar, so there is no element
-    // that might not be there to assert against.
     expect(
       bells.map((bell) => bell.closest("[data-slot='top-bar']") !== null),
     ).toStrictEqual([true, false]);
-    // The placeholder gives way rather than sitting beside it.
+    const seat = bells[1]?.closest("[data-slot='notification-bell']");
+    expect(seat?.parentElement).toBe(screen.getByTestId("first-row"));
+    // 44 target 12 from the edge: half into the 24 gutter.
+    expect(seat).toHaveClass("-mr-3", "shrink-0", "wide:hidden");
+  });
+
+  it("draws no row of its own for the bell: the empty row is gone (Design 169.1)", async () => {
+    await renderWithRouter(
+      <Layout bell={<button type="button">Notifications</button>}>page</Layout>,
+    );
+    // Only the top bar's: no screen seat was placed, so nothing else.
+    expect(
+      screen.getAllByRole("button", { name: "Notifications" }),
+    ).toHaveLength(1);
+    expect(
+      document.querySelector("[data-slot='notification-bell']"),
+    ).toBeNull();
+    expect(screen.getAllByRole("banner")).toStrictEqual([
+      document.querySelector("[data-slot='top-bar']"),
+    ]);
+  });
+
+  it("seats nothing when the layout has no bell", async () => {
+    await renderWithRouter(
+      <Layout>
+        <PhoneBell />
+      </Layout>,
+    );
     expect(
       document.querySelector("[data-slot='notification-bell']"),
     ).toBeNull();
@@ -97,42 +126,6 @@ describe("Layout", () => {
     // bottom padding that clears the fixed tab bar goes away with it.
     const content = screen.getByText("page");
     expect(content).toHaveClass("max-w-page", "pb-24", "wide:pb-0");
-  });
-
-  it("holds the slot open with an inert placeholder when it is not", async () => {
-    // `??`, not `&&`: without a bell the header still needs its right-hand
-    // slot, or the page reflows the moment notifications land. The
-    // placeholder is hidden from assistive tech because it is furniture.
-    await renderWithRouter(<Layout>page</Layout>);
-
-    const placeholder = document.querySelector(
-      "[data-slot='notification-bell']",
-    );
-    expect(placeholder).not.toBeNull();
-    expect(placeholder).toHaveAttribute("aria-hidden", "true");
-    // The row is still drawn, so nothing moves, but it is no banner: a
-    // landmark holding only furniture was an empty stop in the list.
-    expect(placeholder?.parentElement).toHaveClass("pt-4", "wide:hidden");
-    expect(placeholder?.parentElement?.tagName).toBe("DIV");
-    expect(screen.getAllByRole("banner")).toStrictEqual([
-      document.querySelector("[data-slot='top-bar']"),
-    ]);
-  });
-
-  it("makes the row a banner once it holds the bell", async () => {
-    await renderWithRouter(
-      <Layout bell={<button type="button">Notifications</button>}>page</Layout>,
-    );
-
-    // Two banners: the top bar's header and the bell row. Only one is
-    // displayed at any width.
-    const rows = screen.getAllByRole("banner");
-    expect(rows).toHaveLength(2);
-    expect(rows[1]).toHaveClass("pt-4", "wide:hidden");
-    const [, rowBell] = screen.getAllByRole("button", {
-      name: "Notifications",
-    });
-    expect(rowBell?.closest("header")).toBe(rows[1]);
   });
 });
 

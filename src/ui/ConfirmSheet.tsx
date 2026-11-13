@@ -149,7 +149,9 @@ export function ConfirmSheet({
   return (
     <Sheet open={open} onClose={onClose} label={heading}>
       <div data-part="sheet" data-state={state} className="flex flex-col gap-4">
-        <h2 className="m-0 font-display text-heading">{heading}</h2>
+        {/* TYPE.title, so it can't read as page text (Design 165). A guess
+            in both themes until Design 173 (#643) says which. */}
+        <h2 className="m-0 font-display text-title">{heading}</h2>
         <p className="m-0 text-body text-quiet">{body}</p>
         <button
           type="button"

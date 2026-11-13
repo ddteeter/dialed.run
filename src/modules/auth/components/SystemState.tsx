@@ -15,6 +15,7 @@ import {
   Layout,
   Mono,
   Page,
+  PhoneBell,
   TABS,
   classifyFailure,
   tabToLight,
@@ -136,11 +137,16 @@ export function NotFoundState({
         {/* X1 draws "404" as a small muted kicker over the one headline
             (#632 A-04), as the public pages' own not-found does; at the
             display step it read as a second headline. */}
-        <span aria-hidden="true">
-          <Mono step="xs" className="text-muted">
-            404
-          </Mono>
-        </span>
+        {/* The kicker's row is the screen's first, so it ends in the
+            phone's bell (Design 169.1). */}
+        <div className="flex w-full items-center justify-between">
+          <span aria-hidden="true">
+            <Mono step="xs" className="text-muted">
+              404
+            </Mono>
+          </span>
+          <PhoneBell />
+        </div>
         <h1 className="m-0 font-display text-display uppercase">
           Nothing here
         </h1>
@@ -230,6 +236,12 @@ export function LoaderFailedState({
             first so a screen reader's heading list finds the page. Not
             drawn, because the band already shows the words. */}
         <h1 className="sr-only">{LOADER_FAILED_KICKER}</h1>
+        {/* The band is the screen's first part and draws no row of its
+            own, so the phone's bell takes one above it (Design 169.2:
+            "every signed-in screen"). */}
+        <div className="flex justify-end">
+          <PhoneBell />
+        </div>
         <FailureBand
           kicker={LOADER_FAILED_KICKER}
           message={message}

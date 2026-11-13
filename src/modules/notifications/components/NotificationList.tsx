@@ -9,6 +9,7 @@ import {
   inFlight,
   Mono,
   PendingLabel,
+  PhoneBell,
   useControlAction,
 } from "../../../ui";
 import type { listNotifications } from "../service";
@@ -73,28 +74,34 @@ export function NotificationList({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="m-0 font-display text-display uppercase">
-          Notifications
-        </h1>
-        {hasMarkable ? (
-          <button
-            type="button"
-            data-part="mark-all"
-            data-state={marking.pending ? "pending" : "rest"}
-            {...inFlight(marking.pending)}
-            onClick={() => {
-              void marking.run();
-            }}
-            className="target cursor-pointer border-none bg-transparent p-0 text-body font-semibold text-ink"
-          >
-            <PendingLabel
-              label="Mark all read"
-              pendingLabel="Marking"
-              pending={marking.pending}
-            />
-          </button>
-        ) : undefined}
+      {/* The phone's bell ends the first row (Design 169.1) and stays on
+          it: the title and Mark all read wrap inside the row's left part,
+          never the bell. */}
+      <div className="flex items-start gap-3">
+        <div className="flex flex-1 flex-wrap items-center justify-between gap-4">
+          <h1 className="m-0 font-display text-display uppercase">
+            Notifications
+          </h1>
+          {hasMarkable ? (
+            <button
+              type="button"
+              data-part="mark-all"
+              data-state={marking.pending ? "pending" : "rest"}
+              {...inFlight(marking.pending)}
+              onClick={() => {
+                void marking.run();
+              }}
+              className="target cursor-pointer border-none bg-transparent p-0 text-body font-semibold text-ink"
+            >
+              <PendingLabel
+                label="Mark all read"
+                pendingLabel="Marking"
+                pending={marking.pending}
+              />
+            </button>
+          ) : undefined}
+        </div>
+        <PhoneBell />
       </div>
       <ControlFailureBand
         failure={marking.failure}

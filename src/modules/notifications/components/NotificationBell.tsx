@@ -74,13 +74,13 @@ export function NotificationBell({
       to="/notifications"
       aria-label={name[mark]}
       data-state={mark}
-      // Centred on the cross axis, as the search glyph beside it is, so the
-      // bar's right-hand three share one line (#632). The mark rides the
-      // glyph's corner from a box of its own rather than lifting the
-      // glyph with it: `items-start` did that, and the bell sat 12px high.
-      // Centred on the main axis only at desk, where the bar spaces its
-      // targets; the phone row is Design 169's.
-      className={`target flex items-center no-underline wide:justify-center ${
+      // Centred in its 44 target, as the search glyph beside it is, so the
+      // desk bar's right-hand three share one line (#632) and the phone
+      // seat's glyph ends on the gutter (Design 169.1, `PhoneBell`). The
+      // mark rides the glyph's corner from a box of its own rather than
+      // lifting the glyph with it: `items-start` did that, and the bell
+      // sat 12px high.
+      className={`target flex items-center justify-center no-underline ${
         mark === "quiet" ? "text-muted" : "text-ink"
       }`}
     >

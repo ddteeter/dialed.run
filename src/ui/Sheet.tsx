@@ -73,7 +73,9 @@ export function Sheet({
     // Stryker disable next-line ConditionalExpression
     if (!dialog) return;
     if (open && !dialog.open) {
+      const under = openSheetBelow(dialog);
       dialog.showModal();
+      if (under !== undefined) stack(dialog, under);
     } else if (!open && dialog.open) {
       dialog.close();
     }
@@ -88,10 +90,67 @@ export function Sheet({
       onCancel={(event) => {
         if (isLocked) event.preventDefault();
       }}
-      onClose={onClose}
-      className="sheet-motion fixed inset-x-0 bottom-0 top-auto m-0 w-full max-w-none rounded-t-sheet bg-ground p-6 text-ink backdrop:bg-scrim/60 wide:bottom-auto wide:top-[var(--bar-height)] wide:mx-auto wide:mt-12 wide:h-fit wide:max-h-[calc(100dvh-var(--bar-height)-6rem)] wide:max-w-panel wide:overflow-y-auto wide:rounded-sheet wide:backdrop:bg-ground"
+      onClose={() => {
+        unstack();
+        onClose();
+      }}
+      data-slot="sheet"
+      className={SHEET_CLASS}
     >
       {children}
     </dialog>
   );
+}
+
+/**
+ * The sheet's surface. Phone-and-light is the original: `--ground`, no
+ * edge, over the 60% scrim. **Phone-and-dark is Design 165**: in dark the
+ * sheet, the scrim and the page were one colour (`#0B0B0E`), so the sheet
+ * takes `--panel` with a hairline over its top corners and down both
+ * sides, and a grabber (`ground-sheet`). Stacked, the upper sheet's edge steps up to the
+ * stronger hairline, and the lower one stays at least 48 taller so both
+ * top edges show (`stack`).
+ */
+const SHEET_CLASS =
+  "sheet-motion fixed inset-x-0 bottom-0 top-auto m-0 w-full max-w-none rounded-t-sheet bg-ground p-6 text-ink backdrop:bg-scrim/60 max-wide:dark:ground-sheet max-wide:dark:data-[stacked=over]:border-hairline-2 max-wide:data-[stacked=under]:min-h-[calc(var(--over-height)+3rem)] wide:bottom-auto wide:top-[var(--bar-height)] wide:mx-auto wide:mt-12 wide:h-fit wide:max-h-[calc(100dvh-var(--bar-height)-6rem)] wide:max-w-panel wide:overflow-y-auto wide:rounded-sheet wide:backdrop:bg-ground";
+
+/**
+ * The sheet already open beneath one about to open, if any. Design 165:
+ * "never more than two", so one is all there can be.
+ */
+function openSheetBelow(
+  dialog: HTMLDialogElement,
+): HTMLDialogElement | undefined {
+  return [
+    ...document.querySelectorAll<HTMLDialogElement>(
+      "dialog[data-slot='sheet'][open]",
+    ),
+  ].find((sheet) => sheet !== dialog);
+}
+
+/**
+ * Two sheets at once (Design 165): the upper one marks its edge, and the
+ * lower one is held at least 48 taller than it — the upper sheet's own
+ * backdrop is the lower one's second 60% scrim, so only the heights are
+ * this code's. Measured once it is open, since a closed `<dialog>` has no
+ * height.
+ */
+function stack(over: HTMLDialogElement, under: HTMLDialogElement): void {
+  over.dataset.stacked = "over";
+  under.dataset.stacked = "under";
+  under.style.setProperty("--over-height", `${String(over.offsetHeight)}px`);
+}
+
+/**
+ * Either sheet closing ends the stack: with "never more than two", one
+ * sheet is left, and it is nobody's upper or lower. So every mark goes,
+ * whichever sheet closed.
+ */
+function unstack(): void {
+  for (const sheet of document.querySelectorAll<HTMLDialogElement>(
+    "dialog[data-stacked]",
+  )) {
+    delete sheet.dataset.stacked;
+    sheet.style.removeProperty("--over-height");
+  }
 }

@@ -21,13 +21,15 @@ import {
 } from "../../modules/products/functions";
 import { PhotoBeingChecked } from "../../modules/safety/components/NoticeBand";
 import { photoBlurStep } from "../../modules/safety/components/PhotoBlur";
-import { Layout } from "../../ui";
+import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
+import { bellStateFn } from "../../modules/notifications/functions";
 
 export const Route = createFileRoute("/closet/$itemId")({
   loader: garmentLoader(
     requireSession,
     (itemId) => getItemFn({ data: { itemId } }),
     viewerUnitsQuery,
+    bellStateFn,
   ),
   component: GarmentDetailPage,
 });
@@ -38,9 +40,9 @@ const CORRECTION = {
 };
 
 function GarmentDetailPage() {
-  const { detail, units } = Route.useLoaderData();
+  const { detail, units, bell } = Route.useLoaderData();
   return (
-    <Layout>
+    <BelledLayout {...bell}>
       <GarmentDetail
         detail={detail}
         tempUnit={units.temp}
@@ -57,6 +59,6 @@ function GarmentDetailPage() {
         // §AG's WRONG? sheet (R-74): asked for only when it opens.
         correction={CORRECTION}
       />
-    </Layout>
+    </BelledLayout>
   );
 }
