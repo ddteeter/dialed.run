@@ -199,8 +199,71 @@ request-access form is solved there and posted to the app (#367,
 | OpenAI          | Monthly budget limit on the project. Moderation is free; extraction is not.                                                                                                                     | §3.7       |
 | Visual Crossing | Choose the plan. Free is 1,000 records a day. **Do not move to Metered until 125's OPS-6 has landed**; there is no documented daily spend cap, so the digest's backlog count is the only brake. | 0.6, §1.8  |
 | Firecrawl       | The plan's credit cap is the limit; pick the plan.                                                                                                                                              | §3.7       |
-| Cloudflare      | Usage notifications (§1 above). Email Sending: 3,000 included a month, then $0.35 per 1,000.                                                                                                    | §3.7, §2.3 |
+| Cloudflare      | A **Workers spending limit of $25 overage a month** (below), plus usage notifications for what it doesn't cover (§1 above). Email Sending: 3,000 included a month, then $0.35 per 1,000.        | §3.7, §2.3 |
 | Anthropic       | Monthly spend limit on the workspace whose key reviews dependency majors (`docs/dependencies.md` §Setup). About $1–3 a review.                                                                  | design 156 |
+
+### Cloudflare Workers spending limit
+
+Cloudflare's Spend Management (beta, launched 2026-11-13) puts a monthly
+dollar limit on Workers usage. Set it before the first deploy that serves
+friends. The owner chose **$25 a month of overage** (owner, 2026-11-13).
+
+- **What it counts:** Workers overage only. The $5 Workers Paid fee and the
+  plan's included requests and CPU time are deducted first. It's account-wide,
+  not per Worker. It doesn't cover D1, R2, KV, Queues storage, Email Sending
+  or anything else, so the §1 usage notifications stay.
+- **What happens when it trips:** Cloudflare rejects every new Worker
+  invocation on the account: the whole app, the queue consumers and the
+  crons. Static assets still serve. It stays that way until the owner raises
+  the limit above current spend, turns it off or removes it, or the billing
+  period renews (on the subscription date, not the 1st). The crons are
+  re-runnable and the queues keep their messages (resilience law 1), so
+  raising the limit is the whole recovery. Do it the same day, inside the
+  queues' message retention.
+- **Alerts:** a limit with a notification email sends mail at 80% and 100%.
+  A limit set in the dashboard has no email by default, so set it with the
+  CLI or the API, with the owner's address.
+- **Not a hard ceiling:** blocking isn't instant and the invoice can overshoot
+  a little. Enforcement reaches Cloudflare's nodes asynchronously.
+- **Setting it:** Billing > Spend Management > Workers > Edit the spending
+  limit. With the CLI:
+  `cf billing spend-policies create --name 'Workers $25 overage' --product-id workers --enabled true --threshold-cents 2500 --action usage_block`,
+  plus the notification email. Through the API, use
+  `POST /accounts/{account_id}/billing/spend-policies`. Either way it needs
+  permission to edit billing.
+- **Revisit before public:** $25 is sized for friends, where the overage
+  should be about $0. A real spike at public launch could trip it and take
+  the site down.
+
+#### What the Workers limit doesn't cover
+
+The limit stops Worker invocations only. Every other paid service below
+bills on its own, keeps running after the Workers limit trips, and has its
+own brake or none. A Worker that is blocked stops calling most of them, but
+it stops nothing already stored or queued.
+
+| service                             | billed for                                                                            | brake                                                                     |
+| ----------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Cloudflare D1 (core, weather, ops)  | rows read and written, storage                                                        | §1 usage notifications only. No spending limit yet.                       |
+| Cloudflare R2 (every bucket)        | storage and operations                                                                | §1 usage notifications only. No spending limit yet.                       |
+| Cloudflare Queues                   | queue operations (the consumer's invocations count under Workers)                     | None of its own; check its usage in the dashboard. No spending limit yet. |
+| Cloudflare Email Sending            | messages past the included 3,000 a month                                              | §1 usage notifications only. No spending limit yet.                       |
+| Cloudflare Workers Analytics Engine | data points written and queried, where Cloudflare bills them (check its pricing page) | None of its own. No spending limit yet.                                   |
+| Cloudflare Workers Observability    | logs and traces past the plan's included volume (design 165)                          | The sampling rate in `wrangler.jsonc`. No spending limit yet.             |
+| OpenAI                              | extraction calls (moderation is free)                                                 | The project's monthly budget limit (table above).                         |
+| Visual Crossing                     | weather records                                                                       | The plan; Metered has no daily cap (table above).                         |
+| Firecrawl                           | product-link scrapes                                                                  | The plan's credit cap (table above).                                      |
+| Anthropic                           | dependency-major reviews and the a11y transcript review in CI                         | The workspace's monthly spend limit (table above).                        |
+| Sentry                              | events and cron monitors past the plan's quota                                        | The plan's quota.                                                         |
+
+Cloudflare says more products are coming to Spend Management. When D1, R2
+or Email Sending gain a limit, add one here.
+
+Sources:
+
+- [changelog](https://developers.cloudflare.com/changelog/post/2026-11-13-spend-management/)
+- [Spend Management guide](https://developers.cloudflare.com/billing/manage/spend-management/)
+- [announcement](https://blog.cloudflare.com/spend-management)
 
 ## 7. Abuse controls at the zone
 
@@ -328,7 +391,8 @@ items each gate depends on if that ever slips.
 - Strava: callback domain set, webhook subscribed, `STRAVA_SUBSCRIPTION_ID`
   set; connect, disconnect and a revoke that **succeeds on Strava's side**
   (127's STR-1/2).
-- Spend caps set; Visual Crossing plan chosen.
+- Spend caps set, including the Workers spending limit with its
+  notification email (§6); Visual Crossing plan chosen.
 - **Change password's CPU time measured** on the deployed Worker (D-98,
   R-124): it checks the current password twice, once for the per-runner
   count and once inside Better Auth's endpoint, so it is the most
