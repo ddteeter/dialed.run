@@ -10,7 +10,7 @@ import { uiGroupLabels } from "../groups";
 import type { UiGroup } from "../groups";
 import { useIsAtDesk } from "../kit-push";
 import type { PickerGroup } from "../picker";
-import { PUSH_TITLE_CLASS, PushDone, PushPage } from "./PushPage";
+import { PushDone, PushPage, PushTitle } from "./PushPage";
 
 /**
  * The groups A2 draws as a row of tiles; the rest are "+ CATEGORY" chips.
@@ -430,10 +430,6 @@ export function KitPage({
  */
 type PickLayout = "sheet" | "push";
 
-const PICK_TITLE_CLASS: Readonly<Record<PickLayout, string>> = {
-  sheet: "m-0 font-display text-heading",
-  push: PUSH_TITLE_CLASS,
-};
 
 const PICK_LIST_CLASS: Readonly<Record<PickLayout, string>> = {
   sheet: "m-0 flex list-none flex-col gap-1 p-0",
@@ -473,8 +469,6 @@ function PickBody({
     fullName(item).toLowerCase().includes(needle),
   );
   const chosen = group.items.filter((item) => selected.has(item.id)).length;
-  // The page's heading in the push; the sheet's own title in the sheet.
-  const Title = layout === "push" ? "h1" : "h2";
 
   return (
     <div className="flex flex-col gap-5">
@@ -482,7 +476,7 @@ function PickBody({
         {/* The pushed page's heading. In the sheet, the sheet's own label
             is the title (#643). */}
         {layout === "push" ? (
-          <Title className={PICK_TITLE_CLASS[layout]}>{label}</Title>
+          <PushTitle>{label}</PushTitle>
         ) : undefined}
         <Mono step="xs" className="text-muted">
           {conditions === undefined
@@ -518,9 +512,12 @@ function PickBody({
       <ul className={PICK_LIST_CLASS[layout]}>
         {found.map((item) => (
           <li key={item.id}>
-            <label className="target flex items-center gap-3 text-body">
+            {/* R54·166.3: A2b's picks are checkboxes, drawn from the shared
+                set; the label is a choice, so 400. */}
+            <label className="target flex cursor-pointer items-center gap-3 text-body font-normal">
               <input
                 type="checkbox"
+                className="control-check"
                 checked={selected.has(item.id)}
                 onChange={() => {
                   onToggle(item.id);

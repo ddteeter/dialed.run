@@ -784,7 +784,8 @@ function AudiencePicker({
         legend={LABELS.audience}
         options={PICKED_AUDIENCES}
         optionLabels={AUDIENCE_LABELS}
-        optionStep="xs"
+        // R54·166.5: an option's label is MONO.sm.
+        optionStep="sm"
         optionHints={AUDIENCE_HINTS}
         optionDescribedBy={(option) =>
           !isVerified || (hasLine && option === audience)

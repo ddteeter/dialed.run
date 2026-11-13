@@ -1343,12 +1343,12 @@ describe("VerdictForm: tags and sharing", () => {
     });
   });
 
-  it("draws the audience words as MONO.xs capitals, heard in sentence case (round 41 #86a)", async () => {
+  it("draws the audience words as MONO.sm capitals, heard in sentence case (round 41 #86a, R54·166.5)", async () => {
     await renderWithRouter(form({ entry: { audience: "private" } }));
     for (const word of ["Private", "Shared", "Public"]) {
       expect(screen.getByText(word)).toHaveClass(
         "font-mono",
-        "text-mono-xs",
+        "text-mono-sm",
         "uppercase",
       );
     }

@@ -231,6 +231,9 @@ describe("ClosetGrid: the heading row", () => {
       name: "Show retired (1)",
     });
     expect(toggle).not.toBeChecked();
+    // R54·166.3: the shared set's switch, at its label's right.
+    expect(toggle).toHaveClass("control-switch");
+    expect(toggle.previousSibling?.textContent).toBe("Show retired (1)");
 
     await user.click(toggle);
 

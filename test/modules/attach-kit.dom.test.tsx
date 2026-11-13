@@ -1005,8 +1005,9 @@ describe("AttachKit: A2b, one category as a sheet", () => {
     // (Round 54 · 164.3), so these are the sheet's alone.
     const title = within(sheet).getByRole("heading", { name: "Tops" });
     expect(title.tagName).toBe("H2");
-    expect(title).toHaveClass("text-heading");
-    expect(title).not.toHaveClass("text-title");
+    // The sheet's own label is its title (#643): one heading, the sheet's.
+    expect(title).toHaveClass("text-title");
+    expect(within(sheet).getAllByRole("heading", { name: "Tops" })).toHaveLength(1);
     expect(within(sheet).getByRole("list")).toHaveClass("p-0");
     expect(within(sheet).getByRole("list")).not.toHaveClass("rounded-card");
     const done = within(sheet).getByRole("button", { name: "Done" });
@@ -1076,6 +1077,11 @@ describe("AttachKit: A2b, one category as a sheet", () => {
     const search = within(sheet).getByRole("searchbox", { name: "Search" });
     expect(search).toHaveAttribute("placeholder", "Search tops…");
 
+    // R54·166.3: the shared set's checkboxes; each label is a choice, 400.
+    for (const box of within(sheet).getAllByRole("checkbox")) {
+      expect(box).toHaveClass("control-check");
+      expect(box.closest("label")).toHaveClass("font-normal");
+    }
     // The brand is searched as well as the name.
     await user.type(search, "PATAG");
     expect(

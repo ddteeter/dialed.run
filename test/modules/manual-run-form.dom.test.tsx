@@ -160,6 +160,10 @@ describe("ManualRunForm: what it sends", () => {
     await renderWithRouter(<ManualRunForm submitRun={submitRun} />);
 
     await fillValid(user);
+    // R54·166.3: a checkbox from the shared set, its label a choice.
+    const box = screen.getByRole("checkbox", { name: "Indoor / treadmill" });
+    expect(box).toHaveClass("control-check");
+    expect(box).toHaveAttribute("name", "indoor");
     await user.click(screen.getByLabelText(/Indoor/));
     await user.click(
       screen.getByRole("button", { name: "Next · pick the outfit" }),

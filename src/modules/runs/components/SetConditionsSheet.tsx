@@ -97,9 +97,9 @@ export function SetConditionsSheet({
       ) : (
         <div className="flex flex-col gap-3">
           <FormStatus>{retry.status}</FormStatus>
-          <Mono step="xs" className="text-muted">
-            No history for that time
-          </Mono>
+          {/* P2a-04: "No history for that time" was the board frame's
+              caption, not the sheet's; drawn, it was a second kicker over
+              the box's own. */}
           <div
             data-slot="weather-unavailable"
             className="flex flex-col items-start gap-3 border border-ink p-4"

@@ -13,6 +13,7 @@ import {
   Select,
   SubmitButton,
   TextField,
+  ToggleField,
   useFormSubmit,
   useIdempotencyKey,
 } from "../../../ui";
@@ -230,17 +231,15 @@ export function ManualRunForm({
             </FormField>
           </div>
         </div>
-        <label className="target flex items-center gap-2 text-body font-semibold">
-          <input
-            type="checkbox"
-            checked={indoor}
-            readOnly={form.pending}
-            onChange={(event) => {
-              setIndoor(event.target.checked);
-            }}
-          />
-          Indoor / treadmill
-        </label>
+        {/* R54·166.3: saved with the form, so a checkbox, drawn from the
+            shared set. */}
+        <ToggleField
+          name="indoor"
+          label="Indoor / treadmill"
+          field={form.field}
+          isOn={indoor}
+          onChange={setIndoor}
+        />
         <FormField
           name="effort"
           label="Effort (optional)"

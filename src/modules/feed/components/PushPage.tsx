@@ -78,7 +78,7 @@ export function PushBack({
 /**
 The pushed page's title: the page's heading, at the title step.
 */
-export const PUSH_TITLE_CLASS = "m-0 font-display text-title";
+const PUSH_TITLE_CLASS = "m-0 font-display text-title";
 
 /**
  * The pushed page's heading. It is the screen's one h1 while the page is

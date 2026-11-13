@@ -514,9 +514,12 @@ function RetiredSwitch({
   return (
     <label className="target flex cursor-pointer items-center gap-2 text-body font-semibold">
       {`Show retired (${String(count)})`}
+      {/* R54·166.3: it changes the view the moment it moves, so a switch,
+          drawn from the shared set, at the label's right. */}
       <input
         type="checkbox"
         role="switch"
+        className="control-switch"
         checked={isOn}
         onChange={(event) => {
           onToggle(event.target.checked);
