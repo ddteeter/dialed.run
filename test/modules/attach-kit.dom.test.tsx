@@ -1933,6 +1933,8 @@ describe("AttachKit: A2b at the desk is a push (Round 54 · 164.3)", () => {
     const title = within(page).getByRole("heading", { level: 1 });
     expect(title).toHaveTextContent("Tops");
     expect(title).toHaveClass("font-display", "text-title");
+    // Rule 04: the page's h1 is the only one exposed; A2's is hidden under it.
+    expect(screen.getAllByRole("heading", { level: 1 })).toStrictEqual([title]);
     expect(within(page).getByText("2 of 3 match 41° damp")).toBeVisible();
     const card = within(page).getByRole("list");
     expect(card).toHaveClass("rounded-card", "border", "bg-panel");

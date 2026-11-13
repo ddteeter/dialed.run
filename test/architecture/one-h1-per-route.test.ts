@@ -122,8 +122,21 @@ function countOf(source: string, pattern: RegExp): number {
  * Every heading this screen renders, named by where it is written, so a
  * failure says which file to open.
  */
+/**
+ * A pushed page's heading stands in for its screen's (Round 54 · 164.3):
+ * the screen stays mounted under the page, `hidden`, so its own h1 is not
+ * exposed while the page's is. This scan reads source, not what is
+ * exposed, so it is told: the push frame's file is not followed. What is
+ * exposed is counted where it can be, in the dom tests of the screens
+ * that push (attach-kit and verdict-form: one level-1 heading, pushed or
+ * not).
+ */
+const STANDS_IN_FOR_THE_SCREEN = new Set([
+  "src/modules/feed/components/PushPage.tsx",
+]);
+
 function headings(path: string, seen = new Set<string>()): string[] {
-  if (seen.has(path)) return [];
+  if (seen.has(path) || STANDS_IN_FOR_THE_SCREEN.has(path)) return [];
   seen.add(path);
   const code = codeOnly(byPath.get(path) ?? "");
   const found: string[] = [

@@ -11,7 +11,7 @@ import type {
   VerdictValue,
   WritableAudience,
 } from "../../../lib/contracts";
-import { clockLabel, dayLabel } from "../../../lib/dates";
+import { dayLabel, viewerClockLabel } from "../../../lib/dates";
 import { runsLabel } from "../../../lib/runs-label";
 import type { BandRun } from "../band-runs";
 import { BackToRun } from "./BackToRun";
@@ -209,7 +209,8 @@ function RunHeader({
   units,
 }: Readonly<{ entry: Entry; units: Units }>): JSX.Element {
   const zone = entry.conditions?.timeZone;
-  const when = `${dayLabel(entry.startedAt, zone)} · ${clockLabel(entry.startedAt, zone)}`;
+  // Marked UTC when the run has no zone, as the This run card is (P2a-02).
+  const when = `${dayLabel(entry.startedAt, zone)} · ${viewerClockLabel(entry.startedAt, { homeZone: zone })}`;
   const distance = distanceNumber(entry.distanceM, units.distance);
   // With conditions the board drops the unit to fit the temperature
   // (`6.2 AT 41°`); a reader still needs it, so it is said, not drawn.

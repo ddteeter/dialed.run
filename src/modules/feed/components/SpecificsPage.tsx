@@ -1,7 +1,7 @@
 import type { ComponentProps, JSX } from "react";
 
 import { Mono } from "../../../ui";
-import { PUSH_TITLE_CLASS, PushBack, PushDone, PushPage } from "./PushPage";
+import { PushBack, PushDone, PushPage, PushTitle } from "./PushPage";
 import { SpecificsBody, specificsLine } from "./SpecificsSheet";
 
 /**
@@ -29,7 +29,7 @@ export function SpecificsPage({
   return (
     <PushPage slot="specifics-page" back={<PushBack>{back}</PushBack>}>
       <div className="flex flex-col gap-1">
-        <h1 className={PUSH_TITLE_CLASS}>Anything specific?</h1>
+        <PushTitle>Anything specific?</PushTitle>
         <Mono step="xs" className="text-muted">
           {specificsLine(verdict)}
         </Mono>

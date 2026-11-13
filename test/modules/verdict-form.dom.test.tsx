@@ -2000,7 +2000,7 @@ describe("VerdictForm: the run header (round 21)", () => {
 
     const header = screen.getByRole("banner");
     expect(within(header).getByText("6.2 mi")).toBeVisible();
-    expect(within(header).getByText("Sat Aug 29 · 11:04 AM")).toBeVisible();
+    expect(within(header).getByText("Sat Aug 29 · 11:04 AM UTC")).toBeVisible();
   });
 
   it("reads the runner's own units", async () => {
@@ -2691,6 +2691,8 @@ describe("VerdictForm: A3b at the desk is a push (Round 54 · 164.3)", () => {
     expect(page.firstElementChild).toBe(back);
     const title = within(page).getByRole("heading", { level: 1 });
     expect(title).toHaveClass("font-display", "text-title");
+    // Rule 04: the page's h1 is the only one exposed; A3's is hidden under it.
+    expect(screen.getAllByRole("heading", { level: 1 })).toStrictEqual([title]);
     expect(within(page).getByText("A bit warm · optional")).toBeVisible();
     expect(within(page).getByRole("group", { name: "Shell" })).toBeVisible();
     expect(within(page).getByRole("group", { name: "Cap" })).toBeVisible();

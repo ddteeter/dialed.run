@@ -81,6 +81,19 @@ The pushed page's title: the page's heading, at the title step.
 export const PUSH_TITLE_CLASS = "m-0 font-display text-title";
 
 /**
+ * The pushed page's heading. It is the screen's one h1 while the page is
+ * pushed: the screen under it is `hidden`, and its own h1 with it, so the
+ * two are never heard together (rule 04;
+ * test/architecture/one-h1-per-route.test.ts reads this file's h1 as
+ * standing in for the screen's, and the dom tests count what is exposed).
+ */
+export function PushTitle({
+  children,
+}: Readonly<{ children: ReactNode }>): JSX.Element {
+  return <h1 className={PUSH_TITLE_CLASS}>{children}</h1>;
+}
+
+/**
  * Done, as the flow's forward action: the pink caps button at content
  * width (Round 54 · 167).
  */
