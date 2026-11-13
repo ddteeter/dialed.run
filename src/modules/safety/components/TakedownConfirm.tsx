@@ -48,26 +48,25 @@ export function TakedownConfirm({
     );
   }
   if (outcome !== undefined) {
+    // The receipt takes the panel's title (R55·181).
     return (
-      <SignedOutPanel heading="Confirm your request">
-        <SignedOutReceipt
-          kicker="Request confirmed"
-          title={
-            outcome === "decided"
-              ? "We've already decided"
-              : "We have your request"
-          }
-        >
-          <p className="m-0 text-body">
-            {outcome === "decided"
-              ? "We've emailed you what we decided."
-              : "We'll decide within 48 hours and email you either way."}
-          </p>
-          {/* DONE only (round 41 #85): a decided request has had its
-              answer, and the other sites are for one still open. */}
-          {outcome === "decided" ? undefined : <ElsewhereHelp />}
-        </SignedOutReceipt>
-      </SignedOutPanel>
+      <SignedOutReceipt
+        kicker="Request confirmed"
+        title={
+          outcome === "decided"
+            ? "We've already decided"
+            : "We have your request"
+        }
+      >
+        <p className="m-0 text-body">
+          {outcome === "decided"
+            ? "We've emailed you what we decided."
+            : "We'll decide within 48 hours and email you either way."}
+        </p>
+        {/* DONE only (round 41 #85): a decided request has had its
+            answer, and the other sites are for one still open. */}
+        {outcome === "decided" ? undefined : <ElsewhereHelp />}
+      </SignedOutReceipt>
     );
   }
   return (

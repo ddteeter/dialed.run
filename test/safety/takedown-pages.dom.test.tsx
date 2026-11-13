@@ -205,11 +205,16 @@ describe("/takedown", () => {
         turnstileToken: "answer",
       },
     });
-    const inReceipt = within(receipt ?? document.body);
-    expect(inReceipt.getByText("Request sent")).toBeVisible();
-    expect(
-      inReceipt.getByRole("heading", { name: "We have your request" }),
-    ).toBeVisible();
+    // The receipt takes the title (R55·181): a teal MONO.xs kicker, then
+    // its title as the page's one display heading.
+    expect(screen.getByText("Request sent")).toHaveClass(
+      "text-dialed-text",
+      "text-mono-xs",
+    );
+    const title = screen.getByRole("heading", { level: 1 });
+    expect(title).toHaveTextContent("We have your request");
+    expect(title).toHaveClass("font-display", "text-display");
+    expect(screen.getAllByRole("heading")).toHaveLength(1);
     expect(receipt).toHaveTextContent(
       "A person will look at it and decide within 48 hours. We've emailed a receipt to sam@example.com, and we'll email you the outcome.",
     );

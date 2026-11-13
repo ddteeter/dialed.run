@@ -70,7 +70,16 @@ describe("/takedown/confirm", () => {
         screen.getByRole("heading", { name: "We have your request" }),
       ).toBeVisible();
     });
-    expect(screen.getByText("Request confirmed")).toBeVisible();
+    // The receipt takes the title (R55·181): a teal MONO.xs kicker, then
+    // its title as the page's one display heading.
+    expect(screen.getByText("Request confirmed")).toHaveClass(
+      "text-dialed-text",
+      "text-mono-xs",
+    );
+    const title = screen.getByRole("heading", { level: 1 });
+    expect(title).toHaveTextContent("We have your request");
+    expect(title).toHaveClass("font-display", "text-display");
+    expect(screen.getAllByRole("heading")).toHaveLength(1);
     expect(
       screen.getByText(
         "We'll decide within 48 hours and email you either way.",

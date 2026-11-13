@@ -5,8 +5,10 @@ import { Mono } from "./Mono";
 import { Wordmark } from "./Wordmark";
 
 /**
- * A signed-out receipt (Au5's, and `/takedown`'s): a mono kicker, a title,
- * and the words of what happens next, in the one stack both draw.
+ * A signed-out receipt (Au5's, and `/takedown`'s): the receipt takes the
+ * panel's title (R55·181). A teal (`--dialed-text`) MONO.xs kicker, then
+ * the receipt's title as the TYPE.display line in place of the form's,
+ * then the words of what happens next. One headline, in one face.
  */
 export function SignedOutReceipt({
   kicker,
@@ -14,17 +16,22 @@ export function SignedOutReceipt({
   children,
 }: Readonly<{
   kicker: string;
-  title: ReactNode;
+  title: string;
   children: ReactNode;
 }>): JSX.Element {
   return (
-    <div data-part="receipt" className="flex flex-col gap-5">
-      <Mono step="xs" className="text-muted">
-        {kicker}
-      </Mono>
-      <h2 className="m-0 text-title font-bold">{title}</h2>
-      {children}
-    </div>
+    <SignedOutPanel
+      heading={title}
+      notice={
+        <Mono step="xs" className="text-dialed-text">
+          {kicker}
+        </Mono>
+      }
+    >
+      <div data-part="receipt" className="flex flex-col gap-5">
+        {children}
+      </div>
+    </SignedOutPanel>
   );
 }
 

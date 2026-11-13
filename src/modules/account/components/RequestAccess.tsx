@@ -180,83 +180,80 @@ export function RequestAccess({
     onSuccess: setOutcome,
   });
 
+  // The receipt takes the panel's title (R55·181).
+  if (outcome?.status === "received") {
+    return (
+      <Receipt
+        email={email}
+        isFromBlockedRegion={outcome.isFromBlockedRegion}
+      />
+    );
+  }
   return (
-    <SignedOutPanel
-      heading="Request access"
-      notice={outcome?.status === "received" ? undefined : <BackToSignUp />}
-    >
-      {outcome?.status === "received" ? (
-        <Receipt
-          email={email}
-          isFromBlockedRegion={outcome.isFromBlockedRegion}
+    <SignedOutPanel heading="Request access" notice={<BackToSignUp />}>
+      <FormElement
+        form={form}
+        dataPart="form"
+        onSubmit={() => {
+          void form.submit({ email, note });
+        }}
+      >
+        <p className="m-0 text-body">
+          We&apos;re letting runners in a few at a time. Leave your email and
+          we&apos;ll send a code when there&apos;s room.
+        </p>
+        <TextField
+          name="email"
+          label="Email"
+          type="email"
+          autoComplete="email"
+          value={email}
+          onChange={setEmail}
+          field={form.field}
+          error={form.fieldErrors.email}
         />
-      ) : (
-        <FormElement
-          form={form}
-          dataPart="form"
-          onSubmit={() => {
-            void form.submit({ email, note });
-          }}
-        >
-          <p className="m-0 text-body">
-            We&apos;re letting runners in a few at a time. Leave your email and
-            we&apos;ll send a code when there&apos;s room.
-          </p>
+        <div className="flex flex-col gap-2">
           <TextField
-            name="email"
-            label="Email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={setEmail}
-            field={form.field}
-            error={form.fieldErrors.email}
+            name="note"
+            label="Note · optional"
+            hint="Where you run, or who sent you. One line."
+            value={note}
+            onChange={(next) => {
+              const said = noteAnnouncement(note.length, next.length);
+              if (said !== undefined) form.announce(said);
+              setNote(next);
+            }}
+            field={(name, id) => withCounter(form.field(name, id), note.length)}
+            error={form.fieldErrors.note}
           />
-          <div className="flex flex-col gap-2">
-            <TextField
-              name="note"
-              label="Note · optional"
-              hint="Where you run, or who sent you. One line."
-              value={note}
-              onChange={(next) => {
-                const said = noteAnnouncement(note.length, next.length);
-                if (said !== undefined) form.announce(said);
-                setNote(next);
-              }}
-              field={(name, id) =>
-                withCounter(form.field(name, id), note.length)
-              }
-              error={form.fieldErrors.note}
-            />
-            <NoteCounter length={note.length} />
-          </div>
-          {outcome === undefined ? undefined : (
-            <FailureBand
-              kicker="Not sent"
-              message={refusalMessage(outcome)}
-              onRetry={() => {
-                void form.submit({ email, note });
-              }}
-            />
-          )}
-          <FormFailureBand
-            failure={form.failure}
-            onRetry={form.retry}
-            retryRef={form.retryRef}
+          <NoteCounter length={note.length} />
+        </div>
+        {outcome === undefined ? undefined : (
+          <FailureBand
+            kicker="Not sent"
+            message={refusalMessage(outcome)}
+            onRetry={() => {
+              void form.submit({ email, note });
+            }}
           />
-          <Turnstile
-            key={turnstile.widgetKey}
-            siteKey={siteKey}
-            action="request-access"
-            onToken={turnstile.onToken}
-          />
-          <SubmitButton
-            label="Send request"
-            pendingLabel="Sending"
-            pending={form.pending}
-          />
-        </FormElement>
-      )}
+        )}
+        <FormFailureBand
+          failure={form.failure}
+          onRetry={form.retry}
+          retryRef={form.retryRef}
+        />
+        <Turnstile
+          key={turnstile.widgetKey}
+          siteKey={siteKey}
+          action="request-access"
+          onToken={turnstile.onToken}
+        />
+        <SubmitButton
+          label="Send request"
+          pendingLabel="Sending"
+          pending={form.pending}
+        />
+      </FormElement>
     </SignedOutPanel>
   );
 }
