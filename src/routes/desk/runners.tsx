@@ -24,15 +24,14 @@ export const Route = createFileRoute("/desk/runners")({
 });
 
 function RunnersPage() {
-  const { runners, total, flagged } = Route.useLoaderData();
+  const { runners, counts } = Route.useLoaderData();
   const filter = Route.useSearch();
 
   return (
     <DeskPage current="runners">
       <DeskRunners
         runners={runners}
-        total={total}
-        flagged={flagged}
+        counts={counts}
         filter={filter}
         rename={forceRenameAction}
         ban={banUserAction}

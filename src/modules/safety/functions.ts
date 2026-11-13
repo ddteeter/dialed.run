@@ -33,7 +33,7 @@ import {
   settleOutbox,
 } from "../ops";
 
-import { flaggedCountOf, keepAccount } from "./account-flags";
+import { keepAccount } from "./account-flags";
 import { banEmail, banUser, reopenEmailFor, unbanUser } from "./bans";
 import {
   accountCount,
@@ -42,7 +42,7 @@ import {
   reviewFlaggedHandle,
 } from "../account";
 import { placeholderHandle, renameRecord } from "./rename";
-import { deskRunners, runnersWhere } from "./runners";
+import { deskRunners, runnerCounts, runnersWhere } from "./runners";
 import {
   applyCorrection,
   correctionKeyInput,
@@ -336,12 +336,10 @@ export const deskRunnersQuery = createServerFn({ method: "GET" })
       query: data.query,
       only: runnersWhere(data.filter),
     });
-    const [flagged] = await flaggedCountOf(db);
     return {
       runners: await deskRunners(db, accounts),
-      total: await accountCount(db),
-      // R47·124: the Flagged chip's count, shown at 0 too.
-      flagged: flagged?.rows ?? 0,
+      // Round 28 #8 and R47·124: every filter's count, Flagged's at 0 too.
+      counts: await runnerCounts(async (only) => accountCount(db, only)),
     };
   });
 

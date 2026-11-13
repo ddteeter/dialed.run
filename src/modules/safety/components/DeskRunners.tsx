@@ -5,6 +5,7 @@ import type { JSX } from "react";
 import { monthDayLabel } from "../../../lib/dates";
 import {
   Bracketed,
+  CHALK_PILL,
   ControlFailureBand,
   FormStatus,
   Mono,
@@ -25,7 +26,7 @@ import {
 } from "../contracts";
 import { banUserInput, forceRenameInput } from "../inputs";
 import type { RenameOutcome } from "../rename";
-import type { DeskRunner, RunnersFilter } from "../runners";
+import type { DeskRunner, RunnerCounts, RunnersFilter } from "../runners";
 import { DeskForm, PickOne } from "./DeskForm";
 import { NotRenamedBand } from "./NotRenamedBand";
 import { useFocusWhen } from "./use-focus-when";
@@ -101,10 +102,43 @@ function joinedLabel(joinedAt: number): string {
   return new Date(joinedAt * 1000).toISOString().slice(0, 10);
 }
 
+const FILTER_LABEL: Readonly<Record<RunnersFilter["filter"], string>> =
+  Object.fromEntries(
+    FILTERS.map(({ value, label }) => [value, label]),
+  ) as Record<RunnersFilter["filter"], string>;
+
+/**
+ * The line beside the title (round 28 #8): every account, newest first,
+ * until a search or a filter narrows it, then how many match and where. A
+ * filter alone counts the whole table; a search counts what it found.
+ */
+export function metaLine(
+  filter: RunnersFilter,
+  found: number,
+  counts: RunnerCounts,
+): string {
+  const query = filter.query ?? "";
+  if (query === "" && filter.filter === "all") {
+    return `${String(counts.all)} accounts · newest first`;
+  }
+  const matched = query === "" ? counts[filter.filter] : found;
+  const among =
+    filter.filter === "all" ? "" : ` in ${FILTER_LABEL[filter.filter]}`;
+  return `${String(matched)} match${among}`;
+}
+
+/**
+Round 28 #8: text links, the current one ink, semibold and underlined.
+*/
+const FILTER_CLASS =
+  "target inline-flex items-center gap-1 px-2 text-body text-quiet";
+const CURRENT_FILTER_CLASS =
+  "target inline-flex items-center gap-1 px-2 text-body font-semibold text-ink underline underline-offset-4";
+
 function Search({
   filter,
-  flagged,
-}: Readonly<{ filter: RunnersFilter; flagged: number }>): JSX.Element {
+  counts,
+}: Readonly<{ filter: RunnersFilter; counts: RunnerCounts }>): JSX.Element {
   const navigate = useNavigate();
   const [query, setQuery] = useState(filter.query ?? "");
   return (
@@ -119,7 +153,7 @@ function Search({
         });
       }}
     >
-      <label className="target flex flex-col gap-1">
+      <label className="flex flex-col gap-2">
         <Mono step="xs" className="text-muted">
           Handle or email
         </Mono>
@@ -130,31 +164,74 @@ function Search({
           onChange={(event) => {
             setQuery(event.target.value);
           }}
-          className="rounded-field border border-hairline bg-panel px-3 py-2 text-field"
+          className="min-h-field rounded-field border border-hairline bg-ground px-4 text-field"
         />
       </label>
-      <nav aria-label="Filter runners" className="flex gap-4">
+      <nav aria-label="Filter runners" className="-mx-2 flex flex-wrap">
         {FILTERS.map((option) => (
           <Link
             key={option.value}
             to="/desk/runners"
             search={{ query: filter.query, filter: option.value }}
             aria-current={option.value === filter.filter ? "page" : undefined}
-            className="target text-body"
+            className={
+              option.value === filter.filter
+                ? CURRENT_FILTER_CLASS
+                : FILTER_CLASS
+            }
           >
-            {option.label}
-            {option.value === "flagged" ? (
-              <>
-                {" "}
-                <Bracketed step="xs">{String(flagged)}</Bracketed>
-              </>
-            ) : undefined}
+            {option.label}{" "}
+            <Bracketed step="xs">{String(counts[option.value])}</Bracketed>
           </Link>
         ))}
       </nav>
     </form>
   );
 }
+
+/**
+ * A runner's state, and a hi-viz FLAGGED beside it while a flag is open,
+ * each kept whole on its line (168.3: MONO.sm brackets).
+ */
+function StateTags({ runner }: Readonly<{ runner: DeskRunner }>): JSX.Element {
+  return (
+    <span className="flex gap-2 whitespace-nowrap">
+      <Bracketed step="sm">{runner.state}</Bracketed>
+      {runner.flaggedAt === undefined ? undefined : (
+        <Bracketed step="sm" className="text-hiviz-text">
+          Flagged
+        </Bracketed>
+      )}
+    </span>
+  );
+}
+
+/**
+How the table names a runner: their handle, or a dash when they have none.
+*/
+function handleOf(runner: DeskRunner): string {
+  return runner.username === undefined ? "—" : `@${runner.username}`;
+}
+
+/**
+ * Round 54 · 168.3: every cell one line. Handles and emails truncate, with
+ * the whole value in a title and in the pane; numbers right-align. Below
+ * `wide` (not drawn; a guess) the email sits under the handle, and Joined
+ * and Runs are left to the pane, so the columns the filters are about
+ * stay on screen.
+ */
+const CELL = "px-3 py-3 align-baseline";
+const NUMBER_CELL = `${CELL} text-right`;
+const WIDE_CELL = "max-wide:hidden";
+
+const COLUMNS: readonly { heading: string; className: string }[] = [
+  { heading: "Handle", className: CELL },
+  { heading: "Email", className: `${CELL} ${WIDE_CELL}` },
+  { heading: "Joined", className: `${CELL} ${WIDE_CELL}` },
+  { heading: "Runs", className: `${NUMBER_CELL} ${WIDE_CELL}` },
+  { heading: "Reports", className: NUMBER_CELL },
+  { heading: "State", className: CELL },
+];
 
 function RunnerRow({
   runner,
@@ -171,41 +248,78 @@ function RunnerRow({
   focusName: boolean;
 }>): JSX.Element {
   const nameRef = useFocusWhen(focusName);
+  const handle = handleOf(runner);
   return (
     <tr
       aria-selected={selected}
       onClick={onSelect}
-      className="cursor-pointer border-b border-hairline"
+      // Round 27 #22: the picked row takes the panel's fill and a hi-viz
+      // bar at its left edge.
+      className="group cursor-pointer border-b border-hairline aria-selected:bg-panel"
     >
-      <td>
+      <td
+        className={`${CELL} w-full max-w-0 border-l-3 border-transparent group-aria-selected:border-hi-viz wide:w-1/4`}
+      >
         <button
           ref={nameRef}
           type="button"
-          className="target text-left"
+          title={handle}
+          className="target block w-full truncate text-left font-semibold"
           onClick={onSelect}
         >
-          {runner.username === undefined ? "—" : `@${runner.username}`}
+          {handle}
         </button>
-      </td>
-      <td>{runner.email}</td>
-      <td>
-        <Mono step="xs">{joinedLabel(runner.joinedAt)}</Mono>
-      </td>
-      <td>
-        <Mono step="xs">{String(runner.runs)}</Mono>
-      </td>
-      <td>
-        <Mono step="xs">{String(runner.reports)}</Mono>
-      </td>
-      <td>
-        <span className="flex flex-wrap gap-2">
-          <Bracketed step="xs">{runner.state}</Bracketed>
-          {runner.flaggedAt === undefined ? undefined : (
-            <Bracketed step="xs" className="text-hiviz-text">
-              Flagged
-            </Bracketed>
-          )}
+        <span
+          title={runner.email}
+          className="block truncate text-small text-quiet wide:hidden"
+        >
+          {runner.email}
         </span>
+      </td>
+      <td
+        title={runner.email}
+        className={`${CELL} ${WIDE_CELL} w-1/3 max-w-0 truncate`}
+      >
+        {runner.email}
+      </td>
+      <td className={`${CELL} ${WIDE_CELL} whitespace-nowrap`}>
+        <Mono step="md">{joinedLabel(runner.joinedAt)}</Mono>
+      </td>
+      <td className={`${NUMBER_CELL} ${WIDE_CELL}`}>
+        <Mono step="md">{String(runner.runs)}</Mono>
+      </td>
+      <td className={NUMBER_CELL}>
+        <Mono step="md">{String(runner.reports)}</Mono>
+      </td>
+      <td className={CELL}>
+        <StateTags runner={runner} />
+      </td>
+    </tr>
+  );
+}
+
+/**
+ * Where the first row would be when nothing matches: round 28 #8's words
+ * for a search, and "Nobody in {Filter}." for a filter alone (owner,
+ * 2026-11-12).
+ */
+function NoRunners({
+  filter,
+}: Readonly<{ filter: RunnersFilter }>): JSX.Element {
+  const query = filter.query ?? "";
+  return (
+    <tr>
+      <td colSpan={COLUMNS.length} className={CELL}>
+        {query === "" ? (
+          <p className="m-0 text-body">{`Nobody in ${FILTER_LABEL[filter.filter]}.`}</p>
+        ) : (
+          <span className="flex flex-col gap-1">
+            <span className="text-body">{`No runner matches "${query}".`}</span>
+            <span className="text-small text-quiet">
+              Search by handle without the @, or by the whole email.
+            </span>
+          </span>
+        )}
       </td>
     </tr>
   );
@@ -272,6 +386,8 @@ function RenamePanel({
   );
 }
 
+const CLOSE_LABELS = { reason: "Why", rule: "Which rule it breaks" } as const;
+
 function CloseAccountPanel({
   runner,
   act: ban,
@@ -285,6 +401,8 @@ function CloseAccountPanel({
     action: (values) => ban({ data: values }),
     onSuccess: onDone,
     successMessage: "Account closed.",
+    // The error summary names each field as it is labelled on screen.
+    labels: CLOSE_LABELS,
   });
   return (
     <DeskForm
@@ -298,7 +416,7 @@ function CloseAccountPanel({
     >
       <TextField
         name="reason"
-        label="Why"
+        label={CLOSE_LABELS.reason}
         value={reason}
         onChange={setReason}
         field={form.field}
@@ -310,7 +428,7 @@ function CloseAccountPanel({
           CSAM, which stays silent. */}
       <PickOne<ClosureRule>
         name="rule"
-        label="Which rule it breaks"
+        label={CLOSE_LABELS.rule}
         options={closureRules}
         optionLabels={closureRuleLabels}
         schema={closureRuleSchema}
@@ -368,13 +486,15 @@ function AccountActPanel({
       <button
         type="button"
         {...inFlight(control.pending)}
-        className={isFlag ? `target ${QUIET_PILL}` : "target text-left"}
+        // R47·124: Keep account is an outline pill, beside Close account's
+        // chalk below. Reopen is the closed runner's one action, so it is
+        // the chalk pill (round 44 #104).
+        className={isFlag ? `target ${QUIET_PILL}` : `target ${CHALK_PILL}`}
         onClick={() => {
           void control.run();
         }}
       >
-        {/* R47·124: Keep account is an outline pill. */}
-        {isFlag ? words.button : <Mono step="xs">{words.button}</Mono>}
+        {words.button}
       </button>
       <ControlFailureBand
         failure={control.failure}
@@ -423,6 +543,41 @@ function FlaggedPanel({
 }
 
 /**
+ * Round 54 · 168.3: the detail pane, sticky beside the table from `desk`
+ * and under it below that.
+ */
+const PANE_CLASS =
+  "flex flex-col gap-4 rounded-card border border-hairline bg-panel p-5 desk:sticky desk:top-6";
+
+/**
+ * Whose panels these are (round 27 #22, 168.3): the whole handle and
+ * email the table may have cut short, the state, and the counts.
+ */
+function RunnerHead({ runner }: Readonly<{ runner: DeskRunner }>): JSX.Element {
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="m-0 text-heading font-bold wrap-anywhere">
+        {handleOf(runner)}
+      </p>
+      <span className="text-small text-quiet wrap-anywhere">
+        {runner.email}
+      </span>
+      <StateTags runner={runner} />
+      <Mono step="xs" className="text-muted">
+        {`${counted(runner.runs, "run")} · ${counted(runner.reports, "report")} on name · joined ${joinedLabel(runner.joinedAt)}`}
+      </Mono>
+    </div>
+  );
+}
+
+/**
+"1 run", "14 runs".
+*/
+function counted(count: number, word: string): string {
+  return `${String(count)} ${word}${count === 1 ? "" : "s"}`;
+}
+
+/**
  * The selected runner's right column: Rename, any open flag, then Close
  * account, or Reopen once closed.
  */
@@ -456,8 +611,9 @@ function RunnerPanels({
   return (
     <aside
       aria-label={`@${runner.username ?? runner.email}`}
-      className="flex flex-col gap-4 desk:w-[var(--container-column)]"
+      className={PANE_CLASS}
     >
+      <RunnerHead runner={runner} />
       {/* R47·124: at the top of the column. */}
       {isClosed || runner.flaggedAt === undefined ? undefined : (
         <FlaggedPanel
@@ -490,18 +646,16 @@ function RunnerPanels({
 
 export function DeskRunners({
   runners,
-  total,
+  counts,
   filter,
-  flagged,
   ...acts
 }: Readonly<{
   runners: readonly DeskRunner[];
-  total: number;
   filter: RunnersFilter;
   /**
-  How many accounts are flagged, for the Flagged chip (R47·124).
+  Every filter's whole-table count (round 28 #8; Flagged's per R47·124).
   */
-  flagged: number;
+  counts: RunnerCounts;
   rename: Rename;
   ban: Ban;
   unban: OnAccount;
@@ -524,27 +678,34 @@ export function DeskRunners({
 
   return (
     <section aria-labelledby="desk-runners" className="flex flex-col gap-6">
-      <h1 id="desk-runners" className="m-0 font-display text-title uppercase">
-        Runners
-      </h1>
-      <Bracketed step="xs">{`${String(total)} accounts`}</Bracketed>
-      <Search filter={filter} flagged={flagged} />
-      <div className="flex flex-col gap-6 desk:flex-row">
-        <table className="flex-1 text-left">
+      <span className="flex flex-wrap items-baseline gap-3">
+        <h1 id="desk-runners" className="m-0 font-display text-title uppercase">
+          Runners
+        </h1>
+        <Bracketed step="sm" className="text-muted">
+          {metaLine(filter, runners.length, counts)}
+        </Bracketed>
+      </span>
+      <Search filter={filter} counts={counts} />
+      {/* 168.3: the table and a pane beside it from `desk` (the ruling's
+          1280 and 320 collapsed to the scale: a 2fr/1fr track), the pane
+          under the table below that. `items-start` keeps a tall pane from
+          stretching the rows (P3-08). */}
+      <div className="grid items-start gap-6 desk:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <table className="w-full text-left">
           <thead>
-            <tr>
-              {["Handle", "Email", "Joined", "Runs", "Reports", "State"].map(
-                (heading) => (
-                  <th key={heading} scope="col">
-                    <Mono step="xs" className="text-muted">
-                      {heading}
-                    </Mono>
-                  </th>
-                ),
-              )}
+            <tr className="border-b border-hairline">
+              {COLUMNS.map(({ heading, className }) => (
+                <th key={heading} scope="col" className={className}>
+                  <Mono step="xs" className="text-muted">
+                    {heading}
+                  </Mono>
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
+            {runners.length === 0 ? <NoRunners filter={filter} /> : undefined}
             {runners.map((runner) => (
               <RunnerRow
                 key={runner.userId}
@@ -559,7 +720,7 @@ export function DeskRunners({
           </tbody>
         </table>
         {selected === undefined ? (
-          <p className="text-small text-quiet">
+          <p className="m-0 text-small text-quiet">
             Pick a runner to rename or close.
           </p>
         ) : (

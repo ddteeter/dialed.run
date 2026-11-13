@@ -31,7 +31,7 @@ import { useHydrated } from "./use-hydrated";
  * one prop with two numbers: they differ in alignment as well as width,
  * and only at width.
  */
-type PageWidth = "panel" | "column" | "step" | "close";
+type PageWidth = "panel" | "column" | "step" | "close" | "table";
 
 const WIDTH_CLASS: Readonly<Record<PageWidth, string>> = {
   // Centred at every width. An act is a panel on the ground, and DS3 is
@@ -52,6 +52,9 @@ const WIDTH_CLASS: Readonly<Record<PageWidth, string>> = {
   // at desk, so the page is unbounded there and `NowGoRun` holds its own
   // body and bar to the measure.
   close: "mx-auto max-w-panel desk:mx-0 desk:max-w-page",
+  // The Desk's tables, Runners, Access and Review (Round 54 · 168.3): the
+  // whole width beside the rail, up to MEASURE.page, left-aligned.
+  table: "max-w-page",
 };
 
 export function Page({

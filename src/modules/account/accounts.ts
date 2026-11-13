@@ -89,8 +89,13 @@ export async function listAccounts(
 }
 
 /**
-D8's header count: every account, whatever the filter.
-*/
-export async function accountCount(db: Db): Promise<number> {
-  return db.$count(user);
+ * How many accounts there are: every one, or those `only` keeps — the same
+ * predicate `listAccounts` takes, so D8's filter counts (round 28 #8) read
+ * the very filter the list does.
+ */
+export async function accountCount(
+  db: Db,
+  only?: AccountsQuery["only"],
+): Promise<number> {
+  return db.$count(user, only?.(user.id));
 }

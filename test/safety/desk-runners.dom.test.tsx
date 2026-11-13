@@ -17,6 +17,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   DeskRunners,
+  metaLine,
   renameMessage,
 } from "../../src/modules/safety/components/DeskRunners";
 import {
@@ -74,6 +75,8 @@ const bo: DeskRunner = {
   flaggedAt: undefined,
 };
 
+const COUNTS = { all: 412, reported: 9, closed: 6, flagged: 0 } as const;
+
 async function renderDesk(overrides: Partial<Props> = {}) {
   const rename = vi
     .fn<Props["rename"]>()
@@ -84,13 +87,12 @@ async function renderDesk(overrides: Partial<Props> = {}) {
   const router = await renderWithRouter(
     <DeskRunners
       runners={[ada, bo]}
-      total={412}
+      counts={COUNTS}
       filter={{ filter: "all" }}
       rename={rename}
       ban={ban}
       unban={unban}
       keep={keep}
-      flagged={0}
       {...overrides}
     />,
   );
@@ -101,30 +103,111 @@ describe("D8's table", () => {
   it("counts every account and draws one row per runner", async () => {
     await renderDesk();
 
-    expect(screen.getByText(bracketed("412 accounts"))).toBeInTheDocument();
+    expect(
+      screen.getByText(bracketed("412 accounts · newest first")),
+    ).toBeInTheDocument();
     const [header, first, second] = screen.getAllByRole("row");
     expect(header).toHaveTextContent("HandleEmailJoinedRunsReportsState");
-    expect(first).toHaveTextContent("@adaada@example.com2025-09-04122[ACTIVE]");
-    expect(second).toHaveTextContent("—bo@example.com2023-11-1400[CLOSED]");
+    // Below `wide` the email also sits under the handle (a guess, 168.3).
+    expect(first).toHaveTextContent(
+      "@adaada@example.comada@example.com2025-09-04122[ACTIVE]",
+    );
+    expect(second).toHaveTextContent(
+      "—bo@example.combo@example.com2023-11-1400[CLOSED]",
+    );
   });
 
-  it("marks the current filter, and links the others", async () => {
+  it("keeps every cell to one line, full values in titles (168.3)", async () => {
+    await renderDesk();
+
+    const [, first] = screen.getAllByRole("row");
+    const cells = within(first ?? document.body).getAllByRole("cell");
+    const [handle, email, joined, runs, reports, state] = cells;
+    expect(within(handle ?? document.body).getByRole("button")).toHaveAttribute(
+      "title",
+      "@ada",
+    );
+    expect(within(handle ?? document.body).getByRole("button")).toHaveClass(
+      "truncate",
+    );
+    expect(email).toHaveAttribute("title", "ada@example.com");
+    expect(email).toHaveClass("truncate", "max-wide:hidden");
+    expect(joined).toHaveClass("whitespace-nowrap", "max-wide:hidden");
+    expect(runs).toHaveClass("text-right", "max-wide:hidden");
+    expect(reports).toHaveClass("text-right");
+    expect(reports).not.toHaveClass("max-wide:hidden");
+    expect(state?.firstElementChild).toHaveClass("whitespace-nowrap");
+    expect(
+      within(handle ?? document.body).getByTitle("ada@example.com"),
+    ).toHaveClass("wide:hidden");
+  });
+
+  it("marks the current filter, counts each, and links the others", async () => {
     await renderDesk({ filter: { filter: "reported", query: "ad" } });
 
     const filters = screen.getByRole("navigation", { name: "Filter runners" });
+    const reported = within(filters).getByRole("link", { name: /^Reported/u });
+    expect(reported).toHaveAttribute("aria-current", "page");
+    expect(reported).toHaveClass("font-semibold", "text-ink", "underline");
+    const all = within(filters).getByRole("link", { name: /^All/u });
+    expect(all).toHaveAttribute("href", "/desk/runners?query=ad&filter=all");
+    expect(all).not.toHaveAttribute("aria-current");
+    expect(all).toHaveClass("text-quiet");
+    expect(all).not.toHaveClass("underline");
     expect(
-      within(filters).getByRole("link", { name: "Reported" }),
-    ).toHaveAttribute("aria-current", "page");
-    expect(within(filters).getByRole("link", { name: "All" })).toHaveAttribute(
-      "href",
-      "/desk/runners?query=ad&filter=all",
-    );
-    expect(
-      within(filters).getByRole("link", { name: "All" }),
-    ).not.toHaveAttribute("aria-current");
-    expect(
-      within(filters).getByRole("link", { name: "Closed" }),
+      within(filters).getByRole("link", { name: /^Closed/u }),
     ).toHaveAttribute("href", "/desk/runners?query=ad&filter=closed");
+    expect(
+      within(filters)
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toStrictEqual(["All [412]", "Reported [9]", "Closed [6]", "Flagged [0]"]);
+  });
+
+  it("says how many match, and where (round 28 #8)", () => {
+    const counts = { all: 412, reported: 9, closed: 6, flagged: 2 };
+    expect(metaLine({ filter: "all" }, 100, counts)).toBe(
+      "412 accounts · newest first",
+    );
+    expect(metaLine({ filter: "all", query: "" }, 100, counts)).toBe(
+      "412 accounts · newest first",
+    );
+    expect(metaLine({ filter: "all", query: "qz" }, 2, counts)).toBe("2 match");
+    expect(metaLine({ filter: "reported", query: "qz" }, 2, counts)).toBe(
+      "2 match in Reported",
+    );
+    expect(metaLine({ filter: "closed" }, 100, counts)).toBe(
+      "6 match in Closed",
+    );
+    expect(metaLine({ filter: "flagged", query: "" }, 100, counts)).toBe(
+      "2 match in Flagged",
+    );
+  });
+
+  it("says no runner matches a search where the first row would be", async () => {
+    await renderDesk({ runners: [], filter: { filter: "all", query: "qz9" } });
+
+    const [, empty] = screen.getAllByRole("row");
+    expect(empty).toHaveTextContent(
+      'No runner matches "qz9".Search by handle without the @, or by the whole email.',
+    );
+    expect(within(empty ?? document.body).getByRole("cell")).toHaveAttribute(
+      "colspan",
+      "6",
+    );
+  });
+
+  it("says nobody is in a filter with no search (owner, 2026-11-12)", async () => {
+    await renderDesk({ runners: [], filter: { filter: "flagged", query: "" } });
+
+    const [, empty] = screen.getAllByRole("row");
+    expect(empty).toHaveTextContent(/^Nobody in Flagged\.$/u);
+  });
+
+  it("draws no empty row when there are runners", async () => {
+    await renderDesk({ filter: { filter: "all", query: "a" } });
+    expect(screen.queryByText(/No runner matches/u)).toBeNull();
+    expect(screen.queryByText(/Nobody in/u)).toBeNull();
   });
 
   it("searches by navigating, keeping the filter", async () => {
@@ -181,6 +264,38 @@ describe("selecting a runner", () => {
     );
   });
 
+  it("marks the picked row and heads the pane with whose it is (N3-02)", async () => {
+    const user = userEvent.setup();
+    await renderDesk();
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+
+    const row = screen.getByRole("row", { selected: true });
+    expect(row).toHaveClass("group", "aria-selected:bg-panel");
+    expect(row.firstElementChild).toHaveClass(
+      "border-l-3",
+      "border-transparent",
+      "group-aria-selected:border-hi-viz",
+    );
+    const pane = screen.getByRole("complementary", { name: "@ada" });
+    expect(pane).toHaveClass("bg-panel", "desk:sticky");
+    expect(pane.firstElementChild).toHaveTextContent(
+      "@adaada@example.com[ACTIVE]12 runs · 2 reports on name · joined 2025-09-04",
+    );
+    expect(
+      screen.queryByText("Pick a runner to rename or close."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("counts one run and one report in the singular", async () => {
+    const user = userEvent.setup();
+    await renderDesk({ runners: [{ ...ada, runs: 1, reports: 1 }] });
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+
+    expect(
+      screen.getByText("1 run · 1 report on name · joined 2025-09-04"),
+    ).toBeInTheDocument();
+  });
+
   it("names a runner with no handle by their email", async () => {
     const user = userEvent.setup();
     await renderDesk();
@@ -217,13 +332,12 @@ function NextList({
       </button>
       <DeskRunners
         runners={lists[at] ?? []}
-        total={412}
+        counts={{ ...COUNTS, flagged: 1 }}
         filter={{ filter: "all" }}
         rename={vi.fn<Props["rename"]>()}
         ban={vi.fn<Props["ban"]>()}
         unban={vi.fn<Props["unban"]>()}
         keep={vi.fn<Props["keep"]>().mockResolvedValue({ kept: true })}
-        flagged={1}
       />
     </>
   );
@@ -231,14 +345,17 @@ function NextList({
 
 describe("a flagged account (D-161 1, R47·124) and PENDING DELETE (PR#126-1)", () => {
   it("offers Flagged last among the filters, with its count, even at 0", async () => {
-    await renderDesk({ filter: { filter: "flagged" }, flagged: 0 });
+    await renderDesk({
+      filter: { filter: "flagged" },
+      counts: { ...COUNTS, flagged: 0 },
+    });
 
     const filters = screen.getByRole("navigation", { name: "Filter runners" });
     expect(
       within(filters)
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toStrictEqual(["All", "Reported", "Closed", "Flagged [0]"]);
+    ).toStrictEqual(["All [412]", "Reported [9]", "Closed [6]", "Flagged [0]"]);
     const chip = within(filters).getByRole("link", { name: /^Flagged/u });
     expect(chip).toHaveAttribute("aria-current", "page");
     expect(chip).toHaveAttribute("href", "/desk/runners?filter=flagged");
@@ -246,7 +363,7 @@ describe("a flagged account (D-161 1, R47·124) and PENDING DELETE (PR#126-1)", 
   });
 
   it("counts the flagged accounts on the chip", async () => {
-    await renderDesk({ flagged: 3 });
+    await renderDesk({ counts: { ...COUNTS, flagged: 3 } });
 
     const filters = screen.getByRole("navigation", { name: "Filter runners" });
     expect(
@@ -542,6 +659,18 @@ describe("Close account (D3)", () => {
     expect(ban).not.toHaveBeenCalled();
   });
 
+  it("names both empty fields in the summary by their labels (P3-07)", async () => {
+    const user = userEvent.setup();
+    await renderDesk();
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+
+    await user.click(screen.getByRole("button", { name: "Close account" }));
+
+    expect(await screen.findByText("2 fields need a fix.")).toBeInTheDocument();
+    expect(screen.getByText(/^Why — /u)).toBeInTheDocument();
+    expect(screen.getByText(/^Which rule it breaks — /u)).toBeInTheDocument();
+  });
+
   it("offers a closed account its reason and Reopen instead", async () => {
     const user = userEvent.setup();
     const { unban } = await renderDesk();
@@ -557,7 +686,8 @@ describe("Close account (D3)", () => {
       screen.queryByRole("button", { name: "Close account" }),
     ).not.toBeInTheDocument();
     const reopen = screen.getByRole("button", { name: "Reopen account" });
-    expect(reopen).toHaveClass("target", "text-left");
+    // Round 44 #104: the closed runner's one action is the chalk pill.
+    expect(reopen).toHaveClass("target", "rounded-pill", "bg-ink");
     await user.click(reopen);
 
     expect(unban).toHaveBeenCalledWith({ data: { userId: "u-bo" } });

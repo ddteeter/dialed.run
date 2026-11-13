@@ -102,8 +102,10 @@ export {
 
 export {
   deskRunners,
+  runnerCounts,
   runnersWhere,
   type DeskRunner,
+  type RunnerCounts,
   type ListedAccount,
   type RunnerState,
   type RunnersFilter,
