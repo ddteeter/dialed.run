@@ -181,6 +181,10 @@ describe("/takedown", () => {
     );
     const user = userEvent.setup();
     await fillIn(user);
+    // Signed out, so the ink pill, not the product's pink (R54·167.1).
+    expect(
+      screen.getByRole("button", { name: "Send the request" }),
+    ).toHaveClass("rounded-pill", "bg-ink");
     await user.click(screen.getByRole("button", { name: "Send the request" }));
 
     expect(await screen.findByText("Request sent.")).toBeInTheDocument();

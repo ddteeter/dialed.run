@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import { CALL_VERDICT_THRESHOLD } from "../../src/lib/contracts";
 import { NowGoRun } from "../../src/modules/onboarding/components/NowGoRun";
+import { ACTION_PRIMARY, SECONDARY_PILL } from "../../src/ui";
 import { expectConsentBeforeButton } from "../ui/strava-consent";
 
 /**
@@ -113,6 +114,20 @@ describe("NowGoRun", () => {
       "href",
       "/",
     );
+    // R54·167.1: the product's pink caps primary, "Done for now" its
+    // hairline pill, side by side from 720 (167.2).
+    const upload = screen.getByRole("link", { name: "I have a run to upload" });
+    expect(upload).toHaveClass("target", ...ACTION_PRIMARY.split(" "));
+    expect(screen.getByRole("link", { name: "Done for now" })).toHaveClass(
+      "target",
+      ...SECONDARY_PILL.split(" "),
+    );
+    expect(upload.parentElement).toHaveClass(
+      "flex",
+      "flex-col",
+      "gap-3",
+      "wide:flex-row",
+    );
   });
 
   it("says what connecting Strava does, next to the offer", async () => {
@@ -202,7 +217,11 @@ describe("NowGoRun", () => {
     const heading = screen.getByRole("heading", { name: "Now go run." });
     const band = heading.parentElement;
     expect(band).not.toHaveClass("desk:max-w-column");
-    expect(band?.firstElementChild).toHaveClass("flex", "gap-1", "desk:max-w-column");
+    expect(band?.firstElementChild).toHaveClass(
+      "flex",
+      "gap-1",
+      "desk:max-w-column",
+    );
     expect(band?.nextElementSibling).toHaveClass(
       "flex",
       "flex-col",
@@ -215,7 +234,13 @@ describe("NowGoRun", () => {
     await renderScreen();
 
     const list = screen.getByRole("list");
-    expect(list).toHaveClass("border-t", "border-hairline", "m-0", "list-none", "p-0");
+    expect(list).toHaveClass(
+      "border-t",
+      "border-hairline",
+      "m-0",
+      "list-none",
+      "p-0",
+    );
     for (const row of screen.getAllByRole("listitem")) {
       expect(row).toHaveClass("border-b", "border-hairline", "py-3");
       expect(row.firstElementChild).toHaveClass("text-muted");

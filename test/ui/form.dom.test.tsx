@@ -25,6 +25,7 @@ import {
   FormFailureBand,
   FormField,
   FormStatus,
+  ACTION_PRIMARY,
   INK_PILL,
   PendingLabel,
   QUIET_CANCEL,
@@ -3123,6 +3124,23 @@ describe("the primary by surface, and its width (R54·167)", () => {
         "rounded-pill",
         "bg-ink",
         "min-h-control",
+        ...HUG_AT_WIDE,
+      ]),
+    );
+  });
+
+  it("gives a product press that is not a submit the pink caps primary", () => {
+    expect(ACTION_PRIMARY.split(" ")).not.toContain("target");
+    expect(ACTION_PRIMARY.split(" ")).toStrictEqual(
+      expect.arrayContaining([
+        "cursor-pointer",
+        "text-body",
+        "rounded-card",
+        "bg-action",
+        "min-h-13",
+        "font-display",
+        "uppercase",
+        "text-accent-ink",
         ...HUG_AT_WIDE,
       ]),
     );

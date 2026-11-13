@@ -89,6 +89,7 @@ export function TakedownConfirm({
           retryRef={form.retryRef}
         />
         <SubmitButton
+          tone="ink"
           label="Confirm the request"
           pendingLabel="Confirming the request"
           pending={form.pending}

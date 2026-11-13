@@ -913,6 +913,13 @@ export const CHALK_PILL = `cursor-pointer text-body ${SUBMIT_TONE.chalk}`;
 export const INK_PILL = `cursor-pointer text-body ${SUBMIT_TONE.ink}`;
 
 /**
+ * The product flow's primary as a class, for a press that is not a form's
+ * submit: P3's "I have a run to upload" (R54·167.1). The site writes
+ * `target` beside it, as it does for the pills.
+ */
+export const ACTION_PRIMARY = `cursor-pointer text-body ${SUBMIT_TONE.action}`;
+
+/**
  * A Desk decision that is not the bar's main one (Keep, Approve, Decline),
  * beside a literal `target` (the hit-area check reads each site's class):
  * an outline pill in the ground's ink, 44 high (round 44 #105). One chalk

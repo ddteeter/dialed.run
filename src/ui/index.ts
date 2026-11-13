@@ -36,6 +36,7 @@ export {
   ChoiceList,
   ControlFailureBand,
   FailureBand,
+  ACTION_PRIMARY,
   CHALK_PILL,
   FieldMessage,
   FormElement,
