@@ -56,9 +56,13 @@ describe("SetConditionsSheet: the picks", () => {
     expect(
       within(dialog).getByRole("button", { name: "Set conditions" }),
     ).toBeVisible();
-    await user.click(within(dialog).getByRole("radio", { name: "41–50°" }));
+    await user.click(
+      within(dialog).getByRole("radio", { name: "41 to 50 degrees" }),
+    );
     expect(
-      within(dialog).getByRole("button", { name: "Set 41–50° and rain" }),
+      within(dialog).getByRole("button", {
+        name: "Set 41 to 50 degrees and rain",
+      }),
     ).toBeVisible();
   });
 
@@ -94,11 +98,15 @@ describe("SetConditionsSheet: the picks", () => {
     try {
       render(sheet({}, onDone));
       const dialog = await openPicks(user);
-      await user.click(within(dialog).getByRole("radio", { name: "59–68°" }));
+      await user.click(
+        within(dialog).getByRole("radio", { name: "59 to 68 degrees" }),
+      );
       await user.click(within(dialog).getByRole("radio", { name: "Dry" }));
 
       await user.click(
-        within(dialog).getByRole("button", { name: "Set 59–68° and dry" }),
+        within(dialog).getByRole("button", {
+          name: "Set 59 to 68 degrees and dry",
+        }),
       );
 
       await waitFor(() => {

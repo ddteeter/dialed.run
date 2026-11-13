@@ -8,7 +8,7 @@ import {
   bandFloorOf,
   bandMiddleC,
   conditionsPickSchema,
-  setBandLabel,
+  setBandForms,
   canSetConditions,
 } from "../../src/modules/runs/run-conditions";
 
@@ -32,7 +32,7 @@ describe("bandMiddleC", () => {
   });
 });
 
-describe("bandFloorOf and setBandLabel: a set band reads back as its range", () => {
+describe("bandFloorOf and setBandForms: a set band reads back as its range", () => {
   it("finds the band a stored middle came from", () => {
     expect(bandFloorOf(12.5)).toBe(10);
     expect(bandFloorOf(bandMiddleC(-20))).toBe(-20);
@@ -40,8 +40,14 @@ describe("bandFloorOf and setBandLabel: a set band reads back as its range", () 
 
   it("labels it in the runner's unit, never as the middle", () => {
     // Round 26, item 2: "SET · 41–50° · RAIN", never 45.5°.
-    expect(setBandLabel(7.5, "f")).toBe("41–50°");
-    expect(setBandLabel(7.5, "c")).toBe("5–10°");
+    expect(setBandForms(7.5, "f")).toStrictEqual({
+      shown: "41–50°",
+      said: "41 to 50 degrees",
+    });
+    expect(setBandForms(7.5, "c")).toStrictEqual({
+      shown: "5–10°",
+      said: "5 to 10 degrees",
+    });
   });
 });
 

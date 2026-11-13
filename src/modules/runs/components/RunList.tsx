@@ -14,8 +14,8 @@ import {
   WeatherAttribution,
 } from "../../../ui";
 import {
-  setBandLabel,
   hasProvidersReading,
+  setBandForms,
   SKY_WORDS,
 } from "../run-conditions";
 import type { RunConditions, RunSummary } from "../service";
@@ -220,16 +220,22 @@ function MetaLine({
 /**
  * The badge of a run whose conditions the runner set: `SET · 41–50° ·
  * RAIN` (round 26, item 2) — the range and the sky, never the stored
- * middle. A band set before the sheet asked for a sky has none to show.
+ * middle — said "Set, 41 to 50 degrees, rain" (round 53 · 162.3). A band
+ * set before the sheet asked for a sky has none to show.
  */
 function setBadge(
   conditions: Pick<RunConditions, "tempC" | "sky">,
   units: Units,
-): string {
-  const band = `Set · ${setBandLabel(conditions.tempC, units.temp)}`;
-  return conditions.sky === undefined
-    ? band
-    : `${band} · ${SKY_WORDS[conditions.sky]}`;
+): { shown: string; said: string } {
+  const band = setBandForms(conditions.tempC, units.temp);
+  const sky =
+    conditions.sky === undefined ? undefined : SKY_WORDS[conditions.sky];
+  return sky === undefined
+    ? { shown: `Set · ${band.shown}`, said: `Set, ${band.said}` }
+    : {
+        shown: `Set · ${band.shown} · ${sky}`,
+        said: `Set, ${band.said}, ${sky.toLowerCase()}`,
+      };
 }
 
 const FACT_BADGE =
@@ -257,9 +263,11 @@ function RunBadge({
   if (run.conditions !== undefined) {
     return (
       <Mono step="xs" className={FACT_BADGE}>
-        {run.conditions.isSetByYou
-          ? setBadge(run.conditions, units)
-          : "Conditions"}
+        {run.conditions.isSetByYou ? (
+          <Spoken {...setBadge(run.conditions, units)} />
+        ) : (
+          "Conditions"
+        )}
       </Mono>
     );
   }

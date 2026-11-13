@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import type { ManualSky, Units } from "../../../lib/contracts";
 import { manualSkies } from "../../../lib/contracts";
-import { bandLabel } from "../../../lib/contracts/temperature";
+import { bandForms } from "../../../lib/contracts/measures";
 import {
   ChoiceList,
   ControlFailureBand,
@@ -14,6 +14,7 @@ import {
   Mono,
   PendingLabel,
   Sheet,
+  Spoken,
   SubmitButton,
   useControlAction,
   useFormSubmit,
@@ -179,16 +180,26 @@ function SetConditionsForm({
     labels: { bandFloorC: "How warm", sky: "Sky" },
     onSuccess: onDone,
   });
+  // Each band drawn "41–50°" and said "41 to 50 degrees" (round 53 ·
+  // 162.3), on its radio and in the submit's "Set 41–50° and dry".
+  const bands = SET_CONDITION_BANDS.map(
+    (floor) => [String(floor), bandForms(floor, units.temp)] as const,
+  );
   const bandLabels = Object.fromEntries(
-    SET_CONDITION_BANDS.map((floor) => [
-      String(floor),
-      bandLabel(floor, units.temp),
-    ]),
+    bands.map(([floor, forms]) => [floor, forms.shown]),
+  );
+  const bandSaid = Object.fromEntries(
+    bands.map(([floor, forms]) => [floor, forms.said]),
   );
   const label =
-    band === "" || sky === ""
-      ? "Set conditions"
-      : `Set ${bandLabel(Number(band), units.temp)} and ${SKY_WORDS[sky].toLowerCase()}`;
+    band === "" || sky === "" ? (
+      "Set conditions"
+    ) : (
+      <SetLabel
+        band={bandForms(Number(band), units.temp)}
+        sky={SKY_WORDS[sky].toLowerCase()}
+      />
+    );
 
   return (
     <form
@@ -217,6 +228,7 @@ function SetConditionsForm({
         layout="chip-grid"
         options={BAND_OPTIONS}
         optionLabels={bandLabels}
+        optionSaid={bandSaid}
         value={band}
         field={form.field}
         onChange={setBand}
@@ -244,5 +256,23 @@ function SetConditionsForm({
         pending={form.pending}
       />
     </form>
+  );
+}
+
+/**
+The submit once both are picked: "Set 41–50° and dry", said "Set 41 to 50 degrees and dry".
+*/
+function SetLabel({
+  band,
+  sky,
+}: Readonly<{
+  band: { shown: string; said: string };
+  sky: string;
+}>): JSX.Element {
+  return (
+    <Spoken
+      shown={`Set ${band.shown} and ${sky}`}
+      said={`Set ${band.said} and ${sky}`}
+    />
   );
 }

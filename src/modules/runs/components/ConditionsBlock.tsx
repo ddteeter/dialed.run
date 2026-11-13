@@ -4,7 +4,7 @@ import type { Units } from "../../../lib/contracts";
 import { measuredLine } from "../../../lib/contracts/measures";
 import { precipClassOf } from "../../../lib/contracts/temperature";
 import { Mono, PendingLabel, Spoken, WeatherAttribution } from "../../../ui";
-import { setBandLabel, SKY_WORDS } from "../run-conditions";
+import { setBandForms, SKY_WORDS } from "../run-conditions";
 import type { RunConditions, RunSummary } from "../service";
 
 /**
@@ -34,23 +34,22 @@ export function ConditionsBlock({
   // picked — never its stored middle (round 26, item 2).
   const { sky } = conditions;
   // The provider's reading is a line of measures (round 52 #158): drawn
-  // as two sizes, said as one line in words. A band the runner set has no
-  // unit letter, so it is drawn and said as it is.
+  // as two sizes, said as one line in words. A band the runner set is a
+  // range, said as one (round 53 · 162.3), then the sky they picked.
   const reading = {
     kind: "temp",
     tempC: conditions.tempC,
     withLetter: true,
   } as const;
-  const said = measuredLine(
-    [[reading, { kind: "word", word: precipClassOf(conditions.precipMm) }]],
-    units,
-  ).said;
+  const band = setBandForms(conditions.tempC, units.temp);
+  const provided = precipClassOf(conditions.precipMm);
+  const precip = conditions.isSetByYou ? sky && SKY_WORDS[sky] : provided;
   const temp = conditions.isSetByYou
-    ? setBandLabel(conditions.tempC, units.temp)
+    ? band.shown
     : measuredLine([[reading]], units).shown;
-  const precip = conditions.isSetByYou
-    ? sky && SKY_WORDS[sky]
-    : precipClassOf(conditions.precipMm);
+  const said = conditions.isSetByYou
+    ? setSaid(band.said, precip)
+    : measuredLine([[reading, { kind: "word", word: provided }]], units).said;
   return (
     <div
       data-slot="conditions"
@@ -64,20 +63,13 @@ export function ConditionsBlock({
           : "Conditions · auto-attached"}
       </Mono>
       <p className="m-0 flex items-baseline gap-2">
-        <span
-          aria-hidden={conditions.isSetByYou ? undefined : true}
-          className="font-display text-display"
-        >
+        <span aria-hidden="true" className="font-display text-display">
           {temp}
         </span>
         <Mono step="sm" className="text-teal">
-          <span aria-hidden={conditions.isSetByYou ? undefined : true}>
-            {precip}
-          </span>
+          <span aria-hidden="true">{precip}</span>
         </Mono>
-        {conditions.isSetByYou ? undefined : (
-          <span className="sr-only">{said}</span>
-        )}
+        <span className="sr-only">{said}</span>
       </p>
       {conditions.isSetByYou ? undefined : (
         <>
@@ -106,6 +98,14 @@ export function ConditionsBlock({
       )}
     </div>
   );
+}
+
+/**
+ * A set band as it is said: "41 to 50 degrees, rain", or the band alone
+ * when it was set before the sheet asked for a sky.
+ */
+function setSaid(band: string, sky: string | undefined): string {
+  return sky === undefined ? band : `${band}, ${sky.toLowerCase()}`;
 }
 
 /**

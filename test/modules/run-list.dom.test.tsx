@@ -189,8 +189,12 @@ describe("R: the badges, and the one breath", () => {
     const row = onlyRow();
     expect(within(row).getByText("Set by you")).toHaveClass("text-label");
     // Round 26, item 2: the range and the sky, never the stored middle.
-    expect(within(row).getByText("Set · 50–59° · Rain")).toHaveClass(
-      "border-hairline",
+    const badge = within(row).getByText("Set · 50–59° · Rain");
+    expect(badge).toHaveAttribute("aria-hidden", "true");
+    expect(badge.parentElement).toHaveClass("border-hairline");
+    // Round 53 · 162.3: the band is said as a range.
+    expect(within(row).getByText("Set, 50 to 59 degrees, rain")).toHaveClass(
+      "sr-only",
     );
     expect(row).not.toHaveTextContent("55°");
   });
@@ -297,10 +301,14 @@ describe("R: R2b from the list", () => {
     await user.click(
       within(sheet).getByRole("button", { name: "Set conditions" }),
     );
-    await user.click(within(sheet).getByRole("radio", { name: "50–59°" }));
+    await user.click(
+      within(sheet).getByRole("radio", { name: "50 to 59 degrees" }),
+    );
     await user.click(within(sheet).getByRole("radio", { name: "Rain" }));
     await user.click(
-      within(sheet).getByRole("button", { name: "Set 50–59° and rain" }),
+      within(sheet).getByRole("button", {
+        name: "Set 50 to 59 degrees and rain",
+      }),
     );
 
     await waitFor(() => {
