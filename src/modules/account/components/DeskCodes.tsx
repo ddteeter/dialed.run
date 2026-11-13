@@ -65,6 +65,13 @@ export function madeLine(code: string, isCopied: boolean): string {
 }
 
 /**
+A code's label, or NO LABEL when it was made without one.
+*/
+function labelOf(code: DeskCode): string {
+  return code.label ?? "No label";
+}
+
+/**
 How many of a code's runners its row names before "+ N more" (R55·200).
 */
 const FIRST_USERS = 5;
@@ -324,7 +331,7 @@ function CodeWho({
   code,
   onMore,
 }: Readonly<{ code: DeskCode; onMore: () => void }>): JSX.Element {
-  const label = code.label ?? "No label";
+  const label = labelOf(code);
   const more = code.usedBy.length - FIRST_USERS;
   return (
     <span className="flex min-w-0 basis-full flex-col gap-1 wide:basis-auto">
@@ -378,7 +385,7 @@ function CodePane({ code }: Readonly<{ code: DeskCode }>): JSX.Element {
         <h2 className="m-0">
           <Mono step="sm">{code.code}</Mono>
         </h2>
-        <span className="wrap-anywhere">{code.label ?? "No label"}</span>
+        <span className="wrap-anywhere">{labelOf(code)}</span>
         <Mono step="xs" className="text-muted">
           {`${usedLine(code.usedBy.length)} · ${usesLine(code)}`}
         </Mono>

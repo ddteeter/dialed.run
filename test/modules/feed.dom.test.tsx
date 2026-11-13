@@ -20,6 +20,7 @@ import {
 } from "./feed-fixtures";
 import { pointConditions } from "../feed/conditions-fixture";
 import { WEATHER_CREDIT } from "../ui/weather-credit";
+import { expectTheColumn } from "../ui/the-column";
 
 /**
  * The feed's shell (E1 and E2-lite): which tab it opens on, the queue
@@ -73,6 +74,7 @@ describe("Feed: the tabs", () => {
   it("opens on Following once the runner follows anyone, marked in the action pink", async () => {
     await renderFeedScreen(feed({ followeeCount: 3 }));
 
+    expectTheColumn();
     const following = screen.getByRole("button", { name: "Following" });
     // A view switch, not a page: pressed, never "current page".
     expect(following).toHaveAttribute("aria-pressed", "true");

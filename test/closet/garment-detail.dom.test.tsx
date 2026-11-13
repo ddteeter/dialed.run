@@ -12,6 +12,7 @@ import { z } from "zod";
 import { GarmentDetail } from "../../src/modules/closet/components/GarmentDetail";
 import type { LinkDetail } from "../../src/modules/closet/garment-link";
 import type { WardrobeItemRow } from "../../src/modules/closet/service";
+import { expectTheColumn } from "../ui/the-column";
 
 /**
  * Garment detail against a fully populated row — every column carrying a
@@ -171,6 +172,7 @@ describe("GarmentDetail: the shop page and its one line (round 43 #94-95)", () =
     // and E shows nothing of it (#95).
     await renderWithRouter(populated());
 
+    expectTheColumn();
     expect(screen.queryByText("janji.com")).not.toBeInTheDocument();
     expect(document.querySelector('a[href^="https://"]')).toBeNull();
     expect(document.querySelector('[data-part="shop-page"]')).toBeNull();

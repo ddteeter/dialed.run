@@ -14,6 +14,7 @@ import {
 } from "../../src/modules/feed/components/RetractEntry";
 import { DeleteRun } from "../../src/modules/runs/components/DeleteRun";
 import { ICONS } from "../../src/ui/icons";
+import { expectTheColumn } from "../ui/the-column";
 
 /**
  * SAF-3's controls: who sees them, what each sheet says, what each one
@@ -58,6 +59,7 @@ describe("RetractEntry: D's foot (round 27 #26)", () => {
 
   it("offers the owner the entry under a YOURS kicker, and no photo", async () => {
     await renderWithRouter(retractEntry({}));
+    expectTheColumn();
     expect(
       screen
         .getAllByRole("button", { name: /^Delete/ })
