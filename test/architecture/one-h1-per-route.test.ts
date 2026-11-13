@@ -128,8 +128,10 @@ function countOf(source: string, pattern: RegExp): number {
  * exposed while the page's is. This scan reads source, not what is
  * exposed, so it is told: the push frame's file is not followed. What is
  * exposed is counted where it can be, in the dom tests of the screens
- * that push (attach-kit and verdict-form: one level-1 heading, pushed or
- * not).
+ * that push: test/modules/attach-kit.dom.test.tsx ("draws the pushed page
+ * in A2's place…") and test/modules/verdict-form.dom.test.tsx (the
+ * specifics page's test) each assert exactly one exposed level-1 heading
+ * while pushed.
  */
 const STANDS_IN_FOR_THE_SCREEN = new Set([
   "src/modules/feed/components/PushPage.tsx",
