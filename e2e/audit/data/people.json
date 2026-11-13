@@ -1,0 +1,270 @@
+{
+  "maya": {
+    "id": "audit-maya",
+    "handle": "maya_runs",
+    "name": "Maya Okonkwo-Reyes",
+    "city": "Chicago, IL",
+    "lat": 41.88,
+    "lng": -87.63,
+    "timeZone": "America/Chicago"
+  },
+  "runners": [
+    {
+      "id": "audit-r01",
+      "handle": "tomasz_k",
+      "city": "Warsaw, Poland",
+      "lat": 52.23,
+      "lng": 21.01,
+      "followed": true,
+      "followsMaya": true,
+      "long": false,
+      "entries": 9
+    },
+    {
+      "id": "audit-r02",
+      "handle": "priya_trails",
+      "city": "Boulder, CO",
+      "lat": 40.01,
+      "lng": -105.27,
+      "followed": true,
+      "followsMaya": true,
+      "long": false,
+      "entries": 7
+    },
+    {
+      "id": "audit-r03",
+      "handle": "jonas_berg",
+      "city": "Oslo, Norway",
+      "lat": 59.91,
+      "lng": 10.75,
+      "followed": true,
+      "followsMaya": false,
+      "long": false,
+      "entries": 6
+    },
+    {
+      "id": "audit-r04",
+      "handle": "lena_moves",
+      "city": "Berlin, Germany",
+      "lat": 52.52,
+      "lng": 13.4,
+      "followed": true,
+      "followsMaya": true,
+      "long": false,
+      "entries": 5
+    },
+    {
+      "id": "audit-r05",
+      "handle": "sam_okafor",
+      "city": "London, UK",
+      "lat": 51.51,
+      "lng": -0.13,
+      "followed": true,
+      "followsMaya": false,
+      "long": false,
+      "entries": 5
+    },
+    {
+      "id": "audit-r06",
+      "handle": "bartholomew_runs_far",
+      "city": "Llanfairpwllgwyngyllgogerychwyrndrobwll, Isle of Anglesey, Wales",
+      "lat": 53.22,
+      "lng": -4.2,
+      "followed": true,
+      "followsMaya": true,
+      "long": true,
+      "entries": 6
+    },
+    {
+      "id": "audit-r07",
+      "handle": "kit_nakamura",
+      "city": "Seattle, WA",
+      "lat": 47.66,
+      "lng": -122.3,
+      "followed": true,
+      "followsMaya": false,
+      "long": false,
+      "entries": 4
+    },
+    {
+      "id": "audit-r08",
+      "handle": "run_with_jo",
+      "city": "Chicago, IL",
+      "lat": 41.95,
+      "lng": -87.65,
+      "followed": true,
+      "followsMaya": true,
+      "long": false,
+      "entries": 4
+    },
+    {
+      "id": "audit-r09",
+      "handle": "runs_on_coffee",
+      "city": "Portland, OR",
+      "lat": 45.53,
+      "lng": -122.66,
+      "followed": false,
+      "followsMaya": true,
+      "long": false,
+      "entries": 2
+    },
+    {
+      "id": "audit-r10",
+      "handle": "trailrun_tess",
+      "city": "Asheville, NC",
+      "lat": 35.6,
+      "lng": -82.55,
+      "followed": false,
+      "followsMaya": true,
+      "long": false,
+      "entries": 2
+    },
+    {
+      "id": "audit-r11",
+      "handle": "nightrun_nico",
+      "city": "Madrid, Spain",
+      "lat": 40.42,
+      "lng": -3.7,
+      "followed": false,
+      "followsMaya": false,
+      "long": false,
+      "entries": 2
+    },
+    {
+      "id": "audit-r12",
+      "handle": "runner_rae",
+      "city": "Toronto, ON",
+      "lat": 43.65,
+      "lng": -79.38,
+      "followed": false,
+      "followsMaya": true,
+      "long": false,
+      "entries": 2
+    },
+    {
+      "id": "audit-r13",
+      "handle": "slow_run_club",
+      "city": "Melbourne, Australia",
+      "lat": -37.81,
+      "lng": 144.96,
+      "followed": false,
+      "followsMaya": false,
+      "long": false,
+      "entries": 1
+    },
+    {
+      "id": "audit-r14",
+      "handle": "sunrise_runs",
+      "city": "Denver, CO",
+      "lat": 39.74,
+      "lng": -104.99,
+      "followed": false,
+      "followsMaya": true,
+      "long": false,
+      "entries": 2
+    },
+    {
+      "id": "audit-r15",
+      "handle": "rundown_ray",
+      "city": "Austin, TX",
+      "lat": 30.27,
+      "lng": -97.74,
+      "followed": false,
+      "followsMaya": false,
+      "long": false,
+      "entries": 1
+    },
+    {
+      "id": "audit-r16",
+      "handle": "dawn_patrol_run",
+      "city": "Minneapolis, MN",
+      "lat": 44.95,
+      "lng": -93.2,
+      "followed": false,
+      "followsMaya": true,
+      "long": false,
+      "entries": 2
+    },
+    {
+      "id": "audit-r17",
+      "handle": "will_run_for_tacos",
+      "city": "San Diego, CA",
+      "lat": 32.72,
+      "lng": -117.16,
+      "followed": false,
+      "followsMaya": false,
+      "long": false,
+      "entries": 1
+    },
+    {
+      "id": "audit-r18",
+      "handle": "runfluencer_zed",
+      "city": "Los Angeles, CA",
+      "lat": 34.05,
+      "lng": -118.24,
+      "followed": false,
+      "followsMaya": false,
+      "long": false,
+      "entries": 1
+    },
+    {
+      "id": "audit-r19",
+      "handle": "the_run_commute",
+      "city": "Amsterdam, Netherlands",
+      "lat": 52.37,
+      "lng": 4.9,
+      "followed": false,
+      "followsMaya": true,
+      "long": false,
+      "entries": 1
+    },
+    {
+      "id": "audit-r20",
+      "handle": "marathon_mo",
+      "city": "Boston, MA",
+      "lat": 42.36,
+      "lng": -71.06,
+      "followed": false,
+      "followsMaya": true,
+      "long": false,
+      "entries": 2
+    }
+  ],
+  "banned": [
+    {
+      "id": "audit-b01",
+      "handle": "discount_kit_deals",
+      "reason": "Spam accounts: the same shop link in every kit."
+    },
+    {
+      "id": "audit-b02",
+      "handle": "xx_fastest_xx",
+      "reason": "Harassment after a warning."
+    },
+    {
+      "id": "audit-b03",
+      "handle": "totally_real_brand",
+      "reason": "Impersonating a brand to sell counterfeit shoes through profile links and run titles, repeatedly, after two removals."
+    }
+  ],
+  "leaving": [
+    {
+      "id": "audit-d01",
+      "handle": "leaving_lou"
+    },
+    {
+      "id": "audit-d02",
+      "handle": "gone_girl_runs"
+    }
+  ],
+  "unconfirmed": [
+    {
+      "id": "audit-u01",
+      "handle": "unconfirmed_una"
+    },
+    {
+      "id": "audit-u02",
+      "handle": "new_here_2026"
+    }
+  ]
+}

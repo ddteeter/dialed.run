@@ -1,0 +1,8 @@
+{
+  "bands": [
+    { "belowC": 0, "slots": [["thermal"], [null, "vest"]] },
+    { "belowC": 10, "slots": [{ "wet": ["shell"], "dry": [null] }] }
+  ],
+  "warm": [["singlet", "tee"]],
+  "shoes": { "wet": ["trail"], "dry": ["road"] }
+}

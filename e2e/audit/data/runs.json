@@ -1,0 +1,107 @@
+{
+  "titles": [
+    "Morning run",
+    "Lakefront easy miles",
+    "Tempo Tuesday",
+    "Long run with the club",
+    "Recovery shuffle",
+    "Track: 6 x 800",
+    "Lunch loop",
+    "Evening run",
+    "Hill repeats on Cricket Hill",
+    "Sunday long run",
+    "Progression run",
+    "Shakeout",
+    "Trail miles at Palos",
+    "Fartlek in the rain",
+    "Commute run home",
+    "Midweek medium-long"
+  ],
+  "longTitles": [
+    "Sunday long run out along the lakefront path to the museum campus and back by way of the river walk, with strides at the end",
+    "Double-threshold-Wednesday-session-number-two-at-the-track-after-work-with-the-club",
+    "The one where it would not stop raining and I kept going anyway because the plan said twenty-two"
+  ],
+  "tags": {
+    "under": ["cold_first_mile", "hands_cold", "wind_cut_through"],
+    "over": ["overheated_late", "sleeves_damp", "hands_sweaty"],
+    "dialed": ["perfect_warmup"]
+  },
+  "verdictCycle": [0, 0, -1, 0, 1, 0, -2, 0, 0, 2, -1, 0, 1, 0],
+  "recentVerdicts": [0, 0, -1, 0, 1],
+  "distancesM": [
+    5000, 8047, 9978, 12875, 16093, 21097, 6437, 32187, 4023, 11265
+  ],
+  "mayaSources": ["file", "garmin", "manual", "file"],
+  "otherSources": ["file", "garmin", "manual"],
+  "efforts": ["easy", "steady", "workout", "easy", "race", null],
+  "devices": [null, "Forerunner 265"],
+  "skies": ["clear", "overcast", "partly cloudy", "clear"],
+  "seasons": {
+    "bands": [
+      {
+        "withinDays": 14,
+        "feelsC": 2
+      },
+      {
+        "withinDays": 45,
+        "feelsC": 8
+      },
+      {
+        "withinDays": 75,
+        "feelsC": 15
+      },
+      {
+        "withinDays": 105,
+        "feelsC": 22
+      }
+    ],
+    "beyondC": 28
+  },
+  "wet": {
+    "precipMm": 4.2,
+    "condition": "rain"
+  },
+  "damp": {
+    "precipMm": 1,
+    "condition": "light rain"
+  },
+  "rightNow": {
+    "feelsC": 3,
+    "precipMm": 0,
+    "condition": "clear"
+  },
+  "maya": {
+    "runs": 48,
+    "modes": {
+      "indoor": [9, 23],
+      "manual": [14, 30]
+    },
+    "unjudged": [0, 4],
+    "longTitles": [
+      {
+        "run": 7,
+        "title": 0
+      },
+      {
+        "run": 19,
+        "title": 1
+      }
+    ]
+  },
+  "backlog": {
+    "runs": 15,
+    "modes": {
+      "pending": [0],
+      "indoor": [3],
+      "failed": [6],
+      "manual": [9]
+    },
+    "longTitles": [
+      {
+        "run": 4,
+        "title": 2
+      }
+    ]
+  }
+}

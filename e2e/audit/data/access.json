@@ -1,0 +1,135 @@
+{
+  "operator": "e2e-desk-operator",
+  "codes": [
+    {
+      "code": "AUDIT-TRACK-1000",
+      "label": "Tuesday track club",
+      "maxUses": 25,
+      "used": 11,
+      "revoked": false
+    },
+    {
+      "code": "AUDIT-FAMILY-1037",
+      "label": "Friends and family",
+      "maxUses": 10,
+      "used": 10,
+      "revoked": false
+    },
+    {
+      "code": "AUDIT-FLEET-1074",
+      "label": "Fleet Feet Old Town demo night, November",
+      "maxUses": 40,
+      "used": 3,
+      "revoked": false
+    },
+    {
+      "code": "AUDIT-BETA-1111",
+      "label": "Beta testers from the newsletter waiting list (second wave, the long one)",
+      "maxUses": 100,
+      "used": 6,
+      "revoked": false
+    },
+    {
+      "code": "AUDIT-ONE-1148",
+      "label": null,
+      "maxUses": 1,
+      "used": 1,
+      "revoked": false
+    },
+    {
+      "code": "AUDIT-TWO-1185",
+      "label": null,
+      "maxUses": 1,
+      "used": 0,
+      "revoked": false
+    },
+    {
+      "code": "AUDIT-LEAK-1222",
+      "label": "Revoked: leaked on a forum",
+      "maxUses": 50,
+      "used": 2,
+      "revoked": true
+    },
+    {
+      "code": "AUDIT-PACER-1259",
+      "label": "Lakefront pacers",
+      "maxUses": 15,
+      "used": 0,
+      "revoked": false
+    }
+  ],
+  "requests": [
+    {
+      "email": "ada.lindqvist@example.com",
+      "note": "I run with the Tuesday track club. Tomasz said to ask.",
+      "status": "pending",
+      "hoursAgo": 2
+    },
+    {
+      "email": "marcus.w@example.com",
+      "note": null,
+      "status": "pending",
+      "hoursAgo": 5
+    },
+    {
+      "email": "a.very.long.email.address.for.a.runner.who.likes.dots@subdomain.example.com",
+      "note": "Coach of a high-school cross-country team; I'd like to see whether this would work for telling forty teenagers what to wear in November, which is the single most-asked question I get, more than splits, more than shoes.",
+      "status": "pending",
+      "hoursAgo": 9
+    },
+    {
+      "email": "jo@example.com",
+      "note": "saw it on a podcast",
+      "status": "pending",
+      "hoursAgo": 20
+    },
+    {
+      "email": "pacer.pat@example.com",
+      "note": "Lakefront pacers.",
+      "status": "pending",
+      "hoursAgo": 26
+    },
+    {
+      "email": "nina.o@example.com",
+      "note": null,
+      "status": "pending",
+      "hoursAgo": 31
+    },
+    {
+      "email": "kwame@example.com",
+      "note": "Marathon in April, training through winter.",
+      "status": "pending",
+      "hoursAgo": 50
+    },
+    {
+      "email": "sold.out.shoes@example.com",
+      "note": "we sell shoes",
+      "status": "declined",
+      "hoursAgo": 70
+    },
+    {
+      "email": "bea@example.com",
+      "note": "Friend of Maya's.",
+      "status": "invited",
+      "hoursAgo": 80
+    },
+    {
+      "email": "theo.r@example.com",
+      "note": null,
+      "status": "invited",
+      "hoursAgo": 96
+    },
+    {
+      "email": "ines@example.com",
+      "note": "Trail runner, Asheville.",
+      "status": "invited",
+      "hoursAgo": 120
+    },
+    {
+      "email": "old.request@example.com",
+      "note": "Asked in September.",
+      "status": "declined",
+      "hoursAgo": 900
+    }
+  ]
+}

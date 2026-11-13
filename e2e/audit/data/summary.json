@@ -1,0 +1,21 @@
+{
+  "garments": {
+    "halfZipId": "halfzip",
+    "shoeId": "speed",
+    "retiredShoeId": "ghost",
+    "longNameId": "thermal"
+  },
+  "mayaRuns": { "fullRunId": 7, "indoorRunId": 9, "manualRunId": 14 },
+  "backlogRuns": { "backlogRunId": 1 },
+  "mayaEntries": {
+    "ownEntryId": 2,
+    "ownPhotoEntryId": 7,
+    "unjudgedEntryId": 0,
+    "publicEntryId": 1
+  },
+  "otherEntries": {
+    "otherEntryId": { "runner": "audit-r01", "index": 0 },
+    "longEntryId": { "runner": "audit-r06", "index": 0 }
+  },
+  "handles": { "busyHandle": "audit-r01", "longHandle": "audit-r06" }
+}

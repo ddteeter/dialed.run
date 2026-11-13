@@ -1,0 +1,610 @@
+{
+  "operator": "e2e-desk-operator",
+  "queue": [
+    {
+      "subjectType": "entry",
+      "subject": {
+        "ref": "entry",
+        "runner": "audit-r01",
+        "index": 2
+      },
+      "source": "reports",
+      "hoursAgo": 41
+    },
+    {
+      "subjectType": "entry",
+      "subject": {
+        "ref": "entry",
+        "runner": "audit-r06",
+        "index": 1
+      },
+      "source": "reports",
+      "hoursAgo": 30
+    },
+    {
+      "subjectType": "entry",
+      "subject": {
+        "ref": "entry",
+        "runner": "audit-r11",
+        "index": 0
+      },
+      "source": "reports",
+      "hoursAgo": 22
+    },
+    {
+      "subjectType": "profile",
+      "subject": {
+        "ref": "id",
+        "id": "audit-r11"
+      },
+      "source": "reports",
+      "hoursAgo": 18
+    },
+    {
+      "subjectType": "profile",
+      "subject": {
+        "ref": "id",
+        "id": "audit-r18"
+      },
+      "source": "reports",
+      "hoursAgo": 12
+    },
+    {
+      "subjectType": "garment",
+      "subject": {
+        "ref": "garment",
+        "runner": "audit-r09",
+        "garment": "outer"
+      },
+      "source": "classifier",
+      "hoursAgo": 1.5
+    },
+    {
+      "subjectType": "garment",
+      "subject": {
+        "ref": "garment",
+        "runner": "audit-r06",
+        "garment": "top-cold"
+      },
+      "source": "fingerprint",
+      "hoursAgo": 1
+    },
+    {
+      "subjectType": "product",
+      "subject": {
+        "ref": "productAt",
+        "index": 3
+      },
+      "source": "reports",
+      "hoursAgo": 0.5
+    },
+    {
+      "subjectType": "entry",
+      "subject": {
+        "ref": "entry",
+        "runner": "audit-r05",
+        "index": 0
+      },
+      "source": "reports",
+      "hoursAgo": 60,
+      "status": "approved"
+    },
+    {
+      "subjectType": "photo",
+      "subject": {
+        "ref": "fresh"
+      },
+      "source": "classifier",
+      "hoursAgo": 55,
+      "status": "removed"
+    }
+  ],
+  "reports": [
+    {
+      "reporter": "audit-r02",
+      "subjectType": "entry",
+      "subject": {
+        "ref": "entry",
+        "runner": "audit-r01",
+        "index": 2
+      },
+      "reason": "spam",
+      "hoursAgo": 41,
+      "note": "Third time this week this account has posted the same discount code in a kit."
+    },
+    {
+      "reporter": "audit-r03",
+      "subjectType": "entry",
+      "subject": {
+        "ref": "entry",
+        "runner": "audit-r01",
+        "index": 2
+      },
+      "reason": "spam",
+      "hoursAgo": 40
+    },
+    {
+      "reporter": "audit-r04",
+      "subjectType": "entry",
+      "subject": {
+        "ref": "entry",
+        "runner": "audit-r01",
+        "index": 2
+      },
+      "reason": "other",
+      "hoursAgo": 39,
+      "note": "Not a run. It is an advert for a shop, and the photo is a screenshot of the shop's page with a very long caption that goes on and on about shipping times, sizing, returns and a referral scheme."
+    },
+    {
+      "reporter": "audit-r05",
+      "subjectType": "entry",
+      "subject": {
+        "ref": "entry",
+        "runner": "audit-r06",
+        "index": 1
+      },
+      "reason": "intimate",
+      "hoursAgo": 30
+    },
+    {
+      "reporter": "audit-maya",
+      "subjectType": "entry",
+      "subject": {
+        "ref": "entry",
+        "runner": "audit-r11",
+        "index": 0
+      },
+      "reason": "harassment",
+      "hoursAgo": 22,
+      "note": "The run title names another runner and mocks them."
+    },
+    {
+      "reporter": "audit-r08",
+      "subjectType": "entry",
+      "subject": {
+        "ref": "entry",
+        "runner": "audit-r11",
+        "index": 0
+      },
+      "reason": "harassment",
+      "hoursAgo": 21
+    },
+    {
+      "reporter": "audit-r02",
+      "subjectType": "profile",
+      "subject": {
+        "ref": "id",
+        "id": "audit-r11"
+      },
+      "reason": "harassment",
+      "hoursAgo": 18
+    },
+    {
+      "reporter": "audit-r09",
+      "subjectType": "profile",
+      "subject": {
+        "ref": "id",
+        "id": "audit-r11"
+      },
+      "reason": "other",
+      "hoursAgo": 17,
+      "note": "Impersonating a club."
+    },
+    {
+      "reporter": "audit-r10",
+      "subjectType": "profile",
+      "subject": {
+        "ref": "id",
+        "id": "audit-r18"
+      },
+      "reason": "spam",
+      "hoursAgo": 12
+    },
+    {
+      "reporter": "audit-r12",
+      "subjectType": "product",
+      "subject": {
+        "ref": "productAt",
+        "index": 3
+      },
+      "reason": "other",
+      "hoursAgo": 0.5,
+      "note": "The name has a shop's phone number in it."
+    }
+  ],
+  "heldPhotos": [
+    {
+      "entry": {
+        "ref": "entry",
+        "runner": "audit-r02",
+        "index": 1
+      },
+      "source": "classifier",
+      "hoursAgo": 9
+    },
+    {
+      "entry": {
+        "ref": "entry",
+        "runner": "audit-r03",
+        "index": 2
+      },
+      "source": "classifier",
+      "hoursAgo": 7
+    },
+    {
+      "entry": {
+        "ref": "entry",
+        "runner": "audit-r04",
+        "index": 1
+      },
+      "source": "fingerprint",
+      "hoursAgo": 5
+    },
+    {
+      "entry": {
+        "ref": "entry",
+        "runner": "audit-r05",
+        "index": 2
+      },
+      "source": "unscreened",
+      "hoursAgo": 4
+    },
+    {
+      "entry": {
+        "ref": "entry",
+        "runner": "audit-r07",
+        "index": 1
+      },
+      "source": "reports",
+      "hoursAgo": 3
+    },
+    {
+      "entry": {
+        "ref": "entry",
+        "runner": "audit-r08",
+        "index": 1
+      },
+      "source": "missing_file",
+      "hoursAgo": 2
+    }
+  ],
+  "flagged": [
+    {
+      "id": "audit-flag1",
+      "subjectType": "photo",
+      "ownerId": "audit-r12",
+      "reason": "it's an intimate image shared without consent",
+      "hoursAgo": 6
+    },
+    {
+      "id": "audit-flag2",
+      "subjectType": "entry",
+      "ownerId": "audit-r17",
+      "reason": "it's an intimate image shared without consent",
+      "hoursAgo": 30
+    }
+  ],
+  "compositions": {
+    "merino": "52% merino wool, 28% nylon, 20% Tencel lyocell",
+    "other": "88% recycled polyester, 12% elastane"
+  },
+  "dupes": [
+    {
+      "brand": "Tracksmith",
+      "variants": [
+        {
+          "name": "Harrier Long Sleeve",
+          "pieces": 9
+        },
+        {
+          "name": "Harrier Long Sleeves",
+          "pieces": 4
+        },
+        {
+          "name": "Harier Long Sleeve",
+          "pieces": 2
+        },
+        {
+          "name": "Harrier Long Sleve",
+          "pieces": 1
+        }
+      ]
+    },
+    {
+      "brand": "Janji",
+      "variants": [
+        {
+          "name": "Rapid Short",
+          "pieces": 6
+        },
+        {
+          "name": "Rapid Shorts",
+          "pieces": 3
+        },
+        {
+          "name": "Rappid Short",
+          "pieces": 1
+        }
+      ]
+    },
+    {
+      "brand": "Patagonia",
+      "variants": [
+        {
+          "name": "Houdini Jacket",
+          "pieces": 12
+        },
+        {
+          "name": "Houdini Jackets",
+          "pieces": 2
+        },
+        {
+          "name": "Houdni Jacket",
+          "pieces": 1
+        }
+      ]
+    },
+    {
+      "brand": "Saucony",
+      "variants": [
+        {
+          "name": "Endorphin Speed 4",
+          "pieces": 7
+        },
+        {
+          "name": "Endorphine Speed 4",
+          "pieces": 2
+        },
+        {
+          "name": "Endorfin Speed 4",
+          "pieces": 1
+        }
+      ]
+    },
+    {
+      "brand": "Engineered Garments Mountain Research Running Division Limited",
+      "variants": [
+        {
+          "name": "Expedition-Weight Merino Wool Blend Quarter-Zip Thermal Base Layer",
+          "pieces": 3
+        },
+        {
+          "name": "Expedition-Weight Merino Wool Blend Quarter-Zip Thermal Base Layers",
+          "pieces": 2
+        }
+      ]
+    },
+    {
+      "brand": "Hoka",
+      "variants": [
+        {
+          "name": "Speedgoat 6",
+          "pieces": 5
+        },
+        {
+          "name": "Speedgoats 6",
+          "pieces": 2
+        },
+        {
+          "name": "Speedgaot 6",
+          "pieces": 1
+        }
+      ]
+    },
+    {
+      "brand": "Ciele",
+      "variants": [
+        {
+          "name": "GOCap SC",
+          "pieces": 4
+        },
+        {
+          "name": "GOCaps SC",
+          "pieces": 3
+        }
+      ]
+    },
+    {
+      "brand": "Bandit",
+      "variants": [
+        {
+          "name": "Vento Split Short",
+          "pieces": 3
+        },
+        {
+          "name": "Vento Split Shorts",
+          "pieces": 3
+        }
+      ]
+    }
+  ],
+  "corrections": [
+    {
+      "product": "Janji|Rover Half-zip",
+      "garment": {
+        "ref": "maya",
+        "garment": "halfzip"
+      },
+      "userId": "audit-maya",
+      "field": "weight",
+      "value": "light",
+      "hoursAgo": 50,
+      "note": "It's on the maker's page: 180 gsm."
+    },
+    {
+      "product": "Tracksmith|Harrier Tee",
+      "garment": {
+        "ref": "maya",
+        "garment": "tee"
+      },
+      "userId": "audit-maya",
+      "field": "composition",
+      "value": "89% merino wool, 11% nylon",
+      "hoursAgo": 44,
+      "note": "The care label, which I am looking at right now, says this, and so does the product page, and so did the email they sent me when I asked."
+    },
+    {
+      "product": "Tracksmith|Harrier Tee",
+      "garment": {
+        "ref": "garment",
+        "runner": "audit-r01",
+        "garment": "top-mild"
+      },
+      "userId": "audit-r01",
+      "field": "composition",
+      "value": "89% merino wool, 11% nylon",
+      "hoursAgo": 40
+    },
+    {
+      "product": "Tracksmith|Harrier Tee",
+      "garment": {
+        "ref": "garment",
+        "runner": "audit-r02",
+        "garment": "top-mild"
+      },
+      "userId": "audit-r02",
+      "field": "composition",
+      "value": "89% merino wool, 11% nylon",
+      "hoursAgo": 38,
+      "note": "Label."
+    },
+    {
+      "product": "Tracksmith|Harrier Tee",
+      "garment": {
+        "ref": "garment",
+        "runner": "audit-r04",
+        "garment": "top-mild"
+      },
+      "userId": "audit-r04",
+      "field": "fabric",
+      "value": "merino",
+      "hoursAgo": 36
+    },
+    {
+      "product": "Patagonia|Houdini Jacket",
+      "garment": {
+        "ref": "garment",
+        "runner": "audit-r03",
+        "garment": "outer"
+      },
+      "userId": "audit-r03",
+      "field": "water",
+      "value": "no",
+      "hoursAgo": 30,
+      "note": "It's wind resistant, not waterproof."
+    },
+    {
+      "product": "Patagonia|Houdini Jacket",
+      "garment": {
+        "ref": "garment",
+        "runner": "audit-r05",
+        "garment": "outer"
+      },
+      "userId": "audit-r05",
+      "field": "water",
+      "value": "no",
+      "hoursAgo": 28
+    },
+    {
+      "product": "Patagonia|Houdini Jacket",
+      "garment": {
+        "ref": "maya",
+        "garment": "houdini"
+      },
+      "userId": "audit-maya",
+      "field": "name",
+      "value": "Houdini Jacket (2024)",
+      "hoursAgo": 26
+    },
+    {
+      "product": "Saucony|Endorphin Speed 4",
+      "garment": {
+        "ref": "garment",
+        "runner": "audit-r07",
+        "garment": "shoes"
+      },
+      "userId": "audit-r07",
+      "field": "link",
+      "value": "https://example.com/saucony/endorphin-speed-4",
+      "hoursAgo": 20
+    },
+    {
+      "product": "Hoka|Speedgoat 6 GTX",
+      "garment": {
+        "ref": "garment",
+        "runner": "audit-r08",
+        "garment": "shoes2"
+      },
+      "userId": "audit-r08",
+      "field": "water",
+      "value": "yes",
+      "hoursAgo": 12
+    },
+    {
+      "product": "Tracksmith|Turnover Tights",
+      "garment": {
+        "ref": "garment",
+        "runner": "audit-r01",
+        "garment": "bottom-cold"
+      },
+      "userId": "audit-r06",
+      "field": "wind",
+      "value": "yes",
+      "hoursAgo": 8,
+      "note": "Front panels are windproof."
+    },
+    {
+      "product": "Bandit|Vento 5\" Split Short",
+      "garment": {
+        "ref": "garment",
+        "runner": "audit-r02",
+        "garment": "bottom-hot"
+      },
+      "userId": "audit-r02",
+      "field": "weight",
+      "value": "light",
+      "hoursAgo": 3
+    }
+  ],
+  "gaveUp": [
+    {
+      "kind": "enrichment",
+      "subject": {
+        "ref": "productAt",
+        "index": 0
+      },
+      "reason": "The shop returned 403. It may be blocking us.",
+      "rawError": "Page returned 403",
+      "tries": 3
+    },
+    {
+      "kind": "weather",
+      "subject": {
+        "ref": "backlog",
+        "index": 6
+      },
+      "reason": "No weather came back for this run in five hours of hourly tries.",
+      "rawError": null,
+      "tries": 5
+    },
+    {
+      "kind": "import",
+      "subject": {
+        "ref": "fresh"
+      },
+      "reason": "It failed every try the queue gives a job, so the queue stopped. Each error is in Sentry.",
+      "rawError": "TypeError: Cannot read properties of undefined (reading 'records') at parseFit (fit.ts:212:19)",
+      "tries": 4
+    },
+    {
+      "kind": "enrichment",
+      "subject": {
+        "ref": "productAt",
+        "index": 5
+      },
+      "reason": "The page took longer than ten seconds, three times.",
+      "rawError": "TimeoutError: The operation was aborted due to timeout",
+      "tries": 3
+    }
+  ]
+}

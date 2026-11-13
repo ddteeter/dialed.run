@@ -1,0 +1,221 @@
+{
+  "sizes": {
+    "thumb": 200,
+    "card": 600,
+    "full": 1600
+  },
+  "garments": [
+    {
+      "width": 900,
+      "height": 1200,
+      "from": "#1f2a44",
+      "to": "#6d83b0",
+      "label": "HALF-ZIP"
+    },
+    {
+      "width": 1200,
+      "height": 1200,
+      "from": "#7a1f1f",
+      "to": "#e08a6a",
+      "label": "TEE"
+    },
+    {
+      "width": 1600,
+      "height": 1000,
+      "from": "#1d4d3a",
+      "to": "#8fd0a8",
+      "label": "SHORTS"
+    },
+    {
+      "width": 1000,
+      "height": 1500,
+      "from": "#222222",
+      "to": "#777777",
+      "label": "TIGHTS"
+    },
+    {
+      "width": 1200,
+      "height": 900,
+      "from": "#c96a12",
+      "to": "#ffd9a0",
+      "label": "JACKET"
+    },
+    {
+      "width": 1000,
+      "height": 1000,
+      "from": "#3b2a6b",
+      "to": "#b9a5f0",
+      "label": "SINGLET"
+    },
+    {
+      "width": 800,
+      "height": 1200,
+      "from": "#0f4c5c",
+      "to": "#7cc6d6",
+      "label": "VEST"
+    },
+    {
+      "width": 1500,
+      "height": 1000,
+      "from": "#e6e2d6",
+      "to": "#9c9482",
+      "label": "SHOES"
+    },
+    {
+      "width": 1000,
+      "height": 1000,
+      "from": "#ff5a36",
+      "to": "#ffc2a8",
+      "label": "RACERS"
+    },
+    {
+      "width": 1200,
+      "height": 800,
+      "from": "#2d2d2d",
+      "to": "#a0a0a0",
+      "label": "GLOVES"
+    },
+    {
+      "width": 900,
+      "height": 1200,
+      "from": "#5a2a4a",
+      "to": "#e0a0c8",
+      "label": "BEANIE"
+    },
+    {
+      "width": 1200,
+      "height": 1200,
+      "from": "#f0f0f0",
+      "to": "#b8c4d0",
+      "label": "SOCKS"
+    },
+    {
+      "width": 1400,
+      "height": 900,
+      "from": "#20324a",
+      "to": "#f2b233",
+      "label": "CAP"
+    },
+    {
+      "width": 1000,
+      "height": 1400,
+      "from": "#4a5a1f",
+      "to": "#c8d890",
+      "label": "LONGSLEEVE"
+    },
+    {
+      "width": 1200,
+      "height": 1000,
+      "from": "#101820",
+      "to": "#f2aa4c",
+      "label": "TRAIL-SHOE"
+    },
+    {
+      "width": 1000,
+      "height": 1250,
+      "from": "#8a8f98",
+      "to": "#e9ecef",
+      "label": "BUFF"
+    }
+  ],
+  "entries": [
+    {
+      "width": 900,
+      "height": 1200,
+      "from": "#f6c177",
+      "to": "#31748f",
+      "label": "SUNRISE-MILES"
+    },
+    {
+      "width": 1200,
+      "height": 1200,
+      "from": "#0b132b",
+      "to": "#5bc0be",
+      "label": "NIGHT-LOOP"
+    },
+    {
+      "width": 1600,
+      "height": 900,
+      "from": "#a8dadc",
+      "to": "#457b9d",
+      "label": "LAKEFRONT"
+    },
+    {
+      "width": 1000,
+      "height": 1500,
+      "from": "#264653",
+      "to": "#e9c46a",
+      "label": "TRAIL"
+    },
+    {
+      "width": 1200,
+      "height": 900,
+      "from": "#6d597a",
+      "to": "#eaac8b",
+      "label": "TRACK"
+    },
+    {
+      "width": 1080,
+      "height": 1350,
+      "from": "#283618",
+      "to": "#dda15e",
+      "label": "FOREST"
+    },
+    {
+      "width": 1350,
+      "height": 1080,
+      "from": "#cdb4db",
+      "to": "#a2d2ff",
+      "label": "RIVER-PATH"
+    },
+    {
+      "width": 1000,
+      "height": 1000,
+      "from": "#3a0ca3",
+      "to": "#f72585",
+      "label": "TEMPO"
+    },
+    {
+      "width": 1600,
+      "height": 1000,
+      "from": "#606c38",
+      "to": "#fefae0",
+      "label": "LONG-RUN"
+    },
+    {
+      "width": 900,
+      "height": 1600,
+      "from": "#000814",
+      "to": "#ffc300",
+      "label": "RACE-DAY"
+    },
+    {
+      "width": 1200,
+      "height": 1600,
+      "from": "#495057",
+      "to": "#dee2e6",
+      "label": "FOG"
+    },
+    {
+      "width": 1500,
+      "height": 1000,
+      "from": "#023e8a",
+      "to": "#90e0ef",
+      "label": "RAIN"
+    },
+    {
+      "width": 1000,
+      "height": 1300,
+      "from": "#9d0208",
+      "to": "#ffba08",
+      "label": "HEAT"
+    },
+    {
+      "width": 1300,
+      "height": 1000,
+      "from": "#e5e5e5",
+      "to": "#14213d",
+      "label": "SNOW"
+    }
+  ]
+}
