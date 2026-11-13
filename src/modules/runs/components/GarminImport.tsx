@@ -307,9 +307,11 @@ function PickerRow({
       className="flex items-center justify-between gap-3 border-b border-hairline py-2"
     >
       <span className="flex min-w-0 flex-col">
-        <Mono step="sm">
+        {/* The runs list's sentence-case sans for the same run, not mono
+            capitals (P2a-05). */}
+        <span data-part="garmin-row-title" className="text-body font-semibold">
           <Spoken shown={label} said={said} />
-        </Mono>
+        </span>
         <span className="text-small text-quiet">Garmin</span>
       </span>
       {row.runId === undefined ? (
@@ -327,7 +329,7 @@ function PickerRow({
           to="/runs/$runId"
           params={{ runId: row.runId }}
           aria-label={`Imported: open ${said}`}
-          className="target font-mono text-mono-sm uppercase text-muted no-underline"
+          className="target inline-flex items-center font-mono text-mono-sm uppercase text-muted no-underline"
         >
           [Imported] ›
         </Link>

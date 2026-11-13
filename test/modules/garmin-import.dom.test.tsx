@@ -110,6 +110,10 @@ describe("A1: Import from Garmin (G3)", () => {
     expect(
       within(row).getByText("Sat Aug 29 · 6.2 mi · 51:38"),
     ).toHaveAttribute("aria-hidden", "true");
+    // P2a-05: the runs list's sentence-case sans, not mono capitals.
+    const title = row.querySelector("[data-part='garmin-row-title']");
+    expect(title).toHaveClass("text-body", "font-semibold");
+    expect(title).not.toHaveClass("font-mono", "uppercase");
     expect(
       within(row).getByText("Sat Aug 29 · 6.2 mi · 51 minutes 38 seconds"),
     ).toHaveClass("sr-only");
@@ -139,6 +143,8 @@ describe("A1: Import from Garmin (G3)", () => {
       name: "Imported: open Sat Aug 29 · 6.2 mi · 51 minutes 38 seconds",
     });
     expect(link).toHaveTextContent("[Imported] ›");
+    // P2a-05: centred in its 44 target, as Import's button is.
+    expect(link).toHaveClass("target", "inline-flex", "items-center");
     expect(link).toHaveAttribute("href", "/runs/01RUN");
     await user.click(link);
     expect(await screen.findByText("at /runs/$runId")).toBeVisible();
