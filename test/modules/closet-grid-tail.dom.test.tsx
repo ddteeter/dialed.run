@@ -52,8 +52,10 @@ const layout: { template: string; resize: (() => void) | undefined } = {
 };
 const disconnect = vi.fn();
 
+const observe = vi.fn();
+
 class FakeResizeObserver {
-  observe = vi.fn();
+  observe = observe;
   disconnect = disconnect;
   constructor(callback: () => void) {
     layout.resize = callback;
@@ -79,6 +81,14 @@ function Probe({ count }: Readonly<{ count: number }>) {
   );
 }
 
+/**
+A grid whose ref never attaches.
+*/
+function Unattached() {
+  const listRef = useRef<HTMLUListElement | null>(null);
+  return <p>{String(useIsRowFull(listRef, 1))}</p>;
+}
+
 describe("useIsRowFull", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -86,6 +96,7 @@ describe("useIsRowFull", () => {
     layout.template = "";
     layout.resize = undefined;
     disconnect.mockClear();
+    observe.mockClear();
   });
 
   it("measures the grid on mount and again when its width changes", () => {
@@ -93,6 +104,8 @@ describe("useIsRowFull", () => {
     layout.template = "190px 190px 190px";
     render(<Probe count={3} />);
     const list = screen.getByRole("list");
+    // The grid itself is what is watched for its width.
+    expect(observe).toHaveBeenCalledWith(list);
     // Three pieces on three tracks fill the row.
     expect(list).toHaveAttribute("data-full", "true");
 
@@ -102,6 +115,15 @@ describe("useIsRowFull", () => {
     });
     // Four tracks leave room beside the third piece.
     expect(list).toHaveAttribute("data-full", "false");
+  });
+
+  it("measures nothing, and keeps the phone's two, while there is no grid", () => {
+    stubLayout();
+    render(<Unattached />);
+    expect(screen.getByText("false")).toBeVisible();
+    // With no grid nothing is watched (the stubbed layout would answer a
+    // null element, so watching is what tells the guard is there).
+    expect(observe).not.toHaveBeenCalled();
   });
 
   it("starts from the phone's two tracks before it can measure", () => {

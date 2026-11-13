@@ -42,9 +42,8 @@ export interface ClosetNearby {
  */
 function listedType(view: ClosetItemView): string | undefined {
   const types: readonly string[] = garmentTypesFor(view.item.category);
-  const { type } = view.item;
-  return type !== null && types.length > 1 && types.includes(type)
-    ? type
+  return types.length > 1
+    ? types.find((type) => type === view.item.type)
     : undefined;
 }
 

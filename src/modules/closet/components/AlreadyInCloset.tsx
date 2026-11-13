@@ -242,7 +242,6 @@ export function AlreadyInCloset({
   tempUnit,
 }: Readonly<AlreadyInClosetProps>): JSX.Element {
   const zone = useRunnerZone();
-  const pieces = list?.pieces ?? [];
   const plural =
     type === undefined ? CATEGORY_PLURALS[category] : garmentTypePlurals[type];
   return (
@@ -250,7 +249,9 @@ export function AlreadyInCloset({
       title={`Already in your closet · ${kindLabel(category, type)}`}
       isHeading
     >
-      {pieces.length === 0 ? (
+      {/* A list is absent rather than empty: closetNearby lists only a
+          category or a type that has pieces. */}
+      {list === undefined ? (
         // Round 40 C4: the heading stays; this line replaces the rows.
         <p className="m-0 text-body text-quiet">
           {`No ${plural} yet.`}
@@ -258,7 +259,7 @@ export function AlreadyInCloset({
       ) : (
         <>
         <ul className="m-0 flex list-none flex-col gap-3 p-0">
-          {pieces.map((view) => (
+          {list.pieces.map((view) => (
             <Row
               key={view.item.id}
               view={view}
@@ -268,7 +269,7 @@ export function AlreadyInCloset({
             />
           ))}
         </ul>
-        <MoreLink more={list?.more ?? 0} plural={plural} category={category} />
+        <MoreLink more={list.more} plural={plural} category={category} />
         </>
       )}
     </RailCard>

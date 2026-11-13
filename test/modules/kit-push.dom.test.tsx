@@ -43,7 +43,9 @@ describe("verdictSearch", () => {
 });
 
 function Probe() {
-  return useIsAtDesk() ? "desk" : "below";
+  // The value itself, so a server answer that is merely falsy is told
+  // apart from `false`.
+  return String(useIsAtDesk());
 }
 
 describe("useIsAtDesk", () => {
@@ -82,7 +84,7 @@ describe("useIsAtDesk", () => {
   it("is below the desk on the server, which has no window", () => {
     // A window at the desk is not consulted: the server draws the sheet.
     atWidth(true);
-    expect(renderToString(createElement(Probe))).toBe("below");
+    expect(renderToString(createElement(Probe))).toBe("false");
   });
 });
 

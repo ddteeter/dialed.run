@@ -770,6 +770,51 @@ describe("GarmentDetail: composition", () => {
   });
 });
 
+describe("GarmentDetail: composition with nothing beside it", () => {
+  const noWords = {
+    weight: undefined,
+    fabric: undefined,
+    windResistant: false,
+    waterResistant: false,
+  } as const;
+
+  it("draws the block alone when there are no words to put under it", async () => {
+    await renderWithRouter(
+      garment({
+        item: wardrobeItem({ visibilityLevel: "plain" }),
+        effective: noWords,
+        composition: { verbatim: "100% merino wool", parts: [] },
+      }),
+    );
+    // The block, and no empty words line after it.
+    expect(part("composition").children).toHaveLength(1);
+    expect(part("composition").firstElementChild?.tagName).toBe("SECTION");
+  });
+
+  it("keeps WRONG? for a shared product that states nothing and has no words (R-74)", async () => {
+    await renderWithRouter(
+      garment(
+        {
+          item: wardrobeItem({
+            productId: "01PRODUCT",
+            visibilityLevel: "plain",
+          }),
+          effective: noWords,
+        },
+        {
+          correction: {
+            loadContext: vi.fn(),
+            fileCorrection: vi.fn(),
+          },
+        },
+      ),
+    );
+    const wrong = screen.getByRole("button", { name: "Wrong?" });
+    expect(wrong.closest("[data-part='wrong-alone']")).not.toBeNull();
+    expect(part("composition").children).toHaveLength(1);
+  });
+});
+
 describe("GarmentDetail: pairs with", () => {
   it("draws each pair as a chip with its co-dialed count", async () => {
     await renderWithRouter(

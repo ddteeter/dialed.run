@@ -355,6 +355,21 @@ describe("R: the one line, and badges only for exceptions", () => {
     );
   });
 
+  it("reads the conditions it has, not a wait, whatever the status says", async () => {
+    // Conditions that have arrived are the line, even if the run's status
+    // has not caught up with them yet.
+    await renderWithRouter(list([runSummary({ weatherStatus: "pending" })]));
+    expect(within(onlyRow()).queryByText("Fetching weather")).toBeNull();
+    expect(onlyRow()).toHaveTextContent("41°F damp");
+  });
+
+  it("offers no SET CONDITIONS for a run that has its conditions", async () => {
+    await renderWithRouter(list([runSummary({ canSetConditions: true })]));
+    expect(
+      within(onlyRow()).queryByRole("button", { name: /set conditions/iu }),
+    ).toBeNull();
+  });
+
   it("breathes, flush left, instead of badging while the weather is asked for (N1-14)", async () => {
     await renderWithRouter(
       list([runSummary({ weatherStatus: "pending", conditions: undefined })]),

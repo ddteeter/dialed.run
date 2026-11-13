@@ -346,6 +346,20 @@ describe("ClosetFilters: WORKS AT before a script (#109h)", () => {
     expect(within(header as HTMLElement).getByRole("link", { name: "Clear" })).toBeVisible();
   });
 
+  it("reads an upper end alone as set, with the closet's low bound", async () => {
+    await rail({ search: { to: 7.8 } });
+    expect(
+      drawnText(document.querySelector("[data-part='works-at-value']")),
+    ).toBe("34–46°F");
+  });
+
+  it("reads an upper end alone as set once a script drives the bar", async () => {
+    await rail({ search: { to: 7.8 }, onSearch: vi.fn() });
+    expect(
+      drawnText(document.querySelector("[data-part='works-at-value']")),
+    ).toBe("34–46°F");
+  });
+
   it("reads Any in the header while no span is set", async () => {
     await rail();
     expect(

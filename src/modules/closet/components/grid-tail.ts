@@ -32,6 +32,12 @@ export function isRowFull(count: number, tracks: number): boolean {
  * Whether the grid's last row is full, measured from the grid itself and
  * again whenever its width changes. `auto-fill` decides the track count
  * from the width, so CSS alone cannot say where the last row ends.
+ *
+ * The effect has no dependency list on purpose, as `useRunnerZone`'s has
+ * none: the ref is the same object on every render, so a list holding it
+ * changes nothing a test could see, and with no list there is no array
+ * for a mutant to replace. Measuring again after a render sets the same
+ * count, which React ignores.
  */
 export function useIsRowFull(
   listRef: RefObject<HTMLUListElement | null>,
@@ -50,6 +56,6 @@ export function useIsRowFull(
     return () => {
       observer.disconnect();
     };
-  }, [listRef]);
+  });
   return isRowFull(count, tracks);
 }

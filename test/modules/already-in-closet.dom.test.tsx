@@ -71,7 +71,8 @@ function card(
   return render(
     <AlreadyInCloset
       category="top"
-      list={{ pieces: [...pieces], more: 0 }}
+      // The service lists a category only when it has pieces.
+      list={pieces.length === 0 ? undefined : { pieces: [...pieces], more: 0 }}
       typed={typed}
       tempUnit={tempUnit}
     />,
