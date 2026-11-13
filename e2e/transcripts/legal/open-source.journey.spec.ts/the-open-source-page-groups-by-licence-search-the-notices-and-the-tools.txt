@@ -4,6 +4,7 @@ link, dialed.run home
 dialed.run
 end of link, dialed.run home
 link, Log in
+link, Request access
 end of banner
 main
 Open source

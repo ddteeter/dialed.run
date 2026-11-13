@@ -136,8 +136,10 @@ describe("the public profile, signed out", () => {
   it("names the runner in TYPE.display, then Kits with how many", async () => {
     await show(profilePage(PROFILE));
 
-    const handle = screen.getByRole("heading", { level: 1 });
-    expect(handle).toHaveTextContent(/^@maya_runs$/u);
+    const handle = screen.getByRole("heading", {
+      level: 1,
+      name: "@maya_runs",
+    });
     expect(handle).toHaveClass("font-display", "text-display");
     expect(handle).not.toHaveClass("text-title");
     expect(handle).not.toHaveClass("wrap-anywhere");
@@ -151,12 +153,19 @@ describe("the public profile, signed out", () => {
   it("breaks the handle only after an underscore, never inside a word (R55·218a)", async () => {
     await show(profilePage(PROFILE));
     const handle = screen.getByRole("heading", { level: 1 });
-    // "@maya_" then a break opportunity, then "runs".
-    const wbr = handle.querySelector("wbr");
-    expect(handle.querySelectorAll("wbr")).toHaveLength(1);
+    // Drawn: "@maya_", a break opportunity, then "runs".
+    const drawn = handle.firstElementChild;
+    expect(drawn).toHaveAttribute("aria-hidden", "true");
+    expect(drawn).toHaveTextContent(/^@maya_runs$/u);
+    const wbr = drawn?.querySelector("wbr");
+    expect(drawn?.querySelectorAll("wbr")).toHaveLength(1);
     expect(wbr?.previousSibling?.textContent).toBe("_");
     expect(wbr?.nextSibling?.textContent).toBe("runs");
-    expect(handle.firstChild?.textContent).toBe("@");
+    expect(drawn?.firstChild?.textContent).toBe("@");
+    // Said once, whole: never "at, maya, underscore, runs".
+    expect(handle.lastElementChild).toHaveClass("sr-only");
+    expect(handle.lastElementChild).toHaveTextContent(/^@maya_runs$/u);
+    expect(handle.children).toHaveLength(2);
   });
 
   it("steps a handle past 17 characters down to TYPE.title (R55·218a)", async () => {

@@ -1,6 +1,9 @@
 document
 main
 heading, Didn't load, level 1
+paragraph
+Closet
+end of paragraph
 Didn't load
 Our end failed. Your closet is fine.
 button, Try again

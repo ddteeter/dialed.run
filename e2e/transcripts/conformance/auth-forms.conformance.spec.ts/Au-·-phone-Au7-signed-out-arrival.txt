@@ -1,4 +1,9 @@
 document
+banner
+link, dialed.run home
+dialed.run
+end of link, dialed.run home
+end of banner
 main
 dialed.run
 You were signed out

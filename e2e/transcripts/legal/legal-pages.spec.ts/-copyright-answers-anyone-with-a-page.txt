@@ -1,4 +1,11 @@
 document
+banner
+link, dialed.run home
+dialed.run
+end of link, dialed.run home
+link, Log in
+link, Request access
+end of banner
 main
 heading, Nothing here, level 1
 paragraph
@@ -6,4 +13,13 @@ This page doesn't exist, or it's an entry its runner has made private.
 end of paragraph
 link, Log in
 end of main
+contentinfo
+paragraph
+link, Privacy
+link, Terms
+link, Copyright, current page
+link, Open source
+link, Report an intimate image
+end of paragraph
+end of contentinfo
 end of document

@@ -459,7 +459,7 @@ describe("X2 keeps the failed screen's first row (R55·186)", () => {
     expect(row?.children).toHaveLength(0);
   });
 
-  it("takes the title of the route that failed, not a deeper one's", async () => {
+  it("keeps the title of the screen being gone to, whichever loader on the way failed", async () => {
     await routedApp({
       signedIn: true,
       path: "/shell/inner",
@@ -467,7 +467,7 @@ describe("X2 keeps the failed screen's first row (R55·186)", () => {
     });
     await screen.findByText("Our end failed.");
     const row = document.querySelector("[data-part='first-row']");
-    expect(row).toHaveTextContent(/^Shell$/u);
+    expect(row).toHaveTextContent(/^Inner$/u);
   });
 });
 

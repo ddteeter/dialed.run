@@ -88,7 +88,14 @@ test("X2 loader failed: the band, Didn't load, in the shell", async ({
     timeout: 15_000,
   });
 
-  expect(await builtOrder(page)).toEqual(order);
+  // R55·186 drew the row this board leaves out: the closet's own first
+  // row, its title with the bell at its end, above the band.
+  expect(await builtOrder(page)).toEqual([
+    order[0],
+    "first-row",
+    ...order.slice(1),
+  ]);
+  expect(await wordsOf(page, "[data-part='first-row']")).toEqual(["CLOSET"]);
   expect(await wordsOf(page, "[data-part='failure-band']")).toEqual(band);
 });
 

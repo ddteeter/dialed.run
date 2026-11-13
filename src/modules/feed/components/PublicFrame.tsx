@@ -55,7 +55,8 @@ export function useSignedInAfterLoad(ask: AskSignedIn): {
 // target off it).
 const INTO_APP_CLASS =
   "target inline-flex items-center rounded-pill bg-ink px-5 text-small font-bold text-ground no-underline";
-const FOOT_LINK_CLASS = "target text-muted underline underline-offset-4";
+const FOOT_LINK_CLASS =
+  "target inline-flex items-center text-muted underline underline-offset-4";
 // A quiet line with a bold ink underlined link (R55·176's cross-links).
 const CROSS_LINK_CLASS = "font-bold text-ink underline underline-offset-4";
 
@@ -269,23 +270,28 @@ export function RunnerFrame({
 
 /**
  * `@handle`, which may break only after an underscore, never inside a
- * word (R55·218a): a `<wbr>` after each "_".
+ * word (R55·218a): a `<wbr>` after each "_". Drawn for the eye and said
+ * once, whole: the pieces between the breaks are separate text runs, and a
+ * screen reader walking them heard "at, public, underscore, pages".
  */
 function BreakableHandle({ handle }: Readonly<{ handle: string }>) {
   return (
     <>
-      @
-      {handle.split("_").map((part, index) => (
-        // A part's place is part of its identity: two can share a name.
-        <Fragment key={`${String(index)}:${part}`}>
-          {index === 0 ? undefined : (
-            <>
-              _<wbr />
-            </>
-          )}
-          {part}
-        </Fragment>
-      ))}
+      <span aria-hidden="true">
+        @
+        {handle.split("_").map((part, index) => (
+          // A part's place is part of its identity: two can share a name.
+          <Fragment key={`${String(index)}:${part}`}>
+            {index === 0 ? undefined : (
+              <>
+                _<wbr />
+              </>
+            )}
+            {part}
+          </Fragment>
+        ))}
+      </span>
+      <span className="sr-only">{`@${handle}`}</span>
     </>
   );
 }

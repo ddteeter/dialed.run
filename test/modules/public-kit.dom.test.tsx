@@ -148,8 +148,10 @@ describe("the public kit, signed out", () => {
   it("names the runner and the day, never a time", async () => {
     await show(kitPage(KIT));
 
-    const heading = screen.getByRole("heading", { level: 1 });
-    expect(heading).toHaveTextContent(/^@maya_runs$/u);
+    const heading = screen.getByRole("heading", {
+      level: 1,
+      name: "@maya_runs",
+    });
     expect(heading).toBeVisible();
     // The runner's name in body weight, not a display headline.
     expect(heading).toHaveClass("text-body", "font-semibold");

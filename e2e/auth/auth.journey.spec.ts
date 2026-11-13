@@ -129,8 +129,14 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   );
   await page.unroute("**/api/auth/sign-in/social");
 
+  // Round 55 · 177: the band names no page; "No code? Request access"
+  // sits under it.
+  await expect(refused.getByRole("link")).toHaveCount(0);
   await scene(page, "No code? Au5 · Request access");
-  await refused.getByRole("link", { name: "Request access" }).click();
+  await page
+    .locator("[data-part='request-access']")
+    .getByRole("link", { name: "Request access" })
+    .click();
   await expect(page).toHaveURL(/\/account\/request-access/u, {
     timeout: 15_000,
   });
@@ -275,8 +281,11 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   await hydrated(page);
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/$/u, { timeout: 15_000 });
+  // One per view: the bar's from 720, the hero's below it (R55·175).
   await expect(
-    page.getByRole("link", { name: "Request access" }),
+    page
+      .getByRole("link", { name: "Request access" })
+      .filter({ visible: true }),
   ).toBeVisible();
 
   // A guarded page, signed out, goes to log-in carrying the way back.

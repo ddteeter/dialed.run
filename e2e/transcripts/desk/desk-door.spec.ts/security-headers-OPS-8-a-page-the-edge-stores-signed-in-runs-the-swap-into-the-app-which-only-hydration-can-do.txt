@@ -17,6 +17,9 @@ contentinfo
 paragraph
 link, Privacy
 link, Terms
+link, Copyright
+link, Open source
+link, Report an intimate image
 end of paragraph
 end of contentinfo
 end of document

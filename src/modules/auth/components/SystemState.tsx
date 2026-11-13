@@ -478,8 +478,12 @@ function LoaderFailed({
         (match) => match.status === "error" && match.loaderData === undefined,
       ) === 0,
   });
+  // The screen this replaces is the deepest match — the page being gone
+  // to — whichever loader on the way failed (a root that re-reads on the
+  // way to the closet fails at the root's boundary, and it is still the
+  // closet's row that is kept). Its route's title, if it declares one.
   const title = useRouterState({
-    select: (state) => failedScreenTitle(state.matches),
+    select: (state) => state.matches.at(-1)?.staticData.title,
   });
   if (isRootCrash) {
     return (
@@ -515,17 +519,4 @@ declare module "@tanstack/react-router" {
      */
     title?: string;
   }
-}
-
-/**
- * The title of the screen that failed: the deepest failed match's own.
- */
-function failedScreenTitle(
-  matches: readonly {
-    status: string;
-    staticData: { title?: string | undefined };
-  }[],
-): string | undefined {
-  return matches.findLast((match) => match.status === "error")?.staticData
-    .title;
 }

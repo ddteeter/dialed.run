@@ -215,7 +215,9 @@ test("make a kit and a profile public, see them as a stranger, take the kit back
   await scene(page, "Never when or where");
   await expect(page.getByText(RUN_TITLE)).toHaveCount(0);
   await expect(
-    page.getByRole("link", { name: "Request access" }),
+    page
+      .locator("[data-part='invite']")
+      .getByRole("link", { name: "Request access" }),
   ).toBeVisible();
 
   await scene(page, "Signed out · /@handle lists the public kits");

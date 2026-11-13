@@ -1,87 +1,72 @@
 import { expect, test } from "../support/a11y";
-import type { Page } from "@playwright/test";
 
 import { storageStateFor } from "../support/accounts";
-import { fillOf, hydrated, openBoard, screen } from "../support/conformance";
-import { borderOf, partsIn, wordsOf } from "./auth-parts";
+import { hydrated } from "../support/conformance";
+import { partsIn, wordsOf } from "./auth-parts";
 
 /**
- * `/`'s landing bar at 720 and 1040, signed out and signed in, built
- * against round 21's frames (`design/Round 21 Rulings.dc.html`).
+ * `/` in the one signed-out frame (`design/` Round 55 · 175 and 176),
+ * at the phone, 720 and 1040, and signed in.
  *
- * The regions (wordmark, one action), their words, and the action's
- * treatment — hairline when signed out, ink when signed in — read as T1
- * roles from the board and compared, never typed here.
+ * Round 55's frames carry no regions to compare against, so the ruling's
+ * composition is asserted directly: which regions the bar has, in which
+ * order, and what it says, at each width. Values are the contracts'.
  */
-const BOARD = "Round 21 Rulings.dc.html";
 const BAR = "[data-slot='landing-bar']";
-
-async function compare(
-  page: Page,
-  baseURL: string,
-  width: 720 | 1040,
-  state: "logged out" | "signed in",
-): Promise<void> {
-  const label = `Landing bar ${String(width)} ${state}`;
-  await openBoard(page, BOARD, baseURL);
-  const order = await partsIn(page, screen(label));
-  const words = await wordsOf(page, screen(label));
-  const action = `${screen(label)} [data-part='bar-actions']`;
-  const fill = await fillOf(page, action);
-  const border = await borderOf(page, action);
-  const barFill = await fillOf(page, screen(label));
-  expect(order, `the board has no ${label} frame`).not.toHaveLength(0);
-
-  await page.setViewportSize({ width, height: 800 });
-  await page.goto("/");
-  await hydrated(page);
-
-  expect(await partsIn(page, BAR)).toEqual(order);
-  expect(await wordsOf(page, BAR)).toEqual(words);
-  expect(await fillOf(page, BAR)).toBe(barFill);
-  expect(await fillOf(page, `${BAR} [data-part='bar-actions']`)).toBe(fill);
-  expect(await borderOf(page, `${BAR} [data-part='bar-actions']`)).toBe(border);
-  // "No nav, search, bell or 'Log a run'", and never the tab bar.
-  await expect(page.locator("[data-slot='top-bar']")).toHaveCount(0);
-  await expect(page.locator("[data-slot='tab-bar']")).toHaveCount(0);
-}
 
 test.describe("logged out", () => {
   for (const width of [720, 1040] as const) {
-    test(`at ${String(width)}: the wordmark and a hairline Log in`, async ({
+    test(`at ${String(width)}: the wordmark, Log in, and the pink Request access`, async ({
       page,
-      baseURL,
     }) => {
-      if (baseURL === undefined) throw new Error("no baseURL");
-      await compare(page, baseURL, width, "logged out");
-      // Round 51 · 154.3: from 720 the bar's Log in is the only one.
-      await expect(page.getByRole("link", { name: "Log in" })).toHaveCount(1);
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto("/");
+      await hydrated(page);
+
+      expect(await partsIn(page, BAR)).toEqual(["wordmark", "bar-actions"]);
+      expect(await wordsOf(page, `${BAR} [data-part='bar-actions']`)).toEqual([
+        "LOG IN",
+        "REQUEST ACCESS",
+      ]);
+      // The hero ends on the cross-link: the bar holds the pill.
+      await expect(
+        page.getByRole("main").getByRole("link", { name: "Request access" }),
+      ).toBeHidden();
+      await expect(page.locator("[data-slot='top-bar']")).toHaveCount(0);
+      await expect(page.locator("[data-slot='tab-bar']")).toHaveCount(0);
     });
   }
 
-  test("below 720: no bar at all", async ({ page }) => {
+  test("below 720: the bar keeps Log in, and the hero carries the pill", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 390, height: 800 });
     await page.goto("/");
     await hydrated(page);
-    await expect(page.locator(BAR)).toBeHidden();
-    await expect(page.locator("[data-slot='tab-bar']")).toHaveCount(0);
-    // Round 51 · 154.3: below 720, the hero's line carries Log in.
+    await expect(page.locator(BAR)).toBeVisible();
+    expect(await wordsOf(page, `${BAR} [data-part='bar-actions']`)).toEqual([
+      "LOG IN",
+    ]);
     await expect(
-      page.getByRole("main").getByRole("link", { name: "Log in" }),
+      page.getByRole("main").getByRole("link", { name: "Request access" }),
     ).toBeVisible();
+    await expect(page.locator("[data-slot='tab-bar']")).toHaveCount(0);
   });
 });
 
 test.describe("signed in", () => {
   test.use({ storageState: storageStateFor("closet") });
 
-  for (const width of [720, 1040] as const) {
-    test(`at ${String(width)}: the wordmark and an ink Your closet`, async ({
-      page,
-      baseURL,
-    }) => {
-      if (baseURL === undefined) throw new Error("no baseURL");
-      await compare(page, baseURL, width, "signed in");
-    });
-  }
+  test("at 1040: the product's bar, and the hero ends on Go to your feed", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1040, height: 800 });
+    await page.goto("/");
+    await hydrated(page);
+    await expect(page.locator("[data-slot='top-bar']")).toBeVisible();
+    await expect(page.locator(BAR)).toHaveCount(0);
+    await expect(
+      page.getByRole("main").getByRole("link", { name: "Go to your feed" }),
+    ).toBeVisible();
+  });
 });

@@ -4,9 +4,12 @@ link, dialed.run home
 dialed.run
 end of link, dialed.run home
 link, Log in
+link, Request access
 end of banner
 main
 heading, @public_pages_#, level 1
+@public_pages_#
+end of heading, @public_pages_#, level 1
 heading, Kits #, level 2
 Kits
 #
@@ -29,13 +32,21 @@ paragraph
 dialed.run keeps what you wore on each run and how it felt, then tells you what to wear when that weather comes round again.
 end of paragraph
 link, Request access
-link, Have a code? Join
+paragraph
+Have a code?
+link, Create an account
+end of paragraph
+paragraph
+link, Report this profile
+end of paragraph
 end of main
 contentinfo
 paragraph
-link, Report this profile
 link, Privacy
 link, Terms
+link, Copyright
+link, Open source
+link, Report an intimate image
 end of paragraph
 end of contentinfo
 end of document

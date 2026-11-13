@@ -1,12 +1,18 @@
 document
+banner
+link, dialed.run home
+dialed.run
+end of link, dialed.run home
+link, Log in
+end of banner
 main
 dialed.run
 heading, Create account, level 1
-form
-status
 paragraph
 dialed.run is invite-only for now.
 end of paragraph
+form
+status
 Invite code
 textbox, Invite code
 Date of birth
