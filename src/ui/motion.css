@@ -758,3 +758,23 @@
     animation: none;
   }
 }
+
+/**
+ * **AF1's label swap** (Remaining Screens · "Copy a share link"; #645).
+ * The Copy link pill's words cross-fade to "Copied" — or "Not copied" —
+ * at `instant`, and back the same way after the hold. The doctrine's map has
+ * no row for a label swap, so this is the board's own surface: `instant`
+ * and `snap`, as AF1 draws it.
+ *
+ * The words share one grid cell, so the pill never changes width; a word
+ * that is not shown is `data-shown="false"`, at no opacity, and the two
+ * fade across each other. An opacity change at `instant` is already
+ * reduced motion's floor, so there is nothing to collapse here.
+ */
+@utility label-swap {
+  transition: opacity var(--dur-instant) var(--ease-snap);
+
+  &[data-shown="false"] {
+    opacity: 0;
+  }
+}

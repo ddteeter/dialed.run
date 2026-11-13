@@ -23,9 +23,11 @@ import {
   FormFailureBand,
   FormField,
   FormStatus,
+  INK_PILL,
   PendingLabel,
   QUIET_CANCEL,
   QUIET_PILL,
+  SECONDARY_PILL,
   Select,
   SubmitButton,
   TextField,
@@ -1906,6 +1908,111 @@ describe("ToggleField", () => {
   });
 });
 
+describe("ToggleField, drawn (R54·166.1, 166.3, 166.5)", () => {
+  it("draws the checkbox before its words, and its words at 400", () => {
+    render(
+      <ToggleField
+        name="indoor"
+        label="Indoor / treadmill"
+        field={restingField}
+        isOn={false}
+        onChange={vi.fn()}
+      />,
+    );
+    const box = screen.getByRole("checkbox", { name: "Indoor / treadmill" });
+    expect(box).toHaveClass("control-check");
+    const row = box.closest("label");
+    expect(row?.firstElementChild).toBe(box);
+    expect(row).toHaveClass("target", "gap-3", "font-normal", "text-body");
+    expect(row).not.toHaveClass("justify-between", "font-semibold");
+  });
+
+  it("draws the switch at the row's right, and its words at 600 because they name the row", () => {
+    render(
+      <ToggleField
+        name="isPublic"
+        label="Public profile"
+        field={restingField}
+        isOn
+        isSwitch
+        onChange={vi.fn()}
+      />,
+    );
+    const toggle = screen.getByRole("switch", { name: "Public profile" });
+    expect(toggle).toHaveClass("control-switch");
+    expect(toggle).not.toHaveClass("control-check");
+    const row = toggle.closest("label");
+    expect(row?.lastElementChild).toBe(toggle);
+    expect(row).toHaveClass(
+      "target",
+      "justify-between",
+      "font-semibold",
+      "text-body",
+    );
+  });
+});
+
+function legend(): HTMLLegendElement | null {
+  return document.querySelector("legend");
+}
+
+describe("the legend that asks (R55·227)", () => {
+  const LEVELS = ["hot", "cold"] as const;
+  const LABELS = { hot: "Runs hot", cold: "Runs cold" };
+
+  it("sets a question legend at TYPE.heading, and leaves a name in mono", () => {
+    const { rerender } = render(
+      <ChoiceList
+        name="thermal"
+        legend="Do you run warm or cold?"
+        legendStep="question"
+        options={LEVELS}
+        optionLabels={LABELS}
+        value={undefined}
+        field={restingField}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(legend()).toHaveClass("font-display", "text-heading", "text-ink");
+    expect(legend()).not.toHaveClass("text-label", "sr-only");
+    expect(legend()?.querySelector(".font-mono")).toBeNull();
+    expect(legend()).toHaveTextContent("Do you run warm or cold?");
+
+    rerender(
+      <ChoiceList
+        name="thermal"
+        legend="Do you run warm or cold?"
+        options={LEVELS}
+        optionLabels={LABELS}
+        value={undefined}
+        field={restingField}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(legend()).toHaveClass("text-label");
+    expect(legend()).not.toHaveClass("text-heading");
+    expect(legend()?.firstElementChild).toHaveClass("font-mono");
+  });
+
+  it("keeps a heading-named legend hidden, question or not", () => {
+    render(
+      <ChoiceList
+        name="thermal"
+        legend="Who sees new runs"
+        legendStep="question"
+        isLegendHeading
+        options={LEVELS}
+        optionLabels={LABELS}
+        value={undefined}
+        field={restingField}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(document.querySelector("legend")).toHaveClass("sr-only");
+    expect(document.querySelector("legend")).not.toHaveClass("text-heading");
+  });
+});
+
 /**
  * `ChoiceList` — the radio group O1's five answers need, because a select
  * hides its options and comparing them is how a runner picks.
@@ -2407,21 +2514,41 @@ describe("ChoiceList's chip layout (§AH)", () => {
     );
   }
 
-  it("stacks by default, so the groups O1 was built for do not move", () => {
+  it("stacks by default as one card of rows, so O1's answers read together (R54·166.2)", () => {
     chips();
-    const chip = screen.getByRole("radio", { name: "Navy" }).closest("label");
-    expect(chip?.parentElement).toHaveClass("contents");
-    expect(chip?.parentElement).not.toHaveClass("flex-wrap");
-    // The row treatment itself: a full-width bordered box, which is how
-    // O1's five answers are read together.
-    expect(chip).toHaveClass(
-      "rounded-field",
+    const row = screen.getByRole("radio", { name: "Navy" }).closest("label");
+    // One card, not a box per answer: W1's reasons and Privacy too.
+    expect(row?.parentElement).toHaveClass(
+      "flex",
+      "flex-col",
+      "rounded-card",
       "border",
       "border-hairline",
-      "bg-ground",
-      "text-body",
     );
-    expect(chip).not.toHaveClass("rounded-pill");
+    expect(row?.parentElement).not.toHaveClass("flex-wrap");
+    // Rows split by hairlines; the chosen one takes a 2px ink edge drawn
+    // inward that follows the card's corners at its ends — never weight.
+    expect(row).toHaveClass(
+      "border-t",
+      "border-hairline",
+      "first:border-t-0",
+      "first:rounded-t-card",
+      "last:rounded-b-card",
+      "has-[:checked]:inset-ring-2",
+      "has-[:checked]:inset-ring-ink",
+      "font-normal",
+      "text-body",
+      "target",
+    );
+    expect(row).not.toHaveClass(
+      "rounded-pill",
+      "rounded-field",
+      "font-semibold",
+    );
+    // The ring and the dot: the drawn radio, not the browser's.
+    expect(screen.getByRole("radio", { name: "Navy" })).toHaveClass(
+      "control-radio",
+    );
   });
 
   it("wraps when asked, because thirteen rows would bury the form", () => {
@@ -2839,5 +2966,176 @@ describe("PendingLabel", () => {
     expect(close).toHaveClass("breathe", "ml-1");
     // No space between a bracket and its word, so no place to break.
     expect(waiting.textContent).toBe("[Preparing]");
+  });
+});
+
+/**
+ * R54·167: one primary per surface, and the width rule; R55·179–180: the
+ * field box and the summary.
+ */
+function submit(tone?: "action" | "ink" | "chalk"): HTMLElement {
+  render(
+    <form>
+      <SubmitButton
+        label="Go"
+        pendingLabel="Going"
+        pending={false}
+        tone={tone}
+      />
+    </form>,
+  );
+  return screen.getByRole("button", { name: "Go" });
+}
+
+describe("the primary by surface, and its width (R54·167)", () => {
+  const HUG_AT_WIDE = [
+    "w-full",
+    "wide:w-auto",
+    "wide:min-w-50",
+    "wide:self-start",
+    "wide:in-data-[slot=sheet]:w-full",
+    "wide:in-data-[slot=sheet]:self-stretch",
+  ];
+
+  it("draws the product flow's pink caps at RADIUS.card, 52 — the one filled button that is not a pill", () => {
+    const button = submit();
+    expect(button).toHaveClass(
+      "rounded-card",
+      "min-h-13",
+      "bg-action",
+      "font-display",
+      "uppercase",
+      ...HUG_AT_WIDE,
+    );
+    expect(button).not.toHaveClass("rounded-pill");
+  });
+
+  it("draws account and confirm as the ink pill, 48", () => {
+    const button = submit("ink");
+    expect(button).toHaveClass(
+      "rounded-pill",
+      "min-h-control",
+      "bg-ink",
+      "text-ground",
+      "font-bold",
+      "px-6",
+      ...HUG_AT_WIDE,
+    );
+    expect(button).not.toHaveClass("bg-action", "uppercase");
+  });
+
+  it("leaves the Desk's chalk pill at its own size, beside its row", () => {
+    const button = submit("chalk");
+    expect(button).not.toHaveClass("wide:min-w-50", "w-full");
+  });
+
+  it("gives a press that is not a submit the same ink pill", () => {
+    expect(INK_PILL.split(" ")).toStrictEqual(
+      expect.arrayContaining([
+        "target",
+        "cursor-pointer",
+        "border-none",
+        "text-body",
+        "rounded-pill",
+        "bg-ink",
+        "min-h-control",
+        ...HUG_AT_WIDE,
+      ]),
+    );
+  });
+
+  it("draws the secondary as the hairline pill, 48, on the same width rule", () => {
+    expect(SECONDARY_PILL.split(" ")).toStrictEqual(
+      expect.arrayContaining([
+        "target",
+        "cursor-pointer",
+        "rounded-pill",
+        "border",
+        "border-hairline",
+        "bg-transparent",
+        "min-h-control",
+        "font-semibold",
+        "text-ink",
+        ...HUG_AT_WIDE,
+      ]),
+    );
+  });
+
+  it("lets FormEnd take the ink pill", () => {
+    render(
+      <form>
+        <FormEnd
+          form={{
+            failure: undefined,
+            retry: vi.fn(),
+            retryRef: createRef(),
+            pending: false,
+          }}
+          label="Save"
+          pendingLabel="Saving"
+          tone="ink"
+        />
+      </form>,
+    );
+    expect(screen.getByRole("button", { name: "Save" })).toHaveClass(
+      "bg-ink",
+      "rounded-pill",
+    );
+  });
+});
+
+describe("the field box and the summary (R55·179, 180)", () => {
+  it("fills the box with the panel in both themes, edged by the hairline that shows on it", () => {
+    render(
+      <FormField name="plain" label="Plain">
+        <input id="plain" />
+      </FormField>,
+    );
+    const box = screen.getByLabelText("Plain").parentElement;
+    expect(box).toHaveClass(
+      "bg-panel",
+      "border",
+      "border-hairline",
+      "dark:border-hairline-2",
+    );
+    expect(box).not.toHaveClass("bg-ground");
+  });
+
+  it("keeps the fill when it fails; only the edge goes to 2px ink", () => {
+    render(
+      <FormField name="plain" label="Plain" error="Add one.">
+        <input id="plain" />
+      </FormField>,
+    );
+    const box = screen.getByLabelText("Plain").parentElement;
+    expect(box).toHaveClass(
+      "bg-panel",
+      "border-ink",
+      "inset-ring-1",
+      "inset-ring-ink",
+    );
+    // The message fills the field's width, so two in a row line up.
+    expect(screen.getByText("Add one.").closest("span")).toHaveClass(
+      "self-stretch",
+      "bg-failure",
+    );
+  });
+
+  it("sets the summary at an 8 rhythm, with 44 targets that add no height", () => {
+    render(
+      <FormErrorSummary
+        rows={[
+          { name: "a", label: "Name", message: "Add a name." },
+          { name: "b", label: "Brand", message: "Add a brand." },
+        ]}
+        onFocusField={vi.fn()}
+        summaryRef={createRef()}
+      />,
+    );
+    const row = screen.getByRole("button", { name: /^Name/ });
+    expect(row).toHaveClass("target", "py-3", "-my-3", "px-0");
+    expect(row.closest("ul")).toHaveClass("gap-2");
+    expect(row.closest("ul")?.parentElement).toHaveClass("gap-2");
+    expect(row.closest("ul")?.parentElement).not.toHaveClass("gap-3");
   });
 });

@@ -243,6 +243,19 @@ describe("the ported Motion Doctrine (design/motion.js)", () => {
     expect(css).toContain("--travel-element: 24px;");
   });
 
+  it("builds AF1's label swap as the board draws it: opacity, instant, snap (#645)", () => {
+    // Not a doctrine row: AF1 (Remaining Screens · "Copy a share link")
+    // draws its own 90ms cross-fade, so it is checked here rather than in
+    // BUILT, which maps only the doctrine's surfaces.
+    const body = utilities.get("label-swap") ?? "";
+    expect(body).toContain(
+      "transition: opacity var(--dur-instant) var(--ease-snap);",
+    );
+    expect(body).toMatch(/&\[data-shown="false"\] \{\s*opacity: 0;\s*\}/);
+    // Opacity only: nothing travels, so reduced motion has nothing to do.
+    expect(body).not.toMatch(/translate|scale|prefers-reduced-motion/);
+  });
+
   it("names a real surface for every move it builds", () => {
     for (const [utility, surface] of Object.entries(BUILT)) {
       expect([utility, SURFACES.has(surface)]).toEqual([utility, true]);

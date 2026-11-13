@@ -96,7 +96,7 @@
   /* The desk drawer's "one soft lift" (R54·164.1). No contract carries an
    * elevation, so this is the Round 54 board's own shadow, 0 8px 28px at
    * 10% of the scrim, held as one token until Design gives it a home
-   * (design 209, open question). Built from `--scrim` rather than a raw
+   * (#652). Built from `--scrim` rather than a raw
    * colour, so the palette stays the T1 table's. */
   /* How tall a phone sheet grows before it folds (R54·164.4: "the same
    * applies on phone once a sheet passes 90% of the viewport's height"). */
@@ -323,6 +323,126 @@
   --ground: var(--panel);
   border: 1px solid var(--hairline);
   box-shadow: var(--lift);
+}
+
+/**
+ * **The checkbox, the radio and the switch** (R54·166). No native control
+ * is left: each is the real `<input>`, so the keyboard, the form and the
+ * announcement are the browser's, with `appearance: none` and the drawing
+ * here. Every value is the ruling's: a 20 box or ring with a 2px ink
+ * edge, a 48×28 switch, and the contract's focus ring for all three — a
+ * 2px `--ground` gap, then 2px pink. Dark inverts ink and ground through
+ * the roles; pink stays pink. Each sits 20 inside a 44 target that its
+ * row's label provides.
+ *
+ * The ring is a box-shadow rather than an outline so its gap can be the
+ * ground the control sits on, whatever that is (a sheet's panel, a page).
+ */
+@utility control-focus {
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--ground),
+      0 0 0 4px var(--action);
+  }
+}
+
+/* 166.1: a 20 square, RADIUS.tight, 2px ink edge; on, an ink fill with a
+   --ground tick. The tick is two borders of a rotated box, so it is
+   drawn, not a glyph. */
+@utility control-check {
+  @apply control-focus;
+  appearance: none;
+  display: grid;
+  flex: none;
+  place-content: center;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-tight);
+  background: transparent;
+  cursor: pointer;
+
+  &::before {
+    content: "";
+    width: 6px;
+    height: 11px;
+    margin-top: -2px;
+    border: solid var(--ground);
+    border-width: 0 2px 2px 0;
+    rotate: 45deg;
+    visibility: hidden;
+  }
+
+  &:checked {
+    background: var(--ink);
+  }
+
+  &:checked::before {
+    visibility: visible;
+  }
+}
+
+/* 166.2: a 20 ring with a 2px ink edge and a 10 ink dot. */
+@utility control-radio {
+  @apply control-focus;
+  appearance: none;
+  display: grid;
+  flex: none;
+  place-content: center;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  cursor: pointer;
+
+  &::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    border-radius: var(--radius-pill);
+    background: var(--ink);
+    visibility: hidden;
+  }
+
+  &:checked::before {
+    visibility: visible;
+  }
+}
+
+/* 166.3: a 48×28 track with a 2px ink edge and an ink knob; on, the track
+   fills pink and the knob moves right. The knob is the track's inside
+   (24) less 3 a side, as drawn. */
+@utility control-switch {
+  @apply control-focus;
+  appearance: none;
+  display: flex;
+  flex: none;
+  align-items: center;
+  width: 48px;
+  height: 28px;
+  margin: 0;
+  padding: 0 3px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  cursor: pointer;
+
+  &::before {
+    content: "";
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-pill);
+    background: var(--ink);
+  }
+
+  &:checked {
+    justify-content: flex-end;
+    background: var(--action);
+  }
 }
 
 /**

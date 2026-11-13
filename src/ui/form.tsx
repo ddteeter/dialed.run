@@ -144,7 +144,9 @@ export function FieldMessage({
   return (
     <span
       id={messageIdFor(name)}
-      className="self-start bg-failure px-3 py-2 text-small text-accent-ink"
+      // The field's full width at every size, so two messages in a two-up
+      // row line up (R55·179, 180).
+      className="self-stretch bg-failure px-3 py-2 text-small text-accent-ink"
     >
       <ErrorWords message={error} />
     </span>
@@ -275,6 +277,15 @@ function alsoDescribedBy(
 // The visible legend: `--label`, as the paragraph below says.
 const LEGEND_CLASS = "mb-2 p-0 text-label";
 
+// A legend that is a question — O1's "How do you usually run?" — is
+// TYPE.heading, directly over its answers (R55·227). A name stays mono.
+const QUESTION_LEGEND_CLASS = "mb-2 p-0 font-display text-heading text-ink";
+
+function legendClass(isHidden: boolean, isQuestion: boolean): string {
+  if (isHidden) return "sr-only";
+  return isQuestion ? QUESTION_LEGEND_CLASS : LEGEND_CLASS;
+}
+
 /**
  * A labelled group of controls with **no field box**.
  *
@@ -306,11 +317,16 @@ function FieldGroup({
   name,
   legend,
   isLegendHeading,
+  isQuestion,
   hint,
   error,
   children,
 }: Readonly<
-  LabelledFieldProps & { legend: string; isLegendHeading: boolean }
+  LabelledFieldProps & {
+    legend: string;
+    isLegendHeading: boolean;
+    isQuestion: boolean;
+  }
 >): JSX.Element {
   return (
     <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
@@ -319,8 +335,8 @@ function FieldGroup({
         hint={hint}
         error={error}
         caption={
-          <legend className={isLegendHeading ? "sr-only" : LEGEND_CLASS}>
-            <Mono step="sm">{legend}</Mono>
+          <legend className={legendClass(isLegendHeading, isQuestion)}>
+            {isQuestion ? legend : <Mono step="sm">{legend}</Mono>}
           </legend>
         }
       >
@@ -410,10 +426,14 @@ export function FormField({
       // utilities used to do without saying where the ring had gone.
       //
       // Which is why a *group* does not get one — see `FieldGroup`.
+      //
+      // R55·179: the fill is `--panel` in both themes and never changes
+      // with state; the rest edge is `--hairline`, and `--hairline-2` in
+      // dark, where `--hairline` disappears against the panel.
       className={
         isInvalid
-          ? "field-box flex min-h-field items-center rounded-field border border-ink inset-ring-1 inset-ring-ink bg-ground px-4 text-field"
-          : "field-box flex min-h-field items-center rounded-field border border-hairline bg-ground px-4 text-field"
+          ? "field-box flex min-h-field items-center rounded-field border border-ink inset-ring-1 inset-ring-ink bg-panel px-4 text-field"
+          : "field-box flex min-h-field items-center rounded-field border border-hairline bg-panel px-4 text-field dark:border-hairline-2"
       }
     >
       {children}
@@ -563,7 +583,8 @@ export function FormErrorSummary({
     <div
       ref={summaryRef}
       tabIndex={-1}
-      className="flex flex-col gap-3 border border-ink p-4"
+      // R55·180: kicker, sentence and list at an 8 rhythm, rows 8 apart.
+      className="flex flex-col gap-2 border border-ink p-4"
     >
       <Mono step="xs">Nothing saved</Mono>
       <span className="text-body">{rows.length} fields need a fix.</span>
@@ -575,7 +596,11 @@ export function FormErrorSummary({
               onClick={() => {
                 onFocusField(row.name);
               }}
-              className="target cursor-pointer border-none bg-transparent p-0 text-left text-body underline underline-offset-4"
+              // Its 44 target grows by padding against an equal negative
+              // margin, which adds no layout height (R55·180). A wrapped
+              // row keeps TYPE.body's own leading: 180's 1.4 is not a step,
+              // and a step's leading is not overridden (#653).
+              className="target -my-3 cursor-pointer border-none bg-transparent px-0 py-3 text-left text-body underline underline-offset-4"
             >
               {row.label} — <ErrorWords message={row.message} />
             </button>
@@ -950,14 +975,23 @@ const OPTION_CHIP_CLASS =
   "target relative flex cursor-pointer items-center justify-center rounded-pill border border-hairline px-3 py-2 text-body has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-ground has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink";
 
 /**
+ * A row of a `ChoiceList` in its one card (R54·166.2): rows split by
+ * hairlines, the chosen one marked by a 2px ink edge drawn inward that
+ * follows the card's corners at its ends. The ring and the edge mark the
+ * choice, never weight — every label is 400 (166.5).
+ */
+const OPTION_ROW_CLASS =
+  "target flex cursor-pointer items-center gap-3 border-t border-hairline px-4 py-3 text-body font-normal first:rounded-t-card first:border-t-0 last:rounded-b-card has-[:checked]:inset-ring-2 has-[:checked]:inset-ring-ink";
+
+/**
  * How a `ChoiceList`'s options sit: wrapped chips, chips in three columns,
- * or stacked rows (the default, which needs no box of its own).
+ * or stacked rows in one card (the default).
  */
 const OPTIONS_LAYOUT: Readonly<Record<"chips" | "chip-grid" | "rows", string>> =
   {
     chips: "flex flex-wrap gap-2",
     "chip-grid": "grid grid-cols-3 gap-2",
-    rows: "contents",
+    rows: "flex flex-col rounded-card border border-hairline",
   };
 
 function optionsLayout(layout: "chips" | "chip-grid" | undefined): string {
@@ -1129,6 +1163,15 @@ export function ChoiceField<TOption extends string>({
  * should include its words, and `FormField`'s bordered box is sized for a
  * control that fills it. A checkbox that grows a validation error is a
  * different control and should not be bolted on here.
+ *
+ * **Drawn, not native** (R54·166): the checkbox is a 20 square with a
+ * 2px ink edge that fills ink with a `--ground` tick (`control-check`),
+ * before its words at 400. The switch is a 48×28 track at the row's
+ * right that fills pink (`control-switch`), after its words at 600,
+ * because they name the row. Which one is 166.3's rule: a setting that
+ * saves the moment it changes is a switch; an option that goes with a
+ * submit is a checkbox. Both stay the native input, so the keyboard and
+ * the form read them as before.
  */
 export function ToggleField({
   name,
@@ -1157,22 +1200,40 @@ export function ToggleField({
    */
   isSwitch?: boolean | undefined;
 }>): JSX.Element {
-  return (
-    <label className="target flex items-center gap-2 text-body font-semibold">
-      <input
-        ref={inputRef}
-        {...field(name)}
-        role={isSwitch ? "switch" : undefined}
-        type="checkbox"
-        checked={isOn}
-        onChange={(event) => {
-          onChange(event.target.checked);
-        }}
-      />
+  const input = (
+    <input
+      ref={inputRef}
+      {...field(name)}
+      role={isSwitch ? "switch" : undefined}
+      type="checkbox"
+      checked={isOn}
+      onChange={(event) => {
+        onChange(event.target.checked);
+      }}
+      className={isSwitch ? "control-switch" : "control-check"}
+    />
+  );
+  // R54·166.3/166.5: a switch is at its row's right, and the label names
+  // the row, so it is TYPE.body 600. A checkbox leads, and its label is a
+  // choice, so it is 400. Either way the label is the 44 target.
+  return isSwitch ? (
+    <label className={SWITCH_ROW_CLASS}>
+      {label}
+      {input}
+    </label>
+  ) : (
+    <label className={CHECK_ROW_CLASS}>
+      {input}
       {label}
     </label>
   );
 }
+
+const SWITCH_ROW_CLASS =
+  "target flex cursor-pointer items-center justify-between gap-4 text-body font-semibold";
+
+const CHECK_ROW_CLASS =
+  "target flex cursor-pointer items-center gap-3 text-body font-normal";
 
 /**
  * One of a handful of choices, all visible at once.
@@ -1205,6 +1266,12 @@ export function ChoiceList<TOption extends string>(
        * keeps its accessible name; the words are not printed twice.
        */
       isLegendHeading?: boolean | undefined;
+      /**
+       * `"question"` when the legend asks something — O1's warm/cold
+       * question — so it is set at TYPE.heading over the answers
+       * (R55·227). Omitted, the legend is a name, in mono.
+       */
+      legendStep?: "question" | undefined;
       /**
     One sentence under the group, for what the answer is used for.
     */
@@ -1323,6 +1390,7 @@ export function ChoiceList<TOption extends string>(
       name={name}
       legend={legend}
       isLegendHeading={props.isLegendHeading === true}
+      isQuestion={props.legendStep === "question"}
       hint={hint}
       error={error}
     >
@@ -1330,11 +1398,7 @@ export function ChoiceList<TOption extends string>(
         {options.map((option) => (
           <label
             key={option}
-            className={
-              isChips
-                ? OPTION_CHIP_CLASS
-                : "target flex items-center gap-3 rounded-field border border-hairline bg-ground px-4 py-3 text-body font-semibold"
-            }
+            className={isChips ? OPTION_CHIP_CLASS : OPTION_ROW_CLASS}
           >
             <input
               {...described(
@@ -1355,7 +1419,7 @@ export function ChoiceList<TOption extends string>(
               // pointer aimed at the chip lands on the label text instead
               // of on the radio. `TapListForm` found that with Playwright,
               // which clicks the control and not the label.
-              className={isChips ? CHIP_INPUT_CLASS : undefined}
+              className={isChips ? CHIP_INPUT_CLASS : "control-radio"}
             />
             <OptionLabel
               label={optionLabels[option]}
