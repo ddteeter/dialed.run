@@ -28,7 +28,7 @@ heading, Wear what worked., level 2
 paragraph
 dialed.run keeps what you wore on each run and how it felt, then tells you what to wear when that weather comes round again.
 end of paragraph
-link, Request an invite
+link, Request access
 link, Have a code? Join
 end of main
 contentinfo

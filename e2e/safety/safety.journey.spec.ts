@@ -144,7 +144,7 @@ test("report a runner, block them, and take the block back", async ({
   await scene(page, "W1 · anyone can report, and it costs them nothing");
   await expect(page.getByRole("heading", { name: strangerName })).toBeVisible();
   await page
-    .getByRole("button", { name: `Report or block ${strangerName}` })
+    .getByRole("button", { name: `Report or block @${strangerName}` })
     .click();
 
   await scene(page, "Reasons are sentences a runner would say");
