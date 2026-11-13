@@ -26,7 +26,7 @@ import {
   TOTALS_LINE,
   useAuthForm,
 } from "../../src/modules/auth/auth-page";
-import { PasswordField } from "../../src/modules/auth/password-field";
+import { PasswordField } from "../../src/ui/PasswordField";
 import { signIn } from "../../src/modules/auth/credentials";
 import { useGoogleSignIn } from "../../src/modules/auth/google-button";
 import { CARRIED_EMAIL_KEY } from "../../src/lib/browser/carried-email";

@@ -5,7 +5,7 @@ import type { JSX } from "react";
 import { newPasswordSchema } from "../../../lib/contracts";
 import { FormStatus, useFormSubmit } from "../../../ui";
 import { SignedOutPanel } from "../../../ui/SignedOutPanel";
-import { NewPasswordField } from "../password-field";
+import { NewPasswordField } from "../../../ui/PasswordField";
 import { ShellForm } from "./ShellForm";
 import { ResetLinkExpired } from "../credentials";
 

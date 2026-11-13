@@ -24,7 +24,7 @@ import { AGE_LINE } from "../../lib/contracts/age";
 import { authFailure, authStatus, isAccountClosed } from "./auth-copy";
 import type { AuthBand } from "./auth-copy";
 import { GoogleButton, type GoogleSignIn } from "./google-button";
-import { PasswordField } from "./password-field";
+import { PasswordField } from "../../ui/PasswordField";
 import type { CarriedForm } from "../../lib/carried-form";
 
 /**

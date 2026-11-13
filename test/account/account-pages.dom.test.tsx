@@ -903,6 +903,17 @@ describe("ChangeEmail (ACC-8)", () => {
     expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
   });
 
+  it("lets the current password be shown, as every password field does (P1-02)", async () => {
+    const { user } = renderChange();
+    expect(currentPasswordField()).toHaveAttribute("type", "password");
+    expect(currentPasswordField()).toHaveAttribute(
+      "autocomplete",
+      "current-password",
+    );
+    await user.click(screen.getByRole("button", { name: "Show password" }));
+    expect(currentPasswordField()).toHaveAttribute("type", "text");
+  });
+
   it("asks for the current password before the round trip", async () => {
     const { request, user } = renderChange();
     await user.type(newEmailField(), "new@example.com");

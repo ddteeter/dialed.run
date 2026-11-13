@@ -18,9 +18,9 @@ import {
   FormStatus,
   Sheet,
   SubmitButton,
-  TextField,
   useFormSubmit,
 } from "../../../ui";
+import { PasswordField } from "../../../ui/PasswordField";
 import type { DeletionResult } from "../deletion";
 
 /**
@@ -228,10 +228,9 @@ function DeleteSheet({
           the feed now. Log in before {day} to keep everything.
         </p>
         {hasPassword ? (
-          <TextField
+          <PasswordField
             name="currentPassword"
             label="Current password"
-            type="password"
             autoComplete="current-password"
             value={currentPassword}
             onChange={setCurrentPassword}

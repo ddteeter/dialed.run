@@ -1,13 +1,15 @@
 import { useCallback, useState } from "react";
 import type { JSX } from "react";
 
-import { PASSWORD_MIN_LENGTH } from "../../lib/contracts";
-import { FormField, describedByFor } from "../../ui";
-import type { FieldProps } from "../../ui";
+import { PASSWORD_MIN_LENGTH } from "../lib/contracts";
+import { FormField } from "./form";
+import { describedByFor } from "./use-form-submit";
+import type { FieldProps } from "./use-form-submit";
 
 /**
  * The password field: the Form Contract's field with a Show control
- * inside the box (Au1–Au7 all draw it).
+ * inside the box (Au1–Au7 all draw it), and every "Current password"
+ * on Settings › Account (P1-02).
  *
  * `FormField` rather than `TextField` because the box holds two things;
  * every attribute `TextField` would have set is set here from the same

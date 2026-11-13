@@ -153,6 +153,19 @@ describe("DeleteAccount (U1's last row)", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  it("lets the current password be shown in the sheet (P1-02)", async () => {
+    const { view, user } = deleteRow();
+    await view;
+    const sheet = await openSheet(user);
+    await user.click(
+      within(sheet).getByRole("button", { name: "Show password" }),
+    );
+    expect(within(sheet).getByLabelText("Current password")).toHaveAttribute(
+      "type",
+      "text",
+    );
+  });
+
   it("refuses an empty password with the schema's words, sending nothing", async () => {
     const { view, user, request } = deleteRow();
     await view;

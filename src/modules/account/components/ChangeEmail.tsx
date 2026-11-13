@@ -16,6 +16,7 @@ import {
   TextField,
   useFormSubmit,
 } from "../../../ui";
+import { PasswordField } from "../../../ui/PasswordField";
 import type { ChangeResult } from "../verification";
 import { limitedMessage } from "./ResendLink";
 
@@ -119,10 +120,9 @@ export function ChangeEmail({
         field={form.field}
         error={form.fieldErrors.email}
       />
-      <TextField
+      <PasswordField
         name="currentPassword"
         label={LABELS.currentPassword}
-        type="password"
         autoComplete="current-password"
         value={currentPassword}
         onChange={setCurrentPassword}
