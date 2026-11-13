@@ -274,9 +274,9 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await lowest.focus();
   await page.keyboard.press("End");
   const filtered = page.locator("[data-part='filtered']");
-  await expect(filtered.locator("[aria-hidden='true']")).toHaveText(
-    `${warmest}°+`,
-  );
+  await expect(
+    filtered.locator("[aria-hidden='true']", { hasText: "°" }),
+  ).toHaveText(`${warmest}°+`);
   await expect(filtered.locator(".sr-only")).toHaveText(
     `${warmest} degrees and up`,
   );

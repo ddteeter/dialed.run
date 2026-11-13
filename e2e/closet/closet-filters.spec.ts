@@ -82,7 +82,9 @@ test("WORKS AT filters the closet with no script, in the runner's unit", async (
   // Drawn as a range, said in words (round 53 · 162.3).
   const filtered = page.locator("[data-part='filtered']");
   await expect(filtered).toHaveText(/^Filtered:\s*\[/u);
-  await expect(filtered.locator("[aria-hidden='true']")).toHaveText("60–80°");
+  await expect(
+    filtered.locator("[aria-hidden='true']", { hasText: "°" }),
+  ).toHaveText("60–80°");
   await expect(filtered.locator(".sr-only")).toHaveText("60 to 80 degrees");
   await expect(
     page.getByRole("link", { name: new RegExp(singlet.name, "u") }),
