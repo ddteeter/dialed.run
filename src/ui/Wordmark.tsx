@@ -10,13 +10,18 @@ const WORDMARK_CLASS = "inline-flex items-baseline font-display lowercase";
  * own rule — *"pink stays off this bar"* — and the brackets are the only
  * pink in the lockup. The product's own bar and the system states keep
  * them (round 22's X frames draw `[dialed.run]`).
+ *
+ * **`isDeskMark` is the Desk's `[dialed]`** (R55·194): the brackets and
+ * "dialed", no ".run". Heard the same as every other lockup.
  */
 export function Wordmark({
   className,
   brackets = true,
+  isDeskMark = false,
 }: Readonly<{
   className?: string | undefined;
   brackets?: boolean | undefined;
+  isDeskMark?: boolean | undefined;
 }>) {
   return (
     <span
@@ -33,9 +38,11 @@ export function Wordmark({
       {/* T1's --muted. The brand board draws #8B8B93, which is the *dark*
           column's muted; on paper the role resolves to #6E6E64 and keeps
           its contrast. CLAUDE.md §Design truth: the contract wins. */}
-      <span aria-hidden="true" className="text-muted">
-        .run
-      </span>
+      {isDeskMark ? undefined : (
+        <span aria-hidden="true" className="text-muted">
+          .run
+        </span>
+      )}
       {brackets ? (
         <span aria-hidden="true" className="text-cold-text">
           ]

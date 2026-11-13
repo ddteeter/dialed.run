@@ -43,34 +43,42 @@ How many Gave up rows show before "Show all" (round 29 B·2: "the two newest").
 */
 const FIRST_SHOWN = 2;
 
+/**
+ * One of Today's four numbers (R55·196): a --panel card with the numeral in
+ * TYPE.display, its label in TYPE.body and a MONO.xs caption. Hi-viz marks
+ * a number that needs a person, and only above zero.
+ */
 function Stat({
   count,
   needsPerson,
   children,
   note,
+  isNoteLoud = false,
 }: Readonly<{
   count: number;
   needsPerson: boolean;
   children: ReactNode;
+  note: ReactNode;
   /**
-  Absent for a number the board draws with no line under it (R47·125).
+  The caption is hi-viz too while the number is (HIDDEN UNTIL YOU LOOK).
   */
-  note?: ReactNode;
+  isNoteLoud?: boolean;
 }>) {
-  const tone = needsPerson && count > 0 ? "text-hiviz-text" : "text-ink";
+  const isLoud = needsPerson && count > 0;
   return (
-    <li className="flex flex-col gap-1">
-      <span className="flex items-baseline gap-3">
-        <Mono step="lg" className={tone}>
-          {count}
-        </Mono>
-        <span className="text-lead">{children}</span>
+    <li className="relative flex flex-col gap-2 rounded-card border border-hairline bg-panel p-5">
+      <span
+        className={`font-display text-display ${isLoud ? "text-hiviz-text" : "text-ink"}`}
+      >
+        {count}
       </span>
-      {note === undefined ? undefined : (
-        <Mono step="xs" className="text-muted">
-          {note}
-        </Mono>
-      )}
+      <span className="text-body">{children}</span>
+      <Mono
+        step="xs"
+        className={isNoteLoud && isLoud ? "text-hiviz-text" : "text-muted"}
+      >
+        {note}
+      </Mono>
     </li>
   );
 }
@@ -94,6 +102,16 @@ export function spanOf(seconds: number): string {
  * the date with it on any other ("Sep 15 22:40"). UTC, as the date at the
  * top of the page is.
  */
+/**
+ * The flagged card's caption (R55·196): NONE FLAGGED at zero, otherwise
+ * how long the longest-flagged account has waited, "OLDEST · 2D".
+ */
+export function flaggedNote(oldestAt: number | undefined, asOf: number) {
+  return oldestAt === undefined
+    ? "None flagged"
+    : `Oldest · ${spanOf(asOf - oldestAt)}`;
+}
+
 export function lastTryOf(at: number, asOf: number): string {
   const time = timeOfDay(at);
   const isToday = monthDayLabel(at) === monthDayLabel(asOf);
@@ -499,7 +517,10 @@ export function Today({
           <span className="sr-only normal-case">Today, </span>
           {longDayLabel(asOf)}
         </h1>
-        <ul aria-label="Today" className="flex flex-col gap-6">
+        <ul
+          aria-label="Today"
+          className="m-0 grid list-none grid-cols-2 gap-3 p-0"
+        >
           <Stat count={counts.waiting} needsPerson note={oldest}>
             waiting for a decision
           </Stat>
@@ -507,6 +528,7 @@ export function Today({
             count={counts.screenerUnfinished}
             needsPerson
             note="Hidden until you look"
+            isNoteLoud
           >
             {counts.screenerUnfinished === 1 ? "photo" : "photos"} the screener
             couldn't finish
@@ -518,13 +540,17 @@ export function Today({
           >
             {counts.bansThisWeek === 1 ? "ban" : "bans"} this week
           </Stat>
-          {/* R47·125: after the others, shown at 0, linking to D8's
-              Flagged filter (D-161 1). */}
-          <Stat count={counts.flaggedAccounts} needsPerson>
+          {/* R47·125: after the others, shown at 0. R55·196: the whole
+              card opens Runners → Flagged, its link stretched over it. */}
+          <Stat
+            count={counts.flaggedAccounts}
+            needsPerson
+            note={flaggedNote(counts.oldestFlaggedAt, asOf)}
+          >
             <Link
               to="/desk/runners"
               search={{ filter: "flagged" }}
-              className="target inline-flex items-center text-ink underline underline-offset-4"
+              className="target inline-flex items-center text-ink underline underline-offset-4 after:absolute after:inset-0"
             >
               flagged {counts.flaggedAccounts === 1 ? "account" : "accounts"}
             </Link>

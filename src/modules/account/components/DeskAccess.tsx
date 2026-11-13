@@ -1,3 +1,4 @@
+import { Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
@@ -8,6 +9,7 @@ import {
 } from "../../../lib/contracts/access";
 import { monthDayLabel } from "../../../lib/dates";
 import {
+  DeskDetail,
   FailureBand,
   FormElement,
   FormEnd,
@@ -90,6 +92,42 @@ export function orderedCodes(
  */
 export function madeLine(code: string, isCopied: boolean): string {
   return isCopied ? `${code} made · link copied` : `${code} made`;
+}
+
+/**
+How many of a code's runners its row names before "+ N more" (R55·200).
+*/
+const FIRST_USERS = 5;
+
+/**
+ * A count as R55·200 groups it: "1,000,000", not "1000000". In en-US
+ * whatever the operator's locale, as every other Desk figure is.
+ */
+function grouped(count: number): string {
+  return count.toLocaleString("en-US");
+}
+
+/**
+The used-by cell's lead (R55·200): "29 USED", or NOT USED YET.
+*/
+export function usedLine(used: number): string {
+  return used === 0 ? "Not used yet" : `${grouped(used)} used`;
+}
+
+/**
+A code's uses against its cap, grouped: "29 / 1,000,000" (R55·200).
+*/
+export function usesLine(code: DeskCode): string {
+  return `${grouped(code.usedBy.length)} / ${grouped(code.maxUses)}`;
+}
+
+/**
+ * Where a runner's name on a code leads: Runners, searched for them (R55·
+ * 200), by handle without its @ or by the address an unfinished account
+ * still goes by.
+ */
+function runnerSearch(who: string): { query: string; filter: "all" } {
+  return { query: who.replace(/^@/u, ""), filter: "all" };
 }
 
 type RowAction = (input: { data: { id: string } }) => Promise<unknown>;
@@ -422,6 +460,7 @@ function CodeRow({
   onCopy,
   onRevoke,
   onUndo,
+  onMore,
   band,
 }: Readonly<{
   code: DeskCode;
@@ -429,6 +468,10 @@ function CodeRow({
   onCopy: () => void;
   onRevoke: () => void;
   onUndo: () => void;
+  /**
+  "+ N more": opens the code in the detail pane (R55·200).
+  */
+  onMore: () => void;
   /**
   Revoke's or Undo's failure band, when one failed on this row.
   */
@@ -452,12 +495,12 @@ function CodeRow({
             </Mono>
           ) : undefined}
         </span>
-        <CodeWho code={code} />
-        <Mono step="sm" className="text-muted">
+        <CodeWho code={code} onMore={onMore} />
+        <Mono step="xs" className="text-muted wide:text-right">
           {ageLabel(code.createdAt, state.asOf)}
         </Mono>
-        <Mono step="sm" className={tone}>
-          {`${String(code.usedBy.length)}/${String(code.maxUses)}`}
+        <Mono step="sm" className={`whitespace-nowrap wide:text-right ${tone}`}>
+          {usesLine(code)}
         </Mono>
         <CodeActions
           code={code}
@@ -481,22 +524,82 @@ function CodeRow({
 }
 
 /**
- * The code's label and who used it, one line each: cut short, whole in
- * the title (168.3, G-09).
+ * The code's label, one line, cut short and whole in the title (168.3),
+ * and who used it (R55·200): the count, the first five as links to
+ * Runners, then "+ N more", which opens the whole list in the pane. A row
+ * is never taller than two lines.
  */
-function CodeWho({ code }: Readonly<{ code: DeskCode }>): JSX.Element {
+function CodeWho({
+  code,
+  onMore,
+}: Readonly<{ code: DeskCode; onMore: () => void }>): JSX.Element {
   const label = code.label ?? "No label";
-  const who =
-    code.usedBy.length === 0 ? "Not used yet" : code.usedBy.join(", ");
+  const more = code.usedBy.length - FIRST_USERS;
   return (
     <span className="flex min-w-0 basis-full flex-col gap-1 wide:basis-auto">
       <span title={label} className="truncate">
         {label}
       </span>
-      <span title={who} className="truncate text-small text-quiet">
-        {who}
+      <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <Mono step="xs" className="text-muted">
+          {usedLine(code.usedBy.length)}
+        </Mono>
+        {code.usedBy.slice(0, FIRST_USERS).map((who) => (
+          <RunnerLink key={who} who={who} />
+        ))}
+        {more > 0 ? (
+          <button
+            type="button"
+            onClick={onMore}
+            className="cursor-pointer border-none bg-transparent p-0 text-small font-bold text-action"
+          >
+            {`+ ${grouped(more)} more`}
+          </button>
+        ) : undefined}
       </span>
     </span>
+  );
+}
+
+/**
+One runner a code let in, as a link to them on Runners.
+*/
+function RunnerLink({ who }: Readonly<{ who: string }>): JSX.Element {
+  return (
+    <Link
+      to="/desk/runners"
+      search={runnerSearch(who)}
+      className="text-small text-ink underline underline-offset-4"
+    >
+      {who}
+    </Link>
+  );
+}
+
+/**
+ * A code in the detail pane (R55·200): its code, its label and everyone
+ * who used it, each a link to Runners.
+ */
+function CodePane({ code }: Readonly<{ code: DeskCode }>): JSX.Element {
+  return (
+    <>
+      <div className="flex flex-col gap-2">
+        <h2 className="m-0">
+          <Mono step="sm">{code.code}</Mono>
+        </h2>
+        <span className="wrap-anywhere">{code.label ?? "No label"}</span>
+        <Mono step="xs" className="text-muted">
+          {`${usedLine(code.usedBy.length)} · ${usesLine(code)}`}
+        </Mono>
+      </div>
+      <ul className="m-0 flex list-none flex-col gap-2 p-0">
+        {code.usedBy.map((who) => (
+          <li key={who} className="wrap-anywhere">
+            <RunnerLink who={who} />
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }
 
@@ -564,61 +667,31 @@ function NewCodeForm({
 }
 
 /**
- * Desk D7 · Access (task 126, ACC-5; round 26 #20, round 28 #9):
- * Requests, oldest first, each with Send invite and a silent Decline; and
- * Codes, with a form to make one (its link copied as it is made), who used
- * each, Copy link, and Revoke with ten seconds of Undo on the row.
+ * Desk D7 · Access (task 126, ACC-5; round 26 #20): Requests, oldest
+ * first, each with Send invite and a silent Decline. Codes are their own
+ * page since R55·194 (`DeskCodes`).
  */
 export function DeskAccess({
-  desk,
+  requests,
   asOf,
-  linkFor,
-  copy,
-  onChanged,
-  createCode,
   sendInvite,
   decline,
-  revoke,
-  restore,
 }: Readonly<{
-  desk: AccessDesk;
+  requests: AccessDesk["requests"];
   asOf: number;
-  /**
-  The `/join?code=` link for a code, absolute.
-  */
-  linkFor: (code: string) => string;
-  copy: (text: string) => Promise<void>;
-  /**
-  Reloads the page's data after a change.
-  */
-  onChanged: () => Promise<void>;
-  createCode: (input: {
-    data: { label: string; maxUses: number; idempotencyKey: string };
-  }) => Promise<{ code: string }>;
   sendInvite: RowAction;
   decline: RowAction;
-  revoke: RowAction;
-  restore: RowAction;
 }>): JSX.Element {
   const [said, setSaid] = useState("");
+  const onChanged = useReload();
   return (
-    <div className="flex flex-col gap-10">
-      {/* One title for the page the rail calls Access, its two lists
-          under it (G-15). */}
+    <div className="flex flex-col gap-6">
       <h1 className="m-0 font-display text-title uppercase">Access</h1>
       <FormStatus>{said}</FormStatus>
       <RequestsSection
-        requests={desk.requests}
+        requests={requests}
         asOf={asOf}
         actions={{ sendInvite, decline }}
-        onChanged={onChanged}
-        announce={setSaid}
-      />
-      <CodesSection
-        codes={desk.codes}
-        asOf={asOf}
-        link={{ linkFor, copy }}
-        actions={{ createCode, revoke, restore }}
         onChanged={onChanged}
         announce={setSaid}
       />
@@ -627,9 +700,68 @@ export function DeskAccess({
 }
 
 /**
+ * Desk D7 · Codes (round 28 #9; its own page since R55·194, drawn in
+ * R55·200): a form to make one (its link copied as it is made), the codes
+ * as one table, who used each, Copy link, and Revoke with ten seconds of
+ * Undo on the row.
+ */
+export function DeskCodes({
+  codes,
+  asOf,
+  actions,
+}: Readonly<{
+  codes: AccessDesk["codes"];
+  asOf: number;
+  actions: CodeActions;
+}>): JSX.Element {
+  const [said, setSaid] = useState("");
+  const router = useRouter();
+  return (
+    <div className="flex flex-col gap-6">
+      <FormStatus>{said}</FormStatus>
+      <CodesSection
+        codes={codes}
+        asOf={asOf}
+        link={{
+          // The `/join?code=` link for a code, absolute.
+          linkFor: (code) =>
+            new URL(
+              router.buildLocation({ to: "/join", search: { code } }).href,
+              globalThis.location.origin,
+            ).href,
+          copy: (text) => navigator.clipboard.writeText(text),
+        }}
+        actions={actions}
+        onChanged={() => router.invalidate()}
+        announce={setSaid}
+      />
+    </div>
+  );
+}
+
+/**
+What Codes' rows and form do, as the route hands them in.
+*/
+type CodeActions = Readonly<{
+  createCode: (input: {
+    data: { label: string; maxUses: number; idempotencyKey: string };
+  }) => Promise<{ code: string }>;
+  revoke: RowAction;
+  restore: RowAction;
+}>;
+
+/**
+Reloads the route's data after a change, so the rail's counts follow.
+*/
+function useReload(): () => Promise<void> {
+  const router = useRouter();
+  return () => router.invalidate();
+}
+
+/**
  * D7's Codes: the form that makes one (its link copied as it is made),
  * each code's uses, Copy link, and Revoke with ten seconds of Undo on the
- * row. Copy's outcome goes to `DeskAccess`'s status region through
+ * row. Copy's outcome goes to `DeskCodes`' status region through
  * `announce`; a made code's line is this section's own.
  */
 function CodesSection({
@@ -646,13 +778,7 @@ function CodesSection({
     linkFor: (code: string) => string;
     copy: (text: string) => Promise<void>;
   };
-  actions: {
-    createCode: (input: {
-      data: { label: string; maxUses: number; idempotencyKey: string };
-    }) => Promise<{ code: string }>;
-    revoke: RowAction;
-    restore: RowAction;
-  };
+  actions: CodeActions;
   onChanged: () => Promise<void>;
   announce: (said: string) => void;
 }>): JSX.Element {
@@ -681,6 +807,10 @@ function CodesSection({
   // once per hold and not again on every render.
   useReleaseHold(holding, setHolding, isRevokeFailed || undoing.isFailed);
   const [madeStatus, setMadeStatus] = useState("");
+  // The code "+ N more" opened in the pane (R55·200), read from the list
+  // each render so a reload's counts show in it.
+  const [openId, setOpenId] = useState<string>();
+  const open = codes.find((code) => code.id === openId);
   // Codes made on this page load wear NEW until it reloads; codes whose
   // copy failed show their link selected. Both by the code itself, which
   // a new row has before the reload gives it an id.
@@ -698,9 +828,9 @@ function CodesSection({
   };
   return (
     <section aria-labelledby="desk-codes" className="flex flex-col gap-4">
-      <h2 id="desk-codes" className={SECTION_HEADING}>
+      <h1 id="desk-codes" className="m-0 font-display text-title uppercase">
         Codes
-      </h2>
+      </h1>
       <Mono step="xs" className="text-muted">
         {codeCounts(codes)}
       </Mono>
@@ -718,35 +848,71 @@ function CodesSection({
       <p role="status" data-part="status-line" className="m-0">
         <Mono step="xs">{madeStatus}</Mono>
       </p>
-      <ul className={CODE_LIST}>
-        {orderedCodes(codes, holding).map((code) => (
-          <CodeRow
-            key={code.id}
-            code={code}
-            state={{
-              asOf,
-              isNew: made.includes(code.code),
-              isHeld: code.id === holding && !isRevokeFailed,
-              uncopiedLink:
-                uncopied === code.code ? linkFor(code.code) : undefined,
-            }}
-            onCopy={() => {
-              void wasCopied(code.code).then((isCopied) => {
-                announce(isCopied ? "Link copied." : "Link not copied.");
-              });
-            }}
-            onRevoke={() => {
-              setHolding(code.id);
-              revoking.run(code.id);
-            }}
-            onUndo={() => {
-              undoing.run(code.id);
-            }}
-            band={revoking.bandFor(code.id) ?? undoing.bandFor(code.id)}
-          />
-        ))}
-      </ul>
+      <DeskDetail
+        picked={
+          open === undefined
+            ? undefined
+            : { name: open.code, detail: <CodePane code={open} /> }
+        }
+      >
+        <ul className={CODE_LIST}>
+          <CodesHeader />
+          {orderedCodes(codes, holding).map((code) => (
+            <CodeRow
+              key={code.id}
+              code={code}
+              state={{
+                asOf,
+                isNew: made.includes(code.code),
+                isHeld: code.id === holding && !isRevokeFailed,
+                uncopiedLink:
+                  uncopied === code.code ? linkFor(code.code) : undefined,
+              }}
+              onCopy={() => {
+                void wasCopied(code.code).then((isCopied) => {
+                  announce(isCopied ? "Link copied." : "Link not copied.");
+                });
+              }}
+              onRevoke={() => {
+                setHolding(code.id);
+                revoking.run(code.id);
+              }}
+              onUndo={() => {
+                undoing.run(code.id);
+              }}
+              onMore={() => {
+                setOpenId(code.id);
+              }}
+              band={revoking.bandFor(code.id) ?? undoing.bandFor(code.id)}
+            />
+          ))}
+        </ul>
+      </DeskDetail>
     </section>
+  );
+}
+
+/**
+ * The table's column heads (R55·200), at width only: on a phone a row
+ * wraps and its cells say what they are. Drawn, not said: a list has no
+ * headers to announce, and each cell is read in its row.
+ */
+function CodesHeader(): JSX.Element {
+  return (
+    <li
+      aria-hidden="true"
+      className="hidden border-b border-hairline pb-2 text-muted wide:col-span-full wide:grid wide:grid-cols-subgrid"
+    >
+      <Mono step="xs">Code</Mono>
+      <Mono step="xs">Label · used by</Mono>
+      <Mono step="xs" className="text-right">
+        Age
+      </Mono>
+      <Mono step="xs" className="text-right">
+        Uses
+      </Mono>
+      <span />
+    </li>
   );
 }
 
@@ -781,11 +947,7 @@ function RequestsSection({
     announce,
   });
   return (
-    // 168.3: Requests keep the 620 column; Codes take the page's width.
-    <section
-      aria-labelledby="desk-requests"
-      className="flex max-w-column flex-col gap-4"
-    >
+    <section aria-labelledby="desk-requests" className="flex flex-col gap-4">
       <h2 id="desk-requests" className={SECTION_HEADING}>
         Requests
       </h2>

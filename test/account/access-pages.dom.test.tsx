@@ -21,11 +21,14 @@ import { REGION_COPY, TURNSTILE_REFUSED } from "../../src/lib/contracts/access";
 import type { AccessRequestResult } from "../../src/modules/account/access";
 import {
   DeskAccess,
+  DeskCodes,
   UNDO_WINDOW_MS,
   ageLabel,
   codeCounts,
   madeLine,
   orderedCodes,
+  usedLine,
+  usesLine,
 } from "../../src/modules/account/components/DeskAccess";
 import {
   NOTE_COUNTER_ID,
@@ -477,11 +480,39 @@ const DESK: AccessDesk = {
   ],
 };
 
-function desk(overrides: Partial<Parameters<typeof DeskAccess>[0]> = {}) {
-  const props = {
+type RowFn = (input: { data: { id: string } }) => Promise<unknown>;
+
+interface DeskProps {
+  desk: AccessDesk;
+  asOf: number;
+  /**
+  The browser's clipboard write, which Codes calls for Copy link.
+  */
+  copy: (text: string) => Promise<void>;
+  /**
+  The router's reload, which both pages call after a change.
+  */
+  onChanged: () => Promise<void>;
+  createCode: (input: {
+    data: { label: string; maxUses: number; idempotencyKey: string };
+  }) => Promise<{ code: string }>;
+  sendInvite: RowFn;
+  decline: RowFn;
+  revoke: RowFn;
+  restore: RowFn;
+}
+
+/**
+ * D7's two pages, Access and Codes (R55·194), side by side as one render,
+ * so a test of either reads the same fixture. Each page reloads through
+ * the router and copies through the browser, so those are what is
+ * stubbed: `onChanged` stands in for the router's reload and `copy` for
+ * the clipboard.
+ */
+async function desk(overrides: Partial<DeskProps> = {}) {
+  const props: DeskProps = {
     desk: DESK,
     asOf: 3 * 24 * 3600,
-    linkFor: (value: string) => `https://dialed.run/join?code=${value}`,
     copy: vi.fn(() => Promise.resolve()),
     onChanged: vi.fn(() => Promise.resolve()),
     createCode: vi.fn(() => Promise.resolve({ code: "DIAL-NEW2" })),
@@ -491,8 +522,57 @@ function desk(overrides: Partial<Parameters<typeof DeskAccess>[0]> = {}) {
     restore: vi.fn(() => Promise.resolve()),
     ...overrides,
   };
-  render(<DeskAccess {...props} />);
+  vi.spyOn(navigator.clipboard, "writeText").mockImplementation(props.copy);
+  const rootRoute = createRootRoute({
+    component: () => (
+      <>
+        <div data-page="access">
+          <DeskAccess
+            requests={props.desk.requests}
+            asOf={props.asOf}
+            sendInvite={props.sendInvite}
+            decline={props.decline}
+          />
+        </div>
+        <div data-page="codes">
+          <DeskCodes
+            codes={props.desk.codes}
+            asOf={props.asOf}
+            actions={{
+              createCode: props.createCode,
+              revoke: props.revoke,
+              restore: props.restore,
+            }}
+          />
+        </div>
+      </>
+    ),
+  });
+  const router = createRouter({
+    routeTree: rootRoute,
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+  await router.load();
+  vi.spyOn(router, "invalidate").mockImplementation(props.onChanged);
+  render(<RouterProvider router={router} />);
   return { props, user: userEvent.setup() };
+}
+
+/**
+The `/join?code=` link a code copies, on the page's own origin.
+*/
+function joinLink(code: string): string {
+  return `${globalThis.location.origin}/join?code=${code}`;
+}
+
+/**
+A page's status region: the first on it, or the `nth`.
+*/
+function statusOf(page: "access" | "codes", nth = 0): HTMLElement | undefined {
+  const on = document.querySelector<HTMLElement>(
+    `[data-page="${CSS.escape(page)}"]`,
+  );
+  return within(on ?? document.body).getAllByRole("status")[nth];
 }
 
 function undo(): HTMLElement | null {
@@ -506,8 +586,8 @@ function rowOf(text: string): HTMLElement {
 }
 
 describe("D7 · Access", () => {
-  it("lists requests oldest first with their age and note, and counts them", () => {
-    desk();
+  it("lists requests oldest first with their age and note, and counts them", async () => {
+    await desk();
     expect(screen.getByText("2 waiting · oldest first")).toBeVisible();
     const sam = within(rowOf("sam@example.com"));
     expect(sam.getByText("3d")).toBeVisible();
@@ -519,30 +599,34 @@ describe("D7 · Access", () => {
     expect(j.getByText("2d")).toBeVisible();
   });
 
-  it("titles the page Access, its two lists under it (G-15)", () => {
-    desk();
+  it("titles each page: Access over its Requests, and Codes on its own (G-15, R55·194)", async () => {
+    await desk();
+    const access = within(
+      document.querySelector<HTMLElement>('[data-page="access"]') ??
+        document.body,
+    );
     expect(
-      screen.getByRole("heading", { level: 1, name: "Access" }),
+      access.getByRole("heading", { level: 1, name: "Access" }),
     ).toHaveClass("font-display", "text-title", "uppercase");
-    for (const name of ["Requests", "Codes"]) {
-      expect(screen.getByRole("heading", { level: 2, name })).toHaveClass(
-        "font-display",
-        "text-heading",
-        "uppercase",
-      );
-    }
-    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(
+      access.getByRole("heading", { level: 2, name: "Requests" }),
+    ).toHaveClass("font-display", "text-heading", "uppercase");
+    expect(access.getAllByRole("heading")).toHaveLength(2);
+    const codes = within(
+      document.querySelector<HTMLElement>('[data-page="codes"]') ??
+        document.body,
+    );
+    expect(codes.getByRole("heading", { level: 1, name: "Codes" })).toHaveClass(
+      "font-display",
+      "text-title",
+      "uppercase",
+    );
+    expect(codes.getAllByRole("heading", { level: 1 })).toHaveLength(1);
   });
 
-  it("keeps Requests to the column and wraps a long address (168.3, N3-09)", () => {
-    desk();
-    expect(
-      screen.getByRole("heading", { name: "Requests" }).parentElement,
-    ).toHaveClass("max-w-column");
-    expect(
-      screen.getByRole("heading", { name: "Codes" }).parentElement,
-    ).not.toHaveClass("max-w-column");
-    // Only the code list takes the width; its form keeps the column.
+  it("keeps the new-code form to the column and wraps a long address (168.3, N3-09)", async () => {
+    await desk();
+    // Only the code table takes the width; its form keeps the column.
     expect(
       document.querySelector("[data-part='new-code']")?.parentElement,
     ).toHaveClass("max-w-column");
@@ -554,8 +638,8 @@ describe("D7 · Access", () => {
     );
   });
 
-  it("tags a request from a blocked state, and has no Send invite for it, only why", () => {
-    desk({
+  it("tags a request from a blocked state, and has no Send invite for it, only why", async () => {
+    await desk({
       desk: {
         ...DESK,
         requests: [
@@ -592,16 +676,17 @@ describe("D7 · Access", () => {
     expect(rowOf("sam@example.com")).not.toHaveTextContent("[");
   });
 
-  it("shows nothing in its own status line until something happens", () => {
-    desk();
-    expect(screen.getAllByRole("status")[0]).toHaveTextContent("");
+  it("shows nothing in its own status line until something happens", async () => {
+    await desk();
+    expect(statusOf("access")).toHaveTextContent("");
+    expect(statusOf("codes")).toHaveTextContent("");
     // The Codes section's own status line (what a made code's line fills
     // in) starts empty too, before any code is made.
     expect(part("status-line")).toHaveTextContent("");
   });
 
   it("sends an invite and declines, each reloading the page", async () => {
-    const { props, user } = desk();
+    const { props, user } = await desk();
     await user.click(
       within(rowOf("sam@example.com")).getByRole("button", {
         name: "Send invite",
@@ -640,7 +725,7 @@ describe("D7 · Access", () => {
         .fn()
         .mockRejectedValueOnce(new Error("down"))
         .mockResolvedValueOnce(undefined);
-      const { props, user } = desk({ [prop]: act });
+      const { props, user } = await desk({ [prop]: act });
       const button = within(rowOf("j@example.com")).getByRole("button", {
         name: action,
       });
@@ -657,9 +742,7 @@ describe("D7 · Access", () => {
       expect(within(rowOf("sam@example.com")).queryByText(kicker)).toBeNull();
       expect(screen.queryByText("Not changed")).toBeNull();
       // Said once, in the page's one status region, in the band's words.
-      expect(screen.getAllByRole("status")[0]).toHaveTextContent(
-        `${kicker}. ${sentence}`,
-      );
+      expect(statusOf("access")).toHaveTextContent(`${kicker}. ${sentence}`);
       // Focus stays on the control that failed.
       expect(button).toHaveFocus();
       // Nothing optimistic: the page was not reloaded for a failure.
@@ -681,38 +764,41 @@ describe("D7 · Access", () => {
 
   it("keeps the last thing said when another row action starts and has not failed", async () => {
     const pending = Promise.withResolvers<undefined>();
-    const { user } = desk({ sendInvite: vi.fn(() => pending.promise) });
+    const { user } = await desk({ revoke: vi.fn(() => pending.promise) });
     await user.click(
       within(rowOf("DIAL-TR8K")).getByRole("button", { name: "Copy link" }),
     );
     await waitFor(() => {
-      expect(screen.getAllByRole("status")[0]).toHaveTextContent(
-        "Link copied.",
-      );
+      expect(statusOf("codes")).toHaveTextContent("Link copied.");
     });
     await user.click(
-      within(rowOf("sam@example.com")).getByRole("button", {
-        name: "Send invite",
-      }),
+      within(rowOf("DIAL-TR8K")).getByRole("button", { name: "Revoke" }),
     );
-    expect(screen.getAllByRole("status")[0]).toHaveTextContent("Link copied.");
+    expect(statusOf("codes")).toHaveTextContent("Link copied.");
     await act(async () => {
       pending.resolve(undefined);
       await Promise.resolve();
     });
   });
 
-  it("lists codes with their label, who used them and their uses, and counts them", () => {
-    desk();
+  it("lists codes with their label, who used them and their uses, and counts them", async () => {
+    await desk();
     expect(screen.getByText("1 active · 3 used")).toBeVisible();
     const open = within(rowOf("DIAL-TR8K"));
     expect(open.getByText("Tuesday track group")).toBeVisible();
-    expect(open.getByText("@dee_k, @paulo")).toBeVisible();
-    expect(open.getByText("2/8")).toBeVisible();
+    // R55·200: the count, then each runner a link to them on Runners.
+    expect(open.getByText("2 used")).toBeVisible();
+    expect(open.getByRole("link", { name: "@paulo" })).toHaveAttribute(
+      "href",
+      "/desk/runners?query=paulo&filter=all",
+    );
+    expect(open.getByRole("link", { name: "@dee_k" })).toBeVisible();
+    expect(open.queryByRole("button", { name: /more$/u })).toBeNull();
+    expect(open.getByText("2 / 8")).toBeVisible();
     expect(open.getByRole("button", { name: "Copy link" })).toBeVisible();
     // An active code's code and count read in ink; a spent one, muted.
     expect(open.getByText("DIAL-TR8K")).toHaveClass("text-ink");
-    expect(open.getByText("2/8")).toHaveClass("text-ink");
+    expect(open.getByText("2 / 8")).toHaveClass("text-ink");
     // Not held: the row's cells, a subgrid of the list's one grid from
     // `wide` so every row shares its columns (168.3, N3-07), wrapping on a
     // phone; none of the held row's dimming.
@@ -744,19 +830,20 @@ describe("D7 · Access", () => {
       "title",
       "Tuesday track group",
     );
-    expect(open.getByText("@dee_k, @paulo")).toHaveAttribute(
-      "title",
-      "@dee_k, @paulo",
-    );
-    expect(open.getByText("@dee_k, @paulo")).toHaveClass("truncate");
     const used = within(rowOf("DIAL-7K3P"));
     expect(used.getByText("No label")).toBeVisible();
-    expect(used.getByText("maya@example.com")).toBeVisible();
+    // An unfinished account goes by its address, and is searched by it.
+    expect(
+      used.getByRole("link", { name: "maya@example.com" }),
+    ).toHaveAttribute(
+      "href",
+      "/desk/runners?query=maya%40example.com&filter=all",
+    );
     // Round 29 #14: USED in `--quiet`, the spent code too, not struck.
     expect(used.getByText("Used")).toHaveClass("text-quiet");
     expect(used.getByText("DIAL-7K3P")).toHaveClass("text-quiet");
     expect(used.getByText("DIAL-7K3P")).not.toHaveClass("line-through");
-    expect(used.getByText("1/1")).toHaveClass("text-quiet");
+    expect(used.getByText("1 / 1")).toHaveClass("text-quiet");
     expect(used.queryByRole("button")).toBeNull();
     expect(rowOf("DIAL-7K3P")).toHaveAttribute("data-state", "spent");
     const revoked = within(rowOf("DIAL-H2XN"));
@@ -775,30 +862,84 @@ describe("D7 · Access", () => {
     expect(screen.queryByText("Still active")).toBeNull();
   });
 
+  it("names five runners, then opens the rest in the pane from + N more (R55·200)", async () => {
+    const many = Array.from({ length: 29 }, (_, n) => `@runner_${String(n)}`);
+    const { user } = await desk({
+      desk: {
+        ...DESK,
+        codes: [
+          code({
+            id: "big",
+            code: "DIAL-TEST",
+            label: "e2e harness",
+            maxUses: 1_000_000,
+            usedBy: many,
+          }),
+        ],
+      },
+    });
+    const row = within(rowOf("DIAL-TEST"));
+    expect(row.getByText("29 used")).toBeVisible();
+    expect(row.getByText("29 / 1,000,000")).toBeVisible();
+    expect(
+      row.getAllByRole("link").map((link) => link.textContent),
+    ).toStrictEqual(many.slice(0, 5));
+    expect(screen.queryByRole("complementary")).toBeNull();
+
+    await user.click(row.getByRole("button", { name: "+ 24 more" }));
+
+    const pane = screen.getByRole("complementary", { name: "DIAL-TEST" });
+    expect(
+      within(pane).getByRole("heading", { level: 2, name: "DIAL-TEST" }),
+    ).toBeVisible();
+    expect(within(pane).getByText("e2e harness")).toBeVisible();
+    expect(within(pane).getByText("29 used · 29 / 1,000,000")).toBeVisible();
+    expect(
+      within(pane)
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toStrictEqual(many);
+  });
+
+  it("offers no + more for five runners or fewer", async () => {
+    const five = ["@a", "@b", "@c", "@d", "@e"];
+    await desk({
+      desk: { ...DESK, codes: [code({ usedBy: five, maxUses: 6 })] },
+    });
+    const row = within(rowOf("DIAL-TR8K"));
+    expect(row.getAllByRole("link")).toHaveLength(5);
+    expect(row.queryByRole("button", { name: /more$/u })).toBeNull();
+  });
+
+  it("heads the table's columns at width, drawn and not said (R55·200)", async () => {
+    await desk();
+    const list = rowOf("DIAL-TR8K").parentElement;
+    const header = list?.firstElementChild;
+    expect(header).toHaveAttribute("aria-hidden", "true");
+    expect(header).toHaveClass("hidden", "wide:grid", "wide:grid-cols-subgrid");
+    expect(header).toHaveTextContent("CodeLabel · used byAgeUses");
+  });
+
   it("copies the code's link and says so", async () => {
-    const { props, user } = desk();
+    const { props, user } = await desk();
     await user.click(
       within(rowOf("DIAL-TR8K")).getByRole("button", { name: "Copy link" }),
     );
     await waitFor(() => {
-      expect(screen.getAllByRole("status")[0]).toHaveTextContent(
-        "Link copied.",
-      );
+      expect(statusOf("codes")).toHaveTextContent("Link copied.");
     });
-    expect(props.copy).toHaveBeenCalledWith(
-      "https://dialed.run/join?code=DIAL-TR8K",
-    );
+    expect(props.copy).toHaveBeenCalledWith(joinLink("DIAL-TR8K"));
   });
 
   it("shows the link selected on its row when the browser will not copy (round 28 #9)", async () => {
-    const { user } = desk({ copy: () => Promise.reject(new Error("denied")) });
+    const { user } = await desk({
+      copy: () => Promise.reject(new Error("denied")),
+    });
     await user.click(
       within(rowOf("DIAL-TR8K")).getByRole("button", { name: "Copy link" }),
     );
     await waitFor(() => {
-      expect(screen.getAllByRole("status")[0]).toHaveTextContent(
-        "Link not copied.",
-      );
+      expect(statusOf("codes")).toHaveTextContent("Link not copied.");
     });
     const band = within(rowOf("DIAL-TR8K"))
       .getByText(/^Copying/u)
@@ -811,7 +952,7 @@ describe("D7 · Access", () => {
     const link = within(rowOf("DIAL-TR8K")).getByRole("textbox", {
       name: "Invite link",
     });
-    expect(link).toHaveValue("https://dialed.run/join?code=DIAL-TR8K");
+    expect(link).toHaveValue(joinLink("DIAL-TR8K"));
     expect(link).toHaveAttribute("readonly");
     if (!(link instanceof HTMLInputElement))
       throw new TypeError("not an input");
@@ -832,7 +973,7 @@ describe("D7 · Access", () => {
       .fn<(text: string) => Promise<void>>()
       .mockRejectedValueOnce(new Error("denied"))
       .mockResolvedValueOnce();
-    const { user } = desk({ copy });
+    const { user } = await desk({ copy });
     const copyButton = within(rowOf("DIAL-TR8K")).getByRole("button", {
       name: "Copy link",
     });
@@ -842,11 +983,11 @@ describe("D7 · Access", () => {
     await waitFor(() => {
       expect(screen.queryByRole("textbox", { name: "Invite link" })).toBeNull();
     });
-    expect(screen.getAllByRole("status")[0]).toHaveTextContent("Link copied.");
+    expect(statusOf("codes")).toHaveTextContent("Link copied.");
   });
 
   it("revokes at once, the row staying put with REVOKED and Undo, which puts the code back (round 28 #9)", async () => {
-    const { props, user } = desk();
+    const { props, user } = await desk();
     await user.click(
       within(rowOf("DIAL-TR8K")).getByRole("button", { name: "Revoke" }),
     );
@@ -864,7 +1005,7 @@ describe("D7 · Access", () => {
       "text-ink",
       "underline",
     );
-    expect(held.getByText("2/8")).toHaveClass("text-quiet");
+    expect(held.getByText("2 / 8")).toHaveClass("text-quiet");
     expect(rowOf("DIAL-TR8K").querySelector("[style*='opacity']")).toBeNull();
     expect(rowOf("DIAL-TR8K").firstElementChild).toHaveClass("text-quiet");
     expect(held.queryByRole("button", { name: "Copy link" })).toBeNull();
@@ -886,7 +1027,7 @@ describe("D7 · Access", () => {
       .mockRejectedValueOnce(new Error("down"))
       .mockResolvedValueOnce(undefined);
     const onChanged = vi.fn(() => Promise.resolve());
-    desk({ restore, onChanged });
+    await desk({ restore, onChanged });
     act(() => {
       within(rowOf("DIAL-TR8K"))
         .getByRole("button", { name: "Revoke" })
@@ -903,7 +1044,7 @@ describe("D7 · Access", () => {
       .getByText("Still revoked")
       .closest("[data-part='failure-band']");
     expect(band).toHaveTextContent("Undo didn't go through. Try again?");
-    expect(screen.getAllByRole("status")[0]).toHaveTextContent(
+    expect(statusOf("codes")).toHaveTextContent(
       "Still revoked. Undo didn't go through. Try again?",
     );
     expect(within(rowOf("DIAL-7K3P")).queryByText("Still revoked")).toBeNull();
@@ -930,12 +1071,12 @@ describe("D7 · Access", () => {
 
   it("announces a failed revoke in the page's status region", async () => {
     const revoke = vi.fn().mockRejectedValueOnce(new Error("down"));
-    const { user } = desk({ revoke });
+    const { user } = await desk({ revoke });
     await user.click(
       within(rowOf("DIAL-TR8K")).getByRole("button", { name: "Revoke" }),
     );
     await waitFor(() => {
-      expect(screen.getAllByRole("status")[0]).toHaveTextContent(
+      expect(statusOf("codes")).toHaveTextContent(
         "Still active. Revoke didn't go through. Try again?",
       );
     });
@@ -946,7 +1087,7 @@ describe("D7 · Access", () => {
     // start: it would only clear a hold that is already empty, so nothing
     // on screen shows it, but it is a timer left running for no row.
     const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
-    desk();
+    await desk();
     await act(async () => {
       await Promise.resolve();
     });
@@ -958,7 +1099,7 @@ describe("D7 · Access", () => {
 
   it("drops the Undo after ten seconds, and not before", async () => {
     vi.useFakeTimers();
-    desk();
+    await desk();
     act(() => {
       within(rowOf("DIAL-TR8K"))
         .getByRole("button", { name: "Revoke" })
@@ -981,7 +1122,7 @@ describe("D7 · Access", () => {
       .fn()
       .mockRejectedValueOnce(new Error("down"))
       .mockResolvedValueOnce(undefined);
-    desk({ revoke });
+    await desk({ revoke });
     await act(async () => {
       within(rowOf("DIAL-TR8K"))
         .getByRole("button", { name: "Revoke" })
@@ -1013,7 +1154,7 @@ describe("D7 · Access", () => {
 
   it("puts a failed revoke's band only on that row, never on an untouched sibling", async () => {
     const revoke = vi.fn().mockRejectedValueOnce(new Error("down"));
-    const { user } = desk({ revoke });
+    const { user } = await desk({ revoke });
     await user.click(
       within(rowOf("DIAL-TR8K")).getByRole("button", { name: "Revoke" }),
     );
@@ -1032,7 +1173,7 @@ describe("D7 · Access", () => {
     vi.useFakeTimers();
     const pending = Promise.withResolvers<undefined>();
     const revoke = vi.fn(() => pending.promise);
-    desk({ revoke });
+    await desk({ revoke });
     act(() => {
       within(rowOf("DIAL-TR8K"))
         .getByRole("button", { name: "Revoke" })
@@ -1063,7 +1204,7 @@ describe("D7 · Access", () => {
   it("leaves no timer pending that could clear a held row once its revoke has failed", async () => {
     vi.useFakeTimers();
     const revoke = vi.fn().mockRejectedValueOnce(new Error("down"));
-    desk({ revoke });
+    await desk({ revoke });
     await act(async () => {
       within(rowOf("DIAL-TR8K"))
         .getByRole("button", { name: "Revoke" })
@@ -1082,18 +1223,18 @@ describe("D7 · Access", () => {
     expect(within(rowOf("DIAL-TR8K")).getByText("Still active")).toBeVisible();
   });
 
-  it("wears no NEW badge before any code has been made this load", () => {
+  it("wears no NEW badge before any code has been made this load", async () => {
     // A code that happens to share Stryker's own placeholder string: if the
     // "codes made this load" list ever started with anything in it instead
     // of empty, this is the row that would wrongly wear NEW from the start.
     const planted = code({ id: "c9", code: "Stryker was here" });
-    desk({ desk: { ...DESK, codes: [planted, ...DESK.codes] } });
+    await desk({ desk: { ...DESK, codes: [planted, ...DESK.codes] } });
     expect(within(rowOf("Stryker was here")).queryByText("New")).toBeNull();
   });
 
   it("creates a code with a label and uses, once per key, and says which", async () => {
     const createCode = vi.fn(() => Promise.resolve({ code: "DIAL-NEW2" }));
-    const { props, user } = desk({ createCode });
+    const { props, user } = await desk({ createCode });
     expect(screen.getByLabelText("Uses")).toHaveValue("1");
     await user.type(screen.getByLabelText("Label · for you only"), "Sister");
     await user.clear(screen.getByLabelText("Uses"));
@@ -1106,14 +1247,10 @@ describe("D7 · Access", () => {
       );
     });
     expect(part("status-line")).toHaveAttribute("role", "status");
-    expect(props.copy).toHaveBeenCalledWith(
-      "https://dialed.run/join?code=DIAL-NEW2",
-    );
+    expect(props.copy).toHaveBeenCalledWith(joinLink("DIAL-NEW2"));
     // The form's own status region, distinct from the desk-wide one above.
     await waitFor(() => {
-      expect(screen.getAllByRole("status")[1]).toHaveTextContent(
-        "Code created.",
-      );
+      expect(statusOf("codes", 1)).toHaveTextContent("Code created.");
     });
     expect(createCode).toHaveBeenCalledWith({
       data: { label: "Sister", maxUses: 3, idempotencyKey: ANY_STRING },
@@ -1141,7 +1278,7 @@ describe("D7 · Access", () => {
       createdAt: 3 * 24 * 3600 - 30,
       usedBy: [],
     });
-    const { user } = desk({
+    const { user } = await desk({
       desk: { ...DESK, codes: [fresh, ...DESK.codes] },
       copy: () => Promise.reject(new Error("denied")),
     });
@@ -1156,13 +1293,13 @@ describe("D7 · Access", () => {
     const row = within(rowOf("DIAL-NEW2"));
     expect(row.getByText("New")).toHaveClass("bg-hi-viz", "text-accent-ink");
     expect(row.getByRole("textbox", { name: "Invite link" })).toHaveValue(
-      "https://dialed.run/join?code=DIAL-NEW2",
+      joinLink("DIAL-NEW2"),
     );
     expect(within(rowOf("DIAL-TR8K")).queryByText("New")).toBeNull();
   });
 
   it("names both fields by their labels in the summary when both are wrong", async () => {
-    const { user } = desk();
+    const { user } = await desk();
     await user.type(
       screen.getByLabelText("Label · for you only"),
       "x".repeat(61),
@@ -1177,7 +1314,7 @@ describe("D7 · Access", () => {
   });
 
   it("refuses a uses limit that is not a whole number from 1 to 100", async () => {
-    const { props, user } = desk();
+    const { props, user } = await desk();
     await user.clear(screen.getByLabelText("Uses"));
     await user.type(screen.getByLabelText("Uses"), "0");
     await user.click(screen.getByRole("button", { name: "Create code" }));
@@ -1189,6 +1326,15 @@ describe("D7 · Access", () => {
 });
 
 describe("D7's labels", () => {
+  it("says how many used a code, grouped, or that nobody has (R55·200)", () => {
+    expect(usedLine(0)).toBe("Not used yet");
+    expect(usedLine(1)).toBe("1 used");
+    expect(usedLine(1234)).toBe("1,234 used");
+    expect(usesLine(code({ usedBy: ["@a"], maxUses: 1_000_000 }))).toBe(
+      "1 / 1,000,000",
+    );
+  });
+
   it("draws an age as round 28 #9 does: now, minutes, hours, days, then a date", () => {
     expect(ageLabel(0, 0)).toBe("now");
     expect(ageLabel(0, 59)).toBe("now");
@@ -1234,9 +1380,9 @@ describe("D7's labels", () => {
 });
 
 describe("access pages: a lapsed session (Au7, D-155)", () => {
-  it("carries D7 to log-in as the page", () => {
+  it("carries D7 to log-in as the page", async () => {
     carriedSince();
-    desk();
+    await desk();
 
     expect(carriedSince()).toEqual(["page"]);
   });

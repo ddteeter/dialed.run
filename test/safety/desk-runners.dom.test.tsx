@@ -356,6 +356,13 @@ describe("selecting a runner", () => {
 const FLAGGED_AT = Date.UTC(2025, 10, 6, 12) / 1000;
 
 /**
+A row's reports cell: the one before its state.
+*/
+function reportsOf(row: HTMLElement | undefined) {
+  return [...(row?.querySelectorAll("td") ?? [])].at(-2)?.firstElementChild;
+}
+
+/**
  * D8 over a list the test swaps, as a reload or another filter would:
  * "Next list" draws the next one.
  */
@@ -424,6 +431,28 @@ describe("a flagged account (D-161 1, R47·124) and PENDING DELETE (PR#126-1)", 
     expect(
       within(second ?? document.body).queryByText(bracketed("Flagged")),
     ).toBeNull();
+  });
+
+  it("tones each state and the reports count so the ones that need a look stand out (R55·201)", async () => {
+    await renderDesk({
+      runners: [
+        ada,
+        bo,
+        { ...ada, userId: "u-cy", username: "cy", state: "PENDING DELETE" },
+      ],
+    });
+
+    expect(screen.getByText(bracketed("ACTIVE"))).toHaveClass("text-muted");
+    expect(screen.getByText(bracketed("CLOSED"))).toHaveClass("text-ink");
+    expect(screen.getByText(bracketed("PENDING DELETE"))).toHaveClass(
+      "text-ink",
+    );
+    // The reports cell is the one before the state: ada has 2, bo none.
+    const [, adaRow, boRow] = screen.getAllByRole("row");
+    expect(reportsOf(adaRow)).toHaveTextContent("2");
+    expect(reportsOf(adaRow)).toHaveClass("text-hiviz-text");
+    expect(reportsOf(boRow)).toHaveTextContent("0");
+    expect(reportsOf(boRow)).toHaveClass("text-muted");
   });
 
   it("draws PENDING DELETE as a state", async () => {

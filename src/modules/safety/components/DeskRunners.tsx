@@ -7,6 +7,7 @@ import {
   Bracketed,
   CHALK_PILL,
   ControlFailureBand,
+  DeskDetail,
   FormStatus,
   Mono,
   QUIET_PILL,
@@ -26,7 +27,12 @@ import {
 } from "../contracts";
 import { banUserInput, forceRenameInput } from "../inputs";
 import type { RenameOutcome } from "../rename";
-import type { DeskRunner, RunnerCounts, RunnersFilter } from "../runners";
+import type {
+  DeskRunner,
+  RunnerCounts,
+  RunnerState,
+  RunnersFilter,
+} from "../runners";
 import { DeskForm, PickOne } from "./DeskForm";
 import { NotRenamedBand } from "./NotRenamedBand";
 import { useFocusWhen } from "./use-focus-when";
@@ -191,6 +197,17 @@ function Search({
 }
 
 /**
+ * R55·201: the states that need a look stand out of a long table. ACTIVE,
+ * the ordinary state, is --muted; CLOSED and PENDING DELETE keep the
+ * Desk's full ink; FLAGGED is hi-viz.
+ */
+const STATE_TONE_CLASS: Readonly<Record<RunnerState, string>> = {
+  ACTIVE: "text-muted",
+  "PENDING DELETE": "text-ink",
+  CLOSED: "text-ink",
+};
+
+/**
  * A runner's state, and a hi-viz FLAGGED beside it while a flag is open,
  * each kept whole on its line (168.3: MONO.sm brackets).
  */
@@ -199,7 +216,10 @@ function StateTags({ runner }: Readonly<{ runner: DeskRunner }>): JSX.Element {
     // Each tag whole; on a phone (a guess) the two may stack, leaving the
     // handle room.
     <span className="flex flex-wrap gap-x-2 wide:flex-nowrap">
-      <Bracketed step="sm" className="whitespace-nowrap">
+      <Bracketed
+        step="sm"
+        className={`whitespace-nowrap ${STATE_TONE_CLASS[runner.state]}`}
+      >
         {runner.state}
       </Bracketed>
       {runner.flaggedAt === undefined ? undefined : (
@@ -301,7 +321,12 @@ function RunnerRow({
         <Mono step="md">{String(runner.runs)}</Mono>
       </td>
       <td className={NUMBER_CELL}>
-        <Mono step="md">{String(runner.reports)}</Mono>
+        <Mono
+          step="md"
+          className={runner.reports > 0 ? "text-hiviz-text" : "text-muted"}
+        >
+          {String(runner.reports)}
+        </Mono>
       </td>
       <td className={CELL}>
         <StateTags runner={runner} />
@@ -555,13 +580,6 @@ function FlaggedPanel({
 }
 
 /**
- * Round 54 · 168.3: the detail pane, sticky beside the table from `desk`
- * and under it below that.
- */
-const PANE_CLASS =
-  "flex flex-col gap-4 rounded-card border border-hairline bg-panel p-5 desk:sticky desk:top-6";
-
-/**
  * Whose panels these are (round 27 #22, 168.3): the whole handle and
  * email the table may have cut short, the state, and the counts.
  */
@@ -615,10 +633,7 @@ function RunnerPanels({
           onCleared(runner.userId);
         };
   return (
-    <aside
-      aria-label={`@${runner.username ?? runner.email}`}
-      className={PANE_CLASS}
-    >
+    <>
       <RunnerHead runner={runner} />
       {/* R47·124: at the top of the column. */}
       {isClosed || runner.flaggedAt === undefined ? undefined : (
@@ -646,7 +661,7 @@ function RunnerPanels({
           onDone={onDecided}
         />
       )}
-    </aside>
+    </>
   );
 }
 
@@ -693,11 +708,32 @@ export function DeskRunners({
         </Bracketed>
       </span>
       <Search filter={filter} counts={counts} />
-      {/* 168.3: the table and a pane beside it from `desk` (the ruling's
-          1280 and 320 collapsed to the scale: a 2fr/1fr track), the pane
-          under the table below that. `items-start` keeps a tall pane from
-          stretching the rows (P3-08). */}
-      <div className="grid items-start gap-6 desk:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      {/* 168.3: the table and its pane (DeskDetail). */}
+      <DeskDetail
+        idle={
+          <p className="m-0 text-small text-quiet">
+            Pick a runner to rename or close.
+          </p>
+        }
+        picked={
+          selected === undefined
+            ? undefined
+            : {
+                name: `@${selected.username ?? selected.email}`,
+                detail: (
+                  <RunnerPanels
+                    runner={selected}
+                    acts={acts}
+                    onDone={refresh}
+                    onCleared={(userId) => {
+                      setCleared({ userId, among: runners });
+                      refresh();
+                    }}
+                  />
+                ),
+              }
+        }
+      >
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-hairline">
@@ -725,22 +761,7 @@ export function DeskRunners({
             ))}
           </tbody>
         </table>
-        {selected === undefined ? (
-          <p className="m-0 text-small text-quiet">
-            Pick a runner to rename or close.
-          </p>
-        ) : (
-          <RunnerPanels
-            runner={selected}
-            acts={acts}
-            onDone={refresh}
-            onCleared={(userId) => {
-              setCleared({ userId, among: runners });
-              refresh();
-            }}
-          />
-        )}
-      </div>
+      </DeskDetail>
     </section>
   );
 }

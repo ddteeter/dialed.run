@@ -158,6 +158,17 @@ describe("Wordmark", () => {
     expect(screen.getByText("dialed.run")).not.toHaveAttribute("aria-hidden");
   });
 
+  it("draws the Desk's [dialed], with no .run, and is still said in full (R55·194)", () => {
+    const { container } = render(<Wordmark isDeskMark />);
+    const drawn = [...(container.firstElementChild?.children ?? [])]
+      .filter((part) => part.getAttribute("aria-hidden") === "true")
+      .map((part) => part.textContent)
+      .join("");
+    expect(drawn).toBe("[dialed]");
+    expect(screen.queryByText(".run")).toBeNull();
+    expect(screen.getByText("dialed.run")).toHaveClass("sr-only");
+  });
+
   it("drops the brackets for the plain lockup the signed-out bars draw", () => {
     // Round 21's landing bar and the Auth board set "dialed" + ".run" and
     // nothing else — "pink stays off this bar", and the brackets are the

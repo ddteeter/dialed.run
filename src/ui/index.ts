@@ -5,6 +5,7 @@ export {
   PUBLIC_PREVIEW_LINE,
 } from "./audience";
 export { Bracketed } from "./Bracketed";
+export { DeskDetail } from "./DeskDetail";
 export { DeskSplit, RailCard } from "./DeskSplit";
 export { Digits } from "./Digits";
 export { FileWell } from "./FileWell";

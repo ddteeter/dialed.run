@@ -1,8 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
+import { timeOfDay } from "../../../lib/dates";
 import { Mono, Page, Wordmark } from "../../../ui";
 import type { DeskToday } from "../desk";
+import { DeskSignOut } from "./DeskSignOut";
 
 /**
  * The Desk's shell (Operator Screens D0; decision D-35). Always dark
@@ -20,9 +22,9 @@ import type { DeskToday } from "../desk";
  */
 
 /**
- * Every destination the rail names, in D-87's order (Operator Screens D0,
- * redrawn in round 30), with Corrections under Review (R48·130). Gave up is not one: it is a section of Today, and
- * Today's rail count is its count.
+ * Every destination the rail names, in Round 55 · 194's order: the board's
+ * seven, with Codes its own page beside Access (Requests). Gave up is not
+ * one: it is a section of Today, and Today's rail count is its count.
  */
 const DESK_PAGES = [
   "today",
@@ -30,22 +32,24 @@ const DESK_PAGES = [
   "corrections",
   "access",
   "duplicates",
+  "codes",
   "runners",
 ] as const;
 
 export type DeskPage = (typeof DESK_PAGES)[number];
 
 /**
- * Round 54 · 168.3: Runners, Access (its Codes) and Review are tables, and
- * fill the width beside the rail up to MEASURE.page. The rest keep the
- * 620 document column.
+ * Round 54 · 168.3: Runners, Codes and Review are tables, and fill the
+ * width beside the rail up to MEASURE.page. The rest keep the 620
+ * document column.
  */
 const WIDTH: Readonly<Record<DeskPage, "table" | "column">> = {
   today: "column",
   review: "table",
   corrections: "column",
-  access: "table",
+  access: "column",
   duplicates: "column",
+  codes: "table",
   runners: "table",
 };
 
@@ -55,13 +59,14 @@ const LABEL: Readonly<Record<DeskPage, string>> = {
   corrections: "Corrections",
   access: "Access",
   duplicates: "Duplicates",
+  codes: "Codes",
   runners: "Runners",
 };
 
 /**
- * Where each destination lives. Every one is built now (Duplicates was
- * the last, task 110), so the rail has no placeholder entry and a new
- * page cannot be named without a route to go with it.
+ * Where each destination lives. Every one is built, so the rail has no
+ * placeholder entry and a new page cannot be named without a route to go
+ * with it.
  */
 const HREF: Readonly<
   Record<
@@ -71,6 +76,7 @@ const HREF: Readonly<
     | "/desk/corrections"
     | "/desk/runners"
     | "/desk/access"
+    | "/desk/codes"
     | "/desk/duplicates"
   >
 > = {
@@ -79,6 +85,7 @@ const HREF: Readonly<
   corrections: "/desk/corrections",
   access: "/desk/access",
   duplicates: "/desk/duplicates",
+  codes: "/desk/codes",
   runners: "/desk/runners",
 };
 
@@ -104,39 +111,108 @@ function RailCount({ tally }: Readonly<{ tally: RailTally | undefined }>) {
   );
 }
 
+/**
+ * R55·194/195: the current entry is marked by its edge, not its colour, so
+ * hi-viz text stays for the counts that need a person. At width that edge
+ * is a 2px hi-viz bar on the left with a --panel fill and bold text; on a
+ * phone, where the rail is one row, it is a 2px hi-viz underline.
+ */
+const RAIL_ENTRY =
+  "flex min-h-control items-center gap-2 border-b-2 px-3 text-body text-ink no-underline wide:justify-between wide:gap-6 wide:border-b-0 wide:border-l-2 wide:pr-5 wide:pl-6";
+const RAIL_CURRENT = "border-hi-viz font-bold wide:bg-panel";
+const RAIL_OTHER = "border-transparent";
+
+/**
+ * The current entry, scrolled into view in the phone's sideways row (R55·
+ * 195). `nearest` on both axes, so at width, where the rail is a column
+ * already in view, nothing moves.
+ */
+function scrollIntoRow(link: HTMLAnchorElement | null): void {
+  link?.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+
 function RailEntry({
   page,
-  label,
   current,
   tally,
 }: Readonly<{
   page: DeskPage;
-  label: string;
   current: DeskPage;
   tally: RailTally | undefined;
 }>) {
   const isActive = page === current;
-  const tone = isActive ? "text-hiviz-text" : "text-ink";
-  const content = (
-    <>
-      <span>{label}</span>
-      <RailCount tally={tally} />
-    </>
-  );
   return (
     <li>
       <Link
         to={HREF[page]}
+        ref={isActive ? scrollIntoRow : undefined}
         // Exact: by default Link marks a prefix match current, so Today
         // ("/desk") read as the current page on every Desk page. The
         // Link sets aria-current itself whenever it matches.
         activeOptions={{ exact: true }}
         aria-current={isActive ? "page" : undefined}
-        className={`target flex items-baseline justify-between gap-6 ${tone}`}
+        className={`${RAIL_ENTRY} ${isActive ? RAIL_CURRENT : RAIL_OTHER}`}
       >
-        {content}
+        <span>{LABEL[page]}</span>
+        <RailCount tally={tally} />
       </Link>
     </li>
+  );
+}
+
+/**
+ * The rail's foot at width (R55·194), pinned there: whether screening is
+ * holding (a breaker over its ceiling this hour, design 164) and when the
+ * daily digest last ran, in UTC like the date on Today. The words for
+ * neither-OK state are the owner's (2026-11-13, #635).
+ */
+function RailFooter({ today }: Readonly<{ today: DeskToday }>) {
+  const isHolding = today.breakers.length > 0;
+  const lastDigestAt = today.counts.lastDigestAt;
+  return (
+    <div
+      data-part="rail-footer"
+      className="hidden wide:flex wide:flex-col wide:gap-1 wide:px-6 wide:pt-6"
+    >
+      <Mono step="xs" className={isHolding ? "text-hiviz-text" : "text-muted"}>
+        {isHolding ? "Screening · Holding" : "Screening · OK"}
+      </Mono>
+      <Mono step="xs" className="text-muted">
+        {`Last digest · ${lastDigestAt === undefined ? "Not yet" : timeOfDay(lastDigestAt)}`}
+      </Mono>
+    </div>
+  );
+}
+
+/**
+ * The Desk's top bar (R55·194/195): `[dialed] DESK` at the left, and at the
+ * right the operator's handle, their role and Sign out. On a phone the bar
+ * is the 48 row and keeps only Sign out. The handle is in its own case:
+ * a handle is never shouted (G-19).
+ */
+function DeskBar({ handle }: Readonly<{ handle: string | undefined }>) {
+  return (
+    <header
+      data-part="desk-bar"
+      className="flex min-h-control items-center justify-between gap-4 pr-3 pl-4 wide:min-h-[var(--bar-height)] wide:border-b wide:border-hairline wide:px-6"
+    >
+      <span className="flex items-baseline gap-2 text-heading wide:gap-3">
+        <Wordmark isDeskMark />
+        <Mono step="xs" className="text-hiviz-text">
+          Desk
+        </Mono>
+      </span>
+      <span className="flex items-center gap-2">
+        <span
+          data-part="operator"
+          className="hidden font-mono text-mono-xs text-muted wide:inline"
+        >
+          {handle === undefined ? undefined : `@${handle} · `}
+          <span className="uppercase">Operator ·</span>
+        </span>
+        <DeskSignOut />
+      </span>
+    </header>
   );
 }
 
@@ -163,43 +239,35 @@ export function DeskShell({
   return (
     <div
       data-ground="night"
-      // The rail beside the content from `wide`, above it below: at 320px
-      // a rail kept beside the column made the whole Desk scroll sideways
-      // (plan 161, step 6; owner 2026-11-03).
-      className="flex min-h-dvh flex-col bg-ground font-sans text-body text-ink wide:flex-row"
+      className="flex min-h-dvh flex-col bg-ground font-sans text-body text-ink"
     >
-      <nav
-        aria-label="Desk"
-        className="flex flex-col gap-8 border-b border-hairline p-6 wide:border-r wide:border-b-0"
-      >
-        <div className="flex flex-col gap-2">
-          <span className="flex items-baseline gap-3 text-heading">
-            <Wordmark />
-            <Mono step="sm" className="text-hiviz-text">
-              Desk
-            </Mono>
-          </span>
-          <Mono step="xs" className="text-muted">
-            Operator
-          </Mono>
-        </div>
-        <ul className="flex flex-col gap-3">
-          {DESK_PAGES.map((page) => (
-            <RailEntry
-              key={page}
-              page={page}
-              label={LABEL[page]}
-              current={current}
-              tally={tallies[page]}
-            />
-          ))}
-        </ul>
-      </nav>
-      {/* `Page` for the column and the hydration stamp every screen
-          carries (useHydrated), which the e2e specs wait on. */}
-      <main className="min-w-0 flex-1">
-        <Page width={WIDTH[current]}>{children}</Page>
-      </main>
+      <DeskBar handle={today.operatorHandle} />
+      {/* The rail beside the content from `wide`; below it, one sticky row
+          under the bar that scrolls sideways (R55·195), so a page's heading
+          starts near the top instead of under six stacked rows (G-03). */}
+      <div className="flex flex-1 flex-col wide:flex-row">
+        <nav
+          aria-label="Desk"
+          className="sticky top-0 z-10 overflow-x-auto border-y border-hairline bg-ground px-2 wide:static wide:flex wide:flex-col wide:justify-between wide:overflow-visible wide:border-y-0 wide:border-r wide:px-0 wide:py-4"
+        >
+          <ul className="m-0 flex list-none gap-1 p-0 whitespace-nowrap wide:flex-col wide:gap-0">
+            {DESK_PAGES.map((page) => (
+              <RailEntry
+                key={page}
+                page={page}
+                current={current}
+                tally={tallies[page]}
+              />
+            ))}
+          </ul>
+          <RailFooter today={today} />
+        </nav>
+        {/* `Page` for the column and the hydration stamp every screen
+            carries (useHydrated), which the e2e specs wait on. */}
+        <main className="min-w-0 flex-1">
+          <Page width={WIDTH[current]}>{children}</Page>
+        </main>
+      </div>
     </div>
   );
 }
