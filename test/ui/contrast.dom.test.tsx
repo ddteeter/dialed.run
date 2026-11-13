@@ -179,9 +179,8 @@ describe("the T1 port", () => {
     const applies = tokens.match(/@apply [\w:-]+;/gu)?.length;
     // :root, the dark page twice, the ink block and its breakpoint header,
     // the dark page's panel block, its bottom-ruled bar, panel header and
-    // row press (each twice: the attribute and the media query), and night;
-    // then the three drawn controls taking the one focus ring (R54·166).
-    expect(applies).toBe(17);
+    // row press (each twice: the attribute and the media query), and night.
+    expect(applies).toBe(14);
   });
 
   it("puts a dark page's ink blocks on rule 04's fallback, --panel with a hairline (R50·143.1)", () => {
@@ -271,15 +270,12 @@ describe("the T1 port", () => {
   });
 
   it("draws the checkbox, radio and switch as ruled, with the contract's focus ring (R54·166)", () => {
-    // Focus: a 2px --ground gap, then 2px pink.
-    expect(block("control-focus")).toMatch(
-      /box-shadow:\s*0 0 0 2px var\(--ground\),\s*0 0 0 4px var\(--action\);/u,
+    // Focus: rule 06's outline, whose 2px offset is the --ground gap, in
+    // pink — unlayered, so it beats rule 06's ink, and only for these three.
+    expect(tokens).toMatch(
+      /:is\(\.control-check, \.control-radio, \.control-switch\):focus-visible \{\s*outline-color: var\(--action\);\s*\}/u,
     );
     for (const name of ["control-check", "control-radio", "control-switch"]) {
-      expect([name, block(name).includes("@apply control-focus;")]).toEqual([
-        name,
-        true,
-      ]);
       expect([name, block(name).includes("appearance: none;")]).toEqual([
         name,
         true,

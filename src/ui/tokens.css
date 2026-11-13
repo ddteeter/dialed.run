@@ -335,23 +335,21 @@
  * the roles; pink stays pink. Each sits 20 inside a 44 target that its
  * row's label provides.
  *
- * The ring is a box-shadow rather than an outline so its gap can be the
- * ground the control sits on, whatever that is (a sheet's panel, a page).
+ * The focus ring is the app's own outline (`ui/a11y.css`, rule 06: 2px,
+ * offset 2px, never removed) with one change, its colour: the offset is
+ * the 2px gap and shows the ground behind, and the line is pink. It is an
+ * unlayered rule for the same reason rule 06 is — a utility in a layer
+ * cannot beat it — and it names the three controls, so nothing else's
+ * ring turns pink.
  */
-@utility control-focus {
-  &:focus-visible {
-    outline: none;
-    box-shadow:
-      0 0 0 2px var(--ground),
-      0 0 0 4px var(--action);
-  }
+:is(.control-check, .control-radio, .control-switch):focus-visible {
+  outline-color: var(--action);
 }
 
 /* 166.1: a 20 square, RADIUS.tight, 2px ink edge; on, an ink fill with a
    --ground tick. The tick is two borders of a rotated box, so it is
    drawn, not a glyph. */
 @utility control-check {
-  @apply control-focus;
   appearance: none;
   display: grid;
   flex: none;
@@ -386,7 +384,6 @@
 
 /* 166.2: a 20 ring with a 2px ink edge and a 10 ink dot. */
 @utility control-radio {
-  @apply control-focus;
   appearance: none;
   display: grid;
   flex: none;
@@ -417,7 +414,6 @@
    fills pink and the knob moves right. The knob is the track's inside
    (24) less 3 a side, as drawn. */
 @utility control-switch {
-  @apply control-focus;
   appearance: none;
   display: flex;
   flex: none;
