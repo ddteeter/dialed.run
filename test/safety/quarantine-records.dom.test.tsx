@@ -70,6 +70,8 @@ describe("QuarantineRecords", () => {
         .getByRole("button", { name: "Record the NCMEC report" })
         .closest("form"),
     ).toHaveClass("flex", "flex-col", "gap-4");
+    // Not reported yet: the form's own status region is the only one.
+    expect(screen.getAllByRole("status")).toHaveLength(1);
   });
 
   it("says when a record was reported, and its number", () => {
@@ -236,6 +238,8 @@ describe("QuarantineRecords", () => {
     ).toBeNull();
     expect(screen.queryByText("Report recorded.")).toBeNull();
     expect(part("ncmec")?.textContent).toBe("[not reported to NCMEC]");
+    // Gone: the record says so in place, with no status region left.
+    expect(screen.queryAllByRole("status")).toHaveLength(0);
   });
 
   it("says nothing is held under QUARANTINE · 0, rather than going (round 39 #68)", () => {

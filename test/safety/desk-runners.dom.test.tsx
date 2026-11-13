@@ -117,6 +117,32 @@ describe("D8's table", () => {
     );
   });
 
+  it("heads each column as its cells are set: padded, numbers right, the pane's columns hidden below wide", async () => {
+    await renderDesk();
+
+    const heads = screen.getAllByRole("columnheader");
+    expect(heads.map((head) => head.textContent)).toEqual([
+      "Handle",
+      "Email",
+      "Joined",
+      "Runs",
+      "Reports",
+      "State",
+    ]);
+    for (const head of heads) {
+      expect(head).toHaveClass("px-3", "py-3", "align-baseline");
+    }
+    const [handle, email, joined, runs, reports, state] = heads;
+    expect(email).toHaveClass("max-wide:hidden");
+    expect(joined).toHaveClass("max-wide:hidden");
+    expect(runs).toHaveClass("text-right", "max-wide:hidden");
+    expect(reports).toHaveClass("text-right");
+    for (const shown of [handle, reports, state]) {
+      expect(shown).not.toHaveClass("max-wide:hidden");
+    }
+    expect(handle).not.toHaveClass("text-right");
+  });
+
   it("keeps every cell to one line, full values in titles (168.3)", async () => {
     await renderDesk();
 
@@ -212,7 +238,7 @@ describe("D8's table", () => {
   });
 
   it("says nobody is in a filter with no search (owner, 2026-11-12)", async () => {
-    await renderDesk({ runners: [], filter: { filter: "flagged", query: "" } });
+    await renderDesk({ runners: [], filter: { filter: "flagged" } });
 
     const [, empty] = screen.getAllByRole("row");
     expect(empty).toHaveTextContent(/^Nobody in Flagged\.$/u);

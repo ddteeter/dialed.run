@@ -251,7 +251,12 @@ describe("deciding", () => {
       .fn<Props["resolve"]>()
       .mockReturnValue(promise);
     render(
-      <ReviewQueue queue={[row()]} resolve={resolve} reviewHandle={vi.fn()} />,
+      <ReviewQueue
+        onDecided={vi.fn()}
+        queue={[row()]}
+        resolve={resolve}
+        reviewHandle={vi.fn()}
+      />,
     );
 
     await user.selectOptions(
@@ -523,7 +528,12 @@ describe("deciding", () => {
       .fn<Props["resolve"]>()
       .mockReturnValue(promise);
     render(
-      <ReviewQueue queue={[row()]} resolve={resolve} reviewHandle={vi.fn()} />,
+      <ReviewQueue
+        onDecided={vi.fn()}
+        queue={[row()]}
+        resolve={resolve}
+        reviewHandle={vi.fn()}
+      />,
     );
 
     await user.selectOptions(
@@ -552,7 +562,12 @@ describe("deciding", () => {
       .fn<Props["resolve"]>()
       .mockRejectedValue(new Error("offline"));
     render(
-      <ReviewQueue queue={[row()]} resolve={resolve} reviewHandle={vi.fn()} />,
+      <ReviewQueue
+        onDecided={vi.fn()}
+        queue={[row()]}
+        resolve={resolve}
+        reviewHandle={vi.fn()}
+      />,
     );
 
     await user.selectOptions(
@@ -633,7 +648,12 @@ describe("deciding", () => {
       .fn<Props["resolve"]>()
       .mockRejectedValue(new Error("offline"));
     render(
-      <ReviewQueue queue={[row()]} resolve={resolve} reviewHandle={vi.fn()} />,
+      <ReviewQueue
+        onDecided={vi.fn()}
+        queue={[row()]}
+        resolve={resolve}
+        reviewHandle={vi.fn()}
+      />,
     );
 
     await user.click(screen.getByRole("button", { name: "Approve" }));
@@ -913,6 +933,7 @@ describe("what a row tells the reviewer", () => {
   it("puts the statutory line directly under the reason, above the fold (R47·126)", () => {
     render(
       <ReviewQueue
+        onDecided={vi.fn()}
         queue={[
           row({ reporterCount: 1, reasons: ["intimate"], due: "Due in 31h" }),
         ]}
@@ -1059,6 +1080,7 @@ const CLEAR_REFUSED =
 function renderStuck(resolve: Props["resolve"]): void {
   render(
     <ReviewQueue
+      onDecided={vi.fn()}
       queue={[stuck("missing_file")]}
       resolve={resolve}
       reviewHandle={vi.fn()}
@@ -1212,6 +1234,7 @@ describe("a photo still pending a day after upload (D-157)", () => {
       .mockResolvedValue({ outcome: "already_resolved" });
     render(
       <ReviewQueue
+        onDecided={vi.fn()}
         queue={[stuck("missing_file")]}
         resolve={resolve}
         reviewHandle={vi.fn()}
@@ -1232,6 +1255,7 @@ describe("a photo still pending a day after upload (D-157)", () => {
       .mockResolvedValue({ outcome: "not_found" });
     render(
       <ReviewQueue
+        onDecided={vi.fn()}
         queue={[stuck("unscreened")]}
         resolve={resolve}
         reviewHandle={vi.fn()}
@@ -1368,6 +1392,7 @@ describe("a handle the re-ask flagged (D-97)", () => {
       .mockReturnValue(promise);
     render(
       <ReviewQueue
+        onDecided={vi.fn()}
         queue={[flagged()]}
         resolve={vi.fn()}
         reviewHandle={reviewHandle}
@@ -1512,6 +1537,7 @@ function renderWithFold(queue: readonly QueueRow[]) {
     .mockResolvedValue([]);
   render(
     <ReviewQueue
+      onDecided={vi.fn()}
       queue={queue}
       resolve={vi
         .fn<Props["resolve"]>()

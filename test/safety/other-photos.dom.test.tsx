@@ -138,7 +138,12 @@ describe("on Review's rows", () => {
       subject: { photoKeys: [] },
     };
     await renderWithRouter(
-      <ReviewQueue queue={[row]} resolve={vi.fn()} reviewHandle={vi.fn()} />,
+      <ReviewQueue
+        onDecided={vi.fn()}
+        queue={[row]}
+        resolve={vi.fn()}
+        reviewHandle={vi.fn()}
+      />,
     );
     expect(part("other-photos")).toHaveTextContent(/^Their other photos · 2/u);
     expect(

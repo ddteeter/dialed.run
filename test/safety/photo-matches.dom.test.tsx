@@ -248,7 +248,12 @@ describe("on Review's rows", () => {
       subject: { photoKeys: [] },
     };
     await renderWithRouter(
-      <ReviewQueue queue={[row]} resolve={vi.fn()} reviewHandle={vi.fn()} />,
+      <ReviewQueue
+        onDecided={vi.fn()}
+        queue={[row]}
+        resolve={vi.fn()}
+        reviewHandle={vi.fn()}
+      />,
     );
     expect(part("photo-matches")).toHaveTextContent(
       /^Matching photos · any runner · 1/u,
@@ -356,7 +361,12 @@ describe("RemovedMatchLine", () => {
       subject: { photoKeys: [] },
     };
     await renderWithRouter(
-      <ReviewQueue queue={[row]} resolve={vi.fn()} reviewHandle={vi.fn()} />,
+      <ReviewQueue
+        onDecided={vi.fn()}
+        queue={[row]}
+        resolve={vi.fn()}
+        reviewHandle={vi.fn()}
+      />,
     );
     expect(part("removed-match")).toHaveTextContent("The same image");
     expect(part("photo-matches")).not.toBeNull();
@@ -748,6 +758,7 @@ describe("a garment match's takedown", () => {
           decideMatch={decide}
         />
         <ReviewQueue
+          onDecided={vi.fn()}
           queue={[row]}
           resolve={vi.fn()}
           reviewHandle={vi.fn()}

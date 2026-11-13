@@ -632,7 +632,7 @@ export function ReviewQueue(
      * After a row is decided: the route reloads, so the heading's count
      * and the rail's say what is now true.
      */
-    onDecided?: (() => void) | undefined;
+    onDecided: () => void;
   }>,
 ): JSX.Element {
   // Rows leave the list as they are decided; `useSettled` says why that
@@ -680,7 +680,7 @@ export function ReviewQueue(
               setChosen((waiting[at + 1] ?? waiting[at - 1])?.id);
               setHasDecided(true);
               settle(id);
-              props.onDecided?.();
+              props.onDecided();
             }}
           />
         )}
