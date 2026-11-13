@@ -177,4 +177,5 @@ test("06 desk", async ({ page }) => {
   await see(page, "/desk/duplicates");
   await see(page, "/desk/corrections");
   await see(page, "/desk/access");
+  await see(page, "/desk/codes");
 });

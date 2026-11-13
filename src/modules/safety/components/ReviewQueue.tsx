@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { JSX } from "react";
 
 import { spanLabel } from "../../../lib/dates";
@@ -423,10 +423,12 @@ function headName(row: QueueRow, label: string): string {
 function RowHead({
   row,
   label,
-}: Readonly<{ row: QueueRow; label: string }>): JSX.Element {
+  id,
+}: Readonly<{ row: QueueRow; label: string; id: string }>): JSX.Element {
   const { owner } = row.subject;
   return (
     <span
+      id={id}
       data-part="row-head"
       title={label}
       className="truncate font-mono text-mono-sm"
@@ -547,6 +549,9 @@ function ReviewRow({
   // (round 38 #60); the row stays open.
   const [label, setLabel] = useState(row.subject.label ?? row.subjectId);
   const origin = { from: "report", row: row.id } as const;
+  // The strip is named by its head alone; the summary and the age describe
+  // it, so a screen reader hears the name, then the rest.
+  const ids = useId();
 
   return (
     <li
@@ -561,13 +566,18 @@ function ReviewRow({
           ref={opener}
           type="button"
           aria-expanded={active}
+          aria-labelledby={`${ids}-head`}
+          aria-describedby={
+            active ? `${ids}-clock` : `${ids}-summary ${ids}-clock`
+          }
           onClick={onActivate}
           className="flex min-h-target w-full cursor-pointer items-center justify-between gap-4 border-none bg-transparent px-4 py-3 text-left text-ink"
         >
           <span className="flex min-w-0 flex-col gap-1">
-            <RowHead row={row} label={label} />
+            <RowHead row={row} label={label} id={`${ids}-head`} />
             {active ? undefined : (
               <span
+                id={`${ids}-summary`}
                 data-part="row-summary"
                 className="truncate text-small text-quiet"
               >
@@ -576,7 +586,9 @@ function ReviewRow({
             )}
           </span>
           <span className="flex shrink-0 items-center gap-4 whitespace-nowrap">
-            <RowClock row={row} asOf={asOf} />
+            <span id={`${ids}-clock`}>
+              <RowClock row={row} asOf={asOf} />
+            </span>
             {/* The fold's own mark, as WHO REPORTED's (G-21). */}
             <span aria-hidden="true" className="text-muted">
               {active ? "▾" : "▸"}

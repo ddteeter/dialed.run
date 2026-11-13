@@ -38,7 +38,12 @@ import { userIdOf } from "../conformance/logging-fixtures";
 import { signInAsOperator } from "../desk/operator";
 import { expect, hydrated, scene, test } from "../support/demo";
 import { withLocalDb } from "../support/local-db";
-import { openRow, seedRunnerRow, signInAsAccount } from "./moderation-support";
+import {
+  openRow,
+  queueRowFor,
+  seedRunnerRow,
+  signInAsAccount,
+} from "./moderation-support";
 
 test("an operator renames and closes a runner, and a Remove deletes", async ({
   page,
@@ -190,7 +195,7 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   await scene(page, "Review: one row opens at a time");
   await page.goto("/desk/review");
   await hydrated(page);
-  const row = page.getByRole("listitem").filter({ hasText: entryId });
+  const row = queueRowFor(page, entryId);
   // Round 28 #8: the row's name opens it; there is no "Decide this one".
   await openRow(row);
   await expect(row.locator("button[aria-expanded]").first()).toHaveAttribute(
@@ -202,16 +207,12 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   await scene(page, "Review: Remove deletes, and says why");
   await reason.selectOption("it's an ad or spam");
   await row.getByRole("button", { name: "Remove", exact: true }).click();
-  await expect(
-    page.getByRole("listitem").filter({ hasText: entryId }),
-  ).toHaveCount(0);
+  await expect(queueRowFor(page, entryId)).toHaveCount(0);
 
   // R-167 (design 159): a garment photo's Remove takes it off the garment
   // and tells its owner, shown in the bell at the end.
   await scene(page, "Review: Remove a garment's photo, and its owner is told");
-  const garmentRow = page
-    .getByRole("listitem")
-    .filter({ hasText: `garment photo · ${garmentId}` });
+  const garmentRow = queueRowFor(page, garmentId);
   await openRow(garmentRow);
   // Round 42 #88: the photo at F's card size, and the garment's line.
   await expect(garmentRow.locator("[data-part='garment-photo']")).toBeVisible();
@@ -220,9 +221,7 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
     .getByRole("combobox", { name: /Why it comes down/ })
     .selectOption("it's sexual or explicit");
   await garmentRow.getByRole("button", { name: "Remove", exact: true }).click();
-  await expect(
-    page.getByRole("listitem").filter({ hasText: garmentId }),
-  ).toHaveCount(0);
+  await expect(queueRowFor(page, garmentId)).toHaveCount(0);
 
   await scene(page, "D8: find the runner by email");
   await page.goto("/desk/runners");

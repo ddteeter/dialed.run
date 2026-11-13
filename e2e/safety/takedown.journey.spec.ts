@@ -248,7 +248,8 @@ test("someone with no account asks for an intimate image to come down, and an op
       hasText: "Open the kit",
     }),
   });
-  await expect(request.locator("[data-part='due']")).toHaveText("Due in 48h");
+  // R55·197: the clock at the head's right, bold hi-viz.
+  await expect(request.getByText("Due in 48h", { exact: true })).toBeVisible();
   await expect(request).toContainText("[via /takedown]");
   await expect(request).toContainText("[hidden]");
   await expect(request.locator("[data-part='related']")).toHaveText(

@@ -169,10 +169,14 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   // Round 28 #9's ages: under a minute old reads NOW.
   await expect(request.getByText("now", { exact: true })).toBeVisible();
   await request.getByRole("button", { name: "Send invite" }).click();
+  await expect(request).toHaveCount(0, { timeout: 15_000 });
+  // The code it minted is on Codes, its own page since R55·194.
+  await page.goto("/desk/codes");
+  await hydrated(page);
   const invite = page
     .getByRole("listitem")
     .filter({ hasText: `${email} (request)` });
-  await expect(invite).toContainText("0/1", { timeout: 15_000 });
+  await expect(invite).toContainText("0 / 1", { timeout: 15_000 });
   const code = /DIAL-[2-9A-HJ-NP-Z]{4}/u.exec(
     (await invite.textContent()) ?? "",
   )?.[0];
