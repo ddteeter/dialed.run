@@ -6,6 +6,7 @@ import { nowSeconds } from "../../src/lib/now";
 import { storageStateFor } from "../support/accounts";
 import { DESK, PHONE } from "../support/bars";
 import {
+  fillOf,
   fillsOf,
   hydrated,
   leavesOf,
@@ -20,9 +21,10 @@ import { feedUserId, removeSeeded, seeded } from "./feed-support";
  * M, redrawn to S2c — round 22's "M Mark all read in flight" — and the
  * bell round 22 put on every signed-in screen.
  *
- * Unread is a white row and a pink dot, read is the paper; Mark all read
- * breathes in place while the rows stay as they are. At desk the screen
- * is DS3's panel, not a column (R-102).
+ * Round 55 (184b) made the board's white unread row the whole list's
+ * fill: one `--panel` list, unread the pink dot, never a fill of its own.
+ * Mark all read breathes in place while the rows stay as they are. At
+ * desk the screen is DS3's panel, not a column (R-102).
  */
 test.use({ storageState: storageStateFor("feed") });
 
@@ -97,12 +99,15 @@ test("M in flight: white-and-dot rows, and Mark all read breathing in place", as
     await page.goto("/notifications");
     await hydrated(page);
 
-    // **Unread on white, read on the paper** — the wash is gone.
-    const fills = await fillsOf(page, '[data-part="notification-list"]');
-    expect(fills.slice(0, drawn.rowFills.length)).toEqual(drawn.rowFills);
+    // **One white list, the dot for unread** (R55·184b): the board's
+    // unread white is the list's, and no row fills itself.
+    const listFill = await fillOf(page, '[data-part="notification-list"]');
+    expect(listFill).toBe(drawn.rowFills[0]);
+    const rowFills = await fillsOf(page, '[data-part="notification-list"]');
+    expect(new Set(rowFills)).toEqual(new Set(["transparent"]));
     const dots = await fillsOf(
       page,
-      '[data-part="notification-row"][data-state="unread"]',
+      '[data-part="notification-row"][data-state="unread"] > *',
     );
     expect(dots[0]).toBe(drawn.dotFill);
 
@@ -117,7 +122,7 @@ test("M in flight: white-and-dot rows, and Mark all read breathing in place", as
     await page.locator(markAll).waitFor();
     expect(upper(await leavesOf(page, markAll))).toEqual(drawn.marking);
     const inFlight = await fillsOf(page, '[data-part="notification-list"]');
-    expect(inFlight.slice(0, drawn.rowFills.length)).toEqual(drawn.rowFills);
+    expect(inFlight).toEqual(rowFills);
     // Let the call land, and wait for what it does (#566). Taking the
     // route away releases a held call, so it used to land on its own
     // while the spec went on: the list re-read itself in a race with the
@@ -128,6 +133,10 @@ test("M in flight: white-and-dot rows, and Mark all read breathing in place", as
     await expect(
       page.locator('[data-part="notification-row"][data-state="read"]'),
     ).toHaveCount(drafts.length);
+    // The row stays and says so, so the list never jumps (R55·184a).
+    await expect(
+      page.locator('[data-part="mark-all-row"]').getByText("All read"),
+    ).toBeVisible();
     await page.unrouteAll({ behavior: "ignoreErrors" });
 
     // **At desk it is the centred column** (Round 54 · 168.1), no longer

@@ -185,7 +185,7 @@ test("Review · a photo unscreened a day on, its file missing: Clear photo, and 
     await expect(
       rows
         .filter({ hasText: "We couldn't find the file for the photo" })
-        .locator("p"),
+        .locator("[data-part='notification-body']"),
     ).toHaveText(
       "We couldn't find the file for the photo of one of your garments, so we took it off. Add it again from your Closet if you'd like it there.",
     );

@@ -25,19 +25,18 @@ button, Log a run
 end of banner
 main
 heading, Notifications, level 1
+# unread
 button, Mark all read
 Mark all read
 end of button, Mark all read
 status
 list
 listitem, level 1, position 1, set size 1
+link, Unread We kept the name on Rain Shell # as it is. :day :month #, #:# UTC
 Unread
-paragraph
-link, We kept the name on Rain Shell # as it is.
 We kept the name on Rain Shell # as it is.
-end of link, We kept the name on Rain Shell # as it is.
-end of paragraph
 :day :month #, #:# UTC
+end of link, Unread We kept the name on Rain Shell # as it is. :day :month #, #:# UTC
 end of listitem, level 1, position 1, set size 1
 end of list
 end of main
