@@ -124,11 +124,16 @@ function ReleaseLine({
 }>): JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
   return (
-    <li className="flex flex-col">
+    // The board's ruled row: the cause left, its one action right, bold
+    // and in ink (G-16).
+    <li
+      data-part="release-line"
+      className="flex flex-wrap items-center justify-between gap-x-4 border-b border-hairline"
+    >
       <Mono step="xs">{`${CAUSE_LABEL[burst.cause]} · ${String(burst.waiting)} waiting`}</Mono>
       <button
         type="button"
-        className="target cursor-pointer self-start border-none bg-transparent p-0 py-3 text-small text-label underline underline-offset-4"
+        className="target cursor-pointer border-none bg-transparent p-0 text-body font-bold text-ink underline underline-offset-4"
         onClick={() => {
           setIsOpen(true);
         }}

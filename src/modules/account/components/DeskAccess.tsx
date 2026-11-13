@@ -246,13 +246,19 @@ function RequestRow({
   return (
     <li className="flex flex-col gap-2 border-b border-hairline py-4">
       <span className="flex items-baseline justify-between gap-4">
-        <span className="flex items-baseline gap-2">
-          <span className="font-semibold">{request.email}</span>
+        {/* A long address wraps, so the age keeps its place (N3-09). */}
+        <span className="flex min-w-0 flex-wrap items-baseline gap-2">
+          <span
+            data-part="request-email"
+            className="min-w-0 font-semibold wrap-anywhere"
+          >
+            {request.email}
+          </span>
           {region === "" ? undefined : (
             <Mono step="sm">{regionTag(region)}</Mono>
           )}
         </span>
-        <Mono step="sm" className="text-muted">
+        <Mono step="sm" className="shrink-0 text-muted">
           {ageLabel(request.createdAt, asOf)}
         </Mono>
       </span>
@@ -391,6 +397,25 @@ interface CodeRowState {
   readonly uncopiedLink: string | undefined;
 }
 
+/**
+ * Round 54 · 168.3: from `wide` the codes are one grid, each row a subgrid
+ * of it, so the code, label, age, count and actions share their columns
+ * down the list (N3-07). On a phone a row wraps instead, its actions
+ * included, so nothing runs off the screen (G-09, N3-06; not drawn, a
+ * guess).
+ */
+const CODE_LIST =
+  "m-0 flex list-none flex-col p-0 wide:grid wide:grid-cols-[auto_minmax(0,1fr)_auto_auto_auto] wide:gap-x-4";
+const CODE_ROW =
+  "flex flex-col gap-3 border-b border-hairline py-4 wide:col-span-full wide:grid wide:grid-cols-subgrid";
+const CODE_CELLS =
+  "flex flex-wrap items-baseline gap-x-4 gap-y-2 wide:col-span-full wide:grid wide:grid-cols-subgrid";
+
+/**
+The heading of each of Access's two lists.
+*/
+const SECTION_HEADING = "m-0 font-display text-heading uppercase";
+
 function CodeRow({
   code,
   state,
@@ -415,18 +440,9 @@ function CodeRow({
   // the foot — the strike carries the meaning without colour.
   const codeTone = isStruck ? "text-quiet line-through" : tone;
   return (
-    <li
-      data-state={isActive(code) ? undefined : "spent"}
-      className="flex flex-col gap-3 border-b border-hairline py-4"
-    >
-      <span
-        className={
-          isStruck
-            ? "grid grid-cols-[auto_1fr_auto_auto_auto] items-baseline gap-4 text-quiet"
-            : "grid grid-cols-[auto_1fr_auto_auto_auto] items-baseline gap-4"
-        }
-      >
-        <span className="flex items-baseline gap-2">
+    <li data-state={isActive(code) ? undefined : "spent"} className={CODE_ROW}>
+      <span className={isStruck ? `${CODE_CELLS} text-quiet` : CODE_CELLS}>
+        <span className="flex items-baseline gap-2 whitespace-nowrap">
           <Mono step="sm" className={codeTone}>
             {code.code}
           </Mono>
@@ -436,12 +452,7 @@ function CodeRow({
             </Mono>
           ) : undefined}
         </span>
-        <span className="flex flex-col gap-1">
-          <span>{code.label ?? "No label"}</span>
-          <span className="text-small text-quiet">
-            {code.usedBy.length === 0 ? "Not used yet" : code.usedBy.join(", ")}
-          </span>
-        </span>
+        <CodeWho code={code} />
         <Mono step="sm" className="text-muted">
           {ageLabel(code.createdAt, state.asOf)}
         </Mono>
@@ -456,11 +467,36 @@ function CodeRow({
           onUndo={onUndo}
         />
       </span>
-      {band}
+      {/* Under the row, the grid's full width. */}
+      {band === undefined ? undefined : (
+        <div className="wide:col-span-full">{band}</div>
+      )}
       {state.uncopiedLink === undefined ? undefined : (
-        <NotCopied url={state.uncopiedLink} />
+        <div className="wide:col-span-full">
+          <NotCopied url={state.uncopiedLink} />
+        </div>
       )}
     </li>
+  );
+}
+
+/**
+ * The code's label and who used it, one line each: cut short, whole in
+ * the title (168.3, G-09).
+ */
+function CodeWho({ code }: Readonly<{ code: DeskCode }>): JSX.Element {
+  const label = code.label ?? "No label";
+  const who =
+    code.usedBy.length === 0 ? "Not used yet" : code.usedBy.join(", ");
+  return (
+    <span className="flex min-w-0 basis-full flex-col gap-1 wide:basis-auto">
+      <span title={label} className="truncate">
+        {label}
+      </span>
+      <span title={who} className="truncate text-small text-quiet">
+        {who}
+      </span>
+    </span>
   );
 }
 
@@ -567,6 +603,9 @@ export function DeskAccess({
   const [said, setSaid] = useState("");
   return (
     <div className="flex flex-col gap-10">
+      {/* One title for the page the rail calls Access, its two lists
+          under it (G-15). */}
+      <h1 className="m-0 font-display text-title uppercase">Access</h1>
       <FormStatus>{said}</FormStatus>
       <RequestsSection
         requests={desk.requests}
@@ -659,24 +698,27 @@ function CodesSection({
   };
   return (
     <section aria-labelledby="desk-codes" className="flex flex-col gap-4">
-      <h2 id="desk-codes" className="m-0 font-display text-title uppercase">
+      <h2 id="desk-codes" className={SECTION_HEADING}>
         Codes
       </h2>
       <Mono step="xs" className="text-muted">
         {codeCounts(codes)}
       </Mono>
-      <NewCodeForm
-        createCode={actions.createCode}
-        onCreated={async (code) => {
-          setMade((previous) => [...previous, code]);
-          setMadeStatus(madeLine(code, await wasCopied(code)));
-          await onChanged();
-        }}
-      />
+      {/* The form keeps the column; only the list takes the width. */}
+      <div className="max-w-column">
+        <NewCodeForm
+          createCode={actions.createCode}
+          onCreated={async (code) => {
+            setMade((previous) => [...previous, code]);
+            setMadeStatus(madeLine(code, await wasCopied(code)));
+            await onChanged();
+          }}
+        />
+      </div>
       <p role="status" data-part="status-line" className="m-0">
         <Mono step="xs">{madeStatus}</Mono>
       </p>
-      <ul className="m-0 flex list-none flex-col p-0">
+      <ul className={CODE_LIST}>
         {orderedCodes(codes, holding).map((code) => (
           <CodeRow
             key={code.id}
@@ -739,10 +781,14 @@ function RequestsSection({
     announce,
   });
   return (
-    <section aria-labelledby="desk-requests" className="flex flex-col gap-4">
-      <h1 id="desk-requests" className="m-0 font-display text-title uppercase">
+    // 168.3: Requests keep the 620 column; Codes take the page's width.
+    <section
+      aria-labelledby="desk-requests"
+      className="flex max-w-column flex-col gap-4"
+    >
+      <h2 id="desk-requests" className={SECTION_HEADING}>
         Requests
-      </h1>
+      </h2>
       <Mono step="xs" className="text-muted">
         {`${String(requests.length)} waiting · oldest first`}
       </Mono>

@@ -75,7 +75,7 @@ function BackLink({
       className="target inline-flex items-center gap-2 self-start text-ink no-underline"
     >
       <Icon name="back" size={20} />
-      <span className="text-body">{label}</span>
+      <span className="text-body underline underline-offset-4">{label}</span>
     </Link>
   );
 }
@@ -83,12 +83,21 @@ function BackLink({
 function KitBody({ kit }: Readonly<{ kit: Kit }>): JSX.Element {
   return (
     <>
-      <span data-part="kit-band" className="flex flex-wrap gap-2 uppercase">
-        <Runner handle={kit.handle} runnerId={kit.runnerId} />
-        <Bracketed>{audienceWord[kit.audience]}</Bracketed>
-        <Bracketed>{STATE_WORD[kit.moderationStatus]}</Bracketed>
-      </span>
-      <RunLine kit={kit} />
+      {/* R51·153: one bordered strip, `@hillsplits · PRIVATE · HIDDEN,
+          PENDING REVIEW`, the handle in its own case and the run line
+          close under it, muted (G-18). */}
+      <div className="flex flex-col gap-2">
+        <span
+          data-part="kit-band"
+          className="flex flex-wrap items-center gap-x-2 border border-hairline px-3 font-mono text-mono-sm"
+        >
+          <Runner handle={kit.handle} runnerId={kit.runnerId} />
+          <span className="uppercase">
+            {` · ${audienceWord[kit.audience]} · ${STATE_WORD[kit.moderationStatus]}`}
+          </span>
+        </span>
+        <RunLine kit={kit} />
+      </div>
       {kit.moderationStatus === "removed" ? (
         <p data-part="kit-photos" className="m-0 text-body">
           Removed. Photos deleted.
@@ -163,14 +172,14 @@ function Runner({
   handle,
   runnerId,
 }: Readonly<{ handle: string | undefined; runnerId: string }>): JSX.Element {
-  if (handle === undefined) return <Mono step="sm">{runnerId}</Mono>;
+  if (handle === undefined) return <span>{runnerId}</span>;
   return (
     <Link
       to="/desk/runners"
       search={{ query: handle, filter: "all" }}
-      className="target text-ink"
+      className="target inline-flex items-center text-ink"
     >
-      <Mono step="sm">{`@${handle}`}</Mono>
+      {`@${handle}`}
     </Link>
   );
 }
@@ -211,7 +220,7 @@ function RunLine({ kit }: Readonly<{ kit: Kit }>): JSX.Element | undefined {
     { temp: kit.tempUnit, distance: defaultUnits.distance },
   );
   return (
-    <span data-part="kit-run" className="text-ink uppercase">
+    <span data-part="kit-run" className="text-muted uppercase">
       <Mono step="sm">
         <Spoken {...line} />
       </Mono>

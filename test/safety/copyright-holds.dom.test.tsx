@@ -112,7 +112,11 @@ describe("CopyrightHolds", () => {
     expect(
       screen.getByRole("heading", { name: "Copyright holds · 1" }),
     ).toBeVisible();
-    expect(part("copyright-hold")).toHaveTextContent("photo p1");
+    // Round 39 #73: a panel headed by a hi-viz kicker, kind and id (G-13).
+    expect(part("copyright-hold")).toHaveClass("border", "bg-panel", "p-4");
+    const kicker = part("copyright-hold")?.firstElementChild?.firstElementChild;
+    expect(kicker).toHaveTextContent(/^photo · p1$/u);
+    expect(kicker).toHaveClass("text-hiviz-text", "wrap-anywhere", "min-w-0");
     expect(part("hidden-at")?.textContent).toBe("Hidden Oct 23");
     expect(part("owner")?.textContent).toBe("Owner runner-1 · strikes 2");
     expect(part("notice")?.textContent).toBe(
@@ -173,6 +177,17 @@ describe("CopyrightHolds", () => {
       screen.getByRole("button", { name: "Court action filed" }),
     ).toBeVisible();
     expect(part("hold-said")?.textContent).toBe("Counter-notice recorded.");
+    // The answer sits above the next question, not under its buttons (G-22).
+    expect(
+      part("hold-said")?.compareDocumentPosition(
+        screen.getByRole("button", { name: "Court action filed" }),
+      ),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(part("hold-said")?.previousElementSibling).toBe(
+      part("hold-said")?.parentElement?.querySelector(
+        "[data-part='hold-state']",
+      )?.parentElement,
+    );
   });
 
   it("records a court action, and then offers only the case's end", async () => {
@@ -308,10 +323,48 @@ describe("CopyrightHolds", () => {
       });
       expect(part("holds-said")?.textContent).toBe(sentence);
       expect(screen.getByRole("status")).toHaveTextContent(sentence);
-      // The last hold settled: the list goes, its answer stays.
-      expect(screen.queryByRole("heading")).toBeNull();
+      // The last hold settled: the list goes, and its answer stays under
+      // the section's kicker, not loose on the page (G-22).
+      const heading = screen.getByRole("heading", {
+        name: "Copyright holds · 0",
+      });
+      expect(heading.nextElementSibling).toBe(part("holds-said"));
+      expect(screen.getAllByText(sentence, { selector: "p" })).toHaveLength(1);
     },
   );
+
+  it("says what a settled row did above the holds still left", async () => {
+    const act = vi.fn<CaseOverFn>().mockResolvedValue({ outcome: "recorded" });
+    render(
+      <CopyrightHolds
+        holds={[inCourt(), held({ id: "01JABCDEFGHJKMNPQRSTVWXYZ1" })]}
+        counterNotice={vi.fn<CounterFn>()}
+        courtAction={vi.fn<CourtFn>()}
+        caseOverDelete={act}
+        caseOverRestore={vi.fn<CaseOverFn>()}
+      />,
+    );
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Case over: delete" }));
+    await user.click(screen.getByRole("button", { name: "Delete it" }));
+
+    const heading = await screen.findByRole("heading", {
+      name: "Copyright holds · 1",
+    });
+    const said = part("holds-said");
+    expect(said?.textContent).toBe("Case over. It is deleted.");
+    // One hold is left, so the answer sits above the list's kicker.
+    expect(
+      said === null
+        ? 0
+        : said.compareDocumentPosition(heading) &
+            Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      document.querySelectorAll("[data-part='copyright-hold']"),
+    ).toHaveLength(1);
+  });
 
   it.each([
     ["Case over: delete", "Delete it for good? It can't be put back."],

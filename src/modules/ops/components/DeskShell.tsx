@@ -35,6 +35,20 @@ const DESK_PAGES = [
 
 export type DeskPage = (typeof DESK_PAGES)[number];
 
+/**
+ * Round 54 · 168.3: Runners, Access (its Codes) and Review are tables, and
+ * fill the width beside the rail up to MEASURE.page. The rest keep the
+ * 620 document column.
+ */
+const WIDTH: Readonly<Record<DeskPage, "table" | "column">> = {
+  today: "column",
+  review: "table",
+  corrections: "column",
+  access: "table",
+  duplicates: "column",
+  runners: "table",
+};
+
 const LABEL: Readonly<Record<DeskPage, string>> = {
   today: "Today",
   review: "Review",
@@ -184,7 +198,7 @@ export function DeskShell({
       {/* `Page` for the column and the hydration stamp every screen
           carries (useHydrated), which the e2e specs wait on. */}
       <main className="min-w-0 flex-1">
-        <Page>{children}</Page>
+        <Page width={WIDTH[current]}>{children}</Page>
       </main>
     </div>
   );

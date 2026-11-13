@@ -15,7 +15,13 @@ import type {
 } from "../../../lib/contracts/product-corrections";
 import { valueWords } from "../../../lib/correction-words";
 import { monthDayLabel } from "../../../lib/dates";
-import { Bracketed, Mono, QUIET_CANCEL, useFormSubmit } from "../../../ui";
+import {
+  Bracketed,
+  FailureBand,
+  Mono,
+  QUIET_CANCEL,
+  useFormSubmit,
+} from "../../../ui";
 import type {
   ApplyOutcome,
   CorrectionFiler,
@@ -24,6 +30,7 @@ import type {
 } from "../../products";
 import { DeskForm, PickOne } from "./DeskForm";
 import { QuietAction } from "./RemovalDecision";
+import { counted } from "./counted";
 
 /**
  * How a field and its values read on the Desk. Not the runner sheet's
@@ -97,10 +104,6 @@ export function DeskCorrections({
   );
 }
 
-function counted(count: number, noun: string): string {
-  return `${String(count)} ${noun}${count === 1 ? "" : "s"}`;
-}
-
 function CorrectionRow({
   group,
   apply,
@@ -143,8 +146,11 @@ function NowAndSuggested({
   group,
 }: Readonly<{ group: CorrectionGroup }>): JSX.Element {
   return (
-    <dl className="m-0 flex flex-wrap gap-6">
-      <div className="flex min-w-0 flex-col gap-1">
+    // One layout for every card, a value of any length: label and value on
+    // one line each, the labels in one column and the values in another
+    // (G-20, N3-15).
+    <dl className="m-0 grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-4 gap-y-1">
+      <div className="contents">
         <dt className="text-muted">
           <Mono step="xs">Now</Mono>
         </dt>
@@ -154,7 +160,7 @@ function NowAndSuggested({
             : valueWords(group.field, group.now)}
         </dd>
       </div>
-      <div className="flex min-w-0 flex-col gap-1">
+      <div className="contents">
         <dt className="text-muted">
           <Mono step="xs">Suggested</Mono>
         </dt>
@@ -301,6 +307,9 @@ function DecisionBar({
           <QuietAction
             label="Decline"
             onPress={() => {
+              // The refusal was Apply's; it is not a hint about Decline's
+              // select (G-20).
+              setRefusedLine(undefined);
               setIsDeclining(true);
             }}
           />
@@ -320,10 +329,16 @@ function DecisionBar({
           error={form.fieldErrors.reason}
         />
       ) : undefined}
+      {/* A refusal reads as every other one on the Desk: a kicker over
+          the sentence (G-20; NOT APPLIED, owner 2026-11-12). */}
       {refusedLine === undefined ? undefined : (
-        <p role="status" className="m-0 text-small">
-          {refusedLine}
-        </p>
+        <div role="status">
+          <FailureBand
+            kicker="Not applied"
+            message={refusedLine}
+            state="refused"
+          />
+        </div>
       )}
     </DeskForm>
   );

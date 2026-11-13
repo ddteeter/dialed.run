@@ -4,6 +4,7 @@ import type { JSX } from "react";
 import { monthDayLabel } from "../../../lib/dates";
 import {
   Bracketed,
+  FormStatus,
   ListSection,
   Mono,
   TextField,
@@ -11,7 +12,7 @@ import {
 } from "../../../ui";
 import { ncmecReportInput } from "../inputs";
 import type { QuarantineSummary, recordNcmecReport } from "../quarantine";
-import { DeskForm } from "./DeskForm";
+import { DeskForm, RECORD_PANEL, RecordHead } from "./DeskForm";
 
 type RecordReport = (input: {
   data: { recordId: string; reportId?: string | undefined };
@@ -94,18 +95,15 @@ function QuarantineRow({
     },
   });
   return (
-    <li
-      data-part="quarantine-record"
-      className="flex flex-col gap-3 border-b border-hairline py-4"
-    >
-      <span className="flex items-baseline justify-between gap-3">
-        <span className="text-body font-semibold text-ink">
-          {held.subjectType}
-        </span>
-        <span data-part="quarantined-at" className="text-ink uppercase">
-          <Mono step="xs">Held {yearDayLabel(held.quarantinedAt)}</Mono>
-        </span>
-      </span>
+    <li data-part="quarantine-record" className={RECORD_PANEL}>
+      <RecordHead
+        subjectType={held.subjectType}
+        subjectId={held.subjectId}
+        date={{
+          part: "quarantined-at",
+          label: `Held ${yearDayLabel(held.quarantinedAt)}`,
+        }}
+      />
       <span className="flex flex-col gap-1">
         <span className="text-micro text-quiet">
           <Mono step="xs">Uploader {held.uploaderId}</Mono>
@@ -124,9 +122,16 @@ function QuarantineRow({
           )}
         </span>
       </span>
+      {/* Round 68: once the report is recorded, the form leaves the row;
+          the line above says when, and the status says it happened
+          (P3-03). */}
       {isGone ? (
         <span className="text-body">This record is gone: its year was up.</span>
-      ) : (
+      ) : undefined}
+      {isGone || held.ncmecReportedAt === null ? undefined : (
+        <FormStatus>{form.status}</FormStatus>
+      )}
+      {isGone || held.ncmecReportedAt !== null ? undefined : (
         <DeskForm
           form={form}
           className="flex flex-col gap-4"

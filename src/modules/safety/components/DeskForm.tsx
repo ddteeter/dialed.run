@@ -64,7 +64,9 @@ export function DeskForm({
       ref={form.formRef}
       noValidate
       aria-labelledby={title === undefined ? undefined : headingId}
-      className={className}
+      // A Desk form keeps the 620 column, on Review's and Runners' wide
+      // pages too (168.3); on a column page it is already that wide.
+      className={`${className} max-w-column`}
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit();
@@ -129,5 +131,40 @@ export function PickOne<T extends string>(
         onChange(schema.safeParse(picked).data);
       }}
     />
+  );
+}
+
+/**
+ * A held record on Review's foot, a copyright hold or a quarantine record
+ * (round 39 #73, G-13): a panel, not a ruled line, like the queue's rows.
+ */
+export const RECORD_PANEL =
+  "flex flex-col gap-3 border border-hairline bg-panel p-4";
+
+/**
+ * The record's head, as round 39 draws it: what it is and its id, a
+ * hi-viz MONO.xs kicker (`PHOTO · ph_3c0a`), with its date at the right.
+ */
+export function RecordHead({
+  subjectType,
+  subjectId,
+  date,
+}: Readonly<{
+  subjectType: string;
+  subjectId: string;
+  /**
+  The date's part name and its words ("Hidden Oct 23").
+  */
+  date: Readonly<{ part: string; label: string }>;
+}>): JSX.Element {
+  return (
+    <span className="flex items-baseline justify-between gap-3">
+      <Mono step="xs" className="min-w-0 text-hiviz-text wrap-anywhere">
+        {`${subjectType} · ${subjectId}`}
+      </Mono>
+      <span data-part={date.part} className="text-ink uppercase">
+        <Mono step="xs">{date.label}</Mono>
+      </span>
+    </span>
   );
 }

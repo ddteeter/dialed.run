@@ -62,6 +62,7 @@ import {
   removalStatements,
   renameReasonSchema,
   renameRecord,
+  runnerCounts,
   runnersFilterInput,
   runnersWhere,
   type RunnersFilter,
@@ -1787,6 +1788,43 @@ describe("deskRunners, D8 (round 27 #22)", () => {
     expect(await accountCount(core())).toBe(2);
     expect(await idsFor({ filter: "reported" })).toStrictEqual([older]);
     expect(await idsFor({ filter: "closed" })).toStrictEqual([newer]);
+  });
+
+  it("counts each filter by the filter's own condition, as its list does (round 28 #8)", async () => {
+    const ada = await account("ada@example.com", "ada", 1000);
+    const bo = await account("bo@example.com", "bo_runs", 2000);
+    const cy = await account("cy@example.com", "cy", 3000);
+    await core()
+      .insert(reports)
+      .values(
+        [ada, cy].map((subjectId) => ({
+          id: newUlid(),
+          reporterId: bo,
+          subjectType: "profile" as const,
+          subjectId,
+          reason: "harassment" as const,
+          createdAt: 1,
+        })),
+      );
+    await banUser(
+      { userId: bo, reason: "Spam", rule: "spam", bannedBy: "op" },
+      noPurge,
+    );
+
+    const counts = await runnerCounts(async (only) =>
+      accountCount(core(), only),
+    );
+
+    expect(counts).toStrictEqual({
+      all: 3,
+      reported: 2,
+      closed: 1,
+      flagged: 0,
+    });
+    for (const filter of ["all", "reported", "closed", "flagged"] as const) {
+      const ids = await idsFor({ filter });
+      expect(ids).toHaveLength(counts[filter]);
+    }
   });
 
   it("searches a handle or an email by prefix, any case, with or without the @", async () => {

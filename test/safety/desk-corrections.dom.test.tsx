@@ -19,7 +19,7 @@ vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
 });
 
 const NOTHING = z.null().parse(JSON.parse("null"));
-const PRODUCT ="01HZZZZZZZZZZZZZZZZZZZZZZP";
+const PRODUCT = "01HZZZZZZZZZZZZZZZZZZZZZZP";
 const NOV_2 = Date.UTC(2026, 10, 2, 12) / 1000;
 const NOV_6 = Date.UTC(2026, 10, 6, 12) / 1000;
 
@@ -368,6 +368,40 @@ describe("the Desk's Corrections (R48·130)", () => {
     expect(
       within(screen.getByRole("article")).getAllByRole("status"),
     ).toHaveLength(1);
+  });
+
+  it("draws the refusal as a NOT APPLIED band, and drops it at Decline (G-20)", async () => {
+    const user = userEvent.setup();
+    await renderQueue([group({ field: "name", value: "Rover" })], {
+      apply: vi
+        .fn<DeskCorrectionsProps["apply"]>()
+        .mockResolvedValue({ applied: false, reason: "name_taken" }),
+    });
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    const line = await screen.findByText(NAME_TAKEN);
+    const band = line.closest("[data-part='failure-band']");
+    expect(band).toHaveTextContent(`Not applied${NAME_TAKEN}`);
+    expect(band).toHaveAttribute("data-state", "refused");
+    expect(band?.parentElement).toHaveAttribute("role", "status");
+
+    await user.click(screen.getByRole("button", { name: "Decline" }));
+    expect(screen.queryByText(NAME_TAKEN)).toBeNull();
+  });
+
+  it("sets NOW and SUGGESTED as one two-column list on every card (N3-15)", async () => {
+    await renderQueue([group()]);
+    const now = screen.getByText("Now").closest("dt");
+    const list = now?.closest("dl");
+    expect(list).toHaveClass(
+      "grid",
+      "grid-cols-[auto_minmax(0,1fr)]",
+      "items-baseline",
+    );
+    expect(now?.parentElement).toHaveClass("contents");
+    expect(
+      screen.getByText("Suggested").closest("dt")?.parentElement,
+    ).toHaveClass("contents");
   });
 
   it("clears the refusal line when the next decision goes through", async () => {

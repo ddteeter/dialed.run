@@ -466,6 +466,38 @@ describe("DeskPage", () => {
     ]);
   });
 
+  it("gives the three tables the page measure and the rest the column (168.3)", async () => {
+    const widths: Record<string, string> = {};
+    for (const current of [
+      "today",
+      "review",
+      "corrections",
+      "access",
+      "duplicates",
+      "runners",
+    ] as const) {
+      const { unmount } = await renderUnderDesk(desk({}), () => (
+        <DeskPage current={current}>
+          <p>{`the ${current} page`}</p>
+        </DeskPage>
+      ));
+      const body = await screen.findByText(`the ${current} page`);
+      const page = body.closest("main")?.firstElementChild;
+      widths[current] =
+        /max-w-(?<measure>page|column)/u.exec(page?.className ?? "")?.groups
+          ?.measure ?? "neither";
+      unmount();
+    }
+    expect(widths).toStrictEqual({
+      today: "column",
+      review: "page",
+      corrections: "column",
+      access: "page",
+      duplicates: "column",
+      runners: "page",
+    });
+  });
+
   it("hands a page the same counts through useDeskToday", async () => {
     await renderUnderDesk(desk({ waiting: 7 }), () => <TodayCountsProbe />);
 

@@ -1081,6 +1081,32 @@ _Nothing from 99 on is open: round 45 answered the last of it._
 
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
 
+## Built from round 54 · 168.3 (wave 7, design 207)
+
+How the Desk's wide pages (Round 54 · 168.3, #622) were built for #627,
+with what the scale made of the drawing. The coordinator is putting the two
+collapses to Design as a Round 55 CONFIRM item.
+
+- **COLLAPSE · the 1280 threshold → `desk` (1040).** The pane sits beside
+  the table from BREAKPOINT.desk, since 1280 is not a breakpoint
+  (`tokens.js`: "write them with these exact values, nothing else"). Below
+  `desk` it drops under the table, as drawn.
+- **COLLAPSE · the 320 pane → a grid track.** 320 is not a MEASURE, and
+  "rails inherit from the grid, not from a px": table and pane are
+  `minmax(0,2fr) minmax(0,1fr)`, about 340 wide at 1280 and 260 at 1040.
+- **The frame.** `Page` gains `width="table"` (MEASURE.page, left-aligned);
+  DeskShell gives it to Runners, Access and Review, and the column to the
+  rest. Access's Requests keep the 620 column inside it.
+- **Guess, at 390 (not drawn; coordinator, 2026-11-12):** Runners puts the
+  email under the handle and leaves Joined and Runs to the pane, so Handle,
+  Reports and State stay on screen. Access's code rows wrap rather than keep
+  the grid, their actions included.
+- **Codes:** one grid with a subgrid per row, one line a cell, and no pane:
+  the ruling draws nothing for a code's pane.
+- **Not built yet:** Review's row opening the kit view in the pane
+  (R51·153). Review has the wide frame and one-line titles; the pane is
+  #644.
+
 ## Answered in round 53 (imported 2026-11-12)
 
 Design answered as `Round 53 Rulings.dc.html`, items 162–163. The board's
@@ -1235,8 +1261,7 @@ is also a comment on its issue.
   `--unread`, in either theme. Keep `#2A2A14`. The contrast test states
   both as forbidden pairs in both columns and scans that no file painting
   `bg-unread` draws either role; nothing paints `bg-unread` today.
-- **R50·143 · The dark theme's open readings (#494). Built in design
-  204.** (1) Changed: on dark, every ink block takes T2 rule 04's
+- **R50·143 · The dark theme's open readings (#494). Built in design 204.** (1) Changed: on dark, every ink block takes T2 rule 04's
   fallback, `--panel` with a 1px `--hairline` (`ground-panel` in
   `ui/tokens.css`, an inset ring); a row press still inverts. The Desk
   stays ink. NowGoRun had no ink left. Item 7 follows: `--hiviz-text`

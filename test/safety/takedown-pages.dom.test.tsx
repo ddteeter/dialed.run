@@ -537,6 +537,45 @@ describe("Review · removal requests", () => {
     }
   });
 
+  it("puts a failed Take it down's band above the bar, the bar still one row (P3-01)", async () => {
+    const decide = vi
+      .fn<DecideFn>()
+      .mockRejectedValue(new TypeError("Failed to fetch"));
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending()]}
+        decide={decide}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Take it down" }));
+
+    const band = await waitFor(() => {
+      const found = part("failure-band");
+      expect(found).not.toBeNull();
+      return found ?? document.body;
+    });
+    const bar = part("request-actions") ?? document.body;
+    expect(isBefore(band, bar)).toBe(true);
+    expect(bar).not.toContainElement(band);
+    for (const name of ["Take it down", "Decline", "Block and decline all"]) {
+      expect(within(bar).getByRole("button", { name })).toBeVisible();
+    }
+  });
+
+  it("wraps a long requester address rather than cutting it (P3-05)", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending()]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    expect(part("requester")).toHaveTextContent(/^sam@example\.com$/u);
+    expect(part("requester")).toHaveClass("wrap-anywhere");
+  });
+
   it("asks why not in the bar's place, and keeps what was typed through Cancel and Esc (round 45 #107)", async () => {
     const decide = vi.fn<DecideFn>().mockResolvedValue({ outcome: "decided" });
     await renderWithRouter(

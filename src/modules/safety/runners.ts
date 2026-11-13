@@ -85,6 +85,30 @@ const filterSql: Readonly<
 };
 
 /**
+How many accounts each of D8's filters holds, for the filter links.
+*/
+export type RunnerCounts = Readonly<Record<RunnersFilter["filter"], number>>;
+
+/**
+ * Round 28 #8: every filter link carries its whole-table count, whatever
+ * is searched. `countOf` is account's `accountCount`, handed in by the
+ * route's server function (an import from here would be a cycle), and each
+ * count reads the filter's own condition, so a count and its list cannot
+ * disagree.
+ */
+export async function runnerCounts(
+  countOf: (only: ((userId: SQLWrapper) => SQL) | undefined) => Promise<number>,
+): Promise<RunnerCounts> {
+  const [all, reported, closed, flagged] = await Promise.all([
+    countOf(filterSql.all),
+    countOf(filterSql.reported),
+    countOf(filterSql.closed),
+    countOf(filterSql.flagged),
+  ]);
+  return { all, reported, closed, flagged };
+}
+
+/**
  * Each listed account with its runs, its profile reports, its state and
  * any open flag, in the order the accounts came: five reads over at most a
  * page of ids, each in chunks under D1's 100-parameter cap. No accounts,

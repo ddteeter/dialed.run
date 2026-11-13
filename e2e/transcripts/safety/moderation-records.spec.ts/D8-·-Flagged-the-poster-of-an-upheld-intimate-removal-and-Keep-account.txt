@@ -39,14 +39,23 @@ end of navigation, Desk
 main
 region, Runners
 heading, Runners, level 1
-# accounts
+# match in Flagged
 search
 Handle or email
 searchbox, Handle or email, poster_#@example.com
 navigation, Filter runners
-link, All
-link, Reported
-link, Closed
+link, All #
+All
+#
+end of link, All #
+link, Reported #
+Reported
+#
+end of link, Reported #
+link, Closed #
+Closed
+#
+end of link, Closed #
 link, Flagged #, current page
 Flagged
 #
@@ -77,6 +86,13 @@ end of columnheader, State
 end of row, Handle Email Joined Runs Reports State
 end of rowgroup
 rowgroup
+row, No runner matches "poster_#@example.com". Search by handle without the @, or by the whole email.
+cell, No runner matches "poster_#@example.com". Search by handle without the @, or by the whole email., column span #
+No runner matches "poster_#@example.com".
+Search by handle without the @, or by the whole email.
+end of cell, No runner matches "poster_#@example.com". Search by handle without the @, or by the whole email., column span #
+end of row, No runner matches "poster_#@example.com". Search by handle without the @, or by the whole email.
+end of rowgroup
 end of table
 paragraph
 Pick a runner to rename or close.

@@ -53,6 +53,21 @@ describe("ReleaseHolds", () => {
       screen.getByRole("heading", { level: 2, name: "Held in the last day" }),
     ).toBeInTheDocument();
     expect(release).not.toHaveBeenCalled();
+    // Each cause a ruled row, its action bold ink at the right (G-16).
+    const line = part("release-line");
+    expect(line).toHaveClass(
+      "flex",
+      "justify-between",
+      "items-center",
+      "border-b",
+      "border-hairline",
+    );
+    expect(screen.getByRole("button", { name: "Approve all 37" })).toHaveClass(
+      "text-body",
+      "font-bold",
+      "text-ink",
+      "underline",
+    );
   });
 
   it("asks first, then releases until nothing of that cause and day is left", async () => {

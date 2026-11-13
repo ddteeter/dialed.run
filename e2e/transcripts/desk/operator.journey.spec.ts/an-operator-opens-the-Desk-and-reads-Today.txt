@@ -43,9 +43,9 @@ end of navigation, Desk
 main
 heading, Review, level 1
 # waiting · # decided today
-heading, # waiting, level 2
-# waiting
-end of heading, # waiting, level 2
+heading, waiting, level 2
+waiting
+end of heading, waiting, level 2
 list
 listitem, level 1, position 1, set size 3
 button, entry · :id, expanded
@@ -84,6 +84,8 @@ end of listitem, level 1, position 3, set size 3
 end of list
 region, Takedown
 heading, Takedown, level 2
+Takedown
+end of heading, Takedown, level 2
 form
 status
 What it is

@@ -70,6 +70,8 @@ describe("QuarantineRecords", () => {
         .getByRole("button", { name: "Record the NCMEC report" })
         .closest("form"),
     ).toHaveClass("flex", "flex-col", "gap-4");
+    // Not reported yet: the form's own status region is the only one.
+    expect(screen.getAllByRole("status")).toHaveLength(1);
   });
 
   it("says when a record was reported, and its number", () => {
@@ -83,9 +85,29 @@ describe("QuarantineRecords", () => {
     expect(part("ncmec")?.textContent).toBe(
       "[reported to NCMEC Sep 10 2026] · 42",
     );
+    // Round 68: a reported record ends at its status line; the form has
+    // left the row (P3-03).
     expect(
-      screen.getByRole("textbox", { name: /CyberTipline report number/u }),
-    ).toHaveValue("42");
+      screen.queryByRole("textbox", { name: /CyberTipline report number/u }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Record the NCMEC report" }),
+    ).toBeNull();
+  });
+
+  it("heads a record with its kind and id, in a panel (G-13)", () => {
+    render(<QuarantineRecords records={[held()]} recordReport={vi.fn()} />);
+
+    const record = part("quarantine-record");
+    expect(record).toHaveClass("border", "border-hairline", "bg-panel", "p-4");
+    expect(record?.firstElementChild?.firstElementChild).toHaveTextContent(
+      /^photo · p1$/u,
+    );
+    expect(record?.firstElementChild?.firstElementChild).toHaveClass(
+      "text-mono-xs",
+      "uppercase",
+      "text-hiviz-text",
+    );
   });
 
   it("records the report and shows the year it now runs to", async () => {
@@ -119,6 +141,11 @@ describe("QuarantineRecords", () => {
     });
     expect(part("retain-until")?.textContent).toBe("Kept until Sep 10 2027");
     expect(part("quarantined-at")?.textContent).toBe("Held Aug 29 2026");
+    // Recorded, the form leaves the row and the status stays.
+    expect(
+      screen.queryByRole("button", { name: "Record the NCMEC report" }),
+    ).toBeNull();
+    expect(screen.getByText("Report recorded.")).toBeInTheDocument();
   });
 
   it("says it is recording while the call is out", async () => {
@@ -211,6 +238,8 @@ describe("QuarantineRecords", () => {
     ).toBeNull();
     expect(screen.queryByText("Report recorded.")).toBeNull();
     expect(part("ncmec")?.textContent).toBe("[not reported to NCMEC]");
+    // Gone: the record says so in place, with no status region left.
+    expect(screen.queryAllByRole("status")).toHaveLength(0);
   });
 
   it("says nothing is held under QUARANTINE · 0, rather than going (round 39 #68)", () => {
@@ -222,8 +251,7 @@ describe("QuarantineRecords", () => {
     expect(empty).toHaveClass("m-0", "text-small", "text-quiet");
     // Under the heading, in reading order.
     expect(
-      heading.compareDocumentPosition(empty) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
+      heading.compareDocumentPosition(empty) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
 });

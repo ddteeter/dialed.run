@@ -39,14 +39,16 @@ end of navigation, Desk
 main
 heading, Review, level 1
 # waiting · # decided today
-heading, # waiting, level 2
-# waiting
-end of heading, # waiting, level 2
+heading, waiting, level 2
+waiting
+end of heading, waiting, level 2
 paragraph
 Nothing waiting. The daily digest says so too.
 end of paragraph
 region, Takedown
 heading, Takedown, level 2
+Takedown
+end of heading, Takedown, level 2
 form
 status
 What it is
@@ -68,6 +70,9 @@ end of region, Takedown
 status
 Case over. It is back.
 end of status
+heading, Copyright holds · #, level 2
+Copyright holds · #
+end of heading, Copyright holds · #, level 2
 paragraph
 Case over. It is back.
 end of paragraph

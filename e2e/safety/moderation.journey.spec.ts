@@ -241,7 +241,8 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
     .getByRole("combobox", { name: /Which rule it breaks/ })
     .selectOption("Post spam, advertising or promotion we have not allowed");
   await page.getByRole("button", { name: "Close account" }).click();
-  await expect(page.getByText("[CLOSED]")).toBeVisible();
+  // The row's state, not the pane's copy of it (168.3).
+  await expect(page.getByRole("table").getByText("[CLOSED]")).toBeVisible();
 
   const left = await withLocalDb(async ({ core }) => ({
     entries: await core

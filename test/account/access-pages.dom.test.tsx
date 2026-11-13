@@ -233,9 +233,9 @@ describe("Au5 · Request access", () => {
       ...field,
       "aria-describedby": `note-1-message ${NOTE_COUNTER_ID}`,
     });
-    expect(withCounter({ ...field, "aria-describedby": undefined }, 120)).toEqual(
-      { ...field, "aria-describedby": NOTE_COUNTER_ID },
-    );
+    expect(
+      withCounter({ ...field, "aria-describedby": undefined }, 120),
+    ).toEqual({ ...field, "aria-describedby": NOTE_COUNTER_ID });
     expect(withCounter(field, 119)).toBe(field);
   });
 
@@ -519,6 +519,41 @@ describe("D7 · Access", () => {
     expect(j.getByText("2d")).toBeVisible();
   });
 
+  it("titles the page Access, its two lists under it (G-15)", () => {
+    desk();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Access" }),
+    ).toHaveClass("font-display", "text-title", "uppercase");
+    for (const name of ["Requests", "Codes"]) {
+      expect(screen.getByRole("heading", { level: 2, name })).toHaveClass(
+        "font-display",
+        "text-heading",
+        "uppercase",
+      );
+    }
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+  });
+
+  it("keeps Requests to the column and wraps a long address (168.3, N3-09)", () => {
+    desk();
+    expect(
+      screen.getByRole("heading", { name: "Requests" }).parentElement,
+    ).toHaveClass("max-w-column");
+    expect(
+      screen.getByRole("heading", { name: "Codes" }).parentElement,
+    ).not.toHaveClass("max-w-column");
+    // Only the code list takes the width; its form keeps the column.
+    expect(
+      document.querySelector("[data-part='new-code']")?.parentElement,
+    ).toHaveClass("max-w-column");
+    const email = screen.getByText("sam@example.com");
+    expect(email).toHaveClass("min-w-0", "wrap-anywhere");
+    expect(email.parentElement).toHaveClass("min-w-0", "flex-wrap");
+    expect(within(rowOf("sam@example.com")).getByText("3d")).toHaveClass(
+      "shrink-0",
+    );
+  });
+
   it("tags a request from a blocked state, and has no Send invite for it, only why", () => {
     desk({
       desk: {
@@ -678,15 +713,42 @@ describe("D7 · Access", () => {
     // An active code's code and count read in ink; a spent one, muted.
     expect(open.getByText("DIAL-TR8K")).toHaveClass("text-ink");
     expect(open.getByText("2/8")).toHaveClass("text-ink");
-    // Not held: the row's own grid, with none of the held row's dimming.
-    expect(open.getByText("DIAL-TR8K").closest(".grid")).toHaveClass(
-      "grid",
+    // Not held: the row's cells, a subgrid of the list's one grid from
+    // `wide` so every row shares its columns (168.3, N3-07), wrapping on a
+    // phone; none of the held row's dimming.
+    const cells = rowOf("DIAL-TR8K").firstElementChild;
+    expect(cells).toHaveClass(
+      "flex",
+      "flex-wrap",
       "items-baseline",
-      "gap-4",
+      "wide:grid",
+      "wide:grid-cols-subgrid",
+      "wide:col-span-full",
     );
-    expect(open.getByText("DIAL-TR8K").closest(".grid")).not.toHaveClass(
-      "text-quiet",
+    expect(cells).not.toHaveClass("text-quiet");
+    // Nothing went wrong on it, so the row is its cells alone: no empty
+    // full-width line under them.
+    expect(rowOf("DIAL-TR8K").children).toHaveLength(1);
+    expect(rowOf("DIAL-TR8K")).toHaveClass(
+      "wide:grid",
+      "wide:grid-cols-subgrid",
+      "wide:col-span-full",
     );
+    expect(rowOf("DIAL-TR8K").parentElement).toHaveClass(
+      "wide:grid",
+      "wide:grid-cols-[auto_minmax(0,1fr)_auto_auto_auto]",
+    );
+    // One line each, whole in the title (168.3).
+    expect(open.getByText("Tuesday track group")).toHaveClass("truncate");
+    expect(open.getByText("Tuesday track group")).toHaveAttribute(
+      "title",
+      "Tuesday track group",
+    );
+    expect(open.getByText("@dee_k, @paulo")).toHaveAttribute(
+      "title",
+      "@dee_k, @paulo",
+    );
+    expect(open.getByText("@dee_k, @paulo")).toHaveClass("truncate");
     const used = within(rowOf("DIAL-7K3P"));
     expect(used.getByText("No label")).toBeVisible();
     expect(used.getByText("maya@example.com")).toBeVisible();
@@ -704,9 +766,7 @@ describe("D7 · Access", () => {
       "text-quiet",
       "line-through",
     );
-    expect(revoked.getByText("DIAL-H2XN").closest(".grid")).toHaveClass(
-      "text-quiet",
-    );
+    expect(rowOf("DIAL-H2XN").firstElementChild).toHaveClass("text-quiet");
     expect(revoked.queryByRole("button")).toBeNull();
     expect(open.getByText("DIAL-TR8K")).not.toHaveClass("line-through");
     expect(revoked.getByText("Not used yet")).toBeVisible();
@@ -746,6 +806,8 @@ describe("D7 · Access", () => {
     expect(band).toHaveTextContent(
       "Not copiedCopying didn't work here. The link is selected: copy it yourself.",
     );
+    // Under the row, across the list's whole grid.
+    expect(band?.parentElement).toHaveClass("wide:col-span-full");
     const link = within(rowOf("DIAL-TR8K")).getByRole("textbox", {
       name: "Invite link",
     });
@@ -804,9 +866,7 @@ describe("D7 · Access", () => {
     );
     expect(held.getByText("2/8")).toHaveClass("text-quiet");
     expect(rowOf("DIAL-TR8K").querySelector("[style*='opacity']")).toBeNull();
-    expect(held.getByText("DIAL-TR8K").closest(".grid")).toHaveClass(
-      "text-quiet",
-    );
+    expect(rowOf("DIAL-TR8K").firstElementChild).toHaveClass("text-quiet");
     expect(held.queryByRole("button", { name: "Copy link" })).toBeNull();
     // No countdown digits anywhere on the row.
     expect(rowOf("DIAL-TR8K")).not.toHaveTextContent(/\ds\b/u);
@@ -932,6 +992,7 @@ describe("D7 · Access", () => {
       .getByText("Still active")
       .closest("[data-part='failure-band']");
     expect(band).toHaveTextContent("Revoke didn't go through. Try again?");
+    expect(band?.parentElement).toHaveClass("wide:col-span-full");
     expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
     // A failed revoke's band is not timed away with the Undo's ten seconds.
     await act(async () => {

@@ -75,6 +75,14 @@ describe("Page", () => {
     expect(close).not.toHaveClass("desk:max-w-column");
   });
 
+  it("lets a Desk table run to the page measure, left-aligned (168.3)", () => {
+    const table = render(<Page width="table">body</Page>).container
+      .firstElementChild;
+    expect(table).toHaveClass("max-w-page");
+    expect(table).not.toHaveClass("mx-auto");
+    expect(table).not.toHaveClass("max-w-column");
+  });
+
   it("keeps the column's own layout whichever width it is", () => {
     // The rest of the column is not a prop, and a mutant that emptied the
     // template would take it with the width.
