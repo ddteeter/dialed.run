@@ -56,14 +56,32 @@ Desk's run line is in both.
   screen reader already says it in words (162.3).
 - **The other ranges** 162.3 reaches (the closet, A3's history line and
   Noted sentence, KitRecord, the set-band screens, the Call ladder, G's
-  band word) are #613, the next PR from this lane. Pace and duration where they were already
-  `Spoken`. A3's headline "6.2 at 41°", whose unit is already said. Now
+  band word) are #613, PR 3 below. **Out:** pace and duration where they
+  were already `Spoken`. A3's headline "6.2 at 41°", whose unit is already said. Now
   go run's sentences. The OG images, which are not a screen. `/kit`'s
   stats grid, whose distance unit is a term under its number.
 - **#567:** the city and the profile-city read go; the h1 reads "Kit by
   @handle"; the id is MONO.xs `--muted`, selectable; back from a kit the
   row named in the link's anchor takes focus (`useReturnToRow`), and in
   Review it is the row that opens.
+
+**PR 3: every other range (#613, Round 53 · 162.3).** Each drawn as it
+is, `aria-hidden`, and said from `lib/contracts/measures.ts`:
+
+- **A band** (`bandForms`, and `measuredLine`'s `band` part): A3's
+  history line, KitRecord and Noted's sentence; R2b's band radios
+  (`ChoiceList`'s new `optionSaid`) and its "Set 41–50° and dry" submit
+  (`SubmitButton` takes a node); the runs list's SET badge; A1's set-band
+  headline; the Call ladder's rows and Log this next, and G's bands,
+  through a coverage band's new `said`. Noted's sentence carries both
+  forms, so the status region announces the said one.
+- **A garment's range** (`worksAtForms`): the grid tile, garment detail,
+  F's estimate, the Already in your closet rail, and WORKS AT's chip and
+  FILTERED line. WORKS AT's readout, already in the runner's unit, is
+  `spanInUnit`: "18 to 72 degrees Fahrenheit".
+- **The open ends, decided by 162.3's test.** "under 58°" is already
+  words and keeps them. "40°+" is not: a reader may say "40 degrees plus",
+  a reading rather than a range, so it is said "40 degrees and up".
 
 ## Contract touches
 
@@ -80,6 +98,9 @@ Desk's run line is in both.
   (`attach-kit.dom.test.tsx`); the Delete row's name and description
   (the account settings' dom test); the launcher without the attribute
   (`top-bar`, `layout`, `motion-surfaces`, `ui.test.tsx`).
+- dom (PR 3): each range's drawn and said halves apart
+  (`test/modules/spoken-text.ts`), on every screen above; `measures`
+  pins `bandForms`, `worksAtForms` and `spanInUnit`.
 - e2e: no new test. The transcripts that end on these controls change,
   and are named in the PR.
 
