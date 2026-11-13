@@ -458,6 +458,7 @@ describe("getRunSummary / listRunSummaries: a run as the screens draw it", () =>
       },
       entryId: undefined,
       hasVerdict: false,
+      verdict: undefined,
       deviceName: undefined,
       clockZone: "America/Chicago",
     });
@@ -526,11 +527,12 @@ describe("getRunSummary / listRunSummaries: a run as the screens draw it", () =>
     const listed = await listRunSummaries(coreDb(), userId);
 
     expect(
-      listed.map((run) => [run.id, run.entryId, run.hasVerdict]),
+      listed.map((run) => [run.id, run.entryId, run.hasVerdict, run.verdict]),
     ).toStrictEqual([
-      [bare, undefined, false],
-      [kitted, kittedEntry, false],
-      [judged, judgedEntry, true],
+      [bare, undefined, false, undefined],
+      [kitted, kittedEntry, false, undefined],
+      // The verdict itself, for the list's mark (Round 55 · 235).
+      [judged, judgedEntry, true, 0],
     ]);
   });
 

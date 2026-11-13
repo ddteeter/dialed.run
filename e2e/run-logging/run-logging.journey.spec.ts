@@ -368,7 +368,7 @@ test("log a run: read a file in place, pick the kit, note it, enter one by hand"
     ).toBeVisible();
 
     // ---- R · the list ------------------------------------------------
-    await scene(page, "Runs · four badges and one breath");
+    await scene(page, "Runs · month breaks, one line a row, marks at the right");
     await page.goto("/runs");
     await hydrated(page);
     await expect(page.locator('[data-slot="run-row"]').first()).toBeVisible();

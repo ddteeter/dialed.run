@@ -17,6 +17,7 @@ import { selectOwnedRow } from "../../lib/sql/owned";
 import { manualReadingsForRuns, observationsForRuns } from "../weather";
 import type { WeatherReading } from "../weather";
 import { bandMiddleC, canSetConditions } from "./run-conditions";
+import { RUNS_LISTED } from "./run-months";
 import { viewerZone } from "../notifications";
 
 export const DUPLICATE_WINDOW_S = 120;
@@ -279,6 +280,10 @@ export interface RunSummary {
   entryId: string | undefined;
   hasVerdict: boolean;
   /**
+  The verdict itself, −2..+2, for the list's mark (Round 55 · 235).
+  */
+  verdict: number | undefined;
+  /**
   Who to credit for the run's data (G1); only a Garmin run has one.
   */
   deviceName: string | undefined;
@@ -311,6 +316,7 @@ function summaryOf(
     conditions,
     entryId: entry?.id,
     hasVerdict: entry?.verdict != undefined,
+    verdict: entry?.verdict ?? undefined,
     clockZone: conditions?.timeZone ?? homeZone,
   };
 }
@@ -425,7 +431,7 @@ export async function listRunSummaries(
     .from(runs)
     .where(eq(runs.userId, userId))
     .orderBy(desc(runs.startedAt))
-    .limit(50);
+    .limit(RUNS_LISTED);
   return summariesOf(db, userId, list);
 }
 

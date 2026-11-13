@@ -1,10 +1,12 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
 import { viewerUnitsQuery } from "../../modules/feed/functions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";
 import { RunList } from "../../modules/runs/components/RunList";
+import { StravaRemindersLine } from "../../modules/runs/components/StravaRemindersLine";
 import {
+  getStravaStatusFn,
   listRunSummariesFn,
   didRetryRunWeatherFn,
   didSetRunConditionsFn,
@@ -13,22 +15,27 @@ import { Page } from "../../ui";
 
 export const Route = createFileRoute("/runs/")({
   loader: async () => {
-    const [runs, units, bell] = await Promise.all([
+    const [runs, units, bell, strava] = await Promise.all([
       listRunSummariesFn(),
       viewerUnitsQuery(),
       bellStateFn(),
+      getStravaStatusFn(),
     ]);
-    return { runs, units, bell };
+    return { runs, units, bell, strava };
   },
   component: RunsIndexPage,
 });
 
 function RunsIndexPage() {
-  const { runs, units, bell } = Route.useLoaderData();
+  const { runs, units, bell, strava } = Route.useLoaderData();
 
   return (
     <BelledLayout {...bell}>
       <Page title="Runs">
+        <StravaRemindersLine
+          configured={strava.configured}
+          connected={strava.connected}
+        />
         <RunList
           runs={runs}
           units={units}
@@ -37,12 +44,6 @@ function RunsIndexPage() {
             retryWeather: didRetryRunWeatherFn,
           }}
         />
-        <Link
-          to="/runs/strava"
-          className="target inline-flex items-center text-body text-muted underline"
-        >
-          Strava reminders
-        </Link>
       </Page>
     </BelledLayout>
   );

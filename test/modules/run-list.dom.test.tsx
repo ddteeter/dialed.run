@@ -12,6 +12,7 @@ import {
   renderWithRouter,
   runSummary,
 } from "./run-fixtures";
+import { RUNS_LISTED } from "../../src/modules/runs/run-months";
 import { queryWeatherCredit, WEATHER_CREDIT } from "../ui/weather-credit";
 
 /**
@@ -69,44 +70,61 @@ describe("R: the empty list", () => {
   });
 });
 
-describe("R: a row", () => {
-  it("says how far and which day, in the runner's unit and the run's own zone", async () => {
+describe("R: a row (Round 55 · 235)", () => {
+  it("leads with the day, in the run's own zone, as its underlined way in", async () => {
     // 01:30 UTC on the 30th is still the 29th in Chicago.
     const lateSaturday = Math.floor(Date.UTC(2026, 7, 30, 1, 30) / 1000);
     await renderWithRouter(list([runSummary({ startedAt: lateSaturday })]));
 
-    const title = within(onlyRow()).getByText("6.2 mi · Sat Aug 29");
-    expect(title).toBeVisible();
-    // Said in words (round 52 #158).
-    expect(title).toHaveAttribute("aria-hidden", "true");
-    expect(title.nextElementSibling).toHaveTextContent("6.2 miles, Sat Aug 29");
+    const link = within(onlyRow()).getByRole("link");
+    expect(link).toHaveTextContent(/^Sat Aug 29$/u);
+    // The line's own height, its 44 hit area proud of it (a11y.css 03).
+    expect(link).toHaveClass(
+      "target-line",
+      "inline-block",
+      "self-start",
+      "text-body",
+      "font-semibold",
+      "text-ink",
+      "underline",
+      "underline-offset-4",
+    );
   });
 
-  it("credits Garmin once on each Garmin row, and on no other (G1)", async () => {
+  it("is one 64 row: words on the left, marks on the right", async () => {
+    await renderWithRouter(list([runSummary()]));
+
+    const row = onlyRow();
+    expect(row).toHaveClass("grid", "min-h-16", "items-center", "border-b");
+    expect(row.lastElementChild).toHaveAttribute("data-part", "run-marks");
+  });
+
+  it("credits Garmin once on each Garmin row, in sans beside the line, and on no other (G1)", async () => {
     await renderWithRouter(
       list([
         runSummary({ id: "g", deviceName: "Garmin" }),
-        runSummary({ id: "f", startedAt: 1_700_000_000 }),
+        runSummary({ id: "f", startedAt: SAT_MORNING - 60 }),
       ]),
     );
 
-    const rows = [...document.querySelectorAll("[data-slot='run-row']")];
     expect(
-      rows.map(
+      rows().map(
         (row) =>
           row.querySelectorAll("[data-part='garmin-attribution']").length,
       ),
     ).toEqual([1, 0]);
-    expect(rows[0]).toHaveTextContent("Garmin");
+    const credit = rowAt(0).querySelector("[data-part='garmin-attribution']");
+    expect(credit).toHaveTextContent("Garmin");
+    expect(credit?.previousElementSibling).toHaveTextContent("41°F damp");
   });
 
   it("opens run detail for a run with no entry", async () => {
     await renderWithRouter(list([runSummary()]));
 
-    const link = within(onlyRow()).getByRole("link");
-    expect(link).toHaveAttribute("href", `/runs/${RUN_ID}`);
-    // The whole row's words are one 44px target, not a line of text.
-    expect(link).toHaveClass("target", "flex-1");
+    expect(within(onlyRow()).getByRole("link")).toHaveAttribute(
+      "href",
+      `/runs/${RUN_ID}`,
+    );
   });
 
   it("opens the verdict for a run with a kit and no verdict yet", async () => {
@@ -120,7 +138,7 @@ describe("R: a row", () => {
 
   it("opens the post for a run with a verdict", async () => {
     await renderWithRouter(
-      list([runSummary({ entryId: "01ENTRY", hasVerdict: true })]),
+      list([runSummary({ entryId: "01ENTRY", hasVerdict: true, verdict: 0 })]),
     );
 
     expect(within(onlyRow()).getByRole("link")).toHaveAttribute(
@@ -143,24 +161,142 @@ describe("R: a row", () => {
   });
 });
 
-describe("R: the badges, and the one breath", () => {
-  it("marks conditions that came as a fact, in the dialed text colour", async () => {
+describe("R: the month breaks and the end (Round 55 · 235)", () => {
+  const NOV_12 = Math.floor(Date.UTC(2026, 10, 12, 12) / 1000);
+  const NOV_10 = Math.floor(Date.UTC(2026, 10, 10, 12) / 1000);
+  const OCT_30 = Math.floor(Date.UTC(2026, 9, 30, 12) / 1000);
+
+  it("heads each month in MONO.xs with its count, and ends on the oldest month", async () => {
+    await renderWithRouter(
+      list([
+        runSummary({ id: "01A", startedAt: NOV_12 }),
+        runSummary({ id: "01B", startedAt: NOV_10 }),
+        runSummary({ id: "01C", startedAt: OCT_30 }),
+      ]),
+    );
+
+    expect(headings()).toEqual([
+      "November 2026 · 2 runs",
+      "October 2026 · 1 run",
+    ]);
+    const heading = screen.getByRole("heading", {
+      name: "November 2026 · 2 runs",
+    });
+    expect(heading).toHaveClass("border-b", "border-hairline");
+    expect(within(heading).getByText(/November/u)).toHaveClass(
+      "text-mono-xs",
+      "uppercase",
+      "text-label",
+    );
+    // Each month holds its own rows.
+    const november = screen.getByRole("region", { name: "November 2026" });
+    expect(
+      within(november)
+        .getAllByRole("link")
+        .map((link) => link.getAttribute("href")),
+    ).toEqual(["/runs/01A", "/runs/01B"]);
+    const end = screen.getByText("That’s every run · since Oct 2026");
+    expect(end).toHaveClass("text-mono-xs", "text-label", "text-center");
+  });
+
+  it("dates a month on the run's own clock", async () => {
+    // 03:00 UTC on Nov 1 is still October in Chicago.
+    const halloweenNight = Math.floor(Date.UTC(2026, 10, 1, 3) / 1000);
+    await renderWithRouter(list([runSummary({ startedAt: halloweenNight })]));
+
+    expect(headings()).toEqual(["October 2026 · 1 run"]);
+  });
+
+  it("never says every run when the list stopped at what it reads", async () => {
+    const many = Array.from({ length: RUNS_LISTED }, (_, index) =>
+      runSummary({ id: `01R${String(index)}`, startedAt: NOV_12 - index }),
+    );
+    await renderWithRouter(list(many));
+
+    expect(rows()).toHaveLength(RUNS_LISTED);
+    expect(screen.queryByText(/every run/u)).toBeNull();
+  });
+
+  it("says every run one short of it", async () => {
+    const many = Array.from({ length: RUNS_LISTED - 1 }, (_, index) =>
+      runSummary({ id: `01R${String(index)}`, startedAt: NOV_12 - index }),
+    );
+    await renderWithRouter(list(many));
+
+    expect(screen.getByText("That’s every run · since Nov 2026")).toBeVisible();
+  });
+});
+
+describe("R: the marks", () => {
+  it.each([
+    [-2, "Way cold", "text-cold-text"],
+    [-1, "A bit cold", "text-cold-text"],
+    [0, "Dialed", "text-dialed-text"],
+    [1, "A bit warm", "text-quiet"],
+    [2, "Way warm", "text-quiet"],
+  ])(
+    "marks verdict %i as %s in its T2 text hue, with its kit",
+    async (verdict, label, hue) => {
+      await renderWithRouter(
+        list([runSummary({ entryId: "01ENTRY", hasVerdict: true, verdict })]),
+      );
+
+      const marks = marksOf(onlyRow());
+      expect(within(marks).getByText(label)).toHaveClass(
+        "text-mono-xs",
+        "font-semibold",
+        hue,
+      );
+      expect(within(marks).getByText("Kit")).toHaveClass("text-label");
+    },
+  );
+
+  it("marks a run with no kit and no verdict as needing both", async () => {
+    await renderWithRouter(list([runSummary()]));
+
+    const marks = marksOf(onlyRow());
+    expect(marks).toHaveClass("flex", "flex-col", "items-end");
+    expect([...marks.children].map((mark) => mark.textContent)).toEqual([
+      "No verdict",
+      "No kit",
+    ]);
+    expect(within(marks).getByText("No verdict")).toHaveClass(
+      "font-semibold",
+      "text-muted",
+    );
+  });
+});
+
+function headings(): (string | null)[] {
+  return screen
+    .getAllByRole("heading", { level: 2 })
+    .map((heading) => heading.textContent);
+}
+
+function marksOf(row: HTMLElement): HTMLElement {
+  const marks = row.querySelector<HTMLElement>("[data-part='run-marks']");
+  if (marks === null) throw new Error("no marks");
+  return marks;
+}
+
+describe("R: the one line, and badges only for exceptions", () => {
+  it("reads conditions · distance in the dialed text colour, with no badge", async () => {
     await renderWithRouter(list([runSummary()]));
 
     const row = onlyRow();
-    const reading = within(row).getByText("41°F damp");
-    expect(reading.parentElement).toHaveClass("text-dialed-text");
+    const reading = within(row).getByText("41°F damp · 6.2 mi");
+    const line = reading.parentElement;
+    expect(line).toHaveClass("text-mono-sm", "truncate", "text-dialed-text");
     // Round 52 #158: drawn for the eye, said in words.
     expect(reading).toHaveAttribute("aria-hidden", "true");
     expect(reading.nextElementSibling).toHaveTextContent(
-      "41 degrees Fahrenheit, damp",
+      "41 degrees Fahrenheit, damp, 6.2 miles",
     );
-    const badge = within(row).getByText("Conditions");
-    expect(badge).toHaveClass("border-hairline", "text-label");
+    expect(row.querySelectorAll(".rounded-pill")).toHaveLength(0);
     expect(within(row).queryByRole("button")).toBeNull();
   });
 
-  it("marks an indoor run a treadmill, with an indoor badge", async () => {
+  it("says indoor in the line, with no badge", async () => {
     await renderWithRouter(
       list([
         runSummary({
@@ -172,11 +308,13 @@ describe("R: the badges, and the one breath", () => {
     );
 
     const row = onlyRow();
-    expect(within(row).getByText("Treadmill")).toHaveClass("text-muted");
-    expect(within(row).getByText("Indoor")).toHaveClass("border-hairline");
+    expect(within(row).getByText("Indoor · 6.2 mi").parentElement).toHaveClass(
+      "text-label",
+    );
+    expect(row.querySelectorAll(".rounded-pill")).toHaveLength(0);
   });
 
-  it("says set by you, and badges it set, for a band the runner chose", async () => {
+  it("badges a band the runner chose, and leaves the line its distance", async () => {
     await renderWithRouter(
       list([
         runSummary({
@@ -187,11 +325,13 @@ describe("R: the badges, and the one breath", () => {
     );
 
     const row = onlyRow();
-    expect(within(row).getByText("Set by you")).toHaveClass("text-label");
+    expect(within(row).getByText("6.2 mi").parentElement).toHaveClass(
+      "text-label",
+    );
     // Round 26, item 2: the range and the sky, never the stored middle.
     const badge = within(row).getByText("Set · 50–59° · Rain");
     expect(badge).toHaveAttribute("aria-hidden", "true");
-    expect(badge.parentElement).toHaveClass("border-hairline");
+    expectBadge(badge.parentElement, "border-hairline", "text-label");
     // Round 53 · 162.3: the band is said as a range.
     expect(within(row).getByText("Set, 50 to 59 degrees, rain")).toHaveClass(
       "sr-only",
@@ -215,17 +355,24 @@ describe("R: the badges, and the one breath", () => {
     );
   });
 
-  it("breathes instead of badging while the weather is asked for", async () => {
+  it("breathes, flush left, instead of badging while the weather is asked for (N1-14)", async () => {
     await renderWithRouter(
       list([runSummary({ weatherStatus: "pending", conditions: undefined })]),
     );
 
     const row = onlyRow();
-    expect(within(row).getByText("Fetching weather")).toBeVisible();
+    const words = within(row).getByText("Fetching weather");
+    // The pending label's own start alignment, not the centred default.
+    expect(words.closest(".grid")).toHaveClass("justify-items-start");
+    expect(words.closest(".grid")).not.toHaveClass("place-items-center");
+    const line = words.closest(".font-mono");
+    expect(line).toHaveClass("flex", "items-center", "text-label");
+    expect(line).toHaveTextContent("[Fetching weather]·6.2 mi");
+    expect(within(row).getByText("6.2 miles")).toHaveClass("sr-only");
     expect(row.querySelectorAll(".rounded-pill")).toHaveLength(0);
   });
 
-  it("makes the one badge that is a control: SET CONDITIONS › into R2b", async () => {
+  it("makes the one badge that is a control: SET CONDITIONS › into R2b, as tall as the others", async () => {
     await renderWithRouter(
       list([
         runSummary({
@@ -237,14 +384,17 @@ describe("R: the badges, and the one breath", () => {
     );
 
     const row = onlyRow();
-    expect(within(row).getByText("No weather for this time")).toHaveClass(
-      "text-muted",
+    expect(within(row).getByText("6.2 mi").parentElement).toHaveClass(
+      "text-label",
     );
+    expect(row).not.toHaveTextContent("No weather for this time");
     const control = within(row).getByRole("button", {
       name: "Set conditions",
     });
-    expect(control).toHaveClass("border-ink");
+    // The 44 hit area hangs past the line; the pill is the badges' 22.
+    expect(control).toHaveClass("target", "-my-3", "bg-transparent", "p-0");
     expect(control).toHaveAttribute("aria-haspopup", "dialog");
+    expectBadge(control.firstElementChild, "border-ink", "text-ink");
     // The › is drawn and not said.
     expect(control).toHaveTextContent("Set conditions ›");
     expect(within(control).getByText("›")).toHaveAttribute(
@@ -255,14 +405,34 @@ describe("R: the badges, and the one breath", () => {
     expect(control.closest("a")).toBeNull();
   });
 
-  it("offers no control for a run that cannot take a band", async () => {
+  it("says what is missing, with no control, for a run that cannot take a band", async () => {
     await renderWithRouter(
       list([runSummary({ weatherStatus: "failed", conditions: undefined })]),
     );
 
+    expect(
+      within(onlyRow()).getByText("No weather for this time · 6.2 mi"),
+    ).toBeVisible();
     expect(within(onlyRow()).queryByRole("button")).toBeNull();
   });
 });
+
+/**
+Every badge is one pill, 22 tall (Round 55 · 235b).
+*/
+function expectBadge(badge: Element | null, ...tone: readonly string[]): void {
+  expect(badge).toHaveClass(
+    "inline-flex",
+    "shrink-0",
+    "items-center",
+    "rounded-pill",
+    "border",
+    "px-2",
+    "py-1",
+    "text-mono-xs",
+    ...tone,
+  );
+}
 
 describe("R: R2b from the list", () => {
   it("opens for the row it was asked from, and reloads the list when it lands", async () => {

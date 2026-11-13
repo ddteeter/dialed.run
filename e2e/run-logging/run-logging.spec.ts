@@ -106,7 +106,9 @@ test("R2b · no weather came back: set it by picking, never typing, then delete 
     const stale = page.locator('[data-slot="run-row"]').filter({
       has: page.locator(`a[href="/runs/${staleRunId}"]`),
     });
-    await expect(stale).toContainText("No weather for this time");
+    // Round 55 · 235: the control is the row's one badge, and its line
+    // keeps only the distance.
+    await expect(stale).not.toContainText("No weather for this time");
     await stale.getByRole("button", { name: /Set conditions/u }).click();
     const sheet = page.getByRole("dialog", { name: "No weather saved" });
     await expect(sheet).toBeVisible();

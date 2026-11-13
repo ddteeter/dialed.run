@@ -64,6 +64,7 @@ export function runSummary(overrides: Partial<RunSummary> = {}): RunSummary {
     conditions: runConditions(),
     entryId: undefined,
     hasVerdict: false,
+    verdict: undefined,
     ...overrides,
   };
   // The service's rule: the run's own zone, unless a test names another.
