@@ -1023,6 +1023,10 @@ describe("A1: the parsed card", () => {
         name: "6:04 AM, change start time",
       }),
     ).toHaveTextContent("6:04 AM");
+    // D1-08: a full target whose box is pulled back to the facts line.
+    expect(
+      within(card).getByRole("button", { name: "6:04 AM, change start time" }),
+    ).toHaveClass("target", "-my-3.5");
     expect(document.querySelector("[data-part='drop-zone']")).toBeNull();
 
     // The conditions block, read-only, with the correction's note.
@@ -1035,7 +1039,7 @@ describe("A1: the parsed card", () => {
     expect(conditions?.querySelector("input")).toBeNull();
 
     const next = screen.getByRole("link", {
-      name: "Looks right — what did you wear?",
+      name: "What did you wear?",
     });
     expect(next).toHaveAttribute("href", `/feed/attach/${RUN_ID}`);
     expect(router.state.location.pathname).toBe("/");
@@ -1348,13 +1352,13 @@ describe("A1: the parsed card", () => {
     });
 
     const next = screen.getByRole("button", {
-      name: "Looks right — what did you wear?",
+      name: "What did you wear?",
     });
     await user.click(next);
 
     // Waiting, not gone, and never disabled.
     expect(router.state.location.pathname).toBe("/");
-    expect(next).toHaveTextContent("[Looks right — what did you wear?]");
+    expect(next).toHaveTextContent("[What did you wear?]");
     expect(next).not.toHaveAttribute("aria-disabled");
     expect(next).toHaveClass("bg-action", "target");
 
@@ -1369,7 +1373,7 @@ describe("A1: the parsed card", () => {
     const { router } = await renderWithRouter(form({ getOutcome: parsed() }));
     await user.upload(dropInput(), gpx());
     const next = await screen.findByRole("link", {
-      name: "Looks right — what did you wear?",
+      name: "What did you wear?",
     });
     // The log verb's pink, as a 44px target.
     expect(next).toHaveClass("bg-action", "target");
@@ -1557,7 +1561,12 @@ describe("A1: a run already logged", () => {
         "This run is already in your log. Nothing new was added.",
       ),
     ).toBeVisible();
-    expect(screen.getByText("Wrong file? Replace it.")).toBeVisible();
+    // Round 55 · 234: the line points at the strip's REPLACE.
+    const wrongFile = document.querySelector("[data-part='wrong-file']");
+    expect(wrongFile).toHaveTextContent(/^Wrong file\? Tap Replace above\.$/u);
+    const replace = wrongFile?.querySelector(".text-cold-text");
+    expect(replace).toHaveTextContent(/^Replace$/u);
+    expect(replace).toHaveClass("uppercase");
     // No conditions block: they are already the run's.
     expect(document.querySelector("[data-slot='conditions']")).toBeNull();
   });

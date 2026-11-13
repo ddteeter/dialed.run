@@ -152,6 +152,10 @@ describe("R: the conditions row", () => {
     expect(block).toHaveTextContent("Conditions · auto-attached");
     expect(block).toHaveTextContent("41°F");
     expect(block).toHaveTextContent("damp");
+    // D1-03: the text role, which resolves per ground, not the surface teal.
+    const sky = within(block).getByText("damp");
+    expect(sky.closest(".text-dialed-text")).not.toBeNull();
+    expect(sky.closest(".text-teal")).toBeNull();
     expect(block).toHaveTextContent("Feels 36° · 88% hum · 9mph · Light rain");
     // Round 52 #158: each line of measures is drawn for the eye and said
     // in words, once.
@@ -223,13 +227,26 @@ describe("R: the conditions row", () => {
     );
   });
 
-  it("breathes while the weather is still being asked for", async () => {
+  it("keeps the block's place while the weather is still being asked for (233)", async () => {
     await renderWithRouter(
       detail(runSummary({ weatherStatus: "pending", conditions: undefined })),
     );
 
-    expect(screen.getByText("Fetching weather")).toBeVisible();
-    expect(document.querySelector("[data-slot='conditions']")).toBeNull();
+    const slot = region("conditions");
+    expect(slot).toHaveAttribute("data-state", "fetching");
+    expect(slot).toHaveClass(
+      "border",
+      "border-hairline-2",
+      "rounded-card",
+      "min-h-34",
+      "p-4",
+    );
+    expect(within(slot).getByText("Fetching weather")).toHaveClass(
+      "text-mono-xs",
+    );
+    expect(slot).toHaveTextContent(
+      "Fetching weatherUsually under a minute. You can go on without it.",
+    );
   });
 
   it("calls an indoor run a treadmill, with nothing to set", async () => {
@@ -243,8 +260,15 @@ describe("R: the conditions row", () => {
       ),
     );
 
-    expect(region("conditions")).toHaveAttribute("data-state", "indoor");
-    expect(screen.getByText("Treadmill")).toBeVisible();
+    const slot = region("conditions");
+    expect(slot).toHaveAttribute("data-state", "indoor");
+    // Round 55 · 233: the ink block, in the same place and size.
+    expect(slot).toHaveAttribute("data-ground", "ink");
+    expect(slot).toHaveClass("bg-ground", "rounded-card", "min-h-34", "p-4");
+    expect(slot).toHaveTextContent(
+      "Conditions · indoorTreadmillNo weather for an indoor run",
+    );
+    expect(screen.getByText("Treadmill")).toHaveClass("text-mono-lg");
     expect(screen.queryByRole("button", { name: "Set conditions" })).toBeNull();
   });
 

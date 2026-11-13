@@ -64,7 +64,11 @@ const retimeSchema = z.object({
 const PRIMARY_ACTION =
   "target flex items-center justify-center rounded-card bg-action px-6 py-4 font-display text-body uppercase text-accent-ink desk:col-start-1 desk:row-start-3 desk:self-start desk:justify-self-start";
 
-const LOOKS_RIGHT = "Looks right — what did you wear?";
+/**
+ * Round 55 · 232: shorter, so the label never wraps. Moving on is what
+ * confirms the parse.
+ */
+const LOOKS_RIGHT = "What did you wear?";
 
 const OPEN_THAT_RUN =
   "target flex items-center justify-center rounded-card bg-ink px-6 py-4 font-display text-body uppercase text-ground no-underline";
@@ -137,7 +141,9 @@ function TimeButton({
       type="button"
       aria-label={`${shown}, change start time`}
       onClick={onPress}
-      className="target border-none bg-transparent p-0 font-mono text-mono-sm uppercase text-ink underline underline-offset-4"
+      // A full 44 target with its box pulled back to the facts line, so the
+      // row stays one mono line tall and the card is not bottom-heavy (D1-08).
+      className="target -my-3.5 border-none bg-transparent p-0 font-mono text-mono-sm uppercase text-ink underline underline-offset-4"
     >
       {shown}
     </button>
@@ -688,8 +694,12 @@ export function DuplicateCard({
           Open that run
         </Link>
       )}
-      <p className="m-0 text-center text-small text-muted">
-        Wrong file? Replace it.
+      {/* Round 55 · 234: the board's line, pointing at the strip's
+          REPLACE in --cold-text, as the strip draws it. */}
+      <p data-part="wrong-file" className="m-0 text-center text-small text-muted">
+        Wrong file? Tap{" "}
+        <span className="font-semibold text-cold-text uppercase">Replace</span>{" "}
+        above.
       </p>
     </>
   );

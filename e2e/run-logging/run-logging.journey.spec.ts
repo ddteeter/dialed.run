@@ -256,7 +256,7 @@ test("log a run: read a file in place, pick the kit, note it, enter one by hand"
     ).toContainText("Changed", { timeout: 20_000 });
     await expect(conditions).toContainText("46°F", { timeout: 20_000 });
     await page
-      .getByRole("link", { name: "Looks right — what did you wear?" })
+      .getByRole("link", { name: "What did you wear?" })
       .click();
     await hydrated(page);
 

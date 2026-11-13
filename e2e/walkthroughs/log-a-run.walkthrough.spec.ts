@@ -101,7 +101,7 @@ test("log a run: the file, its conditions, the kit, the verdict", async ({
     });
 
     await page
-      .getByRole("link", { name: "Looks right — what did you wear?" })
+      .getByRole("link", { name: "What did you wear?" })
       .click();
     await hydrated(page);
     await expect(

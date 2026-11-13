@@ -73,7 +73,7 @@ test("import a run from Garmin: the picker, the credit, the watch's effort", asy
     await scene(page, "A1's own parsed card, credited to Garmin");
     await expect(picker).toHaveCount(0);
     await page
-      .getByRole("link", { name: "Looks right — what did you wear?" })
+      .getByRole("link", { name: "What did you wear?" })
       .click();
     await hydrated(page);
 
