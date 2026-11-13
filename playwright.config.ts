@@ -105,8 +105,31 @@ const walkthroughProjects = [
     : []),
 ];
 
+/**
+ * The styling audit's own specs (design 205): dense seeded data and the
+ * states the suite does not reach, shot by the a11y fixture's
+ * `auditShot` hook. They exist only for a capture, so the project exists
+ * only while `AUDIT_SHOTS` names the folder the shots go to; CI, which
+ * never sets it, never sees them. The skill `styling-audit` has the run.
+ */
+const AUDIT_SPECS = "audit/**/*.audit.spec.ts";
+const isCapturing = (process.env.AUDIT_SHOTS ?? "") !== "";
+const auditProjects = isCapturing
+  ? [
+      {
+        name: "audit",
+        testMatch: AUDIT_SPECS,
+        use: { viewport: { width: 1280, height: 800 } },
+      },
+    ]
+  : [];
+
 export default defineConfig({
   testDir: "e2e",
+  // A capture shoots every new state four times, page-height, inside the
+  // test that reached it, so a test that visits twenty screens outlives the
+  // 30s default by far. Only while capturing; CI's runs keep the default.
+  ...(isCapturing && { timeout: 15 * 60_000 }),
   // One worker, because every spec shares one dev server and one local D1 —
   // which is one SQLite file. Specs sign up users, so they all write, and
   // parallel workers produce `SQLITE_BUSY: database is locked` on the
@@ -149,6 +172,7 @@ export default defineConfig({
         "**/*.setup.ts",
         "scratch/**",
         WALKTHROUGHS,
+        AUDIT_SPECS,
       ],
       // **Depends on `demo-setup` so a signed-in spec can live here.**
       //
@@ -220,6 +244,7 @@ export default defineConfig({
       },
     },
     ...walkthroughProjects,
+    ...auditProjects,
   ],
   webServer: [
     {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import actionsLock from "../../.github/workflows/actions.lock?raw";
 import issueTracker from "../../docs/agents/issue-tracker.md?raw";
 
 /**
@@ -101,7 +102,96 @@ describe("every workflow job", () => {
       ),
     );
     expect([...pins]).toHaveLength(1);
-    expect([...pins][0]).toMatch(/@[0-9a-f]{40} # v\d+\.\d+\.\d+$/);
+    expect([...pins][0]).toMatch(/@v\d+\.\d+\.\d+$/);
+  });
+});
+
+/**
+The action a `uses:` line names, as the lockfile keys it: the repository
+and the tag, without a path inside the repository (`actions/cache/save`
+is locked as `actions/cache`).
+*/
+function lockKeyOf(line: string): string {
+  const reference = line.slice(line.indexOf("uses:") + "uses:".length).trim();
+  const [action = "", tag = ""] = reference.split("@", 2);
+  return `${action.split("/", 2).join("/")}@${tag}`;
+}
+
+const byName = (left: string, right: string): number => left.localeCompare(right);
+
+/**
+`actions.lock`'s `workflows:` section, read as text: each workflow path with
+the references listed under it, sorted.
+*/
+function lockedWorkflows(lock: string): Record<string, string[]> {
+  const section = lock.slice(
+    lock.indexOf("\nworkflows:\n"),
+    lock.indexOf("\ndependencies:\n"),
+  );
+  const locked: Record<string, string[]> = {};
+  let current: string[] = [];
+  for (const line of section.split("\n")) {
+    const workflow = /^ {4}'(?<path>[^']+)':$/u.exec(line)?.groups?.path;
+    const reference = /^ {8}- '(?<ref>[^']+)'$/u.exec(line)?.groups?.ref;
+    if (workflow !== undefined) {
+      current = [];
+      locked[workflow] = current;
+    } else if (reference !== undefined) {
+      current.push(reference);
+    }
+  }
+  return Object.fromEntries(
+    Object.entries(locked).map(([path, refs]) => [path, refs.toSorted(byName)]),
+  );
+}
+
+/**
+The references `actions.lock`'s `dependencies:` section records a full
+commit for.
+*/
+function recordedCommits(lock: string): Set<string> {
+  const entries = lock.slice(lock.indexOf("\ndependencies:\n")).split(/\n(?= {4}')/u);
+  return new Set(
+    entries
+      .filter((entry) => /\n {8}commit: 'sha1-[0-9a-f]{40}'/u.test(entry))
+      .map((entry) => /^ {4}'(?<ref>[^']+)':/u.exec(entry)?.groups?.ref ?? ""),
+  );
+}
+
+const usesLines = (source: string): string[] =>
+  source.split("\n").filter((line) => /^\s*(- )?uses:/u.test(line));
+
+describe("the workflow lockfile (D-182)", () => {
+  it("is read, so an empty result cannot pass for a clean one", () => {
+    expect(lockedWorkflows(actionsLock)[".github/workflows/ci.yml"]).toEqual(
+      expect.arrayContaining(["actions/checkout@v7.0.1"]),
+    );
+    expect(recordedCommits(actionsLock)).toContain("actions/checkout@v7.0.1");
+  });
+
+  it("names a full version tag on every uses: line, never a commit or a moving major", () => {
+    const loose = Object.values(workflows)
+      .flatMap((source) => usesLines(source))
+      .filter((line) => !/@v\d+\.\d+\.\d+$/u.test(line.trim()));
+    expect(loose).toEqual([]);
+  });
+
+  it("lists exactly the actions each workflow uses, so no workflow runs unlocked", () => {
+    const used = Object.entries(workflows)
+      .map(([path, source]): [string, string[]] => [
+        `.github/workflows/${path.slice(path.lastIndexOf("/") + 1)}`,
+        [...new Set(usesLines(source).map((line) => lockKeyOf(line)))].toSorted(byName),
+      ])
+      .filter(([, actions]) => actions.length > 0);
+    expect(Object.fromEntries(used)).toEqual(lockedWorkflows(actionsLock));
+  });
+
+  it("records a commit for every action it lists", () => {
+    const recorded = recordedCommits(actionsLock);
+    const unrecorded = Object.values(lockedWorkflows(actionsLock))
+      .flat()
+      .filter((reference) => !recorded.has(reference));
+    expect(unrecorded).toEqual([]);
   });
 });
 

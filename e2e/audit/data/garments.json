@@ -1,0 +1,1057 @@
+{
+  "maya": [
+    {
+      "key": "halfzip",
+      "garment": {
+        "category": "top",
+        "name": "Rover Half-zip",
+        "type": "halfZip",
+        "brand": "Janji",
+        "size": "M",
+        "color": "Midnight",
+        "colorName": "navy",
+        "colorHex": "#1f2a44",
+        "layer": "mid",
+        "weight": "mid",
+        "fabric": "merino"
+      },
+      "tempF": {
+        "low": 28,
+        "high": 46
+      },
+      "photo": 1,
+      "product": true
+    },
+    {
+      "key": "singlet",
+      "garment": {
+        "category": "top",
+        "name": "Van Cortlandt Singlet",
+        "type": "singlet",
+        "brand": "Tracksmith",
+        "size": "M",
+        "color": "Ivory/Navy",
+        "colorName": "white",
+        "layer": "base",
+        "weight": "light",
+        "fabric": "synthetic"
+      },
+      "tempF": {
+        "low": 62,
+        "high": 95
+      },
+      "photo": 6,
+      "product": true
+    },
+    {
+      "key": "tee",
+      "garment": {
+        "category": "top",
+        "name": "Harrier Tee",
+        "type": "tee",
+        "brand": "Tracksmith",
+        "size": "M",
+        "color": "Wine",
+        "colorName": "red",
+        "colorHex": "#7a1f1f",
+        "layer": "base",
+        "weight": "light",
+        "fabric": "merino"
+      },
+      "tempF": {
+        "low": 50,
+        "high": 72
+      },
+      "photo": 2,
+      "product": true
+    },
+    {
+      "key": "longsleeve",
+      "garment": {
+        "category": "top",
+        "name": "Capilene Cool Lightweight Long-Sleeve Shirt",
+        "type": "longSleeve",
+        "brand": "Patagonia",
+        "size": "M",
+        "color": "Buckhorn Green",
+        "colorName": "green",
+        "layer": "base",
+        "weight": "light",
+        "fabric": "synthetic"
+      },
+      "tempF": {
+        "low": 42,
+        "high": 58
+      },
+      "photo": 14,
+      "product": true
+    },
+    {
+      "key": "tee2",
+      "garment": {
+        "category": "top",
+        "name": "Micromesh Performance Tee",
+        "type": "tee",
+        "brand": "Bandit",
+        "size": "M",
+        "color": "Black",
+        "colorName": "black",
+        "layer": "base",
+        "weight": "light",
+        "fabric": "synthetic"
+      },
+      "tempF": {
+        "low": 55,
+        "high": 85
+      }
+    },
+    {
+      "key": "thermal",
+      "garment": {
+        "category": "top",
+        "name": "Classic Thermal Merino Base Layer Crew, Extra Long Tall Fit, Charcoal Heather",
+        "type": "longSleeve",
+        "brand": "Smartwool",
+        "size": "M Tall",
+        "color": "Charcoal Heather",
+        "colorName": "grey",
+        "layer": "base",
+        "weight": "heavy",
+        "fabric": "merino"
+      },
+      "tempF": {
+        "low": 5,
+        "high": 32
+      },
+      "product": true
+    },
+    {
+      "key": "racesinglet",
+      "garment": {
+        "category": "top",
+        "name": "Dri-FIT ADV AeroSwift Racing Singlet",
+        "type": "singlet",
+        "brand": "Nike",
+        "size": "M",
+        "color": "Volt",
+        "colorName": "yellow",
+        "visibilityLevel": "hi_viz",
+        "layer": "base",
+        "weight": "light",
+        "fabric": "synthetic"
+      },
+      "tempF": {
+        "low": 60,
+        "high": 90
+      }
+    },
+    {
+      "key": "eztee",
+      "garment": {
+        "category": "top",
+        "name": "EZ Tee Perf",
+        "type": "tee",
+        "brand": "rabbit",
+        "size": "M",
+        "color": "Dusty Rose",
+        "colorName": "pink",
+        "layer": "base",
+        "weight": "light",
+        "fabric": "blend"
+      },
+      "tempF": {
+        "low": 52,
+        "high": 78
+      }
+    },
+    {
+      "key": "bra",
+      "garment": {
+        "category": "top",
+        "name": "Flyout Bra",
+        "type": "sportsBra",
+        "brand": "Oiselle",
+        "size": "S",
+        "color": "Black",
+        "colorName": "black",
+        "layer": "base",
+        "fabric": "synthetic"
+      }
+    },
+    {
+      "key": "oldtee",
+      "garment": {
+        "category": "top",
+        "name": "Old race tee (2019 Chicago Half)",
+        "type": "tee",
+        "size": "M",
+        "color": "Faded blue",
+        "colorName": "blue",
+        "layer": "base",
+        "weight": "mid",
+        "fabric": "cotton"
+      },
+      "tempF": {
+        "low": 55,
+        "high": 70
+      },
+      "retired": true
+    },
+    {
+      "key": "houdini",
+      "garment": {
+        "category": "top",
+        "name": "Houdini Jacket",
+        "type": "jacket",
+        "brand": "Patagonia",
+        "size": "M",
+        "color": "Mango",
+        "colorName": "orange",
+        "colorHex": "#c96a12",
+        "visibilityLevel": "hi_viz",
+        "layer": "outer",
+        "weight": "light",
+        "fabric": "synthetic",
+        "windResistant": true
+      },
+      "tempF": {
+        "low": 30,
+        "high": 52
+      },
+      "photo": 5,
+      "product": true
+    },
+    {
+      "key": "shell",
+      "garment": {
+        "category": "top",
+        "name": "Norvan Shell Jacket",
+        "type": "jacket",
+        "brand": "Arc'teryx",
+        "size": "M",
+        "color": "Black",
+        "colorName": "black",
+        "visibilityLevel": "reflective",
+        "layer": "outer",
+        "weight": "mid",
+        "fabric": "synthetic",
+        "windResistant": true,
+        "waterResistant": true
+      },
+      "tempF": {
+        "low": 25,
+        "high": 50
+      },
+      "product": true
+    },
+    {
+      "key": "vest",
+      "garment": {
+        "category": "top",
+        "name": "Thermal Runner Vest",
+        "type": "vest",
+        "brand": "Janji",
+        "size": "M",
+        "color": "Deep Teal",
+        "colorName": "blue",
+        "colorHex": "#0f4c5c",
+        "layer": "outer",
+        "weight": "mid",
+        "fabric": "synthetic",
+        "windResistant": true
+      },
+      "tempF": {
+        "low": 25,
+        "high": 45
+      },
+      "photo": 7
+    },
+    {
+      "key": "oldshell",
+      "garment": {
+        "category": "top",
+        "name": "Bonatti Trail Waterproof Jacket",
+        "type": "jacket",
+        "brand": "Salomon",
+        "size": "M",
+        "color": "Red",
+        "colorName": "red",
+        "layer": "outer",
+        "weight": "mid",
+        "windResistant": true,
+        "waterResistant": true
+      },
+      "tempF": {
+        "low": 30,
+        "high": 50
+      },
+      "retired": true
+    },
+    {
+      "key": "split",
+      "garment": {
+        "category": "bottom",
+        "name": "Vento 5\" Split Short",
+        "type": "shorts",
+        "brand": "Bandit",
+        "size": "M",
+        "color": "Forest",
+        "colorName": "green",
+        "colorHex": "#1d4d3a",
+        "weight": "light",
+        "fabric": "synthetic"
+      },
+      "tempF": {
+        "low": 50,
+        "high": 95
+      },
+      "photo": 3,
+      "product": true
+    },
+    {
+      "key": "session",
+      "garment": {
+        "category": "bottom",
+        "name": "Session Shorts",
+        "type": "shorts",
+        "brand": "Tracksmith",
+        "size": "M",
+        "color": "Navy",
+        "colorName": "navy",
+        "weight": "light",
+        "fabric": "synthetic"
+      },
+      "tempF": {
+        "low": 48,
+        "high": 90
+      },
+      "product": true
+    },
+    {
+      "key": "afo",
+      "garment": {
+        "category": "bottom",
+        "name": "AFO Middle Short 5\"",
+        "type": "shorts",
+        "brand": "Janji",
+        "size": "M",
+        "color": "Ochre",
+        "colorName": "yellow",
+        "weight": "light",
+        "fabric": "synthetic"
+      },
+      "tempF": {
+        "low": 50,
+        "high": 90
+      }
+    },
+    {
+      "key": "halftight",
+      "garment": {
+        "category": "bottom",
+        "name": "Fast and Free Half Tight 8\"",
+        "type": "halfTights",
+        "brand": "lululemon",
+        "size": "M",
+        "color": "Black",
+        "colorName": "black",
+        "weight": "mid",
+        "fabric": "synthetic"
+      },
+      "tempF": {
+        "low": 40,
+        "high": 65
+      }
+    },
+    {
+      "key": "tights",
+      "garment": {
+        "category": "bottom",
+        "name": "Turnover Tights",
+        "type": "tights",
+        "brand": "Tracksmith",
+        "size": "M",
+        "color": "Black",
+        "colorName": "black",
+        "colorHex": "#222222",
+        "weight": "mid",
+        "fabric": "synthetic"
+      },
+      "tempF": {
+        "low": 22,
+        "high": 44
+      },
+      "photo": 4,
+      "product": true
+    },
+    {
+      "key": "wintertights",
+      "garment": {
+        "category": "bottom",
+        "name": "Phenom Elite Wind-Blocking Winter Tights",
+        "type": "tights",
+        "brand": "Nike",
+        "size": "M",
+        "color": "Black",
+        "colorName": "black",
+        "weight": "heavy",
+        "fabric": "synthetic",
+        "windResistant": true
+      },
+      "tempF": {
+        "low": 0,
+        "high": 28
+      }
+    },
+    {
+      "key": "baggy",
+      "garment": {
+        "category": "bottom",
+        "name": "Baggy mesh shorts",
+        "type": "shorts",
+        "size": "L",
+        "color": "Grey",
+        "colorName": "grey"
+      },
+      "retired": true
+    },
+    {
+      "key": "newtights",
+      "garment": {
+        "category": "bottom",
+        "name": "New thermal tights (tags still on)",
+        "type": "tights",
+        "brand": "Janji",
+        "size": "M",
+        "color": "Black",
+        "colorName": "black",
+        "weight": "heavy"
+      }
+    },
+    {
+      "key": "cap",
+      "garment": {
+        "category": "headwear",
+        "name": "GOCap SC",
+        "type": "cap",
+        "brand": "Ciele",
+        "color": "Whitaker",
+        "colorName": "navy",
+        "colorHex": "#20324a",
+        "weight": "light",
+        "fabric": "synthetic"
+      },
+      "tempF": {
+        "low": 55,
+        "high": 95
+      },
+      "photo": 13,
+      "product": true
+    },
+    {
+      "key": "beanie",
+      "garment": {
+        "category": "headwear",
+        "name": "Merino Reversible Cuffed Beanie",
+        "type": "beanie",
+        "brand": "Smartwool",
+        "color": "Plum",
+        "colorName": "purple",
+        "colorHex": "#5a2a4a",
+        "weight": "mid",
+        "fabric": "merino"
+      },
+      "tempF": {
+        "low": 0,
+        "high": 35
+      },
+      "photo": 11
+    },
+    {
+      "key": "headband",
+      "garment": {
+        "category": "headwear",
+        "name": "Nordic Headband",
+        "type": "headband",
+        "brand": "Skida",
+        "color": "Alpenglow print",
+        "colorName": "pink",
+        "weight": "light",
+        "fabric": "blend"
+      },
+      "tempF": {
+        "low": 25,
+        "high": 42
+      }
+    },
+    {
+      "key": "buff",
+      "garment": {
+        "category": "neckwear",
+        "name": "Original EcoStretch",
+        "type": "neckGaiter",
+        "brand": "Buff",
+        "color": "Grey",
+        "colorName": "grey",
+        "weight": "light",
+        "fabric": "synthetic"
+      },
+      "tempF": {
+        "low": 0,
+        "high": 30
+      },
+      "photo": 16
+    },
+    {
+      "key": "gloves",
+      "garment": {
+        "category": "gloves",
+        "name": "Inverno Gloves",
+        "type": "gloves",
+        "brand": "Tracksmith",
+        "size": "M",
+        "color": "Black",
+        "colorName": "black",
+        "colorHex": "#2d2d2d",
+        "weight": "light"
+      },
+      "tempF": {
+        "low": 28,
+        "high": 45
+      },
+      "photo": 10,
+      "product": true
+    },
+    {
+      "key": "mitts",
+      "garment": {
+        "category": "gloves",
+        "name": "Wind Hood Softshell Gloves",
+        "type": "gloves",
+        "brand": "Black Diamond",
+        "size": "M",
+        "color": "Black",
+        "colorName": "black",
+        "weight": "heavy",
+        "windResistant": true,
+        "waterResistant": true
+      },
+      "tempF": {
+        "low": -5,
+        "high": 28
+      }
+    },
+    {
+      "key": "gasgloves",
+      "garment": {
+        "category": "gloves",
+        "name": "Gas station gloves",
+        "color": "Black",
+        "colorName": "black"
+      }
+    },
+    {
+      "key": "speed",
+      "garment": {
+        "category": "shoes",
+        "name": "Endorphin Speed 4",
+        "type": "shoes",
+        "brand": "Saucony",
+        "size": "9.5",
+        "color": "White/Gold",
+        "colorName": "white",
+        "colorHex": "#e6e2d6"
+      },
+      "photo": 8,
+      "product": true
+    },
+    {
+      "key": "alphafly",
+      "garment": {
+        "category": "shoes",
+        "name": "Alphafly 3",
+        "type": "shoes",
+        "brand": "Nike",
+        "size": "9.5",
+        "color": "Bright Crimson",
+        "colorName": "red",
+        "colorHex": "#ff5a36"
+      },
+      "photo": 9,
+      "product": true
+    },
+    {
+      "key": "speedgoat",
+      "garment": {
+        "category": "shoes",
+        "name": "Speedgoat 6 GTX",
+        "type": "shoes",
+        "brand": "Hoka",
+        "size": "9.5",
+        "color": "Black/Amber",
+        "colorName": "black",
+        "waterResistant": true
+      },
+      "photo": 15,
+      "product": true
+    },
+    {
+      "key": "novablast",
+      "garment": {
+        "category": "shoes",
+        "name": "Novablast 5",
+        "type": "shoes",
+        "brand": "ASICS",
+        "size": "9.5",
+        "color": "Illuminate Mint",
+        "colorName": "green"
+      }
+    },
+    {
+      "key": "ghost",
+      "garment": {
+        "category": "shoes",
+        "name": "Ghost 14",
+        "type": "shoes",
+        "brand": "Brooks",
+        "size": "9.5",
+        "color": "Grey",
+        "colorName": "grey"
+      },
+      "retired": true
+    },
+    {
+      "key": "supercomp",
+      "garment": {
+        "category": "shoes",
+        "name": "FuelCell SuperComp Elite v4, Marathon Majors Limited Edition Colorway",
+        "type": "shoes",
+        "brand": "New Balance",
+        "size": "9.5",
+        "color": "Neon Dragonfly/Black",
+        "colorName": "orange"
+      }
+    },
+    {
+      "key": "socks",
+      "garment": {
+        "category": "socks",
+        "name": "Hidden Comfort",
+        "type": "socks",
+        "brand": "Balega",
+        "size": "M",
+        "color": "White",
+        "colorName": "white",
+        "weight": "light",
+        "fabric": "synthetic"
+      },
+      "photo": 12
+    },
+    {
+      "key": "woolsocks",
+      "garment": {
+        "category": "socks",
+        "name": "Run Quarter Ultra-Lightweight",
+        "type": "socks",
+        "brand": "Darn Tough",
+        "size": "M",
+        "color": "Charcoal",
+        "colorName": "grey",
+        "weight": "mid",
+        "fabric": "merino"
+      },
+      "tempF": {
+        "low": 0,
+        "high": 45
+      }
+    },
+    {
+      "key": "feetures",
+      "garment": {
+        "category": "socks",
+        "name": "Elite Max Cushion No Show Tab",
+        "type": "socks",
+        "brand": "Feetures",
+        "size": "M",
+        "color": "Black",
+        "colorName": "black",
+        "weight": "light",
+        "fabric": "synthetic"
+      }
+    },
+    {
+      "key": "sunnies",
+      "garment": {
+        "category": "accessory",
+        "name": "OG Sunglasses: A Ginger's Soul",
+        "type": "sunglasses",
+        "brand": "goodr",
+        "color": "Black",
+        "colorName": "black"
+      }
+    },
+    {
+      "key": "sleeves",
+      "garment": {
+        "category": "accessory",
+        "name": "ArmForce Ultralight Arm Sleeves",
+        "type": "armSleeves",
+        "brand": "Compressport",
+        "size": "T2",
+        "color": "White",
+        "colorName": "white"
+      },
+      "tempF": {
+        "low": 40,
+        "high": 55
+      }
+    }
+  ],
+  "pool": [
+    {
+      "key": "top-cold",
+      "garment": {
+        "category": "top",
+        "name": "Brighton Base Layer",
+        "type": "longSleeve",
+        "brand": "Tracksmith",
+        "layer": "base",
+        "weight": "mid",
+        "fabric": "merino"
+      },
+      "photo": 14
+    },
+    {
+      "key": "top-mild",
+      "garment": {
+        "category": "top",
+        "name": "Harrier Tee",
+        "type": "tee",
+        "brand": "Tracksmith",
+        "layer": "base",
+        "weight": "light",
+        "fabric": "merino"
+      },
+      "photo": 2,
+      "product": true
+    },
+    {
+      "key": "top-hot",
+      "garment": {
+        "category": "top",
+        "name": "Van Cortlandt Singlet",
+        "type": "singlet",
+        "brand": "Tracksmith",
+        "layer": "base",
+        "weight": "light"
+      },
+      "photo": 6,
+      "product": true
+    },
+    {
+      "key": "outer",
+      "garment": {
+        "category": "top",
+        "name": "Houdini Jacket",
+        "type": "jacket",
+        "brand": "Patagonia",
+        "layer": "outer",
+        "weight": "light",
+        "windResistant": true
+      },
+      "photo": 5,
+      "product": true
+    },
+    {
+      "key": "vest",
+      "garment": {
+        "category": "top",
+        "name": "Thermal Runner Vest",
+        "type": "vest",
+        "brand": "Janji",
+        "layer": "outer"
+      },
+      "photo": 7
+    },
+    {
+      "key": "bottom-cold",
+      "garment": {
+        "category": "bottom",
+        "name": "Turnover Tights",
+        "type": "tights",
+        "brand": "Tracksmith",
+        "weight": "mid"
+      },
+      "photo": 4,
+      "product": true
+    },
+    {
+      "key": "bottom-mild",
+      "garment": {
+        "category": "bottom",
+        "name": "Trail Half Tight 8\"",
+        "type": "halfTights",
+        "brand": "Janji"
+      }
+    },
+    {
+      "key": "bottom-hot",
+      "garment": {
+        "category": "bottom",
+        "name": "Vento 5\" Split Short",
+        "type": "shorts",
+        "brand": "Bandit"
+      },
+      "photo": 3,
+      "product": true
+    },
+    {
+      "key": "gloves",
+      "garment": {
+        "category": "gloves",
+        "name": "Inverno Gloves",
+        "type": "gloves",
+        "brand": "Tracksmith"
+      },
+      "photo": 10,
+      "product": true
+    },
+    {
+      "key": "beanie",
+      "garment": {
+        "category": "headwear",
+        "name": "CR3 Beanie",
+        "type": "beanie",
+        "brand": "Ciele"
+      },
+      "photo": 11
+    },
+    {
+      "key": "cap",
+      "garment": {
+        "category": "headwear",
+        "name": "GOCap SC",
+        "type": "cap",
+        "brand": "Ciele"
+      },
+      "photo": 13,
+      "product": true
+    },
+    {
+      "key": "buff",
+      "garment": {
+        "category": "neckwear",
+        "name": "Merino Lightweight",
+        "type": "neckGaiter",
+        "brand": "Buff"
+      }
+    },
+    {
+      "key": "socks",
+      "garment": {
+        "category": "socks",
+        "name": "Hidden Comfort",
+        "type": "socks",
+        "brand": "Balega"
+      },
+      "photo": 12
+    },
+    {
+      "key": "shoes",
+      "garment": {
+        "category": "shoes",
+        "name": "Endorphin Speed 4",
+        "type": "shoes",
+        "brand": "Saucony"
+      },
+      "photo": 8,
+      "product": true
+    },
+    {
+      "key": "shoes2",
+      "garment": {
+        "category": "shoes",
+        "name": "Speedgoat 6 GTX",
+        "type": "shoes",
+        "brand": "Hoka"
+      },
+      "photo": 15,
+      "product": true
+    },
+    {
+      "key": "sunnies",
+      "garment": {
+        "category": "accessory",
+        "name": "OG Sunglasses",
+        "type": "sunglasses",
+        "brand": "goodr"
+      }
+    }
+  ],
+  "longPool": [
+    {
+      "key": "top-cold",
+      "garment": {
+        "category": "top",
+        "name": "Expedition-Weight Merino Wool Blend Quarter-Zip Thermal Base Layer Top w/ Thumbh",
+        "type": "longSleeve",
+        "brand": "Engineered Garments Mountain Research Running Division Limit",
+        "layer": "base",
+        "weight": "heavy",
+        "fabric": "merino"
+      },
+      "photo": 1
+    },
+    {
+      "key": "top-mild",
+      "garment": {
+        "category": "top",
+        "name": "MothTech Climbing-Dyed Distressed Muscle Tee, Aged Sulphur Mineral Wash Finish",
+        "type": "tee",
+        "brand": "Satisfy",
+        "layer": "base"
+      },
+      "photo": 2
+    },
+    {
+      "key": "top-hot",
+      "garment": {
+        "category": "top",
+        "name": "Ultralightweightbreathablemicroperforatedracingsinglet",
+        "type": "singlet",
+        "brand": "Supercalifragilisticexpialidocious Athletic Co.",
+        "layer": "base"
+      }
+    },
+    {
+      "key": "outer",
+      "garment": {
+        "category": "top",
+        "name": "Senja GORE-TEX Active Windproof Waterproof Breathable Packable Hooded Trail Jack",
+        "type": "jacket",
+        "brand": "Norrona",
+        "layer": "outer",
+        "windResistant": true,
+        "waterResistant": true
+      },
+      "photo": 5
+    },
+    {
+      "key": "vest",
+      "garment": {
+        "category": "top",
+        "name": "Windveil Insulated Reversible Reflective Ultra Trail Running Gilet",
+        "type": "vest",
+        "brand": "Rab",
+        "layer": "outer"
+      }
+    },
+    {
+      "key": "bottom-cold",
+      "garment": {
+        "category": "bottom",
+        "name": "R5 GORE-TEX INFINIUM Windstopper Thermo Fleece-Lined Full-Length Winter Tights",
+        "type": "tights",
+        "brand": "Gore Wear",
+        "weight": "heavy"
+      },
+      "photo": 4
+    },
+    {
+      "key": "bottom-mild",
+      "garment": {
+        "category": "bottom",
+        "name": "Lightweight Compression Half Tights With Seven Pockets",
+        "type": "halfTights",
+        "brand": "District Vision"
+      }
+    },
+    {
+      "key": "bottom-hot",
+      "garment": {
+        "category": "bottom",
+        "name": "Superbeam 3\" Split Shorts With Integrated Compression Liner And Gel Loops",
+        "type": "shorts",
+        "brand": "Bandit"
+      },
+      "photo": 3
+    },
+    {
+      "key": "gloves",
+      "garment": {
+        "category": "gloves",
+        "name": "Windstopper Touchscreen-Compatible Convertible Mitten-Gloves, Extra Long Cuff",
+        "type": "gloves",
+        "brand": "Hestra"
+      },
+      "photo": 10
+    },
+    {
+      "key": "beanie",
+      "garment": {
+        "category": "headwear",
+        "name": "Rho Lightweight Merino Wool Reflective Ponytail-Compatible Beanie",
+        "type": "beanie",
+        "brand": "Arc'teryx"
+      },
+      "photo": 11
+    },
+    {
+      "key": "cap",
+      "garment": {
+        "category": "headwear",
+        "name": "GOCap SC, Century Edition, Reflective Million Miles Laser-Perforated",
+        "type": "cap",
+        "brand": "Ciele"
+      }
+    },
+    {
+      "key": "buff",
+      "garment": {
+        "category": "neckwear",
+        "name": "ThermoNet Hinged Balaclava Neck Gaiter Combination, Glacier Camouflage",
+        "type": "neckGaiter",
+        "brand": "Buff"
+      }
+    },
+    {
+      "key": "socks",
+      "garment": {
+        "category": "socks",
+        "name": "Run Quarter Ultra-Lightweight Cushion Merino With Lifetime Guarantee",
+        "type": "socks",
+        "brand": "Darn Tough"
+      },
+      "photo": 12
+    },
+    {
+      "key": "shoes",
+      "garment": {
+        "category": "shoes",
+        "name": "FuelCell SuperComp Elite v4, Marathon Majors Limited Edition Colorway",
+        "type": "shoes",
+        "brand": "New Balance"
+      },
+      "photo": 9
+    },
+    {
+      "key": "shoes2",
+      "garment": {
+        "category": "shoes",
+        "name": "Cyklon Cross GTX BOA Fit System Winter Mountain Running Shoe",
+        "type": "shoes",
+        "brand": "La Sportiva"
+      },
+      "photo": 15
+    },
+    {
+      "key": "sunnies",
+      "garment": {
+        "category": "accessory",
+        "name": "Junya Racer Photochromic Titanium Sunglasses, Calm-Tech Lens",
+        "type": "sunglasses",
+        "brand": "District Vision"
+      }
+    }
+  ]
+}

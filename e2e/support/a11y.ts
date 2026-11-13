@@ -22,6 +22,7 @@ import type { PageReport } from "./a11y-walk";
 import { installWalk } from "./a11y-walk";
 // Design 182: D1 queries per request, recorded under every a11y-checked spec.
 import { test as base } from "./query-record";
+import { audit, auditShot } from "./audit-shot";
 
 /**
  * Plan 161, step 1: accessibility checks on every state an e2e spec acts
@@ -166,14 +167,16 @@ const worker: {
   current: Page | undefined;
   measure: Measure | undefined;
   isWrapped: boolean;
+  origin: string;
 } = {
+  origin: "",
   current: undefined,
   measure: undefined,
   isWrapped: false,
 };
 
 async function checkNow(page: Page): Promise<void> {
-  if (page.isClosed()) return;
+  if (page.isClosed() || audit.isShooting) return;
   try {
     await page.evaluate(async () => {
       await globalThis.__a11yCheck?.();
@@ -182,6 +185,7 @@ async function checkNow(page: Page): Promise<void> {
     // The page navigated away or closed mid-check; the next action
     // checks whatever replaced it.
   }
+  await auditShot(page, worker.origin);
 }
 
 function wrap(prototype: object, names: readonly string[]): void {
@@ -487,6 +491,8 @@ export const test = base.extend<{
       wrapActions(page);
       worker.current = page;
       worker.measure = measure;
+      worker.origin = new URL(appURL).origin;
+      audit.title = testInfo.titlePath.join(" > ");
       try {
         await use({
           checkNow: () => checkNow(page),

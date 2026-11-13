@@ -1,0 +1,220 @@
+{
+  "notifications": [
+    {
+      "kind": "followed",
+      "body": " followed you.",
+      "hoursAgo": 0.2,
+      "read": false,
+      "follower": 0
+    },
+    {
+      "kind": "kit_reminder",
+      "body": "Add your kit for the run you just imported.",
+      "hoursAgo": 0.6,
+      "read": false,
+      "subject": {
+        "ref": "backlog",
+        "index": 0
+      }
+    },
+    {
+      "kind": "followed",
+      "body": " and 3 others followed you.",
+      "hoursAgo": 2,
+      "read": false,
+      "follower": 5
+    },
+    {
+      "kind": "strava_reminder",
+      "body": "New run on Strava · Add it here: upload the file, then what you wore",
+      "hoursAgo": 3,
+      "read": false
+    },
+    {
+      "kind": "correction_applied",
+      "body": "We fixed the weight on Janji Rover Half-zip. Thanks.",
+      "hoursAgo": 5,
+      "read": false,
+      "link": {
+        "ref": "maya",
+        "garment": "halfzip"
+      }
+    },
+    {
+      "kind": "import_failed",
+      "body": "Your run import didn't work: the file had no GPS track and no start time we could read.",
+      "hoursAgo": 7,
+      "read": false
+    },
+    {
+      "kind": "content_hidden",
+      "body": "Photo hidden while we review it. Our automatic screening flagged a photo on your run, so other runners can't see it until a person reviews it, usually within a day. We'll tell you what we decide.",
+      "hoursAgo": 9,
+      "read": false
+    },
+    {
+      "kind": "kit_reminder",
+      "body": "Add your kit for the run you just imported.",
+      "hoursAgo": 20,
+      "read": false,
+      "subject": {
+        "ref": "backlog",
+        "index": 1
+      }
+    },
+    {
+      "kind": "followed",
+      "body": " followed you.",
+      "hoursAgo": 26,
+      "read": true,
+      "follower": 1
+    },
+    {
+      "kind": "content_kept",
+      "body": "We reviewed the flagged photo on your run and left it up.",
+      "hoursAgo": 30,
+      "read": true
+    },
+    {
+      "kind": "report_removed",
+      "body": "We removed what you reported.",
+      "hoursAgo": 34,
+      "read": false
+    },
+    {
+      "kind": "photo_missing",
+      "body": "We couldn't find the file for the photo of one of your garments, so we took it off. Add it again from your Closet if you'd like it there.",
+      "hoursAgo": 44,
+      "read": true
+    },
+    {
+      "kind": "followed",
+      "body": " followed you.",
+      "hoursAgo": 50,
+      "read": true,
+      "follower": 2
+    },
+    {
+      "kind": "correction_declined",
+      "body": "We left the fabric on Tracksmith Harrier Tee as it is: the maker's page says otherwise.",
+      "hoursAgo": 56,
+      "read": true,
+      "link": {
+        "ref": "maya",
+        "garment": "tee"
+      }
+    },
+    {
+      "kind": "strava_broken",
+      "body": "Strava disconnected. Connect it again from Settings to keep getting a nudge when a run lands.",
+      "hoursAgo": 70,
+      "read": false
+    },
+    {
+      "kind": "kit_reminder",
+      "body": "Add your kit for the run you just imported.",
+      "hoursAgo": 74,
+      "read": true,
+      "subject": {
+        "ref": "backlog",
+        "index": 2
+      }
+    },
+    {
+      "kind": "report_kept",
+      "body": "We reviewed what you reported and left it up. We didn't find that it breaks our community rules.",
+      "hoursAgo": 80,
+      "read": true
+    },
+    {
+      "kind": "content_removed",
+      "body": "A moderator removed this entry from the feed: it's an ad or spam.",
+      "hoursAgo": 96,
+      "read": true
+    },
+    {
+      "kind": "followed",
+      "body": " followed you.",
+      "hoursAgo": 100,
+      "read": true,
+      "follower": 3
+    },
+    {
+      "kind": "import_failed",
+      "body": "Your run import didn't work: that file is not a FIT, GPX or TCX file.",
+      "hoursAgo": 120,
+      "read": true
+    },
+    {
+      "kind": "strava_reminder",
+      "body": "New run on Strava · Add it here: upload the file, then what you wore",
+      "hoursAgo": 125,
+      "read": true
+    },
+    {
+      "kind": "followed",
+      "body": " followed you.",
+      "hoursAgo": 150,
+      "read": true,
+      "follower": 4
+    },
+    {
+      "kind": "photo_missing",
+      "body": "We couldn't find the file for a photo on your run, so we took it off. Add it again if you'd like it there.",
+      "hoursAgo": 170,
+      "read": true
+    },
+    {
+      "kind": "kit_reminder",
+      "body": "Add your kit for the run you just imported.",
+      "hoursAgo": 190,
+      "read": true,
+      "subject": {
+        "ref": "backlog",
+        "index": 3
+      }
+    },
+    {
+      "kind": "correction_applied",
+      "body": "We fixed the name on Patagonia Houdini Jacket. Thanks.",
+      "hoursAgo": 220,
+      "read": true,
+      "link": {
+        "ref": "maya",
+        "garment": "houdini"
+      }
+    },
+    {
+      "kind": "followed",
+      "body": " followed you.",
+      "hoursAgo": 260,
+      "read": true,
+      "follower": 6
+    },
+    {
+      "kind": "content_kept",
+      "body": "We reviewed your run after a report and left it up.",
+      "hoursAgo": 300,
+      "read": true
+    },
+    {
+      "kind": "import_failed",
+      "body": "Your run import didn't work: the file was empty.",
+      "hoursAgo": 340,
+      "read": true
+    },
+    {
+      "kind": "followed",
+      "body": " followed you.",
+      "hoursAgo": 420,
+      "read": true,
+      "follower": 7
+    },
+    {
+      "kind": "strava_reminder",
+      "body": "New run on Strava · Add it here: upload the file, then what you wore",
+      "hoursAgo": 500,
+      "read": true
+    }
+  ]
+}

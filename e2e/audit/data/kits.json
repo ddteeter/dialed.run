@@ -1,0 +1,114 @@
+{
+  "maya": {
+    "bands": [
+      {
+        "belowC": -2,
+        "slots": [
+          ["thermal"],
+          ["vest", "shell"],
+          ["wintertights"],
+          ["mitts"],
+          ["beanie"],
+          ["buff"],
+          ["woolsocks"]
+        ]
+      },
+      {
+        "belowC": 4,
+        "slots": [
+          ["halfzip"],
+          ["vest", null, null],
+          ["tights"],
+          ["gloves"],
+          ["headband", "beanie"],
+          ["woolsocks"]
+        ]
+      },
+      {
+        "belowC": 10,
+        "slots": [
+          ["halfzip", "longsleeve"],
+          {
+            "wet": ["houdini"],
+            "dry": [null]
+          },
+          ["tights", "halftight"],
+          [null, "gloves"],
+          ["socks"]
+        ]
+      },
+      {
+        "belowC": 17,
+        "slots": [
+          ["longsleeve", "tee"],
+          ["halftight", "session", "session"],
+          ["sleeves", null, null, null],
+          ["feetures"],
+          {
+            "wet": ["cap"],
+            "dry": [null]
+          }
+        ]
+      }
+    ],
+    "warm": [
+      ["singlet", "tee2", "eztee", "racesinglet"],
+      ["split", "afo", "session"],
+      ["cap"],
+      ["sunnies"],
+      ["socks"]
+    ],
+    "shoes": {
+      "wet": ["speedgoat"],
+      "dry": [
+        "ghost",
+        "speed",
+        "novablast",
+        "speed",
+        "alphafly",
+        "speed",
+        "novablast",
+        "speed",
+        "alphafly"
+      ]
+    }
+  },
+  "pool": {
+    "bands": [
+      {
+        "belowC": 4,
+        "slots": [
+          ["top-cold"],
+          ["vest", "outer"],
+          ["bottom-cold"],
+          ["gloves"],
+          ["beanie"],
+          [null, "buff"],
+          ["socks"]
+        ]
+      },
+      {
+        "belowC": 12,
+        "slots": [
+          ["top-cold"],
+          {
+            "wet": ["outer"],
+            "dry": [null]
+          },
+          ["bottom-mild"],
+          [null, "gloves"],
+          ["socks"]
+        ]
+      }
+    ],
+    "warm": [
+      ["top-mild", "top-hot"],
+      ["bottom-hot"],
+      ["cap"],
+      ["sunnies"],
+      ["socks"]
+    ],
+    "shoes": ["shoes2", "shoes", "shoes"]
+  },
+  "indoorFeelsC": 20
+}

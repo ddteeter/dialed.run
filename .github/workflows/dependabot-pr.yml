@@ -24,9 +24,11 @@ name: Dependabot PR
 # npm, no build, no checkout of anything but main. CI runs the PR's code,
 # with a read-only token and no secrets.
 #
-# PINS. Every `uses:` is a full commit SHA with its version in a comment. A
-# tag can be repointed by whoever controls it, and these jobs hold the
-# merge token and the Anthropic key. Dependabot keeps the pins current.
+# PINS. Every `uses:` is a full version tag, and `actions.lock` records the
+# commit it resolved to (D-182). A tag can be repointed by whoever controls
+# it, and these jobs hold the merge token and the Anthropic key; the lock is
+# what catches a repointed tag before it runs. Dependabot keeps the tags and
+# the lock current.
 # zizmor flags every use of this trigger, because it runs with the repo's
 # secrets on an event a stranger can cause. GATES and NO PR CODE above are
 # why it is safe here; docs/dependencies.md has the review (owner,
@@ -63,12 +65,12 @@ jobs:
     steps:
       # Audit first (design 196): reports the hosts this job reaches and
       # blocks none. It moves to `block` once that list is known and short.
-      - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+      - uses: step-security/harden-runner@v2.22.3
         with:
           egress-policy: audit
 
       - id: metadata
-        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+        uses: dependabot/fetch-metadata@v3.1.0
         with:
           github-token: ${{ github.token }}
 
@@ -115,7 +117,7 @@ jobs:
     steps:
       # Audit first (design 196): reports the hosts this job reaches and
       # blocks none. It moves to `block` once that list is known and short.
-      - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+      - uses: step-security/harden-runner@v2.22.3
         with:
           egress-policy: audit
 
@@ -124,7 +126,7 @@ jobs:
       # actor: its merge does. It is not a bypass actor, so its merge waits
       # on every required check like any other.
       - id: app
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        uses: actions/create-github-app-token@v3.3.0
         with:
           app-id: ${{ vars.AUTOMATION_APP_ID }}
           private-key: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
@@ -202,7 +204,7 @@ jobs:
       # hosts are where the action installs from and where Claude reads, and
       # none of them shows a stranger what was requested. Claude's own tool
       # rules below are narrower still; this is the layer it can't argue with.
-      - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+      - uses: step-security/harden-runner@v2.22.3
         with:
           egress-policy: block
           disable-sudo: true
@@ -222,7 +224,7 @@ jobs:
 
       # main, never the PR head. The PR changes only package.json and the
       # lockfile, and the versions are in the prompt.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 1
           persist-credentials: false
@@ -235,7 +237,7 @@ jobs:
       # The answer leaves as structured output, which `post` screens.
       # `show_full_output` stays off: these logs are public.
       - id: claude
-        uses: anthropics/claude-code-action@4845bacbb38b3c4b15d948f035349786f678e068 # v1.0.267
+        uses: anthropics/claude-code-action@v1.0.267
         env:
           GH_TOKEN: ${{ github.token }}
           CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
@@ -258,7 +260,7 @@ jobs:
               }
             }
           # `opus` is Claude Code's alias for its newest Opus. The action's
-          # SHA pin fixes which Claude Code runs, so the model only moves
+          # locked commit fixes which Claude Code runs, so the model only moves
           # when an Actions bump is reviewed and merged, never under us.
           claude_args: |
             --model opus
@@ -307,7 +309,7 @@ jobs:
           REVIEW: ${{ steps.claude.outputs.structured_output }}
         run: printf '%s' "$REVIEW" > "$RUNNER_TEMP/review.json"
 
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      - uses: actions/upload-artifact@v7.0.2
         with:
           name: dependabot-review
           path: ${{ runner.temp }}/review.json
@@ -323,11 +325,11 @@ jobs:
     steps:
       # Audit first (design 196): reports the hosts this job reaches and
       # blocks none. It moves to `block` once that list is known and short.
-      - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+      - uses: step-security/harden-runner@v2.22.3
         with:
           egress-policy: audit
 
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+      - uses: actions/download-artifact@v8.0.2
         with:
           name: dependabot-review
           path: ${{ runner.temp }}/review

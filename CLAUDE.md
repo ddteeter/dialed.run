@@ -30,6 +30,7 @@ appeared yet:
 | skill `pr-ready`              | opening a PR, answering review comments                                 | self-review, PR body sections, deferring, pushing, review comments                                               |
 | skill `crushing-mutants`      | working through surviving mutants                                       | the procedure                                                                                                    |
 | skill `pr-demo-video`         | a user-visible change                                                   | recording the demo                                                                                               |
+| skill `styling-audit`         | a styling audit, or re-capturing a screen to confirm a styling finding  | the screenshot capture (`AUDIT_SHOTS`), the seeded captures, the finding format                                  |
 | skill `coordinating-a-wave`   | coordinating a wave of parallel lanes                                   | lane briefs, ownership, owner and Design rounds, merging, the record, traps                                      |
 
 Code comments that cite "CLAUDE.md law 8b", "§D1 discipline", "§Derive, don't

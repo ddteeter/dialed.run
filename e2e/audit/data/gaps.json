@@ -1,0 +1,47 @@
+{
+  "empty": { "id": "audit-gnew", "handle": "first_day_fran" },
+  "onboarding": { "id": "audit-gonb", "handle": "newbie_noor_26" },
+  "nowhere": { "lat": 23.45, "lng": 67.89 },
+  "operator": "e2e-desk-operator",
+  "origin": "http://localhost:3777",
+  "blocked": [
+    { "id": "audit-gb1", "handle": "runner_ava_07", "city": "Columbus, OH" },
+    { "id": "audit-gb2", "handle": "kit_resale_bargains", "city": "Reno, NV" },
+    {
+      "id": "audit-gb3",
+      "handle": "the_longest_handle_a_runner_could_pick_x",
+      "city": "Llanfairpwllgwyngyll, Wales"
+    },
+    { "id": "audit-gb4", "handle": "mo", "city": null },
+    { "id": "audit-gb5", "handle": "sprint_finish_sid", "city": "Leeds, UK" }
+  ],
+  "match": {
+    "fingerprint": "c3a1f09b5d2e7684",
+    "near": [
+      "c3a1f09b5d2e7684",
+      "c3a1f09b5d2e7685",
+      "c3a1f09b5d2e7686",
+      "c3a1f09b5d2e768c"
+    ],
+    "copies": 16
+  },
+  "takedowns": {
+    "held": {
+      "requesterEmail": "rowan.whitlock@example.com",
+      "signature": "Rowan Example-Whitlock",
+      "description": "That is me in the second photo, taken at a club session without my knowledge and posted without asking. I have asked the runner to take it down twice and had no answer. Please remove it."
+    },
+    "confirm": {
+      "requesterEmail": "a.very.long.requester.address.for.someone.with.a.long.name@subdomain.example.com",
+      "signature": "Bartholomew Aurelius Featherstonehaugh-Montgomery III",
+      "location": "https://example.com/a/link/that/is/not/on/this/site/at/all?with=a&very=long&query=string",
+      "description": "The link above is where I saw it."
+    },
+    "valve": {
+      "requesterEmail": "studio@example.com",
+      "signature": "Acme Photo Co"
+    }
+  },
+  "holdReason": "it uses someone else's work — Acme Photo Co, ref AP-2026-11-0417",
+  "ncmecReportId": "AUDIT-20261108"
+}
