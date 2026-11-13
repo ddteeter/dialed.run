@@ -75,9 +75,9 @@ that a ruling changes is built to the ruling.
   `/runs/new?date=<day>`, the day the row arrived in the runner's home
   zone, never anything from the activity (owner, 2026-11-13). A1 has no
   date field, so the day is "filled in" where the flow has one: carried
-  on to R1, whose Started starts at that day's 00:00 (coordinator,
-  2026-11-13; a design delta for Round 56, in case Design meant a line on
-  A1 naming the day).
+  on to R1, whose Started starts at that day's 00:00, and A1 names it
+  under "Enter the run by hand": "It starts on Thu, Nov 12, the day of
+  your Strava reminder." (Round 56 · 250, #661).
 - **Conditions sheet (P2a-04):** the duplicate caption goes. The visible
   title follows #643 (8a).
 - **Garmin picker (P2a-05):** sans rows, and the action is centred.

@@ -14,6 +14,7 @@ import {
 } from "../../modules/runs/functions";
 import { newRunSearch } from "../../modules/runs/inputs";
 import { AddRunShell } from "../../modules/runs/components/AddRunShell";
+import { ReminderDayLine } from "../../modules/runs/components/ReminderDayLine";
 
 /**
 Screen A1: upload & auto-conditions (docs/product.md). Every outcome — the
@@ -71,6 +72,7 @@ function NewRunPage() {
           </Link>{" "}
           instead.
         </p>
+        <ReminderDayLine day={search.date} />
       </AddRunShell>
     </BelledLayout>
   );
