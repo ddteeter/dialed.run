@@ -20,6 +20,7 @@ import {
 } from "../../../ui";
 import type { FieldProps } from "../../../ui";
 import { calibrationInput } from "../inputs";
+import { chipPlaceName } from "../place-name";
 import type { Calibration } from "../inputs";
 import { UNIT_LABELS, UnitFields } from "./UnitFields";
 
@@ -172,6 +173,9 @@ export function CalibrateForm({
           error: form.fieldErrors.cityLabel,
           focusField: form.focusField,
           announce: form.announce,
+          clearError: () => {
+            form.markField("cityLabel", undefined);
+          },
         }}
       />
 
@@ -225,15 +229,20 @@ interface FieldBinding {
   The screen's one status region, for what Find says.
   */
   announce: (status: string) => void;
+  /**
+  Takes the form's message off the field, once Find has an answer.
+  */
+  clearError: () => void;
 }
 
 /**
  * O1's location step (round 22, item 19; round 26 #12): the field and
  * Find, then "Weather for {resolved}", then Use this makes the chip and
- * the field goes. "Change city" brings the field back empty. "Use my
- * location" is a text button under the field: in flight it breathes;
- * granted → chip; denied → focus to the field, line "Location's off.
- * Type your city instead." (not yellow).
+ * the field goes; the chip's "×" brings the field back empty (R55·228
+ * (d) dropped "Change city"). "Use my location" is a text button under
+ * the field: in flight it breathes; granted → chip; denied → focus to the
+ * field, and under the button the line "Location's off. Type your city
+ * instead." (not yellow), until a city is typed.
  */
 function WhereYouRun({
   typed,
@@ -252,7 +261,7 @@ function WhereYouRun({
   lookUpCity: LookUpCity;
   formField: FieldBinding;
 }>): JSX.Element {
-  const { field, error, focusField, announce } = formField;
+  const { field, error, focusField, announce, clearError } = formField;
   const [isLocating, setIsLocating] = useState(false);
   const [isDenied, setIsDenied] = useState(false);
 
@@ -296,22 +305,25 @@ function WhereYouRun({
         name="cityLabel"
         label={LABELS.cityLabel}
         value={typed}
-        onChange={onTyped}
+        onChange={(value) => {
+          // Typing a city answers the denied line (R55·228 (b)).
+          setIsDenied(false);
+          onTyped(value);
+        }}
         field={field}
         error={error}
-        lookUp={lookUpCity}
+        lookUp={async (input) => {
+          const answer = await lookUpCity(input);
+          // "Press Find" has been done once Find has a place to offer, so
+          // the form's message goes (R55·228 (a)).
+          if (answer.kind === "found") clearError();
+          return answer;
+        }}
         onUse={(found) => {
           onPlace({ label: found.address, lat: found.lat, lng: found.lng });
         }}
         announce={announce}
       />
-      {isDenied ? (
-        // Not yellow: nothing is wrong with the form. It is a fact about
-        // the device, and the field is the way on.
-        <p className="m-0 text-small text-quiet">
-          Location&rsquo;s off. Type your city instead.
-        </p>
-      ) : undefined}
       <button
         type="button"
         {...inFlight(isLocating)}
@@ -324,24 +336,37 @@ function WhereYouRun({
           label="Use my location"
           pendingLabel="Use my location"
           pending={isLocating}
+          // Flush with the column's left edge, as the field over it is
+          // (#630 F-08).
+          align="start"
         />
       </button>
+      {isDenied ? (
+        // Not yellow: nothing is wrong with the form. It is a fact about
+        // the device, and the field is the way on. Under the action it
+        // answers (R55·228 (b)).
+        <p className="m-0 text-small text-quiet">
+          Location&rsquo;s off. Type your city instead.
+        </p>
+      ) : undefined}
     </div>
   );
 }
 
 /**
- * What is saved, as round 26's O1 draws it: the provider's name for the
- * place, uppercased (in CSS, so the accessible name stays in normal case),
- * on a teal chip with a way to remove it, and "Change city" under it. The
- * browser's coordinates, when that is all there is, read as a measured
- * value. Both ways out bring the field back empty.
+ * What is saved, as round 26's O1 draws it and R55·228 rules it: the
+ * place as city, region and country (`chipPlaceName`), uppercased (in CSS,
+ * so the accessible name stays in normal case), on a teal chip one line
+ * tall at the field's height that truncates at its end, and its "×" the
+ * one way out, which brings the field back empty. The browser's
+ * coordinates, when that is all there is, read as a measured value.
  */
 function CityChip({
   place,
   onChange,
 }: Readonly<{ place: Place; onChange: () => void }>): JSX.Element {
-  const name = place.label ?? "your location";
+  const name =
+    place.label === undefined ? "your location" : chipPlaceName(place.label);
   return (
     <div className="flex flex-col items-start gap-2">
       <span className="text-label">
@@ -349,29 +374,24 @@ function CityChip({
       </span>
       <div
         data-part="city-chip"
-        className="flex items-center gap-3 rounded-pill bg-teal px-4 py-2 text-accent-ink"
+        className="flex min-h-field max-w-full items-center gap-2 rounded-pill bg-teal pl-4 text-accent-ink"
       >
         {place.label === undefined ? (
-          <Bracketed>{`${place.lat.toFixed(2)}, ${place.lng.toFixed(2)}`}</Bracketed>
+          <Bracketed className="truncate">{`${place.lat.toFixed(2)}, ${place.lng.toFixed(2)}`}</Bracketed>
         ) : (
-          <Mono step="sm">{place.label}</Mono>
+          <Mono step="sm" className="truncate">
+            {name}
+          </Mono>
         )}
         <button
           type="button"
           aria-label={`Remove ${name}`}
           onClick={onChange}
-          className="target cursor-pointer border-none bg-transparent p-0 text-accent-ink"
+          className="target flex shrink-0 cursor-pointer items-center justify-center border-none bg-transparent p-0 text-accent-ink"
         >
           <Icon name="close" size={16} />
         </button>
       </div>
-      <button
-        type="button"
-        onClick={onChange}
-        className="target cursor-pointer border-none bg-transparent p-0 text-body font-semibold text-cold-text"
-      >
-        Change city
-      </button>
     </div>
   );
 }
