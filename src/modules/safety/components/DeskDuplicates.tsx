@@ -3,6 +3,7 @@ import type { JSX } from "react";
 import { Bracketed, Mono } from "../../../ui";
 import type { DuplicateVariant } from "../duplicates";
 import type { DuplicateGroup, DuplicatesReport } from "../duplicates-report";
+import { counted } from "./counted";
 
 /**
  * The Desk's D2 · Duplicates (task 110, Operator Screens D2): one probable
@@ -121,8 +122,4 @@ function VariantRow({
       </Mono>
     </li>
   );
-}
-
-function counted(count: number, noun: string): string {
-  return `${String(count)} ${noun}${count === 1 ? "" : "s"}`;
 }

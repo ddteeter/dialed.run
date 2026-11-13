@@ -30,6 +30,7 @@ import type { DeskRunner, RunnerCounts, RunnersFilter } from "../runners";
 import { DeskForm, PickOne } from "./DeskForm";
 import { NotRenamedBand } from "./NotRenamedBand";
 import { useFocusWhen } from "./use-focus-when";
+import { counted } from "./counted";
 
 /**
  * Desk · Runners, "D8" (round 27 #22). A search and four filters over a
@@ -568,13 +569,6 @@ function RunnerHead({ runner }: Readonly<{ runner: DeskRunner }>): JSX.Element {
       </Mono>
     </div>
   );
-}
-
-/**
-"1 run", "14 runs".
-*/
-function counted(count: number, word: string): string {
-  return `${String(count)} ${word}${count === 1 ? "" : "s"}`;
 }
 
 /**

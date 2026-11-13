@@ -30,6 +30,7 @@ import type {
 } from "../../products";
 import { DeskForm, PickOne } from "./DeskForm";
 import { QuietAction } from "./RemovalDecision";
+import { counted } from "./counted";
 
 /**
  * How a field and its values read on the Desk. Not the runner sheet's
@@ -101,10 +102,6 @@ export function DeskCorrections({
       )}
     </section>
   );
-}
-
-function counted(count: number, noun: string): string {
-  return `${String(count)} ${noun}${count === 1 ? "" : "s"}`;
 }
 
 function CorrectionRow({
