@@ -249,6 +249,7 @@ describe("on Review's rows", () => {
     };
     await renderWithRouter(
       <ReviewQueue
+        asOf={0}
         onDecided={vi.fn()}
         queue={[row]}
         resolve={vi.fn()}
@@ -362,6 +363,7 @@ describe("RemovedMatchLine", () => {
     };
     await renderWithRouter(
       <ReviewQueue
+        asOf={0}
         onDecided={vi.fn()}
         queue={[row]}
         resolve={vi.fn()}
@@ -758,6 +760,7 @@ describe("a garment match's takedown", () => {
           decideMatch={decide}
         />
         <ReviewQueue
+          asOf={0}
           onDecided={vi.fn()}
           queue={[row]}
           resolve={vi.fn()}

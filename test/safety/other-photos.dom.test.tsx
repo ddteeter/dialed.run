@@ -139,6 +139,7 @@ describe("on Review's rows", () => {
     };
     await renderWithRouter(
       <ReviewQueue
+        asOf={0}
         onDecided={vi.fn()}
         queue={[row]}
         resolve={vi.fn()}

@@ -66,6 +66,7 @@ function ReviewPage() {
         reviewHandle={reviewHandleAction}
         decideMatch={decideGarmentMatchAction}
         reporters={reportersAction}
+        asOf={today.asOf}
         onDecided={() => {
           void router.invalidate();
         }}

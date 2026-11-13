@@ -4,7 +4,12 @@ import type { JSX, ReactNode } from "react";
 
 import type { GaveUpKind } from "../../../lib/contracts/gave-up";
 import { outboxBehindSentence } from "../../../lib/copy";
-import { longDayLabel, monthDayLabel, timeOfDay } from "../../../lib/dates";
+import {
+  longDayLabel,
+  monthDayLabel,
+  spanLabel,
+  timeOfDay,
+} from "../../../lib/dates";
 import {
   Bracketed,
   ControlFailureBand,
@@ -34,9 +39,7 @@ import type { GaveUpJob } from "../gave-up";
  * zero; bans are a record, not a task, so they are never hi-viz.
  */
 
-const MINUTE_SECONDS = 60;
 const HOUR_SECONDS = 3600;
-const DAY_SECONDS = 86_400;
 
 /**
 How many Gave up rows show before "Show all" (round 29 B·2: "the two newest").
@@ -84,20 +87,6 @@ function Stat({
 }
 
 /**
- * How long, in the board's largest whole unit: "45m", "6h", "2d". Under
- * a minute is "0m": an age, not a claim that nothing has passed.
- */
-export function spanOf(seconds: number): string {
-  if (seconds >= DAY_SECONDS) {
-    return `${String(Math.floor(seconds / DAY_SECONDS))}d`;
-  }
-  if (seconds >= HOUR_SECONDS) {
-    return `${String(Math.floor(seconds / HOUR_SECONDS))}h`;
-  }
-  return `${String(Math.floor(Math.max(0, seconds) / MINUTE_SECONDS))}m`;
-}
-
-/**
  * When a job last failed: the time alone on the Desk's own day ("04:12"),
  * the date with it on any other ("Sep 15 22:40"). UTC, as the date at the
  * top of the page is.
@@ -109,7 +98,7 @@ export function spanOf(seconds: number): string {
 export function flaggedNote(oldestAt: number | undefined, asOf: number) {
   return oldestAt === undefined
     ? "None flagged"
-    : `Oldest · ${spanOf(asOf - oldestAt)}`;
+    : `Oldest · ${spanLabel(asOf - oldestAt)}`;
 }
 
 export function lastTryOf(at: number, asOf: number): string {
@@ -216,7 +205,7 @@ function JobRow({ job, asOf, inFlight, band, onPress }: JobRowProps) {
           {KIND_LABEL[job.kind]}
         </Mono>
         <Mono step="xs" className="text-muted">
-          {`${spanOf(asOf - job.firstFailedAt)} ago`}
+          {`${spanLabel(asOf - job.firstFailedAt)} ago`}
         </Mono>
       </span>
       <span className="flex flex-col gap-1">
@@ -324,7 +313,7 @@ function GaveUp({
   const shown = isExpanded ? jobs : jobs.slice(0, FIRST_SHOWN);
   const more = count - shown.length;
   const oldest =
-    oldestAt === undefined ? "" : ` · oldest ${spanOf(asOf - oldestAt)}`;
+    oldestAt === undefined ? "" : ` · oldest ${spanLabel(asOf - oldestAt)}`;
   return (
     <section aria-labelledby="desk-gave-up" className="flex flex-col gap-3">
       <span className="flex items-baseline gap-4">
