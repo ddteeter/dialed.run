@@ -859,8 +859,8 @@ const PENDING_ALIGN: Readonly<Record<PendingAlign, string>> = {
  *
  * - `action`, the product flow (A1–A3, manual entry, O1–O3, P3, Add
  *   garment, W1): pink display caps at RADIUS.card, 52 high — the one
- *   filled button that is not a pill (167.3's exception to RADIUS_RULES'
- *   "filled action buttons are always pill").
+ *   filled button that is not a pill (167.3's exception, now in tokens.js's
+ *   RADIUS_RULES).
  * - `ink`, account, signed-out, settings Save and confirm sheets: an ink
  *   pill, `HEIGHT.control` high. Not the product's pink, because these
  *   are not product screens.

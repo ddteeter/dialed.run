@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import {
   act,
   fireEvent,
@@ -696,7 +698,8 @@ describe("FailureBand's other endings", () => {
     expect(band).toHaveAttribute("data-part", "failure-band");
     expect(band).toHaveAttribute("data-state", "failed");
     expect(band).toHaveClass("border", "border-ink");
-    // A filled action button is always a pill (RADIUS_RULES; #632 A-07).
+    // A filled action button is a pill (RADIUS_RULES; #632 A-07); only the
+    // product-flow primary is not (R54·167.3).
     expect(screen.getByRole("button", { name: "Try again" })).toHaveClass(
       "rounded-pill",
     );
@@ -2987,7 +2990,47 @@ function submit(tone?: "action" | "ink" | "chalk" | "secondary"): HTMLElement {
   return screen.getByRole("button", { name: "Go" });
 }
 
+/**
+ * The value contract, read off disk at load. From the repo root, which is
+ * vitest's cwd: in this file `import.meta.url` is not a file URL (Node
+ * refused it), so `tokens.dom.test.tsx`'s `new URL` form does not work here.
+ */
+const TOKENS_JS = readFileSync("design/tokens.js", "utf8");
+
 describe("the primary by surface, and its width (R54·167)", () => {
+  it("follows tokens.js's RADIUS_RULES: pill, except the product-flow primary at RADIUS.card", () => {
+    const rules = TOKENS_JS;
+    // The rule this pins, read from the contract rather than restated.
+    expect(rules).toMatch(
+      /Filled action buttons are pill, with one exception \(round 54 #167\.3\): the product-flow primary \(pink caps\) is RADIUS\.card\./u,
+    );
+    expect(rules).toMatch(
+      /hug the label \(SPACE\[6\] each side, 200 minimum\)/u,
+    );
+    for (const tone of ["ink", "chalk", "secondary"] as const) {
+      const { unmount } = render(
+        <form>
+          <SubmitButton
+            label={tone}
+            pendingLabel="…"
+            pending={false}
+            tone={tone}
+          />
+        </form>,
+      );
+      expect([
+        tone,
+        screen.getByRole("button", { name: tone }).className,
+      ]).toEqual([tone, expect.stringContaining("rounded-pill")]);
+      unmount();
+    }
+    expect(submit("action")).toHaveClass(
+      "rounded-card",
+      "uppercase",
+      "bg-action",
+    );
+  });
+
   const HUG_AT_WIDE = [
     "w-full",
     "wide:w-auto",
