@@ -237,9 +237,12 @@ const DRAFT = parseLegalDoc(
     "## Who can use [dialed.run]",
     "",
     "[dialed.run] is run by us. Write to hello@dialed.run, or (desk@dialed.run).",
+    "Also a@x.run; b@x.run: c@x.run. Not @x.run, d@.run or e@run.",
+    "Plain **bold** in a paragraph.",
     "",
     "- **Account email.** Sent from [us](mailto:hello@dialed.run), not a@b.",
     "- Plain item.",
+    "- Then **bold** inside.",
     "",
     "### Processors",
     "",
@@ -247,6 +250,7 @@ const DRAFT = parseLegalDoc(
     "| ------- | ------- | ---- |",
     "| Sentry  | Functional Software | Processor |",
     "| OpenAI  | OpenAI OpCo | Processor |",
+    "| Short   | Only |",
   ].join("\n"),
 );
 
@@ -278,8 +282,9 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
     expect(tag).toHaveClass("text-mono-xs", "text-ink");
     expect(line).toHaveTextContent(/^Not reviewed by a lawyer yet\.$/u);
     expect(line).toHaveClass("text-body", "text-ink");
-    expect(provenance).toHaveTextContent(
-      /^Written from the code on main, for the owner to edit\.$/u,
+    // Exactly: the space after the bold lead is not drawn.
+    expect(provenance?.textContent).toBe(
+      "Written from the code on main, for the owner to edit.",
     );
     expect(provenance).toHaveClass("text-small", "text-quiet");
     // Inline code is MONO.md, and never breaks.
@@ -326,7 +331,7 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
       <LegalPage
         slug="privacy"
         doc={parseLegalDoc(
-          "# T\n\n> **Note:** DRAFT words.\n\n> DRAFT plain\n\n> `DRAFT` code",
+          "> **DRAFTSMAN** words.\n\n> **Not a DRAFT**\n\n> Note **DRAFT: x**\n\n**DRAFT** in a paragraph.\n\n# T\n\n> **Note:** DRAFT words.\n\n> DRAFT plain\n\n> `DRAFT` code",
         )}
         bellState={undefined}
         bell={bell}
@@ -335,7 +340,10 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
     expect(
       screen.getByRole("heading", { level: 1 }).nextElementSibling,
     ).toBeNull();
-    expect(screen.getAllByRole("blockquote")).toHaveLength(3);
+    expect(screen.getAllByRole("blockquote")).toHaveLength(6);
+    expect(
+      screen.getByText("DRAFT", { selector: "strong" }).closest("p"),
+    ).not.toBeNull();
   });
 
   it("writes the name plain, in prose, headings and the contents", async () => {
@@ -359,9 +367,9 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
     const note = tag.parentElement;
     expect(note?.tagName).toBe("MARK");
     expect(note).toHaveClass("bg-hi-viz", "text-accent-ink");
-    expect(note).toHaveTextContent(/^Owner the day the first invite is sent$/u);
-    expect(note?.parentElement).toHaveTextContent(
-      /^Effective: Owner the day the first invite is sent$/u,
+    expect(note?.textContent).toBe("Owner the day the first invite is sent");
+    expect(note?.parentElement?.textContent).toBe(
+      "Effective: Owner the day the first invite is sent",
     );
   });
 
@@ -372,9 +380,20 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
     expect(hello).toHaveAttribute("data-target", "inline");
     expect(hello).toHaveClass("text-ink", "underline");
     // The punctuation around it stays text.
-    expect(hello.parentElement).toHaveTextContent(
-      /^dialed\.run is run by us\. Write to hello@dialed\.run, or \(desk@dialed\.run\)\.$/u,
+    expect(hello.parentElement?.textContent).toBe(
+      "dialed.run is run by us. Write to hello@dialed.run, or (desk@dialed.run). Also a@x.run; b@x.run: c@x.run. Not @x.run, d@.run or e@run. Plain bold in a paragraph.",
     );
+    expect(
+      within(hello.parentElement ?? document.body)
+        .getAllByRole("link")
+        .map((link) => [link.textContent, link.getAttribute("href")]),
+    ).toEqual([
+      ["hello@dialed.run", "mailto:hello@dialed.run"],
+      ["desk@dialed.run", "mailto:desk@dialed.run"],
+      ["a@x.run", "mailto:a@x.run"],
+      ["b@x.run", "mailto:b@x.run"],
+      ["c@x.run", "mailto:c@x.run"],
+    ]);
     expect(
       screen.getByRole("link", { name: "desk@dialed.run" }),
     ).toHaveAttribute("href", "mailto:desk@dialed.run");
@@ -391,10 +410,19 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
     const lead = screen.getByText("Account email.");
     expect(lead.tagName).toBe("STRONG");
     expect(lead).toHaveClass("text-body", "font-semibold");
-    expect(lead.parentElement).toHaveTextContent(
-      /^Account email\. Sent from us, not a@b\.$/u,
+    expect(lead.parentElement?.textContent).toBe(
+      "Account email. Sent from us, not a@b.",
     );
     expect(screen.getByText("Plain item.").tagName).toBe("LI");
+    // Bold later in an item, or in a paragraph, is not a lead-in.
+    for (const name of ["bold"]) {
+      for (const strong of screen.getAllByText(name)) {
+        expect(strong.tagName).toBe("STRONG");
+        expect(strong).toHaveClass("font-semibold");
+        expect(strong).not.toHaveClass("text-body");
+      }
+    }
+    expect(screen.getAllByText("bold")).toHaveLength(2);
   });
 
   it("heads sections in the display face on a hairline, and sub-sections a step down", async () => {
@@ -421,9 +449,19 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
       .find((list) => list.classList.contains("desk:hidden"));
     if (cards === undefined) throw new Error("no cards");
     const items = within(cards).getAllByRole("listitem");
-    expect(items).toHaveLength(2);
-    const [sentry] = items;
-    if (sentry === undefined) throw new Error("no card");
+    expect(items).toHaveLength(3);
+    const [sentry, , short] = items;
+    if (sentry === undefined || short === undefined) {
+      throw new Error("no card");
+    }
+    // One heading, and a row shorter than the head labels what it has.
+    expect(sentry.querySelectorAll(":scope > p")).toHaveLength(1);
+    expect(
+      [...short.querySelectorAll("dt")].map((term) => term.textContent),
+    ).toEqual(["Company"]);
+    expect(
+      [...short.querySelectorAll("dd")].map((value) => value.textContent),
+    ).toEqual(["Only"]);
     expect(sentry).toHaveClass("bg-panel", "rounded-card", "border-hairline");
     expect(sentry.firstElementChild).toHaveTextContent(/^Sentry$/u);
     expect(sentry.firstElementChild).toHaveClass("font-semibold");
@@ -449,7 +487,9 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
     ).toEqual(["Service", "Company", "Role"]);
     const cells = within(table).getAllByRole("cell");
     expect(cells[0]).toHaveClass("font-semibold");
+    expect(cells[0]).toHaveClass("border-t", "px-4");
     expect(cells[1]).not.toHaveClass("font-semibold");
+    expect(cells[1]).toHaveClass("border-t", "border-hairline", "px-4", "py-3");
     expect(cells.map((cell) => cell.textContent)).toEqual([
       "Sentry",
       "Functional Software",
@@ -457,6 +497,8 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
       "OpenAI",
       "OpenAI OpCo",
       "Processor",
+      "Short",
+      "Only",
     ]);
   });
 
@@ -467,6 +509,9 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
     const wrapper = screen.getByRole("table").parentElement;
     expect(wrapper).toHaveClass("overflow-x-auto");
     expect(wrapper).not.toHaveClass("hidden");
+    expect(
+      within(wrapper ?? document.body).getAllByRole("cell")[0],
+    ).toHaveClass("border-b", "border-hairline", "align-top");
   });
 
   it("holds the rail at 240, the page in a container, and lets the rail scroll", async () => {

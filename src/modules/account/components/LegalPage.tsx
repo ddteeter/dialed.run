@@ -90,10 +90,15 @@ export const LEGAL_TITLES: Readonly<Record<LegalSlug, string>> = {
  * "DRAFT: …" — the banner the owner removes on publishing.
  */
 function isDraftBanner(block: BodyBlock): boolean {
-  if (block.kind !== "quote") return false;
-  const [first] = block.inlines;
   return (
-    first?.kind === "strong" && /^DRAFT\b/u.test(plainText(first.children))
+    block.kind === "quote" &&
+    block.inlines
+      .slice(0, 1)
+      .some(
+        (first) =>
+          first.kind === "strong" &&
+          /^DRAFT\b/u.test(plainText(first.children)),
+      )
   );
 }
 
@@ -210,26 +215,13 @@ function Items({
 }: Readonly<{ items: readonly (readonly Inline[])[] }>): JSX.Element {
   return (
     <>
-      {items.map((item, index) => {
-        const [first, ...rest] = item;
-        return (
-          // A bare URL is one word: it breaks rather than scrolling the
-          // page sideways at 320px (plan 161's reflow check).
-          <li key={index} className="wrap-anywhere">
-            {first?.kind === "strong" ? (
-              // R55·222: a list's bold lead-in is TYPE.body 600.
-              <>
-                <strong className="text-body font-semibold">
-                  <Inlines inlines={first.children} />
-                </strong>
-                <Inlines inlines={rest} />
-              </>
-            ) : (
-              <Inlines inlines={item} />
-            )}
-          </li>
-        );
-      })}
+      {items.map((item, index) => (
+        // A bare URL is one word: it breaks rather than scrolling the
+        // page sideways at 320px (plan 161's reflow check).
+        <li key={index} className="wrap-anywhere">
+          <Inlines inlines={item} leadIn />
+        </li>
+      ))}
     </>
   );
 }
@@ -306,33 +298,34 @@ function WideTable({
   return (
     <>
       <ul className="m-0 flex list-none flex-col gap-3 p-0 desk:hidden">
-        {rows.map((row, rowIndex) => {
-          const [first = [], ...rest] = row;
-          return (
-            <li
-              key={rowIndex}
-              className="flex flex-col gap-2 rounded-card border border-hairline bg-panel px-4 py-3"
-            >
-              <p className="m-0 text-body font-semibold">
-                <Inlines inlines={first} />
+        {rows.map((row, rowIndex) => (
+          <li
+            key={rowIndex}
+            className="flex flex-col gap-2 rounded-card border border-hairline bg-panel px-4 py-3"
+          >
+            {row.slice(0, 1).map((cell, index) => (
+              <p key={index} className="m-0 text-body font-semibold">
+                <Inlines inlines={cell} />
               </p>
-              <dl className="m-0 grid grid-cols-[112px_minmax(0,1fr)] items-baseline gap-x-3 gap-y-2">
-                {rest.map((cell, index) => (
-                  <div key={index} className="contents">
-                    <dt>
-                      <Mono step="xs" className="text-muted">
-                        <Inlines inlines={head[index + 1] ?? []} />
-                      </Mono>
-                    </dt>
-                    <dd className="m-0 text-body">
-                      <Inlines inlines={cell} />
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </li>
-          );
-        })}
+            ))}
+            <dl className="m-0 grid grid-cols-[112px_minmax(0,1fr)] items-baseline gap-x-3 gap-y-2">
+              {row.slice(1).map((cell, index) => (
+                <div key={index} className="contents">
+                  <dt>
+                    <Mono step="xs" className="text-muted">
+                      {head.slice(index + 1, index + 2).map((label, at) => (
+                        <Inlines key={at} inlines={label} />
+                      ))}
+                    </Mono>
+                  </dt>
+                  <dd className="m-0 text-body">
+                    <Inlines inlines={cell} />
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </li>
+        ))}
       </ul>
       <div className="hidden overflow-x-auto rounded-card border border-hairline bg-panel desk:block desk:w-[calc(100cqw-var(--spacing)*72)]">
         <table className="w-full border-collapse text-body">
@@ -377,12 +370,17 @@ type Drawn = Inline | ProsePart;
 function Inlines({
   inlines,
   inLink = false,
+  leadIn = false,
 }: Readonly<{
   inlines: readonly Inline[];
   /**
   Inside a link, where an address is already part of one.
   */
   inLink?: boolean;
+  /**
+  A list item's: bold that opens it is its lead-in (R55·222).
+  */
+  leadIn?: boolean;
 }>): JSX.Element {
   const drawn: readonly Drawn[] = inlines.flatMap<Drawn>((inline) =>
     inline.kind === "text" ? proseParts(inline.text) : [inline],
@@ -390,7 +388,12 @@ function Inlines({
   return (
     <>
       {drawn.map((inline, index) => (
-        <InlineView key={index} inline={inline} inLink={inLink} />
+        <InlineView
+          key={index}
+          inline={inline}
+          inLink={inLink}
+          isLeadIn={leadIn && index === 0}
+        />
       ))}
     </>
   );
@@ -404,7 +407,12 @@ function Inlines({
 function InlineView({
   inline,
   inLink,
-}: Readonly<{ inline: Drawn; inLink: boolean }>): JSX.Element {
+  isLeadIn,
+}: Readonly<{
+  inline: Drawn;
+  inLink: boolean;
+  isLeadIn: boolean;
+}>): JSX.Element {
   switch (inline.kind) {
     case "text": {
       return <>{inline.text}</>;
@@ -425,7 +433,10 @@ function InlineView({
     }
     case "strong": {
       return (
-        <strong className="font-semibold">
+        // R55·222: a list's bold lead-in is TYPE.body 600.
+        <strong
+          className={isLeadIn ? "text-body font-semibold" : "font-semibold"}
+        >
           <Inlines inlines={inline.children} inLink={inLink} />
         </strong>
       );
@@ -473,11 +484,12 @@ function TextLink({
 /**
  * An `[OWNER: …]` note: what it says runs to the first closing bracket.
  */
-const OWNER_NOTE = /\[OWNER:([^\]]*)\]/gu;
+const OWNER_NOTE = /\[OWNER:([^\]]*)\]/u;
 
 /**
-What closes a sentence or a bracket after an address, and is not part of it.
-*/
+ * What can close a sentence or a bracket after an address, and is not
+ * part of it.
+ */
 const TRAILING = new Set([".", ",", ";", ":", ")"]);
 
 interface ProsePart {
@@ -487,50 +499,51 @@ interface ProsePart {
 
 /**
  * A run of the text cut where the page draws something of its own: an
- * owner's note, or an address.
+ * owner's note, or an address. `split` with the note's group puts what
+ * each note says at the odd places, between the runs of text.
  */
 function proseParts(text: string): readonly ProsePart[] {
-  const source = named(text);
-  const parts: ProsePart[] = [];
-  let at = 0;
-  for (const match of source.matchAll(OWNER_NOTE)) {
-    parts.push(...addressParts(source.slice(at, match.index)), {
-      kind: "owner",
-      text: String(match[1]).trim(),
-    });
-    at = match.index + match[0].length;
-  }
-  parts.push(...addressParts(source.slice(at)));
-  return parts;
+  return named(text)
+    .split(OWNER_NOTE)
+    .flatMap((piece, index) =>
+      index % 2 === 0
+        ? addressParts(piece)
+        : { kind: "owner" as const, text: piece.trim() },
+    );
 }
 
 /**
- * Text, with each email address in it cut out: a word holding an `@`
- * with a dot after it, less the punctuation that ends its sentence.
+ * Text, word by word, with each email address cut out of its word: the
+ * word less what sits round it, when that holds an `@` with a dot after.
  */
 function addressParts(text: string): readonly ProsePart[] {
-  const parts: ProsePart[] = [];
-  let plain = "";
-  for (const word of text.split(/(\s+)/u)) {
-    const address = addressIn(word);
-    if (address === undefined) {
-      plain += word;
-      continue;
-    }
+  return text.split(" ").flatMap((word, index): ProsePart[] => {
+    const before = index === 0 ? "" : " ";
+    const address = withoutSurround(word);
+    if (!isAddress(address)) return [{ kind: "text", text: before + word }];
     const start = word.indexOf(address);
-    plain += word.slice(0, start);
-    if (plain !== "") parts.push({ kind: "text", text: plain });
-    parts.push({ kind: "email", text: address });
-    plain = word.slice(start + address.length);
-  }
-  if (plain !== "") parts.push({ kind: "text", text: plain });
-  return parts;
+    return [
+      { kind: "text", text: before + word.slice(0, start) },
+      { kind: "email", text: address },
+      { kind: "text", text: word.slice(start + address.length) },
+    ];
+  });
 }
 
-function addressIn(word: string): string | undefined {
-  let end = word.length;
-  while (end > 0 && TRAILING.has(word.charAt(end - 1))) end -= 1;
-  const address = word.slice(word.startsWith("(") ? 1 : 0, end);
-  const at = address.indexOf("@");
-  return at > 0 && address.indexOf(".", at) > at + 1 ? address : undefined;
+/**
+ * A word less an opening bracket before it and closing punctuation after.
+ */
+function withoutSurround(word: string): string {
+  return withoutTrailing(word.startsWith("(") ? word.slice(1) : word);
+}
+
+function withoutTrailing(word: string): string {
+  return TRAILING.has(word.slice(-1))
+    ? withoutTrailing(word.slice(0, -1))
+    : word;
+}
+
+function isAddress(word: string): boolean {
+  const at = word.indexOf("@");
+  return at > 0 && word.indexOf(".", at) > at + 1;
 }
