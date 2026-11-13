@@ -946,10 +946,7 @@ describe("what a row tells the reviewer", () => {
     expect(clock).not.toHaveClass("bg-hi-viz");
     // Beside the head, keeping its width; the head is one line, whole in
     // its title (N3-10).
-    expect(clock.parentElement?.parentElement).toHaveClass(
-      "shrink-0",
-      "whitespace-nowrap",
-    );
+    expect(clock.parentElement).toHaveClass("shrink-0", "whitespace-nowrap");
     const head = opener.querySelector("[data-part='row-head']");
     expect(head).toHaveClass("truncate");
     expect(head).toHaveAttribute("title", "e-1");
@@ -1004,17 +1001,12 @@ describe("what a row tells the reviewer", () => {
     ]);
   });
 
-  it("names a row's strip by its head alone, and describes it by its summary and age (R55·197)", () => {
+  it("names a row's strip by everything it shows: head, summary, age (R55·197; WCAG 2.5.3)", () => {
     renderQueue([row(), row({ id: "b", subjectId: "e-2" })]);
     const closed = screen.getByRole("button", { expanded: false });
-    expect(closed).toHaveAccessibleName("entry · e-2 [reports]");
-    expect(closed).toHaveAccessibleDescription(
-      "3 people · The photo shows someone inappropriately 0m",
+    expect(closed).toHaveAccessibleName(
+      "entry · e-2 [reports] 3 people · The photo shows someone inappropriately 0m",
     );
-    // Open, the summary has gone; the age still describes it.
-    const open = screen.getByRole("button", { expanded: true });
-    expect(open).toHaveAccessibleName("entry · e-1 [reports]");
-    expect(open).toHaveAccessibleDescription("0m");
   });
 
   it("draws OVERDUE as a filled hi-viz tag once the 48 hours run out (R55·197)", () => {

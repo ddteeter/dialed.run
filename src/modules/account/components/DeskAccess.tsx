@@ -551,7 +551,7 @@ function CodeWho({
           <button
             type="button"
             onClick={onMore}
-            className="cursor-pointer border-none bg-transparent p-0 text-small font-bold text-action"
+            className="target inline-flex cursor-pointer items-center border-none bg-transparent p-0 text-small font-bold text-action"
           >
             {`+ ${grouped(more)} more`}
           </button>
@@ -569,7 +569,7 @@ function RunnerLink({ who }: Readonly<{ who: string }>): JSX.Element {
     <Link
       to="/desk/runners"
       search={runnerSearch(who)}
-      className="text-small text-ink underline underline-offset-4"
+      className="target inline-flex items-center text-small text-ink underline underline-offset-4"
     >
       {who}
     </Link>
