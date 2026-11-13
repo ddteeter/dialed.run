@@ -100,13 +100,13 @@ function SlowRouteStatus() {
  * five links to the log-in page"*). Auth, the landing page, the reading
  * pages and a signed-out 404 all wear this.
  *
- * Paper all the way up, so there is no bell seat either. `action` is
- * retired: the frame offers Log in and Request access on every page and
- * drops whichever one the page is, by its path.
+ * Paper all the way up, so there is no bell seat either. The frame offers
+ * Log in and Request access on every page and drops whichever one the page
+ * is, by its path.
  */
 export function SignedOutLayout({
   children,
-}: Readonly<{ action?: "none" | "log-in"; children: ReactNode }>) {
+}: Readonly<{ children: ReactNode }>) {
   return (
     <SignedOutFrame>
       <div className="mx-auto w-full max-w-page flex-1">{children}</div>

@@ -169,7 +169,6 @@ describe("Au2 · at rest", () => {
       ),
     ).toEqual([
       "header",
-      "wordmark",
       "form",
       "or-divider",
       "google-button",
@@ -187,13 +186,11 @@ describe("Au2 · at rest", () => {
     expect(screen.getByRole("heading", { name: "Log in" })).toBeVisible();
   });
 
-  it("drops the panel's own wordmark from 720 up, and keeps it plain", async () => {
+  it("leaves the wordmark to the bar at every width (R55·176)", async () => {
     await logIn();
     // "The panel drops its own wordmark, so there is one" — the bar's.
-    const own = part("panel")?.querySelector("[data-part='wordmark']");
-    expect(own).toHaveClass("wide:hidden");
-    // Plain: no brackets. Drawn, then said once by `Wordmark`'s sr-only copy.
-    expect(own).toHaveTextContent(/^dialed\.rundialed\.run$/u);
+    expect(part("panel")?.querySelector("[data-part='wordmark']")).toBeNull();
+    expect(document.querySelectorAll("[data-part='wordmark']")).toHaveLength(1);
     expect(
       document.querySelector("[data-part='top-bar'] [data-part='wordmark']"),
     ).not.toBeNull();

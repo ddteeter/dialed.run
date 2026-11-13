@@ -48,7 +48,7 @@ export function ReadingShell({
 }>): JSX.Element {
   const Bell = bell;
   return bellState === undefined ? (
-    <SignedOutLayout action="log-in">{children}</SignedOutLayout>
+    <SignedOutLayout>{children}</SignedOutLayout>
   ) : (
     <Layout bell={<Bell {...bellState} />}>{children}</Layout>
   );

@@ -2,7 +2,6 @@ import type { JSX, ReactNode } from "react";
 
 import { SignedOutLayout } from "./Layout";
 import { Mono } from "./Mono";
-import { Wordmark } from "./Wordmark";
 
 /**
  * A signed-out receipt (Au5's, and `/takedown`'s): the receipt takes the
@@ -41,12 +40,12 @@ export function SignedOutReceipt({
  * · SIGNED-OUT SHELL", Au4 and Au5.
  *
  * *"A 390 column on paper, top-aligned under the bar and never vertically
- * centred — centring jumps when a band appears"* (Au2 1040). From 720 up
- * the bar's wordmark is the one: *"The panel drops its own wordmark, so
- * there is one."*
+ * centred — centring jumps when a band appears"* (Au2 1040). The one
+ * signed-out frame's bar (R55·176) carries the wordmark at every width, so
+ * the panel has none of its own: *"so there is one."*
  *
- * The regions carry the board's `data-part` names — panel, header,
- * wordmark — so a conformance spec compares region to region.
+ * The regions carry the board's `data-part` names — panel and
+ * header — so a conformance spec compares region to region.
  */
 export function SignedOutPanel({
   heading,
@@ -61,15 +60,12 @@ export function SignedOutPanel({
   children: ReactNode;
 }>): JSX.Element {
   return (
-    <SignedOutLayout action="none">
+    <SignedOutLayout>
       <main
         data-part="panel"
         className="mx-auto flex w-full max-w-panel flex-col gap-7 px-6 pt-12 pb-12 wide:pt-14"
       >
         <div data-part="header" className="flex flex-col gap-5">
-          <span data-part="wordmark" className="wide:hidden">
-            <Wordmark brackets={false} className="text-title" />
-          </span>
           {notice}
           <h1 className="m-0 font-display text-display uppercase">{heading}</h1>
         </div>
