@@ -22,10 +22,11 @@ const routeSources: Record<string, string> = import.meta.glob(
 
 /**
  * The loaders that fetch the bell for a route, each reaching
- * `bellStateFn` or `bellState` itself.
+ * `bellStateFn` or `bellState` itself. The closet's `garmentLoader` takes
+ * `bellStateFn` as its last argument, read after the session gate.
  */
 const BELL_SOURCES =
-  /\bbellStateFn\(\)|\blegalPageLoader\(|\bopenSourcePageLoader\(/u;
+  /\bbellStateFn\(\)|\bbellStateFn,\s*\)|\blegalPageLoader\(|\bopenSourcePageLoader\(/u;
 
 const bellRoutes = Object.entries(routeSources)
   .map(([path, source]) => [path, withoutComments(source)] as const)
