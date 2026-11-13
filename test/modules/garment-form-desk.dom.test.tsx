@@ -102,10 +102,10 @@ describe("GarmentForm: its frame", () => {
 });
 
 describe("GarmentForm at the desk (round 26 #10)", () => {
-  it("splits, with the category's pieces in the one rail card", () => {
+  it("splits, with the group's pieces in the one rail card", () => {
     renderForm({
       rail: {
-        nearby: { byCategory: { top: { pieces: [rover], more: 0 }, bottom: { pieces: [shorts], more: 0 } }, byType: {} },
+        nearby: { tops: [rover], bottoms: [shorts] },
         reread: neverReread,
       },
     });
@@ -114,7 +114,7 @@ describe("GarmentForm at the desk (round 26 #10)", () => {
     if (card === null) throw new Error("no rail");
     expect(
       within(card).getByRole("heading", {
-        name: "Already in your closet · Top",
+        name: "Already in your closet · Tops",
       }),
     ).toBeInTheDocument();
     expect(within(card).getByText("Janji Rover Half-zip")).toBeInTheDocument();
@@ -140,7 +140,7 @@ describe("GarmentForm at the desk (round 26 #10)", () => {
     const user = userEvent.setup();
     renderForm({
       rail: {
-        nearby: { byCategory: { top: { pieces: [rover], more: 0 }, bottom: { pieces: [shorts], more: 0 } }, byType: {} },
+        nearby: { tops: [rover], bottoms: [shorts] },
         reread: neverReread,
       },
     });
@@ -151,7 +151,7 @@ describe("GarmentForm at the desk (round 26 #10)", () => {
     if (card === null) throw new Error("no rail");
     expect(
       within(card).getByRole("heading", {
-        name: "Already in your closet · Bottom",
+        name: "Already in your closet · Bottoms",
       }),
     ).toBeInTheDocument();
     expect(within(card).getByText("Split shorts")).toBeInTheDocument();
@@ -160,11 +160,42 @@ describe("GarmentForm at the desk (round 26 #10)", () => {
     expect(within(card).getByText("No shoes yet.")).toBeInTheDocument();
   });
 
+  it("files a piece worn as an outer layer in Outer, as C will (248)", async () => {
+    const user = userEvent.setup();
+    const shell = itemView({
+      item: wardrobeItem({ id: "01SH", name: "Old shell", layer: "outer" }),
+      uiGroup: "outer",
+    });
+    renderForm({
+      rail: { nearby: { tops: [rover], outer: [shell] }, reread: neverReread },
+    });
+    await user.selectOptions(screen.getByLabelText("Layer"), "outer");
+    expect(
+      within(railCard()).getByRole("heading", {
+        name: "Already in your closet · Outer",
+      }),
+    ).toBeInTheDocument();
+    expect(within(railCard()).getByText("Old shell")).toBeInTheDocument();
+    expect(within(railCard()).queryByText("Janji Rover Half-zip")).toBeNull();
+
+    await user.selectOptions(screen.getByLabelText("Layer"), "mid");
+    expect(within(railCard()).getByText("Janji Rover Half-zip")).toBeVisible();
+
+    // Shoes have no layer, so the outer answer left behind files nothing.
+    await user.selectOptions(screen.getByLabelText("Layer"), "outer");
+    await user.selectOptions(screen.getByLabelText("Category"), "shoes");
+    expect(
+      within(railCard()).getByRole("heading", {
+        name: "Already in your closet · Shoes",
+      }),
+    ).toBeInTheDocument();
+  });
+
   it("marks the piece being typed again as SAME NAME", async () => {
     const user = userEvent.setup();
     renderForm({
       rail: {
-        nearby: { byCategory: { top: { pieces: [rover], more: 0 } }, byType: {} },
+        nearby: { tops: [rover] },
         reread: neverReread,
       },
     });
@@ -218,27 +249,34 @@ describe("GarmentForm's TYPE (round 26 #10, D-75, R-112)", () => {
     expect(screen.queryByRole("group", { name: "Type" })).toBeNull();
   });
 
-  it("narrows the rail to the picked type, by its name", async () => {
+  it("lists the picked type's pieces first, and filters nothing (248)", async () => {
     const user = userEvent.setup();
     renderForm({
-      rail: {
-        nearby: {
-          byCategory: { top: { pieces: [rover], more: 0 } },
-          byType: { halfZip: { pieces: [halfZip], more: 0 } },
-        },
-        reread: neverReread,
-      },
+      rail: { nearby: { tops: [rover, halfZip] }, reread: neverReread },
     });
+    const names = () =>
+      within(railCard())
+        .getAllByRole("listitem")
+        .map(
+          (row) =>
+            row.firstElementChild?.nextElementSibling?.firstElementChild
+              ?.textContent,
+        );
 
+    expect(names()).toStrictEqual(["Janji Rover Half-zip", "Old half-zip"]);
     await user.click(screen.getByRole("radio", { name: "Half-zip" }));
 
     expect(
       within(railCard()).getByRole("heading", {
-        name: "Already in your closet · Top · Half-zip",
+        name: "Already in your closet · Tops",
       }),
     ).toBeInTheDocument();
-    expect(within(railCard()).getByText("Old half-zip")).toBeInTheDocument();
-    expect(within(railCard()).queryByText("Janji Rover Half-zip")).toBeNull();
+    expect(names()).toStrictEqual(["Old half-zip", "Janji Rover Half-zip"]);
+  });
+
+  it("names the picked type when its group holds nothing", async () => {
+    const user = userEvent.setup();
+    renderForm({ rail: { nearby: {}, reread: neverReread } });
 
     await user.click(screen.getByRole("radio", { name: "Tee" }));
     expect(within(railCard()).getByText("No tees yet.")).toBeInTheDocument();
@@ -253,7 +291,7 @@ describe("GarmentForm's TYPE (round 26 #10, D-75, R-112)", () => {
       save,
       initial: { name: "Split" },
       rail: {
-        nearby: { byCategory: { top: { pieces: [rover], more: 0 } }, byType: {} },
+        nearby: { tops: [rover] },
         reread: neverReread,
       },
     });
@@ -269,7 +307,7 @@ describe("GarmentForm's TYPE (round 26 #10, D-75, R-112)", () => {
     ).toBeNull();
     expect(
       within(railCard()).getByRole("heading", {
-        name: "Already in your closet · Top",
+        name: "Already in your closet · Tops",
       }),
     ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Add to closet" }));
@@ -331,15 +369,10 @@ describe("GarmentForm, saved with its photo refused: the rail (R-114)", () => {
       }),
       isGeneric: false,
     });
-    const rereadNearby = vi.fn(() =>
-      Promise.resolve({
-        byCategory: { top: { pieces: [saved], more: 0 } },
-        byType: { halfZip: { pieces: [saved], more: 0 } },
-      }),
-    );
+    const rereadNearby = vi.fn(() => Promise.resolve({ tops: [saved] }));
 
     await refuseThePhoto({
-      rail: { nearby: { byCategory: {}, byType: {} }, reread: rereadNearby },
+      rail: { nearby: {}, reread: rereadNearby },
     });
 
     expect(
@@ -352,7 +385,7 @@ describe("GarmentForm, saved with its photo refused: the rail (R-114)", () => {
   it("keeps the rows it had when the re-read fails", async () => {
     await refuseThePhoto({
       rail: {
-        nearby: { byCategory: {}, byType: { halfZip: { pieces: [halfZip], more: 0 } } },
+        nearby: { tops: [halfZip] },
         reread: () => Promise.reject(new TypeError("Failed to fetch")),
       },
     });

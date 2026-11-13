@@ -8,7 +8,11 @@ import { render, screen, within } from "@testing-library/react";
 import { drawnText, saidText } from "./spoken-text";
 import { describe, expect, it } from "vitest";
 
-import type { TempUnit } from "../../src/lib/contracts";
+import {
+  uiGroupLabels,
+  uiGroups,
+  type TempUnit,
+} from "../../src/lib/contracts";
 import { AlreadyInCloset } from "../../src/modules/closet/components/AlreadyInCloset";
 import type {
   ClosetItemView,
@@ -18,7 +22,8 @@ import { itemView, wardrobeItem } from "./closet-fixtures";
 
 /**
  * F at the desk's one rail card (round 26 #10): what is already in the
- * closet in the category being added, read-only.
+ * closet in the group the piece being added would be filed in (Round 56
+ * · 248), read-only.
  */
 
 function record(summary: Partial<ItemPerformance["summary"]>): ItemPerformance {
@@ -63,6 +68,10 @@ const quarterZip = itemView({
 
 const NOTHING_TYPED = { brand: "", name: "" };
 
+function typedPiece(id: string, type: string): ClosetItemView {
+  return itemView({ item: wardrobeItem({ id, name: id, type }) });
+}
+
 function card(
   pieces: readonly ClosetItemView[],
   typed: { brand: string; name: string } = NOTHING_TYPED,
@@ -71,8 +80,9 @@ function card(
   return render(
     <AlreadyInCloset
       category="top"
-      // The service lists a category only when it has pieces.
-      list={pieces.length === 0 ? undefined : { pieces: [...pieces], more: 0 }}
+      group="tops"
+      // The service lists a group only when it has pieces.
+      pieces={pieces.length === 0 ? undefined : pieces}
       typed={typed}
       tempUnit={tempUnit}
     />,
@@ -88,11 +98,11 @@ function photoOf(row: HTMLElement | undefined): Element | null | undefined {
 }
 
 describe("AlreadyInCloset", () => {
-  it("is titled for the category, and says so when it holds nothing yet", () => {
+  it("is titled for the group, and says so when it holds nothing yet", () => {
     card([]);
 
     const heading = screen.getByRole("heading", {
-      name: "Already in your closet · Top",
+      name: "Already in your closet · Tops",
     });
     expect(heading).toBeVisible();
     // Round 40 C4: sentence case, as the heading it is — not mono caps.
@@ -121,7 +131,8 @@ describe("AlreadyInCloset", () => {
         <AlreadyInCloset
           tempUnit="c"
           category={category as keyof typeof plurals}
-          list={undefined}
+          group="tops"
+          pieces={undefined}
           typed={{ brand: "", name: "" }}
         />,
       );
@@ -275,14 +286,66 @@ describe("AlreadyInCloset", () => {
     expect(screen.getAllByText(/Retired/)).toHaveLength(1);
   });
 
-  it("closes on + N more, to the closet on the category's group (193)", async () => {
+  it("is titled for each group by C's own heading (248)", () => {
+    const { rerender } = card([]);
+    for (const group of uiGroups) {
+      rerender(
+        <AlreadyInCloset
+          tempUnit="c"
+          category="top"
+          group={group}
+          pieces={undefined}
+          typed={NOTHING_TYPED}
+        />,
+      );
+      expect(
+        screen.getByRole("heading", {
+          name: `Already in your closet · ${uiGroupLabels[group]}`,
+        }),
+      ).toBeVisible();
+    }
+  });
+
+  it("lists a picked type's pieces first, and keeps the rest (248)", () => {
+    render(
+      <AlreadyInCloset
+        tempUnit="c"
+        category="top"
+        type="halfZip"
+        group="tops"
+        pieces={[
+          typedPiece("Tee one", "tee"),
+          typedPiece("Zip one", "halfZip"),
+          typedPiece("Tee two", "tee"),
+          typedPiece("Zip two", "halfZip"),
+        ]}
+        typed={NOTHING_TYPED}
+      />,
+    );
+
+    // Stable: each part keeps the order given; the type never filters.
+    expect(
+      rows().map((row) => within(row).getByText(/one|two/).textContent),
+    ).toStrictEqual(["Zip one", "Zip two", "Tee one", "Tee two"]);
+  });
+
+  it("shows five, and closes on See all, to C on the group (248)", async () => {
+    const pieces = [harrier, rover, quarterZip].flatMap((view) =>
+      [1, 2].map((copy) =>
+        itemView({
+          ...view,
+          item: { ...view.item, id: `${view.item.id}${String(copy)}` },
+        }),
+      ),
+    );
     const rootRoute = createRootRoute({
       component: () => (
         <AlreadyInCloset
           tempUnit="c"
           category="top"
           type="halfZip"
-          list={{ pieces: [harrier], more: 5 }}
+          group="outer"
+          pieces={pieces}
           typed={NOTHING_TYPED}
         />
       ),
@@ -294,32 +357,40 @@ describe("AlreadyInCloset", () => {
     await router.load();
     render(<RouterProvider router={router} />);
 
-    const more = await screen.findByRole("link", { name: "+ 5 more half-zips" });
-    expect(more).toHaveAttribute("href", "/closet?group=tops");
+    // The whole group's count, as C shows it, not the rest past five.
+    const more = await screen.findByRole("link", {
+      name: "See all 6 in Outer",
+    });
+    expect(more).toHaveAttribute("href", "/closet?group=outer");
     expect(more).toHaveClass("target", "inline-flex", "items-center");
     expect(more.previousElementSibling?.tagName).toBe("UL");
+    expect(rows()).toHaveLength(5);
   });
 
-  it("offers no more when the card shows every piece", () => {
-    card([harrier]);
+  it("offers no link under six pieces, where the card shows every one", () => {
+    card(
+      [harrier, rover, quarterZip, harrier, rover].map((view, index) =>
+        itemView({ ...view, item: { ...view.item, id: String(index) } }),
+      ),
+    );
+    expect(rows()).toHaveLength(5);
     expect(screen.queryByRole("link")).toBeNull();
   });
 
-  it("is titled for the type once one is picked, and says so in its plural", () => {
+  it("says a picked type's plural when the group holds nothing", () => {
     render(
       <AlreadyInCloset
         tempUnit="c"
         category="top"
         type="halfZip"
-        list={undefined}
+        group="tops"
+        pieces={undefined}
         typed={NOTHING_TYPED}
       />,
     );
 
     expect(
-      screen.getByRole("heading", {
-        name: "Already in your closet · Top · Half-zip",
-      }),
+      screen.getByRole("heading", { name: "Already in your closet · Tops" }),
     ).toBeVisible();
     expect(screen.getByText("No half-zips yet.")).toBeVisible();
   });

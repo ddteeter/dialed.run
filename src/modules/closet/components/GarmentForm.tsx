@@ -15,6 +15,7 @@ import {
   garmentCategoryLabels,
   garmentVisibilitySchema,
   layerSchema,
+  uiGroupFor,
   weightSchema,
 } from "../../../lib/contracts";
 import {
@@ -852,45 +853,45 @@ function IdentityFields({
           from it to the legend, 12 from the legend to BRAND. A legend sits
           on its fieldset's own border, so the rule is the wrapper's. */}
       <div data-part="what-is-it" className="border-t border-hairline pt-6">
-      <fieldset className="m-0 flex flex-col gap-3 border-none p-0">
-        <legend className="mb-3 p-0 font-display text-heading">
-          What is it?
-        </legend>
-        <FormField
-          name="brand"
-          label={LABELS.brand}
-          error={form.fieldErrors.brand}
-        >
-          <input
-            {...form.field("brand")}
-            id="brand"
-            type="text"
-            list="garment-brand-options"
-            value={values.brand}
-            onChange={(event) => {
-              update("brand", event.target.value);
-              brand.onInput?.(event.target.value);
+        <fieldset className="m-0 flex flex-col gap-3 border-none p-0">
+          <legend className="mb-3 p-0 font-display text-heading">
+            What is it?
+          </legend>
+          <FormField
+            name="brand"
+            label={LABELS.brand}
+            error={form.fieldErrors.brand}
+          >
+            <input
+              {...form.field("brand")}
+              id="brand"
+              type="text"
+              list="garment-brand-options"
+              value={values.brand}
+              onChange={(event) => {
+                update("brand", event.target.value);
+                brand.onInput?.(event.target.value);
+              }}
+              className="w-full border-none bg-transparent"
+            />
+          </FormField>
+          <datalist id="garment-brand-options">
+            {(brand.options ?? []).map((option) => (
+              <option key={option} value={option} />
+            ))}
+          </datalist>
+          <TextField
+            name="name"
+            label={LABELS.name}
+            value={values.name}
+            onChange={(value) => {
+              update("name", value);
             }}
-            className="w-full border-none bg-transparent"
+            field={form.field}
+            error={form.fieldErrors.name}
           />
-        </FormField>
-        <datalist id="garment-brand-options">
-          {(brand.options ?? []).map((option) => (
-            <option key={option} value={option} />
-          ))}
-        </datalist>
-        <TextField
-          name="name"
-          label={LABELS.name}
-          value={values.name}
-          onChange={(value) => {
-            update("name", value);
-          }}
-          field={form.field}
-          error={form.fieldErrors.name}
-        />
-        <LinkField values={values} update={update} form={form} />
-      </fieldset>
+          <LinkField values={values} update={update} form={form} />
+        </fieldset>
       </div>
     </>
   );
@@ -1220,7 +1221,7 @@ function FormFrame({
   tempUnit: TempUnit;
   values: GarmentFormValues;
   /**
-  The picked type, when one is: the card then matches on it too.
+  The picked type, when one is: the card then lists its pieces first.
   */
   type: GarmentType | undefined;
   children: ReactNode;
@@ -1232,6 +1233,14 @@ function FormFrame({
       </div>
     );
   }
+  // Filed as the save will file it (Round 56 · 248): the layer counts
+  // only where the category has one, and an unanswered layer is none.
+  const group = uiGroupFor(
+    values.category,
+    hasGarmentAttribute(values.category, "layer")
+      ? layerSchema.safeParse(values.layer).data
+      : undefined,
+  );
   return (
     <div data-part="page" className={PAGE_SPLIT}>
       <div data-part="primary" className={PRIMARY_COLUMN}>
@@ -1241,11 +1250,8 @@ function FormFrame({
         <AlreadyInCloset
           category={values.category}
           type={type}
-          list={
-            type === undefined
-              ? nearby.byCategory[values.category]
-              : nearby.byType[type]
-          }
+          group={group}
+          pieces={nearby[group]}
           typed={{ brand: values.brand, name: values.name }}
           tempUnit={tempUnit}
         />
