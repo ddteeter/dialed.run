@@ -71,10 +71,11 @@ export function conditionsWords(conditions: Conditions, units: Units): string {
  * leave at least SPACE[3] above and below it, so the seam never overlaps a
  * neighbour's target.
  */
-const FILTER_CHIP_CLASS = {
-  on: "target-seam flex h-8 items-center gap-1 self-start rounded-pill border border-teal bg-teal px-3 text-accent-ink",
-  off: "target-seam flex h-8 items-center gap-1 self-start rounded-pill border border-hairline px-3 text-quiet",
-} as const;
+const FILTER_ON_CLASS =
+  "target-seam flex h-8 items-center gap-1 self-start rounded-pill border border-teal bg-teal px-3 text-accent-ink";
+
+const FILTER_OFF_CLASS =
+  "target-seam flex h-8 items-center gap-1 self-start rounded-pill border border-hairline px-3 text-quiet";
 
 function FilterChip({
   isOn,
@@ -93,7 +94,7 @@ function FilterChip({
       aria-pressed={isOn}
       aria-label={label}
       onClick={onToggle}
-      className={isOn ? FILTER_CHIP_CLASS.on : FILTER_CHIP_CLASS.off}
+      className={isOn ? FILTER_ON_CLASS : FILTER_OFF_CLASS}
     >
       <Mono step="xs">{children}</Mono>
       {isOn ? <Icon name="close" size={12} /> : undefined}
@@ -141,7 +142,7 @@ function PieceTile({
       type="button"
       aria-pressed={pressed}
       onClick={onToggle}
-      className="flex w-18 shrink-0 cursor-pointer flex-col gap-2 border-none bg-transparent p-0 text-left text-ink"
+      className="target flex w-18 shrink-0 cursor-pointer flex-col gap-2 border-none bg-transparent p-0 text-left text-ink"
     >
       <span
         data-part="tile-well"
@@ -419,11 +420,11 @@ const PICK_LIST_CLASS: Readonly<Record<PickLayout, string>> = {
   push: "m-0 flex list-none flex-col gap-1 rounded-card border border-hairline bg-panel px-4 py-2",
 };
 
-const PICK_DONE_CLASS: Readonly<Record<PickLayout, string>> = {
-  sheet:
-    "target cursor-pointer rounded-pill border border-hairline bg-transparent px-6 py-3 text-body font-semibold",
-  push: "target grid min-h-13 cursor-pointer place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase text-accent-ink",
-};
+const SHEET_DONE_CLASS =
+  "target cursor-pointer rounded-pill border border-hairline bg-transparent px-6 py-3 text-body font-semibold";
+
+const PUSH_DONE_CLASS =
+  "target grid min-h-13 cursor-pointer place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase text-accent-ink";
 
 function PickBody({
   layout,
@@ -524,7 +525,7 @@ function PickBody({
       <button
         type="button"
         onClick={onDone}
-        className={PICK_DONE_CLASS[layout]}
+        className={layout === "push" ? PUSH_DONE_CLASS : SHEET_DONE_CLASS}
       >
         Done
       </button>
