@@ -56,6 +56,7 @@ function ReviewPage() {
       {/* Design 136: `/takedown` requests, soonest due first. */}
       <RemovalRequests
         requests={requests}
+        asOf={today.asOf}
         decide={decideRemovalRequestAction}
         block={blockTakedownRequesterAction}
         decideMatch={decideGarmentMatchAction}

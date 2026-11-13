@@ -22,6 +22,7 @@ import type {
   ReviewSource,
 } from "../review";
 import { PickOne } from "./DeskForm";
+import { DueClock } from "./DueClock";
 import { StatutoryLine } from "./StatutoryLine";
 import {
   KitOriginContext,
@@ -471,24 +472,15 @@ function RowClock({
   row,
   asOf,
 }: Readonly<{ row: QueueRow; asOf: number }>): JSX.Element {
-  if (row.dueAt !== undefined && row.dueAt <= asOf) {
-    return (
-      <Mono
-        step="xs"
-        className="bg-hi-viz px-2 py-1 font-semibold text-accent-ink"
-      >
-        {row.due}
-      </Mono>
-    );
-  }
   return row.due === undefined ? (
     <Mono step="xs" className="text-muted">
       {spanLabel(asOf - row.createdAt)}
     </Mono>
   ) : (
-    <Mono step="xs" className="font-semibold text-hiviz-text">
-      {row.due}
-    </Mono>
+    <DueClock
+      due={row.due}
+      isOverdue={row.dueAt !== undefined && row.dueAt <= asOf}
+    />
   );
 }
 

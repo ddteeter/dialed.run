@@ -5,6 +5,7 @@ import { Mono } from "../../../ui";
 import type { OtherPhoto, OtherPhotos as Others } from "../other-photos";
 import { useKitOriginSearch } from "./kit-origin";
 import { reviewPhotoSrc } from "./review-photo-src";
+import { shortId } from "./short-id";
 
 /**
  * The same runner's other photos, on a Review row about an intimate image
@@ -27,9 +28,11 @@ import { reviewPhotoSrc } from "./review-photo-src";
  *
  * **The kicker counts them all** (round 38 #63a), so it reads
  * `THEIR OTHER PHOTOS · 14` with 12 shown. Past the 12, the block ends in
- * "+ 2 more · Open @name in Runners", which opens the runner in D8. Each
- * id is MONO.sm and selects whole on a click, since it is what the
- * takedown form takes.
+ * "+ 2 more · Open @name in Runners", which opens the runner in D8.
+ *
+ * **R55·198 packs them**: fixed square tiles, 96 six across from `desk`
+ * and three across the column on a phone, each id cut to its first and
+ * last four characters, the whole id its tooltip and what is said.
  */
 export function OtherPhotos({
   others,
@@ -53,12 +56,15 @@ export function OtherPhotos({
           No other photos from this runner.
         </span>
       ) : (
-        <ul className="m-0 flex list-none flex-wrap gap-3 p-0">
+        <ul className="m-0 grid list-none grid-cols-3 gap-x-3 gap-y-2 p-0 desk:grid-cols-[repeat(6,--spacing(24))]">
           {photos.map((photo) => (
-            <li key={photo.id} className="flex flex-col gap-1">
+            <li key={photo.id} className="flex min-w-0 flex-col gap-1">
               <Thumbnail photo={photo} />
-              <span className="text-quiet select-all">
-                <Mono step="sm">{photo.id}</Mono>
+              <span title={photo.id} className="text-muted">
+                <span aria-hidden="true">
+                  <Mono step="xs">{shortId(photo.id)}</Mono>
+                </span>
+                <span className="sr-only">{photo.id}</span>
               </span>
             </li>
           ))}
@@ -151,12 +157,12 @@ function Thumbnail({ photo }: Readonly<{ photo: OtherPhoto }>): JSX.Element {
       to="/desk/kit/$entryId"
       params={{ entryId: photo.entryId }}
       search={useKitOriginSearch()}
-      className="target self-start"
+      className="block"
     >
       <img
         src={reviewPhotoSrc(photo.photoKey)}
         alt={`${photo.id}: open its kit`}
-        className="h-32 w-auto border border-hairline"
+        className="aspect-square w-full rounded-tight border border-hairline object-cover"
       />
     </Link>
   );

@@ -16,6 +16,7 @@ import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TURNSTILE_REFUSED } from "../../src/lib/contracts/access";
+import { shortId } from "../../src/modules/safety/components/short-id";
 import { RemovalRequests } from "../../src/modules/safety/components/RemovalRequests";
 import {
   ATTESTATION,
@@ -375,20 +376,26 @@ describe("Review · removal requests", () => {
   it("names the subject, then the clock right, who signed, what they said, and opens the kit (round 35 #58e)", async () => {
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[pending({ description: "a photo of me" })]}
         decide={vi.fn<DecideFn>()}
         block={vi.fn<BlockFn>()}
       />,
     );
     const row = part("removal-request");
-    expect(row).toHaveTextContent(
-      /^entry\[via \/takedown\]\[hidden\]Due in 31h/u,
+    // R55·197: the queue row's head, a --panel card, the clock at its right
+    // in bold hi-viz, uppercase in CSS.
+    expect(row).toHaveClass("rounded-card", "bg-panel");
+    const head = part("request-head");
+    expect(head).toHaveTextContent(
+      `entry · ${shortId(ENTRY)} [via /takedown] [hidden]`,
     );
-    // The clock in the header, uppercase in CSS, as a queue row's.
-    const clock = part("due");
-    expect(clock).toHaveTextContent(/^Due in 31h$/u);
-    expect(clock).toHaveClass("uppercase");
-    expect(clock?.firstElementChild).toHaveClass("font-mono");
+    expect(head).toHaveAttribute("title", ENTRY);
+    const clock = screen.getByText("Due in 31h");
+    expect(clock).toHaveClass("font-mono", "uppercase", "text-hiviz-text");
+    expect(clock).not.toHaveClass("bg-hi-viz");
+    expect(part("request-body")).toHaveClass("border-t");
+    expect(part("request-bar")).toHaveClass("border-t");
     expect(row).toHaveTextContent("From Sam Runner · signed · good faith");
     expect(row?.querySelector("q")).toHaveTextContent(/^a photo of me$/u);
     expect(row).toHaveTextContent("sam@example.com");
@@ -408,6 +415,7 @@ describe("Review · removal requests", () => {
     try {
       await renderWithRouter(
         <RemovalRequests
+          asOf={0}
           requests={[pending()]}
           decide={vi.fn<DecideFn>()}
           block={vi.fn<BlockFn>()}
@@ -422,6 +430,7 @@ describe("Review · removal requests", () => {
   it("leaves out the description's line when there is none", async () => {
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
         block={vi.fn<BlockFn>()}
@@ -433,6 +442,7 @@ describe("Review · removal requests", () => {
   it("opens a reported photo's kit, and says when a link is not ours", async () => {
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[
           pending({
             id: "01JREQUEST0000000000000002",
@@ -459,15 +469,34 @@ describe("Review · removal requests", () => {
     const [photo, outside] = document.querySelectorAll<HTMLElement>(
       "[data-part='removal-request']",
     );
-    expect(photo).toHaveTextContent(/^photo\[via \/takedown\]/u);
-    expect(outside).toHaveTextContent(/^link\[via \/takedown\]/u);
+    expect(photo).toHaveTextContent(/^photo · \S+ \[via \/takedown\]/u);
+    expect(outside).toHaveTextContent(/^link \[via \/takedown\]/u);
     expect(outside).toHaveTextContent("somewhere");
+  });
+
+  it("draws an overdue request's clock as the filled tag, and names the poster (R55·197)", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        asOf={5}
+        requests={[pending({ due: "Overdue", posterUsername: "tomasz_k" })]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    expect(screen.getByText("Overdue")).toHaveClass(
+      "bg-hi-viz",
+      "text-accent-ink",
+    );
+    expect(part("request-head")).toHaveTextContent(
+      `entry · ${shortId(ENTRY)} · @tomasz_k [via /takedown]`,
+    );
   });
 
   it("takes it down, says so, and only that request leaves the list", async () => {
     const decide = vi.fn<DecideFn>().mockResolvedValue({ outcome: "decided" });
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[
           pending(),
           pending({
@@ -503,6 +532,7 @@ describe("Review · removal requests", () => {
   it("draws its decisions as one bar, Take it down first, and Block's question in its place (round 44)", async () => {
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
         block={vi.fn<BlockFn>()}
@@ -543,6 +573,7 @@ describe("Review · removal requests", () => {
       .mockRejectedValue(new TypeError("Failed to fetch"));
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[pending()]}
         decide={decide}
         block={vi.fn<BlockFn>()}
@@ -567,6 +598,7 @@ describe("Review · removal requests", () => {
   it("wraps a long requester address rather than cutting it (P3-05)", async () => {
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
         block={vi.fn<BlockFn>()}
@@ -580,6 +612,7 @@ describe("Review · removal requests", () => {
     const decide = vi.fn<DecideFn>().mockResolvedValue({ outcome: "decided" });
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[pending()]}
         decide={decide}
         block={vi.fn<BlockFn>()}
@@ -641,6 +674,7 @@ describe("Review · removal requests", () => {
     const decide = vi.fn<DecideFn>().mockResolvedValue({ outcome: "decided" });
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[pending()]}
         decide={decide}
         block={vi.fn<BlockFn>()}
@@ -700,6 +734,7 @@ describe("Review · removal requests", () => {
     async (holdState, words) => {
       await renderWithRouter(
         <RemovalRequests
+          asOf={0}
           requests={[pending({ holdState })]}
           decide={vi.fn<DecideFn>()}
           block={vi.fn<BlockFn>()}
@@ -712,6 +747,7 @@ describe("Review · removal requests", () => {
   it("says nothing of a hold for a link that hides nothing, nor of others when there are none", async () => {
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[pending({ holdState: undefined })]}
         decide={vi.fn<DecideFn>()}
         block={vi.fn<BlockFn>()}
@@ -724,6 +760,7 @@ describe("Review · removal requests", () => {
   it("says what intimate means on every request (D-161)", async () => {
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
         block={vi.fn<BlockFn>()}
@@ -737,6 +774,7 @@ describe("Review · removal requests", () => {
   it("names the requester's other open requests", async () => {
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[pending({ relatedIds: ["a", "b"] })]}
         decide={vi.fn<DecideFn>()}
         block={vi.fn<BlockFn>()}
@@ -749,6 +787,7 @@ describe("Review · removal requests", () => {
     const block = vi.fn<BlockFn>().mockResolvedValue({ status: "blocked" });
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[
           pending({
             id: "01JABCDEFGHJKMNPQRSTVWXYZ1",
@@ -825,6 +864,7 @@ describe("Review · removal requests", () => {
   it("asks about the one request when the requester has no other", async () => {
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
         block={vi.fn<BlockFn>()}
@@ -843,6 +883,7 @@ describe("Review · removal requests", () => {
   it("opens the question on Cancel, and Cancel or Esc hands focus back (round 37 #59f)", async () => {
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
         block={vi.fn<BlockFn>()}
@@ -875,6 +916,7 @@ describe("Review · removal requests", () => {
   it("keeps the question open for a key that is not Esc", async () => {
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
         block={vi.fn<BlockFn>()}
@@ -896,6 +938,7 @@ describe("Review · removal requests", () => {
     // may not hold focus when it leaves; Cancel still returns there.
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
         block={vi.fn<BlockFn>()}
@@ -917,6 +960,7 @@ describe("Review · removal requests", () => {
   it("hands focus back to Decline on Cancel even when the click did not take it", async () => {
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
         block={vi.fn<BlockFn>()}
@@ -939,6 +983,7 @@ describe("Review · removal requests", () => {
     const never = Promise.withResolvers<never>().promise;
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ1" })]}
         decide={vi.fn<DecideFn>().mockReturnValue(never)}
         block={vi.fn<BlockFn>().mockReturnValue(never)}
@@ -962,6 +1007,7 @@ describe("Review · removal requests", () => {
   it("takes focus only from script: a row is not a tab stop", async () => {
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
         block={vi.fn<BlockFn>()}
@@ -974,6 +1020,7 @@ describe("Review · removal requests", () => {
     const block = vi.fn<BlockFn>().mockResolvedValue({ status: "blocked" });
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ1" })]}
         decide={vi.fn<DecideFn>()}
         block={block}
@@ -996,6 +1043,7 @@ describe("Review · removal requests", () => {
     const block = vi.fn<BlockFn>().mockResolvedValue({ status: "blocked" });
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[
           pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ1" }),
           pending({
@@ -1036,6 +1084,7 @@ describe("Review · removal requests", () => {
     const decide = vi.fn<DecideFn>().mockResolvedValue({ outcome: "decided" });
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[
           pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ1" }),
           pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ2", signature: "Next" }),
@@ -1075,6 +1124,7 @@ describe("Review · removal requests", () => {
   it("names the poster in the line for a link that is not ours (round 37 #59g)", async () => {
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[
           pending({
             subject: undefined,
@@ -1096,6 +1146,7 @@ describe("Review · removal requests", () => {
   it("renders nothing when nothing is waiting", async () => {
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[]}
         decide={vi.fn<DecideFn>()}
         block={vi.fn<BlockFn>()}
@@ -1111,6 +1162,7 @@ describe("takedown pages: a lapsed session (Au7, D-155)", () => {
     carriedSince();
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
         block={vi.fn<BlockFn>()}
@@ -1127,6 +1179,7 @@ describe("takedown pages: a lapsed session (Au7, D-155)", () => {
   it("carries Block's question as the page", async () => {
     await renderWithRouter(
       <RemovalRequests
+        asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
         block={vi.fn<BlockFn>()}

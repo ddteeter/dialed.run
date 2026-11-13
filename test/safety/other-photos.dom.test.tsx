@@ -1,6 +1,7 @@
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import { shortId } from "../../src/modules/safety/components/short-id";
 import { OtherPhotos } from "../../src/modules/safety/components/OtherPhotos";
 import { RemovalRequests } from "../../src/modules/safety/components/RemovalRequests";
 import { ReviewQueue } from "../../src/modules/safety/components/ReviewQueue";
@@ -61,7 +62,18 @@ describe("OtherPhotos", () => {
     expect(
       screen.getByRole("link", { name: `${PHOTO_2}: open its kit` }),
     ).toBeInTheDocument();
-    expect(links[0]).toHaveClass("target");
+    // R55·198: square tiles, three across, six across at 96 from desk.
+    expect(links[0]).toHaveClass("block");
+    expect(within(links[0] ?? document.body).getByRole("img")).toHaveClass(
+      "aspect-square",
+      "w-full",
+      "object-cover",
+    );
+    expect(links[0]?.closest("ul")).toHaveClass(
+      "grid",
+      "grid-cols-3",
+      "desk:grid-cols-[repeat(6,--spacing(24))]",
+    );
     expect(
       within(block ?? document.body)
         .getAllByRole("img")
@@ -70,10 +82,14 @@ describe("OtherPhotos", () => {
       "/desk/review-photo/entries/u/k/1",
       "/desk/review-photo/entries/u/k/2",
     ]);
-    // MONO.sm, and one click selects it whole (round 38 #63a).
-    const id = screen.getByText(PHOTO_1);
-    expect(id).toHaveClass("font-mono", "text-mono-sm");
-    expect(id.parentElement).toHaveClass("select-all");
+    // R55·198: each id drawn at its first and last four in MONO.xs, the
+    // whole id its tooltip and what is said.
+    const drawn = screen.getByText(shortId(PHOTO_1));
+    expect(drawn).toHaveClass("font-mono", "text-mono-xs");
+    expect(drawn.parentElement).toHaveAttribute("aria-hidden", "true");
+    const said = screen.getByText(PHOTO_1);
+    expect(said).toHaveClass("sr-only");
+    expect(said.parentElement).toHaveAttribute("title", PHOTO_1);
     // All of them shown: nothing more to open.
     expect(part("more-photos")).toBeNull();
   });
@@ -176,7 +192,12 @@ describe("on Review's rows", () => {
       otherPhotos: others(PHOTOS.slice(0, 1)),
     };
     await renderWithRouter(
-      <RemovalRequests requests={[request]} decide={vi.fn()} block={vi.fn()} />,
+      <RemovalRequests
+        asOf={0}
+        requests={[request]}
+        decide={vi.fn()}
+        block={vi.fn()}
+      />,
     );
     expect(part("other-photos")).toHaveTextContent(/^Their other photos · 1/u);
     expect(

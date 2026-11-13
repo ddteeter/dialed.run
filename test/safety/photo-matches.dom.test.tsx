@@ -286,7 +286,12 @@ describe("on Review's rows", () => {
       photoMatches: found,
     };
     await renderWithRouter(
-      <RemovalRequests requests={[request]} decide={vi.fn()} block={vi.fn()} />,
+      <RemovalRequests
+        asOf={0}
+        requests={[request]}
+        decide={vi.fn()}
+        block={vi.fn()}
+      />,
     );
     expect(part("photo-matches")).toHaveTextContent(
       /^Matching photos · any runner · 1/u,
@@ -754,6 +759,7 @@ describe("a garment match's takedown", () => {
     await renderWithRouter(
       <>
         <RemovalRequests
+          asOf={0}
           requests={[request]}
           decide={vi.fn()}
           block={vi.fn()}
