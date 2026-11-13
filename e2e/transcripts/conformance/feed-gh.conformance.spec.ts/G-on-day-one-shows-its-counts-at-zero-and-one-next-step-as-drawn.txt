@@ -1,12 +1,10 @@
 document
-banner
-link, Notifications
-end of banner
 main
 heading, @feed_#, level 1
 @feed_#
 end of heading, @feed_#, level 1
 link, Settings
+link, Notifications
 paragraph
 #
 Runs
