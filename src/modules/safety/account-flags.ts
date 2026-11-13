@@ -88,14 +88,16 @@ export async function flaggedAtOf(
 }
 
 /**
- * How many accounts are flagged now, for Desk Today. A scan of
- * `moderation_actions`, read once a day by the digest and when an
- * operator opens the Desk.
+ * How many accounts are flagged now, and since when, for Desk Today. A
+ * scan of `moderation_actions`, read once a day by the digest and when an
+ * operator opens the Desk. `oldest` is the earliest flagging removal
+ * still undecided (Today's "OLDEST · 2D", R55·196); NULL when none is.
  */
 export function flaggedCountOf(db: Db) {
   return db
     .select({
       rows: sql<number>`count(DISTINCT ${moderationActions.subjectOwnerId})`,
+      oldest: sql<number | null>`min(${moderationActions.createdAt})`,
     })
     .from(moderationActions)
     .where(unreviewedIntimateRemoval());

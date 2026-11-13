@@ -48,14 +48,17 @@ function desk(gaveUp: number, oldestGaveUpAt?: number): DeskToday {
       bansThisWeek: 0,
       bansAllTime: 0,
       flaggedAccounts: 0,
+      oldestFlaggedAt: undefined,
       gaveUp,
       oldestGaveUpAt,
       digestUnconfirmedAt: undefined,
+      lastDigestAt: undefined,
       outboxBehind: 0,
       oldestBehindAt: undefined,
     },
     skipped: [],
     breakers: [],
+    operatorHandle: undefined,
   };
 }
 

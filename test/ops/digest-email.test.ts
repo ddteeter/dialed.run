@@ -33,10 +33,12 @@ const COUNTS: TodayCounts = {
   bansThisWeek: 0,
   bansAllTime: 3,
   flaggedAccounts: 0,
+  oldestFlaggedAt: undefined,
   corrections: 0,
   gaveUp: 2,
   oldestGaveUpAt: 900_000,
   digestUnconfirmedAt: undefined,
+  lastDigestAt: undefined,
   outboxBehind: 12,
   oldestBehindAt: 800_000,
 };
@@ -306,7 +308,7 @@ describe("only to a confirmed address (OPS-11)", () => {
     ]);
     expect(settled).toHaveLength(1);
     expect(await unconfirmedMark()).toStrictEqual([]);
-    const today = await deskToday();
+    const today = await deskToday("op-viewer");
     expect(today.counts.digestUnconfirmedAt).toBeUndefined();
   });
 
@@ -323,7 +325,7 @@ describe("only to a confirmed address (OPS-11)", () => {
     expect(settles).toBe(0);
     const [mark] = await unconfirmedMark();
     expect(mark?.lastRunAt).toBeGreaterThanOrEqual(before);
-    const today = await deskToday();
+    const today = await deskToday("op-viewer");
     expect(today.counts.digestUnconfirmedAt).toBe(mark?.lastRunAt);
   });
 

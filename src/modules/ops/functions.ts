@@ -28,8 +28,7 @@ export const deskAccessQuery = createServerFn({ method: "GET" }).handler(
  */
 export const deskTodayQuery = createServerFn({ method: "GET" }).handler(
   async () => {
-    requireAdmin(await verifiedUserId());
-    return deskToday();
+    return deskToday(requireAdmin(await verifiedUserId()));
   },
 );
 
