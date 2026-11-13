@@ -116,7 +116,13 @@ function SignOutRow({
   const linesId = useId();
   return (
     <div className="flex items-center justify-between gap-3 border-b border-hairline py-3">
-      <span id={linesId} className="flex min-w-0 flex-col gap-1">
+      {/* Heard once, as the button's description, as Delete account's
+          row is (round 52 #160): read as text too, they were said twice. */}
+      <span
+        id={linesId}
+        aria-hidden="true"
+        className="flex min-w-0 flex-col gap-1"
+      >
         <span className="text-body font-semibold">{lines.title}</span>
         <span className="text-small text-muted">{lines.subtitle}</span>
       </span>

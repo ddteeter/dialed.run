@@ -136,6 +136,11 @@ describe("SignOutButton", () => {
     expect(row).toHaveClass("justify-between", "border-b");
     expect(row?.querySelector("svg")).toBeNull();
     expect(screen.getByText("On this phone")).toHaveClass("text-muted");
+    // Heard once, through the button's description, not again as text.
+    expect(screen.getByText("On this phone").parentElement).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
     expect(screen.getByText("Signed in as @maya_runs")).toHaveClass(
       "font-semibold",
     );

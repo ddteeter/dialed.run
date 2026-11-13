@@ -88,7 +88,10 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
     "Minneapolis, MN, United States",
     { ignoreCase: true },
   );
-  await expect(page.getByRole("button", { name: "Change city" })).toBeVisible();
+  // R55·228: the chip's × is the one way out; no Change city.
+  await expect(
+    page.getByRole("button", { name: "Remove Minneapolis, MN, United States" }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Start running" }).click();
 
   // O3. Every row is on offer and nothing arrives ticked — the counter
