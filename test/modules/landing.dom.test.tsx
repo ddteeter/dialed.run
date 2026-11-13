@@ -60,6 +60,9 @@ describe("Landing, signed out", () => {
       level: 1,
       name: "Every run has an outfit. Log it.",
     });
+    // A space between the sentences, so a reader that ignores the
+    // blocks still hears two.
+    expect(heading.textContent).toBe("Every run has an outfit. Log it.");
     const [first, second] = heading.querySelectorAll("span");
     expect(first).toHaveTextContent(/^Every run has an outfit\.$/u);
     expect(first).toHaveClass("block", "text-balance");

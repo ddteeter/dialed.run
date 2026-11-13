@@ -457,7 +457,8 @@ describe("googleConsentUrl", () => {
         message,
         retry: false,
       });
-      expect(thrown).toMatchObject({ link: undefined });
+      // R55·177: no refusal names a page; the page under the band does.
+      expect(thrown).not.toHaveProperty("link");
     },
   );
 

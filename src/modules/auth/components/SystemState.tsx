@@ -175,11 +175,7 @@ export function NotFoundState({
   subject?: NotFoundSubject | undefined;
 }>): JSX.Element {
   return (
-    <SystemFrame
-      signedIn={signedIn}
-      loadBell={loadBell}
-      width={subject?.width}
-    >
+    <SystemFrame signedIn={signedIn} loadBell={loadBell} width={subject?.width}>
       <section
         data-part="system-state"
         data-state="not-found"
@@ -483,7 +479,8 @@ function LoaderFailed({
   // way to the closet fails at the root's boundary, and it is still the
   // closet's row that is kept). Its route's title, if it declares one.
   const title = useRouterState({
-    select: (state) => state.matches.at(-1)?.staticData.title,
+    select: (state) =>
+      state.matches.map((match) => match.staticData.title).at(-1),
   });
   if (isRootCrash) {
     return (
