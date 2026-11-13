@@ -1,3 +1,9 @@
+import {
+  RouterProvider,
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+} from "@tanstack/react-router";
 import { render, screen, within } from "@testing-library/react";
 import { drawnText, saidText } from "./spoken-text";
 import { describe, expect, it } from "vitest";
@@ -65,7 +71,7 @@ function card(
   return render(
     <AlreadyInCloset
       category="top"
-      pieces={pieces}
+      list={{ pieces: [...pieces], more: 0 }}
       typed={typed}
       tempUnit={tempUnit}
     />,
@@ -114,7 +120,7 @@ describe("AlreadyInCloset", () => {
         <AlreadyInCloset
           tempUnit="c"
           category={category as keyof typeof plurals}
-          pieces={[]}
+          list={undefined}
           typed={{ brand: "", name: "" }}
         />,
       );
@@ -152,7 +158,10 @@ describe("AlreadyInCloset", () => {
       "sr-only",
     );
     expect(second).toHaveTextContent("Janji Rover Half-zip");
-    expect(second).toHaveTextContent(/^Janji Rover Half-zip12 runs · Retired/);
+    // Round 55 · 193: RETIRED once, as the tag; the line is any piece's.
+    expect(second).toHaveTextContent(
+      /^Janji Rover Half-zip12 runs · 2\/4 dialed2 of 4 runs dialedRetired Mar 2025$/,
+    );
     expect(third).toHaveTextContent("Uniqlo quarter-zip");
     expect(third).toHaveTextContent("3 runs · No verdict yet");
   });
@@ -183,7 +192,7 @@ describe("AlreadyInCloset", () => {
     card([harrier, rover], { brand: "janji", name: "  rover half-zip " });
 
     const [first, second] = rows();
-    const flag = screen.getByText("Same name · Retired");
+    const flag = screen.getByText("Same name · Retired Mar 2025");
     expect(second?.contains(flag)).toBe(true);
     // Ink, not the cold hue (round 28 #13): a match is not a verdict.
     expect(flag).toHaveClass("text-ink", "text-mono-xs");
@@ -254,11 +263,45 @@ describe("AlreadyInCloset", () => {
     expect(row?.querySelector(".text-mono-xs")).toBeNull();
   });
 
-  it("dates a retirement by month and year, in the metadata row's mono (round 28 #13)", () => {
+  it("dates a retirement by month and year, once, as the tag (round 28 #13, Round 55 · 193)", () => {
     card([rover]);
 
-    const line = screen.getByText("12 runs · Retired Mar 2025");
-    expect(line).toHaveClass("text-mono-sm", "text-label");
+    const tag = screen.getByText("Retired Mar 2025");
+    expect(tag).toHaveClass("text-mono-xs", "text-ink");
+    expect(screen.getByText("2/4 dialed").closest(".text-mono-sm")).toHaveClass(
+      "text-label",
+    );
+    expect(screen.getAllByText(/Retired/)).toHaveLength(1);
+  });
+
+  it("closes on + N more, to the closet on the category's group (193)", async () => {
+    const rootRoute = createRootRoute({
+      component: () => (
+        <AlreadyInCloset
+          tempUnit="c"
+          category="top"
+          type="halfZip"
+          list={{ pieces: [harrier], more: 5 }}
+          typed={NOTHING_TYPED}
+        />
+      ),
+    });
+    const router = createRouter({
+      routeTree: rootRoute,
+      history: createMemoryHistory({ initialEntries: ["/closet/new"] }),
+    });
+    await router.load();
+    render(<RouterProvider router={router} />);
+
+    const more = await screen.findByRole("link", { name: "+ 5 more half-zips" });
+    expect(more).toHaveAttribute("href", "/closet?group=tops");
+    expect(more).toHaveClass("target", "inline-flex", "items-center");
+    expect(more.previousElementSibling?.tagName).toBe("UL");
+  });
+
+  it("offers no more when the card shows every piece", () => {
+    card([harrier]);
+    expect(screen.queryByRole("link")).toBeNull();
   });
 
   it("is titled for the type once one is picked, and says so in its plural", () => {
@@ -267,7 +310,7 @@ describe("AlreadyInCloset", () => {
         tempUnit="c"
         category="top"
         type="halfZip"
-        pieces={[]}
+        list={undefined}
         typed={NOTHING_TYPED}
       />,
     );

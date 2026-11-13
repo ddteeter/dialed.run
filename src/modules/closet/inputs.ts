@@ -41,6 +41,14 @@ export const closetFiltersInput = z.object({
 export const itemIdInput = z.object({ itemId: ulidSchema });
 
 /**
+ * F's rail card, read for the add form (nothing) or for one piece's edit
+ * form, which leaves that piece out of its own card (Round 54 · 168.2).
+ */
+export const nearbyInput = z
+  .object({ exceptItemId: ulidSchema.optional() })
+  .optional();
+
+/**
  * Screen C's search.
  *
  * - `retired=true` opens with retired pieces shown (set after a retire, so

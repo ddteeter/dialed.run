@@ -101,7 +101,7 @@ describe("closetNearby", () => {
     let shown = 0;
     const one = await queryCounts(async () => {
       const result = await closetNearby(db(), small);
-      shown = result.byCategory.top?.length ?? 0;
+      shown = result.byCategory.top?.pieces.length ?? 0;
     });
     expect(shown).toBe(1);
 
@@ -109,7 +109,7 @@ describe("closetNearby", () => {
     const large = await closetOf(25);
     const twentyFive = await queryCounts(async () => {
       const result = await closetNearby(db(), large);
-      shown = result.byCategory.top?.length ?? 0;
+      shown = result.byCategory.top?.pieces.length ?? 0;
     });
     // A category lists its newest five, however many it has.
     expect(shown).toBe(NEARBY_LIMIT);

@@ -1,6 +1,11 @@
+import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 
-import type { garmentCategories, TempUnit } from "../../../lib/contracts";
+import {
+  uiGroupFor,
+  type garmentCategories,
+  type TempUnit,
+} from "../../../lib/contracts";
 import type { GarmentType } from "../../../lib/contracts/garment-fields";
 import { normalizeIdentity } from "../../../lib/normalize";
 import { worksAtForms } from "../../../lib/contracts/measures";
@@ -9,6 +14,7 @@ import { garmentLabel } from "../../../lib/garment-label";
 import { runsLabel } from "../../../lib/runs-label";
 import { photoUrlFor } from "../photo-url";
 import { retiredMonthLabel } from "../retired-label";
+import type { NearbyList } from "../nearby";
 import type { ClosetItemView } from "../service";
 import { garmentTypePlurals, kindLabel } from "../type-labels";
 import { useRunnerZone } from "./use-runner-zone";
@@ -32,9 +38,9 @@ const CATEGORY_PLURALS = {
 
 /**
  * The mono line under a row's name (round 26 #10): how often it has been
- * worn, then its standing — retired, not judged yet, or how often it was
- * dialed and the range it works in. A retirement is dated by month and
- * year here (round 28 #13, "RETIRED MAR 2026"), not the closet's day.
+ * worn, then its standing — not judged yet, or how often it was dialed and
+ * the range it works in. A retired piece says so once, as the tag at the
+ * right (Round 55 · 193), so its line reads like every other row's.
  *
  * The line draws "8/9 dialed 3–8°", which a screen reader says as "eight
  * slash nine dialed three to eight degrees" with nothing to say what the
@@ -44,18 +50,13 @@ const CATEGORY_PLURALS = {
  */
 function RecordLine({
   view,
-  zone,
   tempUnit,
 }: Readonly<{
   view: ClosetItemView;
-  zone: string | undefined;
   tempUnit: TempUnit;
 }>): JSX.Element {
   const summary = view.performance?.summary;
   const worn = runsLabel(summary?.runCount ?? 0);
-  if (view.item.retired) {
-    return <>{`${worn} · ${retiredMonthLabel(view.item.retiredAt, zone)}`}</>;
-  }
   // `summary === undefined` folded into this guard (rather than checked
   // via `summary?.verdictCount ?? 0 === 0` as before) narrows `summary` to
   // defined for the rest of the function, so `summary.dialedCount` below
@@ -109,10 +110,15 @@ function isSameName(
 function flagsOf(
   view: ClosetItemView,
   typed: { brand: string; name: string },
+  zone: string | undefined,
 ): string {
   return [
     isSameName(view, typed) ? "Same name" : undefined,
-    view.item.retired ? "Retired" : undefined,
+    // Dated by month and year here (round 28 #13, "RETIRED MAR 2026"),
+    // not the closet's day.
+    view.item.retired
+      ? retiredMonthLabel(view.item.retiredAt, zone)
+      : undefined,
   ]
     .filter((flag) => flag !== undefined)
     .join(" · ");
@@ -130,7 +136,7 @@ function Row({
   tempUnit: TempUnit;
 }>): JSX.Element {
   const photo = photoUrlFor(view.item);
-  const flags = flagsOf(view, typed);
+  const flags = flagsOf(view, typed, zone);
   return (
     <li className="flex items-center gap-3 border-t border-hairline pt-3">
       {photo === undefined ? (
@@ -160,7 +166,7 @@ function Row({
         </span>
         {/* MONO.sm, the metadata row's step (round 28 #13). */}
         <Mono step="sm" className="text-label">
-          <RecordLine view={view} zone={zone} tempUnit={tempUnit} />
+          <RecordLine view={view} tempUnit={tempUnit} />
         </Mono>
       </span>
       {flags === "" ? undefined : (
@@ -181,14 +187,40 @@ interface AlreadyInClosetProps {
   */
   type?: GarmentType | undefined;
   /**
-  This category's pieces, or this type's, newest first, up to five.
+  This category's pieces, or this type's: the first five in Round 55 ·
+  193's order, and how many more there are.
   */
-  pieces: readonly ClosetItemView[];
+  list: NearbyList | undefined;
   /**
   What the form holds now, for `SAME NAME`.
   */
   typed: { brand: string; name: string };
   tempUnit: TempUnit;
+}
+
+/**
+ * Round 55 · 193: the card shows five and closes on "+ 5 more tops", which
+ * opens the closet filtered to them. **A guess, for Design:** the ruling
+ * says "filtered to that type", and the closet has no type filter, so it
+ * opens on the GROUP the category falls in, a filter the rail can show
+ * and clear.
+ */
+function MoreLink({
+  more,
+  plural,
+  category,
+}: Readonly<{ more: number; plural: string; category: Category }>) {
+  if (more === 0) return;
+  return (
+    <Link
+      to="/closet"
+      search={{ group: uiGroupFor(category, undefined) }}
+      data-part="more"
+      className="target inline-flex items-center self-start border-t border-hairline text-body font-semibold text-ink"
+    >
+      {`+ ${String(more)} more ${plural}`}
+    </Link>
+  );
 }
 
 /**
@@ -205,11 +237,14 @@ interface AlreadyInClosetProps {
 export function AlreadyInCloset({
   category,
   type,
-  pieces,
+  list,
   typed,
   tempUnit,
 }: Readonly<AlreadyInClosetProps>): JSX.Element {
   const zone = useRunnerZone();
+  const pieces = list?.pieces ?? [];
+  const plural =
+    type === undefined ? CATEGORY_PLURALS[category] : garmentTypePlurals[type];
   return (
     <RailCard
       title={`Already in your closet · ${kindLabel(category, type)}`}
@@ -218,9 +253,10 @@ export function AlreadyInCloset({
       {pieces.length === 0 ? (
         // Round 40 C4: the heading stays; this line replaces the rows.
         <p className="m-0 text-body text-quiet">
-          {`No ${type === undefined ? CATEGORY_PLURALS[category] : garmentTypePlurals[type]} yet.`}
+          {`No ${plural} yet.`}
         </p>
       ) : (
+        <>
         <ul className="m-0 flex list-none flex-col gap-3 p-0">
           {pieces.map((view) => (
             <Row
@@ -232,6 +268,8 @@ export function AlreadyInCloset({
             />
           ))}
         </ul>
+        <MoreLink more={list?.more ?? 0} plural={plural} category={category} />
+        </>
       )}
     </RailCard>
   );

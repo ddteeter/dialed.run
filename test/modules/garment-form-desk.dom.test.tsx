@@ -92,12 +92,12 @@ describe("GarmentForm: its frame", () => {
     ).toBeTruthy();
   });
 
-  it("is the panel it always was with no closet to show beside it", () => {
+  it("is the centred column with no closet to show beside it (168.1)", () => {
     renderForm();
 
     expect(rail()).toBeNull();
-    expect(primary()).toHaveClass("mx-auto", "max-w-panel");
-    expect(primary()).not.toHaveClass("wide:max-w-column");
+    expect(primary()).toHaveClass("mx-auto", "max-w-column", "desk:mx-0");
+    expect(primary().parentElement?.dataset.part).not.toBe("page");
   });
 });
 
@@ -105,7 +105,7 @@ describe("GarmentForm at the desk (round 26 #10)", () => {
   it("splits, with the category's pieces in the one rail card", () => {
     renderForm({
       rail: {
-        nearby: { byCategory: { top: [rover], bottom: [shorts] }, byType: {} },
+        nearby: { byCategory: { top: { pieces: [rover], more: 0 }, bottom: { pieces: [shorts], more: 0 } }, byType: {} },
         reread: neverReread,
       },
     });
@@ -119,15 +119,28 @@ describe("GarmentForm at the desk (round 26 #10)", () => {
     ).toBeInTheDocument();
     expect(within(card).getByText("Janji Rover Half-zip")).toBeInTheDocument();
     expect(within(card).queryByText("Split shorts")).toBeNull();
-    // DS1's primary column: 620 at most, set to the left beside the rail.
-    expect(primary()).toHaveClass("wide:mx-0", "wide:max-w-column");
+    // Round 54 · 168.2: the 620 form at the left of a centred 1180 page,
+    // the rail in the rest of it at ≥1040, and under the form below that.
+    expect(primary()).toHaveClass("mx-auto", "max-w-column", "desk:mx-0");
+    const page = primary().parentElement;
+    expect(page).toHaveAttribute("data-part", "page");
+    expect(page).toHaveClass(
+      "mx-auto",
+      "max-w-page",
+      "flex-col",
+      "desk:grid",
+      "desk:grid-cols-[minmax(0,var(--container-column))_minmax(0,1fr)]",
+    );
+    expect(primary().nextElementSibling).toBe(card);
+    expect(card).toHaveClass("mx-auto", "max-w-column", "desk:mx-0");
+    expect(card).not.toHaveClass("hidden");
   });
 
   it("follows the category as it is picked", async () => {
     const user = userEvent.setup();
     renderForm({
       rail: {
-        nearby: { byCategory: { top: [rover], bottom: [shorts] }, byType: {} },
+        nearby: { byCategory: { top: { pieces: [rover], more: 0 }, bottom: { pieces: [shorts], more: 0 } }, byType: {} },
         reread: neverReread,
       },
     });
@@ -151,7 +164,7 @@ describe("GarmentForm at the desk (round 26 #10)", () => {
     const user = userEvent.setup();
     renderForm({
       rail: {
-        nearby: { byCategory: { top: [rover] }, byType: {} },
+        nearby: { byCategory: { top: { pieces: [rover], more: 0 } }, byType: {} },
         reread: neverReread,
       },
     });
@@ -210,8 +223,8 @@ describe("GarmentForm's TYPE (round 26 #10, D-75, R-112)", () => {
     renderForm({
       rail: {
         nearby: {
-          byCategory: { top: [rover] },
-          byType: { halfZip: [halfZip] },
+          byCategory: { top: { pieces: [rover], more: 0 } },
+          byType: { halfZip: { pieces: [halfZip], more: 0 } },
         },
         reread: neverReread,
       },
@@ -240,7 +253,7 @@ describe("GarmentForm's TYPE (round 26 #10, D-75, R-112)", () => {
       save,
       initial: { name: "Split" },
       rail: {
-        nearby: { byCategory: { top: [rover] }, byType: {} },
+        nearby: { byCategory: { top: { pieces: [rover], more: 0 } }, byType: {} },
         reread: neverReread,
       },
     });
@@ -320,8 +333,8 @@ describe("GarmentForm, saved with its photo refused: the rail (R-114)", () => {
     });
     const rereadNearby = vi.fn(() =>
       Promise.resolve({
-        byCategory: { top: [saved] },
-        byType: { halfZip: [saved] },
+        byCategory: { top: { pieces: [saved], more: 0 } },
+        byType: { halfZip: { pieces: [saved], more: 0 } },
       }),
     );
 
@@ -339,7 +352,7 @@ describe("GarmentForm, saved with its photo refused: the rail (R-114)", () => {
   it("keeps the rows it had when the re-read fails", async () => {
     await refuseThePhoto({
       rail: {
-        nearby: { byCategory: {}, byType: { halfZip: [halfZip] } },
+        nearby: { byCategory: {}, byType: { halfZip: { pieces: [halfZip], more: 0 } } },
         reread: () => Promise.reject(new TypeError("Failed to fetch")),
       },
     });

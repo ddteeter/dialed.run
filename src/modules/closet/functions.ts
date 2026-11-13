@@ -10,6 +10,7 @@ import { requireUserId } from "../auth";
 import {
   closetFiltersInput,
   itemIdInput,
+  nearbyInput,
   newItemInput,
   requireFormData,
   updateItemInput,
@@ -40,14 +41,14 @@ export const listItemsFn = createServerFn({ method: "GET" })
   });
 
 /**
-F at the desk's rail card (round 26 #10): each category's newest five.
+F's rail card (round 26 #10, Round 55 · 193), less the piece being edited.
 */
-export const closetNearbyFn = createServerFn({ method: "GET" }).handler(
-  async () => {
+export const closetNearbyFn = createServerFn({ method: "GET" })
+  .validator((data: unknown) => nearbyInput.parse(data))
+  .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return closetNearby(db(), userId);
-  },
-);
+    return closetNearby(db(), userId, data?.exceptItemId);
+  });
 
 export const getItemFn = createServerFn({ method: "GET" })
   .validator((data: unknown) => itemIdInput.parse(data))

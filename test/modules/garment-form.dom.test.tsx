@@ -128,6 +128,23 @@ describe("GarmentForm: what it is leads", () => {
     ).toStrictEqual(["category", "type", "brand", "name"]);
   });
 
+  it("titles the page in sentence case at TYPE.title (Round 55 · 190)", () => {
+    renderForm();
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading).toHaveTextContent(/^Add a garment$/);
+    expect(heading).toHaveClass("font-display", "text-title");
+    expect(heading).not.toHaveClass("uppercase");
+  });
+
+  it("rules What is it? as the next group is ruled (Round 55 · 190)", () => {
+    renderForm();
+    const legend = screen.getByText("What is it?");
+    expect(legend.tagName).toBe("LEGEND");
+    expect(legend).toHaveClass("mb-3", "font-display", "text-heading");
+    const group = legend.closest("[data-part='what-is-it']");
+    expect(group).toHaveClass("border-t", "border-hairline", "pt-6");
+  });
+
   it("saves with a category and a name alone — never blocked on a brand", async () => {
     // D-27: a generic entry is one submit away.
     const user = userEvent.setup();
