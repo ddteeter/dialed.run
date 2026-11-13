@@ -63,6 +63,7 @@ function band(
   return {
     bandFloorC,
     label: `${String(bandFloorC)}–${String(bandFloorC + 5)}°`,
+    said: `${String(bandFloorC)} to ${String(bandFloorC + 5)} degrees`,
     cold: 0,
     dialed: 0,
     warm: 0,

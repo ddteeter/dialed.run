@@ -16,6 +16,7 @@ function band(counts: Partial<CoverageBand>): CoverageBand {
   return {
     bandFloorC: 0,
     label: "0–5°",
+    said: "32 to 41 degrees",
     cold: 0,
     dialed: 0,
     warm: 0,
