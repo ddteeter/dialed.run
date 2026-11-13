@@ -98,6 +98,11 @@ describe("StravaConnect: not yet connected", () => {
   it("offers Strava's own button, and says where approval happens", async () => {
     await screenFor(false);
 
+    // R39's T1 (Round 55 · 238): one line, then the consent.
+    const line = screen.getByText("So we can remind you to add your kit.");
+    expect(line.nextElementSibling).toContainElement(
+      document.querySelector("[data-slot='strava-consent']"),
+    );
     // The Strava consent (API Policy §2.1) is read before the button.
     expectConsentBeforeButton();
     const button = screen.getByRole("link", { name: "Connect with Strava" });
@@ -173,6 +178,23 @@ describe("StravaConnect: connected", () => {
     expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual([
       "Disconnect",
     ]);
+    // Round 55 · 238: a text link that opens its confirm, not a box.
+    const link = screen.getByRole("button", { name: "Disconnect" });
+    expect(link).toHaveClass(
+      "target",
+      "inline-flex",
+      "items-center",
+      "self-start",
+      "border-none",
+      "bg-transparent",
+      "p-0",
+      "text-body",
+      "font-semibold",
+      "text-ink",
+      "underline",
+      "underline-offset-4",
+    );
+    expect(link).not.toHaveClass("border-ink");
   });
 
   it("confirms first, as T3b draws it: what is kept and what stops", async () => {

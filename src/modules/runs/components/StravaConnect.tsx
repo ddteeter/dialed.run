@@ -40,6 +40,13 @@ const SECONDARY =
   "target rounded-field border border-ink bg-transparent px-4 text-body font-semibold text-ink";
 
 /**
+ * Disconnect, before it is confirmed: a text link that opens its confirm
+ * (Round 55 · 238), not a second button competing with the status line.
+ */
+const DISCONNECT_LINK =
+  "target inline-flex items-center self-start border-none bg-transparent p-0 text-body font-semibold text-ink underline underline-offset-4";
+
+/**
  * The time a run last landed on Strava, in the runner's own zone — which
  * only the device knows, so it is drawn after mount and never in the
  * server's first paint (see `lib/dates.ts`).
@@ -97,6 +104,9 @@ export function StravaConnect({
   if (!connected) {
     return (
       <div className="flex flex-col gap-3">
+        {/* R39's T1: one line under the title, then the consent (Round
+            55 · 238). */}
+        <p className="m-0 text-body">So we can remind you to add your kit.</p>
         <StravaConsent />
         <p className="m-0 text-small text-muted">
           You&rsquo;ll approve this on Strava&rsquo;s own screen.
@@ -170,7 +180,7 @@ export function StravaConnect({
           onClick={() => {
             setIsConfirming(true);
           }}
-          className={SECONDARY}
+          className={DISCONNECT_LINK}
         >
           Disconnect
         </button>
