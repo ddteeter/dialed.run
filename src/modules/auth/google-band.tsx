@@ -1,26 +1,7 @@
-import { Link } from "@tanstack/react-router";
 import type { JSX, RefObject } from "react";
 
 import { FailureBand } from "../../ui";
-import type { AuthBand, RefusalLink } from "./auth-copy";
-
-/**
- * Where each refusal points, in the words round 28 #9 draws: the page
- * that fixes it.
- */
-function RefusalLinkTo({ link }: Readonly<{ link: RefusalLink }>): JSX.Element {
-  const className =
-    "target inline-flex items-center font-bold text-ink underline underline-offset-4";
-  return link === "request-access" ? (
-    <Link to="/account/request-access" className={className}>
-      Request access
-    </Link>
-  ) : (
-    <Link to="/auth/signup" className={className}>
-      Create an account
-    </Link>
-  );
-}
+import type { AuthBand } from "./auth-copy";
 
 /**
  * Every band Google's button owns, directly under it (round 29 #13; Au6 as
@@ -34,7 +15,8 @@ function RefusalLinkTo({ link }: Readonly<{ link: RefusalLink }>): JSX.Element {
  *   attempt, and is the only filled thing in the band.
  * - **A refusal** (`retry: false`, round 28 #9): no Try again, because
  *   pressing again cannot fix it. The fix is the code field above, or the
- *   page its link names: Request access, or Create an account.
+ *   page's own line under the band (Round 55 · 177: a band never repeats a
+ *   line the page already shows, so it names no page itself).
  *
  * **Not a second `role="status"`.** The board marks the band as one, but
  * the Accessibility Contract (rule 08) allows one status region per
@@ -60,8 +42,6 @@ export function GoogleBand({
       message={band.message}
       onRetry={isRefusal ? undefined : onRetry}
       retryRef={retryRef}
-    >
-      {band.link === undefined ? undefined : <RefusalLinkTo link={band.link} />}
-    </FailureBand>
+    />
   );
 }

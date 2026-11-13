@@ -14,6 +14,7 @@ import {
   BirthDateField,
   CredentialFields,
   InviteCodeField,
+  InviteOnlyLine,
   RequestAccessLink,
   SIGN_UP_LABELS,
   SignUpClosedHere,
@@ -127,6 +128,7 @@ function SignupForm({ crossLink }: Readonly<{ crossLink: ReactNode }>) {
           onToken={turnstile.onToken}
         />
       }
+      intro={<InviteOnlyLine />}
       requestLink={<RequestAccessLink />}
       crossLink={crossLink}
       onSubmit={() => {

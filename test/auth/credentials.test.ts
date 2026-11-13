@@ -494,7 +494,6 @@ describe("googleConsentUrl", () => {
       kicker: "Not created",
       message: INVITE_COPY.invalid,
       retry: false,
-      link: "request-access",
     });
   });
 
