@@ -35,7 +35,7 @@ import { runsLabel } from "../../../lib/runs-label";
 import { retiredLabel } from "../retired-label";
 import { kindLabel, typeOf } from "../type-labels";
 import { useRunnerZone } from "./use-runner-zone";
-import { CompositionBlock } from "./Composition";
+import { CompositionBlock, hasComposition } from "./Composition";
 import { CorrectionSheet, type CorrectionSheetProps } from "./CorrectionSheet";
 import { BackToCloset } from "./BackToCloset";
 import { DeleteWithRuns, type BandCount } from "./DeleteWithRuns";
@@ -696,7 +696,7 @@ function CompositionSection({
       />
     );
   const block =
-    composition === undefined ? undefined : (
+    composition === undefined || !hasComposition(composition) ? undefined : (
       <CompositionBlock
         composition={{
           verbatim: composition.verbatim,
@@ -758,7 +758,10 @@ function WrongLink({
         onClick={() => {
           setOpened((count) => count + 1);
         }}
-        className="target cursor-pointer border-none bg-transparent p-0 text-ink"
+        // A full 44 target, its box pulled back to the line it sits on, so
+        // the "As labelled by" line stays tight under the composition
+        // (Round 55 · 191e) instead of becoming a 44 row of its own.
+        className="target -my-3.5 cursor-pointer border-none bg-transparent p-0 text-ink"
       >
         <Mono step="xs">
           Wrong? <span aria-hidden="true">›</span>

@@ -482,6 +482,8 @@ describe("GarmentDetail: WRONG? › (R-74, R48·129)", () => {
     // C-05: at the left in a row of its own, not stretched and centred.
     expect(wrong.parentElement).toHaveAttribute("data-part", "wrong-alone");
     expect(wrong.parentElement).toHaveClass("flex");
+    // A full target whose box is pulled back to its line (191e).
+    expect(wrong).toHaveClass("target", "-my-3.5");
   });
 
   it("is not offered for a piece with no shared product", async () => {

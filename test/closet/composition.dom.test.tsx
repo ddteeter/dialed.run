@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   CompositionBlock,
+  hasComposition,
   type Composition,
 } from "../../src/modules/closet/components/Composition";
 
@@ -76,17 +77,43 @@ describe("CompositionBlock (design round 10 §AG)", () => {
     expect(screen.queryAllByRole("term")).toEqual([]);
   });
 
-  it("renders nothing at all when both are absent", () => {
+  it("has no block to draw when both are absent", () => {
     // Rule 01's third branch, and the one worth asserting hardest: "no
-    // block" is not an "Unknown" row. Nothing on the screen has to know
-    // the field was nullable.
-    const { container } = render(
-      <CompositionBlock
-        composition={{ verbatim: undefined, parts: [], brand: "Janji" }}
-      />,
+    // block" is not an "Unknown" row. The detail page asks this first and
+    // draws nothing (test/closet/garment-detail.dom.test.tsx).
+    expect(hasComposition({ verbatim: undefined, parts: [] })).toBe(false);
+    expect(
+      hasComposition({
+        verbatim: undefined,
+        parts: [{ materials: [{ material: "wool" }] }],
+      }),
+    ).toBe(false);
+    expect(hasComposition({ verbatim: "wool", parts: [] })).toBe(true);
+    expect(hasComposition({ verbatim: undefined, parts: arcteryx.parts })).toBe(
+      true,
     );
+  });
 
-    expect(container).toBeEmptyDOMElement();
+  it("sets the parts as AG1's two-column table (Round 55 · 191a)", () => {
+    render(<CompositionBlock composition={arcteryx} />);
+    const table = screen.getAllByRole("term")[0]?.closest("dl");
+    expect(table).toHaveClass(
+      "grid",
+      "grid-cols-[max-content_minmax(0,1fr)]",
+      "gap-x-4",
+    );
+    const row = screen.getAllByRole("term")[0]?.parentElement;
+    expect(row).toHaveClass("col-span-2", "grid", "grid-cols-subgrid");
+    expect(screen.getAllByRole("definition")[0]).toHaveClass("col-start-2");
+  });
+
+  it("sets the credit tight under the composition (Round 55 · 191e)", () => {
+    render(<CompositionBlock composition={arcteryx} />);
+    const credit = screen.getByText("As labelled by Arc'teryx").closest("p");
+    expect(credit?.parentElement?.parentElement).toHaveClass("gap-1");
+    expect(credit?.parentElement?.parentElement?.firstElementChild?.tagName).toBe(
+      "DL",
+    );
   });
 
   it("omits the attribution rather than guessing whose label it is", () => {
@@ -109,9 +136,9 @@ describe("CompositionBlock (design round 10 §AG)", () => {
       />,
     );
 
-    expect(container.querySelector("section")?.lastElementChild).toBe(
-      screen.getByText("100% merino"),
-    );
+    expect(
+      container.querySelector("section")?.lastElementChild?.lastElementChild,
+    ).toBe(screen.getByText("100% merino"));
   });
 
   it("credits the brand when there is one", () => {
@@ -214,19 +241,6 @@ describe("CompositionBlock: WRONG? › (R-74)", () => {
     );
     const line = screen.getByText("As labelled by Arc'teryx").closest("div");
     expect(line).toHaveTextContent("As labelled by Arc'teryxWrong?");
-  });
-
-  it("stands alone when the product states no composition", () => {
-    // What a linked product with nothing stated reads as: the object, empty.
-    render(
-      <CompositionBlock
-        composition={{ verbatim: undefined, parts: [], brand: "Janji" }}
-        wrong={<button type="button">Wrong?</button>}
-      />,
-    );
-    const wrong = screen.getByRole("button", { name: "Wrong?" });
-    expect(wrong.closest("section")).toBeNull();
-    expect(screen.queryByText("Made of")).toBeNull();
   });
 
   it("keeps the line for WRONG? alone when no brand labelled it", () => {
