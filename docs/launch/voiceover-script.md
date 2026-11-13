@@ -279,10 +279,11 @@ You should hear:
 - button "Next"
 
 **1.5 Calibrate (O1).**
-Source: `conformance/onboarding-desk.conformance.spec.ts/O1-at-390-nothing-changes-no-bar-and-the-panel.txt`.
+Source: `conformance/onboarding-desk.conformance.spec.ts/O1-at-390-the-wordmark-bar-as-at-desk-630-F-09-.txt`.
 
 You should hear:
 
+- a banner, "dialed.run"
 - "Step N of N · Optional"
 - "One question does most of the work", heading 1
 - a group, "Compared to people you run with, do you run warm or cold?", of five radios:
@@ -329,18 +330,19 @@ You should hear:
 - button "Next", button "Skip for now"
 
 Do: double tap "Name it" on one piece. In its place you should hear text
-fields "Brand" and "Model", each with a list of suggestions, "Brand alone
-is enough." and button "Save". Type two letters in Brand. The suggestions
-are the browser's own list, which a transcript cannot show: write down
-whether VoiceOver announced them and whether you could reach them. "Skip
+fields "Brand" and "Model", each followed by its suggestions as buttons
+(R55·229), then button "Save" and "Brand alone is enough." Type two
+letters in Brand: the brand suggestions should follow the Brand field as
+buttons you can reach by swiping. "Skip
 for now" must be reachable without passing through every field (try the
 rotor on Buttons).
 
 **1.8 Now go run (P3).**
-Source: `conformance/onboarding-desk.conformance.spec.ts/P3-at-390-the-body-is-light-as-well.txt`.
+Source: `conformance/onboarding-desk.conformance.spec.ts/P3-at-390-the-band-bleeds-edge-to-edge-under-the-wordmark-bar-and-the-body-is-light.txt`.
 
 You should hear:
 
+- a banner, "dialed.run"
 - "Now go run.", heading 1
 - "Next time you finish a run, upload it and tell us what you wore. That's the whole loop."
 - "What happens as you log", heading 2, and a list of three:
