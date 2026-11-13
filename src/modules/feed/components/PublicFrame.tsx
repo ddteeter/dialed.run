@@ -48,14 +48,21 @@ export function useSignedInAfterLoad(ask: AskSignedIn): {
   return { isSignedIn };
 }
 
-// The bar's one slot in pill form (round 42 #90): hairline for Log in,
-// ink for the way into the app. Written out whole so each can be read as
+// The bar's one slot in pill form (round 42 #90): an outline for Log in,
+// filled for the way into the app. On the bar's ink block the outline is
+// 1px --ink, as R48·134 draws the outline pill on a dark ground; a
+// hairline there is all but invisible. Written out whole so each can be read as
 // one class list (`targets-and-focus` reads the 44px target off it).
 const LOG_IN_CLASS =
-  "target inline-flex items-center rounded-pill border border-hairline px-5 text-small font-semibold text-ink no-underline";
+  "target inline-flex items-center rounded-pill border border-ink px-5 text-small font-semibold text-ink no-underline";
 const INTO_APP_CLASS =
   "target inline-flex items-center rounded-pill bg-ink px-5 text-small font-bold text-ground no-underline";
 const FOOT_LINK_CLASS = "target text-muted underline underline-offset-4";
+// The foot's links, as the app's own legal footer spaces them (A-03, built
+// with 7b's `Layout` fix): 8px each side and no gap, so a word narrower
+// than the 44px target is padded evenly instead of on its right alone.
+const FOOTER_LINK_CLASS =
+  "target inline-flex items-center px-2 text-muted underline underline-offset-4";
 
 /**
  * Where "Open in the app" (or "Look in the app") goes: the app's own page
@@ -105,12 +112,12 @@ const MEASURE = {
   column: {
     edge: "mx-auto flex min-h-11 w-full max-w-column items-center justify-between px-6",
     main: "mx-auto w-full max-w-column flex-1",
-    foot: "m-0 mx-auto flex w-full max-w-column flex-wrap gap-x-4 px-6",
+    foot: "m-0 mx-auto w-full max-w-column px-6",
   },
   split: {
     edge: "mx-auto flex min-h-11 w-full max-w-column items-center justify-between px-6 desk:max-w-page",
-    main: "mx-auto w-full max-w-column flex-1 desk:grid desk:max-w-page desk:grid-cols-[minmax(0,var(--container-column))_minmax(0,1fr)] desk:items-start desk:gap-x-6",
-    foot: "m-0 mx-auto flex w-full max-w-column flex-wrap gap-x-4 px-6 desk:max-w-page",
+    main: "mx-auto w-full max-w-column flex-1 desk:grid desk:max-w-page desk:grid-cols-[minmax(0,var(--container-column))_minmax(0,1fr)] desk:grid-rows-[auto_1fr] desk:items-start desk:gap-x-6",
+    foot: "m-0 mx-auto w-full max-w-column px-6 desk:max-w-page",
   },
 } as const;
 
@@ -127,9 +134,13 @@ function PublicBar({
 }: Readonly<{ intoApp: IntoAppProps; isSignedIn: boolean; edge: string }>) {
   // A `<header>`, so the bar is a landmark, as the app's own is.
   return (
+    // The ink block, as all three boards draw it and as the app's own bar
+    // is at the desk (E2-06); a panel with its rule on a dark page
+    // (R50·143.1).
     <header
       data-part="top-bar"
-      className="border-b border-hairline bg-ground py-3 text-ink"
+      data-ground="ink"
+      className="bg-ground py-3 text-ink"
     >
       <div className={edge}>
         <Link
@@ -269,22 +280,24 @@ export function PublicFrame(props: PublicFrameProps): JSX.Element {
         className="border-t border-hairline py-4 text-small"
       >
         <p className={measure.foot}>
-          {report === undefined ? undefined : (
-            <Link
-              to="/takedown"
-              search={{ location: report.location }}
-              reloadDocument
-              className={FOOT_LINK_CLASS}
-            >
-              {report.label}
+          <span className="-mx-2 flex flex-wrap">
+            {report === undefined ? undefined : (
+              <Link
+                to="/takedown"
+                search={{ location: report.location }}
+                reloadDocument
+                className={FOOTER_LINK_CLASS}
+              >
+                {report.label}
+              </Link>
+            )}
+            <Link to="/privacy" reloadDocument className={FOOTER_LINK_CLASS}>
+              Privacy
             </Link>
-          )}
-          <Link to="/privacy" reloadDocument className={FOOT_LINK_CLASS}>
-            Privacy
-          </Link>
-          <Link to="/terms" reloadDocument className={FOOT_LINK_CLASS}>
-            Terms
-          </Link>
+            <Link to="/terms" reloadDocument className={FOOTER_LINK_CLASS}>
+              Terms
+            </Link>
+          </span>
         </p>
       </footer>
     </div>
@@ -383,7 +396,9 @@ export function VerdictChip({
 /**
  * The pitch (round 41 #86c), for the signed out only: the default card's
  * line, what the app does, and the two ways in. Sign-up is by invite, so
- * the primary asks for one on the marketing site; a code goes to `/join`.
+ * the primary asks for access on the marketing site, in the words every
+ * marketing page and the app's own Landing use (Round 53 · 163d, #612);
+ * a code goes to `/join`.
  */
 export function Invite() {
   return (
@@ -399,7 +414,7 @@ export function Invite() {
         you what to wear when that weather comes round again.
       </p>
       <a href={MARKETING_INVITE_URL} className={INTO_APP_CLASS}>
-        Request an invite
+        Request access
       </a>
       <Link to="/join" reloadDocument className={FOOT_LINK_CLASS}>
         Have a code? Join

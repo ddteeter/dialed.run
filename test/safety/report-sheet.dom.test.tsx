@@ -72,6 +72,36 @@ describe("the sheet names whose entry it is (round 26 #7)", () => {
     ).toBeInTheDocument();
   });
 
+  it("names the line under it: an entry's run", () => {
+    renderSheet();
+    expect(screen.getByText("mark_t · yesterday")).toHaveClass(
+      "text-micro",
+      "text-quiet",
+    );
+  });
+
+  it("asks about a profile's runner by handle, without the entry, and says the handle once (E1-12)", () => {
+    renderSheet({
+      subject: {
+        type: "profile",
+        id: "01RAVI",
+        label: "@ravi_k",
+        authorName: "ravi_k",
+      },
+    });
+    expect(
+      screen.getByRole("dialog", { name: "Report @ravi_k?" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Report @ravi_k?" }),
+    ).toBeInTheDocument();
+    // The label repeats the title's handle on a profile, so it goes.
+    expect(screen.queryByText("@ravi_k")).toBeNull();
+    expect(
+      screen.getByText(/(?:^|\s)@ravi_k is never told who reported it\./u),
+    ).toBeInTheDocument();
+  });
+
   it("falls back to the entry when there is no handle", () => {
     renderSheet({
       subject: {
@@ -374,7 +404,7 @@ describe("naming the author when there is one", () => {
     // both and the sentence needs its own.
     renderSheet();
     expect(
-      screen.getByText(/mark_t is never told who reported it\./),
+      screen.getByText(/(?:^|\s)@mark_t is never told who reported it\./u),
     ).toBeInTheDocument();
   });
 });

@@ -80,12 +80,25 @@ export function UsefulButton({
         }`}
       >
         <Mono step="sm">
+          {/* Flush to the card's left edge, so "[ Noting ]" starts where
+              the heart does rather than centring under it (E1-07, N2-09). */}
           <PendingLabel
+            align="start"
             pending={markUseful.pending}
             pendingLabel="Noting"
             label={
               <span className="flex gap-1">
-                <span aria-hidden="true">{useful.reacted ? "♥" : "♡"}</span>
+                {/* One glyph, filled or outlined (E2-08). Neither heart is
+                    in Plex Mono, so each fell back to whichever system face
+                    had it, and "♡" came out smaller and lighter than "♥".
+                    The outline is the same "♥" with a 1px stroke and no
+                    fill, so the two are one size, on one line. */}
+                <span
+                  aria-hidden="true"
+                  className={useful.reacted ? undefined : HEART_OUTLINE_CLASS}
+                >
+                  ♥
+                </span>
                 {useful.count === 0 ? undefined : (
                   <Digits value={useful.count} />
                 )}
@@ -110,6 +123,9 @@ export function UsefulButton({
     </div>
   );
 }
+
+const HEART_OUTLINE_CLASS =
+  "[-webkit-text-fill-color:transparent] [-webkit-text-stroke:1px_currentColor]";
 
 /**
  * The words the button draws, heart aside — "11 Useful", and "Useful"

@@ -130,7 +130,7 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
   const isOwn = viewerId === entry.userId;
 
   return (
-    <div className="mx-auto flex w-full max-w-column flex-col gap-4 px-5 pt-6 wide:mx-0">
+    <div className="mx-auto flex w-full max-w-column flex-col gap-4 px-5 pt-6 wide:mx-0 wide:px-6">
       <FormStatus>{status}</FormStatus>
       <div className="flex items-center gap-3">
         {/* `exact`: the router marks a prefix match `aria-current="page"`,
@@ -139,7 +139,7 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
           to="/feed"
           activeOptions={{ exact: true }}
           aria-label="Back to feed"
-          className="target inline-flex items-center justify-center text-ink"
+          className="target inline-flex items-center text-ink"
         >
           <Icon name="back" size={20} />
         </Link>

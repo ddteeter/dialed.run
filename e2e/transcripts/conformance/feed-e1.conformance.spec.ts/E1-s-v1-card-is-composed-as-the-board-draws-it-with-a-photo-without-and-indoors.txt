@@ -15,6 +15,8 @@ Dialed
 # degrees, clear
 end of link, @e#_runner_# :when · #:# Dialed #.# miles # degrees, clear
 link, Weather data provided by Visual Crossing
+Visual Crossing
+end of link, Weather data provided by Visual Crossing
 button, Useful, @e#_runner_#’s run, not pressed
 Useful
 end of button, Useful, @e#_runner_#’s run, not pressed

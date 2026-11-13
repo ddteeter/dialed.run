@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { EntryDetail } from "../../src/modules/feed/components/EntryDetail";
 import {
+  COPY_HOLD_MS,
   LINK_COPIED,
   LINK_NOT_COPIED,
   PUBLIC_KIT_LINE,
@@ -662,13 +663,23 @@ describe("EntryDetail: the owner meta (round 41 #86a)", () => {
   it("says who the runner's own kit is for, bracketed in ink, and nothing more unless it is public", async () => {
     await renderFeedScreen(detail({}, { viewerId: OWNER }));
     const meta = part("owner-meta");
-    expect(meta).toHaveTextContent(/^Seen by: \[Shared\]$/u);
+    // All three tags, the board's order, the current one after its prefix
+    // in every state (R55·172).
+    expect(meta).toHaveTextContent(
+      /^\[Public\]Seen by: \[Shared\]\[Private\]$/u,
+    );
     // A reader hears what the label is the state of; the eye sees it bare.
     expect(screen.getByText("Seen by:")).toHaveClass("sr-only");
-    expect(meta?.firstElementChild?.lastElementChild).toHaveClass(
-      "text-ink",
-      "text-mono-xs",
-    );
+    const [publicTag, current, privateTag] = [
+      ...(meta?.firstElementChild?.children ?? []),
+    ];
+    expect(current?.lastElementChild).toHaveClass("text-ink", "text-mono-xs");
+    expect(current).not.toHaveAttribute("aria-hidden");
+    // The others are drawn in --muted and not read.
+    for (const other of [publicTag, privateTag]) {
+      expect(other).toHaveAttribute("aria-hidden", "true");
+      expect(other?.lastElementChild).toHaveClass("text-muted", "text-mono-xs");
+    }
     expect(screen.queryByText(PUBLIC_KIT_LINE)).toBeNull();
     expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull();
   });
@@ -677,10 +688,14 @@ describe("EntryDetail: the owner meta (round 41 #86a)", () => {
     const { unmount } = await renderFeedScreen(
       detail({ audience: "private" }, { viewerId: OWNER }),
     );
-    expect(part("owner-meta")).toHaveTextContent(/^Seen by: \[Private\]$/u);
+    expect(part("owner-meta")).toHaveTextContent(
+      /^\[Public\]\[Shared\]Seen by: \[Private\]$/u,
+    );
     unmount();
     await renderFeedScreen(detail({ audience: "groups" }, { viewerId: OWNER }));
-    expect(part("owner-meta")).toHaveTextContent(/^Seen by: \[Private\]$/u);
+    expect(part("owner-meta")).toHaveTextContent(
+      /^\[Public\]\[Shared\]Seen by: \[Private\]$/u,
+    );
   });
 
   it("is not on anyone else's view of the kit", async () => {
@@ -693,7 +708,7 @@ describe("EntryDetail: the owner meta (round 41 #86a)", () => {
     await renderFeedScreen(detail({ audience: "world" }, { viewerId: OWNER }));
     const meta = part("owner-meta");
     expect(meta).toHaveTextContent(
-      "Seen by: [Public]Public: anyone with the link can see it.Copy linkChange",
+      "Seen by: [Public][Shared][Private]Public: anyone with the link can see it.Copy linkCopiedNot copiedChange",
     );
     expect(screen.getByRole("link", { name: "Change" })).toHaveAttribute(
       "href",
@@ -731,21 +746,117 @@ describe("EntryDetail: the owner meta (round 41 #86a)", () => {
     }
   });
 
-  it("says what happened in the board's plain words, on a link-styled press", async () => {
+  it("says what happened in the board's plain words: an outlined pill and a Change link", async () => {
     expect(LINK_COPIED).toBe("Link copied.");
     expect(LINK_NOT_COPIED).toBe("Link not copied.");
     await renderFeedScreen(detail({ audience: "world" }, { viewerId: OWNER }));
-    for (const press of [
-      screen.getByRole("button", { name: "Copy link" }),
-      screen.getByRole("link", { name: "Change" }),
-    ]) {
-      expect(press).toHaveClass(
-        "target",
-        "text-small",
-        "font-semibold",
-        "text-ink",
-        "underline",
+    const pill = screen.getByRole("button", { name: "Copy link" });
+    expect(pill).toHaveAttribute("data-state", "rest");
+    expect(pill).toHaveClass(
+      "target",
+      "rounded-pill",
+      "border-hairline",
+      "bg-transparent",
+      "text-ink",
+    );
+    expect(shownWord(pill)).toBe("Copy link");
+    expect(screen.getByRole("link", { name: "Change" })).toHaveClass(
+      "target",
+      "text-body",
+      "font-semibold",
+      "text-ink",
+      "underline",
+    );
+    // The sentence in body ink (round 41).
+    expect(screen.getByText(PUBLIC_KIT_LINE)).toHaveClass(
+      "text-body",
+      "text-ink",
+    );
+  });
+
+  it("swaps the pill to Copied, filled ink, for the hold, keeping its name (AF1)", async () => {
+    expect(COPY_HOLD_MS).toBe(2000);
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      await renderFeedScreen(
+        detail({ audience: "world" }, { viewerId: OWNER }),
       );
+      const pill = screen.getByRole("button", { name: "Copy link" });
+      // Long after mount, so the hold is timed from the press, not the page.
+      await vi.advanceTimersByTimeAsync(COPY_HOLD_MS * 2);
+      await user.click(pill);
+      await waitFor(() => {
+        expect(pill).toHaveAttribute("data-state", "copied");
+      });
+      expect(shownWord(pill)).toBe("Copied");
+      expect(pill).toHaveClass("bg-ink", "text-ground", "border-ink");
+      expect(pill).toHaveAccessibleName("Copy link");
+      vi.advanceTimersByTime(COPY_HOLD_MS - 50);
+      expect(pill).toHaveAttribute("data-state", "copied");
+      await vi.advanceTimersByTimeAsync(50);
+      await waitFor(() => {
+        expect(pill).toHaveAttribute("data-state", "rest");
+      });
+      expect(shownWord(pill)).toBe("Copy link");
+      expect(pill).toHaveClass("bg-transparent", "text-ink");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("says Not copied on the pill, unfilled, when the browser refuses (R55·171)", async () => {
+    const user = userEvent.setup();
+    await renderFeedScreen(detail({ audience: "world" }, { viewerId: OWNER }));
+    const refuse = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockRejectedValue(new Error("denied"));
+    try {
+      const pill = screen.getByRole("button", { name: "Copy link" });
+      await user.click(pill);
+      await waitFor(() => {
+        expect(pill).toHaveAttribute("data-state", "refused");
+      });
+      expect(shownWord(pill)).toBe("Not copied");
+      // The rest look, only the word changed (R55·171).
+      expect(pill).toHaveClass("bg-transparent", "text-ink", "border-hairline");
+      expect(pill).not.toHaveClass("bg-ink");
+    } finally {
+      refuse.mockRestore();
+    }
+  });
+
+  it("holds a refusal its full time when it follows a copy mid-hold", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const refuse = vi.spyOn(navigator.clipboard, "writeText");
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      await renderFeedScreen(
+        detail({ audience: "world" }, { viewerId: OWNER }),
+      );
+      const pill = screen.getByRole("button", { name: "Copy link" });
+      refuse.mockResolvedValueOnce(undefined);
+      await user.click(pill);
+      await waitFor(() => {
+        expect(pill).toHaveAttribute("data-state", "copied");
+      });
+      await vi.advanceTimersByTimeAsync(COPY_HOLD_MS / 2);
+      refuse.mockRejectedValueOnce(new Error("denied"));
+      await user.click(pill);
+      await waitFor(() => {
+        expect(pill).toHaveAttribute("data-state", "refused");
+      });
+      // The copy's own timer would have ended the hold here; it was cleared.
+      await vi.advanceTimersByTimeAsync(COPY_HOLD_MS / 2 + 100);
+      expect(pill).toHaveAttribute("data-state", "refused");
+      expect(shownWord(pill)).toBe("Not copied");
+      await vi.advanceTimersByTimeAsync(COPY_HOLD_MS);
+      await waitFor(() => {
+        expect(pill).toHaveAttribute("data-state", "rest");
+      });
+    } finally {
+      refuse.mockRestore();
+      vi.useRealTimers();
     }
   });
 
@@ -765,3 +876,17 @@ describe("EntryDetail: the phone's bell (Design 169.1)", () => {
     expectBellEnding(screen.getByRole("link", { name: "Back to feed" }));
   });
 });
+
+/**
+ * The one word the pill shows: all three share its grid cell, and only
+ * the current one is not `invisible`.
+ */
+function shownWord(pill: HTMLElement): string | undefined {
+  const words = [...pill.children].filter(
+    (word) => !word.classList.contains("invisible"),
+  );
+  expect(words).toHaveLength(1);
+  // In the shared cell, like the unseen ones, so the pill never resizes.
+  expect(words[0]).toHaveClass("col-start-1", "row-start-1", "text-center");
+  return words[0]?.textContent;
+}

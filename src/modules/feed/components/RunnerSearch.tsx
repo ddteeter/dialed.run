@@ -105,9 +105,11 @@ export function RunnerSearch({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6 wide:mx-0">
+    <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6 wide:mx-0 wide:px-6">
       <FormStatus>{status === "" ? said : status}</FormStatus>
-      <div className="flex items-start justify-between gap-3">
+      {/* A 44px row, centred as Feed's title row is: the two titles sit
+          on one line, so the way in and back does not jump (P2b-12). */}
+      <div className="flex min-h-11 items-center justify-between gap-3">
         <h1 className="m-0 font-display text-title uppercase">Find a runner</h1>
         <PhoneBell />
       </div>
@@ -123,17 +125,17 @@ export function RunnerSearch({
           className="min-w-0 flex-1 self-stretch border-none bg-transparent"
         />
         {/* The field's trailing label: the brackets breathe while a search
-            is out, and there is nothing there otherwise. */}
-        <span
-          aria-hidden="true"
-          style={{ visibility: pending ? undefined : "hidden" }}
-        >
-          <Mono step="xs" className="flex gap-1 text-label">
-            <span className="breathe">[</span>
-            Searching
-            <span className="breathe">]</span>
-          </Mono>
-        </span>
+            is out, and there is nothing there otherwise — not even its
+            width, which held the input short of the field's edge (E2-05). */}
+        {pending ? (
+          <span aria-hidden="true">
+            <Mono step="xs" className="flex gap-1 text-label">
+              <span className="breathe">[</span>
+              Searching
+              <span className="breathe">]</span>
+            </Mono>
+          </span>
+        ) : undefined}
       </div>
       {failed === undefined ? undefined : (
         <FailureBand

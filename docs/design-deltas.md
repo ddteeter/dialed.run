@@ -1880,6 +1880,9 @@ design has answered 86.
       invite block leaves, **filled client-side so the HTML stays one cached
       page**. No Useful, follow or comment. og:title "@{handle} · {38°
       damp}, {cold}".
+      **Since changed (Round 53 · 163d, owner, 2026-11-12, #612; built in
+      design 208):** the invite block's primary reads "Request access", as
+      every marketing page and the app's own Landing say it.
     - **d. `/@handle`**: kits (three, then "Show {N} more" as a plain link),
       then Rotation if shown (IN USE, SHOES with mileage, RETIRED). DS1
       columns at the desk. No per-week or per-weekday counts, which would
@@ -3896,6 +3899,10 @@ block; the rest already matched. Not built: the 10px gutter, which waits
 for design to name a T1 role (posts keep their hairline meanwhile).
 `e2e/conformance/feed-board.conformance.spec.ts` compares the own card
 against the board.
+**Since changed (design 208, #632 E2-08):** zero Useful's "♡" is drawn as
+the filled heart's own "♥" with a 1px stroke and no fill. "♡" is not in
+the shipped Plex Mono subset and fell back to a smaller, lighter system
+glyph; the board's outline heart is unchanged.
 
 **Conflicts for the owner.** None of these was adopted by the import. Each
 quotes both sides and ends with a recommendation. **All four are resolved

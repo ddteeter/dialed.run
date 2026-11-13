@@ -92,10 +92,37 @@ describe("PostCard: Visual Crossing's credit (R-179)", () => {
         isCreditRepeated
       />,
     );
-    const credit = screen.getByText(WEATHER_CREDIT);
+    const credit = screen.getByText("Visual Crossing", { selector: "a" });
     expect(credit).toBeVisible();
     expect(credit).toHaveAttribute("aria-hidden", "true");
     expect(credit).toHaveAttribute("tabindex", "-1");
+    expect(credit).not.toHaveAttribute("aria-label");
+  });
+
+  it("is the strip's last item on a card, the label alone, and no sentence (Round 54 · 170)", async () => {
+    const post = await card({
+      conditions: pointConditions({ tempC: 8, feelsLikeC: 6 }),
+    });
+    const credit = within(post).getByRole("link", { name: WEATHER_CREDIT });
+    expect(credit).toHaveTextContent(/^Visual Crossing$/u);
+    expect(credit).toHaveClass(
+      "font-mono",
+      "text-mono-xs",
+      "uppercase",
+      "underline",
+      "target",
+    );
+    expect(within(post).queryByText(WEATHER_CREDIT)).toBeNull();
+    // It lies over the strip's right end, and the strip keeps that room
+    // with an unseen copy of the label in the same step.
+    const seat = credit.parentElement;
+    expect(seat).toHaveClass("absolute", "right-0", "bottom-0", "min-h-target");
+    expect(seat?.parentElement).toHaveClass("relative");
+    expect(seat?.previousElementSibling).toContainElement(strip(post));
+    const room = strip(post).lastElementChild;
+    expect(room).toHaveTextContent(/^Visual Crossing$/u);
+    expect(room).toHaveClass("invisible", "ml-auto", "text-mono-xs");
+    expect(strip(post)).toHaveClass("min-h-target", "items-center");
   });
 });
 
@@ -223,6 +250,14 @@ function useful(): HTMLElement {
   return screen.getByRole("button", { name: /Useful/u });
 }
 
+function heart(): HTMLElement {
+  return within(useful()).getByText("♥");
+}
+
+function divider(post: HTMLElement): HTMLElement | null {
+  return strip(post).querySelector<HTMLElement>(".text-hairline");
+}
+
 const credit = () =>
   screen.queryByRole("link", {
     name: "Weather data provided by Visual Crossing",
@@ -239,27 +274,41 @@ describe("PostCard: the strip", () => {
     });
 
     expect(strip(post)).toHaveTextContent(
-      "5.0mi5.0 miles|41° · Rain41 degrees, Rain",
+      "5.0 mi5.0 miles|41° · Rain41 degrees, RainVisual Crossing",
     );
     // Round 52 #158: drawn for the eye, said in words, once each.
     const reading = screen.getByText("41° · Rain");
     expect(reading.parentElement).toHaveClass("text-dialed-text");
     expect(reading).toHaveAttribute("aria-hidden", "true");
     expect(screen.getByText("41 degrees, Rain")).toHaveClass("sr-only");
-    expect(screen.getByText("5.0mi").parentElement).toHaveClass("font-mono");
+    // Spaced, as the Feed board writes "8.1 MI" (E1-08).
+    expect(screen.getByText("5.0 mi").parentElement).toHaveClass("font-mono");
+    // The board's "|", in the strip's mono on a centred row, not a
+    // body-size sans one below the line (E1-08); a cell of the strip's
+    // own, as the board's are.
+    const rule = divider(post);
+    expect(rule).toHaveAttribute("aria-hidden", "true");
+    expect(rule).toHaveTextContent(/^\|$/u);
+    expect(rule?.firstElementChild).toHaveClass("font-mono");
+    expect(rule?.parentElement).toBe(strip(post));
+    expect(strip(post)).toHaveClass("items-center", "whitespace-nowrap");
+    // The sky word truncates before the credit wraps.
+    expect(reading.closest(".truncate")).toHaveClass("min-w-0");
     expect(screen.getByText("5.0 miles")).toHaveClass("sr-only");
   });
 
   it("reads INDOOR when the run was indoors and has no conditions", async () => {
     const post = await card({ indoor: true });
 
-    expect(strip(post)).toHaveTextContent("5.0mi5.0 miles|Indoor");
+    expect(strip(post)).toHaveTextContent("5.0 mi5.0 miles|Indoor");
+    expect(divider(post)).not.toBeNull();
     expect(screen.getByText("Indoor")).toHaveClass("text-muted", "font-mono");
   });
 
   it("is one cell otherwise — no divider, no dash", async () => {
     const post = await card();
-    expect(strip(post)).toHaveTextContent(/^5\.0mi5\.0 miles$/u);
+    expect(strip(post)).toHaveTextContent(/^5\.0 mi5\.0 miles$/u);
+    expect(divider(post)).toBeNull();
   });
 
   it("credits Visual Crossing beside its reading, outside the link to D (FEED-8)", async () => {
@@ -294,7 +343,13 @@ describe("PostCard: the strip", () => {
 describe("PostCard: Useful", () => {
   it("reads ♡ USEFUL with no zero when nobody has marked it", async () => {
     await card({ usefulCount: 0 });
-    expect(useful()).toHaveTextContent(/^♡ Useful\[Noting\]$/u);
+    expect(useful()).toHaveTextContent(/^♥ Useful\[Noting\]$/u);
+    // ♡ is drawn as the same glyph outlined, so the two hearts are one
+    // size from one face (E2-08).
+    expect(heart()).toHaveClass(
+      "[-webkit-text-fill-color:transparent]",
+      "[-webkit-text-stroke:1px_currentColor]",
+    );
     expect(useful()).toHaveAttribute("aria-pressed", "false");
     expect(useful()).toHaveClass("text-quiet");
     expect(useful()).toHaveAttribute("data-part", "reactions");
@@ -302,12 +357,13 @@ describe("PostCard: Useful", () => {
 
   it("reads ♡ 11 USEFUL with a count, and ♥ in pink once the viewer has marked it", async () => {
     await card({ usefulCount: 11 });
-    expect(useful()).toHaveTextContent(/^♡11 Useful\[Noting\]$/u);
+    expect(useful()).toHaveTextContent(/^♥11 Useful\[Noting\]$/u);
   });
 
   it("wears the viewer's mark", async () => {
     await card({ usefulCount: 24, viewerHasReacted: true });
     expect(useful()).toHaveTextContent(/^♥24 Useful\[Noting\]$/u);
+    expect(heart()).not.toHaveAttribute("class");
     expect(useful()).toHaveAttribute("aria-pressed", "true");
     expect(useful()).toHaveClass("font-semibold", "text-cold-text");
     expect(useful()).not.toHaveClass("text-quiet");
@@ -347,6 +403,8 @@ describe("PostCard: Useful", () => {
     });
     expect(button).toHaveAttribute("aria-busy", "true");
     expect(screen.getByText("Noting")).toBeVisible();
+    // Set flush to the card's edge, where the heart starts (E1-07, N2-09).
+    expect(button.querySelector(".grid")).toHaveClass("justify-items-start");
     expect(button).toHaveAttribute("aria-pressed", "false");
     // While it waits, the drawn [ Noting ] is the name.
     expect(button).toHaveAccessibleName("Noting");
@@ -382,7 +440,7 @@ describe("PostCard: Useful", () => {
     });
     // Once the leaving digit has rolled away.
     await waitFor(() => {
-      expect(useful()).toHaveTextContent(/^♡1 Useful\[Noting\]$/u);
+      expect(useful()).toHaveTextContent(/^♥1 Useful\[Noting\]$/u);
     });
   });
 
@@ -418,7 +476,7 @@ describe("PostCard: Useful", () => {
       "Not marked. Your connection dropped.",
     );
     // No optimistic count to take back.
-    expect(useful()).toHaveTextContent(/^♡2 Useful\[Noting\]$/u);
+    expect(useful()).toHaveTextContent(/^♥2 Useful\[Noting\]$/u);
   });
 
   it("says Still marked when taking one back fails", async () => {
@@ -540,7 +598,7 @@ describe("PostCard: Useful waits for a confirmed address (round 26 #11; seam 7)"
     });
     // Nothing changed, so the mark and the count stay as they were.
     expect(useful()).toHaveAttribute("aria-pressed", "false");
-    expect(useful()).toHaveTextContent(/^♡2 Useful\[Noting\]$/u);
+    expect(useful()).toHaveTextContent(/^♥2 Useful\[Noting\]$/u);
     // A refusal is an answer, not a failure: no band, nothing announced.
     expect(screen.queryByText("Not marked")).toBeNull();
     expect(onStatus).toHaveBeenLastCalledWith("");

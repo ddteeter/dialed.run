@@ -153,13 +153,13 @@ describe("isBacklogWorthOpening", () => {
 });
 
 describe("profileReportSubject", () => {
-  it("reports the profile by its runner, named by their handle", () => {
+  it("reports the profile by its runner, named by their handle with its @ (E1-12)", () => {
     expect(
       profileReportSubject({ userId: "01RAVI", username: "ravi_k" }),
     ).toStrictEqual({
       type: "profile",
       id: "01RAVI",
-      label: "ravi_k",
+      label: "@ravi_k",
       authorId: "01RAVI",
       authorName: "ravi_k",
     });

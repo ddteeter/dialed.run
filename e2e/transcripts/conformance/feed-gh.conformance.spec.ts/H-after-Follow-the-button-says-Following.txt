@@ -15,7 +15,7 @@ end of paragraph
 paragraph
 Their shared runs will show in your feed.
 end of paragraph
-button, Report or block ravi_k
+button, Report or block @ravi_k
 end of main
 navigation, Main
 list

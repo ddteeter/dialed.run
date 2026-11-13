@@ -40,7 +40,7 @@ Dialed
 end of link, :day :month # Dialed
 end of listitem, level 1, position 1, set size 1
 end of list
-button, Report or block trail_#
+button, Report or block @trail_#
 end of main
 status
 end of document

@@ -43,7 +43,7 @@ export function RetractEntry({
   return (
     <div
       data-part="retract"
-      className="mx-auto flex w-full max-w-column flex-col items-start px-5 pb-8 wide:mx-0"
+      className="mx-auto flex w-full max-w-column flex-col items-start px-5 pt-4 pb-8 wide:mx-0 wide:px-6"
     >
       <div className="flex w-full flex-col items-start gap-1 border-t border-hairline pt-4">
         <Mono step="xs" className="text-muted">

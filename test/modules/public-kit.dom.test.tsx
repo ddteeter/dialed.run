@@ -307,19 +307,29 @@ describe("the public kit, signed out", () => {
         "dialed.run keeps what you wore on each run and how it felt, then tells you what to wear when that weather comes round again.",
       ),
     ).toBeVisible();
-    expect(link("Request an invite")).toHaveAttribute(
+    expect(link("Request access")).toHaveAttribute(
       "href",
       "https://dialed.run/invite",
     );
-    expect(link("Request an invite")).toHaveClass("bg-ink", "rounded-pill");
+    expect(link("Request access")).toHaveClass("bg-ink", "rounded-pill");
     expect(link("Have a code? Join")).toHaveAttribute("href", "/join");
+    expect(link("Have a code? Join")).toHaveClass(
+      "target",
+      "text-muted",
+      "underline",
+    );
   });
 
   it("has Log in in the bar, and the wordmark home", async () => {
     await show(kitPage(KIT));
 
     expect(link("Log in")).toHaveAttribute("href", "/auth/login");
-    expect(link("Log in")).toHaveClass("border", "border-hairline");
+    // A 1px --ink outline on the bar's ink block (E2-06, R48·134).
+    expect(link("Log in")).toHaveClass("border", "border-ink");
+    const inkBar = document.querySelector<HTMLElement>("[data-part='top-bar']");
+    expect(inkBar).toHaveAttribute("data-ground", "ink");
+    expect(inkBar).toHaveClass("bg-ground", "text-ink");
+    expect(inkBar).not.toHaveClass("border-b");
     expect(link("dialed.run home")).toHaveAttribute("href", "/");
     // The bracketed wordmark, and one slot beside it (round 42 #90):
     // drawn as "[dialed.run]", then said once as "dialed.run".
@@ -353,6 +363,17 @@ describe("the public kit, signed out", () => {
     expect(link("Privacy")).toHaveAttribute("href", "/privacy");
     expect(link("Terms")).toHaveAttribute("href", "/terms");
     expect(link("Terms")).toHaveClass("text-muted", "underline");
+    // Evenly spaced (A-03, as the app's legal footer): 8px each side and no
+    // gap, so a word under the 44px target is padded on both sides alike;
+    // the row is pulled out by as much, so the first word stays on the gutter.
+    for (const each of within(foot as HTMLElement).getAllByRole("link")) {
+      expect(each).toHaveClass("target", "inline-flex", "items-center", "px-2");
+    }
+    expect(link("Terms").parentElement).toHaveClass(
+      "-mx-2",
+      "flex",
+      "flex-wrap",
+    );
   });
 
   it("offers no Useful, follow or comment", async () => {
@@ -423,7 +444,7 @@ describe("the public kit, once the browser knows who is looking", () => {
       expect(failing).toHaveBeenCalled();
     });
     expect(link("Log in")).toBeVisible();
-    expect(link("Request an invite")).toBeVisible();
+    expect(link("Request access")).toBeVisible();
   });
 });
 

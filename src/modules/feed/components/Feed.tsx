@@ -152,7 +152,7 @@ export function Feed(props: Readonly<FeedProps>) {
             className={
               tab === value
                 ? `tab-label target border-b-2 ${ACTIVE_TAB[value]} px-3 py-2 font-semibold`
-                : "tab-label target px-3 py-2 text-label"
+                : "tab-label target border-b-2 border-transparent px-3 py-2 text-label"
             }
           >
             {TAB_LABEL[value]}
@@ -278,7 +278,7 @@ function FollowingEmpty({
         <button
           type="button"
           onClick={onConditions}
-          className="target cursor-pointer border-none bg-transparent p-0 text-left text-body font-bold text-ink"
+          className="target cursor-pointer border-none bg-transparent p-0 text-left text-body font-bold text-ink underline underline-offset-4"
         >
           what people wore in your conditions
         </button>

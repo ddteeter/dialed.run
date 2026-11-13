@@ -12,6 +12,7 @@
  * reachable without `env`. Both functions here take their expensive halves
  * as callbacks for exactly that reason — the caller owns the queries.
  */
+import { handleText } from "./components/Handle";
 
 /**
  * Whether to ask this viewer for a verdict on this entry.
@@ -123,7 +124,9 @@ export function profileReportSubject(profile: {
   return {
     type: "profile",
     id: profile.userId,
-    label: profile.username ?? "A runner",
+    // With its "@" (round 26 #7, E1-12): the foot link reads "Report or
+    // block @x", as H draws it.
+    label: handleText(profile.username),
     authorId: profile.userId,
     authorName: profile.username ?? undefined,
   };
