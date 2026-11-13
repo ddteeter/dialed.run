@@ -67,7 +67,7 @@ test("add garments with product identity -> detail in round 22's order -> retire
     page,
     "F · Category and Type lead, then Brand, Name and the product link",
   );
-  await page.getByRole("link", { name: "Add garment" }).click();
+  await page.getByRole("link", { name: "Add a piece" }).click();
   await hydrated(page);
   // The click is a client-side navigation, so the hydrated flag is
   // already set from the closet page: wait for F itself before reading it.
@@ -88,7 +88,7 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await bar(page).getByRole("link", { name: "Closet" }).click();
   await hydrated(page);
   await scene(page, "A second piece, another category, same discipline");
-  await page.getByRole("link", { name: "Add garment" }).click();
+  await page.getByRole("link", { name: "Add a piece" }).click();
   await hydrated(page);
   await page.getByLabel("Category").selectOption("top");
   // D-75: round 26's TYPE, under the category, the contract's types.

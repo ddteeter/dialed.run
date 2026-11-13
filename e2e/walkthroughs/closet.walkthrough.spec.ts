@@ -23,10 +23,10 @@ test("the closet: real products, a record per piece, retire not delete", async (
     say: "This is the Closet: the gear you run in. A new runner's is empty, and instead of a blank page it says what to do first: add what you run in most.",
   });
   await scene(page, "Adding a piece", {
-    say: "So let's add the shoes I run in most. I'll tap Add garment.",
+    say: "So let's add the shoes I run in most. I'll tap Add a piece.",
   });
 
-  await page.getByRole("link", { name: "Add garment" }).click();
+  await page.getByRole("link", { name: "Add a piece" }).click();
   await hydrated(page);
   await expect(page.getByLabel("Category")).toBeVisible();
   await expect(page.getByLabel("Brand")).toBeVisible();
@@ -53,7 +53,7 @@ test("the closet: real products, a record per piece, retire not delete", async (
   });
   await bar(page).getByRole("link", { name: "Closet" }).click();
   await hydrated(page);
-  await page.getByRole("link", { name: "Add garment" }).click();
+  await page.getByRole("link", { name: "Add a piece" }).click();
   await hydrated(page);
   await page.getByLabel("Category").selectOption("top");
   await expect(page.getByRole("radio", { name: "Jacket" })).toBeVisible();

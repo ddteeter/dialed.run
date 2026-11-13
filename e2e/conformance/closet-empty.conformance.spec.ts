@@ -113,7 +113,7 @@ test("the empty closet says what ruling 16 says, and offers the dashed tile", as
   expect(await cellsOf(page, '[data-part="grid"]')).toStrictEqual([
     "ADD GARMENT",
   ]);
-  const tile = page.getByRole("link", { name: "Add garment" });
+  const tile = page.getByRole("link", { name: "Add a piece" });
   expect(
     await tile.evaluate((element) => getComputedStyle(element).borderStyle),
   ).toBe("dashed");
@@ -189,7 +189,7 @@ async function tileHeights(
   await hydrated(page);
   const grid = page.locator('[data-part="grid"]');
   const add = await grid
-    .getByRole("link", { name: "Add garment" })
+    .getByRole("link", { name: "Add a piece" })
     .boundingBox();
   const garment = await grid.locator("li > a").first().boundingBox();
   if (add === null || garment === null) throw new Error("not drawn");

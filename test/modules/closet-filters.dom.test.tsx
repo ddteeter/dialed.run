@@ -614,4 +614,36 @@ describe("ClosetFilters: the rail's look", () => {
       );
     }
   });
+
+  it("puts each count at the right of its row (Round 55 · 191b)", async () => {
+    await rail({ onSearch: vi.fn() });
+    for (const choice of [link(/^All/), button(/^Covered/)]) {
+      expect(choice).toHaveClass("w-full", "justify-between");
+    }
+  });
+
+  it("holds each label at its bold width, so choosing one never moves the grid", async () => {
+    // C-11: Untested went bold, the rail widened, and the grid moved 5px.
+    await rail();
+    const label = link(/^All/).querySelector("[data-part='option-label']");
+    expect(label).toHaveClass("inline-grid");
+    const [shown, reserve] = [...(label?.children ?? [])];
+    expect(shown).toHaveClass("col-start-1", "row-start-1");
+    expect(shown).not.toHaveClass("invisible");
+    expect(reserve).toHaveClass("invisible", "col-start-1", "row-start-1", "font-bold");
+    expect(reserve).toHaveAttribute("aria-hidden", "true");
+    expect(reserve?.textContent).toBe(shown?.textContent);
+    // Heard once.
+    expect(link(/^All/)).toHaveAccessibleName(/^All \d+$/);
+  });
+
+  it("keeps the chips' labels plain: a chip's width is its own", async () => {
+    await chips();
+    fireEvent.click(button(/^Group/));
+    expect(
+      screen.getByRole("link", { name: /^All/ }).querySelector(
+        "[data-part='option-label']",
+      ),
+    ).toBeNull();
+  });
 });
