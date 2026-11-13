@@ -925,6 +925,8 @@ describe("while an action is in flight", () => {
     if (form === null) throw new Error("no form");
     expect(form).not.toHaveAttribute("aria-labelledby");
     expect(fireEvent.submit(form)).toBe(false);
+    // Its own layout, held to the column on a wide Desk page (168.3).
+    expect(form).toHaveClass("flex", "flex-col", "gap-4", "max-w-column");
   });
 });
 
@@ -934,8 +936,6 @@ describe("Takedown (SAF-6)", () => {
     const heading = screen.getByRole("heading", { level: 2, name: "Takedown" });
     expect(heading).not.toHaveClass("font-display");
     expect(heading.firstElementChild).toHaveClass("font-mono", "text-mono-xs");
-    // On Review's wide page, the form keeps the column (168.3).
-    expect(heading.parentElement).toHaveClass("max-w-column");
   });
 
   it("opens with nothing chosen", () => {

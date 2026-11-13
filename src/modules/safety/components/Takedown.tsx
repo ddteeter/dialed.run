@@ -63,11 +63,7 @@ export function Takedown({
   });
 
   return (
-    // A form keeps the 620 column on Review's wide page (168.3).
-    <section
-      aria-labelledby="desk-takedown"
-      className="flex max-w-column flex-col gap-6"
-    >
+    <section aria-labelledby="desk-takedown" className="flex flex-col gap-6">
       {/* A kicker, like its siblings under the queue, Copyright holds and
           Quarantine (G-15; round 28 #8's "TAKEDOWN · FROM A NOTICE"). */}
       <h2 id="desk-takedown" className="m-0">

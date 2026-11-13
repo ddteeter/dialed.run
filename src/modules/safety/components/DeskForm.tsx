@@ -64,7 +64,9 @@ export function DeskForm({
       ref={form.formRef}
       noValidate
       aria-labelledby={title === undefined ? undefined : headingId}
-      className={className}
+      // A Desk form keeps the 620 column, on Review's and Runners' wide
+      // pages too (168.3); on a column page it is already that wide.
+      className={`${className} max-w-column`}
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit();
