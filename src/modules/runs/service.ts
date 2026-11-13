@@ -17,6 +17,7 @@ import { selectOwnedRow } from "../../lib/sql/owned";
 import { manualReadingsForRuns, observationsForRuns } from "../weather";
 import type { WeatherReading } from "../weather";
 import { bandMiddleC, canSetConditions } from "./run-conditions";
+import { viewerZone } from "../notifications";
 
 export const DUPLICATE_WINDOW_S = 120;
 
@@ -281,12 +282,21 @@ export interface RunSummary {
   Who to credit for the run's data (G1); only a Garmin run has one.
   */
   deviceName: string | undefined;
+  /**
+   * The clock the run's start reads on, on every screen (P2a-02): the run's
+   * own zone, from its observation (R-96), else its runner's home zone,
+   * else none, which a screen prints as UTC and says so. Never the device:
+   * the list and run detail render on the server, and the parsed card and
+   * the duplicate receipt said one time while they said another.
+   */
+  clockZone: string | undefined;
 }
 
 function summaryOf(
   run: RunRow,
   entry: { id: string; verdict: number | null } | undefined,
   conditions: RunConditions | undefined,
+  homeZone: string | undefined,
 ): RunSummary {
   return {
     id: run.id,
@@ -301,6 +311,7 @@ function summaryOf(
     conditions,
     entryId: entry?.id,
     hasVerdict: entry?.verdict != undefined,
+    clockZone: conditions?.timeZone ?? homeZone,
   };
 }
 
@@ -373,16 +384,17 @@ async function summariesOf(
   userId: string,
   list: readonly RunRow[],
 ): Promise<RunSummary[]> {
-  const [entries, conditions] = await Promise.all([
+  const [entries, conditions, home] = await Promise.all([
     entriesByRun(
       db,
       userId,
       list.map((run) => run.id),
     ),
     conditionsFor(list),
+    viewerZone(db, userId),
   ]);
   return list.map((run) =>
-    summaryOf(run, entries.get(run.id), conditions.get(run.id)),
+    summaryOf(run, entries.get(run.id), conditions.get(run.id), home.homeZone),
   );
 }
 

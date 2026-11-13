@@ -96,10 +96,11 @@ describe("listRunSummaries", () => {
       withEntry: 25,
     });
 
-    // Core: the runs, their entries, and the weather read's own lookup of
-    // the runs' places (observationsForRuns, src/modules/weather/read.ts:84).
-    // Weather: the cache cells and the runner-set bands.
-    expect(one.counts.core).toBe(3);
+    // Core: the runs, their entries, the weather read's own lookup of the
+    // runs' places (observationsForRuns, src/modules/weather/read.ts:84),
+    // and the runner's home zone, one row, for runs with no zone of their
+    // own (P2a-02). Weather: the cache cells and the runner-set bands.
+    expect(one.counts.core).toBe(4);
     expect(one.counts.weather).toBe(2);
     expect(twentyFive.counts.core).toBe(one.counts.core);
     expect(twentyFive.counts.weather).toBe(one.counts.weather);

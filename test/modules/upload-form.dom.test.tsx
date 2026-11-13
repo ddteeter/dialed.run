@@ -1439,20 +1439,25 @@ describe("A1: the parsed card", () => {
     ]);
   });
 
-  it("reads a run with no conditions on the runner's own clock, not UTC", async () => {
-    // A treadmill, no GPS, or weather that never came: no zone of its own.
-    // 11:04 UTC is 4:04 in the morning for a runner in Los Angeles, and
-    // that is the clock they read the start from.
+  it("reads a run with no conditions on the run's clock, as every screen does", async () => {
+    // A treadmill, no GPS, or weather that never came: no zone of its own,
+    // so the runner's home zone (P2a-02). 11:04 UTC is 4:04 in the morning
+    // in Los Angeles. The device's zone is not asked: the list and run
+    // detail cannot ask it, and the four screens must say one time.
     const resolved = new Intl.DateTimeFormat().resolvedOptions();
     vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
       ...resolved,
-      timeZone: "America/Los_Angeles",
+      timeZone: "Asia/Tokyo",
     });
     const user = setupUser();
     const retime = vi.fn<Retime>(() => Promise.resolve("moved"));
     await renderWithRouter(
       form({
-        getOutcome: parsed({ weatherStatus: "failed", conditions: undefined }),
+        getOutcome: parsed({
+          weatherStatus: "failed",
+          conditions: undefined,
+          clockZone: "America/Los_Angeles",
+        }),
         retime,
       }),
     );

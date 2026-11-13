@@ -459,9 +459,27 @@ describe("getRunSummary / listRunSummaries: a run as the screens draw it", () =>
       entryId: undefined,
       hasVerdict: false,
       deviceName: undefined,
+      clockZone: "America/Chicago",
     });
     const [listed] = await listRunSummaries(coreDb(), userId);
     expect(listed).toStrictEqual(summary);
+  });
+
+  it("reads a run with no zone of its own on its runner's home clock (P2a-02)", async () => {
+    const userId = newUlid();
+    // A treadmill run: no place, so no observation and no zone of its own.
+    const runId = await aRun(userId, { lat: undefined, lng: undefined, indoor: true });
+    const before = await getRunSummary(coreDb(), userId, runId);
+    expect(before?.conditions).toBeUndefined();
+    expect(before?.clockZone).toBeUndefined();
+
+    await coreDb()
+      .insert(userProfiles)
+      .values({ userId, timeZone: "America/Los_Angeles" });
+    const after = await getRunSummary(coreDb(), userId, runId);
+    expect(after?.clockZone).toBe("America/Los_Angeles");
+    const [listed] = await listRunSummaries(coreDb(), userId);
+    expect(listed?.clockZone).toBe("America/Los_Angeles");
   });
 
   it("marks a band chosen in R2b as set by you, in the list as on the run", async () => {

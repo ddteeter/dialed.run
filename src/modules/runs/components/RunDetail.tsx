@@ -3,7 +3,8 @@ import type { JSX } from "react";
 import { useState } from "react";
 
 import type { Units } from "../../../lib/contracts";
-import { clockLabel, dayLabel } from "../../../lib/dates";
+import { dayLabel } from "../../../lib/dates";
+import { runClockLabel } from "../run-clock";
 import { distanceNumber, paceForms } from "../../../lib/contracts/measures";
 import { Mono, Spoken } from "../../../ui";
 import type { RunSummary } from "../service";
@@ -45,7 +46,7 @@ export function RunDetail({
 }: Readonly<RunDetailProps>): JSX.Element {
   const router = useRouter();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const zone = run.conditions?.timeZone;
+  const zone = run.clockZone;
   const pace = paceForms(run.durationS, run.distanceM, units.distance);
 
   return (
@@ -55,7 +56,7 @@ export function RunDetail({
         className="flex flex-col gap-2 border-b border-hairline pb-4"
       >
         <Mono step="xs" className="text-muted">
-          {`${dayLabel(run.startedAt, zone)} · ${clockLabel(run.startedAt, zone)} · ${SOURCE_WORDS[run.source]}`}
+          {`${dayLabel(run.startedAt, zone)} · ${runClockLabel(run.startedAt, zone)} · ${SOURCE_WORDS[run.source]}`}
         </Mono>
         <p className="m-0 flex items-baseline gap-3">
           <span className="font-display text-display uppercase">

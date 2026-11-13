@@ -5,9 +5,7 @@ import { z } from "zod";
 
 import type { Units } from "../../../lib/contracts";
 import {
-  clockLabel,
   dayLabel,
-  deviceTimeZone,
   startAtTimeOfDay,
   timeOfDay,
 } from "../../../lib/dates";
@@ -35,6 +33,7 @@ import {
   WeatherAttribution,
   focusOnMount,
 } from "../../../ui";
+import { runClockLabel } from "../run-clock";
 import { hasProvidersReading } from "../run-conditions";
 import type { RunSummary } from "../service";
 import { ConditionsRow } from "./ConditionsBlock";
@@ -358,14 +357,14 @@ function useRetimeForm({
     // The sentence depends on the answer, so `onSuccess` says it.
     successMessage: "",
     onSuccess: ({ outcome, startedAt }) => {
-      const asked = clockLabel(startedAt, zone);
+      const asked = runClockLabel(startedAt, zone);
       if (outcome === "moved") {
         form.announce(`Start time changed to ${asked}.`);
         onMoved(startedAt);
         return;
       }
       form.announce(
-        `Still ${clockLabel(run.startedAt, zone)}. Couldn't get weather for ${asked}. Try again?`,
+        `Still ${runClockLabel(run.startedAt, zone)}. Couldn't get weather for ${asked}. Try again?`,
       );
       onNoWeather(asked);
     },
@@ -410,12 +409,10 @@ export function ParsedCard({
   onRetimed: () => void;
   onReplace: () => void;
 }>): JSX.Element {
-  // The run's own zone, from its observation (R-96). With none — a
-  // treadmill, no GPS, weather that never came — the runner's own clock,
-  // which is the one they read the start from; never UTC, which would put
-  // a Chicago evening run at the next morning. The card is drawn only after
-  // a drop, in the browser, so the device's zone cannot split hydration.
-  const zone = run.conditions?.timeZone ?? deviceTimeZone();
+  // The run's clock, as every screen reads it (P2a-02): its own zone, from
+  // its observation (R-96), else its runner's home zone. The device's zone
+  // made this card and the list disagree about the same run.
+  const zone = run.clockZone;
   const [isRetiming, setIsRetiming] = useState(false);
   const [time, setTime] = useState(timeOfDay(run.startedAt, zone));
   const [movedTo, setMovedTo] = useState<number | undefined>();
@@ -432,7 +429,7 @@ export function ParsedCard({
     },
     onNoWeather: setNoWeatherFor,
   });
-  const clock = clockLabel(movedTo ?? run.startedAt, zone);
+  const clock = runClockLabel(movedTo ?? run.startedAt, zone);
 
   return (
     <div className="flex flex-col gap-3 desk:grid desk:grid-cols-[minmax(0,var(--container-column))_minmax(0,1fr)] desk:items-start desk:gap-x-6">
@@ -473,7 +470,7 @@ export function ParsedCard({
             <StartTimeRow
               form={form}
               time={time}
-              fileSaid={clockLabel(run.startedAt, zone)}
+              fileSaid={runClockLabel(run.startedAt, zone)}
               onTime={setTime}
             />
           ) : undefined}
@@ -574,9 +571,9 @@ function RailConditions({
 }>): JSX.Element {
   return pending ? (
     <WeatherFor
-      time={clockLabel(startAtTimeOfDay(run.startedAt, zone, time), zone)}
+      time={runClockLabel(startAtTimeOfDay(run.startedAt, zone, time), zone)}
       was={conditionsWords(run, units)}
-      at={clockLabel(run.startedAt, zone)}
+      at={runClockLabel(run.startedAt, zone)}
       isProviders={hasProvidersReading(run)}
     />
   ) : (
@@ -605,7 +602,7 @@ function noWeatherFailure(
   return noWeatherFor === undefined
     ? undefined
     : {
-        kicker: `Still ${clockLabel(startedAt, zone)}`,
+        kicker: `Still ${runClockLabel(startedAt, zone)}`,
         message: `Couldn't get weather for ${noWeatherFor}. Try again?`,
       };
 }
@@ -629,10 +626,10 @@ export function DuplicateCard({
   onReplace: () => void;
 }>): JSX.Element {
   const { conditions, entryId } = run;
-  const zone = conditions?.timeZone;
+  const zone = run.clockZone;
   const facts: ReactNode[] = [
     dayLabel(run.startedAt, zone),
-    clockLabel(run.startedAt, zone),
+    runClockLabel(run.startedAt, zone),
   ];
   if (conditions !== undefined) {
     facts.push(

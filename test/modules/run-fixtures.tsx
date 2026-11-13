@@ -51,7 +51,7 @@ export const SET_BY_YOU = runConditions({
 });
 
 export function runSummary(overrides: Partial<RunSummary> = {}): RunSummary {
-  return {
+  const run: Omit<RunSummary, "clockZone"> & Partial<RunSummary> = {
     id: RUN_ID,
     source: "file",
     startedAt: SAT_MORNING,
@@ -66,6 +66,8 @@ export function runSummary(overrides: Partial<RunSummary> = {}): RunSummary {
     hasVerdict: false,
     ...overrides,
   };
+  // The service's rule: the run's own zone, unless a test names another.
+  return { clockZone: run.conditions?.timeZone, ...run };
 }
 
 const PLACES = [

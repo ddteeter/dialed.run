@@ -89,14 +89,28 @@ describe("R: a run before its kit", () => {
     expect(strip.querySelector(".sr-only")).toBeNull();
   });
 
-  it("names a run entered by hand as the board does, and dates it in UTC with no zone", async () => {
+  it("names a run entered by hand as the board does, and marks UTC when there is no zone", async () => {
     await renderWithRouter(
       detail(runSummary({ source: "manual", conditions: undefined })),
     );
 
+    // Never an unmarked UTC time (P2a-02).
     expect(region("run-strip")).toHaveTextContent(
-      "Sat Aug 29 · 11:04 AM · By hand",
+      "Sat Aug 29 · 11:04 AM UTC · By hand",
     );
+  });
+
+  it("reads a run with no zone of its own on its runner's home clock (P2a-02)", async () => {
+    await renderWithRouter(
+      detail(
+        runSummary({
+          conditions: undefined,
+          clockZone: "America/Los_Angeles",
+        }),
+      ),
+    );
+
+    expect(region("run-strip")).toHaveTextContent(/^Sat Aug 29 · 4:04 AM · /u);
   });
 
   it("credits Garmin on a run that came through Garmin's API (G1)", async () => {

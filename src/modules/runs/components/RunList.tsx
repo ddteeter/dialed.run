@@ -92,7 +92,7 @@ export function RunList({
                           kind: "word",
                           word: dayLabel(
                             run.startedAt,
-                            run.conditions?.timeZone,
+                            run.clockZone,
                           ),
                         },
                       ],
