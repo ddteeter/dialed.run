@@ -6,7 +6,7 @@ import type { ViewerZone } from "../../../lib/dates";
 import { Sheet } from "../../../ui";
 import type { ConfirmGate } from "../../../ui";
 import type { ResendResult } from "../verification";
-import { ResendLink } from "./ResendLink";
+import { RESEND_PILL, ResendLink } from "./ResendLink";
 
 /**
  * The lead: the one control that was refused, by name (round 29 #11). The
@@ -108,7 +108,9 @@ export function ConfirmEmailSheet({
             setNotNow(node ?? undefined);
           }}
           onClick={onClose}
-          className="target cursor-pointer self-start rounded-pill border border-hairline bg-transparent px-5 text-body font-semibold text-ink"
+          // Resend's own pill, so the two stacked buttons are a matched
+          // full-width pair (round 29 #11's board; B-11).
+          className={RESEND_PILL}
         >
           Not now
         </button>

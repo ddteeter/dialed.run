@@ -10,14 +10,22 @@ import { viewerClockLabel } from "../../../lib/dates";
 import type { ViewerZone } from "../../../lib/dates";
 import {
   FailureBand,
+  FormElement,
   FormFailureBand,
-  FormStatus,
   SubmitButton,
   TextField,
   useFormSubmit,
 } from "../../../ui";
 import type { ChangeResult } from "../verification";
 import { limitedMessage } from "./ResendLink";
+
+/**
+ * Each field's label, which the summary names its row by.
+ */
+const LABELS = {
+  email: "New email",
+  currentPassword: "Current password",
+};
 
 /**
  * The server's refusal of the current password — wrong, or tried too
@@ -62,6 +70,7 @@ export function ChangeEmail({
   const form = useFormSubmit({
     carry: "settings",
     schema: changeEmailSchema,
+    labels: LABELS,
     action: async (values) => {
       const result = await request({ data: values });
       if (result.status === "wrong-password") {
@@ -86,25 +95,23 @@ export function ChangeEmail({
     },
   });
 
+  // The Form Contract's frame, as Change password's (P1-01): the status
+  // region, the summary on two or more field errors, one spacing.
   return (
-    <form
-      ref={form.formRef}
-      noValidate
-      data-part="form"
-      className="flex flex-col gap-6"
-      onSubmit={(event) => {
-        event.preventDefault();
+    <FormElement
+      form={form}
+      dataPart="form"
+      onSubmit={() => {
         void form.submit({ email, currentPassword });
       }}
     >
-      <FormStatus>{form.status}</FormStatus>
       <p className="m-0 text-body">
         Now <strong>{current}</strong>. We&apos;ll send a link to the new
         address, and the account moves when you open it.
       </p>
       <TextField
         name="email"
-        label="New email"
+        label={LABELS.email}
         type="email"
         autoComplete="email"
         value={email}
@@ -114,7 +121,7 @@ export function ChangeEmail({
       />
       <TextField
         name="currentPassword"
-        label="Current password"
+        label={LABELS.currentPassword}
         type="password"
         autoComplete="current-password"
         value={currentPassword}
@@ -147,6 +154,6 @@ export function ChangeEmail({
         pendingLabel="Sending"
         pending={form.pending}
       />
-    </form>
+    </FormElement>
   );
 }

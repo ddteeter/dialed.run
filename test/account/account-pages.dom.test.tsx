@@ -497,7 +497,10 @@ describe("the confirm-first sheet and the nag", () => {
     expect(resend).toHaveBeenCalledWith({
       data: { email: "maya@example.com" },
     });
-    await user.click(within(sheet).getByRole("button", { name: "Not now" }));
+    // Not now is Resend's match: the same full-width pill (B-11).
+    const notNow = within(sheet).getByRole("button", { name: "Not now" });
+    expect(notNow.className).toBe(RESEND_PILL);
+    await user.click(notNow);
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -775,6 +778,24 @@ async function fillChange(
 const sendLink = () => screen.getByRole("button", { name: "Send link" });
 
 describe("ChangeEmail (ACC-8)", () => {
+  it("lists both fields in the summary when both are missing, as Change password does (P1-01)", async () => {
+    const { request, user } = renderChange();
+    await user.click(sendLink());
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "2 fields need a fix.",
+      );
+    });
+    // The summary names each by its label, as a way to it.
+    expect(screen.getByRole("button", { name: /New email/u })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: /Current password/u }),
+    ).toBeVisible();
+    // One spacing with Change password's form.
+    expect(newEmailField().closest("form")).toHaveClass("gap-4");
+    expect(request).not.toHaveBeenCalled();
+  });
+
   it("sends the link to the new address and says nothing moves until it is opened", async () => {
     const { request, user } = renderChange();
     expect(screen.getByText(/^Now /u)).toHaveTextContent(

@@ -31,7 +31,11 @@ function renderForm(
     kind: "claimed",
     username,
   }),
-  options: { initial?: string; withNext?: boolean } = {},
+  options: {
+    initial?: string;
+    withNext?: boolean;
+    carry?: "page" | "settings";
+  } = {},
 ) {
   const claim = vi.fn((input: { data: { username: string } }) =>
     Promise.resolve(answer(input.data.username)),
@@ -39,7 +43,7 @@ function renderForm(
   const onClaimed = vi.fn();
   render(
     <HandleForm
-      carry="page"
+      carry={options.carry ?? "page"}
       initial={options.initial}
       claim={claim}
       submitLabel="Next"
@@ -75,6 +79,14 @@ describe("the field", () => {
     expect(field()).toHaveAttribute("spellcheck", "false");
     // The @ is drawn in the box, and is not part of what is typed.
     expect(screen.getByText("@")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("leaves off where to change it on Settings › Username, which is that place (B-16)", () => {
+    renderForm(undefined, { initial: "maya_runs", carry: "settings" });
+    expect(field()).toHaveAccessibleDescription(
+      "3 to 20 letters, numbers or underscores. It's on everything you share.",
+    );
+    expect(screen.queryByText(/change it in settings/u)).toBeNull();
   });
 
   it("starts empty at O0", () => {
