@@ -183,7 +183,7 @@ test("Strava: connect with the official button, a reminder lands, disconnect", a
     await scene(page, "T3a · connected, and when the last run was seen");
     await page.goto("/runs/strava");
     await hydrated(page);
-    await expect(page.getByText(/^Connected · Last run seen /u)).toBeVisible();
+    await expect(page.getByText(/^Last run seen /u)).toBeVisible();
     await expect(
       page.getByRole("link", { name: "Connect with Strava" }),
     ).toHaveCount(0);

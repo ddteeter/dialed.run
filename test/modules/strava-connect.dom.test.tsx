@@ -123,9 +123,9 @@ describe("StravaConnect: the last run seen (round 25, T3a)", () => {
     const zone = deviceTimeZone() ?? "UTC";
     expect(
       await screen.findByText(
-        `Connected · Last run seen ${dayLabel(at, zone)}, ${clockLabel(at, zone)}`,
+        `Last run seen ${dayLabel(at, zone)}, ${clockLabel(at, zone)}`,
       ),
-    ).toHaveClass("text-dialed-text");
+    ).toHaveClass("text-mono-sm", "text-muted");
   });
 
   it("leaves the time out of the first paint, which the server renders without the runner's zone", () => {
@@ -154,7 +154,7 @@ describe("StravaConnect: the last run seen (round 25, T3a)", () => {
 
       expect(
         await screen.findByText(
-          "Connected · Last run seen Sat Aug 29, 11:30 PM",
+          "Last run seen Sat Aug 29, 11:30 PM",
         ),
       ).toBeVisible();
     } finally {
@@ -165,7 +165,9 @@ describe("StravaConnect: the last run seen (round 25, T3a)", () => {
   it("says only connected before the first run lands", async () => {
     await screenFor(true);
 
-    expect(screen.getByText("Connected")).toBeVisible();
+    expect(
+      screen.getByText("Connected. We’ll remind you when a run lands."),
+    ).toHaveClass("text-body");
     expect(screen.queryByText(/Last run seen/u)).toBeNull();
   });
 });
@@ -174,7 +176,7 @@ describe("StravaConnect: connected", () => {
   it("says it is connected, and offers only a disconnect", async () => {
     await screenFor(true);
 
-    expect(screen.getByText("Connected")).toHaveClass("text-dialed-text");
+    expect(screen.getByText("Connected. We’ll remind you when a run lands.")).toHaveClass("text-body");
     expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual([
       "Disconnect",
     ]);

@@ -63,9 +63,7 @@ function LastRunSeen({ at }: Readonly<{ at: number }>): JSX.Element {
   });
   if (!isMounted) return <></>;
   const zone = deviceTimeZone();
-  return (
-    <>{` · Last run seen ${dayLabel(at, zone)}, ${clockLabel(at, zone)}`}</>
-  );
+  return <>{`Last run seen ${dayLabel(at, zone)}, ${clockLabel(at, zone)}`}</>;
 }
 
 /**
@@ -118,13 +116,18 @@ export function StravaConnect({
   return (
     <div className="flex flex-col gap-3">
       <FormStatus>{cut.status}</FormStatus>
-      {/* Round 25's T3a status line. */}
-      <Mono step="sm" className="text-dialed-text">
-        Connected
-        {lastRunSeenAt === undefined ? undefined : (
+      {/* Round 55 · 238 (R39): one sentence. Its "Connected as {athlete}"
+          drops the name, which nothing stores (owner, 2026-11-13). */}
+      <p data-part="connected" className="m-0 text-body">
+        Connected. We&rsquo;ll remind you when a run lands.
+      </p>
+      {/* Round 25's last-run-seen, kept under the sentence as a muted
+          line; R39 does not draw it, a guess for Design. */}
+      {lastRunSeenAt === undefined ? undefined : (
+        <Mono step="sm" className="text-muted">
           <LastRunSeen at={lastRunSeenAt} />
-        )}
-      </Mono>
+        </Mono>
+      )}
       {isConfirming ? (
         <div
           data-slot="disconnect-confirm"
