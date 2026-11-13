@@ -13,7 +13,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, like, ne, sql } from "drizzle-orm";
 import { getPlatformProxy } from "wrangler";
 import { z } from "zod";
 
@@ -132,12 +132,19 @@ export async function cleanAudit(): Promise<void> {
         ["invite_codes", "access_requests"],
         "audit-%",
       ),
-      core.run(
-        sql`delete from user_profiles where user_id like 'audit-%' and user_id != ${MAYA_ID}`,
-      ),
-      core.run(
-        sql`delete from user where id like 'audit-%' and id != ${MAYA_ID}`,
-      ),
+      // Builders, not raw SQL: a raw statement with a bound value throws
+      // inside `batch()` (see `deleteWhereLike`).
+      core
+        .delete(userProfiles)
+        .where(
+          and(
+            like(userProfiles.userId, "audit-%"),
+            ne(userProfiles.userId, MAYA_ID),
+          ),
+        ),
+      core
+        .delete(user)
+        .where(and(like(user.id, "audit-%"), ne(user.id, MAYA_ID))),
       ...queueIds.map((id) =>
         core.delete(reviewQueue).where(eq(reviewQueue.id, id)),
       ),

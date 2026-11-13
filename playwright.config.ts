@@ -126,6 +126,10 @@ const auditProjects = isCapturing
 
 export default defineConfig({
   testDir: "e2e",
+  // A capture shoots every new state four times, page-height, inside the
+  // test that reached it, so a test that visits twenty screens outlives the
+  // 30s default by far. Only while capturing; CI's runs keep the default.
+  ...(isCapturing && { timeout: 15 * 60_000 }),
   // One worker, because every spec shares one dev server and one local D1 —
   // which is one SQLite file. Specs sign up users, so they all write, and
   // parallel workers produce `SQLITE_BUSY: database is locked` on the

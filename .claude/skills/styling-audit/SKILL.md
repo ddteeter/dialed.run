@@ -45,10 +45,10 @@ OUT=<scratchpad>/shots
 AUDIT_SHOTS=$OUT npx playwright test --project e2e --project demo
 
 # 2. Dense: 40 garments, 60+ runs, 20 runners, a full Desk (e2e/audit/dense-seed.ts).
-AUDIT_SHOTS=$OUT-dense npx playwright test --project audit e2e/audit/dense.audit.spec.ts
+AUDIT_SHOTS=$OUT-dense npx playwright test e2e/audit/dense.audit.spec.ts --project audit
 
 # 3. Gaps and legal: states the suite does not reach, and the policies.
-AUDIT_SHOTS=$OUT-gaps npx playwright test --project audit e2e/audit/gaps.audit.spec.ts e2e/audit/legal.audit.spec.ts
+AUDIT_SHOTS=$OUT-gaps npx playwright test e2e/audit/gaps.audit.spec.ts e2e/audit/legal.audit.spec.ts --project audit
 ```
 
 How the runs fit together:

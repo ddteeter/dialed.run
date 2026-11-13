@@ -8,12 +8,15 @@
  * the skill `styling-audit` has the run.
  */
 import type { Page } from "@playwright/test";
-import { and, eq, gt, sql } from "drizzle-orm";
+import { and, eq, gt, notLike, sql } from "drizzle-orm";
 
 import {
+  entryPhotos,
   notifications,
+  outfitEntries,
   reports,
   reviewQueue,
+  runConditions,
   runs,
   stravaConnections,
 } from "../../src/db/schema-core";
@@ -110,7 +113,7 @@ async function removeRunsSince(known: ReadonlySet<string>): Promise<void> {
     for (const row of after) {
       if (known.has(row.id)) continue;
       await core.batch([
-        core.run(sql`delete from run_conditions where run_id = ${row.id}`),
+        core.delete(runConditions).where(eq(runConditions.runId, row.id)),
         core.delete(runs).where(eq(runs.id, row.id)),
       ]);
     }
@@ -448,6 +451,11 @@ test.describe("as the dense runner", () => {
       eq(reports.reporterId, MAYA_ID),
       eq(reports.subjectId, seed.otherEntryId),
     );
+    const heldPhotos = and(
+      eq(entryPhotos.entryId, seed.otherEntryId),
+      eq(entryPhotos.screenStatus, "hidden_pending_review"),
+      notLike(entryPhotos.id, "audit-g%"),
+    );
     const cleanReport = () =>
       withLocalDb(async ({ core }) => {
         await core.batch([
@@ -455,12 +463,14 @@ test.describe("as the dense runner", () => {
           core
             .delete(reviewQueue)
             .where(eq(reviewQueue.subjectId, seed.otherEntryId)),
-          core.run(
-            sql`update outfit_entries set moderation_status = 'ok' where id = ${seed.otherEntryId}`,
-          ),
-          core.run(
-            sql`update entry_photos set screen_status = 'pass' where entry_id = ${seed.otherEntryId} and screen_status = 'hidden_pending_review' and id not like 'audit-g%'`,
-          ),
+          core
+            .update(outfitEntries)
+            .set({ moderationStatus: "ok" })
+            .where(eq(outfitEntries.id, seed.otherEntryId)),
+          core
+            .update(entryPhotos)
+            .set({ screenStatus: "pass" })
+            .where(heldPhotos),
         ]);
       });
     await cleanReport();

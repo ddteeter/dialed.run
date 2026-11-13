@@ -41,17 +41,25 @@ export function insertsFor(
 }
 
 /**
-`delete from <table> where <column> like <pattern>`, once per table.
-*/
+ * `delete from <table> where <column> like <pattern>`, once per table.
+ *
+ * Every part is inlined, never bound: drizzle's D1 `batch()` cannot bind a
+ * raw `run()` statement's parameters (its `SQLiteRaw` has no prepared
+ * statement, so it throws reading `bind`). So each part must be a plain
+ * name or pattern, which these callers' constants are.
+ */
 export function deleteWhereLike(
   db: DrizzleD1Database,
   column: string,
   tables: readonly string[],
   pattern: string,
 ): BatchItem<"sqlite">[] {
+  for (const part of [column, pattern, ...tables]) {
+    if (!/^[\w%-]+$/u.test(part)) throw new Error(`not a plain name: ${part}`);
+  }
   return tables.map((name) =>
     db.run(
-      sql`delete from ${sql.identifier(name)} where ${sql.identifier(column)} like ${pattern}`,
+      sql.raw(`delete from "${name}" where "${column}" like '${pattern}'`),
     ),
   );
 }

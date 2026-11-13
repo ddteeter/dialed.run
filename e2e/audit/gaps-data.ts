@@ -7,7 +7,7 @@ import { z } from "zod";
 
 import { table } from "./table";
 
-import gapsJson from "./data/gaps.json";
+import gapsJson from "./data/gaps.json" with { type: "json" };
 
 const text = z.string();
 const num = z.number();

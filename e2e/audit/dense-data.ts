@@ -27,15 +27,15 @@ import {
   garmentSchema,
   weightSchema,
 } from "../../src/lib/contracts";
-import accessJson from "./data/access.json";
-import deskJson from "./data/desk.json";
-import garmentsJson from "./data/garments.json";
-import inboxJson from "./data/inbox.json";
-import kitsJson from "./data/kits.json";
-import peopleJson from "./data/people.json";
-import photosJson from "./data/photos.json";
-import runsJson from "./data/runs.json";
-import summaryJson from "./data/summary.json";
+import accessJson from "./data/access.json" with { type: "json" };
+import deskJson from "./data/desk.json" with { type: "json" };
+import garmentsJson from "./data/garments.json" with { type: "json" };
+import inboxJson from "./data/inbox.json" with { type: "json" };
+import kitsJson from "./data/kits.json" with { type: "json" };
+import peopleJson from "./data/people.json" with { type: "json" };
+import photosJson from "./data/photos.json" with { type: "json" };
+import runsJson from "./data/runs.json" with { type: "json" };
+import summaryJson from "./data/summary.json" with { type: "json" };
 
 const text = z.string();
 const num = z.number();

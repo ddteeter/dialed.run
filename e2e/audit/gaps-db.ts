@@ -6,13 +6,15 @@
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, like, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import {
+  blocks,
   entryPhotos,
   outfitEntries,
   runs,
+  stravaConnections,
   userProfiles,
 } from "../../src/db/schema-core";
 import { weatherObservations } from "../../src/db/schema-weather";
@@ -117,11 +119,15 @@ export async function observeNowhere(feelsLikeC: number): Promise<void> {
 }
 
 export async function cleanGaps(): Promise<void> {
+  // Builders where a value is bound: a raw statement with one throws
+  // inside `batch()` (see `deleteWhereLike`).
+  const mayaBlocks = or(
+    eq(blocks.blockerId, MAYA_ID),
+    like(blocks.blockedId, "audit-g%"),
+  );
   await withLocalDb(async ({ core }) => {
     await core.batch([
-      core.run(
-        sql`delete from blocks where blocker_id = ${MAYA_ID} or blocked_id like 'audit-g%'`,
-      ),
+      core.delete(blocks).where(mayaBlocks),
       ...deleteWhereLike(
         core,
         "id",
@@ -135,7 +141,9 @@ export async function cleanGaps(): Promise<void> {
         ],
         "audit-g%",
       ),
-      core.run(sql`delete from strava_connections where user_id = ${MAYA_ID}`),
+      core
+        .delete(stravaConnections)
+        .where(eq(stravaConnections.userId, MAYA_ID)),
       core.run(sql`delete from user_profiles where user_id like 'audit-gb%'`),
       core.run(sql`delete from user where id like 'audit-gb%'`),
     ]);
