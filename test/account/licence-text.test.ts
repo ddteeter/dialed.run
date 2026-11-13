@@ -114,6 +114,7 @@ describe("holderOf", () => {
     "(c) the Licensor may",
     // Apache 2.0's third condition, not a holder.
     "      (c) You must retain, in the Source form of any Derivative Works",
+    "(c) You keep it for 3 years",
     "(C) Your Name",
     "Permission is hereby granted",
     "",
@@ -487,14 +488,17 @@ describe("reflowed (A-12)", () => {
   it("starts a numbered, lettered or bulleted item on its own", () => {
     expect(
       reflowed(
-        "Conditions:\n1. Keep the notice\n   in copies.\n1.2. Sub\n(a) Letter\n(B) Upper\n- Bullet\n* Star\n• Dot\n2004 is a year",
+        "Conditions:\n1. Keep the notice\n   in copies.\nsee clause 2. below\n1.2. Sub\n1.12. Two digits\n(a) Letter\n(B) Upper\n(iv) Roman\n(12) Twelve\n- Bullet\n* Star\n• Dot\n2004 is a year",
       ),
     ).toEqual([
       "Conditions:",
-      "1. Keep the notice in copies.",
+      "1. Keep the notice in copies. see clause 2. below",
       "1.2. Sub",
+      "1.12. Two digits",
       "(a) Letter",
       "(B) Upper",
+      "(iv) Roman",
+      "(12) Twelve",
       "- Bullet",
       "* Star",
       "• Dot",
@@ -521,6 +525,10 @@ describe("reflowed (A-12)", () => {
     expect(reflowed("Preamble\nmore")).toEqual(["Preamble more"]);
     // Only a paragraph's one line is a heading.
     expect(reflowed("AB\nCD\nmore")).toEqual(["AB CD more"]);
+  });
+
+  it("reads a rule only as a whole line of dashes or the like", () => {
+    expect(reflowed("Words ---\n--- words")).toEqual(["Words --- --- words"]);
   });
 
   it("leaves nothing for a text of blank lines and rules", () => {

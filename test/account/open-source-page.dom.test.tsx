@@ -590,6 +590,10 @@ describe("OpenSourcePage", () => {
       name: "Project: react",
     });
     expect(project.parentElement?.lastElementChild).toBe(project);
+    // The name and its version, a space apart.
+    expect(project.parentElement?.firstElementChild?.textContent).toBe(
+      "react 19.2.0",
+    );
     expect(project.parentElement).toHaveClass("justify-between");
   });
 
