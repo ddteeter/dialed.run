@@ -664,7 +664,7 @@ describe("EntryDetail: the owner meta (round 41 #86a)", () => {
     await renderFeedScreen(detail({}, { viewerId: OWNER }));
     const meta = part("owner-meta");
     // All three tags, the board's order, the current one after its prefix
-    // (a guess until Design 172, #642, draws the other states).
+    // in every state (R55·172).
     expect(meta).toHaveTextContent(
       /^\[Public\]Seen by: \[Shared\]\[Private\]$/u,
     );
@@ -755,7 +755,7 @@ describe("EntryDetail: the owner meta (round 41 #86a)", () => {
     expect(pill).toHaveClass(
       "target",
       "rounded-pill",
-      "border-ink",
+      "border-hairline",
       "bg-transparent",
       "text-ink",
     );
@@ -790,7 +790,7 @@ describe("EntryDetail: the owner meta (round 41 #86a)", () => {
         expect(pill).toHaveAttribute("data-state", "copied");
       });
       expect(shownWord(pill)).toBe("Copied");
-      expect(pill).toHaveClass("bg-ink", "text-ground");
+      expect(pill).toHaveClass("bg-ink", "text-ground", "border-ink");
       expect(pill).toHaveAccessibleName("Copy link");
       vi.advanceTimersByTime(COPY_HOLD_MS - 50);
       expect(pill).toHaveAttribute("data-state", "copied");
@@ -805,7 +805,7 @@ describe("EntryDetail: the owner meta (round 41 #86a)", () => {
     }
   });
 
-  it("says Not copied on the pill, unfilled, when the browser refuses (owner, #641)", async () => {
+  it("says Not copied on the pill, unfilled, when the browser refuses (R55·171)", async () => {
     const user = userEvent.setup();
     await renderFeedScreen(detail({ audience: "world" }, { viewerId: OWNER }));
     const refuse = vi
@@ -818,7 +818,8 @@ describe("EntryDetail: the owner meta (round 41 #86a)", () => {
         expect(pill).toHaveAttribute("data-state", "refused");
       });
       expect(shownWord(pill)).toBe("Not copied");
-      expect(pill).toHaveClass("bg-transparent", "text-ink");
+      // The rest look, only the word changed (R55·171).
+      expect(pill).toHaveClass("bg-transparent", "text-ink", "border-hairline");
       expect(pill).not.toHaveClass("bg-ink");
     } finally {
       refuse.mockRestore();

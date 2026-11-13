@@ -83,17 +83,17 @@ and `ReportAffordance`:
 
 ## Issues
 
-- Closes: #628 (less what 7b holds), #612, #624.
+- Closes: #628 (less what 7b holds), #612, #624, #641, #642.
 - Refs: #632 (the feed-origin findings, ticked "done in 7d").
 - Opens: #645 (AF1's 90ms cross-fade needs a motion surface; the swap is a
   cut until then).
 
 ## Open questions
 
-- **Owner's call, awaiting Design 171 (#641):** a refused copy shows "Not
-  copied" on the pill for 2000ms, with no ink fill. AF1 draws only success.
-- **Guess, awaiting Design 172 (#642):** the three audience tags show in
-  every state, not only PUBLIC. Round 41 draws only PUBLIC.
+- **Settled by Round 55:** R55·171 (#641) draws the owner's "Not copied":
+  the rest look (hairline edge, no fill) for 2000ms, heard as "Link not
+  copied.", so the rest pill's edge is a hairline too, superseding round
+  41's ink one. R55·172 (#642) confirms all three tags in every state.
 - Wave 8 (Round 54): 166.4 (the audience picker as one card with ink
   rings, MONO.sm caps at 400), 166.6 (W1's block option as "Send and
   block"), 167 and 168.

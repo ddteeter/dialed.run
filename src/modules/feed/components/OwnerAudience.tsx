@@ -46,8 +46,8 @@ export const COPY_HOLD_MS = 2000;
 
 /**
  * What the pill says: at rest, after a copy (AF1), and after a refused
- * copy. AF1 draws only the copy; "Not copied" is the owner's call
- * (2026-11-12), built as a guess until Design 171 (#641) draws it.
+ * copy. "Not copied" is the owner's call (2026-11-12), drawn by R55·171:
+ * the rest look, only the word changed, and heard as "Link not copied."
  */
 const PILL_WORD = {
   rest: "Copy link",
@@ -59,9 +59,10 @@ type PillState = keyof typeof PILL_WORD;
 const PILL_STATES: readonly PillState[] = ["rest", "copied", "refused"];
 
 // AF1: "Same button, same width, label swaps to the past tense and fills
-// ink." The ink fill is the copy's alone; a refused copy keeps the outline.
+// ink." The ink fill and edge are the copy's alone. At rest and refused the
+// edge is a hairline with no fill, as R55·171 draws both.
 const OUTLINE_PILL_CLASS =
-  "target inline-grid cursor-pointer items-center rounded-pill border border-ink bg-transparent px-5 text-body font-bold text-ink";
+  "target inline-grid cursor-pointer items-center rounded-pill border border-hairline bg-transparent px-5 text-body font-bold text-ink";
 const FILLED_PILL_CLASS =
   "target inline-grid cursor-pointer items-center rounded-pill border border-ink bg-ink px-5 text-body font-bold text-ground";
 
@@ -73,8 +74,8 @@ const CHANGE_CLASS =
  * the current one in ink, then for a PUBLIC kit the sentence in body ink,
  * an outlined Copy link pill and Change.
  *
- * **The three tags show in every state**, a guess until Design 172
- * (#642) says: round 41 draws only PUBLIC. The board's order is PUBLIC,
+ * **The three tags show in every state**, in MONO.xs, the current one in
+ * ink and the other two muted (R55·172). The board's order is PUBLIC,
  * SHARED, PRIVATE, the picker's reversed. Only the current one is heard,
  * after its prefix; the other two are drawn and not read.
  */
