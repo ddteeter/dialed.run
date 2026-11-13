@@ -83,6 +83,8 @@ describe("kindLabel", () => {
   it("adds the type after the category, as round 26's TOP · HALF-ZIP", () => {
     expect(kindLabel("top", "halfZip")).toBe("Top · Half-zip");
     expect(kindLabel("bottom", "halfTights")).toBe("Bottom · Half tights");
+    // N1-09: a type that only repeats its category is said once.
+    expect(kindLabel("shoes", "shoes")).toBe("Shoes");
   });
 });
 

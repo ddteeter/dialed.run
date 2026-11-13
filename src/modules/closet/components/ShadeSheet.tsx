@@ -192,16 +192,12 @@ export function ShadeSheet({
           htmlFor="colorHex"
         >
           <Mono step="sm">Hex</Mono>
-          <span className="flex items-center gap-3">
-            <input
-              id="colorHex"
-              name="colorHex"
-              value={hex}
-              onChange={(event) => {
-                setHex(event.target.value);
-              }}
-              className="min-h-12 flex-1 rounded-field border border-hairline bg-ground px-4 py-3 text-ink"
-            />
+          {/* Round 55 · 191d: the swatch sits inside the field, before the
+              hex, so the colour and its value read as one thing. */}
+          <span
+            data-part="hex-field"
+            className="flex min-h-12 items-center gap-3 rounded-field border border-hairline bg-ground px-4"
+          >
             {/* The only swatch in the product, and 18px because design said
                 18px. It shows what the runner just read, so it is decorative
                 — the hex beside it is the value, in words. */}
@@ -211,12 +207,22 @@ export function ShadeSheet({
               // about it: one value, used twice, so a test can read what
               // the square actually shows without parsing a style string.
               data-swatch={swatchColor}
-              className="shrink-0 rounded-tight border border-hairline"
+              // Round 55 · 191c: --hairline-2, which separates navy from ink.
+              className="shrink-0 rounded-tight border border-hairline-2"
               style={{
                 width: SWATCH_PX,
                 height: SWATCH_PX,
                 backgroundColor: swatchColor,
               }}
+            />
+            <input
+              id="colorHex"
+              name="colorHex"
+              value={hex}
+              onChange={(event) => {
+                setHex(event.target.value);
+              }}
+              className="min-w-0 flex-1 border-none bg-transparent py-3 text-ink"
             />
           </span>
         </label>

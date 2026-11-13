@@ -2,9 +2,16 @@ import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import type { JSX, ReactNode } from "react";
 
-import type { GarmentVisibility, TempUnit } from "../../../lib/contracts";
+import type {
+  DistanceUnit,
+  GarmentVisibility,
+  Units,
+} from "../../../lib/contracts";
 import { photoAcceptAttribute } from "../../../lib/photo-constraints";
-import { worksAtForms } from "../../../lib/contracts/measures";
+import {
+  wholeDistanceNumber,
+  worksAtForms,
+} from "../../../lib/contracts/measures";
 import {
   COLUMN,
   PHOTO_STILL_ON,
@@ -295,7 +302,9 @@ function Colorway({
         <span
           data-content=""
           aria-hidden="true"
-          className="size-3 shrink-0"
+          // Round 55 · 191c: a --hairline-2 edge in both themes, because
+          // --hairline doesn't separate navy from ink.
+          className="size-3 shrink-0 border border-hairline-2"
           style={{ backgroundColor: item.colorHex }}
         />
       )}
@@ -319,37 +328,64 @@ function summaryOf(detail: Detail): typeof NEVER_WORN {
 }
 
 /**
+ * The stats' record (C-17, N1-06): the mileage in the runner's own unit,
+ * to the whole unit and only once there is a first mile, as the closet's
+ * tile prints it, then how often the piece was dialed. A piece with
+ * neither says so as the tile does: "No runs yet", or "No verdict yet"
+ * once it has run.
+ */
+function RecordLine({
+  summary,
+  distanceUnit,
+}: Readonly<{
+  summary: typeof NEVER_WORN;
+  distanceUnit: DistanceUnit;
+}>): JSX.Element {
+  const verdicts = summary.verdictCount;
+  const dialed = String(summary.dialedCount);
+  const logged =
+    summary.mileageM === 0
+      ? undefined
+      : `${wholeDistanceNumber(summary.mileageM, distanceUnit)} ${distanceUnit} logged`;
+  if (logged === undefined && verdicts === 0) {
+    return <>{summary.runCount === 0 ? "No runs yet" : "No verdict yet"}</>;
+  }
+  return (
+    <>
+      {logged}
+      {/* "3/5" is spoken "three slash five": the eye gets the ratio,
+          a screen reader the sentence. */}
+      {verdicts > 0 ? (
+        <>
+          {logged === undefined ? undefined : " · "}
+          <span aria-hidden="true">{`${dialed}/${String(verdicts)} dialed`}</span>
+          <span className="sr-only">{`${dialed} of ${runsLabel(verdicts)} dialed`}</span>
+        </>
+      ) : undefined}
+    </>
+  );
+}
+
+/**
  * Stats, then works-at: MONO.md for what was logged, MONO.sm in the
  * dialed hue for the band. Retired, the band is past tense — *"Works at →
  * WORKED AT"*. They share a row at width.
  */
 function Stats({
   detail,
-  tempUnit,
-}: Readonly<{ detail: Detail; tempUnit: TempUnit }>): JSX.Element {
+  units,
+}: Readonly<{ detail: Detail; units: Units }>): JSX.Element {
   const { item, tempRange } = detail;
   const range =
-    tempRange === undefined ? undefined : worksAtForms(tempRange, tempUnit);
+    tempRange === undefined ? undefined : worksAtForms(tempRange, units.temp);
   const summary = summaryOf(detail);
-  const km = Math.round(summary.mileageM / 1000);
-  const verdicts = summary.verdictCount;
-  const dialed = String(summary.dialedCount);
   return (
     <div
       data-part="stats"
       className="flex flex-col gap-1 border-y border-hairline py-3 wide:flex-row wide:items-baseline wide:gap-6"
     >
       <Mono step="md">
-        {`${String(km)} km logged`}
-        {/* "3/5" is spoken "three slash five": the eye gets the ratio,
-            a screen reader the sentence. */}
-        {verdicts > 0 ? (
-          <>
-            {" · "}
-            <span aria-hidden="true">{`${dialed}/${String(verdicts)} dialed`}</span>
-            <span className="sr-only">{`${dialed} of ${runsLabel(verdicts)} dialed`}</span>
-          </>
-        ) : undefined}
+        <RecordLine summary={summary} distanceUnit={units.distance} />
       </Mono>
       {range ? (
         <p className="m-0 text-dialed-text">
@@ -404,9 +440,10 @@ function PairsWith({
 type GarmentDetailProps = Readonly<{
   detail: Detail;
   /**
-  The runner's unit, for the works-at range.
+  The runner's units: temperature for the works-at range, distance for the
+  mileage, as the closet's tile has them.
   */
-  tempUnit: TempUnit;
+  units: Units;
   retire: (input: { data: { itemId: string } }) => Promise<unknown>;
   unretire: (input: { data: { itemId: string } }) => Promise<unknown>;
   remove: (input: { data: { itemId: string } }) => Promise<unknown>;
@@ -644,7 +681,7 @@ function CompositionSection({
 }: Readonly<{
   detail: Detail;
   correction: CorrectionActions | undefined;
-}>): JSX.Element {
+}>): JSX.Element | undefined {
   const { item, composition } = detail;
   const words = attributeWords(detail.effective, item);
   const wrong =
@@ -670,13 +707,22 @@ function CompositionSection({
         wrong={wrong}
       />
     );
+  // Nothing to show is no section at all, so the actions' rule can tell
+  // it follows the stats' directly (C-06).
+  if (block === undefined && wrong === undefined && words.length === 0) return;
   return (
-    <div data-part="composition" className="flex flex-col gap-2 empty:hidden">
+    <div data-part="composition" className="flex flex-col gap-2">
       {/* §AG: the brand's own label. `brand` is the garment's, which is
           what the runner sees on the label in their hand; a piece with
           no brand gets no "as labelled by" line rather than an invented
           one. With no label to hang it on, WRONG? stands alone. */}
-      {block ?? wrong}
+      {block ?? (
+        // Alone, WRONG? sits at the left like everything else on the page,
+        // not stretched across the column with its text centred (C-05).
+        <div data-part="wrong-alone" className="flex">
+          {wrong}
+        </div>
+      )}
       {words.length > 0 ? (
         <p className="m-0 text-body">
           {words.map(({ word, isLent }, index) => (
@@ -808,7 +854,7 @@ export function GarmentDetail({
   renderPhotoStep,
   photoChecking,
   bandCount = noBandCount,
-  tempUnit,
+  units,
   correction,
 }: GarmentDetailProps) {
   const { item, isGeneric } = detail;
@@ -854,7 +900,7 @@ export function GarmentDetail({
         photoChecking={photoChecking}
       />
 
-      <Stats detail={detail} tempUnit={tempUnit} />
+      <Stats detail={detail} units={units} />
 
       <CompositionSection detail={detail} correction={correction} />
 
@@ -862,7 +908,10 @@ export function GarmentDetail({
 
       <div
         data-part="actions"
-        className="flex items-center gap-2 border-t border-hairline pt-4 wide:border-t-0 wide:pt-0"
+        // Below wide the actions start with a rule, unless they follow the
+        // stats directly, whose own rule is already there: two hairlines
+        // 20px apart read as a double border (C-06, N1-08).
+        className="flex items-center gap-2 border-t border-hairline pt-4 wide:border-t-0 wide:pt-0 [[data-part=stats]+&]:border-t-0 [[data-part=stats]+&]:pt-0"
       >
         {/* Retired, Edit goes — *"you don't edit a retired piece;
             unretire first"* — and Unretire takes Retire's place. */}

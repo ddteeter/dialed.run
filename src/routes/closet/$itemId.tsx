@@ -45,7 +45,7 @@ function GarmentDetailPage() {
     <BelledLayout {...bell}>
       <GarmentDetail
         detail={detail}
-        tempUnit={units.temp}
+        units={units}
         // Feed's (the band is the run's weather), asked for by round 26's
         // delete sheet when it opens — never with the page (task 128).
         bandCount={garmentBandCountQuery}
