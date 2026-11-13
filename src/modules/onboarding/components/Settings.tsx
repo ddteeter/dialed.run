@@ -292,7 +292,14 @@ export function SettingsIndex({
           account and data groups." */}
       {/* A control, not a row that opens a page, so no list around it. */}
       <GroupSection title="Display" className="flex flex-col gap-1">
-        {display}
+        {/* The kicker over a rule, as the board draws it and as every
+            other group's rows are ruled (#630 F-05). */}
+        <div
+          data-part="display-rule"
+          className="border-t border-hairline pt-3"
+        >
+          {display}
+        </div>
       </GroupSection>
       <SettingsGroup title="Data">
         <SettingsRow

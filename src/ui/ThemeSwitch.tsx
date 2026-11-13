@@ -33,6 +33,11 @@ export const THEME_LABELS: Readonly<Record<ThemeChoice, string>> = {
   dark: "Dark",
 };
 
+/**
+The row's title and the group's name: one word, written once.
+*/
+const THEME_LEGEND = "Theme";
+
 export const THEME_SAVE_KICKER = "Couldn't save.";
 export const THEME_SAVE_MESSAGE = "This device will keep it.";
 
@@ -103,9 +108,16 @@ export function ThemeSwitch({
   });
   return (
     <div data-part="theme-row" className="flex flex-col gap-2">
+      {/* "Theme" is the row's bold title, as every settings row's label
+          is (#630 F-05), not a second mono kicker under DISPLAY. Drawn
+          here and heard once, from the group's legend. */}
+      <span aria-hidden="true" className="text-body font-semibold">
+        {THEME_LEGEND}
+      </span>
       <ChoiceList
         name="theme"
-        legend="Theme"
+        legend={THEME_LEGEND}
+        isLegendHeading
         options={THEME_CHOICES}
         optionLabels={THEME_LABELS}
         optionStep="xs"

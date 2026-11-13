@@ -61,6 +61,22 @@ describe("ThemeSwitch", () => {
     }
   });
 
+  it("titles the row Theme in bold, heard once as the group's name (#630 F-05)", () => {
+    const { group } = setUp(
+      "system",
+      vi.fn(() => Promise.resolve()),
+    );
+    const row = group.closest("[data-part='theme-row']");
+    const title = row?.firstElementChild;
+    expect(title).toHaveTextContent(/^Theme$/u);
+    expect(title).toHaveClass("text-body", "font-semibold");
+    expect(title).not.toHaveClass("font-mono");
+    expect(title).toHaveAttribute("aria-hidden", "true");
+    // The legend still names the group, for the ear only.
+    expect(group.querySelector("legend")).toHaveClass("sr-only");
+    expect(group.querySelector("legend")).toHaveTextContent(/^Theme$/u);
+  });
+
   it("draws the words as MONO.xs capitals and speaks them in sentence case", () => {
     // R50·143.3: capitals like every other segmented label. Round 52's
     // Accessibility Contract: the names heard are "System", "Light",

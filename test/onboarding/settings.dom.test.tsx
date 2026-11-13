@@ -176,6 +176,11 @@ describe("the index (U1/N)", () => {
     expect(display).toContainElement(screen.getByText("the theme row"));
     // A control, not a list row: no `<ul>` for it to be invalid inside.
     expect(display?.querySelector("ul")).toBeNull();
+    // Under a rule, as every other group is (#630 F-05).
+    expect(screen.getByText("the theme row").parentElement).toHaveClass(
+      "border-t",
+      "border-hairline",
+    );
     const you = screen.getByRole("heading", { name: "You" }).closest("section");
     expect(
       within(you ?? document.body)
