@@ -399,14 +399,15 @@ Then, stepping through:
 - the date
 - button "the time, change start time"
 - "Conditions · auto-attached"
-- "N degrees", "dry"
-- "Feels N degrees · N % hum · N mph · overcast"
+- "N degrees Fahrenheit, dry"
+- "Feels like N degrees, N percent humidity, wind N miles per hour, overcast"
 - "Never typed by hand. Wrong time? Change it on the run card and we'll get the weather for it."
 - link "Weather data provided by Visual Crossing"
 - link "Looks right — what did you wear?"
 
 Check: distance, time and pace are heard as values with their units, not
-as bare digits. Write down how VoiceOver reads the "Feels" line.
+as bare digits, and the "Feels" line in words, not as "hum" or "mph" (round
+52 #158). Write down how VoiceOver reads it.
 
 **2.3 Changing the start time.** Double tap the start-time button. Same
 source. In the button's place you should hear:
@@ -424,7 +425,7 @@ Source: `conformance/a2-attach.conformance.spec.ts/A2-·-before-a-suggestion-no-
 You should hear, on a first run with no history:
 
 - "What did you wear?", heading 1
-- "N miles · N degrees damp · N pieces" (your conditions)
+- "N miles, N degrees Fahrenheit, damp, N pieces" (your conditions)
 - link "Weather data provided by Visual Crossing"
 - "No usual kit at N degrees yet." "Pick what you wore. After a few runs here, we'll suggest it."
 - "From the closet", heading 2
@@ -514,8 +515,9 @@ Without moving, you should hear once: "Noted." and one sentence, such as
 Then the screen is the receipt: the same heading, the five verdicts and
 the tags now dimmed, with the verdict you picked still checked, "Noted"
 and the sentence again as text, and under
-them "This run", "The kit you're judging" and "Before, in N to N degrees",
-each a heading 2.
+them "This run", "The kit you're judging" and "Before, in N to N degrees,
+dry", each a heading 2. "This run" holds "N miles, N minutes N seconds"
+and "N degrees Fahrenheit, dry, feels like N degrees".
 
 Check: the button said it was working while it saved; the sentence was
 spoken once, not twice; your next swipe continues from the form, not from
@@ -626,7 +628,8 @@ With nobody followed, you should hear:
 
 With posts, each post is an article holding one link, read as a single
 stop in this order: the handle, when, the verdict, the distance, the
-conditions ("N degrees · clear", or "Indoor"). Then button "Useful, the
+conditions ("N degrees, clear", or "Indoor"), the distance and the
+conditions in words: "N miles", never "mi". Then button "Useful, the
 handle's run", not pressed. "Weather data provided by Visual Crossing" is
 a link after the first post.
 
@@ -670,7 +673,7 @@ You should hear:
 - link "Back to feed"
 - the handle, heading 1
 - the date and time, "N miles", "N minutes N seconds per mile"
-- the verdict, then "N degrees · clear"
+- the verdict, then "N degrees, clear"
 - link "Weather data provided by Visual Crossing"
 - "Kit" and a list of the pieces, each with "Generic" where it is
 - a list "Tags"
@@ -688,14 +691,14 @@ and `conformance/feed-e2.conformance.spec.ts/with-the-location-granted-E2-lite-w
 
 Too few runners (what you will get before friends):
 
-- "Same conditions · Feels N to N degrees · dry"
+- "Same conditions, feels like N to N degrees, dry"
 - "Not enough runs yet", heading 2
 - "Fewer than five runners logged N degrees and dry in two weeks, which is too few to show without showing who."
 - "Your own record in this band is on the Call.", link "Open the Call"
 
 With enough:
 
-- "Same conditions · Feels N to N degrees · dry", and "· N days" when it looked further back
+- "Same conditions, feels like N to N degrees, dry", and ", N days" when it looked further back
 - "N runners logged this", heading 2
 - "In N degrees and dry, wherever they were." and, when widened, "Too few in three days, so this looks back two weeks."
 - "What they wore" and a list: the category, "N of N runners", and a sentence such as "All got it right in long sleeve."

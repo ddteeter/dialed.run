@@ -238,21 +238,28 @@ describe("PostCard: the strip", () => {
       }),
     });
 
-    expect(strip(post)).toHaveTextContent("5.0mi|41° · Rain");
-    expect(screen.getByText("41° · Rain")).toHaveClass("text-dialed-text");
-    expect(screen.getByText("5.0mi")).toHaveClass("font-mono");
+    expect(strip(post)).toHaveTextContent(
+      "5.0mi5.0 miles|41° · Rain41 degrees, Rain",
+    );
+    // Round 52 #158: drawn for the eye, said in words, once each.
+    const reading = screen.getByText("41° · Rain");
+    expect(reading.parentElement).toHaveClass("text-dialed-text");
+    expect(reading).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("41 degrees, Rain")).toHaveClass("sr-only");
+    expect(screen.getByText("5.0mi").parentElement).toHaveClass("font-mono");
+    expect(screen.getByText("5.0 miles")).toHaveClass("sr-only");
   });
 
   it("reads INDOOR when the run was indoors and has no conditions", async () => {
     const post = await card({ indoor: true });
 
-    expect(strip(post)).toHaveTextContent("5.0mi|Indoor");
+    expect(strip(post)).toHaveTextContent("5.0mi5.0 miles|Indoor");
     expect(screen.getByText("Indoor")).toHaveClass("text-muted", "font-mono");
   });
 
   it("is one cell otherwise — no divider, no dash", async () => {
     const post = await card();
-    expect(strip(post)).toHaveTextContent(/^5\.0mi$/u);
+    expect(strip(post)).toHaveTextContent(/^5\.0mi5\.0 miles$/u);
   });
 
   it("credits Visual Crossing beside its reading, outside the link to D (FEED-8)", async () => {

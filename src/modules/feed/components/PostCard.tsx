@@ -1,11 +1,12 @@
 import { Link } from "@tanstack/react-router";
 
 import type { Units } from "../../../lib/contracts";
-import { formatDistance } from "../../../lib/contracts/measures";
+import { measuredLine } from "../../../lib/contracts/measures";
 import {
   GarminAttribution,
   Mono,
   SlowLabel,
+  Spoken,
   useTappedSlow,
   WeatherAttribution,
 } from "../../../ui";
@@ -140,7 +141,15 @@ export function PostCard(props: Readonly<PostCardProps>) {
           data-part="run-strip"
           className="flex gap-3 border-y border-hairline py-2"
         >
-          <Mono>{formatDistance(item.distanceM, units.distance)}</Mono>
+          {/* Drawn as "8.2mi", said "8.2 miles" (round 52 #158). */}
+          <Mono>
+            <Spoken
+              {...measuredLine(
+                [[{ kind: "distance", distanceM: item.distanceM }]],
+                units,
+              )}
+            />
+          </Mono>
           {second === undefined ? undefined : (
             <>
               {/* A rule between two cells, not a value: nothing to read. */}

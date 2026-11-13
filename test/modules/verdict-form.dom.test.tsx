@@ -2016,11 +2016,15 @@ describe("VerdictForm: the run header (round 21)", () => {
       "aria-hidden",
       "true",
     );
-    expect(within(rail).getByText("6.2 mi, 51 minutes 38 seconds")).toHaveClass(
-      "sr-only",
-    );
-    expect(within(rail).getByText("41°F damp · feels 36°")).toHaveClass(
-      "text-dialed-text",
+    expect(
+      within(rail).getByText("6.2 miles, 51 minutes 38 seconds"),
+    ).toHaveClass("sr-only");
+    // Round 52 #158: the receipt's reading, drawn and said in words.
+    const reading = within(rail).getByText("41°F damp · feels 36°");
+    expect(reading.parentElement).toHaveClass("text-dialed-text");
+    expect(reading).toHaveAttribute("aria-hidden", "true");
+    expect(reading.nextElementSibling).toHaveTextContent(
+      "41 degrees Fahrenheit, damp, feels like 36 degrees",
     );
     expect(
       within(rail).getByRole("heading", { name: "The kit you’re judging" }),
@@ -2463,7 +2467,7 @@ describe("VerdictForm: the rail's band record and history (round 25)", () => {
     );
 
     const card = within(railOf())
-      .getByRole("heading", { name: "Before, in 32–41° damp" })
+      .getByRole("heading", { name: "Before, in 32 to 41 degrees, damp" })
       .closest("section");
     if (card === null) throw new Error("no history card");
     const rows = card.querySelectorAll("[data-part='band-run']");
@@ -2497,7 +2501,9 @@ describe("VerdictForm: the rail's band record and history (round 25)", () => {
       }),
     );
     expect(
-      within(railOf()).getByRole("heading", { name: "Before, in 32–41° damp" }),
+      within(railOf()).getByRole("heading", {
+        name: "Before, in 32 to 41 degrees, damp",
+      }),
     ).toBeInTheDocument();
     expect(railOf()).toHaveTextContent("No runs in this band yet.");
   });

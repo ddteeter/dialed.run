@@ -29,17 +29,9 @@ end of button, Get weather
 end of form
 Conditions · auto-attached
 paragraph
-#°F
-dry
+# degrees Fahrenheit, dry
 end of paragraph
-Feels
-#°
-·
-#
-% hum ·
-#mph
-·
-overcast
+Feels like # degrees, # percent humidity, wind # miles per hour, overcast
 paragraph
 Never typed by hand. Wrong time? Change it on the run card and we’ll get the weather for it.
 end of paragraph

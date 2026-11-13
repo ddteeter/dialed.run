@@ -47,7 +47,7 @@ button, Delete photo #
 end of listitem, level 1, position 2, set size 2
 end of list
 :day :month # · #:#
-#.#mi
+#.# miles
 # minutes # seconds per mile
 Dialed
 Kit

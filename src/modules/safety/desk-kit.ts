@@ -15,9 +15,10 @@
  * report is often about both. The start in the run's zone (R-96: its
  * observation's, else the runner's, else UTC), the judged feels-like and
  * the precip class from the run's copy in core (`run_conditions`, D-175),
- * in the operator's own unit, and the runner's city. **The city is a
- * guess (Design 155):** no run stores a place, so the runner's profile
- * city stands in. Not Useful counts or tags: neither decides a report.
+ * in the operator's own unit. **No city** (round 52 #155.1): no run stores
+ * a place, and the runner's home city on a run logged elsewhere would
+ * mislead an operator judging where. Not Useful counts or tags: neither
+ * decides a report.
  */
 import { asc, eq } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
@@ -60,10 +61,6 @@ export interface DeskKit {
   The run it was worn on; nothing for a run since deleted.
   */
   readonly run: DeskKitRun | undefined;
-  /**
-  The runner's city (Design 155's guess: no run stores one).
-  */
-  readonly city: string | undefined;
   /**
   The operator's own unit, which the run line's temperature is in.
   */
@@ -145,7 +142,6 @@ export async function deskKitFor(
         },
         feelsLikeC: runConditions.judgedFeelsLikeC,
         moisture: runConditions.precipClass,
-        city: userProfiles.cityLabel,
         runnerZone: userProfiles.timeZone,
         // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; deskKitFor is the one read of a kit for the Desk, and its pieces already come from kitPiecesSelect, which feed/public-kit.ts shares
       })
@@ -172,7 +168,7 @@ export async function deskKitFor(
   ]);
   const [kit] = kits;
   if (kit === undefined) return undefined;
-  const { runId, feelsLikeC, moisture, city, runnerZone, run, ...rest } = kit;
+  const { runId, feelsLikeC, moisture, runnerZone, run, ...rest } = kit;
   const unit = tempUnitSchema.safeParse(units[0]?.tempUnit);
   return {
     ...rest,
@@ -188,7 +184,6 @@ export async function deskKitFor(
             feelsLikeC: feelsLikeC ?? undefined,
             moisture: moisture ?? undefined,
           },
-    city: city ?? undefined,
     tempUnit: unit.success ? unit.data : defaultUnits.temp,
     photos,
     garments: garments.map(({ id, name, brand, category }) => ({

@@ -34,7 +34,6 @@ function kit(overrides: Partial<Kit> = {}): Kit {
       feelsLikeC: 5,
       moisture: "damp",
     },
-    city: "Boston",
     tempUnit: "f",
     photos: [
       { id: PHOTO_1, photoKey: "entries/u/k/1", screenStatus: "pass" },
@@ -60,10 +59,11 @@ describe("DeskKit", () => {
   it("names whose kit it is, who may see it and where review left it", async () => {
     await renderWithRouter(<DeskKit kit={kit()} />);
 
-    // The board draws no heading: the page's h1 is for screen readers.
-    expect(screen.getByRole("heading", { level: 1, name: "Kit" })).toHaveClass(
-      "sr-only",
-    );
+    // The board draws no heading: the page's h1 is for screen readers,
+    // and names whose kit it is (round 52 #155.3).
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Kit by @k_lopes" }),
+    ).toHaveClass("sr-only");
     expect(part("kit-band")).toHaveTextContent(
       "@k_lopes[private][hidden pending review]",
     );
@@ -71,7 +71,11 @@ describe("DeskKit", () => {
       "href",
       "/desk/runners?query=k_lopes&filter=all",
     );
-    expect(screen.getByText(KIT_ID).parentElement).toHaveClass("select-all");
+    // MONO.xs in --muted, selectable, so it can be copied into the
+    // takedown form (round 52 #155.3).
+    const id = screen.getByText(KIT_ID);
+    expect(id).toHaveClass("font-mono", "text-mono-xs");
+    expect(id.parentElement).toHaveClass("text-muted", "select-all");
   });
 
   it.each([
@@ -95,6 +99,12 @@ describe("DeskKit", () => {
       /^01JRUNNER00000000000000001\[/u,
     );
     expect(screen.queryByRole("link", { name: /^@/u })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: "Kit by 01JRUNNER00000000000000001",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("lays the kit out in the board's order, its id last", async () => {
@@ -112,6 +122,7 @@ describe("DeskKit", () => {
       "kit-verdict",
       "kit-garments",
       "kit-caption",
+      "kit-id",
     ]);
     // The back link before everything, and the kit's id after the notes.
     expect(part("desk-kit")?.firstElementChild).toHaveTextContent(
@@ -120,13 +131,18 @@ describe("DeskKit", () => {
     expect(part("desk-kit")?.lastElementChild).toHaveTextContent(KIT_ID);
   });
 
-  it("says when and where in the run line: the day and start in the run's zone, the feels-like, the moisture and the city", async () => {
+  it("says when in the run line: the day and start in the run's zone, the feels-like and the moisture, and no city", async () => {
     await renderWithRouter(<DeskKit kit={kit()} />);
 
-    // Noon UTC is 8:00 AM in New York; 5 °C is 41 °F.
-    expect(part("kit-run")).toHaveTextContent(
-      /^Sep 10 · 8:00 AM · 41° · damp · Boston$/u,
+    // Noon UTC is 8:00 AM in New York; 5 °C is 41 °F. No city: no run
+    // stores a place (round 52 #155.1).
+    const drawn = screen.getByText("Sep 10 · 8:00 AM · 41° · damp");
+    expect(drawn).toHaveAttribute("aria-hidden", "true");
+    // Said in words, out of the line's capitals (round 52 #158).
+    expect(drawn.nextElementSibling).toHaveTextContent(
+      /^Sep 10, 8:00 AM, 41 degrees, damp$/u,
     );
+    expect(drawn.nextElementSibling).toHaveClass("sr-only", "normal-case");
     expect(part("kit-run")).toHaveClass("uppercase");
     expect(part("kit-run")?.firstElementChild).toHaveClass("font-mono");
   });
@@ -135,7 +151,7 @@ describe("DeskKit", () => {
     await renderWithRouter(<DeskKit kit={kit({ tempUnit: "c" })} />);
 
     expect(part("kit-run")).toHaveTextContent(
-      /^Sep 10 · 8:00 AM · 5° · damp · Boston$/u,
+      /^Sep 10 · 8:00 AM · 5° · dampSep 10, 8:00 AM, 5 degrees, damp$/u,
     );
   });
 
@@ -149,12 +165,13 @@ describe("DeskKit", () => {
             feelsLikeC: undefined,
             moisture: undefined,
           },
-          city: undefined,
         })}
       />,
     );
 
-    expect(part("kit-run")).toHaveTextContent(/^Sep 10 · 12:00 PM$/u);
+    expect(part("kit-run")).toHaveTextContent(
+      /^Sep 10 · 12:00 PMSep 10, 12:00 PM$/u,
+    );
   });
 
   it("shows the verdict and the notes", async () => {
@@ -276,6 +293,9 @@ describe("DeskKit", () => {
       "No kit has this id. It may be deleted.",
     );
     expect(part("kit-band")).toBeNull();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Kit" }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Back to Review" }),
     ).toHaveAttribute("href", "/desk/review");

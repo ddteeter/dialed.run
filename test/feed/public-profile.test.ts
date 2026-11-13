@@ -340,7 +340,12 @@ describe("publicProfileRead: a public profile", () => {
       entryId: publicKits[4],
       // The observation's zone wins over the runner's place (R-96).
       day: "Fri Oct 17",
-      conditions: { feelsLike: "38°", sky: "damp", isProviders: true },
+      conditions: {
+        feelsLike: "38°",
+        sky: "damp",
+        said: "38 degrees, damp",
+        isProviders: true,
+      },
       verdict: -1,
       distance: { value: "6.2", unit: "mi" },
     });

@@ -6,7 +6,7 @@ end of link, Notifications, # new
 end of banner
 main
 heading, What did you wear?, level 1
-#.# mi · #°F damp · # pieces
+#.# miles, # degrees Fahrenheit, damp, # pieces
 link, Weather data provided by Visual Crossing
 status
 busy

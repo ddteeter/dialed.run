@@ -1,9 +1,9 @@
 import type { JSX, ReactNode } from "react";
 
 import type { Units } from "../../../lib/contracts";
-import { formatWind } from "../../../lib/contracts/measures";
-import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
-import { Mono, PendingLabel, WeatherAttribution } from "../../../ui";
+import { measuredLine } from "../../../lib/contracts/measures";
+import { precipClassOf } from "../../../lib/contracts/temperature";
+import { Mono, PendingLabel, Spoken, WeatherAttribution } from "../../../ui";
 import { setBandLabel, SKY_WORDS } from "../run-conditions";
 import type { RunConditions, RunSummary } from "../service";
 
@@ -33,9 +33,21 @@ export function ConditionsBlock({
   // A set band reads as the range the runner picked and the sky they
   // picked — never its stored middle (round 26, item 2).
   const { sky } = conditions;
+  // The provider's reading is a line of measures (round 52 #158): drawn
+  // as two sizes, said as one line in words. A band the runner set has no
+  // unit letter, so it is drawn and said as it is.
+  const reading = {
+    kind: "temp",
+    tempC: conditions.tempC,
+    withLetter: true,
+  } as const;
+  const said = measuredLine(
+    [[reading, { kind: "word", word: precipClassOf(conditions.precipMm) }]],
+    units,
+  ).said;
   const temp = conditions.isSetByYou
     ? setBandLabel(conditions.tempC, units.temp)
-    : `${formatTemp(conditions.tempC, units.temp)}${units.temp.toUpperCase()}`;
+    : measuredLine([[reading]], units).shown;
   const precip = conditions.isSetByYou
     ? sky && SKY_WORDS[sky]
     : precipClassOf(conditions.precipMm);
@@ -52,18 +64,41 @@ export function ConditionsBlock({
           : "Conditions · auto-attached"}
       </Mono>
       <p className="m-0 flex items-baseline gap-2">
-        <span className="font-display text-display">{temp}</span>
+        <span
+          aria-hidden={conditions.isSetByYou ? undefined : true}
+          className="font-display text-display"
+        >
+          {temp}
+        </span>
         <Mono step="sm" className="text-teal">
-          {precip}
+          <span aria-hidden={conditions.isSetByYou ? undefined : true}>
+            {precip}
+          </span>
         </Mono>
+        {conditions.isSetByYou ? undefined : (
+          <span className="sr-only">{said}</span>
+        )}
       </p>
       {conditions.isSetByYou ? undefined : (
         <>
           <Mono step="xs" className="text-quiet">
-            Feels {formatTemp(conditions.feelsLikeC, units.temp)} ·{" "}
-            {Math.round(conditions.humidity)}% hum ·{" "}
-            {formatWind(conditions.windKph, units.distance)} ·{" "}
-            {conditions.condition}
+            <Spoken
+              {...measuredLine(
+                [
+                  [
+                    {
+                      kind: "temp",
+                      tempC: conditions.feelsLikeC,
+                      feels: "Feels",
+                    },
+                  ],
+                  [{ kind: "humidity", percent: conditions.humidity }],
+                  [{ kind: "wind", windKph: conditions.windKph }],
+                  [{ kind: "word", word: conditions.condition }],
+                ],
+                units,
+              )}
+            />
           </Mono>
           {note}
           <WeatherAttribution />

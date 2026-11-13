@@ -33,7 +33,7 @@ end of paragraph
 Seen by:
 Shared
 :day :month # · #:#
-#.#mi
+#.# miles
 # minutes # seconds per mile
 Dialed
 Indoor

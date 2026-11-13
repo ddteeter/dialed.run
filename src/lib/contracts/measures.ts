@@ -9,8 +9,8 @@
  * Unit choice is display-only and stays here: R-6 will make it a user
  * preference, and the contract keeps storing SI either way.
  */
-import type { DistanceUnit, TempUnit } from "./profile";
-import { formatTemp } from "./temperature";
+import type { DistanceUnit, TempUnit, Units } from "./profile";
+import { formatTemp, tempInUnit } from "./temperature";
 
 const METRES_PER_MILE = 1609.34;
 const METRES_PER_KM = 1000;
@@ -63,9 +63,15 @@ export function wholeDistanceNumber(
  * 2026-09-22 reconciliation sweep.
  */
 export function formatWind(windKph: number, unit: DistanceUnit): string {
-  return unit === "km"
-    ? `${String(Math.round(windKph))}km/h`
-    : `${String(Math.round((windKph * METRES_PER_KM) / METRES_PER_MILE))}mph`;
+  return `${String(windNumber(windKph, unit))}${unit === "km" ? "km/h" : "mph"}`;
+}
+
+/**
+ * The wind's speed alone, whole, in the runner's unit an hour: what
+ * `formatWind` shows and `measuredLine` says.
+ */
+function windNumber(windKph: number, unit: DistanceUnit): number {
+  return Math.round((windKph * METRES_PER_KM) / metresPer(unit));
 }
 
 /**
@@ -265,3 +271,159 @@ export const formatTempRange = (
   const high = formatTemp(maxC, unit);
   return low === high ? low : `${low.replace("°", "")}–${high}`;
 };
+
+/**
+ * One measure in a line of them, as `measuredLine` draws and says it.
+ *
+ * - `temp`: "33°", or "41°F" `withLetter`, or "Feels 33°" with `feels`
+ *   (its case is the line's: A1 starts with it, the receipt does not).
+ * - `range`: `formatTempRange`'s "38–46°", collapsed as it collapses,
+ *   "feels" as a temperature's.
+ * - `humidity`: "80% hum". `wind`: `formatWind`'s "6mph".
+ * - `distance`: "8.2mi", or "6.2 mi" `spaced`, as A2's header sets it.
+ * - `duration`: `formatDuration`'s "51:38", said by `spokenDuration`.
+ * - `word`: anything already in words (a sky, a precip class, a
+ *   condition, a day or a time), drawn and said as it is.
+ */
+type MeasuredPart =
+  | Readonly<{
+      kind: "temp";
+      tempC: number;
+      withLetter?: boolean;
+      feels?: "Feels" | "feels";
+    }>
+  | Readonly<{
+      kind: "range";
+      minC: number;
+      maxC: number;
+      feels?: "Feels" | "feels";
+    }>
+  | Readonly<{ kind: "humidity"; percent: number }>
+  | Readonly<{ kind: "wind"; windKph: number }>
+  | Readonly<{ kind: "distance"; distanceM: number; spaced?: boolean }>
+  | Readonly<{ kind: "duration"; durationS: number }>
+  | Readonly<{ kind: "word"; word: string }>;
+
+/**
+ * A line of measures: groups joined by " · ", and within a group parts
+ * joined by a space ("41°F damp · feels 36°" is two groups).
+ */
+export type MeasuredLine = readonly (readonly MeasuredPart[])[];
+
+/**
+ * A line of abbreviated measures as it is drawn, and as a screen reader
+ * should say it: the Accessibility Contract's "Measured lines" row (round
+ * 52 #158). Full words, a comma between every part, units spelled out,
+ * in the viewer's own units: "Feels 33° · 80% hum · 6mph · overcast" is
+ * said "Feels like 33 degrees, 80 percent humidity, wind 6 miles per
+ * hour, overcast".
+ *
+ * **Both halves come from one list of parts**, through the same
+ * converters, so a part added to the drawn line is said too and the two
+ * cannot round apart. `ui/Spoken` renders them: the drawn half
+ * `aria-hidden`, the said half visually hidden.
+ */
+export function measuredLine(
+  line: MeasuredLine,
+  units: Units,
+): { shown: string; said: string } {
+  const shown = line
+    .map((group) => group.map((part) => shownPart(part, units)).join(" "))
+    .join(" · ");
+  const said = line
+    .flat()
+    .map((part) => saidPart(part, units))
+    .join(", ");
+  return { shown, said: `${said.charAt(0).toUpperCase()}${said.slice(1)}` };
+}
+
+function shownPart(part: MeasuredPart, units: Units): string {
+  switch (part.kind) {
+    case "temp": {
+      const feels = part.feels === undefined ? "" : `${part.feels} `;
+      const letter = part.withLetter === true ? units.temp.toUpperCase() : "";
+      return `${feels}${formatTemp(part.tempC, units.temp)}${letter}`;
+    }
+    case "range": {
+      const feels = part.feels === undefined ? "" : `${part.feels} `;
+      return `${feels}${formatTempRange(part.minC, part.maxC, units.temp)}`;
+    }
+    case "humidity": {
+      return `${String(Math.round(part.percent))}% hum`;
+    }
+    case "wind": {
+      return formatWind(part.windKph, units.distance);
+    }
+    case "distance": {
+      return part.spaced === true
+        ? `${distanceNumber(part.distanceM, units.distance)} ${units.distance}`
+        : formatDistance(part.distanceM, units.distance);
+    }
+    case "duration": {
+      return formatDuration(part.durationS);
+    }
+    case "word": {
+      return part.word;
+    }
+  }
+}
+
+function saidPart(part: MeasuredPart, units: Units): string {
+  switch (part.kind) {
+    case "temp": {
+      const feels =
+        part.feels === undefined ? "" : `${part.feels.toLowerCase()} like `;
+      const letter =
+        part.withLetter === true ? ` ${TEMP_UNIT_WORD[units.temp]}` : "";
+      return `${feels}${degrees(tempInUnit(part.tempC, units.temp))}${letter}`;
+    }
+    case "range": {
+      const feels =
+        part.feels === undefined ? "" : `${part.feels.toLowerCase()} like `;
+      const low = tempInUnit(part.minC, units.temp);
+      const high = tempInUnit(part.maxC, units.temp);
+      const span =
+        low === high ? degrees(low) : `${signed(low)} to ${degrees(high)}`;
+      return `${feels}${span}`;
+    }
+    case "humidity": {
+      return `${String(Math.round(part.percent))} percent humidity`;
+    }
+    case "wind": {
+      const speed = windNumber(part.windKph, units.distance);
+      const word = UNIT_WORD[units.distance];
+      return `wind ${String(speed)} ${word}${speed === 1 ? "" : "s"} per hour`;
+    }
+    case "distance": {
+      return `${distanceNumber(part.distanceM, units.distance)} ${UNIT_WORD[units.distance]}s`;
+    }
+    case "duration": {
+      return spokenDuration(part.durationS);
+    }
+    case "word": {
+      return part.word;
+    }
+  }
+}
+
+/**
+"Fahrenheit" for the "F" after a temperature.
+*/
+const TEMP_UNIT_WORD: Record<TempUnit, string> = {
+  f: "Fahrenheit",
+  c: "Celsius",
+};
+
+/**
+"Minus 3" for -3: a screen reader may say a hyphen as "dash".
+*/
+function signed(value: number): string {
+  return value < 0 ? `minus ${String(-value)}` : String(value);
+}
+
+/**
+"33 degrees", "1 degree", "minus 1 degree".
+*/
+function degrees(value: number): string {
+  return `${signed(value)} ${Math.abs(value) === 1 ? "degree" : "degrees"}`;
+}

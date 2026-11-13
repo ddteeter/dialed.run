@@ -62,6 +62,11 @@ export interface PublicKit {
   readonly conditions?: {
     readonly feelsLike: string;
     readonly sky: string;
+    /**
+     * The two as a screen reader should say them, "38 degrees, damp"
+     * (round 52 #158, `measuredLine`).
+     */
+    readonly said: string;
     readonly isProviders: boolean;
   };
   readonly verdict?: VerdictValue;

@@ -285,7 +285,10 @@ test("someone with no account asks for an intimate image to come down, and an op
     new RegExp(String.raw`/desk/kit/${secondEntryId}\?from=request&row=`, "u"),
   );
   const deskKit = page.locator("[data-part='desk-kit']");
-  await expect(deskKit.getByRole("heading", { level: 1 })).toHaveText("Kit");
+  // Round 52 #155.3: whose kit it is.
+  await expect(deskKit.getByRole("heading", { level: 1 })).toHaveText(
+    /^Kit by @/u,
+  );
   await expect(deskKit.locator("[data-part='kit-band']")).toContainText(
     "[hidden pending review]",
   );

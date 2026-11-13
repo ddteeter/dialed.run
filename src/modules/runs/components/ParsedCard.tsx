@@ -14,10 +14,11 @@ import {
 import {
   distanceNumber,
   formatDuration,
+  measuredLine,
   paceForms,
   spokenDuration,
 } from "../../../lib/contracts/measures";
-import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
+import { precipClassOf } from "../../../lib/contracts/temperature";
 import {
   GarminAttribution,
   type ControlFailure,
@@ -196,13 +197,27 @@ function Facts({ children }: Readonly<{ children: ReactNode[] }>): JSX.Element {
 
 /**
  * What the run's conditions were before the correction, for the WAS line —
- * "41°F damp · feels 36°", or that there were none.
+ * "41°F damp · feels 36°", or that there were none. A line of measures
+ * (round 52 #158): drawn, and said in words.
  */
-function conditionsWords(run: RunSummary, units: Units): string {
+function conditionsWords(
+  run: RunSummary,
+  units: Units,
+): { shown: string; said: string } {
   const { conditions } = run;
-  if (conditions === undefined) return "no weather";
-  const unit = units.temp.toUpperCase();
-  return `${formatTemp(conditions.tempC, units.temp)}${unit} ${precipClassOf(conditions.precipMm)} · feels ${formatTemp(conditions.feelsLikeC, units.temp)}`;
+  if (conditions === undefined) {
+    return { shown: "no weather", said: "no weather" };
+  }
+  return measuredLine(
+    [
+      [
+        { kind: "temp", tempC: conditions.tempC, withLetter: true },
+        { kind: "word", word: precipClassOf(conditions.precipMm) },
+      ],
+      [{ kind: "temp", tempC: conditions.feelsLikeC, feels: "feels" }],
+    ],
+    units,
+  );
 }
 
 /**
@@ -217,7 +232,7 @@ function WeatherFor({
   isProviders,
 }: Readonly<{
   time: string;
-  was: string;
+  was: { shown: string; said: string };
   at: string;
   /**
   Whether WAS is the provider's reading, which keeps its credit (D-144).
@@ -238,13 +253,13 @@ function WeatherFor({
         <PendingLabel label="" pendingLabel="Getting it" pending />
       </Mono>
       <Mono step="xs" className="text-quiet">
-        {`Was ${was} · at ${at}`}
+        Was <Spoken {...was} />
+        {` · at ${at}`}
       </Mono>
       {isProviders ? <WeatherAttribution /> : undefined}
     </div>
   );
 }
-
 
 /**
  * A1's START TIME row (round 26, item 1), inside the parsed card: the
@@ -622,7 +637,17 @@ export function DuplicateCard({
   if (conditions !== undefined) {
     facts.push(
       <span key="conditions" className="text-dialed-text">
-        {`${formatTemp(conditions.tempC, units.temp)}${units.temp.toUpperCase()} ${precipClassOf(conditions.precipMm)}`}
+        <Spoken
+          {...measuredLine(
+            [
+              [
+                { kind: "temp", tempC: conditions.tempC, withLetter: true },
+                { kind: "word", word: precipClassOf(conditions.precipMm) },
+              ],
+            ],
+            units,
+          )}
+        />
       </span>,
     );
   }

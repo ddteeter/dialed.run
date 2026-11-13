@@ -40,7 +40,12 @@ const BARE: PublicKit = {
   cardVersion: "0123456789abcdef",
 };
 
-const CONDITIONS = { feelsLike: "38°", sky: "damp", isProviders: true };
+const CONDITIONS = {
+  feelsLike: "38°",
+  sky: "damp",
+  said: "38 degrees, damp",
+  isProviders: true,
+};
 
 /**
  * A stat's drawn text: the said halves are sr-only and the drawn ones
@@ -156,12 +161,16 @@ describe("the public kit, signed out", () => {
   it("leads with the conditions, the measured word teal, and the verdict's chip in its hue", async () => {
     await show(kitPage(KIT));
 
-    const conditions = screen.getByText("38°", { exact: false });
+    const drawn = screen.getByText("38°", { exact: false });
+    expect(drawn).toHaveTextContent(/^38° damp$/u);
+    expect(within(drawn).getByText("damp")).toHaveClass("text-dialed-text");
+    // Round 52 #158: drawn for the eye, said in words.
+    expect(drawn).toHaveAttribute("aria-hidden", "true");
+    const conditions = drawn.parentElement;
     expect(conditions).toHaveClass("font-display", "text-display");
-    expect(conditions).toHaveTextContent(/^38° damp$/u);
-    expect(within(conditions).getByText("damp")).toHaveClass(
-      "text-dialed-text",
-    );
+    expect(
+      within(conditions ?? document.body).getByText("38 degrees, damp"),
+    ).toHaveClass("sr-only", "normal-case");
     expect(screen.getByText("Feels like · Sky")).toBeVisible();
     const chip = screen.getByText("A bit cold").closest("span[data-part]");
     expect(chip).toHaveAttribute("data-part", "verdict-chip");
@@ -272,7 +281,12 @@ describe("the public kit, signed out", () => {
     await show(
       kitPage({
         ...KIT,
-        conditions: { feelsLike: "38°", sky: "damp", isProviders: false },
+        conditions: {
+          feelsLike: "38°",
+          sky: "damp",
+          said: "38 degrees, damp",
+          isProviders: false,
+        },
       }),
     );
     expect(

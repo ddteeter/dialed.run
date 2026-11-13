@@ -419,6 +419,13 @@ describe("ConditionsTab: no matches", () => {
     expect(block()).toHaveTextContent(
       "Same conditions · Feels [41–46°] · damp",
     );
+    // Round 53 #162.3: the range is said in words, and the drawn line is
+    // not read.
+    const said = screen.getByText(
+      "Same conditions, feels like 41 to 46 degrees, damp",
+    );
+    expect(said).toHaveClass("sr-only", "normal-case");
+    expect(said.previousElementSibling).toHaveAttribute("aria-hidden", "true");
     // Round 25 draws the empty eyebrow without a window.
     expect(block()).not.toHaveTextContent(/days/u);
     expect(
@@ -507,6 +514,11 @@ describe("ConditionsTab: matched", () => {
     expect(block()).toHaveTextContent(
       "Same conditions · Feels [41–46°] · damp · 3 days",
     );
+    expect(
+      screen.getByText(
+        "Same conditions, feels like 41 to 46 degrees, damp, 3 days",
+      ),
+    ).toHaveClass("sr-only");
     expect(
       screen.getByText(
         "In 44° and damp, in the last three days, wherever they were.",

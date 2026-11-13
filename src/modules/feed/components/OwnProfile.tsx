@@ -6,11 +6,12 @@ import {
   Icon,
   ListSection,
   Mono,
+  Spoken,
   VerdictMark,
   WeatherAttribution,
 } from "../../../ui";
 import type { VerdictKind } from "../../../ui";
-import { distanceNumber } from "../../../lib/contracts/measures";
+import { measuredLine } from "../../../lib/contracts/measures";
 import type { Units } from "../../../lib/contracts";
 import { bandVerdict } from "../coverage";
 import { stripConditions } from "../strip";
@@ -247,7 +248,17 @@ function RecentEntryRow({
         params={{ entryId: entry.entryId }}
         className="target inline-flex items-center text-body font-semibold text-ink"
       >
-        {`${entry.day} · ${distanceNumber(entry.distanceM, units.distance)} ${units.distance}`}
+        {/* "Sat, Aug 29 · 8.2 mi", said "Sat, Aug 29, 8.2 miles" (round
+            52 #158). */}
+        <Spoken
+          {...measuredLine(
+            [
+              [{ kind: "word", word: entry.day }],
+              [{ kind: "distance", distanceM: entry.distanceM, spaced: true }],
+            ],
+            units,
+          )}
+        />
       </Link>
       {conditions !== undefined || entry.underReview ? (
         <span data-part="entry-meta" className="flex flex-wrap gap-3">

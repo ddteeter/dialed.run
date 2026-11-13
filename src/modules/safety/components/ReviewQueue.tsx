@@ -22,7 +22,11 @@ import type {
 } from "../review";
 import { PickOne } from "./DeskForm";
 import { StatutoryLine } from "./StatutoryLine";
-import { KitOriginContext, kitOriginAnchor } from "./kit-origin";
+import {
+  KitOriginContext,
+  kitOriginAnchor,
+  useReturnToRow,
+} from "./kit-origin";
 import { OtherPhotos } from "./OtherPhotos";
 import {
   PhotoMatches,
@@ -496,6 +500,7 @@ function ReviewRow({
   return (
     <li
       id={kitOriginAnchor(origin)}
+      tabIndex={-1}
       className="flex flex-col gap-2 border border-hairline p-3"
     >
       <KitOriginContext value={origin}>
@@ -612,6 +617,9 @@ export function ReviewQueue(
   // is safe.
   const { remaining: waiting, settle } = useSettled(props.queue, queueRowId);
   const [chosen, setChosen] = useState<string | undefined>();
+  // Back from a kit, the row it was opened from is open and focused
+  // (round 52 #155.5).
+  useReturnToRow("report", setChosen);
   // True once a decision has landed: from then on, the row that opens
   // next takes focus, as round 28 #8 draws.
   const [hasDecided, setHasDecided] = useState(false);

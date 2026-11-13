@@ -79,8 +79,8 @@ end of form
 heading, This run · :day :month # · #:#, level 2
 This run · :day :month # · #:#
 end of heading, This run · :day :month # · #:#, level 2
-#.# mi, # minutes
-#°F dry · feels #°
+#.# miles, # minutes
+# degrees Fahrenheit, dry, feels like # degrees
 heading, The kit you’re judging, level 2
 The kit you’re judging
 end of heading, The kit you’re judging, level 2
@@ -92,9 +92,9 @@ listitem, level 1, position 2, set size 2
 Running tights
 end of listitem, level 1, position 2, set size 2
 end of list
-heading, Before, in #–#° dry, level 2
-Before, in #–#° dry
-end of heading, Before, in #–#° dry, level 2
+heading, Before, in # to # degrees, dry, level 2
+Before, in # to # degrees, dry
+end of heading, Before, in # to # degrees, dry, level 2
 paragraph
 No runs in this band yet.
 end of paragraph

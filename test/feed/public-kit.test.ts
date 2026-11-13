@@ -205,7 +205,12 @@ describe("publicKitRead: a public kit", () => {
       // where the run was (R-96).
       day: "Fri Oct 17",
       // A bit cold: judged at the coldest hour, 3.3 °C feels-like.
-      conditions: { feelsLike: "38°", sky: "damp", isProviders: true },
+      conditions: {
+        feelsLike: "38°",
+        sky: "damp",
+        said: "38 degrees, damp",
+        isProviders: true,
+      },
       verdict: -1,
       distance: { value: "6.2", unit: "mi" },
       time: {

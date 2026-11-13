@@ -620,11 +620,10 @@ describe("VerdictBacklog: what each state is drawn as", () => {
     await renderTable([row()]);
 
     // The time is drawn as a clock and said in words: "40:00" reads as a
-    // time of day.
-    const time = screen.getByText("40:00");
-    expect(time).toHaveAttribute("aria-hidden", "true");
-    expect(time.parentElement).toHaveTextContent(/^40:0040 minutes · 5\.0mi$/u);
-    expect(screen.getByText("40 minutes")).toHaveClass("sr-only");
+    // time of day. The distance with it is said in full (round 52 #158).
+    const line = screen.getByText("40:00 · 5.0mi");
+    expect(line).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("40 minutes, 5.0 miles")).toHaveClass("sr-only");
   });
 
   it("draws a resting row with a hairline and no wash", async () => {

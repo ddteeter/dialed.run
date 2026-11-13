@@ -86,8 +86,12 @@ function Conditions({ kit }: Readonly<{ kit: PublicKit }>) {
       <div className="flex flex-wrap items-center gap-3">
         {conditions === undefined ? undefined : (
           <span className="font-display text-display uppercase">
-            {conditions.feelsLike}{" "}
-            <span className="text-dialed-text">{conditions.sky}</span>
+            {/* Drawn for the eye, said in words (round 52 #158). */}
+            <span aria-hidden="true">
+              {conditions.feelsLike}{" "}
+              <span className="text-dialed-text">{conditions.sky}</span>
+            </span>
+            <span className="sr-only normal-case">{conditions.said}</span>
           </span>
         )}
         <VerdictChip verdict={verdict} />

@@ -11,7 +11,7 @@ heading, Your run, level 1
 Seen by:
 Private
 :day :month # · #:#
-#.#mi
+#.# miles
 # minutes # seconds per mile
 link, You didn’t log a verdict for this run. Add one? Did it work?
 You didn’t log a verdict for this run. Add one?

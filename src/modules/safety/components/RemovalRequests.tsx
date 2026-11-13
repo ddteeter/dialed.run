@@ -23,7 +23,11 @@ import type { HoldState } from "../takedown-limits";
 import type { PendingTakedownRequest } from "../takedown-requests";
 import { ACTION_BAR } from "./DeskForm";
 import { StatutoryLine } from "./StatutoryLine";
-import { KitOriginContext, kitOriginAnchor } from "./kit-origin";
+import {
+  KitOriginContext,
+  kitOriginAnchor,
+  useReturnToRow,
+} from "./kit-origin";
 import { OtherPhotos } from "./OtherPhotos";
 import { PhotoMatches, type DecideMatch } from "./PhotoMatches";
 import { useSettled } from "./use-settled";
@@ -67,6 +71,15 @@ const HOLD_WORDS: Readonly<Record<HoldState, string>> = {
 };
 
 /**
+A request needs no state to be returned to: focus is all it takes.
+*/
+function ignoreRow(): void {
+  /*
+   * Nothing to open: every request is drawn open.
+   */
+}
+
+/**
  * Review's removal requests (design 136, decision D-117), as round 35
  * #58e draws them: REMOVAL REQUESTS · N above the queue, soonest due
  * first, each row the queue row's shape. The header names the subject
@@ -93,6 +106,9 @@ export function RemovalRequests({
   const { remaining, settle } = useSettled(requests, requestId);
   // Round 37 #59f: after a block, focus goes to the next request left.
   const [focusId, setFocusId] = useState<string>();
+  // Back from a kit, the request it was opened from is focused (round 52
+  // #155.5).
+  useReturnToRow("request", ignoreRow);
   return (
     <ListSection
       title={`Removal requests · ${String(remaining.length)}`}

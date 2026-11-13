@@ -8,10 +8,7 @@ link, Find runners
 button, Following, not pressed
 button, Your conditions, pressed
 status
-Same conditions · Feels
-#–#°
-·
-dry
+Same conditions, feels like # to # degrees, dry
 heading, Not enough runs yet, level 2
 paragraph
 Fewer than five runners logged

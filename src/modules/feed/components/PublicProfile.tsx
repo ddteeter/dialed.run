@@ -144,8 +144,12 @@ function KitRow({ row }: Readonly<{ row: PublicKitRow }>) {
         <span className="flex min-w-0 flex-1 flex-col gap-1">
           {row.conditions === undefined ? undefined : (
             <span className="text-body font-semibold">
-              {row.conditions.feelsLike}{" "}
-              <span className="text-dialed-text">{row.conditions.sky}</span>
+              {/* Drawn for the eye, said in words (round 52 #158). */}
+              <span aria-hidden="true">
+                {row.conditions.feelsLike}{" "}
+                <span className="text-dialed-text">{row.conditions.sky}</span>
+              </span>
+              <span className="sr-only">{row.conditions.said}</span>
             </span>
           )}
           <Mono step="xs" className="text-muted">

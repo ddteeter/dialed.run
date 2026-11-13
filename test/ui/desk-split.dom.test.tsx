@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { DeskSplit, RailCard } from "../../src/ui";
+import { DeskSplit, RailCard, Spoken } from "../../src/ui";
 
 /**
  * DS1's two columns for a log step at the desk (round 25): the primary
@@ -52,6 +52,32 @@ describe("RailCard", () => {
       "uppercase",
     );
     expect(heading).not.toHaveClass("text-heading");
+  });
+
+  it("takes a title drawn one way and said another, in the same mono heading", () => {
+    // Round 53 #162.3: the band history's "Last 2 in 32–41° damp".
+    render(
+      <RailCard
+        title={
+          <Spoken
+            shown="Last 2 in 32–41° damp"
+            said="Last 2 in 32 to 41 degrees, damp"
+          />
+        }
+      >
+        <p>Two runs</p>
+      </RailCard>,
+    );
+
+    const heading = screen.getByRole("heading", {
+      level: 2,
+      name: "Last 2 in 32 to 41 degrees, damp",
+    });
+    expect(within(heading).getByText("Last 2 in 32–41° damp")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(heading.firstElementChild).toHaveClass("text-mono-xs", "uppercase");
   });
 
   it("titles a card as a heading in sentence case when asked (round 40 C4)", () => {

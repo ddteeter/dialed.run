@@ -8,6 +8,7 @@ import {
   formatWind,
   formatTempRange,
   gainNumber,
+  measuredLine,
   paceForms,
   paceNumber,
   paceUnit,
@@ -305,5 +306,169 @@ describe("paceForms", () => {
 
   it("has neither with no distance", () => {
     expect(paceForms(1800, 0, "km")).toBeUndefined();
+  });
+});
+
+describe("measuredLine", () => {
+  const miles = { temp: "f", distance: "mi" } as const;
+  const metric = { temp: "c", distance: "km" } as const;
+
+  it("draws A1's line and says it as the contract's example does", () => {
+    // Round 52 #158, the Accessibility Contract's "Measured lines" row.
+    expect(
+      measuredLine(
+        [
+          [{ kind: "temp", tempC: 0.5, feels: "Feels" }],
+          [{ kind: "humidity", percent: 80.4 }],
+          [{ kind: "wind", windKph: 9 }],
+          [{ kind: "word", word: "overcast" }],
+        ],
+        miles,
+      ),
+    ).toStrictEqual({
+      shown: "Feels 33° · 80% hum · 6mph · overcast",
+      said: "Feels like 33 degrees, 80 percent humidity, wind 6 miles per hour, overcast",
+    });
+  });
+
+  it("joins a group with a space and says every part apart", () => {
+    // The receipt's "41°F dry · feels 36°": two groups, three parts.
+    expect(
+      measuredLine(
+        [
+          [
+            { kind: "temp", tempC: 5, withLetter: true },
+            { kind: "word", word: "dry" },
+          ],
+          [{ kind: "temp", tempC: 2.2, feels: "feels" }],
+        ],
+        miles,
+      ),
+    ).toStrictEqual({
+      shown: "41°F dry · feels 36°",
+      said: "41 degrees Fahrenheit, dry, feels like 36 degrees",
+    });
+  });
+
+  it("speaks the viewer's units, Celsius and kilometres included", () => {
+    expect(
+      measuredLine(
+        [
+          [
+            { kind: "distance", distanceM: 10_000, spaced: true },
+            { kind: "temp", tempC: 5, withLetter: true },
+          ],
+          [{ kind: "wind", windKph: 14.6 }],
+          [{ kind: "distance", distanceM: 8200 }],
+        ],
+        metric,
+      ),
+    ).toStrictEqual({
+      shown: "10.0 km 5°C · 15km/h · 8.2km",
+      said: "10.0 kilometres, 5 degrees Celsius, wind 15 kilometres per hour, 8.2 kilometres",
+    });
+  });
+
+  it("draws a duration on the clock and says it in words", () => {
+    // The receipt's "6.2 mi · 51:38".
+    expect(
+      measuredLine(
+        [
+          [{ kind: "distance", distanceM: 9978, spaced: true }],
+          [{ kind: "duration", durationS: 3098 }],
+        ],
+        miles,
+      ),
+    ).toStrictEqual({
+      shown: "6.2 mi · 51:38",
+      said: "6.2 miles, 51 minutes 38 seconds",
+    });
+  });
+
+  it("draws a distance glued or spaced, and says it in miles", () => {
+    expect(
+      measuredLine(
+        [
+          [{ kind: "distance", distanceM: 9978, spaced: true }],
+          [{ kind: "distance", distanceM: 13_197 }],
+        ],
+        miles,
+      ),
+    ).toStrictEqual({
+      shown: "6.2 mi · 8.2mi",
+      said: "6.2 miles, 8.2 miles",
+    });
+  });
+
+  it("says a range as one, collapsed when its ends draw the same", () => {
+    expect(
+      measuredLine(
+        [
+          [{ kind: "range", minC: 3.4, maxC: 7.8 }],
+          [{ kind: "range", minC: 4.3, maxC: 4.4 }],
+          [{ kind: "range", minC: -20.6, maxC: -18 }],
+        ],
+        miles,
+      ),
+    ).toStrictEqual({
+      shown: "38–46° · 40° · -5–0°",
+      said: "38 to 46 degrees, 40 degrees, minus 5 to 0 degrees",
+    });
+  });
+
+  it("says a range felt as one, as Your conditions draws it (round 53 #162.3)", () => {
+    expect(
+      measuredLine(
+        [
+          [{ kind: "word", word: "Same conditions" }],
+          [{ kind: "range", minC: 5, maxC: 8, feels: "Feels" }],
+          [{ kind: "word", word: "damp" }],
+          [{ kind: "range", minC: 5, maxC: 5.2, feels: "feels" }],
+        ],
+        miles,
+      ),
+    ).toStrictEqual({
+      shown: "Same conditions · Feels 41–46° · damp · feels 41°",
+      said: "Same conditions, feels like 41 to 46 degrees, damp, feels like 41 degrees",
+    });
+  });
+
+  it("says one degree and one mile an hour in the singular, and minus for a hyphen", () => {
+    expect(
+      measuredLine(
+        [
+          [{ kind: "temp", tempC: 1 }],
+          [{ kind: "temp", tempC: -1 }],
+          [{ kind: "temp", tempC: -4 }],
+          [{ kind: "wind", windKph: 1.6 }],
+          [{ kind: "wind", windKph: 0 }],
+        ],
+        metric,
+      ),
+    ).toStrictEqual({
+      shown: "1° · -1° · -4° · 2km/h · 0km/h",
+      said: "1 degree, minus 1 degree, minus 4 degrees, wind 2 kilometres per hour, wind 0 kilometres per hour",
+    });
+    expect(measuredLine([[{ kind: "wind", windKph: 1.6 }]], miles).said).toBe(
+      "Wind 1 mile per hour",
+    );
+  });
+
+  it("capitalises the first letter it says, and nothing else", () => {
+    // The Desk's run line opens on a day, and A1's on "feels".
+    expect(
+      measuredLine(
+        [
+          [{ kind: "word", word: "nov 4" }],
+          [{ kind: "word", word: "7:12 AM" }],
+          [{ kind: "temp", tempC: 5 }],
+          [{ kind: "word", word: "damp" }],
+        ],
+        miles,
+      ),
+    ).toStrictEqual({
+      shown: "nov 4 · 7:12 AM · 41° · damp",
+      said: "Nov 4, 7:12 AM, 41 degrees, damp",
+    });
   });
 });

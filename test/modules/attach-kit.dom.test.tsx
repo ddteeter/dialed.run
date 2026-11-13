@@ -255,9 +255,14 @@ describe("AttachKit: the header", () => {
         name: "What did you wear?",
       }),
     ).toBeVisible();
-    expect(
-      within(header).getByText("6.2 mi · 41°F damp · 0 pieces"),
-    ).toBeVisible();
+    const line = within(header).getByText("6.2 mi · 41°F damp · 0 pieces");
+    expect(line).toBeVisible();
+    // Round 52 #158: drawn for the eye, said in words.
+    expect(line).toHaveAttribute("aria-hidden", "true");
+    expect(line.nextElementSibling).toHaveClass("sr-only");
+    expect(line.nextElementSibling).toHaveTextContent(
+      "6.2 miles, 41 degrees Fahrenheit, damp, 0 pieces",
+    );
     // Nothing to announce until something happens.
     expect(screen.getByRole("status")).toHaveTextContent(/^$/u);
   });
@@ -287,6 +292,9 @@ describe("AttachKit: the header", () => {
     await renderWithRouter(attach({ units: { temp: "c", distance: "km" } }));
 
     expect(screen.getByText("10.0 km · 5°C damp · 0 pieces")).toBeVisible();
+    expect(
+      screen.getByText("10.0 kilometres, 5 degrees Celsius, damp, 0 pieces"),
+    ).toHaveClass("sr-only");
   });
 
   it("credits Visual Crossing under the sub-line that carries its reading (D-144)", async () => {
@@ -324,9 +332,17 @@ describe("AttachKit: the rail at the desk (round 25)", () => {
       within(rail()).getByRole("heading", { name: "This run" }),
     ).toBeInTheDocument();
     expect(rail()).toHaveTextContent("6.2 mi");
-    expect(within(rail()).getByText("41°F damp")).toHaveClass(
-      "text-dialed-text",
+    const reading = within(rail()).getByText("41°F damp");
+    expect(reading.parentElement).toHaveClass("text-dialed-text");
+    // Round 52 #158: both of the rail's lines are said in words.
+    expect(reading.nextElementSibling).toHaveTextContent(
+      "41 degrees Fahrenheit, damp",
     );
+    expect(within(rail()).getByText("6.2 mi")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(rail()).toHaveTextContent("6.2 miles");
     expect(rail().querySelector("input, button, [role='radio']")).toBeNull();
   });
 
@@ -368,10 +384,15 @@ describe("AttachKit: the rail's band history (round 25)", () => {
     await renderWithRouter(attach({ bandRunsFor }));
 
     const heading = await within(rail()).findByRole("heading", {
-      name: "Last 2 in 32–41° damp",
+      name: "Last 2 in 32 to 41 degrees, damp",
     });
     // Feels 3°C: the 0–5° band.
     expect(bandRunsFor).toHaveBeenCalledWith({ data: { bandFloorC: 0 } });
+    // Round 53 #162.3: the band is drawn as a range and said in words.
+    expect(within(heading).getByText("Last 2 in 32–41° damp")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
     const card = heading.closest("section");
     const rows = card?.querySelectorAll("[data-part='band-run']") ?? [];
     expect(rows).toHaveLength(2);
@@ -386,7 +407,9 @@ describe("AttachKit: the rail's band history (round 25)", () => {
     await renderWithRouter(attach({ bandRunsFor: () => Promise.resolve([]) }));
 
     expect(
-      await within(rail()).findByRole("heading", { name: "In 32–41° damp" }),
+      await within(rail()).findByRole("heading", {
+        name: "In 32 to 41 degrees, damp",
+      }),
     ).toBeInTheDocument();
     expect(rail()).toHaveTextContent("No runs in this band yet.");
   });
@@ -433,7 +456,7 @@ describe("AttachKit: the rail's band history (round 25)", () => {
     }
     await renderWithRouter(<Switching />);
     await within(rail()).findByRole("heading", {
-      name: "Last 2 in 32–41° damp",
+      name: "Last 2 in 32 to 41 degrees, damp",
     });
 
     await user.click(screen.getByRole("button", { name: "Warmer run" }));
@@ -441,7 +464,7 @@ describe("AttachKit: the rail's band history (round 25)", () => {
     // Feels 12°C: the 10–15° band, and a dry sky.
     expect(
       await within(rail()).findByRole("heading", {
-        name: "Last 2 in 50–59° dry",
+        name: "Last 2 in 50 to 59 degrees, dry",
       }),
     ).toBeInTheDocument();
     expect(bandRunsFor).toHaveBeenLastCalledWith({ data: { bandFloorC: 10 } });

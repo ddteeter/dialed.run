@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import type { Units } from "../../../lib/contracts";
 import { dayLabel } from "../../../lib/dates";
 import { newUlid } from "../../../lib/ids";
-import { distanceNumber } from "../../../lib/contracts/measures";
+import { measuredLine } from "../../../lib/contracts/measures";
 import {
   photoAcceptAttribute,
   photoProblem,
@@ -27,6 +27,7 @@ import {
   Mono,
   PendingLabel,
   RailCard,
+  Spoken,
   useControlAction,
   usePhotoPick,
   WeatherAttribution,
@@ -91,20 +92,33 @@ function piecesWords(count: number): string {
 
 /**
  * The header's sub-line: "6.2 MI · 41°F DAMP · 0 PIECES". With no
- * conditions *"the header sub-line loses its temperature cell"*.
+ * conditions *"the header sub-line loses its temperature cell"*. A line
+ * of measures (round 52 #158): drawn, and said in words.
  */
-function subLine(context: AttachContext, units: Units, pieces: number): string {
-  const distance = `${distanceNumber(context.distanceM, units.distance)} ${units.distance}`;
+function subLine(
+  context: AttachContext,
+  units: Units,
+  pieces: number,
+): { shown: string; said: string } {
   const { conditions } = context;
-  const cells =
-    conditions === undefined
-      ? [distance, piecesWords(pieces)]
-      : [
-          distance,
-          `${formatTemp(conditions.tempC, units.temp)}${units.temp.toUpperCase()} ${precipClassOf(conditions.precipMm)}`,
-          piecesWords(pieces),
-        ];
-  return cells.join(" · ");
+  return measuredLine(
+    [
+      [{ kind: "distance", distanceM: context.distanceM, spaced: true }],
+      ...(conditions === undefined ? [] : [readingOf(conditions)]),
+      [{ kind: "word", word: piecesWords(pieces) }],
+    ],
+    units,
+  );
+}
+
+/**
+The run's reading as A2 draws it: "41°F damp".
+*/
+function readingOf(conditions: NonNullable<AttachContext["conditions"]>) {
+  return [
+    { kind: "temp", tempC: conditions.tempC, withLetter: true },
+    { kind: "word", word: precipClassOf(conditions.precipMm) },
+  ] as const;
 }
 
 /**
@@ -454,7 +468,7 @@ function AttachHeader({
         What did you wear?
       </h1>
       <Mono step="xs" className="text-dialed-text">
-        {subLine(context, units, count)}
+        <Spoken {...subLine(context, units, count)} />
       </Mono>
       {/* The sub-line carries the provider's reading, and the
           picker's filter and MOST LIKELY repeat it below: one credit
@@ -547,11 +561,24 @@ function AttachRail({
     <>
       <RailCard title="This run">
         <Mono step="sm">
-          {`${distanceNumber(context.distanceM, units.distance)} ${units.distance}`}
+          <Spoken
+            {...measuredLine(
+              [
+                [
+                  {
+                    kind: "distance",
+                    distanceM: context.distanceM,
+                    spaced: true,
+                  },
+                ],
+              ],
+              units,
+            )}
+          />
         </Mono>
         {conditions === undefined ? undefined : (
           <Mono step="sm" className="text-dialed-text">
-            {`${formatTemp(conditions.tempC, units.temp)}${units.temp.toUpperCase()} ${precipClassOf(conditions.precipMm)}`}
+            <Spoken {...measuredLine([readingOf(conditions)], units)} />
           </Mono>
         )}
       </RailCard>

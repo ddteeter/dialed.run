@@ -47,16 +47,14 @@ end of columnheader, Did it work?
 end of row, Run Conditions Outfit Did it work?
 end of rowgroup
 rowgroup
-row, :day :month # # minutes · #.#mi #° · clear · #mph Same as :day, :month #? Use Pick — :day :month # Way cold A bit cold Dialed A bit warm Way warm, current item
-cell, :day :month # # minutes · #.#mi
+row, :day :month # # minutes, #.# miles # degrees, clear, wind # miles per hour Same as :day, :month #? Use Pick — :day :month # Way cold A bit cold Dialed A bit warm Way warm, current item
+cell, :day :month # # minutes, #.# miles
 :day :month #
-# minutes
-·
-#.#mi
-end of cell, :day :month # # minutes · #.#mi
-cell, #° · clear · #mph
-#° · clear · #mph
-end of cell, #° · clear · #mph
+# minutes, #.# miles
+end of cell, :day :month # # minutes, #.# miles
+cell, # degrees, clear, wind # miles per hour
+# degrees, clear, wind # miles per hour
+end of cell, # degrees, clear, wind # miles per hour
 cell, Same as :day, :month #? Use Pick — :day :month #
 Same as
 :day, :month #
@@ -85,7 +83,7 @@ button, Way warm — :day :month #, not pressed
 Way warm
 end of button, Way warm — :day :month #, not pressed
 end of cell, Way cold A bit cold Dialed A bit warm Way warm
-end of row, :day :month # # minutes · #.#mi #° · clear · #mph Same as :day, :month #? Use Pick — :day :month # Way cold A bit cold Dialed A bit warm Way warm, current item
+end of row, :day :month # # minutes, #.# miles # degrees, clear, wind # miles per hour Same as :day, :month #? Use Pick — :day :month # Way cold A bit cold Dialed A bit warm Way warm, current item
 end of rowgroup
 end of table
 Keys
@@ -102,7 +100,7 @@ status
 complementary
 Selected ·
 :day :month #
-#° · clear · #mph
+# degrees, clear, wind # miles per hour
 link, Weather data provided by Visual Crossing
 end of complementary
 end of main

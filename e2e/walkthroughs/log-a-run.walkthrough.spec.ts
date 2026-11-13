@@ -112,7 +112,8 @@ test("log a run: the file, its conditions, the kit, the verdict", async ({
     });
     await page.getByRole("button", { name: "Merino half-zip" }).click();
     await page.getByRole("button", { name: "Running tights" }).click();
-    await expect(page.getByText(/2 pieces$/u)).toBeVisible();
+    // The drawn line; its said twin is visually hidden (round 52 #158).
+    await expect(page.getByText(/· 2 pieces$/u)).toBeVisible();
     await scene(page, "The Kit · two pieces", {
       say: "Two pieces, and the Kit is done. On to the last question.",
     });

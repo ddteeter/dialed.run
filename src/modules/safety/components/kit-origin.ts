@@ -1,4 +1,4 @@
-import { createContext, useContext } from "react";
+import { createContext, useContext, useEffect } from "react";
 import { z } from "zod";
 
 import { rowIdSchema } from "../../../lib/ids";
@@ -27,6 +27,42 @@ export type KitOrigin = Readonly<{
  */
 export function kitOriginAnchor(origin: KitOrigin): string {
   return `${origin.from}-${origin.row}`;
+}
+
+/**
+ * The row a hash names, as `kitOriginAnchor` writes it for rows `from`
+ * one list: `#report-01J…` is a report row's. Anything else is no row.
+ */
+export function rowFromHash(
+  hash: string,
+  from: KitOrigin["from"],
+): string | undefined {
+  const prefix = `#${from}-`;
+  return hash.startsWith(prefix)
+    ? rowIdSchema.safeParse(hash.slice(prefix.length)).data
+    : undefined;
+}
+
+/**
+ * Back from a kit (round 52 #155.5): the row the back link names takes
+ * focus, which also scrolls it into view, and `onRow` hears which row it
+ * was (Review opens it). After mount, because the server never sees a
+ * hash, so the first render is the same on both sides.
+ */
+export function useReturnToRow(
+  from: KitOrigin["from"],
+  onRow: (row: string) => void,
+): void {
+  useEffect(() => {
+    const row = rowFromHash(globalThis.location.hash, from);
+    if (row === undefined) return;
+    onRow(row);
+    document
+      .querySelector<HTMLElement>(
+        `#${CSS.escape(kitOriginAnchor({ from, row }))}`,
+      )
+      ?.focus();
+  }, [from, onRow]);
 }
 
 /**

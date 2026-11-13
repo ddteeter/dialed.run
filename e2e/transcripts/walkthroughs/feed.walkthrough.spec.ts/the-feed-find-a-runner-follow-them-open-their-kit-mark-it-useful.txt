@@ -30,10 +30,10 @@ heading, @trail_#, level 1
 @trail_#
 end of heading, @trail_#, level 1
 :day :month # · #:#
-#.#mi
+#.# miles
 # minutes # seconds per mile
 Dialed
-#° · clear
+# degrees, clear
 link, Weather data provided by Visual Crossing
 Kit
 list

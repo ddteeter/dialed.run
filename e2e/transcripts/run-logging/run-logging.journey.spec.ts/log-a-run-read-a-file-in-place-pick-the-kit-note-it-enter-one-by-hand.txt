@@ -29,17 +29,17 @@ main
 heading, Runs, level 1
 list
 listitem, level 1, position 1, set size 2
-link, #.# mi · :day :month # #°F dry
-#.# mi · :day :month #
-#°F dry
-end of link, #.# mi · :day :month # #°F dry
+link, #.# miles, :day :month # # degrees Fahrenheit, dry
+#.# miles, :day :month #
+# degrees Fahrenheit, dry
+end of link, #.# miles, :day :month # # degrees Fahrenheit, dry
 Conditions
 end of listitem, level 1, position 1, set size 2
 listitem, level 1, position 2, set size 2
-link, #.# mi · :day :month # No weather for this time
-#.# mi · :day :month #
+link, #.# miles, :day :month # No weather for this time
+#.# miles, :day :month #
 No weather for this time
-end of link, #.# mi · :day :month # No weather for this time
+end of link, #.# miles, :day :month # No weather for this time
 end of listitem, level 1, position 2, set size 2
 end of list
 link, Weather data provided by Visual Crossing

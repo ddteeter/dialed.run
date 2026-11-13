@@ -1190,7 +1190,16 @@ describe("A1: the parsed card", () => {
     });
     expect(block).toHaveTextContent("Weather for 6:34 AM");
     expect(block).toHaveTextContent("[Getting it]");
-    expect(block).toHaveTextContent("Was 41°F damp · feels 36° · at 6:04 AM");
+    // Drawn for the eye, said in words (round 52 #158).
+    const was = within(block).getByText("41°F damp · feels 36°");
+    expect(was).toHaveAttribute("aria-hidden", "true");
+    expect(was.nextElementSibling).toHaveClass("sr-only");
+    expect(was.nextElementSibling).toHaveTextContent(
+      "41 degrees Fahrenheit, damp, feels like 36 degrees",
+    );
+    expect(was.parentElement).toHaveTextContent(
+      /^Was 41°F damp · feels 36°41 degrees Fahrenheit, damp, feels like 36 degrees · at 6:04 AM$/u,
+    );
     // WAS is still the provider's reading, so it keeps its credit (D-144).
     expect(queryWeatherCredit(block)).not.toBeNull();
     // The block is read-only, and at the desk it is the rail.
@@ -1394,7 +1403,10 @@ describe("A1: the parsed card", () => {
       if (found === null) throw new Error("not fetching yet");
       return found;
     });
-    expect(block).toHaveTextContent(/Was no weather · at /u);
+    expect(block).toHaveTextContent(/Was no weatherno weather · at /u);
+    expect(
+      within(block).getByText("no weather", { ignore: ".sr-only" }),
+    ).toHaveAttribute("aria-hidden", "true");
     // Nothing of the provider's on show, so nothing to credit.
     expect(queryWeatherCredit(block)).toBeNull();
     pending.resolve("moved");
@@ -1527,7 +1539,12 @@ describe("A1: a run already logged", () => {
     expect(within(card).getByText("6.2 mi · 51:38")).toBeVisible();
     expect(within(card).getByText("Sat Aug 29")).toBeVisible();
     expect(within(card).getByText("6:04 AM")).toBeVisible();
-    expect(within(card).getByText("41°F damp")).toHaveClass("text-dialed-text");
+    const reading = within(card).getByText("41°F damp");
+    expect(reading.parentElement).toHaveClass("text-dialed-text");
+    expect(reading).toHaveAttribute("aria-hidden", "true");
+    expect(reading.nextElementSibling).toHaveTextContent(
+      "41 degrees Fahrenheit, damp",
+    );
     // The provider's reading, so its credit is on the card (D-144).
     expect(queryWeatherCredit(card)).not.toBeNull();
     expect(

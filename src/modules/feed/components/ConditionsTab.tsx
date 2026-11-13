@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 
 import type { CityLookup } from "../../../lib/contracts/city-lookup";
 import type { ResolvedPlace, Units } from "../../../lib/contracts";
-import { formatTempRange } from "../../../lib/contracts/measures";
+import { formatTempRange, measuredLine } from "../../../lib/contracts/measures";
 import { formatTemp } from "../../../lib/contracts/temperature";
 import type { PrecipClass } from "../../../lib/contracts/temperature";
 import {
@@ -275,14 +275,30 @@ export function SameConditionsEyebrow({
   windowDays,
   units,
 }: Readonly<{ band: ConsensusBand; windowDays?: number; units: Units }>) {
+  // Drawn with the range in brackets, said in words (round 53 #162.3):
+  // "38–46°" is read as a dash, a minus or nothing.
+  const { said } = measuredLine(
+    [
+      [{ kind: "word", word: "Same conditions" }],
+      [{ kind: "range", minC: band.minC, maxC: band.maxC, feels: "feels" }],
+      [{ kind: "word", word: PRECIP_WORD[band.precip] }],
+      ...(windowDays === undefined
+        ? []
+        : [[{ kind: "word", word: `${String(windowDays)} days` } as const]]),
+    ],
+    units,
+  );
   return (
     <Mono step="xs">
-      Same conditions · Feels{" "}
-      <Bracketed step="xs">
-        {formatTempRange(band.minC, band.maxC, units.temp)}
-      </Bracketed>{" "}
-      · {PRECIP_WORD[band.precip]}
-      {windowDays === undefined ? undefined : ` · ${String(windowDays)} days`}
+      <span aria-hidden="true">
+        Same conditions · Feels{" "}
+        <Bracketed step="xs">
+          {formatTempRange(band.minC, band.maxC, units.temp)}
+        </Bracketed>{" "}
+        · {PRECIP_WORD[band.precip]}
+        {windowDays === undefined ? undefined : ` · ${String(windowDays)} days`}
+      </span>
+      <span className="sr-only normal-case">{said}</span>
     </Mono>
   );
 }

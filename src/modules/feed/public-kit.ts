@@ -33,11 +33,12 @@ import {
   distanceNumber,
   formatDuration,
   gainNumber,
+  measuredLine,
   paceNumber,
   paceUnit,
   spokenDuration,
 } from "../../lib/contracts/measures";
-import { formatTemp, precipClassOf } from "../../lib/contracts/temperature";
+import { precipClassOf } from "../../lib/contracts/temperature";
 import { entryCacheTag } from "../../lib/cache-tags";
 import { dayLabel, isTimeZone } from "../../lib/dates";
 import { ulidSchema } from "../../lib/ids";
@@ -154,10 +155,17 @@ export function conditionsOf(
   units: Units,
 ): Pick<PublicKit, "conditions"> {
   if (conditions === undefined) return {};
+  const feelsLike = {
+    kind: "temp",
+    tempC: judgedFeelsLikeC(conditions, verdict),
+  } as const;
+  const sky = precipClassOf(conditions.precipMm);
   return {
     conditions: {
-      feelsLike: formatTemp(judgedFeelsLikeC(conditions, verdict), units.temp),
-      sky: precipClassOf(conditions.precipMm),
+      feelsLike: measuredLine([[feelsLike]], units).shown,
+      sky,
+      said: measuredLine([[feelsLike, { kind: "word", word: sky }]], units)
+        .said,
       isProviders: isProvidersReading(conditions),
     },
   };
