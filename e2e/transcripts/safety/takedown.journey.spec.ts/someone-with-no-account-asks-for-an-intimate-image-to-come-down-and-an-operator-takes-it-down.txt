@@ -50,9 +50,9 @@ Reports · # waiting
 button, Approve all #
 end of listitem, level 1, position 1, set size 1
 end of list
-heading, # waiting, level 2
-# waiting
-end of heading, # waiting, level 2
+heading, waiting, level 2
+waiting
+end of heading, waiting, level 2
 list
 listitem, level 1, position 1, set size 1
 button, entry · :id, expanded
@@ -67,14 +67,14 @@ end of heading, Matching photos · any runner, level 3
 No fingerprint to match by: the photo is gone, or older than fingerprints.
 # person
 It's an intimate image of someone, shared without their consent
+paragraph
+Intimate means nudity or sexual content (# U.S.C. § #). If it isn't, decline, and remove it under another rule if it breaks one.
+end of paragraph
 button, Who reported · #, not expanded
 Who reported · #
 end of button, Who reported · #, not expanded
 paragraph
 Folded. Opening it is logged. Never shown to the author.
-end of paragraph
-paragraph
-Intimate means nudity or sexual content (# U.S.C. § #). If it isn't, decline, and remove it under another rule if it breaks one.
 end of paragraph
 reports
 form
@@ -100,6 +100,8 @@ end of listitem, level 1, position 1, set size 1
 end of list
 region, Takedown
 heading, Takedown, level 2
+Takedown
+end of heading, Takedown, level 2
 form
 status
 What it is
