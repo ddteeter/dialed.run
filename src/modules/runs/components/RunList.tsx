@@ -228,14 +228,13 @@ function setBadge(
   units: Units,
 ): { shown: string; said: string } {
   const band = setBandForms(conditions.tempC, units.temp);
-  const sky =
-    conditions.sky === undefined ? undefined : SKY_WORDS[conditions.sky];
-  return sky === undefined
-    ? { shown: `Set · ${band.shown}`, said: `Set, ${band.said}` }
-    : {
-        shown: `Set · ${band.shown} · ${sky}`,
-        said: `Set, ${band.said}, ${sky.toLowerCase()}`,
-      };
+  if (conditions.sky === undefined)
+    return { shown: `Set · ${band.shown}`, said: `Set, ${band.said}` };
+  const sky = SKY_WORDS[conditions.sky];
+  return {
+    shown: `Set · ${band.shown} · ${sky}`,
+    said: `Set, ${band.said}, ${sky.toLowerCase()}`,
+  };
 }
 
 const FACT_BADGE =

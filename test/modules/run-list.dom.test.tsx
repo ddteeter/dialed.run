@@ -210,6 +210,9 @@ describe("R: the badges, and the one breath", () => {
     );
 
     expect(within(onlyRow()).getByText("Set · 50–59°")).toBeVisible();
+    expect(within(onlyRow()).getByText("Set, 50 to 59 degrees")).toHaveClass(
+      "sr-only",
+    );
   });
 
   it("breathes instead of badging while the weather is asked for", async () => {

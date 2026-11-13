@@ -194,6 +194,21 @@ describe("R: the conditions row", () => {
     expect(within(block).queryByRole("link")).toBeNull();
   });
 
+  it("says a band set before the sheet asked for a sky as the range alone", async () => {
+    await renderWithRouter(
+      detail(
+        runSummary({
+          weatherStatus: "manual",
+          conditions: { ...SET_BY_YOU, sky: undefined },
+        }),
+      ),
+    );
+
+    expect(saidText(region("conditions"))).toBe(
+      "Conditions · set by you50 to 59 degrees",
+    );
+  });
+
   it("breathes while the weather is still being asked for", async () => {
     await renderWithRouter(
       detail(runSummary({ weatherStatus: "pending", conditions: undefined })),

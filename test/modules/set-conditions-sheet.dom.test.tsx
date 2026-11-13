@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { SetConditionsSheet } from "../../src/modules/runs/components/SetConditionsSheet";
 import type { ConditionsActions } from "../../src/modules/runs/components/SetConditionsSheet";
 import { carriedSince } from "../ui/carry-spy";
+import { drawnText } from "./spoken-text";
 
 vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
   const { spyOnCarry } = await import("../ui/carry-spy");
@@ -59,11 +60,12 @@ describe("SetConditionsSheet: the picks", () => {
     await user.click(
       within(dialog).getByRole("radio", { name: "41 to 50 degrees" }),
     );
-    expect(
-      within(dialog).getByRole("button", {
-        name: "Set 41 to 50 degrees and rain",
-      }),
-    ).toBeVisible();
+    const submit = within(dialog).getByRole("button", {
+      name: "Set 41 to 50 degrees and rain",
+    });
+    expect(submit).toBeVisible();
+    // Drawn as round 26 drew it; only the name is in words.
+    expect(drawnText(submit)).toMatch(/^Set 41–50° and rain/u);
   });
 
   it("lists both missing picks, by name, when neither was made", async () => {
