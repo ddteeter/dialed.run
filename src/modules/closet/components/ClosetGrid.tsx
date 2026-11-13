@@ -72,12 +72,15 @@ function piecesHeading(count: number): string {
  * dashed row across the grid, "+ Add a piece", and an empty closet ends
  * the same way.
  */
+const ADD_CLASS =
+  "target flex h-full items-center justify-center gap-2 rounded-tile border border-dashed border-hairline-2 p-3 text-body font-bold text-ink no-underline";
+
 function AddTile({ isRow }: Readonly<{ isRow: boolean }>): JSX.Element {
   return (
     <li data-part="add" className={isRow ? "col-span-full" : undefined}>
       <Link
         to="/closet/new"
-        className={`target flex h-full items-center justify-center gap-2 rounded-tile border border-dashed border-hairline-2 p-3 text-body font-bold text-ink no-underline ${isRow ? "min-h-14" : ""}`}
+        className={isRow ? `${ADD_CLASS} min-h-14` : ADD_CLASS}
       >
         <Icon name="add" />
         Add a piece
@@ -551,6 +554,12 @@ function GenericNudge({
 }
 
 /**
+The closet's page: MEASURE.page, centred, in the 16 phone gutter.
+*/
+const PAGE_CLASS =
+  "mx-auto flex w-full max-w-page flex-col px-4 py-6 wide:px-6";
+
+/**
  * The sentence a delete leaves, written after mount rather than rendered
  * with the page: a status region announces what changes in it, and a
  * sentence that arrives with the region itself is never read out.
@@ -615,7 +624,11 @@ export function ClosetGrid({
     // rail: an empty closet has none, and an empty track still cost its gap
     // (C-10). Round 55 · 185 keeps the 16 phone gutter.
     <div
-      className={`mx-auto flex w-full max-w-page flex-col px-4 py-6 wide:px-6 ${isEmpty ? "" : "desk:grid desk:grid-cols-[max-content_minmax(0,1fr)] desk:items-start desk:gap-x-8"}`}
+      className={
+        isEmpty
+          ? PAGE_CLASS
+          : `${PAGE_CLASS} desk:grid desk:grid-cols-[max-content_minmax(0,1fr)] desk:items-start desk:gap-x-8`
+      }
     >
       {isEmpty ? undefined : (
         <div className="hidden desk:block desk:border-r desk:border-hairline desk:pr-6">
