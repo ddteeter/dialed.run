@@ -12,6 +12,7 @@ import { BelledLayout } from "../../modules/notifications/components/BelledLayou
 import { bellStateFn } from "../../modules/notifications/functions";
 
 export const Route = createFileRoute("/feed/search")({
+  staticData: { title: "Find a runner" },
   beforeLoad: async ({ location }) => {
     requireSignedIn(await getSession(), location);
   },

@@ -9,6 +9,7 @@ import { BelledLayout } from "../../modules/notifications/components/BelledLayou
 import { bellStateFn } from "../../modules/notifications/functions";
 
 export const Route = createFileRoute("/closet/")({
+  staticData: { title: "Closet" },
   // `?retired=true` after a retire, optional so every other link to
   // /closet omits it, and the rail's filters (R-94). A delete's landing
   // rides history state instead.

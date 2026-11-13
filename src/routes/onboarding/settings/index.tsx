@@ -29,6 +29,7 @@ import { ThemeSwitch } from "../../../ui/ThemeSwitch";
  * tab bar.
  */
 export const Route = createFileRoute("/onboarding/settings/")({
+  staticData: { title: "Settings" },
   loader: async ({ location }) => {
     await requireSession(location);
     const [

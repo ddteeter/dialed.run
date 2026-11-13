@@ -24,6 +24,7 @@ import { geolocate } from "../../modules/onboarding/geolocate";
 import { nowSeconds } from "../../lib/now";
 
 export const Route = createFileRoute("/feed/")({
+  staticData: { title: "Feed" },
   beforeLoad: async ({ location }) => {
     requireSignedIn(await getSession(), location);
   },

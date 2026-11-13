@@ -12,6 +12,7 @@ import { tryAgainSearch } from "../../lib/strava-origin";
 import { Page } from "../../ui";
 
 export const Route = createFileRoute("/runs/strava")({
+  staticData: { title: "Strava" },
   // `again`: back from a refused receipt's Try again (round 39 #66).
   validateSearch: tryAgainSearch,
   loader: async () => withBell(getStravaStatusFn(), bellStateFn()),
