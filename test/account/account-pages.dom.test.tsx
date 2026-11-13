@@ -779,6 +779,9 @@ const sendLink = () => screen.getByRole("button", { name: "Send link" });
 describe("ChangeEmail (ACC-8)", () => {
   it("lists both fields in the summary when both are missing, as Change password does (P1-01)", async () => {
     const { request, user } = renderChange();
+    // R54·167.1: this surface's primary is the ink pill, never pink caps.
+    expect(sendLink()).toHaveClass("rounded-pill", "bg-ink", "text-ground");
+    expect(sendLink()).not.toHaveClass("bg-action");
     await user.click(sendLink());
     await waitFor(() => {
       expect(screen.getByRole("status")).toHaveTextContent(

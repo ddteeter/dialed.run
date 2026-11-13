@@ -196,6 +196,15 @@ describe("Au5 · Request access", () => {
     );
     const note = screen.getByLabelText("Note · optional");
     fireEvent.change(note, { target: { value: "n".repeat(141) } });
+    // R54·167.1: this surface's primary is the ink pill, never pink caps.
+    expect(screen.getByRole("button", { name: "Send request" })).toHaveClass(
+      "rounded-pill",
+      "bg-ink",
+      "text-ground",
+    );
+    expect(
+      screen.getByRole("button", { name: "Send request" }),
+    ).not.toHaveClass("bg-action");
     fireEvent.click(screen.getByRole("button", { name: "Send request" }));
     await waitFor(() => {
       expect(note).toHaveAttribute(

@@ -170,6 +170,13 @@ describe("DeleteAccount (U1's last row)", () => {
     const { view, user, request } = deleteRow();
     await view;
     const sheet = await openSheet(user);
+    // R54·167.1: this surface's primary is the ink pill, never pink caps.
+    expect(
+      within(sheet).getByRole("button", { name: "Delete my account" }),
+    ).toHaveClass("rounded-pill", "bg-ink", "text-ground");
+    expect(
+      within(sheet).getByRole("button", { name: "Delete my account" }),
+    ).not.toHaveClass("bg-action");
     await user.click(
       within(sheet).getByRole("button", { name: "Delete my account" }),
     );

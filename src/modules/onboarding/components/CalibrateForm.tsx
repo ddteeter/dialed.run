@@ -151,6 +151,7 @@ export function CalibrateForm({
       <ChoiceList
         name="thermalLevel"
         legend="Compared to people you run with, do you run warm or cold?"
+        legendStep="question"
         options={THERMAL_OPTIONS}
         optionLabels={THERMAL_LABELS}
         optionNotes={offsetLabels(tempUnit)}

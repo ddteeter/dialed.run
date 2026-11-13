@@ -153,6 +153,7 @@ export function ChangeEmail({
         label="Send link"
         pendingLabel="Sending"
         pending={form.pending}
+        tone="ink"
       />
     </FormElement>
   );

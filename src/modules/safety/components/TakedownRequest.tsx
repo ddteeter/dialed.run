@@ -1,22 +1,18 @@
 import { useState } from "react";
 import type { JSX } from "react";
 
-import { refusalMessage } from "../../../lib/contracts/access";
 import { takedownRequestSchema } from "../../../lib/contracts/takedown";
 import {
-  FailureBand,
   FieldMessage,
   FormElement,
-  FormFailureBand,
-  SubmitButton,
   TextField,
   ToggleField,
-  Turnstile,
   useFormSubmit,
   useIdempotencyKey,
   useTurnstileToken,
 } from "../../../ui";
 import { SignedOutPanel, SignedOutReceipt } from "../../../ui/SignedOutPanel";
+import { TurnstileFormEnd } from "../../../ui/TurnstileFormEnd";
 import type { TakedownRequestResult } from "../takedown-requests";
 import { ElsewhereHelp } from "./ElsewhereHelp";
 
@@ -176,28 +172,15 @@ export function TakedownRequest({
           />
           <FieldMessage name="isAttested" error={form.fieldErrors.isAttested} />
         </div>
-        {outcome === undefined ? undefined : (
-          <FailureBand
-            kicker="Not sent"
-            message={refusalMessage(outcome)}
-            onRetry={submit}
-          />
-        )}
-        <FormFailureBand
-          failure={form.failure}
-          onRetry={form.retry}
-          retryRef={form.retryRef}
-        />
-        <Turnstile
-          key={turnstile.widgetKey}
+        <TurnstileFormEnd
+          form={form}
+          refusal={outcome}
+          onRetryRefusal={submit}
           siteKey={siteKey}
           action="takedown"
-          onToken={turnstile.onToken}
-        />
-        <SubmitButton
+          turnstile={turnstile}
           label="Send the request"
           pendingLabel="Sending the request"
-          pending={form.pending}
         />
       </FormElement>
     </SignedOutPanel>

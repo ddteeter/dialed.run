@@ -92,6 +92,7 @@ export function TakedownConfirm({
           label="Confirm the request"
           pendingLabel="Confirming the request"
           pending={form.pending}
+          tone="ink"
         />
       </FormElement>
     </SignedOutPanel>

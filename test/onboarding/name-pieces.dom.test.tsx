@@ -174,6 +174,15 @@ describe("NamePieces", () => {
     await nameFirst(user);
     await user.type(screen.getByLabelText("Brand"), "Smartwool");
     await user.type(screen.getByLabelText("Model"), "Intraknit 200");
+    // R55·229: Save is the row's hairline pill, beside its note.
+    expect(screen.getByRole("button", { name: "Save" })).toHaveClass(
+      "rounded-pill",
+      "border-hairline",
+      "bg-transparent",
+    );
+    expect(screen.getByRole("button", { name: "Save" })).not.toHaveClass(
+      "bg-ink",
+    );
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(nameGarment).toHaveBeenCalledWith({

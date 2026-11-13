@@ -142,6 +142,7 @@ export function NameRowForm({
           label="Save"
           pendingLabel="Saving"
           pending={form.pending}
+          tone="secondary"
         />
         {form.fieldErrors.brand === undefined ? (
           <span className="text-small text-quiet">Brand alone is enough.</span>

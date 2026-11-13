@@ -6,23 +6,19 @@ import {
   ACCESS_NOTE_COUNT_FROM,
   ACCESS_NOTE_MAX,
   REGION_COPY,
-  refusalMessage,
 } from "../../../lib/contracts/access";
 import { requestAccessSchema } from "../../../lib/contracts";
 import {
-  FailureBand,
   FormElement,
-  FormFailureBand,
   Icon,
   Mono,
-  SubmitButton,
   TextField,
-  Turnstile,
   useFormSubmit,
   useTurnstileToken,
 } from "../../../ui";
 import type { FieldProps } from "../../../ui";
 import { SignedOutPanel, SignedOutReceipt } from "../../../ui/SignedOutPanel";
+import { TurnstileFormEnd } from "../../../ui/TurnstileFormEnd";
 import type { AccessRequestResult } from "../access";
 
 /**
@@ -228,30 +224,17 @@ export function RequestAccess({
           />
           <NoteCounter length={note.length} />
         </div>
-        {outcome === undefined ? undefined : (
-          <FailureBand
-            kicker="Not sent"
-            message={refusalMessage(outcome)}
-            onRetry={() => {
-              void form.submit({ email, note });
-            }}
-          />
-        )}
-        <FormFailureBand
-          failure={form.failure}
-          onRetry={form.retry}
-          retryRef={form.retryRef}
-        />
-        <Turnstile
-          key={turnstile.widgetKey}
+        <TurnstileFormEnd
+          form={form}
+          refusal={outcome}
+          onRetryRefusal={() => {
+            void form.submit({ email, note });
+          }}
           siteKey={siteKey}
           action="request-access"
-          onToken={turnstile.onToken}
-        />
-        <SubmitButton
+          turnstile={turnstile}
           label="Send request"
           pendingLabel="Sending"
-          pending={form.pending}
         />
       </FormElement>
     </SignedOutPanel>

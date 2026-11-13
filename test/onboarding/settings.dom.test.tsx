@@ -460,6 +460,15 @@ describe("the sub-pages", () => {
       screen.getByRole("heading", { level: 1, name: "Privacy" }),
     ).toBeVisible();
     expect(screen.getByRole("radio", { name: "Shared" })).toBeChecked();
+    // R54·167.1: this surface's primary is the ink pill, never pink caps.
+    expect(screen.getByRole("button", { name: "Save" })).toHaveClass(
+      "rounded-pill",
+      "bg-ink",
+      "text-ground",
+    );
+    expect(screen.getByRole("button", { name: "Save" })).not.toHaveClass(
+      "bg-action",
+    );
     await userEvent.setup().click(screen.getByRole("button", { name: "Save" }));
     expect(saveSharing).toHaveBeenCalledWith({
       data: { defaultAudience: "runners" },

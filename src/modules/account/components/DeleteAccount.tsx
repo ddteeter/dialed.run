@@ -261,6 +261,7 @@ function DeleteSheet({
           label="Delete my account"
           pendingLabel="Deleting"
           pending={form.pending}
+          tone="ink"
           ref={(node) => {
             setConfirm(node ?? undefined);
           }}

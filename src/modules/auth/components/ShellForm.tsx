@@ -58,6 +58,7 @@ export function ShellForm({
         label={submitLabel}
         pendingLabel={pendingLabel}
         pending={form.pending}
+        tone="ink"
       />
     </form>
   );

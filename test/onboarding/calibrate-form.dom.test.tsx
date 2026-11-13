@@ -71,6 +71,12 @@ describe("the question", () => {
         name: "Compared to people you run with, do you run warm or cold?",
       }),
     ).toBeInTheDocument();
+    // R55·227: the legend asks, so it is set at TYPE.heading, not mono.
+    const legend = screen.getByText(
+      "Compared to people you run with, do you run warm or cold?",
+      { selector: "legend" },
+    );
+    expect(legend).toHaveClass("font-display", "text-heading");
     const offsets: readonly (readonly [string, string])[] = [
       ["Always freezing", "+8\u{00B0}"],
       ["Run a little cold", "+4\u{00B0}"],

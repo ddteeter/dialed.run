@@ -146,6 +146,15 @@ describe("ForgotPassword", () => {
       screen.getByRole("textbox", { name: "Email" }),
       "maya@example.com",
     );
+    // R54·167.1: this surface's primary is the ink pill, never pink caps.
+    expect(screen.getByRole("button", { name: "Send link" })).toHaveClass(
+      "rounded-pill",
+      "bg-ink",
+      "text-ground",
+    );
+    expect(screen.getByRole("button", { name: "Send link" })).not.toHaveClass(
+      "bg-action",
+    );
     await user.click(screen.getByRole("button", { name: "Send link" }));
 
     expect(request).toHaveBeenCalledWith({ email: "maya@example.com" });
@@ -223,6 +232,15 @@ describe("ResetPassword", () => {
     expect(screen.getByText("At least 10 characters.")).toBeVisible();
     expect(passwordField()).toHaveAttribute("autocomplete", "new-password");
     await user.type(passwordField(), LONG);
+    // R54·167.1: this surface's primary is the ink pill, never pink caps.
+    expect(screen.getByRole("button", { name: "Set password" })).toHaveClass(
+      "rounded-pill",
+      "bg-ink",
+      "text-ground",
+    );
+    expect(
+      screen.getByRole("button", { name: "Set password" }),
+    ).not.toHaveClass("bg-action");
     await user.click(screen.getByRole("button", { name: "Set password" }));
 
     expect(reset).toHaveBeenCalledWith("tok", { password: LONG });
