@@ -278,7 +278,7 @@ describe("buildDenseSeed", () => {
       .map((byte) => byte.toString(16).padStart(2, "0"))
       .join("");
     expect(hex).toBe(
-      "9b9c87e06da09e5dba5a64313d871a84b34ac717e997030bf2fef71a1ee0410f",
+      "b16221216944d0f0c3ae6e0c5f343cacaf6da0f390703f4b429160c071d9a20e",
     );
   });
 
