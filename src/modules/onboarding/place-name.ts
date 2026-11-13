@@ -139,7 +139,9 @@ export function chipPlaceName(address: string): string {
     .map((part) => part.trim())
     .filter((part) => part !== "" && !DROPPED_PART.test(part));
   if (parts.length < 3) return parts.join(", ");
-  const country = parts.slice(-1).join("");
+  // One part, so `String` is that part: a join separator would be a
+  // literal no input could tell from another.
+  const country = String(parts.slice(-1));
   return [
     ...parts.slice(0, 1),
     ...parts.slice(-2, -1).map((region) => regionFor(region, country)),

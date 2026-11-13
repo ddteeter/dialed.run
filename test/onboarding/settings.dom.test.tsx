@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-router";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -345,7 +346,7 @@ describe("the index while a sub-page is slow (X3)", () => {
           isPrivacyReviewDue={false}
           blockedCount={2}
           display={undefined}
-        signOut={undefined}
+          signOut={undefined}
         />,
         {
           at: "/onboarding/settings",
@@ -495,6 +496,48 @@ describe("the sub-pages", () => {
     await waitFor(() => {
       expect(markPrivacySeen).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it("stamp with the stamp they are handed now, not the first one", async () => {
+    const first = vi.fn(SEEN);
+    const second = vi.fn(SEEN);
+    function Harness(): ReactElement {
+      const [stamp, setStamp] = useState(() => first);
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              setStamp(() => second);
+            }}
+          >
+            swap
+          </button>
+          <SettingsSectionPage
+            section="sharing"
+            current={ANSWERED}
+            isVerified
+            saveUnits={vi.fn()}
+            saveSharing={vi.fn()}
+            saveCountInTotals={vi.fn()}
+            savePublicProfile={vi.fn()}
+            pickUsername={vi.fn()}
+            markPrivacySeen={stamp}
+          />
+        </>
+      );
+    }
+    await renderWithRouter(<Harness />);
+    await waitFor(() => {
+      expect(first).toHaveBeenCalledTimes(1);
+    });
+
+    await userEvent.setup().click(screen.getByRole("button", { name: "swap" }));
+
+    await waitFor(() => {
+      expect(second).toHaveBeenCalledTimes(1);
+    });
+    expect(first).toHaveBeenCalledTimes(1);
   });
 
   it("open Privacy the same when the stamp fails, and say nothing of it", async () => {

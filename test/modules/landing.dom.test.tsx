@@ -135,6 +135,10 @@ describe("SignOutButton", () => {
     expect(row?.lastElementChild).toBe(button);
     expect(row).toHaveClass("justify-between", "border-b");
     expect(row?.querySelector("svg")).toBeNull();
+    // The row, then its band under it, a rhythm apart.
+    expect(row?.parentElement).toHaveAttribute("data-part", "sign-out-row");
+    expect(row?.parentElement).toHaveClass("flex", "flex-col", "gap-3");
+    expect(row?.parentElement).not.toHaveClass("items-end");
     expect(screen.getByText("On this phone")).toHaveClass("text-muted");
     // Heard once, through the button's description, not again as text.
     expect(screen.getByText("On this phone").parentElement).toHaveAttribute(
