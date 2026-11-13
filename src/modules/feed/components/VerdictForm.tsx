@@ -33,13 +33,14 @@ import {
   FormStatus,
   LOG_FLOW,
   Mono,
+  PhoneBell,
   PICKED_AUDIENCES,
   PUBLIC_PREVIEW_LINE,
+  RailCard,
   Spoken,
   SubmitButton,
   useFormSubmit,
   useUnconfirmedRefusal,
-  RailCard,
   verdictHue,
   WeatherAttribution,
 } from "../../../ui";
@@ -227,9 +228,12 @@ function RunHeader({
       data-ground="ink-until-wide"
       className="-mx-5 -mt-6 flex flex-col gap-2 bg-ground px-5 py-5 text-ink wide:mx-0 wide:mt-0 wide:gap-1 wide:px-0 wide:py-0"
     >
-      <Mono step="xs" className="text-muted wide:hidden">
-        {when}
-      </Mono>
+      <div className="flex items-center justify-between gap-3 wide:hidden">
+        <Mono step="xs" className="text-muted wide:hidden">
+          {when}
+        </Mono>
+        <PhoneBell />
+      </div>
       <p className="m-0 font-display text-display uppercase wide:hidden">
         {headline}
       </p>

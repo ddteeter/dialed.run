@@ -14,7 +14,13 @@ import type {
   OtherProfile,
   OwnProfile as OwnProfileData,
 } from "../../src/modules/feed/profiles";
-import { MILES, renderFeedScreen, unconfirmed } from "./feed-fixtures";
+import {
+  expectBellEnding,
+  MILES,
+  renderFeedScreen,
+  unconfirmed,
+  withBell,
+} from "./feed-fixtures";
 
 /**
  * Round 26 #7's handle placements (FEED-10), `/@handle`'s two pages, and
@@ -248,5 +254,21 @@ describe("D's under-review band (R-62; round 28 #6)", () => {
     await detailFor(false);
     expect(document.querySelector('[data-part="notice-band"]')).toBeNull();
     expect(screen.queryByText(/while we check/iu)).toBeNull();
+  });
+});
+
+describe("RunnerAtHandle: the phone's bell (Design 169.1)", () => {
+  it("ends the back row when nobody holds the handle", async () => {
+    await renderFeedScreen(
+      withBell(
+        <RunnerAtHandle
+          found={{ kind: "gone" }}
+          follow={done}
+          unfollow={done}
+          reportAffordanceFor={() => NOTHING}
+        />,
+      ),
+    );
+    expectBellEnding(screen.getByRole("link", { name: "Back to feed" }));
   });
 });

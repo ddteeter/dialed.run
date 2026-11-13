@@ -26,6 +26,7 @@ import {
   LOG_FLOW,
   Mono,
   PendingLabel,
+  PhoneBell,
   RailCard,
   Spoken,
   useControlAction,
@@ -464,9 +465,12 @@ function AttachHeader({
       data-ground="ink-until-wide"
       className="-mx-5 -mt-6 flex flex-col gap-1 bg-ground px-5 py-5 text-ink wide:mx-0 wide:mt-0 wide:px-0 wide:py-0"
     >
-      <h1 className="m-0 font-display text-heading wide:text-title">
-        What did you wear?
-      </h1>
+      <div className="flex items-start justify-between gap-3">
+        <h1 className="m-0 font-display text-heading wide:text-title">
+          What did you wear?
+        </h1>
+        <PhoneBell />
+      </div>
       <Mono step="xs" className="text-dialed-text">
         <Spoken {...subLine(context, units, count)} />
       </Mono>

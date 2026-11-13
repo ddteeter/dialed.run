@@ -6,6 +6,7 @@ import {
   Icon,
   ListSection,
   Mono,
+  PhoneBell,
   Spoken,
   VerdictMark,
   WeatherAttribution,
@@ -83,6 +84,7 @@ export function OwnProfile({
             )}
           </div>
           <SettingsButton />
+          <PhoneBell />
         </div>
         <p data-part="counts" className="m-0 flex gap-5 text-muted">
           <Count value={profile.runCount} label="Runs" />

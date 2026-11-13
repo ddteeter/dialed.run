@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
-import { Icon } from "../../../ui";
+import { Icon, PhoneBell } from "../../../ui";
 import type { OtherProfile as OtherProfileData } from "../profiles";
 import type { ProfileAtHandle } from "../profiles";
 import type { FollowAction } from "./Follow";
@@ -71,14 +71,17 @@ function NoRunnerHere({ children }: Readonly<{ children: string }>) {
     <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6 wide:mx-0">
       {/* `exact`: the router marks a prefix match current, and this page
           sits under /feed. */}
-      <Link
-        to="/feed"
-        activeOptions={{ exact: true }}
-        aria-label="Back to feed"
-        className="target inline-flex items-center self-start text-ink"
-      >
-        <Icon name="back" size={20} />
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link
+          to="/feed"
+          activeOptions={{ exact: true }}
+          aria-label="Back to feed"
+          className="target inline-flex items-center text-ink"
+        >
+          <Icon name="back" size={20} />
+        </Link>
+        <PhoneBell />
+      </div>
       <p data-part="no-runner" className="m-0 text-lead">
         {children}
       </p>

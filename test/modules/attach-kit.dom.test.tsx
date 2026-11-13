@@ -29,6 +29,7 @@ import type { PhotoStep } from "../../src/ui";
 import { TermsRefusalAnswer } from "../../src/ui";
 import { expectAvailable, expectBusy } from "../ui/unavailable";
 import { queryWeatherCredit, WEATHER_CREDIT } from "../ui/weather-credit";
+import { expectBellEnding, withBell } from "./feed-fixtures";
 
 /**
  * Attach the kit (screen A2), to round 22's two frames and round 20's
@@ -1613,5 +1614,14 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
       expect(router.state.location.pathname).toBe("/feed/verdict/01NEW");
     });
     expect(uploadPhoto).not.toHaveBeenCalled();
+  });
+});
+
+describe("AttachKit: the phone's bell (Design 169.1)", () => {
+  it("ends the ink header's title row", async () => {
+    await renderWithRouter(withBell(attach()));
+    expectBellEnding(
+      screen.getByRole("heading", { name: "What did you wear?" }),
+    );
   });
 });

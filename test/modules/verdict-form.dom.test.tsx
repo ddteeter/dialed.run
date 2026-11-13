@@ -25,6 +25,7 @@ import { UnconfirmedRefusalAnswer } from "../../src/ui/unconfirmed-refusal";
 import type { ConfirmGate } from "../../src/ui/unconfirmed-refusal";
 import { queryWeatherCredit } from "../ui/weather-credit";
 import { carriedSince } from "../ui/carry-spy";
+import { withBell } from "./feed-fixtures";
 
 vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
   const { spyOnCarry } = await import("../ui/carry-spy");
@@ -1953,8 +1954,9 @@ describe("VerdictForm: the run header (round 21)", () => {
     // the headline is its reading, and below the desk the rail that also
     // credits it is not drawn.
     const credit = queryWeatherCredit(header);
+    // The phone's day and time share their row with the bell (Design 169.1).
     expect([...header.children]).toEqual([
-      phoneWhen,
+      phoneWhen.parentElement,
       phoneHeadline,
       question,
       deskLine,
@@ -2549,5 +2551,20 @@ describe("VerdictForm: the rail's band record and history (round 25)", () => {
       form({ entry: { items: kit }, bandFloor: 0, bandRuns: earlier }),
     );
     expect(railOf()).not.toHaveTextContent("Before, in");
+  });
+});
+
+describe("VerdictForm: the phone's bell (Design 169.1)", () => {
+  it("ends the header's first row, the run's day and time, on the phone only", async () => {
+    await renderWithRouter(withBell(form()));
+    const seat = screen
+      .getByRole("button", { name: "Notifications" })
+      .closest("[data-slot='notification-bell']");
+    const row = seat?.parentElement;
+    expect(row?.parentElement).toHaveAttribute("data-slot", "header");
+    expect(row?.parentElement?.firstElementChild).toBe(row);
+    expect(row).toHaveClass("wide:hidden");
+    expect(row?.firstElementChild).toHaveTextContent(/ · /u);
+    expect(row?.lastElementChild).toBe(seat);
   });
 });

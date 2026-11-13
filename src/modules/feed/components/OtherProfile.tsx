@@ -2,7 +2,14 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import type { ReactNode } from "react";
 
-import { FormStatus, Icon, Mono, SlowLabel, useTappedSlow } from "../../../ui";
+import {
+  FormStatus,
+  Icon,
+  Mono,
+  PhoneBell,
+  SlowLabel,
+  useTappedSlow,
+} from "../../../ui";
 import type { OtherProfile as OtherProfileData } from "../profiles";
 import { Avatar } from "./Avatar";
 import { Handle, handleText } from "./Handle";
@@ -56,14 +63,17 @@ export function OtherProfile({
       <FormStatus>{status}</FormStatus>
       {/* `exact`: the router marks a prefix match current, and this page
           sits under /feed. */}
-      <Link
-        to="/feed"
-        activeOptions={{ exact: true }}
-        aria-label="Back to feed"
-        className="target inline-flex items-center self-start text-ink"
-      >
-        <Icon name="back" size={20} />
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link
+          to="/feed"
+          activeOptions={{ exact: true }}
+          aria-label="Back to feed"
+          className="target inline-flex items-center text-ink"
+        >
+          <Icon name="back" size={20} />
+        </Link>
+        <PhoneBell />
+      </div>
       <div data-part="header" className="flex flex-col items-start gap-4">
         <div className="flex items-center gap-4">
           <Avatar name={profile.username ?? name} size="large" />

@@ -14,7 +14,7 @@ import type {
   OwnProfile as OwnProfileData,
 } from "../../src/modules/feed/profiles";
 import type { SearchResult } from "../../src/modules/feed/search";
-import { renderFeedScreen } from "./feed-fixtures";
+import { expectBellEnding, renderFeedScreen, withBell } from "./feed-fixtures";
 import { queryWeatherCredit } from "../ui/weather-credit";
 import { pointConditions } from "../feed/conditions-fixture";
 
@@ -1085,5 +1085,24 @@ describe("RunnerSearch", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       "Not following. Your connection dropped.",
     );
+  });
+});
+
+describe("the phone's bell on the profiles and search (Design 169.1)", () => {
+  it("ends You's identity row, after Settings", async () => {
+    await renderFeedScreen(
+      withBell(<OwnProfile profile={ownProfile()} confirmBand={undefined} />),
+    );
+    expectBellEnding(screen.getByRole("heading", { name: "@dana_kim" }));
+  });
+
+  it("ends another runner's back row", async () => {
+    await renderFeedScreen(withBell(otherScreen()));
+    expectBellEnding(screen.getByRole("link", { name: "Back to feed" }));
+  });
+
+  it("ends search's title row", async () => {
+    await renderFeedScreen(withBell(searchScreen()));
+    expectBellEnding(screen.getByRole("heading", { name: "Find a runner" }));
   });
 });
