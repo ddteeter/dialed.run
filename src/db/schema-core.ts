@@ -156,6 +156,12 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     // (`lib/browser/theme.ts`); this is the account's value, which takes
     // over on sign-in. `modules/account/theme.ts` is the one writer.
     theme: text("theme", { enum: THEME_CHOICES }).notNull().default("system"),
+    // When the runner last opened Settings › Privacy, in seconds (R55·230):
+    // U1's Privacy row carries REVIEW while this is older than the last
+    // change to Privacy's settings (`onboarding/privacy-review.ts`, its one
+    // reader and writer). NULL until the first visit, which reads as seen
+    // when the account was made, so a new account starts with no tag.
+    privacySeenAt: integer("privacy_seen_at"),
     // An account the service runs, not a runner: the production smoke
     // account (design 193, #533). Invisible to runners by the same floors
     // that hide a ban: `runnerInStanding` for the runner, the entry rules'
