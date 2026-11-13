@@ -320,9 +320,20 @@ test("the retire confirm is composed as round 22 draws it", async ({
   await page.locator(built).waitFor({ state: "visible" });
 
   // Heading, the two sentences, the verb that opened it, Keep it — the
-  // board's own words, because the seeded garment is the board's.
-  expect(await visibleCells(page, built)).toStrictEqual(drawnSheet);
-  expect(await fillsOf(page, built)).toStrictEqual(drawnFills);
+  // board's own words, because the seeded garment is the board's. The
+  // heading is the sheet's own now (R55·173): its title column, then the
+  // body, in reading order.
+  expect([
+    ...(await visibleCells(
+      page,
+      "dialog[open] [data-part='sheet-header'] > div",
+    )),
+    ...(await visibleCells(page, built)),
+  ]).toStrictEqual(drawnSheet);
+  expect([
+    ...(await fillsOf(page, "dialog[open] [data-part='sheet-header'] > div")),
+    ...(await fillsOf(page, built)),
+  ]).toStrictEqual(drawnFills);
   // "Focus lands on Keep it."
   await expect(page.getByRole("button", { name: "Keep it" })).toBeFocused();
 

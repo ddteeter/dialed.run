@@ -160,7 +160,6 @@ export function ShadeSheet({
   return (
     <Sheet open={open} onClose={onClose} label="Exact shade">
       <div className="flex flex-col gap-4">
-        <h2 className="m-0 font-display text-heading">Exact shade</h2>
         <p className="m-0 text-muted">
           <Mono step="xs">{colorName} · optional</Mono>
         </p>

@@ -1,45 +1,55 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { SheetReceipt } from "../../src/ui";
+import { Sheet, SheetReceipt } from "../../src/ui";
 
 function renderReceipt() {
   const onDone = vi.fn();
   render(
-    <SheetReceipt
-      part="some-receipt"
-      kicker="Thing sent"
-      heading="Thanks."
-      onDone={onDone}
-    >
-      <p>What happens next.</p>
-    </SheetReceipt>,
+    <Sheet open onClose={vi.fn()} kicker="Thing sent" label="Thanks.">
+      <SheetReceipt part="some-receipt" onDone={onDone}>
+        <p>What happens next.</p>
+      </SheetReceipt>
+    </Sheet>,
   );
   return onDone;
 }
 
 describe("SheetReceipt", () => {
-  it("says what was sent, then the heading, then what happens next, then Done", () => {
+  it("says what happens next, then Done", () => {
     renderReceipt();
     const receipt = document.querySelector("[data-part='some-receipt']");
-    expect(receipt).toHaveTextContent(
-      "Thing sentThanks.What happens next.Done",
-    );
-    expect(screen.getByText("Thing sent")).toHaveClass("text-muted");
+    expect(receipt).toHaveTextContent(/^What happens next\.Done$/);
   });
 
-  it("puts focus on its heading, so the swap is read out", () => {
+  it("puts focus on the sheet's heading, so the swap is read out", async () => {
     renderReceipt();
-    const heading = screen.getByRole("heading", { level: 2, name: "Thanks." });
-    expect(heading).toHaveFocus();
-    expect(heading).toHaveAttribute("tabindex", "-1");
+    const heading = screen.getByRole("heading", {
+      level: 2,
+      name: "Thanks.",
+      hidden: true,
+    });
+    await waitFor(() => {
+      expect(heading).toHaveFocus();
+    });
   });
 
-  it("closes on Done, a chalk pill", async () => {
+  it("focuses nothing outside a sheet", () => {
+    // A receipt is only ever a sheet's; outside one it has no heading to
+    // send focus to, and it must not throw looking.
+    render(
+      <SheetReceipt part="loose" onDone={vi.fn()}>
+        <p>Next.</p>
+      </SheetReceipt>,
+    );
+    expect(document.body).toHaveFocus();
+  });
+
+  it("closes on Done", async () => {
     const user = userEvent.setup();
     const onDone = renderReceipt();
-    const done = screen.getByRole("button", { name: "Done" });
+    const done = screen.getByRole("button", { name: "Done", hidden: true });
     expect(done).toHaveAttribute("type", "button");
     await user.click(done);
     expect(onDone).toHaveBeenCalledOnce();

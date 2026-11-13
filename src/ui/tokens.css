@@ -93,6 +93,17 @@
    * ------------------------------------------------------------------ */
   --bar-height: calc(44px + 2 * 8px);
 
+  /* The desk drawer's "one soft lift" (R54·164.1). No contract carries an
+   * elevation, so this is the Round 54 board's own shadow, 0 8px 28px at
+   * 10% of the scrim, held as one token until Design gives it a home
+   * (#652). Built from `--scrim` rather than a raw
+   * colour, so the palette stays the T1 table's. */
+  /* How tall a phone sheet grows before it folds (R54·164.4: "the same
+   * applies on phone once a sheet passes 90% of the viewport's height"). */
+  --sheet-cap: 90dvh;
+
+  --lift: 0 8px 28px color-mix(in srgb, var(--scrim) 10%, transparent);
+
   color-scheme: light;
 }
 
@@ -283,17 +294,150 @@
   border: 1px solid var(--hairline);
   border-bottom-width: 0;
 
-  /* The grabber: 36×4 in the stronger hairline, centred over the sheet's
-     content. A pseudo-element, so it is furniture to assistive tech and
-     adds nothing to the sheet's own children. */
+  /* The grabber: 36×4 in the stronger hairline, centred 12 from the top,
+     in the gap above the header. A pseudo-element, so it is furniture to
+     assistive tech and adds nothing to the sheet's own children; placed
+     rather than in flow, so the header's own padding does not move. */
   &::before {
     content: "";
-    display: block;
+    position: absolute;
+    top: 12px;
+    inset-inline: 0;
     width: 36px;
     height: 4px;
-    margin: -12px auto 12px;
+    margin-inline: auto;
     border-radius: var(--radius-pill);
     background: var(--hairline-2);
+  }
+}
+
+/**
+ * **The desk drawer** (R54·164.1): at ≥720 a sheet is a 390 drawer over a
+ * page that stays visible, so it needs an edge of its own in both themes:
+ * `--panel` (the white of the Strava card in light, `#16161B` in dark),
+ * a 1px hairline all round, and the one soft lift. `--ground` moves to
+ * the panel, so the pinned header and footer, painted `bg-ground`, take
+ * the drawer's surface without knowing they are in one.
+ */
+@utility ground-drawer {
+  --ground: var(--panel);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--lift);
+}
+
+/**
+ * **The checkbox, the radio and the switch** (R54·166). No native control
+ * is left: each is the real `<input>`, so the keyboard, the form and the
+ * announcement are the browser's, with `appearance: none` and the drawing
+ * here. Every value is the ruling's: a 20 box or ring with a 2px ink
+ * edge, a 48×28 switch, and the contract's focus ring for all three — a
+ * 2px `--ground` gap, then 2px pink. Dark inverts ink and ground through
+ * the roles; pink stays pink. Each sits 20 inside a 44 target that its
+ * row's label provides.
+ *
+ * The focus ring is the app's own outline (`ui/a11y.css`, rule 06: 2px,
+ * offset 2px, never removed) with one change, its colour: the offset is
+ * the 2px gap and shows the ground behind, and the line is pink. It is an
+ * unlayered rule for the same reason rule 06 is — a utility in a layer
+ * cannot beat it — and it names the three controls, so nothing else's
+ * ring turns pink.
+ */
+:is(.control-check, .control-radio, .control-switch):focus-visible {
+  outline-color: var(--action);
+}
+
+/* 166.1: a 20 square, RADIUS.tight, 2px ink edge; on, an ink fill with a
+   --ground tick. The tick is two borders of a rotated box, so it is
+   drawn, not a glyph. */
+@utility control-check {
+  appearance: none;
+  display: grid;
+  flex: none;
+  place-content: center;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-tight);
+  background: transparent;
+  cursor: pointer;
+
+  &::before {
+    content: "";
+    width: 6px;
+    height: 11px;
+    margin-top: -2px;
+    border: solid var(--ground);
+    border-width: 0 2px 2px 0;
+    rotate: 45deg;
+    visibility: hidden;
+  }
+
+  &:checked {
+    background: var(--ink);
+  }
+
+  &:checked::before {
+    visibility: visible;
+  }
+}
+
+/* 166.2: a 20 ring with a 2px ink edge and a 10 ink dot. */
+@utility control-radio {
+  appearance: none;
+  display: grid;
+  flex: none;
+  place-content: center;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  cursor: pointer;
+
+  &::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    border-radius: var(--radius-pill);
+    background: var(--ink);
+    visibility: hidden;
+  }
+
+  &:checked::before {
+    visibility: visible;
+  }
+}
+
+/* 166.3: a 48×28 track with a 2px ink edge and an ink knob; on, the track
+   fills pink and the knob moves right. The knob is the track's inside
+   (24) less 3 a side, as drawn. */
+@utility control-switch {
+  appearance: none;
+  display: flex;
+  flex: none;
+  align-items: center;
+  width: 48px;
+  height: 28px;
+  margin: 0;
+  padding: 0 3px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  cursor: pointer;
+
+  &::before {
+    content: "";
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-pill);
+    background: var(--ink);
+  }
+
+  &:checked {
+    justify-content: flex-end;
+    background: var(--action);
   }
 }
 

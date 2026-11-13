@@ -187,7 +187,12 @@ test("Y · deleting a piece with runs is round 26's sheet, word for word", async
 
   // `PendingLabel` keeps each action's in-flight label in the DOM, hidden
   // until needed, so it is taken off before the words are compared.
-  const built = await cellsOf(page, sheet);
+  // The heading is the sheet's own (R55·173): its title column, then the
+  // body, in reading order.
+  const built = [
+    ...(await cellsOf(page, "dialog[open] [data-part='sheet-header'] > div")),
+    ...(await cellsOf(page, sheet)),
+  ];
   expect(
     built.map((cell) => cell.replace(/ \[ [A-Z]+ \]$/u, "")),
   ).toStrictEqual(board);

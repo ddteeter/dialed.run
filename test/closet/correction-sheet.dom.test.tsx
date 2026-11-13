@@ -310,7 +310,7 @@ describe("WRONG?'s sheet, closer", () => {
     await user.click(screen.getByRole("button", { name: "Send correction" }));
     expect(await screen.findByText("Correction sent.")).toBeInTheDocument();
     expect(
-      await screen.findByRole("dialog", { name: "Correction sent" }),
+      await screen.findByRole("dialog", { name: "Thanks. We'll check it." }),
     ).toBeVisible();
   });
 

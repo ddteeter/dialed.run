@@ -31,6 +31,7 @@ end of region, From the closet
 dialog, Tops
 dialog, Tops
 heading, Tops, level 2
+button, Close
 # of # match #° damp
 #
 selected

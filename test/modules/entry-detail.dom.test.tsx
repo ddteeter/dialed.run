@@ -878,15 +878,21 @@ describe("EntryDetail: the phone's bell (Design 169.1)", () => {
 });
 
 /**
- * The one word the pill shows: all three share its grid cell, and only
- * the current one is not `invisible`.
+ * The one word the pill shows: all three share its grid cell, each fades
+ * through `label-swap` (AF1's 90ms cross-fade, #645), and only the current
+ * one is `data-shown="true"`.
  */
 function shownWord(pill: HTMLElement): string | undefined {
-  const words = [...pill.children].filter(
-    (word) => !word.classList.contains("invisible"),
+  const words = [...pill.querySelectorAll<HTMLElement>(":scope > span")];
+  for (const word of words) {
+    expect(word).toHaveClass("label-swap");
+  }
+  const shown = words.filter((word) => word.dataset.shown === "true");
+  expect(shown).toHaveLength(1);
+  expect(words.filter((word) => word.dataset.shown === "false")).toHaveLength(
+    words.length - 1,
   );
-  expect(words).toHaveLength(1);
   // In the shared cell, like the unseen ones, so the pill never resizes.
-  expect(words[0]).toHaveClass("col-start-1", "row-start-1", "text-center");
-  return words[0]?.textContent;
+  expect(shown[0]).toHaveClass("col-start-1", "row-start-1", "text-center");
+  return shown[0]?.textContent;
 }

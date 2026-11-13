@@ -104,9 +104,11 @@ export function SetConditionsSheet({
             data-slot="weather-unavailable"
             className="flex flex-col items-start gap-3 border border-ink p-4"
           >
-            <h2 className="m-0">
+            {/* The sheet's own heading names it (R55·173); this is the
+                block's label. */}
+            <p className="m-0">
               <Mono step="sm">No weather saved</Mono>
-            </h2>
+            </p>
             <p className="m-0 text-body">
               We have no record for that hour. Set the conditions yourself and
               the run still counts.

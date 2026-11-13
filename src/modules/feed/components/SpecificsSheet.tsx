@@ -65,12 +65,9 @@ export function SpecificsSheet({
   return (
     <Sheet open={open} onClose={onClose} label="Anything specific?">
       <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-1">
-          <h2 className="m-0 font-display text-heading">Anything specific?</h2>
-          <Mono step="xs" className="text-muted">
-            {label === undefined ? "Optional" : `${label} · optional`}
-          </Mono>
-        </div>
+        <Mono step="xs" className="text-muted">
+          {label === undefined ? "Optional" : `${label} · optional`}
+        </Mono>
 
         {items.map((item) => (
           // One group per garment, legended with its name, so a reader

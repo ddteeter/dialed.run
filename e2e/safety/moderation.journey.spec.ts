@@ -174,8 +174,11 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   // Round 42: an intimate-image report swaps the sheet for its receipt,
   // with the other-sites line last, and Done closes it.
   const receipt = page.locator("[data-part='report-receipt']");
+  // The receipt's heading is the sheet's own (R55·173).
   await expect(
-    receipt.getByRole("heading", { name: "Thanks for telling us." }),
+    page
+      .locator("dialog[open]")
+      .getByRole("heading", { name: "Thanks for telling us." }),
   ).toBeFocused();
   await expect(receipt).toContainText("We'll review it within a day");
   await expect(

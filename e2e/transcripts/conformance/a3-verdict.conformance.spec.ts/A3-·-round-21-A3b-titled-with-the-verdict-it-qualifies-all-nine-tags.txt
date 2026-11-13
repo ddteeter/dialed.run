@@ -36,6 +36,7 @@ end of button, More, anything specific, has popup dialog
 dialog, Anything specific?
 dialog, Anything specific?
 heading, Anything specific?, level 2
+button, Close
 A bit warm · optional
 group, Half-zip
 Half-zip

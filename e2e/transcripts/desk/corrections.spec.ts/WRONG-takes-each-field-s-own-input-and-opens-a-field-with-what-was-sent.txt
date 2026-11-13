@@ -40,13 +40,13 @@ Wrong?
 end of button, Wrong?
 dialog, What's wrong with it?
 dialog, What's wrong with it?
+heading, What's wrong with it?, level 2
+button, Close
 form
 status
 Janji
 ·
 Rain Shell #
-heading, What's wrong with it?, level 2
-button, Close
 paragraph
 This fixes it for every runner. Your own garment keeps what you entered.
 end of paragraph

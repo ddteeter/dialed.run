@@ -1,18 +1,21 @@
 import type { JSX, ReactNode } from "react";
 
-import { focusOnMount } from "./focus-on-mount";
-import { Mono } from "./Mono";
+import { focusSheetHeading } from "./Sheet";
 
 /**
  * A sheet's receipt, swapped in place of its form (round 42's report
- * receipt; R48·129d's correction receipt "the same as 84's"): a MONO
- * kicker naming what was sent, a heading that takes focus so the swap is
- * read out, what happens next, then Done. No toast.
+ * receipt; R48·129d's correction receipt "the same as 84's"): what happens
+ * next, then Done. No toast.
+ *
+ * The receipt's kicker and heading are the sheet's own (R55·173: every
+ * sheet heading is the sheet's TYPE.title, receipts included), so the
+ * caller swaps them on `Sheet` — `kicker="Report sent"`,
+ * `label="Thanks for telling us."` — along with this body. What stays
+ * here is the focus move: the heading takes focus as the receipt mounts,
+ * so the swap is read out.
  */
 export function SheetReceipt({
   part,
-  kicker,
-  heading,
   children,
   onDone,
 }: Readonly<{
@@ -20,8 +23,6 @@ export function SheetReceipt({
   The receipt's `data-part`, which a test and the conformance harness find.
   */
   part: string;
-  kicker: string;
-  heading: string;
   /**
   What happens next: a sentence, and anything after it.
   */
@@ -29,13 +30,7 @@ export function SheetReceipt({
   onDone: () => void;
 }>): JSX.Element {
   return (
-    <div data-part={part} className="flex flex-col gap-4">
-      <Mono step="xs" className="text-muted">
-        {kicker}
-      </Mono>
-      <h2 ref={focusOnMount} tabIndex={-1} className="m-0 text-title font-bold">
-        {heading}
-      </h2>
+    <div data-part={part} ref={focusSheetHeading} className="flex flex-col gap-4">
       {children}
       <button
         type="button"

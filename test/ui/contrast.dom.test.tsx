@@ -62,6 +62,17 @@ const t1: Pair[] = Array.from(theme.matchAll(T1_ROW), (match) => ({
 /**
  * The `--name: value;` declarations inside one selector's block.
  */
+/**
+ * One `@utility` block's text, up to the next one.
+ */
+function block(name: string): string {
+  return (
+    tokens
+      .slice(tokens.indexOf(`@utility ${name} {`))
+      .split(/\n@utility /u, 1)[0] ?? ""
+  );
+}
+
 function declarations(selector: string): Map<string, string> {
   const open = tokens.indexOf(selector);
   const start = tokens.indexOf("{", open);
@@ -241,6 +252,56 @@ describe("the T1 port", () => {
     expect(sheet).toMatch(/^[^@]*border-bottom-width: 0;/u);
     expect(sheet).toMatch(
       /^[^@]*&::before \{[^}]*width: 36px;[^}]*height: 4px;[^}]*background: var\(--hairline-2\);/u,
+    );
+  });
+
+  it("gives the desk drawer the panel, a hairline all round and the lift (R54·164.1)", () => {
+    expect([...declarations("@utility ground-drawer")]).toEqual([
+      ["--ground", "var(--panel)"],
+    ]);
+    expect(tokens).toMatch(
+      /@utility ground-drawer \{[^}]*border: 1px solid var\(--hairline\);[^}]*box-shadow: var\(--lift\);/u,
+    );
+    // The lift is built from the scrim, never a typed colour.
+    expect(tokens).toMatch(
+      /--lift: 0 8px 28px color-mix\(in srgb, var\(--scrim\) 10%, transparent\);/u,
+    );
+    expect(tokens).toContain("--sheet-cap: 90dvh;");
+  });
+
+  it("draws the checkbox, radio and switch as ruled, with the contract's focus ring (R54·166)", () => {
+    // Focus: rule 06's outline, whose 2px offset is the --ground gap, in
+    // pink — unlayered, so it beats rule 06's ink, and only for these three.
+    expect(tokens).toMatch(
+      /:is\(\.control-check, \.control-radio, \.control-switch\):focus-visible \{\s*outline-color: var\(--action\);\s*\}/u,
+    );
+    for (const name of ["control-check", "control-radio", "control-switch"]) {
+      expect([name, block(name).includes("appearance: none;")]).toEqual([
+        name,
+        true,
+      ]);
+      expect([
+        name,
+        block(name).includes("border: 2px solid var(--ink);"),
+      ]).toEqual([name, true]);
+    }
+    // 166.1: a 20 square at RADIUS.tight; on, an ink fill and a --ground tick.
+    const check = block("control-check");
+    expect(check).toMatch(/width: 20px;\s*height: 20px;/u);
+    expect(check).toContain("border-radius: var(--radius-tight);");
+    expect(check).toMatch(/&:checked \{\s*background: var\(--ink\);/u);
+    expect(check).toMatch(/border: solid var\(--ground\);/u);
+    // 166.2: a 20 ring with a 10 ink dot.
+    const radio = block("control-radio");
+    expect(radio).toMatch(/width: 20px;\s*height: 20px;/u);
+    expect(radio).toMatch(
+      /width: 10px;\s*height: 10px;[^}]*background: var\(--ink\);/u,
+    );
+    // 166.3: a 48×28 track; on, pink with the knob at the right.
+    const toggle = block("control-switch");
+    expect(toggle).toMatch(/width: 48px;\s*height: 28px;/u);
+    expect(toggle).toMatch(
+      /&:checked \{\s*justify-content: flex-end;\s*background: var\(--action\);/u,
     );
   });
 

@@ -191,7 +191,6 @@ function ReleaseSheet({
           data-state={`confirm-release-${cause}`}
           className="flex flex-col gap-4"
         >
-          <h2 className="m-0 font-display text-heading">{heading}</h2>
           <p className="m-0 text-body text-quiet">
             Each one is approved as if you&apos;d pressed Approve on it: it goes
             back where an Approve puts it, and whoever Approve would tell is

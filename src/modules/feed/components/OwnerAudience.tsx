@@ -171,11 +171,10 @@ function CopyLinkPill({
         <span
           key={word}
           aria-hidden="true"
-          className={
-            word === state
-              ? "col-start-1 row-start-1 text-center"
-              : "invisible col-start-1 row-start-1 text-center"
-          }
+          // AF1's 90ms cross-fade (#645): every word is drawn, and the ones
+          // not shown fade to nothing in the same cell.
+          data-shown={word === state}
+          className="label-swap col-start-1 row-start-1 text-center"
         >
           {PILL_WORD[word]}
         </span>

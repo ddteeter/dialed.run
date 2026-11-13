@@ -132,7 +132,6 @@ export function PrivateRunLine({
         label="Privacy"
       >
         <div className="flex flex-col gap-6">
-          <h2 className="m-0 font-display text-heading">Privacy</h2>
           <TotalsSwitch
             initial={isCounted}
             // The sheet opens only from Change, which only a confirmed

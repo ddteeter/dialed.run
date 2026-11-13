@@ -315,7 +315,6 @@ function SheetBody({
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-1">
-        <h2 className="m-0 font-display text-heading">{label}</h2>
         <Mono step="xs" className="text-muted">
           {conditions === undefined
             ? `${String(group.items.length)} pieces`

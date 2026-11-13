@@ -748,14 +748,13 @@ describe("the two surfaces that were already right", () => {
     const dialog = screen.getByLabelText("Pick a kit");
     expect(dialog).toHaveClass("sheet-motion");
     // Tailwind v4 compiles `-translate-x-1/2` into the `translate`
-    // property, which is the property the travel needs. The wide layout
-    // centres on margin instead so the two cannot collide.
+    // property, which is the property the travel needs. The drawer is
+    // placed by `right-6` instead so the two cannot collide (R54·164.1).
     expect(dialog.className).not.toMatch(/translate-[xy]/);
-    // Horizontally centred; vertically it is DS3's panel and top-aligned,
-    // which is why this is `mx-auto` and not the `m-auto` it was before
-    // task 115 — "a flow's first step and its fifth should start at the
-    // same y", and `m-auto` centres the panel on its own height.
-    expect(dialog).toHaveClass("wide:mx-auto");
+    // Pinned to the right and top-aligned under the bar: never centred,
+    // because "a flow's first step and its fifth should start at the same
+    // y", and `m-auto` centres the panel on its own height.
+    expect(dialog).toHaveClass("wide:right-6", "wide:left-auto");
     expect(dialog).not.toHaveClass("wide:m-auto");
   });
 });
