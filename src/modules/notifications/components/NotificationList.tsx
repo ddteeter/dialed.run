@@ -76,10 +76,12 @@ export function NotificationList({
     <div className="flex flex-col gap-4">
       {/* The phone's bell ends the first row (Design 169.1) and stays on
           it: the title and Mark all read wrap inside the row's left part,
-          never the bell. */}
+          never the bell. At 320 (reflow) NOTIFICATIONS is wider than what
+          the bell leaves it, so the word may break rather than push the
+          bell off the screen. */}
       <div className="flex items-start gap-3">
-        <div className="flex flex-1 flex-wrap items-center justify-between gap-4">
-          <h1 className="m-0 font-display text-display uppercase">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-4">
+          <h1 className="m-0 min-w-0 font-display text-display uppercase wrap-anywhere">
             Notifications
           </h1>
           {hasMarkable ? (

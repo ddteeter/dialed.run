@@ -84,7 +84,7 @@ export function NotificationBell({
         mark === "quiet" ? "text-muted" : "text-ink"
       }`}
     >
-      <span data-part="bell-glyph" className="relative flex">
+      <span data-slot="bell-glyph" className="relative flex">
         <Icon name="bell" size={20} />
         {mark === "number" ? (
           <Mono

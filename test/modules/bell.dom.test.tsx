@@ -36,7 +36,7 @@ function bell(): HTMLElement {
 }
 
 function glyph(): Element {
-  const box = bell().querySelector('[data-part="bell-glyph"]');
+  const box = bell().querySelector('[data-slot="bell-glyph"]');
   if (box === null) throw new Error("no bell glyph box");
   return box;
 }
