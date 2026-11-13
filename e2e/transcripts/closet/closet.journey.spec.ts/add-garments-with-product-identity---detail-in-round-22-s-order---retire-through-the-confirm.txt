@@ -50,7 +50,7 @@ end of list
 heading, Works at, level 2
 Works at
 end of heading, Works at, level 2
-#–#°F
+# to # degrees Fahrenheit
 slider, Lowest, #, orientated horizontally, max value #, min value #
 slider, Highest, #, orientated horizontally, max value #, min value #
 heading, Coverage, level 2
@@ -83,11 +83,11 @@ Show retired (#)
 switch, Show retired (#), checked
 list
 listitem, level 1, position 1, set size 3
-link, Patagonia Houdini Jacket No runs yet #–#°
+link, Patagonia Houdini Jacket No runs yet # to # degrees
 Patagonia Houdini Jacket
 No runs yet
-#–#°
-end of link, Patagonia Houdini Jacket No runs yet #–#°
+# to # degrees
+end of link, Patagonia Houdini Jacket No runs yet # to # degrees
 end of listitem, level 1, position 1, set size 3
 listitem, level 1, position 2, set size 3
 link, Nike Pegasus # No runs yet Untested Retired

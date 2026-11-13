@@ -142,7 +142,7 @@ end of group, Color
 end of group, Attributes
 paragraph
 Estimated
-#–#°
+# to # degrees
 end of paragraph
 Size
 textbox, Size, M

@@ -32,7 +32,7 @@ heading, Janji Rain Shell #, level 1
 # km logged
 paragraph
 Works at
-#–#°
+# to # degrees
 end of paragraph
 button, Wrong?
 Wrong?
