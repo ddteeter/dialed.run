@@ -157,7 +157,7 @@ function Thumbnail({ photo }: Readonly<{ photo: OtherPhoto }>): JSX.Element {
       to="/desk/kit/$entryId"
       params={{ entryId: photo.entryId }}
       search={useKitOriginSearch()}
-      className="block"
+      className="target block"
     >
       <img
         src={reviewPhotoSrc(photo.photoKey)}

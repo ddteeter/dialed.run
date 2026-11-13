@@ -19,17 +19,17 @@ import { z } from "zod";
 
 import { REGION_COPY, TURNSTILE_REFUSED } from "../../src/lib/contracts/access";
 import type { AccessRequestResult } from "../../src/modules/account/access";
+import { DeskAccess } from "../../src/modules/account/components/DeskAccess";
 import {
-  DeskAccess,
   DeskCodes,
   UNDO_WINDOW_MS,
-  ageLabel,
   codeCounts,
   madeLine,
   orderedCodes,
   usedLine,
   usesLine,
-} from "../../src/modules/account/components/DeskAccess";
+} from "../../src/modules/account/components/DeskCodes";
+import { ageLabel } from "../../src/modules/account/components/desk-rows";
 import {
   NOTE_COUNTER_ID,
   RequestAccess,

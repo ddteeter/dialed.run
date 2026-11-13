@@ -151,7 +151,7 @@ function RailEntry({
         // Link sets aria-current itself whenever it matches.
         activeOptions={{ exact: true }}
         aria-current={isActive ? "page" : undefined}
-        className={`${RAIL_ENTRY} ${isActive ? RAIL_CURRENT : RAIL_OTHER}`}
+        className={`target ${RAIL_ENTRY} ${isActive ? RAIL_CURRENT : RAIL_OTHER}`}
       >
         <span>{LABEL[page]}</span>
         <RailCount tally={tally} />
