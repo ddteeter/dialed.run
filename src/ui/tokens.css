@@ -155,11 +155,10 @@
   --dialed-tint: #d2f0e9;
   /* Round 21. Hi-viz as text, "on an ink surface only … never text on
    * paper; there it is --ink" (T1's note): 17.6:1 on ink, 1.1:1 on paper.
-   * T1 gives #F5FF3D in both columns because the block it was written for
-   * was ink in both themes. Headers now invert to paper on a dark page
-   * (T2 rule 04), so the role is ground-relative and paper says `--ink`
-   * (design 185). On a light page nothing changes: the role is only used
-   * inside ink blocks and the Desk, which take the ink column. */
+   * So the role is ground-relative and paper says `--ink` (design 185).
+   * Its users are eyebrows in ink blocks and on the Desk, which take the
+   * ink column in both themes since R50·143.1 (a dark page's ink block is
+   * `--panel`, not paper: 16.5:1), so in practice it is always hi-viz. */
   --hiviz-text: var(--ink);
   /* R48·135: a notice — the explanations and quiet notes a screen sets in
    * a recessed block — is the tint on paper, with no rule (the ring is
@@ -241,22 +240,40 @@
 }
 
 /**
- * **The inverted block** (T2 rule 04): "The ink header block on a paper
- * screen becomes a paper header block on an ink screen. That's the
- * brand's contrast move, not a bug." So it is the *opposite* of the page,
- * not ink: dark on paper, paper on dark. Every ground-relative role
- * inverts with it, which is why `text-muted` inside one means "muted
- * against this block" without the element reaching for another token.
+ * **The ink block on a dark page** (R50·143.1): T2 rule 04's fallback,
+ * "panel (#16161B) with a hairline, never a third grey". Rule 04's own
+ * move inverts the block to paper, and "a paper block on a dark page
+ * would be the brightest thing on the screen", so every ink block takes
+ * the fallback instead.
  *
- * `.row-press:active` is the same move for the length of a press (R-79):
+ * The block keeps the page's dark column, so no role needs a second copy:
+ * only its ground moves, to `--panel`, which every ink block already
+ * paints through `bg-ground`. The hairline is an inset ring, the way a
+ * notice draws its rule, so it takes no space and the block's padding
+ * does not move between themes.
+ */
+@utility ground-panel {
+  --ground: var(--panel);
+  @apply inset-ring-1 inset-ring-hairline;
+}
+
+/**
+ * **The ink block** (T2 rule 04): ink on a paper page. Every
+ * ground-relative role takes the dark column with it, which is why
+ * `text-muted` inside one means "muted against this block" without the
+ * element reaching for another token. On a dark page it is `ground-panel`
+ * above, not paper.
+ *
+ * `.row-press:active` is rule 04's move for the length of a press (R-79):
  * the doctrine's "Row press" flips the row's ground, and without the roles
  * its `text-quiet` and `text-muted` children stayed at the page's values
  * on the flipped ground. `ui/motion.css` paints it from the roles this
- * gives it.
+ * gives it. A press is a state rather than a block, so R50·143.1 leaves it
+ * inverting to paper on a dark page.
  *
  * `color-scheme` is deliberately not set: this is a block, not a
- * document. Nothing nests one inverted block in another, so one level is
- * the whole of it.
+ * document. Nothing nests one block in another, so one level is the whole
+ * of it.
  */
 [data-ground="ink"],
 .row-press:active {
@@ -267,21 +284,29 @@
   @apply max-wide:ground-ink;
 }
 
-:root[data-theme="dark"] :is([data-ground="ink"], .row-press:active) {
-  @apply ground-paper;
+:root[data-theme="dark"] [data-ground="ink"] {
+  @apply ground-panel;
 }
 
 :root[data-theme="dark"] [data-ground="ink-until-wide"] {
-  @apply max-wide:ground-paper;
+  @apply max-wide:ground-panel;
+}
+
+:root[data-theme="dark"] .row-press:active {
+  @apply ground-paper;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) :is([data-ground="ink"], .row-press:active) {
-    @apply ground-paper;
+  :root:not([data-theme="light"]) [data-ground="ink"] {
+    @apply ground-panel;
   }
 
   :root:not([data-theme="light"]) [data-ground="ink-until-wide"] {
-    @apply max-wide:ground-paper;
+    @apply max-wide:ground-panel;
+  }
+
+  :root:not([data-theme="light"]) .row-press:active {
+    @apply ground-paper;
   }
 }
 

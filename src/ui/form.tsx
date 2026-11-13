@@ -3,6 +3,7 @@ import type { ComponentProps, JSX, ReactNode, Ref, RefObject } from "react";
 
 import { spokenFormOf } from "../lib/contracts";
 import { Mono } from "./Mono";
+import type { MonoStep } from "./Mono";
 import { Spoken } from "./Spoken";
 import { describedByFor, hintIdFor, messageIdFor } from "./use-form-submit";
 import type {
@@ -1176,6 +1177,17 @@ export function ChoiceList<TOption extends string>(
        */
       optionHints?: Readonly<Record<TOption, string>> | undefined;
       /**
+       * Sets each option's words in `Mono` at this step, so a segmented
+       * label reads as one: MONO.xs capitals for SYSTEM / LIGHT / DARK
+       * (R50·143.3) and PRIVATE / SHARED / PUBLIC (round 41 #86a/b).
+       *
+       * The capitals are `Mono`'s CSS, not the string: `optionLabels`
+       * stays sentence case so a screen reader says the word rather than
+       * spelling it (`ui/audience.ts`). Omitted, the words are the
+       * option's own text, as every other group has them.
+       */
+      optionStep?: MonoStep | undefined;
+      /**
        * The id of a sentence elsewhere on the page that describes one
        * option, or `undefined` for none — A3's audience line, which is
        * about the checked radio only, so it is heard with that one and
@@ -1231,8 +1243,8 @@ export function ChoiceList<TOption extends string>(
     }
   >,
 ): JSX.Element {
-  // `optionHints` is read from `props` where it is used, the one option
-  // part only `OptionLabel` needs.
+  // `optionHints` and `optionStep` are read from `props` where they are
+  // used, the option parts only `OptionLabel` needs.
   const {
     name,
     legend,
@@ -1290,6 +1302,7 @@ export function ChoiceList<TOption extends string>(
             <OptionLabel
               label={optionLabels[option]}
               hint={props.optionHints?.[option]}
+              step={props.optionStep}
             />
             {optionNotes === undefined ? undefined : (
               <Mono step="md" className="ml-auto tabular-nums text-quiet">
@@ -1304,18 +1317,25 @@ export function ChoiceList<TOption extends string>(
 }
 
 /**
- * A `ChoiceList` option's words: its label, and its hint beneath when it
- * has one. A label alone stays a bare string, so a group with no hints
- * renders exactly as it did.
+ * A `ChoiceList` option's words: its label, in `Mono` when the group asks
+ * for a step, and its hint beneath when it has one. A label alone stays a
+ * bare string, so a group with neither renders exactly as it did.
  */
 function OptionLabel({
   label,
   hint,
-}: Readonly<{ label: string; hint: string | undefined }>): JSX.Element {
-  if (hint === undefined) return <>{label}</>;
+  step,
+}: Readonly<{
+  label: string;
+  hint: string | undefined;
+  step: MonoStep | undefined;
+}>): JSX.Element {
+  const words =
+    step === undefined ? label : <Mono step={step}>{label}</Mono>;
+  if (hint === undefined) return <>{words}</>;
   return (
     <span className="flex flex-col gap-1">
-      {label}
+      {words}
       <span className="text-small font-normal text-muted">{hint}</span>
     </span>
   );

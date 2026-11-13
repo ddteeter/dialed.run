@@ -1216,18 +1216,24 @@ is also a comment on its issue.
 - **R50·141 · Onboarding's desk measure (#487). Confirmed; built.**
   `MEASURE.column` (620). R49·138a's 560 was a board measurement and is
   struck. P3's body and bar are held to 620; its band runs the full column.
-- **R50·142 · The dark unread tint (#488). Ruled; not built.** A rule, not
-  a new value: `--cold-text` and `--label` never sit on `--unread`, in
-  either theme. Keep `#2A2A14`. Both pairs go in the contrast test as
-  forbidden pairs.
-- **R50·143 · The dark theme's open readings (#494). Not built where
-  changed.** (1) Changed: on dark, every ink block takes T2 rule 04's
-  fallback, `--panel` with a 1px `--hairline`. The Desk stays ink.
-  NowGoRun has no ink in either theme (R49·138b). (2) Confirmed: no You
-  header switch. (3) Changed: SYSTEM / LIGHT / DARK in capitals, MONO.xs.
-  (4) Confirmed: the failure copy. (5) Changed: all three CoverageMarks
-  are `--ink`; R48·134's `--muted` applies only to the [Untested] word.
-  (6) Confirmed: those three notices only.
+- **R50·142 · The dark unread tint (#488). Ruled; built in design 204.** A
+  rule, not a new value: `--cold-text` and `--label` never sit on
+  `--unread`, in either theme. Keep `#2A2A14`. The contrast test states
+  both as forbidden pairs in both columns and scans that no file painting
+  `bg-unread` draws either role; nothing paints `bg-unread` today.
+- **R50·143 · The dark theme's open readings (#494). Built in design
+  204.** (1) Changed: on dark, every ink block takes T2 rule 04's
+  fallback, `--panel` with a 1px `--hairline` (`ground-panel` in
+  `ui/tokens.css`, an inset ring); a row press still inverts. The Desk
+  stays ink. NowGoRun had no ink left. Item 7 follows: `--hiviz-text`
+  eyebrows sit on `--panel` on a dark page and stay hi-viz (16.5:1).
+  (2) Confirmed: no You header switch. (3) Changed: SYSTEM / LIGHT / DARK
+  in capitals, MONO.xs (`ChoiceList`'s `optionStep`), spoken in sentence
+  case; A3's and Settings › Privacy's audience labels had drifted from
+  round 41's board the same way and take it too (#610). (4) Confirmed:
+  the failure copy. (5) Changed: all three CoverageMarks are `--ink`, as
+  built; the [Untested] word is `text-muted`, pinned. (6) Confirmed: those
+  three notices only.
 - **R50·144 · E2-lite's type words (#495). Confirmed; built.** All
   nineteen; plural types stay plural.
 - **R50·145 · WHO REPORTED, open (#497). Confirmed, plus a count; the

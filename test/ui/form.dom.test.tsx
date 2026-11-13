@@ -2022,6 +2022,56 @@ describe("ChoiceList", () => {
     expect(screen.getByLabelText("About average")).toBeInTheDocument();
   });
 
+  it("leaves an option's words as the label's own text when no step is asked for", () => {
+    renderList(vi.fn());
+
+    const words = screen.getByText("Runs hot");
+    expect(words.tagName).toBe("LABEL");
+    expect(words).not.toHaveClass("font-mono");
+  });
+
+  it("sets an option's words in Mono at the step asked for, keeping the spoken name", () => {
+    // R50·143.3 and round 41 #86a/b: segmented labels are MONO.xs
+    // capitals. The capitals are `Mono`'s CSS; the name stays the string.
+    const { rerender } = render(
+      <ChoiceList
+        name="thermal"
+        legend="Do you run warm or cold?"
+        options={LEVELS}
+        optionLabels={LABELS}
+        optionStep="xs"
+        layout="chip-grid"
+        value={undefined}
+        field={restingField}
+        onChange={vi.fn()}
+      />,
+    );
+    const words = screen.getByText("Runs hot");
+    expect(words.tagName).toBe("SPAN");
+    expect(words).toHaveClass("font-mono", "text-mono-xs", "uppercase");
+    expect(screen.getByRole("radio", { name: "Runs hot" })).toBeInTheDocument();
+
+    // With a hint, the words are still Mono and the hint is not.
+    rerender(
+      <ChoiceList
+        name="thermal"
+        legend="Do you run warm or cold?"
+        options={LEVELS}
+        optionLabels={LABELS}
+        optionHints={{ hot: "Warm.", mild: "Even.", cold: "Chilly." }}
+        optionStep="sm"
+        value={undefined}
+        field={restingField}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Runs hot")).toHaveClass("text-mono-sm");
+    expect(screen.getByText("Warm.")).not.toHaveClass("font-mono");
+    expect(
+      screen.getByRole("radio", { name: "Runs hot Warm." }),
+    ).toBeInTheDocument();
+  });
+
   it("reports the answer that was chosen, not the one before it", async () => {
     // The third option on purpose: a handler that reported the first would
     // pass if the test only ever picked the first.

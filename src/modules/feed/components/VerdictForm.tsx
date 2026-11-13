@@ -756,6 +756,7 @@ function AudiencePicker({
         legend={LABELS.audience}
         options={PICKED_AUDIENCES}
         optionLabels={AUDIENCE_LABELS}
+        optionStep="xs"
         optionHints={AUDIENCE_HINTS}
         optionDescribedBy={(option) =>
           !isVerified || (hasLine && option === audience)

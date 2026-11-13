@@ -487,6 +487,7 @@ function SharingFields({
         isLegendHeading
         options={isProfilePublic ? PICKED_AUDIENCES : NOT_PUBLIC_AUDIENCES}
         optionLabels={AUDIENCE_LABELS}
+        optionStep="xs"
         value={value.defaultAudience}
         field={form.field}
         error={form.fieldErrors.defaultAudience}

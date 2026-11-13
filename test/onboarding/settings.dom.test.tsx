@@ -550,6 +550,20 @@ describe("the sub-pages", () => {
     });
   });
 
+  it("draw the default's words as MONO.xs capitals, heard in sentence case (round 41 #86b)", async () => {
+    await renderWithRouter(
+      <SharingForm current={ANSWERED} saveSharing={vi.fn()} />,
+    );
+    const group = screen.getByRole("group", { name: "Who sees new runs" });
+    for (const word of ["Private", "Shared"]) {
+      expect(within(group).getByText(word)).toHaveClass(
+        "font-mono",
+        "text-mono-xs",
+        "uppercase",
+      );
+    }
+  });
+
   it("offer no PUBLIC row while the profile is off, and say where it comes from (round 41 #86b)", async () => {
     await renderWithRouter(
       <SharingForm current={ANSWERED} saveSharing={vi.fn()} />,
