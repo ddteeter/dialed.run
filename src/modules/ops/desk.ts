@@ -244,7 +244,8 @@ export async function todayCounts(): Promise<TodayCounts> {
     bansThisWeek: bans.find((g) => g.recent === 1)?.rows ?? 0,
     bansAllTime: sumOf(bans),
     flaggedAccounts: sumOf(flagged),
-    oldestFlaggedAt: flagged[0]?.oldest ?? undefined,
+    // An aggregate is always one row; its min is null at zero flagged.
+    oldestFlaggedAt: flagged.flatMap((g) => g.oldest ?? [])[0],
     corrections: sumOf(corrections),
     gaveUp: gaveUpGroup?.rows ?? 0,
     oldestGaveUpAt: gaveUpGroup?.oldest,

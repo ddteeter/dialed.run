@@ -478,7 +478,10 @@ describe("Review · removal requests", () => {
     await renderWithRouter(
       <RemovalRequests
         asOf={5}
-        requests={[pending({ due: "Overdue", posterUsername: "tomasz_k" })]}
+        requests={[
+          // Due at this very second: out, so the filled tag.
+          pending({ due: "Overdue", dueAt: 5, posterUsername: "tomasz_k" }),
+        ]}
         decide={vi.fn<DecideFn>()}
         block={vi.fn<BlockFn>()}
       />,

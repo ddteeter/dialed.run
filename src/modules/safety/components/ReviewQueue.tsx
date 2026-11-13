@@ -481,7 +481,7 @@ function RowClock({
   ) : (
     <DueClock
       due={row.due}
-      isOverdue={row.dueAt !== undefined && row.dueAt <= asOf}
+      isOverdue={(row.dueAt ?? Infinity) <= asOf}
     />
   );
 }

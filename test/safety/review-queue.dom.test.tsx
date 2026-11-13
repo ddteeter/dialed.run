@@ -1007,17 +1007,33 @@ describe("what a row tells the reviewer", () => {
     expect(closed).toHaveAccessibleName(
       "entry · e-2 [reports] 3 people · The photo shows someone inappropriately 0m",
     );
+    // The fold's mark is drawn, not said (R56·244.2): ▸ closed, ▾ open.
+    const open = screen.getByRole("button", { expanded: true });
+    expect(within(closed).getByText("▸")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(within(open).getByText("▾")).toHaveAttribute("aria-hidden", "true");
   });
 
   it("draws OVERDUE as a filled hi-viz tag once the 48 hours run out (R55·197)", () => {
-    renderQueue([
-      row({
-        reporterCount: 1,
-        reasons: ["intimate"],
-        due: "Overdue",
-        dueAt: 0,
-      }),
-    ]);
+    // Due this very second counts as out: the clock reads OVERDUE at dueAt.
+    render(
+      <ReviewQueue
+        asOf={1_755_172_800}
+        queue={[
+          row({
+            reporterCount: 1,
+            reasons: ["intimate"],
+            due: "Overdue",
+            dueAt: 1_755_172_800,
+          }),
+        ]}
+        resolve={vi.fn<Props["resolve"]>()}
+        reviewHandle={vi.fn<Props["reviewHandle"]>()}
+        onDecided={vi.fn<() => void>()}
+      />,
+    );
     const tag = within(
       screen.getByRole("button", { expanded: true }),
     ).getByText("Overdue");
