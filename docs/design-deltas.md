@@ -1880,6 +1880,9 @@ design has answered 86.
       invite block leaves, **filled client-side so the HTML stays one cached
       page**. No Useful, follow or comment. og:title "@{handle} · {38°
       damp}, {cold}".
+      **Since changed (Round 53 · 163d, owner, 2026-11-12, #612; built in
+      design 208):** the invite block's primary reads "Request access", as
+      every marketing page and the app's own Landing say it.
     - **d. `/@handle`**: kits (three, then "Show {N} more" as a plain link),
       then Rotation if shown (IN USE, SHOES with mileage, RETIRED). DS1
       columns at the desk. No per-week or per-weekday counts, which would

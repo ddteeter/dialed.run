@@ -20,21 +20,33 @@ and `ReportAffordance`:
   an outlined **Copy link** pill and a **Change** link (N2-06). Copy link
   confirms as AF1 does: for 2000ms it reads "Copied" with an ink fill, and
   keeps its name (P2b-01).
-- **Feed:** the run strip's divider is centred and uses the mono step, and
-  the distance is spaced "5.0 mi" through `measuredLine`'s existing
-  `spaced` part, so `formatDistance` is unchanged (E1-08). Both tabs carry
-  a 2px bottom border, transparent when resting (E1-16a). The "Meanwhile"
-  link is underlined (P2b-07). The teal band bleeds to the screen edge
-  below `desk`, and the place line loses its extra top padding (N2-11).
+- **Feed:** the run strip's divider is a centred 1px rule, and the
+  distance is spaced "5.0 mi" through `measuredLine`'s existing `spaced`
+  part, so `formatDistance` is unchanged (E1-08). `SpokenDistance` draws
+  it for the card and A2's rail. **The card's credit is Design 170's
+  label** (#624): `WeatherAttribution isCompact` draws "VISUAL CROSSING"
+  heard by D-144's sentence, lying over the strip's right end, and the
+  strip keeps that room with an unseen copy of the label. The sentence
+  line under each card goes. Both tabs carry a 2px bottom border,
+  transparent when resting (E1-16a). The "Meanwhile" link is underlined
+  (P2b-07). The teal band is a rounded card at every width, as Design
+  170's board draws it at 390 (this supersedes N2-11's full-bleed
+  reading), and the place line loses its extra top padding.
 - **Columns:** G, H, "isn't here" and search step up to `wide:px-6`, as
   Feed does (E1-09). Search's title sits in a 44px row, as Feed's does
-  (P2b-12). Its field hides the native cancel glyph, and so does
-  KitPicker's (E2-05). H's place line can wrap (P2b-06). The Following
+  (P2b-12). Its "[ Searching ]" label is mounted only while a search is
+  out, so it reserves no width (E2-05); 7b's base rule in `src/styles.css`
+  hides the native cancel glyph on every search field. H's place line can wrap (P2b-06). The Following
   pill's outline is 1px `--ink` (R48·134, E1-16b).
-- **BracketHeadline:** no flex gap; the brackets hug the words when they
-  wrap, using the mechanism 7b builds for `PendingLabel` (E1-06).
-- **Useful:** both hearts render the same size from one face (E2-08). The
-  indent waits on 7b's `PendingLabel` `align` prop (E1-07, N2-09).
+- **BracketHeadline:** inline text with `mr-2`/`ml-2` brackets and no
+  whitespace between a bracket and its word, as 7b's `PendingLabel`
+  pending layer (E1-06).
+- **Useful:** neither heart is in the shipped Plex Mono subset, so each
+  fell back to a different system face. The outline is now the same "♥"
+  with a 1px stroke and no fill (E2-08). The indent takes 7b's
+  `PendingLabel` `align="start"` (E1-07, N2-09).
+- **Phone bell (Design 169, #623, 7b's):** `PhoneBell` goes last in the
+  first row of Feed, G, H, D, search, A2 and A3, after 7b merges.
 - **Public pages (PublicFrame, PublicProfile):** the bar is an ink block
   (`data-ground="ink"`, a panel in dark), and Log in is a 1px `--ink`
   outline on it (E2-06). Desk rows are `auto 1fr`, so the invite follows
@@ -42,7 +54,9 @@ and `ReportAffordance`:
   retired piece's name is struck through (N2-19). The pitch says "Request
   access" (#612). The footer's gaps match 7b's `Layout` fix (A-03).
 - **Handles:** H's report subject is labelled with `handleText`, so the
-  foot link reads "Report or block @x" (E1-12).
+  foot link reads "Report or block @x" (E1-12). On a profile, W1's title
+  is "Report @x?" (owner, 2026-11-12). The line repeating the handle goes,
+  and "@x is never told who reported it." takes its "@".
 
 ## Contract touches
 
@@ -66,15 +80,17 @@ and `ReportAffordance`:
 
 ## Issues
 
-- Closes: #628 (less what 7b holds and the Round 54 items), #612.
+- Closes: #628 (less what 7b holds), #612, #624.
 - Refs: #632 (the feed-origin findings, ticked "done in 7d").
-- Opens: whatever doesn't reproduce or lands with another lane.
+- Opens: #645 (AF1's 90ms cross-fade needs a motion surface; the swap is a
+  cut until then).
 
 ## Open questions
 
-- **Guess:** a refused copy shows "Not copied" on the pill for 2000ms,
-  with no ink fill. AF1 draws only success. Sent to coordinator-7.
-- **Guess:** the three audience tags show in every state, not only PUBLIC.
-  Round 41 draws only PUBLIC.
-- E1-12's other half (the sheet's "entry?" title on a profile, and its
-  bare handle) is in `ReportSheet`, outside this lane.
+- **Owner's call, awaiting Design 171 (#641):** a refused copy shows "Not
+  copied" on the pill for 2000ms, with no ink fill. AF1 draws only success.
+- **Guess, awaiting Design 172 (#642):** the three audience tags show in
+  every state, not only PUBLIC. Round 41 draws only PUBLIC.
+- Wave 8 (Round 54): 166.4 (the audience picker as one card with ink
+  rings, MONO.sm caps at 400), 166.6 (W1's block option as "Send and
+  block"), 167 and 168.
