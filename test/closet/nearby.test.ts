@@ -5,9 +5,14 @@ import { describe, expect, it } from "vitest";
 import { wardrobeItems } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import { closetNearby, nearbyStatement } from "../../src/modules/closet/nearby";
+import {
+  closetNearby,
+  nearbyOrder,
+  nearbyStatement,
+} from "../../src/modules/closet/nearby";
 import type { ClosetItemView } from "../../src/modules/closet/service";
 import { makeEntry, makeItem, makeRun, makeUser, NOW } from "../feed/helpers";
+import { itemView, wardrobeItem } from "../modules/closet-fixtures";
 
 /**
  * F's "Already in your closet" (round 26 #10): every piece of each of C's
@@ -194,5 +199,16 @@ describe("closetNearby", () => {
       verdictCount: 3,
       dialedCount: 2,
     });
+  });
+});
+
+describe("nearbyOrder", () => {
+  it("puts a piece in use before a retired one, from either side", () => {
+    const active = itemView({ item: wardrobeItem({ id: "01A" }) });
+    const retired = itemView({
+      item: wardrobeItem({ id: "01B", retired: true }),
+    });
+    expect(nearbyOrder(active, retired)).toBeLessThan(0);
+    expect(nearbyOrder(retired, active)).toBeGreaterThan(0);
   });
 });
