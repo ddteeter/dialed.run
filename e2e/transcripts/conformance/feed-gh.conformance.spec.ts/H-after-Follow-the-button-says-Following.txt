@@ -1,10 +1,8 @@
 document
-banner
-link, Notifications
-end of banner
 main
 status
 link, Back to feed
+link, Notifications
 heading, @ravi_k, level 1
 @ravi_k
 end of heading, @ravi_k, level 1

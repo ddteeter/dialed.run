@@ -15,7 +15,7 @@ listitem, level 1, position 3, set size 4
 link, Call
 end of listitem, level 1, position 3, set size 4
 listitem, level 1, position 4, set size 4
-link, You
+link, You, current item
 end of listitem, level 1, position 4, set size 4
 end of list
 end of navigation, Main
@@ -24,10 +24,10 @@ link, Notifications
 button, Log a run
 end of banner
 main
-heading, Username, level 1
 link, Settings
 Settings
 end of link, Settings
+heading, Username, level 1
 form
 status
 Username

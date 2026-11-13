@@ -4,6 +4,7 @@ status
 heading, # pieces, level 1
 Show retired (#)
 switch, Show retired (#), checked
+link, Notifications
 paragraph
 #
 of

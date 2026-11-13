@@ -1,9 +1,7 @@
 document
-banner
-link, Notifications
-end of banner
 main
 heading, Add a run, level 1
+link, Notifications
 status
 GPX / TCX / FIT
 Drop a file, or browse

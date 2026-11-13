@@ -1,11 +1,9 @@
 document
-banner
+main
+heading, Add a run, level 1
 link, Notifications, # new
 #
 end of link, Notifications, # new
-end of banner
-main
-heading, Add a run, level 1
 status
 Already logged.
 end of status

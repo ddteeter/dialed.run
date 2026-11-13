@@ -1,9 +1,7 @@
 document
-banner
-link, Notifications
-end of banner
 main
 heading, Settings, level 1
+link, Notifications
 heading, You, level 2
 You
 end of heading, You, level 2

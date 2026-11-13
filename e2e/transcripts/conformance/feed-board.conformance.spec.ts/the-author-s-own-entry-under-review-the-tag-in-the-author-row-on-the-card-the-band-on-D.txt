@@ -1,11 +1,9 @@
 document
-banner
-link, Notifications
-end of banner
 main
 status
 link, Back to feed
 heading, Your run, level 1
+link, Notifications
 Hidden while we check
 Other runners can't see this while we look at it.
 You can still edit or delete it.

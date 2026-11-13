@@ -1,11 +1,9 @@
 document
-banner
+main
+heading, Run, level 1
 link, Notifications, # new
 #
 end of link, Notifications, # new
-end of banner
-main
-heading, Run, level 1
 :day :month # · #:# · File
 paragraph
 #.# mi
@@ -46,9 +44,9 @@ Call
 end of link, Call
 end of listitem, level 1, position 4, set size 5
 listitem, level 1, position 5, set size 5
-link, You
+link, You, current item
 You
-end of link, You
+end of link, You, current item
 end of listitem, level 1, position 5, set size 5
 end of list
 end of navigation, Main

@@ -1,10 +1,8 @@
 document
-banner
-link, Notifications
-end of banner
 main
 heading, Feed, level 1
 link, Find runners
+link, Notifications
 button, Following, pressed
 button, Your conditions, not pressed
 heading, Nobody yet, level 2

@@ -1,12 +1,10 @@
 document
-banner
-link, Notifications
-end of banner
 main
 status
 # runner found.
 end of status
 heading, Find a runner, level 1
+link, Notifications
 searchbox, Search by name, found_#
 list
 listitem, level 1, position 1, set size 1
