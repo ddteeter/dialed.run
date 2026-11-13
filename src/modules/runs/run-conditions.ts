@@ -16,12 +16,12 @@ import { z } from "zod";
 
 import { manualSkies } from "../../lib/contracts";
 import type { ManualSky, TempUnit } from "../../lib/contracts";
-import { bandLabel } from "../../lib/contracts/temperature";
+import { bandForms } from "../../lib/contracts/measures";
 
 /**
  * The bands R2b offers, as the floor of each in °C: −20 °C to 40 °C, which
  * is every morning a runner is likely to be out in and says so in the
- * runner's own unit through `bandLabel`.
+ * runner's own unit through `bandForms`.
  */
 export const SET_CONDITION_BANDS: readonly number[] = Array.from(
   { length: 12 },
@@ -78,10 +78,14 @@ export const SKY_WORDS: Readonly<Record<ManualSky, string>> = {
 
 /**
  * A band the runner set, as every screen reads it back: the range in their
- * unit, never the stored middle — "41–50°".
+ * unit, never the stored middle — "41–50°", said "41 to 50 degrees"
+ * (round 53 · 162.3).
  */
-export function setBandLabel(storedC: number, unit: TempUnit): string {
-  return bandLabel(bandFloorOf(storedC), unit);
+export function setBandForms(
+  storedC: number,
+  unit: TempUnit,
+): { shown: string; said: string } {
+  return bandForms(bandFloorOf(storedC), unit);
 }
 
 /**

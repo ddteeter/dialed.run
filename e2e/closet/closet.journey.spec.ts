@@ -273,8 +273,12 @@ test("add garments with product identity -> detail in round 22's order -> retire
   const warmest = (await lowest.getAttribute("max")) ?? "";
   await lowest.focus();
   await page.keyboard.press("End");
-  await expect(page.locator("[data-part='filtered']")).toHaveText(
-    `Filtered: [${warmest}°+]`,
+  const filtered = page.locator("[data-part='filtered']");
+  await expect(
+    filtered.locator("[aria-hidden='true']", { hasText: "°" }),
+  ).toHaveText(`${warmest}°+`);
+  await expect(filtered.locator(".sr-only")).toHaveText(
+    `${warmest} degrees and up`,
   );
   await expect(page).toHaveURL(/[?&]from=/u);
   await expect(page).not.toHaveURL(/[?&]unit=/u);

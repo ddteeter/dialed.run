@@ -16,7 +16,7 @@ import {
 import { coreDb } from "../../env";
 import { garmentNamesByIds } from "./garment-names";
 import { readInChunks } from "../../lib/chunked";
-import { bandLabel } from "../../lib/contracts/temperature";
+import { bandForms } from "../../lib/contracts/measures";
 import { proseDayLabel } from "../../lib/dates";
 import { topByCount } from "../../lib/top-by-count";
 import { observationsForEntries, observationsForRuns } from "./conditions";
@@ -102,7 +102,7 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
   const units = await unitsFor(database, userId);
 
   const tally = tallyCoverage(profileEntries, observations, (floor) =>
-    bandLabel(floor, units.temp),
+    bandForms(floor, units.temp),
   );
 
   const entryIds = profileEntries.map((e) => e.id);

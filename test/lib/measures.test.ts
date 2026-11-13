@@ -15,6 +15,9 @@ import {
   spokenDuration,
   spokenPace,
   wholeDistanceNumber,
+  bandForms,
+  worksAtForms,
+  spanInUnit,
 } from "../../src/lib/contracts/measures";
 import { formatTemp } from "../../src/lib/contracts/temperature";
 
@@ -433,6 +436,18 @@ describe("measuredLine", () => {
     });
   });
 
+  it("says a band from its floor as a range (round 53 #162.3)", () => {
+    expect(
+      measuredLine(
+        [[{ kind: "word", word: "Set" }], [{ kind: "band", floorC: 5 }]],
+        miles,
+      ),
+    ).toStrictEqual({ shown: "Set · 41–50°", said: "Set, 41 to 50 degrees" });
+    expect(
+      measuredLine([[{ kind: "band", floorC: -5 }]], metric),
+    ).toStrictEqual({ shown: "-5–0°", said: "Minus 5 to 0 degrees" });
+  });
+
   it("says one degree and one mile an hour in the singular, and minus for a hyphen", () => {
     expect(
       measuredLine(
@@ -469,6 +484,56 @@ describe("measuredLine", () => {
     ).toStrictEqual({
       shown: "nov 4 · 7:12 AM · 41° · damp",
       said: "Nov 4, 7:12 AM, 41 degrees, damp",
+    });
+  });
+});
+
+describe("bandForms", () => {
+  it("draws the band and says it as a range, uncapitalised for a sentence", () => {
+    expect(bandForms(5, "f")).toStrictEqual({
+      shown: "41–50°",
+      said: "41 to 50 degrees",
+    });
+    expect(bandForms(-5, "c")).toStrictEqual({
+      shown: "-5–0°",
+      said: "minus 5 to 0 degrees",
+    });
+  });
+});
+
+describe("worksAtForms", () => {
+  it("says a closed range from end to end", () => {
+    expect(worksAtForms({ lowC: 4.4, highC: 14.4 }, "f")).toStrictEqual({
+      shown: "40–58°",
+      said: "40 to 58 degrees",
+    });
+  });
+
+  it("says an open high end as and up, and an open low end as under", () => {
+    expect(worksAtForms({ lowC: -2 }, "c")).toStrictEqual({
+      shown: "-2°+",
+      said: "minus 2 degrees and up",
+    });
+    expect(worksAtForms({ highC: 1 }, "c")).toStrictEqual({
+      shown: "under 1°",
+      said: "under 1 degree",
+    });
+  });
+
+  it("has nothing for a range with no ends", () => {
+    expect(worksAtForms({}, "f")).toBeUndefined();
+  });
+});
+
+describe("spanInUnit", () => {
+  it("draws the readout with its letter and says the unit in full", () => {
+    expect(spanInUnit(18, 72, "f")).toStrictEqual({
+      shown: "18–72°F",
+      said: "18 to 72 degrees Fahrenheit",
+    });
+    expect(spanInUnit(-8, 1, "c")).toStrictEqual({
+      shown: "-8–1°C",
+      said: "minus 8 to 1 degree Celsius",
     });
   });
 });

@@ -24,10 +24,8 @@ import {
   type GarmentAttributeKey,
   type GarmentType,
 } from "../../../lib/contracts/garment-fields";
-import {
-  estimateTempRange,
-  formatTempRange,
-} from "../../../lib/contracts/thermal";
+import { worksAtForms } from "../../../lib/contracts/measures";
+import { estimateTempRange } from "../../../lib/contracts/thermal";
 import {
   Bracketed,
   causeLine,
@@ -43,6 +41,7 @@ import {
   FormStatus,
   Mono,
   Select,
+  Spoken,
   SubmitButton,
   TextField,
   ToggleField,
@@ -1134,12 +1133,14 @@ function EstimatedRange({
       }),
     [values.category, values.layer, values.weight, values.windResistant],
   );
-  if (!estimate) return undefined;
+  const range =
+    estimate === undefined ? undefined : worksAtForms(estimate, tempUnit);
+  if (!range) return undefined;
   return (
     <p className="text-small text-quiet">
       Estimated{" "}
       <Bracketed className="text-dialed-text">
-        {formatTempRange(estimate, tempUnit)}
+        <Spoken {...range} />
       </Bracketed>
     </p>
   );

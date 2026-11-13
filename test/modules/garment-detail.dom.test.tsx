@@ -19,6 +19,7 @@ import type {
 import { itemView, wardrobeItem } from "./closet-fixtures";
 import { expectAvailable, expectBusy } from "../ui/unavailable";
 import { bracketed } from "../ui/bracketed";
+import { drawnText, saidText } from "./spoken-text";
 
 type Props = ComponentProps<typeof GarmentDetail>;
 type Detail = Props["detail"];
@@ -584,7 +585,9 @@ describe("GarmentDetail: stats", () => {
     const line = within(part("stats"))
       .getByText(/Works at/)
       .closest("p");
-    expect(line).toHaveTextContent("Works at [4–12°]");
+    expect(drawnText(line)).toBe("Works at [4–12°]");
+    // Round 53 · 162.3: a range always takes the spoken form.
+    expect(saidText(line)).toBe("Works at 4 to 12 degrees");
     expect(line).toHaveClass("text-dialed-text");
   });
 
@@ -592,7 +595,7 @@ describe("GarmentDetail: stats", () => {
     await renderWithRouter(
       garment({ tempRange: { lowC: 4, highC: 12 } }, { tempUnit: "f" }),
     );
-    expect(part("stats")).toHaveTextContent("Works at [39–54°]");
+    expect(drawnText(part("stats"))).toContain("Works at [39–54°]");
   });
 
   it("says where it worked, once retired", async () => {
@@ -602,7 +605,7 @@ describe("GarmentDetail: stats", () => {
         tempRange: { lowC: 4, highC: 12 },
       }),
     );
-    expect(part("stats")).toHaveTextContent("Worked at [4–12°]");
+    expect(drawnText(part("stats"))).toContain("Worked at [4–12°]");
     expect(part("stats")).not.toHaveTextContent("Works at");
   });
 

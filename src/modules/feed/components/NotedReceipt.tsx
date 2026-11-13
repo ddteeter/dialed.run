@@ -1,6 +1,16 @@
 import type { JSX } from "react";
 
-import { Mono } from "../../../ui";
+import { Mono, Spoken } from "../../../ui";
+
+/**
+ * Noted's sentence as drawn and as said: "… is now 1 of 1 in 38–46°" reads
+ * "… in 38 to 46 degrees" (round 53 · 162.3). A sentence with no measure
+ * in it is said as drawn.
+ */
+export interface NotedSentence {
+  shown: string;
+  said: string;
+}
 
 /**
  * A3's Noted block — the receipt for a logged verdict.
@@ -30,7 +40,7 @@ import { Mono } from "../../../ui";
  */
 export function NotedReceipt({
   sentence,
-}: Readonly<{ sentence: string | undefined }>): JSX.Element {
+}: Readonly<{ sentence: NotedSentence | undefined }>): JSX.Element {
   return (
     <div
       data-slot="noted"
@@ -38,7 +48,14 @@ export function NotedReceipt({
     >
       <Mono step="xs">Noted</Mono>
       {sentence === undefined ? undefined : (
-        <p className="m-0 text-body font-semibold">{sentence}</p>
+        <p className="m-0 text-body font-semibold">
+          {/* A sentence with no measure in it is one text, not two. */}
+          {sentence.shown === sentence.said ? (
+            sentence.shown
+          ) : (
+            <Spoken {...sentence} />
+          )}
+        </p>
       )}
     </div>
   );
@@ -46,8 +63,9 @@ export function NotedReceipt({
 
 /**
  * What the screen's status region says when Noted lands: the receipt's
- * own words, so a reader hears what the eye reads, once.
+ * own words, so a reader hears what the eye reads, once — in their said
+ * form, since a status region is heard and never seen.
  */
-export function notedAnnouncement(sentence: string | undefined): string {
-  return sentence === undefined ? "Noted." : `Noted. ${sentence}`;
+export function notedAnnouncement(sentence: NotedSentence | undefined): string {
+  return sentence === undefined ? "Noted." : `Noted. ${sentence.said}`;
 }

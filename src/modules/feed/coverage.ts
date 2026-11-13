@@ -14,13 +14,30 @@ import { judgedFeelsLikeC } from "./judged-conditions";
  */
 export interface CoverageBand {
   bandFloorC: number;
+  /**
+  The band as drawn, "41–50°", and as said, "41 to 50 degrees" (round 53 · 162.3).
+  */
   label: string;
+  said: string;
   cold: number;
   dialed: number;
   warm: number;
 }
 
 export const BAND_STEP_C = 5;
+
+/**
+A band's words from its floor, drawn and said: `bandForms` in the reader's unit.
+*/
+type BandWords = (bandFloor: number) => { shown: string; said: string };
+
+/**
+A band with nothing counted in it yet.
+*/
+function emptyBand(floor: number, labelFor: BandWords): CoverageBand {
+  const { shown, said } = labelFor(floor);
+  return { bandFloorC: floor, label: shown, said, cold: 0, dialed: 0, warm: 0 };
+}
 
 export interface CoverageTally {
   bands: ReadonlyMap<number, CoverageBand>;
@@ -41,7 +58,7 @@ export interface CoverageTally {
 export function tallyCoverage(
   entries: readonly { runId: string; verdict: number | null }[],
   observations: ReadonlyMap<string, Conditions>,
-  labelFor: (bandFloor: number) => string,
+  labelFor: BandWords,
 ): CoverageTally {
   const bands = new Map<number, CoverageBand>();
   let range: { min: number; max: number } | undefined;
@@ -53,13 +70,7 @@ export function tallyCoverage(
     if (!observation) continue;
 
     const floor = bandFloorC(judgedFeelsLikeC(observation, verdict));
-    const band = bands.get(floor) ?? {
-      bandFloorC: floor,
-      label: labelFor(floor),
-      cold: 0,
-      dialed: 0,
-      warm: 0,
-    };
+    const band = bands.get(floor) ?? emptyBand(floor, labelFor);
     if (verdict < 0) band.cold += 1;
     else if (verdict > 0) band.warm += 1;
     else band.dialed += 1;
@@ -94,17 +105,10 @@ export function bandsAscending(tally: CoverageTally): CoverageBand[] {
  */
 export function bandsAscendingWithGaps(
   tally: CoverageTally,
-  labelFor: (bandFloor: number) => string,
+  labelFor: BandWords,
 ): CoverageBand[] {
   return spanFloors(tally).map(
-    (floor) =>
-      tally.bands.get(floor) ?? {
-        bandFloorC: floor,
-        label: labelFor(floor),
-        cold: 0,
-        dialed: 0,
-        warm: 0,
-      },
+    (floor) => tally.bands.get(floor) ?? emptyBand(floor, labelFor),
   );
 }
 

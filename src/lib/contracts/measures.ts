@@ -10,7 +10,9 @@
  * preference, and the contract keeps storing SI either way.
  */
 import type { DistanceUnit, TempUnit, Units } from "./profile";
-import { formatTemp, tempInUnit } from "./temperature";
+import { bandLabel, formatTemp, tempInUnit } from "./temperature";
+import { formatTempRange as formatWorksAt } from "./thermal";
+import type { TempRange } from "./thermal";
 
 const METRES_PER_MILE = 1609.34;
 const METRES_PER_KM = 1000;
@@ -279,6 +281,7 @@ export const formatTempRange = (
  *   (its case is the line's: A1 starts with it, the receipt does not).
  * - `range`: `formatTempRange`'s "38–46°", collapsed as it collapses,
  *   "feels" as a temperature's.
+ * - `band`: a 5° band from its floor, `bandLabel`'s "38–46°".
  * - `humidity`: "80% hum". `wind`: `formatWind`'s "6mph".
  * - `distance`: "8.2mi", or "6.2 mi" `spaced`, as A2's header sets it.
  * - `duration`: `formatDuration`'s "51:38", said by `spokenDuration`.
@@ -298,6 +301,7 @@ type MeasuredPart =
       maxC: number;
       feels?: "Feels" | "feels";
     }>
+  | Readonly<{ kind: "band"; floorC: number }>
   | Readonly<{ kind: "humidity"; percent: number }>
   | Readonly<{ kind: "wind"; windKph: number }>
   | Readonly<{ kind: "distance"; distanceM: number; spaced?: boolean }>
@@ -348,6 +352,9 @@ function shownPart(part: MeasuredPart, units: Units): string {
       const feels = part.feels === undefined ? "" : `${part.feels} `;
       return `${feels}${formatTempRange(part.minC, part.maxC, units.temp)}`;
     }
+    case "band": {
+      return bandLabel(part.floorC, units.temp);
+    }
     case "humidity": {
       return `${String(Math.round(part.percent))}% hum`;
     }
@@ -382,9 +389,10 @@ function saidPart(part: MeasuredPart, units: Units): string {
         part.feels === undefined ? "" : `${part.feels.toLowerCase()} like `;
       const low = tempInUnit(part.minC, units.temp);
       const high = tempInUnit(part.maxC, units.temp);
-      const span =
-        low === high ? degrees(low) : `${signed(low)} to ${degrees(high)}`;
-      return `${feels}${span}`;
+      return `${feels}${low === high ? degrees(low) : span(low, high)}`;
+    }
+    case "band": {
+      return bandForms(part.floorC, units.temp).said;
     }
     case "humidity": {
       return `${String(Math.round(part.percent))} percent humidity`;
@@ -426,4 +434,69 @@ function signed(value: number): string {
 */
 function degrees(value: number): string {
   return `${signed(value)} ${Math.abs(value) === 1 ? "degree" : "degrees"}`;
+}
+
+/**
+"38 to 46 degrees": two ends said as one range.
+*/
+function span(low: number, high: number): string {
+  return `${signed(low)} to ${degrees(high)}`;
+}
+
+/**
+ * A 5° band both ways: `bandLabel`'s "38–46°" drawn, "38 to 46 degrees"
+ * said (round 53 · 162.3: a range always takes the spoken form). The said
+ * half is not capitalised, for a band that sits inside a sentence ("Fleece
+ * is now 1 of 1 in 38 to 46 degrees").
+ */
+export function bandForms(
+  floorC: number,
+  unit: TempUnit,
+): { shown: string; said: string } {
+  return {
+    shown: bandLabel(floorC, unit),
+    said: span(tempInUnit(floorC, unit), tempInUnit(floorC + 5, unit)),
+  };
+}
+
+/**
+ * A garment's working range both ways (round 53 · 162.3): the thermal
+ * `formatTempRange`'s "40–58°", "40°+" or "under 58°" drawn, and "40 to
+ * 58 degrees", "40 degrees and up" or "under 58 degrees" said. A screen
+ * reader may say the "+" as "plus", which leaves "40 degrees plus" a
+ * reading, not a range. Nothing for a range with no ends, as the drawn
+ * form.
+ */
+export function worksAtForms(
+  range: TempRange,
+  unit: TempUnit,
+): { shown: string; said: string } | undefined {
+  const shown = formatWorksAt(range, unit);
+  if (shown === undefined) return undefined;
+  const low =
+    range.lowC === undefined ? undefined : tempInUnit(range.lowC, unit);
+  const high =
+    range.highC === undefined ? undefined : tempInUnit(range.highC, unit);
+  // A range with no low end has a high one, or it drew nothing above.
+  if (low === undefined) return { shown, said: `under ${degrees(high ?? 0)}` };
+  return {
+    shown,
+    said: high === undefined ? `${degrees(low)} and up` : span(low, high),
+  };
+}
+
+/**
+ * Two whole degrees already in the reader's unit, with the unit's letter:
+ * Closet C's WORKS AT readout, "18–72°F" drawn and "18 to 72 degrees
+ * Fahrenheit" said (round 53 · 162.3), as the thumbs set it.
+ */
+export function spanInUnit(
+  low: number,
+  high: number,
+  unit: TempUnit,
+): { shown: string; said: string } {
+  return {
+    shown: `${String(low)}–${String(high)}°${unit.toUpperCase()}`,
+    said: `${span(low, high)} ${TEMP_UNIT_WORD[unit]}`,
+  };
 }

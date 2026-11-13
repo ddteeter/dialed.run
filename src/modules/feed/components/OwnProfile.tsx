@@ -105,7 +105,9 @@ export function OwnProfile({
                 className="flex items-center gap-3 text-body"
               >
                 <Bracketed className="w-24 shrink-0 text-muted">
-                  {band.label}
+                  {/* "41–50°" drawn, "41 to 50 degrees" said (round 53 ·
+                      162.3). */}
+                  <Spoken shown={band.label} said={band.said} />
                 </Bracketed>
                 <VerdictMark kind={bandVerdict(band)} />
                 <span className="flex-1">

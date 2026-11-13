@@ -1,5 +1,5 @@
 import { coreDb } from "../../env";
-import { bandLabel } from "../../lib/contracts/temperature";
+import { bandForms } from "../../lib/contracts/measures";
 import { observationsForEntries } from "./conditions";
 import { bandsAscendingWithGaps, tallyCoverage } from "./coverage";
 import type { CoverageBand } from "./coverage";
@@ -31,8 +31,8 @@ export async function coverageLadder(userId: string): Promise<CoverageBand[]> {
 
   return bandsAscendingWithGaps(
     tallyCoverage(entries, observations, (floor) =>
-      bandLabel(floor, units.temp),
+      bandForms(floor, units.temp),
     ),
-    (floor) => bandLabel(floor, units.temp),
+    (floor) => bandForms(floor, units.temp),
   );
 }

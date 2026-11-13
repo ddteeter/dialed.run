@@ -1,4 +1,5 @@
 import { screen, waitFor, within } from "@testing-library/react";
+import { drawnText, saidText } from "./spoken-text";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -183,12 +184,29 @@ describe("R: the conditions row", () => {
     expect(block).toHaveTextContent("Conditions · set by you");
     // The range and the sky that were picked, never the stored middle
     // (round 26, item 2).
-    expect(block).toHaveTextContent("50–59°Rain");
+    expect(drawnText(block)).toContain("50–59°Rain");
     expect(block).not.toHaveTextContent("55°");
-    // A band has no unit letter, so it is said as drawn (round 52 #158).
-    expect(block.querySelector("[aria-hidden], .sr-only")).toBeNull();
+    // Round 53 · 162.3: a band is said as a range, then the sky picked.
+    expect(saidText(block)).toBe(
+      "Conditions · set by you50 to 59 degrees, rain",
+    );
     expect(block).not.toHaveTextContent("Feels");
     expect(within(block).queryByRole("link")).toBeNull();
+  });
+
+  it("says a band set before the sheet asked for a sky as the range alone", async () => {
+    await renderWithRouter(
+      detail(
+        runSummary({
+          weatherStatus: "manual",
+          conditions: { ...SET_BY_YOU, sky: undefined },
+        }),
+      ),
+    );
+
+    expect(saidText(region("conditions"))).toBe(
+      "Conditions · set by you50 to 59 degrees",
+    );
   });
 
   it("breathes while the weather is still being asked for", async () => {
@@ -290,12 +308,17 @@ describe("R2b: no weather saved", () => {
     const warm = within(sheet).getByRole("group", { name: "How warm · °C" });
     const bands = within(warm).getAllByRole("radio");
     expect(bands).toHaveLength(12);
-    expect(bands[0]).toHaveAccessibleName("-20–-15°");
+    // Drawn "-20–-15°", said as a range (round 53 · 162.3).
+    expect(bands[0]).toHaveAccessibleName("minus 20 to minus 15 degrees");
+    expect(within(warm).getByText("-20–-15°")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
     // Three to a row, coldest top-left.
     expect(bands[0]?.closest("label")?.parentElement).toHaveClass(
       "grid-cols-3",
     );
-    expect(bands.at(-1)).toHaveAccessibleName("35–40°");
+    expect(bands.at(-1)).toHaveAccessibleName("35 to 40 degrees");
     const sky = within(sheet).getByRole("group", { name: "Sky" });
     const skies = within(sky).getAllByRole("radio");
     expect(skies).toHaveLength(4);
@@ -323,8 +346,9 @@ describe("R2b: no weather saved", () => {
 
     const warm = within(sheet).getByRole("group", { name: "How warm · °F" });
     const bands = within(warm).getAllByRole("radio");
-    expect(bands[0]).toHaveAccessibleName("-4–5°");
-    expect(bands.at(-1)).toHaveAccessibleName("95–104°");
+    expect(bands[0]).toHaveAccessibleName("minus 4 to 5 degrees");
+    expect(bands.at(-1)).toHaveAccessibleName("95 to 104 degrees");
+    expect(within(warm).getByText("95–104°")).toBeVisible();
   });
 
   it("refuses a missing pick with the board's words, on the group it is missing from", async () => {
@@ -348,7 +372,9 @@ describe("R2b: no weather saved", () => {
     expect(within(sheet).getByText("Pick the sky.")).toBeVisible();
     expect(didSetConditions).not.toHaveBeenCalled();
 
-    await user.click(within(sheet).getByRole("radio", { name: "50–59°" }));
+    await user.click(
+      within(sheet).getByRole("radio", { name: "50 to 59 degrees" }),
+    );
     await user.click(
       within(sheet).getByRole("button", { name: "Set conditions" }),
     );
@@ -372,14 +398,18 @@ describe("R2b: no weather saved", () => {
       within(sheet).getByRole("button", { name: "Set conditions" }),
     );
 
-    await user.click(within(sheet).getByRole("radio", { name: "50–59°" }));
+    await user.click(
+      within(sheet).getByRole("radio", { name: "50 to 59 degrees" }),
+    );
     // One pick is not yet a pick to name.
     expect(
       within(sheet).getByRole("button", { name: "Set conditions" }),
     ).toBeVisible();
     await user.click(within(sheet).getByRole("radio", { name: "Rain" }));
     await user.click(
-      within(sheet).getByRole("button", { name: "Set 50–59° and rain" }),
+      within(sheet).getByRole("button", {
+        name: "Set 50 to 59 degrees and rain",
+      }),
     );
 
     await waitFor(() => {
@@ -407,11 +437,13 @@ describe("R2b: no weather saved", () => {
     await user.click(
       within(sheet).getByRole("button", { name: "Set conditions" }),
     );
-    await user.click(within(sheet).getByRole("radio", { name: "32–41°" }));
+    await user.click(
+      within(sheet).getByRole("radio", { name: "32 to 41 degrees" }),
+    );
     await user.click(within(sheet).getByRole("radio", { name: "Snow" }));
 
     const submit = within(sheet).getByRole("button", {
-      name: "Set 32–41° and snow",
+      name: "Set 32 to 41 degrees and snow",
     });
     await user.click(submit);
     await waitFor(() => {

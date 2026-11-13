@@ -23,6 +23,7 @@ function band(
   return {
     bandFloorC,
     label: `${String(bandFloorC)}°`,
+    said: `${String(bandFloorC)} degrees`,
     cold: 0,
     dialed: 0,
     warm: 0,

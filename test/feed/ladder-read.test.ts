@@ -68,6 +68,8 @@ describe("coverageLadder", () => {
     expect(gap).toMatchObject({ cold: 0, dialed: 0, warm: 0 });
     // A gap is a row a runner reads, so it is labelled like any other.
     expect(gap?.label).toBe("41–50°");
+    // Round 53 · 162.3: and said as a range.
+    expect(gap?.said).toBe("41 to 50 degrees");
   });
 
   it("counts each verdict into the band its verdict was about", async () => {
@@ -82,6 +84,7 @@ describe("coverageLadder", () => {
     // The band carries its label in the reader's own unit — 0-5C is
     // 32-41F, and a band with no label is a row with nothing to read.
     expect(band?.label).toBe("32–41°");
+    expect(band?.said).toBe("32 to 41 degrees");
   });
 
   it("leaves an unrated entry out of the ladder entirely", async () => {

@@ -4,6 +4,7 @@ import {
   createRootRoute,
   createRouter,
 } from "@tanstack/react-router";
+import { drawnText, saidText } from "../modules/spoken-text";
 import { render, screen, within } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
@@ -33,6 +34,7 @@ function band(
   return {
     bandFloorC,
     label: `${String(bandFloorC)}–${String(bandFloorC + 5)}°`,
+    said: `${String(bandFloorC)} to ${String(bandFloorC + 5)} degrees`,
     cold: 0,
     dialed: 0,
     warm: 0,
@@ -169,7 +171,9 @@ describe("partway (round 26 #15: 4 OF 15)", () => {
     // The ask, on ink, with its hi-viz eyebrow.
     const ask = screen.getByText("Log this next").closest("section");
     expect(ask).toHaveAttribute("data-ground", "ink");
-    expect(ask).toHaveTextContent("[-5–0°]");
+    expect(drawnText(ask)).toContain("[-5–0°]");
+    // Round 53 · 162.3: said in the band's own words.
+    expect(saidText(ask)).toBe("Log this next-5 to 0 degrees");
     expect(screen.getByText("Log this next")).toHaveClass("text-hiviz-text");
     expect(screen.getByRole("link", { name: "Log a run" })).toBeVisible();
   });
@@ -252,7 +256,8 @@ describe("coverage", () => {
     expect(rows).toHaveLength(3);
     // The gap is the point of the screen — it has to be visible to be
     // asked for.
-    expect(rows[1]).toHaveTextContent("[5–10°]");
+    expect(drawnText(rows[1])).toContain("[5–10°]");
+    expect(saidText(rows[1])).toContain("5 to 10 degrees");
     expect(rows[1]).toHaveTextContent("unknown");
   });
 

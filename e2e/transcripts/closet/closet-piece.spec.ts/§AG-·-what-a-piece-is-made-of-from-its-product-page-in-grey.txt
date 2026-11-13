@@ -39,7 +39,7 @@ end of paragraph
 # km logged
 paragraph
 Works at
-#–#°
+# to # degrees
 end of paragraph
 heading, Composition · from patagonia.com, level 2
 Composition · from

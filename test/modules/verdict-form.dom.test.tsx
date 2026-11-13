@@ -5,6 +5,7 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
+import { drawnText } from "./spoken-text";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import type { MatcherFunction } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -1483,7 +1484,7 @@ describe("VerdictForm: the history line beneath the row (R-97)", () => {
       screen.getByText(
         (_text, element) =>
           element?.tagName === "SPAN" &&
-          element.textContent === "[41–50°] · 2 cold · 7 dialed · 1 warm",
+          drawnText(element) === "[41–50°] · 2 cold · 7 dialed · 1 warm",
       ),
     ).toBeVisible();
   });
@@ -1526,13 +1527,18 @@ describe("VerdictForm: what happens after saving", () => {
     const sentence = await screen.findByText(
       "Houdini is now 3 of 5 in 41–50°.",
     );
+    // Round 53 · 162.3: drawn as the board writes it, said as a range.
+    expect(sentence).toHaveAttribute("aria-hidden", "true");
+    expect(
+      screen.getByText("Houdini is now 3 of 5 in 41 to 50 degrees."),
+    ).toHaveClass("sr-only");
     expect(sentence).toBeVisible();
     // Announced when it lands, in the screen's one region (rule 08): the
     // button just pressed has gone, and this is what took its place.
     expect(sentence.closest("[data-slot='noted']")).toHaveTextContent(/^Noted/);
     expect(screen.getAllByRole("status")).toHaveLength(1);
     expect(screen.getByRole("status")).toHaveTextContent(
-      /^Noted\. Houdini is now 3 of 5 in 41–50°\.$/u,
+      /^Noted\. Houdini is now 3 of 5 in 41 to 50 degrees\.$/u,
     );
     expect(itemBandWearStat).toHaveBeenCalledWith({
       data: { itemId: "01JTEMA0000000000000000000", bandFloorC: 5 },
@@ -1658,7 +1664,9 @@ describe("VerdictForm: what happens after saving", () => {
     );
     await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
-    await screen.findByText(/Houdini is now 3 of 5/, { selector: "p" });
+    await screen.findByText(/Houdini is now 3 of 5/, {
+      selector: "[aria-hidden='true']",
+    });
 
     // In the submit's place: share and submit are gone, and there is no
     // button standing in for them.
@@ -1704,7 +1712,9 @@ describe("VerdictForm: what happens after saving", () => {
     );
     await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
-    await screen.findByText(/Houdini is now 3 of 5/, { selector: "p" });
+    await screen.findByText(/Houdini is now 3 of 5/, {
+      selector: "[aria-hidden='true']",
+    });
 
     const wayCold = screen.getByRole("radio", { name: "Way cold" });
     expect(wayCold).toHaveAttribute("aria-disabled", "true");
@@ -1744,7 +1754,9 @@ describe("VerdictForm: what happens after saving", () => {
 
     await user.click(screen.getByRole("radio", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
-    await screen.findByText(/Houdini is now 3 of 5/, { selector: "p" });
+    await screen.findByText(/Houdini is now 3 of 5/, {
+      selector: "[aria-hidden='true']",
+    });
 
     const chafed = screen.getByRole("button", { name: "chafed" });
     expect(chafed).toHaveAttribute("aria-pressed", "true");
@@ -1847,7 +1859,9 @@ describe("VerdictForm: the details that go missing silently", () => {
 
     stat.resolve({ worn: 3, total: 7 });
     expect(
-      await screen.findByText(/Houdini is now 3 of 7/, { selector: "p" }),
+      await screen.findByText(/Houdini is now 3 of 7/, {
+        selector: "[aria-hidden='true']",
+      }),
     ).toBeVisible();
     expect(screen.getAllByRole("status")).toHaveLength(1);
     expect(screen.getByRole("status")).toHaveTextContent(
@@ -2433,7 +2447,7 @@ describe("VerdictForm: the rail's band record and history (round 25)", () => {
       "true",
     );
     expect(
-      within(harrier).getByText("8 of 9 runs dialed in 32–41°"),
+      within(harrier).getByText("8 of 9 runs dialed in 32 to 41 degrees"),
     ).toHaveClass("sr-only");
     // Never worn here before: no record, rather than "0/0".
     expect(kitRow("Bandit split")).toHaveTextContent(/^Bandit split$/);
@@ -2452,7 +2466,7 @@ describe("VerdictForm: the rail's band record and history (round 25)", () => {
     );
     expect(
       within(kitRow("Tracksmith Harrier")).getByText(
-        "1 of 1 run dialed in 32–41°",
+        "1 of 1 run dialed in 32 to 41 degrees",
       ),
     ).toBeInTheDocument();
   });

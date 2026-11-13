@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { BandHistory } from "../../src/modules/feed/components/BandHistory";
+import { drawnText, saidText } from "./spoken-text";
 
 /**
  * A3's history line (R-97): "Five states. Your history in this band:
@@ -19,14 +20,14 @@ const COUNTS = { "-2": 3, "-1": 1, "0": 7, "1": 0, "2": 2 };
 
 /**
  * The measured half by everything it draws. The brackets are their own
- * hidden spans (D-150), so the line's text is split across three nodes and
- * a plain text match would find none of them.
+ * hidden spans (D-150), and the band is drawn and said apart (round 53 ·
+ * 162.3), so a plain text match would find none of them.
  */
 function wholeText(
   text: string | RegExp,
 ): (content: string, element: Element | null) => boolean {
   return (_content, element) => {
-    const drawn = element?.textContent ?? "";
+    const drawn = element === null ? "" : drawnText(element);
     return (
       element?.tagName === "SPAN" &&
       (typeof text === "string" ? drawn === text : text.test(drawn))
@@ -50,9 +51,13 @@ describe("BandHistory", () => {
     ).toBeVisible();
     // The whole sentence, spaces included — a regex on the prose half let
     // the space before the measured half go missing unnoticed.
-    expect(screen.getByText(/^Five states\./).closest("p")).toHaveTextContent(
+    const line = screen.getByText(/^Five states\./).closest("p");
+    expect(drawnText(line)).toBe(
       "Five states. Your history in this band: [41–50°] · 4 cold · 7 dialed · 2 warm",
-      { normalizeWhitespace: false },
+    );
+    // Round 53 · 162.3: the band is said as a range, its brackets not at all.
+    expect(saidText(line)).toBe(
+      "Five states. Your history in this band: 41 to 50 degrees · 4 cold · 7 dialed · 2 warm",
     );
   });
 

@@ -10,7 +10,7 @@ import {
   type UiGroup,
   type VerdictCoverage,
 } from "../../../lib/contracts";
-import { CoverageMark, Mono } from "../../../ui";
+import { CoverageMark, Mono, Spoken } from "../../../ui";
 import type { RailCounts } from "../filters";
 import type { ClosetSearch } from "../inputs";
 import { useIsHydrated } from "./use-is-hydrated";
@@ -251,18 +251,29 @@ function useControls(
 }
 
 /**
+A chip value already in words: said as drawn.
+*/
+function word(value: string): { shown: string; said: string } {
+  return { shown: value, said: value };
+}
+
+/**
  * Each chip's `GROUP · VALUE` (#109b): unset reads ALL, and WORKS AT's
- * unset reads ANY.
+ * unset reads ANY. A span is drawn one way and said another (round 53 ·
+ * 162.3); every other value is a word, said as drawn.
  */
 export function chipValues(
   search: ClosetSearch,
   tempUnit: TempUnit,
-): Readonly<Record<GroupKey, string>> {
+): Readonly<Record<GroupKey, { shown: string; said: string }>> {
   return {
-    group: search.group === undefined ? "All" : uiGroupLabels[search.group],
-    worksAt: worksAtLabel(search, tempUnit) ?? "Any",
-    coverage:
+    group: word(
+      search.group === undefined ? "All" : uiGroupLabels[search.group],
+    ),
+    worksAt: worksAtLabel(search, tempUnit) ?? word("Any"),
+    coverage: word(
       search.coverage === undefined ? "All" : coverageWords[search.coverage],
+    ),
   };
 }
 
@@ -309,7 +320,12 @@ function ChipRow(props: Readonly<ClosetFiltersProps>): JSX.Element {
               }}
               className="target flex items-center rounded-pill border border-hairline px-3 py-1 text-ink aria-expanded:border-ink aria-expanded:bg-ink aria-expanded:text-ground"
             >
-              <Mono step="xs">{`${CHIP_TITLES[key]} · ${values[key]}`}</Mono>
+              <Mono step="xs">
+                <Spoken
+                  shown={`${CHIP_TITLES[key]} · ${values[key].shown}`}
+                  said={`${CHIP_TITLES[key]} · ${values[key].said}`}
+                />
+              </Mono>
             </button>
           </li>
         ))}

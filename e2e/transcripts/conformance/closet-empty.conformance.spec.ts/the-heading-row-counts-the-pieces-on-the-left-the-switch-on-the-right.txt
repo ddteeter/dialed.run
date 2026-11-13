@@ -14,12 +14,18 @@ navigation, Filter the closet
 list
 listitem, level 1, position 1, set size 3
 button, Group · All, # control, not expanded
+Group · All
+end of button, Group · All, # control, not expanded
 end of listitem, level 1, position 1, set size 3
 listitem, level 1, position 2, set size 3
 button, Works at · Any, # control, not expanded
+Works at · Any
+end of button, Works at · Any, # control, not expanded
 end of listitem, level 1, position 2, set size 3
 listitem, level 1, position 3, set size 3
 button, Coverage · All, # control, not expanded
+Coverage · All
+end of button, Coverage · All, # control, not expanded
 end of listitem, level 1, position 3, set size 3
 end of list
 end of navigation, Filter the closet

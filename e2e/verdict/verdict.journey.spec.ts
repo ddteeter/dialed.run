@@ -300,13 +300,15 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
   // that makes a verdict worth logging.
   await expect(
     page
-      .locator("[data-slot='noted']")
-      .getByText(/Houdini Jacket is now \d+ of \d+/),
+      .locator("[data-slot='noted'] [aria-hidden='true']")
+      .getByText(/Houdini Jacket is now \d+ of \d+ in \d+–\d+°/),
   ).toBeVisible({ timeout: 15_000 });
   // And said once, by the form's one status region, in the receipt's words.
   await expect(
     page.getByRole("status").filter({ hasText: /^Noted\. Houdini Jacket/ }),
-  ).toHaveText(/^Noted\. Houdini Jacket is now \d+ of \d+/);
+  ).toHaveText(
+    /^Noted\. Houdini Jacket is now \d+ of \d+ in \d+ to \d+ degrees/,
+  );
   // Round 20: Noted is a receipt in the submit's place. Share and Log it
   // give way to it, and the answer stays on screen, read-only, so the
   // receipt is read against it.

@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import { drawnText, saidText } from "./spoken-text";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -579,9 +580,13 @@ describe("GarmentForm: the estimate", () => {
       weight: "light",
     });
     if (range === undefined) throw new Error("no estimate for a light base");
-    expect(await screen.findByText(/Estimated/)).toHaveTextContent(
+    const estimated = await screen.findByText(/Estimated/);
+    expect(drawnText(estimated)).toBe(
       `Estimated [${formatTempRange(range, "f") ?? ""}]`,
     );
+    // Round 53 · 162.3: a light base layer has no high end, so it is
+    // said "and up" rather than "55 degrees plus".
+    expect(saidText(estimated)).toBe("Estimated 55 degrees and up");
     expect(formatTempRange(range, "f")).not.toBe(formatTempRange(range, "c"));
   });
 

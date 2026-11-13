@@ -481,6 +481,8 @@ describe("ownProfile: what it leaves out", () => {
     const [band] = profile.coverage;
 
     expect(band?.label).toMatch(/^-?\d+–-?\d+°$/);
+    // Round 53 · 162.3: said as a range, in the same unit.
+    expect(band?.said).toMatch(/^(minus )?\d+ to (minus )?\d+ degrees$/);
   });
 
   it("reports an unset city and thermal level as unset, not as null", async () => {

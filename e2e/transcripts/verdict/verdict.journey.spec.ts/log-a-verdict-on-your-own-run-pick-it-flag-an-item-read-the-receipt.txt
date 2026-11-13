@@ -48,7 +48,7 @@ end of radiogroup, Did it work?
 paragraph
 Five states.
 Your history in this band:
-#–#°
+# to # degrees
 ·
 #
 cold ·
@@ -107,7 +107,7 @@ end of heading, The kit you’re judging, level 2
 list
 listitem, level 1, position 1, set size 1
 Houdini Jacket
-# of # runs dialed in #–#°
+# of # runs dialed in # to # degrees
 end of listitem, level 1, position 1, set size 1
 end of list
 heading, Before, in # to # degrees, dry, level 2

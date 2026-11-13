@@ -1,4 +1,5 @@
 import { screen, waitFor, within } from "@testing-library/react";
+import { drawnText, saidText } from "./spoken-text";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -275,6 +276,7 @@ describe("OwnProfile (G): past day one", () => {
   const band = {
     bandFloorC: 5,
     label: "41–50°",
+    said: "41 to 50 degrees",
     cold: 1,
     dialed: 2,
     warm: 0,
@@ -336,7 +338,9 @@ describe("OwnProfile (G): past day one", () => {
       />,
     );
     const row = screen.getByText("Dialed").closest("li");
-    expect(row).toHaveTextContent("[41–50°]Dialed3 runs");
+    expect(drawnText(row)).toBe("[41–50°]Dialed3 runs");
+    // Round 53 · 162.3: the band is said as a range, its brackets not at all.
+    expect(saidText(row)).toBe("41 to 50 degreesDialed3 runs");
   });
 
   it("credits Visual Crossing directly under the bands, which are feels-like bands (D-144)", async () => {

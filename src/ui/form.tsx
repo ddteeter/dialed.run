@@ -859,7 +859,10 @@ export function SubmitButton({
   ref,
   tone = "action",
 }: Readonly<{
-  label: string;
+  /**
+  Words, or a `Spoken` measure: R2b's "Set 41–50° and dry".
+  */
+  label: ReactNode;
   pendingLabel: string;
   pending: boolean;
   /**
@@ -1170,6 +1173,13 @@ export function ChoiceList<TOption extends string>(
        */
       optionNotes?: Readonly<Record<TOption, string>> | undefined;
       /**
+       * How each option's words are said, where that differs from how
+       * they are drawn: R2b's bands, drawn "41–50°" and said "41 to 50
+       * degrees" (round 53 · 162.3). The drawn words are `aria-hidden`,
+       * so the option's accessible name is the said one.
+       */
+      optionSaid?: Readonly<Record<TOption, string>> | undefined;
+      /**
        * A sentence under each option's label, saying what it means — A3's
        * PRIVATE "Only you." (round 41 #86a). Inside the label for
        * `optionNotes`' reason: it joins the option's accessible name, so
@@ -1301,6 +1311,7 @@ export function ChoiceList<TOption extends string>(
             />
             <OptionLabel
               label={optionLabels[option]}
+              said={props.optionSaid?.[option]}
               hint={props.optionHints?.[option]}
               step={props.optionStep}
             />
@@ -1317,21 +1328,25 @@ export function ChoiceList<TOption extends string>(
 }
 
 /**
- * A `ChoiceList` option's words: its label, in `Mono` when the group asks
- * for a step, and its hint beneath when it has one. A label alone stays a
+ * A `ChoiceList` option's words: its label, said another way when the
+ * group gives one, in `Mono` when the group asks for a step, and its hint
+ * beneath when it has one. A label alone stays a
  * bare string, so a group with neither renders exactly as it did.
  */
 function OptionLabel({
   label,
+  said,
   hint,
   step,
 }: Readonly<{
   label: string;
+  said: string | undefined;
   hint: string | undefined;
   step: MonoStep | undefined;
 }>): JSX.Element {
-  const words =
-    step === undefined ? label : <Mono step={step}>{label}</Mono>;
+  const text =
+    said === undefined ? label : <Spoken shown={label} said={said} />;
+  const words = step === undefined ? text : <Mono step={step}>{text}</Mono>;
   if (hint === undefined) return <>{words}</>;
   return (
     <span className="flex flex-col gap-1">

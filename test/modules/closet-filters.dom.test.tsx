@@ -4,6 +4,7 @@ import {
   createRootRoute,
   createRouter,
 } from "@tanstack/react-router";
+import { drawnText } from "./spoken-text";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState, type ReactElement } from "react";
@@ -364,7 +365,11 @@ describe("ClosetFilters: WORKS AT with a script (#109h)", () => {
     expect(screen.queryByRole("button", { name: "Apply" })).toBeNull();
     expect(screen.queryByRole("spinbutton")).toBeNull();
     expect(screen.getByRole("heading", { name: "Works at" })).toBeVisible();
-    expect(screen.getByText("40–58°F")).toBeVisible();
+    expect(screen.getByText("40–58°F")).toHaveAttribute("aria-hidden", "true");
+    // Round 53 · 162.3: the readout is said as a range, its unit in full.
+    expect(screen.getByText("40 to 58 degrees Fahrenheit")).toHaveClass(
+      "sr-only",
+    );
   });
 
   it("asks for the span when a thumb is let go, in Celsius, the rest kept", async () => {
@@ -496,8 +501,16 @@ describe("ClosetFilters: the phone's chip row (#109b)", () => {
     expect(
       within(row)
         .getAllByRole("button")
-        .map((each) => each.textContent),
+        .map((each) => drawnText(each)),
     ).toStrictEqual(["Group · All", "Works at · Any", "Coverage · All"]);
+  });
+
+  it("says a set span as a range in the chip's name (round 53 · 162.3)", async () => {
+    await chips({ search: { from: 1.1, to: 14.4 } });
+    expect(button(/^Works at/)).toHaveAccessibleName(
+      "Works at · 34 to 58 degrees",
+    );
+    expect(drawnText(button(/^Works at/))).toBe("Works at · 34–58°");
   });
 
   it("reads each set value", () => {
@@ -506,7 +519,11 @@ describe("ClosetFilters: the phone's chip row (#109b)", () => {
         { group: "tops", from: 1.1, to: 14.4, coverage: "unknown" },
         "f",
       ),
-    ).toStrictEqual({ group: "Tops", worksAt: "34–58°", coverage: "Untested" });
+    ).toStrictEqual({
+      group: { shown: "Tops", said: "Tops" },
+      worksAt: { shown: "34–58°", said: "34 to 58 degrees" },
+      coverage: { shown: "Untested", said: "Untested" },
+    });
   });
 
   it("opens nothing until a chip is tapped, then one at a time", async () => {

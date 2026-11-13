@@ -35,7 +35,7 @@ mi
 at #°
 link, Weather data provided by Visual Crossing
 status
-Noted. Merino half-zip is now # of # in #–#°.
+Noted. Merino half-zip is now # of # in # to # degrees.
 end of status
 radiogroup, Did it work?
 radio, Way cold, not checked, disabled, position 1, set size 5
@@ -73,7 +73,7 @@ end of paragraph
 end of group, Effort · optional
 Noted
 paragraph
-Merino half-zip is now # of # in #–#°.
+Merino half-zip is now # of # in # to # degrees.
 end of paragraph
 end of form
 heading, This run · :day :month # · #:#, level 2

@@ -2,7 +2,13 @@ import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 
 import { CALL_VERDICT_THRESHOLD } from "../../../lib/contracts";
-import { Bracketed, CoverageMark, Mono, WeatherAttribution } from "../../../ui";
+import {
+  Bracketed,
+  CoverageMark,
+  Mono,
+  Spoken,
+  WeatherAttribution,
+} from "../../../ui";
 import type { CoverageLevel } from "../../../ui";
 import type { Ladder } from "../ladder";
 
@@ -169,7 +175,7 @@ function Coverage({ ladder }: Readonly<{ ladder: Ladder }>): JSX.Element {
             className="flex items-center justify-between gap-3 text-body"
           >
             <Bracketed className="w-24 shrink-0 text-muted">
-              {band.label}
+              <Spoken shown={band.label} said={band.said} />
             </Bracketed>
             <CoverageMark level={coverage} />
             <Mono className="text-muted">{coverage}</Mono>
@@ -235,7 +241,9 @@ export function LogThisNext({
       </Mono>
       {/* A band is a measured range, so mono and bracketed — at `lg`, the
           ramp's display step, where K sets it large. */}
-      <Bracketed step="lg">{band.label}</Bracketed>
+      <Bracketed step="lg">
+        <Spoken shown={band.label} said={band.said} />
+      </Bracketed>
     </section>
   );
 }

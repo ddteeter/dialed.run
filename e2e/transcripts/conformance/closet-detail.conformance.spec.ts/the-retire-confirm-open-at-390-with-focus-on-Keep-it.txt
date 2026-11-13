@@ -18,7 +18,7 @@ button, Remove
 # of # runs dialed
 paragraph
 Works at
-#–#°
+# to # degrees
 end of paragraph
 button, Wrong?
 Wrong?
