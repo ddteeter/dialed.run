@@ -56,20 +56,31 @@ export function WeatherAttribution({
    */
   isCompact?: boolean;
 }>) {
-  return (
+  const link = {
+    href: "https://www.visualcrossing.com/",
+    target: "_blank",
+    rel: "noopener noreferrer",
+    "aria-hidden": isRepeat ? true : undefined,
+    tabIndex: isRepeat ? -1 : undefined,
+  } as const;
+  // Two anchors, not one with a switched attribute: the sentence takes
+  // WCAG 2.5.8's inline exception, written out so the target audit reads
+  // it; the label is a standalone 44 target.
+  return isCompact ? (
     <a
-      data-target={isCompact ? undefined : "inline"}
-      href="https://www.visualcrossing.com/"
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-hidden={isRepeat ? true : undefined}
-      tabIndex={isRepeat ? -1 : undefined}
-      aria-label={isCompact && !isRepeat ? CREDIT : undefined}
-      className={
-        isCompact ? COMPACT_CLASS : "text-micro text-muted no-underline"
-      }
+      {...link}
+      aria-label={isRepeat ? undefined : CREDIT}
+      className={COMPACT_CLASS}
     >
-      {isCompact ? CREDIT_LABEL : CREDIT}
+      {CREDIT_LABEL}
+    </a>
+  ) : (
+    <a
+      data-target="inline"
+      {...link}
+      className="text-micro text-muted no-underline"
+    >
+      {CREDIT}
     </a>
   );
 }
