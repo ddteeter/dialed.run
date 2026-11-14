@@ -669,7 +669,7 @@ export function ClosetGrid({
                   onToggle={setRetiredShown}
                 />
               ) : undefined}
-              <PhoneBell />
+              <PhoneBell gutter={16} />
             </div>
           </div>
           <FilteredLine search={search} tempUnit={tempUnit} />
