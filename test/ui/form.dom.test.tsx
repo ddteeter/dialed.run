@@ -3048,6 +3048,28 @@ describe("PendingLabel", () => {
     },
   );
 
+  it.each([
+    [false, "Unblock"],
+    [true, "[Unblocking]"],
+  ] as const)(
+    "says only the word it means, with no reserve, when not reserved (pending %s, #698 R2-AUTH-01)",
+    (pending, words) => {
+      const { container } = render(
+        <PendingLabel
+          label="Unblock"
+          pendingLabel="Unblocking"
+          pending={pending}
+          isReserved={false}
+        />,
+      );
+      expect(container.textContent).toBe(words);
+      expect(container.querySelector(".grid")).toBeNull();
+      expect(container.querySelectorAll(".breathe")).toHaveLength(
+        pending ? 2 : 0,
+      );
+    },
+  );
+
   it("keeps its brackets on the words when they wrap: inline text, not a flex row (#632 P2a-03)", () => {
     render(
       <PendingLabel label="Get a copy" pendingLabel="Preparing" pending />,
@@ -3126,11 +3148,9 @@ describe("the primary by surface, and its width (R54·167)", () => {
 
   const HUG_AT_WIDE = [
     "w-full",
-    "wide:w-auto",
+    "wide:w-fit",
     "wide:min-w-50",
-    "wide:self-start",
     "wide:in-data-[slot=sheet]:w-full",
-    "wide:in-data-[slot=sheet]:self-stretch",
   ];
 
   it("draws the product flow's pink caps at RADIUS.card, 52 — the one filled button that is not a pill", () => {
@@ -3144,6 +3164,11 @@ describe("the primary by surface, and its width (R54·167)", () => {
       ...HUG_AT_WIDE,
     );
     expect(button).not.toHaveClass("rounded-pill");
+    // The minimum is the height: padding over the 24 line made it 56
+    // (#697 R2-SHELL-14), and self-start pinned it to a row's top
+    // (R2-ONB-10).
+    expect(button.className.split(" ")).not.toContain("py-4");
+    expect(button.className).not.toMatch(/self-start/);
   });
 
   it("draws account and confirm as the ink pill, 48", () => {

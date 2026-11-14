@@ -197,8 +197,9 @@ function BlockedRow({
               label="Unblock"
               pendingLabel="Unblocking"
               pending={control.pending}
-              // Flush right, the row's edge (#632 B-09).
-              align="end"
+              // The pill hugs its word, with equal padding (W2; #698
+              // R2-AUTH-01), so a handle keeps the width the reserve took.
+              isReserved={false}
             />
           </Mono>
         </button>

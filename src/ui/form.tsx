@@ -801,10 +801,18 @@ export function PendingLabel({
   pendingLabel,
   pending,
   align = "center",
+  isReserved = true,
 }: Readonly<{
   label: ReactNode;
   pendingLabel: string;
   pending: boolean;
+  /**
+  Whether the resting word holds the in-flight label's width, so nothing
+  moves when it is pressed. A pill that must hug its word says no (W2's
+  Unblock, #698 R2-AUTH-01): it grows while in flight instead of carrying
+  the reserve, half empty, at rest.
+  */
+  isReserved?: boolean | undefined;
   /**
   Where the shorter label sits inside the longer one's width. Centred by
   default, which is right for a button that centres its words; a text
@@ -813,6 +821,8 @@ export function PendingLabel({
   */
   align?: PendingAlign | undefined;
 }>): JSX.Element {
+  if (!isReserved)
+    return pending ? <PendingWords label={pendingLabel} /> : <>{label}</>;
   return (
     <span className={PENDING_ALIGN[align]}>
       <span
@@ -833,15 +843,26 @@ export function PendingLabel({
         className="[grid-area:1/1]"
         style={{ visibility: pending ? undefined : "hidden" }}
       >
-        <span className="breathe mr-1" aria-hidden="true">
-          [
-        </span>
-        {pendingLabel}
-        <span className="breathe ml-1" aria-hidden="true">
-          ]
-        </span>
+        <PendingWords label={pendingLabel} />
       </span>
     </span>
+  );
+}
+
+/**
+The in-flight verb between its breathing brackets.
+*/
+function PendingWords({ label }: Readonly<{ label: string }>): JSX.Element {
+  return (
+    <>
+      <span className="breathe mr-1" aria-hidden="true">
+        [
+      </span>
+      {label}
+      <span className="breathe ml-1" aria-hidden="true">
+        ]
+      </span>
+    </>
   );
 }
 
@@ -860,7 +881,9 @@ const PENDING_ALIGN: Readonly<Record<PendingAlign, string>> = {
  * - `action`, the product flow (A1–A3, manual entry, O1–O3, P3, Add
  *   garment, W1): pink display caps at RADIUS.card, 52 high — the one
  *   filled button that is not a pill (167.3's exception, now in tokens.js's
- *   RADIUS_RULES).
+ *   RADIUS_RULES). The minimum is the height: no vertical padding, since
+ *   16 a side over the 24 line made it 56 (#697 R2-SHELL-14). The caps
+ *   never wrap (167.2), so one line always fits.
  * - `ink`, account, signed-out, settings Save and confirm sheets: an ink
  *   pill, `HEIGHT.control` high. Not the product's pink, because these
  *   are not product screens.
@@ -873,12 +896,18 @@ const PENDING_ALIGN: Readonly<Record<PendingAlign, string>> = {
  * left-aligned. Inside a desk drawer it is the drawer's full width again,
  * stacked: the drawer is a 390 column, so hugging there would leave
  * ragged buttons (`in-data-[slot=sheet]`).
+ *
+ * The hug is a width (`w-fit`), not an alignment. A fit-content item is
+ * not stretched, so in a column it sits at the start as `self-start` did,
+ * and a row can still centre its buttons on one line. `self-start` pinned
+ * each to the row's top, so a 48 secondary hung from a 52 primary's top
+ * edge (#697 R2-ONB-10).
  */
 const HUG_WIDE_CLASS =
-  "w-full wide:w-auto wide:min-w-50 wide:self-start wide:in-data-[slot=sheet]:w-full wide:in-data-[slot=sheet]:self-stretch";
+  "w-full wide:w-fit wide:min-w-50 wide:in-data-[slot=sheet]:w-full";
 
 const SUBMIT_TONE = {
-  action: `grid min-h-13 place-items-center rounded-card border-none bg-action px-6 py-4 font-display uppercase text-accent-ink ${HUG_WIDE_CLASS}`,
+  action: `grid min-h-13 place-items-center rounded-card border-none bg-action px-6 font-display uppercase text-accent-ink ${HUG_WIDE_CLASS}`,
   chalk:
     "inline-flex min-h-11 items-center justify-center self-start rounded-pill border-none bg-ink px-5 font-bold text-ground",
   ink: `flex min-h-control items-center justify-center rounded-pill border-none bg-ink px-6 font-bold text-ground ${HUG_WIDE_CLASS}`,

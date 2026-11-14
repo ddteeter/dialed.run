@@ -127,6 +127,9 @@ describe("NowGoRun", () => {
       "flex-col",
       "gap-3",
       "wide:flex-row",
+      // One centre line for the 52 primary and the 48 secondary, not both
+      // hung from the row's top (#697 R2-ONB-10).
+      "wide:items-center",
     );
   });
 
@@ -195,10 +198,11 @@ describe("NowGoRun", () => {
 
     const heading = screen.getByRole("heading", { name: "Now go run." });
     const band = heading.parentElement;
-    expect(band).toHaveClass("bg-failure", "px-6", "desk:px-5", "pb-6", "pt-4");
-    // Full-bleed below desk, flush under the bar; in the column at desk
-    // (#630 F-09).
-    expect(band).toHaveClass("-mx-6", "-mt-8", "desk:mx-0", "desk:mt-0");
+    expect(band).toHaveClass("bg-failure", "px-6", "wide:px-5", "pb-6", "pt-4");
+    // Full-bleed below 720, flush under the bar; in the column from 720,
+    // where the step's width changes (#630 F-09, #703 R2-ONB-03).
+    expect(band).toHaveClass("-mx-6", "-mt-8", "wide:mx-0", "wide:mt-0");
+    expect(band?.className).not.toMatch(/desk:/u);
     // Text on an accent is accent ink, on both themes (T2 rule 02): the
     // band's words and its bar, which `--ink` would turn to chalk on dark.
     expect(band).toHaveClass("text-accent-ink");

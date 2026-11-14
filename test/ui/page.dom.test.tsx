@@ -57,13 +57,25 @@ describe("Page", () => {
     ]);
   });
 
-  it("is the panel on a phone and the column from 720 for an onboarding step and P3's close (#654)", () => {
+  it("is fluid on a phone and the column from 720 for an onboarding step and P3's close (#703 R2-ONB-03)", () => {
     for (const width of ["step", "close"] as const) {
       const page = render(<Page width={width}>body</Page>).container
         .firstElementChild;
-      expect(page).toHaveClass("max-w-panel", "wide:max-w-column");
+      // DS4: nothing pins a phone screen's width, so no 390 panel below 720.
+      // The cap starts at 720, so P3's band reaches both screen edges on
+      // a 620–719 window as on a 390 one.
+      expect(page).toHaveClass("mx-auto", "w-full", "wide:max-w-column");
+      expect(page).not.toHaveClass("max-w-panel");
+      expect(page).not.toHaveClass("max-w-column");
       expect(page).not.toHaveClass("desk:max-w-page");
     }
+  });
+
+  it("takes the closet's page measure, centred, for a state that replaces it (R55·185)", () => {
+    const page = render(<Page width="page">body</Page>).container
+      .firstElementChild;
+    expect(page).toHaveClass("mx-auto", "w-full", "max-w-page");
+    expect(page).not.toHaveClass("max-w-column");
   });
 
   it("lets a Desk table run to the page measure, left-aligned (168.3)", () => {

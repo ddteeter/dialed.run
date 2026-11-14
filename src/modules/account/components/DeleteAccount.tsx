@@ -16,6 +16,7 @@ import {
   FieldMessage,
   FormFailureBand,
   FormStatus,
+  SECONDARY_PILL,
   Sheet,
   SubmitButton,
   useFormSubmit,
@@ -272,7 +273,9 @@ function DeleteSheet({
             setKeep(node ?? undefined);
           }}
           onClick={onClose}
-          className="target w-full cursor-pointer rounded-pill border border-hairline bg-transparent px-4 py-4 text-lead font-semibold text-ink"
+          // The secondary beside the ink pill, the same 48 (R54·164a, 167;
+          // #697 R2-SHELL-05).
+          className={`target ${SECONDARY_PILL}`}
         >
           Keep it
         </button>

@@ -61,9 +61,12 @@ export function SignedOutPanel({
 }>): JSX.Element {
   return (
     <SignedOutLayout>
+      {/* The frame's gutter, 20 then 24 (R55·174, 176), so the title
+          starts under the wordmark and over the footer's links (#698
+          R2-AUTH-03). */}
       <main
         data-part="panel"
-        className="mx-auto flex w-full max-w-panel flex-col gap-7 px-6 pt-12 pb-12 wide:pt-14"
+        className="mx-auto flex w-full max-w-panel flex-col gap-7 px-5 pt-12 pb-12 wide:px-6 wide:pt-14"
       >
         <div data-part="header" className="flex flex-col gap-5">
           {notice}

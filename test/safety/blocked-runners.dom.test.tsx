@@ -114,11 +114,13 @@ describe("the roster", () => {
     const row = handle.closest("li");
     expect(row).toHaveAttribute("data-part", "blocked-row");
     expect(row).toHaveClass("bg-panel", "border", "rounded-card");
-    expect(screen.getByRole("button", { name: "Unblock" })).toHaveClass(
-      "rounded-pill",
-      "border",
-      "shrink-0",
-    );
+    const unblock = screen.getByRole("button", { name: "Unblock" });
+    expect(unblock).toHaveClass("rounded-pill", "border", "shrink-0");
+    // At rest the pill holds its word alone, so it is as wide as UNBLOCK
+    // with equal padding, not the width of "[ Unblocking ]" (#698
+    // R2-AUTH-01).
+    expect(unblock.textContent).toBe("Unblock");
+    expect(unblock.querySelector(".grid")).toBeNull();
   });
 
   it("names a runner who has no display name without leaving a gap", () => {
@@ -185,10 +187,9 @@ describe("Unblock as a control that can fail (round 22, item 21)", () => {
     expect(button).not.toHaveAttribute("disabled");
     expect(button).toHaveTextContent("Unblocking");
     expect(button.querySelectorAll(".breathe")).toHaveLength(2);
-    // Flush with the row's right edge (#632 B-09).
-    expect(within(button).getByText("Unblock").parentElement).toHaveClass(
-      "justify-items-end",
-    );
+    // The pill hugs whichever word it says (#698 R2-AUTH-01): in flight it
+    // says only "[Unblocking]", with no hidden resting word beside it.
+    expect(button.textContent).toBe("[Unblocking]");
 
     // A second press while it waits sends nothing more.
     await user.click(button);

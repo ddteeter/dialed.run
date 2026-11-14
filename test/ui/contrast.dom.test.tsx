@@ -281,6 +281,9 @@ describe("the T1 port", () => {
     expect(sheet).toMatch(
       /^[^@]*&::before \{[^}]*width: 36px;[^}]*height: 4px;[^}]*background: var\(--hairline-2\);/u,
     );
+    // Above the sticky header (Sheet's `z-10`), or the header's ground
+    // paints over it (#697 R2-SHELL-02).
+    expect(sheet).toMatch(/^[^@]*&::before \{[^}]*z-index: 20;/u);
   });
 
   it("gives the desk drawer the panel and a hairline all round, and leaves the lift to the surface (R54·164.1)", () => {

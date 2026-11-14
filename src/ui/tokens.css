@@ -300,10 +300,13 @@
   /* The grabber: 36×4 in the stronger hairline, centred 12 from the top,
      in the gap above the header. A pseudo-element, so it is furniture to
      assistive tech and adds nothing to the sheet's own children; placed
-     rather than in flow, so the header's own padding does not move. */
+     rather than in flow, so the header's own padding does not move. Over
+     the header: the header is sticky at z 10 on the ground, and painted
+     over the grabber until this one sits above it (#697 R2-SHELL-02). */
   &::before {
     content: "";
     position: absolute;
+    z-index: 20;
     top: 12px;
     inset-inline: 0;
     width: 36px;

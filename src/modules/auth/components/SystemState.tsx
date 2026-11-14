@@ -67,12 +67,17 @@ function useViewer(): { isSignedIn: boolean } {
 export type LoadBell = () => Promise<ReactNode>;
 
 /**
- * The bell, once `loadBell` has drawn it, and nothing until then.
+ * The bell, once `loadBell` has drawn it, and its empty seat until then.
  *
- * Nothing either when it fails: a page that is already saying something
- * failed does not say a second thing about the bell (law 5), and the bell
- * is back on the next page that loads. Signed out there is no shell, so
- * nothing is asked for.
+ * Only the seat when it fails, too: a page that is already saying
+ * something failed does not say a second thing about the bell (law 5), and
+ * the bell is back on the next page that loads. Signed out there is no
+ * shell, so nothing is asked for.
+ *
+ * The seat holds the bell's 44 place in both of its seats, so the desk
+ * bar's slot between search and Log a run keeps its shape and the phone's
+ * first row keeps its end (Round 54 · 169: "a fixed slot … so nothing
+ * shifts"; #697 R2-SHELL-06).
  */
 function useLoadedBell(
   isSignedIn: boolean,
@@ -86,11 +91,18 @@ function useLoadedBell(
     void loadBell()
       .then(setBell)
       .catch(() => {
-        // Degrade: the shell without its bell.
+        // Degrade: the shell without its bell, its seat held.
       });
   }, [isSignedIn, loadBell]);
-  return bell;
+  return bell ?? BELL_SEAT;
 }
+
+/**
+The bell's place, empty: its 44 target, nothing to hear or press.
+*/
+const BELL_SEAT = (
+  <span data-part="bell-seat" aria-hidden="true" className="block size-11" />
+);
 
 /**
  * The frame: the product shell signed in, a bare `<main>` signed out.
@@ -101,13 +113,15 @@ function useLoadedBell(
 function SystemFrame({
   signedIn,
   loadBell,
-  width = "panel",
+  width = "column",
   children,
 }: Readonly<{
   signedIn: boolean;
   loadBell: LoadBell | undefined;
   /**
-  The column of the screen this replaces (R55·185); the panel when absent.
+  The column of the screen this replaces (R55·185). The 620 column when
+  absent, since every runner screen is one at desk (Round 54 · 168: "the
+  phone-width panel at desk goes"; #697 R2-SHELL-09).
   */
   width?: PageWidth | undefined;
   children: ReactNode;
@@ -130,7 +144,9 @@ function SignedOutBody({
   return (
     <SignedOutFrame>
       <main className="flex-1 px-5 pt-12 pb-16 wide:px-6 wide:pt-24">
-        <div className="mx-auto w-full max-w-column">{children}</div>
+        {/* The column's own 24 inside it from 720, as every other column
+            has, so the body starts where theirs do (#697 R2-SHELL-09). */}
+        <div className="mx-auto w-full max-w-column wide:px-6">{children}</div>
       </main>
     </SignedOutFrame>
   );
@@ -315,6 +331,7 @@ export function LoaderFailedState({
   onRetry,
   loadBell,
   title,
+  width,
 }: Readonly<{
   signedIn: boolean;
   message: string;
@@ -324,9 +341,14 @@ export function LoaderFailedState({
   The title of the screen this replaces, from its route (`staticData.title`).
   */
   title?: string | undefined;
+  /**
+  The width of the screen this replaces, from its route (`staticData.width`),
+  so Try again never moves it (R55·185). The column when absent.
+  */
+  width?: PageWidth | undefined;
 }>): JSX.Element {
   return (
-    <SystemFrame signedIn={signedIn} loadBell={loadBell}>
+    <SystemFrame signedIn={signedIn} loadBell={loadBell} width={width}>
       <section
         data-part="system-state"
         data-state="loader-failed"
@@ -482,6 +504,10 @@ function LoaderFailed({
     select: (state) =>
       state.matches.map((match) => match.staticData.title).at(-1),
   });
+  const width = useRouterState({
+    select: (state) =>
+      state.matches.map((match) => match.staticData.width).at(-1),
+  });
   if (isRootCrash) {
     return (
       <RootCrashedState
@@ -504,6 +530,7 @@ function LoaderFailed({
       }}
       loadBell={loadBell}
       title={title}
+      width={width}
     />
   );
 }
@@ -515,5 +542,11 @@ declare module "@tanstack/react-router" {
      * X2 keeps above its band when this route's loader fails.
      */
     title?: string;
+    /**
+     * The screen's width at desk, where it is not the 620 column (the
+     * closet's page): what X2 takes so a retry never moves the screen
+     * (R55·185).
+     */
+    width?: PageWidth;
   }
 }
