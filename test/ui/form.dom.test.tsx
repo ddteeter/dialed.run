@@ -3271,6 +3271,8 @@ describe("the primary by surface, and its width (R54·167)", () => {
         "rounded-pill",
         "border",
         "border-hairline",
+        // R57·262: --hairline-2 on every dark ground, as a field's edge.
+        "dark:border-hairline-2",
         "bg-transparent",
         "min-h-control",
         "font-semibold",

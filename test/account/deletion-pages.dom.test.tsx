@@ -98,6 +98,15 @@ describe("DeleteAccount (U1's last row)", () => {
     await view;
     const row = document.querySelector("[data-part='delete-account']");
     expect(row).toHaveClass("border-t-2", "border-ink");
+    // R57·257: LEAVE heads the group, under the rule, as SIGN-IN heads
+    // its own, so a heading list reaches it.
+    const leave = screen.getByRole("heading", { level: 2, name: "Leave" });
+    expect(row?.firstElementChild).toBe(leave);
+    expect(leave).toHaveClass("m-0", "text-muted");
+    expect(within(leave).getByText("Leave")).toHaveClass(
+      "font-mono",
+      "text-mono-xs",
+    );
     // Round 52 #160: named by its title alone, described by its
     // sentence, and the word at the right edge is for the eye only.
     const open = screen.getByRole("button", { name: "Delete account" });

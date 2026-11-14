@@ -15,9 +15,16 @@ function runner(overrides: Partial<BlockedRunner> = {}): BlockedRunner {
   };
 }
 
+/**
+A runner whose home zone is not yet known: their clock is UTC.
+*/
+const UTC_VIEWER = { homeZone: undefined };
+
 describe("what the screen leads with", () => {
   it("explains blocking even when nobody is blocked", () => {
-    render(<BlockedRunners blocked={[]} unblock={vi.fn()} />);
+    render(
+      <BlockedRunners viewer={UTC_VIEWER} blocked={[]} unblock={vi.fn()} />,
+    );
 
     // The artboard is explicit that an empty list is the normal case, so
     // the explanation is the body of the screen rather than help text
@@ -33,7 +40,9 @@ describe("what the screen leads with", () => {
   });
 
   it("promises both directions, because one row means both", () => {
-    render(<BlockedRunners blocked={[]} unblock={vi.fn()} />);
+    render(
+      <BlockedRunners viewer={UTC_VIEWER} blocked={[]} unblock={vi.fn()} />,
+    );
 
     expect(
       screen.getByText(/can't see your entries, your closet/),
@@ -44,7 +53,9 @@ describe("what the screen leads with", () => {
   });
 
   it("keeps the anonymous-conditions carve-out, which is a claim about the code", () => {
-    render(<BlockedRunners blocked={[]} unblock={vi.fn()} />);
+    render(
+      <BlockedRunners viewer={UTC_VIEWER} blocked={[]} unblock={vi.fn()} />,
+    );
 
     // Nothing in blocks.ts is imported by the consensus path, and
     // blocks.test.ts pins that from the outside. This copy is the promise
@@ -55,7 +66,9 @@ describe("what the screen leads with", () => {
   });
 
   it("says blocking is quiet", () => {
-    render(<BlockedRunners blocked={[]} unblock={vi.fn()} />);
+    render(
+      <BlockedRunners viewer={UTC_VIEWER} blocked={[]} unblock={vi.fn()} />,
+    );
     expect(
       screen.getByText(/not told\. Blocking is quiet/),
     ).toBeInTheDocument();
@@ -69,7 +82,9 @@ describe("what the screen leads with", () => {
   });
 
   it("draws the explanation as W2's card, each tag hanging in its own column (B-01)", () => {
-    render(<BlockedRunners blocked={[]} unblock={vi.fn()} />);
+    render(
+      <BlockedRunners viewer={UTC_VIEWER} blocked={[]} unblock={vi.fn()} />,
+    );
     const card = screen
       .getByRole("heading", { name: /what blocking does/i })
       .closest("section");
@@ -93,6 +108,7 @@ describe("the roster", () => {
   it("counts and names who is blocked", () => {
     render(
       <BlockedRunners
+        viewer={UTC_VIEWER}
         blocked={[runner(), runner({ userId: "u-2", username: "gearfiend22" })]}
         unblock={vi.fn()}
       />,
@@ -103,8 +119,27 @@ describe("the roster", () => {
     expect(screen.getByText("@gearfiend22")).toBeInTheDocument();
   });
 
+  it("reads the blocked day on the runner's home clock, as every date is (R57·259d, #677)", () => {
+    // 1_755_000_000 is Aug 12 at noon UTC, and already Aug 13 at UTC+14.
+    render(
+      <BlockedRunners
+        viewer={{ homeZone: "Pacific/Kiritimati" }}
+        blocked={[runner()]}
+        unblock={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Blocked Aug 13")).toBeVisible();
+    expect(screen.queryByText("Blocked Aug 12")).toBeNull();
+  });
+
   it("draws each runner as W2's card row: bold handle, the day blocked, an outlined pill (B-01, P3-10)", () => {
-    render(<BlockedRunners blocked={[runner()]} unblock={vi.fn()} />);
+    render(
+      <BlockedRunners
+        viewer={UTC_VIEWER}
+        blocked={[runner()]}
+        unblock={vi.fn()}
+      />,
+    );
     const handle = screen.getByText("@j_holloway");
     // Truncates rather than pushing Unblock off a phone (P3-09).
     expect(handle).toHaveClass("font-bold", "truncate");
@@ -126,6 +161,7 @@ describe("the roster", () => {
   it("names a runner who has no display name without leaving a gap", () => {
     render(
       <BlockedRunners
+        viewer={UTC_VIEWER}
         blocked={[runner({ username: undefined })]}
         unblock={vi.fn()}
       />,
@@ -136,7 +172,13 @@ describe("the roster", () => {
   it("unblocks immediately and without a confirmation step", async () => {
     const user = userEvent.setup();
     const unblock = vi.fn().mockResolvedValue({});
-    render(<BlockedRunners blocked={[runner()]} unblock={unblock} />);
+    render(
+      <BlockedRunners
+        viewer={UTC_VIEWER}
+        blocked={[runner()]}
+        unblock={unblock}
+      />,
+    );
 
     await user.click(screen.getByRole("button", { name: "Unblock" }));
 
@@ -153,6 +195,7 @@ describe("the roster", () => {
     const user = userEvent.setup();
     render(
       <BlockedRunners
+        viewer={UTC_VIEWER}
         blocked={[runner(), runner({ userId: "u-2", username: "gearfiend22" })]}
         unblock={vi.fn().mockResolvedValue({})}
       />,
@@ -174,7 +217,13 @@ describe("Unblock as a control that can fail (round 22, item 21)", () => {
     const user = userEvent.setup();
     const answer = Promise.withResolvers<unknown>();
     const unblock = vi.fn().mockReturnValue(answer.promise);
-    render(<BlockedRunners blocked={[runner()]} unblock={unblock} />);
+    render(
+      <BlockedRunners
+        viewer={UTC_VIEWER}
+        blocked={[runner()]}
+        unblock={unblock}
+      />,
+    );
 
     const button = screen.getByRole("button", { name: "Unblock" });
     await user.click(button);
@@ -206,6 +255,7 @@ describe("Unblock as a control that can fail (round 22, item 21)", () => {
     const unblock = vi.fn().mockRejectedValue(new Error("D1 down"));
     render(
       <BlockedRunners
+        viewer={UTC_VIEWER}
         blocked={[runner(), runner({ userId: "u-2", username: "gearfiend22" })]}
         unblock={unblock}
       />,
@@ -243,7 +293,13 @@ describe("Unblock as a control that can fail (round 22, item 21)", () => {
       .fn()
       .mockRejectedValueOnce(new Error("D1 down"))
       .mockResolvedValueOnce({});
-    render(<BlockedRunners blocked={[runner()]} unblock={unblock} />);
+    render(
+      <BlockedRunners
+        viewer={UTC_VIEWER}
+        blocked={[runner()]}
+        unblock={unblock}
+      />,
+    );
 
     await user.click(screen.getByRole("button", { name: "Unblock" }));
     await user.click(await screen.findByRole("button", { name: "Try again" }));

@@ -2,7 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { getSession } from "../../modules/auth/functions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
-import { bellStateFn } from "../../modules/notifications/functions";
+import {
+  bellStateFn,
+  viewerZoneFn,
+} from "../../modules/notifications/functions";
 import { SettingsSubPage } from "../../modules/onboarding/components/SettingsSubPage";
 // Deep-imported, NOT via `modules/safety`'s barrel. The barrel reaches
 // blocks.ts -> db/schema-core -> drizzle and src/env -> cloudflare:workers,
@@ -21,11 +24,12 @@ export const Route = createFileRoute("/safety/blocked")({
     requireSignedIn(await getSession(), location);
   },
   loader: async () => {
-    const [{ blocked }, bell] = await Promise.all([
+    const [{ blocked }, bell, viewer] = await Promise.all([
       blockedRunnersQuery(),
       bellStateFn(),
+      viewerZoneFn(),
     ]);
-    return { blocked, bell };
+    return { blocked, bell, viewer };
   },
   component: BlockedPage,
 });
@@ -36,12 +40,16 @@ export const Route = createFileRoute("/safety/blocked")({
  * way back to Settings.
  */
 function BlockedPage() {
-  const { blocked, bell } = Route.useLoaderData();
+  const { blocked, bell, viewer } = Route.useLoaderData();
 
   return (
     <BelledLayout {...bell}>
       <SettingsSubPage title="Blocked runners">
-        <BlockedRunners blocked={blocked} unblock={unblockRunnerAction} />
+        <BlockedRunners
+          blocked={blocked}
+          unblock={unblockRunnerAction}
+          viewer={viewer}
+        />
       </SettingsSubPage>
     </BelledLayout>
   );

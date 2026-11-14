@@ -26,7 +26,7 @@ async function renderWithRouter(element: ReactElement) {
  */
 describe("Landing, signed out", () => {
   it("wears the one frame, Log in in its bar, and never the tab bar", async () => {
-    await renderWithRouter(<Landing signedIn={false} />);
+    await renderWithRouter(<Landing viewer={undefined} />);
 
     const bar = document.querySelector("[data-slot='landing-bar']");
     const logIn = screen.getByRole("link", { name: "Log in" });
@@ -37,7 +37,7 @@ describe("Landing, signed out", () => {
   });
 
   it("sits on the bar's edge: gutters outside, the page measure inside (#625 A-09)", async () => {
-    await renderWithRouter(<Landing signedIn={false} />);
+    await renderWithRouter(<Landing viewer={undefined} />);
     const main = screen.getByRole("main");
     expect(main).toHaveClass("flex-1", "px-5", "wide:px-6");
     expect(main.firstElementChild).toHaveClass("mx-auto", "max-w-page");
@@ -55,7 +55,7 @@ describe("Landing, signed out", () => {
   });
 
   it("breaks the headline by sentence: LOG IT. always starts its own line", async () => {
-    await renderWithRouter(<Landing signedIn={false} />);
+    await renderWithRouter(<Landing viewer={undefined} />);
     const heading = screen.getByRole("heading", {
       level: 1,
       name: "Every run has an outfit. Log it.",
@@ -71,7 +71,7 @@ describe("Landing, signed out", () => {
   });
 
   it("carries the pink Request access below 720 only, then Have a code? Create an account", async () => {
-    await renderWithRouter(<Landing signedIn={false} />);
+    await renderWithRouter(<Landing viewer={undefined} />);
     const hero = within(screen.getByRole("main"));
     const ask = hero.getByRole("link", { name: "Request access" });
     expect(ask).toHaveAttribute("href", "/account/request-access");
@@ -97,7 +97,7 @@ describe("Landing, signed out", () => {
 
 describe("Landing, signed in", () => {
   it("wears the product's shell and ends on Go to your feed, never a second Log a run", async () => {
-    await renderWithRouter(<Landing signedIn />);
+    await renderWithRouter(<Landing viewer={MAYA} />);
     expect(document.querySelector("[data-slot='tab-bar']")).not.toBeNull();
     expect(document.querySelector("[data-slot='landing-bar']")).toBeNull();
     const main = within(screen.getByRole("main"));
@@ -110,7 +110,49 @@ describe("Landing, signed in", () => {
     expect(main.queryByText("Log a run")).toBeNull();
     expect(go.closest("[data-part='hero']")?.parentElement).toHaveClass("px-6");
   });
+
+  it("gets a first row on the phone: who is signed in, then the bell, above the headline (R57·271)", async () => {
+    await renderWithRouter(<Landing viewer={MAYA} />);
+    const row = document.querySelector("[data-part='first-row']");
+    expect(row).toHaveClass(
+      "flex",
+      "items-center",
+      "justify-between",
+      "wide:hidden",
+    );
+    const who = screen.getByText("Signed in as @maya_runs");
+    expect(row?.firstElementChild).toBe(who);
+    expect(who).toHaveClass("font-mono", "text-mono-xs", "text-muted");
+    // The bell ends the row, in the phone's seat (169.1).
+    const seat = row?.lastElementChild;
+    expect(seat).toHaveAttribute("data-slot", "notification-bell");
+    expect(seat).toHaveTextContent("Notifications");
+    // Above the headline, never on its line.
+    expect(row?.nextElementSibling).toHaveAttribute("data-part", "hero");
+    expect(
+      within(screen.getByRole("main")).getAllByRole("button", {
+        name: "Notifications",
+      }),
+    ).toHaveLength(1);
+  });
+
+  it("says only Signed in on the first row before the runner has a handle", async () => {
+    await renderWithRouter(
+      <Landing viewer={{ ...MAYA, username: undefined }} />,
+    );
+    expect(
+      document.querySelector("[data-part='first-row']")?.firstElementChild,
+    ).toHaveTextContent(/^Signed in$/u);
+  });
 });
+
+/**
+A signed-in runner with a handle, and a bell to find.
+*/
+const MAYA = {
+  username: "maya_runs",
+  bell: <button type="button">Notifications</button>,
+};
 
 describe("SignOutButton", () => {
   it("signs out behind [ Signing out ], a live control while it waits", async () => {

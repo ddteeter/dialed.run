@@ -248,6 +248,15 @@ describe("ResetPassword", () => {
       await screen.findByRole("heading", { name: "Password set" }),
     ).toBeVisible();
     expect(screen.getByRole("status")).toHaveTextContent("Password set.");
+    // A receipt: RESET in MONO.xs over the title (R57·258, #676).
+    const kicker = screen.getByText("Reset");
+    expect(kicker).toHaveClass("font-mono", "text-mono-xs", "uppercase");
+    expect(
+      kicker.closest("[data-part='header']")?.querySelector("h1"),
+    ).toHaveTextContent("Password set");
+    expect(
+      screen.getByRole("main").querySelector("[data-part='receipt']"),
+    ).not.toBeNull();
     expect(
       screen.getByText("Log in with it. Every other device was signed out."),
     ).toBeVisible();

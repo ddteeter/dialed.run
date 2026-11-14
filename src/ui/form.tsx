@@ -916,9 +916,11 @@ const SUBMIT_TONE = {
    * the same width rule as the primary beside it. Never alone — a lone
    * action is the primary and takes its surface's kind. Its tertiary is a
    * text link. A tone too, for the hairline-pill Save that is a form's
-   * submit (P2.5, R55·229).
+   * submit (P2.5, R55·229). In dark its edge is `--hairline-2` on every
+   * ground, panel or page, as a field's is (R57·262, #707): `--hairline`
+   * on `--panel` was close to invisible.
    */
-  secondary: `flex min-h-control items-center justify-center rounded-pill border border-hairline bg-transparent px-6 font-semibold text-ink ${HUG_WIDE_CLASS}`,
+  secondary: `flex min-h-control items-center justify-center rounded-pill border border-hairline bg-transparent px-6 font-semibold text-ink dark:border-hairline-2 ${HUG_WIDE_CLASS}`,
 } as const;
 
 /**

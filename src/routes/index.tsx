@@ -1,7 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { usernameQuery } from "../modules/account/functions";
 import { Landing } from "../modules/auth/components/Landing";
 import { getSession } from "../modules/auth/functions";
+import { NotificationBell } from "../modules/notifications/components/NotificationBell";
+import { bellStateFn } from "../modules/notifications/functions";
 import { requiresOnboardingQuery } from "../modules/onboarding/functions";
 import { startOnboardingIfNeeded } from "../modules/onboarding/route-decisions";
 
@@ -23,12 +26,30 @@ export const Route = createFileRoute("/")({
       requiresOnboardingQuery(),
     ]);
     startOnboardingIfNeeded(isUnfinished);
-    return { signedIn: session !== null };
+    if (session === null) return { viewer: undefined };
+    // Signed in, the landing's first row names who, and ends in the bell
+    // (R57·271).
+    const [{ username }, bell] = await Promise.all([
+      usernameQuery(),
+      bellStateFn(),
+    ]);
+    return { viewer: { username, bell } };
   },
   component: Home,
 });
 
 function Home() {
-  const { signedIn } = Route.useLoaderData();
-  return <Landing signedIn={signedIn} />;
+  const { viewer } = Route.useLoaderData();
+  return (
+    <Landing
+      viewer={
+        viewer === undefined
+          ? undefined
+          : {
+              username: viewer.username,
+              bell: <NotificationBell {...viewer.bell} />,
+            }
+      }
+    />
+  );
 }
