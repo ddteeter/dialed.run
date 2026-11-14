@@ -253,7 +253,7 @@ export function PhotoBlur({
       {/* The picker's own input inside its label, as the well's Replace
           is (`ui/FileWell`): pressing it opens the picker with no script,
           and the input is what a keyboard reaches. */}
-      <label className={PICK_ANOTHER_CLASS}>
+      <label className={`target ${PICK_ANOTHER_CLASS}`}>
         Pick another
         <input
           type="file"
@@ -581,7 +581,7 @@ function useAnnounced(
  * Pick another is the hairline secondary, worn by the label that holds
  * the picker's input, with a ring when that input has the keyboard.
  */
-const PICK_ANOTHER_CLASS = `target ${SECONDARY_PILL} has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink`;
+const PICK_ANOTHER_CLASS = `${SECONDARY_PILL} has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink`;
 
 /**
  * The photo, the toggle, the sentence and the cells: everything W3 shows

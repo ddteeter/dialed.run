@@ -283,7 +283,11 @@ function SecondPress({
     keep?.focus();
   }, [keep]);
   return isWorking ? (
-    <button type="button" onClick={onStop} className={SECOND_PRESS}>
+    <button
+      type="button"
+      onClick={onStop}
+      className={`target ${SECONDARY_PILL}`}
+    >
       Stop
     </button>
   ) : (
@@ -293,14 +297,12 @@ function SecondPress({
         setKeep(node ?? undefined);
       }}
       onClick={onKeep}
-      className={SECOND_PRESS}
+      className={`target ${SECONDARY_PILL}`}
     >
       Keep it
     </button>
   );
 }
-
-const SECOND_PRESS = `target ${SECONDARY_PILL}`;
 
 /**
  * A release, run a batch a press until nothing is left or Stop is asked

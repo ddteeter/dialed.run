@@ -48,6 +48,9 @@ Get a copy
 end of button, Get a copy
 end of listitem, level 1, position 1, set size 1
 end of list
+heading, Leave, level 2
+Leave
+end of heading, Leave, level 2
 button, Delete account, Deleted after # days. Log in before then to keep it.
 dialog, Delete your account?
 dialog, Delete your account?

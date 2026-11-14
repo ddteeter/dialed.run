@@ -24,18 +24,24 @@ import { signedInAs } from "../signed-in-as";
  * the bell at its end, above the headline. The hero never shares a line
  * with a control.
  */
-export function Landing({
+export function Landing<TBell extends object>({
   viewer,
+  Bell,
 }: Readonly<{
   /**
-  Who is signed in, and the shell's bell, or nothing signed out.
+  Who is signed in, and their bell's state, or nothing signed out.
   */
-  viewer: SignedInViewer | undefined;
+  viewer: SignedInViewer<TBell> | undefined;
+  /**
+  The shell's bell, which `ui/` and this module may not import; the route's
+  to wire (`NotificationBell`).
+  */
+  Bell: (state: TBell) => ReactNode;
 }>): JSX.Element {
   return viewer === undefined ? (
     <SignedOutLanding />
   ) : (
-    <Layout bell={viewer.bell}>
+    <Layout bell={<Bell {...viewer.bell} />}>
       {/* In the product's measure, on its screens' own gutter. */}
       <div className="px-6">
         <div
@@ -58,11 +64,11 @@ export function Landing({
 }
 
 /**
-The signed-in landing's runner: their handle, if any, and the shell's bell.
+The signed-in landing's runner: their handle, if any, and their bell's state.
 */
-interface SignedInViewer {
+interface SignedInViewer<TBell> {
   readonly username: string | undefined;
-  readonly bell: ReactNode;
+  readonly bell: TBell;
 }
 
 /**
