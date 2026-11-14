@@ -6,12 +6,7 @@ end of heading, @feed_#, level 1
 link, Settings
 link, Notifications
 paragraph
-#
-Runs
-#
-Following
-#
-Followers
+# Runs · # Following · # Followers
 end of paragraph
 heading, No runs yet, level 2
 No runs yet

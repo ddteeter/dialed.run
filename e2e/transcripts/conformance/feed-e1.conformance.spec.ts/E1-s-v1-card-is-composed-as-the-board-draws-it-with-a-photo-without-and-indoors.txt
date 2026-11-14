@@ -7,13 +7,13 @@ button, Following, pressed
 button, Your conditions, not pressed
 status
 article
-link, @e#_runner_# :when · #:# Dialed #.# miles # degrees, clear
+link, @e#_runner_# :when Dialed #.# miles # degrees, clear
 @e#_runner_#
-:when · #:#
+:when
 Dialed
 #.# miles
 # degrees, clear
-end of link, @e#_runner_# :when · #:# Dialed #.# miles # degrees, clear
+end of link, @e#_runner_# :when Dialed #.# miles # degrees, clear
 link, Weather data provided by Visual Crossing
 Visual Crossing
 end of link, Weather data provided by Visual Crossing
@@ -22,25 +22,25 @@ Useful
 end of button, Useful, @e#_runner_#’s run, not pressed
 end of article
 article
-link, @e#_runner_# :when · #:# A bit warm #.# miles # degrees, clear
+link, @e#_runner_# :when A bit warm #.# miles # degrees, clear
 @e#_runner_#
-:when · #:#
+:when
 A bit warm
 #.# miles
 # degrees, clear
-end of link, @e#_runner_# :when · #:# A bit warm #.# miles # degrees, clear
+end of link, @e#_runner_# :when A bit warm #.# miles # degrees, clear
 button, Useful, @e#_runner_#’s run, not pressed
 Useful
 end of button, Useful, @e#_runner_#’s run, not pressed
 end of article
 article
-link, @e#_runner_# :when · #:# Dialed #.# miles Indoor
+link, @e#_runner_# :when Dialed #.# miles Indoor
 @e#_runner_#
-:when · #:#
+:when
 Dialed
 #.# miles
 Indoor
-end of link, @e#_runner_# :when · #:# Dialed #.# miles Indoor
+end of link, @e#_runner_# :when Dialed #.# miles Indoor
 button, Useful, @e#_runner_#’s run, not pressed
 Useful
 end of button, Useful, @e#_runner_#’s run, not pressed

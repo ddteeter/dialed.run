@@ -42,6 +42,7 @@ export function ReportAffordance({
   subject,
   viewerId,
   fileReport,
+  blockRunner,
 }: Readonly<{
   subject: ReportSubject;
   /**
@@ -49,6 +50,10 @@ export function ReportAffordance({
   */
   viewerId?: string | undefined;
   fileReport: Parameters<typeof ReportSheet>[0]["fileReport"];
+  /**
+   * A profile's "Block without reporting" (R55·214); absent on an entry.
+   */
+  blockRunner?: Parameters<typeof ReportSheet>[0]["blockRunner"];
 }>): JSX.Element | undefined {
   const [isOpen, setIsOpen] = useState(false);
   // Flips on every opening, and keys the sheet by it: every report starts
@@ -105,6 +110,7 @@ export function ReportAffordance({
         // on the write side.
         canBlock={subject.type === "profile" && subject.authorId !== undefined}
         fileReport={fileReport}
+        blockRunner={blockRunner}
         onFiled={close}
       />
     </>

@@ -24,7 +24,8 @@ import {
   removalReasonSchema,
   declineReasonField,
   renameReasonSchema,
-  reportReasonSchema,
+  entryReportReasonSchema,
+  profileReportReasonSchema,
   reportSubjectTypeSchema,
 } from "./contracts";
 
@@ -43,15 +44,13 @@ const reportNoteSchema = z
   .max(500, "Keep it under 500 characters — a line or two is plenty.")
   .optional();
 
-export const fileReportInput = z.object({
-  subjectType: reportSubjectTypeSchema,
+const reportFields = {
   /**
    * Not a ULID: a product id is one, but a report can name a profile, and
    * user ids come from Better Auth rather than from `newUlid`. Bounded
    * instead, since the only thing downstream does with it is match a row.
    */
   subjectId: rowIdSchema,
-  reason: reportReasonSchema,
   note: reportNoteSchema,
   /**
    * W1's "Block them as well" checkbox. Part of the report rather than a
@@ -60,7 +59,26 @@ export const fileReportInput = z.object({
    * not.
    */
   alsoBlock: z.boolean().optional(),
-});
+};
+
+/**
+ * A report, its reasons by what it names: a profile takes R55·214's
+ * profile reasons, and anything else W1's. A profile reason on an entry
+ * (or the reverse) is refused rather than stored, so the Desk never reads
+ * a sentence that was not on the sheet the runner saw.
+ */
+export const fileReportInput = z.discriminatedUnion("subjectType", [
+  z.object({
+    subjectType: z.literal("profile"),
+    reason: profileReportReasonSchema,
+    ...reportFields,
+  }),
+  z.object({
+    subjectType: reportSubjectTypeSchema.exclude(["profile"]),
+    reason: entryReportReasonSchema,
+    ...reportFields,
+  }),
+]);
 export type FileReportValues = z.infer<typeof fileReportInput>;
 
 export const blockRunnerInput = z.object({

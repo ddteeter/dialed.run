@@ -45,7 +45,7 @@ import {
   publiclyVisibleEntry,
 } from "../safety";
 import { requireOwned, requireOwner } from "../../lib/sql/owned";
-import { allowedLinksOf } from "../closet";
+import { allowedLinksOf, typeWordOf } from "../closet";
 import { purgePublicPages } from "../ops";
 import { newUlid } from "../../lib/ids";
 import { bandFloorC } from "../../lib/contracts/temperature";
@@ -585,6 +585,11 @@ interface EntryDetailItem {
   brand: string | undefined;
   category: string;
   layer: string | undefined;
+  /**
+   * What kind of piece it is, the public kit's type word ("Jacket"), for
+   * the right end of D's kit row (R55·212). None for a removed piece.
+   */
+  kind?: string | undefined;
   flag: ItemFlag | undefined;
   /**
    * The piece's product link, when closet's one read lets it show (round
@@ -768,6 +773,10 @@ export async function getEntryDetail(
         brand: garment?.brand ?? undefined,
         category: garment?.category ?? "accessory",
         layer: garment?.layer ?? undefined,
+        kind:
+          garment === undefined
+            ? undefined
+            : typeWordOf(garment.category, garment.type),
         flag: isOwner ? (row.flag ?? undefined) : undefined,
         url: links.get(row.itemId),
       };

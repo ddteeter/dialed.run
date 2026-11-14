@@ -79,9 +79,24 @@ describe("a slow shared run on a profile (H → D)", () => {
           userId: "01RAVI",
           username: "ravi_k",
           cityLabel: NONE,
+          units: { temp: "f", distance: "mi" },
           recentPublicEntries: [
-            { entryId: "01A", day: "Tue Aug 12", verdict: 0 },
-            { entryId: "01B", day: "Mon Aug 11", verdict: 1 },
+            {
+              entryId: "01A",
+              day: "Tue Aug 12",
+              verdict: 0,
+              distanceM: 5000,
+              indoor: false,
+              conditions: undefined,
+            },
+            {
+              entryId: "01B",
+              day: "Mon Aug 11",
+              verdict: 1,
+              distanceM: 5000,
+              indoor: false,
+              conditions: undefined,
+            },
           ],
         }}
         isFollowing={false}
@@ -97,9 +112,8 @@ describe("a slow shared run on a profile (H → D)", () => {
     const pressed = screen.getByRole("link", { name: /Tue Aug 12/u });
     const brackets = pressed.querySelectorAll(".breathe");
     expect(brackets).toHaveLength(2);
-    for (const bracket of brackets) {
-      expect(bracket.closest(".font-mono")).toHaveTextContent("[Tue Aug 12]");
-    }
+    // The date is the link now, in TYPE.body (R55·210): it breathes there.
+    expect(pressed).toHaveTextContent("[Tue Aug 12]");
     expect(
       screen
         .getByRole("link", { name: /Mon Aug 11/u })

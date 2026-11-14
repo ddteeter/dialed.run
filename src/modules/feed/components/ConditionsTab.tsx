@@ -346,15 +346,22 @@ function CityForm({
         }}
         using={save.pending}
         announce={announce}
+        footnote={
+          // R55·216: a promise before Use this, and no line under "not
+          // found" (the finder holds it back then). Its "after" line,
+          // "Saved to your settings.", has no moment to show: a save hands
+          // the block straight to the new place's weather, and the status
+          // region says "City saved." Design 260 (#686) is open on it.
+          <p data-part="city-note" className="m-0 text-small text-muted">
+            We&rsquo;ll save it to your settings. Change it any time under You.
+          </p>
+        }
       />
       <ControlFailureBand
         failure={save.failure}
         onRetry={save.retry}
         retryRef={save.retryRef}
       />
-      <p className="m-0 text-small text-muted">
-        Saved to your settings. Change it any time under You.
-      </p>
     </div>
   );
 }
@@ -522,7 +529,10 @@ function Matched({
                     data-share={share}
                     className="flex items-center gap-3"
                   >
-                    <span className="h-6 flex-1 rounded-tight bg-tint">
+                    {/* R55·208, the board's: a fixed 96 track at every
+                        width, so the bar never becomes the row; the name
+                        and its count together beside it. */}
+                    <span className="h-6 w-24 shrink-0 rounded-tight bg-tint">
                       <span
                         className={`block h-full rounded-tight ${BAR_FILL[share]}`}
                         style={{
@@ -530,21 +540,23 @@ function Matched({
                         }}
                       />
                     </span>
-                    <span className="flex w-44 items-baseline justify-between gap-2 text-body">
+                    {/* The bar's colour keeps its word (round 26 #9,
+                        rule 10), quiet, between the name and the count. */}
+                    <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-body">
                       {uiGroupLabels[row.group]}
-                      <span className="flex items-baseline gap-2 text-muted">
-                        <Mono step="xs">{SHARE_WORDS[share]}</Mono>
-                        <Mono>
-                          {/* Drawn as a fraction, said as words: a reader
-                              speaks "5/6" as "five slash six". */}
-                          <span aria-hidden="true">
-                            {String(row.runners)}/{String(result.runners)}
-                          </span>
-                          <span className="sr-only">
-                            {`${String(row.runners)} of ${String(result.runners)} runners`}
-                          </span>
-                        </Mono>
-                      </span>
+                      <Mono step="xs" className="text-muted">
+                        {SHARE_WORDS[share]}
+                      </Mono>
+                      <Mono className="text-muted">
+                        {/* Drawn as a fraction, said as words: a reader
+                            speaks "5/6" as "five slash six". */}
+                        <span aria-hidden="true">
+                          {String(row.runners)}/{String(result.runners)}
+                        </span>
+                        <span className="sr-only">
+                          {`${String(row.runners)} of ${String(result.runners)} runners`}
+                        </span>
+                      </Mono>
                     </span>
                   </li>
                 );

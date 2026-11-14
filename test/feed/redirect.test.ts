@@ -163,6 +163,7 @@ describe("orHandlePage", () => {
         username: "ravi_k",
         cityLabel: "Portland",
         recentPublicEntries: [],
+        units: { temp: "f", distance: "mi" },
       },
     };
     expect(orHandlePage(changed)).toBe(changed);

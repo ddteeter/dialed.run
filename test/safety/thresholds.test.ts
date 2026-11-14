@@ -178,6 +178,26 @@ describe("reading a config", () => {
     expect(reportersToHide("other", INVENTED)).toBe(8);
   });
 
+  it("asks no bar of a profile's own reasons: its first report queues it (R55·214)", () => {
+    // A profile report hides nothing, so its own reasons have no
+    // threshold and the config keeps W1's keys alone.
+    expect(reportersToHide("offensive", INVENTED)).toBe(1);
+    expect(reportersToHide("impersonation", INVENTED)).toBe(1);
+    // A value it shares with W1 keeps W1's count.
+    expect(reportersToHide("spam", INVENTED)).toBe(INVENTED.reports.spam);
+  });
+
+  it("refuses a config that names a profile's own reason", () => {
+    expect(
+      parseThresholds(
+        JSON.stringify({
+          ...INVENTED,
+          reports: { ...INVENTED.reports, offensive: 2 },
+        }),
+      ),
+    ).toBeUndefined();
+  });
+
   it("takes the least of the reasons asked about", () => {
     expect(fewestReportersToHide(["spam", "harassment"], INVENTED)).toBe(5);
     expect(fewestReportersToHide(["other"], INVENTED)).toBe(8);

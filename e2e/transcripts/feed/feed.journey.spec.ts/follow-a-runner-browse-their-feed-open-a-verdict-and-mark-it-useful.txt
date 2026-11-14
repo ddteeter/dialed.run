@@ -32,13 +32,18 @@ end of heading, @feed_#, level 1
 Portland, OR, United States
 link, Settings
 paragraph
-#
-Runs
-#
-Following
-#
-Followers
+# Run · # Following · # Followers
 end of paragraph
+heading, Next, level 2
+Next
+end of heading, Next, level 2
+paragraph
+Your last run has no kit yet. Add what you wore, and your closet starts learning what works.
+end of paragraph
+link, Add your kit
+link, Settings
+Settings
+end of link, Settings
 end of main
 status
 end of document

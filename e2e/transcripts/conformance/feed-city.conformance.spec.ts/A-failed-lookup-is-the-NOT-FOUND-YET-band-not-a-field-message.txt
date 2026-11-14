@@ -22,7 +22,7 @@ Not found yet
 Couldn't look that up.
 button, Try again
 paragraph
-Saved to your settings. Change it any time under You.
+We’ll save it to your settings. Change it any time under You.
 end of paragraph
 end of main
 navigation, Main

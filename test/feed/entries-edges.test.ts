@@ -395,6 +395,28 @@ describe("getEntryDetail copes with what is missing", () => {
       name: "[removed item]",
       category: "accessory",
     });
+    // No type word for a piece that is gone (R55·212).
+    expect(detail?.items[0]?.kind).toBeUndefined();
+  });
+
+  it("gives each piece the public kit's type word: its type, else its category (R55·212)", async () => {
+    const userId = await makeUser();
+    const runId = await makeRun({ userId });
+    const typed = await makeItem({ userId, category: "top", type: "jacket" });
+    const untyped = await makeItem({ userId, category: "socks" });
+    const entryId = await attachKit({
+      userId,
+      runId,
+      itemIds: [typed, untyped],
+    });
+
+    const detail = await getEntryDetail(entryId, userId);
+    const kinds = new Map(
+      (detail?.items ?? []).map((item) => [item.itemId, item.kind]),
+    );
+
+    expect(kinds.get(typed)).toBe("Jacket");
+    expect(kinds.get(untyped)).toBe("Socks");
   });
 
   it("shows per-item flags to the owner and to nobody else", async () => {

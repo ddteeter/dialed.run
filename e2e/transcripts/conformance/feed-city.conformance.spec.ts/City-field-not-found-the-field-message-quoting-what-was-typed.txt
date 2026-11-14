@@ -18,9 +18,6 @@ button, Find
 Find
 end of button, Find
 We couldn't find "Portlnd, OR". Check the spelling, or try a nearby city.
-paragraph
-Saved to your settings. Change it any time under You.
-end of paragraph
 end of main
 navigation, Main
 list

@@ -52,6 +52,7 @@ export function RetractEntry({
         </Mono>
         <ConfirmLink
           label="Delete this entry"
+          tone="owner"
           heading="Delete this entry?"
           body="Your verdict, kit and note for this run go, and it leaves the feed and your Call's record. The run stays. This can't be undone."
           verb="Delete entry"

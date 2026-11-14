@@ -4,6 +4,7 @@ import type { ComponentProps, ReactNode } from "react";
 
 import type { Units } from "../../../lib/contracts";
 import { COLUMN, FormStatus, Mono, PhoneBell } from "../../../ui";
+import { FlushBand } from "./FlushBand";
 import { isProvidersReading } from "../strip";
 import type { FeedItem } from "../feed";
 import { isBacklogWorthOpening } from "../route-decisions";
@@ -100,7 +101,7 @@ export function Feed(props: Readonly<FeedProps>) {
     // "left-aligned inside the page measure, not centred, so it lines up
     // with the wide screens' primary column".
     <div className={`${COLUMN} flex flex-col gap-6 px-5 pt-6 wide:px-6`}>
-      {confirmBand}
+      <FlushBand>{confirmBand}</FlushBand>
       <div className="flex items-center gap-3">
         <h1 className="mr-auto font-display text-title uppercase">Feed</h1>
         <Link
@@ -222,10 +223,14 @@ function FollowingTab({
       {compact === undefined ? undefined : (
         <CompactConditions result={compact} units={units} />
       )}
-      {/* Round 40 C5b: posts are divided by a 1px hairline across the
-          column, never a gutter, and each keeps SPACE[4] above and below
-          (PostCard's own `py-4`). */}
-      <div data-part="posts" className="flex flex-col divide-y divide-hairline">
+      {/* R55·205: posts are split by an 8 --tint band from edge to edge,
+          stronger than any rule inside one. The list steps out of the
+          column's gutter and each post puts it back (PostCard's `px-5`),
+          so the band meets the screen's edges. */}
+      <div
+        data-part="posts"
+        className="-mx-5 flex flex-col divide-y-8 divide-tint wide:-mx-6"
+      >
         {items.map((item, index) => (
           <PostCard
             key={item.entryId}

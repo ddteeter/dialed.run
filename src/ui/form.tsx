@@ -999,6 +999,15 @@ const OPTION_ROW_CLASS =
   "target flex cursor-pointer items-center gap-3 border-t border-hairline px-4 py-3 text-body font-normal first:rounded-t-card first:border-t-0 last:rounded-b-card has-[:checked]:inset-ring-2 has-[:checked]:inset-ring-ink";
 
 /**
+ * A row holding a detail is checked by definition, so its ring is plain;
+ * the label inside carries the target and the words' layout.
+ */
+const OPTION_DETAIL_ROW_CLASS =
+  "flex flex-col gap-2 border-t border-hairline px-4 py-3 first:rounded-t-card first:border-t-0 last:rounded-b-card inset-ring-2 inset-ring-ink";
+const OPTION_DETAIL_LABEL_CLASS =
+  "target flex cursor-pointer items-center gap-3 text-body font-normal";
+
+/**
  * How a `ChoiceList`'s options sit: wrapped chips, chips in three columns,
  * or stacked rows in one card (the default).
  */
@@ -1325,6 +1334,14 @@ export function ChoiceList<TOption extends string>(
        */
       optionHints?: Readonly<Record<TOption, string>> | undefined;
       /**
+       * Something under one option's words that belongs to that choice
+       * only, shown while it is the one checked — W1's way-out line under
+       * the intimate-image reason (R55·215, R37). It sits inside the
+       * chosen row but outside the label, so a link in it is its own
+       * control and not part of the radio's name. Stacked rows only.
+       */
+      optionDetail?: Readonly<Partial<Record<TOption, ReactNode>>> | undefined;
+      /**
        * Sets each option's words in `Mono` at this step, so a segmented
        * label reads as one: MONO.xs capitals for SYSTEM / LIGHT / DARK
        * (R50·143.3) and PRIVATE / SHARED / PUBLIC (round 41 #86a/b).
@@ -1419,9 +1436,10 @@ export function ChoiceList<TOption extends string>(
     >
       <div className={optionsLayout(layout)}>
         {options.map((option) => (
-          <label
+          <OptionRow
             key={option}
-            className={isChips ? OPTION_CHIP_CLASS : OPTION_ROW_CLASS}
+            isChips={isChips}
+            detail={value === option ? props.optionDetail?.[option] : undefined}
           >
             <input
               {...described(
@@ -1455,10 +1473,37 @@ export function ChoiceList<TOption extends string>(
                 {optionNotes[option]}
               </Mono>
             )}
-          </label>
+          </OptionRow>
         ))}
       </div>
     </FieldGroup>
+  );
+}
+
+/**
+ * One option: its label, the whole row, or — while the option holds a
+ * detail (R55·215) — the row as a box holding the label and the detail
+ * under it, the chosen ring on the box so the detail reads as part of the
+ * choice. The label keeps the row's target and pointer.
+ */
+function OptionRow({
+  isChips,
+  detail,
+  children,
+}: Readonly<{
+  isChips: boolean;
+  detail: ReactNode;
+  children: ReactNode;
+}>): JSX.Element {
+  if (isChips) return <label className={OPTION_CHIP_CLASS}>{children}</label>;
+  if (detail === undefined) {
+    return <label className={OPTION_ROW_CLASS}>{children}</label>;
+  }
+  return (
+    <div data-part="option-with-detail" className={OPTION_DETAIL_ROW_CLASS}>
+      <label className={OPTION_DETAIL_LABEL_CLASS}>{children}</label>
+      <div className="pl-8">{detail}</div>
+    </div>
   );
 }
 

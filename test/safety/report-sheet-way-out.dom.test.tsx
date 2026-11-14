@@ -84,6 +84,18 @@ describe("W1's way out to /takedown", () => {
     ).toHaveAttribute("href", "/takedown");
     // Where else to go waits for the receipt (round 41 #85).
     expect(elsewhere()).toBeNull();
+    // R55·215: inside the chosen row, under the reason's words, and not
+    // part of the radio's name.
+    const row = wayOut()?.closest("[data-part='option-with-detail']");
+    expect(row).toContainElement(
+      screen.getByRole("radio", { name: reportReasonLabels.intimate }),
+    );
+    expect(wayOut()).toHaveClass("text-small");
+
+    await user.click(
+      screen.getByRole("radio", { name: reportReasonLabels.spam }),
+    );
+    expect(wayOut()).toBeNull();
   });
 });
 

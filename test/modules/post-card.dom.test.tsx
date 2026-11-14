@@ -139,6 +139,7 @@ describe("PostCard: order and absence", () => {
       "author",
       "verdict-badge",
       "photo",
+      "photo-counter",
       "run-strip",
       "reactions",
     ]);
@@ -160,10 +161,9 @@ describe("PostCard: order and absence", () => {
 
   it("gives a lone photo no counter (round 35 #53c)", async () => {
     const post = await card({ photoKeys: ["user/01/a.jpg"] });
-    expect(post.querySelector('[data-part="photo"]')).toHaveAttribute(
-      "src",
-      "/feed/photo/user/01/a.jpg",
-    );
+    expect(
+      post.querySelector('[data-part="photo"]')?.querySelector("img"),
+    ).toHaveAttribute("src", "/feed/photo/user/01/a.jpg");
     expect(within(post).queryByText(/\d \/ \d/u)).toBeNull();
   });
 
@@ -191,8 +191,9 @@ describe("PostCard: the author row", () => {
     const post = await card({ authorUsername: "dana_k" });
 
     const author = post.querySelector('[data-part="author"]');
-    expect(author).toHaveTextContent("D@dana_k2h ago · 10:00 AM");
-    expect(screen.getByText("2h ago · 10:00 AM")).toHaveClass("font-mono");
+    // Today's run drops the clock (R55·204).
+    expect(author).toHaveTextContent("D@dana_k2h ago");
+    expect(screen.getByText("2h ago")).toHaveClass("font-mono");
   });
 
   it("says A runner for someone with no handle", async () => {
@@ -207,13 +208,19 @@ describe("PostCard: the author row", () => {
   });
 
   it("dates the run in its own zone", async () => {
-    await card({
+    const post = await card({
+      // Yesterday, so the clock shows: 10am UTC is 5am in Chicago.
+      startedAt: NOW - 26 * 3600,
       conditions: {
         ...pointConditions({ tempC: 5, feelsLikeC: 3 }),
         timeZone: "America/Chicago",
       },
     });
-    expect(screen.getByText("2h ago · 5:00 AM")).toBeVisible();
+    // The "·" is bound to the time (R55·204), which a text matcher would
+    // normalise away, so the raw text is read.
+    expect(post.querySelector('[data-part="author"]')?.textContent).toContain(
+      "Yesterday\u{A0}· 5:00 AM",
+    );
   });
 });
 
@@ -558,12 +565,35 @@ describe("PostCard: the author's under-review marker (R-62, D-67; round 29 #4)",
   });
 });
 
+describe("PostCard: the byline and Useful (R55·204–205)", () => {
+  it("centres the avatar, tag and badge on the handle's line, and lets the meta wrap under it", async () => {
+    const post = await card({ verdict: 0, underReview: true });
+    const author = post.querySelector('[data-part="author"]');
+    expect(author).toHaveClass("flex", "items-start", "gap-3");
+    expect(author).not.toHaveClass("items-center");
+    const avatar = author?.querySelector('[aria-hidden="true"]');
+    expect(avatar?.parentElement).toHaveClass("-my-2", "shrink-0");
+    const badge = post.querySelector('[data-part="verdict-badge"]');
+    const end = badge?.parentElement;
+    expect(end).toContainElement(
+      post.querySelector('[data-part="review-tag"]'),
+    );
+    expect(end).toHaveClass("flex", "shrink-0", "whitespace-nowrap");
+  });
+
+  it("grows Useful's 44 target into the post's padding", async () => {
+    const post = await card();
+    const useful = within(post).getByRole("button", { name: /Useful/u });
+    expect(useful).toHaveClass("target", "-my-3", "self-start");
+  });
+});
+
 describe("PostCard: the viewer's own post says so (the Feed board)", () => {
   it("ends the time line with YOU on the viewer's own post", async () => {
     const post = await card({ isOwn: true });
     const author = post.querySelector('[data-part="author"]');
 
-    expect(author?.textContent).toMatch(/^AA runner2h ago · 10:00 AM · You$/u);
+    expect(author?.textContent).toMatch(/^AA runner2h ago\u{A0}· You$/u);
   });
 
   it("says nothing of the kind on anyone else's", async () => {

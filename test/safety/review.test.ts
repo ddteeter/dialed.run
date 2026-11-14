@@ -978,6 +978,12 @@ describe("the queue itself", () => {
 describe("reading the reasons back out of one column", () => {
   it("keeps the ones this app knows", () => {
     expect(reasonsFrom("explicit,spam")).toEqual(["explicit", "spam"]);
+    // A profile's own (R55·214) reach the Desk too.
+    expect(reasonsFrom("offensive,impersonation,harassment")).toEqual([
+      "offensive",
+      "impersonation",
+      "harassment",
+    ]);
   });
 
   it("gives back nothing for a subject nobody reported", () => {

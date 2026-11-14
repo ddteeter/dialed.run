@@ -69,8 +69,9 @@ export function useFollowToggle({
 }
 
 /**
- * The pill. Follow is the primary, in the action pink; Following drops to
- * a hairline, because following again is not the thing to do next.
+ * The pill. On H's header Follow is the primary, in the action pink, and
+ * Following drops to a hairline, because following again is not the thing
+ * to do next; on a list row both are quieter (`PILL_LOOK`).
  *
  * **On a list row its name carries the handle** (round 52 #157): heard
  * alone, a row's pill said "Follow" and not whose. `handle` is that
@@ -89,11 +90,7 @@ export function FollowPill({
       onClick={() => {
         void control.run();
       }}
-      className={`target shrink-0 cursor-pointer rounded-pill px-5 py-2 text-body font-bold ${
-        isFollowing
-          ? "border border-ink bg-transparent text-ink"
-          : "border-none bg-action text-accent-ink"
-      }`}
+      className={`target ${pillLook(handle === undefined ? "header" : "row", isFollowing)}`}
     >
       <PendingLabel
         label={isFollowing ? "Following" : "Follow"}
@@ -105,6 +102,31 @@ export function FollowPill({
       )}
     </button>
   );
+}
+
+/**
+ * The pill's look. On H's header, Follow is the primary in the action
+ * pink and Following a hairline. On a list row (R55·217), nine pink pills
+ * stacked outweighed the page, so Follow is the 44 hairline pill and
+ * Following is `--muted` text: the only pink left is Log a run.
+ */
+const PILL_LOOK = {
+  header: {
+    follow:
+      "shrink-0 cursor-pointer rounded-pill border-none bg-action px-5 py-2 text-body font-bold text-accent-ink",
+    following:
+      "shrink-0 cursor-pointer rounded-pill border border-ink bg-transparent px-5 py-2 text-body font-bold text-ink",
+  },
+  row: {
+    follow:
+      "shrink-0 cursor-pointer rounded-pill border border-hairline bg-transparent px-5 py-2 text-body font-bold text-ink",
+    following:
+      "shrink-0 cursor-pointer border-none bg-transparent px-2 py-2 text-body text-muted",
+  },
+} as const;
+
+function pillLook(where: "header" | "row", isFollowing: boolean): string {
+  return PILL_LOOK[where][isFollowing ? "following" : "follow"];
 }
 
 /**

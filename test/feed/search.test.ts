@@ -6,7 +6,14 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { follow } from "../../src/modules/feed/follows";
 import { searchRunners } from "../../src/modules/feed/search";
-import { makeVerifiedUser, resetTables } from "./helpers";
+import { blockRunner } from "../../src/modules/safety/blocks";
+import {
+  makeEntry,
+  makeRun,
+  makeVerifiedUser,
+  NOW,
+  resetTables,
+} from "./helpers";
 
 /**
  * Runner search (round 22, item 15): a prefix on the handle, never
@@ -30,7 +37,13 @@ describe("searchRunners", () => {
     const userId = await makeVerifiedUser({ username: "tracksmith_runner" });
 
     expect(await searchRunners(viewer, "  Tracksmith ")).toStrictEqual([
-      { userId, username: "tracksmith_runner", following: false },
+      {
+        userId,
+        username: "tracksmith_runner",
+        following: false,
+        sharedRuns: 0,
+        sharedSince: undefined,
+      },
     ]);
   });
 
@@ -96,7 +109,13 @@ describe("searchRunners", () => {
     const viewer = await makeVerifiedUser();
     const maya = await makeVerifiedUser({ username: "maya" });
     expect(await searchRunners(viewer, " @Maya")).toStrictEqual([
-      { userId: maya, username: "maya", following: false },
+      {
+        userId: maya,
+        username: "maya",
+        following: false,
+        sharedRuns: 0,
+        sharedSince: undefined,
+      },
     ]);
   });
 
@@ -112,5 +131,55 @@ describe("searchRunners", () => {
     expect(JSON.stringify(plan.results)).toContain(
       "USING INDEX user_profiles_username_nocase",
     );
+  });
+});
+
+describe("searchRunners: the second line (R55·217)", () => {
+  it("counts a runner's shared runs the viewer may see, and the first one's time", async () => {
+    const viewer = await makeVerifiedUser();
+    const rae = await makeVerifiedUser({ username: "runner_rae" });
+    const quiet = await makeVerifiedUser({ username: "runner_quiet" });
+    for (const [createdAt, audience] of [
+      [NOW - 86_400 * 30, "runners"],
+      [NOW - 86_400, "runners"],
+      [NOW - 86_400 * 90, "private"],
+    ] as const) {
+      await makeEntry({
+        userId: rae,
+        runId: await makeRun({ userId: rae, startedAt: createdAt }),
+        createdAt,
+        audience,
+      });
+    }
+    // Only private runs: a private run is nobody's number.
+    await makeEntry({
+      userId: quiet,
+      runId: await makeRun({ userId: quiet }),
+      audience: "private",
+    });
+
+    const results = await searchRunners(viewer, "runner");
+    const byId = new Map(results.map((row) => [row.userId, row]));
+
+    expect(byId.get(rae)).toMatchObject({
+      sharedRuns: 2,
+      sharedSince: NOW - 86_400 * 30,
+    });
+    expect(byId.get(quiet)).toMatchObject({
+      sharedRuns: 0,
+      sharedSince: undefined,
+    });
+  });
+
+  it("counts nothing the viewer could not open: a runner they blocked is not found at all", async () => {
+    const viewer = await makeVerifiedUser();
+    const blocked = await makeVerifiedUser({ username: "runner_gone" });
+    await makeEntry({
+      userId: blocked,
+      runId: await makeRun({ userId: blocked }),
+    });
+    await blockRunner(viewer, blocked);
+
+    expect(await searchRunners(viewer, "runner")).toStrictEqual([]);
   });
 });

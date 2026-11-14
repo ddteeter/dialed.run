@@ -93,6 +93,7 @@ describe("the status region on first paint", () => {
           username: "Ravi K",
           cityLabel: NOTHING,
           recentPublicEntries: [],
+          units: { temp: "f", distance: "mi" },
         }}
         isFollowing={false}
         follow={done}

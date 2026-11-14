@@ -17,6 +17,7 @@ export { Layout, SignedOutLayout } from "./Layout";
 export { ListSection } from "./ListSection";
 export { CoverageMark, VerdictMark } from "./Marks";
 export type { CoverageLevel, VerdictKind } from "./Marks";
+export { PagerArrows, pagerKeys } from "./PagerArrows";
 export { Mono } from "./Mono";
 export { OnboardingProgress } from "./OnboardingProgress";
 export { OnboardingShell } from "./OnboardingShell";
@@ -90,7 +91,7 @@ export {
 export { useListMotion } from "./use-list-motion";
 export { GarminAttribution } from "./GarminAttribution";
 export { CREDIT_LABEL, WeatherAttribution } from "./WeatherAttribution";
-export { verdictHue } from "./verdict-hue";
+export { verdictHue, verdictTextHue } from "./verdict-hue";
 export { Wordmark } from "./Wordmark";
 export { CITY_HINT, CityFinder } from "./CityFinder";
 export { useTurnstileToken } from "./use-turnstile-token";

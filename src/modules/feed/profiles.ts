@@ -41,6 +41,18 @@ function db() {
 
 const RECENT_LIMIT = 20;
 
+/**
+ * What `observationsForRuns` keys a run's weather on: its id, place, start
+ * and span. One projection for H's rows and G's next step.
+ */
+const RUN_OBSERVATION_KEY = {
+  id: runs.id,
+  lat: runs.lat,
+  lng: runs.lng,
+  startedAt: runs.startedAt,
+  durationS: runs.durationS,
+};
+
 export interface OwnProfile {
   userId: string;
   username: string | undefined;
@@ -80,7 +92,16 @@ export interface OwnProfile {
     (round 28 #6, round 29 #4).
     */
     underReview: boolean;
+    /**
+    The run's verdict, −2..+2, or none yet: R55·210's row says it.
+    */
+    verdict: number | null;
   }[];
+  /**
+  R55·209f: the latest run, while the runner has runs and no kit on any
+  of them — G's one next step. Absent otherwise.
+  */
+  nextStep?: { runId: string; conditions: Conditions | undefined } | undefined;
 }
 
 /**
@@ -119,7 +140,9 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
     wearCounts.set(row.itemId, (wearCounts.get(row.itemId) ?? 0) + 1);
   }
   const topItemIds = topByCount(wearCounts, 5).map(([itemId]) => itemId);
-  const nameById = await garmentNamesByIds(database, topItemIds);
+  const nameById = await garmentNamesByIds(database, topItemIds, {
+    withBrand: true,
+  });
 
   const recent = profileEntries.slice(0, RECENT_LIMIT);
 
@@ -161,10 +184,37 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
         distanceM: e.distanceM,
         indoor: e.indoor,
         conditions,
+        verdict: e.verdict,
         underReview: isUnderReviewForAuthor({ ...e, userId }, userId),
       };
     }),
+    // With no entries, the latest run if there is one: no run, no step.
+    nextStep:
+      profileEntries.length === 0
+        ? await lastRunWithNoKit(database, userId)
+        : undefined,
   };
+}
+
+/**
+ * R55·209f: the runner's latest run, for G's one next step while they
+ * have runs but no kit on any. Its conditions, if the weather has them,
+ * say what the closet would start learning about. The latest by start, on
+ * `runs_user_started`: one index probe.
+ */
+async function lastRunWithNoKit(
+  database: DrizzleD1Database,
+  userId: string,
+): Promise<OwnProfile["nextStep"]> {
+  const [run] = await database
+    .select(RUN_OBSERVATION_KEY)
+    .from(runs)
+    .where(eq(runs.userId, userId))
+    .orderBy(desc(runs.startedAt))
+    .limit(1);
+  if (run === undefined) return undefined;
+  const observed = await observationsForRuns([run]);
+  return { runId: run.id, conditions: observed.get(run.id) };
 }
 
 export interface OtherProfile {
@@ -180,7 +230,18 @@ export interface OtherProfile {
      */
     day: string;
     verdict: number | null;
+    /**
+    R55·210: the row G draws for the same run, distance and conditions.
+    */
+    distanceM: number;
+    indoor: boolean;
+    conditions: Conditions | undefined;
   }[];
+  /**
+  The viewer's own units: the rows' distances and temperatures are
+  measured values, rendered in them.
+  */
+  units: Units;
 }
 
 /**
@@ -228,14 +289,10 @@ export function recentPublicEntriesStatement(
       id: outfitEntries.id,
       createdAt: outfitEntries.createdAt,
       verdict: outfitEntries.verdict,
+      distanceM: runs.distanceM,
+      indoor: runs.indoor,
       // The run's place, start and span, to date it where it was run.
-      run: {
-        id: runs.id,
-        lat: runs.lat,
-        lng: runs.lng,
-        startedAt: runs.startedAt,
-        durationS: runs.durationS,
-      },
+      run: RUN_OBSERVATION_KEY,
     },
     and(eq(outfitEntries.userId, userId), publiclyVisibleEntry(viewerId)),
   )
@@ -275,7 +332,7 @@ export async function otherProfile(
     userId,
     viewerId,
   );
-  const [observed, [runnerZone]] = await Promise.all([
+  const [observed, [runnerZone], units] = await Promise.all([
     observationsForRuns(entries.map((e) => e.run)),
     columnWhere(
       database,
@@ -283,17 +340,26 @@ export async function otherProfile(
       userProfiles.timeZone,
       eq(userProfiles.userId, userId),
     ),
+    unitsFor(database, viewerId),
   ]);
 
   return {
     userId,
     username: profile.username,
     cityLabel: profile.cityLabel,
-    recentPublicEntries: entries.map((e) => ({
-      entryId: e.id,
-      day: runDayOf(e.run.startedAt, observed.get(e.run.id), runnerZone),
-      verdict: e.verdict,
-    })),
+    units,
+    recentPublicEntries: entries.map((e) => {
+      const conditions = observed.get(e.run.id);
+      return {
+        entryId: e.id,
+        // G's prose day, so one row reads the same on both (R55·210).
+        day: runDayOf(e.run.startedAt, conditions, runnerZone, proseDayLabel),
+        verdict: e.verdict,
+        distanceM: e.distanceM,
+        indoor: e.indoor,
+        conditions,
+      };
+    }),
   };
 }
 

@@ -28,6 +28,7 @@ import { EMAIL_PREFERENCE_KINDS } from "../lib/contracts/email";
 import { GAVE_UP_KINDS } from "../lib/contracts/gave-up";
 import { HOLD_CAUSES } from "../lib/contracts/hold-causes";
 import { PRECIP_LEVELS } from "../lib/contracts/temperature";
+import { STORED_REPORT_REASONS } from "../lib/contracts/report-reasons";
 import {
   CORRECTION_FIELDS,
   CORRECTION_STATUSES,
@@ -1460,18 +1461,10 @@ export const reports = /*#__PURE__*/ sqliteTable(
       enum: ["entry", "photo", "profile", "product"],
     }).notNull(),
     subjectId: text("subject_id").notNull(),
-    reason: text("reason", {
-      enum: [
-        "explicit",
-        // Design 136 (D-117): one report hides at once. Plain text in
-        // SQLite, so a new value needs no migration.
-        "intimate",
-        "harassment",
-        "spam",
-        "not_theirs",
-        "other",
-      ],
-    }).notNull(),
+    // Read from the report sheets' tables (R-77, #413): W1's reasons and a
+    // profile's (R55·214). Plain text in SQLite, so a new value needs no
+    // migration.
+    reason: text("reason", { enum: STORED_REPORT_REASONS }).notNull(),
     note: text("note"),
     createdAt: integer("created_at").notNull(),
   },

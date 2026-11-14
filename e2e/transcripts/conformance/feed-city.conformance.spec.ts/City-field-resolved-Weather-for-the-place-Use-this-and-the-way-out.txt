@@ -29,7 +29,7 @@ Use this
 end of button, Use this, Weather for Portland, OR, United States
 Not it? Add more to the name.
 paragraph
-Saved to your settings. Change it any time under You.
+We’ll save it to your settings. Change it any time under You.
 end of paragraph
 end of main
 navigation, Main

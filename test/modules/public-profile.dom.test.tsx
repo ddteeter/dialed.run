@@ -108,6 +108,16 @@ async function firstPaint(element: ReactElement): Promise<string> {
   return renderToString(<RouterProvider router={router} />);
 }
 
+/**
+ * `count` rotation pieces named "{prefix} 1" onwards.
+ */
+function pieces(count: number, prefix: string) {
+  return Array.from({ length: count }, (_, index) => ({
+    name: `${prefix} ${String(index + 1)}`,
+    detail: "Top",
+  }));
+}
+
 async function show(element: ReactElement) {
   const router = routerFor(element);
   await router.load();
@@ -440,6 +450,84 @@ describe("the public profile, signed out", () => {
     // React says so when two rows share a key.
     expect(errors).not.toHaveBeenCalled();
     errors.mockRestore();
+  });
+
+  it("shows five a group and folds the rest under + N more, a group of six whole (R55·218d)", async () => {
+    await show(
+      profilePage({
+        ...PROFILE,
+        rotation: {
+          inUse: pieces(31, "Piece"),
+          shoes: pieces(6, "Shoe"),
+          retired: pieces(4, "Old"),
+        },
+      }),
+    );
+    const rail = part("rail") ?? document.body;
+    // In use: the first five, then "+ 26 more", which opens the rest.
+    const more = rail.querySelector<HTMLDetailsElement>(
+      "[data-part='piece-more']",
+    );
+    expect(more).not.toBeNull();
+    expect(more?.open).toBe(false);
+    const summary = more?.querySelector("summary");
+    expect(summary).toHaveTextContent("+ 26 more");
+    expect(summary).toHaveClass("target", "font-bold", "text-cold-text");
+    const inUse = within(rail).getByRole("heading", { name: "In use · 31" })
+      .parentElement?.parentElement;
+    const shown = inUse?.querySelector(":scope > ul");
+    expect(shown?.children).toHaveLength(5);
+    expect(more?.querySelectorAll("li")).toHaveLength(26);
+    expect(within(more ?? document.body).getByText("Piece 6")).toBeTruthy();
+    // Shoes: six, so all six and no fold.
+    const shoes = within(rail).getByRole("heading", { name: "Shoes · 6" })
+      .parentElement?.parentElement;
+    expect(shoes?.querySelectorAll("li")).toHaveLength(6);
+    expect(shoes?.querySelector("details")).toBeNull();
+    // Retired folds to one line, its heading the summary, with a chevron.
+    const retired = rail.querySelector<HTMLDetailsElement>(
+      "[data-part='piece-fold']",
+    );
+    expect(retired?.open).toBe(false);
+    expect(retired?.querySelector("summary")).toContainElement(
+      within(rail).getByRole("heading", { name: "Retired · 4" }),
+    );
+    expect(retired?.querySelector("summary")).toHaveClass(
+      "target",
+      "flex",
+      "justify-between",
+      "border-y",
+      "border-hairline",
+    );
+    expect(retired?.querySelector("summary")?.querySelector("svg")).toHaveClass(
+      "text-muted",
+      "group-open:rotate-90",
+    );
+    expect(retired).toHaveClass("group");
+    expect(retired?.querySelectorAll("li")).toHaveLength(4);
+  });
+
+  it("rules each rotation row 44 tall, the name truncating before its word", async () => {
+    await show(profilePage(PROFILE));
+    const row = screen.getByText("Brighton Base Layer").closest("li");
+    expect(row).toHaveClass(
+      "flex",
+      "min-h-target",
+      "items-center",
+      "justify-between",
+      "border-b",
+      "border-hairline",
+    );
+    expect(screen.getByText("Brighton Base Layer")).toHaveClass(
+      "min-w-0",
+      "truncate",
+    );
+    expect(screen.getByText("Pegasus 40")).toHaveClass(
+      "min-w-0",
+      "truncate",
+      "line-through",
+    );
+    expect(row?.parentElement).toHaveClass("border-t", "border-hairline");
   });
 
   it("leaves out a rotation group with nothing in it", async () => {

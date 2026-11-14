@@ -75,7 +75,9 @@ export function UsefulButton({
         onClick={() => {
           void markUseful.run(!useful.reacted);
         }}
-        className={`target flex cursor-pointer items-center self-start border-none bg-transparent p-0 ${
+        // R55·205: the 44 target grows into the post's padding and the gap
+        // above, so the drawn words keep the card's rhythm.
+        className={`target -my-3 flex cursor-pointer items-center self-start border-none bg-transparent p-0 ${
           useful.reacted ? "font-semibold text-cold-text" : "text-quiet"
         }`}
       >

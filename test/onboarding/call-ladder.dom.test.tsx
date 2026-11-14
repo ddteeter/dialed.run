@@ -17,7 +17,6 @@ import {
 } from "../../src/modules/onboarding/components/CallLadder";
 import { ladderFrom } from "../../src/modules/onboarding/ladder";
 import { queryWeatherCredit, WEATHER_CREDIT } from "../ui/weather-credit";
-import { bracketed } from "../ui/bracketed";
 
 /**
  * The Call tab's teaser — K, as round 22's item 24 rules it.
@@ -62,11 +61,27 @@ const countdown = () => {
 };
 
 /**
-The band rows, not the legend's — both are lists of `<li>`.
+The bands said in words (the strip is drawn for the eye), not the legend.
 */
 function bandRows() {
   const [bands] = screen.getAllByRole("list");
   return within(bands ?? document.body).getAllByRole("listitem");
+}
+
+function strip(): HTMLElement {
+  const found = document.querySelector<HTMLElement>(
+    "[data-part='coverage-strip']",
+  );
+  if (found === null) throw new Error("no strip");
+  return found;
+}
+
+function axis(): HTMLElement {
+  const found = document.querySelector<HTMLElement>(
+    "[data-part='coverage-axis']",
+  );
+  if (found === null) throw new Error("no axis");
+  return found;
 }
 
 describe("K's header", () => {
@@ -114,7 +129,7 @@ describe("zero verdicts (round 26 #15)", () => {
 
     expect(CALL_VERDICT_THRESHOLD).toBe(15);
     expect(
-      within(countdown()).getByText("The Call · 0 of 15 verdicts"),
+      within(countdown()).getByText("The Call · 0 of 15 needed"),
     ).toBeVisible();
     expect(
       screen.getByText("Log 15 verdicts and the Call starts."),
@@ -157,7 +172,7 @@ describe("partway (round 26 #15: 4 OF 15)", () => {
     );
 
     expect(
-      within(countdown()).getByText("The Call · 4 of 15 verdicts"),
+      within(countdown()).getByText("The Call · 4 of 15 needed"),
     ).toBeVisible();
     const meter = cells();
     expect(meter.meter).toHaveAccessibleName("4 of 15 verdicts logged");
@@ -206,7 +221,7 @@ describe("partway (round 26 #15: 4 OF 15)", () => {
 });
 
 describe("threshold met (round 22, item 24)", () => {
-  it("keeps K, fills the meter, says the Call is next, and offers no button", async () => {
+  it("keeps K, fills the meter, says the Call is next, and ends on Log another run (R55·231)", async () => {
     await renderLadder(
       <CallLadder
         ladder={ladderFrom([band(0, { dialed: CALL_VERDICT_THRESHOLD + 3 })])}
@@ -214,7 +229,7 @@ describe("threshold met (round 22, item 24)", () => {
     );
 
     expect(
-      within(countdown()).getByText("The Call · 15 of 15 verdicts"),
+      within(countdown()).getByText("The Call · 15 of 15 needed"),
     ).toBeVisible();
     expect(cells().logged).toHaveLength(15);
     expect(cells().empty).toHaveLength(0);
@@ -223,10 +238,19 @@ describe("threshold met (round 22, item 24)", () => {
       screen.getByText("The Call arrives in the next release."),
     ).toBeVisible();
     expect(screen.queryByText(/and the Call starts/u)).toBeNull();
-    // "No button — there's no B1 to hand off to." The one link left is
-    // Visual Crossing's credit under the coverage (D-144), not a way on.
+    // "No button — there's no B1 to hand off to." Visual Crossing's
+    // credit under the coverage (D-144), then R55·231's way to keep
+    // logging, pink and after a hairline: no Log a run pill.
     expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual(
-      [WEATHER_CREDIT],
+      [WEATHER_CREDIT, "Log another run"],
+    );
+    const another = screen.getByRole("link", { name: "Log another run" });
+    expect(another).toHaveAttribute("href", "/runs/new");
+    expect(another).toHaveClass("target", "font-bold", "text-cold-text");
+    expect(another.parentElement).toHaveClass(
+      "border-t",
+      "border-hairline",
+      "pt-4",
     );
     expect(screen.queryByRole("button")).toBeNull();
     expect(screen.queryByText("Log this next")).toBeNull();
@@ -240,8 +264,14 @@ describe("coverage", () => {
         ladder={ladderFrom([band(0, { dialed: 3 }), band(5, { cold: 2 })])}
       />,
     );
-    expect(screen.getByText("Your coverage")).toBeVisible();
-    expect(screen.getByText(bracketed("5 verdicts"))).toBeVisible();
+    // R55·231: a heading, and the head counts every verdict, saying so.
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Your coverage" }),
+    ).toHaveClass("font-display", "text-heading");
+    expect(screen.getByText("5 verdicts in all")).toHaveClass(
+      "text-mono-xs",
+      "text-muted",
+    );
   });
 
   it("credits Visual Crossing inside the coverage, whose bands are feels-like bands (D-144)", async () => {
@@ -253,7 +283,7 @@ describe("coverage", () => {
     expect(queryWeatherCredit(coverage)).not.toBeNull();
   });
 
-  it("renders every band it was given, gaps included", async () => {
+  it("draws every band it was given, gaps included, as one strip over an axis (R55·231)", async () => {
     await renderLadder(
       <CallLadder
         ladder={ladderFrom([
@@ -264,13 +294,29 @@ describe("coverage", () => {
       />,
     );
 
+    // One cell a band, square-cornered and filling its track.
+    expect(strip().style.gridTemplateColumns).toBe("repeat(3, minmax(0, 1fr))");
+    expect(strip()).toHaveClass("grid", "gap-0.5");
+    const marks = [...strip().children];
+    expect(
+      marks.map((mark) =>
+        mark instanceof HTMLElement ? mark.dataset.coverage : undefined,
+      ),
+    ).toEqual(["covered", "unknown", "partial"]);
+    expect(marks[0]).toHaveClass("block", "h-7", "w-full", "rounded-none");
+    // Under each cell its floor, then its count; the eye's, not the ear's.
+    expect(axis().style.gridTemplateColumns).toBe("repeat(3, minmax(0, 1fr))");
+    expect([...axis().children].map((cell) => cell.textContent)).toEqual([
+      "0°3",
+      "5°0",
+      "10°1",
+    ]);
+    expect(strip().parentElement).toHaveAttribute("aria-hidden", "true");
+    // The gap is the point of the screen: said in words too.
     const rows = bandRows();
     expect(rows).toHaveLength(3);
-    // The gap is the point of the screen — it has to be visible to be
-    // asked for.
-    expect(drawnText(rows[1])).toContain("[5–10°]");
-    expect(saidText(rows[1])).toContain("5 to 10 degrees");
-    expect(rows[1]).toHaveTextContent("unknown");
+    expect(rows[1]).toHaveTextContent("5 to 10 degrees, unknown, 0 verdicts");
+    expect(rows[1]?.parentElement).toHaveClass("sr-only");
   });
 
   it("labels coverage as text, never as a mark alone", async () => {
@@ -317,6 +363,8 @@ describe("coverage", () => {
       "partial",
       "unknown",
     ]);
+    // The legend's keys are 12 squares.
+    expect(marks[3]).toHaveClass("inline-block", "size-3");
     for (const mark of marks) {
       expect(mark.className).not.toMatch(/pink|teal/);
     }
@@ -340,6 +388,20 @@ describe("coverage", () => {
     expect(inLegend.getByText(/covered 2/)).toBeVisible();
     expect(inLegend.getByText(/partial 1/)).toBeVisible();
     expect(inLegend.getByText(/unknown 1/)).toBeVisible();
+    expect(legend).toHaveClass("flex", "flex-wrap", "gap-4");
+  });
+
+  it("leaves a level at zero out of the legend (R55·231: UNKNOWN 0 goes)", async () => {
+    await renderLadder(
+      <CallLadder
+        ladder={ladderFrom([band(0, { dialed: 3 }), band(5, { dialed: 1 })])}
+      />,
+    );
+    const legend = within(screen.getAllByRole("list")[1] ?? document.body);
+    expect(legend.getAllByRole("listitem")).toHaveLength(2);
+    expect(legend.queryByText(/unknown/u)).toBeNull();
+    expect(legend.getByText("covered 1")).toBeVisible();
+    expect(legend.getByText("partial 1")).toBeVisible();
   });
 
   it("shows how many verdicts each band holds, adding all three kinds", async () => {

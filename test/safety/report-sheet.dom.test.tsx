@@ -1,9 +1,18 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { EMAIL_UNCONFIRMED_CODE } from "../../src/lib/auth-signal";
-import { reportReasons } from "../../src/modules/safety/contracts";
+import {
+  profileReportReasons,
+  reportReasons,
+} from "../../src/modules/safety/contracts";
 import { ReportSheet } from "../../src/modules/safety/components/ReportSheet";
 import type { ConfirmGate } from "../../src/ui";
 import { UnconfirmedRefusalAnswer } from "../../src/ui/unconfirmed-refusal";
@@ -78,28 +87,6 @@ describe("the sheet names whose entry it is (round 26 #7)", () => {
       "text-micro",
       "text-quiet",
     );
-  });
-
-  it("asks about a profile's runner by handle, without the entry, and says the handle once (E1-12)", () => {
-    renderSheet({
-      subject: {
-        type: "profile",
-        id: "01RAVI",
-        label: "@ravi_k",
-        authorName: "ravi_k",
-      },
-    });
-    expect(
-      screen.getByRole("dialog", { name: "Report @ravi_k?" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Report @ravi_k?" }),
-    ).toBeInTheDocument();
-    // The label repeats the title's handle on a profile, so it goes.
-    expect(screen.queryByText("@ravi_k")).toBeNull();
-    expect(
-      screen.getByText(/(?:^|\s)@ravi_k is never told who reported it\./u),
-    ).toBeInTheDocument();
   });
 
   it("falls back to the entry when there is no handle", () => {
@@ -547,5 +534,165 @@ describe("ReportSheet: a lapsed session (Au7, D-155)", () => {
     renderSheet();
 
     expect(carriedSince()).toEqual(["page"]);
+  });
+});
+
+/**
+ * R55·214: a profile's own sheet, "Report or block @handle", with profile
+ * reasons only, and a third way out that blocks without a report.
+ */
+describe("ReportSheet on a profile (R55·214)", () => {
+  const profile: SheetProps["subject"] = {
+    type: "profile",
+    id: "01RAVI",
+    label: "@ravi_k",
+    authorName: "ravi_k",
+    authorId: "01RAVI",
+  };
+
+  it("is titled Report or block @handle, and says the handle once", () => {
+    renderSheet({ subject: profile });
+    expect(
+      screen.getByRole("dialog", { name: "Report or block @ravi_k" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Report or block @ravi_k" }),
+    ).toBeInTheDocument();
+    // The label repeats the title's handle on a profile, so it goes.
+    expect(screen.queryByText("@ravi_k")).toBeNull();
+  });
+
+  it("offers a profile's reasons only, in its own words", () => {
+    renderSheet({ subject: profile });
+    const group = screen.getByRole("group", { name: "What's wrong" });
+    expect(
+      within(group)
+        .getAllByRole("radio")
+        .map((radio) => radio.getAttribute("value")),
+    ).toStrictEqual(profileReportReasons.map((reason) => reason.value));
+    for (const reason of profileReportReasons) {
+      expect(
+        within(group).getByRole("radio", { name: reason.label }),
+      ).toBeInTheDocument();
+    }
+    // A shared value reads as the profile says it, not as W1 does.
+    expect(
+      within(group).queryByRole("radio", {
+        name: "Harassment aimed at someone",
+      }),
+    ).toBeNull();
+  });
+
+  it("promises nothing about hiding, and says the reporter stays unknown", () => {
+    renderSheet({ subject: profile });
+    expect(screen.queryByText("What happens next")).toBeNull();
+    expect(screen.queryByText(/hidden from your feed/u)).toBeNull();
+    const line = document.querySelector('[data-part="report-consequence"]');
+    expect(line).toHaveTextContent(
+      "A person reads it within a day. They won't know it was you.",
+    );
+  });
+
+  it("files a profile reason against the profile", async () => {
+    const { fileReport } = renderSheet({ subject: profile });
+    await userEvent.click(
+      screen.getByRole("radio", {
+        name: "They're pretending to be someone else",
+      }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Send report" }));
+    await waitFor(() => {
+      expect(fileReport).toHaveBeenCalledWith({
+        data: {
+          subjectType: "profile",
+          subjectId: "01RAVI",
+          reason: "impersonation",
+          alsoBlock: false,
+        },
+      });
+    });
+  });
+
+  it("blocks without a report or a reason, after its own confirm", async () => {
+    const blockRunner = vi.fn(() => Promise.resolve());
+    const { fileReport, onFiled, onClose } = renderSheet({
+      subject: profile,
+      blockRunner,
+    });
+    const link = screen.getByRole("button", {
+      name: "Block without reporting",
+    });
+    expect(link).toHaveAttribute("type", "button");
+    await userEvent.click(link);
+    expect(
+      screen.getByRole("heading", { name: "Block @ravi_k?", hidden: true }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Blocking hides all of @ravi_k's runs from you. They aren't told.",
+      ),
+    ).toBeInTheDocument();
+    expect(blockRunner).not.toHaveBeenCalled();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Block", hidden: true }),
+    );
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+    expect(blockRunner).toHaveBeenCalledWith({ data: { userId: "01RAVI" } });
+    expect(onFiled).toHaveBeenCalledTimes(1);
+    expect(fileReport).not.toHaveBeenCalled();
+  });
+
+  it("says Not blocked and stays when the block fails", async () => {
+    const blockRunner = vi.fn(() => Promise.reject(new Error("down")));
+    const { onClose } = renderSheet({ subject: profile, blockRunner });
+    await userEvent.click(
+      screen.getByRole("button", { name: "Block without reporting" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Block", hidden: true }),
+    );
+    // The confirm's kicker says what is still true (it is also announced).
+    const kickers = await screen.findAllByText(/Not blocked/u);
+    expect(kickers.length).toBeGreaterThan(0);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("offers no block without a block action, somebody to block, or leave to block", () => {
+    const blockRunner = vi.fn(() => Promise.resolve());
+    const cases: Partial<SheetProps>[] = [
+      { subject: profile },
+      { subject: { ...profile, authorId: undefined }, blockRunner },
+      { subject: profile, blockRunner, canBlock: false },
+    ];
+    for (const overrides of cases) {
+      renderSheet(overrides);
+      expect(
+        screen.queryByRole("button", { name: "Block without reporting" }),
+      ).toBeNull();
+      cleanup();
+    }
+  });
+});
+
+describe("ReportSheet on an entry keeps W1", () => {
+  it("offers W1's reasons, its legend and what happens next, and no block-only way out", () => {
+    renderSheet({ blockRunner: vi.fn(() => Promise.resolve()) });
+    const group = screen.getByRole("group", {
+      name: "What's wrong with it",
+    });
+    expect(within(group).getAllByRole("radio")).toHaveLength(
+      reportReasons.length,
+    );
+    expect(screen.getByText("What happens next")).toBeInTheDocument();
+    expect(
+      document.querySelector('[data-part="report-consequence"]'),
+    ).toHaveTextContent(
+      "A person reads it within a day. It's hidden from your feed straight away.",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Block without reporting" }),
+    ).toBeNull();
   });
 });

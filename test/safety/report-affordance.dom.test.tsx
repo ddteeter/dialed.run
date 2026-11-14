@@ -114,6 +114,33 @@ describe("whether the block is offered alongside", () => {
     ).toBeInTheDocument();
   });
 
+  it("hands the profile sheet its block-only way out (R55·214)", async () => {
+    const user = userEvent.setup();
+    const blockRunner = vi.fn(() => Promise.resolve());
+    renderAffordance({
+      subject: {
+        type: "profile",
+        id: "author-1",
+        label: "mark_t",
+        authorId: "author-1",
+        authorName: "mark_t",
+      },
+      blockRunner,
+    });
+    await user.click(screen.getByRole("button", { name: REPORT }));
+    await user.click(
+      screen.getByRole("button", { name: "Block without reporting" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Block", hidden: true }),
+    );
+    await waitFor(() => {
+      expect(blockRunner).toHaveBeenCalledWith({
+        data: { userId: "author-1" },
+      });
+    });
+  });
+
   it("does not offer it on an entry", async () => {
     const user = userEvent.setup();
     renderAffordance();

@@ -36,15 +36,29 @@ const COVERAGE_FILL: Readonly<Record<CoverageLevel, string>> = {
  */
 export function CoverageMark({
   level,
-}: Readonly<{ level: CoverageLevel }>): JSX.Element {
+  size = "swatch",
+}: Readonly<{
+  level: CoverageLevel;
+  /**
+   * `swatch` beside a word; `cell`, one band's cell in the Call's strip,
+   * filling its track (R55·231); `key`, the legend's 12 square.
+   */
+  size?: keyof typeof COVERAGE_SIZE;
+}>): JSX.Element {
   return (
     <span
       aria-hidden="true"
       data-coverage={level}
-      className={`inline-block h-3 w-8 shrink-0 rounded-none ${COVERAGE_FILL[level]}`}
+      className={`${COVERAGE_SIZE[size]} rounded-none ${COVERAGE_FILL[level]}`}
     />
   );
 }
+
+const COVERAGE_SIZE = {
+  swatch: "inline-block h-3 w-8 shrink-0",
+  cell: "block h-7 w-full",
+  key: "inline-block size-3 shrink-0",
+} as const;
 
 /**
 How a band was called. A direction around a centre, so hue may carry it.
@@ -58,6 +72,8 @@ export type VerdictKind = "cold" | "dialed" | "warm";
  * order the scale is written in (`verdictScale`, −2 to +2).
  */
 const SLOTS: readonly VerdictKind[] = ["cold", "dialed", "warm"];
+
+const EMPTY_SLOT = "border border-hairline-2";
 
 const VERDICT_INK: Readonly<Record<VerdictKind, string>> = {
   cold: "bg-action",
@@ -85,12 +101,15 @@ export function VerdictMark({
   kind,
 }: Readonly<{ kind: VerdictKind }>): JSX.Element {
   return (
-    <span aria-hidden="true" data-verdict={kind} className="flex gap-1">
+    // R55·209a, AB3's slots: square and 16 tall, 2 apart, an empty one a
+    // hairline outline, so the mark that carries the verdict by position
+    // is no longer the smallest thing in its row.
+    <span aria-hidden="true" data-verdict={kind} className="flex gap-0.5">
       {SLOTS.map((slot) => (
         <span
           key={slot}
-          className={`inline-block h-2 w-2 rounded-pill ${
-            slot === kind ? VERDICT_INK[kind] : "bg-hairline-2"
+          className={`inline-block size-4 ${
+            slot === kind ? VERDICT_INK[kind] : EMPTY_SLOT
           }`}
         />
       ))}

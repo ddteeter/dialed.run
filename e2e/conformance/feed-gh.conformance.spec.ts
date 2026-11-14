@@ -50,7 +50,11 @@ test("G on day one shows its counts at zero and one next step, as drawn", async 
   await hydrated(page);
 
   // **Counts show as zeros** — hiding them makes a profile look broken.
-  expect(await cellsOf(page, '[data-part="counts"]')).toEqual(drawn.counts);
+  // R55·209f draws them as one line, "1 RUN · 0 FOLLOWING · 0 FOLLOWERS",
+  // in ink: the G board's three cells, joined.
+  expect(await cellsOf(page, '[data-part="counts"]')).toEqual([
+    drawn.counts.join(" · "),
+  ]);
   // **One next step**, word for word, in the action pink.
   expect(
     folded(await cellsOf(page, '[data-part="entries"][data-state="empty"]')),

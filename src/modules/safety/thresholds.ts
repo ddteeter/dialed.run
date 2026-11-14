@@ -16,7 +16,7 @@ import { z } from "zod";
 import { env } from "../../env";
 import { imageCategories } from "./classifier/moderation";
 import type { CategoryScores } from "./classifier/moderation";
-import { reportReasonSchema } from "./contracts";
+import { entryReportReasonSchema, isEntryReportReason } from "./contracts";
 import type { ReportReason } from "./contracts";
 
 /**
@@ -26,7 +26,9 @@ import type { ReportReason } from "./contracts";
  * else: a config that forgets one is malformed, not partly right.
  */
 export const moderationThresholdsSchema = z.strictObject({
-  reports: z.record(reportReasonSchema, z.int().min(1)),
+  // W1's reasons only: a profile report hides nothing, so its own
+  // reasons have no bar, and the deployed config keeps its shape.
+  reports: z.record(entryReportReasonSchema, z.int().min(1)),
   photos: z.record(z.enum(imageCategories), z.number().gt(0).max(1)),
 });
 
@@ -58,13 +60,15 @@ export function moderationThresholds(): ModerationThresholds | undefined {
 
 /**
  * Distinct reporters a reason needs before its subject is hidden; one,
- * failing closed, when the config is missing.
+ * failing closed, when the config is missing. A profile's own reasons
+ * (R55·214) have no threshold: a profile report hides nothing and queues
+ * for a person, so its first report does.
  */
 export function reportersToHide(
   reason: ReportReason,
   thresholds: ModerationThresholds | undefined,
 ): number {
-  return thresholds?.reports[reason] ?? 1;
+  return isEntryReportReason(reason) ? (thresholds?.reports[reason] ?? 1) : 1;
 }
 
 /**

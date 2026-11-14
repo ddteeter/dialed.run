@@ -14,13 +14,14 @@
  * so twenty hidden matches cannot leave an empty page that looks real.
  * Nor, for the viewer alone, a runner whose profile they reported (D-68).
  */
-import { and, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, count, eq, inArray, min, ne, sql } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
-import { follows, userProfiles } from "../../db/schema-core";
+import { follows, outfitEntries, userProfiles } from "../../db/schema-core";
 import { coreDb } from "../../env";
 import { normalizeUsername } from "../../lib/contracts";
 import { columnWhere } from "../../lib/sql/keyed-read";
+import { publiclyVisibleEntry } from "../safety";
 import { runnersVisibleTo } from "./runner-visibility";
 
 const RESULT_LIMIT = 20;
@@ -40,6 +41,17 @@ export interface SearchResult {
   userId: string;
   username: string;
   following: boolean;
+  /**
+   * R55·217's second line, "41 RUNS · SINCE OCT 2026": the runner's
+   * shared runs this viewer may see, and when the first of them was. Only
+   * shared entries, as every count a stranger is shown is (CLAUDE.md,
+   * Sharing): a private run is nobody's number.
+   */
+  sharedRuns: number;
+  /**
+   * The first shared entry's time, or nothing with none.
+   */
+  sharedSince: number | undefined;
 }
 
 /**
@@ -99,14 +111,45 @@ export async function searchRunners(
   // directives from a node's *leading* comments, and a comment on the last
   // line before `}` leads no node — it is the previous statement's
   // trailing comment. (guardrails 0.6.0 sanction-placement)
+  const tallies = await sharedTallies(database, viewerId, found);
   // Stryker disable ConditionalExpression,MethodExpression
   return rows.filter(isNamed).map((r) => ({
     userId: r.userId,
     username: r.username,
     following: followed.has(r.userId),
+    sharedRuns: tallies.get(r.userId)?.runs ?? 0,
+    sharedSince: tallies.get(r.userId)?.first ?? undefined,
   }));
 }
 // Stryker restore ConditionalExpression,MethodExpression
+
+/**
+ * Each found runner's shared entries the viewer may see: how many, and
+ * the first one's time. One grouped read over at most a page of runners,
+ * on `entries_user_shared_created` (with none found, drizzle's empty
+ * `inArray` is `false`, and the read answers nothing).
+ */
+async function sharedTallies(
+  database: DrizzleD1Database,
+  viewerId: string,
+  userIds: readonly string[],
+): Promise<Map<string, { runs: number; first: number | null }>> {
+  const rows = await database
+    .select({
+      userId: outfitEntries.userId,
+      runs: count(),
+      first: min(outfitEntries.createdAt),
+    })
+    .from(outfitEntries)
+    .where(
+      and(
+        inArray(outfitEntries.userId, [...userIds]),
+        publiclyVisibleEntry(viewerId),
+      ),
+    )
+    .groupBy(outfitEntries.userId);
+  return new Map(rows.map((row) => [row.userId, row]));
+}
 
 function isNamed<T extends { username: string | null }>(
   row: T,
