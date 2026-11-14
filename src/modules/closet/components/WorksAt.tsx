@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX, ReactNode, RefObject } from "react";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import type { TempUnit } from "../../../lib/contracts";
 import { tempInUnit, unitToC } from "../../../lib/contracts/temperature";
@@ -289,12 +289,17 @@ function SpanBar({
   span,
   tempUnit,
   onSearch,
+  onCleared,
   labelRef,
 }: Readonly<{
   search: ClosetSearch;
   span: { lowC: number; highC: number };
   tempUnit: TempUnit;
   onSearch: (next: ClosetSearch) => void;
+  /**
+  Clear was pressed: the label takes focus once the new search draws.
+  */
+  onCleared: () => void;
   labelRef: RefObject<HTMLHeadingElement | null>;
 }>): JSX.Element {
   const bounds = boundsOf(span, tempUnit);
@@ -320,8 +325,10 @@ function SpanBar({
         />
         <ClearControl
           search={search}
-          onSearch={onSearch}
-          labelRef={labelRef}
+          onClear={(cleared) => {
+            onSearch(cleared);
+            onCleared();
+          }}
         />
       </WorksAtHeading>
       {/* 44 high, so each thumb's input is a full target (rule 03). */}
@@ -371,19 +378,17 @@ function SpanBar({
  */
 function ClearControl({
   search,
-  onSearch,
-  labelRef,
+  onClear,
 }: Readonly<{
   search: ClosetSearch;
   /**
   Absent until script runs: then a link is all that works.
   */
-  onSearch: ((next: ClosetSearch) => void) | undefined;
-  labelRef: RefObject<HTMLHeadingElement | null>;
+  onClear?: (cleared: ClosetSearch) => void;
 }>): JSX.Element | undefined {
   if (search.from === undefined && search.to === undefined) return;
   const cleared = { ...search, from: undefined, to: undefined };
-  if (onSearch === undefined) {
+  if (onClear === undefined) {
     return (
       <Link
         to="/closet"
@@ -400,11 +405,7 @@ function ClearControl({
       type="button"
       className={CLEAR_CLASS}
       onClick={() => {
-        onSearch(cleared);
-        // Equivalent without `?.`: the label is drawn beside this button,
-        // so the ref is set whenever it can be clicked. The `?.` is the type's.
-        // Stryker disable next-line OptionalChaining
-        labelRef.current?.focus();
+        onClear(cleared);
       }}
     >
       Clear
@@ -448,6 +449,31 @@ function WorksAtHeading({
   );
 }
 
+/**
+ * Clear puts focus on the label (round 46 #109f), but the label it was
+ * pressed beside is gone by then: a changed search draws the span bar
+ * anew (its `key`), heading and all. So Clear asks, and the label is
+ * focused once the cleared search has drawn the new one.
+ */
+function useFocusOnceDrawn(
+  labelRef: RefObject<HTMLHeadingElement | null>,
+  search: ClosetSearch,
+): () => void {
+  // Unset until Clear asks: an effect on mount has nothing to do.
+  const focusAsk = useRef<boolean | undefined>(undefined);
+  useEffect(() => {
+    if (focusAsk.current !== true) return;
+    focusAsk.current = false;
+    // Equivalent without `?.`: the effect runs after the commit that drew
+    // the label, so the ref is set. The `?.` is the type's.
+    // Stryker disable next-line OptionalChaining
+    labelRef.current?.focus();
+  }, [labelRef, search.from, search.to]);
+  return () => {
+    focusAsk.current = true;
+  };
+}
+
 export function WorksAt({
   search,
   span,
@@ -456,6 +482,7 @@ export function WorksAt({
 }: Readonly<WorksAtProps>): JSX.Element {
   const isHydrated = useIsHydrated();
   const labelRef = useRef<HTMLHeadingElement>(null);
+  const focusLabelOnceDrawn = useFocusOnceDrawn(labelRef, search);
   // The bar's commit and Any's, once script runs to make them.
   const liveSearch = isHydrated ? onSearch : undefined;
   if (span !== undefined && liveSearch !== undefined) {
@@ -468,6 +495,7 @@ export function WorksAt({
           span={span}
           tempUnit={tempUnit}
           onSearch={liveSearch}
+          onCleared={focusLabelOnceDrawn}
           labelRef={labelRef}
         />
       </section>
@@ -491,11 +519,7 @@ export function WorksAt({
               isSet={search.from !== undefined || search.to !== undefined}
               tempUnit={tempUnit}
             />
-            <ClearControl
-              search={search}
-              onSearch={undefined}
-              labelRef={labelRef}
-            />
+            <ClearControl search={search} />
           </>
         )}
       </WorksAtHeading>

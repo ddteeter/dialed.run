@@ -92,6 +92,26 @@ function Driven() {
   return filters({ search, onSearch: setSearch });
 }
 
+/**
+The same, with a way to change the search that is not Clear.
+*/
+function DrivenWithSpan() {
+  const [search, setSearch] = useState<ClosetSearch>({});
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setSearch({ from: (search.from ?? 4) + 1 });
+        }}
+      >
+        Set a span
+      </button>
+      {filters({ search, onSearch: setSearch })}
+    </>
+  );
+}
+
 function hiddenFields(container: HTMLElement): string[] {
   return [...container.querySelectorAll("input[type='hidden']")].map(
     (input) =>
@@ -343,7 +363,9 @@ describe("ClosetFilters: WORKS AT before a script (#109h)", () => {
     const value = header?.querySelector("[data-part='works-at-value']");
     expect(drawnText(value)).toBe("34–58°F");
     expect(saidText(value)).toBe("34 to 58 degrees Fahrenheit");
-    expect(within(header as HTMLElement).getByRole("link", { name: "Clear" })).toBeVisible();
+    expect(
+      within(header as HTMLElement).getByRole("link", { name: "Clear" }),
+    ).toBeVisible();
   });
 
   it("reads an upper end alone as set, with the closet's low bound", async () => {
@@ -463,7 +485,7 @@ describe("ClosetFilters: WORKS AT with a script (#109h)", () => {
     );
   });
 
-  it("offers Clear as a button that lets go of both ends and focuses the label", async () => {
+  it("offers Clear as a button that lets go of both ends", async () => {
     const user = userEvent.setup();
     const onSearch = vi.fn();
     await rail({ search: { from: 4.4, to: 7.8, group: "tops" }, onSearch });
@@ -476,10 +498,33 @@ describe("ClosetFilters: WORKS AT with a script (#109h)", () => {
       from: undefined,
       to: undefined,
     });
+  });
+
+  it("focuses the label Clear's new search draws, and not before", async () => {
+    // The cleared search draws the span bar anew, heading and all, so the
+    // label beside the pressed Clear is not the one focused (#109f).
+    const user = userEvent.setup();
+    await renderWithRouter(<Driven />);
+    const before = screen.getByRole("heading", { name: "Works at" });
+    expect(before).not.toHaveFocus();
+    await user.click(screen.getByRole("button", { name: "Clear" }));
     const label = screen.getByRole("heading", { name: "Works at" });
+    expect(label).not.toBe(before);
     expect(label).toHaveFocus();
     // Focusable by Clear alone, never a stop in the tab order.
     expect(label).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("leaves focus alone when the search changes without Clear, before it and after", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(<DrivenWithSpan />);
+    const label = () => screen.getByRole("heading", { name: "Works at" });
+    await user.click(screen.getByRole("button", { name: "Set a span" }));
+    expect(label()).not.toHaveFocus();
+    await user.click(screen.getByRole("button", { name: "Clear" }));
+    expect(label()).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: "Set a span" }));
+    expect(label()).not.toHaveFocus();
   });
 
   it("starts the thumbs again from a search that changed under them", async () => {
@@ -526,9 +571,9 @@ describe("ClosetFilters: the span bar", () => {
     expect(screen.getByRole("slider", { name: "Lowest" }).style.transform).toBe(
       "translateX(calc(max(0px, 24px - 20%) / 2 * -1))",
     );
-    expect(screen.getByRole("slider", { name: "Highest" }).style.transform).toBe(
-      "translateX(calc(max(0px, 24px - 20%) / 2))",
-    );
+    expect(
+      screen.getByRole("slider", { name: "Highest" }).style.transform,
+    ).toBe("translateX(calc(max(0px, 24px - 20%) / 2))");
   });
 });
 
@@ -696,7 +741,12 @@ describe("ClosetFilters: the rail's look", () => {
     const [shown, reserve] = [...(label?.children ?? [])];
     expect(shown).toHaveClass("col-start-1", "row-start-1");
     expect(shown).not.toHaveClass("invisible");
-    expect(reserve).toHaveClass("invisible", "col-start-1", "row-start-1", "font-bold");
+    expect(reserve).toHaveClass(
+      "invisible",
+      "col-start-1",
+      "row-start-1",
+      "font-bold",
+    );
     expect(reserve).toHaveAttribute("aria-hidden", "true");
     expect(reserve?.textContent).toBe(shown?.textContent);
     // Heard once.
@@ -707,9 +757,9 @@ describe("ClosetFilters: the rail's look", () => {
     await chips();
     fireEvent.click(button(/^Group/));
     expect(
-      screen.getByRole("link", { name: /^All/ }).querySelector(
-        "[data-part='option-label']",
-      ),
+      screen
+        .getByRole("link", { name: /^All/ })
+        .querySelector("[data-part='option-label']"),
     ).toBeNull();
   });
 });
