@@ -17,6 +17,7 @@ import {
   wholeDistanceNumber,
   bandForms,
   worksAtForms,
+  openSpanInUnit,
   spanInUnit,
 } from "../../src/lib/contracts/measures";
 import { formatTemp } from "../../src/lib/contracts/temperature";
@@ -522,6 +523,22 @@ describe("worksAtForms", () => {
 
   it("has nothing for a range with no ends", () => {
     expect(worksAtForms({}, "f")).toBeUndefined();
+  });
+});
+
+describe("openSpanInUnit", () => {
+  it("draws a lower end alone as its value and up, with the unit's letter", () => {
+    expect(openSpanInUnit({ low: 61 }, "f")).toStrictEqual({
+      shown: "61°F+",
+      said: "61 degrees Fahrenheit and up",
+    });
+  });
+
+  it("draws an upper end alone as under its value", () => {
+    expect(openSpanInUnit({ high: -1 }, "c")).toStrictEqual({
+      shown: "under -1°C",
+      said: "under minus 1 degree Celsius",
+    });
   });
 });
 

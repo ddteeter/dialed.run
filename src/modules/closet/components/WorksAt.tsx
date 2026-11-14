@@ -4,7 +4,11 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import type { TempUnit } from "../../../lib/contracts";
 import { tempInUnit, unitToC } from "../../../lib/contracts/temperature";
-import { spanInUnit, worksAtForms } from "../../../lib/contracts/measures";
+import {
+  openSpanInUnit,
+  spanInUnit,
+  worksAtForms,
+} from "../../../lib/contracts/measures";
 import { Bracketed, Mono, Spoken } from "../../../ui";
 import type { ClosetSearch } from "../inputs";
 import { useIsHydrated } from "./use-is-hydrated";
@@ -220,32 +224,112 @@ export function thumbSpread(spanPercent: number): string {
 }
 
 /**
- * The value WORKS AT's header shows (Round 55 · 192): `Any` while neither
- * end is set, and otherwise the span's exact whole degrees with the
- * unit's letter, `39–46°F`, where an open end reads as the closet's own
- * bound, as the bar draws it.
+ * How far each thumb steps out, as CSS lengths: half the shortfall each,
+ * but never past its end of the track. A thumb at a bound has no room
+ * outward, so its half goes to the other side, and the two still sit 24
+ * apart (C-14: at a bound, a thumb sat about 12px past the track's end).
+ * `left` and `right` are the span's distances from each end, in percent.
  */
+export function thumbShifts(
+  left: number,
+  right: number,
+): { lower: string; upper: string } {
+  const half = thumbSpread(100 - left - right);
+  const lowRoom = `${String(left)}%`;
+  const highRoom = `${String(right)}%`;
+  return {
+    lower: `min(${lowRoom}, ${half} + max(0px, ${half} - ${highRoom}))`,
+    upper: `min(${highRoom}, ${half} + max(0px, ${half} - ${lowRoom}))`,
+  };
+}
+
+/**
+ * Which ends of the span are asked, in the runner's unit: an end not
+ * asked is open.
+ */
+interface AskedEnds {
+  low: number | undefined;
+  high: number | undefined;
+}
+
+/**
+ * The value WORKS AT's header shows (Round 55 · 192): `Any` while neither
+ * end is asked, the span's exact whole degrees with the unit's letter,
+ * `39–46°F`, when both are, and with one end open the FILTERED line's own
+ * words, `61°F+` or `under 58°F` (C-14), never the closet's bound as if
+ * the runner had set it.
+ */
+export function worksAtValueForms(
+  asked: AskedEnds,
+  tempUnit: TempUnit,
+): { shown: string; said: string } | undefined {
+  const { low, high } = asked;
+  if (low !== undefined && high !== undefined)
+    return spanInUnit(low, high, tempUnit);
+  if (low !== undefined) return openSpanInUnit({ low }, tempUnit);
+  if (high !== undefined) return openSpanInUnit({ high }, tempUnit);
+  return undefined;
+}
+
 function WorksAtValue({
-  ends,
-  isSet,
+  asked,
   tempUnit,
-}: Readonly<{
-  ends: { low: number; high: number };
-  isSet: boolean;
-  tempUnit: TempUnit;
-}>): JSX.Element {
+}: Readonly<{ asked: AskedEnds; tempUnit: TempUnit }>): JSX.Element {
+  const forms = worksAtValueForms(asked, tempUnit);
   return (
     <span data-part="works-at-value" className="text-ink">
       <Mono step="sm">
-        {isSet ? (
-          <Spoken {...spanInUnit(ends.low, ends.high, tempUnit)} />
-        ) : (
-          "Any"
-        )}
+        {forms === undefined ? "Any" : <Spoken {...forms} />}
       </Mono>
     </span>
   );
 }
+
+/**
+ * The room the header's value and Clear can ever take for this closet,
+ * held by unseen copies in the same cell: the closet's whole span, and
+ * each end left open (R2-CLOSET-01). The rail's track is as wide as its
+ * widest row, so a value arriving would otherwise widen the rail and move
+ * the grid, which is C-11's complaint; with the room held, setting a span
+ * moves nothing. Hidden from the reader, who hears the value once.
+ */
+function ValueRoom({
+  bounds,
+  tempUnit,
+}: Readonly<{
+  bounds: { low: number; high: number };
+  tempUnit: TempUnit;
+}>): JSX.Element {
+  const widest = [
+    spanInUnit(bounds.low, bounds.high, tempUnit),
+    openSpanInUnit({ low: bounds.low }, tempUnit),
+    openSpanInUnit({ high: bounds.high }, tempUnit),
+  ];
+  return (
+    <>
+      {widest.map(({ shown }) => (
+        <span
+          key={shown}
+          data-part="value-room"
+          aria-hidden="true"
+          className={VALUE_ROOM_CLASS}
+        >
+          <Mono step="sm">{shown}</Mono>
+          <span className={CLEAR_CLASS}>Clear</span>
+        </span>
+      ))}
+    </>
+  );
+}
+
+/**
+ * The header's right side: what is shown, and the unseen room, stacked in
+ * one grid cell and set to its right edge.
+ */
+const VALUE_CELL_CLASS =
+  "col-start-1 row-start-1 flex items-center justify-end gap-3";
+const VALUE_ROOM_CLASS =
+  "invisible col-start-1 row-start-1 flex items-center justify-end gap-3";
 
 /**
 The closet's span in the runner's unit, the bar's two bounds.
@@ -275,6 +359,17 @@ function endsOf(
         : tempInUnit(search.from, tempUnit),
     high:
       search.to === undefined ? bounds.high : tempInUnit(search.to, tempUnit),
+  };
+}
+
+/**
+The ends the search asks for, in the runner's unit; an unasked end is open.
+*/
+function askedOf(search: ClosetSearch, tempUnit: TempUnit): AskedEnds {
+  return {
+    low:
+      search.from === undefined ? undefined : tempInUnit(search.from, tempUnit),
+    high: search.to === undefined ? undefined : tempInUnit(search.to, tempUnit),
   };
 }
 
@@ -314,13 +409,19 @@ function SpanBar({
   };
   const left = trackPercent(ends.low, bounds.low, bounds.high);
   const right = 100 - trackPercent(ends.high, bounds.low, bounds.high);
-  const spread = thumbSpread(100 - left - right);
+  const shift = thumbShifts(left, right);
   return (
     <>
-      <WorksAtHeading label="Works at" labelRef={labelRef}>
+      <WorksAtHeading
+        label="Works at"
+        labelRef={labelRef}
+        room={<ValueRoom bounds={bounds} tempUnit={tempUnit} />}
+      >
         <WorksAtValue
-          ends={ends}
-          isSet={ends.low > bounds.low || ends.high < bounds.high}
+          asked={{
+            low: ends.low > bounds.low ? ends.low : undefined,
+            high: ends.high < bounds.high ? ends.high : undefined,
+          }}
           tempUnit={tempUnit}
         />
         <ClearControl
@@ -338,8 +439,8 @@ function SpanBar({
             data-part="span"
             className="absolute inset-y-0 rounded-pill bg-ink"
             style={{
-              left: `calc(${String(left)}% - ${spread})`,
-              right: `calc(${String(right)}% - ${spread})`,
+              left: `calc(${String(left)}% - ${shift.lower})`,
+              right: `calc(${String(right)}% - ${shift.upper})`,
             }}
           />
         </div>
@@ -347,7 +448,7 @@ function SpanBar({
           label="Lowest"
           value={ends.low}
           bounds={bounds}
-          shift={`translateX(calc(${spread} * -1))`}
+          shift={`translateX(calc(${shift.lower} * -1))`}
           onValue={(value) => {
             setEnds({ ...ends, low: Math.min(value, ends.high) });
           }}
@@ -357,7 +458,7 @@ function SpanBar({
           label="Highest"
           value={ends.high}
           bounds={bounds}
-          shift={`translateX(calc(${spread}))`}
+          shift={`translateX(calc(${shift.upper}))`}
           onValue={(value) => {
             setEnds({ ...ends, high: Math.max(value, ends.low) });
           }}
@@ -428,10 +529,15 @@ const CLEAR_CLASS =
 function WorksAtHeading({
   label,
   labelRef,
+  room,
   children,
 }: Readonly<{
   label: string;
   labelRef: RefObject<HTMLHeadingElement | null>;
+  /**
+  The value's unseen room, once the closet has a span to show.
+  */
+  room?: ReactNode;
   children?: ReactNode;
 }>) {
   return (
@@ -444,7 +550,10 @@ function WorksAtHeading({
           {label}
         </Mono>
       </h2>
-      <span className="flex items-center gap-3">{children}</span>
+      <span data-part="works-at-room" className="grid">
+        <span className={VALUE_CELL_CLASS}>{children}</span>
+        {room}
+      </span>
     </div>
   );
 }
@@ -511,12 +620,16 @@ export function WorksAt({
           span === undefined ? "Works at" : `Works at · ${UNIT_MARK[tempUnit]}`
         }
         labelRef={labelRef}
+        room={
+          span === undefined ? undefined : (
+            <ValueRoom bounds={boundsOf(span, tempUnit)} tempUnit={tempUnit} />
+          )
+        }
       >
         {span === undefined ? undefined : (
           <>
             <WorksAtValue
-              ends={endsOf(search, boundsOf(span, tempUnit), tempUnit)}
-              isSet={search.from !== undefined || search.to !== undefined}
+              asked={askedOf(search, tempUnit)}
               tempUnit={tempUnit}
             />
             <ClearControl search={search} />

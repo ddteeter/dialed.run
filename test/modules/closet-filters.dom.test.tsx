@@ -19,6 +19,7 @@ import {
 } from "../../src/modules/closet/components/ClosetFilters";
 import {
   barRange,
+  thumbShifts,
   thumbSpread,
   trackPercent,
 } from "../../src/modules/closet/components/WorksAt";
@@ -359,27 +360,73 @@ describe("ClosetFilters: WORKS AT before a script (#109h)", () => {
       .getByRole("heading", { name: /^Works at/ })
       .closest("[data-part='works-at-header']");
     expect(header).toHaveClass("min-h-11", "items-center", "justify-between");
-    // An open end reads as the closet's bound: exact numbers, with the unit.
+    // One end open reads as the FILTERED line words it, with the unit's
+    // letter, never the closet's bound as if it were set (C-14).
     const value = header?.querySelector("[data-part='works-at-value']");
-    expect(drawnText(value)).toBe("34–58°F");
-    expect(saidText(value)).toBe("34 to 58 degrees Fahrenheit");
+    expect(drawnText(value)).toBe("34°F+");
+    expect(saidText(value)).toBe("34 degrees Fahrenheit and up");
     expect(
       within(header as HTMLElement).getByRole("link", { name: "Clear" }),
     ).toBeVisible();
   });
 
-  it("reads an upper end alone as set, with the closet's low bound", async () => {
+  it("reads an upper end alone as under it (C-14)", async () => {
     await rail({ search: { to: 7.8 } });
     expect(
       drawnText(document.querySelector("[data-part='works-at-value']")),
-    ).toBe("34–46°F");
+    ).toBe("under 46°F");
   });
 
-  it("reads an upper end alone as set once a script drives the bar", async () => {
+  it("reads an upper end alone as under it once a script drives the bar", async () => {
     await rail({ search: { to: 7.8 }, onSearch: vi.fn() });
     expect(
       drawnText(document.querySelector("[data-part='works-at-value']")),
-    ).toBe("34–46°F");
+    ).toBe("under 46°F");
+  });
+
+  it("reads a lower end alone as its value and up once a script drives the bar", async () => {
+    await rail({ search: { from: 5 }, onSearch: vi.fn() });
+    expect(
+      drawnText(document.querySelector("[data-part='works-at-value']")),
+    ).toBe("41°F+");
+  });
+
+  it("reads both ends as the span, with the unit's letter", async () => {
+    await rail({ search: { from: 5, to: 7.8 }, onSearch: vi.fn() });
+    expect(
+      drawnText(document.querySelector("[data-part='works-at-value']")),
+    ).toBe("41–46°F");
+  });
+
+  it("holds the widest value and Clear unseen, so setting a span never widens the rail (R2-CLOSET-01)", async () => {
+    for (const onSearch of [undefined, vi.fn()]) {
+      const { unmount } = await rail({ onSearch });
+      const room = document.querySelector("[data-part='works-at-room']");
+      expect(room).toHaveClass("grid");
+      const held = [...document.querySelectorAll("[data-part='value-room']")];
+      expect(held.map((copy) => copy.textContent)).toEqual([
+        "34–58°FClear",
+        "34°F+Clear",
+        "under 58°FClear",
+      ]);
+      for (const copy of held) {
+        expect(copy).toHaveAttribute("aria-hidden", "true");
+        expect(copy).toHaveClass("invisible", "col-start-1", "row-start-1");
+      }
+      // What is shown sits in the same cell, at its right edge.
+      expect(room?.firstElementChild).toHaveClass(
+        "col-start-1",
+        "row-start-1",
+        "justify-end",
+      );
+      expect(room?.firstElementChild).not.toHaveClass("invisible");
+      unmount();
+    }
+  });
+
+  it("holds no room while the closet has no span to show", async () => {
+    await rail({ span: undefined });
+    expect(document.querySelector("[data-part='value-room']")).toBeNull();
   });
 
   it("reads Any in the header while no span is set", async () => {
@@ -431,9 +478,10 @@ describe("ClosetFilters: WORKS AT with a script (#109h)", () => {
     expect(screen.queryByRole("button", { name: "Apply" })).toBeNull();
     expect(screen.queryByRole("spinbutton")).toBeNull();
     expect(screen.getByRole("heading", { name: "Works at" })).toBeVisible();
-    expect(screen.getByText("40–58°F")).toHaveAttribute("aria-hidden", "true");
-    // Round 53 · 162.3: the readout is said as a range, its unit in full.
-    expect(screen.getByText("40 to 58 degrees Fahrenheit")).toHaveClass(
+    // C-14: one end open reads as FILTERED words it, its unit in full when
+    // said (round 53 · 162.3).
+    expect(screen.getByText("40°F+")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("40 degrees Fahrenheit and up")).toHaveClass(
       "sr-only",
     );
   });
@@ -444,7 +492,7 @@ describe("ClosetFilters: WORKS AT with a script (#109h)", () => {
     const lowest = screen.getByRole("slider", { name: "Lowest" });
     fireEvent.change(lowest, { target: { value: "40" } });
     expect(onSearch).not.toHaveBeenCalled();
-    expect(screen.getByText("40–58°F")).toBeVisible();
+    expect(screen.getByText("40°F+")).toBeVisible();
     fireEvent.pointerUp(lowest);
     expect(onSearch).toHaveBeenCalledExactlyOnceWith({
       group: "tops",
@@ -545,8 +593,10 @@ describe("ClosetFilters: WORKS AT with a script (#109h)", () => {
 describe("ClosetFilters: the span bar", () => {
   it("fills the whole track while nothing is asked", async () => {
     await rail({ span: { lowC: 0, highC: 20 }, onSearch: vi.fn() });
-    expect(spanFill().style.left).toBe("calc(0% - max(0px, 24px - 100%) / 2)");
-    expect(spanFill().style.right).toBe("calc(0% - max(0px, 24px - 100%) / 2)");
+    // At both bounds neither thumb has room outward.
+    expect(spanFill().style.left).toBe(
+      "calc(0% - min(0%, max(0px, 24px - 100%) / 2 + max(0px, max(0px, 24px - 100%) / 2 - 0%)))",
+    );
   });
 
   it("fills the asked part, from each end", async () => {
@@ -556,8 +606,9 @@ describe("ClosetFilters: the span bar", () => {
       search: { from: 5, to: 15 },
       onSearch: vi.fn(),
     });
-    expect(spanFill().style.left).toBe("calc(25% - max(0px, 24px - 50%) / 2)");
-    expect(spanFill().style.right).toBe("calc(25% - max(0px, 24px - 50%) / 2)");
+    expect(spanFill().style.left).toBe(
+      "calc(25% - min(25%, max(0px, 24px - 50%) / 2 + max(0px, max(0px, 24px - 50%) / 2 - 25%)))",
+    );
   });
 
   it("spreads the thumbs half the shortfall each way, so they sit 24 apart", async () => {
@@ -568,18 +619,38 @@ describe("ClosetFilters: the span bar", () => {
       search: { from: 8, to: 12 },
       onSearch: vi.fn(),
     });
+    const { lower, upper } = thumbShifts(40, 40);
     expect(screen.getByRole("slider", { name: "Lowest" }).style.transform).toBe(
-      "translateX(calc(max(0px, 24px - 20%) / 2 * -1))",
+      `translateX(calc(${lower} * -1))`,
     );
     expect(
       screen.getByRole("slider", { name: "Highest" }).style.transform,
-    ).toBe("translateX(calc(max(0px, 24px - 20%) / 2))");
+    ).toBe(`translateX(calc(${upper}))`);
   });
 });
 
 describe("thumbSpread", () => {
   it("is the shortfall from 24, halved, and never negative", () => {
     expect(thumbSpread(7)).toBe("max(0px, 24px - 7%) / 2");
+  });
+});
+
+describe("thumbShifts", () => {
+  it("steps each thumb out half the shortfall, never past its end of the track", () => {
+    const half = "max(0px, 24px - 20%) / 2";
+    expect(thumbShifts(40, 40)).toStrictEqual({
+      lower: `min(40%, ${half} + max(0px, ${half} - 40%))`,
+      upper: `min(40%, ${half} + max(0px, ${half} - 40%))`,
+    });
+  });
+
+  it("gives a thumb at a bound none, and its half to the other (C-14)", () => {
+    // A 7% span against the low end: the lower thumb has 0% outward.
+    const half = "max(0px, 24px - 7%) / 2";
+    expect(thumbShifts(0, 93)).toStrictEqual({
+      lower: `min(0%, ${half} + max(0px, ${half} - 93%))`,
+      upper: `min(93%, ${half} + max(0px, ${half} - 0%))`,
+    });
   });
 });
 
