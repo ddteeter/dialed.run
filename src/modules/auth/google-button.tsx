@@ -40,7 +40,8 @@ export interface GoogleSignIn extends ControlAction<[]> {
    * Au5: *"The other form stays live: tapping Log in cancels the Google
    * attempt."* An answer for a cancelled attempt is dropped rather than
    * followed, so the runner is not carried off to Google mid-submit, and
-   * a refusal Google's round trip brought back is cleared with it.
+   * a refusal Google's round trip brought back is cleared with it. The
+   * next press of Google is a fresh attempt (#696).
    */
   cancel: () => void;
 }
@@ -108,17 +109,12 @@ export function useGoogleSignIn({
    */
   admission?: (() => Admission) | undefined;
 }>): GoogleSignIn {
-  // The attempt whose answer is still wanted, by identity: each attempt
-  // mints its own token, so "is this answer still wanted" is a comparison
-  // against that token rather than a flag a later attempt could reset under
-  // an earlier one. Cancelling forgets it. (A counter did the same job, but
-  // `useControlAction` allows one attempt in flight at a time, so which way
-  // it counted could never be observed — its mutants were unkillable.)
-  const wanted = useRef<object | undefined>(undefined);
-  // The same attempt, as state, so cancelling re-renders: the button goes
-  // back to rest at once (Au5) rather than breathing until an answer
-  // nobody wants arrives.
-  const [live, setLive] = useState<object>();
+  // How to abandon the attempt in flight: settling this ends its wait for
+  // Google at once, so `useControlAction`'s one-at-a-time lock comes off
+  // and the next press starts a fresh attempt (#696). The abandoned
+  // answer, whenever it lands, loses the race and is never read — neither
+  // a trip to Google mid-submit nor a band for a button the runner left.
+  const abandon = useRef<(() => void) | undefined>(undefined);
   const [showsReturned, setShowsReturned] = useState(() =>
     didGoogleFail(returnedError),
   );
@@ -128,23 +124,20 @@ export function useGoogleSignIn({
   const control = useControlAction<[]>({
     kicker: AUTH_KICKER,
     action: async () => {
-      const mine = {};
-      wanted.current = mine;
-      setLive(mine);
+      const abandoned = new Promise<undefined>((resolve) => {
+        abandon.current = () => {
+          resolve(undefined);
+        };
+      });
       setShowsReturned(false);
       setRefusal(undefined);
       try {
-        const url = await googleConsentUrl(
-          callbackURL,
-          errorCallbackURL,
-          admission?.(),
-        );
-        if (mine === wanted.current) leave(url);
+        const url = await Promise.race([
+          googleConsentUrl(callbackURL, errorCallbackURL, admission?.()),
+          abandoned,
+        ]);
+        if (url !== undefined) leave(url);
       } catch (error: unknown) {
-        // A cancelled attempt's failure is not the runner's news: they
-        // have moved on to Log in, and a band for a button they abandoned
-        // would sit over the form they are using.
-        if (mine !== wanted.current) return;
         if (error instanceof AccessRefused) setRefusal(error);
         throw error;
       }
@@ -160,7 +153,6 @@ export function useGoogleSignIn({
 
   return {
     ...control,
-    pending: control.pending && live !== undefined,
     failure,
     closed: isClosed,
     // Always a fresh attempt: Google's takes no arguments, so repeating
@@ -171,8 +163,7 @@ export function useGoogleSignIn({
       void control.run();
     },
     cancel: () => {
-      wanted.current = undefined;
-      setLive(undefined);
+      abandon.current?.();
       // What Google's last round trip brought back is old news once the
       // runner submits the form: a closed account's notice beside the
       // form's own Au4 band would be two answers to one press.
