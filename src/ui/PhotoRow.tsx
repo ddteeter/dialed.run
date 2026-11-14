@@ -22,8 +22,9 @@ import { messageIdFor } from "./use-form-submit";
  *   chosen file take one path. There is no Replace: a runner removes a
  *   photo, then adds one.
  * - **Remove** is in the viewer's foot (249.3). It closes the viewer, and
- *   focus goes to the next thumbnail, else the one before, else the add
- *   box. A plain close puts focus back on the thumbnail that opened it.
+ *   focus goes to the next thumbnail, else the add box. A plain close puts focus back on the thumbnail that opened it.
+ * - **The line under the row**, "Press a photo to see it whole or remove
+ *   it." (249.2), shows while there is a photo to press.
  *
  * The closet's garment forms keep `FileWell`'s one photo well (249.5).
  */
@@ -96,6 +97,11 @@ export function PhotoRow({
           </li>
         ) : undefined}
       </ul>
+      {photos.length > 0 ? (
+        <p data-part="photo-row-hint" className="m-0 text-small text-label">
+          Press a photo to see it whole or remove it.
+        </p>
+      ) : undefined}
       <FieldMessage name={PART} error={error} />
       {openAt === undefined ? undefined : (
         <PhotoViewer
@@ -203,9 +209,10 @@ function AddBox({
 }
 
 /**
- * Where focus goes once a photo is removed: the photo that slid into its
- * place, else the one before it, else the add box. It moves after the row
- * has re-rendered without that photo, so the element it lands on exists.
+ * Where focus goes once a photo is removed (249.3): the photo that slid
+ * into its place, else the add box, which a removal always brings back.
+ * It moves after the row has re-rendered without that photo, so the
+ * element it lands on exists.
  */
 function useRowFocus(count: number): {
   thumbs: RefObject<(HTMLButtonElement | null)[]>;
@@ -227,8 +234,7 @@ function useRowFocus(count: number): {
     if (landing === undefined) return;
     setLanding(undefined);
     const thumb = landing < count ? thumbs.current[landing] : undefined;
-    const before = landing > 0 ? thumbs.current[landing - 1] : undefined;
-    (thumb ?? before ?? boxInputRef.current)?.focus();
+    (thumb ?? boxInputRef.current)?.focus();
   }, [landing, count]);
 
   // At the cap the add box leaves, and focus with it: it goes to the

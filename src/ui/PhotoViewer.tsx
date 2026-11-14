@@ -31,7 +31,8 @@ export interface ViewedPhoto {
  * that opened it.
  *
  * **Remove** (249.3) sits in the foot as the hairline pill, alone on its
- * surface (D-186), with no confirm: nothing is saved until the entry is.
+ * surface (D-186): `SECONDARY_PILL` is full width on a phone and hugs its
+ * label, left-aligned, from 720 (167.2). There is no confirm: nothing is saved until the entry is.
  * It reports the photo shown through `onRemove`, and the host closes the
  * viewer and moves focus (`PhotoRow`).
  *

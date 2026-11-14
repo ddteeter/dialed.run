@@ -122,6 +122,19 @@ describe("PhotoRow", () => {
     expect(box).toHaveTextContent("+Add photo");
   });
 
+  it("says what a photo does under the row, while there is one", () => {
+    // 249.2's line under the row.
+    const { unmount } = render(<Host />);
+    const line = screen.getByText(
+      "Press a photo to see it whole or remove it.",
+    );
+    expect(line).toHaveClass("text-small", "text-label");
+    expect(line.previousElementSibling).toBe(screen.getByRole("list"));
+    unmount();
+    render(<Host start={[]} />);
+    expect(screen.queryByText(/^Press a photo/u)).toBeNull();
+  });
+
   it("is a group named by its kicker", () => {
     render(<Host />);
     expect(
@@ -235,10 +248,12 @@ describe("PhotoRow", () => {
     expect(thumb(1, 2)).toHaveFocus();
   });
 
-  it("after removing the last photo, focuses the one before", async () => {
+  it("after removing the last photo, focuses the add box after it", async () => {
+    // 249.3: the next thumbnail, or the add box if none is left.
     render(<Host />);
     await removeFrom(3, 3);
-    expect(thumb(2, 2)).toHaveFocus();
+    expect(addInput()).toHaveFocus();
+    expect(thumb(2, 2)).not.toHaveFocus();
   });
 
   it("after removing the only photo, focuses the add box", async () => {

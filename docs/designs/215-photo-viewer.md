@@ -78,3 +78,11 @@ photo well stays as it is (249.5). This lane builds all of that for A2 (#659).
 3. **Names**, answered by the owner on 2026-11-13: a thumbnail's button is
    "Photo 1 of 2", the add box is "Add photo", and the arrows are
    "Previous photo" and "Next photo".
+4. **The arrows are hidden at each end** (Design 261, #690). 249.1 draws the
+   first arrow `--muted` with no edge on photo 1, while R55·207 (D's pager,
+   #636) hides each one at its end, and the two lanes share
+   `PagerArrows`. Until Design rules, both hide it: an arrow that does
+   nothing would be a dead control a screen reader still lands on.
+5. **The line under the row shows only while there is a photo.** 249.2's
+   "Press a photo to see it whole or remove it." has nothing to point at
+   with an empty row.
