@@ -29,9 +29,9 @@ labelled by the detail's heading): it undoes R55·173 for one caller, it needs
 a new mode in `Sheet.tsx` (9a's file this wave), and Runners' name line is
 not a heading, so there would be nothing to label the drawer by.
 
-**Guess, sent to the coordinator:** the drawer's title then shows a code in
-the Sheet's display type, not mono. If Design wants the code in mono there,
-that is a `Sheet` title change for 9a, not this lane.
+**Guess, Design 251 (#667, Round 57):** the drawer's title then shows a code
+in the Sheet's display type, not mono; mono stays in the wide pane. If Design
+rules mono there, that is a `Sheet` title change for 9a, not this lane.
 
 ## Contract touches
 
@@ -59,4 +59,5 @@ that is a `Sheet` title change for 9a, not this lane.
 
 ## Open questions
 
-- Code in display type in the drawer title (above). Proceeding on it.
+- Code in display type in the drawer title: Design 251 (#667). Proceeding
+  on the guess above.
