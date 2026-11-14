@@ -111,7 +111,7 @@ export function ResendLink({
         onClick={() => {
           void control.run();
         }}
-        className={RESEND_LOOK[look]}
+        className={`target ${RESEND_LOOK[look]}`}
       >
         <PendingLabel
           label="Resend link"
@@ -143,20 +143,21 @@ export function ResendLink({
 }
 
 /**
+ * Each is a 44 target, written at the element (rule 03 reads it there).
  * The looks: the page's text link, and the sheet's outline pill — a
  * 1px ink rule, no fill, `HEIGHT.control` (48) high and the sheet's width,
  * as round 29 #12 draws it.
  */
 export const RESEND_LINK =
-  "target cursor-pointer border-none bg-transparent p-0 text-body font-semibold text-ink underline underline-offset-4";
+  "cursor-pointer border-none bg-transparent p-0 text-body font-semibold text-ink underline underline-offset-4";
 export const RESEND_PILL =
-  "target flex h-12 w-full cursor-pointer items-center justify-center rounded-pill border border-ink bg-transparent px-5 text-body font-bold text-ink";
+  "flex h-12 w-full cursor-pointer items-center justify-center rounded-pill border border-ink bg-transparent px-5 text-body font-bold text-ink";
 /**
  * The confirm band's link: R29 draws it 600 in the cold pink, underlined,
  * on the sentence's line (R55·211).
  */
 export const RESEND_BAND_LINK =
-  "target cursor-pointer border-none bg-transparent p-0 font-semibold text-cold-text underline underline-offset-4";
+  "cursor-pointer border-none bg-transparent p-0 font-semibold text-cold-text underline underline-offset-4";
 
 const RESEND_LOOK = {
   link: RESEND_LINK,
@@ -184,7 +185,7 @@ export function PillButton({
       type="button"
       ref={buttonRef}
       onClick={onClick}
-      className={RESEND_PILL}
+      className={`target ${RESEND_PILL}`}
     >
       {label}
     </button>

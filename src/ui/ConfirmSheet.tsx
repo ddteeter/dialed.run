@@ -50,9 +50,9 @@ interface ConfirmContent {
  */
 const CONFIRM_LINK_TONE: Readonly<Record<"quiet" | "owner", string>> = {
   quiet:
-    "target cursor-pointer self-start border-none bg-transparent p-0 py-3 text-small text-label underline underline-offset-4",
+    "cursor-pointer self-start border-none bg-transparent p-0 py-3 text-small text-label underline underline-offset-4",
   owner:
-    "target cursor-pointer self-start border-none bg-transparent p-0 py-3 text-body font-semibold text-cold-text underline underline-offset-4",
+    "cursor-pointer self-start border-none bg-transparent p-0 py-3 text-body font-semibold text-cold-text underline underline-offset-4",
 };
 
 export function ConfirmLink({
@@ -80,7 +80,7 @@ export function ConfirmLink({
     <>
       <button
         type="button"
-        className={CONFIRM_LINK_TONE[tone]}
+        className={`target ${CONFIRM_LINK_TONE[tone]}`}
         onClick={() => {
           setIsOpen(true);
         }}

@@ -133,14 +133,9 @@ describe("ResendLink", () => {
         look="band"
       />,
     );
-    expect(resendButton().className).toBe(RESEND_BAND_LINK);
+    expect(resendButton().className).toBe(`target ${RESEND_BAND_LINK}`);
     expect(RESEND_BAND_LINK.split(" ")).toEqual(
-      expect.arrayContaining([
-        "target",
-        "font-semibold",
-        "text-cold-text",
-        "underline",
-      ]),
+      expect.arrayContaining(["font-semibold", "text-cold-text", "underline"]),
     );
     expect(RESEND_BAND_LINK).not.toContain("text-ink");
   });
@@ -520,7 +515,7 @@ describe("the confirm-first sheet and the nag", () => {
     });
     // Not now is Resend's match: the same full-width pill (B-11).
     const notNow = within(sheet).getByRole("button", { name: "Not now" });
-    expect(notNow.className).toBe(RESEND_PILL);
+    expect(notNow.className).toBe(`target ${RESEND_PILL}`);
     await user.click(notNow);
     expect(onClose).toHaveBeenCalled();
   });

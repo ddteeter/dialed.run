@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { verdictScale } from "../../src/lib/contracts";
-import { verdictHue } from "../../src/ui/verdict-hue";
+import { verdictHue, verdictTextHue } from "../../src/ui/verdict-hue";
 
 /**
  * T2's verdict hues, which A3 and DS2 both read (design round 19).
@@ -60,5 +60,15 @@ describe("verdictHue", () => {
         expect.stringContaining("bg-ink"),
       ]);
     }
+  });
+});
+
+describe("verdictTextHue (R55·210)", () => {
+  it("words a verdict in its sign's hue, 600, as verdictHue fills it", () => {
+    expect(verdictTextHue(-2)).toBe("font-semibold text-cold-text");
+    expect(verdictTextHue(-1)).toBe("font-semibold text-cold-text");
+    expect(verdictTextHue(0)).toBe("font-semibold text-dialed-text");
+    expect(verdictTextHue(1)).toBe("font-semibold text-quiet");
+    expect(verdictTextHue(2)).toBe("font-semibold text-quiet");
   });
 });

@@ -90,7 +90,7 @@ export function FollowPill({
       onClick={() => {
         void control.run();
       }}
-      className={pillLook(handle === undefined ? "header" : "row", isFollowing)}
+      className={`target ${pillLook(handle === undefined ? "header" : "row", isFollowing)}`}
     >
       <PendingLabel
         label={isFollowing ? "Following" : "Follow"}
@@ -113,15 +113,15 @@ export function FollowPill({
 const PILL_LOOK = {
   header: {
     follow:
-      "target shrink-0 cursor-pointer rounded-pill border-none bg-action px-5 py-2 text-body font-bold text-accent-ink",
+      "shrink-0 cursor-pointer rounded-pill border-none bg-action px-5 py-2 text-body font-bold text-accent-ink",
     following:
-      "target shrink-0 cursor-pointer rounded-pill border border-ink bg-transparent px-5 py-2 text-body font-bold text-ink",
+      "shrink-0 cursor-pointer rounded-pill border border-ink bg-transparent px-5 py-2 text-body font-bold text-ink",
   },
   row: {
     follow:
-      "target shrink-0 cursor-pointer rounded-pill border border-hairline bg-transparent px-5 py-2 text-body font-bold text-ink",
+      "shrink-0 cursor-pointer rounded-pill border border-hairline bg-transparent px-5 py-2 text-body font-bold text-ink",
     following:
-      "target shrink-0 cursor-pointer border-none bg-transparent px-2 py-2 text-body text-muted",
+      "shrink-0 cursor-pointer border-none bg-transparent px-2 py-2 text-body text-muted",
   },
 } as const;
 

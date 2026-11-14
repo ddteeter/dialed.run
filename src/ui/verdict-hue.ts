@@ -37,3 +37,18 @@ export function verdictHue(value: VerdictValue): string {
   if (value > 0) return WARM;
   return DIALED;
 }
+
+/**
+ * A verdict's word in its T2 hue, where it is text rather than a fill:
+ * G and H's run rows (R55·210). The same sign rule as `verdictHue`, so a
+ * row's word and a chip's fill can never disagree about which is cold.
+ */
+const COLD_TEXT = "font-semibold text-cold-text";
+const DIALED_TEXT = "font-semibold text-dialed-text";
+const WARM_TEXT = "font-semibold text-quiet";
+
+export function verdictTextHue(value: VerdictValue): string {
+  if (value < 0) return COLD_TEXT;
+  if (value > 0) return WARM_TEXT;
+  return DIALED_TEXT;
+}

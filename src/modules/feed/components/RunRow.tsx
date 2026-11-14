@@ -1,9 +1,15 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 
-import type { Conditions, Units, VerdictValue } from "../../../lib/contracts";
+import type { Conditions, Units } from "../../../lib/contracts";
 import { verdictScale } from "../../../lib/contracts/verdicts";
-import { Mono, SlowLabel, Spoken, useTappedSlow } from "../../../ui";
+import {
+  Mono,
+  SlowLabel,
+  Spoken,
+  useTappedSlow,
+  verdictTextHue,
+} from "../../../ui";
 import { BOUND_SEPARATOR } from "../posted";
 import { stripConditions } from "../strip";
 import { SpokenDistance } from "./SpokenDistance";
@@ -28,16 +34,6 @@ export interface ProfileRun {
   conditions: Conditions | undefined;
   verdict: number | null;
   underReview?: boolean;
-}
-
-/**
- * A verdict's word in its hue: T2's, cold pink, dialed teal, warm quiet.
- * Whole strings, so the unknown-class lint and Tailwind both see them.
- */
-function verdictInk(value: VerdictValue): string {
-  if (value < 0) return "font-semibold text-cold-text";
-  if (value > 0) return "font-semibold text-quiet";
-  return "font-semibold text-dialed-text";
 }
 
 export function RunRow({
@@ -93,7 +89,7 @@ function RunMeta({
       )}
       {verdict === undefined ? undefined : (
         <>
-          <span className={verdictInk(verdict.value)}>{verdict.label}</span>
+          <span className={verdictTextHue(verdict.value)}>{verdict.label}</span>
           {BOUND_SEPARATOR}
         </>
       )}
