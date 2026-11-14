@@ -34,10 +34,9 @@ Following
 end of button, Following
 list
 listitem, level 1, position 1, set size 1
-link, :day :month # Dialed
-:day :month #
+link, :day, :month #
 Dialed
-end of link, :day :month # Dialed
+#.# miles
 end of listitem, level 1, position 1, set size 1
 end of list
 button, Report or block @trail_#

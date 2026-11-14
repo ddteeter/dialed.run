@@ -520,9 +520,8 @@ describe("OwnProfile (G): past day one", () => {
     expect(drawnText(meta)).toBe(
       "41° · Overcast\u{A0}· A bit cold\u{A0}· 8.2 mi",
     );
-    expect(saidText(meta)).toBe(
-      "41 degrees, Overcast\u{A0}· A bit cold\u{A0}· 8.2 miles",
-    );
+    // The dots are drawn, not said.
+    expect(saidText(meta)).toBe("41 degrees, OvercastA bit cold8.2 miles");
     expect(meta?.firstElementChild).toHaveClass("text-mono-sm", "text-quiet");
     expect(within(row).getByText("A bit cold")).toHaveClass(
       "font-semibold",

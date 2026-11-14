@@ -86,7 +86,7 @@ test("your own entry under review is marked to you: on the card, on G, on D", as
     });
     await page.goto("/feed");
     await hydrated(page);
-    // Round 40 C5b: no gutter between posts — a 1px hairline, and each
+    // R55·205: posts are split by an 8 --tint band, edge to edge, and each
     // post keeps SPACE[4] above and below. Read as the browser drew it,
     // so a class Tailwind did not generate fails here.
     const posts = page.locator('[data-part="posts"] > [data-part="post"]');
@@ -100,7 +100,7 @@ test("your own entry under review is marked to you: on the card, on G, on D", as
         padding: `${style.paddingTop} ${style.paddingBottom}`,
       };
     });
-    expect(drawn).toEqual({ rule: "1px solid", padding: "16px 16px" });
+    expect(drawn).toEqual({ rule: "8px solid", padding: "16px 16px" });
     // Found by its link: the caption that named it is cut (D-167).
     const ownCard = page.locator('[data-part="post"]').filter({
       has: page.locator(`a[href="/feed/entry/${ownEntryId}"]`),
@@ -121,8 +121,8 @@ test("your own entry under review is marked to you: on the card, on G, on D", as
     await expect(ownCard.getByText(/· You$/u)).toBeVisible();
     await expect(ownCard.getByText("1 / 2")).toBeVisible();
 
-    // G's Recent entries (round 35 #53b): the link names the run's day and
-    // distance, and the meta line under it carries the tag first.
+    // G's Recent entries (R55·210): the link names the run's day, and
+    // the meta line under it carries the tag.
     await page.goto("/feed/me");
     await hydrated(page);
     await expect(
@@ -131,14 +131,14 @@ test("your own entry under review is marked to you: on the card, on G, on D", as
     const ownRow = page.locator("li").filter({
       has: page.locator(`a[href="/feed/entry/${ownEntryId}"]`),
     });
-    // Drawn "Sat, Aug 29 · 8.2 mi", said "Sat, Aug 29, 8.2 miles"
-    // (round 52 #158).
+    // R55·210: the date is the link, "Sat, Aug 29"; the meta line under
+    // it ends on the card's tag, outside the link.
     await expect(ownRow.getByRole("link")).toHaveAccessibleName(
-      /^[A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2}, \d+\.\d (miles|kilometres)$/u,
+      /^[A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2}$/u,
     );
     await expect(
-      ownRow.locator('[data-part="entry-meta"] > :first-child'),
-    ).toHaveAttribute("data-part", "review-tag");
+      ownRow.locator('[data-part="run-meta"] [data-part="review-tag"]'),
+    ).toHaveCount(1);
 
     // D · HIDDEN WHILE WE CHECK, at the top.
     await page.goto("/feed");

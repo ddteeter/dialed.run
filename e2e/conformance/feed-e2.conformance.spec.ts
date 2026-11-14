@@ -259,8 +259,15 @@ test.describe("with the location refused", () => {
     expect(cells[3]).toMatch(/^YOUR CITY .* FIND/u);
     expect(drawn[3]).toMatch(/^CITY /u);
     expect(drawn).toContain("USE THIS CITY");
-    // The line under it is still round 22's.
-    expect(cells.at(-1)).toBe(drawn.at(-1));
+    // The line under it is R55·216's promise, which replaces round 22's
+    // status ("Saved to your settings…") until Use this. It now sits in
+    // the finder's own cell, as its footnote.
+    expect(drawn.at(-1)).toBe(
+      "SAVED TO YOUR SETTINGS. CHANGE IT ANY TIME UNDER YOU.",
+    );
+    expect(cells.at(-1)).toMatch(
+      /WE['’]LL SAVE IT TO YOUR SETTINGS\. CHANGE IT ANY TIME UNDER YOU\.$/u,
+    );
     // Not a failure: no band, nothing yellow.
     await expect(
       page.locator(`${built} [data-part="failure-band"]`),

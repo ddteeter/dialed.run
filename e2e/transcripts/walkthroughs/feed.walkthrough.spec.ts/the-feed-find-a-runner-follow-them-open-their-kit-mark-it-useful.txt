@@ -40,6 +40,7 @@ list
 listitem, level 1, position 1, set size 1
 Merino half-zip
 Generic
+L/S crew
 end of listitem, level 1, position 1, set size 1
 end of list
 button, # Useful, pressed

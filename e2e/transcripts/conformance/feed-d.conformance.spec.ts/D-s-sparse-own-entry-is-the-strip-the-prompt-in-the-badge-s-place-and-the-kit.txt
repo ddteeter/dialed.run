@@ -20,6 +20,7 @@ list
 listitem, level 1, position 1, set size 1
 Long sleeve
 Generic
+L/S crew
 end of listitem, level 1, position 1, set size 1
 end of list
 Yours

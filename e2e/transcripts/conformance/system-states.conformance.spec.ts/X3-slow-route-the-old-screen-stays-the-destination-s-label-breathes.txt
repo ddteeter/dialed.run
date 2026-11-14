@@ -17,7 +17,7 @@ Find
 end of button, Find
 Add the state or country. We'll show you the place we found before we use it.
 paragraph
-Saved to your settings. Change it any time under You.
+We’ll save it to your settings. Change it any time under You.
 end of paragraph
 end of main
 navigation, Main

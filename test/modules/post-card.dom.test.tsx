@@ -138,7 +138,7 @@ describe("PostCard: order and absence", () => {
     expect(partsOf(post)).toStrictEqual([
       "author",
       "verdict-badge",
-      "photo-slot",
+      "photo",
       "photo-counter",
       "run-strip",
       "reactions",
@@ -162,7 +162,7 @@ describe("PostCard: order and absence", () => {
   it("gives a lone photo no counter (round 35 #53c)", async () => {
     const post = await card({ photoKeys: ["user/01/a.jpg"] });
     expect(
-      post.querySelector('[data-part="photo-slot"]')?.querySelector("img"),
+      post.querySelector('[data-part="photo"]')?.querySelector("img"),
     ).toHaveAttribute("src", "/feed/photo/user/01/a.jpg");
     expect(within(post).queryByText(/\d \/ \d/u)).toBeNull();
   });

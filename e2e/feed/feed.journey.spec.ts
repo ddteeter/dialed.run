@@ -218,8 +218,8 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     // shared (`runners`) entries. Told apart by verdict: the caption is
     // cut for v1 (D-167).
     await expect(
-      page.locator('[data-part="entries"] [data-part="verdict-badge"]'),
-    ).toHaveText(["Dialed"]);
+      page.locator('[data-part="entries"] [data-part="run-meta"]'),
+    ).toHaveText([/Dialed/u]);
 
     // Follow them: the label waits for the server, then flips.
     await scene(page, "Following is what puts them in the feed");

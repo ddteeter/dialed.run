@@ -95,9 +95,10 @@ test("an operator reads the Desk's duplicates report", async ({ page }) => {
     .locator('html[data-hydrated="true"]')
     .waitFor({ state: "attached" });
   // One current page: Today's `/desk` is no longer lit beside it.
-  await expect(
-    rail.getByRole("link", { name: "Duplicates" }),
-  ).toHaveAttribute("aria-current", "page");
+  await expect(rail.getByRole("link", { name: "Duplicates" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
   await expect(rail.locator("[aria-current='page']")).toHaveCount(1);
 
   await scene(page, "How much dirt: names, probable products, pieces");
@@ -121,9 +122,9 @@ test("an operator reads the Desk's duplicates report", async ({ page }) => {
     "Tracksmith[7 pieces]",
   );
   await expect(tracksmith.locator("strong")).toHaveText("Harrier Long Sleeve");
-  await expect(
-    tracksmith.getByRole("listitem").nth(1),
-  ).toHaveText("Harrier Long Sleeves2 pieces");
+  await expect(tracksmith.getByRole("listitem").nth(1)).toHaveText(
+    "Harrier Long Sleeves2 pieces",
+  );
 
   await scene(page, "Sorted by pieces affected: seven before four");
   const headings = await page

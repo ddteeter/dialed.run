@@ -149,26 +149,25 @@ test("report a runner, block them, and take the block back", async ({
     .getByRole("button", { name: `Report or block @${strangerName}` })
     .click();
 
+  // R55·214: a profile's own sheet, with a profile's own reasons.
+  await expect(
+    page.getByRole("heading", { name: `Report or block @${strangerName}` }),
+  ).toBeVisible();
   await scene(page, "Reasons are sentences a runner would say");
   await expect(
-    page.getByRole("radio", { name: "Harassment aimed at someone" }),
+    page.getByRole("radio", { name: "They're harassing someone" }),
   ).toBeVisible();
-  await page
-    .getByRole("radio", { name: "Harassment aimed at someone" })
-    .click();
+  await page.getByRole("radio", { name: "They're harassing someone" }).click();
 
-  await scene(page, "Three promises, and the code keeps all three");
-  // The footer says it in one line over Send report; the body has it whole.
-  await expect(page.locator("[data-part='report-consequence']")).toContainText(
-    "A person reads it within a day",
+  await scene(page, "Two promises, and the code keeps both");
+  // A profile report hides nothing, so the sheet promises nothing about
+  // hiding: a person reads it, and the runner isn't told who.
+  await expect(page.locator("[data-part='report-consequence']")).toHaveText(
+    "A person reads it within a day. They won't know it was you.",
   );
   await expect(
-    page.getByText(/A person reads it within a day\. The entry/),
-  ).toBeVisible();
-  await expect(
-    page.getByText(/The entry is hidden from your feed straight away/),
-  ).toBeVisible();
-  await expect(page.getByText(/never told who/)).toBeVisible();
+    page.getByText(/The entry is hidden from your feed/),
+  ).toHaveCount(0);
 
   await scene(page, "Blocking rides with the report, not a second request");
   // "Send and block" (R54·166.6): one press sends both, and names whom.

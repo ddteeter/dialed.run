@@ -34,7 +34,9 @@ test("a request from the marketing site waits for D7, and the visitor goes to /i
       .from(accessRequests)
       .where(eq(accessRequests.email, email)),
   );
-  expect(rows).toEqual([{ note: "From the marketing site.", status: "pending" }]);
+  expect(rows).toEqual([
+    { note: "From the marketing site.", status: "pending" },
+  ]);
 });
 
 test("a malformed address goes back to /invite with error=invalid_email", async ({

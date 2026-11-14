@@ -65,8 +65,13 @@ export function RunRow({
 
 /**
  * The line under the date. Each "·" is bound to what follows it
- * (R55·204's rule), so a wrapped line never ends on one.
+ * (R55·204's rule), so a wrapped line never ends on one, and is drawn
+ * rather than said: a reader hears "Dialed, 8.2 miles", not a lone dot.
  */
+function Separator(): JSX.Element {
+  return <span aria-hidden="true">{BOUND_SEPARATOR}</span>;
+}
+
 function RunMeta({
   run,
   units,
@@ -84,19 +89,19 @@ function RunMeta({
               <Spoken shown={cell.shown} said={cell.said} />
             </span>
           )}
-          {BOUND_SEPARATOR}
+          <Separator />
         </>
       )}
       {verdict === undefined ? undefined : (
         <>
           <span className={verdictTextHue(verdict.value)}>{verdict.label}</span>
-          {BOUND_SEPARATOR}
+          <Separator />
         </>
       )}
       <SpokenDistance distanceM={run.distanceM} units={units} />
       {run.underReview === true ? (
         <>
-          {BOUND_SEPARATOR}
+          <Separator />
           <UnderReview />
         </>
       ) : undefined}

@@ -100,9 +100,7 @@ test("log a run: the file, its conditions, the kit, the verdict", async ({
       say: "That all looks right, so I'll go on to what I wore.",
     });
 
-    await page
-      .getByRole("link", { name: "What did you wear?" })
-      .click();
+    await page.getByRole("link", { name: "What did you wear?" }).click();
     await hydrated(page);
     await expect(
       page.getByRole("heading", { name: "What did you wear?" }),

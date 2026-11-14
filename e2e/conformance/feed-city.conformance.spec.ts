@@ -46,7 +46,9 @@ async function drawn(
 ): Promise<string[]> {
   await openBoard(page, BOARD, baseURL);
   const lines = await linesOf(page, screen(label));
-  return lines.filter((line) => line !== typed.toUpperCase()).toSorted((a, b) => a.localeCompare(b));
+  return lines
+    .filter((line) => line !== typed.toUpperCase())
+    .toSorted((a, b) => a.localeCompare(b));
 }
 
 async function openDenied(page: Page): Promise<void> {
@@ -62,7 +64,11 @@ async function openDenied(page: Page): Promise<void> {
 
 async function built(page: Page): Promise<string[]> {
   const lines = await linesOf(page, '[data-part="city-finder"]');
-  return lines.toSorted((a, b) => a.localeCompare(b));
+  // The tab's own line under the finder (R55·216's footnote) is not part
+  // of the city field's board.
+  return lines
+    .filter((line) => !/save it to your settings/iu.test(line))
+    .toSorted((a, b) => a.localeCompare(b));
 }
 
 test("City field empty: the label, round 26's hint, and Find", async ({

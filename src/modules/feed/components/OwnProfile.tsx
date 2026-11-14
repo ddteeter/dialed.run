@@ -200,9 +200,9 @@ function NextStep({
           Next
         </Mono>
       </h2>
+      {/* One string, so a reader hears one sentence, not three pieces. */}
       <p className="m-0 text-lead">
-        Your last run has no kit yet. Add what you wore, and your closet starts
-        learning {learning}.
+        {`Your last run has no kit yet. Add what you wore, and your closet starts learning ${learning}.`}
       </p>
       <Link
         data-part="primary-action"

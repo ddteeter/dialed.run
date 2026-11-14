@@ -14,7 +14,7 @@ import {
  */
 function slot(): HTMLElement {
   const element = document.querySelector<HTMLElement>(
-    '[data-part="photo-slot"]',
+    "[data-part='photo'], [data-part='photo-slot']",
   );
   if (element === null) throw new Error("no slot");
   return element;
@@ -111,6 +111,7 @@ describe("PhotoSlot", () => {
       "left-3",
       "text-muted",
     );
+    expect(note.parentElement).toHaveAttribute("aria-hidden", "true");
     expect(screen.queryByText("counter")).toBeNull();
     // The owner's delete stays: a failed photo is still theirs to remove.
     expect(screen.getByRole("button", { name: "Delete" })).toBeVisible();
@@ -179,5 +180,15 @@ describe("PhotoCounter", () => {
       "py-1",
       "text-ink",
     );
+  });
+});
+
+describe("PhotoSlot's part", () => {
+  it("is the boards' photo by default, and the pager's photo-slot when asked", () => {
+    const { unmount } = render(<PhotoSlot src="/a.jpg" shape="portrait" />);
+    expect(slot()).toHaveAttribute("data-part", "photo");
+    unmount();
+    render(<PhotoSlot src="/a.jpg" shape="portrait" part="photo-slot" />);
+    expect(slot()).toHaveAttribute("data-part", "photo-slot");
   });
 });

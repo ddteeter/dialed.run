@@ -109,6 +109,7 @@ export function PhotoPager({
             <PhotoSlot
               src={srcOf(key)}
               shape="portrait"
+              part="photo-slot"
               className="w-full desk:h-full desk:w-auto"
               overlay={<PhotoCounter index={page} count={count} />}
             >

@@ -36,6 +36,7 @@ export function PhotoSlot({
   overlay,
   children,
   className = "",
+  part = "photo",
 }: Readonly<{
   src: string;
   shape: PhotoShape;
@@ -48,6 +49,11 @@ export function PhotoSlot({
    */
   children?: ReactNode;
   className?: string;
+  /**
+   * The slot's `data-part`: the boards' "photo" on the card, and
+   * "photo-slot" in D's pager, whose row is already "photo".
+   */
+  part?: "photo" | "photo-slot";
 }>): JSX.Element {
   const [isFailed, setFailed] = useState(false);
   // Once per element and source, not per render: asking again re-runs
@@ -64,7 +70,7 @@ export function PhotoSlot({
 
   return (
     <span
-      data-part="photo-slot"
+      data-part={part}
       data-state={isFailed ? "failed" : "shown"}
       className={`relative block overflow-hidden rounded-card ${SHAPE_CLASS[shape]} ${
         isFailed ? "photo-hatch" : "bg-photo"
@@ -81,7 +87,12 @@ export function PhotoSlot({
         className="size-full object-cover"
       />
       {isFailed ? (
-        <span className="absolute bottom-3 left-3 text-muted">
+        // Drawn, not said: the photo is decorative (`alt=""`), so a
+        // reader is not told about one they were never going to hear.
+        <span
+          aria-hidden="true"
+          className="absolute bottom-3 left-3 text-muted"
+        >
           <Mono step="xs">Photo didn&apos;t load</Mono>
         </span>
       ) : (

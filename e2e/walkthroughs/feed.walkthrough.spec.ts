@@ -70,8 +70,8 @@ test("the feed: find a runner, follow them, open their kit, mark it useful", asy
     await row.getByRole("link", { name: handle }).click();
     await hydrated(page);
     await expect(
-      page.locator('[data-part="entries"] [data-part="verdict-badge"]'),
-    ).toHaveText(["Dialed"]);
+      page.locator('[data-part="entries"] [data-part="run-meta"]'),
+    ).toHaveText([/Dialed/u]);
     await expect(page.getByRole("button", { name: "Follow" })).toBeVisible();
     await scene(page, "Their profile · what they shared", {
       say: "Their profile shows what they've shared: here, one run, and how it went. I'll follow them.",
