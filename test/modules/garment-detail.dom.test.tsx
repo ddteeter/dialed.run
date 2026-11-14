@@ -578,9 +578,7 @@ describe("GarmentDetail: stats", () => {
         { units: { temp: "c", distance: "mi" } },
       ),
     );
-    expect(part("stats").firstElementChild).toHaveTextContent(
-      /^51 mi logged$/,
-    );
+    expect(part("stats").firstElementChild).toHaveTextContent(/^51 mi logged$/);
   });
 
   it("leads with the ratio when there are verdicts and no mileage", async () => {
@@ -661,11 +659,35 @@ describe("GarmentDetail: stats", () => {
     expect(part("stats")).not.toHaveTextContent("Works at");
   });
 
-  it("says untested when there is no range", async () => {
+  it("says untested when there is no range and no verdict", async () => {
     await renderWithRouter(garment());
     expect(
       within(part("stats")).getByText(bracketed("Untested")),
     ).toBeVisible();
+  });
+
+  it("never calls a judged piece untested for want of a range (N1-04)", async () => {
+    // R55·189: Untested keeps only the rail's meaning, no verdicts.
+    await renderWithRouter(
+      garment({
+        performance: performance({
+          runCount: 17,
+          verdictCount: 17,
+          dialedCount: 9,
+        }),
+      }),
+    );
+    expect(part("stats")).toHaveTextContent("9/17 dialed");
+    expect(part("stats")).not.toHaveTextContent(/Untested/iu);
+  });
+
+  it("calls a piece with one verdict judged, not untested", async () => {
+    await renderWithRouter(
+      garment({
+        performance: performance({ runCount: 1, verdictCount: 1 }),
+      }),
+    );
+    expect(part("stats")).not.toHaveTextContent(/Untested/iu);
   });
 });
 
@@ -758,9 +780,7 @@ describe("GarmentDetail: composition", () => {
     );
     // Absent, not empty: there is no region when it has nothing to say,
     // so the actions can tell they follow the stats (C-06).
-    expect(
-      document.querySelector("[data-part='composition']"),
-    ).toBeNull();
+    expect(document.querySelector("[data-part='composition']")).toBeNull();
     expect(part("stats").nextElementSibling).toBe(part("actions"));
     expect(part("actions")).toHaveClass(
       "border-t",
@@ -1007,9 +1027,7 @@ describe("GarmentDetail: the retire confirm (round 22)", () => {
     expect(retire).not.toHaveBeenCalled();
     expect(sheet().closest("dialog")).toHaveAttribute("open");
     expect(sheet()).toHaveAttribute("data-state", "confirm-retire");
-    expect(
-      sheetHeading("Retire the Harrier?"),
-    ).toBeVisible();
+    expect(sheetHeading("Retire the Harrier?")).toBeVisible();
     expect(
       within(sheet()).getByText(
         "It leaves the closet and the picker. Its 14 runs and verdicts stay, and still count. You can bring it back.",
@@ -1163,9 +1181,7 @@ describe("GarmentDetail: the delete confirm (round 22)", () => {
     expect(sheet()).toHaveAttribute("data-state", "confirm-delete");
     // No runs, so round 26's sheet is not on the page at all.
     expect(document.querySelectorAll("[data-part='sheet']")).toHaveLength(1);
-    expect(
-      sheetHeading("Delete the Harrier?"),
-    ).toBeVisible();
+    expect(sheetHeading("Delete the Harrier?")).toBeVisible();
     expect(
       within(sheet()).getByText(
         "This can't be undone. Retire keeps the history.",

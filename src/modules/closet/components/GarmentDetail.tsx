@@ -7,6 +7,7 @@ import type {
   GarmentVisibility,
   Units,
 } from "../../../lib/contracts";
+import { coverageOfVerdicts } from "../../../lib/contracts";
 import { photoAcceptAttribute } from "../../../lib/photo-constraints";
 import {
   wholeDistanceNumber,
@@ -396,11 +397,24 @@ function Stats({
           </Bracketed>
         </p>
       ) : (
-        <p className="m-0 text-muted">
-          <Bracketed>Untested</Bracketed>
-        </p>
+        <UntestedTag verdictCount={summary.verdictCount} />
       )}
     </div>
+  );
+}
+
+/**
+ * `[UNTESTED]` keeps only the rail's meaning, no verdicts (R55·189): a
+ * shoe judged seventeen times with no range is not untested (N1-04).
+ */
+function UntestedTag({
+  verdictCount,
+}: Readonly<{ verdictCount: number }>): JSX.Element | undefined {
+  if (coverageOfVerdicts(verdictCount) !== "unknown") return;
+  return (
+    <p className="m-0 text-muted">
+      <Bracketed>Untested</Bracketed>
+    </p>
   );
 }
 
