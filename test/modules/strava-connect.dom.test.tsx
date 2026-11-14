@@ -7,10 +7,8 @@ import {
   createRouter,
 } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { clockLabel, dayLabel, deviceTimeZone } from "../../src/lib/dates";
 import { StravaConnect } from "../../src/modules/runs/components/StravaConnect";
 import { expectBusy } from "../ui/unavailable";
 import { expectConsentBeforeButton } from "../ui/strava-consent";
@@ -51,14 +49,12 @@ async function screenFor(
   isConnected: boolean,
   overrides: {
     disconnect?: () => Promise<unknown>;
-    lastRunSeenAt?: number;
   } = {},
 ) {
   return renderInRouter(
     <StravaConnect
       configured
       connected={isConnected}
-      lastRunSeenAt={overrides.lastRunSeenAt}
       runCount={186}
       disconnect={overrides.disconnect ?? nothing}
     />,
@@ -83,7 +79,6 @@ describe("StravaConnect: not configured", () => {
         <StravaConnect
           configured={false}
           connected={false}
-          lastRunSeenAt={undefined}
           runCount={0}
           disconnect={nothing}
         />
@@ -115,60 +110,17 @@ describe("StravaConnect: not yet connected", () => {
   });
 });
 
-describe("StravaConnect: the last run seen (round 25, T3a)", () => {
-  it("adds when Strava last told us a run landed, in the runner's zone", async () => {
-    const at = Math.floor(Date.UTC(2026, 7, 29, 13, 58) / 1000);
-    await screenFor(true, { lastRunSeenAt: at });
-
-    const zone = deviceTimeZone() ?? "UTC";
-    expect(
-      await screen.findByText(
-        `Last run seen ${dayLabel(at, zone)}, ${clockLabel(at, zone)}`,
-      ),
-    ).toHaveClass("text-mono-sm", "text-muted");
-  });
-
-  it("leaves the time out of the first paint, which the server renders without the runner's zone", () => {
-    const html = renderToString(
-      <StravaConnect
-        configured
-        connected
-        lastRunSeenAt={1_788_000_000}
-        runCount={1}
-        disconnect={nothing}
-      />,
-    );
-
-    expect(html).toContain("Connected");
-    expect(html).not.toContain("Last run seen");
-  });
-
-  it("reads the time in UTC when the device names no zone it would accept", async () => {
-    const resolved = new Intl.DateTimeFormat().resolvedOptions();
-    const spy = vi
-      .spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions")
-      .mockReturnValue({ ...resolved, timeZone: "Not/A_Zone" });
-    try {
-      const at = Math.floor(Date.UTC(2026, 7, 29, 23, 30) / 1000);
-      await screenFor(true, { lastRunSeenAt: at });
-
-      expect(
-        await screen.findByText(
-          "Last run seen Sat Aug 29, 11:30 PM",
-        ),
-      ).toBeVisible();
-    } finally {
-      spy.mockRestore();
-    }
-  });
-
-  it("says only connected before the first run lands", async () => {
+describe("StravaConnect: no last run seen (Round 55 · 238)", () => {
+  it("says it is connected in one sentence, and nothing about the last run", async () => {
     await screenFor(true);
 
-    expect(
-      screen.getByText("Connected. We’ll remind you when a run lands."),
-    ).toHaveClass("text-body");
-    expect(screen.queryByText(/Last run seen/u)).toBeNull();
+    const sentence = screen.getByText(
+      "Connected. We’ll remind you when a run lands.",
+    );
+    expect(sentence).toHaveClass("text-body");
+    // R39 draws no "last run seen" (owner, 2026-11-13): the sentence is
+    // followed by the disconnect, nothing between.
+    expect(sentence.nextElementSibling).toHaveTextContent("Disconnect");
   });
 });
 
@@ -176,7 +128,9 @@ describe("StravaConnect: connected", () => {
   it("says it is connected, and offers only a disconnect", async () => {
     await screenFor(true);
 
-    expect(screen.getByText("Connected. We’ll remind you when a run lands.")).toHaveClass("text-body");
+    expect(
+      screen.getByText("Connected. We’ll remind you when a run lands."),
+    ).toHaveClass("text-body");
     expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual([
       "Disconnect",
     ]);

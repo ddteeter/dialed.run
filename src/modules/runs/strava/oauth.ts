@@ -24,13 +24,9 @@
  * A grant the runner kills on Strava's side arrives as a deauthorization
  * event instead (./deauthorize.ts).
  */
-import { and, desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
-import {
-  notifications,
-  stravaConnections,
-  stravaRevocations,
-} from "../../../db/schema-core";
+import { stravaConnections, stravaRevocations } from "../../../db/schema-core";
 import type { CoreDb } from "../core-db";
 import { newUlid } from "../../../lib/ids";
 import { stravaOriginSchema } from "../../../lib/strava-origin";
@@ -232,32 +228,15 @@ export async function isStravaConnected(
 }
 
 /**
- * What T1 and T3a draw: whether this runner is connected, and when Strava
- * last told us a run landed (round 25: "CONNECTED · LAST RUN SEEN …").
- *
- * The time is the newest reminder's, because a reminder is the only trace
- * a run landing leaves — we keep no activity. A reminder is marked read
- * when its file is uploaded, never deleted, so the time outlives that.
- * Read on `notifications_dedupe`, whose (user, kind) prefix covers it.
+ * What T1 and T3a draw: whether this runner is connected. Round 55 · 238
+ * draws no "last run seen" (owner, 2026-11-13): its only trace was the
+ * newest reminder's time, which says nothing the bell does not.
  */
 export async function stravaStatusOf(
   db: CoreDb,
   userId: string,
-): Promise<{ connected: boolean; lastRunSeenAt: number | undefined }> {
-  const reminderRows = and(
-    eq(notifications.userId, userId),
-    eq(notifications.kind, "strava_reminder"),
-  );
-  const [connection, [latest]] = await Promise.all([
-    getStravaConnection(db, userId),
-    db
-      .select({ at: notifications.createdAt })
-      .from(notifications)
-      .where(reminderRows)
-      .orderBy(desc(notifications.createdAt))
-      .limit(1),
-  ]);
-  return { connected: connection !== undefined, lastRunSeenAt: latest?.at };
+): Promise<{ connected: boolean }> {
+  return { connected: (await getStravaConnection(db, userId)) !== undefined };
 }
 
 /**

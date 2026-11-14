@@ -1,11 +1,7 @@
 import { eq, inArray } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  notifications,
-  stravaConnections,
-  stravaRevocations,
-} from "../../src/db/schema-core";
+import { stravaConnections, stravaRevocations } from "../../src/db/schema-core";
 import { newUlid } from "../../src/lib/ids";
 import { ONLY_THEIRS_GONE, seedAthleteGaveUp } from "../gave-up-rows";
 import { coreDb } from "../../src/modules/runs/core-db";
@@ -777,7 +773,11 @@ describe("the trip's origin, beside the nonce (round 39 #66, design 172)", () =>
   it("matches the callback's state against the nonce alone", () => {
     const { nonce } = readStateCookie("nonce-1.onboarding");
     expect(
-      stravaCallbackOutcome({ expectedState: nonce, code: "c", state: "nonce-1" }),
+      stravaCallbackOutcome({
+        expectedState: nonce,
+        code: "c",
+        state: "nonce-1",
+      }),
     ).toEqual({ ok: true, code: "c" });
     expect(
       stravaCallbackOutcome({
@@ -789,43 +789,20 @@ describe("the trip's origin, beside the nonce (round 39 #66, design 172)", () =>
   });
 });
 
-async function reminder(
-  userId: string,
-  createdAt: number,
-  kind = "strava_reminder",
-) {
-  await coreDb().insert(notifications).values({
-    id: newUlid(),
-    userId,
-    kind,
-    subjectId: newUlid(),
-    body: "New run on Strava",
-    createdAt,
-  });
-}
-
 describe("stravaStatusOf (T1 and T3a)", () => {
-  it("is not connected, with no run seen, for a runner who never connected", async () => {
+  it("is not connected for a runner who never connected", async () => {
     expect(await stravaStatusOf(coreDb(), newUlid())).toStrictEqual({
       connected: false,
-      lastRunSeenAt: undefined,
     });
   });
 
-  it("is connected, and names the newest reminder's time", async () => {
+  it("is connected once the grant is made, and says nothing of reminders", async () => {
     const db = coreDb();
     const userId = newUlid();
     await completeStravaConnect(db, fakeApi(), userId, "code");
-    await reminder(userId, 1000);
-    await reminder(userId, 3000);
-    await reminder(userId, 2000);
-    // Neither another kind nor another runner's reminder counts.
-    await reminder(userId, 9000, "kit_reminder");
-    await reminder(newUlid(), 8000);
 
     expect(await stravaStatusOf(db, userId)).toStrictEqual({
       connected: true,
-      lastRunSeenAt: 3000,
     });
   });
 });

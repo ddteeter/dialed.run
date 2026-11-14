@@ -28,7 +28,6 @@ function StravaPage() {
         <StravaConnect
           configured={strava.configured}
           connected={strava.connected}
-          lastRunSeenAt={strava.lastRunSeenAt}
           runCount={strava.runCount}
           disconnect={disconnectStravaFn}
         />

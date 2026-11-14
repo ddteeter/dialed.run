@@ -70,7 +70,9 @@ that a ruling changes is built to the ruling.
   The empty state is VERDICTS, [ALL LOGGED].
 - **Strava (D1-15, P2a-09, 238):** the callback page wears the shell and
   R39's receipt. Connected reads as one sentence, and Disconnect is a text
-  link.
+  link. Round 25's "Last run seen …" is dropped, with the reminder read
+  behind it: R39 does not draw it, and it only repeated when the last
+  reminder arrived (owner, 2026-11-13).
 - **Strava reminder (Round 55 · 183, from #633):** the row reads "New run
   on Strava. Upload its file, then add what you wore." It opens
   `/runs/new?date=<day>`, the day the row arrived in the runner's home

@@ -1,7 +1,6 @@
 import type { JSX, ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-import { clockLabel, dayLabel, deviceTimeZone } from "../../../lib/dates";
 import {
   ControlFailureBand,
   FormStatus,
@@ -25,11 +24,6 @@ export interface StravaConnectProps {
   configured: boolean;
   connected: boolean;
   /**
-   * When Strava last told us a run landed (epoch seconds) — T3a's "LAST
-   * RUN SEEN". Undefined until the first one.
-   */
-  lastRunSeenAt: number | undefined;
-  /**
   How many runs the runner has — what T3b promises is kept.
   */
   runCount: number;
@@ -45,26 +39,6 @@ const SECONDARY =
  */
 const DISCONNECT_LINK =
   "target inline-flex items-center self-start border-none bg-transparent p-0 text-body font-semibold text-ink underline underline-offset-4";
-
-/**
- * The time a run last landed on Strava, in the runner's own zone — which
- * only the device knows, so it is drawn after mount and never in the
- * server's first paint (see `lib/dates.ts`).
- *
- * The effect has no dependency list on purpose: it sets the same value
- * after every render, which React ignores, and leaves no array for a
- * mutant to replace. A device that names no zone it would accept reads
- * as UTC, which `lib/dates` already does for an undefined zone.
- */
-function LastRunSeen({ at }: Readonly<{ at: number }>): JSX.Element {
-  const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => {
-    setIsMounted(true);
-  });
-  if (!isMounted) return <></>;
-  const zone = deviceTimeZone();
-  return <>{`Last run seen ${dayLabel(at, zone)}, ${clockLabel(at, zone)}`}</>;
-}
 
 /**
  * Connect and disconnect (Remaining Screens T1, T3; round 22, item 23;
@@ -84,7 +58,6 @@ function LastRunSeen({ at }: Readonly<{ at: number }>): JSX.Element {
 export function StravaConnect({
   configured,
   connected,
-  lastRunSeenAt,
   runCount,
   disconnect,
 }: Readonly<StravaConnectProps>): JSX.Element | undefined {
@@ -121,13 +94,6 @@ export function StravaConnect({
       <p data-part="connected" className="m-0 text-body">
         Connected. We&rsquo;ll remind you when a run lands.
       </p>
-      {/* Round 25's last-run-seen, kept under the sentence as a muted
-          line; R39 does not draw it, a guess for Design. */}
-      {lastRunSeenAt === undefined ? undefined : (
-        <Mono step="sm" className="text-muted">
-          <LastRunSeen at={lastRunSeenAt} />
-        </Mono>
-      )}
       {isConfirming ? (
         <div
           data-slot="disconnect-confirm"

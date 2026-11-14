@@ -179,11 +179,15 @@ test("Strava: connect with the official button, a reminder lands, disconnect", a
     // Nothing about the run itself: no title, no distance.
     await expect(page.getByText("Never read")).toHaveCount(0);
 
-    // ---- T3a · connected, and when a run was last seen ----------------
-    await scene(page, "T3a · connected, and when the last run was seen");
+    // ---- T3a · connected: R39's one sentence -------------------------
+    // Round 55 · 238 draws no "last run seen" (owner, 2026-11-13).
+    await scene(page, "T3a · connected, in one sentence");
     await page.goto("/runs/strava");
     await hydrated(page);
-    await expect(page.getByText(/^Last run seen /u)).toBeVisible();
+    await expect(
+      page.getByText("Connected. We’ll remind you when a run lands."),
+    ).toBeVisible();
+    await expect(page.getByText(/Last run seen/u)).toHaveCount(0);
     await expect(
       page.getByRole("link", { name: "Connect with Strava" }),
     ).toHaveCount(0);
