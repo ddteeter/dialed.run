@@ -161,17 +161,18 @@ describe("PhotoMatches", () => {
       "/desk/runners?query=maya_runs&filter=all",
       "/desk/runners?query=k_lopes&filter=all",
     ]);
-    // A line with a 44 hit area, cut at the tile's edge: not a 44 box
-    // that sets the grid's row gap (R2-DESK-11).
+    // A 44 target that takes a line's height (R55·180), cut at the
+    // tile's edge, so it no longer sets the grid's row gap (R2-DESK-11).
     expect(owners[0]).toHaveClass(
-      "target-line",
+      "target",
+      "-my-3",
+      "py-3",
       "max-w-full",
       "truncate",
       "font-mono",
       "text-mono-xs",
       "underline",
     );
-    expect(owners[0]).not.toHaveClass("target");
     // In the handle's own case: no uppercase step anywhere in it (G-19).
     expect(owners[0]).not.toHaveClass("uppercase");
     expect(owners[0]?.querySelector(".uppercase")).toBeNull();

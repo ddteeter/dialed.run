@@ -347,9 +347,9 @@ function CodeWho({
       <span title={label} className="truncate">
         {label}
       </span>
-      {/* R2-DESK-03: each name is a text line with a 44 hit area
-          (`target-line`), not a 44 box, so a wrapped line is 12 below
-          the last rather than 48. */}
+      {/* R2-DESK-03: each name's 44 target grows by padding against an
+          equal negative margin (R55·180), so it takes a text line's
+          height and a wrapped line sits 12 below the last, not 48. */}
       <span className="flex flex-wrap items-baseline gap-x-3 gap-y-3">
         <Mono step="xs" className="text-muted">
           {usedLine(code.usedBy.length)}
@@ -361,7 +361,7 @@ function CodeWho({
           <button
             type="button"
             onClick={onMore}
-            className="target-line cursor-pointer border-none bg-transparent p-0 text-small font-bold text-action"
+            className="target -my-3 cursor-pointer border-none bg-transparent px-0 py-3 text-small font-bold text-action"
           >
             {`+ ${grouped(more)} more`}
           </button>
@@ -379,7 +379,7 @@ function RunnerLink({ who }: Readonly<{ who: string }>): JSX.Element {
     <Link
       to="/desk/runners"
       search={runnerSearch(who)}
-      className="target-line text-small text-ink underline underline-offset-4"
+      className="target -my-3 py-3 text-small text-ink underline underline-offset-4"
     >
       {who}
     </Link>

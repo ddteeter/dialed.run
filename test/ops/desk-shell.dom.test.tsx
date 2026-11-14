@@ -280,8 +280,8 @@ describe("DeskShell", () => {
     const [screening, digest] = [...(footer?.children ?? [])];
     expect(screening).toHaveTextContent("Screening · OK");
     expect(screening).toHaveClass("text-muted");
-    expect(digest).toHaveTextContent(/^Last digest · Not yet$/u);
-    expect(digest?.querySelector("[data-part='digest-time']")).toBeNull();
+    expect(digest?.textContent).toBe("Last digest · Not yet");
+    expect(digest?.querySelector("[data-part='digest-room']")).toBeNull();
   });
 
   it("says screening is holding, in hi-viz, while a breaker is over, and when the digest last ran (owner, #635)", async () => {
@@ -302,18 +302,14 @@ describe("DeskShell", () => {
     const [screening, digest] = [...(footer?.children ?? [])];
     expect(screening).toHaveTextContent("Screening · Holding");
     expect(screening).toHaveClass("text-hiviz-text");
-    // The time in the room "Not yet" holds, so the rail keeps its width
+    // One line, heard whole, then unseen and unheard room for the two
+    // characters "Not yet" has beyond a time, so the rail keeps its width
     // the day the digest first runs (R2-DESK-12b, a guess: #758).
-    const time = digest?.querySelector("[data-part='digest-time']");
-    expect(time).toHaveClass("inline-grid");
-    const [shown, room] = [...(time?.children ?? [])];
-    expect(shown).toHaveTextContent(/^07:00$/u);
-    expect(shown).toHaveClass("[grid-area:1/1]");
-    expect(shown).not.toHaveAttribute("aria-hidden");
-    expect(room).toHaveTextContent(/^Not yet$/u);
-    expect(room).toHaveClass("invisible", "[grid-area:1/1]");
+    expect(digest?.firstChild?.textContent).toBe("Last digest · 07:00");
+    const room = digest?.querySelector("[data-part='digest-room']");
+    expect(room?.textContent).toBe("00");
+    expect(room).toHaveClass("invisible");
     expect(room).toHaveAttribute("aria-hidden", "true");
-    expect(digest?.textContent.startsWith("Last digest · 07:00")).toBe(true);
   });
 
   it("counts what is waiting on the Review entry, in hi-viz", async () => {
@@ -486,9 +482,9 @@ describe("Today", () => {
     // R55·196: the whole card opens it, the link stretched over the card.
     expect(card).toHaveClass("relative");
     expect(link).toHaveClass("after:absolute", "after:inset-0");
-    // R2-DESK-10: no 44 box of its own, so the card is as tall as its
-    // neighbours and its label on their line.
-    expect(link).not.toHaveClass("target");
+    // R2-DESK-10: a 44 target that takes no height (R55·180), so the
+    // card is as tall as its neighbours and its label on their line.
+    expect(link).toHaveClass("target", "inline-block", "-my-3", "py-3");
     expect(link).not.toHaveClass("inline-flex");
   });
 

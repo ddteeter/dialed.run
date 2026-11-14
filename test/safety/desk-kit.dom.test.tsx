@@ -82,13 +82,12 @@ describe("DeskKit", () => {
     expect(screen.getByRole("link", { name: "@k_lopes" })).not.toHaveClass(
       "uppercase",
     );
-    // R2-DESK-13: a line with a 44 hit area, not a 44 box that sets the
-    // band's height for its first line only.
+    // R2-DESK-13: a 44 target that takes a line's height (R55·180), not a
+    // 44 box that sets the band's height for its first line only.
     expect(screen.getByRole("link", { name: "@k_lopes" })).toHaveClass(
-      "target-line",
-    );
-    expect(screen.getByRole("link", { name: "@k_lopes" })).not.toHaveClass(
       "target",
+      "-my-3",
+      "py-3",
     );
     expect(part("kit-band")?.nextElementSibling).toBe(part("kit-run"));
     expect(screen.getByRole("link", { name: "@k_lopes" })).toHaveAttribute(

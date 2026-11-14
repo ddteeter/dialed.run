@@ -916,16 +916,15 @@ describe("D7 · Access", () => {
     expect(
       row.getAllByRole("link").map((link) => link.textContent),
     ).toStrictEqual(many.slice(0, 5));
-    // R2-DESK-03: each name and the + more are a text line with a 44 hit
-    // area, not a 44 box, wrapping 12 apart, so the cell stays short.
+    // R2-DESK-03: each name and the + more keep a 44 target that takes a
+    // text line's height (padding against an equal negative margin,
+    // R55·180), wrapping 12 apart, so the cell stays short.
     for (const link of row.getAllByRole("link")) {
-      expect(link).toHaveClass("target-line");
-      expect(link).not.toHaveClass("target");
+      expect(link).toHaveClass("target", "-my-3", "py-3");
       expect(link).not.toHaveClass("inline-flex");
     }
     const more = row.getByRole("button", { name: "+ 24 more" });
-    expect(more).toHaveClass("target-line");
-    expect(more).not.toHaveClass("target");
+    expect(more).toHaveClass("target", "-my-3", "px-0", "py-3");
     expect(more).not.toHaveClass("inline-flex");
     expect(more.parentElement).toHaveClass("flex-wrap", "gap-x-3", "gap-y-3");
     expect(screen.queryByRole("complementary")).toBeNull();

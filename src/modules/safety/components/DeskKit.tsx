@@ -178,7 +178,7 @@ function Runner({
     <Link
       to="/desk/runners"
       search={{ query: handle, filter: "all" }}
-      className="target-line text-ink"
+      className="target -my-3 py-3 text-ink"
     >
       {`@${handle}`}
     </Link>

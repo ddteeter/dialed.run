@@ -400,7 +400,7 @@ function Owner({
       search={{ query: handle, filter: "all" }}
       // A handle in its own case, underlined as a link (G-19): MONO.xs's
       // classes written out, since `Mono`'s xs step is uppercase.
-      className="target-line max-w-full self-start truncate font-mono text-mono-xs text-ink underline underline-offset-4"
+      className="target -my-3 max-w-full self-start truncate py-3 font-mono text-mono-xs text-ink underline underline-offset-4"
     >
       {`@${handle}`}
     </Link>

@@ -153,28 +153,37 @@ The rule above a record's bar, as the queue's card draws one.
 export const RECORD_BAR = "border-t border-hairline pt-3";
 
 /**
- * The record's head, as the queue's row head reads (R55·197, 199): `KIND ·
- * id · @owner [TAG]` in MONO.sm ink, the id at its ends, the kind and tag
- * in capitals and the handle in its own case; its date muted at the right,
- * and a hairline under it. The whole id is the title.
+ * `KIND · id · @owner [TAG]`: the id at its ends, the handle in its own
+ * case, the kind and tag in capitals.
  */
-export function RecordHead({
+export function recordName({
   subjectType,
   subjectId,
   owner,
   tag,
-  date,
 }: Readonly<{
   subjectType: string;
   subjectId: string;
-  /**
-  Whose it is, by handle; null or absent where there is none to name.
-  */
-  owner?: string | null | undefined;
-  /**
-  What holds it, in the brackets ("Copyright hold").
-  */
+  owner?: string | undefined;
   tag: string;
+}>): string {
+  const whose = owner === undefined ? "" : ` · @${owner}`;
+  return `${subjectType.toUpperCase()} · ${shortId(subjectId)}${whose} [${tag.toUpperCase()}]`;
+}
+
+/**
+ * The record's head, as the queue's row head reads (R55·197, 199): its
+ * name (`recordName`) in MONO.sm ink, its date muted at the right, and a
+ * hairline under it.
+ */
+export function RecordHead({
+  name,
+  date,
+}: Readonly<{
+  /**
+  The record's name, from `recordName`.
+  */
+  name: string;
   /**
   The date's part name and its words ("Hidden Oct 23").
   */
@@ -185,16 +194,10 @@ export function RecordHead({
       data-part="record-head"
       className="flex items-baseline justify-between gap-3 border-b border-hairline pb-3"
     >
-      <span
-        title={subjectId}
-        className="min-w-0 truncate font-mono text-mono-sm text-ink"
-      >
-        <span className="uppercase">{subjectType}</span>
-        {` · ${shortId(subjectId)}`}
-        {owner === null || owner === undefined
-          ? undefined
-          : ` · @${owner}`}{" "}
-        <span className="uppercase">{`[${tag}]`}</span>
+      {/* One string, so it is heard as one line: spans for the capitals
+          split it, and a span's edge drops the space beside it. */}
+      <span className="min-w-0 truncate font-mono text-mono-sm text-ink">
+        {name}
       </span>
       <span data-part={date.part} className="shrink-0 text-muted uppercase">
         <Mono step="xs">{date.label}</Mono>

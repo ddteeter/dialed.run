@@ -127,10 +127,11 @@ describe("CopyrightHolds", () => {
     const head = part("record-head");
     expect(head).toHaveClass("border-b", "border-hairline", "pb-3");
     const name = head?.firstElementChild;
-    expect(name).toHaveTextContent(
-      /^photo · 01M7…JY46 · @owner_7734 \[Copyright hold\]$/u,
+    // One text node, so it is heard as one line.
+    expect(name?.childNodes).toHaveLength(1);
+    expect(name?.textContent).toBe(
+      "PHOTO · 01M7…JY46 · @owner_7734 [COPYRIGHT HOLD]",
     );
-    expect(name).toHaveAttribute("title", "01M7DVQKMC6T1D7YG821DFJY46");
     expect(name).toHaveClass(
       "min-w-0",
       "truncate",
@@ -139,8 +140,6 @@ describe("CopyrightHolds", () => {
       "text-ink",
     );
     expect(name).not.toHaveClass("text-hiviz-text");
-    expect(name?.firstElementChild).toHaveClass("uppercase");
-    expect(name?.lastElementChild).toHaveClass("uppercase");
     expect(part("hidden-at")?.textContent).toBe("Hidden Oct 23");
     expect(part("hidden-at")).toHaveClass("shrink-0", "text-muted", "uppercase");
     // The owner is named in the head, so the line says their strikes.
@@ -164,8 +163,8 @@ describe("CopyrightHolds", () => {
 
   it("names an owner with no handle by account id, under a head with no @", () => {
     renderHolds(held({ ownerHandle: undefined, subjectId: "p1" }));
-    expect(part("record-head")?.firstElementChild).toHaveTextContent(
-      /^photo · p1 \[Copyright hold\]$/u,
+    expect(part("record-head")?.firstElementChild?.textContent).toBe(
+      "PHOTO · p1 [COPYRIGHT HOLD]",
     );
     expect(part("owner")?.textContent).toBe("Owner runner-1 · strikes 2");
   });

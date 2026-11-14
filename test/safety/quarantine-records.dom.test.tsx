@@ -109,7 +109,7 @@ describe("QuarantineRecords", () => {
     // Cards 12 apart, as the queue's.
     expect(record?.parentElement).toHaveClass("gap-3");
     const name = part("record-head")?.firstElementChild;
-    expect(name).toHaveTextContent(/^photo · p1 \[Quarantine\]$/u);
+    expect(name?.textContent).toBe("PHOTO · p1 [QUARANTINE]");
     expect(name).toHaveClass("font-mono", "text-mono-sm", "text-ink");
     expect(name).not.toHaveClass("text-hiviz-text");
     // A hairline above its form, as above a queue card's bar.

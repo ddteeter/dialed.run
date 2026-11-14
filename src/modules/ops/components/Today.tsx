@@ -539,9 +539,11 @@ export function Today({
             <Link
               to="/desk/runners"
               search={{ filter: "flagged" }}
-              // No 44 box of its own (R2-DESK-10): the stretched `after:`
-              // makes the whole card its target, so the label is a line.
-              className="text-ink underline underline-offset-4 after:absolute after:inset-0"
+              // A 44 target that takes no height (R2-DESK-10): padding
+              // against an equal negative margin (R55·180), so the label
+              // sits on its neighbours' line; `after:` still stretches it
+              // over the card.
+              className="target inline-block -my-3 py-3 text-ink underline underline-offset-4 after:absolute after:inset-0"
             >
               flagged {counts.flaggedAccounts === 1 ? "account" : "accounts"}
             </Link>

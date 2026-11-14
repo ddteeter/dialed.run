@@ -185,8 +185,10 @@ function RailFooter({ today }: Readonly<{ today: DeskToday }>) {
         {isHolding ? "Screening · Holding" : "Screening · OK"}
       </Mono>
       <Mono step="xs" className="text-muted">
-        {"Last digest · "}
-        <DigestTime at={lastDigestAt} />
+        {/* One string, so it is heard as one line (a second text node is
+            a second line, and its leading space is dropped). */}
+        {`Last digest · ${lastDigestAt === undefined ? NOT_YET : timeOfDay(lastDigestAt)}`}
+        {lastDigestAt === undefined ? undefined : <NotYetRoom />}
       </Mono>
     </div>
   );
@@ -195,22 +197,25 @@ function RailFooter({ today }: Readonly<{ today: DeskToday }>) {
 const NOT_YET = "Not yet";
 
 /**
- * When the digest last ran, in the room "Not yet" takes, so the rail is
- * as wide the day it first runs as the day before (R2-DESK-12b). A guess
- * awaiting Design 312 (#758): the rail stays sized by its content, as
- * tokens.js pins no width outside MEASURE.
+ * The room "Not yet" takes beyond a time (R2-DESK-12b): unseen, unheard
+ * characters after the time, so the rail is as wide the day the digest
+ * first runs as the day before. In mono every character is one width, so
+ * the room is the difference in length. A guess awaiting Design 312
+ * (#758): the rail stays sized by its content, as tokens.js pins no width
+ * outside MEASURE.
  */
-function DigestTime({ at }: Readonly<{ at: number | undefined }>) {
-  if (at === undefined) return <>{NOT_YET}</>;
+function NotYetRoom() {
   return (
-    <span data-part="digest-time" className="inline-grid">
-      <span className="[grid-area:1/1]">{timeOfDay(at)}</span>
-      <span aria-hidden="true" className="invisible [grid-area:1/1]">
-        {NOT_YET}
-      </span>
+    <span data-part="digest-room" aria-hidden="true" className="invisible">
+      {"0".repeat(NOT_YET.length - HH_MM.length)}
     </span>
   );
 }
+
+/**
+What `timeOfDay` writes: two digits, a colon, two digits.
+*/
+const HH_MM = "00:00";
 
 /**
  * The Desk's top bar (R55·194/195): `[dialed] DESK` at the left, and at the
