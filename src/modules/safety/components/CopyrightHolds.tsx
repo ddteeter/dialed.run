@@ -27,7 +27,13 @@ import {
   counterNoticeInputFor,
   RECEIVED_ON_COPY,
 } from "../inputs";
-import { ACTION_BAR, DeskForm, RECORD_PANEL, RecordHead } from "./DeskForm";
+import {
+  ACTION_BAR,
+  DeskForm,
+  RECORD_BAR,
+  RECORD_PANEL,
+  RecordHead,
+} from "./DeskForm";
 import { useSettled } from "./use-settled";
 
 type HoldAct<R, V = { holdId: string }> = (input: { data: V }) => Promise<R>;
@@ -79,6 +85,7 @@ export function CopyrightHolds({
       <ListSection
         title={`Copyright holds · ${String(remaining.length)}`}
         items={remaining}
+        hasCards
         whenEmpty={saidLine}
       >
         {(hold) => (
@@ -204,37 +211,50 @@ function HoldRow({
           {said}
         </p>
       )}
-      {nextAction(held, {
-        counter: (
-          <CounterNotice
-            held={held}
-            act={counterNotice}
-            onRecorded={recorded}
-            onSaid={setSaid}
-          />
-        ),
-        court: (
-          <HoldAction
-            values={{ holdId: held.id }}
-            schema={copyrightHoldInput}
-            label="Court action filed"
-            sentences={COURT_ACTION}
-            act={courtAction}
-            onRecorded={recorded}
-            onSaid={setSaid}
-          />
-        ),
-        caseOver: (
-          <CaseOver
-            holdId={held.id}
-            acts={{ delete: caseOverDelete, restore: caseOverRestore }}
-            onSettled={onSettled}
-            onSaid={setSaid}
-          />
-        ),
-      })}
+      <div data-part="hold-bar" className={RECORD_BAR}>
+        {nextAction(held, {
+          counter: (
+            <CounterNotice
+              held={held}
+              act={counterNotice}
+              onRecorded={recorded}
+              onSaid={setSaid}
+            />
+          ),
+          court: (
+            <HoldAction
+              values={{ holdId: held.id }}
+              schema={copyrightHoldInput}
+              label="Court action filed"
+              sentences={COURT_ACTION}
+              act={courtAction}
+              onRecorded={recorded}
+              onSaid={setSaid}
+            />
+          ),
+          caseOver: (
+            <CaseOver
+              holdId={held.id}
+              acts={{ delete: caseOverDelete, restore: caseOverRestore }}
+              onSettled={onSettled}
+              onSaid={setSaid}
+            />
+          ),
+        })}
+      </div>
     </li>
   );
+}
+
+/**
+ * The owner's strikes. The head names them by handle; one with no handle
+ * is named here by account id, so a hold always says whose it is.
+ */
+export function ownerLine(held: CopyrightHoldSummary): string {
+  const strikes = String(held.strikes);
+  return held.ownerHandle === undefined
+    ? `Owner ${held.ownerId} · strikes ${strikes}`
+    : `Strikes ${strikes}`;
 }
 
 /**
@@ -248,6 +268,8 @@ function HoldFacts({
       <RecordHead
         subjectType={held.subjectType}
         subjectId={held.subjectId}
+        owner={held.ownerHandle}
+        tag="Copyright hold"
         date={{
           part: "hidden-at",
           label: `Hidden ${monthDayLabel(held.hiddenAt)}`,
@@ -255,9 +277,7 @@ function HoldFacts({
       />
       <span className="flex flex-col gap-1">
         <span data-part="owner" className="text-micro text-quiet">
-          <Mono step="xs">
-            Owner {held.ownerId} · strikes {String(held.strikes)}
-          </Mono>
+          <Mono step="xs">{ownerLine(held)}</Mono>
         </span>
         <span data-part="notice" className="text-micro text-ink">
           {held.notice}

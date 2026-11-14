@@ -48,8 +48,9 @@ function held(
   return {
     id: HOLD_ID,
     subjectType: "photo",
-    subjectId: "p1",
+    subjectId: "01M7DVQKMC6T1D7YG821DFJY46",
     ownerId: "runner-1",
+    ownerHandle: "owner_7734",
     strikes: 2,
     notice: "it uses someone else's work — Acme, ref 7",
     hiddenAt: OCT_23,
@@ -112,13 +113,40 @@ describe("CopyrightHolds", () => {
     expect(
       screen.getByRole("heading", { name: "Copyright holds · 1" }),
     ).toBeVisible();
-    // Round 39 #73: a panel headed by a hi-viz kicker, kind and id (G-13).
-    expect(part("copyright-hold")).toHaveClass("border", "bg-panel", "p-4");
-    const kicker = part("copyright-hold")?.firstElementChild?.firstElementChild;
-    expect(kicker).toHaveTextContent(/^photo · p1$/u);
-    expect(kicker).toHaveClass("text-hiviz-text", "wrap-anywhere", "min-w-0");
+    // R55·199: the queue's card, round, cards 12 apart (R2-DESK-08).
+    expect(part("copyright-hold")).toHaveClass(
+      "rounded-card",
+      "border",
+      "border-hairline",
+      "bg-panel",
+      "p-4",
+    );
+    expect(part("copyright-hold")?.parentElement).toHaveClass("gap-3");
+    // Its head as a queue row's: kind, short id, @owner and its tag, in
+    // ink; the whole id in the title; the date muted; a hairline under.
+    const head = part("record-head");
+    expect(head).toHaveClass("border-b", "border-hairline", "pb-3");
+    const name = head?.firstElementChild;
+    expect(name).toHaveTextContent(
+      /^photo · 01M7…JY46 · @owner_7734 \[Copyright hold\]$/u,
+    );
+    expect(name).toHaveAttribute("title", "01M7DVQKMC6T1D7YG821DFJY46");
+    expect(name).toHaveClass(
+      "min-w-0",
+      "truncate",
+      "font-mono",
+      "text-mono-sm",
+      "text-ink",
+    );
+    expect(name).not.toHaveClass("text-hiviz-text");
+    expect(name?.firstElementChild).toHaveClass("uppercase");
+    expect(name?.lastElementChild).toHaveClass("uppercase");
     expect(part("hidden-at")?.textContent).toBe("Hidden Oct 23");
-    expect(part("owner")?.textContent).toBe("Owner runner-1 · strikes 2");
+    expect(part("hidden-at")).toHaveClass("shrink-0", "text-muted", "uppercase");
+    // The owner is named in the head, so the line says their strikes.
+    expect(part("owner")?.textContent).toBe("Strikes 2");
+    // A hairline above the bar.
+    expect(part("hold-bar")).toHaveClass("border-t", "border-hairline", "pt-3");
     expect(part("notice")?.textContent).toBe(
       "it uses someone else's work — Acme, ref 7",
     );
@@ -132,6 +160,14 @@ describe("CopyrightHolds", () => {
       screen.queryByRole("button", { name: "Court action filed" }),
     ).toBeNull();
     expect(part("hold-said")).toBeNull();
+  });
+
+  it("names an owner with no handle by account id, under a head with no @", () => {
+    renderHolds(held({ ownerHandle: undefined, subjectId: "p1" }));
+    expect(part("record-head")?.firstElementChild).toHaveTextContent(
+      /^photo · p1 \[Copyright hold\]$/u,
+    );
+    expect(part("owner")?.textContent).toBe("Owner runner-1 · strikes 2");
   });
 
   it("renders nothing when nothing is held", () => {
