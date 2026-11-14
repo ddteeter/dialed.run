@@ -110,10 +110,14 @@ describe("CompositionBlock (design round 10 §AG)", () => {
   it("sets the credit tight under the composition (Round 55 · 191e)", () => {
     render(<CompositionBlock composition={arcteryx} />);
     const credit = screen.getByText("As labelled by Arc'teryx").closest("p");
-    expect(credit?.parentElement?.parentElement).toHaveClass("gap-1");
-    expect(credit?.parentElement?.parentElement?.firstElementChild?.tagName).toBe(
-      "DL",
-    );
+    // No gap at all: the lines' own leading is the space (N1-10).
+    const credited = credit?.parentElement?.parentElement;
+    expect(credited).toHaveAttribute("data-part", "credited");
+    expect(credited).toHaveClass("flex", "flex-col");
+    expect(credited?.className).not.toMatch(/\bgap-/u);
+    expect(
+      credit?.parentElement?.parentElement?.firstElementChild?.tagName,
+    ).toBe("DL");
   });
 
   it("omits the attribution rather than guessing whose label it is", () => {

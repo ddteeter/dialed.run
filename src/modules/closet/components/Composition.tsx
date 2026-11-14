@@ -108,8 +108,9 @@ export function CompositionBlock({
         )}
       </h2>
       {/* Round 55 · 191e: "As labelled by" sits tight under what it
-          credits, not midway to the next line. */}
-      <div className="flex flex-col gap-1">
+          credits, not midway to the next line: no gap, the lines' own
+          leading only (N1-10: gap-1 left it 19px under and 21px over). */}
+      <div data-part="credited" className="flex flex-col">
         {hasLabelledParts ? (
           // Round 55 · 191a: AG1's two-column table, the part's label
           // beside what it is made of. A part with no label keeps the

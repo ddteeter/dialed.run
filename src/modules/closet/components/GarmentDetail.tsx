@@ -737,8 +737,11 @@ function CompositionSection({
           {wrong}
         </div>
       )}
+      {/* A step further from the credit than the credit is from what it
+          credits, so the credit reads as the composition's, not as this
+          line's heading (N1-10). */}
       {words.length > 0 ? (
-        <p className="m-0 text-body">
+        <p data-part="words" className="m-0 mt-2 text-body">
           {words.map(({ word, isLent }, index) => (
             <span key={word}>
               {index > 0 ? " · " : undefined}
