@@ -176,6 +176,16 @@ export const MEASURE_RULES = [
   'Nothing pins a width that isn\'t in MEASURE. Sidebars and rails inherit from the grid, not from a px.',
 ];
 
+/**
+ * ELEVATION — round 56 #246. One lift, no scale. It carries colour, so its home
+ * is T1 as the --lift role; it is recorded here so the contract names it.
+ * Light: the value below. Dark: none (a floating surface's edge steps up to --hairline-2).
+ */
+export const ELEVATION = {
+  lift: { light: '0 8px 28px rgb(11 11 14 / 0.10)', dark: 'none',
+    for: 'Everything that floats over the page: desk drawer (incl. the Desk pane below desk), centred panel, phone sheet, menus, toast. Never on anything in the page flow, the sticky Desk pane included.' },
+};
+
 /** Paste-ready custom properties. Keep in sync with the objects above. */
 const step = (t) => `${t.size}px/${t.lineHeight} ${FAMILY[t.family]}`;
 export const CSS_VARS = `:root {
