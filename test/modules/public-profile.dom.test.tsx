@@ -262,6 +262,8 @@ describe("the public profile, signed out", () => {
     const [tile, conditions, day, chip] = [...row.children];
     expect(tile?.querySelector("[data-part='kit-tile']")).not.toBeNull();
     expect(tile).toHaveClass(
+      // A flex box, so the --tint span is a sized item (R2-FEED-01).
+      "flex",
       "row-span-2",
       "desk:col-span-2",
       "desk:row-span-1",
@@ -400,7 +402,9 @@ describe("the public profile, signed out", () => {
     await show(profilePage(PROFILE));
 
     const rail = part("rail");
-    expect(rail).toHaveClass("desk:row-span-2", "px-6");
+    expect(rail).toHaveClass("desk:row-span-2", "pb-8");
+    // The gutter is the frame's, so the rail's edge is the bar's.
+    expect(rail).not.toHaveClass("px-6");
     const rotation = within(rail ?? document.body);
     expect(
       rotation.getByRole("heading", { level: 2, name: "Rotation" }),
@@ -553,7 +557,7 @@ describe("the public profile, signed out", () => {
       screen.queryByRole("heading", { name: "Rotation" }),
     ).not.toBeInTheDocument();
     expect(part("rail")).toBeNull();
-    expect(screen.getByRole("main")).not.toHaveClass("desk:grid");
+    expect(part("public-body")).not.toHaveClass("desk:grid");
   });
 
   it("keeps the Rotation while any one group has a piece", async () => {
@@ -568,12 +572,27 @@ describe("the public profile, signed out", () => {
     }
   });
 
+  it("keeps the bar's gutter outside the measure, so its edge is the wordmark's (R2-FEED-07)", async () => {
+    await show(profilePage(PROFILE));
+
+    const main = screen.getByRole("main");
+    expect(main).toHaveClass("flex-1", "px-5", "wide:px-6");
+    expect(main.firstElementChild).toBe(part("public-body"));
+    const column = part("public-column");
+    expect(column).toHaveClass("flex", "flex-col", "gap-6", "py-8");
+    expect(column).not.toHaveClass("px-6");
+    expect(column?.parentElement).toBe(part("public-body"));
+  });
+
   it("sits in DS1's columns at the desk while it has a rail", async () => {
     await show(profilePage(PROFILE));
 
-    expect(screen.getByRole("main")).toHaveClass(
+    expect(part("public-body")).toHaveClass(
+      "mx-auto",
+      "w-full",
       "max-w-column",
       "desk:grid",
+      "desk:gap-x-12",
       "desk:max-w-page",
       "desk:grid-cols-[minmax(0,var(--container-column))_minmax(0,1fr)]",
       // Row 1 is the column's own height; the rail's extra height goes to
@@ -595,16 +614,21 @@ describe("the public profile, signed out", () => {
       screen.queryByRole("heading", { name: "Rotation" }),
     ).not.toBeInTheDocument();
     expect(part("rail")).toBeNull();
-    expect(screen.getByRole("main")).toHaveClass("max-w-column");
-    expect(screen.getByRole("main")).not.toHaveClass("desk:grid");
-    expect(screen.getByRole("main")).not.toHaveClass("desk:max-w-page");
+    expect(part("public-body")).toHaveClass(
+      "mx-auto",
+      "w-full",
+      "max-w-column",
+    );
+    expect(part("public-body")).not.toHaveClass("desk:grid");
+    expect(part("public-body")).not.toHaveClass("desk:max-w-page");
   });
 
   it("closes with the invite, after the rail on the phone and under the kits at the desk", async () => {
     await show(profilePage(PROFILE));
 
     const invite = part("invite");
-    expect(invite?.parentElement).toHaveClass("desk:col-start-1", "px-6");
+    expect(invite?.parentElement).toHaveClass("desk:col-start-1", "pb-8");
+    expect(invite?.parentElement).not.toHaveClass("px-6");
     // The invite closes the page; only the page's own Report link follows.
     expect(part("public-foot")?.previousElementSibling).toBe(
       invite?.parentElement,
@@ -624,7 +648,7 @@ describe("the public profile, signed out", () => {
     expect(links.map((each) => each.textContent)).toStrictEqual([
       "Report this profile",
     ]);
-    expect(screen.getByRole("main").lastElementChild).toBe(part("public-foot"));
+    expect(part("public-body")?.lastElementChild).toBe(part("public-foot"));
     expect(links[0]).toHaveAttribute(
       "href",
       `/takedown?location=${encodeURIComponent("https://dialed.run/@maya_runs")}`,

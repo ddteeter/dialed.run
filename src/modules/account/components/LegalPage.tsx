@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import type { ComponentType, JSX, ReactNode } from "react";
 
 import { Mono } from "../../../ui";
@@ -286,7 +287,9 @@ function WideTable({
             <dl className="m-0 grid grid-cols-[112px_minmax(0,1fr)] items-baseline gap-x-3 gap-y-2">
               {row.slice(1).map((cell, index) => (
                 <div key={index} className="contents">
-                  <dt>
+                  {/* A flex box, so a wrapped label sets at MONO.xs's
+                      leading, not the article's (R2-LEGAL-09). */}
+                  <dt className="flex">
                     <Mono step="xs" className="text-muted">
                       {head.slice(index + 1, index + 2).map((label, at) => (
                         <Inlines key={at} inlines={label} />
@@ -362,16 +365,88 @@ function Inlines({
   );
   return (
     <>
-      {drawn.map((inline, index) => (
-        <InlineView
-          key={index}
-          inline={inline}
-          inLink={inLink}
-          isLeadIn={leadIn && index === 0}
-        />
-      ))}
+      {drawn.map((inline, index) => {
+        const view = (
+          <InlineView
+            inline={inline.kind === "text" ? untouched(drawn, index) : inline}
+            inLink={inLink}
+            isLeadIn={leadIn && index === 0}
+          />
+        );
+        return inline.kind === "code" ? (
+          <span key={index} className="whitespace-nowrap">
+            {touchingEnd(drawn, index - 1)}
+            {view}
+            {touchingStart(drawn, index + 1)}
+          </span>
+        ) : (
+          <Fragment key={index}>{view}</Fragment>
+        );
+      })}
     </>
   );
+}
+
+/**
+ * R2-LEGAL-04: a file name's box never breaks, and nor does it part from
+ * what touches it. The bracket before it ("the app (") and the
+ * punctuation after it (`).`) are drawn inside one unbreakable run with
+ * it, so neither is left hanging at a line's end or starts the next. A
+ * space is where the line may break, so only what touches it moves:
+ * the text after its last space, or before its first. (The text is
+ * already cut at spaces, word by word, by `addressParts`.)
+ */
+function lastWord(text: string): string {
+  return text.slice(text.lastIndexOf(" ") + 1);
+}
+
+function firstWord(text: string): string {
+  const space = text.indexOf(" ");
+  return space === -1 ? text : text.slice(0, space);
+}
+
+/**
+ * A text's own words, less what touches a name before or after it.
+ */
+function untouched(drawn: readonly Drawn[], index: number): Drawn {
+  return { kind: "text", text: textLeft(drawn, index, true) };
+}
+
+/**
+ * Text at `index`, less what touches the name before it, and, when
+ * `isEndTrimmed`, less what touches the name after it.
+ */
+function textLeft(
+  drawn: readonly Drawn[],
+  index: number,
+  isEndTrimmed: boolean,
+): string {
+  const item = drawn[index];
+  if (item?.kind !== "text") return "";
+  const head =
+    drawn[index - 1]?.kind === "code"
+      ? item.text.slice(firstWord(item.text).length)
+      : item.text;
+  return isEndTrimmed && drawn[index + 1]?.kind === "code"
+    ? head.slice(0, head.length - lastWord(head).length)
+    : head;
+}
+
+/**
+ * What touches a name from before it: the end of the text there, from its
+ * last space on.
+ */
+function touchingEnd(drawn: readonly Drawn[], index: number): string {
+  return lastWord(textLeft(drawn, index, false));
+}
+
+/**
+ * What touches a name from after it: the start of the text there, up to
+ * its first space.
+ */
+function touchingStart(drawn: readonly Drawn[], index: number): string {
+  const item = drawn[index];
+  return item?.kind === "text" ? firstWord(item.text) : "";
 }
 
 /**
@@ -422,7 +497,7 @@ function InlineView({
       // name longer than the line itself breaks, so a 320 screen never
       // scrolls sideways (plan 161's reflow check).
       return (
-        <code className="inline-block max-w-full wrap-anywhere">
+        <code className="inline-block max-w-full wrap-anywhere whitespace-normal">
           <Mono step="md">{inline.text}</Mono>
         </code>
       );

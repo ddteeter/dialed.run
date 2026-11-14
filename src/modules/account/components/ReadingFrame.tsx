@@ -87,7 +87,10 @@ export function ReadingFrame({
     // right edge (`LegalPage`'s `WideTable`, R55·220). P4-02: the rail is
     // a fixed 240 (R53·163), so the text starts at one x on every page.
     <div className="@container px-5 pt-8 pb-16 desk:grid desk:max-w-page desk:grid-cols-[240px_minmax(0,1fr)] desk:gap-x-12">
-      <header className="flex flex-col gap-2 desk:col-start-2 desk:row-start-1">
+      {/* The text's width, as the article's: the title and the draft
+          notice sit over the text, and only a wide table steps out
+          (R55·220, R2-LEGAL-05). */}
+      <header className="flex max-w-column flex-col gap-2 desk:col-start-2 desk:row-start-1">
         {kicker === undefined ? undefined : (
           <Mono step="xs" className="text-muted">
             {kicker}
@@ -96,37 +99,41 @@ export function ReadingFrame({
         <h1 className="m-0 font-display text-display uppercase">{title}</h1>
         {notice}
       </header>
-      <nav
-        id="contents"
-        aria-label="Contents"
-        // P4-03: at the desk the rail scrolls itself rather than running
-        // below the fold: the window, less its top and bottom 32.
-        className="mt-6 desk:sticky desk:top-8 desk:col-start-1 desk:row-span-2 desk:row-start-1 desk:mt-0 desk:max-h-[calc(100dvh-var(--spacing)*16)] desk:self-start desk:overflow-y-auto"
-      >
-        <h2 className="m-0 text-muted">
-          <Mono step="xs">Contents</Mono>
-        </h2>
-        <ol className="m-0 mt-2 flex list-none flex-col gap-3 p-0 text-body">
-          {contents.map((entry) => (
-            <li
-              key={entry.id}
-              className="flex items-baseline justify-between gap-2"
-            >
-              <a
-                href={`#${entry.id}`}
-                className={isTally ? TALLY_LINK_CLASS : LINK_CLASS}
+      {/* None when a search leaves nothing: a heading over an empty
+          list is a label for nothing, and an empty landmark (R2-LEGAL-02). */}
+      {contents.length === 0 ? undefined : (
+        <nav
+          id="contents"
+          aria-label="Contents"
+          // P4-03: at the desk the rail scrolls itself rather than running
+          // below the fold: the window, less its top and bottom 32.
+          className="mt-6 desk:sticky desk:top-8 desk:col-start-1 desk:row-span-2 desk:row-start-1 desk:mt-0 desk:max-h-[calc(100dvh-var(--spacing)*16)] desk:self-start desk:overflow-y-auto"
+        >
+          <h2 className="m-0 text-muted">
+            <Mono step="xs">Contents</Mono>
+          </h2>
+          <ol className="m-0 mt-2 flex list-none flex-col gap-3 p-0 text-body">
+            {contents.map((entry) => (
+              <li
+                key={entry.id}
+                className="flex items-baseline justify-between gap-2"
               >
-                {entry.title}
-              </a>
-              {entry.count === undefined ? undefined : (
-                <Mono step="md" className="text-muted">
-                  {String(entry.count)}
-                </Mono>
-              )}
-            </li>
-          ))}
-        </ol>
-      </nav>
+                <a
+                  href={`#${entry.id}`}
+                  className={isTally ? TALLY_LINK_CLASS : LINK_CLASS}
+                >
+                  {entry.title}
+                </a>
+                {entry.count === undefined ? undefined : (
+                  <Mono step="md" className="text-muted">
+                    {String(entry.count)}
+                  </Mono>
+                )}
+              </li>
+            ))}
+          </ol>
+        </nav>
+      )}
       <article className="mt-8 flex max-w-column flex-col gap-4 text-lead desk:col-start-2">
         {children}
       </article>

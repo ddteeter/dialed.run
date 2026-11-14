@@ -163,12 +163,12 @@ describe("what the sheet promises", () => {
     // The handle is heard with it, as the description: a name that left
     // out its visible words would fail label-in-name (WCAG 2.5.3).
     expect(both).toHaveAccessibleDescription(
-      "Blocking hides all of mark_t's runs from you. They aren't told.",
+      "Blocking hides all of @mark_t's runs from you. They aren't told.",
     );
     expect(both).toHaveClass("rounded-pill", "border-hairline");
     // Under it, what blocking does.
     expect(both.nextElementSibling).toHaveTextContent(
-      "Blocking hides all of mark_t's runs from you. They aren't told.",
+      "Blocking hides all of @mark_t's runs from you. They aren't told.",
     );
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
@@ -623,15 +623,20 @@ describe("ReportSheet on a profile (R55·214)", () => {
       name: "Block without reporting",
     });
     expect(link).toHaveAttribute("type", "button");
+    // The footer's third action, centred at TYPE.body (R55·214), not the
+    // small grey link a report foot uses.
+    expect(link).toHaveClass("self-center", "text-body", "text-quiet");
     await userEvent.click(link);
     expect(
       screen.getByRole("heading", { name: "Block @ravi_k?", hidden: true }),
     ).toBeInTheDocument();
+    // The confirm's body, in the same words as the sheet's own line
+    // under Send and block, "@" and all (R2-FEED-03).
     expect(
-      screen.getByText(
+      screen.getAllByText(
         "Blocking hides all of @ravi_k's runs from you. They aren't told.",
       ),
-    ).toBeInTheDocument();
+    ).toHaveLength(2);
     expect(blockRunner).not.toHaveBeenCalled();
     await userEvent.click(
       screen.getByRole("button", { name: "Block", hidden: true }),

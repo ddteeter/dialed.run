@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import { PagerArrows, pagerKeys } from "../../../ui";
+import { PagerArrows, pagerKeys, ScrollRegion } from "../../../ui";
 
 import { PhotoCounter, PhotoSlot } from "./PhotoSlot";
 import { DeletePhoto } from "./RetractEntry";
@@ -25,10 +25,11 @@ import type { DeletePhotoProps } from "./RetractEntry";
 const PAGER_LABELS = { previous: "Previous photo", next: "Next photo" };
 
 /**
- * The row's item nearest its scroll position: the page being shown.
+ * The row's item nearest its scroll position: the page being shown. The
+ * row is the region; its photos are the list's items inside it.
  */
 function nearestPage(row: HTMLElement): number {
-  const offsets = [...row.children].map((item) =>
+  const offsets = [...row.querySelectorAll(":scope > ul > li")].map((item) =>
     item instanceof HTMLElement ? item.offsetLeft : Infinity,
   );
   const distances = offsets.map((left) => Math.abs(left - row.scrollLeft));
@@ -107,37 +108,43 @@ export function PhotoPager({
           labels={PAGER_LABELS}
         />
       </div>
-      <ul
-        data-part="photo"
+      {/* A region a keyboard reaches (D-189, #694): with two photos the
+          row scrolls, and a viewer who doesn't own the entry has nothing
+          in it to press, so the row itself takes focus. */}
+      <ScrollRegion
+        label="Photos"
+        part="photo"
         onScroll={(event) => {
           setIndex(nearestPage(event.currentTarget));
         }}
-        className="m-0 flex list-none snap-x snap-mandatory gap-2 overflow-x-auto p-0"
+        className="snap-x snap-mandatory overflow-x-auto"
       >
-        {photoKeys.map((key, page) => (
-          <li
-            key={key}
-            ref={scrollWhenShown(page)}
-            className="w-full shrink-0 snap-start desk:flex desk:h-140 desk:justify-center desk:rounded-card desk:bg-photo"
-          >
-            <PhotoSlot
-              src={srcOf(key)}
-              shape="portrait"
-              part="photo-slot"
-              className="w-full desk:h-full desk:w-auto"
-              overlay={<PhotoCounter index={page} count={count} />}
+        <ul className="m-0 flex list-none gap-2 p-0">
+          {photoKeys.map((key, page) => (
+            <li
+              key={key}
+              ref={scrollWhenShown(page)}
+              className="w-full shrink-0 snap-start desk:flex desk:h-140 desk:justify-center desk:rounded-card desk:bg-photo"
             >
-              {deletePhoto === undefined ? undefined : (
-                <DeletePhoto
-                  photoKey={key}
-                  index={page}
-                  deletePhoto={deletePhoto}
-                />
-              )}
-            </PhotoSlot>
-          </li>
-        ))}
-      </ul>
+              <PhotoSlot
+                src={srcOf(key)}
+                shape="portrait"
+                part="photo-slot"
+                className="w-full desk:h-full desk:w-auto"
+                overlay={<PhotoCounter index={page} count={count} />}
+              >
+                {deletePhoto === undefined ? undefined : (
+                  <DeletePhoto
+                    photoKey={key}
+                    index={page}
+                    deletePhoto={deletePhoto}
+                  />
+                )}
+              </PhotoSlot>
+            </li>
+          ))}
+        </ul>
+      </ScrollRegion>
     </div>
   );
 }

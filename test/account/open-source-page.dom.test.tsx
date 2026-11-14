@@ -474,6 +474,9 @@ describe("OpenSourcePage", () => {
     const user = userEvent.setup();
     await renderPage();
     expect(screen.queryByText(/^Nothing we ship/u)).toBeNull();
+    expect(
+      screen.getByRole("navigation", { name: "Contents" }),
+    ).toBeInTheDocument();
     await user.type(search(), " xyz ");
     // Said once, by the status region; the drawn line is hidden from it.
     expect(screen.getByRole("status")).toHaveTextContent(
@@ -485,6 +488,9 @@ describe("OpenSourcePage", () => {
     );
     expect(drawn).toHaveAttribute("aria-hidden", "true");
     expect(screen.queryByRole("heading", { name: "MIT" })).toBeNull();
+    // No "Contents" over an empty list, and no empty landmark (R2-LEGAL-02).
+    expect(screen.queryByRole("navigation", { name: "Contents" })).toBeNull();
+    expect(screen.queryByText("Contents")).toBeNull();
   });
 
   it("renders the third-party notices' sections, one level down, without the file's preamble", async () => {

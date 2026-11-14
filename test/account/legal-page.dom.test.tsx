@@ -280,6 +280,10 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
     await renderDraft("privacy");
     const notice = screen.getByRole("heading", { level: 1 }).nextElementSibling;
     expect(notice).toHaveClass("bg-notice", "rounded-none", "inset-ring-1");
+    // The title and the notice sit at the text's width; only a wide
+    // table steps out (R55·220, R2-LEGAL-05).
+    expect(notice?.parentElement?.tagName).toBe("HEADER");
+    expect(notice?.parentElement).toHaveClass("max-w-column");
     if (!(notice instanceof HTMLElement)) throw new TypeError("no notice");
     const [tag, line, provenance] = [...notice.children];
     expect(tag).toHaveTextContent(/^Draft$/u);
@@ -305,6 +309,42 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
     expect(screen.getByText("A quote that is not the banner.").tagName).toBe(
       "BLOCKQUOTE",
     );
+  });
+
+  it("never parts a file name from what touches it: a bracket before, punctuation after (R2-LEGAL-04)", async () => {
+    const text =
+      "See the app (`src/a.ts`). And `b`/`c` here, then `d`, and `e`";
+    await renderWithRouter(
+      <LegalPage
+        slug="privacy"
+        doc={parseLegalDoc(
+          ["# Privacy policy", "", "## Names", "", text, "", "`f` opens."].join(
+            "\n",
+          ),
+        )}
+        bellState={undefined}
+        bell={bell}
+      />,
+    );
+    const runOf = (name: string): Element | undefined =>
+      screen.getByText(name).closest("code")?.parentElement ?? undefined;
+    // One unbreakable run each, holding only what touches the name.
+    expect(runOf("src/a.ts")).toHaveClass("whitespace-nowrap");
+    expect(runOf("src/a.ts")?.textContent).toBe("(src/a.ts).");
+    expect(runOf("b")?.textContent).toBe("b/");
+    expect(runOf("c")?.textContent).toBe("c");
+    expect(runOf("d")?.textContent).toBe("d,");
+    expect(runOf("e")?.textContent).toBe("e");
+    expect(runOf("f")?.textContent).toBe("f");
+    // A name may still break inside when it is longer than the line.
+    expect(screen.getByText("b").closest("code")).toHaveClass(
+      "whitespace-normal",
+    );
+    // Nothing is drawn twice or dropped: the words read as written.
+    expect(runOf("src/a.ts")?.parentElement?.textContent).toBe(
+      text.replaceAll("`", ""),
+    );
+    expect(runOf("f")?.parentElement?.textContent).toBe("f opens.");
   });
 
   it("draws no notice for a text without the banner", async () => {
@@ -465,6 +505,8 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
     expect(
       [...short.querySelectorAll("dt")].map((term) => term.textContent),
     ).toEqual(["Company"]);
+    // A flex box, so a wrapped label sets at MONO.xs's leading (R2-LEGAL-09).
+    expect(short.querySelector("dt")).toHaveClass("flex");
     expect(
       [...short.querySelectorAll("dd")].map((value) => value.textContent),
     ).toEqual(["Only"]);

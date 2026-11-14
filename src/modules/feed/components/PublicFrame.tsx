@@ -4,7 +4,7 @@ import type { JSX, ReactNode } from "react";
 
 import { verdictLabel, type VerdictValue } from "../../../lib/contracts";
 import { MARKETING_INVITE_URL, MARKETING_ORIGIN } from "../../../lib/marketing";
-import { Icon, Mono, Page, verdictHue } from "../../../ui";
+import { Icon, Mono, verdictHue } from "../../../ui";
 import { SignedOutFrame } from "../../../ui/SignedOutFrame";
 
 /**
@@ -107,13 +107,22 @@ function IntoApp({
 /**
  * The body's measure: the column alone, or — with a rail — DS1's two
  * columns at the desk, the page measure wide. Each class list written out
- * whole, so the unknown-class lint can read it.
+ * whole, so the unknown-class lint can read it. Inside the gutter, never
+ * padded itself, so the content edge is the bar's (R2-FEED-07).
  */
 const MEASURE = {
-  column: "mx-auto w-full max-w-column flex-1",
+  column: "mx-auto w-full max-w-column",
   split:
-    "mx-auto w-full max-w-column flex-1 desk:grid desk:max-w-page desk:grid-cols-[minmax(0,var(--container-column))_minmax(0,1fr)] desk:grid-rows-[auto_1fr] desk:items-start desk:gap-x-6",
+    "mx-auto w-full max-w-column desk:grid desk:max-w-page desk:grid-cols-[minmax(0,var(--container-column))_minmax(0,1fr)] desk:grid-rows-[auto_1fr] desk:items-start desk:gap-x-12",
 } as const;
+
+/**
+ * The bar's own structure (#625 A-09, as the landing has it): the gutter
+ * outside, SPACE[5] on the phone and SPACE[6] from 720, the measure
+ * inside. So the handle, the kits and the rail's edge are the wordmark's
+ * and the footer's at every width (R55·176, R2-FEED-07).
+ */
+const GUTTER_CLASS = "flex-1 px-5 wide:px-6";
 
 /**
  * A public page's own address and what its foot's Report link says, from
@@ -175,7 +184,7 @@ interface PublicFrameProps {
 /**
  * The frame every public page wears: the one signed-out frame (R55·176),
  * reloading the document on every way out; the column under its heading
- * (a `Page`); the rail and closing when there are any; and the page's own
+ * (the column); the rail and closing when there are any; and the page's own
  * Report link at the foot of its body. A signed-in viewer sees the way
  * into the app in the bar, in place of Log in and Request access.
  */
@@ -196,43 +205,48 @@ export function PublicFrame(props: PublicFrameProps): JSX.Element {
         ) : undefined
       }
     >
-      <main className={rail === undefined ? MEASURE.column : MEASURE.split}>
-        <Page width="column">
-          <header className="flex flex-col gap-3">
-            {heading.kicker}
-            <div className="flex flex-wrap items-baseline justify-between gap-3">
-              <h1 className={heading.className}>{heading.text}</h1>
-              {heading.beside}
-            </div>
-          </header>
-          {children(isSignedIn)}
-        </Page>
-        {rail === undefined ? undefined : (
-          <div
-            data-part="rail"
-            className="flex flex-col gap-6 px-6 pb-8 desk:row-span-2 desk:py-8"
-          >
-            {rail}
+      <main className={GUTTER_CLASS}>
+        <div
+          data-part="public-body"
+          className={rail === undefined ? MEASURE.column : MEASURE.split}
+        >
+          <div data-part="public-column" className="flex flex-col gap-6 py-8">
+            <header className="flex flex-col gap-3">
+              {heading.kicker}
+              <div className="flex flex-wrap items-baseline justify-between gap-3">
+                <h1 className={heading.className}>{heading.text}</h1>
+                {heading.beside}
+              </div>
+            </header>
+            {children(isSignedIn)}
           </div>
-        )}
-        {closing === undefined ? undefined : (
-          <div className="px-6 pb-8 desk:col-start-1">{closing}</div>
-        )}
-        {report === undefined ? undefined : (
-          <p
-            data-part="public-foot"
-            className="m-0 px-6 pb-8 text-small desk:col-start-1"
-          >
-            <Link
-              to="/takedown"
-              search={{ location: report.location }}
-              reloadDocument
-              className={FOOT_LINK_CLASS}
+          {rail === undefined ? undefined : (
+            <div
+              data-part="rail"
+              className="flex flex-col gap-6 pb-8 desk:row-span-2 desk:py-8"
             >
-              {report.label}
-            </Link>
-          </p>
-        )}
+              {rail}
+            </div>
+          )}
+          {closing === undefined ? undefined : (
+            <div className="pb-8 desk:col-start-1">{closing}</div>
+          )}
+          {report === undefined ? undefined : (
+            <p
+              data-part="public-foot"
+              className="m-0 pb-8 text-small desk:col-start-1"
+            >
+              <Link
+                to="/takedown"
+                search={{ location: report.location }}
+                reloadDocument
+                className={FOOT_LINK_CLASS}
+              >
+                {report.label}
+              </Link>
+            </p>
+          )}
+        </div>
       </main>
     </SignedOutFrame>
   );

@@ -19,7 +19,8 @@ import { UnderReview } from "./UnderReview";
  * One run on a profile, the same row on G and H (R55·210): the date is
  * the link, TYPE.body 600 and underlined, and under it one MONO.sm line,
  * conditions · verdict in its colour · distance, with [UNDER REVIEW] at
- * the line's end. About 60 tall, a hairline after each row (the list
+ * the line's end. About 60 tall: the date keeps its 44 hit area as a
+ * line target (N2-01's), not a 44 box. A hairline after each row (the list
  * draws the one above the first). Nothing sits at the far right, so at
  * desk nothing ends up 500 away.
  *
@@ -50,11 +51,13 @@ export function RunRow({
         to="/feed/entry/$entryId"
         params={{ entryId: run.entryId }}
         onClick={onClick}
-        className="target inline-flex items-center self-start text-body font-semibold text-ink underline underline-offset-4"
+        className="target-line inline-block self-start text-body font-semibold text-ink underline underline-offset-4"
       >
         <SlowLabel label={run.day} isWaiting={isWaiting} />
       </Link>
-      <span data-part="run-meta">
+      {/* A flex box, so the mono line sets at MONO.sm's own leading,
+          not the row's body leading (R2-FEED-02). */}
+      <span data-part="run-meta" className="flex">
         <Mono step="sm" className="text-quiet">
           <RunMeta run={run} units={units} />
         </Mono>

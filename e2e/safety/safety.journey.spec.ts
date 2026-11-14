@@ -173,7 +173,7 @@ test("report a runner, block them, and take the block back", async ({
   // "Send and block" (R54·166.6): one press sends both, and names whom.
   const both = page.getByRole("button", { name: "Send and block" });
   await expect(both).toHaveAccessibleDescription(
-    `Blocking hides all of ${strangerName}'s runs from you. They aren't told.`,
+    `Blocking hides all of @${strangerName}'s runs from you. They aren't told.`,
   );
   await both.click();
   // Wait for the report to land before navigating. Without this the goto

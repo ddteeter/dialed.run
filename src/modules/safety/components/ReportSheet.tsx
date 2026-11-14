@@ -359,7 +359,7 @@ function SendAndBlock({
         data-part="block-consequence"
         className="m-0 text-small text-quiet"
       >
-        Blocking hides all of {name}&apos;s runs from you. They aren&apos;t
+        Blocking hides all of @{name}&apos;s runs from you. They aren&apos;t
         told.
       </p>
     </>
@@ -470,6 +470,7 @@ function BlockWays({
       {blockOnly === undefined ? undefined : (
         <ConfirmLink
           label="Block without reporting"
+          tone="sheet"
           heading={`Block @${name}?`}
           body={`Blocking hides all of @${name}'s runs from you. They aren't told.`}
           verb="Block"
