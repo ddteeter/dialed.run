@@ -72,31 +72,30 @@ describe("PhotoViewer", () => {
     ).toBe(600);
   });
 
-  it("pages with the arrows, which stay put at the ends", async () => {
+  it("pages with the arrows, each absent at its end", async () => {
     const user = userEvent.setup();
     const { dialog } = renderViewer(0);
     const row = rowOf(dialog);
-    const previous = screen.getByRole("button", { name: "Previous photo" });
-    const next = screen.getByRole("button", { name: "Next photo" });
-    expect(previous).toHaveAttribute("aria-disabled", "true");
-    expect(next).not.toHaveAttribute("aria-disabled");
+    const previous = () =>
+      screen.queryByRole("button", { name: "Previous photo" });
+    const next = () => screen.getByRole("button", { name: "Next photo" });
+    expect(previous()).toBeNull();
 
-    await user.click(previous);
-    expect(dialog).toHaveAccessibleName("Photo 1 of 3");
-
-    await user.click(next);
+    await user.click(next());
     expect(dialog).toHaveAccessibleName("Photo 2 of 3");
     expect(row.scrollLeft).toBe(400);
-    expect(previous).not.toHaveAttribute("aria-disabled");
+    expect(previous()).not.toBeNull();
 
-    await user.click(next);
-    await user.click(next);
+    await user.click(next());
     expect(dialog).toHaveAccessibleName("Photo 3 of 3");
-    expect(next).toHaveAttribute("aria-disabled", "true");
     expect(row.scrollLeft).toBe(800);
+    expect(screen.queryByRole("button", { name: "Next photo" })).toBeNull();
 
-    await user.click(previous);
+    const back = previous();
+    if (back === null) throw new Error("no previous arrow");
+    await user.click(back);
     expect(dialog).toHaveAccessibleName("Photo 2 of 3");
+    expect(row.scrollLeft).toBe(400);
   });
 
   it("pages with the ← → keys and ignores others", () => {
@@ -186,25 +185,14 @@ describe("PhotoViewer", () => {
     );
   });
 
-  it("puts the 44 arrows on the photo from 720 only", () => {
+  it("shows the arrows from 720, the viewer's width", () => {
     renderViewer(1);
     for (const name of ["Previous photo", "Next photo"]) {
       expect(screen.getByRole("button", { name })).toHaveClass(
-        "target",
         "hidden",
-        "wide:inline-flex",
-        "h-11",
-        "w-11",
-        "absolute",
-        "aria-disabled:text-muted",
+        "wide:flex",
       );
     }
-    expect(screen.getByRole("button", { name: "Previous photo" })).toHaveClass(
-      "left-3",
-    );
-    expect(screen.getByRole("button", { name: "Next photo" })).toHaveClass(
-      "right-3",
-    );
   });
 
   it("draws Remove as the hairline pill", () => {

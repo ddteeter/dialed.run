@@ -4,6 +4,7 @@ import type { JSX, RefObject } from "react";
 import { SECONDARY_PILL } from "./form";
 import { Icon } from "./icons";
 import { Mono } from "./Mono";
+import { PagerArrows, pagerKeys } from "./PagerArrows";
 
 /**
 A photo the viewer shows: where it is served from, and its alt text.
@@ -61,10 +62,7 @@ export function PhotoViewer({
       aria-label={counterWords(pager.index, photos.length)}
       data-slot="photo-viewer"
       onClose={onClose}
-      onKeyDown={(event) => {
-        if (event.key === "ArrowLeft") pager.go(pager.index - 1);
-        else if (event.key === "ArrowRight") pager.go(pager.index + 1);
-      }}
+      onKeyDown={pagerKeys(pager.index, photos.length, pager.go)}
       className={VIEWER_CLASS}
     >
       <div
@@ -105,7 +103,9 @@ export function PhotoViewer({
         <PagerArrows
           index={pager.index}
           count={photos.length}
-          onGo={pager.go}
+          onIndex={pager.go}
+          from="wide"
+          labels={ARROW_LABELS}
         />
       </div>
       <div data-part="viewer-foot" className="flex shrink-0 flex-col p-5">
@@ -143,59 +143,16 @@ const PHOTO_CLASS =
   "max-h-full max-w-full object-contain wide:max-h-[calc(var(--sheet-cap)-9rem)]";
 
 /**
+The arrows' names, the owner's (2026-11-13, #659).
+*/
+const ARROW_LABELS = { previous: "Previous photo", next: "Next photo" };
+
+/**
 "Photo 1 of 2": the head's line and the dialog's name.
 */
 function counterWords(index: number, count: number): string {
   return `Photo ${String(index + 1)} of ${String(count)}`;
 }
-
-/**
- * The 44 arrows at width, either side of the photo. Below 720 a thumb
- * swipes instead. An arrow at the end of the row stays put and says so
- * (`aria-disabled`), rather than leaving and taking focus with it.
- */
-function PagerArrows({
-  index,
-  count,
-  onGo,
-}: Readonly<{
-  index: number;
-  count: number;
-  onGo: (index: number) => void;
-}>): JSX.Element | undefined {
-  if (count < 2) return undefined;
-  const isFirst = index === 0;
-  const isLast = index === count - 1;
-  return (
-    <>
-      <button
-        type="button"
-        aria-label="Previous photo"
-        aria-disabled={isFirst || undefined}
-        onClick={() => {
-          onGo(index - 1);
-        }}
-        className={`target left-3 ${ARROW_CLASS}`}
-      >
-        <Icon name="back" size={20} />
-      </button>
-      <button
-        type="button"
-        aria-label="Next photo"
-        aria-disabled={isLast || undefined}
-        onClick={() => {
-          onGo(index + 1);
-        }}
-        className={`target right-3 ${ARROW_CLASS}`}
-      >
-        <Icon name="forward" size={20} />
-      </button>
-    </>
-  );
-}
-
-const ARROW_CLASS =
-  "absolute top-1/2 hidden h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-pill border border-hairline bg-ground p-0 text-ink aria-disabled:text-muted wide:inline-flex";
 
 /**
  * The dialog, opened modal on mount. The host mounts the viewer only
