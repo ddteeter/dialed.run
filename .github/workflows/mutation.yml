@@ -283,12 +283,23 @@ jobs:
       # An artifact, not actions/cache: a laptop cannot read the cache.
       # One artifact per shard; the scopes are disjoint, which the local
       # merge requires.
+      #
+      # Uploaded whether the shard passed or failed (owner, 2026-11-13).
+      # A red shard's report is still a cold, honest measurement: its
+      # survivors stay Survived, so a branch that changes that file still
+      # sees them, and its kills hold. The cache above stays success-only
+      # because a PR restores it under `break: 100` and would inherit the
+      # survivor. A local gate mutates only the branch's changed files,
+      # where a kept survivor is a real one. When this was success-only,
+      # one red shard on `main` left every lane's push gate running that
+      # scope cold until `main` went green (#660: closet and safety tsx,
+      # wave 8). The report has to exist: a dry-run crash writes none.
       - name: Fingerprint the report for local seeding
-        if: success() && github.event_name == 'push'
+        if: "!cancelled() && github.event_name == 'push' && hashFiles('reports/stryker-incremental.json') != ''"
         run: node ./node_modules/guardrails-core/dist/cli.mjs mutation-fingerprint
 
       - name: Upload the report for local seeding
-        if: success() && github.event_name == 'push'
+        if: "!cancelled() && github.event_name == 'push' && hashFiles('reports/stryker-incremental.json') != ''"
         uses: actions/upload-artifact@v7.0.2
         with:
           name: stryker-incremental-${{ matrix.slug }}
