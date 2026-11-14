@@ -11,7 +11,7 @@ import {
   WeatherAttribution,
 } from "../../../ui";
 import type { CoverageLevel } from "../../../ui";
-import type { Ladder } from "../ladder";
+import { verdictsIn, type Ladder } from "../ladder";
 
 /**
  * The Call tab's teaser — V1's K, as round 22's item 24 rules it.
@@ -69,6 +69,10 @@ export function CallLadder({
 
       {isCalling ? undefined : <LogThisNext band={ladder.thinnestBand} />}
 
+      {/* R55·231: with all fifteen logged, the page ends on its sentence
+          and a way to keep logging, after a hairline. */}
+      {isCalling ? <LogAnother /> : undefined}
+
       {/* "No button" once the threshold is met: there is nowhere for it
           to go in v1. Before that, the one thing that moves the meter. */}
       {isCalling ? undefined : (
@@ -111,13 +115,16 @@ const METER_COLUMNS = {
 function Countdown({ ladder }: Readonly<{ ladder: Ladder }>): JSX.Element {
   const logged = CALL_VERDICT_THRESHOLD - ladder.verdictsUntilCall;
   const counted = `${String(logged)} of ${String(CALL_VERDICT_THRESHOLD)} verdicts`;
+  // R55·231: the card counts toward the threshold, and says so; the
+  // coverage head below counts every verdict.
+  const needed = `${String(logged)} of ${String(CALL_VERDICT_THRESHOLD)} needed`;
 
   return (
     <section
       data-part="countdown"
       className="flex flex-col gap-3 rounded-card bg-hi-viz p-5 text-accent-ink"
     >
-      <Mono step="xs">{`The Call · ${counted}`}</Mono>
+      <Mono step="xs">{`The Call · ${needed}`}</Mono>
       <p className="m-0 font-display text-title">
         {ladder.verdictsUntilCall === 0
           ? "That’s enough to call."
@@ -160,35 +167,54 @@ function countdownLine(ladder: Ladder): string {
 }
 
 /**
- * "Your coverage" — every band in the runner's range, gaps included,
- * with the words beside each swatch and a legend of how many sit at each
- * level.
+ * "Your coverage" (R55·231): every band in the runner's range, gaps
+ * included, as one strip of square cells over an axis of band floors,
+ * each band's count under its floor, then a one-line legend of the
+ * levels present. The head counts every verdict, which is not the
+ * card's count toward the Call, and says so.
+ *
+ * The strip is drawn for the eye; a list says each band in words,
+ * level and count, so the reading never depends on the swatch.
  */
 function Coverage({ ladder }: Readonly<{ ladder: Ladder }>): JSX.Element {
+  const columns = {
+    gridTemplateColumns: `repeat(${String(ladder.bands.length)}, minmax(0, 1fr))`,
+  };
   return (
-    <section className="flex flex-col gap-3">
-      <div className="flex items-baseline justify-between">
+    <section data-part="coverage" className="flex flex-col gap-3">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="m-0 font-display text-heading">Your coverage</h2>
         <Mono step="xs" className="text-muted">
-          Your coverage
+          {`${String(ladder.verdictTotal)} verdicts in all`}
         </Mono>
-        <Bracketed className="text-muted">
-          {`${String(ladder.verdictTotal)} verdicts`}
-        </Bracketed>
       </div>
-      <ul className="m-0 flex list-none flex-col gap-2 p-0">
-        {ladder.bands.map(({ band, coverage }) => (
-          <li
-            key={band.bandFloorC}
-            className="flex items-center justify-between gap-3 text-body"
-          >
-            <Bracketed className="w-24 shrink-0 text-muted">
-              <Spoken shown={band.label} said={band.said} />
-            </Bracketed>
-            <CoverageMark level={coverage} />
-            <Mono className="text-muted">{coverage}</Mono>
-            <Mono className="text-muted">
-              {String(band.cold + band.dialed + band.warm)}
+      <div aria-hidden="true" className="flex flex-col gap-1">
+        <div
+          data-part="coverage-strip"
+          className="grid gap-0.5"
+          style={columns}
+        >
+          {ladder.bands.map(({ band, coverage }) => (
+            <CoverageMark key={band.bandFloorC} level={coverage} size="cell" />
+          ))}
+        </div>
+        <div data-part="coverage-axis" className="grid gap-0.5" style={columns}>
+          {ladder.bands.map(({ band }) => (
+            <Mono
+              key={band.bandFloorC}
+              step="xs"
+              className="flex flex-col items-center"
+            >
+              <span className="text-muted">{floorOf(band.label)}</span>
+              <span>{String(verdictsIn(band))}</span>
             </Mono>
+          ))}
+        </div>
+      </div>
+      <ul className="sr-only">
+        {ladder.bands.map(({ band, coverage }) => (
+          <li key={band.bandFloorC}>
+            {`${band.said}, ${coverage}, ${String(verdictsIn(band))} verdicts`}
           </li>
         ))}
       </ul>
@@ -202,7 +228,16 @@ function Coverage({ ladder }: Readonly<{ ladder: Ladder }>): JSX.Element {
 }
 
 /**
- * How many bands sit at each level.
+ * A band's floor, for the axis under its cell: "41–50°" is "41°". The
+ * label is `bandLabel`'s, always the floor, an en dash and the top.
+ */
+function floorOf(label: string): string {
+  return `${label.slice(0, label.indexOf("–"))}°`;
+}
+
+/**
+ * How many bands sit at each level, on one line, and only the levels
+ * present (R55·231: "UNKNOWN 0" goes).
  *
  * Design's own legend, and the line that earns it: *"Forty verdicts all at
  * 50° leaves January hollow, and a hollow bar looks hollow."* The counts
@@ -213,17 +248,37 @@ function CoverageLegend({
   levels,
 }: Readonly<{ levels: readonly CoverageLevel[] }>): JSX.Element {
   const order: readonly CoverageLevel[] = ["covered", "partial", "unknown"];
+  const present = order
+    .map((level) => ({
+      level,
+      count: levels.filter((row) => row === level).length,
+    }))
+    .filter(({ count }) => count > 0);
   return (
-    <ul className="m-0 flex list-none flex-wrap gap-4 border-t border-hairline p-0 pt-3">
-      {order.map((level) => (
-        <li key={level} className="flex items-center gap-2">
-          <CoverageMark level={level} />
-          <Mono className="text-muted">
-            {level} {levels.filter((row) => row === level).length}
-          </Mono>
+    <ul className="m-0 flex list-none flex-wrap gap-4 p-0">
+      {present.map(({ level, count }) => (
+        <li key={level} className="flex items-center gap-1.5">
+          <CoverageMark level={level} size="key" />
+          <Mono step="xs">{`${level} ${String(count)}`}</Mono>
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * R55·231's last line once the Call is met: keep logging.
+ */
+function LogAnother(): JSX.Element {
+  return (
+    <div className="border-t border-hairline pt-4">
+      <Link
+        to="/runs/new"
+        className="target inline-flex items-center text-body font-bold text-cold-text no-underline"
+      >
+        Log another run
+      </Link>
+    </div>
   );
 }
 

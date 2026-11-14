@@ -36,15 +36,29 @@ const COVERAGE_FILL: Readonly<Record<CoverageLevel, string>> = {
  */
 export function CoverageMark({
   level,
-}: Readonly<{ level: CoverageLevel }>): JSX.Element {
+  size = "swatch",
+}: Readonly<{
+  level: CoverageLevel;
+  /**
+   * `swatch` beside a word; `cell`, one band's cell in the Call's strip,
+   * filling its track (R55·231); `key`, the legend's 12 square.
+   */
+  size?: keyof typeof COVERAGE_SIZE;
+}>): JSX.Element {
   return (
     <span
       aria-hidden="true"
       data-coverage={level}
-      className={`inline-block h-3 w-8 shrink-0 rounded-none ${COVERAGE_FILL[level]}`}
+      className={`${COVERAGE_SIZE[size]} rounded-none ${COVERAGE_FILL[level]}`}
     />
   );
 }
+
+const COVERAGE_SIZE = {
+  swatch: "inline-block h-3 w-8 shrink-0",
+  cell: "block h-7 w-full",
+  key: "inline-block size-3 shrink-0",
+} as const;
 
 /**
 How a band was called. A direction around a centre, so hue may carry it.

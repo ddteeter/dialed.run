@@ -114,7 +114,7 @@ function marks(attribute: string): HTMLElement[] {
 }
 
 describe("CoverageMark's callers print the level", () => {
-  it("says the word in every band row of the ladder", async () => {
+  it("says the word for every band of the ladder, and beside every legend key", async () => {
     // O6's ladder: one row per band, the swatch between the temperature
     // and the level. Design's own line is the reason — "the counts are
     // there so the reading never depends on the swatch".
@@ -129,11 +129,24 @@ describe("CoverageMark's callers print the level", () => {
       />,
     );
 
-    const swatches = marks("data-coverage");
-    expect(swatches.length).toBeGreaterThan(3);
-    for (const swatch of swatches) {
-      const level = swatch.dataset.coverage ?? "";
-      expect(rowWithoutMark(swatch)).toContain(level);
+    // R55·231: the strip's cells are drawn for the eye, and each band's
+    // level is said in the list beside it, band for band; the legend's
+    // keys sit in their words.
+    const strip = document.querySelector("[data-part='coverage-strip']");
+    const cells = [...(strip?.children ?? [])];
+    const said = [...document.querySelectorAll(".sr-only > li")];
+    expect(cells).toHaveLength(3);
+    expect(said).toHaveLength(3);
+    for (const [index, cell] of cells.entries()) {
+      const level = cell instanceof HTMLElement ? cell.dataset.coverage : "";
+      expect(said[index]?.textContent).toContain(`, ${level ?? ""},`);
+    }
+    const keys = marks("data-coverage").filter(
+      (mark) => strip?.contains(mark) !== true,
+    );
+    expect(keys.length).toBeGreaterThan(0);
+    for (const key of keys) {
+      expect(rowWithoutMark(key)).toContain(key.dataset.coverage ?? "");
     }
   });
 
