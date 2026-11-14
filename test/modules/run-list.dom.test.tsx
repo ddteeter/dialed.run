@@ -76,8 +76,15 @@ describe("R: a row (Round 55 · 235)", () => {
     const lateSaturday = Math.floor(Date.UTC(2026, 7, 30, 1, 30) / 1000);
     await renderWithRouter(list([runSummary({ startedAt: lateSaturday })]));
 
-    const link = within(onlyRow()).getByRole("link");
-    expect(link).toHaveTextContent(/^Sat Aug 29$/u);
+    // Shown as the day; said with its distance, so two runs on one day
+    // are two links a screen reader can tell apart.
+    const link = within(onlyRow()).getByRole("link", {
+      name: "Sat Aug 29, 6.2 miles",
+    });
+    expect(within(link).getByText("Sat Aug 29")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
     // The line's own height, its 44 hit area proud of it (a11y.css 03).
     expect(link).toHaveClass(
       "target-line",

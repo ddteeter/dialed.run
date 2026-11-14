@@ -76,8 +76,7 @@ export function RunList({
             {/* Round 55 · 235: a month break in MONO.xs with its count. */}
             <h2 className="m-0 border-b border-hairline pt-5 pb-2">
               <Mono step="xs" className="text-label">
-                {month} · {inMonth.length}{" "}
-                {inMonth.length === 1 ? "run" : "runs"}
+                {`${month} · ${String(inMonth.length)} ${inMonth.length === 1 ? "run" : "runs"}`}
               </Mono>
             </h2>
             <ul className="m-0 flex list-none flex-col p-0">
@@ -149,7 +148,7 @@ function RunRow({
       className="grid min-h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-hairline"
     >
       <div className="flex min-w-0 flex-col gap-1">
-        <RunLink run={run} />
+        <RunLink run={run} units={units} />
         <div className="flex min-w-0 items-center gap-2">
           <MetaLine run={run} units={units} />
           <RunBadge run={run} units={units} onSet={onSet} />
@@ -172,23 +171,33 @@ function RunRow({
 const ROW_LINK =
   "target-line inline-block self-start text-body font-semibold text-ink underline underline-offset-4";
 
-function RunLink({ run }: Readonly<{ run: RunSummary }>): JSX.Element {
+function RunLink({
+  run,
+  units,
+}: Readonly<{ run: RunSummary; units: Units }>): JSX.Element {
   const { entryId } = run;
   const day = dayLabel(run.startedAt, run.clockZone);
+  // Said with its distance, so two runs on one day are two different
+  // links to a screen reader, as they were before the row lost its line.
+  const { said: distance } = measuredLine(
+    [[{ kind: "distance", distanceM: run.distanceM, spaced: true }]],
+    units,
+  );
+  const name = <Spoken shown={day} said={`${day}, ${distance}`} />;
   if (entryId === undefined) {
     return (
       <Link to="/runs/$runId" params={{ runId: run.id }} className={ROW_LINK}>
-        {day}
+        {name}
       </Link>
     );
   }
   return run.hasVerdict ? (
     <Link to="/feed/entry/$entryId" params={{ entryId }} className={ROW_LINK}>
-      {day}
+      {name}
     </Link>
   ) : (
     <Link to="/feed/verdict/$entryId" params={{ entryId }} className={ROW_LINK}>
-      {day}
+      {name}
     </Link>
   );
 }
