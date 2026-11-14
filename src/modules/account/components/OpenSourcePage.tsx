@@ -1,6 +1,6 @@
 import { useRef, useState, type ComponentType, type JSX } from "react";
 
-import { FormField, FormStatus, Icon, Mono } from "../../../ui";
+import { FormField, FormStatus, focusOnMount, Icon, Mono } from "../../../ui";
 import {
   plainText,
   sectionsOf,
@@ -160,11 +160,14 @@ function SearchField({
   query,
   onQuery,
 }: Readonly<{ query: string; onQuery: (query: string) => void }>) {
-  const field = useRef<HTMLInputElement>(null);
+  // Each Clear mounts the field afresh, and from the first Clear on it
+  // mounts focused: focus stays in the field, never before a Clear.
+  const [clears, setClears] = useState(0);
   return (
     <FormField name="find-a-package" label="Find a package">
       <input
-        ref={field}
+        key={clears}
+        ref={clears > 0 ? focusOnMount : undefined}
         id="find-a-package"
         type="search"
         placeholder="Name, e.g. date-fns"
@@ -180,7 +183,7 @@ function SearchField({
           aria-label="Clear"
           onClick={() => {
             onQuery("");
-            field.current?.focus();
+            setClears((count) => count + 1);
           }}
           className="target -mr-3 inline-flex shrink-0 items-center justify-center text-ink"
         >

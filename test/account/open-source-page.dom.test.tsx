@@ -601,6 +601,8 @@ describe("OpenSourcePage", () => {
     const user = userEvent.setup();
     await renderPage();
     expect(screen.queryByRole("button", { name: "Clear" })).toBeNull();
+    // The field is not focused for the runner before they ask for it.
+    expect(search()).not.toHaveFocus();
     await user.type(search(), "zod");
     const clear = screen.getByRole("button", { name: "Clear" });
     expect(clear).toHaveClass("target", "text-ink");
