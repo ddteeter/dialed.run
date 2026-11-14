@@ -1081,6 +1081,26 @@ _Nothing from 99 on is open: round 45 answered the last of it._
 
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
 
+## Built from round 56 · 246 (wave 9, design 213)
+
+How the lift (Round 56 · 246, #652) was built, with what the ruling left
+to the build. The coordinator read both light-theme points against
+246a–c (2026-11-13): neither needs a Design item.
+
+- **The role.** `--lift` is a T1 role in `src/ui/tokens.css`: `--ink` at
+  10% in the light column, `none` in the dark one. The theme names it once,
+  as `shadow-lift`, and clears the rest of Tailwind's shadow namespace.
+- **What takes it.** `ui/Sheet`'s three faces, the only surfaces that
+  float in the build: the phone sheet, the desk drawer (the old contracts'
+  centred panel at width) and the Desk pane below desk. No menu and no
+  toast exists. 249.1's full-photo view (#659) is the next.
+- **Withdrawn · Design 165's stepped-up edge.** The upper of two stacked
+  dark sheets no longer steps up to `--hairline-2`: under 246b every dark
+  floating surface takes it, and 246c says "one level only". The lower
+  sheet is still held 48 taller, so both top edges show.
+- **Unchanged in light.** 246 rules nothing about light edges, so the
+  drawer keeps 164.1's 1px `--hairline` and the phone sheet keeps no edge.
+
 ## Answered in round 56 (imported 2026-11-14)
 
 Design answered as `Round 56 Rulings.dc.html`, items 243–250 and three

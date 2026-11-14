@@ -12,7 +12,7 @@ edge instead; and everything that floats over the page takes it, one level.
 
 - `src/ui/tokens.css`: `--lift` leaves `:root` for the T1 columns.
   `ground-paper` gets `0 8px 28px color-mix(in srgb, var(--ink) 10%,
-  transparent)` (246a: `rgb(11 11 14 / 0.10)`, with `--ink` as the colour).
+transparent)` (246a: `rgb(11 11 14 / 0.10)`, with `--ink` as the colour).
   `ground-ink` gets `none`. `ground-drawer` drops its `box-shadow`, and
   `ground-sheet`'s edge becomes `--hairline-2`.
 - `src/styles.css`: `--shadow-lift: var(--lift)` in `@theme`, so the lift is
@@ -59,13 +59,16 @@ edge instead; and everything that floats over the page takes it, one level.
 - Closes: #652
 - Opens: none expected
 
-## Open questions (guesses I'm building on, sent to coordinator-9)
+## Open questions
 
-1. The light drawer keeps its 1px `--hairline` edge as well as the lift.
-   246 changes dark and adds the light lift; it does not withdraw 164.1's
-   hairline.
-2. The light phone sheet takes the lift and no edge, as it has today.
+None left. coordinator-9 read the three guesses against 246a–c
+(2026-11-13):
+
+1. The light drawer keeps its 1px `--hairline` edge as well as the lift:
+   246 rules nothing about light edges, so 164.1 stands.
+2. The light phone sheet takes the lift and no edge, as on main.
 3. Stacked phone sheets in dark: Design 165 stepped the upper sheet's edge
-   up to `--hairline-2`. With every dark edge now `--hairline-2`, the step
-   is gone. One level only, so I drop the `data-[stacked=over]` class and
-   keep the 48 height offset that keeps both top edges visible.
+   up to `--hairline-2`. 246b gives every dark floating surface that edge,
+   and 246c says "one level only", so the step is withdrawn. The
+   `data-[stacked=over]` class is gone, and the 48 height offset that
+   keeps both top edges visible stays.
