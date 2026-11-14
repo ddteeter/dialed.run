@@ -352,12 +352,12 @@ test("F at the desk · the rail card is round 26's rows, newest first, marked, u
     drawnRows.some((drawnRow) => row.startsWith(pieceOf(drawnRow))),
   );
   expect(ours.slice(0, 2)).toStrictEqual([harrierRow, uniqloRow]);
-  // 248 keeps RETIRED to once, as the dated tag: the board's
-  // "· RETIRED MAR 2026" on the record and "SAME NAME · RETIRED" beside it
-  // read "SAME NAME · RETIRED MAR 2026".
+  // 248 keeps RETIRED to once, as the tag, and draws it as the word alone
+  // (R2-CLOSET-02): the board's "· RETIRED MAR 2026" on the record and
+  // "SAME NAME · RETIRED" beside it read "SAME NAME · RETIRED".
   expect(roverRow).toContain("RETIRED MAR 2026 SAME NAME · RETIRED");
   expect(ours[2]).toMatch(
-    /^JANJI ROVER HALF-ZIP 12 RUNS .*SAME NAME · RETIRED MAR 2026$/u,
+    /^JANJI ROVER HALF-ZIP 12 RUNS .*SAME NAME · RETIRED$/u,
   );
   expect(ours[2]?.match(/RETIRED/gu)).toHaveLength(1);
 });

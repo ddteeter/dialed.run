@@ -988,7 +988,12 @@ describe("VerdictBacklog: below the desk, one card per run (Round 55 · 236)", (
     }).parentElement;
     // Equal columns at the desk too, as 236a draws them (R2-RUNS-05).
     expect(segments).toHaveAttribute("data-part", "verdict-segments");
-    expect(segments).toHaveClass("grid", "grid-cols-5", "gap-1");
+    expect(segments).toHaveClass(
+      "grid",
+      "grid-cols-5",
+      "gap-1",
+      "desk:grid-cols-[repeat(5,1fr)]",
+    );
     expect(segments).not.toHaveClass("desk:flex");
     // Nothing to skip to: every run is on the page.
     expect(screen.queryByRole("button", { name: "Skip" })).toBeNull();
