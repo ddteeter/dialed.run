@@ -125,6 +125,8 @@ function results(...names: string[]): SearchResult[] {
     userId: `01R${String(index)}`,
     username,
     following: index === 1,
+    sharedRuns: 0,
+    sharedSince: undefined,
   }));
 }
 
@@ -1059,7 +1061,70 @@ describe("RunnerSearch", () => {
         name: "Following @andy",
       }),
     ).toBeVisible();
-    expect(ana).toHaveTextContent(/^A@anaFollow.* @ana$/u);
+    expect(ana).toHaveTextContent(/^A@ana0 runsFollow.* @ana$/u);
+    // R55·217: in a list, Follow is the hairline pill and Following muted
+    // text, so the page's only pink is Log a run.
+    expect(anaPill).toHaveClass(
+      "target",
+      "rounded-pill",
+      "border",
+      "border-hairline",
+      "bg-transparent",
+      "text-ink",
+    );
+    expect(anaPill).not.toHaveClass("bg-action", "border-ink");
+    const andyPill = within(andy ?? document.body).getByRole("button", {
+      name: "Following @andy",
+    });
+    expect(andyPill).toHaveClass("target", "border-none", "text-muted");
+    expect(andyPill).not.toHaveClass("rounded-pill", "border-ink");
+  });
+
+  it("tells runners apart on a second line: shared runs, and since when (R55·217)", async () => {
+    const user = userEvent.setup();
+    const found = vi.fn(() =>
+      Promise.resolve([
+        {
+          userId: "01A",
+          username: "runner_rae",
+          following: false,
+          sharedRuns: 41,
+          // 2026-10-05, UTC.
+          sharedSince: 1_791_158_400,
+        },
+        {
+          userId: "01B",
+          username: "runner_ro",
+          following: false,
+          sharedRuns: 1,
+          sharedSince: 1_791_158_400,
+        },
+        {
+          userId: "01C",
+          username: "runner_new",
+          following: false,
+          sharedRuns: 0,
+          sharedSince: undefined,
+        },
+      ]),
+    );
+    await renderFeedScreen(searchScreen(found));
+    await user.type(screen.getByLabelText("Search by name"), "runner");
+    await waitFor(() => {
+      expect(screen.getAllByRole("listitem")).toHaveLength(3);
+    });
+    const [rae, ro, fresh] = screen.getAllByRole("listitem");
+    const line = within(rae ?? document.body).getByText(/41 runs/u);
+    expect(line.textContent).toBe("41 runs\u{A0}· since Oct 2026");
+    expect(line).toHaveClass("text-mono-xs", "text-muted");
+    // Outside the link: the link is named by the handle alone.
+    expect(
+      within(rae ?? document.body).getByRole("link", { name: "@runner_rae" }),
+    ).not.toContainElement(line);
+    expect(within(ro ?? document.body).getByText(/^1 run/u).textContent).toBe(
+      "1 run\u{A0}· since Oct 2026",
+    );
+    expect(within(fresh ?? document.body).getByText("0 runs")).toBeVisible();
   });
 
   it("breathes its trailing label while a search is out, and only then", async () => {

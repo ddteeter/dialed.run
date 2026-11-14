@@ -17,6 +17,7 @@ import type { Units } from "../../../lib/contracts";
 import { FlushBand } from "./FlushBand";
 import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
 import { bandVerdict } from "../coverage";
+import { counted } from "../counted";
 import { BOUND_SEPARATOR } from "../posted";
 import type { ownProfile } from "../profiles";
 import { BracketHeadline } from "./BracketHeadline";
@@ -170,14 +171,6 @@ function ProfileBody({ profile }: Readonly<{ profile: Profile }>) {
       </ListSection>
     </>
   );
-}
-
-/**
- * A count in words, one for one: "1 run", "2 runs" (R55·209b; delta R46's
- * "singular for one").
- */
-function counted(value: number, one: string, many: string): string {
-  return `${String(value)} ${value === 1 ? one : many}`;
 }
 
 /**

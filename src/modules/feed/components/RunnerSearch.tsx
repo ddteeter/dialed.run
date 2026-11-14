@@ -9,6 +9,9 @@ import {
   Mono,
   PhoneBell,
 } from "../../../ui";
+import { monthYearLabel } from "../../../lib/dates";
+import { counted } from "../counted";
+import { BOUND_SEPARATOR } from "../posted";
 import type { SearchResult } from "../search";
 import { Avatar } from "./Avatar";
 import { Handle, handleText } from "./Handle";
@@ -169,6 +172,17 @@ export function RunnerSearch({
   );
 }
 
+/**
+ * "41 runs · since Oct 2026" (the mono step's CSS sets the caps), or the
+ * count alone with none shared.
+ */
+function sharedLine(result: SearchResult): string {
+  const runs = counted(result.sharedRuns, "run", "runs");
+  return result.sharedSince === undefined
+    ? runs
+    : `${runs}${BOUND_SEPARATOR}since ${monthYearLabel(result.sharedSince)}`;
+}
+
 function ResultRow({
   result,
   follow,
@@ -191,13 +205,21 @@ function ResultRow({
     <li className="flex flex-col gap-3 border-b border-hairline py-3">
       <div className="flex items-center gap-3">
         <Avatar name={result.username} size="small" />
-        <Link
-          to="/feed/u/$handle"
-          params={{ handle: result.username }}
-          className="target flex flex-1 items-center text-body text-ink no-underline"
-        >
-          <Handle username={result.username} />
-        </Link>
+        <span className="flex min-w-0 flex-1 flex-col">
+          <Link
+            to="/feed/u/$handle"
+            params={{ handle: result.username }}
+            className="target flex items-center text-body text-ink no-underline"
+          >
+            <Handle username={result.username} />
+          </Link>
+          {/* R55·217: a second line that tells one prefix match from the
+              next, the shared runs and since when. Outside the link, so
+              the link is named by the handle alone. */}
+          <Mono step="xs" className="text-muted">
+            {sharedLine(result)}
+          </Mono>
+        </span>
         <FollowPill toggle={toggle} handle={handleText(result.username)} />
       </div>
       {/* Under the whole row, never squeezed beside the pill (§4a). */}
