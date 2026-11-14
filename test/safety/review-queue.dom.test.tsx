@@ -1071,6 +1071,14 @@ describe("what a row tells the reviewer", () => {
     );
     // The waiting list's rows stand 12 apart.
     expect(open?.parentElement).toHaveClass("gap-3");
+    // No photo to show: the photo cell is empty, and the text after it
+    // takes both columns at desk (R2-DESK-07).
+    const photos = open?.querySelector("[data-part='row-photos']");
+    expect(photos).toBeEmptyDOMElement();
+    expect(photos?.nextElementSibling).toHaveClass(
+      "desk:col-start-2",
+      "desk:[[data-part=row-photos]:empty+&]:col-span-full",
+    );
     // A closed row is its head, a one-line summary and the fold's mark.
     expect(closed?.querySelector("[data-part='row-body']")).toBeNull();
     const summary = closed?.querySelector("[data-part='row-summary']");
@@ -1466,7 +1474,7 @@ describe("a handle the re-ask flagged (D-97)", () => {
     // content row lists what the reporters said.
     expect(
       screen.getByRole("button", {
-        name: rowNamed("handle · re-check · quadzilla_69"),
+        name: rowNamed("handle · re-check · @quadzilla_69"),
       }),
     ).toBeInTheDocument();
     expect(document.querySelector("[data-part='why-here']")).toHaveTextContent(
@@ -1637,7 +1645,7 @@ describe("a handle the re-ask flagged (D-97)", () => {
     );
     expect(
       screen.getByRole("button", {
-        name: rowNamed("handle · re-check · quadzilla_69"),
+        name: rowNamed("handle · re-check · @quadzilla_69"),
       }),
     ).toBeInTheDocument();
 
@@ -1656,7 +1664,7 @@ describe("a handle the re-ask flagged (D-97)", () => {
     expect(waitingRows()).toBe(1);
     expect(
       screen.getByRole("button", {
-        name: rowNamed("handle · re-check · dunk_runs"),
+        name: rowNamed("handle · re-check · @dunk_runs"),
       }),
     ).toBeInTheDocument();
     // Still open, with its decision, for Keep or another Rename.
@@ -1687,7 +1695,7 @@ describe("a handle the re-ask flagged (D-97)", () => {
     expect(screen.queryByRole("button", { name: "Keep" })).toBeNull();
     // Its kind is its own, and the reporters speak for it.
     expect(
-      screen.getByRole("button", { name: rowNamed("profile · dee") }),
+      screen.getByRole("button", { name: rowNamed("profile · @dee") }),
     ).toBeInTheDocument();
     expect(document.querySelector("[data-part='why-here']")).toBeNull();
   });

@@ -209,6 +209,9 @@ describe("SignOutButton", () => {
       "font-semibold",
       "text-cold-text",
     );
+    // The label at the start of the room it holds for "Signing out", so
+    // it sits right after OPERATOR · (R2-DESK-12a).
+    expect(button.firstElementChild).toHaveClass("justify-items-start");
     const root = button.closest("[data-part='desk-sign-out']");
     expect(root).toHaveClass("flex", "flex-col", "items-end");
     expect(root).not.toHaveClass("gap-3");

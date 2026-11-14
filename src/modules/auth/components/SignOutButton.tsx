@@ -166,7 +166,9 @@ function DeskBarSignOut({
         label="Sign out"
         pendingLabel="Signing out"
         pending={control.pending}
-        align="end"
+        // Start, so the room held for "Signing out" sits at the bar's
+        // edge and not between OPERATOR · and the label (R2-DESK-12a).
+        align="start"
       />
     </button>
   );
