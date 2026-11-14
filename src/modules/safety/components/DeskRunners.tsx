@@ -469,6 +469,8 @@ function CloseAccountPanel({
         label={CLOSE_LABELS.rule}
         options={closureRules}
         optionLabels={closureRuleLabels}
+        // Round 39 #76: the terms' rules, a hairline, then CSAM.
+        hairlineBefore="suspected_csam"
         schema={closureRuleSchema}
         value={rule}
         onChange={setRule}

@@ -1,4 +1,4 @@
-# Design: 216 the desk drawer says the picked name once (#663)
+# Design: 216 the desk drawer says the picked name once (#663), plus #393 and #390
 
 ## Problem
 
@@ -33,6 +33,27 @@ not a heading, so there would be nothing to label the drawer by.
 in the Sheet's display type, not mono; mono stays in the wide pane. If Design
 rules mono there, that is a `Sheet` title change for 9a, not this lane.
 
+## Added: #393, D8's hairline before CSAM
+
+Round 39 #76 draws D8's rule select as the terms' ten rules, a hairline,
+then "Suspected CSAM (the notice names no rule)"; design-deltas 76 says
+the shared `ChoiceField` drew no hairline. `ChoiceField` gains an optional
+`hairlineBefore` option, rendered as a native `<hr>` inside the `<select>`
+(the platform's own separator, no new style), and `PickOne` passes it
+through. Close account sets it to `suspected_csam`.
+
+## Added: #390, D2 says when it stopped at the cap
+
+`duplicateProducts` reads one row past its limit and returns
+`{ candidates, cutAt }`: `cutAt` is the limit it used when the catalogue
+ran past it. `duplicatesReport` carries `cutAt`, and D2 says, under its
+intro, only when cut (the owner's wording, 2026-11-13, recorded on #390):
+
+> Read the first 500 products only. Near-misses past them aren't shown.
+
+and its empty line becomes "No near-misses in the first 500 products."
+The number is `cutAt`, so it is always `DUPLICATES_PRODUCT_CAP`'s.
+
 ## Contract touches
 
 - Schema changes needed: **none**
@@ -49,12 +70,19 @@ rules mono there, that is a `Sheet` title change for 9a, not this lane.
   runner's handle appears once in the drawer, as its title.
 - `test/account/…` Codes test (vitest ui): below desk, the picked code is the
   drawer's only heading.
-- Transcripts: any e2e transcript that opens the drawer is regenerated, and
-  its diff should only lose the repeated name.
+- Transcripts: no e2e opens the drawer, so none change for #663.
+- #393: `test/ui/form.dom.test.tsx` (the `<hr>` sits before the named option
+  only, and nowhere unless asked); `desk-runners.dom.test.tsx` (the CSAM
+  option is last, after the one hairline). Desk e2e transcripts that read
+  the rule select may gain a separator line.
+- #390: `test/safety/duplicates.test.ts` (worker: `cutAt` at and past the
+  cap and for a given limit; D2's lines rendered from a real cut read
+  contain `DUPLICATES_PRODUCT_CAP`); `desk-duplicates.dom.test.tsx` (the
+  cut line, the scoped empty line, nothing when whole).
 
 ## Issues
 
-- Closes: #663
+- Closes: #663, #393, #390
 - Opens: none expected
 
 ## Open questions

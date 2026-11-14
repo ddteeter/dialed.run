@@ -708,6 +708,22 @@ describe("Close account (D3)", () => {
     });
   });
 
+  it("rules the terms' rules off from the CSAM option, last (round 39 #76)", async () => {
+    const user = userEvent.setup();
+    await renderDesk();
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+
+    const select = screen.getByRole("combobox", {
+      name: /Which rule it breaks/,
+    });
+    const hairline = select.querySelector("hr");
+    expect(select.querySelectorAll("hr")).toHaveLength(1);
+    expect(hairline?.nextElementSibling).toHaveTextContent(
+      "Suspected CSAM (the notice names no rule)",
+    );
+    expect(hairline?.nextElementSibling?.nextElementSibling).toBeNull();
+  });
+
   it("closes over suspected CSAM naming no rule (C8)", async () => {
     const user = userEvent.setup();
     const { ban } = await renderDesk();

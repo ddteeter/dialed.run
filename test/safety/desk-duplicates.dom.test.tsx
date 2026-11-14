@@ -171,3 +171,39 @@ describe("a clean catalogue", () => {
     expect(screen.queryByText(/^No near-misses\./u)).toBeNull();
   });
 });
+
+describe("a report cut at its limit (#390)", () => {
+  it("says it read only that many, under the intro, beside the groups", () => {
+    // 7, not the cap: the line says the number it is handed.
+    renderReport(
+      duplicatesReport(
+        [
+          candidate("Ciele", [
+            ["GoCap", 1],
+            ["Go Cap", 1],
+          ]),
+        ],
+        7,
+      ),
+    );
+    const cut = screen.getByText(
+      "Read the first 7 products only. Near-misses past them aren't shown.",
+    );
+    expect(cut).toHaveClass("text-small", "text-muted", "max-w-column");
+    expect(cut.previousElementSibling).toHaveTextContent(/^Nothing here/u);
+    expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(1);
+  });
+
+  it("scopes the clean line to what it read", () => {
+    renderReport(duplicatesReport([], 7));
+    expect(
+      screen.getByText("No near-misses in the first 7 products."),
+    ).toHaveClass("text-body");
+    expect(screen.queryByText(/Every product name/u)).toBeNull();
+  });
+
+  it("says nothing about a cut when the read was whole", () => {
+    renderReport(duplicatesReport([]));
+    expect(screen.queryByText(/products only/u)).toBeNull();
+  });
+});

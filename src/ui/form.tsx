@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { Fragment, useId } from "react";
 import type { ComponentProps, JSX, ReactNode, Ref, RefObject } from "react";
 
 import { spokenFormOf } from "../lib/contracts";
@@ -1123,6 +1123,7 @@ export function ChoiceField<TOption extends string>({
   optionLabels,
   onChange,
   placeholder = NOT_SET,
+  hairlineBefore,
 }: Readonly<
   Omit<ChoosableProps<TOption>, "field"> & {
     /**
@@ -1138,6 +1139,12 @@ export function ChoiceField<TOption extends string>({
      * (round 43 #94). Otherwise the option reads `NOT_SET`.
      */
     placeholder?: string | undefined;
+    /**
+     * An option the list is ruled off before: a native `<hr>` in the
+     * select, which the platform draws as its separator. D8's rule select
+     * sets the CSAM option apart from the terms' rules (round 39 #76).
+     */
+    hairlineBefore?: TOption | undefined;
   }
 >): JSX.Element {
   // Per instance, for the reason `TextField` gives (R-165).
@@ -1157,9 +1164,10 @@ export function ChoiceField<TOption extends string>({
       >
         <option value={NO_CHOICE}>{placeholder}</option>
         {options.map((option) => (
-          <option key={option} value={option}>
-            {optionLabels[option]}
-          </option>
+          <Fragment key={option}>
+            {option === hairlineBefore ? <hr /> : undefined}
+            <option value={option}>{optionLabels[option]}</option>
+          </Fragment>
         ))}
       </Select>
     </FormField>

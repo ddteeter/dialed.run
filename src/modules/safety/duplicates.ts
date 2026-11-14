@@ -69,10 +69,19 @@ export interface DuplicateCandidate {
 /**
  * How many product rows one report reads, at most. The cut falls in
  * `(brand_id, normalized_name)` order, so past it a later brand's
- * near-misses go unreported and nothing on the page says so — accepted
- * while the catalogue is far smaller (task 110's PR, Deferred).
+ * near-misses go unreported; the report says when that happened (#390).
  */
 export const DUPLICATES_PRODUCT_CAP = 500;
+
+/**
+ * One read of the report: what it found, and where it stopped if the
+ * catalogue ran past its limit (#390). `cutAt` is the limit the read
+ * used, so the page's line says the number the query obeyed.
+ */
+export interface DuplicatesRead {
+  candidates: DuplicateCandidate[];
+  cutAt: number | undefined;
+}
 
 /**
  * Products under one brand whose normalised names are near-identical.
@@ -83,8 +92,8 @@ export const DUPLICATES_PRODUCT_CAP = 500;
  */
 export async function duplicateProducts(
   limit = DUPLICATES_PRODUCT_CAP,
-): Promise<DuplicateCandidate[]> {
-  const rows = await db()
+): Promise<DuplicatesRead> {
+  const fetched = await db()
     .select({
       // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; duplicateProducts reads every product with its brand to find near-duplicate names, a catalogue-wide read nothing else does
       id: products.id,
@@ -101,7 +110,11 @@ export async function duplicateProducts(
     .from(products)
     .innerJoin(brands, eq(products.brandId, brands.id))
     .orderBy(asc(products.brandId), asc(products.normalizedName))
-    .limit(limit);
+    // One past the limit: that row is how the read knows it was cut, and
+    // it is dropped before anything is compared.
+    .limit(limit + 1);
+  const isCut = fetched.length > limit;
+  const rows = fetched.slice(0, limit);
 
   // The brand's name is carried on the group rather than read back off
   // its first row later: every row in a group has it, so a `[0]` there
@@ -125,7 +138,7 @@ export async function duplicateProducts(
       found.push(candidateFrom(brand, group, cluster));
     }
   }
-  return found;
+  return { candidates: found, cutAt: isCut ? limit : undefined };
 }
 
 function candidateFrom(
