@@ -6,7 +6,6 @@ end of link, dialed.run home
 link, Log in
 end of banner
 main
-dialed.run
 heading, Create account, level 1
 paragraph
 dialed.run is invite-only for now.

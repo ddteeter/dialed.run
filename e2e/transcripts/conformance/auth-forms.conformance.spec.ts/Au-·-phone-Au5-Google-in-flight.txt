@@ -5,7 +5,6 @@ dialed.run
 end of link, dialed.run home
 end of banner
 main
-dialed.run
 heading, Log in, level 1
 form
 status

@@ -56,8 +56,18 @@ function buildPart(part: string): string {
   return part === "google" ? "google-button" : part;
 }
 
+/**
+ * The board's panel wordmark, which the build no longer draws: Round 55 ·
+ * 176 gives the signed-out frame one wordmark, the bar's ("so there is
+ * one"), at every width.
+ */
+const SUPERSEDED = "wordmark";
+
 async function boardParts(page: Page, label: string): Promise<string[]> {
-  const parts = await partsExcept(page, screen(label), [...UNMARKED]);
+  const parts = await partsExcept(page, screen(label), [
+    ...UNMARKED,
+    SUPERSEDED,
+  ]);
   return parts.map((part) => buildPart(part));
 }
 
@@ -88,11 +98,14 @@ async function drawn(
     // The board's Google button leads with a typed "G" in a ring; the
     // build carries Google's official image instead (owner, PR #104), so
     // that letter is not text in the build and is set aside here.
+    // The board's header holds its panel wordmark, superseded above.
+    const superseded = new Set(
+      await wordsOf(page, `${screen(label)} [data-part='${SUPERSEDED}']`),
+    );
+    const kept = drawnWords.filter((word) => !superseded.has(word));
     words.set(
       buildPart(part),
-      part === "google" && drawnWords[0] === "G"
-        ? drawnWords.slice(1)
-        : drawnWords,
+      part === "google" && kept[0] === "G" ? kept.slice(1) : kept,
     );
   }
   return { order, words };
