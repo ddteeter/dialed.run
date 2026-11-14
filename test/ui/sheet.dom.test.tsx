@@ -385,13 +385,38 @@ describe("Sheet's own head, foot and pane (R55·173, R54·164.4, R55·202)", () 
       level: 2,
       name: "Pick a kit",
     });
-    expect(heading).toHaveClass("font-display", "text-title");
+    expect(heading.className).toBe("m-0 font-display text-title");
     expect(heading).toHaveAttribute("tabindex", "-1");
     const close = screen.getByRole("button", { name: "Close" });
     // Its own 44 column: a long title wraps beside it, never around it.
     expect(close).toHaveClass("target", "w-11", "shrink-0");
     expect(heading.parentElement).toHaveClass("min-w-0", "flex-1");
     expect(close).not.toHaveAttribute("aria-disabled");
+  });
+
+  it("draws a code's title in MONO.lg, still the heading and the name (R57·251)", () => {
+    render(
+      <Sheet open onClose={vi.fn()} label="DIAL-TEST" titleKind="code">
+        <p>body</p>
+      </Sheet>,
+    );
+    const heading = screen.getByRole("heading", {
+      level: 2,
+      name: "DIAL-TEST",
+    });
+    expect(heading.className).toBe("m-0 font-mono text-mono-lg");
+    expect(screen.getByRole("dialog", { name: "DIAL-TEST" })).toBeVisible();
+  });
+
+  it("draws words in TYPE.title, when told so or by default", () => {
+    render(
+      <Sheet open onClose={vi.fn()} label="Pick a kit" titleKind="text">
+        <p>body</p>
+      </Sheet>,
+    );
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Pick a kit" }).className,
+    ).toBe("m-0 font-display text-title");
   });
 
   it("puts a kicker over the heading only when it has one", () => {

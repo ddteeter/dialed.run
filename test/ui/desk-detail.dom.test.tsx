@@ -34,7 +34,7 @@ const PICKED = {
 };
 
 function table(
-  picked: typeof PICKED | undefined,
+  picked: (typeof PICKED & { isCode?: boolean }) | undefined,
   onUnpick: () => void = vi.fn<() => void>(),
 ) {
   return (
@@ -147,6 +147,22 @@ describe("DeskDetail below desk (R55·202)", () => {
     expect(within(drawer).getByRole("heading", { name: "@ada" })).toBeVisible();
     expect(within(drawer).queryByText("the name line")).toBeNull();
     expect(within(drawer).getByText("the detail")).toBeVisible();
+  });
+
+  it("titles the drawer in words for a runner, in mono for a code (R57·251)", () => {
+    atWidth(false);
+    const { rerender } = render(table(PICKED));
+    expect(
+      screen.getByRole("heading", { level: 2, name: "@ada" }),
+    ).toHaveClass("font-display");
+    rerender(table({ ...PICKED, name: "DIAL-TEST", isCode: true }));
+    expect(
+      screen.getByRole("heading", { level: 2, name: "DIAL-TEST" }),
+    ).toHaveClass("font-mono", "text-mono-lg");
+    rerender(table({ ...PICKED, name: "DIAL-TEST", isCode: false }));
+    expect(
+      screen.getByRole("heading", { level: 2, name: "DIAL-TEST" }),
+    ).toHaveClass("font-display");
   });
 
   it("spaces the drawer's blocks 16 apart, as the pane does (R2-DESK-04)", () => {

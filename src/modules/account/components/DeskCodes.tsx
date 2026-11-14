@@ -395,8 +395,9 @@ function CodePane({ code }: Readonly<{ code: DeskCode }>): JSX.Element {
     <>
       <div className="flex flex-col gap-2">
         <DeskPaneName>
+          {/* R57·251: a code is a measured value, at MONO.lg. */}
           <h2 className="m-0">
-            <Mono step="sm">{code.code}</Mono>
+            <Mono step="lg">{code.code}</Mono>
           </h2>
         </DeskPaneName>
         <span className="wrap-anywhere">{labelOf(code)}</span>
@@ -626,7 +627,11 @@ function CodesSection({
         picked={
           open === undefined
             ? undefined
-            : { name: open.code, detail: <CodePane code={open} /> }
+            : {
+                name: open.code,
+                detail: <CodePane code={open} />,
+                isCode: true,
+              }
         }
       >
         <ul className={CODE_LIST}>

@@ -46,6 +46,17 @@ function useIsDesk(): boolean {
 }
 
 /**
+ * What the operator picked: its detail, and the pane's accessible name for
+ * it (whose or what it is). `isCode` when the name is a code, so the
+ * drawer's title draws it in mono (R57·251); a runner's name is words.
+ */
+type PickedThing = Readonly<{
+  name: string;
+  detail: ReactNode;
+  isCode?: boolean;
+}>;
+
+/**
  * A Desk table and its detail pane (Round 54 · 168.3, R55·203): from
  * `desk`, the table and a sticky pane beside it on a 2fr/1fr track (the
  * ruling's 1280 and 320, collapsed to the scale), the pane holding what
@@ -70,7 +81,7 @@ export function DeskDetail({
    * What the operator picked: its detail, and the pane's accessible name
    * for it (whose or what it is). Undefined while nothing is.
    */
-  picked: Readonly<{ name: string; detail: ReactNode }> | undefined;
+  picked: PickedThing | undefined;
   /**
   The pane's line while nothing is picked.
   */
@@ -97,7 +108,7 @@ function Picked({
   isDesk,
   onUnpick,
 }: Readonly<{
-  picked: Readonly<{ name: string; detail: ReactNode }> | undefined;
+  picked: PickedThing | undefined;
   idle: ReactNode;
   isDesk: boolean;
   onUnpick: () => void;
@@ -105,7 +116,13 @@ function Picked({
   if (picked === undefined) return <>{idle}</>;
   if (!isDesk) {
     return (
-      <Sheet open isModal={false} label={picked.name} onClose={onUnpick}>
+      <Sheet
+        open
+        isModal={false}
+        label={picked.name}
+        titleKind={picked.isCode === true ? "code" : "text"}
+        onClose={onUnpick}
+      >
         <InDrawer.Provider value>
           {/* The pane's own gap, so the drawer's blocks stand apart as
               they do at desk (R2-DESK-04): the Sheet's body sets none. */}

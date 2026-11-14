@@ -933,9 +933,13 @@ describe("D7 · Access", () => {
     await user.click(row.getByRole("button", { name: "+ 24 more" }));
 
     const pane = screen.getByRole("complementary", { name: "DIAL-TEST" });
-    expect(
-      within(pane).getByRole("heading", { level: 2, name: "DIAL-TEST" }),
-    ).toBeVisible();
+    const paneName = within(pane).getByRole("heading", {
+      level: 2,
+      name: "DIAL-TEST",
+    });
+    expect(paneName).toBeVisible();
+    // R57·251: a code is a measured value, at MONO.lg.
+    expect(paneName.firstElementChild).toHaveClass("font-mono", "text-mono-lg");
     expect(within(pane).getByText("e2e harness")).toBeVisible();
     expect(within(pane).getByText("29 used · 29 / 1,000,000")).toBeVisible();
     expect(
@@ -965,6 +969,11 @@ describe("D7 · Access", () => {
         .getAllByRole("heading")
         .map((heading) => heading.textContent),
     ).toStrictEqual(["DIAL-TEST"]);
+    // The drawer's title draws the code in mono, as the pane does (R57·251).
+    expect(within(drawer).getByRole("heading")).toHaveClass(
+      "font-mono",
+      "text-mono-lg",
+    );
     expect(within(drawer).getAllByText("DIAL-TEST")).toHaveLength(1);
     expect(
       within(drawer)
