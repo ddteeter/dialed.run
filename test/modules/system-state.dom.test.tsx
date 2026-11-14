@@ -132,7 +132,7 @@ describe("X1 · not found", () => {
 
   it("takes the column when nothing is named, as every runner screen does at desk (#697 R2-SHELL-09)", async () => {
     await renderAt(<NotFoundState signedIn />);
-    expect(state()?.parentElement).toHaveClass("max-w-column");
+    expect(state()?.parentElement).toHaveClass("wide:max-w-column");
     expect(state()?.parentElement).not.toHaveClass("max-w-panel");
   });
 
@@ -160,7 +160,7 @@ describe("X1 · not found", () => {
     expect(wayOut).toHaveAttribute("href", "/closet");
     expect(wayOut).toHaveClass("rounded-pill", "border-hairline", "text-ink");
     expect(screen.queryByRole("link", { name: "Go to your feed" })).toBeNull();
-    expect(state()?.parentElement).toHaveClass("max-w-column");
+    expect(state()?.parentElement).toHaveClass("wide:max-w-column");
     expect(state()?.parentElement).not.toHaveClass("max-w-panel");
   });
 
@@ -487,7 +487,7 @@ describe("X2 keeps the failed screen's first row (R55·186)", () => {
       failWith: new Error("D1 down"),
     });
     await screen.findByText("Our end failed.");
-    expect(state()?.parentElement).toHaveClass("max-w-column");
+    expect(state()?.parentElement).toHaveClass("wide:max-w-column");
     expect(state()?.parentElement).not.toHaveClass("max-w-panel");
   });
 

@@ -179,7 +179,7 @@ test("make a kit and a profile public, see them as a stranger, take the kit back
   const newRuns = page.getByRole("group", { name: "Who sees new runs" });
   // D-151: PUBLIC is a default only once the profile is public.
   await expect(newRuns.getByRole("radio")).toHaveCount(2);
-  const profileSwitch = page.getByRole("checkbox", { name: "Public profile" });
+  const profileSwitch = page.getByRole("switch", { name: "Public profile" });
   await expect(profileSwitch).not.toBeChecked();
   await expect(profileSwitch).toHaveAccessibleDescription(
     `Off. Anyone signed out who opens app.dialed.run/@${handle} sees nothing. Public runs still open from their own links.`,
@@ -192,7 +192,7 @@ test("make a kit and a profile public, see them as a stranger, take the kit back
     `Anyone can see your public runs at app.dialed.run/@${handle}. No sign-in.`,
   );
   await scene(page, "Show my closet appears, and New runs gains Public");
-  const closetSwitch = page.getByRole("checkbox", { name: "Show my closet" });
+  const closetSwitch = page.getByRole("switch", { name: "Show my closet" });
   await expect(closetSwitch).not.toBeChecked();
   await closetSwitch.click();
   await expect(closetSwitch).toBeChecked({ timeout: 15_000 });

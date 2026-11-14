@@ -19,7 +19,7 @@ describe("Page", () => {
     const { container } = render(<Page title="Runs">body</Page>);
 
     const column = container.firstElementChild;
-    expect(column).toHaveClass("max-w-column");
+    expect(column).toHaveClass("wide:max-w-column");
     expect(column).not.toHaveClass("max-w-panel");
   });
 
@@ -50,10 +50,12 @@ describe("Page", () => {
   it("is COLUMN by default, the class a screen drawing its own column takes", () => {
     const column = render(<Page>body</Page>).container.firstElementChild;
     expect(column).toHaveClass(...COLUMN.split(" "));
+    // Capped from 720 only: below it a screen is fluid (DS4), 620–719
+    // included (#703 R2-ONB-03).
     expect(COLUMN.split(" ")).toStrictEqual([
       "mx-auto",
       "w-full",
-      "max-w-column",
+      "wide:max-w-column",
     ]);
   });
 

@@ -9,7 +9,9 @@ import { BelledLayout } from "../../modules/notifications/components/BelledLayou
 import { bellStateFn } from "../../modules/notifications/functions";
 
 export const Route = createFileRoute("/closet/")({
-  staticData: { title: "Closet" },
+  // The list is MEASURE.page, so X2 takes it too and a retry never moves
+  // the screen (R55·185; #697 R2-SHELL-09).
+  staticData: { title: "Closet", width: "page" },
   // `?retired=true` after a retire, optional so every other link to
   // /closet omits it, and the rail's filters (R-94). A delete's landing
   // rides history state instead.

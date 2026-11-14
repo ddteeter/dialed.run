@@ -11,8 +11,10 @@ import {
   FieldMessage,
   Icon,
   inFlight,
+  INK_PILL,
   Mono,
   focusSheetHeading,
+  SECONDARY_PILL,
   ToggleField,
 } from "../../../ui";
 import type { ControlFailure, PhotoStep } from "../../../ui";
@@ -241,7 +243,9 @@ export function PhotoBlur({
           onClick={() => {
             if (prepared !== undefined) onReady(prepared);
           }}
-          className="target w-full cursor-pointer rounded-pill border-none bg-ink px-4 py-4 text-lead font-bold text-ground"
+          // The ink pill over its hairline secondary, both 48 (R54·167.1;
+          // #697 R2-SHELL-05).
+          className={`target ${INK_PILL}`}
         >
           Use this photo
         </button>
@@ -249,7 +253,7 @@ export function PhotoBlur({
       {/* The picker's own input inside its label, as the well's Replace
           is (`ui/FileWell`): pressing it opens the picker with no script,
           and the input is what a keyboard reaches. */}
-      <label className="target flex w-full cursor-pointer items-center justify-center rounded-pill border border-hairline bg-transparent px-4 py-4 text-lead font-semibold text-ink has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink">
+      <label className={PICK_ANOTHER_CLASS}>
         Pick another
         <input
           type="file"
@@ -572,6 +576,12 @@ function useAnnounced(
     if (failure !== undefined) onAnnounce?.(failure.message);
   }, [failure, onAnnounce]);
 }
+
+/**
+ * Pick another is the hairline secondary, worn by the label that holds
+ * the picker's input, with a ring when that input has the keyboard.
+ */
+const PICK_ANOTHER_CLASS = `target ${SECONDARY_PILL} has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink`;
 
 /**
  * The photo, the toggle, the sentence and the cells: everything W3 shows

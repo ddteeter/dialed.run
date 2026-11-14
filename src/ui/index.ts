@@ -49,6 +49,7 @@ export {
   FormField,
   FormStatus,
   inFlight,
+  INK_PILL,
   NO_CHOICE,
   PendingLabel,
   QUIET_CANCEL,

@@ -274,7 +274,7 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
     .getByRole("button", { name: "Change whether runs count in the guides" })
     .click();
   const sharing = page.getByRole("dialog", { name: "Privacy" });
-  const totals = sharing.getByRole("checkbox", {
+  const totals = sharing.getByRole("switch", {
     name: "Count my runs in anonymous totals",
   });
   await scene(page, "Change opens the setting in a sheet; it saves on toggle");
