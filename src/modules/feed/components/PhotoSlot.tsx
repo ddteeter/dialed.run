@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type JSX, type ReactNode } from "react";
+import { useCallback, useState, type JSX, type ReactNode } from "react";
 
 import { Mono } from "../../../ui";
 
@@ -50,15 +50,17 @@ export function PhotoSlot({
   className?: string;
 }>): JSX.Element {
   const [isFailed, setFailed] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
-  useEffect(() => {
-    const img = imgRef.current;
-    // `complete` with no width: the fetch ended before hydration, badly
-    // (or, in a test DOM, never ran). Ask again, now that we listen.
-    if (img?.complete === true && img.naturalWidth === 0) {
+  // Once per element and source, not per render: asking again re-runs
+  // the fetch.
+  const askAgainIfFailedEarly = useCallback(
+    (img: HTMLImageElement | null): void => {
+      // `complete` with no width: the fetch ended before hydration, badly
+      // (or, in a test DOM, never ran). Ask again, now that we listen.
+      if (img === null || !img.complete || img.naturalWidth !== 0) return;
       img.setAttribute("src", src);
-    }
-  }, [src]);
+    },
+    [src],
+  );
 
   return (
     <span
@@ -69,7 +71,7 @@ export function PhotoSlot({
       } ${className}`}
     >
       <img
-        ref={imgRef}
+        ref={askAgainIfFailedEarly}
         src={src}
         alt=""
         hidden={isFailed}

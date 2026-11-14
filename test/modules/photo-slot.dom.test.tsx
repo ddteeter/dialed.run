@@ -68,6 +68,15 @@ describe("PhotoSlot", () => {
       "bg-photo",
     );
     expect(slot()).not.toHaveClass("photo-hatch");
+    // Nothing else: no caller's classes means none added.
+    expect(slot().className.split(" ").filter(Boolean)).toStrictEqual([
+      "relative",
+      "block",
+      "overflow-hidden",
+      "rounded-card",
+      "aspect-4/5",
+      "bg-photo",
+    ]);
     expect(img()).toHaveAttribute("src", "/feed/photo/a.jpg");
     expect(img()).toHaveAttribute("alt", "");
     expect(img()).toHaveClass("size-full", "object-cover");
@@ -124,6 +133,28 @@ describe("PhotoSlot", () => {
 
     expect(failedEarly).toBe(loaded + 1);
     expect(onItsWay).toBe(loaded);
+  });
+});
+
+describe("PhotoSlot's second ask", () => {
+  it("asks again for a new source, and lets go cleanly", () => {
+    const setAttribute = vi.spyOn(HTMLImageElement.prototype, "setAttribute");
+    const { rerender, unmount } = render(
+      <PhotoSlot src="/feed/photo/b.jpg" shape="portrait" />,
+    );
+    const first = srcSets(setAttribute);
+    rerender(<PhotoSlot src="/feed/photo/b.jpg" shape="portrait" />);
+    // The same source on a later render is not fetched again.
+    expect(srcSets(setAttribute)).toBe(first);
+    rerender(<PhotoSlot src="/feed/photo/c.jpg" shape="portrait" />);
+    const forC = setAttribute.mock.calls.filter(
+      ([name, value]) => name === "src" && value === "/feed/photo/c.jpg",
+    ).length;
+    // React's own set on the update, and the slot's second ask for it.
+    expect(forC).toBe(2);
+    expect(() => {
+      unmount();
+    }).not.toThrow();
   });
 });
 

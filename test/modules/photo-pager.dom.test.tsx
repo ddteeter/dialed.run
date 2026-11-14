@@ -42,6 +42,22 @@ function layOut(): void {
   }
 }
 
+/**
+ * Which photo each `scrollIntoView` was asked of, by its place in the
+ * row, and with what.
+ */
+function scrolled(): { pages: number[]; options: unknown[] } {
+  const pages: number[] = [];
+  const options: unknown[] = [];
+  vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(
+    function (this: HTMLElement, arg?: unknown) {
+      pages.push([...row().children].indexOf(this));
+      options.push(arg);
+    },
+  );
+  return { pages, options };
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -133,38 +149,45 @@ describe("PhotoPager", () => {
     expect(within(pager()).queryByText(/\d \/ \d/u)).toBeNull();
   });
 
-  it("turns the row to the next photo, instantly", () => {
+  it("brings the next photo into view, instantly, once per turn", () => {
     render(<PhotoPager photoKeys={KEYS} deletePhoto={undefined} />);
-    layOut();
-    const scrollTo = vi.fn();
-    row().scrollTo = scrollTo;
+    const { pages, options } = scrolled();
 
     fireEvent.click(screen.getByRole("button", { name: "Next photo" }));
-    expect(scrollTo).toHaveBeenLastCalledWith({ left: 620 });
+    expect(pages).toStrictEqual([1]);
+    expect(options).toStrictEqual([{ block: "nearest", inline: "start" }]);
     expect(previousButton()).not.toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Next photo" }));
-    expect(scrollTo).toHaveBeenLastCalledWith({ left: 1240 });
     expect(nextButton()).toBeNull();
-
     fireEvent.click(screen.getByRole("button", { name: "Previous photo" }));
-    expect(scrollTo).toHaveBeenLastCalledWith({ left: 620 });
+    expect(pages).toStrictEqual([1, 2, 1]);
   });
 
   it("turns on ← and → from anywhere inside it", () => {
     render(<PhotoPager photoKeys={KEYS} deletePhoto={undefined} />);
-    layOut();
-    const scrollTo = vi.fn();
-    row().scrollTo = scrollTo;
+    const { pages } = scrolled();
 
     fireEvent.keyDown(screen.getByRole("button", { name: "Next photo" }), {
       key: "ArrowRight",
     });
-    expect(scrollTo).toHaveBeenLastCalledWith({ left: 620 });
     fireEvent.keyDown(row(), { key: "ArrowLeft" });
-    expect(scrollTo).toHaveBeenLastCalledWith({ left: 0 });
+    expect(pages).toStrictEqual([1, 0]);
     expect(previousButton()).toBeNull();
-    expect(scrollTo).toHaveBeenCalledTimes(2);
+  });
+
+  it("leaves a swiped row where the swipe put it", () => {
+    render(<PhotoPager photoKeys={KEYS} deletePhoto={undefined} />);
+    layOut();
+    const { pages } = scrolled();
+    fireEvent.click(screen.getByRole("button", { name: "Next photo" }));
+    expect(pages).toStrictEqual([1]);
+
+    // A swipe re-renders at a new page; nothing scrolls on its behalf.
+    row().scrollLeft = 1200;
+    fireEvent.scroll(row());
+    expect(nextButton()).toBeNull();
+    expect(pages).toStrictEqual([1]);
   });
 
   it("stops listening for keys once it is gone", () => {

@@ -45,16 +45,28 @@ export function PhotoPager({
   srcOf?: (key: string) => string;
 }>) {
   const [index, setIndex] = useState(0);
-  const rowRef = useRef<HTMLUListElement>(null);
   const groupRef = useRef<HTMLDivElement>(null);
+  // Set by a press or a key, so only a turn the runner asked for moves the
+  // row: a swipe already has the row where it is.
+  const isTurningRef = useRef(false);
   const count = photoKeys.length;
 
   function show(page: number): void {
+    isTurningRef.current = true;
     setIndex(page);
-    const row = rowRef.current;
-    const item = row?.children[page];
-    // Instant, not smooth: the Motion Doctrine has no scroll motion.
-    if (item instanceof HTMLElement) row?.scrollTo({ left: item.offsetLeft });
+  }
+
+  /**
+   * The shown photo's own ref brings it into view once, after the turn
+   * has rendered. Instant, not smooth: the Motion Doctrine has no scroll
+   * motion.
+   */
+  function scrollWhenShown(page: number) {
+    return (item: HTMLLIElement | null): void => {
+      if (item === null || page !== index || !isTurningRef.current) return;
+      isTurningRef.current = false;
+      item.scrollIntoView({ block: "nearest", inline: "start" });
+    };
   }
 
   // ← and → wherever focus is inside the pager: on the arrows, or on an
@@ -82,7 +94,6 @@ export function PhotoPager({
       className="relative"
     >
       <ul
-        ref={rowRef}
         data-part="photo"
         onScroll={(event) => {
           setIndex(nearestPage(event.currentTarget));
@@ -92,6 +103,7 @@ export function PhotoPager({
         {photoKeys.map((key, page) => (
           <li
             key={key}
+            ref={scrollWhenShown(page)}
             className="w-full shrink-0 snap-start desk:flex desk:h-140 desk:justify-center desk:rounded-card desk:bg-photo"
           >
             <PhotoSlot
