@@ -163,6 +163,13 @@ export default tseslint.config(
       // files per worktree (measured 2026-10-24) and reported other
       // branches' errors as this one's. Gitignored — the same trap.
       ".claude/worktrees/",
+      // Scripts bundled with a skill, beside its SKILL.md. They are agent
+      // tooling, not code the app ships, and a Workflow script cannot meet
+      // these rules at all: it ends in a top-level `return` and calls
+      // globals the harness supplies (`agent`, `pipeline`, `args`). Ignored
+      // so a skill can carry its script as a file instead of a fenced block
+      // in Markdown (owner, 2026-11-14). tsc still checks any `.ts` here.
+      ".claude/skills/",
       // `stage:mediapipe` copies four files out of node_modules so the
       // browser can fetch them from our own origin, and two are minified
       // dependency glue: ~2,900 errors between them, which buries every

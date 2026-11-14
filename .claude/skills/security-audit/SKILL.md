@@ -90,19 +90,35 @@ a launching message without it.
 
 ### 4 · Run it
 
-````sh
-awk '/^```js$/{f=1;next} /^```$/{f=0} f' .claude/skills/security-audit/workflow.md \
-  > "<your scratchpad>/security-audit.workflow.js"
-````
+Call `Workflow` with `scriptPath` set to this skill's `workflow.js` and
+these `args`:
 
-The file should start with `export const meta` and end with the script's
-`return`. Call `Workflow` with `scriptPath` set to it and `args` as
-`workflow.md` describes. It runs in the background: end the turn, and tell
-the owner in a few lines what is running and under which rules.
+| key         | needed | what it is                                                                                                                                |
+| ----------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `sha`       | yes    | the full commit under review                                                                                                              |
+| `pin`       | yes    | absolute path of the detached worktree at `sha`                                                                                           |
+| `libs`      | yes    | absolute path of the clean install's `node_modules`                                                                                       |
+| `out`       | yes    | absolute path of the audit folder in the private home                                                                                     |
+| `prefix`    | no     | file-name prefix for a later round (`"r2-"`); empty for the first                                                                         |
+| `areas`     | no     | the reviewer briefs, `[{ key, title, scope, start? }]`. Omit for the first round: the script's `AREAS` is used. `[]` runs no reviewers    |
+| `known`     | no     | `true` once `INDEX.md` exists: reviewers read it and report only what is new                                                              |
+| `rechecks`  | no     | `[{ key, files: [finding file names] }]`: findings to re-read against changed libraries. Needs `stale`                                    |
+| `stale`     | no     | `{ path, list }`: the directory holding the old library versions, and a sentence naming each changed package with its old and new version |
+| `gap_check` | no     | `false` skips the coverage-gap check. It runs by default                                                                                  |
+| `cut_off`   | no     | keys of reviewers that were cut off in the run being resumed ("A run that is cut off", below)                                             |
+
+It runs in the background: end the turn, and tell the owner in a few lines
+what is running and under which rules.
+
+It returns `{ commit, out, missing_reviews, areas, rechecks,
+missing_rechecks, not_rechecked, gaps }`. Each area has its coverage note's
+path, a summary, `not_settled`, `bears_on_known`, `write_failures`, and its
+findings, each with the second pass's verdict under `second`.
 
 ### 5 · Check the run before believing it
 
-Read the result from the task's output file with `jq`. Then:
+The result is large. Read it from the task's output file with `jq`, not
+into context. Then:
 
 - **Complete.** `missing_reviews` is empty, no area has `write_failures`,
   and `grep -L '^## Second pass' "$OUT"/findings/*.md` prints nothing.
@@ -193,6 +209,8 @@ to keep, correct or delete it. A cut-off verifier just runs again.
 
 ## Files
 
-- `workflow.md`: the workflow script, its `args`, and what it returns. The
+- `workflow.js`: the workflow script, one for every kind of round. The
   reviewer rules, the severity scale, the finding and coverage formats and
-  every prompt are in the script, and only there.
+  every prompt are in it, and only there. ESLint ignores `.claude/skills/`,
+  because a workflow script ends in a top-level `return` and calls the
+  harness's globals.

@@ -1,37 +1,3 @@
-# The audit workflow script
-
-One script runs every kind of round. `SKILL.md` step 4 says how to extract
-and launch it. It lives in Markdown because ESLint lints every `.js` file
-in the repo, and a workflow script (a top-level `return`, the harness's
-globals) cannot pass.
-
-## `args`
-
-| key         | needed | what it is                                                                                                                                |
-| ----------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `sha`       | yes    | the full commit under review                                                                                                              |
-| `pin`       | yes    | absolute path of the detached worktree at `sha`                                                                                           |
-| `libs`      | yes    | absolute path of the clean install's `node_modules`                                                                                       |
-| `out`       | yes    | absolute path of the audit folder in the private home                                                                                     |
-| `prefix`    | no     | file-name prefix for a later round (`"r2-"`); empty for the first                                                                         |
-| `areas`     | no     | the reviewer briefs, `[{ key, title, scope, start? }]`. Omit for the first round: the script's `AREAS` is used. `[]` runs no reviewers    |
-| `known`     | no     | `true` once `INDEX.md` exists: reviewers read it and report only what is new                                                              |
-| `rechecks`  | no     | `[{ key, files: [finding file names] }]`: findings to re-read against changed libraries. Needs `stale`                                    |
-| `stale`     | no     | `{ path, list }`: the directory holding the old library versions, and a sentence naming each changed package with its old and new version |
-| `gap_check` | no     | `false` skips the coverage-gap check. It runs by default                                                                                  |
-| `cut_off`   | no     | keys of reviewers that were cut off in the run being resumed (`SKILL.md`, "A run that is cut off")                                        |
-
-## What comes back
-
-`{ commit, out, missing_reviews, areas, rechecks, missing_rechecks,
-not_rechecked, gaps }`. Each area has its coverage note's path, a summary,
-`not_settled`, `bears_on_known`, `write_failures`, and its findings, each
-with the second pass's verdict under `second`. The result is large: read it
-from the task's output file with `jq`, not into context.
-
-## The script
-
-```js
 export const meta = {
   name: "security-audit",
   description:
@@ -59,7 +25,7 @@ export const meta = {
 
 const A = args || {};
 for (const k of ["sha", "pin", "libs", "out"]) {
-  if (!A[k]) throw new Error(`args.${k} is required (see workflow.md)`);
+  if (!A[k]) throw new Error(`args.${k} is required (SKILL.md, step 4)`);
 }
 const SHA = A.sha;
 const PIN = A.pin;
@@ -692,4 +658,3 @@ return {
   })),
   gaps,
 };
-```
