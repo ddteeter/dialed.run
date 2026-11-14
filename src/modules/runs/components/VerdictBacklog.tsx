@@ -442,28 +442,6 @@ export function VerdictBacklog({
 }
 
 /**
- * Round 55 · 237: nothing waits. The count line is `[ALL LOGGED]` in the
- * dialed text colour, then what happens next and the way on.
- */
-function AllLogged(): JSX.Element {
-  return (
-    <div data-slot="all-logged" className="flex flex-col gap-3">
-      <Bracketed className="text-dialed-text">All logged</Bracketed>
-      <p className="m-0 text-lead">
-        Every run has a verdict. Your next one shows up here once it&rsquo;s
-        logged.
-      </p>
-      <Link
-        to="/runs"
-        className="target inline-flex items-center self-start text-body font-bold text-cold-text no-underline"
-      >
-        Go to your runs
-      </Link>
-    </div>
-  );
-}
-
-/**
  * A row's saved mark, its failure (if any), and what it currently holds —
  * the three things the table reads per row but a row itself never sets.
  */
@@ -757,3 +735,25 @@ const LEGEND: readonly { keys: string; does: string; said: string }[] = [
   { keys: "↓", does: "skip", said: "Down arrow: skip." },
   { keys: "Tab", does: "outfit", said: "Tab: outfit." },
 ];
+
+/**
+ * Round 55 · 237: nothing waits. The count line is `[ALL LOGGED]` in the
+ * dialed text colour, then what happens next and the way on.
+ */
+function AllLogged(): JSX.Element {
+  return (
+    <div data-slot="all-logged" className="flex flex-col gap-3">
+      <Bracketed className="text-dialed-text">All logged</Bracketed>
+      <p className="m-0 text-lead">
+        Every run has a verdict. Your next one shows up here once it&rsquo;s
+        logged.
+      </p>
+      <Link
+        to="/runs"
+        className="target inline-flex items-center self-start text-body font-bold text-cold-text no-underline"
+      >
+        Go to your runs
+      </Link>
+    </div>
+  );
+}

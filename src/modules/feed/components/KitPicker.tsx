@@ -423,14 +423,6 @@ export function KitPage({
   );
 }
 
-/**
- * The sheet and the push are one body; what differs is the frame. In the
- * push the title is the page's heading, the checkboxes sit in one card,
- * and Done is the flow's forward action (Round 54 · 167).
- */
-type PickLayout = "sheet" | "push";
-
-
 const PICK_LIST_CLASS: Readonly<Record<PickLayout, string>> = {
   sheet: "m-0 flex list-none flex-col gap-1 p-0",
   push: "m-0 flex list-none flex-col gap-1 rounded-card border border-hairline bg-panel px-4 py-2",
@@ -438,6 +430,13 @@ const PICK_LIST_CLASS: Readonly<Record<PickLayout, string>> = {
 
 const SHEET_DONE_CLASS =
   "target cursor-pointer rounded-pill border border-hairline bg-transparent px-6 py-3 text-body font-semibold";
+
+/**
+ * The sheet and the push are one body; what differs is the frame. In the
+ * push the title is the page's heading, the checkboxes sit in one card,
+ * and Done is the flow's forward action (Round 54 · 167).
+ */
+type PickLayout = "sheet" | "push";
 
 function PickBody({
   layout,
@@ -475,9 +474,7 @@ function PickBody({
       <div className="flex flex-col gap-1">
         {/* The pushed page's heading. In the sheet, the sheet's own label
             is the title (#643). */}
-        {layout === "push" ? (
-          <PushTitle>{label}</PushTitle>
-        ) : undefined}
+        {layout === "push" ? <PushTitle>{label}</PushTitle> : undefined}
         <Mono step="xs" className="text-muted">
           {conditions === undefined
             ? `${String(group.items.length)} pieces`

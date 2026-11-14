@@ -180,7 +180,7 @@ function RunLink({
   // Said with its distance, so two runs on one day are two different
   // links to a screen reader, as they were before the row lost its line.
   const { said: distance } = measuredLine(
-    [[{ kind: "distance", distanceM: run.distanceM, spaced: true }]],
+    [[{ kind: "distance", distanceM: run.distanceM }]],
     units,
   );
   const name = <Spoken shown={day} said={`${day}, ${distance}`} />;
