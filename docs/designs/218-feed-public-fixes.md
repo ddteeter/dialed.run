@@ -27,17 +27,29 @@ new utility is needed.
 | R2-FEED-04  | select `brand` and print `garmentLabel` (what G's `withBrand` prints)                                                                            | `closet/public-rotation.ts`                     |
 | R2-FEED-05  | `dt` and `dd` become `flex`                                                                                                                      | `feed/components/PublicKit.tsx`                 |
 | R2-FEED-06  | "since Nov 2026" is bound (no-break spaces), so a wrap moves "· SINCE NOV 2026" whole and never splits the date                                  | `feed/components/RunnerSearch.tsx`              |
-| R2-FEED-07  | the body's gutter is the bar's: `px-5 wide:px-6`, and the page measure is matched to `SignedOutFrame`'s                                          | `feed/components/PublicFrame.tsx`               |
+| R2-FEED-07  | not built: R57·263 (#708) puts the content edge at x=74, where the body already sits, and moves the bar to it, next wave                         | `feed/components/PublicFrame.tsx`               |
 | #694        | D's row becomes a `ScrollRegion` "Photos" (`data-part="photo"` kept), holding the `ul`; `ScrollRegion` is exported from the `ui` barrel          | `feed/components/PhotoPager.tsx`, `ui/index.ts` |
 | R2-LEGAL-05 | the frame's `header` takes `max-w-column`, like the article                                                                                      | `account/components/ReadingFrame.tsx`           |
 | R2-LEGAL-02 | the "Contents" `nav` is not drawn when `contents` is empty                                                                                       | `account/components/ReadingFrame.tsx`           |
 | R2-LEGAL-04 | the code's box takes the punctuation that touches it (the "(" before, the ")" or "." after) into one unbreakable run                             | `account/components/LegalPage.tsx`              |
 | R2-LEGAL-09 | the `dt` becomes `flex`, so a wrapped label sets at MONO.xs's leading                                                                            | `account/components/LegalPage.tsx`              |
 
+Round 57 (2026-11-14) added these rulings to the lane:
+
+| ruling      | fix                                                                                                        | file                                  |
+| ----------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| D-188 drawn | "Report @handle", "What's wrong with this profile", the note only once Other is picked                     | `safety/components/ReportSheet.tsx`   |
+| D-189 drawn | the region pads 4, pulls back 4, snaps 4 in, ring at RADIUS.card; named "Photos, N"                        | `ui/ScrollRegion.tsx`, both pagers    |
+| 261 (#690)  | an end's arrow stays absent (it sits over the photo, so nothing shifts); dark edge `--hairline-2`          | `ui/PagerArrows.tsx`                  |
+| 260 (#686)  | the hand-off says "Saved. Weather for {city}." in the status region                                        | `feed/components/ConditionsTab.tsx`   |
+| 256 (#683)  | `PhoneBell` ends the first row: the kicker's, or the title's on a legal text                               | `account/components/ReadingFrame.tsx` |
+| 265 (#710)  | the cards at every width: no 1440 step exists, and the breakout is as wide at 1440 as at 1280 (Design 315) | `account/components/LegalPage.tsx`    |
+
 Ownership for this wave (coordinator-10, 2026-11-14): `modules/feed` and
 the lane's routes, plus `ReportSheet.tsx`, `public-rotation.ts`, the three
-`account` reading components, and the one-line `ui/index.ts` export, each
-with its tests.
+`account` reading components, `ConfirmSheet`'s new tone, `PagerArrows`,
+`PhotoViewer`, `ScrollRegion` and the `ui/index.ts` export, each with its
+tests.
 
 ## Contract touches
 
@@ -53,8 +65,9 @@ with its tests.
   the class or structure a mutant would remove: the tile's placement is a
   flex box; the date link is `target-line`; the meta, stats `dt`/`dd` and
   label `dt` are flex boxes; the block line reads "@handle's"; the search
-  meta line doesn't wrap; the public body's gutter matches the bar's; D's
-  row is a region named "Photos" that takes focus and still turns pages;
+  meta line doesn't wrap; D's row is a region named "Photos, 3" that
+  takes focus and still turns pages; the profile sheet's note appears only
+  under Other; the hand-off's announcement; the bell's seat;
   an empty contents list draws no nav; a code's touching brackets sit in its
   unbreakable run, and spaces don't.
 - worker: `public-rotation` prints brand and model, and a piece with no
@@ -68,8 +81,8 @@ with its tests.
 
 ## Issues
 
-- Closes: #701, #694, #702.
-- Opens: anything deferred, listed in the PR.
+- Closes: #701, #694, #702, #690, #686, #683, #710.
+- Defers: R2-FEED-07 to #708 (R57·263). Open: Design 315 (#761) on #710.
 
 ## Open questions
 
@@ -77,3 +90,5 @@ with its tests.
   the line to one line. R55·217 is words only, and truncating "SINCE NOV
   20…" loses the fact the line is for. So a long count still wraps, as one
   whole phrase.
+- **Guess (coordinator, R57·265):** the processors table as cards at every
+  width, until Design 315 (#761) answers.
