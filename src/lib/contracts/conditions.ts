@@ -8,6 +8,7 @@
  * `src/env`.
  */
 import { precipClassOf } from "./temperature";
+import type { ManualSky } from "./weather";
 
 /**
 Where a run's conditions came from: the weather provider, or a band its runner set (B1).
@@ -27,6 +28,14 @@ export interface Conditions {
   condition: string;
   windKph: number;
   source: ConditionsSource;
+  /**
+   * The sky the runner picked in R2b, on a band they set (`source:
+   * "manual"`), so every screen reads a band back the same way: the
+   * backlog's `SET · 47–56° · DRY` as the runs list draws it (R2-RUNS-04;
+   * owner, 2026-11-14). Absent on a provider's reading and on a band set
+   * before the sheet asked for a sky.
+   */
+  sky?: ManualSky;
   /**
    * The IANA zone of the place the observation was made (R-96), so a run's
    * date and time render where the run happened rather than in UTC.

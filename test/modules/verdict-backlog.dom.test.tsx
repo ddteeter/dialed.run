@@ -677,16 +677,32 @@ describe("VerdictBacklog: what each state is drawn as", () => {
           condition: "manual",
           windKph: 0,
           source: "manual",
+          sky: "dry",
         },
       }),
     ]);
 
-    const line = screen.getByText("Set · 47–56°");
+    const line = screen.getByText("Set · 47–56° · Dry");
     expect(line).toHaveAttribute("aria-hidden", "true");
     expect(line.parentElement).toHaveClass("text-mono-sm", "text-label");
     expect(line.parentElement).not.toHaveClass("text-dialed-text");
-    expect(screen.getByText("Set, 47 to 56 degrees")).toHaveClass("sr-only");
+    expect(screen.getByText("Set, 47 to 56 degrees, dry")).toHaveClass(
+      "sr-only",
+    );
     expect(screen.queryByText(/manual|0mph|52°/i)).toBeNull();
+  });
+
+  it("reads a band set before the sheet asked for a sky as its range alone", async () => {
+    await renderTable([
+      row({
+        conditions: { ...conditions, tempC: 11, source: "manual" },
+      }),
+    ]);
+
+    expect(screen.getByText("Set · 47–56°")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
   });
 
   it("says how long and how far, in the viewer's own units", async () => {

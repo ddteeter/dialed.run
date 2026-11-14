@@ -121,10 +121,9 @@ function conditionsLine(
 /**
  * The conditions cell. A provider's reading is the measured line in the
  * dialed text colour. A band the runner set reads as the runs list draws
- * it (R2-RUNS-04): `SET · 42–51°` in the label colour, never its stored
- * middle, the storage word "manual" or a wind nobody measured (round 26,
- * item 2). The backlog's `Conditions` doesn't carry the picked sky, so the
- * band is drawn without it, as a band set before the sheet asked for one.
+ * it (R2-RUNS-04): `SET · 42–51° · DRY` in the label colour, never its
+ * stored middle, the storage word "manual" or a wind nobody measured
+ * (round 26, item 2).
  */
 function ConditionsCell({
   conditions,
@@ -134,7 +133,7 @@ function ConditionsCell({
     return (
       <Mono step="sm" className="text-label">
         <Spoken
-          {...setConditionsForms(conditions.tempC, undefined, units.temp)}
+          {...setConditionsForms(conditions.tempC, conditions.sky, units.temp)}
         />
       </Mono>
     );
