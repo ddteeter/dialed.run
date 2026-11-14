@@ -200,6 +200,11 @@ function useRowFocus(count: number): {
   const thumbs = useRef<(HTMLButtonElement | null)[]>([]);
   const boxInputRef = useRef<HTMLInputElement | null>(null);
   const [landing, setLanding] = useState<number | undefined>();
+  // Whether the add box held focus as its input last detached. A ref
+  // callback detaches on every render, so this only means "gone" once the
+  // render has committed with no add box: the photo just kept filled the
+  // row to its cap.
+  const boxHadFocus = useRef(false);
 
   useEffect(() => {
     if (landing === undefined) return;
@@ -209,10 +214,22 @@ function useRowFocus(count: number): {
     (thumb ?? before ?? boxInputRef.current)?.focus();
   }, [landing, count]);
 
+  // At the cap the add box leaves, and focus with it: it goes to the
+  // last thumbnail, the photo just added, rather than to the page.
+  useEffect(() => {
+    if (!boxHadFocus.current) return;
+    boxHadFocus.current = false;
+    if (boxInputRef.current === null) thumbs.current[count - 1]?.focus();
+  });
+
   return {
     thumbs,
     afterRemove: setLanding,
     mergeAddRef: (hostRef) => (node) => {
+      if (node === null) {
+        boxHadFocus.current =
+          globalThis.document.activeElement === boxInputRef.current;
+      }
       boxInputRef.current = node;
       if (typeof hostRef === "function") hostRef(node);
       else if (hostRef) hostRef.current = node;

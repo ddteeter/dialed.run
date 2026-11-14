@@ -45,6 +45,28 @@ function Host({
   );
 }
 
+/**
+A row whose every pick adds a photo, up to a cap of four.
+*/
+function Filling({ start }: Readonly<{ start: typeof all }>) {
+  const [photos, setPhotos] = useState(start);
+  return (
+    <PhotoRow
+      photos={photos}
+      max={4}
+      add={{
+        accept: "image/png",
+        pending: false,
+        error: undefined,
+        onFiles: () => {
+          setPhotos((held) => [...held, { src: "/d.jpg", alt: "" }]);
+        },
+      }}
+      onRemove={vi.fn()}
+    />
+  );
+}
+
 const thumb = (n: number, of: number) =>
   screen.getByRole("button", { name: `Photo ${String(n)} of ${String(of)}` });
 
@@ -213,5 +235,25 @@ describe("PhotoRow", () => {
       thumb(2, 2).focus();
     });
     expect(thumb(2, 2)).toHaveFocus();
+  });
+
+  it("at the cap, hands the add box's focus to the photo just added", () => {
+    render(<Filling start={all} />);
+    act(() => {
+      addInput().focus();
+    });
+    fireEvent.change(addInput(), { target: { files: [] } });
+    expect(document.querySelector("input[type=file]")).toBeNull();
+    expect(thumb(4, 4)).toHaveFocus();
+  });
+
+  it("keeps focus on the add box while it stays", () => {
+    render(<Filling start={all.slice(0, 1)} />);
+    act(() => {
+      addInput().focus();
+    });
+    fireEvent.change(addInput(), { target: { files: [] } });
+    expect(thumb(2, 2)).toBeInTheDocument();
+    expect(addInput()).toHaveFocus();
   });
 });
