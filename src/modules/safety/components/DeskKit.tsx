@@ -85,11 +85,12 @@ function KitBody({ kit }: Readonly<{ kit: Kit }>): JSX.Element {
     <>
       {/* R51·153: one bordered strip, `@hillsplits · PRIVATE · HIDDEN,
           PENDING REVIEW`, the handle in its own case and the run line
-          close under it, muted (G-18). */}
+          close under it, muted (G-18). Padded above and below, so a line
+          that wraps on a phone has room too (R2-DESK-13). */}
       <div className="flex flex-col gap-2">
         <span
           data-part="kit-band"
-          className="flex flex-wrap items-center gap-x-2 border border-hairline px-3 font-mono text-mono-sm"
+          className="flex flex-wrap items-center gap-x-2 border border-hairline px-3 py-2 font-mono text-mono-sm"
         >
           <Runner handle={kit.handle} runnerId={kit.runnerId} />
           <span className="uppercase">
@@ -177,7 +178,7 @@ function Runner({
     <Link
       to="/desk/runners"
       search={{ query: handle, filter: "all" }}
-      className="target inline-flex items-center text-ink"
+      className="target-line text-ink"
     >
       {`@${handle}`}
     </Link>

@@ -474,6 +474,10 @@ describe("Today", () => {
     // R55·196: the whole card opens it, the link stretched over the card.
     expect(card).toHaveClass("relative");
     expect(link).toHaveClass("after:absolute", "after:inset-0");
+    // R2-DESK-10: no 44 box of its own, so the card is as tall as its
+    // neighbours and its label on their line.
+    expect(link).not.toHaveClass("target");
+    expect(link).not.toHaveClass("inline-flex");
   });
 
   it("puts what needs a person in hi-viz, and nothing at zero or for bans", async () => {

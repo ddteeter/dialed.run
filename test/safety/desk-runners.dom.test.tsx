@@ -1038,6 +1038,8 @@ describe("Takedown (SAF-6)", () => {
     const heading = screen.getByRole("heading", { level: 2, name: "Takedown" });
     expect(heading).not.toHaveClass("font-display");
     expect(heading.firstElementChild).toHaveClass("font-mono", "text-mono-xs");
+    // Muted, as every section kicker on Review is (R2-DESK-12c).
+    expect(heading.firstElementChild).toHaveClass("text-muted");
   });
 
   it("opens with nothing chosen", () => {

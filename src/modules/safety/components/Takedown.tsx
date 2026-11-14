@@ -67,7 +67,9 @@ export function Takedown({
       {/* A kicker, like its siblings under the queue, Copyright holds and
           Quarantine (G-15; round 28 #8's "TAKEDOWN · FROM A NOTICE"). */}
       <h2 id="desk-takedown" className="m-0">
-        <Mono step="xs">Takedown</Mono>
+        <Mono step="xs" className="text-muted">
+          Takedown
+        </Mono>
       </h2>
       <DeskForm
         form={form}

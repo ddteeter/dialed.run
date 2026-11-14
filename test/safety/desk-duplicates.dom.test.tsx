@@ -65,6 +65,16 @@ describe("the header", () => {
     ).toBeTruthy();
   });
 
+  it("sets the count beside the heading, not at the far edge (N3-16)", () => {
+    renderReport();
+    const head = screen.getByRole("heading", {
+      level: 1,
+      name: "Duplicates",
+    }).parentElement;
+    expect(head).toHaveClass("flex", "flex-wrap", "items-baseline", "gap-3");
+    expect(head).not.toHaveClass("justify-between");
+  });
+
   it("says the arrow as a word and hides the glyph", () => {
     renderReport();
     const arrow = screen.getByText("→");
