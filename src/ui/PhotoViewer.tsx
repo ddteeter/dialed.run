@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { JSX, RefObject } from "react";
+import type { JSX, UIEvent } from "react";
 
 import { SECONDARY_PILL } from "./form";
 import { Icon } from "./icons";
@@ -26,7 +26,9 @@ export interface ViewedPhoto {
  *
  * It is a native `<dialog>` opened with `showModal()`, so Esc and a phone's
  * system back both reach it as the dialog's `cancel`. No history entry
- * of our own is needed. Every close reports through `onClose`. The host
+ * of our own is needed. Every close reports through `onClose`: the ✕
+ * calls it directly, and the host's unmount takes the dialog out of the
+ * top layer, as it does after Esc. The host
  * mounts it only while it is open, and puts focus back on the thumbnail
  * that opened it.
  *
@@ -54,12 +56,12 @@ export function PhotoViewer({
   onClose: () => void;
   onRemove: (index: number) => void;
 }>): JSX.Element {
-  const dialogRef = useModal();
+  const modalRef = useModal();
   const pager = usePager(photos.length, openAt);
 
   return (
     <dialog
-      ref={dialogRef}
+      ref={modalRef}
       aria-label={counterWords(pager.index, photos.length)}
       data-slot="photo-viewer"
       onClose={onClose}
@@ -76,9 +78,7 @@ export function PhotoViewer({
         <button
           type="button"
           aria-label="Close"
-          onClick={() => {
-            dialogRef.current?.close();
-          }}
+          onClick={onClose}
           className="target -mr-3 inline-flex w-11 cursor-pointer items-center justify-center border-none bg-transparent p-0 text-ink"
         >
           <Icon name="close" size={20} />
@@ -159,12 +159,14 @@ function counterWords(index: number, count: number): string {
  * The dialog, opened modal on mount. The host mounts the viewer only
  * while it is open, so there is no `open` prop to follow.
  */
-function useModal(): RefObject<HTMLDialogElement | null> {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+function useModal(): (node: HTMLDialogElement | null) => void {
+  // The element is held in state, so the effect below follows it: it runs
+  // once with nothing, then once with the dialog.
+  const [dialog, setDialog] = useState<HTMLDialogElement | null>();
   useEffect(() => {
-    dialogRef.current?.showModal();
-  }, []);
-  return dialogRef;
+    dialog?.showModal();
+  }, [dialog]);
+  return setDialog;
 }
 
 /**
@@ -179,32 +181,34 @@ function usePager(
   openAt: number,
 ): {
   index: number;
-  rowRef: RefObject<HTMLUListElement | null>;
+  rowRef: (node: HTMLUListElement | null) => void;
   go: (index: number) => void;
-  onScroll: () => void;
+  onScroll: (event: UIEvent<HTMLUListElement>) => void;
 } {
   const [index, setIndex] = useState(() => clamp(openAt, count));
-  const rowRef = useRef<HTMLUListElement>(null);
+  // The row is held in state, so the scroll below follows it: it runs once
+  // with no row, then once with the row.
+  const [row, setRow] = useState<HTMLUListElement | null>();
   // The photo it opened on, held so the scroll below runs on open only:
   // from then on the row follows `go` and the thumb.
   const opened = useRef(index);
 
   useEffect(() => {
-    scrollRow(rowRef.current, opened.current);
-  }, []);
+    scrollRow(row, opened.current);
+  }, [row]);
 
   return {
     index,
-    rowRef,
+    rowRef: setRow,
     go(target) {
       const next = clamp(target, count);
       setIndex(next);
-      scrollRow(rowRef.current, next);
+      scrollRow(row, next);
     },
-    onScroll() {
-      const row = rowRef.current;
-      if (row === null || row.clientWidth === 0) return;
-      setIndex(clamp(Math.round(row.scrollLeft / row.clientWidth), count));
+    onScroll(event) {
+      const shown = event.currentTarget;
+      if (shown.clientWidth === 0) return;
+      setIndex(clamp(Math.round(shown.scrollLeft / shown.clientWidth), count));
     },
   };
 }
@@ -212,8 +216,11 @@ function usePager(
 /**
 The row scrolled to a photo, at once.
 */
-function scrollRow(row: HTMLUListElement | null, index: number): void {
-  if (row === null) return;
+function scrollRow(
+  row: HTMLUListElement | null | undefined,
+  index: number,
+): void {
+  if (!row) return;
   row.scrollLeft = index * row.clientWidth;
 }
 

@@ -69,7 +69,7 @@ export function PhotoRow({
             <button
               type="button"
               ref={(node) => {
-                focus.thumbs.current[index] = node;
+                focus.thumbs.current.set(index, node);
               }}
               aria-label={`Photo ${String(index + 1)} of ${String(photos.length)}`}
               onClick={() => {
@@ -109,7 +109,7 @@ export function PhotoRow({
           openAt={openAt}
           onClose={() => {
             setOpenAt(undefined);
-            focus.thumbs.current[openAt]?.focus();
+            focus.thumbs.current.get(openAt)?.focus();
           }}
           onRemove={(index) => {
             setOpenAt(undefined);
@@ -215,13 +215,15 @@ function AddBox({
  * element it lands on exists.
  */
 function useRowFocus(count: number): {
-  thumbs: RefObject<(HTMLButtonElement | null)[]>;
+  thumbs: RefObject<Map<number, HTMLButtonElement | null>>;
   afterRemove: (index: number) => void;
   mergeAddRef: (
     hostRef: Ref<HTMLInputElement> | undefined,
   ) => (node: HTMLInputElement | null) => void;
 } {
-  const thumbs = useRef<(HTMLButtonElement | null)[]>([]);
+  // The thumbnails by position. A thumbnail that leaves sets its position
+  // to null, which every read below treats as no thumbnail.
+  const thumbs = useRef(new Map<number, HTMLButtonElement | null>());
   const boxInputRef = useRef<HTMLInputElement | null>(null);
   const [landing, setLanding] = useState<number | undefined>();
   // Whether the add box held focus as its input last detached. A ref
@@ -233,26 +235,25 @@ function useRowFocus(count: number): {
   useEffect(() => {
     if (landing === undefined) return;
     setLanding(undefined);
-    const thumb = landing < count ? thumbs.current[landing] : undefined;
-    (thumb ?? boxInputRef.current)?.focus();
-  }, [landing, count]);
+    (thumbs.current.get(landing) ?? boxInputRef.current)?.focus();
+  }, [landing]);
 
   // At the cap the add box leaves, and focus with it: it goes to the
   // last thumbnail, the photo just added, rather than to the page.
   useEffect(() => {
     if (!boxHadFocus.current) return;
     boxHadFocus.current = false;
-    if (boxInputRef.current === null) thumbs.current[count - 1]?.focus();
+    if (boxInputRef.current === null) thumbs.current.get(count - 1)?.focus();
   });
 
   return {
     thumbs,
     afterRemove: setLanding,
     mergeAddRef: (hostRef) => (node) => {
-      if (node === null) {
-        boxHadFocus.current =
-          globalThis.document.activeElement === boxInputRef.current;
-      }
+      // Read before the input is replaced. Only ever raised here: the
+      // effect above lowers it, once the commit has settled.
+      boxHadFocus.current ||=
+        globalThis.document.activeElement === boxInputRef.current;
       boxInputRef.current = node;
       if (typeof hostRef === "function") hostRef(node);
       else if (hostRef) hostRef.current = node;

@@ -68,6 +68,27 @@ function Filling({ start }: Readonly<{ start: typeof all }>) {
   );
 }
 
+/**
+A row whose photos the test hands in, as a parent that removes one on its
+own would.
+*/
+function Held({ photos }: Readonly<{ photos: typeof all }>) {
+  return (
+    <PhotoRow
+      kicker="Outfit photo · optional"
+      photos={photos}
+      add={{
+        max: 4,
+        accept: "image/png",
+        pending: false,
+        error: undefined,
+        onFiles: vi.fn(),
+      }}
+      onRemove={vi.fn()}
+    />
+  );
+}
+
 const thumb = (n: number, of: number) =>
   screen.getByRole("button", { name: `Photo ${String(n)} of ${String(of)}` });
 
@@ -204,6 +225,8 @@ describe("PhotoRow", () => {
     const input = addInput();
     expect(input).toHaveAttribute("aria-invalid", "true");
     expect(input).toHaveAccessibleDescription("Photos must be JPEG or PNG.");
+    // The row's own name, not just any id the message happens to share.
+    expect(input).toHaveAttribute("aria-describedby", "photo-row-message");
   });
 
   it("leaves a good input unmarked", () => {
@@ -237,7 +260,29 @@ describe("PhotoRow", () => {
     await user.click(thumb(3, 3));
     await user.click(screen.getByRole("button", { name: "Close" }));
     expect(screen.queryByRole("dialog")).toBeNull();
+    // Unmounted, not merely closed (a closed dialog is also out of the tree).
+    expect(document.querySelector("[data-slot=photo-viewer]")).toBeNull();
     expect(thumb(3, 3)).toHaveFocus();
+  });
+
+  it("closes without a fault when its thumbnail is already gone", async () => {
+    // A parent that drops photos while the viewer is open leaves no
+    // thumbnail at the opened position: nothing to focus, and no throw.
+    const errors: unknown[] = [];
+    const record = (event: ErrorEvent) => {
+      event.preventDefault();
+      errors.push(event.error);
+    };
+    globalThis.addEventListener("error", record);
+    const user = userEvent.setup();
+    const { rerender } = render(<Held photos={all} />);
+    await user.click(thumb(3, 3));
+    rerender(<Held photos={all.slice(0, 2)} />);
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    globalThis.removeEventListener("error", record);
+    expect(errors).toEqual([]);
+    expect(document.querySelector("[data-slot=photo-viewer]")).toBeNull();
+    expect(screen.getByRole("group")).toBeInTheDocument();
   });
 
   it("after Remove, focuses the photo that slid into its place", async () => {
@@ -270,6 +315,26 @@ describe("PhotoRow", () => {
     expect(thumb(2, 2)).toHaveFocus();
   });
 
+  it("moves focus for each removal, even from the same place twice", async () => {
+    // The place a removal names is spent once it is used: a second removal
+    // of the first photo has to land again.
+    render(<Host />);
+    await removeFrom(1, 3);
+    await removeFrom(1, 2);
+    expect(thumb(1, 1).querySelector("img")).toHaveAttribute("src", "/c.jpg");
+    expect(thumb(1, 1)).toHaveFocus();
+  });
+
+  it("has nowhere to send focus when the cap holds and no photo is left at the place", async () => {
+    // More photos than the cap: removing the last leaves no add box and no
+    // thumbnail at its place. The row stays, and focus stays off it.
+    render(<Host max={1} />);
+    await removeFrom(3, 3);
+    expect(screen.getByRole("group")).toBeInTheDocument();
+    expect(thumb(1, 2)).not.toHaveFocus();
+    expect(thumb(2, 2)).not.toHaveFocus();
+  });
+
   it("moves focus only once per removal", async () => {
     render(<Host />);
     await removeFrom(1, 3);
@@ -287,6 +352,44 @@ describe("PhotoRow", () => {
     fireEvent.change(addInput(), { target: { files: [] } });
     expect(document.querySelector("input[type=file]")).toBeNull();
     expect(thumb(4, 4)).toHaveFocus();
+  });
+
+  it("does not move focus when the add box leaves unfocused", () => {
+    render(<Filling start={all} />);
+    fireEvent.change(addInput(), { target: { files: [] } });
+    expect(document.querySelector("input[type=file]")).toBeNull();
+    expect(document.body).toHaveFocus();
+  });
+
+  it("leaves focus alone when it mounts already at the cap", () => {
+    render(<Host max={3} />);
+    expect(document.body).toHaveFocus();
+  });
+
+  it("hands focus over once, not on every render at the cap", () => {
+    const { rerender } = render(<Filling start={all} />);
+    act(() => {
+      addInput().focus();
+    });
+    fireEvent.change(addInput(), { target: { files: [] } });
+    expect(thumb(4, 4)).toHaveFocus();
+    act(() => {
+      thumb(1, 4).focus();
+    });
+    rerender(<Filling start={all} />);
+    expect(thumb(1, 4)).toHaveFocus();
+  });
+
+  it("has no thumbnail to take the add box's focus when the row is empty", () => {
+    // The cap falls to nothing under a focused add box: no photo to hand
+    // focus to, and no fault.
+    const { rerender } = render(<Host start={[]} max={1} />);
+    act(() => {
+      addInput().focus();
+    });
+    rerender(<Host start={[]} max={0} />);
+    expect(document.querySelector("input[type=file]")).toBeNull();
+    expect(screen.getByRole("group")).toBeInTheDocument();
   });
 
   it("keeps focus on the add box while it stays", () => {

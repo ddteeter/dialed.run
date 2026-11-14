@@ -135,11 +135,10 @@ describe("PhotoViewer", () => {
     expect(screen.queryByRole("button", { name: "Previous photo" })).toBeNull();
   });
 
-  it("closes by the ✕", async () => {
+  it("closes by the ✕, which reports to the host that unmounts it", async () => {
     const user = userEvent.setup();
-    const { dialog, onClose, onRemove } = renderViewer();
+    const { onClose, onRemove } = renderViewer();
     await user.click(screen.getByRole("button", { name: "Close" }));
-    expect(dialog).not.toHaveAttribute("open");
     expect(onClose).toHaveBeenCalledOnce();
     expect(onRemove).not.toHaveBeenCalled();
   });
