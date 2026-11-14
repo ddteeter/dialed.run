@@ -22,10 +22,11 @@ session that cannot see the private home stops and asks. The briefs for a
 gap round describe unread, possibly weak code, so they are written at run
 time and passed as `args`, never committed.
 
-**Cost.** The first round ran 64 agents for about 90 minutes and used about
-13.4M subagent tokens, enough to reach a weekly usage limit partway through
-the round after it. Run a round only when the owner has asked for it, and
-tell them the size before a second one.
+**Cost.** On 2026-11-14 the first round ran 64 agents for about 90 minutes
+and used about 13.4M subagent tokens. The gap round ran 52 agents, used at
+least 10M more, and hit a weekly usage limit partway through. Run a round
+only when the owner has asked for it, and tell them the size before each
+one.
 
 ## Steps
 
@@ -109,9 +110,9 @@ Read the result from the task's output file with `jq`. Then:
   for a phrase from inside it. No transcript should hold one.
 - **Independent.** Read `gaps.independence_problems`. A reviewer who read
   another's files is weaker evidence; say which findings that touches.
-- **Sceptical.** Count the verdicts. The first round refuted none of 75
-  write-ups, which is a sign the second pass may be soft. Report the
-  counts, including a zero.
+- **Sceptical.** Count the verdicts. The first audit's two rounds refuted
+  none of 127 write-ups and narrowed 27, which is a sign the second pass
+  may be soft. Report the counts, including a zero.
 - **Low findings** had a batched second pass. Report that too.
 
 ### 6 · Write `INDEX.md`
@@ -138,8 +139,16 @@ done
 
 `coverage/00-gaps.md` lists what nobody read. Read it to the owner by
 weight, not by count, and ask whether to run a round on it (steps 2 to 6
-again, with the gap briefs). A later round appends to the same `INDEX.md`:
-new findings, and what changed in old ones ("bears on known findings").
+again, with the gap briefs). **The gap round is half the audit, not a
+tidy-up**: the first one found about as many distinct findings as the
+round before it, because round one covers every entry point and the gaps
+are what the entry points call.
+
+A later round appends to the same `INDEX.md`: its new findings, and what it
+changes in old ones. Reviewers report those as "bears on known findings";
+read every line, because some widen an earlier finding or show its fix is
+incomplete. A later round runs no gap check over the earlier notes, so its
+own "Not read" and "Not settled" lines are what is still open.
 
 When a gap shows a question the first-round briefs should have asked, add
 it to `AREAS`, once any finding it led to is fixed.
