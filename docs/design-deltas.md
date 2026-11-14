@@ -1081,6 +1081,26 @@ _Nothing from 99 on is open: round 45 answered the last of it._
 
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
 
+## Built from the re-run's runs and closet findings (wave 10, design 219)
+
+What the build read where #704, #699 and Round 57 · 252–254 left it a
+choice. Each is a guess the coordinator has seen; none is a Design item yet.
+
+- **Show N more on both widths.** 236a draws "Show 9 more" at the desk.
+  The phone's cards are the same table, so they take it too: eight cards,
+  then the rest on a press. Arrowing past the eighth row lists them all.
+- **SAME NAME stays on F's card.** 248 draws the tag RETIRED and no
+  same-name row, so round 28 #13's SAME NAME is kept. The month and year
+  go: a retired piece's tag is the word alone.
+- **Every rail card is filled.** `RailCard` takes `--panel`, as round
+  25's This run and 193/248's closet card draw it, so A2 and A3's rails
+  change with F's.
+- **A2's kicker drops "optional".** 252's "PHOTOS · 2 OF 4" replaces
+  "Outfit photo · optional", so the count is the whole kicker.
+- **The runs row wraps the Garmin credit whole** (R57·254, #760): the
+  distance and the SET badge never shrink, and the credit takes its own
+  line when the row is too narrow, so that row is taller than 64.
+
 ## Built from round 56 · 246 (wave 9, design 213)
 
 How the lift (Round 56 · 246, #652) was built, with what the ruling left
