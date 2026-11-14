@@ -1,4 +1,4 @@
-import { useEffect, useRef, type JSX, type KeyboardEvent } from "react";
+import { useEffect, useRef, type JSX } from "react";
 
 import { Icon } from "./icons";
 
@@ -114,14 +114,21 @@ export function PagerArrows({
 }
 
 /**
- * ← and → for the pager's container, as its `onKeyDown`. The default is
+ * What `pagerKeys` reads of a key press: React's event and the DOM's both
+ * carry it, so a caller can wire the keys as `onKeyDown` or, where the
+ * element is not a widget of its own, as a native listener.
+ */
+export type PagerKey = Readonly<{ key: string; preventDefault: () => void }>;
+
+/**
+ * ← and → for the pager's container. The default is
  * stopped only when the page turns, so a key at an end still scrolls.
  */
 export function pagerKeys(
   index: number,
   count: number,
   onIndex: (next: number) => void,
-): (event: KeyboardEvent<HTMLElement>) => void {
+): (event: PagerKey) => void {
   return (event) => {
     const direction = DIRECTION_OF[event.key];
     if (direction === undefined) return;
