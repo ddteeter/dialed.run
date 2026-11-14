@@ -1,11 +1,15 @@
 import { readFileSync } from "node:fs";
 
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it, onTestFinished, vi } from "vitest";
 
-import { DESK_MEDIA_QUERY, DeskDetail } from "../../src/ui/DeskDetail";
+import {
+  DESK_MEDIA_QUERY,
+  DeskDetail,
+  DeskPaneName,
+} from "../../src/ui/DeskDetail";
 import { atWidth } from "./desk-width";
 
 /**
@@ -17,7 +21,17 @@ const read = (path: string): string =>
   readFileSync(new URL(path, import.meta.url), "utf8");
 const styles = read("../../src/styles.css");
 
-const PICKED = { name: "@ada", detail: <p>the detail</p> };
+const PICKED = {
+  name: "@ada",
+  detail: (
+    <>
+      <DeskPaneName>
+        <p>the name line</p>
+      </DeskPaneName>
+      <p>the detail</p>
+    </>
+  ),
+};
 
 function table(
   picked: typeof PICKED | undefined,
@@ -67,6 +81,13 @@ describe("DeskDetail at desk", () => {
     expect(screen.queryByText("Pick one.")).toBeNull();
     expect(screen.queryByRole("dialog")).toBeNull();
   });
+
+  it("keeps the detail's own name line in the pane, its only name on screen (#663)", () => {
+    atWidth(true);
+    render(table(PICKED));
+    const pane = screen.getByRole("complementary", { name: "@ada" });
+    expect(within(pane).getByText("the name line")).toBeVisible();
+  });
 });
 
 describe("DeskDetail below desk (R55·202)", () => {
@@ -87,6 +108,15 @@ describe("DeskDetail below desk (R55·202)", () => {
     expect(showModal).not.toHaveBeenCalled();
     expect(screen.getByText("the table")).toBeVisible();
     expect(screen.queryByRole("complementary")).toBeNull();
+  });
+
+  it("drops the detail's own name line, since the drawer's title says it (#663)", () => {
+    atWidth(false);
+    render(table(PICKED));
+    const drawer = screen.getByRole("dialog", { name: "@ada" });
+    expect(within(drawer).getByRole("heading", { name: "@ada" })).toBeVisible();
+    expect(within(drawer).queryByText("the name line")).toBeNull();
+    expect(within(drawer).getByText("the detail")).toBeVisible();
   });
 
   it("unpicks when the drawer's ✕ closes it", async () => {

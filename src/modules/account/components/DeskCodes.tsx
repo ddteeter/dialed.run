@@ -4,6 +4,7 @@ import type { JSX } from "react";
 
 import {
   DeskDetail,
+  DeskPaneName,
   FormElement,
   FormEnd,
   FormStatus,
@@ -390,9 +391,11 @@ function CodePane({ code }: Readonly<{ code: DeskCode }>): JSX.Element {
   return (
     <>
       <div className="flex flex-col gap-2">
-        <h2 className="m-0">
-          <Mono step="sm">{code.code}</Mono>
-        </h2>
+        <DeskPaneName>
+          <h2 className="m-0">
+            <Mono step="sm">{code.code}</Mono>
+          </h2>
+        </DeskPaneName>
         <span className="wrap-anywhere">{labelOf(code)}</span>
         <Mono step="xs" className="text-muted">
           {`${usedLine(code.usedBy.length)} · ${usesLine(code)}`}

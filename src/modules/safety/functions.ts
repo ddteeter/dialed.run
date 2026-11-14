@@ -385,7 +385,8 @@ export const caseOverRestoreAction = createServerFn({ method: "POST" })
 export const deskDuplicatesQuery = createServerFn({ method: "GET" }).handler(
   async () => {
     requireAdmin(await verifiedUserId());
-    return duplicatesReport(await duplicateProducts());
+    const read = await duplicateProducts();
+    return duplicatesReport(read.candidates, read.cutAt);
   },
 );
 

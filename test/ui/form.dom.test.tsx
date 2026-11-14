@@ -1731,6 +1731,33 @@ describe("ChoiceField", () => {
     );
   });
 
+  it("rules the list off before the option it names, and only there (round 39 #76)", () => {
+    const { container } = render(
+      <ChoiceField
+        name="layer"
+        label="Layer"
+        field={restingField}
+        value=""
+        options={LAYERS}
+        optionLabels={LAYER_LABELS}
+        onChange={vi.fn()}
+        hairlineBefore="outer"
+      />,
+    );
+    const select = screen.getByLabelText("Layer");
+    expect(
+      [...select.children].map((child) =>
+        child.tagName === "HR" ? "—" : child.textContent,
+      ),
+    ).toStrictEqual(["Not set", "Base", "Mid", "—", "Outer"]);
+    expect(container.querySelectorAll("hr")).toHaveLength(1);
+  });
+
+  it("draws no hairline unless asked", () => {
+    const { container } = renderChoice(vi.fn());
+    expect(container.querySelector("hr")).toBeNull();
+  });
+
   it("wears the field's error the way every other field does", () => {
     render(
       <ChoiceField

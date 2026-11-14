@@ -25,10 +25,15 @@ export interface DuplicatesReport {
   names: number;
   pieces: number;
   groups: readonly DuplicateGroup[];
+  /**
+  The read's limit when the catalogue ran past it, else undefined (#390).
+  */
+  cutAt: number | undefined;
 }
 
 export function duplicatesReport(
   candidates: readonly DuplicateCandidate[],
+  cutAt?: number,
 ): DuplicatesReport {
   const groups = candidates
     .map((candidate) => ({
@@ -44,5 +49,6 @@ export function duplicatesReport(
     names: groups.reduce((sum, group) => sum + group.products.length, 0),
     pieces: groups.reduce((sum, group) => sum + group.pieces, 0),
     groups,
+    cutAt,
   };
 }

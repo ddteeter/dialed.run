@@ -8,6 +8,7 @@ import {
   CHALK_PILL,
   ControlFailureBand,
   DeskDetail,
+  DeskPaneName,
   FormStatus,
   Mono,
   QUIET_PILL,
@@ -468,6 +469,8 @@ function CloseAccountPanel({
         label={CLOSE_LABELS.rule}
         options={closureRules}
         optionLabels={closureRuleLabels}
+        // Round 39 #76: the terms' rules, a hairline, then CSAM.
+        hairlineBefore="suspected_csam"
         schema={closureRuleSchema}
         value={rule}
         onChange={setRule}
@@ -586,9 +589,11 @@ function FlaggedPanel({
 function RunnerHead({ runner }: Readonly<{ runner: DeskRunner }>): JSX.Element {
   return (
     <div className="flex flex-col gap-2">
-      <p className="m-0 text-heading font-bold wrap-anywhere">
-        {handleOf(runner)}
-      </p>
+      <DeskPaneName>
+        <p className="m-0 text-heading font-bold wrap-anywhere">
+          {handleOf(runner)}
+        </p>
+      </DeskPaneName>
       <span className="text-small text-quiet wrap-anywhere">
         {runner.email}
       </span>

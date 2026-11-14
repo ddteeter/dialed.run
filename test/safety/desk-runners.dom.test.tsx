@@ -343,6 +343,13 @@ describe("selecting a runner", () => {
     );
     const drawer = screen.getByRole("dialog", { name: "@ada" });
     expect(drawer).toHaveTextContent("Close account");
+    // The handle once, as the Sheet's title (#663): the pane's own handle
+    // line stays out of the drawer, and the rest of its head stays in.
+    expect(within(drawer).getAllByText("@ada")).toHaveLength(1);
+    expect(
+      within(drawer).getByRole("heading", { level: 2, name: "@ada" }),
+    ).toBeVisible();
+    expect(within(drawer).getByText("ada@example.com")).toBeVisible();
     expect(screen.queryByRole("complementary")).toBeNull();
     // Its ✕ unpicks: the row is no longer marked, and the drawer is gone.
     await user.click(within(drawer).getByRole("button", { name: "Close" }));
@@ -699,6 +706,22 @@ describe("Close account (D3)", () => {
     expect(ban).toHaveBeenCalledWith({
       data: { userId: "u-ada", reason: "Spam", rule: "spam" },
     });
+  });
+
+  it("rules the terms' rules off from the CSAM option, last (round 39 #76)", async () => {
+    const user = userEvent.setup();
+    await renderDesk();
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+
+    const select = screen.getByRole("combobox", {
+      name: /Which rule it breaks/,
+    });
+    const hairline = select.querySelector("hr");
+    expect(select.querySelectorAll("hr")).toHaveLength(1);
+    expect(hairline?.nextElementSibling).toHaveTextContent(
+      "Suspected CSAM (the notice names no rule)",
+    );
+    expect(hairline?.nextElementSibling?.nextElementSibling).toBeNull();
   });
 
   it("closes over suspected CSAM naming no rule (C8)", async () => {

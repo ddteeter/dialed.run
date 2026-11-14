@@ -36,9 +36,16 @@ export function DeskDuplicates({
         &ldquo;some dirt is accepted&rdquo; stays a decision instead of a hope.
         Sorted by pieces affected.
       </p>
+      {report.cutAt === undefined ? undefined : (
+        <p className="m-0 max-w-column text-small text-muted">
+          {`Read the first ${String(report.cutAt)} products only. Near-misses past them aren't shown.`}
+        </p>
+      )}
       {report.groups.length === 0 ? (
         <p className="m-0 max-w-column text-body text-muted">
-          No near-misses. Every product name under each brand is distinct.
+          {report.cutAt === undefined
+            ? "No near-misses. Every product name under each brand is distinct."
+            : `No near-misses in the first ${String(report.cutAt)} products.`}
         </p>
       ) : (
         <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(min(300px,100%),1fr))] gap-3 p-0">

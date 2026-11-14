@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { drizzle } from "drizzle-orm/d1";
+import { createElement } from "react";
+import { renderToString } from "react-dom/server";
 
 import {
   brands,
@@ -15,12 +17,21 @@ import {
   duplicateProducts,
   type DuplicateCandidate,
 } from "../../src/modules/safety/duplicates";
+import { DeskDuplicates } from "../../src/modules/safety/components/DeskDuplicates";
 import { duplicatesReport } from "../../src/modules/safety/duplicates-report";
 
 import { NOW, resetSafetyTables } from "./helpers";
 
 function core() {
   return drizzle(env.DIALED_CORE);
+}
+
+/**
+What one read of the report found, for the cases that ask nothing else.
+*/
+async function candidatesRead(limit?: number): Promise<DuplicateCandidate[]> {
+  const read = await duplicateProducts(limit);
+  return read.candidates;
 }
 
 /**
@@ -253,17 +264,15 @@ async function piecesOf(
   isRetired = false,
 ): Promise<void> {
   for (let index = 0; index < count; index += 1) {
-    await core()
-      .insert(wardrobeItems)
-      .values({
-        id: newUlid(),
-        userId: newUlid(),
-        category: "bottom",
-        name: "Tights",
-        productId,
-        retired: isRetired,
-        createdAt: NOW,
-      });
+    await core().insert(wardrobeItems).values({
+      id: newUlid(),
+      userId: newUlid(),
+      category: "bottom",
+      name: "Tights",
+      productId,
+      retired: isRetired,
+      createdAt: NOW,
+    });
   }
 }
 
@@ -272,13 +281,13 @@ describe("the report over real rows", () => {
 
   it("finds nothing in a catalogue with no near-misses", async () => {
     await brandWith("Janji", ["Thermal Tight", "Rapid Short"]);
-    expect(await duplicateProducts()).toEqual([]);
+    expect(await candidatesRead()).toEqual([]);
   });
 
   it("reports a near-miss, with the brand named", async () => {
     await brandWith("Janji", ["Thermal Tight", "Thermal Tights"]);
 
-    const found = await duplicateProducts();
+    const found = await candidatesRead();
 
     expect(found).toHaveLength(1);
     expect(found[0]?.brand).toBe("Janji");
@@ -296,7 +305,7 @@ describe("the report over real rows", () => {
       "Rapid Short",
     ]);
 
-    const found = await duplicateProducts();
+    const found = await candidatesRead();
 
     // The candidate is filtered to the cluster. Handing back every row
     // under the brand would tell an operator to look at products that
@@ -313,14 +322,14 @@ describe("the report over real rows", () => {
     await brandWith("Janji", ["Thermal Tight"]);
     await brandWith("Ciele", ["Thermal Tights"]);
 
-    expect(await duplicateProducts()).toEqual([]);
+    expect(await candidatesRead()).toEqual([]);
   });
 
   it("reports each brand's mess separately", async () => {
     await brandWith("Janji", ["Thermal Tight", "Thermal Tights"]);
     await brandWith("Ciele", ["Rapid Short", "Rapid Shorts"]);
 
-    const found = await duplicateProducts();
+    const found = await candidatesRead();
 
     expect(found).toHaveLength(2);
     expect(
@@ -331,7 +340,7 @@ describe("the report over real rows", () => {
   it("carries the ids, so an operator can act on the rows later", async () => {
     await brandWith("Janji", ["Thermal Tight", "Thermal Tights"]);
 
-    const [group] = await duplicateProducts();
+    const [group] = await candidatesRead();
 
     // D-30 is explicit that there is no merge tooling in v1, but a report
     // that named no rows would be one nobody could act on when there is.
@@ -343,7 +352,15 @@ describe("the report over real rows", () => {
     await brandWith("Janji", ["Thermal Tight", "Thermal Tights"]);
     // A limit of one cannot produce a pair, which is the observable
     // difference between a bounded read and an unbounded one.
-    expect(await duplicateProducts(1)).toEqual([]);
+    expect(await candidatesRead(1)).toEqual([]);
+  });
+
+  it("names the limit it was given as where it stopped", async () => {
+    await brandWith("Janji", ["Thermal Tight", "Thermal Tights"]);
+    const cut = await duplicateProducts(1);
+    expect(cut.cutAt).toBe(1);
+    const whole = await duplicateProducts(2);
+    expect(whole.cutAt).toBeUndefined();
   });
 });
 
@@ -355,7 +372,7 @@ describe("the pieces under each name", () => {
     await piecesOf(ids.get("Thermal Tights"), 3);
     await piecesOf(ids.get("Thermal Tight"), 1);
 
-    const [group] = await duplicateProducts();
+    const [group] = await candidatesRead();
 
     // The probable name is the spelling most runners already chose,
     // which is why it leads, whatever order the names sort in.
@@ -371,7 +388,7 @@ describe("the pieces under each name", () => {
     const ids = await brandWith("Janji", ["Thermal Tight", "Thermal Tights"]);
     await piecesOf(ids.get("Thermal Tight"), 2, true);
 
-    const [group] = await duplicateProducts();
+    const [group] = await candidatesRead();
 
     expect(group?.products[0]).toMatchObject({
       name: "Thermal Tight",
@@ -382,7 +399,7 @@ describe("the pieces under each name", () => {
   it("counts a name nobody's closet uses as zero", async () => {
     await brandWith("Janji", ["Thermal Tight", "Thermal Tights"]);
 
-    const [group] = await duplicateProducts();
+    const [group] = await candidatesRead();
 
     expect(group?.products.map((row) => row.pieces)).toEqual([0, 0]);
   });
@@ -394,7 +411,7 @@ describe("the pieces under each name", () => {
     await piecesOf(ids.get("Thermal Tights"), 1);
     await piecesOf(ids.get("Thermal Tight"), 1);
 
-    const [group] = await duplicateProducts();
+    const [group] = await candidatesRead();
 
     expect(group?.products.map((row) => row.name)).toEqual([
       "Thermal Tight",
@@ -412,7 +429,7 @@ describe("the pieces under each name", () => {
     await piecesOf(undefined, 2);
     await piecesOf(ids.get("Thermal Tight"), 1);
 
-    const [group] = await duplicateProducts();
+    const [group] = await candidatesRead();
 
     expect(group?.products.map((row) => row.pieces)).toEqual([1, 0]);
   });
@@ -480,7 +497,12 @@ describe("the report the Desk draws", () => {
   });
 
   it("is all zeroes over a clean catalogue", () => {
-    expect(duplicatesReport([])).toEqual({ names: 0, pieces: 0, groups: [] });
+    expect(duplicatesReport([])).toStrictEqual({
+      names: 0,
+      pieces: 0,
+      groups: [],
+      cutAt: undefined,
+    });
   });
 });
 
@@ -499,16 +521,14 @@ async function pairAfter(filler: number): Promise<void> {
       { id: last, name: "Janji", normalized: "janji" },
     ]);
   const product = (brandId: string, name: string) =>
-    core()
-      .insert(productsTable)
-      .values({
-        id: newUlid(),
-        brandId,
-        name,
-        normalizedName: name,
-        createdBy: newUlid(),
-        createdAt: NOW,
-      });
+    core().insert(productsTable).values({
+      id: newUlid(),
+      brandId,
+      name,
+      normalizedName: name,
+      createdBy: newUlid(),
+      createdAt: NOW,
+    });
   const [head, ...rest] = [
     ...Array.from({ length: filler }, (_, index) =>
       product(first, `model ${String(index).padStart(4, "0")}`),
@@ -522,16 +542,35 @@ async function pairAfter(filler: number): Promise<void> {
 describe("the report's cap, pinned", () => {
   beforeEach(resetSafetyTables);
 
-  it("reads exactly DUPLICATES_PRODUCT_CAP rows: a pair ending on it is found", async () => {
+  it("reads exactly DUPLICATES_PRODUCT_CAP rows: a pair ending on it is found, and nothing was cut", async () => {
     await pairAfter(DUPLICATES_PRODUCT_CAP - 2);
-    expect(await duplicateProducts()).toHaveLength(1);
+    const read = await duplicateProducts();
+    expect(read.candidates).toHaveLength(1);
+    expect(read.cutAt).toBeUndefined();
   });
 
-  it("cuts the row after the cap, so a pair straddling it goes unreported", async () => {
-    // The deferral this pins: past the cap, a later brand's near-misses
-    // silently drop out of the report.
+  it("cuts the row after the cap, and says it stopped there (#390)", async () => {
+    // Past the cap, a later brand's near-misses drop out of the report,
+    // and the read says where it stopped so the page can say so.
     await pairAfter(DUPLICATES_PRODUCT_CAP - 1);
-    expect(await duplicateProducts()).toEqual([]);
+    const read = await duplicateProducts();
+    expect(read.candidates).toEqual([]);
+    expect(read.cutAt).toBe(DUPLICATES_PRODUCT_CAP);
+  });
+
+  it("is the number D2 says it stopped at, from the read (#390)", async () => {
+    await pairAfter(DUPLICATES_PRODUCT_CAP - 1);
+    const read = await duplicateProducts();
+    const page = renderToString(
+      createElement(DeskDuplicates, {
+        report: duplicatesReport(read.candidates, read.cutAt),
+      }),
+    );
+    const cap = String(DUPLICATES_PRODUCT_CAP);
+    expect(page).toContain(
+      `Read the first ${cap} products only. Near-misses past them aren&#x27;t shown.`,
+    );
+    expect(page).toContain(`No near-misses in the first ${cap} products.`);
   });
 
   it("is 500 products", () => {

@@ -373,7 +373,7 @@ describe("the Desk's single-read lists", () => {
         }
       },
       async () => duplicateProducts(),
-      (candidates) => candidates.length,
+      (read) => read.candidates.length,
     );
   });
 });

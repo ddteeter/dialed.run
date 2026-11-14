@@ -186,14 +186,14 @@ test("the judgement names each gap", () => {
   ).toEqual([]);
   expect(
     judge(
-      { branches: 49.7, routes, visits: new Set(["/", "/api/health"]) },
+      { branches: 49.5, routes, visits: new Set(["/", "/api/health"]) },
       {
         ...baseline,
         unvisited: { ...baseline.unvisited, "/gone": "a route since removed" },
       },
     ),
   ).toEqual([
-    "branch coverage fell to 49.7%, more than 0.25 below the baseline's 50%",
+    "branch coverage fell to 49.5%, more than 0.4 below the baseline's 50%",
     "/closet: no spec visits it, and it is not listed",
     '/api/health: listed as unvisited ("an endpoint, not a page"), but a spec visits it',
     "/feed/entry/$entryId: no spec visits it, and it is not listed",

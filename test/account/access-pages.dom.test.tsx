@@ -946,6 +946,14 @@ describe("D7 · Access", () => {
       within(rowOf("DIAL-TEST")).getByRole("button", { name: "+ 1 more" }),
     );
     const drawer = screen.getByRole("dialog", { name: "DIAL-TEST" });
+    // The Sheet's title names it, and only that (#663): the pane's own
+    // code heading stays out of the drawer.
+    expect(
+      within(drawer)
+        .getAllByRole("heading")
+        .map((heading) => heading.textContent),
+    ).toStrictEqual(["DIAL-TEST"]);
+    expect(within(drawer).getAllByText("DIAL-TEST")).toHaveLength(1);
     expect(
       within(drawer)
         .getAllByRole("link")

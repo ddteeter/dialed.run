@@ -117,6 +117,10 @@ interface PickOneProps<T extends string> {
   onChange: (value: T | undefined) => void;
   field: (name: string) => FieldProps;
   error: string | undefined;
+  /**
+  `ChoiceField`'s: the option the list is ruled off before.
+  */
+  hairlineBefore?: T | undefined;
 }
 
 export function PickOne<T extends string>(
