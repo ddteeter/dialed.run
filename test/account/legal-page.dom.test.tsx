@@ -94,6 +94,13 @@ describe("LegalPage", () => {
       "wide:hidden",
     );
     expect(firstRow().lastElementChild).toContainElement(seat);
+    // One first row and one seat: no empty kicker row above the title.
+    expect(
+      document.querySelectorAll("[data-part='reading-first-row']"),
+    ).toHaveLength(1);
+    expect(
+      document.querySelectorAll("header [data-slot='notification-bell']"),
+    ).toHaveLength(1);
     expect(firstRow()).toHaveClass("flex", "items-center", "justify-between");
     // The shell's main is the page's one: the frame brings none of its own.
     expect(screen.getAllByRole("main")).toHaveLength(1);
