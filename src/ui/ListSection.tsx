@@ -35,6 +35,7 @@ export function ListSection<TItem>({
   items,
   count,
   whenEmpty,
+  hasCards = false,
   children,
 }: Readonly<{
   title: string;
@@ -51,6 +52,11 @@ export function ListSection<TItem>({
    * the section renders nothing at all.
    */
   whenEmpty?: ReactNode;
+  /**
+   * The rows are cards that stand alone, 12 apart (SPACE[3]), as the
+   * Desk's Review rows are (R55·197), rather than lines 4 apart.
+   */
+  hasCards?: boolean;
   /**
   Renders one row, `<li key=…>` and all.
   */
@@ -87,7 +93,9 @@ export function ListSection<TItem>({
   return (
     <div className="flex flex-col gap-2">
       {heading}
-      <ul className="m-0 flex list-none flex-col gap-1 p-0">
+      <ul
+        className={`m-0 flex list-none flex-col p-0 ${hasCards ? "gap-3" : "gap-1"}`}
+      >
         {items.map((item) => children(item))}
       </ul>
     </div>

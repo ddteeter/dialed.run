@@ -117,6 +117,18 @@ export function isInstrumented(source: string): boolean {
   return source.includes("stryMutAct_");
 }
 
+/**
+ * A layout route: its component renders `<Outlet` and wraps the pages
+ * under it (the `/desk` layout seats the top bar's Sign out, R55·194).
+ * It is not a screen of its own, so the per-screen rules (one h1, a
+ * shell that stamps hydration) are checked on its children instead.
+ * Shared by `one-h1-per-route` and `routes-stamp-hydration`, which pick
+ * the same screens.
+ */
+export function isLayoutRoute(source: string): boolean {
+  return /<Outlet[\s/>]/u.test(codeOnly(source));
+}
+
 const DECLARATION = /^(?:export )?(?:const|async function|function) (\w+)/u;
 const DECLARATION_START =
   /^(?=(?:export )?(?:const|async function|function) \w)/mu;

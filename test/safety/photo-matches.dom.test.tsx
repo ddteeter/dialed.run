@@ -249,6 +249,7 @@ describe("on Review's rows", () => {
     };
     await renderWithRouter(
       <ReviewQueue
+        asOf={0}
         onDecided={vi.fn()}
         queue={[row]}
         resolve={vi.fn()}
@@ -285,7 +286,12 @@ describe("on Review's rows", () => {
       photoMatches: found,
     };
     await renderWithRouter(
-      <RemovalRequests requests={[request]} decide={vi.fn()} block={vi.fn()} />,
+      <RemovalRequests
+        asOf={0}
+        requests={[request]}
+        decide={vi.fn()}
+        block={vi.fn()}
+      />,
     );
     expect(part("photo-matches")).toHaveTextContent(
       /^Matching photos · any runner · 1/u,
@@ -362,6 +368,7 @@ describe("RemovedMatchLine", () => {
     };
     await renderWithRouter(
       <ReviewQueue
+        asOf={0}
         onDecided={vi.fn()}
         queue={[row]}
         resolve={vi.fn()}
@@ -752,12 +759,14 @@ describe("a garment match's takedown", () => {
     await renderWithRouter(
       <>
         <RemovalRequests
+          asOf={0}
           requests={[request]}
           decide={vi.fn()}
           block={vi.fn()}
           decideMatch={decide}
         />
         <ReviewQueue
+          asOf={0}
           onDecided={vi.fn()}
           queue={[row]}
           resolve={vi.fn()}

@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 import {
+  COLUMN,
   Bracketed,
   Icon,
   ListSection,
@@ -66,7 +67,7 @@ export function OwnProfile({
   confirmBand,
 }: Readonly<{ profile: Profile; confirmBand: ReactNode }>) {
   return (
-    <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6 wide:mx-0 wide:px-6">
+    <div className={`${COLUMN} flex flex-col gap-6 px-5 pt-6 wide:px-6`}>
       {confirmBand}
       <div data-part="header" className="flex flex-col gap-3">
         <div className="flex items-center gap-4">

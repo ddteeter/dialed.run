@@ -410,18 +410,33 @@ describe("CopyrightHolds", () => {
     },
   );
 
-  it("draws the pair as the Desk's presses, focusing neither until asked", () => {
+  it("draws Restore as the bar's one chalk pill and Delete as the outline pill, Restore first, focusing neither (R55·199)", () => {
     renderHolds(inCourt());
-    for (const label of ["Case over: delete", "Case over: restore"]) {
-      const press = screen.getByRole("button", { name: label });
-      // The Desk has no pink button: its main press is a chalk pill in the
-      // ground's ink (round 44 #104).
-      expect(press).toHaveClass(
-        "target",
-        "rounded-pill",
-        "bg-ink",
-        "text-ground",
-      );
+    const presses = within(
+      document.querySelector<HTMLElement>("[data-part='case-over']") ??
+        document.body,
+    ).getAllByRole("button");
+    expect(presses.map((press) => press.textContent)).toStrictEqual([
+      "Case over: restore",
+      "Case over: delete",
+    ]);
+    const [restore, remove] = presses;
+    // The Desk has no pink button: its main press is a chalk pill in the
+    // ground's ink (round 44 #104), and a bar has one (round 44 #105).
+    expect(restore).toHaveClass(
+      "target",
+      "rounded-pill",
+      "bg-ink",
+      "text-ground",
+    );
+    expect(remove).toHaveClass(
+      "target",
+      "rounded-pill",
+      "border-ink",
+      "bg-transparent",
+    );
+    expect(remove).not.toHaveClass("bg-ink");
+    for (const press of presses) {
       expect(press).not.toHaveClass("bg-action");
       expect(press).toHaveAttribute("type", "button");
       expect(press).not.toHaveFocus();

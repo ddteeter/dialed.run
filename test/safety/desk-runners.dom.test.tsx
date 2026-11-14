@@ -13,7 +13,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState, type ReactElement } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   DeskRunners,
@@ -27,6 +27,7 @@ import {
 import type { DeskRunner } from "../../src/modules/safety/runners";
 import { bracketed } from "../ui/bracketed";
 import { carriedSince } from "../ui/carry-spy";
+import { atWidth } from "../ui/desk-width";
 
 vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
   const { spyOnCarry } = await import("../ui/carry-spy");
@@ -98,6 +99,11 @@ async function renderDesk(overrides: Partial<Props> = {}) {
   );
   return { rename, ban, unban, keep, router };
 }
+
+// At desk unless a case says otherwise: the pane beside the table.
+beforeEach(() => {
+  atWidth(true);
+});
 
 describe("D8's table", () => {
   it("counts every account and draws one row per runner", async () => {
@@ -326,6 +332,24 @@ describe("selecting a runner", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("opens the picked runner as the drawer below desk, the row still marked (R55·202)", async () => {
+    atWidth(false);
+    const user = userEvent.setup();
+    await renderDesk();
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+
+    expect(screen.getByRole("row", { selected: true })).toHaveTextContent(
+      /^@ada/u,
+    );
+    const drawer = screen.getByRole("dialog", { name: "@ada" });
+    expect(drawer).toHaveTextContent("Close account");
+    expect(screen.queryByRole("complementary")).toBeNull();
+    // Its ✕ unpicks: the row is no longer marked, and the drawer is gone.
+    await user.click(within(drawer).getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("row", { selected: true })).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
   it("counts one run and one report in the singular", async () => {
     const user = userEvent.setup();
     await renderDesk({ runners: [{ ...ada, runs: 1, reports: 1 }] });
@@ -354,6 +378,13 @@ describe("selecting a runner", () => {
 6 November 2025, 12:00 UTC: when ada's flag opened.
 */
 const FLAGGED_AT = Date.UTC(2025, 10, 6, 12) / 1000;
+
+/**
+A row's reports cell: the one before its state.
+*/
+function reportsOf(row: HTMLElement | undefined) {
+  return [...(row?.querySelectorAll("td") ?? [])].at(-2)?.firstElementChild;
+}
 
 /**
  * D8 over a list the test swaps, as a reload or another filter would:
@@ -424,6 +455,28 @@ describe("a flagged account (D-161 1, R47·124) and PENDING DELETE (PR#126-1)", 
     expect(
       within(second ?? document.body).queryByText(bracketed("Flagged")),
     ).toBeNull();
+  });
+
+  it("tones each state and the reports count so the ones that need a look stand out (R55·201)", async () => {
+    await renderDesk({
+      runners: [
+        ada,
+        bo,
+        { ...ada, userId: "u-cy", username: "cy", state: "PENDING DELETE" },
+      ],
+    });
+
+    expect(screen.getByText(bracketed("ACTIVE"))).toHaveClass("text-muted");
+    expect(screen.getByText(bracketed("CLOSED"))).toHaveClass("text-ink");
+    expect(screen.getByText(bracketed("PENDING DELETE"))).toHaveClass(
+      "text-ink",
+    );
+    // The reports cell is the one before the state: ada has 2, bo none.
+    const [, adaRow, boRow] = screen.getAllByRole("row");
+    expect(reportsOf(adaRow)).toHaveTextContent("2");
+    expect(reportsOf(adaRow)).toHaveClass("text-hiviz-text");
+    expect(reportsOf(boRow)).toHaveTextContent("0");
+    expect(reportsOf(boRow)).toHaveClass("text-muted");
   });
 
   it("draws PENDING DELETE as a state", async () => {

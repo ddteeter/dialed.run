@@ -56,6 +56,10 @@ describe("/takedown/confirm", () => {
       .fn<ConfirmFn>()
       .mockResolvedValue({ outcome: "confirmed" });
     await renderWithRouter(<TakedownConfirm token={TOKEN} confirm={confirm} />);
+    // Signed out, so the ink pill, not the product's pink (R54·167.1).
+    expect(
+      screen.getByRole("button", { name: "Confirm the request" }),
+    ).toHaveClass("rounded-pill", "bg-ink");
     await userEvent
       .setup()
       .click(screen.getByRole("button", { name: "Confirm the request" }));

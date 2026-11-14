@@ -5,6 +5,7 @@ export {
   PUBLIC_PREVIEW_LINE,
 } from "./audience";
 export { Bracketed } from "./Bracketed";
+export { DeskDetail } from "./DeskDetail";
 export { DeskSplit, RailCard } from "./DeskSplit";
 export { Digits } from "./Digits";
 export { FileWell } from "./FileWell";
@@ -19,7 +20,7 @@ export type { CoverageLevel, VerdictKind } from "./Marks";
 export { Mono } from "./Mono";
 export { OnboardingProgress } from "./OnboardingProgress";
 export { OnboardingShell } from "./OnboardingShell";
-export { Page } from "./Page";
+export { COLUMN, Page } from "./Page";
 export { PhoneBell } from "./PhoneBell";
 export { SlowLabel } from "./SlowLabel";
 export { useTappedSlow } from "./tapped-slow";
@@ -35,6 +36,7 @@ export {
   ChoiceList,
   ControlFailureBand,
   FailureBand,
+  ACTION_PRIMARY,
   CHALK_PILL,
   FieldMessage,
   FormElement,

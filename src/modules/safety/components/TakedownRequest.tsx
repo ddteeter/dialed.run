@@ -199,6 +199,7 @@ export function TakedownRequest({
             onToken={turnstile.onToken}
           />
           <SubmitButton
+            tone="ink"
             label="Send the request"
             pendingLabel="Sending the request"
             pending={form.pending}

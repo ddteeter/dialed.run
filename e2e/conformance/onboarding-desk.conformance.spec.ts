@@ -15,9 +15,10 @@ const UNFILLED = "transparent";
  * Onboarding at desk width and P3 in light (round 49, R49·138; drawn on
  * `design/Round 49 Rulings.dc.html` at 390 and 1280).
  *
- * At ≥1040 there is no panel: the step sits in the page column,
- * left-aligned, at a desk measure, under a bar that shows only the
- * wordmark. Below 1040 nothing changes but P3's body, which leaves ink.
+ * From 720 there is no panel: the step is the centred MEASURE.column every
+ * runner screen is (Round 54 · 168.1, a guess for onboarding until #654),
+ * under a bar that shows only the wordmark. On a phone nothing changes but
+ * P3's body, which leaves ink.
  *
  * Geometry is read from the page, and the measure from `tokens.js`;
  * neither is typed here.
@@ -57,7 +58,7 @@ async function box(locator: Locator): Promise<{ x: number; width: number }> {
   return found;
 }
 
-test("O1 at 1280: the step left-aligns in the page column under a wordmark-only bar", async ({
+test("O1 at 1280: the step is the centred column under a wordmark-only bar", async ({
   page,
 }) => {
   await open(page, "/onboarding/calibrate", 1280);
@@ -71,8 +72,10 @@ test("O1 at 1280: the step left-aligns in the page column under a wordmark-only 
 
   const main = await box(page.getByRole("main"));
   const step = await box(page.getByRole("main").locator("> div"));
-  // Left-aligned in the column, not centred in the window.
-  expect(step.x).toBe(main.x);
+  // Centred in the window (168.1), not left-aligned in the page.
+  expect(
+    Math.abs(step.x - main.x - (main.width - step.width) / 2),
+  ).toBeLessThanOrEqual(1);
   expect(step.width).toBeLessThanOrEqual(columnMeasure());
   expect(main.width).toBeGreaterThan(step.width);
 });
@@ -84,7 +87,7 @@ test("O1 at 390: nothing changes, no bar and the panel", async ({ page }) => {
   await expect(page.getByRole("banner")).toHaveCount(0);
 });
 
-test("P3 at 1280: the band runs the column, the body keeps the measure, on the ground", async ({
+test("P3 at 1280: the band and the body keep the column, on the ground", async ({
   page,
 }) => {
   await open(page, "/onboarding/done", 1280);
@@ -96,7 +99,10 @@ test("P3 at 1280: the band runs the column, the body keeps the measure, on the g
 
   const bandBox = await box(band);
   const bodyBox = await box(body);
-  expect(bandBox.width).toBeGreaterThan(measure);
+  // The close is the centred column now (168.1, #654): the band runs the
+  // column's width and no further.
+  expect(bandBox.width).toBeLessThanOrEqual(measure);
+  expect(bandBox.width).toBeGreaterThanOrEqual(bodyBox.width);
   expect(bodyBox.width).toBeLessThanOrEqual(measure);
   // The band is the one fill; the body wears none, so it is the ground.
   expect(await fillOf(page, BAND)).not.toBe(UNFILLED);

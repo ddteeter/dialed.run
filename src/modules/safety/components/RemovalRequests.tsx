@@ -5,7 +5,6 @@ import { z } from "zod";
 
 import { declineReasonField } from "../contracts";
 import {
-  Bracketed,
   FormElement,
   FormFailureBand,
   ListSection,
@@ -22,6 +21,8 @@ import { blockRequesterInput } from "../inputs";
 import type { HoldState } from "../takedown-limits";
 import type { PendingTakedownRequest } from "../takedown-requests";
 import { ACTION_BAR } from "./DeskForm";
+import { DueClock } from "./DueClock";
+import { shortId } from "./short-id";
 import { StatutoryLine } from "./StatutoryLine";
 import {
   KitOriginContext,
@@ -89,11 +90,16 @@ function ignoreRow(): void {
  */
 export function RemovalRequests({
   requests,
+  asOf,
   decide,
   block,
   decideMatch,
 }: Readonly<{
   requests: readonly PendingTakedownRequest[];
+  /**
+  When the page was read, for each request's clock (R55·197).
+  */
+  asOf: number;
   decide: Decide;
   block: Block;
   /**
@@ -113,11 +119,13 @@ export function RemovalRequests({
     <ListSection
       title={`Removal requests · ${String(remaining.length)}`}
       items={remaining}
+      hasCards
     >
       {(request) => (
         <RemovalRequestRow
           key={request.id}
           request={request}
+          asOf={asOf}
           actions={{ decide, block, decideMatch }}
           hasFocus={focusId === request.id}
           onFocused={() => {
@@ -170,6 +178,7 @@ type RowActions = Readonly<{
 
 type RowProps = Readonly<{
   request: PendingTakedownRequest;
+  asOf: number;
   actions: RowActions;
   hasFocus: boolean;
   onFocused: () => void;
@@ -177,8 +186,40 @@ type RowProps = Readonly<{
   onBlocked: () => void;
 }>;
 
+/**
+ * A request's head (R55·197), the queue row's: `ENTRY · id · @owner [VIA
+ * /TAKEDOWN]` in MONO.sm, with what filing decided after it. A link that
+ * names nothing of ours is a LINK, with no id or owner. The kind and the
+ * tags in capitals; the id and the handle in their own case (G-19).
+ */
+function RequestHead({
+  request,
+}: Readonly<{ request: PendingTakedownRequest }>): JSX.Element {
+  const { subject, posterUsername, holdState } = request;
+  return (
+    <span
+      data-part="request-head"
+      title={subject?.subjectId}
+      className="min-w-0 truncate font-mono text-mono-sm"
+    >
+      <span className="uppercase">{subject?.subjectType ?? "link"}</span>
+      {subject === undefined ? undefined : ` · ${shortId(subject.subjectId)}`}
+      {posterUsername === undefined ? undefined : ` · @${posterUsername}`}{" "}
+      <span className="uppercase">[via /takedown]</span>
+      {holdState === undefined ? undefined : (
+        <>
+          {" "}
+          <span data-part="hold-state" className="uppercase">
+            {`[${HOLD_WORDS[holdState]}]`}
+          </span>
+        </>
+      )}
+    </span>
+  );
+}
+
 function RemovalRequestRow(props: RowProps): JSX.Element {
-  const { request, hasFocus, onFocused, onDecided, onBlocked } = props;
+  const { request, asOf, hasFocus, onFocused, onDecided, onBlocked } = props;
   const { decide, block, decideMatch } = props.actions;
   const takeFocus = focusOnce(hasFocus, onFocused);
   const origin = { from: "request", row: request.id } as const;
@@ -188,57 +229,56 @@ function RemovalRequestRow(props: RowProps): JSX.Element {
       id={kitOriginAnchor(origin)}
       tabIndex={-1}
       data-part="removal-request"
-      className="flex flex-col gap-3 border-b border-hairline py-4"
+      className="flex flex-col rounded-card border border-hairline bg-panel"
     >
       <KitOriginContext value={origin}>
-        <span className="flex items-baseline justify-between gap-3">
-          <span className="flex flex-wrap items-baseline gap-2">
-            <span className="text-body font-semibold text-ink">
-              {request.subject?.subjectType ?? "link"}
+        {/* R55·197: the queue row's head, its clock at the right. */}
+        <span className="flex items-center justify-between gap-4 px-4 py-3">
+          <RequestHead request={request} />
+          <span className="shrink-0 whitespace-nowrap">
+            <DueClock due={request.due} isOverdue={request.dueAt <= asOf} />
+          </span>
+        </span>
+        <div
+          data-part="request-body"
+          className="flex flex-col gap-3 border-t border-hairline p-4"
+        >
+          <span className="flex flex-col gap-1">
+            <span className="text-label uppercase">
+              <Mono step="xs">
+                From {request.signature} · signed · good faith
+              </Mono>
             </span>
-            <span className="text-micro text-quiet">
-              <Bracketed>via /takedown</Bracketed>
+            {request.description === undefined ? undefined : (
+              <q className="text-body">{request.description}</q>
+            )}
+            {/* The only way to tell who filed: wrapped, never cut (P3-05). */}
+            <span
+              data-part="requester"
+              className="text-micro text-quiet wrap-anywhere"
+            >
+              {request.requesterEmail}
             </span>
-            {request.holdState === undefined ? undefined : (
-              <span data-part="hold-state" className="text-micro text-ink">
-                <Bracketed>{HOLD_WORDS[request.holdState]}</Bracketed>
+            {request.relatedIds.length === 0 ? undefined : (
+              <span data-part="related" className="text-micro text-ink">
+                {String(request.relatedIds.length)} more from this requester
               </span>
             )}
           </span>
-          <span data-part="due" className="text-ink uppercase">
-            <Mono step="xs">{request.due}</Mono>
-          </span>
-        </span>
-        <span className="flex flex-col gap-1">
-          <span className="text-label uppercase">
-            <Mono step="xs">
-              From {request.signature} · signed · good faith
-            </Mono>
-          </span>
-          {request.description === undefined ? undefined : (
-            <q className="text-body">{request.description}</q>
-          )}
-          {/* The only way to tell who filed: wrapped, never cut (P3-05). */}
-          <span
-            data-part="requester"
-            className="text-micro text-quiet wrap-anywhere"
-          >
-            {request.requesterEmail}
-          </span>
-          {request.relatedIds.length === 0 ? undefined : (
-            <span data-part="related" className="text-micro text-ink">
-              {String(request.relatedIds.length)} more from this requester
-            </span>
-          )}
-        </span>
-        <SubjectLink request={request} />
-        <StatutoryLine />
-        <OtherPhotos others={request.otherPhotos} />
-        <PhotoMatches found={request.photoMatches} decide={decideMatch} />
-        <RequestActions
-          request={request}
-          acts={{ decide, block, onDecided, onBlocked }}
-        />
+          <SubjectLink request={request} />
+          <StatutoryLine />
+          <OtherPhotos others={request.otherPhotos} />
+          <PhotoMatches found={request.photoMatches} decide={decideMatch} />
+        </div>
+        <div
+          data-part="request-bar"
+          className="border-t border-hairline px-4 py-3"
+        >
+          <RequestActions
+            request={request}
+            acts={{ decide, block, onDecided, onBlocked }}
+          />
+        </div>
       </KitOriginContext>
     </li>
   );

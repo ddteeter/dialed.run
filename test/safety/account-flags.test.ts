@@ -130,6 +130,27 @@ describe("an intimate-image removal flags its poster (D-161 1)", () => {
     expect(await flaggedCount()).toBe(2);
   });
 
+  it("dates the count by its earliest undecided removal, whatever order they were recorded in (R55·196)", async () => {
+    const later = await runner("later@example.com");
+    const earlier = await runner("earlier@example.com");
+    // Recorded later-first, so neither the first row nor the max is it.
+    await recorded(later, "remove", INTIMATE, 900);
+    await recorded(earlier, "remove", INTIMATE, 400);
+    await recorded(later, "takedown", INTIMATE, 700);
+
+    expect(await flaggedCountOf(core())).toStrictEqual([
+      { rows: 2, oldest: 400 },
+    ]);
+  });
+
+  it("has no oldest when nobody is flagged", async () => {
+    const [row] = await flaggedCountOf(core());
+    expect(row?.rows).toBe(0);
+    // SQL's NULL for an empty min, which Today reads as absent.
+    expect(row).toHaveProperty("oldest");
+    expect(row?.oldest ?? undefined).toBeUndefined();
+  });
+
   it("flags nobody for another reason, or for a quarantine", async () => {
     const poster = await runner("poster@example.com");
     await recorded(poster, "remove", removalStatements.explicit, 500);
@@ -328,9 +349,13 @@ describe("the flag's reads (D-161 1)", () => {
       .bind(...params)
       .all<{ detail: string }>();
     // Today's count is a scan (the doc comment says so); each removal's
-    // decision is a probe of the profile's audit rows.
+    // decision is a probe of the profile's audit rows. Since R55·196 it
+    // also reads `created_at` for the oldest, which the owner index does
+    // not cover, so the scan is of the table and the distinct count takes
+    // a temp tree: a read made once a day and when the Desk opens.
     expect(plan.results.map((row) => row.detail)).toStrictEqual([
-      "SCAN moderation_actions USING INDEX moderation_actions_owner",
+      "USE TEMP B-TREE FOR count(DISTINCT)",
+      "SCAN moderation_actions",
       "CORRELATED SCALAR SUBQUERY 1",
       "SEARCH account_decision USING INDEX moderation_actions_subject (subject_type=? AND subject_id=?)",
     ]);

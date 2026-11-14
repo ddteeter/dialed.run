@@ -108,3 +108,22 @@ describe("the counted heading", () => {
     expect(texts).toStrictEqual(["2 waiting"]);
   });
 });
+
+describe("ListSection's cards", () => {
+  it("stands card rows 12 apart, and lines 4 apart otherwise (R55·197)", () => {
+    const { rerender, container } = render(
+      <ListSection title="waiting" items={["a"]} hasCards>
+        {(item) => <li key={item}>{item}</li>}
+      </ListSection>,
+    );
+    expect(container.querySelector("ul")).toHaveClass("gap-3");
+    expect(container.querySelector("ul")).not.toHaveClass("gap-1");
+    rerender(
+      <ListSection title="waiting" items={["a"]}>
+        {(item) => <li key={item}>{item}</li>}
+      </ListSection>,
+    );
+    expect(container.querySelector("ul")).toHaveClass("gap-1");
+    expect(container.querySelector("ul")).not.toHaveClass("gap-3");
+  });
+});

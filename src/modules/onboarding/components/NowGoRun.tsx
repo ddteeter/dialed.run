@@ -2,7 +2,13 @@ import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 
 import { CALL_VERDICT_THRESHOLD } from "../../../lib/contracts";
-import { focusOnMount, Mono, StravaConsent } from "../../../ui";
+import {
+  ACTION_PRIMARY,
+  focusOnMount,
+  Mono,
+  SECONDARY_PILL,
+  StravaConsent,
+} from "../../../ui";
 
 /**
  * What the loop does with what a runner logs — P3's numbered list.
@@ -88,17 +94,13 @@ export function NowGoRun({
 
         <StravaOffer shouldFocus={shouldFocusOffer} />
 
-        <div className="flex flex-col gap-3">
-          <Link
-            to="/runs/new"
-            className="target flex items-center justify-center rounded-pill bg-action px-4 py-4 text-center font-display text-body uppercase text-accent-ink"
-          >
+        {/* R54·167.1: the product's pink caps primary, then "Done for
+            now" as its hairline pill; 167.2's width rule for both. */}
+        <div className="flex flex-col gap-3 wide:flex-row">
+          <Link to="/runs/new" className={`target ${ACTION_PRIMARY}`}>
             I have a run to upload
           </Link>
-          <Link
-            to="/"
-            className="target flex items-center justify-center rounded-pill border border-hairline px-4 py-4 text-center text-body font-semibold text-ink"
-          >
+          <Link to="/" className={`target ${SECONDARY_PILL}`}>
             Done for now
           </Link>
         </div>

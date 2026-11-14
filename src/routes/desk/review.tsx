@@ -56,6 +56,7 @@ function ReviewPage() {
       {/* Design 136: `/takedown` requests, soonest due first. */}
       <RemovalRequests
         requests={requests}
+        asOf={today.asOf}
         decide={decideRemovalRequestAction}
         block={blockTakedownRequesterAction}
         decideMatch={decideGarmentMatchAction}
@@ -66,6 +67,7 @@ function ReviewPage() {
         reviewHandle={reviewHandleAction}
         decideMatch={decideGarmentMatchAction}
         reporters={reportersAction}
+        asOf={today.asOf}
         onDecided={() => {
           void router.invalidate();
         }}

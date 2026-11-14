@@ -17,6 +17,7 @@ import type { SearchResult } from "../../src/modules/feed/search";
 import { expectBellEnding, renderFeedScreen, withBell } from "./feed-fixtures";
 import { queryWeatherCredit } from "../ui/weather-credit";
 import { pointConditions } from "../feed/conditions-fixture";
+import { expectTheColumn } from "../ui/the-column";
 
 /**
  * G, H and runner search, as round 22 draws them with only what v1
@@ -178,6 +179,7 @@ describe("OwnProfile (G): an unconfirmed runner (round 26 #11; FEED-11)", () => 
       />,
     );
 
+    expectTheColumn();
     const nag = screen.getByRole("complementary", {
       name: "Confirm your email",
     });
@@ -548,6 +550,7 @@ describe("OtherProfile (H)", () => {
   it("keeps its header and Follow with nothing public, and says so plainly", async () => {
     await renderFeedScreen(otherScreen());
 
+    expectTheColumn();
     expect(screen.getByRole("heading", { name: "@ravi_k" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Follow" })).toBeVisible();
     expect(part("entries")).toHaveAttribute("data-state", "empty");
@@ -825,6 +828,7 @@ describe("Follow, on the control-failure pattern", () => {
 describe("RunnerSearch", () => {
   it("says nothing at rest, and lists nothing", async () => {
     await renderFeedScreen(searchScreen());
+    expectTheColumn();
     expect(screen.queryByText(/No runner called/u)).toBeNull();
     // Not even an empty list, which a reader hears as "list, 0 items".
     expect(screen.queryByRole("list")).toBeNull();

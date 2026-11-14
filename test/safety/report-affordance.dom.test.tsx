@@ -123,7 +123,9 @@ describe("whether the block is offered alongside", () => {
     // An entry report names the entry, not its author. Blocking would
     // need a lookup the reporter never asked for — and `fileReport`
     // enforces the same rule on the write side.
-    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Send and block" }),
+    ).not.toBeInTheDocument();
   });
 
   it("does not offer it on a profile we can name but cannot identify", async () => {
@@ -133,7 +135,7 @@ describe("whether the block is offered alongside", () => {
     // they are" can disagree, and only the second authorises a block.
     //
     // The name is what makes this test bite. Without it the sheet
-    // withholds the checkbox anyway — it needs a name for the label —
+    // withholds Send and block anyway — it needs a name for the label —
     // so an affordance that had dropped the `authorId` check entirely
     // would still look correct here. That is not hypothetical: this test
     // used to pass a subject with neither field, and the mutation gate
@@ -150,7 +152,9 @@ describe("whether the block is offered alongside", () => {
 
     await user.click(screen.getByRole("button", { name: REPORT }));
 
-    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Send and block" }),
+    ).not.toBeInTheDocument();
   });
 });
 

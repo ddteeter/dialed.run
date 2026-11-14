@@ -64,6 +64,19 @@ export function handleOf(prefix: string): string {
  * the row's name opens it; there is no "Decide this one"). It is the
  * row's first fold: a reported row's WHO REPORTED comes after.
  */
+/**
+ * Review's row for a subject, by its id. The head draws a long id at its
+ * first and last four characters (R55·197) and keeps it whole in its
+ * title, so the row is found by that, not by its text.
+ */
+export function queueRowFor(page: Page, subjectId: string): Locator {
+  return page.getByRole("listitem").filter({
+    has: page
+      .locator("[data-part='row-head']")
+      .and(page.getByTitle(subjectId, { exact: true })),
+  });
+}
+
 export async function openRow(row: Locator): Promise<void> {
   const opener = row.locator("button[aria-expanded]").first();
   if ((await opener.getAttribute("aria-expanded")) === "false") {

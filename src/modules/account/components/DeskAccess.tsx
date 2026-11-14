@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useRouter } from "@tanstack/react-router";
+import { useState } from "react";
 import type { JSX } from "react";
 
 import {
@@ -6,200 +7,14 @@ import {
   regionInviteRefusal,
   regionTag,
 } from "../../../lib/contracts/access";
-import { monthDayLabel } from "../../../lib/dates";
+import { FormStatus, Mono } from "../../../ui";
+import type { AccessDesk, DeskRequest } from "../invites";
 import {
-  FailureBand,
-  FormElement,
-  FormEnd,
-  FormStatus,
-  Mono,
-  TextField,
-  useControlAction,
-  useFormSubmit,
-  useIdempotencyKey,
-} from "../../../ui";
-import { newInviteSchema } from "../inputs";
-import type { AccessDesk, DeskCode, DeskRequest } from "../invites";
-
-/**
- * How long a revoked row keeps its Undo (round 26 #20: "no confirm; it's
- * undoable for 10 s"; round 28 #9: on the row, with no countdown).
- */
-export const UNDO_WINDOW_MS = 10_000;
-
-const MINUTE_S = 60;
-const HOUR_S = 60 * MINUTE_S;
-const DAY_S = 24 * HOUR_S;
-/**
-From here an age is a date (round 28 #9: "From 30 days on they show a date").
-*/
-const DATED_FROM_S = 30 * DAY_S;
-
-/**
- * An age as round 28 #9 draws it, in MONO.sm capitals: `NOW` under a
- * minute, then whole minutes, hours and days (`12M`, `5H`, `3D`), and a
- * date (`AUG 29`) from 30 days. Lowercase here; the mono step's CSS sets
- * the capitals, so a screen reader hears "5h", not five letters.
- */
-export function ageLabel(createdAt: number, asOf: number): string {
-  const seconds = Math.max(0, asOf - createdAt);
-  if (seconds < MINUTE_S) return "now";
-  if (seconds < HOUR_S) return `${String(Math.floor(seconds / MINUTE_S))}m`;
-  if (seconds < DAY_S) return `${String(Math.floor(seconds / HOUR_S))}h`;
-  if (seconds < DATED_FROM_S) return `${String(Math.floor(seconds / DAY_S))}d`;
-  return monthDayLabel(createdAt);
-}
-
-/**
-Whether a code can still let anyone in.
-*/
-function isActive(code: DeskCode): boolean {
-  return !code.isRevoked && code.usedBy.length < code.maxUses;
-}
-
-/**
- * The Codes header's counts: "12 active · 31 used", where used is every
- * account a code let in.
- */
-export function codeCounts(codes: readonly DeskCode[]): string {
-  const active = codes.filter((code) => isActive(code)).length;
-  const used = codes.reduce((sum, code) => sum + code.usedBy.length, 0);
-  return `${String(active)} active · ${String(used)} used`;
-}
-
-/**
- * The codes in the server's order (newest first), with revoked ones at
- * the foot — except the one whose Undo is showing, which stays where it
- * was until its ten seconds are up (round 28 #9).
- */
-export function orderedCodes(
-  codes: readonly DeskCode[],
-  holding: string | undefined,
-): DeskCode[] {
-  const isStaying = (code: DeskCode) => !code.isRevoked || code.id === holding;
-  return [
-    ...codes.filter((code) => isStaying(code)),
-    ...codes.filter((code) => !isStaying(code)),
-  ];
-}
-
-/**
- * The status line over the list when a code is made (round 28 #9):
- * "DIAL-7QX2 MADE · LINK COPIED", or just MADE when the copy failed and
- * the row's band shows the link instead.
- */
-export function madeLine(code: string, isCopied: boolean): string {
-  return isCopied ? `${code} made · link copied` : `${code} made`;
-}
-
-type RowAction = (input: { data: { id: string } }) => Promise<unknown>;
-
-/**
- * What each row action says when it fails, under its own row (round 29
- * #14): the state still true, and the board's sentence. The page-level
- * band is gone; only New code, which has no row yet, keeps the form's.
- */
-const ROW_FAILURES = {
-  invite: {
-    kicker: "Not sent",
-    sentence: "Send invite didn't go through. No email went out. Try again?",
-  },
-  decline: {
-    kicker: "Still waiting",
-    sentence:
-      "Decline didn't go through. The request is still here. Try again?",
-  },
-  undo: {
-    kicker: "Still revoked",
-    sentence: "Undo didn't go through. Try again?",
-  },
-  revoke: {
-    kicker: "Still active",
-    sentence: "Revoke didn't go through. Try again?",
-  },
-} as const;
-
-type RowFailureKind = keyof typeof ROW_FAILURES;
-
-/**
- * One row action: in flight behind the server (never optimistic), which
- * row it was last pressed on, and that row's band. A failure is said once
- * in the page's one status region, in the band's own words; focus stays on
- * the control, and Try again repeats the same action on the same row.
- */
-function useRowAction({
-  kind,
-  act,
-  onChanged,
-  announce,
-  onSuccess,
-}: Readonly<{
-  kind: RowFailureKind;
-  act: RowAction;
-  onChanged: () => Promise<void>;
-  announce: (sentence: string) => void;
-  onSuccess?: (() => void) | undefined;
-}>) {
-  const { kicker, sentence } = ROW_FAILURES[kind];
-  const [target, setTarget] = useState<string>();
-  const control = useControlAction<[string]>({
-    kicker,
-    action: async (id) => {
-      await act({ data: { id } });
-      await onChanged();
-    },
-    onSuccess,
-  });
-  const { failure } = control;
-  useEffect(() => {
-    if (failure !== undefined) announce(`${kicker}. ${sentence}`);
-  }, [failure, announce, kicker, sentence]);
-  return {
-    isFailed: failure !== undefined,
-    run: (id: string) => {
-      setTarget(id);
-      void control.run(id);
-    },
-    /**
-    The band under `id`'s row, when this action failed there.
-    */
-    bandFor: (id: string): JSX.Element | undefined =>
-      failure !== undefined && id === target ? (
-        <FailureBand
-          kicker={failure.kicker}
-          message={sentence}
-          onRetry={control.retry}
-          retryRef={control.retryRef}
-        />
-      ) : undefined,
-  };
-}
-
-/**
- * Forgets the row whose Undo is showing ten seconds after its revoke went
- * through — never while its revoke or its Undo has failed, when its band
- * shows instead.
- */
-function useReleaseHold(
-  holding: string | undefined,
-  setHolding: (id: string | undefined) => void,
-  isFailed: boolean,
-): void {
-  useEffect(() => {
-    if (holding === undefined || isFailed) return;
-    const timer = setTimeout(() => {
-      setHolding(undefined);
-    }, UNDO_WINDOW_MS);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [holding, isFailed, setHolding]);
-}
-
-/**
-One row action, as a row uses it: press it on a row, and read that row's band.
-*/
-type RowActionHandle = Pick<ReturnType<typeof useRowAction>, "run" | "bandFor">;
+  ageLabel,
+  useRowAction,
+  type RowAction,
+  type RowActionHandle,
+} from "./desk-rows";
 
 /**
  * A request's Send invite — or, for one from a state that is blocked now
@@ -288,466 +103,49 @@ function RequestRow({
 }
 
 /**
- * What a code's actions cell says: Undo while its revoke can still be
- * taken back, its two actions while it works, and why not once it does
- * not.
- */
-function CodeActions({
-  code,
-  isHeld,
-  onCopy,
-  onRevoke,
-  onUndo,
-}: Readonly<{
-  code: DeskCode;
-  isHeld: boolean;
-  onCopy: () => void;
-  onRevoke: () => void;
-  onUndo: () => void;
-}>): JSX.Element {
-  if (isHeld) {
-    // D-92, round 29 #5: from T1 roles, never opacity — REVOKED in
-    // `--quiet` MONO.xs, and Undo in ink, semibold and underlined.
-    return (
-      <span className="flex items-baseline gap-4">
-        <Mono step="xs" className="text-quiet">
-          Revoked
-        </Mono>
-        <button
-          type="button"
-          className="target font-semibold text-ink underline"
-          onClick={onUndo}
-        >
-          Undo
-        </button>
-      </span>
-    );
-  }
-  // Round 29 #14: USED and REVOKED in `--quiet`, as the STATE column is.
-  if (code.isRevoked) {
-    return (
-      <Mono step="xs" className="text-quiet">
-        Revoked
-      </Mono>
-    );
-  }
-  if (!isActive(code)) {
-    return (
-      <Mono step="xs" className="text-quiet">
-        Used
-      </Mono>
-    );
-  }
-  return (
-    <span className="flex gap-4">
-      <button
-        type="button"
-        className="target font-semibold underline"
-        onClick={onCopy}
-      >
-        Copy link
-      </button>
-      <button
-        type="button"
-        className="target text-quiet underline"
-        onClick={onRevoke}
-      >
-        Revoke
-      </button>
-    </span>
-  );
-}
-
-/**
- * `NOT COPIED` (round 28 #9): the browser would not copy, so the link is
- * shown selected for the operator to copy themselves. No Try again — the
- * same press would fail the same way.
- */
-function NotCopied({ url }: Readonly<{ url: string }>): JSX.Element {
-  return (
-    <div
-      data-part="failure-band"
-      data-state="not-copied"
-      className="flex flex-col items-start gap-3 border border-ink p-4"
-    >
-      <Mono step="xs">Not copied</Mono>
-      <span className="text-body">
-        Copying didn&apos;t work here. The link is selected: copy it yourself.
-      </span>
-      <input
-        readOnly
-        aria-label="Invite link"
-        value={url}
-        ref={(node) => {
-          node?.select();
-        }}
-        className="min-h-target w-full rounded-field border border-hairline bg-ground px-3 font-mono text-mono-sm"
-      />
-    </div>
-  );
-}
-
-/**
-What one code row shows besides the code itself.
-*/
-interface CodeRowState {
-  readonly asOf: number;
-  readonly isNew: boolean;
-  readonly isHeld: boolean;
-  readonly uncopiedLink: string | undefined;
-}
-
-/**
- * Round 54 · 168.3: from `wide` the codes are one grid, each row a subgrid
- * of it, so the code, label, age, count and actions share their columns
- * down the list (N3-07). On a phone a row wraps instead, its actions
- * included, so nothing runs off the screen (G-09, N3-06; not drawn, a
- * guess).
- */
-const CODE_LIST =
-  "m-0 flex list-none flex-col p-0 wide:grid wide:grid-cols-[auto_minmax(0,1fr)_auto_auto_auto] wide:gap-x-4";
-const CODE_ROW =
-  "flex flex-col gap-3 border-b border-hairline py-4 wide:col-span-full wide:grid wide:grid-cols-subgrid";
-const CODE_CELLS =
-  "flex flex-wrap items-baseline gap-x-4 gap-y-2 wide:col-span-full wide:grid wide:grid-cols-subgrid";
-
-/**
 The heading of each of Access's two lists.
 */
 const SECTION_HEADING = "m-0 font-display text-heading uppercase";
 
-function CodeRow({
-  code,
-  state,
-  onCopy,
-  onRevoke,
-  onUndo,
-  band,
-}: Readonly<{
-  code: DeskCode;
-  state: CodeRowState;
-  onCopy: () => void;
-  onRevoke: () => void;
-  onUndo: () => void;
-  /**
-  Revoke's or Undo's failure band, when one failed on this row.
-  */
-  band: JSX.Element | undefined;
-}>): JSX.Element {
-  const isStruck = code.isRevoked || state.isHeld;
-  const tone = isActive(code) && !state.isHeld ? "text-ink" : "text-quiet";
-  // Round 29 #5: a revoked code is struck through in `--quiet`, held or at
-  // the foot — the strike carries the meaning without colour.
-  const codeTone = isStruck ? "text-quiet line-through" : tone;
-  return (
-    <li data-state={isActive(code) ? undefined : "spent"} className={CODE_ROW}>
-      <span className={isStruck ? `${CODE_CELLS} text-quiet` : CODE_CELLS}>
-        <span className="flex items-baseline gap-2 whitespace-nowrap">
-          <Mono step="sm" className={codeTone}>
-            {code.code}
-          </Mono>
-          {state.isNew ? (
-            <Mono step="xs" className="bg-hi-viz px-1 text-accent-ink">
-              New
-            </Mono>
-          ) : undefined}
-        </span>
-        <CodeWho code={code} />
-        <Mono step="sm" className="text-muted">
-          {ageLabel(code.createdAt, state.asOf)}
-        </Mono>
-        <Mono step="sm" className={tone}>
-          {`${String(code.usedBy.length)}/${String(code.maxUses)}`}
-        </Mono>
-        <CodeActions
-          code={code}
-          isHeld={state.isHeld}
-          onCopy={onCopy}
-          onRevoke={onRevoke}
-          onUndo={onUndo}
-        />
-      </span>
-      {/* Under the row, the grid's full width. */}
-      {band === undefined ? undefined : (
-        <div className="wide:col-span-full">{band}</div>
-      )}
-      {state.uncopiedLink === undefined ? undefined : (
-        <div className="wide:col-span-full">
-          <NotCopied url={state.uncopiedLink} />
-        </div>
-      )}
-    </li>
-  );
-}
-
 /**
- * The code's label and who used it, one line each: cut short, whole in
- * the title (168.3, G-09).
- */
-function CodeWho({ code }: Readonly<{ code: DeskCode }>): JSX.Element {
-  const label = code.label ?? "No label";
-  const who =
-    code.usedBy.length === 0 ? "Not used yet" : code.usedBy.join(", ");
-  return (
-    <span className="flex min-w-0 basis-full flex-col gap-1 wide:basis-auto">
-      <span title={label} className="truncate">
-        {label}
-      </span>
-      <span title={who} className="truncate text-small text-quiet">
-        {who}
-      </span>
-    </span>
-  );
-}
-
-/**
- * D7's Create code: a label ("for you only") and a uses limit. The key is
- * the form's (law 8b), rotated once a code is made.
- */
-function NewCodeForm({
-  createCode,
-  onCreated,
-}: Readonly<{
-  createCode: (input: {
-    data: { label: string; maxUses: number; idempotencyKey: string };
-  }) => Promise<{ code: string }>;
-  onCreated: (code: string) => Promise<void>;
-}>): JSX.Element {
-  const [label, setLabel] = useState("");
-  const [maxUses, setMaxUses] = useState("1");
-  const { idempotencyKey, rotate } = useIdempotencyKey();
-  const form = useFormSubmit({
-    carry: "page",
-    schema: newInviteSchema,
-    action: (values) => createCode({ data: { ...values, idempotencyKey } }),
-    successMessage: "Code created.",
-    labels: { label: "Label · for you only", maxUses: "Uses" },
-    onSuccess: async ({ code }) => {
-      rotate();
-      setLabel("");
-      setMaxUses("1");
-      await onCreated(code);
-    },
-  });
-  return (
-    <FormElement
-      form={form}
-      dataPart="new-code"
-      onSubmit={() => {
-        void form.submit({ label, maxUses });
-      }}
-    >
-      <TextField
-        name="label"
-        label="Label · for you only"
-        value={label}
-        onChange={setLabel}
-        field={form.field}
-        error={form.fieldErrors.label}
-      />
-      <TextField
-        name="maxUses"
-        label="Uses"
-        value={maxUses}
-        onChange={setMaxUses}
-        field={form.field}
-        error={form.fieldErrors.maxUses}
-      />
-      <FormEnd
-        form={form}
-        tone="chalk"
-        label="Create code"
-        pendingLabel="Creating"
-      />
-    </FormElement>
-  );
-}
-
-/**
- * Desk D7 · Access (task 126, ACC-5; round 26 #20, round 28 #9):
- * Requests, oldest first, each with Send invite and a silent Decline; and
- * Codes, with a form to make one (its link copied as it is made), who used
- * each, Copy link, and Revoke with ten seconds of Undo on the row.
+ * Desk D7 · Access (task 126, ACC-5; round 26 #20): Requests, oldest
+ * first, each with Send invite and a silent Decline. Codes are their own
+ * page since R55·194 (`DeskCodes`).
  */
 export function DeskAccess({
-  desk,
+  requests,
   asOf,
-  linkFor,
-  copy,
-  onChanged,
-  createCode,
   sendInvite,
   decline,
-  revoke,
-  restore,
 }: Readonly<{
-  desk: AccessDesk;
+  requests: AccessDesk["requests"];
   asOf: number;
-  /**
-  The `/join?code=` link for a code, absolute.
-  */
-  linkFor: (code: string) => string;
-  copy: (text: string) => Promise<void>;
-  /**
-  Reloads the page's data after a change.
-  */
-  onChanged: () => Promise<void>;
-  createCode: (input: {
-    data: { label: string; maxUses: number; idempotencyKey: string };
-  }) => Promise<{ code: string }>;
   sendInvite: RowAction;
   decline: RowAction;
-  revoke: RowAction;
-  restore: RowAction;
 }>): JSX.Element {
   const [said, setSaid] = useState("");
+  const onChanged = useReload();
   return (
-    <div className="flex flex-col gap-10">
-      {/* One title for the page the rail calls Access, its two lists
-          under it (G-15). */}
+    <div className="flex flex-col gap-6">
       <h1 className="m-0 font-display text-title uppercase">Access</h1>
       <FormStatus>{said}</FormStatus>
       <RequestsSection
-        requests={desk.requests}
+        requests={requests}
         asOf={asOf}
         actions={{ sendInvite, decline }}
         onChanged={onChanged}
         announce={setSaid}
       />
-      <CodesSection
-        codes={desk.codes}
-        asOf={asOf}
-        link={{ linkFor, copy }}
-        actions={{ createCode, revoke, restore }}
-        onChanged={onChanged}
-        announce={setSaid}
-      />
     </div>
   );
 }
 
 /**
- * D7's Codes: the form that makes one (its link copied as it is made),
- * each code's uses, Copy link, and Revoke with ten seconds of Undo on the
- * row. Copy's outcome goes to `DeskAccess`'s status region through
- * `announce`; a made code's line is this section's own.
- */
-function CodesSection({
-  codes,
-  asOf,
-  link,
-  actions,
-  onChanged,
-  announce,
-}: Readonly<{
-  codes: AccessDesk["codes"];
-  asOf: number;
-  link: {
-    linkFor: (code: string) => string;
-    copy: (text: string) => Promise<void>;
-  };
-  actions: {
-    createCode: (input: {
-      data: { label: string; maxUses: number; idempotencyKey: string };
-    }) => Promise<{ code: string }>;
-    revoke: RowAction;
-    restore: RowAction;
-  };
-  onChanged: () => Promise<void>;
-  announce: (said: string) => void;
-}>): JSX.Element {
-  const { linkFor, copy } = link;
-  const revoking = useRowAction({
-    kind: "revoke",
-    act: actions.revoke,
-    onChanged,
-    announce,
-  });
-  const isRevokeFailed = revoking.isFailed;
-  const [holding, setHolding] = useState<string>();
-  const undoing = useRowAction({
-    kind: "undo",
-    act: actions.restore,
-    onChanged,
-    announce,
-    // Not optimistic: the row stays held until the code is back.
-    onSuccess: () => {
-      setHolding(undefined);
-    },
-  });
-  // A failed Undo keeps its row held, so its Undo and its band stay where
-  // the operator's focus is rather than sorting to the foot. `setHolding`
-  // is React's own setter, stable across renders, so the timer is armed
-  // once per hold and not again on every render.
-  useReleaseHold(holding, setHolding, isRevokeFailed || undoing.isFailed);
-  const [madeStatus, setMadeStatus] = useState("");
-  // Codes made on this page load wear NEW until it reloads; codes whose
-  // copy failed show their link selected. Both by the code itself, which
-  // a new row has before the reload gives it an id.
-  const [made, setMade] = useState<readonly string[]>([]);
-  const [uncopied, setUncopied] = useState<string>();
-  const wasCopied = async (code: string): Promise<boolean> => {
-    try {
-      await copy(linkFor(code));
-      setUncopied(undefined);
-      return true;
-    } catch {
-      setUncopied(code);
-      return false;
-    }
-  };
-  return (
-    <section aria-labelledby="desk-codes" className="flex flex-col gap-4">
-      <h2 id="desk-codes" className={SECTION_HEADING}>
-        Codes
-      </h2>
-      <Mono step="xs" className="text-muted">
-        {codeCounts(codes)}
-      </Mono>
-      {/* The form keeps the column; only the list takes the width. */}
-      <div className="max-w-column">
-        <NewCodeForm
-          createCode={actions.createCode}
-          onCreated={async (code) => {
-            setMade((previous) => [...previous, code]);
-            setMadeStatus(madeLine(code, await wasCopied(code)));
-            await onChanged();
-          }}
-        />
-      </div>
-      <p role="status" data-part="status-line" className="m-0">
-        <Mono step="xs">{madeStatus}</Mono>
-      </p>
-      <ul className={CODE_LIST}>
-        {orderedCodes(codes, holding).map((code) => (
-          <CodeRow
-            key={code.id}
-            code={code}
-            state={{
-              asOf,
-              isNew: made.includes(code.code),
-              isHeld: code.id === holding && !isRevokeFailed,
-              uncopiedLink:
-                uncopied === code.code ? linkFor(code.code) : undefined,
-            }}
-            onCopy={() => {
-              void wasCopied(code.code).then((isCopied) => {
-                announce(isCopied ? "Link copied." : "Link not copied.");
-              });
-            }}
-            onRevoke={() => {
-              setHolding(code.id);
-              revoking.run(code.id);
-            }}
-            onUndo={() => {
-              undoing.run(code.id);
-            }}
-            band={revoking.bandFor(code.id) ?? undoing.bandFor(code.id)}
-          />
-        ))}
-      </ul>
-    </section>
-  );
+Reloads the route's data after a change, so the rail's counts follow.
+*/
+function useReload(): () => Promise<void> {
+  const router = useRouter();
+  return () => router.invalidate();
 }
 
 /**
@@ -781,11 +179,7 @@ function RequestsSection({
     announce,
   });
   return (
-    // 168.3: Requests keep the 620 column; Codes take the page's width.
-    <section
-      aria-labelledby="desk-requests"
-      className="flex max-w-column flex-col gap-4"
-    >
+    <section aria-labelledby="desk-requests" className="flex flex-col gap-4">
       <h2 id="desk-requests" className={SECTION_HEADING}>
         Requests
       </h2>

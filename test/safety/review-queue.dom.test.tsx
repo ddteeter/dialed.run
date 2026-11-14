@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -17,6 +23,17 @@ vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
 });
 
 type Props = Parameters<typeof ReviewQueue>[0];
+
+/**
+ * A row's head strip, the button that opens it, by the name its head
+ * starts with: the strip also carries the row's summary and age
+ * (R55·197). The head ends at its source tag, so a name cannot match a
+ * longer one by prefix.
+ */
+function rowNamed(head: string): RegExp {
+  const escaped = head.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`);
+  return new RegExp(String.raw`^${escaped} \[`, "u");
+}
 
 function row(overrides: Partial<QueueRow> = {}): QueueRow {
   return {
@@ -44,6 +61,7 @@ function renderQueue(
   const onDecided = vi.fn<() => void>();
   render(
     <ReviewQueue
+      asOf={0}
       queue={queue}
       resolve={resolve}
       reviewHandle={reviewHandle}
@@ -51,6 +69,15 @@ function renderQueue(
     />,
   );
   return { resolve, reviewHandle, onDecided };
+}
+
+/**
+Every row's head, as its text reads.
+*/
+function heads(): (string | null)[] {
+  return [...document.querySelectorAll("[data-part='row-head']")].map(
+    (head) => head.textContent,
+  );
 }
 
 /**
@@ -73,10 +100,12 @@ describe("back from a kit", () => {
         row({ id: "01HYYYYYYYYYYYYYYYYYYYYYYY", subjectId: "e-2" }),
       ]);
 
-      const second = screen.getByRole("button", { name: "entry · e-2" });
+      const second = screen.getByRole("button", {
+        name: rowNamed("entry · e-2"),
+      });
       expect(second).toHaveAttribute("aria-expanded", "true");
       expect(
-        screen.getByRole("button", { name: "entry · e-1" }),
+        screen.getByRole("button", { name: rowNamed("entry · e-1") }),
       ).toHaveAttribute("aria-expanded", "false");
       expect(second.closest("li")).toHaveFocus();
       expect(second.closest("li")).toHaveAttribute("tabindex", "-1");
@@ -88,10 +117,9 @@ describe("back from a kit", () => {
   it("opens the first row and moves nothing with no row in the hash", () => {
     renderQueue([row(), row({ id: "b", subjectId: "e-2" })]);
 
-    expect(screen.getByRole("button", { name: "entry · e-1" })).toHaveAttribute(
-      "aria-expanded",
-      "true",
-    );
+    expect(
+      screen.getByRole("button", { name: rowNamed("entry · e-1") }),
+    ).toHaveAttribute("aria-expanded", "true");
     expect(document.body).toHaveFocus();
   });
 });
@@ -145,9 +173,9 @@ describe("what a reviewer is shown", () => {
     expect(screen.queryByText(bracketed("fingerprint"))).toBeNull();
   });
 
-  it("names what is being reviewed", () => {
+  it("names what is being reviewed, in the row's head (R55·197)", () => {
     renderQueue([row({ subjectType: "product", subjectId: "p-9" })]);
-    expect(screen.getByText(/product · p-9/)).toBeInTheDocument();
+    expect(heads()).toStrictEqual(["product · p-9 [reports]"]);
   });
 });
 
@@ -252,6 +280,7 @@ describe("deciding", () => {
       .mockReturnValue(promise);
     render(
       <ReviewQueue
+        asOf={0}
         onDecided={vi.fn()}
         queue={[row()]}
         resolve={resolve}
@@ -373,7 +402,7 @@ describe("deciding", () => {
     ]);
 
     // The kicker, and the second press: the garment stays in its closet.
-    expect(screen.getByText(/garment photo · g-1/)).toBeInTheDocument();
+    expect(heads()).toStrictEqual(["garment photo · g-1 [classifier]"]);
     await user.selectOptions(
       screen.getByRole("combobox", { name: /Why it comes down/ }),
       "it's sexual or explicit",
@@ -404,15 +433,10 @@ describe("deciding", () => {
       }),
     ]);
 
-    const kicker = screen.getByRole("button", {
-      name: "garment photo · g-1 · @k_lopes",
-    });
-    // The source tag beside the kicker, and only there.
-    expect(kicker.nextElementSibling).toHaveTextContent(/^\[classifier\]$/u);
-    expect(kicker.nextElementSibling).toHaveClass(
-      "shrink-0",
-      "whitespace-nowrap",
-    );
+    // The head names the owner, and the source tag ends it, once.
+    expect(heads()).toStrictEqual([
+      "garment photo · g-1 · @k_lopes [classifier]",
+    ]);
     expect(screen.getAllByText(bracketed("classifier"))).toHaveLength(1);
     const photo = screen.getByRole("img", { name: "Reported garment" });
     expect(photo).toHaveAttribute(
@@ -450,7 +474,7 @@ describe("deciding", () => {
     ]);
 
     expect(
-      screen.getByRole("button", { name: "garment photo · g-1" }),
+      screen.getByRole("button", { name: rowNamed("garment photo · g-1") }),
     ).toBeVisible();
     expect(document.querySelector("[data-part='garment-line']")).toBeNull();
   });
@@ -469,7 +493,7 @@ describe("deciding", () => {
     expect(document.querySelector("[data-part='garment-photo']")).toBeNull();
   });
 
-  it("keeps a kit row's source at its foot, and its photos as reported photos", () => {
+  it("puts every row's source in its head, and a kit's photos as reported photos (R55·197)", () => {
     renderQueue([
       row({
         subjectType: "photo",
@@ -479,18 +503,16 @@ describe("deciding", () => {
       }),
     ]);
 
-    // A kit photo's kicker does not name its owner: its kit does.
-    const kicker = screen.getByRole("button", { name: "photo · p-1" });
-    expect(kicker.nextElementSibling).toBeNull();
+    // R55·197: every head names its owner and ends with its source.
+    expect(heads()).toStrictEqual(["photo · p-1 · @k_lopes [classifier]"]);
+    expect(
+      screen
+        .getByText(bracketed("classifier"))
+        .closest("[data-part='row-head']"),
+    ).not.toBeNull();
     expect(screen.getByRole("img", { name: "Reported" })).toHaveClass("h-32");
     expect(document.querySelector("[data-part='garment-photo']")).toBeNull();
-    // At the row's foot, a child of the row, not of its header.
-    expect(
-      screen.getByText(bracketed("classifier")).closest("[data-part='source']")
-        ?.parentElement?.tagName,
-    ).toBe("LI");
   });
-
   it("goes back to the decision bar on Cancel, deciding nothing", async () => {
     const user = userEvent.setup();
     const { resolve } = renderQueue([row()]);
@@ -529,6 +551,7 @@ describe("deciding", () => {
       .mockReturnValue(promise);
     render(
       <ReviewQueue
+        asOf={0}
         onDecided={vi.fn()}
         queue={[row()]}
         resolve={resolve}
@@ -563,6 +586,7 @@ describe("deciding", () => {
       .mockRejectedValue(new Error("offline"));
     render(
       <ReviewQueue
+        asOf={0}
         onDecided={vi.fn()}
         queue={[row()]}
         resolve={resolve}
@@ -649,6 +673,7 @@ describe("deciding", () => {
       .mockRejectedValue(new Error("offline"));
     render(
       <ReviewQueue
+        asOf={0}
         onDecided={vi.fn()}
         queue={[row()]}
         resolve={resolve}
@@ -675,7 +700,7 @@ describe("deciding", () => {
     await waitFor(() => {
       expect(waitingRows()).toBe(1);
     });
-    expect(screen.getByText(/entry · e-2/)).toBeInTheDocument();
+    expect(heads()).toStrictEqual(["entry · e-2 [reports]"]);
   });
 
   it("decides one row at a time, the oldest first unless another is picked", async () => {
@@ -690,8 +715,10 @@ describe("deciding", () => {
       screen.queryByRole("button", { name: "Decide this one" }),
     ).not.toBeInTheDocument();
     expect(screen.getAllByRole("combobox")).toHaveLength(1);
-    const first = screen.getByRole("button", { name: "entry · e-1" });
-    const second = screen.getByRole("button", { name: "entry · e-2" });
+    const first = screen.getByRole("button", { name: rowNamed("entry · e-1") });
+    const second = screen.getByRole("button", {
+      name: rowNamed("entry · e-2"),
+    });
     expect(first).toHaveAttribute("aria-expanded", "true");
     expect(second).toHaveAttribute("aria-expanded", "false");
 
@@ -718,7 +745,7 @@ describe("deciding", () => {
       row(),
       row({ id: "01HYYYYYYYYYYYYYYYYYYYYYYY", subjectId: "e-2" }),
     ]);
-    const next = screen.getByRole("button", { name: "entry · e-2" });
+    const next = screen.getByRole("button", { name: rowNamed("entry · e-2") });
 
     // Arriving on the page moves nothing.
     expect(document.body).toHaveFocus();
@@ -741,12 +768,16 @@ describe("deciding", () => {
 
     await user.click(screen.getByRole("button", { name: "Approve" }));
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "entry · e-2" })).toHaveFocus();
+      expect(
+        screen.getByRole("button", { name: rowNamed("entry · e-2") }),
+      ).toHaveFocus();
     });
     await user.click(screen.getByRole("button", { name: "Approve" }));
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "entry · e-3" })).toHaveFocus();
+      expect(
+        screen.getByRole("button", { name: rowNamed("entry · e-3") }),
+      ).toHaveFocus();
     });
     expect(waitingRows()).toBe(1);
   });
@@ -758,7 +789,7 @@ describe("deciding", () => {
       row({ id: "01HYYYYYYYYYYYYYYYYYYYYYYY", subjectId: "e-2" }),
     ]);
     await user.click(screen.getByRole("button", { name: "Approve" }));
-    const next = screen.getByRole("button", { name: "entry · e-2" });
+    const next = screen.getByRole("button", { name: rowNamed("entry · e-2") });
     await waitFor(() => {
       expect(next).toHaveFocus();
     });
@@ -777,20 +808,21 @@ describe("deciding", () => {
       row({ id: "01HYYYYYYYYYYYYYYYYYYYYYYY", subjectId: "e-2" }),
       row({ id: "01HXXXXXXXXXXXXXXXXXXXXXXX", subjectId: "e-3" }),
     ]);
-    await user.click(screen.getByRole("button", { name: "entry · e-2" }));
+    await user.click(
+      screen.getByRole("button", { name: rowNamed("entry · e-2") }),
+    );
 
     await user.click(screen.getByRole("button", { name: "Approve" }));
 
     // A reviewer working down from the middle keeps their place.
-    const third = screen.getByRole("button", { name: "entry · e-3" });
+    const third = screen.getByRole("button", { name: rowNamed("entry · e-3") });
     await waitFor(() => {
       expect(third).toHaveFocus();
     });
     expect(third).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("button", { name: "entry · e-1" })).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    );
+    expect(
+      screen.getByRole("button", { name: rowNamed("entry · e-1") }),
+    ).toHaveAttribute("aria-expanded", "false");
   });
 
   it("opens the row before when the last one was decided", async () => {
@@ -800,11 +832,15 @@ describe("deciding", () => {
       row({ id: "01HYYYYYYYYYYYYYYYYYYYYYYY", subjectId: "e-2" }),
       row({ id: "01HXXXXXXXXXXXXXXXXXXXXXXX", subjectId: "e-3" }),
     ]);
-    await user.click(screen.getByRole("button", { name: "entry · e-3" }));
+    await user.click(
+      screen.getByRole("button", { name: rowNamed("entry · e-3") }),
+    );
 
     await user.click(screen.getByRole("button", { name: "Approve" }));
 
-    const second = screen.getByRole("button", { name: "entry · e-2" });
+    const second = screen.getByRole("button", {
+      name: rowNamed("entry · e-2"),
+    });
     await waitFor(() => {
       expect(second).toHaveFocus();
     });
@@ -890,23 +926,30 @@ describe("what a row tells the reviewer", () => {
     expect(screen.getByText(bracketed("1 person"))).toBeInTheDocument();
   });
 
-  it("shows the removal clock in the row's header, right of its name, on a row an intimate-image report started (round 35 #58b)", () => {
+  it("shows the removal clock at the head's right, in bold hi-viz, on a row an intimate-image report started (round 35 #58b, R55·197)", () => {
     renderQueue([
-      row({ reporterCount: 1, reasons: ["intimate"], due: "Due in 31h" }),
+      row({
+        reporterCount: 1,
+        reasons: ["intimate"],
+        due: "Due in 31h",
+        dueAt: 100,
+      }),
     ]);
-    const clock = document.querySelector('[data-part="due"]');
-    expect(clock).toHaveTextContent(/^Due in 31h$/u);
-    // Uppercase in CSS, so the accessible text stays in normal case.
-    expect(clock).toHaveClass("uppercase");
-    expect(clock?.firstElementChild).toHaveClass("font-mono");
-    // The header: the row's opener, then the clock beside it.
     const opener = screen.getByRole("button", { expanded: true });
-    expect(opener.nextElementSibling).toBe(clock);
-    // 168.3: the title is one line, whole in its title; the clock keeps
-    // its width (N3-10).
-    expect(opener).toHaveClass("min-w-0", "truncate");
-    expect(opener).toHaveAttribute("title", opener.textContent);
-    expect(clock).toHaveClass("shrink-0", "whitespace-nowrap");
+    const clock = within(opener).getByText("Due in 31h");
+    expect(clock).toHaveClass(
+      "font-mono",
+      "uppercase",
+      "font-semibold",
+      "text-hiviz-text",
+    );
+    expect(clock).not.toHaveClass("bg-hi-viz");
+    // Beside the head, keeping its width; the head is one line, whole in
+    // its title (N3-10).
+    expect(clock.parentElement).toHaveClass("shrink-0", "whitespace-nowrap");
+    const head = opener.querySelector("[data-part='row-head']");
+    expect(head).toHaveClass("truncate");
+    expect(head).toHaveAttribute("title", "e-1");
     // The brackets stay about people.
     expect(screen.getByText(bracketed("1 person"))).toBeInTheDocument();
     expect(screen.queryByText(bracketed("Due in 31h"))).toBeNull();
@@ -917,6 +960,126 @@ describe("what a row tells the reviewer", () => {
     ).toBeInTheDocument();
   });
 
+  it("shortens an id that stands in for a label to its first and last four, whole in the title (R55·197)", () => {
+    renderQueue([
+      row({ subjectType: "photo", subjectId: "01M7738DQS3ABCDEFGHJKBGCG" }),
+    ]);
+    expect(heads()).toStrictEqual(["photo · 01M7…BGCG [reports]"]);
+    expect(document.querySelector("[data-part='row-head']")).toHaveAttribute(
+      "title",
+      "01M7738DQS3ABCDEFGHJKBGCG",
+    );
+  });
+
+  it("sums a closed row up by why it is here (R55·197)", () => {
+    renderQueue([
+      row({ id: "a" }),
+      row({
+        id: "b",
+        source: "classifier",
+        reporterCount: 0,
+        reasons: [],
+      }),
+      row({ id: "c", source: "unscreened", reporterCount: 0, reasons: [] }),
+      row({
+        id: "d",
+        subjectType: "profile",
+        reporterCount: 0,
+        reasons: [],
+        subject: { photoKeys: [], handleFlagged: true },
+      }),
+      row({ id: "e", reporterCount: 1, reasons: ["explicit"] }),
+    ]);
+    const summaries = [
+      ...document.querySelectorAll("[data-part='row-summary']"),
+    ].map((summary) => summary.textContent);
+    expect(summaries).toStrictEqual([
+      "Nobody reported this.",
+      "Uploaded over a day ago and still not screened: the classifier has not answered for it. Nobody but its owner sees it while it waits.",
+      "The hourly re-check flagged a handle this runner already has. Nothing is hidden while it waits.",
+      "1 person · The photo shows someone inappropriately",
+    ]);
+  });
+
+  it("names a row's strip by everything it shows: head, summary, age (R55·197; WCAG 2.5.3)", () => {
+    renderQueue([row(), row({ id: "b", subjectId: "e-2" })]);
+    const closed = screen.getByRole("button", { expanded: false });
+    expect(closed).toHaveAccessibleName(
+      "entry · e-2 [reports] 3 people · The photo shows someone inappropriately 0m",
+    );
+    // The fold's mark is drawn, not said (R56·244.2): ▸ closed, ▾ open.
+    const open = screen.getByRole("button", { expanded: true });
+    expect(within(closed).getByText("▸")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(within(open).getByText("▾")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("draws OVERDUE as a filled hi-viz tag once the 48 hours run out (R55·197)", () => {
+    // Due this very second counts as out: the clock reads OVERDUE at dueAt.
+    render(
+      <ReviewQueue
+        asOf={1_755_172_800}
+        queue={[
+          row({
+            reporterCount: 1,
+            reasons: ["intimate"],
+            due: "Overdue",
+            dueAt: 1_755_172_800,
+          }),
+        ]}
+        resolve={vi.fn<Props["resolve"]>()}
+        reviewHandle={vi.fn<Props["reviewHandle"]>()}
+        onDecided={vi.fn<() => void>()}
+      />,
+    );
+    const tag = within(
+      screen.getByRole("button", { expanded: true }),
+    ).getByText("Overdue");
+    expect(tag).toHaveClass("bg-hi-viz", "text-accent-ink", "font-semibold");
+  });
+
+  it("dates a row with no clock by how long it has waited (R55·197)", () => {
+    render(
+      <ReviewQueue
+        asOf={1_755_000_000 + 4 * 3600 + 60}
+        queue={[row({ source: "classifier", reporterCount: 0, reasons: [] })]}
+        resolve={vi.fn<Props["resolve"]>()}
+        reviewHandle={vi.fn<Props["reviewHandle"]>()}
+        onDecided={vi.fn<() => void>()}
+      />,
+    );
+    const age = within(
+      screen.getByRole("button", { expanded: true }),
+    ).getByText("4h");
+    expect(age).toHaveClass("text-muted");
+  });
+
+  it("draws a row as a --panel card, its open body and bar under hairlines (R55·197)", () => {
+    renderQueue([row(), row({ id: "b", subjectId: "e-2" })]);
+    const [open, closed] = screen.getAllByRole("listitem");
+    expect(open).toHaveClass("rounded-card", "border", "bg-panel");
+    expect(open?.querySelector("[data-part='row-body']")).toHaveClass(
+      "border-t",
+      "border-hairline",
+      "p-4",
+    );
+    expect(open?.querySelector("[data-part='row-bar']")).toHaveClass(
+      "border-t",
+      "border-hairline",
+    );
+    // The waiting list's rows stand 12 apart.
+    expect(open?.parentElement).toHaveClass("gap-3");
+    // A closed row is its head, a one-line summary and the fold's mark.
+    expect(closed?.querySelector("[data-part='row-body']")).toBeNull();
+    const summary = closed?.querySelector("[data-part='row-summary']");
+    expect(summary).toHaveTextContent(
+      "3 people · The photo shows someone inappropriately",
+    );
+    expect(summary).toHaveClass("truncate");
+    expect(open?.querySelector("[data-part='row-summary']")).toBeNull();
+  });
   it("says what intimate means on a row an intimate-image report started (D-161)", () => {
     renderQueue([
       row({ reporterCount: 1, reasons: ["intimate"], due: "Due in 31h" }),
@@ -933,6 +1096,7 @@ describe("what a row tells the reviewer", () => {
   it("puts the statutory line directly under the reason, above the fold (R47·126)", () => {
     render(
       <ReviewQueue
+        asOf={0}
         onDecided={vi.fn()}
         queue={[
           row({ reporterCount: 1, reasons: ["intimate"], due: "Due in 31h" }),
@@ -1080,6 +1244,7 @@ const CLEAR_REFUSED =
 function renderStuck(resolve: Props["resolve"]): void {
   render(
     <ReviewQueue
+      asOf={0}
       onDecided={vi.fn()}
       queue={[stuck("missing_file")]}
       resolve={resolve}
@@ -1234,6 +1399,7 @@ describe("a photo still pending a day after upload (D-157)", () => {
       .mockResolvedValue({ outcome: "already_resolved" });
     render(
       <ReviewQueue
+        asOf={0}
         onDecided={vi.fn()}
         queue={[stuck("missing_file")]}
         resolve={resolve}
@@ -1255,6 +1421,7 @@ describe("a photo still pending a day after upload (D-157)", () => {
       .mockResolvedValue({ outcome: "not_found" });
     render(
       <ReviewQueue
+        asOf={0}
         onDecided={vi.fn()}
         queue={[stuck("unscreened")]}
         resolve={resolve}
@@ -1298,7 +1465,9 @@ describe("a handle the re-ask flagged (D-97)", () => {
     // a content row names its kind, and the re-check's line where a
     // content row lists what the reporters said.
     expect(
-      screen.getByRole("button", { name: "handle · re-check · quadzilla_69" }),
+      screen.getByRole("button", {
+        name: rowNamed("handle · re-check · quadzilla_69"),
+      }),
     ).toBeInTheDocument();
     expect(document.querySelector("[data-part='why-here']")).toHaveTextContent(
       /^The hourly re-check flagged a handle this runner already has\. Nothing is hidden while it waits\.$/u,
@@ -1392,6 +1561,7 @@ describe("a handle the re-ask flagged (D-97)", () => {
       .mockReturnValue(promise);
     render(
       <ReviewQueue
+        asOf={0}
         onDecided={vi.fn()}
         queue={[flagged()]}
         resolve={vi.fn()}
@@ -1466,7 +1636,9 @@ describe("a handle the re-ask flagged (D-97)", () => {
         .mockResolvedValue({ outcome: "moved", username: "dunk_runs" }),
     );
     expect(
-      screen.getByRole("button", { name: "handle · re-check · quadzilla_69" }),
+      screen.getByRole("button", {
+        name: rowNamed("handle · re-check · quadzilla_69"),
+      }),
     ).toBeInTheDocument();
 
     await user.selectOptions(
@@ -1483,7 +1655,9 @@ describe("a handle the re-ask flagged (D-97)", () => {
     );
     expect(waitingRows()).toBe(1);
     expect(
-      screen.getByRole("button", { name: "handle · re-check · dunk_runs" }),
+      screen.getByRole("button", {
+        name: rowNamed("handle · re-check · dunk_runs"),
+      }),
     ).toBeInTheDocument();
     // Still open, with its decision, for Keep or another Rename.
     expect(screen.getByRole("button", { name: "Keep" })).toBeInTheDocument();
@@ -1497,7 +1671,7 @@ describe("a handle the re-ask flagged (D-97)", () => {
     ]);
 
     expect(
-      screen.getByRole("button", { name: "handle · re-check · u-1" }),
+      screen.getByRole("button", { name: rowNamed("handle · re-check · u-1") }),
     ).toBeInTheDocument();
   });
 
@@ -1513,7 +1687,7 @@ describe("a handle the re-ask flagged (D-97)", () => {
     expect(screen.queryByRole("button", { name: "Keep" })).toBeNull();
     // Its kind is its own, and the reporters speak for it.
     expect(
-      screen.getByRole("button", { name: "profile · dee" }),
+      screen.getByRole("button", { name: rowNamed("profile · dee") }),
     ).toBeInTheDocument();
     expect(document.querySelector("[data-part='why-here']")).toBeNull();
   });
@@ -1537,6 +1711,7 @@ function renderWithFold(queue: readonly QueueRow[]) {
     .mockResolvedValue([]);
   render(
     <ReviewQueue
+      asOf={0}
       onDecided={vi.fn()}
       queue={queue}
       resolve={vi

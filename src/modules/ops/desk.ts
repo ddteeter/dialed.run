@@ -66,6 +66,11 @@ export interface TodayCounts {
    */
   readonly flaggedAccounts: number;
   /**
+   * When the longest-flagged of those was flagged (epoch seconds); absent
+   * at zero. Today's flagged card captions it "OLDEST · 2D" (R55·196).
+   */
+  readonly oldestFlaggedAt: number | undefined;
+  /**
    * Rows on the Desk's Corrections queue (R48·130): a product, field and
    * suggested value each, however many runners said it. The rail's count.
    */
@@ -85,6 +90,11 @@ export interface TodayCounts {
    * Today says so while it is today's.
    */
   readonly digestUnconfirmedAt: number | undefined;
+  /**
+   * When the daily digest last ran, from its heartbeat; absent before its
+   * first run. The rail's footer prints it (R55·194).
+   */
+  readonly lastDigestAt: number | undefined;
   /**
    * Outbox rows that were due when the last daily digest started and are
    * due still: what its drain could not reach (design 168). A line on
@@ -178,47 +188,45 @@ export async function todayCounts(): Promise<TodayCounts> {
   const weekAgo = now - WEEK_SECONDS;
   const dayStart = now - (now % DAY_SECONDS);
   const waiting = await pendingReviewCount();
-  const [
-    review,
-    bans,
-    flagged,
-    gave,
-    unconfirmed,
-    behind,
-    decided,
-    corrections,
-  ] = await db.batch([
-    db
-      .select({
-        source: reviewQueue.source,
-        rows: count(),
-        oldest: sql<number>`min(${reviewQueue.createdAt})`,
-      })
-      .from(reviewQueue)
-      .where(eq(reviewQueue.status, "pending"))
-      .groupBy(reviewQueue.source),
-    banCountsOf(db, weekAgo),
-    flaggedCountOf(db),
-    // Grouped by a constant (not `1`, which would name the count), so an
-    // empty table is no row rather than a NULL oldest. A scan of
-    // `gave_up`, which holds only what is still owed an operator: retried
-    // and dropped rows leave it.
-    db
-      .select({
-        rows: count(),
-        oldest: sql<number>`min(${gaveUp.firstFailedAt})`,
-      })
-      .from(gaveUp)
-      .groupBy(sql`'gave_up'`),
-    // The digest's skip mark, by its primary key (OPS-11).
-    db
-      .select({ at: cronCheckpoints.lastRunAt })
-      .from(cronCheckpoints)
-      .where(eq(cronCheckpoints.cronName, DIGEST_UNCONFIRMED)),
-    outboxBehindOf(db),
-    decidedSinceOf(db, dayStart),
-    waitingCorrectionsCountOf(db),
-  ]);
+  const [review, bans, flagged, gave, marks, behind, decided, corrections] =
+    await db.batch([
+      db
+        .select({
+          source: reviewQueue.source,
+          rows: count(),
+          oldest: sql<number>`min(${reviewQueue.createdAt})`,
+        })
+        .from(reviewQueue)
+        .where(eq(reviewQueue.status, "pending"))
+        .groupBy(reviewQueue.source),
+      banCountsOf(db, weekAgo),
+      flaggedCountOf(db),
+      // Grouped by a constant (not `1`, which would name the count), so an
+      // empty table is no row rather than a NULL oldest. A scan of
+      // `gave_up`, which holds only what is still owed an operator: retried
+      // and dropped rows leave it.
+      db
+        .select({
+          rows: count(),
+          oldest: sql<number>`min(${gaveUp.firstFailedAt})`,
+        })
+        .from(gaveUp)
+        .groupBy(sql`'gave_up'`),
+      // The digest's skip mark (OPS-11) and its own heartbeat (the rail's
+      // LAST DIGEST, R55·194), by their primary keys.
+      db
+        .select({
+          name: cronCheckpoints.cronName,
+          at: cronCheckpoints.lastRunAt,
+        })
+        .from(cronCheckpoints)
+        .where(
+          inArray(cronCheckpoints.cronName, [DIGEST_UNCONFIRMED, DIGEST_CRON]),
+        ),
+      outboxBehindOf(db),
+      decidedSinceOf(db, dayStart),
+      waitingCorrectionsCountOf(db),
+    ]);
   const [gaveUpGroup] = gave;
   return {
     waiting,
@@ -236,10 +244,13 @@ export async function todayCounts(): Promise<TodayCounts> {
     bansThisWeek: bans.find((g) => g.recent === 1)?.rows ?? 0,
     bansAllTime: sumOf(bans),
     flaggedAccounts: sumOf(flagged),
+    // An aggregate is always one row; its min is null at zero flagged.
+    oldestFlaggedAt: flagged.flatMap((g) => g.oldest ?? [])[0],
     corrections: sumOf(corrections),
     gaveUp: gaveUpGroup?.rows ?? 0,
     oldestGaveUpAt: gaveUpGroup?.oldest,
-    digestUnconfirmedAt: unconfirmed[0]?.at,
+    digestUnconfirmedAt: checkpointAt(marks, DIGEST_UNCONFIRMED),
+    lastDigestAt: checkpointAt(marks, DIGEST_CRON),
     outboxBehind: sumOf(behind),
     oldestBehindAt:
       behind.length === 0
@@ -293,6 +304,11 @@ export interface DeskToday {
    * on Today; empty on an ordinary hour.
    */
   readonly breakers: readonly CeilingReading[];
+  /**
+   * The operator looking, by their runner handle, for the Desk's top bar
+   * (R55·194); absent for an operator with no profile row.
+   */
+  readonly operatorHandle: string | undefined;
 }
 
 /**
@@ -324,7 +340,29 @@ async function unconfirmedOperators(): Promise<readonly SkippedOperator[]> {
   }));
 }
 
-export async function deskToday(): Promise<DeskToday> {
+/**
+A checkpoint's time, by its cron's name; absent if it has never run.
+*/
+function checkpointAt(
+  marks: readonly { name: string; at: number }[],
+  name: string,
+): number | undefined {
+  return marks.find((mark) => mark.name === name)?.at;
+}
+
+/**
+ * The viewer's runner handle, for the shell's top bar (R55·194), by the
+ * profile's primary key; absent for an operator with no profile row.
+ */
+async function handleOf(userId: string): Promise<string | undefined> {
+  const [profile] = await coreDb()
+    .select({ handle: userProfiles.username })
+    .from(userProfiles)
+    .where(eq(userProfiles.userId, userId));
+  return profile?.handle ?? undefined;
+}
+
+export async function deskToday(viewerId: string): Promise<DeskToday> {
   const counts = await todayCounts();
   const asOf = nowSeconds();
   const at = counts.digestUnconfirmedAt;
@@ -335,5 +373,6 @@ export async function deskToday(): Promise<DeskToday> {
     asOf,
     skipped: isToday ? await unconfirmedOperators() : [],
     breakers: await overCeilings(coreDb(), asOf),
+    operatorHandle: await handleOf(viewerId),
   };
 }

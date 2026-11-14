@@ -17,7 +17,7 @@ function ManualRunPage() {
 
   return (
     <BelledLayout {...bell}>
-      <Page title="Log a run" width="panel">
+      <Page title="Log a run">
         <ManualRunForm submitRun={submitManualRun} />
       </Page>
     </BelledLayout>

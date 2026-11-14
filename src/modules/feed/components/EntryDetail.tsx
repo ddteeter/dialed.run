@@ -9,6 +9,7 @@ import type { Units } from "../../../lib/contracts";
 import type { NoticeBand as NoticeBandShape } from "../../safety";
 import { measuredLine, paceForms } from "../../../lib/contracts/measures";
 import {
+  COLUMN,
   Bracketed,
   FormStatus,
   GarminAttribution,
@@ -130,7 +131,7 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
   const isOwn = viewerId === entry.userId;
 
   return (
-    <div className="mx-auto flex w-full max-w-column flex-col gap-4 px-5 pt-6 wide:mx-0 wide:px-6">
+    <div className={`${COLUMN} flex flex-col gap-4 px-5 pt-6 wide:px-6`}>
       <FormStatus>{status}</FormStatus>
       <div className="flex items-center gap-3">
         {/* `exact`: the router marks a prefix match `aria-current="page"`,

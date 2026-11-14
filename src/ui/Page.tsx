@@ -21,39 +21,41 @@ import { useHydrated } from "./use-hydrated";
  * outside and this on the inside.
  */
 /**
- * DS3's two answers, and they were already the two widths this had — under
- * names that said how wide rather than what the surface is.
+ * The runner app's one column at width (Round 54 · 168.1): MEASURE.column,
+ * **centred** in the window from 720 up, the phone's own full width below
+ * it, where the viewport is narrower than the measure and `mx-auto` does
+ * nothing. It replaces DS3's "left-aligned inside the page measure", and
+ * the 390 panel that run detail, edit garment, notifications and the Call
+ * wore at width.
  *
- * **`panel`** is *"the phone screen, unchanged, centred at 390"*: a flow
- * step, a short form, anything that is an act. **`column`** is the reflow
- * rule — *"same markup, one column, max-width 620, **left-aligned inside
- * the page measure, not centred**, so it lines up with the wide screens'
- * primary column"*. That last clause is the whole reason the two are not
- * one prop with two numbers: they differ in alignment as well as width,
- * and only at width.
+ * Exported because a screen that draws its own column (the feed's, a
+ * garment's) is the same column, and a second copy of the class is how
+ * the left-aligned one survived on half of them.
+ */
+export const COLUMN = "mx-auto w-full max-w-column";
+
+/**
+ * **`column`** is every signed-in screen. **`panel`** is *"the phone
+ * screen, unchanged, centred at 390"* at every width, and is left for the
+ * system states and signed-out screens 168.1 does not name.
  */
 type PageWidth = "panel" | "column" | "step" | "close" | "table";
 
+/**
+ * An onboarding step: the panel on a phone, and from 720 the centred
+ * column every other screen is (168.1). A guess until Design answers #654:
+ * R49·138a's desk step was left-aligned and predates the rule. P3's close
+ * is the same width, with its band held to the column (`NowGoRun`); the
+ * two stay separate names because #654 may part them again.
+ */
+const STEP = "mx-auto max-w-panel wide:max-w-column";
+
 const WIDTH_CLASS: Readonly<Record<PageWidth, string>> = {
-  // Centred at every width. An act is a panel on the ground, and DS3 is
-  // explicit that it is centred and top-aligned.
   panel: "mx-auto max-w-panel",
-  // Centred on the phone, where the viewport is narrower than the measure
-  // and `mx-auto` therefore does nothing; left-aligned from 720 up, where
-  // it would otherwise drift away from the primary column of the two-column
-  // screens beside it.
-  column: "mx-auto max-w-column wide:mx-0",
-  // An onboarding step (round 49, R49·138a): the panel below 1040, and
-  // from 1040 up "no panel" — the step sits in the page column,
-  // left-aligned like every other screen, at a desk measure. The board
-  // writes 560, which MEASURE does not have; the contract wins, so it is
-  // MEASURE.column until Design says otherwise (design 184).
-  step: "mx-auto max-w-panel desk:mx-0 desk:max-w-column",
-  // P3, the close: a step whose hi-viz band "runs the full column width"
-  // at desk, so the page is unbounded there and `NowGoRun` holds its own
-  // body and bar to the measure.
-  close: "mx-auto max-w-panel desk:mx-0 desk:max-w-page",
-  // The Desk's tables, Runners, Access and Review (Round 54 · 168.3): the
+  column: COLUMN,
+  step: STEP,
+  close: STEP,
+  // The Desk's tables, Runners, Codes and Review (Round 54 · 168.3): the
   // whole width beside the rail, up to MEASURE.page, left-aligned.
   table: "max-w-page",
 };

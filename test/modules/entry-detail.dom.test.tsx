@@ -24,6 +24,7 @@ import {
 } from "./feed-fixtures";
 import { useUnconfirmedRefusal } from "../../src/ui/unconfirmed-refusal";
 import { bracketed } from "../ui/bracketed";
+import { expectTheColumn } from "../ui/the-column";
 
 type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
 type Item = Entry["items"][number];
@@ -145,6 +146,7 @@ function partsInOrder(): string[] {
 describe("EntryDetail: Garmin's credit (G1)", () => {
   it("is the first line under the title on a Garmin run", async () => {
     await renderFeedScreen(detail({ deviceName: "Garmin" }));
+    expectTheColumn();
     const credit = part("garmin-attribution");
     expect(credit).toHaveTextContent(/^Garmin$/u);
     expect(credit?.previousElementSibling).toContainElement(

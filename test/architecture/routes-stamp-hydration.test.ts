@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   codeOnly,
   isInstrumented,
+  isLayoutRoute,
   repoPath,
   withoutComments,
 } from "./source-text";
@@ -142,6 +143,7 @@ for (const [path, source] of byPath) {
     // Stryker rewrites source in its sandbox, and Vite's `?raw` inlines the
     // rewrite — so a mutation run would scan its own instrumentation.
     isInstrumented(source) ||
+    isLayoutRoute(source) ||
     !RENDERS_A_SCREEN.test(codeOnly(source))
   )
     continue;

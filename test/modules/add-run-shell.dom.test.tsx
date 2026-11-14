@@ -22,10 +22,12 @@ describe("AddRunShell", () => {
     // The title shares its row with the phone's bell (Design 169.1).
     expect(heading.parentElement).toHaveClass("flex", "justify-between");
     expect(heading.parentElement?.parentElement).toHaveClass(
+      "mx-auto",
       "max-w-column",
-      "wide:mx-0",
       "desk:max-w-page",
     );
+    // Centred from 720 (168.1), never left-aligned.
+    expect(heading.parentElement?.parentElement).not.toHaveClass("wide:mx-0");
     expect(screen.getByText("The well")).toBeVisible();
   });
 });

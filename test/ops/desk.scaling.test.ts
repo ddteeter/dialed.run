@@ -97,7 +97,7 @@ async function seededToday(n: number, openedAt = nowSeconds() - 2 * HOUR) {
       cronName: "digest-unconfirmed",
       lastRunAt: Math.floor(nowSeconds() / DAY) * DAY,
     });
-  return counted(deskToday);
+  return counted(() => deskToday("op-viewer"));
 }
 
 /**

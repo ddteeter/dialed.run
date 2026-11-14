@@ -91,10 +91,12 @@ describe("todayCounts", () => {
       bansThisWeek: 0,
       bansAllTime: 0,
       flaggedAccounts: 0,
+      oldestFlaggedAt: undefined,
       corrections: 0,
       gaveUp: 0,
       oldestGaveUpAt: undefined,
       digestUnconfirmedAt: undefined,
+      lastDigestAt: undefined,
       outboxBehind: 0,
       oldestBehindAt: undefined,
     });
@@ -105,13 +107,15 @@ describe("todayCounts", () => {
     await coreDb()
       .insert(moderationActions)
       .values([
+        { ...intimateRemoval("poster"), createdAt: 900 },
         intimateRemoval("poster"),
-        intimateRemoval("poster"),
-        intimateRemoval("other"),
+        { ...intimateRemoval("other"), createdAt: 700 },
       ]);
 
     const counts = await todayCounts();
     expect(counts.flaggedAccounts).toBe(2);
+    // The earliest flagging removal, not the first recorded (R55·196).
+    expect(counts.oldestFlaggedAt).toBe(500);
     await coreDb().delete(moderationActions);
   });
 
@@ -301,7 +305,7 @@ describe("deskToday", () => {
     await queueRow();
     const before = nowSeconds();
 
-    const today = await deskToday();
+    const today = await deskToday("op-viewer");
 
     expect(today.counts.waiting).toBe(1);
     expect(today.asOf).toBeGreaterThanOrEqual(before);
@@ -363,7 +367,7 @@ describe("deskToday's skipped operators", () => {
     const startOfDay = Math.floor(nowSeconds() / DAY) * DAY;
     await markSkip(startOfDay);
 
-    const { skipped } = await deskToday();
+    const { skipped } = await deskToday("op-viewer");
 
     expect(skipped).toStrictEqual([
       { userId: "op-jess", handle: "jess", address: "je•••@gmail.com" },
@@ -372,9 +376,9 @@ describe("deskToday's skipped operators", () => {
   });
 
   it("names nobody once the day has turned, or when no digest skipped anyone", async () => {
-    const { skipped: beforeAnySkip } = await deskToday();
+    const { skipped: beforeAnySkip } = await deskToday("op-viewer");
     await markSkip(Math.floor(nowSeconds() / DAY) * DAY - 1);
-    const { skipped: yesterdays } = await deskToday();
+    const { skipped: yesterdays } = await deskToday("op-viewer");
 
     expect(beforeAnySkip).toStrictEqual([]);
     expect(yesterdays).toStrictEqual([]);
@@ -432,6 +436,38 @@ async function dueAt(
  * by the digest's heartbeat rather than `now`, so a row that fell due
  * after the digest is the next drain's, not a backlog.
  */
+describe("deskToday's shell facts (R55·194)", () => {
+  beforeEach(async () => {
+    await coreDb().delete(cronCheckpoints);
+    await coreDb()
+      .delete(user)
+      .where(inArray(user.id, ["op-ana", "op-bo"]));
+    await coreDb()
+      .delete(userProfiles)
+      .where(inArray(userProfiles.userId, ["op-ana", "op-bo"]));
+    await account("op-ana", "ana@example.com", true, "ana_ops");
+    await account("op-bo", "bo@example.com", true);
+  });
+
+  it("names the viewer by their handle, and nobody else's", async () => {
+    const ana = await deskToday("op-ana");
+    const bo = await deskToday("op-bo");
+    expect(ana.operatorHandle).toBe("ana_ops");
+    expect(bo.operatorHandle).toBeUndefined();
+  });
+
+  it("dates the daily digest's last run, and nothing before its first", async () => {
+    // Another cron's heartbeat is not the digest's.
+    await markSkip(RAN_AT - 5);
+    const before = await deskToday("op-ana");
+    expect(before.counts.lastDigestAt).toBeUndefined();
+
+    await heartbeat("daily-digest");
+    const after = await deskToday("op-ana");
+    expect(after.counts.lastDigestAt).toBe(RAN_AT);
+  });
+});
+
 describe("todayCounts' outbox behind", () => {
   beforeEach(async () => {
     await coreDb().delete(outbox);
@@ -503,11 +539,11 @@ describe("deskToday's breakers (design 164)", () => {
 
   it("lists each cause at its ceiling this hour, and nothing on an ordinary hour", async () => {
     await opened("fingerprint", FINGERPRINT_HOLDS_PER_HOUR - 1, nowSeconds());
-    const ordinary = await deskToday();
+    const ordinary = await deskToday("op-viewer");
     expect(ordinary.breakers).toStrictEqual([]);
 
     await opened("fingerprint", 1, nowSeconds());
-    const { breakers } = await deskToday();
+    const { breakers } = await deskToday("op-viewer");
     expect(breakers).toStrictEqual([
       {
         cause: "fingerprint",

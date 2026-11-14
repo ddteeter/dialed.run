@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
-import { Icon, PhoneBell } from "../../../ui";
+import { COLUMN, Icon, PhoneBell } from "../../../ui";
 import type { OtherProfile as OtherProfileData } from "../profiles";
 import type { ProfileAtHandle } from "../profiles";
 import type { FollowAction } from "./Follow";
@@ -68,7 +68,7 @@ const RUNNER_GONE = "This runner isn't here.";
  */
 function NoRunnerHere({ children }: Readonly<{ children: string }>) {
   return (
-    <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6 wide:mx-0 wide:px-6">
+    <div className={`${COLUMN} flex flex-col gap-6 px-5 pt-6 wide:px-6`}>
       {/* `exact`: the router marks a prefix match current, and this page
           sits under /feed. */}
       <div className="flex items-center justify-between">

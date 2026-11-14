@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 
 import {
+  COLUMN,
   classifyFailure,
   FailureBand,
   FormStatus,
@@ -105,7 +106,7 @@ export function RunnerSearch({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6 wide:mx-0 wide:px-6">
+    <div className={`${COLUMN} flex flex-col gap-6 px-5 pt-6 wide:px-6`}>
       <FormStatus>{status === "" ? said : status}</FormStatus>
       {/* A 44px row, centred as Feed's title row is: the two titles sit
           on one line, so the way in and back does not jump (P2b-12). */}

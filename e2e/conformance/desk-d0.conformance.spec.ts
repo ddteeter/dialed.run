@@ -13,10 +13,10 @@
  *
  * What it does not compare, on purpose: the board's own values (4, 23, 3,
  * "OLDEST · 19H") are the drawing's data, not the app's — Today's rail
- * count among them, which is the Gave up count; "@mara ·
- * OPERATOR · SIGN OUT" is a design delta (no handle read before ACC-1, and
- * sign-out is 126's component); and "SCREENING · OK / LAST DIGEST" is
- * undrawn in words the build has anything behind yet.
+ * count among them, which is the Gave up count. The top bar's "@mara ·
+ * OPERATOR · SIGN OUT" and the rail's footer are built since R55·194, a
+ * round the docs pass has not imported yet, so they are read here from
+ * the app alone.
  */
 import { expect, test } from "../support/a11y";
 
@@ -75,8 +75,12 @@ test("D0: the rail's destinations and Today's three numbers, as drawn", async ({
     .locator('html[data-hydrated="true"]')
     .waitFor({ state: "attached" });
 
+  // R55·194: [dialed] DESK heads the top bar, the operator at its right.
+  const bar = page.getByRole("banner");
+  await expect(bar.getByText("Desk", { exact: true })).toBeVisible();
+  await expect(bar.getByText("Operator ·")).toBeVisible();
   const rail = page.getByRole("navigation", { name: "Desk" });
-  await expect(rail.getByText("Desk", { exact: true })).toBeVisible();
+  await expect(rail.getByText("Screening · OK")).toBeVisible();
   const entries = await rail.getByRole("listitem").allTextContents();
   // A rail entry reads "Review4" when it carries a count, so each is
   // matched by the label it starts with.

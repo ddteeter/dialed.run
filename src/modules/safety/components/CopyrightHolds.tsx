@@ -163,7 +163,17 @@ const CASE_OVER = {
 
 type CaseEnd = keyof typeof CASE_OVER;
 
-const CASE_ENDS: readonly CaseEnd[] = ["delete", "restore"];
+/**
+ * The two presses, in R55·199's order: Restore, the one that undoes
+ * nothing, keeps the chalk; Delete, which cannot be undone, is the
+ * outline pill, and asks first. One chalk pill per bar (round 44 #105).
+ */
+const CASE_ENDS: readonly CaseEnd[] = ["restore", "delete"];
+
+const CASE_END_PILL: Readonly<Record<CaseEnd, string>> = {
+  restore: CHALK_PILL,
+  delete: QUIET_PILL,
+};
 
 function HoldRow({
   hold,
@@ -346,7 +356,7 @@ function CaseOver({
             key={end}
             ref={end === back ? focusOn : undefined}
             type="button"
-            className={`target ${CHALK_PILL}`}
+            className={`target ${CASE_END_PILL[end]}`}
             onClick={() => {
               setAsking(end);
             }}

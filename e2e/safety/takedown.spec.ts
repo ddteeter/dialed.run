@@ -30,6 +30,7 @@ import {
   handleOf,
   removeRunnerRows,
   seedRunnerRow,
+  queueRowFor,
 } from "./moderation-support";
 
 test("a copy posted again waits on Review, saying what it matched", async ({
@@ -119,10 +120,7 @@ test("a copy posted again waits on Review, saying what it matched", async ({
     await hydrated(page);
     // Its Review row, by the row's own label: the photo may also show in
     // an earlier run's "Matching photos".
-    const copy = page
-      .getByRole("listitem")
-      .filter({ has: page.locator("[data-part='removed-match']") })
-      .filter({ hasText: `photo · ${copyPhotoId}` });
+    const copy = queueRowFor(page, copyPhotoId);
     await copy.scrollIntoViewIfNeeded();
     await expect(copy.locator("[data-part='removed-match']")).toContainText(
       "A close match to an image removed as intimate on",

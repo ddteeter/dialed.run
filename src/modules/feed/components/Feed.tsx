@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { ComponentProps, ReactNode } from "react";
 
 import type { Units } from "../../../lib/contracts";
-import { FormStatus, Mono, PhoneBell } from "../../../ui";
+import { COLUMN, FormStatus, Mono, PhoneBell } from "../../../ui";
 import { isProvidersReading } from "../strip";
 import type { FeedItem } from "../feed";
 import { isBacklogWorthOpening } from "../route-decisions";
@@ -99,7 +99,7 @@ export function Feed(props: Readonly<FeedProps>) {
     // `mx-auto` below 720 only, for DS3's reason: a reflowed column is
     // "left-aligned inside the page measure, not centred, so it lines up
     // with the wide screens' primary column".
-    <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6 wide:mx-0 wide:px-6">
+    <div className={`${COLUMN} flex flex-col gap-6 px-5 pt-6 wide:px-6`}>
       {confirmBand}
       <div className="flex items-center gap-3">
         <h1 className="mr-auto font-display text-title uppercase">Feed</h1>

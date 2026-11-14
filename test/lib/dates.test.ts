@@ -17,6 +17,7 @@ import {
   timeOfDay,
   viewerClockLabel,
   viewerDayTimeLabel,
+  spanLabel,
 } from "../../src/lib/dates";
 
 /**
@@ -374,5 +375,20 @@ describe("homeZoneOf", () => {
   it("is owed for a missing zone, and a zone Intl refuses", () => {
     expect(homeZoneOf(undefined)).toStrictEqual({ homeZone: undefined });
     expect(homeZoneOf("Not/AZone")).toStrictEqual({ homeZone: undefined });
+  });
+});
+
+describe("spanLabel", () => {
+  it.each([
+    [-5, "0m"],
+    [59, "0m"],
+    [60, "1m"],
+    [3600 - 1, "59m"],
+    [3600, "1h"],
+    [86_400 - 1, "23h"],
+    [86_400, "1d"],
+    [3 * 86_400 + 3600, "3d"],
+  ])("says %d seconds as %s", (seconds, said) => {
+    expect(spanLabel(seconds)).toBe(said);
   });
 });

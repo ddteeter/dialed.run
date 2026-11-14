@@ -20,7 +20,11 @@ import {
   useDeskToday,
 } from "../../src/modules/ops/components/DeskPage";
 import { DeskShell } from "../../src/modules/ops/components/DeskShell";
-import { DeskTodayPage, Today } from "../../src/modules/ops/components/Today";
+import {
+  DeskTodayPage,
+  Today,
+  flaggedNote,
+} from "../../src/modules/ops/components/Today";
 import type { DeskToday, TodayCounts } from "../../src/modules/ops/desk";
 
 /**
@@ -54,15 +58,18 @@ function desk(counts: Partial<TodayCounts> = {}): DeskToday {
       bansThisWeek: 0,
       bansAllTime: 0,
       flaggedAccounts: 0,
+      oldestFlaggedAt: undefined,
       gaveUp: 0,
       oldestGaveUpAt: undefined,
       digestUnconfirmedAt: undefined,
+      lastDigestAt: undefined,
       outboxBehind: 0,
       oldestBehindAt: undefined,
       ...counts,
     },
     skipped: [],
     breakers: [],
+    operatorHandle: undefined,
   };
 }
 
@@ -97,15 +104,41 @@ describe("DeskShell", () => {
     expect(container.querySelector('[data-ground="ink"]')).toBeNull();
   });
 
-  it("marks itself as the Desk, for an operator", async () => {
+  it("heads every page with the bar: [dialed] DESK, and who is looking (R55·194)", async () => {
+    await renderWithRouter(
+      <DeskShell
+        current="today"
+        today={{ ...desk(), operatorHandle: "maya_ops" }}
+      >
+        <p>page</p>
+      </DeskShell>,
+    );
+
+    const bar = screen.getByRole("banner");
+    expect(within(bar).getByText("Desk")).toHaveClass("text-hiviz-text");
+    // The Desk's [dialed], with no .run, said in full.
+    expect(within(bar).queryByText(".run")).toBeNull();
+    expect(within(bar).getByText("dialed.run")).toHaveClass("sr-only");
+    // The handle in its own case; the role in capitals; at width only.
+    const operator = bar.querySelector("[data-part='operator']");
+    expect(operator).toHaveTextContent("@maya_ops · Operator ·");
+    expect(operator).toHaveClass("hidden", "wide:inline");
+    expect(operator).not.toHaveClass("uppercase");
+    expect(within(bar).getByText("Operator ·")).toHaveClass("uppercase");
+    // No sign-out was provided, so none is drawn.
+    expect(within(bar).queryByRole("button")).toBeNull();
+  });
+
+  it("names nobody in the bar for an operator with no handle", async () => {
     await renderWithRouter(
       <DeskShell current="today" today={desk()}>
         <p>page</p>
       </DeskShell>,
     );
 
-    expect(within(rail()).getByText("Desk")).toHaveClass("text-hiviz-text");
-    expect(within(rail()).getByText("Operator")).toBeInTheDocument();
+    expect(
+      screen.getByRole("banner").querySelector("[data-part='operator']"),
+    ).toHaveTextContent(/^Operator ·$/u);
   });
 
   it("names every destination in the rail, in order", async () => {
@@ -126,6 +159,7 @@ describe("DeskShell", () => {
       "Corrections",
       "Access",
       "Duplicates",
+      "Codes",
       "Runners",
     ]);
   });
@@ -148,6 +182,8 @@ describe("DeskShell", () => {
       ["Access", "/desk/access"],
       // D2, task 110: the last to be built.
       ["Duplicates", "/desk/duplicates"],
+      // R55·194: Codes, its own destination beside Access.
+      ["Codes", "/desk/codes"],
       ["Runners", "/desk/runners"],
     ]);
   });
@@ -161,10 +197,10 @@ describe("DeskShell", () => {
 
     const current = within(rail()).getByRole("link", { current: "page" });
     expect(current.textContent).toBe("Duplicates");
-    expect(current).toHaveClass("text-hiviz-text");
+    expect(current).toHaveClass("border-hi-viz");
   });
 
-  it("marks the current destination, in hi-viz", async () => {
+  it("marks the current destination by its edge, keeping hi-viz text for counts (R55·194/195)", async () => {
     await renderWithRouter(
       <DeskShell current="review" today={desk()}>
         <p>page</p>
@@ -174,9 +210,98 @@ describe("DeskShell", () => {
     const review = within(rail()).getByRole("link", { name: "Review" });
     const today = within(rail()).getByRole("link", { name: "Today" });
     expect(review).toHaveAttribute("aria-current", "page");
-    expect(review).toHaveClass("text-hiviz-text");
+    // A 2px hi-viz edge: the underline on a phone, the left bar at width,
+    // with the --panel fill and bold text there.
+    expect(review).toHaveClass(
+      "border-b-2",
+      "wide:border-b-0",
+      "wide:border-l-2",
+      "border-hi-viz",
+      "font-bold",
+      "wide:bg-panel",
+      "text-ink",
+    );
+    expect(review).not.toHaveClass("text-hiviz-text", "border-transparent");
     expect(today).not.toHaveAttribute("aria-current");
-    expect(today).toHaveClass("text-ink");
+    expect(today).toHaveClass("border-transparent", "text-ink");
+    expect(today).not.toHaveClass(
+      "border-hi-viz",
+      "font-bold",
+      "wide:bg-panel",
+    );
+  });
+
+  it("scrolls the current destination into the phone's row, and no other (R55·195)", async () => {
+    const scrolled: string[] = [];
+    const spy = vi
+      .spyOn(HTMLElement.prototype, "scrollIntoView")
+      .mockImplementation(function (this: HTMLElement, options) {
+        expect(options).toStrictEqual({ block: "nearest", inline: "nearest" });
+        scrolled.push(this.textContent);
+      });
+    await renderWithRouter(
+      <DeskShell current="codes" today={desk()}>
+        <p>page</p>
+      </DeskShell>,
+    );
+    expect(scrolled).toStrictEqual(["Codes"]);
+    spy.mockRestore();
+  });
+
+  it("is one sticky row on a phone and the rail beside the page from wide (R55·195)", async () => {
+    await renderWithRouter(
+      <DeskShell current="today" today={desk()}>
+        <p>page</p>
+      </DeskShell>,
+    );
+    expect(rail()).toHaveClass(
+      "sticky",
+      "top-0",
+      "overflow-x-auto",
+      "wide:static",
+      "wide:flex-col",
+      "wide:border-r",
+    );
+    expect(within(rail()).getByRole("list")).toHaveClass(
+      "flex",
+      "whitespace-nowrap",
+      "wide:flex-col",
+    );
+  });
+
+  it("says at the rail's foot that screening is OK and the digest has not run yet", async () => {
+    await renderWithRouter(
+      <DeskShell current="today" today={desk()}>
+        <p>page</p>
+      </DeskShell>,
+    );
+    const footer = rail().querySelector("[data-part='rail-footer']");
+    expect(footer).toHaveClass("hidden", "wide:flex");
+    const [screening, digest] = [...(footer?.children ?? [])];
+    expect(screening).toHaveTextContent("Screening · OK");
+    expect(screening).toHaveClass("text-muted");
+    expect(digest).toHaveTextContent("Last digest · Not yet");
+  });
+
+  it("says screening is holding, in hi-viz, while a breaker is over, and when the digest last ran (owner, #635)", async () => {
+    await renderWithRouter(
+      <DeskShell
+        current="today"
+        today={{
+          ...desk({ lastDigestAt: TUESDAY_NOON - 5 * 3600 }),
+          breakers: [
+            { cause: "fingerprint", isOver: true, count: 9, ceiling: 8 },
+          ],
+        }}
+      >
+        <p>page</p>
+      </DeskShell>,
+    );
+    const footer = rail().querySelector("[data-part='rail-footer']");
+    const [screening, digest] = [...(footer?.children ?? [])];
+    expect(screening).toHaveTextContent("Screening · Holding");
+    expect(screening).toHaveClass("text-hiviz-text");
+    expect(digest).toHaveTextContent("Last digest · 07:00");
   });
 
   it("counts what is waiting on the Review entry, in hi-viz", async () => {
@@ -298,8 +423,43 @@ describe("Today", () => {
       "4waiting for a decisionOldest · 19h",
       "1photo the screener couldn't finishHidden until you look",
       "0bans this week3 all time",
-      "0flagged accounts",
+      "0flagged accountsNone flagged",
     ]);
+  });
+
+  it("draws the four as --panel cards, two by two, the numeral in display type (R55·196)", async () => {
+    await renderToday(desk({ waiting: 4 }));
+    const list = screen.getByRole("list", { name: "Today" });
+    expect(list).toHaveClass("grid", "grid-cols-2", "gap-3");
+    const [first] = within(list).getAllByRole("listitem");
+    expect(first).toHaveClass("rounded-card", "border", "bg-panel", "p-5");
+    expect(within(first ?? document.body).getByText("4")).toHaveClass(
+      "font-display",
+      "text-display",
+    );
+  });
+
+  it("says HIDDEN UNTIL YOU LOOK in hi-viz while the screener left one, muted at zero (R55·196)", async () => {
+    const { unmount } = await renderToday(desk({ screenerUnfinished: 2 }));
+    expect(screen.getByText("Hidden until you look")).toHaveClass(
+      "text-hiviz-text",
+    );
+    unmount();
+    await renderToday(desk({ screenerUnfinished: 0 }));
+    expect(screen.getByText("Hidden until you look")).toHaveClass("text-muted");
+  });
+
+  it("keeps every other caption muted, even above zero", async () => {
+    await renderToday(
+      desk({
+        waiting: 3,
+        oldestWaitingAt: TUESDAY_NOON - 3600,
+        flaggedAccounts: 2,
+        oldestFlaggedAt: TUESDAY_NOON - 2 * 86_400,
+      }),
+    );
+    expect(screen.getByText("Oldest · 1h")).toHaveClass("text-muted");
+    expect(screen.getByText("Oldest · 2d")).toHaveClass("text-muted");
   });
 
   it("links flagged accounts to D8's Flagged filter, in hi-viz above zero, singular at one", async () => {
@@ -307,11 +467,13 @@ describe("Today", () => {
 
     const link = screen.getByRole("link", { name: "flagged account" });
     expect(link).toHaveAttribute("href", "/desk/runners?filter=flagged");
-    const count = link.closest("li")?.querySelector(".font-mono");
+    const card = link.closest("li");
+    const count = card?.querySelector(".font-display");
     expect(count).toHaveTextContent("1");
     expect(count).toHaveClass("text-hiviz-text");
-    // The board draws no line under it: only the count is in mono.
-    expect(link.closest("li")?.querySelectorAll(".font-mono")).toHaveLength(1);
+    // R55·196: the whole card opens it, the link stretched over the card.
+    expect(card).toHaveClass("relative");
+    expect(link).toHaveClass("after:absolute", "after:inset-0");
   });
 
   it("puts what needs a person in hi-viz, and nothing at zero or for bans", async () => {
@@ -359,6 +521,15 @@ describe("Today", () => {
     await renderToday(desk({ bansThisWeek: 1 }));
 
     expect(screen.getByText("ban this week")).toBeInTheDocument();
+  });
+});
+
+describe("flaggedNote", () => {
+  it("says NONE FLAGGED at zero, else how long the oldest has waited (R55·196)", () => {
+    expect(flaggedNote(undefined, TUESDAY_NOON)).toBe("None flagged");
+    expect(flaggedNote(TUESDAY_NOON - 2 * 86_400 - 5, TUESDAY_NOON)).toBe(
+      "Oldest · 2d",
+    );
   });
 });
 
@@ -462,11 +633,12 @@ describe("DeskPage", () => {
       "Corrections",
       "Access",
       "Duplicates",
+      "Codes",
       "Runners",
     ]);
   });
 
-  it("gives the three tables the page measure and the rest the column (168.3)", async () => {
+  it("gives the three tables the page measure and the rest the column (168.3, R55·194)", async () => {
     const widths: Record<string, string> = {};
     for (const current of [
       "today",
@@ -474,6 +646,7 @@ describe("DeskPage", () => {
       "corrections",
       "access",
       "duplicates",
+      "codes",
       "runners",
     ] as const) {
       const { unmount } = await renderUnderDesk(desk({}), () => (
@@ -492,8 +665,9 @@ describe("DeskPage", () => {
       today: "column",
       review: "page",
       corrections: "column",
-      access: "page",
+      access: "column",
       duplicates: "column",
+      codes: "page",
       runners: "page",
     });
   });

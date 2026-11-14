@@ -384,3 +384,22 @@ export function viewerClockLabel(
 export function homeZoneOf(stored: string | null | undefined): ViewerZone {
   return { homeZone: isTimeZone(stored) ? stored : undefined };
 }
+
+const SPAN_MINUTE_S = 60;
+const SPAN_HOUR_S = 3600;
+const SPAN_DAY_S = 86_400;
+
+/**
+ * How long, in the Desk boards' largest whole unit: "45m", "6h", "2d" —
+ * Today's ages and a Review row's (R55·197). Under a minute is "0m": an
+ * age, not a claim that nothing has passed.
+ */
+export function spanLabel(seconds: number): string {
+  if (seconds >= SPAN_DAY_S) {
+    return `${String(Math.floor(seconds / SPAN_DAY_S))}d`;
+  }
+  if (seconds >= SPAN_HOUR_S) {
+    return `${String(Math.floor(seconds / SPAN_HOUR_S))}h`;
+  }
+  return `${String(Math.floor(Math.max(0, seconds) / SPAN_MINUTE_S))}m`;
+}

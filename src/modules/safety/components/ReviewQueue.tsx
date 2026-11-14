@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { JSX } from "react";
 
+import { spanLabel } from "../../../lib/dates";
 import { Bracketed, ListSection, Mono, useFormSubmit } from "../../../ui";
 import {
   renameReasonSchema,
@@ -21,6 +22,7 @@ import type {
   ReviewSource,
 } from "../review";
 import { PickOne } from "./DeskForm";
+import { DueClock } from "./DueClock";
 import { StatutoryLine } from "./StatutoryLine";
 import {
   KitOriginContext,
@@ -42,6 +44,7 @@ import {
   subjectWord,
 } from "./RemovalDecision";
 import { reviewPhotoSrc } from "./review-photo-src";
+import { shortId } from "./short-id";
 import { useFocusWhen } from "./use-focus-when";
 import { useSettled } from "./use-settled";
 import { WhoReported, type LoadReporters } from "./WhoReported";
@@ -214,19 +217,21 @@ function ReportedFor({ row }: Readonly<{ row: QueueRow }>): JSX.Element {
   );
 }
 
-function ListOfReasons({
-  reasons,
-}: Readonly<{ reasons: readonly ReportReason[] }>): JSX.Element {
-  // Sorted so two rows carrying the same set read the same way, which is
-  // what makes a queue scannable.
+/**
+ * What the reporters said, one line. Sorted so two rows carrying the same
+ * set read the same way, which is what makes a queue scannable.
+ */
+function reasonsLine(reasons: readonly ReportReason[]): string {
   const labels = reasons
     .map((reason) => reportReasonLabels[reason])
     .toSorted((one, other) => one.localeCompare(other));
-  return (
-    <span className="text-quiet">
-      {labels.length === 0 ? "Nobody reported this." : labels.join(" · ")}
-    </span>
-  );
+  return labels.length === 0 ? "Nobody reported this." : labels.join(" · ");
+}
+
+function ListOfReasons({
+  reasons,
+}: Readonly<{ reasons: readonly ReportReason[] }>): JSX.Element {
+  return <span className="text-quiet">{reasonsLine(reasons)}</span>;
 }
 
 type Decide = (input: {
@@ -402,30 +407,82 @@ function rowKind(row: QueueRow): string {
 }
 
 /**
- * The row's kicker: its kind and what it is. A garment photo's also names
- * its owner (round 42 #88), "garment photo · {id} · @{owner}", since the
- * garment has no page of its own to say whose it is.
+ * What a row's head names it by (R55·197): the subject's label, or, where
+ * the subject has none and its id stands in, that id at its first and
+ * last four characters.
  */
-function rowTitle(row: QueueRow, label: string): string {
-  const title = `${rowKind(row)} · ${label}`;
-  const { owner } = row.subject;
-  return owner !== undefined && row.subjectType === "garment"
-    ? `${title} · @${owner}`
-    : title;
+function headName(row: QueueRow, label: string): string {
+  return label === row.subjectId ? shortId(label) : label;
 }
 
 /**
- * Where the row's source tag sits: beside a garment photo's kicker (round
- * 42 #88), at the foot of every other row.
+ * The row's head (R55·197): `KIND · id · @owner [SOURCE]` in MONO.sm. The
+ * kind and the source in capitals; the id and the handle in their own case,
+ * since a handle is never shouted (G-19). The whole name is the title.
  */
-function SourceTag({ row }: Readonly<{ row: QueueRow }>): JSX.Element {
+function RowHead({
+  row,
+  label,
+}: Readonly<{ row: QueueRow; label: string }>): JSX.Element {
+  const { owner } = row.subject;
   return (
     <span
-      data-part="source"
-      className="shrink-0 text-micro whitespace-nowrap text-quiet"
+      data-part="row-head"
+      title={label}
+      className="truncate font-mono text-mono-sm"
     >
-      <Bracketed>{SOURCE_TAGS[row.source]}</Bracketed>
+      {/* The separators outside the capitals' span: a space at its end is
+          dropped from what is heard ("photo ·01M7…"). */}
+      <span className="uppercase">{rowKind(row)}</span>
+      {` · ${headName(row, label)}`}
+      {owner === undefined ? undefined : ` · @${owner}`}{" "}
+      <span data-part="source" className="uppercase">
+        {`[${SOURCE_TAGS[row.source]}]`}
+      </span>
     </span>
+  );
+}
+
+/**
+ * What a closed row says in one line (R55·197): why the row is here, as
+ * the open row's reason line says it. A guess at the words where the board
+ * wrote its own (recorded in design-deltas): the open row's sentence, cut
+ * to the line.
+ */
+function rowSummary(row: QueueRow): string {
+  if (row.subject.handleFlagged === true) return HANDLE_FLAGGED_LINE;
+  const stuck = STUCK_LINES[row.source];
+  if (stuck !== undefined) return stuck;
+  const people =
+    row.reporterCount === 0
+      ? []
+      : [
+          row.reporterCount === 1
+            ? "1 person"
+            : `${String(row.reporterCount)} people`,
+        ];
+  return [...people, reasonsLine(row.reasons)].join(" · ");
+}
+
+/**
+ * The row's age or clock, at the head's right (R55·197). A row an
+ * intimate-image report started carries the TAKE IT DOWN Act's 48 hours,
+ * in bold hi-viz, and once they run out OVERDUE as a filled hi-viz tag;
+ * every other row, how long it has waited.
+ */
+function RowClock({
+  row,
+  asOf,
+}: Readonly<{ row: QueueRow; asOf: number }>): JSX.Element {
+  return row.due === undefined ? (
+    <Mono step="xs" className="text-muted">
+      {spanLabel(asOf - row.createdAt)}
+    </Mono>
+  ) : (
+    <DueClock
+      due={row.due}
+      isOverdue={(row.dueAt ?? Infinity) <= asOf}
+    />
   );
 }
 
@@ -444,25 +501,8 @@ type ReviewRowProps = RowSettleProps &
     reviewHandle: ReviewHandle;
     decideMatch: DecideMatch | undefined;
     reporters: LoadReporters | undefined;
+    asOf: number;
   }>;
-
-/**
- * The TAKE IT DOWN Act's 48 hours, on a row an intimate-image report
- * started; nothing on any other row.
- */
-function DueTag({
-  due,
-}: Readonly<{ due: QueueRow["due"] }>): JSX.Element | undefined {
-  if (due === undefined) return;
-  return (
-    <span
-      data-part="due"
-      className="shrink-0 whitespace-nowrap text-ink uppercase"
-    >
-      <Mono step="xs">{due}</Mono>
-    </span>
-  );
-}
 
 /**
  * The WHO REPORTED fold, for a row that has reporters and a way to read
@@ -501,69 +541,117 @@ function ReviewRow({
   reviewHandle,
   decideMatch,
   reporters,
+  asOf,
   onSettled,
 }: ReviewRowProps): JSX.Element {
   const opener = useFocusWhen(active && focusOnOpen);
   // A flagged handle's header re-reads to the handle a rename lost to
   // (round 38 #60); the row stays open.
   const [label, setLabel] = useState(row.subject.label ?? row.subjectId);
-  const isGarment = row.subjectType === "garment";
   const origin = { from: "report", row: row.id } as const;
 
   return (
     <li
       id={kitOriginAnchor(origin)}
       tabIndex={-1}
-      className="flex flex-col gap-2 border border-hairline p-3"
+      className="flex flex-col rounded-card border border-hairline bg-panel"
     >
       <KitOriginContext value={origin}>
-        <span className="flex items-baseline justify-between gap-3">
-          <button
-            ref={opener}
-            type="button"
-            aria-expanded={active}
-            onClick={onActivate}
-            // 168.3: one line, the whole title in `title`; the tags beside
-            // it keep their width (G-08, N3-10).
-            title={rowTitle(row, label)}
-            className="target min-w-0 cursor-pointer truncate border-none bg-transparent p-0 text-left text-body font-semibold text-ink"
-          >
-            {rowTitle(row, label)}
-          </button>
-          {isGarment ? <SourceTag row={row} /> : undefined}
-          {/* The TAKE IT DOWN Act's 48 hours, on a row an intimate-image
-            report started: in the header, right, where the age sits
-            (round 35 #58b). The brackets stay about people. */}
-          <DueTag due={row.due} />
-        </span>
-        <SubjectPhotos row={row} />
-        <RemovedMatchLine match={row.removedMatches?.[0]} />
-        <OtherPhotos others={row.otherPhotos} />
-        <PhotoMatches
-          found={row.photoMatches}
-          removed={row.removedMatches}
-          decide={decideMatch}
-        />
-        <WhyHere row={row} />
-        {/* Only an intimate-image report starts the 48-hour clock; its
-          line goes directly under the reason (R47·126). */}
-        {row.due === undefined ? undefined : <StatutoryLine />}
-        {/* D1: who reported, folded; opening it is logged (D-164). After
-          the photo and before the decision, as the contract's tab order
-          puts it. */}
-        <ReportersFold row={row} reporters={reporters} />
-        {isGarment ? undefined : <SourceTag row={row} />}
+        {/* R55·197: the whole head strip is the button, and the row opens
+            in place. */}
+        <button
+          ref={opener}
+          type="button"
+          aria-expanded={active}
+          onClick={onActivate}
+          className="flex min-h-target w-full cursor-pointer items-center justify-between gap-4 border-none bg-transparent px-4 py-3 text-left text-ink"
+        >
+          <span className="flex min-w-0 flex-col gap-1">
+            <RowHead row={row} label={label} />
+            {active ? undefined : (
+              <span
+                data-part="row-summary"
+                className="truncate text-small text-quiet"
+              >
+                {rowSummary(row)}
+              </span>
+            )}
+          </span>
+          <span className="flex shrink-0 items-center gap-4 whitespace-nowrap">
+            <RowClock row={row} asOf={asOf} />
+            {/* The fold's own mark, as WHO REPORTED's (G-21). */}
+            <span aria-hidden="true" className="text-muted">
+              {active ? "▾" : "▸"}
+            </span>
+          </span>
+        </button>
         {active ? (
-          <RowDecision
+          <OpenRow
             row={row}
-            decide={decide}
-            reviewHandle={reviewHandle}
-            onSettled={onSettled}
-            onMoved={setLabel}
+            reads={{ reporters, decideMatch }}
+            decision={
+              <RowDecision
+                row={row}
+                decide={decide}
+                reviewHandle={reviewHandle}
+                onSettled={onSettled}
+                onMoved={setLabel}
+              />
+            }
           />
         ) : undefined}
       </KitOriginContext>
     </li>
+  );
+}
+
+/**
+ * An open row's body and bar (R55·197, 198), each under a hairline: the
+ * photo beside the reasons from `desk`; then why the row is here, the
+ * statutory line directly under it (R47·126), who reported, the same
+ * runner's other photos and the matches just above the bar; then the
+ * decision.
+ */
+function OpenRow({
+  row,
+  reads,
+  decision,
+}: Readonly<{
+  row: QueueRow;
+  /**
+  The WHO REPORTED fold's read and a garment match's decision, if any.
+  */
+  reads: Pick<ReviewRowProps, "reporters" | "decideMatch">;
+  decision: JSX.Element;
+}>): JSX.Element {
+  const { reporters, decideMatch } = reads;
+  return (
+    <>
+      <div
+        data-part="row-body"
+        className="flex flex-col gap-4 border-t border-hairline p-4 desk:grid desk:grid-cols-[minmax(0,1fr)_minmax(0,3fr)] desk:items-start desk:gap-6"
+      >
+        <div className="flex flex-col gap-2 empty:hidden">
+          <SubjectPhotos row={row} />
+          <RemovedMatchLine match={row.removedMatches?.[0]} />
+        </div>
+        <div className="flex flex-col gap-3 desk:col-start-2">
+          <WhyHere row={row} />
+          {row.due === undefined ? undefined : <StatutoryLine />}
+          {/* D1: who reported, folded; opening it is logged (D-164). */}
+          <ReportersFold row={row} reporters={reporters} />
+          <OtherPhotos others={row.otherPhotos} />
+          <PhotoMatches
+            found={row.photoMatches}
+            removed={row.removedMatches}
+            decide={decideMatch}
+          />
+        </div>
+      </div>
+      <div data-part="row-bar" className="border-t border-hairline px-4 py-3">
+        {decision}
+      </div>
+    </>
   );
 }
 
@@ -633,6 +721,10 @@ export function ReviewQueue(
      * and the rail's say what is now true.
      */
     onDecided: () => void;
+    /**
+    When the page was read, for each row's age (R55·197).
+    */
+    asOf: number;
   }>,
 ): JSX.Element {
   // Rows leave the list as they are decided; `useSettled` says why that
@@ -656,6 +748,7 @@ export function ReviewQueue(
       <ListSection
         title="waiting"
         items={waiting}
+        hasCards
         whenEmpty={<NothingWaiting hasDecided={hasDecided} />}
       >
         {(row) => (
@@ -671,6 +764,7 @@ export function ReviewQueue(
             reviewHandle={props.reviewHandle}
             decideMatch={props.decideMatch}
             reporters={props.reporters}
+            asOf={props.asOf}
             onSettled={(id) => {
               // The row that takes the decided one's place opens next —
               // the one after it, or the one before when it was the last

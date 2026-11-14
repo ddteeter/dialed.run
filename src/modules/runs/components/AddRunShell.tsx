@@ -20,7 +20,7 @@ export function AddRunShell({
   children,
 }: Readonly<{ children: ReactNode }>): JSX.Element {
   return (
-    <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-6 py-8 wide:mx-0 desk:max-w-page">
+    <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-6 py-8 desk:max-w-page">
       {/* The phone's bell ends the title row (Design 169.1). */}
       <div className="flex items-center justify-between gap-3">
         <h1 className="m-0 font-display text-display uppercase">Add a run</h1>

@@ -14,11 +14,7 @@ import {
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  Today,
-  lastTryOf,
-  spanOf,
-} from "../../src/modules/ops/components/Today";
+import { Today, lastTryOf } from "../../src/modules/ops/components/Today";
 import type { DeskToday } from "../../src/modules/ops/desk";
 import type { GaveUpJob } from "../../src/modules/ops/gave-up";
 import { bracketed } from "../ui/bracketed";
@@ -48,14 +44,17 @@ function desk(gaveUp: number, oldestGaveUpAt?: number): DeskToday {
       bansThisWeek: 0,
       bansAllTime: 0,
       flaggedAccounts: 0,
+      oldestFlaggedAt: undefined,
       gaveUp,
       oldestGaveUpAt,
       digestUnconfirmedAt: undefined,
+      lastDigestAt: undefined,
       outboxBehind: 0,
       oldestBehindAt: undefined,
     },
     skipped: [],
     breakers: [],
+    operatorHandle: undefined,
   };
 }
 
@@ -467,21 +466,6 @@ describe("Gave up, on Today", () => {
     expect(retry).toHaveBeenLastCalledWith({
       data: { id: "b", step: "again" },
     });
-  });
-});
-
-describe("spanOf", () => {
-  it.each([
-    [-5, "0m"],
-    [59, "0m"],
-    [60, "1m"],
-    [HOUR - 1, "59m"],
-    [HOUR, "1h"],
-    [DAY - 1, "23h"],
-    [DAY, "1d"],
-    [3 * DAY + HOUR, "3d"],
-  ])("says %d seconds as %s", (seconds, said) => {
-    expect(spanOf(seconds)).toBe(said);
   });
 });
 

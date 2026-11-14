@@ -33,6 +33,7 @@ import {
   removeRunnerRows,
   seedRunnerRow,
   signInAsAccount,
+  queueRowFor,
 } from "./moderation-support";
 
 async function removeQueueRows(subjectIds: readonly string[]): Promise<void> {
@@ -84,7 +85,7 @@ test("Review · suspected CSAM asks again, in the row, Cancel focused", async ({
     await signInAsOperator(page);
     await page.goto("/desk/review");
     await hydrated(page);
-    const row = page.getByRole("listitem").filter({ hasText: entryId });
+    const row = queueRowFor(page, entryId);
     await openRow(row);
     await row
       .getByRole("combobox", { name: /Why it comes down/ })
@@ -155,9 +156,7 @@ test("Review · a photo unscreened a day on, its file missing: Clear photo, and 
     await page.goto("/desk/review");
     await hydrated(page);
     // Review says which failure it is; a missing file draws no photo.
-    const stuckRow = page
-      .getByRole("listitem")
-      .filter({ hasText: `garment photo · ${stuckGarmentId}` });
+    const stuckRow = queueRowFor(page, stuckGarmentId);
     await expect(stuckRow.getByText("[file missing]")).toBeVisible();
     await expect(
       stuckRow.getByText(
@@ -176,9 +175,7 @@ test("Review · a photo unscreened a day on, its file missing: Clear photo, and 
     }
     await expect(stuckRow.getByLabel(/Why it comes down/u)).toHaveCount(0);
     await stuckRow.getByRole("button", { name: "Clear photo" }).click();
-    await expect(
-      page.getByRole("listitem").filter({ hasText: stuckGarmentId }),
-    ).toHaveCount(0);
+    await expect(queueRowFor(page, stuckGarmentId)).toHaveCount(0);
 
     // D-157: the cleared photo's owner is asked to add it again.
     await signInAsAccount(page, "safety");
@@ -235,8 +232,8 @@ test("Review · a handle the hourly re-check flagged, and its Keep", async ({
     const handleRow = page
       .getByRole("listitem")
       .filter({ hasText: flaggedHandle });
-    await expect(handleRow.locator("button[aria-expanded]").first()).toHaveText(
-      `handle · re-check · ${flaggedHandle}`,
+    await expect(handleRow.locator("[data-part='row-head']")).toHaveText(
+      `handle · re-check · ${flaggedHandle} [classifier]`,
     );
     await openRow(handleRow);
     await expect(

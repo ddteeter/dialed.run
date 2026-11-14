@@ -188,8 +188,16 @@ test("an operator opens the Desk and reads Today", async ({
     .locator('html[data-hydrated="true"]')
     .waitFor({ state: "attached" });
   await scene(page, "The Desk: its own dark shell, reached only by address");
+  // R55·194: [dialed] DESK heads the top bar, with the operator's role
+  // and Sign out at its right; the rail's foot says screening is fine.
+  const bar = page.getByRole("banner");
+  await expect(bar.getByText("Desk", { exact: true })).toBeVisible();
+  // The bar's Sign out is mono capitals, underlined, at its right edge.
+  const signOut = bar.getByRole("button", { name: "Sign out" });
+  await expect(signOut).toBeVisible();
+  await expect(signOut).toHaveCSS("text-transform", "uppercase");
   const rail = page.getByRole("navigation", { name: "Desk" });
-  await expect(rail.getByText("Desk", { exact: true })).toBeVisible();
+  await expect(rail.getByText("Screening · OK")).toBeVisible();
   await expect(rail.getByRole("link", { name: "Today" })).toHaveAttribute(
     "aria-current",
     "page",
@@ -293,6 +301,12 @@ test("an operator opens the Desk and reads Today", async ({
     .locator("[data-part='breaker-over']")
     .filter({ hasText: "matched removed images" });
   await expect(paused).toContainText("Holds paused");
+  // And the rail's foot says screening is holding (owner, #635).
+  await expect(
+    page
+      .getByRole("navigation", { name: "Desk" })
+      .getByText("Screening · Holding"),
+  ).toBeVisible();
   await expect(paused).toContainText(
     "uploads matched removed images in the last hour, the most held in one hour. New matches are screened like any photo until the hour clears.",
   );

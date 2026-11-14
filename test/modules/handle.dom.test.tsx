@@ -21,6 +21,7 @@ import {
   unconfirmed,
   withBell,
 } from "./feed-fixtures";
+import { expectTheColumn } from "../ui/the-column";
 
 /**
  * Round 26 #7's handle placements (FEED-10), `/@handle`'s two pages, and
@@ -101,6 +102,7 @@ describe("RunnerAtHandle", () => {
       />,
     );
 
+    expectTheColumn();
     expect(screen.getByRole("heading", { name: "@ravi_k" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Following" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Report 01RAVI" })).toBeVisible();
@@ -146,6 +148,7 @@ describe("RunnerAtHandle", () => {
       "/feed/u/old_name",
     );
 
+    expectTheColumn();
     expect(screen.getByText("This runner changed their name.")).toBeVisible();
     expect(screen.getByRole("link", { name: "Back to feed" })).toHaveAttribute(
       "href",

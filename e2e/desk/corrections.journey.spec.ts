@@ -29,6 +29,7 @@ import { expect, hydrated, scene, test } from "../support/demo";
 import { signInAsKnownUser } from "../support/known-user";
 import { withLocalDb } from "../support/local-db";
 import { OPERATOR_ID, signInAsOperator } from "./operator";
+import { queueRowFor } from "../safety/moderation-support";
 
 const RUNNER_ID = "e2e-corrections-runner";
 const RUNNER_HANDLE = "wrong_spotter";
@@ -177,10 +178,9 @@ test("a runner corrects a product, the Desk applies it, and the bell says so", a
     await page.goto("/desk/review");
     await hydrated(page);
     await scene(page, "Review: who reported, folded, and opening it is logged");
-    const fold = page
-      .locator("li")
-      .filter({ hasText: reportedEntryId })
-      .getByRole("button", { name: /Who reported/u });
+    const fold = queueRowFor(page, reportedEntryId).getByRole("button", {
+      name: /Who reported/u,
+    });
     await fold.click();
     await expect(fold).toHaveAttribute("aria-expanded", "true");
     await expect(
