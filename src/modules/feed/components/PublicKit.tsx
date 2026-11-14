@@ -110,6 +110,15 @@ function Conditions({ kit }: Readonly<{ kit: PublicKit }>) {
  * under it in MONO.xs. Moving time is named for what it is: "moving" when
  * the file measured it, "time" when the run's own clock is all there is.
  */
+/**
+ * A track per stat: distance and time always, pace and gain when known.
+ */
+function statTracks(count: number): string {
+  if (count >= 4) return "grid-cols-4";
+  if (count === 3) return "grid-cols-3";
+  return "grid-cols-2";
+}
+
 function Stats({ kit }: Readonly<{ kit: PublicKit }>) {
   const stats: readonly StatWords[] = [
     kit.distance,
@@ -124,16 +133,23 @@ function Stats({ kit }: Readonly<{ kit: PublicKit }>) {
       : [{ value: kit.gain.value, unit: `${kit.gain.unit} gain` }]),
   ];
   return (
-    <dl data-part="stats" className="m-0 grid grid-cols-4 gap-3">
+    // R55·219, R41: ruled above and below, the label tight under its
+    // number, and as many tracks as there are stats, so three fill the
+    // row. The board's 15px number is not on the mono ramp; MONO.md is
+    // the nearest step.
+    <dl
+      data-part="stats"
+      className={`m-0 grid gap-2 border-y border-hairline py-3 ${statTracks(stats.length)}`}
+    >
       {stats.map((stat) => (
-        <div key={stat.unit} className="flex flex-col-reverse gap-1">
+        <div key={stat.unit} className="flex flex-col-reverse gap-0.5">
           <dt>
             <Mono step="xs" className="text-muted">
               <Said shown={stat.unit} said={stat.said?.unit} />
             </Mono>
           </dt>
           <dd className="m-0">
-            <Mono step="lg">
+            <Mono step="md">
               <Said shown={stat.value} said={stat.said?.value} />
             </Mono>
           </dd>
@@ -178,13 +194,16 @@ function Pieces({ pieces }: Readonly<{ pieces: readonly PublicPiece[] }>) {
       title="The kit"
       level={2}
       pieces={pieces}
-      itemClassName="flex items-baseline justify-between gap-3 border-b border-hairline pb-2 text-body"
+      // R55·219, R41: ruled top and bottom (PieceSection), names in 600.
+      itemClassName="flex min-h-target items-center justify-between gap-3 border-b border-hairline py-2 text-body font-semibold"
       row={(piece) => (
         <>
           {piece.url === undefined ? (
-            <span className="text-ink">{piece.name}</span>
+            <span className="min-w-0 text-ink">{piece.name}</span>
           ) : (
-            <ProductLink url={piece.url} label={piece.name} />
+            <span className="min-w-0">
+              <ProductLink url={piece.url} label={piece.name} />
+            </span>
           )}
           <Mono step="xs" className="shrink-0 text-muted">
             {piece.kind}

@@ -4,7 +4,7 @@ import type { JSX, ReactNode } from "react";
 
 import { verdictLabel, type VerdictValue } from "../../../lib/contracts";
 import { MARKETING_INVITE_URL, MARKETING_ORIGIN } from "../../../lib/marketing";
-import { Mono, Page, verdictHue } from "../../../ui";
+import { Icon, Mono, Page, verdictHue } from "../../../ui";
 import { SignedOutFrame } from "../../../ui/SignedOutFrame";
 
 /**
@@ -57,6 +57,12 @@ const INTO_APP_CLASS =
   "target inline-flex items-center rounded-pill bg-ink px-5 text-small font-bold text-ground no-underline";
 const FOOT_LINK_CLASS =
   "target inline-flex items-center text-muted underline underline-offset-4";
+// The invite card's pill, full width (R41, R55·219).
+const INVITE_PILL_CLASS =
+  "target flex min-h-control w-full items-center justify-center rounded-pill bg-action text-body font-bold text-accent-ink no-underline";
+// The not-public page's way to the site: pink at 600 (R41 #86f, R55·219).
+const WHAT_IS_CLASS =
+  "target inline-flex items-center self-start font-semibold text-cold-text underline underline-offset-4";
 // A quiet line with a bold ink underlined link (R55·176's cross-links).
 const CROSS_LINK_CLASS = "font-bold text-ink underline underline-offset-4";
 
@@ -299,9 +305,15 @@ function BreakableHandle({ handle }: Readonly<{ handle: string }>) {
 /**
  * A titled list of named pieces — THE KIT · N on `/k`, IN USE · N and the
  * rest on `/@handle` — or nothing when there are none: the title and the
- * count in MONO.xs, one `<li>` a piece in `itemClassName`, drawn by `row`.
+ * count in MONO.xs, then the pieces ruled, a hairline under the title and
+ * one under each (R55·218d, 219), drawn by `row` in `itemClassName`.
  * `level` is the heading's place in its page. Two pieces can share a name;
  * their place in the list cannot, so the key is both.
+ *
+ * A long group can fold (R55·218d), with no script, since these pages are
+ * cached and work without it: `fold: "after-five"` shows the first five
+ * and closes on "+ N more", which opens the rest in place (a group of six
+ * shows all six); `fold: "all"` is Retired, one line until opened.
  */
 export function PieceSection<Piece extends { readonly name: string }>({
   title,
@@ -309,30 +321,97 @@ export function PieceSection<Piece extends { readonly name: string }>({
   pieces,
   itemClassName,
   row,
+  fold,
 }: Readonly<{
   title: string;
   level: 2 | 3;
   pieces: readonly Piece[];
   itemClassName: string;
   row: (piece: Piece) => ReactNode;
+  fold?: "after-five" | "all" | undefined;
 }>): JSX.Element | undefined {
   if (pieces.length === 0) return;
   const Heading = level === 2 ? "h2" : "h3";
+  const heading = (
+    <Heading className="m-0">
+      <Mono step="xs" className="text-muted">
+        {`${title} · ${String(pieces.length)}`}
+      </Mono>
+    </Heading>
+  );
+  const list = (shown: readonly Piece[], from: number) => (
+    <PieceList
+      pieces={shown}
+      from={from}
+      itemClassName={itemClassName}
+      row={row}
+    />
+  );
+  if (fold === "all") {
+    return (
+      <details data-part="piece-fold" className="group">
+        <summary className={FOLD_SUMMARY_CLASS}>
+          {heading}
+          <Icon name="forward" size={16} className={FOLD_CHEVRON_CLASS} />
+        </summary>
+        {list(pieces, 0)}
+      </details>
+    );
+  }
+  const isFolded = fold === "after-five" && pieces.length > FOLD_AFTER + 1;
+  const first = isFolded ? pieces.slice(0, FOLD_AFTER) : pieces;
   return (
-    <section className="flex flex-col gap-2">
-      <Heading className="m-0">
-        <Mono step="xs" className="text-muted">
-          {`${title} · ${String(pieces.length)}`}
-        </Mono>
-      </Heading>
-      <ul className="m-0 flex list-none flex-col gap-2 p-0">
-        {pieces.map((piece, index) => (
-          <li key={`${String(index)}:${piece.name}`} className={itemClassName}>
-            {row(piece)}
-          </li>
-        ))}
-      </ul>
+    <section className="flex flex-col">
+      <div className="pb-2">{heading}</div>
+      {list(first, 0)}
+      {isFolded ? (
+        <details data-part="piece-more">
+          <summary className={MORE_SUMMARY_CLASS}>
+            {`+ ${String(pieces.length - FOLD_AFTER)} more`}
+          </summary>
+          {list(pieces.slice(FOLD_AFTER), FOLD_AFTER)}
+        </details>
+      ) : undefined}
     </section>
+  );
+}
+
+/**
+ * How many pieces a folding group shows before "+ N more" (R55·218d).
+ */
+const FOLD_AFTER = 5;
+
+const FOLD_SUMMARY_CLASS =
+  "target flex cursor-pointer list-none items-center justify-between border-y border-hairline [&::-webkit-details-marker]:hidden";
+const FOLD_CHEVRON_CLASS = "text-muted group-open:rotate-90";
+const MORE_SUMMARY_CLASS =
+  "target inline-flex cursor-pointer list-none items-center pt-2 text-body font-bold text-cold-text [&::-webkit-details-marker]:hidden";
+
+/**
+ * The ruled rows: a hairline above the first, and each row's own below.
+ */
+function PieceList<Piece extends { readonly name: string }>({
+  pieces,
+  from,
+  itemClassName,
+  row,
+}: Readonly<{
+  pieces: readonly Piece[];
+  from: number;
+  itemClassName: string;
+  row: (piece: Piece) => ReactNode;
+}>): JSX.Element {
+  return (
+    <ul className="m-0 flex list-none flex-col border-t border-hairline p-0">
+      {pieces.map((piece, index) => (
+        <li
+          key={`${String(from + index)}:${piece.name}`}
+          className={itemClassName}
+        >
+          {row(piece)}
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -362,21 +441,23 @@ export function VerdictChip({
  */
 export function Invite() {
   return (
+    // R55·219, R41: an ink card (dark on a light page, the panel on a
+    // dark one, as every ink block is), the full-width pink pill, then the
+    // code's cross-link.
     <section
       data-part="invite"
-      className="flex flex-col items-start gap-3 border-t border-hairline pt-6"
+      data-ground="ink"
+      className="flex flex-col gap-3 rounded-card bg-ground p-5 text-ink"
     >
-      <h2 className="m-0 font-display text-title uppercase">
-        Wear what worked.
-      </h2>
-      <p className="m-0 text-body text-quiet">
+      <h2 className="m-0 font-display text-title">Wear what worked.</h2>
+      <p className="m-0 text-body">
         dialed.run keeps what you wore on each run and how it felt, then tells
         you what to wear when that weather comes round again.
       </p>
-      <a href={MARKETING_INVITE_URL} className={INTO_APP_CLASS}>
+      <a href={MARKETING_INVITE_URL} className={INVITE_PILL_CLASS}>
         Request access
       </a>
-      <p data-part="cross-link" className="m-0 text-body text-quiet">
+      <p data-part="cross-link" className="m-0 text-small">
         Have a code?{" "}
         <Link
           data-target="inline"
@@ -427,7 +508,7 @@ export function NotPublicPage({
           className="flex flex-col items-start gap-3"
         >
           <p className="m-0 text-body">{line}</p>
-          <a href={MARKETING_ORIGIN} className={FOOT_LINK_CLASS}>
+          <a href={MARKETING_ORIGIN} className={WHAT_IS_CLASS}>
             What is dialed.run?
           </a>
         </section>

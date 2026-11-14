@@ -223,13 +223,14 @@ function Rotation({
   );
 }
 
+// R55·218d: 44-tall ruled rows, the name truncating before the type word.
 const PIECE_CLASS =
-  "flex items-baseline justify-between gap-3 border-b border-hairline pb-2 text-body text-ink";
+  "flex min-h-target items-center justify-between gap-3 border-b border-hairline text-body text-ink";
 // Retired: --quiet, and the name struck through, as D7 marks a revoked
 // code. Only the name: the board leaves the mileage and the type clean,
 // and a line through "50 MI" says the mileage is void (N2-19).
 const RETIRED_PIECE_CLASS =
-  "flex items-baseline justify-between gap-3 border-b border-hairline pb-2 text-body text-quiet";
+  "flex min-h-target items-center justify-between gap-3 border-b border-hairline text-body text-quiet";
 
 function RotationGroup({
   title,
@@ -246,12 +247,18 @@ function RotationGroup({
       level={3}
       pieces={pieces}
       itemClassName={isRetired ? RETIRED_PIECE_CLASS : PIECE_CLASS}
+      // R55·218d: five a group, then "+ N more"; Retired folds to a line.
+      fold={isRetired ? "all" : "after-five"}
       row={(piece) => (
         <>
-          <span className={isRetired ? "line-through" : undefined}>
+          <span
+            className={
+              isRetired ? "min-w-0 truncate line-through" : "min-w-0 truncate"
+            }
+          >
             {piece.name}
           </span>
-          <Mono step="xs" className="shrink-0">
+          <Mono step="xs" className="shrink-0 text-muted">
             {piece.detail}
           </Mono>
         </>

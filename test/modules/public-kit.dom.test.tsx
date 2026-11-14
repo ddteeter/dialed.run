@@ -186,6 +186,23 @@ describe("the public kit, signed out", () => {
     expect(
       screen.getAllByRole("definition").map((value) => drawnText(value)),
     ).toStrictEqual(["6.2", "52:10", "8:25", "210"]);
+    // R55·219, R41: ruled, the word tight under its number, four tracks.
+    const stats = document.querySelector("[data-part='stats']");
+    expect(stats).toHaveClass(
+      "grid",
+      "grid-cols-4",
+      "gap-2",
+      "border-y",
+      "border-hairline",
+      "py-3",
+    );
+    expect(screen.getAllByRole("term")[0]?.parentElement).toHaveClass(
+      "flex-col-reverse",
+      "gap-0.5",
+    );
+    expect(screen.getByText("6.2").closest(".font-mono")).toHaveClass(
+      "text-mono-md",
+    );
   });
 
   it("says the time and the pace in words, where the drawn ones read as a clock and a slash", async () => {
@@ -211,6 +228,10 @@ describe("the public kit, signed out", () => {
 
     const words = screen.getAllByRole("term").map((term) => term.textContent);
     expect(words).toStrictEqual(["mi", "time"]);
+    // Two stats fill two tracks, never half a row.
+    expect(document.querySelector("[data-part='stats']")).toHaveClass(
+      "grid-cols-2",
+    );
     expect(screen.queryByText("Feels like · Sky")).not.toBeInTheDocument();
     expect(document.querySelector('[data-part="conditions"]')).toBeNull();
     expect(document.querySelector('[data-part="caption"]')).toBeNull();
@@ -257,6 +278,30 @@ describe("the public kit, signed out", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByText("L/S crew")).toHaveClass("text-mono-xs");
     expect(screen.getByText("Headwear")).toBeVisible();
+    // R55·219, R41: ruled top and bottom, names in 600, 44-tall rows.
+    const row = screen.getByText("Old black beanie").closest("li");
+    expect(row).toHaveClass(
+      "flex",
+      "min-h-target",
+      "items-center",
+      "justify-between",
+      "border-b",
+      "border-hairline",
+      "py-2",
+      "font-semibold",
+    );
+    expect(row?.parentElement).toHaveClass("border-t", "border-hairline");
+  });
+
+  it("fills three tracks with three stats (R55·219)", async () => {
+    // Distance, time and pace: no gain.
+    const pace = KIT.pace;
+    if (pace === undefined) throw new Error("KIT has a pace");
+    await show(kitPage({ ...BARE, pace }));
+    expect(screen.getAllByRole("term")).toHaveLength(3);
+    expect(document.querySelector("[data-part='stats']")).toHaveClass(
+      "grid-cols-3",
+    );
   });
 
   it("lists two pieces of the same name as two pieces", async () => {
@@ -313,7 +358,25 @@ describe("the public kit, signed out", () => {
     );
     const ask = invite.getByRole("link", { name: "Request access" });
     expect(ask).toHaveAttribute("href", "https://dialed.run/invite");
-    expect(ask).toHaveClass("bg-ink", "rounded-pill");
+    // R55·219, R41: the ink card, its pill pink and full width.
+    expect(document.querySelector("[data-part='invite']")).toHaveAttribute(
+      "data-ground",
+      "ink",
+    );
+    expect(document.querySelector("[data-part='invite']")).toHaveClass(
+      "rounded-card",
+      "bg-ground",
+      "p-5",
+    );
+    expect(ask).toHaveClass(
+      "target",
+      "w-full",
+      "min-h-control",
+      "rounded-pill",
+      "bg-action",
+      "text-accent-ink",
+      "font-bold",
+    );
     // R55·176: the cross-link is quiet text with a bold ink underlined link.
     const create = invite.getByRole("link", { name: "Create an account" });
     expect(create).toHaveAttribute("href", "/join");
@@ -321,7 +384,7 @@ describe("the public kit, signed out", () => {
     expect(create.parentElement).toHaveTextContent(
       /^Have a code\? Create an account$/u,
     );
-    expect(create.parentElement).toHaveClass("text-body", "text-quiet");
+    expect(create.parentElement).toHaveClass("text-small");
     expect(screen.queryByText(/Join/u)).toBeNull();
   });
 
@@ -481,6 +544,13 @@ describe("not public (round 41 #86f)", () => {
     expect(link("What is dialed.run?")).toHaveAttribute(
       "href",
       "https://dialed.run",
+    );
+    // R55·219, R41 #86f: pink at 600, underlined.
+    expect(link("What is dialed.run?")).toHaveClass(
+      "target",
+      "font-semibold",
+      "text-cold-text",
+      "underline",
     );
     expect(link("Log in")).toBeVisible();
     expect(
