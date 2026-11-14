@@ -198,17 +198,9 @@ function SettingsGroup({
 }
 
 /**
- * U1 · the index.
+ * What U1's index takes.
  */
-export function SettingsIndex({
-  current,
-  username,
-  blockedCount,
-  runReminderEmail,
-  display,
-  signOut,
-  isPrivacyReviewDue,
-}: Readonly<{
+interface SettingsIndexProps {
   current: CurrentSettings;
   /**
    * Whether a privacy setting has been added or changed since the runner
@@ -233,7 +225,23 @@ export function SettingsIndex({
   The foot's Sign out row, the route's to wire (it needs the router).
   */
   signOut: ReactNode;
-}>): JSX.Element {
+}
+
+/**
+ * U1 · the index.
+ */
+export function SettingsIndex(
+  props: Readonly<SettingsIndexProps>,
+): JSX.Element {
+  const {
+    current,
+    username,
+    blockedCount,
+    runReminderEmail,
+    display,
+    signOut,
+    isPrivacyReviewDue,
+  } = props;
   return (
     <div className="flex flex-col gap-6">
       <SettingsGroup title="You">
