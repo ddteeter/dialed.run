@@ -46,11 +46,13 @@ dialog, Photo # of #
 dialog, Photo # of #
 Photo # of #
 button, Close
+region, Photos
 list
 listitem, level 1, position 1, set size 1
 image, Your outfit
 end of listitem, level 1, position 1, set size 1
 end of list
+end of region, Photos
 button, Remove photo
 end of dialog, Photo # of #
 end of group, Outfit photo · optional
