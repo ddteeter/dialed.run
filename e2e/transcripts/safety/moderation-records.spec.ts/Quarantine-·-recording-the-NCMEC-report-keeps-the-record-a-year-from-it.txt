@@ -85,7 +85,7 @@ Quarantine · #
 end of heading, Quarantine · #, level 2
 list
 listitem, level 1, position 1, set size 1
-entry · :id
+entry · :id [Quarantine]
 Held :month # #
 Uploader
 :id
