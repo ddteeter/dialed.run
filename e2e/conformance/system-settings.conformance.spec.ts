@@ -139,3 +139,29 @@ test("Delete account at 390: the sheet, open and not confirmed", async ({
     sheet.getByRole("button", { name: "Delete my account" }),
   ).toBeVisible();
 });
+
+// Settings › About opens the reading pages inside the app: a signed-in
+// reader keeps the signed-in shell, its bar's bell and one main landmark,
+// where a signed-out one gets the signed-out frame and its footer
+// (R55·220). At the desk, where the bar seats the bell; the phone's is a
+// screen's to seat, and a reading page seats none yet (#683). Changes
+// nothing.
+test("About › Open source at the desk: the reading frame in the signed-in shell", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/onboarding/settings");
+  await hydrated(page);
+
+  await page.getByRole("link", { name: /^Open source/u }).click();
+  await expect(page).toHaveURL(/\/open-source$/u);
+  await hydrated(page);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Built with thanks" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /^Notifications/u }).first(),
+  ).toBeVisible();
+  await expect(page.getByRole("main")).toHaveCount(1);
+  await expect(page.locator("[data-part='legal-footer']")).toHaveCount(0);
+});

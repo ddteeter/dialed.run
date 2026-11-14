@@ -72,6 +72,8 @@ describe("LegalPage", () => {
     expect(screen.getByRole("link", { name: "Log in" })).toBeInTheDocument();
     expect(document.querySelector("[data-slot='tab-bar']")).toBeNull();
     expect(screen.queryByTestId("bell")).toBeNull();
+    // The signed-out frame leaves the page's main to the page.
+    expect(screen.getAllByRole("main")).toHaveLength(1);
   });
 
   it("reads in the signed-in shell, with the bell's counts, for a signed-in reader", async () => {
@@ -86,6 +88,8 @@ describe("LegalPage", () => {
     expect(document.querySelector("[data-slot='tab-bar']")).not.toBeNull();
     expect(document.querySelector("[data-slot='landing-bar']")).toBeNull();
     expect(screen.getAllByTestId("bell")[0]).toHaveTextContent(/^3\/2$/u);
+    // The shell's main is the page's one: the frame brings none of its own.
+    expect(screen.getAllByRole("main")).toHaveLength(1);
   });
 
   it("titles the page and lists every H2 in the contents, linked to its id", async () => {
@@ -518,7 +522,7 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
 
   it("holds the rail at 240, the page in a container, and lets the rail scroll", async () => {
     await renderDraft("privacy");
-    expect(screen.getByRole("main")).toHaveClass(
+    expect(screen.getByRole("main").firstElementChild).toHaveClass(
       "@container",
       "desk:grid-cols-[240px_minmax(0,1fr)]",
       "desk:max-w-page",

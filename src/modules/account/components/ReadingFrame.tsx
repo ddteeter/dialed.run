@@ -29,7 +29,10 @@ export interface ContentsEntry {
 
 /**
  * A signed-in reader reads in the signed-in shell, with the bell, and
- * anyone else in the signed-out one.
+ * anyone else in the signed-out one. The signed-in shell is the page's one
+ * `<main>` (`Layout`); the signed-out one leaves it to the page, so here it
+ * is the shell's, never the frame's: inside `Layout` a frame of its own
+ * was a second `main` in the first.
  */
 export function ReadingShell({
   bellState,
@@ -48,7 +51,9 @@ export function ReadingShell({
 }>): JSX.Element {
   const Bell = bell;
   return bellState === undefined ? (
-    <SignedOutLayout>{children}</SignedOutLayout>
+    <SignedOutLayout>
+      <main>{children}</main>
+    </SignedOutLayout>
   ) : (
     <Layout bell={<Bell {...bellState} />}>{children}</Layout>
   );
@@ -81,7 +86,7 @@ export function ReadingFrame({
     // A container, so a wide table can break out to the page measure's
     // right edge (`LegalPage`'s `WideTable`, R55·220). P4-02: the rail is
     // a fixed 240 (R53·163), so the text starts at one x on every page.
-    <main className="@container px-5 pt-8 pb-16 desk:grid desk:max-w-page desk:grid-cols-[240px_minmax(0,1fr)] desk:gap-x-12">
+    <div className="@container px-5 pt-8 pb-16 desk:grid desk:max-w-page desk:grid-cols-[240px_minmax(0,1fr)] desk:gap-x-12">
       <header className="flex flex-col gap-2 desk:col-start-2 desk:row-start-1">
         {kicker === undefined ? undefined : (
           <Mono step="xs" className="text-muted">
@@ -125,7 +130,7 @@ export function ReadingFrame({
       <article className="mt-8 flex max-w-column flex-col gap-4 text-lead desk:col-start-2">
         {children}
       </article>
-    </main>
+    </div>
   );
 }
 
