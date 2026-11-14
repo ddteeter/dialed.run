@@ -222,10 +222,14 @@ function FollowingTab({
       {compact === undefined ? undefined : (
         <CompactConditions result={compact} units={units} />
       )}
-      {/* Round 40 C5b: posts are divided by a 1px hairline across the
-          column, never a gutter, and each keeps SPACE[4] above and below
-          (PostCard's own `py-4`). */}
-      <div data-part="posts" className="flex flex-col divide-y divide-hairline">
+      {/* R55·205: posts are split by an 8 --tint band from edge to edge,
+          stronger than any rule inside one. The list steps out of the
+          column's gutter and each post puts it back (PostCard's `px-5`),
+          so the band meets the screen's edges. */}
+      <div
+        data-part="posts"
+        className="-mx-5 flex flex-col divide-y-8 divide-tint wide:-mx-6"
+      >
         {items.map((item, index) => (
           <PostCard
             key={item.entryId}

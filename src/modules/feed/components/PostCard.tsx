@@ -10,12 +10,13 @@ import {
   WeatherAttribution,
 } from "../../../ui";
 import type { FeedItem } from "../feed";
-import { postedLabel } from "../posted";
+import { BOUND_SEPARATOR, postedLabel } from "../posted";
 import { isProvidersReading, stripConditions } from "../strip";
 import { Avatar } from "./Avatar";
 import { Handle, handleText } from "./Handle";
 import { UnderReview } from "./UnderReview";
 import { ConditionsCell } from "./ConditionsCell";
+import { PhotoCounter, PhotoSlot } from "./PhotoSlot";
 
 import { UsefulButton } from "./UsefulButton";
 import type { SetUsefulFn } from "./useful-reaction";
@@ -53,9 +54,10 @@ export interface PostCardProps {
 /**
  * The viewer's own post says so after its time (the Feed board's "E1 Card
  * states": `SAT · 6:30 AM · YOU`), since Following carries the viewer's
- * own shared entries among everyone else's.
+ * own shared entries among everyone else's. Its "·" is bound to "You"
+ * (R55·204), so "You" never sits alone on a line.
  */
-const OWN_SUFFIX = " · You";
+const OWN_SUFFIX = `${BOUND_SEPARATOR}You`;
 
 /**
  * Whose run a card's Useful is about, said after "Useful": twenty cards
@@ -88,7 +90,9 @@ export function PostCard(props: Readonly<PostCardProps>) {
     <article
       data-part="post"
       data-state={photo === undefined ? "no-photo" : "with-photo"}
-      className="flex flex-col gap-3 py-4"
+      // R55·205: 16 above and below, and the column's gutter inside the
+      // post, so Feed's --tint band between posts runs edge to edge.
+      className="flex flex-col gap-3 px-5 py-4 wide:px-6"
     >
       {/* The credit is a link of its own, so it cannot sit inside the
           card's: it lies over the strip's right end (Round 54 · 170), and
@@ -101,8 +105,13 @@ export function PostCard(props: Readonly<PostCardProps>) {
           onClick={onClick}
           className="target flex flex-col gap-3 text-ink no-underline"
         >
-          <div data-part="author" className="flex items-center gap-3">
-            <Avatar name={item.authorUsername ?? "A runner"} size="small" />
+          {/* R55·204–205: the avatar and the tag and badge centre on the
+              handle's line, and the meta wraps under the handle as a
+              whole, so a long one never pushes them down. */}
+          <div data-part="author" className="flex items-start gap-3">
+            <span className="-my-2 shrink-0">
+              <Avatar name={item.authorUsername ?? "A runner"} size="small" />
+            </span>
             <span className="flex min-w-0 flex-1 flex-col wrap-anywhere">
               <span className="text-body">
                 <Handle username={item.authorUsername} />
@@ -120,28 +129,19 @@ export function PostCard(props: Readonly<PostCardProps>) {
               </Mono>
               <GarminAttribution deviceName={item.deviceName} />
             </span>
-            <span className="flex items-center gap-2">
+            <span className="flex shrink-0 items-center gap-2 whitespace-nowrap">
               {item.underReview ? <UnderReview /> : undefined}
               <VerdictBadge verdict={item.verdict} />
             </span>
           </div>
           {photo === undefined ? undefined : (
-            // The first photo, carrying only its `1 / N` counter, bottom
-            // right (the Feed board's E1): the rest are D's pager. A lone
-            // photo carries no counter (round 35 #53c).
-            <span className="relative block">
-              <img
-                data-part="photo"
-                src={`/feed/photo/${photo}`}
-                alt=""
-                className="aspect-video w-full rounded-card object-cover"
-              />
-              {item.photoKeys.length > 1 ? (
-                <span className="absolute right-3 bottom-3 rounded-tight bg-ground px-2 py-1 text-ink">
-                  <Mono step="xs">1 / {String(item.photoKeys.length)}</Mono>
-                </span>
-              ) : undefined}
-            </span>
+            // The first photo at 4:5, carrying only its `1 / N` counter,
+            // bottom right (R55·207): the rest are D's pager.
+            <PhotoSlot
+              src={`/feed/photo/${photo}`}
+              shape="portrait"
+              overlay={<PhotoCounter index={0} count={item.photoKeys.length} />}
+            />
           )}
           <div
             data-part="run-strip"

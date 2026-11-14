@@ -46,19 +46,23 @@ function dayNumber(epochSeconds: number, timeZone: string): number {
   return Date.parse(`${date}T00:00:00Z`) / (DAY * 1000);
 }
 
-function whenLabel(
+/**
+How long ago a run of today was: minutes inside the first hour, else hours.
+*/
+function agoLabel(ago: number): string {
+  return ago < HOUR
+    ? `${String(Math.max(1, Math.floor(ago / 60)))}m ago`
+    : `${String(Math.floor(ago / HOUR))}h ago`;
+}
+
+/**
+The day part of the label, for a run before today.
+*/
+function dayPart(
   epochSeconds: number,
-  nowEpochSeconds: number,
+  daysBack: number,
   timeZone: string,
 ): string {
-  const ago = nowEpochSeconds - epochSeconds;
-  const daysBack =
-    dayNumber(nowEpochSeconds, timeZone) - dayNumber(epochSeconds, timeZone);
-  if (daysBack === 0) {
-    return ago < HOUR
-      ? `${String(Math.max(1, Math.floor(ago / 60)))}m ago`
-      : `${String(Math.floor(ago / HOUR))}h ago`;
-  }
   if (daysBack === 1) return "Yesterday";
   if (daysBack < WEEK_DAYS) {
     return new Intl.DateTimeFormat("en-GB", {
@@ -93,13 +97,29 @@ export function plainSpaces(text: string): string {
   return text.replaceAll("\u{202F}", " ");
 }
 
+/**
+ * A separator bound to the item after it (R55·204): a no-break space
+ * before the "·", so a line never ends on a dangling dot. The meta line
+ * wraps between items, never inside one.
+ */
+export const BOUND_SEPARATOR = "\u{A0}· ";
+
+/**
+ * Today's runs say how long ago and nothing else (R55·204: "1H AGO ·
+ * YOU"): the hours already place the run, and the clock was what pushed
+ * the line onto a third row. Every other day keeps its time.
+ */
 export function postedLabel(
   epochSeconds: number,
   nowEpochSeconds: number,
   timeZone?: string,
 ): string {
   const zone = zoneOf(timeZone);
-  return `${whenLabel(epochSeconds, nowEpochSeconds, zone)} · ${clockIn(epochSeconds, zone)}`;
+  const daysBack =
+    dayNumber(nowEpochSeconds, zone) - dayNumber(epochSeconds, zone);
+  return daysBack === 0
+    ? agoLabel(nowEpochSeconds - epochSeconds)
+    : `${dayPart(epochSeconds, daysBack, zone)}${BOUND_SEPARATOR}${clockIn(epochSeconds, zone)}`;
 }
 
 /**

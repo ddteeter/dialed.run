@@ -15,55 +15,68 @@ const NOON = Date.UTC(2025, 8, 2, 12, 0) / 1000;
 const HOUR = 3600;
 const DAY = 24 * HOUR;
 
+/**
+ * A day and its time, the "·" bound to the time (R55·204).
+ */
+function dayAt(day: string, time: string): string {
+  return `${day}\u{A0}· ${time}`;
+}
+
 describe("postedLabel", () => {
-  it("counts whole hours earlier today, and gives the time on a 12-hour clock", () => {
-    expect(postedLabel(NOON - 2 * HOUR - 30 * 60, NOON)).toBe(
-      "2h ago · 9:30 AM",
-    );
+  it("counts whole hours earlier today, and drops the clock (R55·204)", () => {
+    expect(postedLabel(NOON - 2 * HOUR - 30 * 60, NOON)).toBe("2h ago");
   });
 
   it("counts minutes inside the first hour, and never says zero", () => {
-    expect(postedLabel(NOON - 59 * 60, NOON)).toBe("59m ago · 11:01 AM");
-    expect(postedLabel(NOON - 10, NOON)).toBe("1m ago · 11:59 AM");
-    expect(postedLabel(NOON - HOUR, NOON)).toBe("1h ago · 11:00 AM");
+    expect(postedLabel(NOON - 59 * 60, NOON)).toBe("59m ago");
+    expect(postedLabel(NOON - 10, NOON)).toBe("1m ago");
+    expect(postedLabel(NOON - HOUR, NOON)).toBe("1h ago");
   });
 
-  it("says Yesterday by the calendar, not by twenty-four hours", () => {
+  it("says Yesterday by the calendar, not by twenty-four hours, with its time", () => {
     // 11pm the night before, seen at 7am: eight hours, and yesterday.
     const sevenAm = NOON - 5 * HOUR;
     expect(postedLabel(sevenAm - 8 * HOUR, sevenAm)).toBe(
-      "Yesterday · 11:00 PM",
+      dayAt("Yesterday", "11:00 PM"),
     );
-    expect(postedLabel(NOON - DAY, NOON)).toBe("Yesterday · 12:00 PM");
+    expect(postedLabel(NOON - DAY, NOON)).toBe(dayAt("Yesterday", "12:00 PM"));
   });
 
   it("names the weekday inside a week, and the date past it", () => {
-    expect(postedLabel(NOON - 2 * DAY, NOON)).toBe("Sun · 12:00 PM");
-    expect(postedLabel(NOON - 6 * DAY, NOON)).toBe("Wed · 12:00 PM");
-    expect(postedLabel(NOON - 7 * DAY, NOON)).toBe("Tue Aug 26 · 12:00 PM");
+    expect(postedLabel(NOON - 2 * DAY, NOON)).toBe(dayAt("Sun", "12:00 PM"));
+    expect(postedLabel(NOON - 6 * DAY, NOON)).toBe(dayAt("Wed", "12:00 PM"));
+    expect(postedLabel(NOON - 7 * DAY, NOON)).toBe(
+      dayAt("Tue Aug 26", "12:00 PM"),
+    );
   });
 
   it("counts days and prints the time in the run's own zone", () => {
-    // 01:00 in Chicago on the 2nd is 06:00 UTC — the same calendar day in
-    // Chicago as a 10:00 Chicago "now", where UTC would agree too; but
-    // 23:00 on the 1st in Chicago is the 2nd in UTC, and is yesterday
-    // where the run happened.
+    // 23:00 on the 1st in Chicago is the 2nd in UTC: yesterday where the
+    // run happened, eleven hours ago in UTC.
     const lateChicago = Date.UTC(2025, 8, 2, 4, 0) / 1000;
     const morningChicago = Date.UTC(2025, 8, 2, 15, 0) / 1000;
     expect(postedLabel(lateChicago, morningChicago, "America/Chicago")).toBe(
-      "Yesterday · 11:00 PM",
+      dayAt("Yesterday", "11:00 PM"),
     );
-    expect(postedLabel(lateChicago, morningChicago)).toBe("11h ago · 4:00 AM");
+    expect(postedLabel(lateChicago, morningChicago)).toBe("11h ago");
   });
 
   it("falls back to UTC for a zone Intl will not accept", () => {
-    expect(postedLabel(NOON - 2 * HOUR, NOON, "Not/AZone")).toBe(
-      "2h ago · 10:00 AM",
+    // 22:00 UTC on the 1st is Yesterday in UTC, with UTC's clock.
+    const lateUtc = Date.UTC(2025, 8, 1, 22, 0) / 1000;
+    expect(postedLabel(lateUtc, NOON, "Not/AZone")).toBe(
+      dayAt("Yesterday", "10:00 PM"),
+    );
+    // A zone Intl accepts moves the clock: 3pm in Los Angeles.
+    expect(postedLabel(lateUtc, NOON, "America/Los_Angeles")).toBe(
+      dayAt("Yesterday", "3:00 PM"),
     );
   });
 
-  it("uses one kind of space throughout", () => {
-    expect(postedLabel(NOON, NOON)).not.toMatch(/[\u{202F}\u{A0}]/u);
+  it("binds the separator and uses no other unusual space", () => {
+    const label = postedLabel(NOON - DAY, NOON);
+    expect(label.replace("\u{A0}·", " ·")).not.toMatch(/[\u{202F}\u{A0}]/u);
+    expect(label).toContain("\u{A0}· ");
   });
 });
 

@@ -223,12 +223,19 @@ describe("Feed: Following", () => {
 
     const posts = document.querySelectorAll('[data-part="post"]');
     const list = document.querySelector('[data-part="posts"]');
-    // The divider is the list's, between posts: no gutter, no new role.
-    expect(list).toHaveClass("divide-y", "divide-hairline");
-    expect(list).not.toHaveClass("gap-5");
+    // R55·205: the 8 --tint band is the list's, between posts, edge to
+    // edge: the list steps out of the column's gutter and each post puts
+    // it back.
+    expect(list).toHaveClass(
+      "divide-y-8",
+      "divide-tint",
+      "-mx-5",
+      "wide:-mx-6",
+    );
+    expect(list).not.toHaveClass("divide-hairline", "gap-5");
     for (const post of posts) {
       expect(post.parentElement).toBe(list);
-      expect(post).toHaveClass("py-4");
+      expect(post).toHaveClass("px-5", "py-4", "wide:px-6");
       expect(post).not.toHaveClass("border-b");
     }
   });
