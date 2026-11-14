@@ -665,12 +665,36 @@ describe("VerdictBacklog: what each state is drawn as", () => {
     expect(line.parentElement).toHaveClass("text-mono-sm", "text-dialed-text");
   });
 
+  it("reads a band the runner set as the list does, never its stored middle (R2-RUNS-04)", async () => {
+    // The stored row the weather module writes for a band: its middle,
+    // the storage word and a wind of zero nobody measured.
+    await renderTable([
+      row({
+        conditions: {
+          ...conditions,
+          tempC: 11,
+          feelsLikeC: 11,
+          condition: "manual",
+          windKph: 0,
+          source: "manual",
+        },
+      }),
+    ]);
+
+    const line = screen.getByText("Set · 47–56°");
+    expect(line).toHaveAttribute("aria-hidden", "true");
+    expect(line.parentElement).toHaveClass("text-mono-sm", "text-label");
+    expect(line.parentElement).not.toHaveClass("text-dialed-text");
+    expect(screen.getByText("Set, 47 to 56 degrees")).toHaveClass("sr-only");
+    expect(screen.queryByText(/manual|0mph|52°/i)).toBeNull();
+  });
+
   it("says how long and how far, in the viewer's own units", async () => {
     await renderTable([row()]);
 
     // The time is drawn as a clock and said in words: "40:00" reads as a
     // time of day. The distance with it is said in full (round 52 #158).
-    const line = screen.getByText("40:00 · 5.0mi");
+    const line = screen.getByText("40:00 · 5.0 mi");
     expect(line).toHaveAttribute("aria-hidden", "true");
     expect(screen.getByText("40 minutes, 5.0 miles")).toHaveClass("sr-only");
   });
@@ -946,7 +970,10 @@ describe("VerdictBacklog: below the desk, one card per run (Round 55 · 236)", (
     const segments = within(rowsOf()[0] ?? document.body).getByRole("button", {
       name: /^Way cold/,
     }).parentElement;
-    expect(segments).toHaveClass("grid", "grid-cols-5", "gap-1", "desk:flex");
+    // Equal columns at the desk too, as 236a draws them (R2-RUNS-05).
+    expect(segments).toHaveAttribute("data-part", "verdict-segments");
+    expect(segments).toHaveClass("grid", "grid-cols-5", "gap-1");
+    expect(segments).not.toHaveClass("desk:flex");
     // Nothing to skip to: every run is on the page.
     expect(screen.queryByRole("button", { name: "Skip" })).toBeNull();
   });
@@ -997,6 +1024,69 @@ describe("VerdictBacklog: below the desk, one card per run (Round 55 · 236)", (
         },
       });
     });
+  });
+});
+
+describe("VerdictBacklog: the desk's one card (Round 55 · 236a, R2-RUNS-05)", () => {
+  const many = Array.from({ length: 11 }, (_unused, index) =>
+    row({
+      runId: `01RUN${String(index).padStart(2, "0")}`,
+      startedAt: MONDAY + index * 86_400,
+      suggestion: undefined,
+    }),
+  );
+
+  it("sits the table on one --panel card with a hairline edge at the desk", async () => {
+    await renderTable([row()]);
+
+    const card = screen.getByRole("table").parentElement;
+    expect(card).toHaveAttribute("data-part", "backlog-card");
+    expect(card).toHaveClass(
+      "desk:overflow-hidden",
+      "desk:rounded-card",
+      "desk:border",
+      "desk:border-hairline",
+      "desk:bg-panel",
+    );
+    // The card's edge closes the table: its last row draws no rule.
+    expect(rowsOf()[0]).toHaveClass("desk:last:border-b-0");
+  });
+
+  it("lists the first eight runs, then Show N more, which lists the rest", async () => {
+    await renderTable(many);
+
+    expect(rowsOf()).toHaveLength(8);
+    const more = screen.getByRole("button", { name: "Show 3 more" });
+    expect(more).toHaveClass("target", "text-small", "underline");
+    // The count beneath still counts every run that needs one.
+    expect(screen.getByText(/0 of 11 saved/i)).toBeInTheDocument();
+
+    fireEvent.click(more);
+
+    expect(rowsOf()).toHaveLength(11);
+    expect(screen.queryByRole("button", { name: /more$/ })).toBeNull();
+  });
+
+  it("draws the rest once the arrows move past the eighth row", async () => {
+    await renderTable(many);
+
+    for (let step = 0; step < 7; step += 1) {
+      fireEvent.keyDown(here(), { key: "ArrowDown" });
+    }
+    expect(rowsOf()).toHaveLength(8);
+    expect(rowsOf()[7]).toHaveAttribute("aria-current", "true");
+
+    fireEvent.keyDown(here(), { key: "ArrowDown" });
+
+    expect(rowsOf()).toHaveLength(11);
+    expect(rowsOf()[8]).toHaveAttribute("aria-current", "true");
+  });
+
+  it("offers no Show more for eight runs or fewer", async () => {
+    await renderTable(many.slice(0, 8));
+
+    expect(rowsOf()).toHaveLength(8);
+    expect(screen.queryByRole("button", { name: /more$/ })).toBeNull();
   });
 });
 

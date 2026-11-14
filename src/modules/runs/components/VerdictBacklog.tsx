@@ -25,6 +25,7 @@ import type {
   Conditions,
 } from "../../feed";
 import type { VerdictSlot } from "../backlog-keys";
+import { setConditionsForms } from "../run-conditions";
 import { actionForKey, rowAfterMove, verdictKeys } from "../backlog-keys";
 
 /**
@@ -114,6 +115,34 @@ function conditionsLine(
       [{ kind: "wind", windKph: conditions.windKph }],
     ],
     units,
+  );
+}
+
+/**
+ * The conditions cell. A provider's reading is the measured line in the
+ * dialed text colour. A band the runner set reads as the runs list draws
+ * it (R2-RUNS-04): `SET · 42–51°` in the label colour, never its stored
+ * middle, the storage word "manual" or a wind nobody measured (round 26,
+ * item 2). The backlog's `Conditions` doesn't carry the picked sky, so the
+ * band is drawn without it, as a band set before the sheet asked for one.
+ */
+function ConditionsCell({
+  conditions,
+  units,
+}: Readonly<{ conditions: Conditions; units: Units }>): JSX.Element {
+  if (conditions.source === "manual") {
+    return (
+      <Mono step="sm" className="text-label">
+        <Spoken
+          {...setConditionsForms(conditions.tempC, undefined, units.temp)}
+        />
+      </Mono>
+    );
+  }
+  return (
+    <Mono step="sm" className="text-dialed-text">
+      <Spoken {...conditionsLine(conditions, units)} />
+    </Mono>
   );
 }
 
@@ -510,149 +539,171 @@ function BacklogTable({
   const { selected, onSelect, onKeyDown } = selection;
   const { saved, failures, kitOf, verdicts } = rowState;
   const { onUse, onChoose, onSave } = rowActions;
+  const { shown, more, showAll } = useShownRows(rows, selected);
   return (
     <>
-      <table className="block w-full border-collapse text-left desk:table">
-        <thead className="hidden desk:table-header-group">
-          <tr className="border-b border-hairline">
-            {["Date", "Run", "Conditions", "Outfit", "Did it work?"].map(
-              (heading) => (
-                <th key={heading} scope="col" className="px-2 pb-2">
-                  <Mono step="xs" className="text-muted">
-                    {heading}
-                  </Mono>
-                </th>
-              ),
-            )}
-          </tr>
-        </thead>
-        <tbody className="flex flex-col gap-3 desk:table-row-group">
-          {rows.map((row, index) => {
-            const failure = failures.get(row.runId);
-            const isHere = index === selected;
-            const day = runDay(row);
-            const verdict = verdicts.get(row.runId);
-            return (
-              <Fragment key={row.runId}>
-                <tr
-                  // Roving focus: one row is in the tab order and the
-                  // arrows move which. A table of fifty rows that put every
-                  // row in the sequence would be fifty tab stops.
-                  tabIndex={isHere ? 0 : -1}
-                  aria-current={isHere ? "true" : undefined}
-                  data-saved={saved.has(row.runId) ? "true" : undefined}
-                  data-failed={failure === undefined ? undefined : "true"}
-                  onFocus={() => {
-                    onSelect(index);
-                  }}
-                  // On the row, the one focusable thing that holds focus
-                  // (plan 161 step 7: a key handler on the body is one on
-                  // a non-interactive element). Every row has it, and the
-                  // one with focus answers: `↑`/`↓` move the selection,
-                  // and focus follows it to the next row's handler.
-                  onKeyDown={onKeyDown}
-                  className={rowClass(isHere, failure !== undefined)}
-                >
-                  <td className={CELL}>
-                    <span className="text-body font-semibold desk:font-mono desk:text-mono-sm desk:font-normal desk:uppercase">
-                      {day}
-                    </span>
-                  </td>
-                  <td className={CELL}>
-                    {/* `--quiet`, like the conditions beside it: the
+      {/* Round 55 · 236a: at the desk, one --panel card with a hairline
+          edge (R2-RUNS-05); below it, each row is its own card. */}
+      <div
+        data-part="backlog-card"
+        className="desk:overflow-hidden desk:rounded-card desk:border desk:border-hairline desk:bg-panel desk:pt-2"
+      >
+        <table className="block w-full border-collapse text-left desk:table">
+          <thead className="hidden desk:table-header-group">
+            <tr className="border-b border-hairline">
+              {["Date", "Run", "Conditions", "Outfit", "Did it work?"].map(
+                (heading) => (
+                  <th key={heading} scope="col" className="px-2 pb-2">
+                    <Mono step="xs" className="text-muted">
+                      {heading}
+                    </Mono>
+                  </th>
+                ),
+              )}
+            </tr>
+          </thead>
+          <tbody className="flex flex-col gap-3 desk:table-row-group">
+            {shown.map((row, index) => {
+              const failure = failures.get(row.runId);
+              const isHere = index === selected;
+              const day = runDay(row);
+              const verdict = verdicts.get(row.runId);
+              return (
+                <Fragment key={row.runId}>
+                  <tr
+                    // Roving focus: one row is in the tab order and the
+                    // arrows move which. A table of fifty rows that put every
+                    // row in the sequence would be fifty tab stops.
+                    tabIndex={isHere ? 0 : -1}
+                    aria-current={isHere ? "true" : undefined}
+                    data-saved={saved.has(row.runId) ? "true" : undefined}
+                    data-failed={failure === undefined ? undefined : "true"}
+                    onFocus={() => {
+                      onSelect(index);
+                    }}
+                    // On the row, the one focusable thing that holds focus
+                    // (plan 161 step 7: a key handler on the body is one on
+                    // a non-interactive element). Every row has it, and the
+                    // one with focus answers: `↑`/`↓` move the selection,
+                    // and focus follows it to the next row's handler.
+                    onKeyDown={onKeyDown}
+                    className={rowClass(isHere, failure !== undefined)}
+                  >
+                    <td className={CELL}>
+                      <span className="text-body font-semibold desk:font-mono desk:text-mono-sm desk:font-normal desk:uppercase">
+                        {day}
+                      </span>
+                    </td>
+                    <td className={CELL}>
+                      {/* `--quiet`, like the conditions beside it: the
                         picked row is tinted, and `--muted` is 4.0:1 on
                         the tint. */}
-                    <Mono step="sm" className="text-quiet">
-                      <Spoken
-                        {...measuredLine(
-                          [
-                            [{ kind: "duration", durationS: row.durationS }],
-                            [{ kind: "distance", distanceM: row.distanceM }],
-                          ],
-                          units,
-                        )}
-                      />
-                    </Mono>
-                  </td>
-                  <td className={CELL}>
-                    {row.conditions === undefined ? (
                       <Mono step="sm" className="text-quiet">
-                        No conditions
+                        <Spoken
+                          {...measuredLine(
+                            [
+                              [{ kind: "duration", durationS: row.durationS }],
+                              [
+                                {
+                                  kind: "distance",
+                                  distanceM: row.distanceM,
+                                  spaced: true,
+                                },
+                              ],
+                            ],
+                            units,
+                          )}
+                        />
                       </Mono>
-                    ) : (
-                      <Mono step="sm" className="text-dialed-text">
-                        <Spoken {...conditionsLine(row.conditions, units)} />
-                      </Mono>
-                    )}
-                  </td>
-                  <td className={OUTFIT_CELL}>
-                    <OutfitCell
-                      runId={row.runId}
-                      day={day}
-                      suggestion={row.suggestion}
-                      chosen={kitOf(row)}
-                      onUse={(kit) => {
-                        onUse(row, kit);
-                      }}
-                    />
-                  </td>
-                  <td className={CELL}>
-                    {/* `aria-pressed`, not a `radiogroup`, and for a
+                    </td>
+                    <td className={CELL}>
+                      {row.conditions === undefined ? (
+                        <Mono step="sm" className="text-quiet">
+                          No conditions
+                        </Mono>
+                      ) : (
+                        <ConditionsCell
+                          conditions={row.conditions}
+                          units={units}
+                        />
+                      )}
+                    </td>
+                    <td className={OUTFIT_CELL}>
+                      <OutfitCell
+                        runId={row.runId}
+                        day={day}
+                        suggestion={row.suggestion}
+                        chosen={kitOf(row)}
+                        onUse={(kit) => {
+                          onUse(row, kit);
+                        }}
+                      />
+                    </td>
+                    <td className={CELL}>
+                      {/* `aria-pressed`, not a `radiogroup`, and for a
                         sharper reason than A3's: the arrow keys here move
                         between *rows*, so a group promising arrow-key
                         selection would be a promise the table cannot keep.
                         A3 reached the same answer from the other side
                         (R-84), and one answer to "what is a verdict
                         control" is the point. */}
-                    <div className="grid grid-cols-5 gap-1 desk:flex">
-                      {verdictKeys.map((slot) => (
-                        <VerdictSlotButton
-                          key={slot.key}
-                          slot={slot}
-                          day={day}
-                          isChosen={verdict === slot.value}
-                          onChoose={() => {
-                            onChoose(row, slot.value);
-                          }}
-                        />
-                      ))}
-                    </div>
-                    {/* A card has no Enter to press: A3's own verb, once
-                        a verdict is picked (Round 55 · 236). */}
-                    {verdict === undefined ? undefined : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onSave(row);
-                        }}
-                        className="target mt-3 w-full rounded-card border-none bg-action px-4 font-display text-body uppercase text-accent-ink desk:hidden"
+                      <div
+                        data-part="verdict-segments"
+                        className="grid grid-cols-5 gap-1"
                       >
-                        Log it
-                      </button>
-                    )}
-                  </td>
-                </tr>
-                {failure === undefined ? undefined : (
-                  // The band spans the row it is about, directly under it.
-                  <tr data-slot="row-failure" className="block desk:table-row">
-                    <td
-                      colSpan={5}
-                      className="block desk:table-cell desk:px-2 desk:pb-3"
-                    >
-                      <ControlFailureBand
-                        failure={failure}
-                        onRetry={() => {
-                          onSave(row);
-                        }}
-                      />
+                        {verdictKeys.map((slot) => (
+                          <VerdictSlotButton
+                            key={slot.key}
+                            slot={slot}
+                            day={day}
+                            isChosen={verdict === slot.value}
+                            onChoose={() => {
+                              onChoose(row, slot.value);
+                            }}
+                          />
+                        ))}
+                      </div>
+                      {/* A card has no Enter to press: A3's own verb, once
+                        a verdict is picked (Round 55 · 236). */}
+                      {verdict === undefined ? undefined : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onSave(row);
+                          }}
+                          className="target mt-3 w-full rounded-card border-none bg-action px-4 font-display text-body uppercase text-accent-ink desk:hidden"
+                        >
+                          Log it
+                        </button>
+                      )}
                     </td>
                   </tr>
-                )}
-              </Fragment>
-            );
-          })}
-        </tbody>
-      </table>
+                  {failure === undefined ? undefined : (
+                    // The band spans the row it is about, directly under it.
+                    <tr
+                      data-slot="row-failure"
+                      className="block desk:table-row"
+                    >
+                      <td
+                        colSpan={5}
+                        className="block desk:table-cell desk:px-2 desk:pb-3"
+                      >
+                        <ControlFailureBand
+                          failure={failure}
+                          onRetry={() => {
+                            onSave(row);
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <ShowMore more={more} onShow={showAll} />
 
       <div className="flex flex-wrap items-center gap-4">
         <span className="hidden flex-wrap items-center gap-4 desk:flex">
@@ -680,14 +731,59 @@ function BacklogTable({
 }
 
 /**
+ * Round 55 · 236a: the table lists the first eight runs and then "Show N
+ * more" (R2-RUNS-05). The rest are one press away, and they are drawn as
+ * soon as the arrow keys move the selection past the eighth, so the keys
+ * never land on a row that isn't there.
+ */
+const FIRST_ROWS = 8;
+
+function useShownRows(
+  rows: readonly BacklogRow[],
+  selected: number,
+): { shown: readonly BacklogRow[]; more: number; showAll: () => void } {
+  const [isAll, setIsAll] = useState(false);
+  const shown =
+    isAll || selected >= FIRST_ROWS ? rows : rows.slice(0, FIRST_ROWS);
+  return {
+    shown,
+    more: rows.length - shown.length,
+    showAll: () => {
+      setIsAll(true);
+    },
+  };
+}
+
+/**
+ * "Show N more", under the table's card, in the closet's and the public
+ * profile's text-link form.
+ */
+function ShowMore({
+  more,
+  onShow,
+}: Readonly<{ more: number; onShow: () => void }>): JSX.Element | undefined {
+  if (more === 0) return;
+  return (
+    <button
+      type="button"
+      data-part="show-more"
+      onClick={onShow}
+      className="target inline-flex items-center self-start text-small text-ink underline underline-offset-4"
+    >
+      {`Show ${String(more)} more`}
+    </button>
+  );
+}
+
+/**
  * A run below the desk is a card, as S1 draws a prompt; from the desk up
  * it is a table row on a hairline. **The picked row takes the tint**
  * (Round 55 · 236), which is what lets the rail's "Selected" card go.
  */
 const ROW_CLASS =
-  "row-press flex flex-col gap-2 rounded-card border border-hairline bg-panel p-4 desk:table-row desk:rounded-none desk:border-x-0 desk:border-t-0 desk:bg-transparent desk:p-0";
+  "row-press flex flex-col gap-2 rounded-card border border-hairline bg-panel p-4 desk:table-row desk:rounded-none desk:border-x-0 desk:border-t-0 desk:last:border-b-0 desk:bg-transparent desk:p-0";
 const ROW_PICKED_CLASS =
-  "row-press flex flex-col gap-2 rounded-card border border-hairline bg-panel p-4 desk:table-row desk:rounded-none desk:border-x-0 desk:border-t-0 desk:bg-tint desk:p-0";
+  "row-press flex flex-col gap-2 rounded-card border border-hairline bg-panel p-4 desk:table-row desk:rounded-none desk:border-x-0 desk:border-t-0 desk:last:border-b-0 desk:bg-tint desk:p-0";
 /**
  * The failure mark is **border weight, not hue** — the Form Contract's own
  * rule, one layer out from a field: "pink is action, never failure", and a
@@ -695,7 +791,7 @@ const ROW_PICKED_CLASS =
  * carry a band, so it carries the weight.
  */
 const ROW_FAILED_CLASS =
-  "row-press flex flex-col gap-2 rounded-card border-2 border-ink bg-panel p-4 desk:table-row desk:rounded-none desk:border-x-0 desk:border-t-0 desk:bg-transparent desk:p-0";
+  "row-press flex flex-col gap-2 rounded-card border-2 border-ink bg-panel p-4 desk:table-row desk:rounded-none desk:border-x-0 desk:border-t-0 desk:last:border-b-0 desk:bg-transparent desk:p-0";
 
 function rowClass(isPicked: boolean, hasFailed: boolean): string {
   if (hasFailed) return ROW_FAILED_CLASS;

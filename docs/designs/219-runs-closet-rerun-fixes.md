@@ -21,10 +21,10 @@ before it is fixed. If a finding is already right on main, the PR says so.
 - **Manual entry (R2-RUNS-06):** the route loads the viewer's units. The
   field is "Distance (mi)" or "Distance (km)" and converts by that unit,
   through `metresPer`, now exported from `lib/contracts/measures.ts`.
-- **Runs list row (R2-RUNS-02):** the distance never shrinks. The watch
-  name doesn't wrap and truncates last. **Guess:** Garmin Rulings 77 says
-  the credit is never truncated, and 235 says the line truncates. #671 asks
-  that question for feed cards, so this goes to the coordinator.
+- **Runs list row (R2-RUNS-02):** the distance and the SET badge never
+  shrink, and the Garmin credit is never cut (Garmin Rulings 77). When the
+  row is too narrow, the credit takes its own line, as on the feed card.
+  **Guess**, pending Design 314 (#760, coordinator, 2026-11-14).
 - **T1 (R2-RUNS-07):** with one run, "Your run, its outfit and verdict"
   (owner, 2026-11-14, on #704).
 - **A1 slot (R2-RUNS-08):** the waiting slot reserves the block's resting
@@ -78,4 +78,4 @@ before it is fixed. If a finding is already right on main, the PR says so.
 
 ## Open questions
 
-- R2-RUNS-02: the watch name truncating against Garmin Rulings 77 (with the coordinator).
+- R2-RUNS-02 is built on the guess above until Design 314 (#760) rules.
