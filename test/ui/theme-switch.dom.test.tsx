@@ -77,10 +77,11 @@ describe("ThemeSwitch", () => {
     expect(group.querySelector("legend")).toHaveTextContent(/^Theme$/u);
   });
 
-  it("draws the words as MONO.xs capitals and speaks them in sentence case", () => {
-    // R50·143.3: capitals like every other segmented label. Round 52's
-    // Accessibility Contract: the names heard are "System", "Light",
-    // "Dark", which is the string; the capitals are Mono's CSS.
+  it("draws the words as MONO.sm capitals in one joined track, and speaks them in sentence case", () => {
+    // R54·166.5: name labels are MONO.sm capitals (later than R50·143.3's
+    // xs). Round 52's Accessibility Contract: the names heard are
+    // "System", "Light", "Dark", which is the string; the capitals are
+    // Mono's CSS.
     const { group } = setUp(
       "system",
       vi.fn(() => Promise.resolve()),
@@ -88,10 +89,30 @@ describe("ThemeSwitch", () => {
     for (const name of ["System", "Light", "Dark"]) {
       expect(within(group).getByText(name)).toHaveClass(
         "font-mono",
-        "text-mono-xs",
+        "text-mono-sm",
         "uppercase",
       );
     }
+    // U1 joins the three in one track with an ink thumb (#672 F-05), not
+    // three detached pills.
+    const track = within(group)
+      .getByText("System")
+      .closest("label")?.parentElement;
+    expect(track).toHaveClass(
+      "flex",
+      "gap-1",
+      "rounded-pill",
+      "bg-tint",
+      "p-1",
+    );
+    const chosen = within(group).getByText("System").closest("label");
+    expect(chosen).toHaveClass(
+      "flex-1",
+      "rounded-pill",
+      "has-[:checked]:bg-ink",
+      "has-[:checked]:text-ground",
+    );
+    expect(chosen).not.toHaveClass("border");
   });
 
   it("changes the page and saves at once, with no Save", async () => {

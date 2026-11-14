@@ -13,11 +13,12 @@ import type { FieldProps } from "./use-form-submit";
  * "Three-way segmented control, a radiogroup with arrow keys (three short
  * options, so not the 104 select): SYSTEM / LIGHT / DARK. Changes the page
  * at once and saves at once, with no Save." So the group is
- * `ChoiceList`'s three-column chips — native radios, which is where the
- * arrow keys come from — and a change puts the theme on the page before it
- * asks the server anything. The words are MONO.xs capitals like every
- * other segmented label (R50·143.3); `THEME_LABELS` stays sentence case,
- * which is what a screen reader says (round 52's Theme row).
+ * `ChoiceList`'s joined segmented track (#672 F-05) — native radios, which
+ * is where the arrow keys come from — and a change puts the theme on the
+ * page before it asks the server anything. The words are MONO.sm capitals
+ * like every name label (R54·166.5, after R50·143.3's xs); `THEME_LABELS`
+ * stays sentence case, which is what a screen reader says (round 52's
+ * Theme row).
  *
  * "If saving fails, the page keeps the theme and the row's message band
  * shows 'Couldn't save. This device will keep it.'" It keeps it because
@@ -120,8 +121,10 @@ export function ThemeSwitch({
         isLegendHeading
         options={THEME_CHOICES}
         optionLabels={THEME_LABELS}
-        optionStep="xs"
-        layout="chip-grid"
+        // U1's joined control, not three detached pills, in MONO.sm as
+        // every name label is (#672 F-05; R54·166.5).
+        optionStep="sm"
+        layout="segmented"
         value={choice}
         field={field}
         onChange={(next) => {

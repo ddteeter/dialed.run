@@ -70,7 +70,10 @@ export function UnitFields({
       <ChoiceList
         name="tempUnit"
         legend={UNIT_LABELS.tempUnit}
-        layout="chips"
+        // One joined track with an ink thumb, mono capitals (N; R54·166.5;
+        // #703 R2-ONB-04), as the Theme row is.
+        layout="segmented"
+        optionStep="sm"
         field={field}
         value={tempUnit}
         options={tempUnitSchema.options}
@@ -81,7 +84,10 @@ export function UnitFields({
       <ChoiceList
         name="distanceUnit"
         legend={UNIT_LABELS.distanceUnit}
-        layout="chips"
+        // One joined track with an ink thumb, mono capitals (N; R54·166.5;
+        // #703 R2-ONB-04), as the Theme row is.
+        layout="segmented"
+        optionStep="sm"
         field={field}
         value={distanceUnit}
         options={distanceUnitSchema.options}

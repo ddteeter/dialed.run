@@ -1019,6 +1019,24 @@ const OPTION_CHIP_CLASS =
   "target relative flex cursor-pointer items-center justify-center rounded-pill border border-hairline px-3 py-2 text-body has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-ground has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink";
 
 /**
+ * A segment of a joined pair or trio (U1's Units and Theme, `V1
+ * Screens.dc.html` N; #672, #703 R2-ONB-04): no edge of its own, since the
+ * track is the shape, and the chosen one is the ink thumb. Ink, never hue,
+ * for the chip's reason above.
+ */
+const OPTION_SEGMENT_CLASS =
+  "target relative flex flex-1 cursor-pointer items-center justify-center rounded-pill px-3 py-2 text-quiet has-[:checked]:bg-ink has-[:checked]:text-ground has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink";
+
+/**
+ * How one option of each non-row layout is drawn.
+ */
+const OPTION_CLASS: Readonly<Record<OptionsLayout, string>> = {
+  chips: OPTION_CHIP_CLASS,
+  "chip-grid": OPTION_CHIP_CLASS,
+  segmented: OPTION_SEGMENT_CLASS,
+};
+
+/**
  * A row of a `ChoiceList` in its one card (R54·166.2): rows split by
  * hairlines, the chosen one marked by a 2px ink edge drawn inward that
  * follows the card's corners at its ends. The ring and the edge mark the
@@ -1038,16 +1056,19 @@ const OPTION_DETAIL_LABEL_CLASS =
 
 /**
  * How a `ChoiceList`'s options sit: wrapped chips, chips in three columns,
- * or stacked rows in one card (the default).
+ * one joined track, or stacked rows in one card (the default).
  */
-const OPTIONS_LAYOUT: Readonly<Record<"chips" | "chip-grid" | "rows", string>> =
-  {
-    chips: "flex flex-wrap gap-2",
-    "chip-grid": "grid grid-cols-3 gap-2",
-    rows: "flex flex-col rounded-card border border-hairline",
-  };
+const OPTIONS_LAYOUT: Readonly<Record<OptionsLayout | "rows", string>> = {
+  chips: "flex flex-wrap gap-2",
+  "chip-grid": "grid grid-cols-3 gap-2",
+  // The track: one pill in --tint, its segments 4 inside it and 4 apart.
+  segmented: "flex gap-1 rounded-pill bg-tint p-1",
+  rows: "flex flex-col rounded-card border border-hairline",
+};
 
-function optionsLayout(layout: "chips" | "chip-grid" | undefined): string {
+type OptionsLayout = "chips" | "chip-grid" | "segmented";
+
+function optionsLayout(layout: OptionsLayout | undefined): string {
   return OPTIONS_LAYOUT[layout ?? "rows"];
 }
 
@@ -1410,8 +1431,11 @@ export function ChoiceList<TOption extends string>(
        * `chip-grid` is the same chips in three columns instead of a wrap —
        * R2b's twelve temperature bands, *"a 3-column radiogroup, coldest
        * top-left"* (round 26, item 2), where reading order is the scale.
+       *
+       * `segmented` joins two or three short choices in one track with an
+       * ink thumb, as U1 draws Units and Theme (#672, #703 R2-ONB-04).
        */
-      layout?: "chips" | "chip-grid" | undefined;
+      layout?: OptionsLayout | undefined;
       /**
        * `""` is "not answered", the same spelling `ChoiceField` uses for a
        * `<select>` with no choice made — an unanswered control reaches the
@@ -1467,7 +1491,7 @@ export function ChoiceList<TOption extends string>(
         {options.map((option) => (
           <OptionRow
             key={option}
-            isChips={isChips}
+            layout={layout}
             detail={value === option ? props.optionDetail?.[option] : undefined}
           >
             <input
@@ -1516,15 +1540,17 @@ export function ChoiceList<TOption extends string>(
  * choice. The label keeps the row's target and pointer.
  */
 function OptionRow({
-  isChips,
+  layout,
   detail,
   children,
 }: Readonly<{
-  isChips: boolean;
+  layout: OptionsLayout | undefined;
   detail: ReactNode;
   children: ReactNode;
 }>): JSX.Element {
-  if (isChips) return <label className={OPTION_CHIP_CLASS}>{children}</label>;
+  if (layout !== undefined) {
+    return <label className={OPTION_CLASS[layout]}>{children}</label>;
+  }
   if (detail === undefined) {
     return <label className={OPTION_ROW_CLASS}>{children}</label>;
   }

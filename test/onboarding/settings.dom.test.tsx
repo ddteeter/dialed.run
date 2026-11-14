@@ -575,6 +575,34 @@ describe("the sub-pages", () => {
     expect(screen.queryByText("down")).toBeNull();
   });
 
+  it("draw each unit pair as one joined track in MONO.sm capitals (#703 R2-ONB-04)", async () => {
+    await renderWithRouter(
+      <UnitsForm current={ANSWERED} saveUnits={vi.fn()} />,
+    );
+    for (const [name, words] of [
+      ["Temperature", ["°F", "°C"]],
+      ["Distance", ["mi", "km"]],
+    ] as const) {
+      const group = screen.getByRole("group", { name });
+      const first = within(group).getByText(words[0]);
+      expect(first.closest("label")?.parentElement).toHaveClass(
+        "rounded-pill",
+        "bg-tint",
+      );
+      for (const word of words) {
+        expect(within(group).getByText(word)).toHaveClass(
+          "font-mono",
+          "text-mono-sm",
+          "uppercase",
+        );
+        expect(within(group).getByText(word).closest("label")).toHaveClass(
+          "flex-1",
+          "has-[:checked]:bg-ink",
+        );
+      }
+    }
+  });
+
   it("save units, and only units, from their own form", async () => {
     const user = userEvent.setup();
     const saveUnits = vi.fn().mockResolvedValue(undefined);
