@@ -128,6 +128,10 @@ describe("PhotoMatches", () => {
     ]);
     expect(screen.getByText(PHOTO)).toHaveClass("font-mono");
     expect(screen.getByText(`Garment ${GARMENT}`)).toHaveClass("font-mono");
+    // Every tile's photo is the column's 128 square, cropped to fill it.
+    for (const image of screen.getAllByRole("img")) {
+      expect(image).toHaveClass("h-32", "w-32", "object-cover");
+    }
   });
 
   it("says under each how near it is, whether it is private, and whose (round 39 #71)", async () => {
@@ -157,12 +161,17 @@ describe("PhotoMatches", () => {
       "/desk/runners?query=maya_runs&filter=all",
       "/desk/runners?query=k_lopes&filter=all",
     ]);
+    // A line with a 44 hit area, cut at the tile's edge: not a 44 box
+    // that sets the grid's row gap (R2-DESK-11).
     expect(owners[0]).toHaveClass(
-      "target",
+      "target-line",
+      "max-w-full",
+      "truncate",
       "font-mono",
       "text-mono-xs",
       "underline",
     );
+    expect(owners[0]).not.toHaveClass("target");
     // In the handle's own case: no uppercase step anywhere in it (G-19).
     expect(owners[0]).not.toHaveClass("uppercase");
     expect(owners[0]?.querySelector(".uppercase")).toBeNull();
@@ -172,7 +181,22 @@ describe("PhotoMatches", () => {
         "text-mono-xs",
         "text-quiet",
       );
+      // Cut at the tile's edge, whole in the title (R2-DESK-11).
+      expect(line).toHaveClass("min-w-0", "truncate");
+      expect(line.previousElementSibling).toHaveClass("min-w-0", "truncate");
+      expect(line.previousElementSibling).toHaveAttribute(
+        "title",
+        line.previousElementSibling?.textContent ?? "",
+      );
+      expect(line.parentElement).toHaveClass("min-w-0", "flex-col");
     }
+    // Fixed 128 columns, so a long caption cannot widen its tile.
+    expect(distances[0]?.closest("ul")).toHaveClass(
+      "grid",
+      "grid-cols-[repeat(auto-fill,--spacing(32))]",
+      "gap-3",
+    );
+    expect(distances[0]?.closest("ul")).not.toHaveClass("flex-wrap");
   });
 
   it("says a bit in the singular", async () => {
@@ -402,6 +426,8 @@ describe("a removed image's tile", () => {
     );
     const tile = part("removed-tile");
     expect(tile).not.toBeNull();
+    // A grid cell its caption cannot widen (R2-DESK-11).
+    expect(tile).toHaveClass("min-w-0", "flex-col");
     const inTile = within(tile ?? document.body);
     expect(inTile.getByText("Removed")).toHaveClass("font-mono");
     expect(inTile.getByText("ph_2m8q")).toBeVisible();
@@ -557,8 +583,10 @@ describe("a garment match's takedown", () => {
       "outline-2",
       "outline-offset-2",
       "outline-ink",
+      "min-w-0",
     );
     expect(kit).not.toHaveClass("outline");
+    expect(kit).toHaveClass("flex", "min-w-0", "flex-col", "gap-1");
     const actions = within(bar ?? document.body);
     expect(actions.getByRole("button", { name: "Remove" })).toBeVisible();
     expect(

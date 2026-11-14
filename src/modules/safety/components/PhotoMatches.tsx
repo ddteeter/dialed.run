@@ -192,8 +192,8 @@ type GarmentDeciding = ReturnType<typeof useGarmentDeciding>;
 // A garment tile while its bar is open: §06's focus ring, so it is clear
 // which photo the bar acts on. Written out whole, so it reads as one list.
 const OPEN_TILE_CLASS =
-  "flex flex-col gap-1 outline outline-2 outline-offset-2 outline-ink";
-const TILE_CLASS = "flex flex-col gap-1";
+  "flex min-w-0 flex-col gap-1 outline outline-2 outline-offset-2 outline-ink";
+const TILE_CLASS = "flex min-w-0 flex-col gap-1";
 
 /**
  * The grid, or the sentence that stands in for it.
@@ -227,7 +227,10 @@ function Matches({
     );
   }
   return (
-    <ul className="m-0 flex list-none flex-wrap gap-3 p-0">
+    // Tiles on fixed 128 columns, as 198's other-photos grid sets its
+    // own: a caption no longer sizes its tile, so columns line up
+    // (R2-DESK-11), and the captions cut at the tile's edge.
+    <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,--spacing(32))] gap-3 p-0">
       {removed.map((image) => (
         <RemovedTile key={image.keptId} image={image} />
       ))}
@@ -241,7 +244,7 @@ function Matches({
           }
         >
           <Thumbnail match={match} />
-          <span className={CAPTION_CLASS}>
+          <span title={nameOf(match)} className={CAPTION_CLASS}>
             <Mono step="xs">{nameOf(match)}</Mono>
           </span>
           <span
@@ -276,11 +279,11 @@ function RemovedTile({
   image,
 }: Readonly<{ image: RemovedImage }>): JSX.Element {
   return (
-    <li data-part="removed-tile" className="flex flex-col gap-1">
+    <li data-part="removed-tile" className="flex min-w-0 flex-col gap-1">
       <span className="flex h-32 w-32 items-center justify-center border border-hairline text-quiet">
         <Mono step="xs">Removed</Mono>
       </span>
-      <span className={CAPTION_CLASS}>
+      <span title={nameOf(image)} className={CAPTION_CLASS}>
         <Mono step="xs">{nameOf(image)}</Mono>
       </span>
       <span className={CAPTION_CLASS}>
@@ -380,7 +383,7 @@ function distanceLabel(distance: number): string {
  * A tile's caption line: the mono step's own line-height, so the lines
  * under a tile read as one caption stack, not body paragraphs (G-19).
  */
-const CAPTION_CLASS = "text-mono-xs text-quiet";
+const CAPTION_CLASS = "min-w-0 truncate text-mono-xs text-quiet";
 
 /**
  * Whose the photo is: their @handle, opening them in D8. A runner with no
@@ -397,7 +400,7 @@ function Owner({
       search={{ query: handle, filter: "all" }}
       // A handle in its own case, underlined as a link (G-19): MONO.xs's
       // classes written out, since `Mono`'s xs step is uppercase.
-      className="target self-start font-mono text-mono-xs text-ink underline underline-offset-4"
+      className="target-line max-w-full self-start truncate font-mono text-mono-xs text-ink underline underline-offset-4"
     >
       {`@${handle}`}
     </Link>
@@ -429,7 +432,7 @@ function Thumbnail({ match }: Readonly<{ match: PhotoMatch }>): JSX.Element {
     <img
       src={reviewPhotoSrc(match.photoKey)}
       alt={altOf(match)}
-      className="h-32 w-auto border border-hairline"
+      className="h-32 w-32 border border-hairline object-cover"
     />
   );
   if (match.kind === "garment") return image;
