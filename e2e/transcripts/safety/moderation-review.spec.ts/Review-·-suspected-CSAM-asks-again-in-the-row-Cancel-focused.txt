@@ -59,15 +59,15 @@ waiting
 end of heading, waiting, level 2
 list
 listitem, level 1, position 1, set size 1
-button, entry · #M#…#C#K · @rude_# [reports] #m, expanded
+button, entry · :id · @rude_# [reports] #m, expanded
 :id
 entry
-· #M#…#C#K
+· :id
 · @rude_#
 [reports]
 end, :id
 #m
-end of button, entry · #M#…#C#K · @rude_# [reports] #m, expanded
+end of button, entry · :id · @rude_# [reports] #m, expanded
 Nobody reported this.
 form
 status
