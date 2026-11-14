@@ -8,7 +8,7 @@ import {
 import { render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { renderToString } from "react-dom/server";
-import { expect } from "vitest";
+import { expect, vi } from "vitest";
 
 import { EMAIL_UNCONFIRMED_CODE } from "../../src/lib/auth-signal";
 import type { FeedItem } from "../../src/modules/feed/feed";
@@ -161,4 +161,36 @@ export function expectBellEnding(first: HTMLElement): void {
   expect(seat).toHaveClass("wide:hidden");
   expect(seat?.parentElement).toContainElement(first);
   expect(seat?.parentElement?.lastElementChild).toBe(seat);
+}
+
+/**
+ * The window at a width, as `matchMedia` answers for the desk query
+ * (`kit-push.ts`), with a `resize` that crosses the breakpoint and tells
+ * whoever listens. Undo it with `vi.unstubAllGlobals()`.
+ */
+export function atWidth(isDesk: boolean): {
+  resize: (isToDesk: boolean) => void;
+} {
+  let isDeskNow = isDesk;
+  const listeners = new Set<() => void>();
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn((query: string) => ({
+      get matches() {
+        return isDeskNow && query === "(min-width: 1040px)";
+      },
+      addEventListener: (_type: string, listener: () => void) => {
+        listeners.add(listener);
+      },
+      removeEventListener: (_type: string, listener: () => void) => {
+        listeners.delete(listener);
+      },
+    })),
+  );
+  return {
+    resize: (isToDesk) => {
+      isDeskNow = isToDesk;
+      for (const listener of listeners) listener();
+    },
+  };
 }

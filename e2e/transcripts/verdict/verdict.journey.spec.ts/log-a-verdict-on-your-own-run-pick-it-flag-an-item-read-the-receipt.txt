@@ -25,8 +25,9 @@ button, Log a run
 end of banner
 main
 form
+link, Back
 heading, Did it work?, level 1
-:day :month # · #:#
+:day :month # · #:# UTC
 ·
 #.#
 mi
@@ -65,9 +66,9 @@ button, hands cold, pressed
 button, cold first mile, not pressed
 button, cold throughout, not pressed
 button, overheated late, not pressed
-button, More, anything specific, has popup dialog
+button, More, anything specific
 More
-end of button, More, anything specific, has popup dialog
+end of button, More, anything specific
 group, Effort · optional
 Effort · optional
 button, Easy, not pressed
@@ -96,9 +97,9 @@ button, Log it
 Log it
 end of button, Log it
 end of form
-heading, This run · :day :month # · #:#, level 2
-This run · :day :month # · #:#
-end of heading, This run · :day :month # · #:#, level 2
+heading, This run · :day :month # · #:# UTC, level 2
+This run · :day :month # · #:# UTC
+end of heading, This run · :day :month # · #:# UTC, level 2
 #.# miles, # minutes
 # degrees Fahrenheit, dry, feels like # degrees
 heading, The kit you’re judging, level 2

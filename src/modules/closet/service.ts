@@ -718,7 +718,6 @@ export interface ClosetItemView {
 export interface ClosetListing {
   items: ClosetItemView[];
   totalCount: number;
-  genericCount: number;
 }
 
 export function shouldIncludeByConditionFilters(
@@ -807,8 +806,6 @@ export async function listItems(
       ),
     );
 
-  const genericCount = rows.filter((row) => row.productId === null).length;
-
   const all = await viewsOf(db, userId, rows);
   const views = all.filter(
     (view) =>
@@ -817,7 +814,7 @@ export async function listItems(
       shouldIncludeByTempFilter(view.tempRange, filters),
   );
 
-  return { items: views, totalCount: rows.length, genericCount };
+  return { items: views, totalCount: rows.length };
 }
 
 export interface ItemDetail extends ClosetItemView {

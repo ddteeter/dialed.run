@@ -51,11 +51,12 @@ import { actionForKey, rowAfterMove, verdictKeys } from "../backlog-keys";
 
 /**
  * The slot's shape, which is DS2's own: a shrunk, square-cornered mono
- * key. Its *colour* is not DS2's to choose — see `ui/verdictHue`, which A3
+ * key, in capitals as MONO.xs is everywhere (D1-11; `ui/Mono` pairs the
+ * step with `uppercase`, and the accessible name stays in normal case). Its *colour* is not DS2's to choose — see `ui/verdictHue`, which A3
  * reads too, so the two mirrored surfaces cannot drift apart (round 19).
  */
 const SLOT_BASE =
-  "inline-flex flex-col items-center justify-center rounded-none border px-2 text-center font-mono text-mono-xs";
+  "inline-flex flex-col items-center justify-center rounded-none border px-0.5 text-center font-mono text-mono-xs uppercase desk:px-2";
 const SLOT_RESTING = `${SLOT_BASE} border-hairline-2 font-normal text-quiet`;
 
 /**
@@ -117,27 +118,23 @@ function conditionsLine(
 }
 
 /**
- * A kit as the row draws it: its pieces as chips, read-only.
+ * A kit as the row draws it: its pieces' names on one line, truncated at
+ * the desk rather than stacking chips (Round 55 · 236), in full on a card.
  *
  * An entry saved with nothing on it says so in words, rather than leaving
  * an empty cell that reads as a failed load.
  */
-function KitChips({ kit }: Readonly<{ kit: BacklogKit }>): JSX.Element {
+function KitLine({ kit }: Readonly<{ kit: BacklogKit }>): JSX.Element {
   if (kit.itemNames.length === 0) {
     return <span className="text-small text-quiet">No kit on this run</span>;
   }
   return (
-    <div className="flex flex-wrap items-center gap-1">
-      {kit.itemNames.map((name) => (
-        <Mono
-          key={name}
-          step="xs"
-          className="rounded-pill border border-ink px-2 py-1"
-        >
-          {name}
-        </Mono>
-      ))}
-    </div>
+    <span
+      data-part="kit-line"
+      className="block text-small text-quiet desk:truncate"
+    >
+      {kit.itemNames.join(", ")}
+    </span>
   );
 }
 
@@ -169,18 +166,20 @@ function OutfitCell({
   chosen: BacklogKit | undefined;
   onUse: (kit: BacklogSuggestion) => void;
 }>): JSX.Element {
-  if (chosen !== undefined) return <KitChips kit={chosen} />;
+  if (chosen !== undefined) return <KitLine kit={chosen} />;
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex items-center gap-2">
       {/* Round 20: "Same as …?" offers the nearest kit; with nothing near
           enough the cell says so — "No usual kit here · Pick" — rather
           than leaving Pick on its own to explain itself. */}
       {suggestion === undefined ? (
-        <span className="text-small text-quiet">No usual kit here ·</span>
+        <span className="shrink-0 text-small text-quiet">
+          No usual kit here ·
+        </span>
       ) : (
         <>
-          <span className="text-small text-quiet">
+          <span className="min-w-0 truncate text-small text-quiet">
             Same as {proseDayLabel(suggestion.wornAt)}?
           </span>
           <button
@@ -189,7 +188,7 @@ function OutfitCell({
             onClick={() => {
               onUse(suggestion);
             }}
-            className="target inline-flex items-center px-2 text-body font-semibold text-cold-text"
+            className="target inline-flex shrink-0 items-center px-2 text-body font-semibold text-cold-text"
           >
             Use
           </button>
@@ -199,7 +198,7 @@ function OutfitCell({
         to="/feed/attach/$runId"
         params={{ runId }}
         aria-label={`Pick — ${day}`}
-        className="target inline-flex items-center px-2 text-body font-semibold text-cold-text"
+        className="target inline-flex shrink-0 items-center px-2 text-body font-semibold text-cold-text"
       >
         Pick
       </Link>
@@ -251,50 +250,6 @@ function VerdictSlotButton({
     >
       {slot.label}
     </button>
-  );
-}
-
-/**
- * The rail — DS2's second column, and the reason Closet and this are the
- * only two screens that get one in v1.
- */
-function BacklogRail({
-  row,
-  units,
-}: Readonly<{ row: BacklogRow; units: Units }>): JSX.Element {
-  return (
-    <aside
-      data-slot="backlog-rail"
-      className="flex flex-col gap-4 desk:sticky desk:top-6"
-    >
-      {
-        <div className="flex flex-col gap-3 rounded-card border border-hairline bg-panel p-4">
-          <Mono step="xs" className="text-muted">
-            Selected · {runDay(row)}
-          </Mono>
-          {/* Round 22, item 18: a row with no conditions keeps the card
-              and says so — "No weather on this run." — and the verdict is
-              still allowed. */}
-          {row.conditions === undefined ? (
-            <p className="m-0 text-body">No weather on this run.</p>
-          ) : (
-            <Mono step="lg">
-              <Spoken {...conditionsLine(row.conditions, units)} />
-            </Mono>
-          )}
-        </div>
-      }
-      {/* The rail had a paragraph here — "Verdicts saved here count
-          exactly like verdicts from the phone…" — which is a *note* on the
-          Desktop Contract (`data-annotation`), design explaining the table
-          to its builders. It was never copy for a runner. What the board
-          draws in its place is the selected run's history and the kit
-          they usually wear there; that is drift recorded in the
-          2026-09-22 reconciliation report, and
-          `test/architecture/annotations-are-not-copy.test.ts` stops the
-          next note shipping as copy. */}
-      <WeatherAttribution />
-    </aside>
   );
 }
 
@@ -424,27 +379,27 @@ export function VerdictBacklog({
   const current = isClear ? undefined : rows[selected];
 
   return (
-    <div className="mx-auto flex w-full max-w-panel flex-col gap-6 px-6 py-8 desk:mx-0 desk:grid desk:max-w-page desk:grid-cols-[1.55fr_1fr] desk:items-start desk:gap-6">
-      <div className="flex min-w-0 flex-col gap-4">
-        {/* The phone's bell ends the first row and stays on it while the
-            title and its count wrap (Design 169.1). */}
-        <div className="flex items-start gap-3">
-          <div className="flex flex-1 flex-wrap items-baseline justify-between gap-4">
-            <h1 className="m-0 font-display text-title uppercase">
-              Needs a verdict
-            </h1>
-            {current === undefined ? undefined : (
-              <Mono step="sm" className="text-muted">
-                {rows.length} runs · no verdict yet
-              </Mono>
-            )}
-          </div>
-          <PhoneBell />
+    <div className="mx-auto flex w-full max-w-panel flex-col gap-4 px-6 py-8 desk:max-w-page">
+      {/* The phone's bell ends the first row and stays on it while the
+          title and its count wrap (Design 169.1). */}
+      <div className="flex items-start gap-3">
+        <div className="flex flex-1 flex-wrap items-baseline gap-x-3 gap-y-1">
+          {/* Round 55 · 237: VERDICTS, at the runs pages' TYPE.display
+              step, so the title is true at zero. */}
+          <h1 className="m-0 font-display text-display uppercase">Verdicts</h1>
+          {current === undefined ? undefined : (
+            <Mono step="sm" className="text-muted">
+              {rows.length} need one · oldest first
+            </Mono>
+          )}
         </div>
+        <PhoneBell />
+      </div>
 
-        {current === undefined ? (
-          <Bracketed>All logged</Bracketed>
-        ) : (
+      {current === undefined ? (
+        <AllLogged />
+      ) : (
+        <>
           <BacklogTable
             rows={rows}
             units={units}
@@ -464,40 +419,27 @@ export function VerdictBacklog({
               },
             }}
           />
-        )}
-
-        {/* Rule 07: one live region per screen, and this is the screen's.
-            Everything the keyboard does says so here — a table driven by
-            keys with nothing announcing them is a table only a sighted
-            runner can clear. */}
-        <p role="status" className="m-0 text-small text-quiet">
-          <PendingLabel
-            label={said}
-            pendingLabel="Saving"
-            pending={saving !== undefined}
-          />
-        </p>
-      </div>
-
-      {current === undefined ? undefined : (
-        <BacklogRail row={current} units={units} />
+          {/* Round 55 · 236: the rail goes, and the credit sits once
+              under the table. */}
+          <WeatherAttribution />
+        </>
       )}
+
+      {/* Rule 07: one live region per screen, and this is the screen's.
+          Everything the keyboard does says so here — a table driven by
+          keys with nothing announcing them is a table only a sighted
+          runner can clear. Flush left, like the words around it. */}
+      <p role="status" className="m-0 text-small text-quiet">
+        <PendingLabel
+          label={said}
+          pendingLabel="Saving"
+          pending={saving !== undefined}
+          align="start"
+        />
+      </p>
     </div>
   );
 }
-
-/**
- * A row's place in the layout below the desk threshold.
- *
- * **Between 720 and 1039 there is no table** (round 22, item 18): *"A3,
- * one at a time, in the panel."* So below `desk` only the selected row is
- * drawn, its cells stacked as A3's are, and the rest wait their turn;
- * from `desk` up every row is a table row again. One set of markup, two
- * layouts — the server cannot know the width, and two copies of a row
- * would be two answers to "what is this run's verdict".
- */
-const ROW_HERE = "flex flex-col gap-3 py-3 desk:table-row desk:py-0";
-const ROW_WAITING = "hidden desk:table-row";
 
 /**
  * A row's saved mark, its failure (if any), and what it currently holds —
@@ -534,8 +476,23 @@ interface BacklogSelection {
 }
 
 /**
+ * A cell: a block on a card, a table cell at the desk, where it holds one
+ * line — dates and numbers never break (Round 55 · 236).
+ */
+const CELL =
+  "block desk:table-cell desk:px-2 desk:py-1 desk:align-middle desk:whitespace-nowrap";
+
+/**
+ * The outfit cell takes what the others leave and truncates in it: at
+ * the desk a zero max width with the full width is what lets a table cell
+ * shrink below its content.
+ */
+const OUTFIT_CELL = `${CELL} desk:w-full desk:max-w-0`;
+
+/**
  * The table, its keys, and the count beneath it — everything DS2 draws
- * while there is something left to log.
+ * while there is something left to log. Below the desk each row is a card,
+ * as S1 draws a prompt (Round 55 · 236); from the desk up, a table row.
  */
 function BacklogTable({
   rows,
@@ -558,26 +515,29 @@ function BacklogTable({
       <table className="block w-full border-collapse text-left desk:table">
         <thead className="hidden desk:table-header-group">
           <tr className="border-b border-hairline">
-            {["Run", "Conditions", "Outfit", "Did it work?"].map((heading) => (
-              <th key={heading} scope="col" className="px-2 pb-2">
-                <Mono step="xs" className="text-muted">
-                  {heading}
-                </Mono>
-              </th>
-            ))}
+            {["Date", "Run", "Conditions", "Outfit", "Did it work?"].map(
+              (heading) => (
+                <th key={heading} scope="col" className="px-2 pb-2">
+                  <Mono step="xs" className="text-muted">
+                    {heading}
+                  </Mono>
+                </th>
+              ),
+            )}
           </tr>
         </thead>
-        <tbody className="block desk:table-row-group">
+        <tbody className="flex flex-col gap-3 desk:table-row-group">
           {rows.map((row, index) => {
             const failure = failures.get(row.runId);
             const isHere = index === selected;
+            const day = runDay(row);
+            const verdict = verdicts.get(row.runId);
             return (
               <Fragment key={row.runId}>
                 <tr
                   // Roving focus: one row is in the tab order and the
                   // arrows move which. A table of fifty rows that put every
-                  // row in the sequence would be fifty tab stops before the
-                  // rail.
+                  // row in the sequence would be fifty tab stops.
                   tabIndex={isHere ? 0 : -1}
                   aria-current={isHere ? "true" : undefined}
                   data-saved={saved.has(row.runId) ? "true" : undefined}
@@ -591,14 +551,17 @@ function BacklogTable({
                   // one with focus answers: `↑`/`↓` move the selection,
                   // and focus follows it to the next row's handler.
                   onKeyDown={onKeyDown}
-                  className={`${rowClass(saved.has(row.runId), failure !== undefined)} ${isHere ? ROW_HERE : ROW_WAITING}`}
+                  className={rowClass(isHere, failure !== undefined)}
                 >
-                  <td className="block px-2 py-2 desk:table-cell">
-                    <span className="block text-body font-semibold">
-                      {runDay(row)}
+                  <td className={CELL}>
+                    <span className="text-body font-semibold desk:font-mono desk:text-mono-sm desk:font-normal desk:uppercase">
+                      {day}
                     </span>
-                    {/* `--quiet`, like the conditions beside it: a saved
-                        row is tinted, and `--muted` is 4.0:1 on the tint. */}
+                  </td>
+                  <td className={CELL}>
+                    {/* `--quiet`, like the conditions beside it: the
+                        picked row is tinted, and `--muted` is 4.0:1 on
+                        the tint. */}
                     <Mono step="sm" className="text-quiet">
                       <Spoken
                         {...measuredLine(
@@ -611,19 +574,21 @@ function BacklogTable({
                       />
                     </Mono>
                   </td>
-                  <td className="block px-2 py-2 desk:table-cell">
-                    <Mono step="sm" className="text-quiet">
-                      {row.conditions === undefined ? (
-                        "No conditions"
-                      ) : (
+                  <td className={CELL}>
+                    {row.conditions === undefined ? (
+                      <Mono step="sm" className="text-quiet">
+                        No conditions
+                      </Mono>
+                    ) : (
+                      <Mono step="sm" className="text-dialed-text">
                         <Spoken {...conditionsLine(row.conditions, units)} />
-                      )}
-                    </Mono>
+                      </Mono>
+                    )}
                   </td>
-                  <td className="block px-2 py-2 desk:table-cell">
+                  <td className={OUTFIT_CELL}>
                     <OutfitCell
                       runId={row.runId}
-                      day={runDay(row)}
+                      day={day}
                       suggestion={row.suggestion}
                       chosen={kitOf(row)}
                       onUse={(kit) => {
@@ -631,7 +596,7 @@ function BacklogTable({
                       }}
                     />
                   </td>
-                  <td className="block px-2 py-2 desk:table-cell">
+                  <td className={CELL}>
                     {/* `aria-pressed`, not a `radiogroup`, and for a
                         sharper reason than A3's: the arrow keys here move
                         between *rows*, so a group promising arrow-key
@@ -639,50 +604,41 @@ function BacklogTable({
                         A3 reached the same answer from the other side
                         (R-84), and one answer to "what is a verdict
                         control" is the point. */}
-                    <div className="flex gap-1">
+                    <div className="grid grid-cols-5 gap-1 desk:flex">
                       {verdictKeys.map((slot) => (
                         <VerdictSlotButton
                           key={slot.key}
                           slot={slot}
-                          day={runDay(row)}
-                          isChosen={verdicts.get(row.runId) === slot.value}
+                          day={day}
+                          isChosen={verdict === slot.value}
                           onChoose={() => {
                             onChoose(row, slot.value);
                           }}
                         />
                       ))}
                     </div>
-                    {/* Below the desk there is no Enter to press and no
-                        arrow to move with: A3's own verb, and a way on. */}
-                    <div className="mt-3 flex gap-2 desk:hidden">
+                    {/* A card has no Enter to press: A3's own verb, once
+                        a verdict is picked (Round 55 · 236). */}
+                    {verdict === undefined ? undefined : (
                       <button
                         type="button"
                         onClick={() => {
                           onSave(row);
                         }}
-                        className="target flex-1 rounded-card border-none bg-action px-4 font-display text-body uppercase text-accent-ink"
+                        className="target mt-3 w-full rounded-card border-none bg-action px-4 font-display text-body uppercase text-accent-ink desk:hidden"
                       >
                         Log it
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onSelect(rowAfterMove(selected, 1, rows.length));
-                        }}
-                        className="target rounded-card border border-hairline bg-transparent px-4 text-body font-semibold"
-                      >
-                        Skip
-                      </button>
-                    </div>
+                    )}
                   </td>
                 </tr>
                 {failure === undefined ? undefined : (
                   // The band spans the row it is about, directly under it.
-                  <tr
-                    data-slot="row-failure"
-                    className={isHere ? "block desk:table-row" : ROW_WAITING}
-                  >
-                    <td colSpan={4} className="block px-2 pb-3 desk:table-cell">
+                  <tr data-slot="row-failure" className="block desk:table-row">
+                    <td
+                      colSpan={5}
+                      className="block desk:table-cell desk:px-2 desk:pb-3"
+                    >
                       <ControlFailureBand
                         failure={failure}
                         onRetry={() => {
@@ -722,19 +678,28 @@ function BacklogTable({
     </>
   );
 }
-const ROW_CLASS = "row-press border-b border-hairline";
-const ROW_SAVED_CLASS = "row-press border-b border-hairline bg-tint";
+
+/**
+ * A run below the desk is a card, as S1 draws a prompt; from the desk up
+ * it is a table row on a hairline. **The picked row takes the tint**
+ * (Round 55 · 236), which is what lets the rail's "Selected" card go.
+ */
+const ROW_CLASS =
+  "row-press flex flex-col gap-2 rounded-card border border-hairline bg-panel p-4 desk:table-row desk:rounded-none desk:border-x-0 desk:border-t-0 desk:bg-transparent desk:p-0";
+const ROW_PICKED_CLASS =
+  "row-press flex flex-col gap-2 rounded-card border border-hairline bg-panel p-4 desk:table-row desk:rounded-none desk:border-x-0 desk:border-t-0 desk:bg-tint desk:p-0";
 /**
  * The failure mark is **border weight, not hue** — the Form Contract's own
  * rule, one layer out from a field: "pink is action, never failure", and a
  * field error is marked by border weight and a hi-viz band. A row cannot
  * carry a band, so it carries the weight.
  */
-const ROW_FAILED_CLASS = "row-press border-b-2 border-ink";
+const ROW_FAILED_CLASS =
+  "row-press flex flex-col gap-2 rounded-card border-2 border-ink bg-panel p-4 desk:table-row desk:rounded-none desk:border-x-0 desk:border-t-0 desk:bg-transparent desk:p-0";
 
-function rowClass(isSaved: boolean, hasFailed: boolean): string {
+function rowClass(isPicked: boolean, hasFailed: boolean): string {
   if (hasFailed) return ROW_FAILED_CLASS;
-  return isSaved ? ROW_SAVED_CLASS : ROW_CLASS;
+  return isPicked ? ROW_PICKED_CLASS : ROW_CLASS;
 }
 
 /**
@@ -770,3 +735,25 @@ const LEGEND: readonly { keys: string; does: string; said: string }[] = [
   { keys: "↓", does: "skip", said: "Down arrow: skip." },
   { keys: "Tab", does: "outfit", said: "Tab: outfit." },
 ];
+
+/**
+ * Round 55 · 237: nothing waits. The count line is `[ALL LOGGED]` in the
+ * dialed text colour, then what happens next and the way on.
+ */
+function AllLogged(): JSX.Element {
+  return (
+    <div data-slot="all-logged" className="flex flex-col gap-3">
+      <Bracketed className="text-dialed-text">All logged</Bracketed>
+      <p className="m-0 text-lead">
+        Every run has a verdict. Your next one shows up here once it&rsquo;s
+        logged.
+      </p>
+      <Link
+        to="/runs"
+        className="target inline-flex items-center self-start text-body font-bold text-cold-text no-underline"
+      >
+        Go to your runs
+      </Link>
+    </div>
+  );
+}

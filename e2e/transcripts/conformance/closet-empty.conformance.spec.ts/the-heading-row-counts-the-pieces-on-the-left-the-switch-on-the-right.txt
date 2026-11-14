@@ -9,7 +9,7 @@ paragraph
 #
 of
 #
-pieces are still generic — name the ones you reach for.
+pieces are still generic. Name the ones you reach for.
 end of paragraph
 navigation, Filter the closet
 list
@@ -32,26 +32,22 @@ end of list
 end of navigation, Filter the closet
 list
 listitem, level 1, position 1, set size 3
-link, Harrier No runs yet Untested Generic
+link, Harrier No runs yet Generic
 Harrier
 No runs yet
-Untested
 Generic
-end of link, Harrier No runs yet Untested Generic
+end of link, Harrier No runs yet Generic
 end of listitem, level 1, position 1, set size 3
 listitem, level 1, position 2, set size 3
-link, Old singlet No runs yet Untested Generic Retired
+link, Old singlet No runs yet Generic Retired
 Old singlet
 No runs yet
-Untested
 Generic
 Retired
-end of link, Old singlet No runs yet Untested Generic Retired
+end of link, Old singlet No runs yet Generic Retired
 end of listitem, level 1, position 2, set size 3
 listitem, level 1, position 3, set size 3
-link, Add garment
-Add garment
-end of link, Add garment
+link, Add a piece
 end of listitem, level 1, position 3, set size 3
 end of list
 end of main

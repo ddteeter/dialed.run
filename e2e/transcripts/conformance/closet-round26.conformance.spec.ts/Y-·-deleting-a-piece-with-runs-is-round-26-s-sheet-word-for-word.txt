@@ -9,7 +9,7 @@ Shoes
 Generic
 end of paragraph
 heading, Pegasus #, level 1
-# km logged
+# mi logged
 ·
 # of # runs dialed
 paragraph

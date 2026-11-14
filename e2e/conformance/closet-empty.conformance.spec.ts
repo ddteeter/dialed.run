@@ -111,9 +111,9 @@ test("the empty closet says what ruling 16 says, and offers the dashed tile", as
 
   // "+ the dashed Add tile" — the grid's only cell, and dashed.
   expect(await cellsOf(page, '[data-part="grid"]')).toStrictEqual([
-    "ADD GARMENT",
+    "ADD A PIECE",
   ]);
-  const tile = page.getByRole("link", { name: "Add garment" });
+  const tile = page.getByRole("link", { name: "Add a piece" });
   expect(
     await tile.evaluate((element) => getComputedStyle(element).borderStyle),
   ).toBe("dashed");
@@ -170,7 +170,7 @@ test("the heading row counts the pieces on the left, the switch on the right", a
   await toggle.check();
   const cells = await cellsOf(page, '[data-part="grid"]');
   expect(cells.at(-2)).toMatch(/^OLD SINGLET .*\[ RETIRED \]/u);
-  expect(cells.at(-1)).toBe("ADD GARMENT");
+  expect(cells.at(-1)).toBe("ADD A PIECE");
 
   // It ends at the phone's width, with the same grid on it, so the
   // transcript is what a phone's screen reader is given (#582).
@@ -182,18 +182,29 @@ test("the heading row counts the pieces on the left, the switch on the right", a
 /**
 The Add tile's height against the first garment tile's, as drawn.
 */
-async function tileHeights(
-  page: Page,
-): Promise<{ add: number; garment: number }> {
+async function tileHeights(page: Page): Promise<{
+  add: number;
+  addWidth: number;
+  garment: number;
+  gridWidth: number;
+}> {
   await page.goto("/closet");
   await hydrated(page);
   const grid = page.locator('[data-part="grid"]');
   const add = await grid
-    .getByRole("link", { name: "Add garment" })
+    .getByRole("link", { name: "Add a piece" })
     .boundingBox();
   const garment = await grid.locator("li > a").first().boundingBox();
-  if (add === null || garment === null) throw new Error("not drawn");
-  return { add: add.height, garment: garment.height };
+  const frame = await grid.boundingBox();
+  if (add === null || garment === null || frame === null) {
+    throw new Error("not drawn");
+  }
+  return {
+    add: add.height,
+    addWidth: add.width,
+    garment: garment.height,
+    gridWidth: frame.width,
+  };
 }
 
 /**
@@ -229,13 +240,12 @@ async function seedGarments(count: number): Promise<void> {
   });
 }
 
-test("the Add tile is a garment tile's height, alone on its row or not", async ({
+test("the Add tile follows the last tile, or is one 56-tall row when the count fills the row", async ({
   page,
 }) => {
-  // A grid row is as tall as its tallest cell, so the tile matched a
-  // garment only when one shared its row. Alone — every row of a
-  // one-column phone, or a count the desk's columns divide evenly — it
-  // shrank to its own content. `auto-rows-fr` makes every row equal.
+  // Round 55 · 187: Add follows the last tile at its row's height when
+  // that row has room. When the count fills the last row, it is one
+  // dashed row across the grid, 56 tall, rather than a tile alone.
   await withLocalDb(async ({ core }) => {
     await core
       .delete(wardrobeItems)
@@ -243,24 +253,32 @@ test("the Add tile is a garment tile's height, alone on its row or not", async (
   });
   await seedGarments(1);
 
-  // The phone: one column, so the tile always has a row to itself.
+  // The phone: two tracks, so one garment leaves room beside it.
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/closet");
-  expect(await columnsOf(page)).toBe(1);
-  const phone = await tileHeights(page);
-  expect(phone.add).toBeCloseTo(phone.garment, 0);
+  expect(await columnsOf(page)).toBe(2);
+  const beside = await tileHeights(page);
+  expect(beside.add).toBeCloseTo(beside.garment, 0);
 
-  // The desk, lone row: exactly one row's worth of garments.
+  // Two fill the phone's row: Add is the row under them.
+  await seedGarments(1);
+  const phoneRow = await tileHeights(page);
+  expect(phoneRow.add).toBeCloseTo(56, 0);
+  expect(phoneRow.addWidth).toBeCloseTo(phoneRow.gridWidth, 0);
+
+  // The desk, a full row: Add again goes under it, across the grid.
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/closet");
   const columns = await columnsOf(page);
-  expect(columns).toBeGreaterThan(1);
-  await seedGarments(columns - 1);
-  const lone = await tileHeights(page);
-  expect(lone.add).toBeCloseTo(lone.garment, 0);
+  expect(columns).toBeGreaterThan(2);
+  await seedGarments(columns - 2);
+  const deskRow = await tileHeights(page);
+  expect(deskRow.add).toBeCloseTo(56, 0);
+  expect(deskRow.addWidth).toBeCloseTo(deskRow.gridWidth, 0);
 
-  // The desk, shared row: one garment more, beside the tile.
+  // One garment more starts a row with room: Add is a tile beside it.
   await seedGarments(1);
   const shared = await tileHeights(page);
   expect(shared.add).toBeCloseTo(shared.garment, 0);
+  expect(shared.addWidth).toBeLessThan(shared.gridWidth / 2);
 });

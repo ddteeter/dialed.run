@@ -80,7 +80,7 @@ async function renderWithRouter(element: ReactElement) {
 function populated(uploadPhoto = vi.fn()): ReactElement {
   return (
     <GarmentDetail
-      tempUnit="c"
+      units={{ temp: "c", distance: "km" }}
       detail={detail}
       retire={vi.fn()}
       unretire={vi.fn()}
@@ -94,7 +94,7 @@ function populated(uploadPhoto = vi.fn()): ReactElement {
 function withVisibility(visibility: typeof item.visibility): ReactElement {
   return (
     <GarmentDetail
-      tempUnit="c"
+      units={{ temp: "c", distance: "km" }}
       detail={{ ...detail, item: { ...item, visibility } }}
       retire={vi.fn()}
       unretire={vi.fn()}
@@ -135,7 +135,7 @@ function linked(
 ): ReactElement {
   return (
     <GarmentDetail
-      tempUnit="c"
+      units={{ temp: "c", distance: "km" }}
       detail={{
         ...detail,
         item: { ...item, ...changes.item },
@@ -287,7 +287,7 @@ function words(
 ): ReactElement {
   return (
     <GarmentDetail
-      tempUnit="c"
+      units={{ temp: "c", distance: "km" }}
       detail={{
         ...detail,
         item: { ...item, ...own },
@@ -432,7 +432,7 @@ function withCorrection(
   };
   const element = (
     <GarmentDetail
-      tempUnit="c"
+      units={{ temp: "c", distance: "km" }}
       detail={{
         ...detail,
         item: {
@@ -479,6 +479,11 @@ describe("GarmentDetail: WRONG? › (R-74, R48·129)", () => {
     const wrong = screen.getByRole("button", { name: "Wrong?" });
     expect(wrong.closest("section")).toBeNull();
     expect(wrong.closest("[data-part='composition']")).not.toBeNull();
+    // C-05: at the left in a row of its own, not stretched and centred.
+    expect(wrong.parentElement).toHaveAttribute("data-part", "wrong-alone");
+    expect(wrong.parentElement).toHaveClass("flex");
+    // A full target whose box is pulled back to its line (191e).
+    expect(wrong).toHaveClass("target", "-my-3.5");
   });
 
   it("is not offered for a piece with no shared product", async () => {

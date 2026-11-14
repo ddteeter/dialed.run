@@ -1,12 +1,13 @@
 import {
   Link,
   Navigate,
+  type LinkProps,
   useRouter,
   useRouterState,
 } from "@tanstack/react-router";
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import type { JSX, ReactNode } from "react";
+import type { ComponentProps, JSX, ReactNode } from "react";
 import { z } from "zod";
 
 import { returnPathOf } from "../../../lib/return-path";
@@ -99,17 +100,40 @@ function useLoadedBell(
 function SystemFrame({
   signedIn,
   loadBell,
+  width = "panel",
   children,
 }: Readonly<{
   signedIn: boolean;
   loadBell: LoadBell | undefined;
+  /**
+  The column of the screen this replaces (R55·185); the panel when absent.
+  */
+  width?: PageWidth | undefined;
   children: ReactNode;
 }>): JSX.Element {
   const bell = useLoadedBell(signedIn, loadBell);
-  const body = <Page width="panel">{children}</Page>;
+  const body = <Page width={width}>{children}</Page>;
   // Signed in, `Layout`'s content is the page's main landmark; signed out
   // there is no shell, so the frame is its own (plan 161's `region`).
   return signedIn ? <Layout bell={bell}>{body}</Layout> : <main>{body}</main>;
+}
+
+/**
+A page's width, as `Page` takes it.
+*/
+type PageWidth = NonNullable<ComponentProps<typeof Page>["width"]>;
+
+/**
+ * What a not-found names when its route knows what was missing (R55·185):
+ * its own sentence, its own way out, and the column of the screen it
+ * replaces — "That piece isn't in your closet. It may have been deleted."
+ * and Go to your closet.
+ */
+export interface NotFoundSubject {
+  readonly sentence: string;
+  readonly to: NonNullable<LinkProps["to"]>;
+  readonly label: string;
+  readonly width: PageWidth;
 }
 
 /**
@@ -118,17 +142,26 @@ function SystemFrame({
  * *"One sentence covers 'gone' and 'private' so a 404 never confirms a
  * hidden entry exists."* No brackets on the headline: *"brackets mean
  * waiting or a next step, and this is neither."* The way out is the feed
- * signed in, and Log in signed out.
+ * signed in, and Log in signed out — or, for a named `subject`, its own.
  */
 export function NotFoundState({
   signedIn,
   loadBell,
+  subject,
 }: Readonly<{
   signedIn: boolean;
   loadBell?: LoadBell | undefined;
+  /**
+  The missing thing, named (R55·185). Absent, X1's one sentence for anything.
+  */
+  subject?: NotFoundSubject | undefined;
 }>): JSX.Element {
   return (
-    <SystemFrame signedIn={signedIn} loadBell={loadBell}>
+    <SystemFrame
+      signedIn={signedIn}
+      loadBell={loadBell}
+      width={subject?.width}
+    >
       <section
         data-part="system-state"
         data-state="not-found"
@@ -150,21 +183,45 @@ export function NotFoundState({
         <h1 className="m-0 font-display text-display uppercase">
           Nothing here
         </h1>
-        <p className="m-0 text-body">
-          This page doesn&apos;t exist, or it&apos;s an entry its runner has
-          made private.
-        </p>
-        {signedIn ? (
-          <Link to="/feed" className={WAY_OUT_CLASS}>
-            Go to your feed
-          </Link>
-        ) : (
-          <Link to="/auth/login" className={WAY_OUT_CLASS}>
-            Log in
-          </Link>
-        )}
+        <p className="m-0 text-body">{subject?.sentence ?? NOT_FOUND_LINE}</p>
+        <WayOut signedIn={signedIn} subject={subject} />
       </section>
     </SystemFrame>
+  );
+}
+
+/**
+X1's one sentence for anything that is not there.
+*/
+const NOT_FOUND_LINE =
+  "This page doesn't exist, or it's an entry its runner has made private.";
+
+/**
+ * X1's one way out: the subject's own, else the feed signed in and Log in
+ * signed out.
+ */
+function WayOut({
+  signedIn,
+  subject,
+}: Readonly<{
+  signedIn: boolean;
+  subject: NotFoundSubject | undefined;
+}>): JSX.Element {
+  if (subject !== undefined) {
+    return (
+      <Link to={subject.to} className={WAY_OUT_CLASS}>
+        {subject.label}
+      </Link>
+    );
+  }
+  return signedIn ? (
+    <Link to="/feed" className={WAY_OUT_CLASS}>
+      Go to your feed
+    </Link>
+  ) : (
+    <Link to="/auth/login" className={WAY_OUT_CLASS}>
+      Log in
+    </Link>
   );
 }
 

@@ -1,7 +1,6 @@
 import type { JSX, ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-import { clockLabel, dayLabel, deviceTimeZone } from "../../../lib/dates";
 import {
   ControlFailureBand,
   FormStatus,
@@ -25,11 +24,6 @@ export interface StravaConnectProps {
   configured: boolean;
   connected: boolean;
   /**
-   * When Strava last told us a run landed (epoch seconds) — T3a's "LAST
-   * RUN SEEN". Undefined until the first one.
-   */
-  lastRunSeenAt: number | undefined;
-  /**
   How many runs the runner has — what T3b promises is kept.
   */
   runCount: number;
@@ -40,26 +34,11 @@ const SECONDARY =
   "target rounded-field border border-ink bg-transparent px-4 text-body font-semibold text-ink";
 
 /**
- * The time a run last landed on Strava, in the runner's own zone — which
- * only the device knows, so it is drawn after mount and never in the
- * server's first paint (see `lib/dates.ts`).
- *
- * The effect has no dependency list on purpose: it sets the same value
- * after every render, which React ignores, and leaves no array for a
- * mutant to replace. A device that names no zone it would accept reads
- * as UTC, which `lib/dates` already does for an undefined zone.
+ * Disconnect, before it is confirmed: a text link that opens its confirm
+ * (Round 55 · 238), not a second button competing with the status line.
  */
-function LastRunSeen({ at }: Readonly<{ at: number }>): JSX.Element {
-  const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => {
-    setIsMounted(true);
-  });
-  if (!isMounted) return <></>;
-  const zone = deviceTimeZone();
-  return (
-    <>{` · Last run seen ${dayLabel(at, zone)}, ${clockLabel(at, zone)}`}</>
-  );
-}
+const DISCONNECT_LINK =
+  "target inline-flex items-center self-start border-none bg-transparent p-0 text-body font-semibold text-ink underline underline-offset-4";
 
 /**
  * Connect and disconnect (Remaining Screens T1, T3; round 22, item 23;
@@ -79,7 +58,6 @@ function LastRunSeen({ at }: Readonly<{ at: number }>): JSX.Element {
 export function StravaConnect({
   configured,
   connected,
-  lastRunSeenAt,
   runCount,
   disconnect,
 }: Readonly<StravaConnectProps>): JSX.Element | undefined {
@@ -97,6 +75,9 @@ export function StravaConnect({
   if (!connected) {
     return (
       <div className="flex flex-col gap-3">
+        {/* R39's T1: one line under the title, then the consent (Round
+            55 · 238). */}
+        <p className="m-0 text-body">So we can remind you to add your kit.</p>
         <StravaConsent />
         <p className="m-0 text-small text-muted">
           You&rsquo;ll approve this on Strava&rsquo;s own screen.
@@ -108,13 +89,11 @@ export function StravaConnect({
   return (
     <div className="flex flex-col gap-3">
       <FormStatus>{cut.status}</FormStatus>
-      {/* Round 25's T3a status line. */}
-      <Mono step="sm" className="text-dialed-text">
-        Connected
-        {lastRunSeenAt === undefined ? undefined : (
-          <LastRunSeen at={lastRunSeenAt} />
-        )}
-      </Mono>
+      {/* Round 55 · 238 (R39): one sentence. Its "Connected as {athlete}"
+          drops the name, which nothing stores (owner, 2026-11-13). */}
+      <p data-part="connected" className="m-0 text-body">
+        Connected. We&rsquo;ll remind you when a run lands.
+      </p>
       {isConfirming ? (
         <div
           data-slot="disconnect-confirm"
@@ -170,7 +149,7 @@ export function StravaConnect({
           onClick={() => {
             setIsConfirming(true);
           }}
-          className={SECONDARY}
+          className={DISCONNECT_LINK}
         >
           Disconnect
         </button>

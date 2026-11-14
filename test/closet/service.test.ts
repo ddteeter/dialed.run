@@ -283,7 +283,7 @@ describe("listItems filters and the generic nudge", () => {
 
     const all = await listItems(client, userId);
     expect(all.totalCount).toBe(2);
-    expect(all.genericCount).toBe(2);
+    expect(all.items.filter((view) => view.isGeneric)).toHaveLength(2);
 
     const tops = await listItems(client, userId, { category: "top" });
     expect(tops.items).toHaveLength(1);

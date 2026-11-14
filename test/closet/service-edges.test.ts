@@ -608,8 +608,8 @@ async function closetWith(
 
 describe("listItems", () => {
   it("counts everything owned, and how much of it is generic", async () => {
-    // `genericCount` drives the "name your gear" nudge (D-27). Counting
-    // the wrong side of it turns the prompt on for a closet that is fully
+    // `isGeneric` drives the "name your gear" nudge (D-27). Counting the
+    // wrong side of it turns the prompt on for a closet that is fully
     // named, or off for one that is not.
     const userId = await closetWith([
       { category: "top", name: "Generic one" },
@@ -625,7 +625,6 @@ describe("listItems", () => {
     const listing = await listItems(db(), userId);
 
     expect(listing.totalCount).toBe(3);
-    expect(listing.genericCount).toBe(2);
     expect(listing.items.filter((view) => view.isGeneric)).toHaveLength(2);
   });
 

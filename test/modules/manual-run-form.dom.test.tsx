@@ -12,7 +12,10 @@ import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { AUTH_REQUIRED_CODE } from "../../src/lib/auth-signal";
-import { ManualRunForm } from "../../src/modules/runs/components/ManualRunForm";
+import {
+  ManualRunForm,
+  startedFrom,
+} from "../../src/modules/runs/components/ManualRunForm";
 import { SessionLapseAnswer } from "../../src/ui";
 
 /**
@@ -157,6 +160,10 @@ describe("ManualRunForm: what it sends", () => {
     await renderWithRouter(<ManualRunForm submitRun={submitRun} />);
 
     await fillValid(user);
+    // R54·166.3: a checkbox from the shared set, its label a choice.
+    const box = screen.getByRole("checkbox", { name: "Indoor / treadmill" });
+    expect(box).toHaveClass("control-check");
+    expect(box).toHaveAttribute("name", "indoor");
     await user.click(screen.getByLabelText(/Indoor/));
     await user.click(
       screen.getByRole("button", { name: "Next · pick the outfit" }),
@@ -166,6 +173,25 @@ describe("ManualRunForm: what it sends", () => {
       expect(submitRun).toHaveBeenCalledTimes(1);
     });
     expect(submitted(submitRun)).toMatchObject({ indoor: true });
+  });
+});
+
+describe("ManualRunForm: a day carried from a Strava reminder (Round 55 · 183)", () => {
+  it("starts Started on that day, at its first minute", async () => {
+    await renderWithRouter(
+      <ManualRunForm submitRun={fakeSubmit()} startedOn="2026-11-12" />,
+    );
+    expect(screen.getByLabelText("Started")).toHaveValue("2026-11-12T00:00");
+  });
+
+  it("starts Started blank with no day", async () => {
+    await renderWithRouter(<ManualRunForm submitRun={fakeSubmit()} />);
+    expect(screen.getByLabelText("Started")).toHaveValue("");
+  });
+
+  it("is blank, or the day at 00:00", () => {
+    expect(startedFrom(undefined)).toBe("");
+    expect(startedFrom("2026-11-12")).toBe("2026-11-12T00:00");
   });
 });
 

@@ -1,9 +1,10 @@
 document
 main
-heading, What did you wear?, level 1
+link, Back
 link, Notifications, # new
 #
 end of link, Notifications, # new
+heading, What did you wear?, level 1
 #.# miles, # degrees Fahrenheit, damp, # pieces
 link, Weather data provided by Visual Crossing
 status
@@ -24,11 +25,15 @@ button, All Tops, has popup dialog
 All ›
 end of button, All Tops, has popup dialog
 button, Conformance top, not pressed
+Conformance top
+end of button, Conformance top, not pressed
 Bottoms · # of # match
 button, All Bottoms, has popup dialog
 All ›
 end of button, All Bottoms, has popup dialog
 button, Conformance tights, not pressed
+Conformance tights
+end of button, Conformance tights, not pressed
 end of region, Or pick from the closet
 Outfit photo · optional
 Add a photo

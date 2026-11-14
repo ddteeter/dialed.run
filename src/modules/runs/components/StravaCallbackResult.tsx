@@ -32,6 +32,11 @@ import { Mono, Page } from "../../../ui";
  * **It wears `Page` because every screen must** (R-53): `Page` is what
  * stamps `html[data-hydrated="true"]`, which every e2e wait depends on —
  * one `Page` around every answer, so the screen has one heading.
+ *
+ * **Each answer is R39's receipt** (D1-15, P2a-09): an ink-outlined box
+ * with a mono kicker and its sentences, then one ink pill — the grammar
+ * of "NO WEATHER SAVED" — on the shell's ground, in T1's column, so the
+ * title sits where `/runs/strava` puts it.
  */
 export function StravaCallbackResult({
   result,
@@ -60,10 +65,21 @@ export function StravaCallbackResult({
   );
 }
 
+/**
+R39's outlined receipt: the box, its kicker and what it says.
+*/
+const RECEIPT = "flex flex-col gap-2 border border-ink p-4";
+
+/**
+R39's one action under the receipt: an ink pill, `HEIGHT.control` high.
+*/
+const RECEIPT_PILL =
+  "target flex min-h-control w-full items-center justify-center rounded-pill bg-ink px-6 font-bold text-ground no-underline";
+
 function Connected(): JSX.Element {
   return (
     <>
-      <div data-slot="receipt" className="flex flex-col gap-2">
+      <div data-slot="receipt" className={RECEIPT}>
         <Mono step="xs" className="text-dialed-text">
           Connected
         </Mono>
@@ -77,10 +93,7 @@ function Connected(): JSX.Element {
           We don&rsquo;t copy runs from Strava.
         </p>
       </div>
-      <Link
-        to="/runs/strava"
-        className="target inline-flex items-center justify-center self-start rounded-field bg-ink px-4 font-bold text-ground no-underline"
-      >
+      <Link to="/runs/strava" className={RECEIPT_PILL}>
         Continue
       </Link>
     </>
@@ -105,11 +118,7 @@ function NotConnected({
   return (
     <>
       {result.full ? (
-        <div
-          data-slot="receipt"
-          data-state="full"
-          className="flex flex-col gap-2"
-        >
+        <div data-slot="receipt" data-state="full" className={RECEIPT}>
           <Mono step="xs" className="text-muted">
             Strava is full
           </Mono>
@@ -122,27 +131,28 @@ function NotConnected({
           </p>
         </div>
       ) : (
-        <p data-slot="receipt" className="m-0 text-body">
-          Strava isn&rsquo;t connected. Nothing changed.
-        </p>
+        <div data-slot="receipt" className={RECEIPT}>
+          <Mono step="xs">Not connected</Mono>
+          <p className="m-0 text-body">
+            Strava isn&rsquo;t connected. Nothing changed.
+          </p>
+        </div>
       )}
-      <div className="flex flex-wrap gap-2">
-        {canTryAgain ? (
-          <Link
-            to={from === "onboarding" ? "/onboarding/done" : "/runs/strava"}
-            search={{ again: true }}
-            className="target inline-flex items-center justify-center rounded-field bg-ink px-4 font-bold text-ground no-underline"
-          >
-            Try again
-          </Link>
-        ) : undefined}
+      {/* R39 draws one pill. Where trying again would be refused again,
+          or cannot be tried, the one way on is Not now. */}
+      {canTryAgain ? (
         <Link
-          to="/runs"
-          className="target inline-flex items-center justify-center rounded-field border border-ink px-4 font-semibold text-ink no-underline"
+          to={from === "onboarding" ? "/onboarding/done" : "/runs/strava"}
+          search={{ again: true }}
+          className={RECEIPT_PILL}
         >
+          Try again
+        </Link>
+      ) : (
+        <Link to="/runs" className={RECEIPT_PILL}>
           Not now
         </Link>
-      </div>
+      )}
     </>
   );
 }

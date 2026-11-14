@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
+import { bellStateFn } from "../../modules/notifications/functions";
 import { StravaCallbackResult } from "../../modules/runs/components/StravaCallbackResult";
 import {
   completeStravaConnectFn,
@@ -16,24 +18,29 @@ export const Route = createFileRoute("/runs/strava-callback")({
   validateSearch: stravaCallbackSearch,
   loaderDeps: ({ search }) => ({ ...search }),
   loader: async ({ deps }) => {
-    const { result, from } = await completeStravaConnectFn({ data: deps });
+    const [{ result, from }, bell] = await Promise.all([
+      completeStravaConnectFn({ data: deps }),
+      bellStateFn(),
+    ]);
+    // After the exchange: whether Strava is configured is asked once the
+    // answer is in, as it always was.
     const { configured } = await getStravaStatusFn();
-    return { result, from, configured };
+    return { result, from, configured, bell };
   },
   component: StravaCallbackPage,
 });
 
 function StravaCallbackPage() {
-  const { result, from, configured } = Route.useLoaderData();
-  // No shell here, so the page brings its own landmark (plan 161's
-  // `region`).
+  const { result, from, configured, bell } = Route.useLoaderData();
+  // The shell, as /runs/strava wears it (D1-15, P2a-09): the bell, the
+  // tabs, and the title where T1 puts it.
   return (
-    <main>
+    <BelledLayout {...bell}>
       <StravaCallbackResult
         result={result}
         from={from}
         configured={configured}
       />
-    </main>
+    </BelledLayout>
   );
 }

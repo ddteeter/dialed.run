@@ -76,7 +76,11 @@ export function kindLabel(
   type: GarmentType | undefined,
 ): string {
   const named = garmentCategoryLabels[category];
-  return type === undefined ? named : `${named} · ${garmentTypeLabels[type]}`;
+  // Shoes has one type, also called shoes: "SHOES · SHOES" says it twice
+  // (N1-09), so a type that only repeats its category is left out.
+  return type === undefined || garmentTypeLabels[type] === named
+    ? named
+    : `${named} · ${garmentTypeLabels[type]}`;
 }
 
 /**

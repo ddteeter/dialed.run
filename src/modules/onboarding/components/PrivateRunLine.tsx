@@ -48,10 +48,13 @@ const LINE = "text-small text-muted";
 
 /**
  * A press inside the line, Change or "Confirm your email": ink, semibold
- * and underlined, a button set as running text.
+ * and underlined, a button set as running text. A full 44 target with its
+ * box pulled back to the line (`-my-3.5`: 44 less 28 is under one
+ * TYPE.small line), so a two-line sentence keeps its own spacing rather
+ * than opening a gap around the line Change sits on (D2-06).
  */
 const IN_LINE_BUTTON =
-  "target cursor-pointer border-none bg-transparent p-0 text-small font-semibold text-ink underline underline-offset-4";
+  "target -my-3.5 cursor-pointer border-none bg-transparent p-0 text-small font-semibold text-ink underline underline-offset-4";
 
 export function PrivateRunLine({
   hintId,

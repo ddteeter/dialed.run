@@ -26,6 +26,17 @@ export const manualRunInput = runDraftSchema
     idempotencyKey: ulidSchema.optional(),
   });
 
+/**
+ * Round 55 · 183: A1 and R1 can carry a calendar day, the day a Strava
+ * reminder arrived in the runner's zone (owner, 2026-11-13: never anything
+ * from the activity). Anything that is not a day is no day.
+ */
+export const newRunSearch = z
+  .object({ date: z.iso.date().optional() })
+  .catch({});
+
+export type NewRunSearch = z.infer<typeof newRunSearch>;
+
 export const importIdInput = z.object({ importId: z.string().min(1) });
 
 /**

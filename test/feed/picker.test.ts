@@ -197,6 +197,24 @@ describe("pickerGroups", () => {
     );
   });
 
+  it("carries the piece's photo as the closet serves it, and none without one", async () => {
+    // Round 55 · 239: the tile shows the photo the closet's tile shows.
+    const userId = await makeUser();
+    const pictured = await makeItem({ userId, name: "Pictured" });
+    await makeItem({ userId, name: "Bare" });
+    await db()
+      .update(wardrobeItems)
+      .set({ photoKey: `photos/${userId}/${pictured}/v7` })
+      .where(eq(wardrobeItems.id, pictured));
+
+    const [group] = await pickerGroups(userId, CONDITIONS);
+    const byName = new Map(group?.items.map((item) => [item.name, item.photo]));
+
+    expect(byName.get("Pictured")).toBe(`/closet/photo/${pictured}/card?v=v7`);
+    expect(byName.has("Bare")).toBe(true);
+    expect(byName.get("Bare")).toBeUndefined();
+  });
+
   it("offers nothing that has been retired", async () => {
     const userId = await makeUser();
     const retired = await makeItem({ userId, name: "Retired" });

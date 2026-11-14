@@ -327,7 +327,7 @@ async function processImportJob(
  * time; it names nothing about the run, because we know nothing about it.
  */
 const STRAVA_REMINDER_BODY =
-  "New run on Strava · Add it here: upload the file, then what you wore";
+  "New run on Strava. Upload its file, then add what you wore.";
 
 /**
  * The work the webhook used to do before it could reply. Doing it here

@@ -102,7 +102,7 @@ function garment(
 ): ReactElement {
   return (
     <GarmentDetail
-      tempUnit="c"
+      units={{ temp: "c", distance: "km" }}
       detail={detail(overrides)}
       retire={nothing}
       unretire={nothing}
@@ -315,6 +315,8 @@ describe("GarmentDetail: identity", () => {
     const square = part("identity").querySelector("[data-content]");
     expect(square).toHaveAttribute("aria-hidden", "true");
     expect(square).toHaveStyle({ backgroundColor: "#1f2a44" });
+    // Round 55 · 191c: --hairline-2, which separates navy from ink.
+    expect(square).toHaveClass("border", "border-hairline-2");
   });
 
   it("draws no square and no line when there is no colour at all", async () => {
@@ -554,9 +556,46 @@ describe("GarmentDetail: stats", () => {
     expect(screen.queryByText(/dialed/)).toBeNull();
   });
 
-  it("shows zero when the piece has never been worn", async () => {
+  it("says No runs yet, not 0 km, for a piece never worn (C-17)", async () => {
     await renderWithRouter(garment());
-    expect(screen.getByText("0 km logged")).toBeVisible();
+    expect(part("stats").firstElementChild).toHaveTextContent(/^No runs yet$/);
+    expect(part("stats")).not.toHaveTextContent("logged");
+  });
+
+  it("says No verdict yet for a piece run indoors and never judged", async () => {
+    await renderWithRouter(
+      garment({ performance: performance({ runCount: 2 }) }),
+    );
+    expect(part("stats").firstElementChild).toHaveTextContent(
+      /^No verdict yet$/,
+    );
+  });
+
+  it("prints the mileage in the runner's unit, as the tile does (N1-06)", async () => {
+    await renderWithRouter(
+      garment(
+        { performance: performance({ runCount: 9, mileageM: 82_000 }) },
+        { units: { temp: "c", distance: "mi" } },
+      ),
+    );
+    expect(part("stats").firstElementChild).toHaveTextContent(
+      /^51 mi logged$/,
+    );
+  });
+
+  it("leads with the ratio when there are verdicts and no mileage", async () => {
+    await renderWithRouter(
+      garment({
+        performance: performance({
+          runCount: 2,
+          verdictCount: 2,
+          dialedCount: 1,
+        }),
+      }),
+    );
+    expect(part("stats").firstElementChild).toHaveTextContent(
+      /^1\/2 dialed1 of 2 runs dialed$/,
+    );
   });
 
   it("shows the dialed ratio once there are verdicts", async () => {
@@ -603,7 +642,10 @@ describe("GarmentDetail: stats", () => {
 
   it("says where it works in the runner's unit", async () => {
     await renderWithRouter(
-      garment({ tempRange: { lowC: 4, highC: 12 } }, { tempUnit: "f" }),
+      garment(
+        { tempRange: { lowC: 4, highC: 12 } },
+        { units: { temp: "f", distance: "km" } },
+      ),
     );
     expect(drawnText(part("stats"))).toContain("Works at [39–54°]");
   });
@@ -714,9 +756,62 @@ describe("GarmentDetail: composition", () => {
         },
       }),
     );
-    // Absent, not empty: the region collapses when it has nothing to say.
-    expect(part("composition")).toBeEmptyDOMElement();
-    expect(part("composition")).toHaveClass("empty:hidden");
+    // Absent, not empty: there is no region when it has nothing to say,
+    // so the actions can tell they follow the stats (C-06).
+    expect(
+      document.querySelector("[data-part='composition']"),
+    ).toBeNull();
+    expect(part("stats").nextElementSibling).toBe(part("actions"));
+    expect(part("actions")).toHaveClass(
+      "border-t",
+      "[[data-part=stats]+&]:border-t-0",
+      "[[data-part=stats]+&]:pt-0",
+    );
+  });
+});
+
+describe("GarmentDetail: composition with nothing beside it", () => {
+  const noWords = {
+    weight: undefined,
+    fabric: undefined,
+    windResistant: false,
+    waterResistant: false,
+  } as const;
+
+  it("draws the block alone when there are no words to put under it", async () => {
+    await renderWithRouter(
+      garment({
+        item: wardrobeItem({ visibilityLevel: "plain" }),
+        effective: noWords,
+        composition: { verbatim: "100% merino wool", parts: [] },
+      }),
+    );
+    // The block, and no empty words line after it.
+    expect(part("composition").children).toHaveLength(1);
+    expect(part("composition").firstElementChild?.tagName).toBe("SECTION");
+  });
+
+  it("keeps WRONG? for a shared product that states nothing and has no words (R-74)", async () => {
+    await renderWithRouter(
+      garment(
+        {
+          item: wardrobeItem({
+            productId: "01PRODUCT",
+            visibilityLevel: "plain",
+          }),
+          effective: noWords,
+        },
+        {
+          correction: {
+            loadContext: vi.fn(),
+            fileCorrection: vi.fn(),
+          },
+        },
+      ),
+    );
+    const wrong = screen.getByRole("button", { name: "Wrong?" });
+    expect(wrong.closest("[data-part='wrong-alone']")).not.toBeNull();
+    expect(part("composition").children).toHaveLength(1);
   });
 });
 

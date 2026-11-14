@@ -38,3 +38,6 @@ export type { PasswordCheck } from "./password-check";
 export { deploymentPosture } from "./create-auth";
 export { sessionFromRequest } from "./session";
 export { d1RequestDepsFromEnv, respondInD1Scope } from "./d1-request";
+// X1 for a route that knows what was missing (R55·185).
+export { NotFoundState } from "./components/SystemState";
+export type { NotFoundSubject } from "./components/SystemState";

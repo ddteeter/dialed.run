@@ -2,7 +2,9 @@ import { Link, useRouter } from "@tanstack/react-router";
 import type { JSX } from "react";
 import { useState } from "react";
 
+import { verdictScale } from "../../../lib/contracts";
 import type { Units } from "../../../lib/contracts";
+import type { MeasuredLine } from "../../../lib/contracts/measures";
 import { dayLabel } from "../../../lib/dates";
 import { measuredLine } from "../../../lib/contracts/measures";
 import { precipClassOf } from "../../../lib/contracts/temperature";
@@ -10,6 +12,7 @@ import {
   Bracketed,
   GarminAttribution,
   Mono,
+  PendingLabel,
   Spoken,
   WeatherAttribution,
 } from "../../../ui";
@@ -19,7 +22,7 @@ import {
   SKY_WORDS,
 } from "../run-conditions";
 import type { RunConditions, RunSummary } from "../service";
-import { FetchingWeather } from "./ConditionsBlock";
+import { listedSince, runMonths } from "../run-months";
 import { SetConditionsSheet } from "./SetConditionsSheet";
 import type { ConditionsActions } from "./SetConditionsSheet";
 
@@ -64,58 +67,40 @@ export function RunList({
     );
   }
 
+  const since = listedSince(runs);
   return (
     <>
-      <ul data-slot="run-list" className="m-0 flex list-none flex-col p-0">
-        {runs.map((run) => (
-          <li
-            key={run.id}
-            data-slot="run-row"
-            className="flex items-center justify-between gap-3 border-b border-hairline py-3"
-          >
-            <RunLink run={run}>
-              <span className="text-body font-semibold">
-                {/* "6.2 mi · Thu Nov 12", said "6.2 miles, Thu Nov 12"
-                    (round 52 #158). */}
-                <Spoken
-                  {...measuredLine(
-                    [
-                      [
-                        {
-                          kind: "distance",
-                          distanceM: run.distanceM,
-                          spaced: true,
-                        },
-                      ],
-                      [
-                        {
-                          kind: "word",
-                          word: dayLabel(
-                            run.startedAt,
-                            run.conditions?.timeZone,
-                          ),
-                        },
-                      ],
-                    ],
-                    units,
-                  )}
+      <div data-slot="run-list" className="flex flex-col">
+        {runMonths(runs).map(({ month, runs: inMonth }) => (
+          <section key={month} aria-label={month} className="flex flex-col">
+            {/* Round 55 · 235: a month break in MONO.xs with its count. */}
+            <h2 className="m-0 border-b border-hairline pt-5 pb-2">
+              <Mono step="xs" className="text-label">
+                {`${month} · ${String(inMonth.length)} ${inMonth.length === 1 ? "run" : "runs"}`}
+              </Mono>
+            </h2>
+            <ul className="m-0 flex list-none flex-col p-0">
+              {inMonth.map((run) => (
+                <RunRow
+                  key={run.id}
+                  run={run}
+                  units={units}
+                  onSet={() => {
+                    setSettingFor(run.id);
+                  }}
                 />
-              </span>
-              {/* Once per row: a header line would claim the whole of a
-                  mixed list (G1). */}
-              <GarminAttribution deviceName={run.deviceName} />
-              <MetaLine run={run} units={units} />
-            </RunLink>
-            <RunBadge
-              run={run}
-              units={units}
-              onSet={() => {
-                setSettingFor(run.id);
-              }}
-            />
-          </li>
+              ))}
+            </ul>
+          </section>
         ))}
-      </ul>
+        {/* The list says where it ends, and only when it has: never
+            "every run" about the newest of more than it read. */}
+        {since === undefined ? undefined : (
+          <Mono step="xs" className="block pt-6 pb-4 text-center text-label">
+            That&rsquo;s every run · since {since}
+          </Mono>
+        )}
+      </div>
       {/* One credit under the list, rather than one per row, when any row
           shows the provider's reading — a band the runner set is theirs
           and needs none (D-144). */}
@@ -143,76 +128,142 @@ export function RunList({
   );
 }
 
-const ROW_LINK =
-  "target flex min-w-0 flex-1 flex-col gap-1 text-ink no-underline";
+/**
+ * One 64 row (Round 55 · 235): the date, one mono line under it, and the
+ * verdict and kit marks at the right, so the runs that still need
+ * something stand out. A badge only for an exception.
+ */
+function RunRow({
+  run,
+  units,
+  onSet,
+}: Readonly<{
+  run: RunSummary;
+  units: Units;
+  onSet: () => void;
+}>): JSX.Element {
+  return (
+    <li
+      data-slot="run-row"
+      className="grid min-h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-hairline"
+    >
+      <div className="flex min-w-0 flex-col gap-1">
+        <RunLink run={run} units={units} />
+        <div className="flex min-w-0 items-center gap-2">
+          <MetaLine run={run} units={units} />
+          <RunBadge run={run} units={units} onSet={onSet} />
+          {/* Once per row: a header line would claim the whole of a
+              mixed list (G1). Sentence case and sans, never the mono
+              line's capitals, so it stays beside the line, not in it. */}
+          <GarminAttribution deviceName={run.deviceName} />
+        </div>
+      </div>
+      <Marks run={run} />
+    </li>
+  );
+}
 
 /**
-The row's way in — to D, to A3, or to run detail.
-*/
+ * The row's way in — to D, to A3, or to run detail: the date, underlined
+ * as the board draws it, its 44 hit area proud of the line rather than
+ * growing it.
+ */
+const ROW_LINK =
+  "target-line inline-block self-start text-body font-semibold text-ink underline underline-offset-4";
+
 function RunLink({
   run,
-  children,
-}: Readonly<{ run: RunSummary; children: JSX.Element[] }>): JSX.Element {
+  units,
+}: Readonly<{ run: RunSummary; units: Units }>): JSX.Element {
   const { entryId } = run;
+  const day = dayLabel(run.startedAt, run.clockZone);
+  // Said with its distance, so two runs on one day are two different
+  // links to a screen reader, as they were before the row lost its line.
+  const { said: distance } = measuredLine(
+    [[{ kind: "distance", distanceM: run.distanceM }]],
+    units,
+  );
+  const name = <Spoken shown={day} said={`${day}, ${distance}`} />;
   if (entryId === undefined) {
     return (
       <Link to="/runs/$runId" params={{ runId: run.id }} className={ROW_LINK}>
-        {children}
+        {name}
       </Link>
     );
   }
   return run.hasVerdict ? (
     <Link to="/feed/entry/$entryId" params={{ entryId }} className={ROW_LINK}>
-      {children}
+      {name}
     </Link>
   ) : (
     <Link to="/feed/verdict/$entryId" params={{ entryId }} className={ROW_LINK}>
-      {children}
+      {name}
     </Link>
   );
 }
 
 /**
- * The meta line under a row: the conditions in mono, in the dialed text
- * colour when they came from the weather; "set by you" when R2b set them;
- * what is missing otherwise.
+ * What the row's one mono line leads with, before the distance: the
+ * reading in the dialed text colour when it came from the weather;
+ * "Indoor"; what is missing when nothing can be set; nothing when a band
+ * the runner set is the badge's, or the control asks for one.
+ */
+function leadOf(run: RunSummary): MeasuredLine[number] | undefined {
+  const { conditions } = run;
+  if (conditions !== undefined) {
+    // A set band's numbers are the badge's (round 26, item 2); the line
+    // never shows the stored middle.
+    if (conditions.isSetByYou) return undefined;
+    return [
+      { kind: "temp", tempC: conditions.tempC, withLetter: true },
+      { kind: "word", word: precipClassOf(conditions.precipMm) },
+    ];
+  }
+  if (run.indoor) return [{ kind: "word", word: "Indoor" }];
+  if (run.canSetConditions) return undefined;
+  return [{ kind: "word", word: "No weather for this time" }];
+}
+
+/**
+ * The row's one mono line (Round 55 · 235): conditions · distance, drawn
+ * and said (round 52 #158), on one line that truncates rather than wraps.
+ * While the weather is asked for, the line starts with its breathing
+ * brackets, flush left like every other line (N1-14).
  */
 function MetaLine({
   run,
   units,
 }: Readonly<{ run: RunSummary; units: Units }>): JSX.Element {
-  const { conditions } = run;
-  if (conditions !== undefined) {
-    // A set band's numbers are the badge's (round 26, item 2); the line
-    // only says who set them, and never shows the stored middle.
-    if (conditions.isSetByYou) {
-      return (
-        <Mono step="sm" className="text-label">
-          Set by you
-        </Mono>
-      );
-    }
-    // A line of measures (round 52 #158): drawn, and said in words.
+  const distance: MeasuredLine[number] = [
+    { kind: "distance", distanceM: run.distanceM, spaced: true },
+  ];
+  if (run.conditions === undefined && run.weatherStatus === "pending") {
     return (
-      <Mono step="sm" className="text-dialed-text">
-        <Spoken
-          {...measuredLine(
-            [
-              [
-                { kind: "temp", tempC: conditions.tempC, withLetter: true },
-                { kind: "word", word: precipClassOf(conditions.precipMm) },
-              ],
-            ],
-            units,
-          )}
+      <Mono step="sm" className="flex min-w-0 items-center gap-1 text-label">
+        <PendingLabel
+          label=""
+          pendingLabel="Fetching weather"
+          pending
+          align="start"
         />
+        <span aria-hidden="true">·</span>
+        <Spoken {...measuredLine([distance], units)} />
       </Mono>
     );
   }
-  if (run.weatherStatus === "pending") return <FetchingWeather />;
+  const lead = leadOf(run);
+  const isReading = run.conditions !== undefined && !run.conditions.isSetByYou;
   return (
-    <Mono step="sm" className="text-muted">
-      {run.indoor ? "Treadmill" : "No weather for this time"}
+    <Mono
+      step="sm"
+      className={`min-w-0 truncate ${isReading ? "text-dialed-text" : "text-label"}`}
+    >
+      <Spoken
+        {...measuredLine(
+          lead === undefined ? [distance] : [lead, distance],
+          units,
+        )}
+      />
     </Mono>
   );
 }
@@ -237,12 +288,19 @@ function setBadge(
   };
 }
 
-const FACT_BADGE =
-  "shrink-0 rounded-pill border border-hairline px-3 py-1 text-label";
+/**
+ * Every badge on the list is one pill, 22 tall (Round 55 · 235b): MONO.xs
+ * on SPACE[1] above and below, inside a hairline.
+ */
+const BADGE = "inline-flex shrink-0 items-center rounded-pill border px-2 py-1";
+const FACT_BADGE = `${BADGE} border-hairline text-label`;
+const CONTROL_BADGE = `${BADGE} border-ink text-ink`;
 
 /**
-The row's badge: a fact, the one control, or nothing while it breathes.
-*/
+ * The row's badge, only for an exception: a band the runner set, or the
+ * one control, "SET CONDITIONS ›", into R2b. Its 44 hit area hangs past
+ * the line on both sides rather than making the row taller.
+ */
 function RunBadge({
   run,
   units,
@@ -252,36 +310,61 @@ function RunBadge({
   units: Units;
   onSet: () => void;
 }>): JSX.Element | undefined {
-  if (run.indoor) {
+  if (run.conditions?.isSetByYou === true) {
     return (
       <Mono step="xs" className={FACT_BADGE}>
-        Indoor
+        <Spoken {...setBadge(run.conditions, units)} />
       </Mono>
     );
   }
-  if (run.conditions !== undefined) {
-    return (
-      <Mono step="xs" className={FACT_BADGE}>
-        {run.conditions.isSetByYou ? (
-          <Spoken {...setBadge(run.conditions, units)} />
-        ) : (
-          "Conditions"
-        )}
-      </Mono>
-    );
-  }
-  if (!run.canSetConditions) return undefined;
+  if (run.conditions !== undefined || !run.canSetConditions) return undefined;
   return (
     <button
       type="button"
       aria-haspopup="dialog"
       onClick={onSet}
-      className="target shrink-0 rounded-pill border border-ink bg-transparent px-3 text-ink"
+      className="target -my-3 inline-flex shrink-0 items-center border-none bg-transparent p-0"
     >
       {/* The › is drawn, not said: it reads as "right angle bracket". */}
-      <Mono step="xs">
+      <Mono step="xs" className={CONTROL_BADGE}>
         Set conditions <span aria-hidden="true">&rsaquo;</span>
       </Mono>
     </button>
+  );
+}
+
+/**
+ * The verdict's mark in its T2 text hue: dialed teal, cold in the cold
+ * text colour, warm in `--quiet` — the sign carries the hue, the words
+ * the degree.
+ */
+function verdictTone(verdict: number): string {
+  if (verdict < 0) return "text-cold-text";
+  return verdict > 0 ? "text-quiet" : "text-dialed-text";
+}
+
+/**
+The verdict and kit marks at the row's right (Round 55 · 235).
+*/
+function Marks({ run }: Readonly<{ run: RunSummary }>): JSX.Element {
+  const verdict = verdictScale.find((step) => step.value === run.verdict);
+  return (
+    <div data-part="run-marks" className="flex flex-col items-end gap-1">
+      {verdict === undefined ? (
+        <Mono step="xs" className="font-semibold text-muted">
+          No verdict
+        </Mono>
+      ) : (
+        <Mono
+          step="xs"
+          className={`font-semibold ${verdictTone(verdict.value)}`}
+        >
+          {verdict.label}
+        </Mono>
+      )}
+      <Mono step="xs" className="text-label">
+        {run.entryId === undefined ? "No kit" : "Kit"}
+      </Mono>
+    </div>
   );
 }

@@ -15,6 +15,7 @@ import {
   garmentCategoryLabels,
   garmentVisibilitySchema,
   layerSchema,
+  uiGroupFor,
   weightSchema,
 } from "../../../lib/contracts";
 import {
@@ -33,7 +34,6 @@ import {
   ChoiceList,
   classifyFailure,
   ControlFailureBand,
-  DeskSplit,
   FileWell,
   FormErrorSummary,
   FormFailureBand,
@@ -303,13 +303,22 @@ interface GarmentPhoto {
 }
 
 /**
- * F's column. Alone (Edit), the panel it always was; beside the rail (F at
- * the desk, round 26 #10), DS1's primary column, 620 at most and set to
- * the left as the log flow's desk pages are.
+ * F's column (Round 54 · 168.2): MEASURE.column, centred until the rail
+ * has room beside it; at ≥1040 the 620 form sits at the page's left, with
+ * "Already in your closet" as a rail in the rest of MEASURE.page. Alone,
+ * with no closet handed in, the same column.
  */
-const PRIMARY_ALONE =
-  "mx-auto flex w-full max-w-panel flex-col gap-6 px-4 py-8 wide:px-6";
-const PRIMARY_SPLIT = `${PRIMARY_ALONE} wide:mx-0 wide:max-w-column`;
+const PRIMARY_COLUMN =
+  "mx-auto flex w-full max-w-column flex-col gap-6 px-4 py-8 wide:px-6 desk:mx-0";
+
+/**
+ * F's page: the column and its rail on MEASURE.page, centred. Below 1040
+ * the rail drops under the form, in the form's column.
+ */
+const PAGE_SPLIT =
+  "mx-auto flex w-full max-w-page flex-col desk:grid desk:grid-cols-[minmax(0,var(--container-column))_minmax(0,1fr)] desk:items-start desk:gap-x-6";
+const RAIL_CLASS =
+  "mx-auto flex w-full max-w-column flex-col gap-3 px-4 pb-8 wide:px-6 desk:mx-0 desk:px-0 desk:py-8";
 
 /**
  * A blob URL for the held photo, revoked when it is replaced or dropped.
@@ -840,43 +849,50 @@ function IdentityFields({
         />
       ) : undefined}
 
-      <fieldset className="flex flex-col gap-3">
-        <legend className="font-display text-heading">What is it?</legend>
-        <FormField
-          name="brand"
-          label={LABELS.brand}
-          error={form.fieldErrors.brand}
-        >
-          <input
-            {...form.field("brand")}
-            id="brand"
-            type="text"
-            list="garment-brand-options"
-            value={values.brand}
-            onChange={(event) => {
-              update("brand", event.target.value);
-              brand.onInput?.(event.target.value);
+      {/* Round 55 · 190: the next group's rule — a hairline above, 24
+          from it to the legend, 12 from the legend to BRAND. A legend sits
+          on its fieldset's own border, so the rule is the wrapper's. */}
+      <div data-part="what-is-it" className="border-t border-hairline pt-6">
+        <fieldset className="m-0 flex flex-col gap-3 border-none p-0">
+          <legend className="mb-3 p-0 font-display text-heading">
+            What is it?
+          </legend>
+          <FormField
+            name="brand"
+            label={LABELS.brand}
+            error={form.fieldErrors.brand}
+          >
+            <input
+              {...form.field("brand")}
+              id="brand"
+              type="text"
+              list="garment-brand-options"
+              value={values.brand}
+              onChange={(event) => {
+                update("brand", event.target.value);
+                brand.onInput?.(event.target.value);
+              }}
+              className="w-full border-none bg-transparent"
+            />
+          </FormField>
+          <datalist id="garment-brand-options">
+            {(brand.options ?? []).map((option) => (
+              <option key={option} value={option} />
+            ))}
+          </datalist>
+          <TextField
+            name="name"
+            label={LABELS.name}
+            value={values.name}
+            onChange={(value) => {
+              update("name", value);
             }}
-            className="w-full border-none bg-transparent"
+            field={form.field}
+            error={form.fieldErrors.name}
           />
-        </FormField>
-        <datalist id="garment-brand-options">
-          {(brand.options ?? []).map((option) => (
-            <option key={option} value={option} />
-          ))}
-        </datalist>
-        <TextField
-          name="name"
-          label={LABELS.name}
-          value={values.name}
-          onChange={(value) => {
-            update("name", value);
-          }}
-          field={form.field}
-          error={form.fieldErrors.name}
-        />
-        <LinkField values={values} update={update} form={form} />
-      </fieldset>
+          <LinkField values={values} update={update} form={form} />
+        </fieldset>
+      </div>
     </>
   );
 }
@@ -1205,38 +1221,42 @@ function FormFrame({
   tempUnit: TempUnit;
   values: GarmentFormValues;
   /**
-  The picked type, when one is: the card then matches on it too.
+  The picked type, when one is: the card then lists its pieces first.
   */
   type: GarmentType | undefined;
   children: ReactNode;
 }>): JSX.Element {
   if (nearby === undefined) {
     return (
-      <div data-part="primary" className={PRIMARY_ALONE}>
+      <div data-part="primary" className={PRIMARY_COLUMN}>
         {children}
       </div>
     );
   }
+  // Filed as the save will file it (Round 56 · 248): the layer counts
+  // only where the category has one, and an unanswered layer is none.
+  const group = uiGroupFor(
+    values.category,
+    hasGarmentAttribute(values.category, "layer")
+      ? layerSchema.safeParse(values.layer).data
+      : undefined,
+  );
   return (
-    <DeskSplit
-      rail={
+    <div data-part="page" className={PAGE_SPLIT}>
+      <div data-part="primary" className={PRIMARY_COLUMN}>
+        {children}
+      </div>
+      <div data-part="rail" className={RAIL_CLASS}>
         <AlreadyInCloset
           category={values.category}
           type={type}
-          pieces={
-            (type === undefined
-              ? nearby.byCategory[values.category]
-              : nearby.byType[type]) ?? []
-          }
+          group={group}
+          pieces={nearby[group]}
           typed={{ brand: values.brand, name: values.name }}
           tempUnit={tempUnit}
         />
-      }
-    >
-      <div data-part="primary" className={PRIMARY_SPLIT}>
-        {children}
       </div>
-    </DeskSplit>
+    </div>
   );
 }
 
@@ -1267,7 +1287,10 @@ function FormHeading({
       )}
       <h1
         data-state={saved === undefined ? undefined : "saved"}
-        className="m-0 font-display text-title uppercase data-[state=saved]:normal-case"
+        // Round 55 · 190: sentence case at TYPE.title, as the closet, the
+        // piece and the saved state are; tokens.js allows capitals only
+        // on the display step and MONO.xs/sm.
+        className="m-0 font-display text-title"
       >
         {saved === undefined
           ? heading

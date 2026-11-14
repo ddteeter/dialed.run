@@ -10,6 +10,7 @@ import {
 } from "../../modules/closet/form-mapping";
 import { photoUrlFor } from "../../modules/closet/photo-url";
 import {
+  closetNearbyFn,
   getItemFn,
   removePhotoFn,
   updateItemFn,
@@ -21,14 +22,33 @@ import { photoBlurStep } from "../../modules/safety/components/PhotoBlur";
 import { searchBrandsFn } from "../../modules/products/functions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";
+import { PieceNotFoundPage } from "../../named-not-found";
+
+const garmentPage = garmentLoader(
+  requireSession,
+  (itemId) => getItemFn({ data: { itemId } }),
+  viewerUnitsQuery,
+  bellStateFn,
+);
+
+/**
+The card beside the edit form: the closet, less the piece being edited.
+*/
+function nearbyBut(itemId: string) {
+  return closetNearbyFn({ data: { exceptItemId: itemId } });
+}
 
 export const Route = createFileRoute("/closet/edit/$itemId")({
-  loader: garmentLoader(
-    requireSession,
-    (itemId) => getItemFn({ data: { itemId } }),
-    viewerUnitsQuery,
-    bellStateFn,
-  ),
+  // Round 54 · 168.2: edit, as add, has "Already in your closet" beside it.
+  loader: async (context) => {
+    const [page, nearby] = await Promise.all([
+      garmentPage(context),
+      nearbyBut(context.params.itemId),
+    ]);
+    return { ...page, nearby };
+  },
+  // Round 55 · 185: the missing thing named, in its own column.
+  notFoundComponent: PieceNotFoundPage,
   component: EditGarmentPage,
 });
 
@@ -37,7 +57,7 @@ async function handleBrandInput(prefix: string) {
 }
 
 function EditGarmentPage() {
-  const { detail, units, bell } = Route.useLoaderData();
+  const { detail, units, bell, nearby } = Route.useLoaderData();
   const navigate = useNavigate();
 
   return (
@@ -46,6 +66,7 @@ function EditGarmentPage() {
         heading={`Edit ${detail.item.name}`}
         tempUnit={units.temp}
         back={<BackToCloset />}
+        rail={{ nearby, reread: () => nearbyBut(detail.item.id) }}
         initial={formValuesFromItem(detail.item, detail.effective)}
         stored={{
           errors: storedLinkErrors(detail.item, detail.linkDetail),

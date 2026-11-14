@@ -13,6 +13,7 @@ import {
   Select,
   SubmitButton,
   TextField,
+  ToggleField,
   useFormSubmit,
   useIdempotencyKey,
 } from "../../../ui";
@@ -82,17 +83,29 @@ export interface ManualRunFormProps {
   submitRun: (input: {
     data: z.infer<typeof manualRunInput>;
   }) => Promise<{ id: string }>;
+  /**
+   * The day to start from, when the runner came from a Strava reminder
+   * (Round 55 · 183): the day it arrived, "2026-11-12".
+   */
+  startedOn?: string | undefined;
 }
 
-export function ManualRunForm({ submitRun }: Readonly<ManualRunFormProps>) {
+/**
+ * Started's first value: blank, or a carried day at its first minute. A
+ * `datetime-local` holds a day only with a time, and 00:00 claims none:
+ * the runner sets the hour (a guess for Design, design 212).
+ */
+export function startedFrom(day: string | undefined): string {
+  return day === undefined ? "" : `${day}T00:00`;
+}
+
+export function ManualRunForm({
+  submitRun,
+  startedOn,
+}: Readonly<ManualRunFormProps>) {
   const navigate = useNavigate();
   const [title, setTitle] = useState("Morning run");
-  // Equivalent mutant on the initial value: anything stryker substitutes
-  // is not a parseable datetime either, so `toEpochSeconds` answers NaN
-  // for both and the schema refuses both. The empty string is what a
-  // `datetime-local` renders as blank.
-  // Stryker disable next-line StringLiteral
-  const [startedAt, setStartedAt] = useState("");
+  const [startedAt, setStartedAt] = useState(startedFrom(startedOn));
   const [minutes, setMinutes] = useState("30");
   const [distanceKm, setDistanceKm] = useState("5");
   const [indoor, setIndoor] = useState(false);
@@ -218,17 +231,15 @@ export function ManualRunForm({ submitRun }: Readonly<ManualRunFormProps>) {
             </FormField>
           </div>
         </div>
-        <label className="target flex items-center gap-2 text-body font-semibold">
-          <input
-            type="checkbox"
-            checked={indoor}
-            readOnly={form.pending}
-            onChange={(event) => {
-              setIndoor(event.target.checked);
-            }}
-          />
-          Indoor / treadmill
-        </label>
+        {/* R54·166.3: saved with the form, so a checkbox, drawn from the
+            shared set. */}
+        <ToggleField
+          name="indoor"
+          label="Indoor / treadmill"
+          field={form.field}
+          isOn={indoor}
+          onChange={setIndoor}
+        />
         <FormField
           name="effort"
           label="Effort (optional)"

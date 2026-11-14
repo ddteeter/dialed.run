@@ -3,14 +3,15 @@
  * at the desk in two columns with the conditions in the rail; the start-time
  * correction, round 26 item 1), A2 (the picker from the first frame, a kit
  * required, the outfit photo through W3's blur, and at the desk the rail's
- * band history, round 25), S1 (the Strava reminder a matching upload
+ * band history, round 25, and A2b's push into the column, Round 54 ·
+ * 164.3), S1 (the Strava reminder a matching upload
  * clears, round 25), A3 (Noted, with the band the corrected run now has,
  * and the desk rail's band history), R1 (manual entry going on to the
  * outfit, R-102) and R (the runs list's badges).
  *
  * Journey: open the closet -> launch the log flow from the bar -> drop a
  * GPX file and watch it read in place -> A2: try Next with nothing chosen,
- * pick a piece, add a photo -> A3: log it and read the receipt -> enter a
+ * pick a piece on A2b's pushed page, add a photo -> A3: log it and read the receipt -> enter a
  * run by hand and land on picking its outfit -> the runs list.
  * `run-logging.spec.ts` holds R2b's conditions by picking, deleting a run,
  * the retired import URL, and the Garmin TCX reads (R-130, D-111).
@@ -154,7 +155,7 @@ test("log a run: read a file in place, pick the kit, note it, enter one by hand"
       userId: seeded.userId,
       kind: "strava_reminder",
       subjectId: newUlid(),
-      body: "New run on Strava · Add it here: upload the file, then what you wore",
+      body: "New run on Strava. Upload its file, then add what you wore.",
       createdAt: fileStart + 5 * 60 + 1800,
     });
   });
@@ -255,9 +256,7 @@ test("log a run: read a file in place, pick the kit, note it, enter one by hand"
       }),
     ).toContainText("Changed", { timeout: 20_000 });
     await expect(conditions).toContainText("46°F", { timeout: 20_000 });
-    await page
-      .getByRole("link", { name: "Looks right — what did you wear?" })
-      .click();
+    await page.getByRole("link", { name: "What did you wear?" }).click();
     await hydrated(page);
 
     // ---- A2 · the kit, required, and the photo -----------------------
@@ -284,7 +283,22 @@ test("log a run: read a file in place, pick the kit, note it, enter one by hand"
     await page.getByRole("button", { name: "Next — did it work?" }).click();
     await expect(page.getByText("Pick at least one piece.")).toBeVisible();
 
-    await page.getByRole("button", { name: "Demo half-zip" }).click();
+    // At the desk a category is a push into the column, not a sheet
+    // (Round 54 · 164.3): the URL changes, and Done comes back to A2 with
+    // the pick made there.
+    await scene(page, "A2b at the desk · a push, with the picks kept");
+    await page.getByRole("button", { name: "All Tops" }).click();
+    await page.waitForURL(/[?&]pick=tops\b/u);
+    await expect(
+      page.getByRole("heading", { name: "Tops", level: 1 }),
+    ).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await page.getByRole("checkbox", { name: "Demo half-zip" }).check();
+    await page.getByRole("button", { name: "Done" }).click();
+    await expect(page).not.toHaveURL(/[?&]pick=/u);
+    await expect(
+      page.getByRole("button", { name: "Demo half-zip" }),
+    ).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByText(/· 1 piece$/u)).toBeVisible();
     await expect(page.getByText("Pick at least one piece.")).toHaveCount(0);
 
@@ -345,7 +359,7 @@ test("log a run: read a file in place, pick the kit, note it, enter one by hand"
     await hydrated(page);
     const reminder = page
       .getByRole("listitem")
-      .filter({ hasText: "New run on Strava · Add it here" });
+      .filter({ hasText: "New run on Strava. Upload its file" });
     await expect(reminder).toHaveCount(1);
     // Read: the paper and quiet text, where unread is a white row.
     await expect(reminder).toHaveClass(/text-quiet/u);
@@ -368,7 +382,10 @@ test("log a run: read a file in place, pick the kit, note it, enter one by hand"
     ).toBeVisible();
 
     // ---- R · the list ------------------------------------------------
-    await scene(page, "Runs · four badges and one breath");
+    await scene(
+      page,
+      "Runs · month breaks, one line a row, marks at the right",
+    );
     await page.goto("/runs");
     await hydrated(page);
     await expect(page.locator('[data-slot="run-row"]').first()).toBeVisible();

@@ -193,6 +193,13 @@ describe("ShadeSheet (design round 11 §AH2)", () => {
 
     expect(swatch).toHaveStyle({ width: "18px", height: "18px" });
     expect(swatch).toHaveStyle({ backgroundColor: "#1f2a44" });
+    // Round 55 · 191c and d: inside the field, before the hex, with a
+    // --hairline-2 edge.
+    const field = container.querySelector("[data-part='hex-field']");
+    expect(field?.firstElementChild).toBe(swatch);
+    expect(field?.lastElementChild).toBe(container.querySelector("#colorHex"));
+    expect(field).toHaveClass("flex", "items-center", "rounded-field", "border");
+    expect(swatch).toHaveClass("border-hairline-2");
   });
 
   it("shows nothing through the swatch while the hex is unreadable", () => {

@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { viewerUnitsQuery } from "../../modules/feed/functions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";
+import { RunNotFoundPage } from "../../named-not-found";
 import { DeleteRun } from "../../modules/runs/components/DeleteRun";
 import { RunRemovals } from "../../modules/safety/components/RunRemovals";
 import { runRemovalsQuery } from "../../modules/safety/functions";
@@ -31,6 +32,8 @@ export const Route = createFileRoute("/runs/$runId")({
       removals,
     };
   },
+  // Round 55 · 185: the missing thing named, in its own column.
+  notFoundComponent: RunNotFoundPage,
   component: RunDetailPage,
 });
 

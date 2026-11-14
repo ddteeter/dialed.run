@@ -30,7 +30,7 @@ paragraph
 Top
 end of paragraph
 heading, Janji AFO Middle Layer #, level 1
-# km logged
+No runs yet
 paragraph
 Works at
 # degrees and up

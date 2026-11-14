@@ -34,7 +34,7 @@ paragraph
 Never typed by hand. Wrong time? Change it on the run card and we’ll get the weather for it.
 end of paragraph
 link, Weather data provided by Visual Crossing
-link, Looks right — what did you wear?
+link, What did you wear?
 paragraph
 No file?
 link, Enter the run by hand

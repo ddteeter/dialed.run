@@ -70,7 +70,7 @@ export interface ClosetFiltersProps {
 const CHOICE_BASE = "target flex items-center gap-2 text-ink no-underline";
 
 const CHOICE_CLASS: Readonly<Record<FiltersVariant, string>> = {
-  rail: "text-body [&[aria-current]]:font-bold aria-pressed:font-bold",
+  rail: "w-full justify-between text-body [&[aria-current]]:font-bold aria-pressed:font-bold",
   chips:
     "rounded-pill border border-hairline px-3 py-1 text-small [&[aria-current]]:border-ink [&[aria-current]]:bg-ink [&[aria-current]]:text-ground aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-ground",
 };
@@ -100,10 +100,31 @@ function GroupHeading({ children }: Readonly<{ children: string }>) {
   );
 }
 
-function OptionBody({ option }: Readonly<{ option: FilterOption }>) {
+/**
+ * What a choice reads, and its count. On the rail the count sits at the
+ * right (Round 55 · 191b), and the label keeps the width it has in bold
+ * (C-11): an unseen bold copy holds the cell open, so choosing a filter
+ * never widens the rail and moves the grid it filters.
+ */
+function OptionBody({
+  option,
+  variant,
+}: Readonly<{ option: FilterOption; variant: FiltersVariant }>) {
   return (
     <>
-      {option.label}{" "}
+      {variant === "rail" ? (
+        <span data-part="option-label" className="inline-grid">
+          <span className="col-start-1 row-start-1">{option.label}</span>
+          <span
+            aria-hidden="true"
+            className="invisible col-start-1 row-start-1 font-bold"
+          >
+            {option.label}
+          </span>
+        </span>
+      ) : (
+        option.label
+      )}{" "}
       <Mono step="xs" className="text-label">
         {option.count}
       </Mono>
@@ -146,7 +167,7 @@ function FilterGroup({
                 aria-current={option.isCurrent ? "true" : undefined}
                 className={`${CHOICE_BASE} ${CHOICE_CLASS[variant]}`}
               >
-                <OptionBody option={option} />
+                <OptionBody option={option} variant={variant} />
               </Link>
             ) : (
               <button
@@ -157,7 +178,7 @@ function FilterGroup({
                 }}
                 className={`${CHOICE_BASE} ${CHOICE_CLASS[variant]}`}
               >
-                <OptionBody option={option} />
+                <OptionBody option={option} variant={variant} />
               </button>
             )}
           </li>

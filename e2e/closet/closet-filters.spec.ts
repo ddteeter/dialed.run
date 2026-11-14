@@ -103,7 +103,7 @@ test("WORKS AT filters the closet with no script, in the runner's unit", async (
     page.getByRole("link", { name: new RegExp(shell.name, "u") }),
   ).toHaveCount(0);
 
-  await rail.getByRole("link", { name: "Any" }).click();
+  await rail.getByRole("link", { name: "Clear" }).click();
   await expect(
     page.getByRole("link", { name: new RegExp(shell.name, "u") }),
   ).toBeVisible();

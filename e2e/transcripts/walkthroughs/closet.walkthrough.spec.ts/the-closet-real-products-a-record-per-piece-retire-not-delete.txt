@@ -84,24 +84,20 @@ Show retired (#)
 switch, Show retired (#), checked
 list
 listitem, level 1, position 1, set size 3
-link, Patagonia Houdini Jacket No runs yet Untested
+link, Patagonia Houdini Jacket No runs yet
 Patagonia Houdini Jacket
 No runs yet
-Untested
-end of link, Patagonia Houdini Jacket No runs yet Untested
+end of link, Patagonia Houdini Jacket No runs yet
 end of listitem, level 1, position 1, set size 3
 listitem, level 1, position 2, set size 3
-link, Nike Pegasus # No runs yet Untested Retired
+link, Nike Pegasus # No runs yet Retired
 Nike Pegasus #
 No runs yet
-Untested
 Retired
-end of link, Nike Pegasus # No runs yet Untested Retired
+end of link, Nike Pegasus # No runs yet Retired
 end of listitem, level 1, position 2, set size 3
 listitem, level 1, position 3, set size 3
-link, Add garment
-Add garment
-end of link, Add garment
+link, Add a piece
 end of listitem, level 1, position 3, set size 3
 end of list
 end of main

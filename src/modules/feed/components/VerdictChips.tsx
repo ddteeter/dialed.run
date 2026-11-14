@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Icon, Mono } from "../../../ui";
 import { chipLabel } from "../chips";
 import type { Chip } from "../chips";
+import { useIsAtDesk } from "../kit-push";
 
 /**
  * One chip: a toggle, pill-shaped, in the mono step the board sets its
@@ -108,6 +109,9 @@ export function VerdictChips({
   onToggle: (chip: Chip, isPressed: boolean) => void;
   onMore: () => void;
 }>) {
+  // What MORE does at this width, said before it is pressed: A3b's sheet
+  // below the desk, a push at it (Round 54 · 164.3).
+  const opens = useIsAtDesk() ? undefined : "dialog";
   return (
     <div className="flex flex-col gap-3">
       <h2>
@@ -140,7 +144,7 @@ export function VerdictChips({
           <button
             type="button"
             data-slot="flag-more"
-            aria-haspopup="dialog"
+            aria-haspopup={opens}
             // "More" first, as drawn, then what it opens: the sheet's own
             // title. The chevron is drawn, not said.
             aria-label="More, anything specific"

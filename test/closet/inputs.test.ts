@@ -6,6 +6,7 @@ import {
   closetFiltersInput,
   closetSearch,
   itemIdInput,
+  nearbyInput,
   newItemInput,
   requireFormData,
   updateItemInput,
@@ -75,6 +76,21 @@ describe("itemIdInput", () => {
     expect(itemIdInput.safeParse({ itemId: newUlid() }).success).toBe(true);
     expect(itemIdInput.safeParse({ itemId: "12" }).success).toBe(false);
     expect(itemIdInput.safeParse({}).success).toBe(false);
+  });
+});
+
+describe("nearbyInput", () => {
+  it("takes nothing, or one piece to leave out", () => {
+    const itemId = newUlid();
+    expect(nearbyInput.parse(undefined)).toBeUndefined();
+    expect(nearbyInput.parse({})).toStrictEqual({});
+    expect(nearbyInput.parse({ exceptItemId: itemId })).toStrictEqual({
+      exceptItemId: itemId,
+    });
+  });
+
+  it("refuses an id that is not one", () => {
+    expect(nearbyInput.safeParse({ exceptItemId: "nope" }).success).toBe(false);
   });
 });
 

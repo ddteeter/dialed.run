@@ -6,6 +6,7 @@ import {
   MAX_IMPORT_BYTES,
 } from "../../src/modules/runs/imports";
 import {
+  newRunSearch,
   conditionsBandInput,
   garminImportInput,
   importIdInput,
@@ -32,6 +33,21 @@ const draft = {
   indoor: true,
   title: "Evening run",
 };
+
+describe("newRunSearch (Round 55 · 183)", () => {
+  it("keeps a calendar day", () => {
+    expect(newRunSearch.parse({ date: "2026-11-12" })).toStrictEqual({
+      date: "2026-11-12",
+    });
+    expect(newRunSearch.parse({})).toStrictEqual({});
+  });
+
+  it("drops anything that is not a day", () => {
+    expect(newRunSearch.parse({ date: "2026-11-12T07:30" })).toStrictEqual({});
+    expect(newRunSearch.parse({ date: "Thursday" })).toStrictEqual({});
+    expect(newRunSearch.parse("nonsense")).toStrictEqual({});
+  });
+});
 
 describe("manualRunInput", () => {
   it("takes a run draft with an idempotency key, and without one", () => {

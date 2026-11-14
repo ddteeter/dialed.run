@@ -92,20 +92,20 @@ describe("GarmentForm: its frame", () => {
     ).toBeTruthy();
   });
 
-  it("is the panel it always was with no closet to show beside it", () => {
+  it("is the centred column with no closet to show beside it (168.1)", () => {
     renderForm();
 
     expect(rail()).toBeNull();
-    expect(primary()).toHaveClass("mx-auto", "max-w-panel");
-    expect(primary()).not.toHaveClass("wide:max-w-column");
+    expect(primary()).toHaveClass("mx-auto", "max-w-column", "desk:mx-0");
+    expect(primary().parentElement?.dataset.part).not.toBe("page");
   });
 });
 
 describe("GarmentForm at the desk (round 26 #10)", () => {
-  it("splits, with the category's pieces in the one rail card", () => {
+  it("splits, with the group's pieces in the one rail card", () => {
     renderForm({
       rail: {
-        nearby: { byCategory: { top: [rover], bottom: [shorts] }, byType: {} },
+        nearby: { tops: [rover], bottoms: [shorts] },
         reread: neverReread,
       },
     });
@@ -114,20 +114,33 @@ describe("GarmentForm at the desk (round 26 #10)", () => {
     if (card === null) throw new Error("no rail");
     expect(
       within(card).getByRole("heading", {
-        name: "Already in your closet · Top",
+        name: "Already in your closet · Tops",
       }),
     ).toBeInTheDocument();
     expect(within(card).getByText("Janji Rover Half-zip")).toBeInTheDocument();
     expect(within(card).queryByText("Split shorts")).toBeNull();
-    // DS1's primary column: 620 at most, set to the left beside the rail.
-    expect(primary()).toHaveClass("wide:mx-0", "wide:max-w-column");
+    // Round 54 · 168.2: the 620 form at the left of a centred 1180 page,
+    // the rail in the rest of it at ≥1040, and under the form below that.
+    expect(primary()).toHaveClass("mx-auto", "max-w-column", "desk:mx-0");
+    const page = primary().parentElement;
+    expect(page).toHaveAttribute("data-part", "page");
+    expect(page).toHaveClass(
+      "mx-auto",
+      "max-w-page",
+      "flex-col",
+      "desk:grid",
+      "desk:grid-cols-[minmax(0,var(--container-column))_minmax(0,1fr)]",
+    );
+    expect(primary().nextElementSibling).toBe(card);
+    expect(card).toHaveClass("mx-auto", "max-w-column", "desk:mx-0");
+    expect(card).not.toHaveClass("hidden");
   });
 
   it("follows the category as it is picked", async () => {
     const user = userEvent.setup();
     renderForm({
       rail: {
-        nearby: { byCategory: { top: [rover], bottom: [shorts] }, byType: {} },
+        nearby: { tops: [rover], bottoms: [shorts] },
         reread: neverReread,
       },
     });
@@ -138,7 +151,7 @@ describe("GarmentForm at the desk (round 26 #10)", () => {
     if (card === null) throw new Error("no rail");
     expect(
       within(card).getByRole("heading", {
-        name: "Already in your closet · Bottom",
+        name: "Already in your closet · Bottoms",
       }),
     ).toBeInTheDocument();
     expect(within(card).getByText("Split shorts")).toBeInTheDocument();
@@ -147,11 +160,42 @@ describe("GarmentForm at the desk (round 26 #10)", () => {
     expect(within(card).getByText("No shoes yet.")).toBeInTheDocument();
   });
 
+  it("files a piece worn as an outer layer in Outer, as C will (248)", async () => {
+    const user = userEvent.setup();
+    const shell = itemView({
+      item: wardrobeItem({ id: "01SH", name: "Old shell", layer: "outer" }),
+      uiGroup: "outer",
+    });
+    renderForm({
+      rail: { nearby: { tops: [rover], outer: [shell] }, reread: neverReread },
+    });
+    await user.selectOptions(screen.getByLabelText("Layer"), "outer");
+    expect(
+      within(railCard()).getByRole("heading", {
+        name: "Already in your closet · Outer",
+      }),
+    ).toBeInTheDocument();
+    expect(within(railCard()).getByText("Old shell")).toBeInTheDocument();
+    expect(within(railCard()).queryByText("Janji Rover Half-zip")).toBeNull();
+
+    await user.selectOptions(screen.getByLabelText("Layer"), "mid");
+    expect(within(railCard()).getByText("Janji Rover Half-zip")).toBeVisible();
+
+    // Shoes have no layer, so the outer answer left behind files nothing.
+    await user.selectOptions(screen.getByLabelText("Layer"), "outer");
+    await user.selectOptions(screen.getByLabelText("Category"), "shoes");
+    expect(
+      within(railCard()).getByRole("heading", {
+        name: "Already in your closet · Shoes",
+      }),
+    ).toBeInTheDocument();
+  });
+
   it("marks the piece being typed again as SAME NAME", async () => {
     const user = userEvent.setup();
     renderForm({
       rail: {
-        nearby: { byCategory: { top: [rover] }, byType: {} },
+        nearby: { tops: [rover] },
         reread: neverReread,
       },
     });
@@ -205,27 +249,34 @@ describe("GarmentForm's TYPE (round 26 #10, D-75, R-112)", () => {
     expect(screen.queryByRole("group", { name: "Type" })).toBeNull();
   });
 
-  it("narrows the rail to the picked type, by its name", async () => {
+  it("lists the picked type's pieces first, and filters nothing (248)", async () => {
     const user = userEvent.setup();
     renderForm({
-      rail: {
-        nearby: {
-          byCategory: { top: [rover] },
-          byType: { halfZip: [halfZip] },
-        },
-        reread: neverReread,
-      },
+      rail: { nearby: { tops: [rover, halfZip] }, reread: neverReread },
     });
+    const names = () =>
+      within(railCard())
+        .getAllByRole("listitem")
+        .map(
+          (row) =>
+            row.firstElementChild?.nextElementSibling?.firstElementChild
+              ?.textContent,
+        );
 
+    expect(names()).toStrictEqual(["Janji Rover Half-zip", "Old half-zip"]);
     await user.click(screen.getByRole("radio", { name: "Half-zip" }));
 
     expect(
       within(railCard()).getByRole("heading", {
-        name: "Already in your closet · Top · Half-zip",
+        name: "Already in your closet · Tops",
       }),
     ).toBeInTheDocument();
-    expect(within(railCard()).getByText("Old half-zip")).toBeInTheDocument();
-    expect(within(railCard()).queryByText("Janji Rover Half-zip")).toBeNull();
+    expect(names()).toStrictEqual(["Old half-zip", "Janji Rover Half-zip"]);
+  });
+
+  it("names the picked type when its group holds nothing", async () => {
+    const user = userEvent.setup();
+    renderForm({ rail: { nearby: {}, reread: neverReread } });
 
     await user.click(screen.getByRole("radio", { name: "Tee" }));
     expect(within(railCard()).getByText("No tees yet.")).toBeInTheDocument();
@@ -240,7 +291,7 @@ describe("GarmentForm's TYPE (round 26 #10, D-75, R-112)", () => {
       save,
       initial: { name: "Split" },
       rail: {
-        nearby: { byCategory: { top: [rover] }, byType: {} },
+        nearby: { tops: [rover] },
         reread: neverReread,
       },
     });
@@ -256,7 +307,7 @@ describe("GarmentForm's TYPE (round 26 #10, D-75, R-112)", () => {
     ).toBeNull();
     expect(
       within(railCard()).getByRole("heading", {
-        name: "Already in your closet · Top",
+        name: "Already in your closet · Tops",
       }),
     ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Add to closet" }));
@@ -318,15 +369,10 @@ describe("GarmentForm, saved with its photo refused: the rail (R-114)", () => {
       }),
       isGeneric: false,
     });
-    const rereadNearby = vi.fn(() =>
-      Promise.resolve({
-        byCategory: { top: [saved] },
-        byType: { halfZip: [saved] },
-      }),
-    );
+    const rereadNearby = vi.fn(() => Promise.resolve({ tops: [saved] }));
 
     await refuseThePhoto({
-      rail: { nearby: { byCategory: {}, byType: {} }, reread: rereadNearby },
+      rail: { nearby: {}, reread: rereadNearby },
     });
 
     expect(
@@ -339,7 +385,7 @@ describe("GarmentForm, saved with its photo refused: the rail (R-114)", () => {
   it("keeps the rows it had when the re-read fails", async () => {
     await refuseThePhoto({
       rail: {
-        nearby: { byCategory: {}, byType: { halfZip: [halfZip] } },
+        nearby: { tops: [halfZip] },
         reread: () => Promise.reject(new TypeError("Failed to fetch")),
       },
     });

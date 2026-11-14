@@ -25,7 +25,11 @@ export const runDraftSchema = z.object({
   // is the only place a human types these, and "Value out of range" tells
   // them nothing about what to do next. A parser filling this in gets the
   // same sentences, which is fine — nothing shows them to anyone.
-  startedAt: z.number().int().positive("Pick when the run started."),
+  // The type carries the sentence (P2a-01), so every check on it says it:
+  // a blank date is NaN, which fails `number` before `positive` is asked
+  // (zod's own text is "Invalid input: expected number, received NaN"),
+  // and a zero fails `positive` with the same words.
+  startedAt: z.number({ error: "Pick when the run started." }).int().positive(),
   durationS: z.number().int().positive("How many minutes did it take?"),
   distanceM: z.number().positive("How far did you go?"),
   lat: latitudeSchema.optional(),

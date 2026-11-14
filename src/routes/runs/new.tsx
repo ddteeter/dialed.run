@@ -12,7 +12,9 @@ import {
   retimeRunFn,
   startFileImport,
 } from "../../modules/runs/functions";
+import { newRunSearch } from "../../modules/runs/inputs";
 import { AddRunShell } from "../../modules/runs/components/AddRunShell";
+import { ReminderDayLine } from "../../modules/runs/components/ReminderDayLine";
 
 /**
 Screen A1: upload & auto-conditions (docs/product.md). Every outcome — the
@@ -32,11 +34,14 @@ export const Route = createFileRoute("/runs/new")({
     ]);
     return { units, bell, hasGarmin };
   },
+  validateSearch: newRunSearch,
   component: NewRunPage,
 });
 
 function NewRunPage() {
   const { units, bell, hasGarmin } = Route.useLoaderData();
+  // Round 55 · 183: a Strava reminder's day, carried on to R1's Started.
+  const search = Route.useSearch();
 
   return (
     <BelledLayout {...bell}>
@@ -59,6 +64,7 @@ function NewRunPage() {
           No file?{" "}
           <Link
             to="/runs/manual"
+            search={search}
             data-target="inline"
             className="font-semibold text-cold-text"
           >
@@ -66,6 +72,7 @@ function NewRunPage() {
           </Link>{" "}
           instead.
         </p>
+        <ReminderDayLine day={search.date} />
       </AddRunShell>
     </BelledLayout>
   );

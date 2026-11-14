@@ -25,12 +25,15 @@ button, Log a run
 end of banner
 main
 heading, Runs, level 1
+link, Strava reminders · Off
+Strava reminders ·
+Off
+end of link, Strava reminders · Off
 No runs yet
 paragraph
 Upload a file or enter one by hand.
 end of paragraph
 link, Log a run
-link, Strava reminders
 end of main
 status
 end of document

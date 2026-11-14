@@ -193,24 +193,23 @@ test("F at the desk · what is already in your closet, by category and type", as
     ).toBeVisible();
     await page.getByLabel("Category").selectOption("top");
     const rail = page.locator("[data-part='rail']");
-    await expect(
-      rail.getByRole("heading", { name: "Already in your closet · Top" }),
-    ).toBeVisible();
+    // Round 56 · 248: the card is the closet's group, by its word.
+    const tops = rail.getByRole("heading", {
+      name: "Already in your closet · Tops",
+    });
+    await expect(tops).toBeVisible();
     await expect(rail.getByText(`Patagonia ${jacket.name}`)).toBeVisible();
     await page.getByLabel("Brand").fill("Patagonia");
     await page.getByLabel("Model / name").fill(jacket.name);
     await expect(rail.getByText("Same name")).toBeVisible();
 
-    // R-112: a picked type narrows the card to it, and says so by name.
+    // Round 56 · 248: a picked type sorts first, and the card stays the
+    // group's, so the jacket leads with the type picked.
     await page.getByRole("radio", { name: "Jacket" }).check();
-    await expect(
-      rail.getByRole("heading", {
-        name: "Already in your closet · Top · Jacket",
-      }),
-    ).toBeVisible();
-    await expect(rail.getByText(`Patagonia ${jacket.name}`)).toBeVisible();
-    await page.getByRole("radio", { name: "Half-zip" }).check();
-    await expect(rail.getByText("No half-zips yet.")).toBeVisible();
+    await expect(tops).toBeVisible();
+    await expect(rail.getByRole("listitem").first()).toContainText(
+      `Patagonia ${jacket.name}`,
+    );
 
     // Round 28 #13: no photo is the hatch; a retirement reads by month and
     // year; SAME NAME and RETIRED are ink, not a verdict's hue. Read on
@@ -222,10 +221,11 @@ test("F at the desk · what is already in your closet, by category and type", as
     const retired = rail
       .getByRole("listitem")
       .filter({ hasText: `Nike ${shoe.name}` });
-    await expect(retired.getByText("Retired", { exact: true })).toBeVisible();
+    // Round 56 · 248: RETIRED appears once, as the row's dated tag.
     await expect(
-      retired.getByText(/^0 runs · Retired [A-Z][a-z]{2} \d{4}$/u),
+      retired.getByText(/^Retired [A-Z][a-z]{2} \d{4}$/u),
     ).toBeVisible();
+    await expect(retired.getByText(/Retired/u)).toHaveCount(1);
     await expect(
       retired.locator("[data-part='thumb'][data-state='no-photo']"),
     ).toBeVisible();

@@ -950,7 +950,7 @@ describe("what the consumer tells the runner", () => {
       .where(eq(notifications.userId, userId));
     expect(notification?.kind).toBe("strava_reminder");
     expect(notification?.body).toBe(
-      "New run on Strava · Add it here: upload the file, then what you wore",
+      "New run on Strava. Upload its file, then add what you wore.",
     );
   });
 

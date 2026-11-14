@@ -37,7 +37,7 @@ image, Janji Rover Half-zip
 Replace
 Replace
 button, Remove
-# km logged
+# mi logged
 ·
 # of # runs dialed
 paragraph

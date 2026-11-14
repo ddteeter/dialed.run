@@ -10,6 +10,7 @@ import { and, eq } from "drizzle-orm";
 
 import { wardrobeItems } from "../../db/schema-core";
 import { coreDb } from "../../env";
+import { photoUrlFor } from "../closet";
 import type { Conditions } from "./conditions";
 import type { UiGroup } from "./groups";
 import { uiGroupFor } from "./groups";
@@ -22,6 +23,12 @@ interface PickerItem {
   layer: string | null;
   matches: boolean;
   untested: boolean;
+  /**
+   * Where the tile's photo is served from, read as the closet's own tile
+   * reads it (`photoUrlFor`), or nothing when the piece has none — the
+   * tile then draws the hatch and the type word (Round 55 · 239).
+   */
+  photo: string | undefined;
 }
 
 export interface PickerGroup {
@@ -62,6 +69,7 @@ export async function pickerGroups(
       layer: item.layer,
       matches: isMatches,
       untested: !hasRange,
+      photo: photoUrlFor(item),
     });
     byGroup.set(group, list);
   }

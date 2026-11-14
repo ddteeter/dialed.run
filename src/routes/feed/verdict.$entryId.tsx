@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { bandFloorC } from "../../lib/contracts/temperature";
 import { getSession } from "../../modules/auth/functions";
 import { VerdictForm } from "../../modules/feed/components/VerdictForm";
+import { verdictSearch } from "../../modules/feed/kit-push";
 import { bandContextFor } from "../../modules/feed/route-decisions";
 import {
   bandRunsQuery,
@@ -27,6 +28,13 @@ import { runRemovalsQuery } from "../../modules/safety/functions";
 export const Route = createFileRoute("/feed/verdict/$entryId")({
   // D-102's name for the page: its heading is a question.
   staticData: { savedPage: "The verdict" },
+  // A3b's push at the desk is `?specifics=true` on this page (Round 54 ·
+  // 164.3).
+  validateSearch: verdictSearch,
+  // A push changes only the search: the entry and its band are the ones
+  // already loaded, and A3's unsaved answer is still on the page.
+  // Typed by hand, as A2's route types it.
+  shouldReload: ({ cause }: { cause: string }) => cause !== "stay",
   // The session it already reads also says whether the address is
   // confirmed, which picks A3's private line (D-108 E, round 27 first).
   beforeLoad: async ({ location }) => ({
@@ -84,6 +92,8 @@ function VerdictPage() {
     removals,
     bell,
   } = Route.useLoaderData();
+  const { specifics } = Route.useSearch();
+  const navigate = Route.useNavigate();
 
   // DS1b: the bell is on every screen (R-102).
   return (
@@ -97,6 +107,15 @@ function VerdictPage() {
         submitVerdict={submitVerdictAction}
         itemBandWearStat={itemBandWearStatQuery}
         isVerified={isVerified}
+        push={{
+          isPushed: specifics === true,
+          onPush: () => {
+            void navigate({ search: { specifics: true } });
+          },
+          onDone: () => {
+            void navigate({ search: {} });
+          },
+        }}
         privateLine={(hintId) => (
           <PrivateRunLine
             hintId={hintId}

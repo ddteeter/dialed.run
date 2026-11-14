@@ -23,6 +23,7 @@ import { PhotoBeingChecked } from "../../modules/safety/components/NoticeBand";
 import { photoBlurStep } from "../../modules/safety/components/PhotoBlur";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";
+import { PieceNotFoundPage } from "../../named-not-found";
 
 export const Route = createFileRoute("/closet/$itemId")({
   loader: garmentLoader(
@@ -31,6 +32,8 @@ export const Route = createFileRoute("/closet/$itemId")({
     viewerUnitsQuery,
     bellStateFn,
   ),
+  // Round 55 · 185: the missing thing named, in its own column.
+  notFoundComponent: PieceNotFoundPage,
   component: GarmentDetailPage,
 });
 
@@ -45,7 +48,7 @@ function GarmentDetailPage() {
     <BelledLayout {...bell}>
       <GarmentDetail
         detail={detail}
-        tempUnit={units.temp}
+        units={units}
         // Feed's (the band is the run's weather), asked for by round 26's
         // delete sheet when it opens — never with the page (task 128).
         bandCount={garmentBandCountQuery}

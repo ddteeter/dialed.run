@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { StravaCallbackResult } from "../../src/modules/runs/components/StravaCallbackResult";
@@ -52,32 +52,36 @@ describe("StravaCallbackResult", () => {
     expect(
       screen.getByRole("heading", { name: "Strava connected." }),
     ).toBeVisible();
-    expect(screen.getByRole("link", { name: "Continue" })).toHaveAttribute(
-      "href",
-      "/runs/strava",
-    );
+    expect(receipt).toHaveClass("border", "border-ink");
+    const pill = screen.getByRole("link", { name: "Continue" });
+    expect(pill).toHaveAttribute("href", "/runs/strava");
+    expectPill(pill);
     expect(screen.queryByRole("link", { name: "Try again" })).toBeNull();
   });
 
-  it("says nothing changed when it did not connect, with both ways on", async () => {
+  it("says nothing changed when it did not connect, in R39's receipt with one pill", async () => {
     await renderWithRouter(landing(REFUSED));
 
+    // D1-15: an outlined receipt with a mono kicker, as R39 draws it.
+    const receipt = document.querySelector("[data-slot='receipt']");
+    expect(receipt).toHaveClass("border", "border-ink", "p-4");
     expect(
-      screen.getByText("Strava isn’t connected. Nothing changed."),
-    ).toBeVisible();
+      [...(receipt?.children ?? [])].map((line) => line.textContent),
+    ).toEqual(["Not connected", "Strava isn’t connected. Nothing changed."]);
+    expect(within(receipt as HTMLElement).getByText("Not connected")).toHaveClass(
+      "font-mono",
+      "uppercase",
+    );
     // The reason is the server's diagnostic, not the runner's sentence.
     expect(screen.queryByText("The user declined.")).toBeNull();
     // Try again goes back to T1, where the Strava consent is read before
     // the official button — never straight to the OAuth redirect — and
     // says so, so T1 lands focus on its heading (round 39 #66).
-    expect(screen.getByRole("link", { name: "Try again" })).toHaveAttribute(
-      "href",
-      "/runs/strava?again=true",
-    );
-    expect(screen.getByRole("link", { name: "Not now" })).toHaveAttribute(
-      "href",
-      "/runs",
-    );
+    const pill = screen.getByRole("link", { name: "Try again" });
+    expect(pill).toHaveAttribute("href", "/runs/strava?again=true");
+    expectPill(pill);
+    // One pill: the shell's tabs are the other ways on.
+    expect(screen.getAllByRole("link")).toHaveLength(1);
     expect(document.querySelector("[data-state='full']")).toBeNull();
   });
 
@@ -88,10 +92,7 @@ describe("StravaCallbackResult", () => {
       "href",
       "/onboarding/done?again=true",
     );
-    expect(screen.getByRole("link", { name: "Not now" })).toHaveAttribute(
-      "href",
-      "/runs",
-    );
+    expect(screen.queryByRole("link", { name: "Not now" })).toBeNull();
   });
 
   it("tells the eleventh runner Strava is full, and offers no Try again", async () => {
@@ -99,6 +100,7 @@ describe("StravaCallbackResult", () => {
 
     const receipt = document.querySelector("[data-slot='receipt']");
     expect(receipt).toHaveAttribute("data-state", "full");
+    expect(receipt).toHaveClass("border", "border-ink");
     expect(
       [...(receipt?.children ?? [])].map((line) => line.textContent),
     ).toEqual([
@@ -111,7 +113,9 @@ describe("StravaCallbackResult", () => {
     expect(
       screen.queryByText("Strava isn’t connected. Nothing changed."),
     ).toBeNull();
-    expect(screen.getByRole("link", { name: "Not now" })).toBeVisible();
+    const pill = screen.getByRole("link", { name: "Not now" });
+    expect(pill).toHaveAttribute("href", "/runs");
+    expectPill(pill);
   });
 
   it("offers no Try again where Strava is not configured — never a dead control", async () => {
@@ -121,6 +125,23 @@ describe("StravaCallbackResult", () => {
       screen.getByText("Strava isn’t connected. Nothing changed."),
     ).toBeVisible();
     expect(screen.queryByRole("link", { name: "Try again" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Not now" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Not now" })).toHaveAttribute(
+      "href",
+      "/runs",
+    );
   });
 });
+
+/**
+R39's one action: an ink pill, the control height, the column's width.
+*/
+function expectPill(link: HTMLElement): void {
+  expect(link).toHaveClass(
+    "target",
+    "min-h-control",
+    "w-full",
+    "rounded-pill",
+    "bg-ink",
+    "text-ground",
+  );
+}

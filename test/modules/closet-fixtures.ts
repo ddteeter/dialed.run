@@ -85,6 +85,5 @@ export function listing(views: readonly ClosetItemView[]): ClosetListing {
   return {
     items: [...views],
     totalCount: views.length,
-    genericCount: views.filter((view) => view.isGeneric).length,
   };
 }

@@ -130,6 +130,10 @@ button, Add to closet
 Add to closet
 end of button, Add to closet
 end of form
+heading, Already in your closet · Tops, level 2
+paragraph
+No tops yet.
+end of paragraph
 end of main
 navigation, Main
 list

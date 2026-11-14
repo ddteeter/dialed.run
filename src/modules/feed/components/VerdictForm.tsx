@@ -1,4 +1,4 @@
-import type { JSX, ReactNode } from "react";
+import type { ComponentProps, JSX, ReactNode } from "react";
 import { useState } from "react";
 
 import {
@@ -11,16 +11,14 @@ import type {
   VerdictValue,
   WritableAudience,
 } from "../../../lib/contracts";
-import { clockLabel, dayLabel } from "../../../lib/dates";
+import { dayLabel, viewerClockLabel } from "../../../lib/dates";
 import { runsLabel } from "../../../lib/runs-label";
 import type { BandRun } from "../band-runs";
+import { BackToRun } from "./BackToRun";
 import { BandRunsCard } from "./BandRunsCard";
-import {
-  bandForms,
-  distanceNumber,
-  measuredLine,
-} from "../../../lib/contracts/measures";
-import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
+import { ThisRunCard } from "./ThisRunCard";
+import { bandForms, distanceNumber } from "../../../lib/contracts/measures";
+import { formatTemp } from "../../../lib/contracts/temperature";
 import {
   AUDIENCE_HINTS,
   AUDIENCE_LABELS,
@@ -31,6 +29,7 @@ import {
   FormErrorSummary,
   FormFailureBand,
   FormStatus,
+  GarminAttribution,
   LOG_FLOW,
   Mono,
   PhoneBell,
@@ -137,6 +136,9 @@ import {
   type NotedSentence,
 } from "./NotedReceipt";
 import { SpecificsSheet } from "./SpecificsSheet";
+import { SpecificsPage } from "./SpecificsPage";
+import { PushFrame } from "./PushPage";
+import { isAtDesk } from "../kit-push";
 import { VerdictChips } from "./VerdictChips";
 import type { BandSignals } from "../band-signals";
 import { EffortField, useEffortPick } from "./EffortField";
@@ -207,7 +209,8 @@ function RunHeader({
   units,
 }: Readonly<{ entry: Entry; units: Units }>): JSX.Element {
   const zone = entry.conditions?.timeZone;
-  const when = `${dayLabel(entry.startedAt, zone)} · ${clockLabel(entry.startedAt, zone)}`;
+  // Marked UTC when the run has no zone, as the This run card is (P2a-02).
+  const when = `${dayLabel(entry.startedAt, zone)} · ${viewerClockLabel(entry.startedAt, { homeZone: zone })}`;
   const distance = distanceNumber(entry.distanceM, units.distance);
   // With conditions the board drops the unit to fit the temperature
   // (`6.2 AT 41°`); a reader still needs it, so it is said, not drawn.
@@ -228,12 +231,15 @@ function RunHeader({
       data-ground="ink-until-wide"
       className="-mx-5 -mt-6 flex flex-col gap-2 bg-ground px-5 py-5 text-ink wide:mx-0 wide:mt-0 wide:gap-1 wide:px-0 wide:py-0"
     >
-      <div className="flex items-center justify-between gap-3 wide:hidden">
-        <Mono step="xs" className="text-muted wide:hidden">
-          {when}
-        </Mono>
+      {/* "← Back" above the title at both widths, sharing its row with
+          the phone's bell (Round 55 · 242; Design 169.1). */}
+      <div className="flex items-center justify-between gap-3">
+        <BackToRun runId={entry.runId} />
         <PhoneBell />
       </div>
+      <Mono step="xs" className="text-muted wide:hidden">
+        {when}
+      </Mono>
       <p className="m-0 font-display text-display uppercase wide:hidden">
         {headline}
       </p>
@@ -243,6 +249,9 @@ function RunHeader({
       >
         {LABELS.verdict}
       </h1>
+      {/* The run came through Garmin's API: its credit is the first line
+          under the title (G1; D2-12), once on the screen. */}
+      <GarminAttribution deviceName={entry.deviceName} />
       <Mono step="xs" className="hidden text-dialed-text wide:block">
         {when} · {headline}
       </Mono>
@@ -276,6 +285,8 @@ export function VerdictForm({
   history,
   privateLine,
   isVerified,
+  // The flow's own move rather than the screen's: A3b's push.
+  ...step
 }: Readonly<{
   entry: Entry;
   bandFloor: number | undefined;
@@ -318,6 +329,12 @@ export function VerdictForm({
    * (R47·123).
    */
   isVerified: boolean;
+  /**
+   * A3b at the desk (Round 54 · 164.3): whether it is pushed, from A3's
+   * URL, and the route's two moves, since it owns the URL — to the page,
+   * and back to A3 with the answer still on it.
+   */
+  push: { isPushed: boolean; onPush: () => void; onDone: () => void };
 }>) {
   const { verdict, setVerdict, tags, setTags, flags, setFlags } =
     useAnswer(entry);
@@ -328,7 +345,6 @@ export function VerdictForm({
   const [noted, setNoted] = useState<{
     sentence: NotedSentence | undefined;
   }>();
-  const [sheetOpen, setSheetOpen] = useState(false);
   const effort = useEffortPick(entry.effort);
   // `entry.id`, not an `entryId` prop beside it — the same duplication
   // EntryDetail carried: two sources for one fact, one from the URL params
@@ -439,6 +455,15 @@ export function VerdictForm({
     setTags((prev) => toggledIn(prev, tag));
   }
 
+  // A3b's answer, the sheet's and the page's: A3's own, not a copy.
+  const answer = { flagFor, onFlag: setFlag, tags, onTag: toggleTag };
+  const specifics = useSpecifics(step.push, {
+    verdict,
+    items: entry.items,
+    answer,
+    field: form.field,
+  });
+
   /**
    * A chip toggles the one choice it names. A pressed garment chip goes
    * back to Fine, not to the other direction — un-choosing is all a second
@@ -463,24 +488,27 @@ export function VerdictForm({
         <form
           ref={form.formRef}
           noValidate
-          className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6 wide:max-w-column"
+          // `pb-8`, as A2's column has: at the desk the shell has no tab bar
+          // to clear, and Log it sat flush on the page's bottom (D2-01).
+          className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6 pb-8 wide:max-w-column"
           onSubmit={(event) => {
             event.preventDefault();
             void form.submit(payload());
           }}
         >
-          <RunHeader entry={entry} units={units} />
-          <FormStatus>
-            {noted === undefined
-              ? form.status
-              : notedAnnouncement(noted.sentence)}
-          </FormStatus>
-          <FormErrorSummary
-            rows={form.summaryRows}
-            onFocusField={form.focusField}
-            summaryRef={form.summaryRef}
-          />
-          {/* **One row at every width — in the 390 panel too; never a
+          <PushFrame pushed={specifics.page}>
+            <RunHeader entry={entry} units={units} />
+            <FormStatus>
+              {noted === undefined
+                ? form.status
+                : notedAnnouncement(noted.sentence)}
+            </FormStatus>
+            <FormErrorSummary
+              rows={form.summaryRows}
+              onFocusField={form.focusField}
+              summaryRef={form.summaryRef}
+            />
+            {/* **One row at every width — in the 390 panel too; never a
             stack, never wider than the panel** (design round 17). It was
             `flex flex-col`, which put five full-width buttons in a tall
             column and, at desk, a tall column beside a screen of empty
@@ -495,88 +523,78 @@ export function VerdictForm({
             of its own: the board asks "Did it work?" once, in the ink
             header, and a second copy on the paper beneath would be the
             question twice. */}
-          {/* **Five radios in a `radiogroup`** (Accessibility Contract
+            {/* **Five radios in a `radiogroup`** (Accessibility Contract
             rule 05, R-84 c): arrow keys move between them and choose as
             they go, space chooses the one focused, and Tab enters on the
             chosen one, or the first while there is none. They are native
             radios, so the browser does all three. */}
-          <fieldset
-            role="radiogroup"
-            aria-labelledby={QUESTION_ID}
-            className="m-0 flex flex-col gap-2 border-0 p-0 wide:max-w-panel"
-          >
-            <VerdictRow
-              verdict={verdict}
-              isLocked={isLocked}
-              onChoose={setVerdict}
-            />
-            <FieldMessage name="verdict" error={form.fieldErrors.verdict} />
-          </fieldset>
+            <fieldset
+              role="radiogroup"
+              aria-labelledby={QUESTION_ID}
+              className="m-0 flex flex-col gap-2 border-0 p-0 wide:max-w-panel"
+            >
+              <VerdictRow
+                verdict={verdict}
+                isLocked={isLocked}
+                onChoose={setVerdict}
+              />
+              <FieldMessage name="verdict" error={form.fieldErrors.verdict} />
+            </fieldset>
 
-          {history === undefined || bandFloor === undefined ? undefined : (
-            <BandHistory
-              counts={history.counts}
-              bandFloor={bandFloor}
-              units={units}
-            />
-          )}
+            {history === undefined || bandFloor === undefined ? undefined : (
+              <BandHistory
+                counts={history.counts}
+                bandFloor={bandFloor}
+                units={units}
+              />
+            )}
 
-          {/* **Chips, never a `<select>`** (design round 16), and since
+            {/* **Chips, never a `<select>`** (design round 16), and since
             round 20 generated rather than listed: five, chosen from this
             runner's history in the band, with everything else one tap away
             in A3b. */}
-          <VerdictChips
-            chips={chips}
-            chosenFlags={chosenFlags}
-            chosenTags={tags}
-            readOnly={isLocked}
-            onToggle={toggleChip}
-            onMore={() => {
-              setSheetOpen(true);
-            }}
-          />
-          <SpecificsSheet
-            open={sheetOpen}
-            onClose={() => {
-              setSheetOpen(false);
-            }}
-            verdict={verdict}
-            items={entry.items}
-            answer={{ flagFor, onFlag: setFlag, tags, onTag: toggleTag }}
-            field={form.field}
-          />
+            <VerdictChips
+              chips={chips}
+              chosenFlags={chosenFlags}
+              chosenTags={tags}
+              readOnly={isLocked}
+              onToggle={toggleChip}
+              onMore={specifics.onMore}
+            />
+            {specifics.sheet}
 
-          <EffortField
-            effort={effort.effort}
-            watchRpe={effort.watchRpe}
-            readOnly={isLocked}
-            onPick={effort.pick}
-          />
+            <EffortField
+              effort={effort.effort}
+              watchRpe={effort.watchRpe}
+              readOnly={isLocked}
+              onPick={effort.pick}
+            />
 
-          {isLocked ? (
-            <NotedReceipt sentence={noted.sentence} />
-          ) : (
-            <>
-              <AudiencePicker
-                audience={audience}
-                isVerified={isVerified}
-                onChange={setAudience}
-                field={form.field}
-                privateLine={privateLine}
-              />
+            {isLocked ? (
+              <NotedReceipt sentence={noted.sentence} />
+            ) : (
+              <>
+                <AudiencePicker
+                  audience={audience}
+                  isVerified={isVerified}
+                  onChange={setAudience}
+                  field={form.field}
+                  privateLine={privateLine}
+                />
 
-              <FormFailureBand
-                failure={form.failure}
-                onRetry={form.retry}
-                retryRef={form.retryRef}
-              />
-              <SubmitButton
-                label="Log it"
-                pendingLabel="Logging"
-                pending={form.pending}
-              />
-            </>
-          )}
+                <FormFailureBand
+                  failure={form.failure}
+                  onRetry={form.retry}
+                  retryRef={form.retryRef}
+                />
+                <SubmitButton
+                  label="Log it"
+                  pendingLabel="Logging"
+                  pending={form.pending}
+                />
+              </>
+            )}
+          </PushFrame>
         </form>
       </DeskSplit>
     </FlowStep>
@@ -766,7 +784,8 @@ function AudiencePicker({
         legend={LABELS.audience}
         options={PICKED_AUDIENCES}
         optionLabels={AUDIENCE_LABELS}
-        optionStep="xs"
+        // R54·166.5: an option's label is MONO.sm.
+        optionStep="sm"
         optionHints={AUDIENCE_HINTS}
         optionDescribedBy={(option) =>
           !isVerified || (hasLine && option === audience)
@@ -811,72 +830,15 @@ function VerdictRail({
   units: Units;
   band: RailBand | undefined;
 }>): JSX.Element {
-  const zone = entry.conditions?.timeZone;
   const { conditions } = entry;
   return (
     <>
-      <RailCard
-        title={`This run · ${dayLabel(entry.startedAt, zone)} · ${clockLabel(entry.startedAt, zone)}`}
-      >
-        <Mono step="sm">
-          {/* Lines of measures (round 52 #158): drawn, and said in
-              words. */}
-          <Spoken
-            {...measuredLine(
-              [
-                [
-                  {
-                    kind: "distance",
-                    distanceM: entry.distanceM,
-                    spaced: true,
-                  },
-                ],
-                [{ kind: "duration", durationS: entry.durationS }],
-              ],
-              units,
-            )}
-          />
-        </Mono>
-        {conditions === undefined ? undefined : (
-          <>
-            <Mono step="sm" className="text-dialed-text">
-              <Spoken
-                {...measuredLine(
-                  [
-                    [
-                      {
-                        kind: "temp",
-                        tempC: conditions.tempC,
-                        withLetter: true,
-                      },
-                      {
-                        kind: "word",
-                        word: precipClassOf(conditions.precipMm),
-                      },
-                    ],
-                    [
-                      {
-                        kind: "temp",
-                        tempC: conditions.feelsLikeC,
-                        feels: "feels",
-                      },
-                    ],
-                  ],
-                  units,
-                )}
-              />
-            </Mono>
-            {/* The header above already credits this reading, heard at
-                every width; the rail, the desk's alone, draws it again near
-                its own copy of the data and keeps it unheard (R-179's rule:
-                the licence is about display). A typed reading is no one's
-                to credit. */}
-            {isProvidersReading(conditions) ? (
-              <WeatherAttribution isRepeat />
-            ) : undefined}
-          </>
-        )}
-      </RailCard>
+      {/* A3's entry carries no home zone, so its clock is the run's own,
+          and a run without one reads on UTC, marked. */}
+      <ThisRunCard
+        run={{ ...entry, clockZone: entry.conditions?.timeZone }}
+        units={units}
+      />
       <RailCard title="The kit you’re judging">
         <ul className="m-0 flex list-none flex-col gap-1 p-0">
           {entry.items.map((item) => (
@@ -953,4 +915,43 @@ function KitRecord({
       />
     </Mono>
   );
+}
+
+/**
+ * A3b's two surfaces, of which one is drawn (Round 54 · 164.3): the page
+ * pushed into the column at the desk, or the sheet below it. Never both —
+ * they hold the same radios, and one form cannot hold two groups of one
+ * name. MORE pushes or opens by the width when it is pressed.
+ */
+function useSpecifics(
+  push: { isPushed: boolean; onPush: () => void; onDone: () => void },
+  body: Omit<ComponentProps<typeof SpecificsPage>, "back" | "onDone">,
+): { page: ReactNode; sheet: ReactNode; onMore: () => void } {
+  const [isOpen, setIsOpen] = useState(false);
+  const onMore = (): void => {
+    if (isAtDesk()) push.onPush();
+    else setIsOpen(true);
+  };
+  if (push.isPushed) {
+    return {
+      page: (
+        <SpecificsPage back={LABELS.verdict} onDone={push.onDone} {...body} />
+      ),
+      sheet: undefined,
+      onMore,
+    };
+  }
+  return {
+    page: undefined,
+    sheet: (
+      <SpecificsSheet
+        open={isOpen}
+        onClose={() => {
+          setIsOpen(false);
+        }}
+        {...body}
+      />
+    ),
+    onMore,
+  };
 }

@@ -56,6 +56,17 @@ function materialsLine(part: FabricPart): string {
 }
 
 /**
+ * Whether there is a block to draw: §AG rule 01's "both absent gives no
+ * block at all". The detail page asks first, so a piece with nothing to
+ * show has no section, and its WRONG? › stands alone there (R-74).
+ */
+export function hasComposition(
+  composition: Pick<Composition, "parts" | "verbatim">,
+): boolean {
+  return composition.parts.length > 1 || composition.verbatim !== undefined;
+}
+
+/**
  * §AG rule 01, and it is a three-way rather than a two-way: more than one
  * part gives labelled rows in the brand's order; otherwise the verbatim
  * line; both absent gives **no block at all**, not an "Unknown" row.
@@ -84,9 +95,6 @@ export function CompositionBlock({
 }>): JSX.Element {
   const { verbatim, parts, brand } = composition;
   const hasLabelledParts = parts.length > 1;
-  // No block, but WRONG? › stays: a shared product that states nothing
-  // is still one a runner can correct, and it stands alone (R-74).
-  if (!hasLabelledParts && verbatim === undefined) return <>{wrong}</>;
 
   return (
     <section className="flex flex-col gap-2">
@@ -99,41 +107,50 @@ export function CompositionBlock({
           </Mono>
         )}
       </h2>
-      {hasLabelledParts ? (
-        <dl className="m-0 flex flex-col gap-2">
-          {parts.map((part, index) => (
-            <div
-              // The index, because the brand's order *is* the order: this
-              // list is parsed once per render and never sorted, filtered
-              // or appended to, so position is stable and is the only
-              // thing that distinguishes two "PANELS" rows from each
-              // other. A key built from the label would collide on
-              // exactly that case.
-              key={index}
-              className="flex flex-col gap-1"
-            >
-              {part.part === undefined ? undefined : (
-                <dt className="m-0 text-muted">
-                  <Mono step="xs">{part.part}</Mono>
-                </dt>
-              )}
-              <dd className="m-0 text-body">{materialsLine(part)}</dd>
-            </div>
-          ))}
-        </dl>
-      ) : (
-        <p className="m-0 text-body">{verbatim}</p>
-      )}
-      {brand === undefined && wrong === undefined ? undefined : (
-        <div className="flex flex-wrap items-baseline justify-between gap-3">
-          {brand === undefined ? undefined : (
-            <p className="m-0 text-muted">
-              <Mono step="xs">As labelled by {brand}</Mono>
-            </p>
-          )}
-          {wrong}
-        </div>
-      )}
+      {/* Round 55 · 191e: "As labelled by" sits tight under what it
+          credits, not midway to the next line. */}
+      <div className="flex flex-col gap-1">
+        {hasLabelledParts ? (
+          // Round 55 · 191a: AG1's two-column table, the part's label
+          // beside what it is made of. A part with no label keeps the
+          // value column.
+          <dl className="m-0 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-2">
+            {parts.map((part, index) => (
+              <div
+                // The index, because the brand's order *is* the order: this
+                // list is parsed once per render and never sorted, filtered
+                // or appended to, so position is stable and is the only
+                // thing that distinguishes two "PANELS" rows from each
+                // other. A key built from the label would collide on
+                // exactly that case.
+                key={index}
+                className="col-span-2 grid grid-cols-subgrid items-baseline"
+              >
+                {part.part === undefined ? undefined : (
+                  <dt className="m-0 text-muted">
+                    <Mono step="xs">{part.part}</Mono>
+                  </dt>
+                )}
+                <dd className="col-start-2 m-0 text-body">
+                  {materialsLine(part)}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <p className="m-0 text-body">{verbatim}</p>
+        )}
+        {brand === undefined && wrong === undefined ? undefined : (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {brand === undefined ? undefined : (
+              <p className="m-0 text-muted">
+                <Mono step="xs">As labelled by {brand}</Mono>
+              </p>
+            )}
+            {wrong}
+          </div>
+        )}
+      </div>
     </section>
   );
 }

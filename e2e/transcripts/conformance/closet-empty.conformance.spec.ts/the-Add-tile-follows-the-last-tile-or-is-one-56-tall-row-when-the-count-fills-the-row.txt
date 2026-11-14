@@ -78,61 +78,53 @@ paragraph
 #
 of
 #
-pieces are still generic — name the ones you reach for.
+pieces are still generic. Name the ones you reach for.
 end of paragraph
 list
 listitem, level 1, position 1, set size 7
-link, Row tile # No runs yet Untested Generic
+link, Row tile # No runs yet Generic
 Row tile #
 No runs yet
-Untested
 Generic
-end of link, Row tile # No runs yet Untested Generic
+end of link, Row tile # No runs yet Generic
 end of listitem, level 1, position 1, set size 7
 listitem, level 1, position 2, set size 7
-link, Row tile # No runs yet Untested Generic
+link, Row tile # No runs yet Generic
 Row tile #
 No runs yet
-Untested
 Generic
-end of link, Row tile # No runs yet Untested Generic
+end of link, Row tile # No runs yet Generic
 end of listitem, level 1, position 2, set size 7
 listitem, level 1, position 3, set size 7
-link, Row tile # No runs yet Untested Generic
+link, Row tile # No runs yet Generic
 Row tile #
 No runs yet
-Untested
 Generic
-end of link, Row tile # No runs yet Untested Generic
+end of link, Row tile # No runs yet Generic
 end of listitem, level 1, position 3, set size 7
 listitem, level 1, position 4, set size 7
-link, Row tile # No runs yet Untested Generic
+link, Row tile # No runs yet Generic
 Row tile #
 No runs yet
-Untested
 Generic
-end of link, Row tile # No runs yet Untested Generic
+end of link, Row tile # No runs yet Generic
 end of listitem, level 1, position 4, set size 7
 listitem, level 1, position 5, set size 7
-link, Row tile # No runs yet Untested Generic
+link, Row tile # No runs yet Generic
 Row tile #
 No runs yet
-Untested
 Generic
-end of link, Row tile # No runs yet Untested Generic
+end of link, Row tile # No runs yet Generic
 end of listitem, level 1, position 5, set size 7
 listitem, level 1, position 6, set size 7
-link, Row tile # No runs yet Untested Generic
+link, Row tile # No runs yet Generic
 Row tile #
 No runs yet
-Untested
 Generic
-end of link, Row tile # No runs yet Untested Generic
+end of link, Row tile # No runs yet Generic
 end of listitem, level 1, position 6, set size 7
 listitem, level 1, position 7, set size 7
-link, Add garment
-Add garment
-end of link, Add garment
+link, Add a piece
 end of listitem, level 1, position 7, set size 7
 end of list
 end of main

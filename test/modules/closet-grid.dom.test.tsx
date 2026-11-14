@@ -56,6 +56,11 @@ const genericTop = itemView({
   item: wardrobeItem({ id: "01GEN", name: "Long sleeve top" }),
 });
 
+const genericTights = itemView({
+  item: wardrobeItem({ id: "01GTI", name: "Tights", category: "bottom" }),
+  uiGroup: "bottoms",
+});
+
 const retiredTee = itemView({
   item: wardrobeItem({ id: "01RTD", name: "Old tee", retired: true }),
   isGeneric: false,
@@ -87,7 +92,7 @@ function tagsOf(link: HTMLElement): Element | null {
 }
 
 const tile = (): HTMLElement =>
-  screen.getByRole("link", { name: "Add garment" });
+  screen.getByRole("link", { name: "Add a piece" });
 
 describe("ClosetGrid: the empty closet (ruling 16)", () => {
   it("says so in brackets, asks for three pieces, and offers the Add tile", async () => {
@@ -108,47 +113,57 @@ describe("ClosetGrid: the empty closet (ruling 16)", () => {
       ),
     ).toBeVisible();
     // The dashed tile is the only thing in the grid, and the only link.
-    expect(cells()).toStrictEqual(["Add garment"]);
+    expect(cells()).toStrictEqual(["Add a piece"]);
     expect(screen.getAllByRole("link")).toHaveLength(1);
-    expect(screen.getByRole("link", { name: "Add garment" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Add a piece" })).toHaveAttribute(
       "href",
       "/closet/new",
     );
   });
 
-  it("keeps the Add tile's height only while it is the only cell", async () => {
-    // A grid row is as tall as its tallest cell, so a minimum on the Add
-    // tile was a minimum on whichever row it landed in — a closet's last
-    // row ran to nearly twice every row above it. `only:` keeps the
-    // minimum for the empty closet, where there is no tile to match.
-    const { unmount } = await renderWithRouter(
+  it("ends an empty closet on one 56-tall Add row across the grid", async () => {
+    // Round 55 · 187: when the count fills the last row, Add is one
+    // dashed row across the grid, and no pieces fill no rows.
+    await renderWithRouter(
       <ClosetGrid tempUnit="c" distanceUnit="km" listing={listing([])} />,
     );
-    expect(tile().closest("li")).toHaveClass("only:min-h-40");
-    expect(tile()).toHaveClass("h-full");
-    expect(tile()).not.toHaveClass("min-h-40");
-    unmount();
+    expect(tile().closest("li")).toHaveClass("col-span-full");
+    expect(tile()).toHaveClass("h-full", "min-h-14", "font-bold", "text-ink");
+  });
 
-    await renderWithRouter(
+  it("puts Add beside the last tile when the phone's row has room", async () => {
+    // One piece on two phone tracks leaves the second cell for Add, at the
+    // row's height. happy-dom lays nothing out, so the grid reports no
+    // tracks and keeps the phone's two; real widths are measured in
+    // e2e/conformance/closet-empty.conformance.spec.ts.
+    const { unmount } = await renderWithRouter(
       <ClosetGrid
         tempUnit="c"
         distanceUnit="km"
         listing={listing([harrier])}
       />,
     );
-    // Beside a garment, the grid's equal rows size it. happy-dom lays
-    // nothing out, so the heights themselves are measured in a real
-    // browser at 390 and 1440, alone on a row and sharing one
-    // (e2e/conformance/closet-empty.conformance.spec.ts).
-    expect(tile().closest("li")).toHaveClass("only:min-h-40");
-    expect(tile().closest("ul")).toHaveClass("auto-rows-fr");
+    expect(tile().closest("li")).not.toHaveClass("col-span-full");
+    expect(tile()).not.toHaveClass("min-h-14");
+    unmount();
+
+    await renderWithRouter(
+      <ClosetGrid
+        tempUnit="c"
+        distanceUnit="km"
+        listing={listing([harrier, genericTop])}
+      />,
+    );
+    expect(tile().closest("li")).toHaveClass("col-span-full");
   });
 
   it("has no count and no switch about pieces there are none of", async () => {
     await renderWithRouter(
       <ClosetGrid tempUnit="c" distanceUnit="km" listing={listing([])} />,
     );
-    expect(screen.queryByText(/pieces?$/)).toBeNull();
+    expect(
+      screen.queryByRole("heading", { level: 1, name: /pieces?$/ }),
+    ).toBeNull();
     expect(screen.queryByRole("switch")).toBeNull();
   });
 
@@ -160,7 +175,7 @@ describe("ClosetGrid: the empty closet (ruling 16)", () => {
       <ClosetGrid
         tempUnit="c"
         distanceUnit="km"
-        listing={{ items: [retiredTee], totalCount: 1, genericCount: 0 }}
+        listing={{ items: [retiredTee], totalCount: 1 }}
       />,
     );
 
@@ -216,6 +231,9 @@ describe("ClosetGrid: the heading row", () => {
       name: "Show retired (1)",
     });
     expect(toggle).not.toBeChecked();
+    // R54·166.3: the shared set's switch, at its label's right.
+    expect(toggle).toHaveClass("control-switch");
+    expect(toggle.previousSibling?.textContent).toBe("Show retired (1)");
 
     await user.click(toggle);
 
@@ -245,7 +263,7 @@ describe("ClosetGrid: the heading row", () => {
       />,
     );
     expect(screen.queryByRole("link", { name: /^Add$/ })).toBeNull();
-    expect(cells().at(-1)).toBe("Add garment");
+    expect(cells().at(-1)).toBe("Add a piece");
   });
 });
 
@@ -292,7 +310,7 @@ describe("ClosetGrid: one flat grid (§6c.10)", () => {
       "Liners",
       "Pegasus",
       "Wool socks",
-      "Add garment",
+      "Add a piece",
     ]);
   });
 
@@ -316,7 +334,7 @@ describe("ClosetGrid: one flat grid (§6c.10)", () => {
       "Tracksmith Harrier",
       "Pegasus",
       "Old tee",
-      "Add garment",
+      "Add a piece",
     ]);
   });
 
@@ -337,13 +355,13 @@ describe("ClosetGrid: one flat grid (§6c.10)", () => {
     expect(cells()).toStrictEqual([
       "Tracksmith Harrier",
       "Pegasus",
-      "Add garment",
+      "Add a piece",
     ]);
   });
 
-  it("lets the garment grid fill rather than counting columns", async () => {
-    // DS3's reflow rule for a grid of garments: "auto-fill,
-    // minmax(180px, 1fr)". One rule instead of a count per breakpoint.
+  it("lays two tracks on the phone, then lets the grid fill", async () => {
+    // DS3's reflow rule for a grid of garments: "from 2 tracks to
+    // auto-fill, minmax(180px, 1fr)". Round 55 · 188: two on the phone.
     await renderWithRouter(
       <ClosetGrid
         tempUnit="c"
@@ -353,7 +371,8 @@ describe("ClosetGrid: one flat grid (§6c.10)", () => {
     );
 
     expect(gridElement()).toHaveClass(
-      "grid-cols-[repeat(auto-fill,minmax(180px,1fr))]",
+      "grid-cols-2",
+      "wide:grid-cols-[repeat(auto-fill,minmax(180px,1fr))]",
     );
   });
 });
@@ -459,7 +478,7 @@ function partOf(link: HTMLElement, name: string): Element | null {
 }
 
 describe("ClosetGrid: the tile's photo and record (board C, round 27 #31b)", () => {
-  it("shows the piece's photo at 4:5, full width, under the name in the markup", async () => {
+  it("shows the piece's photo in a square well, under the name in the markup", async () => {
     const pictured = itemView({
       item: wardrobeItem({
         id: "01PIC",
@@ -482,7 +501,7 @@ describe("ClosetGrid: the tile's photo and record (board C, round 27 #31b)", () 
     expect(photo).toHaveAttribute("data-state", "photo");
     expect(photo).toHaveClass(
       "order-first",
-      "aspect-4/5",
+      "aspect-square",
       "w-full",
       "bg-photo",
     );
@@ -494,6 +513,8 @@ describe("ClosetGrid: the tile's photo and record (board C, round 27 #31b)", () 
     // Decorative: the link already names the piece.
     expect(photo?.querySelector("img")).toHaveAttribute("alt", "");
     expect(tile.lastElementChild).toBe(photo);
+    // The word is the hatch's; a photo needs none.
+    expect(partOf(tile, "tile-word")).toBeNull();
   });
 
   it("hatches the photo's place when there is no photo", async () => {
@@ -509,9 +530,15 @@ describe("ClosetGrid: the tile's photo and record (board C, round 27 #31b)", () 
     expect(photo).toHaveClass("photo-hatch");
     expect(photo).not.toHaveClass("bg-photo");
     expect(photo?.querySelector("img")).toBeNull();
+    // Round 55 · 188: the category's word in the hatch, at TYPE.heading in
+    // --muted, unheard, since the link already names the piece.
+    const word = partOf(tileOf(/^Tracksmith Harrier/), "tile-word");
+    expect(word).toHaveTextContent(/^Top$/);
+    expect(word).toHaveClass("font-display", "text-heading", "text-muted", "uppercase");
+    expect(word).toHaveAttribute("aria-hidden", "true");
   });
 
-  it("draws 8/9 DIALED and says 8 of 9 runs dialed, then the range and the mileage", async () => {
+  it("draws 8/9 DIALED with the mileage, then the range", async () => {
     const worn = itemView({ ...harrier, performance: performance() });
     await renderWithRouter(
       <ClosetGrid tempUnit="f" distanceUnit="mi" listing={listing([worn])} />,
@@ -525,13 +552,11 @@ describe("ClosetGrid: the tile's photo and record (board C, round 27 #31b)", () 
     expect(record?.querySelector(".sr-only")).toHaveTextContent(
       /^8 of 9 runs dialed$/,
     );
-    expect(drawnText(partOf(tile, "tile-range"))).toMatch(
-      /^\[39–54°\] · 142 mi$/,
-    );
+    // Round 55 · 189: mileage joins the record line.
+    expect(drawnText(record)).toMatch(/^8\/9 dialed · 142 mi$/);
+    expect(drawnText(partOf(tile, "tile-range"))).toMatch(/^\[39–54°\]$/);
     // Round 53 · 162.3: a range always takes the spoken form.
-    expect(saidText(partOf(tile, "tile-range"))).toBe(
-      "39 to 54 degrees · 142 mi",
-    );
+    expect(saidText(partOf(tile, "tile-range"))).toBe("39 to 54 degrees");
   });
 
   it("measures the mileage in the runner's unit, to the whole unit", async () => {
@@ -539,8 +564,8 @@ describe("ClosetGrid: the tile's photo and record (board C, round 27 #31b)", () 
     await renderWithRouter(
       <ClosetGrid tempUnit="c" distanceUnit="km" listing={listing([worn])} />,
     );
-    const range = partOf(tileOf(/^Tracksmith Harrier/), "tile-range");
-    expect(drawnText(range)).toMatch(/^\[4–12°\] · 229 km$/);
+    const record = partOf(tileOf(/^Tracksmith Harrier/), "tile-record");
+    expect(drawnText(record)).toMatch(/^8\/9 dialed · 229 km$/);
   });
 
   it("says one run, not one runs", async () => {
@@ -589,7 +614,7 @@ describe("ClosetGrid: the tile's photo and record (board C, round 27 #31b)", () 
     );
     expect(
       partOf(tileOf(/^Tracksmith Harrier/), "tile-record"),
-    ).toHaveTextContent(/^No verdict yet$/);
+    ).toHaveTextContent(/^No verdict yet · 229 km$/);
   });
 
   it("leaves the mileage off until there is a first mile", async () => {
@@ -604,8 +629,8 @@ describe("ClosetGrid: the tile's photo and record (board C, round 27 #31b)", () 
         listing={listing([indoorsOnly])}
       />,
     );
-    const range = partOf(tileOf(/^Tracksmith Harrier/), "tile-range");
-    expect(drawnText(range)).toMatch(/^\[4–12°\]$/);
+    const record = partOf(tileOf(/^Tracksmith Harrier/), "tile-record");
+    expect(drawnText(record)).toMatch(/^8\/9 dialed$/);
   });
 
   it("names the piece first, then its record, in the link's name", async () => {
@@ -648,9 +673,9 @@ describe("ClosetGrid: what a tile says", () => {
     );
 
     const generic = screen.getByRole("link", { name: /^Long sleeve top/ });
-    const kicker = generic.querySelector(".order-first");
-    expect(kicker).toHaveClass("order-first");
-    expect(kicker).toHaveTextContent(/^\[Generic\]$/);
+    const photo = generic.querySelector("[data-part='tile-photo']");
+    expect(photo).toHaveClass("order-first");
+    expect(tagsOf(generic)).toHaveTextContent(/^\[Generic\]$/);
   });
 
   it("tags a retired piece [RETIRED] on the photo, and does not dim it", async () => {
@@ -664,7 +689,7 @@ describe("ClosetGrid: what a tile says", () => {
     );
 
     const tile = screen.getByRole("link", { name: /^Old tee/ });
-    expect(tile.querySelector(".order-first")).toHaveTextContent(
+    expect(tile.querySelector("[data-part='tile-tags']")).toHaveTextContent(
       /^\[Retired\]$/,
     );
     expect(tile.className).not.toMatch(/opacity/);
@@ -683,7 +708,7 @@ describe("ClosetGrid: what a tile says", () => {
       />,
     );
     expect(
-      screen.getByRole("link", { name: /^Tee/ }).querySelector(".order-first"),
+      screen.getByRole("link", { name: /^Tee/ }).querySelector("[data-part='tile-tags']"),
     ).toHaveTextContent(/^\[Generic\]\[Retired\]$/);
   });
 
@@ -702,7 +727,7 @@ describe("ClosetGrid: what a tile says", () => {
     );
   });
 
-  it("shows the tested range, and says Untested when there is none", async () => {
+  it("shows the tested range, and leaves the slot out when there is none", async () => {
     await renderWithRouter(
       <ClosetGrid
         tempUnit="c"
@@ -714,30 +739,29 @@ describe("ClosetGrid: what a tile says", () => {
     const harrierTile = screen.getByRole("link", { name: /Harrier/ });
     expect(drawnText(harrierTile)).toContain("[4–12°]");
     expect(harrierTile).toHaveAccessibleName(/4 to 12 degrees/);
-    expect(
-      screen.getByRole("link", { name: /Long sleeve top/ }),
-    ).toHaveTextContent("[Untested]");
+    // Round 55 · 189: "Untested" is the rail's word, not the tile's.
+    const untested = screen.getByRole("link", { name: /Long sleeve top/ });
+    expect(untested).not.toHaveTextContent("Untested");
+    expect(untested.querySelector("[data-part='tile-range']")).toBeNull();
   });
 
-  it("wears no hue on the range or on Untested — teal means dialed", async () => {
+  it("wears no hue on the range — teal means dialed", async () => {
     await renderWithRouter(
       <ClosetGrid
         tempUnit="c"
         distanceUnit="km"
-        listing={listing([harrier, genericTop])}
+        listing={listing([harrier])}
       />,
     );
 
-    for (const name of [/Harrier/, /Long sleeve top/]) {
-      const label = screen
-        .getByRole("link", { name })
-        .querySelector("[data-part='tile-range']");
-      expect(label).toHaveClass("text-muted");
-      expect(label).not.toHaveClass("text-dialed-text");
-    }
+    const label = screen
+      .getByRole("link", { name: /Harrier/ })
+      .querySelector("[data-part='tile-range']");
+    expect(label).toHaveClass("text-muted");
+    expect(label).not.toHaveClass("text-dialed-text");
   });
 
-  it("says Untested for a range with no ends, not an empty bracket", async () => {
+  it("leaves out a range with no ends, not an empty bracket", async () => {
     const halfKnown = itemView({
       item: wardrobeItem({ id: "01VOID", name: "Mystery tee" }),
       tempRange: {},
@@ -750,9 +774,9 @@ describe("ClosetGrid: what a tile says", () => {
       />,
     );
 
-    expect(screen.getByRole("link", { name: /Mystery tee/ })).toHaveTextContent(
-      "[Untested]",
-    );
+    const tile = screen.getByRole("link", { name: /Mystery tee/ });
+    expect(tile.querySelector("[data-part='tile-range']")).toBeNull();
+    expect(tile).not.toHaveTextContent("[]");
   });
 
   it("presses a tile to ink rather than scaling it", async () => {
@@ -792,7 +816,7 @@ describe("ClosetGrid: what a tile says", () => {
 });
 
 describe("ClosetGrid: the enrichment nudge", () => {
-  it("counts the generic pieces against the whole closet", async () => {
+  it("counts the generic pieces against the pieces shown, in board C's words", async () => {
     await renderWithRouter(
       <ClosetGrid
         tempUnit="c"
@@ -800,12 +824,42 @@ describe("ClosetGrid: the enrichment nudge", () => {
         listing={listing([harrier, genericTop])}
       />,
     );
-    expect(screen.getByText(/still generic/)).toHaveTextContent(
-      "1 of 2 pieces are still generic",
+    const nudge = screen.getByText(/still generic/);
+    expect(nudge).toHaveTextContent(
+      /^1 of 2 pieces are still generic\. Name the ones you reach for\.$/,
     );
+    expect(nudge.querySelector(".font-mono")).toHaveTextContent(/^1 of 2$/);
   });
 
-  it("says nothing when every piece is named", async () => {
+  it("counts what the heading counts: no hidden retired pieces", async () => {
+    // N1-05: the heading said 36 and the nudge 40, because the nudge counted
+    // retired pieces the grid was not showing.
+    await renderWithRouter(
+      <ClosetGrid
+        tempUnit="c"
+        distanceUnit="km"
+        listing={listing([harrier, genericTop, retiredTee])}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { level: 1, name: "2 pieces" }),
+    ).toBeVisible();
+    expect(screen.getByText(/still generic/)).toHaveTextContent(/^1 of 2 /);
+  });
+
+  it("counts within a filter, as the heading does", async () => {
+    await renderWithRouter(
+      <ClosetGrid
+        tempUnit="c"
+        distanceUnit="km"
+        listing={listing([harrier, genericTop, genericTights])}
+        search={{ group: "bottoms" }}
+      />,
+    );
+    expect(screen.getByText(/still generic/)).toHaveTextContent(/^1 of 1 /);
+  });
+
+  it("says nothing when every piece shown is named", async () => {
     await renderWithRouter(
       <ClosetGrid
         tempUnit="c"
@@ -814,6 +868,45 @@ describe("ClosetGrid: the enrichment nudge", () => {
       />,
     );
     expect(screen.queryByText(/still generic/)).toBeNull();
+  });
+});
+
+describe("ClosetGrid: the page (Round 54 · 168.2)", () => {
+  it("centres the closet on MEASURE.page, with the rail's track beside a rail", async () => {
+    await renderWithRouter(
+      <ClosetGrid
+        tempUnit="c"
+        distanceUnit="km"
+        listing={listing([harrier])}
+      />,
+    );
+    const page = gridElement().closest(".max-w-page");
+    expect(page).toHaveClass("mx-auto", "w-full", "px-4", "desk:grid");
+    expect(page).toHaveClass("desk:grid-cols-[max-content_minmax(0,1fr)]");
+  });
+
+  it("gives an empty closet no rail track, so it starts at the content edge", async () => {
+    // C-10: the empty first column still cost its gap.
+    await renderWithRouter(
+      <ClosetGrid tempUnit="c" distanceUnit="km" listing={listing([])} />,
+    );
+    const page = gridElement().closest(".max-w-page");
+    expect(page).toHaveClass("mx-auto", "px-4");
+    expect(page).not.toHaveClass("desk:grid");
+    expect(page?.className).not.toMatch(/grid-cols/);
+  });
+
+  it("clamps a tile's name to two lines and always reserves both", async () => {
+    await renderWithRouter(
+      <ClosetGrid
+        tempUnit="c"
+        distanceUnit="km"
+        listing={listing([harrier])}
+      />,
+    );
+    expect(
+      partOf(tileOf(/^Tracksmith Harrier/), "tile-name"),
+    ).toHaveClass("line-clamp-2", "[min-block-size:2lh]");
   });
 });
 
@@ -1093,7 +1186,7 @@ describe("ClosetGrid: the rail (R-94)", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "1 · Bottoms",
     );
-    expect(cells()).toStrictEqual(["Tights", "Add garment"]);
+    expect(cells()).toStrictEqual(["Tights", "Add a piece"]);
   });
 
   it("counts what the retired switch admits, not narrowed by the set group", async () => {
@@ -1121,7 +1214,7 @@ describe("ClosetGrid: the rail (R-94)", () => {
 
   it("narrows by WORKS AT and COVERAGE, and says so on the FILTERED line", async () => {
     await grid({ from: 5, to: 10, coverage: "covered" });
-    expect(cells()).toStrictEqual(["Tracksmith Harrier", "Add garment"]);
+    expect(cells()).toStrictEqual(["Tracksmith Harrier", "Add a piece"]);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "1 piece",
     );
@@ -1165,7 +1258,7 @@ describe("ClosetGrid: the rail (R-94)", () => {
       "href",
       "/closet",
     );
-    expect(cells()).toStrictEqual(["Add garment"]);
+    expect(cells()).toStrictEqual(["Add a piece"]);
   });
 
   it("does not say nothing matches when nothing is filtered", async () => {
@@ -1176,7 +1269,7 @@ describe("ClosetGrid: the rail (R-94)", () => {
         listing={listing([retiredTee])}
       />,
     );
-    expect(cells()).toStrictEqual(["Add garment"]);
+    expect(cells()).toStrictEqual(["Add a piece"]);
     expect(document.querySelector("[data-part='no-matches']")).toBeNull();
   });
 
@@ -1263,7 +1356,7 @@ describe("ClosetGrid: the search the router hands it (design 174)", () => {
     );
     // Any drops the span for good, rather than landing on a URL that
     // brings it back from `lowest`.
-    expect(within(rail).getByRole("link", { name: "Any" })).toHaveAttribute(
+    expect(within(rail).getByRole("link", { name: "Clear" })).toHaveAttribute(
       "href",
       "/closet?group=tops",
     );

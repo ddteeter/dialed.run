@@ -1023,6 +1023,10 @@ describe("A1: the parsed card", () => {
         name: "6:04 AM, change start time",
       }),
     ).toHaveTextContent("6:04 AM");
+    // D1-08: a full target whose box is pulled back to the facts line.
+    expect(
+      within(card).getByRole("button", { name: "6:04 AM, change start time" }),
+    ).toHaveClass("target", "-my-3.5");
     expect(document.querySelector("[data-part='drop-zone']")).toBeNull();
 
     // The conditions block, read-only, with the correction's note.
@@ -1035,7 +1039,7 @@ describe("A1: the parsed card", () => {
     expect(conditions?.querySelector("input")).toBeNull();
 
     const next = screen.getByRole("link", {
-      name: "Looks right — what did you wear?",
+      name: "What did you wear?",
     });
     expect(next).toHaveAttribute("href", `/feed/attach/${RUN_ID}`);
     expect(router.state.location.pathname).toBe("/");
@@ -1348,13 +1352,13 @@ describe("A1: the parsed card", () => {
     });
 
     const next = screen.getByRole("button", {
-      name: "Looks right — what did you wear?",
+      name: "What did you wear?",
     });
     await user.click(next);
 
     // Waiting, not gone, and never disabled.
     expect(router.state.location.pathname).toBe("/");
-    expect(next).toHaveTextContent("[Looks right — what did you wear?]");
+    expect(next).toHaveTextContent("[What did you wear?]");
     expect(next).not.toHaveAttribute("aria-disabled");
     expect(next).toHaveClass("bg-action", "target");
 
@@ -1369,7 +1373,7 @@ describe("A1: the parsed card", () => {
     const { router } = await renderWithRouter(form({ getOutcome: parsed() }));
     await user.upload(dropInput(), gpx());
     const next = await screen.findByRole("link", {
-      name: "Looks right — what did you wear?",
+      name: "What did you wear?",
     });
     // The log verb's pink, as a 44px target.
     expect(next).toHaveClass("bg-action", "target");
@@ -1439,20 +1443,25 @@ describe("A1: the parsed card", () => {
     ]);
   });
 
-  it("reads a run with no conditions on the runner's own clock, not UTC", async () => {
-    // A treadmill, no GPS, or weather that never came: no zone of its own.
-    // 11:04 UTC is 4:04 in the morning for a runner in Los Angeles, and
-    // that is the clock they read the start from.
+  it("reads a run with no conditions on the run's clock, as every screen does", async () => {
+    // A treadmill, no GPS, or weather that never came: no zone of its own,
+    // so the runner's home zone (P2a-02). 11:04 UTC is 4:04 in the morning
+    // in Los Angeles. The device's zone is not asked: the list and run
+    // detail cannot ask it, and the four screens must say one time.
     const resolved = new Intl.DateTimeFormat().resolvedOptions();
     vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
       ...resolved,
-      timeZone: "America/Los_Angeles",
+      timeZone: "Asia/Tokyo",
     });
     const user = setupUser();
     const retime = vi.fn<Retime>(() => Promise.resolve("moved"));
     await renderWithRouter(
       form({
-        getOutcome: parsed({ weatherStatus: "failed", conditions: undefined }),
+        getOutcome: parsed({
+          weatherStatus: "failed",
+          conditions: undefined,
+          clockZone: "America/Los_Angeles",
+        }),
         retime,
       }),
     );
@@ -1552,7 +1561,12 @@ describe("A1: a run already logged", () => {
         "This run is already in your log. Nothing new was added.",
       ),
     ).toBeVisible();
-    expect(screen.getByText("Wrong file? Replace it.")).toBeVisible();
+    // Round 55 · 234: the line points at the strip's REPLACE.
+    const wrongFile = document.querySelector("[data-part='wrong-file']");
+    expect(wrongFile).toHaveTextContent(/^Wrong file\? Tap Replace above\.$/u);
+    const replace = wrongFile?.querySelector(".text-cold-text");
+    expect(replace).toHaveTextContent(/^Replace$/u);
+    expect(replace).toHaveClass("uppercase");
     // No conditions block: they are already the run's.
     expect(document.querySelector("[data-slot='conditions']")).toBeNull();
   });

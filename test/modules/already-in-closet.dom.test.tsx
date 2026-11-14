@@ -1,8 +1,18 @@
+import {
+  RouterProvider,
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+} from "@tanstack/react-router";
 import { render, screen, within } from "@testing-library/react";
 import { drawnText, saidText } from "./spoken-text";
 import { describe, expect, it } from "vitest";
 
-import type { TempUnit } from "../../src/lib/contracts";
+import {
+  uiGroupLabels,
+  uiGroups,
+  type TempUnit,
+} from "../../src/lib/contracts";
 import { AlreadyInCloset } from "../../src/modules/closet/components/AlreadyInCloset";
 import type {
   ClosetItemView,
@@ -12,7 +22,8 @@ import { itemView, wardrobeItem } from "./closet-fixtures";
 
 /**
  * F at the desk's one rail card (round 26 #10): what is already in the
- * closet in the category being added, read-only.
+ * closet in the group the piece being added would be filed in (Round 56
+ * · 248), read-only.
  */
 
 function record(summary: Partial<ItemPerformance["summary"]>): ItemPerformance {
@@ -57,6 +68,10 @@ const quarterZip = itemView({
 
 const NOTHING_TYPED = { brand: "", name: "" };
 
+function typedPiece(id: string, type: string): ClosetItemView {
+  return itemView({ item: wardrobeItem({ id, name: id, type }) });
+}
+
 function card(
   pieces: readonly ClosetItemView[],
   typed: { brand: string; name: string } = NOTHING_TYPED,
@@ -65,7 +80,9 @@ function card(
   return render(
     <AlreadyInCloset
       category="top"
-      pieces={pieces}
+      group="tops"
+      // The service lists a group only when it has pieces.
+      pieces={pieces.length === 0 ? undefined : pieces}
       typed={typed}
       tempUnit={tempUnit}
     />,
@@ -81,11 +98,11 @@ function photoOf(row: HTMLElement | undefined): Element | null | undefined {
 }
 
 describe("AlreadyInCloset", () => {
-  it("is titled for the category, and says so when it holds nothing yet", () => {
+  it("is titled for the group, and says so when it holds nothing yet", () => {
     card([]);
 
     const heading = screen.getByRole("heading", {
-      name: "Already in your closet · Top",
+      name: "Already in your closet · Tops",
     });
     expect(heading).toBeVisible();
     // Round 40 C4: sentence case, as the heading it is — not mono caps.
@@ -114,7 +131,8 @@ describe("AlreadyInCloset", () => {
         <AlreadyInCloset
           tempUnit="c"
           category={category as keyof typeof plurals}
-          pieces={[]}
+          group="tops"
+          pieces={undefined}
           typed={{ brand: "", name: "" }}
         />,
       );
@@ -152,7 +170,10 @@ describe("AlreadyInCloset", () => {
       "sr-only",
     );
     expect(second).toHaveTextContent("Janji Rover Half-zip");
-    expect(second).toHaveTextContent(/^Janji Rover Half-zip12 runs · Retired/);
+    // Round 55 · 193: RETIRED once, as the tag; the line is any piece's.
+    expect(second).toHaveTextContent(
+      /^Janji Rover Half-zip12 runs · 2\/4 dialed2 of 4 runs dialedRetired Mar 2025$/,
+    );
     expect(third).toHaveTextContent("Uniqlo quarter-zip");
     expect(third).toHaveTextContent("3 runs · No verdict yet");
   });
@@ -183,7 +204,7 @@ describe("AlreadyInCloset", () => {
     card([harrier, rover], { brand: "janji", name: "  rover half-zip " });
 
     const [first, second] = rows();
-    const flag = screen.getByText("Same name · Retired");
+    const flag = screen.getByText("Same name · Retired Mar 2025");
     expect(second?.contains(flag)).toBe(true);
     // Ink, not the cold hue (round 28 #13): a match is not a verdict.
     expect(flag).toHaveClass("text-ink", "text-mono-xs");
@@ -254,28 +275,122 @@ describe("AlreadyInCloset", () => {
     expect(row?.querySelector(".text-mono-xs")).toBeNull();
   });
 
-  it("dates a retirement by month and year, in the metadata row's mono (round 28 #13)", () => {
+  it("dates a retirement by month and year, once, as the tag (round 28 #13, Round 55 · 193)", () => {
     card([rover]);
 
-    const line = screen.getByText("12 runs · Retired Mar 2025");
-    expect(line).toHaveClass("text-mono-sm", "text-label");
+    const tag = screen.getByText("Retired Mar 2025");
+    expect(tag).toHaveClass("text-mono-xs", "text-ink");
+    expect(screen.getByText("2/4 dialed").closest(".text-mono-sm")).toHaveClass(
+      "text-label",
+    );
+    expect(screen.getAllByText(/Retired/)).toHaveLength(1);
   });
 
-  it("is titled for the type once one is picked, and says so in its plural", () => {
+  it("is titled for each group by C's own heading (248)", () => {
+    const { rerender } = card([]);
+    for (const group of uiGroups) {
+      rerender(
+        <AlreadyInCloset
+          tempUnit="c"
+          category="top"
+          group={group}
+          pieces={undefined}
+          typed={NOTHING_TYPED}
+        />,
+      );
+      expect(
+        screen.getByRole("heading", {
+          name: `Already in your closet · ${uiGroupLabels[group]}`,
+        }),
+      ).toBeVisible();
+    }
+  });
+
+  it("lists a picked type's pieces first, and keeps the rest (248)", () => {
     render(
       <AlreadyInCloset
         tempUnit="c"
         category="top"
         type="halfZip"
-        pieces={[]}
+        group="tops"
+        pieces={[
+          typedPiece("Tee one", "tee"),
+          typedPiece("Zip one", "halfZip"),
+          typedPiece("Tee two", "tee"),
+          typedPiece("Zip two", "halfZip"),
+        ]}
+        typed={NOTHING_TYPED}
+      />,
+    );
+
+    // Stable: each part keeps the order given; the type never filters.
+    expect(
+      rows().map((row) => within(row).getByText(/one|two/).textContent),
+    ).toStrictEqual(["Zip one", "Zip two", "Tee one", "Tee two"]);
+  });
+
+  it("shows five, and closes on See all, to C on the group (248)", async () => {
+    const pieces = [harrier, rover, quarterZip].flatMap((view) =>
+      [1, 2].map((copy) =>
+        itemView({
+          ...view,
+          item: { ...view.item, id: `${view.item.id}${String(copy)}` },
+        }),
+      ),
+    );
+    const rootRoute = createRootRoute({
+      component: () => (
+        <AlreadyInCloset
+          tempUnit="c"
+          category="top"
+          type="halfZip"
+          group="outer"
+          pieces={pieces}
+          typed={NOTHING_TYPED}
+        />
+      ),
+    });
+    const router = createRouter({
+      routeTree: rootRoute,
+      history: createMemoryHistory({ initialEntries: ["/closet/new"] }),
+    });
+    await router.load();
+    render(<RouterProvider router={router} />);
+
+    // The whole group's count, as C shows it, not the rest past five.
+    const more = await screen.findByRole("link", {
+      name: "See all 6 in Outer",
+    });
+    expect(more).toHaveAttribute("href", "/closet?group=outer");
+    expect(more).toHaveClass("target", "inline-flex", "items-center");
+    expect(more.previousElementSibling?.tagName).toBe("UL");
+    expect(rows()).toHaveLength(5);
+  });
+
+  it("offers no link under six pieces, where the card shows every one", () => {
+    card(
+      [harrier, rover, quarterZip, harrier, rover].map((view, index) =>
+        itemView({ ...view, item: { ...view.item, id: String(index) } }),
+      ),
+    );
+    expect(rows()).toHaveLength(5);
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("says a picked type's plural when the group holds nothing", () => {
+    render(
+      <AlreadyInCloset
+        tempUnit="c"
+        category="top"
+        type="halfZip"
+        group="tops"
+        pieces={undefined}
         typed={NOTHING_TYPED}
       />,
     );
 
     expect(
-      screen.getByRole("heading", {
-        name: "Already in your closet · Top · Half-zip",
-      }),
+      screen.getByRole("heading", { name: "Already in your closet · Tops" }),
     ).toBeVisible();
     expect(screen.getByText("No half-zips yet.")).toBeVisible();
   });

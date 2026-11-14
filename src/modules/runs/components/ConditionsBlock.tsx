@@ -3,7 +3,7 @@ import type { JSX, ReactNode } from "react";
 import type { Units } from "../../../lib/contracts";
 import { measuredLine } from "../../../lib/contracts/measures";
 import { precipClassOf } from "../../../lib/contracts/temperature";
-import { Mono, PendingLabel, Spoken, WeatherAttribution } from "../../../ui";
+import { Mono, Spoken, WeatherAttribution } from "../../../ui";
 import { setBandForms, SKY_WORDS } from "../run-conditions";
 import type { RunConditions, RunSummary } from "../service";
 
@@ -66,7 +66,9 @@ export function ConditionsBlock({
         <span aria-hidden="true" className="font-display text-display">
           {temp}
         </span>
-        <Mono step="sm" className="text-teal">
+        {/* The text role, which resolves per ground: the surface teal on
+            the dark theme's chalk block was 1.5:1 (D1-03). */}
+        <Mono step="sm" className="text-dialed-text">
           <span aria-hidden="true">{precip}</span>
         </Mono>
         <span className="sr-only">{said}</span>
@@ -109,19 +111,6 @@ function setSaid(band: string, sky: string | undefined): string {
 }
 
 /**
- * The weather is still being asked for: no badge, no block — the line
- * breathes (round 22, R: *"Pending isn't a badge; the meta line
- * breathes"*).
- */
-export function FetchingWeather(): JSX.Element {
-  return (
-    <Mono step="xs" className="text-muted">
-      <PendingLabel label="" pendingLabel="Fetching weather" pending />
-    </Mono>
-  );
-}
-
-/**
 What of a run the conditions row reads.
 */
 type RowRun = Pick<
@@ -158,6 +147,62 @@ export function weatherSaid(run: RowRun): string | undefined {
 }
 
 /**
+ * The slot keeps the block's size while there is no block (Round 55 ·
+ * 233), so nothing under it jumps when the weather lands. The block's
+ * resting height: its padding, kicker, display line, feels-like line and
+ * credit.
+ */
+const SLOT_CLASS = "min-h-34 rounded-card p-4";
+
+/**
+ * Round 55 · 233, waiting: a --hairline-2 outline in the block's place,
+ * FETCHING WEATHER at its top left and what to expect under it. The runner
+ * can go on without it.
+ */
+function WaitingForWeather(): JSX.Element {
+  return (
+    <div
+      data-slot="conditions"
+      data-state="fetching"
+      className={`flex flex-col gap-2 border border-hairline-2 ${SLOT_CLASS}`}
+    >
+      <Mono step="xs" className="text-ink">
+        Fetching weather
+      </Mono>
+      <span className="text-small text-label">
+        Usually under a minute. You can go on without it.
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Round 55 · 233, a treadmill: the ink block, which says what the run was
+ * rather than what the sky did — CONDITIONS · INDOOR over TREADMILL, and
+ * NO WEATHER FOR AN INDOOR RUN at its foot.
+ */
+function IndoorBlock(): JSX.Element {
+  return (
+    <div
+      data-slot="conditions"
+      data-state="indoor"
+      data-ground="ink"
+      className={`flex flex-col justify-between gap-2 bg-ground text-ink ${SLOT_CLASS}`}
+    >
+      <span className="flex flex-col gap-2">
+        <Mono step="xs" className="text-muted">
+          Conditions · indoor
+        </Mono>
+        <Mono step="lg">Treadmill</Mono>
+      </span>
+      <Mono step="xs" className="text-muted">
+        No weather for an indoor run
+      </Mono>
+    </div>
+  );
+}
+
+/**
  * A run's conditions, in the four states its weather can be in: arrived
  * (the ink block), still being asked for (the breath), indoor (a fact),
  * or never came — "No conditions", with "Set ›" into R2b where the run can
@@ -183,16 +228,8 @@ export function ConditionsRow({
     );
   }
   const shown = weatherShown(run);
-  if (shown === "fetching") return <FetchingWeather />;
-  if (shown === "indoor") {
-    return (
-      <div data-slot="conditions" data-state="indoor">
-        <Mono step="xs" className="text-muted">
-          Treadmill
-        </Mono>
-      </div>
-    );
-  }
+  if (shown === "fetching") return <WaitingForWeather />;
+  if (shown === "indoor") return <IndoorBlock />;
   return (
     <div
       data-slot="conditions"

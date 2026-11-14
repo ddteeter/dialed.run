@@ -174,13 +174,22 @@ export function DeleteWithRuns({
         <p className="m-0 text-body">
           {`It's on ${runsLabel(runCount)}. Retiring takes it out of the picker and keeps everything it taught you.`}
         </p>
-        <div className="flex flex-col gap-2 border-t border-hairline pt-3">
-          <Mono step="xs" className="text-muted">
+        {/* C-15: one label column for GOES and STAYS, so every sentence
+            starts at the same edge, and "This can't be undone." under the
+            sentences rather than the labels. The rows are a subgrid of it. */}
+        <div
+          data-part="cost"
+          className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-2 border-t border-hairline pt-3"
+        >
+          <Mono step="xs" className="col-span-2 text-muted">
             If you delete it
           </Mono>
-          <ul className="m-0 flex list-none flex-col gap-2 p-0">
+          <ul className="col-span-2 m-0 grid list-none grid-cols-subgrid gap-y-2 p-0">
             {costRows(runCount, bandCount).map((row) => (
-              <li key={row.text} className="flex items-baseline gap-3">
+              <li
+                key={row.text}
+                className="col-span-2 grid grid-cols-subgrid items-baseline"
+              >
                 <Mono step="xs" className="text-ink">
                   {ROW_WORD[row.kind]}
                 </Mono>
@@ -188,7 +197,7 @@ export function DeleteWithRuns({
               </li>
             ))}
           </ul>
-          <p className="m-0 text-small">This can&apos;t be undone.</p>
+          <p className="col-start-2 m-0 text-small">This can&apos;t be undone.</p>
         </div>
         {/* Each action with its own band directly under it, so a failure
             is shown against the action that failed. */}

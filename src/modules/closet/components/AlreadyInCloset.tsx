@@ -1,6 +1,12 @@
+import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 
-import type { garmentCategories, TempUnit } from "../../../lib/contracts";
+import {
+  uiGroupLabels,
+  type garmentCategories,
+  type TempUnit,
+  type UiGroup,
+} from "../../../lib/contracts";
 import type { GarmentType } from "../../../lib/contracts/garment-fields";
 import { normalizeIdentity } from "../../../lib/normalize";
 import { worksAtForms } from "../../../lib/contracts/measures";
@@ -10,7 +16,7 @@ import { runsLabel } from "../../../lib/runs-label";
 import { photoUrlFor } from "../photo-url";
 import { retiredMonthLabel } from "../retired-label";
 import type { ClosetItemView } from "../service";
-import { garmentTypePlurals, kindLabel } from "../type-labels";
+import { garmentTypePlurals } from "../type-labels";
 import { useRunnerZone } from "./use-runner-zone";
 
 type Category = (typeof garmentCategories)[number];
@@ -32,9 +38,9 @@ const CATEGORY_PLURALS = {
 
 /**
  * The mono line under a row's name (round 26 #10): how often it has been
- * worn, then its standing — retired, not judged yet, or how often it was
- * dialed and the range it works in. A retirement is dated by month and
- * year here (round 28 #13, "RETIRED MAR 2026"), not the closet's day.
+ * worn, then its standing — not judged yet, or how often it was dialed and
+ * the range it works in. A retired piece says so once, as the tag at the
+ * right (Round 55 · 193), so its line reads like every other row's.
  *
  * The line draws "8/9 dialed 3–8°", which a screen reader says as "eight
  * slash nine dialed three to eight degrees" with nothing to say what the
@@ -44,18 +50,13 @@ const CATEGORY_PLURALS = {
  */
 function RecordLine({
   view,
-  zone,
   tempUnit,
 }: Readonly<{
   view: ClosetItemView;
-  zone: string | undefined;
   tempUnit: TempUnit;
 }>): JSX.Element {
   const summary = view.performance?.summary;
   const worn = runsLabel(summary?.runCount ?? 0);
-  if (view.item.retired) {
-    return <>{`${worn} · ${retiredMonthLabel(view.item.retiredAt, zone)}`}</>;
-  }
   // `summary === undefined` folded into this guard (rather than checked
   // via `summary?.verdictCount ?? 0 === 0` as before) narrows `summary` to
   // defined for the rest of the function, so `summary.dialedCount` below
@@ -109,10 +110,15 @@ function isSameName(
 function flagsOf(
   view: ClosetItemView,
   typed: { brand: string; name: string },
+  zone: string | undefined,
 ): string {
   return [
     isSameName(view, typed) ? "Same name" : undefined,
-    view.item.retired ? "Retired" : undefined,
+    // Dated by month and year here (round 28 #13, "RETIRED MAR 2026"),
+    // not the closet's day.
+    view.item.retired
+      ? retiredMonthLabel(view.item.retiredAt, zone)
+      : undefined,
   ]
     .filter((flag) => flag !== undefined)
     .join(" · ");
@@ -130,7 +136,7 @@ function Row({
   tempUnit: TempUnit;
 }>): JSX.Element {
   const photo = photoUrlFor(view.item);
-  const flags = flagsOf(view, typed);
+  const flags = flagsOf(view, typed, zone);
   return (
     <li className="flex items-center gap-3 border-t border-hairline pt-3">
       {photo === undefined ? (
@@ -160,7 +166,7 @@ function Row({
         </span>
         {/* MONO.sm, the metadata row's step (round 28 #13). */}
         <Mono step="sm" className="text-label">
-          <RecordLine view={view} zone={zone} tempUnit={tempUnit} />
+          <RecordLine view={view} tempUnit={tempUnit} />
         </Mono>
       </span>
       {flags === "" ? undefined : (
@@ -174,6 +180,11 @@ function Row({
   );
 }
 
+/**
+The most pieces the card lists; a link counts the rest.
+*/
+const SHOWN = 5;
+
 interface AlreadyInClosetProps {
   category: Category;
   /**
@@ -181,9 +192,14 @@ interface AlreadyInClosetProps {
   */
   type?: GarmentType | undefined;
   /**
-  This category's pieces, or this type's, newest first, up to five.
+  The group the form's piece would be filed in, as screen C files it.
   */
-  pieces: readonly ClosetItemView[];
+  group: UiGroup;
+  /**
+  That group's every piece, in Round 55 · 193's order; absent when the
+  group has none.
+  */
+  pieces: readonly ClosetItemView[] | undefined;
   /**
   What the form holds now, for `SAME NAME`.
   */
@@ -192,47 +208,93 @@ interface AlreadyInClosetProps {
 }
 
 /**
+ * Round 56 · 248: under the five, "See all 12 in Tops", which opens C on
+ * that group, counting the whole group as C does. Under six pieces the
+ * card already shows them all, and there is no link.
+ */
+function SeeAllLink({
+  total,
+  group,
+}: Readonly<{ total: number; group: UiGroup }>) {
+  if (total <= SHOWN) return;
+  return (
+    <Link
+      to="/closet"
+      search={{ group }}
+      data-part="more"
+      className="target inline-flex items-center self-start border-t border-hairline text-body font-semibold text-ink"
+    >
+      {`See all ${String(total)} in ${uiGroupLabels[group]}`}
+    </Link>
+  );
+}
+
+/**
  * F at the desk's one rail card (round 26 #10): what is already in the
- * closet in the category being added, so a runner about to add a second
- * Rover Half-zip sees the first. Read-only, and the rows do not link: a
- * link would lead away from a half-filled form over a glance.
+ * closet in the group the piece being added would be filed in, so a
+ * runner about to add a second Rover Half-zip sees the first. Read-only,
+ * and the rows do not link: a link would lead away from a half-filled
+ * form over a glance.
  *
- * **By category and type**, as the board titles and matches it (R-112):
- * "Already in your closet · Top · Half-zip" once a type is picked, and
- * the category's alone before one is. Round 40 C4 confirms both and
+ * **By group** (Round 56 · 248): the card draws from C's group, filed
+ * the same way, so a top worn as an outer layer is in Outer for both. A
+ * picked type only sorts its pieces first; it never filters. Round 40 C4
  * draws the title as a heading, in sentence case, not the rail's mono.
  */
 export function AlreadyInCloset({
   category,
   type,
+  group,
   pieces,
   typed,
   tempUnit,
 }: Readonly<AlreadyInClosetProps>): JSX.Element {
   const zone = useRunnerZone();
+  const plural =
+    type === undefined ? CATEGORY_PLURALS[category] : garmentTypePlurals[type];
   return (
     <RailCard
-      title={`Already in your closet · ${kindLabel(category, type)}`}
+      title={`Already in your closet · ${uiGroupLabels[group]}`}
       isHeading
     >
-      {pieces.length === 0 ? (
+      {/* A group is absent rather than empty: closetNearby lists only a
+          group that has pieces. */}
+      {pieces === undefined ? (
         // Round 40 C4: the heading stays; this line replaces the rows.
-        <p className="m-0 text-body text-quiet">
-          {`No ${type === undefined ? CATEGORY_PLURALS[category] : garmentTypePlurals[type]} yet.`}
-        </p>
+        <p className="m-0 text-body text-quiet">{`No ${plural} yet.`}</p>
       ) : (
-        <ul className="m-0 flex list-none flex-col gap-3 p-0">
-          {pieces.map((view) => (
-            <Row
-              key={view.item.id}
-              view={view}
-              typed={typed}
-              zone={zone}
-              tempUnit={tempUnit}
-            />
-          ))}
-        </ul>
+        <>
+          <ul className="m-0 flex list-none flex-col gap-3 p-0">
+            {typeFirst(pieces, type)
+              .slice(0, SHOWN)
+              .map((view) => (
+                <Row
+                  key={view.item.id}
+                  view={view}
+                  typed={typed}
+                  zone={zone}
+                  tempUnit={tempUnit}
+                />
+              ))}
+          </ul>
+          <SeeAllLink total={pieces.length} group={group} />
+        </>
       )}
     </RailCard>
   );
+}
+
+/**
+ * A picked type's pieces first, the rest after, each in the order given:
+ * a stable sort, so the type sorts and never filters (Round 56 · 248).
+ */
+function typeFirst(
+  pieces: readonly ClosetItemView[],
+  type: GarmentType | undefined,
+): ClosetItemView[] {
+  // A stored type is a string or null and no pick is undefined, so with
+  // nothing picked no piece matches and the order stands.
+  const ofType = (view: ClosetItemView): number =>
+    Number(Object.is(view.item.type, type));
+  return pieces.toSorted((a, b) => ofType(b) - ofType(a));
 }

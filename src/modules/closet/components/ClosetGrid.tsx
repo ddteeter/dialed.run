@@ -3,6 +3,7 @@ import type { JSX, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 
 import {
+  garmentCategoryLabels,
   uiGroupLabels,
   uiGroups,
   type DistanceUnit,
@@ -28,6 +29,7 @@ import { filterViews, railCounts, worksAtSpan } from "../filters";
 import { closetSearch, type ClosetSearch } from "../inputs";
 import type { ClosetItemView, ClosetListing } from "../service";
 import { ClosetFilters, coverageWords } from "./ClosetFilters";
+import { useIsRowFull } from "./grid-tail";
 import { worksAtLabel } from "./WorksAt";
 
 function itemLabel(view: ClosetItemView): string {
@@ -36,18 +38,6 @@ function itemLabel(view: ClosetItemView): string {
     brand: view.item.brand,
     isGeneric: view.isGeneric,
   });
-}
-
-/**
- * The tile's range, drawn "40–58°" and said "40 to 58 degrees" (round 53 ·
- * 162.3), or "Untested", which <Bracketed> uppercases in CSS.
- */
-function tempLabel(view: ClosetItemView, tempUnit: TempUnit): ReactNode {
-  const range =
-    view.tempRange === undefined
-      ? undefined
-      : worksAtForms(view.tempRange, tempUnit);
-  return range === undefined ? "Untested" : <Spoken {...range} />;
 }
 
 const itemKey = (view: ClosetItemView): string => view.item.id;
@@ -74,27 +64,26 @@ function piecesHeading(count: number): string {
 }
 
 /**
- * Adding a garment is the grid's dashed tile (§6c.10: *"never a bar
- * action"*), and it is the last cell of the grid whatever the grid holds —
- * the only cell, on an empty closet.
+ * Adding a garment is the grid's dashed cell (§6c.10: *"never a bar
+ * action"*), and it is the last cell of the grid whatever the grid holds.
  *
- * **Its height is the row's, unless it is the row.** A grid row is as tall
- * as its tallest cell, so a minimum on this tile was a minimum on whichever
- * row it landed in: a closet whose last row held the tile ran that row to
- * nearly twice the height of every row above it. The grid's equal rows
- * (`auto-rows-fr`) size it to a garment tile wherever it lands; it keeps
- * the minimum only as the only cell (`only:`), where there is no garment
- * tile to match.
+ * Round 55 · 187: it follows the last tile when that row has room, at the
+ * row's height. When the count fills the last row, it is one 56-tall
+ * dashed row across the grid, "+ Add a piece", and an empty closet ends
+ * the same way.
  */
-function AddTile(): JSX.Element {
+const ADD_CLASS =
+  "target flex h-full items-center justify-center gap-2 rounded-tile border border-dashed border-hairline-2 p-3 text-body font-bold text-ink no-underline";
+
+function AddTile({ isRow }: Readonly<{ isRow: boolean }>): JSX.Element {
   return (
-    <li className="only:min-h-40">
+    <li data-part="add" className={isRow ? "col-span-full" : undefined}>
       <Link
         to="/closet/new"
-        className="target flex h-full flex-col items-center justify-center gap-2 rounded-tile border border-dashed border-hairline-2 p-3 text-muted no-underline"
+        className={isRow ? `${ADD_CLASS} min-h-14` : ADD_CLASS}
       >
         <Icon name="add" />
-        <Mono step="xs">Add garment</Mono>
+        Add a piece
       </Link>
     </li>
   );
@@ -111,10 +100,12 @@ export const CHECKING_NAME =
   "Being checked, other runners can't see this photo";
 
 /**
- * The tile's photo (board C, round 27 #31b): full width at 4:5 with no
- * fixed height, so the grid can reflow, and the hatch that means "no
- * photo" everywhere when there is none. The tags ride it as board C's
- * pills, top left. Decorative: the tile's link already names the piece.
+ * The tile's well (Round 55 · 187, 188): square, the photo cropped to fill
+ * it, or the hatch that means "no photo" with the piece's category word
+ * in it, so a page of starters is still readable. Every tile's well is the
+ * same square, so a mixed grid keeps its rows. The tags ride it as board
+ * C's pills, top left. Decorative: the tile's link already names the
+ * piece, so the word is hidden from assistive tech.
  */
 function TilePhoto({ view }: Readonly<{ view: ClosetItemView }>): JSX.Element {
   const photo = photoUrlFor(view.item);
@@ -122,9 +113,17 @@ function TilePhoto({ view }: Readonly<{ view: ClosetItemView }>): JSX.Element {
     <span
       data-part="tile-photo"
       data-state={photo === undefined ? "no-photo" : "photo"}
-      className={`relative order-first block aspect-4/5 w-full ${photo === undefined ? "photo-hatch" : "bg-photo"}`}
+      className={`relative order-first flex aspect-square w-full items-center justify-center ${photo === undefined ? "photo-hatch" : "bg-photo"}`}
     >
-      {photo === undefined ? undefined : (
+      {photo === undefined ? (
+        <span
+          data-part="tile-word"
+          aria-hidden="true"
+          className="font-display text-heading text-muted uppercase"
+        >
+          {garmentCategoryLabels[view.item.category]}
+        </span>
+      ) : (
         <img
           src={photo}
           alt=""
@@ -194,11 +193,13 @@ function TilePill({
 }
 
 /**
- * The tile's record (board C): how often the piece was dialed, then the
- * range it works at and how far it has run. Drawn "8/9 DIALED", said "8
- * of 9 runs dialed", as F's record line says it (a11y judgment audit,
- * 2026-11-04). A piece never judged says so: "No runs yet" before its
- * first run, "No verdict yet" after it. Mileage waits for a first mile.
+ * The tile's record (board C, Round 55 · 189): how often the piece was
+ * dialed, with how far it has run once it has run a mile ("3/17 DIALED ·
+ * 109 MI"), then the range it works at when it has one. Drawn "8/9
+ * DIALED", said "8 of 9 runs dialed", as F's record line says it (a11y
+ * judgment audit, 2026-11-04). A piece never judged says so: "No runs
+ * yet" before its first run, "No verdict yet" after it. A piece with no
+ * range has no range slot: "Untested" is the rail's word, not the tile's.
  */
 function TileRecord({
   view,
@@ -214,22 +215,28 @@ function TileRecord({
     summary === undefined || summary.mileageM === 0
       ? undefined
       : `${wholeDistanceNumber(summary.mileageM, distanceUnit)} ${distanceUnit}`;
+  const range =
+    view.tempRange === undefined
+      ? undefined
+      : worksAtForms(view.tempRange, tempUnit);
   return (
     <>
       <span data-part="tile-record" className="text-muted">
         <Mono step="xs">
           <DialedCount summary={summary} />
+          {miles === undefined ? undefined : ` · ${miles}`}
         </Mono>
       </span>
       {/* **Muted, never teal.** T2: teal means *dialed* — a verdict — and
           a garment's working range is not one. Board C draws the band line
           in `--muted`, and round 16 says coverage is monochrome. */}
-      <span data-part="tile-range" className="text-muted">
-        <Bracketed step="xs">{tempLabel(view, tempUnit)}</Bracketed>
-        {miles === undefined ? undefined : (
-          <Mono step="xs">{` · ${miles}`}</Mono>
-        )}
-      </span>
+      {range === undefined ? undefined : (
+        <span data-part="tile-range" className="text-muted">
+          <Bracketed step="xs">
+            <Spoken {...range} />
+          </Bracketed>
+        </span>
+      )}
     </>
   );
 }
@@ -277,7 +284,13 @@ function Tile({
       className="target row-press flex h-full flex-col overflow-hidden rounded-tile border border-hairline bg-panel no-underline"
     >
       <span className="flex flex-col gap-1 p-3">
-        <span data-part="tile-name" className="text-body font-semibold">
+        {/* Round 55 · 187: two lines, always reserved, so every tile is one
+            height and the record lines line up; a longer name ends in an
+            ellipsis and is still said whole, as the link's name. */}
+        <span
+          data-part="tile-name"
+          className="line-clamp-2 text-body font-semibold [min-block-size:2lh]"
+        >
           {itemLabel(view)}
         </span>
         <TileRecord
@@ -312,16 +325,17 @@ function Tiles({
   distanceUnit,
 }: Readonly<TilesProps>): JSX.Element {
   const { shown, leaving, listRef } = useListMotion(items, itemKey);
+  const isRowFull = useIsRowFull(listRef, items.length);
   return (
     <ul
       ref={listRef}
       data-part="grid"
       // DS3's reflow rule for a grid of garments, verbatim: "grids of runs
       // or garments go from 2 tracks to `auto-fill, minmax(180px, 1fr)`".
-      // `auto-rows-fr` makes every row the tallest row's height, so the
-      // Add tile matches a garment tile even on a row of its own — one
-      // column on a phone, or a count the columns divide evenly.
-      className="m-0 grid list-none auto-rows-fr grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3 p-0"
+      // Two tracks on the phone at every count (Round 55 · 188): two
+      // 180px tracks and the gap do not fit 358px, so auto-fill alone
+      // gave one.
+      className="m-0 grid list-none grid-cols-2 gap-3 p-0 wide:grid-cols-[repeat(auto-fill,minmax(180px,1fr))]"
     >
       {shown.map((view) => (
         <li
@@ -332,7 +346,7 @@ function Tiles({
           <Tile view={view} tempUnit={tempUnit} distanceUnit={distanceUnit} />
         </li>
       ))}
-      <AddTile />
+      <AddTile isRow={isRowFull} />
     </ul>
   );
 }
@@ -503,9 +517,12 @@ function RetiredSwitch({
   return (
     <label className="target flex cursor-pointer items-center gap-2 text-body font-semibold">
       {`Show retired (${String(count)})`}
+      {/* R54·166.3: it changes the view the moment it moves, so a switch,
+          drawn from the shared set, at the label's right. */}
       <input
         type="checkbox"
         role="switch"
+        className="control-switch"
         checked={isOn}
         onChange={(event) => {
           onToggle(event.target.checked);
@@ -514,6 +531,33 @@ function RetiredSwitch({
     </label>
   );
 }
+
+/**
+ * Board C's nudge, "14 OF 15 pieces are still generic. Name the ones you
+ * reach for." It counts the pieces the grid is showing, as the heading
+ * does, so the two never disagree under a filter or with retired pieces
+ * hidden (C-13, N1-05).
+ */
+function GenericNudge({
+  visible,
+}: Readonly<{ visible: readonly ClosetItemView[] }>) {
+  const generic = visible.filter((view) => view.isGeneric).length;
+  if (generic === 0) return;
+  return (
+    <p data-part="generic-nudge" className="m-0 text-small text-quiet">
+      <Mono>
+        {generic} of {visible.length}
+      </Mono>{" "}
+      pieces are still generic. Name the ones you reach for.
+    </p>
+  );
+}
+
+/**
+The closet's page: MEASURE.page, centred, in the 16 phone gutter.
+*/
+const PAGE_CLASS =
+  "mx-auto flex w-full max-w-page flex-col px-4 py-6 wide:px-6";
 
 /**
  * The sentence a delete leaves, written after mount rather than rendered
@@ -575,7 +619,17 @@ export function ClosetGrid({
   };
 
   return (
-    <div className="flex flex-col px-4 py-6 wide:px-6 desk:grid desk:grid-cols-[max-content_minmax(0,1fr)] desk:items-start desk:gap-x-8">
+    // Round 54 · 168.2: the closet is the column rule's exception, its grid
+    // on MEASURE.page and centred. The rail's track only exists beside a
+    // rail: an empty closet has none, and an empty track still cost its gap
+    // (C-10). Round 55 · 185 keeps the 16 phone gutter.
+    <div
+      className={
+        isEmpty
+          ? PAGE_CLASS
+          : `${PAGE_CLASS} desk:grid desk:grid-cols-[max-content_minmax(0,1fr)] desk:items-start desk:gap-x-8`
+      }
+    >
       {isEmpty ? undefined : (
         <div className="hidden desk:block desk:border-r desk:border-hairline desk:pr-6">
           <ClosetFilters variant="rail" {...filters} />
@@ -624,14 +678,7 @@ export function ClosetGrid({
               Add what you run in most. Three pieces is enough to start.
             </p>
           ) : undefined}
-          {listing.genericCount > 0 ? (
-            <p className="m-0 text-small text-quiet">
-              <Mono>
-                {listing.genericCount} of {listing.totalCount}
-              </Mono>{" "}
-              pieces are still generic — name the ones you reach for.
-            </p>
-          ) : undefined}
+          <GenericNudge visible={screen.visible} />
         </div>
         {isEmpty ? undefined : (
           <div className="desk:hidden">

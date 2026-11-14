@@ -21,6 +21,7 @@ import { z } from "zod";
 
 import type { AttachContext } from "../../src/modules/feed/attach-context";
 import { AttachKit } from "../../src/modules/feed/components/AttachKit";
+import type { UiGroup } from "../../src/modules/feed/groups";
 import type { PickerGroup } from "../../src/modules/feed/picker";
 import type { BandRun } from "../../src/modules/feed/band-runs";
 import type { PrefillCandidate } from "../../src/modules/feed/prefill";
@@ -29,7 +30,7 @@ import type { PhotoStep } from "../../src/ui";
 import { TermsRefusalAnswer } from "../../src/ui";
 import { expectAvailable, expectBusy } from "../ui/unavailable";
 import { queryWeatherCredit, WEATHER_CREDIT } from "../ui/weather-credit";
-import { expectBellEnding, withBell } from "./feed-fixtures";
+import { atWidth, expectBellEnding, withBell } from "./feed-fixtures";
 
 /**
  * Attach the kit (screen A2), to round 22's two frames and round 20's
@@ -97,6 +98,7 @@ function piece(
     layer: NOTHING,
     matches: true,
     untested: false,
+    photo: undefined,
     ...overrides,
   };
 }
@@ -168,7 +170,32 @@ interface Overrides {
   bandRunsFor?: (input: {
     data: { bandFloorC: number };
   }) => Promise<readonly BandRun[]>;
+  run?: Partial<RunFacts>;
+  pushed?: UiGroup;
+  onPush?: (group: UiGroup) => void;
+  onPushDone?: () => void;
 }
+
+interface RunFacts {
+  startedAt: number;
+  durationS: number;
+  deviceName: string | undefined;
+  clockZone: string | undefined;
+}
+
+/**
+ * 2026-08-29T11:04Z — Sat Aug 29, 6:04 AM in Chicago — and 51:38 long.
+ */
+const RUN: RunFacts = {
+  startedAt: Math.floor(Date.UTC(2026, 7, 29, 11, 4) / 1000),
+  durationS: 3098,
+  deviceName: undefined,
+  clockZone: "America/Chicago",
+};
+
+const noPush = () => {
+  // A2 is the page in these tests unless one says otherwise.
+};
 
 function attach(overrides: Overrides = {}) {
   return (
@@ -176,6 +203,10 @@ function attach(overrides: Overrides = {}) {
       units={overrides.units ?? { temp: "f", distance: "mi" }}
       runId="01RUN"
       context={overrides.context ?? context()}
+      run={{ ...RUN, ...overrides.run }}
+      pushed={overrides.pushed}
+      onPush={overrides.onPush ?? noPush}
+      onPushDone={overrides.onPushDone ?? noPush}
       prefillFor={overrides.prefillFor ?? (() => Promise.resolve(undefined))}
       bandRunsFor={overrides.bandRunsFor ?? (() => Promise.resolve([]))}
       attachKit={
@@ -272,7 +303,7 @@ describe("AttachKit: the header", () => {
     const user = userEvent.setup();
     await renderWithRouter(attach());
 
-    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    await user.click(screen.getByRole("button", { name: "Patagonia Houdini" }));
     expect(screen.getByText("6.2 mi · 41°F damp · 1 piece")).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Tights" }));
     expect(screen.getByText("6.2 mi · 41°F damp · 2 pieces")).toBeVisible();
@@ -329,22 +360,53 @@ describe("AttachKit: the rail at the desk (round 25)", () => {
     await renderWithRouter(attach());
 
     expect(rail()).toHaveClass("hidden", "desk:flex");
+    // A3's card (Round 55 · 242): the run's day and time on its own zone,
+    // how far and how long, then the reading.
     expect(
-      within(rail()).getByRole("heading", { name: "This run" }),
+      within(rail()).getByRole("heading", {
+        name: "This run · Sat Aug 29 · 6:04 AM",
+      }),
     ).toBeInTheDocument();
-    expect(rail()).toHaveTextContent("6.2 mi");
-    const reading = within(rail()).getByText("41°F damp");
+    const reading = within(rail()).getByText("41°F damp · feels 37°");
     expect(reading.parentElement).toHaveClass("text-dialed-text");
     // Round 52 #158: both of the rail's lines are said in words.
     expect(reading.nextElementSibling).toHaveTextContent(
-      "41 degrees Fahrenheit, damp",
+      "41 degrees Fahrenheit, damp, feels like 37 degrees",
     );
-    expect(within(rail()).getByText("6.2 mi")).toHaveAttribute(
+    expect(within(rail()).getByText("6.2 mi · 51:38")).toHaveAttribute(
       "aria-hidden",
       "true",
     );
-    expect(rail()).toHaveTextContent("6.2 miles");
+    expect(rail()).toHaveTextContent("6.2 miles, 51 minutes 38 seconds");
     expect(rail().querySelector("input, button, [role='radio']")).toBeNull();
+  });
+
+  it("reads the run on its summary's clock, not the reading's zone", async () => {
+    // P2a-02: the run's zone, else its runner's home zone, resolved by the
+    // run summary. Here the summary says New York while the reading says
+    // Chicago: the card follows the summary.
+    await renderWithRouter(attach({ run: { clockZone: "America/New_York" } }));
+
+    expect(
+      within(rail()).getByRole("heading", {
+        name: "This run · Sat Aug 29 · 7:04 AM",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("marks a run with no clock as UTC rather than print it bare", async () => {
+    await renderWithRouter(
+      attach({
+        run: { clockZone: undefined },
+        context: context({ conditions: undefined }),
+      }),
+    );
+
+    expect(
+      within(rail()).getByRole("heading", {
+        name: "This run · Sat Aug 29 · 11:04 AM UTC",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("names no conditions for a run with none", async () => {
@@ -496,7 +558,9 @@ describe("AttachKit: most likely", () => {
     ).toBeVisible();
     expect(waiting.querySelectorAll(".breathe")).toHaveLength(2);
 
-    expect(screen.getByRole("button", { name: "Houdini" })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Patagonia Houdini" }),
+    ).toBeVisible();
     expect(primary()).toBeVisible();
     expect(document.querySelector("[data-part='photo-well']")).not.toBeNull();
     // "OR PICK FROM THE CLOSET" while a suggestion may yet come.
@@ -543,6 +607,10 @@ describe("AttachKit: most likely", () => {
             units={{ temp: "f", distance: "mi" }}
             runId={runId}
             context={context()}
+            run={RUN}
+            pushed={undefined}
+            onPush={noPush}
+            onPushDone={noPush}
             prefillFor={prefillFor}
             bandRunsFor={() => Promise.resolve([])}
             attachKit={() => Promise.resolve({ entryId: "01NEW" })}
@@ -711,10 +779,9 @@ describe("AttachKit: most likely", () => {
     );
 
     expect(document.querySelector("[data-slot='most-likely']")).toBeNull();
-    expect(screen.getByRole("button", { name: "Houdini" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(
+      screen.getByRole("button", { name: "Patagonia Houdini" }),
+    ).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Tights" })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -791,18 +858,92 @@ describe("AttachKit: the closet picker", () => {
     expect(screen.queryByText(/^Showing/)).toBeNull();
   });
 
-  it("marks a chosen tile in ink, and unmarks it on a second tap", async () => {
+  it("rings a chosen tile in pink, never inks it, and unrings it on a second tap", async () => {
+    // Round 55 · 239: a 2px pink ring outside a 2px ground gap.
     const user = userEvent.setup();
     await renderWithRouter(attach());
 
-    const tile = screen.getByRole("button", { name: "Houdini" });
+    const tile = screen.getByRole("button", { name: "Patagonia Houdini" });
+    const well = tile.querySelector("[data-part='tile-well']");
+    const ring = [
+      "ring-2",
+      "ring-action",
+      "ring-offset-2",
+      "ring-offset-ground",
+    ];
     expect(tile).toHaveAttribute("aria-pressed", "false");
-    expect(tile).toHaveClass("border-hairline", "bg-panel");
+    expect(well).not.toHaveClass(...ring);
     await user.click(tile);
     expect(tile).toHaveAttribute("aria-pressed", "true");
-    expect(tile).toHaveClass("border-ink", "bg-ink", "text-ground");
+    expect(well).toHaveClass(...ring);
+    expect(well).not.toHaveClass("bg-ink");
     await user.click(tile);
     expect(tile).toHaveAttribute("aria-pressed", "false");
+    expect(well).not.toHaveClass(...ring);
+  });
+
+  it("draws a 72 hatch with the type word, and the full name under it in two lines", async () => {
+    // Round 55 · 239: the photo-less tile, and a name never cut in the tile.
+    await renderWithRouter(attach());
+
+    const tile = screen.getByRole("button", { name: "Patagonia Houdini" });
+    expect(tile).toHaveClass("w-18", "flex-col");
+    const well = tile.querySelector("[data-part='tile-well']");
+    expect(well).toHaveClass("photo-hatch", "size-18", "rounded-field");
+    expect(well).toHaveAttribute("aria-hidden", "true");
+    expect(well).toHaveTextContent(/^Top$/u);
+    expect(well).not.toHaveClass("bg-photo");
+    expect(well?.querySelector("img")).toBeNull();
+    const name = screen.getByText("Patagonia Houdini");
+    expect(name).toHaveClass("line-clamp-2", "text-small");
+    expect(well?.nextElementSibling).toBe(name);
+    // A piece with no brand is named by its name alone, its word its own.
+    const tights = screen.getByRole("button", { name: "Tights" });
+    expect(tights).toHaveTextContent(/^BottomTights$/u);
+  });
+
+  it("fills the 72 square with the piece's photo, ringed when pressed", async () => {
+    // Round 55 · 239: a piece with a photo shows it, cropped to fill the
+    // square; the hatch and the type word are for a piece without one.
+    const user = userEvent.setup();
+    const photoUrl = "/closet/photo/houdini/card?v=v1";
+    const pictured = context({
+      groups: [
+        {
+          group: "tops",
+          items: [piece(HOUDINI, "Houdini", { photo: photoUrl })],
+          matchCount: 1,
+          hiddenByFilterCount: 0,
+        },
+      ],
+    });
+    await renderWithRouter(attach({ context: pictured }));
+
+    const tile = screen.getByRole("button", { name: "Houdini" });
+    const well = tile.querySelector("[data-part='tile-well']");
+    expect(well).toHaveClass(
+      "size-18",
+      "rounded-field",
+      "bg-photo",
+      "overflow-hidden",
+      "relative",
+    );
+    expect(well).not.toHaveClass("photo-hatch");
+    expect(well).toHaveAttribute("aria-hidden", "true");
+    expect(well).not.toHaveTextContent("Top");
+    const img = well?.querySelector("img");
+    expect(img).toHaveAttribute("src", photoUrl);
+    expect(img).toHaveAttribute("alt", "");
+    expect(img).toHaveClass("absolute", "inset-0", "size-full", "object-cover");
+    const ring = [
+      "ring-2",
+      "ring-action",
+      "ring-offset-2",
+      "ring-offset-ground",
+    ];
+    expect(well).not.toHaveClass(...ring);
+    await user.click(tile);
+    expect(well).toHaveClass("bg-photo", ...ring);
   });
 
   it("draws no chip row when every group is a row", async () => {
@@ -860,7 +1001,18 @@ describe("AttachKit: A2b, one category as a sheet", () => {
     await user.click(screen.getByRole("button", { name: "All Tops" }));
     const sheet = await screen.findByRole("dialog", { name: "Tops" });
 
-    expect(within(sheet).getByRole("heading", { name: "Tops" })).toBeVisible();
+    // A sheet's own title, list and Done — the push's are the page's
+    // (Round 54 · 164.3), so these are the sheet's alone.
+    const title = within(sheet).getByRole("heading", { name: "Tops" });
+    expect(title.tagName).toBe("H2");
+    // The sheet's own label is its title (#643): one heading, the sheet's.
+    expect(title).toHaveClass("text-title");
+    expect(within(sheet).getAllByRole("heading", { name: "Tops" })).toHaveLength(1);
+    expect(within(sheet).getByRole("list")).toHaveClass("p-0");
+    expect(within(sheet).getByRole("list")).not.toHaveClass("rounded-card");
+    const done = within(sheet).getByRole("button", { name: "Done" });
+    expect(done).toHaveClass("rounded-pill", "border-hairline");
+    expect(done).not.toHaveClass("bg-action");
     expect(within(sheet).getByText("2 of 3 match 41° damp")).toBeVisible();
     expect(within(sheet).getByText("0 selected")).toBeVisible();
     expect(within(sheet).getByText("Hidden by the filter · 1")).toBeVisible();
@@ -892,10 +1044,9 @@ describe("AttachKit: A2b, one category as a sheet", () => {
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).toBeNull();
     });
-    expect(screen.getByRole("button", { name: "Houdini" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(
+      screen.getByRole("button", { name: "Patagonia Houdini" }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 
   it("shows the whole category with the filter off, and hides nothing", async () => {
@@ -926,6 +1077,11 @@ describe("AttachKit: A2b, one category as a sheet", () => {
     const search = within(sheet).getByRole("searchbox", { name: "Search" });
     expect(search).toHaveAttribute("placeholder", "Search tops…");
 
+    // R54·166.3: the shared set's checkboxes; each label is a choice, 400.
+    for (const box of within(sheet).getAllByRole("checkbox")) {
+      expect(box).toHaveClass("control-check");
+      expect(box.closest("label")).toHaveClass("font-normal");
+    }
     // The brand is searched as well as the name.
     await user.type(search, "PATAG");
     expect(
@@ -1046,7 +1202,7 @@ describe("AttachKit: a kit is required", () => {
 
     await user.click(primary());
     expect(screen.getByText("Pick at least one piece.")).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    await user.click(screen.getByRole("button", { name: "Patagonia Houdini" }));
     expect(screen.queryByText("Pick at least one piece.")).toBeNull();
   });
 
@@ -1056,7 +1212,7 @@ describe("AttachKit: a kit is required", () => {
     const { router } = await renderWithRouter(attach({ attachKit }));
 
     await user.click(primary());
-    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    await user.click(screen.getByRole("button", { name: "Patagonia Houdini" }));
     await user.click(screen.getByRole("button", { name: "Tights" }));
     await user.click(primary());
 
@@ -1086,7 +1242,7 @@ describe("AttachKit: a failed attach (round 23, item 9)", () => {
     const attachKit = vi.fn(() => pending.promise);
     await renderWithRouter(attach({ attachKit }));
 
-    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    await user.click(screen.getByRole("button", { name: "Patagonia Houdini" }));
     await user.click(primary());
 
     // Found by its region: while it works, the name it answers to is the
@@ -1133,7 +1289,9 @@ describe("AttachKit: a failed attach (round 23, item 9)", () => {
     await router.load();
     render(<RouterProvider router={router} />);
 
-    await user.click(await screen.findByRole("button", { name: "Houdini" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Patagonia Houdini" }),
+    );
     await user.click(primary());
 
     await screen.findByText("The prompt");
@@ -1155,7 +1313,7 @@ describe("AttachKit: a failed attach (round 23, item 9)", () => {
       .mockResolvedValueOnce({ entryId: "01NEW" });
     const { router } = await renderWithRouter(attach({ attachKit }));
 
-    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    await user.click(screen.getByRole("button", { name: "Patagonia Houdini" }));
     await user.click(primary());
 
     const band = await screen.findByText("Nothing attached");
@@ -1479,7 +1637,7 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     );
 
     await user.upload(photoInput(), jpeg("kit.jpg"));
-    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    await user.click(screen.getByRole("button", { name: "Patagonia Houdini" }));
     await user.click(primary());
 
     await waitFor(() => {
@@ -1507,7 +1665,7 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     );
 
     await user.upload(photoInput(), jpeg());
-    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    await user.click(screen.getByRole("button", { name: "Patagonia Houdini" }));
     await user.click(primary());
 
     expect(
@@ -1536,7 +1694,7 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     );
 
     await user.upload(photoInput(), jpeg());
-    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    await user.click(screen.getByRole("button", { name: "Patagonia Houdini" }));
     await user.click(primary());
     await screen.findByText(/The photo didn't upload/u);
     await user.click(primary());
@@ -1571,7 +1729,7 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     );
 
     await user.upload(photoInput(), jpeg());
-    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    await user.click(screen.getByRole("button", { name: "Patagonia Houdini" }));
     await user.click(primary());
     await screen.findByText(/The photo didn't upload/u);
     await user.click(screen.getByRole("button", { name: "Remove" }));
@@ -1591,7 +1749,7 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     await renderWithRouter(attach({ uploadPhoto }));
 
     await user.upload(photoInput(), jpeg());
-    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    await user.click(screen.getByRole("button", { name: "Patagonia Houdini" }));
     await user.click(primary());
 
     await waitFor(() => {
@@ -1607,7 +1765,7 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     const uploadPhoto = vi.fn(() => Promise.resolve({ key: "k" }));
     const { router } = await renderWithRouter(attach({ uploadPhoto }));
 
-    await user.click(screen.getByRole("button", { name: "Houdini" }));
+    await user.click(screen.getByRole("button", { name: "Patagonia Houdini" }));
     await user.click(primary());
 
     await waitFor(() => {
@@ -1618,10 +1776,256 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
 });
 
 describe("AttachKit: the phone's bell (Design 169.1)", () => {
-  it("ends the ink header's title row", async () => {
+  it("ends the row of the way back, above the title", async () => {
     await renderWithRouter(withBell(attach()));
-    expectBellEnding(
+    const back = screen.getByRole("link", { name: "Back" });
+    expectBellEnding(back);
+    expect(back.parentElement?.nextElementSibling).toBe(
       screen.getByRole("heading", { name: "What did you wear?" }),
     );
+  });
+});
+
+describe("AttachKit: the conditions filter chip (D2-04, N1-17, D2-05)", () => {
+  const ON = ["bg-teal", "border-teal", "text-accent-ink"];
+  const OFF = ["border-hairline", "text-quiet"];
+
+  it("is filled with a × when on, and an outline when off", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(attach());
+
+    const chip = screen.getByRole("button", {
+      name: "41° damp, matches conditions",
+    });
+    // A pill sized to its words, hit at 44 by the seam.
+    expect(chip).toHaveClass("target-seam", "h-8", "rounded-pill");
+    expect(chip).not.toHaveClass("target");
+    expect(chip).toHaveClass(...ON);
+    expect(chip.querySelector("svg")).not.toBeNull();
+    await user.click(chip);
+    expect(chip).toHaveClass(...OFF);
+    expect(chip).not.toHaveClass("bg-teal");
+    expect(chip.querySelector("svg")).toBeNull();
+  });
+
+  it("sits on the row under the heading, whether or not the heading says OR", async () => {
+    await renderWithRouter(attach({ prefillFor: neverSettles }));
+
+    const heading = screen.getByRole("heading", {
+      name: "Or pick from the closet",
+    });
+    const chip = screen.getByRole("button", {
+      name: "41° damp, matches conditions",
+    });
+    expect(heading.nextElementSibling).toBe(chip.parentElement);
+    expect(chip.parentElement?.firstElementChild).toBe(chip);
+    // The chip stays while the suggestion is waited on (Round 55 · 240).
+    expect(region("most-likely")).toHaveAttribute("data-state", "waiting");
+  });
+
+  it("is the same chip in A2b, on and off", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(attach());
+
+    await user.click(screen.getByRole("button", { name: "All Tops" }));
+    const sheet = await screen.findByRole("dialog", { name: "Tops" });
+    const chip = within(sheet).getByRole("button", {
+      name: "Matches conditions",
+    });
+    expect(chip).toHaveClass("target-seam", "h-8", ...ON);
+    expect(chip.querySelector("svg")).not.toBeNull();
+    await user.click(chip);
+    expect(chip).toHaveClass(...OFF);
+    expect(chip.querySelector("svg")).toBeNull();
+  });
+});
+
+describe("AttachKit: the way back and the Garmin credit (Round 55 · 242, D2-12)", () => {
+  it("goes back to the run the kit is for", async () => {
+    await renderWithRouter(attach());
+    const back = screen.getByRole("link", { name: "Back" });
+    expect(back).toHaveAttribute("href", "/runs/01RUN");
+    expect(screen.getByRole("banner")).toContainElement(back);
+  });
+
+  it("credits Garmin under the title for a run that came through it, once", async () => {
+    await renderWithRouter(attach({ run: { deviceName: "Garmin" } }));
+    const credits = screen.getAllByText("Garmin");
+    expect(credits).toHaveLength(1);
+    expect(credits[0]?.previousElementSibling).toBe(
+      screen.getByRole("heading", { name: "What did you wear?" }),
+    );
+  });
+
+  it("credits no one for a run the runner brought themselves", async () => {
+    await renderWithRouter(attach());
+    expect(screen.queryByText("Garmin")).toBeNull();
+  });
+});
+
+describe("AttachKit: the suggestion and waiting cards (Round 55 · 240)", () => {
+  it("sets the pieces as outlined mono pills, and Change as a pill beside That's it", async () => {
+    await renderWithRouter(
+      attach({ prefillFor: () => Promise.resolve(candidate()) }),
+    );
+
+    const change = await screen.findByRole("button", {
+      name: "Change the kit",
+    });
+    const pills = within(region("most-likely")).getAllByRole("listitem");
+    for (const pill of pills) {
+      expect(pill).toHaveClass("rounded-pill", "border", "border-accent-ink");
+      expect(pill.firstElementChild).toHaveClass("font-mono");
+    }
+    expect(change).toHaveClass("rounded-pill", "border", "border-accent-ink");
+    expect(change).not.toHaveClass("underline");
+    const accept = screen.getByRole("button", { name: "That’s it" });
+    expect(accept).toHaveClass("flex-1", "rounded-pill");
+    expect(accept.nextElementSibling).toBe(change);
+  });
+
+  it("sets the waiting line at the left, with pink brackets", async () => {
+    await renderWithRouter(attach({ prefillFor: neverSettles }));
+
+    const words = within(region("most-likely")).getByText(
+      "Checking what you wore at 41°",
+    );
+    const label = words.parentElement;
+    expect(label).toHaveClass("justify-items-start");
+    expect(label?.parentElement).toHaveClass("[&_.breathe]:text-action");
+  });
+});
+
+/**
+A window at the desk, or below it, as `matchMedia` answers.
+*/
+describe("AttachKit: A2b at the desk is a push (Round 54 · 164.3)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("pushes to the category at the desk instead of opening the sheet", async () => {
+    const user = userEvent.setup();
+    atWidth(true);
+    const onPush = vi.fn();
+    await renderWithRouter(attach({ onPush }));
+
+    await user.click(screen.getByRole("button", { name: "All Tops" }));
+    expect(onPush).toHaveBeenCalledWith("tops");
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("opens the sheet below the desk, and pushes nowhere", async () => {
+    const user = userEvent.setup();
+    atWidth(false);
+    const onPush = vi.fn();
+    await renderWithRouter(attach({ onPush }));
+
+    await user.click(screen.getByRole("button", { name: "+ Hands / head 1" }));
+    expect(await screen.findByRole("dialog", { name: "Hands / head" })).toBe(
+      document.querySelector("dialog[open]"),
+    );
+    expect(onPush).not.toHaveBeenCalled();
+  });
+
+  it("draws the pushed page in A2's place: back, title, one card of checkboxes, Done", async () => {
+    await renderWithRouter(attach({ pushed: "tops" }));
+
+    const page = region("kit-page");
+    const back = within(page).getByRole("link", { name: "What did you wear?" });
+    // The same page with nothing pushed: the harness renders A2 at "/".
+    expect(back).toHaveAttribute("href", "/");
+    expect(page.firstElementChild).toBe(back);
+    const title = within(page).getByRole("heading", { level: 1 });
+    expect(title).toHaveTextContent("Tops");
+    expect(title).toHaveClass("font-display", "text-title");
+    // Rule 04: the page's h1 is the only one exposed; A2's is hidden under it.
+    expect(screen.getAllByRole("heading", { level: 1 })).toStrictEqual([title]);
+    expect(within(page).getByText("2 of 3 match 41° damp")).toBeVisible();
+    const card = within(page).getByRole("list");
+    expect(card).toHaveClass("rounded-card", "border", "bg-panel");
+    expect(within(card).getAllByRole("checkbox")).toHaveLength(2);
+    const done = within(page).getByRole("button", { name: "Done" });
+    expect(done).toHaveClass("bg-action", "uppercase", "font-display");
+    // A2 is not drawn, but it is still there, holding the picks.
+    const a2 = screen.getByRole("button", {
+      name: "Next — did it work?",
+      hidden: true,
+    });
+    expect(a2.closest("[hidden]")).not.toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("keeps the picks made on the page when it comes back to A2", async () => {
+    const user = userEvent.setup();
+    const onPushDone = vi.fn();
+    function Pushed(): JSX.Element {
+      const [pushed, setPushed] = useState<UiGroup | undefined>("tops");
+      return (
+        <AttachKit
+          units={{ temp: "f", distance: "mi" }}
+          runId="01RUN"
+          context={context()}
+          run={RUN}
+          pushed={pushed}
+          onPush={noPush}
+          onPushDone={() => {
+            onPushDone();
+            setPushed(undefined);
+          }}
+          prefillFor={() => Promise.resolve(undefined)}
+          bandRunsFor={() => Promise.resolve([])}
+          attachKit={() => Promise.resolve({ entryId: "01NEW" })}
+          uploadPhoto={() => Promise.resolve({ key: "k" })}
+        />
+      );
+    }
+    await renderWithRouter(<Pushed />);
+
+    await user.click(
+      screen.getByRole("checkbox", { name: "Patagonia Houdini" }),
+    );
+    expect(screen.getByText("1 selected")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Done" }));
+
+    expect(onPushDone).toHaveBeenCalledTimes(1);
+    expect(document.querySelector("[data-slot='kit-page']")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Patagonia Houdini" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("6.2 mi · 41°F damp · 1 piece")).toBeVisible();
+  });
+
+  it("says a sheet opens below the desk, and nothing of the kind at it", async () => {
+    // What the press does at this width, said before it is pressed: a
+    // push opens no dialog. The window is read again as it is resized.
+    const width = atWidth(false);
+    await renderWithRouter(attach());
+    const all = screen.getByRole("button", { name: "All Tops" });
+    const chip = screen.getByRole("button", { name: "+ Hands / head 1" });
+    expect(all).toHaveAttribute("aria-haspopup", "dialog");
+    expect(chip).toHaveAttribute("aria-haspopup", "dialog");
+
+    act(() => {
+      width.resize(true);
+    });
+    expect(all).not.toHaveAttribute("aria-haspopup");
+    expect(chip).not.toHaveAttribute("aria-haspopup");
+
+    act(() => {
+      width.resize(false);
+    });
+    expect(all).toHaveAttribute("aria-haspopup", "dialog");
+  });
+
+  it("draws A2 when the pushed category is not one the closet has", async () => {
+    await renderWithRouter(attach({ pushed: "shoes" }));
+
+    expect(document.querySelector("[data-slot='kit-page']")).toBeNull();
+    expect(
+      screen
+        .getByRole("button", { name: "Next — did it work?" })
+        .closest("[hidden]"),
+    ).toBeNull();
   });
 });
