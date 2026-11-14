@@ -1,12 +1,13 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { JSX } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { Units } from "../../../lib/contracts";
 import { dayLabel } from "../../../lib/dates";
 import { newUlid } from "../../../lib/ids";
 import { measuredLine } from "../../../lib/contracts/measures";
 import {
+  maxPhotosPerEntry,
   photoAcceptAttribute,
   photoProblem,
 } from "../../../lib/photo-constraints";
@@ -19,7 +20,6 @@ import { toggledIn } from "../../../lib/toggled-in";
 import {
   ControlFailureBand,
   DeskSplit,
-  FileWell,
   FlowStep,
   FormStatus,
   GarminAttribution,
@@ -28,6 +28,7 @@ import {
   Mono,
   PendingLabel,
   PhoneBell,
+  PhotoRow,
   Spoken,
   useControlAction,
   usePhotoPick,
@@ -63,12 +64,13 @@ import { ThisRunCard } from "./ThisRunCard";
  * nothing chosen marks the picker "Pick at least one piece." — the round-13
  * "Attach 0 items" is superseded.
  *
- * **The photo is here now** (round 20 moved it from A3): the one well, with
- * W3's blur, held until the attach has made the entry it belongs to. It
- * goes up only after the attach has landed, and a failed upload is the
- * well's, not the attach's: the entry exists, so the band never says
- * "Nothing attached" about it, and the runner can go on without the photo
- * (law 5 — the secondary thing never fails the primary one).
+ * **The photos are here now** (round 20 moved them from A3): the photo row
+ * (Round 56 · 249), each photo through W3's blur, held until the attach
+ * has made the entry they belong to. They go up only after the attach
+ * has landed, and a failed upload is the row's, not the attach's: the
+ * entry exists, so the band never says "Nothing attached" about it, and
+ * the runner can go on without the photo (law 5 — the secondary thing
+ * never fails the primary one).
  *
  * **A failed attach is a control failure** (round 23, item 9): no
  * optimistic step forward, the in-flight label while it waits, and the band
@@ -224,57 +226,54 @@ function useHeldPhoto({
   renderPhotoStep,
   uploadPhoto,
 }: Pick<AttachKitProps, "renderPhotoStep" | "uploadPhoto">) {
-  const [photo, setPhoto] = useState<HeldPhoto | undefined>();
+  // Design 252 (#668): up to `maxPhotosPerEntry`, in the order picked.
+  const [photos, setPhotos] = useState<readonly HeldPhoto[]>([]);
   const [photoError, setPhotoError] = useState<string | undefined>();
   const [isSendingPhoto, setIsSendingPhoto] = useState(false);
   // W3, in the sheet the closet's photo uses too (round 28 #5). It closes
-  // back onto the well it opened from: Use this photo, Cancel and Esc all
-  // return focus there rather than dropping it on the page.
+  // back onto the add box it opened from: Use this photo, Cancel and Esc
+  // all return focus there rather than dropping it on the page.
   const pick = usePhotoPick({ renderPhotoStep, onReady: keep });
-
-  // The preview is the held file's own bytes, released when it goes.
-  useEffect(() => {
-    if (photo === undefined) return;
-    const { url } = photo;
-    return () => {
-      URL.revokeObjectURL(url);
-    };
-  }, [photo]);
+  useReleasedPreviews(photos);
 
   /**
-   * The held photo, sent to the entry the attach made. `false` when it
-   * failed, and the screen then goes nowhere.
+   * The held photos, sent in order to the entry the attach made. `false`
+   * when one failed, and the screen then goes nowhere.
    *
-   * A failure stays on the well, with the photo still held: the runner
-   * either presses Next again, which sends it under the same key (law 8b —
-   * one photo, however many tries), or removes it and goes on without it.
+   * Each photo leaves the row once it is sent, so a failure leaves only
+   * the unsent ones held: the runner either presses Next again, which
+   * sends each under its own key (law 8b — one photo, however many
+   * tries), or removes them and goes on without them.
    */
   async function didSend(entryId: string): Promise<boolean> {
-    if (photo !== undefined) {
-      setIsSendingPhoto(true);
-      setPhotoError(undefined);
-      try {
+    if (photos.length === 0) return true;
+    setIsSendingPhoto(true);
+    setPhotoError(undefined);
+    try {
+      for (const photo of photos) {
         const upload = new FormData();
         upload.append("entryId", entryId);
         upload.append("photo", photo.file);
         upload.append("idempotencyKey", photo.key);
         await uploadPhoto({ data: upload });
-      } catch {
-        setPhotoError(PHOTO_NOT_SENT);
-        return false;
-      } finally {
-        setIsSendingPhoto(false);
+        setPhotos((held) => held.filter((each) => each !== photo));
       }
+      return true;
+    } catch {
+      setPhotoError(PHOTO_NOT_SENT);
+      return false;
+    } finally {
+      setIsSendingPhoto(false);
     }
-    return true;
   }
 
   function keep(ready: File): void {
-    setPhoto({
+    const photo = {
       file: ready,
       key: newUlid(),
       url: URL.createObjectURL(ready),
-    });
+    };
+    setPhotos((held) => [...held, photo]);
   }
 
   function onPhotoFiles(files: FileList | null): void {
@@ -292,14 +291,34 @@ function useHeldPhoto({
     photoError,
     isSendingPhoto,
     isBusy: pick.stepping || isSendingPhoto,
-    preview:
-      photo === undefined ? undefined : { src: photo.url, alt: "Your outfit" },
-    remove: () => {
-      setPhoto(undefined);
+    photos: photos.map((photo) => ({ src: photo.url, alt: "Your outfit" })),
+    remove: (index: number) => {
+      setPhotos((held) => held.filter((_, at) => at !== index));
     },
     didSend,
     onPhotoFiles,
   };
+}
+
+/**
+ * Each preview is its held file's own bytes, released once that photo
+ * leaves the row, whether removed or sent, and all of them on unmount.
+ */
+function useReleasedPreviews(photos: readonly HeldPhoto[]): void {
+  const shown = useRef<readonly string[]>([]);
+  useEffect(() => {
+    const now = photos.map((photo) => photo.url);
+    for (const url of shown.current) {
+      if (!now.includes(url)) URL.revokeObjectURL(url);
+    }
+    shown.current = now;
+  }, [photos]);
+  useEffect(
+    () => () => {
+      for (const url of shown.current) URL.revokeObjectURL(url);
+    },
+    [],
+  );
 }
 
 export function AttachKit(props: Readonly<AttachKitProps>): JSX.Element {
@@ -436,23 +455,20 @@ export function AttachKit(props: Readonly<AttachKitProps>): JSX.Element {
               onPush={props.onPush}
             />
 
-            <FileWell
-              part="photo-well"
-              copy={{
-                kicker: "Outfit photo · optional",
-                label: "Add a photo",
-                wideLabel: "Drop a photo, or browse",
-                overLabel: "Let go to add it",
-                pendingLabel: "Adding",
-                hint: "Flat on the floor works best.",
+            {/* Design 252 (#668): up to the cap, each sent in order.
+                Design 253 (#669): no dashed well, only the add box. */}
+            <PhotoRow
+              kicker="Outfit photo · optional"
+              photos={held.photos}
+              add={{
+                max: maxPhotosPerEntry,
+                accept: photoAcceptAttribute,
+                pending: held.isBusy,
+                error: held.photoError,
+                onFiles: held.onPhotoFiles,
+                inputRef: held.pick.wellRef,
               }}
-              pending={held.isBusy}
-              accept={photoAcceptAttribute}
-              error={held.photoError}
-              preview={held.preview}
               onRemove={held.remove}
-              onFiles={held.onPhotoFiles}
-              inputRef={held.pick.wellRef}
             />
             {held.pick.step(setSaid)}
 

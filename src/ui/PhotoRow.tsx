@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { JSX, Ref, RefObject } from "react";
 
 import { FieldMessage, inFlight, PendingLabel } from "./form";
@@ -28,28 +28,37 @@ import { messageIdFor } from "./use-form-submit";
  * The closet's garment forms keep `FileWell`'s one photo well (249.5).
  */
 export function PhotoRow({
+  kicker,
   photos,
-  max,
   add,
   onRemove,
 }: Readonly<{
+  /**
+  The MONO line over the row, "Outfit photo · optional", and the name of
+  the group the row is.
+  */
+  kicker: string;
   photos: readonly ViewedPhoto[];
   /**
-  The photo cap, read from `maxPhotosPerEntry` by the caller.
-  */
-  max: number;
-  /**
-  Everything the add box needs, held together.
+  Everything the add box needs, held together, its cap included.
   */
   add: AddPhoto;
   onRemove: (index: number) => void;
 }>): JSX.Element {
-  const { accept, pending, error, onFiles, inputRef } = add;
+  const { max, accept, pending, error, onFiles, inputRef } = add;
   const focus = useRowFocus(photos.length);
   const [openAt, setOpenAt] = useState<number | undefined>();
+  const kickerId = useId();
 
   return (
-    <div className="flex flex-col gap-2">
+    <div
+      role="group"
+      aria-labelledby={kickerId}
+      className="flex flex-col gap-2"
+    >
+      <Mono id={kickerId} step="xs" className="text-muted">
+        {kicker}
+      </Mono>
       <ul
         data-part="photo-row"
         className="m-0 flex list-none flex-wrap gap-2 p-0"
@@ -111,6 +120,11 @@ export function PhotoRow({
 What the add box takes: the file input's settings and the pick handler.
 */
 type AddPhoto = Readonly<{
+  /**
+  The photo cap, read from `maxPhotosPerEntry` by the caller: the add box
+  leaves once the row holds this many.
+  */
+  max: number;
   accept: string;
   pending: boolean;
   /**

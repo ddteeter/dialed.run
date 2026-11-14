@@ -35,9 +35,9 @@ function Host({
   const [photos, setPhotos] = useState(start);
   return (
     <PhotoRow
+      kicker="Outfit photo · optional"
       photos={photos}
-      max={max}
-      add={{ accept: "image/png", pending, error, onFiles, inputRef }}
+      add={{ max, accept: "image/png", pending, error, onFiles, inputRef }}
       onRemove={(index) => {
         setPhotos((held) => held.filter((_, at) => at !== index));
       }}
@@ -52,9 +52,10 @@ function Filling({ start }: Readonly<{ start: typeof all }>) {
   const [photos, setPhotos] = useState(start);
   return (
     <PhotoRow
+      kicker="Outfit photo · optional"
       photos={photos}
-      max={4}
       add={{
+        max: 4,
         accept: "image/png",
         pending: false,
         error: undefined,
@@ -119,6 +120,17 @@ describe("PhotoRow", () => {
       "has-[:focus-visible]:outline-ink",
     );
     expect(box).toHaveTextContent("+Add photo");
+  });
+
+  it("is a group named by its kicker", () => {
+    render(<Host />);
+    expect(
+      screen.getByRole("group", { name: "Outfit photo · optional" }),
+    ).toContainElement(screen.getByRole("list"));
+    expect(screen.getByText("Outfit photo · optional")).toHaveClass(
+      "text-mono-xs",
+      "text-muted",
+    );
   });
 
   it("drops the add box at the cap", () => {

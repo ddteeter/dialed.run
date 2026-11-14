@@ -10,9 +10,11 @@ import { messageIdFor } from "./use-form-submit";
  * The box a file is chosen or dropped into — and, once there is a photo,
  * the photo itself.
  *
- * **One well, two callers**: A1's run file and every photo. Round 22 drew
- * it once (item 8, "one well") and the clone detector had already insisted
- * before that; they should evolve together.
+ * **One well, two callers**: A1's run file and the closet's garment photo.
+ * Round 22 drew it once (item 8, "one well") and the clone detector had
+ * already insisted before that; they should evolve together. A2's photos
+ * are `PhotoRow`'s since Round 56 · 249, and the closet keeps this well,
+ * with Replace and Remove (249.5).
  *
  * The states round 22 draws, each named on `data-state` so the conformance
  * harness can find it:
