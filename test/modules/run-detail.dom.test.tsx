@@ -1,8 +1,9 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { drawnText, saidText } from "./spoken-text";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import { ConditionsRow } from "../../src/modules/runs/components/ConditionsBlock";
 import { RunDetail } from "../../src/modules/runs/components/RunDetail";
 import type { ConditionsActions } from "../../src/modules/runs/components/SetConditionsSheet";
 import type { Units } from "../../src/lib/contracts";
@@ -238,15 +239,36 @@ describe("R: the conditions row", () => {
       "border",
       "border-hairline-2",
       "rounded-card",
-      "min-h-34",
       "p-4",
     );
+    // The block's resting height, inside the padding (34 less 2 × 4).
+    expect(slot.firstElementChild).toHaveClass("min-h-26");
+    // Run detail passes no note, so the slot holds no room for one.
+    expect(slot.querySelector("[data-part='note-room']")).toBeNull();
     expect(within(slot).getByText("Fetching weather")).toHaveClass(
       "text-mono-xs",
     );
     expect(slot).toHaveTextContent(
       "Fetching weatherUsually under a minute. You can go on without it.",
     );
+  });
+
+  it("holds the room of the note the block will carry, unseen, so nothing under it moves (R2-RUNS-08)", () => {
+    render(
+      <ConditionsRow
+        run={runSummary({ weatherStatus: "pending", conditions: undefined })}
+        units={MILES}
+        note={<p>Never typed by hand.</p>}
+      />,
+    );
+
+    const slot = region("conditions");
+    expect(slot).toHaveClass("flex", "flex-col", "gap-2");
+    const room = slot.querySelector("[data-part='note-room']");
+    expect(room).toBe(slot.lastElementChild);
+    expect(room).toHaveAttribute("aria-hidden", "true");
+    expect(room).toHaveClass("invisible");
+    expect(room).toHaveTextContent("Never typed by hand.");
   });
 
   it("calls an indoor run a treadmill, with nothing to set", async () => {

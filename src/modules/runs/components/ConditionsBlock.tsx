@@ -155,23 +155,43 @@ export function weatherSaid(run: RowRun): string | undefined {
 const SLOT_CLASS = "min-h-34 rounded-card p-4";
 
 /**
+ * The same resting height inside the waiting slot's padding (34 less the
+ * two 4s of `p-4`), so a note's room can sit under it.
+ */
+const SLOT_REST_CLASS = "min-h-26";
+
+/**
  * Round 55 · 233, waiting: a --hairline-2 outline in the block's place,
  * FETCHING WEATHER at its top left and what to expect under it. The runner
  * can go on without it.
+ *
+ * Where the block will carry a note (A1's), the slot holds an unseen copy
+ * of it under the resting height, one gap down as the block draws it, so
+ * the slot is the block's height and nothing under it moves when the
+ * weather lands (R2-RUNS-08).
  */
-function WaitingForWeather(): JSX.Element {
+function WaitingForWeather({
+  note,
+}: Readonly<{ note?: ReactNode }>): JSX.Element {
   return (
     <div
       data-slot="conditions"
       data-state="fetching"
-      className={`flex flex-col gap-2 border border-hairline-2 ${SLOT_CLASS}`}
+      className="flex flex-col gap-2 rounded-card border border-hairline-2 p-4"
     >
-      <Mono step="xs" className="text-ink">
-        Fetching weather
-      </Mono>
-      <span className="text-small text-label">
-        Usually under a minute. You can go on without it.
-      </span>
+      <div className={`flex flex-col gap-2 ${SLOT_REST_CLASS}`}>
+        <Mono step="xs" className="text-ink">
+          Fetching weather
+        </Mono>
+        <span className="text-small text-label">
+          Usually under a minute. You can go on without it.
+        </span>
+      </div>
+      {note === undefined ? undefined : (
+        <div data-part="note-room" aria-hidden="true" className="invisible">
+          {note}
+        </div>
+      )}
     </div>
   );
 }
@@ -228,7 +248,7 @@ export function ConditionsRow({
     );
   }
   const shown = weatherShown(run);
-  if (shown === "fetching") return <WaitingForWeather />;
+  if (shown === "fetching") return <WaitingForWeather note={note} />;
   if (shown === "indoor") return <IndoorBlock />;
   return (
     <div
