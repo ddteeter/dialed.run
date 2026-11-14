@@ -26,12 +26,15 @@ end of link, Notifications, # new
 button, Log a run
 end of banner
 main
-heading, Needs a verdict, level 1
+heading, Verdicts, level 1
 #
-runs · no verdict yet
+need one · oldest first
 table
 rowgroup
-row, Run Conditions Outfit Did it work?
+row, Date Run Conditions Outfit Did it work?
+columnheader, Date
+Date
+end of columnheader, Date
 columnheader, Run
 Run
 end of columnheader, Run
@@ -44,14 +47,16 @@ end of columnheader, Outfit
 columnheader, Did it work?
 Did it work?
 end of columnheader, Did it work?
-end of row, Run Conditions Outfit Did it work?
+end of row, Date Run Conditions Outfit Did it work?
 end of rowgroup
 rowgroup
 row, :day :month # # minutes, #.# miles # degrees, clear, wind # miles per hour Same as :day, :month #? Use Pick — :day :month # Way cold A bit cold Dialed A bit warm Way warm, current item
-cell, :day :month # # minutes, #.# miles
+cell, :day :month #
 :day :month #
+end of cell, :day :month #
+cell, # minutes, #.# miles
 # minutes, #.# miles
-end of cell, :day :month # # minutes, #.# miles
+end of cell, # minutes, #.# miles
 cell, # degrees, clear, wind # miles per hour
 # degrees, clear, wind # miles per hour
 end of cell, # degrees, clear, wind # miles per hour
@@ -96,13 +101,8 @@ Tab: outfit.
 of
 #
 saved
-status
-complementary
-Selected ·
-:day :month #
-# degrees, clear, wind # miles per hour
 link, Weather data provided by Visual Crossing
-end of complementary
+status
 end of main
 status
 end of document

@@ -357,8 +357,10 @@ test.describe("A3 · round 21", () => {
     );
     expect(colorRole(fill)).toBe(colorRole(drawnNotedFill));
 
-    // The header names the unit, with no temperature to be "at".
-    const header = await signatureOf(page, '[data-slot="header"]');
+    // The header names the unit, with no temperature to be "at". D2-04's
+    // "← Back" sits above the title, where the board's frame has none.
+    const [back, ...header] = await signatureOf(page, '[data-slot="header"]');
+    expect(back?.[0]).toBe("BACK");
     expect(header).toHaveLength(drawnHeader.length);
     expect(header[1]).toEqual(drawnHeader[1]);
 

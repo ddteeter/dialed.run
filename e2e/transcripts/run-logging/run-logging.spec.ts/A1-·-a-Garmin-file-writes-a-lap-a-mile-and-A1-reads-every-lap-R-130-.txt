@@ -39,12 +39,13 @@ end of paragraph
 paragraph
 # minutes # seconds per mile
 :day :month #
-button, #:#, change start time
-#:#
-end of button, #:#, change start time
+button, #:# UTC, change start time
+#:# UTC
+end of button, #:# UTC, change start time
 end of paragraph
 Fetching weather
-link, Looks right — what did you wear?
+Usually under a minute. You can go on without it.
+link, What did you wear?
 paragraph
 No file?
 link, Enter the run by hand

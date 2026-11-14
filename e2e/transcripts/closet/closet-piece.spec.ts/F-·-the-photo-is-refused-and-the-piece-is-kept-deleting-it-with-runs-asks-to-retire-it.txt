@@ -35,9 +35,7 @@ Add what you run in most. Three pieces is enough to start.
 end of paragraph
 list
 listitem, level 1, position 1, set size 1
-link, Add garment
-Add garment
-end of link, Add garment
+link, Add a piece
 end of listitem, level 1, position 1, set size 1
 end of list
 end of main

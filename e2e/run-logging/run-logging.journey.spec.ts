@@ -359,7 +359,7 @@ test("log a run: read a file in place, pick the kit, note it, enter one by hand"
     await hydrated(page);
     const reminder = page
       .getByRole("listitem")
-      .filter({ hasText: "New run on Strava · Add it here" });
+      .filter({ hasText: "New run on Strava. Upload its file" });
     await expect(reminder).toHaveCount(1);
     // Read: the paper and quiet text, where unread is a white row.
     await expect(reminder).toHaveClass(/text-quiet/u);

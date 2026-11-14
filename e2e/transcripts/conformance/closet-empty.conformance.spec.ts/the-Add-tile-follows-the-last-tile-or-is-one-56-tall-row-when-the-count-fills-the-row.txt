@@ -1,0 +1,132 @@
+document
+banner
+link, dialed.run home
+dialed.run
+end of link, dialed.run home
+navigation, Main
+list
+listitem, level 1, position 1, set size 4
+link, Feed
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+link, Closet, current page
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+link, Call
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+link, You
+end of listitem, level 1, position 4, set size 4
+end of list
+end of navigation, Main
+link, Search runners
+link, Notifications
+button, Log a run
+end of banner
+main
+navigation, Filter the closet
+heading, Group, level 2
+Group
+end of heading, Group, level 2
+list
+listitem, level 1, position 1, set size 2
+link, All #, current page
+All
+#
+end of link, All #, current page
+end of listitem, level 1, position 1, set size 2
+listitem, level 1, position 2, set size 2
+link, Tops #
+Tops
+#
+end of link, Tops #
+end of listitem, level 1, position 2, set size 2
+end of list
+heading, Works at, level 2
+Works at
+end of heading, Works at, level 2
+paragraph
+Untested
+end of paragraph
+heading, Coverage, level 2
+Coverage
+end of heading, Coverage, level 2
+list
+listitem, level 1, position 1, set size 3
+button, Covered #, not pressed
+Covered
+#
+end of button, Covered #, not pressed
+end of listitem, level 1, position 1, set size 3
+listitem, level 1, position 2, set size 3
+button, Partial #, not pressed
+Partial
+#
+end of button, Partial #, not pressed
+end of listitem, level 1, position 2, set size 3
+listitem, level 1, position 3, set size 3
+button, Untested #, not pressed
+Untested
+#
+end of button, Untested #, not pressed
+end of listitem, level 1, position 3, set size 3
+end of list
+end of navigation, Filter the closet
+status
+heading, # pieces, level 1
+paragraph
+#
+of
+#
+pieces are still generic. Name the ones you reach for.
+end of paragraph
+list
+listitem, level 1, position 1, set size 7
+link, Row tile # No runs yet Generic
+Row tile #
+No runs yet
+Generic
+end of link, Row tile # No runs yet Generic
+end of listitem, level 1, position 1, set size 7
+listitem, level 1, position 2, set size 7
+link, Row tile # No runs yet Generic
+Row tile #
+No runs yet
+Generic
+end of link, Row tile # No runs yet Generic
+end of listitem, level 1, position 2, set size 7
+listitem, level 1, position 3, set size 7
+link, Row tile # No runs yet Generic
+Row tile #
+No runs yet
+Generic
+end of link, Row tile # No runs yet Generic
+end of listitem, level 1, position 3, set size 7
+listitem, level 1, position 4, set size 7
+link, Row tile # No runs yet Generic
+Row tile #
+No runs yet
+Generic
+end of link, Row tile # No runs yet Generic
+end of listitem, level 1, position 4, set size 7
+listitem, level 1, position 5, set size 7
+link, Row tile # No runs yet Generic
+Row tile #
+No runs yet
+Generic
+end of link, Row tile # No runs yet Generic
+end of listitem, level 1, position 5, set size 7
+listitem, level 1, position 6, set size 7
+link, Row tile # No runs yet Generic
+Row tile #
+No runs yet
+Generic
+end of link, Row tile # No runs yet Generic
+end of listitem, level 1, position 6, set size 7
+listitem, level 1, position 7, set size 7
+link, Add a piece
+end of listitem, level 1, position 7, set size 7
+end of list
+end of main
+status
+end of document

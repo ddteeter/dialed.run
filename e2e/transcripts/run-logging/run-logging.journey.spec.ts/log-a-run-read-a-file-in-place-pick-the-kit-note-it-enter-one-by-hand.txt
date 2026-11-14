@@ -27,23 +27,43 @@ button, Log a run
 end of banner
 main
 heading, Runs, level 1
+link, Strava reminders · Off
+Strava reminders ·
+Off
+end of link, Strava reminders · Off
+region, :month #
+heading, :month # · # run, level 2
+:month # · # run
+end of heading, :month # · # run, level 2
 list
-listitem, level 1, position 1, set size 2
-link, #.# miles, :day :month # # degrees Fahrenheit, dry
-#.# miles, :day :month #
-# degrees Fahrenheit, dry
-end of link, #.# miles, :day :month # # degrees Fahrenheit, dry
-Conditions
-end of listitem, level 1, position 1, set size 2
-listitem, level 1, position 2, set size 2
-link, #.# miles, :day :month # No weather for this time
-#.# miles, :day :month #
-No weather for this time
-end of link, #.# miles, :day :month # No weather for this time
-end of listitem, level 1, position 2, set size 2
+listitem, level 1, position 1, set size 1
+link, :day :month #, #.# miles
+:day :month #, #.# miles
+end of link, :day :month #, #.# miles
+# degrees Fahrenheit, dry, #.# miles
+Dialed
+Kit
+end of listitem, level 1, position 1, set size 1
 end of list
+end of region, :month #
+region, :month #
+heading, :month # · # run, level 2
+:month # · # run
+end of heading, :month # · # run, level 2
+list
+listitem, level 1, position 1, set size 1
+link, :day :month #, #.# miles
+:day :month #, #.# miles
+end of link, :day :month #, #.# miles
+No weather for this time, #.# miles
+No verdict
+No kit
+end of listitem, level 1, position 1, set size 1
+end of list
+end of region, :month #
+That’s every run · since
+:month #
 link, Weather data provided by Visual Crossing
-link, Strava reminders
 end of main
 status
 end of document

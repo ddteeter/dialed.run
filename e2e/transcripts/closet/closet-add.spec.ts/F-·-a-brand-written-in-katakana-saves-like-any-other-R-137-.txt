@@ -30,7 +30,7 @@ paragraph
 Shoes
 end of paragraph
 heading, ミズノ ウエーブライダー #, level 1
-# km logged
+No runs yet
 paragraph
 Untested
 end of paragraph

@@ -155,7 +155,7 @@ button, Add to closet
 Add to closet
 end of button, Add to closet
 end of form
-heading, Already in your closet · Top · Half-zip, level 2
+heading, Already in your closet · Tops, level 2
 list
 listitem, level 1, position 1, set size 4
 Tracksmith Harrier
@@ -165,18 +165,19 @@ Tracksmith Harrier
 # to # degrees
 end of listitem, level 1, position 1, set size 4
 listitem, level 1, position 2, set size 4
-Janji Rover Half-zip
-# runs · Retired :month #
-Same name · Retired
-end of listitem, level 1, position 2, set size 4
-listitem, level 1, position 3, set size 4
 Uniqlo quarter-zip
 # runs · No verdict yet
-end of listitem, level 1, position 3, set size 4
-listitem, level 1, position 4, set size 4
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
 Janji Rover Half-zip
 # runs · No verdict yet
 Same name
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+Janji Rover Half-zip
+# runs ·
+# of # runs dialed
+Same name · Retired :month #
 end of listitem, level 1, position 4, set size 4
 end of list
 end of main

@@ -227,9 +227,9 @@ test("add garments with product identity -> detail in round 22's order -> retire
     "No runs yet",
     { ignoreCase: true },
   );
-  await expect(pegasus.locator("[data-part='tile-range']")).toHaveText(
-    /^\[[^\]]+\]$/u,
-  );
+  // Round 55 · 189: the range has a slot only when the piece has a range,
+  // and the Pegasus was saved without one.
+  await expect(pegasus.locator("[data-part='tile-range']")).toHaveCount(0);
 
   // ---- R-94 · C's rail: GROUP, WORKS AT, COVERAGE --------------------------
   // Round 16's three groups beside the grid at desk, whole. Every value is
@@ -237,7 +237,11 @@ test("add garments with product identity -> detail in round 22's order -> retire
   // closet's, not narrowed by the other groups.
   await scene(page, "C · the rail: GROUP with counts, WORKS AT, COVERAGE");
   const filters = page.locator("nav[data-part='rail']");
-  await expect(filters.getByRole("link", { name: /^All/ })).toHaveText("All 2");
+  // C-11's unseen bold copy holds the label's width, so read what is
+  // heard rather than the text the node holds.
+  await expect(
+    filters.getByRole("link", { name: /^All/ }),
+  ).toHaveAccessibleName("All 2");
   await expect(filters.getByRole("link", { name: /^All/ })).toHaveAttribute(
     "aria-current",
     "page",
@@ -248,9 +252,9 @@ test("add garments with product identity -> detail in round 22's order -> retire
   // Round 47 #112b: a group the closet holds nothing in is left out, and
   // All always shows. Two pieces, shoes and an outer: two groups.
   await expect(filters.getByRole("link", { name: /^Tops/ })).toHaveCount(0);
-  await expect(filters.getByRole("link", { name: /^Outer/ })).toHaveText(
-    "Outer 1",
-  );
+  await expect(
+    filters.getByRole("link", { name: /^Outer/ }),
+  ).toHaveAccessibleName("Outer 1");
 
   await scene(page, "C · GROUP narrows the grid, and the heading names it");
   await filters.getByRole("link", { name: /^Shoes/ }).click();
@@ -261,7 +265,11 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await expect(
     page.getByRole("link", { name: /Patagonia Houdini Jacket/ }),
   ).toHaveCount(0);
-  await expect(filters.getByRole("link", { name: /^All/ })).toHaveText("All 2");
+  // C-11's unseen bold copy holds the label's width, so read what is
+  // heard rather than the text the node holds.
+  await expect(
+    filters.getByRole("link", { name: /^All/ }),
+  ).toHaveAccessibleName("All 2");
   await filters.getByRole("link", { name: /^All/ }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("2 pieces");
 

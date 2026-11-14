@@ -26,7 +26,9 @@ This run is already in your log. Nothing new was added.
 end of paragraph
 link, Open that run
 paragraph
-Wrong file? Replace it.
+Wrong file? Tap
+Replace
+above.
 end of paragraph
 paragraph
 No file?

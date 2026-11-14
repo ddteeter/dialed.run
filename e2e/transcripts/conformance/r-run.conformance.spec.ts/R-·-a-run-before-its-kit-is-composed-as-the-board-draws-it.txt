@@ -4,7 +4,7 @@ heading, Run, level 1
 link, Notifications, # new
 #
 end of link, Notifications, # new
-:day :month # · #:# · File
+:day :month # · #:# UTC · File
 paragraph
 #.# mi
 # minutes # seconds per mile

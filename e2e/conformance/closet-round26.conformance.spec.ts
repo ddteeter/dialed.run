@@ -263,6 +263,14 @@ test("F · saved with its photo refused is round 26's band and Done", async ({
   created.itemIds.push(new URL(page.url()).pathname.split("/").at(-1) ?? "");
 });
 
+/**
+ * A rail row's piece and its run count, which the board and the build
+ * share; other specs may leave a piece of the same name with other runs.
+ */
+function pieceOf(row: string): string {
+  return /^.*? \d+ RUNS/u.exec(row)?.[0] ?? row;
+}
+
 test("F at the desk · the rail card is round 26's rows, newest first, marked, under round 40's heading", async ({
   page,
   baseURL,
@@ -328,13 +336,28 @@ test("F at the desk · the rail card is round 26's rows, newest first, marked, u
     page.locator(card).getByText("Same name · Retired"),
   ).toBeVisible();
 
-  // Round 40 C4 sets the title as a heading in sentence case: the board's
-  // words, no longer its mono capitals.
-  const title = "Already in your closet · Top · Half-zip";
-  expect(title.toUpperCase()).toBe(drawnTitle);
-  await expect(page.locator(`${card} > h2`)).toHaveText(title);
+  // Round 40 C4 sets the title as a heading in sentence case. Round 56 ·
+  // 248 names the closet's group rather than the category and type, so
+  // the board's "TOP · HALF-ZIP" is now its group's word.
+  expect(drawnTitle).toBe("ALREADY IN YOUR CLOSET · TOP · HALF-ZIP");
+  await expect(page.locator(`${card} > h2`)).toHaveText(
+    "Already in your closet · Tops",
+  );
   const rows = await cellsOf(page, `${card} ul`);
-  // The closet may hold other half-zips from other specs; the board's
-  // three are seeded newest (dated ahead, on purpose), so they lead.
-  expect(rows.slice(0, 3)).toStrictEqual(drawnRows);
+  // The closet may hold other tops from other specs, so read the board's
+  // three among them by name and run count. Round 56 · 248 orders them in use first,
+  // most worn first (Harrier's 41, then the Uniqlo's 3), and retired last.
+  const [harrierRow = "", roverRow = "", uniqloRow = ""] = drawnRows;
+  const ours = rows.filter((row) =>
+    drawnRows.some((drawnRow) => row.startsWith(pieceOf(drawnRow))),
+  );
+  expect(ours.slice(0, 2)).toStrictEqual([harrierRow, uniqloRow]);
+  // 248 keeps RETIRED to once, as the dated tag: the board's
+  // "· RETIRED MAR 2026" on the record and "SAME NAME · RETIRED" beside it
+  // read "SAME NAME · RETIRED MAR 2026".
+  expect(roverRow).toContain("RETIRED MAR 2026 SAME NAME · RETIRED");
+  expect(ours[2]).toMatch(
+    /^JANJI ROVER HALF-ZIP 12 RUNS .*SAME NAME · RETIRED MAR 2026$/u,
+  );
+  expect(ours[2]?.match(/RETIRED/gu)).toHaveLength(1);
 });

@@ -57,7 +57,7 @@ end of list
 heading, Works at, level 2
 Works at
 end of heading, Works at, level 2
-# to # degrees Fahrenheit
+Any
 slider, Lowest, #, orientated horizontally, max value #, min value #
 slider, Highest, #, orientated horizontally, max value #, min value #
 heading, Coverage, level 2
@@ -90,7 +90,7 @@ paragraph
 #
 of
 #
-pieces are still generic — name the ones you reach for.
+pieces are still generic. Name the ones you reach for.
 end of paragraph
 list
 listitem, level 1, position 1, set size 4
@@ -118,9 +118,7 @@ Generic
 end of link, Running gloves No runs yet # to # degrees Generic
 end of listitem, level 1, position 3, set size 4
 listitem, level 1, position 4, set size 4
-link, Add garment
-Add garment
-end of link, Add garment
+link, Add a piece
 end of listitem, level 1, position 4, set size 4
 end of list
 end of main

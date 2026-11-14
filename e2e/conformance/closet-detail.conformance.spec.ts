@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 
+import { wholeDistanceNumber } from "../../src/lib/contracts/measures";
 import { expect, test } from "../support/a11y";
 import { storageStateFor } from "../support/accounts";
 import { cellsOf, fillsOf, openBoard } from "../support/conformance";
@@ -175,6 +176,20 @@ const APP = "body";
  */
 const seeded: { garment?: SeededGarment } = {};
 
+/**
+ * The board draws the record in kilometres; C-17 and N1-06 put it in the
+ * runner's own unit, and the closet's runner reads miles.
+ */
+function inMiles(stats: readonly string[]): string[] {
+  return stats.map((cell) =>
+    cell.replace(
+      /^(\d+) KM LOGGED/u,
+      (_, km: string) =>
+        `${wholeDistanceNumber(Number(km) * 1000, "mi")} MI LOGGED`,
+    ),
+  );
+}
+
 function seed(): SeededGarment {
   if (seeded.garment === undefined) throw new Error("nothing seeded");
   return seeded.garment;
@@ -226,7 +241,9 @@ test("garment detail at 390 is composed as round 22 draws it", async ({
     page.locator('[data-part="identity"] [data-content]'),
   ).toHaveCount(drawnSwatch);
 
-  expect(await cells(page, '[data-part="stats"]')).toStrictEqual(drawnStats);
+  expect(await cells(page, '[data-part="stats"]')).toStrictEqual(
+    inMiles(drawnStats),
+  );
   expect(await isSideBySide(page, '[data-part="stats"]')).toBe(
     isDrawnStatsBeside,
   );
@@ -280,7 +297,9 @@ test("garment detail at 1040 keeps the order in one column, photo capped at 320"
   );
 
   // "The stats line and works-at share a row at width."
-  expect(await cells(page, '[data-part="stats"]')).toStrictEqual(drawnStats);
+  expect(await cells(page, '[data-part="stats"]')).toStrictEqual(
+    inMiles(drawnStats),
+  );
   expect(await isSideBySide(page, '[data-part="stats"]')).toBe(
     isDrawnStatsBeside,
   );

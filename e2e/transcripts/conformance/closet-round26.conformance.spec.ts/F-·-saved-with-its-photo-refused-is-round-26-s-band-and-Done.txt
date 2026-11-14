@@ -18,6 +18,14 @@ button, Try again
 Pick another
 Pick another
 button, Done
+heading, Already in your closet · Tops, level 2
+list
+listitem, level 1, position 1, set size 1
+Janji Rover Half-zip
+# runs · No verdict yet
+Same name
+end of listitem, level 1, position 1, set size 1
+end of list
 end of main
 navigation, Main
 list

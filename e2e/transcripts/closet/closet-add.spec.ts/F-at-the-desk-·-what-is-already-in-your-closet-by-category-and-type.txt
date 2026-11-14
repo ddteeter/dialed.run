@@ -113,8 +113,8 @@ heading, Already in your closet · Shoes, level 2
 list
 listitem, level 1, position 1, set size 1
 Nike Pegasus #
-# runs · Retired :month #
-Retired
+# runs · No verdict yet
+Retired :month #
 end of listitem, level 1, position 1, set size 1
 end of list
 end of main
