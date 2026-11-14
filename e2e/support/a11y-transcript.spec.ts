@@ -99,6 +99,9 @@ test("what differs between runs is normalized, and structure is not", () => {
   expect(normalize("Kit 01M6H3VMJB8Y4HRSP8T7FPRGG8, closet_17")).toBe(
     "Kit :id, closet_#",
   );
+  expect(normalize("entry · 01M6…RGG8 · @rude_3")).toBe(
+    "entry · :id · @rude_#",
+  );
   expect(normalize("Ran at 6:42 AM on Monday, November 3")).toBe(
     "Ran at #:# on :day, :month #",
   );

@@ -936,7 +936,8 @@ describe("D7 · Access", () => {
     ).toStrictEqual(many);
     expect(screen.queryByRole("complementary")).toBeNull();
     await user.click(within(drawer).getByRole("button", { name: "Close" }));
-    expect(screen.queryByRole("dialog")).toBeNull();
+    // Unpicked, not merely shut: the drawer leaves the page.
+    expect(document.querySelector("dialog")).toBeNull();
   });
 
   it("offers no + more for five runners or fewer", async () => {

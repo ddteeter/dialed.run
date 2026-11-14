@@ -57,7 +57,7 @@ const END = "end of document";
 
 /**
  * What differs between two runs of the same test, and between the dev
- * server and the build: ids, seeded handles and every number (counts,
+ * server and the build: ids (whole or short), seeded handles and every number (counts,
  * times, dates, temperatures), and a post's "2h ago" or "Yesterday",
  * which depends on the hour the test runs. A transcript is about what is said and
  * in what order; the values are other tests' business. Heading levels
@@ -67,6 +67,9 @@ export function normalize(phrase: string): string {
   return (
     phrase
       .replaceAll(/[0-9A-HJKMNP-TV-Z]{26}/gu, ":id")
+      // The Desk's short id (`safety/components/short-id.ts`): an id's
+      // first and last four, whose tail is the id's random part.
+      .replaceAll(/[0-9A-HJKMNP-TV-Z]{4}…[0-9A-HJKMNP-TV-Z]{4}/gu, ":id")
       .replaceAll(DAY_NAME, ":day")
       .replaceAll(MONTH_NAME, ":month")
       // A heading's level and a list item's place are structure, not data.

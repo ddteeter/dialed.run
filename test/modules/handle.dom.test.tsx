@@ -148,6 +148,7 @@ describe("RunnerAtHandle", () => {
       "/feed/u/old_name",
     );
 
+    expectTheColumn();
     expect(screen.getByText("This runner changed their name.")).toBeVisible();
     expect(screen.getByRole("link", { name: "Back to feed" })).toHaveAttribute(
       "href",

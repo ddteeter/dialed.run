@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderToString } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 
 import { DESK_MEDIA_QUERY, DeskDetail } from "../../src/ui/DeskDetail";
 import { atWidth } from "./desk-width";
@@ -72,11 +72,19 @@ describe("DeskDetail at desk", () => {
 describe("DeskDetail below desk (R55·202)", () => {
   it("opens the picked thing as a non-modal drawer named for it, the table still there", () => {
     atWidth(false);
+    const show = vi.spyOn(HTMLDialogElement.prototype, "show");
+    const showModal = vi.spyOn(HTMLDialogElement.prototype, "showModal");
+    onTestFinished(() => {
+      show.mockRestore();
+      showModal.mockRestore();
+    });
     render(table(PICKED));
     const drawer = screen.getByRole("dialog", { name: "@ada" });
     expect(drawer).toHaveAttribute("open");
     expect(drawer).toHaveTextContent("the detail");
     // `show()`, not `showModal()`: the table beside it stays live.
+    expect(show).toHaveBeenCalledOnce();
+    expect(showModal).not.toHaveBeenCalled();
     expect(screen.getByText("the table")).toBeVisible();
     expect(screen.queryByRole("complementary")).toBeNull();
   });

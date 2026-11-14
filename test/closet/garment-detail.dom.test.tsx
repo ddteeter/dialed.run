@@ -500,6 +500,8 @@ describe("GarmentDetail: WRONG? › (R-74, R48·129)", () => {
   it("opens a fresh sheet after the last one closed", async () => {
     const { element, actions } = withCorrection({ composition: COMPOSITION });
     await renderWithRouter(element);
+    // The page's own confirm sheets, there before WRONG? opens one.
+    const shut = document.querySelectorAll("dialog").length;
     fireEvent.click(screen.getByRole("button", { name: "Wrong?" }));
     fireEvent.click(await screen.findByRole("button", { name: "Close" }));
     await waitFor(() => {
@@ -507,6 +509,8 @@ describe("GarmentDetail: WRONG? › (R-74, R48·129)", () => {
         screen.queryByRole("heading", { name: "What's wrong with it?" }),
       ).toBeNull();
     });
+    // Closed is gone, not a shut dialog left behind.
+    expect(document.querySelectorAll("dialog")).toHaveLength(shut);
     fireEvent.click(screen.getByRole("button", { name: "Wrong?" }));
     expect(
       await screen.findByRole("heading", { name: "What's wrong with it?" }),
