@@ -18,7 +18,18 @@ import { defineConfig } from "@playwright/test";
 
 import { smokeTarget } from "./e2e/smoke/target";
 
-const target = smokeTarget(process.env);
+/**
+ * The target when the deploy job's environment is present, else nothing.
+ * A tool that only loads this file has none of it: knip's Playwright
+ * plugin loads the config `ci.yml` names, and one that threw at import was
+ * reported as an unlisted binary (#533). Nothing is weakened: the spec
+ * calls `smokeTarget` itself as it loads, so a run without the environment
+ * still fails before any request, and a partial one fails here.
+ */
+const target =
+  process.env.SMOKE_BASE_URL === undefined
+    ? undefined
+    : smokeTarget(process.env);
 
 export default defineConfig({
   testDir: "e2e/smoke",
@@ -30,8 +41,8 @@ export default defineConfig({
   forbidOnly: true,
   reporter: [["list"]],
   use: {
-    baseURL: target.baseURL,
-    extraHTTPHeaders: target.headers,
+    baseURL: target?.baseURL,
+    ...(target && { extraHTTPHeaders: target.headers }),
     trace: "off",
     video: "off",
     screenshot: "off",
