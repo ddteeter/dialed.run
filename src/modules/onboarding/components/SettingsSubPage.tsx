@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import type { JSX, ReactNode } from "react";
 
-import { Icon, Page } from "../../../ui";
+import { FormStatus, Icon, Page } from "../../../ui";
 import type { CurrentSettings } from "../profile";
 import type { SettingsSection } from "../route-decisions";
 import type { PublicProfileState } from "../public-profile";
@@ -157,9 +157,15 @@ export function SettingsSectionPage(props: SectionPageProps): JSX.Element {
  * 41 #86b): WHO SEES NEW RUNS is a form with its Save, its legend the
  * group's kicker (round 42 #92); PUBLIC PROFILE and
  * ANONYMOUS TOTALS save on toggle, so they sit after the form's end,
- * outside it, under a rule and a kicker that says so. A failure in either
- * is §4a's NOT CHANGED in its own group. The switches come after the
- * form, so Tab never passes them between its field and its Save.
+ * outside it, under a rule. They are switches, which say it, so their
+ * kickers no longer end "· Saves as you switch" (D-185, R54·166.3). A
+ * failure in either is §4a's NOT CHANGED in its own group. The switches
+ * come after the form, so Tab never passes them between its field and its
+ * Save.
+ *
+ * **One status region for the page** (Accessibility Contract rule 08):
+ * the form's "Privacy saved." and the switches' "Saved." or "Not changed"
+ * all go to it, the latest said.
  *
  * **The profile switch reaches into NEW RUNS**, so its saved state lives
  * here: the PUBLIC row shows only while the profile is public, and
@@ -177,6 +183,7 @@ function PrivacySections({
   markPrivacySeen,
 }: SectionPageProps): JSX.Element {
   useStampOnOpen(markPrivacySeen);
+  const [status, setStatus] = useState("");
   const [profile, setProfile] = useState({
     publicProfile: current.publicProfile,
     publicCloset: current.publicCloset,
@@ -197,8 +204,10 @@ function PrivacySections({
 
   return (
     <>
+      <FormStatus>{status}</FormStatus>
       <SubPageGroup title={SHARE_DEFAULT_LEGEND}>
         <SharingForm
+          onStatus={setStatus}
           key={String(profile.publicProfile)}
           current={{
             defaultAudience: savedDefault,
@@ -219,14 +228,16 @@ function PrivacySections({
           notice: hasMoved ? DEFAULT_MOVED_LINE : undefined,
           save: savePublicProfile,
           onSaved: onProfileSaved,
+          onAnnounce: setStatus,
         }}
       />
       <GroupRule />
-      <SubPageGroup title="Anonymous totals · Saves as you switch">
+      <SubPageGroup title="Anonymous totals">
         <TotalsSwitch
           initial={current.countInTotals}
           isVerified={isVerified}
           save={saveCountInTotals}
+          onAnnounce={setStatus}
         />
       </SubPageGroup>
     </>
@@ -258,7 +269,7 @@ async function stampQuietly(stamp: () => Promise<unknown>): Promise<void> {
 /**
  * PUBLIC PROFILE: round 41 #86b's switches under a handle, and before one
  * (round 42 #92) no switch — the line and "Pick a username" under the
- * kicker alone, which drops "Saves as you switch" while nothing does.
+ * kicker alone.
  * Once the sheet saves a handle, the switches appear, focused.
  */
 function PublicProfileGroup({
@@ -289,7 +300,7 @@ function PublicProfileGroup({
     );
   }
   return (
-    <SubPageGroup title="Public profile · Saves as you switch">
+    <SubPageGroup title="Public profile">
       <PublicProfileSwitches
         {...switches}
         handle={handle}

@@ -43,7 +43,7 @@ async function renderWithRouter(element: ReactElement) {
 }
 
 function totalsBox() {
-  return screen.getByRole("checkbox", { name: TOTALS_LABEL });
+  return screen.getByRole("switch", { name: TOTALS_LABEL });
 }
 
 describe("TotalsSwitch (round 32, frames 1a and 1b)", () => {
@@ -91,6 +91,37 @@ describe("TotalsSwitch (round 32, frames 1a and 1b)", () => {
     expect(totalsBox()).toHaveAccessibleDescription(TOTALS_OFF);
     expect(onSaved).toHaveBeenCalledWith(false);
     expect(screen.queryByRole("dialog")).toBeNull();
+    // Alone on its surface (A3's sheet), it draws its own region and says
+    // Saved. there (D-185, R54·166.3).
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(screen.getByRole("status")).toHaveTextContent(/^Saved\.$/u);
+  });
+
+  it("is a switch at its row's right, its label naming the row (R54·166.3/166.5)", async () => {
+    await renderWithRouter(<TotalsSwitch isVerified initial save={vi.fn()} />);
+    const row = totalsBox().closest("label");
+    expect(row).toHaveClass("justify-between", "font-semibold");
+    expect(row?.lastElementChild).toBe(totalsBox());
+  });
+
+  it("hands its status to the screen's region when given one, and draws none", async () => {
+    const user = userEvent.setup();
+    const onAnnounce = vi.fn();
+    await renderWithRouter(
+      <TotalsSwitch
+        isVerified
+        initial
+        save={vi.fn().mockResolvedValue(undefined)}
+        onAnnounce={onAnnounce}
+      />,
+    );
+    expect(screen.queryByRole("status")).toBeNull();
+    // Nothing said as it mounts.
+    expect(onAnnounce).not.toHaveBeenCalled();
+    await user.click(totalsBox());
+    await waitFor(() => {
+      expect(onAnnounce).toHaveBeenLastCalledWith("Saved.");
+    });
   });
 
   it("saves back on from off", async () => {
@@ -289,7 +320,7 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
     await user.click(change);
     expect(
       within(screen.getByRole("dialog", { name: "Privacy" })).getByRole(
-        "checkbox",
+        "switch",
       ),
     ).toHaveAccessibleDescription(TOTALS_ON);
   });
@@ -304,7 +335,7 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
     expect(
       within(sheet).getByRole("heading", { level: 2, name: "Privacy" }),
     ).toBeVisible();
-    expect(within(sheet).getByRole("checkbox")).toBeChecked();
+    expect(within(sheet).getByRole("switch")).toBeChecked();
 
     await user.click(within(sheet).getByRole("button", { name: "Done" }));
     expect(screen.queryByRole("dialog")).toBeNull();

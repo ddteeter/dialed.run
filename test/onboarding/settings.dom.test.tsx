@@ -440,7 +440,7 @@ describe("the sub-pages", () => {
       screen.getByRole("heading", { level: 1, name: "Units" }),
     ).toBeVisible();
     expect(screen.getByRole("radio", { name: "°F" })).toBeChecked();
-    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.queryByRole("switch")).toBeNull();
     unmount();
 
     await renderWithRouter(
@@ -476,7 +476,7 @@ describe("the sub-pages", () => {
     expect(saveUnits).not.toHaveBeenCalled();
     // D-108's switch sits beside the default and saves on its own.
     expect(
-      screen.getByRole("checkbox", {
+      screen.getByRole("switch", {
         name: "Count my runs in anonymous totals",
       }),
     ).toBeChecked();
@@ -621,20 +621,29 @@ describe("the sub-pages", () => {
       screen.getByRole("group", { name: "Who sees new runs" })
         .firstElementChild,
     ).toHaveClass("sr-only");
-    expect(profile).toHaveTextContent(
-      /^Public profile · Saves as you switch$/u,
-    );
-    expect(totals).toHaveTextContent(
-      /^Anonymous totals · Saves as you switch$/u,
-    );
+    // The switches say they save as they change, so the kickers no
+    // longer do (D-185, R54·166.3; #703 R2-ONB-01).
+    expect(profile).toHaveTextContent(/^Public profile$/u);
+    expect(totals).toHaveTextContent(/^Anonymous totals$/u);
+    expect(screen.queryByText(/saves as you switch/iu)).toBeNull();
+    // Each switch at its row's right, its label 600, as it names the row.
+    for (const name of [
+      "Public profile",
+      "Show my closet",
+      "Count my runs in anonymous totals",
+    ]) {
+      const row = screen.getByRole("switch", { name }).closest("label");
+      expect(row).toHaveClass("justify-between", "font-semibold");
+      expect(row?.lastElementChild).toBe(screen.getByRole("switch", { name }));
+    }
     // The kicker is mono, in the muted role U1's group headings use.
     expect(newRuns).toHaveClass("text-muted");
     expect(newRuns?.firstElementChild).toHaveClass("text-mono-xs");
 
     const shared = screen.getByRole("radio", { name: "Shared" });
-    const publicly = screen.getByRole("checkbox", { name: "Public profile" });
-    const closet = screen.getByRole("checkbox", { name: "Show my closet" });
-    const counted = screen.getByRole("checkbox", {
+    const publicly = screen.getByRole("switch", { name: "Public profile" });
+    const closet = screen.getByRole("switch", { name: "Show my closet" });
+    const counted = screen.getByRole("switch", {
       name: "Count my runs in anonymous totals",
     });
     const save = screen.getByRole("button", { name: "Save" });
@@ -691,7 +700,7 @@ describe("the sub-pages", () => {
       />,
     );
     expect(
-      screen.getByRole("checkbox", {
+      screen.getByRole("switch", {
         name: "Count my runs in anonymous totals",
       }),
     ).toHaveAccessibleDescription(/^Once you confirm your email/u);
@@ -727,7 +736,7 @@ describe("the sub-pages", () => {
     });
   });
 
-  it("draw the default's words as MONO.xs capitals, heard in sentence case (round 41 #86b)", async () => {
+  it("draw the default's words as MONO.sm capitals, heard in sentence case (R54·166.5)", async () => {
     await renderWithRouter(
       <SharingForm current={ANSWERED} saveSharing={vi.fn()} />,
     );
@@ -735,9 +744,10 @@ describe("the sub-pages", () => {
     for (const word of ["Private", "Shared"]) {
       expect(within(group).getByText(word)).toHaveClass(
         "font-mono",
-        "text-mono-xs",
+        "text-mono-sm",
         "uppercase",
       );
+      expect(within(group).getByText(word)).not.toHaveClass("text-mono-xs");
     }
   });
 

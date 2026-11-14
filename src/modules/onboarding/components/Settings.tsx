@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { LinkProps } from "@tanstack/react-router";
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { JSX, ReactNode } from "react";
 import type { z } from "zod";
 
@@ -9,20 +9,17 @@ import {
   thermalOffsetLabel,
   thermalScale,
 } from "../../../lib/contracts";
-import { notificationSettingsSchema } from "../../../lib/contracts/email";
 import type { DistanceUnit, TempUnit } from "../../../lib/contracts";
 import {
   AUDIENCE_LABELS,
   ChoiceList,
   FormErrorSummary,
   FormFailureBand,
-  FormStatus,
   Icon,
   Mono,
   PICKED_AUDIENCES,
   SlowLabel,
   SubmitButton,
-  ToggleField,
   useFormSubmit,
   useTappedSlow,
 } from "../../../ui";
@@ -33,6 +30,7 @@ import {
 } from "../inputs";
 import type { SharingChoice, UnitsChoice } from "../inputs";
 import type { CurrentSettings } from "../profile";
+import { SavedSwitchRow, SwitchStatus } from "./saved-switch";
 import { UNIT_LABELS, UnitFields } from "./UnitFields";
 
 /**
@@ -415,6 +413,7 @@ function SectionForm<TSchema extends z.ZodType>({
   save,
   successMessage,
   labels,
+  onStatus,
   children,
 }: Readonly<{
   schema: TSchema;
@@ -422,6 +421,11 @@ function SectionForm<TSchema extends z.ZodType>({
   save: (input: { data: z.output<TSchema> }) => Promise<unknown>;
   successMessage: string;
   labels: Record<string, string>;
+  /**
+  The screen's one status region, when the page holds it rather than the
+  form: Privacy's, shared with its switches (rule 08).
+  */
+  onStatus?: ((status: string) => void) | undefined;
   children: (fields: SectionFields<z.output<TSchema>>) => ReactNode;
 }>): JSX.Element {
   const [value, setValue] = useState(initial);
@@ -443,7 +447,7 @@ function SectionForm<TSchema extends z.ZodType>({
         void form.submit(value);
       }}
     >
-      <SubPageHead form={form} />
+      <SubPageHead form={form} onStatus={onStatus} />
       {children({ value, onChange: setValue, form })}
       <SaveFoot form={form} />
     </form>
@@ -545,7 +549,9 @@ function SharingFields({
         isLegendHeading
         options={isProfilePublic ? PICKED_AUDIENCES : NOT_PUBLIC_AUDIENCES}
         optionLabels={AUDIENCE_LABELS}
-        optionStep="xs"
+        // Name labels are MONO.sm capitals at 400, as SYSTEM / LIGHT /
+        // DARK are (R54·166.5; #703 R2-ONB-01).
+        optionStep="sm"
         value={value.defaultAudience}
         field={form.field}
         error={form.fieldErrors.defaultAudience}
@@ -567,9 +573,14 @@ function SharingFields({
 export function SharingForm({
   current,
   saveSharing,
+  onStatus,
 }: Readonly<{
   current: Pick<CurrentSettings, "defaultAudience" | "publicProfile">;
   saveSharing: (input: { data: SharingChoice }) => Promise<unknown>;
+  /**
+  Privacy's one status region, which its switches share.
+  */
+  onStatus?: ((status: string) => void) | undefined;
 }>): JSX.Element {
   return (
     <SectionForm
@@ -577,6 +588,7 @@ export function SharingForm({
       initial={{ defaultAudience: current.defaultAudience }}
       save={saveSharing}
       successMessage="Privacy saved."
+      onStatus={onStatus}
       // No summary labels: labels name rows in the error summary, which
       // appears only for two or more failing fields, and this form has
       // one. The field carries its own label. Add one here with a second
@@ -596,15 +608,17 @@ export function SharingForm({
  */
 function SubPageHead({
   form,
+  onStatus,
 }: Readonly<{
   form: Pick<
     ReturnType<typeof useFormSubmit>,
     "status" | "summaryRows" | "focusField" | "summaryRef"
   >;
+  onStatus: ((status: string) => void) | undefined;
 }>): JSX.Element {
   return (
     <>
-      <FormStatus>{form.status}</FormStatus>
+      <SwitchStatus status={form.status} onAnnounce={onStatus} />
       <FormErrorSummary
         rows={form.summaryRows}
         onFocusField={form.focusField}
@@ -651,16 +665,23 @@ function SaveFoot({
 function NotificationKind({
   title,
   when,
+  whenId,
   children,
 }: Readonly<{
   title: string;
   when: string;
+  /**
+  The `when` line's id, for a switch it describes.
+  */
+  whenId?: string | undefined;
   children: ReactNode;
 }>): JSX.Element {
   return (
     <section className="flex flex-col gap-2 border-b border-hairline pb-4">
       <h2 className="m-0 text-body font-semibold">{title}</h2>
-      <p className="m-0 text-small text-quiet">{when}</p>
+      <p id={whenId} className="m-0 text-small text-quiet">
+        {when}
+      </p>
       {children}
     </section>
   );
@@ -684,8 +705,15 @@ function FixedEmail({ text }: Readonly<{ text: string }>): JSX.Element {
  * Settings › Notifications (ACC-11): only the Strava run reminder can be
  * emailed in v1, on by default; Useful stays in the app; account and
  * security email always comes.
+ *
+ * Run reminders · Email saves as it changes, so it is a switch with no
+ * Save (D-185; R54·166.3 names notification settings; Design 309 closed
+ * as answered by it, #754). Not optimistic (§4a): it keeps its saved state
+ * until the save lands, and a failed save leaves it under `Not changed`.
+ * The page's one status region is the switch's own, since nothing else on
+ * it speaks.
  */
-export function NotificationsForm({
+export function NotificationSettings({
   current,
   save,
   changeEmail,
@@ -697,49 +725,38 @@ export function NotificationsForm({
   */
   changeEmail: ReactNode;
 }>): JSX.Element {
+  const whenId = useId();
   return (
-    <SectionForm
-      schema={notificationSettingsSchema}
-      initial={{ runReminder: current.runReminder }}
-      save={save}
-      successMessage="Notifications saved."
-      // One field, so no summary rows (SharingForm's reasoning).
-      labels={{}}
-    >
-      {({ value, onChange, form }) => (
-        <div className="flex flex-col gap-4">
-          <NotificationKind
-            title="Run reminders"
-            when="When a run lands on Strava. Only while Strava is connected."
-          >
-            <ToggleField
-              name="runReminder"
-              label="Email"
-              field={form.field}
-              isOn={value.runReminder}
-              onChange={(runReminder) => {
-                onChange({ runReminder });
-              }}
-            />
-          </NotificationKind>
-          <NotificationKind
-            title="Useful on your runs"
-            when="When a runner finds your run useful."
-          >
-            <FixedEmail text="In the app only" />
-          </NotificationKind>
-          <NotificationKind
-            title="Account and security"
-            when="Confirming your email, password and email changes."
-          >
-            <FixedEmail text="Always sent" />
-          </NotificationKind>
-          <p className="m-0 text-small text-quiet">
-            Emails go to <strong>{current.email}</strong>. {changeEmail}
-          </p>
-        </div>
-      )}
-    </SectionForm>
+    <div className="flex flex-col gap-4">
+      <NotificationKind
+        title="Run reminders"
+        when="When a run lands on Strava. Only while Strava is connected."
+        whenId={whenId}
+      >
+        <SavedSwitchRow
+          name="runReminder"
+          label="Email"
+          initial={current.runReminder}
+          describedBy={whenId}
+          save={(runReminder) => save({ data: { runReminder } })}
+        />
+      </NotificationKind>
+      <NotificationKind
+        title="Useful on your runs"
+        when="When a runner finds your run useful."
+      >
+        <FixedEmail text="In the app only" />
+      </NotificationKind>
+      <NotificationKind
+        title="Account and security"
+        when="Confirming your email, password and email changes."
+      >
+        <FixedEmail text="Always sent" />
+      </NotificationKind>
+      <p className="m-0 text-small text-quiet">
+        Emails go to <strong>{current.email}</strong>. {changeEmail}
+      </p>
+    </div>
   );
 }
 

@@ -42,7 +42,7 @@ import { BelledLayout } from "../../modules/notifications/components/BelledLayou
 import { bellStateFn } from "../../modules/notifications/functions";
 import {
   AccountIndex,
-  NotificationsForm,
+  NotificationSettings,
 } from "../../modules/onboarding/components/Settings";
 import { PickedSubPage } from "../../modules/onboarding/components/SettingsSubPage";
 
@@ -169,7 +169,7 @@ function AccountSectionRoute() {
       />
     ),
     notifications: (
-      <NotificationsForm
+      <NotificationSettings
         current={page.notifications}
         save={saveNotificationSettingsFn}
         changeEmail={
