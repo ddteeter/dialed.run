@@ -1,4 +1,4 @@
-import { useEffect, useRef, type JSX } from "react";
+import { useRef, type JSX } from "react";
 
 import { Icon } from "./icons";
 
@@ -55,17 +55,17 @@ export function PagerArrows({
   from,
   labels,
 }: Readonly<PagerArrowsProps>): JSX.Element | undefined {
-  const previousRef = useRef<HTMLButtonElement>(null);
-  const nextRef = useRef<HTMLButtonElement>(null);
   // The button to focus once the turn has rendered: with two photos the
-  // other one is not mounted until then.
+  // other one is not mounted until then. Each button's ref takes the
+  // focus when it is the one asked for, once.
   const focusAfterRef = useRef<"previous" | "next">(undefined);
-  useEffect(() => {
-    const side = focusAfterRef.current;
-    focusAfterRef.current = undefined;
-    if (side === "previous") previousRef.current?.focus();
-    else if (side === "next") nextRef.current?.focus();
-  }, [index]);
+  function focusWhenAsked(side: "previous" | "next") {
+    return (element: HTMLButtonElement | null): void => {
+      if (element === null || focusAfterRef.current !== side) return;
+      focusAfterRef.current = undefined;
+      element.focus();
+    };
+  }
   if (count < 2) return;
   const isFirst = index === 0;
   const isLast = index === count - 1;
@@ -73,17 +73,17 @@ export function PagerArrows({
   function turn(direction: -1 | 1): void {
     const next = stepped(index, count, direction);
     onIndex(next);
-    // The pressed button leaves at its end; hand focus across.
-    if (direction === 1 && next === count - 1)
-      focusAfterRef.current = "previous";
-    else if (direction === -1 && next === 0) focusAfterRef.current = "next";
+    // The pressed button leaves at its end; hand focus across. Only Next
+    // can reach the last page and only Previous the first.
+    if (next === count - 1) focusAfterRef.current = "previous";
+    else if (next === 0) focusAfterRef.current = "next";
   }
 
   return (
     <>
       {isFirst ? undefined : (
         <button
-          ref={previousRef}
+          ref={focusWhenAsked("previous")}
           type="button"
           aria-label={labels.previous}
           data-part="pager-previous"
@@ -97,7 +97,7 @@ export function PagerArrows({
       )}
       {isLast ? undefined : (
         <button
-          ref={nextRef}
+          ref={focusWhenAsked("next")}
           type="button"
           aria-label={labels.next}
           data-part="pager-next"

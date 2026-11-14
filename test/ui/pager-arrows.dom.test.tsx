@@ -29,6 +29,33 @@ function Pager({
   );
 }
 
+/**
+ * A pager beside another control that re-renders the page.
+ */
+function Host() {
+  const [index, setIndex] = useState(0);
+  const [renders, setRenders] = useState(0);
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => {
+          setRenders(renders + 1);
+        }}
+      >
+        Elsewhere {String(renders)}
+      </button>
+      <PagerArrows
+        index={index}
+        count={2}
+        onIndex={setIndex}
+        from="desk"
+        labels={LABELS}
+      />
+    </div>
+  );
+}
+
 function previous(): HTMLElement | null {
   return screen.queryByRole("button", { name: "Previous photo" });
 }
@@ -49,6 +76,38 @@ describe("PagerArrows (R55·207, Design 249.1)", () => {
       />,
     );
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("draws nothing with no photos at all", () => {
+    const { container } = render(
+      <PagerArrows
+        index={0}
+        count={0}
+        onIndex={vi.fn()}
+        from="desk"
+        labels={LABELS}
+      />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("hands focus to Previous at the last of three, where both were mounted", () => {
+    render(<Pager count={3} start={1} />);
+    const button = screen.getByRole("button", { name: "Next photo" });
+    button.focus();
+    fireEvent.click(button);
+    expect(screen.getByRole("status")).toHaveTextContent("2");
+    expect(previous()).toHaveFocus();
+  });
+
+  it("takes focus once per hand-off, not on every later render", () => {
+    render(<Host />);
+    fireEvent.click(screen.getByRole("button", { name: "Next photo" }));
+    expect(previous()).toHaveFocus();
+    const elsewhere = screen.getByRole("button", { name: /Elsewhere/u });
+    elsewhere.focus();
+    fireEvent.click(elsewhere);
+    expect(screen.getByRole("button", { name: "Elsewhere 1" })).toHaveFocus();
   });
 
   it("shows only Next on the first photo, both in the middle, only Previous on the last", () => {
