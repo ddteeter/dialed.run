@@ -59,6 +59,8 @@ export type VerdictKind = "cold" | "dialed" | "warm";
  */
 const SLOTS: readonly VerdictKind[] = ["cold", "dialed", "warm"];
 
+const EMPTY_SLOT = "border border-hairline-2";
+
 const VERDICT_INK: Readonly<Record<VerdictKind, string>> = {
   cold: "bg-action",
   dialed: "bg-teal",
@@ -85,12 +87,15 @@ export function VerdictMark({
   kind,
 }: Readonly<{ kind: VerdictKind }>): JSX.Element {
   return (
-    <span aria-hidden="true" data-verdict={kind} className="flex gap-1">
+    // R55·209a, AB3's slots: square and 16 tall, 2 apart, an empty one a
+    // hairline outline, so the mark that carries the verdict by position
+    // is no longer the smallest thing in its row.
+    <span aria-hidden="true" data-verdict={kind} className="flex gap-0.5">
       {SLOTS.map((slot) => (
         <span
           key={slot}
-          className={`inline-block h-2 w-2 rounded-pill ${
-            slot === kind ? VERDICT_INK[kind] : "bg-hairline-2"
+          className={`inline-block size-4 ${
+            slot === kind ? VERDICT_INK[kind] : EMPTY_SLOT
           }`}
         />
       ))}

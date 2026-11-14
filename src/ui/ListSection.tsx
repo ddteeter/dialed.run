@@ -36,6 +36,7 @@ export function ListSection<TItem>({
   count,
   whenEmpty,
   hasCards = false,
+  isRuled = false,
   children,
 }: Readonly<{
   title: string;
@@ -57,6 +58,11 @@ export function ListSection<TItem>({
    * Desk's Review rows are (R55·197), rather than lines 4 apart.
    */
   hasCards?: boolean;
+  /**
+   * The rows are ruled, a hairline above the first and each row drawing
+   * its own below, touching (R55·210's run rows), rather than 4 apart.
+   */
+  isRuled?: boolean;
   /**
   Renders one row, `<li key=…>` and all.
   */
@@ -94,10 +100,20 @@ export function ListSection<TItem>({
     <div className="flex flex-col gap-2">
       {heading}
       <ul
-        className={`m-0 flex list-none flex-col p-0 ${hasCards ? "gap-3" : "gap-1"}`}
+        className={`m-0 flex list-none flex-col p-0 ${listGap(hasCards, isRuled)}`}
       >
         {items.map((item) => children(item))}
       </ul>
     </div>
   );
+}
+
+/**
+ * How far apart a section's rows sit: cards 12 apart, ruled rows touching
+ * under one hairline, plain lines 4 apart.
+ */
+function listGap(hasCards: boolean, isRuled: boolean): string {
+  if (hasCards) return "gap-3";
+  if (isRuled) return "border-t border-hairline";
+  return "gap-1";
 }

@@ -41,6 +41,7 @@ function ownProfile(overrides: Partial<OwnProfileData> = {}): OwnProfileData {
     mostWornItems: [],
     units: { temp: "f", distance: "mi" },
     recentEntries: [],
+    nextStep: undefined,
     ...overrides,
   };
 }
@@ -53,6 +54,7 @@ function otherProfile(
     username: "ravi_k",
     cityLabel: NOTHING,
     recentPublicEntries: [],
+    units: { temp: "f", distance: "mi" },
     ...overrides,
   };
 }
@@ -71,6 +73,7 @@ function recent(
     indoor: false,
     conditions: undefined,
     underReview: false,
+    verdict: NOTHING,
     ...overrides,
   };
 }
@@ -213,14 +216,33 @@ describe("OwnProfile (G): an unconfirmed runner (round 26 #11; FEED-11)", () => 
 });
 
 describe("OwnProfile (G): day one", () => {
-  it("shows its counts at zero, never hidden", async () => {
+  it("shows its counts at zero, never hidden, in ink (R55·209d)", async () => {
     await renderFeedScreen(
       <OwnProfile confirmBand={undefined} profile={ownProfile()} />,
     );
 
-    expect(part("counts")).toHaveTextContent("0 Runs0 Following0 Followers");
+    expect(part("counts")?.textContent).toBe(
+      "0 Runs\u{A0}· 0 Following\u{A0}· 0 Followers",
+    );
+    expect(part("counts")).toHaveClass("text-ink");
+    expect(part("counts")).not.toHaveClass("text-muted");
   });
 
+  it("counts one in the singular (R55·209b)", async () => {
+    await renderFeedScreen(
+      <OwnProfile
+        confirmBand={undefined}
+        profile={ownProfile({
+          runCount: 1,
+          followingCount: 1,
+          followerCount: 1,
+        })}
+      />,
+    );
+    expect(part("counts")?.textContent).toBe(
+      "1 Run\u{A0}· 1 Following\u{A0}· 1 Follower",
+    );
+  });
   it("offers one next step: [ NO RUNS YET ], a line, Log a run — and Settings", async () => {
     await renderFeedScreen(
       <OwnProfile confirmBand={undefined} profile={ownProfile()} />,
@@ -256,13 +278,13 @@ describe("OwnProfile (G): day one", () => {
       />,
     );
     expect(screen.getByRole("heading", { name: "You" })).toBeVisible();
-    expect(part("header")?.querySelectorAll(".font-mono")).toHaveLength(3);
+    // The one counts line, and no city line.
+    expect(part("header")?.querySelectorAll(".font-mono")).toHaveLength(1);
     // The avatar's initial falls back to "You", same as the heading.
     expect(
       part("header")?.querySelector('[aria-hidden="true"]'),
     ).toHaveTextContent("Y");
   });
-
   it("shows the city in mono under the name", async () => {
     await renderFeedScreen(
       <OwnProfile
@@ -313,11 +335,12 @@ describe("OwnProfile (G): past day one", () => {
       />,
     );
 
-    expect(part("counts")).toHaveTextContent("12 Runs3 Following4 Followers");
+    expect(part("counts")?.textContent).toBe(
+      "12 Runs\u{A0}· 3 Following\u{A0}· 4 Followers",
+    );
     expect(screen.queryByText("No runs yet")).toBeNull();
-    expect(screen.getByText("12")).toHaveClass("text-ink");
+    expect(part("next-step")).toBeNull();
   });
-
   it("draws each section only once there is something in it", async () => {
     await renderFeedScreen(
       <OwnProfile
@@ -343,6 +366,26 @@ describe("OwnProfile (G): past day one", () => {
     expect(drawnText(row)).toBe("[41–50°]Dialed3 runs");
     // Round 53 · 162.3: the band is said as a range, its brackets not at all.
     expect(saidText(row)).toBe("41 to 50 degreesDialed3 runs");
+    // R55·209a, e: the word bold, and the count beside it, not pushed away.
+    const word = screen.getByText("Dialed");
+    expect(word).toHaveClass("font-semibold");
+    expect(word).not.toHaveClass("flex-1");
+    expect(word.nextElementSibling).toHaveTextContent("3 runs");
+  });
+
+  it("counts a band of one run in the singular (R55·209b)", async () => {
+    await renderFeedScreen(
+      <OwnProfile
+        confirmBand={undefined}
+        profile={ownProfile({
+          runCount: 1,
+          coverage: [{ ...band, cold: 0, dialed: 1, warm: 0 }],
+        })}
+      />,
+    );
+    expect(screen.getByText("Dialed").closest("li")).toHaveTextContent(
+      /1 run$/u,
+    );
   });
 
   it("credits Visual Crossing directly under the bands, which are feels-like bands (D-144)", async () => {
@@ -391,49 +434,116 @@ describe("OwnProfile (G): past day one", () => {
     expect(screen.getByText("Over-dressed")).toBeVisible();
   });
 
-  it("lists the most-worn pieces, and names each recent entry by its day and distance (round 35 #53b)", async () => {
+  it("lists the most-worn pieces by brand and model, their count in runs (R55·209c)", async () => {
     await renderFeedScreen(
       <OwnProfile
         confirmBand={undefined}
         profile={ownProfile({
           runCount: 2,
-          mostWornItems: [{ itemId: "01A", name: "Houdini", wearCount: 4 }],
-          recentEntries: [
-            recent(),
-            recent({
-              entryId: "01F",
-              day: "Thu, Aug 27",
-              distanceM: 8046.72,
-            }),
+          mostWornItems: [
+            { itemId: "01A", name: "Patagonia Houdini", wearCount: 4 },
+            { itemId: "01B", name: "Balega Hidden Comfort", wearCount: 1 },
           ],
         })}
       />,
     );
-    const worn = screen.getByText("Houdini").closest("li");
-    expect(worn).toHaveTextContent("Houdini[4]");
-    // Drawn, not said: a screen reader hears "4", never "left bracket".
+    const worn = screen.getByText("Patagonia Houdini").closest("li");
+    expect(worn).toHaveTextContent("Patagonia Houdini[4 runs]");
+    expect(
+      screen.getByText("Balega Hidden Comfort").closest("li"),
+    ).toHaveTextContent("[1 run]");
+    // Drawn, not said: a screen reader hears "4 runs", never "left bracket".
     expect(
       [...(worn?.querySelectorAll("[aria-hidden='true']") ?? [])].map(
         (mark) => mark.textContent,
       ),
     ).toStrictEqual(["[", "]"]);
-    const latest = screen.getByRole("link", {
-      name: "Sat, Aug 29, 8.2 miles",
-    });
-    expect(latest).toHaveAttribute("href", "/feed/entry/01E");
-    // Drawn as before, said in words (round 52 #158).
-    expect(within(latest).getByText("Sat, Aug 29 · 8.2 mi")).toHaveAttribute(
-      "aria-hidden",
-      "true",
-    );
-    expect(
-      screen.getByRole("link", { name: "Thu, Aug 27, 5.0 miles" }),
-    ).toHaveAttribute("href", "/feed/entry/01F");
-    // No tag and no conditions: no meta line at all, never an empty one.
-    expect(part("entry-meta")).toBeNull();
-    expect(document.querySelector('[data-part="review-tag"]')).toBeNull();
   });
 
+  it("draws each recent entry as R55·210's run row: the date the link, one line under it", async () => {
+    await renderFeedScreen(
+      <OwnProfile
+        confirmBand={undefined}
+        profile={ownProfile({
+          runCount: 2,
+          recentEntries: [
+            recent({
+              verdict: -1,
+              conditions: pointConditions({
+                tempC: 5,
+                feelsLikeC: 3,
+                condition: "Overcast",
+              }),
+            }),
+            recent({ entryId: "01F", day: "Thu, Aug 27", distanceM: 8046.72 }),
+          ],
+        })}
+      />,
+    );
+    const latest = screen.getByRole("link", { name: "Sat, Aug 29" });
+    expect(latest).toHaveAttribute("href", "/feed/entry/01E");
+    expect(latest).toHaveClass(
+      "text-body",
+      "font-semibold",
+      "underline",
+      "self-start",
+    );
+    const row = recentRow("01E");
+    expect(row).toHaveAttribute("data-part", "run-row");
+    expect(row).toHaveClass(
+      "flex",
+      "flex-col",
+      "min-h-15",
+      "justify-center",
+      "gap-1",
+      "py-2",
+      "border-b",
+      "border-hairline",
+    );
+    const meta = row.querySelector('[data-part="run-meta"]');
+    expect(latest).not.toContainElement(meta as HTMLElement);
+    // Drawn with each "·" bound to what follows (R55·204), said in words.
+    expect(drawnText(meta)).toBe(
+      "41° · Overcast\u{A0}· A bit cold\u{A0}· 8.2 mi",
+    );
+    expect(saidText(meta)).toBe(
+      "41 degrees, Overcast\u{A0}· A bit cold\u{A0}· 8.2 miles",
+    );
+    expect(meta?.firstElementChild).toHaveClass("text-mono-sm", "text-quiet");
+    expect(within(row).getByText("A bit cold")).toHaveClass(
+      "font-semibold",
+      "text-cold-text",
+    );
+    // No conditions and no verdict: the distance alone, never a dash.
+    expect(
+      drawnText(recentRow("01F").querySelector('[data-part="run-meta"]')),
+    ).toBe("5.0 mi");
+    // A hairline above the first row, from the list.
+    expect(row.parentElement).toHaveClass("border-t", "border-hairline");
+  });
+
+  it("wears each verdict's own hue: dialed teal, warm quiet", async () => {
+    await renderFeedScreen(
+      <OwnProfile
+        confirmBand={undefined}
+        profile={ownProfile({
+          runCount: 2,
+          recentEntries: [
+            recent({ verdict: 0 }),
+            recent({ entryId: "01F", day: "Thu, Aug 27", verdict: 2 }),
+          ],
+        })}
+      />,
+    );
+    expect(within(recentRow("01E")).getByText("Dialed")).toHaveClass(
+      "font-semibold",
+      "text-dialed-text",
+    );
+    expect(within(recentRow("01F")).getByText("Way warm")).toHaveClass(
+      "font-semibold",
+      "text-quiet",
+    );
+  });
   it("measures a recent entry in the runner's own units", async () => {
     await renderFeedScreen(
       <OwnProfile
@@ -454,48 +564,8 @@ describe("OwnProfile (G): past day one", () => {
       />,
     );
     expect(
-      screen.getByRole("link", { name: "Sat, Aug 29, 13.2 kilometres" }),
-    ).toBeVisible();
-    expect(part("entry-meta")).toHaveTextContent("5° · Overcast");
-  });
-
-  it("puts the conditions on the meta line, outside the link", async () => {
-    await renderFeedScreen(
-      <OwnProfile
-        confirmBand={undefined}
-        profile={ownProfile({
-          runCount: 1,
-          recentEntries: [
-            recent({
-              conditions: pointConditions({
-                tempC: 5,
-                feelsLikeC: 3,
-                condition: "Overcast",
-              }),
-            }),
-          ],
-        })}
-      />,
-    );
-    const link = screen.getByRole("link", { name: "Sat, Aug 29, 8.2 miles" });
-    const meta = part("entry-meta");
-    expect(meta).toHaveTextContent("41° · Overcast");
-    expect(link.nextElementSibling).toBe(meta);
-    expect(link).not.toContainElement(meta);
-  });
-
-  it("carries the tag alone on the meta line when there are no conditions", async () => {
-    await renderFeedScreen(
-      <OwnProfile
-        confirmBand={undefined}
-        profile={ownProfile({
-          runCount: 1,
-          recentEntries: [recent({ underReview: true })],
-        })}
-      />,
-    );
-    expect(part("entry-meta")?.children).toHaveLength(1);
-    expect(part("entry-meta")?.firstElementChild).toBe(part("review-tag"));
+      drawnText(recentRow("01E").querySelector('[data-part="run-meta"]')),
+    ).toBe("5° · Overcast\u{A0}· 13.2 km");
   });
 
   it("says Indoor for an indoor run with no conditions", async () => {
@@ -511,7 +581,7 @@ describe("OwnProfile (G): past day one", () => {
     expect(within(recentRow("01E")).getByText("Indoor")).toBeVisible();
   });
 
-  it("marks a recent entry under review with the card's tag, first on the meta line and outside the link (round 35 #53b)", async () => {
+  it("ends the meta line with the card's tag on an entry under review, outside the link", async () => {
     await renderFeedScreen(
       <OwnProfile
         confirmBand={undefined}
@@ -526,16 +596,106 @@ describe("OwnProfile (G): past day one", () => {
         })}
       />,
     );
-    // The link's name stays the entry's label; the tag is read once.
-    const link = screen.getByRole("link", { name: "Sat, Aug 29, 8.2 miles" });
-    expect(link).toHaveAttribute("href", "/feed/entry/01E");
+    // The link's name stays the date; the tag is read once.
+    const link = screen.getByRole("link", { name: "Sat, Aug 29" });
     const tag = part("review-tag");
     expect(tag).toHaveTextContent("Under review, other runners can't see this");
     expect(link).not.toContainElement(tag);
-    const meta = part("entry-meta");
-    expect(meta?.firstElementChild).toBe(tag);
-    expect(meta).toHaveTextContent("41° · clear");
-    expect(link.nextElementSibling).toBe(meta);
+    const meta = recentRow("01E").querySelector('[data-part="run-meta"]');
+    expect(meta?.firstElementChild?.lastElementChild).toBe(tag);
+  });
+});
+
+describe("OwnProfile (G): runs but no kit on any (R55·209f)", () => {
+  const step = {
+    runId: "01RUN",
+    conditions: pointConditions({
+      tempC: 8,
+      feelsLikeC: 6,
+      condition: "Clear",
+    }),
+  };
+
+  it("offers one next step: the last run, and its kit to add", async () => {
+    await renderFeedScreen(
+      <OwnProfile
+        confirmBand={undefined}
+        profile={ownProfile({ runCount: 1, nextStep: step })}
+      />,
+    );
+    const next = part("next-step");
+    if (next === null) throw new Error("no next step");
+    expect(next).toHaveClass("border-t", "border-hairline", "pt-4");
+    expect(within(next).getByRole("heading", { name: "Next" })).toBeVisible();
+    expect(
+      screen.getByText(
+        "Your last run has no kit yet. Add what you wore, and your closet starts learning what works at 43° and dry.",
+      ),
+    ).toHaveClass("text-lead");
+    const add = screen.getByRole("link", { name: "Add your kit" });
+    expect(add).toHaveAttribute("href", "/feed/attach/01RUN");
+    expect(add).toHaveClass(
+      "rounded-card",
+      "bg-action",
+      "font-display",
+      "uppercase",
+      "min-h-control",
+    );
+    // Then Settings, as day one has it; nothing of the empty sections.
+    const settings = screen.getAllByRole("link", { name: "Settings" });
+    expect(settings).toHaveLength(2);
+    expect(within(next).getByRole("link", { name: "Settings" })).toBe(
+      settings[1],
+    );
+    expect(screen.queryByText("No runs yet")).toBeNull();
+    expect(screen.queryByText("Recent entries")).toBeNull();
+  });
+
+  it("says the run's own wetness and temperature, in the runner's unit", async () => {
+    await renderFeedScreen(
+      <OwnProfile
+        confirmBand={undefined}
+        profile={ownProfile({
+          runCount: 3,
+          units: { temp: "c", distance: "km" },
+          nextStep: {
+            runId: "01RUN",
+            conditions: { ...step.conditions, precipMm: 4 },
+          },
+        })}
+      />,
+    );
+    expect(
+      screen.getByText(/learning what works at 6° and wet\.$/u),
+    ).toBeVisible();
+  });
+
+  it("drops the weather clause when the run has none (owner, 2026-11-14)", async () => {
+    await renderFeedScreen(
+      <OwnProfile
+        confirmBand={undefined}
+        profile={ownProfile({
+          runCount: 1,
+          nextStep: { runId: "01RUN", conditions: undefined },
+        })}
+      />,
+    );
+    expect(
+      screen.getByText(
+        "Your last run has no kit yet. Add what you wore, and your closet starts learning what works.",
+      ),
+    ).toBeVisible();
+  });
+
+  it("keeps day one for a runner with no runs, whatever else is set", async () => {
+    await renderFeedScreen(
+      <OwnProfile
+        confirmBand={undefined}
+        profile={ownProfile({ runCount: 0, nextStep: step })}
+      />,
+    );
+    expect(screen.getByText("No runs yet")).toBeVisible();
+    expect(part("next-step")).toBeNull();
   });
 });
 
@@ -619,19 +779,24 @@ describe("OtherProfile (H)", () => {
     expect(screen.getByText("St. Paul")).toHaveClass("font-mono");
   });
 
-  it("badges every verdict an entry has, not only dialed", async () => {
+  it("says every verdict an entry has in its hue, not only dialed", async () => {
     await renderFeedScreen(
       otherScreen({
         recentPublicEntries: [
           {
             entryId: "01A",
-            day: "Tue Aug 12",
+            day: "Tue, Aug 12",
             verdict: -1,
+            distanceM: 5000,
+            indoor: false,
+            conditions: undefined,
           },
         ],
       }),
     );
-    expect(part("verdict-badge")).toHaveTextContent("A bit cold");
+    expect(within(recentRow("01A")).getByText("A bit cold")).toHaveClass(
+      "text-cold-text",
+    );
   });
 
   it("draws no city line, not an empty one, when there is no city", async () => {
@@ -644,38 +809,57 @@ describe("OtherProfile (H)", () => {
     expect(screen.getByRole("status")).toHaveTextContent("");
   });
 
-  it("lists public entries by date, with the verdict each has (no caption, D-167)", async () => {
+  it("lists public entries in G's run row: conditions, verdict, distance (R55·210)", async () => {
     await renderFeedScreen(
       otherScreen({
+        units: { temp: "c", distance: "km" },
         recentPublicEntries: [
           {
             entryId: "01A",
-            day: "Tue Aug 12",
+            day: "Tue, Aug 12",
             verdict: 0,
+            distanceM: 5000,
+            indoor: false,
+            conditions: pointConditions({
+              tempC: 5,
+              feelsLikeC: 3,
+              condition: "Rain",
+            }),
           },
           {
             entryId: "01B",
             // The day as the server dated it, in the run's own zone: the
             // screen prints it and computes none of its own.
-            day: "Wed Aug 13",
+            day: "Wed, Aug 13",
             verdict: NOTHING,
+            distanceM: 8000,
+            indoor: true,
+            conditions: undefined,
           },
         ],
       }),
     );
 
-    const first = screen.getByRole("link", { name: /Tue Aug 12/u });
-    const second = screen.getByRole("link", { name: /Wed Aug 13/u });
+    const first = screen.getByRole("link", { name: "Tue, Aug 12" });
     expect(first).toHaveAttribute("href", "/feed/entry/01A");
-    expect(first).toHaveTextContent(/^Tue Aug 12Dialed$/u);
-    // No verdict, no badge.
-    expect(second).toHaveAttribute("href", "/feed/entry/01B");
-    expect(second).toHaveTextContent(/^Wed Aug 13$/u);
-    expect(second.children).toHaveLength(1);
-    // And Report still closes the list.
+    expect(
+      drawnText(recentRow("01A").querySelector('[data-part="run-meta"]')),
+    ).toBe("5° · Rain\u{A0}· Dialed\u{A0}· 5.0 km");
+    // No verdict: none said; indoors says so; in the viewer's own units.
+    expect(screen.getByRole("link", { name: "Wed, Aug 13" })).toHaveAttribute(
+      "href",
+      "/feed/entry/01B",
+    );
+    expect(
+      drawnText(recentRow("01B").querySelector('[data-part="run-meta"]')),
+    ).toBe("Indoor\u{A0}· 8.0 km");
+    // Ruled from a hairline above the first, and Report still closes it.
+    expect(recentRow("01A").parentElement).toHaveClass(
+      "border-t",
+      "border-hairline",
+    );
+    expect(recentRow("01A").parentElement).not.toHaveClass("gap-2");
     expect(part("entries")?.lastElementChild).toBe(part("report"));
-    expect(screen.getByText("Tue Aug 12")).toHaveClass("font-mono");
-    expect(screen.getByText("Wed Aug 13")).toHaveClass("font-mono");
   });
 
   it("goes back to the feed", async () => {

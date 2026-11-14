@@ -13,16 +13,15 @@ import {
   WeatherAttribution,
 } from "../../../ui";
 import type { VerdictKind } from "../../../ui";
-import { measuredLine } from "../../../lib/contracts/measures";
 import type { Units } from "../../../lib/contracts";
+import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
 import { bandVerdict } from "../coverage";
-import { stripConditions } from "../strip";
-import { ConditionsCell } from "./ConditionsCell";
+import { BOUND_SEPARATOR } from "../posted";
 import type { ownProfile } from "../profiles";
 import { BracketHeadline } from "./BracketHeadline";
 import { Avatar } from "./Avatar";
 import { Handle } from "./Handle";
-import { UnderReview } from "./UnderReview";
+import { RunRow } from "./RunRow";
 
 type Profile = Awaited<ReturnType<typeof ownProfile>>;
 
@@ -90,84 +89,137 @@ export function OwnProfile({
           <SettingsButton />
           <PhoneBell />
         </div>
-        <p data-part="counts" className="m-0 flex gap-5 text-muted">
-          <Count value={profile.runCount} label="Runs" />
-          <Count value={profile.followingCount} label="Following" />
-          <Count value={profile.followerCount} label="Followers" />
+        {/* R55·209b, d: in ink, one for one ("1 RUN"), as 209f draws
+            them, each "·" bound to the count after it. */}
+        <p data-part="counts" className="m-0 text-ink">
+          <Mono>
+            {[
+              counted(profile.runCount, "Run", "Runs"),
+              counted(profile.followingCount, "Following", "Following"),
+              counted(profile.followerCount, "Follower", "Followers"),
+            ].join(BOUND_SEPARATOR)}
+          </Mono>
         </p>
       </div>
 
-      {profile.runCount === 0 ? (
-        <DayOne />
-      ) : (
-        <>
-          <ListSection
-            title="How you call it, by band"
-            items={profile.coverage}
-          >
-            {(band) => (
-              <li
-                key={band.bandFloorC}
-                className="flex items-center gap-3 text-body"
-              >
-                <Bracketed className="w-24 shrink-0 text-muted">
-                  {/* "41–50°" drawn, "41 to 50 degrees" said (round 53 ·
-                      162.3). */}
-                  <Spoken shown={band.label} said={band.said} />
-                </Bracketed>
-                <VerdictMark kind={bandVerdict(band)} />
-                <span className="flex-1">
-                  {VERDICT_WORD[bandVerdict(band)]}
-                </span>
-                <Mono className="text-muted">
-                  {String(band.cold + band.dialed + band.warm)} runs
-                </Mono>
-              </li>
-            )}
-          </ListSection>
-          {/* The bands are feels-like bands, read from the provider's
-              observations: derived data, credited beside it (D-144). */}
-          {profile.coverage.length > 0 ? <WeatherAttribution /> : undefined}
-
-          <ListSection title="Most worn" items={profile.mostWornItems}>
-            {(item) => (
-              <li
-                key={item.itemId}
-                className="flex items-center justify-between text-body"
-              >
-                <span>{item.name}</span>
-                {/* The brackets are drawn, not said: `Bracketed` hides them,
-                    so the count is read as its number (PR#286-1). */}
-                <Bracketed className="text-muted">
-                  {String(item.wearCount)}
-                </Bracketed>
-              </li>
-            )}
-          </ListSection>
-
-          <ListSection title="Recent entries" items={profile.recentEntries}>
-            {(entry) => (
-              <RecentEntryRow
-                key={entry.entryId}
-                entry={entry}
-                units={profile.units}
-              />
-            )}
-          </ListSection>
-        </>
-      )}
+      <ProfileBody profile={profile} />
     </div>
   );
 }
 
 /**
-A count and what it counts: the number in ink, the word quieter.
-*/
-function Count({ value, label }: Readonly<{ value: number; label: string }>) {
+ * Below the header: day one, R55·209f's one next step while there are
+ * runs and no kit on any, or the sections that have something in them.
+ */
+function ProfileBody({ profile }: Readonly<{ profile: Profile }>) {
+  if (profile.runCount === 0) return <DayOne />;
+  if (profile.nextStep !== undefined) {
+    return <NextStep step={profile.nextStep} units={profile.units} />;
+  }
   return (
-    <Mono>
-      <span className="text-ink">{String(value)}</span> {label}
-    </Mono>
+    <>
+      <ListSection title="How you call it, by band" items={profile.coverage}>
+        {(band) => (
+          <li
+            key={band.bandFloorC}
+            className="flex items-center gap-3 text-body"
+          >
+            <Bracketed className="w-24 shrink-0 text-muted">
+              {/* "41–50°" drawn, "41 to 50 degrees" said (round 53 ·
+                  162.3). */}
+              <Spoken shown={band.label} said={band.said} />
+            </Bracketed>
+            <VerdictMark kind={bandVerdict(band)} />
+            {/* R55·209a, e: the word bold, and the count beside it rather
+                than at the row's far end. */}
+            <span className="font-semibold">
+              {VERDICT_WORD[bandVerdict(band)]}
+            </span>
+            <Mono className="text-muted">
+              {counted(band.cold + band.dialed + band.warm, "run", "runs")}
+            </Mono>
+          </li>
+        )}
+      </ListSection>
+      {/* The bands are feels-like bands, read from the provider's
+          observations: derived data, credited beside it (D-144). */}
+      {profile.coverage.length > 0 ? <WeatherAttribution /> : undefined}
+
+      <ListSection title="Most worn" items={profile.mostWornItems}>
+        {(item) => (
+          <li
+            key={item.itemId}
+            className="flex items-center justify-between gap-3 text-body"
+          >
+            {/* Brand and model, as D names it (R55·209c). */}
+            <span className="min-w-0">{item.name}</span>
+            {/* The brackets are drawn, not said: `Bracketed` hides them,
+                so the count is read as its words (PR#286-1). */}
+            <Bracketed className="shrink-0 text-muted">
+              {counted(item.wearCount, "run", "runs")}
+            </Bracketed>
+          </li>
+        )}
+      </ListSection>
+
+      <ListSection title="Recent entries" items={profile.recentEntries} isRuled>
+        {(entry) => (
+          <RunRow key={entry.entryId} run={entry} units={profile.units} />
+        )}
+      </ListSection>
+    </>
+  );
+}
+
+/**
+ * A count in words, one for one: "1 run", "2 runs" (R55·209b; delta R46's
+ * "singular for one").
+ */
+function counted(value: number, one: string, many: string): string {
+  return `${String(value)} ${value === 1 ? one : many}`;
+}
+
+/**
+ * R55·209f: runs but no kit on any of them, so every section would be
+ * empty. One next step instead — the last run, and the kit to add to it —
+ * then Settings. What the closet would start learning is the run's own
+ * weather; with none, the clause goes (owner, 2026-11-14).
+ */
+function NextStep({
+  step,
+  units,
+}: Readonly<{
+  step: NonNullable<Profile["nextStep"]>;
+  units: Units;
+}>) {
+  const learning =
+    step.conditions === undefined
+      ? "what works"
+      : `what works at ${formatTemp(step.conditions.feelsLikeC, units.temp)} and ${precipClassOf(step.conditions.precipMm)}`;
+  return (
+    <div
+      data-part="next-step"
+      className="flex flex-col items-stretch gap-3 border-t border-hairline pt-4"
+    >
+      <h2 className="m-0">
+        <Mono step="xs" className="text-muted">
+          Next
+        </Mono>
+      </h2>
+      <p className="m-0 text-lead">
+        Your last run has no kit yet. Add what you wore, and your closet starts
+        learning {learning}.
+      </p>
+      <Link
+        data-part="primary-action"
+        to="/feed/attach/$runId"
+        params={{ runId: step.runId }}
+        className="target flex min-h-control items-center justify-center rounded-card bg-action font-display text-body text-accent-ink uppercase no-underline"
+      >
+        Add your kit
+      </Link>
+      <SettingsLink />
+    </div>
   );
 }
 
@@ -234,48 +286,5 @@ function SettingsLink() {
         &rsaquo;
       </span>
     </Link>
-  );
-}
-
-/**
- * One of G's Recent entries, as round 35 #53b draws it: the link names the
- * run — "Sat, Aug 29 · 8.2 mi" — and the meta line under it carries the
- * card's tag first, outside the link (so the link's name stays the row's
- * label and the tag is read once), then the conditions in the card strip's
- * own cell: the range the run covered (R-5), or Indoor, or nothing.
- */
-function RecentEntryRow({
-  entry,
-  units,
-}: Readonly<{ entry: Profile["recentEntries"][number]; units: Units }>) {
-  const conditions = stripConditions(entry.conditions, entry.indoor, units);
-  return (
-    <li className="flex flex-col gap-1 border-t border-hairline py-3">
-      <Link
-        to="/feed/entry/$entryId"
-        params={{ entryId: entry.entryId }}
-        className="target inline-flex items-center text-body font-semibold text-ink"
-      >
-        {/* "Sat, Aug 29 · 8.2 mi", said "Sat, Aug 29, 8.2 miles" (round
-            52 #158). */}
-        <Spoken
-          {...measuredLine(
-            [
-              [{ kind: "word", word: entry.day }],
-              [{ kind: "distance", distanceM: entry.distanceM, spaced: true }],
-            ],
-            units,
-          )}
-        />
-      </Link>
-      {conditions !== undefined || entry.underReview ? (
-        <span data-part="entry-meta" className="flex flex-wrap gap-3">
-          {entry.underReview ? <UnderReview /> : undefined}
-          {conditions === undefined ? undefined : (
-            <ConditionsCell cell={conditions} />
-          )}
-        </span>
-      ) : undefined}
-    </li>
   );
 }

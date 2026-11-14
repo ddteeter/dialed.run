@@ -86,6 +86,7 @@ const ravi: OtherProfile = {
   username: "ravi_k",
   cityLabel: NOTHING,
   recentPublicEntries: [],
+  units: { temp: "f", distance: "mi" },
 };
 
 describe("RunnerAtHandle", () => {

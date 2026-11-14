@@ -1,8 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import { drizzle } from "drizzle-orm/d1";
 import { eq } from "drizzle-orm";
 
-import { outfitEntries, runs, userProfiles } from "../../src/db/schema-core";
+import {
+  outfitEntries,
+  runs,
+  userProfiles,
+  wardrobeItems,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { follow } from "../../src/modules/feed/follows";
 import { otherProfile, ownProfile } from "../../src/modules/feed/profiles";
@@ -29,6 +35,8 @@ import type { Audience } from "../../src/lib/contracts";
  */
 
 const DAY = 86_400;
+// The column's own "no verdict", as D1 hands it back.
+const NONE = z.null().parse(JSON.parse("null"));
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -384,12 +392,26 @@ describe("otherProfile", () => {
 
     const profile = await otherProfile(userId, await makeVerifiedUser());
 
-    expect(profile?.recentPublicEntries[0]).toStrictEqual({
+    const [row] = profile?.recentPublicEntries ?? [];
+    expect(row).toMatchObject({
       entryId,
-      // No zone anywhere: the run's day in UTC.
-      day: "Thu Sep 4",
+      // No zone anywhere: the run's day in UTC, in G's prose (R55·210).
+      day: "Thu, Sep 4",
       verdict: -1,
+      distanceM: 5000,
+      indoor: false,
     });
+    expect(row?.conditions?.feelsLikeC).toBe(3);
+    expect(new Set(Object.keys(row ?? {}))).toEqual(
+      new Set([
+        "conditions",
+        "day",
+        "distanceM",
+        "entryId",
+        "indoor",
+        "verdict",
+      ]),
+    );
     expect(Object.hasOwn(profile ?? {}, "coverage")).toBe(false);
   });
 
@@ -440,9 +462,55 @@ describe("otherProfile", () => {
         day,
       })),
     ).toStrictEqual([
-      { entryId: unobserved, day: "Fri Sep 5" },
-      { entryId: observed, day: "Wed Sep 3" },
+      { entryId: unobserved, day: "Fri, Sep 5" },
+      { entryId: observed, day: "Wed, Sep 3" },
     ]);
+  });
+
+  it("carries G's run row: distance, indoors, conditions, in the viewer's units (R55·210)", async () => {
+    const userId = await makeVerifiedUser();
+    const outdoors = await ratedEntry({
+      userId,
+      lat: 49.11,
+      feelsLikeC: 3,
+      verdict: 0,
+    });
+    const indoorRun = await makeRun({ userId, startedAt: NOW - DAY });
+    await db()
+      .update(runs)
+      .set({ indoor: true, distanceM: 8046.72 })
+      .where(eq(runs.id, indoorRun));
+    const indoors = await makeEntry({
+      userId,
+      runId: indoorRun,
+      verdict: 1,
+      createdAt: NOW - DAY,
+      audience: "runners",
+    });
+    const viewer = await makeVerifiedUser();
+    await db()
+      .update(userProfiles)
+      .set({ tempUnit: "c", distanceUnit: "km" })
+      .where(eq(userProfiles.userId, viewer));
+
+    const profile = await otherProfile(userId, viewer);
+
+    // The viewer's own units, not the runner's.
+    expect(profile?.units).toEqual({ temp: "c", distance: "km" });
+    const [first, second] = profile?.recentPublicEntries ?? [];
+    expect(first).toMatchObject({
+      entryId: outdoors,
+      distanceM: 5000,
+      indoor: false,
+      conditions: { feelsLikeC: 3 },
+    });
+    expect(second).toMatchObject({
+      entryId: indoors,
+      distanceM: 8046.72,
+      indoor: true,
+      verdict: 1,
+    });
+    expect(second?.conditions).toBeUndefined();
   });
 
   it("shows the city label a runner chose to publish", async () => {
@@ -623,5 +691,109 @@ describe("ownProfile: what it leaves out", () => {
       false,
       false,
     ]);
+  });
+});
+
+describe("ownProfile: R55·209 and 210", () => {
+  it("carries each recent entry's verdict, or none", async () => {
+    const userId = await makeVerifiedUser();
+    const rated = await ratedEntry({
+      userId,
+      lat: 54.4,
+      feelsLikeC: 3,
+      verdict: -2,
+    });
+    const unrated = await makeEntry({
+      userId,
+      runId: await makeRun({ userId, startedAt: NOW - DAY }),
+      createdAt: NOW - DAY,
+      audience: "runners",
+    });
+
+    const profile = await ownProfile(userId);
+
+    expect(
+      profile.recentEntries.map(({ entryId, verdict }) => ({
+        entryId,
+        verdict,
+      })),
+    ).toStrictEqual([
+      { entryId: rated, verdict: -2 },
+      { entryId: unrated, verdict: NONE },
+    ]);
+  });
+
+  it("names the most-worn pieces by brand and model, a generic one by its name", async () => {
+    const userId = await makeVerifiedUser();
+    const branded = await makeItem({ userId, name: "Hidden Comfort" });
+    await db()
+      .update(wardrobeItems)
+      .set({ brand: "Balega" })
+      .where(eq(wardrobeItems.id, branded));
+    const generic = await makeItem({ userId, name: "L/S crew" });
+    await ratedEntry({
+      userId,
+      lat: 54.4,
+      feelsLikeC: 3,
+      verdict: 0,
+      itemIds: [branded, generic],
+    });
+
+    const profile = await ownProfile(userId);
+
+    expect(
+      new Map(profile.mostWornItems.map((item) => [item.itemId, item.name])),
+    ).toEqual(
+      new Map([
+        [branded, "Balega Hidden Comfort"],
+        [generic, "L/S crew"],
+      ]),
+    );
+  });
+
+  it("offers the latest run as the next step while no run has a kit (209f)", async () => {
+    const userId = await makeVerifiedUser();
+    await makeRun({ userId, startedAt: NOW - DAY });
+    const latest = await makeRun({
+      userId,
+      lat: 41.88,
+      lng: -87.63,
+      startedAt: NOW,
+    });
+    await makeObservation({
+      lat: 41.88,
+      lng: -87.63,
+      startedAt: NOW,
+      tempC: 8,
+      feelsLikeC: 6,
+    });
+
+    const profile = await ownProfile(userId);
+
+    expect(profile.nextStep?.runId).toBe(latest);
+    expect(profile.nextStep?.conditions).toMatchObject({ feelsLikeC: 6 });
+  });
+
+  it("has a next step with no conditions when the latest run has none", async () => {
+    const userId = await makeVerifiedUser();
+    const only = await makeRun({ userId, startedAt: NOW });
+
+    const profile = await ownProfile(userId);
+
+    expect(profile.nextStep).toStrictEqual({
+      runId: only,
+      conditions: undefined,
+    });
+  });
+
+  it("has no next step with no runs, or once any run has a kit", async () => {
+    const empty = await ownProfile(await makeVerifiedUser());
+    expect(empty.nextStep).toBeUndefined();
+
+    const userId = await makeVerifiedUser();
+    await makeRun({ userId, startedAt: NOW });
+    await ratedEntry({ userId, lat: 54.4, feelsLikeC: 3, verdict: 0 });
+    const withKit = await ownProfile(userId);
+    expect(withKit.nextStep).toBeUndefined();
   });
 });

@@ -11,7 +11,7 @@ import { CoverageMark, VerdictMark } from "../../src/ui/Marks";
  * which is why they are here rather than left to the screens that use them.
  */
 /**
- * Which of the three slots is filled. An empty slot keeps `bg-night/15`,
+ * Which of the three slots is filled. An empty slot is a hairline outline,
  * so "not the empty class" is what identifies the filled one — reading the
  * position rather than the colour, which is the channel that carries the
  * meaning.
@@ -19,7 +19,9 @@ import { CoverageMark, VerdictMark } from "../../src/ui/Marks";
 function filledIndex(kind: "cold" | "dialed" | "warm") {
   const { container } = render(<VerdictMark kind={kind} />);
   const slots = [...(container.firstElementChild?.children ?? [])];
-  return slots.findIndex((slot) => !slot.className.includes("bg-hairline-2"));
+  return slots.findIndex(
+    (slot) => !slot.className.includes("border-hairline-2"),
+  );
 }
 
 describe("CoverageMark", () => {
@@ -83,8 +85,23 @@ describe("VerdictMark", () => {
     const slots = [...(container.firstElementChild?.children ?? [])];
 
     expect(
-      slots.filter((slot) => !slot.className.includes("bg-hairline-2")),
+      slots.filter((slot) => !slot.className.includes("border-hairline-2")),
     ).toHaveLength(1);
+  });
+
+  it("draws AB3's square 16-tall slots, 2 apart, the empty ones outlined (R55·209a)", () => {
+    const { container } = render(<VerdictMark kind="cold" />);
+    const mark = container.firstElementChild;
+    expect(mark).toHaveClass("flex", "gap-0.5");
+    const slots = [...(mark?.children ?? [])];
+    for (const slot of slots) {
+      expect(slot).toHaveClass("inline-block", "size-4");
+      expect(slot).not.toHaveClass("rounded-pill");
+    }
+    expect(slots[0]).toHaveClass("bg-action");
+    expect(slots[0]).not.toHaveClass("border");
+    expect(slots[1]).toHaveClass("border", "border-hairline-2");
+    expect(slots[2]).toHaveClass("border", "border-hairline-2");
   });
 
   it("gives warm full-strength ink, never 30% opacity", () => {

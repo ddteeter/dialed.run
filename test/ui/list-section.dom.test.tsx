@@ -127,3 +127,27 @@ describe("ListSection's cards", () => {
     expect(container.querySelector("ul")).not.toHaveClass("gap-3");
   });
 });
+
+describe("ListSection's ruled rows (R55·210)", () => {
+  it("draws a hairline above the first and lets the rows touch", () => {
+    render(
+      <ListSection title="Recent entries" items={["a", "b"]} isRuled>
+        {(item) => <li key={item}>{item}</li>}
+      </ListSection>,
+    );
+    const list = screen.getByRole("list");
+    expect(list).toHaveClass("border-t", "border-hairline");
+    expect(list).not.toHaveClass("gap-1");
+    expect(list).not.toHaveClass("gap-3");
+  });
+
+  it("stands cards apart even when ruled is asked for too", () => {
+    render(
+      <ListSection title="Review" items={["a"]} hasCards isRuled>
+        {(item) => <li key={item}>{item}</li>}
+      </ListSection>,
+    );
+    expect(screen.getByRole("list")).toHaveClass("gap-3");
+    expect(screen.getByRole("list")).not.toHaveClass("border-t");
+  });
+});
