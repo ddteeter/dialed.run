@@ -33,6 +33,7 @@ You can still edit or delete it.
 Seen by:
 Shared
 group, Photos
+button, Next photo
 list
 listitem, level 1, position 1, set size 2
 #
@@ -47,7 +48,6 @@ listitem, level 1, position 2, set size 2
 button, Delete photo #
 end of listitem, level 1, position 2, set size 2
 end of list
-button, Next photo
 end of group, Photos
 :day :month # · #:#
 #.# miles
