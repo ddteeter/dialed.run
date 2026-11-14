@@ -239,4 +239,19 @@ describe("PhotoPager", () => {
     render(<PhotoPager photoKeys={KEYS} deletePhoto={undefined} />);
     expect(screen.queryByRole("button", { name: /Delete/u })).toBeNull();
   });
+
+  it("puts the arrows before the photos in Tab order, so Next is reached before a Delete turns the page", () => {
+    // Tab onto the last photo's Delete scrolls the row to it, and Next
+    // leaves at the last page: after the row, Tab would never reach it.
+    render(<PhotoPager photoKeys={KEYS} deletePhoto={vi.fn()} />);
+    const buttons = within(pager())
+      .getAllByRole("button")
+      .map((button) => button.getAttribute("aria-label"));
+    expect(buttons).toStrictEqual([
+      "Next photo",
+      "Delete photo 1",
+      "Delete photo 2",
+      "Delete photo 3",
+    ]);
+  });
 });

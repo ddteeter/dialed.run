@@ -93,6 +93,20 @@ export function PhotoPager({
       aria-label="Photos"
       className="relative"
     >
+      {/* Over the shown photo's own box (560 tall at 4:5, centred), so
+          the arrows sit inside its edges; only the arrows take a press.
+          Before the row in Tab order: an owner's Delete on the last photo
+          scrolls the row there when Tab reaches it, and Next leaves at
+          the last page, so after the row Tab would never reach it. */}
+      <div className="pointer-events-none absolute inset-y-0 left-1/2 z-10 aspect-4/5 -translate-x-1/2 *:pointer-events-auto">
+        <PagerArrows
+          index={index}
+          count={count}
+          onIndex={show}
+          from="desk"
+          labels={PAGER_LABELS}
+        />
+      </div>
       <ul
         data-part="photo"
         onScroll={(event) => {
@@ -124,17 +138,6 @@ export function PhotoPager({
           </li>
         ))}
       </ul>
-      {/* Over the shown photo's own box (560 tall at 4:5, centred), so
-          the arrows sit inside its edges; only the arrows take a press. */}
-      <div className="pointer-events-none absolute inset-y-0 left-1/2 aspect-4/5 -translate-x-1/2 *:pointer-events-auto">
-        <PagerArrows
-          index={index}
-          count={count}
-          onIndex={show}
-          from="desk"
-          labels={PAGER_LABELS}
-        />
-      </div>
     </div>
   );
 }
