@@ -130,6 +130,7 @@ describe("PagerArrows (R55·207, Design 249.1)", () => {
     render(<Pager count={3} start={1} />);
     for (const button of [previous(), next()]) {
       expect(button).toHaveClass(
+        "target",
         "absolute",
         "top-1/2",
         "-translate-y-1/2",

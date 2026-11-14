@@ -39,7 +39,7 @@ const SHOWN_FROM: Readonly<Record<PagerArrowsProps["from"], string>> = {
 };
 
 const ARROW_CLASS =
-  "absolute top-1/2 size-11 -translate-y-1/2 items-center justify-center rounded-pill border border-hairline bg-ground text-ink";
+  "target absolute top-1/2 size-11 -translate-y-1/2 items-center justify-center rounded-pill border border-hairline bg-ground text-ink";
 
 /**
  * The index one step from `index` in `direction`, held inside the pages.
