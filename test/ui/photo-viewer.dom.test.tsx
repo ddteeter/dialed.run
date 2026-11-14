@@ -172,6 +172,7 @@ describe("PhotoViewer", () => {
       "wide:rounded-sheet",
       "wide:ground-drawer",
       "wide:dark:border-hairline-2",
+      "wide:shadow-lift",
       "backdrop:bg-scrim/60",
       "wide:m-auto",
       "wide:h-fit",

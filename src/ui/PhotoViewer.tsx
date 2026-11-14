@@ -21,7 +21,7 @@ export interface ViewedPhoto {
  * with "PHOTO 1 OF 2" and the ✕ in its 44, the photo at its own ratio on
  * `--tint`, and a row a thumb swipes between photos. **From 720** it is
  * the centred panel at MEASURE.column and RADIUS.sheet, on `--panel`
- * with its hairline and `--lift` (`ground-drawer`), over the scrim, with
+ * with its hairline (`ground-drawer`) and `shadow-lift`, over the scrim, with
  * 44 pager arrows and the ← → keys.
  *
  * It is a native `<dialog>` opened with `showModal()`, so Esc and a phone's
@@ -130,10 +130,11 @@ export function PhotoViewer({
  * view is the whole screen. From 720 the panel is as tall as its photo,
  * up to the phone sheet's fold, `--sheet-cap` (R54·164.4). The panel is a
  * floating surface (Design 246c), so in dark its edge steps up to
- * `--hairline-2` (246b), and `--lift` is the theme's.
+ * `--hairline-2` (246b), and it types `shadow-lift` (246c), which is the
+ * theme's: a lift in light, none in dark.
  */
 const VIEWER_CLASS =
-  "fixed inset-0 m-0 flex h-dvh max-h-none w-full max-w-none flex-col border-none bg-ground p-0 text-ink backdrop:bg-scrim/60 wide:m-auto wide:h-fit wide:max-h-[var(--sheet-cap)] wide:max-w-column wide:overflow-hidden wide:rounded-sheet wide:ground-drawer wide:dark:border-hairline-2";
+  "fixed inset-0 m-0 flex h-dvh max-h-none w-full max-w-none flex-col border-none bg-ground p-0 text-ink backdrop:bg-scrim/60 wide:m-auto wide:h-fit wide:max-h-[var(--sheet-cap)] wide:max-w-column wide:overflow-hidden wide:rounded-sheet wide:ground-drawer wide:dark:border-hairline-2 wide:shadow-lift";
 
 /**
  * The photo at its own ratio. On a phone it fills what the head and foot
