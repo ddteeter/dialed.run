@@ -163,6 +163,21 @@ describe("PhotoRow", () => {
     expect(box).not.toHaveAttribute("data-state");
   });
 
+  it("clears the input once its file is handed on", async () => {
+    // Else the box is heard with the last file's path, and picking the
+    // same file again fires no change.
+    const user = userEvent.setup();
+    const onFiles = vi.fn<(files: FileList | null) => void>();
+    render(<Host start={[]} onFiles={onFiles} />);
+    const input = addInput();
+    await user.upload(
+      input,
+      new File([new Uint8Array([1])], "k.png", { type: "image/png" }),
+    );
+    expect(onFiles.mock.calls[0]?.[0]?.[0]?.name).toBe("k.png");
+    expect(input.value).toBe("");
+  });
+
   it("says Adding while the photo is on its way", () => {
     render(<Host pending />);
     const input = addInput();

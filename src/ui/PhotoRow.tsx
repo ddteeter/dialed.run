@@ -193,6 +193,9 @@ function AddBox({
         className="sr-only"
         onChange={(event) => {
           onFiles(event.target.files);
+          // Read by now; cleared so a screen reader does not hear the last
+          // file's path on the box, and the same file can be picked again.
+          event.target.value = "";
         }}
       />
     </label>
