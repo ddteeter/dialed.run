@@ -219,6 +219,15 @@ describe("the ported value contract (design/tokens.js)", () => {
     expect(theme["--container-*"]).toBe("initial");
   });
 
+  it("names one lift and no other shadow (R56·246)", () => {
+    // "One lift, no scale." Tailwind's `shadow-md` and friends are a scale
+    // the contract does not have, so the namespace is cleared and the one
+    // name points at the T1 role, which carries the value per column.
+    expect(theme["--shadow-*"]).toBe("initial");
+    expect(theme["--shadow-lift"]).toBe("var(--lift)");
+    expect(themeKeys("--shadow-")).toHaveLength(2);
+  });
+
   it("leaves SPACE to Tailwind's own step, because they are the same 4px", () => {
     // SPACE needs no port — and that claim is the thing worth pinning,
     // because it is what lets `px-4` mean SPACE[4]. If a round ever moves the

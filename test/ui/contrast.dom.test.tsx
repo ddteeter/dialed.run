@@ -248,25 +248,37 @@ describe("the T1 port", () => {
       ["--ground", "var(--panel)"],
     ]);
     const sheet = tokens.slice(tokens.indexOf("@utility ground-sheet") + 1);
-    expect(sheet).toMatch(/^[^@]*border: 1px solid var\(--hairline\);/u);
+    // R56·246b: a floating surface's edge in dark is the stronger hairline.
+    expect(sheet).toMatch(/^[^@]*border: 1px solid var\(--hairline-2\);/u);
     expect(sheet).toMatch(/^[^@]*border-bottom-width: 0;/u);
     expect(sheet).toMatch(
       /^[^@]*&::before \{[^}]*width: 36px;[^}]*height: 4px;[^}]*background: var\(--hairline-2\);/u,
     );
   });
 
-  it("gives the desk drawer the panel, a hairline all round and the lift (R54·164.1)", () => {
+  it("gives the desk drawer the panel and a hairline all round, and leaves the lift to the surface (R54·164.1)", () => {
     expect([...declarations("@utility ground-drawer")]).toEqual([
       ["--ground", "var(--panel)"],
     ]);
-    expect(tokens).toMatch(
-      /@utility ground-drawer \{[^}]*border: 1px solid var\(--hairline\);[^}]*box-shadow: var\(--lift\);/u,
-    );
-    // The lift is built from the scrim, never a typed colour.
-    expect(tokens).toMatch(
-      /--lift: 0 8px 28px color-mix\(in srgb, var\(--scrim\) 10%, transparent\);/u,
-    );
+    const drawer = tokens.slice(tokens.indexOf("@utility ground-drawer {"));
+    expect(drawer).toMatch(/^[^}]*border: 1px solid var\(--hairline\);/u);
+    // `shadow-lift` is typed by every floating surface (246c), so the
+    // drawer's utility does not carry a second copy of it.
+    expect(drawer).not.toMatch(/^[^}]*box-shadow/u);
     expect(tokens).toContain("--sheet-cap: 90dvh;");
+  });
+
+  it("makes the lift a T1 role: --ink at 10% in light, none in dark (R56·246)", () => {
+    // 246a: "0 8px 28px rgb(11 11 14 / 0.10), the build's value with
+    // --ink as the colour" — written as the role, never a typed colour.
+    expect(paper.get("--lift")).toBe(
+      "0 8px 28px color-mix(in srgb, var(--ink) 10%, transparent)",
+    );
+    expect(hexOf("--ink", paper)).toBe("#0b0b0e");
+    // 246b: "On ink a 10% shadow doesn't show."
+    expect(ink.get("--lift")).toBe("none");
+    // A role of the columns, so nothing on `:root` can stand in for one.
+    expect(root.has("--lift")).toBe(false);
   });
 
   it("draws the checkbox, radio and switch as ruled, with the contract's focus ring (R54·166)", () => {
