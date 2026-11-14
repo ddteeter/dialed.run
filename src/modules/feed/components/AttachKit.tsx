@@ -39,7 +39,7 @@ import type { AttachContext } from "../attach-context";
 import type { BandRun } from "../band-runs";
 import { BackToRun } from "./BackToRun";
 import { BandRunsCard } from "./BandRunsCard";
-import { kitChoice, PHOTO_NOT_SENT } from "../attach-rules";
+import { kitChoice, photosNotSent } from "../attach-rules";
 import type { UiGroup } from "../groups";
 import { isAtDesk } from "../kit-push";
 import type { PrefillCandidate } from "../prefill";
@@ -222,13 +222,29 @@ function useSuggestion(
  * The photo well's half of the screen: the held photo and its preview, W3's
  * step between picking and keeping, and the upload once the entry exists.
  */
+/**
+That the held photos did not go up, as distinct from a wrong file's words.
+*/
+const NOT_SENT = { notSent: true } as const;
+
+/**
+The not-sent message for the photos still held, and none once all are gone.
+*/
+function unsentWords(held: number): string | undefined {
+  return held === 0 ? undefined : photosNotSent(held);
+}
+
 function useHeldPhoto({
   renderPhotoStep,
   uploadPhoto,
 }: Pick<AttachKitProps, "renderPhotoStep" | "uploadPhoto">) {
   // Design 252 (#668): up to `maxPhotosPerEntry`, in the order picked.
   const [photos, setPhotos] = useState<readonly HeldPhoto[]>([]);
-  const [photoError, setPhotoError] = useState<string | undefined>();
+  // A wrong file's message, or that the held photos did not go up: that
+  // one is worded from the count still held, so it follows a Remove.
+  const [photoError, setPhotoError] = useState<
+    string | typeof NOT_SENT | undefined
+  >();
   const [isSendingPhoto, setIsSendingPhoto] = useState(false);
   // W3, in the sheet the closet's photo uses too (round 28 #5). It closes
   // back onto the add box it opened from: Use this photo, Cancel and Esc
@@ -246,7 +262,6 @@ function useHeldPhoto({
    * tries), or removes them and goes on without them.
    */
   async function didSend(entryId: string): Promise<boolean> {
-    if (photos.length === 0) return true;
     setIsSendingPhoto(true);
     setPhotoError(undefined);
     try {
@@ -260,7 +275,7 @@ function useHeldPhoto({
       }
       return true;
     } catch {
-      setPhotoError(PHOTO_NOT_SENT);
+      setPhotoError(NOT_SENT);
       return false;
     } finally {
       setIsSendingPhoto(false);
@@ -288,7 +303,8 @@ function useHeldPhoto({
 
   return {
     pick,
-    photoError,
+    photoError:
+      typeof photoError === "object" ? unsentWords(photos.length) : photoError,
     isSendingPhoto,
     isBusy: pick.stepping || isSendingPhoto,
     photos: photos.map((photo) => ({ src: photo.url, alt: "Your outfit" })),
@@ -317,6 +333,10 @@ function useReleasedPreviews(photos: readonly HeldPhoto[]): void {
     () => () => {
       for (const url of shown.current) URL.revokeObjectURL(url);
     },
+    // Equivalent: stryker's replacement for an empty dependency array is
+    // a constant array, exactly as stable as `[]`, so the release still
+    // runs on unmount only and no render can tell (the owner, 2026-11-14).
+    // Stryker disable next-line ArrayDeclaration
     [],
   );
 }

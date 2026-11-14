@@ -1861,6 +1861,49 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     expect(attachKit).toHaveBeenCalledTimes(1);
   });
 
+  it("counts the photos still held in the failure, and follows a Remove", async () => {
+    // The owner, 2026-11-14 (#659): the count is the row's, not typed.
+    const user = userEvent.setup();
+    namedPreviews();
+    const uploadPhoto = vi
+      .fn<(input: { data: FormData }) => Promise<{ key: string }>>()
+      .mockRejectedValue(new Error("R2 down"));
+    await renderWithRouter(attach({ uploadPhoto }));
+
+    await user.upload(photoInput(), jpeg("a.jpg"));
+    await user.upload(photoInput(), jpeg("b.jpg"));
+    await user.click(screen.getByRole("button", { name: "Patagonia Houdini" }));
+    await user.click(primary());
+
+    expect(
+      await screen.findByText(
+        "2 photos didn't upload. Your kit is attached — press Next to try again, or remove them to go on.",
+      ),
+    ).toBeVisible();
+    expect(photoInput()).toHaveAccessibleDescription(/^2 photos didn't/u);
+
+    await removePhoto(user, "Photo 1 of 2");
+    expect(
+      screen.getByText(
+        "The photo didn't upload. Your kit is attached — press Next to try again, or remove the photo to go on.",
+      ),
+    ).toBeVisible();
+
+    await removePhoto(user, "Photo 1 of 1");
+    expect(screen.queryByText(/didn't upload/u)).toBeNull();
+    expect(photoInput()).not.toHaveAttribute("aria-invalid");
+  });
+
+  it("names the full photo as the runner's outfit", async () => {
+    // The thumbnail's image is decorative (its button carries the name);
+    // the viewer's photo is the one a screen reader hears.
+    const user = userEvent.setup();
+    await renderWithRouter(attach());
+    await user.upload(photoInput(), jpeg());
+    await user.click(screen.getByRole("button", { name: "Photo 1 of 1" }));
+    expect(screen.getByRole("img", { name: "Your outfit" })).toBeVisible();
+  });
+
   it("lets a removed photo's preview go and keeps the others'", async () => {
     const user = userEvent.setup();
     namedPreviews();
