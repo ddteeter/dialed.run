@@ -215,6 +215,26 @@ describe("pickerGroups", () => {
     expect(byName.get("Bare")).toBeUndefined();
   });
 
+  it("names each piece by its type, else its category (R2-RUNS-03)", async () => {
+    // A half-zip's word is not its category's: the derivation can't fall
+    // back to "Top" for a piece that knows its type.
+    const userId = await makeUser();
+    const zip = await makeItem({ userId, name: "Rover" });
+    await makeItem({ userId, name: "Generic" });
+    await db()
+      .update(wardrobeItems)
+      .set({ type: "halfZip" })
+      .where(eq(wardrobeItems.id, zip));
+
+    const [group] = await pickerGroups(userId, CONDITIONS);
+    const words = new Map(
+      group?.items.map((item) => [item.name, item.typeWord]),
+    );
+
+    expect(words.get("Rover")).toBe("Half-zip");
+    expect(words.get("Generic")).toBe("Top");
+  });
+
   it("offers nothing that has been retired", async () => {
     const userId = await makeUser();
     const retired = await makeItem({ userId, name: "Retired" });

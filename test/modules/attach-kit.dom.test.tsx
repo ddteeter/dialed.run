@@ -100,6 +100,7 @@ function piece(
     matches: true,
     untested: false,
     photo: undefined,
+    typeWord: "Top",
     ...overrides,
   };
 }
@@ -123,13 +124,17 @@ const GROUPS: PickerGroup[] = [
   },
   {
     group: "bottoms",
-    items: [piece(TIGHTS, "Tights", { category: "bottom" })],
+    items: [
+      piece(TIGHTS, "Tights", { category: "bottom", typeWord: "Bottom" }),
+    ],
     matchCount: 1,
     hiddenByFilterCount: 0,
   },
   {
     group: "hands_head",
-    items: [piece(GLOVES, "Gloves", { category: "gloves" })],
+    items: [
+      piece(GLOVES, "Gloves", { category: "gloves", typeWord: "Gloves" }),
+    ],
     matchCount: 1,
     hiddenByFilterCount: 0,
   },
@@ -929,6 +934,40 @@ describe("AttachKit: the closet picker", () => {
     // A piece with no brand is named by its name alone, its word its own.
     const tights = screen.getByRole("button", { name: "Tights" });
     expect(tights).toHaveTextContent(/^BottomTights$/u);
+  });
+
+  it("puts the piece's type word in the hatch, never its category's (R2-RUNS-03)", async () => {
+    // A shell filed under OUTER: its category is top, its type a jacket.
+    const shell = context({
+      groups: [
+        {
+          group: "outer",
+          items: [
+            piece(HOUDINI, "Norvan Shell", {
+              layer: "outer",
+              typeWord: "Jacket",
+            }),
+          ],
+          matchCount: 1,
+          hiddenByFilterCount: 0,
+        },
+      ],
+    });
+    await renderWithRouter(attach({ context: shell }));
+
+    const well = screen
+      .getByRole("button", { name: "Norvan Shell" })
+      .querySelector("[data-part='tile-well']");
+    expect(well).toHaveTextContent(/^Jacket$/u);
+  });
+
+  it("breaks a word wider than the tile inside it, rather than cutting it", async () => {
+    await renderWithRouter(attach());
+
+    expect(screen.getByText("Patagonia Houdini")).toHaveClass(
+      "line-clamp-2",
+      "wrap-break-word",
+    );
   });
 
   it("fills the 72 square with the piece's photo, ringed when pressed", async () => {

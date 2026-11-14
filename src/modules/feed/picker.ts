@@ -10,7 +10,7 @@ import { and, eq } from "drizzle-orm";
 
 import { wardrobeItems } from "../../db/schema-core";
 import { coreDb } from "../../env";
-import { photoUrlFor } from "../closet";
+import { photoUrlFor, typeWordOf } from "../closet";
 import type { Conditions } from "./conditions";
 import type { UiGroup } from "./groups";
 import { uiGroupFor } from "./groups";
@@ -29,6 +29,13 @@ interface PickerItem {
    * tile then draws the hatch and the type word (Round 55 · 239).
    */
   photo: string | undefined;
+  /**
+   * The word the hatch carries: the piece's type ("Half-zip", "Jacket")
+   * when it has one, else its category's, read as the closet and the open
+   * web read it (`typeWordOf`), so a shell worn as an outer layer never
+   * says TOP under OUTER (R2-RUNS-03).
+   */
+  typeWord: string;
 }
 
 export interface PickerGroup {
@@ -70,6 +77,7 @@ export async function pickerGroups(
       matches: isMatches,
       untested: !hasRange,
       photo: photoUrlFor(item),
+      typeWord: typeWordOf(item.category, item.type),
     });
     byGroup.set(group, list);
   }
