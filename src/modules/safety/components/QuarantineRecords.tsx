@@ -12,7 +12,7 @@ import {
 } from "../../../ui";
 import { ncmecReportInput } from "../inputs";
 import type { QuarantineSummary, recordNcmecReport } from "../quarantine";
-import { DeskForm, RECORD_PANEL, RecordHead, recordName } from "./DeskForm";
+import { DeskForm, RECORD_PANEL, RecordHead } from "./DeskForm";
 
 type RecordReport = (input: {
   data: { recordId: string; reportId?: string | undefined };
@@ -98,11 +98,11 @@ function QuarantineRow({
   return (
     <li data-part="quarantine-record" className={RECORD_PANEL}>
       <RecordHead
-        name={recordName({
+        naming={{
           subjectType: held.subjectType,
           subjectId: held.subjectId,
           tag: "Quarantine",
-        })}
+        }}
         date={{
           part: "quarantined-at",
           label: `Held ${yearDayLabel(held.quarantinedAt)}`,

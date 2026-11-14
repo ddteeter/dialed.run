@@ -123,14 +123,27 @@ describe("CopyrightHolds", () => {
     );
     expect(part("copyright-hold")?.parentElement).toHaveClass("gap-3");
     // Its head as a queue row's: kind, short id, @owner and its tag, in
-    // ink; the whole id in the title; the date muted; a hairline under.
+    // ink; the date muted; a hairline under.
     const head = part("record-head");
     expect(head).toHaveClass("border-b", "border-hairline", "pb-3");
     const name = head?.firstElementChild;
-    // One text node, so it is heard as one line.
-    expect(name?.childNodes).toHaveLength(1);
-    expect(name?.textContent).toBe(
-      "PHOTO · 01M7…JY46 · @owner_7734 [COPYRIGHT HOLD]",
+    // Drawn with the kind and tag in capitals, and unheard: spans split
+    // what a screen reader hears.
+    const drawn = part("record-name-drawn");
+    expect(drawn?.parentElement).toBe(name);
+    expect(drawn).toHaveAttribute("aria-hidden", "true");
+    expect(drawn?.textContent).toBe(
+      "photo · 01M7…JY46 · @owner_7734 [Copyright hold]",
+    );
+    expect(drawn?.firstElementChild).toHaveTextContent(/^photo$/u);
+    expect(drawn?.firstElementChild).toHaveClass("uppercase");
+    expect(drawn?.lastElementChild).toHaveTextContent(/^\[Copyright hold\]$/u);
+    expect(drawn?.lastElementChild).toHaveClass("uppercase");
+    // Heard as one line, in the words' own case.
+    expect(drawn?.nextElementSibling).toHaveClass("sr-only");
+    expect(drawn?.nextElementSibling?.childNodes).toHaveLength(1);
+    expect(drawn?.nextElementSibling?.textContent).toBe(
+      "photo · 01M7…JY46 · @owner_7734 [Copyright hold]",
     );
     expect(name).toHaveClass(
       "min-w-0",
@@ -163,8 +176,11 @@ describe("CopyrightHolds", () => {
 
   it("names an owner with no handle by account id, under a head with no @", () => {
     renderHolds(held({ ownerHandle: undefined, subjectId: "p1" }));
-    expect(part("record-head")?.firstElementChild?.textContent).toBe(
-      "PHOTO · p1 [COPYRIGHT HOLD]",
+    expect(part("record-name-drawn")?.textContent).toBe(
+      "photo · p1 [Copyright hold]",
+    );
+    expect(part("record-name-drawn")?.nextElementSibling?.textContent).toBe(
+      "photo · p1 [Copyright hold]",
     );
     expect(part("owner")?.textContent).toBe("Owner runner-1 · strikes 2");
   });

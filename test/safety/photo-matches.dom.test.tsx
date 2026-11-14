@@ -182,13 +182,10 @@ describe("PhotoMatches", () => {
         "text-mono-xs",
         "text-quiet",
       );
-      // Cut at the tile's edge, whole in the title (R2-DESK-11).
+      // Cut at the tile's edge (R2-DESK-11); the photo's alt says it whole.
       expect(line).toHaveClass("min-w-0", "truncate");
       expect(line.previousElementSibling).toHaveClass("min-w-0", "truncate");
-      expect(line.previousElementSibling).toHaveAttribute(
-        "title",
-        line.previousElementSibling?.textContent ?? "",
-      );
+      expect(line.previousElementSibling).not.toHaveAttribute("title");
       expect(line.parentElement).toHaveClass("min-w-0", "flex-col");
     }
     // Fixed 128 columns, so a long caption cannot widen its tile.

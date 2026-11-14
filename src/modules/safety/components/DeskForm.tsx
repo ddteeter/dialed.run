@@ -153,51 +153,62 @@ The rule above a record's bar, as the queue's card draws one.
 export const RECORD_BAR = "border-t border-hairline pt-3";
 
 /**
- * `KIND · id · @owner [TAG]`: the id at its ends, the handle in its own
- * case, the kind and tag in capitals.
+What a record's head names: its kind, id, owner (if any) and what holds it.
+*/
+interface RecordNaming {
+  readonly subjectType: string;
+  readonly subjectId: string;
+  readonly owner?: string | undefined;
+  readonly tag: string;
+}
+
+/**
+ * `kind · id · @owner [tag]`, the id at its ends, as one line of words: what
+ * a screen reader hears, in the words' own case.
  */
 export function recordName({
   subjectType,
   subjectId,
   owner,
   tag,
-}: Readonly<{
-  subjectType: string;
-  subjectId: string;
-  owner?: string | undefined;
-  tag: string;
-}>): string {
+}: RecordNaming): string {
   const whose = owner === undefined ? "" : ` · @${owner}`;
-  return `${subjectType.toUpperCase()} · ${shortId(subjectId)}${whose} [${tag.toUpperCase()}]`;
+  return `${subjectType} · ${shortId(subjectId)}${whose} [${tag}]`;
 }
 
 /**
- * The record's head, as the queue's row head reads (R55·197, 199): its
- * name (`recordName`) in MONO.sm ink, its date muted at the right, and a
- * hairline under it.
+ * The record's head, as the queue's row head reads (R55·197, 199):
+ * `KIND · id · @owner [TAG]` in MONO.sm ink, the kind and tag in capitals
+ * and the handle in its own case; its date muted at the right; a hairline
+ * under it.
  */
 export function RecordHead({
-  name,
+  naming,
   date,
 }: Readonly<{
-  /**
-  The record's name, from `recordName`.
-  */
-  name: string;
+  naming: RecordNaming;
   /**
   The date's part name and its words ("Hidden Oct 23").
   */
   date: Readonly<{ part: string; label: string }>;
 }>): JSX.Element {
+  const { subjectType, subjectId, owner, tag } = naming;
   return (
     <span
       data-part="record-head"
       className="flex items-baseline justify-between gap-3 border-b border-hairline pb-3"
     >
-      {/* One string, so it is heard as one line: spans for the capitals
-          split it, and a span's edge drops the space beside it. */}
       <span className="min-w-0 truncate font-mono text-mono-sm text-ink">
-        {name}
+        {/* Drawn with the kind and tag in capitals, which takes spans; heard
+            as one line from the copy beside it, since spans split what a
+            screen reader hears and drop the space at their edge. */}
+        <span aria-hidden="true" data-part="record-name-drawn">
+          <span className="uppercase">{subjectType}</span>
+          {` · ${shortId(subjectId)}`}
+          {owner === undefined ? undefined : ` · @${owner}`}{" "}
+          <span className="uppercase">{`[${tag}]`}</span>
+        </span>
+        <span className="sr-only">{recordName(naming)}</span>
       </span>
       <span data-part={date.part} className="shrink-0 text-muted uppercase">
         <Mono step="xs">{date.label}</Mono>

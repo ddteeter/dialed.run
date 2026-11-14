@@ -244,7 +244,7 @@ function Matches({
           }
         >
           <Thumbnail match={match} />
-          <span title={nameOf(match)} className={CAPTION_CLASS}>
+          <span className={CAPTION_CLASS}>
             <Mono step="xs">{nameOf(match)}</Mono>
           </span>
           <span
@@ -283,7 +283,7 @@ function RemovedTile({
       <span className="flex h-32 w-32 items-center justify-center border border-hairline text-quiet">
         <Mono step="xs">Removed</Mono>
       </span>
-      <span title={nameOf(image)} className={CAPTION_CLASS}>
+      <span className={CAPTION_CLASS}>
         <Mono step="xs">{nameOf(image)}</Mono>
       </span>
       <span className={CAPTION_CLASS}>

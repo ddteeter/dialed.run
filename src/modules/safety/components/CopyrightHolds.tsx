@@ -33,7 +33,6 @@ import {
   RECORD_BAR,
   RECORD_PANEL,
   RecordHead,
-  recordName,
 } from "./DeskForm";
 import { useSettled } from "./use-settled";
 
@@ -267,12 +266,12 @@ function HoldFacts({
   return (
     <>
       <RecordHead
-        name={recordName({
+        naming={{
           subjectType: held.subjectType,
           subjectId: held.subjectId,
           owner: held.ownerHandle,
           tag: "Copyright hold",
-        })}
+        }}
         date={{
           part: "hidden-at",
           label: `Hidden ${monthDayLabel(held.hiddenAt)}`,
