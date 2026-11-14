@@ -30,6 +30,33 @@ const read = (path: string): string =>
 const theme = read("../../design/Theme.dc.html");
 const tokens = read("../../src/ui/tokens.css");
 
+const contract = read("../../design/tokens.js");
+
+/**
+ * `ELEVATION.lift` in `design/tokens.js`: `light: '0 8px 28px rgb(11 11 14
+ * / 0.10)', dark: 'none'`. The light value is split into its geometry, its
+ * colour as hex (how `hexOf` reports a role) and its alpha.
+ */
+function elevationLift(): {
+  geometry: string;
+  rgb: string;
+  alpha: number;
+  dark: string;
+} {
+  const found =
+    /lift: \{ light: '(?<geometry>[^']*?) rgb\((?<r>\d+) (?<g>\d+) (?<b>\d+) \/ (?<alpha>[\d.]+)\)', dark: '(?<dark>[^']*)'/u.exec(
+      contract,
+    )?.groups ?? {};
+  const hex = (channel: string | undefined): string =>
+    Number(channel).toString(16).padStart(2, "0");
+  return {
+    geometry: found.geometry ?? "",
+    rgb: `#${hex(found.r)}${hex(found.g)}${hex(found.b)}`,
+    alpha: Number(found.alpha),
+    dark: found.dark ?? "",
+  };
+}
+
 /**
  * One T1 row: `['Muted', '--muted', '#7A7A70', '#8B8B93', 'note'],`.
  */
@@ -268,17 +295,30 @@ describe("the T1 port", () => {
     expect(tokens).toContain("--sheet-cap: 90dvh;");
   });
 
-  it("makes the lift a T1 role: --ink at 10% in light, none in dark (R56·246)", () => {
-    // 246a: "0 8px 28px rgb(11 11 14 / 0.10), the build's value with
-    // --ink as the colour" — written as the role, never a typed colour.
+  it("makes the lift a T1 role, as tokens.js's ELEVATION says (R56·246)", () => {
+    // 246a: "the build's value with --ink as the colour". So the light
+    // column writes the contract's shadow with its colour as the role at
+    // the contract's alpha, and the role resolves to the contract's rgb.
+    const { geometry, rgb, alpha, dark } = elevationLift();
     expect(paper.get("--lift")).toBe(
-      "0 8px 28px color-mix(in srgb, var(--ink) 10%, transparent)",
+      `${geometry} color-mix(in srgb, var(--ink) ${String(alpha * 100)}%, transparent)`,
     );
-    expect(hexOf("--ink", paper)).toBe("#0b0b0e");
+    expect(hexOf("--ink", paper)).toBe(rgb);
     // 246b: "On ink a 10% shadow doesn't show."
-    expect(ink.get("--lift")).toBe("none");
+    expect(ink.get("--lift")).toBe(dark);
     // A role of the columns, so nothing on `:root` can stand in for one.
     expect(root.has("--lift")).toBe(false);
+  });
+
+  it("reads ELEVATION's lift rather than defaulting it", () => {
+    // Pins the reader, so a tokens.js that moved its shape fails here
+    // instead of the case above comparing against empty strings.
+    expect(elevationLift()).toEqual({
+      geometry: "0 8px 28px",
+      rgb: "#0b0b0e",
+      alpha: 0.1,
+      dark: "none",
+    });
   });
 
   it("draws the checkbox, radio and switch as ruled, with the contract's focus ring (R54·166)", () => {
