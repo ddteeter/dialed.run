@@ -483,6 +483,104 @@ describe("Au5 · Google in flight", () => {
   });
 });
 
+/**
+ * #696: Google, then Log in (which cancels it), then Google again while
+ * the first answer is still out. The second press is a fresh attempt, and
+ * only its answer counts.
+ */
+async function pressGoogleAgainAfterLogIn() {
+  const session = await logIn();
+  const first = Promise.withResolvers<unknown>();
+  const second = Promise.withResolvers<unknown>();
+  client.social
+    .mockReturnValueOnce(first.promise)
+    .mockReturnValueOnce(second.promise);
+  client.email.mockResolvedValue({
+    data: undefined,
+    error: { code: "INVALID_EMAIL_OR_PASSWORD", status: 401 },
+  });
+  const google = () =>
+    screen.getByRole("button", { name: "Continue with Google" });
+  await session.user.click(google());
+  await fillAndSubmit(session.user);
+  await screen.findByText(AUTH_COPY.wrongPassword);
+  await session.user.click(google());
+  return { ...session, first, second };
+}
+
+/**
+Lets every answer already given run its course.
+*/
+async function settle() {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+}
+
+const CONSENT = (n: string) => ({
+  data: { url: `https://accounts.example/consent-${n}` },
+  error: undefined,
+});
+
+describe("Au5 · Google pressed again after Log in cancelled it (#696)", () => {
+  it("reaches Google afresh rather than waiting on the cancelled attempt", async () => {
+    await pressGoogleAgainAfterLogIn();
+
+    expect(client.social).toHaveBeenCalledTimes(2);
+    expect(part("google-button")).toHaveAttribute("data-state", "pending");
+    expect(part("google-button")).toHaveTextContent("Opening Google");
+  });
+
+  it("shows no band for the cancelled attempt's late failure, pending or after", async () => {
+    const { first, second, leave } = await pressGoogleAgainAfterLogIn();
+
+    first.resolve({ data: undefined, error: { status: 502 } });
+    await settle();
+    expect(part("control-failure")).toBeNull();
+    expect(screen.queryByText(AUTH_COPY.google)).toBeNull();
+    expect(part("google-button")).toHaveAttribute("data-state", "pending");
+
+    second.resolve(CONSENT("second"));
+    await settle();
+    expect(leave).toHaveBeenCalledExactlyOnceWith(
+      "https://accounts.example/consent-second",
+    );
+    expect(part("control-failure")).toBeNull();
+    expect(screen.queryByText(AUTH_COPY.google)).toBeNull();
+  });
+
+  it("follows the new attempt's answer, never the cancelled one's", async () => {
+    const { first, second, leave } = await pressGoogleAgainAfterLogIn();
+
+    first.resolve(CONSENT("first"));
+    await settle();
+    expect(leave).not.toHaveBeenCalled();
+    expect(part("google-button")).toHaveAttribute("data-state", "pending");
+
+    second.resolve(CONSENT("second"));
+    await settle();
+    expect(leave).toHaveBeenCalledExactlyOnceWith(
+      "https://accounts.example/consent-second",
+    );
+  });
+
+  it("puts Google's band under it when the new attempt fails", async () => {
+    const { first, second, leave } = await pressGoogleAgainAfterLogIn();
+
+    second.resolve({ data: undefined, error: { status: 502 } });
+    await settle();
+    expect(part("control-failure")).toHaveTextContent(AUTH_COPY.google);
+    expect(screen.getByRole("status")).toHaveTextContent(AUTH_COPY.google);
+    expect(part("google-button")).not.toHaveAttribute("data-state");
+
+    // The cancelled attempt answering afterwards changes nothing.
+    first.resolve(CONSENT("first"));
+    await settle();
+    expect(leave).not.toHaveBeenCalled();
+    expect(part("control-failure")).toHaveTextContent(AUTH_COPY.google);
+  });
+});
+
 describe("Au6 · a refusal Google's round trip brought back", () => {
   it("shows the band for any code but the runner's own cancel", async () => {
     await logIn({ returnedError: "invalid_code" });
