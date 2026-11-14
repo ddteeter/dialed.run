@@ -2,7 +2,8 @@ import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import type { z } from "zod";
 
-import type { effortSchema } from "../../../lib/contracts";
+import type { DistanceUnit, effortSchema } from "../../../lib/contracts";
+import { metresPer } from "../../../lib/contracts/measures";
 import {
   FlowStep,
   FormErrorSummary,
@@ -44,8 +45,9 @@ function toEpochSeconds(localDateTime: string): number {
  * The contract stores SI — `durationS` is seconds, `distanceM` is metres —
  * because that is what makes pace arithmetic and the future unit
  * preference (R-6) a display concern rather than a storage one. Nobody
- * types seconds into a form, so the inputs take minutes and kilometres and
- * `toSeconds`/`toMetres` convert on submit.
+ * types seconds into a form, so the inputs take minutes and the runner's
+ * own distance unit (R2-RUNS-06: miles for a runner who reads miles
+ * everywhere else), and `toSeconds`/`toMetres` convert on submit.
  *
  * The keys cannot be renamed to match the labels: `useFormSubmit` looks a
  * field up by `name` to focus it and reads `fieldErrors[name]`, so the DOM
@@ -55,19 +57,26 @@ function toEpochSeconds(localDateTime: string): number {
  * phrased in the input's units** — `durationS` says "How many minutes did
  * it take?" — because the schema's message is what the user reads.
  */
-const LABELS = {
-  title: "Title",
-  startedAt: "Started",
-  durationS: "Minutes",
-  distanceM: "Distance (km)",
+const DISTANCE_LABELS: Readonly<Record<DistanceUnit, string>> = {
+  km: "Distance (km)",
+  mi: "Distance (mi)",
 };
+
+function labelsFor(unit: DistanceUnit) {
+  return {
+    title: "Title",
+    startedAt: "Started",
+    durationS: "Minutes",
+    distanceM: DISTANCE_LABELS[unit],
+  };
+}
 
 function toSeconds(minutes: string): number {
   return Math.round(Number(minutes) * 60);
 }
 
-function toMetres(kilometres: string): number {
-  return Number(kilometres) * 1000;
+function toMetres(distance: string, unit: DistanceUnit): number {
+  return Number(distance) * metresPer(unit);
 }
 
 /**
@@ -88,6 +97,10 @@ export interface ManualRunFormProps {
    * (Round 55 · 183): the day it arrived, "2026-11-12".
    */
   startedOn?: string | undefined;
+  /**
+  The runner's distance unit: Distance is typed in it.
+  */
+  distanceUnit: DistanceUnit;
 }
 
 /**
@@ -102,15 +115,17 @@ export function startedFrom(day: string | undefined): string {
 export function ManualRunForm({
   submitRun,
   startedOn,
+  distanceUnit,
 }: Readonly<ManualRunFormProps>) {
   const navigate = useNavigate();
   const [title, setTitle] = useState("Morning run");
   const [startedAt, setStartedAt] = useState(startedFrom(startedOn));
   const [minutes, setMinutes] = useState("30");
-  const [distanceKm, setDistanceKm] = useState("5");
+  const [distance, setDistance] = useState("5");
   const [indoor, setIndoor] = useState(false);
   const [effort, setEffort] = useState<Effort | "">("");
   const { idempotencyKey, rotate } = useIdempotencyKey();
+  const labels = labelsFor(distanceUnit);
 
   const form = useFormSubmit({
     carry: "run",
@@ -123,7 +138,7 @@ export function ManualRunForm({
     // Recorded as R-44.
     // Stryker disable next-line StringLiteral
     successMessage: "Run logged.",
-    labels: LABELS,
+    labels,
     onSuccess: async (created) => {
       // Equivalent mutant: rotating the key matters for a *second* run
       // typed into the same mounted form, and the navigation below means
@@ -153,7 +168,7 @@ export function ManualRunForm({
             title,
             startedAt: toEpochSeconds(startedAt),
             durationS: toSeconds(minutes),
-            distanceM: toMetres(distanceKm),
+            distanceM: toMetres(distance, distanceUnit),
             indoor,
             idempotencyKey,
             ...(effort !== "" && { effort }),
@@ -168,7 +183,7 @@ export function ManualRunForm({
         />
         <TextField
           name="title"
-          label={LABELS.title}
+          label={labels.title}
           value={title}
           onChange={setTitle}
           field={form.field}
@@ -176,7 +191,7 @@ export function ManualRunForm({
         />
         <FormField
           name="startedAt"
-          label={LABELS.startedAt}
+          label={labels.startedAt}
           error={form.fieldErrors.startedAt}
         >
           <input
@@ -194,7 +209,7 @@ export function ManualRunForm({
           <div className="flex-1">
             <FormField
               name="durationS"
-              label={LABELS.durationS}
+              label={labels.durationS}
               error={form.fieldErrors.durationS}
             >
               <input
@@ -213,7 +228,7 @@ export function ManualRunForm({
           <div className="flex-1">
             <FormField
               name="distanceM"
-              label={LABELS.distanceM}
+              label={labels.distanceM}
               error={form.fieldErrors.distanceM}
             >
               <input
@@ -222,9 +237,9 @@ export function ManualRunForm({
                 type="number"
                 min="0.1"
                 step="0.01"
-                value={distanceKm}
+                value={distance}
                 onChange={(event) => {
-                  setDistanceKm(event.target.value);
+                  setDistance(event.target.value);
                 }}
                 className="w-full border-none bg-transparent"
               />

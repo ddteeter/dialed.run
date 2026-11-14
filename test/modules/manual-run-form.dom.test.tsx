@@ -73,7 +73,9 @@ describe("ManualRunForm: what it sends", () => {
     // on nothing.
     const user = userEvent.setup();
     const submitRun = fakeSubmit();
-    await renderWithRouter(<ManualRunForm submitRun={submitRun} />);
+    await renderWithRouter(
+      <ManualRunForm distanceUnit="km" submitRun={submitRun} />,
+    );
 
     await fillValid(user);
     const minutes = screen.getByLabelText("Minutes");
@@ -97,10 +99,36 @@ describe("ManualRunForm: what it sends", () => {
     });
   });
 
+  it("takes the distance in miles from a runner who reads miles (R2-RUNS-06)", async () => {
+    const user = userEvent.setup();
+    const submitRun = fakeSubmit();
+    await renderWithRouter(
+      <ManualRunForm distanceUnit="mi" submitRun={submitRun} />,
+    );
+
+    expect(screen.queryByLabelText("Distance (km)")).toBeNull();
+    await fillValid(user);
+    const distance = screen.getByLabelText("Distance (mi)");
+    expect(distance).toHaveAttribute("name", "distanceM");
+    await user.clear(distance);
+    await user.type(distance, "5");
+    await user.click(
+      screen.getByRole("button", { name: "Next · pick the outfit" }),
+    );
+
+    await waitFor(() => {
+      expect(submitRun).toHaveBeenCalledTimes(1);
+    });
+    // Five miles, never five kilometres read as 3.1 miles.
+    expect(submitted(submitRun)).toMatchObject({ distanceM: 8046.7 });
+  });
+
   it("rounds a fractional minute rather than truncating it", async () => {
     const user = userEvent.setup();
     const submitRun = fakeSubmit();
-    await renderWithRouter(<ManualRunForm submitRun={submitRun} />);
+    await renderWithRouter(
+      <ManualRunForm distanceUnit="km" submitRun={submitRun} />,
+    );
 
     await fillValid(user);
     const minutes = screen.getByLabelText("Minutes");
@@ -119,7 +147,9 @@ describe("ManualRunForm: what it sends", () => {
   it("sends the start as epoch seconds, not as the string it was typed in", async () => {
     const user = userEvent.setup();
     const submitRun = fakeSubmit();
-    await renderWithRouter(<ManualRunForm submitRun={submitRun} />);
+    await renderWithRouter(
+      <ManualRunForm distanceUnit="km" submitRun={submitRun} />,
+    );
 
     await fillValid(user);
     await user.click(
@@ -140,7 +170,9 @@ describe("ManualRunForm: what it sends", () => {
     // same submission.
     const user = userEvent.setup();
     const submitRun = fakeSubmit();
-    await renderWithRouter(<ManualRunForm submitRun={submitRun} />);
+    await renderWithRouter(
+      <ManualRunForm distanceUnit="km" submitRun={submitRun} />,
+    );
 
     await fillValid(user);
     await user.click(
@@ -157,7 +189,9 @@ describe("ManualRunForm: what it sends", () => {
   it("marks a treadmill run indoor", async () => {
     const user = userEvent.setup();
     const submitRun = fakeSubmit();
-    await renderWithRouter(<ManualRunForm submitRun={submitRun} />);
+    await renderWithRouter(
+      <ManualRunForm distanceUnit="km" submitRun={submitRun} />,
+    );
 
     await fillValid(user);
     // R54·166.3: a checkbox from the shared set, its label a choice.
@@ -179,13 +213,19 @@ describe("ManualRunForm: what it sends", () => {
 describe("ManualRunForm: a day carried from a Strava reminder (Round 55 · 183)", () => {
   it("starts Started on that day, at its first minute", async () => {
     await renderWithRouter(
-      <ManualRunForm submitRun={fakeSubmit()} startedOn="2026-11-12" />,
+      <ManualRunForm
+        distanceUnit="km"
+        submitRun={fakeSubmit()}
+        startedOn="2026-11-12"
+      />,
     );
     expect(screen.getByLabelText("Started")).toHaveValue("2026-11-12T00:00");
   });
 
   it("starts Started blank with no day", async () => {
-    await renderWithRouter(<ManualRunForm submitRun={fakeSubmit()} />);
+    await renderWithRouter(
+      <ManualRunForm distanceUnit="km" submitRun={fakeSubmit()} />,
+    );
     expect(screen.getByLabelText("Started")).toHaveValue("");
   });
 
@@ -201,7 +241,9 @@ describe("ManualRunForm: effort is optional", () => {
     // is a value the contract has no meaning for.
     const user = userEvent.setup();
     const submitRun = fakeSubmit();
-    await renderWithRouter(<ManualRunForm submitRun={submitRun} />);
+    await renderWithRouter(
+      <ManualRunForm distanceUnit="km" submitRun={submitRun} />,
+    );
 
     await fillValid(user);
     await user.click(
@@ -218,7 +260,9 @@ describe("ManualRunForm: effort is optional", () => {
   it("sends it when it is", async () => {
     const user = userEvent.setup();
     const submitRun = fakeSubmit();
-    await renderWithRouter(<ManualRunForm submitRun={submitRun} />);
+    await renderWithRouter(
+      <ManualRunForm distanceUnit="km" submitRun={submitRun} />,
+    );
 
     await fillValid(user);
     await user.selectOptions(screen.getByLabelText(/Effort/), "workout");
@@ -237,7 +281,9 @@ describe("ManualRunForm: effort is optional", () => {
     // a value the run carries forever.
     const user = userEvent.setup();
     const submitRun = fakeSubmit();
-    await renderWithRouter(<ManualRunForm submitRun={submitRun} />);
+    await renderWithRouter(
+      <ManualRunForm distanceUnit="km" submitRun={submitRun} />,
+    );
 
     await fillValid(user);
     const effort = screen.getByLabelText(/Effort/);
@@ -255,7 +301,10 @@ describe("ManualRunForm: effort is optional", () => {
 
   it("offers every effort the contract knows, and a way out", async () => {
     await renderWithRouter(
-      <ManualRunForm submitRun={() => Promise.resolve({ id: "01RUN" })} />,
+      <ManualRunForm
+        distanceUnit="km"
+        submitRun={() => Promise.resolve({ id: "01RUN" })}
+      />,
     );
 
     const select = document.querySelector("select");
@@ -270,7 +319,10 @@ describe("ManualRunForm: after it lands", () => {
   it("takes them on to picking the outfit for the run it just created (R1, R-102)", async () => {
     const user = userEvent.setup();
     const router = await renderWithRouter(
-      <ManualRunForm submitRun={() => Promise.resolve({ id: "01NEWRUN" })} />,
+      <ManualRunForm
+        distanceUnit="km"
+        submitRun={() => Promise.resolve({ id: "01NEWRUN" })}
+      />,
     );
 
     await fillValid(user);
@@ -293,7 +345,9 @@ describe("ManualRunForm: after it lands", () => {
       keys.push(input.data.idempotencyKey);
       return Promise.reject(new Error("network went away"));
     });
-    await renderWithRouter(<ManualRunForm submitRun={submitRun} />);
+    await renderWithRouter(
+      <ManualRunForm distanceUnit="km" submitRun={submitRun} />,
+    );
 
     await fillValid(user);
     await user.click(
@@ -316,7 +370,9 @@ describe("ManualRunForm: what it refuses", () => {
     // and the message is phrased in the input's units, not the schema's.
     const user = userEvent.setup();
     const submitRun = fakeSubmit();
-    await renderWithRouter(<ManualRunForm submitRun={submitRun} />);
+    await renderWithRouter(
+      <ManualRunForm distanceUnit="km" submitRun={submitRun} />,
+    );
 
     await user.click(
       screen.getByRole("button", { name: "Next · pick the outfit" }),
@@ -334,7 +390,9 @@ describe("ManualRunForm: what it refuses", () => {
     // nothing at all.
     const user = userEvent.setup();
     const submitRun = fakeSubmit();
-    await renderWithRouter(<ManualRunForm submitRun={submitRun} />);
+    await renderWithRouter(
+      <ManualRunForm distanceUnit="km" submitRun={submitRun} />,
+    );
 
     await fillValid(user);
     const minutes = screen.getByLabelText("Minutes");
@@ -356,7 +414,9 @@ describe("ManualRunForm: what it refuses", () => {
   it("names every field the way the schema does", async () => {
     // The DOM name is the schema key, not the label, so `focusField` and
     // `fieldErrors[name]` can find it.
-    await renderWithRouter(<ManualRunForm submitRun={fakeSubmit()} />);
+    await renderWithRouter(
+      <ManualRunForm distanceUnit="km" submitRun={fakeSubmit()} />,
+    );
 
     expect(screen.getByLabelText("Title")).toHaveAttribute("name", "title");
     expect(screen.getByLabelText("Started")).toHaveAttribute(
@@ -375,7 +435,9 @@ describe("ManualRunForm: what it refuses", () => {
 
   it("submits through its own handler, never the browser's", async () => {
     const user = userEvent.setup();
-    await renderWithRouter(<ManualRunForm submitRun={fakeSubmit()} />);
+    await renderWithRouter(
+      <ManualRunForm distanceUnit="km" submitRun={fakeSubmit()} />,
+    );
     await fillValid(user);
 
     let prevented: boolean | undefined;
@@ -397,7 +459,9 @@ describe("ManualRunForm: what it refuses", () => {
   it("will not submit a run of no length", async () => {
     const user = userEvent.setup();
     const submitRun = fakeSubmit();
-    await renderWithRouter(<ManualRunForm submitRun={submitRun} />);
+    await renderWithRouter(
+      <ManualRunForm distanceUnit="km" submitRun={submitRun} />,
+    );
 
     await fillValid(user);
     const minutes = screen.getByLabelText("Minutes");
@@ -417,7 +481,10 @@ describe("ManualRunForm: what it refuses", () => {
     // `noValidate`: the browser's bubbles are a second, unstyled error
     // system that fires first and says "Please fill in this field".
     await renderWithRouter(
-      <ManualRunForm submitRun={() => Promise.resolve({ id: "01RUN" })} />,
+      <ManualRunForm
+        distanceUnit="km"
+        submitRun={() => Promise.resolve({ id: "01RUN" })}
+      />,
     );
     expect(
       screen
@@ -439,7 +506,9 @@ describe("ManualRunForm: what it refuses", () => {
  */
 describe("ManualRunForm: the log flow", () => {
   it("is step one of the log flow, and enters from an edge", async () => {
-    await renderWithRouter(<ManualRunForm submitRun={fakeSubmit()} />);
+    await renderWithRouter(
+      <ManualRunForm distanceUnit="km" submitRun={fakeSubmit()} />,
+    );
 
     const step = document.querySelector("[data-flow-direction]");
     expect(step).not.toBeNull();
@@ -467,6 +536,7 @@ describe("ManualRunForm: a lapsed session (Au7, D-155)", () => {
       path: "/runs/manual",
       component: () => (
         <ManualRunForm
+          distanceUnit="km"
           submitRun={() =>
             Promise.reject(
               Object.assign(new Error("Not signed in"), {

@@ -359,7 +359,7 @@ test.describe("as the dense runner", () => {
         );
       await page.getByLabel("Started").fill("2031-01-01T07:15");
       await page.getByLabel("Minutes").fill("-4");
-      await page.getByLabel("Distance (km)").fill("0");
+      await page.getByLabel(/^Distance \((km|mi)\)$/u).fill("0");
       await next.click();
       await shoot(page, "manual: bad values");
     });
@@ -368,7 +368,7 @@ test.describe("as the dense runner", () => {
       await page.getByLabel("Title").fill("Thursday threshold");
       await page.getByLabel("Started").fill("2026-11-10T06:40");
       await page.getByLabel("Minutes").fill("52");
-      await page.getByLabel("Distance (km)").fill("11.2");
+      await page.getByLabel(/^Distance \((km|mi)\)$/u).fill("11.2");
       const release = await holdPosts(page, "fail");
       await next.click({ noWaitAfter: true });
       await expect(page.locator("form").first()).toBeVisible();

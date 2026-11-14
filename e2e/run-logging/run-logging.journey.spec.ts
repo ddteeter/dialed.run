@@ -384,7 +384,7 @@ test("log a run: read a file in place, pick the kit, note it, enter one by hand"
     await page.getByLabel("Title").fill("Demo tempo run");
     await page.getByLabel("Started").fill("2026-09-06T07:15");
     await page.getByLabel("Minutes").fill("32");
-    await page.getByLabel("Distance (km)").fill("6.5");
+    await page.getByLabel(/^Distance \((km|mi)\)$/u).fill("6.5");
     await page.getByRole("button", { name: "Next · pick the outfit" }).click();
     await page.waitForURL("**/feed/attach/**");
     await hydrated(page);

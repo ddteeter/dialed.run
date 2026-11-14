@@ -24,7 +24,7 @@ export function formatDistance(distanceM: number, unit: DistanceUnit): string {
 /**
  * Metres in one of the runner's distance units.
  */
-function metresPer(unit: DistanceUnit): number {
+export function metresPer(unit: DistanceUnit): number {
   return unit === "km" ? METRES_PER_KM : METRES_PER_MILE;
 }
 
