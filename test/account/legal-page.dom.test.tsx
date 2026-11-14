@@ -502,12 +502,15 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
     ).toHaveClass("font-display", "text-heading");
   });
 
-  it("draws a table of more than two columns as cards below the desk and a broken-out table at it", async () => {
+  it("draws a table of more than two columns as cards at every width (R57·265, as built)", async () => {
     await renderDraft("privacy");
-    const cards = screen
-      .getAllByRole("list")
-      .find((list) => list.classList.contains("desk:hidden"));
-    if (cards === undefined) throw new Error("no cards");
+    // GUESS (R57·265, Design 315 #761): no 1440 step, so the cards at
+    // every width and no seven-column breakout.
+    expect(screen.queryByRole("table")).toBeNull();
+    const cards = screen.getByText("Sentry", { selector: "p" }).closest("ul");
+    if (cards === null) throw new Error("no cards");
+    expect(cards).toHaveClass("flex", "flex-col", "gap-3", "list-none");
+    expect(cards).not.toHaveClass("desk:hidden");
     const items = within(cards).getAllByRole("listitem");
     expect(items).toHaveLength(3);
     const [sentry, , short] = items;
@@ -535,33 +538,6 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
       [...sentry.querySelectorAll("dd")].map((value) => value.textContent),
     ).toEqual(["Functional Software", "Processor"]);
     expect(sentry.querySelector(":scope dt span")).toHaveClass("text-mono-xs");
-    const table = screen.getByRole("table");
-    expect(table.parentElement).toHaveClass(
-      "hidden",
-      "desk:block",
-      "desk:w-[calc(100cqw-var(--spacing)*72)]",
-      "bg-panel",
-    );
-    expect(
-      within(table)
-        .getAllByRole("columnheader")
-        .map((cell) => cell.textContent),
-    ).toEqual(["Service", "Company", "Role"]);
-    const cells = within(table).getAllByRole("cell");
-    expect(cells[0]).toHaveClass("font-semibold");
-    expect(cells[0]).toHaveClass("border-t", "px-4");
-    expect(cells[1]).not.toHaveClass("font-semibold");
-    expect(cells[1]).toHaveClass("border-t", "border-hairline", "px-4", "py-3");
-    expect(cells.map((cell) => cell.textContent)).toEqual([
-      "Sentry",
-      "Functional Software",
-      "Processor",
-      "OpenAI",
-      "OpenAI OpCo",
-      "Processor",
-      "Short",
-      "Only",
-    ]);
   });
 
   it("keeps a two-column table a table at every width", async () => {
@@ -576,10 +552,9 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
     ).toHaveClass("border-b", "border-hairline", "align-top");
   });
 
-  it("holds the rail at 240, the page in a container, and lets the rail scroll", async () => {
+  it("holds the rail at 240 and lets the rail scroll", async () => {
     await renderDraft("privacy");
     expect(screen.getByRole("main").firstElementChild).toHaveClass(
-      "@container",
       "desk:grid-cols-[240px_minmax(0,1fr)]",
       "desk:max-w-page",
     );

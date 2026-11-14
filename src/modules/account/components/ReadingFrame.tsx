@@ -105,10 +105,10 @@ export function ReadingFrame({
   // column. A legal text's are underlined links (R55·220's board).
   const isTally = contents.some((entry) => entry.count !== undefined);
   return (
-    // A container, so a wide table can break out to the page measure's
-    // right edge (`LegalPage`'s `WideTable`, R55·220). P4-02: the rail is
-    // a fixed 240 (R53·163), so the text starts at one x on every page.
-    <div className="@container px-5 pt-8 pb-16 desk:grid desk:max-w-page desk:grid-cols-[240px_minmax(0,1fr)] desk:gap-x-12">
+    // P4-02: the rail is a fixed 240 (R53·163), so the text starts at one
+    // x on every page. No wide table breaks out any more (R57·265, as
+    // built: `LegalPage`'s `WideTable`), so the page is no container.
+    <div className="px-5 pt-8 pb-16 desk:grid desk:max-w-page desk:grid-cols-[240px_minmax(0,1fr)] desk:gap-x-12">
       {/* The text's width, as the article's: the title and the draft
           notice sit over the text, and only a wide table steps out
           (R55·220, R2-LEGAL-05). */}
