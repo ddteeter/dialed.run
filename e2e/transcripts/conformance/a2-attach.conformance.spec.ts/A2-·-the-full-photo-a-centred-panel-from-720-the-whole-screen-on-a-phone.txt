@@ -1,0 +1,98 @@
+document
+main
+link, Back
+link, Notifications, # new
+#
+end of link, Notifications, # new
+heading, What did you wear?, level 1
+#.# miles, # degrees Fahrenheit, damp, # pieces
+link, Weather data provided by Visual Crossing
+status
+Auto-blur found nothing to cover. Tap the photo or a cell to blur an area.
+end of status
+No usual kit at #° yet.
+Pick what you wore. After a few runs here, we’ll suggest it.
+region, From the closet
+heading, From the closet, level 2
+From the closet
+end of heading, From the closet, level 2
+button, #° damp, matches conditions, pressed
+#° damp
+end of button, #° damp, matches conditions, pressed
+Showing # of #
+Tops · # of # match
+button, All Tops, has popup dialog
+All ›
+end of button, All Tops, has popup dialog
+button, Conformance top, not pressed
+Conformance top
+end of button, Conformance top, not pressed
+end of region, From the closet
+group, Outfit photo · optional
+Outfit photo · optional
+list
+listitem, level 1, position 1, set size 2
+button, Photo # of #
+end of listitem, level 1, position 1, set size 2
+listitem, level 1, position 2, set size 2
+Add photo
+Add photo
+end of listitem, level 1, position 2, set size 2
+end of list
+paragraph
+Press a photo to see it whole or remove it.
+end of paragraph
+dialog, Photo # of #
+dialog, Photo # of #
+Photo # of #
+button, Close
+region, Photos
+list
+listitem, level 1, position 1, set size 1
+image, Your outfit
+end of listitem, level 1, position 1, set size 1
+end of list
+end of region, Photos
+button, Remove photo
+end of dialog, Photo # of #
+end of group, Outfit photo · optional
+button, Next — did it work?
+Next — did it work?
+end of button, Next — did it work?
+paragraph
+Not now —
+link, leave it in the queue
+.
+end of paragraph
+end of main
+navigation, Main
+list
+listitem, level 1, position 1, set size 5
+link, Feed
+Feed
+end of link, Feed
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Closet
+Closet
+end of link, Closet
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+button, Add a run
++ Add
+end of button, Add a run
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Call
+Call
+end of link, Call
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, You
+You
+end of link, You
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Main
+status
+end of document

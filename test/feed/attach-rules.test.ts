@@ -2,7 +2,11 @@ import { isRedirect } from "@tanstack/react-router";
 import { describe, expect, it } from "vitest";
 
 import type { AttachContext } from "../../src/modules/feed/attach-context";
-import { kitChoice, orOnToVerdict } from "../../src/modules/feed/attach-rules";
+import {
+  kitChoice,
+  orOnToVerdict,
+  photosNotSent,
+} from "../../src/modules/feed/attach-rules";
 import { attachKitInput } from "../../src/modules/feed/inputs";
 
 /**
@@ -27,6 +31,21 @@ describe("kitChoice", () => {
     const overCap = Array.from({ length: 41 }, () => ID);
     expect(attachKitInput.shape.itemIds.safeParse(overCap).success).toBe(false);
     expect(kitChoice.safeParse(overCap).success).toBe(false);
+  });
+});
+
+describe("photosNotSent", () => {
+  it("says one photo in the singular", () => {
+    expect(photosNotSent(1)).toBe(
+      "The photo didn't upload. Your kit is attached — press Next to try again, or remove the photo to go on.",
+    );
+  });
+
+  it("counts two or more, the owner's words", () => {
+    expect(photosNotSent(2)).toBe(
+      "2 photos didn't upload. Your kit is attached — press Next to try again, or remove them to go on.",
+    );
+    expect(photosNotSent(4)).toMatch(/^4 photos didn't upload\./u);
   });
 });
 

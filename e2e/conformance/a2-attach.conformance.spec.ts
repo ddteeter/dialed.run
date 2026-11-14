@@ -1,6 +1,7 @@
 import type { Page, Route } from "@playwright/test";
 import { expect, test } from "../support/a11y";
 
+import { PNG_1X1, PNG_2X1 } from "../closet/closet-support";
 import { storageStateFor } from "../support/accounts";
 import { isServerFnCall } from "../support/server-fn";
 import {
@@ -247,6 +248,119 @@ test.describe("A2 · heard at 390", () => {
     await expect(sheet).toBeVisible();
     await expect(
       sheet.getByRole("checkbox", { name: /^Conformance top/u }),
+    ).toBeVisible();
+  });
+});
+
+/**
+Picks a photo with A2's add box and keeps it through W3's blur step.
+*/
+async function keepPhoto(
+  page: Page,
+  name: string,
+  buffer: Buffer,
+): Promise<void> {
+  await page.setInputFiles('[data-part="add-photo"] input[type="file"]', {
+    name,
+    mimeType: "image/png",
+    buffer,
+  });
+  const blurSheet = page.getByRole("dialog", { name: "Check the blur" });
+  await expect(blurSheet).toBeVisible({ timeout: 20_000 });
+  await blurSheet
+    .getByRole("button", { name: "Use this photo" })
+    .click({ timeout: 20_000 });
+  await expect(blurSheet).toBeHidden();
+}
+
+/**
+ * The full photo (Round 56 · 249.1), the only check that sees the real
+ * dialog in the top layer: from 720 the centred panel at MEASURE.column
+ * over the scrim, paged by its arrows and keys, Remove and where focus
+ * goes, and on a phone the whole screen. It ends open at 390, so what a
+ * screen reader says on it is checked in.
+ */
+test.describe("A2 · the full photo", () => {
+  let seeded: Seeded;
+  let runId: string;
+
+  test.beforeEach(async () => {
+    seeded = {
+      userId: await userIdOf("run-logging"),
+      runIds: [],
+      itemIds: [],
+      entryIds: [],
+    };
+    await unseed(seeded);
+    runId = await seedRun(seeded, {
+      observed: true,
+      weatherStatus: "attached",
+    });
+    await seedItem(seeded, "Conformance top", "top");
+  });
+
+  test.afterEach(async () => {
+    await unseed(seeded);
+  });
+
+  test("a centred panel from 720, the whole screen on a phone", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`/feed/attach/${runId}`);
+    await hydrated(page);
+
+    await keepPhoto(page, "front.png", PNG_1X1);
+    await keepPhoto(page, "back.png", PNG_2X1);
+    const first = page.getByRole("button", { name: "Photo 1 of 2" });
+    await expect(first).toBeVisible({ timeout: 20_000 });
+    const thumb = await first.boundingBox();
+    // 249.4: 76 × 95.
+    expect(thumb?.width).toBe(76);
+    expect(thumb?.height).toBe(95);
+
+    // From 720: MEASURE.column, centred, paged by the arrows and the keys,
+    // each arrow absent at its end (Design 261, #690).
+    await first.click();
+    const viewer = page.locator('[data-slot="photo-viewer"]');
+    await expect(viewer).toHaveAccessibleName("Photo 1 of 2");
+    const panel = await viewer.boundingBox();
+    expect(panel?.width).toBe(620);
+    expect((panel?.x ?? 0) * 2 + (panel?.width ?? 0)).toBe(1280);
+    const previous = viewer.getByRole("button", { name: "Previous photo" });
+    const next = viewer.getByRole("button", { name: "Next photo" });
+    await expect(previous).toHaveCount(0);
+    await next.click();
+    await expect(viewer).toHaveAccessibleName("Photo 2 of 2");
+    await expect(next).toHaveCount(0);
+    await expect(previous).toBeFocused();
+    await page.keyboard.press("ArrowLeft");
+    await expect(viewer).toHaveAccessibleName("Photo 1 of 2");
+    await page.keyboard.press("Escape");
+    await expect(viewer).toBeHidden();
+    await expect(first).toBeFocused();
+
+    // Remove (249.3): no confirm, and focus on the photo that slid into
+    // its place.
+    await first.click();
+    await viewer.getByRole("button", { name: "Remove photo" }).click();
+    await expect(viewer).toBeHidden();
+    const left = page.getByRole("button", { name: "Photo 1 of 1" });
+    await expect(left).toBeFocused();
+
+    // On a phone, the whole screen. It ends open, so its transcript is
+    // checked in.
+    await page.setViewportSize({ width: 390, height: 900 });
+    await left.click();
+    await expect(viewer).toBeVisible();
+    expect(await viewer.boundingBox()).toEqual({
+      x: 0,
+      y: 0,
+      width: 390,
+      height: 900,
+    });
+    await expect(
+      viewer.getByRole("button", { name: "Remove photo" }),
     ).toBeVisible();
   });
 });

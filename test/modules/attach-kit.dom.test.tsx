@@ -26,6 +26,7 @@ import type { PickerGroup } from "../../src/modules/feed/picker";
 import type { BandRun } from "../../src/modules/feed/band-runs";
 import type { PrefillCandidate } from "../../src/modules/feed/prefill";
 import { TERMS_NOT_ACCEPTED_CODE } from "../../src/lib/auth-signal";
+import { maxPhotosPerEntry } from "../../src/lib/photo-constraints";
 import type { PhotoStep } from "../../src/ui";
 import { TermsRefusalAnswer } from "../../src/ui";
 import { expectAvailable, expectBusy } from "../ui/unavailable";
@@ -232,16 +233,44 @@ function region(slot: string): HTMLElement {
   return found;
 }
 
-function photoWell(): HTMLElement {
-  return region("photo-well");
+function addBox(): HTMLElement {
+  return region("add-photo");
 }
 
 function photoInput(): HTMLInputElement {
   const input = document.querySelector<HTMLInputElement>(
-    "[data-part='photo-well'] input[type='file'], [data-part='well-actions'] input[type='file']",
+    "[data-part='add-photo'] input[type='file']",
   );
   if (input === null) throw new Error("no photo input");
   return input;
+}
+
+/**
+ * Each preview named for its file, for a test that holds several: the
+ * row keys its thumbnails by their source.
+ */
+function namedPreviews(): void {
+  vi.spyOn(URL, "createObjectURL").mockImplementation((file) =>
+    file instanceof File ? `blob:${file.name}` : "blob:other",
+  );
+}
+
+/**
+The held photos' thumbnails, in the row's order.
+*/
+function thumbnails(): HTMLElement[] {
+  return screen.queryAllByRole("button", { name: /^Photo \d+ of \d+$/u });
+}
+
+/**
+Opens a thumbnail's full photo and presses its Remove.
+*/
+async function removePhoto(
+  user: ReturnType<typeof userEvent.setup>,
+  name = "Photo 1 of 1",
+): Promise<void> {
+  await user.click(await screen.findByRole("button", { name }));
+  await user.click(screen.getByRole("button", { name: "Remove photo" }));
 }
 
 function jpeg(name = "kit.jpg", bytes = 3): File {
@@ -562,7 +591,7 @@ describe("AttachKit: most likely", () => {
       screen.getByRole("button", { name: "Patagonia Houdini" }),
     ).toBeVisible();
     expect(primary()).toBeVisible();
-    expect(document.querySelector("[data-part='photo-well']")).not.toBeNull();
+    expect(document.querySelector("[data-part='photo-row']")).not.toBeNull();
     // "OR PICK FROM THE CLOSET" while a suggestion may yet come.
     expect(screen.getByText("Or pick from the closet")).toBeVisible();
   });
@@ -1007,7 +1036,9 @@ describe("AttachKit: A2b, one category as a sheet", () => {
     expect(title.tagName).toBe("H2");
     // The sheet's own label is its title (#643): one heading, the sheet's.
     expect(title).toHaveClass("text-title");
-    expect(within(sheet).getAllByRole("heading", { name: "Tops" })).toHaveLength(1);
+    expect(
+      within(sheet).getAllByRole("heading", { name: "Tops" }),
+    ).toHaveLength(1);
     expect(within(sheet).getByRole("list")).toHaveClass("p-0");
     expect(within(sheet).getByRole("list")).not.toHaveClass("rounded-card");
     const done = within(sheet).getByRole("button", { name: "Done" });
@@ -1369,26 +1400,26 @@ function recordingStep() {
 }
 
 describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
-  it("is the one well, with A2's words, from the first frame", async () => {
+  it("is the photo row, only its add box, from the first frame", async () => {
     await renderWithRouter(attach({ prefillFor: neverSettles }));
 
-    const well = document.querySelector("[data-part='photo-well']");
-    expect(well).toHaveAttribute("data-state", "empty");
-    expect(well).toHaveTextContent("Outfit photo · optional");
-    expect(well).toHaveTextContent("Add a photo");
-    expect(well).toHaveTextContent("Flat on the floor works best.");
-    // The desk's words ride along, shown from the wide breakpoint up.
-    expect(well).toHaveTextContent("Drop a photo, or browse");
+    // Design 253 (#669): no dashed well, so no drop title and no hint.
+    const row = screen.getByRole("group", { name: "Outfit photo · optional" });
+    expect(row).toContainElement(addBox());
+    expect(photoInput()).toHaveAccessibleName("Add photo");
+    expect(thumbnails()).toHaveLength(0);
+    expect(row).not.toHaveTextContent("Flat on the floor works best.");
+    expect(row).not.toHaveTextContent("Drop a photo, or browse");
   });
 
-  it("says let go while a photo is dragged over it", async () => {
+  it("marks the add box while a photo is dragged over it", async () => {
     await renderWithRouter(attach());
 
     const transfer = new DataTransfer();
     transfer.items.add(jpeg());
-    fireEvent.dragOver(photoWell(), { dataTransfer: transfer });
+    fireEvent.dragOver(addBox(), { dataTransfer: transfer });
 
-    expect(photoWell()).toHaveTextContent("Let go to add it");
+    expect(addBox()).toHaveAttribute("data-state", "drag-over");
     expect(photoInput()).toHaveAttribute(
       "accept",
       "image/jpeg,image/png,image/webp",
@@ -1405,11 +1436,8 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     expect(screen.getByText("step for raw.jpg")).toBeVisible();
     expect(recording.seen.map((file) => file.name)).toEqual(["raw.jpg"]);
     // While the step is open the well says it is adding.
-    expect(document.querySelector("[data-part='photo-well']")).toHaveAttribute(
-      "data-state",
-      "uploading",
-    );
-    expect(photoWell()).toHaveTextContent("Adding");
+    expect(photoInput()).toHaveAttribute("aria-busy", "true");
+    expect(addBox()).toHaveTextContent("Adding");
 
     // W3 takes focus to its heading when it opens.
     act(() => {
@@ -1421,14 +1449,13 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     });
     // The preview arrives one effect after the photo is kept.
     await waitFor(() => {
-      expect(
-        document.querySelector("[data-part='photo-well']"),
-      ).toHaveAttribute("data-state", "filled");
+      expect(thumbnails()).toHaveLength(1);
     });
-    expect(
-      within(document.body).getByRole("img", { name: "Your outfit" }),
-    ).toHaveAttribute("src", "blob:preview");
-    // Use this photo closes W3 back onto the well — its Replace, now.
+    expect(thumbnails()[0]?.querySelector("img")).toHaveAttribute(
+      "src",
+      "blob:preview",
+    );
+    // Use this photo closes W3 back onto the add box, which stays.
     expect(photoInput()).toHaveFocus();
     expect(createObjectURL).toHaveBeenCalledWith(
       expect.objectContaining({ name: "blurred.jpg" }),
@@ -1455,10 +1482,7 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     });
     // Cancel (and Esc, which is Cancel) closes back onto the well.
     expect(photoInput()).toHaveFocus();
-    expect(document.querySelector("[data-part='photo-well']")).toHaveAttribute(
-      "data-state",
-      "empty",
-    );
+    expect(thumbnails()).toHaveLength(0);
     expect(createObjectURL).not.toHaveBeenCalled();
   });
 
@@ -1484,10 +1508,7 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
       expect(screen.queryByText("step for face.jpg")).toBeNull();
     });
     expect(photoInput()).toHaveFocus();
-    expect(document.querySelector("[data-part='photo-well']")).toHaveAttribute(
-      "data-state",
-      "empty",
-    );
+    expect(thumbnails()).toHaveLength(0);
     expect(createObjectURL).not.toHaveBeenCalled();
   });
 
@@ -1534,9 +1555,7 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     await user.upload(photoInput(), jpeg("plain.jpg"));
 
     await waitFor(() => {
-      expect(
-        document.querySelector("[data-part='photo-well']"),
-      ).toHaveAttribute("data-state", "filled");
+      expect(thumbnails()).toHaveLength(1);
     });
     expect(createObjectURL).toHaveBeenCalledWith(
       expect.objectContaining({ name: "plain.jpg" }),
@@ -1554,10 +1573,7 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     );
 
     expect(screen.getByText("Photos must be JPG, PNG or WebP.")).toBeVisible();
-    expect(document.querySelector("[data-part='photo-well']")).toHaveAttribute(
-      "data-state",
-      "error",
-    );
+    expect(photoInput()).toHaveAttribute("aria-invalid", "true");
     expect(recording.seen).toHaveLength(0);
   });
 
@@ -1589,7 +1605,7 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
 
     globalThis.removeEventListener("error", record);
     expect(thrown).toEqual([]);
-    expect(photoWell()).toHaveAttribute("data-state", "empty");
+    expect(thumbnails()).toHaveLength(0);
     expect(screen.queryByRole("img")).toBeNull();
   });
 
@@ -1599,10 +1615,7 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
 
     await user.upload(photoInput(), []);
 
-    expect(document.querySelector("[data-part='photo-well']")).toHaveAttribute(
-      "data-state",
-      "empty",
-    );
+    expect(thumbnails()).toHaveLength(0);
   });
 
   it("removes the held photo and lets its preview go", async () => {
@@ -1610,12 +1623,9 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     await renderWithRouter(attach());
     await user.upload(photoInput(), jpeg());
 
-    await user.click(await screen.findByRole("button", { name: "Remove" }));
+    await removePhoto(user);
 
-    expect(document.querySelector("[data-part='photo-well']")).toHaveAttribute(
-      "data-state",
-      "empty",
-    );
+    expect(thumbnails()).toHaveLength(0);
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:preview");
   });
 
@@ -1676,7 +1686,7 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     expect(screen.queryByText("Nothing attached")).toBeNull();
     expect(document.querySelector("[data-part='failure-band']")).toBeNull();
     // The photo is still held, so it can be sent again or removed.
-    expect(photoWell()).toHaveAttribute("data-state", "filled");
+    expect(thumbnails()).toHaveLength(1);
     expect(router.state.location.pathname).toBe("/");
     expect(attachKit).toHaveBeenCalledTimes(1);
   });
@@ -1701,7 +1711,7 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
 
     // Sending again: last attempt's message is not left standing over it.
     await waitFor(() => {
-      expect(photoWell()).toHaveAttribute("data-state", "uploading");
+      expect(photoInput()).toHaveAttribute("aria-busy", "true");
     });
     expect(screen.queryByText(/The photo didn't upload/u)).toBeNull();
     secondSend.resolve({ key: "k" });
@@ -1732,7 +1742,7 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     await user.click(screen.getByRole("button", { name: "Patagonia Houdini" }));
     await user.click(primary());
     await screen.findByText(/The photo didn't upload/u);
-    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await removePhoto(user);
     await user.click(primary());
 
     await waitFor(() => {
@@ -1753,11 +1763,172 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     await user.click(primary());
 
     await waitFor(() => {
-      expect(photoWell()).toHaveAttribute("data-state", "uploading");
+      expect(photoInput()).toHaveAttribute("aria-busy", "true");
     });
     await user.click(region("primary-action"));
     expect(uploadPhoto).toHaveBeenCalledTimes(1);
     pending.resolve({ key: "k" });
+  });
+
+  it("holds several photos, and the add box leaves at the cap", async () => {
+    // Design 252 (#668): up to maxPhotosPerEntry, in the order picked.
+    const user = userEvent.setup();
+    namedPreviews();
+    await renderWithRouter(attach());
+
+    for (const name of ["a.jpg", "b.jpg", "c.jpg"]) {
+      await user.upload(photoInput(), jpeg(name));
+    }
+    expect(thumbnails()).toHaveLength(3);
+    expect(thumbnails().map((each) => each.querySelector("img")?.src)).toEqual([
+      "blob:a.jpg",
+      "blob:b.jpg",
+      "blob:c.jpg",
+    ]);
+    await user.upload(photoInput(), jpeg("d.jpg"));
+
+    expect(thumbnails()).toHaveLength(maxPhotosPerEntry);
+    expect(document.querySelector("[data-part='add-photo']")).toBeNull();
+  });
+
+  it("sends every held photo in order, each under its own key", async () => {
+    const user = userEvent.setup();
+    namedPreviews();
+    const uploadPhoto = vi.fn<
+      (input: { data: FormData }) => Promise<{ key: string }>
+    >(() => Promise.resolve({ key: "k" }));
+    const { router } = await renderWithRouter(attach({ uploadPhoto }));
+
+    await user.upload(photoInput(), jpeg("a.jpg"));
+    await user.upload(photoInput(), jpeg("b.jpg"));
+    await user.click(screen.getByRole("button", { name: "Patagonia Houdini" }));
+    await user.click(primary());
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/feed/verdict/01NEW");
+    });
+    const sent = uploadPhoto.mock.calls.map((call) => call[0].data);
+    expect(sent.map((data) => (data.get("photo") as File).name)).toEqual([
+      "a.jpg",
+      "b.jpg",
+    ]);
+    expect(sent.map((data) => data.get("entryId"))).toEqual(["01NEW", "01NEW"]);
+    expect(sent[0]?.get("idempotencyKey")).not.toBe(
+      sent[1]?.get("idempotencyKey"),
+    );
+  });
+
+  it("holds only the unsent photo after a failure, and sends it alone on Next", async () => {
+    const user = userEvent.setup();
+    namedPreviews();
+    const attachKit = vi.fn(() => Promise.resolve({ entryId: "01NEW" }));
+    const uploadPhoto = vi
+      .fn<(input: { data: FormData }) => Promise<{ key: string }>>()
+      .mockResolvedValueOnce({ key: "k1" })
+      .mockRejectedValueOnce(new Error("R2 hiccup"))
+      .mockResolvedValueOnce({ key: "k2" });
+    const { router } = await renderWithRouter(
+      attach({ attachKit, uploadPhoto }),
+    );
+
+    await user.upload(photoInput(), jpeg("a.jpg"));
+    await user.upload(photoInput(), jpeg("b.jpg"));
+    await user.click(screen.getByRole("button", { name: "Patagonia Houdini" }));
+    await user.click(primary());
+    await screen.findByText(/The photo didn't upload/u);
+
+    // The sent one has left the row; the failed one is still held.
+    expect(thumbnails()).toHaveLength(1);
+    expect(thumbnails()[0]?.querySelector("img")).toHaveAttribute(
+      "src",
+      "blob:b.jpg",
+    );
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:a.jpg");
+    expect(revokeObjectURL).not.toHaveBeenCalledWith("blob:b.jpg");
+
+    await user.click(primary());
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/feed/verdict/01NEW");
+    });
+    const keys = uploadPhoto.mock.calls.map((call) =>
+      call[0].data.get("idempotencyKey"),
+    );
+    expect(uploadPhoto).toHaveBeenCalledTimes(3);
+    expect(
+      (uploadPhoto.mock.calls[2]?.[0].data.get("photo") as File).name,
+    ).toBe("b.jpg");
+    expect(keys[2]).toBe(keys[1]);
+    expect(attachKit).toHaveBeenCalledTimes(1);
+  });
+
+  it("counts the photos still held in the failure, and follows a Remove", async () => {
+    // The owner, 2026-11-14 (#659): the count is the row's, not typed.
+    const user = userEvent.setup();
+    namedPreviews();
+    const uploadPhoto = vi
+      .fn<(input: { data: FormData }) => Promise<{ key: string }>>()
+      .mockRejectedValue(new Error("R2 down"));
+    await renderWithRouter(attach({ uploadPhoto }));
+
+    await user.upload(photoInput(), jpeg("a.jpg"));
+    await user.upload(photoInput(), jpeg("b.jpg"));
+    await user.click(screen.getByRole("button", { name: "Patagonia Houdini" }));
+    await user.click(primary());
+
+    expect(
+      await screen.findByText(
+        "2 photos didn't upload. Your kit is attached — press Next to try again, or remove them to go on.",
+      ),
+    ).toBeVisible();
+    expect(photoInput()).toHaveAccessibleDescription(/^2 photos didn't/u);
+
+    await removePhoto(user, "Photo 1 of 2");
+    expect(
+      screen.getByText(
+        "The photo didn't upload. Your kit is attached — press Next to try again, or remove the photo to go on.",
+      ),
+    ).toBeVisible();
+
+    await removePhoto(user, "Photo 1 of 1");
+    expect(screen.queryByText(/didn't upload/u)).toBeNull();
+    expect(photoInput()).not.toHaveAttribute("aria-invalid");
+  });
+
+  it("names the full photo as the runner's outfit", async () => {
+    // The thumbnail's image is decorative (its button carries the name);
+    // the viewer's photo is the one a screen reader hears.
+    const user = userEvent.setup();
+    await renderWithRouter(attach());
+    await user.upload(photoInput(), jpeg());
+    await user.click(screen.getByRole("button", { name: "Photo 1 of 1" }));
+    expect(screen.getByRole("img", { name: "Your outfit" })).toBeVisible();
+  });
+
+  it("lets a removed photo's preview go and keeps the others'", async () => {
+    const user = userEvent.setup();
+    namedPreviews();
+    await renderWithRouter(attach());
+
+    await user.upload(photoInput(), jpeg("a.jpg"));
+    await user.upload(photoInput(), jpeg("b.jpg"));
+    expect(revokeObjectURL).not.toHaveBeenCalled();
+    await removePhoto(user, "Photo 1 of 2");
+
+    expect(thumbnails()).toHaveLength(1);
+    expect(revokeObjectURL).toHaveBeenCalledExactlyOnceWith("blob:a.jpg");
+  });
+
+  it("lets every preview go when the screen does", async () => {
+    const user = userEvent.setup();
+    namedPreviews();
+    const { unmount } = await renderWithRouter(attach());
+
+    await user.upload(photoInput(), jpeg("a.jpg"));
+    await user.upload(photoInput(), jpeg("b.jpg"));
+    unmount();
+
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:a.jpg");
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:b.jpg");
   });
 
   it("sends no photo when none was kept", async () => {

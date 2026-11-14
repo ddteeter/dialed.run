@@ -23,14 +23,18 @@ export const kitChoice = attachKitInput.shape.itemIds.min(
 );
 
 /**
- * The well's message when the photo did not go up after the kit did.
+ * The row's message when photos did not go up after the kit did, for the
+ * number still held (the owner, 2026-11-14, #659).
  *
- * The photo is secondary (CLAUDE.md law 5): the entry exists, so this is
- * never the attach band's "Nothing attached". It says what is true and
- * the two ways on — Next sends the photo again, Remove goes on without it.
+ * The photos are secondary (CLAUDE.md law 5): the entry exists, so this
+ * is never the attach band's "Nothing attached". It says what is true and
+ * the two ways on — Next sends them again, Remove goes on without them.
  */
-export const PHOTO_NOT_SENT =
-  "The photo didn't upload. Your kit is attached — press Next to try again, or remove the photo to go on.";
+export function photosNotSent(held: number): string {
+  return held > 1
+    ? `${String(held)} photos didn't upload. Your kit is attached — press Next to try again, or remove them to go on.`
+    : "The photo didn't upload. Your kit is attached — press Next to try again, or remove the photo to go on.";
+}
 
 /**
  * A2 for a run that already has a kit is A3 for its entry.

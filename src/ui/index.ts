@@ -23,6 +23,7 @@ export { OnboardingProgress } from "./OnboardingProgress";
 export { OnboardingShell } from "./OnboardingShell";
 export { COLUMN, Page } from "./Page";
 export { PhoneBell } from "./PhoneBell";
+export { PhotoRow } from "./PhotoRow";
 export { SlowLabel } from "./SlowLabel";
 export { useTappedSlow } from "./tapped-slow";
 export type { PhotoStep } from "./photo-step";

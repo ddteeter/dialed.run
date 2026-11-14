@@ -303,8 +303,7 @@ test("log a run: read a file in place, pick the kit, note it, enter one by hand"
     await expect(page.getByText("Pick at least one piece.")).toHaveCount(0);
 
     await scene(page, "The outfit photo lives here now, through the blur");
-    const photo = page.locator('[data-part="photo-well"]');
-    await page.setInputFiles('[data-part="photo-well"] input[type="file"]', {
+    await page.setInputFiles('[data-part="add-photo"] input[type="file"]', {
       name: "kit.png",
       mimeType: "image/png",
       buffer: PNG_1X1,
@@ -318,9 +317,21 @@ test("log a run: read a file in place, pick the kit, note it, enter one by hand"
       .getByRole("button", { name: "Use this photo" })
       .click({ timeout: 20_000 });
     await expect(blurSheet).toBeHidden();
-    await expect(photo).toHaveAttribute("data-state", "filled", {
-      timeout: 20_000,
-    });
+    // Kept, it is a thumbnail beside the add box (Round 56 · 249.2, .4).
+    const thumbnail = page.getByRole("button", { name: "Photo 1 of 1" });
+    await expect(thumbnail).toBeVisible({ timeout: 20_000 });
+
+    // Pressing it opens the full photo (249.1), a modal in the top layer;
+    // Esc closes it and focus goes back to the thumbnail.
+    await thumbnail.click();
+    const viewer = page.getByRole("dialog", { name: "Photo 1 of 1" });
+    await expect(viewer).toBeVisible();
+    await expect(
+      viewer.getByRole("button", { name: "Remove photo" }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(viewer).toBeHidden();
+    await expect(thumbnail).toBeFocused();
 
     await page.getByRole("button", { name: "Next — did it work?" }).click();
     await page.waitForURL("**/feed/verdict/**");
