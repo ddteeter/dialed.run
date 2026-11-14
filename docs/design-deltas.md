@@ -1081,6 +1081,122 @@ _Nothing from 99 on is open: round 45 answered the last of it._
 
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
 
+## Answered in round 56 (imported 2026-11-14)
+
+Design answered as `Round 56 Rulings.dc.html`, items 243–250 and three
+notices. The board's text is the text of record; each ruling is also a
+comment on its issue. It draws four things: the Send and block group, the
+closet card that counts what it opens, A2's photo row and its full-photo
+view, and A1's reminder line. One new token, `--lift`, light theme only,
+recorded in `tokens.js` as ELEVATION. Review stays a queue, not a pane, so
+243 settles the dispute between R54·168.3 and R55·197.
+
+### Notices
+
+- **W1 · Send and block (R54·166.6). Drawn; built (#660).** The button's
+  accessible name is its words, "Send and block". The consequence line
+  ("Blocking hides all of {handle}'s runs from you. They aren't told.") is
+  its description, by `aria-describedby`, 8 under it in the same group,
+  TYPE.small `--quiet`; the group sits 12 from SEND REPORT. 166.6's longer
+  name is withdrawn. The rule for every control: the name holds only the
+  visible words, and anything more is a shown description (D-187). The
+  sweep of controls whose names add words, and the icon-only and sr-only
+  questions, are #662 (Round 57).
+- **D-186 · Per surface. Confirmed.** "A hairline pill is never alone" is
+  counted per surface. A surface whose only button is secondary in kind
+  (P2.5's Save, 249's Remove photo) keeps the hairline pill. 229 stands.
+- **183 · Strava reminder. Confirmed.** The bell row opens A1 carrying the
+  day the notification arrived, in the runner's home zone. Nothing from
+  the Strava activity is stored or read. Where that day shows: 250.
+
+### Desk
+
+- **R56·243 · Review: pane or rows (#644). Confirmed.** Review keeps 197's
+  open-in-place rows, with no pane, at every width: a decision needs the
+  200 photo, the reasons and the other photos together, and a 1fr pane
+  can't hold them. 168.3 is narrowed to the lookup lists, Runners and
+  Codes. The decision bar stays on the row, and the kit stays its own page
+  behind "Open the kit". Below `desk`, rows still open in place; 202's
+  drawer is for Runners and Codes only. Built as 197 draws it (#664).
+- **R56·244 · The Round 55 Desk guesses (#658). Confirmed, one part
+  ruled; built (#664).** (244.1) A closed row's summary is the open row's
+  reason sentence, cut to one line with an ellipsis; the board's own
+  summaries were stand-ins. (244.2) The fold marks are the text ▸ and ▾,
+  `aria-hidden`; the row's head is the button and carries
+  `aria-expanded`. (244.3) Removal requests are always open, on the
+  48-hour clock, with no fold mark; they keep the row's head strip and
+  panel. (244.4) [CLOSED] and [PENDING DELETE] are text in the Desk's ink,
+  no fill; only OVERDUE is a filled tag. (244.5) "29 / NO LIMIT" is
+  dropped: every code has a uses cap. (244.6) Other photos' ids are
+  shortened on the tile, with the whole id as tooltip and accessible name,
+  and in full on the kit page; no click-to-select. (244.7, ruled) Codes'
+  column heads are drawn at width and `aria-hidden`, and each cell carries
+  a visually hidden label ("Uses", "Age"), so a row reads "JK4M-22QX,
+  Spring club, used by 29, age 3 days, uses 29 of 1,000,000". (244.8) The
+  Desk top bar is the runner bar's 60 from `wide` and HEIGHT.control (48)
+  on a phone; the board's 56 collapses to 60.
+
+### Layout and primitives
+
+- **R56·245 · Onboarding under 168.1 (#654). Confirmed; built (#664).**
+  (a) Onboarding's steps follow 168.1: the 620 column, centred from 720.
+  138a's 390 panel up to 1040 and its left-aligned column are withdrawn.
+  (b) P3's close band stays inside the column at every width. Nothing in
+  the runner app runs the full page.
+- **R56·246 · The lift (#652). Ruled and changed.** (a) One T1 role,
+  `--lift`, since it carries colour. Light:
+  `0 8px 28px rgb(11 11 14 / 0.10)`, the build's value with `--ink` as
+  its colour, recorded in `tokens.js` as ELEVATION. (b, changed) Dark: none; a floating surface in
+  dark takes `--hairline-2` as its edge instead. (c) Everything that
+  floats over the page takes it: the desk drawer (and so the Desk pane
+  below `desk`, which is that drawer), the centred panel, the phone sheet,
+  menus and the toast. Nothing that sits in the page does, the sticky Desk
+  pane at `desk` included. One level only. To build in wave 9.
+- **R56·247 · Error summary leading (#653). Changed; built (#660).**
+  TYPE.body's 1.5: no new step and no variant. 180's "1.4" is withdrawn,
+  and the rest of 180 stands as built.
+
+### Closet
+
+- **R56·248 · "+ N more" (#657). Changed; built (#681).** No TYPE filter.
+  The card draws from the closet's group, filed the way the closet files
+  it (a top worn as an outer layer is in Outer for both), so it never
+  counts what the closet won't show. A picked type only sorts its pieces
+  first. The link names the destination and its total, "See all 12 in
+  Tops", and opens C on that group. Under six pieces there is no link and
+  the card shows them all.
+
+### Upload and attach
+
+- **R56·249 · A2's photo row and full-photo view (#659). Drawn.**
+  (249.1) The full-photo view. On a phone it is full screen in the
+  theme's ground: a 56 head (MONO.xs "PHOTO 1 OF 2", the ✕ in its 44), the
+  photo at its own ratio on `--tint`, and swipe between photos. From 720
+  it is the centred panel at MEASURE.column, RADIUS.sheet, over the scrim
+  with `--lift`, with 44 hairline-circle pager arrows (the first `--muted`
+  with no edge on photo 1) and the ← → keys. It closes by ✕, Esc or the
+  system back, and focus returns to the thumbnail that opened it.
+  (249.2) The add box is the thumbnail's size, `--panel` with a
+  `--hairline` edge, "+" over ADD PHOTO in MONO.xs. It is always last in
+  the row and leaves at the photo cap. Replace is gone: it's Remove, then
+  Add. A line under the row reads "Press a photo to see it whole or remove
+  it." (249.3) "Remove photo" is the hairline pill in the view's foot
+  (alone on its surface, D-186), full width on a phone and hugging its
+  label, left-aligned, at width (167.2). No confirm, since nothing is
+  saved until the entry is. It closes the view, and focus goes to the next
+  thumbnail, or the add box if none is left. (249.4, changed) Thumbnails
+  are 76 × 95 (4:5, the card's crop) at RADIUS.field, 8 apart, at both
+  widths; the board's 92 collapses to the ratio. (249.5, confirmed) The
+  closet's garment forms keep their one photo well, with Replace and
+  Remove, as is. To build in wave 9.
+- **R56·250 · Where the reminder's day shows (#661). Drawn; built
+  (#681).** A1 names the day under "Enter the run by hand", the only path
+  it affects: "It starts on Thu, Nov 12, the day of your Strava
+  reminder." TYPE.small, `--quiet`, the day in the home zone. A file's own
+  start time wins. Opened any other way, A1 has no line. R1's Started
+  carries the day at 00:00, as built, and the reminder's body stays as
+  built.
+
 ## Answered in round 55 (imported 2026-11-13)
 
 Design answered as `Round 55 Rulings.dc.html`, items 171–242 (182 in two
@@ -1631,7 +1747,7 @@ with what the scale made of the drawing. Round 55 answered both collapses
   the ruling draws nothing for a code's pane.
 - **Not built:** Review's row opening the kit view in the pane
   (R51·153, #644). R55·197 since draws Review's rows opening in place with
-  no pane, so #644 is back with Design for Round 56.
+  no pane, and R56·243 confirms it: Review takes no pane.
 
 ## Answered in round 53 (imported 2026-11-12)
 
