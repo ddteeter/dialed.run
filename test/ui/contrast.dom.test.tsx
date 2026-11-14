@@ -30,6 +30,33 @@ const read = (path: string): string =>
 const theme = read("../../design/Theme.dc.html");
 const tokens = read("../../src/ui/tokens.css");
 
+const contract = read("../../design/tokens.js");
+
+/**
+ * `ELEVATION.lift` in `design/tokens.js`: `light: '0 8px 28px rgb(11 11 14
+ * / 0.10)', dark: 'none'`. The light value is split into its geometry, its
+ * colour as hex (how `hexOf` reports a role) and its alpha.
+ */
+function elevationLift(): {
+  geometry: string;
+  rgb: string;
+  alpha: number;
+  dark: string;
+} {
+  const found =
+    /lift: \{ light: '(?<geometry>[^']*?) rgb\((?<r>\d+) (?<g>\d+) (?<b>\d+) \/ (?<alpha>[\d.]+)\)', dark: '(?<dark>[^']*)'/u.exec(
+      contract,
+    )?.groups ?? {};
+  const hex = (channel: string | undefined): string =>
+    Number(channel).toString(16).padStart(2, "0");
+  return {
+    geometry: found.geometry ?? "",
+    rgb: `#${hex(found.r)}${hex(found.g)}${hex(found.b)}`,
+    alpha: Number(found.alpha),
+    dark: found.dark ?? "",
+  };
+}
+
 /**
  * One T1 row: `['Muted', '--muted', '#7A7A70', '#8B8B93', 'note'],`.
  */
@@ -248,25 +275,50 @@ describe("the T1 port", () => {
       ["--ground", "var(--panel)"],
     ]);
     const sheet = tokens.slice(tokens.indexOf("@utility ground-sheet") + 1);
-    expect(sheet).toMatch(/^[^@]*border: 1px solid var\(--hairline\);/u);
+    // R56·246b: a floating surface's edge in dark is the stronger hairline.
+    expect(sheet).toMatch(/^[^@]*border: 1px solid var\(--hairline-2\);/u);
     expect(sheet).toMatch(/^[^@]*border-bottom-width: 0;/u);
     expect(sheet).toMatch(
       /^[^@]*&::before \{[^}]*width: 36px;[^}]*height: 4px;[^}]*background: var\(--hairline-2\);/u,
     );
   });
 
-  it("gives the desk drawer the panel, a hairline all round and the lift (R54·164.1)", () => {
+  it("gives the desk drawer the panel and a hairline all round, and leaves the lift to the surface (R54·164.1)", () => {
     expect([...declarations("@utility ground-drawer")]).toEqual([
       ["--ground", "var(--panel)"],
     ]);
-    expect(tokens).toMatch(
-      /@utility ground-drawer \{[^}]*border: 1px solid var\(--hairline\);[^}]*box-shadow: var\(--lift\);/u,
-    );
-    // The lift is built from the scrim, never a typed colour.
-    expect(tokens).toMatch(
-      /--lift: 0 8px 28px color-mix\(in srgb, var\(--scrim\) 10%, transparent\);/u,
-    );
+    const drawer = tokens.slice(tokens.indexOf("@utility ground-drawer {"));
+    expect(drawer).toMatch(/^[^}]*border: 1px solid var\(--hairline\);/u);
+    // `shadow-lift` is typed by every floating surface (246c), so the
+    // drawer's utility does not carry a second copy of it.
+    expect(drawer).not.toMatch(/^[^}]*box-shadow/u);
     expect(tokens).toContain("--sheet-cap: 90dvh;");
+  });
+
+  it("makes the lift a T1 role, as tokens.js's ELEVATION says (R56·246)", () => {
+    // 246a: "the build's value with --ink as the colour". So the light
+    // column writes the contract's shadow with its colour as the role at
+    // the contract's alpha, and the role resolves to the contract's rgb.
+    const { geometry, rgb, alpha, dark } = elevationLift();
+    expect(paper.get("--lift")).toBe(
+      `${geometry} color-mix(in srgb, var(--ink) ${String(alpha * 100)}%, transparent)`,
+    );
+    expect(hexOf("--ink", paper)).toBe(rgb);
+    // 246b: "On ink a 10% shadow doesn't show."
+    expect(ink.get("--lift")).toBe(dark);
+    // A role of the columns, so nothing on `:root` can stand in for one.
+    expect(root.has("--lift")).toBe(false);
+  });
+
+  it("reads ELEVATION's lift rather than defaulting it", () => {
+    // Pins the reader, so a tokens.js that moved its shape fails here
+    // instead of the case above comparing against empty strings.
+    expect(elevationLift()).toEqual({
+      geometry: "0 8px 28px",
+      rgb: "#0b0b0e",
+      alpha: 0.1,
+      dark: "none",
+    });
   });
 
   it("draws the checkbox, radio and switch as ruled, with the contract's focus ring (R54·166)", () => {

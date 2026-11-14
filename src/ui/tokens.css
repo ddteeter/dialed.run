@@ -93,16 +93,9 @@
    * ------------------------------------------------------------------ */
   --bar-height: calc(44px + 2 * 8px);
 
-  /* The desk drawer's "one soft lift" (R54·164.1). No contract carries an
-   * elevation, so this is the Round 54 board's own shadow, 0 8px 28px at
-   * 10% of the scrim, held as one token until Design gives it a home
-   * (#652). Built from `--scrim` rather than a raw
-   * colour, so the palette stays the T1 table's. */
   /* How tall a phone sheet grows before it folds (R54·164.4: "the same
    * applies on phone once a sheet passes 90% of the viewport's height"). */
   --sheet-cap: 90dvh;
-
-  --lift: 0 8px 28px color-mix(in srgb, var(--scrim) 10%, transparent);
 
   color-scheme: light;
 }
@@ -176,6 +169,12 @@
    * the fill's own colour, so it draws nothing and takes no space). */
   --notice: var(--tint);
   --notice-rule: var(--tint);
+  /* R56·246a: the one lift, on everything that floats over the page
+   * (246c), and only one level of it. A T1 role because it carries
+   * colour: `rgb(11 11 14 / 0.10)` is `--ink` at 10%, so it is written as
+   * the role. tokens.js records it as ELEVATION. The dark column says
+   * `none` (246b). */
+  --lift: 0 8px 28px color-mix(in srgb, var(--ink) 10%, transparent);
 }
 
 /**
@@ -224,6 +223,9 @@
    * --hairline (the marketing ink-block rule)." */
   --notice: var(--panel);
   --notice-rule: var(--hairline);
+  /* R56·246b: "On ink a 10% shadow doesn't show." A floating surface in
+   * dark takes `--hairline-2` as its edge instead. */
+  --lift: none;
 }
 
 /**
@@ -283,15 +285,16 @@
 
 /**
  * **A phone sheet on a dark page** (Design 165): the panel, with a 1px
- * hairline that follows the top corners and runs down both sides. In dark
+ * edge that follows the top corners and runs down both sides. In dark
  * the sheet, the 60% scrim and the page behind were all `#0B0B0E`, so the
  * sheet had no edge at all. No bottom edge: the sheet sits on the
  * window's. A border, not the panel's inset ring, because the ring draws
- * all four sides.
+ * all four sides. The edge is `--hairline-2`, a floating surface's edge
+ * in dark (R56·246b), where the lift is `none`.
  */
 @utility ground-sheet {
   --ground: var(--panel);
-  border: 1px solid var(--hairline);
+  border: 1px solid var(--hairline-2);
   border-bottom-width: 0;
 
   /* The grabber: 36×4 in the stronger hairline, centred 12 from the top,
@@ -314,15 +317,17 @@
 /**
  * **The desk drawer** (R54·164.1): at ≥720 a sheet is a 390 drawer over a
  * page that stays visible, so it needs an edge of its own in both themes:
- * `--panel` (the white of the Strava card in light, `#16161B` in dark),
- * a 1px hairline all round, and the one soft lift. `--ground` moves to
- * the panel, so the pinned header and footer, painted `bg-ground`, take
- * the drawer's surface without knowing they are in one.
+ * `--panel` (the white of the Strava card in light, `#16161B` in dark)
+ * and a 1px edge all round. `--ground` moves to the panel, so the pinned
+ * header and footer, painted `bg-ground`, take the drawer's surface
+ * without knowing they are in one. The edge is `--hairline` here, and
+ * `--hairline-2` in dark (R56·246b), which `ui/Sheet` says with the dark
+ * variant. The lift is not this utility's: it is `shadow-lift`, which
+ * every floating surface types (R56·246c).
  */
 @utility ground-drawer {
   --ground: var(--panel);
   border: 1px solid var(--hairline);
-  box-shadow: var(--lift);
 }
 
 /**

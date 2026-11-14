@@ -257,16 +257,21 @@ export function SheetFooter({
  * The sheet's surface. Phone-and-light is the original: `--ground`, no
  * edge, over the 60% scrim. **Phone-and-dark is Design 165**: in dark the
  * sheet, the scrim and the page were one colour (`#0B0B0E`), so the sheet
- * takes `--panel` with a hairline over its top corners and down both
- * sides, and a grabber (`ground-sheet`). Stacked, the upper sheet's edge
- * steps up to the stronger hairline, and the lower one stays at least 48
- * taller so both top edges show (`stack`). **At width** it is the drawer
- * (`ground-drawer`), placed by the bar and the right edge, over a
+ * takes `--panel` with an edge over its top corners and down both sides,
+ * and a grabber (`ground-sheet`). Stacked, the lower one stays at least
+ * 48 taller so both top edges show (`stack`). **At width** it is the
+ * drawer (`ground-drawer`), placed by the bar and the right edge, over a
  * transparent backdrop. `z-40` matters only to a pane opened with
  * `show()`, which is not in the top layer.
+ *
+ * **It floats, so it lifts** (R56·246): `shadow-lift` in every state,
+ * which is the light column's one shadow and `none` in dark. In dark the
+ * edge steps up to `--hairline-2` instead, at both widths. One level
+ * only, so the upper of two stacked sheets no longer steps up again
+ * (Design 165's stronger edge is now every dark sheet's).
  */
 const SHEET_CLASS =
-  "sheet-motion group fixed inset-x-0 bottom-0 top-auto z-40 m-0 max-h-[var(--sheet-cap)] w-full max-w-none overflow-y-auto rounded-t-sheet bg-ground p-0 text-ink backdrop:bg-scrim/60 max-wide:dark:ground-sheet max-wide:dark:data-[stacked=over]:border-hairline-2 max-wide:data-[stacked=under]:min-h-[calc(var(--over-height)+3rem)] wide:bottom-auto wide:left-auto wide:right-6 wide:top-[calc(var(--bar-height)+1.5rem)] wide:h-fit wide:max-h-[calc(100dvh-var(--bar-height)-3rem)] wide:max-w-panel wide:rounded-sheet wide:ground-drawer wide:backdrop:bg-transparent";
+  "sheet-motion group fixed inset-x-0 bottom-0 top-auto z-40 m-0 max-h-[var(--sheet-cap)] w-full max-w-none overflow-y-auto rounded-t-sheet bg-ground p-0 text-ink backdrop:bg-scrim/60 max-wide:dark:ground-sheet max-wide:data-[stacked=under]:min-h-[calc(var(--over-height)+3rem)] wide:bottom-auto wide:left-auto wide:right-6 wide:top-[calc(var(--bar-height)+1.5rem)] wide:h-fit wide:max-h-[calc(100dvh-var(--bar-height)-3rem)] wide:max-w-panel wide:rounded-sheet wide:ground-drawer wide:dark:border-hairline-2 wide:backdrop:bg-transparent shadow-lift";
 
 /**
  * The sheet already open beneath one about to open, if any. Design 165:

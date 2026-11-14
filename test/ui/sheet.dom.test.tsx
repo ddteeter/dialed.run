@@ -214,9 +214,16 @@ describe("Sheet", () => {
       "wide:max-w-panel",
       "wide:rounded-sheet",
     );
-    // Its own surface, hairline and lift, so it reads as a layer on a
-    // page that stays: the opaque ground backdrop painted over the bar.
-    expect(dialog).toHaveClass("wide:ground-drawer");
+    // Its own surface and edge, so it reads as a layer on a page that
+    // stays: the opaque ground backdrop painted over the bar. The edge
+    // steps up to the stronger hairline in dark (R56·246b).
+    expect(dialog).toHaveClass(
+      "wide:ground-drawer",
+      "wide:dark:border-hairline-2",
+    );
+    // R56·246c: everything that floats over the page lifts, at both
+    // widths; the role is `none` in dark.
+    expect(dialog).toHaveClass("shadow-lift");
     // DS5, "modals with scrims": no dimmed backdrop at width. The page is
     // visible and undimmed; `showModal` is what makes it inert.
     expect(dialog).toHaveClass(
@@ -332,7 +339,7 @@ describe("Sheet in dark, and stacked (Design 165)", () => {
     );
   });
 
-  it("holds the lower sheet 48 taller than the upper, and steps the upper's edge up", async () => {
+  it("holds the lower sheet 48 taller than the upper", async () => {
     const user = userEvent.setup();
     render(<TwoSheets />);
     await user.click(screen.getByRole("button", { name: "Options" }));
@@ -348,9 +355,6 @@ describe("Sheet in dark, and stacked (Design 165)", () => {
     expect(lower.style.getPropertyValue("--over-height")).toBe("0px");
     expect(lower).toHaveClass(
       "max-wide:data-[stacked=under]:min-h-[calc(var(--over-height)+3rem)]",
-    );
-    expect(upper).toHaveClass(
-      "max-wide:dark:data-[stacked=over]:border-hairline-2",
     );
   });
 

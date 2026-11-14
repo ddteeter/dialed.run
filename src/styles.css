@@ -200,6 +200,12 @@
   --radius-sheet: 20px;
   --radius-pill: 999px;
 
+  /* ---- elevation · tokens.js ELEVATION ---------------------------- */
+  /* R56·246: "One lift, no scale." Its value is the T1 role, so this only
+   * names it: `shadow-lift`, on everything that floats over the page. */
+  --shadow-*: initial;
+  --shadow-lift: var(--lift);
+
   /* ---- breakpoints · tokens.js BREAKPOINT ------------------------- */
   /* Two thresholds, three layouts. What changes at each is task 115; that
    * they are the only two is this lane's. */
