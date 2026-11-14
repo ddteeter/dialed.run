@@ -241,6 +241,22 @@ export function calendarDay(epochSeconds: number, timeZone?: string): string {
   });
 }
 
+/**
+ * The calendar day an instant falls on in a zone, as a date field and a
+ * URL write it: `2026-11-05`. Round 55 · 183's Strava row carries the day
+ * its notification arrived on, in the runner's home zone, on to A1's
+ * `?date=`. One formatter per field, as `dayParts` explains.
+ */
+export function isoCalendarDay(
+  epochSeconds: number,
+  timeZone?: string,
+): string {
+  const year = part(epochSeconds, timeZone, { year: "numeric" });
+  const month = part(epochSeconds, timeZone, { month: "2-digit" });
+  const day = part(epochSeconds, timeZone, { day: "2-digit" });
+  return `${year}-${month}-${day}`;
+}
+
 // A literal, not `60 * 60`: mutated to `60 / 60`, the step below becomes
 // one second, and a day's search builds 86,400 formatters — slow enough to
 // hold a mutation run until its timeout.

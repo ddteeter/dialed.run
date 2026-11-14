@@ -475,7 +475,9 @@ describe("NotificationList · where a row goes (R48·129f, R48·131c)", () => {
       screen.getByRole("link", {
         name: /New run on Strava\. Upload its file, then add what you wore\./u,
       }),
-    ).toHaveAttribute("href", "/runs/new");
+    ).toHaveAttribute("href", "/runs/new?date=2025-08-12");
+    // The day is the notification's own arrival, on the runner's clock
+    // (R55·183 (3)); never anything from the activity.
     expect(
       screen.getByRole("link", { name: /New run on Strava/u }),
     ).toHaveClass("target", "flex");

@@ -213,7 +213,7 @@ function NotificationItem({
   viewer: ViewerZone;
 }>): JSX.Element {
   const state = notification.read ? "read" : "unread";
-  const target = notificationTarget(notification);
+  const target = notificationTarget(notification, viewer);
   const content = (
     <>
       {/* The dot's width is kept on a read row as indent, so the text
@@ -308,7 +308,11 @@ function TargetLink({
     }
     case "upload": {
       return (
-        <Link to="/runs/new" className={`target ${className}`}>
+        <Link
+          to="/runs/new"
+          search={{ date: target.date }}
+          className={`target ${className}`}
+        >
           {children}
         </Link>
       );
