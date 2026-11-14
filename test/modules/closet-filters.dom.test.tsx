@@ -753,6 +753,44 @@ describe("ClosetFilters: the rail's look", () => {
     expect(link(/^All/)).toHaveAccessibleName(/^All \d+$/);
   });
 
+  it("gaps the swatch from its word, and starts each label at the left (R2-CLOSET-04)", async () => {
+    await rail({ onSearch: vi.fn() });
+    const label = button(/^Covered/).querySelector(
+      "[data-part='option-label']",
+    );
+    // A button centres its text: the lighter label sat 2px right of the
+    // GROUP rows in its bold-width cell, and jumped left when pressed.
+    expect(label).toHaveClass(
+      "inline-grid",
+      "justify-items-start",
+      "text-left",
+    );
+    const copies = [...(label?.children ?? [])];
+    expect(copies).toHaveLength(2);
+    for (const copy of copies) {
+      expect(copy).toHaveClass("inline-flex", "items-center", "gap-2");
+    }
+  });
+
+  it("gives a chosen chip's count the chip's own text colour (R2-CLOSET-08)", async () => {
+    await chips();
+    fireEvent.click(button(/^Group/));
+    const chosen = screen.getByRole("link", { name: /^All/ });
+    expect(chosen).toHaveClass("group");
+    expect(chosen.lastElementChild).toHaveClass(
+      "text-label",
+      "group-aria-pressed:text-ground",
+      "group-[[aria-current]]:text-ground",
+    );
+  });
+
+  it("keeps a chosen rail row's count --label: the row only goes bold", async () => {
+    await rail();
+    const count = link(/^All/).lastElementChild;
+    expect(count).toHaveClass("text-label");
+    expect(count).not.toHaveClass("group-aria-pressed:text-ground");
+  });
+
   it("keeps the chips' labels plain: a chip's width is its own", async () => {
     await chips();
     fireEvent.click(button(/^Group/));
