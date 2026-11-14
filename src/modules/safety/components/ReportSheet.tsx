@@ -36,6 +36,13 @@ import { ElsewhereHelp } from "./ElsewhereHelp";
  * profile's labels lay its sentences over W1's, so the one ChoiceList
  * reads a shared value ("harassment") in the profile's words.
  */
+/**
+ * What ChoiceList shows under a reason while it is the one picked: the
+ * intimate-image reason's way out (round 37 #58k), for a runner who'd
+ * rather not report from their account.
+ */
+const INTIMATE_DETAIL = { intimate: <IntimateHelp /> };
+
 const SHEET_KIND = {
   entry: {
     reasons: reportReasons.map((reason): ReportReason => reason.value),
@@ -258,16 +265,14 @@ export function ReportSheet({
           legend={kind.legend}
           options={kind.reasons}
           optionLabels={kind.labels}
+          // R55·215, R37: W1's way out sits inside the chosen row, under
+          // the reason's words, once that reason is picked.
+          optionDetail={INTIMATE_DETAIL}
           value={reason}
           onChange={setReason}
           field={form.field}
           error={form.fieldErrors.reason}
         />
-        {/* Round 37 #58k: W1's way out, shown only once the reason is
-            picked — for a runner who'd rather not report from their
-            account. Under the list, since a choice takes no hint of its
-            own. */}
-        <IntimateHelp reason={reason} />
 
         <TextField
           name="note"
@@ -481,12 +486,9 @@ function BlockWays({
 /**
  * Under the intimate-image reason: W1's way out (round 37 #58k). Where
  * else to go waits for the receipt (round 41 #85): here it would crowd the
- * choice. Shown only once that reason is picked.
+ * choice. Shown only once that reason is picked, inside its row.
  */
-function IntimateHelp({
-  reason,
-}: Readonly<{ reason: ReportReason | undefined }>): JSX.Element | undefined {
-  if (reason !== "intimate") return undefined;
+function IntimateHelp(): JSX.Element {
   return (
     <p data-part="takedown-way-out" className="m-0 text-small">
       Rather not use your account?{" "}

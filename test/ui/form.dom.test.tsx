@@ -2456,6 +2456,71 @@ describe("ChoiceList", () => {
 const TRUE_WHEN_INVALID = undefined;
 const NO_DESCRIPTION = undefined;
 
+describe("ChoiceList's option detail (R55·215)", () => {
+  const OPTIONS = ["a", "b"] as const;
+  const LABELS = { a: "First", b: "Second" };
+
+  function Picker() {
+    const [value, setValue] = useState<"a" | "b" | undefined>();
+    return (
+      <ChoiceList
+        name="pick"
+        legend="Pick one"
+        options={OPTIONS}
+        optionLabels={LABELS}
+        optionDetail={{ a: <button type="button">Go elsewhere</button> }}
+        value={value}
+        field={restingField}
+        onChange={setValue}
+      />
+    );
+  }
+
+  it("shows an option's detail only while it is checked, inside its row", async () => {
+    const user = userEvent.setup();
+    render(<Picker />);
+    expect(screen.queryByRole("button", { name: "Go elsewhere" })).toBeNull();
+
+    await user.click(screen.getByRole("radio", { name: "First" }));
+    const link = screen.getByRole("button", { name: "Go elsewhere" });
+    const row = link.closest("[data-part='option-with-detail']");
+    expect(row).toHaveClass(
+      "flex",
+      "flex-col",
+      "gap-2",
+      "border-t",
+      "border-hairline",
+      "px-4",
+      "py-3",
+      "inset-ring-2",
+      "inset-ring-ink",
+      "first:rounded-t-card",
+      "last:rounded-b-card",
+    );
+    expect(link.parentElement).toHaveClass("pl-8");
+    // The label keeps the row's target, and the link is not in its name.
+    const label = screen.getByRole("radio", { name: "First" }).closest("label");
+    expect(label).toHaveClass(
+      "target",
+      "flex",
+      "cursor-pointer",
+      "items-center",
+    );
+    expect(label).not.toContainElement(link);
+    expect(row).toContainElement(label);
+
+    await user.click(screen.getByRole("radio", { name: "Second" }));
+    expect(screen.queryByRole("button", { name: "Go elsewhere" })).toBeNull();
+    expect(
+      document.querySelector("[data-part='option-with-detail']"),
+    ).toBeNull();
+    // An option with no detail stays a plain row, whether checked or not.
+    expect(
+      screen.getByRole("radio", { name: "Second" }).closest("label"),
+    ).toHaveClass("has-[:checked]:inset-ring-2");
+  });
+});
+
 describe("ChoiceList, read-only", () => {
   /**
    * Shown as an answer, not asked as a question — A3's chips after Log it
