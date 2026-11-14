@@ -300,6 +300,25 @@ export default tseslint.config(
     files: ["src/**/*.tsx"],
   },
   {
+    /**
+     * A region may take focus, beside `recommended`'s `tabpanel`: a row
+     * that scrolls has to be reachable by keyboard (axe's
+     * scrollable-region-focusable), and a labelled region is what it is
+     * (owner, 2026-11-14, #659). Every other option is `recommended`'s.
+     */
+    files: ["src/**/*.tsx"],
+    rules: {
+      "jsx-a11y-x/no-noninteractive-tabindex": [
+        "error",
+        {
+          tags: [],
+          roles: ["tabpanel", "region"],
+          allowExpressionValues: true,
+        },
+      ],
+    },
+  },
+  {
     files: ["**/*.js", "**/*.mjs"],
     extends: [tseslint.configs.disableTypeChecked],
   },

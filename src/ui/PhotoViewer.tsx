@@ -5,6 +5,7 @@ import { SECONDARY_PILL } from "./form";
 import { Icon } from "./icons";
 import { Mono } from "./Mono";
 import { PagerArrows, pagerKeys } from "./PagerArrows";
+import { ScrollRegion } from "./ScrollRegion";
 
 /**
 A photo the viewer shows: where it is served from, and its alt text.
@@ -19,7 +20,8 @@ export interface ViewedPhoto {
  *
  * **On a phone** it is the whole screen in the theme's ground: a 56 head
  * with "PHOTO 1 OF 2" and the ✕ in its 44, the photo at its own ratio on
- * `--tint`, and a row a thumb swipes between photos. **From 720** it is
+ * `--tint`, and a row a thumb swipes between photos: a `ScrollRegion`
+ * named "Photos", so a keyboard and a screen reader's swipe reach it. **From 720** it is
  * the centred panel at MEASURE.column and RADIUS.sheet, on `--panel`
  * with its hairline (`ground-drawer`) and `shadow-lift`, over the scrim, with
  * 44 pager arrows and the ← → keys.
@@ -85,22 +87,25 @@ export function PhotoViewer({
         </button>
       </div>
       <div className="relative flex min-h-0 flex-1">
-        <ul
+        <ScrollRegion
+          label="Photos"
+          part="viewer-photos"
           ref={pager.rowRef}
-          data-part="viewer-photos"
           onScroll={pager.onScroll}
-          className="m-0 flex min-h-0 w-full list-none snap-x snap-mandatory overflow-x-auto p-0"
+          className="flex min-h-0 w-full snap-x snap-mandatory overflow-x-auto"
         >
-          {photos.map((photo, index) => (
-            <li
-              key={photo.src}
-              aria-hidden={index === pager.index ? undefined : true}
-              className="flex w-full shrink-0 snap-start items-center justify-center bg-tint"
-            >
-              <img src={photo.src} alt={photo.alt} className={PHOTO_CLASS} />
-            </li>
-          ))}
-        </ul>
+          <ul className="m-0 flex w-full list-none p-0">
+            {photos.map((photo, index) => (
+              <li
+                key={photo.src}
+                aria-hidden={index === pager.index ? undefined : true}
+                className="flex w-full shrink-0 snap-start items-center justify-center bg-tint"
+              >
+                <img src={photo.src} alt={photo.alt} className={PHOTO_CLASS} />
+              </li>
+            ))}
+          </ul>
+        </ScrollRegion>
         <PagerArrows
           index={pager.index}
           count={photos.length}
@@ -182,14 +187,14 @@ function usePager(
   openAt: number,
 ): {
   index: number;
-  rowRef: (node: HTMLUListElement | null) => void;
+  rowRef: (node: HTMLDivElement | null) => void;
   go: (index: number) => void;
-  onScroll: (event: UIEvent<HTMLUListElement>) => void;
+  onScroll: (event: UIEvent<HTMLDivElement>) => void;
 } {
   const [index, setIndex] = useState(() => clamp(openAt, count));
   // The row is held in state, so the scroll below follows it: it runs once
   // with no row, then once with the row.
-  const [row, setRow] = useState<HTMLUListElement | null>();
+  const [row, setRow] = useState<HTMLDivElement | null>();
   // The photo it opened on, held so the scroll below runs on open only:
   // from then on the row follows `go` and the thumb.
   const opened = useRef(index);
@@ -218,7 +223,7 @@ function usePager(
 The row scrolled to a photo, at once.
 */
 function scrollRow(
-  row: HTMLUListElement | null | undefined,
+  row: HTMLDivElement | null | undefined,
   index: number,
 ): void {
   if (!row) return;

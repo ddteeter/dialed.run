@@ -109,6 +109,17 @@ describe("PhotoViewer", () => {
     expect(dialog).toHaveAccessibleName("Photo 1 of 3");
   });
 
+  it("scrolls in a region named Photos that a keyboard reaches and pages from", () => {
+    const { dialog } = renderViewer(0);
+    const region = screen.getByRole("region", { name: "Photos" });
+    expect(region).toBe(rowOf(dialog));
+    expect(region).toContainElement(screen.getByRole("list"));
+    region.focus();
+    expect(region).toHaveFocus();
+    fireEvent.keyDown(region, { key: "ArrowRight" });
+    expect(dialog).toHaveAccessibleName("Photo 2 of 3");
+  });
+
   it("follows a swipe, rounding to the nearest photo", () => {
     const { dialog } = renderViewer(0);
     const row = rowOf(dialog);
