@@ -11,16 +11,15 @@ it is fixed. A finding already right on main is ticked, with a note saying so.
 
 ## Approach
 
-By finding (files in parentheses; ★ = outside this lane, awaiting the coordinator):
+By finding (files in parentheses; ★ = outside this lane, granted by the coordinator 2026-11-14):
 
 - **R2-DESK-01** (★`ui/DeskDetail`, ★`account/DeskCodes`): the table's track
   is `minmax(0,1fr)` below `desk`, not an implicit `auto`, so the list is as
   wide as the screen and a label's `truncate` cuts it there.
 - **R2-DESK-03** (★ the same files): handles and "+ N more" take `target-line`
-  (the 44 hit area without the 44 height), so a wrapped line is a text line.
-  Codes passes an `idle` line, so the pane's track holds something while
-  nothing is picked. If the board's full-width table needs the pane's track
-  dropped while idle, that is a `DeskDetail` option (`idle` absent ⇒ one track).
+  (the 44 hit area without the 44 height), wrapping 12 apart, so a wrapped
+  line is a text line. With nothing picked and no `idle` line, `DeskDetail`
+  gives the table one track, so Codes' table runs the full width (R55·200).
 - **R2-DESK-02** (★`styles.css`): the `dark` custom variant also matches
   inside `[data-ground="night"]`, because T3 says the Desk is night for
   everyone. Sheet's drawer edge and form's `--hairline-2` field edge then
@@ -40,17 +39,18 @@ By finding (files in parentheses; ★ = outside this lane, awaiting the coordina
   fixed tile columns, as 198's other-photos grid is. Captions wrap or cut
   within the tile, and the owner link is `target-line`.
 - **R2-DESK-12** (a) ★`auth/SignOutButton`'s Desk variant aligns its pending
-  label to the start. (b) `ops/DeskShell`'s rail takes design 210's 200
-  width as a token class. (c) `safety/Takedown`'s kicker is `text-muted`.
-  (d) a profile row's head reads `@handle`.
+  label to the start. (b) `ops/DeskShell`'s rail footer, see below. (c) `safety/Takedown`'s kicker is `text-muted`.
+  (d) a profile row's head reads `@handle`. (b) is a guess awaiting
+  Design 312 (#758): `tokens.js` pins no width outside MEASURE, so the
+  rail stays content-sized, and its digest time holds the room "Not yet"
+  takes.
 - **R2-DESK-13** (`safety/DeskKit`): the band gets `py` so every line has room,
   and its handle link is `target-line`.
 - **G-10** (`safety/DeskRunners`): the search becomes the form contract's
   field (`TextField`, `--panel`).
 - **P3-02** (`safety/CopyrightHolds`): "Received on" is a short field.
-  **Guess:** the date's display format is the browser's own for a native
-  date input, so "Oct 24, 2026" goes to the coordinator as a Design question
-  and is not built here.
+  **Guess, Design 313 (#759):** the format stays the native date field's,
+  which is the browser's locale format and not the board's "Oct 24, 2026".
 - **N3-16** (`safety/DeskDuplicates`): the count sits beside the heading, as
   in Review.
 
@@ -79,9 +79,9 @@ By finding (files in parentheses; ★ = outside this lane, awaiting the coordina
 ## Issues
 
 - Closes: #700
-- Opens: anything deferred (listed in the PR)
+- Opens: #758 and #759 (filed by the coordinator; they stay open)
 
 ## Open questions
 
-- ★ items wait on the coordinator's ownership answer.
-- P3-02's date format (above).
+- Design 312 (#758), the rail's width, and Design 313 (#759), Received
+  on's format: built as guesses, and left open for Round 58.
