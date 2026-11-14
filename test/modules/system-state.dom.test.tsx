@@ -413,7 +413,7 @@ A bell the test can find, standing in for `NotificationBell`.
 const BELL = "the bell";
 const bellIs = () => screen.queryAllByText(BELL);
 const seats = () => [
-  ...document.querySelectorAll<HTMLElement>("[data-part='bell-seat']"),
+  ...document.querySelectorAll<HTMLElement>("[data-slot='bell-seat']"),
 ];
 
 describe("X2 keeps the failed screen's first row (R55·186)", () => {
@@ -465,7 +465,7 @@ describe("X2 keeps the failed screen's first row (R55·186)", () => {
     const row = document.querySelector("[data-part='first-row']");
     // Only the bell's seat, held empty: no bell was wired here.
     expect(row?.children).toHaveLength(1);
-    expect(row?.querySelector("[data-part='bell-seat']")).not.toBeNull();
+    expect(row?.querySelector("[data-slot='bell-seat']")).not.toBeNull();
   });
 
   it("takes the column of the screen it replaces, and the column when that declares none (#697 R2-SHELL-09)", async () => {
@@ -738,7 +738,7 @@ describe("the system states' bell (PR #104)", () => {
       expect(seat).toBeEmptyDOMElement();
     }
     expect(
-      document.querySelector("[data-slot='top-bar'] [data-part='bell-seat']"),
+      document.querySelector("[data-slot='top-bar'] [data-slot='bell-seat']"),
     ).not.toBeNull();
 
     counts.resolve(<span>{BELL}</span>);

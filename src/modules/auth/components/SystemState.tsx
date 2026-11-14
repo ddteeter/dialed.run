@@ -101,7 +101,7 @@ function useLoadedBell(
 The bell's place, empty: its 44 target, nothing to hear or press.
 */
 const BELL_SEAT = (
-  <span data-part="bell-seat" aria-hidden="true" className="block size-11" />
+  <span data-slot="bell-seat" aria-hidden="true" className="block size-11" />
 );
 
 /**
