@@ -322,6 +322,43 @@ export function sectionsOf(blocks: readonly Block[]): {
   return { preamble, sections };
 }
 
+type Quote = Extract<BodyBlock, { kind: "quote" }>;
+
+/**
+ * The texts open with a block quote whose first words are a bold
+ * "DRAFT: …" — the banner the owner removes on publishing.
+ */
+function isDraftBanner(block: BodyBlock): block is Quote {
+  // A quote always holds one paragraph, so it has a first inline; any
+  // other block has no lead to read.
+  const lead = block.kind === "quote" ? block.inlines[0] : undefined;
+  return lead?.kind === "strong" && /^DRAFT\b/u.test(plainText(lead.children));
+}
+
+/**
+ * R55·223: a page draws the draft banner as its own notice, so it leaves
+ * the preamble here. `provenance` is the source's own words after its
+ * bold lead, or absent for a text with no banner.
+ */
+export function draftBannerOf(preamble: readonly BodyBlock[]): {
+  readonly provenance: readonly Inline[] | undefined;
+  readonly rest: readonly BodyBlock[];
+} {
+  const draft = preamble.find((block) => isDraftBanner(block));
+  if (draft === undefined) return { provenance: undefined, rest: preamble };
+  return {
+    provenance: withoutLeadingSpace(draft.inlines.slice(1)),
+    rest: preamble.filter((block) => block !== draft),
+  };
+}
+
+function withoutLeadingSpace(inlines: readonly Inline[]): readonly Inline[] {
+  const [first, ...rest] = inlines;
+  return first?.kind === "text"
+    ? [{ kind: "text", text: first.text.trimStart() }, ...rest]
+    : inlines;
+}
+
 /**
  * What a section says, heading and blocks, as one plain string: what
  * `/open-source`'s search finds a third-party notice by (R55·225).

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import privacyDraft from "../../docs/legal/privacy-policy.md?raw";
 import {
+  draftBannerOf,
   changeSummaryOf,
   headingId,
   parseLegalDoc,
@@ -441,6 +442,43 @@ describe("sectionsOf", () => {
       ["one", "One", 2],
       ["two", "Two", 1],
     ]);
+  });
+});
+
+function preambleOf(text: string) {
+  return sectionsOf(parseLegalDoc(text).blocks).preamble;
+}
+
+describe("draftBannerOf (R55·223)", () => {
+  it("takes the DRAFT quote out, keeping the words after its bold lead", () => {
+    const { provenance, rest } = draftBannerOf(
+      preambleOf(
+        "> **DRAFT: not reviewed.** Written from the code.\n\n# T\n\nFirst words.\n\n## One\n\nBody.",
+      ),
+    );
+    expect(provenance).toStrictEqual([
+      { kind: "text", text: "Written from the code." },
+    ]);
+    expect(rest).toStrictEqual([
+      { kind: "paragraph", inlines: [{ kind: "text", text: "First words." }] },
+    ]);
+  });
+
+  it("keeps a lead that is not text as it is", () => {
+    const { provenance } = draftBannerOf(
+      preambleOf("> **DRAFT**`code` after\n\n# T\n\n## One"),
+    );
+    expect(provenance?.[0]).toStrictEqual({ kind: "code", text: "code" });
+  });
+
+  it("has no banner for a text that opens otherwise", () => {
+    const preamble = preambleOf(
+      "> **Note:** DRAFT words.\n\n> **DRAFTSMAN** x\n\n# T\n\nPlain.\n\n## One",
+    );
+    expect(draftBannerOf(preamble)).toStrictEqual({
+      provenance: undefined,
+      rest: preamble,
+    });
   });
 });
 

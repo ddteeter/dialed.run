@@ -3,7 +3,7 @@ import type { ComponentType, JSX, ReactNode } from "react";
 import { Mono } from "../../../ui";
 import type { LegalSlug } from "../inputs";
 import {
-  plainText,
+  draftBannerOf,
   sectionsOf,
   type BodyBlock,
   type Inline,
@@ -44,22 +44,22 @@ export function LegalPage({
   bell: ComponentType<BellState>;
 }>): JSX.Element {
   const { preamble, sections } = sectionsOf(doc.blocks);
-  const draft = preamble.find((block) => isDraftBanner(block));
+  const { provenance, rest } = draftBannerOf(preamble);
   return (
     <ReadingShell bellState={bellState} bell={bell}>
       <ReadingFrame
         title={LEGAL_TITLES[slug]}
         notice={
-          draft?.kind === "quote" ? (
-            <DraftNotice inlines={draft.inlines} />
-          ) : undefined
+          provenance === undefined ? undefined : (
+            <DraftNotice provenance={provenance} />
+          )
         }
         contents={doc.contents.map((entry) => ({
           id: entry.id,
           title: named(entry.title),
         }))}
       >
-        <LegalBlocks blocks={preamble.filter((block) => block !== draft)} />
+        <LegalBlocks blocks={rest} />
         {sections.map((section) => (
           <ReadingSection
             key={section.id}
@@ -86,27 +86,13 @@ export const LEGAL_TITLES: Readonly<Record<LegalSlug, string>> = {
 };
 
 /**
- * The texts open with a block quote whose first words are a bold
- * "DRAFT: …" — the banner the owner removes on publishing.
- */
-function isDraftBanner(block: BodyBlock): boolean {
-  // A quote always holds one paragraph, so it has a first inline; any
-  // other block has no lead to read.
-  const lead = block.kind === "quote" ? block.inlines[0] : undefined;
-  return (
-    lead?.kind === "strong" && /^DRAFT\b/u.test(plainText(lead.children))
-  );
-}
-
-/**
  * R55·223: the app's notice block under the title, above the contents:
  * MONO.xs DRAFT, the ruled line in ink, then the banner's provenance — the
  * source's own words after its bold lead — in TYPE.small --quiet.
  */
 function DraftNotice({
-  inlines,
-}: Readonly<{ inlines: readonly Inline[] }>): JSX.Element {
-  const provenance = withoutLeadingSpace(inlines.slice(1));
+  provenance,
+}: Readonly<{ provenance: readonly Inline[] }>): JSX.Element {
   return (
     <div className="mt-2 flex flex-col gap-1 rounded-none bg-notice px-4 py-3 inset-ring-1 inset-ring-notice-rule">
       <Mono step="xs" className="text-ink">
@@ -120,13 +106,6 @@ function DraftNotice({
       )}
     </div>
   );
-}
-
-function withoutLeadingSpace(inlines: readonly Inline[]): readonly Inline[] {
-  const [first, ...rest] = inlines;
-  return first?.kind === "text"
-    ? [{ kind: "text", text: first.text.trimStart() }, ...rest]
-    : inlines;
 }
 
 /**
