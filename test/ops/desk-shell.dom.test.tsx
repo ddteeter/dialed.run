@@ -280,7 +280,8 @@ describe("DeskShell", () => {
     const [screening, digest] = [...(footer?.children ?? [])];
     expect(screening).toHaveTextContent("Screening · OK");
     expect(screening).toHaveClass("text-muted");
-    expect(digest).toHaveTextContent("Last digest · Not yet");
+    expect(digest).toHaveTextContent(/^Last digest · Not yet$/u);
+    expect(digest?.querySelector("[data-part='digest-time']")).toBeNull();
   });
 
   it("says screening is holding, in hi-viz, while a breaker is over, and when the digest last ran (owner, #635)", async () => {
@@ -301,7 +302,18 @@ describe("DeskShell", () => {
     const [screening, digest] = [...(footer?.children ?? [])];
     expect(screening).toHaveTextContent("Screening · Holding");
     expect(screening).toHaveClass("text-hiviz-text");
-    expect(digest).toHaveTextContent("Last digest · 07:00");
+    // The time in the room "Not yet" holds, so the rail keeps its width
+    // the day the digest first runs (R2-DESK-12b, a guess: #758).
+    const time = digest?.querySelector("[data-part='digest-time']");
+    expect(time).toHaveClass("inline-grid");
+    const [shown, room] = [...(time?.children ?? [])];
+    expect(shown).toHaveTextContent(/^07:00$/u);
+    expect(shown).toHaveClass("[grid-area:1/1]");
+    expect(shown).not.toHaveAttribute("aria-hidden");
+    expect(room).toHaveTextContent(/^Not yet$/u);
+    expect(room).toHaveClass("invisible", "[grid-area:1/1]");
+    expect(room).toHaveAttribute("aria-hidden", "true");
+    expect(digest?.textContent.startsWith("Last digest · 07:00")).toBe(true);
   });
 
   it("counts what is waiting on the Review entry, in hi-viz", async () => {

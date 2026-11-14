@@ -178,9 +178,30 @@ function RailFooter({ today }: Readonly<{ today: DeskToday }>) {
         {isHolding ? "Screening · Holding" : "Screening · OK"}
       </Mono>
       <Mono step="xs" className="text-muted">
-        {`Last digest · ${lastDigestAt === undefined ? "Not yet" : timeOfDay(lastDigestAt)}`}
+        {"Last digest · "}
+        <DigestTime at={lastDigestAt} />
       </Mono>
     </div>
+  );
+}
+
+const NOT_YET = "Not yet";
+
+/**
+ * When the digest last ran, in the room "Not yet" takes, so the rail is
+ * as wide the day it first runs as the day before (R2-DESK-12b). A guess
+ * awaiting Design 312 (#758): the rail stays sized by its content, as
+ * tokens.js pins no width outside MEASURE.
+ */
+function DigestTime({ at }: Readonly<{ at: number | undefined }>) {
+  if (at === undefined) return <>{NOT_YET}</>;
+  return (
+    <span data-part="digest-time" className="inline-grid">
+      <span className="[grid-area:1/1]">{timeOfDay(at)}</span>
+      <span aria-hidden="true" className="invisible [grid-area:1/1]">
+        {NOT_YET}
+      </span>
+    </span>
   );
 }
 
