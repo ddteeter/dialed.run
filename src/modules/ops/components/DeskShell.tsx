@@ -41,7 +41,9 @@ export type DeskPage = (typeof DESK_PAGES)[number];
 /**
  * Round 54 · 168.3: Runners, Codes and Review are tables, and fill the
  * width beside the rail up to MEASURE.page. The rest keep the 620
- * document column.
+ * document column. Every page starts at the rail (R57·264, #709): the
+ * Desk is not a runner screen, so 168.1's centring does not reach it,
+ * and a 620 page leaves its spare width on the right.
  */
 const WIDTH: Readonly<Record<DeskPage, "table" | "column">> = {
   today: "column",
@@ -52,6 +54,11 @@ const WIDTH: Readonly<Record<DeskPage, "table" | "column">> = {
   codes: "table",
   runners: "table",
 };
+
+/**
+The 620 column, at the rail's edge: the page's own gap, left-aligned.
+*/
+const DESK_COLUMN = "flex w-full max-w-column flex-col gap-6";
 
 const LABEL: Readonly<Record<DeskPage, string>> = {
   today: "Today",
@@ -286,7 +293,15 @@ export function DeskShell({
         {/* `Page` for the column and the hydration stamp every screen
             carries (useHydrated), which the e2e specs wait on. */}
         <main className="min-w-0 flex-1">
-          <Page width={WIDTH[current]}>{children}</Page>
+          <Page width="table">
+            {WIDTH[current] === "column" ? (
+              <div data-part="desk-column" className={DESK_COLUMN}>
+                {children}
+              </div>
+            ) : (
+              children
+            )}
+          </Page>
         </main>
       </div>
     </div>

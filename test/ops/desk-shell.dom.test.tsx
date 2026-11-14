@@ -654,7 +654,7 @@ describe("DeskPage", () => {
     ]);
   });
 
-  it("gives the three tables the page measure and the rest the column (168.3, R55·194)", async () => {
+  it("gives the three tables the page measure and the rest the column, all at the rail (168.3, R57·264)", async () => {
     const widths: Record<string, string> = {};
     for (const current of [
       "today",
@@ -672,9 +672,16 @@ describe("DeskPage", () => {
       ));
       const body = await screen.findByText(`the ${current} page`);
       const page = body.closest("main")?.firstElementChild;
-      widths[current] =
-        /max-w-(?<measure>page|column)/u.exec(page?.className ?? "")?.groups
-          ?.measure ?? "neither";
+      // Every page's frame is left-aligned at the rail: nothing centres
+      // it (#709), and a column page holds its 620 inside that frame.
+      expect(page).toHaveClass("max-w-page");
+      expect(page?.className).not.toMatch(/mx-auto/u);
+      const column = body.closest("[data-part='desk-column']");
+      if (column !== null) {
+        expect(column.className).toBe("flex w-full max-w-column flex-col gap-6");
+        expect(column.parentElement).toBe(page);
+      }
+      widths[current] = column === null ? "page" : "column";
       unmount();
     }
     expect(widths).toStrictEqual({
