@@ -212,6 +212,7 @@ function form(
     privateLine?: (hintId: string) => ReactNode;
     isVerified?: boolean;
     push?: { isPushed: boolean; onPush: () => void; onDone: () => void };
+    homeZone?: string;
   } = {},
 ) {
   return (
@@ -230,6 +231,7 @@ function form(
             }
       }
       units={overrides.units ?? { temp: "f", distance: "mi" }}
+      homeZone={overrides.homeZone}
       submitVerdict={overrides.submitVerdict ?? nothing}
       itemBandWearStat={overrides.itemBandWearStat ?? noStat}
       privateLine={overrides.privateLine ?? privateLineStub}
@@ -2014,9 +2016,43 @@ describe("VerdictForm: the run header (round 21)", () => {
     expect(screen.getByText(wholeText("10.0 km at 5°"))).toBeVisible();
   });
 
+  it("reads a run with no zone of its own on the runner's, in the header and the rail (P2a-02)", async () => {
+    // 20:00 UTC on Sat Aug 29 is 5:00 AM on Sun Aug 30 in Tokyo, so the
+    // runner's zone changes the day, as it does on the runs list.
+    const evening = Math.floor(Date.UTC(2026, 7, 29, 20, 0) / 1000);
+    await renderWithRouter(
+      form({
+        entry: { startedAt: evening, distanceM: 9978, conditions: undefined },
+        homeZone: "Asia/Tokyo",
+      }),
+    );
+
+    const header = screen.getByRole("banner");
+    expect(within(header).getByText("Sun Aug 30 · 5:00 AM")).toBeVisible();
+    const rail = document.querySelector<HTMLElement>("[data-part='rail']");
+    if (rail === null) throw new TypeError("no rail");
+    expect(
+      within(rail).getByRole("heading", {
+        name: "This run · Sun Aug 30 · 5:00 AM",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("prefers the run's own zone to the runner's", async () => {
+    await renderWithRouter(
+      form({
+        entry: { startedAt: SAT_MORNING, distanceM: 9978, conditions },
+        homeZone: "Asia/Tokyo",
+      }),
+    );
+
+    const header = screen.getByRole("banner");
+    expect(header).toHaveTextContent(/Sat Aug 29 · 6:04 AM/u);
+  });
+
   it("reads the rail's run on the run's own zone, and a run with none on UTC, marked", async () => {
-    // A3's entry carries no home zone (P2a-02's fallback is A2's): with no
-    // zone of its own, the card says UTC rather than print it bare.
+    // With no zone of its own and none for the runner, the card says UTC
+    // rather than print it bare.
     await renderWithRouter(
       form({ entry: { startedAt: SAT_MORNING, conditions: undefined } }),
     );
