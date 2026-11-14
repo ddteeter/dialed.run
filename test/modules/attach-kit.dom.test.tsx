@@ -1442,12 +1442,17 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
   it("is the photo row, only its add box, from the first frame", async () => {
     await renderWithRouter(attach({ prefillFor: neverSettles }));
 
-    // Design 253 (#669): no dashed well, so no drop title and no hint.
-    const row = screen.getByRole("group", { name: "Outfit photo · optional" });
+    // Round 57 · 253 (#669): no dashed well, so no drop title, and the
+    // well's hint is the row's line until a photo is held. 252 (#668):
+    // the kicker counts against the cap.
+    const row = screen.getByRole("group", { name: "Photos · 0 of 4" });
     expect(row).toContainElement(addBox());
     expect(photoInput()).toHaveAccessibleName("Add photo");
+    expect(photoInput()).toHaveAccessibleDescription(
+      "Flat on the floor works best.",
+    );
     expect(thumbnails()).toHaveLength(0);
-    expect(row).not.toHaveTextContent("Flat on the floor works best.");
+    expect(row).toHaveTextContent("Flat on the floor works best.");
     expect(row).not.toHaveTextContent("Drop a photo, or browse");
   });
 
