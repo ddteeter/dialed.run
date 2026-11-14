@@ -1148,6 +1148,43 @@ Round 58.
   A quarantine record's head carries no owner, because 199 draws only the
   hold, and the record keeps its Uploader line. Its tag is `[QUARANTINE]`.
 
+## Built from the styling re-run (wave 10, design 220)
+
+How #697, #698, #703 and #672 were built, where the build had to choose or
+moved off an earlier ruling.
+
+- **Saved switches (R54·166.3, D-185).** Privacy's Public profile, Show my
+  closet and anonymous totals, and Notifications' Run reminders · Email,
+  are switches at the row's right with a 600 label. Notifications has no
+  Save now: 166.3 names notification settings, so Design 309 (#754) closed
+  as answered. The status a save sets is "Saved." (guess: the period every
+  other status has). Privacy keeps one status region for its form and its
+  switches. A failed switch says "Not changed. Our end failed." there too,
+  which nothing announced before.
+- **Name labels at MONO.sm (166.5).** PRIVATE / SHARED / PUBLIC, and also
+  SYSTEM / LIGHT / DARK, which R50·143.3 had at xs. 166.5 is later and
+  names both lists.
+- **Joined segmented control (#672, R2-ONB-04).** One `--tint` pill track,
+  segments 4 in and 4 apart, the chosen one the ink thumb (V1 Screens N).
+  Units (Settings and O1) and Theme use it. Each pair hugs its segments;
+  N's two pairs sharing the row half-and-half are not built (guess).
+- **Confirm pairs at 48 (R54·167.1).** Delete account, delete-with-runs,
+  release holds and the blur check draw the ink pill and the hairline
+  secondary. Delete-with-runs' Retire leaves round 26's pink for the ink
+  pill, because 167.1 rules a confirm's primary and is later.
+- **Unblock hugs its word (W2).** At rest the pill holds only "Unblock".
+  While a save is in flight it grows to "[ Unblocking ]" and the handle
+  gives way (guess). Every handle no longer loses the reserve's width.
+- **The column below 720 (DS4).** `COLUMN` and the onboarding step are
+  fluid below 720, capped at 620 from 720, so a 620–719 window fills. P3's
+  band bleeds until 720 and sits in the column from there: one geometry
+  each side.
+- **System states (R55·185).** X2 and an unnamed signed-in 404 take the
+  column, or the width the failed route declares (`staticData.width`; the
+  closet list's is `page`). The bell's 44 seat is held while it loads and
+  after it fails (169).
+- **Open:** the phone bell's badge in the gutter is Design 311 (#757).
+
 ## Built from round 56 · 246 (wave 9, design 213)
 
 How the lift (Round 56 · 246, #652) was built, with what the ruling left
