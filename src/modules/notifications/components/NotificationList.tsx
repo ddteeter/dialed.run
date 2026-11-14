@@ -282,7 +282,7 @@ function TargetLink({
         <Link
           to="/closet/$itemId"
           params={{ itemId: target.itemId }}
-          className={className}
+          className={`target ${className}`}
         >
           {children}
         </Link>
@@ -293,7 +293,7 @@ function TargetLink({
         <Link
           to="/feed/u/$handle"
           params={{ handle: target.handle }}
-          className={className}
+          className={`target ${className}`}
         >
           {children}
         </Link>
@@ -301,14 +301,14 @@ function TargetLink({
     }
     case "own-profile": {
       return (
-        <Link to="/feed/me" className={className}>
+        <Link to="/feed/me" className={`target ${className}`}>
           {children}
         </Link>
       );
     }
     case "upload": {
       return (
-        <Link to="/runs/new" className={className}>
+        <Link to="/runs/new" className={`target ${className}`}>
           {children}
         </Link>
       );

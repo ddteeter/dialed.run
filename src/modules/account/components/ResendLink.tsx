@@ -148,6 +148,33 @@ export const RESEND_LINK =
 export const RESEND_PILL =
   "target flex h-12 w-full cursor-pointer items-center justify-center rounded-pill border border-ink bg-transparent px-5 text-body font-bold text-ink";
 
+/**
+ * A plain button in Resend's pill, for the sheet's other answer: the two
+ * stacked buttons are a matched full-width pair (round 29 #11's board;
+ * B-11). It lives beside the pill so its class list is read where it is
+ * written.
+ */
+export function PillButton({
+  label,
+  onClick,
+  buttonRef,
+}: Readonly<{
+  label: string;
+  onClick: () => void;
+  buttonRef: (node: HTMLButtonElement | null) => void;
+}>): JSX.Element {
+  return (
+    <button
+      type="button"
+      ref={buttonRef}
+      onClick={onClick}
+      className={RESEND_PILL}
+    >
+      {label}
+    </button>
+  );
+}
+
 const SENT_SENTENCE = "A new link is on its way. The old one no longer works.";
 
 /**

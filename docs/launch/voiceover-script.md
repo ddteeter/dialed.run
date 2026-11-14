@@ -211,20 +211,20 @@ and the content between is the same.
 ### Flow 1. Join and set up
 
 **1.1 Home.** Signed out, open the build's address.
-Source: `conformance/auth-landing-bar.conformance.spec.ts/logged-out-below-720-no-bar-at-all.txt`.
+Source: `conformance/auth-landing-bar.conformance.spec.ts/logged-out-below-720-the-bar-keeps-Log-in-and-the-hero-carries-the-pill.txt`.
 
 You should hear:
 
-- "dialed.run", with no brackets spoken
+- link "dialed.run home", current page, with no brackets spoken
+- link "Log in"
 - "Every run has an outfit. Log it.", heading 1
 - "A virtual wardrobe for runners: what you wore, on which run, in which weather."
 - link "Request access"
-- "Have an account?", link "Log in"
+- "Have a code?", link "Create an account"
 - the footer links: "Privacy", "Terms", "Copyright", "Open source", "Report an intimate image"
 
-Do: double tap "Log in", then on that screen find "New here?" and double
-tap the link "Create an account". (An invite link from the Desk lands on
-Create account directly.)
+Do: double tap the link "Create an account". (An invite link from the Desk
+lands on Create account directly.)
 
 **1.2 Create account.**
 Source: `conformance/auth-forms.conformance.spec.ts/Au-·-phone-Au1-create-account-at-rest.txt`.

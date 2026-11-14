@@ -446,7 +446,8 @@ describe("NotificationList · where a row goes (R48·129f, R48·131c)", () => {
       name: /We fixed the weight on AFO Middle Layer/u,
     });
     expect(link.parentElement).toHaveAttribute("data-part", "notification-row");
-    expect(link).toHaveClass("no-underline", "flex", "text-ink");
+    // Padded to 44 like every tappable thing, whatever row it ends.
+    expect(link).toHaveClass("target", "no-underline", "flex", "text-ink");
     expect(link).not.toHaveClass("underline");
     const chevron = link.lastElementChild;
     expect(chevron?.tagName.toLowerCase()).toBe("svg");
@@ -475,6 +476,9 @@ describe("NotificationList · where a row goes (R48·129f, R48·131c)", () => {
         name: /New run on Strava\. Upload its file, then add what you wore\./u,
       }),
     ).toHaveAttribute("href", "/runs/new");
+    expect(
+      screen.getByRole("link", { name: /New run on Strava/u }),
+    ).toHaveClass("target", "flex");
   });
 
   it("opens one follower's profile by the handle they have now", async () => {
@@ -495,6 +499,9 @@ describe("NotificationList · where a row goes (R48·129f, R48·131c)", () => {
     expect(
       screen.getByRole("link", { name: /@ada followed you\./u }),
     ).toHaveAttribute("href", "/feed/u/ada_runs");
+    expect(
+      screen.getByRole("link", { name: /@ada followed you\./u }),
+    ).toHaveClass("target", "flex");
   });
 
   it("opens the runner's own profile for a group", async () => {
@@ -514,6 +521,7 @@ describe("NotificationList · where a row goes (R48·129f, R48·131c)", () => {
       name: /@ada and 3 others followed you\./u,
     });
     expect(link).toHaveAttribute("href", "/feed/me");
+    expect(link).toHaveClass("target", "flex");
   });
 
   it("keeps a decline's reason on its own line", async () => {
