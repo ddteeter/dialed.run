@@ -14,10 +14,8 @@ import { Mono, RailCard, Spoken } from "../../../ui";
 import { garmentLabel } from "../../../lib/garment-label";
 import { runsLabel } from "../../../lib/runs-label";
 import { photoUrlFor } from "../photo-url";
-import { retiredMonthLabel } from "../retired-label";
 import type { ClosetItemView } from "../service";
 import { garmentTypePlurals } from "../type-labels";
-import { useRunnerZone } from "./use-runner-zone";
 
 type Category = (typeof garmentCategories)[number];
 
@@ -110,15 +108,12 @@ function isSameName(
 function flagsOf(
   view: ClosetItemView,
   typed: { brand: string; name: string },
-  zone: string | undefined,
 ): string {
   return [
     isSameName(view, typed) ? "Same name" : undefined,
-    // Dated by month and year here (round 28 #13, "RETIRED MAR 2026"),
-    // not the closet's day.
-    view.item.retired
-      ? retiredMonthLabel(view.item.retiredAt, zone)
-      : undefined,
+    // The word alone, as Round 56 · 248 draws the tag: round 28 #13's
+    // "RETIRED MAR 2026" took more than half a 390 row (R2-CLOSET-02).
+    view.item.retired ? "Retired" : undefined,
   ]
     .filter((flag) => flag !== undefined)
     .join(" · ");
@@ -127,16 +122,14 @@ function flagsOf(
 function Row({
   view,
   typed,
-  zone,
   tempUnit,
 }: Readonly<{
   view: ClosetItemView;
   typed: { brand: string; name: string };
-  zone: string | undefined;
   tempUnit: TempUnit;
 }>): JSX.Element {
   const photo = photoUrlFor(view.item);
-  const flags = flagsOf(view, typed, zone);
+  const flags = flagsOf(view, typed);
   return (
     <li className="flex items-center gap-3 border-t border-hairline pt-3">
       {photo === undefined ? (
@@ -156,8 +149,10 @@ function Row({
           className="size-12 shrink-0 rounded-field object-cover"
         />
       )}
-      <span className="flex min-w-0 flex-col gap-1">
-        <span className="text-body font-semibold">
+      {/* One line each, truncated, as 248 draws the row: the name and
+          the meta never wrap beside the tag (R2-CLOSET-02). */}
+      <span className="flex min-w-0 flex-1 flex-col gap-1">
+        <span data-part="name" className="truncate text-body font-semibold">
           {garmentLabel({
             name: view.item.name,
             brand: view.item.brand,
@@ -165,7 +160,7 @@ function Row({
           })}
         </span>
         {/* MONO.sm, the metadata row's step (round 28 #13). */}
-        <Mono step="sm" className="text-label">
+        <Mono step="sm" className="truncate text-label">
           <RecordLine view={view} tempUnit={tempUnit} />
         </Mono>
       </span>
@@ -222,7 +217,7 @@ function SeeAllLink({
       to="/closet"
       search={{ group }}
       data-part="more"
-      className="target inline-flex items-center self-start border-t border-hairline text-body font-semibold text-ink"
+      className="target flex w-full items-center border-t border-hairline text-body font-bold text-action"
     >
       {`See all ${String(total)} in ${uiGroupLabels[group]}`}
     </Link>
@@ -249,7 +244,6 @@ export function AlreadyInCloset({
   typed,
   tempUnit,
 }: Readonly<AlreadyInClosetProps>): JSX.Element {
-  const zone = useRunnerZone();
   const plural =
     type === undefined ? CATEGORY_PLURALS[category] : garmentTypePlurals[type];
   return (
@@ -272,7 +266,6 @@ export function AlreadyInCloset({
                   key={view.item.id}
                   view={view}
                   typed={typed}
-                  zone={zone}
                   tempUnit={tempUnit}
                 />
               ))}

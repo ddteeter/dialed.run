@@ -52,7 +52,10 @@ export function RailCard({
   children: ReactNode;
 }>): JSX.Element {
   return (
-    <section className="flex flex-col gap-2 rounded-card border border-hairline p-4">
+    // Filled, on `--panel` with a hairline edge, as the closet's tiles are:
+    // A2/A3's This run (round 25) and F's card (Round 55 · 193, Round 56 ·
+    // 248) all draw it so (R2-CLOSET-03).
+    <section className="flex flex-col gap-2 rounded-card border border-hairline bg-panel p-4">
       {isHeading ? (
         <h2 className="m-0 font-display text-heading">{title}</h2>
       ) : (
