@@ -479,6 +479,8 @@ describe("CopyrightHolds", () => {
     const field = screen.getByLabelText<HTMLInputElement>("Received on");
     expect(field).toHaveAttribute("type", "date");
     expect(field.value).toBe(isoDayOf(nowSeconds()));
+    // A short field, as wide as its date, not the column (P3-02; #759).
+    expect(field.closest("[data-part='received-on']")).toHaveClass("w-fit");
 
     fireEvent.change(field, { target: { value: "2026-10-24" } });
     await userEvent

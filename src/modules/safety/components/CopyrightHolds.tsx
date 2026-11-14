@@ -315,15 +315,20 @@ function CounterNotice({
       onRecorded={onRecorded}
       onSaid={onSaid}
       fields={(form) => (
-        <TextField
-          name="receivedOn"
-          label="Received on"
-          type="date"
-          value={receivedOn}
-          onChange={setReceivedOn}
-          field={form.field}
-          error={form.fieldErrors.receivedOn}
-        />
+        // A short field, as wide as the date it holds and not the
+        // column (P3-02). The browser's own date field, so its format is
+        // the browser's: a guess awaiting Design 313 (#759).
+        <div data-part="received-on" className="w-fit">
+          <TextField
+            name="receivedOn"
+            label="Received on"
+            type="date"
+            value={receivedOn}
+            onChange={setReceivedOn}
+            field={form.field}
+            error={form.fieldErrors.receivedOn}
+          />
+        </div>
       )}
     />
   );
