@@ -7,13 +7,20 @@ import {
   removalRule,
   removalRuleLine,
   removalStatements,
+  entryReportReasonSchema,
+  isEntryReportReason,
+  profileReportReasonLabels,
+  profileReportReasonSchema,
+  profileReportReasons,
   reportReasonLabels,
   reportReasonSchema,
   reportReasons,
+  STORED_REPORT_REASONS,
   reportSubjectTypeSchema,
   reportSubjectTypes,
   reportSubjectsThatHide,
 } from "../../src/modules/safety/contracts";
+import { reports } from "../../src/db/schema-core";
 
 /**
  * The derived tables, pinned against their source in both directions.
@@ -37,7 +44,78 @@ describe("the reason schema derives from the reason table", () => {
     // produce and no reviewer would recognise.
     expect(reportReasonSchema.safeParse("sexual_content").success).toBe(false);
     expect(reportReasonSchema.safeParse("").success).toBe(false);
-    expect(reportReasonSchema.options).toHaveLength(reportReasons.length);
+  });
+});
+
+/**
+ * A reason table's stored values.
+ */
+function values(table: readonly { value: string }[]): Set<string> {
+  return new Set(table.map((reason) => reason.value));
+}
+
+/**
+ * R55·214: a profile has its own reasons, three sharing W1's stored values
+ * and two its own (owner, 2026-11-13).
+ */
+describe("the stored reasons are both sheets' values, once each", () => {
+  it("lists W1's values and then a profile's own, with no repeats", () => {
+    expect(STORED_REPORT_REASONS).toStrictEqual([
+      "explicit",
+      "intimate",
+      "harassment",
+      "spam",
+      "not_theirs",
+      "other",
+      "offensive",
+      "impersonation",
+    ]);
+    expect(new Set(STORED_REPORT_REASONS)).toEqual(
+      new Set([...values(reportReasons), ...values(profileReportReasons)]),
+    );
+  });
+
+  it("is what the column takes and what the Desk parses", () => {
+    expect(reports.reason.enumValues).toStrictEqual(STORED_REPORT_REASONS);
+    expect(reportReasonSchema.options).toStrictEqual(STORED_REPORT_REASONS);
+  });
+
+  it("lets W1 file only W1's reasons, and a profile only its own", () => {
+    expect(new Set(entryReportReasonSchema.options)).toEqual(
+      values(reportReasons),
+    );
+    expect(new Set(profileReportReasonSchema.options)).toEqual(
+      values(profileReportReasons),
+    );
+    expect(entryReportReasonSchema.safeParse("offensive").success).toBe(false);
+    expect(profileReportReasonSchema.safeParse("explicit").success).toBe(false);
+    expect(
+      profileReportReasonSchema.safeParse(undefined).error?.issues[0]?.message,
+    ).toBe("Pick what's wrong with it.");
+    expect(
+      entryReportReasonSchema.safeParse(undefined).error?.issues[0]?.message,
+    ).toBe("Pick what's wrong with it.");
+  });
+
+  it("knows which stored reasons are W1's, the ones with a threshold", () => {
+    for (const reason of reportReasons) {
+      expect(isEntryReportReason(reason.value)).toBe(true);
+    }
+    expect(isEntryReportReason("offensive")).toBe(false);
+    expect(isEntryReportReason("impersonation")).toBe(false);
+  });
+
+  it("gives a profile sheet R55·214's sentences", () => {
+    expect(Object.keys(profileReportReasonLabels)).toStrictEqual([
+      ...values(profileReportReasons),
+    ]);
+    expect(profileReportReasonLabels).toStrictEqual({
+      offensive: "Their name or photo is offensive",
+      harassment: "They're harassing someone",
+      impersonation: "They're pretending to be someone else",
+      spam: "It's an ad, or it's spam",
+      other: "Something else",
+    });
   });
 
   it("says something a runner would read when nothing is chosen", () => {
@@ -54,14 +132,20 @@ describe("the label lookup derives from the same table", () => {
     // Sets, because the order a table is written in is not a fact about
     // the derivation.
     expect(new Set(Object.keys(reportReasonLabels))).toEqual(
-      new Set(reportReasons.map((reason) => reason.value)),
+      new Set(STORED_REPORT_REASONS),
     );
   });
 
-  it("uses the table's own sentences", () => {
+  it("uses W1's sentence for a value both sheets share, and a profile's for its own", () => {
     for (const reason of reportReasons) {
       expect(reportReasonLabels[reason.value]).toBe(reason.label);
     }
+    expect(reportReasonLabels.offensive).toBe(
+      "Their name or photo is offensive",
+    );
+    expect(reportReasonLabels.impersonation).toBe(
+      "They're pretending to be someone else",
+    );
   });
 
   it("keeps the artboard's wording rather than policy categories", () => {

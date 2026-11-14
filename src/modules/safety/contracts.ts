@@ -9,6 +9,15 @@
 import { z } from "zod";
 
 import {
+  profileReportReasons,
+  reportReasons,
+  STORED_REPORT_REASONS,
+  type EntryReportReason,
+  type ProfileReportReason,
+  type ReportReason,
+} from "../../lib/contracts/report-reasons";
+
+import {
   communityRuleKeys,
   communityRules,
   ruleLine,
@@ -20,67 +29,87 @@ import {
 } from "../../lib/contracts/email-kinds";
 
 /**
- * What a runner says is wrong, in the artboard's words.
- *
- * **These sentences are the design's, not paraphrases of policy
- * categories.** W1's note is explicit: "Reasons are written as sentences a
- * runner would say, not policy categories." Rewording them into
- * `sexual_content` / `harassment` / `spam` would be inventing design
- * language on a surface that has one.
- *
- * The keys are the stored values and the sentences are the labels, which is
- * why they are one table and not two: a hand-written second copy in the
- * component is exactly the rival truth CLAUDE.md warns about.
+ * The report reasons live in `lib/contracts/report-reasons` because the
+ * schema's `reports.reason` column reads them; they are re-exported here
+ * for the module's own readers.
  */
-export const reportReasons = [
-  { value: "explicit", label: "The photo shows someone inappropriately" },
-  // Design 136 (D-117), in round 35 #58a's words. The one reason on the
-  // TAKE IT DOWN Act's clock (`reasonsOnTheClock`).
-  {
-    value: "intimate",
-    label: "It's an intimate image of someone, shared without their consent",
-  },
-  { value: "harassment", label: "Harassment aimed at someone" },
-  { value: "spam", label: "It's an ad, or it's spam" },
-  { value: "not_theirs", label: "This isn't their run or their gear" },
-  { value: "other", label: "Something else" },
-] as const;
-
-export type ReportReason = (typeof reportReasons)[number]["value"];
+export {
+  profileReportReasons,
+  reportReasons,
+  STORED_REPORT_REASONS,
+  type EntryReportReason,
+  type ProfileReportReason,
+  type ReportReason,
+} from "../../lib/contracts/report-reasons";
 
 /**
- * The same table as a lookup, for the form primitives that want one.
- *
- * Derived rather than written out a second time — `ui/form`'s
- * `optionLabels` is exactly the shape a hand-maintained copy would drift
- * from, and `test/safety/contracts.test.ts` pins the derivation against
- * `reportReasons` in both directions.
+ * Every stored reason in words, for the Desk (the review queue and Who
+ * reported). A value both sheets share reads as W1 says it; a profile's
+ * own reads as R55·214 does. Derived from the two tables, never retyped;
+ * `test/safety/contracts.test.ts` pins it in both directions.
  */
 export const reportReasonLabels: Readonly<Record<ReportReason, string>> =
   Object.fromEntries(
-    reportReasons.map((reason) => [reason.value, reason.label]),
+    [...profileReportReasons, ...reportReasons].map((reason) => [
+      reason.value,
+      reason.label,
+    ]),
   ) as Record<ReportReason, string>;
 
 /**
- * Derived from the table above rather than restated, so a reason added to
- * one is a reason in the other. `test/safety/contracts.test.ts` pins the
- * derivation against `reportReasons` in both directions.
+ * A profile sheet's labels, in R55·214's words.
  */
-export const reportReasonSchema = z.enum(
+export const profileReportReasonLabels: Readonly<
+  Record<ProfileReportReason, string>
+> = Object.fromEntries(
+  profileReportReasons.map((reason) => [reason.value, reason.label]),
+) as Record<ProfileReportReason, string>;
+
+// The sentence a runner reads when they submit without choosing. zod's
+// default here is "Invalid option: expected one of \"explicit\"|…",
+// which leaks the stored values into a sheet whose whole point is that
+// its words are the runner's, not the system's. Error copy lives in the
+// schema (CLAUDE.md forms contract), so it lives here rather than in the
+// component.
+const PICK_ONE = { message: "Pick what's wrong with it." };
+
+/**
+ * Anything `reports.reason` may hold: what the Desk reads back. Derived
+ * from the two tables, as the column is.
+ */
+export const reportReasonSchema = z.enum(STORED_REPORT_REASONS, PICK_ONE);
+
+/**
+ * What W1 may file against an entry, a photo or a product: the reasons
+ * that can hide a subject, and the moderation config's keys.
+ */
+export const entryReportReasonSchema = z.enum(
   reportReasons.map((reason) => reason.value) as [
-    ReportReason,
-    ...ReportReason[],
+    EntryReportReason,
+    ...EntryReportReason[],
   ],
-  {
-    // The sentence a runner reads when they submit without choosing.
-    // zod's default here is "Invalid option: expected one of
-    // \"explicit\"|\"harassment\"…", which leaks the stored values into a
-    // sheet whose whole point is that its words are the runner's, not the
-    // system's. Error copy lives in the schema (CLAUDE.md forms contract),
-    // so it lives here rather than in the component.
-    message: "Pick what's wrong with it.",
-  },
+  PICK_ONE,
 );
+
+/**
+ * What R55·214's sheet may file against a profile.
+ */
+export const profileReportReasonSchema = z.enum(
+  profileReportReasons.map((reason) => reason.value) as [
+    ProfileReportReason,
+    ...ProfileReportReason[],
+  ],
+  PICK_ONE,
+);
+
+/**
+ * Whether a stored reason is one W1 files, the ones with a threshold.
+ */
+export function isEntryReportReason(
+  reason: ReportReason,
+): reason is EntryReportReason {
+  return entryReportReasonSchema.safeParse(reason).success;
+}
 
 /**
  * What can be reported. Product names are here because D-26 makes them UGC:

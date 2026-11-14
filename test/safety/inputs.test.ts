@@ -50,6 +50,51 @@ describe("filing a report", () => {
     expect(result.success).toBe(false);
   });
 
+  it("takes a profile's own reasons for a profile, and W1's for anything else (R55·214)", () => {
+    expect(
+      fileReportInput.parse({
+        subjectType: "profile",
+        subjectId: "u-1",
+        reason: "impersonation",
+        alsoBlock: true,
+      }),
+    ).toMatchObject({
+      subjectType: "profile",
+      reason: "impersonation",
+      alsoBlock: true,
+    });
+    // Shared values go either way.
+    expect(
+      fileReportInput.safeParse({
+        subjectType: "profile",
+        subjectId: "u-1",
+        reason: "spam",
+      }).success,
+    ).toBe(true);
+    // Never across: the Desk would read a sentence nobody was offered.
+    for (const [subjectType, reason] of [
+      ["profile", "explicit"],
+      ["profile", "not_theirs"],
+      ["entry", "offensive"],
+      ["photo", "impersonation"],
+      ["product", "offensive"],
+    ]) {
+      expect(
+        fileReportInput.safeParse({ subjectType, subjectId: "x-1", reason })
+          .success,
+      ).toBe(false);
+    }
+    for (const subjectType of ["entry", "photo", "product"]) {
+      expect(
+        fileReportInput.safeParse({
+          subjectType,
+          subjectId: "x-1",
+          reason: "explicit",
+        }).success,
+      ).toBe(true);
+    }
+  });
+
   it("refuses an empty subject id", () => {
     // An empty id would match no row and quietly file a report about
     // nothing.
