@@ -82,8 +82,9 @@ export function DeskDetail({
   children: ReactNode;
 }>): JSX.Element {
   const isDesk = useIsDesk();
+  const hasPane = picked !== undefined || idle !== undefined;
   return (
-    <div className="grid items-start gap-6 desk:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+    <div className={hasPane ? SPLIT_CLASS : WHOLE_CLASS}>
       {children}
       <Picked picked={picked} idle={idle} isDesk={isDesk} onUnpick={onUnpick} />
     </div>
@@ -105,7 +106,13 @@ function Picked({
   if (!isDesk) {
     return (
       <Sheet open isModal={false} label={picked.name} onClose={onUnpick}>
-        <InDrawer.Provider value>{picked.detail}</InDrawer.Provider>
+        <InDrawer.Provider value>
+          {/* The pane's own gap, so the drawer's blocks stand apart as
+              they do at desk (R2-DESK-04): the Sheet's body sets none. */}
+          <div data-part="desk-drawer-detail" className={DETAIL_GAP}>
+            {picked.detail}
+          </div>
+        </InDrawer.Provider>
       </Sheet>
     );
   }
@@ -138,7 +145,23 @@ export function DeskPaneName({
 }
 
 /**
+ * The frame's tracks. One `minmax(0,1fr)` track at every width, so the
+ * table is as wide as the screen and never as wide as its longest line
+ * (R2-DESK-01: an implicit `auto` track took a code label's min-content,
+ * and the shell stops sideways scroll). From `desk`, the pane's 1fr
+ * beside it, but only when there is a pane to hold: with nothing picked
+ * and no idle line, the table takes the whole width (R2-DESK-03; R55·200
+ * draws Codes' table full width).
+ */
+const WHOLE_CLASS = "grid grid-cols-[minmax(0,1fr)] items-start gap-6";
+const SPLIT_CLASS = `${WHOLE_CLASS} desk:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]`;
+
+/**
+The detail's blocks, 16 apart, in the pane and the drawer alike.
+*/
+const DETAIL_GAP = "flex flex-col gap-4";
+
+/**
 The pane's frame: a --panel card, sticky beside the table from `desk`.
 */
-const PANE_CLASS =
-  "flex flex-col gap-4 rounded-card border border-hairline bg-panel p-5 desk:sticky desk:top-6";
+const PANE_CLASS = `${DETAIL_GAP} rounded-card border border-hairline bg-panel p-5 desk:sticky desk:top-6`;
