@@ -1,4 +1,4 @@
-import type { JSX, KeyboardEvent } from "react";
+import type { JSX, KeyboardEvent, ReactNode } from "react";
 import { useId, useState } from "react";
 
 import { cityLookupInput, cityNotFound } from "../lib/contracts/city-lookup";
@@ -59,6 +59,7 @@ export function CityFinder({
   onUse,
   using = false,
   announce,
+  footnote,
 }: Readonly<{
   name: string;
   label: string;
@@ -77,6 +78,13 @@ export function CityFinder({
   Use this is in flight — the caller's save, where there is one.
   */
   using?: boolean | undefined;
+  /**
+  A line under the finder, where the caller has one (R55·216: what Use
+  this will do with the place). It gives way while the field has a
+  message of its own: under "not found" it would be a promise about a
+  place nobody found.
+  */
+  footnote?: ReactNode;
   /**
   The screen's one status region (Accessibility Contract rule 08).
   */
@@ -204,37 +212,12 @@ export function CityFinder({
         />
       </div>
       {found === undefined ? undefined : (
-        <div
-          data-part="resolved"
-          className="flex flex-col gap-3 rounded-card border border-hairline bg-ground p-4"
-        >
-          <p id={resolvedId} className="m-0 text-body">
-            Weather for <strong>{found.address}</strong>
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              data-part="use-this"
-              // "Use this" alone does not say what this is; the sentence
-              // above it does, so it is the button's description.
-              aria-describedby={resolvedId}
-              {...inFlight(using)}
-              onClick={() => {
-                onUse(found);
-              }}
-              className="target cursor-pointer rounded-pill border-none bg-ink px-5 py-3 text-body font-bold text-ground"
-            >
-              <PendingLabel
-                label="Use this"
-                pendingLabel="Saving"
-                pending={using}
-              />
-            </button>
-            <span className="text-small text-quiet">
-              Not it? Add more to the name.
-            </span>
-          </div>
-        </div>
+        <ResolvedCard
+          found={found}
+          using={using}
+          onUse={onUse}
+          resolvedId={resolvedId}
+        />
       )}
       {hasFailed ? (
         <FailureBand
@@ -245,6 +228,67 @@ export function CityFinder({
           }}
         />
       ) : undefined}
+      {unlessAnswered(message, footnote)}
     </div>
   );
+}
+
+/**
+ * What Find found, with Use this: nothing is saved until it is pressed
+ * (round 26 #12).
+ */
+function ResolvedCard({
+  found,
+  using,
+  onUse,
+  resolvedId,
+}: Readonly<{
+  found: ResolvedPlace;
+  using: boolean;
+  onUse: (place: ResolvedPlace) => void;
+  resolvedId: string;
+}>): JSX.Element {
+  return (
+    <div
+      data-part="resolved"
+      className="flex flex-col gap-3 rounded-card border border-hairline bg-ground p-4"
+    >
+      <p id={resolvedId} className="m-0 text-body">
+        Weather for <strong>{found.address}</strong>
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          data-part="use-this"
+          // "Use this" alone does not say what this is; the sentence
+          // above it does, so it is the button's description.
+          aria-describedby={resolvedId}
+          {...inFlight(using)}
+          onClick={() => {
+            onUse(found);
+          }}
+          className="target cursor-pointer rounded-pill border-none bg-ink px-5 py-3 text-body font-bold text-ground"
+        >
+          <PendingLabel
+            label="Use this"
+            pendingLabel="Saving"
+            pending={using}
+          />
+        </button>
+        <span className="text-small text-quiet">
+          Not it? Add more to the name.
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The caller's footnote, unless the field has a message of its own.
+ */
+function unlessAnswered(
+  message: string | undefined,
+  footnote: ReactNode,
+): ReactNode {
+  return message === undefined ? footnote : undefined;
 }

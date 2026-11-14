@@ -31,6 +31,7 @@ function Harness({
   error,
   using,
   onSubmit,
+  footnote,
 }: Readonly<{
   lookUp: LookUp;
   onUse: (place: ResolvedPlace) => void;
@@ -39,6 +40,7 @@ function Harness({
   error?: string;
   using?: boolean;
   onSubmit: () => void;
+  footnote?: string;
 }>) {
   const [value, setValue] = useState("");
   return (
@@ -59,6 +61,7 @@ function Harness({
         onUse={onUse}
         using={using}
         announce={announce}
+        footnote={footnote === undefined ? undefined : <p>{footnote}</p>}
       />
     </form>
   );
@@ -375,5 +378,31 @@ describe("CityFinder", () => {
 
     expect(part("use-this")).toHaveAttribute("aria-busy", "true");
     expect(part("use-this")).toHaveAccessibleName("Saving");
+  });
+});
+
+describe("CityFinder's footnote (R55·216)", () => {
+  it("shows the caller's line under the finder, and with a place found", async () => {
+    const user = userEvent.setup();
+    setup({ footnote: "We'll save it." });
+    expect(screen.getByText("We'll save it.")).toBeVisible();
+    await user.type(screen.getByLabelText("Your city"), "Portland");
+    await user.click(screen.getByRole("button", { name: "Find" }));
+    await screen.findByRole("button", { name: "Use this" });
+    expect(screen.getByText("We'll save it.")).toBeVisible();
+  });
+
+  it("gives way while the field has a message of its own, and comes back on typing", async () => {
+    const user = userEvent.setup();
+    setup({
+      footnote: "We'll save it.",
+      lookUp: () => Promise.resolve({ kind: "not-found" }),
+    });
+    await user.type(screen.getByLabelText("Your city"), "Atlantis");
+    await user.click(screen.getByRole("button", { name: "Find" }));
+    await screen.findByText(/We couldn't find "Atlantis"/u);
+    expect(screen.queryByText("We'll save it.")).toBeNull();
+    await user.type(screen.getByLabelText("Your city"), "x");
+    expect(screen.getByText("We'll save it.")).toBeVisible();
   });
 });

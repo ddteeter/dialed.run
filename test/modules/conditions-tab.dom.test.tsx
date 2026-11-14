@@ -204,9 +204,12 @@ describe("ConditionsTab: location denied", () => {
     expect(screen.getByLabelText("Your city")).toBeVisible();
     expect(screen.getByText(CITY_HINT)).toBeVisible();
     expect(screen.getByRole("button", { name: "Find" })).toBeVisible();
+    // R55·216: before Use this, a promise, not a status.
     expect(
-      screen.getByText("Saved to your settings. Change it any time under You."),
-    ).toBeVisible();
+      screen.getByText(
+        "We’ll save it to your settings. Change it any time under You.",
+      ),
+    ).toHaveClass("text-small", "text-muted");
     expect(document.querySelector('[data-part="failure-band"]')).toBeNull();
     // No reading is shown, so there is nothing to attribute.
     expect(attribution()).toBeNull();
@@ -259,6 +262,11 @@ describe("ConditionsTab: location denied", () => {
     await screen.findByRole("button", { name: "Use this" });
     expect(lookUpCity).toHaveBeenCalledWith({ data: { label: "Portland" } });
     expect(saveCity).not.toHaveBeenCalled();
+
+    // Found but not yet used: still a promise (R55·216).
+    expect(document.querySelector('[data-part="city-note"]')).toHaveTextContent(
+      "We’ll save it to your settings. Change it any time under You.",
+    );
 
     await user.click(screen.getByRole("button", { name: "Use this" }));
 
@@ -357,6 +365,8 @@ describe("ConditionsTab: location denied", () => {
     });
     expect(screen.getByRole("status")).toHaveTextContent(sentence);
     expect(saveCity).not.toHaveBeenCalled();
+    // No promise about a place nobody found (R55·216).
+    expect(document.querySelector('[data-part="city-note"]')).toBeNull();
   });
 
   it("waits on the weather where the saved city is, breathing, before it answers", async () => {
@@ -599,6 +609,20 @@ describe("ConditionsTab: matched", () => {
       "BottomsMost4/64 of 6 runners",
       "ShoesMost4/64 of 6 runners",
     ]);
+    // R55·208: a fixed 96 track, the name and its count beside it.
+    for (const row of rows) {
+      const track = row.firstElementChild;
+      expect(track).toHaveClass(
+        "h-6",
+        "w-24",
+        "shrink-0",
+        "rounded-tight",
+        "bg-tint",
+      );
+      expect(track).not.toHaveClass("flex-1");
+      expect(row.lastElementChild).toHaveClass("flex", "min-w-0", "gap-x-2");
+      expect(row.lastElementChild).not.toHaveClass("w-44", "justify-between");
+    }
     const fills = rows.map((row) => row.querySelector(":scope > span > span"));
     expect(fills[0]).toHaveClass("bg-action");
     expect(fills[1]).toHaveClass("bg-action");
