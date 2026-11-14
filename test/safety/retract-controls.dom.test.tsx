@@ -72,6 +72,22 @@ describe("RetractEntry: D's foot (round 27 #26)", () => {
     );
   });
 
+  it("draws the owner's delete at TYPE.body 600 in --cold-text, underlined (R55·213)", async () => {
+    await renderWithRouter(retractEntry({}));
+    const link = screen.getByRole("button", { name: "Delete this entry" });
+    expect(link).toHaveClass(
+      "target",
+      "self-start",
+      "py-3",
+      "text-body",
+      "font-semibold",
+      "text-cold-text",
+      "underline",
+      "underline-offset-4",
+    );
+    expect(link).not.toHaveClass("text-small", "text-label");
+  });
+
   it("deletes the entry once confirmed, in the board's words, then leaves the page", async () => {
     const retract = vi.fn(() => Promise.resolve());
     const onRetracted = vi.fn(() => Promise.resolve());
@@ -216,7 +232,19 @@ describe("DeleteRun", () => {
       <DeleteRun runId="01RUN" deleteRun={deleteRun} onDeleted={onDeleted} />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Delete this run" }));
+    // The run's undrawn delete keeps the foot's quiet link.
+    const link = screen.getByRole("button", { name: "Delete this run" });
+    expect(link).toHaveClass(
+      "target",
+      "self-start",
+      "py-3",
+      "text-small",
+      "text-label",
+      "underline",
+      "underline-offset-4",
+    );
+    expect(link).not.toHaveClass("font-semibold", "text-cold-text");
+    fireEvent.click(link);
     expect(
       screen.getByRole("heading", { name: "Delete this run?" }),
     ).toBeTruthy();

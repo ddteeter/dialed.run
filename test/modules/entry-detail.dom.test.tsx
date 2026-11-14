@@ -519,7 +519,50 @@ describe("EntryDetail: the note, the kit and the tags", () => {
     expect(drawnOnly(bracketed("Not enough"))).toStrictEqual(["[", "]"]);
     const rows = part("kit")?.querySelectorAll("li") ?? [];
     expect(rows[2]).toHaveTextContent(/^Patagonia Tights$/u);
-    expect(rows[2]?.children).toHaveLength(1);
+    // Fine: the row's end holds nothing.
+    expect(rows[2]?.children[1]).toBeEmptyDOMElement();
+  });
+
+  it("rules the kit as the public kit does, the type word at the right (R55·212)", async () => {
+    await renderFeedScreen(
+      detail({
+        items: [
+          item({ itemId: "01A", kind: "Jacket", flag: "too_much" }),
+          item({ itemId: "01B", name: "Gloves", kind: "Gloves" }),
+          item({ itemId: "01C", name: "Gone" }),
+        ],
+      }),
+    );
+    const list = part("kit")?.querySelector("ul");
+    expect(list).toHaveClass(
+      "flex",
+      "flex-col",
+      "divide-y",
+      "divide-hairline",
+      "border-y",
+      "border-hairline",
+    );
+    expect(list).not.toHaveClass("gap-2");
+    const rows = [...(list?.querySelectorAll("li") ?? [])];
+    for (const row of rows) {
+      expect(row).toHaveClass(
+        "flex",
+        "items-baseline",
+        "justify-between",
+        "gap-3",
+        "py-2",
+        "text-body",
+      );
+      expect(row.firstElementChild).toHaveClass("min-w-0");
+      expect(row.lastElementChild).toHaveClass("flex", "shrink-0", "gap-2");
+    }
+    const word = within(rows[0] as HTMLElement).getByText("Jacket");
+    expect(word).toHaveClass("text-mono-xs", "text-muted");
+    // The flag comes first, then the type word, at the row's end.
+    expect(rows[0]?.children[1]?.textContent).toMatch(/Too much.*Jacket$/u);
+    expect(rows[1]?.children[1]).toHaveTextContent(/^Gloves$/u);
+    // A removed piece has no type word.
+    expect(rows[2]?.children[1]).toBeEmptyDOMElement();
   });
 
   it("reads the tags in A3's words on the track fill, and drops a stored word that is not one", async () => {

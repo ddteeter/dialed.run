@@ -42,14 +42,29 @@ interface ConfirmContent {
  * asked about"), and its status region is only on the page while there
  * is something to say — one region per screen, as rule 08 asks.
  */
+/**
+ * How loud the link is. `quiet` is the foot's small grey link (a report,
+ * a run's undrawn delete); `owner` is D's "Delete this entry" under YOURS
+ * (R55·213, R27): TYPE.body 600 in `--cold-text`, an owner's only action
+ * on the screen, never as quiet as a stranger's report link.
+ */
+const CONFIRM_LINK_TONE: Readonly<Record<"quiet" | "owner", string>> = {
+  quiet:
+    "target cursor-pointer self-start border-none bg-transparent p-0 py-3 text-small text-label underline underline-offset-4",
+  owner:
+    "target cursor-pointer self-start border-none bg-transparent p-0 py-3 text-body font-semibold text-cold-text underline underline-offset-4",
+};
+
 export function ConfirmLink({
   label,
   kicker,
   act,
+  tone = "quiet",
   ...content
 }: Readonly<
   ConfirmContent & {
     label: string;
+    tone?: keyof typeof CONFIRM_LINK_TONE;
     /**
     What is still true if it fails — "Not deleted".
     */
@@ -65,7 +80,7 @@ export function ConfirmLink({
     <>
       <button
         type="button"
-        className="target cursor-pointer self-start border-none bg-transparent p-0 py-3 text-small text-label underline underline-offset-4"
+        className={CONFIRM_LINK_TONE[tone]}
         onClick={() => {
           setIsOpen(true);
         }}

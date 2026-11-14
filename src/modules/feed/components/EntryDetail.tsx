@@ -294,6 +294,11 @@ function Tags({ tags }: Readonly<{ tags: readonly EntryTag[] }>) {
 /**
  * The kit as a list, not chips, so a flag can sit at the row's end.
  * Absent when nothing was worn.
+ *
+ * R55·212: the public kit's row. A hairline between pieces and round the
+ * list, so a wrapped name can never run into the next piece, and the type
+ * word in MONO.xs at the right. The board's 1.35 leading is not a step
+ * (`design/tokens.js` has none), so the name keeps TYPE.body's own.
  */
 function Kit({ items }: Readonly<{ items: Entry["items"] }>) {
   if (items.length === 0) return;
@@ -302,34 +307,43 @@ function Kit({ items }: Readonly<{ items: Entry["items"] }>) {
       <Mono step="xs" className="text-muted">
         Kit
       </Mono>
-      <ul className="m-0 flex list-none flex-col gap-2 p-0">
+      <ul className="m-0 flex list-none flex-col divide-y divide-hairline border-y border-hairline p-0">
         {items.map((item) => (
           <li
             key={item.itemId}
-            className="flex items-center justify-between gap-3 text-body"
+            className="flex items-baseline justify-between gap-3 py-2 text-body"
           >
             {/* No brand is what generic means here: a piece nobody has
                 named — the tap-list's "L/S crew" — which D marks
                 `[GENERIC]` (round 22), as the closet's own label does
                 (`garmentLabel`: brand and name, unless there is no brand). */}
             {item.brand === undefined ? (
-              <span className="flex items-baseline gap-2">
+              <span className="flex min-w-0 items-baseline gap-2">
                 <ProductLink url={item.url} label={item.name} />
                 <Bracketed step="xs" className="text-label">
                   Generic
                 </Bracketed>
               </span>
             ) : (
-              <ProductLink
-                url={item.url}
-                label={`${item.brand} ${item.name}`}
-              />
+              <span className="min-w-0">
+                <ProductLink
+                  url={item.url}
+                  label={`${item.brand} ${item.name}`}
+                />
+              </span>
             )}
-            {item.flag === undefined ? undefined : (
-              <Bracketed step="xs" className="font-semibold text-ink">
-                {FLAG_MARK[item.flag]}
-              </Bracketed>
-            )}
+            <span className="flex shrink-0 items-baseline gap-2">
+              {item.flag === undefined ? undefined : (
+                <Bracketed step="xs" className="font-semibold text-ink">
+                  {FLAG_MARK[item.flag]}
+                </Bracketed>
+              )}
+              {item.kind === undefined ? undefined : (
+                <Mono step="xs" className="text-muted">
+                  {item.kind}
+                </Mono>
+              )}
+            </span>
           </li>
         ))}
       </ul>
