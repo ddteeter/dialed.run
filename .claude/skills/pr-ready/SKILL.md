@@ -36,8 +36,15 @@ description: Use before opening a pull request in dialed.run, before pushing a b
    skips `verify`** (owner, 2026-10-24): it has no flag to drop its Stryker
    analyzer, the push gate runs that pass in full, and the commit gate has
    run the other analyzers on each commit. The lane runs
-   `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, and
-   `npx stryker run --mutate "<the changed production files>"` to 100%.
+   `npm run lint`, `npm run typecheck`, `npm test` and `npm run build`.
+   It doesn't run Stryker over all its changed files before shipping
+   (owner, 2026-11-13). The push gate mutates the same files, seeded
+   from main's CI run, so a cold local pass over them costs the same
+   warm-up, takes the machine-wide gate lock a second time, and can
+   still score timeouts as kills that the gate calls survivors. Run
+   Stryker on one file only while working a survivor (skill
+   `crushing-mutants`). If the gate reports survivors, fix them and
+   ship again.
 
 ## Deferring is a write
 

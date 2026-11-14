@@ -4,7 +4,7 @@
 # to an empty directory and reads every report it leaves there.
 #
 # Mutation's run on `main` uploads one `stryker-incremental-<shard>` artifact
-# per shard that reached 100 (.github/workflows/mutation.yml). Every artifact
+# per shard, red or green (.github/workflows/mutation.yml). Every artifact
 # here comes from one run, so the shards agree on their sources.
 #
 # Not the run on the merge-base itself: `main` runs queue behind each other
@@ -21,7 +21,7 @@ for run in $(gh run list --workflow mutation.yml --branch main --event push \
   --jq '.[] | "\(.databaseId):\(.headSha)"'); do
   sha=${run#*:}
   if git merge-base --is-ancestor "$sha" HEAD 2>/dev/null; then
-    # A run from before the upload step, or one whose every shard failed,
+    # A run from before the upload step, or one whose every shard crashed,
     # has no artifact; try the next older one.
     if gh run download "${run%%:*}" --pattern 'stryker-incremental-*' \
       --dir "$GUARDRAILS_SEED_DIR" 2>/dev/null; then
