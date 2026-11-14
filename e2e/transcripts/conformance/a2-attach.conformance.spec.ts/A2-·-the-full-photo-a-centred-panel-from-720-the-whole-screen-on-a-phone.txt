@@ -39,6 +39,9 @@ Add photo
 Add photo
 end of listitem, level 1, position 2, set size 2
 end of list
+paragraph
+Press a photo to see it whole or remove it.
+end of paragraph
 dialog, Photo # of #
 dialog, Photo # of #
 Photo # of #

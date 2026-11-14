@@ -83,6 +83,7 @@ photo well stays as it is (249.5). This lane builds all of that for A2 (#659).
    #636) hides each one at its end, and the two lanes share
    `PagerArrows`. Until Design rules, both hide it: an arrow that does
    nothing would be a dead control a screen reader still lands on.
-5. **The line under the row shows only while there is a photo.** 249.2's
+5. **The line under the row shows only while there is a photo** (Design
+   253, #669, with A2's other no-photo question). 249.2's
    "Press a photo to see it whole or remove it." has nothing to point at
    with an empty row.
