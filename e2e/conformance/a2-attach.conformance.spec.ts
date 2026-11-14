@@ -1,7 +1,7 @@
 import type { Page, Route } from "@playwright/test";
 import { expect, test } from "../support/a11y";
 
-import { PNG_1X1 } from "../closet/closet-support";
+import { PNG_1X1, PNG_2X1 } from "../closet/closet-support";
 import { storageStateFor } from "../support/accounts";
 import { isServerFnCall } from "../support/server-fn";
 import {
@@ -253,10 +253,31 @@ test.describe("A2 · heard at 390", () => {
 });
 
 /**
+Picks a photo with A2's add box and keeps it through W3's blur step.
+*/
+async function keepPhoto(
+  page: Page,
+  name: string,
+  buffer: Buffer,
+): Promise<void> {
+  await page.setInputFiles('[data-part="add-photo"] input[type="file"]', {
+    name,
+    mimeType: "image/png",
+    buffer,
+  });
+  const blurSheet = page.getByRole("dialog", { name: "Check the blur" });
+  await expect(blurSheet).toBeVisible({ timeout: 20_000 });
+  await blurSheet
+    .getByRole("button", { name: "Use this photo" })
+    .click({ timeout: 20_000 });
+  await expect(blurSheet).toBeHidden();
+}
+
+/**
  * The full photo (Round 56 · 249.1), the only check that sees the real
  * dialog in the top layer: from 720 the centred panel at MEASURE.column
- * over the scrim, and on a phone the whole screen. One photo, so no
- * arrows; paging is the dom tests'. It ends open at 390, so what a
+ * over the scrim, paged by its arrows and keys, Remove and where focus
+ * goes, and on a phone the whole screen. It ends open at 390, so what a
  * screen reader says on it is checked in.
  */
 test.describe("A2 · the full photo", () => {
@@ -289,41 +310,48 @@ test.describe("A2 · the full photo", () => {
     await page.goto(`/feed/attach/${runId}`);
     await hydrated(page);
 
-    await page.setInputFiles('[data-part="add-photo"] input[type="file"]', {
-      name: "kit.png",
-      mimeType: "image/png",
-      buffer: PNG_1X1,
-    });
-    const blurSheet = page.getByRole("dialog", { name: "Check the blur" });
-    await expect(blurSheet).toBeVisible({ timeout: 20_000 });
-    await blurSheet
-      .getByRole("button", { name: "Use this photo" })
-      .click({ timeout: 20_000 });
-    await expect(blurSheet).toBeHidden();
-
-    const thumbnail = page.getByRole("button", { name: "Photo 1 of 1" });
-    await expect(thumbnail).toBeVisible({ timeout: 20_000 });
-    const thumb = await thumbnail.boundingBox();
+    await keepPhoto(page, "front.png", PNG_1X1);
+    await keepPhoto(page, "back.png", PNG_2X1);
+    const first = page.getByRole("button", { name: "Photo 1 of 2" });
+    await expect(first).toBeVisible({ timeout: 20_000 });
+    const thumb = await first.boundingBox();
     // 249.4: 76 × 95.
     expect(thumb?.width).toBe(76);
     expect(thumb?.height).toBe(95);
 
-    await thumbnail.click();
-    const viewer = page.getByRole("dialog", { name: "Photo 1 of 1" });
-    await expect(viewer).toBeVisible();
+    // From 720: MEASURE.column, centred, paged by the arrows and the keys,
+    // each arrow absent at its end (Design 261, #690).
+    await first.click();
+    const viewer = page.locator('[data-slot="photo-viewer"]');
+    await expect(viewer).toHaveAccessibleName("Photo 1 of 2");
     const panel = await viewer.boundingBox();
-    // MEASURE.column, centred.
     expect(panel?.width).toBe(620);
     expect((panel?.x ?? 0) * 2 + (panel?.width ?? 0)).toBe(1280);
-    await expect(
-      viewer.getByRole("button", { name: "Next photo" }),
-    ).toHaveCount(0);
+    const previous = viewer.getByRole("button", { name: "Previous photo" });
+    const next = viewer.getByRole("button", { name: "Next photo" });
+    await expect(previous).toHaveCount(0);
+    await next.click();
+    await expect(viewer).toHaveAccessibleName("Photo 2 of 2");
+    await expect(next).toHaveCount(0);
+    await expect(previous).toBeFocused();
+    await page.keyboard.press("ArrowLeft");
+    await expect(viewer).toHaveAccessibleName("Photo 1 of 2");
     await page.keyboard.press("Escape");
     await expect(viewer).toBeHidden();
-    await expect(thumbnail).toBeFocused();
+    await expect(first).toBeFocused();
 
+    // Remove (249.3): no confirm, and focus on the photo that slid into
+    // its place.
+    await first.click();
+    await viewer.getByRole("button", { name: "Remove photo" }).click();
+    await expect(viewer).toBeHidden();
+    const left = page.getByRole("button", { name: "Photo 1 of 1" });
+    await expect(left).toBeFocused();
+
+    // On a phone, the whole screen. It ends open, so its transcript is
+    // checked in.
     await page.setViewportSize({ width: 390, height: 900 });
-    await thumbnail.click();
+    await left.click();
     await expect(viewer).toBeVisible();
     expect(await viewer.boundingBox()).toEqual({
       x: 0,
