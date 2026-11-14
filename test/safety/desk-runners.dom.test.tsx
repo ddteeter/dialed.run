@@ -343,6 +343,13 @@ describe("selecting a runner", () => {
     );
     const drawer = screen.getByRole("dialog", { name: "@ada" });
     expect(drawer).toHaveTextContent("Close account");
+    // The handle once, as the Sheet's title (#663): the pane's own handle
+    // line stays out of the drawer, and the rest of its head stays in.
+    expect(within(drawer).getAllByText("@ada")).toHaveLength(1);
+    expect(
+      within(drawer).getByRole("heading", { level: 2, name: "@ada" }),
+    ).toBeVisible();
+    expect(within(drawer).getByText("ada@example.com")).toBeVisible();
     expect(screen.queryByRole("complementary")).toBeNull();
     // Its ✕ unpicks: the row is no longer marked, and the drawer is gone.
     await user.click(within(drawer).getByRole("button", { name: "Close" }));

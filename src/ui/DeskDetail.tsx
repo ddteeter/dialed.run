@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { createContext, useContext, useSyncExternalStore } from "react";
 import type { JSX, ReactNode } from "react";
 
 import { Sheet } from "./Sheet";
@@ -105,7 +105,7 @@ function Picked({
   if (!isDesk) {
     return (
       <Sheet open isModal={false} label={picked.name} onClose={onUnpick}>
-        {picked.detail}
+        <InDrawer.Provider value>{picked.detail}</InDrawer.Provider>
       </Sheet>
     );
   }
@@ -118,6 +118,23 @@ function Picked({
       {picked.detail}
     </aside>
   );
+}
+
+/**
+Whether the detail is in the drawer, whose title already names it.
+*/
+const InDrawer = createContext(false);
+
+/**
+ * The detail's own name line (#663): in the desk pane, the only place the
+ * picked name shows, since the pane is named by `aria-label`; in the drawer,
+ * nothing, since the Sheet's title already says it. Design 251 (#667):
+ * so a code reads in the Sheet's display type there, not its mono.
+ */
+export function DeskPaneName({
+  children,
+}: Readonly<{ children: ReactNode }>): ReactNode {
+  return useContext(InDrawer) ? undefined : children;
 }
 
 /**
