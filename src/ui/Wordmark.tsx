@@ -4,23 +4,18 @@ const WORDMARK_CLASS = "inline-flex items-baseline font-display lowercase";
  * The [dialed.run] lockup: pink brackets, "dialed" in Archivo Black in the
  * inherited ink, grey ".run". Lowercase always, including sentence-initial.
  *
- * **`brackets={false}` is the plain lockup** the signed-out surfaces draw:
- * Auth's header and panel, and round 21's landing bar, both set
- * "dialed" + grey ".run" and nothing else. Round 21's reason is the bar's
- * own rule — *"pink stays off this bar"* — and the brackets are the only
- * pink in the lockup. The product's own bar and the system states keep
- * them (round 22's X frames draw `[dialed.run]`).
+ * Every bar draws the brackets, the signed-out frame's included (R55·176
+ * rules one wordmark, the bar's, pink-bracketed), so there is no plain
+ * lockup any more.
  *
  * **`isDeskMark` is the Desk's `[dialed]`** (R55·194): the brackets and
  * "dialed", no ".run". Heard the same as every other lockup.
  */
 export function Wordmark({
   className,
-  brackets = true,
   isDeskMark = false,
 }: Readonly<{
   className?: string | undefined;
-  brackets?: boolean | undefined;
   isDeskMark?: boolean | undefined;
 }>) {
   return (
@@ -29,11 +24,9 @@ export function Wordmark({
     >
       {/* The brackets are drawn, not said (plan 161, owner 2026-11-03):
           VoiceOver reads "dialed.run", not "left bracket dialed". */}
-      {brackets ? (
-        <span aria-hidden="true" className="text-cold-text">
-          [
-        </span>
-      ) : undefined}
+      <span aria-hidden="true" className="text-cold-text">
+        [
+      </span>
       <span aria-hidden="true">dialed</span>
       {/* T1's --muted. The brand board draws #8B8B93, which is the *dark*
           column's muted; on paper the role resolves to #6E6E64 and keeps
@@ -43,11 +36,9 @@ export function Wordmark({
           .run
         </span>
       )}
-      {brackets ? (
-        <span aria-hidden="true" className="text-cold-text">
-          ]
-        </span>
-      ) : undefined}
+      <span aria-hidden="true" className="text-cold-text">
+        ]
+      </span>
       {/* Said once, as one word, last so the drawn lockup's text stays
           contiguous. The two halves above are separate flex items for
           their colours, and a screen reader walking them heard "dialed"

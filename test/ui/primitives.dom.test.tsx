@@ -169,20 +169,6 @@ describe("Wordmark", () => {
     expect(screen.getByText("dialed.run")).toHaveClass("sr-only");
   });
 
-  it("drops the brackets for the plain lockup the signed-out bars draw", () => {
-    // Round 21's landing bar and the Auth board set "dialed" + ".run" and
-    // nothing else — "pink stays off this bar", and the brackets are the
-    // lockup's only pink.
-    const { container } = render(<Wordmark brackets={false} />);
-    // Drawn once and said once: the sr-only copy follows the lockup.
-    expect(container.firstElementChild).toHaveTextContent(
-      /^dialed\.rundialed\.run$/u,
-    );
-    expect(screen.queryByText("[")).toBeNull();
-    expect(screen.queryByText("]")).toBeNull();
-    expect(screen.getByText(".run")).toHaveClass("text-muted");
-  });
-
   it("keeps the lockup classes when the caller adds one", () => {
     const { container } = render(<Wordmark className="text-title" />);
     const lockup = container.firstElementChild;
