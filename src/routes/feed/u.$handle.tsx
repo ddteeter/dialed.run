@@ -20,7 +20,10 @@ import {
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";
 import { ReportAffordance } from "../../modules/safety/components/ReportAffordance";
-import { fileReportAction } from "../../modules/safety/functions";
+import {
+  blockRunnerAction,
+  fileReportAction,
+} from "../../modules/safety/functions";
 
 /**
  * H, a runner's profile in the app (round 26 #7, FEED-10), by handle.
@@ -65,6 +68,7 @@ function HandlePage() {
             subject={profileReportSubject(profile)}
             viewerId={viewerId}
             fileReport={fileReportAction}
+            blockRunner={blockRunnerAction}
           />
         )}
       />

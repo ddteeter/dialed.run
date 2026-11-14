@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 
 import {
   ChoiceList,
+  ConfirmLink,
   FormErrorSummary,
   FormFailureBand,
   FormStatus,
@@ -18,11 +19,35 @@ import {
   TextField,
   useFormSubmit,
 } from "../../../ui";
-import { reportReasonLabels, reportReasons } from "../contracts";
+import {
+  profileReportReasonLabels,
+  profileReportReasons,
+  reportReasonLabels,
+  reportReasons,
+} from "../contracts";
 import type { ReportReason, ReportSubjectType } from "../contracts";
 import { fileReportInput } from "../inputs";
 import type { FileReportResult } from "../reports";
 import { ElsewhereHelp } from "./ElsewhereHelp";
+
+/**
+ * What each kind of sheet offers. W1 for an entry, a photo or a product;
+ * R55·214's own sheet for a profile, with profile reasons only. The
+ * profile's labels lay its sentences over W1's, so the one ChoiceList
+ * reads a shared value ("harassment") in the profile's words.
+ */
+const SHEET_KIND = {
+  entry: {
+    reasons: reportReasons.map((reason): ReportReason => reason.value),
+    labels: reportReasonLabels,
+    legend: "What's wrong with it",
+  },
+  profile: {
+    reasons: profileReportReasons.map((reason): ReportReason => reason.value),
+    labels: { ...reportReasonLabels, ...profileReportReasonLabels },
+    legend: "What's wrong",
+  },
+} as const;
 
 /**
  * W1 · REPORT AN ENTRY.
@@ -81,6 +106,7 @@ export function ReportSheet({
   subject,
   canBlock,
   fileReport,
+  blockRunner,
   onFiled,
 }: Readonly<{
   open: boolean;
@@ -101,6 +127,13 @@ export function ReportSheet({
       alsoBlock?: boolean | undefined;
     };
   }) => Promise<FileReportResult>;
+  /**
+   * R55·214's "Block without reporting", on a profile's sheet: a block
+   * with no reason, after its own confirm. Absent where there is nobody
+   * to block.
+   */
+  blockRunner?:
+    ((input: { data: { userId: string } }) => Promise<unknown>) | undefined;
   onFiled: () => void;
 }>): JSX.Element {
   // `undefined` rather than `""` for "not chosen yet": that is what
@@ -173,23 +206,12 @@ export function ReportSheet({
   // so the mutation gate correctly reported `"them"` as unobservable.
   const blockableName = canBlock ? subject.authorName : undefined;
 
-  // The sentence gets its own string, because the wording changes the verb
-  // as well as the word: a name is singular ("Alex is never told"), the
-  // pronoun is not ("They are never told"). One string could never have
-  // served both, which is how "them is never told" shipped. Raised on
-  // PR #73.
-  const neverTold =
-    subject.authorName === undefined
-      ? "They are never told who reported it."
-      : `@${subject.authorName} is never told who reported it.`;
-
   // Round 26 #7 (SAF-15): the sheet names whose entry it is, by handle,
   // once there is a handle to name. A profile is the runner, not an entry
   // of theirs (owner, 2026-11-12, E1-12).
   const title = titleOf(subject);
-  // The line under the title names what is reported — an entry's run. On
-  // a profile that is the handle the title already says, so it goes.
-  const isLabelled = subject.type !== "profile";
+  const isProfile = subject.type === "profile";
+  const kind = SHEET_KIND[isProfile ? "profile" : "entry"];
 
   function send(isAlsoBlocking: boolean): void {
     // The submit guards itself, but the label would still move to the
@@ -223,9 +245,7 @@ export function ReportSheet({
           onFocusField={form.focusField}
         />
 
-        {isLabelled ? (
-          <p className="m-0 text-micro text-quiet">{subject.label}</p>
-        ) : undefined}
+        <SubjectLine subject={subject} />
 
         {/* Yes, this is valid TSX, and it is not a trick. A JSX element
             takes explicit type arguments exactly as a call does
@@ -235,9 +255,9 @@ export function ReportSheet({
             reason that is not one. Asked on PR #73. */}
         <ChoiceList<ReportReason>
           name="reason"
-          legend="What's wrong with it"
-          options={reportReasons.map((option) => option.value)}
-          optionLabels={reportReasonLabels}
+          legend={kind.legend}
+          options={kind.reasons}
+          optionLabels={kind.labels}
           value={reason}
           onChange={setReason}
           field={form.field}
@@ -247,7 +267,7 @@ export function ReportSheet({
             picked — for a runner who'd rather not report from their
             account. Under the list, since a choice takes no hint of its
             own. */}
-        {reason === "intimate" ? <IntimateHelp /> : undefined}
+        <IntimateHelp reason={reason} />
 
         <TextField
           name="note"
@@ -260,26 +280,10 @@ export function ReportSheet({
           autoComplete="off"
         />
 
-        {/* The full paragraph at the body's end; the footer says it in one
-            line (R54·164.4). */}
-        <section className="flex flex-col gap-1 text-micro text-quiet">
-          <h3>
-            <Mono step="xs">What happens next</Mono>
-          </h3>
-          <p>
-            A person reads it within a day. The entry is hidden from your feed
-            straight away, whatever we decide. {neverTold}
-          </p>
-        </section>
+        <WhatHappensNext subject={subject} />
 
         <SheetFooter>
-          <p
-            data-part="report-consequence"
-            className="m-0 text-small text-quiet"
-          >
-            A person reads it within a day. It&apos;s hidden from your feed
-            straight away.
-          </p>
+          <ConsequenceLine isProfile={isProfile} />
           <FormFailureBand
             failure={form.failure}
             onRetry={form.retry}
@@ -290,15 +294,14 @@ export function ReportSheet({
             pendingLabel="Sending"
             pending={form.pending && sentBy === "report"}
           />
-          {blockableName === undefined ? undefined : (
-            <SendAndBlock
-              name={blockableName}
-              pending={form.pending && sentBy === "block"}
-              onSend={() => {
-                send(true);
-              }}
-            />
-          )}
+          <BlockWays
+            name={blockableName}
+            pending={form.pending && sentBy === "block"}
+            onSendAndBlock={() => {
+              send(true);
+            }}
+            blockOnly={blockOnlyAct(subject.authorId, blockRunner, finish)}
+          />
         </SheetFooter>
       </form>
     </Sheet>
@@ -359,11 +362,131 @@ function SendAndBlock({
 }
 
 /**
+ * The line under the title, naming what is reported: an entry's run. On a
+ * profile that is the handle the title already says, so it goes.
+ */
+function SubjectLine({
+  subject,
+}: Readonly<{ subject: ReportSubject }>): JSX.Element | undefined {
+  return subject.type === "profile" ? undefined : (
+    <p className="m-0 text-micro text-quiet">{subject.label}</p>
+  );
+}
+
+/**
+ * The full paragraph at the body's end on W1; the footer says it in one
+ * line (R54·164.4). A profile's sheet has neither half of it: nothing is
+ * hidden, and R55·214's footer says the rest.
+ *
+ * The last sentence gets its own string, because the wording changes the
+ * verb as well as the word: a name is singular ("Alex is never told"),
+ * the pronoun is not ("They are never told"). One string could never have
+ * served both, which is how "them is never told" shipped. Raised on PR
+ * #73.
+ */
+function WhatHappensNext({
+  subject,
+}: Readonly<{ subject: ReportSubject }>): JSX.Element | undefined {
+  if (subject.type === "profile") return undefined;
+  const neverTold =
+    subject.authorName === undefined
+      ? "They are never told who reported it."
+      : `@${subject.authorName} is never told who reported it.`;
+  return (
+    <section className="flex flex-col gap-1 text-micro text-quiet">
+      <h3>
+        <Mono step="xs">What happens next</Mono>
+      </h3>
+      <p>
+        A person reads it within a day. The entry is hidden from your feed
+        straight away, whatever we decide. {neverTold}
+      </p>
+    </section>
+  );
+}
+
+/**
+ * The footer's one line of what happens: W1's, or R55·214's on a
+ * profile, where nothing is hidden.
+ */
+function ConsequenceLine({
+  isProfile,
+}: Readonly<{ isProfile: boolean }>): JSX.Element {
+  return (
+    <p data-part="report-consequence" className="m-0 text-small text-quiet">
+      {isProfile
+        ? "A person reads it within a day. They won't know it was you."
+        : "A person reads it within a day. It's hidden from your feed straight away."}
+    </p>
+  );
+}
+
+/**
+ * R55·214's block with no report and no reason, as an act for its
+ * confirm, or nothing where there is nobody to block or no way to.
+ */
+function blockOnlyAct(
+  userId: string | undefined,
+  blockRunner:
+    ((input: { data: { userId: string } }) => Promise<unknown>) | undefined,
+  onBlocked: () => void,
+): (() => Promise<void>) | undefined {
+  if (userId === undefined || blockRunner === undefined) return undefined;
+  return async () => {
+    await blockRunner({ data: { userId } });
+    onBlocked();
+  };
+}
+
+/**
+ * The footer's ways to block, under Send report: W1's "Send and block",
+ * and on a profile R55·214's third way out, "Block without reporting",
+ * which asks only for its confirm, in the sheet's own block line (owner,
+ * 2026-11-13).
+ */
+function BlockWays({
+  name,
+  pending,
+  onSendAndBlock,
+  blockOnly,
+}: Readonly<{
+  /**
+  Whom a block would block; nothing to offer without one.
+  */
+  name: string | undefined;
+  pending: boolean;
+  onSendAndBlock: () => void;
+  blockOnly: (() => Promise<void>) | undefined;
+}>): JSX.Element | undefined {
+  if (name === undefined) return undefined;
+  return (
+    <>
+      <SendAndBlock name={name} pending={pending} onSend={onSendAndBlock} />
+      {blockOnly === undefined ? undefined : (
+        <ConfirmLink
+          label="Block without reporting"
+          heading={`Block @${name}?`}
+          body={`Blocking hides all of @${name}'s runs from you. They aren't told.`}
+          verb="Block"
+          pendingVerb="Blocking"
+          kicker="Not blocked"
+          state="confirm-block"
+          act={blockOnly}
+        />
+      )}
+    </>
+  );
+}
+
+/**
  * Under the intimate-image reason: W1's way out (round 37 #58k). Where
  * else to go waits for the receipt (round 41 #85): here it would crowd the
- * choice.
+ * choice. Shown only once that reason is picked.
  */
-function IntimateHelp(): JSX.Element {
+function IntimateHelp({
+  reason,
+}: Readonly<{ reason: ReportReason | undefined }>): JSX.Element | undefined {
+  if (reason !== "intimate") return undefined;
   return (
     <p data-part="takedown-way-out" className="m-0 text-small">
       Rather not use your account?{" "}
@@ -416,11 +539,12 @@ function focusPageHeading(): void {
 
 /**
  * The sheet's title: whose entry it is, or which runner, by handle once
- * there is one (round 26 #7; owner, 2026-11-12, for a profile).
+ * there is one (round 26 #7; R55·214 for a profile).
  */
 function titleOf(subject: ReportSubject): string {
   if (subject.authorName === undefined) return "Report this entry";
+  // R55·214: a profile's own sheet, "Report or block @handle".
   return subject.type === "profile"
-    ? `Report @${subject.authorName}?`
+    ? `Report or block @${subject.authorName}`
     : `Report @${subject.authorName}'s entry?`;
 }
