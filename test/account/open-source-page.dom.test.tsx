@@ -167,6 +167,20 @@ describe("OpenSourcePage", () => {
     );
     expect(document.querySelector("[data-slot='tab-bar']")).not.toBeNull();
     expect(screen.getAllByTestId("bell")[0]).toHaveTextContent(/^4\/1$/u);
+    // Below 720 the bell ends the kicker's row, the page's first
+    // (R57·256); the title has a row of its own, with no bell.
+    const kickerRow = within(screen.getByRole("main"))
+      .getByText("Open source")
+      .closest("[data-part='reading-first-row']");
+    expect(kickerRow).not.toBeNull();
+    expect(
+      within(kickerRow as HTMLElement).getByTestId("bell"),
+    ).toBeInTheDocument();
+    expect(
+      screen
+        .getByRole("heading", { level: 1 })
+        .closest("[data-part='reading-first-row']"),
+    ).toBeNull();
   });
 
   it("thanks people: the kicker, the heading, and a lead that counts every piece", async () => {

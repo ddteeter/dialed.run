@@ -171,7 +171,7 @@ test("D for someone else's entry with two photos: the row is a region a keyboard
   page,
 }) => {
   // #694, D-189: with two photos the row scrolls, and a stranger has no
-  // Delete in it, so the row itself takes focus, named "Photos". The
+  // Delete in it, so the row itself takes focus, named "Photos, 2". The
   // fixture's axe pass (scrollable-region-focusable) and Tab walk are
   // the check; this case is what brings them here.
   const rows = seeded();
@@ -193,7 +193,7 @@ test("D for someone else's entry with two photos: the row is a region a keyboard
     await page.setViewportSize(PHONE);
     await page.goto(`/feed/entry/${entryId}`);
     await hydrated(page);
-    const region = page.getByRole("region", { name: "Photos" });
+    const region = page.getByRole("region", { name: "Photos, 2" });
     await expect(region.getByRole("listitem")).toHaveCount(2);
     await expect(
       page.getByRole("group", { name: "Photos" }).getByRole("button", {

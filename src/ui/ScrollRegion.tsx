@@ -14,6 +14,12 @@ import type { JSX, ReactNode, Ref, UIEventHandler } from "react";
  * What it scrolls stays itself: a list goes inside as a list. The ring
  * is the contract's 2px ink outline, drawn inside the edge, since a
  * scroller sits in panels that clip what overflows them.
+ *
+ * R57 (D-189 drawn): it pads 4 on every side and pulls back 4 by margin,
+ * so what it holds doesn't move and the ring draws inside its clip, at
+ * RADIUS.card, clear of the photos. The snap edge takes the same 4, so a
+ * snapped photo lands where it sat at rest. Its name says what it holds
+ * and how many ("Photos, 4"), which the owner passes as `label`.
  */
 export function ScrollRegion({
   label,
@@ -24,7 +30,8 @@ export function ScrollRegion({
   children,
 }: Readonly<{
   /**
-  The region's name, what a screen reader hears on it.
+  The region's name, what a screen reader hears on it: what it holds, and
+  how many ("Photos, 4").
   */
   label: string;
   /**
@@ -58,4 +65,4 @@ export function ScrollRegion({
 The focus ring, inside the region's edge.
 */
 const RING_CLASS =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink";
+  "-m-1 scroll-p-1 rounded-card p-1 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink";

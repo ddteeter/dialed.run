@@ -8,9 +8,12 @@ import { Icon } from "./icons";
  * its index and what turning the page does (D scrolls its snap row; the
  * viewer swaps the photo).
  *
- * Two 44 round `--ground` buttons with a hairline, inside the left and
- * right edges of a `relative` parent and centred on its height. Each is
- * absent at its end. Below `from` they are hidden: the phone swipes.
+ * Two 44 round `--ground` buttons with a `--hairline` edge
+ * (`--hairline-2` in dark, R57·261 and 262), inside the left and right
+ * edges of a `relative` parent and centred on its height: one fill for
+ * both pagers. Each is absent at its end, for both (R57·261); they sit
+ * over the photo, so the photo never shifts when one goes. Below `from`
+ * they are hidden: the phone swipes.
  *
  * **Focus never drops to the page.** The button a runner is pressing is
  * the one that disappears at its end, so when it goes, focus moves to the
@@ -39,7 +42,7 @@ const SHOWN_FROM: Readonly<Record<PagerArrowsProps["from"], string>> = {
 };
 
 const ARROW_CLASS =
-  "target absolute top-1/2 size-11 -translate-y-1/2 items-center justify-center rounded-pill border border-hairline bg-ground text-ink";
+  "target absolute top-1/2 size-11 -translate-y-1/2 items-center justify-center rounded-pill border border-hairline bg-ground text-ink dark:border-hairline-2";
 
 /**
  * The index one step from `index` in `direction`, held inside the pages.

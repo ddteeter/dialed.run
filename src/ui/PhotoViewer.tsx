@@ -21,7 +21,7 @@ export interface ViewedPhoto {
  * **On a phone** it is the whole screen in the theme's ground: a 56 head
  * with "PHOTO 1 OF 2" and the ✕ in its 44, the photo at its own ratio on
  * `--tint`, and a row a thumb swipes between photos: a `ScrollRegion`
- * named "Photos", so a keyboard and a screen reader's swipe reach it. **From 720** it is
+ * named "Photos, 2" (D-189), so a keyboard and a screen reader's swipe reach it. **From 720** it is
  * the centred panel at MEASURE.column and RADIUS.sheet, on `--panel`
  * with its hairline (`ground-drawer`) and `shadow-lift`, over the scrim, with
  * 44 pager arrows and the ← → keys.
@@ -88,7 +88,7 @@ export function PhotoViewer({
       </div>
       <div className="relative flex min-h-0 flex-1">
         <ScrollRegion
-          label="Photos"
+          label={`Photos, ${String(photos.length)}`}
           part="viewer-photos"
           ref={pager.rowRef}
           onScroll={pager.onScroll}

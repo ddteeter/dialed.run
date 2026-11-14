@@ -112,7 +112,7 @@ export function PhotoPager({
           row scrolls, and a viewer who doesn't own the entry has nothing
           in it to press, so the row itself takes focus. */}
       <ScrollRegion
-        label="Photos"
+        label={`Photos, ${String(count)}`}
         part="photo"
         onScroll={(event) => {
           setIndex(nearestPage(event.currentTarget));

@@ -440,10 +440,9 @@ describe("the public kit, signed out", () => {
     );
     const foot = document.querySelector('[data-part="public-foot"]');
     // At the foot of the body (R55·176), last in the page's main.
-    expect(foot?.parentElement?.parentElement?.tagName).toBe("MAIN");
+    expect(foot?.parentElement?.tagName).toBe("MAIN");
     expect(foot?.parentElement?.lastElementChild).toBe(foot);
-    expect(foot).toHaveClass("m-0", "pb-8", "text-small", "desk:col-start-1");
-    expect(foot).not.toHaveClass("px-6");
+    expect(foot).toHaveClass("px-6", "pb-8", "text-small", "desk:col-start-1");
     expect(link("Report this kit")).toHaveClass(
       "target",
       "text-muted",

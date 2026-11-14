@@ -392,17 +392,15 @@ function Inlines({
  * what touches it. The bracket before it ("the app (") and the
  * punctuation after it (`).`) are drawn inside one unbreakable run with
  * it, so neither is left hanging at a line's end or starts the next. A
- * space is where the line may break, so only what touches it moves:
- * the text after its last space, or before its first. (The text is
- * already cut at spaces, word by word, by `addressParts`.)
+ * space is where the line may break, so only what touches it moves.
+ *
+ * `addressParts` has already cut the text word by word, each part after
+ * the first led by its space (" (" , " app"). So a name's next part is
+ * the word that touches it, whole (`).`, or "" when a space follows),
+ * and its part before touches it from that part's last space on.
  */
 function lastWord(text: string): string {
   return text.slice(text.lastIndexOf(" ") + 1);
-}
-
-function firstWord(text: string): string {
-  const space = text.indexOf(" ");
-  return space === -1 ? text : text.slice(0, space);
 }
 
 /**
@@ -423,10 +421,8 @@ function textLeft(
 ): string {
   const item = drawn[index];
   if (item?.kind !== "text") return "";
-  const head =
-    drawn[index - 1]?.kind === "code"
-      ? item.text.slice(firstWord(item.text).length)
-      : item.text;
+  // A name before it took this whole part: it is the word touching it.
+  const head = drawn[index - 1]?.kind === "code" ? "" : item.text;
   return isEndTrimmed && drawn[index + 1]?.kind === "code"
     ? head.slice(0, head.length - lastWord(head).length)
     : head;
@@ -441,12 +437,11 @@ function touchingEnd(drawn: readonly Drawn[], index: number): string {
 }
 
 /**
- * What touches a name from after it: the start of the text there, up to
- * its first space.
+ * What touches a name from after it: the word there, whole.
  */
 function touchingStart(drawn: readonly Drawn[], index: number): string {
   const item = drawn[index];
-  return item?.kind === "text" ? firstWord(item.text) : "";
+  return item?.kind === "text" ? item.text : "";
 }
 
 /**

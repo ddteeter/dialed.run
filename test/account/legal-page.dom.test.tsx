@@ -88,6 +88,13 @@ describe("LegalPage", () => {
     expect(document.querySelector("[data-slot='tab-bar']")).not.toBeNull();
     expect(document.querySelector("[data-slot='landing-bar']")).toBeNull();
     expect(screen.getAllByTestId("bell")[0]).toHaveTextContent(/^3\/2$/u);
+    // Below 720 the bell ends the title's row, the page's first (R57·256).
+    const seat = within(firstRow() as HTMLElement).getByTestId("bell");
+    expect(seat.closest("[data-slot='notification-bell']")).toHaveClass(
+      "wide:hidden",
+    );
+    expect(firstRow().lastElementChild).toContainElement(seat);
+    expect(firstRow()).toHaveClass("flex", "items-center", "justify-between");
     // The shell's main is the page's one: the frame brings none of its own.
     expect(screen.getAllByRole("main")).toHaveLength(1);
   });
@@ -258,6 +265,17 @@ const DRAFT = parseLegalDoc(
   ].join("\n"),
 );
 
+/**
+ * The page's first row: a legal text has no kicker, so it is the title's,
+ * which the phone bell ends for a signed-in reader (R57·256).
+ */
+function firstRow(): Element {
+  const row = screen.getByRole("heading", { level: 1 }).parentElement;
+  if (row === null) throw new Error("no first row");
+  expect(row).toHaveAttribute("data-part", "reading-first-row");
+  return row;
+}
+
 async function renderDraft(slug: "privacy" | "terms" | "copyright") {
   return renderWithRouter(
     <LegalPage slug={slug} doc={DRAFT} bellState={undefined} bell={bell} />,
@@ -278,7 +296,7 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
 
   it("draws the draft banner as the notice block under the title", async () => {
     await renderDraft("privacy");
-    const notice = screen.getByRole("heading", { level: 1 }).nextElementSibling;
+    const notice = firstRow().nextElementSibling;
     expect(notice).toHaveClass("bg-notice", "rounded-none", "inset-ring-1");
     // The title and the notice sit at the text's width; only a wide
     // table steps out (R55·220, R2-LEGAL-05).
@@ -351,9 +369,7 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
     await renderWithRouter(
       <LegalPage slug="privacy" doc={DOC} bellState={undefined} bell={bell} />,
     );
-    expect(
-      screen.getByRole("heading", { level: 1 }).nextElementSibling,
-    ).toBeNull();
+    expect(firstRow().nextElementSibling).toBeNull();
   });
 
   it("draws a banner with nothing after its bold lead as the two lines alone", async () => {
@@ -365,7 +381,7 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
         bell={bell}
       />,
     );
-    const notice = screen.getByRole("heading", { level: 1 }).nextElementSibling;
+    const notice = firstRow().nextElementSibling;
     expect(notice?.children).toHaveLength(2);
     expect(screen.getByText("Words.").tagName).toBe("P");
   });
@@ -381,9 +397,7 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
         bell={bell}
       />,
     );
-    expect(
-      screen.getByRole("heading", { level: 1 }).nextElementSibling,
-    ).toBeNull();
+    expect(firstRow().nextElementSibling).toBeNull();
     expect(screen.getAllByRole("blockquote")).toHaveLength(6);
     const paragraphBold = screen.getByText("DRAFT", { selector: "strong" });
     expect(paragraphBold.closest("p")).not.toBeNull();

@@ -1,6 +1,6 @@
 import type { ComponentType, JSX, ReactNode } from "react";
 
-import { Layout, Mono, SignedOutLayout } from "../../../ui";
+import { Layout, Mono, PhoneBell, SignedOutLayout } from "../../../ui";
 import type { BellState } from "../../notifications";
 
 /**
@@ -59,6 +59,28 @@ export function ReadingShell({
   );
 }
 
+/**
+ * The page's first row, ended by the phone bell for a signed-in reader
+ * (R57·256, Design 169.1): the kicker's row on `/open-source`, the
+ * title's on a legal text, which has no kicker. `PhoneBell` draws nothing
+ * signed out, and nothing from 720, where the bar seats the bell.
+ */
+function BellRow({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <div
+      data-part="reading-first-row"
+      className="flex items-center justify-between gap-3"
+    >
+      {children}
+      <PhoneBell />
+    </div>
+  );
+}
+
+function Title({ title }: Readonly<{ title: string }>) {
+  return <h1 className="m-0 font-display text-display uppercase">{title}</h1>;
+}
+
 export function ReadingFrame({
   title,
   kicker,
@@ -92,11 +114,19 @@ export function ReadingFrame({
           (R55·220, R2-LEGAL-05). */}
       <header className="flex max-w-column flex-col gap-2 desk:col-start-2 desk:row-start-1">
         {kicker === undefined ? undefined : (
-          <Mono step="xs" className="text-muted">
-            {kicker}
-          </Mono>
+          <BellRow>
+            <Mono step="xs" className="text-muted">
+              {kicker}
+            </Mono>
+          </BellRow>
         )}
-        <h1 className="m-0 font-display text-display uppercase">{title}</h1>
+        {kicker === undefined ? (
+          <BellRow>
+            <Title title={title} />
+          </BellRow>
+        ) : (
+          <Title title={title} />
+        )}
         {notice}
       </header>
       {/* None when a search leaves nothing: a heading over an empty

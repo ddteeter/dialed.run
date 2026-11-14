@@ -131,7 +131,8 @@ describe("PhotoPager", () => {
 
   it("is a region named Photos a keyboard reaches, for a viewer with nothing to press in it (D-189)", () => {
     render(<PhotoPager photoKeys={KEYS} deletePhoto={undefined} />);
-    const region = screen.getByRole("region", { name: "Photos" });
+    // Named by what it holds and how many (R57, D-189).
+    const region = screen.getByRole("region", { name: "Photos, 3" });
     expect(region).toBe(row());
     expect(region).toHaveAttribute("tabindex", "0");
     expect(items()).toHaveLength(3);

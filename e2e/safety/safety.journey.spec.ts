@@ -149,9 +149,10 @@ test("report a runner, block them, and take the block back", async ({
     .getByRole("button", { name: `Report or block @${strangerName}` })
     .click();
 
-  // R55·214: a profile's own sheet, with a profile's own reasons.
+  // R55·214 as Round 57 drew it (D-188): "Report @handle", with a
+  // profile's own reasons.
   await expect(
-    page.getByRole("heading", { name: `Report or block @${strangerName}` }),
+    page.getByRole("heading", { name: `Report @${strangerName}` }),
   ).toBeVisible();
   await scene(page, "Reasons are sentences a runner would say");
   await expect(
