@@ -17,6 +17,7 @@ export { Layout, SignedOutLayout } from "./Layout";
 export { ListSection } from "./ListSection";
 export { CoverageMark, VerdictMark } from "./Marks";
 export type { CoverageLevel, VerdictKind } from "./Marks";
+export { PagerArrows, pagerKeys } from "./PagerArrows";
 export { Mono } from "./Mono";
 export { OnboardingProgress } from "./OnboardingProgress";
 export { OnboardingShell } from "./OnboardingShell";

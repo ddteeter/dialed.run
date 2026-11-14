@@ -81,5 +81,11 @@ Phase A is files no wave 8 lane holds, and I build it now. B waits for 8b
   Retired folds to "Retired · N" with the same disclosure.
 - **Guess:** 209(f) ADD YOUR KIT links to `/feed/attach/$runId` for the latest
   run with no entry.
+- **Design 254 (#671), building on the guess:** R55·205 puts the watch name
+  on the caps meta line, but on the card that name is Garmin's attribution.
+  It stays its own "Garmin {model}" line (Garmin Rulings 77) until Design
+  rules.
+- **207 and 249.1 share one control:** `src/ui/PagerArrows.tsx`, built here
+  and cherry-picked by 9c. Neither lane changes it without telling the other.
 - **Moot:** 217's "their photo when they have one". No profile photo exists, so
   the avatar stays the initial.

@@ -127,6 +127,9 @@ export function PostCard(props: Readonly<PostCardProps>) {
                 />
                 {item.isOwn ? OWN_SUFFIX : undefined}
               </Mono>
+              {/* Its own line, "Garmin {model}" in sentence case (Garmin
+                  Rulings 77), not R55·205's caps meta line: Design 254
+                  (#671) is open on which wins. */}
               <GarminAttribution deviceName={item.deviceName} />
             </span>
             <span className="flex shrink-0 items-center gap-2 whitespace-nowrap">

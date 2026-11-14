@@ -173,7 +173,9 @@ describe("EntryDetail: the order, and what a sparse entry leaves out", () => {
     );
 
     expect(partsInOrder()).toStrictEqual([
+      "photo-pager",
       "photo",
+      "photo-slot",
       "run-strip",
       "kit",
       "tags",
