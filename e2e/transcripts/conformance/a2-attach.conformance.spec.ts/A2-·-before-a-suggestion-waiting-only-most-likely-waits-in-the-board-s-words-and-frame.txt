@@ -35,10 +35,15 @@ button, Conformance tights, not pressed
 Conformance tights
 end of button, Conformance tights, not pressed
 end of region, Or pick from the closet
+group, Outfit photo · optional
 Outfit photo · optional
-Add a photo
-Flat on the floor works best.
-Add a photo, Outfit photo · optional Flat on the floor works best.
+list
+listitem, level 1, position 1, set size 1
+Add photo
+Add photo
+end of listitem, level 1, position 1, set size 1
+end of list
+end of group, Outfit photo · optional
 button, Next — did it work?
 Next — did it work?
 end of button, Next — did it work?

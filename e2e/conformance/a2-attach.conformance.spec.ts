@@ -1,6 +1,7 @@
 import type { Page, Route } from "@playwright/test";
 import { expect, test } from "../support/a11y";
 
+import { PNG_1X1 } from "../closet/closet-support";
 import { storageStateFor } from "../support/accounts";
 import { isServerFnCall } from "../support/server-fn";
 import {
@@ -247,6 +248,91 @@ test.describe("A2 · heard at 390", () => {
     await expect(sheet).toBeVisible();
     await expect(
       sheet.getByRole("checkbox", { name: /^Conformance top/u }),
+    ).toBeVisible();
+  });
+});
+
+/**
+ * The full photo (Round 56 · 249.1), the only check that sees the real
+ * dialog in the top layer: from 720 the centred panel at MEASURE.column
+ * over the scrim, and on a phone the whole screen. One photo, so no
+ * arrows; paging is the dom tests'. It ends open at 390, so what a
+ * screen reader says on it is checked in.
+ */
+test.describe("A2 · the full photo", () => {
+  let seeded: Seeded;
+  let runId: string;
+
+  test.beforeEach(async () => {
+    seeded = {
+      userId: await userIdOf("run-logging"),
+      runIds: [],
+      itemIds: [],
+      entryIds: [],
+    };
+    await unseed(seeded);
+    runId = await seedRun(seeded, {
+      observed: true,
+      weatherStatus: "attached",
+    });
+    await seedItem(seeded, "Conformance top", "top");
+  });
+
+  test.afterEach(async () => {
+    await unseed(seeded);
+  });
+
+  test("a centred panel from 720, the whole screen on a phone", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`/feed/attach/${runId}`);
+    await hydrated(page);
+
+    await page.setInputFiles('[data-part="add-photo"] input[type="file"]', {
+      name: "kit.png",
+      mimeType: "image/png",
+      buffer: PNG_1X1,
+    });
+    const blurSheet = page.getByRole("dialog", { name: "Check the blur" });
+    await expect(blurSheet).toBeVisible({ timeout: 20_000 });
+    await blurSheet
+      .getByRole("button", { name: "Use this photo" })
+      .click({ timeout: 20_000 });
+    await expect(blurSheet).toBeHidden();
+
+    const thumbnail = page.getByRole("button", { name: "Photo 1 of 1" });
+    await expect(thumbnail).toBeVisible({ timeout: 20_000 });
+    const thumb = await thumbnail.boundingBox();
+    // 249.4: 76 × 95.
+    expect(thumb?.width).toBe(76);
+    expect(thumb?.height).toBe(95);
+
+    await thumbnail.click();
+    const viewer = page.getByRole("dialog", { name: "Photo 1 of 1" });
+    await expect(viewer).toBeVisible();
+    const panel = await viewer.boundingBox();
+    // MEASURE.column, centred.
+    expect(panel?.width).toBe(620);
+    expect((panel?.x ?? 0) * 2 + (panel?.width ?? 0)).toBe(1280);
+    await expect(
+      viewer.getByRole("button", { name: "Next photo" }),
+    ).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(viewer).toBeHidden();
+    await expect(thumbnail).toBeFocused();
+
+    await page.setViewportSize({ width: 390, height: 900 });
+    await thumbnail.click();
+    await expect(viewer).toBeVisible();
+    expect(await viewer.boundingBox()).toEqual({
+      x: 0,
+      y: 0,
+      width: 390,
+      height: 900,
+    });
+    await expect(
+      viewer.getByRole("button", { name: "Remove photo" }),
     ).toBeVisible();
   });
 });
