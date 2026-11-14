@@ -25,6 +25,7 @@ import {
   landingCopy,
 } from "../../src/modules/account/components/LinkLanding";
 import {
+  RESEND_BAND_LINK,
   RESEND_LINK,
   RESEND_PILL,
   ResendLink,
@@ -121,6 +122,27 @@ describe("ResendLink", () => {
     );
     expect(resendButton()).toHaveClass(...RESEND_LINK.split(" "));
     expect(resendButton()).not.toHaveClass("rounded-pill");
+  });
+
+  it("draws the band's link in --cold-text, 600, underlined (R55·211)", () => {
+    render(
+      <ResendLink
+        email="maya@example.com"
+        resend={resender()}
+        viewer={OWED}
+        look="band"
+      />,
+    );
+    expect(resendButton().className).toBe(RESEND_BAND_LINK);
+    expect(RESEND_BAND_LINK.split(" ")).toEqual(
+      expect.arrayContaining([
+        "target",
+        "font-semibold",
+        "text-cold-text",
+        "underline",
+      ]),
+    );
+    expect(RESEND_BAND_LINK).not.toContain("text-ink");
   });
 
   it("sends to the address it was given, says Sent ✓ for a minute, then rests", async () => {
@@ -729,6 +751,21 @@ describe("the sheet the root opens on a refusal (design 133)", () => {
     expect(
       within(band).queryByRole("button", { name: /dismiss|close/iu }),
     ).toBeNull();
+    // R55·211, R29: a flush band, not a card, with one hairline below and
+    // Resend link in --cold-text on the sentence's line.
+    expect(band).toHaveClass(
+      "flex",
+      "flex-wrap",
+      "items-baseline",
+      "border-b",
+      "border-hairline",
+      "py-3",
+      "text-small",
+    );
+    expect(band).not.toHaveClass("border", "p-4", "flex-col");
+    expect(
+      within(band).getByRole("button", { name: "Resend link" }),
+    ).toHaveClass(...RESEND_BAND_LINK.split(" "));
 
     rerender(
       <ConfirmEmailBand

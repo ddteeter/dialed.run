@@ -23,18 +23,22 @@ export function ConfirmEmailBand({
 }>): JSX.Element | undefined {
   if (account === undefined || account.isVerified) return undefined;
   return (
+    // R55·211, R29's band: no box, one hairline below, the sentence and
+    // Resend link on one line where it fits. The page sets it flush under
+    // its header; the band only draws itself.
     <aside
       data-part="confirm-email-band"
       aria-label="Confirm your email"
-      className="flex flex-col gap-2 border border-hairline p-4"
+      className="flex flex-wrap items-baseline gap-x-2 gap-y-1 border-b border-hairline py-3 text-small"
     >
-      <p className="m-0 text-body">
+      <p className="m-0">
         Confirm your email to share runs with other runners.
       </p>
       <ResendLink
         email={account.email}
         resend={resend}
         viewer={account.viewer}
+        look="band"
       />
     </aside>
   );

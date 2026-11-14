@@ -14,6 +14,7 @@ import {
 } from "../../../ui";
 import type { VerdictKind } from "../../../ui";
 import type { Units } from "../../../lib/contracts";
+import { FlushBand } from "./FlushBand";
 import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
 import { bandVerdict } from "../coverage";
 import { BOUND_SEPARATOR } from "../posted";
@@ -67,7 +68,7 @@ export function OwnProfile({
 }: Readonly<{ profile: Profile; confirmBand: ReactNode }>) {
   return (
     <div className={`${COLUMN} flex flex-col gap-6 px-5 pt-6 wide:px-6`}>
-      {confirmBand}
+      <FlushBand>{confirmBand}</FlushBand>
       <div data-part="header" className="flex flex-col gap-3">
         <div className="flex items-center gap-4">
           <Avatar name={profile.username ?? "You"} size="large" />

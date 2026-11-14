@@ -4,6 +4,7 @@ import type { ComponentProps, ReactNode } from "react";
 
 import type { Units } from "../../../lib/contracts";
 import { COLUMN, FormStatus, Mono, PhoneBell } from "../../../ui";
+import { FlushBand } from "./FlushBand";
 import { isProvidersReading } from "../strip";
 import type { FeedItem } from "../feed";
 import { isBacklogWorthOpening } from "../route-decisions";
@@ -100,7 +101,7 @@ export function Feed(props: Readonly<FeedProps>) {
     // "left-aligned inside the page measure, not centred, so it lines up
     // with the wide screens' primary column".
     <div className={`${COLUMN} flex flex-col gap-6 px-5 pt-6 wide:px-6`}>
-      {confirmBand}
+      <FlushBand>{confirmBand}</FlushBand>
       <div className="flex items-center gap-3">
         <h1 className="mr-auto font-display text-title uppercase">Feed</h1>
         <Link

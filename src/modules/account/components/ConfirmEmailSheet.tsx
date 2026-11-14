@@ -98,7 +98,7 @@ export function ConfirmEmailSheet({
               email={address.email}
               resend={resend}
               viewer={address.viewer}
-              isPill
+              look="pill"
             />
           </>
         )}

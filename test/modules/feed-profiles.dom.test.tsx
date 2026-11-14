@@ -186,7 +186,19 @@ describe("OwnProfile (G): an unconfirmed runner (round 26 #11; FEED-11)", () => 
     const nag = screen.getByRole("complementary", {
       name: "Confirm your email",
     });
-    expect(nag.parentElement?.firstElementChild).toBe(nag);
+    // Flush under the header, edge to edge (R55·211): the slot steps out
+    // of the column's gutter and top padding.
+    const slot = nag.parentElement;
+    expect(slot).toHaveAttribute("data-part", "flush-band");
+    expect(slot).toHaveClass(
+      "-mx-5",
+      "-mt-6",
+      "px-5",
+      "empty:hidden",
+      "wide:-mx-6",
+      "wide:px-6",
+    );
+    expect(slot?.parentElement?.firstElementChild).toBe(slot);
     expect(nag.compareDocumentPosition(part("header") ?? nag)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );

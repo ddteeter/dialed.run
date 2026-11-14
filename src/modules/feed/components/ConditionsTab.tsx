@@ -351,7 +351,7 @@ function CityForm({
           // found" (the finder holds it back then). Its "after" line,
           // "Saved to your settings.", has no moment to show: a save hands
           // the block straight to the new place's weather, and the status
-          // region says "City saved."
+          // region says "City saved." Design 260 (#686) is open on it.
           <p data-part="city-note" className="m-0 text-small text-muted">
             We&rsquo;ll save it to your settings. Change it any time under You.
           </p>

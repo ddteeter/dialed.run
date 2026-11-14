@@ -87,5 +87,8 @@ Phase A is files no wave 8 lane holds, and I build it now. B waits for 8b
   rules.
 - **207 and 249.1 share one control:** `src/ui/PagerArrows.tsx`, built here
   and cherry-picked by 9c. Neither lane changes it without telling the other.
+- **Design 260 (#686):** 216's "after" line, "Saved to your settings.", has no
+  moment to show, because a save hands the block straight to the new place's
+  weather. Built without it.
 - **Moot:** 217's "their photo when they have one". No profile photo exists, so
   the avatar stays the initial.

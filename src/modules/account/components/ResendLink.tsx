@@ -59,7 +59,7 @@ export function ResendLink({
   email,
   resend,
   viewer,
-  isPill = false,
+  look = "link",
 }: Readonly<{
   email: string;
   /**
@@ -67,7 +67,11 @@ export function ResendLink({
    */
   viewer: ViewerZone | undefined;
   resend: (input: { data: { email: string } }) => Promise<ResendResult>;
-  isPill?: boolean | undefined;
+  /**
+   * Which of the three looks: the check-email page's ink link, the
+   * confirm band's `--cold-text` link (R55·211, R29), or the sheet's pill.
+   */
+  look?: keyof typeof RESEND_LOOK | undefined;
 }>): JSX.Element {
   const [isSent, setIsSent] = useState(false);
   const [limitedUntil, setLimitedUntil] = useState<number | undefined>();
@@ -107,7 +111,7 @@ export function ResendLink({
         onClick={() => {
           void control.run();
         }}
-        className={isPill ? RESEND_PILL : RESEND_LINK}
+        className={RESEND_LOOK[look]}
       >
         <PendingLabel
           label="Resend link"
@@ -139,7 +143,7 @@ export function ResendLink({
 }
 
 /**
- * The two looks: the band's text link, and the sheet's outline pill — a
+ * The looks: the page's text link, and the sheet's outline pill — a
  * 1px ink rule, no fill, `HEIGHT.control` (48) high and the sheet's width,
  * as round 29 #12 draws it.
  */
@@ -147,6 +151,18 @@ export const RESEND_LINK =
   "target cursor-pointer border-none bg-transparent p-0 text-body font-semibold text-ink underline underline-offset-4";
 export const RESEND_PILL =
   "target flex h-12 w-full cursor-pointer items-center justify-center rounded-pill border border-ink bg-transparent px-5 text-body font-bold text-ink";
+/**
+ * The confirm band's link: R29 draws it 600 in the cold pink, underlined,
+ * on the sentence's line (R55·211).
+ */
+export const RESEND_BAND_LINK =
+  "target cursor-pointer border-none bg-transparent p-0 font-semibold text-cold-text underline underline-offset-4";
+
+const RESEND_LOOK = {
+  link: RESEND_LINK,
+  band: RESEND_BAND_LINK,
+  pill: RESEND_PILL,
+} as const;
 
 /**
  * A plain button in Resend's pill, for the sheet's other answer: the two
