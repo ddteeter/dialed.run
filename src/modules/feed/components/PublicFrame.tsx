@@ -339,13 +339,8 @@ export function PieceSection<Piece extends { readonly name: string }>({
       </Mono>
     </Heading>
   );
-  const list = (shown: readonly Piece[], from: number) => (
-    <PieceList
-      pieces={shown}
-      from={from}
-      itemClassName={itemClassName}
-      row={row}
-    />
+  const list = (shown: readonly Piece[]) => (
+    <PieceList pieces={shown} itemClassName={itemClassName} row={row} />
   );
   if (fold === "all") {
     return (
@@ -354,7 +349,7 @@ export function PieceSection<Piece extends { readonly name: string }>({
           {heading}
           <Icon name="forward" size={16} className={FOLD_CHEVRON_CLASS} />
         </summary>
-        {list(pieces, 0)}
+        {list(pieces)}
       </details>
     );
   }
@@ -363,13 +358,13 @@ export function PieceSection<Piece extends { readonly name: string }>({
   return (
     <section className="flex flex-col">
       <div className="pb-2">{heading}</div>
-      {list(first, 0)}
+      {list(first)}
       {isFolded ? (
         <details data-part="piece-more">
           <summary className={MORE_SUMMARY_CLASS}>
             {`+ ${String(pieces.length - FOLD_AFTER)} more`}
           </summary>
-          {list(pieces.slice(FOLD_AFTER), FOLD_AFTER)}
+          {list(pieces.slice(FOLD_AFTER))}
         </details>
       ) : undefined}
     </section>
@@ -392,22 +387,17 @@ const MORE_SUMMARY_CLASS =
  */
 function PieceList<Piece extends { readonly name: string }>({
   pieces,
-  from,
   itemClassName,
   row,
 }: Readonly<{
   pieces: readonly Piece[];
-  from: number;
   itemClassName: string;
   row: (piece: Piece) => ReactNode;
 }>): JSX.Element {
   return (
     <ul className="m-0 flex list-none flex-col border-t border-hairline p-0">
       {pieces.map((piece, index) => (
-        <li
-          key={`${String(from + index)}:${piece.name}`}
-          className={itemClassName}
-        >
+        <li key={`${String(index)}:${piece.name}`} className={itemClassName}>
           {row(piece)}
         </li>
       ))}

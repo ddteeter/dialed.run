@@ -23,27 +23,25 @@ import { garmentLabel } from "../../lib/garment-label";
 export async function garmentNamesByIds(
   database: DrizzleD1Database,
   itemIds: readonly string[],
-  naming: "model" | "brandAndModel" = "model",
+  options: Readonly<{ withBrand?: boolean }> = {},
 ): Promise<Map<string, string>> {
   const garments = await garmentsByIds(database, itemIds);
   return new Map(
-    garments.map((garment) => [garment.id, nameOf(garment, naming)]),
+    garments.map((garment) => [
+      garment.id,
+      options.withBrand === true ? withBrand(garment) : garment.name,
+    ]),
   );
 }
 
 /**
- * A garment's name: the model alone, or as the closet names it, brand and
- * model unless generic (`garmentLabel`). G's Most worn reads the latter
- * (R55·209c), as D does: "Balega Hidden Comfort", not "Hidden Comfort".
- * No brand is what generic means on a kit (D's `[GENERIC]`).
+ * A garment as the closet names it, brand and model (`garmentLabel`).
+ * G's Most worn reads it so (R55·209c), as D does: "Balega Hidden
+ * Comfort", not "Hidden Comfort". A piece with no brand is generic (D's
+ * `[GENERIC]`), and `garmentLabel` gives its name alone.
  */
-function nameOf(
-  garment: { name: string; brand: string | null },
-  naming: "model" | "brandAndModel",
-): string {
-  return naming === "model"
-    ? garment.name
-    : garmentLabel({ ...garment, isGeneric: garment.brand === null });
+function withBrand(garment: { name: string; brand: string | null }): string {
+  return garmentLabel({ ...garment, isGeneric: false });
 }
 
 /**

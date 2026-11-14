@@ -293,6 +293,20 @@ describe("the public kit, signed out", () => {
     expect(row?.parentElement).toHaveClass("border-t", "border-hairline");
   });
 
+  it("lists every piece of a long kit, folding none (only the rotation folds)", async () => {
+    const pieces = Array.from({ length: 7 }, (_, index) => ({
+      name: `Piece ${String(index + 1)}`,
+      model: `Piece ${String(index + 1)}`,
+      kind: "Top",
+    }));
+    await show(kitPage({ ...BARE, pieces }));
+    expect(
+      screen.getByRole("heading", { level: 2, name: "The kit · 7" }),
+    ).toBeVisible();
+    expect(document.querySelector("details")).toBeNull();
+    expect(screen.getByText("Piece 7").closest("ul")?.children).toHaveLength(7);
+  });
+
   it("fills three tracks with three stats (R55·219)", async () => {
     // Distance, time and pace: no gain.
     const pace = KIT.pace;

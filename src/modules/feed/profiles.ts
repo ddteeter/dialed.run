@@ -140,11 +140,9 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
     wearCounts.set(row.itemId, (wearCounts.get(row.itemId) ?? 0) + 1);
   }
   const topItemIds = topByCount(wearCounts, 5).map(([itemId]) => itemId);
-  const nameById = await garmentNamesByIds(
-    database,
-    topItemIds,
-    "brandAndModel",
-  );
+  const nameById = await garmentNamesByIds(database, topItemIds, {
+    withBrand: true,
+  });
 
   const recent = profileEntries.slice(0, RECENT_LIMIT);
 
@@ -190,8 +188,9 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
         underReview: isUnderReviewForAuthor({ ...e, userId }, userId),
       };
     }),
+    // With no entries, the latest run if there is one: no run, no step.
     nextStep:
-      runCount > 0 && profileEntries.length === 0
+      profileEntries.length === 0
         ? await lastRunWithNoKit(database, userId)
         : undefined,
   };

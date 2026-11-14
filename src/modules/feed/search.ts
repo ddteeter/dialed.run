@@ -126,14 +126,14 @@ export async function searchRunners(
 /**
  * Each found runner's shared entries the viewer may see: how many, and
  * the first one's time. One grouped read over at most a page of runners,
- * on `entries_user_shared_created`.
+ * on `entries_user_shared_created` (with none found, drizzle's empty
+ * `inArray` is `false`, and the read answers nothing).
  */
 async function sharedTallies(
   database: DrizzleD1Database,
   viewerId: string,
   userIds: readonly string[],
 ): Promise<Map<string, { runs: number; first: number | null }>> {
-  if (userIds.length === 0) return new Map();
   const rows = await database
     .select({
       userId: outfitEntries.userId,

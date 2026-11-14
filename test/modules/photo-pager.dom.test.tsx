@@ -149,6 +149,12 @@ describe("PhotoPager", () => {
     expect(within(pager()).queryByText(/\d \/ \d/u)).toBeNull();
   });
 
+  it("moves nothing on mount: only a turn the runner asks for scrolls", () => {
+    const { pages } = scrolled();
+    render(<PhotoPager photoKeys={KEYS} deletePhoto={undefined} />);
+    expect(pages).toStrictEqual([]);
+  });
+
   it("brings the next photo into view, instantly, once per turn", () => {
     render(<PhotoPager photoKeys={KEYS} deletePhoto={undefined} />);
     const { pages, options } = scrolled();

@@ -132,3 +132,32 @@ describe("VerdictMark", () => {
     expect(dialed.getHTML()).toContain("bg-teal");
   });
 });
+
+describe("CoverageMark's sizes (R55·231)", () => {
+  it("is the swatch beside a word unless asked otherwise", () => {
+    const { container } = render(<CoverageMark level="covered" />);
+    expect(container.firstElementChild).toHaveClass(
+      "inline-block",
+      "h-3",
+      "w-8",
+      "shrink-0",
+      "rounded-none",
+    );
+  });
+
+  it("fills its track as the strip's cell, and is a 12 square as a key", () => {
+    const cell = render(<CoverageMark level="partial" size="cell" />);
+    expect(cell.container.firstElementChild).toHaveClass(
+      "block",
+      "h-7",
+      "w-full",
+    );
+    cell.unmount();
+    const key = render(<CoverageMark level="unknown" size="key" />);
+    expect(key.container.firstElementChild).toHaveClass(
+      "inline-block",
+      "size-3",
+      "shrink-0",
+    );
+  });
+});
