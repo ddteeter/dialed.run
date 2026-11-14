@@ -82,8 +82,14 @@ The number is `cutAt`, so it is always `DUPLICATES_PRODUCT_CAP`'s.
 
 ## Issues
 
-- Closes: #663, #393, #390
+- Closes: #663, #393, #390, #689
 - Opens: none expected
+
+#689 joined late. This PR's first CI e2e failed the accessibility coverage
+figure at 77.15% against a 77.44% baseline, 0.04 past `FIGURE_NOISE`. Main's
+own runs spread 0.31 points, so the owner widened `FIGURE_NOISE` from 0.25
+to 0.4 and kept the baseline (2026-11-14). The judge test's failing case
+moves from 49.7% to 49.5%, so it still observes the band.
 
 ## Open questions
 

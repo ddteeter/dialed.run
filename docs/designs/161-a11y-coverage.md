@@ -200,11 +200,13 @@ _How (2026-11-03):_
     (`/api/*`, `/og/*`, photo routes) are routes but not pages.
 
   The run fails:
-  - when the figure falls more than `FIGURE_NOISE` (0.25 points) below
+  - when the figure falls more than `FIGURE_NOISE` (0.4 points) below
     `branches`. Two fresh-database runs of the same code differed by four
     branches of about 2,200: a component preloaded or not, and one
-    `EntryDetail` branch that reads the shared data. A screen no spec
-    reaches any more is tens of branches;
+    `EntryDetail` branch that reads the shared data. Main's own CI runs
+    later spread 0.31 points, so the owner widened the band from 0.25 to
+    0.4 (2026-11-14, #689). A screen no spec reaches any more is tens of
+    branches;
   - when a route is neither visited nor listed;
   - when a listed route was visited, so its reason is stale.
 
@@ -215,8 +217,8 @@ _How (2026-11-03):_
 - **CI.** The teardown prints the figure and appends it to
   `$GITHUB_STEP_SUMMARY`, so no workflow changes. The HTML report is not
   uploaded: the Actions bill is artifact storage.
-- _Known limit:_ the noise band. A loss smaller than 0.25 points, a
-  handful of branches, passes; the route check still catches a screen no
+- _Known limit:_ the noise band. A loss smaller than 0.4 points, about
+  nine branches, passes; the route check still catches a screen no
   spec opens.
 
 **4. Transcripts.** At the end of each test, record what a screen reader

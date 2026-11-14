@@ -237,10 +237,12 @@ export function loadCoverageBaseline(): CoverageBaseline {
  * How far the figure moves between two runs of the same code, in
  * points. Two fresh-database runs (2026-11-03) differed by four
  * branches of about 2,200: one component preloaded or not, and one
- * branch that reads the shared data. A screen no spec reaches any more
- * is tens of branches, well past this.
+ * branch that reads the shared data. Main's own CI runs (2026-11-13/14)
+ * then spread 0.31 points (77.13% to 77.44%), so the owner widened this
+ * from 0.25 to 0.4 (#689). That is about nine branches. A screen no spec
+ * reaches any more is tens of branches, still well past it.
  */
-export const FIGURE_NOISE = 0.25;
+export const FIGURE_NOISE = 0.4;
 
 /**
  * What the run reached, against the baseline: each line is a failure.
