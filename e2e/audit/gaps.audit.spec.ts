@@ -821,9 +821,9 @@ test.describe("onboarding with real data", () => {
       await page.getByRole("button", { name: "Find" }).click();
       await shoot(page, "O1 city found");
       await page.getByRole("button", { name: "Use this" }).click();
-      await expect(
-        page.getByRole("button", { name: "Change city" }),
-      ).toBeVisible({ timeout: 10_000 });
+      await expect(page.locator("[data-part='city-chip']")).toBeVisible({
+        timeout: 10_000,
+      });
       await shoot(page, "O1 city chosen");
       await page.unroute(SERVER_FN);
       await page.getByRole("button", { name: "Start running" }).click();

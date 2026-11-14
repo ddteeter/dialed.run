@@ -190,8 +190,9 @@ test("the first run: an invite, an account, a handle, and a closet to start from
   await page.getByRole("link", { name: "Done for now" }).click();
   await expect(page).toHaveURL(/\/$/u, { timeout: 15_000 });
   await hydrated(page);
+  // Signed in, home wears the product's shell (R55·175): the Closet tab.
   await page
-    .getByRole("link", { name: "Your closet" })
+    .getByRole("link", { name: "Closet", exact: true })
     .filter({ visible: true })
     .click();
   await expect(page).toHaveURL(/\/closet$/u, { timeout: 15_000 });

@@ -1,15 +1,17 @@
 document
-main
+banner
+link, dialed.run home
 dialed.run
-heading, Every run has an outfit. Log it., level 1
-paragraph
-A virtual wardrobe for runners: what you wore, on which run, in which weather.
-end of paragraph
-link, Request access
-paragraph
-Have an account?
+end of link, dialed.run home
 link, Log in
+link, Request access
+end of banner
+main
+heading, Nothing here, level 1
+paragraph
+This page doesn't exist, or it's an entry its runner has made private.
 end of paragraph
+link, Log in
 end of main
 contentinfo
 paragraph

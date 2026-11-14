@@ -23,7 +23,7 @@ in place; nothing navigates while a file is read (round 22).
 */
 export const Route = createFileRoute("/runs/new")({
   // D-102's name for the page, in round 30 #4b's words.
-  staticData: { savedPage: "Log a run" },
+  staticData: { savedPage: "Log a run", title: "Add a run" },
   // fallow-ignore-next-line code-duplication -- two signed-in routes with a Promise.all loader and a BelledLayout shell are the same route shape by mandate: createFileRoute + loader + useLoaderData + shell is exactly what server-functions-are-glue requires a route to be, and the branching that would make them differ is what it forbids
   loader: async () => {
     const [units, bell, hasGarmin] = await Promise.all([

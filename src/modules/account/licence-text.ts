@@ -72,6 +72,11 @@ export function holderOf(line: string): string | undefined {
   if (!isLine || PLACEHOLDER.test(line)) return undefined;
   const rest = line.slice(at).replace(MARK, "");
   if (!/^[\d(©\p{Lu}]/u.test(rest) || PROSE.test(rest)) return undefined;
+  // A line led by a bare "(c)" is a holder only with a year after it:
+  // Apache 2.0's clause "(c) You must retain, in the Source form…" is the
+  // licence's third condition, and reading it as a holder dropped it from
+  // the text the page prints.
+  if (/^\(c\)/iu.test(line.slice(at)) && !/^\d/u.test(rest)) return undefined;
   const holder = withoutBracketed(rest)
     .replaceAll(/\(https?:[^()]*\)/gu, "")
     .replaceAll(/\s+/gu, " ")
@@ -333,4 +338,64 @@ export function cssBanners(
       version: String(match[2]),
     }),
   );
+}
+
+/**
+A rule drawn in text: `-----`, `=====`.
+*/
+const RULE_LINE = /^[-=_*]{3,}$/u;
+/**
+ * A line that starts an item of its own: `1.`, `1.2.`, `(a)`, `- `. The
+ * files set these on a new line, and so does the page.
+ */
+const ITEM_LINE = /^(?:\d+(?:\.\d+)*\.?|\([a-z\d]+\)|[-*•])\s/iu;
+/**
+ * The longest line read as a heading (the font licence's "PREAMBLE"). A
+ * longer line in capitals is a disclaimer's sentence.
+ */
+const HEADING_LENGTH = 40;
+
+const LOWERCASE = /\p{Ll}/u;
+
+/**
+ * A paragraph so far that is a heading: one short line in capitals, which
+ * a line of ordinary text then follows. A disclaimer in capitals goes on
+ * in capitals, so its lines stay one paragraph.
+ */
+function isHeading(lines: readonly string[], next: string): boolean {
+  const [only, ...rest] = lines;
+  return (
+    only !== undefined &&
+    rest.length === 0 &&
+    only.length < HEADING_LENGTH &&
+    !LOWERCASE.test(only) &&
+    LOWERCASE.test(next)
+  );
+}
+
+/**
+ * A licence's text as paragraphs, for the page to wrap (A-12). The files
+ * break their lines at about 80 columns; printed as written, each of
+ * those lines wrapped again on a phone. So a paragraph is its lines
+ * joined; a blank line or a rule ends one; and a numbered or lettered
+ * item, or the text after a short heading in capitals, starts one.
+ */
+export function reflowed(text: string): readonly string[] {
+  const paragraphs: string[] = [];
+  let lines: string[] = [];
+  const close = () => {
+    if (lines.length > 0) paragraphs.push(lines.join(" "));
+    lines = [];
+  };
+  for (const raw of text.split("\n")) {
+    const line = raw.trim();
+    if (line === "" || RULE_LINE.test(line)) {
+      close();
+      continue;
+    }
+    if (ITEM_LINE.test(line) || isHeading(lines, line)) close();
+    lines.push(line);
+  }
+  close();
+  return paragraphs;
 }

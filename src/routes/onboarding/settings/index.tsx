@@ -16,7 +16,10 @@ import { requireSession } from "../../../modules/auth/functions";
 import { BelledLayout } from "../../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../../modules/notifications/functions";
 import { SettingsIndex } from "../../../modules/onboarding/components/Settings";
-import { settingsQuery } from "../../../modules/onboarding/functions";
+import {
+  isPrivacyReviewDueQuery,
+  settingsQuery,
+} from "../../../modules/onboarding/functions";
 import { blockedRunnersQuery } from "../../../modules/safety/functions";
 import { Page } from "../../../ui";
 import { ThemeSwitch } from "../../../ui/ThemeSwitch";
@@ -26,17 +29,26 @@ import { ThemeSwitch } from "../../../ui/ThemeSwitch";
  * tab bar.
  */
 export const Route = createFileRoute("/onboarding/settings/")({
+  staticData: { title: "Settings" },
   loader: async ({ location }) => {
     await requireSession(location);
-    const [current, { blocked }, bell, { username }, notifications, theme] =
-      await Promise.all([
-        settingsQuery(),
-        blockedRunnersQuery(),
-        bellStateFn(),
-        usernameQuery(),
-        notificationSettingsQuery(),
-        ownThemeQuery(),
-      ]);
+    const [
+      current,
+      { blocked },
+      bell,
+      { username },
+      notifications,
+      theme,
+      isPrivacyReviewDue,
+    ] = await Promise.all([
+      settingsQuery(),
+      blockedRunnersQuery(),
+      bellStateFn(),
+      usernameQuery(),
+      notificationSettingsQuery(),
+      ownThemeQuery(),
+      isPrivacyReviewDueQuery(),
+    ]);
     return {
       current,
       blockedCount: blocked.length,
@@ -44,14 +56,22 @@ export const Route = createFileRoute("/onboarding/settings/")({
       username,
       runReminderEmail: notifications.runReminder,
       theme,
+      isPrivacyReviewDue,
     };
   },
   component: SettingsPage,
 });
 
 function SettingsPage() {
-  const { current, blockedCount, bell, username, runReminderEmail, theme } =
-    Route.useLoaderData();
+  const {
+    current,
+    blockedCount,
+    bell,
+    username,
+    runReminderEmail,
+    theme,
+    isPrivacyReviewDue,
+  } = Route.useLoaderData();
   const router = useRouter();
   const navigate = useNavigate();
 
@@ -63,9 +83,11 @@ function SettingsPage() {
           username={username}
           blockedCount={blockedCount}
           runReminderEmail={runReminderEmail}
+          isPrivacyReviewDue={isPrivacyReviewDue}
           display={<ThemeSwitch initial={theme} save={setThemeFn} />}
           signOut={
             <SignOutButton
+              username={username}
               signOut={async () => {
                 await signOut();
                 // The shell reads "signed in" once, at the root; tell it.

@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import privacyDraft from "../../docs/legal/privacy-policy.md?raw";
 import {
+  draftBannerOf,
   changeSummaryOf,
   headingId,
   parseLegalDoc,
   plainText,
   publishedText,
+  sectionsOf,
+  sectionText,
   withoutSourceComments,
 } from "../../src/modules/account/legal-markdown";
 
@@ -419,5 +422,95 @@ describe("publishedText", () => {
     // The opener's own dashes do not close it.
     expect(withoutSourceComments("a<!-->b-->c")).toBe("ac");
     expect(withoutSourceComments("no comment")).toBe("no comment");
+  });
+});
+
+describe("sectionsOf", () => {
+  it("splits the blocks before the first H2 from each H2 and what follows it", () => {
+    const { preamble, sections } = sectionsOf(
+      parseLegalDoc("# T\n\nBefore.\n\n## One\n\nA.\n\nB.\n\n## Two\n\nC.")
+        .blocks,
+    );
+    expect(preamble.map((block) => block.kind)).toEqual(["paragraph"]);
+    expect(
+      sections.map((section) => [
+        section.id,
+        plainText(section.heading),
+        section.blocks.length,
+      ]),
+    ).toEqual([
+      ["one", "One", 2],
+      ["two", "Two", 1],
+    ]);
+  });
+});
+
+function preambleOf(text: string) {
+  return sectionsOf(parseLegalDoc(text).blocks).preamble;
+}
+
+describe("draftBannerOf (R55·223)", () => {
+  it("takes the DRAFT quote out, keeping the words after its bold lead", () => {
+    const { provenance, rest } = draftBannerOf(
+      preambleOf(
+        "> **DRAFT: not reviewed.** Written from the code.\n\n# T\n\nFirst words.\n\n## One\n\nBody.",
+      ),
+    );
+    expect(provenance).toStrictEqual([
+      { kind: "text", text: "Written from the code." },
+    ]);
+    expect(rest).toStrictEqual([
+      { kind: "paragraph", inlines: [{ kind: "text", text: "First words." }] },
+    ]);
+  });
+
+  it("keeps a lead that is not text as it is", () => {
+    const { provenance } = draftBannerOf(
+      preambleOf("> **DRAFT**`code` after\n\n# T\n\n## One"),
+    );
+    expect(provenance?.[0]).toStrictEqual({ kind: "code", text: "code" });
+  });
+
+  it("has no banner for a text that opens otherwise", () => {
+    const preamble = preambleOf(
+      "> **Note:** DRAFT words.\n\n> **DRAFTSMAN** x\n\n# T\n\nPlain.\n\n## One",
+    );
+    expect(draftBannerOf(preamble)).toStrictEqual({
+      provenance: undefined,
+      rest: preamble,
+    });
+  });
+});
+
+describe("sectionText", () => {
+  it("reads a section's heading and every kind of block as plain words", () => {
+    const [section] = sectionsOf(
+      parseLegalDoc(
+        [
+          "# T",
+          "",
+          "## Weather **data**",
+          "",
+          "### Sub",
+          "",
+          "Para `code`.",
+          "",
+          "> Quote.",
+          "",
+          "- Item one",
+          "- [Item two](https://x.test)",
+          "",
+          "3. Third",
+          "",
+          "| Head | Two |",
+          "| ---- | --- |",
+          "| Cell | Last |",
+        ].join("\n"),
+      ).blocks,
+    ).sections;
+    if (section === undefined) throw new Error("no section");
+    expect(sectionText(section)).toBe(
+      "Weather data Sub Para code. Quote. Item one Item two Third Head Two Cell Last",
+    );
   });
 });

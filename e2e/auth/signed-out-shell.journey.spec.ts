@@ -1,7 +1,9 @@
 /**
- * Covers: the signed-out shell (round 21 item 23, round 22 Auth §2, X1) —
- * the landing bar at 720 and up, the hero's ask (Round 50 · 151a), no bar
- * below it, and no tab bar on any signed-out page. One journey, one video.
+ * Covers: the one signed-out frame (Round 55 · 176) — its bar at every
+ * width, Log in as text and Request access from 720, a page dropping its
+ * own ask, the landing hero's ask below 720 (175), the five-link footer,
+ * and the signed-out 404 in the frame (174). No tab bar on any signed-out
+ * page. One journey, one video.
  */
 import { expect, scene, test } from "../support/demo";
 
@@ -11,55 +13,61 @@ async function hydrated(page: import("@playwright/test").Page): Promise<void> {
     .waitFor({ state: "attached" });
 }
 
-test("the landing bar at width, nothing below it, and never a tab bar", async ({
+test("one signed-out frame: the bar at every width, the page's own ask, and never a tab bar", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1040, height: 760 });
   await page.goto("/");
   await hydrated(page);
 
-  await scene(page, "/ at 1040 · a wordmark and one action, Log in");
+  await scene(page, "/ at 1040 · the wordmark, Log in and Request access");
   const bar = page.locator("[data-slot='landing-bar']");
   await expect(bar).toBeVisible();
   await expect(bar.getByRole("link", { name: "Log in" })).toBeVisible();
+  await expect(bar.getByRole("link", { name: "Request access" })).toBeVisible();
   await expect(page.locator("[data-slot='top-bar']")).toHaveCount(0);
   await expect(page.locator("[data-slot='tab-bar']")).toHaveCount(0);
 
-  // Round 50 · 151a: the hero asks for access. Round 51 · 154.3: from 720
-  // the bar's Log in is enough, so the hero's line is not drawn here.
-  await scene(page, "The hero: Request access; Log in is the bar's");
+  // The bar holds Request access from 720, so the hero ends on the
+  // cross-link.
+  await scene(page, "The hero: Have a code? Create an account");
   const hero = page.getByRole("main");
+  await expect(hero.getByRole("link", { name: "Request access" })).toBeHidden();
+  await expect(
+    hero.getByRole("link", { name: "Create an account" }),
+  ).toHaveAttribute("href", "/join");
+  const footer = page.locator("[data-part='legal-footer']");
+  await expect(footer.getByRole("link")).toHaveCount(5);
+
+  // Below 720 the bar keeps the wordmark and Log in; the pill moves into
+  // the hero.
+  await scene(page, "Below 720 · the bar stays, the pill moves to the hero");
+  await page.setViewportSize({ width: 390, height: 760 });
+  await expect(bar).toBeVisible();
+  await expect(bar.getByRole("link", { name: "Request access" })).toBeHidden();
   await expect(
     hero.getByRole("link", { name: "Request access" }),
-  ).toHaveAttribute("href", "/account/request-access");
-  await expect(hero.getByText("Have an account?")).toBeHidden();
-
-  // Below 720 there is no bar, so the hero offers it.
-  await scene(page, "Below 720 · Request access, then Have an account? Log in");
-  await page.setViewportSize({ width: 390, height: 760 });
-  await expect(hero.getByText("Have an account?")).toBeVisible();
-  await expect(hero.getByRole("link", { name: "Log in" })).toBeVisible();
+  ).toBeVisible();
   await page.setViewportSize({ width: 1040, height: 760 });
 
-  await scene(page, "Auth takes the same bar, with no action");
+  await scene(page, "Log in drops its own Log in");
   await bar.getByRole("link", { name: "Log in" }).click();
   await expect(page).toHaveURL(/\/auth\/login/u);
   await hydrated(page);
-  await expect(bar).toBeVisible();
-  await expect(bar.getByRole("link")).toHaveCount(1);
   await expect(page.getByRole("heading", { name: "Log in" })).toBeVisible();
+  await expect(bar.getByRole("link", { name: "Log in" })).toHaveCount(0);
+  await expect(bar.getByRole("link", { name: "Request access" })).toBeVisible();
 
-  await scene(page, "Below 720 · no bar, the page's wordmark does it");
-  await page.setViewportSize({ width: 390, height: 760 });
-  await expect(bar).toBeHidden();
-  await expect(page.locator("main [data-part='wordmark']")).toBeVisible();
-
-  await scene(page, "A signed-out 404 · no bars, and the way out is Log in");
+  await scene(page, "A signed-out 404 · in the frame, the way out is Log in");
   await page.goto("/nowhere-at-all");
   await hydrated(page);
   await expect(
     page.getByRole("heading", { name: "Nothing here" }),
   ).toBeVisible();
+  await expect(bar).toBeVisible();
   await expect(page.locator("[data-slot='tab-bar']")).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Log in" })).toBeVisible();
+  await expect(
+    page.getByRole("main").getByRole("link", { name: "Log in" }),
+  ).toBeVisible();
+  await expect(footer.getByRole("link")).toHaveCount(5);
 });

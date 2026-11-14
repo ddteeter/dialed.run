@@ -17,6 +17,7 @@ import {
   FormErrorSummary,
   FormFailureBand,
   FormStatus,
+  Icon,
   Mono,
   PICKED_AUDIENCES,
   SlowLabel,
@@ -71,7 +72,12 @@ export function privacyRowValue(
 }
 
 /**
- * One tap-through row: the setting, what it is now, and the way in.
+ * One tap-through row: the setting, what it is now, and how it ends.
+ *
+ * R55·182.1's two kinds of row. A row that goes somewhere — every
+ * Settings index row — ends in a `--muted` chevron and no verb, its state
+ * in the subtitle. A row that does something — every Account row — ends
+ * in one bold `--cold-text` verb and no chevron.
  *
  * A slow sub-page keeps this screen up and breathes brackets on the row's
  * label (round 22 X3, in-screen links), as the bar breathes on a tab's.
@@ -82,6 +88,7 @@ function SettingsRow({
   label,
   value,
   verb,
+  tag,
 }: Readonly<{
   to: NonNullable<LinkProps["to"]>;
   /**
@@ -92,10 +99,13 @@ function SettingsRow({
   label: string;
   value: ReactNode;
   /**
-   * The verb before the "›" when there is something to do ("Answer",
-   * "Change"); a row that only opens something has the "›" alone.
-   */
-  verb?: string;
+  An Account row's verb ("Change"), which ends it in place of the chevron.
+  */
+  verb?: string | undefined;
+  /**
+  A pink MONO tag before the chevron: Privacy's REVIEW (R55·230).
+  */
+  tag?: string | undefined;
 }>): JSX.Element {
   const { isWaiting, onClick } = useTappedSlow();
   return (
@@ -108,19 +118,45 @@ function SettingsRow({
         data-state={isWaiting ? "navigating" : undefined}
         className="target flex items-center justify-between gap-3 border-b border-hairline py-3 text-ink no-underline"
       >
-        <span className="flex flex-col gap-1">
+        <span className="flex min-w-0 flex-col gap-1">
           <span className="text-body font-semibold">
             <SlowLabel label={label} isWaiting={isWaiting} />
           </span>
           <span className="text-small text-muted">{value}</span>
         </span>
-        <span className="shrink-0 text-body">
-          {verb === undefined ? undefined : `${verb} `}
-          {/* Drawn, not said: the link is already the way in. */}
-          <span aria-hidden="true">›</span>
-        </span>
+        <RowEnd verb={verb} tag={tag} />
       </Link>
     </li>
+  );
+}
+
+/**
+ * A row's end: the verb alone, or the tag (if any) and the chevron.
+ */
+function RowEnd({
+  verb,
+  tag,
+}: Readonly<{
+  verb: string | undefined;
+  tag: string | undefined;
+}>): JSX.Element {
+  if (verb !== undefined) {
+    return (
+      <span className="shrink-0 text-body font-bold text-cold-text">
+        {verb}
+      </span>
+    );
+  }
+  return (
+    <span className="flex shrink-0 items-center gap-2">
+      {tag === undefined ? undefined : (
+        <Mono step="xs" className="font-semibold text-cold-text">
+          {tag}
+        </Mono>
+      )}
+      {/* Drawn, not said: the link is already the way in. */}
+      <Icon name="forward" size={16} className="text-muted" />
+    </span>
   );
 }
 
@@ -162,17 +198,15 @@ function SettingsGroup({
 }
 
 /**
- * U1 · the index.
+ * What U1's index takes.
  */
-export function SettingsIndex({
-  current,
-  username,
-  blockedCount,
-  runReminderEmail,
-  display,
-  signOut,
-}: Readonly<{
+interface SettingsIndexProps {
   current: CurrentSettings;
+  /**
+   * Whether a privacy setting has been added or changed since the runner
+   * last opened Privacy: its row's REVIEW tag (R55·230).
+   */
+  isPrivacyReviewDue: boolean;
   /**
   The runner's handle, or nothing for an account that has not reached O0.
   */
@@ -188,10 +222,26 @@ export function SettingsIndex({
    */
   display: ReactNode;
   /**
-  The foot's Sign out, the route's to wire (it needs the router).
+  The foot's Sign out row, the route's to wire (it needs the router).
   */
   signOut: ReactNode;
-}>): JSX.Element {
+}
+
+/**
+ * U1 · the index.
+ */
+export function SettingsIndex(
+  props: Readonly<SettingsIndexProps>,
+): JSX.Element {
+  const {
+    current,
+    username,
+    blockedCount,
+    runReminderEmail,
+    display,
+    signOut,
+    isPrivacyReviewDue,
+  } = props;
   return (
     <div className="flex flex-col gap-6">
       <SettingsGroup title="You">
@@ -219,22 +269,22 @@ export function SettingsIndex({
           value={`${TEMP_WORDS[current.tempUnit]}, ${DISTANCE_WORDS[current.distanceUnit]}`}
         />
       </SettingsGroup>
+      {/* R55·230: Blocked runners and Notifications sit under WHO SEES
+          WHAT, after Privacy. */}
       <SettingsGroup title="Who sees what">
         <SettingsRow
           to="/onboarding/settings/$section"
           params={{ section: "sharing" }}
           label="Privacy"
           value={privacyRowValue(current)}
+          tag={isPrivacyReviewDue ? "Review" : undefined}
         />
-      </SettingsGroup>
-      <SettingsGroup title="Review">
         <SettingsRow
           to="/safety/blocked"
           params={{}}
           label="Blocked runners"
           value={`${String(blockedCount)} blocked`}
         />
-        {/* U1 draws Notifications under Review, after Blocked runners. */}
         <SettingsRow
           to="/account/$section"
           params={{ section: "notifications" }}
@@ -250,7 +300,11 @@ export function SettingsIndex({
           account and data groups." */}
       {/* A control, not a row that opens a page, so no list around it. */}
       <GroupSection title="Display" className="flex flex-col gap-1">
-        {display}
+        {/* The kicker over a rule, as the board draws it and as every
+            other group's rows are ruled (#630 F-05). */}
+        <div data-part="display-rule" className="border-t border-hairline pt-3">
+          {display}
+        </div>
       </GroupSection>
       <SettingsGroup title="Data">
         <SettingsRow
@@ -290,15 +344,20 @@ export function SettingsIndex({
           value="What dialed.run is built on"
         />
       </SettingsGroup>
-      {signOut}
+      {/* R55·182.2: Sign out is the index's last row, alone in its
+          group, with a rule above it as below. */}
+      <ul className="m-0 list-none border-t border-hairline p-0">
+        <li>{signOut}</li>
+      </ul>
     </div>
   );
 }
 
 /**
- * *"Unanswered calibration row: 'How you run' · 'Not answered' in --muted
- * · 'Answer ›'."* Answered, it states the answer and its offset, as U1
- * draws it — a runner is never made to open O1 to find out what they
+ * Unanswered, "How you run" · "Not answered", the state in the subtitle
+ * and the row ending in its chevron like every index row (R55·182.1, which
+ * dropped "Answer ›"). Answered, it states the answer and its offset, as
+ * U1 draws it — a runner is never made to open O1 to find out what they
  * picked.
  */
 function CalibrationRow({
@@ -316,7 +375,6 @@ function CalibrationRow({
         params={{}}
         label="How you run"
         value="Not answered"
-        verb="Answer"
       />
     );
   }
@@ -574,7 +632,12 @@ function SaveFoot({
         onRetry={form.retry}
         retryRef={form.retryRef}
       />
-      <SubmitButton label="Save" pendingLabel="Saving" pending={form.pending} />
+      <SubmitButton
+        label="Save"
+        pendingLabel="Saving"
+        pending={form.pending}
+        tone="ink"
+      />
     </>
   );
 }
@@ -733,6 +796,7 @@ export function AccountIndex({
           params={{}}
           label="Username"
           value={username === undefined ? "Not picked" : `@${username}`}
+          verb="Change"
         />
         {account.hasPassword ? (
           <SettingsRow
@@ -740,10 +804,13 @@ export function AccountIndex({
             params={{ section: "password" }}
             label="Password"
             value="Change the password you log in with"
+            verb="Change"
           />
         ) : undefined}
+        {/* R55·182.2: Sign out everywhere is the last SIGN-IN row,
+            "Every device". */}
+        <li>{signOutEverywhere}</li>
       </SettingsGroup>
-      {signOutEverywhere}
       {/* Round 27 #13: "Export your data" · Get a copy (ACC-10). */}
       <SettingsGroup title="Your data">{dataExport}</SettingsGroup>
       {deletion}

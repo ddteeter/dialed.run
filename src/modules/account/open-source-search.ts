@@ -100,3 +100,19 @@ export function readLabel(group: LicenceGroup): string {
     ? "Read the licence text"
     : `Read the ${group.name} licence`;
 }
+
+/**
+ * The third-party notices a search leaves (R55·225): each whose words —
+ * heading and text — contain what was typed, ignoring case and the spaces
+ * around it. A blank search leaves them all.
+ */
+export function matchingNotices<Notice>(
+  notices: readonly Notice[],
+  query: string,
+  wordsOf: (notice: Notice) => string,
+): readonly Notice[] {
+  const wanted = query.trim().toLowerCase();
+  return notices.filter((notice) =>
+    wordsOf(notice).toLowerCase().includes(wanted),
+  );
+}

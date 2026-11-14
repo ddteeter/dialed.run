@@ -196,6 +196,15 @@ describe("Au5 · Request access", () => {
     );
     const note = screen.getByLabelText("Note · optional");
     fireEvent.change(note, { target: { value: "n".repeat(141) } });
+    // R54·167.1: this surface's primary is the ink pill, never pink caps.
+    expect(screen.getByRole("button", { name: "Send request" })).toHaveClass(
+      "rounded-pill",
+      "bg-ink",
+      "text-ground",
+    );
+    expect(
+      screen.getByRole("button", { name: "Send request" }),
+    ).not.toHaveClass("bg-action");
     fireEvent.click(screen.getByRole("button", { name: "Send request" }));
     await waitFor(() => {
       expect(note).toHaveAttribute(
@@ -266,10 +275,16 @@ describe("Au5 · Request access", () => {
       },
     });
     const inReceipt = within(receipt ?? document.body);
-    expect(inReceipt.getByText("On the list")).toBeVisible();
-    expect(
-      inReceipt.getByRole("heading", { name: "You're on the list" }),
-    ).toBeVisible();
+    // The receipt takes the title (R55·181): a teal MONO.xs kicker, then
+    // its title as the page's one display heading.
+    expect(screen.getByText("On the list")).toHaveClass(
+      "text-dialed-text",
+      "text-mono-xs",
+    );
+    const title = screen.getByRole("heading", { level: 1 });
+    expect(title).toHaveTextContent("You're on the list");
+    expect(title).toHaveClass("font-display", "text-display");
+    expect(screen.getAllByRole("heading")).toHaveLength(1);
     expect(receipt).toHaveTextContent(
       "When there's room, we'll email a code to sam@example.com. There's nothing else to do until then.",
     );
@@ -372,7 +387,9 @@ describe("Au5 · Request access", () => {
       expect(found).not.toBeNull();
       return found;
     });
-    expect(receipt).toHaveTextContent("You're on the list");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "You're on the list",
+    );
     expect(receipt).toHaveTextContent(REGION_COPY.waitlist);
     // No way on to an account that would be refused, and no promise of a
     // code by email.

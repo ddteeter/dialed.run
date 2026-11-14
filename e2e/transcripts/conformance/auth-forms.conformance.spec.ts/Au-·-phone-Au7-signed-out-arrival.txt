@@ -1,6 +1,10 @@
 document
-main
+banner
+link, dialed.run home
 dialed.run
+end of link, dialed.run home
+end of banner
+main
 You were signed out
 Log in and you're back on your run. What you typed wasn't kept.
 heading, Log in, level 1

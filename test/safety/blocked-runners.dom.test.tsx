@@ -59,9 +59,33 @@ describe("what the screen leads with", () => {
     expect(
       screen.getByText(/not told\. Blocking is quiet/),
     ).toBeInTheDocument();
+    // The tinted closing note, its first sentence back (P3-10).
+    const note = screen.getByText(/Nothing here is a list anyone else can see/);
+    expect(note).toHaveTextContent(
+      "Unblocking takes effect immediately and doesn't re-follow anyone. Nothing here is a list anyone else can see.",
+    );
+    expect(note).toHaveAttribute("data-part", "blocked-note");
+    expect(note).toHaveClass("bg-tint");
+  });
+
+  it("draws the explanation as W2's card, each tag hanging in its own column (B-01)", () => {
+    render(<BlockedRunners blocked={[]} unblock={vi.fn()} />);
+    const card = screen
+      .getByRole("heading", { name: /what blocking does/i })
+      .closest("section");
+    expect(card).toHaveAttribute("data-part", "blocking-explained");
+    expect(card).toHaveClass("border", "rounded-card");
+    const lines = within(card ?? document.body).getAllByRole("listitem");
     expect(
-      screen.getByText(/Nothing here is a list anyone else can see/),
-    ).toBeInTheDocument();
+      lines.map((line) => line.firstElementChild?.textContent),
+    ).toStrictEqual(["[blocked]", "[blocked]", "[still]"]);
+    for (const line of lines) {
+      expect(line).toHaveClass("grid");
+    }
+    // The words sit in the second column, apart from the tag.
+    expect(lines[0]?.lastElementChild).toHaveTextContent(
+      /^They can't see your entries/u,
+    );
   });
 });
 
@@ -75,8 +99,26 @@ describe("the roster", () => {
     );
 
     expect(screen.getByText(bracketed("2 blocked"))).toBeInTheDocument();
-    expect(screen.getByText("j_holloway")).toBeInTheDocument();
-    expect(screen.getByText("gearfiend22")).toBeInTheDocument();
+    expect(screen.getByText("@j_holloway")).toBeInTheDocument();
+    expect(screen.getByText("@gearfiend22")).toBeInTheDocument();
+  });
+
+  it("draws each runner as W2's card row: bold handle, the day blocked, an outlined pill (B-01, P3-10)", () => {
+    render(<BlockedRunners blocked={[runner()]} unblock={vi.fn()} />);
+    const handle = screen.getByText("@j_holloway");
+    // Truncates rather than pushing Unblock off a phone (P3-09).
+    expect(handle).toHaveClass("font-bold", "truncate");
+    expect(handle.parentElement).toHaveClass("min-w-0", "flex-1");
+    // 1_755_000_000 is Aug 12 (UTC).
+    expect(screen.getByText("Blocked Aug 12")).toHaveClass("font-mono");
+    const row = handle.closest("li");
+    expect(row).toHaveAttribute("data-part", "blocked-row");
+    expect(row).toHaveClass("bg-panel", "border", "rounded-card");
+    expect(screen.getByRole("button", { name: "Unblock" })).toHaveClass(
+      "rounded-pill",
+      "border",
+      "shrink-0",
+    );
   });
 
   it("names a runner who has no display name without leaving a gap", () => {
@@ -100,7 +142,7 @@ describe("the roster", () => {
     // Both would imply the action is heavier than it is.
     expect(unblock).toHaveBeenCalledWith({ data: { userId: "u-1" } });
     await waitFor(() => {
-      expect(screen.queryByText("j_holloway")).not.toBeInTheDocument();
+      expect(screen.queryByText("@j_holloway")).not.toBeInTheDocument();
     });
     expect(screen.getByText(bracketed("0 blocked"))).toBeInTheDocument();
   });
@@ -119,9 +161,9 @@ describe("the roster", () => {
     await user.click(first);
 
     await waitFor(() => {
-      expect(screen.queryByText("j_holloway")).not.toBeInTheDocument();
+      expect(screen.queryByText("@j_holloway")).not.toBeInTheDocument();
     });
-    expect(screen.getByText("gearfiend22")).toBeInTheDocument();
+    expect(screen.getByText("@gearfiend22")).toBeInTheDocument();
   });
 });
 
@@ -137,7 +179,7 @@ describe("Unblock as a control that can fail (round 22, item 21)", () => {
 
     // Not optimistic: the row is still here, the button is busy and still
     // a live control, and its label breathes.
-    expect(screen.getByText("j_holloway")).toBeInTheDocument();
+    expect(screen.getByText("@j_holloway")).toBeInTheDocument();
     expect(button).toHaveAttribute("aria-busy", "true");
     expect(button).toHaveAttribute("aria-disabled", "true");
     expect(button).not.toHaveAttribute("disabled");
@@ -154,7 +196,7 @@ describe("Unblock as a control that can fail (round 22, item 21)", () => {
 
     answer.resolve({});
     await waitFor(() => {
-      expect(screen.queryByText("j_holloway")).not.toBeInTheDocument();
+      expect(screen.queryByText("@j_holloway")).not.toBeInTheDocument();
     });
   });
 
@@ -180,9 +222,9 @@ describe("Unblock as a control that can fail (round 22, item 21)", () => {
       return found;
     });
     // Inside the row that failed, not the other one and not the page.
-    const row = screen.getByText("j_holloway").closest("li");
+    const row = screen.getByText("@j_holloway").closest("li");
     expect(row).toContainElement(band);
-    expect(screen.getByText("gearfiend22").closest("li")).not.toContainElement(
+    expect(screen.getByText("@gearfiend22").closest("li")).not.toContainElement(
       band,
     );
     expect(band).toHaveTextContent("Still blocked");
@@ -206,7 +248,7 @@ describe("Unblock as a control that can fail (round 22, item 21)", () => {
     await user.click(await screen.findByRole("button", { name: "Try again" }));
 
     await waitFor(() => {
-      expect(screen.queryByText("j_holloway")).not.toBeInTheDocument();
+      expect(screen.queryByText("@j_holloway")).not.toBeInTheDocument();
     });
     expect(unblock).toHaveBeenCalledTimes(2);
     expect(unblock).toHaveBeenLastCalledWith({ data: { userId: "u-1" } });

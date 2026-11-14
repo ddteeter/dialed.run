@@ -32,6 +32,7 @@ import {
   BirthDateField,
   CredentialFields,
   InviteCodeField,
+  InviteOnlyLine,
   RequestAccessLink,
   SIGN_UP_LABELS,
   SignUpClosedHere,
@@ -100,6 +101,7 @@ function SignUp({
       closed={<AccountClosed />}
       turnstile={<span data-part="turnstile-slot" />}
       requestLink={<RequestAccessLink isInviteOnly={isInviteOnly} />}
+      intro={<InviteOnlyLine isInviteOnly={isInviteOnly} />}
       onSubmit={() => {
         void form.submit({ inviteCode, birthDate, email, password });
       }}
@@ -198,9 +200,13 @@ beforeEach(() => {
 describe("Au2 · invite stage at rest", () => {
   it("asks for the code first, says why, and offers Au5 under Google", async () => {
     await signUpPage();
-    expect(
-      screen.getByText("dialed.run is invite-only for now."),
-    ).toBeVisible();
+    // Round 55 · 178: TYPE.small in --quiet, 8 under the title — first in
+    // the form's column, pulled up from the panel's 28.
+    const why = screen.getByText("dialed.run is invite-only for now.");
+    expect(why).toBeVisible();
+    expect(why).toHaveClass("text-small", "text-quiet", "-mt-5");
+    expect(why).not.toHaveClass("text-body");
+    expect(part("form")?.firstElementChild).toBe(why);
     const fields = [...document.querySelectorAll("input")].map(
       (input) => input.name,
     );
@@ -210,9 +216,14 @@ describe("Au2 · invite stage at rest", () => {
       "email",
       "password",
     ]);
-    const link = screen.getByRole("link", { name: "Request access" });
+    const link = within(part("request-access") ?? document.body).getByRole(
+      "link",
+      { name: "Request access" },
+    );
     expect(link).toHaveAttribute("href", "/account/request-access");
     expect(part("request-access")).toHaveTextContent("No code? Request access");
+    // Left, with the legal lines: only the foot's cross-link is centred.
+    expect(part("request-access")).not.toHaveClass("text-center");
     expect(part("google-button")?.nextElementSibling).toBe(
       part("request-access"),
     );
@@ -300,6 +311,46 @@ describe("Au2 · submitting with a code", () => {
   });
 });
 
+describe("one band at a time (Round 55 · 177)", () => {
+  it("replaces the form's band with Google's when Google fails next, and Google's with the form's when the form is pressed again", async () => {
+    client.signUp.mockResolvedValue({
+      data: undefined,
+      error: { code: "TURNSTILE_REFUSED", status: 403 },
+    });
+    client.social.mockResolvedValue({
+      data: undefined,
+      error: { status: 503 },
+    });
+    const { user } = await signUpPage();
+    await fill(user, "DIAL-7K3P");
+    await user.click(screen.getByRole("button", { name: "Create account" }));
+    await waitFor(() => {
+      expect(part("failure-band")).not.toBeNull();
+    });
+
+    // Google fails next: its band, under its button, and the form's goes.
+    await user.click(
+      screen.getByRole("button", { name: "Continue with Google" }),
+    );
+    await waitFor(() => {
+      expect(part("control-failure")).toHaveTextContent(AUTH_COPY.google);
+    });
+    expect(part("failure-band")).toBeNull();
+    expect(screen.getByRole("status")).not.toHaveTextContent(TURNSTILE_REFUSED);
+    // The form's primary is itself again, not the form band's Try again.
+    expect(
+      screen.getByRole("button", { name: "Create account" }),
+    ).toBeInTheDocument();
+
+    // Pressing the form again clears Google's band.
+    await user.click(screen.getByRole("button", { name: "Create account" }));
+    await waitFor(() => {
+      expect(part("failure-band")).toHaveTextContent(TURNSTILE_REFUSED);
+    });
+    expect(part("control-failure")).toBeNull();
+  });
+});
+
 describe("Au2 · Google in the invite stage", () => {
   it("asks to sign up with the code and the Turnstile answer", async () => {
     client.social.mockResolvedValue({
@@ -326,7 +377,7 @@ describe("Au2 · Google in the invite stage", () => {
     );
   });
 
-  it("says a refused code in Google's band under it, with Request access and no retry, and Au6's words again for a later fault (round 28 #9)", async () => {
+  it("says a refused code in Google's band under it, with no link and no retry, and Au6's words again for a later fault (round 28 #9, R55·177)", async () => {
     client.social.mockResolvedValueOnce({
       data: undefined,
       error: { code: "INVITE_INVALID", status: 400 },
@@ -343,11 +394,10 @@ describe("Au2 · Google in the invite stage", () => {
     expect(band).toHaveTextContent("Not created");
     expect(band).toHaveAttribute("data-state", "refused");
     expect(band?.previousElementSibling).toBe(part("google-button"));
-    const requestAccess = within(band ?? document.body).getByRole("link", {
-      name: "Request access",
-    });
-    expect(requestAccess).toHaveAttribute("href", "/account/request-access");
-    expect(requestAccess).toHaveClass("target");
+    // R55·177: the band never repeats a line the page shows, and "No
+    // code? Request access" sits right under it.
+    expect(within(band ?? document.body).queryByRole("link")).toBeNull();
+    expect(band?.nextElementSibling).toBe(part("request-access"));
     // Pressing again cannot fix a refused code, so there is no Try again.
     expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
     expect(leave).not.toHaveBeenCalled();
@@ -383,29 +433,24 @@ describe("Au2 · Google in the invite stage", () => {
     const band = part("control-failure");
     expect(band).toHaveTextContent("Not logged in");
     expect(band).toHaveTextContent(AUTH_COPY.googleNoAccount);
-    expect(
-      within(band ?? document.body).getByRole("link", {
-        name: "Create an account",
-      }),
-    ).toHaveAttribute("href", "/auth/signup");
+    // R55·177: the page's own cross-link is the way, never the band's.
+    expect(within(band ?? document.body).queryByRole("link")).toBeNull();
     expect(AUTH_COPY.googleNoAccount).toBe(
       "No account uses that Google address. Create one first.",
     );
   });
 
   it.each([
-    ["INVITE_MISSING", AUTH_COPY.googleNoCode, false],
-    ["INVITE_INVALID", INVITE_COPY.invalid, true],
-    ["REGION_BLOCKED", REGION_BLOCKED_COPY, false],
+    ["INVITE_MISSING", AUTH_COPY.googleNoCode],
+    ["INVITE_INVALID", INVITE_COPY.invalid],
+    ["REGION_BLOCKED", REGION_BLOCKED_COPY],
   ])(
     "says a new Google account's %s from the round trip as round 28 #9 draws it",
-    async (error, message, linksRequestAccess) => {
+    async (error, message) => {
       await signUpPage({ returnedError: error });
       const band = part("control-failure");
       expect(band).toHaveTextContent(`Not created${message}`);
-      expect(within(band ?? document.body).queryByRole("link") !== null).toBe(
-        linksRequestAccess,
-      );
+      expect(within(band ?? document.body).queryByRole("link")).toBeNull();
       expect(AUTH_COPY.googleNoCode).toBe(
         "Enter your invite code above, then continue with Google.",
       );
@@ -568,7 +613,9 @@ describe("Au2 · on load in a closed state (round 39 #69)", () => {
     const ask = screen.getByRole("link", { name: "Ask for access" });
     expect(ask).toHaveAttribute("href", "/account/request-access");
     expect(ask).toHaveClass("target", "bg-ink", "text-ground", "rounded-pill");
-    const logIn = screen.getByRole("link", { name: "Log in" });
+    const logIn = within(screen.getByRole("main")).getByRole("link", {
+      name: "Log in",
+    });
     expect(logIn).toHaveAttribute("href", "/auth/login");
     expect(logIn.closest("p")).toHaveTextContent("Have an account? Log in");
     // The band, then Ask for access, then Log in.

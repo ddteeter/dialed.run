@@ -71,6 +71,12 @@ describe("the question", () => {
         name: "Compared to people you run with, do you run warm or cold?",
       }),
     ).toBeInTheDocument();
+    // R55·227: the legend asks, so it is set at TYPE.heading, not mono.
+    const legend = screen.getByText(
+      "Compared to people you run with, do you run warm or cold?",
+      { selector: "legend" },
+    );
+    expect(legend).toHaveClass("font-display", "text-heading");
     const offsets: readonly (readonly [string, string])[] = [
       ["Always freezing", "+8\u{00B0}"],
       ["Run a little cold", "+4\u{00B0}"],
@@ -277,16 +283,97 @@ describe("where you run: Find, then Use this (round 26 #12)", () => {
     expect(lookUpCity).not.toHaveBeenCalled();
   });
 
-  it("brings the field back empty on Change city", async () => {
+  it("brings the field back empty on the chip's ×, the one way out (R55·228 (d))", async () => {
     const { user } = renderForm({ lookUpCity: () => Promise.resolve(FOUND) });
     await user.type(screen.getByLabelText("Where you run"), "Minneapolis");
     await user.click(screen.getByRole("button", { name: "Find" }));
     await user.click(await screen.findByRole("button", { name: "Use this" }));
 
-    await user.click(screen.getByRole("button", { name: "Change city" }));
+    expect(screen.queryByRole("button", { name: "Change city" })).toBeNull();
+    await user.click(
+      screen.getByRole("button", {
+        name: "Remove Minneapolis, MN, United States",
+      }),
+    );
 
     expect(screen.getByLabelText("Where you run")).toHaveValue("");
     expect(document.querySelector("[data-part='city-chip']")).toBeNull();
+  });
+
+  it("names the place by city, region and country, one line at field height (R55·228)", async () => {
+    const { user, save } = renderForm({
+      lookUpCity: () =>
+        Promise.resolve({
+          ...FOUND,
+          address: "Minneapolis, Hennepin County, Minnesota, United States",
+        }),
+    });
+    await user.type(screen.getByLabelText("Where you run"), "Minneapolis");
+    await user.click(screen.getByRole("button", { name: "Find" }));
+    await user.click(await screen.findByRole("button", { name: "Use this" }));
+
+    const chip = document.querySelector("[data-part='city-chip']");
+    expect(chip?.firstElementChild).toHaveTextContent(
+      /^Minneapolis, MN, United States$/u,
+    );
+    expect(chip?.firstElementChild).toHaveClass("truncate", "uppercase");
+    expect(chip).toHaveClass("min-h-field", "max-w-full", "items-center");
+    expect(
+      screen.getByRole("button", {
+        name: "Remove Minneapolis, MN, United States",
+      }),
+    ).toHaveClass("shrink-0");
+    // The chip's words only: what is saved is the provider's.
+    await user.click(screen.getByLabelText(/^About average/u));
+    await user.click(submit());
+    expect(save.mock.calls[0]?.[0]).toMatchObject({
+      data: {
+        cityLabel: "Minneapolis, Hennepin County, Minnesota, United States",
+      },
+    });
+  });
+
+  it("takes the form's Press Find message away once Find has a place (R55·228 (a))", async () => {
+    const answer = Promise.withResolvers<CityLookup>();
+    const { user } = renderForm({ lookUpCity: () => answer.promise });
+    await user.type(screen.getByLabelText("Where you run"), "Minneapolis");
+    await user.click(screen.getByLabelText(/^About average/u));
+    await user.click(submit());
+    await screen.findByText("Press Find, or clear the field to skip.");
+
+    await user.click(screen.getByRole("button", { name: "Find" }));
+    // Still there while Find is out: only an answer clears it.
+    expect(
+      screen.getByText("Press Find, or clear the field to skip."),
+    ).toBeVisible();
+    await act(async () => {
+      answer.resolve(FOUND);
+      await answer.promise;
+    });
+
+    expect(
+      await screen.findByRole("button", { name: "Use this" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByText("Press Find, or clear the field to skip."),
+    ).toBeNull();
+  });
+
+  it("keeps the form's message when Find finds nothing", async () => {
+    const { user } = renderForm({
+      lookUpCity: () => Promise.resolve({ kind: "unavailable" }),
+    });
+    await user.type(screen.getByLabelText("Where you run"), "Minneapolis");
+    await user.click(screen.getByLabelText(/^About average/u));
+    await user.click(submit());
+    await screen.findByText("Press Find, or clear the field to skip.");
+
+    await user.click(screen.getByRole("button", { name: "Find" }));
+
+    await screen.findByText("Not found yet");
+    expect(
+      screen.getByText("Press Find, or clear the field to skip."),
+    ).toBeVisible();
   });
 
   it("removes the chip by its named remove button too", async () => {
@@ -344,6 +431,9 @@ describe("Use my location (round 22, item 19)", () => {
     expect(locateButton()).not.toHaveAttribute("disabled");
     expect(locateButton().querySelectorAll(".breathe")).toHaveLength(2);
     expect(locateButton()).toHaveClass("underline");
+    // Its words start at the column's edge, not centred in the pending
+    // label's width (#630 F-08).
+    expect(locateButton().firstElementChild).toHaveClass("justify-items-start");
 
     await act(async () => {
       answer.resolve({ lat: 44.98, lng: -93.27 });
@@ -399,6 +489,8 @@ describe("Use my location (round 22, item 19)", () => {
       "Location’s off. Type your city instead.",
     );
     expect(line).toHaveClass("text-quiet");
+    // Directly under the action it answers (R55·228 (b)).
+    expect(locateButton().nextElementSibling).toBe(line);
     expect(line.className).not.toMatch(/failure|hiviz/u);
     await waitFor(() => {
       expect(screen.getByLabelText("Where you run")).toHaveFocus();
@@ -432,6 +524,19 @@ describe("Use my location (round 22, item 19)", () => {
       second.resolve(undefined);
       await second.promise;
     });
+  });
+
+  it("lets the denied line go once a city is typed (R55·228 (b))", async () => {
+    const { user } = renderForm({ locate: () => Promise.resolve(undefined) });
+    await user.click(locateButton());
+    await screen.findByText("Location’s off. Type your city instead.");
+
+    await user.type(screen.getByLabelText("Where you run"), "M");
+
+    expect(
+      screen.queryByText("Location’s off. Type your city instead."),
+    ).toBeNull();
+    expect(screen.getByLabelText("Where you run")).toHaveValue("M");
   });
 
   it("stops breathing and says so when the browser cannot even ask", async () => {

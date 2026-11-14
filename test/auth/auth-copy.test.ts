@@ -65,15 +65,9 @@ describe("authFailure", () => {
     expect(refusal.name).toBe("AccessRefused");
     expect(refusal).toMatchObject({ kicker: "Kicker", message: "Words." });
     expect(refusal.retry).toBeUndefined();
-    expect(refusal.link).toBeUndefined();
     expect(
-      new AccessRefused({
-        kicker: "Kicker",
-        message: "Words.",
-        retry: false,
-        link: "create-account",
-      }),
-    ).toMatchObject({ retry: false, link: "create-account" });
+      new AccessRefused({ kicker: "Kicker", message: "Words.", retry: false }),
+    ).toMatchObject({ retry: false });
   });
 
   it("has nothing to say when nothing failed", () => {
@@ -113,21 +107,21 @@ describe("GOOGLE_REFUSALS", () => {
     });
   });
 
-  it("offers no Try again for a refused code, and points at Request access", () => {
+  // Round 55 · 177: no band names a page, because the page under it
+  // already does ("No code? Request access", "New here? Create an account").
+  it("offers no Try again for a refused code, and points nowhere", () => {
     expect(GOOGLE_REFUSALS.get(ACCESS_CODES.invalid)).toStrictEqual({
       kicker: NOT_CREATED,
       message: INVITE_COPY.invalid,
       retry: false,
-      link: "request-access",
     });
   });
 
-  it("offers no Try again for a Google address with no account, and points at Create an account", () => {
+  it("offers no Try again for a Google address with no account, and points nowhere", () => {
     expect(GOOGLE_REFUSALS.get(SIGNUP_DISABLED)).toStrictEqual({
       kicker: NOT_LOGGED_IN,
       message: AUTH_COPY.googleNoAccount,
       retry: false,
-      link: "create-account",
     });
   });
 });

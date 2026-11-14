@@ -19,7 +19,12 @@ export const HANDLE_COPY = {
   /**
   What O0 and Settings add after the rule. A moderator's re-pick (round 27 #16) says the rule alone.
   */
-  ruleReason: "It's on everything you share. You can change it in settings.",
+  ruleReason: "It's on everything you share.",
+  /**
+   * O0's last sentence. Settings › Username is where it points, so that
+   * page does not say it (B-16; owner, 2026-11-13).
+   */
+  changeLater: "You can change it in settings.",
 } as const;
 
 /**

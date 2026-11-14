@@ -29,6 +29,13 @@
       "when": 1794350695705,
       "tag": "0003_add_system_account",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1794587790321,
+      "tag": "0004_add_user_privacy_seen_at",
+      "breakpoints": true
     }
   ]
 }

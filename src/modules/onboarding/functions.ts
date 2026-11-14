@@ -9,6 +9,7 @@ import { getRequestHeaders } from "@tanstack/react-start/server";
 
 import { coreDb, waitUntil } from "../../env";
 import { cityLookupInput } from "../../lib/contracts/city-lookup";
+import { nowSeconds } from "../../lib/now";
 import { optionalUserId, requireUserId, verifiedUserId } from "../auth";
 import { nameItem } from "../closet";
 import { coverageLadder } from "../feed";
@@ -35,6 +36,7 @@ import {
 } from "./profile";
 import { saveSharing, setPublicProfile } from "./public-profile";
 import { namedResult, namingOffer, namingSuggestions } from "./naming";
+import { isPrivacyReviewDue, markPrivacySeen } from "./privacy-review";
 import { starterList } from "./starter-list";
 import { unitsFromLocale } from "./units-from-locale";
 
@@ -144,6 +146,22 @@ export const setCountInTotalsFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) =>
     setCountInTotals(db(), await requireUserId(), data),
   );
+
+/**
+ * U1's REVIEW tag on Privacy (R55·230): the runner's own state, seen by
+ * nobody else, so `settingsQuery`'s class.
+ */
+export const isPrivacyReviewDueQuery = createServerFn({ method: "GET" }).handler(
+  async () => isPrivacyReviewDue(db(), await requireUserId()),
+);
+
+/**
+ * Opening Privacy clears its REVIEW tag (R55·230). The runner's own
+ * state, so an unconfirmed runner stamps it too.
+ */
+export const markPrivacySeenFn = createServerFn({ method: "POST" }).handler(
+  async () => markPrivacySeen(db(), await requireUserId(), nowSeconds()),
+);
 
 /**
  * Find (round 26 #12): resolves a typed city once, when the runner presses

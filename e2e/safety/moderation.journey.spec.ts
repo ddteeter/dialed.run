@@ -343,7 +343,7 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   await expect(
     rows
       .filter({ hasText: "We removed the photo of one of your garments." })
-      .locator("p"),
+      .locator("[data-part='notification-body']"),
   ).toHaveText(
     "We removed the photo of one of your garments. Reason: it's sexual or explicit.",
   );

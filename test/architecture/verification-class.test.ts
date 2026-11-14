@@ -246,6 +246,10 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   // runner may opt out (owner, 2026-10-11).
   "onboarding/functions.ts setCountInTotalsFn": "unconfirmed",
   "onboarding/functions.ts lookUpCityFn": "unconfirmed",
+  // R55·230: Privacy's REVIEW tag and the stamp that clears it, the
+  // runner's own state seen by nobody else (settingsQuery's class).
+  "onboarding/functions.ts isPrivacyReviewDueQuery": "unconfirmed",
+  "onboarding/functions.ts markPrivacySeenFn": "unconfirmed",
   "onboarding/functions.ts requiresOnboardingQuery": "sessionless",
   "onboarding/functions.ts namingOfferQuery": "unconfirmed",
   // Q1: closet's clamp, as createItemFn.

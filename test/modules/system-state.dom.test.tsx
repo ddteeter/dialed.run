@@ -7,7 +7,7 @@ import {
   createRouter,
   notFound,
 } from "@tanstack/react-router";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import type { ReactElement } from "react";
@@ -83,15 +83,43 @@ describe("X1 · not found", () => {
     expect(state()).not.toHaveTextContent("[");
   });
 
-  it("has no bars at all signed out, and the way out is Log in", async () => {
+  it("wears the one signed-out frame signed out, and the way out is the ink Log in (R55·174)", async () => {
     await renderAt(<NotFoundState signedIn={false} />);
 
     expect(tabBar()).toBeNull();
     expect(document.querySelector("[data-slot='top-bar']")).toBeNull();
-    expect(document.querySelector("[data-slot='landing-bar']")).toBeNull();
-    const logIn = screen.getByRole("link", { name: "Log in" });
+    expect(document.querySelector("[data-slot='landing-bar']")).not.toBeNull();
+    expect(document.querySelector("[data-part='legal-footer']")).not.toBeNull();
+    // X1's body in the 620 column, centred, 96 under the bar at width.
+    const main = screen.getByRole("main");
+    expect(main).toHaveClass(
+      "flex-1",
+      "px-5",
+      "pt-12",
+      "wide:px-6",
+      "wide:pt-24",
+    );
+    expect(state()?.parentElement).toHaveClass("mx-auto", "max-w-column");
+    expect(state()?.parentElement?.parentElement).toBe(main);
+    const logIn = within(main).getByRole("link", { name: "Log in" });
     expect(logIn).toHaveAttribute("href", "/auth/login");
-    expect(logIn).toHaveClass("rounded-pill", "border-hairline", "text-ink");
+    expect(logIn).toHaveClass(
+      "target",
+      "rounded-pill",
+      "bg-ink",
+      "text-ground",
+      "self-stretch",
+      "wide:self-start",
+    );
+    expect(logIn).not.toHaveClass("border-hairline");
+    // The phone's cross-link; at width the bar already offers it.
+    const ask = within(main).getByRole("link", { name: "Request access" });
+    expect(ask).toHaveAttribute("href", "/account/request-access");
+    expect(ask).toHaveClass("font-bold", "text-ink", "underline");
+    expect(ask.parentElement).toHaveTextContent(
+      /^No account\? Request access$/u,
+    );
+    expect(ask.parentElement).toHaveClass("text-quiet", "wide:hidden");
     expect(screen.queryByRole("link", { name: "Go to your feed" })).toBeNull();
     expect(screen.getByText("404").parentElement).toHaveAttribute(
       "aria-hidden",
@@ -109,7 +137,8 @@ describe("X1 · not found", () => {
       <NotFoundState
         signedIn
         subject={{
-          sentence: "That piece isn't in your closet. It may have been deleted.",
+          sentence:
+            "That piece isn't in your closet. It may have been deleted.",
           to: "/closet",
           label: "Go to your closet",
           width: "column",
@@ -143,10 +172,13 @@ describe("X1 · not found", () => {
         }}
       />,
     );
-    expect(
-      screen.getByRole("link", { name: "Go to your runs" }),
-    ).toHaveAttribute("href", "/runs");
-    expect(screen.queryByRole("link", { name: "Log in" })).toBeNull();
+    const main = within(screen.getByRole("main"));
+    expect(main.getByRole("link", { name: "Go to your runs" })).toHaveAttribute(
+      "href",
+      "/runs",
+    );
+    expect(main.queryByRole("link", { name: "Log in" })).toBeNull();
+    expect(main.queryByRole("link", { name: "Request access" })).toBeNull();
   });
 });
 
@@ -292,7 +324,7 @@ async function routedApp({
     getParentRoute: () => rootRoute,
     path: "/closet",
     // A page with a name, so a loader's refusal that named it would show.
-    staticData: { savedPage: "Closet" },
+    staticData: { savedPage: "Closet", title: "Closet" },
     loader: () => {
       if (failWith) throw failWith;
     },
@@ -312,8 +344,54 @@ async function routedApp({
     path: "/auth/login",
     component: () => <p>the log-in page</p>,
   });
+  // A titled screen whose loader fails once, then reads.
+  let flakyLoads = 0;
+  const flaky = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/flaky",
+    staticData: { title: "Flaky" },
+    loader: () => {
+      flakyLoads += 1;
+      if (flakyLoads === 1) throw new Error("once");
+    },
+    component: () => <p>flaky read</p>,
+  });
+  // A screen with no title of its own, whose loader fails too.
+  const untitled = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/untitled",
+    loader: () => {
+      if (failWith) throw failWith;
+    },
+    component: () => <p>untitled</p>,
+  });
+  // A titled layout whose loader fails, over a titled child that does not:
+  // X2 keeps the failed one's title.
+  const shell = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/shell",
+    staticData: { title: "Shell" },
+    loader: () => {
+      if (failWith) throw failWith;
+    },
+    component: () => <Outlet />,
+  });
+  const inner = createRoute({
+    getParentRoute: () => shell,
+    path: "/inner",
+    staticData: { title: "Inner" },
+    component: () => <p>inner</p>,
+  });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([closet, gone, login, terms]),
+    routeTree: rootRoute.addChildren([
+      closet,
+      gone,
+      login,
+      terms,
+      untitled,
+      flaky,
+      shell.addChildren([inner]),
+    ]),
     history: createMemoryHistory({ initialEntries: [path] }),
     defaultNotFoundComponent: () => <NotFound loadBell={loadBell} />,
     defaultErrorComponent: (props) => (
@@ -330,6 +408,68 @@ A bell the test can find, standing in for `NotificationBell`.
 */
 const BELL = "the bell";
 const bellIs = () => screen.queryAllByText(BELL);
+
+describe("X2 keeps the failed screen's first row (R55·186)", () => {
+  it("draws its title, then the bell at the row's end, and the band under it", async () => {
+    await routedApp({
+      signedIn: true,
+      path: "/closet",
+      failWith: new Error("D1 down"),
+      loadBell: () => Promise.resolve(BELL),
+    });
+    await screen.findByText("Our end failed. Your closet is fine.");
+    const row = document.querySelector("[data-part='first-row']");
+    const title = within(row as HTMLElement).getByText("Closet");
+    expect(title).toHaveClass(
+      "m-0",
+      "mr-auto",
+      "font-display",
+      "text-display",
+      "uppercase",
+    );
+    expect(row?.firstElementChild).toBe(title);
+    expect(row).toHaveClass("flex", "items-center", "justify-end", "gap-3");
+    await waitFor(() => {
+      expect(row?.lastElementChild).toHaveTextContent(BELL);
+    });
+    expect(row?.nextElementSibling).toHaveAttribute(
+      "data-part",
+      "failure-band",
+    );
+    expect(state()).toHaveClass("flex", "flex-col", "gap-4");
+  });
+
+  it("lets the screen back in once Try again reads, with nothing left failed", async () => {
+    const user = userEvent.setup();
+    await routedApp({ signedIn: true, path: "/flaky" });
+    expect(await screen.findByText("Flaky", { selector: "p" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByText("flaky read")).toBeVisible();
+    expect(document.querySelector("[data-part='first-row']")).toBeNull();
+  });
+
+  it("keeps the bell's row alone for a screen with no title", async () => {
+    await routedApp({
+      signedIn: true,
+      path: "/untitled",
+      failWith: new Error("D1 down"),
+    });
+    await screen.findByText("Our end failed.");
+    const row = document.querySelector("[data-part='first-row']");
+    expect(row?.children).toHaveLength(0);
+  });
+
+  it("keeps the title of the screen being gone to, whichever loader on the way failed", async () => {
+    await routedApp({
+      signedIn: true,
+      path: "/shell/inner",
+      failWith: new Error("D1 down"),
+    });
+    await screen.findByText("Our end failed.");
+    const row = document.querySelector("[data-part='first-row']");
+    expect(row).toHaveTextContent(/^Inner$/u);
+  });
+});
 
 describe("the router's defaults", () => {
   it("frame an unknown path by the root's signed-in answer", async () => {

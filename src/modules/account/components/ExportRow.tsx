@@ -46,7 +46,9 @@ function subLine(
 }
 
 /**
- * U1's "Export your data" row (ACC-10; round 27 #13): Get a copy queues
+ * U1's "Export your data" row (ACC-10; round 27 #13), ending, as every
+ * Account row does, in one bold `--cold-text` verb (R55·182.1): Get a
+ * copy, Try again, or Download. Get a copy queues
  * the ZIP, and the row turns to `[ Preparing ]` and "We'll email a link
  * when it's ready." One a day: on the day a copy is ready the row offers
  * it instead. A control outside a form, so `useControlAction`'s — with a
@@ -132,7 +134,7 @@ function ExportAction({
         params={{ token: state.token }}
         reloadDocument
         download
-        className="target shrink-0 text-body font-semibold text-ink underline underline-offset-4"
+        className="target shrink-0 text-body font-bold text-cold-text no-underline"
       >
         Download
       </Link>
@@ -143,7 +145,7 @@ function ExportAction({
       type="button"
       {...inFlight(pending)}
       onClick={onRequest}
-      className="target shrink-0 cursor-pointer border-none bg-transparent p-0 text-body text-ink"
+      className="target shrink-0 cursor-pointer border-none bg-transparent p-0 text-body font-bold text-cold-text"
     >
       <PendingLabel
         label={state.state === "failed" ? "Try again" : "Get a copy"}

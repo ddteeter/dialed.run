@@ -3,12 +3,20 @@ banner
 link, dialed.run home, current page
 dialed.run
 end of link, dialed.run home, current page
-link, Your closet
+link, Log in
+link, Request access
 end of banner
 main
 heading, Every run has an outfit. Log it., level 1
+Every run has an outfit.
+Log it.
+end of heading, Every run has an outfit. Log it., level 1
 paragraph
 A virtual wardrobe for runners: what you wore, on which run, in which weather.
+end of paragraph
+paragraph
+Have a code?
+link, Create an account
 end of paragraph
 end of main
 contentinfo

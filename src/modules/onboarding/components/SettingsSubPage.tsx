@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { JSX, ReactNode } from "react";
 
 import { Icon, Page } from "../../../ui";
@@ -128,6 +128,11 @@ type SectionPageProps = Readonly<{
   The username form Privacy's sheet holds for a runner with no handle yet.
   */
   pickUsername: PickUsernameForm;
+  /**
+   * Opening Privacy clears U1's REVIEW tag (R55·230). A stamp nobody
+   * waits for: if it fails the tag stays, and the page works the same.
+   */
+  markPrivacySeen: () => Promise<unknown>;
 }>;
 
 /**
@@ -169,7 +174,9 @@ function PrivacySections({
   saveCountInTotals,
   savePublicProfile,
   pickUsername,
+  markPrivacySeen,
 }: SectionPageProps): JSX.Element {
+  useStampOnOpen(markPrivacySeen);
   const [profile, setProfile] = useState({
     publicProfile: current.publicProfile,
     publicCloset: current.publicCloset,
@@ -224,6 +231,28 @@ function PrivacySections({
       </SubPageGroup>
     </>
   );
+}
+
+/**
+ * Stamps Privacy as seen once it opens (R55·230). On opening, not in the
+ * loader: a link preloads its page on hover, and a hover is not a visit.
+ */
+function useStampOnOpen(stamp: () => Promise<unknown>): void {
+  useEffect(() => {
+    void stampQuietly(stamp);
+  }, [stamp]);
+}
+
+/**
+ * A stamp that fails leaves the tag up and the page as it is (law 5): the
+ * next visit stamps it again.
+ */
+async function stampQuietly(stamp: () => Promise<unknown>): Promise<void> {
+  try {
+    await stamp();
+  } catch {
+    // Nothing to tell the runner: Privacy works the same either way.
+  }
 }
 
 /**

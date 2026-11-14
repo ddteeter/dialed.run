@@ -56,8 +56,18 @@ function buildPart(part: string): string {
   return part === "google" ? "google-button" : part;
 }
 
+/**
+ * The board's panel wordmark, which the build no longer draws: Round 55 ·
+ * 176 gives the signed-out frame one wordmark, the bar's ("so there is
+ * one"), at every width.
+ */
+const SUPERSEDED = "wordmark";
+
 async function boardParts(page: Page, label: string): Promise<string[]> {
-  const parts = await partsExcept(page, screen(label), [...UNMARKED]);
+  const parts = await partsExcept(page, screen(label), [
+    ...UNMARKED,
+    SUPERSEDED,
+  ]);
   return parts.map((part) => buildPart(part));
 }
 
@@ -88,11 +98,14 @@ async function drawn(
     // The board's Google button leads with a typed "G" in a ring; the
     // build carries Google's official image instead (owner, PR #104), so
     // that letter is not text in the build and is set aside here.
+    // The board's header holds its panel wordmark, superseded above.
+    const superseded = new Set(
+      await wordsOf(page, `${screen(label)} [data-part='${SUPERSEDED}']`),
+    );
+    const kept = drawnWords.filter((word) => !superseded.has(word));
     words.set(
       buildPart(part),
-      part === "google" && drawnWords[0] === "G"
-        ? drawnWords.slice(1)
-        : drawnWords,
+      part === "google" && kept[0] === "G" ? kept.slice(1) : kept,
     );
   }
   return { order, words };
@@ -139,7 +152,12 @@ test.describe("Au · phone", () => {
     // the primary (round 27 #12) and "No code? Request access" under
     // Google. Everything round 22 drew is still in its order around them.
     expect(
-      await partsExcept(page, PANEL, ["turnstile", "request-access"]),
+      // R55·178's invite-only line is the build's own part, inside the form.
+      await partsExcept(page, PANEL, [
+        "turnstile",
+        "request-access",
+        "invite-only",
+      ]),
     ).toEqual(board.order);
     const parts = await partsIn(page, PANEL);
     expect(parts.indexOf("request-access")).toBe(
@@ -373,26 +391,25 @@ test.describe("Au · phone", () => {
   });
 });
 
-test("Au2 at 1040: the landing bar with no action, the panel beneath", async ({
+test("Au2 at 1040: the one signed-out frame's bar, the panel beneath", async ({
   page,
-  baseURL,
 }) => {
-  if (baseURL === undefined) throw new Error("no baseURL");
-  const label = "Au2 Log in 1040";
-  await openBoard(page, BOARD, baseURL);
-  const order = await boardParts(page, label);
-  const bar = await wordsOf(page, `${screen(label)} [data-part='top-bar']`);
-
   await page.setViewportSize({ width: 1040, height: 900 });
   await page.goto("/auth/login");
   await hydrated(page);
 
-  // The bar and the panel, in that order; the panel's own wordmark is
-  // gone ("so there is one"), and no action sits in the bar.
+  // Round 55 · 176 replaced Au2's bar: the bar, then the panel; the
+  // panel's own wordmark is gone ("so there is one"), and on the log-in
+  // page the bar drops its own Log in and keeps Request access.
   const built = await partsIn(page, "body");
-  expect(built.slice(0, 3)).toEqual(order.slice(0, 3));
+  expect(built.slice(0, 3)).toEqual(["top-bar", "wordmark", "bar-actions"]);
   expect(built.filter((part) => part === "wordmark")).toHaveLength(1);
-  expect(built).not.toContain("bar-actions");
-  expect(await wordsOf(page, "[data-part='top-bar']")).toEqual(bar);
+  expect(await wordsOf(page, "[data-part='top-bar']")).toEqual([
+    "[",
+    "DIALED",
+    ".RUN",
+    "]",
+    "REQUEST ACCESS",
+  ]);
   await expect(page.locator("[data-slot='tab-bar']")).toBeHidden();
 });

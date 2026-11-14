@@ -7,6 +7,7 @@ import {
   holderOf,
   holdersOf,
   licenceOf,
+  reflowed,
   sameWords,
   shippedList,
   toolList,
@@ -111,6 +112,10 @@ describe("holderOf", () => {
     "Copyright (c)",
     "Copyright (c) <a@b.c>",
     "(c) the Licensor may",
+    // Apache 2.0's third condition, not a holder.
+    "      (c) You must retain, in the Source form of any Derivative Works",
+    "(c) You keep it for 3 years",
+    "(C) Your Name",
     "Permission is hereby granted",
     "",
   ])("finds no holder in %j", (line) => {
@@ -464,5 +469,69 @@ describe("cssBanners", () => {
         "/* tailwindcss v4.3.3 | MIT */ /*! just a note */ /*! x vNext | y */",
       ),
     ).toEqual([]);
+  });
+});
+
+describe("reflowed (A-12)", () => {
+  it("joins a paragraph's lines, and a blank line or a rule ends one", () => {
+    expect(
+      reflowed(
+        "Permission is hereby granted,\n  free of charge.\n\nTHE SOFTWARE IS\nPROVIDED AS IS.\n-----\nLast.",
+      ),
+    ).toEqual([
+      "Permission is hereby granted, free of charge.",
+      "THE SOFTWARE IS PROVIDED AS IS.",
+      "Last.",
+    ]);
+  });
+
+  it("starts a numbered, lettered or bulleted item on its own", () => {
+    expect(
+      reflowed(
+        "Conditions:\n1. Keep the notice\n   in copies.\nsee clause 2. below\n1.2. Sub\n1.12. Two digits\n(a) Letter\n(B) Upper\n(iv) Roman\n(12) Twelve\n- Bullet\n* Star\n• Dot\n2004 is a year",
+      ),
+    ).toEqual([
+      "Conditions:",
+      "1. Keep the notice in copies. see clause 2. below",
+      "1.2. Sub",
+      "1.12. Two digits",
+      "(a) Letter",
+      "(B) Upper",
+      "(iv) Roman",
+      "(12) Twelve",
+      "- Bullet",
+      "* Star",
+      "• Dot",
+      "2004 is a year",
+    ]);
+  });
+
+  it("sets a short heading in capitals apart, but not a disclaimer's last line", () => {
+    expect(reflowed("PREAMBLE\nThe goals of the licence.")).toEqual([
+      "PREAMBLE",
+      "The goals of the licence.",
+    ]);
+    expect(reflowed("IN NO EVENT SHALL THE\nSOFTWARE.")).toEqual([
+      "IN NO EVENT SHALL THE SOFTWARE.",
+    ]);
+    // Forty characters or more in capitals is a sentence, not a heading.
+    const long = "A".repeat(40);
+    expect(reflowed(`${long}\nmore`)).toEqual([`${long} more`]);
+    expect(reflowed(`${"A".repeat(39)}\nmore`)).toEqual([
+      "A".repeat(39),
+      "more",
+    ]);
+    // A line with a lowercase letter is not a heading.
+    expect(reflowed("Preamble\nmore")).toEqual(["Preamble more"]);
+    // Only a paragraph's one line is a heading.
+    expect(reflowed("AB\nCD\nmore")).toEqual(["AB CD more"]);
+  });
+
+  it("reads a rule only as a whole line of dashes or the like", () => {
+    expect(reflowed("Words ---\n--- words")).toEqual(["Words --- --- words"]);
+  });
+
+  it("leaves nothing for a text of blank lines and rules", () => {
+    expect(reflowed("\n  \n=====\n")).toEqual([]);
   });
 });

@@ -83,6 +83,15 @@ describe("UnsubscribeLanding (round 27 #8)", () => {
         resubscribe={resubscribe}
       />,
     );
+    // R54·167.1: this surface's primary is the ink pill, never pink caps.
+    expect(screen.getByRole("button", { name: "Unsubscribe" })).toHaveClass(
+      "rounded-pill",
+      "bg-ink",
+      "text-ground",
+    );
+    expect(screen.getByRole("button", { name: "Unsubscribe" })).not.toHaveClass(
+      "bg-action",
+    );
     await user.click(screen.getByRole("button", { name: "Unsubscribe" }));
     const turnOn = await screen.findByRole("button", {
       name: "Turn them back on",

@@ -53,13 +53,14 @@ export function StravaButton({
           className="block h-12 w-auto"
         />
       </Link>
-      <Mono step="sm" className="text-label">
-        <PendingLabel
-          label=""
-          pendingLabel="Connecting"
-          pending={isConnecting}
-        />
-      </Mono>
+      {/* Only while it waits (#630 F-07): held at rest, its reserved width
+          wrapped onto a line of its own at 390 and left a void under the
+          button. */}
+      {isConnecting ? (
+        <Mono step="sm" className="text-label">
+          <PendingLabel label="" pendingLabel="Connecting" pending />
+        </Mono>
+      ) : undefined}
     </div>
   );
 }

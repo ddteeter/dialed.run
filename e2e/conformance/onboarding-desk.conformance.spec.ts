@@ -17,8 +17,9 @@ const UNFILLED = "transparent";
  *
  * From 720 there is no panel: the step is the centred MEASURE.column every
  * runner screen is (Round 54 · 168.1, a guess for onboarding until #654),
- * under a bar that shows only the wordmark. On a phone nothing changes but
- * P3's body, which leaves ink.
+ * under a bar that shows only the wordmark. On a phone the wordmark bar
+ * stays as well (#630 F-09: R49's P3 board draws it at 390), and P3's body
+ * leaves ink.
  *
  * Geometry is read from the page, and the measure from `tokens.js`;
  * neither is typed here.
@@ -80,11 +81,14 @@ test("O1 at 1280: the step is the centred column under a wordmark-only bar", asy
   expect(main.width).toBeGreaterThan(step.width);
 });
 
-test("O1 at 390: nothing changes, no bar and the panel", async ({ page }) => {
+test("O1 at 390: the wordmark bar, as at desk (#630 F-09)", async ({
+  page,
+}) => {
   await open(page, "/onboarding/calibrate", 390);
 
-  await expect(page.locator(BAR)).toBeHidden();
-  await expect(page.getByRole("banner")).toHaveCount(0);
+  await expect(page.locator(BAR)).toBeVisible();
+  await expect(page.getByRole("banner")).toHaveCount(1);
+  await expect(page.locator(BAR).getByRole("link")).toHaveCount(0);
 });
 
 test("P3 at 1280: the band and the body keep the column, on the ground", async ({
@@ -109,11 +113,21 @@ test("P3 at 1280: the band and the body keep the column, on the ground", async (
   expect(await fillOf(page, BODY)).toBe(UNFILLED);
 });
 
-test("P3 at 390: the body is light as well", async ({ page }) => {
+test("P3 at 390: the band bleeds edge to edge under the wordmark bar, and the body is light", async ({
+  page,
+}) => {
   await open(page, "/onboarding/done", 390);
 
   expect(await fillOf(page, BODY)).toBe(UNFILLED);
-  await expect(page.locator(BAR)).toBeHidden();
+  await expect(page.locator(BAR)).toBeVisible();
+  // #630 F-09: full-bleed, flush under the bar, three segments.
+  const band = page.getByRole("heading", { name: "Now go run." }).locator("..");
+  const bandBox = await band.boundingBox();
+  const barBox = await page.locator(BAR).boundingBox();
+  expect(bandBox?.x).toBe(0);
+  expect(bandBox?.width).toBe(390);
+  expect(bandBox?.y).toBe((barBox?.y ?? 0) + (barBox?.height ?? 0));
+  await expect(band.locator("> div[aria-hidden='true'] > div")).toHaveCount(3);
 });
 
 // O3 and P2.5 have no drawing at 390 to compare with here; they end at
@@ -158,7 +172,7 @@ test.describe("P2.5, for a runner with generic pieces", () => {
     await page.getByRole("button", { name: "Name it" }).first().click();
     await page.getByLabel("Brand").fill("Sm");
     await expect(
-      page.locator("datalist[id^='brands-'] option"),
+      page.locator("[data-part='suggestions'] button"),
     ).not.toHaveCount(0);
   });
 });

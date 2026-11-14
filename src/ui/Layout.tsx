@@ -1,10 +1,11 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 import { BellProvider } from "./PhoneBell";
 import { TabBar } from "./TabBar";
 import { TABS, bar, tabToLight, useSlowRoute } from "./tabs";
-import { LandingBar, TopBar, type LandingAction } from "./TopBar";
+import { SignedOutFrame } from "./SignedOutFrame";
+import { TopBar } from "./TopBar";
 import { useHydrated } from "./use-hydrated";
 
 /**
@@ -93,73 +94,22 @@ function SlowRouteStatus() {
 }
 
 /**
- * The shell a signed-out page wears: the landing bar from 720 up, nothing
- * below it, and **never the tab bar** (round 22, Auth §2: *"Every tab is a
- * signed-in place; showing them to someone signed out is five links to
- * the log-in page"*). Auth, the landing page, and a signed-out 404 all
- * wear this.
+ * The shell a signed-out page wears: the one signed-out frame (Round 55 ·
+ * 176, `SignedOutFrame`), and **never the tab bar** (round 22, Auth §2:
+ * *"Every tab is a signed-in place; showing them to someone signed out is
+ * five links to the log-in page"*). Auth, the landing page, the reading
+ * pages and a signed-out 404 all wear this.
  *
- * Paper all the way up — *"auth is not a product screen, so it doesn't
- * get the ink header"* — so there is no bell seat either.
+ * Paper all the way up, so there is no bell seat either. The frame offers
+ * Log in and Request access on every page and drops whichever one the page
+ * is, by its path.
  */
 export function SignedOutLayout({
-  action,
   children,
-}: Readonly<{ action: LandingAction; children: ReactNode }>) {
-  useHydrated();
-
+}: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="flex min-h-dvh flex-col bg-ground text-ink">
-      <LandingBar action={action} />
+    <SignedOutFrame>
       <div className="mx-auto w-full max-w-page flex-1">{children}</div>
-      <LegalFooter />
-    </div>
+    </SignedOutFrame>
   );
 }
-
-/**
- * The signed-out footer's legal links (task 126, ACC-13; D-52; round 27
- * #12: "Footer order everywhere: Privacy · Terms · Copyright"). Each
- * links even while its page answers X1 (D-81).
- */
-function LegalFooter() {
-  return (
-    <footer
-      data-part="legal-footer"
-      className="border-t border-hairline px-6 py-4 text-small text-muted"
-    >
-      {/* The gaps are the links' own padding, not `gap-x` (#632 A-03):
-          `target`'s 44px minimum width padded only the links narrower than
-          it ("Terms"), so one gap came out wider than the rest. Padded,
-          every link clears 44 and every gap is the same 16px. The row's
-          negative margin keeps the first word on the gutter. */}
-      <p className="m-0 mx-auto w-full max-w-page">
-        <span className="-mx-2 flex flex-wrap">
-          <Link to="/privacy" className={FOOTER_LINK}>
-            Privacy
-          </Link>
-          <Link to="/terms" className={FOOTER_LINK}>
-            Terms
-          </Link>
-          <Link to="/copyright" className={FOOTER_LINK}>
-            Copyright
-          </Link>
-          {/* Round 29 #9: after Copyright, as "Open source" (plan C9). */}
-          <Link to="/open-source" className={FOOTER_LINK}>
-            Open source
-          </Link>
-          {/* Design 136: the TAKE IT DOWN Act asks for the way to request a
-            removal to be clear and conspicuous, so it is on every page.
-            Placeholder words, after round 27 #12's three (design deltas
-            item 58). */}
-          <Link to="/takedown" className={FOOTER_LINK}>
-            Report an intimate image
-          </Link>
-        </span>
-      </p>
-    </footer>
-  );
-}
-
-const FOOTER_LINK =
-  "target inline-flex items-center px-2 text-muted underline underline-offset-4";

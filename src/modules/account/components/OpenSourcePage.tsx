@@ -1,9 +1,17 @@
 import { useRef, useState, type ComponentType, type JSX } from "react";
 
-import { FormField, FormStatus, Mono } from "../../../ui";
-import type { LegalDoc } from "../legal-markdown";
+import { FormField, FormStatus, focusOnMount, Icon, Mono } from "../../../ui";
+import {
+  plainText,
+  sectionsOf,
+  sectionText,
+  type LegalDoc,
+  type Section,
+} from "../legal-markdown";
+import { reflowed } from "../licence-text";
 import {
   matchingGroups,
+  matchingNotices,
   pieceCount,
   readLabel,
   COLLAPSED_ROWS,
@@ -11,8 +19,13 @@ import {
   type OpenSourcePiece,
 } from "../open-source-search";
 import type { BellState } from "../../notifications";
-import { LegalSubsections } from "./LegalPage";
-import { ReadingFrame, ReadingSection, ReadingShell } from "./ReadingFrame";
+import { LegalBlocks } from "./LegalPage";
+import {
+  ReadingFrame,
+  ReadingSection,
+  ReadingShell,
+  type ContentsEntry,
+} from "./ReadingFrame";
 
 /**
  * `/open-source` (plan C9; round 29 #9; D-137): every open-source piece
@@ -21,20 +34,26 @@ import { ReadingFrame, ReadingSection, ReadingShell } from "./ReadingFrame";
  *
  * - **The thank-you** is the kicker, the heading and the lead, which
  *   counts every piece. No mascot and no hearts.
- * - **A group** is headed by its licence and count. "Read the MIT
- *   licence" opens the full text once, above the rows; the group shows
- *   its first three rows and "Show all {N}" opens the rest. A row is the
- *   name, the shipped version, "Project", and the copyright line; "Notice"
+ * - **A group** is headed by its licence, its count at the end of the
+ *   heading's line (A-01a). "Read the MIT licence" opens the full text
+ *   once, above the rows; the group shows its first three rows and the
+ *   "Show all {N}" pill opens the rest. A row is the name and the shipped
+ *   version, "Project" at its right, and the copyright line; "Notice"
  *   where the package ships an Apache NOTICE, and "Licence" where its own
  *   licence text says something the group's does not (an undesigned
  *   addition: design deltas).
+ * - **The third-party notices** follow the groups: R39's four rows, one
+ *   per section of `docs/legal/third-party-notices.md`, under its own
+ *   headings (R55·225).
  * - **"Tools we build with"** comes last, after the notices (design 151;
  *   round 40 #82): the tools that build the app and do not ship in it,
  *   each row naming its licence where a copyright line would sit. The
  *   lead counts only what ships.
- * - **Search** is a FormField filtering every group by package name as
- *   you type. Empty groups hide, an opened group stays open, and no match
- *   reads "Nothing we ship or build with is called “xyz”."
+ * - **Search** is a FormField filtering every group by package name, and
+ *   the notices by their words, as you type; the contents filter with
+ *   them (R55·225). Empty groups hide, an opened group stays open, and no
+ *   match reads "Nothing we ship or build with is called “xyz”." The
+ *   pack's ✕ clears it, shown only while there is text (R55·226).
  *
  * The rows are generated, never written: `scripts/open-source-list.ts`.
  */
@@ -60,78 +79,132 @@ export function OpenSourcePage({
   const [query, setQuery] = useState("");
   const [opened, setOpened] = useState<ReadonlySet<string>>(new Set());
   const shown = matchingGroups([...groups, tools], query);
-  const noticesId = "third-party-notices";
+  const shownNotices = matchingNotices(
+    sectionsOf(notices.blocks).sections,
+    query,
+    sectionText,
+  );
+  const licences = shown.filter((group) => group.kind !== "tools");
+  const shownTools = shown.filter((group) => group.kind === "tools");
   const open = (id: string) => {
     setOpened(new Set([...opened, id]));
   };
+  const groupSection = (group: LicenceGroup) => (
+    <GroupSection
+      key={group.id}
+      group={group}
+      isOpen={opened.has(group.id)}
+      onOpen={open}
+    />
+  );
   return (
     <ReadingShell bellState={bellState} bell={bell}>
       <ReadingFrame
         kicker="Open source"
         title="Built with thanks"
-        contents={[
-          ...groups.map((group) => contentsEntry(group)),
-          { id: noticesId, title: notices.title },
-          contentsEntry(tools),
-        ]}
+        contents={contentsOf(licences, shownNotices, notices.title, shownTools)}
       >
         <p className="m-0">
           {`dialed.run runs on code and type that people chose to give away. Here are all ${String(pieceCount(groups))} pieces, grouped by licence, with a link to each project.`}
         </p>
-        <FormField name="find-a-package" label="Find a package">
-          <input
-            id="find-a-package"
-            type="search"
-            placeholder="Name, e.g. date-fns"
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-            }}
-            className="w-full border-none bg-transparent"
-          />
-        </FormField>
-        <FormStatus>{searchStatus(query, shown)}</FormStatus>
-        {shown.length === 0 ? (
+        <SearchField query={query} onQuery={setQuery} />
+        <FormStatus>{searchStatus(query, shown, shownNotices)}</FormStatus>
+        {shown.length + shownNotices.length === 0 ? (
           // The status region says it; drawn here, read there, once.
           <p aria-hidden="true" className="m-0">
             {noMatch(query)}
           </p>
         ) : undefined}
-        {shown
-          .filter((group) => group.kind !== "tools")
-          .map((group) => (
-            <GroupSection
-              key={group.id}
-              group={group}
-              isOpen={opened.has(group.id)}
-              onOpen={open}
-            />
-          ))}
-        <ReadingSection id={noticesId} heading={notices.title}>
-          <LegalSubsections doc={notices} />
-        </ReadingSection>
-        {shown
-          .filter((group) => group.kind === "tools")
-          .map((group) => (
-            <GroupSection
-              key={group.id}
-              group={group}
-              isOpen={opened.has(group.id)}
-              onOpen={open}
-            />
-          ))}
+        {licences.map((group) => groupSection(group))}
+        {shownNotices.length === 0 ? undefined : (
+          <ReadingSection id={NOTICES_ID} heading={notices.title}>
+            <ul className="m-0 flex list-none flex-col gap-4 p-0">
+              {shownNotices.map((notice) => (
+                <NoticeRow key={notice.id} notice={notice} />
+              ))}
+            </ul>
+          </ReadingSection>
+        )}
+        {shownTools.map((group) => groupSection(group))}
       </ReadingFrame>
     </ReadingShell>
   );
 }
 
+const NOTICES_ID = "third-party-notices";
+
+/**
+ * The contents, filtered with the page (R55·225): each group the search
+ * leaves, with what it leaves counted, then the notices while any is
+ * left, then the tools.
+ */
+function contentsOf(
+  licences: readonly LicenceGroup[],
+  notices: readonly Section[],
+  noticesTitle: string,
+  tools: readonly LicenceGroup[],
+): readonly ContentsEntry[] {
+  return [
+    ...licences.map((group) => contentsEntry(group)),
+    ...(notices.length === 0 ? [] : [{ id: NOTICES_ID, title: noticesTitle }]),
+    ...tools.map((group) => contentsEntry(group)),
+  ];
+}
+
+/**
+ * "Find a package", and the pack's ✕ at a 44 target in ink while there is
+ * text (R55·226): pressing it empties the field and leaves focus in it.
+ * The browser's own clear is hidden for every search field (`styles.css`).
+ */
+function SearchField({
+  query,
+  onQuery,
+}: Readonly<{ query: string; onQuery: (query: string) => void }>) {
+  // Each Clear mounts the field afresh, and from the first Clear on it
+  // mounts focused: focus stays in the field, never before a Clear.
+  const [clears, setClears] = useState(0);
+  return (
+    <FormField name="find-a-package" label="Find a package">
+      <input
+        key={clears}
+        ref={clears > 0 ? focusOnMount : undefined}
+        id="find-a-package"
+        type="search"
+        placeholder="Name, e.g. date-fns"
+        value={query}
+        onChange={(event) => {
+          onQuery(event.target.value);
+        }}
+        className="w-full border-none bg-transparent"
+      />
+      {query === "" ? undefined : (
+        <button
+          type="button"
+          aria-label="Clear"
+          onClick={() => {
+            onQuery("");
+            setClears((count) => count + 1);
+          }}
+          className="target -mr-3 inline-flex shrink-0 items-center justify-center text-ink"
+        >
+          <Icon name="close" />
+        </button>
+      )}
+    </FormField>
+  );
+}
+
 /**
  * What the search's status region says: nothing until there is a query,
- * then how many match, or the line that says none do.
+ * then how many packages match, or the line that says nothing does.
  */
-function searchStatus(query: string, shown: readonly LicenceGroup[]): string {
+function searchStatus(
+  query: string,
+  shown: readonly LicenceGroup[],
+  notices: readonly Section[],
+): string {
   if (query.trim() === "") return "";
-  if (shown.length === 0) return noMatch(query);
+  if (shown.length + notices.length === 0) return noMatch(query);
   const count = pieceCount(shown);
   return count === 1
     ? "1 package matches."
@@ -140,6 +213,21 @@ function searchStatus(query: string, shown: readonly LicenceGroup[]): string {
 
 function noMatch(query: string): string {
   return `Nothing we ship or build with is called “${query.trim()}”.`;
+}
+
+/**
+ * One third-party notice: R39's row, its heading bold on a hairline, then
+ * its text as written.
+ */
+function NoticeRow({ notice }: Readonly<{ notice: Section }>): JSX.Element {
+  return (
+    <li className="flex flex-col gap-2 border-t border-hairline pt-3">
+      <h3 id={notice.id} className="m-0 text-body font-bold">
+        {plainText(notice.heading)}
+      </h3>
+      <LegalBlocks blocks={notice.blocks} />
+    </li>
+  );
 }
 
 /**
@@ -180,10 +268,15 @@ function GroupSection({
   const count = String(group.pieces.length);
   const { firstShown, press } = useFocusFirstShown();
   return (
-    <ReadingSection id={group.id} heading={group.name}>
-      <Mono step="sm" className="text-muted">
-        {`${count}${COUNT_SUFFIX[group.kind]}`}
-      </Mono>
+    <ReadingSection
+      id={group.id}
+      heading={group.name}
+      aside={
+        <Mono step="sm" className="shrink-0 text-muted">
+          {`${count}${COUNT_SUFFIX[group.kind]}`}
+        </Mono>
+      }
+    >
       {group.kind === "licence" ? undefined : (
         <p className={`m-0 ${GROUP_LINES[group.kind].className}`}>
           {GROUP_LINES[group.kind].text}
@@ -203,13 +296,14 @@ function GroupSection({
         ))}
       </ul>
       {rows.length < group.pieces.length ? (
+        // A-01c: the board's full-width hairline pill.
         <button
           type="button"
           onClick={() => {
             press();
             onOpen(group.id);
           }}
-          className="target self-start text-small text-ink underline underline-offset-4"
+          className="target w-full rounded-pill border border-ink text-body font-semibold text-ink"
         >
           {`Show all ${count}`}
         </button>
@@ -268,18 +362,26 @@ function PieceRow({
       tabIndex={rowRef === undefined ? undefined : -1}
       className="flex flex-col gap-1 border-t border-hairline py-3"
     >
-      <div className="flex flex-wrap items-center gap-x-4">
-        <span className="font-semibold wrap-anywhere">{piece.name}</span>
-        {piece.version === undefined ? undefined : (
-          <Mono step="sm" className="text-muted">
-            {piece.version}
-          </Mono>
-        )}
+      {/* A-01b: Project at the row's right, wherever the name ends. */}
+      <div className="flex items-baseline justify-between gap-x-4">
+        <span className="min-w-0">
+          <span className="font-semibold wrap-anywhere">{piece.name}</span>
+          {piece.version === undefined ? undefined : (
+            <>
+              {" "}
+              <Mono step="sm" className="text-muted">
+                {piece.version}
+              </Mono>
+            </>
+          )}
+        </span>
         {piece.project === undefined ? undefined : (
+          // A-02: a line target, so a row with a link is as tall as one
+          // without; the row's 12 padding holds its hit area.
           <a
             href={piece.project}
             aria-label={`Project: ${piece.name}`}
-            className="target inline-flex items-center text-small text-ink underline underline-offset-4"
+            className="target-line inline-block shrink-0 text-body text-ink underline underline-offset-4"
           >
             Project
           </a>
@@ -305,9 +407,11 @@ function PieceRow({
 }
 
 /**
- * A licence or notice, closed until asked for and then printed whole, as
- * its file sets it. Native `<details>`, so it opens without script and
- * nothing animates.
+ * A licence or notice, closed until asked for. Native `<details>`, so it
+ * opens without script and nothing animates. R55·226: no browser marker;
+ * the text link carries the pack's chevron, turned down while open. The
+ * text is reflowed into paragraphs the page wraps (A-12), not printed
+ * with its file's line breaks.
  */
 function TextDisclosure({
   label,
@@ -324,16 +428,21 @@ function TextDisclosure({
   text: string;
 }>): JSX.Element {
   return (
-    <details>
+    <details className="group">
       <summary
         aria-label={of === undefined ? undefined : `${label}: ${of}`}
-        className="target cursor-pointer text-small text-ink underline underline-offset-4"
+        className="target-line inline-flex cursor-pointer list-none items-center gap-1 text-small text-ink underline underline-offset-4 [&::-webkit-details-marker]:hidden"
       >
         {label}
+        <Icon name="forward" size={16} className="group-open:rotate-90" />
       </summary>
-      <pre className="m-0 mt-2 font-sans text-small whitespace-pre-wrap wrap-anywhere">
-        {text}
-      </pre>
+      <div className="mt-2 flex flex-col gap-2 text-small wrap-anywhere">
+        {reflowed(text).map((paragraph, index) => (
+          <p key={index} className="m-0">
+            {paragraph}
+          </p>
+        ))}
+      </div>
     </details>
   );
 }

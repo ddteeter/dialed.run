@@ -1,4 +1,7 @@
 document
+banner
+dialed.run
+end of banner
 main
 Step # of # · Optional
 heading, Which ones do you actually reach for?, level 1
@@ -12,13 +15,14 @@ Top · Generic
 form
 status
 Brand
-combobox, Brand, Sm, has popup listbox, not expanded, # control
+textbox, Brand, Sm
+button, Smartwool
 Model
-combobox, Model, has popup listbox, not expanded, # control
-Brand alone is enough.
+textbox, Model
 button, Save
 Save
 end of button, Save
+Brand alone is enough.
 end of form
 end of listitem, level 1, position 1, set size 2
 listitem, level 1, position 2, set size 2

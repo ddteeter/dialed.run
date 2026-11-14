@@ -6,13 +6,20 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
 
 import { Layout, SignedOutLayout } from "../../src/ui/Layout";
 import { SLOW_ROUTE_MS, activeTabIndex } from "../../src/ui/tabs";
-import { LandingBar } from "../../src/ui/TopBar";
+import { SignedOutFrame } from "../../src/ui/SignedOutFrame";
 
 /**
  * The signed-out shell (round 21 item 23, round 22 Auth §2) and the slow
@@ -21,98 +28,142 @@ import { LandingBar } from "../../src/ui/TopBar";
  * happy-dom lays nothing out, so "hidden below 720" is asserted as the
  * class that does it and Playwright's conformance specs check the widths.
  */
-async function renderAt(element: ReactElement) {
+async function routerAt(element: ReactElement, path = "/") {
   const rootRoute = createRootRoute({ component: () => element });
   const router = createRouter({
     routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ["/"] }),
+    history: createMemoryHistory({ initialEntries: [path] }),
   });
   await router.load();
-  return render(<RouterProvider router={router} />);
+  render(<RouterProvider router={router} />);
+  return router;
+}
+
+async function renderAt(element: ReactElement, path = "/") {
+  await routerAt(element, path);
 }
 
 const landingBar = () => document.querySelector("[data-slot='landing-bar']");
+const barLink = (name: string) =>
+  landingBar()?.querySelector<HTMLAnchorElement>(
+    `a[href="${CSS.escape(name)}"]`,
+  );
 
-describe("LandingBar", () => {
-  it("exists only from 720 up, on paper, with a hairline foot", async () => {
-    await renderAt(<LandingBar action="none" />);
+describe("SignedOutFrame (Round 55 · 176)", () => {
+  it("draws its bar at every width, on paper, 56 then 64, with its edge on the page measure", async () => {
+    await renderAt(<SignedOutFrame>page</SignedOutFrame>);
 
-    // "Below 720, no bar." Hidden by CSS rather than unmounted, like the
-    // product bar, so SSR and the first client render agree at any width.
-    expect(landingBar()).toHaveClass("hidden", "wide:block");
+    // Shown at every width now: no `hidden`.
+    expect(landingBar()).not.toHaveClass("hidden");
+    expect(landingBar()?.tagName).toBe("HEADER");
     expect(landingBar()).toHaveClass(
       "border-b",
       "border-hairline",
       "bg-ground",
+      "px-5",
+      "wide:px-6",
     );
     // Not an inverted block: "paper all the way up".
     expect(landingBar()).not.toHaveAttribute("data-ground");
     expect(landingBar()).toHaveAttribute("data-part", "top-bar");
+    expect(landingBar()?.firstElementChild).toHaveClass(
+      "h-14",
+      "wide:h-16",
+      "max-w-page",
+      "mx-auto",
+    );
   });
 
-  it("links the plain wordmark home and offers nothing on an auth page", async () => {
-    await renderAt(<LandingBar action="none" />);
+  it("links the pink-bracketed wordmark home at TYPE.title", async () => {
+    await renderAt(<SignedOutFrame>page</SignedOutFrame>);
 
     const home = screen.getByRole("link", { name: "dialed.run home" });
     expect(home).toHaveAttribute("href", "/");
     expect(home).toHaveAttribute("data-part", "wordmark");
-    // The plain lockup: no brackets on this bar.
-    // Drawn, then said once by the sr-only copy (`Wordmark`).
-    expect(home).toHaveTextContent(/^dialed\.rundialed\.run$/u);
-    // "'Log in' on the log-in page would point at itself."
-    expect(screen.getAllByRole("link")).toHaveLength(1);
-    expect(document.querySelector("[data-part='bar-actions']")).toBeNull();
+    expect(home).not.toHaveAttribute("data-reload-document");
+    // Brackets drawn, then the name said once (`Wordmark`).
+    expect(home).toHaveTextContent(/^\[dialed\.run\]dialed\.run$/u);
+    expect(home.firstElementChild).toHaveClass("text-title");
   });
 
-  it("offers a hairline Log in when signed out", async () => {
-    await renderAt(<LandingBar action="log-in" />);
+  it("offers Log in as text and, from 720, Request access as the pink pill", async () => {
+    await renderAt(<SignedOutFrame>page</SignedOutFrame>);
 
-    const action = screen.getByRole("link", { name: "Log in" });
-    expect(action).toHaveAttribute("href", "/auth/login");
-    expect(action).toHaveAttribute("data-part", "bar-actions");
-    // Secondary: a hairline pill, never filled and never pink.
-    expect(action).toHaveClass("border", "border-hairline", "rounded-pill");
-    expect(action).not.toHaveClass("bg-ink");
-    expect(action).not.toHaveClass("bg-action");
-  });
-
-  it("offers an ink Your closet when signed in", async () => {
-    await renderAt(<LandingBar action="closet" />);
-
-    const action = screen.getByRole("link", { name: "Your closet" });
-    expect(action).toHaveAttribute("href", "/closet");
-    expect(action).toHaveAttribute("data-part", "bar-actions");
-    expect(action).toHaveClass("bg-ink", "text-ground", "rounded-pill");
-    expect(action).not.toHaveClass("border-hairline");
-  });
-});
-
-describe("SignedOutLayout", () => {
-  it("wears the landing bar and never the tab bar or the product bar", async () => {
-    delete document.documentElement.dataset.hydrated;
-    await renderAt(<SignedOutLayout action="log-in">page</SignedOutLayout>);
-
-    expect(landingBar()).not.toBeNull();
-    expect(screen.getByRole("link", { name: "Log in" })).toBeInTheDocument();
-    // "A signed-out page never shows the tab bar."
+    const logIn = screen.getByRole("link", { name: "Log in" });
+    expect(logIn).toBe(barLink("/auth/login"));
+    expect(logIn).toHaveClass("target", "font-bold", "text-ink", "text-body");
+    expect(logIn).not.toHaveClass("rounded-pill");
+    const ask = screen.getByRole("link", { name: "Request access" });
+    expect(ask).toBe(barLink("/account/request-access"));
+    expect(ask).toHaveClass(
+      "target",
+      "rounded-pill",
+      "bg-action",
+      "text-accent-ink",
+      "hidden",
+      "wide:inline-flex",
+    );
+    expect(logIn.parentElement).toHaveAttribute("data-part", "bar-actions");
+    // Never the tab bar, the product bar or a nav.
     expect(document.querySelector("[data-slot='tab-bar']")).toBeNull();
     expect(document.querySelector("[data-slot='top-bar']")).toBeNull();
     expect(screen.queryByRole("navigation")).toBeNull();
-    expect(screen.getByText("page")).toBeInTheDocument();
-    // The e2e suite waits on this stamp before driving any input.
+  });
+
+  it("drops Log in on the log-in page", async () => {
+    await renderAt(<SignedOutFrame>page</SignedOutFrame>, "/auth/login");
+    expect(barLink("/auth/login")).toBeNull();
+    expect(barLink("/account/request-access")).not.toBeNull();
+  });
+
+  it("drops Request access on the request-access page", async () => {
+    await renderAt(
+      <SignedOutFrame>page</SignedOutFrame>,
+      "/account/request-access",
+    );
+    expect(barLink("/account/request-access")).toBeNull();
+    expect(barLink("/auth/login")).not.toBeNull();
+  });
+
+  it("puts a signed-in viewer's way into the app in their place", async () => {
+    await renderAt(
+      <SignedOutFrame intoApp={<span>Open in the app</span>}>
+        page
+      </SignedOutFrame>,
+    );
+    expect(landingBar()).toHaveTextContent("Open in the app");
+    expect(barLink("/auth/login")).toBeNull();
+    expect(barLink("/account/request-access")).toBeNull();
+  });
+
+  it("reloads the document on every way out when asked, and only then", async () => {
+    const reloading = await routerAt(
+      <SignedOutFrame reloadDocument>page</SignedOutFrame>,
+    );
+    for (const link of document.querySelectorAll("a")) {
+      // A reloading link leaves the click to the browser: the router never
+      // moves.
+      fireEvent.click(link);
+    }
+    expect(reloading.state.location.pathname).toBe("/");
+    cleanup();
+
+    const routed = await routerAt(<SignedOutFrame>page</SignedOutFrame>);
+    fireEvent.click(screen.getByRole("link", { name: "Log in" }));
     await waitFor(() => {
-      expect(document.documentElement.dataset.hydrated).toBe("true");
+      expect(routed.state.location.pathname).toBe("/auth/login");
     });
   });
 
-  it("ends with the legal footer: Privacy · Terms · Copyright (ACC-13, round 27 #12), then the removal request (design 136)", async () => {
-    await renderAt(<SignedOutLayout action="none">page</SignedOutLayout>);
+  it("ends with the five links: Privacy · Terms · Copyright · Open source, then the removal request", async () => {
+    delete document.documentElement.dataset.hydrated;
+    await renderAt(<SignedOutFrame>page</SignedOutFrame>);
 
     const footer = document.querySelector("[data-part='legal-footer']");
     expect(footer?.tagName).toBe("FOOTER");
-    expect(footer).toHaveClass("border-t", "border-hairline");
-    // Last in the shell, after the page.
+    expect(footer).toHaveClass("border-t", "border-hairline", "text-small");
     expect(footer?.parentElement?.lastElementChild).toBe(footer);
+    expect(screen.getByText("page")).toBeInTheDocument();
     const links = [...(footer?.querySelectorAll("a") ?? [])];
     expect(
       links.map((link) => [link.textContent, link.getAttribute("href")]),
@@ -124,13 +175,24 @@ describe("SignedOutLayout", () => {
       ["Report an intimate image", "/takedown"],
     ]);
     for (const link of links) {
-      expect(link).toHaveClass("target", "text-muted", "underline");
-      // #632 A-03: every gap is the links' own padding, so a word under
-      // 44px wide ("Terms") no longer carries a wider gap than the rest.
+      expect(link).toHaveClass("target", "text-quiet", "underline");
+      // #632 A-03: the gaps are the links' own padding.
       expect(link).toHaveClass("inline-flex", "items-center", "px-2");
     }
     expect(links[0]?.parentElement).toHaveClass("-mx-2", "flex", "flex-wrap");
-    expect(links[0]?.parentElement).not.toHaveClass("gap-x-4");
+    // The e2e suite waits on this stamp before driving any input.
+    await waitFor(() => {
+      expect(document.documentElement.dataset.hydrated).toBe("true");
+    });
+  });
+});
+
+describe("SignedOutLayout", () => {
+  it("wears the one frame around the page, on the page measure", async () => {
+    await renderAt(<SignedOutLayout>page</SignedOutLayout>);
+    expect(landingBar()).not.toBeNull();
+    expect(screen.getByText("page")).toHaveClass("max-w-page", "flex-1");
+    expect(document.querySelector("[data-part='legal-footer']")).not.toBeNull();
   });
 });
 

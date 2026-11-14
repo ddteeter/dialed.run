@@ -3,6 +3,7 @@ banner
 link, dialed.run home
 dialed.run
 end of link, dialed.run home
+link, Request access
 end of banner
 main
 heading, Log in, level 1

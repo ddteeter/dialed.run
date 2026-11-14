@@ -272,7 +272,8 @@ test("account settings -> change password -> reminder emails off and on -> sign 
   await scene(page, "Sign out everywhere");
   await page.goto("/account/sign-in");
   await hydrated(page);
-  await page.getByRole("button", { name: "Sign out everywhere" }).click();
+  // R55·182.2: the last SIGN-IN row, "Every device", its verb Sign out.
+  await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/$/u, { timeout: 15_000 });
   await page.goto("/call");
   await expect(page).toHaveURL(/\/auth\/login/u, { timeout: 15_000 });

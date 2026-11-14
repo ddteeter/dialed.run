@@ -25,6 +25,7 @@ button, Log a run
 end of banner
 main
 heading, Notifications, level 1
+# unread
 button, Mark all read
 Mark all read
 end of button, Mark all read
@@ -32,9 +33,7 @@ status
 list
 listitem, level 1, position 1, set size 1
 Unread
-paragraph
 We couldn't find the file for the photo of one of your garments, so we took it off. Add it again from your Closet if you'd like it there.
-end of paragraph
 :day :month #, #:# UTC
 end of listitem, level 1, position 1, set size 1
 end of list

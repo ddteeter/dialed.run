@@ -9,29 +9,33 @@ heading, Sign-in, level 2
 Sign-in
 end of heading, Sign-in, level 2
 list
-listitem, level 1, position 1, set size 3
+listitem, level 1, position 1, set size 4
 link, Email closet-#@example.com Change
 Email
 closet-#@example.com
 Change
 end of link, Email closet-#@example.com Change
-end of listitem, level 1, position 1, set size 3
-listitem, level 1, position 2, set size 3
-link, Username @closet_#
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+link, Username @closet_# Change
 Username
 @closet_#
-end of link, Username @closet_#
-end of listitem, level 1, position 2, set size 3
-listitem, level 1, position 3, set size 3
-link, Password Change the password you log in with
+Change
+end of link, Username @closet_# Change
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+link, Password Change the password you log in with Change
 Password
 Change the password you log in with
-end of link, Password Change the password you log in with
-end of listitem, level 1, position 3, set size 3
+Change
+end of link, Password Change the password you log in with Change
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+button, Sign out, Every device Signs out your phone and other browsers
+Sign out
+end of button, Sign out, Every device Signs out your phone and other browsers
+end of listitem, level 1, position 4, set size 4
 end of list
-button, Sign out everywhere
-Sign out everywhere
-end of button, Sign out everywhere
 heading, Your data, level 2
 Your data
 end of heading, Your data, level 2
@@ -58,6 +62,10 @@ to keep everything.
 end of paragraph
 Current password
 Current password
+button, Show password, # control
+Show
+password
+end of button, Show password, # control
 button, Delete my account
 Delete my account
 end of button, Delete my account

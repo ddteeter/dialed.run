@@ -360,10 +360,9 @@ describe("CheckEmail (Au4)", () => {
     const startOver = screen.getByRole("link", { name: "Start over" });
     expect(startOver).toHaveAttribute("href", "/auth/signup");
     expect(startOver).toHaveClass("underline");
-    expect(screen.getByRole("link", { name: "Log in" })).toHaveAttribute(
-      "href",
-      "/auth/login",
-    );
+    expect(
+      within(screen.getByRole("main")).getByRole("link", { name: "Log in" }),
+    ).toHaveAttribute("href", "/auth/login");
     expect(
       screen.getByText(/^Wrong address\?/u).closest("p"),
     ).toHaveTextContent("Wrong address? Start over");
@@ -497,7 +496,10 @@ describe("the confirm-first sheet and the nag", () => {
     expect(resend).toHaveBeenCalledWith({
       data: { email: "maya@example.com" },
     });
-    await user.click(within(sheet).getByRole("button", { name: "Not now" }));
+    // Not now is Resend's match: the same full-width pill (B-11).
+    const notNow = within(sheet).getByRole("button", { name: "Not now" });
+    expect(notNow.className).toBe(RESEND_PILL);
+    await user.click(notNow);
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -775,6 +777,27 @@ async function fillChange(
 const sendLink = () => screen.getByRole("button", { name: "Send link" });
 
 describe("ChangeEmail (ACC-8)", () => {
+  it("lists both fields in the summary when both are missing, as Change password does (P1-01)", async () => {
+    const { request, user } = renderChange();
+    // R54·167.1: this surface's primary is the ink pill, never pink caps.
+    expect(sendLink()).toHaveClass("rounded-pill", "bg-ink", "text-ground");
+    expect(sendLink()).not.toHaveClass("bg-action");
+    await user.click(sendLink());
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "2 fields need a fix.",
+      );
+    });
+    // The summary names each by its label, as a way to it.
+    expect(screen.getByRole("button", { name: /New email/u })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: /Current password/u }),
+    ).toBeVisible();
+    // One spacing with Change password's form.
+    expect(newEmailField().closest("form")).toHaveClass("gap-4");
+    expect(request).not.toHaveBeenCalled();
+  });
+
   it("sends the link to the new address and says nothing moves until it is opened", async () => {
     const { request, user } = renderChange();
     expect(screen.getByText(/^Now /u)).toHaveTextContent(
@@ -881,6 +904,17 @@ describe("ChangeEmail (ACC-8)", () => {
       expect(region).toHaveTextContent("");
     }
     expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  });
+
+  it("lets the current password be shown, as every password field does (P1-02)", async () => {
+    const { user } = renderChange();
+    expect(currentPasswordField()).toHaveAttribute("type", "password");
+    expect(currentPasswordField()).toHaveAttribute(
+      "autocomplete",
+      "current-password",
+    );
+    await user.click(screen.getByRole("button", { name: "Show password" }));
+    expect(currentPasswordField()).toHaveAttribute("type", "text");
   });
 
   it("asks for the current password before the round trip", async () => {

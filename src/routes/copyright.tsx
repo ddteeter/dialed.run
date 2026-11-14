@@ -13,6 +13,10 @@ import { NotificationBell } from "../modules/notifications/components/Notificati
 export const Route = createFileRoute("/copyright")({
   loader: () => legalPageLoader("copyright"),
   component: () => (
-    <LegalPage {...Route.useLoaderData()} bell={NotificationBell} />
+    <LegalPage
+      {...Route.useLoaderData()}
+      slug="copyright"
+      bell={NotificationBell}
+    />
   ),
 });

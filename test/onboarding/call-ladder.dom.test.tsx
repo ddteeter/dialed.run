@@ -70,15 +70,27 @@ function bandRows() {
 }
 
 describe("K's header", () => {
-  it("names the tab in the eyebrow and says what it is doing, on ink", async () => {
+  it("says what it is doing on ink, full-bleed on the phone and a plain title from wide (#630 F-02)", async () => {
     await renderLadder(<CallLadder ladder={ladderFrom([])} />);
     const heading = screen.getByRole("heading", {
       level: 1,
       name: "Learning your body.",
     });
     const header = heading.closest("header");
-    expect(header).toHaveAttribute("data-ground", "ink");
-    expect(header).toHaveTextContent(/^The CallLearning your body\.$/u);
+    expect(header).toHaveAttribute("data-ground", "ink-until-wide");
+    expect(header).toHaveClass(
+      "-mx-6",
+      "-mt-8",
+      "px-6",
+      "bg-ground",
+      "wide:mx-0",
+      "wide:mt-0",
+      "wide:p-0",
+    );
+    expect(heading).toHaveClass("text-display", "wide:text-title");
+    // THE CALL once on the screen: the countdown's kicker says it.
+    expect(header).toHaveTextContent(/^Learning your body\.$/u);
+    expect(screen.getAllByText(/^The Call/u)).toHaveLength(1);
   });
 });
 

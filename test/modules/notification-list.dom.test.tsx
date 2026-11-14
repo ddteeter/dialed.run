@@ -109,8 +109,14 @@ describe("NotificationList · the rows", () => {
       ),
     ).toBeVisible();
     expect(screen.queryByRole("list")).toBeNull();
-    // Nothing to mark, so no control that could only do nothing.
+    // Nothing to mark, so no control that could only do nothing; the row
+    // above the list stays and says so (R55·184a, 184c).
     expect(screen.queryByRole("button", { name: "Mark all read" })).toBeNull();
+    expect(screen.getByText("All read")).toHaveClass("text-muted");
+    // Centred in the one ruled panel the list would be.
+    const panel = quiet.parentElement;
+    expect(panel).toHaveAttribute("data-state", "empty");
+    expect(panel).toHaveClass("bg-panel", "text-center", "items-center");
   });
 
   it("renders one row per notification, with its body and its time in mono", async () => {
@@ -151,10 +157,7 @@ describe("NotificationList · the rows", () => {
     expect(screen.queryByText(/UTC/u)).toBeNull();
   });
 
-  it("puts unread on white with a pink dot, and read on the paper in quiet", async () => {
-    // S2c: unread = --panel + the dot; read = paper, --quiet, and the dot's
-    // width kept as indent so the text does not move when a row is read.
-    // Never the hi-viz wash — yellow is failure and nothing else.
+  it("marks unread with the dot and ink, read with quiet and no dot, never a fill (R55·183, 184b)", async () => {
     await renderWithRouter(
       <NotificationList
         viewer={OWED}
@@ -168,23 +171,62 @@ describe("NotificationList · the rows", () => {
 
     const [unread, read] = screen.getAllByRole("listitem");
     expect(unread).toHaveAttribute("data-state", "unread");
-    expect(unread).toHaveClass("bg-panel", "text-ink");
-    expect(unread).not.toHaveClass("bg-unread");
-    expect(unread?.firstElementChild).toHaveClass("bg-action", "size-2");
+    const unreadRow = unread?.firstElementChild;
+    expect(unreadRow).toHaveClass("text-ink");
+    expect(unreadRow).not.toHaveClass("bg-panel");
+    expect(unreadRow?.firstElementChild).toHaveClass("bg-action", "size-2");
     expect(read).toHaveAttribute("data-state", "read");
-    expect(read).toHaveClass("text-quiet");
-    expect(read).not.toHaveClass("bg-panel");
-    expect(read?.firstElementChild).toHaveClass("size-2");
-    expect(read?.firstElementChild).not.toHaveClass("bg-action");
+    const readRow = read?.firstElementChild;
+    expect(readRow).toHaveClass("text-quiet");
+    expect(readRow).not.toHaveClass("text-ink");
+    expect(readRow?.firstElementChild).toHaveClass("size-2");
+    expect(readRow?.firstElementChild).not.toHaveClass("bg-action");
     // The kept width is the dot's own shape and nothing else.
-    expect(read?.firstElementChild?.classList).toHaveLength(5);
-    // The row's colour and the dot say "unread" to the eye only.
+    expect(readRow?.firstElementChild?.classList).toHaveLength(5);
+    // The dot says "unread" to the eye only.
     expect(within(unread ?? document.body).getByText("Unread")).toHaveClass(
       "sr-only",
     );
     expect(
       within(read ?? document.body).queryByText("Unread"),
     ).not.toBeInTheDocument();
+    // One --panel list with hairline dividers (184b).
+    expect(screen.getByRole("list")).toHaveClass(
+      "bg-panel",
+      "divide-y",
+      "divide-hairline",
+      "desk:rounded-card",
+    );
+  });
+
+  it("counts the unread above the list, markable or not (R55·184a)", async () => {
+    await renderWithRouter(
+      <NotificationList
+        viewer={OWED}
+        notifications={[
+          notification({ id: "01A", read: false, markable: false }),
+          notification({ id: "01B", read: false }),
+          notification({ id: "01C", read: true }),
+        ]}
+        markAllRead={nothing}
+      />,
+    );
+    const count = screen.getByText("2 unread");
+    expect(count).toHaveClass("text-muted", "font-mono");
+    expect(count.parentElement).toHaveAttribute("data-part", "mark-all-row");
+    expect(count.parentElement).toContainElement(markAll());
+  });
+
+  it("reads ALL READ once nothing is unread, and offers nothing", async () => {
+    await renderWithRouter(
+      <NotificationList
+        viewer={OWED}
+        notifications={[notification({ read: true })]}
+        markAllRead={nothing}
+      />,
+    );
+    expect(screen.getByText("All read")).toBeVisible();
+    expect(screen.queryByText(/unread$/u)).toBeNull();
   });
 
   it("offers Mark all read only while something is unread", async () => {
@@ -232,7 +274,10 @@ describe("NotificationList · moderation notices (C8, D-132, D-145)", () => {
 
     const rows = screen.getAllByRole("listitem");
     expect(
-      rows.map((row) => row.querySelector("p")?.textContent),
+      rows.map(
+        (row) =>
+          row.querySelector('[data-part="notification-body"]')?.textContent,
+      ),
     ).toStrictEqual([
       "We removed what you reported.",
       "We reviewed what you reported and left it up. We didn't find that it breaks our community rules. Disagree? Write to desk@dialed.run.",
@@ -392,17 +437,50 @@ describe("NotificationList · where a row goes (R48·129f, R48·131c)", () => {
     );
     expect(
       screen.getByRole("link", {
-        name: "We fixed the weight on AFO Middle Layer. Thanks.",
+        name: "Unread We fixed the weight on AFO Middle Layer. Thanks. Tue Aug 12, 12:00 UTC",
       }),
     ).toHaveAttribute("href", "/closet/01GARMENT");
-    // The words keep the row's shape: a 44 hit area from the row's own
-    // padding, not a 44-tall box (#628 N2-01).
+    // The whole row is the link, regular weight and never underlined,
+    // and it ends in the muted chevron (R55·183).
     const link = screen.getByRole("link", {
-      name: "We fixed the weight on AFO Middle Layer. Thanks.",
+      name: /We fixed the weight on AFO Middle Layer/u,
     });
-    expect(link).toHaveClass("target-line", "inline-block");
-    expect(link).not.toHaveClass("target");
-    expect(link).not.toHaveClass("inline-flex");
+    expect(link.parentElement).toHaveAttribute("data-part", "notification-row");
+    // Padded to 44 like every tappable thing, whatever row it ends.
+    expect(link).toHaveClass("target", "no-underline", "flex", "text-ink");
+    expect(link).not.toHaveClass("underline");
+    const chevron = link.lastElementChild;
+    expect(chevron?.tagName.toLowerCase()).toBe("svg");
+    expect(chevron).toHaveClass("text-muted");
+    expect(chevron).toHaveAttribute("aria-hidden", "true");
+    expect(
+      screen.getByText("We fixed the weight on AFO Middle Layer. Thanks."),
+    ).toHaveClass("text-body", "font-normal");
+  });
+
+  it("opens the upload for a run that landed on Strava", async () => {
+    await renderWithRouter(
+      <NotificationList
+        viewer={OWED}
+        notifications={[
+          notification({
+            kind: "strava_reminder",
+            body: "New run on Strava. Upload its file, then add what you wore.",
+          }),
+        ]}
+        markAllRead={nothing}
+      />,
+    );
+    expect(
+      screen.getByRole("link", {
+        name: /New run on Strava\. Upload its file, then add what you wore\./u,
+      }),
+    ).toHaveAttribute("href", "/runs/new?date=2025-08-12");
+    // The day is the notification's own arrival, on the runner's clock
+    // (R55·183 (3)); never anything from the activity.
+    expect(
+      screen.getByRole("link", { name: /New run on Strava/u }),
+    ).toHaveClass("target", "flex");
   });
 
   it("opens one follower's profile by the handle they have now", async () => {
@@ -421,8 +499,11 @@ describe("NotificationList · where a row goes (R48·129f, R48·131c)", () => {
       />,
     );
     expect(
-      screen.getByRole("link", { name: "@ada followed you." }),
+      screen.getByRole("link", { name: /@ada followed you\./u }),
     ).toHaveAttribute("href", "/feed/u/ada_runs");
+    expect(
+      screen.getByRole("link", { name: /@ada followed you\./u }),
+    ).toHaveClass("target", "flex");
   });
 
   it("opens the runner's own profile for a group", async () => {
@@ -439,10 +520,10 @@ describe("NotificationList · where a row goes (R48·129f, R48·131c)", () => {
       />,
     );
     const link = screen.getByRole("link", {
-      name: "@ada and 3 others followed you.",
+      name: /@ada and 3 others followed you\./u,
     });
     expect(link).toHaveAttribute("href", "/feed/me");
-    expect(link).toHaveClass("underline");
+    expect(link).toHaveClass("target", "flex");
   });
 
   it("keeps a decline's reason on its own line", async () => {
@@ -474,5 +555,7 @@ describe("NotificationList · where a row goes (R48·129f, R48·131c)", () => {
     );
     expect(screen.queryByRole("link")).toBeNull();
     expect(screen.getByText("Your run import didn't work")).toBeVisible();
+    // No chevron on a row that opens nothing (R55·183).
+    expect(screen.getByRole("listitem").querySelector("svg")).toBeNull();
   });
 });

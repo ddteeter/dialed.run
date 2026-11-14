@@ -12,7 +12,7 @@ import { useFormSubmit } from "../../../ui";
 import { AUTH_COPY } from "../auth-copy";
 import type { PasswordChange } from "../change-password";
 import { AuthFieldError } from "../credentials";
-import { NewPasswordField, PasswordField } from "../password-field";
+import { NewPasswordField, PasswordField } from "../../../ui/PasswordField";
 import { ShellForm } from "./ShellForm";
 
 const LABELS = {

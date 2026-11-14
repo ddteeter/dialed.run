@@ -7,6 +7,7 @@ import { BelledLayout } from "../../../modules/notifications/components/BelledLa
 import { bellStateFn } from "../../../modules/notifications/functions";
 import { SettingsSectionPage } from "../../../modules/onboarding/components/SettingsSubPage";
 import {
+  markPrivacySeenFn,
   saveSharingFn,
   saveUnitsFn,
   setCountInTotalsFn,
@@ -49,6 +50,7 @@ function SectionPage() {
         saveSharing={saveSharingFn}
         saveCountInTotals={setCountInTotalsFn}
         savePublicProfile={setPublicProfileFn}
+        markPrivacySeen={markPrivacySeenFn}
         pickUsername={(onClaimed) => (
           // Settings › Username's form and words, in Privacy's sheet
           // (round 42 #92).

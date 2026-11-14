@@ -13,6 +13,7 @@ import { Page } from "../../ui";
 
 // fallow-ignore-next-line code-duplication -- two routes of the same kind are the same shape by mandate: createFileRoute + loader + useLoaderData + shell is exactly what server-functions-are-glue requires, and the branching that would make them differ is what it forbids
 export const Route = createFileRoute("/notifications/")({
+  staticData: { title: "Notifications" },
   loader: () =>
     withBell(
       Promise.all([listNotificationsFn(), viewerZoneFn()]),

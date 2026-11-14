@@ -457,7 +457,8 @@ describe("googleConsentUrl", () => {
         message,
         retry: false,
       });
-      expect(thrown).toMatchObject({ link: undefined });
+      // R55·177: no refusal names a page; the page under the band does.
+      expect(thrown).not.toHaveProperty("link");
     },
   );
 
@@ -494,7 +495,6 @@ describe("googleConsentUrl", () => {
       kicker: "Not created",
       message: INVITE_COPY.invalid,
       retry: false,
-      link: "request-access",
     });
   });
 

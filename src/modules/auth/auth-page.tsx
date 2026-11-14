@@ -22,8 +22,9 @@ import {
 } from "../../lib/contracts/access";
 import { AGE_LINE } from "../../lib/contracts/age";
 import { authFailure, authStatus, isAccountClosed } from "./auth-copy";
+import type { AuthBand } from "./auth-copy";
 import { GoogleButton, type GoogleSignIn } from "./google-button";
-import { PasswordField } from "./password-field";
+import { PasswordField } from "../../ui/PasswordField";
 import type { CarriedForm } from "../../lib/carried-form";
 
 /**
@@ -91,13 +92,20 @@ export function AuthPage(
   Au2's "No code? Request access", under Google (round 26 #20).
   */
     requestLink?: ReactNode;
+    /**
+  Au2's line under the title (`InviteOnlyLine`), first in the form's column.
+  */
+    intro?: ReactNode;
     children: ReactNode;
   }>,
 ): JSX.Element {
   // The slots (notice, legal, cross-link, Turnstile, request link) are read
   // off `props` where they are placed; the rest are the page's own.
-  const { heading, submitLabel, pendingLabel, form, cause, google } = props;
-  const band = authFailure(form.failure, cause);
+  const { heading, submitLabel, pendingLabel, form, cause } = props;
+  const { band, google, pressForm } = useOneBand(
+    authFailure(form.failure, cause),
+    props.google,
+  );
   // Item 23: "D4's band on Au1, over the empty form". Neither the form's
   // band nor Google's speaks for it — there is nothing to try again — so
   // the status region says the notice's own words. A closed account never
@@ -116,6 +124,7 @@ export function AuthPage(
         data-state={formState(band, form.summaryRows.length)}
         className="flex flex-col gap-4"
       >
+        {props.intro}
         {isClosed ? props.closed : undefined}
         {/* noValidate: the browser's own bubbles are a second, unstyled
               error system that fires before ours and says "Please fill in
@@ -126,6 +135,7 @@ export function AuthPage(
           className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault();
+            pressForm();
             google.cancel();
             props.onSubmit();
           }}
@@ -164,6 +174,41 @@ export function AuthPage(
       </div>
     </SignedOutPanel>
   );
+}
+
+/**
+ * Round 55 · 177: one band at a time. The newest failure replaces the
+ * older one, each at the control that failed — the form's above its
+ * primary, Google's under its button — so the band shown is the last
+ * pressed control's. Pressing either control again clears the other's.
+ * Before either is pressed, a refusal Google's round trip brought back
+ * shows on its own.
+ */
+function useOneBand(
+  formBand: AuthBand | undefined,
+  google: GoogleSignIn,
+): {
+  band: AuthBand | undefined;
+  google: GoogleSignIn;
+  pressForm: () => void;
+} {
+  const [pressed, setPressed] = useState<"form" | "google">();
+  return {
+    band: pressed === "google" ? undefined : formBand,
+    google: {
+      ...google,
+      failure: pressed === "form" ? undefined : google.failure,
+      // Google's own Try again needs no wrapping: its band shows only
+      // while Google was the last pressed, or before anything was.
+      run: async () => {
+        setPressed("google");
+        await google.run();
+      },
+    },
+    pressForm: () => {
+      setPressed("form");
+    },
+  };
 }
 
 /**
@@ -469,18 +514,32 @@ export function InviteCodeField({
 }>): JSX.Element | undefined {
   if (!isInviteOnly) return undefined;
   return (
-    <>
-      <p className="m-0 text-body">dialed.run is invite-only for now.</p>
-      <TextField
-        name="inviteCode"
-        label={SIGN_UP_LABELS.inviteCode}
-        autoComplete="off"
-        value={value}
-        onChange={onChange}
-        field={form.field}
-        error={form.fieldErrors.inviteCode}
-      />
-    </>
+    <TextField
+      name="inviteCode"
+      label={SIGN_UP_LABELS.inviteCode}
+      autoComplete="off"
+      value={value}
+      onChange={onChange}
+      field={form.field}
+      error={form.fieldErrors.inviteCode}
+    />
+  );
+}
+
+/**
+ * The invite code's one line saying why, under Au2's title (Round 55 ·
+ * 178): TYPE.small in `--quiet`, 8 under the title — the panel's 28
+ * between header and form, less 20. Goes with the field when the flag is
+ * off.
+ */
+export function InviteOnlyLine({
+  isInviteOnly = IS_INVITE_ONLY,
+}: Readonly<{ isInviteOnly?: boolean }>): JSX.Element | undefined {
+  if (!isInviteOnly) return undefined;
+  return (
+    <p data-part="invite-only" className="m-0 -mt-5 text-small text-quiet">
+      dialed.run is invite-only for now.
+    </p>
   );
 }
 
@@ -495,7 +554,9 @@ export function RequestAccessLink({
   return (
     <p
       data-part="request-access"
-      className="m-0 text-center text-body text-quiet"
+      // Left, with the legal lines (Round 55 · 178): only the foot's
+      // cross-link is centred.
+      className="m-0 text-body text-quiet"
     >
       No code?{" "}
       <Link

@@ -307,47 +307,50 @@ describe("the public kit, signed out", () => {
         "dialed.run keeps what you wore on each run and how it felt, then tells you what to wear when that weather comes round again.",
       ),
     ).toBeVisible();
-    expect(link("Request access")).toHaveAttribute(
-      "href",
-      "https://dialed.run/invite",
+    const invite = within(
+      document.querySelector<HTMLElement>("[data-part='invite']") ??
+        document.body,
     );
-    expect(link("Request access")).toHaveClass("bg-ink", "rounded-pill");
-    expect(link("Have a code? Join")).toHaveAttribute("href", "/join");
-    expect(link("Have a code? Join")).toHaveClass(
-      "target",
-      "text-muted",
-      "underline",
+    const ask = invite.getByRole("link", { name: "Request access" });
+    expect(ask).toHaveAttribute("href", "https://dialed.run/invite");
+    expect(ask).toHaveClass("bg-ink", "rounded-pill");
+    // R55·176: the cross-link is quiet text with a bold ink underlined link.
+    const create = invite.getByRole("link", { name: "Create an account" });
+    expect(create).toHaveAttribute("href", "/join");
+    expect(create).toHaveClass("font-bold", "text-ink", "underline");
+    expect(create.parentElement).toHaveTextContent(
+      /^Have a code\? Create an account$/u,
     );
+    expect(create.parentElement).toHaveClass("text-body", "text-quiet");
+    expect(screen.queryByText(/Join/u)).toBeNull();
   });
 
-  it("has Log in in the bar, and the wordmark home", async () => {
+  it("wears the one signed-out frame: Log in, Request access, the wordmark home (R55·176)", async () => {
     await show(kitPage(KIT));
 
-    expect(link("Log in")).toHaveAttribute("href", "/auth/login");
-    // A 1px --ink outline on the bar's ink block (E2-06, R48·134).
-    expect(link("Log in")).toHaveClass("border", "border-ink");
-    const inkBar = document.querySelector<HTMLElement>("[data-part='top-bar']");
-    expect(inkBar).toHaveAttribute("data-ground", "ink");
-    expect(inkBar).toHaveClass("bg-ground", "text-ink");
-    expect(inkBar).not.toHaveClass("border-b");
+    const bar = document.querySelector<HTMLElement>("[data-part='top-bar']");
+    // Paper with a hairline foot now, as every signed-out page.
+    expect(bar).toHaveAttribute("data-slot", "landing-bar");
+    expect(bar).not.toHaveAttribute("data-ground");
     expect(link("dialed.run home")).toHaveAttribute("href", "/");
-    // The bracketed wordmark, and one slot beside it (round 42 #90):
-    // drawn as "[dialed.run]", then said once as "dialed.run".
     expect(link("dialed.run home")).toHaveTextContent(
       /^\[dialed\.run\]dialed\.run$/u,
     );
-    const bar = document.querySelector<HTMLElement>("[data-part='top-bar']");
     expect(
       within(bar ?? document.body)
         .getAllByRole("link")
-        .map((each) => each.textContent),
-    ).toStrictEqual(["[dialed.run]dialed.run", "Log in"]);
+        .map((each) => [each.textContent, each.getAttribute("href")]),
+    ).toStrictEqual([
+      ["[dialed.run]dialed.run", "/"],
+      ["Log in", "/auth/login"],
+      ["Request access", "/account/request-access"],
+    ]);
     expect(
       screen.queryByRole("link", { name: "Open in the app" }),
     ).not.toBeInTheDocument();
   });
 
-  it("ends with Report this kit, the link filled in, then Privacy and Terms", async () => {
+  it("ends its body with Report this kit, the link filled in, then the frame's five links", async () => {
     await show(kitPage(KIT));
 
     expect(link("Report this kit")).toHaveAttribute(
@@ -355,25 +358,29 @@ describe("the public kit, signed out", () => {
       `/takedown?location=${encodeURIComponent(KIT_URL)}`,
     );
     const foot = document.querySelector('[data-part="public-foot"]');
+    // At the foot of the body (R55·176), last in the page's main.
+    expect(foot?.parentElement?.tagName).toBe("MAIN");
+    expect(foot?.parentElement?.lastElementChild).toBe(foot);
+    expect(foot).toHaveClass("px-6", "pb-8", "text-small", "desk:col-start-1");
+    expect(link("Report this kit")).toHaveClass(
+      "target",
+      "text-muted",
+      "underline",
+    );
+    const footer = document.querySelector<HTMLElement>(
+      "[data-part='legal-footer']",
+    );
     expect(
-      within(foot as HTMLElement)
+      within(footer ?? document.body)
         .getAllByRole("link")
         .map((each) => each.textContent),
-    ).toStrictEqual(["Report this kit", "Privacy", "Terms"]);
-    expect(link("Privacy")).toHaveAttribute("href", "/privacy");
-    expect(link("Terms")).toHaveAttribute("href", "/terms");
-    expect(link("Terms")).toHaveClass("text-muted", "underline");
-    // Evenly spaced (A-03, as the app's legal footer): 8px each side and no
-    // gap, so a word under the 44px target is padded on both sides alike;
-    // the row is pulled out by as much, so the first word stays on the gutter.
-    for (const each of within(foot as HTMLElement).getAllByRole("link")) {
-      expect(each).toHaveClass("target", "inline-flex", "items-center", "px-2");
-    }
-    expect(link("Terms").parentElement).toHaveClass(
-      "-mx-2",
-      "flex",
-      "flex-wrap",
-    );
+    ).toStrictEqual([
+      "Privacy",
+      "Terms",
+      "Copyright",
+      "Open source",
+      "Report an intimate image",
+    ]);
   });
 
   it("offers no Useful, follow or comment", async () => {
@@ -444,7 +451,12 @@ describe("the public kit, once the browser knows who is looking", () => {
       expect(failing).toHaveBeenCalled();
     });
     expect(link("Log in")).toBeVisible();
-    expect(link("Request access")).toBeVisible();
+    expect(
+      within(
+        document.querySelector<HTMLElement>("[data-part='invite']") ??
+          document.body,
+      ).getByRole("link", { name: "Request access" }),
+    ).toBeVisible();
   });
 });
 

@@ -41,7 +41,7 @@ export function PublicProfilePage({
       {...frame}
       page={{ handle: profile.handle }}
       handle={profile.handle}
-      headingClassName="m-0 font-display text-display wrap-anywhere"
+      headingClassName={handleClass(profile.handle)}
       rail={
         isRotationShown(profile.rotation) ? (
           <Rotation rotation={profile.rotation} />
@@ -52,6 +52,19 @@ export function PublicProfilePage({
       {() => <Kits profile={profile} />}
     </RunnerFrame>
   );
+}
+
+/**
+ * R55·218a: past 17 characters the handle steps down from TYPE.display to
+ * TYPE.title, and breaks only after an underscore (`RunnerFrame`'s
+ * `<wbr>`), never inside a word.
+ */
+const LONG_HANDLE = 17;
+
+function handleClass(handle: string): string {
+  return handle.length > LONG_HANDLE
+    ? "m-0 font-display text-title"
+    : "m-0 font-display text-display";
 }
 
 /**
@@ -73,8 +86,19 @@ function isRotationShown(
 // Written out whole, so each can be read as one class list.
 const KIT_LIST_CLASS =
   "m-0 flex list-none flex-col p-0 desk:grid desk:grid-cols-3 desk:gap-3";
+// One grid, two arrangements (Round 41's boards, #633 A-15): on the phone
+// the tile, the two lines, and the chip at the row's end; at the desk the
+// tile across the top, the conditions with the chip at their right, then
+// the day and distance under both.
 const KIT_ROW_CLASS =
-  "target flex items-center gap-3 border-b border-hairline py-2 text-ink no-underline desk:flex-col desk:items-start desk:border-b-0";
+  "target grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-b border-hairline py-2 text-ink no-underline desk:grid-cols-[minmax(0,1fr)_auto] desk:border-b-0";
+const KIT_TILE_PLACE_CLASS = "row-span-2 desk:col-span-2 desk:row-span-1";
+const CONDITIONS_PLACE_CLASS =
+  "col-start-2 row-start-1 text-body font-semibold desk:col-start-1 desk:row-start-2";
+const DAY_PLACE_CLASS =
+  "col-start-2 row-start-2 desk:col-span-2 desk:col-start-1 desk:row-start-3";
+const CHIP_PLACE_CLASS =
+  "col-start-3 row-span-2 row-start-1 desk:col-start-2 desk:row-span-1 desk:row-start-2";
 const MORE_CLASS =
   "target inline-flex items-center self-start text-small text-ink underline underline-offset-4";
 const KIT_TILE_CLASS =
@@ -95,7 +119,8 @@ function Kits({ profile }: Readonly<{ profile: PublicProfile }>) {
   );
   return (
     <section data-part="kits" className="flex flex-col gap-3">
-      <h2 className="m-0 flex items-baseline gap-2 font-display text-heading">
+      {/* The count at the row's right, as both boards draw it (A-15). */}
+      <h2 className="m-0 flex items-baseline justify-between gap-2 font-display text-heading">
         Kits
         <Mono step="md" className="text-muted">
           {String(profile.kitCount)}
@@ -140,23 +165,27 @@ function KitRow({ row }: Readonly<{ row: PublicKitRow }>) {
         reloadDocument
         className={KIT_ROW_CLASS}
       >
-        <KitTile photo={row.photo} />
-        <span className="flex min-w-0 flex-1 flex-col gap-1">
-          {row.conditions === undefined ? undefined : (
-            <span className="text-body font-semibold">
-              {/* Drawn for the eye, said in words (round 52 #158). */}
-              <span aria-hidden="true">
-                {row.conditions.feelsLike}{" "}
-                <span className="text-dialed-text">{row.conditions.sky}</span>
-              </span>
-              <span className="sr-only">{row.conditions.said}</span>
+        <span className={KIT_TILE_PLACE_CLASS}>
+          <KitTile photo={row.photo} />
+        </span>
+        {row.conditions === undefined ? undefined : (
+          <span className={CONDITIONS_PLACE_CLASS}>
+            {/* Drawn for the eye, said in words (round 52 #158). */}
+            <span aria-hidden="true">
+              {row.conditions.feelsLike}{" "}
+              <span className="text-dialed-text">{row.conditions.sky}</span>
             </span>
-          )}
+            <span className="sr-only">{row.conditions.said}</span>
+          </span>
+        )}
+        <span className={DAY_PLACE_CLASS}>
           <Mono step="xs" className="text-muted">
             {`${row.day} · ${row.distance.value} ${row.distance.unit}`}
           </Mono>
         </span>
-        <VerdictChip verdict={row.verdict} />
+        <span className={CHIP_PLACE_CLASS}>
+          <VerdictChip verdict={row.verdict} />
+        </span>
       </Link>
     </li>
   );

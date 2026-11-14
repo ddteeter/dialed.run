@@ -20,6 +20,7 @@ import { VerdictBacklog } from "../../modules/runs/components/VerdictBacklog";
  * bouncing somebody who typed the URL.
  */
 export const Route = createFileRoute("/runs/backlog")({
+  staticData: { title: "Needs a verdict" },
   loader: async () => ({
     backlog: await verdictBacklogQuery(),
     units: await viewerUnitsQuery(),

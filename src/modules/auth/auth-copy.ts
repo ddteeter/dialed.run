@@ -81,18 +81,17 @@ export const NOT_CREATED = "Not created";
 export const NOT_LOGGED_IN = "Not logged in";
 
 /**
-Where a refusal's band points, when its fix is on another page.
-*/
-export type RefusalLink = "request-access" | "create-account";
-
-/**
  * A band about the way in. `retry` is false for a refusal whose fix is
- * not pressing again — the code field above, or another page, which
- * `link` names — so its band carries no Try again (round 28 #9).
+ * not pressing again — the code field above, or another page — so its
+ * band carries no Try again (round 28 #9).
+ *
+ * **No band names a page to go to** (Round 55 · 177): "a band never
+ * repeats a line the page already shows", and the page always shows it —
+ * Au2's "No code? Request access" under the Google band, and Au1's "New
+ * here? Create an account" at its foot.
  */
 export interface AuthBand extends ControlFailure {
   readonly retry?: false | undefined;
-  readonly link?: RefusalLink | undefined;
 }
 
 /**
@@ -103,14 +102,12 @@ export interface AuthBand extends ControlFailure {
 export class AccessRefused extends Error implements AuthBand {
   readonly kicker: string;
   readonly retry: false | undefined;
-  readonly link: RefusalLink | undefined;
 
   constructor(band: AuthBand) {
     super(band.message);
     this.name = "AccessRefused";
     this.kicker = band.kicker;
     this.retry = band.retry;
-    this.link = band.link;
   }
 }
 
@@ -158,8 +155,9 @@ export function regionRefused(): AccessRefused {
 /**
  * Google's refusals, by the code that names them, as round 28 #9 draws
  * them in a band under the button: no code ("enter it above"), a refused
- * code (the field's sentence, and Request access), and Au1's address with
- * no account (Create an account). None offers Try again.
+ * code (the field's sentence; the page's own "No code? Request access"
+ * sits under it), and Au1's address with no account (its foot's "New
+ * here? Create an account" is the way). None offers Try again.
  */
 export const GOOGLE_REFUSALS: ReadonlyMap<string | undefined, AuthBand> =
   new Map([
@@ -173,7 +171,6 @@ export const GOOGLE_REFUSALS: ReadonlyMap<string | undefined, AuthBand> =
         kicker: NOT_CREATED,
         message: INVITE_COPY.invalid,
         retry: false,
-        link: "request-access",
       },
     ],
     [
@@ -192,7 +189,6 @@ export const GOOGLE_REFUSALS: ReadonlyMap<string | undefined, AuthBand> =
         kicker: NOT_LOGGED_IN,
         message: AUTH_COPY.googleNoAccount,
         retry: false,
-        link: "create-account",
       },
     ],
   ]);

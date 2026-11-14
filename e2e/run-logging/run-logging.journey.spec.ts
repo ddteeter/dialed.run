@@ -361,9 +361,9 @@ test("log a run: read a file in place, pick the kit, note it, enter one by hand"
       .getByRole("listitem")
       .filter({ hasText: "New run on Strava. Upload its file" });
     await expect(reminder).toHaveCount(1);
-    // Read: the paper and quiet text, where unread is a white row.
-    await expect(reminder).toHaveClass(/text-quiet/u);
-    await expect(reminder).not.toHaveClass(/bg-panel/u);
+    // Read: quiet text and no dot (R55·183), where unread is ink.
+    await expect(reminder).toHaveAttribute("data-state", "read");
+    await expect(reminder.locator("> *")).toHaveClass(/text-quiet/u);
 
     // ---- R1 · by hand, straight on to the outfit ---------------------
     await page.setViewportSize(DESK);

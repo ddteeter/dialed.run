@@ -1,6 +1,10 @@
 document
-main
+banner
+link, dialed.run home
 dialed.run
+end of link, dialed.run home
+end of banner
+main
 heading, Log in, level 1
 form
 status

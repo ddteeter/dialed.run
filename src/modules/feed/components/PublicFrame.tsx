@@ -1,10 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import type { JSX, ReactNode } from "react";
 
 import { verdictLabel, type VerdictValue } from "../../../lib/contracts";
 import { MARKETING_INVITE_URL, MARKETING_ORIGIN } from "../../../lib/marketing";
-import { Mono, Page, Wordmark, verdictHue } from "../../../ui";
+import { Mono, Page, verdictHue } from "../../../ui";
+import { SignedOutFrame } from "../../../ui/SignedOutFrame";
 
 /**
  * What the open web's pages share (round 41 #86c, #86d, #86f): `/kit/<id>`
@@ -48,21 +49,16 @@ export function useSignedInAfterLoad(ask: AskSignedIn): {
   return { isSignedIn };
 }
 
-// The bar's one slot in pill form (round 42 #90): an outline for Log in,
-// filled for the way into the app. On the bar's ink block the outline is
-// 1px --ink, as R48·134 draws the outline pill on a dark ground; a
-// hairline there is all but invisible. Written out whole so each can be read as
-// one class list (`targets-and-focus` reads the 44px target off it).
-const LOG_IN_CLASS =
-  "target inline-flex items-center rounded-pill border border-ink px-5 text-small font-semibold text-ink no-underline";
+// The way into the app, for a signed-in viewer: the ink pill in the
+// frame's bar (R55·176), and the invite's primary. Written out whole so
+// it can be read as one class list (`targets-and-focus` reads the 44px
+// target off it).
 const INTO_APP_CLASS =
   "target inline-flex items-center rounded-pill bg-ink px-5 text-small font-bold text-ground no-underline";
-const FOOT_LINK_CLASS = "target text-muted underline underline-offset-4";
-// The foot's links, as the app's own legal footer spaces them (A-03, built
-// with 7b's `Layout` fix): 8px each side and no gap, so a word narrower
-// than the 44px target is padded evenly instead of on its right alone.
-const FOOTER_LINK_CLASS =
-  "target inline-flex items-center px-2 text-muted underline underline-offset-4";
+const FOOT_LINK_CLASS =
+  "target inline-flex items-center text-muted underline underline-offset-4";
+// A quiet line with a bold ink underlined link (R55·176's cross-links).
+const CROSS_LINK_CLASS = "font-bold text-ink underline underline-offset-4";
 
 /**
  * Where "Open in the app" (or "Look in the app") goes: the app's own page
@@ -103,75 +99,15 @@ function IntoApp({
 }
 
 /**
- * The frame's measure: the column alone, or — with a rail — DS1's two
- * columns at the desk, the page measure wide, with the bar and the foot
- * on the same measure so the wordmark lines up with the content. Each
- * class list written out whole, so the unknown-class lint can read it.
+ * The body's measure: the column alone, or — with a rail — DS1's two
+ * columns at the desk, the page measure wide. Each class list written out
+ * whole, so the unknown-class lint can read it.
  */
 const MEASURE = {
-  column: {
-    edge: "mx-auto flex min-h-11 w-full max-w-column items-center justify-between px-6",
-    main: "mx-auto w-full max-w-column flex-1",
-    foot: "m-0 mx-auto w-full max-w-column px-6",
-  },
-  split: {
-    edge: "mx-auto flex min-h-11 w-full max-w-column items-center justify-between px-6 desk:max-w-page",
-    main: "mx-auto w-full max-w-column flex-1 desk:grid desk:max-w-page desk:grid-cols-[minmax(0,var(--container-column))_minmax(0,1fr)] desk:grid-rows-[auto_1fr] desk:items-start desk:gap-x-6",
-    foot: "m-0 mx-auto w-full max-w-column px-6 desk:max-w-page",
-  },
+  column: "mx-auto w-full max-w-column flex-1",
+  split:
+    "mx-auto w-full max-w-column flex-1 desk:grid desk:max-w-page desk:grid-cols-[minmax(0,var(--container-column))_minmax(0,1fr)] desk:grid-rows-[auto_1fr] desk:items-start desk:gap-x-6",
 } as const;
-
-/**
- * The public pages' top bar, on every width (round 42 #90): the bracketed
- * wordmark home, and one slot in pill form — a hairline Log in signed
- * out, an ink way into the app signed in, never both: a stranger with no
- * account gets nothing from "Open in the app".
- */
-function PublicBar({
-  intoApp,
-  isSignedIn,
-  edge,
-}: Readonly<{ intoApp: IntoAppProps; isSignedIn: boolean; edge: string }>) {
-  // A `<header>`, so the bar is a landmark, as the app's own is.
-  return (
-    // The ink block, as all three boards draw it and as the app's own bar
-    // is at the desk (E2-06); a panel with its rule on a dark page
-    // (R50·143.1).
-    <header
-      data-part="top-bar"
-      data-ground="ink"
-      className="bg-ground py-3 text-ink"
-    >
-      <div className={edge}>
-        <Link
-          to="/"
-          reloadDocument
-          aria-label="dialed.run home"
-          className="target flex items-center no-underline"
-        >
-          <Wordmark className="text-title" />
-        </Link>
-        {isSignedIn ? (
-          <IntoApp page={intoApp.page} label={intoApp.label} />
-        ) : (
-          <Link
-            to="/auth/login"
-            reloadDocument
-            data-part="bar-actions"
-            className={LOG_IN_CLASS}
-          >
-            Log in
-          </Link>
-        )}
-      </div>
-    </header>
-  );
-}
-
-interface IntoAppProps {
-  readonly page: AppPage;
-  readonly label: string;
-}
 
 /**
  * A public page's own address and what its foot's Report link says, from
@@ -231,28 +167,30 @@ interface PublicFrameProps {
 }
 
 /**
- * The frame every public page wears: the bar, the column under its
- * heading (a `Page`, which stamps hydration), the rail and closing when
- * there are any, and the foot.
+ * The frame every public page wears: the one signed-out frame (R55·176),
+ * reloading the document on every way out; the column under its heading
+ * (a `Page`); the rail and closing when there are any; and the page's own
+ * Report link at the foot of its body. A signed-in viewer sees the way
+ * into the app in the bar, in place of Log in and Request access.
  */
 export function PublicFrame(props: PublicFrameProps): JSX.Element {
   const { page, origin, askSignedIn, heading, rail, children } = props;
   const report = origin === undefined ? undefined : reportOf(page, origin);
-  const intoApp = {
-    page,
-    label: origin === undefined ? "Look in the app" : "Open in the app",
-  };
   const { isSignedIn } = useSignedInAfterLoad(askSignedIn);
   const closing = props.closing?.(isSignedIn);
-  const measure = rail === undefined ? MEASURE.column : MEASURE.split;
   return (
-    <div className="flex min-h-dvh flex-col bg-ground text-ink">
-      <PublicBar
-        intoApp={intoApp}
-        isSignedIn={isSignedIn}
-        edge={measure.edge}
-      />
-      <main className={measure.main}>
+    <SignedOutFrame
+      reloadDocument
+      intoApp={
+        isSignedIn ? (
+          <IntoApp
+            page={page}
+            label={origin === undefined ? "Look in the app" : "Open in the app"}
+          />
+        ) : undefined
+      }
+    >
+      <main className={rail === undefined ? MEASURE.column : MEASURE.split}>
         <Page width="column">
           <header className="flex flex-col gap-3">
             {heading.kicker}
@@ -274,33 +212,23 @@ export function PublicFrame(props: PublicFrameProps): JSX.Element {
         {closing === undefined ? undefined : (
           <div className="px-6 pb-8 desk:col-start-1">{closing}</div>
         )}
+        {report === undefined ? undefined : (
+          <p
+            data-part="public-foot"
+            className="m-0 px-6 pb-8 text-small desk:col-start-1"
+          >
+            <Link
+              to="/takedown"
+              search={{ location: report.location }}
+              reloadDocument
+              className={FOOT_LINK_CLASS}
+            >
+              {report.label}
+            </Link>
+          </p>
+        )}
       </main>
-      <footer
-        data-part="public-foot"
-        className="border-t border-hairline py-4 text-small"
-      >
-        <p className={measure.foot}>
-          <span className="-mx-2 flex flex-wrap">
-            {report === undefined ? undefined : (
-              <Link
-                to="/takedown"
-                search={{ location: report.location }}
-                reloadDocument
-                className={FOOTER_LINK_CLASS}
-              >
-                {report.label}
-              </Link>
-            )}
-            <Link to="/privacy" reloadDocument className={FOOTER_LINK_CLASS}>
-              Privacy
-            </Link>
-            <Link to="/terms" reloadDocument className={FOOTER_LINK_CLASS}>
-              Terms
-            </Link>
-          </span>
-        </p>
-      </footer>
-    </div>
+    </SignedOutFrame>
   );
 }
 
@@ -331,8 +259,40 @@ export function RunnerFrame({
   return (
     <PublicFrame
       {...frame}
-      heading={{ text: `@${handle}`, className: headingClassName, beside }}
+      heading={{
+        text: <BreakableHandle handle={handle} />,
+        className: headingClassName,
+        beside,
+      }}
     />
+  );
+}
+
+/**
+ * `@handle`, which may break only after an underscore, never inside a
+ * word (R55·218a): a `<wbr>` after each "_". Drawn for the eye and said
+ * once, whole: the pieces between the breaks are separate text runs, and a
+ * screen reader walking them heard "at, public, underscore, pages".
+ */
+function BreakableHandle({ handle }: Readonly<{ handle: string }>) {
+  return (
+    <>
+      <span aria-hidden="true">
+        @
+        {handle.split("_").map((part, index) => (
+          // A part's place is part of its identity: two can share a name.
+          <Fragment key={`${String(index)}:${part}`}>
+            {index === 0 ? undefined : (
+              <>
+                _<wbr />
+              </>
+            )}
+            {part}
+          </Fragment>
+        ))}
+      </span>
+      <span className="sr-only">{`@${handle}`}</span>
+    </>
   );
 }
 
@@ -416,9 +376,17 @@ export function Invite() {
       <a href={MARKETING_INVITE_URL} className={INTO_APP_CLASS}>
         Request access
       </a>
-      <Link to="/join" reloadDocument className={FOOT_LINK_CLASS}>
-        Have a code? Join
-      </Link>
+      <p data-part="cross-link" className="m-0 text-body text-quiet">
+        Have a code?{" "}
+        <Link
+          data-target="inline"
+          to="/join"
+          reloadDocument
+          className={CROSS_LINK_CLASS}
+        >
+          Create an account
+        </Link>
+      </p>
     </section>
   );
 }

@@ -164,6 +164,23 @@ function NextAndSkip({
 }
 
 /**
+ * A row's edge for its state (AC2a and AC3a, R55·229): the open row a 2px
+ * ink edge, so it reads as the one being named; a named row a teal edge,
+ * as its teal "… · MATCHED" says it is done; any other row a hairline.
+ */
+function rowEdge(isNaming: boolean, isFinished: boolean): string {
+  if (isNaming) return OPEN_ROW;
+  return isFinished ? NAMED_ROW : RESTING_ROW;
+}
+
+const OPEN_ROW =
+  "flex flex-col gap-3 rounded-field border-2 border-ink bg-ground px-4 py-3";
+const NAMED_ROW =
+  "flex flex-col gap-3 rounded-field border border-teal bg-ground px-4 py-3";
+const RESTING_ROW =
+  "flex flex-col gap-3 rounded-field border border-hairline bg-ground px-4 py-3";
+
+/**
  * One offer: what it is now, and the form that gives it a name.
  *
  * Collapsed it states the Z language — `categoryLabel · GENERIC` — because
@@ -200,11 +217,14 @@ function PieceRow({
   const isFinished = result?.isNamed === true;
 
   return (
-    <div className="flex flex-col gap-3 rounded-field border border-hairline bg-ground px-4 py-3">
+    <div data-part="piece-row" className={rowEdge(isNaming, isFinished)}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-col gap-1">
           <span className="text-body font-semibold">{label}</span>
-          <Mono step="xs" className="text-muted">
+          <Mono
+            step="xs"
+            className={isFinished ? "text-dialed-text" : "text-muted"}
+          >
             {subtitle}
           </Mono>
         </div>

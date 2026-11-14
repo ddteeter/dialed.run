@@ -24,19 +24,12 @@ describe("OnboardingShell", () => {
     );
   });
 
-  it("shows its bar only from 1040, with a hairline foot", () => {
+  it("shows its bar at every width, 390 included (#630 F-09), with a hairline foot", () => {
     render(<OnboardingShell>step</OnboardingShell>);
 
     const bar = screen.getByRole("banner");
-    expect(bar).toHaveClass(
-      "hidden",
-      "desk:block",
-      "border-b",
-      "border-hairline",
-      "px-6",
-      "py-4",
-    );
-    expect(bar).not.toHaveClass("wide:block");
+    expect(bar).toHaveClass("border-b", "border-hairline", "px-6", "py-4");
+    expect(bar).not.toHaveClass("hidden");
     expect(bar.firstElementChild).toHaveClass(
       "mx-auto",
       "flex",

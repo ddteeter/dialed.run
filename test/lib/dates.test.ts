@@ -7,6 +7,7 @@ import {
   monthDayLabel,
   dayTimeLabel,
   isTimeZone,
+  isoCalendarDay,
   longDayLabel,
   monthYearLabel,
   previousCalendarDay,
@@ -256,6 +257,19 @@ describe("calendarDay", () => {
     const lateChicago = Math.floor(Date.UTC(2026, 8, 22, 3, 30) / 1000);
     expect(calendarDay(lateChicago)).toBe("22 Sept 2026");
     expect(calendarDay(lateChicago, "America/Chicago")).toBe("21 Sept 2026");
+  });
+});
+
+describe("isoCalendarDay (R55·183's carried day)", () => {
+  it("writes the day in the zone asked, as a date field does", () => {
+    const lateChicago = Math.floor(Date.UTC(2026, 10, 13, 3, 30) / 1000);
+    expect(isoCalendarDay(lateChicago)).toBe("2026-11-13");
+    expect(isoCalendarDay(lateChicago, "America/Chicago")).toBe("2026-11-12");
+  });
+
+  it("pads a one-digit month and day to two", () => {
+    const march = Math.floor(Date.UTC(2026, 2, 5, 12) / 1000);
+    expect(isoCalendarDay(march, "Europe/London")).toBe("2026-03-05");
   });
 });
 

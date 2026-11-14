@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 
+import { monthDayLabel } from "../../../lib/dates";
 import {
   Bracketed,
   ControlFailureBand,
@@ -54,25 +55,28 @@ export function BlockedRunners({
   return (
     <div className="flex flex-col gap-6">
       <FormStatus>{status}</FormStatus>
-      <section className="flex flex-col gap-2">
+      {/* W2's bordered card (B-01): the tags hang in their own column,
+          so a second line wraps under the words, not under the tag. */}
+      <section
+        data-part="blocking-explained"
+        className="flex flex-col gap-3 rounded-card border border-hairline p-4"
+      >
         <h2 className="text-quiet">
           <Mono step="xs">What blocking does</Mono>
         </h2>
-        <ul className="flex flex-col gap-2 text-body">
-          <li>
-            <Bracketed>blocked</Bracketed> They can&apos;t see your entries,
-            your closet, or find you in search
-          </li>
-          <li>
-            <Bracketed>blocked</Bracketed> You won&apos;t see them in the feed
-            or in search
-          </li>
-          <li>
-            <Bracketed>still</Bracketed> Their verdicts count in anonymous
-            conditions numbers — those name nobody
-          </li>
+        <ul className="m-0 flex list-none flex-col gap-2 p-0 text-body">
+          <Effect tag="blocked">
+            They can&apos;t see your entries, your closet, or find you in search
+          </Effect>
+          <Effect tag="blocked">
+            You won&apos;t see them in the feed or in search
+          </Effect>
+          <Effect tag="still">
+            Their verdicts count in anonymous conditions numbers — those name
+            nobody
+          </Effect>
         </ul>
-        <p className="text-micro text-quiet">
+        <p className="m-0 text-small text-quiet">
           They&apos;re not told. Blocking is quiet on purpose.
         </p>
       </section>
@@ -99,11 +103,34 @@ export function BlockedRunners({
             />
           )}
         </ListSection>
-        <p className="text-micro text-quiet">
-          Nothing here is a list anyone else can see.
-        </p>
       </section>
+      {/* W2's tinted closing note, its first sentence back (P3-10). */}
+      <p
+        data-part="blocked-note"
+        className="m-0 bg-tint p-4 text-body text-quiet"
+      >
+        Unblocking takes effect immediately and doesn&apos;t re-follow anyone.
+        Nothing here is a list anyone else can see.
+      </p>
     </div>
+  );
+}
+
+/**
+ * One line of what blocking does: its tag in a hanging column, then the
+ * words, which wrap in their own column.
+ */
+function Effect({
+  tag,
+  children,
+}: Readonly<{ tag: "blocked" | "still"; children: ReactNode }>): JSX.Element {
+  return (
+    <li className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-baseline gap-2">
+      <Bracketed step="xs" className="text-quiet">
+        {tag}
+      </Bracketed>
+      <span>{children}</span>
+    </li>
   );
 }
 
@@ -137,11 +164,28 @@ function BlockedRow({
   }, [announce, control.status]);
 
   return (
-    <li className="flex flex-col gap-3 text-body">
-      <div className="flex items-center justify-between gap-3">
-        <span>{runner.username ?? "A runner"}</span>
+    <li
+      data-part="blocked-row"
+      className="flex flex-col gap-3 rounded-card border border-hairline bg-panel p-4 text-body"
+    >
+      <div className="flex items-center gap-3">
+        {/* The board's avatar circle; decorative, the handle is read. */}
+        <span
+          aria-hidden="true"
+          className="size-9 shrink-0 rounded-pill bg-hairline"
+        />
+        {/* Shrinks and truncates, so the longest handle a runner can
+            pick never pushes Unblock off the screen (P3-09). */}
+        <span className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="truncate font-bold">
+            {runner.username === undefined ? "A runner" : `@${runner.username}`}
+          </span>
+          <Mono step="xs" className="text-muted">
+            {`Blocked ${monthDayLabel(runner.blockedAt)}`}
+          </Mono>
+        </span>
         <button
-          className="target cursor-pointer border-none bg-transparent p-0"
+          className="target shrink-0 cursor-pointer rounded-pill border border-ink bg-transparent px-4 text-ink"
           type="button"
           {...inFlight(control.pending)}
           onClick={() => {

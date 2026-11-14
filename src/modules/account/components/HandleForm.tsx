@@ -45,14 +45,18 @@ function AtMark(): JSX.Element {
 /**
  * The field's hint: the rule, said in words (`HANDLE_COPY.rule`), then
  * why it matters unless this is the re-pick, which says the rule alone.
+ * Off the settings form it ends on where the handle changes later; the
+ * settings form is that place (B-16).
  */
 function HandleHint({
   isRuleOnly,
-}: Readonly<{ isRuleOnly: boolean }>): JSX.Element {
+  isSettings,
+}: Readonly<{ isRuleOnly: boolean; isSettings: boolean }>): JSX.Element {
   return (
     <>
       <Spoken {...HANDLE_COPY.rule} />
       {isRuleOnly ? undefined : ` ${HANDLE_COPY.ruleReason}`}
+      {isRuleOnly || isSettings ? undefined : ` ${HANDLE_COPY.changeLater}`}
     </>
   );
 }
@@ -131,7 +135,9 @@ export function HandleForm({
   }
 
   const error = form.fieldErrors.username;
-  const hint = <HandleHint isRuleOnly={isRuleOnly} />;
+  const hint = (
+    <HandleHint isRuleOnly={isRuleOnly} isSettings={carry === "settings"} />
+  );
   const field = form.field("username");
 
   return (

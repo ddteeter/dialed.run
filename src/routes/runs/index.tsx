@@ -14,6 +14,7 @@ import {
 import { Page } from "../../ui";
 
 export const Route = createFileRoute("/runs/")({
+  staticData: { title: "Runs" },
   loader: async () => {
     const [runs, units, bell, strava] = await Promise.all([
       listRunSummariesFn(),

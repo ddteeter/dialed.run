@@ -1,4 +1,7 @@
 document
+banner
+dialed.run
+end of banner
 main
 Step # of # · Optional
 heading, One question does most of the work, level 1
@@ -6,8 +9,6 @@ form
 status
 group, Compared to people you run with, do you run warm or cold?
 Compared to people you run with, do you run warm or cold?
-Compared to people you run with, do you run warm or cold?
-end, Compared to people you run with, do you run warm or cold?
 radio, Always freezing +#°, The offset is visible on purpose. You'll see it change as we learn., not checked, position 1, set size 5
 Always freezing
 +#°

@@ -14,6 +14,7 @@ import {
 import {
   COLLAPSED_ROWS,
   matchingGroups,
+  matchingNotices,
   pieceCount,
   readLabel,
   type LicenceGroup,
@@ -315,5 +316,26 @@ describe("pieceCount, readLabel and the collapse", () => {
 
   it("collapses a group to its first three rows (round 29 #9)", () => {
     expect(COLLAPSED_ROWS).toBe(3);
+  });
+});
+
+function wordsOf(notice: { readonly words: string }): string {
+  return notice.words;
+}
+
+describe("matchingNotices", () => {
+  const notices = [
+    { id: "weather", words: "Weather data Visual Crossing" },
+    { id: "climate", words: "Climate zones Köppen" },
+  ];
+  it("keeps the notices whose words hold the query, ignoring case and the spaces around it", () => {
+    expect(
+      matchingNotices(notices, "  CROSSING ", wordsOf).map(({ id }) => id),
+    ).toEqual(["weather"]);
+    expect(matchingNotices(notices, "zz", wordsOf)).toEqual([]);
+  });
+
+  it("keeps every notice for a blank query", () => {
+    expect(matchingNotices(notices, ' '.repeat(3), wordsOf)).toEqual(notices);
   });
 });

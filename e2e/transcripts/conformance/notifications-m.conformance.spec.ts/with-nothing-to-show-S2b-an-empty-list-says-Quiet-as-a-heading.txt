@@ -2,6 +2,7 @@ document
 main
 heading, Notifications, level 1
 link, Notifications, current page
+All read
 status
 heading, Quiet, level 2
 Quiet

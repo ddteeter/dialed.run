@@ -1,22 +1,18 @@
 import { useState } from "react";
 import type { JSX } from "react";
 
-import { refusalMessage } from "../../../lib/contracts/access";
 import { takedownRequestSchema } from "../../../lib/contracts/takedown";
 import {
-  FailureBand,
   FieldMessage,
   FormElement,
-  FormFailureBand,
-  SubmitButton,
   TextField,
   ToggleField,
-  Turnstile,
   useFormSubmit,
   useIdempotencyKey,
   useTurnstileToken,
 } from "../../../ui";
 import { SignedOutPanel, SignedOutReceipt } from "../../../ui/SignedOutPanel";
+import { TurnstileFormEnd } from "../../../ui/TurnstileFormEnd";
 import type { TakedownRequestResult } from "../takedown-requests";
 import { ElsewhereHelp } from "./ElsewhereHelp";
 
@@ -105,6 +101,8 @@ export function TakedownRequest({
       request({ data: { ...values, turnstileToken: turnstile.take() } }),
     onSuccess: setOutcome,
   });
+  // The receipt takes the panel's title (R55·181).
+  if (outcome?.status === "received") return <Receipt email={email} />;
   const plainField = (
     key: "location" | "posterUsername" | "description",
     hint: string,
@@ -131,81 +129,60 @@ export function TakedownRequest({
 
   return (
     <SignedOutPanel heading="Ask us to remove an image">
-      {outcome?.status === "received" ? (
-        <Receipt email={email} />
-      ) : (
-        <FormElement form={form} dataPart="form" onSubmit={submit}>
-          <p className="m-0 text-body">
-            For an intimate image of you, or someone you act for, shared without
-            consent. We hide it while we look and decide within 48 hours.
-          </p>
-          <TextField
-            name="email"
-            label={LABELS.email}
-            hint="Where we'll write back"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={edit("email")}
-            field={form.field}
-            error={form.fieldErrors.email}
-          />
-          <TextField
-            name="signature"
-            label={LABELS.signature}
-            hint="Typed as your signature."
-            autoComplete="name"
-            value={signature}
-            onChange={edit("signature")}
-            field={form.field}
-            error={form.fieldErrors.signature}
-          />
-          {/* Plain text, not `url`: the hint invites words, and a phone's
+      <FormElement form={form} dataPart="form" onSubmit={submit}>
+        <p className="m-0 text-body">
+          For an intimate image of you, or someone you act for, shared without
+          consent. We hide it while we look and decide within 48 hours.
+        </p>
+        <TextField
+          name="email"
+          label={LABELS.email}
+          hint="Where we'll write back"
+          type="email"
+          autoComplete="email"
+          value={email}
+          onChange={edit("email")}
+          field={form.field}
+          error={form.fieldErrors.email}
+        />
+        <TextField
+          name="signature"
+          label={LABELS.signature}
+          hint="Typed as your signature."
+          autoComplete="name"
+          value={signature}
+          onChange={edit("signature")}
+          field={form.field}
+          error={form.fieldErrors.signature}
+        />
+        {/* Plain text, not `url`: the hint invites words, and a phone's
               URL keyboard has no space bar to type them with. */}
-          {plainField("location", "A dialed.run link, or say where it is.")}
-          {plainField("posterUsername", "If you know who posted it.")}
-          {plainField("description", "One line")}
-          {/* A checkbox with an error is not `ToggleField`'s job, so its
+        {plainField("location", "A dialed.run link, or say where it is.")}
+        {plainField("posterUsername", "If you know who posted it.")}
+        {plainField("description", "One line")}
+        {/* A checkbox with an error is not `ToggleField`'s job, so its
               sentence goes under it, as O3's tap-list does with a group's. */}
-          <div className="flex flex-col gap-2">
-            <ToggleField
-              name="isAttested"
-              label={ATTESTATION}
-              field={form.field}
-              isOn={isAttested}
-              onChange={edit("isAttested")}
-            />
-            <FieldMessage
-              name="isAttested"
-              error={form.fieldErrors.isAttested}
-            />
-          </div>
-          {outcome === undefined ? undefined : (
-            <FailureBand
-              kicker="Not sent"
-              message={refusalMessage(outcome)}
-              onRetry={submit}
-            />
-          )}
-          <FormFailureBand
-            failure={form.failure}
-            onRetry={form.retry}
-            retryRef={form.retryRef}
+        <div className="flex flex-col gap-2">
+          <ToggleField
+            name="isAttested"
+            label={ATTESTATION}
+            field={form.field}
+            isOn={isAttested}
+            onChange={edit("isAttested")}
           />
-          <Turnstile
-            key={turnstile.widgetKey}
-            siteKey={siteKey}
-            action="takedown"
-            onToken={turnstile.onToken}
-          />
-          <SubmitButton
-            tone="ink"
-            label="Send the request"
-            pendingLabel="Sending the request"
-            pending={form.pending}
-          />
-        </FormElement>
-      )}
+          <FieldMessage name="isAttested" error={form.fieldErrors.isAttested} />
+        </div>
+        <TurnstileFormEnd
+          form={form}
+          refusal={outcome}
+          onRetryRefusal={submit}
+          siteKey={siteKey}
+          action="takedown"
+          turnstile={turnstile}
+          label="Send the request"
+          pendingLabel="Sending the request"
+        />
+      </FormElement>
     </SignedOutPanel>
   );
 }

@@ -56,29 +56,24 @@ heading, Who sees what, level 2
 Who sees what
 end of heading, Who sees what, level 2
 list
-listitem, level 1, position 1, set size 1
+listitem, level 1, position 1, set size 3
 link, Privacy New runs shared · Not counted
 Privacy
 New runs shared · Not counted
 end of link, Privacy New runs shared · Not counted
-end of listitem, level 1, position 1, set size 1
-end of list
-heading, Review, level 2
-Review
-end of heading, Review, level 2
-list
-listitem, level 1, position 1, set size 2
+end of listitem, level 1, position 1, set size 3
+listitem, level 1, position 2, set size 3
 link, Blocked runners # blocked
 Blocked runners
 # blocked
 end of link, Blocked runners # blocked
-end of listitem, level 1, position 1, set size 2
-listitem, level 1, position 2, set size 2
+end of listitem, level 1, position 2, set size 3
+listitem, level 1, position 3, set size 3
 link, Notifications Run reminders by email
 Notifications
 Run reminders by email
 end of link, Notifications Run reminders by email
-end of listitem, level 1, position 2, set size 2
+end of listitem, level 1, position 3, set size 3
 end of list
 heading, Display, level 2
 Display
@@ -134,9 +129,13 @@ What dialed.run is built on
 end of link, Open source What dialed.run is built on
 end of listitem, level 1, position 4, set size 4
 end of list
-button, Sign out
+list
+listitem, level 1, position 1, set size 1
+button, Sign out, Signed in as @onboarding_# On this phone
 Sign out
-end of button, Sign out
+end of button, Sign out, Signed in as @onboarding_# On this phone
+end of listitem, level 1, position 1, set size 1
+end of list
 end of main
 status
 end of document

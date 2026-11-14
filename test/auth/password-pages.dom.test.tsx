@@ -137,12 +137,23 @@ describe("ForgotPassword", () => {
     ).toBeVisible();
     const remembered = screen.getByText(/^Remembered it\?/u);
     expect(remembered.closest("p")).toHaveTextContent("Remembered it? Log in");
-    const login = screen.getByRole("link", { name: "Log in" });
+    const login = within(screen.getByRole("main")).getByRole("link", {
+      name: "Log in",
+    });
     expect(login).toHaveAttribute("href", "/auth/login");
     expect(login).toHaveClass("underline");
     await user.type(
       screen.getByRole("textbox", { name: "Email" }),
       "maya@example.com",
+    );
+    // R54·167.1: this surface's primary is the ink pill, never pink caps.
+    expect(screen.getByRole("button", { name: "Send link" })).toHaveClass(
+      "rounded-pill",
+      "bg-ink",
+      "text-ground",
+    );
+    expect(screen.getByRole("button", { name: "Send link" })).not.toHaveClass(
+      "bg-action",
     );
     await user.click(screen.getByRole("button", { name: "Send link" }));
 
@@ -221,6 +232,15 @@ describe("ResetPassword", () => {
     expect(screen.getByText("At least 10 characters.")).toBeVisible();
     expect(passwordField()).toHaveAttribute("autocomplete", "new-password");
     await user.type(passwordField(), LONG);
+    // R54·167.1: this surface's primary is the ink pill, never pink caps.
+    expect(screen.getByRole("button", { name: "Set password" })).toHaveClass(
+      "rounded-pill",
+      "bg-ink",
+      "text-ground",
+    );
+    expect(
+      screen.getByRole("button", { name: "Set password" }),
+    ).not.toHaveClass("bg-action");
     await user.click(screen.getByRole("button", { name: "Set password" }));
 
     expect(reset).toHaveBeenCalledWith("tok", { password: LONG });
@@ -231,7 +251,9 @@ describe("ResetPassword", () => {
     expect(
       screen.getByText("Log in with it. Every other device was signed out."),
     ).toBeVisible();
-    const login = screen.getByRole("link", { name: "Log in" });
+    const login = within(screen.getByRole("main")).getByRole("link", {
+      name: "Log in",
+    });
     expect(login).toHaveAttribute("href", "/auth/login");
     expect(login).toHaveClass("bg-ink");
   });
@@ -402,10 +424,14 @@ describe("Sign out everywhere (ACC-7)", () => {
     const signOut = vi.fn().mockReturnValue(done.promise);
     await renderWithRouter(<SignOutButton isEverywhere signOut={signOut} />);
 
-    const button = screen.getByRole("button", { name: "Sign out everywhere" });
+    // R55·182.2: the last SIGN-IN row, "Every device", its verb Sign out.
+    const button = screen.getByRole("button", { name: "Sign out" });
+    expect(button).toHaveAccessibleDescription(
+      "Every device Signs out your phone and other browsers",
+    );
     await user.click(button);
     expect(signOut).toHaveBeenCalledTimes(1);
-    expect(button).toHaveTextContent("Signing out everywhere");
+    expect(button).toHaveTextContent("Signing out");
     done.resolve(undefined);
     await waitFor(() => {
       expect(button).not.toHaveAttribute("aria-busy");

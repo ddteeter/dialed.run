@@ -181,10 +181,13 @@ describe("/takedown", () => {
     );
     const user = userEvent.setup();
     await fillIn(user);
-    // Signed out, so the ink pill, not the product's pink (R54·167.1).
+    // R54·167.1: this surface's primary is the ink pill, never pink caps.
     expect(
       screen.getByRole("button", { name: "Send the request" }),
-    ).toHaveClass("rounded-pill", "bg-ink");
+    ).toHaveClass("rounded-pill", "bg-ink", "text-ground");
+    expect(
+      screen.getByRole("button", { name: "Send the request" }),
+    ).not.toHaveClass("bg-action");
     await user.click(screen.getByRole("button", { name: "Send the request" }));
 
     expect(await screen.findByText("Request sent.")).toBeInTheDocument();
@@ -205,11 +208,16 @@ describe("/takedown", () => {
         turnstileToken: "answer",
       },
     });
-    const inReceipt = within(receipt ?? document.body);
-    expect(inReceipt.getByText("Request sent")).toBeVisible();
-    expect(
-      inReceipt.getByRole("heading", { name: "We have your request" }),
-    ).toBeVisible();
+    // The receipt takes the title (R55·181): a teal MONO.xs kicker, then
+    // its title as the page's one display heading.
+    expect(screen.getByText("Request sent")).toHaveClass(
+      "text-dialed-text",
+      "text-mono-xs",
+    );
+    const title = screen.getByRole("heading", { level: 1 });
+    expect(title).toHaveTextContent("We have your request");
+    expect(title).toHaveClass("font-display", "text-display");
+    expect(screen.getAllByRole("heading")).toHaveLength(1);
     expect(receipt).toHaveTextContent(
       "A person will look at it and decide within 48 hours. We've emailed a receipt to sam@example.com, and we'll email you the outcome.",
     );

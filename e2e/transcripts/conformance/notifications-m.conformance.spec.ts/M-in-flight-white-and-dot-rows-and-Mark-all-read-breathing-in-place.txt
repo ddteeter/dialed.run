@@ -25,24 +25,19 @@ button, Log a run
 end of banner
 main
 heading, Notifications, level 1
+All read
 status
 list
 listitem, level 1, position 1, set size 3
-paragraph
 Your run import didn't work.
-end of paragraph
 :day :month #, #:# UTC
 end of listitem, level 1, position 1, set size 3
 listitem, level 1, position 2, set size 3
-paragraph
 New run on Strava — log your kit?
-end of paragraph
 :day :month #, #:# UTC
 end of listitem, level 1, position 2, set size 3
 listitem, level 1, position 3, set size 3
-paragraph
 Your run import didn't work.
-end of paragraph
 :day :month #, #:# UTC
 end of listitem, level 1, position 3, set size 3
 end of list

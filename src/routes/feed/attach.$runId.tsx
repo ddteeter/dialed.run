@@ -21,7 +21,7 @@ import { photoBlurStep } from "../../modules/safety/components/PhotoBlur";
 // fallow-ignore-next-line code-duplication -- two signed-in feed routes are the same route shape by mandate: createFileRoute + beforeLoad gate + a one-call loader + shell is what server-functions-are-glue requires of a route
 export const Route = createFileRoute("/feed/attach/$runId")({
   // D-102's name for the page: its heading is a question.
-  staticData: { savedPage: "Attach the kit" },
+  staticData: { savedPage: "Attach the kit", title: "What did you wear?" },
   // A2b's push at the desk is `?pick=` on this page (Round 54 · 164.3).
   validateSearch: attachSearch,
   // A push changes only the search: the run and the closet are the ones

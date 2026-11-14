@@ -132,6 +132,7 @@ export function UnsubscribeLanding({
             label="Unsubscribe"
             pendingLabel="Unsubscribing"
             pending={form.pending}
+            tone="ink"
           />
           {form.failure === undefined ? undefined : (
             <FailureBand

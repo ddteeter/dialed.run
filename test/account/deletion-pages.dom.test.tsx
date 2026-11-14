@@ -92,7 +92,7 @@ async function openSheet(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("DeleteAccount (U1's last row)", () => {
-  it("is set apart by a 2px rule, its title in the action colour as text, and says what happens", async () => {
+  it("is set apart by a 2px rule, its verb in the action colour as text, and says what happens", async () => {
     const { view } = deleteRow();
     await view;
     const row = document.querySelector("[data-part='delete-account']");
@@ -117,8 +117,15 @@ describe("DeleteAccount (U1's last row)", () => {
         (child) => child.getAttribute("aria-hidden") === "true",
       ),
     ).toEqual([false, true, true]);
-    // Pink as text is `--cold-text`; `--action` is a surface (tokens.css).
-    expect(screen.getByText("Delete account")).toHaveClass("text-cold-text");
+    // R55·182.1: the label is ink, and the verb carries the danger, bold
+    // in `--cold-text` (pink as text; `--action` is a surface).
+    expect(screen.getByText("Delete account")).not.toHaveClass(
+      "text-cold-text",
+    );
+    expect(screen.getByText("Delete")).toHaveClass(
+      "font-bold",
+      "text-cold-text",
+    );
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
@@ -146,10 +153,30 @@ describe("DeleteAccount (U1's last row)", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  it("lets the current password be shown in the sheet (P1-02)", async () => {
+    const { view, user } = deleteRow();
+    await view;
+    const sheet = await openSheet(user);
+    await user.click(
+      within(sheet).getByRole("button", { name: "Show password" }),
+    );
+    expect(within(sheet).getByLabelText("Current password")).toHaveAttribute(
+      "type",
+      "text",
+    );
+  });
+
   it("refuses an empty password with the schema's words, sending nothing", async () => {
     const { view, user, request } = deleteRow();
     await view;
     const sheet = await openSheet(user);
+    // R54·167.1: this surface's primary is the ink pill, never pink caps.
+    expect(
+      within(sheet).getByRole("button", { name: "Delete my account" }),
+    ).toHaveClass("rounded-pill", "bg-ink", "text-ground");
+    expect(
+      within(sheet).getByRole("button", { name: "Delete my account" }),
+    ).not.toHaveClass("bg-action");
     await user.click(
       within(sheet).getByRole("button", { name: "Delete my account" }),
     );
@@ -349,20 +376,16 @@ describe("Leaving (round 27 #14)", () => {
         "You're signed out on every device. Changed your mind? Log in before then and choose to keep it.",
       ),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Log in" })).toHaveAttribute(
-      "href",
-      "/auth/login",
-    );
+    expect(
+      within(screen.getByRole("main")).getByRole("link", { name: "Log in" }),
+    ).toHaveAttribute("href", "/auth/login");
     expect(
       screen.getByRole("link", { name: "Open dialed.run" }),
     ).toHaveAttribute("href", "/");
     // Log in is the primary way back, Open dialed.run the secondary one.
-    expect(screen.getByRole("link", { name: "Log in" })).toHaveClass(
-      "target",
-      "rounded-pill",
-      "bg-ink",
-      "text-ground",
-    );
+    expect(
+      within(screen.getByRole("main")).getByRole("link", { name: "Log in" }),
+    ).toHaveClass("target", "rounded-pill", "bg-ink", "text-ground");
     expect(screen.getByRole("link", { name: "Open dialed.run" })).toHaveClass(
       "target",
       "rounded-pill",
