@@ -27,9 +27,13 @@
  * phone would get the light half. Only what T1 cannot say uses it —
  * Google's button, whose dark colours are Google's — since a T1 role
  * already changes with the page.
+ *
+ * And inside the night ground, which T3 makes dark for everyone: the
+ * Desk does not read the runner's theme, so a light-theme operator gets
+ * the dark sheet edge and the dark field edge too (#700 R2-DESK-02).
  */
 @custom-variant dark {
-  &:where(:root[data-theme="dark"] *) {
+  &:where(:root[data-theme="dark"] *, [data-ground="night"] *) {
     @slot;
   }
 
