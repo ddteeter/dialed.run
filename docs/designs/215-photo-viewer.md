@@ -69,11 +69,12 @@ photo well stays as it is (249.5). This lane builds all of that for A2 (#659).
 
 ## Open questions (building on these guesses)
 
-1. **A2 holds several photos.** "PHOTO 1 OF 2", "swipe between photos"
+1. **A2 holds several photos** (Design 252, #668). "PHOTO 1 OF 2", "swipe between photos"
    and "leaves at the photo cap" read as up to `maxPhotosPerEntry` (4) on
    A2, where today it holds one.
-2. **With no photo, A2 shows only the add box**, under the kicker, as the
+2. **With no photo, A2 shows only the add box** (Design 253, #669), under the kicker, as the
    board draws it. The dashed well and its hint "Flat on the floor works
    best." leave A2. The hint is dropped unless Design says where it goes.
-3. **Names.** A thumbnail's button is "Photo 1 of 2". The add box's name is
-   "Add photo". The arrows are "Previous photo" and "Next photo".
+3. **Names**, answered by the owner on 2026-11-13: a thumbnail's button is
+   "Photo 1 of 2", the add box is "Add photo", and the arrows are
+   "Previous photo" and "Next photo".
