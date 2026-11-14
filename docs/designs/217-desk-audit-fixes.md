@@ -78,7 +78,7 @@ By finding (files in parentheses; ★ = outside this lane, granted by the coordi
 
 ## Issues
 
-- Closes: #700
+- Closes: #700, and the Round 57 rulings #709 (264, every Desk page at the rail) and #667 (251, a code titles the drawer in MONO.lg)
 - Opens: #758 and #759 (filed by the coordinator; they stay open)
 
 ## Open questions
