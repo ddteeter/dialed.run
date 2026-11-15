@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import {
   extractedProductSchema,
+  validExtracted,
   type ExtractedProduct,
 } from "../../lib/contracts";
 
@@ -40,18 +41,14 @@ const FIELDS = Object.keys(extractedProductSchema.shape);
  *
  * A rung that found nothing must say *nothing* rather than hand the ladder
  * an empty object — an empty object reads as a rung that succeeded, and
- * stops the next one being tried.
+ * stops the next one being tried. A field that fails its own schema is
+ * dropped here (SA-L17, `validExtracted`), so a bad value from one rung
+ * leaves the field blank for the next.
  */
 export function someExtracted(
-  fields: Readonly<ExtractedProduct>,
+  fields: Readonly<Partial<Record<keyof ExtractedProduct, unknown>>>,
 ): ExtractedProduct | undefined {
-  const found: ExtractedProduct = {};
-  for (const key of FIELDS) {
-    const value: unknown = Reflect.get(fields, key);
-    // `!== undefined` rather than truthiness: `windResistant: false` is a
-    // finding, and dropping it leaves a column that reads as "nobody looked".
-    if (value !== undefined) Reflect.set(found, key, value);
-  }
+  const found = validExtracted(fields);
   return Object.keys(found).length > 0 ? found : undefined;
 }
 

@@ -3,6 +3,7 @@ import type { z } from "zod";
 
 import {
   brandNameSchema,
+  validExtracted,
   effortSchema,
   entryTagSchema,
   fabricSchema,
@@ -342,5 +343,45 @@ describe("the garment union is closed", () => {
         layer: "base",
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("validExtracted keeps each field that passes its own schema (SA-L17)", () => {
+  it("drops a bad field and keeps the good ones beside it", () => {
+    expect(
+      validExtracted({
+        name: "Rover Tee",
+        imageUrl: "//cdn.example.com/x.jpg",
+        windResistant: false,
+        weight: "heavyish",
+      }),
+    ).toStrictEqual({ name: "Rover Tee", windResistant: false });
+  });
+
+  it("bounds a name and a brand as a product's, and a hint as a brand's", () => {
+    const fields = {
+      name: "n".repeat(120),
+      brand: "b".repeat(60),
+      categoryHint: "c".repeat(60),
+    };
+    expect(validExtracted(fields)).toStrictEqual(fields);
+    expect(
+      validExtracted({
+        name: "n".repeat(121),
+        brand: "b".repeat(61),
+        categoryHint: "c".repeat(61),
+      }),
+    ).toStrictEqual({});
+    expect(validExtracted({ brand: "", name: "" })).toStrictEqual({});
+  });
+
+  it("keeps nothing it has no schema for, and nothing undefined", () => {
+    expect(
+      validExtracted({
+        name: undefined,
+        imageUrl: "https://shop.example/x.jpg",
+      }),
+    ).toStrictEqual({ imageUrl: "https://shop.example/x.jpg" });
+    expect(Object.keys(validExtracted({ name: undefined }))).toStrictEqual([]);
   });
 });

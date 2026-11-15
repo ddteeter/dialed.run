@@ -372,3 +372,34 @@ describe("hasWrittenSpecs: specs found, or a page with nothing (round 43 #94)", 
     );
   });
 });
+
+describe("applyExtraction: only what reads back is stored (SA-L17)", () => {
+  it("drops a field that fails its own schema, keeps the rest, and can apply again", async () => {
+    const id = await freshProduct();
+    // A protocol-relative image, as shop pages do publish, and a name
+    // longer than a product's.
+    const page: ExtractedProduct = {
+      imageUrl: "//cdn.example.com/tee.jpg",
+      name: "n".repeat(121),
+      brand: "Janji",
+      weight: "light",
+    };
+
+    const report = await applyExtraction(db(), id, page, "og");
+
+    expect(report.filled).toContain("weight");
+    const row = await rowOf(id);
+    const stored: unknown = JSON.parse(String(row.extracted));
+    expect(stored).toMatchObject({
+      found: { brand: "Janji", weight: "light" },
+    });
+    expect(JSON.stringify(stored)).not.toContain("cdn.example.com");
+    expect(JSON.stringify(stored)).not.toContain("n".repeat(121));
+    expect(hasWrittenSpecs(row.extracted)).toBe(true);
+
+    // The ledger reads back, so a second pass writes rather than throwing.
+    await expect(
+      applyExtraction(db(), id, { fabric: "merino" }, "og"),
+    ).resolves.toMatchObject({ filled: ["fabric"] });
+  });
+});

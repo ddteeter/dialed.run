@@ -74,6 +74,37 @@ export const extractedProductSchema = z.object({
 export type ExtractedProduct = z.infer<typeof extractedProductSchema>;
 
 /**
+ * Each field as it may be stored: its own member of the schema above, and
+ * a name and brand no longer than a product's own (SA-L17). A category
+ * hint gets a brand's bound, being a word or two.
+ */
+const storedFieldSchemas: Readonly<Record<string, z.ZodType>> = {
+  ...extractedProductSchema.shape,
+  name: productNameSchema,
+  brand: brandNameSchema,
+  categoryHint: brandNameSchema,
+};
+
+/**
+ * What a page gave, keeping only the fields that pass their own schema
+ * (SA-L17): a bad image costs the image, not the name beside it. Every
+ * rung's answer passes through here, and so does the ledger a product
+ * stores, so nothing is stored that its reader would refuse.
+ */
+export function validExtracted(
+  candidate: Readonly<Partial<Record<keyof ExtractedProduct, unknown>>>,
+): ExtractedProduct {
+  const valid: ExtractedProduct = {};
+  for (const [key, schema] of Object.entries(storedFieldSchemas)) {
+    const value: unknown = Reflect.get(candidate, key);
+    if (value !== undefined && schema.safeParse(value).success) {
+      Reflect.set(valid, key, value);
+    }
+  }
+  return valid;
+}
+
+/**
 Deterministic rungs (JSON-LD, Shopify JSON, OG) implement this per source.
 */
 export interface PageExtractor {
