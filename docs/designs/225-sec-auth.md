@@ -100,4 +100,9 @@ and SA-M26 (`safety/bans.ts`, `test/safety/ban-gate.test.ts`) wait for #786.
 
 Owner answers (2026-11-15): a button on the landings; refuse Google into an
 email account; 10 wrong passwords per address per 15 minutes; codes
-`DIAL-XXXX-XXXX`.
+`DIAL-XXXX-XXXX`. The landings' ask state: sign-up link, kicker "Confirm",
+"Confirm your email", "This confirms {masked address} for your dialed.run
+account.", button "Confirm email"; change link, kicker "Change email", "Use
+this address?", "Your account's email changes to {address}. You'll log in
+with it from now on.", button "Use this address". Failure bands NOT
+CONFIRMED / NOT CHANGED, "That didn't go through. Try again?"
