@@ -29,11 +29,33 @@ const PRODUCT_JSON_ID = "ProductJson";
 /**
  * `var meta = {…};` — ShopifyAnalytics, carrying rather less.
  *
- * Still a pattern, and rightly: this is JavaScript inside a script body,
- * which no HTML tokenizer reads. The tokenizer's job ends at handing over
- * the body.
+ * The opening is a pattern, since this is JavaScript inside a script body,
+ * which no HTML tokenizer reads. The blob's end is found by a scan, not by
+ * the pattern (SA-M32): the first `};` on the opening's own line, and when
+ * that line has none, the search goes on from the next line, so each line
+ * is read once however many openings it holds.
  */
-const ANALYTICS_META = /var\s+meta\s*=\s*(\{[^\n]*?\});/iu;
+const ANALYTICS_OPENING = /var\s+meta\s*=\s*\{/giu;
+
+/**
+ * The `{…}` of the first `var meta = {…};` in a script body.
+ */
+export function analyticsBlob(body: string): string | undefined {
+  const opening = new RegExp(ANALYTICS_OPENING);
+  for (
+    let match = opening.exec(body);
+    match !== null;
+    match = opening.exec(body)
+  ) {
+    const start = match.index + match[0].length - 1;
+    const newline = body.indexOf("\n", start);
+    const lineEnd = newline === -1 ? body.length : newline;
+    const close = body.slice(start, lineEnd).indexOf("};");
+    if (close !== -1) return body.slice(start, start + close + 1);
+    opening.lastIndex = lineEnd;
+  }
+  return undefined;
+}
 
 /**
 The product object, wherever the theme put it.
@@ -56,7 +78,7 @@ function productFrom(html: string): unknown {
   // missing blob unparseable text, and zod makes "not an object" a failed
   // parse, so only the reachable case is written down.
   const blob = scripts
-    .map((script) => ANALYTICS_META.exec(script.body)?.[1])
+    .map((script) => analyticsBlob(script.body))
     .find((match) => match !== undefined);
   const meta = analyticsMeta.safeParse(parseJson(String(blob)));
   return meta.success ? meta.data.product : undefined;
