@@ -169,13 +169,16 @@ export const MEASURE = {
   panel: 390,   // the phone width. Every "centred at phone width" surface is exactly this wide.
   column: 620,  // one column of reading or a list at width. Also the Operator document measure.
   rail: 122,    // Round 58 #312: the Desk rail's content track. Rail + 24 gap puts every Desk heading at the page edge + 146 (x=220 at 1280). Its footer stacks label over time.
+  aside: 300,   // Round 59 #316: the log flow's rail at desk (A1–A3). Column + 24 + aside = 944, centred as one group in the page's content (x=168 at 1280). Folds into the column's head below desk.
   page: 1180,   // the shell's max-width at desk, gutters included. Round 57 #263: content is 1180 − 2×24 = 1132, and the top bar, signed-out frame, rails and pages all share that one edge (x=74 at 1280).
 };
 export const MEASURE_RULES = [
   'The Operator boards\' 980px measure is a one-off: collapse to MEASURE.page for tables, MEASURE.column for documents.',
   'Between wide and desk the content column is min(100% − 2×SPACE[6], MEASURE.column). Never a fluid two-column.',
-  'Nothing pins a width that isn\'t in MEASURE. Sidebars and rails inherit from the grid, not from a px.',
+  'Nothing pins a width that isn\'t in MEASURE. Round 59 #316: rails and asides pin their width here or nowhere (MEASURE.rail, MEASURE.aside); every other sidebar inherits from the grid.',
   'Round 57 #263: gutters belong to the page, never to a column. A 620 column is 620 of content, centred on the page\'s axis (x=330 at 1280). The Desk\'s 620 pages start at the rail instead (#264).',
+  'Round 59 #319: nothing bleeds past its column. A band or notice inside a column sits on the content edge and pads its own text (SPACE[4]).',
+  'Round 59 #315: nothing breaks out past MEASURE.page. A table too wide for the 620 becomes cards at every width.',
 ];
 
 /**
@@ -203,6 +206,8 @@ ${Object.entries(HEIGHT).map(([k, v]) => `  --height-${k}: ${v}px;`).join('\n')}
 ${Object.entries(RADIUS).map(([k, v]) => `  --radius-${k}: ${v}px;`).join('\n')}
   --measure-panel: ${MEASURE.panel}px;
   --measure-column: ${MEASURE.column}px;
+  --measure-rail: ${MEASURE.rail}px;
+  --measure-aside: ${MEASURE.aside}px;
   --measure-page: ${MEASURE.page}px;
 }
 /* Media queries: write them with these exact values, nothing else. */
@@ -224,7 +229,7 @@ export const LINT = [
   // The prefix boundary stops `border-top: 1px` matching as `top:`.
   { id: 'no-raw-spacing',       reject: new RegExp(`(?:^|[\\s;{"'\`(,])${SPACING_PROP}\\s*:\\s*[^;},\\n]*?(?<![\\w.])(?<!\\w-)(?:-?(?!0+(?:\\.0+)?px)\\d*\\.?\\d+px|-?[1-9]\\d*(?:\\.\\d+)?(?![\\w.%]))`), allow: 'var(--space-*) or var(--height-*). 0 is allowed literally. 1px/2px exist only as border widths.' },
   { id: 'no-raw-breakpoint',    reject: /min-width:\s*\d+px/,             allow: `${BREAKPOINT.wide}px or ${BREAKPOINT.desk}px only — export from here, don't retype` },
-  { id: 'no-raw-measure',       reject: /(max-)?width:\s*(390|620|1180|980|1440)px/, allow: 'var(--measure-*)' },
+  { id: 'no-raw-measure',       reject: /(max-)?width:\s*(122|300|390|620|1180|980|1440)px/, allow: 'var(--measure-*)' },
   { id: 'mono-is-not-prose',    reject: 'a --mono-* step on an element with > 40 characters of non-numeric text', allow: 'TYPE.small or TYPE.body' },
   { id: 'uppercase-floor',      reject: 'text-transform: uppercase on any --type-* step except display', allow: 'MONO.xs / MONO.sm / TYPE.display only' },
 ];

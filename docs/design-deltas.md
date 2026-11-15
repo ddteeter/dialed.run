@@ -1081,6 +1081,73 @@ _Nothing from 99 on is open: round 45 answered the last of it._
 
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
 
+## Answered in round 59 (imported 2026-11-15)
+
+Design answered as `Round 59 Rulings.dc.html`, items 315–323, every one
+in the table on the board. The board's text is the text of record; each
+ruling is also a comment on its issue. One guess stands (315). One new
+token, MEASURE.aside 300, recorded in `tokens.js` and ported as
+`--container-aside` (`max-w-aside`), with three rule lines: rails and
+asides pin their width in MEASURE or nowhere, nothing bleeds past its
+column, nothing breaks out past MEASURE.page. Nothing wears the new
+token yet; #771 builds it. Every other item is a build issue, status
+Ready, for the next waves. Wave 11's screens lane ships its guesses for
+318–323 as built.
+
+### Notices
+
+- **R59 · 255's two exceptions. Noted.** "+ Add" keeps the name "Add a
+  run"; the compact credit keeps "Weather data provided by Visual
+  Crossing". Every other name is its visible words.
+- **R59 · /open-source deferred. Noted.** Answered by 318: "Project:
+  <package>" goes.
+
+### Shell and shared
+
+- **R59·316 · The log flow's rail at desk (#771). Ruled.** A new measure,
+  MEASURE.aside 300 (not "rail", which is the Desk's 122). 620 + 24 + 300
+  = 944, centred in the 1132 (x=168 at 1280). DeskSplit's `300px` guess
+  becomes the token.
+- **R59·317 · The Desk's QUIET_PILL (#778). Changed.** R58·308 reaches it:
+  QUIET_PILL takes the hairline edge (`--hairline-2` on the Desk's dark
+  ground). Its height stays matched to CHALK_PILL's, and the pair stays,
+  two kinds, as D-186 counts.
+- **R59·322 · New-tab mark (#783). Ruled.** No mark, because no new tab.
+  External links open in the same tab, on the help page and everywhere
+  else; `target="_blank"` goes. No glyph joins the Icon Pack.
+- **R59·323 · Hidden words outside controls (#784). Ruled.** 255 covers
+  every hidden word: hidden text may voice a visible mark, never add
+  words. ", works at" and "… dialed together" go; their lines read whole
+  without them. "Seen by:" becomes visible: MONO.xs SEEN BY before the
+  audience, on the same line.
+
+### Feed
+
+- **R59·319 · The confirm band at wide (#780). Changed; drawn.** Inside
+  the 620. The band's box sits on the content edge with the cards and
+  pads its own text 16. Nothing bleeds past a column (263). Below 720 as
+  built.
+
+### Runs
+
+- **R59·320 · The separator at the wrap (#781). Changed; drawn.** Neither
+  end: when the conditions wrap, the " ·" between the parts drops. Line
+  one "1:35:29 · 10.0 MI", line two "54° OVERCAST".
+- **R59·321 · The start-time button (#782). Drawn.** A visible "Change"
+  after the time, inside the same 44 target, TYPE.small 600, underlined.
+  The name is "6:04 AM Change"; the hidden ", change start time" goes.
+
+### Legal and /open-source
+
+- **R59·315 · The processors table's width (#761). Confirmed; closed.**
+  Cards at every width. The page caps at MEASURE.page and nothing breaks
+  out of it; there is no 1440 breakpoint. R57·265's seven-column breakout
+  is withdrawn.
+- **R59·318 · The PROJECTS heading (#779). Drawn.** An h2 "Projects" at
+  TYPE.heading, in its own case, over the rows. Each package name is the
+  link to its project, 600, underlined; the right-hand "Project" goes.
+  Replaces R58·290's right-hand link; the disclosures stay as drawn.
+
 ## Answered in round 58 (imported 2026-11-14)
 
 Design answered as `Round 58 Rulings.dc.html`, items 266–313 less 271
@@ -1268,7 +1335,7 @@ MEASURE; Design 316 (#771) asks.
   one group centred inside MEASURE.page as Add garment is (x=168 at 1280).
   The credit shows in the header only at desk (304), so This run drops
   its copy. Below desk the rail folds into the column's head, as built.
-  The 300 is not a MEASURE: Design 316 (#771).
+  The 300 is not a MEASURE: Design 316 (#771); R59·316 made it MEASURE.aside.
 
 ## Answered in round 57 (imported 2026-11-14)
 
