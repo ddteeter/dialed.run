@@ -13,6 +13,7 @@ import { notificationSettingsQuery } from "../../../modules/email/functions";
 import { SignOutButton } from "../../../modules/auth/components/SignOutButton";
 import { signOut } from "../../../modules/auth/credentials";
 import { requireSession } from "../../../modules/auth/functions";
+import { getStravaStatusFn } from "../../../modules/runs/functions";
 import { BelledLayout } from "../../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../../modules/notifications/functions";
 import { SettingsIndex } from "../../../modules/onboarding/components/Settings";
@@ -40,6 +41,7 @@ export const Route = createFileRoute("/onboarding/settings/")({
       notifications,
       theme,
       isPrivacyReviewDue,
+      strava,
     ] = await Promise.all([
       settingsQuery(),
       blockedRunnersQuery(),
@@ -48,6 +50,7 @@ export const Route = createFileRoute("/onboarding/settings/")({
       notificationSettingsQuery(),
       ownThemeQuery(),
       isPrivacyReviewDueQuery(),
+      getStravaStatusFn(),
     ]);
     return {
       current,
@@ -57,6 +60,7 @@ export const Route = createFileRoute("/onboarding/settings/")({
       runReminderEmail: notifications.runReminder,
       theme,
       isPrivacyReviewDue,
+      isStravaConnected: strava.connected,
     };
   },
   component: SettingsPage,
@@ -71,6 +75,7 @@ function SettingsPage() {
     runReminderEmail,
     theme,
     isPrivacyReviewDue,
+    isStravaConnected,
   } = Route.useLoaderData();
   const router = useRouter();
   const navigate = useNavigate();
@@ -84,6 +89,7 @@ function SettingsPage() {
           blockedCount={blockedCount}
           runReminderEmail={runReminderEmail}
           isPrivacyReviewDue={isPrivacyReviewDue}
+          isStravaConnected={isStravaConnected}
           display={<ThemeSwitch initial={theme} save={setThemeFn} />}
           signOut={
             <SignOutButton

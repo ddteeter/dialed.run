@@ -333,11 +333,12 @@ describe("R2b: no weather saved", () => {
 
     const sheet = await openSheet(user);
 
-    // P2a-04: one kicker, the box's own, not the board frame's caption too.
+    // P2a-04: not the board frame's caption; R58·298: and no kicker of
+    // the box's own, since the sheet's title says it.
     expect(within(sheet).queryByText("No history for that time")).toBeNull();
     const box = sheet.querySelector("[data-slot='weather-unavailable']");
     expect(box).toHaveClass("border-ink");
-    expect(box).toHaveTextContent("No weather saved");
+    expect(box).not.toHaveTextContent("No weather saved");
     expect(box).toHaveTextContent(
       "We have no record for that hour. Set the conditions yourself and the run still counts.",
     );

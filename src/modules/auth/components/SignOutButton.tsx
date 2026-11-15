@@ -22,7 +22,7 @@ function rowLines(
   }
   return {
     title: signedInAs(username),
-    subtitle: "On this phone",
+    subtitle: "On this device",
   };
 }
 

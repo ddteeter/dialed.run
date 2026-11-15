@@ -11,7 +11,6 @@ import {
   FormFailureBand,
   FormStatus,
   inFlight,
-  Mono,
   PendingLabel,
   Sheet,
   Spoken,
@@ -104,11 +103,8 @@ export function SetConditionsSheet({
             data-slot="weather-unavailable"
             className="flex flex-col items-start gap-3 border border-ink p-4"
           >
-            {/* The sheet's own heading names it (R55·173); this is the
-                block's label. */}
-            <p className="m-0">
-              <Mono step="sm">No weather saved</Mono>
-            </p>
+            {/* No kicker: the sheet's own title says "No weather saved"
+                (R55·173), so the box would say it twice (R58·298). */}
             <p className="m-0 text-body">
               We have no record for that hour. Set the conditions yourself and
               the run still counts.

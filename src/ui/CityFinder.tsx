@@ -81,8 +81,8 @@ export function CityFinder({
   /**
   A line under the finder, where the caller has one (R55·216: what Use
   this will do with the place). It gives way while the field has a
-  message of its own: under "not found" it would be a promise about a
-  place nobody found.
+  message of its own, or the lookup failed: under "not found" or NOT FOUND
+  YET it would be a promise about a place nobody found (R58·287).
   */
   footnote?: ReactNode;
   /**
@@ -230,7 +230,7 @@ export function CityFinder({
           }}
         />
       ) : undefined}
-      {unlessAnswered(message, footnote)}
+      {unlessAnswered(message, hasFailed, footnote)}
     </div>
   );
 }
@@ -286,11 +286,13 @@ function ResolvedCard({
 }
 
 /**
- * The caller's footnote, unless the field has a message of its own.
+ * The caller's footnote, unless the field has a message of its own or the
+ * lookup failed (R58·287).
  */
 function unlessAnswered(
   message: string | undefined,
+  hasFailed: boolean,
   footnote: ReactNode,
 ): ReactNode {
-  return message === undefined ? footnote : undefined;
+  return message === undefined && !hasFailed ? footnote : undefined;
 }

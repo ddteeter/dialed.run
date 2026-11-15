@@ -372,6 +372,24 @@ describe("ConditionsTab: location denied", () => {
     expect(document.querySelector('[data-part="city-note"]')).toBeNull();
   });
 
+  it("says no promise under the NOT FOUND YET band when the lookup failed (R58·287)", async () => {
+    const user = userEvent.setup();
+    await renderFeedScreen(
+      tab({
+        locate: () => Promise.resolve(undefined),
+        lookUpCity: () => Promise.resolve({ kind: "unavailable" }),
+        saveCity: vi.fn(() => Promise.resolve(SAVED)),
+      }),
+    );
+
+    await user.type(await screen.findByLabelText("Your city"), "Boston");
+    expect(document.querySelector('[data-part="city-note"]')).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "Find" }));
+
+    expect(await screen.findByText("Couldn't look that up.")).toBeVisible();
+    expect(document.querySelector('[data-part="city-note"]')).toBeNull();
+  });
+
   it("waits on the weather where the saved city is, breathing, before it answers", async () => {
     const user = userEvent.setup();
     const pending = Promise.withResolvers<undefined>();

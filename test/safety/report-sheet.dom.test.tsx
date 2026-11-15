@@ -131,16 +131,14 @@ describe("W1's reasons", () => {
 });
 
 describe("what the sheet promises", () => {
-  it("tells the reporter what happens next, in the artboard's words", () => {
+  it("tells the reporter what happens next: only what the footer does not say (R58·283)", () => {
     renderSheet();
 
-    // Each sentence is a promise the code keeps, so the copy is pinned:
-    // a person reads it, the entry goes from your feed immediately, and
-    // the author is never told who reported them.
+    // The promise is pinned: the author is never told who reported them.
+    // A person reading it and the hide are the footer's line, said once.
     const next = screen.getByText(/never told who\s+reported it/);
-    expect(next).toHaveTextContent(
-      /^A person reads it within a day\. The entry is hidden from your feed straight away, whatever we decide\./,
-    );
+    expect(next.tagName).toBe("P");
+    expect(next).toHaveTextContent(/^@\w+ is never told who reported it\.$/u);
   });
 
   it("says it again in one line in the pinned footer, over Send report (R54·164.4)", () => {
