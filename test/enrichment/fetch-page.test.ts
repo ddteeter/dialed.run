@@ -824,9 +824,16 @@ describe("fetchProductPage: a meta refresh is one more hop (R-176)", () => {
   });
 
   it("gives up on a refresh loop between two pages", async () => {
+    // A loop that never ends fails here at once, not at the test timeout.
+    let calls = 0;
+    const bounce = (target: string) => () => {
+      calls += 1;
+      if (calls > 20) throw new Error("still looping");
+      return refreshPage(target);
+    };
     const fetchImpl = pages({
-      "https://a.example/1": () => refreshPage("https://a.example/2"),
-      "https://a.example/2": () => refreshPage("https://a.example/1"),
+      "https://a.example/1": bounce("https://a.example/2"),
+      "https://a.example/2": bounce("https://a.example/1"),
     });
     await expect(
       fetchProductPage("https://a.example/1", fetchImpl),
@@ -886,6 +893,23 @@ describe("fetchProductPage: a meta refresh is one more hop (R-176)", () => {
     expect(
       fetchImpl.mock.calls.filter(([input]) => isProxyCall(input)),
     ).toHaveLength(1);
+  });
+
+  it("keeps the proxy for a later hop when the page before it came directly", async () => {
+    const fetchImpl = vi.fn<typeof fetch>((input) => {
+      if (isProxyCall(input))
+        return Promise.resolve(proxyEnvelope("<html>shop</html>"));
+      return Promise.resolve(
+        urlOf(input) === "https://short.example/x"
+          ? refreshPage("https://shop.example.com/p")
+          : new Response("blocked", { status: 403 }),
+      );
+    });
+    const page = await fetchProductPage("https://short.example/x", fetchImpl, {
+      proxyApiKey: "fc-key",
+    });
+    expect(page.via).toBe("proxy");
+    expect(page.html).toBe("<html>shop</html>");
   });
 
   it("asks the budget before the proxy, and fails the fetch when it says no", async () => {

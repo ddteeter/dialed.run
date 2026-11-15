@@ -277,9 +277,12 @@ export async function fetchProductPage(
   if (parsed === null) throw new PageFetchError("Unparseable URL");
 
   let current = parsed;
-  let hopOptions = options;
+  let { proxyApiKey } = options;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
-    const answer = await fetchHop(current, fetchImpl, hopOptions);
+    const answer = await fetchHop(current, fetchImpl, {
+      ...options,
+      proxyApiKey,
+    });
     if (answer instanceof URL) {
       current = answer;
       continue;
@@ -289,7 +292,7 @@ export async function fetchProductPage(
     current = refresh;
     // The proxy once per page: a proxied page that sends us on to another
     // refusal is a failed fetch, not a second credit.
-    if (answer.via === "proxy") hopOptions = { proxyApiKey: undefined };
+    if (answer.via === "proxy") proxyApiKey = undefined;
   }
   throw new PageFetchError(`More than ${String(MAX_REDIRECTS)} redirects`);
 }

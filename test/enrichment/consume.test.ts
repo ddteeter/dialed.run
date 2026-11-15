@@ -1225,7 +1225,10 @@ async function repend(productId: string): Promise<void> {
     .where(eq(products.id, productId));
 }
 
-async function spentAlready(key: "spend:page-fetch" | "spend:proxy-call", count: number) {
+async function spentAlready(
+  key: "spend:page-fetch" | "spend:proxy-call",
+  count: number,
+) {
   await db()
     .insert(emailSendLimits)
     .values({ key, windowStartedAt: nowSeconds(), sends: count })
@@ -1279,6 +1282,24 @@ describe("handleEnrichmentBatch: the spend ceilings", () => {
     expect(row.extractionStatus).toBe("pending");
     expect(row.extractionTries).toBeNull();
     expect(await snapshotsOf(productId)).toEqual([]);
+  });
+
+  it("leaves a deferred row's earlier failure as it was, for the sweep's next try", async () => {
+    await spentAlready("spend:page-fetch", PAGE_FETCHES_PER_HOUR);
+    const productId = await pendingProduct({
+      extractionError: "Page returned 403",
+      extractionTries: 2,
+    });
+
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      depsWith(serving(PAGE)),
+    );
+
+    const row = await rowOf(productId);
+    expect(row.extractionStatus).toBe("pending");
+    expect(row.extractionError).toBe("Page returned 403");
+    expect(row.extractionTries).toBe(2);
   });
 
   it("fetches the last one the hour allows", async () => {

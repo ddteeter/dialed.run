@@ -286,7 +286,7 @@ async function extractPending(
   deps: EnrichmentDeps,
   productId: string,
   sourceUrl: string,
-): Promise<"worked" | "deferred"> {
+): Promise<"deferred" | undefined> {
   const recent = await latestSnapshot(
     deps.db,
     productId,
@@ -296,12 +296,12 @@ async function extractPending(
     const stored = await readSnapshot(recent.r2Key);
     if (stored !== undefined) {
       await extractStored(deps, productId, recent, stored);
-      return "worked";
+      return undefined;
     }
   }
   if (!(await canSpendPageFetch(deps.db))) return "deferred";
   await fetchAndExtract(deps, productId, sourceUrl);
-  return "worked";
+  return undefined;
 }
 
 async function processEnrichJob(
