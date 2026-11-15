@@ -433,6 +433,8 @@ describe("the callback key (SA-M6)", () => {
     expect(isStravaCallbackKey(KEY.slice(1), KEY)).toBe(false);
     expect(isStravaCallbackKey("", "")).toBe(false);
     expect(isStravaCallbackKey("anything", undefined)).toBe(false);
+    // An unset key encodes to nothing, as an empty presented key does.
+    expect(isStravaCallbackKey("", undefined)).toBe(false);
     // An unset secret is not the word "undefined".
     expect(isStravaCallbackKey("undefined", undefined)).toBe(false);
   });

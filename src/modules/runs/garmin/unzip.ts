@@ -86,16 +86,18 @@ async function inflated(data: ArrayBuffer, size: number): Promise<ArrayBuffer> {
     .stream()
     .pipeThrough(new DecompressionStream("deflate-raw"))
     .pipeTo(exactly.writable);
-  const [read, piped] = await Promise.allSettled([
+  // The pipe is settled too, so its own rejection is handled, but only the
+  // read is consulted: it carries the length stream's refusal whether the
+  // inflate ran long or ended short, and any other refusal is the inflate's.
+  const [read] = await Promise.allSettled([
     new Response(exactly.readable).arrayBuffer(),
     piping,
   ]);
   if (read.status === "fulfilled") return read.value;
-  // The length stream's own refusal names it, on either side of the pipe;
-  // any other is the inflate's.
-  const reasons = `${String(read.reason)} ${piped.status === "rejected" ? String(piped.reason) : ""}`;
   throw new UnzipError(
-    reasons.includes("FixedLengthStream") ? "wrong size" : "does not inflate",
+    String(read.reason).includes("FixedLengthStream")
+      ? "wrong size"
+      : "does not inflate",
   );
 }
 

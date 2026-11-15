@@ -123,7 +123,8 @@ function asciiAt(bytes: Uint8Array, at: number, length: number): string {
 const NOT_FRAMES: ReadonlySet<number> = new Set([0xc4, 0xc8, 0xcc]);
 
 function isStartOfFrame(marker: number): boolean {
-  return marker >= 0xc0 && marker <= 0xcf && !NOT_FRAMES.has(marker);
+  // Asked only of a marker `hasLength` took, which is C0 or above.
+  return marker <= 0xcf && !NOT_FRAMES.has(marker);
 }
 
 /**

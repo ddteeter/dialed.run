@@ -27,7 +27,9 @@ class BodyTooLarge extends Error {}
  * The ceiling for a request, by what it says it carries.
  */
 export function bodyLimitFor(request: Request): number {
-  const type = request.headers.get("content-type") ?? "";
+  // `String(null)` is "null", which is not multipart: no header needs no
+  // branch of its own.
+  const type = String(request.headers.get("content-type"));
   return type.toLowerCase().startsWith("multipart/form-data")
     ? MULTIPART_BODY_LIMIT
     : OTHER_BODY_LIMIT;

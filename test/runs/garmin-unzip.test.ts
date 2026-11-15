@@ -139,6 +139,17 @@ describe("onlyFileIn", () => {
     ).toBe("unzip: wrong size");
   });
 
+  it("refuses a stored entry whose size is not the one stated", async () => {
+    expect(
+      await refusal(
+        await zipOf(CONTENT, {
+          method: "stored",
+          statedSize: CONTENT.byteLength - 1,
+        }),
+      ),
+    ).toBe("unzip: wrong size");
+  });
+
   it("refuses a deflate bomb as the wrong size (SA-L17)", async () => {
     // Megabytes of zeros deflate to a few kilobytes, under a directory that
     // says a kilobyte. The inflate is written through a stream of exactly

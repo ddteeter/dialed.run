@@ -642,7 +642,8 @@ describe("the import consumer's quieter paths", () => {
     await env.IMPORTS.delete(row?.r2Key ?? "");
 
     const { batch } = fakeBatch([{ body: { type: "import", importId } }]);
-    await handleImportsBatch(batch, makeDeps());
+    const deps = makeDeps();
+    await handleImportsBatch(batch, deps);
 
     const [after] = await db
       .select()
@@ -650,6 +651,8 @@ describe("the import consumer's quieter paths", () => {
       .where(eq(imports.id, importId));
     expect(after?.status).toBe("failed");
     expect(after?.failureReason).toMatch(/couldn't read this file/);
+    // A missing file is the runner's to act on, not a fault to report.
+    expect(deps.exceptions).toStrictEqual([]);
   });
 
   it("fails an import whose key names a format it cannot read", async () => {
