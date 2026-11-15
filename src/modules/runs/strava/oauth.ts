@@ -47,9 +47,11 @@ export type StravaConnectionRow = typeof stravaConnections.$inferSelect;
 
 /**
  * The cookie the OAuth `state` nonce round-trips in (R-41). Named once:
- * the connect redirect writes it and the callback reads it.
+ * the connect redirect writes it and the callback reads it. `__Host-`
+ * (SA-L17): the browser keeps it only as this host set it, `Secure`, with
+ * `Path=/` and no `Domain`.
  */
-export const STRAVA_STATE_COOKIE = "strava_oauth_state";
+export const STRAVA_STATE_COOKIE = "__Host-strava_oauth_state";
 
 /**
  * What the state cookie holds: the nonce, then — when the trip started
@@ -137,7 +139,8 @@ export function stravaAuthorizeUrl(
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: "code",
-    approval_prompt: "auto",
+    // Strava asks every time, a reconnect included (SA-L17).
+    approval_prompt: "force",
     scope: "activity:read",
     state,
   });
@@ -241,7 +244,11 @@ export async function stravaStatusOf(
 
 /**
 Exchanges the OAuth `code` and upserts the connection. Re-running
-with a fresh code (the runner reconnects) replaces the row outright.
+with a fresh code (the runner reconnects) replaces the row outright; a
+reconnect to a different Strava athlete owes Strava a revoke of the grant
+it replaces, in the same batch (SA-L17, law 8c), which the daily digest
+drains. The same athlete owes none: revoking its old token could take the
+new grant with it.
 */
 export async function completeStravaConnect(
   db: CoreDb,
@@ -250,6 +257,7 @@ export async function completeStravaConnect(
   code: string,
 ): Promise<void> {
   const tokens = await api.exchangeCode(code);
+  const replaced = await getStravaConnection(db, userId);
   const connection = {
     athleteId: tokens.athleteId,
     refreshToken: tokens.refreshToken,
@@ -259,6 +267,16 @@ export async function completeStravaConnect(
   // same batch: Strava may hand back the refresh token it issued before,
   // and a stale `strava_revocations` row would then revoke the grant the
   // runner has just made.
+  const owed =
+    replaced === undefined || replaced.athleteId === tokens.athleteId
+      ? []
+      : [
+          db.insert(stravaRevocations).values({
+            id: newUlid(),
+            refreshToken: replaced.refreshToken,
+            createdAt: connection.connectedAt,
+          }),
+        ];
   await db.batch([
     db
       .insert(stravaConnections)
@@ -270,6 +288,7 @@ export async function completeStravaConnect(
     db
       .delete(stravaRevocations)
       .where(eq(stravaRevocations.refreshToken, tokens.refreshToken)),
+    ...owed,
   ]);
 }
 
