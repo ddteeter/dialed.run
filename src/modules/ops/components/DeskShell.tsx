@@ -125,7 +125,7 @@ function RailCount({ tally }: Readonly<{ tally: RailTally | undefined }>) {
  * phone, where the rail is one row, it is a 2px hi-viz underline.
  */
 const RAIL_ENTRY =
-  "flex min-h-control items-center gap-2 border-b-2 px-3 text-body text-ink no-underline wide:justify-between wide:gap-6 wide:border-b-0 wide:border-l-2 wide:pr-5 wide:pl-6";
+  "flex min-h-control items-center gap-2 border-b-2 px-3 text-body text-ink no-underline wide:justify-between wide:border-b-0 wide:border-l-2 wide:pr-0 wide:pl-6";
 const RAIL_CURRENT = "border-hi-viz font-bold wide:bg-panel";
 const RAIL_OTHER = "border-transparent";
 
@@ -171,7 +171,9 @@ function RailEntry({
  * The rail's foot at width (R55·194), pinned there: whether screening is
  * holding (a breaker over its ceiling this hour, design 164) and when the
  * daily digest last ran, in UTC like the date on Today. The words for
- * neither-OK state are the owner's (2026-11-13, #635).
+ * neither-OK state are the owner's (2026-11-13, #635). R58·312: LAST
+ * DIGEST stacks over the time, in tabular mono, so neither sets the
+ * rail's width; the rail's measure does.
  */
 function RailFooter({ today }: Readonly<{ today: DeskToday }>) {
   const isHolding = today.breakers.length > 0;
@@ -179,43 +181,22 @@ function RailFooter({ today }: Readonly<{ today: DeskToday }>) {
   return (
     <div
       data-part="rail-footer"
-      className="hidden wide:flex wide:flex-col wide:gap-1 wide:px-6 wide:pt-6"
+      className="hidden wide:flex wide:flex-col wide:gap-3 wide:pt-6 wide:pl-6"
     >
       <Mono step="xs" className={isHolding ? "text-hiviz-text" : "text-muted"}>
         {isHolding ? "Screening · Holding" : "Screening · OK"}
       </Mono>
-      <Mono step="xs" className="text-muted">
-        {/* One string, so it is heard as one line (a second text node is
-            a second line, and its leading space is dropped). */}
-        {`Last digest · ${lastDigestAt === undefined ? NOT_YET : timeOfDay(lastDigestAt)}`}
-        {lastDigestAt === undefined ? undefined : <NotYetRoom />}
-      </Mono>
+      <span data-part="last-digest" className="flex flex-col gap-1">
+        <Mono step="xs" className="text-muted">
+          Last digest
+        </Mono>
+        <Mono step="xs" className="text-ink tabular-nums">
+          {lastDigestAt === undefined ? "Not yet" : timeOfDay(lastDigestAt)}
+        </Mono>
+      </span>
     </div>
   );
 }
-
-const NOT_YET = "Not yet";
-
-/**
- * The room "Not yet" takes beyond a time (R2-DESK-12b): unseen, unheard
- * characters after the time, so the rail is as wide the day the digest
- * first runs as the day before. In mono every character is one width, so
- * the room is the difference in length. A guess awaiting Design 312
- * (#758): the rail stays sized by its content, as tokens.js pins no width
- * outside MEASURE.
- */
-function NotYetRoom() {
-  return (
-    <span data-part="digest-room" aria-hidden="true" className="invisible">
-      {"0".repeat(NOT_YET.length - HH_MM.length)}
-    </span>
-  );
-}
-
-/**
-What `timeOfDay` writes: two digits, a colon, two digits.
-*/
-const HH_MM = "00:00";
 
 /**
  * The Desk's top bar (R55·194/195): `[dialed] DESK` at the left, and at the
@@ -281,7 +262,10 @@ export function DeskShell({
       <div className="flex flex-1 flex-col wide:flex-row">
         <nav
           aria-label="Desk"
-          className="sticky top-0 z-10 overflow-x-auto border-y border-hairline bg-ground px-2 wide:static wide:flex wide:flex-col wide:justify-between wide:overflow-visible wide:border-y-0 wide:border-r wide:px-0 wide:py-4"
+          // R58·312: from `wide` the rail is MEASURE.rail beside a 24
+          // inset, so the page's own 24 puts every heading at the edge +
+          // 170 whatever the footer holds.
+          className="sticky top-0 z-10 overflow-x-auto border-y border-hairline bg-ground px-2 wide:static wide:flex wide:w-[calc(var(--spacing)*6+var(--container-rail))] wide:shrink-0 wide:flex-col wide:justify-between wide:overflow-visible wide:border-y-0 wide:border-r wide:px-0 wide:py-4"
         >
           <ul className="m-0 flex list-none gap-1 p-0 whitespace-nowrap wide:flex-col wide:gap-0">
             {DESK_PAGES.map((page) => (

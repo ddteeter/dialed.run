@@ -261,7 +261,13 @@ describe("DeskShell", () => {
       "wide:static",
       "wide:flex-col",
       "wide:border-r",
+      // R58·312: MEASURE.rail beside a 24 inset, whatever the footer says.
+      "wide:w-[calc(var(--spacing)*6+var(--container-rail))]",
+      "wide:shrink-0",
     );
+    const entry = within(rail()).getByRole("link", { name: "Today" });
+    expect(entry).toHaveClass("wide:pl-6", "wide:pr-0", "gap-2");
+    expect(entry).not.toHaveClass("wide:gap-6");
     expect(within(rail()).getByRole("list")).toHaveClass(
       "flex",
       "whitespace-nowrap",
@@ -280,8 +286,16 @@ describe("DeskShell", () => {
     const [screening, digest] = [...(footer?.children ?? [])];
     expect(screening).toHaveTextContent("Screening · OK");
     expect(screening).toHaveClass("text-muted");
-    expect(digest?.textContent).toBe("Last digest · Not yet");
-    expect(digest?.querySelector("[data-part='digest-room']")).toBeNull();
+    // R58·312: LAST DIGEST stacked over its value, the value in tabular
+    // mono, so neither sets the rail's width.
+    expect(footer).toHaveClass("wide:pl-6");
+    expect(digest).toHaveAttribute("data-part", "last-digest");
+    expect(digest).toHaveClass("flex", "flex-col");
+    const [label, value] = [...(digest?.children ?? [])];
+    expect(label?.textContent).toBe("Last digest");
+    expect(label).toHaveClass("text-muted");
+    expect(value?.textContent).toBe("Not yet");
+    expect(value).toHaveClass("text-ink", "tabular-nums");
   });
 
   it("says screening is holding, in hi-viz, while a breaker is over, and when the digest last ran (owner, #635)", async () => {
@@ -302,14 +316,7 @@ describe("DeskShell", () => {
     const [screening, digest] = [...(footer?.children ?? [])];
     expect(screening).toHaveTextContent("Screening · Holding");
     expect(screening).toHaveClass("text-hiviz-text");
-    // One line, heard whole, then unseen and unheard room for the two
-    // characters "Not yet" has beyond a time, so the rail keeps its width
-    // the day the digest first runs (R2-DESK-12b, a guess: #758).
-    expect(digest?.firstChild?.textContent).toBe("Last digest · 07:00");
-    const room = digest?.querySelector("[data-part='digest-room']");
-    expect(room?.textContent).toBe("00");
-    expect(room).toHaveClass("invisible");
-    expect(room).toHaveAttribute("aria-hidden", "true");
+    expect(digest?.lastElementChild?.textContent).toBe("07:00");
   });
 
   it("counts what is waiting on the Review entry, in hi-viz", async () => {
