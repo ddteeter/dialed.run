@@ -342,6 +342,7 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   // Speed beacons (design 165): anonymous by design, same-origin and
   // size-capped, and they write only to the VITALS dataset.
   "routes/api/vitals.ts POST": "sessionless",
+  "routes/api/csp-report.ts POST": "sessionless",
   // The owner's own garment photo.
   "routes/closet/photo.$itemId.$size.ts GET": "unconfirmed",
   // Entry photos: visibility is decided per viewer, signed out included.

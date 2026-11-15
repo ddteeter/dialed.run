@@ -10,6 +10,7 @@
     "/feed/photo/$": "an endpoint: a photo's bytes",
     "/desk/review-photo/$": "an endpoint: a photo's bytes for review",
     "/closet/photo/$itemId/$size": "an endpoint: a garment photo's bytes",
-    "/api/vitals": "an endpoint: the speed beacon's POST"
+    "/api/vitals": "an endpoint: the speed beacon's POST",
+    "/api/csp-report": "an endpoint: the browser's CSP report POST"
   }
 }

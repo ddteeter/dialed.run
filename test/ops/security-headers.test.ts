@@ -2,11 +2,11 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { env } from "../../src/env";
 
+import { CSP_REPORT_PATH } from "../../src/modules/ops/csp-report";
 import { secureResponse } from "../../src/modules/ops/secure-response";
 import {
   CSP_HEADER,
   contentSecurityPolicy,
-  sentryReportUri,
   withSecurityHeaders,
 } from "../../src/modules/ops/security-headers";
 
@@ -164,22 +164,6 @@ describe("contentSecurityPolicy", () => {
   });
 });
 
-describe("sentryReportUri", () => {
-  it("derives Sentry's security endpoint from a DSN", () => {
-    expect(sentryReportUri("https://abc@o1.ingest.sentry.io/42")).toBe(REPORT);
-  });
-
-  it.each([
-    ["unset", undefined],
-    ["empty", ""],
-    ["not a URL", "not a dsn"],
-    ["without a key", "https://o1.ingest.sentry.io/42"],
-    ["without a project", "https://abc@o1.ingest.sentry.io/"],
-  ])("has none for a DSN that is %s", (_label, dsn) => {
-    expect(sentryReportUri(dsn)).toBeUndefined();
-  });
-});
-
 describe("secureResponse, as server.ts calls it", () => {
   const ORIGINAL: unknown = env.SENTRY_DSN;
 
@@ -187,23 +171,16 @@ describe("secureResponse, as server.ts calls it", () => {
     Reflect.set(env, "SENTRY_DSN", ORIGINAL);
   });
 
-  it("reports CSP violations to the deployed DSN's project", async () => {
+  it("reports CSP violations to our own collector, never to Sentry (SA-L19)", async () => {
     Reflect.set(env, "SENTRY_DSN", "https://abc@o1.ingest.sentry.io/42");
 
     const secured = await secureResponse(new Response("<p>page</p>"), "n0nce");
 
     const policy = secured.headers.get(CSP_HEADER);
-    expect(policy).toBe(contentSecurityPolicy(REPORT, { nonce: "n0nce" }));
-  });
-
-  it("still secures every response when there is no DSN", async () => {
-    Reflect.deleteProperty(env, "SENTRY_DSN");
-
-    const secured = await secureResponse(new Response("<p>page</p>"), "n0nce");
-
-    expect(secured.headers.get(CSP_HEADER)).toBe(
-      contentSecurityPolicy(undefined, { nonce: "n0nce" }),
+    expect(policy).toBe(
+      contentSecurityPolicy("/api/csp-report", { nonce: "n0nce" }),
     );
+    expect(policy).not.toContain("sentry");
     expect(secured.headers.get("X-Frame-Options")).toBe("DENY");
   });
 
@@ -245,7 +222,7 @@ describe("secureResponse, for a page the edge may store (design 163)", () => {
     const secured = await secureResponse(page("public, max-age=60"), undefined);
 
     expect(secured.headers.get(CSP_HEADER)).toBe(
-      contentSecurityPolicy(REPORT, { hashes: [ALERT, X] }),
+      contentSecurityPolicy(CSP_REPORT_PATH, { hashes: [ALERT, X] }),
     );
     expect(secured.headers.get(CSP_HEADER)).not.toContain("nonce");
     expect(secured.headers.get("Cache-Control")).toBe("public, max-age=60");
@@ -259,7 +236,7 @@ describe("secureResponse, for a page the edge may store (design 163)", () => {
 
     expect(secured.headers.get("Cache-Control")).toBe("private, no-store");
     expect(secured.headers.get(CSP_HEADER)).toBe(
-      contentSecurityPolicy(REPORT, { nonce: "n0nce" }),
+      contentSecurityPolicy(CSP_REPORT_PATH, { nonce: "n0nce" }),
     );
     expect(secured.status).toBe(200);
     expect(await secured.text()).toBe(PAGE);

@@ -1,11 +1,12 @@
-import { env } from "../../env";
 import { withInlineScriptHashes } from "./inline-script-hashes";
 import { isPubliclyStorable } from "./public-cache";
-import { sentryReportUri, withSecurityHeaders } from "./security-headers";
+import { CSP_REPORT_PATH } from "./csp-report";
+import { withSecurityHeaders } from "./security-headers";
 
 /**
  * What `server.ts` calls: every response the Worker generates, with the
- * security headers, reporting CSP violations to the deployed DSN.
+ * security headers, reporting CSP violations to our own collector
+ * (`./csp-report`).
  *
  * Inline scripts are admitted by this request's `nonce`, unless the page
  * may be stored at the edge (design 163): then by their hashes, read from
@@ -18,7 +19,8 @@ export async function secureResponse(
   response: Response,
   nonce: string | undefined,
 ): Promise<Response> {
-  const reportUri = sentryReportUri(env.SENTRY_DSN);
+  // SA-L19: reports go to our own collector, never straight to Sentry.
+  const reportUri = CSP_REPORT_PATH;
   if (nonce !== undefined && !isPubliclyStorable(response)) {
     return withSecurityHeaders(response, reportUri, { nonce });
   }

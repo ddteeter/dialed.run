@@ -119,29 +119,6 @@ function inlineScriptSources(inline: InlineScripts | undefined): string {
 }
 
 /**
- * Sentry's CSP report endpoint for a DSN, or `undefined` for none.
- *
- * A DSN is `https://<key>@<host>/<project>`; the endpoint is
- * `https://<host>/api/<project>/security/?sentry_key=<key>` (Sentry's
- * "Security Policy Reporting" docs).
- */
-export function sentryReportUri(dsn: string | undefined): string | undefined {
-  let url: URL;
-  try {
-    // `String(undefined)` is not a URL either, so an unset DSN takes the
-    // same refusal as a malformed one: no report-uri, and never a throw —
-    // this runs on every response.
-    url = new URL(String(dsn));
-  } catch {
-    return undefined;
-  }
-  const project = url.pathname.slice(1);
-  return project === "" || url.username === ""
-    ? undefined
-    : `${url.protocol}//${url.host}/api/${project}/security/?sentry_key=${url.username}`;
-}
-
-/**
  * The headers, as a list, for the response wrapper and for the test.
  *
  * HSTS without `preload`: preload is a submission to browsers that is slow
