@@ -29,7 +29,7 @@ describe("publicPageTags and publicPageHeaders", () => {
       "runner:u1",
     ]);
     expect(publicPageHeaders("handle:maya", "u1")).toStrictEqual({
-      "Cache-Control": "public, max-age=60",
+      "Cache-Control": "public, max-age=60, must-revalidate",
       "Cache-Tag": "handle:maya,runner:u1",
     });
   });
@@ -52,7 +52,7 @@ describe("publicCacheHeaders", () => {
         handleCacheTag("maya_runs"),
       ]),
     ).toStrictEqual({
-      "Cache-Control": "public, max-age=60",
+      "Cache-Control": "public, max-age=60, must-revalidate",
       "Cache-Tag":
         "entry:01J00000000000000000000000,runner:u1,handle:maya_runs",
     });
@@ -60,7 +60,7 @@ describe("publicCacheHeaders", () => {
 
   it("names no Cache-Tag when there is nothing to tag", () => {
     expect(publicCacheHeaders(86_400, [])).toStrictEqual({
-      "Cache-Control": "public, max-age=86400",
+      "Cache-Control": "public, max-age=86400, must-revalidate",
     });
   });
 

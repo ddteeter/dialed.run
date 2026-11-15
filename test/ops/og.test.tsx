@@ -309,7 +309,7 @@ describe("kitCardResponse", () => {
     expect(response.headers.get("Content-Type")).toBe("image/png");
     // A minute, not the day it is rendered for: the edge keeps what this
     // says, in front of the check that the kit is still public.
-    expect(response.headers.get("Cache-Control")).toBe("public, max-age=60");
+    expect(response.headers.get("Cache-Control")).toBe("public, max-age=60, must-revalidate");
     expect(response.headers.get("Cache-Tag")).toBe(
       `entry:${ENTRY_ID},runner:u1`,
     );
@@ -361,7 +361,7 @@ describe("kitCardResponse", () => {
     );
 
     expect(await sha256(response)).toBe(await sha256(fallback));
-    expect(response.headers.get("Cache-Control")).toBe("public, max-age=60");
+    expect(response.headers.get("Cache-Control")).toBe("public, max-age=60, must-revalidate");
     expect(response.headers.get("Cache-Tag")).toBe(`entry:${ENTRY_ID}`);
   });
 });

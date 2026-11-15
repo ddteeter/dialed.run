@@ -23,15 +23,18 @@ How long the edge may keep a public page or its not-public twin.
 export const PUBLIC_PAGE_TTL_SECONDS = 60;
 
 /**
- * `Cache-Control: public` for `ttlSeconds`, and the `Cache-Tag` list when
+ * `Cache-Control: public` for `ttlSeconds`, revalidated once it is over, and the `Cache-Tag` list when
  * there are tags to name.
  */
 export function publicCacheHeaders(
   ttlSeconds: number,
   tags: readonly string[],
 ): Record<string, string> {
+  // SA-L19: `must-revalidate` makes the TTL the bound it is meant to be.
+  // Without it, Workers Cache serves an expired copy for as long as the
+  // Worker errors; with it, the error reaches the visitor instead.
   const cacheControl = {
-    "Cache-Control": `public, max-age=${String(ttlSeconds)}`,
+    "Cache-Control": `public, max-age=${String(ttlSeconds)}, must-revalidate`,
   };
   return tags.length === 0
     ? cacheControl
