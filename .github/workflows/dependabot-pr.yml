@@ -65,7 +65,7 @@ jobs:
     steps:
       # Audit first (design 196): reports the hosts this job reaches and
       # blocks none. It moves to `block` once that list is known and short.
-      - uses: step-security/harden-runner@v2.22.3
+      - uses: step-security/harden-runner@v2.22.4
         with:
           egress-policy: audit
 
@@ -117,7 +117,7 @@ jobs:
     steps:
       # Audit first (design 196): reports the hosts this job reaches and
       # blocks none. It moves to `block` once that list is known and short.
-      - uses: step-security/harden-runner@v2.22.3
+      - uses: step-security/harden-runner@v2.22.4
         with:
           egress-policy: audit
 
@@ -204,7 +204,7 @@ jobs:
       # hosts are where the action installs from and where Claude reads, and
       # none of them shows a stranger what was requested. Claude's own tool
       # rules below are narrower still; this is the layer it can't argue with.
-      - uses: step-security/harden-runner@v2.22.3
+      - uses: step-security/harden-runner@v2.22.4
         with:
           egress-policy: block
           disable-sudo: true
@@ -237,7 +237,7 @@ jobs:
       # The answer leaves as structured output, which `post` screens.
       # `show_full_output` stays off: these logs are public.
       - id: claude
-        uses: anthropics/claude-code-action@v1.0.267
+        uses: anthropics/claude-code-action@v1.0.269
         env:
           GH_TOKEN: ${{ github.token }}
           CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
@@ -325,7 +325,7 @@ jobs:
     steps:
       # Audit first (design 196): reports the hosts this job reaches and
       # blocks none. It moves to `block` once that list is known and short.
-      - uses: step-security/harden-runner@v2.22.3
+      - uses: step-security/harden-runner@v2.22.4
         with:
           egress-policy: audit
 

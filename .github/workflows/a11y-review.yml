@@ -44,7 +44,7 @@ jobs:
     outputs:
       reviewed: ${{ steps.diff.outputs.reviewed }}
     steps:
-      - uses: step-security/harden-runner@v2.22.3
+      - uses: step-security/harden-runner@v2.22.4
         with:
           egress-policy: block
           disable-sudo: true
@@ -95,7 +95,7 @@ jobs:
       # `post` screens. `show_full_output` stays off: these logs are public.
       - id: claude
         if: steps.diff.outputs.reviewed == 'true'
-        uses: anthropics/claude-code-action@v1.0.267
+        uses: anthropics/claude-code-action@v1.0.269
         env:
           CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
         with:
@@ -162,7 +162,7 @@ jobs:
     steps:
       # Audit first (design 196): reports the hosts this job reaches and
       # blocks none. It moves to `block` once that list is known and short.
-      - uses: step-security/harden-runner@v2.22.3
+      - uses: step-security/harden-runner@v2.22.4
         with:
           egress-policy: audit
 
