@@ -139,8 +139,9 @@ const IMPORT_REFUSALS: Readonly<Record<FilePartProblem, string>> = {
  * The file out of a multipart import upload, or the reason it is not one,
  * and the key that makes a retry of it the same upload (law 8b).
  *
- * Size is checked here, before the bytes are read: an oversized upload is
- * refused without allocating it. `startImport` checks the cap again
+ * Size is checked here, against the declared size, before the file's bytes
+ * are copied out of the form (the request body was bounded before the
+ * framework read it, `modules/ops/body-cap.ts`). `startImport` checks the cap again
  * against the bytes it was actually handed — this is the early exit, not
  * the guarantee. The key is optional because a form that predates it still
  * sends a file and nothing else.

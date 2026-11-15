@@ -309,8 +309,8 @@ export async function uploadPhotoFromForm(
     // Equivalent mutant, and the guard stays: `uploadItemPhoto` validates
     // the same rules and raises the same sentences, so removing this
     // changes no answer. What it changes is when — this runs against the
-    // *declared* size, before `arrayBuffer()` buffers the whole file into
-    // the isolate. An oversized upload is refused without being read.
+    // *declared* size, before `arrayBuffer()` copies the file out of the
+    // form, so an oversized upload is refused without that copy.
     // Stryker disable next-line CallExpression
     validatePhoto(photo.type, photo.size);
     const bytes = new Uint8Array(await photo.arrayBuffer());

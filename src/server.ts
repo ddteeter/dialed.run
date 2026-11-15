@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-start/server";
 
 import {
+  boundedRequest,
   captureException,
   handleQueueBatch,
   handleScheduled,
@@ -67,13 +68,19 @@ export default {
       // Design 165: the response is timed by route id, logged and written
       // to VITALS. The same name labels the request's D1 query count, on
       // a dev server that counts them (design 182).
+      //
+      // SA-L05: a body is bounded before anything reads it (body-cap.ts).
       const context = requestContext(new URL(request.url).pathname);
+      const bounded = await boundedRequest(request);
+      if (bounded instanceof Response) {
+        return await secureResponse(bounded, context.nonce);
+      }
       const response = await timeRequest(
-        request,
+        bounded,
         () =>
           respondInD1Scope(
-            request,
-            () => startFetch(request, { context }),
+            bounded,
+            () => startFetch(bounded, { context }),
             d1RequestDepsFromEnv(timing.name),
           ),
         timing,
