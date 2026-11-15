@@ -448,9 +448,9 @@ exception, the human never polls dashboards.
 
 ```mermaid
 flowchart LR
-    Q[[dialed-imports\nmax_retries=3, backoff]] -->|exhausted| DLQ[[dialed-imports-dlq]]
+    Q[[dialed-imports\nmax_batch_size=1, max_retries=3]] -->|exhausted| DLQ[[dialed-imports-dlq]]
     DLQ --> DC[DLQ consumer:\nmark job failed,\nnotify affected user,\nSentry event]
-    QE[[dialed-enrichment\nmax_retries=3]] -->|exhausted| DLQE[[dialed-enrichment-dlq]]
+    QE[[dialed-enrichment\nmax_batch_size=1, max_retries=3]] -->|exhausted| DLQE[[dialed-enrichment-dlq]]
     DLQE --> DCE[DLQ consumer:\nproduct failed,\nSentry event]
     DC -->|same batch: giveUpEach| GU[(gave_up)]
     DCE -->|past the product's first day:\nsame batch, giveUpEach| GU

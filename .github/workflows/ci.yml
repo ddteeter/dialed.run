@@ -207,6 +207,7 @@ jobs:
             echo "STRAVA_CLIENT_ID=0"
             echo "STRAVA_CLIENT_SECRET=ci-placeholder-not-a-secret"
             echo "STRAVA_SUBSCRIPTION_ID=1"
+            echo "STRAVA_WEBHOOK_PATH_SECRET=ci-placeholder-not-a-secret"
             echo "GARMIN_API_KEY=ci-placeholder-not-a-key"
             echo "GARMIN_OWNER_USER_ID=e2e-garmin-owner"
             echo 'MODERATION_THRESHOLDS={"reports":{"explicit":2,"intimate":1,"harassment":2,"spam":2,"not_theirs":2,"other":2},"photos":{"sexual":0.8,"violence":0.8,"violence/graphic":0.7,"self-harm":0.7,"self-harm/intent":0.7,"self-harm/instructions":0.7}}'

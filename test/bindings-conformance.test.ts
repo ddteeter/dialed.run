@@ -111,6 +111,7 @@ interface BoundConsumer {
   queue: string;
   dlq: string | undefined;
   maxRetries: number | undefined;
+  maxBatchSize: number | undefined;
 }
 
 function queueConsumers(config: unknown): BoundConsumer[] {
@@ -137,6 +138,10 @@ function queueConsumers(config: unknown): BoundConsumer[] {
           : undefined,
       maxRetries:
         "max_retries" in consumer ? Number(consumer.max_retries) : undefined,
+      maxBatchSize:
+        "max_batch_size" in consumer
+          ? Number(consumer.max_batch_size)
+          : undefined,
     };
   });
 }
@@ -223,6 +228,24 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
       expect(bound.get(entry.queue), `max_retries for ${entry.queue}`).toBe(
         entry.maxRetries,
       );
+    }
+  });
+
+  it("gives each file a consumer invocation of its own (SA-M29, SA-M32)", () => {
+    // A run file, a product page and an export are each parsed or built in
+    // the invocation's own CPU and memory, so a batch never holds two.
+    const bound = new Map(
+      queueConsumers(config).map((consumer) => [
+        consumer.queue,
+        consumer.maxBatchSize,
+      ]),
+    );
+    for (const queue of [
+      "dialed-imports",
+      "dialed-enrichment",
+      "dialed-exports",
+    ]) {
+      expect(bound.get(queue), `max_batch_size for ${queue}`).toBe(1);
     }
   });
 
