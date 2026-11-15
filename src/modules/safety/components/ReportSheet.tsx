@@ -48,11 +48,15 @@ const SHEET_KIND = {
     reasons: reportReasons.map((reason): ReportReason => reason.value),
     labels: reportReasonLabels,
     legend: "What's wrong with it",
+    hasNote: () => true,
   },
+  // R57 (D-188 drawn): "Report @handle", its own question, and the note
+  // only once Other is picked, under the list, as the entry sheet's.
   profile: {
     reasons: profileReportReasons.map((reason): ReportReason => reason.value),
     labels: { ...reportReasonLabels, ...profileReportReasonLabels },
-    legend: "What's wrong",
+    legend: "What's wrong with this profile",
+    hasNote: (reason: ReportReason | undefined) => reason === "other",
   },
 } as const;
 
@@ -229,7 +233,9 @@ export function ReportSheet({
       subjectType: subject.type,
       subjectId: subject.id,
       reason,
-      note: note === "" ? undefined : note,
+      // A note typed under Other and left when another reason was
+      // picked is not sent: the runner can no longer see it.
+      note: note === "" || !kind.hasNote(reason) ? undefined : note,
       alsoBlock: blockableName === undefined ? undefined : isAlsoBlocking,
     });
   }
@@ -274,16 +280,18 @@ export function ReportSheet({
           error={form.fieldErrors.reason}
         />
 
-        <TextField
-          name="note"
-          label="Anything else · optional"
-          value={note}
-          onChange={setNote}
-          field={form.field}
-          error={form.fieldErrors.note}
-          hint="One or two lines is plenty."
-          autoComplete="off"
-        />
+        {kind.hasNote(reason) ? (
+          <TextField
+            name="note"
+            label="Anything else · optional"
+            value={note}
+            onChange={setNote}
+            field={form.field}
+            error={form.fieldErrors.note}
+            hint="One or two lines is plenty."
+            autoComplete="off"
+          />
+        ) : undefined}
 
         <WhatHappensNext subject={subject} />
 
@@ -359,7 +367,7 @@ function SendAndBlock({
         data-part="block-consequence"
         className="m-0 text-small text-quiet"
       >
-        Blocking hides all of {name}&apos;s runs from you. They aren&apos;t
+        Blocking hides all of @{name}&apos;s runs from you. They aren&apos;t
         told.
       </p>
     </>
@@ -470,6 +478,7 @@ function BlockWays({
       {blockOnly === undefined ? undefined : (
         <ConfirmLink
           label="Block without reporting"
+          tone="sheet"
           heading={`Block @${name}?`}
           body={`Blocking hides all of @${name}'s runs from you. They aren't told.`}
           verb="Block"
@@ -545,8 +554,8 @@ function focusPageHeading(): void {
  */
 function titleOf(subject: ReportSubject): string {
   if (subject.authorName === undefined) return "Report this entry";
-  // R55·214: a profile's own sheet, "Report or block @handle".
+  // R57 (D-188 drawn): a profile's own sheet, "Report @handle".
   return subject.type === "profile"
-    ? `Report or block @${subject.authorName}`
+    ? `Report @${subject.authorName}`
     : `Report @${subject.authorName}'s entry?`;
 }

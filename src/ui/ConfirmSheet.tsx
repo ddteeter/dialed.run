@@ -46,14 +46,19 @@ interface ConfirmContent {
  * How loud the link is. `quiet` is the foot's small grey link (a report,
  * a run's undrawn delete); `owner` is D's "Delete this entry" under YOURS
  * (R55·213, R27): TYPE.body 600 in `--cold-text`, an owner's only action
- * on the screen, never as quiet as a stranger's report link.
+ * on the screen, never as quiet as a stranger's report link. `sheet` is a
+ * sheet footer's text action under its buttons, as W1's "Block without
+ * reporting" (R55·214): centred at TYPE.body in --quiet, in a 44 row.
  */
-const CONFIRM_LINK_TONE: Readonly<Record<"quiet" | "owner", string>> = {
-  quiet:
-    "cursor-pointer self-start border-none bg-transparent p-0 py-3 text-small text-label underline underline-offset-4",
-  owner:
-    "cursor-pointer self-start border-none bg-transparent p-0 py-3 text-body font-semibold text-cold-text underline underline-offset-4",
-};
+const CONFIRM_LINK_TONE: Readonly<Record<"quiet" | "owner" | "sheet", string>> =
+  {
+    quiet:
+      "cursor-pointer self-start border-none bg-transparent p-0 py-3 text-small text-label underline underline-offset-4",
+    owner:
+      "cursor-pointer self-start border-none bg-transparent p-0 py-3 text-body font-semibold text-cold-text underline underline-offset-4",
+    sheet:
+      "cursor-pointer self-center border-none bg-transparent p-0 text-body text-quiet underline underline-offset-4",
+  };
 
 export function ConfirmLink({
   label,

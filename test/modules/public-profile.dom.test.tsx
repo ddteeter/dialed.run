@@ -262,6 +262,8 @@ describe("the public profile, signed out", () => {
     const [tile, conditions, day, chip] = [...row.children];
     expect(tile?.querySelector("[data-part='kit-tile']")).not.toBeNull();
     expect(tile).toHaveClass(
+      // A flex box, so the --tint span is a sized item (R2-FEED-01).
+      "flex",
       "row-span-2",
       "desk:col-span-2",
       "desk:row-span-1",

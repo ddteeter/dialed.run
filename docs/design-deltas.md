@@ -1101,6 +1101,28 @@ choice. Each is a guess the coordinator has seen; none is a Design item yet.
   distance and the SET badge never shrink, and the credit takes its own
   line when the row is too narrow, so that row is taller than 64.
 
+## Built from round 57 and the re-run audit (wave 10, design 218)
+
+How lane w10-feed built what its rulings left to the build. Each guess is
+marked in the code at its site.
+
+- **Guess · R55·217's search line wraps whole.** "41 RUNS · SINCE OCT
+  2026" stays one line where it fits; beside the Follow pill it doesn't
+  always, so "since Nov 2026" is bound with no-break spaces and moves to
+  the next line whole, rather than being truncated (R2-FEED-06; the
+  coordinator, 2026-11-14).
+- **Guess · R57·265, the processors table.** The cards at every width:
+  the contract has no 1440 step, and the breakout is MEASURE.page wide at
+  1280 and 1440 alike, so the ruling can't hold as worded. Design 315
+  (#761) asks again.
+- **R57·261's kept slot.** The arrows sit over the photo, so an end's
+  arrow stays absent and nothing shifts; the slot needs no placeholder.
+- **R57·256 on a legal text.** It has no kicker, so its first row is the
+  title's, and the bell ends that row.
+- **Superseded · R2-FEED-07.** The audit asked for the public body on
+  the bar's edge (x=50 at 1280). R57·263 moved the edge to x=74, where the
+  body already sat, and moves the bar instead (#708, next wave).
+
 ## Built from round 56 · 246 (wave 9, design 213)
 
 How the lift (Round 56 · 246, #652) was built, with what the ruling left

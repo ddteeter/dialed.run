@@ -138,6 +138,9 @@ describe("PagerArrows (R55·207, Design 249.1)", () => {
         "rounded-pill",
         "border",
         "border-hairline",
+        // One fill for both pagers; the dark edge is --hairline-2
+        // (R57·261, 262).
+        "dark:border-hairline-2",
         "bg-ground",
         "text-ink",
         "items-center",

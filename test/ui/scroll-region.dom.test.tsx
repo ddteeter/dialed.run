@@ -33,6 +33,14 @@ describe("ScrollRegion", () => {
     );
     expect(screen.getByRole("region")).toHaveClass(
       "overflow-x-auto",
+      // R57 (D-189): 4 in, 4 back out, so the ring clears what it holds
+      // and nothing moves; the snap edge the same 4.
+      "p-1",
+      "-m-1",
+      "scroll-p-1",
+      "rounded-card",
+      // A target, so never under 44 (Contract 03).
+      "min-h-11",
       "focus-visible:outline",
       "focus-visible:outline-2",
       "focus-visible:-outline-offset-2",

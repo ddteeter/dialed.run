@@ -279,17 +279,19 @@ beforeEach(resetAll);
 /**
  * The rotation the fixture's closet gives: shoes carry their mileage
  * (the closet's sum over every run they were on, here 9,978 m public, 3 km
- * shared and 10 km private: 14.3 mi), nothing else does.
+ * shared and 10 km private: 14.3 mi), nothing else does. A piece is
+ * named by brand and model, as G's Most worn and the kit page name it
+ * (R55·218d, R2-FEED-04); one with no brand by its name alone.
  */
 const ROTATION = {
   inUse: [
-    { name: "Brighton Base Layer", detail: "L/S crew" },
+    { name: "Tracksmith Brighton Base Layer", detail: "L/S crew" },
     { name: "AFO Middle Tight", detail: "Bottom" },
   ],
-  shoes: [{ name: "Pegasus 41", detail: "14 mi" }],
+  shoes: [{ name: "Nike Pegasus 41", detail: "14 mi" }],
   retired: [
     { name: "Grey tee", detail: "Tee" },
-    { name: "Pegasus 40", detail: "0 mi" },
+    { name: "Nike Pegasus 40", detail: "0 mi" },
   ],
 };
 
@@ -446,8 +448,6 @@ describe("publicProfileRead: a public profile", () => {
       "too_much",
       "not_enough",
       "Test run",
-      "Nike",
-      "Tracksmith",
       "lat",
       "lng",
       "startedAt",
@@ -457,6 +457,14 @@ describe("publicProfileRead: a public profile", () => {
       "mileageM",
     ]) {
       expect(serialized, forbidden).not.toContain(forbidden);
+    }
+
+    // A kit row names no garment: the pieces are the kit page's, one tap
+    // on. The rotation does name them, brand and model (R55·218d).
+    const profile = await publicProfileForPage(HANDLE, true, vi.fn());
+    const kits = JSON.stringify(profile?.kits);
+    for (const garment of ["Nike", "Tracksmith", "Pegasus", "Brighton"]) {
+      expect(kits, garment).not.toContain(garment);
     }
   });
 });
@@ -469,7 +477,7 @@ describe("publicRotation", () => {
     const rotation = await publicRotation(coreDb(), runner, "km");
 
     expect(rotation.shoes).toStrictEqual([
-      { name: "Pegasus 41", detail: "23 km" },
+      { name: "Nike Pegasus 41", detail: "23 km" },
     ]);
   });
 

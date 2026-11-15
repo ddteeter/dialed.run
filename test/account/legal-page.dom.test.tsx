@@ -88,6 +88,20 @@ describe("LegalPage", () => {
     expect(document.querySelector("[data-slot='tab-bar']")).not.toBeNull();
     expect(document.querySelector("[data-slot='landing-bar']")).toBeNull();
     expect(screen.getAllByTestId("bell")[0]).toHaveTextContent(/^3\/2$/u);
+    // Below 720 the bell ends the title's row, the page's first (R57·256).
+    const seat = within(firstRow() as HTMLElement).getByTestId("bell");
+    expect(seat.closest("[data-slot='notification-bell']")).toHaveClass(
+      "wide:hidden",
+    );
+    expect(firstRow().lastElementChild).toContainElement(seat);
+    // One first row and one seat: no empty kicker row above the title.
+    expect(
+      document.querySelectorAll("[data-part='reading-first-row']"),
+    ).toHaveLength(1);
+    expect(
+      document.querySelectorAll("header [data-slot='notification-bell']"),
+    ).toHaveLength(1);
+    expect(firstRow()).toHaveClass("flex", "items-center", "justify-between");
     // The shell's main is the page's one: the frame brings none of its own.
     expect(screen.getAllByRole("main")).toHaveLength(1);
   });
@@ -258,6 +272,17 @@ const DRAFT = parseLegalDoc(
   ].join("\n"),
 );
 
+/**
+ * The page's first row: a legal text has no kicker, so it is the title's,
+ * which the phone bell ends for a signed-in reader (R57·256).
+ */
+function firstRow(): Element {
+  const row = screen.getByRole("heading", { level: 1 }).parentElement;
+  if (row === null) throw new Error("no first row");
+  expect(row).toHaveAttribute("data-part", "reading-first-row");
+  return row;
+}
+
 async function renderDraft(slug: "privacy" | "terms" | "copyright") {
   return renderWithRouter(
     <LegalPage slug={slug} doc={DRAFT} bellState={undefined} bell={bell} />,
@@ -278,8 +303,12 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
 
   it("draws the draft banner as the notice block under the title", async () => {
     await renderDraft("privacy");
-    const notice = screen.getByRole("heading", { level: 1 }).nextElementSibling;
+    const notice = firstRow().nextElementSibling;
     expect(notice).toHaveClass("bg-notice", "rounded-none", "inset-ring-1");
+    // The title and the notice sit at the text's width; only a wide
+    // table steps out (R55·220, R2-LEGAL-05).
+    expect(notice?.parentElement?.tagName).toBe("HEADER");
+    expect(notice?.parentElement).toHaveClass("max-w-column");
     if (!(notice instanceof HTMLElement)) throw new TypeError("no notice");
     const [tag, line, provenance] = [...notice.children];
     expect(tag).toHaveTextContent(/^Draft$/u);
@@ -307,13 +336,47 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
     );
   });
 
+  it("never parts a file name from what touches it: a bracket before, punctuation after (R2-LEGAL-04)", async () => {
+    const text =
+      "See the app (`src/a.ts`). And `b`/`c` here, then `d`, and `e`";
+    await renderWithRouter(
+      <LegalPage
+        slug="privacy"
+        doc={parseLegalDoc(
+          ["# Privacy policy", "", "## Names", "", text, "", "`f` opens."].join(
+            "\n",
+          ),
+        )}
+        bellState={undefined}
+        bell={bell}
+      />,
+    );
+    const runOf = (name: string): Element | undefined =>
+      screen.getByText(name).closest("code")?.parentElement ?? undefined;
+    // One unbreakable run each, holding only what touches the name.
+    expect(runOf("src/a.ts")).toHaveClass("whitespace-nowrap");
+    expect(runOf("src/a.ts")?.textContent).toBe("(src/a.ts).");
+    expect(runOf("b")?.textContent).toBe("b/");
+    expect(runOf("c")?.textContent).toBe("c");
+    expect(runOf("d")?.textContent).toBe("d,");
+    expect(runOf("e")?.textContent).toBe("e");
+    expect(runOf("f")?.textContent).toBe("f");
+    // A name may still break inside when it is longer than the line.
+    expect(screen.getByText("b").closest("code")).toHaveClass(
+      "whitespace-normal",
+    );
+    // Nothing is drawn twice or dropped: the words read as written.
+    expect(runOf("src/a.ts")?.parentElement?.textContent).toBe(
+      text.replaceAll("`", ""),
+    );
+    expect(runOf("f")?.parentElement?.textContent).toBe("f opens.");
+  });
+
   it("draws no notice for a text without the banner", async () => {
     await renderWithRouter(
       <LegalPage slug="privacy" doc={DOC} bellState={undefined} bell={bell} />,
     );
-    expect(
-      screen.getByRole("heading", { level: 1 }).nextElementSibling,
-    ).toBeNull();
+    expect(firstRow().nextElementSibling).toBeNull();
   });
 
   it("draws a banner with nothing after its bold lead as the two lines alone", async () => {
@@ -325,7 +388,7 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
         bell={bell}
       />,
     );
-    const notice = screen.getByRole("heading", { level: 1 }).nextElementSibling;
+    const notice = firstRow().nextElementSibling;
     expect(notice?.children).toHaveLength(2);
     expect(screen.getByText("Words.").tagName).toBe("P");
   });
@@ -341,9 +404,7 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
         bell={bell}
       />,
     );
-    expect(
-      screen.getByRole("heading", { level: 1 }).nextElementSibling,
-    ).toBeNull();
+    expect(firstRow().nextElementSibling).toBeNull();
     expect(screen.getAllByRole("blockquote")).toHaveLength(6);
     const paragraphBold = screen.getByText("DRAFT", { selector: "strong" });
     expect(paragraphBold.closest("p")).not.toBeNull();
@@ -448,12 +509,15 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
     ).toHaveClass("font-display", "text-heading");
   });
 
-  it("draws a table of more than two columns as cards below the desk and a broken-out table at it", async () => {
+  it("draws a table of more than two columns as cards at every width (R57·265, as built)", async () => {
     await renderDraft("privacy");
-    const cards = screen
-      .getAllByRole("list")
-      .find((list) => list.classList.contains("desk:hidden"));
-    if (cards === undefined) throw new Error("no cards");
+    // GUESS (R57·265, Design 315 #761): no 1440 step, so the cards at
+    // every width and no seven-column breakout.
+    expect(screen.queryByRole("table")).toBeNull();
+    const cards = screen.getByText("Sentry", { selector: "p" }).closest("ul");
+    if (cards === null) throw new Error("no cards");
+    expect(cards).toHaveClass("flex", "flex-col", "gap-3", "list-none");
+    expect(cards).not.toHaveClass("desk:hidden");
     const items = within(cards).getAllByRole("listitem");
     expect(items).toHaveLength(3);
     const [sentry, , short] = items;
@@ -465,6 +529,8 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
     expect(
       [...short.querySelectorAll("dt")].map((term) => term.textContent),
     ).toEqual(["Company"]);
+    // A flex box, so a wrapped label sets at MONO.xs's leading (R2-LEGAL-09).
+    expect(short.querySelector("dt")).toHaveClass("flex");
     expect(
       [...short.querySelectorAll("dd")].map((value) => value.textContent),
     ).toEqual(["Only"]);
@@ -479,33 +545,6 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
       [...sentry.querySelectorAll("dd")].map((value) => value.textContent),
     ).toEqual(["Functional Software", "Processor"]);
     expect(sentry.querySelector(":scope dt span")).toHaveClass("text-mono-xs");
-    const table = screen.getByRole("table");
-    expect(table.parentElement).toHaveClass(
-      "hidden",
-      "desk:block",
-      "desk:w-[calc(100cqw-var(--spacing)*72)]",
-      "bg-panel",
-    );
-    expect(
-      within(table)
-        .getAllByRole("columnheader")
-        .map((cell) => cell.textContent),
-    ).toEqual(["Service", "Company", "Role"]);
-    const cells = within(table).getAllByRole("cell");
-    expect(cells[0]).toHaveClass("font-semibold");
-    expect(cells[0]).toHaveClass("border-t", "px-4");
-    expect(cells[1]).not.toHaveClass("font-semibold");
-    expect(cells[1]).toHaveClass("border-t", "border-hairline", "px-4", "py-3");
-    expect(cells.map((cell) => cell.textContent)).toEqual([
-      "Sentry",
-      "Functional Software",
-      "Processor",
-      "OpenAI",
-      "OpenAI OpCo",
-      "Processor",
-      "Short",
-      "Only",
-    ]);
   });
 
   it("keeps a two-column table a table at every width", async () => {
@@ -520,10 +559,9 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
     ).toHaveClass("border-b", "border-hairline", "align-top");
   });
 
-  it("holds the rail at 240, the page in a container, and lets the rail scroll", async () => {
+  it("holds the rail at 240 and lets the rail scroll", async () => {
     await renderDraft("privacy");
     expect(screen.getByRole("main").firstElementChild).toHaveClass(
-      "@container",
       "desk:grid-cols-[240px_minmax(0,1fr)]",
       "desk:max-w-page",
     );

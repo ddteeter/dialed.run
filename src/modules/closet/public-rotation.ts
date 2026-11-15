@@ -19,13 +19,14 @@ import { desc, eq } from "drizzle-orm";
 import { wardrobeItems } from "../../db/schema-core";
 import type { DistanceUnit } from "../../lib/contracts";
 import { wholeDistanceNumber } from "../../lib/contracts/measures";
+import { garmentLabel } from "../../lib/garment-label";
 
 import { computeUserPerformance } from "./service";
 import { typeWordOf } from "./type-labels";
 
 /**
- * One piece as the rotation lists it: the closet's name for it ("Pegasus
- * 41"), and beside it its mileage when it is a pair of shoes ("412 mi"),
+ * One piece as the rotation lists it: the closet's name for it, brand and
+ * model ("Nike Pegasus 41"), and beside it its mileage when it is a pair of shoes ("412 mi"),
  * else its type ("Tights").
  */
 export interface RotationPiece {
@@ -46,8 +47,21 @@ export interface PublicRotation {
 
 type Piece = Pick<
   typeof wardrobeItems.$inferSelect,
-  "id" | "name" | "category" | "type" | "retired"
+  "id" | "name" | "brand" | "category" | "type" | "retired"
 >;
+
+/**
+ * What the rotation reads of a piece: what it prints (brand and model,
+ * type) and what sorts it (shoes, retired). Nothing else of the closet.
+ */
+const PIECE_COLUMNS = {
+  id: wardrobeItems.id,
+  name: wardrobeItems.name,
+  brand: wardrobeItems.brand,
+  category: wardrobeItems.category,
+  type: wardrobeItems.type,
+  retired: wardrobeItems.retired,
+};
 
 export async function publicRotation(
   database: Parameters<typeof computeUserPerformance>[0],
@@ -56,20 +70,16 @@ export async function publicRotation(
 ): Promise<PublicRotation> {
   const [pieces, performance] = await Promise.all([
     database
-      .select({
-        id: wardrobeItems.id,
-        name: wardrobeItems.name,
-        category: wardrobeItems.category,
-        type: wardrobeItems.type,
-        retired: wardrobeItems.retired,
-      })
+      .select(PIECE_COLUMNS)
       .from(wardrobeItems)
       .where(eq(wardrobeItems.userId, userId))
       .orderBy(desc(wardrobeItems.createdAt)),
     computeUserPerformance(database, userId),
   ]);
   const listed = (piece: Piece): RotationPiece => ({
-    name: piece.name,
+    // Brand and model, as G's Most worn and the kit page name it
+    // (R55·218d, R2-FEED-04); a piece with no brand by its name alone.
+    name: garmentLabel({ ...piece, isGeneric: false }),
     detail: isShoes(piece)
       ? `${wholeDistanceNumber(performance.get(piece.id)?.summary.mileageM ?? 0, unit)} ${unit}`
       : typeWordOf(piece.category, piece.type),
@@ -81,11 +91,12 @@ export async function publicRotation(
     shoes: pieces
       .filter((piece) => !piece.retired && isShoes(piece))
       .map((piece) => listed(piece)),
-    retired: pieces.filter((piece) => piece.retired).map((piece) => listed(piece)),
+    retired: pieces
+      .filter((piece) => piece.retired)
+      .map((piece) => listed(piece)),
   };
 }
 
 function isShoes(piece: Piece): boolean {
   return piece.category === "shoes";
 }
-

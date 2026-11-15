@@ -167,6 +167,20 @@ describe("OpenSourcePage", () => {
     );
     expect(document.querySelector("[data-slot='tab-bar']")).not.toBeNull();
     expect(screen.getAllByTestId("bell")[0]).toHaveTextContent(/^4\/1$/u);
+    // Below 720 the bell ends the kicker's row, the page's first
+    // (R57·256); the title has a row of its own, with no bell.
+    const kickerRow = within(screen.getByRole("main"))
+      .getByText("Open source")
+      .closest("[data-part='reading-first-row']");
+    expect(kickerRow).not.toBeNull();
+    expect(
+      within(kickerRow as HTMLElement).getByTestId("bell"),
+    ).toBeInTheDocument();
+    expect(
+      screen
+        .getByRole("heading", { level: 1 })
+        .closest("[data-part='reading-first-row']"),
+    ).toBeNull();
   });
 
   it("thanks people: the kicker, the heading, and a lead that counts every piece", async () => {
@@ -474,6 +488,9 @@ describe("OpenSourcePage", () => {
     const user = userEvent.setup();
     await renderPage();
     expect(screen.queryByText(/^Nothing we ship/u)).toBeNull();
+    expect(
+      screen.getByRole("navigation", { name: "Contents" }),
+    ).toBeInTheDocument();
     await user.type(search(), " xyz ");
     // Said once, by the status region; the drawn line is hidden from it.
     expect(screen.getByRole("status")).toHaveTextContent(
@@ -485,6 +502,9 @@ describe("OpenSourcePage", () => {
     );
     expect(drawn).toHaveAttribute("aria-hidden", "true");
     expect(screen.queryByRole("heading", { name: "MIT" })).toBeNull();
+    // No "Contents" over an empty list, and no empty landmark (R2-LEGAL-02).
+    expect(screen.queryByRole("navigation", { name: "Contents" })).toBeNull();
+    expect(screen.queryByText("Contents")).toBeNull();
   });
 
   it("renders the third-party notices' sections, one level down, without the file's preamble", async () => {

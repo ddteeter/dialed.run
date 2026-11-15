@@ -143,12 +143,14 @@ function Stats({ kit }: Readonly<{ kit: PublicKit }>) {
     >
       {stats.map((stat) => (
         <div key={stat.unit} className="flex flex-col-reverse gap-0.5">
-          <dt>
+          {/* Flex boxes, so each line sets at its mono step's leading
+              and the label sits tight under its number (R2-FEED-05). */}
+          <dt className="flex">
             <Mono step="xs" className="text-muted">
               <Said shown={stat.unit} said={stat.said?.unit} />
             </Mono>
           </dt>
-          <dd className="m-0">
+          <dd className="m-0 flex">
             <Mono step="md">
               <Said shown={stat.value} said={stat.said?.value} />
             </Mono>

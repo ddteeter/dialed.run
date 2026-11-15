@@ -92,7 +92,9 @@ const KIT_LIST_CLASS =
 // the day and distance under both.
 const KIT_ROW_CLASS =
   "target grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-b border-hairline py-2 text-ink no-underline desk:grid-cols-[minmax(0,1fr)_auto] desk:border-b-0";
-const KIT_TILE_PLACE_CLASS = "row-span-2 desk:col-span-2 desk:row-span-1";
+// A flex box, so the --tint tile (a span) is a sized item, not an inline
+// child whose size does not apply (R2-FEED-01).
+const KIT_TILE_PLACE_CLASS = "flex row-span-2 desk:col-span-2 desk:row-span-1";
 const CONDITIONS_PLACE_CLASS =
   "col-start-2 row-start-1 text-body font-semibold desk:col-start-1 desk:row-start-2";
 const DAY_PLACE_CLASS =

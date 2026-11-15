@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import type { ComponentType, JSX, ReactNode } from "react";
 
 import { Mono } from "../../../ui";
@@ -224,114 +225,72 @@ function TableView({
           </tr>
         </thead>
         <tbody>
-          <BodyRows
-            rows={rows}
-            cellClass={() => "border-b border-hairline py-2 pr-4 align-top"}
-          />
+          {rows.map((row, rowIndex) => (
+            <tr key={rowIndex}>
+              {row.map((cell, index) => (
+                <td
+                  key={index}
+                  className="border-b border-hairline py-2 pr-4 align-top"
+                >
+                  <Inlines inlines={cell} />
+                </td>
+              ))}
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
   );
 }
 
-function BodyRows({
-  rows,
-  cellClass,
-}: Readonly<{
-  rows: readonly Cells[];
-  cellClass: (index: number) => string;
-}>): JSX.Element {
-  return (
-    <>
-      {rows.map((row, rowIndex) => (
-        <tr key={rowIndex}>
-          {row.map((cell, index) => (
-            <td key={index} className={cellClass(index)}>
-              <Inlines inlines={cell} />
-            </td>
-          ))}
-        </tr>
-      ))}
-    </>
-  );
-}
-
 /**
- * R55·220, a table wider than two columns. Below the desk each row is a
- * --panel card: its first cell as the heading, then each other cell under
- * its column's header (the label is the header: a guess the PR records).
- * At the desk it is a table that breaks out of the 620 text to the right,
- * from the text's left edge to the page measure's right edge: the frame's
- * width (`100cqw`, `ReadingFrame`'s container) less the contents rail and
- * its gap (240 + 48, `--spacing` × 72). Only one of the two is drawn at a
- * width, so a reader hears the table once.
+ * R55·220, a table wider than two columns: each row a --panel card, its
+ * first cell as the heading, then each other cell under its column's
+ * header (the label is the header: a guess the PR records).
+ *
+ * At every width (R57·265, as built): Design ruled the cards until 1440
+ * and the seven-column breakout from there, but the contract has no 1440
+ * step and the breakout is MEASURE.page's width at 1280 and at 1440 alike,
+ * so a row that wraps to eleven lines at one wraps the same at the other.
+ * Design 315 (#761) asks again; until then, the cards.
  */
 function WideTable({
   head,
   rows,
 }: Readonly<{ head: Cells; rows: readonly Cells[] }>): JSX.Element {
   return (
-    <>
-      <ul className="m-0 flex list-none flex-col gap-3 p-0 desk:hidden">
-        {rows.map((row, rowIndex) => (
-          <li
-            key={rowIndex}
-            className="flex flex-col gap-2 rounded-card border border-hairline bg-panel px-4 py-3"
-          >
-            {row.slice(0, 1).map((cell, index) => (
-              <p key={index} className="m-0 text-body font-semibold">
-                <Inlines inlines={cell} />
-              </p>
-            ))}
-            <dl className="m-0 grid grid-cols-[112px_minmax(0,1fr)] items-baseline gap-x-3 gap-y-2">
-              {row.slice(1).map((cell, index) => (
-                <div key={index} className="contents">
-                  <dt>
-                    <Mono step="xs" className="text-muted">
-                      {head.slice(index + 1, index + 2).map((label, at) => (
-                        <Inlines key={at} inlines={label} />
-                      ))}
-                    </Mono>
-                  </dt>
-                  <dd className="m-0 text-body">
-                    <Inlines inlines={cell} />
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </li>
-        ))}
-      </ul>
-      <div className="hidden overflow-x-auto rounded-card border border-hairline bg-panel desk:block desk:w-[calc(100cqw-var(--spacing)*72)]">
-        <table className="w-full border-collapse text-body">
-          <thead>
-            <tr>
-              {head.map((cell, index) => (
-                <th
-                  key={index}
-                  scope="col"
-                  className="border-b border-hairline px-4 py-3 text-left align-bottom font-normal"
-                >
+    <ul className="m-0 flex list-none flex-col gap-3 p-0">
+      {rows.map((row, rowIndex) => (
+        <li
+          key={rowIndex}
+          className="flex flex-col gap-2 rounded-card border border-hairline bg-panel px-4 py-3"
+        >
+          {row.slice(0, 1).map((cell, index) => (
+            <p key={index} className="m-0 text-body font-semibold">
+              <Inlines inlines={cell} />
+            </p>
+          ))}
+          <dl className="m-0 grid grid-cols-[112px_minmax(0,1fr)] items-baseline gap-x-3 gap-y-2">
+            {row.slice(1).map((cell, index) => (
+              <div key={index} className="contents">
+                {/* A flex box, so a wrapped label sets at MONO.xs's
+                      leading, not the article's (R2-LEGAL-09). */}
+                <dt className="flex">
                   <Mono step="xs" className="text-muted">
-                    <Inlines inlines={cell} />
+                    {head.slice(index + 1, index + 2).map((label, at) => (
+                      <Inlines key={at} inlines={label} />
+                    ))}
                   </Mono>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            <BodyRows
-              rows={rows}
-              cellClass={(index) =>
-                index === 0
-                  ? "border-t border-hairline px-4 py-3 align-top font-semibold"
-                  : "border-t border-hairline px-4 py-3 align-top"
-              }
-            />
-          </tbody>
-        </table>
-      </div>
-    </>
+                </dt>
+                <dd className="m-0 text-body">
+                  <Inlines inlines={cell} />
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -362,16 +321,83 @@ function Inlines({
   );
   return (
     <>
-      {drawn.map((inline, index) => (
-        <InlineView
-          key={index}
-          inline={inline}
-          inLink={inLink}
-          isLeadIn={leadIn && index === 0}
-        />
-      ))}
+      {drawn.map((inline, index) => {
+        const view = (
+          <InlineView
+            inline={inline.kind === "text" ? untouched(drawn, index) : inline}
+            inLink={inLink}
+            isLeadIn={leadIn && index === 0}
+          />
+        );
+        return inline.kind === "code" ? (
+          <span key={index} className="whitespace-nowrap">
+            {touchingEnd(drawn, index - 1)}
+            {view}
+            {touchingStart(drawn, index + 1)}
+          </span>
+        ) : (
+          <Fragment key={index}>{view}</Fragment>
+        );
+      })}
     </>
   );
+}
+
+/**
+ * R2-LEGAL-04: a file name's box never breaks, and nor does it part from
+ * what touches it. The bracket before it ("the app (") and the
+ * punctuation after it (`).`) are drawn inside one unbreakable run with
+ * it, so neither is left hanging at a line's end or starts the next. A
+ * space is where the line may break, so only what touches it moves.
+ *
+ * `addressParts` has already cut the text word by word, each part after
+ * the first led by its space (" (" , " app"). So a name's next part is
+ * the word that touches it, whole (`).`, or "" when a space follows),
+ * and its part before touches it from that part's last space on.
+ */
+function lastWord(text: string): string {
+  return text.slice(text.lastIndexOf(" ") + 1);
+}
+
+/**
+ * A text's own words, less what touches a name before or after it.
+ */
+function untouched(drawn: readonly Drawn[], index: number): Drawn {
+  return { kind: "text", text: textLeft(drawn, index, true) };
+}
+
+/**
+ * Text at `index`, less what touches the name before it, and, when
+ * `isEndTrimmed`, less what touches the name after it.
+ */
+function textLeft(
+  drawn: readonly Drawn[],
+  index: number,
+  isEndTrimmed: boolean,
+): string {
+  const item = drawn[index];
+  if (item?.kind !== "text") return "";
+  // A name before it took this whole part: it is the word touching it.
+  const head = drawn[index - 1]?.kind === "code" ? "" : item.text;
+  return isEndTrimmed && drawn[index + 1]?.kind === "code"
+    ? head.slice(0, head.length - lastWord(head).length)
+    : head;
+}
+
+/**
+ * What touches a name from before it: the end of the text there, from its
+ * last space on.
+ */
+function touchingEnd(drawn: readonly Drawn[], index: number): string {
+  return lastWord(textLeft(drawn, index, false));
+}
+
+/**
+ * What touches a name from after it: the word there, whole.
+ */
+function touchingStart(drawn: readonly Drawn[], index: number): string {
+  const item = drawn[index];
+  return item?.kind === "text" ? item.text : "";
 }
 
 /**
@@ -422,7 +448,7 @@ function InlineView({
       // name longer than the line itself breaks, so a 320 screen never
       // scrolls sideways (plan 161's reflow check).
       return (
-        <code className="inline-block max-w-full wrap-anywhere">
+        <code className="inline-block max-w-full wrap-anywhere whitespace-normal">
           <Mono step="md">{inline.text}</Mono>
         </code>
       );
