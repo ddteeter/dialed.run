@@ -4,11 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { z } from "zod";
 
-import {
-  emailSendLimits,
-  outbox,
-  takedownRequests,
-} from "../../src/db/schema-core";
+import { rateLimits, outbox, takedownRequests } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { EMAIL_SENDS_PER_HOUR } from "../../src/lib/contracts/email";
 import { newUlid } from "../../src/lib/ids";
@@ -78,7 +74,7 @@ async function owedEmails() {
 beforeEach(async () => {
   await core().delete(takedownRequests);
   await core().delete(outbox);
-  await core().delete(emailSendLimits);
+  await core().delete(rateLimits);
   Reflect.set(env, "ADMIN_USER_IDS", "op-one,op-two");
 });
 
@@ -205,7 +201,7 @@ describe("filing a request", () => {
     expect(again).toStrictEqual({ status: "received" });
     expect(await rows()).toHaveLength(1);
     expect(await owedEmails()).toHaveLength(3);
-    expect(await core().select().from(emailSendLimits)).toStrictEqual([]);
+    expect(await core().select().from(rateLimits)).toStrictEqual([]);
   });
 });
 
@@ -238,13 +234,16 @@ describe("the limit, on a real deployment", () => {
       deps,
       NOW,
     );
-    const [limit] = await core().select().from(emailSendLimits);
-    expect(limit?.key).toBe("takedown:unknown");
+    const [limit] = await core().select().from(rateLimits);
+    expect([limit?.kind, limit?.subject]).toStrictEqual([
+      "takedown",
+      "unknown",
+    ]);
   });
 
   it("is not counted off a real deployment", async () => {
     await fileTakedownRequest(core(), request(), deps, NOW);
-    expect(await core().select().from(emailSendLimits)).toStrictEqual([]);
+    expect(await core().select().from(rateLimits)).toStrictEqual([]);
   });
 });
 

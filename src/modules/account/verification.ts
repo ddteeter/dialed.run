@@ -25,8 +25,8 @@ import {
 import { nowSeconds } from "../../lib/now";
 import {
   claimEmailSend,
+  claimRunnerChange,
   deliverEmail,
-  runnerSendKey,
   emailDebt,
   type EmailDeps,
 } from "../email";
@@ -501,12 +501,7 @@ export async function requestEmailChange(
   if (password.status === "wrong") return { status: "wrong-password" };
   // The runner's own count first, so a refused request is not counted
   // against the address it named.
-  const byRunner = await claimEmailSend(
-    db,
-    "change",
-    runnerSendKey(userId),
-    now,
-  );
+  const byRunner = await claimRunnerChange(db, userId, now);
   if (!byRunner.isAllowed) {
     return { status: "runner-limited", until: byRunner.until };
   }

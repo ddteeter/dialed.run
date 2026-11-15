@@ -1,6 +1,7 @@
 import { and, eq, inArray, like, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { countRow, countedKeys } from "../rate-limit-rows";
 
 import { account, session, user, verification } from "../../src/db/schema-auth";
 import {
@@ -8,7 +9,7 @@ import {
   accountDeletions,
   blocks,
   dataExports,
-  emailSendLimits,
+  rateLimits,
   emailVerifications,
   entryPhotos,
   entryTags,
@@ -349,18 +350,15 @@ async function seedAccount(): Promise<Seeded> {
         createdAt: NOW,
       },
     ]),
-    core.insert(emailSendLimits).values({
-      key: `spend:enrich-runner:${userId}`,
-      windowStartedAt: NOW,
-      sends: 1,
-    }),
-    core.insert(emailSendLimits).values(
-      [...limitKeysOf(email), runnerLimitKeyOf(userId)].map((key) => ({
-        key,
-        windowStartedAt: NOW,
-        sends: 1,
-      })),
-    ),
+    core
+      .insert(rateLimits)
+      .values([
+        countRow("enrich-runner", userId, 1, NOW),
+        countRow("change-runner", userId, 1, NOW),
+        ...addressesOf(email).flatMap((address) =>
+          ADDRESS_SENDS.map((kind) => countRow(kind, address, 1, NOW)),
+        ),
+      ]),
     core.insert(inviteRedemptions).values({
       userId,
       codeId: newUlid(),
@@ -460,10 +458,24 @@ function byText(a: string, b: string): number {
   return a.localeCompare(b);
 }
 
-function sendLimitKeys(email: string): string[] {
-  const address = email.toLowerCase();
-  return [`verify:${address}`, `reset:${address}`, `change:${address}`];
+/**
+Every count whose subject is one of the runner's addresses.
+*/
+function addressCounts(email: string) {
+  return inArray(rateLimits.subject, addressesOf(email));
 }
+
+/**
+A runner's own count of one kind, which the purge forgets.
+*/
+function runnersCount(kind: "change-runner" | "enrich-runner", userId: string) {
+  return and(eq(rateLimits.kind, kind), eq(rateLimits.subject, userId));
+}
+
+/**
+The sends counted by the address, which the purge forgets with it.
+*/
+const ADDRESS_SENDS = ["verify", "reset", "change"] as const;
 
 /**
 The address a seeded runner's open email change moves to.
@@ -486,20 +498,6 @@ function addressesOf(email: string): string[] {
   return [email, firstAddress(email), movingTo(email)].map((address) =>
     address.toLowerCase(),
   );
-}
-
-/**
-Every counter a seeded runner's addresses hold.
-*/
-/**
-The runner's own count of change requests, keyed by their id.
-*/
-function runnerLimitKeyOf(userId: string): string {
-  return `change:runner:${userId.toLowerCase()}`;
-}
-
-function limitKeysOf(email: string): string[] {
-  return addressesOf(email).flatMap((address) => sendLimitKeys(address));
 }
 
 /**
@@ -660,17 +658,14 @@ async function footprint(seeded: Seeded) {
       ),
     sendLimits: await core
       .select()
-      .from(emailSendLimits)
+      .from(rateLimits)
       .where(
-        inArray(emailSendLimits.key, [
-          ...limitKeysOf(seeded.email),
-          runnerLimitKeyOf(userId),
-        ]),
+        or(addressCounts(seeded.email), runnersCount("change-runner", userId)),
       ),
     spendLimits: await core
       .select()
-      .from(emailSendLimits)
-      .where(eq(emailSendLimits.key, `spend:enrich-runner:${userId}`)),
+      .from(rateLimits)
+      .where(runnersCount("enrich-runner", userId)),
     resetLinks: await core
       .select()
       .from(verification)
@@ -899,11 +894,9 @@ describe("purgeDueAccounts — a full purge", () => {
           createdAt: NOW,
         },
       ]),
-      core.insert(emailSendLimits).values({
-        key: `access:1.2.3.4-${runner.userId}`,
-        windowStartedAt: NOW,
-        sends: 1,
-      }),
+      core
+        .insert(rateLimits)
+        .values(countRow("access", `1.2.3.4-${runner.userId}`, 1, NOW)),
     ]);
     await claim(runner.userId, NOW - 1);
     const { deps, revoked, reported } = depsAt(NOW);
@@ -984,11 +977,9 @@ describe("purgeDueAccounts — a full purge", () => {
     expect(history[0]?.lockedAt).toBeNull();
 
     // A limit counted by address other than theirs is kept.
-    const access = await core
-      .select({ key: emailSendLimits.key })
-      .from(emailSendLimits)
-      .where(eq(emailSendLimits.key, `access:1.2.3.4-${runner.userId}`));
-    expect(access).toHaveLength(1);
+    expect(await countedKeys(core)).toContain(
+      `access:1.2.3.4-${runner.userId}`,
+    );
 
     // What R2 is owed: each garment's photos. The entries' prefix and the
     // run's upload were settled by feed's fast path, and every other run

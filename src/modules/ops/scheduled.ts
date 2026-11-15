@@ -18,7 +18,7 @@ import {
   ENRICHMENT_SWEEP_TRIES,
   listAbandonedEnrichments,
 } from "../enrichment";
-import { sweepSendLimits } from "../email";
+import { sweepRateLimits } from "../email";
 import { fillMissingTimeZones } from "../onboarding";
 import { pruneStravaIds } from "../runs";
 import { retryPendingWeather, timeZoneAt } from "../weather";
@@ -1005,7 +1005,7 @@ async function runDailyDigest(
   // the others fail (law 5). A check that threw above is thrown with
   // them.
   const sweeps = await failuresOf([
-    () => sweepSendLimits(db),
+    () => sweepRateLimits(db),
     () => upkeep.sweepAuthRows?.(),
     () => upkeep.forgetAnsweredRequests?.(),
     () => upkeep.sweepCopyrightHolds?.(),

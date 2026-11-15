@@ -1,10 +1,10 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   cronCheckpoints,
-  emailSendLimits,
+  rateLimits,
   entryPhotos,
   photoScreenings,
   imports,
@@ -18,6 +18,7 @@ import {
   userProfiles,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import type { RateLimitKind } from "../../src/lib/contracts/rate-limits";
 import { newUlid, type Ulid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { ENRICHMENT_SWEEP_TRIES } from "../../src/modules/enrichment";
@@ -2055,26 +2056,30 @@ describe("the product link a confirmation owes (design 133, D-113 Q1)", () => {
 
 /**
  * The production call sites of the expired-row sweeps: the daily firing
- * sweeps the send limits itself and runs the auth sweep it is handed
+ * sweeps the rate limits itself and runs the auth sweep it is handed
  * (`src/server.ts` hands `sweepExpiredAuthRows`), each whether the other
  * fails.
  */
+type CountId = Readonly<{ kind: RateLimitKind; subject: string }>;
+
 /**
-A send-limit count whose hour ended days ago.
+A rate-limit count whose window ended days ago.
 */
-async function staleCount(): Promise<string> {
-  const key = `access:${newUlid()}`;
+async function staleCount(kind: RateLimitKind = "access"): Promise<CountId> {
+  const id = { kind, subject: newUlid() };
   await coreDb()
-    .insert(emailSendLimits)
-    .values({ key, windowStartedAt: nowSeconds() - 72 * HOUR, sends: 9 });
-  return key;
+    .insert(rateLimits)
+    .values({ ...id, windowStartedAt: nowSeconds() - 72 * HOUR, count: 9 });
+  return id;
 }
 
-async function isCountKept(key: string): Promise<boolean> {
+async function isCountKept(id: CountId): Promise<boolean> {
   const rows = await coreDb()
-    .select({ key: emailSendLimits.key })
-    .from(emailSendLimits)
-    .where(eq(emailSendLimits.key, key));
+    .select({ subject: rateLimits.subject })
+    .from(rateLimits)
+    .where(
+      and(eq(rateLimits.kind, id.kind), eq(rateLimits.subject, id.subject)),
+    );
   return rows.length === 1;
 }
 
@@ -2105,16 +2110,9 @@ async function isReportKept(id: string): Promise<boolean> {
 }
 
 describe("the daily firing sweeps rows kept past any use", () => {
-  it("sweeps the send limits and runs each sweep it is handed, once", async () => {
+  it("sweeps the rate limits and runs each sweep it is handed, once", async () => {
     const key = await staleCount();
-    const enrichmentKey = `spend:enrich-runner:${newUlid()}`;
-    await coreDb()
-      .insert(emailSendLimits)
-      .values({
-        key: enrichmentKey,
-        windowStartedAt: nowSeconds() - 72 * HOUR,
-        sends: 9,
-      });
+    const enrichmentKey = await staleCount("enrich-runner");
     const report = await expiredReport();
     const swept: string[] = [];
 

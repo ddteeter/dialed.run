@@ -17,16 +17,15 @@ export {
 } from "./preferences";
 export {
   claimEmailSend,
+  claimRunnerChange,
   countSend,
-  forgetRunnerSendLimit,
+  forgetRateLimit,
   forgetSendLimits,
-  forgetSpendLimit,
-  isWithinSpendLimit,
-  runnerSendKey,
+  isWithinRateLimit,
   sendAllowed,
   sendClaimOf,
-  sweepSendLimits,
-} from "./send-limit";
-export type { LimitedSend, SendClaim } from "./send-limit";
+  sweepRateLimits,
+} from "./rate-limit";
+export type { SendClaim } from "./rate-limit";
 export { notificationSettings } from "./settings";
 export type { NotificationSettings } from "./settings";

@@ -1,12 +1,16 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { emailSendLimits } from "../../src/db/schema-core";
+import { rateLimits } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import {
+  GLOBAL_SUBJECT,
+  type RateLimitKind,
+} from "../../src/lib/contracts/rate-limits";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { sweepSendLimits } from "../../src/modules/email";
+import { sweepRateLimits } from "../../src/modules/email";
 import {
   canSpendPageFetch,
   canSpendProxyCall,
@@ -28,14 +32,17 @@ const HOUR = 60 * 60;
 const DAY = 24 * HOUR;
 
 beforeEach(async () => {
-  await db.delete(emailSendLimits);
+  await db.delete(rateLimits);
 });
 
-async function countOf(key: string): Promise<number | undefined> {
+async function countOf(
+  kind: RateLimitKind,
+  subject = GLOBAL_SUBJECT,
+): Promise<number | undefined> {
   const [row] = await db
-    .select({ count: emailSendLimits.sends })
-    .from(emailSendLimits)
-    .where(eq(emailSendLimits.key, key));
+    .select({ count: rateLimits.count })
+    .from(rateLimits)
+    .where(and(eq(rateLimits.kind, kind), eq(rateLimits.subject, subject)));
   return row?.count;
 }
 
@@ -104,14 +111,14 @@ describe("the spend counts", () => {
     expect(PROXY_CALLS_PER_DAY).toBe(150);
   });
 
-  it("keys each runner, and each global count, on its own", async () => {
+  it("counts each runner, and each global count, on its own", async () => {
     const runner = newUlid();
     await canSpendRunnerRequest(db, runner, NOW);
     await canSpendPageFetch(db, NOW);
     await canSpendProxyCall(db, NOW);
-    expect(await countOf(`spend:enrich-runner:${runner}`)).toBe(1);
-    expect(await countOf("spend:page-fetch")).toBe(1);
-    expect(await countOf("spend:proxy-call")).toBe(1);
+    expect(await countOf("enrich-runner", runner)).toBe(1);
+    expect(await countOf("page-fetch")).toBe(1);
+    expect(await countOf("proxy-call")).toBe(1);
     expect(await canSpendRunnerRequest(db, newUlid(), NOW)).toBe(true);
   });
 
@@ -120,7 +127,7 @@ describe("the spend counts", () => {
     await canSpendRunnerRequest(db, runner);
     await canSpendPageFetch(db);
     await canSpendProxyCall(db);
-    const rows = await db.select().from(emailSendLimits);
+    const rows = await db.select().from(rateLimits);
     for (const row of rows) {
       expect(Math.abs(row.windowStartedAt - nowSeconds())).toBeLessThan(60);
     }
@@ -128,18 +135,18 @@ describe("the spend counts", () => {
   });
 });
 
-describe("the send limits' daily sweep, over spend counts", () => {
+describe("the rate limits' daily sweep, over spend counts", () => {
   it("keeps a day's count while it can still refuse, and takes it once long over", async () => {
     const runner = newUlid();
     for (let n = 0; n <= ENRICHMENT_REQUESTS_PER_RUNNER_PER_DAY; n += 1) {
       await canSpendRunnerRequest(db, runner, NOW);
     }
     // Late in its day, the sweep leaves it, and it still refuses.
-    await sweepSendLimits(db, NOW + DAY - 60);
+    await sweepRateLimits(db, NOW + DAY - 60);
     expect(await canSpendRunnerRequest(db, runner, NOW + DAY - 60)).toBe(false);
     // Long after, it goes.
-    await sweepSendLimits(db, NOW + 3 * DAY);
-    expect(await countOf(`spend:enrich-runner:${runner}`)).toBeUndefined();
+    await sweepRateLimits(db, NOW + 3 * DAY);
+    expect(await countOf("enrich-runner", runner)).toBeUndefined();
   });
 });
 
@@ -153,8 +160,8 @@ describe("forgetRunnerEnrichmentLimit", () => {
 
     await forgetRunnerEnrichmentLimit(db, runner);
 
-    expect(await countOf(`spend:enrich-runner:${runner}`)).toBeUndefined();
-    expect(await countOf(`spend:enrich-runner:${other}`)).toBe(1);
-    expect(await countOf("spend:page-fetch")).toBe(1);
+    expect(await countOf("enrich-runner", runner)).toBeUndefined();
+    expect(await countOf("enrich-runner", other)).toBe(1);
+    expect(await countOf("page-fetch")).toBe(1);
   });
 });

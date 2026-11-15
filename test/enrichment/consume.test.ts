@@ -1,15 +1,16 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   domainDenylist,
-  emailSendLimits,
+  rateLimits,
   gaveUp,
   linkLandings,
   products,
   productSnapshots,
 } from "../../src/db/schema-core";
+import { GLOBAL_SUBJECT } from "../../src/lib/contracts/rate-limits";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import {
@@ -1225,34 +1226,40 @@ async function repend(productId: string): Promise<void> {
     .where(eq(products.id, productId));
 }
 
-async function spentAlready(
-  key: "spend:page-fetch" | "spend:proxy-call",
-  count: number,
-) {
+type GlobalSpend = "page-fetch" | "proxy-call";
+
+async function spentAlready(kind: GlobalSpend, count: number) {
   await db()
-    .insert(emailSendLimits)
-    .values({ key, windowStartedAt: nowSeconds(), sends: count })
+    .insert(rateLimits)
+    .values({
+      kind,
+      subject: GLOBAL_SUBJECT,
+      windowStartedAt: nowSeconds(),
+      count,
+    })
     .onConflictDoUpdate({
-      target: emailSendLimits.key,
-      set: { windowStartedAt: nowSeconds(), sends: count },
+      target: [rateLimits.kind, rateLimits.subject],
+      set: { windowStartedAt: nowSeconds(), count },
     });
 }
 
-async function limitCountOf(key: string): Promise<number | undefined> {
+async function limitCountOf(kind: GlobalSpend): Promise<number | undefined> {
   const [row] = await db()
-    .select({ count: emailSendLimits.sends })
-    .from(emailSendLimits)
-    .where(eq(emailSendLimits.key, key));
+    .select({ count: rateLimits.count })
+    .from(rateLimits)
+    .where(
+      and(eq(rateLimits.kind, kind), eq(rateLimits.subject, GLOBAL_SUBJECT)),
+    );
   return row?.count;
 }
 
 describe("handleEnrichmentBatch: the spend ceilings", () => {
   // The other cases here count their fetches too, and D1 keeps them.
   beforeEach(async () => {
-    await db().delete(emailSendLimits);
+    await db().delete(rateLimits);
   });
   afterEach(async () => {
-    await db().delete(emailSendLimits);
+    await db().delete(rateLimits);
   });
 
   it("counts each page fetch against the hour", async () => {
@@ -1262,11 +1269,11 @@ describe("handleEnrichmentBatch: the spend ceilings", () => {
       depsWith(serving(PAGE)),
     );
     expect(await statusOf(productId)).toBe("done");
-    expect(await limitCountOf("spend:page-fetch")).toBe(1);
+    expect(await limitCountOf("page-fetch")).toBe(1);
   });
 
   it("fetches nothing once the hour's fetches are spent, and leaves the row pending for the sweep", async () => {
-    await spentAlready("spend:page-fetch", PAGE_FETCHES_PER_HOUR);
+    await spentAlready("page-fetch", PAGE_FETCHES_PER_HOUR);
     const productId = await pendingProduct();
     const fetchImpl = serving(PAGE);
     const message = jobFor(productId);
@@ -1285,7 +1292,7 @@ describe("handleEnrichmentBatch: the spend ceilings", () => {
   });
 
   it("leaves a deferred row's earlier failure as it was, for the sweep's next try", async () => {
-    await spentAlready("spend:page-fetch", PAGE_FETCHES_PER_HOUR);
+    await spentAlready("page-fetch", PAGE_FETCHES_PER_HOUR);
     const productId = await pendingProduct({
       extractionError: "Page returned 403",
       extractionTries: 2,
@@ -1303,7 +1310,7 @@ describe("handleEnrichmentBatch: the spend ceilings", () => {
   });
 
   it("fetches the last one the hour allows", async () => {
-    await spentAlready("spend:page-fetch", PAGE_FETCHES_PER_HOUR - 1);
+    await spentAlready("page-fetch", PAGE_FETCHES_PER_HOUR - 1);
     const productId = await pendingProduct();
     await handleEnrichmentBatch(
       batchOf("dialed-enrichment", [jobFor(productId)]),
@@ -1319,11 +1326,11 @@ describe("handleEnrichmentBatch: the spend ceilings", () => {
       { ...depsWith(vi.fn(refusingWithProxy)), proxyApiKey: "fc-test" },
     );
     expect(await statusOf(productId)).toBe("done");
-    expect(await limitCountOf("spend:proxy-call")).toBe(1);
+    expect(await limitCountOf("proxy-call")).toBe(1);
   });
 
   it("calls no proxy once the day's calls are spent: the refusal is a failed fetch", async () => {
-    await spentAlready("spend:proxy-call", PROXY_CALLS_PER_DAY);
+    await spentAlready("proxy-call", PROXY_CALLS_PER_DAY);
     const productId = await pendingProduct();
     const fetchImpl = vi.fn(refusingWithProxy);
 

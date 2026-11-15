@@ -1,8 +1,8 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { emailSendLimits, products } from "../../src/db/schema-core";
+import { rateLimits, products } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { enqueueEnrichment } from "../../src/modules/enrichment/enqueue";
@@ -161,8 +161,10 @@ The runner's count of enrichment requests in its window, if it has one.
 */
 async function countOf(runner: string): Promise<number | undefined> {
   const [row] = await db()
-    .select({ count: emailSendLimits.sends })
-    .from(emailSendLimits)
-    .where(eq(emailSendLimits.key, `spend:enrich-runner:${runner}`));
+    .select({ count: rateLimits.count })
+    .from(rateLimits)
+    .where(
+      and(eq(rateLimits.kind, "enrich-runner"), eq(rateLimits.subject, runner)),
+    );
   return row?.count;
 }

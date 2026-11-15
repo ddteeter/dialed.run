@@ -1,12 +1,13 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { countedKeys } from "../rate-limit-rows";
 
 import { session, user, verification } from "../../src/db/schema-auth";
 import { env } from "../../src/env";
 import { EMAIL_SENDS_PER_HOUR } from "../../src/lib/contracts/email";
 import { newUlid } from "../../src/lib/ids";
 import {
-  emailSendLimits,
+  rateLimits,
   emailVerifications,
   outbox,
 } from "../../src/db/schema-core";
@@ -48,7 +49,7 @@ const NOW = 1_800_000_000;
 beforeEach(async () => {
   await db.batch([
     db.delete(emailVerifications),
-    db.delete(emailSendLimits),
+    db.delete(rateLimits),
     db.delete(outbox),
   ]);
 });
@@ -772,13 +773,10 @@ describe("resendConfirmation", () => {
     await hooks.existingAccount({ id: userId, email });
     await hooks.resetPassword({ id: userId, email }, "t");
 
-    const limitRows = await db
-      .select({ key: emailSendLimits.key })
-      .from(emailSendLimits);
-    const keys = limitRows
-      .map((row) => row.key)
-      .toSorted((a, b) => a.localeCompare(b));
-    expect(keys).toStrictEqual([`reset:${email}`, `verify:${email}`]);
+    expect(await countedKeys(db)).toStrictEqual([
+      `reset:${email}`,
+      `verify:${email}`,
+    ]);
   });
 });
 
@@ -904,16 +902,10 @@ describe("requestEmailChange", () => {
       email: "fresh@example.com",
     });
     // Its own bucket, named "change" — not the "verify" links' one.
-    const rows = await db
-      .select({ key: emailSendLimits.key })
-      .from(emailSendLimits);
-    expect(rows).toHaveLength(2);
-    expect(rows.map((row) => row.key)).toStrictEqual(
-      expect.arrayContaining([
-        "change:fresh@example.com",
-        `change:runner:${userId.toLowerCase()}`,
-      ]),
-    );
+    expect(await countedKeys(db)).toStrictEqual([
+      `change-runner:${userId}`,
+      "change:fresh@example.com",
+    ]);
   });
 
   it("does the same work for an address with an account: its owner is owed the existing-account email", async () => {
@@ -1003,7 +995,7 @@ describe("requestEmailChange", () => {
     await later.settled();
     expect(mail.sent).toHaveLength(0);
     // Not a send, so not counted against the address, and no link made.
-    expect(await db.select().from(emailSendLimits)).toHaveLength(0);
+    expect(await db.select().from(rateLimits)).toHaveLength(0);
     expect(await db.select().from(emailVerifications)).toHaveLength(0);
     expect(await db.select().from(outbox)).toHaveLength(0);
   });
@@ -1023,7 +1015,7 @@ describe("requestEmailChange", () => {
         NOW,
       ),
     ).toStrictEqual({ status: "password-limited", until: NOW + 900 });
-    expect(await db.select().from(emailSendLimits)).toHaveLength(0);
+    expect(await db.select().from(rateLimits)).toHaveLength(0);
     expect(await db.select().from(outbox)).toHaveLength(0);
   });
 
@@ -1078,16 +1070,9 @@ describe("requestEmailChange", () => {
     await later.settled();
     expect(mail.sent).toHaveLength(EMAIL_SENDS_PER_HOUR);
     // The refused address was not counted against its owner.
-    const refused = await db
-      .select({ key: emailSendLimits.key })
-      .from(emailSendLimits)
-      .where(
-        eq(
-          emailSendLimits.key,
-          `change:stranger-${String(EMAIL_SENDS_PER_HOUR)}@example.com`,
-        ),
-      );
-    expect(refused).toStrictEqual([]);
+    expect(await countedKeys(db)).not.toContain(
+      `change:stranger-${String(EMAIL_SENDS_PER_HOUR)}@example.com`,
+    );
     // A new hour starts the runner's count over.
     expect(await ask(EMAIL_SENDS_PER_HOUR + 1, NOW + 3600)).toStrictEqual({
       status: "sent",

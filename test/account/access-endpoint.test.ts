@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { accessRequests, emailSendLimits } from "../../src/db/schema-core";
+import { accessRequests, rateLimits } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { ACCESS_NOTE_MAX } from "../../src/lib/contracts/access";
 import { receiveAccessRequest } from "../../src/modules/account";
@@ -19,7 +19,7 @@ const SENT = "https://dialed.run/invite/sent";
 const VISITOR = "203.0.113.7";
 
 beforeEach(async () => {
-  await db.batch([db.delete(accessRequests), db.delete(emailSendLimits)]);
+  await db.batch([db.delete(accessRequests), db.delete(rateLimits)]);
 });
 
 function verifyAs(isOk: boolean) {

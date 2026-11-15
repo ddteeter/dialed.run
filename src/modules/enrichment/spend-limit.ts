@@ -1,7 +1,7 @@
 /**
  * The bounds on what enrichment spends: a page fetch, a proxy credit, a
  * model call and a stored snapshot are each paid for, so each has a
- * fixed-window count in `email_send_limits` (owner, 2026-11-15):
+ * fixed-window count in `rate_limits` (owner, 2026-11-15):
  *
  * - one runner's enrichment requests, 50 a day, counted where a garment
  *   save asks for one (`closet`'s `productLinkFor`). Over it the garment
@@ -11,14 +11,15 @@
  * - proxy calls across everyone, 150 a day, counted before each one. Over
  *   it a refused page is a failed fetch, as it is with no proxy key.
  *
- * Each count is one upsert in the send limits' table
- * (`isWithinSpendLimit`), so two requests at once cannot both read the
- * last one free; the daily sweep and the purge treat them as their own.
+ * Each count is one upsert (`isWithinRateLimit`), so two requests at
+ * once cannot both read the last one free; the daily sweep and the purge
+ * treat them as they treat the send limits.
  */
 import type { drizzle } from "drizzle-orm/d1";
 
+import { GLOBAL_SUBJECT } from "../../lib/contracts/rate-limits";
 import { nowSeconds } from "../../lib/now";
-import { forgetSpendLimit, isWithinSpendLimit } from "../email";
+import { forgetRateLimit, isWithinRateLimit } from "../email";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -29,10 +30,6 @@ export const ENRICHMENT_REQUESTS_PER_RUNNER_PER_DAY = 50;
 export const PAGE_FETCHES_PER_HOUR = 200;
 export const PROXY_CALLS_PER_DAY = 150;
 
-function runnerName(userId: string): string {
-  return `enrich-runner:${userId}`;
-}
-
 /**
 One runner's enrichment request today, if they have one left.
 */
@@ -41,9 +38,10 @@ export function canSpendRunnerRequest(
   userId: string,
   now = nowSeconds(),
 ): Promise<boolean> {
-  return isWithinSpendLimit(
+  return isWithinRateLimit(
     db,
-    runnerName(userId),
+    "enrich-runner",
+    userId,
     ENRICHMENT_REQUESTS_PER_RUNNER_PER_DAY,
     DAY_S,
     now,
@@ -57,9 +55,10 @@ export function canSpendPageFetch(
   db: Db,
   now = nowSeconds(),
 ): Promise<boolean> {
-  return isWithinSpendLimit(
+  return isWithinRateLimit(
     db,
     "page-fetch",
+    GLOBAL_SUBJECT,
     PAGE_FETCHES_PER_HOUR,
     HOUR_S,
     now,
@@ -73,12 +72,19 @@ export function canSpendProxyCall(
   db: Db,
   now = nowSeconds(),
 ): Promise<boolean> {
-  return isWithinSpendLimit(db, "proxy-call", PROXY_CALLS_PER_DAY, DAY_S, now);
+  return isWithinRateLimit(
+    db,
+    "proxy-call",
+    GLOBAL_SUBJECT,
+    PROXY_CALLS_PER_DAY,
+    DAY_S,
+    now,
+  );
 }
 
 /**
-A deleted account's id is not kept as a key: one statement, for the purge.
+A deleted account's id is not kept as a subject: one statement, for the purge.
 */
 export function forgetRunnerEnrichmentLimit(db: Db, userId: string) {
-  return forgetSpendLimit(db, runnerName(userId));
+  return forgetRateLimit(db, "enrich-runner", userId);
 }

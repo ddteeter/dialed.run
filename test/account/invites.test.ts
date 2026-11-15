@@ -2,11 +2,12 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { countedKeys } from "../rate-limit-rows";
 
 import { user } from "../../src/db/schema-auth";
 import {
   accessRequests,
-  emailSendLimits,
+  rateLimits,
   inviteCodes,
   inviteRedemptions,
   outbox,
@@ -68,7 +69,7 @@ beforeEach(async () => {
     db.delete(inviteCodes),
     db.delete(inviteRedemptions),
     db.delete(accessRequests),
-    db.delete(emailSendLimits),
+    db.delete(rateLimits),
     db.delete(outbox),
   ]);
 });
@@ -945,20 +946,15 @@ describe("requestAccess (Au5)", () => {
       until: 1000 + 3600,
     });
     expect(await db.select().from(accessRequests)).toHaveLength(5);
-    const [row] = await db
-      .select({ key: emailSendLimits.key })
-      .from(emailSendLimits);
-    expect(row?.key).toBe("access:203.0.113.9");
+    expect(await countedKeys(db)).toStrictEqual(["access:203.0.113.9"]);
     // Another visitor is not held up by the first.
     expect(
       await ask("7@x.test", { ...ATTEMPT, remoteIp: undefined }),
     ).toStrictEqual({ status: "received", isFromBlockedRegion: false });
-    const keys = await db
-      .select({ key: emailSendLimits.key })
-      .from(emailSendLimits);
-    expect(
-      keys.map((key) => key.key).toSorted((a, b) => a.localeCompare(b)),
-    ).toStrictEqual(["access:203.0.113.9", "access:unknown"]);
+    expect(await countedKeys(db)).toStrictEqual([
+      "access:203.0.113.9",
+      "access:unknown",
+    ]);
   });
 
   it("does not limit where the deployment does not", async () => {
@@ -977,7 +973,7 @@ describe("requestAccess (Au5)", () => {
       );
     }
     expect(await db.select().from(accessRequests)).toHaveLength(6);
-    expect(await db.select().from(emailSendLimits)).toStrictEqual([]);
+    expect(await db.select().from(rateLimits)).toStrictEqual([]);
   });
 });
 
