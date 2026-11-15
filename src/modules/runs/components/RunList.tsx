@@ -17,8 +17,14 @@ import {
   WeatherAttribution,
 } from "../../../ui";
 import { hasProvidersReading, setConditionsForms } from "../run-conditions";
-import type { RunSummary } from "../service";
-import { listedSince, runMonths } from "../run-months";
+import type { RunListPage, RunSummary } from "../service";
+import {
+  RUNS_LISTED,
+  listedSince,
+  monthCount,
+  moreToShow,
+  runMonths,
+} from "../run-months";
 import { SetConditionsSheet } from "./SetConditionsSheet";
 import type { ConditionsActions } from "./SetConditionsSheet";
 
@@ -33,14 +39,20 @@ import type { ConditionsActions } from "./SetConditionsSheet";
  * opens A3, and a run with neither opens run detail.
  */
 export function RunList({
-  runs,
+  page,
+  show,
   units,
   actions,
 }: Readonly<{
-  runs: readonly RunSummary[];
+  page: RunListPage;
+  /**
+  How many the list asked for: the next "Show 50 more" asks for fifty more.
+  */
+  show: number;
   units: Units;
   actions: ConditionsActions;
 }>): JSX.Element {
+  const { runs } = page;
   const router = useRouter();
   const [settingFor, setSettingFor] = useState<string | undefined>();
 
@@ -63,7 +75,6 @@ export function RunList({
     );
   }
 
-  const since = listedSince(runs);
   return (
     <>
       <div data-slot="run-list" className="flex flex-col">
@@ -72,7 +83,10 @@ export function RunList({
             {/* Round 55 · 235: a month break in MONO.xs with its count. */}
             <h2 className="m-0 border-b border-hairline pt-5 pb-2">
               <Mono step="xs" className="text-label">
-                {`${month} · ${String(inMonth.length)} ${inMonth.length === 1 ? "run" : "runs"}`}
+                {monthBreak(
+                  month,
+                  monthCount(month, inMonth.length, page.cutMonth),
+                )}
               </Mono>
             </h2>
             <ul className="m-0 flex list-none flex-col p-0">
@@ -89,13 +103,7 @@ export function RunList({
             </ul>
           </section>
         ))}
-        {/* The list says where it ends, and only when it has: never
-            "every run" about the newest of more than it read. */}
-        {since === undefined ? undefined : (
-          <Mono step="xs" className="block pt-6 pb-4 text-center text-label">
-            That&rsquo;s every run · since {since}
-          </Mono>
-        )}
+        <ListEnd runs={runs} total={page.total} show={show} />
       </div>
       {/* One credit under the list, rather than one per row, when any row
           shows the provider's reading — a band the runner set is theirs
@@ -121,6 +129,52 @@ export function RunList({
         />
       )}
     </>
+  );
+}
+
+/**
+ * A month break (Round 55 · 235): the month, then its count, singular for
+ * one (D-191). The count is the whole month's (R58·299).
+ */
+function monthBreak(month: string, count: number): string {
+  return `${month} · ${String(count)} ${count === 1 ? "run" : "runs"}`;
+}
+
+/**
+ * Where the list stops (R58·299): "Show N more" while there are more, as
+ * 236a's "Show 9 more", in the closet's text-link form; the end line once
+ * every run is listed, and never "every run" about the newest of more.
+ * Show keeps the scroll where it is, so the next runs arrive under it.
+ */
+function ListEnd({
+  runs,
+  total,
+  show,
+}: Readonly<{
+  runs: readonly RunSummary[];
+  total: number;
+  show: number;
+}>): JSX.Element | undefined {
+  const more = moreToShow(runs.length, total);
+  if (more > 0) {
+    return (
+      <Link
+        to="/runs"
+        search={{ show: show + RUNS_LISTED }}
+        resetScroll={false}
+        data-part="show-more"
+        className="target mt-4 inline-flex items-center self-start text-small text-ink underline underline-offset-4"
+      >
+        {`Show ${String(more)} more`}
+      </Link>
+    );
+  }
+  const since = listedSince(runs, total);
+  if (since === undefined) return;
+  return (
+    <Mono step="xs" className="block pt-6 pb-4 text-center text-label">
+      That&rsquo;s every run · since {since}
+    </Mono>
   );
 }
 

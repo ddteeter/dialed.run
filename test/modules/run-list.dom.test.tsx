@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { RunList } from "../../src/modules/runs/components/RunList";
 import type { ConditionsActions } from "../../src/modules/runs/components/SetConditionsSheet";
-import type { RunSummary } from "../../src/modules/runs/service";
+import type { RunListPage, RunSummary } from "../../src/modules/runs/service";
 import {
   RUN_ID,
   SET_BY_YOU,
@@ -24,10 +24,16 @@ import { queryWeatherCredit, WEATHER_CREDIT } from "../ui/weather-credit";
 function list(
   runs: readonly RunSummary[],
   actions: Partial<ConditionsActions> = {},
+  page: Partial<Omit<RunListPage, "runs">> & { show?: number } = {},
 ) {
   return (
     <RunList
-      runs={runs}
+      page={{
+        runs: [...runs],
+        total: page.total ?? runs.length,
+        cutMonth: page.cutMonth,
+      }}
+      show={page.show ?? RUNS_LISTED}
       units={{ temp: "f", distance: "mi" }}
       actions={{
         setConditions: actions.setConditions ?? (() => Promise.resolve(true)),
@@ -241,23 +247,62 @@ describe("R: the month breaks and the end (Round 55 · 235)", () => {
     expect(headings()).toEqual(["October 2026 · 1 run"]);
   });
 
-  it("never says every run when the list stopped at what it reads", async () => {
+  it("never says every run while there are more, and offers the next fifty where it stops (R58·299)", async () => {
+    const many = Array.from({ length: RUNS_LISTED }, (_, index) =>
+      runSummary({ id: `01R${String(index)}`, startedAt: NOV_12 - index }),
+    );
+    await renderWithRouter(list(many, {}, { total: 130 }));
+
+    expect(rows()).toHaveLength(RUNS_LISTED);
+    expect(screen.queryByText(/every run/u)).toBeNull();
+    const more = screen.getByRole("link", { name: "Show 50 more" });
+    expect(more).toHaveAttribute("href", "/runs?show=100");
+    expect(more).toHaveAttribute("data-part", "show-more");
+    expect(more).toHaveClass("target", "text-small", "underline");
+    // Where the list stops: after the last month.
+    expect(
+      document.querySelector("[data-slot='run-list']")?.lastElementChild,
+    ).toBe(more);
+  });
+
+  it("offers what is left when fewer than fifty are, and asks for fifty more than it showed", async () => {
+    const many = Array.from({ length: 100 }, (_, index) =>
+      runSummary({ id: `01R${String(index)}`, startedAt: NOV_12 - index }),
+    );
+    await renderWithRouter(list(many, {}, { total: 103, show: 100 }));
+
+    expect(screen.getByRole("link", { name: "Show 3 more" })).toHaveAttribute(
+      "href",
+      "/runs?show=150",
+    );
+  });
+
+  it("says every run once everything is listed, even at fifty", async () => {
     const many = Array.from({ length: RUNS_LISTED }, (_, index) =>
       runSummary({ id: `01R${String(index)}`, startedAt: NOV_12 - index }),
     );
     await renderWithRouter(list(many));
 
-    expect(rows()).toHaveLength(RUNS_LISTED);
-    expect(screen.queryByText(/every run/u)).toBeNull();
+    expect(screen.queryByRole("link", { name: /^Show \d+ more$/u })).toBeNull();
+    expect(screen.getByText("That’s every run · since Nov 2026")).toBeVisible();
   });
 
-  it("says every run one short of it", async () => {
-    const many = Array.from({ length: RUNS_LISTED - 1 }, (_, index) =>
-      runSummary({ id: `01R${String(index)}`, startedAt: NOV_12 - index }),
+  it("counts the month the list stops in whole, and the others by their runs (R58·299)", async () => {
+    await renderWithRouter(
+      list(
+        [
+          runSummary({ id: "01A", startedAt: NOV_12 }),
+          runSummary({ id: "01B", startedAt: OCT_30 }),
+        ],
+        {},
+        { total: 40, cutMonth: { month: "October 2026", count: 38 } },
+      ),
     );
-    await renderWithRouter(list(many));
 
-    expect(screen.getByText("That’s every run · since Nov 2026")).toBeVisible();
+    expect(headings()).toEqual([
+      "November 2026 · 1 run",
+      "October 2026 · 38 runs",
+    ]);
   });
 });
 

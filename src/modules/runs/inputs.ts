@@ -12,6 +12,7 @@ import { z } from "zod";
 import { manualSkySchema, runDraftSchema } from "../../lib/contracts";
 import { ulidSchema } from "../../lib/ids";
 import { SET_CONDITION_BANDS } from "./run-conditions";
+import { RUNS_LISTED } from "./run-months";
 import { ImportUploadError, MAX_IMPORT_BYTES } from "./upload-limits";
 import { filePartFrom } from "../../lib/file-part";
 import type { FilePartProblem } from "../../lib/file-part";
@@ -138,3 +139,37 @@ export function importUploadFrom(input: unknown): {
     .parse(part.form.get("idempotencyKey") ?? undefined);
   return { file: part.file, idempotencyKey: key };
 }
+
+/**
+ * How many the runs list shows (R58·299): fifty, then fifty more for each
+ * "Show 50 more", up to a thousand, past which a page is not a list. A
+ * value nobody's Show row wrote reads as the first fifty.
+ */
+export const runListSearch = z.object({
+  show: z.coerce
+    .number()
+    .int()
+    .min(RUNS_LISTED)
+    .max(RUNS_LISTED * 20)
+    .optional()
+    .catch(undefined),
+});
+export type RunListSearch = z.infer<typeof runListSearch>;
+
+/**
+What the runs list's loader reads from its search: fifty unless asked.
+*/
+export function runListDeps(search: RunListSearch): { show: number } {
+  return { show: search.show ?? RUNS_LISTED };
+}
+
+/**
+The runs list's read: how many it shows.
+*/
+export const runListInput = z.object({
+  show: z
+    .number()
+    .int()
+    .min(RUNS_LISTED)
+    .max(RUNS_LISTED * 20),
+});

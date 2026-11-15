@@ -11,24 +11,27 @@ import {
   didRetryRunWeatherFn,
   didSetRunConditionsFn,
 } from "../../modules/runs/functions";
+import { runListDeps, runListSearch } from "../../modules/runs/inputs";
 import { Page } from "../../ui";
 
 export const Route = createFileRoute("/runs/")({
   staticData: { title: "Runs" },
-  loader: async () => {
-    const [runs, units, bell, strava] = await Promise.all([
-      listRunSummariesFn(),
+  validateSearch: runListSearch,
+  loaderDeps: ({ search }) => runListDeps(search),
+  loader: async ({ deps }) => {
+    const [page, units, bell, strava] = await Promise.all([
+      listRunSummariesFn({ data: deps }),
       viewerUnitsQuery(),
       bellStateFn(),
       getStravaStatusFn(),
     ]);
-    return { runs, units, bell, strava };
+    return { page, show: deps.show, units, bell, strava };
   },
   component: RunsIndexPage,
 });
 
 function RunsIndexPage() {
-  const { runs, units, bell, strava } = Route.useLoaderData();
+  const { page, show, units, bell, strava } = Route.useLoaderData();
 
   return (
     <BelledLayout {...bell}>
@@ -38,7 +41,8 @@ function RunsIndexPage() {
           connected={strava.connected}
         />
         <RunList
-          runs={runs}
+          page={page}
+          show={show}
           units={units}
           actions={{
             setConditions: didSetRunConditionsFn,
