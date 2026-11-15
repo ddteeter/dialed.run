@@ -350,7 +350,7 @@ async function seedAccount(): Promise<Seeded> {
       },
     ]),
     core.insert(emailSendLimits).values(
-      limitKeysOf(email).map((key) => ({
+      [...limitKeysOf(email), runnerLimitKeyOf(userId)].map((key) => ({
         key,
         windowStartedAt: NOW,
         sends: 1,
@@ -486,6 +486,13 @@ function addressesOf(email: string): string[] {
 /**
 Every counter a seeded runner's addresses hold.
 */
+/**
+The runner's own count of change requests, keyed by their id.
+*/
+function runnerLimitKeyOf(userId: string): string {
+  return `change:runner:${userId.toLowerCase()}`;
+}
+
 function limitKeysOf(email: string): string[] {
   return addressesOf(email).flatMap((address) => sendLimitKeys(address));
 }
@@ -649,7 +656,12 @@ async function footprint(seeded: Seeded) {
     sendLimits: await core
       .select()
       .from(emailSendLimits)
-      .where(inArray(emailSendLimits.key, limitKeysOf(seeded.email))),
+      .where(
+        inArray(emailSendLimits.key, [
+          ...limitKeysOf(seeded.email),
+          runnerLimitKeyOf(userId),
+        ]),
+      ),
     resetLinks: await core
       .select()
       .from(verification)

@@ -893,6 +893,23 @@ describe("ChangeEmail (ACC-8)", () => {
     expect(request).toHaveBeenCalledTimes(2);
   });
 
+  it("bands the runner's own hourly count of address changes", async () => {
+    const { request, user } = renderChange({
+      answer: { status: "runner-limited", until: UNTIL },
+    });
+    await fillChange(user, "new@example.com");
+    await user.click(sendLink());
+    const band = await screen.findByText(
+      "That's 5 address changes this hour. You can try again at 8:00 AM UTC.",
+    );
+    expect(band).toBeVisible();
+    expect(screen.getByText("Not sent")).toBeVisible();
+    expect(screen.queryByText(/links this hour/u)).toBeNull();
+    expect(screen.queryByText("Link sent.")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(request).toHaveBeenCalledTimes(2);
+  });
+
   it("opens the root's sheet, with the email change's own lead, when the server says the address is not confirmed", async () => {
     // What the gate throws, as it arrives: a plain object, cloned (D-113).
     const request = vi.fn(() =>

@@ -5,7 +5,7 @@
  * Counted per address whatever the address is: see `email_send_limits`
  * for why an unknown address is counted too.
  */
-import { inArray, lt, sql } from "drizzle-orm";
+import { eq, inArray, lt, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
@@ -62,6 +62,18 @@ function sendLimitKey(kind: LimitedSend, address: string): string {
 }
 
 /**
+ * What a runner's own count of email-change requests is keyed by, in the
+ * `change` kind beside the per-address counts: five an hour per runner,
+ * whatever addresses they name. It cannot collide with an address's key,
+ * which always has an `@`. `sendLimitKey` lowercases it; account ids are
+ * ULIDs, whose alphabet has one letter per case, so no two ids fold to
+ * the same key.
+ */
+export function runnerSendKey(userId: string): string {
+  return `runner:${userId}`;
+}
+
+/**
  * Forget an address's counters (ACC-9): a deleted account's address is
  * not kept, even as a key in an hour's count. One statement, for the
  * purge's batch; each key is a primary-key probe.
@@ -76,6 +88,18 @@ export function forgetSendLimits(
       ADDRESS_SENDS.map((kind) => sendLimitKey(kind, address)),
     ),
   );
+}
+
+/**
+ * Forget a runner's own count of change requests at the purge, as
+ * `forgetSendLimits` forgets an address's: the key holds their id.
+ */
+export function forgetRunnerSendLimit(
+  db: ReturnType<typeof drizzle>,
+  userId: string,
+) {
+  const key = sendLimitKey("change", runnerSendKey(userId));
+  return db.delete(emailSendLimits).where(eq(emailSendLimits.key, key));
 }
 
 /**

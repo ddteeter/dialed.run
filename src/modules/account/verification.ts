@@ -26,6 +26,7 @@ import { nowSeconds } from "../../lib/now";
 import {
   claimEmailSend,
   deliverEmail,
+  runnerSendKey,
   emailDebt,
   type EmailDeps,
 } from "../email";
@@ -411,7 +412,12 @@ export async function confirmEmail(
 export type ChangeResult =
   | ResendResult
   | { readonly status: "wrong-password" }
-  | { readonly status: "password-limited"; readonly until: number };
+  | { readonly status: "password-limited"; readonly until: number }
+  /**
+  This runner's own count of change requests this hour is used up,
+  whatever addresses they named.
+  */
+  | { readonly status: "runner-limited"; readonly until: number };
 
 export interface EmailChangeRequest {
   readonly userId: string;
@@ -493,6 +499,17 @@ export async function requestEmailChange(
     return { status: "password-limited", until: password.until };
   }
   if (password.status === "wrong") return { status: "wrong-password" };
+  // The runner's own count first, so a refused request is not counted
+  // against the address it named.
+  const byRunner = await claimEmailSend(
+    db,
+    "change",
+    runnerSendKey(userId),
+    now,
+  );
+  if (!byRunner.isAllowed) {
+    return { status: "runner-limited", until: byRunner.until };
+  }
   const email = request.newEmail.toLowerCase();
   const claim = await claimEmailSend(db, "change", email, now);
   if (!claim.isAllowed) return { status: "limited", until: claim.until };

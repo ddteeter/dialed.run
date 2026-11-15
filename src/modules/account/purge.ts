@@ -77,7 +77,7 @@ import { columnWhere, firstRowWhere } from "../../lib/sql/keyed-read";
 import { listedPages } from "../../lib/sql/r2-pages";
 import { orSqlNull } from "../../lib/sql/sql-null";
 import { nowSeconds } from "../../lib/now";
-import { forgetSendLimits } from "../email";
+import { forgetRunnerSendLimit, forgetSendLimits } from "../email";
 import { deleteRuns } from "../feed";
 import { captureException, outboxInsert, oweOutbox } from "../ops";
 import { disconnectStrava } from "../runs";
@@ -506,6 +506,7 @@ async function deleteAccountRows(
       db.delete(table).where(eq(table.userId, userId)),
     ),
     ...addresses.flatMap((address) => forgetAddress(db, address)),
+    forgetRunnerSendLimit(db, userId),
     // Reports they filed stay — what was said about someone else's post
     // is that runner's record too — but name nobody (the development
     // plan's default; an owner question). A per-report id keeps them

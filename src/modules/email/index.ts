@@ -18,7 +18,9 @@ export {
 export {
   claimEmailSend,
   countSend,
+  forgetRunnerSendLimit,
   forgetSendLimits,
+  runnerSendKey,
   sendAllowed,
   sendClaimOf,
   sweepSendLimits,

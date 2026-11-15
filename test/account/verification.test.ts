@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { session, user, verification } from "../../src/db/schema-auth";
 import { env } from "../../src/env";
+import { EMAIL_SENDS_PER_HOUR } from "../../src/lib/contracts/email";
 import { newUlid } from "../../src/lib/ids";
 import {
   emailSendLimits,
@@ -906,9 +907,13 @@ describe("requestEmailChange", () => {
     const rows = await db
       .select({ key: emailSendLimits.key })
       .from(emailSendLimits);
-    expect(rows.map((row) => row.key)).toStrictEqual([
-      "change:fresh@example.com",
-    ]);
+    expect(rows).toHaveLength(2);
+    expect(rows.map((row) => row.key)).toStrictEqual(
+      expect.arrayContaining([
+        "change:fresh@example.com",
+        `change:runner:${userId.toLowerCase()}`,
+      ]),
+    );
   });
 
   it("does the same work for an address with an account: its owner is owed the existing-account email", async () => {
@@ -1022,18 +1027,22 @@ describe("requestEmailChange", () => {
     expect(await db.select().from(outbox)).toHaveLength(0);
   });
 
-  it("is limited per new address", async () => {
+  it("is limited per new address, whoever asks", async () => {
     const mail = fakeMail();
-    const { userId } = await seedUser();
-    for (let n = 0; n < 5; n += 1) {
-      await requestEmailChange(
-        db,
-        change(userId, "spam@example.com"),
-        mail,
-        owedTo(mail).owed,
-        NOW,
-      );
+    // Five runners, one request each, so no runner's own count is reached.
+    for (let n = 0; n < EMAIL_SENDS_PER_HOUR; n += 1) {
+      const { userId } = await seedUser();
+      expect(
+        await requestEmailChange(
+          db,
+          change(userId, "spam@example.com"),
+          mail,
+          owedTo(mail).owed,
+          NOW,
+        ),
+      ).toStrictEqual({ status: "sent" });
     }
+    const { userId } = await seedUser();
     expect(
       await requestEmailChange(
         db,
@@ -1043,6 +1052,72 @@ describe("requestEmailChange", () => {
         NOW,
       ),
     ).toStrictEqual({ status: "limited", until: NOW + 3600 });
+  });
+
+  it("is limited per runner, across different new addresses, and owes nothing past it", async () => {
+    const mail = fakeMail();
+    const later = owedTo(mail);
+    const { userId } = await seedUser();
+    const ask = (n: number, at = NOW) =>
+      requestEmailChange(
+        db,
+        change(userId, `stranger-${String(n)}@example.com`),
+        mail,
+        later.owed,
+        at,
+      );
+    for (let n = 0; n < EMAIL_SENDS_PER_HOUR; n += 1) {
+      expect(await ask(n)).toStrictEqual({ status: "sent" });
+    }
+    expect(await ask(EMAIL_SENDS_PER_HOUR)).toStrictEqual({
+      status: "runner-limited",
+      until: NOW + 3600,
+    });
+    // Owed before the background settles: one row per request let through.
+    expect(await db.select().from(outbox)).toHaveLength(
+      EMAIL_SENDS_PER_HOUR,
+    );
+    await later.settled();
+    expect(mail.sent).toHaveLength(EMAIL_SENDS_PER_HOUR);
+    // The refused address was not counted against its owner.
+    const refused = await db
+      .select({ key: emailSendLimits.key })
+      .from(emailSendLimits)
+      .where(
+        eq(
+          emailSendLimits.key,
+          `change:stranger-${String(EMAIL_SENDS_PER_HOUR)}@example.com`,
+        ),
+      );
+    expect(refused).toStrictEqual([]);
+    // A new hour starts the runner's count over.
+    expect(await ask(EMAIL_SENDS_PER_HOUR + 1, NOW + 3600)).toStrictEqual({
+      status: "sent",
+    });
+  });
+
+  it("limits each runner on their own count", async () => {
+    const mail = fakeMail();
+    const first = await seedUser();
+    const second = await seedUser();
+    for (let n = 0; n <= EMAIL_SENDS_PER_HOUR; n += 1) {
+      await requestEmailChange(
+        db,
+        change(first.userId, `first-${String(n)}@example.com`),
+        mail,
+        owedTo(mail).owed,
+        NOW,
+      );
+    }
+    expect(
+      await requestEmailChange(
+        db,
+        change(second.userId, "second@example.com"),
+        mail,
+        owedTo(mail).owed,
+        NOW,
+      ),
+    ).toStrictEqual({ status: "sent" });
   });
 });
 
