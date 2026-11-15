@@ -424,9 +424,11 @@ describe("ClosetFilters: WORKS AT before a script (#109h)", () => {
     }
   });
 
-  it("holds no room while the closet has no span to show", async () => {
+  it("holds no room, and shows no value, while the closet has no span to show", async () => {
     await rail({ span: undefined });
     expect(document.querySelector("[data-part='value-room']")).toBeNull();
+    // Nothing to read beside the label: Untested says it under it.
+    expect(document.querySelector("[data-part='works-at-value']")).toBeNull();
   });
 
   it("reads Any in the header while no span is set", async () => {
@@ -607,6 +609,9 @@ describe("ClosetFilters: the span bar", () => {
       onSearch: vi.fn(),
     });
     expect(spanFill().style.left).toBe(
+      "calc(25% - min(25%, max(0px, 24px - 50%) / 2 + max(0px, max(0px, 24px - 50%) / 2 - 25%)))",
+    );
+    expect(spanFill().style.right).toBe(
       "calc(25% - min(25%, max(0px, 24px - 50%) / 2 + max(0px, max(0px, 24px - 50%) / 2 - 25%)))",
     );
   });

@@ -146,6 +146,12 @@ describe("R: a row (Round 55 · 235)", () => {
     expect(watch?.parentElement).toHaveClass("flex-wrap", "gap-x-2", "gap-y-1");
   });
 
+  it("draws no watch wrapper on a run that isn't Garmin's", async () => {
+    await renderWithRouter(list([runSummary({ conditions: SET_BY_YOU })]));
+
+    expect(onlyRow().querySelector("[data-part='watch']")).toBeNull();
+  });
+
   it("opens run detail for a run with no entry", async () => {
     await renderWithRouter(list([runSummary()]));
 
