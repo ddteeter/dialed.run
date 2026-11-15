@@ -36,6 +36,8 @@ browser from carrying a runner's details off the app.
   - The purge deletes the follow rows it named on other runners' bells.
   - A closed account is purged on schedule, and its addresses' HMAC
     (`CLOSED_ADDRESS_SECRET`) is kept 3 years; sign-up refuses a match.
+    With the secret unset, the purge keeps nothing and the daily digest
+    says a closed account's address went unremembered (law 6).
   - The purge orders retried claims behind untried ones and claims in
     rounds while it has time.
   - A ban or leaving withdraws every public photo copy in one drain
