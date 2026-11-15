@@ -109,7 +109,10 @@ test("E1's v1 card is composed as the board draws it, with a photo, without, and
     rows,
     `e1_runner_${String(Date.now()).slice(-8)}`,
   );
-  const startedAt = nowSeconds() - 2 * 3600;
+  // Minutes back, not hours: today's run says only how long ago
+  // (R55·204), and two hours back crossed midnight in the evening, when
+  // the card added the clock and the transcript moved with the hour.
+  const startedAt = nowSeconds() - 10 * 60;
   const withPhoto = await seedEntry(rows, {
     userId: runner,
     place: { lat: 61.37, lng: 12.41 },
