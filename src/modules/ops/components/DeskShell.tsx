@@ -45,14 +45,14 @@ export type DeskPage = (typeof DESK_PAGES)[number];
  * Desk is not a runner screen, so 168.1's centring does not reach it,
  * and a 620 page leaves its spare width on the right.
  */
-const WIDTH: Readonly<Record<DeskPage, "table" | "column">> = {
-  today: "column",
-  review: "table",
-  corrections: "column",
-  access: "column",
-  duplicates: "column",
-  codes: "table",
-  runners: "table",
+const COLUMN_PAGES: Readonly<Record<DeskPage, boolean>> = {
+  today: true,
+  review: false,
+  corrections: true,
+  access: true,
+  duplicates: true,
+  codes: false,
+  runners: false,
 };
 
 /**
@@ -299,7 +299,7 @@ export function DeskShell({
             carries (useHydrated), which the e2e specs wait on. */}
         <main className="min-w-0 flex-1">
           <Page width="table">
-            {WIDTH[current] === "column" ? (
+            {COLUMN_PAGES[current] ? (
               <div data-part="desk-column" className={DESK_COLUMN}>
                 {children}
               </div>

@@ -177,6 +177,17 @@ describe("what a reviewer is shown", () => {
     renderQueue([row({ subjectType: "product", subjectId: "p-9" })]);
     expect(heads()).toStrictEqual(["product · p-9 [reports]"]);
   });
+
+  it("names a labelled subject by its label, and only a profile's with an @ (R2-DESK-12d)", () => {
+    renderQueue([
+      row({
+        subjectType: "product",
+        subjectId: "p-9",
+        subject: { label: "Cool Long-Sleeve", photoKeys: [] },
+      }),
+    ]);
+    expect(heads()).toStrictEqual(["product · Cool Long-Sleeve [reports]"]);
+  });
 });
 
 describe("deciding", () => {
