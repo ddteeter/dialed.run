@@ -39,6 +39,14 @@ hardens account closure, the email-change request and enrichment spend.
 ## Contract touches
 
 - Schema changes needed: **none** (a comment on `email_send_limits` only).
+  The owner was told SA-H3 would add a new `enrichment_limits` table; it
+  was built and then dropped, because its upsert restated the send
+  limits' row for row (the `dupes` gate). Two checks make the shared
+  table safe: the daily sweep removes a row only once its window started
+  more than a day and an hour ago, so a live day's count is never dropped
+  (`test/enrichment/spend-limit.test.ts`); and the send kinds are a closed
+  type (`verify`, `reset`, `change`, `access`, `takedown`), so nothing
+  else is keyed `spend:`. The purge forgets only the runner's own key.
 - New route files: none.
 - New bindings/queues/crons: **none** (the sweep rides the existing daily cron).
 - Screens: Settings › Change email gets one new message state; no board change.
