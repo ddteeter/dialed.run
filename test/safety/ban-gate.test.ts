@@ -174,6 +174,27 @@ describe("a banned runner signing in (SAF-4)", () => {
       context.internalAdapter.createSession(newUlid()),
     ).rejects.toHaveProperty("body", { code: ACCOUNT_CLOSED_CODE });
   });
+
+  it("is refused after a close that inserted the profile row", async () => {
+    const email = `${newUlid().toLowerCase()}@example.test`;
+    const signUp = await auth.api.signUpEmail({
+      body: { name: "Runner", email, password: PASSWORD },
+    });
+    await banUser(
+      {
+        userId: signUp.user.id,
+        reason: "Spam.",
+        rule: "spam",
+        bannedBy: newUlid(),
+      },
+      noPurge,
+    );
+
+    const refused = await signIn(email);
+
+    expect(refused.status).toBe(403);
+    expect(await refused.json()).toMatchObject({ code: ACCOUNT_CLOSED_CODE });
+  });
 });
 
 /**

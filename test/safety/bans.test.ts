@@ -491,3 +491,52 @@ describe("a runner with no profile", () => {
     });
   });
 });
+
+describe("closing writes the ban by upsert", () => {
+  beforeEach(resetAuthTables);
+
+  it("inserts the profile row with the ban", async () => {
+    const userId = newUlid();
+    await core()
+      .insert(user)
+      .values({
+        id: userId,
+        name: "",
+        email: `${userId}@example.test`,
+        emailVerified: true,
+        createdAt: new Date(NOW * 1000),
+        updatedAt: new Date(NOW * 1000),
+      });
+
+    await banUser(
+      { userId, reason: "Spam.", rule: "spam", bannedBy: newUlid() },
+      noPurge,
+    );
+
+    const state = await banStateOf(userId);
+    expect(state.banned).toBe(true);
+    expect(state.reason).toBe("Spam.");
+  });
+
+  it("updates an existing profile row, keeping its other columns", async () => {
+    const userId = await makeUser();
+    await core()
+      .update(userProfiles)
+      .set({ username: "kept_handle" })
+      .where(eq(userProfiles.userId, userId));
+
+    await banUser(
+      { userId, reason: "Spam.", rule: "spam", bannedBy: newUlid() },
+      noPurge,
+    );
+
+    const rows = await core()
+      .select({
+        username: userProfiles.username,
+        banReason: userProfiles.banReason,
+      })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, userId));
+    expect(rows).toEqual([{ username: "kept_handle", banReason: "Spam." }]);
+  });
+});

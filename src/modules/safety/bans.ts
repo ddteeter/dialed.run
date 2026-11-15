@@ -72,10 +72,18 @@ export async function banUser(
       ? []
       : await reporterNotices(db(), "profile", input.userId, "removed");
   await db().batch([
+    // An upsert: the ban is the profile row's, inserted or updated.
     db()
-      .update(userProfiles)
-      .set({ bannedAt, banReason: input.reason })
-      .where(eq(userProfiles.userId, input.userId)),
+      .insert(userProfiles)
+      .values({
+        userId: input.userId,
+        bannedAt,
+        banReason: input.reason,
+      })
+      .onConflictDoUpdate({
+        target: userProfiles.userId,
+        set: { bannedAt, banReason: input.reason },
+      }),
     // Deleting rather than expiring: an expired session is still a row
     // Better Auth has to be trusted to reject, and a deleted one cannot be
     // got wrong by anybody.
