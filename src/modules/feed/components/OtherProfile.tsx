@@ -1,8 +1,7 @@
-import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import type { ReactNode } from "react";
 
-import { COLUMN, FormStatus, Icon, Mono, PhoneBell } from "../../../ui";
+import { COLUMN, FormStatus, Mono, PhoneBell } from "../../../ui";
 import type { OtherProfile as OtherProfileData } from "../profiles";
 import { Avatar } from "./Avatar";
 import { Handle, handleText } from "./Handle";
@@ -10,6 +9,7 @@ import { ReportFoot } from "./ReportFoot";
 import { FollowBand, FollowPill, useFollowToggle } from "./Follow";
 import type { FollowAction } from "./Follow";
 import { RunRow } from "./RunRow";
+import { BackToFeed } from "./BackToFeed";
 
 /**
  * Someone else's profile — screen H, drawn with only what v1 stores
@@ -54,17 +54,8 @@ export function OtherProfile({
   return (
     <div className={`${COLUMN} flex flex-col gap-6 px-5 pt-6 wide:px-6`}>
       <FormStatus>{status}</FormStatus>
-      {/* `exact`: the router marks a prefix match current, and this page
-          sits under /feed. */}
       <div className="flex items-center justify-between">
-        <Link
-          to="/feed"
-          activeOptions={{ exact: true }}
-          aria-label="Back to feed"
-          className="target inline-flex items-center text-ink"
-        >
-          <Icon name="back" size={20} />
-        </Link>
+        <BackToFeed />
         <PhoneBell />
       </div>
       <div data-part="header" className="flex flex-col items-start gap-4">

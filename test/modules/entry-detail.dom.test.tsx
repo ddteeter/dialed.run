@@ -143,6 +143,13 @@ function partsInOrder(): string[] {
     .filter((name) => name !== "verdict-badge");
 }
 
+/**
+The kit list, whose rules R58·284 is about.
+*/
+function kitRule(): HTMLUListElement | null | undefined {
+  return part("kit")?.querySelector("ul");
+}
+
 describe("EntryDetail: Garmin's credit (G1)", () => {
   it("is the first line under the title on a Garmin run", async () => {
     await renderFeedScreen(detail({ deviceName: "Garmin" }));
@@ -521,6 +528,26 @@ describe("EntryDetail: the note, the kit and the tags", () => {
     expect(rows[2]).toHaveTextContent(/^Patagonia Tights$/u);
     // Fine: the row's end holds nothing.
     expect(rows[2]?.children[1]).toBeEmptyDOMElement();
+  });
+
+  it("drops the kit list's closing rule when YOURS follows, and only then (R58·284)", async () => {
+    const items = [item({ itemId: "01A" })];
+    const own = await renderFeedScreen(detail({ items }, { viewerId: OWNER }));
+    // Your own entry, no tags: YOURS is next, and its rule is the one.
+    expect(kitRule()).toHaveClass("border-t", "border-hairline");
+    expect(kitRule()).not.toHaveClass("border-y");
+    own.unmount();
+
+    // Tags between them: the list closes as usual.
+    const tagged = await renderFeedScreen(
+      detail({ items, tags: ["hands_cold"] }, { viewerId: OWNER }),
+    );
+    expect(kitRule()).toHaveClass("border-y");
+    tagged.unmount();
+
+    // Someone else's entry: Useful and Report follow, not YOURS.
+    await renderFeedScreen(detail({ items }));
+    expect(kitRule()).toHaveClass("border-y");
   });
 
   it("rules the kit as the public kit does, the type word at the right (R55·212)", async () => {
