@@ -250,7 +250,7 @@ describe("rescreenHandles", () => {
   it(`asks about at most ${String(RESCREEN_CAP)} handles a firing`, async () => {
     await Promise.all(
       Array.from({ length: RESCREEN_CAP + 3 }, (_, n) =>
-        claimedDuringOutage(`runner_${String(n)}`),
+        claimedDuringOutage(`outage_${String(n)}`),
       ),
     );
     const { asked, rescreen } = answering("clear");
