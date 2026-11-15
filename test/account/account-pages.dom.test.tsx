@@ -35,6 +35,7 @@ import type {
   ChangeResult,
   ResendResult,
 } from "../../src/modules/account/verification";
+import { SECONDARY_PILL } from "../../src/ui";
 import { UnconfirmedRefusalAnswer } from "../../src/ui/unconfirmed-refusal";
 import { carriedSince } from "../ui/carry-spy";
 
@@ -502,20 +503,22 @@ describe("the confirm-first sheet and the nag", () => {
     expect(within(sheet).getByText(/We sent a link to/u)).toHaveTextContent(
       /^We sent a link to maya@example\.com\.$/u,
     );
-    // Round 29 #12: Resend is the sheet's outline pill, not the band's
-    // text link.
+    // R58·270: Resend is the sheet's ink pill, not the band's text link.
     const resendButton = within(sheet).getByRole("button", {
       name: "Resend link",
     });
     expect(resendButton).toHaveClass(...RESEND_PILL.split(" "));
+    expect(resendButton).toHaveClass("bg-ink", "text-ground");
     expect(resendButton).not.toHaveClass("underline");
     await user.click(resendButton);
     expect(resend).toHaveBeenCalledWith({
       data: { email: "maya@example.com" },
     });
-    // Not now is Resend's match: the same full-width pill (B-11).
+    // Not now is the hairline pill under it (R58·270, D-186).
     const notNow = within(sheet).getByRole("button", { name: "Not now" });
-    expect(notNow.className).toBe(`target ${RESEND_PILL}`);
+    expect(notNow.className).toBe(`target ${SECONDARY_PILL}`);
+    expect(notNow).toHaveClass("border-hairline");
+    expect(notNow).not.toHaveClass("bg-ink");
     await user.click(notNow);
     expect(onClose).toHaveBeenCalled();
   });

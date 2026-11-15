@@ -106,7 +106,8 @@ export function FollowPill({
 
 /**
  * The pill's look. On H's header, Follow is the primary in the action
- * pink and Following a hairline. On a list row (R55·217), nine pink pills
+ * pink and Following the hairline pill, as every secondary is (R58·308).
+ * On a list row (R55·217), nine pink pills
  * stacked outweighed the page, so Follow is the 44 hairline pill and
  * Following is `--muted` text: the only pink left is Log a run.
  */
@@ -115,7 +116,7 @@ const PILL_LOOK = {
     follow:
       "shrink-0 cursor-pointer rounded-pill border-none bg-action px-5 py-2 text-body font-bold text-accent-ink",
     following:
-      "shrink-0 cursor-pointer rounded-pill border border-ink bg-transparent px-5 py-2 text-body font-bold text-ink",
+      "shrink-0 cursor-pointer rounded-pill border border-hairline bg-transparent px-5 py-2 text-body font-bold text-ink dark:border-hairline-2",
   },
   row: {
     follow:

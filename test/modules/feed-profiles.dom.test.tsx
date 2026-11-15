@@ -905,9 +905,10 @@ describe("Follow, on the control-failure pattern", () => {
     await waitFor(() => {
       expect(button).toHaveAccessibleName("Following");
     });
-    // The outline pill is 1px --ink (R48·134): a hairline all but
-    // vanished on dark (E1-16b).
-    expect(button).toHaveClass("border-ink");
+    // The hairline pill, as every secondary is (R58·308), its edge
+    // --hairline-2 in dark, where --hairline all but vanished (E1-16b).
+    expect(button).toHaveClass("border-hairline", "dark:border-hairline-2");
+    expect(button).not.toHaveClass("border-ink");
     expect(button).not.toHaveClass("bg-action");
   });
 

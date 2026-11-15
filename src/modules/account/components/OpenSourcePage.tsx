@@ -304,7 +304,7 @@ function GroupSection({
             press();
             onOpen(group.id);
           }}
-          className="target w-full rounded-pill border border-ink text-body font-semibold text-ink"
+          className="target w-full rounded-pill border border-hairline text-body font-semibold text-ink dark:border-hairline-2"
         >
           {`Show all ${count}`}
         </button>

@@ -308,8 +308,11 @@ describe("OpenSourcePage", () => {
       "target",
       "w-full",
       "rounded-pill",
-      "border-ink",
+      // The hairline pill, as every secondary is (R58·308).
+      "border-hairline",
+      "dark:border-hairline-2",
     );
+    expect(showAll).not.toHaveClass("border-ink");
     // Every row keyed by its own name and version: React says nothing.
     const errors = vi.spyOn(console, "error");
     await user.click(showAll);
