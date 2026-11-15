@@ -19,7 +19,7 @@ note on every step that writes or crosses a boundary) and a recovery view
 (try/catch, loop and opt frames). Skill `architecture-diagrams` holds the
 conventions and the validate, render, look loop.
 
-Five steps, each its own PR:
+Six steps, each its own PR:
 
 1. **Foundation.** The dependency and `npm run diagrams` /
    `diagrams:check` (validate, format); spec, model and the import flow;
@@ -30,7 +30,9 @@ Five steps, each its own PR:
    the imports between them) from `wrangler.jsonc`, `ops/crons.ts`,
    `ops/queues.ts` and the module sources. A test regenerates and
    compares. Hand-written files only extend generated elements, so a story
-   naming something removed fails `validate`. The four Mermaid blocks in
+   naming something removed fails `validate`. A folder with its own
+   `index.ts` is drawn as a sub-module, so #796's breakdown appears with
+   no generator change. The four Mermaid blocks in
    `architecture.md` are deleted in this PR, each replaced by the name of
    the view that now shows it.
 3. **Stories are anchored and flagged.** Every step carries a
@@ -49,8 +51,14 @@ Five steps, each its own PR:
    issue. Run in a wave's docs pass and whenever `diagrams:stale` was
    answered "re-read" more than a few times for one flow.
 
-The remaining flows (enrichment, feed reads, exports, public photos) are
-then written by Opus agents under the skill, one PR each.
+6. **A public page.** After step 2, a workflow builds the model on pushes
+   to main that touch `docs/diagrams/` and publishes it to GitHub Pages:
+   diagrams only, no secret, not a required check. `architecture.md` links
+   its views there.
+
+The remaining flows are written by Opus agents under the skill, one PR
+each. Those inside the four modules #796 breaks down wait for it (#797);
+the rest can follow step 1.
 
 **Opus trial** (2026-11-15). An Opus agent, given only the draft skill and
 the import flow, drew enrichment (`flows/enrichment.c4`): three views, 32
@@ -67,16 +75,18 @@ failed, which is the kind of finding step 5 exists for.
 `likec4 export markdown` does emit Mermaid, but as a flowchart that loses
 step order, notes, frames and the sequence layout, and a committed copy
 would be a second truth that parallel lanes conflict on. So nothing
-generated is committed: reviewers get the PR video, and readers get a
-hosted build (open question 1).
+generated is committed: reviewers get the PR video, and readers get the
+public page (step 6).
 
 ## Contract touches
 
 - Schema changes needed: **none**
 - New route files: **none**
 - New bindings/queues/crons: **none**
-- Human-managed files: one CI step running `diagrams:check` (and the
-  publish job, if approved) in `.github/workflows/`. **Owner's change.**
+- Human-managed files, in `.github/workflows/`: one CI step running
+  `diagrams:check`, and step 6's publish workflow. Pages is also switched
+  on in the repo's settings. **Owner's changes**; each PR brings the
+  workflow as a proposal.
 - New dev dependency: `likec4` (pulls its own Vite and React; nothing the
   app ships imports it).
 
@@ -97,17 +107,21 @@ filesystem, so sources arrive as `?raw` imports, as
 ## Issues
 
 - Closes: none.
-- Opens: one build item per step above, once this doc is approved.
+- Opens: one build item per step above, once this doc is approved. Filed
+  already: #797 (the held flows). Related: #796 (the module breakdown).
+
+## Owner's calls (2026-11-15)
+
+- **Hosting:** GitHub Pages, diagrams only, so the model can be shown to
+  people from a public page. The design boards are not published there.
+- **Mermaid** leaves `architecture.md` only. Design docs keep the
+  template's optional sketch: a proposal drawn once is not a second truth.
+- **Order:** build this now; a module move changes source paths and
+  parents, not a story's steps, and the anchor test forces that update.
 
 ## Open questions
 
-1. **Hosting.** Publish `likec4 build` to GitHub Pages from main, so
-   `architecture.md` can link to live views? It is the owner's workflow to
-   add. Proceeding without it: the views open with `npm run diagrams`.
-2. **Mermaid elsewhere.** This removes it from `architecture.md` only.
-   Design docs keep the template's optional sketch: a proposal drawn once
-   and never maintained is not a second truth. Veto if it should go too.
-3. **Auth and trust boundaries are not drawn** while the security audit's
+1. **Auth and trust boundaries are not drawn** while the security audit's
    findings are open (`.claude/rules/publishing.md`). Proceeding on that.
-4. **Frames are marked experimental** in LikeC4's docs. Proceeding with
+2. **Frames are marked experimental** in LikeC4's docs. Proceeding with
    the version pinned exactly, and upgrades checked by re-rendering.
