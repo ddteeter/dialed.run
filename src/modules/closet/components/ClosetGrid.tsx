@@ -527,13 +527,13 @@ function useFocusAfterClear(search: ClosetSearch) {
 const RETIRED_SWITCH_SPOT = {
   heading: {
     className:
-      "target hidden cursor-pointer items-center gap-2 text-body font-semibold wide:flex",
+      "hidden cursor-pointer items-center gap-2 text-body font-semibold wide:flex",
     label: (count: number) => `Show retired (${String(count)})`,
     name: undefined,
   },
   chips: {
     className:
-      "target flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap text-body font-semibold wide:hidden",
+      "flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap text-body font-semibold wide:hidden",
     label: (count: number) => `Retired (${String(count)})`,
     // The ruling's name: "Retired (N)" alone does not say what it does.
     name: "Show retired",
@@ -553,7 +553,7 @@ function RetiredSwitch({
 }>) {
   const { className, label, name } = RETIRED_SWITCH_SPOT[spot];
   return (
-    <label data-part="retired-switch" className={className}>
+    <label data-part="retired-switch" className={`target ${className}`}>
       {label(count)}
       {/* R54·166.3: it changes the view the moment it moves, so a switch,
           drawn from the shared set, at the label's right. */}
