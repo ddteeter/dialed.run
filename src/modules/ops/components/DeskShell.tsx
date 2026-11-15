@@ -97,24 +97,18 @@ const HREF: Readonly<
 };
 
 /**
-A rail count and what it counts. The words are for a screen reader only:
-the rail draws the bare number, and "Review 4" alone does not say four of
-what (a11y judgment audit, 2026-11-04).
-*/
-type RailTally = Readonly<{ count: number; counts: string }>;
-
-/**
-A count that needs a person is hi-viz; at zero it is not shown at all.
-*/
-function RailCount({ tally }: Readonly<{ tally: RailTally | undefined }>) {
-  if (tally === undefined || tally.count === 0) return;
+ * A count that needs a person is hi-viz; at zero it is not shown at all.
+ * The entry is named by what it draws, "Review 4": hidden text may voice a
+ * visible mark but never add words (R57·255, D-187), and the rail draws
+ * the bare number (R55·194), so the unit the a11y audit of 2026-11-04 put
+ * in sr-only text is gone. The page the entry opens says what it counts.
+ */
+function RailCount({ count }: Readonly<{ count: number | undefined }>) {
+  if (count === undefined || count === 0) return;
   return (
-    <>
-      <Mono step="sm" className="text-hiviz-text">
-        {tally.count}
-      </Mono>
-      <span className="sr-only"> {tally.counts}</span>
-    </>
+    <Mono step="sm" className="text-hiviz-text">
+      {count}
+    </Mono>
   );
 }
 
@@ -145,7 +139,7 @@ function RailEntry({
 }: Readonly<{
   page: DeskPage;
   current: DeskPage;
-  tally: RailTally | undefined;
+  tally: number | undefined;
 }>) {
   const isActive = page === current;
   return (
@@ -161,7 +155,7 @@ function RailEntry({
         className={`target ${RAIL_ENTRY} ${isActive ? RAIL_CURRENT : RAIL_OTHER}`}
       >
         <span>{LABEL[page]}</span>
-        <RailCount tally={tally} />
+        <RailCount count={tally} />
       </Link>
     </li>
   );
@@ -249,11 +243,11 @@ export function DeskShell({
 }>) {
   // Only a destination that needs a person carries a count: Review's is
   // what waits for a decision, Today's what the system gave up on.
-  const tallies: Partial<Record<DeskPage, RailTally>> = {
-    today: { count: today.counts.gaveUp, counts: "gave up" },
-    review: { count: today.counts.waiting, counts: "waiting" },
+  const tallies: Partial<Record<DeskPage, number>> = {
+    today: today.counts.gaveUp,
+    review: today.counts.waiting,
     // Under Review, above Duplicates (R48·130), counting queue rows.
-    corrections: { count: today.counts.corrections, counts: "waiting" },
+    corrections: today.counts.corrections,
   };
   return (
     <div

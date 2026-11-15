@@ -361,11 +361,12 @@ describe("DeskShell", () => {
     );
 
     const review = within(rail()).getByRole("link", {
-      name: "Review 4 waiting",
+      name: "Review 4",
     });
     expect(within(review).getByText("4")).toHaveClass("text-hiviz-text");
-    // The rail draws the bare number; the unit is spoken only.
-    expect(within(review).getByText("waiting")).toHaveClass("sr-only");
+    // Named by what it draws: no unheard unit (R57·255, D-187).
+    expect(review.textContent).toBe("Review4");
+    expect(review.querySelector(".sr-only")).toBeNull();
   });
 
   it("counts the Corrections queue's rows on its entry (R48·130)", async () => {
@@ -375,7 +376,7 @@ describe("DeskShell", () => {
       </DeskShell>,
     );
     const corrections = within(rail()).getByRole("link", {
-      name: "Corrections 2 waiting",
+      name: "Corrections 2",
     });
     expect(within(corrections).getByText("2")).toHaveClass("text-hiviz-text");
   });
@@ -388,12 +389,12 @@ describe("DeskShell", () => {
     );
 
     const today = within(rail()).getByRole("link", {
-      name: "Today 3 gave up",
+      name: "Today 3",
     });
     expect(within(today).getByText("3")).toHaveClass("text-hiviz-text");
-    expect(within(today).getByText("gave up")).toHaveClass("sr-only");
+    expect(today.textContent).toBe("Today3");
     expect(
-      within(rail()).getByRole("link", { name: "Review 4 waiting" }),
+      within(rail()).getByRole("link", { name: "Review 4" }),
     ).toBeVisible();
   });
 
@@ -619,7 +620,7 @@ describe("DeskTodayPage", () => {
     render(<RouterProvider router={router} />);
 
     expect(
-      await within(rail()).findByRole("link", { name: "Today 1 gave up" }),
+      await within(rail()).findByRole("link", { name: "Today 1" }),
     ).toHaveAttribute("aria-current", "page");
     fireEvent.click(screen.getByRole("button", { name: /^Drop/u }));
 
@@ -681,8 +682,8 @@ describe("DeskPage", () => {
         .getAllByRole("link")
         .map((link) => link.textContent),
     ).toStrictEqual([
-      "Today3 gave up",
-      "Review4 waiting",
+      "Today3",
+      "Review4",
       "Corrections",
       "Access",
       "Duplicates",

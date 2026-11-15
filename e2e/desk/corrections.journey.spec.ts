@@ -158,7 +158,7 @@ test("a runner corrects a product, the Desk applies it, and the bell says so", a
     await scene(page, "Corrections: under Review, counting rows");
     const rail = page.getByRole("navigation", { name: "Desk" });
     await expect(
-      rail.getByRole("link", { name: /^Corrections \d+ waiting$/u }),
+      rail.getByRole("link", { name: /^Corrections \d+$/u }),
     ).toBeVisible();
     await rail.getByRole("link", { name: /^Corrections/u }).click();
     await expect(page).toHaveURL(/\/desk\/corrections$/u);
