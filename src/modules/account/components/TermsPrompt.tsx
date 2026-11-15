@@ -13,7 +13,7 @@ import {
 } from "../../../ui";
 import { SignedOutPanel } from "../../../ui/SignedOutPanel";
 import type { AcceptResult, TermsPromptView } from "../terms-acceptance";
-import { ActionPill, useLogOutAction } from "./ActionCard";
+import { ActionPill, SignedInMark, useLogOutAction } from "./ActionCard";
 
 /**
  * The terms prompt's actions, needed identically by `TermsPrompt` and
@@ -86,6 +86,7 @@ export function TermsPrompt({
   return (
     <SignedOutPanel
       heading="Accept the terms"
+      intoApp={<SignedInMark />}
       notice={
         <Mono step="xs" className="text-cold-text">
           {copy.kicker}

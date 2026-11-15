@@ -378,6 +378,22 @@ function leaving(
   return { keep, logOut, onKept, rendered, user: userEvent.setup() };
 }
 
+/**
+ * R58·267: the bar holds the wordmark and "Signed in", and neither Log in
+ * nor Request access.
+ */
+function expectSignedInBar(): void {
+  const bar = screen.getByRole("banner");
+  expect(within(bar).getByText("Signed in")).toHaveClass(
+    "text-mono-xs",
+    "text-muted",
+  );
+  expect(within(bar).queryByRole("link", { name: "Log in" })).toBeNull();
+  expect(
+    within(bar).queryByRole("link", { name: "Request access" }),
+  ).toBeNull();
+}
+
 describe("Leaving (round 27 #14)", () => {
   it("tells a runner who just asked when the account goes, signed out", async () => {
     const { rendered } = leaving({ state: "scheduled", day: "Sat, Oct 4" });
@@ -415,6 +431,10 @@ describe("Leaving (round 27 #14)", () => {
       "data-state",
       "scheduled",
     );
+    // Signed out here, so the bar keeps its asks.
+    const bar = screen.getByRole("banner");
+    expect(within(bar).getByRole("link", { name: "Log in" })).toBeVisible();
+    expect(within(bar).queryByText("Signed in")).toBeNull();
   });
 
   it("asks a runner who logged in inside the week, and Keep brings it back", async () => {
@@ -426,6 +446,7 @@ describe("Leaving (round 27 #14)", () => {
     expect(
       screen.getByRole("heading", { name: "Keep your account?" }),
     ).toBeInTheDocument();
+    expectSignedInBar();
     expect(
       screen.getByText(
         "It's set to be deleted on Sat, Oct 4, with everything in it. Keep it and your runs, closet and entries come back as they were.",
