@@ -336,9 +336,10 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   // exists yet, and Turnstile and the visitor limit gate the write.
   "routes/api/access-requests.ts POST": "sessionless",
   "routes/api/health.ts GET": "sessionless",
-  // Strava's handshake and its webhook: a machine, verified by token.
-  "routes/api/strava.ts GET": "sessionless",
-  "routes/api/strava.ts POST": "sessionless",
+  // Strava's handshake and its webhook: a machine, verified by the
+  // callback key and then the token or subscription id.
+  "routes/api/strava.$key.ts GET": "sessionless",
+  "routes/api/strava.$key.ts POST": "sessionless",
   // Speed beacons (design 165): anonymous by design, same-origin and
   // size-capped, and they write only to the VITALS dataset.
   "routes/api/vitals.ts POST": "sessionless",

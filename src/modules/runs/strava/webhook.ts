@@ -7,8 +7,11 @@
  * time from Strava, ever. This module never reads or stores anything
  * beyond the athlete id (to find the connected user) and the dedupe key.
  */
+import { timingSafeEqual } from "node:crypto";
+
 import { z } from "zod";
 
+import { nowSeconds } from "../../../lib/now";
 import type { DeauthorizeJob, ReminderJob } from "../queue-messages";
 
 export interface ReminderQueueProducer {
@@ -26,7 +29,8 @@ const webhookEventSchema = z.object({
   aspect_type: z.enum(["create", "update", "delete"]),
   owner_id: z.number(),
   subscription_id: z.number(),
-  event_time: z.number(),
+  // Whole seconds, as the queue's job schema and the dedupe table take it.
+  event_time: z.number().int(),
   // Only `authorized` is read, and only from an athlete event (STR-3).
   // Strava's docs write it as the string "false" and their example as the
   // boolean, so both are accepted. For an activity event `updates` holds
@@ -52,6 +56,32 @@ function isDeauthorization(event: WebhookEvent): boolean {
   return (
     event.object_type === "athlete" && event.updates?.authorized !== undefined
   );
+}
+
+/**
+ * How far ahead of our clock an event's `event_time` may be. Strava stamps
+ * an event when it happens, so anything later than this is not one of its
+ * events, and a stored time beyond the prune's cutoff would never age out
+ * (`prune.ts`). A day leaves room for any clock skew.
+ */
+export const MAX_EVENT_AHEAD_SECONDS = 86_400;
+
+/**
+ * SA-M6: the webhook answers only at `/api/strava/<key>`, where the key is
+ * `STRAVA_WEBHOOK_PATH_SECRET` and the subscription was registered with
+ * that URL. Unset or blank accepts nothing, as an unset verify token
+ * refuses the handshake. Compared in constant time; a different length is
+ * refused before the comparison, which tells a caller only the length.
+ */
+export function isStravaCallbackKey(
+  presented: string,
+  expected: string | undefined,
+): boolean {
+  if (expected === undefined || expected === "") return false;
+  const encoder = new TextEncoder();
+  const theirs = encoder.encode(presented);
+  const ours = encoder.encode(expected);
+  return theirs.byteLength === ours.byteLength && timingSafeEqual(theirs, ours);
 }
 
 /**
@@ -84,19 +114,19 @@ POST event handler. Always resolves (never throws) so the route can
 respond 200 within 2s regardless of payload shape or dedupe outcome —
 Strava disables webhooks that don't get a fast 200.
 
-**Only our own subscription's events are accepted** (STR-4, finding 0.10).
-The endpoint is public and Strava signs nothing, so `subscription_id` is
-the one thing that says an event is ours; anyone else could otherwise post
-forged activities for any athlete id and fill the queue with reminders.
-It is compared before the queue is touched, and a deployment with no
-`STRAVA_SUBSCRIPTION_ID` accepts nothing — fail closed, as an unset verify
-token already refuses the handshake.
+**Only our own subscription's events are accepted** (STR-4, SA-M6). The
+route answers only at the callback key (`isStravaCallbackKey`), and this
+is the second check: `subscription_id` is compared before the queue is
+touched, and a deployment with no `STRAVA_SUBSCRIPTION_ID` accepts nothing
+— fail closed, as an unset verify token already refuses the handshake. An
+`event_time` more than `MAX_EVENT_AHEAD_SECONDS` past `now` is dropped.
 */
 export async function handleStravaWebhookEvent(
   queue: ReminderQueueProducer,
   captureException: (error: unknown, context: Record<string, string>) => void,
   body: unknown,
   subscriptionId: string | undefined,
+  now: number = nowSeconds(),
 ): Promise<void> {
   // Ours first, and silently. A body that does not even name our
   // subscription is someone else's noise — reporting it, or reporting that
@@ -119,6 +149,7 @@ export async function handleStravaWebhookEvent(
     return;
   }
   const event = parsed.data;
+  if (event.event_time > now + MAX_EVENT_AHEAD_SECONDS) return;
 
   if (isDeauthorization(event)) {
     await queue.send({
@@ -148,4 +179,47 @@ export async function handleStravaWebhookEvent(
     aspectType: event.aspect_type,
     eventTime: event.event_time,
   });
+}
+
+const notFound = (): Response => new Response("Not found", { status: 404 });
+
+/**
+ * The GET handshake at `/api/strava/<key>`: 404 for any other key, 403 for
+ * a handshake that does not check out, else the echoed challenge.
+ */
+export function stravaHandshakeResponse(
+  presentedKey: string,
+  expectedKey: string | undefined,
+  searchParams: URLSearchParams,
+  verifyToken: string | undefined,
+): Response {
+  if (!isStravaCallbackKey(presentedKey, expectedKey)) return notFound();
+  const result = verifyStravaChallenge(searchParams, verifyToken);
+  return result === undefined
+    ? new Response("Forbidden", { status: 403 })
+    : Response.json({ "hub.challenge": result.challenge });
+}
+
+/**
+ * An event delivery at `/api/strava/<key>`. Any other key is a 404 before
+ * the body is read. At the key it is always a 200, whatever the body,
+ * because Strava disables a subscription that does not get one promptly.
+ */
+export async function stravaDeliveryResponse(
+  presentedKey: string,
+  expectedKey: string | undefined,
+  request: Request,
+  queue: ReminderQueueProducer,
+  captureException: (error: unknown, context: Record<string, string>) => void,
+  subscriptionId: string | undefined,
+): Promise<Response> {
+  if (!isStravaCallbackKey(presentedKey, expectedKey)) return notFound();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    body = undefined;
+  }
+  await handleStravaWebhookEvent(queue, captureException, body, subscriptionId);
+  return new Response(undefined, { status: 200 });
 }

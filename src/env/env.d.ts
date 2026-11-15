@@ -32,6 +32,11 @@ declare namespace Cloudflare {
     STRAVA_CLIENT_ID?: string;
     STRAVA_CLIENT_SECRET?: string;
     STRAVA_WEBHOOK_VERIFY_TOKEN?: string;
+    /** The webhook's callback key (SA-M6), a `wrangler secret`: Strava
+     * delivers to `/api/strava/<this>`, the URL the subscription was
+     * registered with, and every other key is a 404. Unset or blank, the
+     * webhook answers nothing. See `modules/runs/strava/webhook.ts`. */
+    STRAVA_WEBHOOK_PATH_SECRET?: string;
     /** Our Strava push subscription's id (task 127, STR-4), as a string —
      * a var, not a secret; set in the deployment sweep. Every webhook
      * event whose `subscription_id` differs is dropped before the queue,

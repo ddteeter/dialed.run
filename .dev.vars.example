@@ -39,6 +39,10 @@ PUBLIC_PHOTOS_ORIGIN=
 # at the stub it starts, on a port that follows the app's
 # (e2e/garmin/stub-origin.ts), so a value here is overridden in e2e.
 # GARMIN_OWNER_USER_ID=e2e-garmin-owner
+# Strava's webhook callback key (design 227): deliveries go to
+# /api/strava/<this>, and every other path is a 404. Any value locally; the
+# e2e Strava journey posts to the one CI writes, so use that to run it.
+# STRAVA_WEBHOOK_PATH_SECRET=ci-placeholder-not-a-secret
 # Optional locally; set in prod:
 # SENTRY_DSN=
 # Google OAuth (both or neither — the Google button 500s without them):

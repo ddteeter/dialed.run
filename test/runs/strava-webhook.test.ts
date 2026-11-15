@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 
+import { nowSeconds } from "../../src/lib/now";
 import type {
   DeauthorizeJob,
   ReminderJob,
 } from "../../src/modules/runs/queue-messages";
 import {
+  MAX_EVENT_AHEAD_SECONDS,
   handleStravaWebhookEvent,
+  isStravaCallbackKey,
+  stravaDeliveryResponse,
+  stravaHandshakeResponse,
   verifyStravaChallenge,
 } from "../../src/modules/runs/strava/webhook";
 
@@ -408,5 +413,173 @@ describe("verifyStravaChallenge: every reason it refuses", () => {
         "the-token",
       ),
     ).toBeUndefined();
+  });
+});
+
+function post(body: string): Request {
+  return new Request("https://dialed.test/api/strava/k", {
+    method: "POST",
+    body,
+  });
+}
+
+describe("the callback key (SA-M6)", () => {
+  const KEY = "callback-key-under-test";
+
+  it("accepts only the configured key, and nothing when none is set", () => {
+    expect(isStravaCallbackKey(KEY, KEY)).toBe(true);
+    expect(isStravaCallbackKey("callback-key-under-tesT", KEY)).toBe(false);
+    expect(isStravaCallbackKey(`${KEY}x`, KEY)).toBe(false);
+    expect(isStravaCallbackKey(KEY.slice(1), KEY)).toBe(false);
+    expect(isStravaCallbackKey("", "")).toBe(false);
+    expect(isStravaCallbackKey("anything", undefined)).toBe(false);
+  });
+
+  it("answers 404 at a wrong key without reading the body or queueing", async () => {
+    const queue = fakeQueue();
+    const capture = fakeCaptureException();
+    const event = activityCreateEvent();
+    const request = post(JSON.stringify(event));
+
+    const response = await stravaDeliveryResponse(
+      "guess",
+      KEY,
+      request,
+      queue,
+      capture.captureException,
+      OUR_SUBSCRIPTION,
+    );
+
+    expect(response.status).toBe(404);
+    expect(request.bodyUsed).toBe(false);
+    expect(queue.sent).toStrictEqual([]);
+  });
+
+  it("answers 200 and queues at the key", async () => {
+    const deauthorization = deauthorizationEvent();
+    const queue = fakeQueue();
+    const capture = fakeCaptureException();
+
+    const response = await stravaDeliveryResponse(
+      KEY,
+      KEY,
+      post(JSON.stringify(deauthorization)),
+      queue,
+      capture.captureException,
+      OUR_SUBSCRIPTION,
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("");
+    expect(queue.sent.map((job) => job.type)).toStrictEqual([
+      "strava_deauthorize",
+    ]);
+  });
+
+  it("answers 200 at the key to a body that is not JSON, and queues nothing", async () => {
+    const queue = fakeQueue();
+    const capture = fakeCaptureException();
+
+    const response = await stravaDeliveryResponse(
+      KEY,
+      KEY,
+      post("not json"),
+      queue,
+      capture.captureException,
+      OUR_SUBSCRIPTION,
+    );
+
+    expect(response.status).toBe(200);
+    expect(queue.sent).toStrictEqual([]);
+    expect(capture.errors).toStrictEqual([]);
+  });
+
+  const handshake = new URLSearchParams({
+    "hub.mode": "subscribe",
+    "hub.verify_token": "verify",
+    "hub.challenge": "abc123",
+  });
+
+  it("answers the handshake only at the key", async () => {
+    const wrong = stravaHandshakeResponse("guess", KEY, handshake, "verify");
+    const unset = stravaHandshakeResponse(KEY, undefined, handshake, "verify");
+    const right = stravaHandshakeResponse(KEY, KEY, handshake, "verify");
+    const badToken = stravaHandshakeResponse(KEY, KEY, handshake, "other");
+
+    expect([wrong.status, unset.status]).toStrictEqual([404, 404]);
+    expect(await wrong.text()).toBe("Not found");
+    expect(right.status).toBe(200);
+    expect(await right.json()).toStrictEqual({ "hub.challenge": "abc123" });
+    expect(badToken.status).toBe(403);
+    expect(await badToken.text()).toBe("Forbidden");
+  });
+});
+
+describe("event_time (SA-M6)", () => {
+  const NOW = 1_800_000_000;
+
+  it("drops an event stamped further ahead than a day, keeps one at the bound", async () => {
+    const queue = fakeQueue();
+    const capture = fakeCaptureException();
+
+    await handleStravaWebhookEvent(
+      queue,
+      capture.captureException,
+      deauthorizationEvent(),
+      OUR_SUBSCRIPTION,
+      NOW,
+    );
+    await handleStravaWebhookEvent(
+      queue,
+      capture.captureException,
+      { ...deauthorizationEvent(), event_time: NOW + MAX_EVENT_AHEAD_SECONDS },
+      OUR_SUBSCRIPTION,
+      NOW,
+    );
+    await handleStravaWebhookEvent(
+      queue,
+      capture.captureException,
+      {
+        ...deauthorizationEvent(),
+        event_time: NOW + MAX_EVENT_AHEAD_SECONDS + 1,
+      },
+      OUR_SUBSCRIPTION,
+      NOW,
+    );
+
+    expect(queue.sent.map((job) => job.eventTime)).toStrictEqual([
+      1_516_126_040,
+      NOW + MAX_EVENT_AHEAD_SECONDS,
+    ]);
+    expect(capture.errors).toStrictEqual([]);
+  });
+
+  it("reads the clock when no time is given", async () => {
+    const queue = fakeQueue();
+    const capture = fakeCaptureException();
+
+    await deliver(queue, capture.captureException, {
+      ...deauthorizationEvent(),
+      event_time: nowSeconds() + 2 * MAX_EVENT_AHEAD_SECONDS,
+    });
+
+    expect(queue.sent).toStrictEqual([]);
+  });
+
+  it("refuses a time that is not whole seconds", async () => {
+    const queue = fakeQueue();
+    const capture = fakeCaptureException();
+
+    await deliver(queue, capture.captureException, {
+      ...deauthorizationEvent(),
+      event_time: 1_516_126_040.5,
+    });
+
+    expect(queue.sent).toStrictEqual([]);
+    expect(capture.errors).toHaveLength(1);
+  });
+
+  it("is a day", () => {
+    expect(MAX_EVENT_AHEAD_SECONDS).toBe(86_400);
   });
 });
