@@ -408,6 +408,29 @@ describe("Better Auth's change-password endpoint over HTTP (R-124)", () => {
   });
 });
 
+describe("Better Auth's verify-password endpoint over HTTP", () => {
+  it("is not there, while the server's own check still answers", async () => {
+    const { auth } = instance();
+    const { email } = await signUp(auth);
+    const cookie = await signIn(auth, email);
+
+    for (const guess of ["not-the-password-at-all", password]) {
+      const response = await auth.handler(
+        post("verify-password", { password: guess }, cookie),
+      );
+      expect(response.status).toBe(404);
+    }
+
+    const headers = new Headers({ cookie });
+    expect(await isOwnPassword(auth, headers, password)).toBe(true);
+    expect(
+      await refused("INVALID_PASSWORD", () =>
+        isOwnPassword(auth, headers, "not-the-password-at-all"),
+      ),
+    ).toBe(false);
+  });
+});
+
 describe("changeOwnPassword (ACC-7 within the per-runner limit, R-124)", () => {
   const NOW = 1_800_000_000;
   const next = ["a", "fresh", "long", "passphrase"].join("-");

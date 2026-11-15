@@ -37,8 +37,16 @@ export interface HealthReport {
  * finding 0.7); unset, auth half-works, which is worse than not at all.
  * `UNSUBSCRIBE_SECRET` signs unsubscribe links; unset, no optional email
  * goes and every link is refused (task 126, fail closed).
+ * `BETTER_AUTH_SECRET` signs every session; unset, auth refuses to build
+ * (`createAuth`). While the instance is built at load that stops the
+ * Worker before this can answer; named here so it still says why if the
+ * instance is ever built on first use instead.
  */
-const REQUIRED_CONFIG = ["BETTER_AUTH_URL", "UNSUBSCRIBE_SECRET"] as const;
+const REQUIRED_CONFIG = [
+  "BETTER_AUTH_URL",
+  "UNSUBSCRIBE_SECRET",
+  "BETTER_AUTH_SECRET",
+] as const;
 
 function missingConfig(): string[] {
   return REQUIRED_CONFIG.filter((name) => {

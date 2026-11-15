@@ -177,6 +177,27 @@ function screened(verdict: "breached" | "clean" | "unknown") {
  * §3.1.1.2; owner, PR #104), through Better Auth's real endpoint on a real
  * D1 — only the range API is stubbed, by handing in its answer.
  */
+describe("the signing secret", () => {
+  it("refuses to build without one", () => {
+    expect(() => auth({ ...BASE, secret: undefined })).toThrow(
+      /BETTER_AUTH_SECRET is not set/u,
+    );
+  });
+
+  it("refuses an empty or blank one", () => {
+    expect(() => auth({ ...BASE, secret: "" })).toThrow(
+      /BETTER_AUTH_SECRET is not set/u,
+    );
+    expect(() => auth({ ...BASE, secret: " ".repeat(3) })).toThrow(
+      /BETTER_AUTH_SECRET is not set/u,
+    );
+  });
+
+  it("builds with a real one, and signs with it", () => {
+    expect(auth(BASE).options.secret).toBe(BASE.secret);
+  });
+});
+
 describe("the password breach screen", () => {
   it("refuses a breached password with the code the form lands on Password", async () => {
     const { auth: withScreen, screen, report } = screened("breached");

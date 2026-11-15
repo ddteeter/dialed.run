@@ -20,16 +20,19 @@ import {
   type HookRequest,
 } from "./access-hook";
 import { AUTH_COPY } from "./auth-copy";
+import { CLOSED_AUTH_PATHS } from "./closed-paths";
 import {
   BREACHED_CODE,
-  CHANGE_PASSWORD_PATH,
   newPasswordIn,
   type BreachVerdict,
 } from "./breached-password";
 
 export interface AuthConfig {
   db: ReturnType<typeof drizzle>;
-  secret: string;
+  /**
+   * `undefined` when the binding is unset: `signingSecret` refuses it.
+   */
+  secret: string | undefined;
   baseUrl?: string | undefined;
   /** Absent when the deployment has no Google credentials — email/password
    *  still works (CLAUDE.md law 5). */
@@ -123,6 +126,24 @@ export function deploymentPosture(baseUrl: string | undefined): {
 }
 
 /**
+ * The secret every token and cookie Better Auth signs is signed with, or
+ * no auth instance at all.
+ *
+ * Better Auth answers an empty secret with a fixed fallback of its own
+ * and refuses that fallback only under `NODE_ENV=production`, which a
+ * Worker does not have. So the refusal is ours: an unset or blank
+ * `BETTER_AUTH_SECRET` stops the instance being built, which stops the
+ * Worker serving anything, rather than starting on a secret everyone
+ * can read.
+ */
+function signingSecret(secret: string | undefined): string {
+  if (secret === undefined || secret.trim() === "") {
+    throw new Error("BETTER_AUTH_SECRET is not set: auth will not start");
+  }
+  return secret;
+}
+
+/**
  * The Google provider, or `undefined` when the deployment has no
  * credentials (law 5: a missing secondary feature degrades, it does not
  * fail — email/password still works).
@@ -203,14 +224,15 @@ export function createAuth({
     else background(work);
   }
   return betterAuth({
-    secret,
+    secret: signingSecret(secret),
     telemetry: { enabled: false },
-    // Change password is ours (`./change-password`, R-124): the per-runner
-    // count on tries at the current password runs before Better Auth's
-    // endpoint is called. Over HTTP the endpoint would skip that count, so
-    // the router answers it 404. Only the router reads this list, so the
-    // server-side `auth.api.changePassword` still works.
-    disabledPaths: [CHANGE_PASSWORD_PATH],
+    // Every routed endpoint the app does not call from the browser is
+    // answered 404 (`./closed-paths`). Change password among them is ours
+    // (`./change-password`, R-124): the per-runner count on tries at the
+    // current password runs before Better Auth's endpoint is called. Only
+    // the router reads this list, so the server-side
+    // `auth.api.changePassword` and `auth.api.verifyPassword` still work.
+    disabledPaths: [...CLOSED_AUTH_PATHS],
     ...(baseUrl !== undefined && { baseURL: baseUrl }),
     // Better Auth's own limits for its sensitive paths (sign-in and
     // sign-up: 3 per 10 s per address) and 100 per minute elsewhere, with
