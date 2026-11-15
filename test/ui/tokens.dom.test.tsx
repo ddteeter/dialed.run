@@ -163,13 +163,26 @@ describe("the ported value contract (design/tokens.js)", () => {
     const named = new Set([
       ...steps("TYPE").map(([step]) => `--text-${step}`),
       ...steps("MONO").map(([step]) => `--text-mono-${step}`),
+      "--text-hero",
     ]);
     // `--text-body--line-height` is the step's own pairing, not a step.
     const declared = themeKeys("--text-").filter(
       (name) => !name.includes("--", 2),
     );
     expect(declared.filter((name) => !named.has(name))).toEqual(["--text-*"]);
-    expect(named.size).toBe(12);
+    expect(named.size).toBe(13);
+  });
+
+  it("carries MARKETING.hero as --text-hero, its one fluid step (#674)", () => {
+    const hero =
+      /hero: \{ family: 'display', size: '([^']+)', min: \d+, max: \d+, lineHeight: ([\d.]+), tracking: (-?[\d.]+),/u.exec(
+        section("MARKETING"),
+      );
+    expect(hero).not.toBeNull();
+    const [, size, lineHeight, tracking] = hero ?? [];
+    expect(theme["--text-hero"]).toBe(size);
+    expect(Number(theme["--text-hero--line-height"])).toBe(Number(lineHeight));
+    expect(em(theme["--text-hero--letter-spacing"])).toBe(Number(tracking));
   });
 
   it("collapses tracking and line-height into the step, with nothing to override them", () => {

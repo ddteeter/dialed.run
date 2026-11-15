@@ -114,6 +114,12 @@
   --text-display--line-height: 1.05;
   --text-display--letter-spacing: -0.035em;
 
+  /* tokens.js MARKETING.hero (round 31): the one fluid step, outside the
+   * eight, for the landing's h1 alone. 44 at 390 to 76 at 1180. */
+  --text-hero: clamp(44px, calc(28px + 4.05vw), 76px);
+  --text-hero--line-height: 0.95;
+  --text-hero--letter-spacing: -0.035em;
+
   --text-title: 24px;
   --text-title--line-height: 1.1;
   --text-title--letter-spacing: -0.03em;

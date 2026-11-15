@@ -63,6 +63,9 @@ describe("Landing, signed out", () => {
     // A space between the sentences, so a reader that ignores the
     // blocks still hears two.
     expect(heading.textContent).toBe("Every run has an outfit. Log it.");
+    // Home's h1 is MARKETING.hero, not TYPE.display (#674).
+    expect(heading).toHaveClass("font-display", "text-hero", "uppercase");
+    expect(heading).not.toHaveClass("text-display");
     const [first, second] = heading.querySelectorAll("span");
     expect(first).toHaveTextContent(/^Every run has an outfit\.$/u);
     expect(first).toHaveClass("block", "text-balance");
