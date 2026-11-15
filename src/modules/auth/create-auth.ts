@@ -363,6 +363,11 @@ export function createAuth({
         update: { before: withoutProviderTokens },
       },
     },
+    // Google signs in only to an account it is already a login of. An
+    // address whose account was made with a password is refused as
+    // `account_not_linked` (owner, 2026-11-15): the runner logs in with the
+    // password, or resets it, and the band says so (`GOOGLE_REFUSALS`).
+    account: { accountLinking: { disableImplicitLinking: true } },
     // Google makes an account only when Au2 asks it to (`requestSignUp`),
     // which is where Turnstile and the code are checked; from the log-in
     // page an unknown Google address is refused, not signed up.

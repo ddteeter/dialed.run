@@ -440,6 +440,16 @@ describe("Au2 · Google in the invite stage", () => {
     );
   });
 
+  it("sends a Google address whose account has a password to that password, as NOT LOGGED IN", async () => {
+    await signUpPage({ returnedError: "account_not_linked" });
+    const band = part("control-failure");
+    expect(band).toHaveTextContent("Not logged in");
+    expect(band).toHaveTextContent(
+      "That address already has an account. Log in with your password, or reset it.",
+    );
+    expect(within(band ?? document.body).queryByRole("link")).toBeNull();
+  });
+
   it.each([
     ["INVITE_MISSING", AUTH_COPY.googleNoCode],
     ["INVITE_INVALID", INVITE_COPY.invalid],
