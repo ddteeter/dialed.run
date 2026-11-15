@@ -1043,15 +1043,15 @@ describe("PasswordField", () => {
     expect(input).toHaveAttribute("name", "password");
     expect(screen.getByText("At least 10 characters.")).toBeVisible();
 
-    // The drawn word starts the name (WCAG 2.5.3), and says what it shows.
-    const toggle = screen.getByRole("button", { name: "Show password" });
-    expect(toggle).toHaveTextContent(/^Show password$/u);
-    expect(within(toggle).getByText("password")).toHaveClass("sr-only");
+    // The name is the drawn word and nothing more (R57·255).
+    const toggle = screen.getByRole("button", { name: "Show" });
+    expect(toggle).toHaveTextContent(/^Show$/u);
+    expect(toggle.querySelector(".sr-only")).toBeNull();
     expect(toggle).toHaveAttribute("type", "button");
     expect(toggle).toHaveAttribute("aria-controls", "password");
     await user.click(toggle);
     expect(input).toHaveAttribute("type", "text");
-    await user.click(screen.getByRole("button", { name: "Hide password" }));
+    await user.click(screen.getByRole("button", { name: "Hide" }));
     expect(input).toHaveAttribute("type", "password");
   });
 
@@ -1062,7 +1062,7 @@ describe("PasswordField", () => {
     // is 44 — so the toggle stretches to the box's 48 inside its border
     // and nothing grows it.
     render(<ArrivingPassword isArrival={false} />);
-    const toggle = screen.getByRole("button", { name: "Show password" });
+    const toggle = screen.getByRole("button", { name: "Show" });
     const box = toggle.parentElement;
     expect(box).toHaveClass("field-box", "min-h-field");
     expect(box).not.toHaveClass("py-3");

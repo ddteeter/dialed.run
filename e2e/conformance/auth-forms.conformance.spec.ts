@@ -383,7 +383,7 @@ test.describe("Au · phone", () => {
       "field-failure",
     );
 
-    await page.getByRole("button", { name: "Show password" }).click();
+    await page.getByRole("button", { name: "Show", exact: true }).click();
     await expect(page.getByLabel("Password", { exact: true })).toHaveAttribute(
       "type",
       "text",
