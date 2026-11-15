@@ -1183,6 +1183,13 @@ moved off an earlier ruling.
   column, or the width the failed route declares (`staticData.width`; the
   closet list's is `page`). The bell's 44 seat is held while it loads and
   after it fails (169).
+- **The phone bell on a 16 gutter (169.1).** `PhoneBell` takes the gutter
+  it sits on, so on the closet list's 16 the 44 target ends 12 from the
+  edge (`-mr-1`), as on every 24 screen (`-mr-3`).
+- **Round 57, built here.** 262: the hairline pill's dark edge is
+  `--hairline-2`. 271: the signed-in landing's phone first row, "Signed
+  in as @handle" with the bell. 257: LEAVE over Delete account. 258: the
+  Password set receipt's RESET. 259d: W2's day on the home clock.
 - **Open:** the phone bell's badge in the gutter is Design 311 (#757).
 
 ## Built from round 56 · 246 (wave 9, design 213)
