@@ -220,6 +220,7 @@
   /* ---- measures · tokens.js MEASURE ------------------------------- */
   /* "Nothing pins a width that isn't in MEASURE." */
   --container-*: initial;
+  --container-rail: 122px;
   --container-panel: 390px;
   --container-column: 620px;
   --container-page: 1180px;
