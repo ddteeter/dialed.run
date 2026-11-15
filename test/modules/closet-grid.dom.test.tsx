@@ -275,7 +275,10 @@ describe("ClosetGrid: the heading row", () => {
     // Below 720 only, at the row's end, the chips scrolling beside it.
     expect(label).toHaveClass("flex", "shrink-0", "wide:hidden");
     expect(row.lastElementChild).toBe(label);
+    // `relative`: the chips' sr-only words are absolute, so without a
+    // containing block they escape the scroll and widen the page at 320.
     expect(row.firstElementChild).toHaveClass(
+      "relative",
       "min-w-0",
       "flex-1",
       "overflow-x-auto",

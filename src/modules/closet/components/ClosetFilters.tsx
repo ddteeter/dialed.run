@@ -359,9 +359,11 @@ function ChipRow(props: Readonly<ClosetFiltersProps>): JSX.Element {
       className="flex flex-col gap-3"
     >
       {/* R58·272: below 720 the row ends on the Retired switch and the
-          chips scroll beside it; from 720 they wrap, as before. */}
+          chips scroll beside it; from 720 they wrap, as before. `relative`
+          holds the chips' absolute sr-only words inside the scroll, or
+          they widen the page at 320 (WCAG 1.4.10). */}
       <div data-part="chip-row" className="flex items-center gap-3">
-        <ul className="m-0 flex min-w-0 flex-1 list-none gap-2 overflow-x-auto p-0 wide:flex-wrap wide:overflow-visible">
+        <ul className="relative m-0 flex min-w-0 flex-1 list-none gap-2 overflow-x-auto p-0 wide:flex-wrap wide:overflow-visible">
           {CHIP_ORDER.map((key) => (
             <li key={key}>
               <button

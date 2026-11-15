@@ -102,7 +102,7 @@ describe("Au1's Forgot it?", () => {
     expect(link).toHaveClass("target");
     // A-06: right of the PASSWORD label, on its row, not under the field.
     const row = link.parentElement;
-    expect(row).toHaveAttribute("data-part", "label-row");
+    expect(row).toHaveAttribute("data-slot", "label-row");
     expect(row).toHaveClass("flex", "items-center", "justify-between");
     expect(row?.firstElementChild).toHaveTextContent("Password");
     expect(row?.firstElementChild?.tagName).toBe("LABEL");
@@ -124,7 +124,7 @@ describe("Au1's Forgot it?", () => {
     );
     expect(screen.queryByRole("link", { name: /^Forgot it\?/u })).toBeNull();
     // No link, so the label stands alone, as every other field's does.
-    expect(document.querySelector("[data-part='label-row']")).toBeNull();
+    expect(document.querySelector("[data-slot='label-row']")).toBeNull();
   });
 });
 

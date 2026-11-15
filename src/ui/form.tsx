@@ -372,7 +372,9 @@ function FieldCaption({
   if (end === undefined) return caption;
   return (
     <div
-      data-part="label-row"
+      // A slot, not a part: a board's part order names what it draws,
+      // and the label row is the field's own layout (Au2's order).
+      data-slot="label-row"
       className="flex items-center justify-between gap-3"
     >
       {caption}
