@@ -152,6 +152,16 @@ export function sentryReportUri(dsn: string | undefined): string | undefined {
  * Permissions-Policy turns off what the app never asks for, and keeps
  * geolocation for its own origin: onboarding offers "use my location".
  */
+/**
+ * SA-M40: one directive enforced now, beside the report-only policy. A
+ * browser applies both: this one refuses any fetch, beacon or socket to
+ * another origin, so no library the page loads (the face-blur model's
+ * among them) sends anything off the app; the report-only policy keeps
+ * reporting the rest until it is enforced. It restricts nothing else.
+ */
+const ENFORCED_CSP_HEADER = "Content-Security-Policy";
+const ENFORCED_CSP = "connect-src 'self'";
+
 export function securityHeaders(
   reportUri: string | undefined,
   inline?: InlineScripts,
@@ -159,6 +169,7 @@ export function securityHeaders(
   const csp = contentSecurityPolicy(reportUri, inline);
   return [
     [CSP_HEADER, csp],
+    [ENFORCED_CSP_HEADER, ENFORCED_CSP],
     ["X-Frame-Options", "DENY"],
     ["X-Content-Type-Options", "nosniff"],
     ["Referrer-Policy", "strict-origin-when-cross-origin"],
