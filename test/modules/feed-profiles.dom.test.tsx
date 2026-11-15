@@ -501,7 +501,11 @@ describe("OwnProfile (G): past day one", () => {
       "font-semibold",
       "underline",
       "self-start",
+      // A 44 hit area that doesn't grow the line (R2-FEED-02, N2-01's).
+      "target-line",
+      "inline-block",
     );
+    expect(latest).not.toHaveClass("target");
     const row = recentRow("01E");
     expect(row).toHaveAttribute("data-part", "run-row");
     expect(row).toHaveClass(
@@ -515,6 +519,8 @@ describe("OwnProfile (G): past day one", () => {
       "border-hairline",
     );
     const meta = row.querySelector('[data-part="run-meta"]');
+    // A flex box: the mono line sets at MONO.sm's leading (R2-FEED-02).
+    expect(meta).toHaveClass("flex");
     expect(latest).not.toContainElement(meta as HTMLElement);
     // Drawn with each "·" bound to what follows (R55·204), said in words.
     expect(drawnText(meta)).toBe(
@@ -1114,14 +1120,15 @@ describe("RunnerSearch", () => {
     });
     const [rae, ro, fresh] = screen.getAllByRole("listitem");
     const line = within(rae ?? document.body).getByText(/41 runs/u);
-    expect(line.textContent).toBe("41 runs\u{A0}· since Oct 2026");
+    // "since Oct 2026" is bound, so a wrap never leaves the year alone.
+    expect(line.textContent).toBe("41 runs\u{A0}· since\u{A0}Oct\u{A0}2026");
     expect(line).toHaveClass("text-mono-xs", "text-muted");
     // Outside the link: the link is named by the handle alone.
     expect(
       within(rae ?? document.body).getByRole("link", { name: "@runner_rae" }),
     ).not.toContainElement(line);
     expect(within(ro ?? document.body).getByText(/^1 run/u).textContent).toBe(
-      "1 run\u{A0}· since Oct 2026",
+      "1 run\u{A0}· since\u{A0}Oct\u{A0}2026",
     );
     expect(within(fresh ?? document.body).getByText("0 runs")).toBeVisible();
   });

@@ -273,7 +273,10 @@ describe("ConditionsTab: location denied", () => {
     expect(saveCity).toHaveBeenCalledWith({ data: SAVED });
     await waitFor(
       () => {
-        expect(screen.getByRole("status")).toHaveTextContent("City saved.");
+        // R57·260: no "after" line; the hand-off is heard, politely.
+        expect(screen.getByRole("status")).toHaveTextContent(
+          /^Saved\. Weather for Portland, OR, United States\.$/u,
+        );
       },
       { interval: 1 },
     );

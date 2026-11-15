@@ -163,12 +163,12 @@ describe("what the sheet promises", () => {
     // The handle is heard with it, as the description: a name that left
     // out its visible words would fail label-in-name (WCAG 2.5.3).
     expect(both).toHaveAccessibleDescription(
-      "Blocking hides all of mark_t's runs from you. They aren't told.",
+      "Blocking hides all of @mark_t's runs from you. They aren't told.",
     );
     expect(both).toHaveClass("rounded-pill", "border-hairline");
     // Under it, what blocking does.
     expect(both.nextElementSibling).toHaveTextContent(
-      "Blocking hides all of mark_t's runs from you. They aren't told.",
+      "Blocking hides all of @mark_t's runs from you. They aren't told.",
     );
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
@@ -538,8 +538,9 @@ describe("ReportSheet: a lapsed session (Au7, D-155)", () => {
 });
 
 /**
- * R55·214: a profile's own sheet, "Report or block @handle", with profile
- * reasons only, and a third way out that blocks without a report.
+ * R55·214, as Round 57 drew it (D-188): a profile's own sheet, "Report
+ * @handle", with profile reasons only under their own question, the note
+ * only under Other, and a third way out that blocks without a report.
  */
 describe("ReportSheet on a profile (R55·214)", () => {
   const profile: SheetProps["subject"] = {
@@ -550,13 +551,13 @@ describe("ReportSheet on a profile (R55·214)", () => {
     authorId: "01RAVI",
   };
 
-  it("is titled Report or block @handle, and says the handle once", () => {
+  it("is titled Report @handle, and says the handle once", () => {
     renderSheet({ subject: profile });
     expect(
-      screen.getByRole("dialog", { name: "Report or block @ravi_k" }),
+      screen.getByRole("dialog", { name: "Report @ravi_k" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "Report or block @ravi_k" }),
+      screen.getByRole("heading", { name: "Report @ravi_k" }),
     ).toBeInTheDocument();
     // The label repeats the title's handle on a profile, so it goes.
     expect(screen.queryByText("@ravi_k")).toBeNull();
@@ -564,7 +565,9 @@ describe("ReportSheet on a profile (R55·214)", () => {
 
   it("offers a profile's reasons only, in its own words", () => {
     renderSheet({ subject: profile });
-    const group = screen.getByRole("group", { name: "What's wrong" });
+    const group = screen.getByRole("group", {
+      name: "What's wrong with this profile",
+    });
     expect(
       within(group)
         .getAllByRole("radio")
@@ -613,6 +616,56 @@ describe("ReportSheet on a profile (R55·214)", () => {
     });
   });
 
+  it("asks for a note only once Other is picked, and sends it only from there", async () => {
+    const { fileReport } = renderSheet({ subject: profile });
+    expect(screen.queryByLabelText(/Anything else/u)).toBeNull();
+    await userEvent.click(
+      screen.getByRole("radio", { name: "Something else" }),
+    );
+    const note = screen.getByLabelText(/Anything else · optional/u);
+    expect(note).toHaveAccessibleDescription(
+      expect.stringContaining("One or two lines is plenty.") as string,
+    );
+    await userEvent.type(note, "an odd one");
+    await userEvent.click(screen.getByRole("button", { name: "Send report" }));
+    await waitFor(() => {
+      expect(fileReport).toHaveBeenCalledWith({
+        data: {
+          subjectType: "profile",
+          subjectId: "01RAVI",
+          reason: "other",
+          note: "an odd one",
+          alsoBlock: false,
+        },
+      });
+    });
+  });
+
+  it("drops a note left under Other once another reason is picked", async () => {
+    const { fileReport } = renderSheet({ subject: profile });
+    await userEvent.click(
+      screen.getByRole("radio", { name: "Something else" }),
+    );
+    await userEvent.type(screen.getByLabelText(/Anything else/u), "gone");
+    await userEvent.click(
+      screen.getByRole("radio", { name: "It's an ad, or it's spam" }),
+    );
+    expect(screen.queryByLabelText(/Anything else/u)).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Send report" }));
+    await waitFor(() => {
+      expect(fileReport).toHaveBeenCalledTimes(1);
+    });
+    expect(vi.mocked(fileReport).mock.calls[0]?.[0]).toStrictEqual({
+      data: {
+        subjectType: "profile",
+        subjectId: "01RAVI",
+        reason: "spam",
+        note: undefined,
+        alsoBlock: false,
+      },
+    });
+  });
+
   it("blocks without a report or a reason, after its own confirm", async () => {
     const blockRunner = vi.fn(() => Promise.resolve());
     const { fileReport, onFiled, onClose } = renderSheet({
@@ -623,15 +676,20 @@ describe("ReportSheet on a profile (R55·214)", () => {
       name: "Block without reporting",
     });
     expect(link).toHaveAttribute("type", "button");
+    // The footer's third action, centred at TYPE.body (R55·214), not the
+    // small grey link a report foot uses.
+    expect(link).toHaveClass("self-center", "text-body", "text-quiet");
     await userEvent.click(link);
     expect(
       screen.getByRole("heading", { name: "Block @ravi_k?", hidden: true }),
     ).toBeInTheDocument();
+    // The confirm's body, in the same words as the sheet's own line
+    // under Send and block, "@" and all (R2-FEED-03).
     expect(
-      screen.getByText(
+      screen.getAllByText(
         "Blocking hides all of @ravi_k's runs from you. They aren't told.",
       ),
-    ).toBeInTheDocument();
+    ).toHaveLength(2);
     expect(blockRunner).not.toHaveBeenCalled();
     await userEvent.click(
       screen.getByRole("button", { name: "Block", hidden: true }),

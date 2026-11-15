@@ -20,6 +20,13 @@ function row(): HTMLElement {
   return element;
 }
 
+/**
+ * The photos in the row, the list the region scrolls (D-189).
+ */
+function items(): HTMLElement[] {
+  return within(row()).getAllByRole("listitem");
+}
+
 function nextButton(): HTMLElement | null {
   return screen.queryByRole("button", { name: "Next photo" });
 }
@@ -34,7 +41,7 @@ function previousButton(): HTMLElement | null {
 const WIDTH = 620;
 
 function layOut(): void {
-  for (const [index, item] of [...row().children].entries()) {
+  for (const [index, item] of items().entries()) {
     Object.defineProperty(item, "offsetLeft", {
       configurable: true,
       value: index * WIDTH,
@@ -51,7 +58,7 @@ function scrolled(): { pages: number[]; options: unknown[] } {
   const options: unknown[] = [];
   vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(
     function (this: HTMLElement, arg?: unknown) {
-      pages.push([...row().children].indexOf(this));
+      pages.push(items().indexOf(this));
       options.push(arg);
     },
   );
@@ -107,14 +114,9 @@ describe("PhotoPager", () => {
 
   it("swipes as a snapping row, and at desk frames each photo 560 tall on --photo", () => {
     render(<PhotoPager photoKeys={KEYS} deletePhoto={undefined} />);
-    expect(row()).toHaveClass(
-      "flex",
-      "snap-x",
-      "snap-mandatory",
-      "overflow-x-auto",
-      "gap-2",
-    );
-    const item = row().firstElementChild;
+    expect(row()).toHaveClass("snap-x", "snap-mandatory", "overflow-x-auto");
+    expect(within(row()).getByRole("list")).toHaveClass("flex", "gap-2");
+    const [item] = items();
     expect(item).toHaveClass(
       "w-full",
       "shrink-0",
@@ -125,6 +127,15 @@ describe("PhotoPager", () => {
       "desk:rounded-card",
       "desk:bg-photo",
     );
+  });
+
+  it("is a region named Photos a keyboard reaches, for a viewer with nothing to press in it (D-189)", () => {
+    render(<PhotoPager photoKeys={KEYS} deletePhoto={undefined} />);
+    // Named by what it holds and how many (R57, D-189).
+    const region = screen.getByRole("region", { name: "Photos, 3" });
+    expect(region).toBe(row());
+    expect(region).toHaveAttribute("tabindex", "0");
+    expect(items()).toHaveLength(3);
   });
 
   it("sets the arrows over the shown photo's box, taking only their own presses", () => {

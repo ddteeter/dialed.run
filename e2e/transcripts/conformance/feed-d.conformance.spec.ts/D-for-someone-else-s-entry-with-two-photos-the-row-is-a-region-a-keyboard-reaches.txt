@@ -1,0 +1,66 @@
+document
+main
+status
+link, Back to feed
+heading, @d_photos_#, level 1
+@d_photos_#
+end of heading, @d_photos_#, level 1
+link, Notifications
+group, Photos
+region, Photos, #
+list
+listitem, level 1, position 1, set size 2
+listitem, level 1, position 2, set size 2
+end of list
+end of region, Photos, #
+end of group, Photos
+:day :month # · #:#
+#.# miles
+# minutes # seconds per mile
+Dialed
+# degrees, clear
+link, Weather data provided by Visual Crossing
+Kit
+list
+listitem, level 1, position 1, set size 1
+Long sleeve
+Generic
+L/S crew
+end of listitem, level 1, position 1, set size 1
+end of list
+button, Useful, not pressed
+Useful
+end of button, Useful, not pressed
+button, Report this entry
+end of main
+navigation, Main
+list
+listitem, level 1, position 1, set size 5
+link, Feed, current item
+Feed
+end of link, Feed, current item
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Closet
+Closet
+end of link, Closet
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+button, Add a run
++ Add
+end of button, Add a run
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Call
+Call
+end of link, Call
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, You
+You
+end of link, You
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Main
+status
+end of document

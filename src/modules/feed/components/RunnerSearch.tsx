@@ -176,11 +176,20 @@ export function RunnerSearch({
  * "41 runs · since Oct 2026" (the mono step's CSS sets the caps), or the
  * count alone with none shared.
  */
+/**
+ * A phrase that never breaks inside: beside the Follow pill a phone's
+ * line holds about 22 mono characters, and "since Nov 2026" wrapped with
+ * the year alone (R2-FEED-06). Bound, it moves to the next line whole.
+ */
+function bound(phrase: string): string {
+  return phrase.replaceAll(" ", "\u{A0}");
+}
+
 function sharedLine(result: SearchResult): string {
   const runs = counted(result.sharedRuns, "run", "runs");
-  return result.sharedSince === undefined
-    ? runs
-    : `${runs}${BOUND_SEPARATOR}since ${monthYearLabel(result.sharedSince)}`;
+  if (result.sharedSince === undefined) return runs;
+  const since = bound(`since ${monthYearLabel(result.sharedSince)}`);
+  return `${runs}${BOUND_SEPARATOR}${since}`;
 }
 
 function ResultRow({

@@ -23,7 +23,7 @@ In use · #
 end of heading, In use · #, level 3
 list
 listitem, level 1, position 1, set size 1
-Houdini Jacket
+Patagonia Houdini Jacket
 Top
 end of listitem, level 1, position 1, set size 1
 end of list

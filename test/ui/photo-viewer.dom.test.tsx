@@ -109,9 +109,9 @@ describe("PhotoViewer", () => {
     expect(dialog).toHaveAccessibleName("Photo 1 of 3");
   });
 
-  it("scrolls in a region named Photos that a keyboard reaches and pages from", () => {
+  it("scrolls in a region named Photos, 3 (D-189) that a keyboard reaches and pages from", () => {
     const { dialog } = renderViewer(0);
-    const region = screen.getByRole("region", { name: "Photos" });
+    const region = screen.getByRole("region", { name: "Photos, 3" });
     expect(region).toBe(rowOf(dialog));
     expect(region).toContainElement(screen.getByRole("list"));
     region.focus();

@@ -18,6 +18,7 @@ import {
   removeSeeded,
   seedEntry,
   seeded,
+  seedPhoto,
   seedRunner,
 } from "./feed-support";
 
@@ -161,6 +162,46 @@ test("D for someone else's entry: strip with badge, kit, tags, Useful, Report", 
     expect(await fillsOf(page, '[data-part="tags"]')).toEqual(drawn.tagFills);
     const kit = await cellsOf(page, '[data-part="kit"]');
     expect(kit[0]).toBe(drawn.kit[0]);
+  } finally {
+    await removeSeeded(rows);
+  }
+});
+
+test("D for someone else's entry with two photos: the row is a region a keyboard reaches", async ({
+  page,
+}) => {
+  // #694, D-189: with two photos the row scrolls, and a stranger has no
+  // Delete in it, so the row itself takes focus, named "Photos, 2". The
+  // fixture's axe pass (scrollable-region-focusable) and Tab walk are
+  // the check; this case is what brings them here.
+  const rows = seeded();
+  const runner = await seedRunner(
+    rows,
+    `d_photos_${String(Date.now()).slice(-8)}`,
+  );
+  const { entryId } = await seedEntry(rows, {
+    userId: runner,
+    place: { lat: 62.13, lng: 13.21 },
+    startedAt: nowSeconds() - 4 * 3600,
+    feelsLikeC: 8,
+    verdict: 0,
+  });
+  await seedPhoto(rows, entryId);
+  await seedPhoto(rows, entryId);
+
+  try {
+    await page.setViewportSize(PHONE);
+    await page.goto(`/feed/entry/${entryId}`);
+    await hydrated(page);
+    const region = page.getByRole("region", { name: "Photos, 2" });
+    await expect(region.getByRole("listitem")).toHaveCount(2);
+    await expect(
+      page.getByRole("group", { name: "Photos" }).getByRole("button", {
+        name: /Delete/u,
+      }),
+    ).toHaveCount(0);
+    await region.focus();
+    await expect(region).toBeFocused();
   } finally {
     await removeSeeded(rows);
   }

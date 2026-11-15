@@ -200,6 +200,10 @@ describe("the public kit, signed out", () => {
       "flex-col-reverse",
       "gap-0.5",
     );
+    // Flex boxes, so each line sets at its own mono leading and the label
+    // sits tight under its number (R2-FEED-05).
+    expect(screen.getAllByRole("term")[0]).toHaveClass("flex");
+    expect(screen.getAllByRole("definition")[0]).toHaveClass("m-0", "flex");
     expect(screen.getByText("6.2").closest(".font-mono")).toHaveClass(
       "text-mono-md",
     );

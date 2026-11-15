@@ -99,7 +99,7 @@ export function ConditionsTab({
     home.coords === undefined ? undefined : home.cityLabel,
   );
   // The screen's one status region (Accessibility Contract rule 08), here
-  // rather than in the city form, so "City saved." outlives the form.
+  // rather than in the city form, so the save's line outlives the form.
   const [status, setStatus] = useState("");
 
   const lookAt = useCallback(
@@ -314,8 +314,11 @@ function CityForm({
     action: async (found: ResolvedPlace) => saveCity({ data: placeOf(found) }),
     kicker: "Not saved",
     onSuccess: async (found) => {
-      announce("City saved.");
-      await onSaved(placeOf(found));
+      const place = placeOf(found);
+      // R57·260: the new place's weather is the confirmation; a screen
+      // reader hears the hand-off, politely.
+      announce(`Saved. Weather for ${place.cityLabel}.`);
+      await onSaved(place);
     },
   });
 
@@ -348,10 +351,9 @@ function CityForm({
         announce={announce}
         footnote={
           // R55·216: a promise before Use this, and no line under "not
-          // found" (the finder holds it back then). Its "after" line,
-          // "Saved to your settings.", has no moment to show: a save hands
-          // the block straight to the new place's weather, and the status
-          // region says "City saved." Design 260 (#686) is open on it.
+          // found" (the finder holds it back then). No "after" line
+          // (R57·260): a save hands the block straight to the new place's
+          // weather, and the status region says "Saved. Weather for …".
           <p data-part="city-note" className="m-0 text-small text-muted">
             We&rsquo;ll save it to your settings. Change it any time under You.
           </p>
