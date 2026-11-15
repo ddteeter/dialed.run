@@ -83,7 +83,7 @@ async function renderQueue(
 ) {
   const apply = vi
     .fn<DeskCorrectionsProps["apply"]>()
-    .mockResolvedValue({ applied: true });
+    .mockResolvedValue({ outcome: "applied" });
   const decline = vi
     .fn<DeskCorrectionsProps["decline"]>()
     .mockResolvedValue(undefined);
@@ -200,7 +200,7 @@ describe("the Desk's Corrections (R48·130)", () => {
       {
         apply: vi
           .fn<DeskCorrectionsProps["apply"]>()
-          .mockResolvedValue({ applied: false, reason: "name_taken" }),
+          .mockResolvedValue({ outcome: "name_taken" }),
       },
     );
     const invalidate = vi.spyOn(router, "invalidate");
@@ -377,7 +377,7 @@ describe("the Desk's Corrections (R48·130)", () => {
     await renderQueue([group({ field: "name", value: "Rover" })], {
       apply: vi
         .fn<DeskCorrectionsProps["apply"]>()
-        .mockResolvedValue({ applied: false, reason: "name_taken" }),
+        .mockResolvedValue({ outcome: "name_taken" }),
     });
     await user.click(screen.getByRole("button", { name: "Apply" }));
 
@@ -388,6 +388,25 @@ describe("the Desk's Corrections (R48·130)", () => {
     expect(band?.parentElement).toHaveAttribute("role", "status");
 
     await user.click(screen.getByRole("button", { name: "Decline" }));
+    expect(screen.queryByText(NAME_TAKEN)).toBeNull();
+  });
+
+  it("says the suggestion changed when nobody is waiting on it any more (SA-L11)", async () => {
+    const user = userEvent.setup();
+    await renderQueue([group()], {
+      apply: vi
+        .fn<DeskCorrectionsProps["apply"]>()
+        .mockResolvedValue({ outcome: "changed" }),
+    });
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    const line = await screen.findByText(
+      "That suggestion changed. Reload to see it.",
+    );
+    expect(line.closest("[data-part='failure-band']")).toHaveAttribute(
+      "data-state",
+      "refused",
+    );
     expect(screen.queryByText(NAME_TAKEN)).toBeNull();
   });
 
@@ -411,8 +430,8 @@ describe("the Desk's Corrections (R48·130)", () => {
     await renderQueue([group({ field: "name", value: "Rover" })], {
       apply: vi
         .fn<DeskCorrectionsProps["apply"]>()
-        .mockResolvedValueOnce({ applied: false, reason: "name_taken" })
-        .mockResolvedValue({ applied: true }),
+        .mockResolvedValueOnce({ outcome: "name_taken" })
+        .mockResolvedValue({ outcome: "applied" }),
     });
     await user.click(screen.getByRole("button", { name: "Apply" }));
     expect(await screen.findByText(NAME_TAKEN)).toBeVisible();

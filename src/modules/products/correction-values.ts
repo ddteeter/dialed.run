@@ -21,7 +21,8 @@ type ProductPatch = { [K in keyof ProductInsert]?: ProductInsert[K] | SQL };
  * The product columns a field's value writes. Wind and water are stored
  * as the words and written as booleans; a corrected composition is the
  * label's text, so the parts read from the old one go with it. The value
- * is read back from D1, so the enums are parsed again rather than trusted.
+ * is one a runner filed (`applyCorrection` writes nothing else), which
+ * its field's schema parsed then; the enums are parsed again all the same.
  */
 export function productPatch(
   field: CorrectionField,
