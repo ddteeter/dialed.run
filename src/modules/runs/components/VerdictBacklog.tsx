@@ -57,7 +57,7 @@ import { actionForKey, rowAfterMove, verdictKeys } from "../backlog-keys";
  * reads too, so the two mirrored surfaces cannot drift apart (round 19).
  */
 const SLOT_BASE =
-  "inline-flex flex-col items-center justify-center rounded-none border px-0.5 text-center font-mono text-mono-xs uppercase desk:px-2";
+  "inline-flex flex-col items-center justify-center rounded-none border px-0.5 text-center font-mono text-mono-xs uppercase desk:min-w-max desk:px-2";
 const SLOT_RESTING = `${SLOT_BASE} border-hairline-2 font-normal text-quiet`;
 
 /**
@@ -505,14 +505,15 @@ interface BacklogSelection {
 
 /**
  * The five verdict segments: five on a card's row, and equal columns at
- * the desk too, as 236a draws them (R2-RUNS-05). At the desk each track's
- * floor is its words' width, `max-content`: the outfit cell takes what the
- * others leave, and a zero floor let the table squeeze the buttons under
- * the target size. A bare `1fr` floors at the button's 44 `min-width`
- * (`target`), not its words, and the words ran out of it.
+ * the desk too, as 236a draws them (R2-RUNS-05). At the desk the tracks
+ * are `1fr`, whose floor is each button's `min-width`, and a button there
+ * is `min-w-max` (`SLOT_BASE`), so the floor is its words: the five come
+ * out as wide as the widest, never squeezed under them by the outfit cell,
+ * which takes what the others leave. `minmax(0,1fr)` let the table squeeze
+ * them under the target; `minmax(max-content,1fr)` kept each its own width.
  */
 const VERDICT_SEGMENTS_CLASS =
-  "grid grid-cols-5 gap-1 desk:grid-cols-[repeat(5,minmax(max-content,1fr))]";
+  "grid grid-cols-5 gap-1 desk:grid-cols-[repeat(5,1fr)]";
 
 /**
  * A cell: a block on a card, a table cell at the desk, where it holds one

@@ -992,9 +992,16 @@ describe("VerdictBacklog: below the desk, one card per run (Round 55 · 236)", (
       "grid",
       "grid-cols-5",
       "gap-1",
-      "desk:grid-cols-[repeat(5,minmax(max-content,1fr))]",
+      "desk:grid-cols-[repeat(5,1fr)]",
     );
     expect(segments).not.toHaveClass("desk:flex");
+    // Each button's floor is its words at the desk, so 1fr tracks come
+    // out as wide as the widest word, never cut by the outfit cell.
+    const buttons = [...(segments?.children ?? [])];
+    expect(buttons).toHaveLength(5);
+    for (const each of buttons) {
+      expect(each).toHaveClass("target", "desk:min-w-max");
+    }
     // Nothing to skip to: every run is on the page.
     expect(screen.queryByRole("button", { name: "Skip" })).toBeNull();
   });
