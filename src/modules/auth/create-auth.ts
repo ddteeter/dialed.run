@@ -5,13 +5,17 @@
 import { betterAuth } from "better-auth";
 import type { BetterAuthPlugin } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { APIError, createAuthMiddleware } from "better-auth/api";
+import {
+  APIError,
+  createAuthMiddleware,
+  getSessionFromCtx,
+} from "better-auth/api";
 import { eq, sql } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import * as authSchema from "../../db/schema-auth";
 import { newUlid } from "../../lib/ids";
-import type { AuthMail } from "../account";
+import { changeLinkWithdrawal, type AuthMail } from "../account";
 import { PASSWORD_MIN_LENGTH } from "../../lib/contracts";
 import { outboxInsertWhere, oweOutbox } from "../ops";
 import {
@@ -104,6 +108,28 @@ async function screenPassword(
       path: ctx.path,
     });
   }
+}
+
+/**
+Better Auth's Sign out everywhere, as its hooks name it.
+*/
+const REVOKE_SESSIONS_PATH = "/revoke-sessions";
+
+/**
+ * Sign out everywhere also withdraws the runner's open change-email link:
+ * it is what a runner presses when they think someone else got in, and a
+ * change that someone asked for must not outlive it. Withdrawn before the
+ * sessions end, from the session that asked; no session, nothing to do
+ * (the endpoint refuses it anyway).
+ */
+async function withdrawChangeOnSignOutEverywhere(
+  db: AuthConfig["db"],
+  ctx: Parameters<Parameters<typeof createAuthMiddleware>[0]>[0],
+): Promise<void> {
+  if (ctx.path !== REVOKE_SESSIONS_PATH) return;
+  const session = await getSessionFromCtx(ctx);
+  if (session === null) return;
+  await changeLinkWithdrawal(db, session.user.id);
 }
 
 /**
@@ -338,6 +364,8 @@ export function createAuth({
             .update(authSchema.user)
             .set({ emailVerified: true })
             .where(account),
+          // A change asked for before the reset moves the account no more.
+          changeLinkWithdrawal(db, user.id),
         ]);
       },
     },
@@ -389,6 +417,7 @@ export function createAuth({
         // whatever the code says. Then the way in.
         await screenPassword(passwordScreen, ctx);
         await admitSignUp(access, ctx);
+        await withdrawChangeOnSignOutEverywhere(db, ctx);
       }),
     },
     plugins: plugins ?? [],

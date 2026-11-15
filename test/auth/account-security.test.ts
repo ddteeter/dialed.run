@@ -327,6 +327,107 @@ describe("an email change (ACC-8) and the old inbox's reset link", () => {
   });
 });
 
+async function plantChange(userId: string): Promise<string> {
+  return issueEmailLink(db, {
+    userId,
+    purpose: "change",
+    email: `moved-${newUlid().toLowerCase()}@example.com`,
+  });
+}
+
+async function addressOf(userId: string): Promise<string | undefined> {
+  const [row] = await db
+    .select({ email: user.email })
+    .from(user)
+    .where(eq(user.id, userId));
+  return row?.email;
+}
+
+describe("an open change-email link, once the password changes hands", () => {
+  const next = ["a", "replaced", "long", "passphrase"].join("-");
+
+  it("is withdrawn by a reset, while another runner's still works", async () => {
+    const { auth, mail } = instance();
+    const { email, userId } = await signUp(auth);
+    const bystander = await signUp(auth);
+    const link = await plantChange(userId);
+    const theirs = await plantChange(bystander.userId);
+    const token = await resetTokenFor(auth, mail, email);
+
+    const reset = await auth.handler(
+      post("reset-password", { token, newPassword: next }),
+    );
+
+    expect(reset.status).toBe(200);
+    expect(await confirmEmail(db, link)).toStrictEqual({ state: "expired" });
+    expect(await addressOf(userId)).toBe(email);
+    expect(await confirmEmail(db, theirs)).toMatchObject({
+      state: "confirmed",
+    });
+  });
+
+  it("is withdrawn by a password change", async () => {
+    const check = { ...(await signedIn()), db };
+    const before = await addressOf(check.userId);
+    const link = await plantChange(check.userId);
+
+    expect(
+      await changeOwnPassword(check, {
+        currentPassword: password,
+        password: next,
+      }),
+    ).toStrictEqual({ status: "changed" });
+
+    expect(await confirmEmail(db, link)).toStrictEqual({ state: "expired" });
+    expect(await addressOf(check.userId)).toBe(before);
+  });
+
+  it("stays when the current password is wrong, since nothing changed hands", async () => {
+    const check = { ...(await signedIn()), db };
+    const link = await plantChange(check.userId);
+
+    await refused("INVALID_PASSWORD", () =>
+      changeOwnPassword(check, {
+        currentPassword: `${password}-not`,
+        password: next,
+      }),
+    );
+
+    expect(await confirmEmail(db, link)).toMatchObject({ state: "confirmed" });
+  });
+
+  it("stays on an ordinary log-out, which hands no password over", async () => {
+    const { auth } = instance();
+    const { email, userId } = await signUp(auth);
+    const cookie = await signIn(auth, email);
+    const link = await plantChange(userId);
+
+    const response = await auth.handler(post("sign-out", {}, cookie));
+
+    expect(response.status).toBe(200);
+    expect(await confirmEmail(db, link)).toMatchObject({ state: "confirmed" });
+  });
+
+  it("leaves Sign out everywhere with no session refused as it was", async () => {
+    const { auth } = instance();
+    const response = await auth.handler(post("revoke-sessions", {}));
+    expect(response.status).toBe(401);
+  });
+
+  it("is withdrawn by Sign out everywhere", async () => {
+    const { auth } = instance();
+    const { email, userId } = await signUp(auth);
+    const cookie = await signIn(auth, email);
+    const link = await plantChange(userId);
+
+    const response = await auth.handler(post("revoke-sessions", {}, cookie));
+
+    expect(response.status).toBe(200);
+    expect(await confirmEmail(db, link)).toStrictEqual({ state: "expired" });
+    expect(await addressOf(userId)).toBe(email);
+  });
+});
+
 /**
 A signed-in runner, as `checkOwnPassword` is handed one.
 */
