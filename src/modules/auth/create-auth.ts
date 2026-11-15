@@ -77,8 +77,8 @@ export interface AuthConfig {
 }
 
 /**
- * The before-hook's half that screens a new password on sign-up and on a
- * password change.
+ * The before-hook's half that screens a new password on sign-up, on a
+ * password change and on a reset.
  *
  * **Fails open** (law 5): a screen that times out or errors lets the
  * request through and reports it — sign-up is the primary action and the

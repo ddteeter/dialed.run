@@ -92,6 +92,13 @@ describe("newPasswordIn", () => {
     expect(newPasswordIn("/change-password", { newPassword: "b" })).toBe("b");
   });
 
+  it("reads the new password on a reset, with or without its token", () => {
+    expect(
+      newPasswordIn("/reset-password", { newPassword: "c", token: "t" }),
+    ).toBe("c");
+    expect(newPasswordIn("/reset-password", { newPassword: "d" })).toBe("d");
+  });
+
   it("reads nothing on any other path, or from a body without it", () => {
     expect(newPasswordIn("/sign-in/email", { password: "a" })).toBeUndefined();
     expect(newPasswordIn(undefined, { password: "a" })).toBeUndefined();

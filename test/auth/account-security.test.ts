@@ -194,6 +194,34 @@ describe("a password reset (ACC-4)", () => {
     expect(signedIn.status).toBe(200);
   });
 
+  it("refuses a breached new password, and leaves the old one and the link as they were", async () => {
+    const next = ["a", "breached", "long", "passphrase"].join("-");
+    const { auth, mail } = instance({
+      passwordScreen: {
+        verdict: (candidate) =>
+          Promise.resolve(candidate === next ? "breached" : "clean"),
+        report: () => {
+          // a breached verdict is an answer, not a failure
+        },
+      },
+    });
+    const { email, userId } = await signUp(auth);
+    const token = await resetTokenFor(auth, mail, email);
+
+    const response = await refused("PASSWORD_BREACHED", () =>
+      auth.handler(post("reset-password", { token, newPassword: next })),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ code: "PASSWORD_BREACHED" });
+    expect(await canSignInWith(auth, userId, password)).toBe(true);
+    const clean = ["a", "clean", "long", "passphrase"].join("-");
+    const retried = await auth.handler(
+      post("reset-password", { token, newPassword: clean }),
+    );
+    expect(retried.status).toBe(200);
+  });
+
   it("stores the link's token only as a hash", async () => {
     const { auth, mail } = instance();
     const { email, userId } = await signUp(auth);
