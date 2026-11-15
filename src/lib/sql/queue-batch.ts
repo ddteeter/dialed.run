@@ -19,7 +19,11 @@ export interface Reporter {
 }
 
 export interface ConsumeHandlers<Job> extends Reporter {
-  process: (job: Job) => Promise<void>;
+  /**
+  The job, and its delivery: `attempts` is 1 on the first, and counts up
+  on each redelivery of the same message.
+  */
+  process: (job: Job, delivery: { attempts: number }) => Promise<void>;
   /**
   The sentence reported for a body the schema rejects — each consumer's
   own, so an alert says which queue's producer went wrong.
@@ -74,7 +78,7 @@ export function consumeEach<Job>(
       return;
     }
     try {
-      await handlers.process(job);
+      await handlers.process(job, { attempts: message.attempts });
       message.ack();
     } catch (error) {
       report(handlers, batch, message, error, handlers.context?.(job));

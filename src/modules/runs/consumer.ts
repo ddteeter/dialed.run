@@ -99,15 +99,56 @@ type DeadLetterDeps = Omit<ConsumerDeps, "attachObservation">;
 
 const IMPORT_TERMINAL_STATUSES = ["done", "failed", "duplicate"] as const;
 
-async function didClaimImport(db: CoreDb, importId: string): Promise<boolean> {
+/**
+ * How many deliveries of one import job may parse its file (SA-M29, owner
+ * 2026-11-15: one recovery). A row a delivery finds still `processing`
+ * was left by a delivery that ended without a word, because anything
+ * thrown puts it back to `pending` (`withPendingOnThrow`): the runtime
+ * ended it, for a deploy or for a limit. The next delivery parses it once
+ * more; the one after fails it without parsing.
+ */
+export const MAX_PARSE_DELIVERIES = 2;
+
+/**
+ * What a delivery may claim. The first only a `pending` row: one already
+ * `processing` is another message's, still at work. A redelivery may also
+ * take back the row its own earlier delivery left.
+ */
+async function didClaimImport(
+  db: CoreDb,
+  importId: string,
+  attempts: number,
+): Promise<boolean> {
   return await didClaim(
     db,
     imports,
     { id: imports.id, status: imports.status },
     importId,
-    ["pending", "processing"],
+    attempts > 1 ? ["pending", "processing"] : ["pending"],
     { status: "processing" },
   );
+}
+
+/**
+ * Runs the work a claim authorised, and puts the row back to `pending` if
+ * it throws, so `processing` on arrival only ever means a delivery that
+ * was ended. Guarded on `processing`: a row the work already concluded
+ * keeps its conclusion.
+ */
+async function withPendingOnThrow(
+  db: CoreDb,
+  importId: string,
+  work: () => Promise<void>,
+): Promise<void> {
+  try {
+    await work();
+  } catch (error) {
+    await db
+      .update(imports)
+      .set({ status: "pending" })
+      .where(and(eq(imports.id, importId), eq(imports.status, "processing")));
+    throw error;
+  }
 }
 
 /**
@@ -204,6 +245,7 @@ function importById(db: CoreDb, importId: string) {
 async function processImportJob(
   deps: ConsumerDeps,
   job: ImportJob,
+  attempts: number,
 ): Promise<void> {
   const importRow = await importById(deps.db, job.importId);
   if (importRow === undefined) {
@@ -219,9 +261,26 @@ async function processImportJob(
   // 'processing')` refuses exactly the same rows, and it refuses them at
   // write time rather than from a value that may already be stale. A
   // redelivery of completed work claims nothing and stops here.
-  const didClaim = await didClaimImport(deps.db, job.importId);
-  if (!didClaim) return; // already concluded, or lost the race
+  if (importRow.status === "processing" && attempts > MAX_PARSE_DELIVERIES) {
+    await failImport(deps, importRow, DEAD_IMPORT_REASON);
+    return;
+  }
+  const didClaim = await didClaimImport(deps.db, job.importId, attempts);
+  if (!didClaim) return; // already concluded, in flight, or lost the race
 
+  await withPendingOnThrow(deps.db, importRow.id, () =>
+    parseAndSave(deps, importRow),
+  );
+}
+
+/**
+ * A claimed import: its file read, parsed and saved as a run, or failed
+ * with the sentence the runner reads.
+ */
+async function parseAndSave(
+  deps: ConsumerDeps,
+  importRow: typeof imports.$inferSelect,
+): Promise<void> {
   const object = await deps.importBucket.get(importRow.r2Key);
   if (object === null) {
     await failImport(deps, importRow, PARSE_FAILURE_MESSAGE);
@@ -515,6 +574,7 @@ async function processRevokeJob(
 async function processJob(
   deps: ConsumerDeps,
   job: ImportJob | ReminderJob | RevokeJob | DeauthorizeJob,
+  attempts: number,
 ): Promise<void> {
   switch (job.type) {
     case "strava_deauthorize": {
@@ -522,7 +582,7 @@ async function processJob(
       return;
     }
     case "import": {
-      await processImportJob(deps, job);
+      await processImportJob(deps, job, attempts);
       return;
     }
     case "strava_reminder": {
@@ -541,7 +601,7 @@ export async function handleImportsBatch(
   deps: ConsumerDeps,
 ): Promise<void> {
   await consumeEach(batch, importsQueueMessageSchema, {
-    process: (job) => processJob(deps, job),
+    process: (job, delivery) => processJob(deps, job, delivery.attempts),
     invalidMessage: "invalid imports queue message",
     captureException: deps.captureException,
   });

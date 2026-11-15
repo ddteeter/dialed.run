@@ -30,10 +30,28 @@ describe("consumeEach", () => {
 
     await consumeEach(batchOf("q", [message]), jobSchema, h);
 
-    expect(h.process).toHaveBeenCalledWith({ type: "job", id: "a" });
+    expect(h.process).toHaveBeenCalledWith(
+      { type: "job", id: "a" },
+      { attempts: 1 },
+    );
     expect(message.ack).toHaveBeenCalledTimes(1);
     expect(message.retry).not.toHaveBeenCalled();
     expect(h.captureException).not.toHaveBeenCalled();
+  });
+
+  it("tells the job which delivery this is", async () => {
+    const h = handlers();
+    const message = {
+      ...fakeMessage("m3", { type: "job", id: "b" }),
+      attempts: 3,
+    };
+
+    await consumeEach(batchOf("q", [message]), jobSchema, h);
+
+    expect(h.process).toHaveBeenCalledWith(
+      { type: "job", id: "b" },
+      { attempts: 3 },
+    );
   });
 
   it("acks and reports a message that does not parse, without processing it", async () => {
