@@ -511,10 +511,7 @@ function RowClock({
       {spanLabel(asOf - row.createdAt)}
     </Mono>
   ) : (
-    <DueClock
-      due={row.due}
-      isOverdue={(row.dueAt ?? Infinity) <= asOf}
-    />
+    <DueClock due={row.due} isOverdue={(row.dueAt ?? Infinity) <= asOf} />
   );
 }
 
@@ -665,7 +662,10 @@ function OpenRow({
         data-part="row-body"
         className="flex flex-col gap-4 border-t border-hairline p-4 desk:grid desk:grid-cols-[minmax(0,1fr)_minmax(0,3fr)] desk:items-start desk:gap-6"
       >
-        <div data-part="row-photos" className="flex flex-col gap-2 empty:hidden">
+        <div
+          data-part="row-photos"
+          className="flex flex-col gap-2 empty:hidden"
+        >
           <SubjectPhotos row={row} />
           <RemovedMatchLine match={row.removedMatches?.[0]} />
         </div>

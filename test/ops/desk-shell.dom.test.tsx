@@ -716,7 +716,9 @@ describe("DeskPage", () => {
       expect(page?.className).not.toMatch(/mx-auto/u);
       const column = body.closest("[data-part='desk-column']");
       if (column !== null) {
-        expect(column.className).toBe("flex w-full max-w-column flex-col gap-6");
+        expect(column.className).toBe(
+          "flex w-full max-w-column flex-col gap-6",
+        );
         expect(column.parentElement).toBe(page);
       }
       widths[current] = column === null ? "page" : "column";

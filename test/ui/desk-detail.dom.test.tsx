@@ -155,9 +155,9 @@ describe("DeskDetail below desk (R55·202)", () => {
   it("titles the drawer in words for a runner, in mono for a code (R57·251)", () => {
     atWidth(false);
     const { rerender } = render(table(PICKED));
-    expect(
-      screen.getByRole("heading", { level: 2, name: "@ada" }),
-    ).toHaveClass("font-display");
+    expect(screen.getByRole("heading", { level: 2, name: "@ada" })).toHaveClass(
+      "font-display",
+    );
     rerender(table({ ...PICKED, name: "DIAL-TEST", isCode: true }));
     expect(
       screen.getByRole("heading", { level: 2, name: "DIAL-TEST" }),

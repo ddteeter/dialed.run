@@ -117,7 +117,9 @@ function Picked({
   // below it nothing opens there, so the line would only say "pick" from
   // the foot of a long list (R58·276).
   if (picked === undefined) {
-    return idle === undefined ? <></> : (
+    return idle === undefined ? (
+      <></>
+    ) : (
       <div data-part="desk-idle" className="hidden desk:block">
         {idle}
       </div>

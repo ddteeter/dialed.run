@@ -1023,10 +1023,9 @@ describe("what a row tells the reviewer", () => {
     expect(tags?.textContent).toBe(" · @nightrun_nico_ferreira [classifier]");
     expect(tags).toHaveClass("desk:inline");
     // The separator is drawn only on the one desk line, and always heard.
-    expect(screen.getByText("·", { normalizer: (text) => text.trim() })).toHaveClass(
-      "sr-only",
-      "desk:not-sr-only",
-    );
+    expect(
+      screen.getByText("·", { normalizer: (text) => text.trim() }),
+    ).toHaveClass("sr-only", "desk:not-sr-only");
     expect(screen.getByText("@nightrun_nico_ferreira")).toHaveClass(
       "whitespace-nowrap",
     );
