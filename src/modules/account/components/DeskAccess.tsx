@@ -103,11 +103,6 @@ function RequestRow({
 }
 
 /**
-The heading of each of Access's two lists.
-*/
-const SECTION_HEADING = "m-0 font-display text-heading uppercase";
-
-/**
  * Desk D7 · Access (task 126, ACC-5; round 26 #20): Requests, oldest
  * first, each with Send invite and a silent Decline. Codes are their own
  * page since R55·194 (`DeskCodes`).
@@ -179,13 +174,15 @@ function RequestsSection({
     announce,
   });
   return (
-    <section aria-labelledby="desk-requests" className="flex flex-col gap-4">
-      <h2 id="desk-requests" className={SECTION_HEADING}>
-        Requests
+    <section aria-labelledby="desk-requests" className="flex flex-col gap-2">
+      {/* R58·279: the muted kicker with its count, as Review's sections,
+          under the page's one display heading. One string, so it is heard
+          as one line. */}
+      <h2 id="desk-requests" className="m-0">
+        <Mono step="xs" className="text-muted">
+          {`Requests · ${String(requests.length)} waiting · oldest first`}
+        </Mono>
       </h2>
-      <Mono step="xs" className="text-muted">
-        {`${String(requests.length)} waiting · oldest first`}
-      </Mono>
       <ul className="m-0 flex list-none flex-col p-0">
         {requests.map((request) => (
           <RequestRow

@@ -606,7 +606,9 @@ function rowOf(text: string): HTMLElement {
 describe("D7 · Access", () => {
   it("lists requests oldest first with their age and note, and counts them", async () => {
     await desk();
-    expect(screen.getByText("2 waiting · oldest first")).toBeVisible();
+    expect(
+      screen.getByText("Requests · 2 waiting · oldest first"),
+    ).toBeVisible();
     const sam = within(rowOf("sam@example.com"));
     expect(sam.getByText("3d")).toBeVisible();
     expect(sam.getByText("Winter runner.")).toBeVisible();
@@ -626,9 +628,20 @@ describe("D7 · Access", () => {
     expect(
       access.getByRole("heading", { level: 1, name: "Access" }),
     ).toHaveClass("font-display", "text-title", "uppercase");
-    expect(
-      access.getByRole("heading", { level: 2, name: "Requests" }),
-    ).toHaveClass("font-display", "text-heading", "uppercase");
+    // R58·279: one display heading; Requests is the muted kicker with its
+    // count, as Review's sections.
+    const requests = access.getByRole("heading", {
+      level: 2,
+      name: "Requests · 2 waiting · oldest first",
+    });
+    expect(requests).toHaveClass("m-0");
+    expect(requests).not.toHaveClass("font-display");
+    expect(requests.firstElementChild).toHaveClass(
+      "font-mono",
+      "text-mono-xs",
+      "text-muted",
+    );
+    expect(requests.closest("section")).toHaveClass("gap-2");
     expect(access.getAllByRole("heading")).toHaveLength(2);
     const codes = within(
       document.querySelector<HTMLElement>('[data-page="codes"]') ??
@@ -925,6 +938,14 @@ describe("D7 · Access", () => {
     }
     const more = row.getByRole("button", { name: "+ 24 more" });
     expect(more).toHaveClass("target", "-my-3", "px-0", "py-3");
+    // R58·280: the Desk's link, never pink.
+    expect(more).toHaveClass(
+      "font-semibold",
+      "text-ink",
+      "underline",
+      "underline-offset-4",
+    );
+    expect(more).not.toHaveClass("text-action");
     expect(more).not.toHaveClass("inline-flex");
     expect(more.parentElement).toHaveClass("flex-wrap", "gap-x-3", "gap-y-3");
     expect(screen.queryByRole("complementary")).toBeNull();

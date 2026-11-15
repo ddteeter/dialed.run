@@ -90,7 +90,10 @@ describe("DeskDetail at desk", () => {
   it("holds the idle line while nothing is picked, and no pane", () => {
     atWidth(true);
     render(table(undefined));
-    expect(screen.getByText("Pick one.")).toBeVisible();
+    expect(screen.getByText("Pick one.").parentElement).toHaveClass(
+      "hidden",
+      "desk:block",
+    );
     expect(screen.queryByRole("complementary")).toBeNull();
   });
 
@@ -193,11 +196,23 @@ describe("DeskDetail below desk (R55·202)", () => {
     expect(onUnpick).toHaveBeenCalledOnce();
   });
 
-  it("keeps the idle line under the table while nothing is picked", () => {
+  it("hides the idle line below desk, where nothing opens beside the table (R58·276)", () => {
     atWidth(false);
     render(table(undefined));
-    expect(screen.getByText("Pick one.")).toBeVisible();
+    const idle = document.querySelector("[data-part='desk-idle']");
+    expect(idle).toHaveTextContent("Pick one.");
+    expect(idle).toHaveClass("hidden", "desk:block");
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("adds no idle wrapper when there is no idle line", () => {
+    atWidth(true);
+    render(
+      <DeskDetail picked={undefined} onUnpick={vi.fn<() => void>()}>
+        <p>the table</p>
+      </DeskDetail>,
+    );
+    expect(document.querySelector("[data-part='desk-idle']")).toBeNull();
   });
 
   it("moves the picked thing between drawer and pane as the window crosses desk", () => {
