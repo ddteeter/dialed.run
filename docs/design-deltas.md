@@ -1402,6 +1402,36 @@ Design 315 (#761) asks again.
   date (250): "Aug 12". (259e) A notification row's name is the body text
   and time, with "Unread" voicing the dot (255b).
 
+## Built from round 58's Desk rulings (wave 11, design 222)
+
+How the Desk's Round 58 rulings (#719–#725, #758, #759) were built, and
+the calls made on the way.
+
+- **The Desk is one centred group (312, with R57·263).** From `wide` the
+  bar's content and the rail-and-page frame each sit inside the centred
+  MEASURE.page, the frame's left gutter its own and the page's `px-6` the
+  gap beside the rail and the right gutter. The rail is MEASURE.rail on
+  the content edge, so headings sit at x=220 at 1280 and at 170 up to 1228. R57·264's "every Desk page starts at the rail" is about a 620 page
+  against the rail, not about the Desk filling the screen (coordinator,
+  2026-11-15).
+- **Guess · the rail's insets.** The board draws the entries' words on the
+  rail's edge. The current entry's 2px bar and `--panel` fill need room,
+  so entries take 8 each side inside the 122 and the footer the same
+  unseen 2px edge, which keeps "Corrections 99" inside the track.
+- **The rail's counts are named by what they draw (R57·255, D-187).**
+  "Review 4", not "Review 4 waiting": the unit was sr-only text, which may
+  voice a mark but not add words, and spelling it out does not fit the 122.
+- **The Review head below desk (274).** Inline flow, not flex, so the
+  spaces between the owner and the tag stay in what is heard. The `·`
+  before the owner is drawn only on the one desk line and heard at every
+  width. The closed row's summary stays one cut line under the head.
+- **Guess · Access's kicker (279).** One `h2`, "Requests · N waiting ·
+  oldest first", so the words of the old count line are kept.
+- **One card (278).** Only Corrections changed: holds and quarantine
+  records took 197's card in #700.
+- **The idle line (276).** `DeskDetail` hides it below `desk` for every
+  table, Codes' included, since nothing opens beside a table there.
+
 ## Built from the re-run's runs and closet findings (wave 10, design 219)
 
 What the build read where #704, #699 and Round 57 · 252–254 left it a
