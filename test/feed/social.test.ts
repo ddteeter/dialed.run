@@ -2,12 +2,18 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { reactions as reactionsTable } from "../../src/db/schema-core";
+import {
+  accountDeletions,
+  follows as followsTable,
+  reactions as reactionsTable,
+  userProfiles,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 
 import {
   follow,
+  followerCount,
   followingCount,
   isFollowing,
   unfollow,
@@ -18,6 +24,7 @@ import {
   usefulCount,
 } from "../../src/modules/feed/reactions";
 import { searchRunners } from "../../src/modules/feed/search";
+import { blockRunner } from "../../src/modules/safety";
 import {
   makeEntry,
   makeRun,
@@ -26,6 +33,30 @@ import {
   resetTables,
 } from "./helpers";
 import { nowSeconds } from "../../src/lib/now";
+
+function core() {
+  return drizzle(env.DIALED_CORE);
+}
+
+/**
+The follow rows pointing at `userId`: what a refused follow must not leave.
+*/
+async function followRowsOf(userId: string) {
+  return core()
+    .select()
+    .from(followsTable)
+    .where(eq(followsTable.followeeId, userId));
+}
+
+/**
+A SHARED entry by `author` that `reactor` has marked Useful.
+*/
+async function markedEntry(author: string, reactor: string): Promise<string> {
+  const runId = await makeRun({ userId: author });
+  const entryId = await makeEntry({ userId: author, runId });
+  await setUsefulReaction(entryId, reactor, true);
+  return entryId;
+}
 
 describe("useful reactions (D-11)", () => {
   beforeEach(resetTables);
@@ -91,7 +122,7 @@ describe("follows", () => {
 
   it("follows and unfollows", async () => {
     const follower = await makeUser();
-    const followee = await makeUser();
+    const followee = await makeVerifiedUser();
 
     expect(await isFollowing(follower, followee)).toBe(false);
     await follow(follower, followee);
@@ -105,11 +136,45 @@ describe("follows", () => {
 
   it("is idempotent under a repeated follow (queue-redelivery-safe)", async () => {
     const follower = await makeUser();
-    const followee = await makeUser();
+    const followee = await makeVerifiedUser();
 
     await follow(follower, followee);
     await follow(follower, followee);
     expect(await followingCount(follower)).toBe(1);
+  });
+
+  it("does not follow across a block, from either end", async () => {
+    const blocker = await makeVerifiedUser();
+    const blocked = await makeVerifiedUser();
+    await blockRunner(blocker, blocked);
+
+    await follow(blocker, blocked);
+    await follow(blocked, blocker);
+
+    expect(await followerCount(blocked)).toBe(0);
+    expect(await followerCount(blocker)).toBe(0);
+  });
+
+  it("ignores a follow of an unconfirmed runner", async () => {
+    const follower = await makeVerifiedUser();
+    const unconfirmed = await makeUser();
+
+    await follow(follower, unconfirmed);
+
+    expect(await followRowsOf(unconfirmed)).toHaveLength(0);
+  });
+
+  it("ignores a follow of a banned runner", async () => {
+    const follower = await makeVerifiedUser();
+    const banned = await makeVerifiedUser();
+    await core()
+      .update(userProfiles)
+      .set({ bannedAt: nowSeconds() })
+      .where(eq(userProfiles.userId, banned));
+
+    await follow(follower, banned);
+
+    expect(await followRowsOf(banned)).toHaveLength(0);
   });
 });
 
@@ -197,5 +262,57 @@ describe("useful reactions: who may react", () => {
     expect(row?.kind).toBe("useful");
     expect(row?.createdAt).toBeGreaterThanOrEqual(before - 5);
     expect(row?.createdAt).toBeLessThanOrEqual(before + 5);
+  });
+});
+
+describe("useful reactions: whose marks count", () => {
+  beforeEach(resetTables);
+
+  it("does not count a banned runner's Useful", async () => {
+    const author = await makeVerifiedUser();
+    const reactor = await makeVerifiedUser();
+    const entryId = await markedEntry(author, reactor);
+    expect(await usefulCount(entryId)).toBe(1);
+
+    await core()
+      .update(userProfiles)
+      .set({ bannedAt: nowSeconds() })
+      .where(eq(userProfiles.userId, reactor));
+
+    expect(await usefulCount(entryId)).toBe(0);
+  });
+
+  it("does not count a leaving runner's Useful", async () => {
+    const author = await makeVerifiedUser();
+    const reactor = await makeVerifiedUser();
+    const entryId = await markedEntry(author, reactor);
+    expect(await usefulCount(entryId)).toBe(1);
+
+    const now = nowSeconds();
+    await core()
+      .insert(accountDeletions)
+      .values({ userId: reactor, requestedAt: now, purgeAfter: now + 1 });
+
+    expect(await usefulCount(entryId)).toBe(0);
+  });
+
+  it("takes a mark back across a block", async () => {
+    const author = await makeVerifiedUser();
+    const reactor = await makeVerifiedUser();
+    const entryId = await markedEntry(author, reactor);
+    await blockRunner(author, reactor);
+
+    expect(await setUsefulReaction(entryId, reactor, false)).toStrictEqual({
+      status: "set",
+      useful: false,
+      count: 0,
+    });
+    expect(await hasReacted(entryId, reactor)).toBe(false);
+    const marking = setUsefulReaction(entryId, reactor, true);
+    await expect(marking).rejects.toBeInstanceOf(Error);
+    await expect(marking).rejects.toThrow(
+      "entry is not visible to this viewer",
+    );
+    expect(await hasReacted(entryId, reactor)).toBe(false);
   });
 });

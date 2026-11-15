@@ -18,7 +18,12 @@ import {
   ringFollowQuietly,
 } from "../../src/modules/feed/follow-notices";
 import { nowSeconds } from "../../src/lib/now";
-import { deleteAllFrom, makeUser, resetTables } from "./helpers";
+import {
+  deleteAllFrom,
+  makeUser,
+  makeVerifiedUser,
+  resetTables,
+} from "./helpers";
 
 const NO_LINK = z.null().parse(JSON.parse("null"));
 
@@ -52,7 +57,7 @@ function clockAt(seconds: number): void {
  * was read, and they follow again. Answers how many unread rows you have.
  */
 async function refollowRungAt(rungAt: number): Promise<number> {
-  const you = await makeUser();
+  const you = await makeVerifiedUser();
   const ada = await makeUser();
   await follow(ada, you);
   await markRead(you);
@@ -90,7 +95,7 @@ describe("the bell row's words (R48·131a–b)", () => {
 
 describe("following rings the bell (D-168)", () => {
   it("rings once for a follow, linking to the follower", async () => {
-    const you = await makeUser();
+    const you = await makeVerifiedUser();
     const ada = await makeUser({ username: "ada" });
     await follow(ada, you);
     const [row] = await bellOf(you);
@@ -104,7 +109,7 @@ describe("following rings the bell (D-168)", () => {
   });
 
   it("groups follows while the row is unread, naming the newest, with no one to link to", async () => {
-    const you = await makeUser();
+    const you = await makeVerifiedUser();
     const ada = await makeUser({ username: "ada" });
     const bo = await makeUser({ username: "bo" });
     const cy = await makeUser({ username: "cy" });
@@ -121,7 +126,7 @@ describe("following rings the bell (D-168)", () => {
   });
 
   it("starts a new row once the last one is read", async () => {
-    const you = await makeUser();
+    const you = await makeVerifiedUser();
     const ada = await makeUser({ username: "ada" });
     const bo = await makeUser({ username: "bo" });
     await follow(ada, you);
@@ -134,7 +139,7 @@ describe("following rings the bell (D-168)", () => {
   });
 
   it("does not ring twice for an unfollow and refollow within 30 days (R48·131e)", async () => {
-    const you = await makeUser();
+    const you = await makeVerifiedUser();
     const ada = await makeUser({ username: "ada" });
     await follow(ada, you);
     await markRead(you);
@@ -144,7 +149,7 @@ describe("following rings the bell (D-168)", () => {
   });
 
   it("rings again for a refollow 30 days on", async () => {
-    const you = await makeUser();
+    const you = await makeVerifiedUser();
     const ada = await makeUser({ username: "ada" });
     await follow(ada, you);
     await markRead(you);
@@ -160,7 +165,7 @@ describe("following rings the bell (D-168)", () => {
   });
 
   it("stays quiet a moment short of 30 days", async () => {
-    const you = await makeUser();
+    const you = await makeVerifiedUser();
     const ada = await makeUser({ username: "ada" });
     await follow(ada, you);
     await markRead(you);
@@ -214,7 +219,7 @@ describe("following rings the bell (D-168)", () => {
   });
 
   it("rings nothing for a follow that was already there", async () => {
-    const you = await makeUser();
+    const you = await makeVerifiedUser();
     const ada = await makeUser({ username: "ada" });
     await follow(ada, you);
     await markRead(you);

@@ -22,6 +22,7 @@ import {
   makeObservation,
   makeRun,
   makeUser,
+  makeVerifiedUser,
   resetTables,
   NOW,
 } from "./helpers";
@@ -146,7 +147,7 @@ describe("a feed card carries its own entry's detail", () => {
 
   it("counts the usefuls on each entry separately", async () => {
     const userId = await makeUser();
-    const reactor = await makeUser();
+    const reactor = await makeVerifiedUser();
     const popular = await publicEntry({ userId, lat: 43.11 });
     await publicEntry({ userId, lat: 43.12, createdAt: NOW - DAY });
     await db().insert(reactions).values({
@@ -165,7 +166,7 @@ describe("a feed card carries its own entry's detail", () => {
     // Round 22 put Useful on the card, so the card has to start in the
     // right state: marked by this viewer, not by anyone at all.
     const viewer = await makeUser();
-    const other = await makeUser();
+    const other = await makeVerifiedUser();
     const marked = await publicEntry({ userId: viewer, lat: 43.21 });
     const byOther = await publicEntry({
       userId: viewer,

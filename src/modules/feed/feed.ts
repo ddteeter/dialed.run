@@ -35,6 +35,7 @@ import { observationsForRuns } from "./conditions";
 import type { Conditions } from "./conditions";
 import type { EntryRunFields } from "./entries";
 import { followingCount } from "./follows";
+import { countedUsefulOf } from "./reactions";
 import {
   isUnderReviewForAuthor,
   publicPhotoStatus,
@@ -275,7 +276,7 @@ async function hydrateEntries(
   const reactionsQuery = database
     .select({ entryId: reactions.entryId })
     .from(reactions)
-    .where(inArray(reactions.entryId, entryIds));
+    .where(countedUsefulOf(inArray(reactions.entryId, entryIds)));
   // Which of these the viewer has marked, so each card's Useful starts in
   // the right state (round 22). Its own read on the same primary key
   // rather than a column on every reaction row: one row per mark, and

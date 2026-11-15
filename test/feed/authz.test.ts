@@ -93,7 +93,7 @@ describe("authorization", () => {
   });
 
   it("never shows a private entry in a follower's feed", async () => {
-    const author = await makeUser();
+    const author = await makeVerifiedUser();
     const follower = await makeUser();
     await follow(follower, author);
 

@@ -63,7 +63,7 @@ async function postedEntry(): Promise<{
   entryId: string;
   photoKey: string;
 }> {
-  const author = await makeUser();
+  const author = await makeVerifiedUser();
   const runId = await makeRun({ userId: author });
   const entryId = await makeEntry({ userId: author, runId });
   const photoId = newUlid();
@@ -246,12 +246,20 @@ describe("a block (SAF-12)", () => {
       await sightings(second.author, first.entryId, first.photoKey),
     ).toEqual(UNSEEN);
 
+    // The block ended the pair's follows (SA-L02), and unblocking
+    // re-follows nobody (W2): the entries are visible again, and leave
+    // the Following feed until someone follows again.
     await unblockRunner(first.author, second.author);
+    const unfollowed = { ...SEEN, inFeed: false };
     expect(
       await sightings(first.author, second.entryId, second.photoKey),
-    ).toEqual(SEEN);
+    ).toEqual(unfollowed);
     expect(
       await sightings(second.author, first.entryId, first.photoKey),
+    ).toEqual(unfollowed);
+    await follow(first.author, second.author);
+    expect(
+      await sightings(first.author, second.entryId, second.photoKey),
     ).toEqual(SEEN);
   });
 

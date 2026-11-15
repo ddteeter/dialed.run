@@ -13,7 +13,13 @@ import { entryDetailForViewer } from "../../src/modules/feed/entries";
 import { publicKitRead } from "../../src/modules/feed/public-kit";
 import { publicProfileRead } from "../../src/modules/feed/public-profile";
 import { core, expectFlat, locatedEntry, measured } from "./feed-scaling";
-import { addAccount, makeItem, makeUser, NOW } from "./helpers";
+import {
+  addAccount,
+  makeItem,
+  makeUser,
+  makeVerifiedUser,
+  NOW,
+} from "./helpers";
 import { observationWalk, seedObservation } from "./scaling-fixture";
 
 /**
@@ -119,7 +125,7 @@ async function seedEntryDetail(size: number) {
       .values({ entryId, tag: `tag-${String(index)}` });
     await core()
       .insert(reactions)
-      .values({ entryId, userId: newUlid(), createdAt: NOW });
+      .values({ entryId, userId: await makeVerifiedUser(), createdAt: NOW });
   }
   // The author reading their own: flags, effort and every photo.
   return () => entryDetailForViewer(entryId, author);

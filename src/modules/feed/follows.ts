@@ -5,12 +5,13 @@
  */
 import { and, eq } from "drizzle-orm";
 
-import { follows } from "../../db/schema-core";
+import { follows, userProfiles } from "../../db/schema-core";
 import { coreDb } from "../../env";
 import { hasRowWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
 import { countWhere } from "./count-where";
 import { ringFollowQuietly } from "./follow-notices";
+import { runnerVisibleToViewer } from "./runner-visibility";
 
 function db() {
   return coreDb();
@@ -21,6 +22,17 @@ export async function follow(
   followeeId: string,
 ): Promise<void> {
   if (followerId === followeeId) return; // no self-follow, silently ignored
+  // SA-L02: only a runner the follower may see, by H's own rule, can be
+  // followed; anyone else is ignored as silently as a self-follow, so the
+  // answer says nothing about who is there. `verifiedUserId` has pinned
+  // this request to the primary, so the check reads what the write will.
+  const isVisible = await hasRowWhere(
+    db(),
+    userProfiles,
+    userProfiles.userId,
+    and(eq(userProfiles.userId, followeeId), runnerVisibleToViewer(followerId)),
+  );
+  if (!isVisible) return;
   const inserted = await db()
     .insert(follows)
     .values({

@@ -54,7 +54,7 @@ import { observationsForEntries, observationsForRuns } from "./conditions";
 import { entryHalfStatement } from "./run-conditions-entry";
 import { judgedFeelsLikeC } from "./judged-conditions";
 import { recentOwnEntries } from "./own-history";
-import { hasReacted, usefulCount } from "./reactions";
+import { countedUsefulOf, hasReacted, usefulCount } from "./reactions";
 import { audienceAsChosen, defaultAudienceFor } from "./share-default";
 import { nowSeconds } from "../../lib/now";
 
@@ -738,7 +738,7 @@ export async function getEntryDetail(
   const usefulRows = await database
     .select({ userId: reactions.userId })
     .from(reactions)
-    .where(eq(reactions.entryId, entryId));
+    .where(countedUsefulOf(eq(reactions.entryId, entryId)));
 
   const observations = await observationsForRuns([run]);
 

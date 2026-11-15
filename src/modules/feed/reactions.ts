@@ -3,13 +3,14 @@
  * the packet is explicit that the count query is cheap and correct at
  * MVP scale.
  */
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, sql, type SQL } from "drizzle-orm";
 
-import { outfitEntries, reactions } from "../../db/schema-core";
+import { outfitEntries, reactions, userProfiles } from "../../db/schema-core";
 import { coreDb } from "../../env";
 import { hasRowWhere } from "../../lib/sql/keyed-read";
 import { countOf, countWhere } from "./count-where";
 import { entryVisibleTo } from "../safety";
+import { runnerInStanding } from "./runner-visibility";
 import { nowSeconds } from "../../lib/now";
 
 function db() {
@@ -80,11 +81,15 @@ export async function setUsefulReaction(
   isUseful: boolean,
 ): Promise<UsefulOutcome> {
   const database = db();
-  await assertVisible(entryId, userId);
+  // Taking a mark back always works (SA-L02, owner 2026-11-15): it tells
+  // the runner nothing the mark they made did not, and a block made after
+  // marking must not leave their mark stuck on the author's kit.
+  if (isUseful) await assertVisible(entryId, userId);
   const mine = and(
     eq(reactions.entryId, entryId),
     eq(reactions.userId, userId),
   );
+  const counted = countedUsefulOf(eq(reactions.entryId, entryId));
   const write = isUseful
     ? database
         .insert(reactions)
@@ -93,10 +98,7 @@ export async function setUsefulReaction(
     : database.delete(reactions).where(mine);
   const [, all, own] = await database.batch([
     write,
-    database
-      .select({ n: count() })
-      .from(reactions)
-      .where(eq(reactions.entryId, entryId)),
+    database.select({ n: count() }).from(reactions).where(counted),
     database.select({ n: count() }).from(reactions).where(mine),
   ]);
   return { status: "set", useful: countOf(own) > 0, count: countOf(all) };
@@ -115,5 +117,24 @@ export async function hasReacted(
 }
 
 export async function usefulCount(entryId: string): Promise<number> {
-  return countWhere(db(), reactions, eq(reactions.entryId, entryId));
+  return countWhere(
+    db(),
+    reactions,
+    countedUsefulOf(eq(reactions.entryId, entryId)),
+  );
+}
+
+/**
+ * SA-L02: the marks a Useful count counts — `which`, made by a runner in
+ * standing (`runnerInStanding`: not banned, not leaving, not a system
+ * account, confirmed). A ban moves the count, as the contract says of
+ * every number everyone reads; a block does not, because a count that
+ * differed per viewer would say who blocked whom. Every read of the count
+ * goes through this, so they cannot disagree.
+ */
+export function countedUsefulOf(which: SQL | undefined): SQL | undefined {
+  return and(
+    which,
+    sql`exists (select 1 from ${userProfiles} where ${userProfiles.userId} = ${reactions.userId} and ${runnerInStanding()})`,
+  );
 }
