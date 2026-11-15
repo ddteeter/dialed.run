@@ -11,18 +11,16 @@ end of banner
 navigation, Desk
 list
 listitem, level 1, position 1, set size 7
-link, :when # gave up
+link, :when #
 :when
 #
-gave up
-end of link, :when # gave up
+end of link, :when #
 end of listitem, level 1, position 1, set size 7
 listitem, level 1, position 2, set size 7
-link, Review # waiting, current page
+link, Review #, current page
 Review
 #
-waiting
-end of link, Review # waiting, current page
+end of link, Review #, current page
 end of listitem, level 1, position 2, set size 7
 listitem, level 1, position 3, set size 7
 link, Corrections
@@ -51,7 +49,8 @@ end of link, Runners
 end of listitem, level 1, position 7, set size 7
 end of list
 Screening · Holding
-Last digest · #:#
+Last digest
+#:#
 end of navigation, Desk
 main
 heading, Review, level 1

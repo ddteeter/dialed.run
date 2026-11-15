@@ -1,4 +1,3 @@
-import type { MatcherFunction } from "@testing-library/react";
 import {
   fireEvent,
   render,
@@ -15,20 +14,8 @@ import type {
   QueueRow,
   ResolveOutcome,
 } from "../../src/modules/safety/review";
-import { bracketed } from "../ui/bracketed";
+import { bracketed, sourceTag } from "../ui/bracketed";
 import { carriedSince } from "../ui/carry-spy";
-
-/**
- * A head's source tag as drawn (R58·274): the bracketed words held
- * together by no-break spaces.
- */
-function sourceTag(text: string): MatcherFunction {
-  const drawn = `[${text.replaceAll(" ", "\u{A0}")}]`;
-  return (_content, element) =>
-    element instanceof HTMLElement &&
-    element.dataset.part === "source" &&
-    element.textContent === drawn;
-}
 
 vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
   const { spyOnCarry } = await import("../ui/carry-spy");
