@@ -826,6 +826,9 @@ function MostLikely({
     <div
       data-slot="most-likely"
       data-state="suggestion"
+      // Its own ground in both themes (R58·305, #750): the hi-viz card
+      // does not flip, so That's it stays the ink pill on a dark page.
+      data-ground="paper"
       className="flex flex-col gap-3 rounded-card bg-hi-viz p-4 text-accent-ink"
     >
       <Mono step="xs" id={fromId}>

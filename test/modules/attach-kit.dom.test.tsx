@@ -713,6 +713,8 @@ describe("AttachKit: most likely", () => {
     expect(block).toHaveAttribute("data-state", "suggestion");
     expect(block).toContainElement(card);
     expect(block).toHaveClass("bg-hi-viz");
+    // R58·305: paper in both themes, so That's it is ink on a dark page.
+    expect(block).toHaveAttribute("data-ground", "paper");
     const pieces = within(block)
       .getAllByRole("listitem")
       .map((li) => li.textContent);
