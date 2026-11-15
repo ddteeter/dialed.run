@@ -2,9 +2,10 @@ views {
   dynamic view importStory {
     title 'A run file becomes a run'
 
-    include cf.core with {
-      description 'The imports row is the durable marker'
-    }
+    include
+      cf.core with {
+        description 'The imports row is the durable marker'
+      }
 
     // source: src/modules/runs/imports.ts startImport (the idempotencyKey lookup)
     runner -> cf.app.upload 'uploads a .FIT file, with an idempotency key' {
@@ -42,7 +43,7 @@ views {
       notes '''
         **Timing boundary: the request ends here.** One attempt, no retries inside it.
 
-        The upload screen polls the import's status from now on.
+        The upload screen polls the import\'s status from now on.
       '''
     }
     // source: src/modules/ops/queues.ts handleQueueBatch; wrangler.jsonc queues.consumers (max_retries)
@@ -57,7 +58,7 @@ views {
     // source: src/modules/runs/consumer.ts processImportJob (didClaimImport)
     cf.app.consumer -> cf.core 'claims the row: pending to processing' {
       notes '''
-        **Guard: claim, then work.** The claim is an `UPDATE ... WHERE status IN ('pending', 'processing')`.
+        **Guard: claim, then work.** The claim is an `UPDATE ... WHERE status IN (\'pending\', \'processing\')`.
 
         A redelivery of an import that is already `done`, `failed` or `duplicate` claims nothing and stops here.
       '''
@@ -77,7 +78,7 @@ views {
     // source: src/modules/runs/consumer.ts processImportJob (the injected weather attach)
     cf.app.consumer -> cf.app.weather 'asks for the conditions' {
       notes '''
-        **Degrade, don't fail.** One attempt. The import is already `done`.
+        **Degrade, don\'t fail.** One attempt. The import is already `done`.
 
         **If it fails:** the run stays `pending` on its weather and the hourly cron picks it up.
       '''
@@ -88,9 +89,10 @@ views {
   dynamic view importRecovery {
     title 'When a step is lost'
 
-    include cf.core with {
-      description 'The imports row is the durable marker'
-    }
+    include
+      cf.core with {
+        description 'The imports row is the durable marker'
+      }
 
     try {
       // source: src/modules/runs/imports.ts startImport (queue.send); src/modules/ops/scheduled.ts redispatchStalledImports
@@ -147,7 +149,7 @@ views {
         notes '''
           **The marker is `runs.weather_status = pending`.** The hourly cron re-drives it.
 
-          **It gives up** five hours after the run's last hour settles, and says so on the run.
+          **It gives up** five hours after the run\'s last hour settles, and says so on the run.
         '''
       }
       // source: src/modules/weather/attach.ts

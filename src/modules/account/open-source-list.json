@@ -1198,6 +1198,12 @@
       "project": "https://knip.dev"
     },
     {
+      "name": "likec4",
+      "version": "1.61.0",
+      "licence": "MIT",
+      "project": "https://likec4.dev"
+    },
+    {
       "name": "lockfile-lint",
       "version": "5.1.0",
       "licence": "Apache-2.0",

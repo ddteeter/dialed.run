@@ -2,17 +2,19 @@ views {
   dynamic view enrichmentStory {
     title 'A product link becomes the product\'s specs'
 
-    include runner with {
-      description 'Saves a garment with a product link'
-    }
-    include cf.core with {
-      description 'The products row is the durable marker'
-    }
+    include
+      runner with {
+        description 'Saves a garment with a product link'
+      }
+    include
+      cf.core with {
+        description 'The products row is the durable marker'
+      }
 
     // source: src/modules/closet/functions.ts createItemFn, updateItemFn (withResolvedProduct, then createItem with data.idempotencyKey)
     runner -> cf.app.saveGarment 'saves a garment with a brand, a model and a product link' {
       notes '''
-        **Guard: the garment's idempotency key, on a create.** A repeat of the save also asks for enrichment again, which the claim below turns into nothing.
+        **Guard: the garment\'s idempotency key, on a create.** A repeat of the save also asks for enrichment again, which the claim below turns into nothing.
       '''
     }
     // source: src/modules/products/service.ts resolveProduct, createOrGetProduct (onConflictDoUpdate, coalesce on source_url)
@@ -24,7 +26,7 @@ views {
     // source: src/modules/closet/service.ts productLinkFor; src/modules/enrichment/enqueue.ts enqueueEnrichment
     cf.app.saveGarment -> cf.app.enrichRequest 'asks for enrichment' {
       notes '''
-        **Degrade, don't fail.** This never throws. A failed claim or a failed send is reported and swallowed, and the garment still saves.
+        **Degrade, don\'t fail.** This never throws. A failed claim or a failed send is reported and swallowed, and the garment still saves.
 
         It runs before the garment row is written, so a save that then fails has still asked. The product is shared, so the work is not wasted.
       '''
@@ -79,7 +81,7 @@ views {
     // source: src/modules/enrichment/consume.ts extractFrom; src/modules/products/apply-extraction.ts applyExtraction (the ledger guard, ExtractionConflictError)
     cf.app.enrichConsumer -> cf.core 'writes the specs back: pending to done' {
       notes '''
-        **Guard: the ledger.** The update only lands if the product's extraction ledger is the one this job read. A job that lost the race throws, and its retry starts from the stored page.
+        **Guard: the ledger.** The update only lands if the product\'s extraction ledger is the one this job read. A job that lost the race throws, and its retry starts from the stored page.
 
         **What a runner entered is the floor.** Enrichment fills a field only where nobody else has written it.
       '''
@@ -89,9 +91,10 @@ views {
   dynamic view enrichmentExtraction {
     title 'The page is fetched, kept and read'
 
-    include cf.core with {
-      description 'The products row is the durable marker'
-    }
+    include
+      cf.core with {
+        description 'The products row is the durable marker'
+      }
 
     // source: src/modules/enrichment/fetch-page.ts fetchProductPage (TIMEOUT_MS, MAX_REDIRECTS, assertFetchable); src/modules/enrichment/bounds.ts MAX_BYTES
     cf.app.enrichConsumer -> shop 'fetches the page, one hop at a time' {
@@ -105,14 +108,14 @@ views {
       // source: src/modules/enrichment/fetch-page.ts refused (REFUSALS); src/modules/enrichment/firecrawl.ts scrapeThroughProxy (PROXY_TIMEOUT_MS)
       cf.app.enrichConsumer -> firecrawl 'fetches the page through the proxy' {
         notes '''
-          **Degrade, don't fail.** With no key, a refused page is a failed fetch. The proxy call has 30 seconds.
+          **Degrade, don\'t fail.** With no key, a refused page is a failed fetch. The proxy call has 30 seconds.
         '''
       }
     }
     // source: src/modules/enrichment/consume.ts fetchAndExtract (isLandingDenied, dropDeniedSource); src/modules/ops/queues.ts enrichmentDeps
     cf.app.enrichConsumer -> cf.core 'checks where the page landed against the denylist' {
       notes '''
-        **If the landing is denied:** nothing from the page is kept. The product lets go of the link and goes back to `none`, so the next runner's link can ask again.
+        **If the landing is denied:** nothing from the page is kept. The product lets go of the link and goes back to `none`, so the next runner\'s link can ask again.
       '''
     }
     // source: src/modules/enrichment/snapshot.ts putSnapshot
@@ -146,9 +149,10 @@ views {
   dynamic view enrichmentRecovery {
     title 'When an enrichment step is lost'
 
-    include cf.core with {
-      description 'The products row is the durable marker'
-    }
+    include
+      cf.core with {
+        description 'The products row is the durable marker'
+      }
 
     try {
       // source: src/modules/enrichment/request.ts requestEnrichment (queue.send)

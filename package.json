@@ -50,7 +50,10 @@
     "pretest": "npm run stage:mediapipe",
     "worktrees:prune": "sh scripts/worktrees-prune.sh",
     "generate:grafana": "tsx scripts/grafana-vitals.ts",
-    "track": "tsx scripts/track.ts"
+    "track": "tsx scripts/track.ts",
+    "diagrams": "likec4 start docs/diagrams",
+    "diagrams:check": "likec4 validate --max-warnings 0 docs/diagrams && likec4 format --check docs/diagrams",
+    "diagrams:format": "likec4 format docs/diagrams"
   },
   "dependencies": {
     "@cf-wasm/og": "^0.5.0",
@@ -130,6 +133,7 @@
     "guardrails-core": "https://github.com/ddteeter/agentic-guardrails-scaffolding/releases/download/v0.14.2/guardrails-core-0.14.2.tgz",
     "happy-dom": "^21.0.4",
     "knip": "^6.44.2",
+    "likec4": "1.61.0",
     "lockfile-lint": "5.1.0",
     "monocart-coverage-reports": "^3.2.1",
     "normalize-package-data": "^9.0.0",

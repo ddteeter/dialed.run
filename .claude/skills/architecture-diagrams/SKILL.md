@@ -123,11 +123,13 @@ to the view it belongs in, render it, and look.
 
 ## The loop
 
-Run these from `docs/diagrams/`. Until `likec4` is a dev dependency, use
-`npx -y likec4@1.61.0` wherever a command says `likec4`.
+`likec4` is a dev dependency, pinned exactly. Run the `npx likec4`
+commands from `docs/diagrams/`; the npm scripts run from the repo root.
 
-1. `likec4 validate --max-warnings 0 .` It must print `Valid`.
-2. `likec4 export png -o <scratchpad>/png .` and, for the recovery view,
+1. `npm run diagrams:check`: it validates with no warnings and checks the
+   formatting. `npm run diagrams:format` fixes the formatting (it escapes
+   `'` inside `'''` notes as `\'`; the rendered note is unchanged).
+2. `npx likec4 export png -o <scratchpad>/png .` and, for the recovery view,
    again with `--seq`. Open the PNGs and read them: a label that wraps
    badly, a step in the wrong order and an arrow of the wrong kind only
    show here.
