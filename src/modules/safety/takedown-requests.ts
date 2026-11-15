@@ -53,6 +53,7 @@ import {
   filedSubjectOf,
   requestSubjectOf,
   requestSubjectsOf,
+  subjectPhotoKeysOf,
 } from "./request-subject";
 import type { OweEmail } from "./reports";
 import { ipKey, requesterKey } from "./requester-key";
@@ -534,6 +535,11 @@ export interface PendingTakedownRequest {
    * fingerprint (D-142, design 146); `undefined` when the link is not ours.
    */
   readonly photoMatches?: PhotoMatches | undefined;
+  /**
+   * The stored key of the photo the request names, for its tile on the
+   * row (SA-M24); `undefined` for a kit, a link not ours, or a photo gone.
+   */
+  readonly subjectPhotoKey: string | undefined;
 }
 
 /**
@@ -557,6 +563,7 @@ export async function pendingTakedownRequests(
   const keyOf = (row: (typeof rows)[number]) =>
     row.requesterKey ?? requesterKey(row.requesterEmail);
   const subjects = await requestSubjectsOf(db, rows);
+  const photoKeys = await subjectPhotoKeysOf(db, subjects);
   const listed = rows.map((row, index) => ({ row, subject: subjects[index] }));
   const others = await otherPhotosOf(
     db,
@@ -578,6 +585,7 @@ export async function pendingTakedownRequests(
       subject && others.get(`${subject.subjectType}:${subject.subjectId}`),
     photoMatches:
       subject && matches.get(`${subject.subjectType}:${subject.subjectId}`),
+    subjectPhotoKey: subject && photoKeys.get(subject.subjectId),
     createdAt: row.createdAt,
     dueAt: row.dueAt,
     due: removalDueLabel(row.dueAt, now),

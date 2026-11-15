@@ -7,9 +7,10 @@
  * **Resolved once, at filing, and recorded.** Holding the photo deletes
  * its copy and the row naming it, so the key names nothing by the time an
  * operator decides. Every later reading — the confirm, Review, the
- * decision, a Decline's give-back, block-and-decline — takes the link's
- * path first, as before, and otherwise the subject filing recorded on the
- * request. An unknown key names nothing, as an unknown path does.
+ * decision, a Decline's give-back, block-and-decline — takes the photo
+ * filing recorded on the request first, with the kit it is on, and
+ * otherwise the link's path. An unknown key names nothing, as an unknown
+ * path does.
  */
 import { eq, inArray } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
@@ -65,11 +66,13 @@ export type FiledRequest = Pick<
 >;
 
 /**
- * Each request's subject, in order: its link's path, else the photo filing
- * recorded on it (a public copy's URL is the only link resolved by more
- * than its path), read with its kit by the requests' own ids, an `IN` list
- * at a time. A recorded subject that is no photo, or a photo gone since,
- * joins no row and names nothing.
+ * Each request's subject, in order: the photo filing recorded on it, read
+ * with the kit it is really on, else its link's path. The recorded photo
+ * comes first (SA-M24): a photo's path names a kit as well, and that kit
+ * is only the link's word for it. A recorded subject that is no photo, or
+ * a photo gone since, joins no row, and the path answers as it did when
+ * the request was filed. Read by the requests' own ids, an `IN` list at a
+ * time.
  */
 export async function requestSubjectsOf(
   db: Db,
@@ -81,7 +84,7 @@ export async function requestSubjectsOf(
   );
   return filed.map(
     (request) =>
-      takedownSubjectOf(request.location) ?? recorded.get(request.id),
+      recorded.get(request.id) ?? takedownSubjectOf(request.location),
   );
 }
 
@@ -121,4 +124,24 @@ export async function requestSubjectOf(
 ): Promise<TakedownSubject | undefined> {
   const [subject] = await requestSubjectsOf(db, [request]);
   return subject;
+}
+
+/**
+ * The stored key of each photo subject still there, by photo id: what
+ * Review draws the named photo from (SA-M24), an `IN` list at a time.
+ */
+export async function subjectPhotoKeysOf(
+  db: Db,
+  subjects: readonly (TakedownSubject | undefined)[],
+): Promise<Map<string, string>> {
+  // Every subject's id, a kit's too: a kit's id is no photo's, so it
+  // finds nothing, and a filter on the type would be a second rule.
+  const photoIds = subjects.flatMap((subject) => subject?.subjectId ?? []);
+  const rows = await readInChunks(photoIds, (chunk) =>
+    db
+      .select({ id: entryPhotos.id, photoKey: entryPhotos.photoKey })
+      .from(entryPhotos)
+      .where(inArray(entryPhotos.id, chunk)),
+  );
+  return new Map(rows.map((row) => [row.id, row.photoKey]));
 }

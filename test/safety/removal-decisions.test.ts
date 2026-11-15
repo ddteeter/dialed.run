@@ -17,7 +17,10 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
 import { decideRemovalRequest } from "../../src/modules/feed/removal-requests";
-import { fileTakedownRequest } from "../../src/modules/safety";
+import {
+  fileTakedownRequest,
+  pendingTakedownRequests,
+} from "../../src/modules/safety";
 import { HIDDEN_NOTICE } from "../../src/modules/safety/notice-copy";
 import { noPurge } from "../purge-spy";
 import { oweInCore } from "../queue-fakes";
@@ -347,6 +350,49 @@ const entryLink = (entryId: string) =>
   `https://dialed.run/feed/entry/${entryId}`;
 const photoLink = (entryId: string, photoId: string) =>
   `https://dialed.run/feed/photo/entries/u/${entryId}/${photoId}`;
+
+describe("the kit Review sends the operator to (SA-M24)", () => {
+  it("is the kit a named photo is on, not the kit its link names", async () => {
+    const kitB = await sharedEntry();
+    const photoId = await photoOn(kitB, "pass");
+    const kitA = await sharedEntry();
+    await file(photoLink(kitA, photoId));
+
+    const [request] = await pendingTakedownRequests(core(), NOW);
+    expect(request?.subject).toStrictEqual({
+      subjectType: "photo",
+      subjectId: photoId,
+      entryId: kitB,
+    });
+    expect(request?.subjectPhotoKey).toBe(`entries/u/${kitB}/${photoId}`);
+  });
+
+  it("is the link's kit for a kit, and for a photo gone since", async () => {
+    const kit = await sharedEntry();
+    await file(entryLink(kit));
+    const gone = await sharedEntry();
+    const photoId = await photoOn(gone, "pass");
+    await file(photoLink(gone, photoId));
+    await core().delete(entryPhotos).where(eq(entryPhotos.id, photoId));
+
+    const listed = await pendingTakedownRequests(core(), NOW);
+    const subjects = listed.map((request) => request.subject);
+    expect(listed.map((request) => request.subjectPhotoKey)).toStrictEqual([
+      undefined,
+      undefined,
+    ]);
+    expect(subjects).toContainEqual({
+      subjectType: "entry",
+      subjectId: kit,
+      entryId: kit,
+    });
+    expect(subjects).toContainEqual({
+      subjectType: "photo",
+      subjectId: photoId,
+      entryId: gone,
+    });
+  });
+});
 
 describe("the hold a request puts on what it names", () => {
   it("hides a public kit at once, and a Decline gives it back", async () => {

@@ -305,6 +305,7 @@ describe("on Review's rows", () => {
       holdState: "held",
       relatedIds: [],
       otherPhotos: { photos: [], total: 0, handle: undefined },
+      subjectPhotoKey: undefined,
       photoMatches: found,
     };
     await renderWithRouter(
@@ -780,6 +781,7 @@ describe("a garment match's takedown", () => {
       holdState: "held",
       relatedIds: [],
       otherPhotos: { photos: [], total: 0, handle: undefined },
+      subjectPhotoKey: undefined,
       photoMatches: matches,
     };
     await renderWithRouter(

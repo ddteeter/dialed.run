@@ -376,6 +376,7 @@ function pending(
     holdState: "held",
     relatedIds: [],
     otherPhotos: { photos: [], total: 0, handle: undefined },
+    subjectPhotoKey: undefined,
     ...overrides,
   };
 }
@@ -385,6 +386,32 @@ type DecideFn = Parameters<typeof RemovalRequests>[0]["decide"];
 type BlockFn = Parameters<typeof RemovalRequests>[0]["block"];
 
 describe("Review · removal requests", () => {
+  it("draws the photo a request names, served as the Desk's tiles are (SA-M24)", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        asOf={0}
+        requests={[pending({ subjectPhotoKey: "entries/u/k/p" })]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    const tile = screen.getByRole("img", { name: "Requested" });
+    expect(tile).toHaveAttribute("src", "/desk/review-photo/entries/u/k/p");
+    expect(tile).toHaveAttribute("data-part", "subject-photo");
+  });
+
+  it("draws no tile when the request names no photo (SA-M24)", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        asOf={0}
+        requests={[pending()]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    expect(screen.queryByRole("img", { name: "Requested" })).toBeNull();
+  });
+
   it("names the subject, then the clock right, who signed, what they said, and opens the kit (round 35 #58e)", async () => {
     await renderWithRouter(
       <RemovalRequests

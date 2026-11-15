@@ -190,6 +190,7 @@ describe("on Review's rows", () => {
       holdState: "held",
       relatedIds: [],
       otherPhotos: others(PHOTOS.slice(0, 1)),
+      subjectPhotoKey: undefined,
     };
     await renderWithRouter(
       <RemovalRequests
