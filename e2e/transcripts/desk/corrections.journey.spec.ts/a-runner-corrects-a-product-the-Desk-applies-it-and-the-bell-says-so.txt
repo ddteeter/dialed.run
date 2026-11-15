@@ -51,18 +51,9 @@ end of button, Wrong?
 paragraph
 lightweight
 end of paragraph
-link, Edit Janji AFO Middle Layer #
-Edit
-Janji AFO Middle Layer #
-end of link, Edit Janji AFO Middle Layer #
-button, Retire Janji AFO Middle Layer #
-Retire
-Janji AFO Middle Layer #
-end of button, Retire Janji AFO Middle Layer #
-button, Delete Janji AFO Middle Layer #
-Delete
-Janji AFO Middle Layer #
-end of button, Delete Janji AFO Middle Layer #
+link, Edit, Janji AFO Middle Layer #
+button, Retire, Janji AFO Middle Layer #
+button, Delete, Janji AFO Middle Layer #
 end of main
 status
 end of document

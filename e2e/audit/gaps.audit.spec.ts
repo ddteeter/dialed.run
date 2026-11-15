@@ -568,7 +568,7 @@ test("06 garmin: the picker, then the parsed card", async ({ page }) => {
     const picker = page.getByRole("region", {
       name: "IMPORT FROM GARMIN · LAST 10",
     });
-    const imports = picker.getByRole("button", { name: /^Import /u });
+    const imports = picker.getByRole("button", { name: "Import", exact: true });
     await expect(imports.first()).toBeVisible({ timeout: 20_000 });
     await shoot(page, "garmin picker");
     await imports.first().click();
@@ -579,7 +579,7 @@ test("06 garmin: the picker, then the parsed card", async ({ page }) => {
     await see(page, "/runs/new", "imported");
     await attempt("garmin picker with one imported", async () => {
       await expect(
-        page.getByRole("link", { name: /^Imported: open /u }),
+        page.getByRole("link", { name: "Imported", exact: true }),
       ).toHaveCount(1, { timeout: 20_000 });
       await shoot(page, "garmin picker, one imported");
     });

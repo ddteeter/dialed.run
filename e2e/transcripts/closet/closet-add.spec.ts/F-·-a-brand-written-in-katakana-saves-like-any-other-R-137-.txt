@@ -37,18 +37,9 @@ end of paragraph
 button, Wrong?
 Wrong?
 end of button, Wrong?
-link, Edit ミズノ ウエーブライダー #
-Edit
-ミズノ ウエーブライダー #
-end of link, Edit ミズノ ウエーブライダー #
-button, Retire ミズノ ウエーブライダー #
-Retire
-ミズノ ウエーブライダー #
-end of button, Retire ミズノ ウエーブライダー #
-button, Delete ミズノ ウエーブライダー #
-Delete
-ミズノ ウエーブライダー #
-end of button, Delete ミズノ ウエーブライダー #
+link, Edit, ミズノ ウエーブライダー #
+button, Retire, ミズノ ウエーブライダー #
+button, Delete, ミズノ ウエーブライダー #
 end of main
 status
 end of document

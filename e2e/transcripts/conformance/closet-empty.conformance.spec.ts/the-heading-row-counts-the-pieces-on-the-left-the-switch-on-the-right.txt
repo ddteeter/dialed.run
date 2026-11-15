@@ -2,8 +2,6 @@ document
 main
 status
 heading, # pieces, level 1
-Show retired (#)
-switch, Show retired (#), checked
 link, Notifications
 paragraph
 #
@@ -29,6 +27,8 @@ Coverage · All
 end of button, Coverage · All, # control, not expanded
 end of listitem, level 1, position 3, set size 3
 end of list
+Retired (#)
+switch, Show retired, checked
 end of navigation, Filter the closet
 list
 listitem, level 1, position 1, set size 3

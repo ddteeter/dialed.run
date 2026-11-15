@@ -90,18 +90,9 @@ end of dialog, What's wrong with it?
 paragraph
 midweight
 end of paragraph
-link, Edit Janji Rain Shell #
-Edit
-Janji Rain Shell #
-end of link, Edit Janji Rain Shell #
-button, Retire Janji Rain Shell #
-Retire
-Janji Rain Shell #
-end of button, Retire Janji Rain Shell #
-button, Delete Janji Rain Shell #
-Delete
-Janji Rain Shell #
-end of button, Delete Janji Rain Shell #
+link, Edit, Janji Rain Shell #
+button, Retire, Janji Rain Shell #
+button, Delete, Janji Rain Shell #
 end of main
 status
 end of document

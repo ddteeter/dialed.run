@@ -21,10 +21,7 @@ Conformance tights
 end of listitem, level 1, position 2, set size 2
 end of list
 button, That’s it
-button, Change the kit
-Change
-the kit
-end of button, Change the kit
+button, Change, Most likely · from #° damp, :day :month #
 region, Or pick from the closet
 heading, Or pick from the closet, level 2
 Or pick from the closet

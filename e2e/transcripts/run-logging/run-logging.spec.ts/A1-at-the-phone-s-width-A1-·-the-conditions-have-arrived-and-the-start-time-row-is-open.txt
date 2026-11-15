@@ -7,9 +7,7 @@ Parsed morning_run.gpx. Weather found.
 end of status
 status
 Parsed · morning_run.gpx
-button, Replace morning_run.gpx
-Replace
-end of button, Replace morning_run.gpx
+button, Replace, Parsed · morning_run.gpx
 paragraph
 #.# mi, # minutes
 end of paragraph

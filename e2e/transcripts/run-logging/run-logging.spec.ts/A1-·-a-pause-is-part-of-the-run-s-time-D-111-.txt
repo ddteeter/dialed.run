@@ -30,9 +30,7 @@ Parsed paused_at_the_light.tcx. Fetching weather.
 end of status
 status
 Parsed · paused_at_the_light.tcx
-button, Replace paused_at_the_light.tcx
-Replace
-end of button, Replace paused_at_the_light.tcx
+button, Replace, Parsed · paused_at_the_light.tcx
 paragraph
 #.# mi, # minutes
 end of paragraph

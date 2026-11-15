@@ -13,12 +13,9 @@ end of status
 Email
 textbox, Email, closet-#@example.com
 Password
+link, Forgot it?
 Password, any-password-at-all
 button, Show, # control
-link, Forgot it? Reset your password
-Forgot it?
-Reset your password
-end of link, Forgot it? Reset your password
 Not signed in
 Our end failed. Try again in a moment.
 button, Try again

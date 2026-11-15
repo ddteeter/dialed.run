@@ -13,12 +13,9 @@ end of status
 Email
 textbox, Email
 Password
+link, Forgot it?
 Password
 button, Show, # control
-link, Forgot it? Reset your password
-Forgot it?
-Reset your password
-end of link, Forgot it? Reset your password
 button, Log in
 Log in
 end of button, Log in

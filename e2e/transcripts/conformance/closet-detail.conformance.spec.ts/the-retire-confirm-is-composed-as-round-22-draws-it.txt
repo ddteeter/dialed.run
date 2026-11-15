@@ -40,18 +40,9 @@ Thin gloves
 , # runs dialed together
 end of listitem, level 1, position 2, set size 2
 end of list
-link, Edit Janji Rover Half-zip
-Edit
-Janji Rover Half-zip
-end of link, Edit Janji Rover Half-zip
-button, Retire Janji Rover Half-zip
-Retire
-Janji Rover Half-zip
-end of button, Retire Janji Rover Half-zip
-button, Delete Janji Rover Half-zip
-Delete
-Janji Rover Half-zip
-end of button, Delete Janji Rover Half-zip
+link, Edit, Janji Rover Half-zip
+button, Retire, Janji Rover Half-zip
+button, Delete, Janji Rover Half-zip
 end of main
 navigation, Main
 list

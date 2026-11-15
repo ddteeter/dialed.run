@@ -30,9 +30,7 @@ Parsed forerunner_six_laps.tcx. Fetching weather.
 end of status
 status
 Parsed · forerunner_six_laps.tcx
-button, Replace forerunner_six_laps.tcx
-Replace
-end of button, Replace forerunner_six_laps.tcx
+button, Replace, Parsed · forerunner_six_laps.tcx
 paragraph
 #.# mi, # minutes # seconds
 end of paragraph
