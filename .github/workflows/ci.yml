@@ -65,6 +65,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Diagrams
+        run: npm run diagrams:check
+
       - name: Test
         run: npm test
 

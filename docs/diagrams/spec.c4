@@ -1,0 +1,70 @@
+specification {
+  element actor {
+    style {
+      shape person
+      color secondary
+    }
+  }
+  element system
+  element external {
+    style {
+      color muted
+    }
+  }
+  element worker
+  // Entry points. The kind says when the code runs, and so how long it
+  // has and who is waiting on it.
+  element inRequest {
+    notation 'Runs in the request: one attempt, someone is waiting'
+    style {
+      color green
+    }
+  }
+  element offQueue {
+    notation 'Runs off a queue: later, at least once'
+    style {
+      color blue
+    }
+  }
+  element onCron {
+    notation 'Runs on a schedule: re-drives what is still owed'
+    style {
+      color amber
+    }
+  }
+  element module {
+    style {
+      shape component
+    }
+  }
+  element database {
+    style {
+      shape storage
+      color slate
+    }
+  }
+  element bucket {
+    style {
+      shape bucket
+      color slate
+    }
+  }
+  element queue {
+    style {
+      shape queue
+      color slate
+    }
+  }
+
+  relationship async {
+    notation 'Crosses a timing boundary: the sender does not wait'
+    line dotted
+    color amber
+    head open
+  }
+  relationship recovery {
+    notation 'A recovery path'
+    line solid
+    color red
+  }
+}

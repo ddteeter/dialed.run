@@ -1,0 +1,12 @@
+views {
+  // What a new element joins is a choice: each view names what it includes.
+  view index {
+    title 'dialed.run: system context'
+    include *
+  }
+
+  view platform of cf {
+    title 'Inside Cloudflare'
+    include *
+  }
+}
