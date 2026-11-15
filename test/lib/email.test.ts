@@ -4,6 +4,7 @@ import {
   emailPayloadSchema,
   emailRecipientSchema,
   emailTemplateSchema,
+  notificationSettingsSchema,
   preferenceFor,
 } from "../../src/lib/contracts/email";
 
@@ -198,3 +199,18 @@ function isReminderAccepted(landedAt: string, runs: number): boolean {
   return emailTemplateSchema.safeParse({ kind: "run_reminder", landedAt, runs })
     .success;
 }
+
+describe("notificationSettingsSchema", () => {
+  it("keeps Run reminders · Email's switch, the one field the save carries", () => {
+    expect(notificationSettingsSchema.parse({ runReminder: false })).toEqual({
+      runReminder: false,
+    });
+  });
+
+  it("refuses a save without the switch, or with something that isn't on or off", () => {
+    expect(notificationSettingsSchema.safeParse({}).success).toBe(false);
+    expect(
+      notificationSettingsSchema.safeParse({ runReminder: "on" }).success,
+    ).toBe(false);
+  });
+});
