@@ -58,13 +58,15 @@ export function NowGoRun({
   return (
     <div className="flex flex-col gap-6">
       {/* The band is the screen's one emphasis (round 49, R49·138b): the
-          full bar and the instruction, and nothing else is hi-viz. At
-          desk it runs the full column; its bar keeps the measure. Below
-          desk it bleeds to both screen edges, flush under the wordmark
-          bar, its words on the page's gutter (#630 F-09). */}
+          full bar and the instruction, and nothing else is hi-viz. Below
+          720 it bleeds to both screen edges, flush under the wordmark
+          bar, its words on the page's gutter (#630 F-09). From 720 it sits
+          in the column with the page's gutter round it. That is one
+          geometry each side of 720, where the step's width changes, not
+          a third between 720 and 1040 (#703 R2-ONB-03). */}
       <div
         data-part="close-band"
-        className="-mx-6 -mt-8 flex flex-col gap-3 bg-failure px-6 pb-6 pt-4 text-accent-ink desk:mx-0 desk:mt-0 desk:px-5"
+        className="-mx-6 -mt-8 flex flex-col gap-3 bg-failure px-6 pb-6 pt-4 text-accent-ink wide:mx-0 wide:mt-0 wide:px-5"
       >
         <Steps />
         <h1 className="m-0 font-display text-display uppercase">Now go run.</h1>
@@ -102,7 +104,7 @@ export function NowGoRun({
 
         {/* R54·167.1: the product's pink caps primary, then "Done for
             now" as its hairline pill; 167.2's width rule for both. */}
-        <div className="flex flex-col gap-3 wide:flex-row">
+        <div className="flex flex-col gap-3 wide:flex-row wide:items-center">
           <Link to="/runs/new" className={`target ${ACTION_PRIMARY}`}>
             I have a run to upload
           </Link>

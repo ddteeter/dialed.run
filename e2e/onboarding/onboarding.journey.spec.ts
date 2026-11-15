@@ -273,20 +273,20 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   await expect(
     page.getByRole("heading", {
       level: 2,
-      name: "Public profile · Saves as you switch",
+      name: "Public profile",
     }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", {
       level: 2,
-      name: "Anonymous totals · Saves as you switch",
+      name: "Anonymous totals",
     }),
   ).toBeVisible();
   // Round 41 #86b: PRIVATE / SHARED, and PUBLIC only once the profile is.
   const newRuns = page.getByRole("group", { name: "Who sees new runs" });
   await expect(newRuns.getByRole("radio", { name: "Shared" })).toBeChecked();
   await expect(newRuns.getByRole("radio")).toHaveCount(2);
-  const totals = page.getByRole("checkbox", {
+  const totals = page.getByRole("switch", {
     name: "Count my runs in anonymous totals",
   });
   await expect(totals).toHaveAccessibleDescription(

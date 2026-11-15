@@ -74,7 +74,7 @@ function switches(
 describe("the PUBLIC PROFILE switches", () => {
   it("are off by default, say so with the runner's own address, and hide Show my closet", () => {
     render(switches());
-    const profile = screen.getByRole("checkbox", { name: "Public profile" });
+    const profile = screen.getByRole("switch", { name: "Public profile" });
     expect(profile).not.toBeChecked();
     expect(profile).toHaveAccessibleDescription(OFF_LINE);
     expect(screen.getByText(OFF_LINE)).toHaveClass(
@@ -82,18 +82,16 @@ describe("the PUBLIC PROFILE switches", () => {
       "text-small",
       "text-muted",
     );
-    expect(
-      screen.queryByRole("checkbox", { name: "Show my closet" }),
-    ).toBeNull();
+    expect(screen.queryByRole("switch", { name: "Show my closet" })).toBeNull();
     expect(screen.queryByText(CLOSET_LINE)).toBeNull();
   });
 
   it("show Show my closet under a public profile, with its line, as saved", () => {
     render(switches({ publicProfile: true, publicCloset: true }));
-    const profile = screen.getByRole("checkbox", { name: "Public profile" });
+    const profile = screen.getByRole("switch", { name: "Public profile" });
     expect(profile).toBeChecked();
     expect(profile).toHaveAccessibleDescription(ON_LINE);
-    const closet = screen.getByRole("checkbox", { name: "Show my closet" });
+    const closet = screen.getByRole("switch", { name: "Show my closet" });
     expect(closet).toBeChecked();
     // Each field by the column it saves.
     expect(profile).toHaveAttribute("name", "publicProfile");
@@ -114,7 +112,7 @@ describe("the PUBLIC PROFILE switches", () => {
   it("take no focus on arrival unless they were just unlocked", () => {
     render(switches());
     expect(
-      screen.getByRole("checkbox", { name: "Public profile" }),
+      screen.getByRole("switch", { name: "Public profile" }),
     ).not.toHaveFocus();
   });
 
@@ -125,20 +123,20 @@ describe("the PUBLIC PROFILE switches", () => {
     const onSaved = vi.fn();
     const { rerender } = render(switches({ save, onSaved }));
 
-    await user.click(screen.getByRole("checkbox", { name: "Public profile" }));
+    await user.click(screen.getByRole("switch", { name: "Public profile" }));
     expect(save).toHaveBeenCalledWith({ data: { publicProfile: true } });
     await waitFor(() => {
       expect(onSaved).toHaveBeenCalledWith(saved);
     });
 
     rerender(switches({ save, onSaved, publicProfile: true }));
-    await user.click(screen.getByRole("checkbox", { name: "Show my closet" }));
+    await user.click(screen.getByRole("switch", { name: "Show my closet" }));
     expect(save).toHaveBeenLastCalledWith({ data: { publicCloset: true } });
 
     rerender(
       switches({ save, onSaved, publicProfile: true, publicCloset: true }),
     );
-    await user.click(screen.getByRole("checkbox", { name: "Public profile" }));
+    await user.click(screen.getByRole("switch", { name: "Public profile" }));
     expect(save).toHaveBeenLastCalledWith({ data: { publicProfile: false } });
   });
 
@@ -147,8 +145,8 @@ describe("the PUBLIC PROFILE switches", () => {
     const pending = Promise.withResolvers<PublicProfileState>();
     const save = vi.fn(() => pending.promise);
     render(switches({ save, publicProfile: true }));
-    const profile = screen.getByRole("checkbox", { name: "Public profile" });
-    const closet = screen.getByRole("checkbox", { name: "Show my closet" });
+    const profile = screen.getByRole("switch", { name: "Public profile" });
+    const closet = screen.getByRole("switch", { name: "Show my closet" });
     expect(profile).not.toHaveAttribute("readonly");
 
     await user.click(closet);
@@ -166,7 +164,7 @@ describe("the PUBLIC PROFILE switches", () => {
     const onSaved = vi.fn();
     const save = vi.fn().mockRejectedValue(new Error("D1"));
     render(switches({ save, onSaved }));
-    const profile = screen.getByRole("checkbox", { name: "Public profile" });
+    const profile = screen.getByRole("switch", { name: "Public profile" });
     await user.click(profile);
     expect(await screen.findByText("Not changed")).toBeVisible();
     expect(profile).not.toBeChecked();
@@ -234,6 +232,75 @@ function rowValues() {
 }
 
 describe("Privacy with the PUBLIC PROFILE group (round 41 #86b)", () => {
+  it("says Saved. in the page's one status region, though NEW RUNS starts again as the profile saves (D-185)", async () => {
+    const user = userEvent.setup();
+    const save = vi
+      .fn()
+      .mockResolvedValue(
+        state({ publicCloset: true, defaultAudience: "runners" }),
+      );
+    await renderWithRouter(privacy(PUBLIC_DEFAULT, save));
+    // One region for the form and both switch groups (rule 08).
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+
+    await user.click(screen.getByRole("switch", { name: "Public profile" }));
+
+    // NEW RUNS is keyed by the profile, so it mounted again here; its
+    // empty first status must not have wiped the switch's.
+    await waitFor(() => {
+      expect(rowValues()).toStrictEqual(["private", "runners"]);
+    });
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(screen.getByRole("status")).toHaveTextContent(/^Saved\.$/u);
+    // A save that landed leaves no failure behind it.
+    expect(screen.queryByText("Not changed")).toBeNull();
+    expect(document.querySelector("[data-part='control-failure']")).toBeNull();
+  });
+
+  it("says the latest of the form's and the switches' outcomes in that one region", async () => {
+    const user = userEvent.setup();
+    const saveTotals = vi
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error("D1 down"));
+    await renderWithRouter(
+      <SettingsSectionPage
+        section="sharing"
+        current={PUBLIC_DEFAULT}
+        isVerified
+        saveUnits={vi.fn()}
+        saveSharing={vi.fn().mockResolvedValue(undefined)}
+        saveCountInTotals={saveTotals}
+        savePublicProfile={vi.fn()}
+        pickUsername={vi.fn()}
+        markPrivacySeen={() => Promise.resolve()}
+      />,
+    );
+    const status = screen.getByRole("status");
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(status).toHaveTextContent(/^Privacy saved\.$/u);
+    });
+
+    const counted = screen.getByRole("switch", {
+      name: "Count my runs in anonymous totals",
+    });
+    await user.click(counted);
+    await waitFor(() => {
+      expect(status).toHaveTextContent(/^Saved\.$/u);
+    });
+    expect(counted).not.toBeChecked();
+
+    await user.click(counted);
+    await waitFor(() => {
+      expect(status).toHaveTextContent(/^Not changed\. Our end failed\.$/u);
+    });
+    expect(counted).not.toBeChecked();
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+  });
+
   it("moves a PUBLIC default to SHARED when the profile goes off, and says so", async () => {
     const user = userEvent.setup();
     const save = vi
@@ -246,17 +313,15 @@ describe("Privacy with the PUBLIC PROFILE group (round 41 #86b)", () => {
     expect(screen.getByRole("radio", { name: "Public" })).toBeChecked();
     expect(screen.queryByText(MOVED)).toBeNull();
 
-    await user.click(screen.getByRole("checkbox", { name: "Public profile" }));
+    await user.click(screen.getByRole("switch", { name: "Public profile" }));
 
     expect(await screen.findByText(MOVED)).toBeVisible();
     expect(rowValues()).toStrictEqual(["private", "runners"]);
     expect(screen.getByRole("radio", { name: "Shared" })).toBeChecked();
     expect(
-      screen.getByRole("checkbox", { name: "Public profile" }),
+      screen.getByRole("switch", { name: "Public profile" }),
     ).not.toBeChecked();
-    expect(
-      screen.queryByRole("checkbox", { name: "Show my closet" }),
-    ).toBeNull();
+    expect(screen.queryByRole("switch", { name: "Show my closet" })).toBeNull();
   });
 
   it("says nothing moved when the default was not PUBLIC", async () => {
@@ -267,7 +332,7 @@ describe("Privacy with the PUBLIC PROFILE group (round 41 #86b)", () => {
     await renderWithRouter(
       privacy({ ...PUBLIC_DEFAULT, defaultAudience: "private" }, save),
     );
-    await user.click(screen.getByRole("checkbox", { name: "Public profile" }));
+    await user.click(screen.getByRole("switch", { name: "Public profile" }));
     await waitFor(() => {
       expect(rowValues()).toStrictEqual(["private", "runners"]);
     });
@@ -284,7 +349,7 @@ describe("Privacy with the PUBLIC PROFILE group (round 41 #86b)", () => {
         state({ publicProfile: true, defaultAudience: "runners" }),
       );
     await renderWithRouter(privacy(PUBLIC_DEFAULT, save));
-    const profile = screen.getByRole("checkbox", { name: "Public profile" });
+    const profile = screen.getByRole("switch", { name: "Public profile" });
 
     await user.click(profile);
     await screen.findByText(MOVED);
@@ -327,7 +392,7 @@ describe("Privacy with the PUBLIC PROFILE group (round 41 #86b)", () => {
       });
     });
 
-    await user.click(screen.getByRole("checkbox", { name: "Public profile" }));
+    await user.click(screen.getByRole("switch", { name: "Public profile" }));
     await waitFor(() => {
       expect(rowValues()).toStrictEqual(["private", "runners", "world"]);
     });
@@ -354,7 +419,7 @@ describe("Privacy with the PUBLIC PROFILE group (round 41 #86b)", () => {
     await user.click(screen.getByRole("button", { name: "Save" }));
     expect(await screen.findByText("Nothing saved")).toBeVisible();
 
-    await user.click(screen.getByRole("checkbox", { name: "Public profile" }));
+    await user.click(screen.getByRole("switch", { name: "Public profile" }));
     await waitFor(() => {
       expect(rowValues()).toStrictEqual(["private", "runners", "world"]);
     });
@@ -364,7 +429,7 @@ describe("Privacy with the PUBLIC PROFILE group (round 41 #86b)", () => {
   it("names the runner's handle in the profile's line", async () => {
     await renderWithRouter(privacy(PUBLIC_DEFAULT, vi.fn()));
     expect(
-      screen.getByRole("checkbox", { name: "Public profile" }),
+      screen.getByRole("switch", { name: "Public profile" }),
     ).toHaveAccessibleDescription(ON_LINE);
   });
 
@@ -378,10 +443,10 @@ describe("Privacy with the PUBLIC PROFILE group (round 41 #86b)", () => {
       }),
     );
     await renderWithRouter(privacy(PUBLIC_DEFAULT, save));
-    await user.click(screen.getByRole("checkbox", { name: "Show my closet" }));
+    await user.click(screen.getByRole("switch", { name: "Show my closet" }));
     await waitFor(() => {
       expect(
-        screen.getByRole("checkbox", { name: "Show my closet" }),
+        screen.getByRole("switch", { name: "Show my closet" }),
       ).not.toBeChecked();
     });
     expect(screen.queryByText(MOVED)).toBeNull();
@@ -397,7 +462,7 @@ describe("Privacy with the PUBLIC PROFILE group (round 41 #86b)", () => {
     await renderWithRouter(
       privacy({ ...PUBLIC_DEFAULT, defaultAudience: "private" }, save),
     );
-    await user.click(screen.getByRole("checkbox", { name: "Public profile" }));
+    await user.click(screen.getByRole("switch", { name: "Public profile" }));
     await waitFor(() => {
       expect(screen.getByRole("radio", { name: "Shared" })).toBeChecked();
     });
@@ -425,7 +490,7 @@ describe("Privacy with the PUBLIC PROFILE group (round 41 #86b)", () => {
       });
     });
 
-    await user.click(screen.getByRole("checkbox", { name: "Public profile" }));
+    await user.click(screen.getByRole("switch", { name: "Public profile" }));
     expect(await screen.findByText(MOVED)).toBeVisible();
   });
 });
@@ -461,7 +526,7 @@ describe("Privacy before the runner has a handle (round 42 #92)", () => {
   it("leaves focus where it is on a page whose runner already has a handle", async () => {
     await renderWithRouter(privacy(PUBLIC_DEFAULT, vi.fn()));
     expect(
-      screen.getByRole("checkbox", { name: "Public profile" }),
+      screen.getByRole("switch", { name: "Public profile" }),
     ).not.toHaveFocus();
   });
 
@@ -473,9 +538,7 @@ describe("Privacy before the runner has a handle (round 42 #92)", () => {
       name: "Public profile",
     });
     const group = kicker.closest("section");
-    expect(
-      screen.queryByRole("checkbox", { name: "Public profile" }),
-    ).toBeNull();
+    expect(screen.queryByRole("switch", { name: "Public profile" })).toBeNull();
     expect(screen.getByText(NO_HANDLE_LINE)).toHaveClass("m-0", "text-body");
     expect(NO_HANDLE_LINE).toBe(
       "A public profile lives at your username. Pick one first.",
@@ -512,7 +575,7 @@ describe("Privacy before the runner has a handle (round 42 #92)", () => {
     );
     await user.click(within(sheet).getByRole("button", { name: "Save" }));
 
-    const profile = await screen.findByRole("checkbox", {
+    const profile = await screen.findByRole("switch", {
       name: "Public profile",
     });
     expect(claim).toHaveBeenCalledExactlyOnceWith({
@@ -525,7 +588,7 @@ describe("Privacy before the runner has a handle (round 42 #92)", () => {
     expect(
       screen.getByRole("heading", {
         level: 2,
-        name: "Public profile · Saves as you switch",
+        name: "Public profile",
       }),
     ).toBeVisible();
     expect(
@@ -582,8 +645,6 @@ describe("Privacy before the runner has a handle (round 42 #92)", () => {
       expect(claim).toHaveBeenCalledOnce();
     });
     expect(sheet).toHaveAttribute("open");
-    expect(
-      screen.queryByRole("checkbox", { name: "Public profile" }),
-    ).toBeNull();
+    expect(screen.queryByRole("switch", { name: "Public profile" })).toBeNull();
   });
 });

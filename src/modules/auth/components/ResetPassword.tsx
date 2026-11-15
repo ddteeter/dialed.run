@@ -4,7 +4,7 @@ import type { JSX } from "react";
 
 import { newPasswordSchema } from "../../../lib/contracts";
 import { FormStatus, useFormSubmit } from "../../../ui";
-import { SignedOutPanel } from "../../../ui/SignedOutPanel";
+import { SignedOutPanel, SignedOutReceipt } from "../../../ui/SignedOutPanel";
 import { NewPasswordField } from "../../../ui/PasswordField";
 import { ShellForm } from "./ShellForm";
 import { ResetLinkExpired } from "../credentials";
@@ -82,7 +82,9 @@ function ResetForm({
 
   if (outcome === "set") {
     return (
-      <SignedOutPanel heading="Password set">
+      // A receipt, so the MONO kicker over the title, as every signed-out
+      // receipt has (R55·181); its word is RESET (R57·258, #676).
+      <SignedOutReceipt kicker="Reset" title="Password set">
         <div data-part="reset-done" className="flex flex-col gap-6">
           <FormStatus>{form.status}</FormStatus>
           <p className="m-0 text-lead">
@@ -92,7 +94,7 @@ function ResetForm({
             Log in
           </Link>
         </div>
-      </SignedOutPanel>
+      </SignedOutReceipt>
     );
   }
 

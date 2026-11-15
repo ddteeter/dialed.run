@@ -22,6 +22,7 @@ import {
   type ClosetSearch,
 } from "../../src/modules/closet/inputs";
 import type { ClosetItemView } from "../../src/modules/closet/service";
+import { BellProvider } from "../../src/ui/PhoneBell";
 import { itemView, listing, wardrobeItem } from "./closet-fixtures";
 
 /**
@@ -187,6 +188,21 @@ describe("ClosetGrid: the empty closet (ruling 16)", () => {
 });
 
 describe("ClosetGrid: the heading row", () => {
+  it("seats the phone's bell for its 16 gutter, so the target ends 12 from the edge (Design 169.1)", async () => {
+    await renderWithRouter(
+      <BellProvider value={<button type="button">Notifications</button>}>
+        <ClosetGrid
+          tempUnit="c"
+          distanceUnit="km"
+          listing={listing([harrier])}
+        />
+      </BellProvider>,
+    );
+    const seat = document.querySelector("[data-slot='notification-bell']");
+    expect(seat).toHaveClass("-mr-1");
+    expect(seat).not.toHaveClass("-mr-3");
+  });
+
   it("counts the pieces the grid is showing", async () => {
     await renderWithRouter(
       <ClosetGrid

@@ -10,7 +10,7 @@ import {
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -100,6 +100,9 @@ describe("X1 · not found", () => {
       "wide:pt-24",
     );
     expect(state()?.parentElement).toHaveClass("mx-auto", "max-w-column");
+    // The column's own 24 inside it from 720, so the body starts where
+    // every other column's does (#697 R2-SHELL-09).
+    expect(state()?.parentElement).toHaveClass("wide:px-6");
     expect(state()?.parentElement?.parentElement).toBe(main);
     const logIn = within(main).getByRole("link", { name: "Log in" });
     expect(logIn).toHaveAttribute("href", "/auth/login");
@@ -127,9 +130,10 @@ describe("X1 · not found", () => {
     );
   });
 
-  it("sits in the panel when nothing is named", async () => {
+  it("takes the column when nothing is named, as every runner screen does at desk (#697 R2-SHELL-09)", async () => {
     await renderAt(<NotFoundState signedIn />);
-    expect(state()?.parentElement).toHaveClass("max-w-panel");
+    expect(state()?.parentElement).toHaveClass("wide:max-w-column");
+    expect(state()?.parentElement).not.toHaveClass("max-w-panel");
   });
 
   it("names a subject: its sentence, its way out, and its screen's column (R55·185)", async () => {
@@ -156,7 +160,7 @@ describe("X1 · not found", () => {
     expect(wayOut).toHaveAttribute("href", "/closet");
     expect(wayOut).toHaveClass("rounded-pill", "border-hairline", "text-ink");
     expect(screen.queryByRole("link", { name: "Go to your feed" })).toBeNull();
-    expect(state()?.parentElement).toHaveClass("max-w-column");
+    expect(state()?.parentElement).toHaveClass("wide:max-w-column");
     expect(state()?.parentElement).not.toHaveClass("max-w-panel");
   });
 
@@ -324,7 +328,7 @@ async function routedApp({
     getParentRoute: () => rootRoute,
     path: "/closet",
     // A page with a name, so a loader's refusal that named it would show.
-    staticData: { savedPage: "Closet", title: "Closet" },
+    staticData: { savedPage: "Closet", title: "Closet", width: "page" },
     loader: () => {
       if (failWith) throw failWith;
     },
@@ -370,7 +374,9 @@ async function routedApp({
   const shell = createRoute({
     getParentRoute: () => rootRoute,
     path: "/shell",
-    staticData: { title: "Shell" },
+    // A width only the layout declares: X2 takes the deepest screen's, not
+    // its parent's.
+    staticData: { title: "Shell", width: "page" },
     loader: () => {
       if (failWith) throw failWith;
     },
@@ -408,6 +414,9 @@ A bell the test can find, standing in for `NotificationBell`.
 */
 const BELL = "the bell";
 const bellIs = () => screen.queryAllByText(BELL);
+const seats = () => [
+  ...document.querySelectorAll<HTMLElement>("[data-slot='bell-seat']"),
+];
 
 describe("X2 keeps the failed screen's first row (R55·186)", () => {
   it("draws its title, then the bell at the row's end, and the band under it", async () => {
@@ -456,7 +465,44 @@ describe("X2 keeps the failed screen's first row (R55·186)", () => {
     });
     await screen.findByText("Our end failed.");
     const row = document.querySelector("[data-part='first-row']");
-    expect(row?.children).toHaveLength(0);
+    // Only the bell's seat, held empty: no bell was wired here.
+    expect(row?.children).toHaveLength(1);
+    expect(row?.querySelector("[data-slot='bell-seat']")).not.toBeNull();
+  });
+
+  it("takes the column of the screen it replaces, and the column when that declares none (#697 R2-SHELL-09)", async () => {
+    await routedApp({
+      signedIn: true,
+      path: "/closet",
+      failWith: new Error("D1 down"),
+    });
+    await screen.findByText("Our end failed. Your closet is fine.");
+    // The closet declares its page measure, so a retry never moves it.
+    expect(state()?.parentElement).toHaveClass("max-w-page");
+    expect(state()?.parentElement).not.toHaveClass("max-w-panel");
+  });
+
+  it("is the column for a failed screen that names no width", async () => {
+    await routedApp({
+      signedIn: true,
+      path: "/untitled",
+      failWith: new Error("D1 down"),
+    });
+    await screen.findByText("Our end failed.");
+    expect(state()?.parentElement).toHaveClass("wide:max-w-column");
+    expect(state()?.parentElement).not.toHaveClass("max-w-panel");
+  });
+
+  it("takes the width of the screen being gone to, not a parent's", async () => {
+    await routedApp({
+      signedIn: true,
+      path: "/shell/inner",
+      failWith: new Error("D1 down"),
+    });
+    await screen.findByText("Our end failed.");
+    // Inner declares none, so the column, though Shell declares the page.
+    expect(state()?.parentElement).toHaveClass("wide:max-w-column");
+    expect(state()?.parentElement).not.toHaveClass("max-w-page");
   });
 
   it("keeps the title of the screen being gone to, whichever loader on the way failed", async () => {
@@ -688,6 +734,32 @@ describe("the system states' bell (PR #104)", () => {
     expect(tabBar()).not.toBeNull();
     expect(bellIs()).toEqual([]);
     expect(document.querySelector("[data-part='failure-band']")).toBeNull();
+    // The seat stays, so the bar's slot keeps its shape (#697 R2-SHELL-06).
+    expect(seats().length).toBeGreaterThan(0);
+  });
+
+  it("holds the bell's 44 seat, in the bar and the first row, until the bell lands (#697 R2-SHELL-06)", async () => {
+    const counts = Promise.withResolvers<ReactNode>();
+    const loadBell = vi.fn<LoadBell>(() => counts.promise);
+    await routedApp({ signedIn: true, path: "/nowhere", loadBell });
+    await screen.findByText("Nothing here");
+
+    // Both seats: the desk bar's slot and the phone row's end.
+    expect(seats()).toHaveLength(2);
+    for (const seat of seats()) {
+      expect(seat).toHaveClass("block", "size-11");
+      expect(seat).toHaveAttribute("aria-hidden", "true");
+      expect(seat).toBeEmptyDOMElement();
+    }
+    expect(
+      document.querySelector("[data-slot='top-bar'] [data-slot='bell-seat']"),
+    ).not.toBeNull();
+
+    counts.resolve(<span>{BELL}</span>);
+    await waitFor(() => {
+      expect(bellIs().length).toBeGreaterThan(0);
+    });
+    expect(seats()).toEqual([]);
   });
 
   it("asks once the page learns it is signed in, not only on its first render", async () => {

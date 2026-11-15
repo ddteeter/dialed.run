@@ -22,37 +22,44 @@ import { useHydrated } from "./use-hydrated";
  */
 /**
  * The runner app's one column at width (Round 54 · 168.1): MEASURE.column,
- * **centred** in the window from 720 up, the phone's own full width below
- * it, where the viewport is narrower than the measure and `mx-auto` does
- * nothing. It replaces DS3's "left-aligned inside the page measure", and
- * the 390 panel that run detail, edit garment, notifications and the Call
- * wore at width.
+ * **centred** in the window from 720 up, and the phone's own full width
+ * below it. The cap starts at 720, not at the measure: DS4 has a phone
+ * screen fluid from 320 to 719 ("nothing pins a width"), so a 620–719
+ * window fills, and a full-bleed header (the Call's, P3's band) reaches
+ * both edges there as on a 390 phone (#703 R2-ONB-03). It replaces DS3's
+ * "left-aligned inside the page measure", and the 390 panel that run
+ * detail, edit garment, notifications and the Call wore at width.
  *
  * Exported because a screen that draws its own column (the feed's, a
  * garment's) is the same column, and a second copy of the class is how
  * the left-aligned one survived on half of them.
  */
-export const COLUMN = "mx-auto w-full max-w-column";
+export const COLUMN = "mx-auto w-full wide:max-w-column";
 
 /**
  * **`column`** is every signed-in screen. **`panel`** is *"the phone
  * screen, unchanged, centred at 390"* at every width, and is left for the
- * system states and signed-out screens 168.1 does not name.
+ * root crash and signed-out screens 168.1 does not name. **`page`** is the
+ * closet list's MEASURE.page, for a system state that replaces it
+ * (R55·185).
  */
-type PageWidth = "panel" | "column" | "step" | "close" | "table";
+type PageWidth = "panel" | "column" | "page" | "step" | "close" | "table";
 
 /**
- * An onboarding step: the panel on a phone, and from 720 the centred
- * column every other screen is (168.1). A guess until Design answers #654:
- * R49·138a's desk step was left-aligned and predates the rule. P3's close
- * is the same width, with its band held to the column (`NowGoRun`); the
- * two stay separate names because #654 may part them again.
+ * An onboarding step: the phone's own width below 720, fluid as DS4 has
+ * every phone screen ("nothing pins a width"), and from 720 the centred
+ * column every other screen is (168.1; R56·245 withdrew 138a's 390 panel).
+ * So a step on a 430 phone starts on the wordmark's gutter, not 20 inside
+ * it (#703 R2-ONB-03). P3's close is the same width, with its band held to
+ * the column (`NowGoRun`); the two stay separate names because #654 may
+ * part them again.
  */
-const STEP = "mx-auto max-w-panel wide:max-w-column";
+const STEP = COLUMN;
 
 const WIDTH_CLASS: Readonly<Record<PageWidth, string>> = {
   panel: "mx-auto max-w-panel",
   column: COLUMN,
+  page: "mx-auto w-full max-w-page",
   step: STEP,
   close: STEP,
   // The Desk's tables, Runners, Codes and Review (Round 54 · 168.3): the

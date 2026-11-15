@@ -8,6 +8,6 @@ import { COLUMN } from "../../src/ui";
  * rendered screen, so a wrapper that lost its classes fails here.
  */
 export function expectTheColumn(): void {
-  const column = document.querySelector(".max-w-column");
+  const column = document.querySelector(".wide\\:max-w-column");
   expect(column).toHaveClass(...COLUMN.split(" "), "flex", "flex-col");
 }

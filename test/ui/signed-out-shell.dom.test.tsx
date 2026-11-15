@@ -20,6 +20,7 @@ import { describe, expect, it } from "vitest";
 import { Layout, SignedOutLayout } from "../../src/ui/Layout";
 import { SLOW_ROUTE_MS, activeTabIndex } from "../../src/ui/tabs";
 import { SignedOutFrame } from "../../src/ui/SignedOutFrame";
+import { SignedOutPanel } from "../../src/ui/SignedOutPanel";
 
 /**
  * The signed-out shell (round 21 item 23, round 22 Auth §2) and the slow
@@ -193,6 +194,17 @@ describe("SignedOutLayout", () => {
     expect(landingBar()).not.toBeNull();
     expect(screen.getByText("page")).toHaveClass("max-w-page", "flex-1");
     expect(document.querySelector("[data-part='legal-footer']")).not.toBeNull();
+  });
+});
+
+describe("SignedOutPanel", () => {
+  it("puts the form on the frame's gutter, 20 then 24, as the bar is (#698 R2-AUTH-03)", async () => {
+    await renderAt(<SignedOutPanel heading="Log in">form</SignedOutPanel>);
+    const panel = document.querySelector("[data-part='panel']");
+    expect(panel).toHaveClass("px-5", "wide:px-6", "max-w-panel");
+    expect(panel).not.toHaveClass("px-6");
+    // The bar's own gutter, the edge the panel matches.
+    expect(landingBar()).toHaveClass("px-5", "wide:px-6");
   });
 });
 

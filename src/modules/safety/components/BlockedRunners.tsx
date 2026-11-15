@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { JSX, ReactNode } from "react";
 
 import { monthDayLabel } from "../../../lib/dates";
+import type { ViewerZone } from "../../../lib/dates";
 import {
   Bracketed,
   ControlFailureBand,
@@ -16,6 +17,19 @@ import type { BlockedRunner } from "../blocks";
 import { useSettled } from "./use-settled";
 
 type Unblock = (input: { data: { userId: string } }) => Promise<unknown>;
+
+/**
+What W2 takes: the list, the press, and the clock its days are read on.
+*/
+type BlockedRunnersProps = Readonly<{
+  blocked: readonly BlockedRunner[];
+  unblock: Unblock;
+  /**
+  The runner's home zone, which the blocked day is read in, as every other
+  date is (R57·259d, #677).
+  */
+  viewer: ViewerZone;
+}>;
 
 /**
  * W2 · BLOCKED RUNNERS.
@@ -38,15 +52,9 @@ type Unblock = (input: { data: { userId: string } }) => Promise<unknown>;
  * failure keeps its place with a band inside it that says what is still
  * true — `Still blocked`.
  */
-export function BlockedRunners({
-  blocked,
-  unblock,
-}: Readonly<{
-  blocked: readonly BlockedRunner[];
-  unblock: Unblock;
-}>): JSX.Element {
+export function BlockedRunners(props: BlockedRunnersProps): JSX.Element {
   const { remaining: visible, settle } = useSettled(
-    blocked,
+    props.blocked,
     (runner) => runner.userId,
   );
   // The screen's one status region (rule 08); every row speaks through it.
@@ -97,7 +105,8 @@ export function BlockedRunners({
             <BlockedRow
               key={runner.userId}
               runner={runner}
-              unblock={unblock}
+              blockedOn={monthDayLabel(runner.blockedAt, props.viewer.homeZone)}
+              unblock={props.unblock}
               onUnblocked={settle}
               announce={setStatus}
             />
@@ -135,27 +144,32 @@ function Effect({
 }
 
 /**
+One row's runner, its day, and what its press reports to.
+*/
+type BlockedRowProps = Readonly<{
+  runner: BlockedRunner;
+  /**
+  The day it was blocked, on the runner's own clock.
+  */
+  blockedOn: string;
+  unblock: Unblock;
+  onUnblocked: (userId: string) => void;
+  announce: (sentence: string) => void;
+}>;
+
+/**
  * One blocked runner, and the Unblock that belongs to them.
  *
  * A row per hook, so two rows can fail and retry independently and each
  * band sits inside the row it is about.
  */
-function BlockedRow({
-  runner,
-  unblock,
-  onUnblocked,
-  announce,
-}: Readonly<{
-  runner: BlockedRunner;
-  unblock: Unblock;
-  onUnblocked: (userId: string) => void;
-  announce: (sentence: string) => void;
-}>): JSX.Element {
+function BlockedRow(props: BlockedRowProps): JSX.Element {
+  const { runner, announce } = props;
   const control = useControlAction<[]>({
-    action: () => unblock({ data: { userId: runner.userId } }),
+    action: () => props.unblock({ data: { userId: runner.userId } }),
     kicker: "Still blocked",
     onSuccess: () => {
-      onUnblocked(runner.userId);
+      props.onUnblocked(runner.userId);
     },
   });
 
@@ -181,7 +195,7 @@ function BlockedRow({
             {runner.username === undefined ? "A runner" : `@${runner.username}`}
           </span>
           <Mono step="xs" className="text-muted">
-            {`Blocked ${monthDayLabel(runner.blockedAt)}`}
+            {`Blocked ${props.blockedOn}`}
           </Mono>
         </span>
         <button
@@ -197,8 +211,9 @@ function BlockedRow({
               label="Unblock"
               pendingLabel="Unblocking"
               pending={control.pending}
-              // Flush right, the row's edge (#632 B-09).
-              align="end"
+              // The pill hugs its word, with equal padding (W2; #698
+              // R2-AUTH-01), so a handle keeps the width the reserve took.
+              isReserved={false}
             />
           </Mono>
         </button>

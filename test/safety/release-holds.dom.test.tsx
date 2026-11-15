@@ -6,6 +6,7 @@ import {
   type ReleaseHoldsFn,
 } from "../../src/modules/safety/components/ReleaseHolds";
 import type { ReleaseOutcome } from "../../src/modules/safety/release";
+import { INK_PILL, SECONDARY_PILL } from "../../src/ui";
 import { renderWithRouter } from "../modules/run-fixtures";
 
 /**
@@ -109,6 +110,29 @@ describe("ReleaseHolds", () => {
         screen.queryByRole("heading", { name: "Approve 53 screener holds?" }),
       ).toBeNull();
     });
+  });
+
+  it("draws the confirm's pair as the ink pill and the hairline secondary, both 48 (R54·167.1)", async () => {
+    const working = Promise.withResolvers<ReleaseOutcome>();
+    const release = vi.fn<ReleaseHoldsFn>(() => working.promise);
+    await renderWithRouter(
+      <ReleaseHolds
+        bursts={[{ cause: "classifier", waiting: 53 }]}
+        since={SINCE}
+        release={release}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Approve all 53" }));
+    // #697 R2-SHELL-05: neither is the taller hand-written pill now.
+    expect(screen.getByRole("button", { name: "Approve all" }).className).toBe(
+      `target ${INK_PILL}`,
+    );
+    expect(screen.getByRole("button", { name: "Keep it" }).className).toBe(
+      `target ${SECONDARY_PILL}`,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Approve all" }));
+    const stop = await screen.findByRole("button", { name: "Stop" });
+    expect(stop.className).toBe(`target ${SECONDARY_PILL}`);
   });
 
   it("counts what it has approved while it works", async () => {

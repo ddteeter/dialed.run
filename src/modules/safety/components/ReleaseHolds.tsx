@@ -7,8 +7,10 @@ import {
   FailureBand,
   FormStatus,
   inFlight,
+  INK_PILL,
   Mono,
   PendingLabel,
+  SECONDARY_PILL,
   Sheet,
   useControlAction,
 } from "../../../ui";
@@ -207,7 +209,9 @@ function ReleaseSheet({
             onClick={() => {
               void action.run();
             }}
-            className="target w-full cursor-pointer rounded-pill border-none bg-ink px-4 py-4 text-lead font-bold text-ground"
+            // The ink pill and its hairline secondary, both 48 (R54·167.1;
+            // #697 R2-SHELL-05).
+            className={`target ${INK_PILL}`}
           >
             <PendingLabel
               label={
@@ -279,7 +283,11 @@ function SecondPress({
     keep?.focus();
   }, [keep]);
   return isWorking ? (
-    <button type="button" onClick={onStop} className={SECOND_PRESS}>
+    <button
+      type="button"
+      onClick={onStop}
+      className={`target ${SECONDARY_PILL}`}
+    >
       Stop
     </button>
   ) : (
@@ -289,15 +297,12 @@ function SecondPress({
         setKeep(node ?? undefined);
       }}
       onClick={onKeep}
-      className={SECOND_PRESS}
+      className={`target ${SECONDARY_PILL}`}
     >
       Keep it
     </button>
   );
 }
-
-const SECOND_PRESS =
-  "target w-full cursor-pointer rounded-pill border border-hairline bg-transparent px-4 py-4 text-lead font-semibold text-ink";
 
 /**
  * A release, run a batch a press until nothing is left or Stop is asked

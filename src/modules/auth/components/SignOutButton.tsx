@@ -3,6 +3,7 @@ import type { JSX } from "react";
 
 import { PendingLabel, inFlight, useControlAction } from "../../../ui";
 import { ControlFailureBand } from "../../../ui";
+import { signedInAs } from "../signed-in-as";
 
 /**
  * The row's two lines, for each of the two sign-outs (R55·182.2): Account's
@@ -20,7 +21,7 @@ function rowLines(
     };
   }
   return {
-    title: username === undefined ? "Signed in" : `Signed in as @${username}`,
+    title: signedInAs(username),
     subtitle: "On this phone",
   };
 }

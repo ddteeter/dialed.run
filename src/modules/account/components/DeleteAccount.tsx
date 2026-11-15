@@ -16,6 +16,8 @@ import {
   FieldMessage,
   FormFailureBand,
   FormStatus,
+  Mono,
+  SECONDARY_PILL,
   Sheet,
   SubmitButton,
   useFormSubmit,
@@ -81,6 +83,11 @@ export function DeleteAccount({
       data-part="delete-account"
       className="flex flex-col border-t-2 border-ink pt-3"
     >
+      {/* LEAVE, in the settings groups' heading style under the 2px rule,
+          so headings reach it as they reach SIGN-IN (R57·257, #675). */}
+      <h2 className="m-0 text-muted">
+        <Mono step="xs">Leave</Mono>
+      </h2>
       {/* Round 52 #160: one button, named by its title and described by
           its sentence, and the word at the right edge is for the eye
           only. The button lies over the row and holds no text of its own:
@@ -272,7 +279,9 @@ function DeleteSheet({
             setKeep(node ?? undefined);
           }}
           onClick={onClose}
-          className="target w-full cursor-pointer rounded-pill border border-hairline bg-transparent px-4 py-4 text-lead font-semibold text-ink"
+          // The secondary beside the ink pill, the same 48 (R54·164a, 167;
+          // #697 R2-SHELL-05).
+          className={`target ${SECONDARY_PILL}`}
         >
           Keep it
         </button>

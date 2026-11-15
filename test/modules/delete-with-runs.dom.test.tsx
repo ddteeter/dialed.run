@@ -4,6 +4,7 @@ import { createRef, type ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { DeleteWithRuns } from "../../src/modules/closet/components/DeleteWithRuns";
+import { INK_PILL, SECONDARY_PILL } from "../../src/ui";
 import type { ControlAction } from "../../src/ui";
 
 /**
@@ -131,7 +132,9 @@ describe("DeleteWithRuns: what it says", () => {
       expect(row).toHaveClass("col-span-2", "grid", "grid-cols-subgrid");
     }
     expect(screen.getByText("If you delete it")).toHaveClass("col-span-2");
-    expect(screen.getByText("This can't be undone.")).toHaveClass("col-start-2");
+    expect(screen.getByText("This can't be undone.")).toHaveClass(
+      "col-start-2",
+    );
   });
 
   it("marks what goes and what stays in ink, never a verdict's hue (round 28 #13)", async () => {
@@ -221,17 +224,18 @@ describe("DeleteWithRuns: the band count, asked for on opening (law 5)", () => {
 });
 
 describe("DeleteWithRuns: the two actions", () => {
-  it("makes retiring the pink primary and deleting the hairline secondary", () => {
+  it("makes retiring the ink primary and deleting the hairline secondary, both 48 (R54·167.1)", () => {
     sheet();
 
-    // Round 26: pink is the action, and retiring is the one recommended.
+    // Round 26 recommends retiring; 167.1 makes a confirm's primary the
+    // ink pill (#697 R2-SHELL-05).
     const retiring = screen.getByRole("button", { name: "Retire it" });
-    expect(retiring).toHaveClass("bg-action", "rounded-pill", "font-bold");
+    expect(retiring.className).toBe(`target ${INK_PILL}`);
+    expect(retiring).not.toHaveClass("bg-action");
     const deleting = screen.getByRole("button", {
       name: "Delete it and its record",
     });
-    expect(deleting).toHaveClass("border", "border-ink", "bg-transparent");
-    expect(deleting).not.toHaveClass("bg-action");
+    expect(deleting.className).toBe(`target ${SECONDARY_PILL}`);
   });
 
   it("retires on Retire it and deletes on the hairline button", async () => {

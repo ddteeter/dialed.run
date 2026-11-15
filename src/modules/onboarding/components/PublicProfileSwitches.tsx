@@ -1,16 +1,18 @@
 import { useId } from "react";
 import type { JSX, Ref } from "react";
 
-import { ControlFailureBand, ToggleField, useControlAction } from "../../../ui";
+import { ControlFailureBand, ToggleField } from "../../../ui";
 import type { PublicProfileChoice } from "../inputs";
 import type { PublicProfileState } from "../public-profile";
-import { toggleFieldProps } from "./TotalsSwitch";
+import { SwitchStatus, toggleFieldProps, useSavedSwitch } from "./saved-switch";
 
 /**
  * Settings › Privacy's PUBLIC PROFILE group (D-151; round 41 #86b), in the
  * board's words. It saves as you switch, like ANONYMOUS TOTALS, and is
  * not optimistic either (§4a): a switch keeps its saved state until the
  * save lands, and a failed save leaves it under a `Not changed` band.
+ * Switches at their rows' right, and "Saved." once a save lands (D-185,
+ * R54·166.3).
  */
 export const PUBLIC_PROFILE_LABEL = "Public profile";
 export const SHOW_CLOSET_LABEL = "Show my closet";
@@ -59,6 +61,7 @@ export function PublicProfileSwitches({
   isJustShown = false,
   save,
   onSaved,
+  onAnnounce,
 }: Readonly<{
   publicProfile: boolean;
   publicCloset: boolean;
@@ -67,15 +70,19 @@ export function PublicProfileSwitches({
   isJustShown?: boolean | undefined;
   save: (input: { data: PublicProfileChoice }) => Promise<PublicProfileState>;
   onSaved: (state: PublicProfileState) => void;
+  /**
+  The screen's one status region, when the screen has one (`SwitchStatus`).
+  */
+  onAnnounce?: ((status: string) => void) | undefined;
 }>): JSX.Element {
-  const control = useControlAction<[PublicProfileChoice]>({
+  const control = useSavedSwitch<[PublicProfileChoice]>({
     action: async (choice) => {
       onSaved(await save({ data: choice }));
     },
-    kicker: "Not changed",
   });
   return (
     <div data-part="public-profile" className="flex flex-col gap-4">
+      <SwitchStatus status={control.status} onAnnounce={onAnnounce} />
       <SavedSwitch
         inputRef={isJustShown ? focusSwitch : undefined}
         copy={{
@@ -142,6 +149,7 @@ function SavedSwitch(
         inputRef={props.inputRef}
         name={props.copy.name}
         label={props.copy.label}
+        isSwitch
         field={toggleFieldProps(hintId, props.isPending)}
         isOn={props.isOn}
         onChange={props.onToggle}

@@ -242,7 +242,7 @@ test("account settings -> change password -> reminder emails off and on -> sign 
   await page.goto("/account/notifications");
   await hydrated(page);
   await expect(page.getByText("Always sent")).toBeVisible();
-  await expect(page.getByRole("checkbox", { name: "Email" })).toBeChecked();
+  await expect(page.getByRole("switch", { name: "Email" })).toBeChecked();
 
   // The link in every reminder's footer, opened from the inbox
   // (e2e/support/email-links): opening it asks, and changes nothing until

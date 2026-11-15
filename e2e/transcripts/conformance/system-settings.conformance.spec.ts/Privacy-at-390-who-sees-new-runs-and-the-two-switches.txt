@@ -5,11 +5,11 @@ Settings
 end of link, Settings, current page
 link, Notifications
 heading, Privacy, level 1
+status
 heading, Who sees new runs, level 2
 Who sees new runs
 end of heading, Who sees new runs, level 2
 form
-status
 group, Who sees new runs
 Who sees new runs
 Who sees new runs
@@ -27,20 +27,20 @@ Save
 end of button, Save
 end of form
 separator, orientated horizontally, max value #, min value #
-heading, Public profile · Saves as you switch, level 2
-Public profile · Saves as you switch
-end of heading, Public profile · Saves as you switch, level 2
-checkbox, Public profile, Off. Anyone signed out who opens app.dialed.run/@closet_# sees nothing. Public runs still open from their own links., not checked
+heading, Public profile, level 2
 Public profile
+end of heading, Public profile, level 2
+Public profile
+switch, Public profile, Off. Anyone signed out who opens app.dialed.run/@closet_# sees nothing. Public runs still open from their own links., not checked
 paragraph
 Off. Anyone signed out who opens app.dialed.run/@closet_# sees nothing. Public runs still open from their own links.
 end of paragraph
 separator, orientated horizontally, max value #, min value #
-heading, Anonymous totals · Saves as you switch, level 2
-Anonymous totals · Saves as you switch
-end of heading, Anonymous totals · Saves as you switch, level 2
-checkbox, Count my runs in anonymous totals, Shared and private runs add their temperature, kit and verdict to the guides and reports. Shared runs also count in Same conditions, which other runners see. Never your name, notes, photos, when you ran, or anywhere more precise than a broad climate zone., checked
+heading, Anonymous totals, level 2
+Anonymous totals
+end of heading, Anonymous totals, level 2
 Count my runs in anonymous totals
+switch, Count my runs in anonymous totals, Shared and private runs add their temperature, kit and verdict to the guides and reports. Shared runs also count in Same conditions, which other runners see. Never your name, notes, photos, when you ran, or anywhere more precise than a broad climate zone., checked
 paragraph
 Shared and private runs add their temperature, kit and verdict to the guides and reports. Shared runs also count in Same conditions, which other runners see. Never your name, notes, photos, when you ran, or anywhere more precise than a broad climate zone.
 end of paragraph

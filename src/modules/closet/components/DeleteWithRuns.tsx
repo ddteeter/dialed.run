@@ -3,9 +3,11 @@ import type { JSX } from "react";
 
 import {
   ControlFailureBand,
+  INK_PILL,
   inFlight,
   Mono,
   PendingLabel,
+  SECONDARY_PILL,
   Sheet,
 } from "../../../ui";
 import type { ControlAction } from "../../../ui";
@@ -88,14 +90,12 @@ export type BandCount = (input: {
 }) => Promise<number | undefined>;
 
 /**
- * Round 26 draws retire as the pink primary — pink is the action, and
- * retiring is the one this sheet recommends — and the delete as a
- * hairline secondary.
+ * Retire is the sheet's primary, as round 26 recommends it, and the delete
+ * its hairline secondary. A confirm sheet's primary is the ink pill and
+ * both are 48 (R54·167.1, later than round 26's pink; #697 R2-SHELL-05).
  */
-const RETIRE_LOOK =
-  "w-full cursor-pointer rounded-pill border-none bg-action px-4 py-4 text-lead font-bold text-accent-ink";
-const DELETE_LOOK =
-  "w-full cursor-pointer rounded-pill border border-ink bg-transparent px-4 py-4 text-body font-semibold text-ink";
+const RETIRE_LOOK = INK_PILL;
+const DELETE_LOOK = SECONDARY_PILL;
 
 /**
  * Round 26 #3, "Y Delete with runs": deleting a piece that has runs asks

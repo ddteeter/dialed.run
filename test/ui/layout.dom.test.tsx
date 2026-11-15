@@ -72,6 +72,19 @@ describe("Layout", () => {
     expect(seat?.parentElement).toBe(screen.getByTestId("first-row"));
     // 44 target 12 from the edge: half into the 24 gutter.
     expect(seat).toHaveClass("-mr-3", "shrink-0", "wide:hidden");
+    expect(seat).not.toHaveClass("-mr-1");
+  });
+
+  it("reaches 4 into a 16 gutter, so the target still ends 12 from the edge (Design 169.1)", async () => {
+    await renderWithRouter(
+      <Layout bell={<button type="button">Notifications</button>}>
+        <PhoneBell gutter={16} />
+      </Layout>,
+    );
+    const seat = document.querySelectorAll("[data-slot='notification-bell']");
+    expect(seat).toHaveLength(1);
+    expect(seat[0]).toHaveClass("-mr-1", "shrink-0", "wide:hidden");
+    expect(seat[0]).not.toHaveClass("-mr-3");
   });
 
   it("draws no row of its own for the bell: the empty row is gone (Design 169.1)", async () => {

@@ -26,17 +26,35 @@ export const BellProvider = BellContext.Provider;
  * fixed slot (169.2), so this seat is `wide:hidden`.
  *
  * `Page` seats it for every screen with a title or a back link. A screen
- * that draws its own first row puts one at that row's end.
+ * that draws its own first row puts one at that row's end, and names its
+ * gutter when it is not 24: the closet list's is 16, where -mr-3 put the
+ * target 4 from the edge, not 12.
  */
-export function PhoneBell(): JSX.Element | undefined {
+export function PhoneBell({
+  gutter = 24,
+}: Readonly<{ gutter?: Gutter | undefined }>): JSX.Element | undefined {
   const bell = useContext(BellContext);
   if (bell === undefined) return undefined;
   return (
     <div
       data-slot="notification-bell"
-      className="-mr-3 flex shrink-0 wide:hidden"
+      className={`flex shrink-0 wide:hidden ${REACH[gutter]}`}
     >
       {bell}
     </div>
   );
 }
+
+/**
+The screen gutters a phone row sits on.
+*/
+type Gutter = 16 | 24;
+
+/**
+ * How far the 44 target reaches into each gutter so its edge is 12 from
+ * the screen's (Design 169.1): the gutter less 12.
+ */
+const REACH: Readonly<Record<Gutter, string>> = {
+  16: "-mr-1",
+  24: "-mr-3",
+};

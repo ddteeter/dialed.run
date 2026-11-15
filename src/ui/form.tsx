@@ -801,10 +801,18 @@ export function PendingLabel({
   pendingLabel,
   pending,
   align = "center",
+  isReserved = true,
 }: Readonly<{
   label: ReactNode;
   pendingLabel: string;
   pending: boolean;
+  /**
+  Whether the resting word holds the in-flight label's width, so nothing
+  moves when it is pressed. A pill that must hug its word says no (W2's
+  Unblock, #698 R2-AUTH-01): it grows while in flight instead of carrying
+  the reserve, half empty, at rest.
+  */
+  isReserved?: boolean | undefined;
   /**
   Where the shorter label sits inside the longer one's width. Centred by
   default, which is right for a button that centres its words; a text
@@ -813,6 +821,8 @@ export function PendingLabel({
   */
   align?: PendingAlign | undefined;
 }>): JSX.Element {
+  if (!isReserved)
+    return pending ? <PendingWords label={pendingLabel} /> : <>{label}</>;
   return (
     <span className={PENDING_ALIGN[align]}>
       <span
@@ -833,15 +843,26 @@ export function PendingLabel({
         className="[grid-area:1/1]"
         style={{ visibility: pending ? undefined : "hidden" }}
       >
-        <span className="breathe mr-1" aria-hidden="true">
-          [
-        </span>
-        {pendingLabel}
-        <span className="breathe ml-1" aria-hidden="true">
-          ]
-        </span>
+        <PendingWords label={pendingLabel} />
       </span>
     </span>
+  );
+}
+
+/**
+The in-flight verb between its breathing brackets.
+*/
+function PendingWords({ label }: Readonly<{ label: string }>): JSX.Element {
+  return (
+    <>
+      <span className="breathe mr-1" aria-hidden="true">
+        [
+      </span>
+      {label}
+      <span className="breathe ml-1" aria-hidden="true">
+        ]
+      </span>
+    </>
   );
 }
 
@@ -860,7 +881,9 @@ const PENDING_ALIGN: Readonly<Record<PendingAlign, string>> = {
  * - `action`, the product flow (A1–A3, manual entry, O1–O3, P3, Add
  *   garment, W1): pink display caps at RADIUS.card, 52 high — the one
  *   filled button that is not a pill (167.3's exception, now in tokens.js's
- *   RADIUS_RULES).
+ *   RADIUS_RULES). The minimum is the height: no vertical padding, since
+ *   16 a side over the 24 line made it 56 (#697 R2-SHELL-14). The caps
+ *   never wrap (167.2), so one line always fits.
  * - `ink`, account, signed-out, settings Save and confirm sheets: an ink
  *   pill, `HEIGHT.control` high. Not the product's pink, because these
  *   are not product screens.
@@ -873,12 +896,18 @@ const PENDING_ALIGN: Readonly<Record<PendingAlign, string>> = {
  * left-aligned. Inside a desk drawer it is the drawer's full width again,
  * stacked: the drawer is a 390 column, so hugging there would leave
  * ragged buttons (`in-data-[slot=sheet]`).
+ *
+ * The hug is a width (`w-fit`), not an alignment. A fit-content item is
+ * not stretched, so in a column it sits at the start as `self-start` did,
+ * and a row can still centre its buttons on one line. `self-start` pinned
+ * each to the row's top, so a 48 secondary hung from a 52 primary's top
+ * edge (#697 R2-ONB-10).
  */
 const HUG_WIDE_CLASS =
-  "w-full wide:w-auto wide:min-w-50 wide:self-start wide:in-data-[slot=sheet]:w-full wide:in-data-[slot=sheet]:self-stretch";
+  "w-full wide:w-fit wide:min-w-50 wide:in-data-[slot=sheet]:w-full";
 
 const SUBMIT_TONE = {
-  action: `grid min-h-13 place-items-center rounded-card border-none bg-action px-6 py-4 font-display uppercase text-accent-ink ${HUG_WIDE_CLASS}`,
+  action: `grid min-h-13 place-items-center rounded-card border-none bg-action px-6 font-display uppercase text-accent-ink ${HUG_WIDE_CLASS}`,
   chalk:
     "inline-flex min-h-11 items-center justify-center self-start rounded-pill border-none bg-ink px-5 font-bold text-ground",
   ink: `flex min-h-control items-center justify-center rounded-pill border-none bg-ink px-6 font-bold text-ground ${HUG_WIDE_CLASS}`,
@@ -887,9 +916,11 @@ const SUBMIT_TONE = {
    * the same width rule as the primary beside it. Never alone — a lone
    * action is the primary and takes its surface's kind. Its tertiary is a
    * text link. A tone too, for the hairline-pill Save that is a form's
-   * submit (P2.5, R55·229).
+   * submit (P2.5, R55·229). In dark its edge is `--hairline-2` on every
+   * ground, panel or page, as a field's is (R57·262, #707): `--hairline`
+   * on `--panel` was close to invisible.
    */
-  secondary: `flex min-h-control items-center justify-center rounded-pill border border-hairline bg-transparent px-6 font-semibold text-ink ${HUG_WIDE_CLASS}`,
+  secondary: `flex min-h-control items-center justify-center rounded-pill border border-hairline bg-transparent px-6 font-semibold text-ink dark:border-hairline-2 ${HUG_WIDE_CLASS}`,
 } as const;
 
 /**
@@ -990,6 +1021,24 @@ const OPTION_CHIP_CLASS =
   "target relative flex cursor-pointer items-center justify-center rounded-pill border border-hairline px-3 py-2 text-body has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-ground has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink";
 
 /**
+ * A segment of a joined pair or trio (U1's Units and Theme, `V1
+ * Screens.dc.html` N; #672, #703 R2-ONB-04): no edge of its own, since the
+ * track is the shape, and the chosen one is the ink thumb. Ink, never hue,
+ * for the chip's reason above.
+ */
+const OPTION_SEGMENT_CLASS =
+  "target relative flex flex-1 cursor-pointer items-center justify-center rounded-pill px-3 py-2 text-quiet has-[:checked]:bg-ink has-[:checked]:text-ground has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink";
+
+/**
+ * How one option of each non-row layout is drawn.
+ */
+const OPTION_CLASS: Readonly<Record<OptionsLayout, string>> = {
+  chips: OPTION_CHIP_CLASS,
+  "chip-grid": OPTION_CHIP_CLASS,
+  segmented: OPTION_SEGMENT_CLASS,
+};
+
+/**
  * A row of a `ChoiceList` in its one card (R54·166.2): rows split by
  * hairlines, the chosen one marked by a 2px ink edge drawn inward that
  * follows the card's corners at its ends. The ring and the edge mark the
@@ -1009,16 +1058,19 @@ const OPTION_DETAIL_LABEL_CLASS =
 
 /**
  * How a `ChoiceList`'s options sit: wrapped chips, chips in three columns,
- * or stacked rows in one card (the default).
+ * one joined track, or stacked rows in one card (the default).
  */
-const OPTIONS_LAYOUT: Readonly<Record<"chips" | "chip-grid" | "rows", string>> =
-  {
-    chips: "flex flex-wrap gap-2",
-    "chip-grid": "grid grid-cols-3 gap-2",
-    rows: "flex flex-col rounded-card border border-hairline",
-  };
+const OPTIONS_LAYOUT: Readonly<Record<OptionsLayout | "rows", string>> = {
+  chips: "flex flex-wrap gap-2",
+  "chip-grid": "grid grid-cols-3 gap-2",
+  // The track: one pill in --tint, its segments 4 inside it and 4 apart.
+  segmented: "flex gap-1 rounded-pill bg-tint p-1",
+  rows: "flex flex-col rounded-card border border-hairline",
+};
 
-function optionsLayout(layout: "chips" | "chip-grid" | undefined): string {
+type OptionsLayout = "chips" | "chip-grid" | "segmented";
+
+function optionsLayout(layout: OptionsLayout | undefined): string {
   return OPTIONS_LAYOUT[layout ?? "rows"];
 }
 
@@ -1381,8 +1433,11 @@ export function ChoiceList<TOption extends string>(
        * `chip-grid` is the same chips in three columns instead of a wrap —
        * R2b's twelve temperature bands, *"a 3-column radiogroup, coldest
        * top-left"* (round 26, item 2), where reading order is the scale.
+       *
+       * `segmented` joins two or three short choices in one track with an
+       * ink thumb, as U1 draws Units and Theme (#672, #703 R2-ONB-04).
        */
-      layout?: "chips" | "chip-grid" | undefined;
+      layout?: OptionsLayout | undefined;
       /**
        * `""` is "not answered", the same spelling `ChoiceField` uses for a
        * `<select>` with no choice made — an unanswered control reaches the
@@ -1438,7 +1493,7 @@ export function ChoiceList<TOption extends string>(
         {options.map((option) => (
           <OptionRow
             key={option}
-            isChips={isChips}
+            layout={layout}
             detail={value === option ? props.optionDetail?.[option] : undefined}
           >
             <input
@@ -1487,15 +1542,17 @@ export function ChoiceList<TOption extends string>(
  * choice. The label keeps the row's target and pointer.
  */
 function OptionRow({
-  isChips,
+  layout,
   detail,
   children,
 }: Readonly<{
-  isChips: boolean;
+  layout: OptionsLayout | undefined;
   detail: ReactNode;
   children: ReactNode;
 }>): JSX.Element {
-  if (isChips) return <label className={OPTION_CHIP_CLASS}>{children}</label>;
+  if (layout !== undefined) {
+    return <label className={OPTION_CLASS[layout]}>{children}</label>;
+  }
   if (detail === undefined) {
     return <label className={OPTION_ROW_CLASS}>{children}</label>;
   }

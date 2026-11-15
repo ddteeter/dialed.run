@@ -11,7 +11,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   AccountIndex,
-  NotificationsForm,
+  NotificationSettings,
 } from "../../src/modules/onboarding/components/Settings";
 import { PickedSubPage } from "../../src/modules/onboarding/components/SettingsSubPage";
 
@@ -140,11 +140,15 @@ describe("AccountIndex (U1 Account)", () => {
   });
 });
 
-function renderForm(isOn = true) {
-  const save = vi.fn(() => Promise.resolve());
+function renderForm(
+  isOn = true,
+  save = vi.fn<(input: { data: { runReminder: boolean } }) => Promise<unknown>>(
+    () => Promise.resolve(),
+  ),
+) {
   const user = userEvent.setup();
   const view = renderWithRouter(
-    <NotificationsForm
+    <NotificationSettings
       current={{ email: "maya@example.com", runReminder: isOn }}
       save={save}
       changeEmail={<span>Change email</span>}
@@ -153,7 +157,7 @@ function renderForm(isOn = true) {
   return { save, user, view };
 }
 
-describe("NotificationsForm", () => {
+describe("NotificationSettings", () => {
   it("has the reminder's email switch, Useful in the app only, account email always sent — and no push", async () => {
     const { view } = renderForm();
     await view;
@@ -176,7 +180,7 @@ describe("NotificationsForm", () => {
       .getByRole("heading", { name: "Run reminders" })
       .closest("section");
     expect(
-      within(reminder ?? document.body).getByRole("checkbox", {
+      within(reminder ?? document.body).getByRole("switch", {
         name: "Email",
       }),
     ).toBeChecked();
@@ -192,30 +196,83 @@ describe("NotificationsForm", () => {
     expect(
       within(account ?? document.body).getByText("Always sent"),
     ).toBeVisible();
-    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+    // One switch, at its row's right, named by its 600 label, and
+    // described by when the reminder comes (D-185, R54·166.3/166.5).
+    expect(screen.getAllByRole("switch")).toHaveLength(1);
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    const email = screen.getByRole("switch", { name: "Email" });
+    expect(email).toHaveAccessibleDescription(
+      "When a run lands on Strava. Only while Strava is connected.",
+    );
+    expect(email.closest("label")).toHaveClass(
+      "justify-between",
+      "font-semibold",
+    );
+    expect(email.closest("label")?.lastElementChild).toBe(email);
+    // It saves as it changes, so there is nothing to submit.
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+    expect(document.querySelector("form")).toBeNull();
     expect(screen.queryByText(/push/iu)).toBeNull();
     expect(screen.getByText(/^Emails go to/u)).toHaveTextContent(
       "Emails go to maya@example.com. Change email",
     );
   });
 
-  it("saves the switch", async () => {
+  it("saves as it switches, and says Saved. in the page's one status region", async () => {
     const { save, user, view } = renderForm(true);
     await view;
-    await user.click(screen.getByRole("checkbox", { name: "Email" }));
-    await user.click(screen.getByRole("button", { name: "Save" }));
-    expect(save).toHaveBeenCalledWith({ data: { runReminder: false } });
+    const email = screen.getByRole("switch", { name: "Email" });
+    // Nothing is said before anything is saved.
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+    await user.click(email);
+    expect(save).toHaveBeenCalledExactlyOnceWith({
+      data: { runReminder: false },
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(/^Saved\.$/u);
+    });
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(email).not.toBeChecked();
+
+    // Again: the status clears as the next save starts, so it is heard.
+    await user.click(email);
+    expect(save).toHaveBeenLastCalledWith({ data: { runReminder: true } });
+    await waitFor(() => {
+      expect(email).toBeChecked();
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(/^Saved\.$/u);
+  });
+
+  it("keeps the switch as it was under Not changed when the save fails, and Try again saves it", async () => {
+    const save = vi
+      .fn<(input: { data: { runReminder: boolean } }) => Promise<unknown>>()
+      .mockRejectedValueOnce(new Error("D1 down"))
+      .mockResolvedValueOnce(undefined);
+    const { user, view } = renderForm(true, save);
+    await view;
+    const email = screen.getByRole("switch", { name: "Email" });
+    await user.click(email);
     await waitFor(() => {
       expect(screen.getByRole("status")).toHaveTextContent(
-        "Notifications saved.",
+        "Not changed. Our end failed.",
       );
     });
+    expect(email).toBeChecked();
+    expect(screen.getByText("Not changed")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(save).toHaveBeenLastCalledWith({ data: { runReminder: false } });
+    await waitFor(() => {
+      expect(email).not.toBeChecked();
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(/^Saved\.$/u);
+    expect(screen.queryByText("Not changed")).toBeNull();
   });
 
   it("starts from what is saved", async () => {
     const { view } = renderForm(false);
     await view;
-    expect(screen.getByRole("checkbox", { name: "Email" })).not.toBeChecked();
+    expect(screen.getByRole("switch", { name: "Email" })).not.toBeChecked();
   });
 });
 

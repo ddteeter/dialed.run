@@ -135,8 +135,9 @@ const PREFERENCE_OF: Readonly<
 };
 
 /**
- * Settings › Notifications' one switch in v1 (ACC-11; round 26 #19) — the
- * form's schema and the server function's, here so both sides read one.
+ * Settings › Notifications' one switch in v1 (ACC-11; round 26 #19): what
+ * the switch saves, as the server function parses it. The switch saves as it
+ * changes (R54·166.3), so no form reads it.
  */
 export const notificationSettingsSchema = z.object({
   runReminder: z.boolean(),

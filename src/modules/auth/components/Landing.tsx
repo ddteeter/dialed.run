@@ -1,8 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX, ReactNode } from "react";
 
-import { Layout } from "../../../ui";
+import { Layout, Mono, PhoneBell } from "../../../ui";
 import { SignedOutFrame } from "../../../ui/SignedOutFrame";
+import { signedInAs } from "../signed-in-as";
 
 /**
  * `/` — the landing page (Round 55 · 175).
@@ -17,14 +18,41 @@ import { SignedOutFrame } from "../../../ui/SignedOutFrame";
  * line, and the first sentence balances over its lines. The right half
  * is the image slot, still open under #523, so nothing is drawn there.
  * No other sections until the owner gives copy (151b is #523).
+ *
+ * Signed in on the phone, the landing has no title row for the bell to
+ * end, so it gets one (R57·271, #716): who is signed in, in MONO.xs, and
+ * the bell at its end, above the headline. The hero never shares a line
+ * with a control.
  */
-export function Landing({
-  signedIn,
-}: Readonly<{ signedIn: boolean }>): JSX.Element {
-  return signedIn ? (
-    <Layout>
+export function Landing<TBell extends object>({
+  viewer,
+  Bell,
+}: Readonly<{
+  /**
+  Who is signed in, and their bell's state, or nothing signed out.
+  */
+  viewer: SignedInViewer<TBell> | undefined;
+  /**
+  The shell's bell, which `ui/` and this module may not import; the route's
+  to wire (`NotificationBell`).
+  */
+  Bell: (state: TBell) => ReactNode;
+}>): JSX.Element {
+  return viewer === undefined ? (
+    <SignedOutLanding />
+  ) : (
+    <Layout bell={<Bell {...viewer.bell} />}>
       {/* In the product's measure, on its screens' own gutter. */}
       <div className="px-6">
+        <div
+          data-part="first-row"
+          className="flex items-center justify-between gap-3 pt-6 wide:hidden"
+        >
+          <Mono step="xs" className="text-muted">
+            {signedInAs(viewer.username)}
+          </Mono>
+          <PhoneBell />
+        </div>
         <Hero>
           <Link to="/feed" className={GO_TO_FEED_CLASS}>
             Go to your feed
@@ -32,7 +60,22 @@ export function Landing({
         </Hero>
       </div>
     </Layout>
-  ) : (
+  );
+}
+
+/**
+The signed-in landing's runner: their handle, if any, and their bell's state.
+*/
+interface SignedInViewer<TBell> {
+  readonly username: string | undefined;
+  readonly bell: TBell;
+}
+
+/**
+ * Signed out: the one signed-out frame around the hero and its ask.
+ */
+function SignedOutLanding(): JSX.Element {
+  return (
     <SignedOutFrame>
       {/* The bar's own structure — gutters outside, the measure inside —
           so the hero's edge is the wordmark's at every width (#625 A-09). */}

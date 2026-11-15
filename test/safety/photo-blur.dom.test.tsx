@@ -22,7 +22,12 @@ import type {
 } from "../../src/modules/safety/blur/pipeline";
 import type { DetectionOutcome } from "../../src/modules/safety/blur/detect";
 import type { BlurRegion } from "../../src/modules/safety/blur/regions";
-import { PHOTO_STEP_LABEL, Sheet } from "../../src/ui";
+import {
+  INK_PILL,
+  PHOTO_STEP_LABEL,
+  SECONDARY_PILL,
+  Sheet,
+} from "../../src/ui";
 
 /**
  * jsdom's `getContext("2d")` is null, so the pixels are injected and what
@@ -1615,6 +1620,34 @@ describe("W3 waits for the runner (round 28 #5)", () => {
     expect(input).toBe(picker());
     expect(input).toHaveAttribute("type", "file");
     expect(input).toHaveAttribute("accept", photoAcceptAttribute);
+  });
+
+  it("draws Use this photo as the ink pill and Pick another as the hairline secondary, both 48 (R54·167.1)", () => {
+    const { pipeline } = fakePipeline();
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={vi.fn()}
+        onCancel={noop}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+    // #697 R2-SHELL-05: the pair is the 167 kinds, not hand-written pills.
+    expect(
+      screen.getByRole("button", { name: "Use this photo" }).className,
+    ).toBe(`target ${INK_PILL}`);
+    const another = screen.getByLabelText("Pick another").closest("label");
+    expect(another?.className.startsWith(`target ${SECONDARY_PILL} `)).toBe(
+      true,
+    );
+    // The label wears the ring when its input has the keyboard.
+    expect(another).toHaveClass(
+      "has-[:focus-visible]:outline",
+      "has-[:focus-visible]:outline-2",
+      "has-[:focus-visible]:outline-offset-2",
+      "has-[:focus-visible]:outline-ink",
+    );
   });
 
   it("checks a new pick from the start, and hands that one over", async () => {

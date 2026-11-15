@@ -121,7 +121,7 @@ test("Privacy at 390: who sees new runs, and the two switches", async ({
     page.getByRole("heading", { level: 1, name: "Privacy" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("checkbox", { name: "Count my runs in anonymous totals" }),
+    page.getByRole("switch", { name: "Count my runs in anonymous totals" }),
   ).toBeChecked();
 });
 
