@@ -296,6 +296,14 @@ are stable because code cites them.
 - `design/` and `plan/` archives — read-only, never edited.
 - Secrets: never write a secret, token, or key into any file. Bindings only.
 
+**A forbidden zone limits who edits a file, not which tool is right.** Pick
+the tool on its merits. When the right one lives in a forbidden zone (a lint
+selector in `eslint.config.js`, a setting in `wrangler.jsonc`, a CI step), say
+so and ask the owner for a grant, naming the tool and why it beats the
+alternatives. Never build a weaker version outside the zone to avoid asking:
+the owner grants these one change at a time, and wants the callout (owner,
+2026-11-15).
+
 ## Agent skills
 
 ### Issue tracker
