@@ -28,7 +28,7 @@ import type {
   CorrectionGroup,
   CorrectionsQueue,
 } from "../../products";
-import { DeskForm, PickOne } from "./DeskForm";
+import { DeskForm, PickOne, RECORD_PANEL } from "./DeskForm";
 import { QuietAction } from "./RemovalDecision";
 import { counted } from "./counted";
 
@@ -123,7 +123,8 @@ function CorrectionRow({
     <li>
       <article
         aria-label={title}
-        className="flex flex-col gap-3 border border-hairline bg-panel p-4"
+        // R58·278: 197's round card, as every Desk row that stands alone.
+        className={RECORD_PANEL}
       >
         <Mono step="xs" className="text-muted">
           {FIELD_KICKER[group.field]} · {counted(group.filers.length, "runner")}{" "}

@@ -97,24 +97,18 @@ const HREF: Readonly<
 };
 
 /**
-A rail count and what it counts. The words are for a screen reader only:
-the rail draws the bare number, and "Review 4" alone does not say four of
-what (a11y judgment audit, 2026-11-04).
-*/
-type RailTally = Readonly<{ count: number; counts: string }>;
-
-/**
-A count that needs a person is hi-viz; at zero it is not shown at all.
-*/
-function RailCount({ tally }: Readonly<{ tally: RailTally | undefined }>) {
-  if (tally === undefined || tally.count === 0) return;
+ * A count that needs a person is hi-viz; at zero it is not shown at all.
+ * The entry is named by what it draws, "Review 4": hidden text may voice a
+ * visible mark but never add words (R57·255, D-187), and the rail draws
+ * the bare number (R55·194), so the unit the a11y audit of 2026-11-04 put
+ * in sr-only text is gone. The page the entry opens says what it counts.
+ */
+function RailCount({ count }: Readonly<{ count: number | undefined }>) {
+  if (count === undefined || count === 0) return;
   return (
-    <>
-      <Mono step="sm" className="text-hiviz-text">
-        {tally.count}
-      </Mono>
-      <span className="sr-only"> {tally.counts}</span>
-    </>
+    <Mono step="sm" className="text-hiviz-text">
+      {count}
+    </Mono>
   );
 }
 
@@ -125,7 +119,7 @@ function RailCount({ tally }: Readonly<{ tally: RailTally | undefined }>) {
  * phone, where the rail is one row, it is a 2px hi-viz underline.
  */
 const RAIL_ENTRY =
-  "flex min-h-control items-center gap-2 border-b-2 px-3 text-body text-ink no-underline wide:justify-between wide:gap-6 wide:border-b-0 wide:border-l-2 wide:pr-5 wide:pl-6";
+  "flex min-h-control items-center gap-2 border-b-2 px-3 text-body text-ink no-underline wide:justify-between wide:border-b-0 wide:border-l-2 wide:px-2";
 const RAIL_CURRENT = "border-hi-viz font-bold wide:bg-panel";
 const RAIL_OTHER = "border-transparent";
 
@@ -145,7 +139,7 @@ function RailEntry({
 }: Readonly<{
   page: DeskPage;
   current: DeskPage;
-  tally: RailTally | undefined;
+  tally: number | undefined;
 }>) {
   const isActive = page === current;
   return (
@@ -161,7 +155,7 @@ function RailEntry({
         className={`target ${RAIL_ENTRY} ${isActive ? RAIL_CURRENT : RAIL_OTHER}`}
       >
         <span>{LABEL[page]}</span>
-        <RailCount tally={tally} />
+        <RailCount count={tally} />
       </Link>
     </li>
   );
@@ -171,7 +165,9 @@ function RailEntry({
  * The rail's foot at width (R55·194), pinned there: whether screening is
  * holding (a breaker over its ceiling this hour, design 164) and when the
  * daily digest last ran, in UTC like the date on Today. The words for
- * neither-OK state are the owner's (2026-11-13, #635).
+ * neither-OK state are the owner's (2026-11-13, #635). R58·312: LAST
+ * DIGEST stacks over the time, in tabular mono, so neither sets the
+ * rail's width; the rail's measure does.
  */
 function RailFooter({ today }: Readonly<{ today: DeskToday }>) {
   const isHolding = today.breakers.length > 0;
@@ -179,43 +175,22 @@ function RailFooter({ today }: Readonly<{ today: DeskToday }>) {
   return (
     <div
       data-part="rail-footer"
-      className="hidden wide:flex wide:flex-col wide:gap-1 wide:px-6 wide:pt-6"
+      className="hidden wide:flex wide:flex-col wide:gap-3 wide:border-l-2 wide:border-transparent wide:pt-6 wide:pl-2"
     >
       <Mono step="xs" className={isHolding ? "text-hiviz-text" : "text-muted"}>
         {isHolding ? "Screening · Holding" : "Screening · OK"}
       </Mono>
-      <Mono step="xs" className="text-muted">
-        {/* One string, so it is heard as one line (a second text node is
-            a second line, and its leading space is dropped). */}
-        {`Last digest · ${lastDigestAt === undefined ? NOT_YET : timeOfDay(lastDigestAt)}`}
-        {lastDigestAt === undefined ? undefined : <NotYetRoom />}
-      </Mono>
+      <span data-part="last-digest" className="flex flex-col gap-1">
+        <Mono step="xs" className="text-muted">
+          Last digest
+        </Mono>
+        <Mono step="xs" className="text-ink tabular-nums">
+          {lastDigestAt === undefined ? "Not yet" : timeOfDay(lastDigestAt)}
+        </Mono>
+      </span>
     </div>
   );
 }
-
-const NOT_YET = "Not yet";
-
-/**
- * The room "Not yet" takes beyond a time (R2-DESK-12b): unseen, unheard
- * characters after the time, so the rail is as wide the day the digest
- * first runs as the day before. In mono every character is one width, so
- * the room is the difference in length. A guess awaiting Design 312
- * (#758): the rail stays sized by its content, as tokens.js pins no width
- * outside MEASURE.
- */
-function NotYetRoom() {
-  return (
-    <span data-part="digest-room" aria-hidden="true" className="invisible">
-      {"0".repeat(NOT_YET.length - HH_MM.length)}
-    </span>
-  );
-}
-
-/**
-What `timeOfDay` writes: two digits, a colon, two digits.
-*/
-const HH_MM = "00:00";
 
 /**
  * The Desk's top bar (R55·194/195): `[dialed] DESK` at the left, and at the
@@ -225,26 +200,31 @@ const HH_MM = "00:00";
  */
 function DeskBar({ handle }: Readonly<{ handle: string | undefined }>) {
   return (
-    <header
-      data-part="desk-bar"
-      className="flex min-h-control items-center justify-between gap-4 pr-3 pl-4 wide:min-h-[var(--bar-height)] wide:border-b wide:border-hairline wide:px-6"
-    >
-      <span className="flex items-baseline gap-2 text-heading wide:gap-3">
-        <Wordmark isDeskMark />
-        <Mono step="xs" className="text-hiviz-text">
-          Desk
-        </Mono>
-      </span>
-      <span className="flex items-center gap-2">
-        <span
-          data-part="operator"
-          className="hidden font-mono text-mono-xs text-muted wide:inline"
-        >
-          {handle === undefined ? undefined : `@${handle} · `}
-          <span className="uppercase">Operator ·</span>
+    <header data-part="desk-bar" className="wide:border-b wide:border-hairline">
+      {/* R57·263: from wide the bar's content is the page's, inside the
+          centred MEASURE.page and its 24 gutters, so the wordmark starts
+          on the rail's edge. */}
+      <div
+        data-part="desk-bar-content"
+        className="flex min-h-control items-center justify-between gap-4 pr-3 pl-4 wide:mx-auto wide:min-h-[var(--bar-height)] wide:w-full wide:max-w-page wide:px-6"
+      >
+        <span className="flex items-baseline gap-2 text-heading wide:gap-3">
+          <Wordmark isDeskMark />
+          <Mono step="xs" className="text-hiviz-text">
+            Desk
+          </Mono>
         </span>
-        <DeskSignOut />
-      </span>
+        <span className="flex items-center gap-2">
+          <span
+            data-part="operator"
+            className="hidden font-mono text-mono-xs text-muted wide:inline"
+          >
+            {handle === undefined ? undefined : `@${handle} · `}
+            <span className="uppercase">Operator ·</span>
+          </span>
+          <DeskSignOut />
+        </span>
+      </div>
     </header>
   );
 }
@@ -263,11 +243,11 @@ export function DeskShell({
 }>) {
   // Only a destination that needs a person carries a count: Review's is
   // what waits for a decision, Today's what the system gave up on.
-  const tallies: Partial<Record<DeskPage, RailTally>> = {
-    today: { count: today.counts.gaveUp, counts: "gave up" },
-    review: { count: today.counts.waiting, counts: "waiting" },
+  const tallies: Partial<Record<DeskPage, number>> = {
+    today: today.counts.gaveUp,
+    review: today.counts.waiting,
     // Under Review, above Duplicates (R48·130), counting queue rows.
-    corrections: { count: today.counts.corrections, counts: "waiting" },
+    corrections: today.counts.corrections,
   };
   return (
     <div
@@ -278,10 +258,20 @@ export function DeskShell({
       {/* The rail beside the content from `wide`; below it, one sticky row
           under the bar that scrolls sideways (R55·195), so a page's heading
           starts near the top instead of under six stacked rows (G-03). */}
-      <div className="flex flex-1 flex-col wide:flex-row">
+      {/* From `wide` the rail and the page are one group inside the
+          centred MEASURE.page, the rail on its content edge (R57·263:
+          x=74 at 1280). The left gutter is the group's; the page's own
+          24 is the gap beside the rail and the right gutter. */}
+      <div
+        data-part="desk-frame"
+        className="flex flex-1 flex-col wide:mx-auto wide:w-full wide:max-w-page wide:flex-row wide:pl-6"
+      >
         <nav
           aria-label="Desk"
-          className="sticky top-0 z-10 overflow-x-auto border-y border-hairline bg-ground px-2 wide:static wide:flex wide:flex-col wide:justify-between wide:overflow-visible wide:border-y-0 wide:border-r wide:px-0 wide:py-4"
+          // R58·312: from `wide` the rail is MEASURE.rail, so every
+          // heading sits 122 + 24 in from the content edge (x=220 at
+          // 1280) whatever the footer holds.
+          className="sticky top-0 z-10 overflow-x-auto border-y border-hairline bg-ground px-2 wide:static wide:flex wide:w-rail wide:shrink-0 wide:flex-col wide:justify-between wide:overflow-visible wide:border-y-0 wide:border-r wide:px-0 wide:py-4"
         >
           <ul className="m-0 flex list-none gap-1 p-0 whitespace-nowrap wide:flex-col wide:gap-0">
             {DESK_PAGES.map((page) => (

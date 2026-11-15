@@ -47,7 +47,8 @@ end of link, Runners, current page
 end of listitem, level 1, position 7, set size 7
 end of list
 Screening · OK
-Last digest · Not yet
+Last digest
+Not yet
 end of navigation, Desk
 main
 region, Runners

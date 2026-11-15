@@ -154,7 +154,11 @@ describe("CopyrightHolds", () => {
     );
     expect(name).not.toHaveClass("text-hiviz-text");
     expect(part("hidden-at")?.textContent).toBe("Hidden Oct 23");
-    expect(part("hidden-at")).toHaveClass("shrink-0", "text-muted", "uppercase");
+    expect(part("hidden-at")).toHaveClass(
+      "shrink-0",
+      "text-muted",
+      "uppercase",
+    );
     // The owner is named in the head, so the line says their strikes.
     expect(part("owner")?.textContent).toBe("Strikes 2");
     // A hairline above the bar.

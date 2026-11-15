@@ -113,7 +113,18 @@ function Picked({
   isDesk: boolean;
   onUnpick: () => void;
 }>): JSX.Element {
-  if (picked === undefined) return <>{idle}</>;
+  // The idle line only from desk, where a pane stands beside the table;
+  // below it nothing opens there, so the line would only say "pick" from
+  // the foot of a long list (R58·276).
+  if (picked === undefined) {
+    return idle === undefined ? (
+      <></>
+    ) : (
+      <div data-part="desk-idle" className="hidden desk:block">
+        {idle}
+      </div>
+    );
+  }
   if (!isDesk) {
     return (
       <Sheet

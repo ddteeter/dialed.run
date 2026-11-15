@@ -125,18 +125,31 @@ function photosShown(row: QueueRow): readonly string[] {
 function ReportedPhotos({
   keys,
 }: Readonly<{ keys: readonly string[] }>): JSX.Element | undefined {
-  if (keys.length === 0) return undefined;
+  const [first, ...rest] = keys;
+  if (first === undefined) return undefined;
+  // R58·275: the first fills the photo column at its own ratio; the
+  // entry's other photos are 96 squares in a row under it, 8 apart.
   return (
-    <span className="flex flex-wrap gap-2">
-      {keys.map((key) => (
-        <img
-          key={key}
-          src={reviewPhotoSrc(key)}
-          alt="Reported"
-          className="h-32 w-auto border border-hairline"
-        />
-      ))}
-    </span>
+    <>
+      <img
+        src={reviewPhotoSrc(first)}
+        alt="Reported"
+        data-part="reported-photo"
+        className="h-auto w-full border border-hairline"
+      />
+      {rest.length === 0 ? undefined : (
+        <span data-part="reported-rest" className="flex flex-wrap gap-2">
+          {rest.map((key) => (
+            <img
+              key={key}
+              src={reviewPhotoSrc(key)}
+              alt="Reported"
+              className="size-24 border border-hairline object-cover"
+            />
+          ))}
+        </span>
+      )}
+    </>
   );
 }
 
@@ -421,6 +434,18 @@ function headName(row: QueueRow, label: string): string {
  * The row's head (R55·197): `KIND · id · @owner [SOURCE]` in MONO.sm. The
  * kind and the source in capitals; the id and the handle in their own case,
  * since a handle is never shouted (G-19). The whole name is the title.
+ *
+ * From `desk` it is one cut line. Below it (R58·274) it wraps instead:
+ * the kind and id on the first line, then the owner and the tag, each
+ * whole. One run of inline text, broken by a `<br>` drawn only below desk.
+ *
+ * **Every space is in a text node of this one span, beside a mark.**
+ * Chromium drops a text node that is spaces alone, and trims the spaces at
+ * the ends of a child element's text, from what is heard: a tag or a dot
+ * in its own span carrying its own spaces was heard "id·@owner[reports]".
+ * So the spaces sit in the id's and the owner's text, the dot before the
+ * owner is a bare mark drawn only on the one desk line, and the tag keeps
+ * its words together with no-break spaces. A handle has none to wrap at.
  */
 function RowHead({
   row,
@@ -431,18 +456,33 @@ function RowHead({
     <span
       data-part="row-head"
       title={label}
-      className="truncate font-mono text-mono-sm"
+      className="block font-mono text-mono-sm wrap-anywhere desk:truncate"
     >
-      {/* The separators outside the capitals' span: a space at its end is
-          dropped from what is heard ("photo ·01M7…"). */}
       <span className="uppercase">{rowKind(row)}</span>
-      {` · ${headName(row, label)}`}
-      {owner === undefined ? undefined : ` · @${owner}`}{" "}
+      {` · ${headName(row, label)} `}
+      <br data-part="head-break" className="desk:hidden" />
+      {owner === undefined ? undefined : (
+        <>
+          <span data-part="owner-dot" className="hidden desk:inline">
+            ·
+          </span>
+          {` @${owner} `}
+        </>
+      )}
       <span data-part="source" className="uppercase">
-        {`[${SOURCE_TAGS[row.source]}]`}
+        {`[${wholeTag(SOURCE_TAGS[row.source])}]`}
       </span>
     </span>
   );
+}
+
+const NO_BREAK_SPACE = String.fromCodePoint(0xa0);
+
+/**
+A tag's words held together, so the tag wraps whole (R58·274).
+*/
+function wholeTag(tag: string): string {
+  return tag.split(" ").join(NO_BREAK_SPACE);
 }
 
 /**
@@ -481,10 +521,7 @@ function RowClock({
       {spanLabel(asOf - row.createdAt)}
     </Mono>
   ) : (
-    <DueClock
-      due={row.due}
-      isOverdue={(row.dueAt ?? Infinity) <= asOf}
-    />
+    <DueClock due={row.due} isOverdue={(row.dueAt ?? Infinity) <= asOf} />
   );
 }
 
@@ -566,7 +603,9 @@ function ReviewRow({
           type="button"
           aria-expanded={active}
           onClick={onActivate}
-          className="flex min-h-target w-full cursor-pointer items-center justify-between gap-4 border-none bg-transparent px-4 py-3 text-left text-ink"
+          // Below desk the head wraps, and the clock keeps to its first
+          // line (R58·274).
+          className="flex min-h-target w-full cursor-pointer items-start justify-between gap-4 border-none bg-transparent px-4 py-3 text-left text-ink desk:items-center"
         >
           <span className="flex min-w-0 flex-col gap-1">
             <RowHead row={row} label={label} />
@@ -633,7 +672,10 @@ function OpenRow({
         data-part="row-body"
         className="flex flex-col gap-4 border-t border-hairline p-4 desk:grid desk:grid-cols-[minmax(0,1fr)_minmax(0,3fr)] desk:items-start desk:gap-6"
       >
-        <div data-part="row-photos" className="flex flex-col gap-2 empty:hidden">
+        <div
+          data-part="row-photos"
+          className="flex flex-col gap-2 empty:hidden"
+        >
           <SubjectPhotos row={row} />
           <RemovedMatchLine match={row.removedMatches?.[0]} />
         </div>

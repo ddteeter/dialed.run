@@ -261,11 +261,52 @@ describe("DeskShell", () => {
       "wide:static",
       "wide:flex-col",
       "wide:border-r",
+      // R58·312: MEASURE.rail, whatever the footer says.
+      "wide:w-rail",
+      "wide:shrink-0",
     );
+    // R57·263: the rail and the page share the centred page's content
+    // edge, its left gutter the group's own.
+    expect(rail().parentElement).toHaveAttribute("data-part", "desk-frame");
+    expect(rail().parentElement).toHaveClass(
+      "wide:mx-auto",
+      "wide:w-full",
+      "wide:max-w-page",
+      "wide:flex-row",
+      "wide:pl-6",
+    );
+    const entry = within(rail()).getByRole("link", { name: "Today" });
+    // 8 each side inside the 122, so "Corrections 99" fits (R58·312).
+    expect(entry).toHaveClass("wide:px-2", "wide:border-l-2", "gap-2");
+    expect(entry).not.toHaveClass("wide:gap-6");
     expect(within(rail()).getByRole("list")).toHaveClass(
       "flex",
       "whitespace-nowrap",
       "wide:flex-col",
+    );
+  });
+
+  it("puts the bar's content on the page's edge, inside the centred page and its gutters (R57·263)", async () => {
+    await renderWithRouter(
+      <DeskShell current="today" today={desk()}>
+        <p>page</p>
+      </DeskShell>,
+    );
+    const bar = document.querySelector("[data-part='desk-bar']");
+    expect(bar).toHaveClass("wide:border-b", "wide:border-hairline");
+    expect(bar).not.toHaveClass("wide:px-6");
+    expect(bar?.firstElementChild).toHaveAttribute(
+      "data-part",
+      "desk-bar-content",
+    );
+    expect(bar?.firstElementChild).toHaveClass(
+      "pl-4",
+      "pr-3",
+      "wide:mx-auto",
+      "wide:w-full",
+      "wide:max-w-page",
+      "wide:px-6",
+      "wide:min-h-[var(--bar-height)]",
     );
   });
 
@@ -280,8 +321,21 @@ describe("DeskShell", () => {
     const [screening, digest] = [...(footer?.children ?? [])];
     expect(screening).toHaveTextContent("Screening · OK");
     expect(screening).toHaveClass("text-muted");
-    expect(digest?.textContent).toBe("Last digest · Not yet");
-    expect(digest?.querySelector("[data-part='digest-room']")).toBeNull();
+    // R58·312: LAST DIGEST stacked over its value, the value in tabular
+    // mono, so neither sets the rail's width.
+    // Its text on the entries' edge: the same 2px edge, unseen, and 8.
+    expect(footer).toHaveClass(
+      "wide:pl-2",
+      "wide:border-l-2",
+      "wide:border-transparent",
+    );
+    expect(digest).toHaveAttribute("data-part", "last-digest");
+    expect(digest).toHaveClass("flex", "flex-col");
+    const [label, value] = [...(digest?.children ?? [])];
+    expect(label?.textContent).toBe("Last digest");
+    expect(label).toHaveClass("text-muted");
+    expect(value?.textContent).toBe("Not yet");
+    expect(value).toHaveClass("text-ink", "tabular-nums");
   });
 
   it("says screening is holding, in hi-viz, while a breaker is over, and when the digest last ran (owner, #635)", async () => {
@@ -302,14 +356,7 @@ describe("DeskShell", () => {
     const [screening, digest] = [...(footer?.children ?? [])];
     expect(screening).toHaveTextContent("Screening · Holding");
     expect(screening).toHaveClass("text-hiviz-text");
-    // One line, heard whole, then unseen and unheard room for the two
-    // characters "Not yet" has beyond a time, so the rail keeps its width
-    // the day the digest first runs (R2-DESK-12b, a guess: #758).
-    expect(digest?.firstChild?.textContent).toBe("Last digest · 07:00");
-    const room = digest?.querySelector("[data-part='digest-room']");
-    expect(room?.textContent).toBe("00");
-    expect(room).toHaveClass("invisible");
-    expect(room).toHaveAttribute("aria-hidden", "true");
+    expect(digest?.lastElementChild?.textContent).toBe("07:00");
   });
 
   it("counts what is waiting on the Review entry, in hi-viz", async () => {
@@ -320,11 +367,12 @@ describe("DeskShell", () => {
     );
 
     const review = within(rail()).getByRole("link", {
-      name: "Review 4 waiting",
+      name: "Review 4",
     });
     expect(within(review).getByText("4")).toHaveClass("text-hiviz-text");
-    // The rail draws the bare number; the unit is spoken only.
-    expect(within(review).getByText("waiting")).toHaveClass("sr-only");
+    // Named by what it draws: no unheard unit (R57·255, D-187).
+    expect(review.textContent).toBe("Review4");
+    expect(review.querySelector(".sr-only")).toBeNull();
   });
 
   it("counts the Corrections queue's rows on its entry (R48·130)", async () => {
@@ -334,7 +382,7 @@ describe("DeskShell", () => {
       </DeskShell>,
     );
     const corrections = within(rail()).getByRole("link", {
-      name: "Corrections 2 waiting",
+      name: "Corrections 2",
     });
     expect(within(corrections).getByText("2")).toHaveClass("text-hiviz-text");
   });
@@ -347,12 +395,12 @@ describe("DeskShell", () => {
     );
 
     const today = within(rail()).getByRole("link", {
-      name: "Today 3 gave up",
+      name: "Today 3",
     });
     expect(within(today).getByText("3")).toHaveClass("text-hiviz-text");
-    expect(within(today).getByText("gave up")).toHaveClass("sr-only");
+    expect(today.textContent).toBe("Today3");
     expect(
-      within(rail()).getByRole("link", { name: "Review 4 waiting" }),
+      within(rail()).getByRole("link", { name: "Review 4" }),
     ).toBeVisible();
   });
 
@@ -578,7 +626,7 @@ describe("DeskTodayPage", () => {
     render(<RouterProvider router={router} />);
 
     expect(
-      await within(rail()).findByRole("link", { name: "Today 1 gave up" }),
+      await within(rail()).findByRole("link", { name: "Today 1" }),
     ).toHaveAttribute("aria-current", "page");
     fireEvent.click(screen.getByRole("button", { name: /^Drop/u }));
 
@@ -640,8 +688,8 @@ describe("DeskPage", () => {
         .getAllByRole("link")
         .map((link) => link.textContent),
     ).toStrictEqual([
-      "Today3 gave up",
-      "Review4 waiting",
+      "Today3",
+      "Review4",
       "Corrections",
       "Access",
       "Duplicates",
@@ -674,7 +722,9 @@ describe("DeskPage", () => {
       expect(page?.className).not.toMatch(/mx-auto/u);
       const column = body.closest("[data-part='desk-column']");
       if (column !== null) {
-        expect(column.className).toBe("flex w-full max-w-column flex-col gap-6");
+        expect(column.className).toBe(
+          "flex w-full max-w-column flex-col gap-6",
+        );
         expect(column.parentElement).toBe(page);
       }
       widths[current] = column === null ? "page" : "column";

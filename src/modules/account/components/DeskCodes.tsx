@@ -358,10 +358,12 @@ function CodeWho({
           <RunnerLink key={who} who={who} />
         ))}
         {more > 0 ? (
+          // The Desk's link, ink, 600 and underlined: the Desk has no pink
+          // action (R44·104, R58·280).
           <button
             type="button"
             onClick={onMore}
-            className="target -my-3 cursor-pointer border-none bg-transparent px-0 py-3 text-small font-bold text-action"
+            className="target -my-3 cursor-pointer border-none bg-transparent px-0 py-3 text-small font-semibold text-ink underline underline-offset-4"
           >
             {`+ ${grouped(more)} more`}
           </button>

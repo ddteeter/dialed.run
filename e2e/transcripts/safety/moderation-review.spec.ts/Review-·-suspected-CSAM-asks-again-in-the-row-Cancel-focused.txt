@@ -16,11 +16,10 @@ link, :when
 end of link, :when
 end of listitem, level 1, position 1, set size 7
 listitem, level 1, position 2, set size 7
-link, Review # waiting, current page
+link, Review #, current page
 Review
 #
-waiting
-end of link, Review # waiting, current page
+end of link, Review #, current page
 end of listitem, level 1, position 2, set size 7
 listitem, level 1, position 3, set size 7
 link, Corrections
@@ -49,7 +48,8 @@ end of link, Runners
 end of listitem, level 1, position 7, set size 7
 end of list
 Screening · OK
-Last digest · Not yet
+Last digest
+Not yet
 end of navigation, Desk
 main
 heading, Review, level 1
@@ -63,7 +63,8 @@ button, entry · :id · @rude_# [reports] #m, expanded
 :id
 entry
 · :id
-· @rude_#
+·
+@rude_#
 [reports]
 end, :id
 #m

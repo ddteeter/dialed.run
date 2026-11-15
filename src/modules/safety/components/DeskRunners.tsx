@@ -161,7 +161,9 @@ function Search({
         });
       }}
     >
-      <label className="target flex flex-col gap-2">
+      {/* The field holds to the 620 column, as Codes' form does (R58·277);
+          the filters under it keep the page's width. */}
+      <label className="target flex max-w-column flex-col gap-2">
         <Mono step="xs" className="text-muted">
           Handle or email
         </Mono>
@@ -216,12 +218,13 @@ const STATE_TONE_CLASS: Readonly<Record<RunnerState, string>> = {
  */
 function StateTags({ runner }: Readonly<{ runner: DeskRunner }>): JSX.Element {
   return (
-    // Each tag whole; on a phone (a guess) the two may stack, leaving the
-    // handle room.
+    // On a phone the two may stack, and a long tag wraps inside the cell
+    // (R58·276), so one [PENDING DELETE] does not set the column's width
+    // and cut every handle. From `wide` each tag is whole on one line.
     <span className="flex flex-wrap gap-x-2 wide:flex-nowrap">
       <Bracketed
         step="sm"
-        className={`whitespace-nowrap ${STATE_TONE_CLASS[runner.state]}`}
+        className={`wide:whitespace-nowrap ${STATE_TONE_CLASS[runner.state]}`}
       >
         {runner.state}
       </Bracketed>

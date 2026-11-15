@@ -16,7 +16,17 @@ export function bracketed(text: string): MatcherFunction {
   const drawn = `[${text}]`;
   return (_content, element) =>
     element?.textContent === drawn &&
-    [...element.children].every(
-      (child) => child.textContent !== drawn,
-    );
+    [...element.children].every((child) => child.textContent !== drawn);
+}
+
+/**
+ * A head's source tag as drawn (R58·274): the bracketed words held
+ * together by no-break spaces.
+ */
+export function sourceTag(text: string): MatcherFunction {
+  const drawn = `[${text.replaceAll(" ", "\u{A0}")}]`;
+  return (_content, element) =>
+    element instanceof HTMLElement &&
+    element.dataset.part === "source" &&
+    element.textContent === drawn;
 }

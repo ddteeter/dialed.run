@@ -118,6 +118,8 @@ describe("the Desk's Corrections (R48·130)", () => {
     const row = screen.getByRole("article", {
       name: "Janji · AFO Middle Layer",
     });
+    // R58·278: 197's round card, as every Desk row that stands alone.
+    expect(row).toHaveClass("rounded-card", "border-hairline", "bg-panel");
     expect(
       within(row).getByText("Weight · 3 runners · oldest Nov 2"),
     ).toBeVisible();

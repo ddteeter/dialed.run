@@ -180,9 +180,11 @@ describe("D8's table", () => {
       "flex-wrap",
       "wide:flex-nowrap",
     );
-    expect(state?.firstElementChild?.firstElementChild).toHaveClass(
-      "whitespace-nowrap",
-    );
+    // R58·276: on a phone a long tag wraps inside its cell, so it does not
+    // set the column's width; from `wide` it is whole.
+    const tag = state?.firstElementChild?.firstElementChild;
+    expect(tag).toHaveClass("wide:whitespace-nowrap");
+    expect(tag).not.toHaveClass("whitespace-nowrap");
     expect(
       within(handle ?? document.body).getByTitle("ada@example.com"),
     ).toHaveClass("wide:hidden");
@@ -292,6 +294,13 @@ describe("D8's table", () => {
       "dark:border-hairline-2",
     );
     expect(screen.getByRole("searchbox")).not.toHaveClass("bg-ground");
+    // R58·277: the field holds to the 620 column, the filters do not.
+    expect(screen.getByRole("searchbox").closest("label")).toHaveClass(
+      "max-w-column",
+    );
+    expect(
+      screen.getByRole("navigation", { name: "Filter runners" }),
+    ).not.toHaveClass("max-w-column");
   });
 });
 

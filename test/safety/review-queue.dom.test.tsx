@@ -14,7 +14,7 @@ import type {
   QueueRow,
   ResolveOutcome,
 } from "../../src/modules/safety/review";
-import { bracketed } from "../ui/bracketed";
+import { bracketed, sourceTag } from "../ui/bracketed";
 import { carriedSince } from "../ui/carry-spy";
 
 vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
@@ -159,8 +159,8 @@ describe("what a reviewer is shown", () => {
     // A photo a model flagged is a threshold question; an entry three
     // people objected to is a judgement about people. A reviewer who
     // cannot tell them apart treats both the same way.
-    expect(screen.getByText(bracketed("reports"))).toBeInTheDocument();
-    expect(screen.getByText(bracketed("classifier"))).toBeInTheDocument();
+    expect(screen.getByText(sourceTag("reports"))).toBeInTheDocument();
+    expect(screen.getByText(sourceTag("classifier"))).toBeInTheDocument();
   });
 
   it("tags a photo held on upload by what was done, not how", () => {
@@ -169,8 +169,8 @@ describe("what a reviewer is shown", () => {
     ]);
 
     // Round 41 #84: the tag names the hold, not the technique.
-    expect(screen.getByText(bracketed("held on upload"))).toBeInTheDocument();
-    expect(screen.queryByText(bracketed("fingerprint"))).toBeNull();
+    expect(screen.getByText(sourceTag("held on upload"))).toBeInTheDocument();
+    expect(screen.queryByText(sourceTag("fingerprint"))).toBeNull();
   });
 
   it("names what is being reviewed, in the row's head (R55·197)", () => {
@@ -448,7 +448,7 @@ describe("deciding", () => {
     expect(heads()).toStrictEqual([
       "garment photo · g-1 · @k_lopes [classifier]",
     ]);
-    expect(screen.getAllByText(bracketed("classifier"))).toHaveLength(1);
+    expect(screen.getAllByText(sourceTag("classifier"))).toHaveLength(1);
     const photo = screen.getByRole("img", { name: "Reported garment" });
     expect(photo).toHaveAttribute(
       "src",
@@ -518,11 +518,43 @@ describe("deciding", () => {
     expect(heads()).toStrictEqual(["photo · p-1 · @k_lopes [classifier]"]);
     expect(
       screen
-        .getByText(bracketed("classifier"))
+        .getByText(sourceTag("classifier"))
         .closest("[data-part='row-head']"),
     ).not.toBeNull();
-    expect(screen.getByRole("img", { name: "Reported" })).toHaveClass("h-32");
+    // R58·275: one photo fills the photo column at its own ratio.
+    expect(screen.getByRole("img", { name: "Reported" })).toHaveClass(
+      "w-full",
+      "h-auto",
+    );
+    expect(document.querySelector("[data-part='reported-rest']")).toBeNull();
     expect(document.querySelector("[data-part='garment-photo']")).toBeNull();
+  });
+
+  it("shows an entry's first photo at the column's width and the rest as 96 squares under it (R58·275)", () => {
+    renderQueue([
+      row({
+        subjectType: "entry",
+        subjectId: "e-1",
+        subject: {
+          photoKeys: ["entries/u/e/1", "entries/u/e/2", "entries/u/e/3"],
+        },
+      }),
+    ]);
+
+    const [first, ...rest] = screen.getAllByRole("img", { name: "Reported" });
+    expect(first).toHaveAttribute("data-part", "reported-photo");
+    expect(first).toHaveClass("w-full", "h-auto");
+    expect(first?.getAttribute("src")).toContain("entries/u/e/1");
+    const row2 = document.querySelector("[data-part='reported-rest']");
+    expect(row2).toHaveClass("flex", "flex-wrap", "gap-2");
+    expect(rest.map((img) => img.parentElement)).toStrictEqual([row2, row2]);
+    expect(rest.map((img) => img.getAttribute("src"))).toStrictEqual([
+      expect.stringContaining("entries/u/e/2"),
+      expect.stringContaining("entries/u/e/3"),
+    ]);
+    for (const img of rest) {
+      expect(img).toHaveClass("size-24", "object-cover", "border-hairline");
+    }
   });
   it("goes back to the decision bar on Cancel, deciding nothing", async () => {
     const user = userEvent.setup();
@@ -955,11 +987,14 @@ describe("what a row tells the reviewer", () => {
       "text-hiviz-text",
     );
     expect(clock).not.toHaveClass("bg-hi-viz");
-    // Beside the head, keeping its width; the head is one line, whole in
-    // its title (N3-10).
+    // Beside the head, keeping its width; from desk the head is one line,
+    // whole in its title (N3-10). Below desk it wraps, and the clock keeps
+    // to its first line (R58·274).
     expect(clock.parentElement).toHaveClass("shrink-0", "whitespace-nowrap");
+    expect(opener).toHaveClass("items-start", "desk:items-center");
     const head = opener.querySelector("[data-part='row-head']");
-    expect(head).toHaveClass("truncate");
+    expect(head).toHaveClass("block", "desk:truncate");
+    expect(head).not.toHaveClass("truncate");
     expect(head).toHaveAttribute("title", "e-1");
     // The brackets stay about people.
     expect(screen.getByText(bracketed("1 person"))).toBeInTheDocument();
@@ -969,6 +1004,60 @@ describe("what a row tells the reviewer", () => {
         "It's an intimate image of someone, shared without their consent",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("wraps the head below desk: kind and id, then the owner and the tag, each whole (R58·274)", () => {
+    renderQueue([
+      row({
+        subjectType: "photo",
+        subjectId: "p-1",
+        source: "classifier",
+        subject: { photoKeys: [], owner: "nightrun_nico_ferreira" },
+      }),
+    ]);
+    const head = document.querySelector("[data-part='row-head']");
+    expect(head?.textContent).toBe(
+      "photo · p-1 · @nightrun_nico_ferreira [classifier]",
+    );
+    expect(head).toHaveClass("block", "wrap-anywhere", "desk:truncate");
+    // One run of inline text: below desk a break drawn only there parts
+    // the kind and id from the owner and the tag.
+    const lineBreak = head?.querySelector("br");
+    expect(lineBreak).toHaveAttribute("data-part", "head-break");
+    expect(lineBreak).toHaveClass("desk:hidden");
+    // Every space sits in a text node of the head beside a mark, never at
+    // the end of a child's text, where Chromium trims it from what is heard.
+    expect(
+      [...(head?.childNodes ?? [])]
+        .filter((node) => node.nodeType === Node.TEXT_NODE)
+        .map((node) => node.textContent),
+    ).toStrictEqual([" · p-1 ", " @nightrun_nico_ferreira "]);
+    const dot = head?.querySelector("[data-part='owner-dot']");
+    expect(dot?.textContent).toBe("·");
+    expect(dot).toHaveClass("hidden", "desk:inline");
+    const source = head?.querySelector("[data-part='source']");
+    expect(source?.textContent).toBe("[classifier]");
+    expect(source).toHaveClass("uppercase");
+    expect(
+      [...(head?.children ?? [])].map((child) => child.tagName),
+    ).toStrictEqual(["SPAN", "BR", "SPAN", "SPAN"]);
+  });
+
+  it("keeps a tag of several words whole with no-break spaces, and draws no dot without an owner (R58·274)", () => {
+    renderQueue([
+      row({
+        subjectType: "photo",
+        subjectId: "p-2",
+        source: "fingerprint",
+        subject: { photoKeys: [] },
+      }),
+    ]);
+    const head = document.querySelector("[data-part='row-head']");
+    expect(head?.querySelector("[data-part='source']")?.textContent).toBe(
+      "[held\u{A0}on\u{A0}upload]",
+    );
+    expect(head?.querySelector("[data-part='owner-dot']")).toBeNull();
+    expect(head?.textContent).toBe("photo · p-2 [held\u{A0}on\u{A0}upload]");
   });
 
   it("shortens an id that stands in for a label to its first and last four, whole in the title (R55·197)", () => {
@@ -1150,7 +1239,7 @@ describe("what a row tells the reviewer", () => {
     expect(screen.getByText("Nobody reported this.").parentElement).toHaveClass(
       "text-small",
     );
-    expect(screen.getByText(bracketed("classifier"))).toBeInTheDocument();
+    expect(screen.getByText(sourceTag("classifier"))).toBeInTheDocument();
     // Nor "[0 people]" over it: nobody is not a count of people.
     expect(screen.queryByText(bracketed("0 people"))).toBeNull();
   });
@@ -1277,7 +1366,7 @@ describe("a photo still pending a day after upload (D-157)", () => {
     renderQueue([stuck("unscreened")]);
 
     expect(
-      screen.getByText(bracketed("not screened in a day")),
+      screen.getByText(sourceTag("not screened in a day")),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
@@ -1296,7 +1385,7 @@ describe("a photo still pending a day after upload (D-157)", () => {
   it("says the file is missing, and draws no frame for it", () => {
     renderQueue([stuck("missing_file")]);
 
-    expect(screen.getByText(bracketed("file missing"))).toBeInTheDocument();
+    expect(screen.getByText(sourceTag("file missing"))).toBeInTheDocument();
     expect(
       screen.getByText(
         "Uploaded over a day ago, and its file is not in storage, so it cannot be screened or shown. Nobody but its owner sees it while it waits.",
@@ -1492,7 +1581,7 @@ describe("a handle the re-ask flagged (D-97)", () => {
       /^The hourly re-check flagged a handle this runner already has\. Nothing is hidden while it waits\.$/u,
     );
     expect(screen.queryByText("Nobody reported this.")).toBeNull();
-    expect(screen.getByText(bracketed("classifier"))).toBeInTheDocument();
+    expect(screen.getByText(sourceTag("classifier"))).toBeInTheDocument();
     // A decision that is not the row's submit is the boards' outline pill,
     // not bare text (R-173: on the Desk's dark ground it read as a label).
     expect(screen.getByRole("button", { name: "Keep" })).toHaveClass(
