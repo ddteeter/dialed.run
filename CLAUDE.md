@@ -32,6 +32,11 @@ appeared yet:
 | skill `pr-demo-video`         | a user-visible change                                                   | recording the demo                                                                                               |
 | skill `styling-audit`         | a styling audit, or re-capturing a screen to confirm a styling finding  | the screenshot capture (`AUDIT_SHOTS`), the seeded captures, the finding format                                  |
 | skill `coordinating-a-wave`   | coordinating a wave of parallel lanes                                   | lane briefs, ownership, owner and Design rounds, merging, the record, traps                                      |
+| skill `security-audit`        | a whole-app security audit, a round on its gaps, a re-check of findings | pinning code and libraries, the reviewer workflow and second pass, the private home, the index, tracking by id   |
+
+A skill's scripts sit beside its `SKILL.md` as files. ESLint ignores
+`.claude/skills/` (owner, 2026-11-14): they are agent tooling, and nothing
+the app ships imports them.
 
 Code comments that cite "CLAUDE.md law 8b", "§D1 discipline", "§Derive, don't
 mirror" and the like predate this split; the table says where each now lives.
