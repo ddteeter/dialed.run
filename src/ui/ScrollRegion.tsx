@@ -20,6 +20,10 @@ import type { JSX, ReactNode, Ref, UIEventHandler } from "react";
  * RADIUS.card, clear of the photos. The snap edge takes the same 4, so a
  * snapped photo lands where it sat at rest. Its name says what it holds
  * and how many ("Photos, 4"), which the owner passes as `label`.
+ *
+ * It takes focus, so it is a target, and a target is 44 (Accessibility
+ * Contract 03): never shorter than that, whatever it holds, even a
+ * photo that hasn't loaded yet.
  */
 export function ScrollRegion({
   label,
@@ -65,4 +69,4 @@ export function ScrollRegion({
 The focus ring, inside the region's edge.
 */
 const RING_CLASS =
-  "-m-1 scroll-p-1 rounded-card p-1 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink";
+  "-m-1 min-h-11 scroll-p-1 rounded-card p-1 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink";

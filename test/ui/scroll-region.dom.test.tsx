@@ -39,6 +39,8 @@ describe("ScrollRegion", () => {
       "-m-1",
       "scroll-p-1",
       "rounded-card",
+      // A target, so never under 44 (Contract 03).
+      "min-h-11",
       "focus-visible:outline",
       "focus-visible:outline-2",
       "focus-visible:-outline-offset-2",
