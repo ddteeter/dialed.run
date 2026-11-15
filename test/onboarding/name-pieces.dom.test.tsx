@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -88,7 +88,7 @@ function pieceRows(): Element[] {
 }
 
 async function nameFirst(user: ReturnType<typeof userEvent.setup>) {
-  const [first] = screen.getAllByRole("button", { name: /^Name it /u });
+  const [first] = screen.getAllByRole("button", { name: "Name it" });
   await user.click(first ?? screen.getByRole("button", { name: "Next" }));
 }
 
@@ -106,9 +106,7 @@ describe("NamePieces", () => {
     // screen that showed three would be claiming to know a stranger.
     renderScreen();
 
-    expect(screen.getAllByRole("button", { name: /^Name it /u })).toHaveLength(
-      5,
-    );
+    expect(screen.getAllByRole("button", { name: "Name it" })).toHaveLength(5);
     expect(
       screen.getByRole("button", { name: /Everything else/ }),
     ).toHaveTextContent("Everything else · 1 more");
@@ -250,9 +248,7 @@ describe("NamePieces", () => {
       expect(screen.getByText("Smartwool · No model")).toBeVisible();
     });
     expect(counter().textContent).toBe("0 of 6 named");
-    expect(screen.getAllByRole("button", { name: /^Name it /u })).toHaveLength(
-      5,
-    );
+    expect(screen.getAllByRole("button", { name: "Name it" })).toHaveLength(5);
   });
 
   it("edges the open row in 2px ink, the rest in hairline, and sets the note beside Save (AC2a, R55·229)", async () => {
@@ -529,32 +525,42 @@ describe("NamePieces", () => {
     await waitFor(() => {
       expect(screen.getByText("Smartwool Intraknit 200")).toBeVisible();
     });
-    expect(screen.getAllByRole("button", { name: /^Name it /u })).toHaveLength(
-      4,
-    );
+    expect(screen.getAllByRole("button", { name: "Name it" })).toHaveLength(4);
   });
 
-  it("names each offer for its piece, behind the visible words", () => {
-    // Heard alone, five buttons that all say "Name it" name nothing. The
-    // piece is in the name and not on screen twice: the visible label is
-    // still the two words, which start the name (WCAG 2.5.3).
+  it("names each offer by its visible words, and describes it by its piece", () => {
+    // Heard alone, five buttons that all say "Name it" name nothing. D-187:
+    // the name is the two visible words, and the row's own visible label
+    // is the description, so the piece is not on screen twice.
     renderScreen();
 
-    const offers = screen.getAllByRole("button", { name: /^Name it /u });
+    const offers = screen.getAllByRole("button", { name: "Name it" });
     expect(offers.filter((offer) => offer.hasAttribute("aria-label"))).toEqual(
       [],
     );
-    expect(offers.map((offer) => offer.textContent)).toEqual([
-      "Name it Running tights",
-      "Name it Merino base layer",
-      "Name it Beanie",
-      "Name it Running gloves",
-      "Name it Short sleeve tee",
-    ]);
+    expect(offers.map((offer) => offer.textContent)).toEqual(
+      Array.from({ length: 5 }, () => "Name it"),
+    );
+    const labels = [
+      "Running tights",
+      "Merino base layer",
+      "Beanie",
+      "Running gloves",
+      "Short sleeve tee",
+    ];
+    expect(offers).toHaveLength(labels.length);
+    for (const [index, offer] of offers.entries()) {
+      expect(offer).toHaveAccessibleDescription(labels[index] ?? "");
+      // The description is the row's own visible label, not a copy of it.
+      const row = offer.closest("[data-part='piece-row']");
+      const label = within(
+        row instanceof HTMLElement ? row : document.body,
+      ).getByText(labels[index] ?? "");
+      expect(label).toBeVisible();
+      expect(offer).toHaveAttribute("aria-describedby", label.id);
+    }
     for (const offer of offers) {
-      const [visible, hidden] = offer.children;
-      expect(visible).toHaveTextContent(/^Name it$/u);
-      expect(hidden).toHaveClass("sr-only");
+      expect(offer.querySelector(".sr-only")).toBeNull();
     }
   });
 
@@ -566,9 +572,7 @@ describe("NamePieces", () => {
 
     await nameFirst(user);
 
-    expect(screen.getAllByRole("button", { name: /^Name it /u })).toHaveLength(
-      4,
-    );
+    expect(screen.getAllByRole("button", { name: "Name it" })).toHaveLength(4);
   });
 
   it("never lets the browser submit the naming form itself", async () => {

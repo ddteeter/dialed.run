@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { JSX, ReactNode } from "react";
 
 import type {
@@ -882,6 +882,10 @@ export function GarmentDetail({
   const { runCount } = summaryOf(detail);
   // Same name for the heading and the photo's accessible name.
   const label = garmentLabel({ name: item.name, brand: item.brand, isGeneric });
+  // Every action is described by the h1, the piece it acts on, for a
+  // screen reader that lands on it alone; its name stays its visible word
+  // (D-187).
+  const labelId = useId();
   const photo = usePhotoActions({
     itemId,
     uploadPhoto,
@@ -908,7 +912,9 @@ export function GarmentDetail({
           <PhoneBell />
         </div>
         <IdentityKicker item={item} isGeneric={isGeneric} />
-        <h1 className="m-0 font-display text-title">{label}</h1>
+        <h1 id={labelId} className="m-0 font-display text-title">
+          {label}
+        </h1>
         <ShopPage detail={detail} />
         <Colorway item={item} />
       </div>
@@ -939,6 +945,7 @@ export function GarmentDetail({
           <button
             type="button"
             {...inFlight(bringBack.pending)}
+            aria-describedby={labelId}
             onClick={() => {
               void bringBack.run();
             }}
@@ -949,29 +956,26 @@ export function GarmentDetail({
               pendingLabel="Unretiring"
               pending={bringBack.pending}
             />
-            <span className="sr-only">{` ${label}`}</span>
           </button>
         ) : (
           <>
             <Link
               to="/closet/edit/$itemId"
               params={{ itemId }}
+              aria-describedby={labelId}
               className="target inline-flex cursor-pointer items-center rounded-pill border border-hairline bg-transparent px-5 py-3 text-body font-semibold text-ink no-underline"
             >
               Edit
-              {/* Every action names the piece it acts on, for a screen
-                  reader that lands on it alone. */}
-              <span className="sr-only">{` ${label}`}</span>
             </Link>
             <button
               type="button"
+              aria-describedby={labelId}
               onClick={() => {
                 setConfirming("retire");
               }}
               className="target inline-flex cursor-pointer items-center rounded-pill border border-hairline bg-transparent px-5 py-3 text-body font-semibold text-ink no-underline"
             >
               Retire
-              <span className="sr-only">{` ${label}`}</span>
             </button>
           </>
         )}
@@ -980,13 +984,13 @@ export function GarmentDetail({
             ruling on task 122). Its sheet says what a delete costs. */}
         <button
           type="button"
+          aria-describedby={labelId}
           onClick={() => {
             setConfirming("delete");
           }}
           className="target ml-auto cursor-pointer border-none bg-transparent px-1 text-body text-quiet underline underline-offset-4"
         >
           Delete
-          <span className="sr-only">{` ${label}`}</span>
         </button>
       </div>
       <ControlFailureBand

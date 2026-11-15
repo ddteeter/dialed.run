@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { Mono } from "../../../ui";
 import type { NameableItem, NamedResult, NamingOffer } from "../naming";
@@ -215,12 +215,15 @@ function PieceRow({
   const label = result?.label ?? item.label;
   const subtitle = result?.subtitle ?? item.subtitle;
   const isFinished = result?.isNamed === true;
+  const labelId = useId();
 
   return (
     <div data-part="piece-row" className={rowEdge(isNaming, isFinished)}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <span className="text-body font-semibold">{label}</span>
+          <span id={labelId} className="text-body font-semibold">
+            {label}
+          </span>
           <Mono
             step="xs"
             className={isFinished ? "text-dialed-text" : "text-muted"}
@@ -232,13 +235,14 @@ function PieceRow({
           <button
             type="button"
             onClick={onStartNaming}
+            // Which piece, for a reader that hears the button alone: one
+            // per row would otherwise all say "Name it" (#582). Described
+            // by the row's own name, as garment detail's Edit and Retire
+            // are; the name stays the visible words (D-187).
+            aria-describedby={labelId}
             className="target shrink-0 cursor-pointer rounded-pill border border-hairline bg-transparent px-4 py-2"
           >
             <Mono step="xs">Name it</Mono>
-            {/* Which piece, for a reader that hears the button alone: one
-                per row would otherwise all say "Name it" (#582). The
-                row's own name, as garment detail's Edit and Retire do. */}
-            <span className="sr-only">{` ${label}`}</span>
           </button>
         )}
       </div>
