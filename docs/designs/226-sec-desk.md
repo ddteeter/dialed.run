@@ -51,7 +51,7 @@ the reports breaker and the moderator's placeholder handle.
   comment is corrected in the same commit.
 - New route files: none. New bindings/queues/crons: **none**.
 - Screens: Review › removal request row gains the photo tile (guess,
-  built from the Desk's existing tile; Design to confirm). Corrections
+  built from the Desk's existing tile; Design 325, to be filed). Corrections
   sheet and Desk Corrections each get one new message.
 
 ## Test plan
@@ -89,4 +89,4 @@ tile). No Playwright spec: no new route or server boundary.
 
 ## Open questions
 
-- The tile's layout is a guess for Design.
+- The tile's layout is a guess for Design 325 (filed after merge).
