@@ -35,13 +35,13 @@ The hi-viz card takes it, so its ink pill stays ink in dark (#750).
 - **#757.** The bell's count badge anchors at the glyph's top-right with a
   2px `--ground` ring.
 - **#731.** NOTIFICATIONS becomes "Notifications" in TYPE.title.
-- **#752** moved to 11d (coordinator, 2026-11-15). My guess went with it:
-  `DeskSplit`'s 620 + 24 + 300 group, centred in MEASURE.page, with the 300
-  marked as a guess pending Design 316 (#771).
-- **#662's open three.** PasswordField's "Show password", the tab bar's
-  "Add a run" and the compact weather credit predate 255's rule. Each
-  needs an answer on whether 255 overrides it, so all three stay as built
-  until one comes.
+- **#752.** `DeskSplit` centres its 620 + 24 + 300 group inside
+  MEASURE.page (x=168 at 1280). The 300 is marked as a guess pending
+  Design 316 (#771).
+- **#662's three older names.** The password toggle becomes "Show" or
+  "Hide". The owner kept the launcher's "Add a run" and the compact
+  weather credit's full sentence as exceptions (#662, comment
+  6895610129).
 
 Call sites in 11d's files: Resend link and Not now (#715), A2b/A3b Done
 (#747), That's it (#750), A1's Open that run and the delete-with-runs pair
@@ -66,7 +66,7 @@ Call sites in 11d's files: Resend link and Not now (#715), A2b/A3b Done
 
 ## Issues
 
-- Closes: #711 and #757 here. #708, #662, #731, #751, #753, #747, #750
+- Closes: #711, #752 and #757 here. #708, #662, #731, #751, #753, #747, #750
   and #715 close when 11d's (and for #662, 11b's) call sites land; the PR
   lists mine and theirs per item.
 - Opens: whatever the sweep finds that nobody owns.
