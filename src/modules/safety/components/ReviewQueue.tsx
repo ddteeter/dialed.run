@@ -437,9 +437,15 @@ function headName(row: QueueRow, label: string): string {
  *
  * From `desk` it is one cut line. Below it (R58·274) it wraps instead:
  * the kind and id on the first line, then the owner and the tag, each
- * whole. Inline flow, not flex, so the spaces between them stay in what is
- * heard. The ` · ` before the owner is drawn only on the one line, and is
- * heard at every width.
+ * whole. Inline flow, not flex.
+ *
+ * Every space sits inside a text node that also holds a mark, because
+ * Chromium drops a text node that is only spaces from what is heard
+ * ("id[reports]"), and a visually hidden one loses its spaces
+ * ("id·@owner"). So the ` · ` before the owner is text drawn only on the
+ * one desk line, and not heard below it, where the line break parts them.
+ * The tag carries its own leading space, a place to wrap, and keeps its
+ * words together with no-break spaces. A handle has no spaces to wrap at.
  */
 function RowHead({
   row,
@@ -459,20 +465,29 @@ function RowHead({
         {` · ${headName(row, label)}`}
       </span>
       <span data-part="head-tags" className="desk:inline">
-        {owner === undefined ? (
-          " "
-        ) : (
+        {owner === undefined ? undefined : (
           <>
-            <span className="sr-only desk:not-sr-only">{" · "}</span>
-            <span className="whitespace-nowrap">{`@${owner}`}</span>{" "}
+            <span data-part="owner-dot" className="hidden desk:inline">
+              {" · "}
+            </span>
+            {`@${owner}`}
           </>
         )}
-        <span data-part="source" className="whitespace-nowrap uppercase">
-          {`[${SOURCE_TAGS[row.source]}]`}
+        <span data-part="source" className="uppercase">
+          {` [${wholeTag(SOURCE_TAGS[row.source])}]`}
         </span>
       </span>
     </span>
   );
+}
+
+const NO_BREAK_SPACE = String.fromCodePoint(0xa0);
+
+/**
+A tag's words held together, so the tag wraps whole (R58·274).
+*/
+function wholeTag(tag: string): string {
+  return tag.split(" ").join(NO_BREAK_SPACE);
 }
 
 /**
