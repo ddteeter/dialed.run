@@ -10,6 +10,7 @@ import { eq, sql } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import * as authSchema from "../../db/schema-auth";
+import { newUlid } from "../../lib/ids";
 import type { AuthMail } from "../account";
 import { PASSWORD_MIN_LENGTH } from "../../lib/contracts";
 import { outboxInsertWhere, oweOutbox } from "../ops";
@@ -141,6 +142,14 @@ function signingSecret(secret: string | undefined): string {
     throw new Error("BETTER_AUTH_SECRET is not set: auth will not start");
   }
   return secret;
+}
+
+/**
+ * A date as the `user` table stores it: `integer` in timestamp mode keeps
+ * whole seconds.
+ */
+function toWholeSecond(date: Date): Date {
+  return new Date(Math.floor(date.getTime() / 1000) * 1000);
 }
 
 /**
@@ -282,6 +291,23 @@ export function createAuth({
       // runner logs in (unconfirmed runners can: D-50), or follows the
       // link, whichever comes first.
       autoSignIn: false,
+      // What Better Auth answers a registered address with: the user a new
+      // account's answer carries, as the create hook and the column leave
+      // it (`claimInvite`: no name, and a ULID when invite-only; the
+      // `user` table's dates: whole seconds). Pinned against a real
+      // sign-up's answer in `test/auth/create-auth.test.ts`.
+      // The app declares no additional user fields, so there are none to
+      // carry over.
+      customSyntheticUser: ({ coreFields, id }) => {
+        const at = toWholeSecond(coreFields.createdAt);
+        return {
+          ...coreFields,
+          name: "",
+          createdAt: at,
+          updatedAt: at,
+          id: access.isInviteOnly ? newUlid() : id,
+        };
+      },
       onExistingUserSignUp: ({ user }) => mail.existingAccount(user),
       // ACC-4. Better Auth's reset: single use, its row deleted when
       // spent; the link lives an hour, and a reset signs every session
