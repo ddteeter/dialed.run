@@ -170,6 +170,19 @@ describe("Next", () => {
     ).toBeVisible();
   });
 
+  it("lands the rename cap on the field (SA-L02)", async () => {
+    const { onClaimed, user } = renderForm(() => ({ kind: "too_often" }));
+    await user.type(field(), "fifth_name");
+    await user.click(next());
+    expect(
+      await screen.findByText(
+        "You've changed your handle 3 times this month. Try again in a few weeks.",
+      ),
+    ).toBeVisible();
+    expect(field()).toHaveAttribute("aria-invalid", "true");
+    expect(onClaimed).not.toHaveBeenCalled();
+  });
+
   it("gives a server fault the form's band, not the field", async () => {
     const claim = vi.fn(() => Promise.reject(new Error("boom")));
     render(

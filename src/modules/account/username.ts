@@ -224,6 +224,7 @@ async function suggestionFor(
  */
 export type HandleClaim =
   | { readonly kind: "claimed"; readonly username: string }
+  | { readonly kind: "too_often" }
   | {
       readonly kind: "taken";
       readonly username: string;
@@ -277,6 +278,44 @@ function notRetiredByAnother(userId: string, handle: string): SQL {
 }
 
 /**
+ * The rename cap (SA-L02, owner 2026-11-15): a runner retires at most
+ * `RENAME_CAP` handles of their own choosing in any `RENAME_WINDOW_S`.
+ * D-56 keeps each one for good, so without a bound one account could take
+ * any number out of circulation. Counted from `username_history` itself
+ * (`username_history_user`), no table of its own: a moderator's lock is
+ * not the runner's choice and does not count, and taking back `typed`
+ * deletes its row, so switching between two handles retires nothing new.
+ *
+ * Read against the runner's profile row, whose handle is the one this
+ * claim retires: the batch writes that row into the history before it
+ * moves the handle, and it is not one the cap has spent yet.
+ */
+export const RENAME_CAP = 3;
+export const RENAME_WINDOW_S = 30 * 24 * 60 * 60;
+
+function withinRenameCap(userId: string, typed: string, now: number): SQL {
+  return sql`(SELECT count(*) FROM ${usernameHistory} WHERE ${usernameHistory.userId} = ${userId} AND ${usernameHistory.lockedAt} IS NULL AND ${usernameHistory.retiredAt} > ${now - RENAME_WINDOW_S} AND ${usernameHistory.username} <> ${typed} AND ${usernameHistory.username} <> ${userProfiles.username}) < ${RENAME_CAP}`;
+}
+
+/**
+ * Whether claiming `typed` now would pass the cap, read before the batch
+ * so the refusal can say why; the batch asks the same in SQL, so parallel
+ * claims cannot pass it together.
+ */
+async function isWithinRenameCap(
+  db: Db,
+  userId: string,
+  typed: string,
+  now: number,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ ok: sql<number>`${withinRenameCap(userId, typed, now)}` })
+    .from(userProfiles)
+    .where(eq(userProfiles.userId, userId));
+  return row?.ok === 1;
+}
+
+/**
  * Keeps the handle the runner holds *at the moment the batch runs* in the
  * history — read by the statement, not passed in, so two changes racing
  * each other each retire what they actually replace. Nothing when there is
@@ -288,7 +327,7 @@ function retireCurrent(db: Db, userId: string, typed: string, at: number) {
   return db
     .insert(usernameHistory)
     .select(
-      sql`SELECT ${userProfiles.username}, ${userProfiles.userId}, ${at}, NULL FROM ${userProfiles} WHERE ${userProfiles.userId} = ${userId} AND ${userProfiles.username} <> ${typed} AND ${notRetiredByAnother(userId, typed)}`,
+      sql`SELECT ${userProfiles.username}, ${userProfiles.userId}, ${at}, NULL FROM ${userProfiles} WHERE ${userProfiles.userId} = ${userId} AND ${userProfiles.username} <> ${typed} AND ${notRetiredByAnother(userId, typed)} AND ${withinRenameCap(userId, typed, at)}`,
     );
 }
 
@@ -360,16 +399,22 @@ export async function claimUsername(
     suggestion: await suggestionFor(db, userId, typed),
   });
   if (await isHeldByAnother(db, userId, typed)) return taken();
+  const now = nowSeconds();
+  // A first handle retires nothing, so only a change is capped.
+  const isAChange = profile?.username != undefined;
+  if (isAChange && !(await isWithinRenameCap(db, userId, typed, now))) {
+    return { kind: "too_often" };
+  }
 
   const ownHistoryRow = ownUnlocked(userId, typed);
-  // The handle is set only where D-56 still allows it; a refusal writes
-  // nothing, and the read at the end of the batch is what notices.
+  // The handle is set only where D-56 and the rename cap still allow it; a
+  // refusal writes nothing, and the read at the end of the batch notices.
   const mayTake = and(
     eq(userProfiles.userId, userId),
     notRetiredByAnother(userId, typed),
+    or(isNull(userProfiles.username), withinRenameCap(userId, typed, now)),
   );
   const holdsTyped = and(eq(userProfiles.userId, userId), sameHandle(typed));
-  const now = nowSeconds();
   try {
     const results = await db.batch([
       retireCurrent(db, userId, typed, now),
@@ -389,9 +434,14 @@ export async function claimUsername(
       holdersNow(db, holdsTyped),
     ]);
     const held = results[4];
-    // Nothing held means D-56 refused the claim inside the batch: someone
-    // gave this handle up after the read above said it was free.
-    if (held.length === 0) return await taken();
+    // Nothing held means the batch refused the claim: someone gave this
+    // handle up after the read above said it was free, or a parallel
+    // change used the runner's last rename.
+    if (held.length === 0) {
+      return (await isWithinRenameCap(db, userId, typed, now))
+        ? await taken()
+        : { kind: "too_often" };
+    }
     purge(profileCacheTags(userId, typed));
     return { kind: "claimed", username: typed };
   } catch (error: unknown) {
