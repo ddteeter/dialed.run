@@ -19,11 +19,11 @@ import { bracketed } from "../ui/bracketed";
 import { carriedSince } from "../ui/carry-spy";
 
 /**
- * A head's source tag as drawn (R58·274): its own leading space, then the
- * bracketed words held together by no-break spaces.
+ * A head's source tag as drawn (R58·274): the bracketed words held
+ * together by no-break spaces.
  */
 function sourceTag(text: string): MatcherFunction {
-  const drawn = ` [${text.replaceAll(" ", "\u{A0}")}]`;
+  const drawn = `[${text.replaceAll(" ", "\u{A0}")}]`;
   return (_content, element) =>
     element instanceof HTMLElement &&
     element.dataset.part === "source" &&
@@ -1006,7 +1006,7 @@ describe("what a row tells the reviewer", () => {
     expect(clock.parentElement).toHaveClass("shrink-0", "whitespace-nowrap");
     expect(opener).toHaveClass("items-start", "desk:items-center");
     const head = opener.querySelector("[data-part='row-head']");
-    expect(head).toHaveClass("flex", "flex-col", "desk:block", "desk:truncate");
+    expect(head).toHaveClass("block", "desk:truncate");
     expect(head).not.toHaveClass("truncate");
     expect(head).toHaveAttribute("title", "e-1");
     // The brackets stay about people.
@@ -1029,28 +1029,31 @@ describe("what a row tells the reviewer", () => {
       }),
     ]);
     const head = document.querySelector("[data-part='row-head']");
-    const name = head?.querySelector("[data-part='head-name']");
-    const tags = head?.querySelector("[data-part='head-tags']");
-    expect(name?.textContent).toBe("photo · p-1");
-    expect(name).toHaveClass("wrap-anywhere", "desk:inline");
-    expect(tags?.textContent).toBe(" · @nightrun_nico_ferreira [classifier]");
-    expect(tags).toHaveClass("desk:inline");
-    // The dot is text drawn only on the one desk line: a hidden copy would
-    // lose its spaces in what Chromium hears ("id·@owner").
-    const dot = tags?.querySelector("[data-part='owner-dot']");
-    expect(dot?.textContent).toBe(" · ");
-    expect(dot).toHaveClass("hidden", "desk:inline");
-    expect(dot).not.toHaveClass("sr-only");
-    // The tag carries its own space, never a text node of spaces alone.
-    const source = head?.querySelector("[data-part='source']");
-    expect(source?.textContent).toBe(" [classifier]");
-    expect(source).toHaveClass("uppercase");
-    expect(source).not.toHaveClass("whitespace-nowrap");
+    expect(head?.textContent).toBe(
+      "photo · p-1 · @nightrun_nico_ferreira [classifier]",
+    );
+    expect(head).toHaveClass("block", "wrap-anywhere", "desk:truncate");
+    // One run of inline text: below desk a break drawn only there parts
+    // the kind and id from the owner and the tag.
+    const lineBreak = head?.querySelector("br");
+    expect(lineBreak).toHaveAttribute("data-part", "head-break");
+    expect(lineBreak).toHaveClass("desk:hidden");
+    // Every space sits in a text node of the head beside a mark, never at
+    // the end of a child's text, where Chromium trims it from what is heard.
     expect(
-      [...(tags?.childNodes ?? [])]
+      [...(head?.childNodes ?? [])]
         .filter((node) => node.nodeType === Node.TEXT_NODE)
         .map((node) => node.textContent),
-    ).toStrictEqual(["@nightrun_nico_ferreira"]);
+    ).toStrictEqual([" · p-1 ", " @nightrun_nico_ferreira "]);
+    const dot = head?.querySelector("[data-part='owner-dot']");
+    expect(dot?.textContent).toBe("·");
+    expect(dot).toHaveClass("hidden", "desk:inline");
+    const source = head?.querySelector("[data-part='source']");
+    expect(source?.textContent).toBe("[classifier]");
+    expect(source).toHaveClass("uppercase");
+    expect(
+      [...(head?.children ?? [])].map((child) => child.tagName),
+    ).toStrictEqual(["SPAN", "BR", "SPAN", "SPAN"]);
   });
 
   it("keeps a tag of several words whole with no-break spaces, and draws no dot without an owner (R58·274)", () => {
@@ -1062,10 +1065,12 @@ describe("what a row tells the reviewer", () => {
         subject: { photoKeys: [] },
       }),
     ]);
-    const tags = document.querySelector("[data-part='head-tags']");
-    expect(tags?.textContent).toBe(" [held\u{A0}on\u{A0}upload]");
-    expect(tags?.querySelector("[data-part='owner-dot']")).toBeNull();
-    expect(tags?.childNodes).toHaveLength(1);
+    const head = document.querySelector("[data-part='row-head']");
+    expect(head?.querySelector("[data-part='source']")?.textContent).toBe(
+      "[held\u{A0}on\u{A0}upload]",
+    );
+    expect(head?.querySelector("[data-part='owner-dot']")).toBeNull();
+    expect(head?.textContent).toBe("photo · p-2 [held\u{A0}on\u{A0}upload]");
   });
 
   it("shortens an id that stands in for a label to its first and last four, whole in the title (R55·197)", () => {

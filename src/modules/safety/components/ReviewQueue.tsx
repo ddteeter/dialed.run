@@ -437,15 +437,15 @@ function headName(row: QueueRow, label: string): string {
  *
  * From `desk` it is one cut line. Below it (R58·274) it wraps instead:
  * the kind and id on the first line, then the owner and the tag, each
- * whole. Inline flow, not flex.
+ * whole. One run of inline text, broken by a `<br>` drawn only below desk.
  *
- * Every space sits inside a text node that also holds a mark, because
- * Chromium drops a text node that is only spaces from what is heard
- * ("id[reports]"), and a visually hidden one loses its spaces
- * ("id·@owner"). So the ` · ` before the owner is text drawn only on the
- * one desk line, and not heard below it, where the line break parts them.
- * The tag carries its own leading space, a place to wrap, and keeps its
- * words together with no-break spaces. A handle has no spaces to wrap at.
+ * **Every space is in a text node of this one span, beside a mark.**
+ * Chromium drops a text node that is spaces alone, and trims the spaces at
+ * the ends of a child element's text, from what is heard: a tag or a dot
+ * in its own span carrying its own spaces was heard "id·@owner[reports]".
+ * So the spaces sit in the id's and the owner's text, the dot before the
+ * owner is a bare mark drawn only on the one desk line, and the tag keeps
+ * its words together with no-break spaces. A handle has none to wrap at.
  */
 function RowHead({
   row,
@@ -456,26 +456,21 @@ function RowHead({
     <span
       data-part="row-head"
       title={label}
-      className="flex flex-col gap-1 font-mono text-mono-sm desk:block desk:truncate"
+      className="block font-mono text-mono-sm wrap-anywhere desk:truncate"
     >
-      {/* The separators outside the capitals' span: a space at its end is
-          dropped from what is heard ("photo ·01M7…"). */}
-      <span data-part="head-name" className="wrap-anywhere desk:inline">
-        <span className="uppercase">{rowKind(row)}</span>
-        {` · ${headName(row, label)}`}
-      </span>
-      <span data-part="head-tags" className="desk:inline">
-        {owner === undefined ? undefined : (
-          <>
-            <span data-part="owner-dot" className="hidden desk:inline">
-              {" · "}
-            </span>
-            {`@${owner}`}
-          </>
-        )}
-        <span data-part="source" className="uppercase">
-          {` [${wholeTag(SOURCE_TAGS[row.source])}]`}
-        </span>
+      <span className="uppercase">{rowKind(row)}</span>
+      {` · ${headName(row, label)} `}
+      <br data-part="head-break" className="desk:hidden" />
+      {owner === undefined ? undefined : (
+        <>
+          <span data-part="owner-dot" className="hidden desk:inline">
+            ·
+          </span>
+          {` @${owner} `}
+        </>
+      )}
+      <span data-part="source" className="uppercase">
+        {`[${wholeTag(SOURCE_TAGS[row.source])}]`}
       </span>
     </span>
   );
