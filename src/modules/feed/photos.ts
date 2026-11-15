@@ -18,7 +18,13 @@ import { fingerprintOf } from "../../lib/photo-fingerprint";
 import type { z } from "zod";
 
 import { uploadPhotoFields } from "./inputs";
-import { entryPhotoIdOf, entryPhotoKeyFor } from "../../lib/entry-photo-key";
+import {
+  ENTRY_PHOTO_ROOT,
+  QUARANTINE_ROOT,
+  entryPhotoIdOf,
+  entryPhotoKeyFor,
+} from "../../lib/entry-photo-key";
+import { GARMENT_PHOTO_ROOT } from "../../lib/garment-photo-key";
 import { requireOwned } from "../../lib/sql/owned";
 import type { TaggedScope } from "../../lib/cache-tags";
 import { syncPublicPhotosLater } from "../ops";
@@ -403,7 +409,26 @@ export async function reviewerPhotoResponse(
   // deliberately — a 403 tells a stranger the photo exists, which is most
   // of what they wanted to know. A throw would also surface as a 500 on a
   // media URL, which says the same thing louder.
-  return isAdmin(viewerId) ? bytesResponse(key, REVIEW_CACHE) : notFound();
+  //
+  // **Only a photo's key** (SA-M7): Review asks for kit photos, garment
+  // photos and quarantined copies, so a key under any other root is not
+  // found, whatever the bucket holds there.
+  return isAdmin(viewerId) && isReviewablePhotoKey(key)
+    ? bytesResponse(key, REVIEW_CACHE)
+    : notFound();
+}
+
+/**
+The roots of every key Review shows a reviewer.
+*/
+const REVIEWABLE_ROOTS = [
+  ENTRY_PHOTO_ROOT,
+  GARMENT_PHOTO_ROOT,
+  QUARANTINE_ROOT,
+];
+
+function isReviewablePhotoKey(key: string): boolean {
+  return REVIEWABLE_ROOTS.some((root) => key.startsWith(root));
 }
 
 /**
@@ -431,10 +456,32 @@ async function bytesResponse(
 
   const headers = new Headers();
   object.writeHttpMetadata(headers);
+  // The stored type, checked rather than trusted (SA-M7): the photo
+  // pipeline stores only these, so an object typed as anything else, or
+  // not at all, is not found, and these routes only ever answer an image.
+  if (!SERVED_PHOTO_TYPES.has(headers.get("content-type") ?? "")) {
+    return notFound();
+  }
   headers.set("etag", object.httpEtag);
   headers.set("cache-control", cacheControl);
+  headers.set("content-security-policy", MEDIA_POLICY);
   return new Response(object.body, { headers });
 }
+
+/**
+ * The types the photo pipeline stores: a re-encoded kit photo is JPEG, a
+ * garment photo's versions JPEG and WebP (`modules/closet/photos.ts`).
+ */
+const SERVED_PHOTO_TYPES: ReadonlySet<string> = new Set([
+  "image/jpeg",
+  "image/webp",
+]);
+
+/**
+ * An enforced policy on the bytes themselves: an image needs no script,
+ * no subresource and no origin, so a media response gets none.
+ */
+export const MEDIA_POLICY = "sandbox; default-src 'none'";
 
 function notFound(): Response {
   return new Response("not found", { status: 404 });

@@ -38,8 +38,10 @@ export async function putSnapshot(
   fetchedAt: number,
 ): Promise<string> {
   const key = snapshotKey(productId, fetchedAt);
+  // Kept as text, not as a page (SA-M7): it is read back only as a string
+  // (`readSnapshot`), so nothing gains from a type a browser renders.
   await env.MEDIA.put(key, html, {
-    httpMetadata: { contentType: "text/html; charset=utf-8" },
+    httpMetadata: { contentType: "text/plain; charset=utf-8" },
   });
   return key;
 }
