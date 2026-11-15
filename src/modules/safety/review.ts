@@ -626,6 +626,7 @@ export type ClaimOutcome = "claimed" | "already_taken";
 export async function claimForReview(
   queueId: string,
   reviewerId: string,
+  source: ReviewSource,
 ): Promise<ClaimOutcome> {
   const claimed = await db()
     .update(reviewQueue)
@@ -636,7 +637,13 @@ export async function claimForReview(
       // `releaseStaleClaims`.
       claimedAt: nowSeconds(),
     })
-    .where(and(eq(reviewQueue.id, queueId), eq(reviewQueue.status, "pending")))
+    .where(
+      and(
+        eq(reviewQueue.id, queueId),
+        eq(reviewQueue.status, "pending"),
+        eq(reviewQueue.source, source),
+      ),
+    )
     .returning({ id: reviewQueue.id });
   return claimed.length > 0 ? "claimed" : "already_taken";
 }

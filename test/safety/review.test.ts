@@ -164,11 +164,13 @@ describe("claiming a decision (law 2)", () => {
     const reviewer = await makeUser();
     const other = await makeUser();
 
-    expect(await claimForReview(queueId, reviewer)).toBe("claimed");
+    expect(await claimForReview(queueId, reviewer, "reports")).toBe("claimed");
     // The duplicated tab. Without the status predicate in the UPDATE both
     // claims would "succeed" and the second reviewer would act on a row
     // the first is already deciding.
-    expect(await claimForReview(queueId, other)).toBe("already_taken");
+    expect(await claimForReview(queueId, other, "reports")).toBe(
+      "already_taken",
+    );
   });
 });
 
@@ -452,7 +454,7 @@ describe("what a decision writes", () => {
     const { queueId } = await queuedEntry();
     const reviewer = await makeUser();
 
-    await claimForReview(queueId, reviewer);
+    await claimForReview(queueId, reviewer, "reports");
 
     // Not just "reviewing": the row must name WHO, or a second tab
     // cannot tell whether it is looking at its own claim.

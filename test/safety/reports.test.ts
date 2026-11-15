@@ -146,7 +146,9 @@ describe("the distinct-reporter threshold", () => {
     }
     const [queued] = await pendingReviewQueue();
     if (!queued) throw new Error("nothing queued");
-    expect(await claimForReview(queued.id, await makeUser())).toBe("claimed");
+    expect(await claimForReview(queued.id, await makeUser(), "reports")).toBe(
+      "claimed",
+    );
 
     expect(await isQueuedForReview("entry", entryId)).toBe(true);
   });
@@ -448,5 +450,27 @@ describe("the report breaker (design 164)", () => {
     expect(await moderationStatusOf(entryId)).toBe("ok");
     expect(await isQueuedForReview("entry", entryId)).toBe(true);
     expect(await core().select().from(notifications)).toStrictEqual([]);
+  });
+
+  it("does not count a report that hid at once (SA-L12)", async () => {
+    const flooder = await makeUser();
+    for (let n = 0; n < REPORT_HIDES_FLOOR; n += 1) {
+      await fileReport(
+        {
+          reporterId: flooder,
+          subjectType: "entry",
+          subjectId: await reportableEntry(),
+          reason: "intimate",
+        },
+        oweInCore,
+        noPurge,
+      );
+    }
+    const entryId = await reportableEntry();
+
+    const last = await reportedToTheThreshold(entryId);
+
+    expect(last?.hiddenPendingReview).toBe(true);
+    expect(await moderationStatusOf(entryId)).toBe("hidden_pending_review");
   });
 });

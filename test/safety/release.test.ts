@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { entryPhotos, reviewQueue } from "../../src/db/schema-core";
+import { entryPhotos, reports, reviewQueue } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
@@ -29,7 +29,10 @@ import {
 
 const core = () => drizzle(env.DIALED_CORE);
 
-const SINCE = 1_000_000;
+/**
+An hour ago: inside the day a release may reach back (SA-L12).
+*/
+const SINCE = nowSeconds() - 60 * 60;
 
 beforeEach(resetSafetyTables);
 
@@ -146,6 +149,74 @@ describe("releaseHolds", () => {
 
     const second = await releaseHolds("fingerprint", SINCE, "op");
     expect(second).toStrictEqual({ released: 1, hasMore: false });
+  });
+});
+
+/**
+ * A `reports` row on a kit, and a report of `reason` filed on that kit.
+ */
+async function reportsRowWith(reason: "intimate" | "spam"): Promise<string> {
+  const subjectId = newUlid();
+  await core()
+    .insert(reports)
+    .values({
+      id: newUlid(),
+      reporterId: await makeUser(),
+      subjectType: "entry",
+      subjectId,
+      reason,
+      createdAt: SINCE,
+    });
+  await core().insert(reviewQueue).values({
+    id: newUlid(),
+    subjectType: "entry",
+    subjectId,
+    source: "reports",
+    status: "pending",
+    createdAt: SINCE,
+    openedAt: SINCE,
+  });
+  return subjectId;
+}
+
+describe("what a release may reach (SA-L12)", () => {
+  it("reaches back a day at most, whatever time it is asked about", async () => {
+    const photoId = await heldPhoto(nowSeconds() - RELEASE_WINDOW_S - 60);
+    await heldPhoto(nowSeconds() - RELEASE_WINDOW_S + 60);
+
+    const outcome = await releaseHolds("fingerprint", 0, "op");
+
+    expect(outcome).toStrictEqual({ released: 1, hasMore: false });
+    const [photo] = await core()
+      .select({ screenStatus: entryPhotos.screenStatus })
+      .from(entryPhotos)
+      .where(eq(entryPhotos.id, photoId));
+    expect(photo?.screenStatus).toBe("hidden_pending_review");
+  });
+
+  it("leaves a reports row on the removal clock for a person, and does not offer it", async () => {
+    await reportsRowWith("intimate");
+    await reportsRowWith("spam");
+
+    expect(await waitingHoldsSince(SINCE)).toStrictEqual([
+      { cause: "reports", waiting: 1 },
+    ]);
+    const outcome = await releaseHolds("reports", SINCE, "op");
+
+    expect(outcome).toStrictEqual({ released: 1, hasMore: false });
+    expect(await statusesOf()).toStrictEqual(["approved", "pending"]);
+  });
+
+  it("leaves a row whose cause changed after it was read", async () => {
+    await opened("classifier", 1, SINCE);
+
+    const [outcome] = await Promise.all([
+      releaseHolds("classifier", SINCE, "op"),
+      core().update(reviewQueue).set({ source: "reports" }),
+    ]);
+
+    expect(outcome).toStrictEqual({ released: 0, hasMore: false });
+    expect(await statusesOf()).toStrictEqual(["pending"]);
   });
 });
 

@@ -39,6 +39,7 @@ import type { drizzle } from "drizzle-orm/d1";
 
 import { photoScreenings, reviewQueue } from "../../db/schema-core";
 import { HOLD_CAUSES, type HoldCause } from "../../lib/contracts/hold-causes";
+import { noReportHidingAtOnce } from "./at-once";
 import { reportSubjectsThatHide } from "./contracts";
 import { counted } from "./takedown-limits";
 
@@ -377,12 +378,18 @@ async function reportsCeilingBefore(db: Db, until: number): Promise<number> {
 /**
  * The Review rows a cause's breaker counts: every row it opened, except
  * that reports count only on the subjects a report can hide (owner,
- * 2026-10-31), so a pile-on of profile reports cannot pause post hides.
+ * 2026-10-31), so a pile-on of profile reports cannot pause post hides,
+ * and not on a subject with a report that hides at once (SA-L12): that
+ * report never asked the breaker, so its row must not pause the rest.
  */
 function heldBy(cause: HoldCause): SQL | undefined {
   const opened = eq(reviewQueue.source, cause);
   return cause === "reports"
-    ? and(opened, inArray(reviewQueue.subjectType, reportSubjectsThatHide))
+    ? and(
+        opened,
+        inArray(reviewQueue.subjectType, reportSubjectsThatHide),
+        noReportHidingAtOnce(),
+      )
     : opened;
 }
 
