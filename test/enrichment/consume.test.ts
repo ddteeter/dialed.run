@@ -1,9 +1,10 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   domainDenylist,
+  emailSendLimits,
   gaveUp,
   linkLandings,
   products,
@@ -23,6 +24,10 @@ import {
 import { DEAD_LETTER_REASON } from "../../src/db/gave-up";
 import { listAbandonedEnrichments } from "../../src/modules/enrichment/abandon";
 import { pageFailureReason } from "../../src/modules/enrichment/bounds";
+import {
+  PAGE_FETCHES_PER_HOUR,
+  PROXY_CALLS_PER_DAY,
+} from "../../src/modules/enrichment/spend-limit";
 import {
   denyDomain,
   isDeniedLink,
@@ -695,7 +700,6 @@ describe("handleEnrichmentBatch: no shop images (D-176)", () => {
     ]);
     expect(deps.captureException).not.toHaveBeenCalled();
   });
-
 });
 
 /**
@@ -1220,3 +1224,100 @@ async function repend(productId: string): Promise<void> {
     .set({ extractionStatus: "pending" })
     .where(eq(products.id, productId));
 }
+
+async function spentAlready(key: "spend:page-fetch" | "spend:proxy-call", count: number) {
+  await db()
+    .insert(emailSendLimits)
+    .values({ key, windowStartedAt: nowSeconds(), sends: count })
+    .onConflictDoUpdate({
+      target: emailSendLimits.key,
+      set: { windowStartedAt: nowSeconds(), sends: count },
+    });
+}
+
+async function limitCountOf(key: string): Promise<number | undefined> {
+  const [row] = await db()
+    .select({ count: emailSendLimits.sends })
+    .from(emailSendLimits)
+    .where(eq(emailSendLimits.key, key));
+  return row?.count;
+}
+
+describe("handleEnrichmentBatch: the spend ceilings", () => {
+  // The other cases here count their fetches too, and D1 keeps them.
+  beforeEach(async () => {
+    await db().delete(emailSendLimits);
+  });
+  afterEach(async () => {
+    await db().delete(emailSendLimits);
+  });
+
+  it("counts each page fetch against the hour", async () => {
+    const productId = await pendingProduct();
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      depsWith(serving(PAGE)),
+    );
+    expect(await statusOf(productId)).toBe("done");
+    expect(await limitCountOf("spend:page-fetch")).toBe(1);
+  });
+
+  it("fetches nothing once the hour's fetches are spent, and leaves the row pending for the sweep", async () => {
+    await spentAlready("spend:page-fetch", PAGE_FETCHES_PER_HOUR);
+    const productId = await pendingProduct();
+    const fetchImpl = serving(PAGE);
+    const message = jobFor(productId);
+
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [message]),
+      depsWith(fetchImpl),
+    );
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(message.ack).toHaveBeenCalledTimes(1);
+    const row = await rowOf(productId);
+    expect(row.extractionStatus).toBe("pending");
+    expect(row.extractionTries).toBeNull();
+    expect(await snapshotsOf(productId)).toEqual([]);
+  });
+
+  it("fetches the last one the hour allows", async () => {
+    await spentAlready("spend:page-fetch", PAGE_FETCHES_PER_HOUR - 1);
+    const productId = await pendingProduct();
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      depsWith(serving(PAGE)),
+    );
+    expect(await statusOf(productId)).toBe("done");
+  });
+
+  it("counts a proxy call against the day", async () => {
+    const productId = await pendingProduct();
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      { ...depsWith(vi.fn(refusingWithProxy)), proxyApiKey: "fc-test" },
+    );
+    expect(await statusOf(productId)).toBe("done");
+    expect(await limitCountOf("spend:proxy-call")).toBe(1);
+  });
+
+  it("calls no proxy once the day's calls are spent: the refusal is a failed fetch", async () => {
+    await spentAlready("spend:proxy-call", PROXY_CALLS_PER_DAY);
+    const productId = await pendingProduct();
+    const fetchImpl = vi.fn(refusingWithProxy);
+
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      { ...depsWith(fetchImpl), proxyApiKey: "fc-test" },
+    );
+
+    expect(
+      fetchImpl.mock.calls.some(([input]) =>
+        urlOf(input).startsWith("https://api.firecrawl.dev/"),
+      ),
+    ).toBe(false);
+    const row = await rowOf(productId);
+    expect(row.extractionStatus).toBe("failed");
+    expect(row.extractionError).toBe("Page returned 403");
+  });
+});

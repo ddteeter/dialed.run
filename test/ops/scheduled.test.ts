@@ -20,6 +20,7 @@ import {
 import { env } from "../../src/env";
 import { newUlid, type Ulid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
+import { ENRICHMENT_SWEEP_TRIES } from "../../src/modules/enrichment";
 import { handleScheduled } from "../../src/modules/ops";
 import { MODERATION_RECORD_KEPT_SECONDS } from "../../src/modules/safety/retention";
 import { gaveUpRow } from "../gave-up-rows";
@@ -1533,6 +1534,30 @@ describe("stalled enrichments are re-dispatched on their own hourly sweep", () =
     expect(row?.status).toBe("pending");
   });
 
+  it("re-drives a failed product until its tries reach the cap, then leaves it failed", async () => {
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    const below = await insertProduct("failed", HOUR);
+    const atCap = await insertProduct("failed", HOUR);
+    await coreDb()
+      .update(products)
+      .set({ extractionTries: ENRICHMENT_SWEEP_TRIES - 1 })
+      .where(eq(products.id, below));
+    await coreDb()
+      .update(products)
+      .set({ extractionTries: ENRICHMENT_SWEEP_TRIES })
+      .where(eq(products.id, atCap));
+
+    await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledWith({ type: "enrich", productId: below });
+    const [row] = await coreDb()
+      .select({ status: products.extractionStatus })
+      .from(products)
+      .where(eq(products.id, atCap));
+    expect(row?.status).toBe("failed");
+  });
+
   it("claims the row even when the send then fails, so the next sweep owns it", async () => {
     vi.spyOn(env.ENRICHMENT_QUEUE, "send").mockRejectedValue(
       new Error("queue down"),
@@ -2082,6 +2107,14 @@ async function isReportKept(id: string): Promise<boolean> {
 describe("the daily firing sweeps rows kept past any use", () => {
   it("sweeps the send limits and runs each sweep it is handed, once", async () => {
     const key = await staleCount();
+    const enrichmentKey = `spend:enrich-runner:${newUlid()}`;
+    await coreDb()
+      .insert(emailSendLimits)
+      .values({
+        key: enrichmentKey,
+        windowStartedAt: nowSeconds() - 72 * HOUR,
+        sends: 9,
+      });
     const report = await expiredReport();
     const swept: string[] = [];
 
@@ -2101,6 +2134,7 @@ describe("the daily firing sweeps rows kept past any use", () => {
     });
 
     expect(await isCountKept(key)).toBe(false);
+    expect(await isCountKept(enrichmentKey)).toBe(false);
     // The 3-year sweep is safety's own, imported rather than handed in.
     expect(await isReportKept(report)).toBe(false);
     expect(swept).toStrictEqual(["auth", "requests", "copyright holds"]);

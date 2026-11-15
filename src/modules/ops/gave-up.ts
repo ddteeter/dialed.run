@@ -28,7 +28,7 @@ import type { GaveUpKind } from "../../lib/contracts/gave-up";
 import { clockLabel, monthDayLabel } from "../../lib/dates";
 import { firstColumnWhere, firstRowWhere } from "../../lib/sql/keyed-read";
 import { dedupeKeyFor } from "../../lib/sql/outbox";
-import { reextract, requestEnrichment } from "../enrichment";
+import { reextract, retryFailedEnrichment } from "../enrichment";
 import { reminderFromSubject, type ImportJob, type ReminderJob } from "../runs";
 import type { GaveUpRetry } from "./inputs";
 import { ownerHandles } from "./owner-handles";
@@ -221,7 +221,7 @@ export async function gaveUpJobs(
  */
 export interface RetryDeps {
   readonly db: Db;
-  readonly enrichmentQueue: Parameters<typeof requestEnrichment>[2]["queue"];
+  readonly enrichmentQueue: Parameters<typeof retryFailedEnrichment>[2]["queue"];
   readonly importsQueue: {
     send: (message: ImportJob | ReminderJob) => Promise<unknown>;
   };
@@ -255,7 +255,7 @@ type Row = typeof gaveUp.$inferSelect;
 
 /**
  * Enrichment's two retries (D6: "re-fetch starts over; re-run extraction
- * reuses the stored page"). Re-fetch is `requestEnrichment`, which claims
+ * reuses the stored page"). Re-fetch is `retryFailedEnrichment`, which claims
  * the product from `failed` and sends `enrich`; a product no longer
  * `failed` claims nothing, and the row goes either way, because there is
  * nothing left to retry.
@@ -281,7 +281,7 @@ async function retryEnrichment(
     await gaveUpClear(deps.db, "enrichment", row.subjectId);
     return "gone";
   }
-  await requestEnrichment(deps.db, row.subjectId, {
+  await retryFailedEnrichment(deps.db, row.subjectId, {
     queue: deps.enrichmentQueue,
     captureException,
   });

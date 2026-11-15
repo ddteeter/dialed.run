@@ -5,7 +5,12 @@ import { describe, expect, it, vi } from "vitest";
 import { products } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import { requestEnrichment } from "../../src/modules/enrichment/request";
+import { orSqlNull } from "../../src/lib/sql/sql-null";
+import { abandonedBefore } from "../../src/modules/enrichment/abandon";
+import {
+  isClaimable,
+  requestEnrichment,
+} from "../../src/modules/enrichment/request";
 import {
   createOrGetBrand,
   createOrGetProduct,
@@ -19,6 +24,8 @@ import {
 function db() {
   return drizzle(env.DIALED_CORE);
 }
+
+const NOW = 1_800_000_000;
 
 async function productWith(
   overrides: Partial<typeof products.$inferInsert> = {},
@@ -82,12 +89,31 @@ describe("requestEnrichment", () => {
     expect(d.queue.send).not.toHaveBeenCalled();
   });
 
-  it("lets a failed product be asked for again", async () => {
-    const id = await productWith({ extractionStatus: "failed" });
+  it("lets a failed product be asked for again once the sweep's day is over", async () => {
+    const id = await productWith({
+      extractionStatus: "failed",
+      createdAt: abandonedBefore(NOW),
+    });
     const d = deps();
-    expect(await requestEnrichment(db(), id, d)).toBe("queued");
+    expect(await requestEnrichment(db(), id, d, NOW)).toBe("queued");
     expect(await statusOf(id)).toBe("pending");
     expect(d.queue.send).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves a failed product to the sweep inside its first day", async () => {
+    const id = await productWith({
+      extractionStatus: "failed",
+      createdAt: abandonedBefore(NOW) + 1,
+    });
+    const d = deps();
+    expect(await requestEnrichment(db(), id, d, NOW)).toBe("skipped");
+    expect(await statusOf(id)).toBe("failed");
+    expect(d.queue.send).not.toHaveBeenCalled();
+  });
+
+  it("asks for a never-tried product whatever its age", async () => {
+    const id = await productWith({ createdAt: abandonedBefore(NOW) + 1 });
+    expect(await requestEnrichment(db(), id, deps(), NOW)).toBe("queued");
   });
 
   it("sends nothing for a product with no URL to fetch", async () => {
@@ -119,5 +145,55 @@ describe("requestEnrichment", () => {
       surface: "enrichment-request",
       productId: id,
     });
+  });
+});
+
+describe("isClaimable", () => {
+  // The rule for a row in hand must be the claim's own: each case is put
+  // to both, and the two must agree.
+  const DAY_OVER = abandonedBefore(NOW);
+  const cases = [
+    { extractionStatus: "none", createdAt: DAY_OVER + 1, link: true },
+    { extractionStatus: "none", createdAt: DAY_OVER, link: false },
+    { extractionStatus: "failed", createdAt: DAY_OVER, link: true },
+    { extractionStatus: "failed", createdAt: DAY_OVER + 1, link: true },
+    { extractionStatus: "pending", createdAt: DAY_OVER, link: true },
+    { extractionStatus: "done", createdAt: DAY_OVER, link: true },
+  ] as const;
+
+  it.each(cases)(
+    "agrees with the claim for $extractionStatus, created $createdAt, link $link",
+    async ({ extractionStatus, createdAt, link }) => {
+      const id = await productWith({ extractionStatus, createdAt });
+      if (!link) {
+        await db()
+          .update(products)
+          .set({ sourceUrl: orSqlNull(undefined) })
+          .where(eq(products.id, id));
+      }
+      const [row] = await db()
+        .select()
+        .from(products)
+        .where(eq(products.id, id));
+      if (row === undefined) throw new Error("no product");
+      const isInHand = isClaimable(row, NOW);
+      const claimed = await requestEnrichment(db(), id, deps(), NOW);
+      expect(claimed === "queued").toBe(isInHand);
+    },
+  );
+
+  it("says yes and no where the claim does", () => {
+    const row = { sourceUrl: "https://a.example/p", createdAt: DAY_OVER };
+    expect(isClaimable({ ...row, extractionStatus: "none" }, NOW)).toBe(true);
+    expect(isClaimable({ ...row, extractionStatus: "failed" }, NOW)).toBe(true);
+    expect(
+      isClaimable(
+        { ...row, extractionStatus: "failed", createdAt: DAY_OVER + 1 },
+        NOW,
+      ),
+    ).toBe(false);
+    expect(isClaimable({ ...row, extractionStatus: "pending" }, NOW)).toBe(
+      false,
+    );
   });
 });

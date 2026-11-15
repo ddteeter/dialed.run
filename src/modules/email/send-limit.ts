@@ -150,21 +150,24 @@ export function countSend(
   address: string,
   now = nowSeconds(),
 ) {
+  return countUnder(db, sendLimitKey(kind, address), SEND_WINDOW_S, now);
+}
+
+/**
+The upsert under any key, for a window `windowS` long.
+*/
+function countUnder(db: Db, key: string, windowS: number, now: number) {
   const next = windowedCountSet(
     {
       startedAt: emailSendLimits.windowStartedAt,
       count: emailSendLimits.sends,
     },
     now,
-    SEND_WINDOW_S,
+    windowS,
   );
   return db
     .insert(emailSendLimits)
-    .values({
-      key: sendLimitKey(kind, address),
-      windowStartedAt: now,
-      sends: 1,
-    })
+    .values({ key, windowStartedAt: now, sends: 1 })
     .onConflictDoUpdate({
       target: emailSendLimits.key,
       set: { windowStartedAt: next.startedAt, sends: next.count },
@@ -173,6 +176,40 @@ export function countSend(
       startedAt: emailSendLimits.windowStartedAt,
       count: emailSendLimits.sends,
     });
+}
+
+/**
+ * Count one against a key that is not a send (enrichment's spend, design
+ * 221): `spend:{name}`, so it cannot meet a `{kind}:` key, in a window up
+ * to a day long. True while the count is within `limit`. The daily sweep
+ * takes these rows as it takes the rest: a day's window that started more
+ * than a day and an hour ago is over, and only an upsert ever reads one.
+ */
+export async function isWithinSpendLimit(
+  db: Db,
+  name: string,
+  limit: number,
+  windowS: number,
+  now = nowSeconds(),
+): Promise<boolean> {
+  const rows = await countUnder(db, spendLimitKey(name), windowS, now);
+  return windowedCountUntil(rows, limit, windowS) === undefined;
+}
+
+/**
+A spend count's row; never lowercased, so a runner's id is kept as it is.
+*/
+function spendLimitKey(name: string): string {
+  return `spend:${name}`;
+}
+
+/**
+A deleted account's id is not kept in a spend count's key: for the purge.
+*/
+export function forgetSpendLimit(db: Db, name: string) {
+  return db
+    .delete(emailSendLimits)
+    .where(eq(emailSendLimits.key, spendLimitKey(name)));
 }
 
 /**

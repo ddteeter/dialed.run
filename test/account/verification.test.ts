@@ -1074,9 +1074,7 @@ describe("requestEmailChange", () => {
       until: NOW + 3600,
     });
     // Owed before the background settles: one row per request let through.
-    expect(await db.select().from(outbox)).toHaveLength(
-      EMAIL_SENDS_PER_HOUR,
-    );
+    expect(await db.select().from(outbox)).toHaveLength(EMAIL_SENDS_PER_HOUR);
     await later.settled();
     expect(mail.sent).toHaveLength(EMAIL_SENDS_PER_HOUR);
     // The refused address was not counted against its owner.

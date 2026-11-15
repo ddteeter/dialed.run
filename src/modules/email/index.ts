@@ -20,6 +20,8 @@ export {
   countSend,
   forgetRunnerSendLimit,
   forgetSendLimits,
+  forgetSpendLimit,
+  isWithinSpendLimit,
   runnerSendKey,
   sendAllowed,
   sendClaimOf,

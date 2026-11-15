@@ -14,6 +14,7 @@ import { runLadder, type LadderResult } from "./ladder";
 import { modelPass } from "./model/rung";
 import { enrichJobSchema } from "./queue-messages";
 import { putSnapshot, readSnapshot, recordSnapshot } from "./snapshot";
+import { canSpendPageFetch, canSpendProxyCall } from "./spend-limit";
 
 /**
  * The concrete handle `coreDb()` returns, spelled out:
@@ -251,6 +252,7 @@ async function fetchAndExtract(
 ): Promise<void> {
   const page = await fetchProductPage(sourceUrl, deps.fetchImpl ?? fetch, {
     proxyApiKey: deps.proxyApiKey,
+    claimProxy: () => canSpendProxyCall(deps.db),
   });
   if (await deps.isLandingDenied(sourceUrl, page.finalUrl)) {
     await dropDeniedSource(deps.db, productId);
@@ -277,13 +279,14 @@ async function fetchAndExtract(
 
 /**
  * The work for a `pending` product: the page stored within the reuse
- * window, or a fresh fetch.
+ * window, or a fresh fetch — `deferred` when the hour's fetches are spent
+ * (`spend-limit.ts`), and the row stays `pending` for the hourly sweep.
  */
 async function extractPending(
   deps: EnrichmentDeps,
   productId: string,
   sourceUrl: string,
-): Promise<void> {
+): Promise<"worked" | "deferred"> {
   const recent = await latestSnapshot(
     deps.db,
     productId,
@@ -293,10 +296,12 @@ async function extractPending(
     const stored = await readSnapshot(recent.r2Key);
     if (stored !== undefined) {
       await extractStored(deps, productId, recent, stored);
-      return;
+      return "worked";
     }
   }
+  if (!(await canSpendPageFetch(deps.db))) return "deferred";
   await fetchAndExtract(deps, productId, sourceUrl);
+  return "worked";
 }
 
 async function processEnrichJob(
@@ -316,7 +321,12 @@ async function processEnrichJob(
     // the row; a hand-edited one goes through the same door as any other
     // bad URL — a terminal `PageFetchError`, reported, and the row failed —
     // rather than a private branch that fails it silently.
-    await extractPending(deps, productId, String(row.sourceUrl));
+    const outcome = await extractPending(
+      deps,
+      productId,
+      String(row.sourceUrl),
+    );
+    if (outcome === "deferred") return;
   } catch (error) {
     if (!(error instanceof PageFetchError)) throw error;
     deps.captureException(error, { surface: "enrichment-fetch", productId });

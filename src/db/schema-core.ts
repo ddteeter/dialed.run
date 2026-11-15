@@ -296,6 +296,9 @@ export const emailVerifications = /*#__PURE__*/ sqliteTable(
  * the address has one: a limit that only an existing account could hit
  * would tell whoever hit it that the account exists — the thing Au4 is
  * drawn to never reveal. The key is `{kind}:{address}`.
+ *
+ * Enrichment's spend counts share it under `spend:{name}`
+ * (`isWithinSpendLimit`, design 221): the same upsert and the same sweep.
  */
 export const emailSendLimits = /*#__PURE__*/ sqliteTable(
   "email_send_limits",

@@ -23,6 +23,14 @@ import { pageFailureReason } from "./bounds";
 export const ENRICHMENT_RETRY_WINDOW_S = 24 * 60 * 60;
 
 /**
+ * How many failed tries the sweep re-drives inside that day: a model
+ * outage worth waiting out is over in a few hours, and every try at a
+ * page that refuses us may be a proxy credit. Past it the product waits
+ * out its day `failed`, and is listed on Gave up as before.
+ */
+export const ENRICHMENT_SWEEP_TRIES = 6;
+
+/**
  * `extraction_status = 'failed'`, written as the partial index
  * `products_extraction_failed` writes it (`schema-core.ts`), for every
  * sweep that reads failed products by age.

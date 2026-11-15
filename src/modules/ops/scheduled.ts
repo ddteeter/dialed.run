@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, inArray, lt, or, type SQL } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, lt, or, sql, type SQL } from "drizzle-orm";
 
 import {
   cronCheckpoints,
@@ -15,6 +15,7 @@ import {
   extractionDone,
   extractionFailed,
   extractionPending,
+  ENRICHMENT_SWEEP_TRIES,
   listAbandonedEnrichments,
 } from "../enrichment";
 import { sweepSendLimits } from "../email";
@@ -736,6 +737,9 @@ function failedAndOwed(): SQL | undefined {
     extractionFailed(),
     lt(products.createdAt, staleBefore),
     gt(products.createdAt, abandonedBefore()),
+    // A few tries, not one an hour all day: a page that keeps failing has
+    // answered, and each try may be a proxy credit.
+    sql`coalesce(${products.extractionTries}, 0) < ${ENRICHMENT_SWEEP_TRIES}`,
   );
 }
 

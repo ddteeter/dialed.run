@@ -18,9 +18,11 @@ hardens account closure, the email-change request and enrichment spend.
   the owner's sentence: "That's 5 address changes this hour. You can try
   again at {time}." The purge forgets the runner's key along with the
   address keys.
-- **SA-H3, enrichment spend.** A new `enrichment_limits` counter table
-  (`modules/enrichment/spend-limit.ts`) holds three fixed windows,
-  each one upsert via `lib/sql/window-count.ts`:
+- **SA-H3, enrichment spend.** Three fixed-window counts
+  (`modules/enrichment/spend-limit.ts`), kept in `email_send_limits` under
+  `spend:` keys through `isWithinSpendLimit`: the table already counts keys
+  that are not addresses (`access:`, `takedown:`), and sharing it shares
+  the upsert, the sweep and the purge rather than restating them:
   - per runner: 50 enrichment requests a day, counted in
     `productLinkFor` only when the product is claimable. Over the cap, the
     garment still saves and links to its product, with no request (law 5);
@@ -31,13 +33,12 @@ hardens account closure, the email-change request and enrichment spend.
   - Three hardening changes with no schema: a job uses the proxy at most
     once; a save re-claims a `failed` product only once its retry day is
     over; the sweep stops re-driving after a few tries.
-  - The daily sweep deletes old windows; the purge forgets a runner's key.
+  - The send limits' daily sweep takes old windows; the purge forgets a
+    runner's key.
 
 ## Contract touches
 
-- Schema changes needed: one additive table, `enrichment_limits` (core
-  migration `0005_add_enrichment_limits`). Additive, so it proceeds
-  (`.claude/rules/schema.md`).
+- Schema changes needed: **none** (a comment on `email_send_limits` only).
 - New route files: none.
 - New bindings/queues/crons: **none** (the sweep rides the existing daily cron).
 - Screens: Settings › Change email gets one new message state; no board change.

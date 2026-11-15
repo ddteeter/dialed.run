@@ -349,6 +349,11 @@ async function seedAccount(): Promise<Seeded> {
         createdAt: NOW,
       },
     ]),
+    core.insert(emailSendLimits).values({
+      key: `spend:enrich-runner:${userId}`,
+      windowStartedAt: NOW,
+      sends: 1,
+    }),
     core.insert(emailSendLimits).values(
       [...limitKeysOf(email), runnerLimitKeyOf(userId)].map((key) => ({
         key,
@@ -662,6 +667,10 @@ async function footprint(seeded: Seeded) {
           runnerLimitKeyOf(userId),
         ]),
       ),
+    spendLimits: await core
+      .select()
+      .from(emailSendLimits)
+      .where(eq(emailSendLimits.key, `spend:enrich-runner:${userId}`)),
     resetLinks: await core
       .select()
       .from(verification)
@@ -719,6 +728,7 @@ const GONE = {
   accessRequests: [],
   inviteLabels: [],
   sendLimits: [],
+  spendLimits: [],
   resetLinks: [],
   garments: [],
   imports: [],

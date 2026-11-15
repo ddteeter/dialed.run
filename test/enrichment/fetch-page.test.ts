@@ -857,4 +857,60 @@ describe("fetchProductPage: a meta refresh is one more hop (R-176)", () => {
       via: "direct",
     });
   });
+
+  it("uses the proxy once per page: a proxied refresh to another refusal is a failed fetch", async () => {
+    // Every proxied page sends us on to a new URL, and the shop refuses
+    // each one: today's loop would pay the proxy at every hop.
+    let next = 0;
+    const fetchImpl = vi.fn<typeof fetch>((input) => {
+      if (isProxyCall(input)) {
+        next += 1;
+        return Promise.resolve(
+          Response.json({
+            success: true,
+            data: {
+              rawHtml: `<meta http-equiv="refresh" content="0; url=/wall-${String(next)}">`,
+              metadata: { statusCode: 200, url: "https://landed.example/x" },
+            },
+          }),
+        );
+      }
+      return Promise.resolve(new Response("blocked", { status: 403 }));
+    });
+
+    await expect(
+      fetchProductPage("https://short.example/x", fetchImpl, {
+        proxyApiKey: "fc-key",
+      }),
+    ).rejects.toThrow("Page returned 403");
+    expect(
+      fetchImpl.mock.calls.filter(([input]) => isProxyCall(input)),
+    ).toHaveLength(1);
+  });
+
+  it("asks the budget before the proxy, and fails the fetch when it says no", async () => {
+    const fetchImpl = vi.fn(proxiedRefresh);
+    const canProxy = vi.fn(() => Promise.resolve(false));
+    await expect(
+      fetchProductPage("https://short.example/x", fetchImpl, {
+        proxyApiKey: "fc-key",
+        claimProxy: canProxy,
+      }),
+    ).rejects.toThrow("Page returned 403");
+    expect(canProxy).toHaveBeenCalledTimes(1);
+    expect(fetchImpl.mock.calls.some(([input]) => isProxyCall(input))).toBe(
+      false,
+    );
+  });
+
+  it("goes through the proxy when the budget has one left", async () => {
+    const canProxy = vi.fn(() => Promise.resolve(true));
+    const page = await fetchProductPage(
+      "https://short.example/x",
+      vi.fn(proxiedRefresh),
+      { proxyApiKey: "fc-key", claimProxy: canProxy },
+    );
+    expect(page.finalUrl).toBe("https://landed.example/real");
+    expect(canProxy).toHaveBeenCalledTimes(1);
+  });
 });
