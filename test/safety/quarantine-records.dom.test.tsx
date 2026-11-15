@@ -95,18 +95,33 @@ describe("QuarantineRecords", () => {
     ).toBeNull();
   });
 
-  it("heads a record with its kind and id, in a panel (G-13)", () => {
+  it("heads a record as a queue card heads its row (R55·199, R2-DESK-08)", () => {
     render(<QuarantineRecords records={[held()]} recordReport={vi.fn()} />);
 
     const record = part("quarantine-record");
-    expect(record).toHaveClass("border", "border-hairline", "bg-panel", "p-4");
-    expect(record?.firstElementChild?.firstElementChild).toHaveTextContent(
-      /^photo · p1$/u,
+    expect(record).toHaveClass(
+      "rounded-card",
+      "border",
+      "border-hairline",
+      "bg-panel",
+      "p-4",
     );
-    expect(record?.firstElementChild?.firstElementChild).toHaveClass(
-      "text-mono-xs",
-      "uppercase",
-      "text-hiviz-text",
+    // Cards 12 apart, as the queue's.
+    expect(record?.parentElement).toHaveClass("gap-3");
+    const name = part("record-head")?.firstElementChild;
+    expect(part("record-name-drawn")?.parentElement).toBe(name);
+    expect(part("record-name-drawn")?.textContent).toBe(
+      "photo · p1 [Quarantine]",
+    );
+    expect(name?.lastElementChild).toHaveClass("sr-only");
+    expect(name?.lastElementChild?.textContent).toBe("photo · p1 [Quarantine]");
+    expect(name).toHaveClass("font-mono", "text-mono-sm", "text-ink");
+    expect(name).not.toHaveClass("text-hiviz-text");
+    // A hairline above its form, as above a queue card's bar.
+    expect(record?.querySelector("form")).toHaveClass(
+      "border-t",
+      "border-hairline",
+      "pt-3",
     );
   });
 

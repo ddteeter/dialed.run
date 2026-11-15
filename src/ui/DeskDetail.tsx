@@ -46,6 +46,17 @@ function useIsDesk(): boolean {
 }
 
 /**
+ * What the operator picked: its detail, and the pane's accessible name for
+ * it (whose or what it is). `isCode` when the name is a code, so the
+ * drawer's title draws it in mono (R57·251); a runner's name is words.
+ */
+type PickedThing = Readonly<{
+  name: string;
+  detail: ReactNode;
+  isCode?: boolean;
+}>;
+
+/**
  * A Desk table and its detail pane (Round 54 · 168.3, R55·203): from
  * `desk`, the table and a sticky pane beside it on a 2fr/1fr track (the
  * ruling's 1280 and 320, collapsed to the scale), the pane holding what
@@ -70,7 +81,7 @@ export function DeskDetail({
    * What the operator picked: its detail, and the pane's accessible name
    * for it (whose or what it is). Undefined while nothing is.
    */
-  picked: Readonly<{ name: string; detail: ReactNode }> | undefined;
+  picked: PickedThing | undefined;
   /**
   The pane's line while nothing is picked.
   */
@@ -82,8 +93,9 @@ export function DeskDetail({
   children: ReactNode;
 }>): JSX.Element {
   const isDesk = useIsDesk();
+  const hasPane = picked !== undefined || idle !== undefined;
   return (
-    <div className="grid items-start gap-6 desk:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+    <div className={hasPane ? SPLIT_CLASS : WHOLE_CLASS}>
       {children}
       <Picked picked={picked} idle={idle} isDesk={isDesk} onUnpick={onUnpick} />
     </div>
@@ -96,7 +108,7 @@ function Picked({
   isDesk,
   onUnpick,
 }: Readonly<{
-  picked: Readonly<{ name: string; detail: ReactNode }> | undefined;
+  picked: PickedThing | undefined;
   idle: ReactNode;
   isDesk: boolean;
   onUnpick: () => void;
@@ -104,8 +116,20 @@ function Picked({
   if (picked === undefined) return <>{idle}</>;
   if (!isDesk) {
     return (
-      <Sheet open isModal={false} label={picked.name} onClose={onUnpick}>
-        <InDrawer.Provider value>{picked.detail}</InDrawer.Provider>
+      <Sheet
+        open
+        isModal={false}
+        label={picked.name}
+        titleKind={picked.isCode === true ? "code" : "text"}
+        onClose={onUnpick}
+      >
+        <InDrawer.Provider value>
+          {/* The pane's own gap, so the drawer's blocks stand apart as
+              they do at desk (R2-DESK-04): the Sheet's body sets none. */}
+          <div data-part="desk-drawer-detail" className={DETAIL_GAP}>
+            {picked.detail}
+          </div>
+        </InDrawer.Provider>
       </Sheet>
     );
   }
@@ -138,7 +162,23 @@ export function DeskPaneName({
 }
 
 /**
+ * The frame's tracks. One `minmax(0,1fr)` track at every width, so the
+ * table is as wide as the screen and never as wide as its longest line
+ * (R2-DESK-01: an implicit `auto` track took a code label's min-content,
+ * and the shell stops sideways scroll). From `desk`, the pane's 1fr
+ * beside it, but only when there is a pane to hold: with nothing picked
+ * and no idle line, the table takes the whole width (R2-DESK-03; R55·200
+ * draws Codes' table full width).
+ */
+const WHOLE_CLASS = "grid grid-cols-[minmax(0,1fr)] items-start gap-6";
+const SPLIT_CLASS = `${WHOLE_CLASS} desk:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]`;
+
+/**
+The detail's blocks, 16 apart, in the pane and the drawer alike.
+*/
+const DETAIL_GAP = "flex flex-col gap-4";
+
+/**
 The pane's frame: a --panel card, sticky beside the table from `desk`.
 */
-const PANE_CLASS =
-  "flex flex-col gap-4 rounded-card border border-hairline bg-panel p-5 desk:sticky desk:top-6";
+const PANE_CLASS = `${DETAIL_GAP} rounded-card border border-hairline bg-panel p-5 desk:sticky desk:top-6`;

@@ -53,6 +53,7 @@ export function Sheet({
   open,
   onClose,
   label,
+  titleKind = "text",
   kicker,
   isLocked = false,
   isModal = true,
@@ -64,6 +65,12 @@ export function Sheet({
   The sheet's title: its TYPE.title heading and its accessible name.
   */
   label: string;
+  /**
+   * What the title is (R57·251): words in TYPE.title, or a code, a
+   * measured value, in MONO.lg. A kind and not a style, so a sheet's
+   * heading still has one face per kind of name.
+   */
+  titleKind?: SheetTitleKind | undefined;
   /**
   A MONO line over the title: a receipt's "Report sent".
   */
@@ -112,6 +119,7 @@ export function Sheet({
     >
       <SheetHeader
         label={label}
+        titleKind={titleKind}
         kicker={kicker}
         isLocked={isLocked}
         onClose={() => {
@@ -176,6 +184,20 @@ function notYetOpen(): void {
 }
 
 /**
+What a sheet's title is: words, or a code (R57·251).
+*/
+type SheetTitleKind = "text" | "code";
+
+/**
+ * Each kind's face: TYPE.title for words; MONO.lg for a code, as
+ * CodePane draws one (mixed case at `lg`, so a code keeps its own).
+ */
+const TITLE_CLASS: Readonly<Record<SheetTitleKind, string>> = {
+  text: "m-0 font-display text-title",
+  code: "m-0 font-mono text-mono-lg",
+};
+
+/**
  * The pinned head: the kicker, if any, over the title, and the ✕ in its
  * own 44 column. The hairline under it is transparent until the sheet has
  * scrolled, so a sheet that fits shows no line.
@@ -186,11 +208,13 @@ function notYetOpen(): void {
  */
 function SheetHeader({
   label,
+  titleKind,
   kicker,
   isLocked,
   onClose,
 }: Readonly<{
   label: string;
+  titleKind: SheetTitleKind;
   kicker: string | undefined;
   isLocked: boolean;
   onClose: () => void;
@@ -206,7 +230,7 @@ function SheetHeader({
             {kicker}
           </Mono>
         )}
-        <h2 tabIndex={-1} className="m-0 font-display text-title">
+        <h2 tabIndex={-1} className={TITLE_CLASS[titleKind]}>
           {label}
         </h2>
       </div>

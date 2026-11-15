@@ -172,7 +172,9 @@ function Search({
           onChange={(event) => {
             setQuery(event.target.value);
           }}
-          className="min-h-field rounded-field border border-hairline bg-ground px-4 text-field"
+          // The form contract's field at rest (R55·179), as Codes' Label
+          // field is: `--panel` fill and the night ground's edge (G-10).
+          className="min-h-field rounded-field border border-hairline bg-panel px-4 text-field dark:border-hairline-2"
         />
       </label>
       <nav aria-label="Filter runners" className="-mx-2 flex flex-wrap">

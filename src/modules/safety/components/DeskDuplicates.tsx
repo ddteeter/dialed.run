@@ -22,7 +22,9 @@ export function DeskDuplicates({
   // 320px viewport's column, which reflow would scroll sideways.
   return (
     <section aria-labelledby="desk-duplicates" className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
+      {/* The count beside the heading, as Review, Corrections and Runners
+          set theirs (N3-16). */}
+      <div className="flex flex-wrap items-baseline gap-3">
         <h1
           id="desk-duplicates"
           className="m-0 font-display text-title uppercase"

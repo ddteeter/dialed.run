@@ -9,6 +9,7 @@
  * `.dev.vars`, as the journey does. Every test seeds its rows with ids it
  * generated and removes exactly those.
  */
+import { shortId } from "../../src/modules/safety/components/short-id";
 import { eq, or } from "drizzle-orm";
 
 import {
@@ -139,7 +140,8 @@ test("Copyright holds · counter-notice, court action, then the case's end", asy
     // the Desk restores or deletes it.
     const copyrightHold = page
       .locator("[data-part='copyright-hold']")
-      .filter({ hasText: heldPhotoId });
+      // The card's head names it by its short id (R55·199).
+      .filter({ hasText: shortId(heldPhotoId) });
     await copyrightHold.scrollIntoViewIfNeeded();
     await expect(copyrightHold.locator("[data-part='owner']")).toHaveText(
       `Owner ${holdOwnerId} · strikes 1`,

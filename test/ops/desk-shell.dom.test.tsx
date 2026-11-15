@@ -280,7 +280,8 @@ describe("DeskShell", () => {
     const [screening, digest] = [...(footer?.children ?? [])];
     expect(screening).toHaveTextContent("Screening · OK");
     expect(screening).toHaveClass("text-muted");
-    expect(digest).toHaveTextContent("Last digest · Not yet");
+    expect(digest?.textContent).toBe("Last digest · Not yet");
+    expect(digest?.querySelector("[data-part='digest-room']")).toBeNull();
   });
 
   it("says screening is holding, in hi-viz, while a breaker is over, and when the digest last ran (owner, #635)", async () => {
@@ -301,7 +302,14 @@ describe("DeskShell", () => {
     const [screening, digest] = [...(footer?.children ?? [])];
     expect(screening).toHaveTextContent("Screening · Holding");
     expect(screening).toHaveClass("text-hiviz-text");
-    expect(digest).toHaveTextContent("Last digest · 07:00");
+    // One line, heard whole, then unseen and unheard room for the two
+    // characters "Not yet" has beyond a time, so the rail keeps its width
+    // the day the digest first runs (R2-DESK-12b, a guess: #758).
+    expect(digest?.firstChild?.textContent).toBe("Last digest · 07:00");
+    const room = digest?.querySelector("[data-part='digest-room']");
+    expect(room?.textContent).toBe("00");
+    expect(room).toHaveClass("invisible");
+    expect(room).toHaveAttribute("aria-hidden", "true");
   });
 
   it("counts what is waiting on the Review entry, in hi-viz", async () => {
@@ -474,6 +482,10 @@ describe("Today", () => {
     // R55·196: the whole card opens it, the link stretched over the card.
     expect(card).toHaveClass("relative");
     expect(link).toHaveClass("after:absolute", "after:inset-0");
+    // R2-DESK-10: a 44 target that takes no height (R55·180), so the
+    // card is as tall as its neighbours and its label on their line.
+    expect(link).toHaveClass("target", "inline-block", "-my-3", "py-3");
+    expect(link).not.toHaveClass("inline-flex");
   });
 
   it("puts what needs a person in hi-viz, and nothing at zero or for bans", async () => {
@@ -638,7 +650,7 @@ describe("DeskPage", () => {
     ]);
   });
 
-  it("gives the three tables the page measure and the rest the column (168.3, R55·194)", async () => {
+  it("gives the three tables the page measure and the rest the column, all at the rail (168.3, R57·264)", async () => {
     const widths: Record<string, string> = {};
     for (const current of [
       "today",
@@ -656,9 +668,16 @@ describe("DeskPage", () => {
       ));
       const body = await screen.findByText(`the ${current} page`);
       const page = body.closest("main")?.firstElementChild;
-      widths[current] =
-        /max-w-(?<measure>page|column)/u.exec(page?.className ?? "")?.groups
-          ?.measure ?? "neither";
+      // Every page's frame is left-aligned at the rail: nothing centres
+      // it (#709), and a column page holds its 620 inside that frame.
+      expect(page).toHaveClass("max-w-page");
+      expect(page?.className).not.toMatch(/mx-auto/u);
+      const column = body.closest("[data-part='desk-column']");
+      if (column !== null) {
+        expect(column.className).toBe("flex w-full max-w-column flex-col gap-6");
+        expect(column.parentElement).toBe(page);
+      }
+      widths[current] = column === null ? "page" : "column";
       unmount();
     }
     expect(widths).toStrictEqual({

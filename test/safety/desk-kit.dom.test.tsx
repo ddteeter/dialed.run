@@ -72,6 +72,8 @@ describe("DeskKit", () => {
     expect(part("kit-band")).toHaveClass(
       "border",
       "border-hairline",
+      "px-3",
+      "py-2",
       "items-center",
       "font-mono",
     );
@@ -79,6 +81,13 @@ describe("DeskKit", () => {
     expect(part("kit-band")?.lastElementChild).toHaveClass("uppercase");
     expect(screen.getByRole("link", { name: "@k_lopes" })).not.toHaveClass(
       "uppercase",
+    );
+    // R2-DESK-13: a 44 target that takes a line's height (R55·180), not a
+    // 44 box that sets the band's height for its first line only.
+    expect(screen.getByRole("link", { name: "@k_lopes" })).toHaveClass(
+      "target",
+      "-my-3",
+      "py-3",
     );
     expect(part("kit-band")?.nextElementSibling).toBe(part("kit-run"));
     expect(screen.getByRole("link", { name: "@k_lopes" })).toHaveAttribute(

@@ -347,7 +347,10 @@ function CodeWho({
       <span title={label} className="truncate">
         {label}
       </span>
-      <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      {/* R2-DESK-03: each name's 44 target grows by padding against an
+          equal negative margin (R55·180), so it takes a text line's
+          height and a wrapped line sits 12 below the last, not 48. */}
+      <span className="flex flex-wrap items-baseline gap-x-3 gap-y-3">
         <Mono step="xs" className="text-muted">
           {usedLine(code.usedBy.length)}
         </Mono>
@@ -358,7 +361,7 @@ function CodeWho({
           <button
             type="button"
             onClick={onMore}
-            className="target inline-flex cursor-pointer items-center border-none bg-transparent p-0 text-small font-bold text-action"
+            className="target -my-3 cursor-pointer border-none bg-transparent px-0 py-3 text-small font-bold text-action"
           >
             {`+ ${grouped(more)} more`}
           </button>
@@ -376,7 +379,7 @@ function RunnerLink({ who }: Readonly<{ who: string }>): JSX.Element {
     <Link
       to="/desk/runners"
       search={runnerSearch(who)}
-      className="target inline-flex items-center text-small text-ink underline underline-offset-4"
+      className="target -my-3 py-3 text-small text-ink underline underline-offset-4"
     >
       {who}
     </Link>
@@ -392,8 +395,9 @@ function CodePane({ code }: Readonly<{ code: DeskCode }>): JSX.Element {
     <>
       <div className="flex flex-col gap-2">
         <DeskPaneName>
+          {/* R57·251: a code is a measured value, at MONO.lg. */}
           <h2 className="m-0">
-            <Mono step="sm">{code.code}</Mono>
+            <Mono step="lg">{code.code}</Mono>
           </h2>
         </DeskPaneName>
         <span className="wrap-anywhere">{labelOf(code)}</span>
@@ -623,7 +627,11 @@ function CodesSection({
         picked={
           open === undefined
             ? undefined
-            : { name: open.code, detail: <CodePane code={open} /> }
+            : {
+                name: open.code,
+                detail: <CodePane code={open} />,
+                isCode: true,
+              }
         }
       >
         <ul className={CODE_LIST}>

@@ -48,8 +48,9 @@ function held(
   return {
     id: HOLD_ID,
     subjectType: "photo",
-    subjectId: "p1",
+    subjectId: "01M7DVQKMC6T1D7YG821DFJY46",
     ownerId: "runner-1",
+    ownerHandle: "owner_7734",
     strikes: 2,
     notice: "it uses someone else's work — Acme, ref 7",
     hiddenAt: OCT_23,
@@ -112,13 +113,52 @@ describe("CopyrightHolds", () => {
     expect(
       screen.getByRole("heading", { name: "Copyright holds · 1" }),
     ).toBeVisible();
-    // Round 39 #73: a panel headed by a hi-viz kicker, kind and id (G-13).
-    expect(part("copyright-hold")).toHaveClass("border", "bg-panel", "p-4");
-    const kicker = part("copyright-hold")?.firstElementChild?.firstElementChild;
-    expect(kicker).toHaveTextContent(/^photo · p1$/u);
-    expect(kicker).toHaveClass("text-hiviz-text", "wrap-anywhere", "min-w-0");
+    // R55·199: the queue's card, round, cards 12 apart (R2-DESK-08).
+    expect(part("copyright-hold")).toHaveClass(
+      "rounded-card",
+      "border",
+      "border-hairline",
+      "bg-panel",
+      "p-4",
+    );
+    expect(part("copyright-hold")?.parentElement).toHaveClass("gap-3");
+    // Its head as a queue row's: kind, short id, @owner and its tag, in
+    // ink; the date muted; a hairline under.
+    const head = part("record-head");
+    expect(head).toHaveClass("border-b", "border-hairline", "pb-3");
+    const name = head?.firstElementChild;
+    // Drawn with the kind and tag in capitals, and unheard: spans split
+    // what a screen reader hears.
+    const drawn = part("record-name-drawn");
+    expect(drawn?.parentElement).toBe(name);
+    expect(drawn).toHaveAttribute("aria-hidden", "true");
+    expect(drawn?.textContent).toBe(
+      "photo · 01M7…JY46 · @owner_7734 [Copyright hold]",
+    );
+    expect(drawn?.firstElementChild).toHaveTextContent(/^photo$/u);
+    expect(drawn?.firstElementChild).toHaveClass("uppercase");
+    expect(drawn?.lastElementChild).toHaveTextContent(/^\[Copyright hold\]$/u);
+    expect(drawn?.lastElementChild).toHaveClass("uppercase");
+    // Heard as one line, in the words' own case.
+    expect(drawn?.nextElementSibling).toHaveClass("sr-only");
+    expect(drawn?.nextElementSibling?.childNodes).toHaveLength(1);
+    expect(drawn?.nextElementSibling?.textContent).toBe(
+      "photo · 01M7…JY46 · @owner_7734 [Copyright hold]",
+    );
+    expect(name).toHaveClass(
+      "min-w-0",
+      "truncate",
+      "font-mono",
+      "text-mono-sm",
+      "text-ink",
+    );
+    expect(name).not.toHaveClass("text-hiviz-text");
     expect(part("hidden-at")?.textContent).toBe("Hidden Oct 23");
-    expect(part("owner")?.textContent).toBe("Owner runner-1 · strikes 2");
+    expect(part("hidden-at")).toHaveClass("shrink-0", "text-muted", "uppercase");
+    // The owner is named in the head, so the line says their strikes.
+    expect(part("owner")?.textContent).toBe("Strikes 2");
+    // A hairline above the bar.
+    expect(part("hold-bar")).toHaveClass("border-t", "border-hairline", "pt-3");
     expect(part("notice")?.textContent).toBe(
       "it uses someone else's work — Acme, ref 7",
     );
@@ -132,6 +172,17 @@ describe("CopyrightHolds", () => {
       screen.queryByRole("button", { name: "Court action filed" }),
     ).toBeNull();
     expect(part("hold-said")).toBeNull();
+  });
+
+  it("names an owner with no handle by account id, under a head with no @", () => {
+    renderHolds(held({ ownerHandle: undefined, subjectId: "p1" }));
+    expect(part("record-name-drawn")?.textContent).toBe(
+      "photo · p1 [Copyright hold]",
+    );
+    expect(part("record-name-drawn")?.nextElementSibling?.textContent).toBe(
+      "photo · p1 [Copyright hold]",
+    );
+    expect(part("owner")?.textContent).toBe("Owner runner-1 · strikes 2");
   });
 
   it("renders nothing when nothing is held", () => {
@@ -479,6 +530,8 @@ describe("CopyrightHolds", () => {
     const field = screen.getByLabelText<HTMLInputElement>("Received on");
     expect(field).toHaveAttribute("type", "date");
     expect(field.value).toBe(isoDayOf(nowSeconds()));
+    // A short field, as wide as its date, not the column (P3-02; #759).
+    expect(field.closest("[data-part='received-on']")).toHaveClass("w-fit");
 
     fireEvent.change(field, { target: { value: "2026-10-24" } });
     await userEvent

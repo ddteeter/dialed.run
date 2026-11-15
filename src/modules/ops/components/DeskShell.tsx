@@ -41,17 +41,24 @@ export type DeskPage = (typeof DESK_PAGES)[number];
 /**
  * Round 54 · 168.3: Runners, Codes and Review are tables, and fill the
  * width beside the rail up to MEASURE.page. The rest keep the 620
- * document column.
+ * document column. Every page starts at the rail (R57·264, #709): the
+ * Desk is not a runner screen, so 168.1's centring does not reach it,
+ * and a 620 page leaves its spare width on the right.
  */
-const WIDTH: Readonly<Record<DeskPage, "table" | "column">> = {
-  today: "column",
-  review: "table",
-  corrections: "column",
-  access: "column",
-  duplicates: "column",
-  codes: "table",
-  runners: "table",
+const COLUMN_PAGES: Readonly<Record<DeskPage, boolean>> = {
+  today: true,
+  review: false,
+  corrections: true,
+  access: true,
+  duplicates: true,
+  codes: false,
+  runners: false,
 };
+
+/**
+The 620 column, at the rail's edge: the page's own gap, left-aligned.
+*/
+const DESK_COLUMN = "flex w-full max-w-column flex-col gap-6";
 
 const LABEL: Readonly<Record<DeskPage, string>> = {
   today: "Today",
@@ -178,11 +185,37 @@ function RailFooter({ today }: Readonly<{ today: DeskToday }>) {
         {isHolding ? "Screening · Holding" : "Screening · OK"}
       </Mono>
       <Mono step="xs" className="text-muted">
-        {`Last digest · ${lastDigestAt === undefined ? "Not yet" : timeOfDay(lastDigestAt)}`}
+        {/* One string, so it is heard as one line (a second text node is
+            a second line, and its leading space is dropped). */}
+        {`Last digest · ${lastDigestAt === undefined ? NOT_YET : timeOfDay(lastDigestAt)}`}
+        {lastDigestAt === undefined ? undefined : <NotYetRoom />}
       </Mono>
     </div>
   );
 }
+
+const NOT_YET = "Not yet";
+
+/**
+ * The room "Not yet" takes beyond a time (R2-DESK-12b): unseen, unheard
+ * characters after the time, so the rail is as wide the day the digest
+ * first runs as the day before. In mono every character is one width, so
+ * the room is the difference in length. A guess awaiting Design 312
+ * (#758): the rail stays sized by its content, as tokens.js pins no width
+ * outside MEASURE.
+ */
+function NotYetRoom() {
+  return (
+    <span data-part="digest-room" aria-hidden="true" className="invisible">
+      {"0".repeat(NOT_YET.length - HH_MM.length)}
+    </span>
+  );
+}
+
+/**
+What `timeOfDay` writes: two digits, a colon, two digits.
+*/
+const HH_MM = "00:00";
 
 /**
  * The Desk's top bar (R55·194/195): `[dialed] DESK` at the left, and at the
@@ -265,7 +298,15 @@ export function DeskShell({
         {/* `Page` for the column and the hydration stamp every screen
             carries (useHydrated), which the e2e specs wait on. */}
         <main className="min-w-0 flex-1">
-          <Page width={WIDTH[current]}>{children}</Page>
+          <Page width="table">
+            {COLUMN_PAGES[current] ? (
+              <div data-part="desk-column" className={DESK_COLUMN}>
+                {children}
+              </div>
+            ) : (
+              children
+            )}
+          </Page>
         </main>
       </div>
     </div>

@@ -409,10 +409,12 @@ function rowKind(row: QueueRow): string {
 /**
  * What a row's head names it by (R55·197): the subject's label, or, where
  * the subject has none and its id stands in, that id at its first and
- * last four characters.
+ * last four characters. A profile's label is its handle, so it reads
+ * `@handle`, as every other row's owner does (R2-DESK-12d).
  */
 function headName(row: QueueRow, label: string): string {
-  return label === row.subjectId ? shortId(label) : label;
+  if (label === row.subjectId) return shortId(label);
+  return row.subjectType === "profile" ? `@${label}` : label;
 }
 
 /**
@@ -631,11 +633,13 @@ function OpenRow({
         data-part="row-body"
         className="flex flex-col gap-4 border-t border-hairline p-4 desk:grid desk:grid-cols-[minmax(0,1fr)_minmax(0,3fr)] desk:items-start desk:gap-6"
       >
-        <div className="flex flex-col gap-2 empty:hidden">
+        <div data-part="row-photos" className="flex flex-col gap-2 empty:hidden">
           <SubjectPhotos row={row} />
           <RemovedMatchLine match={row.removedMatches?.[0]} />
         </div>
-        <div className="flex flex-col gap-3 desk:col-start-2">
+        {/* With no photo to show, the text takes both columns rather than
+            leaving the first one blank (R2-DESK-07). */}
+        <div className="flex flex-col gap-3 desk:col-start-2 desk:[[data-part=row-photos]:empty+&]:col-span-full">
           <WhyHere row={row} />
           {row.due === undefined ? undefined : <StatutoryLine />}
           {/* D1: who reported, folded; opening it is logged (D-164). */}

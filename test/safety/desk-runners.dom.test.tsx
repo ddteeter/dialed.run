@@ -285,7 +285,13 @@ describe("D8's table", () => {
     expect(screen.getByRole("searchbox")).toHaveClass(
       "text-field",
       "rounded-field",
+      "min-h-field",
+      // Every other Desk field's fill and edge, not the ground's (G-10).
+      "bg-panel",
+      "border-hairline",
+      "dark:border-hairline-2",
     );
+    expect(screen.getByRole("searchbox")).not.toHaveClass("bg-ground");
   });
 });
 
@@ -1038,6 +1044,8 @@ describe("Takedown (SAF-6)", () => {
     const heading = screen.getByRole("heading", { level: 2, name: "Takedown" });
     expect(heading).not.toHaveClass("font-display");
     expect(heading.firstElementChild).toHaveClass("font-mono", "text-mono-xs");
+    // Muted, as every section kicker on Review is (R2-DESK-12c).
+    expect(heading.firstElementChild).toHaveClass("text-muted");
   });
 
   it("opens with nothing chosen", () => {

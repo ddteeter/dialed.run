@@ -335,6 +335,29 @@ test("an operator opens the Desk and reads Today", async ({
   await expect(
     ink.getByText(/^\[\d+ waiting · \d+ decided today\]$/iu),
   ).toBeVisible();
+  // R2-DESK-02: night is dark for everyone (T3), so a light-theme
+  // operator's field takes the dark edge, `--hairline-2` (R55·179).
+  await page.emulateMedia({ colorScheme: "light" });
+  const edges = await ink
+    .locator(".field-box")
+    .first()
+    .evaluate((box) => {
+      // Each token through the box's own outline colour, read and reset:
+      // a computed colour, the same form as the border's.
+      const tokenColour = (token: string): string => {
+        box.style.outlineColor = `var(${token})`;
+        const colour = getComputedStyle(box).outlineColor;
+        box.style.outlineColor = "";
+        return colour;
+      };
+      return {
+        have: getComputedStyle(box).borderTopColor,
+        strong: tokenColour("--hairline-2"),
+        faint: tokenColour("--hairline"),
+      };
+    });
+  expect(edges.strong).not.toBe(edges.faint);
+  expect(edges.have).toBe(edges.strong);
   await scene(page, "Review: the burst, waiting from the last day");
   const held = page.locator("[data-part='release-holds']");
   await expect(held).toContainText("Held in the last day");

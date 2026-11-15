@@ -34,7 +34,7 @@ const PICKED = {
 };
 
 function table(
-  picked: typeof PICKED | undefined,
+  picked: (typeof PICKED & { isCode?: boolean }) | undefined,
   onUnpick: () => void = vi.fn<() => void>(),
 ) {
   return (
@@ -55,7 +55,34 @@ describe("DeskDetail at desk", () => {
     const { container } = render(table(undefined));
     expect(container.firstElementChild).toHaveClass(
       "grid",
+      "grid-cols-[minmax(0,1fr)]",
       "items-start",
+      "gap-6",
+      "desk:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]",
+    );
+  });
+
+  it("gives the table the whole width while there is no pane to hold (R2-DESK-03)", () => {
+    atWidth(true);
+    const { container } = render(
+      <DeskDetail picked={undefined} onUnpick={vi.fn<() => void>()}>
+        <p>the table</p>
+      </DeskDetail>,
+    );
+    // One track only: no idle line and nothing picked, so no 1fr reserved.
+    expect(container.firstElementChild?.className).toBe(
+      "grid grid-cols-[minmax(0,1fr)] items-start gap-6",
+    );
+  });
+
+  it("splits the width once something is picked, with no idle line", () => {
+    atWidth(true);
+    const { container } = render(
+      <DeskDetail picked={PICKED} onUnpick={vi.fn<() => void>()}>
+        <p>the table</p>
+      </DeskDetail>,
+    );
+    expect(container.firstElementChild).toHaveClass(
       "desk:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]",
     );
   });
@@ -73,6 +100,9 @@ describe("DeskDetail at desk", () => {
     const pane = screen.getByRole("complementary", { name: "@ada" });
     expect(pane).toHaveTextContent("the detail");
     expect(pane).toHaveClass(
+      "flex",
+      "flex-col",
+      "gap-4",
       "rounded-card",
       "bg-panel",
       "desk:sticky",
@@ -117,6 +147,42 @@ describe("DeskDetail below desk (R55·202)", () => {
     expect(within(drawer).getByRole("heading", { name: "@ada" })).toBeVisible();
     expect(within(drawer).queryByText("the name line")).toBeNull();
     expect(within(drawer).getByText("the detail")).toBeVisible();
+  });
+
+  it("titles the drawer in words for a runner, in mono for a code (R57·251)", () => {
+    atWidth(false);
+    const { rerender } = render(table(PICKED));
+    expect(
+      screen.getByRole("heading", { level: 2, name: "@ada" }),
+    ).toHaveClass("font-display");
+    rerender(table({ ...PICKED, name: "DIAL-TEST", isCode: true }));
+    expect(
+      screen.getByRole("heading", { level: 2, name: "DIAL-TEST" }),
+    ).toHaveClass("font-mono", "text-mono-lg");
+    rerender(table({ ...PICKED, name: "DIAL-TEST", isCode: false }));
+    expect(
+      screen.getByRole("heading", { level: 2, name: "DIAL-TEST" }),
+    ).toHaveClass("font-display");
+  });
+
+  it("spaces the drawer's blocks 16 apart, as the pane does (R2-DESK-04)", () => {
+    atWidth(false);
+    render(table(PICKED));
+    const drawer = screen.getByRole("dialog", { name: "@ada" });
+    expect(within(drawer).getByText("the detail").parentElement).toHaveClass(
+      "flex",
+      "flex-col",
+      "gap-4",
+    );
+  });
+
+  it("keeps the table to the screen's width below desk (R2-DESK-01)", () => {
+    atWidth(false);
+    const { container } = render(table(undefined));
+    // An explicit track, never an implicit `auto` one a long line widens.
+    expect(container.firstElementChild).toHaveClass(
+      "grid-cols-[minmax(0,1fr)]",
+    );
   });
 
   it("unpicks when the drawer's ✕ closes it", async () => {

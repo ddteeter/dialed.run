@@ -233,7 +233,7 @@ test("Review · a handle the hourly re-check flagged, and its Keep", async ({
       .getByRole("listitem")
       .filter({ hasText: flaggedHandle });
     await expect(handleRow.locator("[data-part='row-head']")).toHaveText(
-      `handle · re-check · ${flaggedHandle} [classifier]`,
+      `handle · re-check · @${flaggedHandle} [classifier]`,
     );
     await openRow(handleRow);
     await expect(

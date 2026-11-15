@@ -1103,6 +1103,31 @@ marked in the code at its site.
   the bar's edge (x=50 at 1280). R57·263 moved the edge to x=74, where the
   body already sat, and moves the bar instead (#708, next wave).
 
+## Built for #700, the Desk's styling-audit fixes (wave 10, design 217)
+
+How the Desk's audit findings were built, and the two guesses that wait on
+Round 58.
+
+- **Night is dark for every operator (R2-DESK-02).** `src/styles.css`'s
+  `dark` custom variant also matches inside `[data-ground="night"]`, which
+  only the Desk sets. T3 says the Desk does not read the runner's theme,
+  so a light-theme operator now gets 246b's dark sheet edge and R55·179's
+  `--hairline-2` field edge, where before they got the light page's. One
+  selector, and `Sheet`/`form` are unchanged. The operator journey checks
+  a Desk field's edge with the system in light.
+- **Guess · the rail's width (R2-DESK-12b, Design 312, #758).** The rail
+  is still sized by its content, since `tokens.js` pins no width outside
+  MEASURE ("rails inherit from the grid, not from a px"), and design 210's
+  "200 rail" is not in it. The footer's digest time holds the room "Not
+  yet" takes, so the rail no longer widens 14px the day the digest first
+  runs.
+- **Guess · Received on (P3-02, Design 313, #759).** The field is short,
+  as wide as its date, and is still the browser's native date field, so it
+  reads in the browser's locale format and not the board's "Oct 24, 2026".
+- **Holds and quarantine records (R2-DESK-08).** Both take R55·199's card.
+  A quarantine record's head carries no owner, because 199 draws only the
+  hold, and the record keeps its Uploader line. Its tag is `[QUARANTINE]`.
+
 ## Built from round 56 · 246 (wave 9, design 213)
 
 How the lift (Round 56 · 246, #652) was built, with what the ruling left

@@ -44,6 +44,7 @@ import {
   entryPhotos,
   moderationActions,
   outfitEntries,
+  userProfiles,
 } from "../../db/schema-core";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
@@ -508,6 +509,17 @@ function strikesOf(owner: SQLiteColumn): SQL<number> {
 }
 
 /**
+ * The owner's @handle (R55·199's card head), as a column of the hold's own
+ * row like `strikesOf`: null for an owner with no profile, whose hold
+ * still lists. `user_profiles`' primary key finds it.
+ */
+function handleOf(owner: SQLiteColumn): SQL<string | null> {
+  return sql<
+    string | null
+  >`(select ${userProfiles.username} from ${userProfiles} where ${userProfiles.userId} = ${owner})`;
+}
+
+/**
 The most holds Review lists.
 */
 export const COPYRIGHT_HOLD_PAGE = 100;
@@ -518,12 +530,13 @@ export const COPYRIGHT_HOLD_PAGE = 100;
  * stands.
  */
 export async function heldCopyrightContent(db: Db) {
-  return db
+  const rows = await db
     .select({
       id: copyrightHolds.id,
       subjectType: copyrightHolds.subjectType,
       subjectId: copyrightHolds.subjectId,
       ownerId: copyrightHolds.ownerId,
+      ownerHandle: handleOf(copyrightHolds.ownerId),
       strikes: strikesOf(copyrightHolds.ownerId),
       // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; heldCopyrightContent reads the hidden holds with the notice that hid them, a join only copyright holds have
       notice: moderationActions.reason,
@@ -543,6 +556,11 @@ export async function heldCopyrightContent(db: Db) {
     .where(eq(copyrightHolds.status, "hidden"))
     .orderBy(asc(copyrightHolds.purgeAt), asc(copyrightHolds.id))
     .limit(COPYRIGHT_HOLD_PAGE);
+  // No handle reads as absent, as every other Desk owner does.
+  return rows.map(({ ownerHandle, ...hold }) => ({
+    ...hold,
+    ownerHandle: ownerHandle ?? undefined,
+  }));
 }
 
 export type CopyrightHoldSummary = Awaited<

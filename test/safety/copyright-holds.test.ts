@@ -12,6 +12,7 @@ import {
   outbox,
   outfitEntries,
   reviewQueue,
+  userProfiles,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { isoDayOf } from "../../src/lib/contracts/age";
@@ -761,7 +762,31 @@ describe("Review's list of holds, and strikes", () => {
       courtActionAt: NOT_SET,
       strikes: 1,
     });
+    // Each hold names its own owner's handle (R55·199's head).
+    const handles = await core()
+      .select({ id: userProfiles.userId, handle: userProfiles.username })
+      .from(userProfiles);
+    const handleOf = (id: string) =>
+      handles.find((row) => row.id === id)?.handle;
+    expect(listed.map((hold) => hold.ownerHandle)).toStrictEqual([
+      handleOf(first.author),
+      handleOf(second.author),
+    ]);
+    expect(listed[0]?.ownerHandle).toEqual(expect.any(String));
+    expect(listed[0]?.ownerHandle).not.toBe(listed[1]?.ownerHandle);
     expect(COPYRIGHT_HOLD_PAGE).toBe(100);
+  });
+
+  it("lists a hold whose owner has no profile, naming no handle", async () => {
+    const { author, photoId } = await posted();
+    await takeDown("photo", photoId);
+    await core().delete(userProfiles).where(eq(userProfiles.userId, author));
+
+    const listed = await heldCopyrightContent(core());
+
+    expect(listed.map((hold) => [hold.subjectId, hold.ownerHandle])).toStrictEqual(
+      [[photoId, undefined]],
+    );
   });
 
   it("counts every takedown a restore did not undo, and lists only the hidden", async () => {

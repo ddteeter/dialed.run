@@ -52,6 +52,7 @@ export function QuarantineRecords({
     <ListSection
       title={`Quarantine · ${String(records.length)}`}
       items={records}
+      hasCards
       whenEmpty={
         <p className="m-0 text-small text-quiet">Nothing is in quarantine.</p>
       }
@@ -97,8 +98,11 @@ function QuarantineRow({
   return (
     <li data-part="quarantine-record" className={RECORD_PANEL}>
       <RecordHead
-        subjectType={held.subjectType}
-        subjectId={held.subjectId}
+        naming={{
+          subjectType: held.subjectType,
+          subjectId: held.subjectId,
+          tag: "Quarantine",
+        }}
         date={{
           part: "quarantined-at",
           label: `Held ${yearDayLabel(held.quarantinedAt)}`,
@@ -134,7 +138,8 @@ function QuarantineRow({
       {isGone || held.ncmecReportedAt !== null ? undefined : (
         <DeskForm
           form={form}
-          className="flex flex-col gap-4"
+          // A hairline above the card's form, as above a queue card's bar.
+          className="flex flex-col gap-4 border-t border-hairline pt-3"
           onSubmit={() => {
             void form.submit({ recordId: held.id, reportId });
           }}

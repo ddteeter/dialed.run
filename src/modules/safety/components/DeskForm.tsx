@@ -13,6 +13,7 @@ import {
   SubmitButton,
 } from "../../../ui";
 import type { FieldProps, FormShell } from "../../../ui";
+import { shortId } from "./short-id";
 
 /**
  * A Desk's row of buttons: the chalk pill first, then outline pills, then
@@ -140,33 +141,76 @@ export function PickOne<T extends string>(
 
 /**
  * A held record on Review's foot, a copyright hold or a quarantine record
- * (round 39 #73, G-13): a panel, not a ruled line, like the queue's rows.
+ * (R55·199): the queue's own card, round and 12 apart (`ListSection
+ * hasCards`), its head, body and bar parted by hairlines (R2-DESK-08).
  */
 export const RECORD_PANEL =
-  "flex flex-col gap-3 border border-hairline bg-panel p-4";
+  "flex flex-col gap-3 rounded-card border border-hairline bg-panel p-4";
 
 /**
- * The record's head, as round 39 draws it: what it is and its id, a
- * hi-viz MONO.xs kicker (`PHOTO · ph_3c0a`), with its date at the right.
+The rule above a record's bar, as the queue's card draws one.
+*/
+export const RECORD_BAR = "border-t border-hairline pt-3";
+
+/**
+What a record's head names: its kind, id, owner (if any) and what holds it.
+*/
+interface RecordNaming {
+  readonly subjectType: string;
+  readonly subjectId: string;
+  readonly owner?: string | undefined;
+  readonly tag: string;
+}
+
+/**
+ * `kind · id · @owner [tag]`, the id at its ends, as one line of words: what
+ * a screen reader hears, in the words' own case.
  */
-export function RecordHead({
+export function recordName({
   subjectType,
   subjectId,
+  owner,
+  tag,
+}: RecordNaming): string {
+  const whose = owner === undefined ? "" : ` · @${owner}`;
+  return `${subjectType} · ${shortId(subjectId)}${whose} [${tag}]`;
+}
+
+/**
+ * The record's head, as the queue's row head reads (R55·197, 199):
+ * `KIND · id · @owner [TAG]` in MONO.sm ink, the kind and tag in capitals
+ * and the handle in its own case; its date muted at the right; a hairline
+ * under it.
+ */
+export function RecordHead({
+  naming,
   date,
 }: Readonly<{
-  subjectType: string;
-  subjectId: string;
+  naming: RecordNaming;
   /**
   The date's part name and its words ("Hidden Oct 23").
   */
   date: Readonly<{ part: string; label: string }>;
 }>): JSX.Element {
+  const { subjectType, subjectId, owner, tag } = naming;
   return (
-    <span className="flex items-baseline justify-between gap-3">
-      <Mono step="xs" className="min-w-0 text-hiviz-text wrap-anywhere">
-        {`${subjectType} · ${subjectId}`}
-      </Mono>
-      <span data-part={date.part} className="text-ink uppercase">
+    <span
+      data-part="record-head"
+      className="flex items-baseline justify-between gap-3 border-b border-hairline pb-3"
+    >
+      <span className="min-w-0 truncate font-mono text-mono-sm text-ink">
+        {/* Drawn with the kind and tag in capitals, which takes spans; heard
+            as one line from the copy beside it, since spans split what a
+            screen reader hears and drop the space at their edge. */}
+        <span aria-hidden="true" data-part="record-name-drawn">
+          <span className="uppercase">{subjectType}</span>
+          {` · ${shortId(subjectId)}`}
+          {owner === undefined ? undefined : ` · @${owner}`}{" "}
+          <span className="uppercase">{`[${tag}]`}</span>
+        </span>
+        <span className="sr-only">{recordName(naming)}</span>
+      </span>
+      <span data-part={date.part} className="shrink-0 text-muted uppercase">
         <Mono step="xs">{date.label}</Mono>
       </span>
     </span>
