@@ -53,10 +53,19 @@ const MAX_CHARS = 40_000;
  */
 const MAX_NODE_CHARS = 8000;
 
+/**
+ * A raw node longer than this is skipped before it is decoded (SA-L04):
+ * sixteen times a node that fits, far more than entities add to any real
+ * description, and short of the blobs above (Tracksmith's are 129,000
+ * characters and up), which are never kept and are no longer decoded.
+ */
+export const MAX_RAW_NODE_CHARS = MAX_NODE_CHARS * 16;
+
 export function pageTextFor(html: string): string {
   const kept: string[] = [];
   let total = 0;
   for (const node of readPage(html).text) {
+    if (node.length > MAX_RAW_NODE_CHARS) continue;
     // Through `readableText`, which decodes to a fixed point: a page
     // arrives with `&amp;` in it, often double-encoded, and a prompt
     // carrying `91% recycled polyester &amp;amp; 9% spandex` teaches the

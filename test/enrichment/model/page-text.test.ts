@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { pageTextFor } from "../../../src/modules/enrichment/model/page-text";
+import {
+  MAX_RAW_NODE_CHARS,
+  pageTextFor,
+} from "../../../src/modules/enrichment/model/page-text";
 
 /**
  * What the model is shown. A product page is megabytes of markup around a
@@ -108,5 +111,31 @@ describe("pageTextFor", () => {
 
   it("returns nothing for a page with no prose at all", () => {
     expect(pageTextFor("<html><body><img src='x'></body></html>")).toBe("");
+  });
+});
+
+/**
+ * Markup whose text node, as the tokenizer hands it over (decoded once),
+ * is exactly `length` characters and decodes to "A": `&amp;` becomes
+ * `&`, and a numeric entity may carry any number of leading zeros.
+ */
+function letterIn(length: number): string {
+  return `&amp;#${"0".repeat(length - 5)}65;`;
+}
+
+describe("pageTextFor: a raw node too long to keep (SA-L04)", () => {
+  it("decodes a node at the bound", () => {
+    expect(letterIn(10).replace("&amp;", "&")).toHaveLength(10);
+    expect(pageTextFor(`<p>${letterIn(MAX_RAW_NODE_CHARS)}</p>`)).toBe("A");
+  });
+
+  it("skips one past it without decoding it", () => {
+    expect(
+      pageTextFor(`<p>${letterIn(MAX_RAW_NODE_CHARS + 1)}</p><p>kept</p>`),
+    ).toBe("kept");
+  });
+
+  it("is sixteen times a node that fits", () => {
+    expect(MAX_RAW_NODE_CHARS).toBe(128_000);
   });
 });
