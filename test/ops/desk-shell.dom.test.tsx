@@ -261,17 +261,51 @@ describe("DeskShell", () => {
       "wide:static",
       "wide:flex-col",
       "wide:border-r",
-      // R58·312: MEASURE.rail beside a 24 inset, whatever the footer says.
-      "wide:w-[calc(var(--spacing)*6+var(--container-rail))]",
+      // R58·312: MEASURE.rail, whatever the footer says.
+      "wide:w-rail",
       "wide:shrink-0",
     );
+    // R57·263: the rail and the page share the centred page's content
+    // edge, its left gutter the group's own.
+    expect(rail().parentElement).toHaveAttribute("data-part", "desk-frame");
+    expect(rail().parentElement).toHaveClass(
+      "wide:mx-auto",
+      "wide:w-full",
+      "wide:max-w-page",
+      "wide:flex-row",
+      "wide:pl-6",
+    );
     const entry = within(rail()).getByRole("link", { name: "Today" });
-    expect(entry).toHaveClass("wide:pl-6", "wide:pr-0", "gap-2");
+    expect(entry).toHaveClass("wide:pl-3", "wide:pr-0", "gap-2");
     expect(entry).not.toHaveClass("wide:gap-6");
     expect(within(rail()).getByRole("list")).toHaveClass(
       "flex",
       "whitespace-nowrap",
       "wide:flex-col",
+    );
+  });
+
+  it("puts the bar's content on the page's edge, inside the centred page and its gutters (R57·263)", async () => {
+    await renderWithRouter(
+      <DeskShell current="today" today={desk()}>
+        <p>page</p>
+      </DeskShell>,
+    );
+    const bar = document.querySelector("[data-part='desk-bar']");
+    expect(bar).toHaveClass("wide:border-b", "wide:border-hairline");
+    expect(bar).not.toHaveClass("wide:px-6");
+    expect(bar?.firstElementChild).toHaveAttribute(
+      "data-part",
+      "desk-bar-content",
+    );
+    expect(bar?.firstElementChild).toHaveClass(
+      "pl-4",
+      "pr-3",
+      "wide:mx-auto",
+      "wide:w-full",
+      "wide:max-w-page",
+      "wide:px-6",
+      "wide:min-h-[var(--bar-height)]",
     );
   });
 
@@ -288,7 +322,7 @@ describe("DeskShell", () => {
     expect(screening).toHaveClass("text-muted");
     // R58·312: LAST DIGEST stacked over its value, the value in tabular
     // mono, so neither sets the rail's width.
-    expect(footer).toHaveClass("wide:pl-6");
+    expect(footer).toHaveClass("wide:pl-3");
     expect(digest).toHaveAttribute("data-part", "last-digest");
     expect(digest).toHaveClass("flex", "flex-col");
     const [label, value] = [...(digest?.children ?? [])];

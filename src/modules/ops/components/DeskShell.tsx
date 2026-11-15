@@ -125,7 +125,7 @@ function RailCount({ tally }: Readonly<{ tally: RailTally | undefined }>) {
  * phone, where the rail is one row, it is a 2px hi-viz underline.
  */
 const RAIL_ENTRY =
-  "flex min-h-control items-center gap-2 border-b-2 px-3 text-body text-ink no-underline wide:justify-between wide:border-b-0 wide:border-l-2 wide:pr-0 wide:pl-6";
+  "flex min-h-control items-center gap-2 border-b-2 px-3 text-body text-ink no-underline wide:justify-between wide:border-b-0 wide:border-l-2 wide:pr-0 wide:pl-3";
 const RAIL_CURRENT = "border-hi-viz font-bold wide:bg-panel";
 const RAIL_OTHER = "border-transparent";
 
@@ -181,7 +181,7 @@ function RailFooter({ today }: Readonly<{ today: DeskToday }>) {
   return (
     <div
       data-part="rail-footer"
-      className="hidden wide:flex wide:flex-col wide:gap-3 wide:pt-6 wide:pl-6"
+      className="hidden wide:flex wide:flex-col wide:gap-3 wide:pt-6 wide:pl-3"
     >
       <Mono step="xs" className={isHolding ? "text-hiviz-text" : "text-muted"}>
         {isHolding ? "Screening · Holding" : "Screening · OK"}
@@ -206,26 +206,31 @@ function RailFooter({ today }: Readonly<{ today: DeskToday }>) {
  */
 function DeskBar({ handle }: Readonly<{ handle: string | undefined }>) {
   return (
-    <header
-      data-part="desk-bar"
-      className="flex min-h-control items-center justify-between gap-4 pr-3 pl-4 wide:min-h-[var(--bar-height)] wide:border-b wide:border-hairline wide:px-6"
-    >
-      <span className="flex items-baseline gap-2 text-heading wide:gap-3">
-        <Wordmark isDeskMark />
-        <Mono step="xs" className="text-hiviz-text">
-          Desk
-        </Mono>
-      </span>
-      <span className="flex items-center gap-2">
-        <span
-          data-part="operator"
-          className="hidden font-mono text-mono-xs text-muted wide:inline"
-        >
-          {handle === undefined ? undefined : `@${handle} · `}
-          <span className="uppercase">Operator ·</span>
+    <header data-part="desk-bar" className="wide:border-b wide:border-hairline">
+      {/* R57·263: from wide the bar's content is the page's, inside the
+          centred MEASURE.page and its 24 gutters, so the wordmark starts
+          on the rail's edge. */}
+      <div
+        data-part="desk-bar-content"
+        className="flex min-h-control items-center justify-between gap-4 pr-3 pl-4 wide:mx-auto wide:min-h-[var(--bar-height)] wide:w-full wide:max-w-page wide:px-6"
+      >
+        <span className="flex items-baseline gap-2 text-heading wide:gap-3">
+          <Wordmark isDeskMark />
+          <Mono step="xs" className="text-hiviz-text">
+            Desk
+          </Mono>
         </span>
-        <DeskSignOut />
-      </span>
+        <span className="flex items-center gap-2">
+          <span
+            data-part="operator"
+            className="hidden font-mono text-mono-xs text-muted wide:inline"
+          >
+            {handle === undefined ? undefined : `@${handle} · `}
+            <span className="uppercase">Operator ·</span>
+          </span>
+          <DeskSignOut />
+        </span>
+      </div>
     </header>
   );
 }
@@ -259,13 +264,20 @@ export function DeskShell({
       {/* The rail beside the content from `wide`; below it, one sticky row
           under the bar that scrolls sideways (R55·195), so a page's heading
           starts near the top instead of under six stacked rows (G-03). */}
-      <div className="flex flex-1 flex-col wide:flex-row">
+      {/* From `wide` the rail and the page are one group inside the
+          centred MEASURE.page, the rail on its content edge (R57·263:
+          x=74 at 1280). The left gutter is the group's; the page's own
+          24 is the gap beside the rail and the right gutter. */}
+      <div
+        data-part="desk-frame"
+        className="flex flex-1 flex-col wide:mx-auto wide:w-full wide:max-w-page wide:flex-row wide:pl-6"
+      >
         <nav
           aria-label="Desk"
-          // R58·312: from `wide` the rail is MEASURE.rail beside a 24
-          // inset, so the page's own 24 puts every heading at the edge +
-          // 170 whatever the footer holds.
-          className="sticky top-0 z-10 overflow-x-auto border-y border-hairline bg-ground px-2 wide:static wide:flex wide:w-[calc(var(--spacing)*6+var(--container-rail))] wide:shrink-0 wide:flex-col wide:justify-between wide:overflow-visible wide:border-y-0 wide:border-r wide:px-0 wide:py-4"
+          // R58·312: from `wide` the rail is MEASURE.rail, so every
+          // heading sits 122 + 24 in from the content edge (x=220 at
+          // 1280) whatever the footer holds.
+          className="sticky top-0 z-10 overflow-x-auto border-y border-hairline bg-ground px-2 wide:static wide:flex wide:w-rail wide:shrink-0 wide:flex-col wide:justify-between wide:overflow-visible wide:border-y-0 wide:border-r wide:px-0 wide:py-4"
         >
           <ul className="m-0 flex list-none gap-1 p-0 whitespace-nowrap wide:flex-col wide:gap-0">
             {DESK_PAGES.map((page) => (
