@@ -521,8 +521,40 @@ describe("deciding", () => {
         .getByText(bracketed("classifier"))
         .closest("[data-part='row-head']"),
     ).not.toBeNull();
-    expect(screen.getByRole("img", { name: "Reported" })).toHaveClass("h-32");
+    // R58·275: one photo fills the photo column at its own ratio.
+    expect(screen.getByRole("img", { name: "Reported" })).toHaveClass(
+      "w-full",
+      "h-auto",
+    );
+    expect(document.querySelector("[data-part='reported-rest']")).toBeNull();
     expect(document.querySelector("[data-part='garment-photo']")).toBeNull();
+  });
+
+  it("shows an entry's first photo at the column's width and the rest as 96 squares under it (R58·275)", () => {
+    renderQueue([
+      row({
+        subjectType: "entry",
+        subjectId: "e-1",
+        subject: {
+          photoKeys: ["entries/u/e/1", "entries/u/e/2", "entries/u/e/3"],
+        },
+      }),
+    ]);
+
+    const [first, ...rest] = screen.getAllByRole("img", { name: "Reported" });
+    expect(first).toHaveAttribute("data-part", "reported-photo");
+    expect(first).toHaveClass("w-full", "h-auto");
+    expect(first?.getAttribute("src")).toContain("entries/u/e/1");
+    const row2 = document.querySelector("[data-part='reported-rest']");
+    expect(row2).toHaveClass("flex", "flex-wrap", "gap-2");
+    expect(rest.map((img) => img.parentElement)).toStrictEqual([row2, row2]);
+    expect(rest.map((img) => img.getAttribute("src"))).toStrictEqual([
+      expect.stringContaining("entries/u/e/2"),
+      expect.stringContaining("entries/u/e/3"),
+    ]);
+    for (const img of rest) {
+      expect(img).toHaveClass("size-24", "object-cover", "border-hairline");
+    }
   });
   it("goes back to the decision bar on Cancel, deciding nothing", async () => {
     const user = userEvent.setup();
@@ -955,11 +987,14 @@ describe("what a row tells the reviewer", () => {
       "text-hiviz-text",
     );
     expect(clock).not.toHaveClass("bg-hi-viz");
-    // Beside the head, keeping its width; the head is one line, whole in
-    // its title (N3-10).
+    // Beside the head, keeping its width; from desk the head is one line,
+    // whole in its title (N3-10). Below desk it wraps, and the clock keeps
+    // to its first line (R58·274).
     expect(clock.parentElement).toHaveClass("shrink-0", "whitespace-nowrap");
+    expect(opener).toHaveClass("items-start", "desk:items-center");
     const head = opener.querySelector("[data-part='row-head']");
-    expect(head).toHaveClass("truncate");
+    expect(head).toHaveClass("flex", "flex-col", "desk:block", "desk:truncate");
+    expect(head).not.toHaveClass("truncate");
     expect(head).toHaveAttribute("title", "e-1");
     // The brackets stay about people.
     expect(screen.getByText(bracketed("1 person"))).toBeInTheDocument();
@@ -969,6 +1004,36 @@ describe("what a row tells the reviewer", () => {
         "It's an intimate image of someone, shared without their consent",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("wraps the head below desk: kind and id, then the owner and the tag, each whole (R58·274)", () => {
+    renderQueue([
+      row({
+        subjectType: "photo",
+        subjectId: "p-1",
+        source: "classifier",
+        subject: { photoKeys: [], owner: "nightrun_nico_ferreira" },
+      }),
+    ]);
+    const head = document.querySelector("[data-part='row-head']");
+    const name = head?.querySelector("[data-part='head-name']");
+    const tags = head?.querySelector("[data-part='head-tags']");
+    expect(name?.textContent).toBe("photo · p-1");
+    expect(name).toHaveClass("wrap-anywhere", "desk:inline");
+    expect(tags?.textContent).toBe(" · @nightrun_nico_ferreira [classifier]");
+    expect(tags).toHaveClass("desk:inline");
+    // The separator is drawn only on the one desk line, and always heard.
+    expect(screen.getByText("·", { normalizer: (text) => text.trim() })).toHaveClass(
+      "sr-only",
+      "desk:not-sr-only",
+    );
+    expect(screen.getByText("@nightrun_nico_ferreira")).toHaveClass(
+      "whitespace-nowrap",
+    );
+    expect(head?.querySelector("[data-part='source']")).toHaveClass(
+      "whitespace-nowrap",
+      "uppercase",
+    );
   });
 
   it("shortens an id that stands in for a label to its first and last four, whole in the title (R55·197)", () => {

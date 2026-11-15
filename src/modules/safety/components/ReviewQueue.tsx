@@ -125,18 +125,31 @@ function photosShown(row: QueueRow): readonly string[] {
 function ReportedPhotos({
   keys,
 }: Readonly<{ keys: readonly string[] }>): JSX.Element | undefined {
-  if (keys.length === 0) return undefined;
+  const [first, ...rest] = keys;
+  if (first === undefined) return undefined;
+  // R58·275: the first fills the photo column at its own ratio; the
+  // entry's other photos are 96 squares in a row under it, 8 apart.
   return (
-    <span className="flex flex-wrap gap-2">
-      {keys.map((key) => (
-        <img
-          key={key}
-          src={reviewPhotoSrc(key)}
-          alt="Reported"
-          className="h-32 w-auto border border-hairline"
-        />
-      ))}
-    </span>
+    <>
+      <img
+        src={reviewPhotoSrc(first)}
+        alt="Reported"
+        data-part="reported-photo"
+        className="h-auto w-full border border-hairline"
+      />
+      {rest.length === 0 ? undefined : (
+        <span data-part="reported-rest" className="flex flex-wrap gap-2">
+          {rest.map((key) => (
+            <img
+              key={key}
+              src={reviewPhotoSrc(key)}
+              alt="Reported"
+              className="size-24 border border-hairline object-cover"
+            />
+          ))}
+        </span>
+      )}
+    </>
   );
 }
 
@@ -421,6 +434,12 @@ function headName(row: QueueRow, label: string): string {
  * The row's head (R55·197): `KIND · id · @owner [SOURCE]` in MONO.sm. The
  * kind and the source in capitals; the id and the handle in their own case,
  * since a handle is never shouted (G-19). The whole name is the title.
+ *
+ * From `desk` it is one cut line. Below it (R58·274) it wraps instead:
+ * the kind and id on the first line, then the owner and the tag, each
+ * whole. Inline flow, not flex, so the spaces between them stay in what is
+ * heard. The ` · ` before the owner is drawn only on the one line, and is
+ * heard at every width.
  */
 function RowHead({
   row,
@@ -431,15 +450,26 @@ function RowHead({
     <span
       data-part="row-head"
       title={label}
-      className="truncate font-mono text-mono-sm"
+      className="flex flex-col gap-1 font-mono text-mono-sm desk:block desk:truncate"
     >
       {/* The separators outside the capitals' span: a space at its end is
           dropped from what is heard ("photo ·01M7…"). */}
-      <span className="uppercase">{rowKind(row)}</span>
-      {` · ${headName(row, label)}`}
-      {owner === undefined ? undefined : ` · @${owner}`}{" "}
-      <span data-part="source" className="uppercase">
-        {`[${SOURCE_TAGS[row.source]}]`}
+      <span data-part="head-name" className="wrap-anywhere desk:inline">
+        <span className="uppercase">{rowKind(row)}</span>
+        {` · ${headName(row, label)}`}
+      </span>
+      <span data-part="head-tags" className="desk:inline">
+        {owner === undefined ? (
+          " "
+        ) : (
+          <>
+            <span className="sr-only desk:not-sr-only">{" · "}</span>
+            <span className="whitespace-nowrap">{`@${owner}`}</span>{" "}
+          </>
+        )}
+        <span data-part="source" className="whitespace-nowrap uppercase">
+          {`[${SOURCE_TAGS[row.source]}]`}
+        </span>
       </span>
     </span>
   );
@@ -566,7 +596,9 @@ function ReviewRow({
           type="button"
           aria-expanded={active}
           onClick={onActivate}
-          className="flex min-h-target w-full cursor-pointer items-center justify-between gap-4 border-none bg-transparent px-4 py-3 text-left text-ink"
+          // Below desk the head wraps, and the clock keeps to its first
+          // line (R58·274).
+          className="flex min-h-target w-full cursor-pointer items-start justify-between gap-4 border-none bg-transparent px-4 py-3 text-left text-ink desk:items-center"
         >
           <span className="flex min-w-0 flex-col gap-1">
             <RowHead row={row} label={label} />
