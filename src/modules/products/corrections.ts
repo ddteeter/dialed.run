@@ -16,6 +16,7 @@ import {
   correctionFieldsFor,
   type CorrectionField,
 } from "../../lib/contracts/product-corrections";
+import { domainOf } from "../../lib/domain";
 import { NotFoundError } from "../../lib/errors";
 import {
   FIELD_REFUSAL_CODE,
@@ -24,6 +25,7 @@ import {
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import { orSqlNull } from "../../lib/sql/sql-null";
+import { deniedLinksOf } from "../safety";
 import {
   brandNameColumn,
   currentValues,
@@ -182,10 +184,26 @@ export async function correctionContext(
   ]);
   const [row] = product;
   if (row === undefined) throw new NotFoundError("Product not found.");
+  const { link: pasted, ...facts } = currentValues(row);
   return {
     brandName: row.brandName,
     productName: row.name,
-    current: currentValues(row),
+    current: { ...facts, ...(await linkAsShown(db, pasted)) },
     waiting,
   };
+}
+
+/**
+ * SA-L02: the sheet quotes a shared product's link as the garment page
+ * shows it, by its domain, and not at all when the denylist denies it.
+ * The link is the first one any runner pasted, so its path and query are
+ * theirs. The Desk's queue reads `currentValues` whole.
+ */
+async function linkAsShown(
+  db: ReturnType<typeof coreDb>,
+  pasted: string | undefined,
+): Promise<{ link?: string }> {
+  const denied = await deniedLinksOf(db, [pasted]);
+  const domain = denied.has(String(pasted)) ? undefined : domainOf(pasted);
+  return domain === undefined ? {} : { link: domain };
 }
