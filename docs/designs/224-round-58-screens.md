@@ -63,9 +63,14 @@ One commit per area, each with the tests that observe it.
 ## Issues
 
 - Closes: #712 #738 #739 #740 #741 #742 #673 #674 #717 #718 #728 #729
-  #732 #733 #734 #736 #737 #743 #744 #745 #746 #749. Call sites of #753
-  and #662 in these screens follow 11c.
-- Opens: whatever is deferred, as issues listed in the PR.
+  #732 #733 #734 #736 #737 #743 #744 #745 #746 #749. Call sites in
+  these screens for 11c's kinds (coordinator-11, 2026-11-15): #753 (308),
+  #715 (270), #751 (306), #747 (302), #731 (286), #708 (263, the columns
+  and F's gutters), #750 (305, after 11c's `data-ground="paper"`), and
+  #662's sites (D-187).
+- Opens: whatever is deferred, as issues listed in the PR. Design asks
+  from this lane: #779 (/open-source's Project link, owner: defer to
+  Design), #780 (FlushBand bleed at wide), #781 (301's dot).
 
 ## Open questions
 
@@ -73,3 +78,9 @@ One commit per area, each with the tests that observe it.
   236a counts its real remainder. The ruling's words are "Show 50 more".
 - 267, guess: "Signed in" is MONO.xs muted at the bar's right, as the
   landing's signed-in first row.
+- 295: a new `hugging` SubmitButton tone (the secondary, `w-fit` at
+  every width), since the secondary fills a phone row.
+- 308: Following, Unblock and Show all take the hairline edge but keep
+  their shapes, since the full `SECONDARY_PILL` would change their widths.
+- 301, guess (#781): the dot ends the run part, so a wrapped card's line
+  one ends "10.0 MI ·".
