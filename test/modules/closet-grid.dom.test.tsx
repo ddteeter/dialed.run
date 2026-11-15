@@ -257,6 +257,47 @@ describe("ClosetGrid: the heading row", () => {
     expect(within(header).getByRole("heading")).toHaveTextContent("2 pieces");
   });
 
+  it("ends the chip row below 720 as Retired (N), named Show retired, in step with the heading's (R58·272)", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(
+      <ClosetGrid
+        tempUnit="c"
+        distanceUnit="km"
+        listing={listing([harrier, retiredTee])}
+      />,
+    );
+
+    const row = document.querySelector<HTMLElement>("[data-part='chip-row']");
+    if (row === null) throw new Error("no chip row");
+    const phone = within(row).getByRole("switch", { name: "Show retired" });
+    const label = phone.closest("label");
+    expect(label).toHaveTextContent(/^Retired \(1\)$/u);
+    // Below 720 only, at the row's end, the chips scrolling beside it.
+    expect(label).toHaveClass("flex", "shrink-0", "wide:hidden");
+    expect(row.lastElementChild).toBe(label);
+    expect(row.firstElementChild).toHaveClass(
+      "min-w-0",
+      "flex-1",
+      "overflow-x-auto",
+      "wide:flex-wrap",
+    );
+    // The heading row's copy is the one from 720 up.
+    const header = document.querySelector<HTMLElement>(
+      "[data-part='grid-header']",
+    );
+    if (header === null) throw new Error("no heading row");
+    const wide = within(header).getByRole("switch", {
+      name: "Show retired (1)",
+    });
+    expect(wide.closest("label")).toHaveClass("hidden", "wide:flex");
+
+    await user.click(phone);
+
+    expect(phone).toBeChecked();
+    expect(wide).toBeChecked();
+    expect(within(header).getByRole("heading")).toHaveTextContent("2 pieces");
+  });
+
   it("offers no switch when nothing is retired — it would change nothing", async () => {
     await renderWithRouter(
       <ClosetGrid
@@ -550,7 +591,12 @@ describe("ClosetGrid: the tile's photo and record (board C, round 27 #31b)", () 
     // --muted, unheard, since the link already names the piece.
     const word = partOf(tileOf(/^Tracksmith Harrier/), "tile-word");
     expect(word).toHaveTextContent(/^Top$/);
-    expect(word).toHaveClass("font-display", "text-heading", "text-muted", "uppercase");
+    expect(word).toHaveClass(
+      "font-display",
+      "text-heading",
+      "text-muted",
+      "uppercase",
+    );
     expect(word).toHaveAttribute("aria-hidden", "true");
   });
 
@@ -724,7 +770,9 @@ describe("ClosetGrid: what a tile says", () => {
       />,
     );
     expect(
-      screen.getByRole("link", { name: /^Tee/ }).querySelector("[data-part='tile-tags']"),
+      screen
+        .getByRole("link", { name: /^Tee/ })
+        .querySelector("[data-part='tile-tags']"),
     ).toHaveTextContent(/^\[Generic\]\[Retired\]$/);
   });
 
@@ -758,7 +806,15 @@ describe("ClosetGrid: what a tile says", () => {
     // Round 55 · 189: "Untested" is the rail's word, not the tile's.
     const untested = screen.getByRole("link", { name: /Long sleeve top/ });
     expect(untested).not.toHaveTextContent("Untested");
-    expect(untested.querySelector("[data-part='tile-range']")).toBeNull();
+    // R58·273: the slot stays, empty, for the row's one height.
+    const slot = untested.querySelector("[data-part='tile-range']");
+    expect(slot).toHaveAttribute("data-state", "empty");
+    expect(slot).toHaveAttribute("aria-hidden", "true");
+    expect(slot).toHaveClass("invisible");
+    expect(slot?.textContent).toBe("\u{A0}");
+    expect(slot?.firstElementChild).toHaveClass("text-mono-xs");
+    expect(untested).toHaveAccessibleName(/^Long sleeve top/u);
+    expect(untested).not.toHaveAccessibleName(/degrees/u);
   });
 
   it("wears no hue on the range — teal means dialed", async () => {
@@ -777,7 +833,7 @@ describe("ClosetGrid: what a tile says", () => {
     expect(label).not.toHaveClass("text-dialed-text");
   });
 
-  it("leaves out a range with no ends, not an empty bracket", async () => {
+  it("prints no range with no ends, not an empty bracket", async () => {
     const halfKnown = itemView({
       item: wardrobeItem({ id: "01VOID", name: "Mystery tee" }),
       tempRange: {},
@@ -791,7 +847,10 @@ describe("ClosetGrid: what a tile says", () => {
     );
 
     const tile = screen.getByRole("link", { name: /Mystery tee/ });
-    expect(tile.querySelector("[data-part='tile-range']")).toBeNull();
+    expect(tile.querySelector("[data-part='tile-range']")).toHaveAttribute(
+      "data-state",
+      "empty",
+    );
     expect(tile).not.toHaveTextContent("[]");
   });
 
@@ -920,9 +979,10 @@ describe("ClosetGrid: the page (Round 54 · 168.2)", () => {
         listing={listing([harrier])}
       />,
     );
-    expect(
-      partOf(tileOf(/^Tracksmith Harrier/), "tile-name"),
-    ).toHaveClass("line-clamp-2", "[min-block-size:2lh]");
+    expect(partOf(tileOf(/^Tracksmith Harrier/), "tile-name")).toHaveClass(
+      "line-clamp-2",
+      "[min-block-size:2lh]",
+    );
   });
 });
 
@@ -1222,7 +1282,7 @@ describe("ClosetGrid: the rail (R-94)", () => {
   it("counts the retired pieces once the switch admits them", async () => {
     const user = userEvent.setup();
     await grid();
-    await user.click(screen.getByRole("switch", { name: /Show retired/ }));
+    await user.click(screen.getByRole("switch", { name: /^Show retired \(/u }));
     expect(
       within(rail()).getByRole("link", { name: /^All/ }),
     ).toHaveTextContent("All 4");

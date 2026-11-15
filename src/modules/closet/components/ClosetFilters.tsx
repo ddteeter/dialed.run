@@ -55,6 +55,10 @@ export interface ClosetFiltersProps {
   every control works as it does before hydration.
   */
   onSearch?: ((next: ClosetSearch) => void) | undefined;
+  /**
+  What ends the chip row below 720: the closet's Retired switch (R58·272).
+  */
+  chipRowEnd?: ReactNode;
 }
 
 /**
@@ -354,28 +358,33 @@ function ChipRow(props: Readonly<ClosetFiltersProps>): JSX.Element {
       data-part="chips"
       className="flex flex-col gap-3"
     >
-      <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
-        {CHIP_ORDER.map((key) => (
-          <li key={key}>
-            <button
-              type="button"
-              aria-expanded={isShown(key)}
-              aria-controls={`${id}-${key}`}
-              onClick={() => {
-                setOpen(open === key ? undefined : key);
-              }}
-              className="target flex items-center rounded-pill border border-hairline px-3 py-1 text-ink aria-expanded:border-ink aria-expanded:bg-ink aria-expanded:text-ground"
-            >
-              <Mono step="xs">
-                <Spoken
-                  shown={`${CHIP_TITLES[key]} · ${values[key].shown}`}
-                  said={`${CHIP_TITLES[key]} · ${values[key].said}`}
-                />
-              </Mono>
-            </button>
-          </li>
-        ))}
-      </ul>
+      {/* R58·272: below 720 the row ends on the Retired switch and the
+          chips scroll beside it; from 720 they wrap, as before. */}
+      <div data-part="chip-row" className="flex items-center gap-3">
+        <ul className="m-0 flex min-w-0 flex-1 list-none gap-2 overflow-x-auto p-0 wide:flex-wrap wide:overflow-visible">
+          {CHIP_ORDER.map((key) => (
+            <li key={key}>
+              <button
+                type="button"
+                aria-expanded={isShown(key)}
+                aria-controls={`${id}-${key}`}
+                onClick={() => {
+                  setOpen(open === key ? undefined : key);
+                }}
+                className="target flex shrink-0 items-center whitespace-nowrap rounded-pill border border-hairline px-3 py-1 text-ink aria-expanded:border-ink aria-expanded:bg-ink aria-expanded:text-ground"
+              >
+                <Mono step="xs">
+                  <Spoken
+                    shown={`${CHIP_TITLES[key]} · ${values[key].shown}`}
+                    said={`${CHIP_TITLES[key]} · ${values[key].said}`}
+                  />
+                </Mono>
+              </button>
+            </li>
+          ))}
+        </ul>
+        {props.chipRowEnd}
+      </div>
       {CHIP_ORDER.map((key) => (
         <div key={key} id={`${id}-${key}`} hidden={!isShown(key)}>
           {controls[key]}

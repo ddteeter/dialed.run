@@ -199,7 +199,8 @@ function TilePill({
  * DIALED", said "8 of 9 runs dialed", as F's record line says it (a11y
  * judgment audit, 2026-11-04). A piece never judged says so: "No runs
  * yet" before its first run, "No verdict yet" after it. A piece with no
- * range has no range slot: "Untested" is the rail's word, not the tile's.
+ * range prints nothing in the range slot, which keeps its height (R58·273):
+ * "Untested" is the rail's word, not the tile's.
  */
 function TileRecord({
   view,
@@ -230,7 +231,19 @@ function TileRecord({
       {/* **Muted, never teal.** T2: teal means *dialed* — a verdict — and
           a garment's working range is not one. Board C draws the band line
           in `--muted`, and round 16 says coverage is monochrome. */}
-      {range === undefined ? undefined : (
+      {range === undefined ? (
+        // R58·273: the slot keeps its height, empty, so a row is one
+        // height (187) and nothing is printed (189). A space at the
+        // line's own step holds it, unseen and unheard.
+        <span
+          data-part="tile-range"
+          data-state="empty"
+          aria-hidden="true"
+          className="invisible"
+        >
+          <Mono step="xs">{"\u{A0}"}</Mono>
+        </span>
+      ) : (
         <span data-part="tile-range" className="text-muted">
           <Bracketed step="xs">
             <Spoken {...range} />
@@ -505,23 +518,49 @@ function useFocusAfterClear(search: ClosetSearch) {
   };
 }
 
+/**
+ * Where the Retired switch sits: in the heading row from 720 up, and
+ * below it at the chip row's end (R58·272), heading and bell owning row
+ * one. Two copies, each `hidden` on the other side of 720, as the bar's
+ * Request access is: only one is ever drawn or heard.
+ */
+const RETIRED_SWITCH_SPOT = {
+  heading: {
+    className:
+      "target hidden cursor-pointer items-center gap-2 text-body font-semibold wide:flex",
+    label: (count: number) => `Show retired (${String(count)})`,
+    name: undefined,
+  },
+  chips: {
+    className:
+      "target flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap text-body font-semibold wide:hidden",
+    label: (count: number) => `Retired (${String(count)})`,
+    // The ruling's name: "Retired (N)" alone does not say what it does.
+    name: "Show retired",
+  },
+} as const;
+
 function RetiredSwitch({
+  spot,
   count,
   isOn,
   onToggle,
 }: Readonly<{
+  spot: keyof typeof RETIRED_SWITCH_SPOT;
   count: number;
   isOn: boolean;
   onToggle: (isOn: boolean) => void;
 }>) {
+  const { className, label, name } = RETIRED_SWITCH_SPOT[spot];
   return (
-    <label className="target flex cursor-pointer items-center gap-2 text-body font-semibold">
-      {`Show retired (${String(count)})`}
+    <label data-part="retired-switch" className={className}>
+      {label(count)}
       {/* R54·166.3: it changes the view the moment it moves, so a switch,
           drawn from the shared set, at the label's right. */}
       <input
         type="checkbox"
         role="switch"
+        aria-label={name}
         className="control-switch"
         checked={isOn}
         onChange={(event) => {
@@ -610,6 +649,17 @@ export function ClosetGrid({
   // pieces is not empty, and "add what you run in most" to someone with a
   // full closet reads as data loss.
   const isEmpty = listing.totalCount === 0;
+  // Only when there is something to show: a switch that changes nothing
+  // is a dead control.
+  const retiredSwitch = (spot: keyof typeof RETIRED_SWITCH_SPOT) =>
+    screen.retiredCount > 0 ? (
+      <RetiredSwitch
+        spot={spot}
+        count={screen.retiredCount}
+        isOn={isRetiredShown}
+        onToggle={setRetiredShown}
+      />
+    ) : undefined;
   const filters = {
     search,
     counts: screen.counts,
@@ -658,17 +708,10 @@ export function ClosetGrid({
                 closetHeading(screen.visible.length, search.group)
               )}
             </h1>
-            {/* Only when there is something to show: a switch that changes
-                nothing is a dead control. Then the phone's bell, the row's
-                last thing (Design 169.1). */}
+            {/* From 720 the Retired switch, then the phone's bell, the
+                row's last thing (Design 169.1). */}
             <div className="flex items-center gap-3">
-              {screen.retiredCount > 0 ? (
-                <RetiredSwitch
-                  count={screen.retiredCount}
-                  isOn={isRetiredShown}
-                  onToggle={setRetiredShown}
-                />
-              ) : undefined}
+              {retiredSwitch("heading")}
               <PhoneBell gutter={16} />
             </div>
           </div>
@@ -682,7 +725,11 @@ export function ClosetGrid({
         </div>
         {isEmpty ? undefined : (
           <div className="desk:hidden">
-            <ClosetFilters variant="chips" {...filters} />
+            <ClosetFilters
+              variant="chips"
+              {...filters}
+              chipRowEnd={retiredSwitch("chips")}
+            />
           </div>
         )}
         {screen.isFiltered && screen.visible.length === 0 ? (
