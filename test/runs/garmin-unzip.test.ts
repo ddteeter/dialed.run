@@ -139,6 +139,24 @@ describe("onlyFileIn", () => {
     ).toBe("unzip: wrong size");
   });
 
+  it("stops inflating at the stated size, before the rest of the stream (SA-L17)", async () => {
+    // Megabytes of zeros deflate to a few kilobytes; with the last bytes cut
+    // off, inflating to the end would reach the truncation and fail as
+    // "does not inflate". Stopping one byte past the stated kilobyte never
+    // gets there.
+    const zeros = new ArrayBuffer(8 * 1024 * 1024);
+    const deflating = new Blob([zeros])
+      .stream()
+      .pipeThrough(new CompressionStream("deflate-raw"));
+    const whole = new Uint8Array(await new Response(deflating).arrayBuffer());
+    const zip = await zipOf(zeros, {
+      data: whole.subarray(0, whole.byteLength - 4),
+      statedSize: 1024,
+    });
+
+    expect(await refusal(zip)).toBe("unzip: wrong size");
+  });
+
   it("refuses contents that do not inflate", async () => {
     const garbage = new Uint8Array([0xff, 0xff, 0xff]);
     const zip = await zipOf(CONTENT, { data: garbage });

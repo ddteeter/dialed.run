@@ -9,6 +9,7 @@
  * carries no sizes. It checks no CRC: the FIT file has its own, and the
  * parser refuses a file that fails it.
  */
+import { readCappedStream } from "../../../lib/read-capped";
 import { MAX_IMPORT_BYTES } from "../upload-limits";
 
 export class UnzipError extends Error {
@@ -71,11 +72,26 @@ function onlyEntry(view: DataView): Entry {
   };
 }
 
-async function inflated(data: ArrayBuffer): Promise<ArrayBuffer> {
+/**
+ * Inflates at most `size` bytes: the first byte past what the directory
+ * states is refused as the wrong size, before the rest is inflated
+ * (SA-L17).
+ */
+async function inflated(data: ArrayBuffer, size: number): Promise<ArrayBuffer> {
   const stream = new Blob([data])
     .stream()
     .pipeThrough(new DecompressionStream("deflate-raw"));
-  return new Response(stream).arrayBuffer();
+  try {
+    const bytes = await readCappedStream(
+      stream,
+      size,
+      () => new UnzipError("wrong size"),
+    );
+    return bytes.buffer;
+  } catch (error) {
+    if (error instanceof UnzipError) throw error;
+    throw new UnzipError("does not inflate");
+  }
 }
 
 /**
@@ -101,11 +117,7 @@ export async function onlyFileIn(zip: ArrayBuffer): Promise<ArrayBuffer> {
   if (entry.method === STORED) {
     bytes = data;
   } else if (entry.method === DEFLATED) {
-    try {
-      bytes = await inflated(data);
-    } catch {
-      throw new UnzipError("does not inflate");
-    }
+    bytes = await inflated(data, entry.size);
   } else {
     throw new UnzipError("unsupported method");
   }

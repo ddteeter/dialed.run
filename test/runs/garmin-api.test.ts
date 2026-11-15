@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import { MAX_IMPORT_BYTES } from "../../src/modules/runs/upload-limits";
 import {
   GARMIN_PERSONAL_ORIGIN,
   GarminUnavailable,
+  MAX_DOWNLOAD_BYTES,
   createGarminApi,
 } from "../../src/modules/runs/garmin/api";
 import { urlOf } from "./request-url";
@@ -254,6 +256,60 @@ describe("what a refusal keeps for Sentry", () => {
 });
 
 describe("fitFile", () => {
+  it("stops reading a download past its cap (SA-L17)", async () => {
+    const megabyte = new Uint8Array(1024 * 1024);
+    const pulls = { count: 0 };
+    const endless = () =>
+      new Response(
+        new ReadableStream<Uint8Array>({
+          pull: (controller) => {
+            pulls.count += 1;
+            controller.enqueue(megabyte);
+          },
+        }),
+      );
+    const { fetchImpl } = stubFetch({
+      "/personalapitoken-service": tokenAnswer,
+      "/download-service": endless,
+    });
+
+    const error = await unavailable(
+      createGarminApi("key", ORIGIN, fetchImpl).fitFile("1"),
+    );
+
+    expect(error.reason).toBe("download: not one file");
+    expect(error.cause).toStrictEqual(
+      new Error(`download exceeded ${String(MAX_DOWNLOAD_BYTES)} bytes`),
+    );
+    // The chunk that went over is the last one read (allowing the stream's
+    // own read-ahead of one).
+    const over = Math.floor(MAX_DOWNLOAD_BYTES / megabyte.byteLength) + 1;
+    expect(pulls.count).toBeGreaterThanOrEqual(over);
+    expect(pulls.count).toBeLessThanOrEqual(over + 2);
+  });
+
+  it("refuses a download that declares more than its cap, unread", async () => {
+    const { fetchImpl } = stubFetch({
+      "/personalapitoken-service": tokenAnswer,
+      "/download-service": () =>
+        new Response("x", {
+          headers: { "content-length": String(MAX_DOWNLOAD_BYTES + 1) },
+        }),
+    });
+
+    const error = await unavailable(
+      createGarminApi("key", ORIGIN, fetchImpl).fitFile("1"),
+    );
+
+    expect(error.cause).toStrictEqual(
+      new Error(`download declares ${String(MAX_DOWNLOAD_BYTES + 1)} bytes`),
+    );
+  });
+
+  it("reads a zip of the largest file the upload takes", () => {
+    expect(MAX_DOWNLOAD_BYTES).toBe(MAX_IMPORT_BYTES + 1024 * 1024);
+  });
+
   const FIT = new TextEncoder().encode(
     "synthetic fit bytes ".repeat(10),
   ).buffer;
