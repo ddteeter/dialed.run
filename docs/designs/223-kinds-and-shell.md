@@ -28,7 +28,8 @@ The hi-viz card takes it, so its ink pill stays ink in dark (#750).
   "dialed.run". A notification's sr-only "Unread" stays, because it voices
   the dot. The sweep list of every other site goes to 11b and 11d.
 - **#751.** SheetReceipt's Done becomes `INK_PILL`.
-- **#753.** CityFinder's ink-edged secondary becomes `SECONDARY_PILL`.
+- **#753.** CityFinder's ink-edged Find takes the hairline pill's edge at
+  the field's own height.
 - **#711.** The signed-out panel is a fill context, like the drawer. Its
   primary spans the 342 at ≥720.
 - **#757.** The bell's count badge anchors at the glyph's top-right with a
@@ -65,7 +66,7 @@ Call sites in 11d's files: Resend link and Not now (#715), A2b/A3b Done
 
 ## Issues
 
-- Closes: #711, #757 and #731 here. #708, #662, #751, #753, #747, #750
+- Closes: #711 and #757 here. #708, #662, #731, #751, #753, #747, #750
   and #715 close when 11d's (and for #662, 11b's) call sites land; the PR
   lists mine and theirs per item.
 - Opens: whatever the sweep finds that nobody owns.
