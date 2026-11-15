@@ -16,9 +16,11 @@ By finding (files in parentheses; ★ = outside this lane, granted by the coordi
 - **R2-DESK-01** (★`ui/DeskDetail`, ★`account/DeskCodes`): the table's track
   is `minmax(0,1fr)` below `desk`, not an implicit `auto`, so the list is as
   wide as the screen and a label's `truncate` cuts it there.
-- **R2-DESK-03** (★ the same files): handles and "+ N more" take `target-line`
-  (the 44 hit area without the 44 height), wrapping 12 apart, so a wrapped
-  line is a text line. With nothing picked and no `idle` line, `DeskDetail`
+- **R2-DESK-03** (★ the same files): handles and "+ N more" keep a 44
+  target that takes a text line's height: R55·180's padding against an
+  equal negative margin (`target -my-3 py-3`), wrapping 12 apart. Not
+  `target-line`: the e2e target check reads its `::before` at its own size,
+  and 22px over a 13px line is short of 44. With nothing picked and no `idle` line, `DeskDetail`
   gives the table one track, so Codes' table runs the full width (R55·200).
 - **R2-DESK-02** (★`styles.css`): the `dark` custom variant also matches
   inside `[data-ground="night"]`, because T3 says the Desk is night for
@@ -33,21 +35,24 @@ By finding (files in parentheses; ★ = outside this lane, granted by the coordi
   holds and quarantine records use 197's card: `rounded-card`, a `RowHead`-
   shaped head in ink (`KIND · short id · @owner [TAG]`, date muted), hairlines
   around the body, and `ListSection hasCards`.
-- **R2-DESK-10** (`ops/Today`): the flagged link drops `target inline-flex`.
-  The stretched `after:` already covers the card.
+- **R2-DESK-10** (`ops/Today`): the flagged link's 44 target takes no
+  height (the same padding pattern), and the stretched `after:` still covers
+  the card.
 - **R2-DESK-11** (`safety/PhotoMatches`): the match grid becomes a grid of
-  fixed tile columns, as 198's other-photos grid is. Captions wrap or cut
-  within the tile, and the owner link is `target-line`.
+  fixed tile columns, as 198's other-photos grid is. Captions cut at the
+  tile's edge, and the owner link's 44 target takes a line's height.
 - **R2-DESK-12** (a) ★`auth/SignOutButton`'s Desk variant aligns its pending
-  label to the start. (b) `ops/DeskShell`'s rail footer, see below. (c) `safety/Takedown`'s kicker is `text-muted`.
-  (d) a profile row's head reads `@handle`. (b) is a guess awaiting
+  label to the start. (b) `ops/DeskShell`'s rail footer. (c)
+  `safety/Takedown`'s kicker is `text-muted`. (d) A profile row's head
+  reads `@handle`. (b) is a guess awaiting
   Design 312 (#758): `tokens.js` pins no width outside MEASURE, so the
   rail stays content-sized, and its digest time holds the room "Not yet"
   takes.
 - **R2-DESK-13** (`safety/DeskKit`): the band gets `py` so every line has room,
-  and its handle link is `target-line`.
-- **G-10** (`safety/DeskRunners`): the search becomes the form contract's
-  field (`TextField`, `--panel`).
+  and its handle link's 44 target takes a line's height.
+- **G-10** (`safety/DeskRunners`): the search takes the form contract's
+  field look (`--panel` fill, the night edge); it stays a `type=search`
+  input, since `TextField` takes no search type.
 - **P3-02** (`safety/CopyrightHolds`): "Received on" is a short field.
   **Guess, Design 313 (#759):** the format stays the native date field's,
   which is the browser's locale format and not the board's "Oct 24, 2026".
@@ -65,7 +70,7 @@ By finding (files in parentheses; ★ = outside this lane, granted by the coordi
 
 - vitest ui (`*.dom.test.tsx`), one assertion per class change that a
   mutant would flip: DeskDetail's tracks, idle line and drawer gap; Codes
-  rows' `target-line`; ReviewQueue's no-photo span; record card classes and
+  rows' targets; ReviewQueue's no-photo span; record card classes and
   head text; Today's link classes; PhotoMatches' grid; Takedown's muted
   kicker; profile head's `@`; DeskKit band; Runners search is a `TextField`;
   Duplicates' count beside the heading.
