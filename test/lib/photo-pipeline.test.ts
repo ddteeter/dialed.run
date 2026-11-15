@@ -147,6 +147,100 @@ describe("imageDimensions, from hand-built headers", () => {
     expect(imageDimensions(jpeg)).toBeUndefined();
   });
 
+  it("skips fill bytes before a marker, as a decoder does (SA-L05)", () => {
+    const jpeg = bytesOf(
+      0xff,
+      0xd8,
+      0xff,
+      0xff,
+      0xff,
+      0xc0,
+      0,
+      17,
+      8,
+      0,
+      2,
+      0,
+      3,
+    );
+    expect(imageDimensions(jpeg)).toStrictEqual({ width: 3, height: 2 });
+    // Fill before a segment that is stepped over, too.
+    const app = bytesOf(
+      0xff,
+      0xd8,
+      0xff,
+      0xff,
+      0xe0,
+      0,
+      4,
+      1,
+      2,
+      0xff,
+      0xc0,
+      0,
+      17,
+      8,
+      0,
+      5,
+      0,
+      7,
+    );
+    expect(imageDimensions(app)).toStrictEqual({ width: 7, height: 5 });
+  });
+
+  it.each([0x00, 0x01, 0x02, 0xbf, 0xd0, 0xd8, 0xd9])(
+    "gives up at marker %s, which carries no length to step over (SA-L05)",
+    (marker) => {
+      // Stepped over by a length, the walk would land on the frame after.
+      const jpeg = bytesOf(
+        0xff,
+        0xd8,
+        0xff,
+        marker,
+        0,
+        4,
+        0,
+        0,
+        0xff,
+        0xc0,
+        0,
+        17,
+        8,
+        0,
+        2,
+        0,
+        3,
+      );
+      expect(imageDimensions(jpeg)).toBeUndefined();
+    },
+  );
+
+  it.each([0xc4, 0xda, 0xdb, 0xdd, 0xe0, 0xfe])(
+    "steps over marker %s by its length",
+    (marker) => {
+      const jpeg = bytesOf(
+        0xff,
+        0xd8,
+        0xff,
+        marker,
+        0,
+        4,
+        0,
+        0,
+        0xff,
+        0xc0,
+        0,
+        17,
+        8,
+        0,
+        2,
+        0,
+        3,
+      );
+      expect(imageDimensions(jpeg)).toStrictEqual({ width: 3, height: 2 });
+    },
+  );
+
   it("gives up on a JPEG whose segments stop making sense", () => {
     expect(
       imageDimensions(bytesOf(0xff, 0xd8, 0x00, 0xc0, 0, 17, 8, 0, 2, 0, 3)),
@@ -213,19 +307,7 @@ describe("imageDimensions, from hand-built headers", () => {
     // these otherwise-unrecognisable bytes and read a size out of the zero
     // bytes standing in for a real IHDR payload — a defined {width, height}
     // where the correct answer is undefined.
-    const notPngMagic = bytesOf(
-      0x00,
-      "XXX",
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      "IHDR",
-    );
+    const notPngMagic = bytesOf(0x00, "XXX", 0, 0, 0, 0, 0, 0, 0, 0, "IHDR");
     expect(imageDimensions(notPngMagic)).toBeUndefined();
   });
 
