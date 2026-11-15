@@ -413,8 +413,8 @@ describe("the public kit, signed out", () => {
     // Paper with a hairline foot now, as every signed-out page.
     expect(bar).toHaveAttribute("data-slot", "landing-bar");
     expect(bar).not.toHaveAttribute("data-ground");
-    expect(link("dialed.run home")).toHaveAttribute("href", "/");
-    expect(link("dialed.run home")).toHaveTextContent(
+    expect(link("dialed.run")).toHaveAttribute("href", "/");
+    expect(link("dialed.run")).toHaveTextContent(
       /^\[dialed\.run\]dialed\.run$/u,
     );
     expect(

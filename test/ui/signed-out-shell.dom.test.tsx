@@ -61,24 +61,27 @@ describe("SignedOutFrame (Round 55 · 176)", () => {
       "border-b",
       "border-hairline",
       "bg-ground",
-      "px-5",
-      "wide:px-6",
     );
     // Not an inverted block: "paper all the way up".
     expect(landingBar()).not.toHaveAttribute("data-ground");
     expect(landingBar()).toHaveAttribute("data-part", "top-bar");
+    // The gutter is inside the measure (R57·263): at desk the bar's
+    // content is the page's 1,132, on the page's one edge.
+    expect(landingBar()).not.toHaveClass("px-5");
     expect(landingBar()?.firstElementChild).toHaveClass(
       "h-14",
       "wide:h-16",
       "max-w-page",
       "mx-auto",
+      "px-5",
+      "wide:px-6",
     );
   });
 
   it("links the pink-bracketed wordmark home at TYPE.title", async () => {
     await renderAt(<SignedOutFrame>page</SignedOutFrame>);
 
-    const home = screen.getByRole("link", { name: "dialed.run home" });
+    const home = screen.getByRole("link", { name: "dialed.run" });
     expect(home).toHaveAttribute("href", "/");
     expect(home).toHaveAttribute("data-part", "wordmark");
     expect(home).not.toHaveAttribute("data-reload-document");
@@ -163,6 +166,9 @@ describe("SignedOutFrame (Round 55 · 176)", () => {
     const footer = document.querySelector("[data-part='legal-footer']");
     expect(footer?.tagName).toBe("FOOTER");
     expect(footer).toHaveClass("border-t", "border-hairline", "text-small");
+    // The footer's gutter is inside the measure too (R57·263).
+    expect(footer).not.toHaveClass("px-5");
+    expect(footer?.firstElementChild).toHaveClass("max-w-page", "px-5", "wide:px-6");
     expect(footer?.parentElement?.lastElementChild).toBe(footer);
     expect(screen.getByText("page")).toBeInTheDocument();
     const links = [...(footer?.querySelectorAll("a") ?? [])];
@@ -204,7 +210,7 @@ describe("SignedOutPanel", () => {
     expect(panel).toHaveClass("px-5", "wide:px-6", "max-w-panel");
     expect(panel).not.toHaveClass("px-6");
     // The bar's own gutter, the edge the panel matches.
-    expect(landingBar()).toHaveClass("px-5", "wide:px-6");
+    expect(landingBar()?.firstElementChild).toHaveClass("px-5", "wide:px-6");
   });
 });
 
