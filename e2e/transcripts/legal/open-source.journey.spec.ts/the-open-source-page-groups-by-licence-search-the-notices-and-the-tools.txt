@@ -774,7 +774,7 @@ mdast-util-gfm-table
 link, Project: mdast-util-gfm-table
 Project
 end of link, Project: mdast-util-gfm-table
-© # Titus Wormer
+© Titus Wormer
 end of listitem, level 1, position 71, set size 116
 listitem, level 1, position 72, set size 116
 mdast-util-to-string
