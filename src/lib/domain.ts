@@ -46,9 +46,26 @@ export function domainOf(url: string | undefined): string | undefined {
   } catch {
     return undefined;
   }
-  if (parsed.protocol !== "https:") return undefined;
-  const host = parsed.hostname.toLowerCase();
-  return host.startsWith("www.") ? host.slice(4) : host;
+  return parsed.protocol === "https:" ? siteOf(parsed.hostname) : undefined;
+}
+
+/**
+ * A host as one site: lower case, without the DNS root's trailing dot
+ * (`shop.example.` is `shop.example` to every browser, SA-L04), and
+ * without a leading `www.`. `domainOf` and the denylist's typed domains
+ * both go through it, so the two can only ever agree.
+ */
+export function siteOf(host: string): string {
+  const bare = withoutRootDot(host.toLowerCase());
+  return bare.startsWith("www.") ? bare.slice(4) : bare;
+}
+
+/**
+ * A host without the one trailing dot that names the DNS root. One, not
+ * every: only one is meaningful, and slicing needs no pattern to run.
+ */
+export function withoutRootDot(host: string): string {
+  return host.endsWith(".") ? host.slice(0, -1) : host;
 }
 
 /**

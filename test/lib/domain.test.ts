@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { domainOf, isOwnHost, linkDomainOf } from "../../src/lib/domain";
+import {
+  domainOf,
+  isOwnHost,
+  linkDomainOf,
+  siteOf,
+  withoutRootDot,
+} from "../../src/lib/domain";
 
 /**
  * The same function answers two questions — is this domain denied, and
@@ -76,17 +82,35 @@ describe("the app's own host (SA-L14)", () => {
     expect(isOwnHost(host)).toBe(true);
   });
 
-  it.each(["notdialed.run", "dialed.running.com", "dialed.run.evil.example", "run"])(
-    "is not %s",
-    (host) => {
-      expect(isOwnHost(host)).toBe(false);
-    },
-  );
+  it.each([
+    "notdialed.run",
+    "dialed.running.com",
+    "dialed.run.evil.example",
+    "run",
+  ])("is not %s", (host) => {
+    expect(isOwnHost(host)).toBe(false);
+  });
 
   it("shows a shop's domain and none for the app's own pages", () => {
     expect(linkDomainOf("https://www.janji.com/rover")).toBe("janji.com");
-    expect(linkDomainOf("https://www.dialed.run/onboarding/done")).toBeUndefined();
+    expect(
+      linkDomainOf("https://www.dialed.run/onboarding/done"),
+    ).toBeUndefined();
     expect(linkDomainOf("https://dialed.run./onboarding/done")).toBeUndefined();
     expect(linkDomainOf(undefined)).toBeUndefined();
+  });
+});
+
+describe("the DNS root's trailing dot (SA-L04)", () => {
+  it("reads a host with its root dot as the same site", () => {
+    expect(domainOf("https://Spam.Example./x")).toBe("spam.example");
+    expect(domainOf("https://www.spam.example./x")).toBe("spam.example");
+    expect(siteOf("WWW.Spam.Example.")).toBe("spam.example");
+  });
+
+  it("takes one dot only, and nothing from a host without one", () => {
+    expect(withoutRootDot("spam.example..")).toBe("spam.example.");
+    expect(withoutRootDot("spam.example")).toBe("spam.example");
+    expect(withoutRootDot("")).toBe("");
   });
 });

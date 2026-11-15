@@ -14,7 +14,7 @@ import type { drizzle } from "drizzle-orm/d1";
 
 import { domainDenylist, linkLandings } from "../../db/schema-core";
 import { primaryCoreDb } from "../../env";
-import { domainOf } from "../../lib/domain";
+import { domainOf, siteOf } from "../../lib/domain";
 import { columnWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
 
@@ -186,6 +186,5 @@ export async function denyDomain(
  * A host typed without a scheme, in the same shape `domainOf` returns.
  */
 function normalizeBareDomain(value: string): string {
-  const host = value.trim().toLowerCase();
-  return host.startsWith("www.") ? host.slice(4) : host;
+  return siteOf(value.trim());
 }
