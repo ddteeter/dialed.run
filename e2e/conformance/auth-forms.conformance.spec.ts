@@ -366,7 +366,7 @@ test.describe("Au · phone", () => {
     page,
   }) => {
     await builtAt390(page, "/auth/signup");
-    await page.getByLabel("Invite code").fill("DIAL-TEST");
+    await page.getByLabel("Invite code").fill("DIAL-TEST-CASE");
     await page.getByLabel("Date of birth").fill("1990-04-21");
     await page.getByLabel("Email").fill("dana.example.com");
     await page

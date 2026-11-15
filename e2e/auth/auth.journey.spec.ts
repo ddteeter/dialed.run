@@ -76,7 +76,7 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   ).toHaveAttribute("href", "/terms");
 
   await scene(page, "A code that doesn't work is marked on the code");
-  await page.getByLabel("Invite code").fill("DIAL-ZZZZ");
+  await page.getByLabel("Invite code").fill("DIAL-ZZZZ-ZZZZ");
   await page.getByLabel("Date of birth").fill("1990-04-21");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSPHRASE);

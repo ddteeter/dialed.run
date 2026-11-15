@@ -80,7 +80,7 @@ describe("auth (better-auth on real D1)", () => {
     expect(context.password.config.minPasswordLength).toBe(PASSWORD_MIN_LENGTH);
     expect(
       signUpSchema.safeParse({
-        inviteCode: "DIAL-7K3P",
+        inviteCode: "DIAL-7K3P-2QXM",
         birthDate: "1990-04-21",
         email: "floor-9@example.com",
         password: short,
@@ -93,7 +93,7 @@ describe("auth (better-auth on real D1)", () => {
     expect(taken.user.email).toBe("floor-10@example.com");
     expect(
       signUpSchema.safeParse({
-        inviteCode: "DIAL-7K3P",
+        inviteCode: "DIAL-7K3P-2QXM",
         birthDate: "1990-04-21",
         email: "floor-10@example.com",
         password: enough,

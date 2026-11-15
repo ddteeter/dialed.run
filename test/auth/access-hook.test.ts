@@ -208,7 +208,7 @@ describe("email sign-up through the gate", () => {
     ],
     [
       "a code nobody made",
-      { "x-invite-code": "DIAL-ZZZZ" },
+      { "x-invite-code": "DIAL-ZZZZ-ZZZZ" },
       "INVITE_INVALID",
       INVITE_COPY.invalid,
     ],
@@ -491,7 +491,7 @@ describe("Google sign-up through the gate", () => {
       auth,
       address(),
       { requestSignUp: true },
-      { "x-invite-code": "DIAL-ZZZZ", "x-turnstile-token": "token" },
+      { "x-invite-code": "DIAL-ZZZZ-ZZZZ", "x-turnstile-token": "token" },
     );
     expect(started.status).toBe(400);
     expect(await refusal(started)).toMatchObject({ code: "INVITE_INVALID" });
@@ -559,7 +559,7 @@ describe("Google sign-up through the gate", () => {
         { email: address() },
         {
           path: "/sign-up/email",
-          headers: new Headers({ "x-invite-code": "DIAL-ABCD" }),
+          headers: new Headers({ "x-invite-code": "DIAL-ABCD-EFGH" }),
         },
       ),
     ).rejects.toMatchObject({ body: { code: "INVITE_INVALID" } });
@@ -814,7 +814,7 @@ describe("admitSignUp", () => {
       };
       await admitSignUp(gate, {
         path: "/sign-up/email",
-        headers: new Headers({ "x-invite-code": "DIAL-ABCD" }),
+        headers: new Headers({ "x-invite-code": "DIAL-ABCD-EFGH" }),
       });
       expect(contextSpy).not.toHaveBeenCalled();
     } finally {
@@ -865,7 +865,7 @@ describe("admitSignUp without a code", () => {
         { ...gate, standing: () => Promise.resolve("used") },
         {
           path: "/sign-up/email",
-          headers: new Headers({ "x-invite-code": "DIAL-ABCD" }),
+          headers: new Headers({ "x-invite-code": "DIAL-ABCD-EFGH" }),
         },
       ),
     ).rejects.toMatchObject({

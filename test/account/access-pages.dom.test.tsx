@@ -489,7 +489,7 @@ const DESK: AccessDesk = {
     code(),
     code({
       id: "c2",
-      code: "DIAL-7K3P",
+      code: "DIAL-7K3P-2QXM",
       label: NOTHING,
       maxUses: 1,
       usedBy: ["maya@example.com"],
@@ -861,7 +861,7 @@ describe("D7 · Access", () => {
       "title",
       "Tuesday track group",
     );
-    const used = within(rowOf("DIAL-7K3P"));
+    const used = within(rowOf("DIAL-7K3P-2QXM"));
     expect(used.getByText("No label")).toBeVisible();
     // An unfinished account goes by its address, and is searched by it.
     expect(
@@ -872,8 +872,8 @@ describe("D7 · Access", () => {
     );
     // Round 29 #14: USED in `--quiet`, the spent code too, not struck.
     expect(used.getByText("Used")).toHaveClass("text-quiet");
-    expect(used.getByText("DIAL-7K3P")).toHaveClass("text-quiet");
-    expect(used.getByText("DIAL-7K3P")).not.toHaveClass("line-through");
+    expect(used.getByText("DIAL-7K3P-2QXM")).toHaveClass("text-quiet");
+    expect(used.getByText("DIAL-7K3P-2QXM")).not.toHaveClass("line-through");
     expect(used.getByText("1 / 1")).toHaveClass("text-quiet");
     // R56·244.7: the heads are drawn only, so each cell names itself to a
     // reader, its label hidden from sight.
@@ -889,7 +889,7 @@ describe("D7 · Access", () => {
     );
     expect(used.getByText("Age").parentElement).toHaveClass("wide:text-right");
     expect(used.queryByRole("button")).toBeNull();
-    expect(rowOf("DIAL-7K3P")).toHaveAttribute("data-state", "spent");
+    expect(rowOf("DIAL-7K3P-2QXM")).toHaveAttribute("data-state", "spent");
     const revoked = within(rowOf("DIAL-H2XN"));
     // A revoked code at the foot reads as it did while held (round 29 #5).
     expect(revoked.getByText("Revoked")).toHaveClass("text-quiet");
@@ -1152,7 +1152,7 @@ describe("D7 · Access", () => {
     expect(statusOf("codes")).toHaveTextContent(
       "Still revoked. Undo didn't go through. Try again?",
     );
-    expect(within(rowOf("DIAL-7K3P")).queryByText("Still revoked")).toBeNull();
+    expect(within(rowOf("DIAL-7K3P-2QXM")).queryByText("Still revoked")).toBeNull();
     // Nothing optimistic: the row is still held, Undo and all, and its ten
     // seconds do not take it away while the band is up.
     await act(async () => {
@@ -1270,7 +1270,7 @@ describe("D7 · Access", () => {
     });
     // The band's condition is `code.id === holding`, not "some revoke
     // failed" — a sibling row with no revoke of its own must not wear it.
-    expect(within(rowOf("DIAL-7K3P")).queryByText("Still active")).toBeNull();
+    expect(within(rowOf("DIAL-7K3P-2QXM")).queryByText("Still active")).toBeNull();
     expect(within(rowOf("DIAL-H2XN")).queryByText("Still active")).toBeNull();
   });
 

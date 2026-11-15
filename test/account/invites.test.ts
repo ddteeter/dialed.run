@@ -161,9 +161,9 @@ describe("inviteStanding", () => {
 
 describe("redeemInvite", () => {
   it("writes the claim against the account's id, address lowercased, with its hold", async () => {
-    const codeId = await seedCode("DIAL-7K3P");
+    const codeId = await seedCode("DIAL-7K3P-2QXM");
     const now = 1_000_000;
-    const mine = { code: "DIAL-7K3P", userId: newUlid(), email: "Maya@X.test" };
+    const mine = { code: "DIAL-7K3P-2QXM", userId: newUlid(), email: "Maya@X.test" };
     expect(await redeemInvite(db, mine, now)).toBe("redeemed");
     expect(await db.select().from(inviteRedemptions)).toStrictEqual([
       {
@@ -390,7 +390,7 @@ describe("Desk D7", () => {
     const first = await createInviteCode(db, input, 50);
     const again = await createInviteCode(db, input, 60);
     expect(again).toStrictEqual(first);
-    expect(first.code).toMatch(/^DIAL-[2-9A-HJ-NP-Z]{4}$/u);
+    expect(first.code).toMatch(/^DIAL-[2-9A-HJ-NP-Z]{4}-[2-9A-HJ-NP-Z]{4}$/u);
     const rows = await db.select().from(inviteCodes);
     expect(rows).toMatchObject([
       {
@@ -425,8 +425,8 @@ describe("Desk D7", () => {
   });
 
   it("says a code that collided with another was not created, and writes nothing", async () => {
-    await seedCode("DIAL-4444");
-    const random = forceCode(2); // -> "DIAL-4444"
+    await seedCode("DIAL-4444-4444");
+    const random = forceCode(2); // -> "DIAL-4444-4444"
     try {
       await expect(
         createInviteCode(db, {
@@ -575,9 +575,9 @@ describe("Desk D7", () => {
     // Same shape as `createInviteCode`'s: untargeted, `onConflictDoNothing`
     // would swallow a `code` collision that belongs to nobody's request and
     // silently return no code instead of a real error.
-    const random = forceCode(4); // -> "DIAL-6666"
+    const random = forceCode(4); // -> "DIAL-6666-6666"
     try {
-      await seedCode("DIAL-6666");
+      await seedCode("DIAL-6666-6666");
       const requestId = newUlid();
       await db.insert(accessRequests).values({
         id: requestId,

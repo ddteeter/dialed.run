@@ -167,7 +167,7 @@ describe("signUp", () => {
     client.signUp.mockResolvedValue({ data: {}, error: undefined });
     await expect(
       signUp(
-        { ...account, inviteCode: "DIAL-7K3P", birthDate: "1990-04-21" },
+        { ...account, inviteCode: "DIAL-7K3P-2QXM", birthDate: "1990-04-21" },
         TOKEN,
       ),
     ).resolves.toBeUndefined();
@@ -175,7 +175,7 @@ describe("signUp", () => {
       { ...person, name: "" },
       {
         headers: {
-          "x-invite-code": "DIAL-7K3P",
+          "x-invite-code": "DIAL-7K3P-2QXM",
           "x-birth-date": "1990-04-21",
           "x-turnstile-token": TOKEN,
         },
@@ -412,7 +412,7 @@ describe("googleConsentUrl", () => {
       error: undefined,
     });
     await googleConsentUrl("/", "/auth/signup", {
-      inviteCode: "DIAL-7K3P",
+      inviteCode: "DIAL-7K3P-2QXM",
       birthDate: "1990-04-21",
       turnstileToken: "t",
     });
@@ -426,7 +426,7 @@ describe("googleConsentUrl", () => {
       },
       {
         headers: {
-          "x-invite-code": "DIAL-7K3P",
+          "x-invite-code": "DIAL-7K3P-2QXM",
           "x-birth-date": "1990-04-21",
           "x-turnstile-token": "t",
         },
@@ -486,7 +486,7 @@ describe("googleConsentUrl", () => {
     });
     const thrown = await caught(
       googleConsentUrl("/", "/auth/signup", {
-        inviteCode: "DIAL-7K3P",
+        inviteCode: "DIAL-7K3P-2QXM",
         turnstileToken: "t",
       }),
     );
@@ -506,7 +506,7 @@ describe("googleConsentUrl", () => {
     expect(
       await caught(
         googleConsentUrl("/", "/auth/signup", {
-          inviteCode: "DIAL-7K3P",
+          inviteCode: "DIAL-7K3P-2QXM",
           turnstileToken: undefined,
         }),
       ),

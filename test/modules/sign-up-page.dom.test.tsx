@@ -248,7 +248,7 @@ describe("Au2 · submitting with a code", () => {
   it("sends the code and the Turnstile answer beside the account", async () => {
     client.signUp.mockResolvedValue({ data: {}, error: undefined });
     const { user, onSignedUp } = await signUpPage();
-    await fill(user, "dial-7k3p");
+    await fill(user, "dial-7k3p-2qxm");
     await user.click(screen.getByRole("button", { name: "Create account" }));
     await waitFor(() => {
       expect(onSignedUp).toHaveBeenCalledTimes(1);
@@ -257,7 +257,7 @@ describe("Au2 · submitting with a code", () => {
       { email: "maya@example.com", password: PASSPHRASE, name: "" },
       {
         headers: {
-          "x-invite-code": "DIAL-7K3P",
+          "x-invite-code": "DIAL-7K3P-2QXM",
           "x-birth-date": BIRTH_DATE,
           "x-turnstile-token": TOKEN,
         },
@@ -279,7 +279,7 @@ describe("Au2 · submitting with a code", () => {
       error: { code: "INVITE_INVALID", status: 400 },
     });
     const { user } = await signUpPage();
-    await fill(user, "DIAL-7K3P");
+    await fill(user, "DIAL-7K3P-2QXM");
     await user.click(screen.getByRole("button", { name: "Create account" }));
     expect(await screen.findByText(INVITE_COPY.invalid)).toBeVisible();
     expect(screen.getByLabelText("Invite code")).toHaveAttribute(
@@ -295,7 +295,7 @@ describe("Au2 · submitting with a code", () => {
       error: { code: "TURNSTILE_REFUSED", status: 403 },
     });
     const { user } = await signUpPage();
-    await fill(user, "DIAL-7K3P");
+    await fill(user, "DIAL-7K3P-2QXM");
     await user.click(screen.getByRole("button", { name: "Create account" }));
     const band = await waitFor(() => {
       const found = part("failure-band");
@@ -322,7 +322,7 @@ describe("one band at a time (Round 55 · 177)", () => {
       error: { status: 503 },
     });
     const { user } = await signUpPage();
-    await fill(user, "DIAL-7K3P");
+    await fill(user, "DIAL-7K3P-2QXM");
     await user.click(screen.getByRole("button", { name: "Create account" }));
     await waitFor(() => {
       expect(part("failure-band")).not.toBeNull();
@@ -358,7 +358,7 @@ describe("Au2 · Google in the invite stage", () => {
       error: undefined,
     });
     const { user, leave } = await signUpPage();
-    await user.type(screen.getByLabelText("Invite code"), "DIAL-7K3P");
+    await user.type(screen.getByLabelText("Invite code"), "DIAL-7K3P-2QXM");
     await user.click(
       screen.getByRole("button", { name: "Continue with Google" }),
     );
@@ -369,7 +369,7 @@ describe("Au2 · Google in the invite stage", () => {
       expect.objectContaining({ requestSignUp: true }),
       {
         headers: {
-          "x-invite-code": "DIAL-7K3P",
+          "x-invite-code": "DIAL-7K3P-2QXM",
           "x-birth-date": "",
           "x-turnstile-token": TOKEN,
         },
@@ -468,7 +468,7 @@ describe("Au2 · date of birth (design 134)", () => {
 
   it("says a missing date on the field, before any round trip", async () => {
     const { user } = await signUpPage();
-    await fill(user, "DIAL-7K3P", "");
+    await fill(user, "DIAL-7K3P-2QXM", "");
     await user.click(screen.getByRole("button", { name: "Create account" }));
     expect(await screen.findByText("Enter your date of birth.")).toBeVisible();
     expect(screen.getByLabelText("Date of birth")).toHaveAttribute(
@@ -484,7 +484,7 @@ describe("Au2 · date of birth (design 134)", () => {
       error: { code: "AGE_REFUSED", status: 403 },
     });
     const { user } = await signUpPage();
-    await fill(user, "DIAL-7K3P");
+    await fill(user, "DIAL-7K3P-2QXM");
     await user.click(screen.getByRole("button", { name: "Create account" }));
     const band = await waitFor(() => {
       const found = part("failure-band");
@@ -510,7 +510,7 @@ describe("Au2 · date of birth (design 134)", () => {
         error: { code: "INTERNAL", status: 500 },
       });
     const { user } = await signUpPage();
-    await fill(user, "DIAL-7K3P");
+    await fill(user, "DIAL-7K3P-2QXM");
     const password = screen.getByLabelText("Password");
     const primary = screen.getByRole("button", { name: "Create account" });
 
@@ -546,7 +546,7 @@ describe("Au2 · date of birth (design 134)", () => {
       error: { code: "REGION_BLOCKED", status: 403 },
     });
     const { user } = await signUpPage();
-    await fill(user, "DIAL-7K3P");
+    await fill(user, "DIAL-7K3P-2QXM");
     await user.click(screen.getByRole("button", { name: "Create account" }));
     const band = await waitFor(() => {
       const found = part("failure-band");

@@ -491,13 +491,13 @@ describe("emailContent", () => {
       },
     ],
     [
-      { kind: "invite", code: "DIAL-7K3P" },
+      { kind: "invite", code: "DIAL-7K3P-2QXM" },
       {
         subject: "Your dialed.run invite",
-        body: "Here's your code: DIAL-7K3P. It works once.",
+        body: "Here's your code: DIAL-7K3P-2QXM. It works once.",
         button: {
           label: "Create your account",
-          href: `${ORIGIN}/join?code=DIAL-7K3P`,
+          href: `${ORIGIN}/join?code=DIAL-7K3P-2QXM`,
         },
         foot: "Sent because this address asked for access. Didn't ask? Ignore this; nothing happens.",
         footer: LEGAL,
