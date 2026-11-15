@@ -206,8 +206,9 @@ describe("the T1 port", () => {
     const applies = tokens.match(/@apply [\w:-]+;/gu)?.length;
     // :root, the dark page twice, the ink block and its breakpoint header,
     // the dark page's panel block, its bottom-ruled bar, panel header and
-    // row press (each twice: the attribute and the media query), and night.
-    expect(applies).toBe(14);
+    // row press (each twice: the attribute and the media query), night,
+    // and paper (R58·305).
+    expect(applies).toBe(15);
   });
 
   it("puts a dark page's ink blocks on rule 04's fallback, --panel with a hairline (R50·143.1)", () => {
@@ -249,6 +250,9 @@ describe("the T1 port", () => {
     );
     // The Desk reads nothing from the page.
     expect(tokens).toMatch(/\[data-ground="night"\] \{\s*@apply ground-ink;/u);
+    // Nor does the hi-viz card, its own ground in both themes (R58·305):
+    // paper, with no theme selector in front of it.
+    expect(tokens).toMatch(/\n\[data-ground="paper"\] \{\s*@apply ground-paper;\s*\}/u);
   });
 
   it("rules a full-bleed dark block underneath only, on the same panel (#632 R-01)", () => {

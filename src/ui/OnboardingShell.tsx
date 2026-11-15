@@ -21,9 +21,10 @@ export function OnboardingShell({
     <div className="flex min-h-dvh flex-col bg-ground text-ink">
       <header
         data-part="top-bar"
-        className="border-b border-hairline px-6 py-4"
+        className="border-b border-hairline py-4"
       >
-        <div className="mx-auto flex min-h-11 w-full max-w-page items-center">
+        {/* The gutter is inside the page measure (R57·263). */}
+        <div className="mx-auto flex min-h-11 w-full max-w-page items-center px-6">
           <Wordmark className="text-title" />
         </div>
       </header>

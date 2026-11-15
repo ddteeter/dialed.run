@@ -1,8 +1,8 @@
 document
 banner
-link, dialed.run home
+link, dialed.run
 dialed.run
-end of link, dialed.run home
+end of link, dialed.run
 navigation, Main
 list
 listitem, level 1, position 1, set size 4

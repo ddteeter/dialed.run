@@ -56,15 +56,24 @@ type PageWidth = "panel" | "column" | "page" | "step" | "close" | "table";
  */
 const STEP = COLUMN;
 
+/**
+ * Gutters belong to the page, never to a column (R57·263, tokens.js
+ * MEASURE_RULES): a 620 column is 620 of content, centred on the page's
+ * axis (x=330 at 1280). So from 720 a column drops the phone's 24, and
+ * the measure alone sets its edge. The panel is the phone screen itself
+ * and the page measure has its gutters inside it, so both keep theirs.
+ */
+const COLUMN_GUTTER_CLASS = "px-6 wide:px-0";
+
 const WIDTH_CLASS: Readonly<Record<PageWidth, string>> = {
-  panel: "mx-auto max-w-panel",
-  column: COLUMN,
-  page: "mx-auto w-full max-w-page",
-  step: STEP,
-  close: STEP,
+  panel: "mx-auto max-w-panel px-6",
+  column: `${COLUMN} ${COLUMN_GUTTER_CLASS}`,
+  page: "mx-auto w-full max-w-page px-6",
+  step: `${STEP} ${COLUMN_GUTTER_CLASS}`,
+  close: `${STEP} ${COLUMN_GUTTER_CLASS}`,
   // The Desk's tables, Runners, Codes and Review (Round 54 · 168.3): the
   // whole width beside the rail, up to MEASURE.page, left-aligned.
-  table: "max-w-page",
+  table: "max-w-page px-6",
 };
 
 export function Page({
@@ -119,11 +128,11 @@ export function Page({
 
   return (
     <div
-      // `px-6` at every width, and left alone: SPACE[6] is already what
-      // tokens.js asks for at width, and dropping the phone to SPACE[5] to
+      // The phone's `px-6` is left alone: dropping it to SPACE[5] to
       // complete DS3's "SPACE[5] → SPACE[6]" would move every screen this
-      // wraps on a device this lane is not here to touch.
-      className={`flex w-full ${WIDTH_CLASS[width]} flex-col gap-6 px-6 py-8`}
+      // wraps on a device this lane is not here to touch. Each width says
+      // its own gutter, since a column has none from 720.
+      className={`flex w-full ${WIDTH_CLASS[width]} flex-col gap-6 py-8`}
     >
       {back === undefined ? undefined : (
         <div

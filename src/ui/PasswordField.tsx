@@ -94,9 +94,10 @@ export function PasswordField({
         }}
         className="target shrink-0 cursor-pointer self-stretch border-none bg-transparent p-0 text-small font-semibold text-ink"
       >
-        {/* The visible word first (WCAG 2.5.3), then what it shows. */}
+        {/* The visible word and nothing more (R57·255): the name holds
+            only what is on screen, and `aria-controls` ties it to the
+            field it shows. */}
         {isShown ? "Hide" : "Show"}
-        <span className="sr-only"> password</span>
       </button>
     </FormField>
   );

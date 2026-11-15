@@ -222,7 +222,7 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   await page.getByLabel("Date of birth").fill("1990-04-21");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSPHRASE);
-  await page.getByRole("button", { name: "Show password" }).click();
+  await page.getByRole("button", { name: "Show", exact: true }).click();
   await expect(page.getByLabel("Password")).toHaveAttribute("type", "text");
   await turnstileAnswered(page);
   await page.getByRole("button", { name: "Create account" }).click();

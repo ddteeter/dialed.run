@@ -16,13 +16,22 @@ import { Mono } from "./Mono";
  *
  * In `ui/` because two modules draw log steps (runs' A1, feed's A2 and
  * A3) and neither may reach into the other.
+ *
+ * **Column and rail are one group, centred** (R58·307, 168.2's third
+ * exception): 620 + 24 + 300, centred inside MEASURE.page as Add garment
+ * is, so at 1280 the column starts at x=168. Both tracks are fixed so the
+ * group's width never follows its content.
+ *
+ * GUESS: the rail's 300 is not a MEASURE (tokens.js: "Nothing pins a width
+ * that isn't in MEASURE"). It is the board's number until Design 316
+ * (#771) names one.
  */
 export function DeskSplit({
   rail,
   children,
 }: Readonly<{ rail: ReactNode; children: ReactNode }>): JSX.Element {
   return (
-    <div className="mx-auto flex w-full flex-col wide:mx-0 desk:grid desk:max-w-page desk:grid-cols-[minmax(0,var(--container-column))_minmax(0,1fr)] desk:items-start desk:gap-x-6">
+    <div className="mx-auto flex w-full flex-col wide:mx-0 desk:mx-auto desk:grid desk:w-fit desk:grid-cols-[var(--container-column)_300px] desk:items-start desk:gap-x-6">
       {children}
       <div
         data-part="rail"

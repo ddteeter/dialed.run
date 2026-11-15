@@ -122,16 +122,20 @@ export function TopBar({ bell }: Readonly<{ bell?: ReactNode }>): JSX.Element {
       // (#632 R-01; `tokens.css`, `ground-panel-ruled`).
       data-edge="bottom"
       data-slot="top-bar"
-      className="hidden bg-ground px-6 text-ink wide:block"
+      className="hidden bg-ground text-ink wide:block"
     >
-      <div className="mx-auto flex h-[var(--bar-height)] w-full max-w-page items-stretch gap-5 desk:gap-8">
+      {/* The gutter is inside the page measure, as a page's is (R57·263):
+          gutters belong to the page, so at desk the bar's content is the
+          page's 1,132 and the wordmark starts on the page's edge. */}
+      <div className="mx-auto flex h-[var(--bar-height)] w-full max-w-page items-stretch gap-5 px-6 desk:gap-8">
         {/* The one place the logo appears in the product: "the phone has
             no wordmark on-screen". It links to Feed, which is the first
             tab, so it is a shortcut rather than a sixth destination. */}
+        {/* Named by the word it shows, "dialed.run", and nothing more
+            (R57·255): the Wordmark says it once. */}
         <Link
           to="/feed"
           activeOptions={PAGE_ONLY}
-          aria-label="dialed.run home"
           className="target flex items-center no-underline"
         >
           <Wordmark className="text-title" />

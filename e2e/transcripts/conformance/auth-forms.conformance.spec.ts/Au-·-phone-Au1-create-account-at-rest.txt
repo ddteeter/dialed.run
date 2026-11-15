@@ -1,8 +1,8 @@
 document
 banner
-link, dialed.run home
+link, dialed.run
 dialed.run
-end of link, dialed.run home
+end of link, dialed.run
 link, Log in
 end of banner
 main
@@ -20,10 +20,7 @@ Email
 textbox, Email
 Password
 Password, At least # characters.
-button, Show password, # control
-Show
-password
-end of button, Show password, # control
+button, Show, # control
 At least # characters.
 button, Create account
 Create account

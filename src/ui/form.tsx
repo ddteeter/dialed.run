@@ -895,7 +895,9 @@ const PENDING_ALIGN: Readonly<Record<PendingAlign, string>> = {
  * ≥720 in a column it hugs its label — SPACE 6 a side, 200 minimum —
  * left-aligned. Inside a desk drawer it is the drawer's full width again,
  * stacked: the drawer is a 390 column, so hugging there would leave
- * ragged buttons (`in-data-[slot=sheet]`).
+ * ragged buttons (`in-data-[slot=sheet]`). The signed-out panel is the
+ * same 390 column and fills the same way at every width (R58·266):
+ * `in-data-[slot=signed-out-panel]`.
  *
  * The hug is a width (`w-fit`), not an alignment. A fit-content item is
  * not stretched, so in a column it sits at the start as `self-start` did,
@@ -904,7 +906,7 @@ const PENDING_ALIGN: Readonly<Record<PendingAlign, string>> = {
  * edge (#697 R2-ONB-10).
  */
 const HUG_WIDE_CLASS =
-  "w-full wide:w-fit wide:min-w-50 wide:in-data-[slot=sheet]:w-full";
+  "w-full wide:w-fit wide:min-w-50 wide:in-data-[slot=sheet]:w-full wide:in-data-[slot=signed-out-panel]:w-full";
 
 const SUBMIT_TONE = {
   action: `grid min-h-13 place-items-center rounded-card border-none bg-action px-6 font-display uppercase text-accent-ink ${HUG_WIDE_CLASS}`,

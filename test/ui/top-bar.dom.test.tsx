@@ -48,6 +48,15 @@ describe("TopBar", () => {
     expect(bar()).toHaveClass("bg-ground", "text-ink");
   });
 
+  it("keeps its gutter inside the page measure, so the bar shares the page's edge (R57·263)", async () => {
+    await renderAt("/feed", <TopBar />);
+
+    // Full-bleed ground, then 1,180 with the 24 gutters inside it: at 1280
+    // the wordmark starts at 74, where every page's content does.
+    expect(bar()).not.toHaveClass("px-6");
+    expect(bar()?.firstElementChild).toHaveClass("mx-auto", "max-w-page", "px-6");
+  });
+
   it("carries the four destinations in order, as links", async () => {
     await renderAt("/feed", <TopBar />);
 
@@ -95,7 +104,7 @@ describe("TopBar", () => {
     await renderAt("/feed/entry/entry_1", <TopBar />);
 
     expect(
-      screen.getByRole("link", { name: "dialed.run home" }),
+      screen.getByRole("link", { name: "dialed.run" }),
     ).not.toHaveAttribute("aria-current");
     expect(screen.getByRole("link", { name: "Feed" })).toHaveAttribute(
       "aria-current",
@@ -109,7 +118,7 @@ describe("TopBar", () => {
   it("still says page on the page itself, whatever its query", async () => {
     await renderAt("/feed?view=following", <TopBar />);
 
-    for (const name of ["dialed.run home", "Feed"]) {
+    for (const name of ["dialed.run", "Feed"]) {
       expect([
         name,
         screen.getByRole("link", { name }).getAttribute("aria-current"),

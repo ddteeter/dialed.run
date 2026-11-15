@@ -1,5 +1,6 @@
 import type { JSX, ReactNode } from "react";
 
+import { INK_PILL } from "./form";
 import { focusSheetHeading } from "./Sheet";
 
 /**
@@ -13,6 +14,9 @@ import { focusSheetHeading } from "./Sheet";
  * `label="Thanks for telling us."` — along with this body. What stays
  * here is the focus move: the heading takes focus as the receipt mounts,
  * so the swap is read out.
+ *
+ * Done is the ink pill, a sheet's act (R58·306): a receipt is not a flow
+ * step, and a display-caps card is never a button.
  */
 export function SheetReceipt({
   part,
@@ -35,7 +39,7 @@ export function SheetReceipt({
       <button
         type="button"
         onClick={onDone}
-        className="target grid min-h-13 w-full cursor-pointer place-items-center rounded-card border-none bg-ink px-6 font-display text-body uppercase text-ground"
+        className={`target ${INK_PILL}`}
       >
         Done
       </button>

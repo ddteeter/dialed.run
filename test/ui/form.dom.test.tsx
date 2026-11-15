@@ -3151,6 +3151,7 @@ describe("the primary by surface, and its width (R54·167)", () => {
     "wide:w-fit",
     "wide:min-w-50",
     "wide:in-data-[slot=sheet]:w-full",
+    "wide:in-data-[slot=signed-out-panel]:w-full",
   ];
 
   it("draws the product flow's pink caps at RADIUS.card, 52 — the one filled button that is not a pill", () => {

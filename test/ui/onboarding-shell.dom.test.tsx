@@ -28,8 +28,11 @@ describe("OnboardingShell", () => {
     render(<OnboardingShell>step</OnboardingShell>);
 
     const bar = screen.getByRole("banner");
-    expect(bar).toHaveClass("border-b", "border-hairline", "px-6", "py-4");
+    expect(bar).toHaveClass("border-b", "border-hairline", "py-4");
     expect(bar).not.toHaveClass("hidden");
+    // The gutter is inside the measure, so the wordmark sits on the
+    // page's edge at desk (R57·263), not 24 outside it.
+    expect(bar).not.toHaveClass("px-6");
     expect(bar.firstElementChild).toHaveClass(
       "mx-auto",
       "flex",
@@ -37,6 +40,7 @@ describe("OnboardingShell", () => {
       "w-full",
       "max-w-page",
       "items-center",
+      "px-6",
     );
   });
 

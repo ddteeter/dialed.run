@@ -945,7 +945,7 @@ describe("ChangeEmail (ACC-8)", () => {
       "autocomplete",
       "current-password",
     );
-    await user.click(screen.getByRole("button", { name: "Show password" }));
+    await user.click(screen.getByRole("button", { name: "Show" }));
     expect(currentPasswordField()).toHaveAttribute("type", "text");
   });
 

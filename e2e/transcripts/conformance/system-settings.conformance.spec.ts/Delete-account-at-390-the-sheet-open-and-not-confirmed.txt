@@ -65,10 +65,7 @@ to keep everything.
 end of paragraph
 Current password
 Current password
-button, Show password, # control
-Show
-password
-end of button, Show password, # control
+button, Show, # control
 button, Delete my account
 Delete my account
 end of button, Delete my account

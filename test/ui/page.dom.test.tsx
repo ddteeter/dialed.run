@@ -98,9 +98,26 @@ describe("Page", () => {
       "w-full",
       "flex-col",
       "gap-6",
-      "px-6",
       "py-8",
     );
+  });
+
+  it("gives a column no gutter of its own from 720, and the panel and page measures theirs (R57·263)", () => {
+    // Gutters belong to the page: a 620 column is 620 of content.
+    for (const width of ["column", "step", "close"] as const) {
+      const page = render(<Page width={width}>body</Page>).container
+        .firstElementChild;
+      expect([width, page?.className.split(" ")]).toEqual([
+        width,
+        expect.arrayContaining(["px-6", "wide:px-0"]),
+      ]);
+    }
+    for (const width of ["panel", "page", "table"] as const) {
+      const page = render(<Page width={width}>body</Page>).container
+        .firstElementChild;
+      expect(page).toHaveClass("px-6");
+      expect(page).not.toHaveClass("wide:px-0");
+    }
   });
 
   it("renders the title as the page's heading", () => {

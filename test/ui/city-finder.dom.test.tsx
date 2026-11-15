@@ -175,6 +175,17 @@ describe("CityFinder", () => {
     );
   });
 
+  it("edges Find in the secondary's hairline, never ink (R58·308)", () => {
+    setup();
+    expect(findButton()).toHaveClass(
+      "rounded-pill",
+      "border-hairline",
+      "dark:border-hairline-2",
+      "font-semibold",
+    );
+    expect(findButton()).not.toHaveClass("border-ink");
+  });
+
   it("lets other keys through to the field", async () => {
     const { lookUp, user } = setup();
     await user.type(field(), "Bend");

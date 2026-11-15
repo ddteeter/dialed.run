@@ -1,8 +1,8 @@
 document
 banner
-link, dialed.run home
+link, dialed.run
 dialed.run
-end of link, dialed.run home
+end of link, dialed.run
 end of banner
 main
 heading, Log in, level 1
@@ -12,10 +12,7 @@ Email
 textbox, Email
 Password
 Password
-button, Show password, # control
-Show
-password
-end of button, Show password, # control
+button, Show, # control
 link, Forgot it? Reset your password
 Forgot it?
 Reset your password

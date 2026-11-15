@@ -49,13 +49,14 @@ export function SignedOutFrame({
       <header
         data-slot="landing-bar"
         data-part="top-bar"
-        className="border-b border-hairline bg-ground px-5 text-ink wide:px-6"
+        className="border-b border-hairline bg-ground text-ink"
       >
-        <div className="mx-auto flex h-14 w-full max-w-page items-center justify-between gap-4 wide:h-16">
+        {/* The gutter is inside the page measure (R57·263), so at desk the
+            bar's content shares the page's one edge. */}
+        <div className="mx-auto flex h-14 w-full max-w-page items-center justify-between gap-4 px-5 wide:h-16 wide:px-6">
           <Link
             to="/"
             reloadDocument={reloadDocument}
-            aria-label="dialed.run home"
             data-part="wordmark"
             className="target flex items-center no-underline"
           >
@@ -140,9 +141,9 @@ function SignedOutFooter({
   return (
     <footer
       data-part="legal-footer"
-      className="border-t border-hairline px-5 py-4 text-small wide:px-6"
+      className="border-t border-hairline py-4 text-small"
     >
-      <p className="m-0 mx-auto w-full max-w-page">
+      <p className="m-0 mx-auto w-full max-w-page px-5 wide:px-6">
         <span className="-mx-2 flex flex-wrap">
           {FOOTER_LINKS.map((link) => (
             <Link

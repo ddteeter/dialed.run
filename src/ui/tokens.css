@@ -526,3 +526,14 @@
      (#627 P3-02). */
   color-scheme: dark;
 }
+
+/**
+ * **Paper: its own ground in both themes**, night's mirror. For a block
+ * whose surface is a fixed accent the theme does not flip: the hi-viz
+ * card. Round 58 #305: "the hi-viz card is its own ground in both
+ * themes", so its ink pill stays ink on the dark page. With this on the
+ * card, `INK_PILL` inside it is ink on chalk whatever the runner picked.
+ */
+[data-ground="paper"] {
+  @apply ground-paper;
+}

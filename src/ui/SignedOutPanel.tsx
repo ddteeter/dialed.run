@@ -64,8 +64,12 @@ export function SignedOutPanel({
       {/* The frame's gutter, 20 then 24 (R55·174, 176), so the title
           starts under the wordmark and over the footer's links (#698
           R2-AUTH-03). */}
+      {/* A fill context, as the drawer is (R58·266): its buttons span the
+          342 at every width rather than hugging at 720 (`form.tsx`'s
+          width rule reads the slot). */}
       <main
         data-part="panel"
+        data-slot="signed-out-panel"
         className="mx-auto flex w-full max-w-panel flex-col gap-7 px-5 pt-12 pb-12 wide:px-6 wide:pt-14"
       >
         <div data-part="header" className="flex flex-col gap-5">

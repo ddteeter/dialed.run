@@ -256,7 +256,7 @@ test("one bar from 720 up: the tab bar becomes a top bar, and back", async ({
   // The wordmark is "the one place the logo appears in the product", and
   // it links to Feed.
   await expect(
-    topBar.getByRole("link", { name: "dialed.run home" }),
+    topBar.getByRole("link", { name: "dialed.run" }),
   ).toHaveAttribute("href", "/feed");
   // Four text links in the phone bar's order, plus the pill that says the
   // verb this seat has room for (round 15).

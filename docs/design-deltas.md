@@ -1452,6 +1452,33 @@ choice. Each is a guess the coordinator has seen; none is a Design item yet.
   distance and the SET badge never shrink, and the credit takes its own
   line when the row is too narrow, so that row is taller than 64.
 
+## Built from rounds 57 and 58: shared kinds and shell (wave 11, design 223)
+
+What lane 11c built in `src/ui` and the shell, and the guesses it built
+on. The screens' call sites are 11b's and 11d's.
+
+- **263, one desk edge.** The bars' gutters (top bar, signed-out frame
+  and footer, onboarding bar) now sit inside `max-w-page`, and `Page`'s
+  column drops its own 24 from 720. So the bar and the page share x=74 at
+  1280, and a 620 column holds 620 of content.
+- **255, names.** The wordmark link is "dialed.run". The password toggle
+  is "Show" or "Hide". A notification's sr-only "Unread" stays, because it
+  voices the dot. **Owner exceptions** ([#662](https://github.com/ddteeter/dialed.run/issues/662#issuecomment-6895610129)):
+  the phone launcher keeps "Add a run" for "+ Add", and the compact
+  weather credit keeps "Weather data provided by Visual Crossing" for
+  "Visual Crossing".
+- **306, 308, 266, 311, 286.** A receipt's Done is the ink pill.
+  CityFinder's Find takes the hairline edge. The signed-out panel fills
+  like the drawer. The bell's count badge has a 2px ground ring.
+  Notifications is TYPE.title in its own case.
+- **305.** `data-ground="paper"` (`tokens.css`) is night's mirror, a
+  block that is paper in both themes, for the hi-viz card.
+- **307. GUESS:** `DeskSplit` centres 620 + 24 + 300 inside MEASURE.page.
+  The 300 is not a MEASURE. It stays the board's number until Design 316
+  (#771) names one.
+- **308. GUESS:** the Desk's round-44 `QUIET_PILL` keeps its ink edge,
+  because D-186 makes the kinds per surface. Open as Design 317 (#778).
+
 ## Built from round 57 and the re-run audit (wave 10, design 218)
 
 How lane w10-feed built what its rulings left to the build. Each guess is
