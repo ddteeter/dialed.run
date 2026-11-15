@@ -87,7 +87,10 @@ const PLACES = [
  * components link to. Each stand-in names its path, so a test can see
  * where a navigation went.
  */
-export async function renderWithRouter(element: ReactElement) {
+export async function renderWithRouter(
+  element: ReactElement,
+  options: { scrollRestoration?: boolean } = {},
+) {
   const rootRoute = createRootRoute();
   const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -104,6 +107,9 @@ export async function renderWithRouter(element: ReactElement) {
   const router = createRouter({
     routeTree: rootRoute.addChildren([indexRoute, ...others]),
     history: createMemoryHistory({ initialEntries: ["/"] }),
+    // The app's router restores scroll (`src/router.tsx`); a test that
+    // reads where a navigation leaves the page turns it on too.
+    scrollRestoration: options.scrollRestoration ?? false,
   });
   await router.load();
   return { router, ...render(<RouterProvider router={router} />) };

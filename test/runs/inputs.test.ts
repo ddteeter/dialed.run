@@ -14,6 +14,9 @@ import {
   manualRunInput,
   retimeRunInput,
   runIdInput,
+  runListDeps,
+  runListInput,
+  runListSearch,
   stravaCallbackInput,
   stravaCallbackSearch,
 } from "../../src/modules/runs/inputs";
@@ -340,5 +343,33 @@ describe("garminImportInput", () => {
     expect(garminImportInput.safeParse({ activityId: "1" }).success).toBe(
       false,
     );
+  });
+});
+
+describe("the runs list's show (R58·299)", () => {
+  it("reads show from the URL, fifty at a time up to a thousand", () => {
+    expect(runListSearch.parse({ show: "100" })).toEqual({ show: 100 });
+    expect(runListSearch.parse({ show: "50" })).toEqual({ show: 50 });
+    expect(runListSearch.parse({ show: "1000" })).toEqual({ show: 1000 });
+  });
+
+  it("reads anything else as the first fifty", () => {
+    for (const show of ["49", "1001", "75.5", "many"]) {
+      expect(runListSearch.parse({ show })).toEqual({ show: undefined });
+    }
+    expect(runListSearch.parse({})).toEqual({ show: undefined });
+  });
+
+  it("asks the loader for fifty unless the URL says more", () => {
+    expect(runListDeps({ show: undefined })).toStrictEqual({ show: 50 });
+    expect(runListDeps({ show: 150 })).toStrictEqual({ show: 150 });
+  });
+
+  it("lets the read ask for fifty to a thousand, whole", () => {
+    expect(runListInput.parse({ show: 50 })).toEqual({ show: 50 });
+    expect(runListInput.parse({ show: 1000 })).toEqual({ show: 1000 });
+    for (const show of [49, 1001, 50.5]) {
+      expect(() => runListInput.parse({ show })).toThrow(/show/u);
+    }
   });
 });

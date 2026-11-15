@@ -154,27 +154,29 @@ function ListEnd({
   runs: readonly RunSummary[];
   total: number;
   show: number;
-}>): JSX.Element | undefined {
-  const more = moreToShow(runs.length, total);
-  if (more > 0) {
+}>): JSX.Element {
+  // The two are each other's opposite: every run is listed exactly when
+  // there are none more to show, so the end line decides.
+  const since = listedSince(runs, total);
+  if (since !== undefined) {
     return (
-      <Link
-        to="/runs"
-        search={{ show: show + RUNS_LISTED }}
-        resetScroll={false}
-        data-part="show-more"
-        className="target mt-4 inline-flex items-center self-start text-small text-ink underline underline-offset-4"
-      >
-        {`Show ${String(more)} more`}
-      </Link>
+      <Mono step="xs" className="block pt-6 pb-4 text-center text-label">
+        That&rsquo;s every run · since {since}
+      </Mono>
     );
   }
-  const since = listedSince(runs, total);
-  if (since === undefined) return;
   return (
-    <Mono step="xs" className="block pt-6 pb-4 text-center text-label">
-      That&rsquo;s every run · since {since}
-    </Mono>
+    <Link
+      to="/runs"
+      search={{ show: show + RUNS_LISTED }}
+      // Fifty more land under the row that asked for them, so the page
+      // stays where the runner was reading.
+      resetScroll={false}
+      data-part="show-more"
+      className="target mt-4 inline-flex items-center self-start text-small text-ink underline underline-offset-4"
+    >
+      {`Show ${String(moreToShow(runs.length, total))} more`}
+    </Link>
   );
 }
 

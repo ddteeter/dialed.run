@@ -277,6 +277,30 @@ describe("R: the month breaks and the end (Round 55 · 235)", () => {
     );
   });
 
+  it("keeps the page where it is when Show asks for more", async () => {
+    // The app's router scrolls to the top after a navigation unless the
+    // link says not to; fifty more belong under the row that asked.
+    const many = Array.from({ length: RUNS_LISTED }, (_, index) =>
+      runSummary({ id: `01R${String(index)}`, startedAt: NOV_12 - index }),
+    );
+    const { router } = await renderWithRouter(
+      list(many, {}, { total: 53, show: RUNS_LISTED }),
+      { scrollRestoration: true },
+    );
+    const scrollTo = vi.spyOn(globalThis, "scrollTo").mockImplementation(() => {
+      // happy-dom has no layout to scroll; the call is what is read.
+    });
+
+    await userEvent.click(screen.getByRole("link", { name: "Show 3 more" }));
+
+    await waitFor(() => {
+      expect(router.state.location.search).toEqual({ show: 100 });
+    });
+    await screen.findByText("at /runs");
+    expect(scrollTo).not.toHaveBeenCalled();
+    scrollTo.mockRestore();
+  });
+
   it("says every run once everything is listed, even at fifty", async () => {
     const many = Array.from({ length: RUNS_LISTED }, (_, index) =>
       runSummary({ id: `01R${String(index)}`, startedAt: NOV_12 - index }),

@@ -648,7 +648,6 @@ function at(month: number, day: number, hour = 12): number {
 }
 
 describe("listRunPage: the runs list past its fifty (R58·299)", () => {
-
   it("lists what it was asked for, counts every run, and counts the cut month whole", async () => {
     const userId = newUlid();
     for (const startedAt of [at(11, 2), at(10, 20), at(10, 10), at(9, 5)]) {
@@ -666,6 +665,32 @@ describe("listRunPage: the runs list past its fifty (R58·299)", () => {
     expect(page.total).toBe(4);
     // November 20 is listed and November 10 is past the cut: two.
     expect(page.cutMonth).toStrictEqual({ month: "November 2026", count: 2 });
+  });
+
+  it("takes the cut month from the last listed run, not the second", async () => {
+    const userId = newUlid();
+    // Three listed, two of them December's; the oldest listed is November
+    // 20, and November 10 is past the cut.
+    for (const startedAt of [at(11, 5), at(11, 2), at(10, 20), at(10, 10)]) {
+      await aRun(userId, { startedAt });
+    }
+
+    const page = await listRunPage(coreDb(), userId, 3);
+
+    expect(page.cutMonth).toStrictEqual({ month: "November 2026", count: 2 });
+  });
+
+  it("has no cut month when it lists nothing, though a run exists", async () => {
+    // What a run landing between the list's read and its count looks like:
+    // nothing listed and one counted. No month is cut, and nothing throws.
+    const userId = newUlid();
+    await aRun(userId, { startedAt: at(10, 20) });
+
+    const page = await listRunPage(coreDb(), userId, 0);
+
+    expect(page.runs).toEqual([]);
+    expect(page.total).toBe(1);
+    expect(page.cutMonth).toBeUndefined();
   });
 
   it("has no cut month once every run is listed", async () => {
