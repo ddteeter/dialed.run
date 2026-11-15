@@ -984,7 +984,7 @@
     },
     {
       "name": "@playwright/test",
-      "version": "1.64.1",
+      "version": "1.65.0",
       "licence": "Apache-2.0",
       "project": "https://playwright.dev"
     },
@@ -1098,7 +1098,7 @@
     },
     {
       "name": "@vitejs/plugin-react",
-      "version": "6.1.2",
+      "version": "6.2.1",
       "licence": "MIT",
       "project": "https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#readme"
     },
@@ -1128,7 +1128,7 @@
     },
     {
       "name": "dependency-cruiser",
-      "version": "18.7.0",
+      "version": "18.7.2",
       "licence": "MIT",
       "project": "https://github.com/sverweij/dependency-cruiser"
     },
@@ -1176,7 +1176,7 @@
     },
     {
       "name": "fallow",
-      "version": "3.38.1",
+      "version": "3.41.0",
       "licence": "MIT",
       "project": "https://fallow.tools/docs/"
     },
@@ -1193,7 +1193,7 @@
     },
     {
       "name": "knip",
-      "version": "6.44.1",
+      "version": "6.44.2",
       "licence": "ISC",
       "project": "https://knip.dev"
     },
@@ -1205,7 +1205,7 @@
     },
     {
       "name": "monocart-coverage-reports",
-      "version": "3.2.0",
+      "version": "3.2.1",
       "licence": "MIT",
       "project": "https://github.com/cenfun/monocart-coverage-reports#readme"
     },
@@ -1241,7 +1241,7 @@
     },
     {
       "name": "vite",
-      "version": "8.3.5",
+      "version": "8.3.6",
       "licence": "MIT",
       "project": "https://vite.dev"
     },
