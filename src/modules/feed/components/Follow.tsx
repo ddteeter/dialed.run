@@ -73,33 +73,32 @@ export function useFollowToggle({
  * Following drops to a hairline, because following again is not the thing
  * to do next; on a list row both are quieter (`PILL_LOOK`).
  *
- * **On a list row its name carries the handle** (round 52 #157): heard
- * alone, a row's pill said "Follow" and not whose. `handle` is that
- * runner's, as drawn beside it, visually hidden and in every state. H's
+ * **On a list row it is described by the handle** (round 52 #157,
+ * D-187): heard alone, a row's pill said "Follow" and not whose. The name
+ * holds only the visible word, in every state; `describedBy` is the id of
+ * the row's visible handle, so whose it is comes as its description. H's
  * header passes none: its h1 names the runner.
  */
 export function FollowPill({
   toggle,
-  handle,
-}: Readonly<{ toggle: FollowToggle; handle?: string | undefined }>) {
+  describedBy,
+}: Readonly<{ toggle: FollowToggle; describedBy?: string | undefined }>) {
   const { isFollowing, control } = toggle;
   return (
     <button
       type="button"
       {...inFlight(control.pending)}
+      aria-describedby={describedBy}
       onClick={() => {
         void control.run();
       }}
-      className={`target ${pillLook(handle === undefined ? "header" : "row", isFollowing)}`}
+      className={`target ${pillLook(describedBy === undefined ? "header" : "row", isFollowing)}`}
     >
       <PendingLabel
         label={isFollowing ? "Following" : "Follow"}
         pendingLabel={isFollowing ? "Unfollowing" : "Following"}
         pending={control.pending}
       />
-      {handle === undefined ? undefined : (
-        <span className="sr-only">{` ${handle}`}</span>
-      )}
     </button>
   );
 }

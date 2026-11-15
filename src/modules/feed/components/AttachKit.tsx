@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { JSX } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import type { Units } from "../../../lib/contracts";
 import { dayLabel } from "../../../lib/dates";
@@ -760,6 +760,7 @@ function MostLikely({
   onAccept: (itemIds: readonly string[]) => void;
   onChange: (itemIds: readonly string[]) => void;
 }>): JSX.Element | undefined {
+  const fromId = useId();
   const temp =
     conditions === undefined
       ? undefined
@@ -827,7 +828,7 @@ function MostLikely({
       data-state="suggestion"
       className="flex flex-col gap-3 rounded-card bg-hi-viz p-4 text-accent-ink"
     >
-      <Mono step="xs">
+      <Mono step="xs" id={fromId}>
         Most likely · from {conditionsWords(suggestion.conditions, units)},{" "}
         {dayLabel(suggestion.createdAt, suggestion.conditions.timeZone)}
       </Mono>
@@ -858,11 +859,13 @@ function MostLikely({
           onClick={() => {
             onChange(shown);
           }}
+          // Round 52 #159: heard alone, "Change" did not say what. D-187:
+          // the name is the visible word, and the card's own "Most likely
+          // · from …" line is its description.
+          aria-describedby={fromId}
           className="target rounded-pill border border-accent-ink bg-transparent px-4 py-3 font-semibold text-accent-ink"
         >
           Change
-          {/* Round 52 #159: heard alone, "Change" did not say what. */}
-          <span className="sr-only"> the kit</span>
         </button>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 
 import {
   COLUMN,
@@ -14,7 +14,7 @@ import { counted } from "../counted";
 import { BOUND_SEPARATOR } from "../posted";
 import type { SearchResult } from "../search";
 import { Avatar } from "./Avatar";
-import { Handle, handleText } from "./Handle";
+import { Handle } from "./Handle";
 import { FollowBand, FollowPill, useFollowToggle } from "./Follow";
 import type { FollowAction } from "./Follow";
 
@@ -211,12 +211,14 @@ function ResultRow({
     unfollow,
     onStatus,
   });
+  const handleId = useId();
   return (
     <li className="flex flex-col gap-3 border-b border-hairline py-3">
       <div className="flex items-center gap-3">
         <Avatar name={result.username} size="small" />
         <span className="flex min-w-0 flex-1 flex-col">
           <Link
+            id={handleId}
             to="/feed/u/$handle"
             params={{ handle: result.username }}
             className="target flex items-center text-body text-ink no-underline"
@@ -230,7 +232,8 @@ function ResultRow({
             {sharedLine(result)}
           </Mono>
         </span>
-        <FollowPill toggle={toggle} handle={handleText(result.username)} />
+        {/* Whose pill it is, from the handle drawn beside it (D-187). */}
+        <FollowPill toggle={toggle} describedBy={handleId} />
       </div>
       {/* Under the whole row, never squeezed beside the pill (§4a). */}
       <FollowBand toggle={toggle} />

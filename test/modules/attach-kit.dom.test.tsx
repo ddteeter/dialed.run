@@ -753,14 +753,17 @@ describe("AttachKit: most likely", () => {
       }),
     );
 
-    // Round 52 #159: named for what it changes; the visible word is the
-    // one word.
-    const change = await screen.findByRole("button", {
-      name: "Change the kit",
-    });
-    expect(change.firstChild?.textContent).toBe("Change");
-    expect(change.lastElementChild).toHaveClass("sr-only");
-    expect(change.lastElementChild?.textContent).toBe(" the kit");
+    // Round 52 #159, D-187: named by its one visible word, and described
+    // by the card's visible "Most likely · from …" line, which says what
+    // it changes.
+    const change = await screen.findByRole("button", { name: "Change" });
+    expect(change).toHaveTextContent(/^Change$/u);
+    expect(change.querySelector(".sr-only")).toBeNull();
+    const from = screen.getByText(/Most likely · from/);
+    expect(change).toHaveAttribute("aria-describedby", from.id);
+    expect(change).toHaveAccessibleDescription(
+      "Most likely · from 43° damp, Fri Aug 14",
+    );
     await user.click(change);
     expect(screen.getByText("6.2 mi · 41°F damp · 1 piece")).toBeVisible();
   });
@@ -808,9 +811,7 @@ describe("AttachKit: most likely", () => {
       attach({ prefillFor: () => Promise.resolve(candidate()) }),
     );
 
-    await user.click(
-      await screen.findByRole("button", { name: "Change the kit" }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Change" }));
 
     expect(document.querySelector("[data-slot='most-likely']")).toBeNull();
     expect(
@@ -2084,9 +2085,7 @@ describe("AttachKit: the suggestion and waiting cards (Round 55 · 240)", () => 
       attach({ prefillFor: () => Promise.resolve(candidate()) }),
     );
 
-    const change = await screen.findByRole("button", {
-      name: "Change the kit",
-    });
+    const change = await screen.findByRole("button", { name: "Change" });
     const pills = within(region("most-likely")).getAllByRole("listitem");
     for (const pill of pills) {
       expect(pill).toHaveClass("rounded-pill", "border", "border-accent-ink");
