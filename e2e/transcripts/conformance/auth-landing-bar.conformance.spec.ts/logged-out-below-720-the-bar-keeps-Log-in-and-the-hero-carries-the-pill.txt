@@ -1,8 +1,8 @@
 document
 banner
-link, dialed.run home, current page
+link, dialed.run, current page
 dialed.run
-end of link, dialed.run home, current page
+end of link, dialed.run, current page
 link, Log in
 end of banner
 main
