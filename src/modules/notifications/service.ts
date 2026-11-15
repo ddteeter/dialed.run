@@ -225,11 +225,20 @@ export async function createNotification(
  * nothing (PR #102 review). The predicate is mark-all's own, in SQL, so
  * the two cannot disagree.
  */
-export async function listNotifications(db: NotificationsDb, userId: string) {
+export async function listNotifications(
+  db: NotificationsDb,
+  userId: string,
+  followerFloor: SQL | undefined,
+) {
   const markable = and(eq(notifications.read, false), notOwed(db, userId));
+  // SA-M9: a follow row names its follower only while the viewer may see
+  // them. The floor is the feed's `runnerVisibleToViewer`, handed in by the
+  // server function (feed imports this module), so a row links exactly
+  // when H would open. A row it hides keeps its id and reads no handle.
   const followerProfile = and(
     eq(notifications.kind, "followed"),
     eq(userProfiles.userId, notifications.linkId),
+    followerFloor,
   );
   return db
     .select({

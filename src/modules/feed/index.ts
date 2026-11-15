@@ -24,6 +24,7 @@
  */
 export type { CoverageBand } from "./coverage";
 export { coverageLadder } from "./ladder-read";
+export { runnerVisibleToViewer } from "./runner-visibility";
 export type {
   Backlog,
   BacklogKit,
