@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX, ReactNode } from "react";
 
-import { Icon } from "../../../ui";
+import { Icon, SECONDARY_PILL } from "../../../ui";
 
 /**
  * A picker at the desk is a push into the 620 column, not a sheet (Round
@@ -94,8 +94,9 @@ export function PushTitle({
 }
 
 /**
- * Done, as the flow's forward action: the pink caps button at content
- * width (Round 54 · 167).
+ * Done on A2b's and A3b's pushed pages at the desk: the hairline pill, as
+ * the phone's sheets draw it. A button that only closes is not a primary
+ * (R58·302, D-186), so the desk's pink caps is withdrawn.
  */
 export function PushDone({
   onDone,
@@ -104,7 +105,7 @@ export function PushDone({
     <button
       type="button"
       onClick={onDone}
-      className="target grid min-h-13 cursor-pointer place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase text-accent-ink"
+      className={`target ${SECONDARY_PILL}`}
     >
       Done
     </button>

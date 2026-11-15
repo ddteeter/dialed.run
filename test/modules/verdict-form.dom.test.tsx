@@ -2734,7 +2734,9 @@ describe("VerdictForm: A3b at the desk is a push (Round 54 · 164.3)", () => {
       ).toBeVisible();
     }
     const done = within(page).getByRole("button", { name: "Done" });
-    expect(done).toHaveClass("bg-action", "uppercase", "font-display");
+    // R58·302: the hairline pill at the desk too.
+    expect(done).toHaveClass("target", "rounded-pill", "border-hairline");
+    expect(done).not.toHaveClass("bg-action", "uppercase", "font-display");
     expect(page.lastElementChild).toBe(done);
     // A3 is not drawn, but it is still there, holding the answer; the
     // sheet is not, so the page's radios are the form's only ones.

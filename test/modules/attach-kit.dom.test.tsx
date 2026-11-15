@@ -2161,7 +2161,10 @@ describe("AttachKit: A2b at the desk is a push (Round 54 · 164.3)", () => {
     expect(card).toHaveClass("rounded-card", "border", "bg-panel");
     expect(within(card).getAllByRole("checkbox")).toHaveLength(2);
     const done = within(page).getByRole("button", { name: "Done" });
-    expect(done).toHaveClass("bg-action", "uppercase", "font-display");
+    // R58·302: a button that only closes is the hairline pill, at the
+    // desk as on the phone.
+    expect(done).toHaveClass("target", "rounded-pill", "border-hairline");
+    expect(done).not.toHaveClass("bg-action", "uppercase", "font-display");
     // A2 is not drawn, but it is still there, holding the picks.
     const a2 = screen.getByRole("button", {
       name: "Next — did it work?",
