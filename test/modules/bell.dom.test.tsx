@@ -121,6 +121,8 @@ describe("NotificationBell", () => {
     expect(bell()).not.toHaveClass("items-start");
     expect(glyph()).toHaveClass("relative");
     expect(screen.getByText("3")).toHaveClass("absolute", "top-0", "left-3.5");
+    // R58·311: a 2px ring in the ground it sits on.
+    expect(screen.getByText("3")).toHaveClass("ring-2", "ring-ground");
   });
 
   it("hangs the dot on the glyph's corner too", async () => {

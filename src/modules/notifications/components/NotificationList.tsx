@@ -64,11 +64,12 @@ export function NotificationList({
 }: Readonly<NotificationListProps>) {
   return (
     <div className="flex flex-col gap-3">
-      {/* The phone's bell ends the first row (Design 169.1). At 320
-          (reflow) NOTIFICATIONS is wider than what the bell leaves it, so
-          the word may break rather than push the bell off the screen. */}
+      {/* The phone's bell ends the first row (Design 169.1). A tab root's
+          title is TYPE.title in its own case (R58·286); TYPE.display is
+          the payoff. At 320 (reflow) the word may still break rather than
+          push the bell off the screen. */}
       <div className="flex items-start gap-3">
-        <h1 className="m-0 min-w-0 flex-1 font-display text-display uppercase wrap-anywhere">
+        <h1 className="m-0 min-w-0 flex-1 font-display text-title wrap-anywhere">
           Notifications
         </h1>
         <PhoneBell />

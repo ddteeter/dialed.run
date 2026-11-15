@@ -82,6 +82,22 @@ A runner whose home zone has not been looked up yet: times read UTC, marked.
 const OWED = { homeZone: undefined };
 
 describe("NotificationList · the rows", () => {
+  it("titles the tab root in TYPE.title, in its own case (R58·286)", async () => {
+    await renderWithRouter(
+      <NotificationList
+        viewer={OWED}
+        notifications={[]}
+        markAllRead={nothing}
+      />,
+    );
+
+    const title = screen.getByRole("heading", { level: 1 });
+    expect(title).toHaveTextContent(/^Notifications$/u);
+    expect(title).toHaveClass("font-display", "text-title");
+    expect(title).not.toHaveClass("text-display");
+    expect(title).not.toHaveClass("uppercase");
+  });
+
   it("is S2b when there is nothing: the bracketed QUIET and its one next step", async () => {
     await renderWithRouter(
       <NotificationList

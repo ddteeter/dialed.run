@@ -86,10 +86,14 @@ export function NotificationBell({
     >
       <span data-slot="bell-glyph" className="relative flex">
         <Icon name="bell" size={20} />
+        {/* At the glyph's top-right, inside the 44, with a 2px ring in
+            whatever ground it sits on (R58·311): the badge belongs to the
+            target, so on the phone it may cross the gutter, and "9+" is
+            the widest it gets. */}
         {mark === "number" ? (
           <Mono
             step="xs"
-            className="absolute top-0 left-3.5 rounded-pill bg-action px-1 font-semibold text-accent-ink"
+            className="absolute top-0 left-3.5 rounded-pill bg-action px-1 font-semibold text-accent-ink ring-2 ring-ground"
           >
             {number}
           </Mono>
