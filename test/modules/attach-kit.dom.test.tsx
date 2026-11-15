@@ -2166,6 +2166,10 @@ describe("AttachKit: A2b at the desk is a push (Round 54 · 164.3)", () => {
     // desk as on the phone.
     expect(done).toHaveClass("target", "rounded-pill", "border-hairline");
     expect(done).not.toHaveClass("bg-action", "uppercase", "font-display");
+    // It is the shared secondary (48 high, the dark hairline), not the
+    // sheet's own pill, whose height comes from its padding.
+    expect(done).toHaveClass("min-h-control", "dark:border-hairline-2");
+    expect(done).not.toHaveClass("py-3");
     // A2 is not drawn, but it is still there, holding the picks.
     const a2 = screen.getByRole("button", {
       name: "Next — did it work?",
