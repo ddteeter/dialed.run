@@ -222,6 +222,8 @@ describe("NotificationSettings", () => {
     const { save, user, view } = renderForm(true);
     await view;
     const email = screen.getByRole("switch", { name: "Email" });
+    // Nothing is said before anything is saved.
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
     await user.click(email);
     expect(save).toHaveBeenCalledExactlyOnceWith({
       data: { runReminder: false },

@@ -374,7 +374,9 @@ async function routedApp({
   const shell = createRoute({
     getParentRoute: () => rootRoute,
     path: "/shell",
-    staticData: { title: "Shell" },
+    // A width only the layout declares: X2 takes the deepest screen's, not
+    // its parent's.
+    staticData: { title: "Shell", width: "page" },
     loader: () => {
       if (failWith) throw failWith;
     },
@@ -489,6 +491,18 @@ describe("X2 keeps the failed screen's first row (R55·186)", () => {
     await screen.findByText("Our end failed.");
     expect(state()?.parentElement).toHaveClass("wide:max-w-column");
     expect(state()?.parentElement).not.toHaveClass("max-w-panel");
+  });
+
+  it("takes the width of the screen being gone to, not a parent's", async () => {
+    await routedApp({
+      signedIn: true,
+      path: "/shell/inner",
+      failWith: new Error("D1 down"),
+    });
+    await screen.findByText("Our end failed.");
+    // Inner declares none, so the column, though Shell declares the page.
+    expect(state()?.parentElement).toHaveClass("wide:max-w-column");
+    expect(state()?.parentElement).not.toHaveClass("max-w-page");
   });
 
   it("keeps the title of the screen being gone to, whichever loader on the way failed", async () => {

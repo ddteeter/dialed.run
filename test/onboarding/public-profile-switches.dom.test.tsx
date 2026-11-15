@@ -253,6 +253,9 @@ describe("Privacy with the PUBLIC PROFILE group (round 41 #86b)", () => {
     });
     expect(screen.getAllByRole("status")).toHaveLength(1);
     expect(screen.getByRole("status")).toHaveTextContent(/^Saved\.$/u);
+    // A save that landed leaves no failure behind it.
+    expect(screen.queryByText("Not changed")).toBeNull();
+    expect(document.querySelector("[data-part='control-failure']")).toBeNull();
   });
 
   it("says the latest of the form's and the switches' outcomes in that one region", async () => {
