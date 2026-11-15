@@ -22,6 +22,26 @@ export async function secureResponse(
   if (nonce !== undefined && !isPubliclyStorable(response)) {
     return withSecurityHeaders(response, reportUri, { nonce });
   }
+  if (nonce !== undefined && isHtml(response)) {
+    return withSecurityHeaders(neverStored(response), reportUri, { nonce });
+  }
   const { page, hashes } = await withInlineScriptHashes(response);
   return withSecurityHeaders(page, reportUri, { hashes });
+}
+
+/**
+ * SA-M15: a nonce means `server.ts` did not read the path as the open web,
+ * so the root route may have read the session into this page. Such a page
+ * is never left for the edge to store, whatever a route set. Only an HTML
+ * document carries the root's answer: a share card or a server function's
+ * own response keeps its `public`.
+ */
+function isHtml(response: Response): boolean {
+  return String(response.headers.get("Content-Type")).includes("text/html");
+}
+
+function neverStored(response: Response): Response {
+  const page = new Response(response.body, response);
+  page.headers.set("Cache-Control", "private, no-store");
+  return page;
 }

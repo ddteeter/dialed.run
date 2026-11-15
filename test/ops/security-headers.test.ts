@@ -236,16 +236,29 @@ describe("secureResponse, for a page the edge may store (design 163)", () => {
     Reflect.set(env, "SENTRY_DSN", ORIGINAL);
   });
 
-  it("names the hashes of exactly its inline scripts, and no nonce, even when one was minted", async () => {
+  it("names the hashes of exactly its inline scripts, and no nonce, on an open-web path", async () => {
     Reflect.set(env, "SENTRY_DSN", "https://abc@o1.ingest.sentry.io/42");
 
-    const secured = await secureResponse(page("public, max-age=60"), "n0nce");
+    const secured = await secureResponse(page("public, max-age=60"), undefined);
 
     expect(secured.headers.get(CSP_HEADER)).toBe(
       contentSecurityPolicy(REPORT, { hashes: [ALERT, X] }),
     );
     expect(secured.headers.get(CSP_HEADER)).not.toContain("nonce");
     expect(secured.headers.get("Cache-Control")).toBe("public, max-age=60");
+    expect(await secured.text()).toBe(PAGE);
+  });
+
+  it("never leaves a public page for the edge when a nonce was minted (SA-M15)", async () => {
+    Reflect.set(env, "SENTRY_DSN", "https://abc@o1.ingest.sentry.io/42");
+
+    const secured = await secureResponse(page("public, max-age=60"), "n0nce");
+
+    expect(secured.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(secured.headers.get(CSP_HEADER)).toBe(
+      contentSecurityPolicy(REPORT, { nonce: "n0nce" }),
+    );
+    expect(secured.status).toBe(200);
     expect(await secured.text()).toBe(PAGE);
   });
 
@@ -273,6 +286,8 @@ describe("secureResponse, for a page the edge may store (design 163)", () => {
     expect(
       directives(secured.headers.get(CSP_HEADER) ?? "").get("script-src"),
     ).toBe("'self' 'wasm-unsafe-eval' https://challenges.cloudflare.com");
+    // Not HTML, so no root answer in it: it stays storable.
+    expect(secured.headers.get("Cache-Control")).toBe("public");
   });
 
   it("keeps the nonce for a page that is not stored", async () => {
