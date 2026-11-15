@@ -475,8 +475,9 @@ export function VerdictBacklog({
       {/* Rule 07: one live region per screen, and this is the screen's.
           Everything the keyboard does says so here — a table driven by
           keys with nothing announcing them is a table only a sighted
-          runner can clear. Flush left, like the words around it. */}
-      <p role="status" className="m-0 text-small text-quiet">
+          runner can clear. Heard, not drawn (R58·300): the picked
+          segment and "N OF N SAVED" already show it. */}
+      <p role="status" className="sr-only">
         <PendingLabel
           label={said}
           pendingLabel="Saving"
@@ -540,6 +541,16 @@ const VERDICT_SEGMENTS_CLASS =
  * line — dates and numbers never break (Round 55 · 236).
  */
 const CELL =
+  "block basis-full desk:table-cell desk:px-2 desk:py-1 desk:align-middle desk:whitespace-nowrap";
+
+/**
+ * The run and its conditions on a card: one teal mono line at the card's
+ * 8 rhythm (R58·301, as 236b draws it), and where both won't fit the
+ * conditions wrap whole to a second line. A card is a wrapping row and
+ * every other cell takes a line of its own; these two take only their
+ * words.
+ */
+const RUN_LINE_CELL =
   "block desk:table-cell desk:px-2 desk:py-1 desk:align-middle desk:whitespace-nowrap";
 
 /**
@@ -625,11 +636,15 @@ function BacklogTable({
                         {day}
                       </span>
                     </td>
-                    <td className={CELL}>
-                      {/* `--quiet`, like the conditions beside it: the
-                        picked row is tinted, and `--muted` is 4.0:1 on
-                        the tint. */}
-                      <Mono step="sm" className="text-quiet">
+                    <td className={RUN_LINE_CELL}>
+                      {/* At the desk `--quiet`, like the conditions beside
+                        it: the picked row is tinted, and `--muted` is
+                        4.0:1 on the tint. On a card, teal, one line with
+                        the conditions (R58·301). */}
+                      <Mono
+                        step="sm"
+                        className="text-dialed-text desk:text-quiet"
+                      >
                         <Spoken
                           {...measuredLine(
                             [
@@ -645,9 +660,15 @@ function BacklogTable({
                             units,
                           )}
                         />
+                        {/* The board's dot between the two, drawn only
+                          where they share a line's start; unheard, as a
+                          measured line's own separators are. */}
+                        <span aria-hidden="true" className="desk:hidden">
+                          {" ·"}
+                        </span>
                       </Mono>
                     </td>
-                    <td className={CELL}>
+                    <td className={RUN_LINE_CELL}>
                       {row.conditions === undefined ? (
                         <Mono step="sm" className="text-quiet">
                           No conditions
@@ -812,9 +833,9 @@ function ShowMore({
  * (Round 55 · 236), which is what lets the rail's "Selected" card go.
  */
 const ROW_CLASS =
-  "row-press flex flex-col gap-2 rounded-card border border-hairline bg-panel p-4 desk:table-row desk:rounded-none desk:border-x-0 desk:border-t-0 desk:last:border-b-0 desk:bg-transparent desk:p-0";
+  "row-press flex flex-wrap gap-2 rounded-card border border-hairline bg-panel p-4 desk:table-row desk:rounded-none desk:border-x-0 desk:border-t-0 desk:last:border-b-0 desk:bg-transparent desk:p-0";
 const ROW_PICKED_CLASS =
-  "row-press flex flex-col gap-2 rounded-card border border-hairline bg-panel p-4 desk:table-row desk:rounded-none desk:border-x-0 desk:border-t-0 desk:last:border-b-0 desk:bg-tint desk:p-0";
+  "row-press flex flex-wrap gap-2 rounded-card border border-hairline bg-panel p-4 desk:table-row desk:rounded-none desk:border-x-0 desk:border-t-0 desk:last:border-b-0 desk:bg-tint desk:p-0";
 /**
  * The failure mark is **border weight, not hue** — the Form Contract's own
  * rule, one layer out from a field: "pink is action, never failure", and a
@@ -822,7 +843,7 @@ const ROW_PICKED_CLASS =
  * carry a band, so it carries the weight.
  */
 const ROW_FAILED_CLASS =
-  "row-press flex flex-col gap-2 rounded-card border-2 border-ink bg-panel p-4 desk:table-row desk:rounded-none desk:border-x-0 desk:border-t-0 desk:last:border-b-0 desk:bg-transparent desk:p-0";
+  "row-press flex flex-wrap gap-2 rounded-card border-2 border-ink bg-panel p-4 desk:table-row desk:rounded-none desk:border-x-0 desk:border-t-0 desk:last:border-b-0 desk:bg-transparent desk:p-0";
 
 function rowClass(isPicked: boolean, hasFailed: boolean): string {
   if (hasFailed) return ROW_FAILED_CLASS;

@@ -729,7 +729,7 @@ describe("VerdictBacklog: what each state is drawn as", () => {
     const shape = [
       "row-press",
       "flex",
-      "flex-col",
+      "flex-wrap",
       "gap-2",
       "rounded-card",
       "border",
@@ -756,6 +756,36 @@ describe("VerdictBacklog: what each state is drawn as", () => {
       "gap-3",
       "desk:table-row-group",
     );
+  });
+
+  it("joins the run and its conditions in one teal line on a card, the conditions wrapping whole (R58·301)", async () => {
+    await renderTable([row()]);
+
+    const [card] = rowsOf();
+    if (card === undefined) throw new Error("no card");
+    const cells = [...card.querySelectorAll("td")];
+    const [dayCell, runCell, conditionsCell, ...rest] = cells;
+    // A wrapping row: every other cell a line of its own, these two only
+    // their words, so they share a line until it is full.
+    for (const cell of [dayCell, ...rest]) {
+      expect(cell).toHaveClass("basis-full");
+    }
+    for (const cell of [runCell, conditionsCell]) {
+      expect(cell).not.toHaveClass("basis-full");
+      expect(cell).toHaveClass("block", "desk:table-cell");
+    }
+    const run = runCell?.firstElementChild;
+    expect(run).toHaveClass(
+      "text-mono-sm",
+      "text-dialed-text",
+      "desk:text-quiet",
+    );
+    // The board's dot between them, drawn on a card only and never heard.
+    const dot = run?.lastElementChild;
+    expect(dot?.textContent).toBe(" ·");
+    expect(dot).toHaveAttribute("aria-hidden", "true");
+    expect(dot).toHaveClass("desk:hidden");
+    expect(conditionsCell?.firstElementChild).toHaveClass("text-dialed-text");
   });
 
   it("spells out every key it claims, beside what it does", async () => {
@@ -813,6 +843,9 @@ describe("VerdictBacklog: what each state is drawn as", () => {
     // waiting state.
     const status = screen.getByRole("status");
     expect(status).toBeInTheDocument();
+    // R58·300: heard, not drawn.
+    expect(status).toHaveClass("sr-only");
+    expect(status).not.toHaveClass("text-small");
     expect(screen.getByText("Saving")).not.toBeVisible();
     // Empty, not merely "not one of the messages": a region seeded with a
     // sentence announces it to a reader the moment the screen mounts.

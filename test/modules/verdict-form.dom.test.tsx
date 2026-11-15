@@ -2117,21 +2117,17 @@ describe("VerdictForm: the run header (round 21)", () => {
     expect(rail.querySelector("input, button, [role='radio']")).toBeNull();
   });
 
-  it("draws the rail's credit unheard, so the header's is the one heard", async () => {
+  it("credits the reading once, in the header: the rail's card has no copy (R58·304)", async () => {
     await renderWithRouter(
       form({ entry: { startedAt: SAT_MORNING, distanceM: 9978, conditions } }),
     );
 
     const rail = document.querySelector<HTMLElement>("[data-part='rail']");
-    const railCredit = rail?.querySelector<HTMLElement>(
-      "a[href='https://www.visualcrossing.com/']",
-    );
-    expect(railCredit).toHaveTextContent(
-      "Weather data provided by Visual Crossing",
-    );
-    expect(railCredit).toHaveAttribute("aria-hidden", "true");
-    expect(railCredit).toHaveAttribute("tabindex", "-1");
-    // getByRole throws on two: one credit is heard, and it is the header's.
+    expect(rail).not.toBeNull();
+    expect(
+      rail?.querySelector("a[href='https://www.visualcrossing.com/']"),
+    ).toBeNull();
+    // getByRole throws on two: one credit, and it is the header's.
     const heard = screen.getByRole("link", {
       name: "Weather data provided by Visual Crossing",
     });
