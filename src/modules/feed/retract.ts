@@ -24,12 +24,13 @@
  * cycle dependency-cruiser refuses. The feed already reads `runs` for every
  * card it draws, and a run's deletion is mostly its entry's.
  */
-import { and, eq, inArray, ne, type SQL } from "drizzle-orm";
+import { and, eq, inArray, ne, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { drizzle } from "drizzle-orm/d1";
 
 import {
+  copyrightHolds,
   entryPhotos,
   entryTags,
   imports,
@@ -40,6 +41,7 @@ import {
   runs,
 } from "../../db/schema-core";
 import { WORLD_AUDIENCE } from "../../lib/contracts";
+import { ControlRefusal } from "../../lib/control-refusal";
 import { NotFoundError } from "../../lib/errors";
 import { ulidSchema } from "../../lib/ids";
 import {
@@ -277,9 +279,40 @@ async function retractOne(
   notFoundMessage: string,
   effects: { readonly report: Report; readonly purge: PurgeTags },
   deleteScoped: ScopedDelete,
+  held: HeldCheck,
 ): Promise<void> {
   await assertOwned(db, table, userId, id, notFoundMessage);
+  await assertNotHeld(db, held);
   await deleteScoped(db, userId, [id], effects.report, effects.purge);
+}
+
+/**
+ * SA-L09: what a live copyright hold names stays until the Desk settles
+ * it ("Case over", the 30-day purge, a restore). Asked only on the
+ * runner's own deletes: the hold's purge and a moderator's Remove build
+ * their deletes from the same statements and must still delete.
+ */
+export interface HeldCheck {
+  /**
+  Which kits the delete would take, as a predicate on `copyright_holds.entry_id`.
+  */
+  entries: SQL;
+  noun: "kit" | "run" | "photo";
+}
+
+const LIVE_HOLD = ["hidden", "purging"] as const;
+
+async function assertNotHeld(db: Db, check: HeldCheck): Promise<void> {
+  const [hold] = await db
+    .select({ id: copyrightHolds.id })
+    .from(copyrightHolds)
+    .where(and(inArray(copyrightHolds.status, LIVE_HOLD), check.entries))
+    .limit(1);
+  if (hold !== undefined) {
+    throw new ControlRefusal(
+      `This ${check.noun} is held while a copyright claim is settled, so it can't be deleted yet.`,
+    );
+  }
 }
 
 /**
@@ -305,6 +338,7 @@ function retractOneOf(
   table: typeof outfitEntries | typeof runs,
   notFoundMessage: string,
   deleteScoped: ScopedDelete,
+  heldOf: (id: string) => HeldCheck,
 ): (
   db: Db,
   userId: string,
@@ -327,6 +361,7 @@ function retractOneOf(
       notFoundMessage,
       { report, purge },
       deleteScoped,
+      heldOf(id),
     );
 }
 
@@ -338,6 +373,7 @@ export const retractEntry = retractOneOf(
   outfitEntries,
   "entry not found",
   retractEntries,
+  (entryId) => ({ entries: eq(copyrightHolds.entryId, entryId), noun: "kit" }),
 );
 
 /**
@@ -379,6 +415,10 @@ export async function deleteEntryPhoto(
     and(eq(entryPhotos.id, photoId), eq(outfitEntries.userId, userId)),
   );
   if (photo === undefined) throw new NotFoundError("photo not found");
+  await assertNotHeld(db, {
+    entries: eq(copyrightHolds.entryId, photo.entryId),
+    noun: "photo",
+  });
   await commit(
     db,
     photoDeletion(db, photoId, userId),
@@ -496,4 +536,12 @@ export async function deleteRuns(
 /**
 One run, the runner's own; "not found" for anyone else's.
 */
-export const deleteRun = retractOneOf(runs, "run not found", deleteRuns);
+export const deleteRun = retractOneOf(
+  runs,
+  "run not found",
+  deleteRuns,
+  (runId) => ({
+    entries: sql`${copyrightHolds.entryId} in (select ${outfitEntries.id} from ${outfitEntries} where ${outfitEntries.runId} = ${runId})`,
+    noun: "run",
+  }),
+);

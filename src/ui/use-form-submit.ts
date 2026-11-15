@@ -9,6 +9,7 @@ import {
 } from "../lib/auth-signal";
 import type { ConfirmTrigger } from "../lib/auth-signal";
 import type { CarriedForm } from "../lib/carried-form";
+import { controlRefusalMessage } from "../lib/control-refusal";
 import { DURATION } from "./motion";
 import { useSessionLapse } from "./session-lapse";
 import type { AnswerSessionLapse } from "./session-lapse";
@@ -46,7 +47,13 @@ Field name -> the one sentence to show under it.
 export type FieldErrors = Record<string, string>;
 
 export interface FormFailure {
-  kind: "network" | "server" | "session" | "terms" | "unconfirmed";
+  kind:
+    | "network"
+    | "server"
+    | "session"
+    | "terms"
+    | "unconfirmed"
+    | "refused";
   message: string;
 }
 
@@ -218,6 +225,10 @@ export function classifyFailure(error: unknown): FormFailure {
   if (isUnconfirmedRefusal(error)) {
     return { kind: "unconfirmed", message: "Confirm your email first." };
   }
+  // A refusal in the server's own words (`lib/control-refusal`): the
+  // sentence is the cause line, by its code like the three above.
+  const refusal = controlRefusalMessage(error);
+  if (refusal !== undefined) return { kind: "refused", message: refusal };
   // `fetch` rejects with a TypeError, and it rejects *here* — client-side,
   // never having crossed a structured clone — so the prototype is intact
   // and `instanceof` is safe in a way it is not for a server rejection.

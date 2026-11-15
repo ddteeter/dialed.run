@@ -26,7 +26,13 @@ import {
   sweepCopyrightHolds,
 } from "../../src/modules/feed/moderation";
 import { isPhotoVisible } from "../../src/modules/feed/photos";
-import { retractEntry } from "../../src/modules/feed/retract";
+import {
+  deleteEntryPhoto,
+  deleteRun,
+  retractEntries,
+  retractEntry,
+} from "../../src/modules/feed/retract";
+import { ControlRefusal } from "../../src/lib/control-refusal";
 import { oweInCore } from "../../src/modules/ops";
 import { fileReport, resolveReview } from "../../src/modules/safety";
 import {
@@ -571,11 +577,13 @@ describe("the daily sweep's purge", () => {
     expect(await holdStatus(photoId)).toBe("purged");
   });
 
-  it("finishes a hold whose subject its runner deleted", async () => {
+  it("finishes a hold whose subject is already gone", async () => {
     const { author, entryId } = await posted();
     await takeDown("entry", entryId);
     const { purgeAt } = await holdOf(entryId);
-    await retractEntry(core(), author, entryId, quiet);
+    // Gone some way other than the runner's own delete, which a live hold
+    // refuses (SA-L09): a row deleted before that rule, say.
+    await retractEntries(core(), author, [entryId], quiet, noPurge);
 
     await sweepCopyrightHolds(core(), purgeAt, quiet);
 
@@ -864,3 +872,81 @@ async function strikesWithOneMore(author: string) {
   const listed = await heldCopyrightContent(core());
   return listed.find((hold) => hold.subjectId === entryId)?.strikes;
 }
+
+function heldSentence(noun: string): string {
+  return `This ${noun} is held while a copyright claim is settled, so it can't be deleted yet.`;
+}
+
+/**
+The sentence a delete was refused with, failing unless it was a ControlRefusal.
+*/
+async function refusalOf(attempt: Promise<void>): Promise<string> {
+  try {
+    await attempt;
+  } catch (error: unknown) {
+    expect(error).toBeInstanceOf(ControlRefusal);
+    return error instanceof Error ? error.message : "";
+  }
+  throw new Error("the delete was not refused");
+}
+
+describe("the runner's own delete of what a hold names (SA-L09)", () => {
+  beforeEach(resetSafetyTables);
+
+  it.each([
+    ["the kit", "entry"],
+    ["a photo on it", "photo"],
+  ] as const)(
+    "refuses the kit, its run and each photo while %s is held, and keeps it all",
+    async (_case, subject) => {
+      const { author, runId, entryId, photoId, key } = await posted();
+      await takeDown(subject, subject === "entry" ? entryId : photoId);
+
+      const kit = await refusalOf(retractEntry(core(), author, entryId, quiet));
+      const run = await refusalOf(deleteRun(core(), author, runId, quiet));
+      const photo = await refusalOf(
+        deleteEntryPhoto(core(), author, photoId, quiet, noPurge),
+      );
+
+      expect([kit, run, photo]).toStrictEqual([
+        heldSentence("kit"),
+        heldSentence("run"),
+        heldSentence("photo"),
+      ]);
+      expect(await entryStatus(entryId)).toBeDefined();
+      expect(await photoRow(photoId)).toBeDefined();
+      expect(await isStored(key)).toBe(true);
+    },
+  );
+
+  it("refuses under a litigation hold too", async () => {
+    const { author, entryId, photoId } = await posted();
+    await takeDown("photo", photoId);
+    await inCourt(photoId);
+
+    const kit = await refusalOf(retractEntry(core(), author, entryId, quiet));
+    expect(kit).toBe(heldSentence("kit"));
+  });
+
+  it("deletes once the hold is restored", async () => {
+    const { author, entryId } = await posted();
+    await takeDown("entry", entryId);
+    await core()
+      .update(copyrightHolds)
+      .set({ status: "restored" })
+      .where(eq(copyrightHolds.subjectId, entryId));
+
+    await retractEntry(core(), author, entryId, quiet);
+
+    expect(await entryStatus(entryId)).toBeUndefined();
+  });
+
+  it("leaves another kit of the same runner deletable", async () => {
+    const { author, entryId } = await posted();
+    const other = await posted();
+    await takeDown("entry", other.entryId);
+
+    await retractEntry(core(), author, entryId, quiet);
+    expect(await entryStatus(entryId)).toBeUndefined();
+  });
+});
