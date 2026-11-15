@@ -22,6 +22,7 @@ import type { Place } from "../../onboarding";
 import type { ConsensusBand, ConsensusResult } from "../consensus";
 import { SHARE_WORDS, summarySentence, withShares } from "../bar-share";
 import type { BarShare } from "../bar-share";
+import { chipPlaceName } from "../../../lib/place-name";
 import { uiGroupLabels } from "../groups";
 import type { ConditionsHome } from "../home";
 import { BracketHeadline } from "./BracketHeadline";
@@ -153,14 +154,15 @@ export function ConditionsTab({
 }
 
 /**
- * The place being looked at, in the provider's words — the answer to
- * "which Portland?" — as round 26 #12 draws the header: `WEATHER FOR
- * PORTLAND, OR, UNITED STATES`, the same string O1's chip shows.
+ * The place being looked at — the answer to "which Portland?" — as round
+ * 26 #12 draws the header: `WEATHER FOR PORTLAND, OR, UNITED STATES`, in
+ * the name O1's chip shows (R55·228, R58·294). The saved label stays the
+ * provider's.
  */
 function ResolvedPlace({ address }: Readonly<{ address: string }>) {
   return (
     <p data-part="resolved-place" className="m-0 text-muted">
-      <Mono step="xs">Weather for {address}</Mono>
+      <Mono step="xs">Weather for {chipPlaceName(address)}</Mono>
     </p>
   );
 }
@@ -317,7 +319,7 @@ function CityForm({
       const place = placeOf(found);
       // R57·260: the new place's weather is the confirmation; a screen
       // reader hears the hand-off, politely.
-      announce(`Saved. Weather for ${place.cityLabel}.`);
+      announce(`Saved. Weather for ${chipPlaceName(place.cityLabel)}.`);
       await onSaved(place);
     },
   });
@@ -465,9 +467,9 @@ function SummarySentence({
  * not know, never that nobody ran. Round 26 #9 names the place: "No
  * weather for Portland, OR yet. It shows after the first reading."
  */
-function NoWeather({
-  place = "where you are",
-}: Readonly<{ place: string | undefined }>) {
+function NoWeather({ place }: Readonly<{ place: string | undefined }>) {
+  // In the chip's name, as everywhere the place is shown (R58·294).
+  const name = place === undefined ? "where you are" : chipPlaceName(place);
   return (
     <div
       data-part="match-block"
@@ -477,7 +479,7 @@ function NoWeather({
       <TabNameEyebrow />
       <h2 className="m-0 font-display text-title uppercase">No weather yet</h2>
       <p className="m-0 text-lead">
-        No weather for {place} yet. It shows after the first reading.
+        No weather for {name} yet. It shows after the first reading.
       </p>
       <OpenTheCall />
     </div>

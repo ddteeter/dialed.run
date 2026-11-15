@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { cityLookupInput, cityNotFound } from "../lib/contracts/city-lookup";
 import type { CityLookup } from "../lib/contracts/city-lookup";
 import type { ResolvedPlace } from "../lib/contracts";
+import { chipPlaceName } from "../lib/place-name";
 import { FailureBand, PendingLabel, TextField, inFlight } from "./form";
 import type { FieldProps } from "./use-form-submit";
 
@@ -142,7 +143,7 @@ export function CityFinder({
         lng: answer.lng,
       };
       setFound(place);
-      announce(`Weather for ${place.address}.`);
+      announce(`Weather for ${chipPlaceName(place.address)}.`);
     } else if (answer.kind === "not-found") {
       say(cityNotFound(parsed.data.label));
     } else {
@@ -237,7 +238,8 @@ export function CityFinder({
 
 /**
  * What Find found, with Use this: nothing is saved until it is pressed
- * (round 26 #12).
+ * (round 26 #12). Named as the chip it turns into names it (R58·294);
+ * what Use this hands on is still the provider's string.
  */
 function ResolvedCard({
   found,
@@ -256,7 +258,7 @@ function ResolvedCard({
       className="flex flex-col gap-3 rounded-card border border-hairline bg-ground p-4"
     >
       <p id={resolvedId} className="m-0 text-body">
-        Weather for <strong>{found.address}</strong>
+        Weather for <strong>{chipPlaceName(found.address)}</strong>
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <button

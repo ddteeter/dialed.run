@@ -20,7 +20,7 @@ import {
 } from "../../../ui";
 import type { FieldProps } from "../../../ui";
 import { calibrationInput } from "../inputs";
-import { chipPlaceName } from "../place-name";
+import { chipPlaceName } from "../../../lib/place-name";
 import type { Calibration } from "../inputs";
 import { UNIT_LABELS, UnitFields } from "./UnitFields";
 

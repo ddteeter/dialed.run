@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { chipPlaceName } from "../../src/modules/onboarding/place-name";
+import { chipPlaceName } from "../../src/lib/place-name";
 
 /**
  * R55·228: O1's chip names a place as city, region, country, the region by

@@ -321,6 +321,40 @@ describe("ConditionsTab: location denied", () => {
     ).toBeVisible();
   });
 
+  it("names the place as O1's chip does, and saves the provider's string (R58·294)", async () => {
+    const user = userEvent.setup();
+    const address = "Minneapolis, Hennepin County, Minnesota, United States";
+    const saveCity = vi.fn(({ data }: { data: Place }) =>
+      Promise.resolve(data),
+    );
+    await renderFeedScreen(
+      tab({
+        locate: () => Promise.resolve(undefined),
+        lookUpCity: () =>
+          Promise.resolve({ kind: "found", address, lat: 44.98, lng: -93.27 }),
+        saveCity,
+      }),
+    );
+
+    await findAndUse(user, "Minneapolis");
+
+    expect(await screen.findByText("No weather yet")).toBeVisible();
+    expect(
+      document.querySelector('[data-part="resolved-place"]'),
+    ).toHaveTextContent(/^Weather for Minneapolis, MN, United States$/u);
+    expect(
+      screen.getByText(
+        "No weather for Minneapolis, MN, United States yet. It shows after the first reading.",
+      ),
+    ).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /^Saved\. Weather for Minneapolis, MN, United States\.$/u,
+    );
+    expect(saveCity).toHaveBeenCalledWith({
+      data: { cityLabel: address, lat: 44.98, lng: -93.27 },
+    });
+  });
+
   it("heads the tab with a saved place from the start", async () => {
     await renderFeedScreen(
       tab({ home: { coords: PORTLAND, cityLabel: SAVED.cityLabel } }),
