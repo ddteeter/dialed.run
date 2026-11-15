@@ -336,6 +336,6 @@ describe("matchingNotices", () => {
   });
 
   it("keeps every notice for a blank query", () => {
-    expect(matchingNotices(notices, ' '.repeat(3), wordsOf)).toEqual(notices);
+    expect(matchingNotices(notices, " ".repeat(3), wordsOf)).toEqual(notices);
   });
 });

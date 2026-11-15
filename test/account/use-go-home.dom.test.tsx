@@ -167,7 +167,9 @@ describe("useTermsPromptWiring", () => {
     const { router, invalidate } = await renderWithRouter(
       <Wired signOut={signOut} />,
     );
-    await userEvent.setup().click(screen.getByRole("button", { name: "Stale" }));
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Stale" }));
     await waitFor(() => {
       expect(invalidate).toHaveBeenCalledTimes(1);
     });

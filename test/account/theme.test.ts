@@ -62,7 +62,11 @@ describe("the theme column", () => {
   });
 
   it("stores the contract's values and no others", () => {
-    expect(themeChoiceSchema.options).toStrictEqual(["system", "light", "dark"]);
+    expect(themeChoiceSchema.options).toStrictEqual([
+      "system",
+      "light",
+      "dark",
+    ]);
     expect(userProfiles.theme.enumValues).toStrictEqual(THEME_CHOICES);
     expect(themeInput.safeParse({ theme: "sepia" }).success).toBe(false);
     expect(themeInput.parse({ theme: "dark" })).toStrictEqual({

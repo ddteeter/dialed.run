@@ -34,6 +34,7 @@ import { orSqlNull } from "../../lib/sql/sql-null";
 import { nowSeconds } from "../../lib/now";
 import { isProfaneHandle, readBackDigits } from "../../lib/contracts/profanity";
 import { purgePublicPages } from "../ops";
+import { isPlaceholderHandle } from "../safety";
 import type { ScreenHandle } from "./handle-screen";
 import { currentTermsVersion, termsStanding } from "./terms-acceptance";
 
@@ -206,10 +207,11 @@ async function suggestionFor(
   userId: string,
   handle: string,
 ): Promise<string | undefined> {
+  // Never a placeholder's shape, which the claim would refuse (SA-L12).
   const candidates = [
     ...SUGGESTION_WORDS.map((word) => withSuffix(handle, `_${word}`)),
     ...SUGGESTION_DIGITS.map((digit) => withSuffix(handle, digit)),
-  ];
+  ].filter((candidate) => !isPlaceholderHandle(candidate));
   for (const candidate of candidates) {
     if (await isFreeFor(db, userId, candidate)) return candidate;
   }
@@ -346,6 +348,10 @@ export async function claimUsername(
     await keepPlaceholder(db, userId);
     return { kind: "claimed", username: typed };
   }
+  // A moderator's placeholder is only theirs to give (SA-L12): refused as
+  // a reserved handle is, before it costs a screening call. Keeping the
+  // one you were given is the branch above.
+  if (isPlaceholderHandle(typed)) return refused;
   const verdict = await screen(typed);
   if (verdict === "flagged") return refused;
   const taken = async (): Promise<HandleClaim> => ({

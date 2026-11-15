@@ -266,7 +266,9 @@ describe("rescreenHandles", () => {
     await claimUsername(db, answered, "answered", () =>
       Promise.resolve("clear"),
     );
-    await db.insert(userProfiles).values({ userId: newUlid(), username: "old" });
+    await db
+      .insert(userProfiles)
+      .values({ userId: newUlid(), username: "old" });
     const { asked, rescreen } = answering("flagged");
 
     await rescreenHandles(db, rescreen, [], 5000);
@@ -351,7 +353,10 @@ describe("who waits, and who is skipped", () => {
       .set({ bannedAt: orSqlNull(undefined) })
       .where(eq(userProfiles.userId, banned));
     await rescreenHandles(db, rescreen, [], 9000);
-    expect(asked.at(-1)).toStrictEqual({ handle: "closed_down", userId: banned });
+    expect(asked.at(-1)).toStrictEqual({
+      handle: "closed_down",
+      userId: banned,
+    });
   });
 });
 
@@ -365,9 +370,7 @@ describe("the claim's read (D1 bills rows scanned)", () => {
     expect(details).toContain(
       "SEARCH user_profiles USING INDEX user_profiles_username_screen_pending (username_screen=?)",
     );
-    expect(details.filter((line) => line.startsWith("SCAN"))).toStrictEqual(
-      [],
-    );
+    expect(details.filter((line) => line.startsWith("SCAN"))).toStrictEqual([]);
   });
 });
 

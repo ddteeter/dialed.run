@@ -50,6 +50,7 @@ import {
   AdminRequiredError,
   banUser,
   deskRunners,
+  isPlaceholderHandle,
   placeholderHandle,
   QUARANTINE_PAGE,
   QUARANTINE_RETENTION_SECONDS,
@@ -1430,29 +1431,42 @@ function failingOnWrite(message: string) {
 describe("forceRename (round 27 #16), through account's rules", () => {
   beforeEach(freshState);
 
-  it("pads the placeholder to four digits, and draws one at random", () => {
-    expect(placeholderHandle(7)).toBe("runner_0007");
-    expect(placeholderHandle(4821)).toBe("runner_4821");
-    expect(placeholderHandle()).toMatch(/^runner_\d{4}$/u);
+  it("pads the placeholder to six digits, and draws one at random (SA-L12)", () => {
+    expect(placeholderHandle(7)).toBe("runner_000007");
+    expect(placeholderHandle(482_105)).toBe("runner_482105");
+    expect(placeholderHandle()).toMatch(/^runner_\d{6}$/u);
   });
 
-  it("draws again at the cut-off, so no four digits are likelier than others", () => {
-    // 60,000 is the first draw refused: reduced, it would be a seventh
-    // 0000. 59,999 is the last one kept.
-    const draws = [60_000, 65_535, 59_999, 60_000, 12];
+  it("draws again at the cut-off, so no six digits are likelier than others", () => {
+    // 4,294,000,000 is the first draw refused: the largest multiple of a
+    // million a 32-bit draw reaches. 4,293,999,999 is the last one kept.
+    const draws = [4_294_000_000, 4_294_967_295, 4_293_999_999, 12];
     const random = vi
       .spyOn(globalThis.crypto, "getRandomValues")
       .mockImplementation((array) => {
-        if (array instanceof Uint16Array) array.fill(draws.shift() ?? 0);
+        if (array instanceof Uint32Array) array.fill(draws.shift() ?? 0);
         return array;
       });
     try {
-      expect(placeholderHandle()).toBe("runner_9999");
-      expect(placeholderHandle()).toBe("runner_0012");
+      expect(placeholderHandle()).toBe("runner_999999");
+      expect(placeholderHandle()).toBe("runner_000012");
       expect(draws).toStrictEqual([]);
     } finally {
       random.mockRestore();
     }
+  });
+
+  it.each([
+    ["runner_000042", true],
+    ["runner_4821", true],
+    ["runner_7", true],
+    ["runner_", false],
+    ["runner_12a", false],
+    ["xrunner_123", false],
+    ["runner_123x", false],
+    ["runners_123", false],
+  ])("knows %s as the placeholder's shape: %s", (handle, isShape) => {
+    expect(isPlaceholderHandle(handle)).toBe(isShape);
   });
 
   it("swaps the handle, locks the old one, owes a re-pick and records it", async () => {

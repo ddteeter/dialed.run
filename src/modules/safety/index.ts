@@ -113,6 +113,7 @@ export {
 export { flaggedCountOf } from "./account-flags";
 
 export {
+  isPlaceholderHandle,
   placeholderHandle,
   renameRecord,
   type RenameOutcome,

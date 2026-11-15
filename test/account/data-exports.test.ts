@@ -582,7 +582,10 @@ describe("exportFileResponse", () => {
     for (const request of cases) {
       expect(
         locationOf(await exportFileResponse(db, request, env.IMPORTS, NOW)),
-      ).toStrictEqual({ status: 302, location: "/account/sign-in?export=expired" });
+      ).toStrictEqual({
+        status: 302,
+        location: "/account/sign-in?export=expired",
+      });
     }
   });
 });

@@ -22,8 +22,9 @@ type Db = ReturnType<typeof drizzle>;
 
 /**
  * What a rename came to, as the Desk reads it — account's `ForcedRename`.
- * `taken` is a placeholder somebody holds, or held: rare at four digits,
- * and the operator presses Rename again (a request handler does one
+ * `taken` is a placeholder somebody holds, or held: rare at six digits,
+ * which only a moderator's rename hands out, and the operator presses
+ * Rename again (a request handler does one
  * attempt, law 3). `moved` is a handle that changed before the rename
  * landed (another rename, or the runner's own pick), so nothing was done
  * (R-121); it carries the handle as it is now (round 38 #60).
@@ -35,31 +36,49 @@ export type RenameOutcome =
   | { kind: "moved"; username: string };
 
 /**
- * The placeholder handle: `runner_` and four digits. `digits` is a
- * parameter so a test can choose them; production draws them at random.
+ * The placeholder handle: `runner_` and six digits (owner, 2026-11-15).
+ * `digits` is a parameter so a test can choose them; production draws
+ * them at random.
  */
 export function placeholderHandle(digits: number = randomDigits()): string {
-  return `runner_${String(digits).padStart(4, "0")}`;
+  return `runner_${String(digits).padStart(PLACEHOLDER_DIGITS, "0")}`;
+}
+
+const PLACEHOLDER_DIGITS = 6;
+
+/**
+ * Whether a handle has the placeholder's shape, `runner_` and digits, of
+ * any length (the four-digit ones handed out before are this shape too).
+ * Only a moderator's rename gives one (SA-L12): a runner's claim refuses
+ * it, so no runner can use the Desk's placeholders up.
+ */
+export function isPlaceholderHandle(handle: string): boolean {
+  return /^runner_\d+$/u.test(handle);
 }
 
 /**
- * The draws that are kept: 0 to 59,999, six of each four-digit number. A
- * 16-bit draw reaches 65,535, and reducing all of them would make 0000 to
- * 5535 a seventh likelier than the rest.
- */
-const DRAW_LIMIT = 60_000;
+How many six-digit numbers there are.
+*/
+const PLACEHOLDER_SPACE = 1_000_000;
 
 /**
- * Four digits from the platform's CSPRNG, each as likely as any other: a
- * draw at or past `DRAW_LIMIT` is drawn again (about one in twelve). A
+ * The draws that are kept: below the largest multiple of a million a
+ * 32-bit draw reaches, so reducing them leaves every six-digit number
+ * equally likely.
+ */
+const DRAW_LIMIT = Math.floor(2 ** 32 / PLACEHOLDER_SPACE) * PLACEHOLDER_SPACE;
+
+/**
+ * Six digits from the platform's CSPRNG, each as likely as any other: a
+ * draw at or past `DRAW_LIMIT` is drawn again (about one in 4,300). A
  * handle is not a secret, but the lint is right that `Math.random` should
  * not be reached for.
  */
 function randomDigits(): number {
-  const draw = new Uint16Array(1);
+  const draw = new Uint32Array(1);
   for (;;) {
     const [value = 0] = crypto.getRandomValues(draw);
-    if (value < DRAW_LIMIT) return value % 10_000;
+    if (value < DRAW_LIMIT) return value % PLACEHOLDER_SPACE;
   }
 }
 
