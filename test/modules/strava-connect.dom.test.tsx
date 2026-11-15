@@ -72,6 +72,21 @@ function confirmBox(): HTMLElement {
   return found;
 }
 
+describe("StravaConnect: one run (R2-RUNS-07)", () => {
+  it("keeps 'your run, its outfit and verdict', never 'All 1 runs'", async () => {
+    const user = userEvent.setup();
+    await renderInRouter(
+      <StravaConnect configured connected runCount={1} disconnect={nothing} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Disconnect" }));
+
+    const first = confirmBox().querySelector(":scope dl > div");
+    expect(first).toHaveTextContent("KeptYour run, its outfit and verdict");
+    expect(confirmBox()).not.toHaveTextContent(/All 1 run/u);
+  });
+});
+
 describe("StravaConnect: not configured", () => {
   it("draws nothing at all — never a dead control", async () => {
     await renderInRouter(

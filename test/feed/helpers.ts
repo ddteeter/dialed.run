@@ -28,7 +28,7 @@ import { env } from "../../src/env";
 import { entryHalfStatement } from "../../src/modules/feed/run-conditions-entry";
 import { cacheKeyFor } from "../../src/modules/weather";
 import { weatherHalfStatements } from "../../src/modules/weather/run-conditions-copy";
-import type { Audience } from "../../src/lib/contracts";
+import type { Audience, ManualSky } from "../../src/lib/contracts";
 import { newUlid } from "../../src/lib/ids";
 
 export const NOW = 1_757_000_000;
@@ -261,10 +261,11 @@ A band a runner set for this run in R2b: the run's own, never a cache cell.
 export async function makeManualBand(
   runId: string,
   tempC: number,
+  sky?: ManualSky,
 ): Promise<void> {
   await weatherDb()
     .insert(manualConditions)
-    .values({ runId, tempC, setAt: NOW });
+    .values({ runId, tempC, setAt: NOW, sky });
 }
 
 export async function makeObservation(params: {

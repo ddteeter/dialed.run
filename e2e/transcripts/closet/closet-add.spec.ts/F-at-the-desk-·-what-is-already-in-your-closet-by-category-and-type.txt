@@ -114,7 +114,7 @@ list
 listitem, level 1, position 1, set size 1
 Nike Pegasus #
 # runs · No verdict yet
-Retired :month #
+Retired
 end of listitem, level 1, position 1, set size 1
 end of list
 end of main

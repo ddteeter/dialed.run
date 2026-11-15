@@ -1,4 +1,8 @@
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
+
+import { userProfiles } from "../../src/db/schema-core";
+import { coreDb } from "../../src/env";
 
 import {
   bandRunsInput,
@@ -137,6 +141,25 @@ describe("recentRunsInBand", () => {
       conditions: { feelsLikeC: IN_BAND, tempC: IN_BAND + 1 },
     });
     expect(second).toMatchObject({ id: utc, day: "Sep 3", verdict: 2 });
+  });
+
+  it("dates a run whose conditions carry no zone in the runner's own, not UTC (P2a-02)", async () => {
+    const userId = await makeUser();
+    await coreDb()
+      .update(userProfiles)
+      .set({ timeZone: "Asia/Tokyo" })
+      .where(eq(userProfiles.userId, userId));
+    // No zone on the observation: 15:33 UTC on Thu 4 Sep, Fri 5 Sep at home.
+    await makeEntry({
+      userId,
+      runId: await runAt(userId, 43.3, IN_BAND),
+      verdict: 0,
+      createdAt: NOW,
+    });
+
+    const [only] = await recentRunsInBand(userId, BAND);
+
+    expect(only?.day).toBe("Sep 5");
   });
 
   it("names the pieces worn on each run, and only those", async () => {

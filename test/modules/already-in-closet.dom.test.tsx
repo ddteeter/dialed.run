@@ -172,7 +172,7 @@ describe("AlreadyInCloset", () => {
     expect(second).toHaveTextContent("Janji Rover Half-zip");
     // Round 55 · 193: RETIRED once, as the tag; the line is any piece's.
     expect(second).toHaveTextContent(
-      /^Janji Rover Half-zip12 runs · 2\/4 dialed2 of 4 runs dialedRetired Mar 2025$/,
+      /^Janji Rover Half-zip12 runs · 2\/4 dialed2 of 4 runs dialedRetired$/,
     );
     expect(third).toHaveTextContent("Uniqlo quarter-zip");
     expect(third).toHaveTextContent("3 runs · No verdict yet");
@@ -204,11 +204,23 @@ describe("AlreadyInCloset", () => {
     card([harrier, rover], { brand: "janji", name: "  rover half-zip " });
 
     const [first, second] = rows();
-    const flag = screen.getByText("Same name · Retired Mar 2025");
+    const flag = screen.getByText("Same name · Retired");
     expect(second?.contains(flag)).toBe(true);
     // Ink, not the cold hue (round 28 #13): a match is not a verdict.
     expect(flag).toHaveClass("text-ink", "text-mono-xs");
     expect(first).not.toHaveTextContent("Same name");
+  });
+
+  it("keeps the name and the meta to one line each beside the tag (R2-CLOSET-02)", () => {
+    card([rover], { brand: "janji", name: "rover half-zip" });
+
+    const [row] = rows();
+    const column = row?.querySelector("[data-part='name']")?.parentElement;
+    expect(column).toHaveClass("min-w-0", "flex-1");
+    expect(row?.querySelector("[data-part='name']")).toHaveClass("truncate");
+    expect(screen.getByText("2/4 dialed").closest(".text-mono-sm")).toHaveClass(
+      "truncate",
+    );
   });
 
   it("does not match on the name alone when the brand differs", () => {
@@ -275,10 +287,10 @@ describe("AlreadyInCloset", () => {
     expect(row?.querySelector(".text-mono-xs")).toBeNull();
   });
 
-  it("dates a retirement by month and year, once, as the tag (round 28 #13, Round 55 · 193)", () => {
+  it("tags a retirement RETIRED, once and undated, as 248 draws it (R2-CLOSET-02)", () => {
     card([rover]);
 
-    const tag = screen.getByText("Retired Mar 2025");
+    const tag = screen.getByText("Retired");
     expect(tag).toHaveClass("text-mono-xs", "text-ink");
     expect(screen.getByText("2/4 dialed").closest(".text-mono-sm")).toHaveClass(
       "text-label",
@@ -362,7 +374,19 @@ describe("AlreadyInCloset", () => {
       name: "See all 6 in Outer",
     });
     expect(more).toHaveAttribute("href", "/closet?group=outer");
-    expect(more).toHaveClass("target", "inline-flex", "items-center");
+    // 248: the closing line spans the card under a full-width hairline,
+    // in the pink link colour at 700 (R2-CLOSET-03).
+    expect(more).toHaveClass(
+      "target",
+      "flex",
+      "w-full",
+      "items-center",
+      "border-t",
+      "border-hairline",
+      "font-bold",
+      "text-action",
+    );
+    expect(more).not.toHaveClass("self-start", "text-ink");
     expect(more.previousElementSibling?.tagName).toBe("UL");
     expect(rows()).toHaveLength(5);
   });

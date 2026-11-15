@@ -100,6 +100,7 @@ function piece(
     matches: true,
     untested: false,
     photo: undefined,
+    typeWord: "Top",
     ...overrides,
   };
 }
@@ -123,13 +124,17 @@ const GROUPS: PickerGroup[] = [
   },
   {
     group: "bottoms",
-    items: [piece(TIGHTS, "Tights", { category: "bottom" })],
+    items: [
+      piece(TIGHTS, "Tights", { category: "bottom", typeWord: "Bottom" }),
+    ],
     matchCount: 1,
     hiddenByFilterCount: 0,
   },
   {
     group: "hands_head",
-    items: [piece(GLOVES, "Gloves", { category: "gloves" })],
+    items: [
+      piece(GLOVES, "Gloves", { category: "gloves", typeWord: "Gloves" }),
+    ],
     matchCount: 1,
     hiddenByFilterCount: 0,
   },
@@ -931,6 +936,40 @@ describe("AttachKit: the closet picker", () => {
     expect(tights).toHaveTextContent(/^BottomTights$/u);
   });
 
+  it("puts the piece's type word in the hatch, never its category's (R2-RUNS-03)", async () => {
+    // A shell filed under OUTER: its category is top, its type a jacket.
+    const shell = context({
+      groups: [
+        {
+          group: "outer",
+          items: [
+            piece(HOUDINI, "Norvan Shell", {
+              layer: "outer",
+              typeWord: "Jacket",
+            }),
+          ],
+          matchCount: 1,
+          hiddenByFilterCount: 0,
+        },
+      ],
+    });
+    await renderWithRouter(attach({ context: shell }));
+
+    const well = screen
+      .getByRole("button", { name: "Norvan Shell" })
+      .querySelector("[data-part='tile-well']");
+    expect(well).toHaveTextContent(/^Jacket$/u);
+  });
+
+  it("breaks a word wider than the tile inside it, rather than cutting it", async () => {
+    await renderWithRouter(attach());
+
+    expect(screen.getByText("Patagonia Houdini")).toHaveClass(
+      "line-clamp-2",
+      "wrap-break-word",
+    );
+  });
+
   it("fills the 72 square with the piece's photo, ringed when pressed", async () => {
     // Round 55 · 239: a piece with a photo shows it, cropped to fill the
     // square; the hatch and the type word are for a piece without one.
@@ -1403,12 +1442,17 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
   it("is the photo row, only its add box, from the first frame", async () => {
     await renderWithRouter(attach({ prefillFor: neverSettles }));
 
-    // Design 253 (#669): no dashed well, so no drop title and no hint.
-    const row = screen.getByRole("group", { name: "Outfit photo · optional" });
+    // Round 57 · 253 (#669): no dashed well, so no drop title, and the
+    // well's hint is the row's line until a photo is held. 252 (#668):
+    // the kicker counts against the cap.
+    const row = screen.getByRole("group", { name: "Photos · 0 of 4" });
     expect(row).toContainElement(addBox());
     expect(photoInput()).toHaveAccessibleName("Add photo");
+    expect(photoInput()).toHaveAccessibleDescription(
+      "Flat on the floor works best.",
+    );
     expect(thumbnails()).toHaveLength(0);
-    expect(row).not.toHaveTextContent("Flat on the floor works best.");
+    expect(row).toHaveTextContent("Flat on the floor works best.");
     expect(row).not.toHaveTextContent("Drop a photo, or browse");
   });
 

@@ -1,4 +1,4 @@
-import { monthDayLabel, monthYearLabel } from "../../lib/dates";
+import { monthDayLabel } from "../../lib/dates";
 
 /**
  * The words inside a retired piece's tag — round 22's `[RETIRED SEP 12]`.
@@ -20,19 +20,4 @@ export function retiredLabel(
   return retiredAt === null
     ? "Retired"
     : `Retired ${monthDayLabel(retiredAt, timeZone)}`;
-}
-
-/**
- * The same retirement on F's rail card, by **month and year** — round 28
- * #13's "RETIRED MAR 2026": retired gear is read across years there, and
- * the day does not matter. Everywhere else in the closet keeps
- * `retiredLabel`'s day. Undated for the same reason.
- */
-export function retiredMonthLabel(
-  retiredAt: number | null,
-  timeZone: string | undefined,
-): string {
-  return retiredAt === null
-    ? "Retired"
-    : `Retired ${monthYearLabel(retiredAt, timeZone)}`;
 }

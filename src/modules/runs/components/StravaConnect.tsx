@@ -101,8 +101,12 @@ export function StravaConnect({
         >
           <h2 className="m-0 font-display text-lead">Disconnect Strava?</h2>
           <dl className="m-0 flex flex-col gap-2">
+            {/* One run has no plural to count (R2-RUNS-07; owner,
+                2026-11-14, on #704). */}
             <KeptOrStops word="Kept">
-              All {runCount} runs, their outfits and verdicts
+              {runCount === 1
+                ? "Your run, its outfit and verdict"
+                : `All ${String(runCount)} runs, their outfits and verdicts`}
             </KeptOrStops>
             {/* Round 25: nothing ever arrived on its own — connecting turns
                 on a reminder, so disconnecting turns off the reminder, and

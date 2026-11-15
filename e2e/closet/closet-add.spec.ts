@@ -211,8 +211,8 @@ test("F at the desk · what is already in your closet, by category and type", as
       `Patagonia ${jacket.name}`,
     );
 
-    // Round 28 #13: no photo is the hatch; a retirement reads by month and
-    // year; SAME NAME and RETIRED are ink, not a verdict's hue. Read on
+    // Round 28 #13: no photo is the hatch; SAME NAME and RETIRED are ink,
+    // not a verdict's hue. Read on
     // this spec's own row: the journey's retired shoes may be there too.
     await page.getByLabel("Category").selectOption("shoes");
     await expect(
@@ -221,10 +221,9 @@ test("F at the desk · what is already in your closet, by category and type", as
     const retired = rail
       .getByRole("listitem")
       .filter({ hasText: `Nike ${shoe.name}` });
-    // Round 56 · 248: RETIRED appears once, as the row's dated tag.
-    await expect(
-      retired.getByText(/^Retired [A-Z][a-z]{2} \d{4}$/u),
-    ).toBeVisible();
+    // Round 56 · 248: RETIRED appears once, as the row's tag, the word
+    // alone (R2-CLOSET-02).
+    await expect(retired.getByText(/^Retired$/u)).toBeVisible();
     await expect(retired.getByText(/Retired/u)).toHaveCount(1);
     await expect(
       retired.locator("[data-part='thumb'][data-state='no-photo']"),

@@ -12,9 +12,6 @@ heading, Pegasus #, level 1
 # mi logged
 ·
 # of # runs dialed
-paragraph
-Untested
-end of paragraph
 link, Edit Pegasus #
 Edit
 Pegasus #

@@ -7,6 +7,7 @@ import type {
   GarmentVisibility,
   Units,
 } from "../../../lib/contracts";
+import { coverageOfVerdicts } from "../../../lib/contracts";
 import { photoAcceptAttribute } from "../../../lib/photo-constraints";
 import {
   wholeDistanceNumber,
@@ -396,11 +397,24 @@ function Stats({
           </Bracketed>
         </p>
       ) : (
-        <p className="m-0 text-muted">
-          <Bracketed>Untested</Bracketed>
-        </p>
+        <UntestedTag verdictCount={summary.verdictCount} />
       )}
     </div>
+  );
+}
+
+/**
+ * `[UNTESTED]` keeps only the rail's meaning, no verdicts (R55·189): a
+ * shoe judged seventeen times with no range is not untested (N1-04).
+ */
+function UntestedTag({
+  verdictCount,
+}: Readonly<{ verdictCount: number }>): JSX.Element | undefined {
+  if (coverageOfVerdicts(verdictCount) !== "unknown") return;
+  return (
+    <p className="m-0 text-muted">
+      <Bracketed>Untested</Bracketed>
+    </p>
   );
 }
 
@@ -723,8 +737,11 @@ function CompositionSection({
           {wrong}
         </div>
       )}
+      {/* A step further from the credit than the credit is from what it
+          credits, so the credit reads as the composition's, not as this
+          line's heading (N1-10). */}
       {words.length > 0 ? (
-        <p className="m-0 text-body">
+        <p data-part="words" className="m-0 mt-2 text-body">
           {words.map(({ word, isLent }, index) => (
             <span key={word}>
               {index > 0 ? " · " : undefined}

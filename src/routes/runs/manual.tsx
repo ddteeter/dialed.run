@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { viewerUnitsQuery } from "../../modules/feed/functions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";
 import { ManualRunForm } from "../../modules/runs/components/ManualRunForm";
@@ -11,18 +12,28 @@ import { Page } from "../../ui";
 export const Route = createFileRoute("/runs/manual")({
   staticData: { title: "Log a run" },
   validateSearch: newRunSearch,
-  loader: async () => ({ bell: await bellStateFn() }),
+  loader: async () => {
+    const [bell, units] = await Promise.all([
+      bellStateFn(),
+      viewerUnitsQuery(),
+    ]);
+    return { bell, units };
+  },
   component: ManualRunPage,
 });
 
 function ManualRunPage() {
-  const { bell } = Route.useLoaderData();
+  const { bell, units } = Route.useLoaderData();
   const { date } = Route.useSearch();
 
   return (
     <BelledLayout {...bell}>
       <Page title="Log a run">
-        <ManualRunForm submitRun={submitManualRun} startedOn={date} />
+        <ManualRunForm
+          submitRun={submitManualRun}
+          startedOn={date}
+          distanceUnit={units.distance}
+        />
       </Page>
     </BelledLayout>
   );

@@ -89,6 +89,29 @@ export function setBandForms(
 }
 
 /**
+ * A band the runner set, as a line reads it back: `SET · 41–50° · RAIN`
+ * (round 26, item 2), the range and the sky and never the stored middle,
+ * said "Set, 41 to 50 degrees, rain" (round 53 · 162.3). A band set before
+ * the sheet asked for a sky, or read where the sky isn't carried, is
+ * `SET · 41–50°`. The runs list's badge and the backlog's conditions cell
+ * (R2-RUNS-04) both read it here.
+ */
+export function setConditionsForms(
+  storedC: number,
+  sky: ManualSky | undefined,
+  unit: TempUnit,
+): { shown: string; said: string } {
+  const band = setBandForms(storedC, unit);
+  if (sky === undefined)
+    return { shown: `Set · ${band.shown}`, said: `Set, ${band.said}` };
+  const word = SKY_WORDS[sky];
+  return {
+    shown: `Set · ${band.shown} · ${word}`,
+    said: `Set, ${band.said}, ${word.toLowerCase()}`,
+  };
+}
+
+/**
  * Whether a run shows the provider's reading — what Visual Crossing's
  * licence asks to be credited beside (D-144). A band the runner set in R2b
  * is theirs and owes nobody; no conditions carry nothing to credit.

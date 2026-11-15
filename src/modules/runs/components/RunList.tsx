@@ -16,12 +16,8 @@ import {
   Spoken,
   WeatherAttribution,
 } from "../../../ui";
-import {
-  hasProvidersReading,
-  setBandForms,
-  SKY_WORDS,
-} from "../run-conditions";
-import type { RunConditions, RunSummary } from "../service";
+import { hasProvidersReading, setConditionsForms } from "../run-conditions";
+import type { RunSummary } from "../service";
 import { listedSince, runMonths } from "../run-months";
 import { SetConditionsSheet } from "./SetConditionsSheet";
 import type { ConditionsActions } from "./SetConditionsSheet";
@@ -149,13 +145,22 @@ function RunRow({
     >
       <div className="flex min-w-0 flex-col gap-1">
         <RunLink run={run} units={units} />
-        <div className="flex min-w-0 items-center gap-2">
+        {/* Wraps rather than shrinks (R2-RUNS-02): the distance and the
+            badge are never cut, and neither is the Garmin credit (Garmin
+            Rulings 77), so on a row too narrow for all three the credit
+            takes its own line, as on the feed card. A guess until Design
+            314 (#760) rules between 77 and 235's one line. */}
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
           <MetaLine run={run} units={units} />
           <RunBadge run={run} units={units} onSet={onSet} />
           {/* Once per row: a header line would claim the whole of a
               mixed list (G1). Sentence case and sans, never the mono
               line's capitals, so it stays beside the line, not in it. */}
-          <GarminAttribution deviceName={run.deviceName} />
+          {run.deviceName === undefined ? undefined : (
+            <div data-part="watch" className="whitespace-nowrap">
+              <GarminAttribution deviceName={run.deviceName} />
+            </div>
+          )}
         </div>
       </div>
       <Marks run={run} />
@@ -269,26 +274,6 @@ function MetaLine({
 }
 
 /**
- * The badge of a run whose conditions the runner set: `SET · 41–50° ·
- * RAIN` (round 26, item 2) — the range and the sky, never the stored
- * middle — said "Set, 41 to 50 degrees, rain" (round 53 · 162.3). A band
- * set before the sheet asked for a sky has none to show.
- */
-function setBadge(
-  conditions: Pick<RunConditions, "tempC" | "sky">,
-  units: Units,
-): { shown: string; said: string } {
-  const band = setBandForms(conditions.tempC, units.temp);
-  if (conditions.sky === undefined)
-    return { shown: `Set · ${band.shown}`, said: `Set, ${band.said}` };
-  const sky = SKY_WORDS[conditions.sky];
-  return {
-    shown: `Set · ${band.shown} · ${sky}`,
-    said: `Set, ${band.said}, ${sky.toLowerCase()}`,
-  };
-}
-
-/**
  * Every badge on the list is one pill, 22 tall (Round 55 · 235b): MONO.xs
  * on SPACE[1] above and below, inside a hairline.
  */
@@ -313,7 +298,13 @@ function RunBadge({
   if (run.conditions?.isSetByYou === true) {
     return (
       <Mono step="xs" className={FACT_BADGE}>
-        <Spoken {...setBadge(run.conditions, units)} />
+        <Spoken
+          {...setConditionsForms(
+            run.conditions.tempC,
+            run.conditions.sky,
+            units.temp,
+          )}
+        />
       </Mono>
     );
   }

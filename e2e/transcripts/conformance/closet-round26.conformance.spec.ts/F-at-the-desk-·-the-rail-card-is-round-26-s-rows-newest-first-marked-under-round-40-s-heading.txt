@@ -177,7 +177,7 @@ listitem, level 1, position 4, set size 4
 Janji Rover Half-zip
 # runs ·
 # of # runs dialed
-Same name · Retired :month #
+Same name · Retired
 end of listitem, level 1, position 4, set size 4
 end of list
 end of main

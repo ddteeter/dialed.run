@@ -44,7 +44,15 @@ describe("RailCard", () => {
 
     const heading = screen.getByRole("heading", { level: 2, name: "This run" });
     const card = heading.closest("section");
-    expect(card).toHaveClass("border-hairline");
+    // Filled on --panel inside a hairline edge, as the boards draw every
+    // rail card (round 25's This run; 248's closet card; R2-CLOSET-03).
+    expect(card).toHaveClass(
+      "rounded-card",
+      "border",
+      "border-hairline",
+      "bg-panel",
+      "p-4",
+    );
     expect(within(card ?? document.body).getByText("6.2 mi")).toBeVisible();
     // The mono title: MONO.xs, caps by CSS so the name stays as written.
     expect(within(heading).getByText("This run")).toHaveClass(

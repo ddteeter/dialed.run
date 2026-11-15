@@ -24,7 +24,7 @@ export function formatDistance(distanceM: number, unit: DistanceUnit): string {
 /**
  * Metres in one of the runner's distance units.
  */
-function metresPer(unit: DistanceUnit): number {
+export function metresPer(unit: DistanceUnit): number {
   return unit === "km" ? METRES_PER_KM : METRES_PER_MILE;
 }
 
@@ -498,5 +498,28 @@ export function spanInUnit(
   return {
     shown: `${String(low)}–${String(high)}°${unit.toUpperCase()}`,
     said: `${span(low, high)} ${TEMP_UNIT_WORD[unit]}`,
+  };
+}
+
+/**
+ * Closet C's WORKS AT header with one end open, in the reader's unit and
+ * with its letter, as the FILTERED line words it: `61°F+`, said "61
+ * degrees Fahrenheit and up", or `under 58°F`, said "under 58 degrees
+ * Fahrenheit" (C-14). Both ends are `spanInUnit`.
+ */
+export function openSpanInUnit(
+  end: { low: number } | { high: number },
+  unit: TempUnit,
+): { shown: string; said: string } {
+  const letter = `°${unit.toUpperCase()}`;
+  if ("low" in end) {
+    return {
+      shown: `${String(end.low)}${letter}+`,
+      said: `${degrees(end.low)} ${TEMP_UNIT_WORD[unit]} and up`,
+    };
+  }
+  return {
+    shown: `under ${String(end.high)}${letter}`,
+    said: `under ${degrees(end.high)} ${TEMP_UNIT_WORD[unit]}`,
   };
 }

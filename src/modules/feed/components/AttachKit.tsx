@@ -475,13 +475,16 @@ export function AttachKit(props: Readonly<AttachKitProps>): JSX.Element {
               onPush={props.onPush}
             />
 
-            {/* Design 252 (#668): up to the cap, each sent in order.
-                Design 253 (#669): no dashed well, only the add box. */}
+            {/* Design 252 (#668): up to the cap, each sent in order, the
+                kicker counting against it. Design 253 (#669): no dashed
+                well, only the add box, and the well's hint is the row's
+                line until a photo is held. */}
             <PhotoRow
-              kicker="Outfit photo · optional"
+              kicker="Photos"
               photos={held.photos}
               add={{
                 max: maxPhotosPerEntry,
+                hint: "Flat on the floor works best.",
                 accept: photoAcceptAttribute,
                 pending: held.isBusy,
                 error: held.photoError,

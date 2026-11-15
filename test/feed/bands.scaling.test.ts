@@ -177,7 +177,9 @@ describe("verdictedEntriesInBand's readers (entries.ts:402)", () => {
     // BAND_RUNS_SHOWN: the rail shows three, read in one statement.
     expect(twentyFive.result).toHaveLength(3);
     expect(twentyFive.result?.[0]?.pieces).toHaveLength(1);
-    expectFlat(one.counts, twentyFive.counts, walk + 1);
+    // The walk, the shown runs' kits, and the runner's home zone, one
+    // profile row for dating a run whose conditions carry no zone (P2a-02).
+    expectFlat(one.counts, twentyFive.counts, walk + 2);
   });
 
   it("bandSignalsForEntry: the same queries for 1 entry or 25", async () => {

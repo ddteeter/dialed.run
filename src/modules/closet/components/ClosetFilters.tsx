@@ -67,13 +67,38 @@ export interface ClosetFiltersProps {
  * What the two share is its own constant, `target` in it, so a reader —
  * and the 44px check, which resolves string constants only — sees it.
  */
-const CHOICE_BASE = "target flex items-center gap-2 text-ink no-underline";
+const CHOICE_BASE =
+  "group target flex items-center gap-2 text-ink no-underline";
 
 const CHOICE_CLASS: Readonly<Record<FiltersVariant, string>> = {
   rail: "w-full justify-between text-body [&[aria-current]]:font-bold aria-pressed:font-bold",
   chips:
     "rounded-pill border border-hairline px-3 py-1 text-small [&[aria-current]]:border-ink [&[aria-current]]:bg-ink [&[aria-current]]:text-ground aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-ground",
 };
+
+/**
+ * A choice's count. On a chosen chip it takes the chip's ground-coloured
+ * text, as the label does: `--label` on an ink chip was 3.8:1 in light and
+ * 3.0:1 in dark for 10px mono (R2-CLOSET-08). A chosen rail row only goes
+ * bold, so its count stays `--label`.
+ */
+const COUNT_CLASS: Readonly<Record<FiltersVariant, string>> = {
+  rail: "text-label",
+  chips:
+    "text-label group-aria-pressed:text-ground group-[[aria-current]]:text-ground",
+};
+
+/**
+ * A rail label's two copies, the seen one and the unseen bold one that
+ * holds the cell's width (C-11). Each lays its swatch and word out with
+ * the row's own gap, and starts at the cell's left, so a lighter label is
+ * not centred in the bold width and pressing a row moves nothing
+ * (R2-CLOSET-04).
+ */
+const LABEL_COPY_CLASS =
+  "col-start-1 row-start-1 inline-flex items-center gap-2";
+const LABEL_HOLD_CLASS =
+  "invisible col-start-1 row-start-1 inline-flex items-center gap-2 font-bold";
 
 const GROUP_CLASS: Readonly<Record<FiltersVariant, string>> = {
   rail: "m-0 flex list-none flex-col gap-2 p-0",
@@ -113,19 +138,19 @@ function OptionBody({
   return (
     <>
       {variant === "rail" ? (
-        <span data-part="option-label" className="inline-grid">
-          <span className="col-start-1 row-start-1">{option.label}</span>
-          <span
-            aria-hidden="true"
-            className="invisible col-start-1 row-start-1 font-bold"
-          >
+        <span
+          data-part="option-label"
+          className="inline-grid justify-items-start text-left"
+        >
+          <span className={LABEL_COPY_CLASS}>{option.label}</span>
+          <span aria-hidden="true" className={LABEL_HOLD_CLASS}>
             {option.label}
           </span>
         </span>
       ) : (
         option.label
       )}{" "}
-      <Mono step="xs" className="text-label">
+      <Mono step="xs" className={COUNT_CLASS[variant]}>
         {option.count}
       </Mono>
     </>

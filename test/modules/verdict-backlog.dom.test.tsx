@@ -125,6 +125,13 @@ const here = (): HTMLElement => {
 const slot = (name: RegExp) => screen.getByRole("button", { name });
 
 /**
+ * The word a segment draws: its first span's, without the unseen widest
+ * word every desk segment holds for its width.
+ */
+const drawnWord = (button: HTMLElement): string | null | undefined =>
+  button.querySelector(":scope > span > span:not([aria-hidden])")?.textContent;
+
+/**
  * A promise this test resolves when it chooses, so the in-flight state is
  * reachable at all — a pending state visible only for a tick is one a test
  * races. `Promise.withResolvers` is the platform's own spelling and the
@@ -305,7 +312,7 @@ describe("VerdictBacklog: the keyboard", () => {
     // The five are the row's pressable buttons; Use and Pick name the row
     // too, but press nothing.
     const slots = screen.getAllByRole("button", { pressed: false });
-    expect(slots.map((slot) => slot.textContent)).toStrictEqual([
+    expect(slots.map((slot) => drawnWord(slot))).toStrictEqual([
       "Way cold",
       "A bit cold",
       "Dialed",
@@ -590,7 +597,7 @@ describe("VerdictBacklog: what each state is drawn as", () => {
         "desk:px-2",
       );
       // The capitals are CSS: the name a reader hears stays in words.
-      expect(slot(name).textContent).toMatch(/^[A-Z][a-z ]+$/u);
+      expect(drawnWord(slot(name))).toMatch(/^[A-Z][a-z ]+$/u);
     }
 
     fireEvent.click(slot(/^Way cold/));
@@ -665,12 +672,52 @@ describe("VerdictBacklog: what each state is drawn as", () => {
     expect(line.parentElement).toHaveClass("text-mono-sm", "text-dialed-text");
   });
 
+  it("reads a band the runner set as the list does, never its stored middle (R2-RUNS-04)", async () => {
+    // The stored row the weather module writes for a band: its middle,
+    // the storage word and a wind of zero nobody measured.
+    await renderTable([
+      row({
+        conditions: {
+          ...conditions,
+          tempC: 11,
+          feelsLikeC: 11,
+          condition: "manual",
+          windKph: 0,
+          source: "manual",
+          sky: "dry",
+        },
+      }),
+    ]);
+
+    const line = screen.getByText("Set · 47–56° · Dry");
+    expect(line).toHaveAttribute("aria-hidden", "true");
+    expect(line.parentElement).toHaveClass("text-mono-sm", "text-label");
+    expect(line.parentElement).not.toHaveClass("text-dialed-text");
+    expect(screen.getByText("Set, 47 to 56 degrees, dry")).toHaveClass(
+      "sr-only",
+    );
+    expect(screen.queryByText(/manual|0mph|52°/i)).toBeNull();
+  });
+
+  it("reads a band set before the sheet asked for a sky as its range alone", async () => {
+    await renderTable([
+      row({
+        conditions: { ...conditions, tempC: 11, source: "manual" },
+      }),
+    ]);
+
+    expect(screen.getByText("Set · 47–56°")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+  });
+
   it("says how long and how far, in the viewer's own units", async () => {
     await renderTable([row()]);
 
     // The time is drawn as a clock and said in words: "40:00" reads as a
     // time of day. The distance with it is said in full (round 52 #158).
-    const line = screen.getByText("40:00 · 5.0mi");
+    const line = screen.getByText("40:00 · 5.0 mi");
     expect(line).toHaveAttribute("aria-hidden", "true");
     expect(screen.getByText("40 minutes, 5.0 miles")).toHaveClass("sr-only");
   });
@@ -946,7 +993,27 @@ describe("VerdictBacklog: below the desk, one card per run (Round 55 · 236)", (
     const segments = within(rowsOf()[0] ?? document.body).getByRole("button", {
       name: /^Way cold/,
     }).parentElement;
-    expect(segments).toHaveClass("grid", "grid-cols-5", "gap-1", "desk:flex");
+    // Equal columns at the desk too, as 236a draws them (R2-RUNS-05).
+    expect(segments).toHaveAttribute("data-part", "verdict-segments");
+    expect(segments).toHaveClass(
+      "grid",
+      "grid-cols-5",
+      "gap-1",
+      "desk:grid-cols-[repeat(5,1fr)]",
+    );
+    expect(segments).not.toHaveClass("desk:flex");
+    // The widest word, held unseen in each desk segment so the five are
+    // one width, and heard by nobody (the name is the aria-label).
+    const ghost = segments?.querySelector("[aria-hidden='true']");
+    expect(ghost).toHaveTextContent("A bit cold");
+    expect(ghost).toHaveClass("invisible", "hidden", "desk:block");
+    // Each button's floor is its words at the desk, so 1fr tracks come
+    // out as wide as the widest word, never cut by the outfit cell.
+    const buttons = [...(segments?.children ?? [])];
+    expect(buttons).toHaveLength(5);
+    for (const each of buttons) {
+      expect(each).toHaveClass("target", "desk:min-w-max");
+    }
     // Nothing to skip to: every run is on the page.
     expect(screen.queryByRole("button", { name: "Skip" })).toBeNull();
   });
@@ -997,6 +1064,69 @@ describe("VerdictBacklog: below the desk, one card per run (Round 55 · 236)", (
         },
       });
     });
+  });
+});
+
+describe("VerdictBacklog: the desk's one card (Round 55 · 236a, R2-RUNS-05)", () => {
+  const many = Array.from({ length: 11 }, (_unused, index) =>
+    row({
+      runId: `01RUN${String(index).padStart(2, "0")}`,
+      startedAt: MONDAY + index * 86_400,
+      suggestion: undefined,
+    }),
+  );
+
+  it("sits the table on one --panel card with a hairline edge at the desk", async () => {
+    await renderTable([row()]);
+
+    const card = screen.getByRole("table").parentElement;
+    expect(card).toHaveAttribute("data-part", "backlog-card");
+    expect(card).toHaveClass(
+      "desk:overflow-hidden",
+      "desk:rounded-card",
+      "desk:border",
+      "desk:border-hairline",
+      "desk:bg-panel",
+    );
+    // The card's edge closes the table: its last row draws no rule.
+    expect(rowsOf()[0]).toHaveClass("desk:last:border-b-0");
+  });
+
+  it("lists the first eight runs, then Show N more, which lists the rest", async () => {
+    await renderTable(many);
+
+    expect(rowsOf()).toHaveLength(8);
+    const more = screen.getByRole("button", { name: "Show 3 more" });
+    expect(more).toHaveClass("target", "text-small", "underline");
+    // The count beneath still counts every run that needs one.
+    expect(screen.getByText(/0 of 11 saved/i)).toBeInTheDocument();
+
+    fireEvent.click(more);
+
+    expect(rowsOf()).toHaveLength(11);
+    expect(screen.queryByRole("button", { name: /more$/ })).toBeNull();
+  });
+
+  it("draws the rest once the arrows move past the eighth row", async () => {
+    await renderTable(many);
+
+    for (let step = 0; step < 7; step += 1) {
+      fireEvent.keyDown(here(), { key: "ArrowDown" });
+    }
+    expect(rowsOf()).toHaveLength(8);
+    expect(rowsOf()[7]).toHaveAttribute("aria-current", "true");
+
+    fireEvent.keyDown(here(), { key: "ArrowDown" });
+
+    expect(rowsOf()).toHaveLength(11);
+    expect(rowsOf()[8]).toHaveAttribute("aria-current", "true");
+  });
+
+  it("offers no Show more for eight runs or fewer", async () => {
+    await renderTable(many.slice(0, 8));
+
+    expect(rowsOf()).toHaveLength(8);
+    expect(screen.queryByRole("button", { name: /more$/ })).toBeNull();
   });
 });
 

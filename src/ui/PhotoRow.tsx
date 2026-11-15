@@ -23,8 +23,12 @@ import { messageIdFor } from "./use-form-submit";
  *   photo, then adds one.
  * - **Remove** is in the viewer's foot (249.3). It closes the viewer, and
  *   focus goes to the next thumbnail, else the add box. A plain close puts focus back on the thumbnail that opened it.
- * - **The line under the row**, "Press a photo to see it whole or remove
- *   it." (249.2), shows while there is a photo to press.
+ * - **The kicker counts against the cap**: "PHOTOS · 2 OF 4", and "PHOTOS
+ *   · 0 OF 4" with none (Round 57 · 252, #668).
+ * - **The line under the row** is the host's hint until a photo is held
+ *   (A2's "Flat on the floor works best."), then "Press a photo to see it
+ *   whole or remove it." (249.2) takes its place, in TYPE.small `--quiet`.
+ *   It is the add box's description too (Round 57 · 253, #669).
  *
  * The closet's garment forms keep `FileWell`'s one photo well (249.5).
  */
@@ -35,8 +39,8 @@ export function PhotoRow({
   onRemove,
 }: Readonly<{
   /**
-  The MONO line over the row, "Outfit photo · optional", and the name of
-  the group the row is.
+  The MONO line's word over the row, "Photos", which the count follows;
+  with it, the name of the group the row is.
   */
   kicker: string;
   photos: readonly ViewedPhoto[];
@@ -46,10 +50,11 @@ export function PhotoRow({
   add: AddPhoto;
   onRemove: (index: number) => void;
 }>): JSX.Element {
-  const { max, accept, pending, error, onFiles, inputRef } = add;
+  const { max, accept, pending, error, onFiles, inputRef, hint } = add;
   const focus = useRowFocus(photos.length);
   const [openAt, setOpenAt] = useState<number | undefined>();
   const kickerId = useId();
+  const hintId = `${kickerId}-hint`;
 
   return (
     <div
@@ -58,7 +63,7 @@ export function PhotoRow({
       className="flex flex-col gap-2"
     >
       <Mono id={kickerId} step="xs" className="text-muted">
-        {kicker}
+        {`${kicker} · ${String(photos.length)} of ${String(max)}`}
       </Mono>
       <ul
         data-part="photo-row"
@@ -93,15 +98,18 @@ export function PhotoRow({
               error={error}
               onFiles={onFiles}
               inputRef={focus.mergeAddRef(inputRef)}
+              hintId={hintId}
             />
           </li>
         ) : undefined}
       </ul>
-      {photos.length > 0 ? (
-        <p data-part="photo-row-hint" className="m-0 text-small text-label">
-          Press a photo to see it whole or remove it.
-        </p>
-      ) : undefined}
+      <p
+        id={hintId}
+        data-part="photo-row-hint"
+        className="m-0 text-small text-quiet"
+      >
+        {photos.length > 0 ? PRESS_HINT : hint}
+      </p>
       <FieldMessage name={PART} error={error} />
       {openAt === undefined ? undefined : (
         <PhotoViewer
@@ -131,6 +139,11 @@ type AddPhoto = Readonly<{
   leaves once the row holds this many.
   */
   max: number;
+  /**
+  The row's line while it holds no photo, which describes the add box:
+  what helps the first one (253).
+  */
+  hint: string;
   accept: string;
   pending: boolean;
   /**
@@ -144,6 +157,11 @@ type AddPhoto = Readonly<{
   */
   inputRef?: Ref<HTMLInputElement> | undefined;
 }>;
+
+/**
+The row's line once there is a photo to press (249.2).
+*/
+const PRESS_HINT = "Press a photo to see it whole or remove it.";
 
 /**
 The row's field name, for its message and the input that message describes.
@@ -164,12 +182,17 @@ function AddBox({
   error,
   onFiles,
   inputRef,
+  hintId,
 }: Readonly<{
   accept: string;
   pending: boolean;
   error: string | undefined;
   onFiles: (files: FileList | null) => void;
   inputRef: Ref<HTMLInputElement>;
+  /**
+  The row's line, which is the box's description (253).
+  */
+  hintId: string;
 }>): JSX.Element {
   const drop = useFileDrop(onFiles);
   return (
@@ -194,7 +217,9 @@ function AddBox({
         type="file"
         accept={accept}
         aria-invalid={error === undefined ? undefined : true}
-        aria-describedby={error === undefined ? undefined : messageIdFor(PART)}
+        aria-describedby={
+          error === undefined ? hintId : `${messageIdFor(PART)} ${hintId}`
+        }
         {...inFlight(pending)}
         className="sr-only"
         onChange={(event) => {

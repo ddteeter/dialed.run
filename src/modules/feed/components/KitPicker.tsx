@@ -1,7 +1,6 @@
 import type { JSX, ReactNode } from "react";
 import { useState } from "react";
 
-import { garmentCategoryLabels } from "../../../lib/contracts";
 import type { Units } from "../../../lib/contracts";
 import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
 import { Bracketed, FieldMessage, Icon, Mono, Sheet } from "../../../ui";
@@ -105,13 +104,6 @@ function FilterChip({
 }
 
 /**
-The word a category goes by, for a tile with no photo.
-*/
-const TYPE_WORDS: ReadonlyMap<string, string> = new Map(
-  Object.entries(garmentCategoryLabels),
-);
-
-/**
  * The tile's well (Round 55 · 239): a 72 square holding the piece's photo,
  * cropped to fill it as the closet's tile crops it, or — with no photo —
  * the hatch that means "no photo" with the piece's type word in it.
@@ -164,12 +156,16 @@ function PieceTile({
         className={pressed ? well.pressed : well.resting}
       >
         {item.photo === undefined ? (
-          TYPE_WORDS.get(item.category)
+          item.typeWord
         ) : (
           <img src={item.photo} alt="" className={TILE_PHOTO_CLASS} />
         )}
       </span>
-      <span className="line-clamp-2 text-small">{fullName(item)}</span>
+      {/* A word wider than the tile breaks inside it rather than being
+          sliced at its edge (R2-RUNS-03): never cut inside the tile. */}
+      <span className="line-clamp-2 text-small wrap-break-word">
+        {fullName(item)}
+      </span>
     </button>
   );
 }

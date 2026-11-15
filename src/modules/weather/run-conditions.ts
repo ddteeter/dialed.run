@@ -98,6 +98,10 @@ export async function conditionsForRuns(
         windKph: band.windKph,
         source: band.source,
         span: pointSpan(band.tempC, band.feelsLikeC),
+        // The picked sky, so a band reads back whole wherever it is
+        // drawn (R2-RUNS-04). Absent rather than undefined on a band set
+        // before the sheet asked.
+        ...(band.sky !== undefined && { sky: band.sky }),
       });
       continue;
     }

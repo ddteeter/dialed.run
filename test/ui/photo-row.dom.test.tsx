@@ -35,9 +35,17 @@ function Host({
   const [photos, setPhotos] = useState(start);
   return (
     <PhotoRow
-      kicker="Outfit photo · optional"
+      kicker="Photos"
       photos={photos}
-      add={{ max, accept: "image/png", pending, error, onFiles, inputRef }}
+      add={{
+        max,
+        hint: "Flat on the floor works best.",
+        accept: "image/png",
+        pending,
+        error,
+        onFiles,
+        inputRef,
+      }}
       onRemove={(index) => {
         setPhotos((held) => held.filter((_, at) => at !== index));
       }}
@@ -52,10 +60,11 @@ function Filling({ start }: Readonly<{ start: typeof all }>) {
   const [photos, setPhotos] = useState(start);
   return (
     <PhotoRow
-      kicker="Outfit photo · optional"
+      kicker="Photos"
       photos={photos}
       add={{
         max: 4,
+        hint: "Flat on the floor works best.",
         accept: "image/png",
         pending: false,
         error: undefined,
@@ -75,10 +84,11 @@ own would.
 function Held({ photos }: Readonly<{ photos: typeof all }>) {
   return (
     <PhotoRow
-      kicker="Outfit photo · optional"
+      kicker="Photos"
       photos={photos}
       add={{
         max: 4,
+        hint: "Flat on the floor works best.",
         accept: "image/png",
         pending: false,
         error: undefined,
@@ -144,27 +154,50 @@ describe("PhotoRow", () => {
   });
 
   it("says what a photo does under the row, while there is one", () => {
-    // 249.2's line under the row.
-    const { unmount } = render(<Host />);
+    // 249.2's line under the row, in TYPE.small --quiet (253).
+    render(<Host />);
     const line = screen.getByText(
       "Press a photo to see it whole or remove it.",
     );
-    expect(line).toHaveClass("text-small", "text-label");
+    expect(line).toHaveClass("m-0", "text-small", "text-quiet");
     expect(line.previousElementSibling).toBe(screen.getByRole("list"));
-    unmount();
+    expect(screen.queryByText("Flat on the floor works best.")).toBeNull();
+  });
+
+  it("gives the host's hint as the row's line until a photo is held (Round 57 · 253)", () => {
     render(<Host start={[]} />);
+    const line = screen.getByText("Flat on the floor works best.");
+    expect(line).toHaveClass("m-0", "text-small", "text-quiet");
+    expect(line.previousElementSibling).toBe(screen.getByRole("list"));
     expect(screen.queryByText(/^Press a photo/u)).toBeNull();
   });
 
-  it("is a group named by its kicker", () => {
+  it("describes the add box by the row's line, whichever it is (253)", () => {
+    const { unmount } = render(<Host start={[]} />);
+    expect(addInput()).toHaveAccessibleDescription(
+      "Flat on the floor works best.",
+    );
+    unmount();
+    render(<Host />);
+    expect(addInput()).toHaveAccessibleDescription(
+      "Press a photo to see it whole or remove it.",
+    );
+  });
+
+  it("is a group named by its kicker, which counts against the cap (Round 57 · 252)", () => {
     render(<Host />);
     expect(
-      screen.getByRole("group", { name: "Outfit photo · optional" }),
+      screen.getByRole("group", { name: "Photos · 3 of 4" }),
     ).toContainElement(screen.getByRole("list"));
-    expect(screen.getByText("Outfit photo · optional")).toHaveClass(
+    expect(screen.getByText("Photos · 3 of 4")).toHaveClass(
       "text-mono-xs",
       "text-muted",
     );
+  });
+
+  it("counts none as 0 of the cap", () => {
+    render(<Host start={[]} max={4} />);
+    expect(screen.getByText("Photos · 0 of 4")).toBeInTheDocument();
   });
 
   it("drops the add box at the cap", () => {
@@ -224,16 +257,21 @@ describe("PhotoRow", () => {
     render(<Host error="Photos must be JPEG or PNG." />);
     const input = addInput();
     expect(input).toHaveAttribute("aria-invalid", "true");
-    expect(input).toHaveAccessibleDescription("Photos must be JPEG or PNG.");
+    // The message first, then the row's line.
+    expect(input).toHaveAccessibleDescription(
+      "Photos must be JPEG or PNG. Press a photo to see it whole or remove it.",
+    );
     // The row's own name, not just any id the message happens to share.
-    expect(input).toHaveAttribute("aria-describedby", "photo-row-message");
+    expect(input.getAttribute("aria-describedby")).toMatch(
+      /^photo-row-message /u,
+    );
   });
 
-  it("leaves a good input unmarked", () => {
+  it("leaves a good input unmarked, described by the row's line alone", () => {
     render(<Host />);
     const input = addInput();
     expect(input).not.toHaveAttribute("aria-invalid");
-    expect(input).not.toHaveAttribute("aria-describedby");
+    expect(input.getAttribute("aria-describedby")).not.toMatch(/message/u);
   });
 
   it("hands the add box's input to the host's ref, object or callback", () => {

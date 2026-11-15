@@ -250,6 +250,19 @@ describe("a run's own band (B1)", () => {
     });
   });
 
+  it("carries the sky its runner picked, so the band reads back whole (R2-RUNS-04)", async () => {
+    const userId = await makeUser();
+    const runId = await makeRun({ userId, lat: 47.12, lng: -93.27 });
+    await makeManualBand(runId, 12.5, "damp");
+
+    const observations = await observationsForRuns([
+      { id: runId, lat: 47.12, lng: -93.27, startedAt: NOW, durationS: 0 },
+    ]);
+
+    expect(observations.get(runId)?.sky).toBe("damp");
+    expect(observations.get(runId)?.source).toBe("manual");
+  });
+
   it("wins over a real reading someone else's run fetched into the cell", async () => {
     const userId = await makeUser();
     const runId = await makeRun({ userId, lat: 47.22, lng: -93.27 });
@@ -297,7 +310,6 @@ describe("a run's own band (B1)", () => {
     expect(observations.get(mine)?.tempC).toBe(3);
     expect(observations.get(mine)?.source).toBe("visualcrossing");
   });
-
 });
 
 describe("the run's own zone (R-96)", () => {

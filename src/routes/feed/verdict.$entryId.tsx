@@ -16,7 +16,10 @@ import {
 } from "../../modules/feed/functions";
 import { orBackToFeed, requireSignedIn } from "../../modules/feed/redirect";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
-import { bellStateFn } from "../../modules/notifications/functions";
+import {
+  bellStateFn,
+  viewerZoneFn,
+} from "../../modules/notifications/functions";
 import { PrivateRunLine } from "../../modules/onboarding/components/PrivateRunLine";
 import {
   countInTotalsQuery,
@@ -42,12 +45,14 @@ export const Route = createFileRoute("/feed/verdict/$entryId")({
       .emailVerified,
   }),
   loader: async ({ params, context }) => {
-    const [found, units, { countInTotals }, bell] = await Promise.all([
-      entryDetailQuery({ data: { entryId: params.entryId } }),
-      viewerUnitsQuery(),
-      countInTotalsQuery(),
-      bellStateFn(),
-    ]);
+    const [found, units, { countInTotals }, bell, { homeZone }] =
+      await Promise.all([
+        entryDetailQuery({ data: { entryId: params.entryId } }),
+        viewerUnitsQuery(),
+        countInTotalsQuery(),
+        bellStateFn(),
+        viewerZoneFn(),
+      ]);
     const entry = orBackToFeed(found);
     // R-140: the band where it was, as on the entry page — a runner is sent
     // here straight after logging, which is when a removal is likeliest to
@@ -59,6 +64,7 @@ export const Route = createFileRoute("/feed/verdict/$entryId")({
       entry,
       removals,
       units,
+      homeZone,
       isVerified: context.isVerified,
       countInTotals,
       bell,
@@ -87,6 +93,7 @@ function VerdictPage() {
     bandFloor,
     history,
     units,
+    homeZone,
     isVerified,
     countInTotals,
     removals,
@@ -104,6 +111,7 @@ function VerdictPage() {
         bandFloor={bandFloor}
         history={history}
         units={units}
+        homeZone={homeZone}
         submitVerdict={submitVerdictAction}
         itemBandWearStat={itemBandWearStatQuery}
         isVerified={isVerified}

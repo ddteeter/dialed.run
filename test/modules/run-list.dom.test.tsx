@@ -122,7 +122,34 @@ describe("R: a row (Round 55 · 235)", () => {
     ).toEqual([1, 0]);
     const credit = rowAt(0).querySelector("[data-part='garmin-attribution']");
     expect(credit).toHaveTextContent("Garmin");
-    expect(credit?.previousElementSibling).toHaveTextContent("41°F damp");
+    expect(credit?.parentElement?.previousElementSibling).toHaveTextContent(
+      "41°F damp",
+    );
+  });
+
+  it("wraps the Garmin credit whole onto its own line rather than cutting anything (R2-RUNS-02)", async () => {
+    await renderWithRouter(
+      list([
+        runSummary({
+          id: "g",
+          deviceName: "Forerunner 265",
+          conditions: SET_BY_YOU,
+        }),
+      ]),
+    );
+
+    const credit = onlyRow().querySelector("[data-part='garmin-attribution']");
+    const watch = credit?.parentElement;
+    expect(watch).toHaveAttribute("data-part", "watch");
+    expect(watch).toHaveClass("whitespace-nowrap");
+    expect(watch).not.toHaveClass("truncate");
+    expect(watch?.parentElement).toHaveClass("flex-wrap", "gap-x-2", "gap-y-1");
+  });
+
+  it("draws no watch wrapper on a run that isn't Garmin's", async () => {
+    await renderWithRouter(list([runSummary({ conditions: SET_BY_YOU })]));
+
+    expect(onlyRow().querySelector("[data-part='watch']")).toBeNull();
   });
 
   it("opens run detail for a run with no entry", async () => {

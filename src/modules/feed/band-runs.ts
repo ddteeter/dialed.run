@@ -10,6 +10,7 @@ import {
 import { coreDb } from "../../env";
 import { monthDayLabel } from "../../lib/dates";
 import { ulidSchema } from "../../lib/ids";
+import { viewerZone } from "../notifications";
 import { verdictedEntriesInBand } from "./entries";
 import type { InBandEntry } from "./entries";
 import { runDayOf } from "./public-kit";
@@ -56,11 +57,13 @@ export async function recentRunsInBand(
   bandFloorC: number,
   excludeEntryId?: string,
 ): Promise<BandRun[]> {
-  const inBand = await verdictedEntriesInBand(
-    userId,
-    bandFloorC,
-    excludeEntryId,
-  );
+  // The runner's own zone, for a run whose conditions carry none (an
+  // indoor run, one with no weather, a band they set): A2's card then
+  // dates it as the runs list does, not a day off in UTC (P2a-02).
+  const [inBand, home] = await Promise.all([
+    verdictedEntriesInBand(userId, bandFloorC, excludeEntryId),
+    viewerZone(coreDb(), userId),
+  ]);
   const shown = inBand.slice(0, BAND_RUNS_SHOWN);
   const rows = await shownRunsAndKits(shown.map((entry) => entry.id));
   // Every entry has its run, so every shown entry has a row here: a kit
@@ -71,7 +74,7 @@ export async function recentRunsInBand(
     day: runDayOf(
       startedAt.get(entry.id) ?? 0,
       entry.conditions,
-      undefined,
+      home.homeZone,
       monthDayLabel,
     ),
     pieces: rows.filter(pieceOf(entry.id)).map(({ itemId, name }) => ({

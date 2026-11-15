@@ -250,6 +250,15 @@ describe("GarmentDetail: the shop page and its one line (round 43 #94-95)", () =
     expect(screen.getByText("midweight")).toHaveClass("text-ink");
   });
 
+  it("sets the words a step below the credit, so the credit reads as the composition's (N1-10)", async () => {
+    await renderWithRouter(
+      linked({ link: LINK, outcome: FOUND, specSource: "janji.com" }),
+    );
+    const words = screen.getByText("midweight").closest("p");
+    expect(words).toHaveAttribute("data-part", "words");
+    expect(words).toHaveClass("mt-2", "text-body");
+  });
+
   it("draws the link with no line under it before enrichment has an outcome", async () => {
     await renderWithRouter(
       linked({ link: LINK, outcome: undefined, specSource: undefined }),

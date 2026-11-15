@@ -207,10 +207,15 @@ const QUESTION_ID = "verdict-question";
 function RunHeader({
   entry,
   units,
-}: Readonly<{ entry: Entry; units: Units }>): JSX.Element {
-  const zone = entry.conditions?.timeZone;
-  // Marked UTC when the run has no zone, as the This run card is (P2a-02).
-  const when = `${dayLabel(entry.startedAt, zone)} · ${viewerClockLabel(entry.startedAt, { homeZone: zone })}`;
+  clockZone,
+}: Readonly<{
+  entry: Entry;
+  units: Units;
+  clockZone: string | undefined;
+}>): JSX.Element {
+  // On the run's clock (`clockOf`), as the runs list reads it; marked UTC
+  // only when neither the run nor the runner has a zone (P2a-02).
+  const when = `${dayLabel(entry.startedAt, clockZone)} · ${viewerClockLabel(entry.startedAt, { homeZone: clockZone })}`;
   const distance = distanceNumber(entry.distanceM, units.distance);
   // With conditions the board drops the unit to fit the temperature
   // (`6.2 AT 41°`); a reader still needs it, so it is said, not drawn.
@@ -265,6 +270,18 @@ function RunHeader({
 }
 
 /**
+ * The clock a run is read on: its conditions' zone, else the runner's own,
+ * as `RunSummary.clockZone` is for the runs list, so A3 never dates a run
+ * a day off from the list (P2a-02).
+ */
+function clockOf(
+  entry: Entry,
+  homeZone: string | undefined,
+): string | undefined {
+  return entry.conditions?.timeZone ?? homeZone;
+}
+
+/**
  * The verdict (screen A3) — the one screen the whole product turns on.
  *
  * A verdict is per-run, stored as -2..+2 with 0 meaning dialed, and the
@@ -285,10 +302,17 @@ export function VerdictForm({
   history,
   privateLine,
   isVerified,
+  homeZone,
   // The flow's own move rather than the screen's: A3b's push.
   ...step
 }: Readonly<{
   entry: Entry;
+  /**
+   * The runner's own zone, the clock for a run whose conditions carry none
+   * (an indoor run, one with no weather, a band they set), as the runs
+   * list reads it (P2a-02).
+   */
+  homeZone: string | undefined;
   bandFloor: number | undefined;
   /**
    * The runner's own units, for the header's distance and temperature, the
@@ -482,6 +506,7 @@ export function VerdictForm({
             entry={entry}
             units={units}
             band={railBand(bandFloor, history)}
+            clockZone={clockOf(entry, homeZone)}
           />
         }
       >
@@ -497,7 +522,11 @@ export function VerdictForm({
           }}
         >
           <PushFrame pushed={specifics.page}>
-            <RunHeader entry={entry} units={units} />
+            <RunHeader
+              entry={entry}
+              units={units}
+              clockZone={clockOf(entry, homeZone)}
+            />
             <FormStatus>
               {noted === undefined
                 ? form.status
@@ -825,20 +854,17 @@ function VerdictRail({
   entry,
   units,
   band,
+  clockZone,
 }: Readonly<{
   entry: Entry;
   units: Units;
   band: RailBand | undefined;
+  clockZone: string | undefined;
 }>): JSX.Element {
   const { conditions } = entry;
   return (
     <>
-      {/* A3's entry carries no home zone, so its clock is the run's own,
-          and a run without one reads on UTC, marked. */}
-      <ThisRunCard
-        run={{ ...entry, clockZone: entry.conditions?.timeZone }}
-        units={units}
-      />
+      <ThisRunCard run={{ ...entry, clockZone }} units={units} />
       <RailCard title="The kit you’re judging">
         <ul className="m-0 flex list-none flex-col gap-1 p-0">
           {entry.items.map((item) => (
