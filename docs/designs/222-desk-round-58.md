@@ -43,7 +43,7 @@ By ruling (files in parentheses):
   (122) on that edge, and the page's own 24 is the gap, so every heading
   sits at x=220 at 1280 and at 170 below 1228, whatever the footer holds.
   The footer stacks `LAST DIGEST` over the time in tabular mono, and
-  `NotYetRoom` goes. Entries indent 12 inside the rail, so the current
+  `NotYetRoom` goes. Entries take 8 each side inside the rail, so the current
   entry's bar sits on the edge. Below `wide` the rail is still the sticky
   row. The measure comes from #777's `--container-rail`, so this rebases
   on it, and it lines up with 11c's #708 (bar and `Page` gutters).

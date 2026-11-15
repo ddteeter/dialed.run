@@ -119,7 +119,7 @@ function RailCount({ count }: Readonly<{ count: number | undefined }>) {
  * phone, where the rail is one row, it is a 2px hi-viz underline.
  */
 const RAIL_ENTRY =
-  "flex min-h-control items-center gap-2 border-b-2 px-3 text-body text-ink no-underline wide:justify-between wide:border-b-0 wide:border-l-2 wide:pr-0 wide:pl-3";
+  "flex min-h-control items-center gap-2 border-b-2 px-3 text-body text-ink no-underline wide:justify-between wide:border-b-0 wide:border-l-2 wide:px-2";
 const RAIL_CURRENT = "border-hi-viz font-bold wide:bg-panel";
 const RAIL_OTHER = "border-transparent";
 
@@ -175,7 +175,7 @@ function RailFooter({ today }: Readonly<{ today: DeskToday }>) {
   return (
     <div
       data-part="rail-footer"
-      className="hidden wide:flex wide:flex-col wide:gap-3 wide:pt-6 wide:pl-3"
+      className="hidden wide:flex wide:flex-col wide:gap-3 wide:border-l-2 wide:border-transparent wide:pt-6 wide:pl-2"
     >
       <Mono step="xs" className={isHolding ? "text-hiviz-text" : "text-muted"}>
         {isHolding ? "Screening · Holding" : "Screening · OK"}

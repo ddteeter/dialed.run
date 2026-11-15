@@ -276,7 +276,8 @@ describe("DeskShell", () => {
       "wide:pl-6",
     );
     const entry = within(rail()).getByRole("link", { name: "Today" });
-    expect(entry).toHaveClass("wide:pl-3", "wide:pr-0", "gap-2");
+    // 8 each side inside the 122, so "Corrections 99" fits (R58·312).
+    expect(entry).toHaveClass("wide:px-2", "wide:border-l-2", "gap-2");
     expect(entry).not.toHaveClass("wide:gap-6");
     expect(within(rail()).getByRole("list")).toHaveClass(
       "flex",
@@ -322,7 +323,12 @@ describe("DeskShell", () => {
     expect(screening).toHaveClass("text-muted");
     // R58·312: LAST DIGEST stacked over its value, the value in tabular
     // mono, so neither sets the rail's width.
-    expect(footer).toHaveClass("wide:pl-3");
+    // Its text on the entries' edge: the same 2px edge, unseen, and 8.
+    expect(footer).toHaveClass(
+      "wide:pl-2",
+      "wide:border-l-2",
+      "wide:border-transparent",
+    );
     expect(digest).toHaveAttribute("data-part", "last-digest");
     expect(digest).toHaveClass("flex", "flex-col");
     const [label, value] = [...(digest?.children ?? [])];
