@@ -50,7 +50,7 @@ export const TYPE = {
   display: { family: 'display', size: 32, lineHeight: 1.05, tracking: -0.035, transform: 'uppercase',
     for: 'The payoff: temperature, verdict word, screen headline. Five words max. One per screen.' },
   title:   { family: 'display', size: 24, lineHeight: 1.1,  tracking: -0.03,  transform: 'none',
-    for: 'Tab and sheet titles ("You", "Log a run"), the wordmark in the top bar.' },
+    for: 'Tab and sheet titles ("You", "Log a run"), the wordmark in the top bar. Round 58 #286: every tab root (Feed, Find a runner, Notifications) is this step, in its own case, never capitals.' },
   heading: { family: 'display', size: 19, lineHeight: 1.2,  tracking: -0.025, transform: 'none',
     for: 'Garment names on cards, section heads inside a screen, runner display names on profiles.' },
   lead:    { family: 'text',    size: 17, lineHeight: 1.5,  tracking: 0,      transform: 'none',
@@ -168,12 +168,14 @@ export const BREAKPOINT = {
 export const MEASURE = {
   panel: 390,   // the phone width. Every "centred at phone width" surface is exactly this wide.
   column: 620,  // one column of reading or a list at width. Also the Operator document measure.
-  page: 1180,   // the shell's content max-width at desk. Boards drawn at 1440 use this inside 24px gutters.
+  rail: 122,    // Round 58 #312: the Desk rail's content track. Rail + 24 gap puts every Desk heading at the page edge + 146 (x=220 at 1280). Its footer stacks label over time.
+  page: 1180,   // the shell's max-width at desk, gutters included. Round 57 #263: content is 1180 − 2×24 = 1132, and the top bar, signed-out frame, rails and pages all share that one edge (x=74 at 1280).
 };
 export const MEASURE_RULES = [
   'The Operator boards\' 980px measure is a one-off: collapse to MEASURE.page for tables, MEASURE.column for documents.',
   'Between wide and desk the content column is min(100% − 2×SPACE[6], MEASURE.column). Never a fluid two-column.',
   'Nothing pins a width that isn\'t in MEASURE. Sidebars and rails inherit from the grid, not from a px.',
+  'Round 57 #263: gutters belong to the page, never to a column. A 620 column is 620 of content, centred on the page\'s axis (x=330 at 1280). The Desk\'s 620 pages start at the rail instead (#264).',
 ];
 
 /**

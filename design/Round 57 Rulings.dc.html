@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #16161A; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+</style>
+</helmet>
+<div style="font-family: Archivo, Helvetica, sans-serif; background: #16161A; color: #F4F3EF; padding: 48px 40px 88px;">
+  <div style="max-width: 1420px; margin: 0 auto; display: flex; flex-direction: column; gap: 64px;">
+
+    <div style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 28px; border-bottom: 1px solid #2A2A31;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">
+        <span>Round 57 &nbsp;/&nbsp; 251–265, 271 · 2026-11-14</span>
+        <span style="color: #FF2D8A;">dialed.run</span>
+      </div>
+      <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; max-width: 1120px; text-transform: uppercase;">One edge, one bell.</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #8B8B93; max-width: 860px; text-wrap: pretty;">Sixteen items and two notices, every part answered in the table at the foot. Drawn: the profile report sheet, the hairline pill on dark, the shared content edge at desk, the phone bell on reading pages and the landing, A2 with no photo, and a code in the drawer's title. Hidden text may voice a visible mark, never add words. The Desk's 620 pages sit at the rail.</p>
+    </div>
+
+    <!-- D-188 / D-189 -->
+    <div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">Notices · D-188, D-189</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">D-188 · REPORT A PROFILE · 390 LIGHT</span>
+          <div data-screen-label="D-188 profile report sheet" style="width: 390px; background: #FFFFFF; color: #0B0B0E; border-radius: 20px 20px 0 0; border-top: 1px solid #DCDBD2; box-shadow: 0 8px 28px rgba(11, 11, 14, 0.10); padding: 8px 20px 28px; display: flex; flex-direction: column; gap: 16px;">
+            <span style="align-self: center; width: 36px; height: 4px; border-radius: 999px; background: #DCDBD2;"></span>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;">Report @nightrun_nico</span>
+              <span style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; margin-right: -12px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"></path></svg></span>
+            </div>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #4E4E44;">WHAT'S WRONG WITH THIS PROFILE</span>
+            <div style="display: flex; flex-direction: column; border-top: 1px solid #DCDBD2;">
+              <sc-for list="{{ reasons }}" as="r" hint-placeholder-count="5">
+                <div style="display: flex; align-items: center; gap: 12px; min-height: 52px; border-bottom: 1px solid #DCDBD2; font-size: 15px;">
+                  <span style="flex: none; width: 20px; height: 20px; border-radius: 999px; border: {{ r.ring }}; display: flex; align-items: center; justify-content: center;"><span style="width: 10px; height: 10px; border-radius: 999px; background: {{ r.dot }};"></span></span>
+                  <span>{{ r.t }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <span style="background: #FF2D8A; border-radius: 12px; height: 48px; display: flex; align-items: center; justify-content: center; font-family: 'Archivo Black', sans-serif; font-size: 15px; letter-spacing: 0.02em;">SEND REPORT</span>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <span style="border: 1px solid #DCDBD2; border-radius: 999px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700;">Send and block</span>
+              <span style="font-size: 13px; line-height: 1.45; color: #4E4E44; text-wrap: pretty;">Blocking hides all of @nightrun_nico's runs from you. They aren't told.</span>
+            </div>
+          </div>
+        </div>
+        <div style="flex: 1 1 420px; max-width: 620px; display: flex; flex-direction: column; gap: 24px; padding-top: 24px;">
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">The entry sheet's parts, its own list. Title names the runner. The group label is MONO.sm. Five radio rows at 52, one picked. "Other" opens the same optional note field the entry sheet has, under the list. The footer is W1's, unchanged.</p>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">D-189 · PHOTO ROW AS A REGION · TABBED TO</span>
+            <div style="background: #F4F3EF; padding: 20px; color: #0B0B0E; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; gap: 8px; padding: 4px; margin: -4px; outline: 2px solid #0B0B0E; outline-offset: -2px; border-radius: 12px; overflow: hidden;">
+                <span style="flex: none; width: 76px; height: 95px; border-radius: 10px; background: linear-gradient(160deg, #2D5F94, #86CCD9);"></span>
+                <span style="flex: none; width: 76px; height: 95px; border-radius: 10px; background: linear-gradient(160deg, #6F7656, #E6E2CC);"></span>
+                <span style="flex: none; width: 76px; height: 95px; border-radius: 10px; background: linear-gradient(160deg, #5E3150, #C98AB5);"></span>
+                <span style="flex: none; width: 76px; height: 95px; border-radius: 10px; background: linear-gradient(160deg, #B8742E, #E8C08A);"></span>
+              </div>
+            </div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">The scroller pads 4 on every side and pulls back 4 by margin, so the photos don't move and the ring (2px --ink, inset) draws inside the scroller's clip, at RADIUS.card. Named by its contents: "Photos, 4". Arrow keys scroll it. Pagers take the same 4.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 262 -->
+    <div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">262 · The hairline pill on dark</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <div style="flex: 1 1 420px; max-width: 560px; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">ON --PANEL (A SHEET) · WAS / IS</span>
+          <div style="background: #16161B; outline: 1px solid #3A3A42; padding: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; color: #F4F3EF;">
+            <span style="border: 1px solid #2A2A31; border-radius: 999px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700;">Keep it</span>
+            <span style="border: 1px solid #3A3A42; border-radius: 999px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700;">Keep it</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">--HAIRLINE · WITHDRAWN</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #00E0C6;">--HAIRLINE-2</span>
+          </div>
+        </div>
+        <div style="flex: 1 1 420px; max-width: 560px; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">ON --GROUND (A SEARCH ROW) · IS</span>
+          <div style="background: #0B0B0E; outline: 1px solid #2A2A31; padding: 16px 24px; color: #F4F3EF; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; align-items: center;">
+            <span style="width: 40px; height: 40px; border-radius: 999px; background: linear-gradient(160deg, #2E3A5C, #6178A8);"></span>
+            <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0;"><span style="font-size: 15px; font-weight: 600;">Nico Ferreira</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #8B8B93;">@NIGHTRUN_NICO</span></span>
+            <span style="border: 1px solid #3A3A42; border-radius: 999px; height: 44px; padding: 0 20px; display: flex; align-items: center; font-size: 15px; font-weight: 700;">Follow</span>
+          </div>
+        </div>
+      </div>
+      <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 860px; text-wrap: pretty;">In dark the hairline pill takes --hairline-2 on every ground, panel or page, as fields do (R55·179). One rule, no per-ground value. Light keeps --hairline. The label names the control, so the edge is grouping and needn't reach 3:1; --hairline-2 is what makes it read as a button at a glance.</p>
+    </div>
+
+    <!-- 263 / 264 -->
+    <div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">263–264 · One content edge at desk</span>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">263 · BAR AND PAGE · 1280 LIGHT · SCHEMATIC</span>
+        <div style="overflow-x: auto; max-width: 100%;">
+          <div data-screen-label="263 content edge" style="width: 1280px; height: 420px; position: relative; background: #F4F3EF; color: #0B0B0E; overflow: hidden;">
+            <div style="position: absolute; left: 0; right: 0; top: 0; height: 60px; border-bottom: 1px solid #DCDBD2;"></div>
+            <div style="position: absolute; left: 74px; top: 0; width: 1132px; height: 60px; display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;">dialed.run</span>
+              <span style="display: flex; gap: 24px; align-items: center; font-size: 15px; font-weight: 600;"><span>Feed</span><span>Closet</span><span>You</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 16V11a6 6 0 0112 0v5l2 2H4zM10 20a2 2 0 004 0"></path></svg></span>
+            </div>
+            <div style="position: absolute; left: 74px; top: 92px; width: 1132px; height: 296px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+              <div style="background: #FFFFFF; border: 1px solid #DCDBD2; border-radius: 12px;"></div>
+              <div style="background: #FFFFFF; border: 1px solid #DCDBD2; border-radius: 12px;"></div>
+            </div>
+            <div style="position: absolute; left: 330px; top: 92px; width: 620px; height: 296px; outline: 1px dashed #FF2D8A; display: flex; align-items: flex-end; padding: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #C21A6B;">A 620 COLUMN · CONTENT AT 330</span></div>
+            <div style="position: absolute; left: 73px; top: 0; bottom: 0; border-left: 1px dashed #FF2D8A;"></div>
+            <div style="position: absolute; left: 1206px; top: 0; bottom: 0; border-left: 1px dashed #FF2D8A;"></div>
+            <span style="position: absolute; left: 80px; bottom: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #C21A6B;">X=74</span>
+            <span style="position: absolute; right: 80px; bottom: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #C21A6B;">X=1206 · 1,132 WIDE</span>
+          </div>
+        </div>
+        <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 860px; text-wrap: pretty;">MEASURE.page (1,180) holds the 24 gutters, so content is 1,132. The bar's wordmark and bell, the signed-out frame, F's rail, the closet page, the landing and the public profile all start at 74 and end at 1206. Gutters belong to the page, never a column: a 620 column is 620 of content on the page's axis, so every one starts at 330. The 404 is already right; the columns that start at 354 drop their inner 24. Below 1180 + 48 the edge is the 24 gutter.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">264 · THE DESK · TODAY AT THE RAIL · 1280 · SCHEMATIC</span>
+        <div style="overflow-x: auto; max-width: 100%;">
+          <div data-screen-label="264 desk at rail" style="width: 1280px; height: 240px; position: relative; background: #0B0B0E; color: #F4F3EF; outline: 1px solid #2A2A31;">
+            <div style="position: absolute; left: 74px; top: 24px; width: 122px; display: flex; flex-direction: column; gap: 14px; font-size: 15px; color: #8B8B93;"><span style="color: #F4F3EF; font-weight: 700;">Today</span><span>Review</span><span>Access</span><span>Codes</span><span>Runners</span></div>
+            <div style="position: absolute; left: 220px; top: 24px; width: 620px; height: 192px; outline: 1px dashed #FF2D8A; padding: 0 0 0 0; display: flex; flex-direction: column; gap: 12px;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;">Today</span>
+              <span style="height: 52px; border-top: 1px solid #2A2A31; border-bottom: 1px solid #2A2A31;"></span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #FF2D8A; margin-top: auto; padding: 8px;">X=220 · SAME AS REVIEW, CODES, RUNNERS, KIT</span>
+            </div>
+          </div>
+        </div>
+        <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 860px; text-wrap: pretty;">The Desk is a tool, not a runner screen, so 168.1's centring doesn't reach it. Every Desk page's heading starts at the rail, x=220, as 194 drew. A 620 page leaves its spare width on the right.</p>
+      </div>
+    </div>
+
+    <!-- 256 / 271 -->
+    <div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">256 · 271 · The phone bell, every signed-in screen</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">256 · /PRIVACY SIGNED IN · 390 LIGHT</span>
+          <div data-screen-label="256 reading bell" style="width: 390px; height: 420px; background: #F4F3EF; color: #0B0B0E; padding: 8px 20px 0; display: flex; flex-direction: column; gap: 12px; overflow: hidden;">
+            <div style="display: flex; justify-content: space-between; align-items: center; min-height: 44px; margin-right: -12px; outline: 1px dashed #FF2D8A; outline-offset: 2px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">LEGAL · UPDATED OCT 27, 2026</span>
+              <span style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; position: relative;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 16V11a6 6 0 0112 0v5l2 2H4zM10 20a2 2 0 004 0"></path></svg><span style="position: absolute; top: 9px; right: 9px; width: 8px; height: 8px; border-radius: 999px; background: #FF2D8A;"></span></span>
+            </div>
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 32px; line-height: 1.05; letter-spacing: -0.035em; text-transform: uppercase;">Privacy</span>
+            <span style="font-size: 17px; line-height: 1.5; color: #4E4E44;">What we keep about your runs, why, and how to have it removed.</span>
+          </div>
+        </div>
+        <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">271 · / SIGNED IN · 390 LIGHT</span>
+          <div data-screen-label="271 landing bell" style="width: 390px; height: 420px; background: #F4F3EF; color: #0B0B0E; padding: 8px 20px 0; display: flex; flex-direction: column; gap: 16px; overflow: hidden;">
+            <div style="display: flex; justify-content: space-between; align-items: center; min-height: 44px; margin-right: -12px; outline: 1px dashed #FF2D8A; outline-offset: 2px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">SIGNED IN AS @MARA_K</span>
+              <span style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 16V11a6 6 0 0112 0v5l2 2H4zM10 20a2 2 0 004 0"></path></svg></span>
+            </div>
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 44px; line-height: 0.95; letter-spacing: -0.035em; text-transform: uppercase;">Dress for the run you'll have.</span>
+            <span style="background: #FF2D8A; border-radius: 12px; height: 48px; display: flex; align-items: center; justify-content: center; font-family: 'Archivo Black', sans-serif; font-size: 15px; letter-spacing: 0.02em; margin-top: auto; margin-bottom: 28px;">GO TO YOUR FEED</span>
+          </div>
+        </div>
+        <p style="flex: 1 1 300px; max-width: 520px; margin: 0; padding-top: 24px; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">169.2 holds: signed in, every screen below desk seats the bell, at the end of its first row. A reading page's first row is its kicker, so the bell ends it. The landing has no kicker, so it gets one, MONO.xs "SIGNED IN AS @handle", and the bell ends that row. The hero never shares a line with a control. Reaching a page from Settings › About doesn't excuse it: a deep link lands there too.</p>
+      </div>
+    </div>
+
+    <!-- 252 / 253 / 261 -->
+    <div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">252–253 · 261 · A2's photos</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">253 · A2 · NO PHOTO · 390 LIGHT</span>
+          <div data-screen-label="253 A2 empty" style="width: 390px; background: #F4F3EF; color: #0B0B0E; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em;">PHOTOS · 0 OF 4</span>
+            <span style="width: 76px; height: 95px; border-radius: 10px; background: #FFFFFF; border: 1px solid #DCDBD2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center;"><span style="font-size: 20px; line-height: 1;">+</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; line-height: 1.3;">ADD<br />PHOTO</span></span>
+            <span style="font-size: 13px; line-height: 1.45; color: #4E4E44; outline: 1px dashed #FF2D8A; outline-offset: 4px;">Flat on the floor works best.</span>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">The well and its title are gone. The hint is the row's line, TYPE.small --quiet, where "Press a photo to see it whole or remove it." goes once one is attached. It's the add box's description too. The kicker counts against the cap: "PHOTOS · 2 OF 4".</p>
+        </div>
+        <div style="flex: 1 1 420px; max-width: 620px; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">261 · PAGER ARROWS · FIRST · MIDDLE · LAST</span>
+          <div style="background: #EDECE3; padding: 20px; display: flex; flex-direction: column; gap: 12px; color: #0B0B0E;">
+            <sc-for list="{{ pager }}" as="p" hint-placeholder-count="3">
+              <div style="display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 16px; align-items: center;">
+                <span style="visibility: {{ p.prev }}; width: 44px; height: 44px; border-radius: 999px; background: #F4F3EF; border: 1px solid #DCDBD2; display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5l-7 7 7 7"></path></svg></span>
+                <span style="height: 44px; border-radius: 10px; background: {{ p.bg }}; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #FFFFFF;">{{ p.t }}</span>
+                <span style="visibility: {{ p.next }}; width: 44px; height: 44px; border-radius: 999px; background: #F4F3EF; border: 1px solid #DCDBD2; display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"></path></svg></span>
+              </div>
+            </sc-for>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">207 holds for both: an end's arrow is hidden (it keeps its 44 so the photo doesn't shift). 249.1's muted first is withdrawn. One fill for both: --ground with a --hairline edge, which reads on --tint; --hairline-2 in dark (262). D doesn't change.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 251 -->
+    <div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">251 · A code in the drawer's title</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">251 · DESK DRAWER · CODE PICKED · 390 DARK</span>
+          <div data-screen-label="251 drawer code title" style="width: 390px; background: #16161B; color: #F4F3EF; border-radius: 20px 20px 0 0; border-top: 1px solid #3A3A42; padding: 8px 20px 28px; display: flex; flex-direction: column; gap: 16px;">
+            <span style="align-self: center; width: 36px; height: 4px; border-radius: 999px; background: #3A3A42;"></span>
+            <div style="display: flex; justify-content: space-between; align-items: center; outline: 1px dashed #FF2D8A; outline-offset: 4px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 22px; line-height: 1.2; letter-spacing: 0.02em;">JK4M-22QX</span>
+              <span style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; margin-right: -12px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"></path></svg></span>
+            </div>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #8B8B93;">SPRING CLUB · USED BY 29 · 3 DAYS</span>
+            <span style="height: 120px; border-top: 1px solid #2A2A31;"></span>
+          </div>
+        </div>
+        <p style="flex: 1 1 360px; max-width: 560px; margin: 0; padding-top: 24px; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">A code is a measured value wherever it's the name, so the Sheet's title takes CodePane's step, MONO.lg, in the drawer as in the pane. A runner's name stays TYPE.title. The Sheet takes a title kind (text or code) rather than a style override; it's still the dialog's label.</p>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 20px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">Rulings · Round 57</span>
+      <div style="display: flex; flex-direction: column; border: 1px solid #2A2A31;">
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="12">
+          <div style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 120px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;">
+            <span style="font-size: 15px; font-weight: 600;">{{ r.q }}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: {{ r.vc }};">{{ r.v }}</span>
+            <span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">{{ r.a }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const C = '#00E0C6', A = '#F5FF3D', D = '#FF2D8A';
+    const R = (q, v, a) => ({ q, v, a, vc: v.startsWith('CONFIRM') ? C : v.includes('DRAWN') ? D : A });
+    const reasons = ['Their name or photo is offensive', "They're pretending to be someone else", 'Harassment', 'Spam', 'Other']
+      .map((t, i) => ({ t, ring: i === 1 ? '2px solid #0B0B0E' : '1px solid #B9B8AE', dot: i === 1 ? '#0B0B0E' : 'transparent' }));
+    const G = 'linear-gradient(90deg, #2D5F94, #86CCD9)';
+    const pager = [
+      { t: 'PHOTO 1 OF 3', prev: 'hidden', next: 'visible', bg: G },
+      { t: 'PHOTO 2 OF 3', prev: 'visible', next: 'visible', bg: 'linear-gradient(90deg, #6F7656, #B9B48E)' },
+      { t: 'PHOTO 3 OF 3', prev: 'visible', next: 'hidden', bg: 'linear-gradient(90deg, #5E3150, #A9709A)' },
+    ];
+    const rows = [
+      R('D-188 · Profile report', 'DRAWN', `The entry sheet's parts with its own five reasons: their name or photo is offensive, they're pretending to be someone else, harassment, spam, other. Title "Report {handle}", group label "What's wrong with this profile". Other opens the optional note. W1's footer unchanged.`),
+      R('D-189 · Scrolling rows', 'DRAWN', `A swipe row with nothing focusable is a region (role="region", named by its contents, "Photos, 4") with tabindex 0, and arrow keys scroll it. It pads 4 and pulls back 4 by margin, so the 2px inset ring draws inside its clip at RADIUS.card. Pagers likewise.`),
+      R('251 · Code in the drawer title', 'CHANGED', `Mono. A code is a measured value wherever it's the name, so the drawer's Sheet title takes CodePane's step, MONO.lg. A runner's name stays TYPE.title. The Sheet takes a title kind (text | code), not a style override.`),
+      R('262 · Hairline pill on dark', 'CHANGED', `--hairline-2 on every dark ground, panel or page, as fields (R55·179). Light keeps --hairline. Covers the delete-account sheet, the closet's confirms, the profile report sheet and Follow in search rows.`),
+      R('263 · One content edge', 'CONFIRMED', `Yes, one edge: 1,132 at desk (MEASURE.page less two 24 gutters), x=74 at 1280. The bar, signed-out frame, rails and pages all share it. Gutters belong to the page, never a column: a 620 column is 620 of content on the page's axis, starting at 330. The 404 stays; the columns at 354 drop their inner 24. Recorded in tokens.js.`),
+      R('255a · Icon-only controls', 'RULED', `Outside the rule. With no visible words, the name is the meaning: "Clear search", "Remove Boston".`),
+      R('255b · Hidden descriptions', 'RULED', `No. Visually hidden text may voice a visible mark (a dot, an icon, an aria-hidden column head, as 244.7), never add words. So: the wordmark is "dialed.run"; "Forgot it?" is "Forgot it?"; a notification's "Unread" stays, since it voices the dot; the project link is the package name, under its PROJECTS heading; NamePieces' suffix goes unless it voices a mark. Where words truly add meaning, show them.`),
+      R('256 · Bell on a reading page', 'DRAWN', `Signed in below desk, the bell ends the kicker row, the page's first row (169.1). Reached from Settings › About or not, a deep link lands here too.`),
+      R('271 · Bell on the landing', 'DRAWN', `Same rule. The landing has no first row to end, so it gets one: MONO.xs "Signed in as {handle}" with the bell at its end, above the headline. The hero never shares a line with a control.`),
+      R('264 · Desk 620 pages', 'CONFIRMED', `At the rail, as 194 draws: every Desk heading at x=220 at 1280. The Desk isn't a runner screen, so 168.1's centring doesn't reach it.`),
+      R('252 · A2 holds several', 'CONFIRMED', `Yes: up to 4, the per-entry cap, sent in order after the attach. The kicker counts: "PHOTOS · 2 OF 4". The add box leaves at 4.`),
+      R('253 · A2 with no photo', 'DRAWN', `The kicker and the add box. The well's title is gone. "Flat on the floor works best." is the row's line until a photo is attached, then "Press a photo to see it whole or remove it." takes its place. It's the add box's description too. Drops land on the add box.`),
+      R('261 · Pager arrow at its end', 'CHANGED', `Hidden, for both, as 207. It keeps its 44 slot so the photo doesn't shift. 249.1's muted first is withdrawn. One fill: --ground with a --hairline edge (--hairline-2 in dark). D doesn't change.`),
+      R('254 · Garmin card', 'CONFIRMED', `77 wins for Garmin runs: "Garmin {model}" in TYPE.small, sentence case, its own line under the meta. 205's watch name on the meta line is withdrawn; the rest of 205 stands.`),
+      R('260 · City finder confirmation', 'CONFIRMED', `No after line. The new place's weather is the confirmation. For screen readers, the hand-off announces politely: "Saved. Weather for {city}."`),
+      R('257 · LEAVE heading', 'RULED', `Yes, on the account sub-page only, where Delete account lives. LEAVE in the group heading style, under the 2px rule, so headings navigate to it as SIGN-IN does. The settings index has no Delete account row.`),
+      R('258 · Password set kicker', 'RULED', `RESET. MONO.xs over the panel's title "Password set".`),
+      R('259a · 220, 175, REVIEW tag', 'CONFIRMED', `Card labels are the cards' headers. 175's image slot stays empty. The REVIEW tag counts from the last open of Privacy, or account creation if never opened, against 2026-10-27.`),
+      R('259b · Signed-out bar, onboarding, Closet', 'CONFIRMED', `"Signed in" without the handle. The wordmark bar on every onboarding step, O0 included. The Closet title follows 186.`),
+      R('259c · A-15, landing, Au7', 'CONFIRMED', `17 characters. Signed in, the landing ends on "Go to your feed". Au7's band carries no link.`),
+      R('259d · W2 blocked date', 'CHANGED', `The tag and the date blocked, in the runner's home zone, not UTC, as every other date (250). "Aug 12".`),
+      R('259e · Notification row name', 'CONFIRMED', `The body text and time, with "Unread" voicing the dot (255b).`),
+      R('265 · Processors table at 1280', 'CHANGED', `The cards until 1440. From 1440 the seven-column breakout as built. Below that, a row that wraps to eleven lines isn't a table.`),
+    ];
+    return { reasons, pager, rows };
+  }
+}
+</script>
+</body>
+</html>
