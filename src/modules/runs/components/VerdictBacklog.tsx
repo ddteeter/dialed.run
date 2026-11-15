@@ -505,13 +505,14 @@ interface BacklogSelection {
 
 /**
  * The five verdict segments: five on a card's row, and equal columns at
- * the desk too, as 236a draws them (R2-RUNS-05). At the desk each track is
- * `1fr` with its content as the floor, not `minmax(0,1fr)`: the outfit
- * cell takes what the others leave, and a zero floor let the table squeeze
- * the buttons under the target size.
+ * the desk too, as 236a draws them (R2-RUNS-05). At the desk each track's
+ * floor is its words' width, `max-content`: the outfit cell takes what the
+ * others leave, and a zero floor let the table squeeze the buttons under
+ * the target size. A bare `1fr` floors at the button's 44 `min-width`
+ * (`target`), not its words, and the words ran out of it.
  */
 const VERDICT_SEGMENTS_CLASS =
-  "grid grid-cols-5 gap-1 desk:grid-cols-[repeat(5,1fr)]";
+  "grid grid-cols-5 gap-1 desk:grid-cols-[repeat(5,minmax(max-content,1fr))]";
 
 /**
  * A cell: a block on a card, a table cell at the desk, where it holds one

@@ -992,7 +992,7 @@ describe("VerdictBacklog: below the desk, one card per run (Round 55 · 236)", (
       "grid",
       "grid-cols-5",
       "gap-1",
-      "desk:grid-cols-[repeat(5,1fr)]",
+      "desk:grid-cols-[repeat(5,minmax(max-content,1fr))]",
     );
     expect(segments).not.toHaveClass("desk:flex");
     // Nothing to skip to: every run is on the page.
