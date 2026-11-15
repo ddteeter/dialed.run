@@ -204,6 +204,8 @@ export function stravaHandshakeResponse(
  * An event delivery at `/api/strava/<key>`. Any other key is a 404 before
  * the body is read. At the key it is always a 200, whatever the body,
  * because Strava disables a subscription that does not get one promptly.
+ * Only the key's holder can post here, so a body that is not JSON is worth
+ * a report: it is Strava changing its payload.
  */
 export async function stravaDeliveryResponse(
   presentedKey: string,
@@ -218,8 +220,12 @@ export async function stravaDeliveryResponse(
   try {
     body = await request.json();
   } catch {
-    body = undefined;
+    captureException(new Error("strava webhook body is not JSON"), {
+      surface: "strava-webhook",
+    });
+    return new Response();
   }
   await handleStravaWebhookEvent(queue, captureException, body, subscriptionId);
-  return new Response(undefined, { status: 200 });
+  // An empty 200, Response's default.
+  return new Response();
 }

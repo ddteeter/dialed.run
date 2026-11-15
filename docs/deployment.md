@@ -414,9 +414,8 @@ needs its own Strava app, not a second subscription.
   differently, and the audit's finding 0.4 was that a report which does not
   outlive its invocation can be cancelled in flight; OPS-1 hands every send
   to `waitUntil`, and this is where that is checked against the real thing.
-  - **Fetch**: `curl -X POST https://<host>/api/strava/$STRAVA_WEBHOOK_PATH_SECRET -d '{"subscription_id":<id>}'`. The
-    webhook reports "invalid strava webhook payload" and still answers 200
-    (a body without our subscription id is dropped silently).
+  - **Fetch**: `curl -X POST https://<host>/api/strava/$STRAVA_WEBHOOK_PATH_SECRET -d 'not json'`.
+    The webhook reports "strava webhook body is not JSON" and still answers 200.
   - **Cron**: the first hourly firing after the deploy opens and closes a
     Sentry Crons check-in; seeing `weather-retry` go green under Crons is a
     send from the cron path. For an _error_ from a cron, run the Worker

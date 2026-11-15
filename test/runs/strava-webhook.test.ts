@@ -433,6 +433,8 @@ describe("the callback key (SA-M6)", () => {
     expect(isStravaCallbackKey(KEY.slice(1), KEY)).toBe(false);
     expect(isStravaCallbackKey("", "")).toBe(false);
     expect(isStravaCallbackKey("anything", undefined)).toBe(false);
+    // An unset secret is not the word "undefined".
+    expect(isStravaCallbackKey("undefined", undefined)).toBe(false);
   });
 
   it("answers 404 at a wrong key without reading the body or queueing", async () => {
@@ -476,7 +478,7 @@ describe("the callback key (SA-M6)", () => {
     ]);
   });
 
-  it("answers 200 at the key to a body that is not JSON, and queues nothing", async () => {
+  it("answers 200 at the key to a body that is not JSON, and reports it", async () => {
     const queue = fakeQueue();
     const capture = fakeCaptureException();
 
@@ -490,8 +492,14 @@ describe("the callback key (SA-M6)", () => {
     );
 
     expect(response.status).toBe(200);
+    expect(await response.text()).toBe("");
     expect(queue.sent).toStrictEqual([]);
-    expect(capture.errors).toStrictEqual([]);
+    expect(capture.errors).toStrictEqual([
+      {
+        error: new Error("strava webhook body is not JSON"),
+        context: { surface: "strava-webhook" },
+      },
+    ]);
   });
 
   const handshake = new URLSearchParams({
