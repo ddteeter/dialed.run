@@ -28,7 +28,7 @@ jobs:
     steps:
       # Audit first (design 196): reports the hosts this job reaches and
       # blocks none. It moves to `block` once that list is known and short.
-      - uses: step-security/harden-runner@v2.22.3
+      - uses: step-security/harden-runner@v2.22.4
         with:
           egress-policy: audit
 
@@ -91,7 +91,7 @@ jobs:
     steps:
       # Audit first (design 196): reports the hosts this job reaches and
       # blocks none. It moves to `block` once that list is known and short.
-      - uses: step-security/harden-runner@v2.22.3
+      - uses: step-security/harden-runner@v2.22.4
         with:
           egress-policy: audit
 
@@ -163,7 +163,7 @@ jobs:
     steps:
       # Audit first (design 196): reports the hosts this job reaches and
       # blocks none. It moves to `block` once that list is known and short.
-      - uses: step-security/harden-runner@v2.22.3
+      - uses: step-security/harden-runner@v2.22.4
         with:
           egress-policy: audit
 
@@ -197,7 +197,7 @@ jobs:
     steps:
       # Audit first (design 196): reports the hosts this job reaches and
       # blocks none. It moves to `block` once that list is known and short.
-      - uses: step-security/harden-runner@v2.22.3
+      - uses: step-security/harden-runner@v2.22.4
         with:
           egress-policy: audit
 
