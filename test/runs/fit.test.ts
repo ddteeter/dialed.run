@@ -1,13 +1,25 @@
 import { Utils } from "@garmin/fitsdk";
+import type { MesgDefinition } from "@garmin/fitsdk";
 import { describe, expect, it } from "vitest";
 
-import { fitSource, rpeFrom, toDate } from "../../src/modules/runs/parsers/fit";
+import {
+  MAX_FIELD_DESCRIPTIONS,
+  fitReadLimits,
+  fitSource,
+  rpeFrom,
+  toDate,
+} from "../../src/modules/runs/parsers/fit";
 import {
   NO_TRACK_MESSAGE,
   PARSE_FAILURE_MESSAGE,
   RunParseError,
 } from "../../src/modules/runs/parsers/shared";
-import { START, fitFile, fitFileWithoutSession } from "./fit-file";
+import {
+  START,
+  fitFile,
+  fitFileWithFieldDescriptions,
+  fitFileWithoutSession,
+} from "./fit-file";
 
 /**
  * The FIT decoder's refusals, and the one conversion nobody was checking.
@@ -312,5 +324,78 @@ describe("rpeFrom", () => {
     expect(rpeFrom(104)).toBe(10);
     expect(rpeFrom(4)).toBeUndefined();
     expect(rpeFrom(105)).toBeUndefined();
+  });
+});
+
+function definition(sizes: readonly number[]): MesgDefinition {
+  return {
+    recordHeader: 0x40,
+    reserved: 0,
+    endianness: true,
+    numFields: 0,
+    architecture: 0,
+    globalMessageNumber: 20,
+    localMesgNum: 0,
+    messageSize: 0,
+    developerDataSize: 0,
+    fieldDefinitions: [],
+    developerFieldDefinitions: sizes.map((size) => ({
+      fieldDefinitionNumber: 0,
+      size,
+      developerDataIndex: 0,
+    })),
+  };
+}
+
+describe("fit: the decode budget (SA-M29)", () => {
+  it("reads a file with as many field descriptions as the budget allows", async () => {
+    const draft = await fitSource.parse(
+      fitFileWithFieldDescriptions(MAX_FIELD_DESCRIPTIONS),
+    );
+    expect(draft.durationS).toBe(1800);
+  });
+
+  it("refuses a file with more", async () => {
+    const failure = await failureFrom(
+      fitFileWithFieldDescriptions(MAX_FIELD_DESCRIPTIONS + 1),
+    );
+    expect(failure.message).toBe(PARSE_FAILURE_MESSAGE);
+    expect(failure.reason).toBe("fit: decoder reported 1 error(s)");
+    expect(failure.cause).toStrictEqual(
+      new Error("fit: too many field descriptions"),
+    );
+  });
+
+  it("counts only field descriptions, and counts per file", () => {
+    const limits = fitReadLimits();
+    for (let index = 0; index < MAX_FIELD_DESCRIPTIONS; index += 1) {
+      limits.mesgListener(206);
+    }
+    expect(() => {
+      limits.mesgListener(207);
+    }).not.toThrow();
+    expect(() => {
+      limits.mesgListener(206);
+    }).toThrow("fit: too many field descriptions");
+    expect(() => {
+      fitReadLimits().mesgListener(206);
+    }).not.toThrow();
+  });
+
+  it("refuses a definition with a developer field of size zero", () => {
+    const { mesgDefinitionListener } = fitReadLimits();
+    expect(() => {
+      mesgDefinitionListener(definition([1, 4]));
+    }).not.toThrow();
+    expect(() => {
+      mesgDefinitionListener(definition([]));
+    }).not.toThrow();
+    expect(() => {
+      mesgDefinitionListener(definition([1, 0]));
+    }).toThrow("fit: a developer field of size zero");
+  });
+
+  it("is 256", () => {
+    expect(MAX_FIELD_DESCRIPTIONS).toBe(256);
   });
 });

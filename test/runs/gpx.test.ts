@@ -8,7 +8,9 @@ import {
 } from "../../src/modules/runs/parsers/gpx";
 import {
   ELEVATION_HYSTERESIS_M,
+  MAX_XML_TAGS,
   NO_TRACK_MESSAGE,
+  XML_PARSER_OPTIONS,
   PARSE_FAILURE_MESSAGE,
   RunParseError,
 } from "../../src/modules/runs/parsers/shared";
@@ -422,5 +424,61 @@ describe("gpx: the climb (D-111)", () => {
     expect(partial.elevationGainM).toBe(12);
     expect(one.elevationGainM).toBeUndefined();
     expect(none.elevationGainM).toBeUndefined();
+  });
+});
+
+function tagsIn(text: string): number {
+  return text.split("<").length - 1;
+}
+
+const EMPTY_TRACK = gpxWith("<trkseg></trkseg>");
+
+/**
+ * A file of exactly `tags` tags: the wrapper's, then empty elements.
+ */
+function fileOfTags(tags: number): string {
+  return gpxWith(
+    `<trkseg>${"<a/>".repeat(tags - tagsIn(EMPTY_TRACK))}</trkseg>`,
+  );
+}
+
+describe("gpx: the tag budget (SA-M29)", () => {
+  it("builds a file of the tags it is asked for", () => {
+    expect(tagsIn(fileOfTags(20))).toBe(20);
+  });
+
+  it("refuses a file over the budget before parsing it", async () => {
+    expect(await reasonFor(fileOfTags(MAX_XML_TAGS + 1))).toBe(
+      `gpx: more than ${String(MAX_XML_TAGS)} tags`,
+    );
+  });
+
+  it("parses a file at the budget", async () => {
+    // At the budget the file is parsed and fails on its content instead.
+    expect(await reasonFor(fileOfTags(MAX_XML_TAGS))).not.toMatch(/tags$/u);
+  });
+
+  it("reads a ten-hour run, a point a second, with time and elevation", async () => {
+    const start = Date.parse(START);
+    const points = Array.from(
+      { length: 36_000 },
+      (_, second) =>
+        `<trkpt lat="${String(44.98 + second * 1e-6)}" lon="-93.27"><ele>250</ele><time>${new Date(start + second * 1000).toISOString()}</time></trkpt>`,
+    );
+    const draft = await parse(gpxWith(`<trkseg>${points.join("")}</trkseg>`));
+    expect(draft.durationS).toBe(35_999);
+  });
+
+  it("builds no element paths, and expands no entities", () => {
+    expect(XML_PARSER_OPTIONS).toStrictEqual({
+      ignoreAttributes: false,
+      attributeNamePrefix: "@_",
+      processEntities: false,
+      jPath: false,
+    });
+  });
+
+  it("is two million", () => {
+    expect(MAX_XML_TAGS).toBe(2_000_000);
   });
 });

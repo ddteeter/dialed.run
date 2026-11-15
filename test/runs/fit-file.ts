@@ -6,12 +6,20 @@
 import { Encoder } from "@garmin/fitsdk";
 import type {
   ActivityMesg,
+  DeveloperDataIdMesg,
   Encodable,
+  FieldDescriptionMesg,
   FileIdMesg,
   SessionMesg,
 } from "@garmin/fitsdk";
 
-const MESG_NUM = { FILE_ID: 0, SESSION: 18, ACTIVITY: 34 } as const;
+const MESG_NUM = {
+  FILE_ID: 0,
+  SESSION: 18,
+  ACTIVITY: 34,
+  FIELD_DESCRIPTION: 206,
+  DEVELOPER_DATA_ID: 207,
+} as const;
 export const START = new Date("2026-08-15T12:00:00Z");
 
 /**
@@ -68,5 +76,48 @@ export function fitFileWithoutSession(): ArrayBuffer {
     timeCreated: START,
   };
   encoder.writeMesg(fileId);
+  return new Uint8Array(encoder.close()).buffer;
+}
+
+/**
+A good activity file that registers `count` developer field descriptions
+before its session, as a watch's data-field apps do (a handful each).
+*/
+export function fitFileWithFieldDescriptions(count: number): ArrayBuffer {
+  const encoder = new Encoder();
+  const fileId: Encodable<FileIdMesg> = {
+    mesgNum: MESG_NUM.FILE_ID,
+    type: "activity",
+    manufacturer: "garmin",
+    product: 1,
+    timeCreated: START,
+  };
+  encoder.writeMesg(fileId);
+  const developer: Encodable<DeveloperDataIdMesg> = {
+    mesgNum: MESG_NUM.DEVELOPER_DATA_ID,
+    developerDataIndex: 0,
+    applicationVersion: 1,
+  };
+  encoder.writeMesg(developer);
+  for (let index = 0; index < count; index += 1) {
+    const description: Encodable<FieldDescriptionMesg> = {
+      mesgNum: MESG_NUM.FIELD_DESCRIPTION,
+      developerDataIndex: 0,
+      fieldDefinitionNumber: index % 256,
+      fitBaseTypeId: "uint8",
+      fieldName: "Field",
+    };
+    encoder.writeMesg(description);
+  }
+  const session: Encodable<SessionMesg> = {
+    mesgNum: MESG_NUM.SESSION,
+    timestamp: START,
+    startTime: START,
+    totalElapsedTime: 1800,
+    totalTimerTime: 1800,
+    totalDistance: 5000,
+    sport: "running",
+  };
+  encoder.writeMesg(session);
   return new Uint8Array(encoder.close()).buffer;
 }
