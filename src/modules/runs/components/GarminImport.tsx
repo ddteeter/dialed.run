@@ -11,6 +11,7 @@ import {
 import { dayLabel } from "../../../lib/dates";
 import { newUlid } from "../../../lib/ids";
 import {
+  Bracketed,
   classifyFailure,
   ControlFailureBand,
   inFlight,
@@ -344,9 +345,8 @@ function PickerRow({
           aria-describedby={titleId}
           className="target inline-flex items-center font-mono text-mono-sm uppercase text-muted no-underline"
         >
-          <span aria-hidden="true">[</span>
-          Imported
-          <span aria-hidden="true">] ›</span>
+          <Bracketed>Imported</Bracketed>
+          <span aria-hidden="true"> ›</span>
         </Link>
       )}
     </li>
