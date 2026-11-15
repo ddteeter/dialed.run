@@ -29,7 +29,12 @@ import { firstRowWhere, hasRowWhere } from "../../lib/sql/keyed-read";
 import { consumeEach } from "../../lib/sql/queue-batch";
 import type { CoreDb } from "./core-db";
 import { createNotification, notificationInsert } from "../notifications";
-import { PARSE_FAILURE_MESSAGE, extensionFromKey, sourceFor } from "./parsers";
+import {
+  PARSE_FAILURE_MESSAGE,
+  RunParseError,
+  extensionFromKey,
+  sourceFor,
+} from "./parsers";
 import {
   importsQueueMessageSchema,
   reminderSubject,
@@ -179,14 +184,14 @@ async function failImport(
 /**
  * The sentence the runner is shown when an import fails.
  *
- * Every parser throws `RunParseError`, whose message is already that
- * sentence, so the branch below is for the one case a parser cannot
- * promise: a library throwing something that is not an Error. Exported so
- * both halves are observable — the same shape as `reasonFrom` in
- * `modules/closet`.
+ * A `RunParseError`'s message is already that sentence. Anything else (a
+ * library's own error, a failed read of the stored file) is the generic
+ * one (SA-L17): its message was written for a developer, and the consumer
+ * reports it to Sentry instead. Exported so both halves are observable —
+ * the same shape as `reasonFrom` in `modules/closet`.
  */
 export function importFailureReason(error: unknown): string {
-  return error instanceof Error ? error.message : PARSE_FAILURE_MESSAGE;
+  return error instanceof RunParseError ? error.message : PARSE_FAILURE_MESSAGE;
 }
 
 /**
@@ -229,6 +234,12 @@ async function processImportJob(
     const bytes = await object.arrayBuffer();
     draft = await sourceFor(extension).parse(bytes);
   } catch (error) {
+    if (!(error instanceof RunParseError)) {
+      deps.captureException(error, {
+        surface: "import-parse",
+        importId: importRow.id,
+      });
+    }
     await failImport(deps, importRow, importFailureReason(error));
     return;
   }
@@ -276,7 +287,6 @@ async function processImportJob(
     // watch did not ask.
     ...effortFromWatch(draft.rpe),
   });
-
 
   // The import is done, and the Strava reminder this file answers — if it
   // had one — is answered (round 25; one upload clears one reminder), and

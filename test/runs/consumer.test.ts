@@ -1,12 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import {
-  beforeEach,
-  describe,
-  expect,
-  it,
-  onTestFinished,
-  vi,
-} from "vitest";
+import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import {
   gaveUp,
@@ -27,7 +20,10 @@ import {
 } from "../../src/modules/runs/consumer";
 import type { ConsumerDeps } from "../../src/modules/runs/consumer";
 import type { StravaApi } from "../../src/modules/runs/strava/api";
-import { PARSE_FAILURE_MESSAGE } from "../../src/modules/runs/parsers";
+import {
+  NO_TRACK_MESSAGE,
+  PARSE_FAILURE_MESSAGE,
+} from "../../src/modules/runs/parsers";
 import { RunParseError } from "../../src/modules/runs/parsers/shared";
 import { createManualRun } from "../../src/modules/runs/service";
 import { unreadNotificationCount } from "../../src/modules/notifications";
@@ -366,12 +362,7 @@ describe("handleImportsBatch (102 §4, §8)", () => {
         return "attached";
       },
     });
-    const importId = await seedImport(
-      deps.db,
-      newUlid(),
-      LOCATED_GPX,
-      "gpx",
-    );
+    const importId = await seedImport(deps.db, newUlid(), LOCATED_GPX, "gpx");
 
     await handleImportsBatch(
       fakeBatch([{ body: { type: "import", importId } }]).batch,
@@ -398,12 +389,7 @@ describe("handleImportsBatch (102 §4, §8)", () => {
         return Promise.resolve("attached");
       },
     });
-    const importId = await seedImport(
-      deps.db,
-      newUlid(),
-      treadmillTcx,
-      "tcx",
-    );
+    const importId = await seedImport(deps.db, newUlid(), treadmillTcx, "tcx");
 
     await handleImportsBatch(
       fakeBatch([{ body: { type: "import", importId } }]).batch,
@@ -419,12 +405,7 @@ describe("handleImportsBatch (102 §4, §8)", () => {
       vi.restoreAllMocks();
     });
     const deps = makeDeps({ attachObservation });
-    const importId = await seedImport(
-      deps.db,
-      newUlid(),
-      LOCATED_GPX,
-      "gpx",
-    );
+    const importId = await seedImport(deps.db, newUlid(), LOCATED_GPX, "gpx");
 
     await handleImportsBatch(
       fakeBatch([{ body: { type: "import", importId } }]).batch,
@@ -892,14 +873,19 @@ describe("the Strava revoke job (the outbox's other half)", () => {
 });
 
 describe("importFailureReason", () => {
-  it("passes an Error's own sentence through", () => {
-    // Every parser throws RunParseError, whose message is already the
-    // sentence the runner reads.
+  it("passes a RunParseError's sentence through, and no other error's (SA-L17)", () => {
+    // A RunParseError's message is already the sentence the runner reads.
     expect(importFailureReason(new RunParseError("tcx: no laps"))).toBe(
       PARSE_FAILURE_MESSAGE,
     );
-    expect(importFailureReason(new Error("something specific"))).toBe(
-      "something specific",
+    expect(
+      importFailureReason(
+        new RunParseError("gpx: empty", { problem: "no-track" }),
+      ),
+    ).toBe(NO_TRACK_MESSAGE);
+    // Any other error was written for a developer.
+    expect(importFailureReason(new TypeError("Cannot mix BigInt"))).toBe(
+      PARSE_FAILURE_MESSAGE,
     );
   });
 
@@ -912,6 +898,47 @@ describe("importFailureReason", () => {
 });
 
 describe("what the consumer tells the runner", () => {
+  it("shows the generic sentence for an error that is not a parse error, and reports it (SA-L17)", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    const importId = await seedImport(db, userId, LOCATED_GPX, "gpx");
+    const engineError = new TypeError("engine words a runner never reads");
+    const importBucket: ConsumerDeps["importBucket"] = {
+      get: async (key) => {
+        const object = await env.IMPORTS.get(key);
+        // The read of the stored bytes is what fails here.
+        if (object !== null)
+          object.arrayBuffer = () => Promise.reject(engineError);
+        return object;
+      },
+    };
+    const deps = makeDeps({ importBucket });
+
+    const { batch } = fakeBatch([{ body: { type: "import", importId } }]);
+    await handleImportsBatch(batch, deps);
+
+    const [row] = await db
+      .select()
+      .from(imports)
+      .where(eq(imports.id, importId));
+    expect(row?.status).toBe("failed");
+    expect(row?.failureReason).toBe(PARSE_FAILURE_MESSAGE);
+    expect(deps.exceptions).toStrictEqual([
+      { error: engineError, context: { surface: "import-parse", importId } },
+    ]);
+  });
+
+  it("does not report a parse error, which is the file's, not ours", async () => {
+    const db = coreDb();
+    const importId = await seedImport(db, newUlid(), malformedTcx, "tcx");
+    const deps = makeDeps();
+
+    const { batch } = fakeBatch([{ body: { type: "import", importId } }]);
+    await handleImportsBatch(batch, deps);
+
+    expect(deps.exceptions).toStrictEqual([]);
+  });
+
   it("names the reason in the import-failed notification", async () => {
     // The reason is the parser's user-facing sentence, and it is the only
     // thing the runner has to act on.
