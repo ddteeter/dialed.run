@@ -29,6 +29,15 @@ describe("allowedLinksOf, the one read of a garment's link", () => {
     expect(links).toEqual(new Map([["a", "https://janji.com/p/tee?c=grey"]]));
   });
 
+  it("drops a link to the app's own pages, stored before the rule (SA-L14)", async () => {
+    const links = await allowedLinksOf(core(), [
+      { id: "own", productUrl: "https://dialed.run/onboarding/done" },
+      { id: "sub", productUrl: "https://app.dialed.run/feed" },
+      { id: "shop", productUrl: "https://janji.com/rover" },
+    ]);
+    expect(links).toStrictEqual(new Map([["shop", "https://janji.com/rover"]]));
+  });
+
   it("drops a link whose domain was denied after it was saved", async () => {
     // The case a check at save cannot cover: the row is already there.
     const userId = await makeUser();

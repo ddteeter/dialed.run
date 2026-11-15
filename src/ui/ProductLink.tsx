@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 
-import { domainOf } from "../lib/domain";
+import { linkDomainOf } from "../lib/domain";
 
 import { Mono } from "./Mono";
 
@@ -54,7 +54,7 @@ export function ProductLink({
   label: string;
 }>): JSX.Element | undefined {
   if (url === null) return undefined;
-  const domain = domainOf(url);
+  const domain = linkDomainOf(url);
 
   if (domain === undefined) {
     // No anchor. A URL we cannot parse is one we cannot vouch for, and an

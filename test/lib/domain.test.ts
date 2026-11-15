@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { domainOf } from "../../src/lib/domain";
+import { domainOf, isOwnHost, linkDomainOf } from "../../src/lib/domain";
 
 /**
  * The same function answers two questions — is this domain denied, and
@@ -61,5 +61,32 @@ describe("a link that is not there", () => {
     // the callers from each carrying a guard nothing can reach.
     const missing = undefined;
     expect(domainOf(missing)).toBeUndefined();
+  });
+});
+
+describe("the app's own host (SA-L14)", () => {
+  it.each([
+    "dialed.run",
+    "DIALED.run",
+    "app.dialed.run",
+    "photos.dialed.run",
+    "dialed.run.",
+    "app.dialed.run..",
+  ])("is %s", (host) => {
+    expect(isOwnHost(host)).toBe(true);
+  });
+
+  it.each(["notdialed.run", "dialed.running.com", "dialed.run.evil.example", "run"])(
+    "is not %s",
+    (host) => {
+      expect(isOwnHost(host)).toBe(false);
+    },
+  );
+
+  it("shows a shop's domain and none for the app's own pages", () => {
+    expect(linkDomainOf("https://www.janji.com/rover")).toBe("janji.com");
+    expect(linkDomainOf("https://www.dialed.run/onboarding/done")).toBeUndefined();
+    expect(linkDomainOf("https://dialed.run./onboarding/done")).toBeUndefined();
+    expect(linkDomainOf(undefined)).toBeUndefined();
   });
 });

@@ -140,12 +140,21 @@ export function startLeavingIfNeeded(
   isLeaving: boolean,
   pathname: string,
 ): void {
-  if (
-    isLeaving &&
-    !OPEN_WHILE_LEAVING.has(pathname) &&
-    !pathname.startsWith("/auth/")
-  ) {
-    redirect({ to: "/account/leaving", throw: true });
+  sendUnlessOpen(isLeaving, pathname, OPEN_WHILE_LEAVING, "/account/leaving");
+}
+
+/**
+ * The one shape both gates share: when the gate is up, every page but the
+ * open ones and the auth pages goes to the gate's own page.
+ */
+function sendUnlessOpen(
+  isUp: boolean,
+  pathname: string,
+  open: ReadonlySet<string>,
+  to: "/account/leaving" | "/account/terms",
+): void {
+  if (isUp && !open.has(pathname) && !pathname.startsWith("/auth/")) {
+    redirect({ to, throw: true });
   }
 }
 
@@ -176,13 +185,7 @@ const OPEN_WHILE_BEHIND: ReadonlySet<string> = new Set([
  * account?".
  */
 export function startTermsIfNeeded(isBehind: boolean, pathname: string): void {
-  if (
-    isBehind &&
-    !OPEN_WHILE_BEHIND.has(pathname) &&
-    !pathname.startsWith("/auth/")
-  ) {
-    redirect({ to: "/account/terms", throw: true });
-  }
+  sendUnlessOpen(isBehind, pathname, OPEN_WHILE_BEHIND, "/account/terms");
 }
 
 /**
@@ -193,9 +196,13 @@ export function startTermsIfNeeded(isBehind: boolean, pathname: string): void {
 const optionalText = z.string().optional().catch(undefined);
 
 /**
-Au4's search: the address sign-up sent the link to.
+Au4's search: the address sign-up sent the link to. SA-L14: parsed as an
+address, so the page only ever prints something address-shaped; anything
+else is dropped, and a signed-out visitor is sent to start over.
 */
-export const checkEmailSearch = z.object({ email: optionalText });
+export const checkEmailSearch = z.object({
+  email: z.email().max(320).optional().catch(undefined),
+});
 
 /**
  * A token link's search — the confirm link's and the reset link's.

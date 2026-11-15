@@ -97,3 +97,15 @@ describe("a named piece with no link", () => {
     expect(container).toHaveTextContent(/^Capilene$/);
   });
 });
+
+describe("a link to the app itself (SA-L14)", () => {
+  it.each(["https://dialed.run/onboarding/done", "https://dialed.run./x"])(
+    "draws no anchor for %s, only the label",
+    (url) => {
+      render(<ProductLink url={url} label="Shop page" />);
+      expect(screen.queryByRole("link")).toBeNull();
+      expect(screen.getByText("Shop page")).toBeDefined();
+      expect(screen.queryByText("dialed.run")).toBeNull();
+    },
+  );
+});

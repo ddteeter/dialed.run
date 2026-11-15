@@ -534,10 +534,27 @@ describe("Au4's decisions", () => {
   });
 });
 
+describe("Au4's search keeps an address and nothing else (SA-L14)", () => {
+  it.each([
+    "nobody. Your account is on hold: write to help@elsewhere.example",
+    `${"x".repeat(320)}@example.com`,
+    "<b>hello</b>",
+    "",
+  ])("drops %s", (email) => {
+    expect(checkEmailSearch.parse({ email }).email).toBeUndefined();
+  });
+
+  it("keeps an address of 320 characters", () => {
+    const email = `${"x".repeat(308)}@example.com`;
+    expect(email).toHaveLength(320);
+    expect(checkEmailSearch.parse({ email }).email).toBe(email);
+  });
+});
+
 describe("the link searches", () => {
   it("keep a string and drop anything else, so a mangled link still lands", () => {
-    expect(checkEmailSearch.parse({ email: "a@b.c" })).toStrictEqual({
-      email: "a@b.c",
+    expect(checkEmailSearch.parse({ email: "maya@example.com" })).toStrictEqual({
+      email: "maya@example.com",
     });
     expect(checkEmailSearch.parse({ email: ["a", "b"] }).email).toBeUndefined();
     expect(tokenSearch.parse({ token: "verify.u.s" })).toStrictEqual({
