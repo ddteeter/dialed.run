@@ -135,14 +135,15 @@ export function NameRowForm({
         onRetry={form.retry}
         retryRef={form.retryRef}
       />
-      {/* Save with the form's note beside it (AC2a, R55·229). An empty
-          save's message under Brand says it instead, so the note goes. */}
+      {/* Save with the form's note beside it (AC2a, R55·229), at every
+          width (R58·295). An empty save's message under Brand says it
+          instead, so the note goes. */}
       <div data-part="save-row" className="flex flex-wrap items-center gap-3">
         <SubmitButton
           label="Save"
           pendingLabel="Saving"
           pending={form.pending}
-          tone="secondary"
+          tone="hugging"
         />
         {form.fieldErrors.brand === undefined ? (
           <span className="text-small text-quiet">Brand alone is enough.</span>

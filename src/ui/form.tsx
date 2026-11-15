@@ -923,6 +923,12 @@ const SUBMIT_TONE = {
    * on `--panel` was close to invisible.
    */
   secondary: `flex min-h-control items-center justify-center rounded-pill border border-hairline bg-transparent px-6 font-semibold text-ink dark:border-hairline-2 ${HUG_WIDE_CLASS}`,
+  /**
+   * The secondary that hugs its label at every width (AC2a, R58·295):
+   * P2.5's Save, with "Brand alone is enough." beside it on a phone too.
+   * From 720 it is the secondary as above.
+   */
+  hugging: `flex w-fit min-h-control items-center justify-center rounded-pill border border-hairline bg-transparent px-6 font-semibold text-ink dark:border-hairline-2 wide:min-w-50`,
 } as const;
 
 /**
@@ -987,7 +993,7 @@ export function SubmitButton({
   pendingLabel: string;
   pending: boolean;
   /**
-  `chalk` on the Desk; `ink` on account, settings and confirms; `secondary` for a hairline-pill submit.
+  `chalk` on the Desk; `ink` on account, settings and confirms; `secondary` for a hairline-pill submit; `hugging` for one that hugs its label on a phone too (P2.5).
   */
   tone?: keyof typeof SUBMIT_TONE | undefined;
   /**

@@ -135,6 +135,12 @@ describe("NamePieces", () => {
     await user.click(screen.getByRole("button", { name: "Skip for now" }));
 
     expect(onDone).toHaveBeenCalledTimes(1);
+    // R58·293: left under its primary at every width, 600, underlined.
+    expect(screen.getByRole("button", { name: "Skip for now" })).toHaveClass(
+      "self-start",
+      "font-semibold",
+      "underline",
+    );
   });
 
   it("expands in place rather than navigating", async () => {
@@ -268,6 +274,9 @@ describe("NamePieces", () => {
     expect(save.nextElementSibling).toBe(note);
     expect(save.parentElement).toHaveClass("flex", "items-center");
     expect(note).toHaveClass("text-small", "text-quiet");
+    // R58·295: AC2a at every width, so the pill hugs on a phone too.
+    expect(save).toHaveClass("w-fit", "rounded-pill", "border-hairline");
+    expect(save).not.toHaveClass("w-full");
   });
 
   it("puts the empty save's message in the note's place, never both (R55·229)", async () => {
