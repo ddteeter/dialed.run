@@ -8,8 +8,8 @@
  * early reject.
  *
  * Shared by the enrichment fetch, which reads a shop's page, the speed
- * beacon, which reads a stranger's POST, and the Garmin download and its
- * inflate (SA-L17). Each names its own failure, so `tooLarge` builds the
+ * beacon, which reads a stranger's POST, the Garmin download (SA-L17) and
+ * every request body (SA-L05). Each names its own failure, so `tooLarge` builds the
  * error from what went over: `declares N bytes` or `exceeded N bytes`. A
  * message with no body reads as empty.
  */
@@ -41,7 +41,7 @@ export async function readCappedBytes(
  * A stream's bytes, refused as soon as they pass `limit`: what is read
  * past it is never held.
  */
-export async function readCappedStream(
+async function readCappedStream(
   body: ReadableStream<Uint8Array> | null,
   limit: number,
   tooLarge: (detail: string) => Error,
