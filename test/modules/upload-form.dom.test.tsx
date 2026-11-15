@@ -794,7 +794,7 @@ describe("A1: sending and reading", () => {
     await renderWithRouter(form({ upload, getOutcome }));
     await user.upload(dropInput(), gpx());
     await screen.findByText("Parsed · run.gpx");
-    await user.click(screen.getByRole("button", { name: /^Replace / }));
+    await user.click(screen.getByRole("button", { name: "Replace" }));
 
     await user.upload(dropInput(), gpx("second.gpx"));
     await waitFor(() => {
@@ -914,7 +914,7 @@ function garmin(
 }
 
 async function tapImport(user: ReturnType<typeof setupUser>): Promise<void> {
-  await user.click(await screen.findByRole("button", { name: /^Import / }));
+  await user.click(await screen.findByRole("button", { name: "Import" }));
 }
 
 describe("A1: a run imported from Garmin is watched like an upload", () => {
@@ -926,7 +926,7 @@ describe("A1: a run imported from Garmin is watched like an upload", () => {
 
     await tapImport(user);
     await screen.findByText("Parsed · From Garmin");
-    await user.click(screen.getByRole("button", { name: /^Replace / }));
+    await user.click(screen.getByRole("button", { name: "Replace" }));
 
     expect(screen.queryByText("That file is empty.")).toBeNull();
     expect(well()).toHaveAttribute("data-state", "empty");
@@ -945,7 +945,7 @@ describe("A1: a run imported from Garmin is watched like an upload", () => {
 
     await tapImport(user);
     await screen.findByText("Parsed · From Garmin");
-    await user.click(screen.getByRole("button", { name: /^Replace / }));
+    await user.click(screen.getByRole("button", { name: "Replace" }));
 
     expect(screen.queryByText("Your connection dropped.")).toBeNull();
   });
@@ -1093,7 +1093,7 @@ describe("A1: the parsed card", () => {
     await user.upload(dropInput(), gpx());
     await screen.findByText("Parsed · run.gpx");
 
-    await user.click(screen.getByRole("button", { name: /^Replace / }));
+    await user.click(screen.getByRole("button", { name: "Replace" }));
 
     expect(well()).toHaveAttribute("data-state", "empty");
     expect(document.querySelector("[data-slot='parsed-card']")).toBeNull();
@@ -1628,7 +1628,7 @@ describe("A1: a run already logged", () => {
     await user.upload(dropInput(), gpx());
     await screen.findByText("Already logged");
 
-    await user.click(screen.getByRole("button", { name: /^Replace / }));
+    await user.click(screen.getByRole("button", { name: "Replace" }));
 
     expect(well()).toHaveAttribute("data-state", "empty");
   });
@@ -2022,9 +2022,7 @@ describe("A1 keeps focus where the runner can find it (a11y audit M2)", () => {
     await renderWithRouter(form({ garmin: garmin(), getOutcome: parsed() }));
     await tapImport(user);
 
-    await user.click(
-      await screen.findByRole("button", { name: "Replace From Garmin" }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Replace" }));
 
     expect(document.activeElement).toBe(dropInput());
   });
@@ -2034,35 +2032,36 @@ describe("A1 keeps focus where the runner can find it (a11y audit M2)", () => {
     await renderWithRouter(form({ getOutcome: parsed() }));
     await user.upload(dropInput(), gpx());
 
-    await user.click(
-      await screen.findByRole("button", { name: "Replace run.gpx" }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Replace" }));
 
     expect(document.activeElement).toBe(dropInput());
   });
 });
 
-describe("A1: Replace names the file it replaces (a11y audit)", () => {
-  it("is the visible word, then the file", async () => {
+describe("A1: Replace is described by the file it replaces (a11y audit, D-187)", () => {
+  it("is named by the visible word, and described by the strip's file line", async () => {
     const user = setupUser();
     await renderWithRouter(form({ getOutcome: parsed() }));
 
     await user.upload(dropInput(), gpx("MORNING_RUN.GPX"));
 
-    expect(
-      await screen.findByRole("button", { name: "Replace MORNING_RUN.GPX" }),
-    ).toHaveTextContent(/^Replace$/u);
+    const replace = await screen.findByRole("button", { name: "Replace" });
+    expect(replace).toHaveTextContent(/^Replace$/u);
+    const line = document.querySelector("[data-part='file-line']");
+    expect(line).toHaveTextContent(/^Parsed · MORNING_RUN\.GPX$/u);
+    expect(replace).toHaveAttribute("aria-describedby", line?.id);
+    expect(replace).toHaveAccessibleDescription("Parsed · MORNING_RUN.GPX");
   });
 
-  it("names a Garmin import by where it came from", async () => {
+  it("describes a Garmin import by where it came from", async () => {
     const user = setupUser();
     await renderWithRouter(form({ garmin: garmin(), getOutcome: parsed() }));
 
     await tapImport(user);
 
     expect(
-      await screen.findByRole("button", { name: "Replace From Garmin" }),
-    ).toBeVisible();
+      await screen.findByRole("button", { name: "Replace" }),
+    ).toHaveAccessibleDescription("Parsed · From Garmin");
   });
 });
 

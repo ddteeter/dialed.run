@@ -1,14 +1,10 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { JSX, ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { z } from "zod";
 
 import type { Units } from "../../../lib/contracts";
-import {
-  dayLabel,
-  startAtTimeOfDay,
-  timeOfDay,
-} from "../../../lib/dates";
+import { dayLabel, startAtTimeOfDay, timeOfDay } from "../../../lib/dates";
 import {
   distanceNumber,
   formatDuration,
@@ -93,22 +89,22 @@ export function focusIfLost(line: HTMLElement | null | undefined): void {
 
 /**
  * The card's header strip: the file, and REPLACE — *"the only way back"*
- * to the drop zone (round 20). Replace's name carries the file it
- * replaces, after the word it shows (WCAG 2.5.3).
+ * to the drop zone (round 20). Replace's name is the word it shows, and
+ * the strip's own line, which names the file, is its description (D-187).
  */
 function FileStrip({
   label,
-  filename,
   onReplace,
 }: Readonly<{
   label: string;
-  filename: string;
   onReplace: () => void;
 }>): JSX.Element {
+  const lineId = useId();
   return (
     <div className="flex items-center justify-between gap-3 bg-notice inset-ring-1 inset-ring-notice-rule px-4 py-2">
       {/* `--quiet`: the strip is tinted, and `--label` is 4.0:1 on the tint. */}
       <span
+        id={lineId}
         ref={focusIfLost}
         tabIndex={-1}
         data-part="file-line"
@@ -120,7 +116,7 @@ function FileStrip({
       </span>
       <button
         type="button"
-        aria-label={`Replace ${filename}`}
+        aria-describedby={lineId}
         onClick={onReplace}
         className="target shrink-0 border-none bg-transparent font-semibold text-cold-text"
       >
@@ -449,11 +445,7 @@ export function ParsedCard({
         data-state="parsed"
         className="overflow-hidden rounded-card border border-hairline bg-panel desk:col-start-1 desk:row-start-1"
       >
-        <FileStrip
-          label={`Parsed · ${filename}`}
-          filename={filename}
-          onReplace={onReplace}
-        />
+        <FileStrip label={`Parsed · ${filename}`} onReplace={onReplace} />
         <div className="flex flex-col gap-2 p-4">
           <Headline run={run} units={units} />
           <GarminAttribution deviceName={run.deviceName} />
@@ -666,7 +658,7 @@ export function DuplicateCard({
         data-state="duplicate"
         className="overflow-hidden rounded-card border border-hairline bg-panel"
       >
-        <FileStrip label={filename} filename={filename} onReplace={onReplace} />
+        <FileStrip label={filename} onReplace={onReplace} />
         <div className="flex flex-col gap-2 p-4">
           <Mono step="xs" className="text-muted">
             Already logged
@@ -700,7 +692,10 @@ export function DuplicateCard({
       )}
       {/* Round 55 · 234: the board's line, pointing at the strip's
           REPLACE in --cold-text, as the strip draws it. */}
-      <p data-part="wrong-file" className="m-0 text-center text-small text-muted">
+      <p
+        data-part="wrong-file"
+        className="m-0 text-center text-small text-muted"
+      >
         Wrong file? Tap{" "}
         <span className="font-semibold text-cold-text uppercase">Replace</span>{" "}
         above.

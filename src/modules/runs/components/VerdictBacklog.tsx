@@ -1,6 +1,6 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import type { JSX, KeyboardEvent } from "react";
-import { Fragment, useState } from "react";
+import { Fragment, useId, useState } from "react";
 
 import type { VerdictValue } from "../../../lib/contracts";
 import { measuredLine } from "../../../lib/contracts/measures";
@@ -180,16 +180,17 @@ function KitLine({ kit }: Readonly<{ kit: BacklogKit }>): JSX.Element {
  */
 function OutfitCell({
   runId,
-  day,
+  dayId,
   suggestion,
   chosen,
   onUse,
 }: Readonly<{
   runId: string;
   /**
-  The row's day, for Use's and Pick's names, as the verdict buttons have it.
+  The id of the row's visible day cell, which describes Use and Pick as it
+  describes the verdict buttons (D-187): the name is the visible word.
   */
-  day: string;
+  dayId: string;
   suggestion: BacklogSuggestion | undefined;
   chosen: BacklogKit | undefined;
   onUse: (kit: BacklogSuggestion) => void;
@@ -212,7 +213,7 @@ function OutfitCell({
           </span>
           <button
             type="button"
-            aria-label={`Use — ${day}`}
+            aria-describedby={dayId}
             onClick={() => {
               onUse(suggestion);
             }}
@@ -225,7 +226,7 @@ function OutfitCell({
       <Link
         to="/feed/attach/$runId"
         params={{ runId }}
-        aria-label={`Pick — ${day}`}
+        aria-describedby={dayId}
         className="target inline-flex shrink-0 items-center px-2 text-body font-semibold text-cold-text"
       >
         Pick
@@ -250,12 +251,15 @@ function OutfitCell({
  */
 function VerdictSlotButton({
   slot,
-  day,
+  dayId,
   isChosen,
   onChoose,
 }: Readonly<{
   slot: VerdictSlot;
-  day: string;
+  /**
+  The id of the row's visible day cell, the button's description.
+  */
+  dayId: string;
   isChosen: boolean;
   onChoose: () => void;
 }>): JSX.Element {
@@ -263,11 +267,11 @@ function VerdictSlotButton({
     <button
       type="button"
       aria-pressed={isChosen}
-      // The visible word is the label, so the accessible name adds only
-      // what the eye gets from the row it is in. The key is not in the
-      // name: it is a shortcut, and reading "key 3" to somebody who
-      // cannot see the legend is noise.
-      aria-label={`${slot.label} — ${day}`}
+      // The visible word is the name (D-187), and the row's day cell, what
+      // the eye gets from the row it is in, is the description. The key is
+      // not in either: it is a shortcut, and reading "key 3" to somebody
+      // who cannot see the legend is noise.
+      aria-describedby={dayId}
       onClick={onChoose}
       // `target` at the site rather than inside `SLOT_BASE`: the 44px hit
       // area is the button's and belongs where a reviewer — and
@@ -279,7 +283,7 @@ function VerdictSlotButton({
       {/* At the desk every segment holds the widest word unseen, so the
           five are one width, as 236a draws them (R2-RUNS-05): the table
           gives this column its least width, which would otherwise be each
-          word's own. The name is the `aria-label`, so it is heard once. */}
+          word's own. The widest word is hidden, so the name is heard once. */}
       <span className="inline-grid">
         <span className="col-start-1 row-start-1">{slot.label}</span>
         <span
@@ -582,6 +586,8 @@ function BacklogTable({
   const { saved, failures, kitOf, verdicts } = rowState;
   const { onUse, onChoose, onSave } = rowActions;
   const { shown, more, showAll } = useShownRows(rows, selected);
+  // Each row's day cell describes that row's controls.
+  const dayIdPrefix = useId();
   return (
     <>
       {/* Round 55 · 236a: at the desk, one --panel card with a hairline
@@ -609,6 +615,7 @@ function BacklogTable({
               const failure = failures.get(row.runId);
               const isHere = index === selected;
               const day = runDay(row);
+              const dayId = `${dayIdPrefix}-day-${row.runId}`;
               const verdict = verdicts.get(row.runId);
               return (
                 <Fragment key={row.runId}>
@@ -632,7 +639,10 @@ function BacklogTable({
                     className={rowClass(isHere, failure !== undefined)}
                   >
                     <td className={CELL}>
-                      <span className="text-body font-semibold desk:font-mono desk:text-mono-sm desk:font-normal desk:uppercase">
+                      <span
+                        id={dayId}
+                        className="text-body font-semibold desk:font-mono desk:text-mono-sm desk:font-normal desk:uppercase"
+                      >
                         {day}
                       </span>
                     </td>
@@ -683,7 +693,7 @@ function BacklogTable({
                     <td className={OUTFIT_CELL}>
                       <OutfitCell
                         runId={row.runId}
-                        day={day}
+                        dayId={dayId}
                         suggestion={row.suggestion}
                         chosen={kitOf(row)}
                         onUse={(kit) => {
@@ -707,7 +717,7 @@ function BacklogTable({
                           <VerdictSlotButton
                             key={slot.key}
                             slot={slot}
-                            day={day}
+                            dayId={dayId}
                             isChosen={verdict === slot.value}
                             onChoose={() => {
                               onChoose(row, slot.value);

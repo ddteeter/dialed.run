@@ -118,11 +118,14 @@ describe("A1: Import from Garmin (G3)", () => {
       within(row).getByText("Sat Aug 29 · 6.2 mi · 51 minutes 38 seconds"),
     ).toHaveClass("sr-only");
     expect(row).toHaveTextContent("Garmin");
-    expect(
-      within(row).getByRole("button", {
-        name: "Import Sat Aug 29 · 6.2 mi · 51 minutes 38 seconds",
-      }),
-    ).toHaveTextContent("Import ›");
+    // D-187: named by its visible word, the chevron drawn and not said,
+    // and described by the row's title, in its spoken form.
+    const button = within(row).getByRole("button", { name: "Import" });
+    expect(button).toHaveTextContent("Import ›");
+    expect(button).toHaveAttribute("aria-describedby", title?.id);
+    expect(button).toHaveAccessibleDescription(
+      "Sat Aug 29 · 6.2 mi · 51 minutes 38 seconds",
+    );
   });
 
   it("opens the run for one already here", async () => {
@@ -139,10 +142,15 @@ describe("A1: Import from Garmin (G3)", () => {
       ),
     );
 
+    // D-187: named by its visible word, its brackets and chevron drawn
+    // and not said, and described by the row's title.
     const link = await within(section()).findByRole("link", {
-      name: "Imported: open Sat Aug 29 · 6.2 mi · 51 minutes 38 seconds",
+      name: "Imported",
     });
     expect(link).toHaveTextContent("[Imported] ›");
+    expect(link).toHaveAccessibleDescription(
+      "Sat Aug 29 · 6.2 mi · 51 minutes 38 seconds",
+    );
     // P2a-05: centred in its 44 target, as Import's button is.
     expect(link).toHaveClass("target", "inline-flex", "items-center");
     expect(link).toHaveAttribute("href", "/runs/01RUN");
@@ -199,7 +207,7 @@ describe("A1: Import from Garmin (G3)", () => {
 
       next.resolve({ status: "ready", rows: [ROW] });
       expect(
-        await within(section()).findByRole("button", { name: /^Import / }),
+        await within(section()).findByRole("button", { name: "Import" }),
       ).toBeVisible();
       expect(picker).toHaveBeenCalledTimes(2);
     },
@@ -220,7 +228,7 @@ describe("A1: Import from Garmin (G3)", () => {
     await renderWithRouter(a1(actions({ importActivity }), getOutcome));
 
     await user.click(
-      await within(section()).findByRole("button", { name: /^Import / }),
+      await within(section()).findByRole("button", { name: "Import" }),
     );
 
     expect(await screen.findByText("Parsed · From Garmin")).toBeVisible();
@@ -240,7 +248,7 @@ describe("A1: Import from Garmin (G3)", () => {
     await renderWithRouter(a1(actions({ importActivity })));
 
     await user.click(
-      await within(section()).findByRole("button", { name: /^Import / }),
+      await within(section()).findByRole("button", { name: "Import" }),
     );
 
     expect(
@@ -256,12 +264,16 @@ describe("A1: Import from Garmin (G3)", () => {
     await renderWithRouter(a1(actions({ importActivity })));
 
     const button = await within(section()).findByRole("button", {
-      name: /^Import /,
+      name: "Import",
     });
     await user.click(button);
     await user.click(button);
 
     expect(button).toHaveTextContent("Importing");
+    expect(button).toHaveAccessibleName("Importing");
+    expect(button).toHaveAccessibleDescription(
+      "Sat Aug 29 · 6.2 mi · 51 minutes 38 seconds",
+    );
     expect(button).toHaveAttribute("aria-busy", "true");
     expect(button).toHaveAttribute("aria-disabled", "true");
     expect(importActivity).toHaveBeenCalledTimes(1);
@@ -299,13 +311,13 @@ describe("A1: Import from Garmin (G3)", () => {
       await renderWithRouter(a1(actions({ importActivity })));
 
       await user.click(
-        await within(section()).findByRole("button", { name: /^Import / }),
+        await within(section()).findByRole("button", { name: "Import" }),
       );
       const message = await within(section()).findByText(sentence);
       expect(message).toBeVisible();
       expect(section()).toHaveTextContent(/not imported/iu);
       const button = within(section()).getByRole("button", {
-        name: /^Import /,
+        name: "Import",
       });
       expect(button).toHaveTextContent("Import ›");
       expect(button).not.toHaveAttribute("aria-busy");
@@ -340,7 +352,7 @@ describe("A1: Import from Garmin (G3)", () => {
     await renderWithRouter(a1(actions({ importActivity })));
 
     const button = await within(section()).findByRole("button", {
-      name: /^Import /,
+      name: "Import",
     });
     await user.click(button);
     await within(section()).findByText(
