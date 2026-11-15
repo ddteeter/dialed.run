@@ -81,13 +81,32 @@ jobs:
   # invisible to the dev leg, and dependency updates merge themselves on
   # these checks (design 156). The dev leg keeps the name `e2e`, which
   # branch protection requires; `e2e (build)` is required alongside it.
-  e2e:
-    name: ${{ matrix.server == 'preview' && 'e2e (build)' || 'e2e' }}
+  # Whether this PR changes anything the browser e2e can see. A PR that
+  # touches only prose (docs outside docs/legal, plan/, .claude/, the
+  # root's *.md) changes nothing the app serves or the specs read, so e2e
+  # has nothing to test and is skipped, along with its flake exposure.
+  # The test job above still runs for every PR: lint and about twenty
+  # vitest files read docs (docs/legal, docs/deferred.md, the voiceover
+  # script, docs/agents), so it is not a no-op for prose.
+  #
+  # The list is what may be skipped, not what must run, so a new top-level
+  # folder runs e2e until someone decides otherwise. design/ is not on it:
+  # the conformance specs read the boards (e2e/support/conformance.ts).
+  # docs/legal/ is not on it: the app imports those pages (?raw).
+  #
+  # A path filter on the trigger cannot do this: e2e and e2e (build) are
+  # required checks, and a workflow that does not run reports no context,
+  # which blocks the merge forever (the trap mutation.yml describes). A
+  # job-level `if` cannot either: a skipped matrix job reports its name
+  # unexpanded, so neither required name arrives. So the e2e job always
+  # runs, and its steps skip; it reports success under its own name in
+  # about a minute. The base is the PR's own, for the reason mutation.yml
+  # gives (#334).
+  changes:
+    name: Classify the change
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        server: [dev, preview]
+    outputs:
+      e2e: ${{ steps.classify.outputs.e2e }}
     steps:
       # Audit first (design 196): reports the hosts this job reaches and
       # blocks none. It moves to `block` once that list is known and short.
@@ -97,19 +116,72 @@ jobs:
 
       - uses: actions/checkout@v7.0.1
         with:
+          fetch-depth: 0
+          # The fetch below is of a public repository and needs no token.
           persist-credentials: false
-      - uses: actions/setup-node@v7.1.0
+
+      - id: classify
+        env:
+          BASE: ${{ github.event.pull_request.base.ref }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
+            echo "e2e=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git fetch --no-tags origin \
+            "+refs/heads/$BASE:refs/remotes/origin/$BASE"
+          # A file e2e can see is any file not on the prose list. grep -v
+          # exits 1 when every line was prose, hence the `|| true`.
+          seen="$(git diff --name-only "origin/$BASE...HEAD" \
+            | grep -vE '^(docs/|plan/|\.claude/|[^/]+\.md$)' || true)"
+          legal="$(git diff --name-only "origin/$BASE...HEAD" \
+            | grep -E '^docs/legal/' || true)"
+          if [ -n "$seen" ] || [ -n "$legal" ]; then
+            echo "e2e=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "e2e=false" >> "$GITHUB_OUTPUT"
+            echo "Only prose changed: e2e's steps skip."
+          fi
+
+  e2e:
+    name: ${{ matrix.server == 'preview' && 'e2e (build)' || 'e2e' }}
+    needs: changes
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        server: [dev, preview]
+    # Every step below but the first carries `if: env.RUN == 'true'`, so a
+    # prose-only PR reports success under this job's name (see `changes`).
+    env:
+      RUN: ${{ needs.changes.outputs.e2e }}
+    steps:
+      # Audit first (design 196): reports the hosts this job reaches and
+      # blocks none. It moves to `block` once that list is known and short.
+      - uses: step-security/harden-runner@v2.22.4
+        with:
+          egress-policy: audit
+
+      - if: env.RUN == 'true'
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - if: env.RUN == 'true'
+        uses: actions/setup-node@v7.1.0
         with:
           node-version: 24
           cache: npm
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - if: env.RUN == 'true'
+        run: npm ci
+      - if: env.RUN == 'true'
+        run: npx playwright install --with-deps chromium
       # MediaPipe's WASM is gitignored and staged out of node_modules, and
       # the `browser` vitest project fetches it over HTTP. `npm test` stages
       # it through `pretest`; anything that reaches vitest by another road —
       # stryker here, the dev server for e2e — has to ask for it, or the
       # model 404s and every browser test fails as "unavailable".
-      - run: npm run stage:mediapipe
+      - if: env.RUN == 'true'
+        run: npm run stage:mediapipe
       # ADMIN_USER_IDS: the Desk's operator in e2e/desk (register R-72).
       # The TURNSTILE_* pair are Cloudflare's documented always-pass test
       # keys, so sign-up works in CI once the widget is on it (OPS-5).
@@ -120,7 +192,8 @@ jobs:
       # Garmin demo's owner (e2e/garmin, plan 160); the key is a placeholder
       # the stub accepts (owner, 2026-10-27). GARMIN_API_ORIGIN is not here:
       # Playwright sets it to the stub it starts (e2e/garmin/stub-origin.ts).
-      - run: |
+      - if: env.RUN == 'true'
+        run: |
           {
             echo "BETTER_AUTH_SECRET=ci-only-secret"
             echo "UNSUBSCRIBE_SECRET=ci-only-unsubscribe-secret"
@@ -135,12 +208,16 @@ jobs:
             echo "GARMIN_OWNER_USER_ID=e2e-garmin-owner"
             echo 'MODERATION_THRESHOLDS={"reports":{"explicit":2,"intimate":1,"harassment":2,"spam":2,"not_theirs":2,"other":2},"photos":{"sexual":0.8,"violence":0.8,"violence/graphic":0.7,"self-harm":0.7,"self-harm/intent":0.7,"self-harm/instructions":0.7}}'
           } > .dev.vars
-      - run: npx wrangler d1 migrations apply dialed-core --local
-      - run: npx wrangler d1 migrations apply dialed-weather --local
-      - run: npx wrangler d1 migrations apply dialed-ops --local
-      - if: matrix.server == 'preview'
+      - if: env.RUN == 'true'
+        run: npx wrangler d1 migrations apply dialed-core --local
+      - if: env.RUN == 'true'
+        run: npx wrangler d1 migrations apply dialed-weather --local
+      - if: env.RUN == 'true'
+        run: npx wrangler d1 migrations apply dialed-ops --local
+      - if: env.RUN == 'true' && matrix.server == 'preview'
         run: npm run build
-      - run: npx playwright test
+      - if: env.RUN == 'true'
+        run: npx playwright test
         env:
           E2E_SERVER: ${{ matrix.server }}
 
