@@ -193,6 +193,8 @@ export function CityFinder({
           hint={CITY_HINT}
           autoComplete="address-level2"
           action={
+            // The secondary's hairline edge (R58·308: the ink-edged pill
+            // is not a kind), at the field's own height beside it.
             <button
               type="button"
               data-part="find"
@@ -200,7 +202,7 @@ export function CityFinder({
               onClick={() => {
                 void find();
               }}
-              className="target cursor-pointer rounded-pill border border-ink bg-transparent px-5 py-3 text-body font-bold text-ink"
+              className="target cursor-pointer rounded-pill border border-hairline bg-transparent px-5 py-3 text-body font-semibold text-ink dark:border-hairline-2"
             >
               <PendingLabel
                 label="Find"

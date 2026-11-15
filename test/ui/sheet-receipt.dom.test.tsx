@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { Sheet, SheetReceipt } from "../../src/ui";
+import { INK_PILL, Sheet, SheetReceipt } from "../../src/ui";
 
 function renderReceipt() {
   const onDone = vi.fn();
@@ -53,5 +53,13 @@ describe("SheetReceipt", () => {
     expect(done).toHaveAttribute("type", "button");
     await user.click(done);
     expect(onDone).toHaveBeenCalledOnce();
+  });
+
+  it("draws Done as the ink pill, never a display-caps card (R58·306)", () => {
+    renderReceipt();
+    const done = screen.getByRole("button", { name: "Done", hidden: true });
+    expect(done).toHaveClass("target", ...INK_PILL.split(" "));
+    expect(done).not.toHaveClass("uppercase");
+    expect(done).not.toHaveClass("rounded-card");
   });
 });

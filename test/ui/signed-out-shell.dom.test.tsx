@@ -209,6 +209,8 @@ describe("SignedOutPanel", () => {
     const panel = document.querySelector("[data-part='panel']");
     expect(panel).toHaveClass("px-5", "wide:px-6", "max-w-panel");
     expect(panel).not.toHaveClass("px-6");
+    // The slot the width rule fills in, as the drawer's (R58·266).
+    expect(panel).toHaveAttribute("data-slot", "signed-out-panel");
     // The bar's own gutter, the edge the panel matches.
     expect(landingBar()?.firstElementChild).toHaveClass("px-5", "wide:px-6");
   });
