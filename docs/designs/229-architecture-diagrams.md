@@ -107,8 +107,8 @@ filesystem, so sources arrive as `?raw` imports, as
 ## Issues
 
 - Closes: none.
-- Opens: one build item per step above, once this doc is approved. Filed
-  already: #797 (the held flows). Related: #796 (the module breakdown).
+- Opens: #799 (the parent), with #800 to #805 for steps 1 to 6 and #797
+  for the held flows. Related: #796 (the module breakdown).
 
 ## Owner's calls (2026-11-15)
 
