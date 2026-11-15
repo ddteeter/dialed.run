@@ -276,10 +276,29 @@ function VerdictSlotButton({
       // decides.
       className={`target ${slotClass(slot.value, isChosen)}`}
     >
-      {slot.label}
+      {/* At the desk every segment holds the widest word unseen, so the
+          five are one width, as 236a draws them (R2-RUNS-05): the table
+          gives this column its least width, which would otherwise be each
+          word's own. The name is the `aria-label`, so it is heard once. */}
+      <span className="inline-grid">
+        <span className="col-start-1 row-start-1">{slot.label}</span>
+        <span
+          aria-hidden="true"
+          className="invisible col-start-1 row-start-1 hidden desk:block"
+        >
+          {WIDEST_VERDICT}
+        </span>
+      </span>
     </button>
   );
 }
+
+/**
+The longest verdict word: mono, so the most letters is the widest.
+*/
+const WIDEST_VERDICT = verdictKeys
+  .map((slot) => slot.label)
+  .toSorted((a, b) => b.length - a.length)[0];
 
 export interface VerdictBacklogProps {
   rows: readonly BacklogRow[];
@@ -507,10 +526,11 @@ interface BacklogSelection {
  * The five verdict segments: five on a card's row, and equal columns at
  * the desk too, as 236a draws them (R2-RUNS-05). At the desk the tracks
  * are `1fr`, whose floor is each button's `min-width`, and a button there
- * is `min-w-max` (`SLOT_BASE`), so the floor is its words: the five come
- * out as wide as the widest, never squeezed under them by the outfit cell,
- * which takes what the others leave. `minmax(0,1fr)` let the table squeeze
- * them under the target; `minmax(max-content,1fr)` kept each its own width.
+ * is `min-w-max` (`SLOT_BASE`) holding the widest word unseen, so all five
+ * floor at that word: the table gives this column its least width, beside
+ * the outfit cell that takes the rest. `minmax(0,1fr)` let the table
+ * squeeze them under the target, and each word's own floor left them
+ * unequal.
  */
 const VERDICT_SEGMENTS_CLASS =
   "grid grid-cols-5 gap-1 desk:grid-cols-[repeat(5,1fr)]";

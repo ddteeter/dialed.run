@@ -125,6 +125,13 @@ const here = (): HTMLElement => {
 const slot = (name: RegExp) => screen.getByRole("button", { name });
 
 /**
+ * The word a segment draws: its first span's, without the unseen widest
+ * word every desk segment holds for its width.
+ */
+const drawnWord = (button: HTMLElement): string | null | undefined =>
+  button.querySelector(":scope > span > span:not([aria-hidden])")?.textContent;
+
+/**
  * A promise this test resolves when it chooses, so the in-flight state is
  * reachable at all — a pending state visible only for a tick is one a test
  * races. `Promise.withResolvers` is the platform's own spelling and the
@@ -305,7 +312,7 @@ describe("VerdictBacklog: the keyboard", () => {
     // The five are the row's pressable buttons; Use and Pick name the row
     // too, but press nothing.
     const slots = screen.getAllByRole("button", { pressed: false });
-    expect(slots.map((slot) => slot.textContent)).toStrictEqual([
+    expect(slots.map((slot) => drawnWord(slot))).toStrictEqual([
       "Way cold",
       "A bit cold",
       "Dialed",
@@ -590,7 +597,7 @@ describe("VerdictBacklog: what each state is drawn as", () => {
         "desk:px-2",
       );
       // The capitals are CSS: the name a reader hears stays in words.
-      expect(slot(name).textContent).toMatch(/^[A-Z][a-z ]+$/u);
+      expect(drawnWord(slot(name))).toMatch(/^[A-Z][a-z ]+$/u);
     }
 
     fireEvent.click(slot(/^Way cold/));
@@ -995,6 +1002,11 @@ describe("VerdictBacklog: below the desk, one card per run (Round 55 · 236)", (
       "desk:grid-cols-[repeat(5,1fr)]",
     );
     expect(segments).not.toHaveClass("desk:flex");
+    // The widest word, held unseen in each desk segment so the five are
+    // one width, and heard by nobody (the name is the aria-label).
+    const ghost = segments?.querySelector("[aria-hidden='true']");
+    expect(ghost).toHaveTextContent("A bit cold");
+    expect(ghost).toHaveClass("invisible", "hidden", "desk:block");
     // Each button's floor is its words at the desk, so 1fr tracks come
     // out as wide as the widest word, never cut by the outfit cell.
     const buttons = [...(segments?.children ?? [])];
