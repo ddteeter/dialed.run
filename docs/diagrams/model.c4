@@ -1,0 +1,141 @@
+model {
+  runner = actor 'Runner' {
+    description 'Logs runs and the kit worn on them'
+  }
+
+  cf = system 'Cloudflare' {
+    description 'One Worker, SSR-first, on the Workers Paid plan'
+    icon tech:cloudflare
+
+    app = worker 'TanStack Start Worker' {
+      upload = inRequest 'startImport' {
+        technology 'in the request: one attempt, the runner is waiting'
+        description 'The upload server function'
+      }
+      consumer = offQueue 'import consumer' {
+        technology 'off the queue: seconds later, at least once'
+        description 'Parses the file and writes the run'
+      }
+      deadLetter = offQueue 'dead-letter consumer' {
+        technology 'off the queue: after 3 failed retries'
+        description 'Makes sure no import ends in silence'
+      }
+      digest = onCron 'daily digest' {
+        technology 'cron: 12:00 UTC'
+        description 'Re-drives imports still pending'
+      }
+      weatherRetry = onCron 'weather-retry' {
+        technology 'cron: every hour'
+        description 'Re-drives runs still waiting on conditions'
+      }
+      weather = module 'weather attach' {
+        description 'Attaches observed conditions to a run'
+      }
+
+      // Product enrichment: a pasted product link becomes the product's specs.
+      saveGarment = inRequest 'createItemFn / updateItemFn' {
+        technology 'in the request: one attempt, the runner is waiting'
+        description 'Saves a garment; a product link asks for enrichment'
+      }
+      enrichRequest = module 'requestEnrichment' {
+        description 'Claims the product, then sends EnrichJob'
+      }
+      enrichConsumer = offQueue 'enrichment consumer' {
+        technology 'off the queue: up to 30 seconds later, at least once'
+        description 'Fetches the page, stores it, extracts the specs'
+      }
+      enrichDeadLetter = offQueue 'enrichment dead-letter consumer' {
+        technology 'off the queue: after 3 failed retries'
+        description 'Marks the product failed'
+      }
+      enrichmentRetry = onCron 'enrichment-retry' {
+        technology 'cron: every hour, at half past'
+        description 'Re-drives products pending, or failed in their first day'
+      }
+      deskRetry = inRequest 'Desk: Retry' {
+        technology 'in the request: one attempt, the operator is waiting'
+        description 'Re-fetches a product the system gave up on'
+      }
+    }
+
+    mediaBucket = bucket 'R2: media' {
+      description 'Product page snapshots, kept for good'
+    }
+    enrichQueue = queue 'Queue: dialed-enrichment' {
+      description 'EnrichJob: a product id, not the work'
+    }
+    enrichDlq = queue 'Queue: dialed-enrichment-dlq' {
+      description 'Jobs that failed every retry'
+    }
+
+    importsBucket = bucket 'R2: imports' {
+      description 'The raw uploaded file'
+    }
+    importsQueue = queue 'Queue: dialed-imports' {
+      description 'ImportJob'
+    }
+    importsDlq = queue 'Queue: dialed-imports-dlq' {
+      description 'Jobs that failed every retry'
+    }
+    core = database 'D1: dialed-core' {
+      description 'Users, closet, runs, products, feed'
+    }
+    weatherDb = database 'D1: dialed-weather' {
+      description 'The shared observation cache'
+    }
+  }
+
+  provider = external 'Visual Crossing' {
+    description 'Weather provider, behind an adapter'
+  }
+
+  operator = actor 'Operator' {
+    description 'Works the Desk'
+  }
+  shop = external 'The shop' {
+    description 'The product page the runner linked'
+  }
+  firecrawl = external 'Firecrawl' {
+    description 'Fetching proxy, when a shop refuses a Worker'
+  }
+  openai = external 'OpenAI' {
+    description 'The model rung: composition'
+  }
+
+  runner -> cf.app.upload 'uploads a run file'
+  cf.app.upload -> cf.importsBucket 'stores the raw file'
+  cf.app.upload -> cf.core 'inserts the import row'
+  cf.app.upload -[async]-> cf.importsQueue 'enqueues ImportJob'
+  cf.importsQueue -[async]-> cf.app.consumer 'delivers ImportJob'
+  cf.app.consumer -> cf.importsBucket 'reads the raw file'
+  cf.app.consumer -> cf.core 'claims the import, writes the run'
+  cf.app.consumer -> cf.app.weather 'asks for the conditions'
+  cf.importsQueue -[recovery]-> cf.importsDlq 'dead-letters after 3 retries'
+  cf.importsDlq -[async]-> cf.app.deadLetter 'delivers the dead job'
+  cf.app.deadLetter -[recovery]-> cf.core 'marks the import failed'
+  cf.app.digest -[recovery]-> cf.core 'finds imports pending past 15 minutes'
+  cf.app.digest -[recovery]-> cf.importsQueue 'enqueues them again'
+  cf.app.weatherRetry -[recovery]-> cf.app.weather 'retries runs still pending'
+  cf.app.weather -> provider 'finished hours only'
+  cf.app.weather -> cf.weatherDb 'caches the observation'
+  cf.app.weather -> cf.core 'weather_status and run_conditions'
+
+  runner -> cf.app.saveGarment 'saves a garment with a product link'
+  cf.app.saveGarment -> cf.core 'finds or makes the shared product'
+  cf.app.saveGarment -> cf.app.enrichRequest 'asks for enrichment'
+  cf.app.enrichRequest -> cf.core 'claims the product: pending'
+  cf.app.enrichRequest -[async]-> cf.enrichQueue 'sends EnrichJob'
+  cf.enrichQueue -[async]-> cf.app.enrichConsumer 'delivers EnrichJob'
+  cf.app.enrichConsumer -> shop 'fetches the page'
+  cf.app.enrichConsumer -> firecrawl 'fetches a refused page'
+  cf.app.enrichConsumer -> cf.mediaBucket 'stores and reuses the page'
+  cf.app.enrichConsumer -> openai 'asks for the composition'
+  cf.app.enrichConsumer -> cf.core 'writes the specs: done'
+  cf.enrichQueue -[recovery]-> cf.enrichDlq 'dead-letters after 3 retries'
+  cf.enrichDlq -[async]-> cf.app.enrichDeadLetter 'delivers the dead job'
+  cf.app.enrichDeadLetter -[recovery]-> cf.core 'marks the product failed'
+  cf.app.enrichmentRetry -[recovery]-> cf.core 'finds pending, re-claims failed'
+  cf.app.enrichmentRetry -[recovery]-> cf.enrichQueue 'sends them again'
+  operator -> cf.app.deskRetry 'presses Retry on a given-up product'
+  cf.app.deskRetry -[recovery]-> cf.app.enrichRequest 'asks for enrichment again'
+}
