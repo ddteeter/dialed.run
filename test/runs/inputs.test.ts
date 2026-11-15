@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { newUlid } from "../../src/lib/ids";
 import {
@@ -11,6 +11,7 @@ import {
   garminImportInput,
   importIdInput,
   importUploadFrom,
+  MAX_START_AHEAD_SECONDS,
   manualRunInput,
   retimeRunInput,
   runIdInput,
@@ -146,6 +147,43 @@ describe("conditionsBandInput", () => {
   });
 });
 
+describe("a typed start is not in the future (SA-M31)", () => {
+  const NOW = 1_800_000_000;
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function startIssues(
+    schema: typeof manualRunInput | typeof retimeRunInput,
+    startedAt: number,
+  ) {
+    vi.spyOn(Date, "now").mockReturnValue(NOW * 1000);
+    const result = schema.safeParse({ ...draft, runId: newUlid(), startedAt });
+    return result.success
+      ? []
+      : result.error.issues
+          .filter((issue) => issue.path[0] === "startedAt")
+          .map((issue) => issue.message);
+  }
+
+  it("takes a start up to a day past the clock, and refuses one after", () => {
+    for (const schema of [manualRunInput, retimeRunInput]) {
+      expect(startIssues(schema, NOW)).toStrictEqual([]);
+      expect(startIssues(schema, NOW + MAX_START_AHEAD_SECONDS)).toStrictEqual(
+        [],
+      );
+      expect(
+        startIssues(schema, NOW + MAX_START_AHEAD_SECONDS + 1),
+      ).toStrictEqual(["Pick a start that isn't in the future."]);
+    }
+  });
+
+  it("allows a day", () => {
+    expect(MAX_START_AHEAD_SECONDS).toBe(86_400);
+  });
+});
+
 describe("retimeRunInput: the zone the card read the time in", () => {
   it("carries a zone when sent, and caps its length", () => {
     const runId = newUlid();
@@ -182,8 +220,9 @@ describe("retimeRunInput", () => {
     expect(
       retimeRunInput.parse({ runId, startedAt: 1_755_000_000 }).startedAt,
     ).toBe(1_755_000_000);
-    expect(retimeRunInput.parse({ runId, startedAt: 0 }).startedAt).toBe(0);
-    expect(retimeRunInput.safeParse({ runId, startedAt: -1 }).success).toBe(
+    // A run's start, as runDraftSchema takes it: positive.
+    expect(retimeRunInput.parse({ runId, startedAt: 1 }).startedAt).toBe(1);
+    expect(retimeRunInput.safeParse({ runId, startedAt: 0 }).success).toBe(
       false,
     );
     expect(retimeRunInput.safeParse({ runId, startedAt: 1.5 }).success).toBe(

@@ -384,6 +384,29 @@ describe("ManualRunForm: what it refuses", () => {
     expect(submitRun).not.toHaveBeenCalled();
   });
 
+  it("refuses a start in the future, in the owner's words (SA-M31)", async () => {
+    const user = userEvent.setup();
+    const submitRun = fakeSubmit();
+    await renderWithRouter(
+      <ManualRunForm distanceUnit="km" submitRun={submitRun} />,
+    );
+
+    // Years ahead of any clock this suite runs on.
+    await user.type(screen.getByLabelText("Started"), "2999-08-15T07:30");
+    await user.click(
+      screen.getByRole("button", { name: "Next · pick the outfit" }),
+    );
+
+    expect(
+      await screen.findAllByText("Pick a start that isn't in the future."),
+    ).not.toHaveLength(0);
+    expect(screen.getByLabelText("Started")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(submitRun).not.toHaveBeenCalled();
+  });
+
   it("marks and focuses the field the schema refused", async () => {
     // `form.field("durationS")` wires the name the summary and the focus
     // move look up. A wrong name there means a server-side error lands on

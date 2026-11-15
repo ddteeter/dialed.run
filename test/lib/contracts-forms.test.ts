@@ -16,6 +16,7 @@ import {
   USERNAME_MAX_LENGTH,
   USERNAME_MIN_LENGTH,
   normalizeUsername,
+  MAX_RUN_START,
   runDraftSchema,
   signInSchema,
   signUpSchema,
@@ -319,6 +320,28 @@ describe("runDraftSchema", () => {
         "startedAt",
       ),
     ).toStrictEqual(["Pick when the run started."]);
+  });
+
+  it("refuses a start no date can hold (SA-M31)", () => {
+    expect(
+      messagesFor(
+        runDraftSchema,
+        { ...runDraft, startedAt: MAX_RUN_START },
+        "startedAt",
+      ),
+    ).toStrictEqual([]);
+    expect(
+      messagesFor(
+        runDraftSchema,
+        { ...runDraft, startedAt: MAX_RUN_START + 1 },
+        "startedAt",
+      ),
+    ).toStrictEqual(["Pick when the run started."]);
+    // The ceiling is the last instant a Date holds.
+    expect(Number.isNaN(new Date(MAX_RUN_START * 1000).getTime())).toBe(false);
+    expect(Number.isNaN(new Date((MAX_RUN_START + 1) * 1000).getTime())).toBe(
+      true,
+    );
   });
 
   it("insists the three measurements are positive whole-ish numbers", () => {
