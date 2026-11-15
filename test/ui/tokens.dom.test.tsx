@@ -120,7 +120,7 @@ describe("the ported value contract (design/tokens.js)", () => {
     expect(scalars("HEIGHT")).toHaveLength(3);
     expect(scalars("RADIUS")).toHaveLength(7);
     expect(scalars("BREAKPOINT")).toHaveLength(2);
-    expect(scalars("MEASURE")).toHaveLength(3);
+    expect(scalars("MEASURE")).toHaveLength(4);
     expect(Object.keys(theme).length).toBeGreaterThan(50);
   });
 
@@ -206,7 +206,7 @@ describe("the ported value contract (design/tokens.js)", () => {
     expect(themeKeys("--height-")).toHaveLength(scalars("HEIGHT").length + 1);
   });
 
-  it("pins the two breakpoints and the three measures", () => {
+  it("pins the two breakpoints and the four measures", () => {
     for (const [name, value] of scalars("BREAKPOINT")) {
       expect([name, px(theme[`--breakpoint-${name}`])]).toEqual([name, value]);
     }
