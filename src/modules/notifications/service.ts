@@ -14,6 +14,7 @@ import {
   notInArray,
   or,
   sql,
+  type SQL,
 } from "drizzle-orm";
 
 import {
@@ -23,6 +24,7 @@ import {
   userProfiles,
 } from "../../db/schema-core";
 import { newUlid } from "../../lib/ids";
+import { orSqlNull } from "../../lib/sql/sql-null";
 import { BELL_NUMBER_CAP } from "./bell-cap";
 import type { BellState } from "./bell-state";
 import type { NotificationsDb } from "./db";
@@ -152,6 +154,57 @@ export function notificationRaise(
       ],
       set: { body: row.body, read: false, createdAt: row.createdAt },
     });
+}
+
+/**
+ * `notificationInsert`, landing only if `onlyIf` is true when the
+ * statement runs: `INSERT … SELECT … WHERE`, as the outbox's
+ * `outboxInsertWhere` is, for a batch whose other writes may match
+ * nothing (a Review decision that lost a race, SA-L11). A batch cannot
+ * branch on its own results, so this is how a notice lands exactly when
+ * the change it tells of did.
+ */
+export function notificationInsertWhere(
+  db: NotificationsDb,
+  draft: NotificationDraft,
+  onlyIf: SQL,
+) {
+  return db
+    .insert(notifications)
+    .select(selectedRow(rowOf(draft), onlyIf))
+    .onConflictDoNothing();
+}
+
+/**
+`notificationRaise`, landing only if `onlyIf` is true when it runs.
+*/
+export function notificationRaiseWhere(
+  db: NotificationsDb,
+  draft: NotificationDraft,
+  onlyIf: SQL,
+) {
+  const row = rowOf(draft);
+  return db
+    .insert(notifications)
+    .select(selectedRow(row, onlyIf))
+    .onConflictDoUpdate({
+      target: [
+        notifications.userId,
+        notifications.kind,
+        notifications.subjectId,
+      ],
+      set: { body: row.body, read: false, createdAt: row.createdAt },
+    });
+}
+
+/**
+ * A row as a one-row `SELECT`, in the table's column order, which is the
+ * order drizzle names them in: a column added to the table fails this
+ * loudly, as a count mismatch, on the first test that sends a notice.
+ * No `FROM`: the condition is the whole of the `WHERE`.
+ */
+function selectedRow(row: ReturnType<typeof rowOf>, onlyIf: SQL): SQL {
+  return sql`select ${row.id}, ${row.userId}, ${row.kind}, ${orSqlNull(row.subjectId)}, ${row.body}, ${orSqlNull(row.linkId)}, 0, ${row.createdAt} where ${onlyIf}`;
 }
 
 /**

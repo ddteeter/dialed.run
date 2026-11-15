@@ -128,6 +128,27 @@ describe("Keep", () => {
   });
 });
 
+describe("Keep racing another decision on the row (SA-L11)", () => {
+  it("clears nothing once the row was settled between its read and its batch", async () => {
+    const { userId, queueId } = await flaggedRunner();
+
+    const [kept] = await Promise.all([
+      reviewFlaggedHandle(db, REVIEWER, { queueId, action: "keep" }),
+      db
+        .update(reviewQueue)
+        .set({ status: "removed", resolvedBy: "another-operator" })
+        .where(eq(reviewQueue.id, queueId)),
+    ]);
+
+    expect(kept).toStrictEqual({ outcome: "already_resolved" });
+    expect(await profileOf(userId)).toMatchObject({ screen: "flagged" });
+    expect(await queueRow(queueId)).toStrictEqual({
+      status: "removed",
+      resolvedBy: "another-operator",
+    });
+  });
+});
+
 describe("Rename", () => {
   it("is the moderator's force-rename: a placeholder, the reason O0 quotes, the audit row and the row settled", async () => {
     const { userId, queueId } = await flaggedRunner();

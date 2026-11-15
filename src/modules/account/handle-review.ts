@@ -13,13 +13,14 @@
 import { and, eq } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
-import { userProfiles } from "../../db/schema-core";
+import { reviewQueue, userProfiles } from "../../db/schema-core";
 import { nowSeconds } from "../../lib/now";
 import {
   openReviewRow,
   placeholderHandle,
   renameRecord,
   reviewResolution,
+  settledHere,
   type HandleReview,
   type HandleReviewValues,
 } from "../safety";
@@ -38,20 +39,31 @@ async function keep(
   userId: string,
   reviewerId: string,
 ): Promise<HandleReview> {
+  const settled = { reviewerId, status: "approved", at: nowSeconds() } as const;
+  // The settle first, and the verdict only if it landed (SA-L11): a Keep
+  // racing another decision on the row clears nothing once it lost.
   const cleared = db
     .update(userProfiles)
-    .set({ usernameScreen: "clear", usernameScreenedAt: nowSeconds() })
+    .set({ usernameScreen: "clear", usernameScreenedAt: settled.at })
     .where(
       and(
         eq(userProfiles.userId, userId),
         eq(userProfiles.usernameScreen, "flagged"),
+        settledHere(queueId, settled),
       ),
     );
-  await db.batch([
+  const [settle] = await db.batch([
+    reviewResolution(
+      db,
+      queueId,
+      reviewerId,
+      settled.status,
+      undefined,
+      settled.at,
+    ).returning({ id: reviewQueue.id }),
     cleared,
-    reviewResolution(db, queueId, reviewerId, "approved"),
   ]);
-  return { outcome: "resolved" };
+  return { outcome: settle.length === 0 ? "already_resolved" : "resolved" };
 }
 
 /**

@@ -70,7 +70,6 @@ import {
   handleReviewInput,
   ncmecReportInput,
   releaseHoldsInput,
-  reviewDecisionInput,
   runnersFilterInput,
   runRemovalsInput,
   unbanUserInput,
@@ -81,7 +80,7 @@ import { reportersFor } from "./review-audit";
 import { removalsOnRun } from "./run-removals";
 import { burstsToRelease, releaseHolds } from "./release";
 import { fileReport } from "./reports";
-import { claimForReview, pendingReviewQueue } from "./review";
+import { pendingReviewQueue } from "./review";
 import { quarantinedContentFor, recordNcmecReport } from "./quarantine";
 import {
   heldCopyrightContent,
@@ -232,13 +231,6 @@ export const releaseHoldsAction = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const reviewerId = requireAdmin(await verifiedUserId());
     return releaseHolds(data.cause, data.since, reviewerId);
-  });
-
-export const claimReviewAction = createServerFn({ method: "POST" })
-  .validator((input: unknown) => reviewDecisionInput.parse(input))
-  .handler(async ({ data }) => {
-    const reviewerId = requireAdmin(await verifiedUserId());
-    return { outcome: await claimForReview(data.queueId, reviewerId) };
   });
 
 export const banUserAction = createServerFn({ method: "POST" })

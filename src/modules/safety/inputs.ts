@@ -94,11 +94,6 @@ export const releaseHoldsInput = z.object({
   since: z.number().int().nonnegative(),
 });
 
-export const reviewDecisionInput = z.object({
-  queueId: ulidSchema,
-  decision: z.enum(["approve", "remove"]),
-});
-
 /**
  * A review decision that can take content down (task 128 · SAF-5): the
  * reason is the statement the author is sent, and `quarantine` is the

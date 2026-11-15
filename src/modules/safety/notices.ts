@@ -10,13 +10,18 @@
  * **Suspected CSAM is silent** (D-70): a quarantine owes none of these,
  * which its callers decide by never asking for one.
  */
-import { and, eq, ne, type SQL } from "drizzle-orm";
+import { and, eq, ne, sql, type SQL } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { entryPhotos, outfitEntries, reports } from "../../db/schema-core";
 import { columnWhere } from "../../lib/sql/keyed-read";
-import { notificationInsert, notificationRaise } from "../notifications";
+import {
+  notificationInsert,
+  notificationInsertWhere,
+  notificationRaise,
+  notificationRaiseWhere,
+} from "../notifications";
 
 import type { ReportSubjectType } from "./contracts";
 import {
@@ -81,18 +86,23 @@ async function authorNotice(
   words: Readonly<Record<Authored, string>>,
   subjectType: ReportSubjectType,
   subjectId: string,
+  onlyIf: SQL,
 ): Promise<BatchItem<"sqlite">[]> {
   if (!isAuthored(subjectType)) return [];
   const authors = await authorOf[subjectType](db, subjectId);
   return authors.map(({ userId }) =>
-    notificationRaise(db, {
-      userId,
-      kind,
-      subjectId,
-      body: words[subjectType],
-    }),
+    notificationRaiseWhere(
+      db,
+      { userId, kind, subjectId, body: words[subjectType] },
+      onlyIf,
+    ),
   );
 }
+
+/**
+A notice's condition when its batch has none: always.
+*/
+const ALWAYS = sql`1`;
 
 /**
  * The author's notice that a report hid their kit or photo (D-145).
@@ -109,6 +119,7 @@ export function hiddenNotice(
     HIDDEN_NOTICE,
     subjectType,
     subjectId,
+    ALWAYS,
   );
 }
 
@@ -154,6 +165,7 @@ export async function screeningNotice(
   db: Db,
   photoId: string,
   which: keyof typeof SCREENING_NOTICES,
+  onlyIf: SQL = ALWAYS,
 ): Promise<BatchItem<"sqlite">[]> {
   const { kind, status, body } = SCREENING_NOTICES[which];
   const authors = await photoAuthorWhere(
@@ -162,7 +174,11 @@ export async function screeningNotice(
     eq(entryPhotos.screenStatus, status),
   );
   return authors.map(({ userId }) =>
-    notificationRaise(db, { userId, kind, subjectId: photoId, body }),
+    notificationRaiseWhere(
+      db,
+      { userId, kind, subjectId: photoId, body },
+      onlyIf,
+    ),
   );
 }
 
@@ -189,8 +205,16 @@ export function keptNotice(
   db: Db,
   subjectType: ReportSubjectType,
   subjectId: string,
+  onlyIf: SQL,
 ): Promise<BatchItem<"sqlite">[]> {
-  return authorNotice(db, "content_kept", KEPT_NOTICE, subjectType, subjectId);
+  return authorNotice(
+    db,
+    "content_kept",
+    KEPT_NOTICE,
+    subjectType,
+    subjectId,
+    onlyIf,
+  );
 }
 
 /**
@@ -220,15 +244,20 @@ export async function reporterNotices(
   subjectType: ReportSubjectType,
   subjectId: string,
   outcome: ReportOutcome,
+  onlyIf: SQL = ALWAYS,
 ): Promise<BatchItem<"sqlite">[]> {
   const reporters = await reporterIdsOf(db, subjectType, subjectId);
   return reporters.map((userId) =>
-    notificationInsert(db, {
-      userId,
-      kind: OUTCOME_KIND[outcome],
-      subjectId,
-      body: REPORT_OUTCOME[outcome],
-    }),
+    notificationInsertWhere(
+      db,
+      {
+        userId,
+        kind: OUTCOME_KIND[outcome],
+        subjectId,
+        body: REPORT_OUTCOME[outcome],
+      },
+      onlyIf,
+    ),
   );
 }
 

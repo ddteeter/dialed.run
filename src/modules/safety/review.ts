@@ -1,6 +1,6 @@
 /**
- * The review queue: one row per thing awaiting a person, and the claim that
- * keeps two open tabs from both resolving it (law 2).
+ * The review queue: one row per thing awaiting a person, and the guards
+ * that keep two open tabs from both resolving it (SA-L11).
  *
  * The packet asks for "zero standing moderation workload", which is a claim
  * about volume, not about rigour — everything that lands here waits for a
@@ -22,6 +22,7 @@ import {
   products,
   reports,
   reviewQueue,
+  takedownRequests,
   userProfiles,
   wardrobeItems,
 } from "../../db/schema-core";
@@ -610,9 +611,11 @@ export type ClaimOutcome = "claimed" | "already_taken";
  * Claims a pending row for this reviewer, reporting whether the claim
  * landed (law 2: operate only on rows the update actually claimed).
  *
- * With one operator this looks like ceremony. It is not: the review page is
- * a browser tab, tabs get duplicated, and "approve" on a stale tab must not
- * undo a "remove" from the fresh one.
+ * The burst release's (design 164): it claims each row before approving
+ * it, so a row another tab took in the meantime is left to it. A decision
+ * from the Review page takes no claim; its batch holds to the row as it
+ * read it instead (`resolveReview`, SA-L11), which is what keeps
+ * "approve" on a stale tab from undoing a "remove" from the fresh one.
  *
  * **The claim expires.** It is a lock held by a browser tab, and a tab can
  * be closed, crash, or simply be walked away from — so `claimedAt` stamps
@@ -730,6 +733,11 @@ type OpenRow =
       subjectType: ReviewSubjectType;
       subjectId: string;
       source: ReviewSource;
+      /**
+       * When it last went in front of a person: a re-open moves it, so a
+       * decision made on the row as read lands only while it is unchanged.
+       */
+      openedAt: number | null;
     };
 
 /**
@@ -747,17 +755,11 @@ type OpenRow =
  * the same three ways.
  */
 export async function openRow(queueId: string): Promise<OpenRow> {
-  // fallow-ignore-next-line code-duplication -- the well-factored-pair residue CLAUDE.md names: openRow, feed/reactions.ts's assertVisible and feed/entries.ts's read all select a few columns for one row by id and branch on what they find, because that is what "load a row and decide" looks like once the bodies are already in lib/keyed-read.ts. A review decision, an entry's visibility to a reactor, and an entry's own load are three different facts over two tables; merging them would couple a moderation outcome to a feed read, and the extraction that produced this shape is what removed two OTHER clone groups from this module
-  const [row] = await db()
-    .select({
-      subjectType: reviewQueue.subjectType,
-      subjectId: reviewQueue.subjectId,
-      status: reviewQueue.status,
-      source: reviewQueue.source,
-    })
-    .from(reviewQueue)
-    .where(eq(reviewQueue.id, queueId))
-    .limit(1);
+  const row = await firstRowWhere(
+    db(),
+    reviewQueue,
+    eq(reviewQueue.id, queueId),
+  );
 
   if (!row) return "not_found";
   if (row.status === "approved" || row.status === "removed") {
@@ -767,7 +769,36 @@ export async function openRow(queueId: string): Promise<OpenRow> {
     subjectType: row.subjectType,
     subjectId: row.subjectId,
     source: row.source,
+    openedAt: row.openedAt,
   };
+}
+
+/**
+ * The row not re-opened since it was read (SA-L11): what a decision's
+ * settle also holds to, so a report that re-opened the row in between is
+ * left for a person rather than settled on what was read before it.
+ */
+function unchangedSinceRead(row: Exclude<OpenRow, string>): SQL {
+  return sql`${reviewQueue.openedAt} is ${row.openedAt}`;
+}
+
+/**
+ * The row settled by this decision, in this batch (SA-L11): the settle
+ * runs first and lands only on an open row, and every statement after it
+ * holds to this. Of two decisions that read the same row, the first batch
+ * lands whole and the second writes nothing; two identical ones from one
+ * reviewer in one second write the same thing twice. Exported for
+ * account's Keep on a flagged handle, whose batch has the same shape.
+ */
+export function settledHere(
+  queueId: string,
+  settled: Readonly<{
+    reviewerId: string;
+    status: "approved" | "removed";
+    at: number;
+  }>,
+): SQL {
+  return sql`exists (select 1 from ${reviewQueue} where ${reviewQueue.id} = ${queueId} and ${reviewQueue.status} = ${settled.status} and ${reviewQueue.resolvedBy} = ${settled.reviewerId} and ${reviewQueue.resolvedAt} = ${settled.at})`;
 }
 
 /**
@@ -816,20 +847,26 @@ export async function resolveReview(
   // helper here any more — the one that was here threw on an empty array
   // that could not happen, and an unreachable throw is a branch no test
   // can reach.
-  const told = await decisionNotices(row, decision);
-  const writes = [
+  const settled = {
+    reviewerId,
+    status: decision === "approve" ? "approved" : "removed",
+    at: nowSeconds(),
+  } as const;
+  const here = settledHere(queueId, settled);
+  const told = await decisionNotices(row, decision, here);
+  const [settle] = await db().batch([
     reviewResolution(
       db(),
       queueId,
       reviewerId,
-      decision === "approve" ? "approved" : "removed",
-    ),
-    ...subjectWritesFor(row, decision),
+      settled.status,
+      unchangedSinceRead(row),
+      settled.at,
+    ).returning({ id: reviewQueue.id }),
+    ...subjectWritesFor(row, decision, here),
     ...told,
-  ] as const;
-
-  await db().batch(writes);
-  return "resolved";
+  ]);
+  return settle.length === 0 ? "already_resolved" : "resolved";
 }
 
 /**
@@ -851,6 +888,7 @@ export async function resolveReview(
 async function decisionNotices(
   row: Exclude<OpenRow, string>,
   decision: ReviewDecision,
+  here: SQL,
 ): Promise<BatchItem<"sqlite">[]> {
   const { subjectType, subjectId } = row;
   if (subjectType === "garment") return [];
@@ -860,12 +898,21 @@ async function decisionNotices(
       subjectType,
       subjectId,
       "kept",
+      here,
     );
-    const author = await authorKeptNotice(row.source, subjectType, subjectId);
+    // Not while a removal request still holds it (SA-M23; owner,
+    // 2026-11-15): it stays hidden, and the request's own decision is
+    // what tells the author.
+    const author = await authorKeptNotice(
+      row.source,
+      subjectType,
+      subjectId,
+      sql`${here} and ${notHeldByRequest(subjectType, subjectId)}`,
+    );
     return [...reporters, ...author];
   }
   return decision === "remove" && subjectType === "product"
-    ? reporterNotices(db(), subjectType, subjectId, "removed")
+    ? reporterNotices(db(), subjectType, subjectId, "removed", here)
     : [];
 }
 
@@ -880,10 +927,13 @@ async function authorKeptNotice(
   source: ReviewSource,
   subjectType: ReportSubjectType,
   subjectId: string,
+  onlyIf: SQL,
 ): Promise<BatchItem<"sqlite">[]> {
-  if (source === "reports") return keptNotice(db(), subjectType, subjectId);
+  if (source === "reports") {
+    return keptNotice(db(), subjectType, subjectId, onlyIf);
+  }
   return automaticSources.has(source)
-    ? screeningNotice(db(), subjectId, "kept")
+    ? screeningNotice(db(), subjectId, "kept", onlyIf)
     : [];
 }
 
@@ -924,26 +974,35 @@ export async function wasFlaggedAutomatically(
  * batch — `resolveReview`'s own, and account's for a flagged handle's
  * Keep or Rename (D-97), whose subject writes are account's to make.
  * `onlyIf` holds it back unless the change it records happens in the same
- * batch: a force-rename that lost a race settles nothing (R-121).
+ * batch: a force-rename that lost a race settles nothing (R-121). Only an
+ * open row is settled, whatever `onlyIf` says (SA-L11): a decision never
+ * overwrites one already made.
  */
 export function reviewResolution(
   database: ReturnType<typeof drizzle>,
   queueId: string,
   reviewerId: string,
   status: "approved" | "removed",
-  onlyIf: SQL = sql`1`,
+  onlyIf?: SQL,
+  at = nowSeconds(),
 ) {
   return database
     .update(reviewQueue)
     .set({
       status,
       resolvedBy: reviewerId,
-      resolvedAt: nowSeconds(),
+      resolvedAt: at,
       // Settled rows carry no claim. Left set, a resolved row would still
       // look claimed to anything reading the lease.
       claimedAt: orSqlNull(undefined),
     })
-    .where(and(eq(reviewQueue.id, queueId), onlyIf));
+    .where(
+      and(
+        eq(reviewQueue.id, queueId),
+        inArray(reviewQueue.status, ["pending", "reviewing"]),
+        onlyIf,
+      ),
+    );
 }
 
 /**
@@ -956,8 +1015,14 @@ export function reviewResolution(
 function subjectWritesFor(
   row: Exclude<OpenRow, string>,
   decision: ReviewDecision,
+  here: SQL,
 ) {
-  return subjectWriters[row.subjectType](row.subjectId, decision, row.source);
+  return subjectWriters[row.subjectType](
+    row.subjectId,
+    decision,
+    row.source,
+    here,
+  );
 }
 
 /**
@@ -976,25 +1041,32 @@ const subjectWriters: Record<
     subjectId: string,
     decision: ReviewDecision,
     source: ReviewSource,
+    here: SQL,
   ) => BatchItem<"sqlite">[]
 > = {
   // Neither entry nor photo moves out of `removed`: that is a copyright
   // takedown's hide (D-130), and only its counter-notice puts it back.
-  entry: (subjectId, decision) => [
-    setOnSubject(
-      outfitEntries,
-      subjectId,
+  // Nor out of a hold a pending removal request put on it (SA-M23): the
+  // request's decision gives it back or takes it down. (A Remove reaches
+  // these two only for a kit or photo already gone, so the guard is
+  // Approve's in effect.)
+  entry: (subjectId, decision, _source, here) => [
+    unlessRequestHolds(
+      { table: outfitEntries, subjectType: "entry", subjectId },
       { moderationStatus: onDecision(decision, "ok", "removed") },
-      ne(outfitEntries.moderationStatus, "removed"),
+      and(ne(outfitEntries.moderationStatus, "removed"), here),
     ),
   ],
   // Hidden products drop out of autocomplete and linked garments fall
   // back to their own text fields (packet §2) — the column 000 reserved
   // for exactly this.
-  product: (subjectId, decision) => [
-    setOnSubject(products, subjectId, {
-      status: onDecision(decision, "active", "hidden"),
-    }),
+  product: (subjectId, decision, _source, here) => [
+    setOnSubject(
+      products,
+      subjectId,
+      { status: onDecision(decision, "active", "hidden") },
+      here,
+    ),
   ],
   // Deliberately nothing: removing a person is a ban, which has its own
   // path and its own notice.
@@ -1012,10 +1084,9 @@ const subjectWriters: Record<
   // screen it, so back to `pending` would only bring it back tomorrow. A
   // person has looked at it now, and their Approve publishes it (owner,
   // 2026-10-31).
-  photo: (subjectId, decision, source) => [
-    setOnSubject(
-      entryPhotos,
-      subjectId,
+  photo: (subjectId, decision, source, here) => [
+    unlessRequestHolds(
+      { table: entryPhotos, subjectType: "photo", subjectId },
       {
         screenStatus: onDecision(
           decision,
@@ -1023,7 +1094,7 @@ const subjectWriters: Record<
           "flagged",
         ),
       },
-      ne(entryPhotos.screenStatus, heldPhotoStatus),
+      and(ne(entryPhotos.screenStatus, heldPhotoStatus), here),
     ),
   ],
   // A garment's photo (design 157). Approve clears it: nobody but its
@@ -1033,15 +1104,49 @@ const subjectWriters: Record<
   // photo off first; safety's own Remove, reached without it, keeps a
   // photo still there hidden (`flagged`) rather than leave it waiting.
   // Only a garment that still has a photo.
-  garment: (subjectId, decision) => [
+  garment: (subjectId, decision, _source, here) => [
     setOnSubject(
       wardrobeItems,
       subjectId,
       { visibility: onDecision(decision, "pass", "flagged") },
-      isNotNull(wardrobeItems.photoKey),
+      and(isNotNull(wardrobeItems.photoKey), here),
     ),
   ],
 };
+
+/**
+ * `setOnSubject` for a kit or a photo, a removal request's two subjects:
+ * held back while a request holds it (SA-M23), as well as by `onlyIf`.
+ */
+function unlessRequestHolds<T extends SQLiteTable & { id: SQLiteColumn }>(
+  subject: Readonly<{
+    table: T;
+    subjectType: "entry" | "photo";
+    subjectId: string;
+  }>,
+  values: SQLiteUpdateSetSource<T>,
+  onlyIf: SQL | undefined,
+): BatchItem<"sqlite"> {
+  return setOnSubject(
+    subject.table,
+    subject.subjectId,
+    values,
+    and(onlyIf, notHeldByRequest(subject.subjectType, subject.subjectId)),
+  );
+}
+
+/**
+ * No pending removal request holds this kit or photo (SA-M23): one that
+ * hid it at filing (`held_at`). A request that was blocked, past the
+ * valve or unconfirmed hid nothing, so it pins nothing. Any other subject
+ * type is never a request's.
+ */
+function notHeldByRequest(
+  subjectType: ReviewSubjectType,
+  subjectId: string,
+): SQL {
+  return sql`not exists (select 1 from ${takedownRequests} where ${takedownRequests.subjectType} = ${subjectType} and ${takedownRequests.subjectId} = ${subjectId} and ${takedownRequests.status} = 'pending' and ${takedownRequests.heldAt} is not null)`;
+}
 
 /**
  * Where Approve leaves an entry photo: `pass` when a person is the only
