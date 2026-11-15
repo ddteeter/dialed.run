@@ -195,7 +195,7 @@ function Items({
         // A bare URL is one word: it breaks rather than scrolling the
         // page sideways at 320px (plan 161's reflow check).
         <li key={index} className="wrap-anywhere">
-          <Inlines inlines={item} leadIn />
+          <Inlines inlines={item} />
         </li>
       ))}
     </>
@@ -208,30 +208,38 @@ function TableView({
   head,
   rows,
 }: Readonly<{ head: Cells; rows: readonly Cells[] }>): JSX.Element {
+  // One table language (R58·289): the wide table's --panel, mono headers
+  // and TYPE.body, inside the 620. The header row and every row but the
+  // last sit on a hairline, as the wide table's cards are drawn.
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-small">
+    <div
+      data-part="legal-table"
+      className="overflow-x-auto rounded-card border border-hairline bg-panel px-4 py-1"
+    >
+      <table className="w-full border-collapse text-body">
         <thead>
           <tr>
             {head.map((cell, index) => (
               <th
                 key={index}
                 scope="col"
-                className="border-b-2 border-ink py-2 pr-4 text-left align-bottom font-semibold"
+                className="border-b border-hairline py-2 pr-4 text-left align-bottom font-normal"
               >
-                <Inlines inlines={cell} />
+                <Mono step="xs" className="text-muted">
+                  <Inlines inlines={cell} />
+                </Mono>
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.map((row, rowIndex) => (
-            <tr key={rowIndex}>
+            <tr
+              key={rowIndex}
+              className="border-b border-hairline last:border-b-0"
+            >
               {row.map((cell, index) => (
-                <td
-                  key={index}
-                  className="border-b border-hairline py-2 pr-4 align-top"
-                >
+                <td key={index} className="py-2 pr-4 align-top">
                   <Inlines inlines={cell} />
                 </td>
               ))}
@@ -304,17 +312,12 @@ type Drawn = Inline | ProsePart;
 function Inlines({
   inlines,
   inLink = false,
-  leadIn = false,
 }: Readonly<{
   inlines: readonly Inline[];
   /**
   Inside a link, where an address is already part of one.
   */
   inLink?: boolean;
-  /**
-  A list item's: bold that opens it is its lead-in (R55·222).
-  */
-  leadIn?: boolean;
 }>): JSX.Element {
   const drawn: readonly Drawn[] = inlines.flatMap<Drawn>((inline) =>
     inline.kind === "text" ? proseParts(inline.text) : [inline],
@@ -326,7 +329,6 @@ function Inlines({
           <InlineView
             inline={inline.kind === "text" ? untouched(drawn, index) : inline}
             inLink={inLink}
-            isLeadIn={leadIn && index === 0}
           />
         );
         return inline.kind === "code" ? (
@@ -408,11 +410,9 @@ function touchingStart(drawn: readonly Drawn[], index: number): string {
 function InlineView({
   inline,
   inLink,
-  isLeadIn,
 }: Readonly<{
   inline: Drawn;
   inLink: boolean;
-  isLeadIn: boolean;
 }>): JSX.Element {
   switch (inline.kind) {
     case "text": {
@@ -434,10 +434,10 @@ function InlineView({
     }
     case "strong": {
       return (
-        // R55·222: a list's bold lead-in is TYPE.body 600.
-        <strong
-          className={isLeadIn ? "text-body font-semibold" : "font-semibold"}
-        >
+        // A list's bold lead-in is its sentence's size, 600: the
+        // display-face headings separate the levels (R58·291, which
+        // withdraws R55·222's step down).
+        <strong className="font-semibold">
           <Inlines inlines={inline.children} inLink={inLink} />
         </strong>
       );

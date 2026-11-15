@@ -472,16 +472,18 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
     expect(screen.queryByRole("link", { name: "a@b" })).toBeNull();
   });
 
-  it("sets a list's bold lead-in at TYPE.body 600, and only the lead-in", async () => {
+  it("sets a list's bold lead-in at its sentence's size, 600 (R58·291)", async () => {
     await renderDraft("privacy");
     const lead = screen.getByText("Account email.");
     expect(lead.tagName).toBe("STRONG");
-    expect(lead).toHaveClass("text-body", "font-semibold");
+    expect(lead).toHaveClass("font-semibold");
+    // No step of its own: it takes its sentence's, the article's TYPE.lead.
+    expect(lead).not.toHaveClass("text-body");
     expect(lead.parentElement?.textContent).toBe(
       "Account email. Sent from us, not a@b.",
     );
     expect(screen.getByText("Plain item.").tagName).toBe("LI");
-    // Bold later in an item, or in a paragraph, is not a lead-in.
+    // Bold later in an item, or in a paragraph, is drawn the same.
     for (const name of ["bold"]) {
       for (const strong of screen.getAllByText(name)) {
         expect(strong.tagName).toBe("STRONG");
@@ -551,12 +553,33 @@ describe("LegalPage, drawing the owner's text (R55 · 220–224)", () => {
     await renderWithRouter(
       <LegalPage slug="privacy" doc={DOC} bellState={undefined} bell={bell} />,
     );
-    const wrapper = screen.getByRole("table").parentElement;
+    const table = screen.getByRole("table");
+    const wrapper = table.parentElement;
     expect(wrapper).toHaveClass("overflow-x-auto");
     expect(wrapper).not.toHaveClass("hidden");
-    expect(
-      within(wrapper ?? document.body).getAllByRole("cell")[0],
-    ).toHaveClass("border-b", "border-hairline", "align-top");
+    // R58·289: one table language, the wide table's panel, mono headers
+    // and TYPE.body.
+    expect(wrapper).toHaveClass(
+      "rounded-card",
+      "border",
+      "border-hairline",
+      "bg-panel",
+    );
+    expect(table).toHaveClass("text-body");
+    expect(table).not.toHaveClass("text-small");
+    for (const header of within(table).getAllByRole("columnheader")) {
+      expect(header).toHaveClass("border-b", "border-hairline", "font-normal");
+      expect(header).not.toHaveClass("border-ink");
+      expect(header.firstElementChild).toHaveClass(
+        "text-mono-xs",
+        "text-muted",
+      );
+    }
+    const rows = within(table).getAllByRole("row").slice(1);
+    for (const row of rows) {
+      expect(row).toHaveClass("border-b", "border-hairline", "last:border-b-0");
+    }
+    expect(within(table).getAllByRole("cell")[0]).toHaveClass("align-top");
   });
 
   it("holds the rail at 240 and lets the rail scroll", async () => {

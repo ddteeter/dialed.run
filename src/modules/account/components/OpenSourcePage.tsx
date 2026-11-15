@@ -217,11 +217,12 @@ function noMatch(query: string): string {
 
 /**
  * One third-party notice: R39's row, its heading bold on a hairline, then
- * its text as written.
+ * its text as written, at TYPE.body: notices are rows of this page, not a
+ * legal text (R58·288), so not the article's reading step.
  */
 function NoticeRow({ notice }: Readonly<{ notice: Section }>): JSX.Element {
   return (
-    <li className="flex flex-col gap-2 border-t border-hairline pt-3">
+    <li className="flex flex-col gap-2 border-t border-hairline pt-3 text-body">
       <h3 id={notice.id} className="m-0 text-body font-bold">
         {plainText(notice.heading)}
       </h3>
@@ -369,7 +370,9 @@ function PieceRow({
           {piece.version === undefined ? undefined : (
             <>
               {" "}
-              <Mono step="sm" className="text-muted">
+              {/* MONO.md, which keeps mixed case, so a version prints as
+                  written: "4.1.0-beta.2" (R58·292). */}
+              <Mono step="md" className="text-muted">
                 {piece.version}
               </Mono>
             </>
