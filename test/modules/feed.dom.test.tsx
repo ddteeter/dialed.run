@@ -436,6 +436,14 @@ describe("Feed: an unconfirmed runner (round 26 #11; FEED-11)", () => {
       /^Confirm your email to share runs with other runners\./u,
     );
     const heading = screen.getByRole("heading", { name: "Feed" });
+    // R58·286: TYPE.title in the page's own case.
+    expect(heading).toHaveClass("font-display", "text-title");
+    expect(heading).not.toHaveClass("uppercase");
+    // R57·263: from 720 the column is 620 of content, its gutter the
+    // page's.
+    const column = heading.parentElement?.parentElement;
+    expect(column).toHaveClass("wide:max-w-column", "px-5", "wide:px-0");
+    expect(column).not.toHaveClass("wide:px-6");
     // The band comes first in the column: nothing above it.
     expect(nag.compareDocumentPosition(heading)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,

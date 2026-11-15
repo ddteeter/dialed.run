@@ -100,8 +100,8 @@ const DELETE_LOOK = SECONDARY_PILL;
 /**
  * Round 26 #3, "Y Delete with runs": deleting a piece that has runs asks
  * whether to retire it instead — **retire, don't delete**, said as the
- * sheet's shape. Retire it is the pink primary, the delete a hairline
- * secondary, and Cancel below both. The sheet is the confirm, so the
+ * sheet's shape. Retire it is the ink pill, the delete the hairline pill
+ * (R58·306), and Cancel below both. The sheet is the confirm, so the
  * delete goes straight through with no second one.
  *
  * Its own sheet rather than `ConfirmSheet`, which has one action: this

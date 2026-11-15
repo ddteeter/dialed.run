@@ -68,7 +68,7 @@ export function OwnProfile({
   confirmBand,
 }: Readonly<{ profile: Profile; confirmBand: ReactNode }>) {
   return (
-    <div className={`${COLUMN} flex flex-col gap-6 px-5 pt-6 wide:px-6`}>
+    <div className={`${COLUMN} flex flex-col gap-6 px-5 pt-6 wide:px-0`}>
       <FlushBand>{confirmBand}</FlushBand>
       <div data-part="header" className="flex flex-col gap-3">
         <div className="flex items-center gap-4">

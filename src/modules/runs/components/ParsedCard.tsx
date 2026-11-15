@@ -25,6 +25,7 @@ import {
   FormFailureBand,
   FormField,
   FormStatus,
+  INK_PILL,
   Mono,
   PendingLabel,
   Spoken,
@@ -70,8 +71,11 @@ const PRIMARY_ACTION =
  */
 const LOOKS_RIGHT = "What did you wear?";
 
-const OPEN_THAT_RUN =
-  "target flex items-center justify-center rounded-card bg-ink px-6 py-4 font-display text-body uppercase text-ground no-underline";
+/**
+ * A1's way on from a run already logged: the ink pill (R58·306), not an
+ * ink display-caps card.
+ */
+const OPEN_THAT_RUN = `target ${INK_PILL} no-underline`;
 
 /**
  * Where focus goes when the card takes the well's place. The well held

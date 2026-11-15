@@ -132,7 +132,7 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
   const tags = tagsOf(entry.tags);
 
   return (
-    <div className={`${COLUMN} flex flex-col gap-4 px-5 pt-6 wide:px-6`}>
+    <div className={`${COLUMN} flex flex-col gap-4 px-5 pt-6 wide:px-0`}>
       <FormStatus>{status}</FormStatus>
       <div className="flex items-center gap-3">
         <BackToFeed />

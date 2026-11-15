@@ -68,7 +68,7 @@ const RUNNER_GONE = "This runner isn't here.";
  */
 function NoRunnerHere({ children }: Readonly<{ children: string }>) {
   return (
-    <div className={`${COLUMN} flex flex-col gap-6 px-5 pt-6 wide:px-6`}>
+    <div className={`${COLUMN} flex flex-col gap-6 px-5 pt-6 wide:px-0`}>
       <div className="flex items-center justify-between">
         <BackToFeed />
         <PhoneBell />

@@ -898,7 +898,7 @@ export function GarmentDetail({
   const { bringBack, setConfirming } = lifecycle;
 
   return (
-    <div className={`${COLUMN} flex flex-col gap-5 px-4 py-8 wide:px-6`}>
+    <div className={`${COLUMN} flex flex-col gap-5 px-4 py-8 wide:px-0`}>
       <FormStatus>{photo.status || lifecycle.status}</FormStatus>
 
       <div data-part="identity" className="flex flex-col gap-1">

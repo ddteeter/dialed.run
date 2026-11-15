@@ -109,12 +109,13 @@ export function RunnerSearch({
   }
 
   return (
-    <div className={`${COLUMN} flex flex-col gap-6 px-5 pt-6 wide:px-6`}>
+    <div className={`${COLUMN} flex flex-col gap-6 px-5 pt-6 wide:px-0`}>
       <FormStatus>{status === "" ? said : status}</FormStatus>
       {/* A 44px row, centred as Feed's title row is: the two titles sit
           on one line, so the way in and back does not jump (P2b-12). */}
       <div className="flex min-h-11 items-center justify-between gap-3">
-        <h1 className="m-0 font-display text-title uppercase">Find a runner</h1>
+        {/* TYPE.title in the page's own case (R58·286). */}
+        <h1 className="m-0 font-display text-title">Find a runner</h1>
         <PhoneBell />
       </div>
       <div className="field-box flex min-h-12 items-center gap-3 rounded-field border border-hairline bg-ground px-4">

@@ -1377,6 +1377,10 @@ describe("the phone's bell on the profiles and search (Design 169.1)", () => {
 
   it("ends search's title row", async () => {
     await renderFeedScreen(withBell(searchScreen()));
-    expectBellEnding(screen.getByRole("heading", { name: "Find a runner" }));
+    const title = screen.getByRole("heading", { name: "Find a runner" });
+    expectBellEnding(title);
+    // R58·286: TYPE.title in the page's own case.
+    expect(title).toHaveClass("text-title");
+    expect(title).not.toHaveClass("uppercase");
   });
 });

@@ -1583,7 +1583,15 @@ describe("A1: a run already logged", () => {
 
     const open = await screen.findByRole("link", { name: "Open that run" });
     expect(open).toHaveAttribute("href", `/feed/attach/${RUN_ID}`);
-    expect(open).toHaveClass("bg-ink", "text-ground");
+    // R58·306: the ink pill, not an ink display-caps card.
+    expect(open).toHaveClass(
+      "target",
+      "rounded-pill",
+      "bg-ink",
+      "text-ground",
+      "no-underline",
+    );
+    expect(open).not.toHaveClass("rounded-card", "font-display", "uppercase");
   });
 
   it("opens the run itself when it already has an entry", async () => {

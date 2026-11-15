@@ -52,7 +52,7 @@ export function OtherProfile({
   const name = handleText(profile.username);
 
   return (
-    <div className={`${COLUMN} flex flex-col gap-6 px-5 pt-6 wide:px-6`}>
+    <div className={`${COLUMN} flex flex-col gap-6 px-5 pt-6 wide:px-0`}>
       <FormStatus>{status}</FormStatus>
       <div className="flex items-center justify-between">
         <BackToFeed />
