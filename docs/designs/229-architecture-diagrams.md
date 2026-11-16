@@ -151,6 +151,34 @@ filesystem, so sources arrive as `?raw` imports, as
   elements: no kind fits a cache in front of the Worker, and a kind is not
   added for one picture.
 
+## Step 2 follow-up: the generator fails on what it cannot read
+
+The comparison test regenerates with the generator's own blind spots, so
+a construct the generator skipped was skipped in both copies and nothing
+failed. Found after #807 (owner, 2026-11-16): a new kind of binding, an
+import through the `#/` or `@/` alias, a dynamic or bare import, or code
+in a new folder beside `src/modules` would each have been left out
+silently. Crons and queues were already safe:
+`test/bindings-conformance.test.ts` holds `wrangler.jsonc` equal to the
+registries.
+
+- **Each way in is a closed list** in `scripts/diagrams/structure.ts`:
+  the keys of `wrangler.jsonc`, the handlers and exports of its `main`,
+  and the top-level entries of `src`. Each entry is drawn or carries the
+  reason it is not; anything else throws.
+- **Every module file is placed.** A file under `src/modules` in no
+  module throws (dependency-cruiser does not require an `index.ts`), and
+  so does a `createServerFn(` outside a `functions.ts`, because the
+  wiring arrows are read from that file name.
+- **Imports in every form**: bare, dynamic (a template literal throws),
+  type-position `import("…")`, and the aliases, read from
+  `tsconfig.json`'s `paths`. The generator now reads all of `src`, which
+  the top-level list needs; only `src/modules` is drawn.
+- **Email sending is drawn** (owner, 2026-11-16): the `send_email`
+  binding generates `cf.emailSending`, an `external`, with
+  `cf.app.email`'s arrow to it in `model.c4`. A system we call and do not
+  run, though it is bound.
+
 ## Open questions
 
 1. **Auth and trust boundaries are not drawn** while the security audit's

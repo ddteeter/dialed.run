@@ -20,6 +20,9 @@ diagrams:format` fixes the formatting. `npm run diagrams` opens the
   module or a cross-module import changes;
   `test/architecture/diagram-structure.test.ts` fails until you do. A
   generated element's description is a line in `structure.words.json`.
+  The generator also throws on a new `wrangler.jsonc` key, handler on
+  `main`, or folder beside `src/modules` that it neither draws nor lists:
+  draw it, or list it with the reason (skill `architecture-diagrams`).
 - **A story is a claim about the code.** Every step carries a
   `// source: <path> <symbol>` comment, and a number in a note is one you
   read in that source.
