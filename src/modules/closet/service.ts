@@ -942,19 +942,28 @@ export async function getItemDetailWithPairs(
  * trips and a rule a caller could simply not call. Here it runs wherever a
  * garment is written, so it cannot be skipped and the client is one
  * request lighter. The link itself is `productLinkFor`'s.
+ *
+ * **The product is only ever the server's answer** (SA-L04): whatever
+ * `productId` the submission carried is dropped first, so a garment with
+ * no brand, no name or an unconfirmed owner saves with none.
  */
 export async function withResolvedProduct(
   db: Db,
-  garment: Garment,
+  submitted: Garment,
   createdBy: string,
 ): Promise<Garment> {
+  const garment = garmentSchema.parse({ ...submitted, productId: undefined });
   const brand = garment.brand?.trim() ?? "";
-  if (brand === "" || garment.name.trim() === "") return garment;
-  // Products are shared rows (D-26), so an unconfirmed runner makes none
-  // (design 133, decision D-113 Q1): the garment saves with what was typed
-  // and no product, and confirming owes the link (`linkTypedGarments`).
-  if (await isUnconfirmed(db, createdBy)) {
-    return garmentSchema.parse({ ...garment, productId: undefined });
+  // No brand or no name links nothing. Products are shared rows (D-26), so
+  // an unconfirmed runner makes none (design 133, decision D-113 Q1): the
+  // garment saves with what was typed and no product, and confirming owes
+  // the link (`linkTypedGarments`).
+  if (
+    brand === "" ||
+    garment.name.trim() === "" ||
+    (await isUnconfirmed(db, createdBy))
+  ) {
+    return garment;
   }
   const link = await productLinkFor(
     db,
