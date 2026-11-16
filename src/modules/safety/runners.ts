@@ -28,8 +28,10 @@ type Db = ReturnType<typeof drizzle<Record<string, never>>>;
 
 /**
  * Round 27's D8 STATE. `PENDING DELETE`: the runner asked to delete the
- * account and its purge has not run (PR#126-1). Closed wins over it: a
- * closed account is hidden whether or not it is leaving.
+ * account and its purge has not run (PR#126-1). Closed wins over it as
+ * the state: a closed account is hidden whether or not it is leaving. A
+ * closed account that is leaving is still purged on its date (SA-L09), so
+ * the row says that too (`DeskRunner.isLeaving`).
  */
 export type RunnerState = "ACTIVE" | "PENDING DELETE" | "CLOSED";
 
@@ -47,6 +49,10 @@ export interface DeskRunner extends ListedAccount {
   runs: number;
   reports: number;
   state: RunnerState;
+  /**
+  A deletion request waits on the account, whatever its state.
+  */
+  isLeaving: boolean;
   banReason: string | undefined;
   /**
    * When an intimate-image removal of theirs last flagged the account
@@ -165,6 +171,7 @@ export async function deskRunners(
         typeof profile?.bannedAt === "number",
         leavingIds.has(account.userId),
       ),
+      isLeaving: leavingIds.has(account.userId),
       banReason: profile?.banReason ?? undefined,
       flaggedAt: flaggedAt.get(account.userId),
     };

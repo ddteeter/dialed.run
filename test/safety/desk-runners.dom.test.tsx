@@ -60,6 +60,7 @@ const ada: DeskRunner = {
   runs: 12,
   reports: 2,
   state: "ACTIVE",
+  isLeaving: false,
   banReason: undefined,
   flaggedAt: undefined,
 };
@@ -72,6 +73,7 @@ const bo: DeskRunner = {
   runs: 0,
   reports: 0,
   state: "CLOSED",
+  isLeaving: false,
   banReason: "Spam accounts",
   flaggedAt: undefined,
 };
@@ -501,10 +503,34 @@ describe("a flagged account (D-161 1, R47·124) and PENDING DELETE (PR#126-1)", 
     expect(reportsOf(boRow)).toHaveClass("text-muted");
   });
 
-  it("draws PENDING DELETE as a state", async () => {
-    await renderDesk({ runners: [{ ...ada, state: "PENDING DELETE" }] });
+  it("draws PENDING DELETE as a state, once", async () => {
+    await renderDesk({
+      runners: [{ ...ada, state: "PENDING DELETE", isLeaving: true }],
+    });
 
     expect(screen.getByText(bracketed("PENDING DELETE"))).toBeInTheDocument();
+  });
+
+  it("draws PENDING DELETE after CLOSED for a closed account that is leaving (SA-L09)", async () => {
+    await renderDesk({ runners: [{ ...bo, isLeaving: true }] });
+
+    const closed = screen.getByText(bracketed("CLOSED"));
+    const leaving = screen.getByText(bracketed("PENDING DELETE"));
+    expect(leaving).toHaveClass("text-ink", "wide:whitespace-nowrap");
+    expect(closed.nextElementSibling).toBe(leaving);
+  });
+
+  it("draws no PENDING DELETE for a closed account that is not leaving", async () => {
+    await renderDesk({ runners: [bo] });
+
+    expect(screen.getByText(bracketed("CLOSED"))).toBeInTheDocument();
+    expect(screen.queryByText(bracketed("PENDING DELETE"))).toBeNull();
+  });
+
+  it("draws no second tag for an active account marked leaving", async () => {
+    await renderDesk({ runners: [{ ...ada, isLeaving: true }] });
+
+    expect(screen.queryByText(bracketed("PENDING DELETE"))).toBeNull();
   });
 
   it("puts the flag at the top of the column, dated, never saying intimate", async () => {
