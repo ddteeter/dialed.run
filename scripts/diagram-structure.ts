@@ -1,49 +1,43 @@
 /**
  * `npm run diagrams:generate`: writes
- * `docs/diagrams/structure.generated.c4` (design 229, step 2).
+ * `docs/diagrams/structure.generated.c4` (design 229, step 2). With
+ * `--check`, which `npm run diagrams:check` runs, it compares instead and
+ * fails when the committed file is not what the sources say.
  *
  * Only the reading and the writing are here. What the file says is decided
- * in `scripts/diagrams/structure.ts`, which
- * `test/architecture/diagram-structure.test.ts` runs over the same inputs
- * and compares with the committed file.
+ * in `scripts/diagrams/structure.ts`; the facts are read in
+ * `scripts/diagrams/sources.ts`.
  */
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
-import path from "node:path";
+import { readFileSync, writeFileSync } from "node:fs";
 
 import { cronNameFor, cronSchedules } from "../src/modules/ops/crons";
-import { generateStructure } from "./diagrams/structure";
+import { readSources } from "./diagrams/sources";
+import { generateStructure, mainOf } from "./diagrams/structure";
 
-const SOURCE_ROOT = "src";
 const OUTPUT = "docs/diagrams/structure.generated.c4";
 const WORDS = "docs/diagrams/structure.words.json";
 
-const sources: Record<string, string> = {};
-const entries = readdirSync(SOURCE_ROOT, {
-  recursive: true,
-  withFileTypes: true,
-});
-for (const entry of entries) {
-  if (!entry.isFile() || !/\.tsx?$/u.test(entry.name)) continue;
-  const file = path.posix.join(
-    entry.parentPath.split(path.sep).join("/"),
-    entry.name,
-  );
-  sources[file] = readFileSync(file, "utf8");
-}
-
+const wranglerJsonc = readFileSync("wrangler.jsonc", "utf8");
 const words: unknown = JSON.parse(readFileSync(WORDS, "utf8"));
 
-writeFileSync(
-  OUTPUT,
-  generateStructure({
-    wranglerJsonc: readFileSync("wrangler.jsonc", "utf8"),
-    tsconfigJsonc: readFileSync("tsconfig.json", "utf8"),
-    crons: cronSchedules.map((schedule) => ({
-      schedule,
-      name: cronNameFor(schedule) ?? "",
-    })),
-    sources,
-    words,
-  }),
-);
-console.log(`wrote ${OUTPUT}`);
+const generated = generateStructure({
+  wranglerJsonc,
+  crons: cronSchedules.map((schedule) => ({
+    schedule,
+    name: cronNameFor(schedule) ?? "",
+  })),
+  sources: await readSources(mainOf(wranglerJsonc)),
+  words,
+});
+
+if (process.argv.includes("--check")) {
+  if (readFileSync(OUTPUT, "utf8") !== generated) {
+    console.error(
+      `${OUTPUT} is not what the sources say. Run \`npm run diagrams:generate\` and commit the result.`,
+    );
+    process.exitCode = 1;
+  }
+} else {
+  writeFileSync(OUTPUT, generated);
+  console.log(`wrote ${OUTPUT}`);
+}

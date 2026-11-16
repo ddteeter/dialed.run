@@ -1,27 +1,30 @@
 /**
  * The structure half of the architecture diagrams (design 229, step 2):
  * what is bound and what imports what, written as LikeC4 source from the
- * files that decide it. `scripts/diagram-structure.ts` writes the result
- * to `docs/diagrams/structure.generated.c4`, and
- * `test/architecture/diagram-structure.test.ts` regenerates and compares,
- * so the drawn structure cannot drift from the bound one.
+ * facts that decide it. `scripts/diagram-structure.ts` gathers the facts
+ * and writes the result to `docs/diagrams/structure.generated.c4`; with
+ * `--check`, which `npm run diagrams:check` runs, it regenerates and
+ * compares instead, so the drawn structure cannot drift from the bound one.
  *
- * Pure: text in, text out. The script reads the files; the test, whose
- * pool has no filesystem, gets them inlined by Vite.
+ * Pure: facts in, text out. The imports are read by dependency-cruiser,
+ * the tool that enforces the module boundaries, and the syntax by
+ * TypeScript (`sources.ts`, `syntax.ts`), so this file decides what to
+ * draw and parses nothing but JSONC.
  *
  * Its inputs are `wrangler.jsonc` (databases, buckets, queues, datasets,
- * email), `tsconfig.json` (the import aliases), the cron registry and
- * every source under `src`. Queues come from the config rather than
- * `ops/queues.ts`, which imports `env` and so cannot be loaded by a
- * script; `test/bindings-conformance.test.ts` already holds the two equal.
+ * email), the cron registry and the facts about every source under `src`.
+ * Queues come from the config rather than `ops/queues.ts`, which imports
+ * `env` and so cannot be loaded by a script;
+ * `test/bindings-conformance.test.ts` already holds the two equal.
  *
  * **It throws on what it cannot read, rather than leaving it out.** The
- * comparison test regenerates with the generator's own blind spots, so a
- * construct it skips is skipped in both copies and nothing fails. So each
- * way into the system is a closed list: the keys of `wrangler.jsonc`, the
- * handlers of its `main`, the top-level entries of `src`, and the files
+ * check regenerates with the generator's own blind spots, so a construct
+ * it skips is skipped in both copies and nothing fails. So each way into
+ * the system is a closed list: the keys of `wrangler.jsonc`, the handlers
+ * and exports of its `main`, the top-level entries of `src`, and the files
  * under `src/modules`. Something new in any of them throws until it is
- * drawn here or listed with the reason it is not.
+ * drawn here or listed with the reason it is not, and so does an import
+ * the resolver could not follow.
  *
  * The output must be what `likec4 format` would leave alone, because
  * `diagrams:check` runs the formatter's check over this file too.
@@ -53,11 +56,6 @@ const wranglerSchema = z.object({
   send_email: z.array(sendEmailSchema),
 });
 const topLevelSchema = z.record(z.string(), z.unknown());
-
-const pathsSchema = z.record(z.string(), z.array(z.string()));
-const tsconfigSchema = z.object({
-  compilerOptions: z.object({ paths: pathsSchema.optional() }),
-});
 
 const wordsSchema = z.record(z.string(), z.string());
 
@@ -137,6 +135,51 @@ export interface CronEntry {
   readonly name: string;
 }
 
+/**
+An import from one file under `src` to another, resolved.
+*/
+export interface ImportEdge {
+  readonly from: string;
+  readonly to: string;
+}
+
+/**
+An import that could not be followed: what it says, and where.
+*/
+export interface UnreadImport {
+  readonly from: string;
+  readonly text: string;
+}
+
+/**
+ * What the sources say, read by `sources.ts`. Paths are repo-relative.
+ */
+export interface SourceFacts {
+  /**
+  Every `.ts` and `.tsx` file under `src`.
+  */
+  readonly paths: readonly string[];
+  /**
+   * Every import between two files under `src`, in every form: static,
+   * re-export, bare, dynamic, type-only, through an alias.
+   */
+  readonly imports: readonly ImportEdge[];
+  /**
+   * Imports of something local the resolver could not find, and dynamic
+   * imports of a computed path.
+   */
+  readonly unread: readonly UnreadImport[];
+  /**
+  The files that call `createServerFn`.
+  */
+  readonly serverFunctionFiles: readonly string[];
+  /**
+   * The handlers on `main`'s default export, by name, and each of its
+   * other exports, as `export <what> <name>`.
+   */
+  readonly mainEntries: readonly string[];
+}
+
 export interface StructureInputs {
   /**
   `wrangler.jsonc`, as written.
@@ -146,14 +189,7 @@ export interface StructureInputs {
   The cron registry's entries (`src/modules/ops/crons.ts`).
   */
   readonly crons: readonly CronEntry[];
-  /**
-  `tsconfig.json`, as written: its `paths` are the import aliases.
-  */
-  readonly tsconfigJsonc: string;
-  /**
-  Every `.ts` and `.tsx` source under `src`, by repo-relative path.
-  */
-  readonly sources: Readonly<Record<string, string>>;
+  readonly sources: SourceFacts;
   /**
   `docs/diagrams/structure.words.json`, parsed: element id to description.
   */
@@ -278,31 +314,16 @@ function boundElements(config: Wrangler): Element[] {
   ];
 }
 
-const HANDLER = /^ {2}(?:async\s+)?(\w+)\s*[(:,]/gmu;
-const DEFAULT_EXPORT = /^export default \{$/mu;
-const EXPORT_LINE = /^export\s.*$/gmu;
+const SRC_ROOT = "src/";
 
 /**
- * The handlers on `main`'s default export, and every other export it has,
- * whole lines: a Durable Object's class is exported from here. Read at the
- * formatter's indent, so a property of a handler's body is not a handler.
- */
-function mainEntries(main: string): string[] {
-  const code = withoutComments(main);
-  const start = code.search(DEFAULT_EXPORT);
-  if (start === -1) {
-    throw new Error("main has no `export default {`: its handlers not read");
-  }
-  const body = code.slice(start, code.indexOf("\n}", start));
-  const handlers = Array.from(
-    body.matchAll(HANDLER),
-    (match) => match[1] ?? "",
+`wrangler.jsonc`'s `main`: the file the Worker starts from.
+*/
+export function mainOf(wranglerJsonc: string): string {
+  return wranglerSchema.shape.main.parse(
+    topLevelSchema.parse(parseJsonc(wranglerJsonc)).main,
   );
-  const exports = Array.from(code.matchAll(EXPORT_LINE), (match) => match[0]);
-  return [...handlers, ...exports.filter((line) => !DEFAULT_EXPORT.test(line))];
 }
-
-const SRC_ROOT = "src/";
 
 /**
  * Throws on a way into the system the diagram does not account for: a
@@ -312,41 +333,17 @@ const SRC_ROOT = "src/";
 function requireWaysInListed(
   wrangler: Readonly<Record<string, unknown>>,
   main: string,
-  sources: Readonly<Record<string, string>>,
+  sources: SourceFacts,
 ): void {
   requireListed(Object.keys(wrangler), WRANGLER_KEYS, "wrangler.jsonc");
-  const mainSource = sources[main];
-  if (mainSource === undefined) {
+  if (!sources.paths.includes(main)) {
     throw new Error(`wrangler.jsonc's main, ${main}, is not a source read`);
   }
-  requireListed(mainEntries(mainSource), MAIN_ENTRIES, main);
-  const entries = Object.keys(sources)
+  requireListed(sources.mainEntries, MAIN_ENTRIES, main);
+  const entries = sources.paths
     .filter((path) => path.startsWith(SRC_ROOT))
     .map((path) => path.slice(SRC_ROOT.length).split("/", 1)[0] ?? "");
   requireListed(new Set(entries), SRC_ENTRIES, "src");
-}
-
-const ALIAS_PATTERN = /^([^*]+\/)\*$/u;
-const ALIAS_TARGET = /^\.\/([^*]+\/)\*$/u;
-
-/**
- * `tsconfig.json`'s `paths` as prefixes: `@/*` to `./src/*` is `@/` read
- * as `src/`. A shape other than one folder for one prefix throws.
- */
-function aliasesOf(tsconfigJsonc: string): Map<string, string> {
-  const { paths = {} } = tsconfigSchema.parse(
-    parseJsonc(tsconfigJsonc),
-  ).compilerOptions;
-  return new Map(
-    Object.entries(paths).map(([pattern, targets]) => {
-      const prefix = ALIAS_PATTERN.exec(pattern)?.[1];
-      const folder = ALIAS_TARGET.exec(targets.join(" "))?.[1];
-      if (prefix === undefined || folder === undefined) {
-        throw new Error(`tsconfig path not read: ${pattern}`);
-      }
-      return [prefix, folder];
-    }),
-  );
 }
 
 /**
@@ -440,129 +437,7 @@ function unitId(unit: string): string {
   return ["cf", "app", ...parts.map((part) => camel(part))].join(".");
 }
 
-/**
- * Where a specifier points, as a repo path: a relative one against the
- * folder of the file that wrote it, an alias by its prefix. A package is
- * `undefined`.
- */
-function resolveSpecifier(
-  fromPath: string,
-  specifier: string,
-  aliases: ReadonlyMap<string, string>,
-): string | undefined {
-  for (const [prefix, folder] of aliases) {
-    if (specifier.startsWith(prefix)) {
-      return folder + specifier.slice(prefix.length);
-    }
-  }
-  if (!specifier.startsWith(".")) return undefined;
-  const parts = fromPath.split("/").slice(0, -1);
-  for (const part of specifier.split("/")) {
-    if (part === "..") parts.pop();
-    else if (part !== ".") parts.push(part);
-  }
-  return parts.join("/");
-}
-
-const FROM = /\sfrom\s*["']([^"'\n]+)["']/gu;
-const CLAUSE = /^[\w\s,{}*$]+$/u;
-const KEYWORDS = ["import ", "export "];
-const BARE_IMPORT = /^import\s*["']([^"'\n]+)["']/gmu;
-const DYNAMIC_IMPORT = /\bimport\(\s*(["'`])([^"'`\n]*)(["'`])/gu;
-
-/**
- * Where the statement that holds `index` starts: the nearest `import` or
- * `export` at the start of a line above it, and the end of that keyword.
- */
-function statementStart(code: string, index: number): number {
-  return Math.max(
-    ...KEYWORDS.map((keyword) => {
-      if (code.startsWith(keyword) && code.lastIndexOf("\n", index) === -1) {
-        return keyword.length;
-      }
-      const at = code.lastIndexOf(`\n${keyword}`, index);
-      return at === -1 ? -1 : at + 1 + keyword.length;
-    }),
-  );
-}
-
-/**
- * The specifier of every `import … from` and `export … from` in a source.
- * Found from the `from "…"` backwards, and kept only when what sits
- * between the keyword and the `from` is an import clause, so a `from "x"`
- * inside a string or a query is not read as one.
- */
-function staticImportsOf(code: string): string[] {
-  const found: string[] = [];
-  for (const match of code.matchAll(FROM)) {
-    const start = statementStart(code, match.index);
-    const isImport =
-      start !== -1 && CLAUSE.test(code.slice(start, match.index));
-    if (!isImport) continue;
-    found.push(match[1] ?? "");
-  }
-  return found;
-}
-
-/**
- * `import("…")` with a literal, the type-position `import("…").T` too. A
- * template literal could name any module, so it throws rather than being
- * read as none. A bare identifier is not read: it cannot be told apart
- * from prose such as "import(s)" in a message, and no file has one.
- */
-function dynamicImportsOf(path: string, code: string): string[] {
-  return Array.from(code.matchAll(DYNAMIC_IMPORT), (match) => {
-    const [whole, open = "", specifier = "", close = ""] = match;
-    if (open === "`" || open !== close || specifier.includes("${")) {
-      throw new Error(
-        `an import the diagram cannot read, in ${path}: ${whole}`,
-      );
-    }
-    return specifier;
-  });
-}
-
-/**
-Every specifier a source imports: static, bare (`import "./x"`) and dynamic.
-*/
-function importsOf(path: string, source: string): string[] {
-  const code = withoutComments(source);
-  return [
-    ...staticImportsOf(code),
-    ...Array.from(code.matchAll(BARE_IMPORT), (match) => match[1] ?? ""),
-    ...dynamicImportsOf(path, code),
-  ];
-}
-
-interface Units {
-  readonly folders: readonly string[];
-  readonly aliases: ReadonlyMap<string, string>;
-}
-
-/**
- * The other units one file imports from. A unit and its own sub-module
- * count as one here: LikeC4 refuses an arrow between a parent and its
- * child, and the nesting already says it.
- */
-function importedUnits(
-  path: string,
-  source: string,
-  from: string,
-  units: Units,
-): string[] {
-  const found: string[] = [];
-  for (const specifier of importsOf(path, source)) {
-    const target = resolveSpecifier(path, specifier, units.aliases);
-    if (target === undefined) continue;
-    const to = owningUnit(target, units.folders);
-    if (to === undefined || isUnder(to, from) || isUnder(from, to)) continue;
-    found.push(to);
-  }
-  return found;
-}
-
 const WIRING_FILE = /(?:\/functions\.ts|\.tsx)$/u;
-const SERVER_FN_CALL = "createServerFn(";
 
 /**
  * A module's wiring: its server functions and its components, the files
@@ -576,36 +451,56 @@ function isWiring(path: string): boolean {
 }
 
 /**
- * Throws on a module file the drawing would misplace: one in no module
- * (a folder under `src/modules` without its own `index.ts`), or a server
- * function outside a `functions.ts`, whose imports would be drawn as
- * service code rather than wiring.
+ * Throws on a module file the drawing would misplace or an import it could
+ * not follow: a file in no module (a folder under `src/modules` without
+ * its own `index.ts`), a server function outside a `functions.ts`, whose
+ * imports would be drawn as service code rather than wiring, or an unread
+ * import, which might be an arrow.
  */
-function requireModuleFilesPlaced(
+function requireEverythingRead(
   modulePaths: readonly string[],
-  sources: Readonly<Record<string, string>>,
+  sources: SourceFacts,
   folders: readonly string[],
 ): void {
-  const loose = modulePaths.filter(
-    (path) => owningUnit(path, folders) === undefined,
-  );
-  if (loose.length > 0) {
-    throw new Error(
-      `in no module, so not drawn: ${loose.join(", ")}. ` +
-        "A folder under src/modules is drawn when it has its own index.ts.",
-    );
-  }
-  const serverFns = modulePaths.filter(
-    (path) =>
-      !isWiring(path) &&
-      withoutComments(sources[path] ?? "").includes(SERVER_FN_CALL),
-  );
-  if (serverFns.length > 0) {
-    throw new Error(
-      `a server function outside functions.ts: ${serverFns.join(", ")}. ` +
-        "The diagram counts only functions.ts and components as wiring.",
-    );
-  }
+  const problems = [
+    ...modulePaths
+      .filter((path) => owningUnit(path, folders) === undefined)
+      .map(
+        (path) =>
+          `${path} is in no module: a folder under src/modules is drawn when it has its own index.ts`,
+      ),
+    ...sources.serverFunctionFiles
+      .filter((path) => path.startsWith(MODULES_ROOT) && !isWiring(path))
+      .map(
+        (path) =>
+          `${path} creates a server function outside functions.ts, which the diagram counts as wiring`,
+      ),
+    ...sources.unread.map(
+      ({ from, text }) =>
+        `${from} has an import the diagram cannot follow: ${text}`,
+    ),
+  ];
+  if (problems.length > 0) throw new Error(problems.join("\n"));
+}
+
+/**
+ * The two units an import joins, as `from to`, or `undefined` when it
+ * joins none: an end outside the modules, or a unit and its own
+ * sub-module, which count as one (LikeC4 refuses an arrow between a parent
+ * and its child, and the nesting already says it).
+ */
+function unitPair(
+  edge: ImportEdge,
+  folders: readonly string[],
+): string | undefined {
+  const from = owningUnit(edge.from, folders);
+  const to = owningUnit(edge.to, folders);
+  const doesJoinTwo =
+    from !== undefined &&
+    to !== undefined &&
+    !isUnder(to, from) &&
+    !isUnder(from, to);
+  return doesJoinTwo ? `${from} ${to}` : undefined;
 }
 
 /**
@@ -616,17 +511,14 @@ function requireModuleFilesPlaced(
  * this file for no change in structure.
  */
 function importArrows(
-  sources: Readonly<Record<string, string>>,
-  units: Units,
+  imports: readonly ImportEdge[],
+  folders: readonly string[],
 ): Arrow[] {
   const pairs = new Map<string, boolean>();
-  for (const [path, source] of Object.entries(sources)) {
-    const from = owningUnit(path, units.folders);
-    if (from === undefined) continue;
-    for (const to of importedUnits(path, source, from, units)) {
-      const key = `${from} ${to}`;
-      pairs.set(key, (pairs.get(key) ?? true) && isWiring(path));
-    }
+  for (const edge of imports) {
+    const key = unitPair(edge, folders);
+    if (key === undefined) continue;
+    pairs.set(key, (pairs.get(key) ?? true) && isWiring(edge.from));
   }
   return [...pairs]
     .toSorted(([a], [b]) => a.localeCompare(b))
@@ -744,10 +636,10 @@ function renderImportViews(arrows: readonly Arrow[]): string[] {
 }
 
 const HEADER = [
-  "// Generated by `npm run diagrams:generate`. Do not edit: a test",
-  "// regenerates this file and compares. It is built from wrangler.jsonc,",
-  "// src/modules/ops/crons.ts and the imports under src/modules, with the",
-  "// descriptions in structure.words.json.",
+  "// Generated by `npm run diagrams:generate`. Do not edit:",
+  "// `npm run diagrams:check` regenerates this file and compares. It is",
+  "// built from wrangler.jsonc, src/modules/ops/crons.ts and the imports",
+  "// under src/modules, with the descriptions in structure.words.json.",
 ];
 
 /**
@@ -760,18 +652,15 @@ export function generateStructure(inputs: StructureInputs): string {
   const config = wranglerSchema.parse(wrangler);
   const words = wordsSchema.parse(inputs.words);
   requireWaysInListed(wrangler, config.main, inputs.sources);
-  const modulePaths = Object.keys(inputs.sources).filter((path) =>
+  const modulePaths = inputs.sources.paths.filter((path) =>
     path.startsWith(MODULES_ROOT),
   );
-  const units: Units = {
-    folders: unitFolders(modulePaths),
-    aliases: aliasesOf(inputs.tsconfigJsonc),
-  };
-  requireModuleFilesPlaced(modulePaths, inputs.sources, units.folders);
+  const folders = unitFolders(modulePaths);
+  requireEverythingRead(modulePaths, inputs.sources, folders);
 
   const bound = boundElements(config);
   const inWorker = [
-    ...moduleElements(units.folders, MODULES_ROOT.slice(0, -1)),
+    ...moduleElements(folders, MODULES_ROOT.slice(0, -1)),
     ...inputs.crons
       .map((entry) => cronElement(entry))
       .toSorted((a, b) => a.id.localeCompare(b.id)),
@@ -788,7 +677,7 @@ export function generateStructure(inputs: StructureInputs): string {
     );
   }
 
-  const imports = importArrows(inputs.sources, units);
+  const imports = importArrows(inputs.sources.imports, folders);
   return [
     ...HEADER,
     "model {",
