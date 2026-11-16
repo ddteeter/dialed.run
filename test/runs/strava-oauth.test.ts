@@ -19,6 +19,7 @@ import {
   isStravaConnected,
   readStateCookie,
   STRAVA_STATE_COOKIE,
+  STRAVA_STATE_COOKIE_CLEAR,
   stravaAuthorizeUrl,
   stravaCallbackOutcome,
   stravaConnectRedirect,
@@ -747,6 +748,11 @@ describe("stravaConnectRedirect (STR-7: the official button is a link)", () => {
     );
     // Only this host can set it (SA-L17).
     expect(STRAVA_STATE_COOKIE).toBe("__Host-strava_oauth_state");
+  });
+
+  it("clears the cookie as a __Host- cookie must be: Secure, at Path=/", () => {
+    // The serializer refuses to clear a __Host- cookie without both.
+    expect(STRAVA_STATE_COOKIE_CLEAR).toStrictEqual({ path: "/", secure: true });
   });
 
   it("sends a signed-out visitor to log in, coming back to T1, with no nonce", () => {

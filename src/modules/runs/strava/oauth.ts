@@ -54,6 +54,13 @@ export type StravaConnectionRow = typeof stravaConnections.$inferSelect;
 export const STRAVA_STATE_COOKIE = "__Host-strava_oauth_state";
 
 /**
+ * What the callback clears the cookie with: a `__Host-` cookie is refused,
+ * set or cleared, without `Secure` and `Path=/`, and the serializer
+ * throws on one that lacks them.
+ */
+export const STRAVA_STATE_COOKIE_CLEAR = { path: "/", secure: true } as const;
+
+/**
  * What the state cookie holds: the nonce, then — when the trip started
  * somewhere other than T1 — this and the origin (round 39 #66, design
  * 172). A ULID has no `.`, so the first one ends the nonce. One cookie,

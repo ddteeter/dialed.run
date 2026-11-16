@@ -50,6 +50,7 @@ import {
   disconnectStravaAndTell,
   readStateCookie,
   STRAVA_STATE_COOKIE,
+  STRAVA_STATE_COOKIE_CLEAR,
   stravaStatusOf,
 } from "./strava/oauth";
 
@@ -199,7 +200,7 @@ export const completeStravaConnectFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     const { nonce, from } = readStateCookie(getCookie(STRAVA_STATE_COOKIE));
-    deleteCookie(STRAVA_STATE_COOKIE);
+    deleteCookie(STRAVA_STATE_COOKIE, STRAVA_STATE_COOKIE_CLEAR);
     const result = await connectFromCallback(
       coreDb(),
       stravaApiFromEnv(),
