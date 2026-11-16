@@ -27,7 +27,7 @@ appeared yet:
 | `.claude/rules/server.md`     | `src/modules/**/*.ts`, `src/lib/**`, `src/env/**`                       | D1 discipline, trust boundaries, server functions, resilience laws 1–7, 8b, 8c, 9, 10                            |
 | `.claude/rules/publishing.md` | always                                                                  | what may land in the public repo, its issues and PRs: the never-list and the approve-list                        |
 | `.claude/rules/testing.md`    | `test/**`, any test, vitest/stryker config; read it when planning tests | which kind of test to write (vitest or e2e), the three vitest projects, the mutation ratchet, equivalent mutants |
-| `.claude/rules/diagrams.md`   | `docs/diagrams/**`                                                      | the LikeC4 model: load skill `architecture-diagrams`, `diagrams:check`, source comments, what is never committed |
+| `.claude/rules/diagrams.md`   | `docs/diagrams/**`                                                      | the LikeC4 model: load skill `architecture-diagrams`, `diagrams:check`, the generated structure, source comments |
 | skill `pr-ready`              | opening a PR, answering review comments                                 | self-review, PR body sections, deferring, pushing, review comments                                               |
 | skill `crushing-mutants`      | working through surviving mutants                                       | the procedure                                                                                                    |
 | skill `pr-demo-video`         | a user-visible change                                                   | recording the demo                                                                                               |
@@ -277,9 +277,9 @@ are stable because code cites them.
 4. Tests are part of done. Match the test expectations in your packet.
 5. If you change module boundaries, add a queue/cron/binding, or change a
    drawn flow's steps, guards or timing, update the model in
-   `docs/diagrams/` (skill `architecture-diagrams`) in the same PR. Until
-   design 229's step 2 replaces them, the Mermaid blocks in
-   `docs/architecture.md` change with it.
+   `docs/diagrams/` (skill `architecture-diagrams`) in the same PR:
+   `npm run diagrams:generate` redraws the structure, and a flow's story
+   is yours to re-read.
 6. Before opening a PR, use the `pr-ready` skill: self-review, demo video,
    design deltas, `Closes #N` and the issues it defers, the final checks,
    and a five-sentence summary.

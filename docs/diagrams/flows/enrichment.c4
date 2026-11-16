@@ -7,24 +7,24 @@ views {
         description 'Saves a garment with a product link'
       }
     include
-      cf.core with {
+      cf.coreDb with {
         description 'The products row is the durable marker'
       }
 
     // source: src/modules/closet/functions.ts createItemFn, updateItemFn (withResolvedProduct, then createItem with data.idempotencyKey)
-    runner -> cf.app.saveGarment 'saves a garment with a brand, a model and a product link' {
+    runner -> cf.app.closet.saveGarment 'saves a garment with a brand, a model and a product link' {
       notes '''
         **Guard: the garment\'s idempotency key, on a create.** A repeat of the save also asks for enrichment again, which the claim below turns into nothing.
       '''
     }
     // source: src/modules/products/service.ts resolveProduct, createOrGetProduct (onConflictDoUpdate, coalesce on source_url)
-    cf.app.saveGarment -> cf.core 'finds or makes the shared product, keeps its link' {
+    cf.app.closet.saveGarment -> cf.coreDb 'finds or makes the shared product, keeps its link' {
       notes '''
         **Guard: create-if-missing on the normalized brand and name.** Products are shared rows. The first link a product gets stays its link; a later paste does not replace it.
       '''
     }
     // source: src/modules/closet/service.ts productLinkFor; src/modules/enrichment/enqueue.ts enqueueEnrichment
-    cf.app.saveGarment -> cf.app.enrichRequest 'asks for enrichment' {
+    cf.app.closet.saveGarment -> cf.app.enrichment.request 'asks for enrichment' {
       notes '''
         **Degrade, don\'t fail.** This never throws. A failed claim or a failed send is reported and swallowed, and the garment still saves.
 
@@ -32,7 +32,7 @@ views {
       '''
     }
     // source: src/modules/enrichment/request.ts requestEnrichment (didClaim from none or failed, source_url not null)
-    cf.app.enrichRequest -> cf.core 'claims the product: none or failed to pending' {
+    cf.app.enrichment.request -> cf.coreDb 'claims the product: none or failed to pending' {
       notes '''
         **Guard: the claim.** Only `none` and `failed` flip to `pending`, and only with a link. A second paste while a job is in flight, or of a product already `done`, claims nothing and sends nothing.
 
@@ -40,7 +40,7 @@ views {
       '''
     }
     // source: src/modules/enrichment/request.ts requestEnrichment (queue.send); src/modules/ops/scheduled.ts redispatchStalledEnrichments
-    cf.app.enrichRequest -[async]-> cf.enrichQueue 'sends EnrichJob: the product id' {
+    cf.app.enrichment.request -[async]-> cf.enrichmentQueue 'sends EnrichJob: the product id' {
       notes '''
         **Not atomic with the claim.** D1 and a queue are two systems.
 
@@ -49,13 +49,13 @@ views {
       navigateTo enrichmentRecovery
     }
     // source: src/modules/closet/functions.ts createItemFn (createItem after withResolvedProduct)
-    runner <- cf.app.saveGarment 'saves the garment and answers' {
+    runner <- cf.app.closet.saveGarment 'saves the garment and answers' {
       notes '''
         **Timing boundary: the request ends here.** The runner waits for the save, never for the page.
       '''
     }
     // source: src/modules/ops/queues.ts handleQueueBatch (dialed-enrichment); src/lib/sql/queue-batch.ts consumeEach; wrangler.jsonc queues.consumers (max_batch_timeout 30, max_retries 3)
-    cf.enrichQueue -[async]-> cf.app.enrichConsumer 'delivers EnrichJob' {
+    cf.enrichmentQueue -[async]-> cf.app.enrichment.consumer 'delivers EnrichJob' {
       notes '''
         **Timing boundary: up to 30 seconds later, in a queue consumer.** The queue waits up to 30 seconds to fill a batch.
 
@@ -64,13 +64,13 @@ views {
       navigateTo enrichmentRecovery
     }
     // source: src/modules/enrichment/consume.ts processEnrichJob (extractionStatus !== "pending")
-    cf.app.enrichConsumer -> cf.core 'reads the product: only pending is work' {
+    cf.app.enrichment.consumer -> cf.coreDb 'reads the product: only pending is work' {
       notes '''
         **Guard: the status.** A job for a product that is `done` (a redelivery after success) or `none` (sent without the claim) is acked and ignored.
       '''
     }
     // source: src/modules/enrichment/consume.ts extractPending, fetchAndExtract
-    cf.app.enrichConsumer -> shop 'fetches, stores and reads the page' {
+    cf.app.enrichment.consumer -> shop 'fetches, stores and reads the page' {
       notes '''
         **Guard: the stored page.** A page this product stored in the last hour is read again rather than fetched again, so a redelivery never pays for a second fetch.
 
@@ -79,7 +79,7 @@ views {
       navigateTo enrichmentExtraction
     }
     // source: src/modules/enrichment/consume.ts extractFrom; src/modules/products/apply-extraction.ts applyExtraction (the ledger guard, ExtractionConflictError)
-    cf.app.enrichConsumer -> cf.core 'writes the specs back: pending to done' {
+    cf.app.enrichment.consumer -> cf.coreDb 'writes the specs back: pending to done' {
       notes '''
         **Guard: the ledger.** The update only lands if the product\'s extraction ledger is the one this job read. A job that lost the race throws, and its retry starts from the stored page.
 
@@ -92,12 +92,12 @@ views {
     title 'The page is fetched, kept and read'
 
     include
-      cf.core with {
+      cf.coreDb with {
         description 'The products row is the durable marker'
       }
 
     // source: src/modules/enrichment/fetch-page.ts fetchProductPage (TIMEOUT_MS, MAX_REDIRECTS, assertFetchable); src/modules/enrichment/bounds.ts MAX_BYTES
-    cf.app.enrichConsumer -> shop 'fetches the page, one hop at a time' {
+    cf.app.enrichment.consumer -> shop 'fetches the page, one hop at a time' {
       notes '''
         **Bounded.** 10 seconds a hop, at most 5 redirects, at most 6 MB of page. Every hop is checked before it is fetched.
 
@@ -106,20 +106,20 @@ views {
     }
     opt 'the shop refuses a Worker (401, 403, 429 or 503) and a proxy key is set' {
       // source: src/modules/enrichment/fetch-page.ts refused (REFUSALS); src/modules/enrichment/firecrawl.ts scrapeThroughProxy (PROXY_TIMEOUT_MS)
-      cf.app.enrichConsumer -> firecrawl 'fetches the page through the proxy' {
+      cf.app.enrichment.consumer -> firecrawl 'fetches the page through the proxy' {
         notes '''
           **Degrade, don\'t fail.** With no key, a refused page is a failed fetch. The proxy call has 30 seconds.
         '''
       }
     }
     // source: src/modules/enrichment/consume.ts fetchAndExtract (isLandingDenied, dropDeniedSource); src/modules/ops/queues.ts enrichmentDeps
-    cf.app.enrichConsumer -> cf.core 'checks where the page landed against the denylist' {
+    cf.app.enrichment.consumer -> cf.coreDb 'checks where the page landed against the denylist' {
       notes '''
         **If the landing is denied:** nothing from the page is kept. The product lets go of the link and goes back to `none`, so the next runner\'s link can ask again.
       '''
     }
     // source: src/modules/enrichment/snapshot.ts putSnapshot
-    cf.app.enrichConsumer -> cf.mediaBucket 'stores the page before reading it' {
+    cf.app.enrichment.consumer -> cf.mediaBucket 'stores the page before reading it' {
       notes '''
         **Not atomic with the next step.** R2 and D1 are two systems. The page goes first, so a parser that throws can never cost us the page.
 
@@ -127,9 +127,9 @@ views {
       '''
     }
     // source: src/modules/enrichment/consume.ts fetchAndExtract (runLadder, recordSnapshot); src/modules/enrichment/snapshot.ts recordSnapshot
-    cf.app.enrichConsumer -> cf.core 'records the snapshot and the rung that read it'
+    cf.app.enrichment.consumer -> cf.coreDb 'records the snapshot and the rung that read it'
     // source: src/modules/enrichment/model/rung.ts modelPass; src/modules/enrichment/model/chat-completions.ts (TIMEOUT_MS); src/modules/enrichment/model/from-env.ts
-    cf.app.enrichConsumer -> openai 'asks the model for what the page left blank' {
+    cf.app.enrichment.consumer -> openai 'asks the model for what the page left blank' {
       notes '''
         **If it fails:** the error throws and the queue retries. The product stays `pending`, because the model is the only source of composition and a `done` product would never be asked again. The call has 30 seconds.
 
@@ -137,9 +137,9 @@ views {
       '''
     }
     // source: src/modules/enrichment/consume.ts extractFrom (the rung update); src/modules/products/apply-extraction.ts applyExtraction
-    cf.app.enrichConsumer -> cf.core 'writes the specs back: pending to done'
+    cf.app.enrichment.consumer -> cf.coreDb 'writes the specs back: pending to done'
     // source: src/modules/enrichment/consume.ts processEnrichJob (gaveUpClear, the batch after the write-back)
-    cf.app.enrichConsumer -> cf.core 'clears any give-up left from earlier tries' {
+    cf.app.enrichment.consumer -> cf.coreDb 'clears any give-up left from earlier tries' {
       notes '''
         **Not atomic with the write-back.** A clear that fails throws, and the redelivery finds the product `done` and stops.
       '''
@@ -150,59 +150,59 @@ views {
     title 'When an enrichment step is lost'
 
     include
-      cf.core with {
+      cf.coreDb with {
         description 'The products row is the durable marker'
       }
 
     try {
       // source: src/modules/enrichment/request.ts requestEnrichment (queue.send)
-      cf.app.enrichRequest -[async]-> cf.enrichQueue 'sends EnrichJob'
+      cf.app.enrichment.request -[async]-> cf.enrichmentQueue 'sends EnrichJob'
     }
     catch 'the send fails, or the Worker dies first' {
       // source: src/modules/ops/scheduled.ts redispatchStalledEnrichments (stalledPending, ENRICHMENT_STALL_GRACE_S); src/modules/ops/crons.ts cronRegistry (30 * * * *)
-      cf.app.enrichmentRetry -[recovery]-> cf.core 'finds products pending for 15+ minutes' {
+      cf.app.cronHourly30 -[recovery]-> cf.coreDb 'finds products pending for 15+ minutes' {
         notes 'Fifteen minutes of grace, counted from when the product was made, so the sweep rarely races a send still in flight.'
       }
       // source: src/modules/ops/scheduled.ts redispatchStalledEnrichments (redispatchEach)
-      cf.app.enrichmentRetry -[recovery]-> cf.enrichQueue 'sends them again' {
+      cf.app.cronHourly30 -[recovery]-> cf.enrichmentQueue 'sends them again' {
         notes 'Safe to repeat: the consumer works only a `pending` product, and reuses a page stored in the last hour.'
       }
     }
     loop 'at least once: up to 3 retries' {
       // source: src/modules/ops/queues.ts handleQueueBatch; wrangler.jsonc queues.consumers (max_retries 3)
-      cf.enrichQueue -[async]-> cf.app.enrichConsumer 'delivers EnrichJob'
+      cf.enrichmentQueue -[async]-> cf.app.enrichment.consumer 'delivers EnrichJob'
       // source: src/modules/enrichment/consume.ts processEnrichJob
-      cf.app.enrichConsumer -> cf.core 'reads the product, or stops'
+      cf.app.enrichment.consumer -> cf.coreDb 'reads the product, or stops'
       // source: src/modules/enrichment/consume.ts extractPending (latestSnapshot, REUSE_WINDOW_MS)
-      cf.app.enrichConsumer -> cf.mediaBucket 'reads the page stored in the last hour'
+      cf.app.enrichment.consumer -> cf.mediaBucket 'reads the page stored in the last hour'
     }
     opt 'every retry failed' {
       // source: wrangler.jsonc queues.consumers (max_retries 3, dead_letter_queue)
-      cf.enrichQueue -[recovery]-> cf.enrichDlq 'dead-letters the job'
+      cf.enrichmentQueue -[recovery]-> cf.enrichmentDlq 'dead-letters the job'
       // source: src/modules/ops/queues.ts handleQueueBatch (dialed-enrichment-dlq)
-      cf.enrichDlq -[async]-> cf.app.enrichDeadLetter 'delivers it'
+      cf.enrichmentDlq -[async]-> cf.app.enrichment.deadLetter 'delivers it'
       // source: src/modules/enrichment/consume.ts handleEnrichmentDlqBatch
-      cf.app.enrichDeadLetter -[recovery]-> cf.core 'marks the product failed, if still pending' {
+      cf.app.enrichment.deadLetter -[recovery]-> cf.coreDb 'marks the product failed, if still pending' {
         notes 'A retry that won before the dead letter arrived is never un-done. Inside the product\'s first day the failure is parked for the sweep; past it, it goes on the Desk\'s Gave up at once.'
       }
     }
     opt 'failed, and inside the product\'s first day' {
       // source: src/modules/ops/scheduled.ts redispatchStalledEnrichments, failedAndOwed; src/modules/enrichment/abandon.ts ENRICHMENT_RETRY_WINDOW_S
-      cf.app.enrichmentRetry -[recovery]-> cf.core 'claims failed products back to pending' {
+      cf.app.cronHourly30 -[recovery]-> cf.coreDb 'claims failed products back to pending' {
         notes 'A claim, not just a send: the consumer ignores a product that is not `pending`. Hourly, for the product\'s first 24 hours.'
       }
       // source: src/modules/ops/scheduled.ts redispatchStalledEnrichments (redispatchEach)
-      cf.app.enrichmentRetry -[recovery]-> cf.enrichQueue 'sends them again'
+      cf.app.cronHourly30 -[recovery]-> cf.enrichmentQueue 'sends them again'
     }
     opt 'failed, and past the product\'s first day' {
       // source: src/modules/enrichment/abandon.ts listAbandonedEnrichments
-      cf.app.enrichmentRetry -[recovery]-> cf.core 'lists it on the Desk\'s Gave up' {
+      cf.app.cronHourly30 -[recovery]-> cf.coreDb 'lists it on the Desk\'s Gave up' {
         notes 'The system has stopped retrying, so a person is told. The daily digest reports it too.'
       }
       // source: src/modules/ops/gave-up.ts retryEnrichment
-      operator -> cf.app.deskRetry 'presses Retry'
+      operator -> cf.app.ops.deskRetry 'presses Retry'
       // source: src/modules/ops/gave-up.ts retryEnrichment (requestEnrichment, gaveUpClear)
-      cf.app.deskRetry -[recovery]-> cf.app.enrichRequest 'claims it and sends EnrichJob again' {
+      cf.app.ops.deskRetry -[recovery]-> cf.app.enrichment.request 'claims it and sends EnrichJob again' {
         notes 'The Desk can also re-run extraction over the stored page, with no fetch and no queue.'
       }
     }

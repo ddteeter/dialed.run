@@ -28,9 +28,11 @@ description: Use before opening a pull request in dialed.run, before pushing a b
    Done.
 6. **Schema.** A migration is named in the PR body; a destructive one says so
    explicitly (D-139). An additive column another lane may want is called out.
-7. **Architecture.** If you changed module boundaries or added a
-   queue/cron/binding, the diagram in `docs/architecture.md` changes in the
-   same PR.
+7. **Architecture.** If you changed module boundaries, a cross-module
+   import or a queue/cron/binding, run `npm run diagrams:generate` and
+   commit the result; if you changed a drawn flow's steps, guards or
+   timing, its story in `docs/diagrams/` changes in the same PR (skill
+   `architecture-diagrams`).
 8. **Run** `npm run verify && npm test && npm run build`. `build` is a gate:
    `postbuild` runs `check:bundle`. **A lane dispatched by a coordinator
    skips `verify`** (owner, 2026-10-24): it has no flag to drop its Stryker

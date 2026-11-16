@@ -1,70 +1,30 @@
 # dialed.run — Architecture
 
 One Worker, SSR-first, everything on the Cloudflare $5 plan. This document is
-the shared map: humans review against it, agents build against it. **If your
-change alters a boundary shown here, update the diagram in the same PR.**
+the shared map: humans review against it, agents build against it. Its
+diagrams are views of the model in `docs/diagrams/` (`npm run diagrams`
+opens them). **If your change alters a boundary shown here, update the
+model in the same PR** (skill `architecture-diagrams`).
 
 Supersedes `plan/docs/architecture.md` (htmx/Hono replaced by TanStack Start;
 same backend shape).
 
 ## System context
 
-```mermaid
-flowchart LR
-    U[Runner / Browser] -->|HTTPS, SSR + hydration| EC
-    EC -->|miss, or anything not public| W
-    U -->|a PUBLIC kit's photo,\nphotos.dialed.run| ZC
+The picture is the `index` view of the model in `docs/diagrams/` (the
+people, the app and every system it calls), and `platform` is the same app
+opened up: the Worker with each database, bucket and queue bound to it.
+`npm run diagrams` opens both. The databases, buckets, queues and crons in
+them are generated from `wrangler.jsonc` and the cron registry
+(`docs/diagrams/structure.generated.c4`), so they cannot differ from what
+is bound.
 
-    subgraph CF[Cloudflare - Workers Paid plan]
-        EC{{Workers Caching\npublic pages only, 60 s,\nby Cache-Tag}}
-        W[TanStack Start Worker\nSSR + server functions + API routes]
-        D1[(D1: dialed-core)]
-        D1W[(D1: dialed-weather)]
-        D1O[(D1: dialed-ops)]
-        AE[(Analytics Engine:\ndialed_vitals)]
-        R2[(R2: photos)]
-        ZC{{Zone cache + CSAM Scanning Tool\neach copy 60 s}}
-        R2P[(R2: dialed-public-photos\nPUBLIC_PHOTOS, unguessable keys)]
-        R2B[(R2: dialed-media-backup\nMEDIA_BACKUP)]
-        Q[[Queue: imports]]
-        QE[[Queue: enrichment]]
-        QX[[Queue: exports]]
-        CRON[Cron Triggers]
-    end
-
-    W --> D1
-    W --> D1W
-    U -->|sendBeacon on hide:\nPOST /api/vitals| W
-    MK[Marketing site: dialed.run] -->|request-access form:\nPOST /api/access-requests, 303 back| W
-    W -->|speed beacon, server timing| AE
-    CRON -->|daily rollup via\nSQL API| AE
-    W -->|perf_daily| D1O
-    W --> R2
-    W -->|copy a PUBLIC kit's screened photo;\ndelete on every retraction\nand the hourly sweep| R2P
-    ZC -->|miss| R2P
-    W -->|daily: copy new and changed photos;\na deleted one's copy goes 30 days later| R2B
-    W -->|produce| Q
-    Q -->|consume| W
-    W -->|produce| QE
-    QE -->|consume| W
-    W -->|produce| QX
-    QX -->|consume| W
-    CRON --> W
-    W -->|purge by tag on retraction| EC
-
-    W -->|product page fetch\nbounded, https-only| SHOP[Brand product pages\nShopify JSON / JSON-LD / OG]
-    W -->|same fetch, when the shop\nrefuses a Worker: 11 of 14 do| PROXY[Firecrawl scrape API\nresidential egress, 1 credit/page]
-    PROXY --> SHOP
-    W -->|LLM extraction rung\nadapter, D-32| LLM[OpenAI\nproduct extraction]
-    W -->|photo screening| MOD[OpenAI\nomni-moderation-latest]
-    W -->|siteverify, fail closed| TS[Cloudflare Turnstile]
-    W -->|exceptions, digest events,\ncron check-ins| SENTRY[Sentry]
-
-    STRAVA[Strava webhook] -->|activity event\nreminder only| W
-    W -->|historical + forecast| WX[Weather provider\nVisual Crossing behind adapter]
-    W -->|OAuth| IDP[Google / Strava auth]
-    W -->|owner only: list runs,\nfetch one .FIT, D-149| GARMIN[Garmin Connect\nPersonal API]
-```
+Two things on the edge of the picture are not drawn, because no element
+kind fits them. Public pages (`/kit/<id>`, `/@handle`, the kit's card) are
+served from Workers Caching for 60 seconds by `Cache-Tag`, and the Worker
+purges by tag on a retraction. A public kit's photo is read from
+`photos.dialed.run`, the zone cache in front of `dialed-public-photos`,
+where the CSAM Scanning Tool runs.
 
 Key decisions embedded here:
 
@@ -200,79 +160,22 @@ Key decisions embedded here:
 
 ## Module dependency graph (enforced by dependency-cruiser)
 
-```mermaid
-flowchart TD
-    ROUTES[src/routes - thin files] --> AUTH[modules/auth]
-    ROUTES --> CLOSET[modules/closet]
-    ROUTES --> RUNS[modules/runs]
-    ROUTES --> FEED[modules/feed]
-    ROUTES --> ONB[modules/onboarding]
-    ROUTES --> PROD[modules/products]
+The graph is the `modules` view of the model in `docs/diagrams/`: every
+module, and an arrow wherever one's service code imports from another. It
+is generated from the imports themselves (`npm run diagrams:generate`;
+`test/architecture/diagram-structure.test.ts` fails when it is stale), so
+it is the graph as it is, not as someone last drew it.
 
-    CLOSET --> DB[db]
-    RUNS --> DB
-    FEED --> DB
-    AUTH --> DB
-    ONB --> DB
-    PROD --> DB
-    ENR[modules/enrichment] --> DB
-    ENR -->|index.ts only| PROD
-    WX[modules/weather] --> DBW[db - weather]
-    WX --> DB
+Each module also has a view of its own (`runsImports`, `feedImports` and
+so on): the module, what it imports and what imports it. Click a module in
+`modules` to open it. Those views add the dotted arrows the map leaves
+out: a pair where only a module's wiring (its `functions.ts` and its
+components) imports from the other, which is mostly the auth gates, the
+error reporter and another module's component.
 
-    RUNS -->|index.ts only| WX
-    FEED -->|index.ts only| CLOSET
-    FEED -->|index.ts only| RUNS
-    FEED -->|index.ts only| WX
-    ONB -->|index.ts only| CLOSET
-    FEED -->|index.ts only: the place writer| ONB
-    CLOSET -->|index.ts only| PROD
-    FEED -->|index.ts only| PROD
-    OPS[modules/ops] -->|index.ts only| WX
-    ONB -->|index.ts only: the city lookup and the zone| WX
-    OPS -->|index.ts only: the :00 zone fill| ONB
-    SAFE[modules/safety] --> DB
-    FEED -->|index.ts only| SAFE
-    CLOSET -->|index.ts only: the one link rule| SAFE
-    CLOSET -->|index.ts only| AUTH
-    PROD -->|index.ts only| AUTH
-    ROUTES --> ACCT[modules/account]
-    ROUTES --> MAIL[modules/email]
-    ACCT --> DB
-    MAIL --> DB
-    MAIL -->|the only reader of EMAIL| ENV
-    AUTH -->|index.ts only| ACCT
-    ACCT -->|index.ts only| MAIL
-    ACCT -->|index.ts only| OPS
-    OPS -->|index.ts only| MAIL
-    FEED -->|index.ts only| ACCT
-    FEED -->|index.ts only: the removal email| MAIL
-    SAFE -->|index.ts only: D8's run counts| RUNS
-    SAFE -->|index.ts only: report and review notices, C8| NOTE[modules/notifications]
-    SAFE -->|index.ts only: the Desk's Corrections queue, D-163| PROD
-    PROD -->|index.ts only: a correction's outcome, R48·129f| NOTE
-    FEED -->|index.ts only: a follow's ring, D-168| NOTE
-    OPS -->|index.ts only: the Corrections rail count| PROD
-    ACCT -->|index.ts only: Strava revoked on deletion| RUNS
-    ACCT -->|index.ts only: the one visibility rule| SAFE
-    PURGE[account/purge.ts] -->|index.ts only: SAF-3's deletes| FEED
-    WORKER[src/server.ts] -->|hands the daily firing its upkeep| PURGE
-    WORKER -->|hands dialed-exports its consumers,\nthe :00 firing its sweep| EXPORT[account/export-build.ts,\nexport-sweep.ts]
-    RUNS -->|index.ts only: the Strava-disconnected email| MAIL
-
-    CLOSET --> UI[ui]
-    RUNS --> UI
-    FEED --> UI
-    ONB --> UI
-
-    subgraph FOUNDATION
-        DB
-        DBW
-        UI
-        ENV[env]
-        LIB[lib]
-    end
-```
+The graph draws modules only. Route files import modules and are imported
+by nothing, and `src/server.ts` hands the scheduled handler and the queue
+handler what `ops` cannot import without a cycle (below).
 
 Rules: modules import foundation freely; cross-module imports go through the
 target module's `index.ts`; only `env/` reads bindings; route files import
@@ -361,33 +264,16 @@ broke".
 
 ## Import pipeline (lane 102)
 
-```mermaid
-sequenceDiagram
-    participant User
-    participant Worker
-    participant Queue
-    participant D1
-    participant Weather as Weather adapter
+The file path is the `importStory` view of the model in `docs/diagrams/`:
+the upload, the queue, the consumer and the weather attach, one step at a
+time, with what makes each step safe to repeat. `importRecovery` is what
+happens when a step is lost.
 
-    alt FIT/GPX/TCX upload
-        User->>Worker: upload file (server function, multipart)
-        Worker->>Worker: zod-validate metadata, store raw file to R2
-        Worker->>Queue: enqueue ImportJob
-        Worker-->>User: import row 'pending' (client polls import status)
-        Queue->>Worker: consume ImportJob
-        Worker->>Worker: parse FIT/GPX/TCX -> RunDraft
-        Worker->>D1: insert run (source=file), dedupe-check started_at
-        Worker->>D1: import 'done' + notification: "Add your kit"
-        Worker->>Weather: attachObservation(runId)
-        Weather->>D1: cache + attach weather to run
-    else Strava webhook (reminder only)
-        Strava->>Worker: POST activity event (api route)
-        Worker->>Worker: verify subscription, zod-validate, dedupe
-        Worker->>Queue: enqueue ReminderJob (no activity data stored)
-        Queue->>Worker: consume
-        Worker->>D1: notification: "New run on Strava - log your kit?"
-    end
-```
+The Strava path is not drawn, because it carries no run. The webhook's
+route checks the verify token, parses the event and enqueues a
+`ReminderJob` (the athlete id and the dedupe key, nothing else) on the
+same queue. The consumer dedupes it and leaves a notification and, if the
+runner allows it, a reminder email. No activity data is stored.
 
 The attach comes last: the import is done before its conditions are asked
 for, and the upload screen keeps polling while the run is `pending`.
