@@ -161,13 +161,17 @@ Key decisions embedded here:
 ## Module dependency graph (enforced by dependency-cruiser)
 
 The graph is the `modules` view of the model in `docs/diagrams/`: every
-module, and an arrow for each one that imports from another, labelled with
-the names it imports. It is generated from the imports themselves
-(`npm run diagrams:generate`; `test/architecture/diagram-structure.test.ts`
-fails when it is stale), so it is the graph as it is, not as someone last
-drew it. It is dense, so each module also has a view of its own
-(`runsImports`, `feedImports` and so on): the module, what it imports and
-what imports it. Click a module in `modules` to open it.
+module, and an arrow wherever one's service code imports from another. It
+is generated from the imports themselves (`npm run diagrams:generate`;
+`test/architecture/diagram-structure.test.ts` fails when it is stale), so
+it is the graph as it is, not as someone last drew it.
+
+Each module also has a view of its own (`runsImports`, `feedImports` and
+so on): the module, what it imports and what imports it. Click a module in
+`modules` to open it. Those views add the dotted arrows the map leaves
+out: a pair where only a module's wiring (its `functions.ts` and its
+components) imports from the other, which is mostly the auth gates, the
+error reporter and another module's component.
 
 The graph draws modules only. Route files import modules and are imported
 by nothing, and `src/server.ts` hands the scheduled handler and the queue

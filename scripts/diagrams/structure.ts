@@ -80,7 +80,7 @@ interface Arrow {
   readonly from: string;
   readonly to: string;
   readonly kind: string;
-  readonly title: string;
+  readonly title?: string;
 }
 
 const CLOSER = /^[\]}]/u;
@@ -301,62 +301,22 @@ function statementStart(code: string, index: number): number {
 }
 
 /**
- * The names an import clause brings in. A namespace import is `*`, a
- * default import `default`, and `type` and `as` are dropped: the arrow
- * says what the other module is asked for, not what it is called here.
+ * The specifier of every `import … from` and `export … from` in a source.
+ * Found from the `from "…"` backwards, and kept only when what sits
+ * between the keyword and the `from` is an import clause, so a `from "x"`
+ * inside a string or a query is not read as one.
  */
-function importedNames(clause: string): string[] {
-  const open = clause.indexOf("{");
-  if (open === -1) return [clause.includes("*") ? "*" : "default"];
-  const lead = clause.slice(0, open).replace(",", "").trim();
-  const named = clause
-    .slice(open + 1, clause.lastIndexOf("}"))
-    .split(",")
-    .map((name) => name.trim().split(/\s+/u))
-    .map(([first = "", second = ""]) => (first === "type" ? second : first))
-    .filter((name) => name !== "");
-  return lead === "" || lead === "type" ? named : ["default", ...named];
-}
-
-interface Import {
-  readonly specifier: string;
-  readonly names: readonly string[];
-}
-
-/**
- * Every `import … from` and `export … from` in a source. Found from the
- * `from "…"` backwards, and kept only when what sits between the keyword
- * and the `from` is an import clause, so a `from "x"` inside a string or a
- * query is not read as one.
- */
-function importsOf(source: string): Import[] {
+function importsOf(source: string): string[] {
   const code = withoutComments(source);
-  const found: Import[] = [];
+  const found: string[] = [];
   for (const match of code.matchAll(FROM)) {
     const start = statementStart(code, match.index);
-    if (start === -1) continue;
-    const clause = code.slice(start, match.index);
-    if (!CLAUSE.test(clause)) continue;
-    found.push({ specifier: match[1] ?? "", names: importedNames(clause) });
+    const isImport =
+      start !== -1 && CLAUSE.test(code.slice(start, match.index));
+    if (!isImport) continue;
+    found.push(match[1] ?? "");
   }
   return found;
-}
-
-const NAMES_SHOWN = 3;
-
-/**
-An arrow's label: the names imported, or the first few and how many more.
-*/
-function importLabel(names: readonly string[]): string {
-  const sorted = names.toSorted((a, b) => a.localeCompare(b));
-  if (sorted.length <= NAMES_SHOWN) return sorted.join(", ");
-  const shown = sorted.slice(0, NAMES_SHOWN - 1).join(", ");
-  return `${shown} +${String(sorted.length - NAMES_SHOWN + 1)}`;
-}
-
-interface ImportedUnit {
-  readonly to: string;
-  readonly names: readonly string[];
 }
 
 /**
@@ -369,45 +329,58 @@ function importedUnits(
   source: string,
   from: string,
   units: readonly string[],
-): ImportedUnit[] {
-  const found: ImportedUnit[] = [];
-  for (const entry of importsOf(source)) {
-    if (!entry.specifier.startsWith(".")) continue;
-    const to = owningUnit(resolveSpecifier(path, entry.specifier), units);
+): string[] {
+  const found: string[] = [];
+  for (const specifier of importsOf(source)) {
+    if (!specifier.startsWith(".")) continue;
+    const to = owningUnit(resolveSpecifier(path, specifier), units);
     if (to === undefined || isUnder(to, from) || isUnder(from, to)) continue;
-    found.push({ to, names: entry.names });
+    found.push(to);
   }
   return found;
 }
 
+const WIRING_FILE = /(?:\/functions\.ts|\.tsx)$/u;
+
 /**
-One arrow per pair of units where a file in the first imports from the
-second, labelled with every name any of its files imports.
-*/
+ * A module's wiring: its server functions and its components, the files
+ * that join a screen to the code behind it. An import only they make
+ * (the auth gate, the error reporter, another module's component) says
+ * less about how the modules depend on each other than one its service
+ * code makes, so the two are drawn as different arrows.
+ */
+function isWiring(path: string): boolean {
+  return WIRING_FILE.test(path);
+}
+
+/**
+ * One arrow per pair of units where a file in the first imports from the
+ * second: `imports` when any file outside the wiring does, `wiring` when
+ * only wiring files do. The arrow carries no names. A label would change
+ * with every new import, and lanes working in parallel would conflict on
+ * this file for no change in structure.
+ */
 function importArrows(
   sources: Readonly<Record<string, string>>,
   units: readonly string[],
 ): Arrow[] {
-  const names = new Map<string, Set<string>>();
+  const pairs = new Map<string, boolean>();
   for (const [path, source] of Object.entries(sources)) {
     const from = owningUnit(path, units);
     if (from === undefined) continue;
-    for (const imported of importedUnits(path, source, from, units)) {
-      const key = `${from} ${imported.to}`;
-      const seen = names.get(key) ?? new Set<string>();
-      for (const name of imported.names) seen.add(name);
-      names.set(key, seen);
+    for (const to of importedUnits(path, source, from, units)) {
+      const key = `${from} ${to}`;
+      pairs.set(key, (pairs.get(key) ?? true) && isWiring(path));
     }
   }
-  return [...names]
+  return [...pairs]
     .toSorted(([a], [b]) => a.localeCompare(b))
-    .map(([key, seen]) => {
+    .map(([key, wiringOnly]) => {
       const [from = "", to = ""] = key.split(" ", 2);
       return {
         from: unitId(from),
         to: unitId(to),
-        kind: "imports",
-        title: importLabel([...seen]),
+        kind: wiringOnly ? "wiring" : "imports",
       };
     });
 }
@@ -485,13 +458,16 @@ function renderExtend(
 }
 
 function renderArrow(arrow: Arrow): string {
-  return `  ${arrow.from} -[${arrow.kind}]-> ${arrow.to} ${quoted(arrow.title)}`;
+  const line = `  ${arrow.from} -[${arrow.kind}]-> ${arrow.to}`;
+  return arrow.title === undefined ? line : `${line} ${quoted(arrow.title)}`;
 }
 
+const EITHER_IMPORT = "where kind is imports or kind is wiring";
+
 /**
- * One view a module: the module, what it imports and what imports it. The
- * whole graph is too dense to read at once, so `overview.c4`'s `modules`
- * view is the map and these are what a click on a module opens.
+ * One view a module: the module, what it imports and what imports it,
+ * wiring included. `overview.c4`'s `modules` view is the map, with the
+ * service imports only, and these are what a click on a module opens.
  */
 function renderImportViews(arrows: readonly Arrow[]): string[] {
   const ids = new Set(arrows.flatMap((arrow) => [arrow.from, arrow.to]));
@@ -505,8 +481,8 @@ function renderImportViews(arrows: readonly Arrow[]): string[] {
         `  view ${viewId} of ${id} {`,
         `    title ${quoted(title)}`,
         `    include ${id}`,
-        `    include ${id} -> cf.app.** where kind is imports`,
-        `    include cf.app.** -> ${id} where kind is imports`,
+        `    include ${id} -> cf.app.** ${EITHER_IMPORT}`,
+        `    include cf.app.** -> ${id} ${EITHER_IMPORT}`,
         "  }",
       ];
     });

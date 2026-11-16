@@ -69,8 +69,13 @@ specification {
   }
   // Generated, never written by hand: one module imports from another.
   relationship imports {
-    notation 'Imports from the other module'
+    notation 'Its service code imports from the other module'
     line solid
+    color gray
+  }
+  relationship wiring {
+    notation 'Only its server functions and components import from the other module'
+    line dotted
     color gray
   }
 }

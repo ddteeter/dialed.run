@@ -11,7 +11,7 @@ views {
   }
 
   view modules of cf.app {
-    title 'The modules and what each imports'
+    title 'The modules and what each one\'s service code imports'
     include cf.app.* where kind is module
     exclude * -> * where kind is not imports
   }

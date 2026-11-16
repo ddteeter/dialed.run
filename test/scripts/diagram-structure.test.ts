@@ -120,12 +120,15 @@ const SOURCES = {
     `import {`,
     `  attachObservation,`,
     `  type Observation,`,
-    `  cacheKeyFor as keyFor,`,
     `} from "../weather";`,
     `import type { Parsed } from "./parsers";`,
     `import * as schema from "../../db/schema-core";`,
     `// import { never } from "../feed";`,
     `export const text = sql\`select a from "../feed"\`;`,
+  ].join("\n"),
+  "src/modules/runs/functions.ts": [
+    `import { requireUserId } from "../auth";`,
+    `import { attachObservation } from "../weather";`,
   ].join("\n"),
   "src/modules/runs/parsers/index.ts": `export { parse } from "./fit";`,
   "src/modules/runs/parsers/fit.ts": [
@@ -133,12 +136,11 @@ const SOURCES = {
     `import { timeZoneAt } from "../../weather/provider";`,
   ].join("\n"),
   "src/modules/runs/components/Upload.tsx": `import { Bell } from "../../notifications";`,
+  "src/modules/auth/index.ts": `export const requireUserId = 1;`,
   "src/modules/weather/index.ts": `export { attachObservation } from "./attach";`,
   "src/modules/weather/attach.ts": `import { fetchHour } from "./provider";`,
   "src/modules/weather/provider/index.ts": `export const fetchHour = 1;`,
-  "src/modules/notifications/index.ts": [
-    `import defaults, { a, b, c, d } from "../runs";`,
-  ].join("\n"),
+  "src/modules/notifications/index.ts": `import defaults, { a } from "../runs";`,
   "src/modules/public-pages/index.ts": `export const page = 1;`,
   "src/modules/loose.ts": `import { a } from "./runs";`,
   "src/lib/now.ts": `import { a } from "../modules/runs";`,
@@ -162,37 +164,40 @@ describe("generateStructure: modules and their imports", () => {
     expect(out.some((line) => line.startsWith("components ="))).toBe(false);
   });
 
-  it("draws one arrow a pair, labelled with the names imported", () => {
-    expect(out).toContain(
-      "cf.app.runs -[imports]-> cf.app.weather 'attachObservation, cacheKeyFor, Observation'",
-    );
-    expect(out).toContain(
-      "cf.app.runs -[imports]-> cf.app.notifications 'Bell'",
-    );
+  it("draws one unlabelled arrow a pair where service code imports", () => {
+    expect(out).toContain("cf.app.runs -[imports]-> cf.app.weather");
+    expect(out).toContain("cf.app.notifications -[imports]-> cf.app.runs");
   });
 
-  it("shortens a long label to its first names and a count", () => {
-    expect(out).toContain(
-      "cf.app.notifications -[imports]-> cf.app.runs 'a, b +3'",
-    );
+  it("draws a pair only the server functions and components import as wiring", () => {
+    expect(out).toContain("cf.app.runs -[wiring]-> cf.app.auth");
+    expect(out).toContain("cf.app.runs -[wiring]-> cf.app.notifications");
   });
 
   it("gives a sub-module its own arrows, to the unit that owns the target", () => {
     expect(out).toContain(
-      "cf.app.runs.parsers -[imports]-> cf.app.weather.provider 'timeZoneAt'",
+      "cf.app.runs.parsers -[imports]-> cf.app.weather.provider",
     );
   });
 
-  it("draws no arrow between a module and its own sub-module", () => {
-    const arrows = out.filter((line) => line.includes("-[imports]->"));
+  it("draws nothing for a sub-module, a comment, a query or a file outside a module", () => {
+    const arrows = out.filter((line) =>
+      /-\[(?:imports|wiring)\]->/u.test(line),
+    );
 
-    expect(arrows).toHaveLength(4);
+    expect(arrows).toHaveLength(5);
     expect(arrows.some((line) => line.includes("cf.app.feed"))).toBe(false);
   });
 
-  it("gives every module with an arrow a view of its imports", () => {
+  it("gives every module with an arrow a view of both kinds of import", () => {
     expect(out).toContain("view runsImports of cf.app.runs {");
     expect(out).toContain("title 'runs: what it imports, and what imports it'");
+    expect(out).toContain(
+      "include cf.app.runs -> cf.app.** where kind is imports or kind is wiring",
+    );
+    expect(out).toContain(
+      "include cf.app.** -> cf.app.runs where kind is imports or kind is wiring",
+    );
     expect(out).toContain("view runsParsersImports of cf.app.runs.parsers {");
     expect(out).toContain(
       "title 'runs/parsers: what it imports, and what imports it'",

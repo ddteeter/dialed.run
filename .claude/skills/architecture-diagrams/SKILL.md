@@ -32,10 +32,16 @@ It holds:
 - every cron, named for its firing (`cf.app.cronHourly30`), because one
   firing runs several jobs. The step's label says which job;
 - every module and sub-module (`cf.app.runs`, `cf.app.runs.parsers`: a
-  folder with its own `index.ts`), an `-[imports]->` arrow for each pair
-  where one imports from the other, and a view a module of its imports.
+  folder with its own `index.ts`), and an arrow for each pair where one
+  imports from the other: `-[imports]->` when its service code does,
+  `-[wiring]->` when only its `functions.ts` and components do. The arrows
+  carry no names, so the file changes when a pair appears or goes, not
+  with every import. Each module has a view of its imports
+  (`runsImports`), and `modules` in `overview.c4` is the map of the
+  `imports` arrows alone.
 
-You never write these by hand, and never write an `-[imports]->` arrow.
+You never write these by hand, and never write an `-[imports]->` or
+`-[wiring]->` arrow.
 Read the file for the ids. When a binding, a cron, a module or a
 cross-module import changes, run `npm run diagrams:generate` and commit
 the result. If that removes or renames an element a flow names,
@@ -109,7 +115,8 @@ An arrow's kind says what the hop is:
 | `->`            | grey dashed  | a call the sender waits on                                         |
 | `-[async]->`    | amber dotted | a hop across a timing boundary: an enqueue, a delivery             |
 | `-[recovery]->` | red solid    | a path that exists to repair: a re-drive, a dead-letter, a give-up |
-| `-[imports]->`  | grey solid   | generated only: one module imports from another                    |
+| `-[imports]->`  | grey solid   | generated only: a module's service code imports from another       |
+| `-[wiring]->`   | grey dotted  | generated only: just its server functions and components do        |
 
 Do not add a kind, a colour or a tag for one flow. If a flow seems to need
 one, say so in your report and use the nearest existing kind.
