@@ -98,6 +98,8 @@ filesystem, so sources arrive as `?raw` imports, as
 
 - `diagram-structure.test.ts`: the generated file equals the generator's
   output for today's `wrangler.jsonc`, registries and module imports.
+  (Moved into `npm run diagrams:check` after step 2; see the follow-up
+  below.)
 - `diagram-sources.test.ts`: every step has a source comment; every path
   exists and contains the symbol it names.
 - Unit tests for the generator, the view-hash diff and the stale-story
@@ -170,10 +172,24 @@ registries.
   module throws (dependency-cruiser does not require an `index.ts`), and
   so does a `createServerFn(` outside a `functions.ts`, because the
   wiring arrows are read from that file name.
-- **Imports in every form**: bare, dynamic (a template literal throws),
-  type-position `import("…")`, and the aliases, read from
-  `tsconfig.json`'s `paths`. The generator now reads all of `src`, which
-  the top-level list needs; only `src/modules` is drawn.
+- **Imports are read by dependency-cruiser, not by pattern** (owner,
+  2026-11-16). The first version read imports with regexes over
+  comment-stripped text, which leaned on the formatter's layout and could
+  be thrown by a regex literal or an apostrophe in JSX. dependency-cruiser
+  already enforces the module boundaries at the commit gate; its `cruise()`
+  API follows every form (static, re-export, bare, dynamic, type-only)
+  and the tsconfig aliases, so the diagram and the gate agree on what an
+  import is. The rest (main's handlers and exports, `createServerFn`, an
+  `import(…)` of a computed path) is read from TypeScript's syntax tree.
+  An unresolved local import throws. Run over today's tree, it drew the
+  same 65 arrows as the regex version.
+- **The stale check moved from `npm test` to `npm run diagrams:check`.**
+  Both libraries need the filesystem, which the workers pool lacks.
+  `scripts/diagram-structure.ts --check` regenerates in memory and fails
+  on a difference; `diagrams:check` is already in CI's required job, and
+  `pr-ready`'s final checks now run it. `generateStructure` stays pure and
+  is tested in the worker project on facts; `scripts/diagrams/syntax.ts`
+  is tested in the `ui` project, which runs in Node.
 - **Email sending is drawn** (owner, 2026-11-16): the `send_email`
   binding generates `cf.emailSending`, an `external`, with
   `cf.app.email`'s arrow to it in `model.c4`. A system we call and do not

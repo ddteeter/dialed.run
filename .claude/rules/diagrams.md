@@ -17,8 +17,8 @@ diagrams:format` fixes the formatting. `npm run diagrams` opens the
 - **`structure.generated.c4` is never edited.** It is the databases,
   buckets, queues, crons and modules, and the imports between modules,
   written by `npm run diagrams:generate`. Run it when a binding, a cron, a
-  module or a cross-module import changes;
-  `test/architecture/diagram-structure.test.ts` fails until you do. A
+  module or a cross-module import changes; `npm run diagrams:check`
+  regenerates and fails until you do. A
   generated element's description is a line in `structure.words.json`.
   The generator also throws on a new `wrangler.jsonc` key, handler on
   `main`, or folder beside `src/modules` that it neither draws nor lists:

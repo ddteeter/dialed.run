@@ -162,9 +162,9 @@ Key decisions embedded here:
 
 The graph is the `modules` view of the model in `docs/diagrams/`: every
 module, and an arrow wherever one's service code imports from another. It
-is generated from the imports themselves (`npm run diagrams:generate`;
-`test/architecture/diagram-structure.test.ts` fails when it is stale), so
-it is the graph as it is, not as someone last drew it.
+is generated from the imports themselves, as dependency-cruiser resolves
+them (`npm run diagrams:generate`; `npm run diagrams:check` fails when it
+is stale), so it is the graph as it is, not as someone last drew it.
 
 Each module also has a view of its own (`runsImports`, `feedImports` and
 so on): the module, what it imports and what imports it. Click a module in

@@ -33,12 +33,13 @@ description: Use before opening a pull request in dialed.run, before pushing a b
    commit the result; if you changed a drawn flow's steps, guards or
    timing, its story in `docs/diagrams/` changes in the same PR (skill
    `architecture-diagrams`).
-8. **Run** `npm run verify && npm test && npm run build`. `build` is a gate:
+8. **Run** `npm run verify && npm test && npm run diagrams:check && npm run build`. `build` is a gate:
    `postbuild` runs `check:bundle`. **A lane dispatched by a coordinator
    skips `verify`** (owner, 2026-10-24): it has no flag to drop its Stryker
    analyzer, the push gate runs that pass in full, and the commit gate has
    run the other analyzers on each commit. The lane runs
-   `npm run lint`, `npm run typecheck`, `npm test` and `npm run build`.
+   `npm run lint`, `npm run typecheck`, `npm test`, `npm run
+diagrams:check` (the stale-structure check left `npm test` under design 229) and `npm run build`.
    It doesn't run Stryker over all its changed files before shipping
    (owner, 2026-11-13). The push gate mutates the same files, seeded
    from main's CI run, so a cold local pass over them costs the same
