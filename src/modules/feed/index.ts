@@ -39,6 +39,7 @@ export {
   deleteEntryPhoto,
   deleteRun,
   deleteRuns,
+  LIVE_HOLD,
   retractEntries,
   retractEntry,
   type Scope,

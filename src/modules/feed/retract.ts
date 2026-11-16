@@ -300,7 +300,11 @@ export interface HeldCheck {
   noun: "kit" | "run" | "photo";
 }
 
-const LIVE_HOLD = ["hidden", "purging"] as const;
+/**
+ * A hold's statuses while it is live: the material is hidden, or its purge
+ * has started. The account purge waits on the same set.
+ */
+export const LIVE_HOLD = ["hidden", "purging"] as const;
 
 async function assertNotHeld(db: Db, check: HeldCheck): Promise<void> {
   const [hold] = await db
