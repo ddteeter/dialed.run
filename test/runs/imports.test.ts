@@ -652,6 +652,13 @@ describe("startFileUpload: a runner's day of uploads (SA-M29)", () => {
     expect(other.isStarted).toBe(true);
   });
 
+  it("still refuses a minute before the day is out", async () => {
+    const userId = newUlid();
+    await usedToday(userId, UPLOADS_PER_DAY, nowSeconds() - DAY_S + 60);
+    const refused = await upload(userId, fakeQueue());
+    expect(refused.isStarted).toBe(false);
+  });
+
   it("starts a new day once a day has passed since the first", async () => {
     const userId = newUlid();
     await usedToday(userId, UPLOADS_PER_DAY, nowSeconds() - DAY_S - 1);
