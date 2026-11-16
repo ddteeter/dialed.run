@@ -42,6 +42,7 @@ export {
 export {
   authMail,
   confirmEmail,
+  readEmailLanding,
   requestEmailChange,
   resendConfirmation,
 } from "./verification";

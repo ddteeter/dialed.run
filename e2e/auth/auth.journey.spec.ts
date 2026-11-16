@@ -240,9 +240,21 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   await scene(page, "Resend: a new link, and the old one stops working");
   await expect(page.getByText(/^Sent ✓/u)).toBeVisible({ timeout: 15_000 });
 
-  // The link, opened from the inbox (e2e/support/email-links).
-  await scene(page, "The link confirms the address");
-  await page.goto(await confirmLinkFor(email));
+  // The link, opened from the inbox (e2e/support/email-links). Fetching
+  // it — a mail scanner's GET, a preview's HEAD — spends nothing: the
+  // landing still asks after both (owner, 2026-11-15).
+  const link = await confirmLinkFor(email);
+  const fetched = await page.request.get(link);
+  expect(fetched.status()).toBe(200);
+  const peeked = await page.request.head(link);
+  expect(peeked.status()).toBe(200);
+  await scene(page, "The link asks; its one button confirms the address");
+  await page.goto(link);
+  await expect(
+    page.getByRole("heading", { name: "Confirm your email" }),
+  ).toBeVisible({ timeout: 15_000 });
+  await hydrated(page);
+  await page.getByRole("button", { name: "Confirm email" }).click();
   await expect(
     page.getByRole("heading", { name: "Email confirmed" }),
   ).toBeVisible({ timeout: 15_000 });

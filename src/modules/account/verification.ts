@@ -28,6 +28,7 @@ import {
   claimRunnerChange,
   deliverEmail,
   emailDebt,
+  maskedAddress,
   type EmailDeps,
 } from "../email";
 import type { PasswordCheck } from "../auth";
@@ -242,8 +243,18 @@ export function authMail(
  * confirmed" (a used link) and "That link has run out" (expired, replaced
  * by a newer one, or not a link at all — none of which a runner can do
  * anything about but ask again).
+ *
+ * And the question before any of them (`ask`, owner 2026-11-15): opening
+ * a link changes nothing, as the unsubscribe landing's does not (D-64),
+ * and one button spends it. `email` is the sign-up link's address masked,
+ * or a change link's new address in full.
  */
 export type Landing =
+  | {
+      readonly state: "ask";
+      readonly purpose: LinkPurpose;
+      readonly email: string;
+    }
   | {
       readonly state: "confirmed";
       readonly purpose: LinkPurpose;
@@ -294,6 +305,61 @@ export interface ConfirmOptions {
 }
 
 /**
+ * What a link can still do: the landing it ends on, or the link and the
+ * account's current address when it can be spent.
+ */
+type Standing =
+  | { readonly landing: Landing }
+  | { readonly link: ReadLink; readonly current: string };
+
+async function linkStanding(
+  db: Db,
+  token: unknown,
+  now: number,
+): Promise<Standing> {
+  const link = await readEmailLink(db, token);
+  if (link === undefined) return { landing: EXPIRED };
+  if (link.usedAt !== undefined) return { landing: USED };
+  if (link.expiresAt <= now) return { landing: EXPIRED };
+  const current = await firstColumnWhere(
+    db,
+    user,
+    user.email,
+    eq(user.id, link.userId),
+  );
+  if (current === undefined) return { landing: EXPIRED };
+  // A sign-up link for an address the account has since left confirms
+  // nothing; a change link whose address someone else has taken since
+  // could not move (the unique index would refuse it).
+  const isStale =
+    link.purpose === "verify"
+      ? current !== link.email
+      : await hasRowWhere(db, user, user.email, eq(user.email, link.email));
+  return isStale ? { landing: EXPIRED } : { link, current };
+}
+
+/**
+ * The landing's question, read when the link is opened: what the link
+ * would do, or why it can't. Claims nothing and writes nothing, so a
+ * scanner or a preview fetching the link spends nothing; the button's
+ * `confirmEmail` does, and checks it all again.
+ */
+export async function readEmailLanding(
+  db: Db,
+  token: unknown,
+  now = nowSeconds(),
+): Promise<Landing> {
+  const standing = await linkStanding(db, token, now);
+  if ("landing" in standing) return standing.landing;
+  const { link } = standing;
+  return {
+    state: "ask",
+    purpose: link.purpose,
+    email: link.purpose === "verify" ? maskedAddress(link.email) : link.email,
+  };
+}
+
+/**
  * Spend a link. For `verify`, the account's address is confirmed, and the
  * link of its garments to the shared products is owed in the same batch
  * (design 133, D-113 Q1: an unconfirmed runner's garments saved with
@@ -304,8 +370,8 @@ export interface ConfirmOptions {
  * session is signed out — whoever else holds one was signed in to the old
  * address — and every reset or confirm link still open is withdrawn.
  *
- * Claim, then work (law 2): two tabs opening one link both read it
- * unspent, and only the one whose claim lands acts on it. The other hears
+ * Claim, then work (law 2): two tabs pressing one link's button both
+ * read it unspent, and only the one whose claim lands acts on it. The other hears
  * it was used.
  */
 export async function confirmEmail(
@@ -314,17 +380,9 @@ export async function confirmEmail(
   options: ConfirmOptions = {},
   now = nowSeconds(),
 ): Promise<Landing> {
-  const link = await readEmailLink(db, token);
-  if (link === undefined) return EXPIRED;
-  if (link.usedAt !== undefined) return USED;
-  if (link.expiresAt <= now) return EXPIRED;
-  const current = await firstColumnWhere(
-    db,
-    user,
-    user.email,
-    eq(user.id, link.userId),
-  );
-  if (current === undefined) return EXPIRED;
+  const standing = await linkStanding(db, token, now);
+  if ("landing" in standing) return standing.landing;
+  const { link, current } = standing;
   const updatedAt = new Date(now * 1000);
   const confirmed: Landing = {
     state: "confirmed",
@@ -333,8 +391,6 @@ export async function confirmEmail(
   };
 
   if (link.purpose === "verify") {
-    // A link for an address the account has since left confirms nothing.
-    if (current !== link.email) return EXPIRED;
     if (!(await didClaimEmailLink(db, link, now))) return USED;
     const productLink = oweOutbox({
       kind: "product_link",
@@ -352,10 +408,6 @@ export async function confirmEmail(
     return confirmed;
   }
 
-  // Someone else has taken the address since the link was sent: the
-  // unique index would refuse the move, so say the link has run out.
-  if (await hasRowWhere(db, user, user.email, eq(user.email, link.email)))
-    return EXPIRED;
   if (!(await didClaimEmailLink(db, link, now))) return USED;
   const notice = oweOutbox(
     emailDebt(

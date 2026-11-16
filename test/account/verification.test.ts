@@ -15,6 +15,7 @@ import {
   authMail,
   confirmEmail,
   isVerified,
+  readEmailLanding,
   requestEmailChange,
   resendConfirmation,
 } from "../../src/modules/account";
@@ -369,6 +370,143 @@ describe("confirmEmail", () => {
     });
     const after = await emailOf(userId);
     expect(after.email).toBe(email);
+  });
+});
+
+/**
+The link's row as it stands: spent or not.
+*/
+async function usedAtOf(userId: string): Promise<(number | undefined)[]> {
+  const rows = await db
+    .select({ usedAt: emailVerifications.usedAt })
+    .from(emailVerifications)
+    .where(eq(emailVerifications.userId, userId));
+  return rows.map((row) => row.usedAt ?? undefined);
+}
+
+describe("readEmailLanding (opening a link changes nothing)", () => {
+  it("asks about a sign-up link with the address masked, and spends nothing", async () => {
+    const { userId } = await seedUser({
+      isVerified: false,
+      email: `maya-${newUlid().toLowerCase()}@example.com`,
+    });
+    const { email } = await emailOf(userId);
+    const token = await issueEmailLink(
+      db,
+      { userId, purpose: "verify", email },
+      NOW,
+    );
+
+    expect(await readEmailLanding(db, token, NOW + 60)).toStrictEqual({
+      state: "ask",
+      purpose: "verify",
+      email: "ma•••@example.com",
+    });
+    expect(await readEmailLanding(db, token, NOW + 61)).toMatchObject({
+      state: "ask",
+    });
+    expect(await isVerified(db, userId)).toBe(false);
+    expect(await usedAtOf(userId)).toStrictEqual([undefined]);
+    const [owed] = await db.select({ id: outbox.id }).from(outbox);
+    expect(owed).toBeUndefined();
+
+    // The button still works after the reads.
+    expect(await confirmEmail(db, token, undefined, NOW + 120)).toMatchObject({
+      state: "confirmed",
+    });
+  });
+
+  it("asks about a change link naming the new address in full, and moves nothing", async () => {
+    const { userId, email } = await seedUser();
+    const next = `new-${newUlid().toLowerCase()}@example.com`;
+    const token = await issueEmailLink(
+      db,
+      { userId, purpose: "change", email: next },
+      NOW,
+    );
+    const sessionId = newUlid();
+    await db.insert(session).values({
+      id: sessionId,
+      userId,
+      token: newUlid(),
+      expiresAt: new Date((NOW + 3600) * 1000),
+      createdAt: new Date(NOW * 1000),
+      updatedAt: new Date(NOW * 1000),
+    });
+
+    expect(await readEmailLanding(db, token, NOW + 1)).toStrictEqual({
+      state: "ask",
+      purpose: "change",
+      email: next,
+    });
+    const unmoved = await emailOf(userId);
+    expect(unmoved.email).toBe(email);
+    expect(await usedAtOf(userId)).toStrictEqual([undefined]);
+    const sessions = await db
+      .select({ id: session.id })
+      .from(session)
+      .where(eq(session.userId, userId));
+    expect(sessions).toStrictEqual([{ id: sessionId }]);
+  });
+
+  it("says a spent link was used, and a link that cannot be spent has run out", async () => {
+    const { userId, email } = await seedUser({ isVerified: false });
+    const token = await issueEmailLink(
+      db,
+      { userId, purpose: "verify", email },
+      NOW,
+    );
+    expect(
+      await readEmailLanding(db, token, NOW + EMAIL_LINK_TTL_S),
+    ).toStrictEqual({ state: "expired" });
+    expect(
+      await readEmailLanding(db, token, NOW + EMAIL_LINK_TTL_S - 1),
+    ).toMatchObject({ state: "ask" });
+    await confirmEmail(db, token, undefined, NOW + 1);
+    expect(await readEmailLanding(db, token, NOW + 2)).toStrictEqual({
+      state: "used",
+    });
+    expect(await readEmailLanding(db, "not-a-link", NOW)).toStrictEqual({
+      state: "expired",
+    });
+  });
+
+  it("says a link has run out once its address is left or taken, or its account is gone", async () => {
+    const moved = await seedUser({ isVerified: false });
+    const left = await issueEmailLink(
+      db,
+      { userId: moved.userId, purpose: "verify", email: moved.email },
+      NOW,
+    );
+    await db
+      .update(user)
+      .set({ email: `elsewhere-${newUlid().toLowerCase()}@example.com` })
+      .where(eq(user.id, moved.userId));
+    expect(await readEmailLanding(db, left, NOW)).toStrictEqual({
+      state: "expired",
+    });
+
+    const mover = await seedUser();
+    const taker = await seedUser({
+      email: `taken-${newUlid().toLowerCase()}@example.com`,
+    });
+    const taken = await issueEmailLink(
+      db,
+      { userId: mover.userId, purpose: "change", email: taker.email },
+      NOW,
+    );
+    expect(await readEmailLanding(db, taken, NOW)).toStrictEqual({
+      state: "expired",
+    });
+
+    const ghost = await issueEmailLink(
+      db,
+      { userId: "gone", purpose: "verify", email: "gone@example.com" },
+      NOW,
+    );
+    expect(await readEmailLanding(db, ghost, NOW)).toStrictEqual({
+      state: "expired",
+    });
   });
 });
 

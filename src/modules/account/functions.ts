@@ -81,6 +81,7 @@ import {
 } from "./username";
 import {
   confirmEmail,
+  readEmailLanding,
   requestEmailChange,
   resendConfirmation,
 } from "./verification";
@@ -178,9 +179,17 @@ export const resendConfirmationFn = createServerFn({ method: "POST" })
   );
 
 /**
- * The confirm link's landing: spend the link, and say which of the three
- * landings to show. POST because it changes state; the landing's loader
- * calls it once.
+ * The confirm link's landing, as it opens: what the link would do, or why
+ * it can't. GET, and it claims nothing (D-64: opening a link changes
+ * nothing); the landing's loader calls it.
+ */
+export const readEmailLinkFn = createServerFn({ method: "GET" })
+  .validator((data: unknown) => confirmInput.parse(data))
+  .handler(async ({ data }) => readEmailLanding(db(), data.token));
+
+/**
+ * The landing's one button: spend the link, and say which landing to
+ * show. POST because it changes state.
  */
 export const confirmEmailFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => confirmInput.parse(data))

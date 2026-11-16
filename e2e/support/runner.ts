@@ -1,7 +1,7 @@
 import { expect } from "@playwright/test";
 import type { Browser, BrowserContext } from "@playwright/test";
 
-import { confirmLinkFor } from "./email-links";
+import { confirmAddress } from "./email-links";
 import { turnstileAnswered } from "./invites";
 
 /**
@@ -59,10 +59,7 @@ export async function signUpRunner(
     await expect(page).toHaveURL(/\/account\/check-email/, {
       timeout: 15_000,
     });
-    await page.goto(await confirmLinkFor(runner.email));
-    await expect(
-      page.getByRole("heading", { name: "Email confirmed" }),
-    ).toBeVisible({ timeout: 15_000 });
+    await confirmAddress(page, runner.email);
   }
 
   // A new account picks its handle at O0 first (round 26 #7), through

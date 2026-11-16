@@ -33,6 +33,7 @@ import {
 } from "../../src/modules/account/components/ResendLink";
 import type {
   ChangeResult,
+  Landing,
   ResendResult,
 } from "../../src/modules/account/verification";
 import { SECONDARY_PILL } from "../../src/ui";
@@ -456,8 +457,15 @@ describe("LinkLanding", () => {
   ] as const)(
     "lands %o on its kicker, heading, sentence and way on",
     async (landing, kicker, tone, heading, body, action, href) => {
-      await renderWithRouter(<LinkLanding landing={landing} />);
+      const confirm = vi.fn<() => Promise<Landing>>();
+      await renderWithRouter(
+        <LinkLanding landing={landing} confirm={confirm} />,
+      );
       expect(screen.getByText(kicker)).toHaveClass(tone);
+      // Opened straight onto it: the heading is the page's, nothing is
+      // announced, and nothing is spent.
+      expect(status().textContent).toBe("");
+      expect(confirm).not.toHaveBeenCalled();
       expect(
         screen.getByRole("heading", { level: 1, name: heading }),
       ).toBeVisible();
@@ -468,6 +476,127 @@ describe("LinkLanding", () => {
       expect(
         screen.getByText(body).closest("[data-part=landing]"),
       ).toHaveAttribute("data-state", landing.state);
+    },
+  );
+
+  it.each([
+    [
+      { state: "ask", purpose: "verify", email: "ma•••@example.com" },
+      "Confirm",
+      "Confirm your email",
+      "This confirms ma•••@example.com for your dialed.run account.",
+      "Confirm email",
+      { state: "confirmed", purpose: "verify", email: "maya@example.com" },
+      "Email confirmed",
+    ],
+    [
+      { state: "ask", purpose: "change", email: "new@example.com" },
+      "Change email",
+      "Use this address?",
+      "Your account's email changes to new@example.com. You'll log in with it from now on.",
+      "Use this address",
+      { state: "confirmed", purpose: "change", email: "new@example.com" },
+      "Email changed",
+    ],
+  ] as const)(
+    "asks %o before spending it, and spends it once on the button",
+    async (landing, kicker, heading, body, label, answer, done) => {
+      const confirm = vi.fn<() => Promise<Landing>>().mockResolvedValue(answer);
+      const user = userEvent.setup();
+      await renderWithRouter(
+        <LinkLanding landing={landing} confirm={confirm} />,
+      );
+      expect(screen.getByText(kicker)).toHaveClass("text-quiet");
+      expect(
+        screen.getByRole("heading", { level: 1, name: heading }),
+      ).toBeVisible();
+      expect(screen.getByText(body)).toBeVisible();
+      expect(
+        screen.getByText(body).closest("[data-part=landing]"),
+      ).toHaveAttribute("data-state", "ask");
+      // The way on comes with the answer, not the question.
+      expect(
+        screen.queryByRole("link", {
+          name: /^(Open the feed|Open dialed\.run|Log in to resend)$/u,
+        }),
+      ).toBeNull();
+      expect(confirm).not.toHaveBeenCalled();
+
+      await user.click(screen.getByRole("button", { name: label }));
+
+      expect(
+        await screen.findByRole("heading", { level: 1, name: done }),
+      ).toBeVisible();
+      expect(confirm).toHaveBeenCalledTimes(1);
+      expect(status()).toHaveTextContent(`${done}.`);
+      expect(screen.queryByRole("button", { name: label })).toBeNull();
+    },
+  );
+
+  it.each([
+    ["verify", "Confirm email", "Confirming"],
+    ["change", "Use this address", "Changing"],
+  ] as const)(
+    "says the %s button is working while it is",
+    async (purpose, label, pendingLabel) => {
+      const confirm = vi.fn<() => Promise<Landing>>().mockReturnValue(
+        new Promise<Landing>(() => {
+          // never settles: the press stays in flight
+        }),
+      );
+      const user = userEvent.setup();
+      await renderWithRouter(
+        <LinkLanding
+          landing={{ state: "ask", purpose, email: "a@example.com" }}
+          confirm={confirm}
+        />,
+      );
+      await user.click(screen.getByRole("button", { name: label }));
+      const busy = await screen.findByRole("button", { name: pendingLabel });
+      expect(busy).toHaveAttribute("aria-busy", "true");
+      await user.click(busy);
+      expect(confirm).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each([
+    ["verify", "Confirm email", "Not confirmed", "Confirm your email"],
+    ["change", "Use this address", "Not changed", "Use this address?"],
+  ] as const)(
+    "keeps the %s question and its band when the button fails, and tries again",
+    async (purpose, label, failureKicker, heading) => {
+      const confirm = vi
+        .fn<() => Promise<Landing>>()
+        .mockRejectedValueOnce(new Error("down"))
+        .mockResolvedValueOnce({ state: "used" });
+      const user = userEvent.setup();
+      await renderWithRouter(
+        <LinkLanding
+          landing={{ state: "ask", purpose, email: "a@example.com" }}
+          confirm={confirm}
+        />,
+      );
+      expect(screen.queryByText(failureKicker)).toBeNull();
+      await user.click(screen.getByRole("button", { name: label }));
+      const retry = await screen.findByRole("button", { name: "Try again" });
+      expect(screen.getByText(failureKicker)).toBeVisible();
+      expect(
+        screen.getByText("That didn't go through. Try again?"),
+      ).toBeVisible();
+      expect(
+        screen.getByRole("heading", { level: 1, name: heading }),
+      ).toBeVisible();
+
+      await user.click(retry);
+      // Spent in another tab meanwhile: the answer says so, not "confirmed".
+      expect(
+        await screen.findByRole("heading", {
+          level: 1,
+          name: "Your email is confirmed",
+        }),
+      ).toBeVisible();
+      expect(confirm).toHaveBeenCalledTimes(2);
+      expect(status()).toHaveTextContent("Your email is confirmed.");
     },
   );
 
