@@ -1,6 +1,13 @@
+// The hand-written half of the model. What is bound (databases, buckets,
+// queues, crons) and the modules with their imports are in
+// structure.generated.c4; this file adds the people, the systems we call,
+// the entry points inside each module, and the arrows a flow draws.
 model {
   runner = actor 'Runner' {
     description 'Logs runs and the kit worn on them'
+  }
+  operator = actor 'Operator' {
+    description 'Works the Desk'
   }
 
   cf = system 'Cloudflare' {
@@ -8,134 +15,134 @@ model {
     icon tech:cloudflare
 
     app = worker 'TanStack Start Worker' {
-      upload = inRequest 'startImport' {
-        technology 'in the request: one attempt, the runner is waiting'
-        description 'The upload server function'
-      }
-      consumer = offQueue 'import consumer' {
-        technology 'off the queue: seconds later, at least once'
-        description 'Parses the file and writes the run'
-      }
-      deadLetter = offQueue 'dead-letter consumer' {
-        technology 'off the queue: after 3 failed retries'
-        description 'Makes sure no import ends in silence'
-      }
-      digest = onCron 'daily digest' {
-        technology 'cron: 12:00 UTC'
-        description 'Re-drives imports still pending'
-      }
-      weatherRetry = onCron 'weather-retry' {
-        technology 'cron: every hour'
-        description 'Re-drives runs still waiting on conditions'
-      }
-      weather = module 'weather attach' {
-        description 'Attaches observed conditions to a run'
-      }
-
-      // Product enrichment: a pasted product link becomes the product's specs.
-      saveGarment = inRequest 'createItemFn / updateItemFn' {
-        technology 'in the request: one attempt, the runner is waiting'
-        description 'Saves a garment; a product link asks for enrichment'
-      }
-      enrichRequest = module 'requestEnrichment' {
-        description 'Claims the product, then sends EnrichJob'
-      }
-      enrichConsumer = offQueue 'enrichment consumer' {
-        technology 'off the queue: up to 30 seconds later, at least once'
-        description 'Fetches the page, stores it, extracts the specs'
-      }
-      enrichDeadLetter = offQueue 'enrichment dead-letter consumer' {
-        technology 'off the queue: after 3 failed retries'
-        description 'Marks the product failed'
-      }
-      enrichmentRetry = onCron 'enrichment-retry' {
-        technology 'cron: every hour, at half past'
-        description 'Re-drives products pending, or failed in their first day'
-      }
-      deskRetry = inRequest 'Desk: Retry' {
-        technology 'in the request: one attempt, the operator is waiting'
-        description 'Re-fetches a product the system gave up on'
-      }
-    }
-
-    mediaBucket = bucket 'R2: media' {
-      description 'Product page snapshots, kept for good'
-    }
-    enrichQueue = queue 'Queue: dialed-enrichment' {
-      description 'EnrichJob: a product id, not the work'
-    }
-    enrichDlq = queue 'Queue: dialed-enrichment-dlq' {
-      description 'Jobs that failed every retry'
-    }
-
-    importsBucket = bucket 'R2: imports' {
-      description 'The raw uploaded file'
-    }
-    importsQueue = queue 'Queue: dialed-imports' {
-      description 'ImportJob'
-    }
-    importsDlq = queue 'Queue: dialed-imports-dlq' {
-      description 'Jobs that failed every retry'
-    }
-    core = database 'D1: dialed-core' {
-      description 'Users, closet, runs, products, feed'
-    }
-    weatherDb = database 'D1: dialed-weather' {
-      description 'The shared observation cache'
+      description 'SSR, server functions, API routes, queue consumers and crons'
     }
   }
 
+  // Run import: an uploaded file becomes a run.
+  extend cf.app.runs {
+    upload = inRequest 'startImport' {
+      technology 'in the request: one attempt, the runner is waiting'
+      description 'The upload server function'
+    }
+    consumer = offQueue 'import consumer' {
+      technology 'off the queue: seconds later, at least once'
+      description 'Parses the file and writes the run'
+    }
+    deadLetter = offQueue 'import dead-letter consumer' {
+      technology 'off the queue: after 3 failed retries'
+      description 'Makes sure no import ends in silence'
+    }
+  }
+
+  // Product enrichment: a pasted product link becomes the product's specs.
+  extend cf.app.closet {
+    saveGarment = inRequest 'createItemFn / updateItemFn' {
+      technology 'in the request: one attempt, the runner is waiting'
+      description 'Saves a garment; a product link asks for enrichment'
+    }
+  }
+  extend cf.app.enrichment {
+    request = module 'requestEnrichment' {
+      description 'Claims the product, then sends EnrichJob'
+    }
+    consumer = offQueue 'enrichment consumer' {
+      technology 'off the queue: up to 30 seconds later, at least once'
+      description 'Fetches the page, stores it, extracts the specs'
+    }
+    deadLetter = offQueue 'enrichment dead-letter consumer' {
+      technology 'off the queue: after 3 failed retries'
+      description 'Marks the product failed'
+    }
+  }
+  extend cf.app.ops {
+    deskRetry = inRequest 'Desk: Retry' {
+      technology 'in the request: one attempt, the operator is waiting'
+      description 'Re-fetches a product the system gave up on'
+    }
+  }
+
+  // The systems we call and do not run.
   provider = external 'Visual Crossing' {
     description 'Weather provider, behind an adapter'
   }
-
-  operator = actor 'Operator' {
-    description 'Works the Desk'
-  }
-  shop = external 'The shop' {
-    description 'The product page the runner linked'
+  shop = external 'Brand product pages' {
+    description 'The product page a runner linked'
   }
   firecrawl = external 'Firecrawl' {
     description 'Fetching proxy, when a shop refuses a Worker'
   }
   openai = external 'OpenAI' {
-    description 'The model rung: composition'
+    description 'Product extraction and photo screening'
+  }
+  sentry = external 'Sentry' {
+    description 'Exceptions, digest events and cron check-ins'
+  }
+  turnstile = external 'Cloudflare Turnstile' {
+    description 'The bot check, verified server-side'
+  }
+  strava = external 'Strava' {
+    description 'A runner\'s connection, and a webhook that is a reminder only'
+  }
+  google = external 'Google' {
+    description 'Sign-in'
+  }
+  garmin = external 'Garmin Connect' {
+    description 'Owner only: lists runs and fetches one .FIT'
+  }
+  marketing = external 'Marketing site' {
+    description 'dialed.run, with the request-access form'
   }
 
-  runner -> cf.app.upload 'uploads a run file'
-  cf.app.upload -> cf.importsBucket 'stores the raw file'
-  cf.app.upload -> cf.core 'inserts the import row'
-  cf.app.upload -[async]-> cf.importsQueue 'enqueues ImportJob'
-  cf.importsQueue -[async]-> cf.app.consumer 'delivers ImportJob'
-  cf.app.consumer -> cf.importsBucket 'reads the raw file'
-  cf.app.consumer -> cf.core 'claims the import, writes the run'
-  cf.app.consumer -> cf.app.weather 'asks for the conditions'
-  cf.importsQueue -[recovery]-> cf.importsDlq 'dead-letters after 3 retries'
-  cf.importsDlq -[async]-> cf.app.deadLetter 'delivers the dead job'
-  cf.app.deadLetter -[recovery]-> cf.core 'marks the import failed'
-  cf.app.digest -[recovery]-> cf.core 'finds imports pending past 15 minutes'
-  cf.app.digest -[recovery]-> cf.importsQueue 'enqueues them again'
-  cf.app.weatherRetry -[recovery]-> cf.app.weather 'retries runs still pending'
+  runner -> cf.app 'uses the app: SSR pages and server functions'
+  operator -> cf.app.ops 'works the Desk'
+  marketing -> cf.app.account 'posts a request for access'
+  strava -> cf.app.runs 'sends an activity event: a reminder only'
+  cf.app.runs -> strava 'connects and revokes; reads no activity'
+  cf.app.runs -> garmin 'lists runs, fetches one .FIT'
+  cf.app.auth -> google 'OAuth'
+  cf.app.ops -> sentry 'reports exceptions, checks in each cron'
+  cf.app.ops -> turnstile 'verifies the bot check'
+  cf.app.ops -> cf.vitalsDataset 'writes the speed beacon, reads the daily rollup'
+  cf.app.ops -> cf.opsDb 'writes the daily speed rollup'
+  cf.app.ops -> cf.publicPhotosBucket 'copies a public kit\'s screened photos'
+  cf.app.ops -> cf.mediaBackupBucket 'copies new and changed photos daily'
+  cf.app.safety -> openai 'screens photos'
+  cf.app.account -[async]-> cf.exportsQueue 'enqueues a data export'
+  cf.exportsQueue -[async]-> cf.app.account 'delivers the export job'
+
+  runner -> cf.app.runs.upload 'uploads a run file'
+  cf.app.runs.upload -> cf.importsBucket 'stores the raw file'
+  cf.app.runs.upload -> cf.coreDb 'inserts the import row'
+  cf.app.runs.upload -[async]-> cf.importsQueue 'enqueues ImportJob'
+  cf.importsQueue -[async]-> cf.app.runs.consumer 'delivers ImportJob'
+  cf.app.runs.consumer -> cf.importsBucket 'reads the raw file'
+  cf.app.runs.consumer -> cf.coreDb 'claims the import, writes the run'
+  cf.app.runs.consumer -> cf.app.weather 'asks for the conditions'
+  cf.importsDlq -[async]-> cf.app.runs.deadLetter 'delivers the dead job'
+  cf.app.runs.deadLetter -[recovery]-> cf.coreDb 'marks the import failed'
+  cf.app.cronDaily1200 -[recovery]-> cf.coreDb 'finds imports pending past 15 minutes'
+  cf.app.cronDaily1200 -[recovery]-> cf.importsQueue 'enqueues them again'
+  cf.app.cronHourly00 -[recovery]-> cf.app.weather 'retries runs still pending'
   cf.app.weather -> provider 'finished hours only'
   cf.app.weather -> cf.weatherDb 'caches the observation'
-  cf.app.weather -> cf.core 'weather_status and run_conditions'
+  cf.app.weather -> cf.coreDb 'weather_status and run_conditions'
 
-  runner -> cf.app.saveGarment 'saves a garment with a product link'
-  cf.app.saveGarment -> cf.core 'finds or makes the shared product'
-  cf.app.saveGarment -> cf.app.enrichRequest 'asks for enrichment'
-  cf.app.enrichRequest -> cf.core 'claims the product: pending'
-  cf.app.enrichRequest -[async]-> cf.enrichQueue 'sends EnrichJob'
-  cf.enrichQueue -[async]-> cf.app.enrichConsumer 'delivers EnrichJob'
-  cf.app.enrichConsumer -> shop 'fetches the page'
-  cf.app.enrichConsumer -> firecrawl 'fetches a refused page'
-  cf.app.enrichConsumer -> cf.mediaBucket 'stores and reuses the page'
-  cf.app.enrichConsumer -> openai 'asks for the composition'
-  cf.app.enrichConsumer -> cf.core 'writes the specs: done'
-  cf.enrichQueue -[recovery]-> cf.enrichDlq 'dead-letters after 3 retries'
-  cf.enrichDlq -[async]-> cf.app.enrichDeadLetter 'delivers the dead job'
-  cf.app.enrichDeadLetter -[recovery]-> cf.core 'marks the product failed'
-  cf.app.enrichmentRetry -[recovery]-> cf.core 'finds pending, re-claims failed'
-  cf.app.enrichmentRetry -[recovery]-> cf.enrichQueue 'sends them again'
-  operator -> cf.app.deskRetry 'presses Retry on a given-up product'
-  cf.app.deskRetry -[recovery]-> cf.app.enrichRequest 'asks for enrichment again'
+  runner -> cf.app.closet.saveGarment 'saves a garment with a product link'
+  cf.app.closet.saveGarment -> cf.coreDb 'finds or makes the shared product'
+  cf.app.closet.saveGarment -> cf.app.enrichment.request 'asks for enrichment'
+  cf.app.enrichment.request -> cf.coreDb 'claims the product: pending'
+  cf.app.enrichment.request -[async]-> cf.enrichmentQueue 'sends EnrichJob'
+  cf.enrichmentQueue -[async]-> cf.app.enrichment.consumer 'delivers EnrichJob'
+  cf.app.enrichment.consumer -> shop 'fetches the page'
+  cf.app.enrichment.consumer -> firecrawl 'fetches a refused page'
+  cf.app.enrichment.consumer -> cf.mediaBucket 'stores and reuses the page'
+  cf.app.enrichment.consumer -> openai 'asks for the composition'
+  cf.app.enrichment.consumer -> cf.coreDb 'writes the specs: done'
+  cf.enrichmentDlq -[async]-> cf.app.enrichment.deadLetter 'delivers the dead job'
+  cf.app.enrichment.deadLetter -[recovery]-> cf.coreDb 'marks the product failed'
+  cf.app.cronHourly30 -[recovery]-> cf.coreDb 'finds pending, re-claims failed'
+  cf.app.cronHourly30 -[recovery]-> cf.enrichmentQueue 'sends them again'
+  operator -> cf.app.ops.deskRetry 'presses Retry on a given-up product'
+  cf.app.ops.deskRetry -[recovery]-> cf.app.enrichment.request 'asks for enrichment again'
 }

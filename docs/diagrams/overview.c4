@@ -7,6 +7,12 @@ views {
 
   view platform of cf {
     title 'Inside Cloudflare'
-    include *
+    include cf.*
+  }
+
+  view modules of cf.app {
+    title 'The modules and what each imports'
+    include cf.app.* where kind is module
+    exclude * -> * where kind is not imports
   }
 }

@@ -1,0 +1,21 @@
+{
+  "cf.coreDb": "Users, closet, runs, products, feed",
+  "cf.weatherDb": "The shared observation cache",
+  "cf.opsDb": "Data about the app, never about anyone: the daily speed rollup",
+  "cf.vitalsDataset": "The speed beacon's readings",
+  "cf.mediaBucket": "Garment and kit photos, and product page snapshots",
+  "cf.importsBucket": "Uploaded run files, and data exports",
+  "cf.publicPhotosBucket": "Copies of screened photos on public kits",
+  "cf.mediaBackupBucket": "The daily copy of garment and kit photos",
+  "cf.importsQueue": "ImportJob",
+  "cf.importsDlq": "Import jobs that failed every retry",
+  "cf.enrichmentQueue": "EnrichJob: a product id, not the work",
+  "cf.enrichmentDlq": "Enrichment jobs that failed every retry",
+  "cf.exportsQueue": "One data export a delivery",
+  "cf.exportsDlq": "Exports that failed every retry",
+  "cf.app.weather": "Attaches observed conditions to a run",
+  "cf.app.cronDaily1200": "The daily digest: re-drives what is still owed and reports what is wrong",
+  "cf.app.cronHourly00": "Retries weather for runs still waiting on conditions, with other hourly upkeep",
+  "cf.app.cronHourly15": "Retries photo screenings still pending, with other hourly upkeep",
+  "cf.app.cronHourly30": "Re-drives product enrichment still owed, with other hourly upkeep"
+}

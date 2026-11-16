@@ -67,4 +67,10 @@ specification {
     line solid
     color red
   }
+  // Generated, never written by hand: one module imports from another.
+  relationship imports {
+    notation 'Imports from the other module'
+    line solid
+    color gray
+  }
 }

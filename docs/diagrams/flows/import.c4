@@ -3,12 +3,12 @@ views {
     title 'A run file becomes a run'
 
     include
-      cf.core with {
+      cf.coreDb with {
         description 'The imports row is the durable marker'
       }
 
     // source: src/modules/runs/imports.ts startImport (the idempotencyKey lookup)
-    runner -> cf.app.upload 'uploads a .FIT file, with an idempotency key' {
+    runner -> cf.app.runs.upload 'uploads a .FIT file, with an idempotency key' {
       notes '''
         **Guard: the idempotency key.** The form mints a key when it mounts and resends it on every retry.
 
@@ -16,7 +16,7 @@ views {
       '''
     }
     // source: src/modules/runs/imports.ts startImport (importBucket.put, and the delete on a failed insert)
-    cf.app.upload -> cf.importsBucket 'stores the raw file' {
+    cf.app.runs.upload -> cf.importsBucket 'stores the raw file' {
       notes '''
         **Not atomic with the next step.** R2 and D1 are two systems.
 
@@ -24,13 +24,13 @@ views {
       '''
     }
     // source: src/modules/runs/imports.ts startImport
-    cf.app.upload -> cf.core 'inserts the import row: pending' {
+    cf.app.runs.upload -> cf.coreDb 'inserts the import row: pending' {
       notes '''
         **This row is the recovery marker.** From here on, `pending` means the work is still owed, whatever happens to the request, the queue or the Worker.
       '''
     }
     // source: src/modules/runs/imports.ts startImport (queue.send); src/modules/ops/scheduled.ts redispatchStalledImports
-    cf.app.upload -[async]-> cf.importsQueue 'enqueues ImportJob' {
+    cf.app.runs.upload -[async]-> cf.importsQueue 'enqueues ImportJob' {
       notes '''
         **Not atomic with the row.** The send can fail, or the Worker can die first.
 
@@ -39,7 +39,7 @@ views {
       navigateTo importRecovery
     }
     // source: src/modules/runs/imports.ts startImport; import-polling.ts
-    runner <- cf.app.upload 'answers with the import id' {
+    runner <- cf.app.runs.upload 'answers with the import id' {
       notes '''
         **Timing boundary: the request ends here.** One attempt, no retries inside it.
 
@@ -47,7 +47,7 @@ views {
       '''
     }
     // source: src/modules/ops/queues.ts handleQueueBatch; wrangler.jsonc queues.consumers (max_retries)
-    cf.importsQueue -[async]-> cf.app.consumer 'delivers ImportJob' {
+    cf.importsQueue -[async]-> cf.app.runs.consumer 'delivers ImportJob' {
       notes '''
         **Timing boundary: seconds later, in a queue consumer.**
 
@@ -56,7 +56,7 @@ views {
       navigateTo importRecovery
     }
     // source: src/modules/runs/consumer.ts processImportJob (didClaimImport)
-    cf.app.consumer -> cf.core 'claims the row: pending to processing' {
+    cf.app.runs.consumer -> cf.coreDb 'claims the row: pending to processing' {
       notes '''
         **Guard: claim, then work.** The claim is an `UPDATE ... WHERE status IN (\'pending\', \'processing\')`.
 
@@ -64,19 +64,19 @@ views {
       '''
     }
     // source: src/modules/runs/consumer.ts processImportJob (failImport)
-    cf.app.consumer -> cf.importsBucket 'reads the file back and parses it' {
+    cf.app.runs.consumer -> cf.importsBucket 'reads the file back and parses it' {
       notes '''
         **If the file cannot be parsed:** the import is marked `failed` with a reason the runner sees. A terminal failure is never silent.
       '''
     }
     // source: src/modules/runs/consumer.ts processImportJob (findDuplicateRun)
-    cf.app.consumer -> cf.core 'inserts the run, marks the import done' {
+    cf.app.runs.consumer -> cf.coreDb 'inserts the run, marks the import done' {
       notes '''
         **Guard: the duplicate check.** A run by this runner with the same start time is already in the log? The import becomes `duplicate` and points at that run.
       '''
     }
     // source: src/modules/runs/consumer.ts processImportJob (the injected weather attach)
-    cf.app.consumer -> cf.app.weather 'asks for the conditions' {
+    cf.app.runs.consumer -> cf.app.weather 'asks for the conditions' {
       notes '''
         **Degrade, don\'t fail.** One attempt. The import is already `done`.
 
@@ -90,37 +90,37 @@ views {
     title 'When a step is lost'
 
     include
-      cf.core with {
+      cf.coreDb with {
         description 'The imports row is the durable marker'
       }
 
     try {
       // source: src/modules/runs/imports.ts startImport (queue.send); src/modules/ops/scheduled.ts redispatchStalledImports
-      cf.app.upload -[async]-> cf.importsQueue 'enqueues ImportJob'
+      cf.app.runs.upload -[async]-> cf.importsQueue 'enqueues ImportJob'
     }
     catch 'the send fails, or the Worker dies first' {
       // source: src/modules/ops/scheduled.ts redispatchStalledImports (IMPORT_STALL_GRACE_S)
-      cf.app.digest -[recovery]-> cf.core 'finds imports pending for 15+ minutes' {
+      cf.app.cronDaily1200 -[recovery]-> cf.coreDb 'finds imports pending for 15+ minutes' {
         notes 'Fifteen minutes of grace, so the sweep never races a dispatch still in flight.'
       }
       // source: src/modules/ops/scheduled.ts redispatchStalledImports
-      cf.app.digest -[recovery]-> cf.importsQueue 'enqueues them again' {
+      cf.app.cronDaily1200 -[recovery]-> cf.importsQueue 'enqueues them again' {
         notes 'Safe to repeat: the consumer claims the row before it works, so a second copy of the job loses the race and stops.'
       }
     }
     loop 'at least once: up to 3 retries' {
       // source: src/modules/ops/queues.ts handleQueueBatch; wrangler.jsonc queues.consumers (max_retries)
-      cf.importsQueue -[async]-> cf.app.consumer 'delivers ImportJob'
+      cf.importsQueue -[async]-> cf.app.runs.consumer 'delivers ImportJob'
       // source: src/modules/runs/consumer.ts processImportJob (didClaimImport)
-      cf.app.consumer -> cf.core 'claims the row, or stops'
+      cf.app.runs.consumer -> cf.coreDb 'claims the row, or stops'
     }
     opt 'every retry failed' {
       // source: wrangler.jsonc queues.consumers (max_retries 3, dead_letter_queue)
       cf.importsQueue -[recovery]-> cf.importsDlq 'dead-letters the job'
       // source: src/modules/ops/queues.ts handleQueueBatch (dialed-imports-dlq)
-      cf.importsDlq -[async]-> cf.app.deadLetter 'delivers it'
+      cf.importsDlq -[async]-> cf.app.runs.deadLetter 'delivers it'
       // source: src/modules/runs/consumer.ts handleImportsDlqBatch
-      cf.app.deadLetter -[recovery]-> cf.core 'marks the import failed, notifies the runner' {
+      cf.app.runs.deadLetter -[recovery]-> cf.coreDb 'marks the import failed, notifies the runner' {
         notes 'No import ends in silence: the runner is told, and the job lands where an operator can retry it.'
       }
     }
@@ -130,7 +130,7 @@ views {
     title 'The run gets its conditions'
 
     // source: src/modules/weather/attach.ts
-    cf.app.consumer -> cf.app.weather 'attachObservation(runId)'
+    cf.app.runs.consumer -> cf.app.weather 'attachObservation(runId)'
     // source: src/modules/weather/attach.ts (settlesAt)
     cf.app.weather -> provider 'asks for the finished hours' {
       notes '''
@@ -141,11 +141,11 @@ views {
       // source: src/modules/weather/attach.ts
       cf.app.weather -> cf.weatherDb 'caches the observation'
       // source: src/modules/weather/attach.ts; run-conditions-copy.ts
-      cf.app.weather -> cf.core 'writes weather_status and run_conditions'
+      cf.app.weather -> cf.coreDb 'writes weather_status and run_conditions'
     }
     opt 'some hours had not settled, or the provider failed' {
       // source: src/modules/ops/scheduled.ts (weather-retry); src/modules/weather/attach.ts (the give-up)
-      cf.app.weatherRetry -[recovery]-> cf.app.weather 'retries the runs still pending' {
+      cf.app.cronHourly00 -[recovery]-> cf.app.weather 'retries the runs still pending' {
         notes '''
           **The marker is `runs.weather_status = pending`.** The hourly cron re-drives it.
 
@@ -155,7 +155,7 @@ views {
       // source: src/modules/weather/attach.ts
       cf.app.weather -> provider 'asks for the hours settled since'
       // source: src/modules/weather/attach.ts
-      cf.app.weather -> cf.core 'the run is settled'
+      cf.app.weather -> cf.coreDb 'the run is settled'
     }
   }
 }
