@@ -1086,6 +1086,10 @@ describe("AttachKit: A2b, one category as a sheet", () => {
     const done = within(sheet).getByRole("button", { name: "Done" });
     expect(done).toHaveClass("rounded-pill", "border-hairline");
     expect(done).not.toHaveClass("bg-action");
+    // The sheet's own Done, padded to its height, and not the pushed
+    // page's control-height secondary pill.
+    expect(done).toHaveClass("py-3");
+    expect(done).not.toHaveClass("min-h-control");
     expect(within(sheet).getByText("2 of 3 match 41° damp")).toBeVisible();
     expect(within(sheet).getByText("0 selected")).toBeVisible();
     expect(within(sheet).getByText("Hidden by the filter · 1")).toBeVisible();
