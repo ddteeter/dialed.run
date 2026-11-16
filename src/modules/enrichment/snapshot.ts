@@ -47,7 +47,9 @@ export async function putSnapshot(
 }
 
 /**
- * Record the snapshot, once the ladder has said which rung won.
+ * Record the snapshot as soon as the page is stored, before the ladder
+ * runs: the caller passes the rung it has so far, and `extractFrom` in
+ * `consume.ts` sets the rung that won once the ladder has run.
  *
  * **Two writes that cannot be atomic**, and deliberately so — nothing spans
  * R2 and D1 (law 8c). The order is the one that fails safely: an object with
