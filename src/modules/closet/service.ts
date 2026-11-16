@@ -1010,7 +1010,7 @@ export async function productLinkFor(
     sourceUrl: typed.productUrl ?? undefined,
     createdBy,
   });
-  await enqueueEnrichment(db, product.id, captureException);
+  await enqueueEnrichment(db, product, createdBy, captureException);
   const allowed: readonly string[] = garmentTypesFor(typed.category);
   // Equivalent mutant on the null check: `allowed.includes(null)` is already
   // false, so dropping it changes no answer. It is here because `includes`

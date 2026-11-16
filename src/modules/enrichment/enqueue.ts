@@ -1,8 +1,9 @@
 import type { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
-import { requestEnrichment, type RequestOutcome } from "./request";
+import { isClaimable, requestEnrichment, type RequestOutcome } from "./request";
 import type { RequestDeps } from "./request";
+import { canSpendRunnerRequest } from "./spend-limit";
 
 /**
  * `requestEnrichment` with this Worker's bindings, and the promise that it
@@ -24,13 +25,27 @@ import type { RequestDeps } from "./request";
  * *claim*, which is the remaining way a D1 hiccup could take a garment save
  * down with it. Either way the row is left for the `enrichment-retry` cron
  * to find, or the next paste to ask again.
+ *
+ * **Counted against the runner who asked** (`spend-limit.ts`): only a
+ * request that could claim the product is counted, so re-saving a garment
+ * whose product is done or in flight spends nothing. Over the day's count
+ * nothing is asked; the garment saves all the same.
  */
 export async function enqueueEnrichment(
   db: ReturnType<typeof drizzle>,
-  productId: string,
+  product: Parameters<typeof isClaimable>[0] & Readonly<{ id: string }>,
+  requestedBy: string,
   captureException: RequestDeps["captureException"],
 ): Promise<RequestOutcome> {
+  const productId = product.id;
   try {
+    // In this order: a request that could not go is never counted.
+    if (
+      !isClaimable(product) ||
+      !(await canSpendRunnerRequest(db, requestedBy))
+    ) {
+      return "skipped";
+    }
     return await requestEnrichment(db, productId, {
       queue: env.ENRICHMENT_QUEUE,
       captureException,

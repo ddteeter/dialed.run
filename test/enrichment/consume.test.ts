@@ -1,14 +1,16 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   domainDenylist,
+  rateLimits,
   gaveUp,
   linkLandings,
   products,
   productSnapshots,
 } from "../../src/db/schema-core";
+import { GLOBAL_SUBJECT } from "../../src/lib/contracts/rate-limits";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import {
@@ -23,6 +25,10 @@ import {
 import { DEAD_LETTER_REASON } from "../../src/db/gave-up";
 import { listAbandonedEnrichments } from "../../src/modules/enrichment/abandon";
 import { pageFailureReason } from "../../src/modules/enrichment/bounds";
+import {
+  PAGE_FETCHES_PER_HOUR,
+  PROXY_CALLS_PER_DAY,
+} from "../../src/modules/enrichment/spend-limit";
 import {
   denyDomain,
   isDeniedLink,
@@ -695,7 +701,6 @@ describe("handleEnrichmentBatch: no shop images (D-176)", () => {
     ]);
     expect(deps.captureException).not.toHaveBeenCalled();
   });
-
 });
 
 /**
@@ -1220,3 +1225,127 @@ async function repend(productId: string): Promise<void> {
     .set({ extractionStatus: "pending" })
     .where(eq(products.id, productId));
 }
+
+type GlobalSpend = "page-fetch" | "proxy-call";
+
+async function spentAlready(kind: GlobalSpend, count: number) {
+  await db()
+    .insert(rateLimits)
+    .values({
+      kind,
+      subject: GLOBAL_SUBJECT,
+      windowStartedAt: nowSeconds(),
+      count,
+    })
+    .onConflictDoUpdate({
+      target: [rateLimits.kind, rateLimits.subject],
+      set: { windowStartedAt: nowSeconds(), count },
+    });
+}
+
+async function limitCountOf(kind: GlobalSpend): Promise<number | undefined> {
+  const [row] = await db()
+    .select({ count: rateLimits.count })
+    .from(rateLimits)
+    .where(
+      and(eq(rateLimits.kind, kind), eq(rateLimits.subject, GLOBAL_SUBJECT)),
+    );
+  return row?.count;
+}
+
+describe("handleEnrichmentBatch: the spend ceilings", () => {
+  // The other cases here count their fetches too, and D1 keeps them.
+  beforeEach(async () => {
+    await db().delete(rateLimits);
+  });
+  afterEach(async () => {
+    await db().delete(rateLimits);
+  });
+
+  it("counts each page fetch against the hour", async () => {
+    const productId = await pendingProduct();
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      depsWith(serving(PAGE)),
+    );
+    expect(await statusOf(productId)).toBe("done");
+    expect(await limitCountOf("page-fetch")).toBe(1);
+  });
+
+  it("fetches nothing once the hour's fetches are spent, and leaves the row pending for the sweep", async () => {
+    await spentAlready("page-fetch", PAGE_FETCHES_PER_HOUR);
+    const productId = await pendingProduct();
+    const fetchImpl = serving(PAGE);
+    const message = jobFor(productId);
+
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [message]),
+      depsWith(fetchImpl),
+    );
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(message.ack).toHaveBeenCalledTimes(1);
+    const row = await rowOf(productId);
+    expect(row.extractionStatus).toBe("pending");
+    expect(row.extractionTries).toBeNull();
+    expect(await snapshotsOf(productId)).toEqual([]);
+  });
+
+  it("leaves a deferred row's earlier failure as it was, for the sweep's next try", async () => {
+    await spentAlready("page-fetch", PAGE_FETCHES_PER_HOUR);
+    const productId = await pendingProduct({
+      extractionError: "Page returned 403",
+      extractionTries: 2,
+    });
+
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      depsWith(serving(PAGE)),
+    );
+
+    const row = await rowOf(productId);
+    expect(row.extractionStatus).toBe("pending");
+    expect(row.extractionError).toBe("Page returned 403");
+    expect(row.extractionTries).toBe(2);
+  });
+
+  it("fetches the last one the hour allows", async () => {
+    await spentAlready("page-fetch", PAGE_FETCHES_PER_HOUR - 1);
+    const productId = await pendingProduct();
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      depsWith(serving(PAGE)),
+    );
+    expect(await statusOf(productId)).toBe("done");
+  });
+
+  it("counts a proxy call against the day", async () => {
+    const productId = await pendingProduct();
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      { ...depsWith(vi.fn(refusingWithProxy)), proxyApiKey: "fc-test" },
+    );
+    expect(await statusOf(productId)).toBe("done");
+    expect(await limitCountOf("proxy-call")).toBe(1);
+  });
+
+  it("calls no proxy once the day's calls are spent: the refusal is a failed fetch", async () => {
+    await spentAlready("proxy-call", PROXY_CALLS_PER_DAY);
+    const productId = await pendingProduct();
+    const fetchImpl = vi.fn(refusingWithProxy);
+
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      { ...depsWith(fetchImpl), proxyApiKey: "fc-test" },
+    );
+
+    expect(
+      fetchImpl.mock.calls.some(([input]) =>
+        urlOf(input).startsWith("https://api.firecrawl.dev/"),
+      ),
+    ).toBe(false);
+    const row = await rowOf(productId);
+    expect(row.extractionStatus).toBe("failed");
+    expect(row.extractionError).toBe("Page returned 403");
+  });
+});

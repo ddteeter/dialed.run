@@ -173,6 +173,12 @@ export interface FetchOptions {
    * refusal is recorded as a failed fetch, exactly as before there was one.
    */
   proxyApiKey?: string | undefined;
+  /**
+   * Spends one of the day's proxy calls, answering whether one was left
+   * (`spend-limit.ts`). Absent means no budget to keep. Over it, a refusal
+   * is a failed fetch, exactly as with no key.
+   */
+  claimProxy?: (() => Promise<boolean>) | undefined;
 }
 
 /**
@@ -200,7 +206,11 @@ async function refused(
   fetchImpl: typeof fetch,
   options: FetchOptions,
 ): Promise<FetchedPage> {
-  if (REFUSALS.has(response.status) && options.proxyApiKey !== undefined) {
+  if (
+    REFUSALS.has(response.status) &&
+    options.proxyApiKey !== undefined &&
+    (options.claimProxy === undefined || (await options.claimProxy()))
+  ) {
     const proxied = await scrapeThroughProxy(
       at.href,
       options.proxyApiKey,
@@ -267,8 +277,12 @@ export async function fetchProductPage(
   if (parsed === null) throw new PageFetchError("Unparseable URL");
 
   let current = parsed;
+  let { proxyApiKey } = options;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
-    const answer = await fetchHop(current, fetchImpl, options);
+    const answer = await fetchHop(current, fetchImpl, {
+      ...options,
+      proxyApiKey,
+    });
     if (answer instanceof URL) {
       current = answer;
       continue;
@@ -276,6 +290,9 @@ export async function fetchProductPage(
     const refresh = refreshTarget(answer.html, new URL(answer.finalUrl));
     if (refresh === undefined) return answer;
     current = refresh;
+    // The proxy once per page: a proxied page that sends us on to another
+    // refusal is a failed fetch, not a second credit.
+    if (answer.via === "proxy") proxyApiKey = undefined;
   }
   throw new PageFetchError(`More than ${String(MAX_REDIRECTS)} redirects`);
 }

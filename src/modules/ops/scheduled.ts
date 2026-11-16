@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, inArray, lt, or, type SQL } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, lt, or, sql, type SQL } from "drizzle-orm";
 
 import {
   cronCheckpoints,
@@ -15,9 +15,10 @@ import {
   extractionDone,
   extractionFailed,
   extractionPending,
+  ENRICHMENT_SWEEP_TRIES,
   listAbandonedEnrichments,
 } from "../enrichment";
-import { sweepSendLimits } from "../email";
+import { sweepRateLimits } from "../email";
 import { fillMissingTimeZones } from "../onboarding";
 import { pruneStravaIds } from "../runs";
 import { retryPendingWeather, timeZoneAt } from "../weather";
@@ -736,6 +737,9 @@ function failedAndOwed(): SQL | undefined {
     extractionFailed(),
     lt(products.createdAt, staleBefore),
     gt(products.createdAt, abandonedBefore()),
+    // A few tries, not one an hour all day: a page that keeps failing has
+    // answered, and each try may be a proxy credit.
+    sql`coalesce(${products.extractionTries}, 0) < ${ENRICHMENT_SWEEP_TRIES}`,
   );
 }
 
@@ -1001,7 +1005,7 @@ async function runDailyDigest(
   // the others fail (law 5). A check that threw above is thrown with
   // them.
   const sweeps = await failuresOf([
-    () => sweepSendLimits(db),
+    () => sweepRateLimits(db),
     () => upkeep.sweepAuthRows?.(),
     () => upkeep.forgetAnsweredRequests?.(),
     () => upkeep.sweepCopyrightHolds?.(),

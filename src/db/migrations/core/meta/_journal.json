@@ -36,6 +36,13 @@
       "when": 1794587790321,
       "tag": "0004_add_user_privacy_seen_at",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1794769467555,
+      "tag": "0005_replace_email_send_limits_with_rate_limits",
+      "breakpoints": true
     }
   ]
 }

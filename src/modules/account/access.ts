@@ -95,8 +95,8 @@ export type AccessRequestResult =
 
 /**
  * Au5 · Request access. Turnstile first; then, on a real deployment, a
- * limit per visitor address (the email limiter's table, keyed `access:`),
- * so a script cannot fill D7 even with a solved challenge, in one batch
+ * limit per visitor address (`rate_limits`, kind `access`), so a script
+ * cannot fill D7 even with a solved challenge, in one batch
  * with one conditional upsert — a repeat updates the note and leaves the
  * request where it was in the queue. A declined address that asks again
  * is pending again.

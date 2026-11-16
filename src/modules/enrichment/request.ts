@@ -1,8 +1,10 @@
-import { isNotNull } from "drizzle-orm";
+import { and, eq, isNotNull, lte, or, type SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { products } from "../../db/schema-core";
+import { nowSeconds } from "../../lib/now";
 import { didClaim } from "../../lib/sql/claim";
+import { abandonedBefore } from "./abandon";
 import type { EnrichJob } from "./queue-messages";
 
 type Db = ReturnType<typeof drizzle>;
@@ -37,11 +39,43 @@ export type RequestOutcome = "queued" | "skipped";
  * The flip is the dedupe: only `none` and `failed` become `pending`, so a
  * second paste of the same URL while a job is in flight sends nothing, and
  * `done` is `reextract`'s business rather than a refetch.
+ *
+ * **A `failed` product only once its first day is over.** Inside the day
+ * the hourly sweep owns its retry (`ENRICHMENT_RETRY_WINDOW_S`), so a
+ * paste then would only fetch the same page again sooner. Past it, a paste
+ * is what asks again. `isClaimable` is the same rule for a row in hand; a
+ * test holds the two together. The Desk's Retry is `retryFailedEnrichment`.
  */
 export async function requestEnrichment(
   db: Db,
   productId: string,
   deps: RequestDeps,
+  now = nowSeconds(),
+): Promise<RequestOutcome> {
+  const neverTriedOrDayOver = or(
+    eq(products.extractionStatus, "none"),
+    lte(products.createdAt, abandonedBefore(now)),
+  );
+  return claimAndSend(db, productId, deps, neverTriedOrDayOver);
+}
+
+/**
+ * The Desk's Retry (Operator Screens D6): an operator asked for this one,
+ * so a `failed` product is claimed whatever its age.
+ */
+export async function retryFailedEnrichment(
+  db: Db,
+  productId: string,
+  deps: RequestDeps,
+): Promise<RequestOutcome> {
+  return claimAndSend(db, productId, deps);
+}
+
+async function claimAndSend(
+  db: Db,
+  productId: string,
+  deps: RequestDeps,
+  also?: SQL,
 ): Promise<RequestOutcome> {
   const wasClaimed = await didClaim(
     db,
@@ -50,7 +84,7 @@ export async function requestEnrichment(
     productId,
     ["none", "failed"],
     { extractionStatus: "pending" },
-    isNotNull(products.sourceUrl),
+    and(isNotNull(products.sourceUrl), also),
   );
   if (!wasClaimed) return "skipped";
 
@@ -62,4 +96,26 @@ export async function requestEnrichment(
   // Queued even when the send failed: the row is `pending`, which is the
   // durable half, and the hourly sweep sends what this could not.
   return "queued";
+}
+
+/**
+ * Whether `requestEnrichment` would claim this product row: a link, and
+ * either never tried or failed and past the sweep's day. For a caller
+ * that must decide before claiming (the per-runner count is spent only on
+ * a request that can go).
+ */
+export function isClaimable(
+  product: Readonly<{
+    sourceUrl: string | null;
+    extractionStatus: string;
+    createdAt: number;
+  }>,
+  now = nowSeconds(),
+): boolean {
+  if (product.sourceUrl === null) return false;
+  if (product.extractionStatus === "none") return true;
+  return (
+    product.extractionStatus === "failed" &&
+    product.createdAt <= abandonedBefore(now)
+  );
 }

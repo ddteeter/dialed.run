@@ -6,6 +6,7 @@ import {
   CURRENT_PASSWORD_WRONG,
   currentPasswordLimited,
 } from "../../../lib/contracts";
+import { EMAIL_SENDS_PER_HOUR } from "../../../lib/contracts/email";
 import { viewerClockLabel } from "../../../lib/dates";
 import type { ViewerZone } from "../../../lib/dates";
 import {
@@ -27,6 +28,18 @@ const LABELS = {
   email: "New email",
   currentPassword: "Current password",
 };
+
+/**
+ * The runner's own hourly count of change requests is used up, whatever
+ * addresses they named (owner, 2026-11-15). The same window and number
+ * as a link's limit, on the same clock.
+ */
+export function changesLimitedMessage(
+  until: number,
+  viewer: ViewerZone,
+): string {
+  return `That's ${String(EMAIL_SENDS_PER_HOUR)} address changes this hour. You can try again at ${viewerClockLabel(until, viewer)}.`;
+}
 
 /**
  * The server's refusal of the current password — wrong, or tried too
@@ -135,10 +148,15 @@ export function ChangeEmail({
           the new address. Your email stays {current} until you do.
         </p>
       ) : undefined}
-      {outcome?.status === "limited" ? (
+      {outcome?.status === "limited" ||
+      outcome?.status === "runner-limited" ? (
         <FailureBand
           kicker="Not sent"
-          message={limitedMessage(outcome.until, viewer)}
+          message={
+            outcome.status === "limited"
+              ? limitedMessage(outcome.until, viewer)
+              : changesLimitedMessage(outcome.until, viewer)
+          }
           onRetry={() => {
             void form.submit({ email, currentPassword });
           }}

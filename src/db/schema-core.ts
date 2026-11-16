@@ -27,6 +27,7 @@ import {
 import { EMAIL_PREFERENCE_KINDS } from "../lib/contracts/email";
 import { GAVE_UP_KINDS } from "../lib/contracts/gave-up";
 import { HOLD_CAUSES } from "../lib/contracts/hold-causes";
+import { RATE_LIMIT_KINDS } from "../lib/contracts/rate-limits";
 import { PRECIP_LEVELS } from "../lib/contracts/temperature";
 import { STORED_REPORT_REASONS } from "../lib/contracts/report-reasons";
 import {
@@ -36,6 +37,7 @@ import {
 import {
   index,
   integer,
+  primaryKey,
   real,
   sqliteTable,
   text,
@@ -289,25 +291,31 @@ export const emailVerifications = /*#__PURE__*/ sqliteTable(
 );
 
 /**
- * How many emails of one kind an address has been sent this hour (round
- * 26 #11: "That's 5 links this hour. You can send another at {time}.").
+ * How many times one subject has been counted for one kind this window:
+ * the limits on link emails (round 26 #11: "That's 5 links this hour. You
+ * can send another at {time}."), on the two public forms, and on a
+ * runner's email changes and enrichment's spend (design 221). The kinds
+ * are `RATE_LIMIT_KINDS`.
  *
- * **Keyed by the address, not the account**, and counted whether or not
- * the address has one: a limit that only an existing account could hit
- * would tell whoever hit it that the account exists — the thing Au4 is
- * drawn to never reveal. The key is `{kind}:{address}`.
+ * **A send is keyed by the address, not the account**, and counted
+ * whether or not the address has one: a limit that only an existing
+ * account could hit would tell whoever hit it that the account exists —
+ * the thing Au4 is drawn to never reveal. `subject` is that address
+ * (lowercased), a visitor's IP, a runner's id or `GLOBAL_SUBJECT`.
  */
-export const emailSendLimits = /*#__PURE__*/ sqliteTable(
-  "email_send_limits",
+export const rateLimits = /*#__PURE__*/ sqliteTable(
+  "rate_limits",
   {
-    key: text("key").primaryKey(),
+    kind: text("kind", { enum: RATE_LIMIT_KINDS }).notNull(),
+    subject: text("subject").notNull(),
     windowStartedAt: integer("window_started_at").notNull(),
-    sends: integer("sends").notNull(),
+    count: integer("count").notNull(),
   },
   (t) => [
-    // The daily sweep of counts whose hour is long over
-    // (`sweepSendLimits`) reads by this; without it the sweep scans.
-    index("email_send_limits_window").on(t.windowStartedAt),
+    primaryKey({ columns: [t.kind, t.subject] }),
+    // The daily sweep of counts whose window is long over
+    // (`sweepRateLimits`) reads by this; without it the sweep scans.
+    index("rate_limits_window").on(t.windowStartedAt),
   ],
 );
 

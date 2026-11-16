@@ -5,6 +5,7 @@
  */
 export {
   abandonedBefore,
+  ENRICHMENT_SWEEP_TRIES,
   extractionDone,
   extractionFailed,
   extractionPending,
@@ -17,10 +18,12 @@ export {
   type EnrichmentDeps,
 } from "./consume";
 export { enqueueEnrichment } from "./enqueue";
+export { forgetRunnerEnrichmentLimit } from "./spend-limit";
 export { extractionModelFromEnv } from "./model/from-env";
 export { type EnrichJob } from "./queue-messages";
 export {
   requestEnrichment,
+  retryFailedEnrichment,
   type RequestDeps,
   type RequestOutcome,
 } from "./request";

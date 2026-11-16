@@ -1,9 +1,10 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { countRow, countedKeys } from "../rate-limit-rows";
 
 import { user } from "../../src/db/schema-auth";
 import {
-  emailSendLimits,
+  rateLimits,
   notificationPreferences,
   outbox,
 } from "../../src/db/schema-core";
@@ -28,7 +29,7 @@ import { deliverOwedEmail, EMAIL_FROM } from "../../src/modules/email/deliver";
 import {
   SEND_WINDOW_S,
   SENDS_PER_WINDOW,
-} from "../../src/modules/email/send-limit";
+} from "../../src/modules/email/rate-limit";
 import {
   unsubscribeSignature,
   unsubscribeUrl,
@@ -68,7 +69,7 @@ const NOW = 1_800_000_000;
 beforeEach(async () => {
   await db.batch([
     db.delete(notificationPreferences),
-    db.delete(emailSendLimits),
+    db.delete(rateLimits),
     db.delete(outbox),
   ]);
 });
@@ -387,11 +388,12 @@ describe("claimEmailSend", () => {
     expect(
       await claimEmailSend(db, "verify", "a@example.com", NOW + SEND_WINDOW_S),
     ).toStrictEqual({ isAllowed: true });
-    const [row] = await db.select().from(emailSendLimits);
+    const [row] = await db.select().from(rateLimits);
     expect(row).toStrictEqual({
-      key: "verify:a@example.com",
+      kind: "verify",
+      subject: "a@example.com",
       windowStartedAt: NOW + SEND_WINDOW_S,
-      sends: 1,
+      count: 1,
     });
     expect([SENDS_PER_WINDOW, SEND_WINDOW_S]).toStrictEqual([5, 3600]);
   });
@@ -788,23 +790,20 @@ describe("who a reply goes to", () => {
 
 describe("forgetSendLimits (ACC-9)", () => {
   it("forgets an address's counters for every emailed kind, whatever its case, and nothing else", async () => {
-    const kept = ["verify:other@example.com", "access:1.2.3.4"];
-    await db
-      .insert(emailSendLimits)
-      .values(
-        [
-          "verify:gone@example.com",
-          "reset:gone@example.com",
-          "change:gone@example.com",
-          ...kept,
-        ].map((key) => ({ key, windowStartedAt: 1, sends: 1 })),
-      );
+    await db.insert(rateLimits).values([
+      countRow("verify", "gone@example.com", 1, 1),
+      countRow("reset", "gone@example.com", 1, 1),
+      countRow("change", "gone@example.com", 1, 1),
+      countRow("verify", "other@example.com", 1, 1),
+      countRow("access", "unknown", 1, 1),
+      // The same text under a kind not counted by address is not theirs.
+      countRow("access", "gone@example.com", 1, 1),
+    ]);
     await forgetSendLimits(db, "Gone@Example.com");
-    const left = await db
-      .select({ key: emailSendLimits.key })
-      .from(emailSendLimits);
-    expect(
-      left.map((row) => row.key).toSorted((a, b) => a.localeCompare(b)),
-    ).toStrictEqual(kept.toSorted((a, b) => a.localeCompare(b)));
+    expect(await countedKeys(db)).toStrictEqual([
+      "access:gone@example.com",
+      "access:unknown",
+      "verify:other@example.com",
+    ]);
   });
 });
