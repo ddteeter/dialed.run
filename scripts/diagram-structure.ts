@@ -13,12 +13,15 @@ import path from "node:path";
 import { cronNameFor, cronSchedules } from "../src/modules/ops/crons";
 import { generateStructure } from "./diagrams/structure";
 
-const MODULES = "src/modules";
+const SOURCE_ROOT = "src";
 const OUTPUT = "docs/diagrams/structure.generated.c4";
 const WORDS = "docs/diagrams/structure.words.json";
 
 const sources: Record<string, string> = {};
-const entries = readdirSync(MODULES, { recursive: true, withFileTypes: true });
+const entries = readdirSync(SOURCE_ROOT, {
+  recursive: true,
+  withFileTypes: true,
+});
 for (const entry of entries) {
   if (!entry.isFile() || !/\.tsx?$/u.test(entry.name)) continue;
   const file = path.posix.join(
@@ -34,6 +37,7 @@ writeFileSync(
   OUTPUT,
   generateStructure({
     wranglerJsonc: readFileSync("wrangler.jsonc", "utf8"),
+    tsconfigJsonc: readFileSync("tsconfig.json", "utf8"),
     crons: cronSchedules.map((schedule) => ({
       schedule,
       name: cronNameFor(schedule) ?? "",

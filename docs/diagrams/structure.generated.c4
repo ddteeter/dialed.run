@@ -46,6 +46,9 @@ model {
     importsDlq = queue 'Queue: dialed-imports-dlq' {
       description 'Import jobs that failed every retry'
     }
+    emailSending = external 'Email sending: EMAIL' {
+      description 'Cloudflare\'s email sending: every message the app sends leaves through it'
+    }
   }
   extend cf.app {
     account = module 'account'

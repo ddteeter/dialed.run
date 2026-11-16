@@ -108,6 +108,7 @@ model {
   cf.app.ops -> cf.publicPhotosBucket 'copies a public kit\'s screened photos'
   cf.app.ops -> cf.mediaBackupBucket 'copies new and changed photos daily'
   cf.app.safety -> openai 'screens photos'
+  cf.app.email -> cf.emailSending 'sends every message'
   cf.app.account -[async]-> cf.exportsQueue 'enqueues a data export'
   cf.exportsQueue -[async]-> cf.app.account 'delivers the export job'
 

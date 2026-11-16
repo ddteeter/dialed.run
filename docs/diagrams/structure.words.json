@@ -17,5 +17,6 @@
   "cf.app.cronDaily1200": "The daily digest: re-drives what is still owed and reports what is wrong",
   "cf.app.cronHourly00": "Retries weather for runs still waiting on conditions, with other hourly upkeep",
   "cf.app.cronHourly15": "Retries photo screenings still pending, with other hourly upkeep",
-  "cf.app.cronHourly30": "Re-drives product enrichment still owed, with other hourly upkeep"
+  "cf.app.cronHourly30": "Re-drives product enrichment still owed, with other hourly upkeep",
+  "cf.emailSending": "Cloudflare's email sending: every message the app sends leaves through it"
 }
