@@ -5,7 +5,14 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -532,6 +539,48 @@ describe("LinkLanding", () => {
       expect(screen.queryByRole("button", { name: label })).toBeNull();
     },
   );
+
+  it("says one sentence for the press, the answer's, and stays on the page", async () => {
+    const confirm = vi.fn<() => Promise<Landing>>().mockResolvedValue({
+      state: "confirmed",
+      purpose: "verify",
+      email: "maya@example.com",
+    });
+    await renderWithRouter(
+      <LinkLanding
+        landing={{
+          state: "ask",
+          purpose: "verify",
+          email: "ma•••@example.com",
+        }}
+        confirm={confirm}
+      />,
+    );
+    // Every sentence any status region says, in order, across the swap
+    // from the question to the answer.
+    const said: string[] = [];
+    const observer = new MutationObserver(() => {
+      for (const region of screen.queryAllByRole("status")) {
+        const text = region.textContent;
+        if (text !== "" && said.at(-1) !== text) said.push(text);
+      }
+    });
+    observer.observe(document.body, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+    });
+
+    const form = screen.getByText(/^This confirms/u).closest("form");
+    if (form === null) throw new Error("no form");
+    // The submit is the page's: nothing navigates.
+    expect(fireEvent.submit(form)).toBe(false);
+    await screen.findByRole("heading", { level: 1, name: "Email confirmed" });
+    observer.disconnect();
+
+    expect(said).toStrictEqual(["Email confirmed."]);
+    expect(confirm).toHaveBeenCalledTimes(1);
+  });
 
   it.each([
     ["verify", "Confirm email", "Confirming"],

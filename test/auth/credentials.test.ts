@@ -165,6 +165,16 @@ describe("signIn", () => {
     expect(thrown).toMatchObject({ status: 429 });
   });
 
+  it("reads Better Auth's own limit as its own, even with a time on it", async () => {
+    client.email.mockResolvedValue({
+      data: undefined,
+      error: { code: "TOO_MANY_REQUESTS", until: 1_800_000_900, status: 429 },
+    });
+    const thrown = await caught(signIn(person));
+    expect(thrown).toBeInstanceOf(AuthRejected);
+    expect(thrown).toMatchObject({ status: 429 });
+  });
+
   it("keeps any other refusal's status for the band", async () => {
     client.email.mockResolvedValue({
       data: undefined,
