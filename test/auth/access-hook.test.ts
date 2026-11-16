@@ -4,7 +4,11 @@ import { drizzle } from "drizzle-orm/d1";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { account as authAccount, user } from "../../src/db/schema-auth";
+import {
+  account as authAccount,
+  session,
+  user,
+} from "../../src/db/schema-auth";
 import { inviteCodes, inviteRedemptions } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import {
@@ -208,7 +212,7 @@ describe("email sign-up through the gate", () => {
     ],
     [
       "a code nobody made",
-      { "x-invite-code": "DIAL-ZZZZ" },
+      { "x-invite-code": "DIAL-ZZZZ-ZZZZ" },
       "INVITE_INVALID",
       INVITE_COPY.invalid,
     ],
@@ -349,7 +353,9 @@ function googleIdToken(email: string): string {
   const claims = {
     iss: "https://accounts.google.com",
     aud: "test-client",
-    sub: newUlid(),
+    // One Google account per address, as Google has it: a second round
+    // trip for the same address is the same Google account signing in.
+    sub: `google-${email}`,
     email,
     email_verified: true,
     name: "Maya Runner",
@@ -419,6 +425,42 @@ async function googleRoundTrip(
     landing: new URL(callback.headers.get("location") ?? "", ORIGIN),
   };
 }
+
+describe("Google for an address that already has an email account", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("is refused as not linked, signs nobody in and adds no Google login", async () => {
+    const auth = instance(OPEN_ACCESS);
+    const email = address();
+    const signedUp = await auth.handler(signUpRequest(email, {}));
+    expect(signedUp.status).toBe(200);
+    // Confirmed, so Better Auth's default would link it.
+    await db
+      .update(user)
+      .set({ emailVerified: true })
+      .where(eq(user.email, email));
+    const owner = await accountFor(email);
+
+    const { started, landing } = await googleRoundTrip(auth, email, {
+      errorCallbackURL: "/auth/login",
+    });
+
+    expect(started.status).toBe(200);
+    expect(landing?.pathname).toBe("/auth/login");
+    expect(landing?.searchParams.get("error")).toBe("account_not_linked");
+    const ownerId = owner?.id ?? "";
+    expect(
+      await db.select().from(session).where(eq(session.userId, ownerId)),
+    ).toStrictEqual([]);
+    const logins = await db
+      .select({ providerId: authAccount.providerId })
+      .from(authAccount)
+      .where(eq(authAccount.userId, ownerId));
+    expect(logins).toStrictEqual([{ providerId: "credential" }]);
+  });
+});
 
 describe("Google sign-up through the gate", () => {
   afterEach(() => {
@@ -491,7 +533,7 @@ describe("Google sign-up through the gate", () => {
       auth,
       address(),
       { requestSignUp: true },
-      { "x-invite-code": "DIAL-ZZZZ", "x-turnstile-token": "token" },
+      { "x-invite-code": "DIAL-ZZZZ-ZZZZ", "x-turnstile-token": "token" },
     );
     expect(started.status).toBe(400);
     expect(await refusal(started)).toMatchObject({ code: "INVITE_INVALID" });
@@ -559,7 +601,7 @@ describe("Google sign-up through the gate", () => {
         { email: address() },
         {
           path: "/sign-up/email",
-          headers: new Headers({ "x-invite-code": "DIAL-ABCD" }),
+          headers: new Headers({ "x-invite-code": "DIAL-ABCD-EFGH" }),
         },
       ),
     ).rejects.toMatchObject({ body: { code: "INVITE_INVALID" } });
@@ -814,7 +856,7 @@ describe("admitSignUp", () => {
       };
       await admitSignUp(gate, {
         path: "/sign-up/email",
-        headers: new Headers({ "x-invite-code": "DIAL-ABCD" }),
+        headers: new Headers({ "x-invite-code": "DIAL-ABCD-EFGH" }),
       });
       expect(contextSpy).not.toHaveBeenCalled();
     } finally {
@@ -865,7 +907,7 @@ describe("admitSignUp without a code", () => {
         { ...gate, standing: () => Promise.resolve("used") },
         {
           path: "/sign-up/email",
-          headers: new Headers({ "x-invite-code": "DIAL-ABCD" }),
+          headers: new Headers({ "x-invite-code": "DIAL-ABCD-EFGH" }),
         },
       ),
     ).rejects.toMatchObject({

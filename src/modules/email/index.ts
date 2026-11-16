@@ -18,9 +18,11 @@ export {
 export {
   claimEmailSend,
   claimRunnerChange,
+  claimSignInTry,
   countSend,
   forgetRateLimit,
   forgetSendLimits,
+  forgetSignInTries,
   isWithinRateLimit,
   sendAllowed,
   sendClaimOf,

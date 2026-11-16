@@ -175,6 +175,65 @@ describe("a banned runner signing in (SAF-4)", () => {
     ).rejects.toHaveProperty("body", { code: ACCOUNT_CLOSED_CODE });
   });
 
+  it("deletes the session when a ban lands while it is being made", async () => {
+    const { userId, email } = await runner();
+    // Not banned when the gate first looks; banned by the time it looks
+    // again, once the session row exists.
+    const states = [
+      { banned: false, reason: undefined, bannedAt: undefined },
+      { banned: true, reason: "Spam.", bannedAt: 1 },
+    ];
+    const looked: string[] = [];
+    const racing = createAuth({
+      db: core(),
+      secret: "test-secret-not-for-production",
+      baseUrl: "http://localhost",
+      passwordScreen: CLEAN_SCREEN,
+      mail: recordingMail(),
+      access: OPEN_ACCESS,
+      plugins: [
+        banGate((id) => {
+          looked.push(id);
+          return Promise.resolve(
+            states.shift() ?? { banned: true, reason: "", bannedAt: 1 },
+          );
+        }),
+      ],
+    });
+
+    const refused = await racing.handler(
+      new Request("http://localhost/api/auth/sign-in/email", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "http://localhost",
+        },
+        body: JSON.stringify({ email, password: PASSWORD }),
+      }),
+    );
+
+    expect(refused.status).toBe(403);
+    expect(await refused.json()).toEqual({ code: ACCOUNT_CLOSED_CODE });
+    expect(refused.headers.getSetCookie()).toEqual([]);
+    expect(looked).toEqual([userId, userId]);
+    const left = await core()
+      .select({ id: session.id })
+      .from(session)
+      .where(eq(session.userId, userId));
+    expect(left).toEqual([]);
+  });
+
+  it("keeps the session when the second look still finds no ban", async () => {
+    const { userId } = await runner();
+    const context = await auth.$context;
+    const made = await context.internalAdapter.createSession(userId);
+    const kept = await core()
+      .select({ id: session.id })
+      .from(session)
+      .where(eq(session.userId, userId));
+    expect(kept).toEqual([{ id: made.id }]);
+  });
+
   it("is refused after a close that inserted the profile row", async () => {
     const email = `${newUlid().toLowerCase()}@example.test`;
     const signUp = await auth.api.signUpEmail({

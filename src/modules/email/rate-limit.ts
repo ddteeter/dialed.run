@@ -3,7 +3,7 @@
  * one kind of link ("That's 5 links this hour. You can send another at
  * {time}.", round 26 #11), how often a visitor fills a public form, and
  * the counts that are not sends (a runner's email changes, enrichment's
- * spend; design 221).
+ * spend; design 221; email sign-in's tries per address).
  *
  * A send is counted per address whatever the address is: see
  * `rate_limits` for why an unknown address is counted too.
@@ -13,6 +13,10 @@ import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { rateLimits } from "../../db/schema-core";
+import {
+  SIGN_IN_TRIES,
+  SIGN_IN_WINDOW_S,
+} from "../../lib/contracts/access";
 import { EMAIL_SENDS_PER_HOUR } from "../../lib/contracts/email";
 import type {
   RateLimitKind,
@@ -31,13 +35,15 @@ export const SENDS_PER_WINDOW = EMAIL_SENDS_PER_HOUR;
 export const SEND_WINDOW_S = 60 * 60;
 
 /**
-The sends counted by email address; `access` and `takedown` are counted by IP.
-*/
-const ADDRESS_SENDS = [
+ * The counts kept by email address: the three sends and sign-in's tries.
+ * `access` and `takedown` are counted by IP.
+ */
+const ADDRESS_COUNTS = [
   "verify",
   "reset",
   "change",
-] as const satisfies readonly SendLimitKind[];
+  "sign-in",
+] as const satisfies readonly RateLimitKind[];
 
 export type SendClaim =
   | { readonly isAllowed: true }
@@ -62,7 +68,7 @@ function sendSubject(address: string): string {
  * the purge's batch; each kind is a primary-key probe.
  */
 export function forgetSendLimits(db: Db, address: string) {
-  const addressKinds = inArray(rateLimits.kind, [...ADDRESS_SENDS]);
+  const addressKinds = inArray(rateLimits.kind, [...ADDRESS_COUNTS]);
   const ofAddress = eq(rateLimits.subject, sendSubject(address));
   return db.delete(rateLimits).where(and(addressKinds, ofAddress));
 }
@@ -171,16 +177,20 @@ export async function isWithinRateLimit(
   return windowedCountUntil(rows, limit, windowS) === undefined;
 }
 
-/**
-What `countSend` returned, as the answer.
-*/
-export function sendClaimOf(
-  rows: readonly Readonly<{ startedAt: number; count: number }>[],
-): SendClaim {
-  const until = windowedCountUntil(rows, SENDS_PER_WINDOW, SEND_WINDOW_S);
+type CountRows = readonly Readonly<{ startedAt: number; count: number }>[];
+
+function claimOf(rows: CountRows, limit: number, windowS: number): SendClaim {
+  const until = windowedCountUntil(rows, limit, windowS);
   return until === undefined
     ? { isAllowed: true }
     : { isAllowed: false, until };
+}
+
+/**
+What `countSend` returned, as the answer.
+*/
+export function sendClaimOf(rows: CountRows): SendClaim {
+  return claimOf(rows, SENDS_PER_WINDOW, SEND_WINDOW_S);
 }
 
 /**
@@ -216,4 +226,31 @@ export async function claimRunnerChange(
   return sendClaimOf(
     await countRate(db, "change-runner", userId, SEND_WINDOW_S, now),
   );
+}
+
+/**
+ * Count one email sign-in for the typed address, and say whether it may
+ * be tried: `SIGN_IN_TRIES` in `SIGN_IN_WINDOW_S`, the address lowercased
+ * as Better Auth looks it up.
+ */
+export async function claimSignInTry(
+  db: Db,
+  address: string,
+  now = nowSeconds(),
+): Promise<SendClaim> {
+  const rows = await countRate(
+    db,
+    "sign-in",
+    sendSubject(address),
+    SIGN_IN_WINDOW_S,
+    now,
+  );
+  return claimOf(rows, SIGN_IN_TRIES, SIGN_IN_WINDOW_S);
+}
+
+/**
+A sign-in that worked: the address's tries start again from none.
+*/
+export function forgetSignInTries(db: Db, address: string) {
+  return forgetRateLimit(db, "sign-in", sendSubject(address));
 }

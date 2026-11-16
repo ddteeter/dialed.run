@@ -11,6 +11,7 @@ import {
   AccessRefused,
   AccountClosedRefusal,
   AuthRejected,
+  GOOGLE_NOT_LINKED,
   GOOGLE_REFUSALS,
   NOT_CREATED,
   NOT_LOGGED_IN,
@@ -115,6 +116,16 @@ describe("GOOGLE_REFUSALS", () => {
       message: INVITE_COPY.invalid,
       retry: false,
     });
+  });
+
+  it("sends an address whose account has a password to that password, or a reset", () => {
+    expect(GOOGLE_REFUSALS.get(GOOGLE_NOT_LINKED)).toStrictEqual({
+      kicker: NOT_LOGGED_IN,
+      message:
+        "That address already has an account. Log in with your password, or reset it.",
+      retry: false,
+    });
+    expect(GOOGLE_NOT_LINKED).toBe("account_not_linked");
   });
 
   it("offers no Try again for a Google address with no account, and points nowhere", () => {

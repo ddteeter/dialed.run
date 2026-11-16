@@ -449,7 +449,7 @@ export const dataExports = /*#__PURE__*/ sqliteTable(
 );
 
 /**
- * Invite codes (task 126, ACC-5; decision D-39; round 26 #20). `DIAL-XXXX`,
+ * Invite codes (task 126, ACC-5; decision D-39; round 26 #20). `DIAL-XXXX-XXXX`,
  * stored as `lib/access.ts` normalizes it, minted on Desk D7 — by hand,
  * or by answering an access request — or seeded for the owner as a
  * deployment step. A code works `max_uses` times; revoking one stops it at

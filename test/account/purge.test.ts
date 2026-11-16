@@ -473,9 +473,9 @@ function runnersCount(kind: "change-runner" | "enrich-runner", userId: string) {
 }
 
 /**
-The sends counted by the address, which the purge forgets with it.
+The counts kept by the address, which the purge forgets with it.
 */
-const ADDRESS_SENDS = ["verify", "reset", "change"] as const;
+const ADDRESS_SENDS = ["verify", "reset", "change", "sign-in"] as const;
 
 /**
 The address a seeded runner's open email change moves to.

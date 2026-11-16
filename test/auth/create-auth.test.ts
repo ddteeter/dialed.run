@@ -1,7 +1,10 @@
 import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it, vi } from "vitest";
 
+import { z } from "zod";
+
 import { env } from "../../src/env";
+import { ACCESS_HEADERS, mintInviteCode } from "../../src/lib/contracts/access";
 import { PASSWORD_MIN_LENGTH } from "../../src/lib/contracts";
 import { newUlid } from "../../src/lib/ids";
 import { AUTH_COPY } from "../../src/modules/auth/auth-copy";
@@ -98,6 +101,8 @@ describe("createAuth", () => {
       minPasswordLength: PASSWORD_MIN_LENGTH,
       // Au4 for everyone: sign-up signs nobody in (ACC-3).
       autoSignIn: false,
+      // A registered address's answer has a new account's shape.
+      customSyntheticUser: A_FUNCTION,
       onExistingUserSignUp: A_FUNCTION,
       sendResetPassword: A_FUNCTION,
       // ACC-4: an hour, and every session ends when it is spent.
@@ -177,6 +182,27 @@ function screened(verdict: "breached" | "clean" | "unknown") {
  * §3.1.1.2; owner, PR #104), through Better Auth's real endpoint on a real
  * D1 — only the range API is stubbed, by handing in its answer.
  */
+describe("the signing secret", () => {
+  it("refuses to build without one", () => {
+    expect(() => auth({ ...BASE, secret: undefined })).toThrow(
+      /BETTER_AUTH_SECRET is not set/u,
+    );
+  });
+
+  it("refuses an empty or blank one", () => {
+    expect(() => auth({ ...BASE, secret: "" })).toThrow(
+      /BETTER_AUTH_SECRET is not set/u,
+    );
+    expect(() => auth({ ...BASE, secret: " ".repeat(3) })).toThrow(
+      /BETTER_AUTH_SECRET is not set/u,
+    );
+  });
+
+  it("builds with a real one, and signs with it", () => {
+    expect(auth(BASE).options.secret).toBe(BASE.secret);
+  });
+});
+
 describe("the password breach screen", () => {
   it("refuses a breached password with the code the form lands on Password", async () => {
     const { auth: withScreen, screen, report } = screened("breached");
@@ -392,6 +418,73 @@ describe("secure cookies (OPS-4)", () => {
       /^__Secure-better-auth\.session_token=/u,
     );
   });
+});
+
+describe("sign-up's answer for a registered address", () => {
+  const password = ["long", "enough", "password", "here"].join("-");
+
+  async function signUpUser(
+    instance: ReturnType<typeof auth>,
+    email: string,
+  ): Promise<Record<string, unknown>> {
+    const response = await instance.handler(
+      new Request("http://localhost/api/auth/sign-up/email", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "http://localhost",
+          [ACCESS_HEADERS.inviteCode]: mintInviteCode(),
+        },
+        // A name the create hook blanks: the answer must not echo it.
+        body: JSON.stringify({ name: "Somebody", email, password }),
+      }),
+    );
+    expect(response.status).toBe(200);
+    const body: unknown = await response.json();
+    return z.object({ user: z.record(z.string(), z.unknown()) }).parse(body)
+      .user;
+  }
+
+  const ID_FORMS: readonly (readonly [string, RegExp])[] = [
+    ["ulid", /^[0-9A-HJKMNP-TV-Z]{26}$/u],
+    ["better-auth", /^[A-Za-z0-9]{32}$/u],
+  ];
+
+  /**
+   * What a reader of the body can see of a user, with the values that
+   * differ between any two accounts replaced by their form.
+   */
+  function shape(user: Record<string, unknown>): Record<string, unknown> {
+    const at = (key: string) => z.iso.datetime().parse(user[key]);
+    return {
+      keys: Object.keys(user).toSorted((a, b) => a.localeCompare(b)),
+      name: user.name,
+      id: ID_FORMS.find(([, form]) => form.test(String(user.id)))?.[0],
+      createdAtMs: new Date(at("createdAt")).getUTCMilliseconds(),
+      updatedAtMs: new Date(at("updatedAt")).getUTCMilliseconds(),
+      sameDates: user.createdAt === user.updatedAt,
+    };
+  }
+
+  it.each([false, true])(
+    "has the shape a new account's has (invite-only %s)",
+    async (isInviteOnly) => {
+      const instance = auth({
+        ...BASE,
+        baseUrl: "http://localhost",
+        access: { ...OPEN_ACCESS, isInviteOnly },
+      });
+      const email = `twice-${newUlid().toLowerCase()}@example.com`;
+
+      const fresh = await signUpUser(instance, email);
+      const again = await signUpUser(instance, email);
+
+      expect(again.id).not.toBe(fresh.id);
+      expect(shape(again)).toStrictEqual(shape(fresh));
+      expect(fresh.name).toBe("");
+      expect(fresh.createdAt).toMatch(/\.000Z$/u);
+    },
+  );
 });
 
 describe("the emails auth asks for (ACC-3, ACC-4)", () => {

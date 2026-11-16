@@ -92,7 +92,7 @@ describe("signInSchema", () => {
 });
 
 const signUp = {
-  inviteCode: "DIAL-7K3P",
+  inviteCode: "DIAL-7K3P-2QXM",
   birthDate: "1990-04-21",
   ...signIn,
   password: "hunter22hunter22",
@@ -112,8 +112,8 @@ describe("signUpSchemaFor (the invite-only flag)", () => {
       ),
     ).toStrictEqual(["That code doesn't work. Check it, or request access."]);
     expect(
-      withCode.parse({ ...signUp, inviteCode: " dial-7k3p " }),
-    ).toMatchObject({ inviteCode: "DIAL-7K3P" });
+      withCode.parse({ ...signUp, inviteCode: " dial-7k3p-2qxm " }),
+    ).toMatchObject({ inviteCode: "DIAL-7K3P-2QXM" });
   });
 
   it("asks for no code when invite-only is off, and ignores one that comes", () => {

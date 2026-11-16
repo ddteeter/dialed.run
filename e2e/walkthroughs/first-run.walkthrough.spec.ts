@@ -6,7 +6,7 @@
  * journeys (`e2e/auth/`, `e2e/onboarding/`) carry the edge cases.
  */
 import { expect, hydrated, scene, test, typeSlowly } from "../support/demo";
-import { confirmLinkFor } from "../support/email-links";
+import { confirmAddress } from "../support/email-links";
 import { ensureInviteCode, turnstileAnswered } from "../support/invites";
 
 /**
@@ -72,10 +72,7 @@ test("the first run: an invite, an account, a handle, and a closet to start from
   });
 
   // The link, opened from the inbox (e2e/support/email-links).
-  await page.goto(await confirmLinkFor(email));
-  await expect(
-    page.getByRole("heading", { name: "Email confirmed" }),
-  ).toBeVisible({ timeout: 15_000 });
+  await confirmAddress(page, email);
   await expect(
     page.getByText("Your runs can go on the feed now."),
   ).toBeVisible();

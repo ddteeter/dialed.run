@@ -1,9 +1,13 @@
+import { z } from "zod";
+
 import {
   ACCESS_CODES,
   ACCESS_HEADERS,
   ACCOUNT_CLOSED_CODE,
   INVITE_COPY,
   REGION_BLOCKED_CODE,
+  SIGN_IN_LIMITED_CODE,
+  signInLimitedMessage,
 } from "../../lib/contracts/access";
 import {
   AGE_CODES,
@@ -15,6 +19,7 @@ import {
   AUTH_COPY,
   AccessRefused,
   AccountClosedRefusal,
+  AUTH_KICKER,
   AuthRejected,
   GOOGLE_REFUSALS,
   ageRefused,
@@ -140,6 +145,28 @@ function throwIfRefused(
     : new AuthFieldError(refusal.field, refusal.message);
 }
 
+/**
+When the server says the address may try again, in epoch seconds.
+*/
+const limitedBody = z.object({ until: z.number() });
+
+/**
+ * The typed address is past its sign-in tries: the band says when it may
+ * try again, or to reset the password (owner, 2026-11-15). No Try again —
+ * pressing it now is refused the same way. A 429 without its time is
+ * Better Auth's own limit, which the band words as before.
+ */
+function throwIfLimited(error: ClientError | null | undefined): void {
+  if (error?.code !== SIGN_IN_LIMITED_CODE) return;
+  const body = limitedBody.safeParse(error);
+  if (!body.success) return;
+  throw new AccessRefused({
+    kicker: AUTH_KICKER,
+    message: signInLimitedMessage(body.data.until),
+    retry: false,
+  });
+}
+
 interface SignInValues {
   email: string;
   password: string;
@@ -155,6 +182,7 @@ interface SignInValues {
 export async function signIn(values: SignInValues): Promise<void> {
   const { error } = await authClient.signIn.email(values);
   if (error?.code === ACCOUNT_CLOSED_CODE) throw new AccountClosedRefusal();
+  throwIfLimited(error);
   throwIfRefused(error, SIGN_IN_REFUSALS);
   // A different runner may be signed in now: what the browser remembered
   // about the last one (`lib/browser/session-memo`) is not about them.

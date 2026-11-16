@@ -1,12 +1,17 @@
 import process from "node:process";
 
 import { APIError } from "better-auth/api";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 import { session, user, verification } from "../../src/db/schema-auth";
-import { outbox, passwordAttempts } from "../../src/db/schema-core";
+import {
+  outbox,
+  passwordAttempts,
+  rateLimits,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { createAuth } from "../../src/modules/auth/create-auth";
@@ -19,6 +24,12 @@ import {
   PASSWORD_ATTEMPT_WINDOW_S,
 } from "../../src/modules/auth/password-check";
 import { PASSWORD_ATTEMPTS_PER_WINDOW } from "../../src/lib/contracts";
+import {
+  SIGN_IN_LIMITED_CODE,
+  SIGN_IN_TRIES,
+  SIGN_IN_WINDOW_S,
+} from "../../src/lib/contracts/access";
+import { nowSeconds } from "../../src/lib/now";
 import { recordingMail } from "./mail-recorder";
 import { OPEN_ACCESS } from "./open-access";
 
@@ -194,6 +205,34 @@ describe("a password reset (ACC-4)", () => {
     expect(signedIn.status).toBe(200);
   });
 
+  it("refuses a breached new password, and leaves the old one and the link as they were", async () => {
+    const next = ["a", "breached", "long", "passphrase"].join("-");
+    const { auth, mail } = instance({
+      passwordScreen: {
+        verdict: (candidate) =>
+          Promise.resolve(candidate === next ? "breached" : "clean"),
+        report: () => {
+          // a breached verdict is an answer, not a failure
+        },
+      },
+    });
+    const { email, userId } = await signUp(auth);
+    const token = await resetTokenFor(auth, mail, email);
+
+    const response = await refused("PASSWORD_BREACHED", () =>
+      auth.handler(post("reset-password", { token, newPassword: next })),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ code: "PASSWORD_BREACHED" });
+    expect(await canSignInWith(auth, userId, password)).toBe(true);
+    const clean = ["a", "clean", "long", "passphrase"].join("-");
+    const retried = await auth.handler(
+      post("reset-password", { token, newPassword: clean }),
+    );
+    expect(retried.status).toBe(200);
+  });
+
   it("stores the link's token only as a hash", async () => {
     const { auth, mail } = instance();
     const { email, userId } = await signUp(auth);
@@ -299,6 +338,107 @@ describe("an email change (ACC-8) and the old inbox's reset link", () => {
   });
 });
 
+async function plantChange(userId: string): Promise<string> {
+  return issueEmailLink(db, {
+    userId,
+    purpose: "change",
+    email: `moved-${newUlid().toLowerCase()}@example.com`,
+  });
+}
+
+async function addressOf(userId: string): Promise<string | undefined> {
+  const [row] = await db
+    .select({ email: user.email })
+    .from(user)
+    .where(eq(user.id, userId));
+  return row?.email;
+}
+
+describe("an open change-email link, once the password changes hands", () => {
+  const next = ["a", "replaced", "long", "passphrase"].join("-");
+
+  it("is withdrawn by a reset, while another runner's still works", async () => {
+    const { auth, mail } = instance();
+    const { email, userId } = await signUp(auth);
+    const bystander = await signUp(auth);
+    const link = await plantChange(userId);
+    const theirs = await plantChange(bystander.userId);
+    const token = await resetTokenFor(auth, mail, email);
+
+    const reset = await auth.handler(
+      post("reset-password", { token, newPassword: next }),
+    );
+
+    expect(reset.status).toBe(200);
+    expect(await confirmEmail(db, link)).toStrictEqual({ state: "expired" });
+    expect(await addressOf(userId)).toBe(email);
+    expect(await confirmEmail(db, theirs)).toMatchObject({
+      state: "confirmed",
+    });
+  });
+
+  it("is withdrawn by a password change", async () => {
+    const check = { ...(await signedIn()), db };
+    const before = await addressOf(check.userId);
+    const link = await plantChange(check.userId);
+
+    expect(
+      await changeOwnPassword(check, {
+        currentPassword: password,
+        password: next,
+      }),
+    ).toStrictEqual({ status: "changed" });
+
+    expect(await confirmEmail(db, link)).toStrictEqual({ state: "expired" });
+    expect(await addressOf(check.userId)).toBe(before);
+  });
+
+  it("stays when the current password is wrong, since nothing changed hands", async () => {
+    const check = { ...(await signedIn()), db };
+    const link = await plantChange(check.userId);
+
+    await refused("INVALID_PASSWORD", () =>
+      changeOwnPassword(check, {
+        currentPassword: `${password}-not`,
+        password: next,
+      }),
+    );
+
+    expect(await confirmEmail(db, link)).toMatchObject({ state: "confirmed" });
+  });
+
+  it("stays on an ordinary log-out, which hands no password over", async () => {
+    const { auth } = instance();
+    const { email, userId } = await signUp(auth);
+    const cookie = await signIn(auth, email);
+    const link = await plantChange(userId);
+
+    const response = await auth.handler(post("sign-out", {}, cookie));
+
+    expect(response.status).toBe(200);
+    expect(await confirmEmail(db, link)).toMatchObject({ state: "confirmed" });
+  });
+
+  it("leaves Sign out everywhere with no session refused as it was", async () => {
+    const { auth } = instance();
+    const response = await auth.handler(post("revoke-sessions", {}));
+    expect(response.status).toBe(401);
+  });
+
+  it("is withdrawn by Sign out everywhere", async () => {
+    const { auth } = instance();
+    const { email, userId } = await signUp(auth);
+    const cookie = await signIn(auth, email);
+    const link = await plantChange(userId);
+
+    const response = await auth.handler(post("revoke-sessions", {}, cookie));
+
+    expect(response.status).toBe(200);
+    expect(await confirmEmail(db, link)).toStrictEqual({ state: "expired" });
+    expect(await addressOf(userId)).toBe(email);
+  });
+});
+
 /**
 A signed-in runner, as `checkOwnPassword` is handed one.
 */
@@ -308,6 +448,112 @@ async function signedIn() {
   const headers = new Headers({ cookie: await signIn(auth, email) });
   return { auth, userId, headers };
 }
+
+const wrong = ["not", "the", "password", "at", "all"].join("-");
+
+function tryPassword(auth: Auth, email: string, attempt: string) {
+  return auth.handler(post("sign-in/email", { email, password: attempt }));
+}
+
+/**
+The address's sign-in count, or nothing once it is cleared.
+*/
+async function triesOf(email: string): Promise<number | undefined> {
+  const ofAddress = and(
+    eq(rateLimits.kind, "sign-in"),
+    eq(rateLimits.subject, email.toLowerCase()),
+  );
+  const [row] = await db
+    .select({ count: rateLimits.count })
+    .from(rateLimits)
+    .where(ofAddress);
+  return row?.count;
+}
+
+describe("email sign-in's tries per typed address", () => {
+
+  it("refuses even the right password once the wrong ones reach the limit", async () => {
+    const { auth } = instance();
+    const { email, userId } = await signUp(auth);
+    for (let n = 0; n < SIGN_IN_TRIES; n += 1) {
+      const refused = await tryPassword(auth, email, wrong);
+      expect(refused.status).toBe(401);
+    }
+
+    const before = nowSeconds();
+    const limited = await tryPassword(auth, email, password);
+
+    expect(limited.status).toBe(429);
+    const body = z
+      .object({ code: z.string(), until: z.number() })
+      .parse(await limited.json());
+    expect(body.code).toBe(SIGN_IN_LIMITED_CODE);
+    expect(body.until).toBeGreaterThanOrEqual(before + SIGN_IN_WINDOW_S - 5);
+    expect(body.until).toBeLessThanOrEqual(nowSeconds() + SIGN_IN_WINDOW_S);
+    const sessions = await db
+      .select({ id: session.id })
+      .from(session)
+      .where(eq(session.userId, userId));
+    expect(sessions).toEqual([]);
+  });
+
+  it("counts the address however it is typed", async () => {
+    const { auth } = instance();
+    const { email } = await signUp(auth);
+    for (let n = 0; n < SIGN_IN_TRIES; n += 1) {
+      await tryPassword(auth, n % 2 === 0 ? email : email.toUpperCase(), wrong);
+    }
+    expect(await triesOf(email)).toBe(SIGN_IN_TRIES);
+    const limited = await tryPassword(auth, email.toUpperCase(), password);
+    expect(limited.status).toBe(429);
+  });
+
+  it("counts an address with no account the same way", async () => {
+    const { auth } = instance();
+    const nobody = `nobody-${newUlid().toLowerCase()}@example.com`;
+    for (let n = 0; n < SIGN_IN_TRIES; n += 1) {
+      const refused = await tryPassword(auth, nobody, wrong);
+      expect(refused.status).toBe(401);
+    }
+    const limited = await tryPassword(auth, nobody, wrong);
+    expect(limited.status).toBe(429);
+    expect(await limited.json()).toMatchObject({ code: SIGN_IN_LIMITED_CODE });
+  });
+
+  it("starts again from none after a sign-in that works", async () => {
+    const { auth } = instance();
+    const { email } = await signUp(auth);
+    for (let n = 0; n < SIGN_IN_TRIES - 1; n += 1) {
+      await tryPassword(auth, email, wrong);
+    }
+    expect(await triesOf(email)).toBe(SIGN_IN_TRIES - 1);
+
+    const signedIn = await tryPassword(auth, email, password);
+
+    expect(signedIn.status).toBe(200);
+    expect(await triesOf(email)).toBeUndefined();
+    const next = await tryPassword(auth, email, wrong);
+    expect(next.status).toBe(401);
+    expect(await triesOf(email)).toBe(1);
+  });
+
+  it("keeps the count after a wrong password", async () => {
+    const { auth } = instance();
+    const { email } = await signUp(auth);
+    await tryPassword(auth, email, wrong);
+    await tryPassword(auth, email, wrong);
+    expect(await triesOf(email)).toBe(2);
+  });
+
+  it("counts nothing for a body with no address", async () => {
+    const { auth } = instance();
+    const before = await db.select({ kind: rateLimits.kind }).from(rateLimits);
+    const refused = await auth.handler(post("sign-in/email", { password }));
+    expect(refused.status).toBe(400);
+    const after = await db.select({ kind: rateLimits.kind }).from(rateLimits);
+    expect(after).toHaveLength(before.length);
+  });
+});
 
 describe("checkOwnPassword (tries at the current password, limited)", () => {
   const NOW = 1_800_000_000;
@@ -405,6 +651,29 @@ describe("Better Auth's change-password endpoint over HTTP (R-124)", () => {
       headers: new Headers({ cookie }),
     });
     expect(await canSignInWith(auth, userId, next)).toBe(true);
+  });
+});
+
+describe("Better Auth's verify-password endpoint over HTTP", () => {
+  it("is not there, while the server's own check still answers", async () => {
+    const { auth } = instance();
+    const { email } = await signUp(auth);
+    const cookie = await signIn(auth, email);
+
+    for (const guess of ["not-the-password-at-all", password]) {
+      const response = await auth.handler(
+        post("verify-password", { password: guess }, cookie),
+      );
+      expect(response.status).toBe(404);
+    }
+
+    const headers = new Headers({ cookie });
+    expect(await isOwnPassword(auth, headers, password)).toBe(true);
+    expect(
+      await refused("INVALID_PASSWORD", () =>
+        isOwnPassword(auth, headers, "not-the-password-at-all"),
+      ),
+    ).toBe(false);
   });
 });
 

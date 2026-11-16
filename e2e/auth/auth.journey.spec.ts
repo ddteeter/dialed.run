@@ -76,7 +76,7 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   ).toHaveAttribute("href", "/terms");
 
   await scene(page, "A code that doesn't work is marked on the code");
-  await page.getByLabel("Invite code").fill("DIAL-ZZZZ");
+  await page.getByLabel("Invite code").fill("DIAL-ZZZZ-ZZZZ");
   await page.getByLabel("Date of birth").fill("1990-04-21");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSPHRASE);
@@ -183,7 +183,7 @@ test("request access -> an invite from the Desk -> create an account -> sign out
     .getByRole("listitem")
     .filter({ hasText: `${email} (request)` });
   await expect(invite).toContainText("0 / 1", { timeout: 15_000 });
-  const code = /DIAL-[2-9A-HJ-NP-Z]{4}/u.exec(
+  const code = /DIAL-[2-9A-HJ-NP-Z]{4}-[2-9A-HJ-NP-Z]{4}/u.exec(
     (await invite.textContent()) ?? "",
   )?.[0];
   if (code === undefined) throw new Error("no code on the invited row");
@@ -240,9 +240,21 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   await scene(page, "Resend: a new link, and the old one stops working");
   await expect(page.getByText(/^Sent ✓/u)).toBeVisible({ timeout: 15_000 });
 
-  // The link, opened from the inbox (e2e/support/email-links).
-  await scene(page, "The link confirms the address");
-  await page.goto(await confirmLinkFor(email));
+  // The link, opened from the inbox (e2e/support/email-links). Fetching
+  // it — a mail scanner's GET, a preview's HEAD — spends nothing: the
+  // landing still asks after both (owner, 2026-11-15).
+  const link = await confirmLinkFor(email);
+  const fetched = await page.request.get(link);
+  expect(fetched.status()).toBe(200);
+  const peeked = await page.request.head(link);
+  expect(peeked.status()).toBe(200);
+  await scene(page, "The link asks; its one button confirms the address");
+  await page.goto(link);
+  await expect(
+    page.getByRole("heading", { name: "Confirm your email" }),
+  ).toBeVisible({ timeout: 15_000 });
+  await hydrated(page);
+  await page.getByRole("button", { name: "Confirm email" }).click();
   await expect(
     page.getByRole("heading", { name: "Email confirmed" }),
   ).toBeVisible({ timeout: 15_000 });

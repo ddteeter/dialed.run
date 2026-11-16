@@ -22,7 +22,7 @@ import {
 } from "../../src/db/schema-core";
 import { nowSeconds } from "../../src/lib/now";
 import { expect, scene, test } from "../support/demo";
-import { confirmLinkFor, unsubscribeLinkFor } from "../support/email-links";
+import { confirmAddress, unsubscribeLinkFor } from "../support/email-links";
 import { ensureInviteCode, turnstileAnswered } from "../support/invites";
 import { withLocalDb } from "../support/local-db";
 
@@ -92,10 +92,7 @@ test("account settings -> change password -> reminder emails off and on -> sign 
   await page.getByLabel("Password").fill(PASSPHRASE);
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page).toHaveURL(/\/account\/check-email/u, { timeout: 15_000 });
-  await page.goto(await confirmLinkFor(email));
-  await expect(
-    page.getByRole("heading", { name: "Email confirmed" }),
-  ).toBeVisible({ timeout: 15_000 });
+  await confirmAddress(page, email);
   await page.goto("/auth/login");
   await hydrated(page);
   await page.getByLabel("Email").fill(email);

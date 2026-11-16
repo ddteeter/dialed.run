@@ -22,6 +22,12 @@ export const resendInput = z.object({ email: z.string().max(320) });
  */
 export { tokenSearch as confirmInput } from "./route-decisions";
 
+/**
+ * The confirm landing's form: one button and no fields. The token rides
+ * in the server function's input, not the form.
+ */
+export const confirmLinkForm = z.object({});
+
 export { changeEmailSchema as changeEmailInput } from "../../lib/contracts";
 
 /**

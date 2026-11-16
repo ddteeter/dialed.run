@@ -38,13 +38,13 @@ describe("parseSignInSearch", () => {
   });
 
   it("carries an invite link's code, if it is short enough to be one (ACC-5)", () => {
-    expect(parseSignInSearch({ code: "DIAL-7K3P" }).code).toBe("DIAL-7K3P");
+    expect(parseSignInSearch({ code: "DIAL-7K3P-2QXM" }).code).toBe("DIAL-7K3P-2QXM");
     expect(parseSignInSearch({ code: "x".repeat(20) }).code).toBe(
       "x".repeat(20),
     );
     expect(parseSignInSearch({ code: "x".repeat(21) }).code).toBeUndefined();
-    expect(joinSearch({ code: "DIAL-7K3P", redirect: "/x" })).toStrictEqual({
-      code: "DIAL-7K3P",
+    expect(joinSearch({ code: "DIAL-7K3P-2QXM", redirect: "/x" })).toStrictEqual({
+      code: "DIAL-7K3P-2QXM",
     });
     expect(joinSearch({ code: 7 })).toStrictEqual({ code: undefined });
   });
@@ -123,21 +123,21 @@ describe("onToSignUp (/join)", () => {
   it("goes on to Au2 with the code in its search", () => {
     let thrown: unknown;
     try {
-      onToSignUp({ code: "DIAL-7K3P" });
+      onToSignUp({ code: "DIAL-7K3P-2QXM" });
     } catch (error: unknown) {
       thrown = error;
     }
     expect(thrown).toMatchObject({
-      options: { to: "/auth/signup", search: { code: "DIAL-7K3P" } },
+      options: { to: "/auth/signup", search: { code: "DIAL-7K3P-2QXM" } },
     });
   });
 });
 
 describe("googleReturn", () => {
   it("brings Au2's code back with a refused attempt", () => {
-    expect(googleReturn("/auth/signup", { code: "DIAL-7K3P" })).toEqual({
+    expect(googleReturn("/auth/signup", { code: "DIAL-7K3P-2QXM" })).toEqual({
       callbackURL: "/",
-      errorCallbackURL: "/auth/signup?code=DIAL-7K3P",
+      errorCallbackURL: "/auth/signup?code=DIAL-7K3P-2QXM",
     });
   });
 

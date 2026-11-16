@@ -120,6 +120,7 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "account/functions.ts ownAccountQuery": "unconfirmed",
   "account/functions.ts resendConfirmationFn": "sessionless",
   "account/functions.ts confirmEmailFn": "sessionless",
+  "account/functions.ts readEmailLinkFn": "sessionless",
   // Q8: trusts the address.
   "account/functions.ts requestEmailChangeFn": "verified",
   "account/functions.ts turnstileSiteKeyQuery": "sessionless",

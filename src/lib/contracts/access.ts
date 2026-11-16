@@ -24,17 +24,31 @@ export const IS_INVITE_ONLY = true;
 export const INVITE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 
 /**
- * `DIAL-` and four of the alphabet: 32^4, about a million codes (20 bits).
- * Enough for the friends stage (D-38), where a code is handed to someone
- * and a guesser must also pass Turnstile and Better Auth's sign-up limit
- * per attempt; the public gate lengthens it or retires codes altogether.
+ * `DIAL-` and two groups of four of the alphabet, `DIAL-7KQ2-M9XP`: 32^8,
+ * about a trillion codes (40 bits), out of reach of guessing one at a
+ * time online. Grouped so it reads aloud in two breaths (owner,
+ * 2026-11-15); the field takes it with or without the middle hyphen.
  */
 export const INVITE_PREFIX = "DIAL-";
-const INVITE_BODY_LENGTH = 4;
+const INVITE_GROUP_LENGTH = 4;
+const INVITE_GROUPS = 2;
 
+const INVITE_GROUP = `[${INVITE_ALPHABET}]{${String(INVITE_GROUP_LENGTH)}}`;
 const INVITE_SHAPE = new RegExp(
-  `^${INVITE_PREFIX}[${INVITE_ALPHABET}]{${String(INVITE_BODY_LENGTH)}}$`,
+  `^${INVITE_PREFIX}${Array.from({ length: INVITE_GROUPS }, () => INVITE_GROUP).join("-")}$`,
+  "u",
 );
+
+/**
+ * A code's characters in its groups of four, joined by hyphens.
+ */
+function grouped(characters: string): string {
+  const groups: string[] = [];
+  for (let at = 0; at < characters.length; at += INVITE_GROUP_LENGTH) {
+    groups.push(characters.slice(at, at + INVITE_GROUP_LENGTH));
+  }
+  return groups.join("-");
+}
 
 /**
  * Round 28 #9's refusals. A spent code, a revoked one, one nobody made
@@ -48,14 +62,16 @@ export const INVITE_COPY = {
 } as const;
 
 /**
- * A code as it is stored and compared: case ignored, spaces dropped, and
- * the `DIAL-` a runner left off put back.
+ * A code as it is stored and compared: case ignored, spaces dropped, the
+ * `DIAL-` a runner left off put back, and the groups' hyphen put where it
+ * goes whether or not it was typed.
  */
 export function normalizeInviteCode(typed: string): string {
   const compact = typed.replaceAll(/\s/gu, "").toUpperCase();
-  return compact.startsWith(INVITE_PREFIX)
-    ? compact
-    : `${INVITE_PREFIX}${compact}`;
+  const body = compact.startsWith(INVITE_PREFIX)
+    ? compact.slice(INVITE_PREFIX.length)
+    : compact;
+  return `${INVITE_PREFIX}${grouped(body.replaceAll("-", ""))}`;
 }
 
 /**
@@ -76,12 +92,12 @@ export function mintInviteCode(
   random: (length: number) => Uint8Array = (length) =>
     crypto.getRandomValues(new Uint8Array(length)),
 ): string {
-  const bytes = random(INVITE_BODY_LENGTH);
+  const bytes = random(INVITE_GROUP_LENGTH * INVITE_GROUPS);
   const body = Array.from(
     bytes,
     (byte) => INVITE_ALPHABET[byte % INVITE_ALPHABET.length],
   ).join("");
-  return `${INVITE_PREFIX}${body}`;
+  return `${INVITE_PREFIX}${grouped(body)}`;
 }
 
 /**
@@ -248,6 +264,29 @@ export const ACCESS_CODES = {
   missing: "INVITE_MISSING",
   invalid: "INVITE_INVALID",
 } as const;
+
+/**
+ * Email sign-in's tries per typed address (owner, 2026-11-15): ten in
+ * fifteen minutes, whether or not the address has an account, so the
+ * limit says nothing about which addresses do. A sign-in that works
+ * clears the count.
+ */
+export const SIGN_IN_TRIES = 10;
+export const SIGN_IN_WINDOW_S = 15 * 60;
+
+/**
+ * The refusal a sign-in past the limit carries, with `until`: when the
+ * address may try again, in epoch seconds.
+ */
+export const SIGN_IN_LIMITED_CODE = "SIGN_IN_LIMITED";
+
+/**
+ * The log-in band's sentence past the limit (owner, 2026-11-15), on the
+ * device's clock: a signed-out visitor has no home zone.
+ */
+export function signInLimitedMessage(until: number): string {
+  return `Too many tries for this address. Try again at ${viewerClockLabel(until, undefined)}, or reset your password.`;
+}
 
 /**
  * The ban gate's refusal (task 128 · SAF-4, `safety/ban-gate.ts`): the

@@ -5,12 +5,17 @@
 import { betterAuth } from "better-auth";
 import type { BetterAuthPlugin } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { APIError, createAuthMiddleware } from "better-auth/api";
+import {
+  APIError,
+  createAuthMiddleware,
+  getSessionFromCtx,
+} from "better-auth/api";
 import { eq, sql } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import * as authSchema from "../../db/schema-auth";
-import type { AuthMail } from "../account";
+import { newUlid } from "../../lib/ids";
+import { changeLinkWithdrawal, type AuthMail } from "../account";
 import { PASSWORD_MIN_LENGTH } from "../../lib/contracts";
 import { outboxInsertWhere, oweOutbox } from "../ops";
 import {
@@ -20,16 +25,20 @@ import {
   type HookRequest,
 } from "./access-hook";
 import { AUTH_COPY } from "./auth-copy";
+import { CLOSED_AUTH_PATHS } from "./closed-paths";
+import { clearSignInTries, countSignInTry } from "./sign-in-limit";
 import {
   BREACHED_CODE,
-  CHANGE_PASSWORD_PATH,
   newPasswordIn,
   type BreachVerdict,
 } from "./breached-password";
 
 export interface AuthConfig {
   db: ReturnType<typeof drizzle>;
-  secret: string;
+  /**
+   * `undefined` when the binding is unset: `signingSecret` refuses it.
+   */
+  secret: string | undefined;
   baseUrl?: string | undefined;
   /** Absent when the deployment has no Google credentials — email/password
    *  still works (CLAUDE.md law 5). */
@@ -74,8 +83,8 @@ export interface AuthConfig {
 }
 
 /**
- * The before-hook's half that screens a new password on sign-up and on a
- * password change.
+ * The before-hook's half that screens a new password on sign-up, on a
+ * password change and on a reset.
  *
  * **Fails open** (law 5): a screen that times out or errors lets the
  * request through and reports it — sign-up is the primary action and the
@@ -103,6 +112,28 @@ async function screenPassword(
 }
 
 /**
+Better Auth's Sign out everywhere, as its hooks name it.
+*/
+const REVOKE_SESSIONS_PATH = "/revoke-sessions";
+
+/**
+ * Sign out everywhere also withdraws the runner's open change-email link:
+ * it is what a runner presses when they think someone else got in, and a
+ * change that someone asked for must not outlive it. Withdrawn before the
+ * sessions end, from the session that asked; no session, nothing to do
+ * (the endpoint refuses it anyway).
+ */
+async function withdrawChangeOnSignOutEverywhere(
+  db: AuthConfig["db"],
+  ctx: Parameters<Parameters<typeof createAuthMiddleware>[0]>[0],
+): Promise<void> {
+  if (ctx.path !== REVOKE_SESSIONS_PATH) return;
+  const session = await getSessionFromCtx(ctx);
+  if (session === null) return;
+  await changeLinkWithdrawal(db, session.user.id);
+}
+
+/**
  * What the deployment's own origin says about how auth should behave
  * (OPS-4, audit finding 0.7), decided here rather than by `NODE_ENV`,
  * which Better Auth reads by default and a Worker does not have.
@@ -120,6 +151,32 @@ export function deploymentPosture(baseUrl: string | undefined): {
 } {
   const isHttps = baseUrl?.startsWith("https://") === true;
   return { secureCookies: isHttps, rateLimited: isHttps };
+}
+
+/**
+ * The secret every token and cookie Better Auth signs is signed with, or
+ * no auth instance at all.
+ *
+ * Better Auth answers an empty secret with a fixed fallback of its own
+ * and refuses that fallback only under `NODE_ENV=production`, which a
+ * Worker does not have. So the refusal is ours: an unset or blank
+ * `BETTER_AUTH_SECRET` stops the instance being built, which stops the
+ * Worker serving anything, rather than starting on a secret everyone
+ * can read.
+ */
+function signingSecret(secret: string | undefined): string {
+  if (secret === undefined || secret.trim() === "") {
+    throw new Error("BETTER_AUTH_SECRET is not set: auth will not start");
+  }
+  return secret;
+}
+
+/**
+ * A date as the `user` table stores it: `integer` in timestamp mode keeps
+ * whole seconds.
+ */
+function toWholeSecond(date: Date): Date {
+  return new Date(Math.floor(date.getTime() / 1000) * 1000);
 }
 
 /**
@@ -203,14 +260,15 @@ export function createAuth({
     else background(work);
   }
   return betterAuth({
-    secret,
+    secret: signingSecret(secret),
     telemetry: { enabled: false },
-    // Change password is ours (`./change-password`, R-124): the per-runner
-    // count on tries at the current password runs before Better Auth's
-    // endpoint is called. Over HTTP the endpoint would skip that count, so
-    // the router answers it 404. Only the router reads this list, so the
-    // server-side `auth.api.changePassword` still works.
-    disabledPaths: [CHANGE_PASSWORD_PATH],
+    // Every routed endpoint the app does not call from the browser is
+    // answered 404 (`./closed-paths`). Change password among them is ours
+    // (`./change-password`, R-124): the per-runner count on tries at the
+    // current password runs before Better Auth's endpoint is called. Only
+    // the router reads this list, so the server-side
+    // `auth.api.changePassword` and `auth.api.verifyPassword` still work.
+    disabledPaths: [...CLOSED_AUTH_PATHS],
     ...(baseUrl !== undefined && { baseURL: baseUrl }),
     // Better Auth's own limits for its sensitive paths (sign-in and
     // sign-up: 3 per 10 s per address) and 100 per minute elsewhere, with
@@ -260,6 +318,23 @@ export function createAuth({
       // runner logs in (unconfirmed runners can: D-50), or follows the
       // link, whichever comes first.
       autoSignIn: false,
+      // What Better Auth answers a registered address with: the user a new
+      // account's answer carries, as the create hook and the column leave
+      // it (`claimInvite`: no name, and a ULID when invite-only; the
+      // `user` table's dates: whole seconds). Pinned against a real
+      // sign-up's answer in `test/auth/create-auth.test.ts`.
+      // The app declares no additional user fields, so there are none to
+      // carry over.
+      customSyntheticUser: ({ coreFields, id }) => {
+        const at = toWholeSecond(coreFields.createdAt);
+        return {
+          ...coreFields,
+          name: "",
+          createdAt: at,
+          updatedAt: at,
+          id: access.isInviteOnly ? newUlid() : id,
+        };
+      },
       onExistingUserSignUp: ({ user }) => mail.existingAccount(user),
       // ACC-4. Better Auth's reset: single use, its row deleted when
       // spent; the link lives an hour, and a reset signs every session
@@ -290,6 +365,8 @@ export function createAuth({
             .update(authSchema.user)
             .set({ emailVerified: true })
             .where(account),
+          // A change asked for before the reset moves the account no more.
+          changeLinkWithdrawal(db, user.id),
         ]);
       },
     },
@@ -315,6 +392,11 @@ export function createAuth({
         update: { before: withoutProviderTokens },
       },
     },
+    // Google signs in only to an account it is already a login of. An
+    // address whose account was made with a password is refused as
+    // `account_not_linked` (owner, 2026-11-15): the runner logs in with the
+    // password, or resets it, and the band says so (`GOOGLE_REFUSALS`).
+    account: { accountLinking: { disableImplicitLinking: true } },
     // Google makes an account only when Au2 asks it to (`requestSignUp`),
     // which is where Turnstile and the code are checked; from the log-in
     // page an unknown Google address is refused, not signed up.
@@ -336,6 +418,11 @@ export function createAuth({
         // whatever the code says. Then the way in.
         await screenPassword(passwordScreen, ctx);
         await admitSignUp(access, ctx);
+        await withdrawChangeOnSignOutEverywhere(db, ctx);
+        await countSignInTry(db, ctx);
+      }),
+      after: createAuthMiddleware(async (ctx) => {
+        await clearSignInTries(db, ctx);
       }),
     },
     plugins: plugins ?? [],

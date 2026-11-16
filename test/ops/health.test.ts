@@ -159,6 +159,23 @@ describe("the unsubscribe secret (task 126)", () => {
   });
 });
 
+describe("the auth signing secret", () => {
+  const ORIGINAL: unknown = env.BETTER_AUTH_SECRET;
+
+  afterEach(() => {
+    Reflect.set(env, "BETTER_AUTH_SECRET", ORIGINAL);
+  });
+
+  it("names a missing BETTER_AUTH_SECRET, and is not healthy without it", async () => {
+    Reflect.deleteProperty(env, "BETTER_AUTH_SECRET");
+
+    const report = await checkHealth();
+
+    expect(report.missing).toStrictEqual(["BETTER_AUTH_SECRET"]);
+    expect(report.ok).toBe(false);
+  });
+});
+
 const HOUR = 3600;
 const NOW = 1_800_000_000;
 

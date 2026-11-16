@@ -58,7 +58,7 @@ export function orderedCodes(
 
 /**
  * The status line over the list when a code is made (round 28 #9):
- * "DIAL-7QX2 MADE · LINK COPIED", or just MADE when the copy failed and
+ * "DIAL-7QX2-M9KP MADE · LINK COPIED", or just MADE when the copy failed and
  * the row's band shows the link instead.
  */
 export function madeLine(code: string, isCopied: boolean): string {

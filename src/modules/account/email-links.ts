@@ -104,6 +104,23 @@ export async function emailLinkWrite(
 }
 
 /**
+ * The runner's open change-email link, withdrawn, unsent — for the
+ * batches where the password changes hands (a reset, a change, Sign out
+ * everywhere). A change requested before then must not still move the
+ * account once its password has been replaced. Their other links stay.
+ */
+export function changeLinkWithdrawal(db: Db, userId: string) {
+  return db
+    .delete(emailVerifications)
+    .where(
+      and(
+        eq(emailVerifications.userId, userId),
+        eq(emailVerifications.purpose, "change"),
+      ),
+    );
+}
+
+/**
  * A link read back: the row it names, when its secret is the row's
  * current one. Anything else — a token of the wrong shape, a runner with
  * no link, a link replaced by a newer one — is `undefined`, which the

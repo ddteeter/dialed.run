@@ -11,6 +11,9 @@ import {
   REGION_BLOCKED_CODE,
   REGION_BLOCKED_COPY,
   REGION_COPY,
+  SIGN_IN_LIMITED_CODE,
+  SIGN_IN_TRIES,
+  SIGN_IN_WINDOW_S,
   TURNSTILE_REFUSED,
   blockedRegionOf,
   inviteCodeField,
@@ -20,6 +23,7 @@ import {
   normalizeInviteCode,
   regionInviteRefusal,
   regionTag,
+  signInLimitedMessage,
 } from "../../src/lib/contracts/access";
 
 /**
@@ -27,7 +31,7 @@ import {
  * round 27 #12).
  */
 describe("the invite code", () => {
-  it("is DIAL- and four of an alphabet with no 0/O or 1/I", () => {
+  it("is DIAL- and two groups of four of an alphabet with no 0/O or 1/I", () => {
     expect(INVITE_PREFIX).toBe("DIAL-");
     expect(INVITE_ALPHABET).toHaveLength(32);
     for (const confusable of ["0", "O", "1", "I"]) {
@@ -37,39 +41,47 @@ describe("the invite code", () => {
   });
 
   it("ignores case and spaces, and puts back a DIAL- left off", () => {
-    expect(normalizeInviteCode(" dial-7k3p ")).toBe("DIAL-7K3P");
-    expect(normalizeInviteCode("7k 3p")).toBe("DIAL-7K3P");
-    expect(normalizeInviteCode("DIAL-7K3P")).toBe("DIAL-7K3P");
+    expect(normalizeInviteCode(" dial-7k3p-2qxm ")).toBe("DIAL-7K3P-2QXM");
+    expect(normalizeInviteCode("7k 3p-2q xm")).toBe("DIAL-7K3P-2QXM");
+    expect(normalizeInviteCode("DIAL-7K3P-2QXM")).toBe("DIAL-7K3P-2QXM");
+  });
+
+  it("puts the middle hyphen where it goes, typed or not", () => {
+    expect(normalizeInviteCode("DIAL-7K3P2QXM")).toBe("DIAL-7K3P-2QXM");
+    expect(normalizeInviteCode("7k3p2qxm")).toBe("DIAL-7K3P-2QXM");
+    expect(normalizeInviteCode("DIAL-7K-3P2Q-XM")).toBe("DIAL-7K3P-2QXM");
   });
 
   it("parses to the stored form, refusing the wrong shape as invalid", () => {
-    expect(inviteCodeField.parse("dial-7k3p")).toBe("DIAL-7K3P");
+    expect(inviteCodeField.parse("dial-7k3p-2qxm")).toBe("DIAL-7K3P-2QXM");
+    expect(inviteCodeField.parse("7k3p2qxm")).toBe("DIAL-7K3P-2QXM");
     const message = (typed: string) =>
       inviteCodeField
         .safeParse(typed)
         .error?.issues.map((issue) => issue.message);
     expect(message("")).toStrictEqual([INVITE_COPY.missing]);
-    expect(message("DIAL-7K3")).toStrictEqual([INVITE_COPY.invalid]);
-    expect(message("DIAL-7K3PP")).toStrictEqual([INVITE_COPY.invalid]);
-    expect(message("DIAL-0K3P")).toStrictEqual([INVITE_COPY.invalid]);
-    expect(message("XDIAL-7K3P")).toStrictEqual([INVITE_COPY.invalid]);
-    expect(message("DIAL-7K3P!")).toStrictEqual([INVITE_COPY.invalid]);
+    expect(message("DIAL-7K3P")).toStrictEqual([INVITE_COPY.invalid]);
+    expect(message("DIAL-7K3P-2QX")).toStrictEqual([INVITE_COPY.invalid]);
+    expect(message("DIAL-7K3P-2QXMM")).toStrictEqual([INVITE_COPY.invalid]);
+    expect(message("DIAL-0K3P-2QXM")).toStrictEqual([INVITE_COPY.invalid]);
+    expect(message("XDIAL-7K3P-2QXM")).toStrictEqual([INVITE_COPY.invalid]);
+    expect(message("DIAL-7K3P-2QXM!")).toStrictEqual([INVITE_COPY.invalid]);
+    expect(message("DIAL-7K3P-2QXM-ABCD")).toStrictEqual([INVITE_COPY.invalid]);
   });
 
-  it("mints from the alphabet, one character per random byte", () => {
-    expect(mintInviteCode(() => new Uint8Array([0, 1, 31, 32]))).toBe(
-      "DIAL-23Z2",
-    );
-    expect(mintInviteCode(() => new Uint8Array([255, 7, 8, 30]))).toBe(
-      "DIAL-Z9AY",
-    );
+  it("mints from the alphabet, one character per random byte, in two groups", () => {
+    expect(
+      mintInviteCode(() => new Uint8Array([0, 1, 31, 32, 255, 7, 8, 30])),
+    ).toBe("DIAL-23Z2-Z9AY");
     let asked = 0;
     mintInviteCode((length) => {
       asked = length;
       return new Uint8Array(length);
     });
-    expect(asked).toBe(4);
-    expect(mintInviteCode()).toMatch(/^DIAL-[2-9A-HJ-NP-Z]{4}$/u);
+    expect(asked).toBe(8);
+    expect(mintInviteCode()).toMatch(
+      /^DIAL-[2-9A-HJ-NP-Z]{4}-[2-9A-HJ-NP-Z]{4}$/u,
+    );
   });
 });
 
@@ -81,6 +93,16 @@ describe("the words", () => {
     });
     expect(TURNSTILE_REFUSED).toBe(
       "We couldn't check this browser. Reload the page and try again.",
+    );
+  });
+
+  it("limit sign-in to the owner's ten tries in fifteen minutes, in the owner's sentence", () => {
+    expect(SIGN_IN_TRIES).toBe(10);
+    expect(SIGN_IN_WINDOW_S).toBe(900);
+    expect(SIGN_IN_LIMITED_CODE).toBe("SIGN_IN_LIMITED");
+    // 2027-01-15 08:15 UTC, on a device whose clock is UTC.
+    expect(signInLimitedMessage(1_800_000_900)).toBe(
+      "Too many tries for this address. Try again at 8:15 AM UTC, or reset your password.",
     );
   });
 

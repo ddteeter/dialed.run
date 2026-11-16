@@ -8,10 +8,13 @@ import {
 import {
   INVITE_COPY,
   REGION_BLOCKED_COPY,
+  SIGN_IN_LIMITED_CODE,
   TURNSTILE_REFUSED,
+  signInLimitedMessage,
 } from "../../src/lib/contracts/access";
 import {
   AUTH_COPY,
+  AUTH_KICKER,
   AccessRefused,
   AccountClosedRefusal,
   AuthRejected,
@@ -135,6 +138,43 @@ describe("signIn", () => {
     expect(isRememberedForSession("has-handle")).toBe(true);
   });
 
+  it("says when the address may try again once its tries are used up, with no retry", async () => {
+    rememberForSession("u1", "has-handle");
+    const until = 1_800_000_900;
+    client.email.mockResolvedValue({
+      data: undefined,
+      error: { code: SIGN_IN_LIMITED_CODE, until, status: 429 },
+    });
+    const thrown = await caught(signIn(person));
+    expect(thrown).toBeInstanceOf(AccessRefused);
+    expect(thrown).toMatchObject({
+      kicker: AUTH_KICKER,
+      message: signInLimitedMessage(until),
+      retry: false,
+    });
+    expect(isRememberedForSession("has-handle")).toBe(true);
+  });
+
+  it("reads a limit refusal with no time as Better Auth's own limit", async () => {
+    client.email.mockResolvedValue({
+      data: undefined,
+      error: { code: SIGN_IN_LIMITED_CODE, status: 429 },
+    });
+    const thrown = await caught(signIn(person));
+    expect(thrown).toBeInstanceOf(AuthRejected);
+    expect(thrown).toMatchObject({ status: 429 });
+  });
+
+  it("reads Better Auth's own limit as its own, even with a time on it", async () => {
+    client.email.mockResolvedValue({
+      data: undefined,
+      error: { code: "TOO_MANY_REQUESTS", until: 1_800_000_900, status: 429 },
+    });
+    const thrown = await caught(signIn(person));
+    expect(thrown).toBeInstanceOf(AuthRejected);
+    expect(thrown).toMatchObject({ status: 429 });
+  });
+
   it("keeps any other refusal's status for the band", async () => {
     client.email.mockResolvedValue({
       data: undefined,
@@ -167,7 +207,7 @@ describe("signUp", () => {
     client.signUp.mockResolvedValue({ data: {}, error: undefined });
     await expect(
       signUp(
-        { ...account, inviteCode: "DIAL-7K3P", birthDate: "1990-04-21" },
+        { ...account, inviteCode: "DIAL-7K3P-2QXM", birthDate: "1990-04-21" },
         TOKEN,
       ),
     ).resolves.toBeUndefined();
@@ -175,7 +215,7 @@ describe("signUp", () => {
       { ...person, name: "" },
       {
         headers: {
-          "x-invite-code": "DIAL-7K3P",
+          "x-invite-code": "DIAL-7K3P-2QXM",
           "x-birth-date": "1990-04-21",
           "x-turnstile-token": TOKEN,
         },
@@ -412,7 +452,7 @@ describe("googleConsentUrl", () => {
       error: undefined,
     });
     await googleConsentUrl("/", "/auth/signup", {
-      inviteCode: "DIAL-7K3P",
+      inviteCode: "DIAL-7K3P-2QXM",
       birthDate: "1990-04-21",
       turnstileToken: "t",
     });
@@ -426,7 +466,7 @@ describe("googleConsentUrl", () => {
       },
       {
         headers: {
-          "x-invite-code": "DIAL-7K3P",
+          "x-invite-code": "DIAL-7K3P-2QXM",
           "x-birth-date": "1990-04-21",
           "x-turnstile-token": "t",
         },
@@ -486,7 +526,7 @@ describe("googleConsentUrl", () => {
     });
     const thrown = await caught(
       googleConsentUrl("/", "/auth/signup", {
-        inviteCode: "DIAL-7K3P",
+        inviteCode: "DIAL-7K3P-2QXM",
         turnstileToken: "t",
       }),
     );
@@ -506,7 +546,7 @@ describe("googleConsentUrl", () => {
     expect(
       await caught(
         googleConsentUrl("/", "/auth/signup", {
-          inviteCode: "DIAL-7K3P",
+          inviteCode: "DIAL-7K3P-2QXM",
           turnstileToken: undefined,
         }),
       ),

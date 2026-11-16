@@ -262,14 +262,21 @@ export interface BanState {
  * A user with no profile row is **not** banned. That is the right default:
  * the row is created during onboarding, so a brand-new account has none,
  * and failing closed here would lock out every first-time signup.
+ *
+ * `reader` is the handle it reads through: the request's, by default, and
+ * the primary for the sign-in gate (`banGate`), which must not let a
+ * lagging replica open a session for a runner just banned.
  */
-export async function banStateOf(userId: string): Promise<BanState> {
+export async function banStateOf(
+  userId: string,
+  reader: ReturnType<typeof db> = db(),
+): Promise<BanState> {
   // The full row, not just the two ban columns: `userId` is the primary
   // key, so this is one row read whichever way it is written, and
   // `firstRowWhere` is the shared primary-key lookup the rest of this
   // module already leans on (see `lib/sql/keyed-read.ts`).
   const row = await firstRowWhere(
-    db(),
+    reader,
     userProfiles,
     eq(userProfiles.userId, userId),
   );

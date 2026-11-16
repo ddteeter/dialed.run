@@ -20,7 +20,7 @@ import { withLocalDb } from "./local-db";
  * sign-up through the API has no widget, and sends the token Cloudflare
  * documents for its test secret instead.
  */
-export const E2E_INVITE_CODE = "DIAL-TEST";
+export const E2E_INVITE_CODE = "DIAL-TEST-CASE";
 
 /**
 Cloudflare's dummy token, which its always-pass test secret accepts.

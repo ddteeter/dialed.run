@@ -54,6 +54,13 @@ export const AUTH_COPY = {
    */
   googleNoAccount: "No account uses that Google address. Create one first.",
   /**
+   * Google for an address whose account was made with a password and has
+   * no Google login: Better Auth links nothing implicitly (`createAuth`),
+   * so the way in is the password, or Forgot it? (owner, 2026-11-15).
+   */
+  googleNotLinked:
+    "That address already has an account. Log in with your password, or reset it.",
+  /**
   Round 28 #9: Google on Au2 with the code field empty.
   */
   googleNoCode: "Enter your invite code above, then continue with Google.",
@@ -116,6 +123,12 @@ export class AccessRefused extends Error implements AuthBand {
  * log-in page, which only Au2 may do (ACC-5).
  */
 export const SIGNUP_DISABLED = "signup_disabled";
+
+/**
+ * Better Auth's answer when Google names an address whose account Google
+ * is not a login of.
+ */
+export const GOOGLE_NOT_LINKED = "account_not_linked";
 
 /**
  * Design 134: under 18, on the form and on Google alike. A band, not the
@@ -188,6 +201,14 @@ export const GOOGLE_REFUSALS: ReadonlyMap<string | undefined, AuthBand> =
       {
         kicker: NOT_LOGGED_IN,
         message: AUTH_COPY.googleNoAccount,
+        retry: false,
+      },
+    ],
+    [
+      GOOGLE_NOT_LINKED,
+      {
+        kicker: NOT_LOGGED_IN,
+        message: AUTH_COPY.googleNotLinked,
         retry: false,
       },
     ],

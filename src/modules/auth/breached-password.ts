@@ -101,9 +101,14 @@ export const CHANGE_PASSWORD_PATH = "/change-password";
 
 /**
  * The body a path that sets a password carries, parsed: sign-up's field
- * is `password`, a change's is `newPassword`. Any other path is not
+ * is `password`; a change's and a reset's is `newPassword` (a reset's
+ * token may ride beside it, or in the query). Any other path is not
  * screened.
  */
+const NEW_PASSWORD_BODY = z
+  .object({ newPassword: z.string() })
+  .transform((body) => ({ secret: body.newPassword }));
+
 const BODY_ON_PATH: ReadonlyMap<
   string | undefined,
   z.ZodType<{ secret: string }>
@@ -114,12 +119,8 @@ const BODY_ON_PATH: ReadonlyMap<
       secret: body.password,
     })),
   ],
-  [
-    CHANGE_PASSWORD_PATH,
-    z.object({ newPassword: z.string() }).transform((body) => ({
-      secret: body.newPassword,
-    })),
-  ],
+  [CHANGE_PASSWORD_PATH, NEW_PASSWORD_BODY],
+  ["/reset-password", NEW_PASSWORD_BODY],
 ]);
 
 export function newPasswordIn(

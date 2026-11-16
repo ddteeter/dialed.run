@@ -23,6 +23,7 @@
 import { APIError } from "better-auth/api";
 
 import { nowSeconds } from "../../lib/now";
+import { changeLinkWithdrawal } from "../account";
 import { BREACHED_CODE } from "./breached-password";
 import { checkOwnPassword } from "./password-check";
 import type { PasswordAuth } from "./password-check";
@@ -70,6 +71,11 @@ export async function changeOwnPassword(
 ): Promise<PasswordChange> {
   const proved = await checkOwnPassword(check, values.currentPassword, now);
   if (proved.status !== "own") return proved;
+  // Before the change, not after: a withdrawn link with the password
+  // unchanged (a breached new one) costs the runner a resend; a changed
+  // password with a change link still open would let whoever asked for it
+  // move the account anyway.
+  await changeLinkWithdrawal(check.db, check.userId);
   try {
     await check.auth.api.changePassword({
       body: {

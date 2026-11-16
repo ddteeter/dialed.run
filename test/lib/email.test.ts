@@ -37,7 +37,7 @@ describe("emailTemplateSchema", () => {
       },
       { kind: "account_reopened" },
       { kind: "account_reopened", handle: "maya_runs" },
-      { kind: "invite", code: "DIAL-7K2Q" },
+      { kind: "invite", code: "DIAL-7K2Q-M9XP" },
       { kind: "strava_disconnected" },
       { kind: "deletion_scheduled", day: "Sat, Oct 4" },
       { kind: "export_ready", token: "0123456789abcdef0123456789abcdef" },

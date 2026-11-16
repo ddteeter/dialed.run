@@ -51,6 +51,7 @@ describe("the app auth instance", () => {
       enabled: true,
       minPasswordLength: PASSWORD_MIN_LENGTH,
       autoSignIn: false,
+      customSyntheticUser: A_FUNCTION,
       // The account emails are wired (ACC-3, ACC-4).
       onExistingUserSignUp: A_FUNCTION,
       sendResetPassword: A_FUNCTION,

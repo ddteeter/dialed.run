@@ -1,13 +1,15 @@
 import { createHash, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 
-import { eq } from "drizzle-orm";
+import { expect, type Page } from "@playwright/test";
+import { eq, sql } from "drizzle-orm";
 
 import { user, verification } from "../../src/db/schema-auth";
 import { emailVerifications } from "../../src/db/schema-core";
 import { firstColumnWhere } from "../../src/lib/sql/keyed-read";
 import { nowSeconds } from "../../src/lib/now";
 import { unsubscribeUrl } from "../../src/modules/email/unsubscribe";
+import { hydrated } from "./demo";
 import { withLocalDb } from "./local-db";
 
 /**
@@ -20,7 +22,8 @@ import { withLocalDb } from "./local-db";
  *
  * - **the confirm link** is issued here as the app issues it — a fresh
  *   secret whose SHA-256 replaces the runner's row — and everything from
- *   opening it on is the app's own (`/account/verify`, the landing);
+ *   opening it on is the app's own (`/account/verify`, the landing, and
+ *   its Confirm email button: `confirmAddress`);
  * - **the reset link** is minted here, as a `verification` row of Better
  *   Auth's own shape: the one the email carried cannot be read back,
  *   because only its hash is stored (`storeIdentifier: "hashed"`). The
@@ -53,11 +56,28 @@ export async function confirmLinkFor(email: string): Promise<string> {
       .values({ userId, purpose: "verify", ...values })
       .onConflictDoUpdate({
         target: [emailVerifications.userId, emailVerifications.purpose],
-        set: values,
+        // A fresh link is unspent, as the app's own issue makes it.
+        set: { ...values, usedAt: sql`NULL` },
       });
   });
   const token = `verify.${userId}.${secret}`;
   return `/account/verify?token=${encodeURIComponent(token)}`;
+}
+
+/**
+ * Open the confirm link and press its one button, as a runner does:
+ * opening it only asks (owner, 2026-11-15).
+ */
+export async function confirmAddress(page: Page, email: string): Promise<void> {
+  await page.goto(await confirmLinkFor(email));
+  await expect(
+    page.getByRole("heading", { name: "Confirm your email" }),
+  ).toBeVisible({ timeout: 15_000 });
+  await hydrated(page);
+  await page.getByRole("button", { name: "Confirm email" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Email confirmed" }),
+  ).toBeVisible({ timeout: 15_000 });
 }
 
 export async function resetLinkFor(email: string): Promise<string> {
