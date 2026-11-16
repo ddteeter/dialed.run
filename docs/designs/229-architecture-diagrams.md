@@ -119,6 +119,30 @@ filesystem, so sources arrive as `?raw` imports, as
 - **Order:** build this now; a module move changes source paths and
   parents, not a story's steps, and the anchor test forces that update.
 
+## Step 2 as built (#801)
+
+- **Descriptions come from `docs/diagrams/structure.words.json`.** LikeC4's
+  `extend` takes child elements, tags and metadata but not a description,
+  so a hand-written file cannot describe a generated element. The
+  generator merges the words file in and throws on an id it does not
+  generate.
+- **Queues are read from `wrangler.jsonc`, not `ops/queues.ts`.** That
+  file imports `env`, which a script cannot load, and
+  `test/bindings-conformance.test.ts` already holds the two equal. Cron
+  names come from `ops/crons.ts`.
+- **No arrow between a module and its own sub-module.** LikeC4 refuses a
+  parent-to-child relationship; the nesting says it.
+- **A view a module.** The whole graph has about sixty arrows, so the
+  generator also writes `<module>Imports` for each module, and `modules`
+  is the map they open from.
+- **Three of the four Mermaid blocks left `architecture.md`** (owner,
+  2026-11-15). The resilience flowchart stays until the flows it draws
+  (the outbox, the Gave up table, the export queue, the digest) are
+  stories, which wait for #797.
+- **Edge caching and the public-photo zone cache are prose**, not
+  elements: no kind fits a cache in front of the Worker, and a kind is not
+  added for one picture.
+
 ## Open questions
 
 1. **Auth and trust boundaries are not drawn** while the security audit's

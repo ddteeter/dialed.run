@@ -10,12 +10,51 @@ flow step by step, and each step says what makes it safe to repeat and
 what picks the work up if it is lost. `flows/import.c4` is the worked
 example: read it before writing a flow.
 
-| file              | holds                                                       |
-| ----------------- | ----------------------------------------------------------- |
-| `spec.c4`         | the kinds: what an element or an arrow can be               |
-| `model.c4`        | every element once, and the arrows between them             |
-| `overview.c4`     | the views of structure                                      |
-| `flows/<flow>.c4` | one flow's views: its story, its recovery view, sub-stories |
+| file                     | holds                                                                        |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| `spec.c4`                | the kinds: what an element or an arrow can be                                |
+| `structure.generated.c4` | what is bound and what imports what. Generated, never edited                 |
+| `structure.words.json`   | the descriptions of generated elements, by id                                |
+| `model.c4`               | the people, the systems we call, each module's entry points, a flow's arrows |
+| `overview.c4`            | the views of structure                                                       |
+| `flows/<flow>.c4`        | one flow's views: its story, its recovery view, sub-stories                  |
+
+## What is generated
+
+`structure.generated.c4` is written by `npm run diagrams:generate` from
+`wrangler.jsonc`, the cron registry and the imports under `src/modules`,
+and `test/architecture/diagram-structure.test.ts` fails when it is stale.
+It holds:
+
+- every D1 database, R2 bucket, Analytics Engine dataset and queue
+  (`cf.coreDb`, `cf.importsBucket`, `cf.importsQueue`, `cf.importsDlq`),
+  with each queue's arrow to its dead-letter queue;
+- every cron, named for its firing (`cf.app.cronHourly30`), because one
+  firing runs several jobs. The step's label says which job;
+- every module and sub-module (`cf.app.runs`, `cf.app.runs.parsers`: a
+  folder with its own `index.ts`), an `-[imports]->` arrow for each pair
+  where one imports from the other, and a view a module of its imports.
+
+You never write these by hand, and never write an `-[imports]->` arrow.
+Read the file for the ids. When a binding, a cron, a module or a
+cross-module import changes, run `npm run diagrams:generate` and commit
+the result. If that removes or renames an element a flow names,
+`diagrams:check` fails on the flow: that is the flow telling you it needs
+re-reading.
+
+A generated element's description is a line in `structure.words.json`
+(LikeC4's `extend` cannot set one). An id there that is not generated
+fails the generator.
+
+**An entry point goes inside the module that owns it**, in `model.c4`:
+
+```
+extend cf.app.runs {
+  upload = inRequest 'startImport' { … }
+}
+```
+
+and is named `cf.app.runs.upload` everywhere after.
 
 ## Read the code before you draw
 
@@ -38,22 +77,25 @@ cron re-drives, and `wrangler.jsonc` for retries and dead-letter queues.
 An element's kind says **when its code runs**, which is the timing
 boundary. Its `technology` line says it in words.
 
-| kind                          | colour | means                                                 | `technology` reads like                              |
-| ----------------------------- | ------ | ----------------------------------------------------- | ---------------------------------------------------- |
-| `inRequest`                   | green  | runs in the request; one attempt, someone waits       | `in the request: one attempt, the runner is waiting` |
-| `offQueue`                    | blue   | a queue consumer; later, at least once                | `off the queue: seconds later, at least once`        |
-| `onCron`                      | amber  | a cron firing; re-drives what is still owed           | `cron: every hour`                                   |
-| `module`                      | blue   | code called by an entry point, no boundary of its own | (none)                                               |
-| `database`, `bucket`, `queue` | slate  | a D1 database, an R2 bucket, a queue                  | (none)                                               |
-| `external`                    | muted  | a system we call and do not run                       | (none)                                               |
+| kind                          | colour | means                                                  | `technology` reads like                              |
+| ----------------------------- | ------ | ------------------------------------------------------ | ---------------------------------------------------- |
+| `inRequest`                   | green  | runs in the request; one attempt, someone waits        | `in the request: one attempt, the runner is waiting` |
+| `offQueue`                    | blue   | a queue consumer; later, at least once                 | `off the queue: seconds later, at least once`        |
+| `onCron`                      | amber  | a cron firing; re-drives what is still owed. Generated | its expression and registry name                     |
+| `module`                      | blue   | code called by an entry point, no boundary of its own  | (none)                                               |
+| `database`, `bucket`, `queue` | slate  | a D1 database, an R2 bucket, a queue. Generated        | (none)                                               |
+| `external`                    | muted  | a system we call and do not run                        | (none)                                               |
 
-An entry point is one element per way in: the server function, the
-consumer, the cron's handler. Two entry points in one module are two
+An entry point is one element per way in: the server function or the
+consumer. A cron's entry point is its generated firing. Two entry points in one module are two
 elements, because they run at different times. Two server functions that
 run the same path (a create and an update) are one element named for both.
 
-A call into another module is a step on the caller's own element, not a
-new element, unless that module is itself an entry point in the flow.
+A call into another module is a step on the caller's own element, or a
+step to that module's generated element (`cf.app.weather`) when the flow
+turns on what it does. Add a `module` element by hand only for one
+function inside a module that a flow has to name
+(`cf.app.enrichment.request`).
 
 **Elements are shared between flows, so describe them for all of them.**
 A database's description says what it holds, never what one flow uses it
@@ -67,6 +109,7 @@ An arrow's kind says what the hop is:
 | `->`            | grey dashed  | a call the sender waits on                                         |
 | `-[async]->`    | amber dotted | a hop across a timing boundary: an enqueue, a delivery             |
 | `-[recovery]->` | red solid    | a path that exists to repair: a re-drive, a dead-letter, a give-up |
+| `-[imports]->`  | grey solid   | generated only: one module imports from another                    |
 
 Do not add a kind, a colour or a tag for one flow. If a flow seems to need
 one, say so in your report and use the nearest existing kind.
@@ -117,9 +160,9 @@ no step budget; if its sequence render stops being readable, split it by
 failure.
 
 **The overview is not yours to grow.** `overview.c4` names what it
-includes, and a new element does not join it by default. If the flow adds
-a queue, a bucket, a database or an external system, add that one element
-to the view it belongs in, render it, and look.
+includes. A new queue, bucket or database arrives by generation and joins
+`platform` on its own; a new external system joins `index`. Render both
+and look after either.
 
 ## The loop
 
