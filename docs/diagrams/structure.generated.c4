@@ -89,6 +89,7 @@ model {
   cf.exportsQueue -[recovery]-> cf.exportsDlq 'dead-letters after 3 retries'
   cf.app.account -[imports]-> cf.app.auth
   cf.app.account -[imports]-> cf.app.email
+  cf.app.account -[imports]-> cf.app.enrichment
   cf.app.account -[imports]-> cf.app.feed
   cf.app.account -[imports]-> cf.app.notifications
   cf.app.account -[imports]-> cf.app.ops
@@ -106,6 +107,7 @@ model {
   cf.app.closet -[imports]-> cf.app.products
   cf.app.closet -[imports]-> cf.app.safety
   cf.app.email -[wiring]-> cf.app.auth
+  cf.app.enrichment -[imports]-> cf.app.email
   cf.app.enrichment -[imports]-> cf.app.products
   cf.app.feed -[imports]-> cf.app.account
   cf.app.feed -[wiring]-> cf.app.auth
