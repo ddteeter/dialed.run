@@ -332,7 +332,8 @@ const PHOTO_REFUSALS: Readonly<Record<FilePartProblem, string>> = {
  * pipeline cannot store.
  *
  * The size is checked against the *declared* size, before the bytes are
- * read, so an oversized upload is refused without being allocated. All
+ * copied out of the form, so an oversized upload is refused without that
+ * copy. All
  * three refusals are decisions, which is why they are here rather than in
  * the server function's validator (R-41).
  */
