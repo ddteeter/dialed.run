@@ -1483,6 +1483,31 @@ Design 315 (#761) asks again.
   waiting on; the corrections sheet says "Keep the link to 2048
   characters." for a longer link.
 
+## Built for the auth lane (wave 12, design 225)
+
+Three surfaces built from the owner's words (2026-11-15) with no board
+yet. Each is a guess at composition until Design draws it.
+
+- **Guess · the link landings ask first.** `/account/verify` no longer
+  confirms on open: it asks, with one ink button, on the unsubscribe
+  landing's composition (round 27 #8). A sign-up link: kicker "Confirm",
+  "Confirm your email", "This confirms {masked address} for your
+  dialed.run account.", button "Confirm email" ("Confirming"). A change
+  link: kicker "Change email", "Use this address?", "Your account's email
+  changes to {address}. You'll log in with it from now on.", button "Use
+  this address" ("Changing"). A failure keeps the question with the §4a
+  band NOT CONFIRMED or NOT CHANGED, "That didn't go through. Try again?".
+  The answer replaces the question with round 26 #11's landings, and the
+  status region says its heading.
+- **Guess · Google into an email account.** Continue with Google for an
+  address whose account was made with a password is refused, on Au1 and
+  Au2: Google's band, kicker NOT LOGGED IN, no Try again, "That address
+  already has an account. Log in with your password, or reset it."
+- **Guess · the sign-in limit's band.** Past ten tries for one address in
+  fifteen minutes, Au1's form band says "Too many tries for this address.
+  Try again at {time}, or reset your password." on the device's clock,
+  kicker NOT SIGNED IN and no Try again.
+
 ## Built from round 58's Desk rulings (wave 11, design 222)
 
 How the Desk's Round 58 rulings (#719–#725, #758, #759) were built, and
