@@ -79,6 +79,11 @@ export interface EnrichmentDeps {
    * read denied pages again.
    */
   isLandingDenied: (link: string, landedUrl: string) => Promise<boolean>;
+  /**
+  The ladder a fetched page is read by, so a test can stand in one that
+  fails part-way; production passes nothing and gets `runLadder`.
+  */
+  ladder?: typeof runLadder | undefined;
 }
 
 /**
@@ -235,11 +240,11 @@ async function dropDeniedSource(db: Db, productId: string): Promise<void> {
 }
 
 /**
- * Fetch, store, extract, record, write back — the bytes go to R2 before
- * anything tries to understand them (D-31), and the row is written once the
- * ladder has said which rung read it. A ladder that throws between the two
- * leaves an object with no row, which is the recoverable kind of residue
- * `snapshot.ts` already accepts.
+ * Fetch, store, record, extract, write back — the bytes go to R2 before
+ * anything tries to understand them (D-31), and the row is written before
+ * the ladder reads them (SA-M32), as `none` until `extractFrom` records
+ * the rung that read it. A delivery that ends inside the ladder leaves a
+ * stored page the next one reads again, rather than fetching it again.
  *
  * **Where the page landed is checked before anything is kept** (R-176): a
  * link that redirected to a denied site leaves no snapshot and no specs
@@ -260,14 +265,15 @@ async function fetchAndExtract(
   }
   const fetchedAt = Date.now();
   const r2Key = await putSnapshot(productId, page.html, fetchedAt);
-  const result = runLadder(new URL(page.finalUrl), page.html);
   const id = await recordSnapshot(deps.db, {
     productId,
     url: page.finalUrl,
     r2Key,
-    rung: result.rung,
+    rung: "none",
     fetchedAt,
   });
+  const ladder = deps.ladder ?? runLadder;
+  const result = ladder(new URL(page.finalUrl), page.html);
   await extractFrom(
     deps,
     productId,
