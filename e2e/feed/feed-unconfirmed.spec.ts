@@ -116,9 +116,12 @@ test("unconfirmed: Useful, Report and Follow open Confirm first, and Unfollow go
     ).toBeFocused();
     await confirmFirst.getByRole("button", { name: "Not now" }).click();
     await expect(confirmFirst).toBeHidden();
-    // Still the mark the confirmed runner left: nothing was sent.
+    // Still the mark the confirmed runner left: nothing was sent. While
+    // their address is unconfirmed the count leaves it out, as it leaves
+    // out every runner not in standing (SA-L02); it counts again once
+    // they confirm.
     await expect(cardUseful).toHaveAttribute("aria-pressed", "true");
-    await expect(cardUseful).toContainText("1");
+    await expect(cardUseful).not.toContainText("1");
 
     // The same band on You.
     await bar(page).getByRole("link", { name: "You" }).click();
