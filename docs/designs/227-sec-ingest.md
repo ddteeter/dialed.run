@@ -28,18 +28,24 @@ reading, links and photo uploads.
   The consumer re-parses an import left mid-parse once; the delivery
   after that fails it without parsing (decided on the message's
   `attempts`). There is a cap of 30 run-file uploads a day per runner, counted
-  in the shared rate-limit table (#786's `rate_limits`).
+  in the shared rate-limit table (#786's `rate_limits`, kind
+  `upload-runner`, forgotten by the account purge). The refusal is an
+  answer the well shows, not a thrown error, and a repeat of a submission
+  is not counted. A Garmin import is not counted: each activity imports
+  once, so the picker is bounded already.
 - **SA-M31, run start.** A start more than a day ahead of now is refused,
   for a manual run and for a retime, by the service. The schema keeps a
   fixed ceiling as well.
 - **SA-M32, Shopify rung.** The `var meta` blob is found by a linear scan
   that keeps the rung's current matches. The snapshot row is written before
-  the ladder runs (after #786 merges, since it touches `consume.ts`).
+  the ladder runs, with rung `none` until the ladder's rung is recorded, so
+  a delivery that ends inside the ladder leaves a page the next one reads
+  again rather than fetches again.
 - **SA-L04.** Hosts lose a trailing dot before the denylist and fetch-guard
   checks, and an operator's bare domain does too. `readableText` stops after
   a few passes, and long raw nodes are skipped before decoding. A garment's
-  product link comes only from the server's own resolution (in
-  `closet/service.ts`, after #786).
+  product link comes only from the server's own resolution
+  (`withResolvedProduct` drops a submitted `productId` first).
 - **SA-L05.** The JPEG header walk skips fill bytes and refuses any marker
   it does not understand. `src/server.ts` refuses a request body over a
   ceiling before the framework reads it (`modules/ops/body-cap.ts`, a
