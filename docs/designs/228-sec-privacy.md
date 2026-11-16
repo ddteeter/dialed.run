@@ -46,8 +46,8 @@ browser from carrying a runner's details off the app.
   `dialed.run` or a subdomain is refused at save and drawn as plain text
   at read (one host test in `lib/domain.ts`).
 - **SA-L19.** CSP reports go to `/api/csp-report` on our origin, which
-  caps, parses, strips queries, counts per address (`rate_limits`) and
-  forwards path-only reports to Sentry. Public pages leave
+  caps, parses, strips queries, counts per address (`rate_limits` kind
+  `csp-report`, 20 an hour) and forwards path-only reports to Sentry. Public pages leave
   `public, max-age=60, must-revalidate`.
 
 ## Contract touches
@@ -73,10 +73,12 @@ so it can't be deleted yet." (run, photo alike). Policy wording as drafted.
 
 ## Test plan
 
-All vitest (worker, ui, and the blur browser test); one e2e assertion for
-the enforced header beside `desk-door.spec.ts`'s CSP check. Each item gets a
-failing-first test in its module's test file, plus parallel claims for the
-rename cap.
+All vitest (worker, ui, and the blur browser test). Each item gets a
+failing-first test in its module's test file: the rename cap with
+parallel claims, the held refusal through `controlRefusalAdapter`, the
+CSP collector's cut and its per-address count. The enforced header is
+pinned in `security-headers`' and `_headers`' tests, and the e2e suite
+updates only `desk-door.spec.ts`'s cache-header expectation.
 
 ## Issues
 
