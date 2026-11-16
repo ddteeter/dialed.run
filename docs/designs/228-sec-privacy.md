@@ -70,6 +70,9 @@ shows the domain. Unmarking always works. CSP: own-origin collector.
 Own-host link: "That's a dialed.run page. Paste the address of the shop's
 page." Held delete: "This kit is held while a copyright claim is settled,
 so it can't be deleted yet." (run, photo alike). Policy wording as drafted.
+A closed account in its deletion week shows [CLOSED] [PENDING DELETE] on
+the Desk. The digest says "N account deletion(s) wait for a copyright hold
+to settle". The policy names the per-address count of CSP reports.
 
 ## Test plan
 
