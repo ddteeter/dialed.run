@@ -183,7 +183,7 @@ test("request access -> an invite from the Desk -> create an account -> sign out
     .getByRole("listitem")
     .filter({ hasText: `${email} (request)` });
   await expect(invite).toContainText("0 / 1", { timeout: 15_000 });
-  const code = /DIAL-[2-9A-HJ-NP-Z]{4}/u.exec(
+  const code = /DIAL-[2-9A-HJ-NP-Z]{4}-[2-9A-HJ-NP-Z]{4}/u.exec(
     (await invite.textContent()) ?? "",
   )?.[0];
   if (code === undefined) throw new Error("no code on the invited row");
