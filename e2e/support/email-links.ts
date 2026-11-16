@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 import { expect, type Page } from "@playwright/test";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import { user, verification } from "../../src/db/schema-auth";
 import { emailVerifications } from "../../src/db/schema-core";
@@ -56,7 +56,8 @@ export async function confirmLinkFor(email: string): Promise<string> {
       .values({ userId, purpose: "verify", ...values })
       .onConflictDoUpdate({
         target: [emailVerifications.userId, emailVerifications.purpose],
-        set: values,
+        // A fresh link is unspent, as the app's own issue makes it.
+        set: { ...values, usedAt: sql`NULL` },
       });
   });
   const token = `verify.${userId}.${secret}`;
