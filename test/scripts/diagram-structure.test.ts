@@ -288,7 +288,7 @@ describe("generateStructure: the ways in are closed lists", () => {
   it.each(["kv_namespaces", "durable_objects", "env"])(
     "throws on a wrangler.jsonc key it neither draws nor lists: %s",
     (key) => {
-      const wranglerJsonc = WRANGLER.replace("{", () => `{ "${key}": {},`);
+      const wranglerJsonc = `{ "${key}": {},${WRANGLER.slice(1)}`;
 
       expect(() => generateStructure(inputs({ wranglerJsonc }))).toThrow(
         `wrangler.jsonc ${UNLISTED}: ${key}.`,
