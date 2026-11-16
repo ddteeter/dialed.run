@@ -98,20 +98,29 @@ function addressOf(request: Request): string {
   return request.headers.get("cf-connecting-ip") ?? "unknown";
 }
 
+/**
+ * What `readCappedText` throws for a report over the cap: named, so the
+ * read says what went over.
+ */
+export function reportTooLarge(detail: string): Error {
+  return new Error(`csp report ${detail}`);
+}
+
 async function readReport(
   request: Request,
 ): Promise<ForwardedReport | undefined> {
-  let text: string;
+  let parsed: ReturnType<typeof reportSchema.safeParse>;
   try {
-    text = await readCappedText(
+    const text = await readCappedText(
       request,
       MAX_REPORT_BYTES,
-      () => new Error("too large"),
+      reportTooLarge,
     );
+    parsed = reportSchema.safeParse(JSON.parse(text));
   } catch {
+    // Too large, or not JSON: not a report, and no more to say about it.
     return undefined;
   }
-  const parsed = reportSchema.safeParse(parseJson(text));
   if (!parsed.success) return undefined;
   const body = parsed.data["csp-report"];
   return {
@@ -122,16 +131,9 @@ async function readReport(
   };
 }
 
-function parseJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return undefined;
-  }
-}
-
 function firstWord(value: string | undefined): string {
-  return String(value).split(" ", 1)[0] ?? "";
+  // Everything from the first space on is the directive's sources.
+  return String(value).replace(/ .*/u, "");
 }
 
 /**

@@ -188,7 +188,7 @@ async function deleteStale(
       .where(and(copies, noLongerPublic()))
       .limit(IN_LIST_CHUNK);
     const keys = stale.map((copy) => copy.key);
-    if (!(await didWithdraw(deps, keys))) return deleted;
+    if ((keys.length === 0) || !(await didWithdraw(deps, keys))) return deleted;
     deleted += keys.length;
     if (keys.length < IN_LIST_CHUNK) return deleted;
   }
@@ -204,7 +204,6 @@ async function didWithdraw(
   deps: PublicPhotoDeps,
   keys: readonly string[],
 ): Promise<boolean> {
-  if (keys.length === 0) return true;
   try {
     await deps.bucket.delete([...keys]);
     await deps.db.delete(publicPhotos).where(inArray(publicPhotos.key, keys));

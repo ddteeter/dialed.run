@@ -881,6 +881,77 @@ describe("a runner-wide withdrawal drains (SA-L09)", () => {
     expect(await bucketKeys()).toHaveLength(0);
   });
 
+  it("makes no bucket call, and no further read, when nothing is stale", async () => {
+    const { userId } = await kit();
+    const report = vi.fn();
+    const remove = vi.fn().mockResolvedValue(undefined);
+    const bucket: PublicPhotoDeps["bucket"] = {
+      put: vi.fn(),
+      delete: remove,
+      list: vi.fn(),
+    };
+
+    expect(
+      await syncPublicPhotos(deps({ bucket, report, isPublishing: false }), {
+        entryIds: [],
+        runnerIds: [userId],
+      }),
+    ).toBe(0);
+    expect(remove).not.toHaveBeenCalled();
+    expect(report).not.toHaveBeenCalled();
+  });
+
+  it("reads a page more only when the last one was full", async () => {
+    const { userId } = await kit();
+    await staleCopies(userId, 90);
+    let reads = 0;
+    const counting = new Proxy(core(), {
+      get(target, property, receiver): unknown {
+        if (property === "select") reads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+
+    expect(
+      await syncPublicPhotos(deps({ db: counting, isPublishing: false }), {
+        entryIds: [],
+        runnerIds: [userId],
+      }),
+    ).toBe(90);
+    // A full page of 80, then a short one of 10: the short one ends it.
+    expect(reads).toBe(2);
+  });
+
+  it("withdraws at most twenty-five pages in one pass, leaving the rest for the next", async () => {
+    const { userId } = await kit();
+    const rows = Array.from({ length: 2100 }, () => ({
+      key: newPublicPhotoKey(),
+      photoId: newUlid(),
+      entryId: newUlid(),
+      userId,
+      createdAt: 1,
+      publishedAt: 1,
+    }));
+    for (let at = 0; at < rows.length; at += 10) {
+      await core()
+        .insert(publicPhotos)
+        .values(rows.slice(at, at + 10));
+    }
+    const bucket: PublicPhotoDeps["bucket"] = {
+      put: vi.fn(),
+      delete: vi.fn().mockResolvedValue(undefined),
+      list: vi.fn(),
+    };
+
+    expect(
+      await syncPublicPhotos(deps({ bucket, isPublishing: false }), {
+        entryIds: [],
+        runnerIds: [userId],
+      }),
+    ).toBe(2000);
+    expect(await copies()).toHaveLength(100);
+  });
+
   it("stops at a page that fails, keeping its rows for the next pass", async () => {
     const { userId } = await kit();
     await staleCopies(userId, 90);

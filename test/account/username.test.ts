@@ -16,6 +16,7 @@ import {
   isReservedHandle,
   keepPlaceholder,
   lookUpHandle,
+  RENAME_WINDOW_S,
   handleGate,
   renameNoticeOf,
   usernameOf,
@@ -985,6 +986,76 @@ describe("the rename cap (SA-L02)", () => {
     expect(await claimUsername(db, userId, "fresh_two", CLEAR)).toStrictEqual({
       kind: "too_often",
     });
+  });
+
+  it("is thirty days long, counting a handle retired within them", async () => {
+    expect(RENAME_WINDOW_S).toBe(2_592_000);
+    const userId = await runner({ username: "window_current" });
+    const now = nowSeconds();
+    await db.insert(usernameHistory).values(
+      ["in_a", "in_b", "in_c"].map((username) => ({
+        username,
+        userId,
+        retiredAt: now - 29 * 24 * 60 * 60,
+      })),
+    );
+
+    expect(await claimUsername(db, userId, "window_new", CLEAR)).toStrictEqual({
+      kind: "too_often",
+    });
+  });
+
+  it("refuses a runner at the cap before it attempts a write", async () => {
+    const userId = await runner({ username: "gate_current" });
+    const now = nowSeconds();
+    await db.insert(usernameHistory).values(
+      ["gate_a", "gate_b", "gate_c"].map((username) => ({
+        username,
+        userId,
+        retiredAt: now - 60,
+      })),
+    );
+    const tracked = trackBatches();
+
+    expect(
+      await claimUsername(tracked.db, userId, "gate_new", CLEAR),
+    ).toStrictEqual({ kind: "too_often" });
+    // The write batch is five statements; a refusal ahead of it makes none.
+    expect(tracked.sizes()).not.toContain(5);
+  });
+
+  it("refuses a claim whose cap is spent between the read and the write", async () => {
+    const userId = await runner({ username: "late_current" });
+    const now = nowSeconds();
+    await db.insert(usernameHistory).values(
+      ["late_a", "late_b"].map((username) => ({
+        username,
+        userId,
+        retiredAt: now - 60,
+      })),
+    );
+    const racing = beforeBatch(async () => {
+      await db
+        .insert(usernameHistory)
+        .values({ username: "late_c", userId, retiredAt: now - 30 });
+    });
+
+    expect(await claimUsername(racing, userId, "late_new", CLEAR)).toStrictEqual(
+      { kind: "too_often" },
+    );
+    expect(await handleOf(userId)).toBe("late_current");
+  });
+
+  it("refuses, rather than fails, when the profile is gone after it was read", async () => {
+    const userId = await runner({ username: "gone_current" });
+    const vanishing: ScreenHandle = async () => {
+      await db.delete(userProfiles).where(eq(userProfiles.userId, userId));
+      return "clear";
+    };
+
+    expect(await claimUsername(db, userId, "gone_new", vanishing)).toStrictEqual(
+      { kind: "too_often" },
+    );
   });
 
   it("lets a runner switch back and forth between two handles", async () => {

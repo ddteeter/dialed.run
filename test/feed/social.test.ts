@@ -143,6 +143,15 @@ describe("follows", () => {
     expect(await followingCount(follower)).toBe(1);
   });
 
+  it("ignores a runner following themselves, though they may see themselves", async () => {
+    const runner = await makeVerifiedUser();
+
+    await follow(runner, runner);
+
+    expect(await isFollowing(runner, runner)).toBe(false);
+    expect(await followRowsOf(runner)).toHaveLength(0);
+  });
+
   it("does not follow across a block, from either end", async () => {
     const blocker = await makeVerifiedUser();
     const blocked = await makeVerifiedUser();

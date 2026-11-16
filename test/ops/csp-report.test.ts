@@ -1,16 +1,22 @@
 import { drizzle } from "drizzle-orm/d1";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { rateLimits } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import { nowSeconds } from "../../src/lib/now";
 import {
   CSP_REPORT_PATH,
   CSP_REPORTS_PER_HOUR,
   cspReportDepsFromEnv,
   receiveCspReport,
+  reportTooLarge,
   type ForwardedReport,
 } from "../../src/modules/ops/csp-report";
-import { countedKeys } from "../rate-limit-rows";
+import { countedKeys, countRow } from "../rate-limit-rows";
+
+function nothing(): void {
+  // Swallows the console line the disabled reporter writes.
+}
 
 /**
  * The CSP report collector (SA-L19): what a browser posts is cut to the
@@ -109,6 +115,51 @@ describe("receiveCspReport", () => {
     });
   });
 
+  it("prefers the effective directive over the violated one", async () => {
+    const [forwarded] = await received(
+      report({
+        "document-uri": "https://dialed.run/feed",
+        "effective-directive": "img-src",
+        "violated-directive": "script-src 'self'",
+        "blocked-uri": "inline",
+      }),
+    );
+    expect(forwarded?.directive).toBe("img-src");
+  });
+
+  it("forwards an empty page when the document is not a URL", async () => {
+    const [forwarded] = await received(
+      report({
+        "document-uri": "not a url",
+        "effective-directive": "img-src",
+        "blocked-uri": "inline",
+      }),
+    );
+    expect(forwarded?.page).toBe("");
+  });
+
+  it.each([
+    "inline",
+    "eval",
+    "data",
+    "blob",
+    "wasm-eval",
+    "trusted-types-policy",
+    "trusted-types-sink",
+  ])(
+    "keeps the keyword %s the browser sends for a blocked load",
+    async (keyword) => {
+      const [forwarded] = await received(
+        report({
+          "document-uri": "https://dialed.run/feed",
+          "effective-directive": "img-src",
+          "blocked-uri": keyword,
+        }),
+      );
+      expect(forwarded?.blocked).toBe(keyword);
+    },
+  );
+
   it.each([
     ["data:image/png;base64,AAAA", "data"],
     ["blob:https://dialed.run/1234", "https://dialed.run"],
@@ -183,5 +234,43 @@ describe("cspReportDepsFromEnv", () => {
       "csp-report:198.51.100.4",
       "csp-report:203.0.113.9",
     ]);
+  });
+
+  it("keeps an address's count for an hour, and starts over after it", async () => {
+    const deps = cspReportDepsFromEnv();
+    const now = nowSeconds();
+    await db
+      .insert(rateLimits)
+      .values([
+        countRow("csp-report", "full-recent", CSP_REPORTS_PER_HOUR, now - 3000),
+        countRow("csp-report", "full-old", CSP_REPORTS_PER_HOUR, now - 3700),
+      ]);
+
+    expect(await deps.isWithinLimit("full-recent")).toBe(false);
+    expect(await deps.isWithinLimit("full-old")).toBe(true);
+  });
+
+  it("forwards a report to Sentry as a csp violation, with the report as its context", () => {
+    const error = vi.spyOn(console, "error").mockImplementation(nothing);
+    const forwarded: ForwardedReport = {
+      directive: "img-src",
+      page: "/feed",
+      blocked: "inline",
+    };
+    cspReportDepsFromEnv().forward(forwarded);
+    expect(error).toHaveBeenCalledTimes(1);
+    expect(error).toHaveBeenCalledWith(
+      "[sentry-disabled]",
+      { directive: "img-src", page: "/feed", blocked: "inline" },
+      expect.objectContaining({ message: "csp violation" }),
+    );
+  });
+});
+
+describe("reportTooLarge", () => {
+  it("names what went over the cap", () => {
+    const error = reportTooLarge("exceeded 8192 bytes");
+    expect(error).toBeInstanceOf(Error);
+    expect(error.message).toBe("csp report exceeded 8192 bytes");
   });
 });
