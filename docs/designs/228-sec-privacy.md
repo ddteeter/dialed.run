@@ -36,6 +36,10 @@ browser from carrying a runner's details off the app.
   - The purge deletes the follow rows it named on other runners' bells.
   - A closed account is purged on schedule, and its addresses' HMAC
     (`CLOSED_ADDRESS_SECRET`) is kept 3 years; sign-up refuses a match.
+    The email form answers a match as it answers a registered address (no
+    account, no email, the same body), and spends no code. Google comes
+    back to Au2 with `?error=ADDRESS_CLOSED` and the band "This address
+    can't be used to make an account."
     With the secret unset, the purge keeps nothing and the daily digest
     says a closed account's address went unremembered (law 6).
   - The purge orders retried claims behind untried ones and claims in
@@ -60,7 +64,7 @@ browser from carrying a runner's details off the app.
 - New route: `src/routes/api/csp-report.ts`.
 - New secret: `CLOSED_ADDRESS_SECRET` (owner, 2026-11-15), in the deploy
   checklists and `.dev.vars.example`.
-- Screens: handle form (one refusal), correction sheet label, garment
+- Screens: Au2's Google band (one refusal, `ADDRESS_CLOSED`), handle form (one refusal), correction sheet label, garment
   link error, held-kit delete refusal. Policy text: deletion paragraph,
   two retention rows, Sentry's row.
 
@@ -75,6 +79,8 @@ so it can't be deleted yet." (run, photo alike). Policy wording as drafted.
 A closed account in its deletion week shows [CLOSED] [PENDING DELETE] on
 the Desk. The digest says "N account deletion(s) wait for a copyright hold
 to settle". The policy names the per-address count of CSP reports.
+A closed address at sign-up (2026-11-16): the email form is silent, as for
+a registered address; Google's band says the address can't be used.
 
 ## Test plan
 

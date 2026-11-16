@@ -9,9 +9,14 @@ import {
   session,
   user,
 } from "../../src/db/schema-auth";
-import { inviteCodes, inviteRedemptions } from "../../src/db/schema-core";
+import {
+  closedAddresses,
+  inviteCodes,
+  inviteRedemptions,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import {
+  ADDRESS_CLOSED_CODE,
   INVITE_COPY,
   REGION_BLOCKED_CODE,
   REGION_BLOCKED_COPY,
@@ -21,6 +26,7 @@ import {
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { accessGate } from "../../src/modules/account";
+import { closedAddressRows } from "../../src/modules/account/closed-addresses";
 import {
   admitSignUp,
   claimInvite,
@@ -75,12 +81,12 @@ function turnstile(shouldPass = true) {
   return { attempts, verify };
 }
 
-function instance(access: AccessGate) {
+function instance(access: AccessGate, mail = recordingMail()) {
   return createAuth({
     db,
     secret: "test-secret-not-for-production",
     baseUrl: ORIGIN,
-    mail: recordingMail(),
+    mail,
     passwordScreen: CLEAN_SCREEN,
     access,
     google: { clientId: "test-client", clientSecret: "test-client-secret" },
@@ -579,6 +585,7 @@ describe("Google sign-up through the gate", () => {
         claims.push(claim);
         return Promise.resolve("redeemed");
       },
+      isClosedAddress: () => Promise.resolve(false),
       confirm: () => Promise.resolve(),
     });
     await expect(
@@ -594,6 +601,7 @@ describe("Google sign-up through the gate", () => {
       passesTurnstile: () => Promise.resolve(true),
       standing: () => Promise.resolve("open"),
       claim: () => Promise.resolve("used"),
+      isClosedAddress: () => Promise.resolve(false),
       confirm: () => Promise.resolve(),
     });
     await expect(
@@ -624,6 +632,7 @@ describe("Google sign-up through the gate", () => {
         passesTurnstile: () => Promise.resolve(true),
         standing: () => Promise.resolve("open"),
         claim: () => Promise.resolve("redeemed"),
+        isClosedAddress: () => Promise.resolve(false),
         confirm: () => Promise.resolve(),
       });
       await expect(
@@ -826,6 +835,114 @@ describe("the region gate", () => {
   });
 });
 
+/**
+The shape of a sign-up's answer: its keys and the types of its values.
+*/
+async function shapeOf(response: Response) {
+  const body = z
+    .object({ token: z.null(), user: z.record(z.string(), z.unknown()) })
+    .parse(await response.json());
+  return Object.entries(body.user)
+    .map(([key, value]) => `${key}:${typeof value}`)
+    .toSorted((a, b) => a.localeCompare(b));
+}
+
+/**
+ * SA-L09 (owner, 2026-11-16): an address an operator closed, kept after
+ * its account was purged, makes no account. The email form answers it as
+ * it answers a registered address; Google says so on Au2. A test key, not
+ * a deployed one.
+ */
+describe("a closed address", () => {
+  const KEY = "closed-address-test-key";
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  async function closed(): Promise<string> {
+    const email = address();
+    await db
+      .insert(closedAddresses)
+      .values(await closedAddressRows(KEY, [email], nowSeconds()));
+    return email;
+  }
+
+  it("answers the email form as a new address is answered, makes no account, sends nothing and spends no code", async () => {
+    const mail = recordingMail();
+    const auth = instance(
+      accessGate(db, turnstile().verify, undefined, KEY),
+      mail,
+    );
+    const code = await freshCode();
+    const codeId = await seedCode(code);
+    const headers = { "x-invite-code": code, "x-turnstile-token": "t" };
+    const email = await closed();
+
+    const response = await auth.handler(signUpRequest(email, headers));
+
+    expect(response.status).toBe(200);
+    expect(await accountFor(email)).toBeUndefined();
+    expect(mail.calls).toStrictEqual([]);
+    const spent = await db
+      .select()
+      .from(inviteRedemptions)
+      .where(eq(inviteRedemptions.codeId, codeId));
+    expect(spent).toStrictEqual([]);
+    // The same code then makes a new address's account, whose answer has
+    // the closed address's shape.
+    const fresh = await auth.handler(signUpRequest(address(), headers));
+    expect(fresh.status).toBe(200);
+    expect(await shapeOf(response)).toStrictEqual(await shapeOf(fresh));
+  });
+
+  it("refuses Google on the callback with its code, and makes no account", async () => {
+    const auth = instance(accessGate(db, turnstile().verify, undefined, KEY));
+    const code = await freshCode();
+    await seedCode(code);
+    const email = await closed();
+
+    const { landing } = await googleRoundTrip(
+      auth,
+      email,
+      { requestSignUp: true },
+      { "x-invite-code": code, "x-turnstile-token": "token" },
+    );
+
+    expect(landing?.pathname).toBe("/auth/signup");
+    expect(landing?.searchParams.get("error")).toBe(ADDRESS_CLOSED_CODE);
+    expect(await accountFor(email)).toBeUndefined();
+  });
+
+  it("refuses nobody when the gate has no key", async () => {
+    const auth = instance(accessGate(db, turnstile().verify));
+    const code = await freshCode();
+    await seedCode(code);
+    const email = await closed();
+
+    const response = await auth.handler(
+      signUpRequest(email, { "x-invite-code": code, "x-turnstile-token": "t" }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await accountFor(email)).toBeDefined();
+  });
+
+  it("makes another address's account under the key", async () => {
+    const auth = instance(accessGate(db, turnstile().verify, undefined, KEY));
+    const code = await freshCode();
+    await seedCode(code);
+    await closed();
+    const email = address();
+
+    await auth.handler(
+      signUpRequest(email, { "x-invite-code": code, "x-turnstile-token": "t" }),
+    );
+
+    expect(await accountFor(email)).toBeDefined();
+  });
+});
+
 describe("signUpKind", () => {
   it('names the email form\'s request "email", not just non-undefined', () => {
     expect(signUpKind("/sign-up/email", {})).toBe("email");
@@ -852,6 +969,7 @@ describe("admitSignUp", () => {
         passesTurnstile: () => Promise.resolve(true),
         standing: () => Promise.resolve("open"),
         claim: () => Promise.resolve("redeemed"),
+        isClosedAddress: () => Promise.resolve(false),
         confirm: () => Promise.resolve(),
       };
       await admitSignUp(gate, {
@@ -876,6 +994,7 @@ describe("admitSignUp without a code", () => {
       return Promise.resolve("open");
     },
     claim: () => Promise.resolve("redeemed"),
+    isClosedAddress: () => Promise.resolve(false),
     confirm: () => Promise.resolve(),
   };
   const google = { path: "/sign-in/social", body: { requestSignUp: true } };

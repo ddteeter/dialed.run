@@ -11,5 +11,6 @@ export const OPEN_ACCESS: AccessGate = {
   passesTurnstile: () => Promise.resolve(true),
   standing: () => Promise.resolve("open"),
   claim: () => Promise.resolve("redeemed"),
+  isClosedAddress: () => Promise.resolve(false),
   confirm: () => Promise.resolve(),
 };
