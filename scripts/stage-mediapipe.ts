@@ -19,28 +19,21 @@
  * the same reason `check-bundle.ts` was, and see that file's header for
  * why a `.ts` script works where a `.mjs` one would not lint.
  */
-import { copyFileSync, mkdirSync } from "node:fs";
+import { cpSync, rmSync } from "node:fs";
 import path from "node:path";
 
 const FROM = path.join("node_modules", "@mediapipe", "tasks-vision", "wasm");
 const TO = path.join("public", "mediapipe", "wasm");
 
 /**
- * Both the SIMD and non-SIMD builds, and each one's JS glue.
- *
- * The loader picks between them at runtime by feature-detecting the
- * browser, so staging only the SIMD pair works on every machine anyone
- * tests on and fails on the older ones nobody does.
+ * **The whole `wasm/` folder, by name of nothing in it.** The package's
+ * contract is the folder: `FilesetResolver.forVisionTasks(basePath)`
+ * takes a hosted copy of it (MediaPipe's docs point it at the package's
+ * `wasm/` on a CDN), and which files the loader then fetches is the
+ * package's business. A hard-coded list broke the build when 1.2.2
+ * dropped the non-SIMD pair. The folder is replaced, not merged, so a
+ * file a newer version drops does not linger here.
  */
-const FILES = [
-  "vision_wasm_internal.js",
-  "vision_wasm_internal.wasm",
-  "vision_wasm_nosimd_internal.js",
-  "vision_wasm_nosimd_internal.wasm",
-] as const;
-
-mkdirSync(TO, { recursive: true });
-for (const file of FILES) {
-  copyFileSync(path.join(FROM, file), path.join(TO, file));
-}
+rmSync(TO, { recursive: true, force: true });
+cpSync(FROM, TO, { recursive: true });
 console.log("mediapipe wasm staged");

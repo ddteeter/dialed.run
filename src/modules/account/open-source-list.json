@@ -22,35 +22,35 @@
   "packages": [
     {
       "name": "@better-auth/core",
-      "version": "1.7.15",
+      "version": "1.7.18",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com"
     },
     {
       "name": "@better-auth/drizzle-adapter",
-      "version": "1.7.15",
+      "version": "1.7.18",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com/docs/adapters/drizzle"
     },
     {
       "name": "@better-auth/kysely-adapter",
-      "version": "1.7.15",
+      "version": "1.7.18",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com/docs/adapters/kysely"
     },
     {
       "name": "@better-auth/memory-adapter",
-      "version": "1.7.15",
+      "version": "1.7.18",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com"
     },
     {
       "name": "@better-auth/telemetry",
-      "version": "1.7.15",
+      "version": "1.7.18",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com"
@@ -112,14 +112,14 @@
     },
     {
       "name": "@garmin/fitsdk",
-      "version": "21.218.0",
+      "version": "21.221.0",
       "licence": "@garmin/fitsdk licence",
       "copyright": "Garmin International, Inc.",
       "project": "https://github.com/garmin/fit-javascript-sdk#readme"
     },
     {
       "name": "@mediapipe/tasks-vision",
-      "version": "1.2.0",
+      "version": "1.2.2",
       "licence": "Apache-2.0"
     },
     {
@@ -347,14 +347,14 @@
     },
     {
       "name": "better-auth",
-      "version": "1.7.15",
+      "version": "1.7.18",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://better-auth.com"
     },
     {
       "name": "better-call",
-      "version": "1.4.4",
+      "version": "1.4.5",
       "licence": "MIT",
       "copyright": "2025 Bereket Engida",
       "project": "https://github.com/better-auth/better-call#readme"
@@ -577,7 +577,7 @@
     },
     {
       "name": "jose",
-      "version": "6.2.14",
+      "version": "6.2.15",
       "licence": "MIT",
       "copyright": "2018 Filip Skokan",
       "project": "https://github.com/panva/jose"
@@ -619,9 +619,9 @@
     },
     {
       "name": "mdast-util-gfm-table",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "licence": "MIT",
-      "copyright": "2020 Titus Wormer",
+      "copyright": "Titus Wormer",
       "project": "https://github.com/syntax-tree/mdast-util-gfm-table#readme"
     },
     {
@@ -873,7 +873,7 @@
     },
     {
       "name": "tailwindcss",
-      "version": "4.3.3",
+      "version": "4.3.5",
       "licence": "MIT",
       "copyright": "Tailwind Labs, Inc",
       "project": "https://tailwindcss.com"
@@ -1008,7 +1008,7 @@
     },
     {
       "name": "@tailwindcss/vite",
-      "version": "4.3.3",
+      "version": "4.3.5",
       "licence": "MIT",
       "project": "https://tailwindcss.com"
     },
