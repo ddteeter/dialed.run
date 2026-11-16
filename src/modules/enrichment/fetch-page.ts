@@ -1,5 +1,6 @@
 import ipaddr from "ipaddr.js";
 
+import { withoutRootDot } from "../../lib/domain";
 import { PageFetchError, readCapped } from "./bounds";
 import { scrapeThroughProxy } from "./firecrawl";
 import { refreshTarget } from "./meta-refresh";
@@ -105,7 +106,9 @@ function isPrivateAddress(host: string): boolean {
  * the third.
  */
 export function isBlockedHost(hostname: string): boolean {
-  const host = hostname.toLowerCase();
+  // Without the DNS root's dot (SA-L04): `localhost.` is `localhost`, and
+  // `shop.local.` is `shop.local`, to everything that resolves them.
+  const host = withoutRootDot(hostname.toLowerCase());
   // Bracketed IPv6 first, and this is not a tidy-up: a v6 address contains
   // no dot, so the bare-name rule below would have called every public one
   // private and refused it. Found by asserting a public address is allowed.
