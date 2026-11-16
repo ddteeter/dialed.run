@@ -235,7 +235,7 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
     .getByRole("combobox", { name: /Why the name has to go/ })
     .selectOption("Offensive or sexual");
   await page.getByRole("button", { name: "Rename" }).click();
-  await expect(page.getByText(/^Renamed to @runner_\d{4}\.$/)).toBeVisible();
+  await expect(page.getByText(/^Renamed to @runner_\d{6}\.$/)).toBeVisible();
 
   await scene(page, "Close account: the reason, and the rule it names (C8)");
   await page.getByRole("textbox", { name: /Why/ }).fill("Spam accounts");
