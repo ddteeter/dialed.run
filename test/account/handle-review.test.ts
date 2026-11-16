@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   moderationActions,
@@ -33,6 +33,10 @@ beforeEach(async () => {
     db.delete(reviewQueue),
     db.delete(moderationActions),
   ]);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 const UNKNOWN: ScreenHandle = () => Promise.resolve("unknown");
@@ -128,6 +132,27 @@ describe("Keep", () => {
   });
 });
 
+describe("Keep racing another decision on the row (SA-L11)", () => {
+  it("clears nothing once the row was settled between its read and its batch", async () => {
+    const { userId, queueId } = await flaggedRunner();
+
+    const [kept] = await Promise.all([
+      reviewFlaggedHandle(db, REVIEWER, { queueId, action: "keep" }),
+      db
+        .update(reviewQueue)
+        .set({ status: "removed", resolvedBy: "another-operator" })
+        .where(eq(reviewQueue.id, queueId)),
+    ]);
+
+    expect(kept).toStrictEqual({ outcome: "already_resolved" });
+    expect(await profileOf(userId)).toMatchObject({ screen: "flagged" });
+    expect(await queueRow(queueId)).toStrictEqual({
+      status: "removed",
+      resolvedBy: "another-operator",
+    });
+  });
+});
+
 describe("Rename", () => {
   it("is the moderator's force-rename: a placeholder, the reason O0 quotes, the audit row and the row settled", async () => {
     const { userId, queueId } = await flaggedRunner();
@@ -141,7 +166,7 @@ describe("Rename", () => {
     ).toStrictEqual({ outcome: "resolved" });
 
     const profile = await profileOf(userId);
-    expect(profile?.username).toMatch(/^runner_\d{4}$/u);
+    expect(profile?.username).toMatch(/^runner_\d{6}$/u);
     expect(profile?.screen).toBeNull();
     expect(await renameNoticeOf(db, userId)).toStrictEqual({
       previous: "quadzilla_69",
@@ -172,12 +197,18 @@ describe("Rename", () => {
 
   it("says taken, and leaves the row open, when the drawn placeholder is held", async () => {
     const { userId, queueId } = await flaggedRunner();
-    // Every placeholder is somebody's old handle: the rename cannot land.
-    await env.DIALED_CORE.prepare(
-      `WITH RECURSIVE n(i) AS (SELECT 0 UNION ALL SELECT i + 1 FROM n WHERE i < 9999)
-       INSERT INTO username_history (username, user_id, retired_at)
-       SELECT printf('runner_%04d', i), 'someone-else', 1 FROM n`,
-    ).run();
+    // The placeholder drawn is somebody's old handle: the rename cannot land.
+    await db.insert(usernameHistory).values({
+      username: "runner_000042",
+      userId: "someone-else",
+      retiredAt: 1,
+    });
+    vi.spyOn(globalThis.crypto, "getRandomValues").mockImplementation(
+      (array) => {
+        if (array instanceof Uint32Array) array.fill(42);
+        return array;
+      },
+    );
 
     expect(
       await reviewFlaggedHandle(db, REVIEWER, {

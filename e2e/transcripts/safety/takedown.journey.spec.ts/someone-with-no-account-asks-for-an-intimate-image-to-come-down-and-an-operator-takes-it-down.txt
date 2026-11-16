@@ -54,15 +54,6 @@ end of navigation, Desk
 main
 heading, Review, level 1
 # waiting · # decided today
-heading, Held in the last day, level 2
-Held in the last day
-end of heading, Held in the last day, level 2
-list
-listitem, level 1, position 1, set size 1
-Reports · # waiting
-button, Approve all #
-end of listitem, level 1, position 1, set size 1
-end of list
 heading, waiting, level 2
 waiting
 end of heading, waiting, level 2

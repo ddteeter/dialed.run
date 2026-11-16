@@ -7,6 +7,8 @@ import {
   DECLINE_REASON_LABELS,
   DECLINE_REASONS,
   declineCorrectionSchema,
+  CORRECTION_VALUE_MAX,
+  correctionKeySchema,
   fileCorrectionSchema,
 } from "../../src/lib/contracts/product-corrections";
 import { garmentCategoriesInOrder } from "../../src/lib/contracts/garment-fields";
@@ -125,6 +127,44 @@ describe("WRONG?'s schema (R48·129)", () => {
 
   it("refuses a field it does not know", () => {
     expect(messagesFor("colour", "red")?.[0]?.[0]).toBe("field");
+  });
+});
+
+function linkOf(length: number): string {
+  return "https://example.com/".padEnd(length, "a");
+}
+
+describe("a filed link and the Desk's key (SA-M39)", () => {
+  it("files a link the Desk's key can name, up to the limit", () => {
+    expect(CORRECTION_VALUE_MAX).toBe(2048);
+    const value = linkOf(CORRECTION_VALUE_MAX);
+    expect(messagesFor("link", value)).toBeUndefined();
+    expect(
+      correctionKeySchema.safeParse({
+        productId: newUlid(),
+        field: "link",
+        value,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("refuses a longer link when it is filed, in the owner's words", () => {
+    expect(messagesFor("link", linkOf(CORRECTION_VALUE_MAX + 1))).toStrictEqual(
+      [["value", "Keep the link to 2048 characters."]],
+    );
+    expect(
+      correctionKeySchema.safeParse({
+        productId: newUlid(),
+        field: "link",
+        value: linkOf(CORRECTION_VALUE_MAX + 1),
+      }).success,
+    ).toBe(false);
+  });
+
+  it("still asks a short link to be one", () => {
+    expect(messagesFor("link", "not a link")).toStrictEqual([
+      ["value", "That isn't a link. Paste the address of the shop's page."],
+    ]);
   });
 });
 

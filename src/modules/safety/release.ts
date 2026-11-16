@@ -19,6 +19,7 @@ import { reviewQueue } from "../../db/schema-core";
 import { coreDb } from "../../env";
 import { HOLD_CAUSES, type HoldCause } from "../../lib/contracts/hold-causes";
 import { nowSeconds } from "../../lib/now";
+import { noReportHidingAtOnce } from "./at-once";
 import { claimForReview, resolveReview } from "./review";
 
 /**
@@ -31,6 +32,12 @@ function openSince(since: number, ...also: readonly SQL[]) {
   return and(
     gte(reviewQueue.openedAt, since),
     inArray(reviewQueue.status, ["pending", "reviewing"]),
+    // Not a row on the removal clock (SA-L12; owner, 2026-11-15): one
+    // whose subject has a report that hides at once is a person's to
+    // decide, so a release leaves it and Review does not count it. Written
+    // for every cause, as it is true of every cause: such a report re-opens
+    // any row on its subject as `reports`.
+    noReportHidingAtOnce(),
     ...also,
   );
 }
@@ -74,14 +81,21 @@ export async function releaseHolds(
   since: number,
   reviewerId: string,
 ): Promise<ReleaseOutcome> {
-  const waiting = await oldestWaiting(cause, since);
+  // Never further back than the day Review offers (SA-L12), whatever time
+  // the request names: a press made after the page loaded clamps a little
+  // later than the page counted from, which leaves a row waiting, not
+  // released.
+  const from = Math.max(since, nowSeconds() - RELEASE_WINDOW_S);
+  const waiting = await oldestWaiting(cause, from);
   let released = 0;
   for (const { id } of waiting.slice(0, RELEASE_BATCH)) {
-    // Claimed first (law 2), as the Review page does: a row a tab took in
-    // the meantime is that tab's to decide.
-    if ((await claimForReview(id, reviewerId)) !== "claimed") continue;
-    await resolveReview(id, reviewerId, "approve");
-    released += 1;
+    // Claimed first (law 2), and only while it is still of this cause: a
+    // row a tab took in the meantime is that tab's to decide, and one a
+    // report re-opened since is no longer this burst's.
+    if ((await claimForReview(id, reviewerId, cause)) !== "claimed") continue;
+    if ((await resolveReview(id, reviewerId, "approve")) === "resolved") {
+      released += 1;
+    }
   }
   return { released, hasMore: waiting.length > RELEASE_BATCH };
 }

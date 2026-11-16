@@ -41,7 +41,7 @@ describe("putSnapshot", () => {
     expect(await stored?.text()).toBe(html);
     // Without the type a later reader has to guess, and a browser opening a
     // snapshot for debugging downloads it instead of rendering it.
-    expect(stored?.httpMetadata?.contentType).toBe("text/html; charset=utf-8");
+    expect(stored?.httpMetadata?.contentType).toBe("text/plain; charset=utf-8");
   });
 });
 

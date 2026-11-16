@@ -784,9 +784,9 @@ describe("Review's list of holds, and strikes", () => {
 
     const listed = await heldCopyrightContent(core());
 
-    expect(listed.map((hold) => [hold.subjectId, hold.ownerHandle])).toStrictEqual(
-      [[photoId, undefined]],
-    );
+    expect(
+      listed.map((hold) => [hold.subjectId, hold.ownerHandle]),
+    ).toStrictEqual([[photoId, undefined]]);
   });
 
   it("counts every takedown a restore did not undo, and lists only the hidden", async () => {

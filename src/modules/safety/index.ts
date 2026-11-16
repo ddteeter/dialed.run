@@ -113,6 +113,7 @@ export {
 export { flaggedCountOf } from "./account-flags";
 
 export {
+  isPlaceholderHandle,
   placeholderHandle,
   renameRecord,
   type RenameOutcome,
@@ -156,6 +157,7 @@ export {
   releaseStaleClaims,
   resolveReview,
   reviewResolution,
+  settledHere,
   settleOpenReviews,
   wasFlaggedAutomatically,
   type ClaimOutcome,
@@ -253,7 +255,6 @@ export {
   garmentMatchActionInput,
   handleReviewInput,
   reviewActionInput,
-  reviewDecisionInput,
   runnersFilterInput,
   takedownInput,
   removalDecisionInput,

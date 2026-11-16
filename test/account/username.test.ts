@@ -795,6 +795,50 @@ async function renamedFrom(
   return userId;
 }
 
+describe("the moderator's placeholder shape (SA-L12)", () => {
+  it.each(["runner_4821", "runner_000042"])(
+    "is not a runner's to claim: %s",
+    async (handle) => {
+      const squatter = await runner();
+      expect(await claimUsername(db, squatter, handle, CLEAR)).toStrictEqual({
+        kind: "taken",
+        username: handle,
+        suggestion: undefined,
+      });
+      expect(await usernameOf(db, squatter)).toBeUndefined();
+    },
+  );
+
+  it("is refused before the handle is screened", async () => {
+    const squatter = await runner();
+    let screened = 0;
+    await claimUsername(db, squatter, "runner_4821", () => {
+      screened += 1;
+      return Promise.resolve("clear");
+    });
+    expect(screened).toBe(0);
+  });
+
+  it("is kept by the runner a moderator gave it to", async () => {
+    const userId = await renamedFrom("quadzilla_69", "runner_482105");
+    expect(
+      await claimUsername(db, userId, "runner_482105", CLEAR),
+    ).toStrictEqual({ kind: "claimed", username: "runner_482105" });
+  });
+
+  it("is never offered as a suggestion", async () => {
+    await runner({ username: "runner_" });
+    await runner({ username: "runner__runs" });
+    await runner({ username: "runner__miles" });
+    const userId = await runner();
+    expect(await claimUsername(db, userId, "runner_", CLEAR)).toStrictEqual({
+      kind: "taken",
+      username: "runner_",
+      suggestion: undefined,
+    });
+  });
+});
+
 describe("the rename notice (ACC-12; round 27 #16)", () => {
   it("says the handle taken away, the placeholder and why", async () => {
     const userId = await renamedFrom("quadzilla_69");

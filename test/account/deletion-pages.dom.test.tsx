@@ -175,9 +175,7 @@ describe("DeleteAccount (U1's last row)", () => {
     const { view, user } = deleteRow();
     await view;
     const sheet = await openSheet(user);
-    await user.click(
-      within(sheet).getByRole("button", { name: "Show" }),
-    );
+    await user.click(within(sheet).getByRole("button", { name: "Show" }));
     expect(within(sheet).getByLabelText("Current password")).toHaveAttribute(
       "type",
       "text",

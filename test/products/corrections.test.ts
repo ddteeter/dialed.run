@@ -287,6 +287,22 @@ async function decideAt(userId: string, decidedAt: number): Promise<void> {
 }
 
 describe("the Desk's queue (R48·130)", () => {
+  it("loads a page of a hundred different products (SA-M37)", async () => {
+    const runner = await makeUser();
+    for (let index = 0; index < CORRECTIONS_PAGE; index += 1) {
+      const { productId } = await product(`Layer ${String(index)}`);
+      const garmentId = await makeItem({ userId: runner, category: "top" });
+      await core()
+        .update(wardrobeItems)
+        .set({ productId })
+        .where(eq(wardrobeItems.id, garmentId));
+      await file({ userId: runner, garmentId }, productId, "name", "Better");
+    }
+    const queue = await correctionsQueue();
+    expect(queue.groups).toHaveLength(CORRECTIONS_PAGE);
+    expect(queue.groups.every((group) => group.filers.length === 1)).toBe(true);
+  });
+
   it("groups by product, field and value, most runners first, then oldest", async () => {
     const { productId } = await product();
     const [ada, bo, cy] = [
@@ -448,6 +464,54 @@ const weightLight = (productId: string): CorrectionKey => ({
 });
 
 describe("Apply (R48·130)", () => {
+  it("decides a field a hundred runners filed on (SA-M37)", async () => {
+    const { productId } = await product();
+    const filers = [];
+    for (let index = 0; index < 100; index += 1) {
+      const who = await owner(productId);
+      await file(who, productId, "weight", "light");
+      filers.push(who);
+    }
+    expect(
+      await applyCorrection({ actorId: "op", key: weightLight(productId) }),
+    ).toStrictEqual({ outcome: "applied" });
+    const waiting = await core()
+      .select({ id: productCorrections.id })
+      .from(productCorrections)
+      .where(eq(productCorrections.status, "waiting"));
+    expect(waiting).toStrictEqual([]);
+    expect(await bellOf(filers[99]?.userId ?? "")).toHaveLength(1);
+  });
+
+  it("writes nothing for a value no runner is waiting on (SA-L11)", async () => {
+    const { productId } = await product();
+    const ada = await owner(productId);
+    await file(ada, productId, "link", "https://example.com/shoe");
+    expect(
+      await applyCorrection({
+        actorId: "op",
+        key: { productId, field: "link", value: "https://example.com/other" },
+      }),
+    ).toStrictEqual({ outcome: "changed" });
+    const productAfter = await productRow(productId);
+    expect(productAfter.sourceUrl).toBe(NOTHING);
+    const [row] = await rowsOf(ada.userId);
+    expect(row?.status).toBe("waiting");
+    expect(await bellOf(ada.userId)).toStrictEqual([]);
+  });
+
+  it("writes nothing once the runner has filed again (SA-L11)", async () => {
+    const { productId } = await product();
+    const ada = await owner(productId);
+    await file(ada, productId, "weight", "light");
+    await file(ada, productId, "weight", "heavy");
+    expect(
+      await applyCorrection({ actorId: "op", key: weightLight(productId) }),
+    ).toStrictEqual({ outcome: "changed" });
+    const unchanged = await productRow(productId);
+    expect(unchanged.weight).toBe("mid");
+  });
+
   it("writes the product, decides every waiting row for the field, and rings each runner", async () => {
     const { productId } = await product();
     const ada = await owner(productId);
@@ -456,7 +520,7 @@ describe("Apply (R48·130)", () => {
     await file(bo, productId, "weight", "heavy");
     expect(
       await applyCorrection({ actorId: "op", key: weightLight(productId) }),
-    ).toStrictEqual({ applied: true });
+    ).toStrictEqual({ outcome: "applied" });
     const applied = await productRow(productId);
     expect(applied.weight).toBe("light");
     for (const who of [ada, bo]) {
@@ -517,7 +581,7 @@ describe("Apply (R48·130)", () => {
         actorId: "op",
         key: { productId, field: "name", value: "rover  half-zip" },
       }),
-    ).toStrictEqual({ applied: false, reason: "name_taken" });
+    ).toStrictEqual({ outcome: "name_taken" });
     const kept = await productRow(productId);
     expect(kept.name).toBe("AFO Middle Layer");
     const rows = await rowsOf(ada.userId);
@@ -534,14 +598,14 @@ describe("Apply (R48·130)", () => {
         actorId: "op",
         key: { productId, field: "name", value: "afo middle layer" },
       }),
-    ).toStrictEqual({ applied: true });
+    ).toStrictEqual({ outcome: "applied" });
   });
 
   it("is a repeat with nothing done once nobody is waiting", async () => {
     const { productId } = await product();
     expect(
       await applyCorrection({ actorId: "op", key: weightLight(productId) }),
-    ).toStrictEqual({ applied: true });
+    ).toStrictEqual({ outcome: "applied" });
     const unchanged = await productRow(productId);
     expect(unchanged.weight).toBe("mid");
   });

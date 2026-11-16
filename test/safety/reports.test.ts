@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -6,6 +6,7 @@ import {
   notifications,
   outfitEntries,
   reports,
+  reviewQueue,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import {
@@ -54,6 +55,22 @@ async function moderationStatusOf(entryId: string): Promise<string> {
     .limit(1);
   if (!row) throw new Error("entry vanished");
   return row.status;
+}
+
+/**
+Whether the entry's Review opening hid it (`review_queue.hid`).
+*/
+async function hidOf(entryId: string): Promise<number | null | undefined> {
+  const [row] = await core()
+    .select({ hid: reviewQueue.hid })
+    .from(reviewQueue)
+    .where(
+      and(
+        eq(reviewQueue.subjectType, "entry"),
+        eq(reviewQueue.subjectId, entryId),
+      ),
+    );
+  return row?.hid;
 }
 
 async function reportableEntry(): Promise<string> {
@@ -146,7 +163,9 @@ describe("the distinct-reporter threshold", () => {
     }
     const [queued] = await pendingReviewQueue();
     if (!queued) throw new Error("nothing queued");
-    expect(await claimForReview(queued.id, await makeUser())).toBe("claimed");
+    expect(await claimForReview(queued.id, await makeUser(), "reports")).toBe(
+      "claimed",
+    );
 
     expect(await isQueuedForReview("entry", entryId)).toBe(true);
   });
@@ -436,6 +455,7 @@ describe("the report breaker (design 164)", () => {
 
     expect(last?.hiddenPendingReview).toBe(true);
     expect(await moderationStatusOf(entryId)).toBe("hidden_pending_review");
+    expect(await hidOf(entryId)).toBe(1);
   });
 
   it("only queues at its ceiling: nothing hidden, nobody told", async () => {
@@ -448,5 +468,51 @@ describe("the report breaker (design 164)", () => {
     expect(await moderationStatusOf(entryId)).toBe("ok");
     expect(await isQueuedForReview("entry", entryId)).toBe(true);
     expect(await core().select().from(notifications)).toStrictEqual([]);
+    expect(await hidOf(entryId)).toBe(0);
+  });
+
+  it("records each opening's own hide when a queued row is opened again", async () => {
+    await opened("reports", REPORT_HIDES_FLOOR, nowSeconds());
+    const entryId = await reportableEntry();
+    await reportedToTheThreshold(entryId);
+    expect(await hidOf(entryId)).toBe(0);
+
+    // The flood's rows settle; the next report hides, and says so.
+    await core().delete(reviewQueue).where(ne(reviewQueue.subjectId, entryId));
+    await fileReport(
+      {
+        reporterId: await makeUser(),
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "explicit",
+      },
+      oweInCore,
+      noPurge,
+    );
+
+    expect(await moderationStatusOf(entryId)).toBe("hidden_pending_review");
+    expect(await hidOf(entryId)).toBe(1);
+  });
+
+  it("does not count a report that hid at once (SA-L12)", async () => {
+    const flooder = await makeUser();
+    for (let n = 0; n < REPORT_HIDES_FLOOR; n += 1) {
+      await fileReport(
+        {
+          reporterId: flooder,
+          subjectType: "entry",
+          subjectId: await reportableEntry(),
+          reason: "intimate",
+        },
+        oweInCore,
+        noPurge,
+      );
+    }
+    const entryId = await reportableEntry();
+
+    const last = await reportedToTheThreshold(entryId);
+
+    expect(last?.hiddenPendingReview).toBe(true);
+    expect(await moderationStatusOf(entryId)).toBe("hidden_pending_review");
   });
 });

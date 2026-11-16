@@ -32,8 +32,13 @@ export function entryPhotoPrefix(userId: string, entryId?: string): string {
  * `reviewerPhotoResponse` serves it.
  */
 export function quarantineKeyFor(photoKey: string): string {
-  return `quarantine/${photoKey}`;
+  return `${QUARANTINE_ROOT}${photoKey}`;
 }
+
+/**
+The prefix every quarantined copy is stored under.
+*/
+export const QUARANTINE_ROOT = "quarantine/";
 
 export function entryPhotoKeyFor(
   userId: string,

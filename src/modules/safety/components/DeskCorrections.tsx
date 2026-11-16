@@ -238,11 +238,21 @@ async function decide(
   };
   if (values.decision === "apply") return apply({ data: key });
   await decline({ data: { ...key, reason: values.reason } });
-  return { applied: true };
+  return { outcome: "applied" };
 }
 
-const NAME_TAKEN_LINE =
-  "Another product of this brand already has that name. Decline it, and look in Duplicates.";
+/**
+What the row says after Apply, by its outcome: nothing when it applied.
+*/
+const REFUSED_LINES: Readonly<
+  Record<ApplyOutcome["outcome"], string | undefined>
+> = {
+  applied: undefined,
+  name_taken:
+    "Another product of this brand already has that name. Decline it, and look in Duplicates.",
+  // The runner filed again since the page loaded (SA-L11).
+  changed: "That suggestion changed. Reload to see it.",
+};
 
 /**
  * The row's decision, one form: Apply (chalk) with Decline beside it, and
@@ -270,9 +280,9 @@ function DecisionBar({
     onSuccess: () => router.invalidate(),
     successMessage: isDeclining ? "Declined." : "Applied.",
     refusal: {
-      matches: (result) => !result.applied,
-      answer: () => {
-        setRefusedLine(NAME_TAKEN_LINE);
+      matches: (result) => result.outcome !== "applied",
+      answer: (result) => {
+        setRefusedLine(REFUSED_LINES[result.outcome]);
       },
     },
   });

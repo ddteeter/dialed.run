@@ -98,6 +98,7 @@ export async function opened(
   n: number,
   openedAt: number,
   subjectType: ReviewSubjectType = "photo",
+  hid?: number,
 ): Promise<void> {
   await times(n, (core) =>
     core.insert(reviewQueue).values({
@@ -108,6 +109,7 @@ export async function opened(
       status: "pending",
       createdAt: 1,
       openedAt,
+      hid,
     }),
   );
 }

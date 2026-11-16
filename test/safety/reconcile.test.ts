@@ -250,7 +250,9 @@ async function queuedAndClaimed(): Promise<string> {
   }
   const [queued] = await pendingReviewQueue();
   if (!queued) throw new Error("nothing queued");
-  expect(await claimForReview(queued.id, await makeUser())).toBe("claimed");
+  expect(await claimForReview(queued.id, await makeUser(), "reports")).toBe(
+    "claimed",
+  );
   return queued.id;
 }
 
@@ -349,7 +351,9 @@ describe("review claims expire", () => {
   it("lets the row be claimed again afterwards", async () => {
     const queueId = await queuedAndClaimed();
     await releaseStaleClaims(nowSeconds() + claimLeaseSeconds + 1);
-    expect(await claimForReview(queueId, await makeUser())).toBe("claimed");
+    expect(await claimForReview(queueId, await makeUser(), "reports")).toBe(
+      "claimed",
+    );
   });
 
   it("does not touch rows nobody has claimed", async () => {

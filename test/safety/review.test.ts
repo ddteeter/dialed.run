@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import {
   entryPhotos,
+  notifications,
   outfitEntries,
   products,
   reviewQueue,
@@ -22,6 +23,7 @@ import {
   pendingReviewQueue,
   reasonsFrom,
   resolveReview,
+  reviewResolution,
   moderationThresholds,
   reportersToHide,
 } from "../../src/modules/safety";
@@ -162,11 +164,13 @@ describe("claiming a decision (law 2)", () => {
     const reviewer = await makeUser();
     const other = await makeUser();
 
-    expect(await claimForReview(queueId, reviewer)).toBe("claimed");
+    expect(await claimForReview(queueId, reviewer, "reports")).toBe("claimed");
     // The duplicated tab. Without the status predicate in the UPDATE both
     // claims would "succeed" and the second reviewer would act on a row
     // the first is already deciding.
-    expect(await claimForReview(queueId, other)).toBe("already_taken");
+    expect(await claimForReview(queueId, other, "reports")).toBe(
+      "already_taken",
+    );
   });
 });
 
@@ -313,6 +317,136 @@ describe("resolving a decision", () => {
   });
 });
 
+/**
+ * A product three runners reported, its queue row and its reporters.
+ */
+async function reportedProduct(): Promise<{
+  productId: string;
+  queueId: string;
+}> {
+  const productId = newUlid();
+  await core()
+    .insert(products)
+    .values({
+      id: productId,
+      brandId: newUlid(),
+      name: "Some Shoe",
+      normalizedName: "some shoe",
+      createdBy: await makeUser(),
+      createdAt: NOW,
+    });
+  for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+    await fileReport(
+      {
+        reporterId: await makeUser(),
+        subjectType: "product",
+        subjectId: productId,
+        reason: "spam",
+      },
+      oweInCore,
+      noPurge,
+    );
+  }
+  const [queued] = await pendingReviewQueue();
+  if (!queued) throw new Error("nothing queued");
+  return { productId, queueId: queued.id };
+}
+
+async function queueRow(queueId: string) {
+  const [row] = await core()
+    .select({
+      status: reviewQueue.status,
+      resolvedBy: reviewQueue.resolvedBy,
+    })
+    .from(reviewQueue)
+    .where(eq(reviewQueue.id, queueId));
+  return row;
+}
+
+async function noticesOfKind(kind: string): Promise<number> {
+  const rows = await core()
+    .select({ id: notifications.id })
+    .from(notifications)
+    .where(eq(notifications.kind, kind));
+  return rows.length;
+}
+
+describe("two decisions on one row (SA-L11)", () => {
+  beforeEach(resetSafetyTables);
+
+  it("lands one of two that read the row together, whole", async () => {
+    const { productId, queueId } = await reportedProduct();
+    const [approver, remover] = [await makeUser(), await makeUser()];
+
+    // Both read the row open before either batch runs.
+    const outcomes = await Promise.all([
+      resolveReview(queueId, approver, "approve"),
+      resolveReview(queueId, remover, "remove"),
+    ]);
+
+    expect(outcomes).toContain("resolved");
+    expect(outcomes).toContain("already_resolved");
+    const won = outcomes[0] === "resolved" ? "approve" : "remove";
+    const row = await queueRow(queueId);
+    expect(row).toStrictEqual(
+      won === "approve"
+        ? { status: "approved", resolvedBy: approver }
+        : { status: "removed", resolvedBy: remover },
+    );
+    const [product] = await core()
+      .select({ status: products.status })
+      .from(products)
+      .where(eq(products.id, productId));
+    expect(product?.status).toBe(won === "approve" ? "active" : "hidden");
+    // Only the winner's reporters' notices: "kept" or "removed", not both.
+    expect(await noticesOfKind("report_kept")).toBe(
+      won === "approve" ? autoHideReporterThreshold : 0,
+    );
+    expect(await noticesOfKind("report_removed")).toBe(
+      won === "approve" ? 0 : autoHideReporterThreshold,
+    );
+  });
+
+  it("settles nothing on a row a new report re-opened since it was read", async () => {
+    const { entryId, queueId } = await queuedEntry();
+    // Opened a while ago, so the re-open below moves `opened_at`.
+    await core()
+      .update(reviewQueue)
+      .set({ openedAt: nowSeconds() - 600 })
+      .where(eq(reviewQueue.id, queueId));
+
+    const reviewer = await makeUser();
+    const [outcome] = await Promise.all([
+      resolveReview(queueId, reviewer, "approve"),
+      core()
+        .update(reviewQueue)
+        .set({ openedAt: nowSeconds() })
+        .where(eq(reviewQueue.id, queueId)),
+    ]);
+
+    expect(outcome).toBe("already_resolved");
+    const row = await queueRow(queueId);
+    expect(row?.status).toBe("pending");
+    expect(await statusOf(entryId)).toBe("hidden_pending_review");
+    expect(await noticesOfKind("report_kept")).toBe(0);
+  });
+
+  it("never settles a row already settled", async () => {
+    const { queueId } = await reportedProduct();
+    const first = await makeUser();
+    await resolveReview(queueId, first, "remove");
+
+    await core().batch([
+      reviewResolution(core(), queueId, await makeUser(), "approved"),
+    ]);
+
+    expect(await queueRow(queueId)).toStrictEqual({
+      status: "removed",
+      resolvedBy: first,
+    });
+  });
+});
+
 describe("what a decision writes", () => {
   beforeEach(resetSafetyTables);
 
@@ -320,7 +454,7 @@ describe("what a decision writes", () => {
     const { queueId } = await queuedEntry();
     const reviewer = await makeUser();
 
-    await claimForReview(queueId, reviewer);
+    await claimForReview(queueId, reviewer, "reports");
 
     // Not just "reviewing": the row must name WHO, or a second tab
     // cannot tell whether it is looking at its own claim.

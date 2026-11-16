@@ -30,6 +30,7 @@ import {
   useReturnToRow,
 } from "./kit-origin";
 import { OtherPhotos } from "./OtherPhotos";
+import { reviewPhotoSrc } from "./review-photo-src";
 import { PhotoMatches, type DecideMatch } from "./PhotoMatches";
 import { useSettled } from "./use-settled";
 
@@ -218,6 +219,24 @@ function RequestHead({
   );
 }
 
+/**
+ * The photo a request names, so the decision is made on the picture and
+ * not only on a link (SA-M24). Drawn as the Desk kit's own photos are
+ * (a guess for Design, design 226); nothing for a kit or a link not ours.
+ */
+function SubjectPhoto({
+  photoKey,
+}: Readonly<{ photoKey: string | undefined }>): JSX.Element | undefined {
+  return photoKey === undefined ? undefined : (
+    <img
+      src={reviewPhotoSrc(photoKey)}
+      alt="Requested"
+      data-part="subject-photo"
+      className="h-32 w-auto self-start border border-hairline"
+    />
+  );
+}
+
 function RemovalRequestRow(props: RowProps): JSX.Element {
   const { request, asOf, hasFocus, onFocused, onDecided, onBlocked } = props;
   const { decide, block, decideMatch } = props.actions;
@@ -265,6 +284,7 @@ function RemovalRequestRow(props: RowProps): JSX.Element {
               </span>
             )}
           </span>
+          <SubjectPhoto photoKey={request.subjectPhotoKey} />
           <SubjectLink request={request} />
           <StatutoryLine />
           <OtherPhotos others={request.otherPhotos} />

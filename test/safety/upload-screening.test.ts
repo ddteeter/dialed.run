@@ -19,6 +19,7 @@ import {
   reviewerPhotoResponse,
   uploadPhoto,
 } from "../../src/modules/feed/photos";
+import { putSnapshot } from "../../src/modules/enrichment/snapshot";
 import {
   imageCategories,
   pendingEntryPhotos,
@@ -424,6 +425,10 @@ describe("the bytes behind a reported photo", () => {
     // Design 157: material under review is cached nowhere, the operator's
     // own browser included — not the hour a runner's photo is kept.
     expect(served.headers.get("cache-control")).toBe("private, no-store");
+    expect(served.headers.get("content-type")).toBe("image/jpeg");
+    expect(served.headers.get("content-security-policy")).toBe(
+      "sandbox; default-src 'none'",
+    );
 
     // The point of the separate route: `photoResponse` refuses this photo
     // to everyone but its owner, and being reported is what hid it. A
@@ -453,6 +458,77 @@ describe("the bytes behind a reported photo", () => {
     // never in the admin list.
     const refused = await reviewerPhotoResponse(key, "");
     expect(refused.status).toBe(404);
+  });
+
+  /**
+   * What an admin is served when the object at a key is whatever it is,
+   * put straight in the bucket so the type is the test's to choose.
+   */
+  async function servedAt(key: string, contentType?: string) {
+    const reviewer = await makeUser();
+    Reflect.set(env, "ADMIN_USER_IDS", reviewer);
+    await env.MEDIA.put(
+      key,
+      PHOTO_BYTES,
+      contentType === undefined ? {} : { httpMetadata: { contentType } },
+    );
+    try {
+      const response = await reviewerPhotoResponse(key, reviewer);
+      return {
+        status: response.status,
+        type: response.headers.get("content-type"),
+        text: await response.text(),
+      };
+    } finally {
+      await env.MEDIA.delete(key);
+    }
+  }
+
+  it("serves a garment photo's WebP and a quarantined copy (SA-M7)", async () => {
+    await expect(
+      servedAt("items/u/i/v.webp", "image/webp"),
+    ).resolves.toMatchObject({
+      status: 200,
+      type: "image/webp",
+    });
+    await expect(
+      servedAt("quarantine/entries/u/e/p", "image/jpeg"),
+    ).resolves.toMatchObject({ status: 200, type: "image/jpeg" });
+  });
+
+  it("says not found for a key outside the photo roots (SA-M7)", async () => {
+    await expect(
+      servedAt("products/p/snapshot-1.jpg", "image/jpeg"),
+    ).resolves.toMatchObject({ status: 404 });
+  });
+
+  it("says not found for an object not stored as a photo (SA-M7)", async () => {
+    await expect(
+      servedAt("entries/u/e/page", "text/html"),
+    ).resolves.toMatchObject({ status: 404 });
+    await expect(
+      servedAt("entries/u/e/plain", "text/plain"),
+    ).resolves.toMatchObject({ status: 404 });
+    await expect(servedAt("entries/u/e/untyped")).resolves.toMatchObject({
+      status: 404,
+      text: "not found",
+    });
+  });
+
+  it("says not found for a stored product page (SA-M7)", async () => {
+    const key = await putSnapshot(
+      "01JAAAAAAAAAAAAAAAAAAAAAAA",
+      "<!doctype html><p>a page</p>",
+      1_700_000_000_000,
+    );
+    const reviewer = await makeUser();
+    Reflect.set(env, "ADMIN_USER_IDS", reviewer);
+    try {
+      const response = await reviewerPhotoResponse(key, reviewer);
+      expect(response.status).toBe(404);
+    } finally {
+      await env.MEDIA.delete(key);
+    }
   });
 
   it("says not found for a key that is not a photo", async () => {

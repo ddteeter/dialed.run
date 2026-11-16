@@ -107,6 +107,13 @@ function textValue(max: number, noun: string) {
 }
 
 /**
+ * The longest value a correction may carry (SA-M39): what the Desk's key
+ * takes, so every filed value is one the Desk can name to decide it. Only
+ * a link can reach it; the text fields' own limits are far below.
+ */
+export const CORRECTION_VALUE_MAX = 2048;
+
+/**
  * What each field's value must be, as the sheet's input of that type
  * offers it. Weight and fabric are the closet form's own enums.
  */
@@ -117,7 +124,13 @@ const correctionValueSchemas = {
   wind: yesNoSchema,
   water: yesNoSchema,
   composition: textValue(CORRECTION_COMPOSITION_MAX, "composition"),
-  link: httpsUrlSchema,
+  link: z
+    .string()
+    .max(
+      CORRECTION_VALUE_MAX,
+      `Keep the link to ${String(CORRECTION_VALUE_MAX)} characters.`,
+    )
+    .pipe(httpsUrlSchema),
 } satisfies Record<CorrectionField, z.ZodType<string>>;
 
 /**
@@ -206,7 +219,7 @@ export const DECLINE_REASON_LABELS: Readonly<Record<DeclineReason, string>> = {
 export const correctionKeySchema = z.object({
   productId: ulidSchema,
   field: correctionFieldSchema,
-  value: z.string().min(1).max(2048),
+  value: z.string().min(1).max(CORRECTION_VALUE_MAX),
 });
 
 /**

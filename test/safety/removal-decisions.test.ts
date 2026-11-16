@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -17,7 +17,13 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
 import { decideRemovalRequest } from "../../src/modules/feed/removal-requests";
-import { fileTakedownRequest } from "../../src/modules/safety";
+import {
+  fileTakedownRequest,
+  pendingTakedownRequests,
+  resolveReview,
+} from "../../src/modules/safety";
+import { releaseHolds } from "../../src/modules/safety/release";
+import { nowSeconds } from "../../src/lib/now";
 import { HIDDEN_NOTICE } from "../../src/modules/safety/notice-copy";
 import { noPurge } from "../purge-spy";
 import { oweInCore } from "../queue-fakes";
@@ -347,6 +353,167 @@ const entryLink = (entryId: string) =>
   `https://dialed.run/feed/entry/${entryId}`;
 const photoLink = (entryId: string, photoId: string) =>
   `https://dialed.run/feed/photo/entries/u/${entryId}/${photoId}`;
+
+describe("the kit Review sends the operator to (SA-M24)", () => {
+  it("is the kit a named photo is on, not the kit its link names", async () => {
+    const kitB = await sharedEntry();
+    const photoId = await photoOn(kitB, "pass");
+    const kitA = await sharedEntry();
+    await file(photoLink(kitA, photoId));
+
+    const [request] = await pendingTakedownRequests(core(), NOW);
+    expect(request?.subject).toStrictEqual({
+      subjectType: "photo",
+      subjectId: photoId,
+      entryId: kitB,
+    });
+    expect(request?.subjectPhotoKey).toBe(`entries/u/${kitB}/${photoId}`);
+  });
+
+  it("is the link's kit for a kit, and for a photo gone since", async () => {
+    const kit = await sharedEntry();
+    await file(entryLink(kit));
+    const gone = await sharedEntry();
+    const photoId = await photoOn(gone, "pass");
+    await file(photoLink(gone, photoId));
+    await core().delete(entryPhotos).where(eq(entryPhotos.id, photoId));
+
+    const listed = await pendingTakedownRequests(core(), NOW);
+    const subjects = listed.map((request) => request.subject);
+    expect(listed.map((request) => request.subjectPhotoKey)).toStrictEqual([
+      undefined,
+      undefined,
+    ]);
+    expect(subjects).toContainEqual({
+      subjectType: "entry",
+      subjectId: kit,
+      entryId: kit,
+    });
+    expect(subjects).toContainEqual({
+      subjectType: "photo",
+      subjectId: photoId,
+      entryId: gone,
+    });
+  });
+});
+
+/**
+ * A review row open on a subject, for a reason that is not the request.
+ */
+async function openRow(
+  subjectType: "entry" | "photo",
+  subjectId: string,
+  source: "reports" | "classifier",
+): Promise<string> {
+  const id = newUlid();
+  await core().insert(reviewQueue).values({
+    id,
+    subjectType,
+    subjectId,
+    source,
+    status: "pending",
+    createdAt: nowSeconds(),
+    openedAt: nowSeconds(),
+  });
+  return id;
+}
+
+async function rowStatus(id: string) {
+  const [row] = await core()
+    .select({ status: reviewQueue.status })
+    .from(reviewQueue)
+    .where(eq(reviewQueue.id, id));
+  return row?.status;
+}
+
+async function keptNoticesFor(subjectId: string) {
+  return core()
+    .select({ kind: notifications.kind })
+    .from(notifications)
+    .where(
+      and(
+        eq(notifications.subjectId, subjectId),
+        eq(notifications.kind, "content_kept"),
+      ),
+    );
+}
+
+describe("an Approve on a subject a request holds (SA-M23)", () => {
+  it("settles a classifier row and leaves the photo hidden until the request is decided", async () => {
+    const entryId = await sharedEntry();
+    const photoId = await photoOn(entryId, "pass");
+    const rowId = await openRow("photo", photoId, "classifier");
+    const id = await file(photoLink(entryId, photoId));
+
+    expect(await resolveReview(rowId, "op-one", "approve")).toBe("resolved");
+
+    expect(await rowStatus(rowId)).toBe("approved");
+    expect(await photoStatus(photoId)).toBe("hidden_pending_review");
+    // Nobody tells the author it was left up while it is still hidden.
+    expect(await keptNoticesFor(photoId)).toStrictEqual([]);
+    await decline(id);
+    expect(await photoStatus(photoId)).toBe("pending");
+  });
+
+  it("leaves a kit hidden on a reports row's Approve", async () => {
+    const entryId = await sharedEntry();
+    const rowId = await openRow("entry", entryId, "reports");
+    await file(entryLink(entryId));
+
+    await resolveReview(rowId, "op-one", "approve");
+
+    expect(await rowStatus(rowId)).toBe("approved");
+    expect(await entryStatus(entryId)).toBe("hidden_pending_review");
+    expect(await keptNoticesFor(entryId)).toStrictEqual([]);
+  });
+
+  it("leaves it hidden through a burst release of the row's cause", async () => {
+    const entryId = await sharedEntry();
+    const photoId = await photoOn(entryId, "pass");
+    const rowId = await openRow("photo", photoId, "classifier");
+    await file(photoLink(entryId, photoId));
+
+    await releaseHolds("classifier", nowSeconds() - 60, "op-one");
+
+    expect(await rowStatus(rowId)).toBe("approved");
+    expect(await photoStatus(photoId)).toBe("hidden_pending_review");
+  });
+
+  it("is held back only by a pending request that hid this very subject", async () => {
+    const entryId = await sharedEntry();
+    const other = await sharedEntry();
+    await core()
+      .update(outfitEntries)
+      .set({ moderationStatus: "hidden_pending_review" })
+      .where(eq(outfitEntries.id, entryId));
+    // One that hid nothing (blocked, say), one decided, one on another kit.
+    await seedRequest({ subjectType: "entry", subjectId: entryId });
+    const decided = await seedRequest({
+      subjectType: "entry",
+      subjectId: entryId,
+    });
+    await core()
+      .update(takedownRequests)
+      .set({ status: "declined", heldAt: NOW })
+      .where(eq(takedownRequests.id, decided));
+    const elsewhere = await seedRequest({
+      subjectType: "entry",
+      subjectId: other,
+    });
+    await core()
+      .update(takedownRequests)
+      .set({ heldAt: NOW })
+      .where(eq(takedownRequests.id, elsewhere));
+    const rowId = await openRow("entry", entryId, "reports");
+
+    await resolveReview(rowId, "op-one", "approve");
+
+    expect(await entryStatus(entryId)).toBe("ok");
+    expect(await keptNoticesFor(entryId)).toStrictEqual([
+      { kind: "content_kept" },
+    ]);
+  });
+});
 
 describe("the hold a request puts on what it names", () => {
   it("hides a public kit at once, and a Decline gives it back", async () => {

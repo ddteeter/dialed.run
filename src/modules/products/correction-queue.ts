@@ -5,7 +5,7 @@
  * Decline keeps the product as it is. Every runner decided hears it on the
  * bell, and nothing is emailed (R48·129f).
  */
-import { and, asc, count, desc, eq, gte, inArray, ne, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ne, sql } from "drizzle-orm";
 
 import {
   productCorrections,
@@ -22,6 +22,7 @@ import {
 import { NotFoundError } from "../../lib/errors";
 import { normalizeIdentity } from "../../lib/normalize";
 import { nowSeconds } from "../../lib/now";
+import { inJsonList } from "../../lib/sql/json-list";
 import { orSqlNull } from "../../lib/sql/sql-null";
 import { notificationInsert } from "../notifications";
 import {
@@ -166,7 +167,9 @@ async function filersOf(productIds: readonly string[]) {
   const distinctIds = [...new Set(productIds)];
   const waitingOnPage = and(
     eq(productCorrections.status, "waiting"),
-    inArray(productCorrections.productId, distinctIds),
+    // One parameter for the whole list (SA-M37): a page of a hundred
+    // products would otherwise bind more than D1 takes in one statement.
+    inJsonList(productCorrections.productId, distinctIds),
   );
   return coreDb()
     .select({
@@ -202,9 +205,14 @@ export interface CorrectionKey {
  * (R48·130: that is a Decline, and Duplicates), so it is refused with an
  * answer the row can say.
  */
-export type ApplyOutcome =
-  | { readonly applied: true }
-  | { readonly applied: false; readonly reason: "name_taken" };
+/**
+ * What Apply did: `applied` (a repeat too), or refused because another
+ * product of the brand has that name, or because the value on screen is
+ * no longer one a runner is waiting on (SA-L11).
+ */
+export interface ApplyOutcome {
+  readonly outcome: "applied" | "name_taken" | "changed";
+}
 
 /**
  * The waiting corrections a decision resolves, and the product they are
@@ -229,6 +237,7 @@ async function toDecide(key: CorrectionKey, isWholeField: boolean) {
         id: productCorrections.id,
         userId: productCorrections.userId,
         garmentId: productCorrections.garmentId,
+        value: productCorrections.value,
       })
       .from(productCorrections)
       .where(toResolve),
@@ -264,7 +273,7 @@ function decisionWrites(
       : "correction_declined";
   const filerIds = filers.map((filer) => filer.id);
   const stillWaiting = and(
-    inArray(productCorrections.id, filerIds),
+    inJsonList(productCorrections.id, filerIds),
     eq(productCorrections.status, "waiting"),
   );
   return [
@@ -299,7 +308,13 @@ export async function applyCorrection({
   key,
 }: Readonly<{ actorId: string; key: CorrectionKey }>): Promise<ApplyOutcome> {
   const { filers, product } = await toDecide(key, true);
-  if (filers.length === 0) return { applied: true };
+  if (filers.length === 0) return { outcome: "applied" };
+  // Only a value a runner is still waiting on (SA-L11): every filed value
+  // passed its field's schema when it was filed, and a runner who filed
+  // again since the page loaded has replaced the one on screen.
+  if (filers.every((filer) => filer.value !== key.value)) {
+    return { outcome: "changed" };
+  }
   const isName = key.field === "name";
   const isTaken =
     isName &&
@@ -308,7 +323,7 @@ export async function applyCorrection({
       product.brandId,
       normalizeIdentity(key.value),
     ));
-  if (isTaken) return { applied: false, reason: "name_taken" };
+  if (isTaken) return { outcome: "name_taken" };
   const patch = productPatch(key.field, key.value);
   const named = isName ? key.value : product.name;
   const db = primaryCoreDb();
@@ -321,7 +336,7 @@ export async function applyCorrection({
       body: `We fixed the ${CORRECTION_FIELD_NOUNS[key.field]} on ${named}. Thanks.`,
     }),
   ]);
-  return { applied: true };
+  return { outcome: "applied" };
 }
 
 async function isNameTaken(

@@ -1469,6 +1469,20 @@ Design 315 (#761) asks again.
   date (250): "Aug 12". (259e) A notification row's name is the body text
   and time, with "Unread" voicing the dot (255b).
 
+## Built on the Desk by wave 12's sec-desk lane (design 226)
+
+- **Guess · the photo a removal request names (Design 325, to be
+  filed).** A request row on Review shows the photo it names, above
+  "Open its kit": one image, alt "Requested", drawn as the Desk kit
+  page's photos are (`h-32`, hairline edge). Nothing for a kit or a link
+  that is not ours. The ask: its size and place, and whether it opens
+  anything.
+- **Two sentences on existing bands (owner, 2026-11-15).** Desk
+  Corrections' refused band says "That suggestion changed. Reload to see
+  it." when Apply finds the value on screen is no longer one a runner is
+  waiting on; the corrections sheet says "Keep the link to 2048
+  characters." for a longer link.
+
 ## Built from round 58's Desk rulings (wave 11, design 222)
 
 How the Desk's Round 58 rulings (#719–#725, #758, #759) were built, and

@@ -1585,8 +1585,8 @@ export const takedownBlocks = /*#__PURE__*/ sqliteTable("takedown_blocks", {
 /**
  * One row per thing awaiting a human, not one per report — three reports
  * about the same entry are one decision. `status` is the claim column
- * (law 2): the review UI claims a row before acting on it, so two open
- * tabs cannot both resolve it.
+ * (law 2): a decision settles the row only while it is still open and
+ * unchanged since it was read, so of two open tabs only one resolves it.
  */
 export const reviewQueue = /*#__PURE__*/ sqliteTable(
   "review_queue",
@@ -1632,6 +1632,10 @@ export const reviewQueue = /*#__PURE__*/ sqliteTable(
     // count an hour of (design 164), so a re-hide counts as a hold. Null
     // only on a row from before the column, as `created_at` was copied in.
     openedAt: integer("opened_at"),
+    // Whether that opening hid its subject: 1 when it did, 0 when it only
+    // queued it. The reports breaker counts openings that hid. Null only
+    // on a row from before the column, counted as before. Additive.
+    hid: integer("hid"),
   },
   (t) => [
     // One open decision per subject; a second trigger updates rather than

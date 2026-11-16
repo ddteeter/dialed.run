@@ -8,7 +8,6 @@ import {
   fileReportInput,
   garmentMatchActionInput,
   removalDecisionInput,
-  reviewDecisionInput,
   takedownRequestInput,
 } from "../../src/modules/safety";
 import {
@@ -170,37 +169,6 @@ describe("blocking", () => {
 
   it("refuses an empty one", () => {
     expect(blockRunnerInput.safeParse({ userId: "" }).success).toBe(false);
-  });
-});
-
-describe("a review decision", () => {
-  it.each(["approve", "remove"])("takes a queue ULID and %s", (decision) => {
-    // Both, not one: the enum names two decisions and a test that only
-    // ever sends "remove" cannot tell whether "approve" is still in it.
-    const queueId = newUlid();
-    expect(reviewDecisionInput.parse({ queueId, decision })).toEqual({
-      queueId,
-      decision,
-    });
-  });
-
-  it("refuses a queue id that is not a ULID", () => {
-    // These ARE ours, unlike a subject id, so the format can be strict.
-    expect(
-      reviewDecisionInput.safeParse({ queueId: "nope", decision: "approve" })
-        .success,
-    ).toBe(false);
-  });
-
-  it("refuses a third decision", () => {
-    // Two buttons, two decisions. Anything else arriving here is a
-    // client that has drifted from the contract.
-    expect(
-      reviewDecisionInput.safeParse({
-        queueId: newUlid(),
-        decision: "maybe",
-      }).success,
-    ).toBe(false);
   });
 });
 

@@ -209,6 +209,32 @@ describe("the report breaker", () => {
     expect(reading).toMatchObject({ isOver: true, count: 10 });
   });
 
+  it("counts an opening that hid, and one from before the column, but not one that only queued", async () => {
+    await opened("reports", 5, NOW - 60, "entry", 0);
+    await opened("reports", REPORT_HIDES_FLOOR - 2, NOW - 60, "entry", 1);
+    await opened("reports", 1, NOW - 60, "entry");
+    expect(await ceilingReading(core(), "reports", NOW)).toMatchObject({
+      isOver: false,
+      count: 9,
+    });
+
+    await opened("reports", 1, NOW - 60, "photo", 1);
+    const reading = await ceilingReading(core(), "reports", NOW);
+    expect(reading).toMatchObject({ isOver: true, count: 10 });
+  });
+
+  it("leaves openings that only queued out of the baseline", async () => {
+    await opened("reports", 3, NOW - 2 * HOUR, "entry", 0);
+    await opened("reports", REPORT_HIDES_FLOOR, NOW - 60);
+    expect(await ceilingReading(core(), "reports", NOW)).toMatchObject({
+      ceiling: REPORT_HIDES_FLOOR,
+    });
+
+    await opened("reports", 3, NOW - 2 * HOUR, "entry", 1);
+    const reading = await ceilingReading(core(), "reports", NOW);
+    expect(reading).toMatchObject({ ceiling: 12 });
+  });
+
   it("leaves profile and product reports out of the baseline too", async () => {
     await opened("reports", 3, NOW - 2 * HOUR, "profile");
     await opened("reports", REPORT_HIDES_FLOOR, NOW - 60);
