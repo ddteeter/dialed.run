@@ -62,7 +62,10 @@ export const UPLOAD_REFUSALS = {
   wrongType: "That's not a GPX, TCX or FIT file.",
   empty: "That file is empty.",
   tooLarge: "That file is larger than 25 MB.",
-  tooMany: `That's ${String(UPLOADS_PER_DAY)} run files today. You can upload more tomorrow.`,
+  // A literal, not a template over `UPLOADS_PER_DAY`: a template here moved
+  // every module's server-function stubs into the entry chunk (measured
+  // 2026-11-15, +33 kB). The test pins the number to the constant.
+  tooMany: "That's 30 run files today. You can upload more tomorrow.",
 } as const;
 
 /**

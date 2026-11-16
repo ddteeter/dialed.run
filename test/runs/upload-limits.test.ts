@@ -53,6 +53,9 @@ describe("checkUpload", () => {
 
   it("says a day's uploads are used up in the owner's words (SA-M29)", () => {
     expect(UPLOADS_PER_DAY).toBe(30);
+    expect(UPLOAD_REFUSALS.tooMany).toContain(
+      `That's ${String(UPLOADS_PER_DAY)} run files`,
+    );
     expect(UPLOAD_REFUSALS.tooMany).toBe(
       "That's 30 run files today. You can upload more tomorrow.",
     );
