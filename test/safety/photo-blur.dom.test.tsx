@@ -1965,7 +1965,11 @@ describe("when the photo cannot be prepared", () => {
     });
     expect(band()).toHaveTextContent("Photo not added");
     expect(band()).toHaveTextContent(PREPARE_FAILED);
-    expect(onAnnounce).toHaveBeenCalledWith(PREPARE_FAILED);
+    // The band can paint a tick before the failure is announced (the
+    // sentence is written from an effect), so it is waited for.
+    await waitFor(() => {
+      expect(onAnnounce).toHaveBeenCalledWith(PREPARE_FAILED);
+    });
     expect(screen.queryByRole("button", { name: "Use this photo" })).toBeNull();
     expect(screen.getByLabelText("Pick another")).toBe(picker());
     expect(screen.getByRole("button", { name: "Cancel" })).toBeVisible();
