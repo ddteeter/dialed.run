@@ -1,12 +1,17 @@
 import process from "node:process";
 
 import { APIError } from "better-auth/api";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 import { session, user, verification } from "../../src/db/schema-auth";
-import { outbox, passwordAttempts } from "../../src/db/schema-core";
+import {
+  outbox,
+  passwordAttempts,
+  rateLimits,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { createAuth } from "../../src/modules/auth/create-auth";
@@ -19,6 +24,12 @@ import {
   PASSWORD_ATTEMPT_WINDOW_S,
 } from "../../src/modules/auth/password-check";
 import { PASSWORD_ATTEMPTS_PER_WINDOW } from "../../src/lib/contracts";
+import {
+  SIGN_IN_LIMITED_CODE,
+  SIGN_IN_TRIES,
+  SIGN_IN_WINDOW_S,
+} from "../../src/lib/contracts/access";
+import { nowSeconds } from "../../src/lib/now";
 import { recordingMail } from "./mail-recorder";
 import { OPEN_ACCESS } from "./open-access";
 
@@ -437,6 +448,112 @@ async function signedIn() {
   const headers = new Headers({ cookie: await signIn(auth, email) });
   return { auth, userId, headers };
 }
+
+const wrong = ["not", "the", "password", "at", "all"].join("-");
+
+function tryPassword(auth: Auth, email: string, attempt: string) {
+  return auth.handler(post("sign-in/email", { email, password: attempt }));
+}
+
+/**
+The address's sign-in count, or nothing once it is cleared.
+*/
+async function triesOf(email: string): Promise<number | undefined> {
+  const ofAddress = and(
+    eq(rateLimits.kind, "sign-in"),
+    eq(rateLimits.subject, email.toLowerCase()),
+  );
+  const [row] = await db
+    .select({ count: rateLimits.count })
+    .from(rateLimits)
+    .where(ofAddress);
+  return row?.count;
+}
+
+describe("email sign-in's tries per typed address", () => {
+
+  it("refuses even the right password once the wrong ones reach the limit", async () => {
+    const { auth } = instance();
+    const { email, userId } = await signUp(auth);
+    for (let n = 0; n < SIGN_IN_TRIES; n += 1) {
+      const refused = await tryPassword(auth, email, wrong);
+      expect(refused.status).toBe(401);
+    }
+
+    const before = nowSeconds();
+    const limited = await tryPassword(auth, email, password);
+
+    expect(limited.status).toBe(429);
+    const body = z
+      .object({ code: z.string(), until: z.number() })
+      .parse(await limited.json());
+    expect(body.code).toBe(SIGN_IN_LIMITED_CODE);
+    expect(body.until).toBeGreaterThanOrEqual(before + SIGN_IN_WINDOW_S - 5);
+    expect(body.until).toBeLessThanOrEqual(nowSeconds() + SIGN_IN_WINDOW_S);
+    const sessions = await db
+      .select({ id: session.id })
+      .from(session)
+      .where(eq(session.userId, userId));
+    expect(sessions).toEqual([]);
+  });
+
+  it("counts the address however it is typed", async () => {
+    const { auth } = instance();
+    const { email } = await signUp(auth);
+    for (let n = 0; n < SIGN_IN_TRIES; n += 1) {
+      await tryPassword(auth, n % 2 === 0 ? email : email.toUpperCase(), wrong);
+    }
+    expect(await triesOf(email)).toBe(SIGN_IN_TRIES);
+    const limited = await tryPassword(auth, email.toUpperCase(), password);
+    expect(limited.status).toBe(429);
+  });
+
+  it("counts an address with no account the same way", async () => {
+    const { auth } = instance();
+    const nobody = `nobody-${newUlid().toLowerCase()}@example.com`;
+    for (let n = 0; n < SIGN_IN_TRIES; n += 1) {
+      const refused = await tryPassword(auth, nobody, wrong);
+      expect(refused.status).toBe(401);
+    }
+    const limited = await tryPassword(auth, nobody, wrong);
+    expect(limited.status).toBe(429);
+    expect(await limited.json()).toMatchObject({ code: SIGN_IN_LIMITED_CODE });
+  });
+
+  it("starts again from none after a sign-in that works", async () => {
+    const { auth } = instance();
+    const { email } = await signUp(auth);
+    for (let n = 0; n < SIGN_IN_TRIES - 1; n += 1) {
+      await tryPassword(auth, email, wrong);
+    }
+    expect(await triesOf(email)).toBe(SIGN_IN_TRIES - 1);
+
+    const signedIn = await tryPassword(auth, email, password);
+
+    expect(signedIn.status).toBe(200);
+    expect(await triesOf(email)).toBeUndefined();
+    const next = await tryPassword(auth, email, wrong);
+    expect(next.status).toBe(401);
+    expect(await triesOf(email)).toBe(1);
+  });
+
+  it("keeps the count after a wrong password", async () => {
+    const { auth } = instance();
+    const { email } = await signUp(auth);
+    await tryPassword(auth, email, wrong);
+    await tryPassword(auth, email, wrong);
+    expect(await triesOf(email)).toBe(2);
+  });
+
+  it("counts nothing for a body with no address", async () => {
+    const { auth } = instance();
+    const before = await db.select({ kind: rateLimits.kind }).from(rateLimits);
+    const refused = await auth.handler(post("sign-in/email", { password }));
+    expect(refused.status).toBe(400);
+    const after = await db.select({ kind: rateLimits.kind }).from(rateLimits);
+    expect(after).toHaveLength(before.length);
+  });
+});
 
 describe("checkOwnPassword (tries at the current password, limited)", () => {
   const NOW = 1_800_000_000;

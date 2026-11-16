@@ -8,10 +8,13 @@ import {
 import {
   INVITE_COPY,
   REGION_BLOCKED_COPY,
+  SIGN_IN_LIMITED_CODE,
   TURNSTILE_REFUSED,
+  signInLimitedMessage,
 } from "../../src/lib/contracts/access";
 import {
   AUTH_COPY,
+  AUTH_KICKER,
   AccessRefused,
   AccountClosedRefusal,
   AuthRejected,
@@ -133,6 +136,33 @@ describe("signIn", () => {
     });
     // Nobody was signed in.
     expect(isRememberedForSession("has-handle")).toBe(true);
+  });
+
+  it("says when the address may try again once its tries are used up, with no retry", async () => {
+    rememberForSession("u1", "has-handle");
+    const until = 1_800_000_900;
+    client.email.mockResolvedValue({
+      data: undefined,
+      error: { code: SIGN_IN_LIMITED_CODE, until, status: 429 },
+    });
+    const thrown = await caught(signIn(person));
+    expect(thrown).toBeInstanceOf(AccessRefused);
+    expect(thrown).toMatchObject({
+      kicker: AUTH_KICKER,
+      message: signInLimitedMessage(until),
+      retry: false,
+    });
+    expect(isRememberedForSession("has-handle")).toBe(true);
+  });
+
+  it("reads a limit refusal with no time as Better Auth's own limit", async () => {
+    client.email.mockResolvedValue({
+      data: undefined,
+      error: { code: SIGN_IN_LIMITED_CODE, status: 429 },
+    });
+    const thrown = await caught(signIn(person));
+    expect(thrown).toBeInstanceOf(AuthRejected);
+    expect(thrown).toMatchObject({ status: 429 });
   });
 
   it("keeps any other refusal's status for the band", async () => {

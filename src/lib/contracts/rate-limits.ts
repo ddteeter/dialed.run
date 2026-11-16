@@ -34,7 +34,9 @@ export const SEND_LIMIT_KINDS = [
  * - `page-fetch` — enrichment's page fetches across everyone;
  *   `GLOBAL_SUBJECT`;
  * - `proxy-call` — enrichment's proxy calls across everyone;
- *   `GLOBAL_SUBJECT`.
+ *   `GLOBAL_SUBJECT`;
+ * - `sign-in` — email sign-in's tries for one typed address, lowercased,
+ *   whether or not it has an account (`SIGN_IN_TRIES`).
  */
 export const RATE_LIMIT_KINDS = [
   ...SEND_LIMIT_KINDS,
@@ -42,6 +44,7 @@ export const RATE_LIMIT_KINDS = [
   "enrich-runner",
   "page-fetch",
   "proxy-call",
+  "sign-in",
 ] as const;
 
 export type SendLimitKind = (typeof SEND_LIMIT_KINDS)[number];

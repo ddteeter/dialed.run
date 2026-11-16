@@ -266,6 +266,29 @@ export const ACCESS_CODES = {
 } as const;
 
 /**
+ * Email sign-in's tries per typed address (owner, 2026-11-15): ten in
+ * fifteen minutes, whether or not the address has an account, so the
+ * limit says nothing about which addresses do. A sign-in that works
+ * clears the count.
+ */
+export const SIGN_IN_TRIES = 10;
+export const SIGN_IN_WINDOW_S = 15 * 60;
+
+/**
+ * The refusal a sign-in past the limit carries, with `until`: when the
+ * address may try again, in epoch seconds.
+ */
+export const SIGN_IN_LIMITED_CODE = "SIGN_IN_LIMITED";
+
+/**
+ * The log-in band's sentence past the limit (owner, 2026-11-15), on the
+ * device's clock: a signed-out visitor has no home zone.
+ */
+export function signInLimitedMessage(until: number): string {
+  return `Too many tries for this address. Try again at ${viewerClockLabel(until, undefined)}, or reset your password.`;
+}
+
+/**
  * The ban gate's refusal (task 128 · SAF-4, `safety/ban-gate.ts`): the
  * code a refused sign-in carries, here rather than beside the gate so the
  * sign-in forms can read it without importing the server's auth plugin.

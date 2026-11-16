@@ -11,6 +11,9 @@ import {
   REGION_BLOCKED_CODE,
   REGION_BLOCKED_COPY,
   REGION_COPY,
+  SIGN_IN_LIMITED_CODE,
+  SIGN_IN_TRIES,
+  SIGN_IN_WINDOW_S,
   TURNSTILE_REFUSED,
   blockedRegionOf,
   inviteCodeField,
@@ -20,6 +23,7 @@ import {
   normalizeInviteCode,
   regionInviteRefusal,
   regionTag,
+  signInLimitedMessage,
 } from "../../src/lib/contracts/access";
 
 /**
@@ -89,6 +93,16 @@ describe("the words", () => {
     });
     expect(TURNSTILE_REFUSED).toBe(
       "We couldn't check this browser. Reload the page and try again.",
+    );
+  });
+
+  it("limit sign-in to the owner's ten tries in fifteen minutes, in the owner's sentence", () => {
+    expect(SIGN_IN_TRIES).toBe(10);
+    expect(SIGN_IN_WINDOW_S).toBe(900);
+    expect(SIGN_IN_LIMITED_CODE).toBe("SIGN_IN_LIMITED");
+    // 2027-01-15 08:15 UTC, on a device whose clock is UTC.
+    expect(signInLimitedMessage(1_800_000_900)).toBe(
+      "Too many tries for this address. Try again at 8:15 AM UTC, or reset your password.",
     );
   });
 

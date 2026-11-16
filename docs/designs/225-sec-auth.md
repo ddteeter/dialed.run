@@ -27,9 +27,9 @@ instance's configuration.
   secret stops the Worker.
 - **SA-M4, sign-in tries.** `/verify-password` is closed over HTTP, as
   `/change-password` already is (`auth.api.verifyPassword` still works).
-  Email sign-in counts wrong passwords per typed address in
-  `email_send_limits` under a `signin:` key (11a's pattern): 10 in 15
-  minutes. An address with no account is counted the same way. Past the
+  Email sign-in counts its tries per typed address in `rate_limits`
+  under the `sign-in` kind (#786's helpers): 10 in 15 minutes, counted
+  before the password is checked and cleared by a sign-in that works. An address with no account is counted the same way. Past the
   limit the answer is 429 and the band says the owner's sentence: "Too
   many tries for this address. Try again at {time}, or reset your
   password."
@@ -53,13 +53,16 @@ instance's configuration.
   a new account (`customSyntheticUser`: blank name, the same id form,
   dates to the second).
 
-Ordering: SA-M4's limit kind (`send-limit.ts`), SA-M16 (`verification.ts`)
-and SA-M26 (`safety/bans.ts`, `test/safety/ban-gate.test.ts`) wait for #786.
+Ordering: SA-M4's limit kind (`rate-limit.ts`), SA-M2's landing read
+(`verification.ts`) and SA-M26 (`safety/bans.ts`,
+`test/safety/ban-gate.test.ts`) waited for #786. A deleted account's
+address is forgotten with its sign-in count by the purge's existing
+per-address forget.
 
 ## Contract touches
 
-- Schema changes needed: **none** (`email_send_limits` gets a `signin:`
-  kind, a comment only).
+- Schema changes needed: **none** (`RATE_LIMIT_KINDS` gains `sign-in`;
+  the column stores it as text with no check).
 - New route files: none (`src/routes/account/verify.tsx` changes its loader).
 - New bindings/queues/crons: **none**.
 - Screens: the confirm and change landings (round 26 #11) gain a state

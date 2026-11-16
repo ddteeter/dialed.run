@@ -9,7 +9,11 @@ import {
   SEND_LIMIT_KINDS,
 } from "../../src/lib/contracts/rate-limits";
 import { newUlid } from "../../src/lib/ids";
-import { claimRunnerChange, countSend } from "../../src/modules/email";
+import {
+  claimRunnerChange,
+  claimSignInTry,
+  countSend,
+} from "../../src/modules/email";
 import {
   canSpendPageFetch,
   canSpendProxyCall,
@@ -40,6 +44,7 @@ describe("the rate-limit kinds", () => {
     await canSpendRunnerRequest(db, runner, NOW);
     await canSpendPageFetch(db, NOW);
     await canSpendProxyCall(db, NOW);
+    await claimSignInTry(db, "Someone@Example.test", NOW);
 
     const keys = await countedKeys(db);
     expect(keys).toStrictEqual(
@@ -49,6 +54,7 @@ describe("the rate-limit kinds", () => {
         `enrich-runner:${runner}`,
         `page-fetch:${GLOBAL_SUBJECT}`,
         `proxy-call:${GLOBAL_SUBJECT}`,
+        "sign-in:someone@example.test",
       ].toSorted((a, b) => a.localeCompare(b)),
     );
     const kinds = new Set(keys.map((key) => key.slice(0, key.indexOf(":"))));

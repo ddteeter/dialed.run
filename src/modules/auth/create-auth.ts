@@ -26,6 +26,7 @@ import {
 } from "./access-hook";
 import { AUTH_COPY } from "./auth-copy";
 import { CLOSED_AUTH_PATHS } from "./closed-paths";
+import { clearSignInTries, countSignInTry } from "./sign-in-limit";
 import {
   BREACHED_CODE,
   newPasswordIn,
@@ -418,6 +419,10 @@ export function createAuth({
         await screenPassword(passwordScreen, ctx);
         await admitSignUp(access, ctx);
         await withdrawChangeOnSignOutEverywhere(db, ctx);
+        await countSignInTry(db, ctx);
+      }),
+      after: createAuthMiddleware(async (ctx) => {
+        await clearSignInTries(db, ctx);
       }),
     },
     plugins: plugins ?? [],
