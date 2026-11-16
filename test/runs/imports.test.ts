@@ -1,15 +1,23 @@
 import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { imports, outfitEntries, runs } from "../../src/db/schema-core";
+import {
+  imports,
+  outfitEntries,
+  rateLimits,
+  runs,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { coreDb } from "../../src/modules/runs/core-db";
 import {
   ImportUploadError,
   MAX_IMPORT_BYTES,
   getImportOutcome,
+  startFileUpload,
   startImport,
 } from "../../src/modules/runs/imports";
+import { UPLOADS_PER_DAY } from "../../src/modules/runs/upload-limits";
+import { countRow } from "../rate-limit-rows";
 import { newUlid } from "../../src/lib/ids";
 import { selectOwnedRow } from "../../src/lib/sql/owned";
 import type { ImportJob } from "../../src/modules/runs/queue-messages";
@@ -554,5 +562,100 @@ describe("startImport: an upload whose row could not be written (D-110)", () => 
       userId,
       importId,
     });
+  });
+});
+
+/**
+A runner whose day already holds `count` uploads, counted at `startedAt`.
+*/
+async function usedToday(userId: string, count: number, startedAt: number) {
+  await coreDb()
+    .insert(rateLimits)
+    .values(countRow("upload-runner", userId, count, startedAt));
+}
+
+describe("startFileUpload: a runner's day of uploads (SA-M29)", () => {
+  const bytes = new TextEncoder().encode("<gpx/>").buffer;
+  const DAY_S = 24 * 60 * 60;
+
+  function upload(
+    userId: string,
+    queue: ReturnType<typeof fakeQueue>,
+    idempotencyKey: string = newUlid(),
+  ) {
+    return startFileUpload(
+      coreDb(),
+      env.IMPORTS,
+      queue,
+      { userId, filename: "run.gpx", bytes, idempotencyKey },
+      noReport,
+    );
+  }
+
+  it("starts an upload as startImport does, and says so", async () => {
+    const userId = newUlid();
+    const queue = fakeQueue();
+    const started = await upload(userId, queue);
+    expect(started.isStarted).toBe(true);
+    const importId = started.isStarted ? started.importId : "";
+    const row = await importRow(userId, importId);
+    expect(row?.status).toBe("pending");
+    expect(queue.sent).toStrictEqual([{ type: "import", importId }]);
+  });
+
+  it("takes the day's last upload and refuses the one after, storing nothing", async () => {
+    const userId = newUlid();
+    const queue = fakeQueue();
+    await usedToday(userId, UPLOADS_PER_DAY - 1, nowSeconds());
+
+    const last = await upload(userId, queue);
+    expect(last.isStarted).toBe(true);
+    expect(await upload(userId, queue)).toStrictEqual({
+      isStarted: false,
+      refusal: "That's 30 run files today. You can upload more tomorrow.",
+    });
+    expect(queue.sent).toHaveLength(1);
+    const rows = await coreDb()
+      .select()
+      .from(imports)
+      .where(eq(imports.userId, userId));
+    expect(rows).toHaveLength(1);
+    const stored = await env.IMPORTS.list({ prefix: `imports/${userId}/` });
+    expect(stored.objects).toHaveLength(1);
+  });
+
+  it("returns a repeat's import without counting it", async () => {
+    const userId = newUlid();
+    const queue = fakeQueue();
+    const idempotencyKey = newUlid();
+    const first = await upload(userId, queue, idempotencyKey);
+    await coreDb()
+      .update(rateLimits)
+      .set({ count: UPLOADS_PER_DAY })
+      .where(eq(rateLimits.subject, userId));
+
+    // At the day's limit, the same submission still answers with its import.
+    expect(await upload(userId, queue, idempotencyKey)).toStrictEqual(first);
+    const [count] = await coreDb()
+      .select({ count: rateLimits.count })
+      .from(rateLimits)
+      .where(eq(rateLimits.subject, userId));
+    expect(count?.count).toBe(UPLOADS_PER_DAY);
+  });
+
+  it("counts each runner's day apart", async () => {
+    const full = newUlid();
+    await usedToday(full, UPLOADS_PER_DAY, nowSeconds());
+    const refused = await upload(full, fakeQueue());
+    const other = await upload(newUlid(), fakeQueue());
+    expect(refused.isStarted).toBe(false);
+    expect(other.isStarted).toBe(true);
+  });
+
+  it("starts a new day once a day has passed since the first", async () => {
+    const userId = newUlid();
+    await usedToday(userId, UPLOADS_PER_DAY, nowSeconds() - DAY_S - 1);
+    const started = await upload(userId, fakeQueue());
+    expect(started.isStarted).toBe(true);
   });
 });

@@ -11,7 +11,13 @@ import { and, eq } from "drizzle-orm";
 import { imports, runs } from "../../db/schema-core";
 import { importFileKeyFor } from "../../lib/import-file-key";
 import { firstColumnWhere } from "../../lib/sql/keyed-read";
-import { ImportUploadError, checkUpload } from "./upload-limits";
+import { isWithinRateLimit } from "../email";
+import {
+  ImportUploadError,
+  UPLOAD_REFUSALS,
+  UPLOADS_PER_DAY,
+  checkUpload,
+} from "./upload-limits";
 import { newUlid } from "../../lib/ids";
 import type { CoreDb } from "./core-db";
 import type { ImportJob } from "./queue-messages";
@@ -86,18 +92,8 @@ export async function startImport(
   // retry does not upload the same file twice or start a second parse
   // (law 8b). Checked before the R2 put, because the put is the expensive
   // half.
-  if (input.idempotencyKey !== undefined) {
-    const existing = await firstColumnWhere(
-      db,
-      imports,
-      imports.id,
-      and(
-        eq(imports.userId, input.userId),
-        eq(imports.idempotencyKey, input.idempotencyKey),
-      ),
-    );
-    if (existing !== undefined) return { importId: existing };
-  }
+  const existing = await repeatOf(db, input);
+  if (existing !== undefined) return { importId: existing };
 
   const importId = newUlid();
   const r2Key = importFileKeyFor(input.userId, importId, extension);
@@ -132,6 +128,80 @@ export async function startImport(
   await queue.send({ type: "import", importId });
 
   return { importId };
+}
+
+/**
+ * The import a submission already started, when it carries a key we have
+ * seen from this runner.
+ */
+async function repeatOf(
+  db: CoreDb,
+  input: Readonly<Pick<StartImportInput, "userId" | "idempotencyKey">>,
+): Promise<string | undefined> {
+  return input.idempotencyKey === undefined
+    ? undefined
+    : firstColumnWhere(
+        db,
+        imports,
+        imports.id,
+        and(
+          eq(imports.userId, input.userId),
+          eq(imports.idempotencyKey, input.idempotencyKey),
+        ),
+      );
+}
+
+const DAY_S = 24 * 60 * 60;
+
+/**
+ * Count one of a runner's uploads today, and say whether it is within
+ * `UPLOADS_PER_DAY`.
+ */
+export function isWithinUploadCap(
+  db: CoreDb,
+  userId: string,
+  now = nowSeconds(),
+): Promise<boolean> {
+  return isWithinRateLimit(
+    db,
+    "upload-runner",
+    userId,
+    UPLOADS_PER_DAY,
+    DAY_S,
+    now,
+  );
+}
+
+/**
+ * A runner's upload, started, or refused with the sentence they read.
+ */
+export type FileUpload =
+  | Readonly<{ isStarted: true; importId: string }>
+  | Readonly<{ isStarted: false; refusal: string }>;
+
+/**
+ * A file a runner uploads: `startImport`, within `UPLOADS_PER_DAY` a
+ * runner (SA-M29). A repeat of a submission returns its import and is not
+ * counted again. A Garmin import calls `startImport` itself: each
+ * activity imports once, so the picker is bounded already.
+ *
+ * The refusal is an answer, not an error: a thrown one reaches the form
+ * as "Our end failed", and this is the runner's to read.
+ */
+export async function startFileUpload(
+  db: CoreDb,
+  importBucket: R2Bucket,
+  queue: ImportsQueueProducer,
+  input: Omit<StartImportInput, "garminActivityId">,
+  report: ReportException,
+): Promise<FileUpload> {
+  const existing = await repeatOf(db, input);
+  if (existing !== undefined) return { isStarted: true, importId: existing };
+  if (!(await isWithinUploadCap(db, input.userId))) {
+    return { isStarted: false, refusal: UPLOAD_REFUSALS.tooMany };
+  }
+  const { importId } = await startImport(db, importBucket, queue, input, report);
+  return { isStarted: true, importId };
 }
 
 /**

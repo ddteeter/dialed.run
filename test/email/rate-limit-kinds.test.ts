@@ -20,6 +20,7 @@ import {
   canSpendRunnerRequest,
 } from "../../src/modules/enrichment/spend-limit";
 import { cspReportDepsFromEnv } from "../../src/modules/ops/csp-report";
+import { isWithinUploadCap } from "../../src/modules/runs/imports";
 import { countedKeys } from "../rate-limit-rows";
 
 /**
@@ -47,6 +48,7 @@ describe("the rate-limit kinds", () => {
     await canSpendProxyCall(db, NOW);
     await claimSignInTry(db, "Someone@Example.test", NOW);
     await cspReportDepsFromEnv().isWithinLimit("203.0.113.9");
+    await isWithinUploadCap(db, runner, NOW);
 
     const keys = await countedKeys(db);
     expect(keys).toStrictEqual(
@@ -54,6 +56,7 @@ describe("the rate-limit kinds", () => {
         ...SEND_LIMIT_KINDS.map((kind) => `${kind}:someone@example.test`),
         `change-runner:${runner}`,
         `enrich-runner:${runner}`,
+        `upload-runner:${runner}`,
         `page-fetch:${GLOBAL_SUBJECT}`,
         `proxy-call:${GLOBAL_SUBJECT}`,
         "sign-in:someone@example.test",

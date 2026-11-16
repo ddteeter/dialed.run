@@ -22,7 +22,7 @@ import {
   importPollIntervalMs,
   isReading,
 } from "../import-polling";
-import type { ImportOutcome } from "../imports";
+import type { FileUpload, ImportOutcome } from "../imports";
 import { checkUpload, parseFailureSentence } from "../upload-limits";
 import { GarminImport } from "./GarminImport";
 import type { GarminImportActions } from "./GarminImport";
@@ -40,7 +40,7 @@ import type { Retime } from "./ParsedCard";
  * the server functions' own, so the route passes them with no wrapper.
  */
 export interface UploadFormProps {
-  upload: (input: { data: FormData }) => Promise<{ importId: string }>;
+  upload: (input: { data: FormData }) => Promise<FileUpload>;
   getOutcome: (input: {
     data: { importId: string };
   }) => Promise<ImportOutcome | undefined>;
@@ -261,7 +261,13 @@ function UploadFlow({
       const form = new FormData();
       form.set("file", attempt.file);
       form.set("idempotencyKey", attempt.key);
-      const { importId } = await upload({ data: form });
+      const started = await upload({ data: form });
+      // Over the day's uploads: refused as a wrong file is, in the well.
+      if (!started.isStarted) {
+        refuse(started.refusal);
+        return;
+      }
+      const { importId } = started;
       setWatching({
         importId,
         label: attempt.file.name,
@@ -291,8 +297,12 @@ function UploadFlow({
       void send(freshAttempt(file));
       return;
     }
-    setRefusal(check.problem);
-    setSaid(check.problem);
+    refuse(check.problem);
+  }
+
+  function refuse(problem: string): void {
+    setRefusal(problem);
+    setSaid(problem);
     setWatching(undefined);
     setFailed(undefined);
   }

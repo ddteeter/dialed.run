@@ -640,6 +640,7 @@ async function deleteAccountRows(
       db.insert(closedAddresses).values(row).onConflictDoNothing(),
     ),
     forgetRateLimit(db, "change-runner", userId),
+    forgetRateLimit(db, "upload-runner", userId),
     forgetRunnerEnrichmentLimit(db, userId),
     // Reports they filed stay — what was said about someone else's post
     // is that runner's record too — but name nobody (the development
