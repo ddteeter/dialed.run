@@ -29,9 +29,11 @@ import {
   eq,
   gte,
   inArray,
+  isNull,
   lt,
   lte,
   ne,
+  or,
   sql,
 } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
@@ -381,6 +383,8 @@ async function reportsCeilingBefore(db: Db, until: number): Promise<number> {
  * 2026-10-31), so a pile-on of profile reports cannot pause post hides,
  * and not on a subject with a report that hides at once (SA-L12): that
  * report never asked the breaker, so its row must not pause the rest.
+ * Nor an opening that only queued its subject (`hid` 0): the breaker
+ * counts hides. A row from before `hid` (null) counts as it did.
  */
 function heldBy(cause: HoldCause): SQL | undefined {
   const opened = eq(reviewQueue.source, cause);
@@ -389,6 +393,7 @@ function heldBy(cause: HoldCause): SQL | undefined {
         opened,
         inArray(reviewQueue.subjectType, reportSubjectsThatHide),
         noReportHidingAtOnce(),
+        or(isNull(reviewQueue.hid), eq(reviewQueue.hid, 1)),
       )
     : opened;
 }

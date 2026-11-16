@@ -436,6 +436,8 @@ async function hidePendingReview(
     subjectType,
     subjectId,
     source: "reports",
+    // What the reports breaker counts: an opening that hid (design 164).
+    hid: canHide ? 1 : 0,
   });
   if (!canHide) {
     await queueWrite;

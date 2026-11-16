@@ -74,7 +74,7 @@ What a queue row is about and why, read from the table's own columns.
 */
 export type EnqueueInput = Pick<
   typeof reviewQueue.$inferInsert,
-  "subjectType" | "subjectId" | "source"
+  "subjectType" | "subjectId" | "source" | "hid"
 >;
 
 /**
@@ -109,6 +109,7 @@ export function enqueueForReview<TSchema extends Record<string, unknown>>(
         status: "pending",
         createdAt: now,
         openedAt: now,
+        hid: input.hid,
       })
       // UNIQUE(subject_type, subject_id): a subject already queued stays one
       // decision. Re-opening a resolved row is deliberate — a subject
@@ -122,6 +123,9 @@ export function enqueueForReview<TSchema extends Record<string, unknown>>(
           // Reopened now, though created when it first was: the hold
           // breakers count this as a hold (design 164).
           openedAt: now,
+          // This opening's own: whether it hid, or null when the caller
+          // does not say (only a report's opening does).
+          hid: orSqlNull(input.hid),
           // Cleared, not left alone: this row is being re-opened, and a
           // stale reviewer stamped on a pending decision would read as
           // "someone already looked at this". An `undefined` here would
