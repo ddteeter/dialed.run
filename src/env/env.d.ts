@@ -91,6 +91,11 @@ declare namespace Cloudflare {
      * requesters are matched by email alone. Optional, so health does not
      * fail without it. */
     TAKEDOWN_SECRET?: string;
+    /** Keys the fingerprint of a closed account's addresses (SA-L09;
+     * owner, 2026-11-15), its own secret, as takedown's is. Rotating it
+     * forgets every closed address. Absent: a closed account is purged
+     * with nothing kept, and no sign-up is refused for one. */
+    CLOSED_ADDRESS_SECRET?: string;
     /** The moderation thresholds, as JSON (`safety/thresholds.ts`): read
      * from config rather than source, its value kept with the deploy
      * checklist's private notes. Absent or malformed: moderation fails

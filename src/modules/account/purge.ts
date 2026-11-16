@@ -46,6 +46,7 @@ import {
   accessRequests,
   accountDeletions,
   blocks,
+  closedAddresses,
   copyrightHolds,
   dataExports,
   emailVerifications,
@@ -85,6 +86,7 @@ import { captureException, outboxInsert, oweOutbox } from "../ops";
 import { disconnectStrava } from "../runs";
 import { settleOpenReviews } from "../safety";
 import { forgetManualBands } from "../weather";
+import { closedAddressRows, forgetClosedAddresses } from "./closed-addresses";
 import { exportPrefixFor } from "./data-exports";
 
 type Db = ReturnType<typeof drizzle>;
@@ -130,6 +132,11 @@ export interface PurgeDeps {
   readonly importsBucket: Pick<R2Bucket, "list" | "delete">;
   readonly report: Report;
   readonly now: number;
+  /**
+   * `CLOSED_ADDRESS_SECRET` (SA-L09): keys what is kept of a closed
+   * account's addresses. Absent: nothing is kept, and the digest says so.
+   */
+  readonly closedAddressSecret?: string | undefined;
 }
 
 function liveDeps(): PurgeDeps {
@@ -142,6 +149,7 @@ function liveDeps(): PurgeDeps {
     importsBucket: env.IMPORTS,
     report: captureException,
     now: nowSeconds(),
+    closedAddressSecret: env.CLOSED_ADDRESS_SECRET,
   };
 }
 
@@ -158,10 +166,15 @@ export async function purgeDueAccounts(
   clock: () => number = Date.now,
 ): Promise<void> {
   const startedAt = clock();
+  // The daily firing also lets go of closed addresses past their 3 years.
+  await forgetClosedAddresses(deps.core, deps.now);
   let failed = 0;
+  let unremembered = 0;
   let claimed = await claimDue(deps.core, deps.now);
   while (claimed.length > 0) {
-    failed += await purgeEach(deps, claimed);
+    const outcome = await purgeEach(deps, claimed);
+    failed += outcome.failed;
+    unremembered += outcome.unremembered;
     claimed =
       clock() - startedAt < PURGE_BUDGET_MS
         ? await claimDue(deps.core, deps.now)
@@ -170,6 +183,11 @@ export async function purgeDueAccounts(
   if (failed > 0) {
     anomalies.push(
       `${String(failed)} account deletion(s) stopped part way and are finished on the next firing`,
+    );
+  }
+  if (unremembered > 0) {
+    anomalies.push(
+      `${String(unremembered)} closed account(s) were purged with their addresses unremembered: CLOSED_ADDRESS_SECRET is not set`,
     );
   }
   const dueButHeld = and(due(deps.now), sql`EXISTS (${liveHold()})`);
@@ -190,22 +208,26 @@ export async function purgeDueAccounts(
 }
 
 /**
-How many of these purges failed; each failure is reported, and the rest go on.
-*/
+ * How many of these purges failed, and how many closed accounts were
+ * purged with nothing kept of their addresses; each failure is reported,
+ * and the rest go on.
+ */
 async function purgeEach(
   deps: PurgeDeps,
   userIds: readonly string[],
-): Promise<number> {
+): Promise<{ failed: number; unremembered: number }> {
   let failed = 0;
+  let unremembered = 0;
   for (const userId of userIds) {
     try {
-      await purgeAccount(deps, userId);
+      const { isUnremembered } = await purgeAccount(deps, userId);
+      if (isUnremembered) unremembered += 1;
     } catch (error) {
       failed += 1;
       deps.report(error, { surface: "account-purge", userId });
     }
   }
-  return failed;
+  return { failed, unremembered };
 }
 
 /**
@@ -287,12 +309,13 @@ async function claimDue(db: Db, now: number): Promise<string[]> {
 /**
  * One account, step by step. Every step reads what is left, so running
  * it again from the top after a failure at any step does only what the
- * failure left undone.
+ * failure left undone. `isUnremembered` when the account was closed and
+ * nothing was kept of its addresses (`deleteAccountRows`).
  */
 export async function purgeAccount(
   deps: PurgeDeps,
   userId: string,
-): Promise<void> {
+): Promise<{ isUnremembered: boolean }> {
   const { core, report } = deps;
   await forgetManualConditions(deps, userId);
   // Revoked before anything else of theirs goes: a connection the request
@@ -304,7 +327,7 @@ export async function purgeAccount(
   await deleteRuns(core, userId, "all", report);
   await deleteCloset(core, userId);
   await deleteStoredFiles(deps.importsBucket, userId);
-  await deleteAccountRows(core, userId, deps.now);
+  return deleteAccountRows(core, userId, deps);
 }
 
 /**
@@ -534,8 +557,9 @@ function followRowsNaming(db: Db, userId: string, handle: string | undefined) {
 async function deleteAccountRows(
   db: Db,
   userId: string,
-  now: number,
-): Promise<void> {
+  deps: Pick<PurgeDeps, "now" | "closedAddressSecret">,
+): Promise<{ isUnremembered: boolean }> {
+  const { now } = deps;
   const addresses = await addressesOf(db, userId);
   const profile = await firstRowWhere(
     db,
@@ -543,6 +567,10 @@ async function deleteAccountRows(
     eq(userProfiles.userId, userId),
   );
   const handle = profile?.username ?? undefined;
+  const isClosed = profile !== undefined && profile.bannedAt !== null;
+  const fingerprints = isClosed
+    ? await closedAddressRows(deps.closedAddressSecret, addresses, now)
+    : [];
   // Both directions. `follows` has no index led by the followee, so the
   // second clause scans it — once, for a deletion.
   const eitherFollow = involvingEither(
@@ -607,6 +635,10 @@ async function deleteAccountRows(
       db.delete(table).where(eq(table.userId, userId)),
     ),
     ...addresses.flatMap((address) => forgetAddress(db, address)),
+    // What sign-up refuses for 3 years, in place of the addresses.
+    ...fingerprints.map((row) =>
+      db.insert(closedAddresses).values(row).onConflictDoNothing(),
+    ),
     forgetRateLimit(db, "change-runner", userId),
     forgetRunnerEnrichmentLimit(db, userId),
     // Reports they filed stay — what was said about someone else's post
@@ -641,4 +673,7 @@ async function deleteAccountRows(
       db.delete(table).where(eq(column, userId)),
     ),
   ]);
+  // SA-L09: a closed account's addresses are kept as fingerprints, so
+  // sign-up can refuse them; with no secret, none were.
+  return { isUnremembered: isClosed && fingerprints.length === 0 };
 }

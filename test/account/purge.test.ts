@@ -8,6 +8,7 @@ import {
   accessRequests,
   accountDeletions,
   blocks,
+  closedAddresses,
   copyrightHolds,
   dataExports,
   rateLimits,
@@ -53,6 +54,10 @@ import {
   purgeDueAccounts,
 } from "../../src/modules/account/purge";
 import type { PurgeDeps } from "../../src/modules/account/purge";
+import {
+  CLOSED_ADDRESS_KEPT_S,
+  closedAddressHash,
+} from "../../src/modules/account/closed-addresses";
 import { forgetManualBands } from "../../src/modules/weather";
 import { drainOutbox } from "../../src/modules/ops/outbox";
 import { ONLY_THEIRS_GONE, seedAthleteGaveUp } from "../gave-up-rows";
@@ -780,17 +785,20 @@ describe("the purge's limits", () => {
  * from 0: a firing on it claims one round and no more.
  */
 function oneRoundClock(): () => number {
-  let reading = -PURGE_BUDGET_MS;
+  let reading = CLOCK_START - PURGE_BUDGET_MS;
   return () => (reading += PURGE_BUDGET_MS);
 }
 
 /**
 A clock that reads `elapsed` after its first reading, every time.
 */
+// Clocks read the epoch in milliseconds, as `Date.now` does.
+const CLOCK_START = NOW * 1000;
+
 function clockAt(elapsed: number): () => number {
   let reading: number | undefined;
   return () => {
-    const at = reading ?? 0;
+    const at = CLOCK_START + (reading ?? 0);
     reading = elapsed;
     return at;
   };
@@ -1343,13 +1351,15 @@ describe("purgeDueAccounts — a live copyright hold", () => {
 describe("purgeAccount — the follow rows on others' bells", () => {
   it("deletes a row they rang or a group naming them, and keeps a group naming someone else", async () => {
     const runner = await seedAccount();
-    const [alone, named, unnamed, unrung] = [
+    const [alone, named, unnamed, unrung, prefixed] = [
+      newUlid(),
       newUlid(),
       newUlid(),
       newUlid(),
       newUlid(),
     ];
-    const [soloGroup, namedGroup, otherGroup] = [
+    const [soloGroup, namedGroup, otherGroup, prefixedGroup] = [
+      newUlid(),
       newUlid(),
       newUlid(),
       newUlid(),
@@ -1357,6 +1367,7 @@ describe("purgeAccount — the follow rows on others' bells", () => {
     await ring(runner.userId, alone, soloGroup);
     await ring(runner.userId, named, namedGroup);
     await ring(runner.userId, unnamed, otherGroup);
+    await ring(runner.userId, prefixed, prefixedGroup);
     await bellRow(
       alone,
       soloGroup,
@@ -1377,10 +1388,10 @@ describe("purgeAccount — the follow rows on others' bells", () => {
     );
     // A handle that starts with theirs is not theirs.
     const longer = await bellRow(
-      named,
-      newUlid(),
+      prefixed,
+      prefixedGroup,
       undefined,
-      `@${runner.handle}x followed you.`,
+      `@${runner.handle}x and 1 other followed you.`,
     );
     // A row they never rang, though its words name them.
     const notRung = await bellRow(
@@ -1395,7 +1406,15 @@ describe("purgeAccount — the follow rows on others' bells", () => {
     const left = await core
       .select({ id: notifications.id })
       .from(notifications)
-      .where(inArray(notifications.userId, [alone, named, unnamed, unrung]));
+      .where(
+        inArray(notifications.userId, [
+          alone,
+          named,
+          unnamed,
+          unrung,
+          prefixed,
+        ]),
+      );
     expect(left.map((row) => row.id).toSorted(byText)).toStrictEqual(
       [kept, longer, notRung].toSorted(byText),
     );
@@ -1408,11 +1427,12 @@ describe("purgeAccount — the follow rows on others' bells", () => {
     await ring(userId, followee, group);
     await ring(userId, other, otherGroup);
     await bellRow(followee, group, userId, "@gone followed you.");
+    // A runner may be called "undefined"; a group naming them stays.
     const kept = await bellRow(
       other,
       otherGroup,
       undefined,
-      "@gone and 1 other followed you.",
+      "@undefined and 1 other followed you.",
     );
 
     await purgeAccount(depsAt(NOW).deps, userId);
@@ -1800,5 +1820,106 @@ describe("purgeAccount", () => {
         ),
       );
     expect(owed).toHaveLength(2);
+  });
+});
+
+const CLOSED_KEY = "closed-address-test-key";
+
+async function dueRunner(isClosed: boolean): Promise<Seeded> {
+  const runner = await seedAccount();
+  if (isClosed) {
+    await core
+      .update(userProfiles)
+      .set({ bannedAt: NOW - 3600 })
+      .where(eq(userProfiles.userId, runner.userId));
+  }
+  await claim(runner.userId, NOW - 1);
+  return runner;
+}
+
+async function closedKept() {
+  return core
+    .select({
+      hash: closedAddresses.hash,
+      closedAt: closedAddresses.closedAt,
+    })
+    .from(closedAddresses)
+    .orderBy(closedAddresses.hash);
+}
+
+/**
+ * SA-L09: an account an operator closed leaves its addresses behind as
+ * keyed fingerprints, so sign-up can refuse them; anyone else's leave
+ * nothing. A test key, not a deployed one.
+ */
+describe("purgeDueAccounts — a closed account's addresses", () => {
+  beforeEach(async () => {
+    await core.delete(closedAddresses);
+  });
+
+  it("keeps each address of a closed account as a fingerprint", async () => {
+    const runner = await dueRunner(true);
+    const anomalies: string[] = [];
+
+    await purgeDueAccounts(anomalies, {
+      ...depsAt(NOW).deps,
+      closedAddressSecret: CLOSED_KEY,
+    });
+
+    expect(await footprint(runner)).toStrictEqual(GONE);
+    const hashes = await Promise.all(
+      addressesOf(runner.email).map((address) =>
+        closedAddressHash(CLOSED_KEY, address),
+      ),
+    );
+    expect(await closedKept()).toStrictEqual(
+      hashes.toSorted(byText).map((hash) => ({ hash, closedAt: NOW })),
+    );
+    expect(anomalies).toStrictEqual([]);
+  });
+
+  it("keeps nothing of an account that was not closed", async () => {
+    const runner = await dueRunner(false);
+    const anomalies: string[] = [];
+
+    await purgeDueAccounts(anomalies, {
+      ...depsAt(NOW).deps,
+      closedAddressSecret: CLOSED_KEY,
+    });
+
+    expect(await footprint(runner)).toStrictEqual(GONE);
+    expect(await closedKept()).toStrictEqual([]);
+    expect(anomalies).toStrictEqual([]);
+  });
+
+  it("purges a closed account without a key, and the digest says nothing was kept", async () => {
+    const runner = await dueRunner(true);
+    await dueRunner(false);
+    const anomalies: string[] = [];
+
+    await purgeDueAccounts(anomalies, depsAt(NOW).deps);
+
+    expect(await footprint(runner)).toStrictEqual(GONE);
+    expect(await closedKept()).toStrictEqual([]);
+    expect(anomalies).toStrictEqual([
+      "1 closed account(s) were purged with their addresses unremembered: CLOSED_ADDRESS_SECRET is not set",
+    ]);
+  });
+
+  it("lets go of fingerprints past 3 years on each firing, with nothing due", async () => {
+    const [atEdge, past] = await Promise.all([
+      closedAddressHash(CLOSED_KEY, "edge@example.test"),
+      closedAddressHash(CLOSED_KEY, "past@example.test"),
+    ]);
+    await core.insert(closedAddresses).values([
+      { hash: atEdge, closedAt: NOW - CLOSED_ADDRESS_KEPT_S },
+      { hash: past, closedAt: NOW - CLOSED_ADDRESS_KEPT_S - 1 },
+    ]);
+
+    await purgeDueAccounts([], depsAt(NOW).deps);
+
+    expect(await closedKept()).toStrictEqual([
+      { hash: atEdge, closedAt: NOW - CLOSED_ADDRESS_KEPT_S },
+    ]);
   });
 });

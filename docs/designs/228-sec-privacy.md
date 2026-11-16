@@ -54,7 +54,9 @@ browser from carrying a runner's details off the app.
 
 - Schema: core migration `0007_add_closed_addresses` (number from
   coordinator-12; owner, 2026-11-15): `closed_addresses` (`hash` primary
-  key, `closed_at`), swept after 3 years. **HARD STOP** passed.
+  key, `closed_at`), swept after 3 years by the daily purge firing.
+  Additive. A row is written in the purge's final batch when the account's
+  profile is banned. **HARD STOP** passed.
 - New route: `src/routes/api/csp-report.ts`.
 - New secret: `CLOSED_ADDRESS_SECRET` (owner, 2026-11-15), in the deploy
   checklists and `.dev.vars.example`.
