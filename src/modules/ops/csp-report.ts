@@ -6,11 +6,15 @@
  * origin, it is cut to what an operator needs: the directive, the page's
  * path with no query, and the origin of what was blocked. Only that goes
  * to Sentry, through the Worker, so no query string, token or IP address
- * leaves. Always answers 204, so a probe learns nothing.
+ * leaves. One visitor's reports are counted by their address, and past
+ * `CSP_REPORTS_PER_HOUR` they are dropped. Always answers 204, so a probe
+ * learns nothing.
  */
 import { z } from "zod";
 
+import { coreDb } from "../../env";
 import { readCappedText } from "../../lib/read-capped";
+import { isWithinRateLimit } from "../email";
 import { captureException } from "./sentry";
 
 /**
@@ -23,6 +27,14 @@ export const CSP_REPORT_PATH = "/api/csp-report";
  * is refused before it is held.
  */
 const MAX_REPORT_BYTES = 8 * 1024;
+
+/**
+ * How many reports one address may send in an hour. A page that breaks
+ * the policy sends one per blocked load, so a real visitor stays well
+ * under it; past it the rest are the same report again, or a script.
+ */
+export const CSP_REPORTS_PER_HOUR = 20;
+const HOUR_S = 60 * 60;
 
 const reportSchema = z.object({
   "csp-report": z.object({
@@ -44,6 +56,10 @@ export interface ForwardedReport {
 
 export interface CspReportDeps {
   readonly forward: (report: ForwardedReport) => void;
+  /**
+  Count one report from this address, and say whether it is within the hour's.
+  */
+  readonly isWithinLimit: (address: string) => Promise<boolean>;
 }
 
 export function cspReportDepsFromEnv(): CspReportDeps {
@@ -51,6 +67,14 @@ export function cspReportDepsFromEnv(): CspReportDeps {
     forward: (report) => {
       captureException(new Error("csp violation"), { ...report });
     },
+    isWithinLimit: (address) =>
+      isWithinRateLimit(
+        coreDb(),
+        "csp-report",
+        address,
+        CSP_REPORTS_PER_HOUR,
+        HOUR_S,
+      ),
   };
 }
 
@@ -59,8 +83,19 @@ export async function receiveCspReport(
   deps: CspReportDeps,
 ): Promise<Response> {
   const report = await readReport(request);
-  if (report !== undefined) deps.forward(report);
+  // Only a report is counted: what is not one costs no write.
+  if (report !== undefined && (await deps.isWithinLimit(addressOf(request)))) {
+    deps.forward(report);
+  }
   return new Response(undefined, { status: 204 });
+}
+
+/**
+ * The address Cloudflare's edge saw, which a client cannot write; one
+ * shared count when there is none.
+ */
+function addressOf(request: Request): string {
+  return request.headers.get("cf-connecting-ip") ?? "unknown";
 }
 
 async function readReport(
@@ -114,7 +149,9 @@ function pathOf(uri: string): string {
 function originOf(uri: string | undefined): string {
   const url = URL.parse(String(uri));
   if (url === null) return keywordOf(String(uri));
-  return url.origin === "null" ? keywordOf(url.protocol.slice(0, -1)) : url.origin;
+  return url.origin === "null"
+    ? keywordOf(url.protocol.slice(0, -1))
+    : url.origin;
 }
 
 const KEYWORDS: ReadonlySet<string> = new Set([

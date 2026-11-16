@@ -19,6 +19,7 @@ import {
   canSpendProxyCall,
   canSpendRunnerRequest,
 } from "../../src/modules/enrichment/spend-limit";
+import { cspReportDepsFromEnv } from "../../src/modules/ops/csp-report";
 import { countedKeys } from "../rate-limit-rows";
 
 /**
@@ -45,6 +46,7 @@ describe("the rate-limit kinds", () => {
     await canSpendPageFetch(db, NOW);
     await canSpendProxyCall(db, NOW);
     await claimSignInTry(db, "Someone@Example.test", NOW);
+    await cspReportDepsFromEnv().isWithinLimit("203.0.113.9");
 
     const keys = await countedKeys(db);
     expect(keys).toStrictEqual(
@@ -55,6 +57,7 @@ describe("the rate-limit kinds", () => {
         `page-fetch:${GLOBAL_SUBJECT}`,
         `proxy-call:${GLOBAL_SUBJECT}`,
         "sign-in:someone@example.test",
+        "csp-report:203.0.113.9",
       ].toSorted((a, b) => a.localeCompare(b)),
     );
     const kinds = new Set(keys.map((key) => key.slice(0, key.indexOf(":"))));

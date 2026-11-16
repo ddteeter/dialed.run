@@ -100,8 +100,9 @@ Questions about this policy or your data: hello@dialed.run.
   address; those counts are kept for about a minute and then deleted. We
   count how many confirmation links, password resets and email changes each
   address asked for in the last hour, and how many wrong passwords you
-  typed when changing your email or password. Requests for access and
-  removal requests are counted per visitor IP address the same way. Each
+  typed when changing your email or password. Requests for access, removal
+  requests, and the reports a browser sends us when it blocks part of a
+  page are counted per visitor IP address the same way. Each
   of these counts is deleted a day after its window ends.
 - **Terms you accepted:** each version and when.
 - **Account email.** We send email from hello@dialed.run through
