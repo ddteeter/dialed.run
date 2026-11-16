@@ -73,40 +73,40 @@ export function useFollowToggle({
  * Following drops to a hairline, because following again is not the thing
  * to do next; on a list row both are quieter (`PILL_LOOK`).
  *
- * **On a list row its name carries the handle** (round 52 #157): heard
- * alone, a row's pill said "Follow" and not whose. `handle` is that
- * runner's, as drawn beside it, visually hidden and in every state. H's
+ * **On a list row it is described by the handle** (round 52 #157,
+ * D-187): heard alone, a row's pill said "Follow" and not whose. The name
+ * holds only the visible word, in every state; `describedBy` is the id of
+ * the row's visible handle, so whose it is comes as its description. H's
  * header passes none: its h1 names the runner.
  */
 export function FollowPill({
   toggle,
-  handle,
-}: Readonly<{ toggle: FollowToggle; handle?: string | undefined }>) {
+  describedBy,
+}: Readonly<{ toggle: FollowToggle; describedBy?: string | undefined }>) {
   const { isFollowing, control } = toggle;
   return (
     <button
       type="button"
       {...inFlight(control.pending)}
+      aria-describedby={describedBy}
       onClick={() => {
         void control.run();
       }}
-      className={`target ${pillLook(handle === undefined ? "header" : "row", isFollowing)}`}
+      className={`target ${pillLook(describedBy === undefined ? "header" : "row", isFollowing)}`}
     >
       <PendingLabel
         label={isFollowing ? "Following" : "Follow"}
         pendingLabel={isFollowing ? "Unfollowing" : "Following"}
         pending={control.pending}
       />
-      {handle === undefined ? undefined : (
-        <span className="sr-only">{` ${handle}`}</span>
-      )}
     </button>
   );
 }
 
 /**
  * The pill's look. On H's header, Follow is the primary in the action
- * pink and Following a hairline. On a list row (R55·217), nine pink pills
+ * pink and Following the hairline pill, as every secondary is (R58·308).
+ * On a list row (R55·217), nine pink pills
  * stacked outweighed the page, so Follow is the 44 hairline pill and
  * Following is `--muted` text: the only pink left is Log a run.
  */
@@ -115,7 +115,7 @@ const PILL_LOOK = {
     follow:
       "shrink-0 cursor-pointer rounded-pill border-none bg-action px-5 py-2 text-body font-bold text-accent-ink",
     following:
-      "shrink-0 cursor-pointer rounded-pill border border-ink bg-transparent px-5 py-2 text-body font-bold text-ink",
+      "shrink-0 cursor-pointer rounded-pill border border-hairline bg-transparent px-5 py-2 text-body font-bold text-ink dark:border-hairline-2",
   },
   row: {
     follow:

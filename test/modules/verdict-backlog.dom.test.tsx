@@ -183,22 +183,25 @@ describe("VerdictBacklog: what a row offers", () => {
     expect(
       screen.getByText(/^Same as [A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2}\?$/u),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^Use — / })).toBeInTheDocument();
-    // Both name the row they are in, as its verdict buttons do: a list of
-    // fifty "Use"s says nothing about which run each is for.
-    const day = slot(/^Way cold — /)
-      .getAttribute("aria-label")
-      ?.replace("Way cold — ", "");
-    expect(day).toMatch(/^[A-Z][a-z]{2} [A-Z][a-z]{2} \d{1,2}$/u);
-    expect(
-      screen.getByRole("button", { name: `Use — ${String(day)}` }),
-    ).toHaveTextContent(/^Use$/u);
-    expect(
-      screen.getByRole("link", { name: `Pick — ${String(day)}` }),
-    ).toHaveTextContent(/^Pick$/u);
+    expect(screen.getByRole("button", { name: "Use" })).toBeInTheDocument();
+    // Both are described by the row's visible day cell, as its verdict
+    // buttons are (D-187): a list of fifty "Use"s says nothing about which
+    // run each is for, and the name stays the visible word.
+    const day = screen.getByRole("cell", {
+      name: /^[A-Z][a-z]{2} [A-Z][a-z]{2} \d{1,2}$/u,
+    }).firstElementChild;
+    expect(day?.id).not.toBe("");
+    const use = screen.getByRole("button", { name: "Use" });
+    expect(use).toHaveTextContent(/^Use$/u);
+    expect(use).toHaveAttribute("aria-describedby", day?.id);
+    expect(use).toHaveAccessibleDescription(String(day?.textContent));
+    const pick = screen.getByRole("link", { name: "Pick" });
+    expect(pick).toHaveTextContent(/^Pick$/u);
+    expect(pick).toHaveAttribute("aria-describedby", day?.id);
+    expect(slot(/^Way cold$/u)).toHaveAttribute("aria-describedby", day?.id);
     // Pick is A2 at its own route, which at width is the centred panel.
     // No picker is rebuilt here, which is the whole of "not a new form".
-    expect(screen.getByRole("link", { name: /^Pick — / })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Pick" })).toHaveAttribute(
       "href",
       "/feed/attach/01RUN1",
     );
@@ -207,11 +210,11 @@ describe("VerdictBacklog: what a row offers", () => {
   it("offers only Pick when there is nothing near enough to suggest", async () => {
     await renderTable([bare]);
 
-    expect(screen.queryByRole("button", { name: /^Use — / })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Use" })).toBeNull();
     expect(screen.queryByText(/^Same as/)).toBeNull();
     // Round 20: "No usual kit here · Pick" — the cell names the gap.
     expect(screen.getByText("No usual kit here ·")).toBeVisible();
-    expect(screen.getByRole("link", { name: /^Pick — / })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Pick" })).toHaveAttribute(
       "href",
       "/feed/attach/01RUN2",
     );
@@ -228,7 +231,7 @@ describe("VerdictBacklog: what a row offers", () => {
   it("shows the kit once it is taken, in place of the offer", async () => {
     await renderTable([row()]);
 
-    fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
 
     // Round 55 · 236: one line of names, truncated at the desk.
     const kit = screen.getByText("Janji half-zip, Bandit split");
@@ -238,7 +241,7 @@ describe("VerdictBacklog: what a row offers", () => {
       "text-quiet",
       "desk:truncate",
     );
-    expect(screen.queryByRole("button", { name: /^Use — / })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Use" })).toBeNull();
   });
 });
 
@@ -260,8 +263,8 @@ describe("VerdictBacklog: a run that already has a kit", () => {
     await renderTable([kitted]);
 
     expect(screen.getByText("Houdini")).toBeVisible();
-    expect(screen.queryByRole("button", { name: /^Use — / })).toBeNull();
-    expect(screen.queryByRole("link", { name: /^Pick — / })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Use" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Pick" })).toBeNull();
     expect(screen.queryByText("No usual kit here ·")).toBeNull();
   });
 
@@ -288,7 +291,7 @@ describe("VerdictBacklog: a run that already has a kit", () => {
     ]);
 
     expect(screen.getByText("No kit on this run")).toBeVisible();
-    expect(screen.queryByRole("link", { name: /^Pick — / })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Pick" })).toBeNull();
     fireEvent.keyDown(here(), { key: "3" });
     fireEvent.keyDown(here(), { key: "Enter" });
 
@@ -319,10 +322,14 @@ describe("VerdictBacklog: the keyboard", () => {
       "A bit warm",
       "Way warm",
     ]);
-    // The name adds only the row; the key is a shortcut, and reading
-    // "key 3" to somebody who cannot see the legend is noise.
-    const dialed = screen.getByRole("button", { name: /^Dialed —/ });
-    expect(dialed.getAttribute("aria-label")).not.toContain("key");
+    // The name is the word and the row is the description; the key is in
+    // neither, as it is a shortcut, and reading "key 3" to somebody who
+    // cannot see the legend is noise.
+    const dialed = screen.getByRole("button", { name: "Dialed" });
+    expect(dialed).not.toHaveAttribute("aria-label");
+    expect(dialed).toHaveAccessibleDescription(
+      /^[A-Z][a-z]{2} [A-Z][a-z]{2} \d{1,2}$/u,
+    );
     expect(dialed).toHaveAttribute("aria-pressed", "false");
 
     // And no digit is drawn in the verdict cell. Scoped to the slots
@@ -344,12 +351,12 @@ describe("VerdictBacklog: the keyboard", () => {
     const [first, second] = rowsOf();
     expect(
       within(first ?? document.body).getByRole("button", {
-        name: /^A bit cold —/,
+        name: "A bit cold",
       }),
     ).toHaveAttribute("aria-pressed", "true");
     expect(
       within(second ?? document.body).getByRole("button", {
-        name: /^A bit cold —/,
+        name: "A bit cold",
       }),
     ).toHaveAttribute("aria-pressed", "false");
     // Rule 07's live region: a table driven by keys with nothing
@@ -392,7 +399,7 @@ describe("VerdictBacklog: saving", () => {
   it("sends the kit and the verdict, then moves on", async () => {
     const saveRow = await renderTable([row(), bare]);
 
-    fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
     fireEvent.keyDown(here(), { key: "3" });
     fireEvent.keyDown(here(), { key: "Enter" });
 
@@ -416,7 +423,7 @@ describe("VerdictBacklog: saving", () => {
     // 'row flies away'."
     await renderTable([row(), bare]);
 
-    fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
     fireEvent.keyDown(here(), { key: "3" });
     fireEvent.keyDown(here(), { key: "Enter" });
 
@@ -447,7 +454,7 @@ describe("VerdictBacklog: saving", () => {
   it("asks for the verdict when only the outfit is there", async () => {
     const saveRow = await renderTable([row()]);
 
-    fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
     fireEvent.keyDown(here(), { key: "Enter" });
 
     await waitFor(() => {
@@ -462,7 +469,7 @@ describe("VerdictBacklog: saving", () => {
     const saveRow = vi.fn().mockRejectedValue(new Error("offline"));
     await renderTable([row()], saveRow);
 
-    fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
     fireEvent.keyDown(here(), { key: "4" });
     fireEvent.keyDown(here(), { key: "Enter" });
 
@@ -473,9 +480,10 @@ describe("VerdictBacklog: saving", () => {
     });
     expect(rowsOf()[0]).not.toHaveAttribute("data-saved");
     expect(screen.getByText(/0 of 1 saved/)).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /^A bit warm —/ }),
-    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "A bit warm" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     // Round 4's §AF: the control that did the thing says what happened
     // **in its own place**. A line at the foot of a fifty-row table does
     // not say which row. Marked by border weight, never by hue — "pink is
@@ -499,7 +507,7 @@ describe("VerdictBacklog: saving", () => {
       .mockResolvedValue({ entryId: "01NEW" });
     await renderTable([row(), bare], saveRow);
 
-    fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
     fireEvent.keyDown(here(), { key: "3" });
     fireEvent.keyDown(here(), { key: "Enter" });
     await waitFor(() => {
@@ -539,7 +547,7 @@ describe("VerdictBacklog: saving", () => {
     const saveRow = vi.fn().mockRejectedValue(new Error("offline"));
     await renderTable([row(), bare], saveRow);
 
-    fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
     fireEvent.keyDown(here(), { key: "3" });
     fireEvent.keyDown(here(), { key: "Enter" });
     await waitFor(() => {
@@ -557,8 +565,8 @@ describe("VerdictBacklog: saving", () => {
     // has to work — DS5's "hover-only anything" in its other direction.
     const saveRow = await renderTable([row()]);
 
-    fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
-    fireEvent.click(screen.getByRole("button", { name: /^Way warm —/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+    fireEvent.click(screen.getByRole("button", { name: "Way warm" }));
     fireEvent.keyDown(here(), { key: "Enter" });
 
     await waitFor(() => {
@@ -636,7 +644,8 @@ describe("VerdictBacklog: what each state is drawn as", () => {
 
     expect(screen.getByRole("cell", { name: "Wed Sep 2" })).toBeVisible();
     expect(screen.queryByText("Thu Sep 3")).toBeNull();
-    expect(slot(/^Dialed/)).toHaveAccessibleName("Dialed — Wed Sep 2");
+    expect(slot(/^Dialed/)).toHaveAccessibleName("Dialed");
+    expect(slot(/^Dialed/)).toHaveAccessibleDescription("Wed Sep 2");
   });
 
   it("dates a row with no known zone in UTC", async () => {
@@ -729,7 +738,7 @@ describe("VerdictBacklog: what each state is drawn as", () => {
     const shape = [
       "row-press",
       "flex",
-      "flex-col",
+      "flex-wrap",
       "gap-2",
       "rounded-card",
       "border",
@@ -756,6 +765,36 @@ describe("VerdictBacklog: what each state is drawn as", () => {
       "gap-3",
       "desk:table-row-group",
     );
+  });
+
+  it("joins the run and its conditions in one teal line on a card, the conditions wrapping whole (R58·301)", async () => {
+    await renderTable([row()]);
+
+    const [card] = rowsOf();
+    if (card === undefined) throw new Error("no card");
+    const cells = [...card.querySelectorAll("td")];
+    const [dayCell, runCell, conditionsCell, ...rest] = cells;
+    // A wrapping row: every other cell a line of its own, these two only
+    // their words, so they share a line until it is full.
+    for (const cell of [dayCell, ...rest]) {
+      expect(cell).toHaveClass("basis-full");
+    }
+    for (const cell of [runCell, conditionsCell]) {
+      expect(cell).not.toHaveClass("basis-full");
+      expect(cell).toHaveClass("block", "desk:table-cell");
+    }
+    const run = runCell?.firstElementChild;
+    expect(run).toHaveClass(
+      "text-mono-sm",
+      "text-dialed-text",
+      "desk:text-quiet",
+    );
+    // The board's dot between them, drawn on a card only and never heard.
+    const dot = run?.lastElementChild;
+    expect(dot?.textContent).toBe(" ·");
+    expect(dot).toHaveAttribute("aria-hidden", "true");
+    expect(dot).toHaveClass("desk:hidden");
+    expect(conditionsCell?.firstElementChild).toHaveClass("text-dialed-text");
   });
 
   it("spells out every key it claims, beside what it does", async () => {
@@ -813,6 +852,9 @@ describe("VerdictBacklog: what each state is drawn as", () => {
     // waiting state.
     const status = screen.getByRole("status");
     expect(status).toBeInTheDocument();
+    // R58·300: heard, not drawn.
+    expect(status).toHaveClass("sr-only");
+    expect(status).not.toHaveClass("text-small");
     expect(screen.getByText("Saving")).not.toBeVisible();
     // Empty, not merely "not one of the messages": a region seeded with a
     // sentence announces it to a reader the moment the screen mounts.
@@ -828,7 +870,7 @@ describe("VerdictBacklog: what each state is drawn as", () => {
     const saveRow = vi.fn().mockReturnValue(pending.promise);
     await renderTable([row(), bare], saveRow);
 
-    fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
     fireEvent.keyDown(here(), { key: "3" });
     fireEvent.keyDown(here(), { key: "Enter" });
 
@@ -882,9 +924,9 @@ describe("VerdictBacklog: no rail (Round 55 · 236)", () => {
     await renderTable([row({ conditions: undefined, suggestion: undefined })]);
 
     expect(screen.getByText("No conditions")).toHaveClass("text-quiet");
-    expect(
-      screen.getByRole("button", { name: /^Dialed —/ }),
-    ).not.toHaveAttribute("aria-disabled");
+    expect(screen.getByRole("button", { name: "Dialed" })).not.toHaveAttribute(
+      "aria-disabled",
+    );
   });
 });
 
@@ -955,7 +997,7 @@ describe("VerdictBacklog: all logged (Round 55 · 237)", () => {
     const saveRow = vi.fn().mockResolvedValue({ entryId: "01NEW" });
     const invalidate = await renderTableWatching([row()], saveRow);
 
-    fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
     fireEvent.keyDown(here(), { key: "3" });
     fireEvent.keyDown(here(), { key: "Enter" });
 
@@ -968,7 +1010,7 @@ describe("VerdictBacklog: all logged (Round 55 · 237)", () => {
     const saveRow = vi.fn().mockResolvedValue({ entryId: "01NEW" });
     const invalidate = await renderTableWatching([row(), bare], saveRow);
 
-    fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
     fireEvent.keyDown(here(), { key: "3" });
     fireEvent.keyDown(here(), { key: "Enter" });
 
@@ -1003,7 +1045,8 @@ describe("VerdictBacklog: below the desk, one card per run (Round 55 · 236)", (
     );
     expect(segments).not.toHaveClass("desk:flex");
     // The widest word, held unseen in each desk segment so the five are
-    // one width, and heard by nobody (the name is the aria-label).
+    // one width, and heard by nobody (it is aria-hidden, so the name is the
+    // drawn word alone).
     const ghost = segments?.querySelector("[aria-hidden='true']");
     expect(ghost).toHaveTextContent("A bit cold");
     expect(ghost).toHaveClass("invisible", "hidden", "desk:block");
@@ -1024,7 +1067,7 @@ describe("VerdictBacklog: below the desk, one card per run (Round 55 · 236)", (
     expect(screen.queryByRole("button", { name: "Log it" })).toBeNull();
     fireEvent.click(
       within(rowsOf()[1] ?? document.body).getByRole("button", {
-        name: /^Dialed —/,
+        name: "Dialed",
       }),
     );
 
@@ -1047,10 +1090,10 @@ describe("VerdictBacklog: below the desk, one card per run (Round 55 · 236)", (
     const saveRow = vi.fn().mockResolvedValue({ entryId: "01NEW" });
     await renderTable([row(), bare], saveRow);
 
-    fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
     fireEvent.click(
       within(rowsOf()[0] ?? document.body).getByRole("button", {
-        name: /^A bit warm —/,
+        name: "A bit warm",
       }),
     );
     fireEvent.click(screen.getByRole("button", { name: "Log it" }));

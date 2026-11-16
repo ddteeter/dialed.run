@@ -140,7 +140,7 @@ test("DS2 · two runs with no outfit are a queue: 1–5 sets the verdict, Enter 
     // Enter saves and moves on. The scale is A3's own, not a coarser one.
     await page.getByRole("row").nth(1).press("3");
     await expect(
-      page.getByRole("button", { name: /^Dialed —/ }).first(),
+      page.getByRole("button", { name: "Dialed", exact: true }).first(),
     ).toHaveAttribute("aria-pressed", "true");
     await page.getByRole("row").nth(1).press("Enter");
 

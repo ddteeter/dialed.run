@@ -199,7 +199,7 @@ function BlockedRow(props: BlockedRowProps): JSX.Element {
           </Mono>
         </span>
         <button
-          className="target shrink-0 cursor-pointer rounded-pill border border-ink bg-transparent px-4 text-ink"
+          className="target shrink-0 cursor-pointer rounded-pill border border-hairline bg-transparent px-4 text-ink dark:border-hairline-2"
           type="button"
           {...inFlight(control.pending)}
           onClick={() => {

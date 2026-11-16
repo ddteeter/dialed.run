@@ -402,7 +402,10 @@ describe("the public profile, signed out", () => {
     await show(profilePage(PROFILE));
 
     const rail = part("rail");
-    expect(rail).toHaveClass("desk:row-span-2", "px-6");
+    expect(rail).toHaveClass("desk:row-span-2", "px-6", "wide:px-0");
+    // R57·263: at the desk the page's 24 is the split's own, so the rail
+    // ends on the content edge, not 24 past it.
+    expect(rail?.parentElement).toHaveClass("desk:grid", "desk:px-6");
     const rotation = within(rail ?? document.body);
     expect(
       rotation.getByRole("heading", { level: 2, name: "Rotation" }),
@@ -606,7 +609,11 @@ describe("the public profile, signed out", () => {
     await show(profilePage(PROFILE));
 
     const invite = part("invite");
-    expect(invite?.parentElement).toHaveClass("desk:col-start-1", "px-6");
+    expect(invite?.parentElement).toHaveClass(
+      "desk:col-start-1",
+      "px-6",
+      "wide:px-0",
+    );
     // The invite closes the page; only the page's own Report link follows.
     expect(part("public-foot")?.previousElementSibling).toBe(
       invite?.parentElement,

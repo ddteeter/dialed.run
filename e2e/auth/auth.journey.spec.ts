@@ -331,9 +331,7 @@ test("request access -> an invite from the Desk -> create an account -> sign out
 
   // ACC-4: forgotten, it is reset by email.
   await scene(page, "Forgot it? A reset link goes to the address");
-  await page
-    .getByRole("link", { name: "Forgot it? Reset your password" })
-    .click();
+  await page.getByRole("link", { name: "Forgot it?", exact: true }).click();
   await expect(page).toHaveURL(/\/account\/forgot/u, { timeout: 15_000 });
   await expect(
     page.getByRole("heading", { name: "Forgot your password?" }),

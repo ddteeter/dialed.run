@@ -59,7 +59,7 @@ test("import a run from Garmin: the picker, the credit, the watch's effort", asy
     const picker = page.getByRole("region", {
       name: "IMPORT FROM GARMIN · LAST 10",
     });
-    const imports = picker.getByRole("button", { name: /^Import / });
+    const imports = picker.getByRole("button", { name: "Import", exact: true });
     await expect(imports).toHaveCount(3, { timeout: 20_000 });
 
     await scene(page, "One tap fetches the run and reads it here");
@@ -118,10 +118,10 @@ test("import a run from Garmin: the picker, the credit, the watch's effort", asy
     await page.goto("/runs/new");
     await hydrated(page);
     await scene(page, "Back on A1, the run reads IMPORTED and opens its entry");
-    const imported = page.getByRole("link", { name: /^Imported: open / });
+    const imported = page.getByRole("link", { name: "Imported", exact: true });
     await expect(imported).toHaveCount(1, { timeout: 20_000 });
     await imported.click();
-    // The link names the run; a logged run redirects to its entry
+    // The link is described by the run (D-187); a logged run redirects to its entry
     // (`beforeItsEntry`), which is D, credited too.
     await expect(page).toHaveURL(/\/feed\/entry\/[0-9A-Z]{26}$/u);
     await expect(

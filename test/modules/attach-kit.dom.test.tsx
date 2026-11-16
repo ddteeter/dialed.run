@@ -713,6 +713,8 @@ describe("AttachKit: most likely", () => {
     expect(block).toHaveAttribute("data-state", "suggestion");
     expect(block).toContainElement(card);
     expect(block).toHaveClass("bg-hi-viz");
+    // R58·305: paper in both themes, so That's it is ink on a dark page.
+    expect(block).toHaveAttribute("data-ground", "paper");
     const pieces = within(block)
       .getAllByRole("listitem")
       .map((li) => li.textContent);
@@ -753,14 +755,17 @@ describe("AttachKit: most likely", () => {
       }),
     );
 
-    // Round 52 #159: named for what it changes; the visible word is the
-    // one word.
-    const change = await screen.findByRole("button", {
-      name: "Change the kit",
-    });
-    expect(change.firstChild?.textContent).toBe("Change");
-    expect(change.lastElementChild).toHaveClass("sr-only");
-    expect(change.lastElementChild?.textContent).toBe(" the kit");
+    // Round 52 #159, D-187: named by its one visible word, and described
+    // by the card's visible "Most likely · from …" line, which says what
+    // it changes.
+    const change = await screen.findByRole("button", { name: "Change" });
+    expect(change).toHaveTextContent(/^Change$/u);
+    expect(change.querySelector(".sr-only")).toBeNull();
+    const from = screen.getByText(/Most likely · from/);
+    expect(change).toHaveAttribute("aria-describedby", from.id);
+    expect(change).toHaveAccessibleDescription(
+      "Most likely · from 43° damp, Fri Aug 14",
+    );
     await user.click(change);
     expect(screen.getByText("6.2 mi · 41°F damp · 1 piece")).toBeVisible();
   });
@@ -808,9 +813,7 @@ describe("AttachKit: most likely", () => {
       attach({ prefillFor: () => Promise.resolve(candidate()) }),
     );
 
-    await user.click(
-      await screen.findByRole("button", { name: "Change the kit" }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Change" }));
 
     expect(document.querySelector("[data-slot='most-likely']")).toBeNull();
     expect(
@@ -2084,9 +2087,7 @@ describe("AttachKit: the suggestion and waiting cards (Round 55 · 240)", () => 
       attach({ prefillFor: () => Promise.resolve(candidate()) }),
     );
 
-    const change = await screen.findByRole("button", {
-      name: "Change the kit",
-    });
+    const change = await screen.findByRole("button", { name: "Change" });
     const pills = within(region("most-likely")).getAllByRole("listitem");
     for (const pill of pills) {
       expect(pill).toHaveClass("rounded-pill", "border", "border-accent-ink");
@@ -2161,7 +2162,14 @@ describe("AttachKit: A2b at the desk is a push (Round 54 · 164.3)", () => {
     expect(card).toHaveClass("rounded-card", "border", "bg-panel");
     expect(within(card).getAllByRole("checkbox")).toHaveLength(2);
     const done = within(page).getByRole("button", { name: "Done" });
-    expect(done).toHaveClass("bg-action", "uppercase", "font-display");
+    // R58·302: a button that only closes is the hairline pill, at the
+    // desk as on the phone.
+    expect(done).toHaveClass("target", "rounded-pill", "border-hairline");
+    expect(done).not.toHaveClass("bg-action", "uppercase", "font-display");
+    // It is the shared secondary (48 high, the dark hairline), not the
+    // sheet's own pill, whose height comes from its padding.
+    expect(done).toHaveClass("min-h-control", "dark:border-hairline-2");
+    expect(done).not.toHaveClass("py-3");
     // A2 is not drawn, but it is still there, holding the picks.
     const a2 = screen.getByRole("button", {
       name: "Next — did it work?",

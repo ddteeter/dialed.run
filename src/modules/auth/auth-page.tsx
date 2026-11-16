@@ -599,7 +599,8 @@ export function CredentialFields({
   passwordHint?: string | undefined;
   focusPasswordOnArrival?: boolean | undefined;
   /**
-  Au1's "Forgot it?" (ACC-4), under Password on log-in only.
+  Au1's "Forgot it?" (ACC-4), on log-in only: at the Password label row's
+  right (A-06).
   */
   hasForgotLink?: boolean | undefined;
 }>): JSX.Element {
@@ -627,16 +628,24 @@ export function CredentialFields({
         // Arrival focus is Au7's alone, and it skips Au7's notice, so the
         // field it lands in is read with the sentence it skipped.
         describedBy={focusPasswordOnArrival ? SESSION_NOTICE_ID : undefined}
+        labelEnd={hasForgotLink ? <ForgotLink /> : undefined}
       />
-      {hasForgotLink ? (
-        <Link
-          to="/account/forgot"
-          className="target inline-flex items-center self-start text-small font-semibold text-ink underline underline-offset-4"
-        >
-          Forgot it?<span className="sr-only"> Reset your password</span>
-        </Link>
-      ) : undefined}
     </>
+  );
+}
+
+/**
+ * "Forgot it?", on the Password label row (A-06). Its name is its words
+ * (R57·255, D-187): the page it opens says what it is for.
+ */
+function ForgotLink(): JSX.Element {
+  return (
+    <Link
+      to="/account/forgot"
+      className="target inline-flex items-center text-small font-semibold text-ink underline underline-offset-4"
+    >
+      Forgot it?
+    </Link>
   );
 }
 

@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 
 import {
   COLUMN,
@@ -14,7 +14,7 @@ import { counted } from "../counted";
 import { BOUND_SEPARATOR } from "../posted";
 import type { SearchResult } from "../search";
 import { Avatar } from "./Avatar";
-import { Handle, handleText } from "./Handle";
+import { Handle } from "./Handle";
 import { FollowBand, FollowPill, useFollowToggle } from "./Follow";
 import type { FollowAction } from "./Follow";
 
@@ -109,12 +109,13 @@ export function RunnerSearch({
   }
 
   return (
-    <div className={`${COLUMN} flex flex-col gap-6 px-5 pt-6 wide:px-6`}>
+    <div className={`${COLUMN} flex flex-col gap-6 px-5 pt-6 wide:px-0`}>
       <FormStatus>{status === "" ? said : status}</FormStatus>
       {/* A 44px row, centred as Feed's title row is: the two titles sit
           on one line, so the way in and back does not jump (P2b-12). */}
       <div className="flex min-h-11 items-center justify-between gap-3">
-        <h1 className="m-0 font-display text-title uppercase">Find a runner</h1>
+        {/* TYPE.title in the page's own case (R58·286). */}
+        <h1 className="m-0 font-display text-title">Find a runner</h1>
         <PhoneBell />
       </div>
       <div className="field-box flex min-h-12 items-center gap-3 rounded-field border border-hairline bg-ground px-4">
@@ -210,12 +211,14 @@ function ResultRow({
     unfollow,
     onStatus,
   });
+  const handleId = useId();
   return (
     <li className="flex flex-col gap-3 border-b border-hairline py-3">
       <div className="flex items-center gap-3">
         <Avatar name={result.username} size="small" />
         <span className="flex min-w-0 flex-1 flex-col">
           <Link
+            id={handleId}
             to="/feed/u/$handle"
             params={{ handle: result.username }}
             className="target flex items-center text-body text-ink no-underline"
@@ -229,7 +232,8 @@ function ResultRow({
             {sharedLine(result)}
           </Mono>
         </span>
-        <FollowPill toggle={toggle} handle={handleText(result.username)} />
+        {/* Whose pill it is, from the handle drawn beside it (D-187). */}
+        <FollowPill toggle={toggle} describedBy={handleId} />
       </div>
       {/* Under the whole row, never squeezed beside the pill (§4a). */}
       <FollowBand toggle={toggle} />

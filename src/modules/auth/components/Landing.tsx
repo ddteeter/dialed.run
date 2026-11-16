@@ -101,7 +101,9 @@ function Hero({ children }: Readonly<{ children: ReactNode }>): JSX.Element {
       className="pt-12 pb-16 desk:grid desk:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] desk:gap-12 desk:pt-24"
     >
       <div className="flex flex-col items-start gap-5 wide:gap-6">
-        <h1 className="m-0 font-display text-display uppercase">
+        {/* MARKETING.hero (round 31): Home's h1 is the one fluid step,
+            44 at 390 to 76 at 1180 (#674). */}
+        <h1 className="m-0 font-display text-hero uppercase">
           {/* By sentence: the first balances over its lines, and "Log
               it." always starts its own. One heading, read as one line. */}
           <span className="block text-balance">Every run has an outfit.</span>{" "}

@@ -165,17 +165,17 @@ test("someone with no account asks for an intimate image to come down, and an op
   ).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText(requester)).toBeVisible();
   // D-147 (round 41 #85): the two services that reach other sites, last
-  // on the receipt, each saying it opens a new tab.
+  // on the receipt, each named by its own words (D-187).
   const elsewhere = page.locator("[data-part='elsewhere-help']");
   await expect(
     elsewhere.getByRole("link", {
-      name: "StopNCII.org (opens in a new tab)",
+      name: "StopNCII.org",
       exact: true,
     }),
   ).toHaveAttribute("href", "https://stopncii.org/");
   await expect(
     elsewhere.getByRole("link", {
-      name: "Take It Down (opens in a new tab)",
+      name: "Take It Down",
       exact: true,
     }),
   ).toHaveAttribute("href", "https://takeitdown.ncmec.org/");

@@ -13,7 +13,6 @@ import {
   Bracketed,
   FormStatus,
   GarminAttribution,
-  Icon,
   Mono,
   PhoneBell,
   Spoken,
@@ -35,6 +34,7 @@ import type { DeletePhotoProps } from "./RetractEntry";
 import { UsefulButton } from "./UsefulButton";
 import type { SetUsefulFn } from "./useful-reaction";
 import { VerdictBadge } from "./VerdictBadge";
+import { BackToFeed } from "./BackToFeed";
 
 type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
 
@@ -129,21 +129,13 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
   }, [shouldPromptVerdict, entryId, recordPrompted]);
 
   const isOwn = viewerId === entry.userId;
+  const tags = tagsOf(entry.tags);
 
   return (
-    <div className={`${COLUMN} flex flex-col gap-4 px-5 pt-6 wide:px-6`}>
+    <div className={`${COLUMN} flex flex-col gap-4 px-5 pt-6 wide:px-0`}>
       <FormStatus>{status}</FormStatus>
       <div className="flex items-center gap-3">
-        {/* `exact`: the router marks a prefix match `aria-current="page"`,
-            and /feed/entry/:id is under /feed — back is never here. */}
-        <Link
-          to="/feed"
-          activeOptions={{ exact: true }}
-          aria-label="Back to feed"
-          className="target inline-flex items-center text-ink"
-        >
-          <Icon name="back" size={20} />
-        </Link>
+        <BackToFeed />
         <h1 className="m-0 min-w-0 flex-1 font-display text-heading wrap-anywhere">
           {isOwn ? "Your run" : <Handle username={entry.authorUsername} />}
         </h1>
@@ -190,9 +182,11 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
         </Link>
       ) : undefined}
 
-      <Kit items={entry.items} />
+      {/* YOURS follows the kit on your own entry with no tags: Useful
+          and Report are other runners' (R58·284). */}
+      <Kit items={entry.items} isYoursNext={isOwn && tags.length === 0} />
 
-      <Tags tags={tagsOf(entry.tags)} />
+      <Tags tags={tags} />
 
       {/* Not on your own run (round 22, "D Sparse own entry"): Useful is
           what other runners say about it. So is Report. */}
@@ -300,14 +294,28 @@ function Tags({ tags }: Readonly<{ tags: readonly EntryTag[] }>) {
  * word in MONO.xs at the right. The board's 1.35 leading is not a step
  * (`design/tokens.js` has none), so the name keeps TYPE.body's own.
  */
-function Kit({ items }: Readonly<{ items: Entry["items"] }>) {
+/**
+ * The kit list's rules: a hairline over and under, except that it drops
+ * its closing rule when YOURS follows it, whose own rule stays (R58·284):
+ * two rules 16 apart said one thing twice.
+ */
+const KIT_LIST_CLASS = {
+  closed:
+    "m-0 flex list-none flex-col divide-y divide-hairline border-y border-hairline p-0",
+  open: "m-0 flex list-none flex-col divide-y divide-hairline border-t border-hairline p-0",
+} as const;
+
+function Kit({
+  items,
+  isYoursNext,
+}: Readonly<{ items: Entry["items"]; isYoursNext: boolean }>) {
   if (items.length === 0) return;
   return (
     <div data-part="kit" className="flex flex-col gap-2">
       <Mono step="xs" className="text-muted">
         Kit
       </Mono>
-      <ul className="m-0 flex list-none flex-col divide-y divide-hairline border-y border-hairline p-0">
+      <ul className={isYoursNext ? KIT_LIST_CLASS.open : KIT_LIST_CLASS.closed}>
         {items.map((item) => (
           <li
             key={item.itemId}

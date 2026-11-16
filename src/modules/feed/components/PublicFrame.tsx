@@ -112,8 +112,17 @@ function IntoApp({
 const MEASURE = {
   column: "mx-auto w-full max-w-column flex-1",
   split:
-    "mx-auto w-full max-w-column flex-1 desk:grid desk:max-w-page desk:grid-cols-[minmax(0,var(--container-column))_minmax(0,1fr)] desk:grid-rows-[auto_1fr] desk:items-start desk:gap-x-6",
+    "mx-auto w-full max-w-column flex-1 desk:grid desk:max-w-page desk:grid-cols-[minmax(0,var(--container-column))_minmax(0,1fr)] desk:grid-rows-[auto_1fr] desk:items-start desk:gap-x-6 desk:px-6",
 } as const;
+
+/**
+ * One content edge (R57·263): gutters belong to the page, never a column.
+ * Below 720 each part keeps the phone's 24; from 720 the column is 620 of
+ * content, as `Page`'s column is, and at the desk the split's own 24 is
+ * the page's gutter, so the rail ends on the same edge the list starts on
+ * the other side of, not 24 past it.
+ */
+const PART_GUTTER = "px-6 wide:px-0";
 
 /**
  * A public page's own address and what its foot's Report link says, from
@@ -210,18 +219,20 @@ export function PublicFrame(props: PublicFrameProps): JSX.Element {
         {rail === undefined ? undefined : (
           <div
             data-part="rail"
-            className="flex flex-col gap-6 px-6 pb-8 desk:row-span-2 desk:py-8"
+            className={`flex flex-col gap-6 ${PART_GUTTER} pb-8 desk:row-span-2 desk:py-8`}
           >
             {rail}
           </div>
         )}
         {closing === undefined ? undefined : (
-          <div className="px-6 pb-8 desk:col-start-1">{closing}</div>
+          <div className={`${PART_GUTTER} pb-8 desk:col-start-1`}>
+            {closing}
+          </div>
         )}
         {report === undefined ? undefined : (
           <p
             data-part="public-foot"
-            className="m-0 px-6 pb-8 text-small desk:col-start-1"
+            className={`m-0 ${PART_GUTTER} pb-8 text-small desk:col-start-1`}
           >
             <Link
               to="/takedown"

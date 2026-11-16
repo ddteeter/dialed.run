@@ -50,9 +50,15 @@ export function SignedOutReceipt({
 export function SignedOutPanel({
   heading,
   notice,
+  intoApp,
   children,
 }: Readonly<{
   heading: string;
+  /**
+  The bar's right side, for a page a logged-in runner sees in this frame:
+  "Signed in" in place of Log in and Request access (R58·267).
+  */
+  intoApp?: ReactNode;
   /**
   What sits above the heading: Au7's notice, a landing's kicker.
   */
@@ -60,7 +66,7 @@ export function SignedOutPanel({
   children: ReactNode;
 }>): JSX.Element {
   return (
-    <SignedOutLayout>
+    <SignedOutLayout intoApp={intoApp}>
       {/* The frame's gutter, 20 then 24 (R55·174, 176), so the title
           starts under the wordmark and over the footer's links (#698
           R2-AUTH-03). */}

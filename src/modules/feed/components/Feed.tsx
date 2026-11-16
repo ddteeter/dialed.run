@@ -100,10 +100,11 @@ export function Feed(props: Readonly<FeedProps>) {
     // `mx-auto` below 720 only, for DS3's reason: a reflowed column is
     // "left-aligned inside the page measure, not centred, so it lines up
     // with the wide screens' primary column".
-    <div className={`${COLUMN} flex flex-col gap-6 px-5 pt-6 wide:px-6`}>
+    <div className={`${COLUMN} flex flex-col gap-6 px-5 pt-6 wide:px-0`}>
       <FlushBand>{confirmBand}</FlushBand>
       <div className="flex items-center gap-3">
-        <h1 className="mr-auto font-display text-title uppercase">Feed</h1>
+        {/* TYPE.title in the page's own case (R58·286). */}
+        <h1 className="mr-auto font-display text-title">Feed</h1>
         <Link
           to="/feed/search"
           className="target inline-flex items-center text-body font-semibold text-cold-text"

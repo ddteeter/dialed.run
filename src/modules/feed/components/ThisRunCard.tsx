@@ -4,9 +4,8 @@ import type { Units } from "../../../lib/contracts";
 import { measuredLine } from "../../../lib/contracts/measures";
 import { precipClassOf } from "../../../lib/contracts/temperature";
 import { dayLabel, viewerClockLabel } from "../../../lib/dates";
-import { Mono, RailCard, Spoken, WeatherAttribution } from "../../../ui";
+import { Mono, RailCard, Spoken } from "../../../ui";
 import type { Conditions } from "../conditions";
-import { isProvidersReading } from "../strip";
 
 /**
  * The desk rail's first card on A2 and A3 (round 25; Round 55 · 242: "A2's
@@ -78,14 +77,9 @@ export function ThisRunCard({
               )}
             />
           </Mono>
-          {/* The header above already credits this reading, heard at
-              every width; the rail, the desk's alone, draws it again near
-              its own copy of the data and keeps it unheard (R-179's rule:
-              the licence is about display). A typed reading is no one's
-              to credit. */}
-          {isProvidersReading(conditions) ? (
-            <WeatherAttribution isRepeat />
-          ) : undefined}
+          {/* No credit of its own: the header above credits this reading,
+              and at the desk, the only width this rail is drawn, it is on
+              screen with it. Once per screen (R55·170, R58·304). */}
         </>
       )}
     </RailCard>

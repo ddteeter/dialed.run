@@ -321,6 +321,40 @@ describe("ConditionsTab: location denied", () => {
     ).toBeVisible();
   });
 
+  it("names the place as O1's chip does, and saves the provider's string (R58·294)", async () => {
+    const user = userEvent.setup();
+    const address = "Minneapolis, Hennepin County, Minnesota, United States";
+    const saveCity = vi.fn(({ data }: { data: Place }) =>
+      Promise.resolve(data),
+    );
+    await renderFeedScreen(
+      tab({
+        locate: () => Promise.resolve(undefined),
+        lookUpCity: () =>
+          Promise.resolve({ kind: "found", address, lat: 44.98, lng: -93.27 }),
+        saveCity,
+      }),
+    );
+
+    await findAndUse(user, "Minneapolis");
+
+    expect(await screen.findByText("No weather yet")).toBeVisible();
+    expect(
+      document.querySelector('[data-part="resolved-place"]'),
+    ).toHaveTextContent(/^Weather for Minneapolis, MN, United States$/u);
+    expect(
+      screen.getByText(
+        "No weather for Minneapolis, MN, United States yet. It shows after the first reading.",
+      ),
+    ).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /^Saved\. Weather for Minneapolis, MN, United States\.$/u,
+    );
+    expect(saveCity).toHaveBeenCalledWith({
+      data: { cityLabel: address, lat: 44.98, lng: -93.27 },
+    });
+  });
+
   it("heads the tab with a saved place from the start", async () => {
     await renderFeedScreen(
       tab({ home: { coords: PORTLAND, cityLabel: SAVED.cityLabel } }),
@@ -369,6 +403,24 @@ describe("ConditionsTab: location denied", () => {
     expect(screen.getByRole("status")).toHaveTextContent(sentence);
     expect(saveCity).not.toHaveBeenCalled();
     // No promise about a place nobody found (R55·216).
+    expect(document.querySelector('[data-part="city-note"]')).toBeNull();
+  });
+
+  it("says no promise under the NOT FOUND YET band when the lookup failed (R58·287)", async () => {
+    const user = userEvent.setup();
+    await renderFeedScreen(
+      tab({
+        locate: () => Promise.resolve(undefined),
+        lookUpCity: () => Promise.resolve({ kind: "unavailable" }),
+        saveCity: vi.fn(() => Promise.resolve(SAVED)),
+      }),
+    );
+
+    await user.type(await screen.findByLabelText("Your city"), "Boston");
+    expect(document.querySelector('[data-part="city-note"]')).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "Find" }));
+
+    expect(await screen.findByText("Couldn't look that up.")).toBeVisible();
     expect(document.querySelector('[data-part="city-note"]')).toBeNull();
   });
 

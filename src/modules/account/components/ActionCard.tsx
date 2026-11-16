@@ -5,6 +5,7 @@ import {
   ControlFailureBand,
   FailureBand,
   FormStatus,
+  Mono,
   PendingLabel,
   inFlight,
   useControlAction,
@@ -160,5 +161,20 @@ export function LogInOrOpen(): JSX.Element {
         Open dialed.run
       </Link>
     </div>
+  );
+}
+
+/**
+ * The bar's right side on a page a logged-in runner sees in the signed-out
+ * frame (Keep your account?, Accept the terms): "Signed in", without the
+ * handle (R57·259b), in place of Log in and Request access (R58·267).
+ */
+export function SignedInMark(): JSX.Element {
+  return (
+    <span data-part="signed-in">
+      <Mono step="xs" className="text-muted">
+        Signed in
+      </Mono>
+    </span>
   );
 }

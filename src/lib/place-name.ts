@@ -1,5 +1,5 @@
 /**
- * O1's chosen-city chip names a place as R55·228 rules: "city, region,
+ * A place is named as R55·228 rules for O1's chosen-city chip: "city, region,
  * country. The region is its postal abbreviation where one exists
  * ('MINNEAPOLIS, MN, UNITED STATES') and its name otherwise. County and
  * district are always dropped."
@@ -13,8 +13,9 @@
  * region's name becomes its postal abbreviation from the tables below,
  * for the countries that have them.
  *
- * Only the chip's words: what is saved, and what Your conditions shows,
- * stay the provider's.
+ * The name everywhere a place is shown — the chip, the candidate card,
+ * Your conditions (R58·294) — so it lives in `lib/`, where `ui/`'s city
+ * finder can read it. What is saved stays the provider's string.
  */
 
 /**

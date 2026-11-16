@@ -189,7 +189,7 @@ export function TapListForm({
       <button
         type="button"
         onClick={onSkip}
-        className="target cursor-pointer self-center border-none bg-transparent p-0 text-body underline underline-offset-4"
+        className="target cursor-pointer self-start border-none bg-transparent p-0 text-body font-semibold text-ink underline underline-offset-4"
       >
         Skip for now
       </button>

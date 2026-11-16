@@ -17,6 +17,7 @@ import {
   getRun,
   getRunSummary,
   initialWeatherStatus,
+  listRunPage,
   listRunSummaries,
 } from "../../src/modules/runs/service";
 import { recordManualObservation } from "../../src/modules/weather";
@@ -469,7 +470,11 @@ describe("getRunSummary / listRunSummaries: a run as the screens draw it", () =>
   it("reads a run with no zone of its own on its runner's home clock (P2a-02)", async () => {
     const userId = newUlid();
     // A treadmill run: no place, so no observation and no zone of its own.
-    const runId = await aRun(userId, { lat: undefined, lng: undefined, indoor: true });
+    const runId = await aRun(userId, {
+      lat: undefined,
+      lng: undefined,
+      indoor: true,
+    });
     const before = await getRunSummary(coreDb(), userId, runId);
     expect(before?.conditions).toBeUndefined();
     expect(before?.clockZone).toBeUndefined();
@@ -632,6 +637,124 @@ describe("getRunSummary / listRunSummaries: a run as the screens draw it", () =>
     const [listed] = await listRunSummaries(coreDb(), userId);
     expect(listed?.weatherStatus).toBe("manual");
     expect(listed?.conditions).toBeUndefined();
+  });
+});
+
+/**
+2026's `month` (0-based) `day` at `hour` UTC, in seconds.
+*/
+function at(month: number, day: number, hour = 12): number {
+  return Math.floor(Date.UTC(2026, month, day, hour) / 1000);
+}
+
+describe("listRunPage: the runs list past its fifty (R58·299)", () => {
+  it("lists what it was asked for, counts every run, and counts the cut month whole", async () => {
+    const userId = newUlid();
+    for (const startedAt of [at(11, 2), at(10, 20), at(10, 10), at(9, 5)]) {
+      await aRun(userId, { startedAt });
+    }
+    // Someone else's November run is no part of it.
+    await aRun(newUlid(), { startedAt: at(10, 15) });
+
+    const page = await listRunPage(coreDb(), userId, 2);
+
+    expect(page.runs.map((run) => run.startedAt)).toEqual([
+      at(11, 2),
+      at(10, 20),
+    ]);
+    expect(page.total).toBe(4);
+    // November 20 is listed and November 10 is past the cut: two.
+    expect(page.cutMonth).toStrictEqual({ month: "November 2026", count: 2 });
+  });
+
+  it("takes the cut month from the last listed run, not the second", async () => {
+    const userId = newUlid();
+    // Three listed, two of them December's; the oldest listed is November
+    // 20, and November 10 is past the cut.
+    for (const startedAt of [at(11, 5), at(11, 2), at(10, 20), at(10, 10)]) {
+      await aRun(userId, { startedAt });
+    }
+
+    const page = await listRunPage(coreDb(), userId, 3);
+
+    expect(page.cutMonth).toStrictEqual({ month: "November 2026", count: 2 });
+  });
+
+  it("has no cut month when it lists nothing, though a run exists", async () => {
+    // What a run landing between the list's read and its count looks like:
+    // nothing listed and one counted. No month is cut, and nothing throws.
+    const userId = newUlid();
+    await aRun(userId, { startedAt: at(10, 20) });
+
+    const page = await listRunPage(coreDb(), userId, 0);
+
+    expect(page.runs).toEqual([]);
+    expect(page.total).toBe(1);
+    expect(page.cutMonth).toBeUndefined();
+  });
+
+  it("has no cut month once every run is listed", async () => {
+    const userId = newUlid();
+    await aRun(userId, { startedAt: at(10, 20) });
+    await aRun(userId, { startedAt: at(10, 10) });
+
+    const page = await listRunPage(coreDb(), userId, 2);
+
+    expect(page.runs).toHaveLength(2);
+    expect(page.total).toBe(2);
+    expect(page.cutMonth).toBeUndefined();
+  });
+
+  it("reads the cut month on each run's own clock, as the list does", async () => {
+    const userId = newUlid();
+    await coreDb()
+      .insert(userProfiles)
+      .values({ userId, timeZone: "America/Chicago" });
+    // Nov 1, 05:00 UTC is midnight in Chicago: November. An hour before
+    // it is still October 31 there, so it is not November's, though UTC
+    // would count it.
+    for (const startedAt of [
+      at(11, 2),
+      at(10, 1, 5),
+      at(10, 1, 4),
+      at(9, 20),
+    ]) {
+      await aRun(userId, { startedAt });
+    }
+
+    const page = await listRunPage(coreDb(), userId, 2);
+
+    expect(page.cutMonth).toStrictEqual({ month: "November 2026", count: 1 });
+  });
+
+  it("counts a run started the same second as the cut once", async () => {
+    const userId = newUlid();
+    await aRun(userId, { startedAt: at(11, 2) });
+    await aRun(userId, { startedAt: at(10, 20) });
+    await aRun(userId, { startedAt: at(10, 20) });
+
+    const page = await listRunPage(coreDb(), userId, 2);
+
+    expect(page.total).toBe(3);
+    expect(page.cutMonth).toStrictEqual({ month: "November 2026", count: 2 });
+  });
+
+  it("reaches back a whole month from the cut, and no further", async () => {
+    const userId = newUlid();
+    // Listed: Dec 31 and Dec 30. Past the cut, Dec 1 is December's;
+    // Nov 29 is a month and a day back, and not.
+    for (const startedAt of [
+      at(11, 31),
+      at(11, 30),
+      at(11, 1, 0),
+      at(10, 29),
+    ]) {
+      await aRun(userId, { startedAt });
+    }
+
+    const page = await listRunPage(coreDb(), userId, 2);
+
+    expect(page.cutMonth).toStrictEqual({ month: "December 2026", count: 3 });
   });
 });
 

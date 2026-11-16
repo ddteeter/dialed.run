@@ -63,6 +63,9 @@ describe("Landing, signed out", () => {
     // A space between the sentences, so a reader that ignores the
     // blocks still hears two.
     expect(heading.textContent).toBe("Every run has an outfit. Log it.");
+    // Home's h1 is MARKETING.hero, not TYPE.display (#674).
+    expect(heading).toHaveClass("font-display", "text-hero", "uppercase");
+    expect(heading).not.toHaveClass("text-display");
     const [first, second] = heading.querySelectorAll("span");
     expect(first).toHaveTextContent(/^Every run has an outfit\.$/u);
     expect(first).toHaveClass("block", "text-balance");
@@ -204,7 +207,7 @@ describe("SignOutButton", () => {
     );
     const button = screen.getByRole("button", { name: "Sign out" });
     expect(button).toHaveAccessibleDescription(
-      "Signed in as @maya_runs On this phone",
+      "Signed in as @maya_runs On this device",
     );
     // One bold --cold-text verb at the row's end, and no chevron.
     expect(button).toHaveClass("font-bold", "text-cold-text");
@@ -216,9 +219,9 @@ describe("SignOutButton", () => {
     expect(row?.parentElement).toHaveAttribute("data-part", "sign-out-row");
     expect(row?.parentElement).toHaveClass("flex", "flex-col", "gap-3");
     expect(row?.parentElement).not.toHaveClass("items-end");
-    expect(screen.getByText("On this phone")).toHaveClass("text-muted");
+    expect(screen.getByText("On this device")).toHaveClass("text-muted");
     // Heard once, through the button's description, not again as text.
-    expect(screen.getByText("On this phone").parentElement).toHaveAttribute(
+    expect(screen.getByText("On this device").parentElement).toHaveAttribute(
       "aria-hidden",
       "true",
     );
@@ -232,7 +235,7 @@ describe("SignOutButton", () => {
     await renderWithRouter(<SignOutButton signOut={vi.fn()} />);
     expect(
       screen.getByRole("button", { name: "Sign out" }),
-    ).toHaveAccessibleDescription("Signed in On this phone");
+    ).toHaveAccessibleDescription("Signed in On this device");
   });
 
   it("is the Desk bar's mono, underlined Sign out at the bar's right, with no row (R55·194)", async () => {
@@ -264,7 +267,7 @@ describe("SignOutButton", () => {
     expect(root).toHaveClass("flex", "flex-col", "items-end");
     expect(root).not.toHaveClass("gap-3");
     expect(document.querySelector("[data-part='sign-out-row']")).toBeNull();
-    expect(screen.queryByText(/Signed in|On this phone/u)).toBeNull();
+    expect(screen.queryByText(/Signed in|On this device/u)).toBeNull();
     expect(button).not.toHaveAttribute("aria-describedby");
 
     await user.click(button);

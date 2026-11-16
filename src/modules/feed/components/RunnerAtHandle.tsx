@@ -1,11 +1,11 @@
-import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
-import { COLUMN, Icon, PhoneBell } from "../../../ui";
+import { COLUMN, PhoneBell } from "../../../ui";
 import type { OtherProfile as OtherProfileData } from "../profiles";
 import type { ProfileAtHandle } from "../profiles";
 import type { FollowAction } from "./Follow";
 import { OtherProfile } from "./OtherProfile";
+import { BackToFeed } from "./BackToFeed";
 
 /**
  * H at `/feed/u/<handle>` (round 26 #7): the runner who holds the handle now, or — for
@@ -68,18 +68,9 @@ const RUNNER_GONE = "This runner isn't here.";
  */
 function NoRunnerHere({ children }: Readonly<{ children: string }>) {
   return (
-    <div className={`${COLUMN} flex flex-col gap-6 px-5 pt-6 wide:px-6`}>
-      {/* `exact`: the router marks a prefix match current, and this page
-          sits under /feed. */}
+    <div className={`${COLUMN} flex flex-col gap-6 px-5 pt-6 wide:px-0`}>
       <div className="flex items-center justify-between">
-        <Link
-          to="/feed"
-          activeOptions={{ exact: true }}
-          aria-label="Back to feed"
-          className="target inline-flex items-center text-ink"
-        >
-          <Icon name="back" size={20} />
-        </Link>
+        <BackToFeed />
         <PhoneBell />
       </div>
       <p data-part="no-runner" className="m-0 text-lead">

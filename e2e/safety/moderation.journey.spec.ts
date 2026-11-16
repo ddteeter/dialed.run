@@ -187,7 +187,7 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   ).toBeFocused();
   await expect(receipt).toContainText("We'll review it within a day");
   await expect(
-    receipt.getByRole("link", { name: "StopNCII.org (opens in a new tab)" }),
+    receipt.getByRole("link", { name: "StopNCII.org", exact: true }),
   ).toBeVisible();
   await receipt.getByRole("button", { name: "Done" }).click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);

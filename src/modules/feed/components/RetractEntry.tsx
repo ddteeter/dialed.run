@@ -44,7 +44,7 @@ export function RetractEntry({
   return (
     <div
       data-part="retract"
-      className={`${COLUMN} flex flex-col items-start px-5 pt-4 pb-8 wide:px-6`}
+      className={`${COLUMN} flex flex-col items-start px-5 pt-4 pb-8 wide:px-0`}
     >
       <div className="flex w-full flex-col items-start gap-1 border-t border-hairline pt-4">
         <Mono step="xs" className="text-muted">

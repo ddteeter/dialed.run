@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 
 import { PASSWORD_MIN_LENGTH } from "../lib/contracts";
 import { FormField } from "./form";
@@ -29,6 +29,7 @@ export function PasswordField({
   autoComplete,
   focusOnArrival = false,
   describedBy,
+  labelEnd,
 }: Readonly<{
   /**
    * The field's name and id: `password` everywhere but Change password,
@@ -48,6 +49,10 @@ export function PasswordField({
    * read with, after its own: Au7's notice, which arrival focus skips.
    */
   describedBy?: string | undefined;
+  /**
+  A link at the label row's right: log-in's "Forgot it?" (A-06).
+  */
+  labelEnd?: ReactNode;
 }>): JSX.Element {
   const [isShown, setIsShown] = useState(false);
   // Arrival is once. An inline callback ref here was a new function on
@@ -63,7 +68,13 @@ export function PasswordField({
   );
 
   return (
-    <FormField name={name} label={label} error={error} hint={hint}>
+    <FormField
+      name={name}
+      label={label}
+      error={error}
+      hint={hint}
+      labelEnd={labelEnd}
+    >
       <input
         {...field(name)}
         // Whichever of its own hint and message is showing, then the

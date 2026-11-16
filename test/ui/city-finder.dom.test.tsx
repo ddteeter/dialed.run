@@ -143,6 +143,35 @@ describe("CityFinder", () => {
     expect(onUse).toHaveBeenCalledWith(PORTLAND);
   });
 
+  it("names the found place as the chip will, and hands on the provider's string (R58·294)", async () => {
+    const county = {
+      kind: "found" as const,
+      address: "Minneapolis, Hennepin County, Minnesota, United States",
+      lat: 44.98,
+      lng: -93.27,
+    };
+    const { onUse, announce, user } = setup({
+      lookUp: () => Promise.resolve(county),
+    });
+
+    await user.type(field(), "Minneapolis");
+    await user.click(findButton());
+
+    const resolved = await screen.findByText("Minneapolis, MN, United States");
+    expect(resolved.closest("p")).toHaveTextContent(
+      /^Weather for Minneapolis, MN, United States$/u,
+    );
+    expect(announce).toHaveBeenCalledWith(
+      "Weather for Minneapolis, MN, United States.",
+    );
+    await user.click(screen.getByRole("button", { name: "Use this" }));
+    expect(onUse).toHaveBeenCalledWith({
+      address: county.address,
+      lat: county.lat,
+      lng: county.lng,
+    });
+  });
+
   it("finds on Enter, and Enter never submits the form around it", async () => {
     const { lookUp, onSubmit, user } = setup();
 

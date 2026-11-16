@@ -72,9 +72,29 @@ function row(name: RegExp) {
 }
 
 describe("the index (U1/N)", () => {
+  it("says Strava is connected on the Connections row once it is (R58·296)", async () => {
+    await renderWithRouter(
+      <SettingsIndex
+        isStravaConnected
+        current={ANSWERED}
+        username="maya_runs"
+        runReminderEmail
+        isPrivacyReviewDue={false}
+        blockedCount={2}
+        display={undefined}
+        signOut={undefined}
+      />,
+    );
+
+    expect(row(/^Connections/u)).toHaveTextContent(
+      /^ConnectionsStrava · connected$/u,
+    );
+  });
+
   it("says every row's current value, and each opens somewhere", async () => {
     await renderWithRouter(
       <SettingsIndex
+        isStravaConnected={false}
         current={ANSWERED}
         username="maya_runs"
         runReminderEmail
@@ -137,6 +157,10 @@ describe("the index (U1/N)", () => {
     expect(row(/^Blocked runners/u)).toHaveAttribute("href", "/safety/blocked");
     expect(row(/^Blocked runners/u)).toHaveTextContent("2 blocked");
     expect(row(/^Connections/u)).toHaveAttribute("href", "/runs/strava");
+    // R58·296: the row states its value, as its neighbours do.
+    expect(row(/^Connections/u)).toHaveTextContent(
+      /^ConnectionsNot connected$/u,
+    );
     // A row with nowhere to go is absent, not dead.
     expect(screen.queryByText(/Export|Delete/u)).toBeNull();
   });
@@ -144,6 +168,7 @@ describe("the index (U1/N)", () => {
   it("groups the rows under U1's headings, in U1's order", async () => {
     await renderWithRouter(
       <SettingsIndex
+        isStravaConnected={false}
         current={ANSWERED}
         username="maya_runs"
         runReminderEmail
@@ -197,6 +222,7 @@ describe("the index (U1/N)", () => {
   it("says the other value of each row the other way round", async () => {
     await renderWithRouter(
       <SettingsIndex
+        isStravaConnected={false}
         username={undefined}
         current={{
           thermalLevel: -2,
@@ -244,6 +270,7 @@ describe("the index (U1/N)", () => {
   it("ends every row in a chevron and no verb, the unanswered state in the subtitle (R55·182.1)", async () => {
     await renderWithRouter(
       <SettingsIndex
+        isStravaConnected={false}
         current={{ ...ANSWERED, thermalLevel: undefined }}
         username="maya_runs"
         runReminderEmail
@@ -273,6 +300,7 @@ describe("the index (U1/N)", () => {
   it("tags Privacy REVIEW while a privacy setting is new to the runner, before its chevron (R55·230)", async () => {
     await renderWithRouter(
       <SettingsIndex
+        isStravaConnected={false}
         current={ANSWERED}
         username="maya_runs"
         runReminderEmail
@@ -296,6 +324,7 @@ describe("the index (U1/N)", () => {
   it("draws no tag on Privacy once it has been opened", async () => {
     await renderWithRouter(
       <SettingsIndex
+        isStravaConnected={false}
         current={ANSWERED}
         username="maya_runs"
         runReminderEmail
@@ -311,6 +340,7 @@ describe("the index (U1/N)", () => {
   it("puts the caller's sign-out last, alone in its own list (R55·182.2)", async () => {
     await renderWithRouter(
       <SettingsIndex
+        isStravaConnected={false}
         current={ANSWERED}
         username="maya_runs"
         runReminderEmail
@@ -340,6 +370,7 @@ describe("the index while a sub-page is slow (X3)", () => {
     try {
       await renderWithSlowRoute(
         <SettingsIndex
+          isStravaConnected={false}
           current={ANSWERED}
           username="maya_runs"
           runReminderEmail

@@ -196,6 +196,14 @@ function SettingsGroup({
 }
 
 /**
+ * The Connections row states its value, as its neighbours do (R58·296):
+ * "Strava · connected", or "Not connected".
+ */
+function connectionsRowValue(isStravaConnected: boolean): string {
+  return isStravaConnected ? "Strava · connected" : "Not connected";
+}
+
+/**
  * What U1's index takes.
  */
 interface SettingsIndexProps {
@@ -214,6 +222,10 @@ interface SettingsIndexProps {
   Whether the Strava run reminder comes by email (ACC-11).
   */
   runReminderEmail: boolean;
+  /**
+  Whether Strava is connected: the Connections row's value (R58·296).
+  */
+  isStravaConnected: boolean;
   /**
    * DISPLAY's Theme row (R48·133), the route's to wire: it saves through
    * a server function, which a component may not import.
@@ -236,6 +248,7 @@ export function SettingsIndex(
     username,
     blockedCount,
     runReminderEmail,
+    isStravaConnected,
     display,
     signOut,
     isPrivacyReviewDue,
@@ -309,7 +322,7 @@ export function SettingsIndex(
           to="/runs/strava"
           params={{}}
           label="Connections"
-          value="Strava"
+          value={connectionsRowValue(isStravaConnected)}
         />
       </SettingsGroup>
       {/* Settings › About (ACC-13; round 26 #14, round 28 #7, D-52): the

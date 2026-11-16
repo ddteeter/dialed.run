@@ -20,12 +20,9 @@ end of status
 Email
 textbox, Email, safety-#@example.com
 Password
+link, Forgot it?
 Password, a-long-enough-password
 button, Show, # control
-link, Forgot it? Reset your password
-Forgot it?
-Reset your password
-end of link, Forgot it? Reset your password
 button, Log in
 Log in
 end of button, Log in

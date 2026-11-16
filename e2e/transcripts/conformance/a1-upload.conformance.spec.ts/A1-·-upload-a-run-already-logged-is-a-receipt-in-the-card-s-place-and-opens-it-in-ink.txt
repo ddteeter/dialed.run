@@ -8,9 +8,7 @@ status
 Already logged.
 end of status
 MORNING_RUN_#.GPX
-button, Replace MORNING_RUN_#.GPX
-Replace
-end of button, Replace MORNING_RUN_#.GPX
+button, Replace, MORNING_RUN_#.GPX
 Already logged
 paragraph
 #.# mi, # minutes # seconds

@@ -12,18 +12,9 @@ heading, Pegasus #, level 1
 # mi logged
 ·
 # of # runs dialed
-link, Edit Pegasus #
-Edit
-Pegasus #
-end of link, Edit Pegasus #
-button, Retire Pegasus #
-Retire
-Pegasus #
-end of button, Retire Pegasus #
-button, Delete Pegasus #
-Delete
-Pegasus #
-end of button, Delete Pegasus #
+link, Edit, Pegasus #
+button, Retire, Pegasus #
+button, Delete, Pegasus #
 dialog, Delete the Pegasus #? Retire it instead.
 dialog, Delete the Pegasus #? Retire it instead.
 heading, Delete the Pegasus #? Retire it instead., level 2

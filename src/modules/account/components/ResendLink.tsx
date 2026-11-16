@@ -8,7 +8,9 @@ import {
   ControlFailureBand,
   FailureBand,
   FormStatus,
+  INK_PILL,
   PendingLabel,
+  SECONDARY_PILL,
   inFlight,
   useControlAction,
 } from "../../../ui";
@@ -50,10 +52,9 @@ export function limitedMessage(
  * no other.
  *
  * **Two looks, one control** (round 29 #12): the text link in the band
- * and on Au4, and on the "Confirm your email first" sheet an outline pill
- * at the control height, because there it is the sheet's only real action
- * — outline rather than ink, since Not now is the default. Both run the
- * same three states.
+ * and on Au4, and on the "Confirm your email first" sheet the ink pill,
+ * because there it is the sheet's act (R58·270); focus still lands on Not
+ * now, the way out. Both run the same three states.
  */
 export function ResendLink({
   email,
@@ -144,14 +145,13 @@ export function ResendLink({
 
 /**
  * Each is a 44 target, written at the element (rule 03 reads it there).
- * The looks: the page's text link, and the sheet's outline pill — a
- * 1px ink rule, no fill, `HEIGHT.control` (48) high and the sheet's width,
- * as round 29 #12 draws it.
+ * The looks: the page's text link, and on the sheet the ink pill — the
+ * sheet's primary, over Not now's hairline pill, as every sheet's pair is
+ * (R58·270, D-186), each the sheet's width.
  */
 export const RESEND_LINK =
   "cursor-pointer border-none bg-transparent p-0 text-body font-semibold text-ink underline underline-offset-4";
-export const RESEND_PILL =
-  "flex h-12 w-full cursor-pointer items-center justify-center rounded-pill border border-ink bg-transparent px-5 text-body font-bold text-ink";
+export const RESEND_PILL = INK_PILL;
 /**
  * The confirm band's link: R29 draws it 600 in the cold pink, underlined,
  * on the sentence's line (R55·211).
@@ -166,10 +166,9 @@ const RESEND_LOOK = {
 } as const;
 
 /**
- * A plain button in Resend's pill, for the sheet's other answer: the two
- * stacked buttons are a matched full-width pair (round 29 #11's board;
- * B-11). It lives beside the pill so its class list is read where it is
- * written.
+ * The sheet's other answer, Not now: the hairline pill under Resend's ink
+ * one (R58·270), a full-width pair (round 29 #11's board; B-11). It lives
+ * beside the pill so the pair is read where it is written.
  */
 export function PillButton({
   label,
@@ -185,7 +184,7 @@ export function PillButton({
       type="button"
       ref={buttonRef}
       onClick={onClick}
-      className={`target ${RESEND_PILL}`}
+      className={`target ${SECONDARY_PILL}`}
     >
       {label}
     </button>

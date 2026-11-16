@@ -901,53 +901,44 @@ describe("GarmentDetail: actions", () => {
   it("offers Edit and Retire, and Delete apart as a text link", async () => {
     await renderWithRouter(garment());
 
-    // Each names the piece, for a screen reader that lands on it alone;
-    // the eye gets the bare verb.
-    const named = within(part("actions")).getAllByText("Tracksmith Harrier");
-    expect(named).toHaveLength(3);
-    for (const name of named) expect(name).toHaveClass("sr-only");
-
+    // D-187: each is named by its visible verb, and described by the h1,
+    // the piece it acts on, for a screen reader that lands on it alone.
     const actions = part("actions");
-    expect(
-      within(actions).getByRole("link", { name: "Edit Tracksmith Harrier" }),
-    ).toHaveAttribute("href", "/closet/edit/01ITEM");
-    expect(
-      within(actions).getByRole("button", {
-        name: "Retire Tracksmith Harrier",
-      }),
-    ).toBeVisible();
-    expect(
-      within(actions).getByRole("button", {
-        name: "Delete Tracksmith Harrier",
-      }),
-    ).toHaveClass("ml-auto", "underline");
+    expect(actions.querySelector(".sr-only")).toBeNull();
+    const heading = screen.getByRole("heading", {
+      level: 1,
+      name: "Tracksmith Harrier",
+    });
+    const edit = within(actions).getByRole("link", { name: "Edit" });
+    expect(edit).toHaveAttribute("href", "/closet/edit/01ITEM");
+    const retire = within(actions).getByRole("button", { name: "Retire" });
+    expect(retire).toBeVisible();
+    const remove = within(actions).getByRole("button", { name: "Delete" });
+    expect(remove).toHaveClass("ml-auto", "underline");
+    for (const action of [edit, retire, remove]) {
+      expect(action).toHaveAttribute("aria-describedby", heading.id);
+      expect(action).toHaveAccessibleDescription("Tracksmith Harrier");
+    }
   });
 
   it("offers Unretire and no Edit once retired", async () => {
     await renderWithRouter(garment({ item: wardrobeItem({ retired: true }) }));
 
     const actions = part("actions");
+    expect(within(actions).queryByRole("link", { name: "Edit" })).toBeNull();
     expect(
-      within(actions).queryByRole("link", { name: "Edit Long sleeve top" }),
+      within(actions).queryByRole("button", { name: "Retire" }),
     ).toBeNull();
-    expect(
-      within(actions).queryByRole("button", { name: "Retire Long sleeve top" }),
-    ).toBeNull();
-    // Named for the piece, as Edit, Retire and Delete are.
-    expect(
-      within(actions).getByRole("button", {
-        name: "Unretire Long sleeve top",
-      }),
-    ).toBeVisible();
-    // The eye gets the bare verb.
-    expect(within(actions).getAllByText("Long sleeve top")).toHaveLength(2);
-    for (const name of within(actions).getAllByText("Long sleeve top")) {
-      expect(name).toHaveClass("sr-only");
-    }
+    // Described by the piece, as Edit, Retire and Delete are; the name is
+    // the bare verb the eye gets.
+    const unretire = within(actions).getByRole("button", { name: "Unretire" });
+    expect(unretire).toBeVisible();
+    expect(unretire).toHaveAccessibleDescription("Long sleeve top");
+    expect(actions.querySelector(".sr-only")).toBeNull();
     // No runs, so a real delete is still on offer.
     expect(
-      within(actions).getByRole("button", { name: "Delete Long sleeve top" }),
-    ).toBeVisible();
+      within(actions).getByRole("button", { name: "Delete" }),
+    ).toHaveAccessibleDescription("Long sleeve top");
   });
 
   it("keeps Delete on a retired piece with runs — it is always offered", async () => {
@@ -959,7 +950,7 @@ describe("GarmentDetail: actions", () => {
     );
     expect(
       within(part("actions")).getByRole("button", {
-        name: "Delete Long sleeve top",
+        name: "Delete",
       }),
     ).toBeVisible();
   });
@@ -972,9 +963,7 @@ describe("GarmentDetail: actions", () => {
     );
     const invalidate = vi.spyOn(router, "invalidate");
 
-    await user.click(
-      screen.getByRole("button", { name: "Unretire Long sleeve top" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Unretire" }));
 
     await waitFor(() => {
       expect(invalidate).toHaveBeenCalled();
@@ -994,9 +983,7 @@ describe("GarmentDetail: actions", () => {
       ),
     );
 
-    await user.click(
-      screen.getByRole("button", { name: "Unretire Long sleeve top" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Unretire" }));
     expectBusy(
       within(part("actions")).getAllByRole("button")[0] ?? part("actions"),
     );
@@ -1020,9 +1007,7 @@ describe("GarmentDetail: the retire confirm (round 22)", () => {
       garment({ performance: performance({ runCount: 14 }) }, { retire }),
     );
 
-    await user.click(
-      screen.getByRole("button", { name: "Retire Tracksmith Harrier" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Retire" }));
 
     expect(retire).not.toHaveBeenCalled();
     expect(sheet().closest("dialog")).toHaveAttribute("open");
@@ -1044,9 +1029,7 @@ describe("GarmentDetail: the retire confirm (round 22)", () => {
     const { unmount } = await renderWithRouter(
       garment({ performance: performance({ runCount: 1 }) }),
     );
-    await user.click(
-      screen.getByRole("button", { name: "Retire Tracksmith Harrier" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Retire" }));
     expect(
       within(sheet()).getByText(
         "It leaves the closet and the picker. Its 1 run and verdict stay, and still count. You can bring it back.",
@@ -1055,9 +1038,7 @@ describe("GarmentDetail: the retire confirm (round 22)", () => {
     unmount();
 
     await renderWithRouter(garment());
-    await user.click(
-      screen.getByRole("button", { name: "Retire Tracksmith Harrier" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Retire" }));
     expect(
       within(sheet()).getByText(
         "It leaves the closet and the picker. You can bring it back.",
@@ -1069,9 +1050,7 @@ describe("GarmentDetail: the retire confirm (round 22)", () => {
     const user = userEvent.setup();
     await renderWithRouter(garment());
 
-    await user.click(
-      screen.getByRole("button", { name: "Retire Tracksmith Harrier" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Retire" }));
 
     await waitFor(() => {
       expect(
@@ -1085,9 +1064,7 @@ describe("GarmentDetail: the retire confirm (round 22)", () => {
     const retire = vi.fn<Props["retire"]>(nothing);
     await renderWithRouter(garment({}, { retire }));
 
-    await user.click(
-      screen.getByRole("button", { name: "Retire Tracksmith Harrier" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Retire" }));
     await user.click(within(sheet()).getByRole("button", { name: "Keep it" }));
 
     expect(sheet().closest("dialog")).not.toHaveAttribute("open");
@@ -1100,9 +1077,7 @@ describe("GarmentDetail: the retire confirm (round 22)", () => {
     const { router } = await renderWithRouter(garment({}, { retire }));
     const invalidate = vi.spyOn(router, "invalidate");
 
-    await user.click(
-      screen.getByRole("button", { name: "Retire Tracksmith Harrier" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Retire" }));
     await user.click(within(sheet()).getByRole("button", { name: "Retire" }));
 
     await waitFor(() => {
@@ -1120,9 +1095,7 @@ describe("GarmentDetail: the retire confirm (round 22)", () => {
       garment({}, { retire: () => pending.promise }),
     );
 
-    await user.click(
-      screen.getByRole("button", { name: "Retire Tracksmith Harrier" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Retire" }));
     const primary = sheet().querySelector("[data-part='primary-action']");
     if (!(primary instanceof HTMLElement)) throw new TypeError("no primary");
     await user.click(primary);
@@ -1151,9 +1124,7 @@ describe("GarmentDetail: the retire confirm (round 22)", () => {
       .mockResolvedValueOnce(undefined);
     const { router } = await renderWithRouter(garment({}, { retire }));
 
-    await user.click(
-      screen.getByRole("button", { name: "Retire Tracksmith Harrier" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Retire" }));
     await user.click(within(sheet()).getByRole("button", { name: "Retire" }));
     await user.click(
       await within(sheet()).findByRole("button", { name: "Try again" }),
@@ -1173,9 +1144,7 @@ describe("GarmentDetail: the delete confirm (round 22)", () => {
     const retire = vi.fn<Props["retire"]>(nothing);
     const { router } = await renderWithRouter(garment({}, { remove, retire }));
 
-    await user.click(
-      screen.getByRole("button", { name: "Delete Tracksmith Harrier" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Delete" }));
 
     expect(remove).not.toHaveBeenCalled();
     expect(sheet()).toHaveAttribute("data-state", "confirm-delete");
@@ -1208,9 +1177,7 @@ describe("GarmentDetail: the delete confirm (round 22)", () => {
     const pending = Promise.withResolvers<undefined>();
     await renderWithRouter(garment({}, { remove: () => pending.promise }));
 
-    await user.click(
-      screen.getByRole("button", { name: "Delete Tracksmith Harrier" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Delete" }));
     await user.click(within(sheet()).getByRole("button", { name: "Delete" }));
     expect(within(sheet()).getByText("Deleting")).toBeVisible();
 
@@ -1239,9 +1206,7 @@ describe("GarmentDetail: deleting a piece with runs (round 26 #3)", () => {
 
     // Not asked with the page: only the sheet wants it.
     expect(bandCount).not.toHaveBeenCalled();
-    await user.click(
-      screen.getByRole("button", { name: "Delete Tracksmith Harrier" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Delete" }));
 
     expect(remove).not.toHaveBeenCalled();
     expect(sheet()).toHaveAttribute("data-state", "delete-with-runs");
@@ -1276,9 +1241,7 @@ describe("GarmentDetail: deleting a piece with runs (round 26 #3)", () => {
       expect(
         screen.getByRole("heading", { level: 1, name: "Tracksmith Harrier" }),
       ).toBeVisible();
-      await user.click(
-        screen.getByRole("button", { name: "Delete Tracksmith Harrier" }),
-      );
+      await user.click(screen.getByRole("button", { name: "Delete" }));
 
       expect(sheet()).toHaveAttribute("data-state", "delete-with-runs");
       expect(
@@ -1308,9 +1271,7 @@ describe("GarmentDetail: deleting a piece with runs (round 26 #3)", () => {
       ),
     );
 
-    await user.click(
-      screen.getByRole("button", { name: "Delete Tracksmith Harrier" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Delete" }));
     await user.click(
       within(sheet()).getByRole("button", { name: "Delete it and its record" }),
     );
@@ -1339,9 +1300,7 @@ describe("GarmentDetail: deleting a piece with runs (round 26 #3)", () => {
       ),
     );
 
-    await user.click(
-      screen.getByRole("button", { name: "Delete Tracksmith Harrier" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Delete" }));
     await user.click(
       within(sheet()).getByRole("button", { name: "Retire it" }),
     );
@@ -1364,9 +1323,7 @@ describe("GarmentDetail: deleting a piece with runs (round 26 #3)", () => {
       garment({ performance: performance({ runCount: 3 }) }, { remove }),
     );
 
-    await user.click(
-      screen.getByRole("button", { name: "Delete Tracksmith Harrier" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Delete" }));
     await user.click(
       within(sheet()).getByRole("button", { name: "Delete it and its record" }),
     );
@@ -1382,9 +1339,7 @@ describe("GarmentDetail: deleting a piece with runs (round 26 #3)", () => {
       garment({ performance: performance({ runCount: 3 }) }, { remove }),
     );
 
-    await user.click(
-      screen.getByRole("button", { name: "Delete Tracksmith Harrier" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Delete" }));
     await user.click(within(sheet()).getByRole("button", { name: "Cancel" }));
 
     await waitFor(() => {
@@ -1411,16 +1366,14 @@ describe("GarmentDetail: each sheet owns its own failure", () => {
 
     await user.click(
       within(part("actions")).getByRole("button", {
-        name: "Retire Tracksmith Harrier",
+        name: "Retire",
       }),
     );
     await user.click(within(sheet()).getByRole("button", { name: "Retire" }));
     expect(await within(sheet()).findByText("Not retired")).toBeVisible();
     await user.click(within(sheet()).getByRole("button", { name: "Keep it" }));
 
-    await user.click(
-      screen.getByRole("button", { name: "Delete Tracksmith Harrier" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Delete" }));
 
     expect(sheet()).toHaveAttribute("data-state", "confirm-delete");
     expect(within(sheet()).queryByText("Not retired")).toBeNull();
@@ -1444,7 +1397,7 @@ describe("GarmentDetail: each sheet owns its own failure", () => {
 
     await user.click(
       within(part("actions")).getByRole("button", {
-        name: "Retire Tracksmith Harrier",
+        name: "Retire",
       }),
     );
     await user.click(within(sheet()).getByRole("button", { name: "Retire" }));
@@ -1452,7 +1405,7 @@ describe("GarmentDetail: each sheet owns its own failure", () => {
     await user.click(within(sheet()).getByRole("button", { name: "Keep it" }));
     await user.click(
       within(part("actions")).getByRole("button", {
-        name: "Retire Tracksmith Harrier",
+        name: "Retire",
       }),
     );
 

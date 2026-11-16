@@ -308,6 +308,10 @@ describe("O0's re-pick after a moderator's rename (ACC-12; round 27 #16)", () =>
       expect(onRepicked).toHaveBeenCalledTimes(1);
     });
     expect(keep).toHaveBeenCalledTimes(1);
+    // R58·293: left under its primary at every width, 600, underlined.
+    expect(
+      screen.getByRole("button", { name: "Keep @runner_4821 for now" }),
+    ).toHaveClass("self-start", "font-semibold", "underline");
   });
 
   it("says Not kept when Keep fails, and tries it again", async () => {

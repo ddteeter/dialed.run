@@ -74,13 +74,14 @@ const SHEET_KIND = {
  * failure — `FormFailureBand` owns what a failure looks like, the same as
  * every other form in the app.
  *
- * The "what happens next" block is load-bearing copy, not reassurance: it
- * is what makes filing a report cost the reporter nothing, and each of its
- * three sentences is a promise the code keeps. A person reads it (the
- * review queue, and the digest that reports its depth). The entry is
- * hidden from your feed straight away (the report row itself is that
- * hide). They are never told who reported it (nothing in `fileReport`
- * writes a notification).
+ * The consequence line and "what happens next" are load-bearing copy, not
+ * reassurance: they are what makes filing a report cost the reporter
+ * nothing, and each sentence is a promise the code keeps. A person reads
+ * it (the review queue, and the digest that reports its depth). The entry
+ * is hidden from your feed straight away (the report row itself is that
+ * hide); the footer says both. They are never told who reported it
+ * (nothing in `fileReport` writes a notification), which "what happens
+ * next" keeps as its one sentence (R58·283).
  */
 /**
  * What is being reported, as one value rather than four loose props.
@@ -410,10 +411,8 @@ function WhatHappensNext({
       <h3>
         <Mono step="xs">What happens next</Mono>
       </h3>
-      <p>
-        A person reads it within a day. The entry is hidden from your feed
-        straight away, whatever we decide. {neverTold}
-      </p>
+      {/* R58·283: only what the footer's consequence line does not say. */}
+      <p>{neverTold}</p>
     </section>
   );
 }
@@ -518,8 +517,8 @@ function IntimateHelp(): JSX.Element {
  * reason closes the sheet on "Report sent." The head takes focus, so the
  * swap is read out; Done, or Esc, closes it.
  *
- * "Within a day" is the owner's word for the board's "today" (2026-10-29):
- * the promise the sheet's own "What happens next" already makes.
+ * "Within a day" is the owner's word for the board's "today" (2026-10-29),
+ * the promise the footer's consequence line makes.
  */
 function IntimateReceipt({
   onDone,

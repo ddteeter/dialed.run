@@ -347,6 +347,43 @@ function FieldGroup({
 }
 
 /**
+ * A field's label, and what sits at its row's right where there is
+ * something: both boards put Au1's "Forgot it?" on the Password label row,
+ * right-aligned, not under the field (A-06).
+ *
+ * `--label`, not `--muted`: the mono caption inside the field IS the label
+ * (the contract's Forms row says so in as many words), and T1's round-13
+ * row bans --muted from being a control's only label on paper.
+ */
+function FieldCaption({
+  controlId,
+  label,
+  end,
+}: Readonly<{
+  controlId: string;
+  label: string;
+  end: ReactNode;
+}>): JSX.Element {
+  const caption = (
+    <label htmlFor={controlId} className="text-label">
+      <Mono step="sm">{label}</Mono>
+    </label>
+  );
+  if (end === undefined) return caption;
+  return (
+    <div
+      // A slot, not a part: a board's part order names what it draws,
+      // and the label row is the field's own layout (Au2's order).
+      data-slot="label-row"
+      className="flex items-center justify-between gap-3"
+    >
+      {caption}
+      {end}
+    </div>
+  );
+}
+
+/**
  * A field with a button beside it — the field and **Find** (round 26 #12)
  * is the one today.
  *
@@ -380,6 +417,7 @@ export function FormField({
   hint,
   error,
   action,
+  labelEnd,
   children,
 }: Readonly<
   LabelledFieldProps & {
@@ -396,6 +434,10 @@ export function FormField({
     A button that belongs beside the box — see `BesideTheBox`.
     */
     action?: ReactNode;
+    /**
+    A link at the label row's right: Au1's "Forgot it?" (A-06).
+    */
+    labelEnd?: ReactNode;
   }
 >): JSX.Element {
   const isInvalid = error !== undefined;
@@ -446,13 +488,7 @@ export function FormField({
         hint={hint}
         error={error}
         caption={
-          /* `--label`, not `--muted`: the mono caption inside the field IS
-             the label (the contract's Forms row says so in as many words),
-             and T1's round-13 row bans --muted from being a control's only
-             label on paper. */
-          <label htmlFor={controlId} className="text-label">
-            <Mono step="sm">{label}</Mono>
-          </label>
+          <FieldCaption controlId={controlId} label={label} end={labelEnd} />
         }
       >
         {action === undefined ? (
@@ -923,6 +959,12 @@ const SUBMIT_TONE = {
    * on `--panel` was close to invisible.
    */
   secondary: `flex min-h-control items-center justify-center rounded-pill border border-hairline bg-transparent px-6 font-semibold text-ink dark:border-hairline-2 ${HUG_WIDE_CLASS}`,
+  /**
+   * The secondary that hugs its label at every width (AC2a, R58·295):
+   * P2.5's Save, with "Brand alone is enough." beside it on a phone too.
+   * From 720 it is the secondary as above.
+   */
+  hugging: `flex w-fit min-h-control items-center justify-center rounded-pill border border-hairline bg-transparent px-6 font-semibold text-ink dark:border-hairline-2 wide:min-w-50`,
 } as const;
 
 /**
@@ -987,7 +1029,7 @@ export function SubmitButton({
   pendingLabel: string;
   pending: boolean;
   /**
-  `chalk` on the Desk; `ink` on account, settings and confirms; `secondary` for a hairline-pill submit.
+  `chalk` on the Desk; `ink` on account, settings and confirms; `secondary` for a hairline-pill submit; `hugging` for one that hugs its label on a phone too (P2.5).
   */
   tone?: keyof typeof SUBMIT_TONE | undefined;
   /**

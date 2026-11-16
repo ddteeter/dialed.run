@@ -27,6 +27,7 @@ import {
   manualRunInput,
   retimeRunInput,
   runIdInput,
+  runListInput,
   conditionsBandInput,
   stravaCallbackInput,
 } from "./inputs";
@@ -37,7 +38,7 @@ import {
   didRetryRunWeather,
   didSetRunConditions,
   getRunSummary,
-  listRunSummaries,
+  listRunPage,
 } from "./service";
 import { env, waitUntil } from "../../env";
 import { captureException, oweInCore } from "../ops";
@@ -146,12 +147,12 @@ export const getRunSummaryFn = createServerFn({ method: "GET" })
     return getRunSummary(coreDb(), userId, data.runId);
   });
 
-export const listRunSummariesFn = createServerFn({ method: "GET" }).handler(
-  async () => {
+export const listRunSummariesFn = createServerFn({ method: "GET" })
+  .validator((data: unknown) => runListInput.parse(data))
+  .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return listRunSummaries(coreDb(), userId);
-  },
-);
+    return listRunPage(coreDb(), userId, data.show);
+  });
 
 export const didSetRunConditionsFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => conditionsBandInput.parse(data))

@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 import type { Units } from "../../../lib/contracts";
 import {
@@ -11,6 +11,7 @@ import {
 import { dayLabel } from "../../../lib/dates";
 import { newUlid } from "../../../lib/ids";
 import {
+  Bracketed,
   classifyFailure,
   ControlFailureBand,
   inFlight,
@@ -301,6 +302,9 @@ function PickerRow({
 }>): JSX.Element {
   const label = rowLabel(row, units);
   const said = rowLabel(row, units, spokenDuration);
+  // The row's title describes its control (D-187): the name holds only
+  // the visible word, its brackets and chevron drawn, not said.
+  const titleId = useId();
   return (
     <li
       data-part="garmin-row"
@@ -309,7 +313,11 @@ function PickerRow({
       <span className="flex min-w-0 flex-col">
         {/* The runs list's sentence-case sans for the same run, not mono
             capitals (P2a-05). */}
-        <span data-part="garmin-row-title" className="text-body font-semibold">
+        <span
+          id={titleId}
+          data-part="garmin-row-title"
+          className="text-body font-semibold"
+        >
           <Spoken shown={label} said={said} />
         </span>
         <span className="text-small text-quiet">Garmin</span>
@@ -317,21 +325,28 @@ function PickerRow({
       {row.runId === undefined ? (
         <button
           type="button"
-          aria-label={`Import ${said}`}
+          aria-describedby={titleId}
           {...inFlight(isPending)}
           onClick={onImport}
           className="target border-none bg-transparent p-0 font-mono text-mono-sm uppercase text-ink"
         >
-          {isPending ? "Importing" : "Import ›"}
+          {isPending ? (
+            "Importing"
+          ) : (
+            <>
+              Import<span aria-hidden="true"> ›</span>
+            </>
+          )}
         </button>
       ) : (
         <Link
           to="/runs/$runId"
           params={{ runId: row.runId }}
-          aria-label={`Imported: open ${said}`}
+          aria-describedby={titleId}
           className="target inline-flex items-center font-mono text-mono-sm uppercase text-muted no-underline"
         >
-          [Imported] ›
+          <Bracketed>Imported</Bracketed>
+          <span aria-hidden="true"> ›</span>
         </Link>
       )}
     </li>

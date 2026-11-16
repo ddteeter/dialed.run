@@ -151,6 +151,9 @@ describe("the roster", () => {
     expect(row).toHaveClass("bg-panel", "border", "rounded-card");
     const unblock = screen.getByRole("button", { name: "Unblock" });
     expect(unblock).toHaveClass("rounded-pill", "border", "shrink-0");
+    // The hairline pill, as every secondary is (R58·308).
+    expect(unblock).toHaveClass("border-hairline", "dark:border-hairline-2");
+    expect(unblock).not.toHaveClass("border-ink");
     // At rest the pill holds its word alone, so it is as wide as UNBLOCK
     // with equal padding, not the width of "[ Unblocking ]" (#698
     // R2-AUTH-01).

@@ -83,7 +83,7 @@ function answering(result: PasswordChange) {
 }
 
 describe("Au1's Forgot it?", () => {
-  it("sits under Password on log-in only, and opens the request", async () => {
+  it("sits on the Password label row on log-in only, named by its words, and opens the request (A-06, D-187)", async () => {
     const { rerender } = await renderWithRouter(
       <CredentialFields
         form={RESTING_FORM}
@@ -95,16 +95,19 @@ describe("Au1's Forgot it?", () => {
         hasForgotLink
       />,
     );
-    // Drawn "Forgot it?"; heard with what it does, the drawn words first.
-    const link = screen.getByRole("link", {
-      name: "Forgot it? Reset your password",
-    });
-    expect(link).toHaveTextContent(/^Forgot it\? Reset your password$/u);
-    expect(within(link).getByText("Reset your password")).toHaveClass(
-      "sr-only",
-    );
+    // R57·255: the name is the visible words, nothing added.
+    const link = screen.getByRole("link", { name: "Forgot it?" });
+    expect(link).toHaveTextContent(/^Forgot it\?$/u);
     expect(link).toHaveAttribute("href", "/account/forgot");
     expect(link).toHaveClass("target");
+    // A-06: right of the PASSWORD label, on its row, not under the field.
+    const row = link.parentElement;
+    expect(row).toHaveAttribute("data-slot", "label-row");
+    expect(row).toHaveClass("flex", "items-center", "justify-between");
+    expect(row?.firstElementChild).toHaveTextContent("Password");
+    expect(row?.firstElementChild?.tagName).toBe("LABEL");
+    expect(row?.lastElementChild).toBe(link);
+    expect(screen.getByLabelText("Password")).toBeInTheDocument();
     rerender(<></>);
   });
 
@@ -120,6 +123,8 @@ describe("Au1's Forgot it?", () => {
       />,
     );
     expect(screen.queryByRole("link", { name: /^Forgot it\?/u })).toBeNull();
+    // No link, so the label stands alone, as every other field's does.
+    expect(document.querySelector("[data-slot='label-row']")).toBeNull();
   });
 });
 

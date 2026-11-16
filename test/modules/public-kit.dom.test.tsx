@@ -442,7 +442,13 @@ describe("the public kit, signed out", () => {
     // At the foot of the body (R55·176), last in the page's main.
     expect(foot?.parentElement?.tagName).toBe("MAIN");
     expect(foot?.parentElement?.lastElementChild).toBe(foot);
-    expect(foot).toHaveClass("px-6", "pb-8", "text-small", "desk:col-start-1");
+    expect(foot).toHaveClass(
+      "px-6",
+      "wide:px-0",
+      "pb-8",
+      "text-small",
+      "desk:col-start-1",
+    );
     expect(link("Report this kit")).toHaveClass(
       "target",
       "text-muted",

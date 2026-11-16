@@ -272,7 +272,10 @@ describe("OpenSourcePage", () => {
     const [react, , clsx] = within(section("MIT")).getAllByRole("listitem");
     if (react === undefined || clsx === undefined) throw new Error("no rows");
     expect(within(react).getByText("react")).toHaveClass("font-semibold");
-    expect(within(react).getByText("19.2.0")).toHaveClass("text-mono-sm");
+    // R58·292: MONO.md, which keeps the version's own case.
+    const version = within(react).getByText("19.2.0");
+    expect(version).toHaveClass("text-mono-md");
+    expect(version).not.toHaveClass("uppercase");
     // Its group's heading names the licence; the row does not repeat it.
     expect(within(react).queryByText("MIT")).toBeNull();
     // Drawn "Project", heard with the package's name: ~130 of them alone
@@ -291,7 +294,7 @@ describe("OpenSourcePage", () => {
     const plex = within(section("SIL Open Font License 1.1")).getAllByRole(
       "listitem",
     )[1];
-    expect(plex?.querySelector(".text-mono-sm")).toBeNull();
+    expect(plex?.querySelector(".text-mono-md")).toBeNull();
   });
 
   it("shows a group's first three rows, and all of them after Show all", async () => {
@@ -305,8 +308,11 @@ describe("OpenSourcePage", () => {
       "target",
       "w-full",
       "rounded-pill",
-      "border-ink",
+      // The hairline pill, as every secondary is (R58·308).
+      "border-hairline",
+      "dark:border-hairline-2",
     );
+    expect(showAll).not.toHaveClass("border-ink");
     // Every row keyed by its own name and version: React says nothing.
     const errors = vi.spyOn(console, "error");
     await user.click(showAll);
@@ -532,7 +538,13 @@ describe("OpenSourcePage", () => {
     });
     expect(weather).toHaveClass("text-body", "font-bold");
     expect(weather.parentElement?.tagName).toBe("LI");
-    expect(weather.parentElement).toHaveClass("border-t", "border-hairline");
+    // R58·288: a notice's text is TYPE.body, a row of this page, not the
+    // article's reading step.
+    expect(weather.parentElement).toHaveClass(
+      "border-t",
+      "border-hairline",
+      "text-body",
+    );
     expect(weather.parentElement?.parentElement?.children).toHaveLength(2);
   });
 

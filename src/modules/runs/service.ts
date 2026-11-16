@@ -3,7 +3,16 @@
  * duplicate window. Pure of request plumbing so the workers-pool tests
  * exercise it directly; server-fn glue lives in functions.ts.
  */
-import { and, desc, eq, gte, inArray, lte, notInArray } from "drizzle-orm";
+import {
+  and,
+  between,
+  desc,
+  eq,
+  gte,
+  inArray,
+  lte,
+  notInArray,
+} from "drizzle-orm";
 
 import { outfitEntries, runs, userProfiles } from "../../db/schema-core";
 import { roundCoordinate } from "../../lib/coords";
@@ -17,7 +26,8 @@ import { selectOwnedRow } from "../../lib/sql/owned";
 import { manualReadingsForRuns, observationsForRuns } from "../weather";
 import type { WeatherReading } from "../weather";
 import { bandMiddleC, canSetConditions } from "./run-conditions";
-import { RUNS_LISTED } from "./run-months";
+import { RUNS_LISTED, monthOf } from "./run-months";
+import type { CutMonth } from "./run-months";
 import { viewerZone } from "../notifications";
 
 export const DUPLICATE_WINDOW_S = 120;
@@ -425,14 +435,102 @@ export async function summaryOfRun(
 export async function listRunSummaries(
   db: CoreDb,
   userId: string,
+  shown: number = RUNS_LISTED,
 ): Promise<RunSummary[]> {
   const list = await db
     .select()
     .from(runs)
     .where(eq(runs.userId, userId))
     .orderBy(desc(runs.startedAt))
-    .limit(RUNS_LISTED);
+    .limit(shown);
   return summariesOf(db, userId, list);
+}
+
+/**
+ * The runs list as R58·299 draws it: the newest `shown` runs, how many
+ * there are in all (for "Show 50 more" and the end line), and the oldest
+ * listed month counted whole when the list stops inside it.
+ */
+export interface RunListPage {
+  runs: RunSummary[];
+  total: number;
+  cutMonth: CutMonth | undefined;
+}
+
+export async function listRunPage(
+  db: CoreDb,
+  userId: string,
+  shown: number,
+): Promise<RunListPage> {
+  const [listed, total] = await Promise.all([
+    listRunSummaries(db, userId, shown),
+    countRuns(db, userId),
+  ]);
+  return {
+    runs: listed,
+    total,
+    cutMonth: await cutMonthOf(db, userId, listed, total),
+  };
+}
+
+/**
+ * How far before the oldest listed run its month can still reach: a month
+ * is at most 31 days, and a run's own clock is within a day of UTC.
+ */
+const MONTH_REACH_S = 32 * 86_400;
+
+/**
+ * The cut month's whole count. Only the oldest listed month can be cut:
+ * the list is newest first, so every month above it is listed whole. Its
+ * other runs are the ones at or before the oldest listed run's start and
+ * within a month of it, each read on its own clock as the list reads its
+ * own (P2a-02), so a run near midnight lands in the month it was run in.
+ */
+async function cutMonthOf(
+  db: CoreDb,
+  userId: string,
+  listed: readonly RunSummary[],
+  total: number,
+): Promise<CutMonth | undefined> {
+  const oldest = listed.at(-1);
+  if (oldest === undefined || listed.length >= total) return undefined;
+  const month = monthOf(oldest);
+  const ids = new Set(listed.map((run) => run.id));
+  const window = await db
+    .select()
+    .from(runs)
+    .where(
+      and(
+        eq(runs.userId, userId),
+        between(
+          runs.startedAt,
+          oldest.startedAt - MONTH_REACH_S,
+          oldest.startedAt,
+        ),
+      ),
+    );
+  // In code, not SQL, for two reasons. The listed runs the window holds
+  // are only the oldest and any started the same second (newest first),
+  // so the id filter throws away a row or two. And a run's clock comes
+  // from its observation, in DIALED_WEATHER, a join D1 cannot express.
+  const before = window.filter((run) => !ids.has(run.id));
+  const [conditions, home] = await Promise.all([
+    conditionsFor(before),
+    viewerZone(db, userId),
+  ]);
+  const isInMonth = (run: {
+    startedAt: number;
+    clockZone: string | undefined;
+  }): boolean => monthOf(run) === month;
+  const count =
+    listed.filter((run) => isInMonth(run)).length +
+    before.filter((run) =>
+      isInMonth({
+        startedAt: run.startedAt,
+        clockZone: conditions.get(run.id)?.timeZone ?? home.homeZone,
+      }),
+    ).length;
+  return { month, count };
 }
 
 /**

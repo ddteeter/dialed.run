@@ -111,6 +111,22 @@ function acceptRow(): Element | null {
   return document.querySelector("[data-part='accept']");
 }
 
+/**
+ * R58·267: the bar holds the wordmark and "Signed in", and neither Log in
+ * nor Request access.
+ */
+function expectSignedInBar(): void {
+  const bar = screen.getByRole("banner");
+  expect(within(bar).getByText("Signed in")).toHaveClass(
+    "text-mono-xs",
+    "text-muted",
+  );
+  expect(within(bar).queryByRole("link", { name: "Log in" })).toBeNull();
+  expect(
+    within(bar).queryByRole("link", { name: "Request access" }),
+  ).toBeNull();
+}
+
 describe("TermsPrompt · never accepted (round 29 #6)", () => {
   it("is the TERMS kicker and its lead, the read link on its own line, Accept, and the escape line", async () => {
     const { rendered } = prompt(FIRST);
@@ -118,6 +134,7 @@ describe("TermsPrompt · never accepted (round 29 #6)", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Accept the terms" }),
     ).toBeInTheDocument();
+    expectSignedInBar();
     expect(document.querySelector("[data-part='panel']")).not.toBeNull();
     const header = document.querySelector("[data-part='header']");
     expect(within(header as HTMLElement).getByText("Terms")).toHaveClass(

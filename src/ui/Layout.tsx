@@ -105,10 +105,18 @@ function SlowRouteStatus() {
  * is, by its path.
  */
 export function SignedOutLayout({
+  intoApp,
   children,
-}: Readonly<{ children: ReactNode }>) {
+}: Readonly<{
+  /**
+  The bar's right side in place of Log in and Request access, as
+  `SignedOutFrame` takes it (R58·267).
+  */
+  intoApp?: ReactNode;
+  children: ReactNode;
+}>) {
   return (
-    <SignedOutFrame>
+    <SignedOutFrame intoApp={intoApp}>
       <div className="mx-auto w-full max-w-page flex-1">{children}</div>
     </SignedOutFrame>
   );

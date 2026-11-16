@@ -50,7 +50,7 @@ end of columnheader, Did it work?
 end of row, Date Run Conditions Outfit Did it work?
 end of rowgroup
 rowgroup
-row, :day :month # # minutes, #.# miles # degrees, clear, wind # miles per hour Same as :day, :month #? Use Pick — :day :month # Way cold A bit cold Dialed A bit warm Way warm, current item
+row, :day :month # # minutes, #.# miles # degrees, clear, wind # miles per hour Same as :day, :month #? Use Pick Way cold A bit cold Dialed A bit warm Way warm, current item
 cell, :day :month #
 :day :month #
 end of cell, :day :month #
@@ -60,35 +60,31 @@ end of cell, # minutes, #.# miles
 cell, # degrees, clear, wind # miles per hour
 # degrees, clear, wind # miles per hour
 end of cell, # degrees, clear, wind # miles per hour
-cell, Same as :day, :month #? Use Pick — :day :month #
+cell, Same as :day, :month #? Use Pick
 Same as
 :day, :month #
 ?
-button, Use — :day :month #
-Use
-end of button, Use — :day :month #
-link, Pick — :day :month #
-Pick
-end of link, Pick — :day :month #
-end of cell, Same as :day, :month #? Use Pick — :day :month #
+button, Use, :day :month #
+link, Pick, :day :month #
+end of cell, Same as :day, :month #? Use Pick
 cell, Way cold A bit cold Dialed A bit warm Way warm
-button, Way cold — :day :month #, not pressed
+button, Way cold, :day :month #, not pressed
 Way cold
-end of button, Way cold — :day :month #, not pressed
-button, A bit cold — :day :month #, not pressed
+end of button, Way cold, :day :month #, not pressed
+button, A bit cold, :day :month #, not pressed
 A bit cold
-end of button, A bit cold — :day :month #, not pressed
-button, Dialed — :day :month #, not pressed
+end of button, A bit cold, :day :month #, not pressed
+button, Dialed, :day :month #, not pressed
 Dialed
-end of button, Dialed — :day :month #, not pressed
-button, A bit warm — :day :month #, not pressed
+end of button, Dialed, :day :month #, not pressed
+button, A bit warm, :day :month #, not pressed
 A bit warm
-end of button, A bit warm — :day :month #, not pressed
-button, Way warm — :day :month #, not pressed
+end of button, A bit warm, :day :month #, not pressed
+button, Way warm, :day :month #, not pressed
 Way warm
-end of button, Way warm — :day :month #, not pressed
+end of button, Way warm, :day :month #, not pressed
 end of cell, Way cold A bit cold Dialed A bit warm Way warm
-end of row, :day :month # # minutes, #.# miles # degrees, clear, wind # miles per hour Same as :day, :month #? Use Pick — :day :month # Way cold A bit cold Dialed A bit warm Way warm, current item
+end of row, :day :month # # minutes, #.# miles # degrees, clear, wind # miles per hour Same as :day, :month #? Use Pick Way cold A bit cold Dialed A bit warm Way warm, current item
 end of rowgroup
 end of table
 Keys

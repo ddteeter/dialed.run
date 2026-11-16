@@ -6,7 +6,12 @@ import { Mono, useControlAction } from "../../../ui";
 import type { ControlFailure } from "../../../ui";
 import { SignedOutPanel } from "../../../ui/SignedOutPanel";
 import type { KeepResult, LeavingView } from "../deletion";
-import { ActionCard, LogInOrOpen, useLogOutAction } from "./ActionCard";
+import {
+  ActionCard,
+  LogInOrOpen,
+  SignedInMark,
+  useLogOutAction,
+} from "./ActionCard";
 
 /**
  * Round 27 #14's two deletion pages, in the signed-out panel: "Delete
@@ -57,7 +62,11 @@ export function Leaving({
     );
   }
   return (
-    <SignedOutPanel heading="Keep your account?" notice={notice}>
+    <SignedOutPanel
+      heading="Keep your account?"
+      notice={notice}
+      intoApp={<SignedInMark />}
+    >
       <KeepOrLeave day={view.day} keep={keep} logOut={logOut} onKept={onKept} />
     </SignedOutPanel>
   );

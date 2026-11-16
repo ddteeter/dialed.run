@@ -294,6 +294,12 @@ describe("TapListForm", () => {
     expect(onSkip).toHaveBeenCalledTimes(1);
     expect(save).not.toHaveBeenCalled();
     expect(onSaved).not.toHaveBeenCalled();
+    // R58·293: left under its primary at every width, 600, underlined.
+    expect(screen.getByRole("button", { name: "Skip for now" })).toHaveClass(
+      "self-start",
+      "font-semibold",
+      "underline",
+    );
   });
 
   it("draws the artboard's mark, and keeps it out of the name", async () => {

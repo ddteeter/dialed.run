@@ -227,9 +227,12 @@ test("add garments with product identity -> detail in round 22's order -> retire
     "No runs yet",
     { ignoreCase: true },
   );
-  // Round 55 · 189: the range has a slot only when the piece has a range,
-  // and the Pegasus was saved without one.
-  await expect(pegasus.locator("[data-part='tile-range']")).toHaveCount(0);
+  // R58·273: a piece saved without a range keeps the slot, empty and
+  // unheard, so every tile in a row is one height.
+  await expect(pegasus.locator("[data-part='tile-range']")).toHaveAttribute(
+    "data-state",
+    "empty",
+  );
 
   // ---- R-94 · C's rail: GROUP, WORKS AT, COVERAGE --------------------------
   // Round 16's three groups beside the grid at desk, whole. Every value is

@@ -44,10 +44,9 @@ interface OwnAddress {
  * a small sheet."*
  *
  * The lead, then "We sent a link to {email}." on a line of its own
- * (round 29 #11), then Resend as an outline pill (round 29 #12: the
- * sheet's only real action, but not filled, because **Not now** has focus
- * and is the default — the runner did not ask for a sheet, so the way out
- * is where they land). Without a trigger the body is the address alone.
+ * (round 29 #11), then Resend as the ink pill, the sheet's act, over Not
+ * now's hairline pill (R58·270, D-186). **Not now** has focus — the
+ * runner did not ask for a sheet, so the way out is where they land. Without a trigger the body is the address alone.
  * Until the address has arrived, or when it can't be read, the body is
  * the lead alone with no space held for the rest; the address line and
  * Resend arrive together, without motion (round 35 #49b).
