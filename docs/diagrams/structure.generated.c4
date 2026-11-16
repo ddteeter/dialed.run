@@ -120,6 +120,7 @@ model {
   cf.app.feed -[imports]-> cf.app.safety
   cf.app.feed -[imports]-> cf.app.weather
   cf.app.notifications -[wiring]-> cf.app.auth
+  cf.app.notifications -[wiring]-> cf.app.feed
   cf.app.notifications -[wiring]-> cf.app.runs
   cf.app.onboarding -[wiring]-> cf.app.auth
   cf.app.onboarding -[imports]-> cf.app.closet
@@ -138,6 +139,7 @@ model {
   cf.app.ops -[imports]-> cf.app.weather
   cf.app.products -[wiring]-> cf.app.auth
   cf.app.products -[imports]-> cf.app.notifications
+  cf.app.products -[imports]-> cf.app.safety
   cf.app.runs -[wiring]-> cf.app.auth
   cf.app.runs -[imports]-> cf.app.email
   cf.app.runs -[wiring]-> cf.app.feed
