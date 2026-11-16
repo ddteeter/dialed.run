@@ -459,7 +459,7 @@ async function bytesResponse(
   // The stored type, checked rather than trusted (SA-M7): the photo
   // pipeline stores only these, so an object typed as anything else, or
   // not at all, is not found, and these routes only ever answer an image.
-  if (!SERVED_PHOTO_TYPES.has(headers.get("content-type") ?? "")) {
+  if (!SERVED_PHOTO_TYPES.has(headers.get("content-type"))) {
     return notFound();
   }
   headers.set("etag", object.httpEtag);
@@ -472,7 +472,7 @@ async function bytesResponse(
  * The types the photo pipeline stores: a re-encoded kit photo is JPEG, a
  * garment photo's versions JPEG and WebP (`modules/closet/photos.ts`).
  */
-const SERVED_PHOTO_TYPES: ReadonlySet<string> = new Set([
+const SERVED_PHOTO_TYPES: ReadonlySet<string | null> = new Set([
   "image/jpeg",
   "image/webp",
 ]);
@@ -481,7 +481,7 @@ const SERVED_PHOTO_TYPES: ReadonlySet<string> = new Set([
  * An enforced policy on the bytes themselves: an image needs no script,
  * no subresource and no origin, so a media response gets none.
  */
-export const MEDIA_POLICY = "sandbox; default-src 'none'";
+const MEDIA_POLICY = "sandbox; default-src 'none'";
 
 function notFound(): Response {
   return new Response("not found", { status: 404 });

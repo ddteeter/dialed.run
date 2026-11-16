@@ -3,7 +3,7 @@
  * release and the reports breaker. Its own file because both import it,
  * and the breakers sit below `review.ts` in the import graph.
  */
-import { sql, type SQL } from "drizzle-orm";
+import { inArray, sql, type SQL } from "drizzle-orm";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 
 import { reports, reviewQueue } from "../../db/schema-core";
@@ -21,8 +21,5 @@ export function noReportHidingAtOnce(): SQL {
   // `subject_id = subject_id` inside the subquery is true of every report.
   const of = (table: SQLiteTable, column: SQLiteColumn) =>
     sql`${table}.${sql.identifier(column.name)}`;
-  return sql`not exists (select 1 from ${reports} where ${of(reports, reports.subjectType)} = ${of(reviewQueue, reviewQueue.subjectType)} and ${of(reports, reports.subjectId)} = ${of(reviewQueue, reviewQueue.subjectId)} and ${of(reports, reports.reason)} in (${sql.join(
-    reasonsOnTheClock.map((reason) => sql`${reason}`),
-    sql`, `,
-  )}))`;
+  return sql`not exists (select 1 from ${reports} where ${of(reports, reports.subjectType)} = ${of(reviewQueue, reviewQueue.subjectType)} and ${of(reports, reports.subjectId)} = ${of(reviewQueue, reviewQueue.subjectId)} and ${inArray(reports.reason, reasonsOnTheClock)})`;
 }

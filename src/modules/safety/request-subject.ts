@@ -136,7 +136,9 @@ export async function subjectPhotoKeysOf(
 ): Promise<Map<string, string>> {
   // Every subject's id, a kit's too: a kit's id is no photo's, so it
   // finds nothing, and a filter on the type would be a second rule.
-  const photoIds = subjects.flatMap((subject) => subject?.subjectId ?? []);
+  const photoIds = subjects
+    .filter((subject) => subject !== undefined)
+    .map((subject) => subject.subjectId);
   const rows = await readInChunks(photoIds, (chunk) =>
     db
       .select({ id: entryPhotos.id, photoKey: entryPhotos.photoKey })

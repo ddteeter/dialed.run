@@ -18,7 +18,6 @@ import {
   photoResponse,
   reviewerPhotoResponse,
   uploadPhoto,
-  MEDIA_POLICY,
 } from "../../src/modules/feed/photos";
 import { putSnapshot } from "../../src/modules/enrichment/snapshot";
 import {
@@ -427,7 +426,9 @@ describe("the bytes behind a reported photo", () => {
     // own browser included — not the hour a runner's photo is kept.
     expect(served.headers.get("cache-control")).toBe("private, no-store");
     expect(served.headers.get("content-type")).toBe("image/jpeg");
-    expect(served.headers.get("content-security-policy")).toBe(MEDIA_POLICY);
+    expect(served.headers.get("content-security-policy")).toBe(
+      "sandbox; default-src 'none'",
+    );
 
     // The point of the separate route: `photoResponse` refuses this photo
     // to everyone but its owner, and being reported is what hid it. A
@@ -473,10 +474,10 @@ describe("the bytes behind a reported photo", () => {
     );
     try {
       const response = await reviewerPhotoResponse(key, reviewer);
-      await response.body?.cancel();
       return {
         status: response.status,
         type: response.headers.get("content-type"),
+        text: await response.text(),
       };
     } finally {
       await env.MEDIA.delete(key);
@@ -484,13 +485,15 @@ describe("the bytes behind a reported photo", () => {
   }
 
   it("serves a garment photo's WebP and a quarantined copy (SA-M7)", async () => {
-    await expect(servedAt("items/u/i/v.webp", "image/webp")).resolves.toEqual({
+    await expect(
+      servedAt("items/u/i/v.webp", "image/webp"),
+    ).resolves.toMatchObject({
       status: 200,
       type: "image/webp",
     });
     await expect(
       servedAt("quarantine/entries/u/e/p", "image/jpeg"),
-    ).resolves.toEqual({ status: 200, type: "image/jpeg" });
+    ).resolves.toMatchObject({ status: 200, type: "image/jpeg" });
   });
 
   it("says not found for a key outside the photo roots (SA-M7)", async () => {
@@ -508,6 +511,7 @@ describe("the bytes behind a reported photo", () => {
     ).resolves.toMatchObject({ status: 404 });
     await expect(servedAt("entries/u/e/untyped")).resolves.toMatchObject({
       status: 404,
+      text: "not found",
     });
   });
 
