@@ -238,7 +238,9 @@ runners.
   every runner's photos, private ones included. One exception: when we
   remove a photo as an intimate image shared without consent, we keep its
   fingerprint for 3 years, so that if the same image is uploaded again it
-  is hidden until a person reviews it.
+  is hidden until a person reviews it. If you delete a photo while we are
+  reviewing it, we keep a short fingerprint of it, never the image itself,
+  so that a copy uploaded again is held for a person to check.
 
 ## What other people can see
 
