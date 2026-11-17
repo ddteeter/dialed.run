@@ -20,6 +20,7 @@ import {
 } from "../../src/modules/closet/service";
 import { resolveProduct } from "../../src/modules/products/service";
 import { addAccount } from "../feed/helpers";
+import { uniqueName } from "../unique-name";
 
 /**
  * Design 133, decision D-113 Q1: an unconfirmed runner's garments save
@@ -39,7 +40,7 @@ afterEach(() => {
  * catalogues that no reset clears.
  */
 function unique(prefix: string): string {
-  return `${prefix}${newUlid()}`;
+  return uniqueName(prefix);
 }
 
 async function runner(isConfirmed: boolean): Promise<string> {

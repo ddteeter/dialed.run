@@ -19,6 +19,7 @@ import {
   nameIdentityInput,
 } from "../../src/modules/onboarding/inputs";
 import { addAccount, resetTables } from "../feed/helpers";
+import { uniqueName } from "../unique-name";
 
 function coreDb() {
   return drizzle(env.DIALED_CORE);
@@ -56,7 +57,7 @@ account's data. The first version of these tests asserted against
 the other had been created by a test above.
 */
 function uniqueBrand() {
-  return `Brand${newUlid()}`;
+  return uniqueName("Brand");
 }
 
 beforeEach(async () => {
@@ -317,7 +318,7 @@ describe("naming before the address is confirmed (design 133, D-113 Q1)", () => 
     const userId = await seededCloset(["merino-base"]);
     const row = await firstOffer(userId);
     const named = await nameItem(coreDb(), userId, row?.itemId ?? "", {
-      brand: `Linked${newUlid()}`,
+      brand: uniqueName("Linked"),
       model: "Merino base layer",
     });
 

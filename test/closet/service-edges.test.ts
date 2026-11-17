@@ -30,6 +30,7 @@ import {
 } from "../../src/modules/closet/service";
 
 import { nowSeconds } from "../../src/lib/now";
+import { uniqueName } from "../unique-name";
 /**
  * The closet service's remaining edges: product resolution on save, the
  * stored-versus-estimated temperature range, and the reads that answer with
@@ -76,7 +77,7 @@ describe("withResolvedProduct", () => {
       db(),
       {
         category: "top",
-        name: `Linked Tee ${newUlid()}`,
+        name: uniqueName("Linked Tee "),
         brand: "Linked Brand",
         productUrl: "https://shop.example.com/products/tee",
       },
@@ -103,7 +104,7 @@ describe("withResolvedProduct", () => {
       db(),
       {
         category: "top",
-        name: `Unlinked Tee ${newUlid()}`,
+        name: uniqueName("Unlinked Tee "),
         brand: "Unlinked Brand",
       },
       newUlid(),
