@@ -12,7 +12,7 @@
  * Read from whatever `coreDb()` is in scope: the report's server function
  * gates on `verifiedUserId`, which pins the primary.
  */
-import { and, eq, or } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
@@ -23,7 +23,7 @@ import {
   sharedAudience,
   userProfiles,
 } from "../../db/schema-core";
-import { firstColumnWhere, hasRowWhere } from "../../lib/sql/keyed-read";
+import { hasRowWhere } from "../../lib/sql/keyed-read";
 import { forgetRateLimit, isWithinRateLimit } from "../email";
 import {
   AT_ONCE_HIDES_PER_DAY,
@@ -45,34 +45,39 @@ function seenBy(reporterId: string): SQL | undefined {
   );
 }
 
+/**
+The kit `kitIs` names is the reporter's own or shared with runners.
+*/
+function isSeenKit(db: Db, reporterId: string, kitIs: SQL): Promise<boolean> {
+  return hasRowWhere(
+    db,
+    outfitEntries,
+    outfitEntries.id,
+    and(kitIs, seenBy(reporterId)),
+  );
+}
+
 function isKitSeen(
   db: Db,
   reporterId: string,
   entryId: string,
 ): Promise<boolean> {
-  return hasRowWhere(
-    db,
-    outfitEntries,
-    outfitEntries.id,
-    and(eq(outfitEntries.id, entryId), seenBy(reporterId)),
-  );
+  return isSeenKit(db, reporterId, eq(outfitEntries.id, entryId));
 }
 
 /**
-A kit photo is seen where its kit is: two primary-key probes.
+A kit photo is seen where its kit is: one read, the photo's kit.
 */
-async function isKitPhotoSeen(
+function isKitPhotoSeen(
   db: Db,
   reporterId: string,
   photoId: string,
 ): Promise<boolean> {
-  const entryId = await firstColumnWhere(
-    db,
-    entryPhotos,
-    entryPhotos.entryId,
-    eq(entryPhotos.id, photoId),
-  );
-  return entryId === undefined ? false : isKitSeen(db, reporterId, entryId);
+  const photosKit = db
+    .select({ entryId: entryPhotos.entryId })
+    .from(entryPhotos)
+    .where(eq(entryPhotos.id, photoId));
+  return isSeenKit(db, reporterId, inArray(outfitEntries.id, photosKit));
 }
 
 /**

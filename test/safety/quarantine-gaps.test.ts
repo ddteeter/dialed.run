@@ -1095,6 +1095,20 @@ describe("an owner's garment-photo delete under review (design 232)", () => {
     ]);
   });
 
+  it("keeps it while an operator has the review open", async () => {
+    const garment = await heldGarment();
+    await core()
+      .update(reviewQueue)
+      .set({ status: "reviewing" })
+      .where(eq(reviewQueue.subjectId, garment.itemId));
+
+    await removeItemPhoto(core(), garment.userId, garment.itemId);
+
+    expect(await garmentWithdrawals(garment.itemId)).toMatchObject([
+      { subjectId: garment.itemId },
+    ]);
+  });
+
   it("keeps nothing for a garment photo that is not held", async () => {
     const garment = await closetGarment();
     const passing = vi.fn<Classify>(() =>

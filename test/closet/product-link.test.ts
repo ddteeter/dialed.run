@@ -427,7 +427,8 @@ describe("linkTypedGarments — the link a confirmation owes", () => {
       brand,
     });
 
-    await linkTypedGarments(db(), userId);
+    // Nothing more is owed by this run: the confirmation owes it again.
+    expect(await linkTypedGarments(db(), userId)).toBe("linked");
 
     const unlinked = await getOwnedItem(db(), userId, item.id);
     expect(unlinked.productId).toBeNull();

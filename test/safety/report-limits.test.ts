@@ -163,6 +163,20 @@ describe("what a report may name (design 232)", () => {
     expect(await statusOf(privateKit)).toBe("ok");
   });
 
+  it("refuses a photo id that names no photo", async () => {
+    await photoOn(await kit());
+
+    const result = await report({
+      reporterId: await makeUser(),
+      subjectType: "photo",
+      subjectId: newUlid(),
+      reason: "intimate",
+    });
+
+    expect(result).toStrictEqual({ status: "not_found" });
+    expect(await core().select().from(reports)).toStrictEqual([]);
+  });
+
   it("takes a report of the reporter's own private kit", async () => {
     const author = await makeUser();
     const ownKit = await kit("private", author);

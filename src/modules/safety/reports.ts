@@ -206,8 +206,9 @@ export async function fileReport(
   // Only a profile can be blocked — a report against an entry names the
   // entry, and blocking its author would need a lookup the reporter never
   // asked for. W1 offers the checkbox only where there is somebody to
-  // block, and this is the same rule on the write side.
-  if (input.alsoBlock === true && input.subjectType === "profile") {
+  // block, and `blockRunner` is the same rule on the write side: it blocks
+  // only an id with a profile (design 232), so a kit's id blocks nothing.
+  if (input.alsoBlock === true) {
     await blockRunner(input.reporterId, input.subjectId);
   }
 

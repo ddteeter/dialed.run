@@ -714,6 +714,7 @@ async function withdrawals() {
     .select({
       action: moderationActions.action,
       actorId: moderationActions.actorId,
+      subjectType: moderationActions.subjectType,
       subjectId: moderationActions.subjectId,
       subjectOwnerId: moderationActions.subjectOwnerId,
     })
@@ -747,6 +748,7 @@ describe("an owner's delete under review (design 232)", () => {
       {
         action: "withdrawn",
         actorId: first.userId,
+        subjectType: "photo",
         subjectId: first.photoId,
         subjectOwnerId: first.userId,
       },
@@ -833,6 +835,19 @@ describe("an owner's delete under review (design 232)", () => {
 
     expect(await keptRows()).toStrictEqual([]);
     expect(await withdrawals()).toStrictEqual([]);
+  });
+
+  it("keeps it while an operator has the review open", async () => {
+    const first = await posted(await sceneJpeg(4));
+    await reportedAs("intimate", "photo", first.photoId);
+    await core()
+      .update(reviewQueue)
+      .set({ status: "reviewing" })
+      .where(eq(reviewQueue.subjectId, first.photoId));
+
+    await deleteEntryPhoto(core(), first.userId, first.photoId, quiet, noPurge);
+
+    expect(await withdrawals()).toMatchObject([{ subjectId: first.photoId }]);
   });
 
   it("keeps nothing once the review is decided", async () => {
