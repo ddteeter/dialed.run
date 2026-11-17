@@ -887,6 +887,29 @@ describe("the receipt's confirm token (SA-L18)", () => {
     expect(LINKED_TOKEN.exec(JSON.stringify(mail.sent))?.[1]).toBe(token);
   });
 
+  it("leaves a receipt whose request is unset as it was", async () => {
+    const mail = fakeMail();
+    const token = "b".repeat(64);
+    await emailHandler(() => mail).run(
+      core(),
+      {
+        dedupeKey: "removal_request_received:unset",
+        email: {
+          to: { address: "me@example.com" },
+          template: {
+            kind: "removal_request_received",
+            dueAt: NOW,
+            isHidden: false,
+            confirmRequestId: undefined,
+            confirmToken: token,
+          },
+        },
+      },
+      "no-such-row",
+    );
+    expect(LINKED_TOKEN.exec(JSON.stringify(mail.sent))?.[1]).toBe(token);
+  });
+
   it("is none for a request nobody filed", async () => {
     expect(await mintReceiptConfirmToken(core(), "no-such-request")).toBeUndefined();
   });
