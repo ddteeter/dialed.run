@@ -87,7 +87,13 @@ describe("receiveAccessRequest", () => {
     // The challenge was solved on the marketing site, so that is the host
     // it must name; the visitor's address comes off Cloudflare's header.
     expect(seen).toStrictEqual([
-      { token: "token-1", remoteIp: VISITOR, hostname: "dialed.run" },
+      {
+        token: "token-1",
+        remoteIp: VISITOR,
+        hostname: "dialed.run",
+        // The marketing form's action is not named here (SA-L07).
+        action: undefined,
+      },
     ]);
     const rows = await requests();
     expect(rows).toMatchObject([
@@ -128,7 +134,12 @@ describe("receiveAccessRequest", () => {
     );
     expectSeeOther(response, "https://dialed.run/invite?error=turnstile");
     expect(seen).toStrictEqual([
-      { token: undefined, remoteIp: VISITOR, hostname: "dialed.run" },
+      {
+        token: undefined,
+        remoteIp: VISITOR,
+        hostname: "dialed.run",
+        action: undefined,
+      },
     ]);
     expect(await requests()).toStrictEqual([]);
   });

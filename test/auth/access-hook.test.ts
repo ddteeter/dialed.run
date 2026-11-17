@@ -305,7 +305,12 @@ describe("email sign-up through the gate", () => {
       message: TURNSTILE_REFUSED,
     });
     expect(attempts).toStrictEqual([
-      { token: "token", remoteIp: "203.0.113.9", hostname: "localhost" },
+      {
+        token: "token",
+        remoteIp: "203.0.113.9",
+        hostname: "localhost",
+        action: "sign-up",
+      },
     ]);
     expect(await accountFor(email)).toBeUndefined();
   });
