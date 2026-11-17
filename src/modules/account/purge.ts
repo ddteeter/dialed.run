@@ -170,15 +170,19 @@ export async function purgeDueAccounts(
   await forgetClosedAddresses(deps.core, deps.now);
   let failed = 0;
   let unremembered = 0;
-  let claimed = await claimDue(deps.core, deps.now);
-  while (claimed.length > 0) {
-    const outcome = await purgeEach(deps, claimed);
-    failed += outcome.failed;
-    unremembered += outcome.unremembered;
+  // The next claim is the loop's step, outside its body, so each round
+  // reads the clock whatever the round did.
+  for (
+    let claimed = await claimDue(deps.core, deps.now);
+    claimed.length > 0;
     claimed =
       clock() - startedAt < PURGE_BUDGET_MS
         ? await claimDue(deps.core, deps.now)
-        : [];
+        : []
+  ) {
+    const outcome = await purgeEach(deps, claimed);
+    failed += outcome.failed;
+    unremembered += outcome.unremembered;
   }
   if (failed > 0) {
     anomalies.push(

@@ -834,6 +834,33 @@ function clockAt(elapsed: number): () => number {
   };
 }
 
+/**
+ * Most clock readings one firing here may take. A loop that never ends
+ * reads the clock every round, so its test throws here rather than
+ * running until the test times out.
+ */
+const MOST_READINGS = 50;
+
+function bounded(clock: () => number): () => number {
+  let readings = 0;
+  return () => {
+    readings += 1;
+    if (readings > MOST_READINGS) throw new Error("The firing never ended");
+    return clock();
+  };
+}
+
+/**
+`purgeDueAccounts` on a clock that stops a firing that never ends; a clock still at its start by default.
+*/
+function purge(
+  anomalies: string[],
+  deps: PurgeDeps,
+  clock: () => number = clockAt(0),
+): Promise<void> {
+  return purgeDueAccounts(anomalies, deps, bounded(clock));
+}
+
 describe("purgeDueAccounts — a full purge", () => {
   it("leaves nothing of the runner's in either database, and nothing of anyone else's changed", async () => {
     const runner = await seedAccount();
@@ -964,7 +991,7 @@ describe("purgeDueAccounts — a full purge", () => {
     const { deps, revoked, reported } = depsAt(NOW);
     const anomalies: string[] = [];
 
-    await purgeDueAccounts(anomalies, deps);
+    await purge(anomalies, deps);
 
     expect(await footprint(runner)).toStrictEqual(GONE);
     expect(await footprint(other)).toStrictEqual(otherBefore);
@@ -1096,7 +1123,7 @@ describe("purgeDueAccounts — a full purge", () => {
       .where(eq(userProfiles.userId, runner.userId));
     await claim(runner.userId, NOW - 1);
 
-    await purgeDueAccounts([], depsAt(NOW).deps);
+    await purge([], depsAt(NOW).deps);
 
     expect(await footprint(runner)).toStrictEqual(GONE);
     const history = await core
@@ -1117,7 +1144,7 @@ describe("purgeDueAccounts — a full purge", () => {
     const { deps, revoked, reported } = depsAt(NOW);
     const anomalies: string[] = [];
 
-    await purgeDueAccounts(anomalies, deps);
+    await purge(anomalies, deps);
 
     expect(await claimOf(userId)).toStrictEqual([]);
     expect(
@@ -1143,7 +1170,7 @@ describe("purgeDueAccounts — which claims a firing takes", () => {
     const { deps, revoked } = depsAt(NOW);
     const anomalies: string[] = [];
 
-    await purgeDueAccounts(anomalies, deps);
+    await purge(anomalies, deps);
 
     expect(await footprint(runner)).toStrictEqual(before);
     expect(revoked).toStrictEqual([]);
@@ -1153,7 +1180,7 @@ describe("purgeDueAccounts — which claims a firing takes", () => {
   it("takes a claim due this very second", async () => {
     const userId = await claimedProfile(NOW);
 
-    await purgeDueAccounts([], depsAt(NOW).deps);
+    await purge([], depsAt(NOW).deps);
 
     expect(await hasProfile(userId)).toBe(false);
     expect(await claimOf(userId)).toStrictEqual([]);
@@ -1165,7 +1192,7 @@ describe("purgeDueAccounts — which claims a firing takes", () => {
     const { deps, revoked } = depsAt(NOW);
     const anomalies: string[] = [];
 
-    await purgeDueAccounts(anomalies, deps);
+    await purge(anomalies, deps);
 
     expect(revoked).toStrictEqual([]);
     expect(anomalies).toStrictEqual([]);
@@ -1185,7 +1212,7 @@ describe("purgeDueAccounts — which claims a firing takes", () => {
     const userId = await claimedProfile(NOW - 86_400, NOW - PURGE_LEASE_S - 1);
     const { deps, revoked } = depsAt(NOW);
 
-    await purgeDueAccounts([], deps);
+    await purge([], deps);
 
     expect(revoked).toStrictEqual([userId]);
     expect(await hasProfile(userId)).toBe(false);
@@ -1202,7 +1229,7 @@ describe("purgeDueAccounts — which claims a firing takes", () => {
     const { deps, revoked } = depsAt(NOW);
     const anomalies: string[] = [];
 
-    await purgeDueAccounts(anomalies, deps, oneRoundClock());
+    await purge(anomalies, deps, oneRoundClock());
 
     const oldest = [5, 4, 3].map((age) => byAge.get(age) ?? "");
     const newest = [2, 1].map((age) => byAge.get(age) ?? "");
@@ -1222,7 +1249,7 @@ describe("purgeDueAccounts — which claims a firing takes", () => {
 
     const next = depsAt(NOW + 86_400);
     const nextAnomalies: string[] = [];
-    await purgeDueAccounts(nextAnomalies, next.deps);
+    await purge(nextAnomalies, next.deps);
 
     expect(next.revoked.toSorted(byText)).toStrictEqual(
       newest.toSorted(byText),
@@ -1240,7 +1267,7 @@ describe("purgeDueAccounts — rounds", () => {
     const { deps, revoked } = depsAt(NOW);
     const anomalies: string[] = [];
 
-    await purgeDueAccounts(anomalies, deps, clockAt(PURGE_BUDGET_MS - 1));
+    await purge(anomalies, deps, clockAt(PURGE_BUDGET_MS - 1));
 
     expect(revoked.toSorted(byText)).toStrictEqual(userIds.toSorted(byText));
     expect(anomalies).toStrictEqual([]);
@@ -1253,7 +1280,7 @@ describe("purgeDueAccounts — rounds", () => {
     const { deps, revoked } = depsAt(NOW);
     const anomalies: string[] = [];
 
-    await purgeDueAccounts(anomalies, deps, clockAt(PURGE_BUDGET_MS));
+    await purge(anomalies, deps, clockAt(PURGE_BUDGET_MS));
 
     expect(revoked).toHaveLength(PURGE_PER_ROUND);
     expect(anomalies).toStrictEqual([
@@ -1266,7 +1293,7 @@ describe("purgeDueAccounts — rounds", () => {
     const { deps, revoked } = depsAt(NOW, [failing]);
     const anomalies: string[] = [];
 
-    await purgeDueAccounts(anomalies, deps, clockAt(0));
+    await purge(anomalies, deps, clockAt(0));
 
     expect(revoked).toStrictEqual([failing]);
     expect(anomalies).toStrictEqual([
@@ -1286,7 +1313,7 @@ describe("purgeDueAccounts — rounds", () => {
     }
     const { deps, revoked } = depsAt(NOW);
 
-    await purgeDueAccounts([], deps, oneRoundClock());
+    await purge([], deps, oneRoundClock());
 
     expect(revoked.toSorted(byText)).toStrictEqual(untried.toSorted(byText));
     expect(await hasProfile(retried)).toBe(true);
@@ -1355,7 +1382,7 @@ describe("purgeDueAccounts — a live copyright hold", () => {
       const { deps, revoked } = depsAt(NOW);
       const anomalies: string[] = [];
 
-      await purgeDueAccounts(anomalies, deps);
+      await purge(anomalies, deps);
 
       expect(revoked).toStrictEqual([other]);
       expect(await hasProfile(held)).toBe(true);
@@ -1372,7 +1399,7 @@ describe("purgeDueAccounts — a live copyright hold", () => {
     await holdOn(held, "hidden");
     const anomalies: string[] = [];
 
-    await purgeDueAccounts(anomalies, depsAt(NOW).deps);
+    await purge(anomalies, depsAt(NOW).deps);
 
     expect(anomalies).toStrictEqual([]);
   });
@@ -1525,7 +1552,7 @@ describe("purgeDueAccounts — a purge that stops part way", () => {
     const first = depsAt(NOW, [runner.userId]);
     const anomalies: string[] = [];
 
-    await purgeDueAccounts(anomalies, first.deps);
+    await purge(anomalies, first.deps);
 
     expect(first.reported).toStrictEqual([
       {
@@ -1544,12 +1571,12 @@ describe("purgeDueAccounts — a purge that stops part way", () => {
 
     // Inside the lease, a second firing leaves it alone.
     const overlapping = depsAt(NOW + 60);
-    await purgeDueAccounts([], overlapping.deps);
+    await purge([], overlapping.deps);
     expect(overlapping.revoked).toStrictEqual([]);
 
     const next = depsAt(NOW + PURGE_LEASE_S + 1);
     const nextAnomalies: string[] = [];
-    await purgeDueAccounts(nextAnomalies, next.deps);
+    await purge(nextAnomalies, next.deps);
 
     expect(next.revoked).toStrictEqual([runner.userId]);
     expect(next.reported).toStrictEqual([]);
@@ -1576,7 +1603,7 @@ describe("purgeDueAccounts — a purge that stops deleting the runner's files", 
     const first = depsAt(NOW);
     const anomalies: string[] = [];
 
-    await purgeDueAccounts(anomalies, first.deps);
+    await purge(anomalies, first.deps);
     vi.restoreAllMocks();
 
     expect(first.reported).toStrictEqual([
@@ -1599,7 +1626,7 @@ describe("purgeDueAccounts — a purge that stops deleting the runner's files", 
     expect(await env.IMPORTS.head(looseUpload)).not.toBeNull();
     expect(await env.IMPORTS.head(unnamedUpload)).not.toBeNull();
 
-    await purgeDueAccounts([], depsAt(NOW + PURGE_LEASE_S + 1).deps);
+    await purge([], depsAt(NOW + PURGE_LEASE_S + 1).deps);
 
     expect(await footprint(runner)).toStrictEqual(GONE);
     const left = await env.IMPORTS.list({
@@ -1716,7 +1743,7 @@ describe("purgeDueAccounts — a purge stopped at any step", () => {
       const first = stop(runner);
       const anomalies: string[] = [];
 
-      await purgeDueAccounts(anomalies, first.deps);
+      await purge(anomalies, first.deps);
       vi.restoreAllMocks();
 
       expect(first.reported).toHaveLength(1);
@@ -1727,7 +1754,7 @@ describe("purgeDueAccounts — a purge stopped at any step", () => {
 
       const next = depsAt(NOW + PURGE_LEASE_S + 1);
       const nextAnomalies: string[] = [];
-      await purgeDueAccounts(nextAnomalies, next.deps);
+      await purge(nextAnomalies, next.deps);
 
       expect(next.reported).toStrictEqual([]);
       expect(nextAnomalies).toStrictEqual([]);
@@ -1744,7 +1771,7 @@ describe("purgeDueAccounts — nobody signs in behind the purge", () => {
     await claim(runner.userId, NOW - 1);
     await claim(inTheWeek.userId, NOW + 86_400);
     // Stopped at its first step: the sign-out is the claim's, not a step's.
-    await purgeDueAccounts([], depsAt(NOW, [], true).deps);
+    await purge([], depsAt(NOW, [], true).deps);
 
     const partial = await footprint(runner);
     expect(partial.session).toStrictEqual([]);
@@ -1760,7 +1787,7 @@ describe("purgeDueAccounts — nobody signs in behind the purge", () => {
     await claim(runner.userId, NOW - 86_400, NOW - 600);
     const { deps, revoked } = depsAt(NOW);
 
-    await purgeDueAccounts([], deps);
+    await purge([], deps);
 
     expect(revoked).toStrictEqual([]);
     const held = await footprint(runner);
@@ -1891,7 +1918,7 @@ describe("purgeDueAccounts — a closed account's addresses", () => {
     const runner = await dueRunner(true);
     const anomalies: string[] = [];
 
-    await purgeDueAccounts(anomalies, {
+    await purge(anomalies, {
       ...depsAt(NOW).deps,
       closedAddressSecret: CLOSED_KEY,
     });
@@ -1912,7 +1939,7 @@ describe("purgeDueAccounts — a closed account's addresses", () => {
     const runner = await dueRunner(false);
     const anomalies: string[] = [];
 
-    await purgeDueAccounts(anomalies, {
+    await purge(anomalies, {
       ...depsAt(NOW).deps,
       closedAddressSecret: CLOSED_KEY,
     });
@@ -1927,7 +1954,7 @@ describe("purgeDueAccounts — a closed account's addresses", () => {
     await dueRunner(false);
     const anomalies: string[] = [];
 
-    await purgeDueAccounts(anomalies, depsAt(NOW).deps);
+    await purge(anomalies, depsAt(NOW).deps);
 
     expect(await footprint(runner)).toStrictEqual(GONE);
     expect(await closedKept()).toStrictEqual([]);
@@ -1946,7 +1973,7 @@ describe("purgeDueAccounts — a closed account's addresses", () => {
       { hash: past, closedAt: NOW - CLOSED_ADDRESS_KEPT_S - 1 },
     ]);
 
-    await purgeDueAccounts([], depsAt(NOW).deps);
+    await purge([], depsAt(NOW).deps);
 
     expect(await closedKept()).toStrictEqual([
       { hash: atEdge, closedAt: NOW - CLOSED_ADDRESS_KEPT_S },
