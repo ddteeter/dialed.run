@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import {
   AUTH_REQUIRED_CODE,
@@ -79,5 +80,51 @@ describe("signalAdapter", () => {
         }),
       ),
     ).toBe(true);
+  });
+});
+
+/**
+ * A value as the deserializer hands it over: any shape, typed as the wire
+ * shape only because that is the adapter's parameter.
+ */
+function arriving(
+  value: unknown,
+): Parameters<typeof signalAdapter.fromSerializable>[0] {
+  return z
+    .custom<Parameters<typeof signalAdapter.fromSerializable>[0]>(() => true)
+    .parse(value);
+}
+
+/**
+ * SA-L13 (design 230): what arrives is parsed through the schema before an
+ * `Error` is made of it, because on the server it is a caller's payload.
+ */
+describe("signalAdapter on the way in", () => {
+  it("keeps only the schema's keys, and an Error's own prototype", () => {
+    // JSON.parse makes `__proto__` an own key, as the deserializer does.
+    const wire: unknown = JSON.parse(
+      `{"code":"${AUTH_REQUIRED_CODE}","message":"x","extra":1,"__proto__":{"on":1}}`,
+    );
+    const error = signalAdapter.fromSerializable(arriving(wire));
+    expect(Object.getPrototypeOf(error)).toBe(Error.prototype);
+    expect(error).not.toHaveProperty("extra");
+    expect(error).not.toHaveProperty("on");
+    expect(error.message).toBe("x");
+    expect(isAuthRequired(error)).toBe(true);
+  });
+
+  it.each([
+    ["no code", { message: "x" }],
+    ["a code it does not send", { code: "ACCOUNT_BANNED", message: "x" }],
+    [
+      "a message that is not a string",
+      { code: AUTH_REQUIRED_CODE, message: {} },
+    ],
+    ["nothing", undefined],
+    ["a string", "x"],
+  ])("refuses %s", (_name, value) => {
+    expect(() => signalAdapter.fromSerializable(arriving(value))).toThrow(
+      z.ZodError,
+    );
   });
 });
