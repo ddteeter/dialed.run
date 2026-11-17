@@ -188,7 +188,7 @@ async function deleteStale(
       .where(and(copies, noLongerPublic()))
       .limit(IN_LIST_CHUNK);
     const keys = stale.map((copy) => copy.key);
-    if ((keys.length === 0) || !(await didWithdraw(deps, keys))) return deleted;
+    if (keys.length === 0 || !(await didWithdraw(deps, keys))) return deleted;
     deleted += keys.length;
     if (keys.length < IN_LIST_CHUNK) return deleted;
   }
@@ -245,7 +245,7 @@ async function copyOwed(
     .where(notYetLanded)
     .limit(COPIES_PER_PASS);
   for (const photo of owed) {
-    await didSettle(deps, photo.photoId, () => copy(deps, photo));
+    await settle(deps, photo.photoId, () => copy(deps, photo));
   }
 }
 
@@ -311,19 +311,17 @@ async function claim(deps: PublicPhotoDeps, photo: Owed): Promise<string> {
 
 /**
  * Runs one copy's work; a failure is reported with the photo's id and the
- * pass goes on. Whether it went through.
+ * pass goes on.
  */
-async function didSettle(
+async function settle(
   deps: PublicPhotoDeps,
   photoId: string,
   work: () => Promise<void>,
-): Promise<boolean> {
+): Promise<void> {
   try {
     await work();
-    return true;
   } catch (error: unknown) {
     deps.report(error, { photoId });
-    return false;
   }
 }
 
