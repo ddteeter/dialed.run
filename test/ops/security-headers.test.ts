@@ -174,7 +174,7 @@ describe("secureResponse, as server.ts calls it", () => {
   it("reports CSP violations to our own collector, never to Sentry (SA-L19)", async () => {
     Reflect.set(env, "SENTRY_DSN", "https://abc@o1.ingest.sentry.io/42");
 
-    const secured = await secureResponse(new Response("<p>page</p>"), "n0nce");
+    const secured = await secureResponse(new Response("<p>page</p>"), "n0nce", undefined);
 
     const policy = secured.headers.get(CSP_HEADER);
     expect(policy).toBe(
@@ -188,6 +188,7 @@ describe("secureResponse, as server.ts calls it", () => {
     const secured = await secureResponse(
       new Response("<p>page</p>"),
       "r3quest",
+      undefined,
     );
 
     const policy = directives(secured.headers.get(CSP_HEADER) ?? "");
@@ -201,7 +202,10 @@ describe("secureResponse, for a page the edge may store (design 163)", () => {
   // Fixed vectors, base64(sha256(text)), computed outside the app.
   const ALERT = "bhHHL3z2vDgxUt0W3dWQOrprscmda2Y5pLsLg4GF+pI=";
   const X = "D6IGS8VMvCoyaR/l0h9tERrBTATY01CoPS7l6xDv0kI=";
-  const PAGE =
+  const MARKER = "bWFya2Vy";
+  // The scripts the framework wrote carry the render's marker (SA-L08).
+  const PAGE = `<html><head><script nonce="${MARKER}">alert(1)</script><script type="module" nonce="${MARKER}" src="/app.js"></script></head><body><script nonce="${MARKER}">x()</script></body></html>`;
+  const SERVED =
     '<html><head><script>alert(1)</script><script type="module" src="/app.js"></script></head><body><script>x()</script></body></html>';
 
   function page(cacheControl?: string, status = 200): Response {
@@ -219,20 +223,20 @@ describe("secureResponse, for a page the edge may store (design 163)", () => {
   it("names the hashes of exactly its inline scripts, and no nonce, on an open-web path", async () => {
     Reflect.set(env, "SENTRY_DSN", "https://abc@o1.ingest.sentry.io/42");
 
-    const secured = await secureResponse(page("public, max-age=60"), undefined);
+    const secured = await secureResponse(page("public, max-age=60"), undefined, MARKER);
 
     expect(secured.headers.get(CSP_HEADER)).toBe(
       contentSecurityPolicy(CSP_REPORT_PATH, { hashes: [ALERT, X] }),
     );
     expect(secured.headers.get(CSP_HEADER)).not.toContain("nonce");
     expect(secured.headers.get("Cache-Control")).toBe("public, max-age=60");
-    expect(await secured.text()).toBe(PAGE);
+    expect(await secured.text()).toBe(SERVED);
   });
 
   it("never leaves a public page for the edge when a nonce was minted (SA-M15)", async () => {
     Reflect.set(env, "SENTRY_DSN", "https://abc@o1.ingest.sentry.io/42");
 
-    const secured = await secureResponse(page("public, max-age=60"), "n0nce");
+    const secured = await secureResponse(page("public, max-age=60"), "n0nce", undefined);
 
     expect(secured.headers.get("Cache-Control")).toBe("private, no-store");
     expect(secured.headers.get(CSP_HEADER)).toBe(
@@ -245,7 +249,7 @@ describe("secureResponse, for a page the edge may store (design 163)", () => {
   it("hashes an open-web page that turned out not to be public, and stores none of it", async () => {
     // No nonce was minted for the path, so a not-found or error page
     // rendered there has scripts with no nonce on them.
-    const secured = await secureResponse(page(undefined, 500), undefined);
+    const secured = await secureResponse(page(undefined, 500), undefined, MARKER);
 
     expect(
       directives(secured.headers.get(CSP_HEADER) ?? "").get("script-src"),
@@ -261,7 +265,7 @@ describe("secureResponse, for a page the edge may store (design 163)", () => {
       headers: { "Content-Type": "image/png", "Cache-Control": "public" },
     });
 
-    const secured = await secureResponse(card, "n0nce");
+    const secured = await secureResponse(card, "n0nce", undefined);
 
     expect(
       directives(secured.headers.get(CSP_HEADER) ?? "").get("script-src"),
@@ -271,7 +275,7 @@ describe("secureResponse, for a page the edge may store (design 163)", () => {
   });
 
   it("keeps the nonce for a page that is not stored", async () => {
-    const secured = await secureResponse(page(), "n0nce");
+    const secured = await secureResponse(page(), "n0nce", undefined);
 
     expect(
       directives(secured.headers.get(CSP_HEADER) ?? "").get("script-src"),

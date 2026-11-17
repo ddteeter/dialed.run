@@ -95,6 +95,7 @@ export default {
       return await secureResponse(
         withoutCookiesWhenPublic(response),
         context.nonce,
+        context.marker,
       );
     } catch (error) {
       captureException(error, { surface: "fetch" });

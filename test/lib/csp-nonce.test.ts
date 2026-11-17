@@ -103,11 +103,20 @@ describe("routerSsr", () => {
 
 describe("requestContext", () => {
   it.each(["/kit/01J0000000000000000000000", "/@maya", "/%40maya"])(
-    "mints no nonce for the open-web page %s, which is admitted by hash",
+    "mints no nonce for the open-web page %s, which is admitted by hash, only a marker",
     (pathname) => {
-      expect(requestContext(pathname)).toStrictEqual({ hashedScripts: true });
+      const context = requestContext(pathname);
+      expect(Object.keys(context)).toStrictEqual(["hashedScripts", "marker"]);
+      expect(context.hashedScripts).toBe(true);
+      expect(decoded(String(context.marker))).toHaveLength(16);
     },
   );
+
+  it("mints a fresh marker for every open-web request (SA-L08)", () => {
+    expect(requestContext("/@maya").marker).not.toBe(
+      requestContext("/@maya").marker,
+    );
+  });
 
   it("mints a fresh nonce for every other request", () => {
     const first = requestContext("/feed");
@@ -120,11 +129,23 @@ describe("requestContext", () => {
   });
 
   it.each([SERVER_DEV, SERVER_PROD])(
-    "gives the router no nonce, and does not throw, for an open-web page (%o)",
+    "gives the router the marker where a nonce would go, and does not throw, for an open-web page (%o)",
     (side) => {
-      expect(routerSsr(() => requestContext("/@maya"), side)).toStrictEqual({});
+      const context = requestContext("/@maya");
+      expect(routerSsr(() => context, side)).toStrictEqual({
+        nonce: context.marker,
+      });
     },
   );
+
+  it("refuses a hashed context with no marker as it refuses no nonce", () => {
+    expect(routerSsr(() => ({ hashedScripts: true }), SERVER_PROD)).toStrictEqual(
+      {},
+    );
+    expect(() =>
+      routerSsr(() => ({ hashedScripts: true }), SERVER_DEV),
+    ).toThrow("The request context has no CSP nonce");
+  });
 
   it("still throws in dev for a context that says it is hashed but not truly", () => {
     expect(() =>
