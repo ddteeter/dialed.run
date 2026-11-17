@@ -36,7 +36,7 @@ function NotificationsPage() {
       <Page>
         <NotificationList
           notifications={notifications}
-          markAllRead={markAllNotificationsReadFn}
+          markAllRead={() => markAllNotificationsReadFn({ data: {} })}
           viewer={viewer}
         />
       </Page>

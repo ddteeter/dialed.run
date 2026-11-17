@@ -316,7 +316,7 @@ export interface D1ScopeOptions {
 }
 
 /**
- * Run `work` as one request. `deviceBookmark` is the `d1b` cookie's value,
+ * Run `work` as one request. `deviceBookmark` is the `__Host-d1b` cookie's value,
  * which only core carries; weather has one writer, the cron, and nobody
  * reads their own write there.
  */
@@ -385,7 +385,7 @@ export function offerRunnerBookmark(
 
 export interface ScopeOutcome {
   /**
-  The newest core bookmark the request reached: the `d1b` cookie.
+  The newest core bookmark the request reached: the `__Host-d1b` cookie.
   */
   readonly bookmark: string | undefined;
   /**
@@ -449,9 +449,11 @@ export function scopeOutcome(): ScopeOutcome {
 /**
  * The cookie the device's bookmark round-trips in. A day: a device away
  * longer than that has nothing of its own still waiting on a replica, and
- * the runner's stored bookmark covers what it wrote.
+ * the runner's stored bookmark covers what it wrote. `__Host-` (SA-M35,
+ * design 230): the browser keeps it only as this host set it, so no other
+ * host under the domain can hand the device a bookmark.
  */
-export const DEVICE_BOOKMARK_COOKIE = "d1b";
+export const DEVICE_BOOKMARK_COOKIE = "__Host-d1b";
 
 /**
  * How long a bookmark is worth anything: the cookie's lifetime, and the

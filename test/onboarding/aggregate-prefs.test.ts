@@ -64,7 +64,7 @@ describe("setCountInTotals", () => {
       defaultAudience: "private",
     });
     await saveCalibration(coreDb(), userId, { thermalLevel: 1 }, NO_ZONE);
-    await completeOnboarding(coreDb(), userId);
+    await completeOnboarding(coreDb(), userId, new Headers());
 
     await setCountInTotals(coreDb(), userId, { countInTotals: false });
     await setCountInTotals(coreDb(), userId, { countInTotals: true });

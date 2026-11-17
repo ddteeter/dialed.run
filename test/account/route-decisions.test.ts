@@ -21,6 +21,7 @@ import {
   legalDocOrNotFound,
   startHandleIfNeeded,
   startOverIfNoAddress,
+  savedPageSchema,
   termsPromptSearch,
   tokenSearch,
   unsubscribeSearch,
@@ -297,15 +298,21 @@ describe("termsPromptSearch (ACC-6, D-96)", () => {
     }
   });
 
-  it("keeps a refused save's page name, trimmed, and drops an empty or over-long one (D-102)", () => {
-    expect(termsPromptSearch.parse({ save: " Edit Harrier " }).save).toBe(
-      "Edit Harrier",
-    );
-    expect(termsPromptSearch.parse({ save: "x" }).save).toBe("x");
+  it("takes no page name from the link (SA-L13)", () => {
+    expect(
+      termsPromptSearch.parse({ from: "/closet", save: "the closet" }),
+    ).toStrictEqual({ from: "/closet" });
+  });
+});
+
+describe("savedPageSchema (D-102)", () => {
+  it("keeps a refused save's page name, trimmed, and drops an empty or over-long one", () => {
+    expect(savedPageSchema.parse(" Edit Harrier ")).toBe("Edit Harrier");
+    expect(savedPageSchema.parse("x")).toBe("x");
     const longest = `Edit ${"h".repeat(95)}`;
-    expect(termsPromptSearch.parse({ save: longest }).save).toBe(longest);
-    for (const save of ["", " ".repeat(3), `${longest}h`, 7]) {
-      expect(termsPromptSearch.parse({ save }).save).toBeUndefined();
+    expect(savedPageSchema.parse(longest)).toBe(longest);
+    for (const save of ["", " ".repeat(3), `${longest}h`, 7, undefined]) {
+      expect(savedPageSchema.parse(save)).toBeUndefined();
     }
   });
 });

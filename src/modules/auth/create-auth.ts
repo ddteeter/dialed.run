@@ -134,12 +134,26 @@ async function withdrawChangeOnSignOutEverywhere(
 }
 
 /**
+ * Better Auth's cookies on an https origin (SA-M35, design 230): named
+ * `__Host-`, which a browser keeps only as this host set it (`Secure`,
+ * `Path=/`, no `Domain`), so no other host under the domain can set a
+ * cookie this host then reads. Better Auth's own `useSecureCookies` would
+ * put `__Secure-` in front of any name, which allows a `Domain`; so it is
+ * off, the prefix is the name's, and `secure` is set on every cookie it
+ * writes. On plain http nothing changes: no prefix, no `Secure`.
+ */
+export const HOST_ONLY_COOKIES = {
+  cookiePrefix: "__Host-better-auth",
+  defaultCookieAttributes: { secure: true },
+} as const;
+
+/**
  * What the deployment's own origin says about how auth should behave
  * (OPS-4, audit finding 0.7), decided here rather than by `NODE_ENV`,
  * which Better Auth reads by default and a Worker does not have.
  *
  * An `https` origin is a real deployment: its cookies carry the
- * `__Secure-` prefix, and sign-in, sign-up and the other sensitive paths
+ * `__Host-` prefix (`HOST_ONLY_COOKIES`), and sign-in, sign-up and the other sensitive paths
  * are rate limited. Anything else — local dev and CI, on
  * `http://localhost` — gets neither: a browser refuses a secure cookie
  * over plain http, and every e2e account signs up from one address inside
@@ -280,7 +294,8 @@ export function createAuth({
       max: 100,
     },
     advanced: {
-      useSecureCookies: posture.secureCookies,
+      useSecureCookies: false,
+      ...(posture.secureCookies && HOST_ONLY_COOKIES),
       // Cloudflare's edge sets this, and a client cannot: the one address
       // worth keying a limit on. Better Auth's default reads
       // X-Forwarded-For, which a client can write.

@@ -30,7 +30,7 @@ function StravaPage() {
           configured={strava.configured}
           connected={strava.connected}
           runCount={strava.runCount}
-          disconnect={disconnectStravaFn}
+          disconnect={() => disconnectStravaFn({ data: {} })}
         />
       </Page>
     </BelledLayout>

@@ -13,7 +13,7 @@ import {
 import { CoverageMark, Mono, Spoken } from "../../../ui";
 import type { RailCounts } from "../filters";
 import type { ClosetSearch } from "../inputs";
-import { useIsHydrated } from "./use-is-hydrated";
+import { useIsHydrated } from "../../../ui/use-is-hydrated";
 import { WorksAt, worksAtLabel } from "./WorksAt";
 
 /**

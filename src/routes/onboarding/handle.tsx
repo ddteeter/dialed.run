@@ -33,7 +33,7 @@ function HandlePage() {
         <OnboardingHandle
           notice={notice}
           claim={claimUsernameFn}
-          keep={keepPlaceholderFn}
+          keep={() => keepPlaceholderFn({ data: {} })}
           onFirstHandle={() => {
             void navigate({ to: "/onboarding/calibrate" });
           }}

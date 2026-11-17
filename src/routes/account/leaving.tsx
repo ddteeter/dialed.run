@@ -36,7 +36,7 @@ function LeavingPage() {
   return (
     <Leaving
       view={view}
-      keep={keepAccountFn}
+      keep={() => keepAccountFn({ data: {} })}
       logOut={async () => {
         await signOut();
         await router.invalidate();

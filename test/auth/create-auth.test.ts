@@ -288,7 +288,9 @@ describe("the deployment's posture, from its own origin (OPS-4)", () => {
       max: 100,
     });
     expect(options.advanced).toStrictEqual({
-      useSecureCookies: true,
+      useSecureCookies: false,
+      cookiePrefix: "__Host-better-auth",
+      defaultCookieAttributes: { secure: true },
       ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
     });
   });
@@ -298,6 +300,8 @@ describe("the deployment's posture, from its own origin (OPS-4)", () => {
 
     expect(options.rateLimit.enabled).toBe(false);
     expect(options.advanced.useSecureCookies).toBe(false);
+    expect(options.advanced).not.toHaveProperty("cookiePrefix");
+    expect(options.advanced).not.toHaveProperty("defaultCookieAttributes");
   });
 });
 
@@ -379,8 +383,8 @@ describe("rate limiting in D1 (OPS-4)", () => {
   });
 });
 
-describe("secure cookies (OPS-4)", () => {
-  it("prefixes the session cookie __Secure- on an https origin", async () => {
+describe("host-only cookies (OPS-4, SA-M35)", () => {
+  it("names the session cookie __Host- on an https origin", async () => {
     const instance = auth({ ...BASE, baseUrl: ORIGIN });
     const password = ["long", "enough", "password", "here"].join("-");
     const email = `secure-${newUlid()}@example.com`;
@@ -414,9 +418,39 @@ describe("secure cookies (OPS-4)", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("set-cookie")).toMatch(
-      /^__Secure-better-auth\.session_token=/u,
+    const session = response.headers
+      .getSetCookie()
+      .find((cookie) => cookie.includes("session_token="));
+    // What the browser receives: a name only this host can set.
+    expect(session).toMatch(/^__Host-better-auth\.session_token=/u);
+    expect(session).toMatch(/; Secure(?:;|$)/u);
+    expect(session).toMatch(/; Path=\/(?:;|$)/u);
+    expect(session).not.toMatch(/; Domain=/iu);
+  });
+
+  it("names every cookie Better Auth writes __Host-, Secure, on an https origin", async () => {
+    const context = await auth({ ...BASE, baseUrl: ORIGIN }).$context;
+    const cookies = Object.values(context.authCookies);
+    expect(cookies.length).toBeGreaterThan(3);
+    for (const cookie of cookies) {
+      expect(cookie.name).toMatch(/^__Host-better-auth\./u);
+      expect(cookie.attributes).toMatchObject({ secure: true, path: "/" });
+      expect(cookie.attributes).not.toHaveProperty("domain");
+    }
+    // Google's sign-in state is made by the same getter.
+    expect(context.createAuthCookie("state").name).toBe(
+      "__Host-better-auth.state",
     );
+    expect(context.createAuthCookie("state").attributes.secure).toBe(true);
+  });
+
+  it("leaves a local origin's cookies unprefixed and not Secure", async () => {
+    const context = await auth({ ...BASE, baseUrl: "http://localhost:3000" })
+      .$context;
+    expect(context.authCookies.sessionToken.name).toBe(
+      "better-auth.session_token",
+    );
+    expect(context.authCookies.sessionToken.attributes.secure).toBe(false);
   });
 });
 

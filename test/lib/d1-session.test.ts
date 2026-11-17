@@ -620,28 +620,32 @@ describe("primaryDb", () => {
 describe("the device bookmark cookie", () => {
   const value = "00000000-0000003d-00000000-" + "0".repeat(32);
 
-  it("is called d1b", () => {
-    expect(DEVICE_BOOKMARK_COOKIE).toBe("d1b");
+  it("is called __Host-d1b, which only this host can set", () => {
+    expect(DEVICE_BOOKMARK_COOKIE).toBe("__Host-d1b");
   });
 
   it("finds it among other cookies", () => {
-    expect(deviceBookmarkFrom(`a=1; d1b=${value}; b=2`)).toBe(value);
-    expect(deviceBookmarkFrom(`d1b=${value}`)).toBe(value);
+    expect(deviceBookmarkFrom(`a=1; __Host-d1b=${value}; b=2`)).toBe(value);
+    expect(deviceBookmarkFrom(`__Host-d1b=${value}`)).toBe(value);
   });
 
   it("is nothing when absent or malformed", () => {
     expect(deviceBookmarkFrom(new Headers().get("cookie"))).toBeUndefined();
     expect(deviceBookmarkFrom("")).toBeUndefined();
     expect(deviceBookmarkFrom("a=1")).toBeUndefined();
-    expect(deviceBookmarkFrom("xd1b=00")).toBeUndefined();
-    expect(deviceBookmarkFrom("d1b=not a bookmark")).toBeUndefined();
-    expect(deviceBookmarkFrom("d1b")).toBeUndefined();
+    expect(deviceBookmarkFrom("x__Host-d1b=00")).toBeUndefined();
+    expect(deviceBookmarkFrom("__Host-d1b=not a bookmark")).toBeUndefined();
+    expect(deviceBookmarkFrom("__Host-d1b")).toBeUndefined();
+  });
+
+  it("ignores the unprefixed name another host could set (SA-M35)", () => {
+    expect(deviceBookmarkFrom(`d1b=${value}`)).toBeUndefined();
   });
 
   it("round-trips through the header it sets", () => {
     const header = deviceBookmarkCookie(value);
     expect(header).toBe(
-      `d1b=${value}; Path=/; Max-Age=86400; HttpOnly; Secure; SameSite=Lax`,
+      `__Host-d1b=${value}; Path=/; Max-Age=86400; HttpOnly; Secure; SameSite=Lax`,
     );
     expect(deviceBookmarkFrom(header.split(";", 1)[0] ?? "")).toBe(value);
   });

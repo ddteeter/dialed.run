@@ -84,7 +84,7 @@ export function isPubliclyStorable(response: Response): boolean {
 /**
  * A response the edge may store never sets a cookie: a stored
  * `Set-Cookie` would be handed to every later visitor. The one cookie a
- * public page could pick up is the D1 bookmark (`d1b`, design 143), which
+ * public page could pick up is the D1 bookmark (`__Host-d1b`, design 143), which
  * only saves the device a stale read later; it is dropped rather than
  * shared. Anything not public is returned as it came.
  */

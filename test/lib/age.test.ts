@@ -96,7 +96,7 @@ describe("the words and the wire", () => {
       missing: "AGE_MISSING",
       refused: "AGE_REFUSED",
     });
-    expect(AGE_REFUSED_COOKIE).toBe("dialed_age_refused");
+    expect(AGE_REFUSED_COOKIE).toBe("__Host-dialed_age_refused");
     expect(AGE_REFUSED_SECONDS).toBe(86_400);
   });
 });

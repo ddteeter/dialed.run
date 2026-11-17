@@ -14,16 +14,35 @@
  * `lib/field-refusal`'s adapter, so a refusal the server lands on a field
  * (a denied product link) reaches `useFormSubmit` as one, and a control
  * refusal keeps its sentence (`lib/control-refusal`).
+ *
+ * **A server function answers only this app's own pages** (SA-M1, design
+ * 230). The framework applies its CSRF middleware by default only to an
+ * app with no `startInstance`, so this file lists it. Filtered to server
+ * functions, of every method: a `/_serverFn/*` request whose
+ * `Sec-Fetch-Site` is not `same-origin` (or, with no fetch metadata, whose
+ * `Origin` or `Referer` is not this origin) answers 403 before its payload
+ * is read. A loader's call during a server render is in-process and is
+ * not checked here; `lib/fetch-site` is for that.
+ *
+ * **A payload carries data, never a server function** (SA-M25):
+ * `lib/refuse-server-fn-argument` comes first, under the framework's key.
  */
 import { createSerializationAdapter } from "@tanstack/react-router";
-import { createStart } from "@tanstack/react-start";
+import { createCsrfMiddleware, createStart } from "@tanstack/react-start";
 
 import { signalAdapter } from "./lib/auth-signal";
 import { controlRefusalAdapter } from "./lib/control-refusal";
 import { fieldRefusalAdapter } from "./lib/field-refusal";
+import { refuseServerFnArgument } from "./lib/refuse-server-fn-argument";
+
+const csrfMiddleware = createCsrfMiddleware({
+  filter: (ctx) => ctx.handlerType === "serverFn",
+});
 
 export const startInstance = createStart(() => ({
+  requestMiddleware: [csrfMiddleware],
   serializationAdapters: [
+    createSerializationAdapter(refuseServerFnArgument),
     createSerializationAdapter(signalAdapter),
     createSerializationAdapter(fieldRefusalAdapter),
     createSerializationAdapter(controlRefusalAdapter),

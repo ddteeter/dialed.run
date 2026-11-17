@@ -50,7 +50,7 @@ Ofcom's guidance sets two stages
 - Sign-up asks for a date of birth and the server checks it
   (`src/lib/contracts/age.ts` `isOldEnough`, `MINIMUM_AGE = 18`;
   `auth/access-hook.ts`). Nothing checks the date is true. A refusal sets a
-  one-day cookie (`dialed_age_refused`), which a new browser avoids.
+  one-day cookie (`__Host-dialed_age_refused`), which a new browser avoids.
 - Self-declaration is not highly effective age assurance. D-140 records
   that Ofcom's guidance (3.9, 4.2, 4.11) does not allow a "not likely to
   be accessed" conclusion on an 18+ term and a date-of-birth prompt.
