@@ -27,7 +27,6 @@ one-time grant (2026-11-15).
   data), it reads the registry and holds the PR unless the version is at
   least the cooldown old (7 days, pinned to `dependabot.yml`) and its
   publisher published an earlier version. Any read that fails holds it.
-  The body's "Maintainer changes" heading is no longer what decides.
 - **SA-L10 (deploy).** The `pnpm` block goes. `package.json` gains
   `allowScripts` for the packages that need theirs, and `.npmrc`
   `strict-allow-scripts=true`, behind an npm version floor. The deploy
