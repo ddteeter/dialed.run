@@ -114,6 +114,8 @@ const READERS: Readonly<Record<string, Reason>> = {
   "src/modules/safety/quarantine.ts": "operator",
   // Answers whether a report may name a subject, and shows nothing.
   "src/modules/safety/reportable.ts": "machinery",
+  // Writes the owner's own record of their delete, and shows nothing.
+  "src/modules/safety/withdrawn.ts": "own",
   "src/modules/safety/removed-fingerprints.ts": "operator",
   "src/modules/safety/reports.ts": "machinery",
   "src/modules/safety/review-audit.ts": "operator",

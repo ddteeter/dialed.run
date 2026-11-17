@@ -314,3 +314,6 @@ export {
   type HoldCause,
 } from "./breakers";
 export { kitPiecesSelect } from "./kit-pieces";
+
+// Design 232: an owner's delete of a kit photo under review.
+export { withdrawnUnderReview } from "./withdrawn";

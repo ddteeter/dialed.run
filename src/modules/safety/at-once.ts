@@ -17,6 +17,15 @@ import { reasonsOnTheClock } from "./contracts";
  * count it (that report never asked the breaker). Built on call.
  */
 export function noReportHidingAtOnce(): SQL {
+  return sql`not ${reportHidingAtOnce()}`;
+}
+
+/**
+ * A report of a reason that hides at once is filed on this queue row's
+ * subject: the correlated `EXISTS` the line above negates, and what an
+ * owner's delete under review keeps a record of (design 232).
+ */
+export function reportHidingAtOnce(): SQL {
   // Both sides named by table (`qualified`).
-  return sql`not exists (select 1 from ${reports} where ${qualified(reports, reports.subjectType)} = ${qualified(reviewQueue, reviewQueue.subjectType)} and ${qualified(reports, reports.subjectId)} = ${qualified(reviewQueue, reviewQueue.subjectId)} and ${inArray(reports.reason, reasonsOnTheClock)})`;
+  return sql`exists (select 1 from ${reports} where ${qualified(reports, reports.subjectType)} = ${qualified(reviewQueue, reviewQueue.subjectType)} and ${qualified(reports, reports.subjectId)} = ${qualified(reviewQueue, reviewQueue.subjectId)} and ${inArray(reports.reason, reasonsOnTheClock)})`;
 }
