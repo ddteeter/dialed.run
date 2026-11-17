@@ -229,17 +229,16 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      # Read, Grep and Glob over the repo; web reads only from GitHub and
-      # the npm registry; `gh` only to read releases, with this job's
-      # read-only token. No Bash beyond that, no writes, no web search.
-      # Reads of process state and the runner's own files are denied, so
-      # the key in this process's environment is not in reach of a tool.
-      # The answer leaves as structured output, which `post` screens.
+      # Read, Grep and Glob over the repo, and web reads only from GitHub
+      # and the npm registry. No Bash at all (SA-M19): a command runs with
+      # this process's environment, the key's included, so the only tools
+      # are ones that run nothing. No writes, no web search. The Read deny
+      # rules below cover the Read tool only. The answer leaves as
+      # structured output, which `post` screens.
       # `show_full_output` stays off: these logs are public.
       - id: claude
         uses: anthropics/claude-code-action@v1.0.269
         env:
-          GH_TOKEN: ${{ github.token }}
           CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -265,8 +264,8 @@ jobs:
           claude_args: |
             --model opus
             --max-turns 60
-            --allowedTools "Read,Grep,Glob,WebFetch(domain:github.com),WebFetch(domain:raw.githubusercontent.com),WebFetch(domain:registry.npmjs.org),Bash(gh release view *),Bash(gh release list *),Bash(gh api repos/*)"
-            --disallowedTools "Edit,Write,NotebookEdit,WebSearch,Task"
+            --allowedTools "Read,Grep,Glob,WebFetch(domain:github.com),WebFetch(domain:raw.githubusercontent.com),WebFetch(domain:registry.npmjs.org)"
+            --disallowedTools "Bash,Edit,Write,NotebookEdit,WebSearch,Task"
             --json-schema '{"type":"object","additionalProperties":false,"required":["verdict","summary","breaking_changes","sources"],"properties":{"verdict":{"enum":["safe to merge","merge with follow-up","hold"]},"summary":{"type":"string","maxLength":2000},"breaking_changes":{"type":"array","maxItems":40,"items":{"type":"object","additionalProperties":false,"required":["change","affects_this_repo","action"],"properties":{"change":{"type":"string","maxLength":500},"affects_this_repo":{"type":"string","maxLength":500},"action":{"type":"string","maxLength":500}}}},"sources":{"type":"array","maxItems":30,"items":{"type":"string","maxLength":500}}}}'
           prompt: |
             You are reviewing a Dependabot pull request on this repository that is
@@ -288,11 +287,12 @@ jobs:
 
             1. For each package, find the release notes and any migration guide
                for the whole version range, every intermediate major included.
-               Start from `gh release list -R <owner>/<repo>` and
-               `gh release view <tag> -R <owner>/<repo>`, find the repository
-               from https://registry.npmjs.org/<name>, and read CHANGELOG.md or
-               a migration guide in the package's repository through
-               raw.githubusercontent.com. Record every URL you rely on.
+               Find the repository from https://registry.npmjs.org/<name>,
+               then read its releases at
+               https://github.com/<owner>/<repo>/releases (and
+               /releases/tag/<tag>), and CHANGELOG.md or a migration guide
+               through raw.githubusercontent.com. You have no shell. Record
+               every URL you rely on.
             2. Keep only breaking changes: what changed, and what a user must do.
             3. For each one, check whether it applies here. Search the source,
                tests, configs, scripts and workflows, and cite file paths and

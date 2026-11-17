@@ -140,9 +140,10 @@ succeeds, and limits what one can do:
   from (GitHub and the npm registry), none of which shows a stranger what
   was requested.
 - **Narrow tools**: Read, Grep and Glob over the repo; web reads from
-  GitHub and the npm registry only; `gh` only to read releases. No shell
-  beyond that, no edits, no web search. Reads of process state and the
-  runner's files are denied.
+  GitHub and the npm registry only, releases included. No shell at all:
+  a command runs with the process's environment, where the key is
+  (SA-M19). No edits, no web search. The Read tool is denied process state
+  and the runner's files; that rule covers the Read tool only.
 - **A capped key**: the Anthropic key is a workspace key with a spend
   limit, not an account login.
 - **A screened comment**: the post job checks the review's shape and size,

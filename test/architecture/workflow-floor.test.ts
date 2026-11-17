@@ -282,3 +282,43 @@ describe("the issue chooser", () => {
     );
   });
 });
+
+/**
+The `--allowedTools` and `--disallowedTools` lists of every Claude step.
+*/
+function claudeToolLists(flag: "--allowedTools" | "--disallowedTools") {
+  const pattern = new RegExp(`${flag} "([^"]+)"`, "g");
+  return Object.entries(workflows).flatMap(([path, source]) =>
+    Array.from(source.matchAll(pattern), (match) => ({
+      workflow: path.slice(path.lastIndexOf("/") + 1),
+      tools: (match[1] ?? "").split(","),
+    })),
+  );
+}
+
+describe("the Claude review jobs (SA-M19)", () => {
+  const allowed = claudeToolLists("--allowedTools");
+  const disallowed = claudeToolLists("--disallowedTools");
+
+  it("are found, so an empty result cannot pass for a clean one", () => {
+    expect(allowed.map(({ workflow }) => workflow).toSorted(byName)).toEqual([
+      "a11y-review.yml",
+      "dependabot-pr.yml",
+    ]);
+    expect(disallowed).toHaveLength(allowed.length);
+  });
+
+  it("grant no Bash command", () => {
+    const shells = allowed
+      .filter(({ tools }) => tools.some((tool) => /^Bash\b/u.test(tool)))
+      .map(({ workflow }) => workflow);
+    expect(shells).toEqual([]);
+  });
+
+  it("deny Bash outright", () => {
+    const open = disallowed
+      .filter(({ tools }) => !tools.includes("Bash"))
+      .map(({ workflow }) => workflow);
+    expect(open).toEqual([]);
+  });
+});

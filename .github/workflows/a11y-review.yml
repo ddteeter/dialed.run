@@ -89,10 +89,11 @@ jobs:
           echo "reviewed=true" >>"$GITHUB_OUTPUT"
 
       # Read, Grep and Glob over the checkout, nothing else: no Bash, no
-      # web, no writes. Reads of process state and the runner's own files
-      # are denied, so the key in this process's environment is out of
-      # reach of a tool. The answer leaves as structured output, which
-      # `post` screens. `show_full_output` stays off: these logs are public.
+      # web, no writes. No granted tool runs a command, so nothing inherits
+      # this process's environment, where the key is; the Read deny rules
+      # keep the Read tool off process state and the runner's own files.
+      # The answer leaves as structured output, which `post` screens.
+      # `show_full_output` stays off: these logs are public.
       - id: claude
         if: steps.diff.outputs.reviewed == 'true'
         uses: anthropics/claude-code-action@v1.0.269
