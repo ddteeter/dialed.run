@@ -11,6 +11,7 @@
 // Server-fn glue lives in ./functions, imported directly by route files.
 
 export { auth } from "./instance";
+export { authRequest } from "./auth-route";
 
 // The shared auth gate. Reached through the barrel (not deep-imported)
 // because `no-cross-module-deep-imports` in .dependency-cruiser.cjs makes
