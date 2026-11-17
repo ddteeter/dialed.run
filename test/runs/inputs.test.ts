@@ -412,3 +412,27 @@ describe("the runs list's show (R58·299)", () => {
     }
   });
 });
+
+describe("the bounds on ids and Strava's callback (SA-M17)", () => {
+  it("bounds a run's and an import's id", () => {
+    expect(runIdInput.safeParse({ runId: "x".repeat(64) }).success).toBe(true);
+    expect(runIdInput.safeParse({ runId: "x".repeat(65) }).success).toBe(false);
+    expect(importIdInput.safeParse({ importId: "x".repeat(64) }).success).toBe(
+      true,
+    );
+    expect(importIdInput.safeParse({ importId: "x".repeat(65) }).success).toBe(
+      false,
+    );
+  });
+
+  it("bounds each callback value at 1024 characters", () => {
+    for (const key of ["code", "state", "error"]) {
+      expect(
+        stravaCallbackInput.safeParse({ [key]: "x".repeat(1024) }).success,
+      ).toBe(true);
+      expect(
+        stravaCallbackInput.safeParse({ [key]: "x".repeat(1025) }).success,
+      ).toBe(false);
+    }
+  });
+});

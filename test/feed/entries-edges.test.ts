@@ -11,6 +11,7 @@ import {
   wardrobeItems,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import { queriesDuring } from "../d1-spy";
 import { newUlid } from "../../src/lib/ids";
 import {
   attachKit,
@@ -326,6 +327,31 @@ describe("submitVerdict writes the whole submission or none of it", () => {
     });
     const cleared = await getEntryDetail(entryId, userId);
     expect(cleared?.items[0]?.flag).toBeUndefined();
+  });
+
+  it("sends one update per item however often a flag repeats it, the last winning (SA-M17)", async () => {
+    const { userId, entryId, itemId } = await ownEntry();
+    const verdict = {
+      userId,
+      entryId,
+      verdict: 0 as const,
+      audience: "runners" as const,
+      tags: [],
+      itemFlags: [
+        { itemId, flag: "not_enough" as const },
+        { itemId, flag: "too_much" as const },
+        { itemId, flag: "too_much" as const },
+      ],
+    };
+
+    const sent = await queriesDuring(() => submitVerdict(verdict));
+
+    const updates = sent.prepared.filter((query) =>
+      /^update "outfit_entry_items"/iu.test(query),
+    );
+    expect(updates).toHaveLength(1);
+    const detail = await getEntryDetail(entryId, userId);
+    expect(detail?.items[0]?.flag).toBe("too_much");
   });
 
   it("ignores a flag for an item the entry does not contain", async () => {

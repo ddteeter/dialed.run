@@ -295,6 +295,11 @@ export async function submitVerdict(
   const applicableFlags = input.itemFlags.filter((itemFlag) =>
     entryItemIds.has(itemFlag.itemId),
   );
+  // One statement per item however often a flag repeats it (SA-M17): the
+  // last flag for an item wins, as the statements in order would have.
+  const flagOf = new Map(
+    applicableFlags.map((itemFlag) => [itemFlag.itemId, itemFlag.flag]),
+  );
 
   // Decision D-50: an unconfirmed runner's entry stays private whatever
   // the toggle said (task 126; `./share-default`).
@@ -326,14 +331,14 @@ export async function submitVerdict(
             .values(input.tags.map((tag) => ({ entryId: input.entryId, tag }))),
         ]
       : []),
-    ...applicableFlags.map((itemFlag) =>
+    ...[...flagOf].map(([itemId, flag]) =>
       database
         .update(outfitEntryItems)
-        .set({ flag: itemFlag.flag ?? sql`NULL` })
+        .set({ flag: flag ?? sql`NULL` })
         .where(
           and(
             eq(outfitEntryItems.entryId, input.entryId),
-            eq(outfitEntryItems.itemId, itemFlag.itemId),
+            eq(outfitEntryItems.itemId, itemId),
           ),
         ),
     ),

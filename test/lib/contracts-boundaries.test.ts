@@ -10,6 +10,8 @@ import {
   garmentSchema,
   httpsUrlProblem,
   httpsUrlSchema,
+  MAX_PRODUCT_LINK_LENGTH,
+  PRODUCT_LINK_TOO_LONG,
   productLinkProblem,
   productLinkSchema,
   itemFlagSchema,
@@ -383,5 +385,32 @@ describe("validExtracted keeps each field that passes its own schema (SA-L17)", 
       }),
     ).toStrictEqual({ imageUrl: "https://shop.example/x.jpg" });
     expect(Object.keys(validExtracted({ name: undefined }))).toStrictEqual([]);
+  });
+});
+
+/**
+A product link exactly `length` characters long.
+*/
+function linkOfLength(length: number): string {
+  return "https://shop.example/".padEnd(length, "x");
+}
+
+describe("a product link's length (SA-M17)", () => {
+  it("keeps a link as long as the ceiling, and refuses one past it with the sentence", () => {
+    expect(MAX_PRODUCT_LINK_LENGTH).toBe(2048);
+    expect(
+      productLinkProblem(linkOfLength(MAX_PRODUCT_LINK_LENGTH)),
+    ).toBeUndefined();
+    expect(productLinkProblem(linkOfLength(MAX_PRODUCT_LINK_LENGTH + 1))).toBe(
+      PRODUCT_LINK_TOO_LONG,
+    );
+    expect(
+      productLinkSchema.safeParse(linkOfLength(MAX_PRODUCT_LINK_LENGTH + 1)),
+    ).toMatchObject({
+      success: false,
+    });
+    expect(PRODUCT_LINK_TOO_LONG).toBe(
+      "That link is too long. Paste the shop page's address.",
+    );
   });
 });
