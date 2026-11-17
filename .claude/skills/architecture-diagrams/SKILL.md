@@ -23,12 +23,16 @@ example: read it before writing a flow.
 
 `structure.generated.c4` is written by `npm run diagrams:generate` from
 `wrangler.jsonc`, the cron registry and the imports under `src/modules`,
-and `test/architecture/diagram-structure.test.ts` fails when it is stale.
+and `npm run diagrams:check` regenerates and fails when it is stale. The
+imports are dependency-cruiser's, the tool the commit gate enforces the
+module boundaries with, and the rest is read with the TypeScript compiler
+(`scripts/diagrams/`); nothing is matched by pattern.
 It holds:
 
 - every D1 database, R2 bucket, Analytics Engine dataset and queue
   (`cf.coreDb`, `cf.importsBucket`, `cf.importsQueue`, `cf.importsDlq`),
-  with each queue's arrow to its dead-letter queue;
+  with each queue's arrow to its dead-letter queue, and each email
+  sender (`cf.emailSending`, an `external`: bound, but not ours to run);
 - every cron, named for its firing (`cf.app.cronHourly30`), because one
   firing runs several jobs. The step's label says which job;
 - every module and sub-module (`cf.app.runs`, `cf.app.runs.parsers`: a
@@ -51,6 +55,18 @@ re-reading.
 A generated element's description is a line in `structure.words.json`
 (LikeC4's `extend` cannot set one). An id there that is not generated
 fails the generator.
+
+**The generator throws on what it cannot read.** The check regenerates
+with the generator's own blind spots, so anything it skipped would be
+skipped in both copies. So each way in is a closed list in
+`scripts/diagrams/structure.ts`: the keys of `wrangler.jsonc`, the
+handlers and exports of its `main` (`src/server.ts`), and the top-level
+entries of `src`. It also throws on a file under `src/modules` in no
+module (a folder needs its own index.ts), a `createServerFn` outside a
+`functions.ts`, a local import the resolver cannot follow, and an
+`import(…)` of a computed path. When one of these fails, draw the new
+thing, or add it to the list with the reason it is not drawn. Never widen
+a check to make it pass.
 
 **An entry point goes inside the module that owns it**, in `model.c4`:
 

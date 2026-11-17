@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { generateStructure } from "../../scripts/diagrams/structure";
-import type { StructureInputs } from "../../scripts/diagrams/structure";
+import { generateStructure, mainOf } from "../../scripts/diagrams/structure";
+import type {
+  SourceFacts,
+  StructureInputs,
+} from "../../scripts/diagrams/structure";
 
 const WRANGLER = `{
   // A comment, and a URL that must survive it.
+  "main": "src/server.ts",
   "vars": { "ORIGIN": "https://dialed.run" },
+  "send_email": [{ "name": "EMAIL" }],
   "d1_databases": [{ "database_name": "dialed-core" }],
   "r2_buckets": [{ "bucket_name": "dialed-public-photos" },],
   "analytics_engine_datasets": [{ "dataset": "dialed_vitals" }],
@@ -22,18 +27,36 @@ const WRANGLER = `{
   },
 }`;
 
-function inputs(overrides: Partial<StructureInputs> = {}): StructureInputs {
+const MAIN_FACTS: SourceFacts = {
+  paths: ["src/server.ts"],
+  imports: [],
+  unread: [],
+  serverFunctionFiles: [],
+  mainEntries: ["fetch", "queue", "scheduled"],
+};
+
+function inputs(
+  overrides: Partial<Omit<StructureInputs, "sources">> = {},
+  sources: Partial<SourceFacts> = {},
+): StructureInputs {
   return {
     wranglerJsonc: WRANGLER,
     crons: [],
-    sources: {},
     words: {},
     ...overrides,
+    sources: {
+      ...MAIN_FACTS,
+      ...sources,
+      paths: [...MAIN_FACTS.paths, ...(sources.paths ?? [])],
+    },
   };
 }
 
-function lines(overrides: Partial<StructureInputs> = {}): string[] {
-  return generateStructure(inputs(overrides))
+function lines(
+  overrides: Partial<Omit<StructureInputs, "sources">> = {},
+  sources: Partial<SourceFacts> = {},
+): string[] {
+  return generateStructure(inputs(overrides, sources))
     .split("\n")
     .map((line) => line.trim());
 }
@@ -51,6 +74,7 @@ describe("generateStructure: what is bound", () => {
     );
     expect(out).toContain("importsQueue = queue 'Queue: dialed-imports'");
     expect(out).toContain("importsDlq = queue 'Queue: dialed-imports-dlq'");
+    expect(out).toContain("emailSending = external 'Email sending: EMAIL'");
   });
 
   it("draws a queue once, however many times the config names it", () => {
@@ -113,44 +137,67 @@ describe("generateStructure: crons", () => {
   );
 });
 
-const SOURCES = {
-  "src/modules/runs/index.ts": `export { startImport } from "./imports";`,
-  "src/modules/runs/imports.ts": [
-    `import { z } from "zod";`,
-    `import {`,
-    `  attachObservation,`,
-    `  type Observation,`,
-    `} from "../weather";`,
-    `import type { Parsed } from "./parsers";`,
-    `import * as schema from "../../db/schema-core";`,
-    `// import { never } from "../feed";`,
-    `export const text = sql\`select a from "../feed"\`;`,
-  ].join("\n"),
-  "src/modules/runs/functions.ts": [
-    `import { requireUserId } from "../auth";`,
-    `import { attachObservation } from "../weather";`,
-  ].join("\n"),
-  "src/modules/runs/parsers/index.ts": `export { parse } from "./fit";`,
-  "src/modules/runs/parsers/fit.ts": [
-    `import { runLimits } from "../upload-limits";`,
-    `import { timeZoneAt } from "../../weather/provider";`,
-  ].join("\n"),
-  "src/modules/runs/components/Upload.tsx": `import { Bell } from "../../notifications";`,
-  "src/modules/auth/index.ts": `export const requireUserId = 1;`,
-  "src/modules/weather/index.ts": `export { attachObservation } from "./attach";`,
-  "src/modules/weather/attach.ts": `import { fetchHour } from "./provider";`,
-  "src/modules/weather/provider/index.ts": `export const fetchHour = 1;`,
-  "src/modules/notifications/index.ts": `import defaults, { a } from "../runs";`,
-  "src/modules/public-pages/index.ts": `export const page = 1;`,
-  "src/modules/loose.ts": `import { a } from "./runs";`,
-  "src/lib/now.ts": `import { a } from "../modules/runs";`,
+const MODULES: Partial<SourceFacts> = {
+  paths: [
+    "src/modules/runs/index.ts",
+    "src/modules/runs/imports.ts",
+    "src/modules/runs/functions.ts",
+    "src/modules/runs/upload-limits.ts",
+    "src/modules/runs/parsers/index.ts",
+    "src/modules/runs/parsers/fit.ts",
+    "src/modules/runs/components/Upload.tsx",
+    "src/modules/auth/index.ts",
+    "src/modules/weather/index.ts",
+    "src/modules/weather/attach.ts",
+    "src/modules/weather/provider/index.ts",
+    "src/modules/notifications/index.ts",
+    "src/modules/public-pages/index.ts",
+    "src/lib/now.ts",
+    "src/db/schema-core.ts",
+  ],
+  imports: [
+    // The wiring's import first: the service code's still makes the pair
+    // `imports`, whichever comes first.
+    {
+      from: "src/modules/runs/functions.ts",
+      to: "src/modules/weather/index.ts",
+    },
+    { from: "src/modules/runs/imports.ts", to: "src/modules/weather/index.ts" },
+    {
+      from: "src/modules/runs/imports.ts",
+      to: "src/modules/runs/parsers/index.ts",
+    },
+    { from: "src/modules/runs/imports.ts", to: "src/db/schema-core.ts" },
+    { from: "src/modules/runs/functions.ts", to: "src/modules/auth/index.ts" },
+    {
+      from: "src/modules/runs/parsers/fit.ts",
+      to: "src/modules/runs/upload-limits.ts",
+    },
+    {
+      from: "src/modules/runs/parsers/fit.ts",
+      to: "src/modules/weather/provider/index.ts",
+    },
+    {
+      from: "src/modules/runs/components/Upload.tsx",
+      to: "src/modules/notifications/index.ts",
+    },
+    {
+      from: "src/modules/weather/attach.ts",
+      to: "src/modules/weather/provider/index.ts",
+    },
+    {
+      from: "src/modules/notifications/index.ts",
+      to: "src/modules/runs/index.ts",
+    },
+    { from: "src/lib/now.ts", to: "src/modules/runs/index.ts" },
+  ],
 };
 
 describe("generateStructure: modules and their imports", () => {
-  const out = lines({ sources: SOURCES });
+  const out = lines({}, MODULES);
 
   it("draws a folder with its own index.ts as a module, nested where it sits", () => {
-    const text = generateStructure(inputs({ sources: SOURCES }));
+    const text = generateStructure(inputs({}, MODULES));
 
     expect(text).toContain(
       [
@@ -180,13 +227,12 @@ describe("generateStructure: modules and their imports", () => {
     );
   });
 
-  it("draws nothing for a sub-module, a comment, a query or a file outside a module", () => {
+  it("draws nothing between a unit and its sub-module, nor to or from outside the modules", () => {
     const arrows = out.filter((line) =>
       /-\[(?:imports|wiring)\]->/u.test(line),
     );
 
     expect(arrows).toHaveLength(5);
-    expect(arrows.some((line) => line.includes("cf.app.feed"))).toBe(false);
   });
 
   it("gives every module with an arrow a view of both kinds of import", () => {
@@ -218,10 +264,10 @@ describe("generateStructure: descriptions", () => {
   });
 
   it("describes a nested module by its full id", () => {
-    const out = lines({
-      sources: SOURCES,
-      words: { "cf.app.runs.parsers": "Reads a run file" },
-    });
+    const out = lines(
+      { words: { "cf.app.runs.parsers": "Reads a run file" } },
+      MODULES,
+    );
 
     expect(out).toContain("parsers = module 'runs/parsers' {");
     expect(out).toContain("description 'Reads a run file'");
@@ -233,5 +279,110 @@ describe("generateStructure: descriptions", () => {
         inputs({ words: { "cf.gone": "x", "cf.coreDb": "y" } }),
       ),
     ).toThrow("structure.words.json describes what is not generated: cf.gone");
+  });
+});
+
+const UNLISTED = "has what the diagram neither draws nor lists";
+
+describe("generateStructure: the ways in are closed lists", () => {
+  it.each(["kv_namespaces", "durable_objects", "env"])(
+    "throws on a wrangler.jsonc key it neither draws nor lists: %s",
+    (key) => {
+      const wranglerJsonc = `{ "${key}": {},${WRANGLER.slice(1)}`;
+
+      expect(() => generateStructure(inputs({ wranglerJsonc }))).toThrow(
+        `wrangler.jsonc ${UNLISTED}: ${key}.`,
+      );
+    },
+  );
+
+  it.each([["email"], ["tail"], ["export class Room"]])(
+    "throws on an entry of main it does not list: %s",
+    (entry) => {
+      expect(() =>
+        generateStructure(
+          inputs({}, { mainEntries: ["fetch", "queue", entry] }),
+        ),
+      ).toThrow(`src/server.ts ${UNLISTED}: ${entry}.`);
+    },
+  );
+
+  it("throws when main is not among the sources", () => {
+    const wranglerJsonc = WRANGLER.replace("src/server.ts", "src/worker.ts");
+
+    expect(() => generateStructure(inputs({ wranglerJsonc }))).toThrow(
+      "wrangler.jsonc's main, src/worker.ts, is not a source read",
+    );
+  });
+
+  it("throws on code in a folder beside src/modules it does not list", () => {
+    expect(() =>
+      generateStructure(
+        inputs({}, { paths: ["src/lib/now.ts", "src/jobs/sweep.ts"] }),
+      ),
+    ).toThrow(`src ${UNLISTED}: jobs.`);
+  });
+
+  it("reads main from the config", () => {
+    expect(mainOf(WRANGLER)).toBe("src/server.ts");
+  });
+});
+
+describe("generateStructure: everything is read", () => {
+  it.each([["src/modules/loose.ts"], ["src/modules/new-thing/service.ts"]])(
+    "throws on a file in no module: %s",
+    (path) => {
+      expect(() =>
+        generateStructure(
+          inputs({}, { ...MODULES, paths: [...(MODULES.paths ?? []), path] }),
+        ),
+      ).toThrow(`${path} is in no module`);
+    },
+  );
+
+  it("throws on a server function outside functions.ts in a module", () => {
+    expect(() =>
+      generateStructure(
+        inputs(
+          {},
+          {
+            ...MODULES,
+            serverFunctionFiles: ["src/modules/runs/imports.ts"],
+          },
+        ),
+      ),
+    ).toThrow(
+      "src/modules/runs/imports.ts creates a server function outside functions.ts",
+    );
+  });
+
+  it("accepts a server function in functions.ts, a component, or outside the modules", () => {
+    expect(() =>
+      generateStructure(
+        inputs(
+          {},
+          {
+            ...MODULES,
+            serverFunctionFiles: [
+              "src/modules/runs/functions.ts",
+              "src/modules/runs/components/Upload.tsx",
+              "src/lib/now.ts",
+            ],
+          },
+        ),
+      ),
+    ).not.toThrow();
+  });
+
+  it("throws on every import it could not follow, naming each", () => {
+    const unread = [
+      { from: "src/modules/feed/index.ts", text: "@/modules/gone" },
+      { from: "src/lib/x.ts", text: "import(`../${name}`)" },
+    ];
+
+    expect(() => generateStructure(inputs({}, { unread }))).toThrow(
+      "src/modules/feed/index.ts has an import the diagram cannot follow: @/modules/gone\n" +
+        "src/lib/x.ts has an import the diagram cannot follow: import(`../${name}`)",
+    );
   });
 });
