@@ -17,6 +17,7 @@ import { nowSeconds } from "../../src/lib/now";
 import { FINGERPRINT_HOLDS_PER_HOUR } from "../../src/modules/safety/breakers";
 import { moderateContent } from "../../src/modules/feed/moderation";
 import { uploadPhoto } from "../../src/modules/feed/photos";
+import { deleteEntryPhoto } from "../../src/modules/feed/retract";
 import type { Classify } from "../../src/modules/safety";
 import {
   removedMatchOf,
@@ -36,6 +37,7 @@ import {
 
 import { queriesDuring } from "../d1-spy";
 import { makeEntry, makeRun, makeUser, resetTables } from "../feed/helpers";
+import { noPurge } from "../purge-spy";
 import { opened } from "./helpers";
 
 /**
@@ -321,7 +323,14 @@ describe("a copy of a removed image is held for review (D-147)", () => {
     const bytes = await sceneJpeg(4);
     const first = await posted(bytes);
     await removed("photo", first.photoId);
-    await opened("fingerprint", FINGERPRINT_HOLDS_PER_HOUR, nowSeconds());
+    await opened(
+      "fingerprint",
+      FINGERPRINT_HOLDS_PER_HOUR,
+      nowSeconds(),
+      "photo",
+      undefined,
+      "each",
+    );
     const classify = vi.fn<Classify>(unscreened);
 
     const again = await posted(await copyOf(bytes), undefined, classify);
@@ -332,6 +341,102 @@ describe("a copy of a removed image is held for review (D-147)", () => {
     expect(classify).toHaveBeenCalledOnce();
     const queued = await queueRows();
     expect(queued.map((row) => row.subjectId)).not.toContain(again.photoId);
+  });
+
+  it("counts runners, not holds: one runner's five copies leave room for the next runner's (design 232)", async () => {
+    const bytes = await sceneJpeg(4);
+    const first = await posted(bytes);
+    await removed("photo", first.photoId);
+    // Four photos a kit, so the fifth copy goes on the runner's second kit.
+    const runner = await aKit();
+    const secondKit = {
+      userId: runner.userId,
+      entryId: await makeEntry({
+        userId: runner.userId,
+        runId: await makeRun({ userId: runner.userId }),
+      }),
+    };
+    for (let n = 0; n < FINGERPRINT_HOLDS_PER_HOUR; n += 1) {
+      await posted(await copyOf(bytes), n < 4 ? runner : secondKit);
+    }
+
+    const another = await posted(await copyOf(bytes));
+
+    expect(await photoRow(another.photoId)).toStrictEqual({
+      screenStatus: "hidden_pending_review",
+    });
+  });
+
+  it("still holds the runner who filled the hour, past the ceiling (design 232)", async () => {
+    const bytes = await sceneJpeg(4);
+    const first = await posted(bytes);
+    await removed("photo", first.photoId);
+    const runner = await aKit();
+    await posted(await copyOf(bytes), runner);
+    await opened(
+      "fingerprint",
+      FINGERPRINT_HOLDS_PER_HOUR,
+      nowSeconds(),
+      "photo",
+      undefined,
+      "each",
+    );
+
+    const again = await posted(await copyOf(bytes), runner);
+
+    expect(await photoRow(again.photoId)).toStrictEqual({
+      screenStatus: "hidden_pending_review",
+    });
+  });
+
+  it("still holds a runner whose held copy they deleted this hour (design 232)", async () => {
+    const bytes = await sceneJpeg(4);
+    const first = await posted(bytes);
+    await removed("photo", first.photoId);
+    const runner = await aKit();
+    const held = await posted(await copyOf(bytes), runner);
+    await deleteEntryPhoto(
+      core(),
+      runner.userId,
+      held.photoId,
+      quiet,
+      noPurge,
+    );
+    await opened(
+      "fingerprint",
+      FINGERPRINT_HOLDS_PER_HOUR - 1,
+      nowSeconds(),
+      "photo",
+      undefined,
+      "each",
+    );
+
+    const again = await posted(await copyOf(bytes), runner);
+
+    expect(await photoRow(again.photoId)).toStrictEqual({
+      screenStatus: "hidden_pending_review",
+    });
+  });
+
+  it("does not hold a runner for another runner's hold this hour (design 232)", async () => {
+    const bytes = await sceneJpeg(4);
+    const first = await posted(bytes);
+    await removed("photo", first.photoId);
+    await posted(await copyOf(bytes));
+    await opened(
+      "fingerprint",
+      FINGERPRINT_HOLDS_PER_HOUR - 1,
+      nowSeconds(),
+      "photo",
+      undefined,
+      "each",
+    );
+
+    const again = await posted(await copyOf(bytes), undefined, unscreened);
+
+    expect(await photoRow(again.photoId)).toStrictEqual({
+      screenStatus: "pending",
+    });
   });
 
   it("never holds a plain picture, whatever was kept (design 164)", async () => {

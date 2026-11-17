@@ -651,7 +651,14 @@ describe("a garment photo that copies a removed image is held (D-147, design 157
         moderationActionId: await anIntimateRemoval(),
         createdAt: nowSeconds(),
       });
-    await opened("fingerprint", FINGERPRINT_HOLDS_PER_HOUR, nowSeconds());
+    await opened(
+      "fingerprint",
+      FINGERPRINT_HOLDS_PER_HOUR,
+      nowSeconds(),
+      "photo",
+      undefined,
+      "each",
+    );
     const garment = await closetGarment();
 
     await upload(garment, bytes, clean);

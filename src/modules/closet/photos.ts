@@ -167,6 +167,7 @@ export async function uploadItemPhoto(
   const isCopyOfRemoved = await isHeldAsRemovedCopy(
     primaryCoreDb(),
     fingerprint,
+    userId,
     nowSeconds(),
   );
   const pointAtNewVersion = db

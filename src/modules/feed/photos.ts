@@ -207,6 +207,7 @@ async function wasStoredHeld(
   const isHeld = await isHeldAsRemovedCopy(
     primaryCoreDb(),
     row.fingerprint,
+    uploaderId,
     nowSeconds(),
   );
   if (!isHeld) {
