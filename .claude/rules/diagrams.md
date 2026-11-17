@@ -24,8 +24,12 @@ diagrams:format` fixes the formatting. `npm run diagrams` opens the
   `main`, or folder beside `src/modules` that it neither draws nor lists:
   draw it, or list it with the reason (skill `architecture-diagrams`).
 - **A story is a claim about the code.** Every step carries a
-  `// source: <path> <symbol>` comment, and a number in a note is one you
-  read in that source.
+  `// source: <path> <name>, …` comment on the line above it, and a number
+  in a note is one you read in that source.
+  `test/architecture/diagram-sources.node.test.ts` fails when a path or a name
+  stops resolving; the form is in skill `architecture-diagrams`.
+  `npm run diagrams:stale` lists the stories that cite a file your branch
+  changed.
 - **Nothing rendered is committed**: no PNG, no `dist/`, no exported
   Markdown. `likec4 export markdown` writes a `README.md` into this folder
   whatever `-o` says; delete it.

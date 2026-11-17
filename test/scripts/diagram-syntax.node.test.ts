@@ -1,7 +1,6 @@
 /**
  * `scripts/diagrams/syntax.ts` reads with the TypeScript compiler, which
- * the workers pool cannot load; this project runs in Node. There is no
- * DOM in it.
+ * the workers pool cannot load, so it runs in the `node` project.
  */
 import { describe, expect, it } from "vitest";
 

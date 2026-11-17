@@ -101,7 +101,9 @@ filesystem, so sources arrive as `?raw` imports, as
   (Moved into `npm run diagrams:check` after step 2; see the follow-up
   below.)
 - `diagram-sources.test.ts`: every step has a source comment; every path
-  exists and contains the symbol it names.
+  exists and contains the symbol it names. (Built as
+  `diagram-sources.node.test.ts`, in the `node` project; see step 3 as
+  built.)
 - Unit tests for the generator, the view-hash diff and the stale-story
   mapping, which are pure functions.
 - `likec4 validate` cannot run in the pool; it runs in `diagrams:check`.
@@ -189,11 +191,54 @@ registries.
   on a difference; `diagrams:check` is already in CI's required job, and
   `pr-ready`'s final checks now run it. `generateStructure` stays pure and
   is tested in the worker project on facts; `scripts/diagrams/syntax.ts`
-  is tested in the `ui` project, which runs in Node.
+  is tested in Node (the `ui` project at first; the `node` project since
+  step 3).
 - **Email sending is drawn** (owner, 2026-11-16): the `send_email`
   binding generates `cf.emailSending`, an `external`, with
   `cf.app.email`'s arrow to it in `model.c4`. A system we call and do not
   run, though it is bound.
+
+## Step 3 as built (#802)
+
+- **The comment has a form, so it can be checked.** `// source: <path>
+<name>, <name> (<note>); <path> …` on the line directly above the step.
+  The names are checked and the note is not, so a name that must keep
+  resolving goes before the note. A cite needs at least one name: a bare
+  path anchors nothing. The two flows' comments were rewritten to it.
+  Names that sat inside notes (`(didClaimImport)`) became names. Two cites
+  gave a file name with no path (`import-polling.ts`,
+  `run-conditions-copy.ts`), and nine cited a path with no name. Each
+  now resolves.
+- **The steps come from LikeC4's parse tree, not from reading `.c4`
+  text** (owner, 2026-11-16). A first version found them line by line with
+  regexes and brace counting, and held its count to LikeC4's in
+  `diagrams:check`; it was replaced before it merged.
+  `scripts/diagrams/model.ts` walks LikeC4's own tree for every step
+  statement (frames and `a -> b -> c` chains included) and its line, and
+  `anchors.ts` reads only the comment on the line above. LikeC4 has no
+  public API for the tree: it is the `langium` member, read as `unknown`
+  and parsed node by node, so an upgrade that moves it fails by name. Each
+  view's arrows from the tree are held equal to LikeC4's computed view,
+  so a step form the walk does not know fails too.
+- **The anchor test is in a new `node` vitest project**
+  (`test/architecture/diagram-sources.node.test.ts`; owner, 2026-11-16).
+  LikeC4 cannot load in the workers pool. The first version borrowed `ui`
+  for its Node runtime under a `.dom.test.tsx` name, with happy-dom and
+  `test/dom-setup.ts` it did not use; `node` is plain Node with no setup,
+  and the #812 syntax test moved there too. It stays in `npm test`.
+  It reads the cited files from disk, so a cite may name any file in the
+  repo.
+- **A name resolves when its file holds it as a whole word**; a dotted
+  `wrangler.jsonc` key needs each part. That is a text check, not
+  "defines it": a name left only in a comment would pass. It catches what
+  the step exists to catch, a move or a rename.
+- **`npm run diagrams:stale` reports and never fails.** It diffs against
+  the merge base with `origin/main`, untracked and uncommitted files
+  included, and marks a story whose own file the branch edited. The git
+  half is a shell script (`scripts/diagram-stale.sh`), as
+  `worktrees-prune.sh` is: the lint config forbids spawning git from
+  TypeScript. `pr-ready` runs it, and the PR body answers it under a
+  **Diagrams** heading.
 
 ## Open questions
 

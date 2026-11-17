@@ -5,7 +5,7 @@
  * function, and the dynamic imports whose target no resolver can follow.
  * The imports themselves are dependency-cruiser's (`sources.ts`).
  *
- * Pure: text in, facts out. Tested in the `ui` project, because the
+ * Pure: text in, facts out. Tested in the `node` project, because the
  * workers pool cannot load the compiler.
  */
 import ts from "typescript";

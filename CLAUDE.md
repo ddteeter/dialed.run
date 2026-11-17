@@ -58,9 +58,10 @@ mirror" and the like predate this split; the table says where each now lives.
 - **Styling**: Tailwind v4 + the brand tokens. **`src/styles.css`'s `@theme
 inline` block is the index of what you may type** — Tailwind's defaults
   (`text-sm`, `rounded-md`) are cleared (`.claude/rules/ui.md`).
-- **Tests**: Vitest in three projects — `worker` (workerd), `ui`
-  (`*.dom.test.tsx`, happy-dom), `browser` (`*.browser.test.ts`, Chromium) —
-  plus Playwright in CI (`.claude/rules/testing.md`).
+- **Tests**: Vitest in four projects — `worker` (workerd), `ui`
+  (`*.dom.test.tsx`, happy-dom), `browser` (`*.browser.test.ts`, Chromium),
+  `node` (`*.node.test.ts`, Node, for libraries workerd cannot load) — plus
+  Playwright in CI (`.claude/rules/testing.md`).
 
 ## Architecture rules (enforced by dependency-cruiser)
 

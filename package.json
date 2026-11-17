@@ -54,7 +54,8 @@
     "diagrams": "likec4 start docs/diagrams",
     "diagrams:check": "tsx scripts/diagram-structure.ts --check && likec4 validate --max-warnings 0 docs/diagrams && likec4 format --check docs/diagrams",
     "diagrams:format": "likec4 format docs/diagrams",
-    "diagrams:generate": "tsx scripts/diagram-structure.ts"
+    "diagrams:generate": "tsx scripts/diagram-structure.ts",
+    "diagrams:stale": "sh scripts/diagram-stale.sh"
   },
   "dependencies": {
     "@cf-wasm/og": "^0.5.0",
