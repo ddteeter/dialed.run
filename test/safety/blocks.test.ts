@@ -1,13 +1,10 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { drizzle } from "drizzle-orm/d1";
-
-import { blocks, follows, userProfiles } from "../../src/db/schema-core";
-import { coreDb, env } from "../../src/env";
+import { follows, userProfiles } from "../../src/db/schema-core";
+import { coreDb } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import {
-  BLOCKS_MAX,
   blockRunner,
   blockedAmong,
   blockedCount,
@@ -243,23 +240,7 @@ describe("a block and the pair's follows (SA-L02)", () => {
   });
 });
 
-/**
-`n` blocks already held by `blockerId`, of ids that need not be runners.
-*/
-async function holding(blockerId: string, n: number): Promise<void> {
-  const rows = Array.from({ length: n }, () => ({
-    blockerId,
-    blockedId: newUlid(),
-    createdAt: 1,
-  }));
-  const core = drizzle(env.DIALED_CORE);
-  // D1 binds at most 100 parameters a statement: three columns a row.
-  for (let start = 0; start < rows.length; start += 30) {
-    await core.insert(blocks).values(rows.slice(start, start + 30));
-  }
-}
-
-describe("what a block may name, and how many (design 232)", () => {
+describe("what a block may name (design 232)", () => {
   beforeEach(resetSafetyTables);
 
   it("writes nothing for an id that is not a runner", async () => {
@@ -270,43 +251,18 @@ describe("what a block may name, and how many (design 232)", () => {
     expect(await blockedCount(me)).toBe(0);
   });
 
-  it("blocks up to BLOCKS_MAX runners and writes nothing past it", async () => {
+  it("ends no follows for an id that is not a runner", async () => {
     const me = await makeUser();
-    await holding(me, BLOCKS_MAX - 1);
-    const last = await makeUser();
-    const over = await makeUser();
-
-    await blockRunner(me, last);
-    await blockRunner(me, over);
-
-    expect(await isBlocked(me, last)).toBe(true);
-    expect(await isBlocked(me, over)).toBe(false);
-    expect(await blockedCount(me)).toBe(BLOCKS_MAX);
-  });
-
-  it("ends no follows when the block is refused", async () => {
-    const me = await makeUser();
-    await holding(me, BLOCKS_MAX);
-    const them = await makeUser();
+    const nobody = newUlid();
     await coreDb().delete(follows);
     await coreDb()
       .insert(follows)
-      .values([{ followerId: me, followeeId: them, createdAt: 1 }]);
+      .values([{ followerId: me, followeeId: nobody, createdAt: 1 }]);
 
-    await blockRunner(me, them);
+    await blockRunner(me, nobody);
 
-    expect(await isBlocked(me, them)).toBe(false);
+    expect(await isBlocked(me, nobody)).toBe(false);
     expect(await coreDb().select().from(follows)).toHaveLength(1);
-  });
-
-  it("counts only the blocker's own blocks toward the cap", async () => {
-    const me = await makeUser();
-    await holding(await makeUser(), BLOCKS_MAX);
-    const them = await makeUser();
-
-    await blockRunner(me, them);
-
-    expect(await isBlocked(me, them)).toBe(true);
   });
 
   it("counts a runner's blocks for Settings", async () => {
