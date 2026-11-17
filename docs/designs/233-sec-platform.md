@@ -85,6 +85,14 @@ one-time grant (2026-11-15).
     Pinned by "works only as the last one minted" and the drain's
     sent-row tests.
 
+- **A bounded listing** (coordinator-13, 2026-11-16). `outbox-handlers`'
+  two R2 reconciles page through one helper, `forEachPage`, which stops
+  after 1,000 pages (a million objects) and throws, so the drain keeps
+  the row owed and reports it. The largest real listing, a runner's every
+  entry photo at account deletion, is about 70 pages; a garment's is one.
+  Without the bound, a mutant to either loop could only time out, and a
+  cursor that never ends would run forever. 13c cherry-picks it.
+
 ## Contract touches
 
 - Schema: **none**. Bindings: **none**. `wrangler.jsonc` gains two
