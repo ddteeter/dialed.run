@@ -13,9 +13,5 @@ import { oneClickUnsubscribe } from "./landing";
 export function oneClickUnsubscribeResponse(
   request: Request,
 ): Promise<Response> {
-  return oneClickUnsubscribe(
-    coreDb(),
-    env.UNSUBSCRIBE_SECRET,
-    request,
-  );
+  return oneClickUnsubscribe(coreDb(), env.UNSUBSCRIBE_SECRET, request);
 }

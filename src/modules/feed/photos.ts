@@ -5,14 +5,23 @@
  * this branch yet). Originals only for now; derived sizes follow 101's
  * photon-wasm benchmark rather than duplicating a wasm pipeline here.
  */
-import { and, eq, ne, or } from "drizzle-orm";
+import { and, eq, ne, or, sql } from "drizzle-orm";
 
-import { entryPhotos, outfitEntries } from "../../db/schema-core";
+import {
+  entryPhotos,
+  notifications,
+  outfitEntries,
+  reviewQueue,
+} from "../../db/schema-core";
 import { coreDb, env, primaryCoreDb } from "../../env";
 import { firstColumnWhere } from "../../lib/sql/keyed-read";
+import { orSqlNull } from "../../lib/sql/sql-null";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
-import { isAllowedPhotoType } from "../../lib/photo-constraints";
+import {
+  PHOTO_LIMIT_REACHED,
+  isAllowedPhotoType,
+} from "../../lib/photo-constraints";
 import { photoRefusal, withReleased } from "../../lib/photo-pipeline";
 import { fingerprintOf } from "../../lib/photo-fingerprint";
 import type { z } from "zod";
@@ -27,6 +36,7 @@ import {
 import { GARMENT_PHOTO_ROOT } from "../../lib/garment-photo-key";
 import { requireOwned } from "../../lib/sql/owned";
 import type { TaggedScope } from "../../lib/cache-tags";
+import { claimLimit } from "../email";
 import { syncPublicPhotosLater } from "../ops";
 import { filePartFrom } from "../../lib/file-part";
 import type { FilePartProblem } from "../../lib/file-part";
@@ -53,6 +63,12 @@ function db() {
 }
 
 export class InvalidPhotoError extends Error {}
+
+function kitIsFull(): InvalidPhotoError {
+  return new InvalidPhotoError(
+    `at most ${String(MAX_PHOTOS_PER_ENTRY)} photos per entry`,
+  );
+}
 
 export interface UploadPhotoInput {
   userId: string;
@@ -129,11 +145,12 @@ export async function uploadPhoto(
     .select({ id: entryPhotos.id })
     .from(entryPhotos)
     .where(eq(entryPhotos.entryId, input.entryId));
-  if (existing.length >= MAX_PHOTOS_PER_ENTRY) {
-    throw new InvalidPhotoError(
-      `at most ${String(MAX_PHOTOS_PER_ENTRY)} photos per entry`,
-    );
-  }
+  if (existing.length >= MAX_PHOTOS_PER_ENTRY) throw kitIsFull();
+  // One of the runner's day's photo uploads (SA-M14): after the repeat
+  // check, so a retry of one submission is not counted again, and before
+  // anything is decoded or stored.
+  const claim = await claimLimit(database, "photo-runner", input.userId);
+  if (!claim.isAllowed) throw new InvalidPhotoError(PHOTO_LIMIT_REACHED);
 
   // R2 then the row, which cannot be atomic (law 8c). Deliberately left as
   // two writes: a failure between them is visible — the upload errors and
@@ -147,17 +164,22 @@ export async function uploadPhoto(
   await env.MEDIA.put(key, stored, {
     httpMetadata: { contentType: "image/jpeg" },
   });
-  const wasHeld = await wasStoredHeld(database, input.userId, {
+  const outcome = await storeRow(database, input.userId, {
     id: photoId,
     entryId: input.entryId,
     photoKey: key,
-    position: existing.length,
     idempotencyKey: input.idempotencyKey,
     fingerprint,
   });
+  // Another upload to this kit took its last place while this one was
+  // being encoded (SA-M14): its object goes too, and the kit stays at four.
+  if (outcome === "full") {
+    await env.MEDIA.delete(key);
+    throw kitIsFull();
+  }
   // A held photo waits for a person, not the classifier: Approve sends it
   // back to `pending`, and the screening-retry sweep screens it then.
-  if (wasHeld) return key;
+  if (outcome === "held") return key;
 
   // Screened inline rather than after responding, because the packet's
   // common path is "pass -> visible immediately" and a photo that appears
@@ -188,18 +210,48 @@ export async function uploadPhoto(
 }
 
 /**
+ * The photo's row, written only while the kit has room (SA-M14): the
+ * count and the insert are one statement, so uploads racing for one kit
+ * cannot all read three and all write a fifth. Its place is the count at
+ * that moment. Returns the id it wrote, or nothing when the kit was full.
+ */
+function insertWhileRoom(
+  database: ReturnType<typeof db>,
+  row: PhotoRow,
+  screenStatus: (typeof entryPhotos.$inferInsert)["screenStatus"],
+) {
+  const inKit = sql`(SELECT count(*) FROM ${entryPhotos} WHERE ${entryPhotos.entryId} = ${row.entryId})`;
+  return database
+    .insert(entryPhotos)
+    .select(
+      sql`SELECT ${row.id}, ${row.entryId}, ${row.photoKey}, ${inKit}, ${orSqlNull(row.idempotencyKey)}, ${row.fingerprint}, ${screenStatus} WHERE ${inKit} < ${MAX_PHOTOS_PER_ENTRY}`,
+    )
+    .returning({ id: entryPhotos.id });
+}
+
+type PhotoRow = Readonly<{
+  id: string;
+  entryId: string;
+  photoKey: string;
+  idempotencyKey: string | undefined;
+  fingerprint: string;
+}>;
+
+/**
  * Writes the photo's row, held for review when it is a copy of an image
  * removed as intimate (D-147, design 152) and the fingerprint breaker has
  * room (design 164): hidden from everyone but its owner, as a classifier
  * flag is, with a Review row and its uploader's notice (D-162) in the same
- * batch. Returns whether it was held. The match is read first, since a
- * batch cannot branch on its own results.
+ * batch. Says whether it was stored, held, or refused because the kit was
+ * full. The match is read first, since a batch cannot branch on its own
+ * results; a held batch whose row was refused takes its Review row and
+ * notice back, which name a photo nobody can reach.
  */
-async function wasStoredHeld(
+async function storeRow(
   database: ReturnType<typeof db>,
   uploaderId: string,
-  row: typeof entryPhotos.$inferInsert & { fingerprint: string },
-): Promise<boolean> {
+  row: PhotoRow,
+): Promise<"stored" | "held" | "full"> {
   // From the primary (design 143): what was kept is an operator's write,
   // not this runner's, so the session's bookmark does not promise a replica
   // has it. Read from one, a copy posted seconds after its takedown would
@@ -211,13 +263,11 @@ async function wasStoredHeld(
     nowSeconds(),
   );
   if (!isHeld) {
-    await database.insert(entryPhotos).values(row);
-    return false;
+    const written = await insertWhileRoom(database, row, "pending");
+    return written.length === 0 ? "full" : "stored";
   }
-  await database.batch([
-    database
-      .insert(entryPhotos)
-      .values({ ...row, screenStatus: "hidden_pending_review" }),
+  const [written] = await database.batch([
+    insertWhileRoom(database, row, "hidden_pending_review"),
     enqueueForReview(database, {
       subjectType: "photo",
       subjectId: row.id,
@@ -225,7 +275,20 @@ async function wasStoredHeld(
     }),
     screeningHoldNotice(database, uploaderId, row.id),
   ]);
-  return true;
+  if (written.length > 0) return "held";
+  const queuedRow = and(
+    eq(reviewQueue.subjectType, "photo"),
+    eq(reviewQueue.subjectId, row.id),
+  );
+  const toldRow = and(
+    eq(notifications.userId, uploaderId),
+    eq(notifications.subjectId, row.id),
+  );
+  await database.batch([
+    database.delete(reviewQueue).where(queuedRow),
+    database.delete(notifications).where(toldRow),
+  ]);
+  return "full";
 }
 
 /**

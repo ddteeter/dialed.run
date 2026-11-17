@@ -10,10 +10,9 @@ import {
 } from "../../src/lib/contracts/rate-limits";
 import { newUlid } from "../../src/lib/ids";
 import {
+  claimLimit,
   claimRunnerChange,
   claimSignInTry,
-  claimTakedownReceipt,
-  claimVisitorResend,
   countSend,
 } from "../../src/modules/email";
 import {
@@ -58,9 +57,10 @@ describe("the rate-limit kinds", () => {
     await isWithinUploadCap(db, runner, NOW);
     await isWithinReportLimit(db, runner, NOW);
     await isWithinAtOnceLimit(db, runner, NOW);
-    await claimVisitorResend(db, "2001:db8:1:2::7", NOW);
-    await claimTakedownReceipt(db, "Someone@Example.test", NOW);
+    await claimLimit(db, "resend-visitor", "2001:db8:1:2::7", NOW);
+    await claimLimit(db, "takedown-to", "someone@example.test", NOW);
     await runnerWeatherBudget(runner)();
+    await claimLimit(db, "photo-runner", runner, NOW);
 
     const keys = await countedKeys(db);
     expect(keys).toStrictEqual(
@@ -78,6 +78,7 @@ describe("the rate-limit kinds", () => {
         "resend-visitor:2001:db8:1:2::/64",
         "takedown-to:someone@example.test",
         `weather-runner:${runner}`,
+        `photo-runner:${runner}`,
       ].toSorted((a, b) => a.localeCompare(b)),
     );
     const kinds = new Set(keys.map((key) => key.slice(0, key.indexOf(":"))));

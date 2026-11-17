@@ -79,3 +79,9 @@ export function photoProblem(file: File): string | undefined {
   }
   return undefined;
 }
+
+/**
+ * The refusal once a runner's day's photo uploads, kit and garment, are
+ * used up (SA-M14).
+ */
+export const PHOTO_LIMIT_REACHED = "photo uploads for today are used up";

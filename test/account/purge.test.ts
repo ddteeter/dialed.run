@@ -364,6 +364,7 @@ async function seedAccount(): Promise<Seeded> {
         countRow("change-runner", userId, 1, NOW),
         countRow("upload-runner", userId, 1, NOW),
         countRow("weather-runner", userId, 1, NOW),
+        countRow("photo-runner", userId, 1, NOW),
         ...addressesOf(email).flatMap((address) =>
           ADDRESS_SENDS.map((kind) => countRow(kind, address, 1, NOW)),
         ),
@@ -478,7 +479,12 @@ function addressCounts(email: string) {
 A runner's own count of one kind, which the purge forgets.
 */
 function runnersCount(
-  kind: "change-runner" | "enrich-runner" | "upload-runner" | "weather-runner",
+  kind:
+    | "change-runner"
+    | "enrich-runner"
+    | "upload-runner"
+    | "weather-runner"
+    | "photo-runner",
   userId: string,
 ) {
   return and(eq(rateLimits.kind, kind), eq(rateLimits.subject, userId));
@@ -682,6 +688,7 @@ async function footprint(seeded: Seeded) {
           addressCounts(seeded.email),
           runnersCount("change-runner", userId),
           runnersCount("weather-runner", userId),
+          runnersCount("photo-runner", userId),
         ),
       ),
     spendLimits: await core

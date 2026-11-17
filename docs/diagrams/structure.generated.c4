@@ -105,6 +105,7 @@ model {
   cf.app.auth -[imports]-> cf.app.safety
   cf.app.closet -[imports]-> cf.app.account
   cf.app.closet -[wiring]-> cf.app.auth
+  cf.app.closet -[imports]-> cf.app.email
   cf.app.closet -[imports]-> cf.app.enrichment
   cf.app.closet -[imports]-> cf.app.ops
   cf.app.closet -[imports]-> cf.app.products

@@ -287,23 +287,10 @@ export async function claimSignInTry(
 export const RESENDS_PER_VISITOR_PER_HOUR = 10;
 
 /**
- * Count one Resend for the visitor's IP (its network, SA-M11), and say
- * whether it may go.
+ * How many photos one runner may upload in a day, kit and garment alike
+ * (SA-M14). GUESS, held for the owner (design 231).
  */
-export async function claimVisitorResend(
-  db: Db,
-  visitor: string,
-  now = nowSeconds(),
-): Promise<SendClaim> {
-  return claimRateLimit(
-    db,
-    "resend-visitor",
-    visitor,
-    RESENDS_PER_VISITOR_PER_HOUR,
-    SEND_WINDOW_S,
-    now,
-  );
-}
+export const PHOTO_UPLOADS_PER_DAY = 50;
 
 /**
  * How many `/takedown` receipts one address may be sent in an hour,
@@ -312,23 +299,38 @@ export async function claimVisitorResend(
  */
 export const TAKEDOWN_RECEIPTS_PER_HOUR = 3;
 
+const DAY_S = 24 * 60 * 60;
+
 /**
- * Count one `/takedown` receipt to the typed address, lowercased, and say
- * whether it may go.
+ * The counts a caller claims by kind alone, each with its limit and its
+ * window: Resend per visitor (its IP), a runner's photo uploads (their
+ * id), and `/takedown`'s receipts per address (lowercased, as the
+ * request is).
  */
-export async function claimTakedownReceipt(
+const LIMIT_OF = {
+  "resend-visitor": {
+    limit: RESENDS_PER_VISITOR_PER_HOUR,
+    windowS: SEND_WINDOW_S,
+  },
+  "photo-runner": { limit: PHOTO_UPLOADS_PER_DAY, windowS: DAY_S },
+  "takedown-to": { limit: TAKEDOWN_RECEIPTS_PER_HOUR, windowS: SEND_WINDOW_S },
+} as const satisfies Partial<
+  Record<RateLimitKind, Readonly<{ limit: number; windowS: number }>>
+>;
+
+export type LimitedKind = keyof typeof LIMIT_OF;
+
+/**
+Count one of `kind` for `subject`, and say whether it may go.
+*/
+export async function claimLimit(
   db: Db,
-  address: string,
+  kind: LimitedKind,
+  subject: string,
   now = nowSeconds(),
 ): Promise<SendClaim> {
-  return claimRateLimit(
-    db,
-    "takedown-to",
-    sendSubject(address),
-    TAKEDOWN_RECEIPTS_PER_HOUR,
-    SEND_WINDOW_S,
-    now,
-  );
+  const { limit, windowS } = LIMIT_OF[kind];
+  return claimRateLimit(db, kind, subject, limit, windowS, now);
 }
 
 /**

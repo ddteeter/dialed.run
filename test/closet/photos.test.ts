@@ -17,8 +17,13 @@ import {
   getOwnedItem,
   NotFoundError,
 } from "../../src/modules/closet/service";
-import { outbox, wardrobeItems } from "../../src/db/schema-core";
-import { maxPhotoBytes } from "../../src/lib/photo-constraints";
+import { outbox, rateLimits, wardrobeItems } from "../../src/db/schema-core";
+import {
+  PHOTO_LIMIT_REACHED,
+  maxPhotoBytes,
+} from "../../src/lib/photo-constraints";
+import { PHOTO_UPLOADS_PER_DAY } from "../../src/modules/email/rate-limit";
+import { countRow } from "../rate-limit-rows";
 import {
   getItemPhotoObject,
   isPhotoSize,
@@ -985,5 +990,41 @@ describe("reasonFrom", () => {
     // crafted form reaching another runner's item.
     const form = formFor("not-a-ulid");
     await expect(uploadPhotoFromForm(db(), newUlid(), form)).rejects.toThrow();
+  });
+});
+
+describe("the runner's day's photo uploads (SA-M14)", () => {
+  it("refuses a garment photo past the day's uploads, storing nothing", async () => {
+    const client = db();
+    const userId = newUlid();
+    const item = await createItem(client, userId, {
+      category: "top",
+      name: "Limit test shirt",
+    });
+    await client
+      .insert(rateLimits)
+      .values(
+        countRow("photo-runner", userId, PHOTO_UPLOADS_PER_DAY, nowSeconds()),
+      );
+
+    await expect(
+      uploadItemPhoto(
+        client,
+        userId,
+        item.id,
+        new Uint8Array(samplePhotoBytes),
+        "image/jpeg",
+      ),
+    ).rejects.toThrow(new PhotoValidationError(PHOTO_LIMIT_REACHED));
+    expect(await storedKeys(photoKeyFor(userId, item.id))).toStrictEqual([]);
+  });
+
+  it("counts a garment photo against the runner's day", async () => {
+    const { client, userId } = await itemWithPhoto();
+    const [row] = await client
+      .select({ kind: rateLimits.kind, count: rateLimits.count })
+      .from(rateLimits)
+      .where(eq(rateLimits.subject, userId));
+    expect(row).toStrictEqual({ kind: "photo-runner", count: 1 });
   });
 });

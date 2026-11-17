@@ -27,7 +27,7 @@ import { nowSeconds } from "../../lib/now";
 import {
   claimEmailSend,
   claimRunnerChange,
-  claimVisitorResend,
+  claimLimit,
   deliverEmail,
   emailDebt,
   maskedAddress,
@@ -183,7 +183,7 @@ export async function resendConfirmation(
 ): Promise<ResendAnswer> {
   if (input.visitor.isLimited) {
     const visitor = input.visitor.ip ?? "unknown";
-    const claim = await claimVisitorResend(db, visitor, now);
+    const claim = await claimLimit(db, "resend-visitor", visitor, now);
     if (!claim.isAllowed) {
       return { status: "visitor-limited", until: claim.until };
     }

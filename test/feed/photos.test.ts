@@ -4,7 +4,11 @@ import { ForbiddenError, getEntryDetail } from "../../src/modules/feed/entries";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
-import { entryPhotos, outfitEntries } from "../../src/db/schema-core";
+import {
+  entryPhotos,
+  outfitEntries,
+  rateLimits,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import {
   entryPhotoIdOf,
@@ -12,6 +16,10 @@ import {
   entryPhotoPrefix,
 } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
+import { nowSeconds } from "../../src/lib/now";
+import { PHOTO_LIMIT_REACHED } from "../../src/lib/photo-constraints";
+import { PHOTO_UPLOADS_PER_DAY } from "../../src/modules/email/rate-limit";
+import { countRow } from "../rate-limit-rows";
 import { imageDimensions } from "../../src/lib/photo-pipeline";
 import {
   InvalidPhotoError,
@@ -613,5 +621,88 @@ describe("photoResponse: the whole cached GET, in one function", () => {
 
     const gone = await photoResponse(key, userId);
     expect(gone.status).toBe(404);
+  });
+});
+
+describe("bounds on what one runner stores (SA-M14)", () => {
+  it("holds a kit to four photos when uploads race, and keeps no object without a row", async () => {
+    const userId = await makeUser();
+    const runId = await makeRun({ userId });
+    const entryId = await makeEntry({ userId, runId });
+
+    const attempts = await Promise.allSettled(
+      Array.from({ length: 8 }, () =>
+        uploadPhoto({
+          userId,
+          entryId,
+          contentType: "image/jpeg",
+          bytes: JPEG_BYTES,
+        }),
+      ),
+    );
+
+    const rows = await drizzle(env.DIALED_CORE)
+      .select({ position: entryPhotos.position })
+      .from(entryPhotos)
+      .where(eq(entryPhotos.entryId, entryId));
+    expect(rows).toHaveLength(MAX_PHOTOS_PER_ENTRY);
+    expect(
+      rows.map((row) => row.position).toSorted((a, b) => a - b),
+    ).toStrictEqual([0, 1, 2, 3]);
+    const refused = attempts.filter((a) => a.status === "rejected");
+    expect(refused).toHaveLength(8 - MAX_PHOTOS_PER_ENTRY);
+    for (const attempt of refused) {
+      expect(attempt.reason).toBeInstanceOf(InvalidPhotoError);
+      expect(String(attempt.reason)).toContain("at most 4 photos per entry");
+    }
+    const listed = await env.MEDIA.list({
+      prefix: entryPhotoPrefix(userId, entryId),
+    });
+    expect(listed.objects).toHaveLength(MAX_PHOTOS_PER_ENTRY);
+  });
+
+  it("refuses a runner's photo past the day's uploads, before storing anything", async () => {
+    const userId = await makeUser();
+    const runId = await makeRun({ userId });
+    const entryId = await makeEntry({ userId, runId });
+    await drizzle(env.DIALED_CORE)
+      .insert(rateLimits)
+      .values(
+        countRow("photo-runner", userId, PHOTO_UPLOADS_PER_DAY, nowSeconds()),
+      );
+
+    await expect(
+      uploadPhoto({
+        userId,
+        entryId,
+        contentType: "image/jpeg",
+        bytes: JPEG_BYTES,
+      }),
+    ).rejects.toThrow(new InvalidPhotoError(PHOTO_LIMIT_REACHED));
+    const listed = await env.MEDIA.list({
+      prefix: entryPhotoPrefix(userId, entryId),
+    });
+    expect(listed.objects).toHaveLength(0);
+  });
+
+  it("counts each upload once, and a repeat of one submission not again", async () => {
+    const userId = await makeUser();
+    const runId = await makeRun({ userId });
+    const entryId = await makeEntry({ userId, runId });
+    const upload = {
+      userId,
+      entryId,
+      contentType: "image/jpeg",
+      bytes: JPEG_BYTES,
+      idempotencyKey: newUlid(),
+    };
+    await uploadPhoto(upload);
+    await uploadPhoto(upload);
+
+    const [row] = await drizzle(env.DIALED_CORE)
+      .select({ kind: rateLimits.kind, count: rateLimits.count })
+      .from(rateLimits)
+      .where(eq(rateLimits.subject, userId));
+    expect(row).toStrictEqual({ kind: "photo-runner", count: 1 });
   });
 });

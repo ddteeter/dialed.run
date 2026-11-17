@@ -43,12 +43,7 @@ import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { operatorEmailMessage } from "../../lib/sql/outbox";
-import {
-  claimTakedownReceipt,
-  countSend,
-  emailDebt,
-  sendClaimOf,
-} from "../email";
+import { claimLimit, countSend, emailDebt, sendClaimOf } from "../email";
 import { adminUserIds } from "./admin";
 import { REMOVAL_DUE_SECONDS, removalDueLabel } from "./contracts";
 import { subjectCacheTagsOf } from "./kit-cache-tags";
@@ -237,7 +232,7 @@ async function limitedUntil(
   );
   const claim = sendClaimOf(counted);
   if (!claim.isAllowed) return claim.until;
-  const receipt = await claimTakedownReceipt(db, email, now);
+  const receipt = await claimLimit(db, "takedown-to", email, now);
   return receipt.isAllowed ? undefined : receipt.until;
 }
 

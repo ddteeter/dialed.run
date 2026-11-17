@@ -13,7 +13,11 @@ import type { drizzle } from "drizzle-orm/d1";
 
 import { wardrobeItems } from "../../db/schema-core";
 import { newUlid, ulidSchema } from "../../lib/ids";
-import { isAllowedPhotoType, maxPhotoBytes } from "../../lib/photo-constraints";
+import {
+  PHOTO_LIMIT_REACHED,
+  isAllowedPhotoType,
+  maxPhotoBytes,
+} from "../../lib/photo-constraints";
 import { env, primaryCoreDb } from "../../env";
 import {
   fitWithin,
@@ -24,6 +28,7 @@ import { garmentOriginalKey, photoKeyFor } from "../../lib/garment-photo-key";
 import { nowSeconds } from "../../lib/now";
 import { fingerprintOf } from "../../lib/photo-fingerprint";
 import { ownedBy } from "../../lib/sql/owned";
+import { claimLimit } from "../email";
 import { getOwnedItem } from "./service";
 import {
   captureException,
@@ -103,6 +108,10 @@ export async function uploadItemPhoto(
   const refusal = photoRefusal(bytes);
   if (refusal !== undefined) throw new PhotoValidationError(refusal);
   await getOwnedItem(db, userId, itemId);
+  // One of the runner's day's photo uploads (SA-M14), counted before
+  // anything is decoded or stored.
+  const claim = await claimLimit(db, "photo-runner", userId);
+  if (!claim.isAllowed) throw new PhotoValidationError(PHOTO_LIMIT_REACHED);
 
   // Lazily imported on purpose: this package ships a WASM module, and a
   // static import instantiates it during worker startup — a cost paid by
