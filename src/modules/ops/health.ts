@@ -33,7 +33,7 @@ export interface HealthReport {
 /**
  * Vars a production deployment cannot do without, which a binding check
  * would never notice. `BETTER_AUTH_URL` decides where Better Auth sends
- * callbacks and whether its cookies carry the `__Secure-` prefix (audit
+ * callbacks and whether its cookies carry the `__Host-` prefix (audit
  * finding 0.7); unset, auth half-works, which is worse than not at all.
  * `UNSUBSCRIBE_SECRET` signs unsubscribe links; unset, no optional email
  * goes and every link is refused (task 126, fail closed).

@@ -1101,7 +1101,7 @@ describe("the age gate", () => {
       message: "dialed.run is for runners 18 and over.",
     });
     expect(response.headers.getSetCookie()).toEqual([
-      "dialed_age_refused=1; Max-Age=86400; Path=/; HttpOnly; Secure; SameSite=Lax",
+      "__Host-dialed_age_refused=1; Max-Age=86400; Path=/; HttpOnly; Secure; SameSite=Lax",
     ]);
     expect(await accountFor(email)).toBeUndefined();
   });
@@ -1109,7 +1109,7 @@ describe("the age gate", () => {
   it("refuses a browser it refused in the last day, whatever date it sends now", async () => {
     const { response, email } = await emailSignUp(
       accessGate(db, turnstile().verify),
-      { cookie: "theme=dark; dialed_age_refused=1" },
+      { cookie: "theme=dark; __Host-dialed_age_refused=1" },
     );
     expect(response.status).toBe(403);
     expect(await refusal(response)).toMatchObject({ code: "AGE_REFUSED" });
@@ -1119,7 +1119,16 @@ describe("the age gate", () => {
   it("reads only its own cookie, not one whose name merely ends the same", async () => {
     const { response, email } = await emailSignUp(
       accessGate(db, turnstile().verify),
-      { cookie: "not_dialed_age_refused=1" },
+      { cookie: "not___Host-dialed_age_refused=1" },
+    );
+    expect(response.status).toBe(200);
+    expect(await accountFor(email)).toBeDefined();
+  });
+
+  it("reads only the __Host- name, which no other host can set (SA-M35)", async () => {
+    const { response, email } = await emailSignUp(
+      accessGate(db, turnstile().verify),
+      { cookie: "dialed_age_refused=1" },
     );
     expect(response.status).toBe(200);
     expect(await accountFor(email)).toBeDefined();
@@ -1159,7 +1168,7 @@ describe("the age gate", () => {
     expect(started.status).toBe(403);
     expect(await refusal(started)).toMatchObject({ code: "AGE_REFUSED" });
     expect(started.headers.getSetCookie()[0]).toMatch(
-      /^dialed_age_refused=1;/u,
+      /^__Host-dialed_age_refused=1;/u,
     );
   });
 
@@ -1271,7 +1280,7 @@ describe("admitSignUp's age check", () => {
 
   it("refuses on the cookie alone, before reading any date", async () => {
     await expect(
-      admitSignUp(ageGate, google({ cookie: "dialed_age_refused=1" })),
+      admitSignUp(ageGate, google({ cookie: "__Host-dialed_age_refused=1" })),
     ).rejects.toMatchObject({ body: { code: "AGE_REFUSED" } });
   });
 

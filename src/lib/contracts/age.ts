@@ -96,7 +96,8 @@ export const AGE_CODES = {
 /**
  * The cookie a refusal sets: while it is present the gate refuses whatever
  * date is typed, so Back and an earlier year does not get through. A day,
- * so a runner who mistyped their year is not shut out for long.
+ * so a runner who mistyped their year is not shut out for long. `__Host-`
+ * (SA-M35, design 230): only this host can set it.
  */
-export const AGE_REFUSED_COOKIE = "dialed_age_refused";
+export const AGE_REFUSED_COOKIE = "__Host-dialed_age_refused";
 export const AGE_REFUSED_SECONDS = 24 * 60 * 60;

@@ -86,7 +86,9 @@ describe("the app auth instance", () => {
       enabled: true,
       storage: "database",
     });
-    expect(auth.options.advanced).toMatchObject({ useSecureCookies: true });
+    expect(auth.options.advanced).toMatchObject({
+      cookiePrefix: "__Host-better-auth",
+    });
   });
 
   it("carries the framework cookie plugin", () => {

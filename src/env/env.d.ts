@@ -74,7 +74,7 @@ declare namespace Cloudflare {
     TURNSTILE_SITE_KEY?: string;
     /** The app's public origin, `https://…` in production (125, OPS-4).
      * Better Auth builds its callbacks from it, and its scheme decides the
-     * `__Secure-` cookie prefix. A var in wrangler.jsonc, set by the
+     * `__Host-` cookie prefix. A var in wrangler.jsonc, set by the
      * owner; `/api/health` names it when absent. */
     BETTER_AUTH_URL?: string;
     /** The public photo bucket's origin (D-153, design 163 step 8), a var

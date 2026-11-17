@@ -51,7 +51,7 @@ function requestWith(cookie?: string): Request {
 
 function sentBookmark(response: Response): string | undefined {
   const header = response.headers.get("set-cookie");
-  return /^d1b=([^;]+);/.exec(header ?? "")?.[1];
+  return /^__Host-d1b=([^;]+);/.exec(header ?? "")?.[1];
 }
 
 describe("respondInD1Scope", () => {
@@ -59,7 +59,7 @@ describe("respondInD1Scope", () => {
     const spy = spiedBinding();
     const { deps } = harness();
     await respondInD1Scope(
-      requestWith(`other=1; d1b=${DEVICE}`),
+      requestWith(`other=1; __Host-d1b=${DEVICE}`),
       async () => {
         await scopedDb(spy.binding, "core").all(sql`select 1`);
         return new Response("ok");
@@ -94,7 +94,7 @@ describe("respondInD1Scope", () => {
   it("adds no cookie to a request that read nothing", async () => {
     const { deps } = harness();
     const response = await respondInD1Scope(
-      requestWith(`d1b=${DEVICE}`),
+      requestWith(`__Host-d1b=${DEVICE}`),
       () => new Response("ok"),
       deps,
     );
@@ -160,7 +160,7 @@ describe("respondInD1Scope", () => {
   it("reports a session whose bookmark went backwards", async () => {
     const { deps, captured } = harness();
     const response = await respondInD1Scope(
-      requestWith(`d1b=${LATER}`),
+      requestWith(`__Host-d1b=${LATER}`),
       async () => {
         await scopedDb(
           spiedBinding(env.DIALED_CORE, DEVICE).binding,
@@ -184,7 +184,7 @@ describe("respondInD1Scope", () => {
   it("reports nothing for a session that moved forward", async () => {
     const { deps, captured } = harness();
     await respondInD1Scope(
-      requestWith(`d1b=${DEVICE}`),
+      requestWith(`__Host-d1b=${DEVICE}`),
       async () => {
         await scopedDb(
           spiedBinding(env.DIALED_CORE, LATER).binding,
