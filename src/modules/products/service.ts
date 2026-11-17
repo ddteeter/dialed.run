@@ -6,14 +6,15 @@
  * pages is lane 107's; this module only owns identity + the fields a user
  * can type directly.
  */
-import { and, eq, gte, inArray, lt, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt, sql, type SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
-import { brands, products } from "../../db/schema-core";
+import { brands, products, wardrobeItems } from "../../db/schema-core";
 import { fabricPartsSchema, type FabricPart } from "../../lib/contracts";
 import { readInChunks } from "../../lib/chunked";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
+import { qualified } from "../../lib/sql/qualified";
 import { hasWrittenSpecs } from "./apply-extraction";
 import { newUlid } from "../../lib/ids";
 import { normalizeIdentity } from "../../lib/normalize";
@@ -143,7 +144,9 @@ export async function searchBrands(
         .from(brands)
         // fallow-ignore-next-line code-duplication -- two prefix searches over different tables; searchProducts also filters status='active', a moderation rule that belongs in sight at its own call site rather than inside a shared helper's argument
         .where(matches)
-        .orderBy(brands.name)
+        // The curated brands first (design 232): a typed brand that sorts
+        // ahead of a seeded one cannot push it off the list.
+        .orderBy(desc(brands.seeded), brands.name)
         .limit(limit);
 }
 
@@ -284,8 +287,19 @@ export async function productsForBrand(
         .where(
           and(eq(products.brandId, brand.id), eq(products.status, "active")),
         )
-        .orderBy(products.name)
+        .orderBy(desc(wornBeyondItsMaker()), products.name)
         .limit(limit);
+}
+
+/**
+ * Whether a runner other than the one who made the product wears it
+ * (design 232): what puts a model on the brand's chips ahead of ones only
+ * their maker typed, so a few typed rows that sort first cannot fill the
+ * list. One `wardrobe_product` probe a product, stopping at the first
+ * other runner, rather than a count of every garment.
+ */
+function wornBeyondItsMaker(): SQL {
+  return sql`exists (select 1 from ${wardrobeItems} where ${qualified(wardrobeItems, wardrobeItems.productId)} = ${qualified(products, products.id)} and ${qualified(wardrobeItems, wardrobeItems.userId)} <> ${qualified(products, products.createdBy)})`;
 }
 
 export async function resolveProduct(

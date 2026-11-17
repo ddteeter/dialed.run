@@ -16,7 +16,7 @@ import {
   searchBrands,
   searchProducts,
 } from "../../src/modules/products/service";
-import { brands, products } from "../../src/db/schema-core";
+import { brands, products, wardrobeItems } from "../../src/db/schema-core";
 import { CURATED_BRANDS } from "../../src/modules/products/seed-brands";
 import { normalizeIdentity } from "../../src/lib/normalize";
 import { nowSeconds } from "../../src/lib/now";
@@ -129,7 +129,6 @@ async function made(sourceUrl?: string) {
 }
 
 describe("products: the first pasted link (design 163, Q1)", () => {
-
   it("fills the link of a product first made without one", async () => {
     const { brandId, product } = await made();
     const again = await createOrGetProduct(db(), {
@@ -729,3 +728,90 @@ describe("prefix autocomplete is an index range", () => {
     expect(ids).toStrictEqual([inside.id]);
   });
 });
+
+describe("suggestions typed rows cannot crowd out (design 232)", () => {
+  it("offers a seeded brand ahead of typed brands that sort before it", async () => {
+    const client = db();
+    const stem = `Zeta${newUlid()}`;
+    await client.insert(brands).values({
+      id: newUlid(),
+      name: stem,
+      normalized: normalizeIdentity(stem),
+      seeded: true,
+    });
+    for (let n = 0; n < 8; n += 1) {
+      await createOrGetBrand(client, `${stem.toUpperCase()} ${String(n)}`);
+    }
+
+    const offered = await searchBrands(client, stem, 8);
+
+    expect(offered[0]?.name).toBe(stem);
+  });
+
+  it("offers a model someone besides its maker wears ahead of typed models that sort before it", async () => {
+    const client = db();
+    const brandName = `Brand${newUlid()}`;
+    const brand = await createOrGetBrand(client, brandName);
+    const maker = newUlid();
+    const worn = await createOrGetProduct(client, {
+      brandId: brand.id,
+      name: "Zephyr",
+      createdBy: maker,
+    });
+    const typist = newUlid();
+    for (let n = 0; n < 8; n += 1) {
+      const typed = await createOrGetProduct(client, {
+        brandId: brand.id,
+        name: `!${String(n)} typed`,
+        createdBy: typist,
+      });
+      await linkedGarment(typed.id, typist);
+    }
+    await linkedGarment(worn.id, maker);
+    await linkedGarment(worn.id, newUlid());
+
+    const offered = await productsForBrand(client, brandName, 8);
+
+    expect(offered[0]?.id).toBe(worn.id);
+    expect(offered.slice(1).map((product) => product.name)).toStrictEqual(
+      Array.from({ length: 7 }, (_, n) => `!${String(n)} typed`),
+    );
+  });
+
+  it("does not lift a model worn only by its maker", async () => {
+    const client = db();
+    const brandName = `Brand${newUlid()}`;
+    const brand = await createOrGetBrand(client, brandName);
+    const maker = newUlid();
+    const own = await createOrGetProduct(client, {
+      brandId: brand.id,
+      name: "Zephyr",
+      createdBy: maker,
+    });
+    await linkedGarment(own.id, maker);
+    await createOrGetProduct(client, {
+      brandId: brand.id,
+      name: "Apex",
+      createdBy: newUlid(),
+    });
+
+    const offered = await productsForBrand(client, brandName, 8);
+
+    expect(offered.map((product) => product.name)).toStrictEqual([
+      "Apex",
+      "Zephyr",
+    ]);
+  });
+});
+
+async function linkedGarment(productId: string, userId: string): Promise<void> {
+  await db().insert(wardrobeItems).values({
+    id: newUlid(),
+    userId,
+    category: "top",
+    name: "Linked",
+    origin: "manual",
+    productId,
+    createdAt: nowSeconds(),
+  });
+}

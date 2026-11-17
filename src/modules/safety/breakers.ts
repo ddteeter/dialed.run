@@ -40,7 +40,6 @@ import {
 } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
-import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 
 import {
   entryPhotos,
@@ -51,6 +50,7 @@ import {
 } from "../../db/schema-core";
 import { HOLD_CAUSES, type HoldCause } from "../../lib/contracts/hold-causes";
 import { hasRowWhere } from "../../lib/sql/keyed-read";
+import { qualified } from "../../lib/sql/qualified";
 import { noReportHidingAtOnce } from "./at-once";
 import { reportSubjectsThatHide } from "./contracts";
 import { counted } from "./takedown-limits";
@@ -491,13 +491,6 @@ async function screenedIn(
     .where(screenedWithin(verdicts, since, until));
   const flagged = rows.reduce((total, row) => total + row.flagged, 0);
   return { flagged, screened: counted(rows) };
-}
-
-/**
-A column named with its table, so a correlated subquery cannot read it bare.
-*/
-function qualified(table: SQLiteTable, column: SQLiteColumn): SQL {
-  return sql`${table}.${sql.identifier(column.name)}`;
 }
 
 /**
