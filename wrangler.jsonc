@@ -14,6 +14,14 @@
     "enabled": true,
   },
   "upload_source_maps": true,
+  // One origin, written out (SA-L08), never left to a default: no version
+  // preview URLs at all, since each would serve an old version against
+  // the live bindings; the gradual-deploy smoke test uses the
+  // version-override header on the real hostname instead. workers.dev
+  // stays on only until the deployment sweep attaches dialed.run, the
+  // step that also turns it off (docs/launch/deployment-plan.md §3.3).
+  "preview_urls": false,
+  "workers_dev": true,
   // Workers Caching (owner-approved, 2026-10-28; design 163, D-154): the
   // open web's pages (/kit/<id>, /@handle, the kit's card) leave with
   // `Cache-Control: public, max-age=60` and a `Cache-Tag`, and the edge

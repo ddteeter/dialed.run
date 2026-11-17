@@ -191,6 +191,11 @@ function opsBinding(bound: unknown): unknown {
 describe("wrangler.jsonc matches the code that depends on it", () => {
   const config: unknown = JSON.parse(stripJsonc(wranglerJsonc));
 
+  it("answers on no version preview URL, and names workers.dev outright (SA-L08)", () => {
+    // Both written out, so neither is left to Cloudflare's default.
+    expect(config).toMatchObject({ preview_urls: false, workers_dev: true });
+  });
+
   it("registers every cron the scheduled handler knows how to run", () => {
     // Sets, not sorted arrays: order is meaningless here and ES2022 has
     // no toSorted, which the lint config would otherwise demand.
