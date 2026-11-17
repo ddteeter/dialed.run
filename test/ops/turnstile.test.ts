@@ -9,6 +9,7 @@ import {
   type TurnstileAttempt,
   type TurnstileVerdict,
 } from "../../src/modules/ops/turnstile";
+import type { TurnstileAction } from "../../src/lib/turnstile-actions";
 
 /**
  * Turnstile's server half (OPS-5). Every way a token can be refused, and
@@ -26,8 +27,9 @@ An attempt on this app's own host.
 function attempt(
   token: string | undefined,
   remoteIp: string | undefined,
+  action?: TurnstileAction,
 ): TurnstileAttempt {
-  return { token, remoteIp, hostname: HOST };
+  return { token, remoteIp, hostname: HOST, action };
 }
 
 /**
@@ -314,6 +316,78 @@ describe("verifyTurnstile", () => {
     );
 
     expect(verdict).toMatchObject({ ok: false, reason: "wrong-hostname" });
+  });
+
+  it("refuses a token solved for another form's action (SA-L07)", async () => {
+    const verdict = await verifyTurnstile(
+      SECRET,
+      attempt("tok", undefined, "sign-up"),
+      answering({ success: true, action: "takedown" }),
+    );
+
+    expect(verdict).toStrictEqual({
+      ok: false,
+      reason: "wrong-action",
+      codes: [],
+    });
+  });
+
+  it("refuses an answer that names no action when one is expected", async () => {
+    const verdict = await verifyTurnstile(
+      SECRET,
+      attempt("tok", undefined, "takedown"),
+      answering({ success: true }),
+    );
+
+    expect(verdict).toMatchObject({ ok: false, reason: "wrong-action" });
+  });
+
+  it("accepts a token solved for the form's own action", async () => {
+    const verdict = await verifyTurnstile(
+      SECRET,
+      attempt("tok", undefined, "request-access"),
+      answering({ success: true, action: "request-access" }),
+    );
+
+    expect(verdict).toStrictEqual({ ok: true });
+  });
+
+  it("checks the site before the action", async () => {
+    const verdict = await verifyTurnstile(
+      SECRET,
+      attempt("tok", undefined, "sign-up"),
+      answering({
+        success: true,
+        hostname: "phish.example",
+        action: "takedown",
+      }),
+    );
+
+    expect(verdict).toMatchObject({ ok: false, reason: "wrong-hostname" });
+  });
+
+  it("accepts any action where none is expected (the marketing form)", async () => {
+    const verdict = await verifyTurnstile(
+      SECRET,
+      attempt("tok", undefined),
+      answering({ success: true, action: "whatever-it-sends" }),
+    );
+
+    expect(verdict).toStrictEqual({ ok: true });
+  });
+
+  it("accepts the test key's answer, which names no form, for any action", async () => {
+    const verdict = await verifyTurnstile(
+      "1x0000000000000000000000000000000AA",
+      attempt("XXXX.DUMMY.TOKEN.XXXX", undefined, "sign-up"),
+      answering({
+        success: true,
+        hostname: "example.com",
+        metadata: { result_with_testing_key: true },
+      }),
+    );
+
+    expect(verdict).toStrictEqual({ ok: true });
   });
 
   it("refuses an answer of the wrong shape", async () => {

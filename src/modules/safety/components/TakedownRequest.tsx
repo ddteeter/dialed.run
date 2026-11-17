@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { JSX } from "react";
 
 import { takedownRequestSchema } from "../../../lib/contracts/takedown";
+import { TURNSTILE_ACTIONS } from "../../../lib/turnstile-actions";
 import {
   FieldMessage,
   FormElement,
@@ -177,7 +178,7 @@ export function TakedownRequest({
           refusal={outcome}
           onRetryRefusal={submit}
           siteKey={siteKey}
-          action="takedown"
+          action={TURNSTILE_ACTIONS.takedown}
           turnstile={turnstile}
           label="Send the request"
           pendingLabel="Sending the request"

@@ -712,6 +712,7 @@ const ATTEMPT: TurnstileAttempt = {
   token: "t",
   remoteIp: "203.0.113.9",
   hostname: "dialed.run",
+  action: "request-access",
 };
 
 describe("requestAccess (Au5)", () => {
@@ -1020,21 +1021,23 @@ describe("turnstileAttempt", () => {
     const request = new Request("https://dialed.run/api/auth/sign-up/email", {
       headers: { "cf-connecting-ip": "198.51.100.4" },
     });
-    expect(turnstileAttempt("t", request)).toStrictEqual({
+    expect(turnstileAttempt("t", request, "takedown")).toStrictEqual({
       token: "t",
       remoteIp: "198.51.100.4",
       hostname: "dialed.run",
+      action: "takedown",
     });
   });
 
   it("has no address and no host without a request", () => {
-    expect(turnstileAttempt(undefined, undefined)).toStrictEqual({
+    expect(turnstileAttempt(undefined, undefined, undefined)).toStrictEqual({
       token: undefined,
       remoteIp: undefined,
       hostname: "",
+      action: undefined,
     });
     expect(
-      turnstileAttempt("t", new Request("https://dialed.run/")),
+      turnstileAttempt("t", new Request("https://dialed.run/"), undefined),
     ).toMatchObject({ remoteIp: undefined });
   });
 });
@@ -1114,7 +1117,12 @@ describe("accessGate", () => {
       false,
     );
     expect(yes.seen).toStrictEqual([
-      { token: "t", remoteIp: undefined, hostname: "dialed.run" },
+      {
+        token: "t",
+        remoteIp: undefined,
+        hostname: "dialed.run",
+        action: "sign-up",
+      },
     ]);
   });
 });

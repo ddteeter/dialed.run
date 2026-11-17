@@ -13,6 +13,8 @@ import type { BlockedRegion, FormRefusal } from "../../lib/contracts/access";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import { orSqlNull } from "../../lib/sql/sql-null";
+import { TURNSTILE_ACTIONS } from "../../lib/turnstile-actions";
+import type { TurnstileAction } from "../../lib/turnstile-actions";
 import { countSend, sendAllowed, sendClaimOf } from "../email";
 import type { TurnstileAttempt, TurnstileVerdict } from "../ops";
 import { isClosedAddress } from "./closed-addresses";
@@ -30,11 +32,13 @@ type Db = ReturnType<typeof drizzle>;
 export function turnstileAttempt(
   token: string | undefined,
   request: Request | undefined,
+  action: TurnstileAction | undefined,
 ): TurnstileAttempt {
   return {
     token,
     remoteIp: request?.headers.get("cf-connecting-ip") ?? undefined,
     hostname: request === undefined ? "" : new URL(request.url).hostname,
+    action,
   };
 }
 
@@ -58,7 +62,9 @@ export function accessGate(
       token: string | undefined,
       request: Request | undefined,
     ) => {
-      const verdict = await verify(turnstileAttempt(token, request));
+      const verdict = await verify(
+        turnstileAttempt(token, request, TURNSTILE_ACTIONS.signUp),
+      );
       return verdict.ok;
     },
     standing: (code: string) => inviteStanding(db, code),

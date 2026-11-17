@@ -25,6 +25,7 @@ import {
 } from "../auth";
 import { nowSeconds } from "../../lib/now";
 import { noInput } from "../../lib/no-input";
+import { TURNSTILE_ACTIONS } from "../../lib/turnstile-actions";
 import { emailDepsFromEnv } from "../email";
 import {
   captureException,
@@ -178,7 +179,7 @@ export const resendConfirmationFn = createServerFn({ method: "POST" })
       {
         email: data.email,
         visitor: {
-          ip: turnstileAttempt(undefined, getRequest()).remoteIp,
+          ip: turnstileAttempt(undefined, getRequest(), undefined).remoteIp,
           isLimited: deploymentPosture(env.BETTER_AUTH_URL).rateLimited,
         },
       },
@@ -260,7 +261,11 @@ export const requestAccessFn = createServerFn({ method: "POST" })
       {
         email: data.email,
         note: data.note,
-        attempt: turnstileAttempt(data.turnstileToken, getRequest()),
+        attempt: turnstileAttempt(
+          data.turnstileToken,
+          getRequest(),
+          TURNSTILE_ACTIONS.requestAccess,
+        ),
         isLimited: deploymentPosture(env.BETTER_AUTH_URL).rateLimited,
         blockedRegion: blockedRegionOf(getRequest()),
       },
