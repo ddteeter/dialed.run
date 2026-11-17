@@ -29,9 +29,10 @@ type PayloadOf<K extends OutboxKind> = Extract<
 
 /**
  * What a handler's run answers when it did part of the work and owes the
- * rest (design 232). Anything else it resolves to means done.
+ * rest (design 232). Anything else it resolves to means done. A symbol,
+ * so no other value a handler resolves to can be mistaken for it.
  */
-export const OWED_AGAIN = "again";
+export const OWED_AGAIN: unique symbol = Symbol();
 
 export type OutboxHandlers = {
   readonly [K in OutboxKind]: {
