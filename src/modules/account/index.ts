@@ -50,5 +50,5 @@ export type {
   AuthMail,
   ChangeResult,
   Landing,
-  ResendResult,
+  ResendAnswer,
 } from "./verification";

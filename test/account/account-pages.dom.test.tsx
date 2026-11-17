@@ -41,7 +41,7 @@ import {
 import type {
   ChangeResult,
   Landing,
-  ResendResult,
+  ResendAnswer,
 } from "../../src/modules/account/verification";
 import { SECONDARY_PILL } from "../../src/ui";
 import { UnconfirmedRefusalAnswer } from "../../src/ui/unconfirmed-refusal";
@@ -87,7 +87,7 @@ async function renderWithRouter(element: ReactElement) {
   return { router, ...render(<RouterProvider router={router} />) };
 }
 
-function resender(...answers: (ResendResult | Error)[]) {
+function resender(...answers: (ResendAnswer | Error)[]) {
   return vi.fn(() => {
     const answer = answers.shift() ?? { status: "sent" };
     return answer instanceof Error
@@ -189,7 +189,7 @@ describe("ResendLink", () => {
   });
 
   it("brackets the button while it sends, and never disables it", async () => {
-    const pending = Promise.withResolvers<ResendResult>();
+    const pending = Promise.withResolvers<ResendAnswer>();
     const resend = vi.fn(() => pending.promise);
     const user = userEvent.setup();
     render(
@@ -237,6 +237,35 @@ describe("ResendLink", () => {
     await user.click(screen.getByRole("button", { name: "Try again" }));
     expect(resend).toHaveBeenCalledTimes(2);
     expect(await screen.findByText(/^Sent ✓/u)).toBeVisible();
+    expect(screen.queryByText(message)).toBeNull();
+  });
+
+  it("bands NOT SENT with the visitor's own sentence when their Resends are used up (SA-M12)", async () => {
+    const resend = resender(
+      { status: "visitor-limited", until: UNTIL },
+      { status: "limited", until: UNTIL },
+    );
+    const user = userEvent.setup();
+    render(
+      <ResendLink email="maya@example.com" resend={resend} viewer={CHICAGO} />,
+    );
+
+    await user.click(resendButton());
+    const message =
+      "Too many links from here this hour. You can send another at 2:00 AM.";
+    const band = await screen.findByText(message);
+    expect(band.closest("[data-part=failure-band]")).toHaveTextContent(
+      /Not sent/u,
+    );
+    expect(screen.queryByText(/^Sent ✓/u)).toBeNull();
+
+    // The address's own limit after it reads its own sentence.
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(
+      await screen.findByText(
+        "That's 5 links this hour. You can send another at 2:00 AM.",
+      ),
+    ).toBeVisible();
     expect(screen.queryByText(message)).toBeNull();
   });
 

@@ -12,6 +12,8 @@ import { newUlid } from "../../src/lib/ids";
 import {
   claimRunnerChange,
   claimSignInTry,
+  claimTakedownReceipt,
+  claimVisitorResend,
   countSend,
 } from "../../src/modules/email";
 import {
@@ -55,6 +57,8 @@ describe("the rate-limit kinds", () => {
     await isWithinUploadCap(db, runner, NOW);
     await isWithinReportLimit(db, runner, NOW);
     await isWithinAtOnceLimit(db, runner, NOW);
+    await claimVisitorResend(db, "2001:db8:1:2::7", NOW);
+    await claimTakedownReceipt(db, "Someone@Example.test", NOW);
 
     const keys = await countedKeys(db);
     expect(keys).toStrictEqual(
@@ -69,6 +73,8 @@ describe("the rate-limit kinds", () => {
         "csp-report:203.0.113.9",
         `report-runner:${runner}`,
         `report-at-once:${runner}`,
+        "resend-visitor:2001:db8:1:2::/64",
+        "takedown-to:someone@example.test",
       ].toSorted((a, b) => a.localeCompare(b)),
     );
     const kinds = new Set(keys.map((key) => key.slice(0, key.indexOf(":"))));

@@ -45,7 +45,11 @@ export const SEND_LIMIT_KINDS = [
  * - `report-runner` — one runner's reports in a day; the runner's id
  *   (design 232);
  * - `report-at-once` — one runner's reports a day that hide at once, of a
- *   reason on the removal clock; the runner's id (design 232).
+ *   reason on the removal clock; the runner's id (design 232);
+ * - `resend-visitor` — Au4's Resend, per visitor, before the address is
+ *   counted (SA-M12); the visitor's IP;
+ * - `takedown-to` — `/takedown`'s receipts to one address, whoever asks
+ *   (SA-M11); the address, lowercased.
  */
 export const RATE_LIMIT_KINDS = [
   ...SEND_LIMIT_KINDS,
@@ -58,7 +62,19 @@ export const RATE_LIMIT_KINDS = [
   "csp-report",
   "report-runner",
   "report-at-once",
+  "resend-visitor",
+  "takedown-to",
 ] as const;
+
+/**
+ * The kinds whose subject is a visitor's IP. Their key is the address's
+ * network (`visitorAddress`, SA-M11), so one line is one visitor.
+ */
+export const VISITOR_KINDS = [
+  "access",
+  "takedown",
+  "resend-visitor",
+] as const satisfies readonly (typeof RATE_LIMIT_KINDS)[number][];
 
 export type SendLimitKind = (typeof SEND_LIMIT_KINDS)[number];
 export type RateLimitKind = (typeof RATE_LIMIT_KINDS)[number];

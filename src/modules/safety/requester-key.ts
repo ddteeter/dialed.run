@@ -13,6 +13,7 @@
 import normalizeEmail from "validator/lib/normalizeEmail";
 
 import { hmacKey } from "../../lib/hmac-key";
+import { visitorAddress } from "../../lib/visitor-address";
 
 export function requesterKey(email: string): string {
   const typed = email.trim().toLowerCase();
@@ -38,7 +39,8 @@ export async function ipSigningKey(secret: string): Promise<CryptoKey> {
 
 /**
  * The visitor's IP as a key (design 137): HMAC-SHA-256 under
- * `TAKEDOWN_SECRET`, hex. Keyed because a plain hash of an IPv4 address is
+ * `TAKEDOWN_SECRET`, hex, of the address's network (`visitorAddress`,
+ * SA-M11). Keyed because a plain hash of an IPv4 address is
  * undone by trying all four billion; the raw address is never stored.
  * `undefined` without the secret or the address — the cap then counts the
  * email key alone.
@@ -49,7 +51,11 @@ export async function ipKey(
 ): Promise<string | undefined> {
   if (ip === undefined || secret === undefined || secret === "") return;
   const key = await ipSigningKey(secret);
-  const signed = await crypto.subtle.sign("HMAC", key, encoder.encode(ip));
+  const signed = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(visitorAddress(ip)),
+  );
   return [...new Uint8Array(signed)]
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");

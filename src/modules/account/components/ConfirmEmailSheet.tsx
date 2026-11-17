@@ -5,7 +5,7 @@ import type { ConfirmTrigger } from "../../../lib/auth-signal";
 import type { ViewerZone } from "../../../lib/dates";
 import { Sheet } from "../../../ui";
 import type { ConfirmGate } from "../../../ui";
-import type { ResendResult } from "../verification";
+import type { ResendAnswer } from "../verification";
 import { PillButton, ResendLink } from "./ResendLink";
 
 /**
@@ -25,7 +25,7 @@ const WAITS_FOR: Readonly<Record<ConfirmTrigger, string>> = {
   share: "Sharing needs a confirmed email. This run saves private.",
 };
 
-type Resend = (input: { data: { email: string } }) => Promise<ResendResult>;
+type Resend = (input: { data: { email: string } }) => Promise<ResendAnswer>;
 
 /**
 What the sheet reads about the runner once a refusal opens it.

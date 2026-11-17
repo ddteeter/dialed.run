@@ -486,7 +486,13 @@ function runnersCount(
 /**
 The counts kept by the address, which the purge forgets with it.
 */
-const ADDRESS_SENDS = ["verify", "reset", "change", "sign-in"] as const;
+const ADDRESS_SENDS = [
+  "verify",
+  "reset",
+  "change",
+  "sign-in",
+  "takedown-to",
+] as const;
 
 /**
 The address a seeded runner's open email change moves to.

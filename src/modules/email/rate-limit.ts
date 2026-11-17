@@ -13,16 +13,15 @@ import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { rateLimits } from "../../db/schema-core";
-import {
-  SIGN_IN_TRIES,
-  SIGN_IN_WINDOW_S,
-} from "../../lib/contracts/access";
+import { SIGN_IN_TRIES, SIGN_IN_WINDOW_S } from "../../lib/contracts/access";
 import { EMAIL_SENDS_PER_HOUR } from "../../lib/contracts/email";
+import { VISITOR_KINDS } from "../../lib/contracts/rate-limits";
 import type {
   RateLimitKind,
   SendLimitKind,
 } from "../../lib/contracts/rate-limits";
 import { nowSeconds } from "../../lib/now";
+import { visitorAddress } from "../../lib/visitor-address";
 import {
   windowedCountSet,
   windowedCountUntil,
@@ -35,14 +34,16 @@ export const SENDS_PER_WINDOW = EMAIL_SENDS_PER_HOUR;
 export const SEND_WINDOW_S = 60 * 60;
 
 /**
- * The counts kept by email address: the three sends and sign-in's tries.
- * `access` and `takedown` are counted by IP.
+ * The counts kept by email address: the three sends, sign-in's tries and
+ * `/takedown`'s receipts. `access`, `takedown` and `resend-visitor` are
+ * counted by IP.
  */
 const ADDRESS_COUNTS = [
   "verify",
   "reset",
   "change",
   "sign-in",
+  "takedown-to",
 ] as const satisfies readonly RateLimitKind[];
 
 export type SendClaim =
@@ -60,6 +61,16 @@ A send's subject: the address or IP, lowercased, so a case is not a fresh count.
 */
 function sendSubject(address: string): string {
   return address.toLowerCase();
+}
+
+const visitorKinds: ReadonlySet<RateLimitKind> = new Set(VISITOR_KINDS);
+
+/**
+ * The key a count is kept under: a visitor's IP by its network
+ * (`visitorAddress`, SA-M11), any other subject as given.
+ */
+function keyOf(kind: RateLimitKind, subject: string): string {
+  return visitorKinds.has(kind) ? visitorAddress(subject) : subject;
 }
 
 /**
@@ -143,6 +154,7 @@ function countRate(
   windowS: number,
   now: number,
 ) {
+  const key = keyOf(kind, subject);
   const next = windowedCountSet(
     { startedAt: rateLimits.windowStartedAt, count: rateLimits.count },
     now,
@@ -150,7 +162,7 @@ function countRate(
   );
   return db
     .insert(rateLimits)
-    .values({ kind, subject, windowStartedAt: now, count: 1 })
+    .values({ kind, subject: key, windowStartedAt: now, count: 1 })
     .onConflictDoUpdate({
       target: [rateLimits.kind, rateLimits.subject],
       set: { windowStartedAt: next.startedAt, count: next.count },
@@ -187,6 +199,26 @@ function claimOf(rows: CountRows, limit: number, windowS: number): SendClaim {
 }
 
 /**
+ * Count one of any kind, and say whether it is within `limit` and, when it
+ * is not, when the window ends: for a refusal the runner or visitor is
+ * told about ("You can try again at {time}").
+ */
+export async function claimRateLimit(
+  db: Db,
+  kind: RateLimitKind,
+  subject: string,
+  limit: number,
+  windowS: number,
+  now = nowSeconds(),
+): Promise<SendClaim> {
+  return claimOf(
+    await countRate(db, kind, subject, windowS, now),
+    limit,
+    windowS,
+  );
+}
+
+/**
 What `countSend` returned, as the answer.
 */
 export function sendClaimOf(rows: CountRows): SendClaim {
@@ -199,7 +231,7 @@ export function sendClaimOf(rows: CountRows): SendClaim {
  * (`windowedCountWithin`, the limit `sendClaimOf` applies).
  */
 export function sendAllowed(kind: SendLimitKind, address: string): SQL {
-  return sql`EXISTS (SELECT 1 FROM ${rateLimits} WHERE ${rateLimits.kind} = ${kind} AND ${rateLimits.subject} = ${sendSubject(address)} AND ${windowedCountWithin(rateLimits.count, SENDS_PER_WINDOW)})`;
+  return sql`EXISTS (SELECT 1 FROM ${rateLimits} WHERE ${rateLimits.kind} = ${kind} AND ${rateLimits.subject} = ${keyOf(kind, sendSubject(address))} AND ${windowedCountWithin(rateLimits.count, SENDS_PER_WINDOW)})`;
 }
 
 /**
@@ -238,14 +270,65 @@ export async function claimSignInTry(
   address: string,
   now = nowSeconds(),
 ): Promise<SendClaim> {
-  const rows = await countRate(
+  return claimRateLimit(
     db,
     "sign-in",
     sendSubject(address),
+    SIGN_IN_TRIES,
     SIGN_IN_WINDOW_S,
     now,
   );
-  return claimOf(rows, SIGN_IN_TRIES, SIGN_IN_WINDOW_S);
+}
+
+/**
+ * How many times one visitor may press Resend in an hour, whatever
+ * addresses they name (SA-M12). GUESS, held for the owner (design 231).
+ */
+export const RESENDS_PER_VISITOR_PER_HOUR = 10;
+
+/**
+ * Count one Resend for the visitor's IP (its network, SA-M11), and say
+ * whether it may go.
+ */
+export async function claimVisitorResend(
+  db: Db,
+  visitor: string,
+  now = nowSeconds(),
+): Promise<SendClaim> {
+  return claimRateLimit(
+    db,
+    "resend-visitor",
+    visitor,
+    RESENDS_PER_VISITOR_PER_HOUR,
+    SEND_WINDOW_S,
+    now,
+  );
+}
+
+/**
+ * How many `/takedown` receipts one address may be sent in an hour,
+ * whoever files the requests (SA-M11). GUESS, held for the owner
+ * (design 231).
+ */
+export const TAKEDOWN_RECEIPTS_PER_HOUR = 3;
+
+/**
+ * Count one `/takedown` receipt to the typed address, lowercased, and say
+ * whether it may go.
+ */
+export async function claimTakedownReceipt(
+  db: Db,
+  address: string,
+  now = nowSeconds(),
+): Promise<SendClaim> {
+  return claimRateLimit(
+    db,
+    "takedown-to",
+    sendSubject(address),
+    TAKEDOWN_RECEIPTS_PER_HOUR,
+    SEND_WINDOW_S,
+    now,
+  );
 }
 
 /**

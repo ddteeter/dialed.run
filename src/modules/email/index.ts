@@ -17,8 +17,11 @@ export {
 } from "./preferences";
 export {
   claimEmailSend,
+  claimRateLimit,
   claimRunnerChange,
   claimSignInTry,
+  claimTakedownReceipt,
+  claimVisitorResend,
   countSend,
   forgetRateLimit,
   forgetSendLimits,

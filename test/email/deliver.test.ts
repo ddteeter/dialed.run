@@ -794,6 +794,7 @@ describe("forgetSendLimits (ACC-9)", () => {
       countRow("verify", "gone@example.com", 1, 1),
       countRow("reset", "gone@example.com", 1, 1),
       countRow("change", "gone@example.com", 1, 1),
+      countRow("takedown-to", "gone@example.com", 1, 1),
       countRow("verify", "other@example.com", 1, 1),
       countRow("access", "unknown", 1, 1),
       // The same text under a kind not counted by address is not theirs.

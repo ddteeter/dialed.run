@@ -15,6 +15,7 @@ import {
   userProfiles,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import { EMAIL_SENDS_PER_HOUR } from "../../src/lib/contracts/email";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import {
@@ -163,7 +164,11 @@ describe("redeemInvite", () => {
   it("writes the claim against the account's id, address lowercased, with its hold", async () => {
     const codeId = await seedCode("DIAL-7K3P-2QXM");
     const now = 1_000_000;
-    const mine = { code: "DIAL-7K3P-2QXM", userId: newUlid(), email: "Maya@X.test" };
+    const mine = {
+      code: "DIAL-7K3P-2QXM",
+      userId: newUlid(),
+      email: "Maya@X.test",
+    };
     expect(await redeemInvite(db, mine, now)).toBe("redeemed");
     expect(await db.select().from(inviteRedemptions)).toStrictEqual([
       {
@@ -955,6 +960,39 @@ describe("requestAccess (Au5)", () => {
       "access:203.0.113.9",
       "access:unknown",
     ]);
+  });
+
+  it("counts every address in one IPv6 /64 as one visitor, and keeps nothing past the limit (SA-M11)", async () => {
+    const { verify } = verifyAs(true);
+    const ask = (n: number, remoteIp: string) =>
+      requestAccess(
+        db,
+        {
+          email: `asker-${String(n)}@x.test`,
+          note: "",
+          attempt: { ...ATTEMPT, remoteIp },
+          isLimited: true,
+          blockedRegion: undefined,
+        },
+        verify,
+        1000,
+      );
+    const results = [];
+    for (let n = 0; n <= EMAIL_SENDS_PER_HOUR; n += 1) {
+      results.push(await ask(n, `2001:db8:1:2::${(n + 1).toString(16)}`));
+    }
+    expect(results.at(-1)).toStrictEqual({
+      status: "limited",
+      until: 1000 + 3600,
+    });
+    expect(await db.select().from(accessRequests)).toHaveLength(
+      EMAIL_SENDS_PER_HOUR,
+    );
+    expect(await countedKeys(db)).toStrictEqual(["access:2001:db8:1:2::/64"]);
+    expect(await ask(99, "2001:db8:1:3::1")).toStrictEqual({
+      status: "received",
+      isFromBlockedRegion: false,
+    });
   });
 
   it("does not limit where the deployment does not", async () => {
