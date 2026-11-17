@@ -100,7 +100,10 @@ None. Every guess is answered (2026-11-16).
   too long. Paste the shop page's address."
 - SA-M28: the Strava notice is not sent to an unconfirmed address.
 - SA-M36: the policy paragraph below, with a clause for the per-account
-  counts; the owner approved it as written.
+  counts; the owner approved it as written. Widened (owner, 2026-11-17) to
+  name every per-account count: run-file uploads (`upload-runner`),
+  reports filed (`report-runner`) and reports that hide at once
+  (`report-at-once`), beside weather, photos and purges.
 - SA-L07: the action check, no visible change (coordinator).
 - SA-L15: the follow half is 12d's; the verdict prompt checks the kit
   (coordinator). A run's title is not sent to other runners, and W1 names
@@ -120,10 +123,11 @@ abuse), as the owner approved it:
 > reports a browser sends us when it blocks part of a page are counted per
 > visitor IP address the same way. Each of these counts is deleted a day
 > after its window ends. We also count, against your account, how many
-> weather lookups your runs and places cause each day, how many photos you
-> upload each day, and how often a minute your changes refresh public
-> pages; each of these counts is deleted within two days, and with your
-> account.
+> weather lookups your runs and places cause each day, how many photos and
+> how many run files you upload each day, how many reports you file each
+> day and how many of those hide what you reported at once, and how often
+> a minute your changes refresh public pages; each of these counts is
+> deleted within two days, and with your account.
 
 "Within two days": the daily sweep deletes a count once its window started
 more than 25 hours ago, so a day's count goes between 25 and 49 hours after
