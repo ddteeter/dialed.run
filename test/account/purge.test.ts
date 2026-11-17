@@ -8,6 +8,8 @@ import {
   accessRequests,
   accountDeletions,
   blocks,
+  closedAddresses,
+  copyrightHolds,
   dataExports,
   rateLimits,
   emailVerifications,
@@ -45,12 +47,17 @@ import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { orSqlNull } from "../../src/lib/sql/sql-null";
 import {
+  PURGE_BUDGET_MS,
   PURGE_LEASE_S,
-  PURGE_PER_FIRING,
+  PURGE_PER_ROUND,
   purgeAccount,
   purgeDueAccounts,
 } from "../../src/modules/account/purge";
 import type { PurgeDeps } from "../../src/modules/account/purge";
+import {
+  CLOSED_ADDRESS_KEPT_S,
+  closedAddressHash,
+} from "../../src/modules/account/closed-addresses";
 import { forgetManualBands } from "../../src/modules/weather";
 import { drainOutbox } from "../../src/modules/ops/outbox";
 import { ONLY_THEIRS_GONE, seedAthleteGaveUp } from "../gave-up-rows";
@@ -766,11 +773,36 @@ afterEach(() => {
 });
 
 describe("the purge's limits", () => {
-  it("purges at most three accounts a firing, and holds a claim for an hour", () => {
-    expect(PURGE_PER_FIRING).toBe(3);
+  it("claims three accounts a round for five minutes, and holds a claim for an hour", () => {
+    expect(PURGE_PER_ROUND).toBe(3);
+    expect(PURGE_BUDGET_MS).toBe(300_000);
     expect(PURGE_LEASE_S).toBe(3600);
   });
 });
+
+/**
+ * A clock whose every reading is `PURGE_BUDGET_MS` later than the last,
+ * from 0: a firing on it claims one round and no more.
+ */
+function oneRoundClock(): () => number {
+  let reading = CLOCK_START - PURGE_BUDGET_MS;
+  return () => (reading += PURGE_BUDGET_MS);
+}
+
+/**
+A clock that reads `elapsed` after its first reading, every time.
+*/
+// Clocks read the epoch in milliseconds, as `Date.now` does.
+const CLOCK_START = NOW * 1000;
+
+function clockAt(elapsed: number): () => number {
+  let reading: number | undefined;
+  return () => {
+    const at = CLOCK_START + (reading ?? 0);
+    reading = elapsed;
+    return at;
+  };
+}
 
 describe("purgeDueAccounts — a full purge", () => {
   it("leaves nothing of the runner's in either database, and nothing of anyone else's changed", async () => {
@@ -1140,7 +1172,7 @@ describe("purgeDueAccounts — which claims a firing takes", () => {
     const { deps, revoked } = depsAt(NOW);
     const anomalies: string[] = [];
 
-    await purgeDueAccounts(anomalies, deps);
+    await purgeDueAccounts(anomalies, deps, oneRoundClock());
 
     const oldest = [5, 4, 3].map((age) => byAge.get(age) ?? "");
     const newest = [2, 1].map((age) => byAge.get(age) ?? "");
@@ -1166,6 +1198,292 @@ describe("purgeDueAccounts — which claims a firing takes", () => {
       newest.toSorted(byText),
     );
     expect(nextAnomalies).toStrictEqual([]);
+  });
+});
+
+describe("purgeDueAccounts — rounds", () => {
+  it("claims round after round while it has time, until nothing is due", async () => {
+    const userIds: string[] = [];
+    for (let age = 1; age <= PURGE_PER_ROUND * 2 + 1; age++) {
+      userIds.push(await claimedProfile(NOW - age * 60));
+    }
+    const { deps, revoked } = depsAt(NOW);
+    const anomalies: string[] = [];
+
+    await purgeDueAccounts(anomalies, deps, clockAt(PURGE_BUDGET_MS - 1));
+
+    expect(revoked.toSorted(byText)).toStrictEqual(userIds.toSorted(byText));
+    expect(anomalies).toStrictEqual([]);
+  });
+
+  it("starts no round once the budget is spent", async () => {
+    for (let age = 1; age <= PURGE_PER_ROUND + 1; age++) {
+      await claimedProfile(NOW - age * 60);
+    }
+    const { deps, revoked } = depsAt(NOW);
+    const anomalies: string[] = [];
+
+    await purgeDueAccounts(anomalies, deps, clockAt(PURGE_BUDGET_MS));
+
+    expect(revoked).toHaveLength(PURGE_PER_ROUND);
+    expect(anomalies).toStrictEqual([
+      "1 account deletion(s) past their date wait for the next firing",
+    ]);
+  });
+
+  it("does not take a failed claim again in a later round", async () => {
+    const failing = await claimedProfile(NOW - 60);
+    const { deps, revoked } = depsAt(NOW, [failing]);
+    const anomalies: string[] = [];
+
+    await purgeDueAccounts(anomalies, deps, clockAt(0));
+
+    expect(revoked).toStrictEqual([failing]);
+    expect(anomalies).toStrictEqual([
+      "1 account deletion(s) stopped part way and are finished on the next firing",
+    ]);
+  });
+
+  it("takes a claim a purge failed on only after every one never tried", async () => {
+    // The oldest by date, retaken after its lease ran out.
+    const retried = await claimedProfile(
+      NOW - 30 * 86_400,
+      NOW - PURGE_LEASE_S - 1,
+    );
+    const untried: string[] = [];
+    for (let age = 1; age <= PURGE_PER_ROUND; age++) {
+      untried.push(await claimedProfile(NOW - age * 60));
+    }
+    const { deps, revoked } = depsAt(NOW);
+
+    await purgeDueAccounts([], deps, oneRoundClock());
+
+    expect(revoked.toSorted(byText)).toStrictEqual(untried.toSorted(byText));
+    expect(await hasProfile(retried)).toBe(true);
+  });
+});
+
+async function holdOn(
+  ownerId: string,
+  status: (typeof copyrightHolds.$inferInsert)["status"],
+): Promise<void> {
+  await core.insert(copyrightHolds).values({
+    id: newUlid(),
+    moderationActionId: newUlid(),
+    subjectType: "entry",
+    subjectId: newUlid(),
+    ownerId,
+    entryId: newUlid(),
+    status,
+    hiddenAt: NOW - 86_400,
+    purgeAt: NOW + 29 * 86_400,
+  });
+}
+
+async function bellRow(
+  userId: string,
+  groupId: string,
+  linkId: string | undefined,
+  body: string,
+): Promise<string> {
+  const id = newUlid();
+  await core.insert(notifications).values({
+    id,
+    userId,
+    kind: "followed",
+    subjectId: groupId,
+    linkId,
+    body,
+    read: false,
+    createdAt: NOW,
+  });
+  return id;
+}
+
+async function ring(
+  followerId: string,
+  followeeId: string,
+  groupId: string,
+): Promise<void> {
+  await core.insert(followNotices).values({
+    followerId,
+    followeeId,
+    notificationId: groupId,
+    rungAt: NOW,
+  });
+}
+
+describe("purgeDueAccounts — a live copyright hold", () => {
+  it.each(["hidden", "purging"] as const)(
+    "leaves an account whose hold is %s, and the digest says it waits on the hold",
+    async (status) => {
+      const held = await claimedProfile(NOW - 60);
+      const other = await claimedProfile(NOW - 60);
+      await holdOn(held, status);
+      await holdOn(other, "restored");
+      await holdOn(other, "purged");
+      const { deps, revoked } = depsAt(NOW);
+      const anomalies: string[] = [];
+
+      await purgeDueAccounts(anomalies, deps);
+
+      expect(revoked).toStrictEqual([other]);
+      expect(await hasProfile(held)).toBe(true);
+      const [claimRow] = await claimOf(held);
+      expect(claimRow?.purgeStartedAt).toBeNull();
+      expect(anomalies).toStrictEqual([
+        "1 account deletion(s) wait for a copyright hold to settle",
+      ]);
+    },
+  );
+
+  it("says nothing of a held account that is not yet due", async () => {
+    const held = await claimedProfile(NOW + 60);
+    await holdOn(held, "hidden");
+    const anomalies: string[] = [];
+
+    await purgeDueAccounts(anomalies, depsAt(NOW).deps);
+
+    expect(anomalies).toStrictEqual([]);
+  });
+});
+
+describe("purgeAccount — the follow rows on others' bells", () => {
+  it("deletes a row they rang or a group naming them, and keeps a group naming someone else", async () => {
+    const runner = await seedAccount();
+    const [alone, named, unnamed, unrung, prefixed] = [
+      newUlid(),
+      newUlid(),
+      newUlid(),
+      newUlid(),
+      newUlid(),
+    ];
+    const [soloGroup, namedGroup, otherGroup, prefixedGroup] = [
+      newUlid(),
+      newUlid(),
+      newUlid(),
+      newUlid(),
+    ];
+    await ring(runner.userId, alone, soloGroup);
+    await ring(runner.userId, named, namedGroup);
+    await ring(runner.userId, unnamed, otherGroup);
+    await ring(runner.userId, prefixed, prefixedGroup);
+    await bellRow(
+      alone,
+      soloGroup,
+      runner.userId,
+      `@${runner.handle} followed you.`,
+    );
+    await bellRow(
+      named,
+      namedGroup,
+      undefined,
+      `@${runner.handle} and 2 others followed you.`,
+    );
+    const kept = await bellRow(
+      unnamed,
+      otherGroup,
+      undefined,
+      "@someone_else and 1 other followed you.",
+    );
+    // A handle that starts with theirs is not theirs.
+    const longer = await bellRow(
+      prefixed,
+      prefixedGroup,
+      undefined,
+      `@${runner.handle}x and 1 other followed you.`,
+    );
+    // A row they never rang, though its words name them.
+    const notRung = await bellRow(
+      unrung,
+      newUlid(),
+      undefined,
+      `@${runner.handle} followed you.`,
+    );
+
+    await purgeAccount(depsAt(NOW).deps, runner.userId);
+
+    const left = await core
+      .select({ id: notifications.id })
+      .from(notifications)
+      .where(
+        inArray(notifications.userId, [
+          alone,
+          named,
+          unnamed,
+          unrung,
+          prefixed,
+        ]),
+      );
+    expect(left.map((row) => row.id).toSorted(byText)).toStrictEqual(
+      [kept, longer, notRung].toSorted(byText),
+    );
+  });
+
+  it("deletes only the row linking to them when they had no handle", async () => {
+    const userId = newUlid();
+    const [followee, other] = [newUlid(), newUlid()];
+    const [group, otherGroup] = [newUlid(), newUlid()];
+    await ring(userId, followee, group);
+    await ring(userId, other, otherGroup);
+    await bellRow(followee, group, userId, "@gone followed you.");
+    // A runner may be called "undefined"; a group naming them stays.
+    const kept = await bellRow(
+      other,
+      otherGroup,
+      undefined,
+      "@undefined and 1 other followed you.",
+    );
+
+    await purgeAccount(depsAt(NOW).deps, userId);
+
+    const left = await core
+      .select({ id: notifications.id })
+      .from(notifications)
+      .where(inArray(notifications.userId, [followee, other]));
+    expect(left).toStrictEqual([{ id: kept }]);
+  });
+
+  it("leaves another kind of row in the same group", async () => {
+    const runner = await seedAccount();
+    const followee = newUlid();
+    const group = newUlid();
+    await ring(runner.userId, followee, group);
+    const id = newUlid();
+    await core.insert(notifications).values({
+      id,
+      userId: followee,
+      kind: "content_kept",
+      subjectId: group,
+      linkId: runner.userId,
+      body: `@${runner.handle} followed you.`,
+      read: false,
+      createdAt: NOW,
+    });
+
+    await purgeAccount(depsAt(NOW).deps, runner.userId);
+
+    const left = await core
+      .select({ id: notifications.id })
+      .from(notifications)
+      .where(eq(notifications.userId, followee));
+    expect(left).toStrictEqual([{ id }]);
+  });
+
+  it("leaves a row in their ring's group on a bell they never rang", async () => {
+    const runner = await seedAccount();
+    const [followee, bystander] = [newUlid(), newUlid()];
+    const group = newUlid();
+    await ring(runner.userId, followee, group);
+    const id = await bellRow(bystander, group, runner.userId, "x");
+
+    await purgeAccount(depsAt(NOW).deps, runner.userId);
+
+    const left = await core
+      .select({ id: notifications.id })
+      .from(notifications)
+      .where(eq(notifications.userId, bystander));
+    expect(left).toStrictEqual([{ id }]);
   });
 });
 
@@ -1502,5 +1820,106 @@ describe("purgeAccount", () => {
         ),
       );
     expect(owed).toHaveLength(2);
+  });
+});
+
+const CLOSED_KEY = "closed-address-test-key";
+
+async function dueRunner(isClosed: boolean): Promise<Seeded> {
+  const runner = await seedAccount();
+  if (isClosed) {
+    await core
+      .update(userProfiles)
+      .set({ bannedAt: NOW - 3600 })
+      .where(eq(userProfiles.userId, runner.userId));
+  }
+  await claim(runner.userId, NOW - 1);
+  return runner;
+}
+
+async function closedKept() {
+  return core
+    .select({
+      hash: closedAddresses.hash,
+      closedAt: closedAddresses.closedAt,
+    })
+    .from(closedAddresses)
+    .orderBy(closedAddresses.hash);
+}
+
+/**
+ * SA-L09: an account an operator closed leaves its addresses behind as
+ * keyed fingerprints, so sign-up can refuse them; anyone else's leave
+ * nothing. A test key, not a deployed one.
+ */
+describe("purgeDueAccounts — a closed account's addresses", () => {
+  beforeEach(async () => {
+    await core.delete(closedAddresses);
+  });
+
+  it("keeps each address of a closed account as a fingerprint", async () => {
+    const runner = await dueRunner(true);
+    const anomalies: string[] = [];
+
+    await purgeDueAccounts(anomalies, {
+      ...depsAt(NOW).deps,
+      closedAddressSecret: CLOSED_KEY,
+    });
+
+    expect(await footprint(runner)).toStrictEqual(GONE);
+    const hashes = await Promise.all(
+      addressesOf(runner.email).map((address) =>
+        closedAddressHash(CLOSED_KEY, address),
+      ),
+    );
+    expect(await closedKept()).toStrictEqual(
+      hashes.toSorted(byText).map((hash) => ({ hash, closedAt: NOW })),
+    );
+    expect(anomalies).toStrictEqual([]);
+  });
+
+  it("keeps nothing of an account that was not closed", async () => {
+    const runner = await dueRunner(false);
+    const anomalies: string[] = [];
+
+    await purgeDueAccounts(anomalies, {
+      ...depsAt(NOW).deps,
+      closedAddressSecret: CLOSED_KEY,
+    });
+
+    expect(await footprint(runner)).toStrictEqual(GONE);
+    expect(await closedKept()).toStrictEqual([]);
+    expect(anomalies).toStrictEqual([]);
+  });
+
+  it("purges a closed account without a key, and the digest says nothing was kept", async () => {
+    const runner = await dueRunner(true);
+    await dueRunner(false);
+    const anomalies: string[] = [];
+
+    await purgeDueAccounts(anomalies, depsAt(NOW).deps);
+
+    expect(await footprint(runner)).toStrictEqual(GONE);
+    expect(await closedKept()).toStrictEqual([]);
+    expect(anomalies).toStrictEqual([
+      "1 closed account(s) were purged with their addresses unremembered: CLOSED_ADDRESS_SECRET is not set",
+    ]);
+  });
+
+  it("lets go of fingerprints past 3 years on each firing, with nothing due", async () => {
+    const [atEdge, past] = await Promise.all([
+      closedAddressHash(CLOSED_KEY, "edge@example.test"),
+      closedAddressHash(CLOSED_KEY, "past@example.test"),
+    ]);
+    await core.insert(closedAddresses).values([
+      { hash: atEdge, closedAt: NOW - CLOSED_ADDRESS_KEPT_S },
+      { hash: past, closedAt: NOW - CLOSED_ADDRESS_KEPT_S - 1 },
+    ]);
+
+    await purgeDueAccounts([], depsAt(NOW).deps);
+
+    expect(await closedKept()).toStrictEqual([
+      { hash: atEdge, closedAt: NOW - CLOSED_ADDRESS_KEPT_S },
+    ]);
   });
 });

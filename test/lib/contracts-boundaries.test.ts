@@ -237,6 +237,30 @@ describe("httpsUrlProblem", () => {
   });
 });
 
+describe("a product link is somebody else's page (SA-L14)", () => {
+  it.each([
+    "https://dialed.run/desk/review-photo/snapshots/x",
+    "https://dialed.run/account/sign-in?deleting=1",
+    "https://www.dialed.run/onboarding/done",
+    "https://app.dialed.run/feed",
+    "https://photos.dialed.run/0123456789abcdef0123456789abcdef",
+    "https://DIALED.RUN/x",
+    "https://dialed.run./onboarding/done",
+  ])("refuses the app's own host: %s", (link) => {
+    expect(productLinkProblem(link)).toBe(
+      "That's a dialed.run page. Paste the address of the shop's page.",
+    );
+    expect(productLinkSchema.safeParse(link).success).toBe(false);
+  });
+
+  it.each(["https://notdialed.run/x", "https://dialed.running.com/x"])(
+    "still takes a shop whose name only looks like it: %s",
+    (link) => {
+      expect(productLinkProblem(link)).toBeUndefined();
+    },
+  );
+});
+
 describe("productLinkSchema (D-166)", () => {
   it("takes https exactly as typed: no `URL` normalisation, no trailing slash", () => {
     expect(productLinkSchema.parse("https://janji.com/rover")).toBe(

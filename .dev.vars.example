@@ -6,6 +6,9 @@ UNSUBSCRIBE_SECRET=generate-another-long-random-string
 # Keys /takedown's IP match (design 137). Optional: without it the
 # abuse limits match requesters by email alone.
 TAKEDOWN_SECRET=generate-a-third-long-random-string
+# Keys a closed account's address fingerprints (SA-L09). Optional:
+# without it a closed account is purged with nothing kept.
+CLOSED_ADDRESS_SECRET=generate-a-fourth-long-random-string
 # Required locally: wrangler.jsonc sets the production origin
 # (https://dialed.run). Without this override Better Auth refuses every
 # sign-in and sign-up from localhost (403 INVALID_ORIGIN), and the https

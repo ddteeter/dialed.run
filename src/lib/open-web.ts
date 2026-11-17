@@ -14,9 +14,12 @@
  */
 
 /**
-`/kit/<entryId>`, the public kit (round 41 #86c).
+`/kit/<entryId>`, the public kit (round 41 #86c). Case-insensitive, as the
+router matches static segments (SA-M15): `iu` folds the way its
+`toLowerCase()` does, so a path the router routes here is read as the open
+web here.
 */
-const PUBLIC_KIT_PATH = /^\/kit\/[^/]+\/?$/u;
+const PUBLIC_KIT_PATH = /^\/kit\/[^/]+\/?$/iu;
 
 /**
  * `/@<handle>`, the public profile (round 41 #86d) — with the `@` as a

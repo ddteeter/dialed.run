@@ -114,6 +114,9 @@ export function HandleForm({
       if (result.kind === "taken") {
         throw new HandleTaken(takenMessage(result.username, result.suggestion));
       }
+      if (result.kind === "too_often") {
+        throw new HandleTaken(HANDLE_COPY.tooOften);
+      }
       return result.username;
     },
     successMessage,

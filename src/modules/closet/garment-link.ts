@@ -14,7 +14,7 @@
  */
 import type { drizzle } from "drizzle-orm/d1";
 
-import { domainOf } from "../../lib/domain";
+import { domainOf, linkDomainOf } from "../../lib/domain";
 import { isUnconfirmed } from "../account";
 import { abandonedBefore } from "../enrichment";
 import type { ProductForDetail } from "../products";
@@ -129,7 +129,7 @@ export async function linkDetailOf(
     ? undefined
     : domainOf(extraction?.sourceUrl);
   const link = garment.productUrl ?? undefined;
-  if (domainOf(link) === undefined || denied.has(String(link))) {
+  if (linkDomainOf(link) === undefined || denied.has(String(link))) {
     return { link: undefined, outcome: undefined, specSource };
   }
   const outcome =
@@ -157,7 +157,7 @@ export async function allowedLinksOf(
   const allowed = new Map<string, string>();
   for (const { id, productUrl } of garments) {
     if (
-      domainOf(productUrl ?? undefined) === undefined ||
+      linkDomainOf(productUrl ?? undefined) === undefined ||
       denied.has(String(productUrl))
     ) {
       continue;

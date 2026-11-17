@@ -8,7 +8,15 @@ import { isOpenWebPath, signedInOffTheOpenWeb } from "../../src/lib/open-web";
  */
 
 describe("isOpenWebPath", () => {
-  it.each(["/kit/01J00000000000000000000000", "/kit/anything/", "/kit/x"])(
+  it.each([
+    "/kit/01J00000000000000000000000",
+    "/kit/anything/",
+    "/kit/x",
+    // The router matches static segments case-insensitively (SA-M15).
+    "/KIT/01J00000000000000000000000",
+    "/Kit/x/",
+    "/\u{212A}it/x",
+  ])(
     "is %s, a public kit",
     (path) => {
       expect(isOpenWebPath(path)).toBe(true);

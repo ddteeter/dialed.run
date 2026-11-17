@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ACCESS_CODES,
+  ADDRESS_CLOSED_CODE,
   INVITE_COPY,
   TURNSTILE_REFUSED,
 } from "../../src/lib/contracts/access";
@@ -126,6 +127,15 @@ describe("GOOGLE_REFUSALS", () => {
       retry: false,
     });
     expect(GOOGLE_NOT_LINKED).toBe("account_not_linked");
+  });
+
+  it("says a closed address makes no account, with no Try again (SA-L09)", () => {
+    expect(GOOGLE_REFUSALS.get(ADDRESS_CLOSED_CODE)).toStrictEqual({
+      kicker: NOT_CREATED,
+      message: "This address can't be used to make an account.",
+      retry: false,
+    });
+    expect(ADDRESS_CLOSED_CODE).toBe("ADDRESS_CLOSED");
   });
 
   it("offers no Try again for a Google address with no account, and points nowhere", () => {

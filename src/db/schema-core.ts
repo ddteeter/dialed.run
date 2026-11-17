@@ -213,6 +213,24 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
 );
 
 /**
+ * A closed account's email addresses, kept as a keyed fingerprint after
+ * the account purge deletes it (SA-L09; owner, 2026-11-15), so sign-up
+ * can refuse the address for 3 years. HMAC-SHA256 under
+ * `CLOSED_ADDRESS_SECRET` of the normalised address: the row names no
+ * one, and without the secret a guessed address cannot be checked.
+ * `closed_at` is when the purge wrote it; the daily sweep deletes a row
+ * 3 years on (`closed_addresses_closed`).
+ */
+export const closedAddresses = /*#__PURE__*/ sqliteTable(
+  "closed_addresses",
+  {
+    hash: text("hash").primaryKey(),
+    closedAt: integer("closed_at").notNull(),
+  },
+  (t) => [index("closed_addresses_closed").on(t.closedAt)],
+);
+
+/**
  * Every handle a runner has given up (task 126, ACC-1). Kept for two
  * reasons: `/@old` answers "This runner changed their name." rather than
  * a not-found or — worse — someone else's profile, and a handle a

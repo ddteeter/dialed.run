@@ -274,4 +274,24 @@ describe("DeleteRun", () => {
     });
     expect(onDeleted).not.toHaveBeenCalled();
   });
+
+  it("says why when a copyright hold refuses it (SA-L09)", async () => {
+    const sentence =
+      "This run is held while a copyright claim is settled, so it can't be deleted yet.";
+    const refused = Object.assign(new Error(sentence), {
+      code: "CONTROL_REFUSAL",
+    });
+    const deleteRun = vi.fn(() => Promise.reject(refused));
+    const onDeleted = vi.fn(() => Promise.resolve());
+    await renderWithRouter(
+      <DeleteRun runId="01RUN" deleteRun={deleteRun} onDeleted={onDeleted} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Delete this run" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await waitFor(() => {
+      expect(screen.getAllByText(/held while a copyright claim/u).length).toBeGreaterThan(0);
+    });
+    expect(screen.queryByText(/Our end failed/)).toBeNull();
+    expect(onDeleted).not.toHaveBeenCalled();
+  });
 });

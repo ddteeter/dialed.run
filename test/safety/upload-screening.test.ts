@@ -33,6 +33,7 @@ import {
   makeItem,
   makeRun,
   makeUser,
+  makeVerifiedUser,
   resetSafetyTables,
 } from "./helpers";
 
@@ -305,7 +306,7 @@ describe("what the screening verdict keeps off a stranger's screen", () => {
   beforeEach(resetSafetyTables);
 
   it("drops a flagged photo from the feed list but leaves the entry", async () => {
-    const author = await makeUser();
+    const author = await makeVerifiedUser();
     const runId = await makeRun({ userId: author });
     const entryId = await makeEntry({
       userId: author,

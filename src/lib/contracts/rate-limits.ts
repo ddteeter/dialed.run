@@ -37,6 +37,9 @@ export const SEND_LIMIT_KINDS = [
  *   `GLOBAL_SUBJECT`;
  * - `sign-in` — email sign-in's tries for one typed address, lowercased,
  *   whether or not it has an account (`SIGN_IN_TRIES`).
+ * - `csp-report` — the CSP reports one visitor's browser posts, so a
+ *   script cannot spend the error tracker's quota (SA-L19); the visitor's
+ *   IP.
  */
 export const RATE_LIMIT_KINDS = [
   ...SEND_LIMIT_KINDS,
@@ -45,6 +48,7 @@ export const RATE_LIMIT_KINDS = [
   "page-fetch",
   "proxy-call",
   "sign-in",
+  "csp-report",
 ] as const;
 
 export type SendLimitKind = (typeof SEND_LIMIT_KINDS)[number];

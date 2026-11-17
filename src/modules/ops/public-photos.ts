@@ -85,8 +85,9 @@ export interface PublicPhotoDeps {
 }
 
 /**
- * How many copies one pass deletes, and how many it makes: a bound on one
- * invocation's work, which the sweep's next firing continues.
+ * How many copies one pass makes: a bound on one invocation's work, which
+ * the sweep's next firing continues. Deleting drains instead
+ * (`deleteStale`).
  */
 const COPIES_PER_PASS = 50;
 
@@ -153,34 +154,64 @@ async function reconcile(deps: PublicPhotoDeps, reach: Reach): Promise<number> {
 }
 
 /**
- * Deletes the copies in reach that the rule no longer admits, the object
- * before its row. Returns how many went.
+ * One copy: the object, then the row that names it. A failure between
+ * leaves a row naming nothing, which the next pass deletes again.
+ */
+async function withdraw(deps: PublicPhotoDeps, key: string): Promise<void> {
+  await didWithdraw(deps, [key]);
+}
+
+/**
+ * Pages a drain deletes at most: `STALE_PAGES` of `IN_LIST_CHUNK` copies,
+ * each page one bucket call and one row delete, so an invocation spends a
+ * few dozen subrequests however many copies it withdraws.
+ */
+const STALE_PAGES = 25;
+
+/**
+ * Deletes the copies in reach that the rule no longer admits, the objects
+ * before their rows, a page at a time until none is left (SA-L09): a ban
+ * or a leaving withdraws every copy of the runner's in the pass it asks
+ * for, not 50 of them, and the sweep drains the same way. Returns how
+ * many went; a page that fails is reported and ends the drain, and the
+ * next pass deletes it again.
  */
 async function deleteStale(
   deps: PublicPhotoDeps,
   copies: SQL | undefined,
 ): Promise<number> {
-  const stale = await deps.db
-    .select({ key: publicPhotos.key, photoId: publicPhotos.photoId })
-    .from(publicPhotos)
-    .where(and(copies, noLongerPublic()))
-    .limit(COPIES_PER_PASS);
   let deleted = 0;
-  for (const copy of stale) {
-    if (await didSettle(deps, copy.photoId, () => withdraw(deps, copy.key))) {
-      deleted += 1;
-    }
+  for (let page = 0; page < STALE_PAGES; page += 1) {
+    const stale = await deps.db
+      .select({ key: publicPhotos.key })
+      .from(publicPhotos)
+      .where(and(copies, noLongerPublic()))
+      .limit(IN_LIST_CHUNK);
+    const keys = stale.map((copy) => copy.key);
+    if (keys.length === 0 || !(await didWithdraw(deps, keys))) return deleted;
+    deleted += keys.length;
+    if (keys.length < IN_LIST_CHUNK) return deleted;
   }
   return deleted;
 }
 
 /**
- * The object, then the row that names it: a failure between leaves a row
- * naming nothing, which the next pass deletes again.
+ * One page: the objects in one call, then the rows that name them. A
+ * failure between leaves rows naming nothing, which the next pass deletes
+ * again.
  */
-async function withdraw(deps: PublicPhotoDeps, key: string): Promise<void> {
-  await deps.bucket.delete(key);
-  await deps.db.delete(publicPhotos).where(eq(publicPhotos.key, key));
+async function didWithdraw(
+  deps: PublicPhotoDeps,
+  keys: readonly string[],
+): Promise<boolean> {
+  try {
+    await deps.bucket.delete([...keys]);
+    await deps.db.delete(publicPhotos).where(inArray(publicPhotos.key, keys));
+    return true;
+  } catch (error: unknown) {
+    deps.report(error, { copies: String(keys.length) });
+    return false;
+  }
 }
 
 /**
@@ -214,7 +245,7 @@ async function copyOwed(
     .where(notYetLanded)
     .limit(COPIES_PER_PASS);
   for (const photo of owed) {
-    await didSettle(deps, photo.photoId, () => copy(deps, photo));
+    await settle(deps, photo.photoId, () => copy(deps, photo));
   }
 }
 
@@ -280,19 +311,17 @@ async function claim(deps: PublicPhotoDeps, photo: Owed): Promise<string> {
 
 /**
  * Runs one copy's work; a failure is reported with the photo's id and the
- * pass goes on. Whether it went through.
+ * pass goes on.
  */
-async function didSettle(
+async function settle(
   deps: PublicPhotoDeps,
   photoId: string,
   work: () => Promise<void>,
-): Promise<boolean> {
+): Promise<void> {
   try {
     await work();
-    return true;
   } catch (error: unknown) {
     deps.report(error, { photoId });
-    return false;
   }
 }
 

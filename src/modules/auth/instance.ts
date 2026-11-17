@@ -23,11 +23,7 @@ export const auth = createAuth({
   // wherever one is made — email, Google, any provider added later.
   // The deletion gate (task 126, ACC-9): once an account's purge has
   // started, no session is made for it, by any provider.
-  plugins: [
-    tanstackStartCookies(),
-    banGate(),
-    deletionGate(primaryCoreDb()),
-  ],
+  plugins: [tanstackStartCookies(), banGate(), deletionGate(primaryCoreDb())],
   passwordScreen: {
     verdict: (password) => breachVerdict(password),
     report: captureException,
@@ -40,5 +36,11 @@ export const auth = createAuth({
   background: waitUntil,
   // Task 126 (ACC-5): Turnstile and the invite code on sign-up, email and
   // Google, and the code spent as the account is made.
-  access: accessGate(primaryCoreDb(), verifyTurnstileToken),
+  // SA-L09: and an address an operator closed makes no account.
+  access: accessGate(
+    primaryCoreDb(),
+    verifyTurnstileToken,
+    undefined,
+    env.CLOSED_ADDRESS_SECRET,
+  ),
 });

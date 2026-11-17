@@ -16,9 +16,10 @@
  *   is imported by the consensus path, and `blocks.test.ts` pins that from
  *   the outside so the carve-out cannot rot.
  */
-import { and, eq, or } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 
-import { blocks, userProfiles } from "../../db/schema-core";
+import { blocks, follows, userProfiles } from "../../db/schema-core";
 import { coreDb } from "../../env";
 import { columnSetAmong } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
@@ -43,14 +44,34 @@ export async function blockRunner(
   blockedId: string,
 ): Promise<void> {
   if (blockerId === blockedId) throw new SelfBlockError();
-  await db()
-    .insert(blocks)
-    .values({
-      blockerId,
-      blockedId,
-      createdAt: nowSeconds(),
-    })
-    .onConflictDoNothing();
+  const database = db();
+  // The pair's follows, in either direction. Built before the batch so the
+  // predicate is not nested inside the batch call.
+  const pairFollows = or(
+    followBetween(blockerId, blockedId),
+    followBetween(blockedId, blockerId),
+  );
+  // SA-L02: a block ends the pair's follows, both ways, in the same batch,
+  // so a block never stands beside a follow it should have ended.
+  await database.batch([
+    database
+      .insert(blocks)
+      .values({
+        blockerId,
+        blockedId,
+        createdAt: nowSeconds(),
+      })
+      .onConflictDoNothing(),
+    database.delete(follows).where(pairFollows),
+  ]);
+}
+
+// The follow row running from `followerId` to `followeeId`, if there is one.
+function followBetween(followerId: string, followeeId: string) {
+  return and(
+    eq(follows.followerId, followerId),
+    eq(follows.followeeId, followeeId),
+  );
 }
 
 /**
@@ -142,7 +163,13 @@ export async function blockedRunners(
       username: userProfiles.username,
     })
     .from(blocks)
-    .leftJoin(userProfiles, eq(userProfiles.userId, blocks.blockedId))
+    .leftJoin(
+      userProfiles,
+      and(
+        eq(userProfiles.userId, blocks.blockedId),
+        notBlockedBack(blockerId),
+      ),
+    )
     .where(eq(blocks.blockerId, blockerId));
 
   return rows.map((row) => ({
@@ -150,6 +177,16 @@ export async function blockedRunners(
     username: row.username ?? undefined,
     blockedAt: row.createdAt,
   }));
+}
+
+/**
+ * SA-M8: a runner who has blocked the roster's owner back is listed without
+ * a handle, so the row can still be unblocked and the handle is never read
+ * across a block. A probe on `blocks_pk` (blocker, blocked) per row.
+ */
+const back = alias(blocks, "back");
+function notBlockedBack(blockerId: string) {
+  return sql`not exists (select 1 from ${blocks} as ${sql.identifier("back")} where ${back.blockerId} = ${blocks.blockedId} and ${back.blockedId} = ${blockerId})`;
 }
 
 /**

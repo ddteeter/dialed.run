@@ -37,8 +37,8 @@ A followee's `size` entries, each with a garment, a tag, a photo and a Useful.
 */
 async function seedFollowedEntries(size: number) {
   const viewer = await makeUser();
-  const author = await makeUser();
-  const reactor = await makeUser();
+  const author = await makeVerifiedUser();
+  const reactor = await makeVerifiedUser();
   await follow(viewer, author);
   await seedObservation();
   for (let index = 0; index < size; index += 1) {
@@ -235,7 +235,7 @@ describe("the verdict backlog", () => {
 function followedBeside(noise: "strangers" | "private") {
   return async (count: number) => {
     const viewer = await makeUser();
-    const author = await makeUser();
+    const author = await makeVerifiedUser();
     await follow(viewer, author);
     await seedObservation();
     await locatedEntry({ userId: author, index: 0 });

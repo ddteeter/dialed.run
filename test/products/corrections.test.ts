@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import {
   brands,
+  domainDenylist,
   notifications,
   productCorrections,
   products,
@@ -267,6 +268,37 @@ describe("the sheet's context (R48·129)", () => {
       field: "weight",
       value: "light",
     });
+  });
+
+  it("quotes a shared product's link by its domain, never the pasted URL (SA-L02)", async () => {
+    const { productId } = await product();
+    await core()
+      .update(products)
+      .set({ sourceUrl: "https://www.shop.example/p/123?ref=private-token" })
+      .where(eq(products.id, productId));
+    const ada = await owner(productId);
+
+    const context = await correctionContext(ada.userId, productId);
+
+    expect(context.current.link).toBe("shop.example");
+    expect(JSON.stringify(context)).not.toContain("private-token");
+  });
+
+  it("quotes no link at all when its domain is denied", async () => {
+    const { productId } = await product();
+    await core()
+      .update(products)
+      .set({ sourceUrl: "https://bit.ly/x" })
+      .where(eq(products.id, productId));
+    await core()
+      .insert(domainDenylist)
+      .values({ domain: "bit.ly", addedBy: "test", createdAt: 1 })
+      .onConflictDoNothing();
+    const ada = await owner(productId);
+
+    const context = await correctionContext(ada.userId, productId);
+
+    expect(context.current).not.toHaveProperty("link");
   });
 
   it("is not found for a product that does not exist", async () => {

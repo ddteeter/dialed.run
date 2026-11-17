@@ -6,6 +6,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireUserId, requireUserIdBeforeTerms } from "../auth";
+import { runnerVisibleToViewer } from "../feed";
 import { runsAwaitingVerdict } from "../runs";
 import { notificationsDb } from "./db";
 import {
@@ -18,7 +19,11 @@ import { viewerZone } from "./viewer-zone";
 export const listNotificationsFn = createServerFn({ method: "GET" }).handler(
   async () => {
     const userId = await requireUserId();
-    return listNotifications(notificationsDb(), userId);
+    return listNotifications(
+      notificationsDb(),
+      userId,
+      runnerVisibleToViewer(userId),
+    );
   },
 );
 

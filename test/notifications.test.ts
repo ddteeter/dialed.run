@@ -1,5 +1,11 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+
+import { userProfiles } from "../src/db/schema-core";
+import { runnerVisibleToViewer } from "../src/modules/feed";
+import { follow } from "../src/modules/feed/follows";
+import { blockRunner } from "../src/modules/safety";
 
 import { newUlid } from "../src/lib/ids";
 import { coreDb } from "../src/modules/runs/core-db";
@@ -13,7 +19,13 @@ import {
   unreadNotificationCount,
 } from "../src/modules/notifications";
 import { runsAwaitingVerdict } from "../src/modules/runs";
-import { makeEntry, makeRun, makeUser, NOW } from "./feed/helpers";
+import {
+  makeEntry,
+  makeRun,
+  makeUser,
+  makeVerifiedUser,
+  NOW,
+} from "./feed/helpers";
 import type { NotificationKind } from "../src/modules/notifications";
 import { nowSeconds } from "../src/lib/now";
 
@@ -40,7 +52,7 @@ describe("notifications (102 §7, resilience law 1)", () => {
       body: "Add your kit.",
     });
 
-    const rows = await listNotifications(db, userId);
+    const rows = await listNotifications(db, userId, runnerVisibleToViewer(userId));
     expect(rows).toHaveLength(1);
   });
 
@@ -66,7 +78,7 @@ describe("notifications (102 §7, resilience law 1)", () => {
     await markAllNotificationsRead(db, userId);
     expect(await unreadNotificationCount(db, userId)).toBe(0);
 
-    const rows = await listNotifications(db, userId);
+    const rows = await listNotifications(db, userId, runnerVisibleToViewer(userId));
     expect(rows.every((row) => row.read)).toBe(true);
   });
 
@@ -88,7 +100,7 @@ describe("notifications (102 §7, resilience law 1)", () => {
       body: "Yours.",
     });
 
-    const rows = await listNotifications(db, userId);
+    const rows = await listNotifications(db, userId, runnerVisibleToViewer(userId));
     expect(rows.map((row) => row.body)).toEqual(["Yours."]);
   });
 });
@@ -108,7 +120,7 @@ describe("raising a notice again (C8)", () => {
       notificationRaise(db, { ...draft, body: "Again.", createdAt: NOW + 60 }),
     ]);
 
-    const rows = await listNotifications(db, userId);
+    const rows = await listNotifications(db, userId, runnerVisibleToViewer(userId));
     expect(
       rows.map(({ kind, body, read, createdAt }) => ({
         kind,
@@ -140,7 +152,7 @@ describe("raising a notice again (C8)", () => {
       }),
     ]);
 
-    const [row] = await listNotifications(db, userId);
+    const [row] = await listNotifications(db, userId, runnerVisibleToViewer(userId));
     expect(row?.createdAt).toBeGreaterThanOrEqual(before);
     expect(row?.read).toBe(false);
   });
@@ -162,7 +174,7 @@ describe("what a notification row records", () => {
       body: "Your import failed.",
     });
 
-    const [row] = await listNotifications(db, userId);
+    const [row] = await listNotifications(db, userId, runnerVisibleToViewer(userId));
     expect(row?.createdAt).toBeGreaterThanOrEqual(before - 5);
     expect(row?.createdAt).toBeLessThanOrEqual(before + 5);
     // Unread is the state the bell counts; a row that arrives read is a
@@ -281,7 +293,7 @@ describe("which rows Mark all read can clear", () => {
       body: "other kind",
     });
 
-    const rows = await listNotifications(db, userId);
+    const rows = await listNotifications(db, userId, runnerVisibleToViewer(userId));
     const markable = Object.fromEntries(
       rows.map((row) => [row.body, row.markable]),
     );
@@ -303,7 +315,7 @@ describe("which rows Mark all read can clear", () => {
     });
     await markAllNotificationsRead(db, userId);
 
-    const [row] = await listNotifications(db, userId);
+    const [row] = await listNotifications(db, userId, runnerVisibleToViewer(userId));
     expect(row?.markable).toBe(false);
   });
 
@@ -323,12 +335,12 @@ describe("which rows Mark all read can clear", () => {
       subjectId: newUlid(),
       body: "other",
     });
-    const before = await listNotifications(db, userId);
+    const before = await listNotifications(db, userId, runnerVisibleToViewer(userId));
     const offered = before.filter((row) => row.markable).map((row) => row.body);
 
     await markAllNotificationsRead(db, userId);
 
-    const after = await listNotifications(db, userId);
+    const after = await listNotifications(db, userId, runnerVisibleToViewer(userId));
     const cleared = after
       .filter(
         (row) => row.read && before.some((b) => b.id === row.id && !b.read),
@@ -368,7 +380,7 @@ describe("mark all read never clears a verdict still owed", () => {
 
     await markAllNotificationsRead(db, userId);
 
-    const rows = await listNotifications(db, userId);
+    const rows = await listNotifications(db, userId, runnerVisibleToViewer(userId));
     const unread = rows.filter((row) => !row.read).map((row) => row.body);
     expect(unread).toStrictEqual([
       "Add your kit for the run you just imported.",
@@ -414,7 +426,7 @@ describe("mark all read never clears a verdict still owed", () => {
 
     // Each reminder's body is its run's id, so the two sets compare as
     // plain strings.
-    const notificationRows = await listNotifications(db, userId);
+    const notificationRows = await listNotifications(db, userId, runnerVisibleToViewer(userId));
     const unread = new Set(
       notificationRows.filter((row) => !row.read).map((row) => row.body),
     );
@@ -444,7 +456,7 @@ describe("what a row links to (design 183)", () => {
   it("carries a follow row's follower by the handle they have now", async () => {
     const db = coreDb();
     const userId = newUlid();
-    const followerId = await makeUser({ username: "ada_now" });
+    const followerId = await makeVerifiedUser({ username: "ada_now" });
     await createNotification(db, {
       userId,
       kind: "followed",
@@ -452,8 +464,51 @@ describe("what a row links to (design 183)", () => {
       linkId: followerId,
       body: "@ada followed you.",
     });
-    const [row] = await listNotifications(db, userId);
+    const [row] = await listNotifications(db, userId, runnerVisibleToViewer(userId));
     expect(row).toMatchObject({ linkId: followerId, linkHandle: "ada_now" });
+  });
+
+  it.each([
+    ["the follower blocked the runner", "follower"],
+    ["the runner blocked the follower", "runner"],
+  ] as const)(
+    "names no follower across a block, renamed or not, when %s (SA-M9)",
+    async (_case, blocker) => {
+      const db = coreDb();
+      const you = await makeVerifiedUser({ username: `you_${blocker}` });
+      const ada = await makeVerifiedUser({ username: `old_${blocker}` });
+      await follow(ada, you);
+      await (blocker === "follower"
+        ? blockRunner(ada, you)
+        : blockRunner(you, ada));
+      await db
+        .update(userProfiles)
+        .set({ username: `new_${blocker}` })
+        .where(eq(userProfiles.userId, ada));
+
+      const rows = await listNotifications(db, you, runnerVisibleToViewer(you));
+      expect(rows.find((row) => row.kind === "followed")).toMatchObject({
+        linkId: ada,
+        linkHandle: NOTHING,
+      });
+    },
+  );
+
+  it("names no follower who is banned", async () => {
+    const db = coreDb();
+    const you = await makeVerifiedUser();
+    const ada = await makeVerifiedUser({ username: "ada_banned" });
+    await follow(ada, you);
+    await db
+      .update(userProfiles)
+      .set({ bannedAt: NOW })
+      .where(eq(userProfiles.userId, ada));
+
+    const rows = await listNotifications(db, you, runnerVisibleToViewer(you));
+    expect(rows.find((row) => row.kind === "followed")).toMatchObject({
+      linkId: ada,
+      linkHandle: NOTHING,
+    });
   });
 
   it("reads no handle for any other kind, whatever its link", async () => {
@@ -467,7 +522,7 @@ describe("what a row links to (design 183)", () => {
       linkId: someone,
       body: "We fixed the weight on Harrier. Thanks.",
     });
-    const [row] = await listNotifications(db, userId);
+    const [row] = await listNotifications(db, userId, runnerVisibleToViewer(userId));
     expect(row).toMatchObject({ linkId: someone, linkHandle: NOTHING });
   });
 
@@ -480,7 +535,7 @@ describe("what a row links to (design 183)", () => {
       subjectId: newUlid(),
       body: "@ada and 2 others followed you.",
     });
-    const rows = await listNotifications(db, userId);
+    const rows = await listNotifications(db, userId, runnerVisibleToViewer(userId));
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
       linkId: NOTHING,

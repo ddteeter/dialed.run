@@ -196,6 +196,17 @@ export function regionInviteRefusal(code: BlockedRegion): string {
 export const REGION_BLOCKED_CODE = "REGION_BLOCKED";
 
 /**
+ * SA-L09 (owner, 2026-11-16): an address an operator closed, kept as a
+ * fingerprint after its account was purged, makes no account. Google's
+ * round trip brings it back as `?error=ADDRESS_CLOSED` and Au2's band says
+ * it: the runner there has shown Google they hold the address. The email
+ * form says nothing of it — it answers as it answers a registered address.
+ */
+export const ADDRESS_CLOSED_CODE = "ADDRESS_CLOSED";
+export const ADDRESS_CLOSED_COPY =
+  "This address can't be used to make an account.";
+
+/**
  * The slice of a Workers request the gate reads: Cloudflare's `cf`, which
  * the edge writes and a client cannot, parsed rather than trusted. A
  * request with none (local dev, a test, Better Auth called from the

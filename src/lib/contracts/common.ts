@@ -4,6 +4,8 @@
  */
 import { z } from "zod";
 
+import { isOwnHost } from "../domain";
+
 // ---- Common ---------------------------------------------------------------
 
 /**
@@ -32,6 +34,9 @@ function linkProblem(
   const url = URL.parse(value);
   if (!url?.hostname.includes(".")) {
     return "That isn't a link. Paste the address of the shop's page.";
+  }
+  if (isOwnHost(url.hostname)) {
+    return "That's a dialed.run page. Paste the address of the shop's page.";
   }
   return schemes.has(url.protocol)
     ? undefined

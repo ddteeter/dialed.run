@@ -566,7 +566,7 @@ describe("not public (round 41 #86f): one answer for every reason", () => {
     expect(await publicKitRead("not-an-id")).toBeUndefined();
     expect(await pageFor("not-an-id")).toStrictEqual({
       kit: undefined,
-      headers: [[{ "Cache-Control": "public, max-age=60" }]],
+      headers: [[{ "Cache-Control": "public, max-age=60, must-revalidate" }]],
     });
   });
 });
@@ -579,7 +579,7 @@ describe("publicKitHeaders (design 163, D-154)", () => {
       headers: [
         [
           {
-            "Cache-Control": "public, max-age=60",
+            "Cache-Control": "public, max-age=60, must-revalidate",
             "Cache-Tag": `entry:${entryId},runner:${runner}`,
           },
         ],
@@ -591,7 +591,7 @@ describe("publicKitHeaders (design 163, D-154)", () => {
     const entryId = newUlid();
 
     expect(publicKitHeaders(entryId, undefined)).toStrictEqual({
-      "Cache-Control": "public, max-age=60",
+      "Cache-Control": "public, max-age=60, must-revalidate",
       "Cache-Tag": `entry:${entryId}`,
     });
   });
@@ -659,7 +659,7 @@ describe("the card (round 41 #86e)", () => {
     );
 
     expect(response.headers.get("Content-Type")).toBe("image/png");
-    expect(response.headers.get("Cache-Control")).toBe("public, max-age=60");
+    expect(response.headers.get("Cache-Control")).toBe("public, max-age=60, must-revalidate");
     // The kit's own card, not the default one.
     const fallback = await publicKitCardResponse(
       new Request(`https://dialed.test/og/kit/${newUlid()}`),
@@ -679,7 +679,7 @@ describe("the card (round 41 #86e)", () => {
       entryId,
     );
 
-    expect(response.headers.get("Cache-Control")).toBe("public, max-age=60");
+    expect(response.headers.get("Cache-Control")).toBe("public, max-age=60, must-revalidate");
     expect(response.headers.get("Cache-Tag")).toBe(`entry:${entryId}`);
   });
 });

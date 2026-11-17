@@ -302,6 +302,15 @@ describe("D8 Runners: state and flag (PR#126-1, D-161 1)", () => {
         [active, "ACTIVE"],
       ]),
     );
+    expect(
+      new Map(rows.map((row) => [row.userId, row.isLeaving])),
+    ).toStrictEqual(
+      new Map([
+        [leaving, true],
+        [closed, true],
+        [active, false],
+      ]),
+    );
   });
 
   it("carries the flag on the row, and filters to flagged accounts", async () => {

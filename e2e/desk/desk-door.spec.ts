@@ -256,7 +256,7 @@ test.describe("security headers (OPS-8)", () => {
       const html = await response.text();
 
       expect(response.status()).toBe(404);
-      expect(headers["cache-control"]).toBe("public, max-age=60");
+      expect(headers["cache-control"]).toBe("public, max-age=60, must-revalidate");
       const policy = headers[CSP_HEADER.toLowerCase()] ?? "";
       expect(policy).not.toContain("nonce");
       expect(html).not.toMatch(/\snonce=/);

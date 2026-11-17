@@ -15,6 +15,7 @@ import { nowSeconds } from "../../lib/now";
 import { orSqlNull } from "../../lib/sql/sql-null";
 import { countSend, sendAllowed, sendClaimOf } from "../email";
 import type { TurnstileAttempt, TurnstileVerdict } from "../ops";
+import { isClosedAddress } from "./closed-addresses";
 import { confirmRedemption, inviteStanding, redeemInvite } from "./invites";
 import { currentTermsVersion, signUpAcceptances } from "./terms-acceptance";
 
@@ -41,12 +42,14 @@ export function turnstileAttempt(
  * The gate `createAuth` takes (`modules/auth/access-hook.ts`), against one
  * database and one Turnstile check. `termsVersion` is the published terms'
  * version, `undefined` while none are published (D-93) — the shipped
- * text's, unless a test says otherwise.
+ * text's, unless a test says otherwise. `closedAddressSecret` is
+ * `CLOSED_ADDRESS_SECRET` (SA-L09); without it no address is refused.
  */
 export function accessGate(
   db: Db,
   verify: (attempt: TurnstileAttempt) => Promise<TurnstileVerdict>,
   termsVersion: number | undefined = currentTermsVersion(),
+  closedAddressSecret?: string,
 ) {
   return {
     isInviteOnly: IS_INVITE_ONLY,
@@ -61,6 +64,8 @@ export function accessGate(
     standing: (code: string) => inviteStanding(db, code),
     claim: (claim: Readonly<{ code: string; userId: string; email: string }>) =>
       redeemInvite(db, claim),
+    isClosedAddress: (email: string) =>
+      isClosedAddress(db, closedAddressSecret, email),
     // The account exists: its invite's use is spent for good, and the
     // published terms it was made under are recorded (ACC-6: creating the
     // account is the acceptance) — one batch, the account's first app

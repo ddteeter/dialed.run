@@ -12,6 +12,7 @@
  */
 import { and, eq, inArray } from "drizzle-orm";
 
+import { user } from "../../src/db/schema-auth";
 import {
   brands,
   notifications,
@@ -80,7 +81,16 @@ test("a runner corrects a product, the Desk applies it, and the bell says so", a
       createdAt: now,
     });
     // A follow that rang the runner's bell (R48·131); the ring itself is
-    // the follow module's, and its tests cover it.
+    // the follow module's, and its tests cover it. A confirmed account, as
+    // every follower is: the bell names only a runner its owner may see.
+    await core.insert(user).values({
+      id: followerId,
+      name: followerHandle,
+      email: `${followerHandle}@example.com`,
+      emailVerified: true,
+      createdAt: new Date(now * 1000),
+      updatedAt: new Date(now * 1000),
+    });
     await core
       .insert(userProfiles)
       .values({ userId: followerId, username: followerHandle });
@@ -237,6 +247,7 @@ test("a runner corrects a product, the Desk applies it, and the bell says so", a
       await core
         .delete(userProfiles)
         .where(inArray(userProfiles.userId, [followerId, ...reporterIds]));
+      await core.delete(user).where(eq(user.id, followerId));
     });
   }
 });

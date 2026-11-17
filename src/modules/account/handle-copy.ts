@@ -25,6 +25,12 @@ export const HANDLE_COPY = {
    * page does not say it (B-16; owner, 2026-11-13).
    */
   changeLater: "You can change it in settings.",
+  /**
+   * Past the rename cap (SA-L02, owner 2026-11-15): `RENAME_CAP` new
+   * handles in `RENAME_WINDOW_S`.
+   */
+  tooOften:
+    "You've changed your handle 3 times this month. Try again in a few weeks.",
 } as const;
 
 /**

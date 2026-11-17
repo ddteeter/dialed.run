@@ -46,6 +46,8 @@ import {
   accessRequests,
   accountDeletions,
   blocks,
+  closedAddresses,
+  copyrightHolds,
   dataExports,
   emailVerifications,
   entryPhotos,
@@ -79,21 +81,30 @@ import { orSqlNull } from "../../lib/sql/sql-null";
 import { nowSeconds } from "../../lib/now";
 import { forgetRateLimit, forgetSendLimits } from "../email";
 import { forgetRunnerEnrichmentLimit } from "../enrichment";
-import { deleteRuns } from "../feed";
+import { deleteRuns, LIVE_HOLD } from "../feed";
 import { captureException, outboxInsert, oweOutbox } from "../ops";
 import { disconnectStrava } from "../runs";
 import { settleOpenReviews } from "../safety";
 import { forgetManualBands } from "../weather";
+import { closedAddressRows, forgetClosedAddresses } from "./closed-addresses";
 import { exportPrefixFor } from "./data-exports";
 
 type Db = ReturnType<typeof drizzle>;
 type Report = (error: unknown, context: Record<string, string>) => void;
 
 /**
- * Accounts one firing purges at most. A purge is a few hundred statements
- * and R2 calls for a runner with years of runs; the rest wait a day.
+ * Accounts one round claims at most. A purge is a few hundred statements
+ * and R2 calls for a runner with years of runs, so a firing claims a few at
+ * a time and claims again while it has time (`PURGE_BUDGET_MS`); what is
+ * left waits a day.
  */
-export const PURGE_PER_FIRING = 3;
+export const PURGE_PER_ROUND = 3;
+
+/**
+ * How long a firing keeps claiming: no round starts past it. A daily
+ * firing may run fifteen minutes; this leaves the rest of the upkeep room.
+ */
+export const PURGE_BUDGET_MS = 5 * 60 * 1000;
 
 /**
  * How long a claim is held before another firing may take it over. The
@@ -121,6 +132,11 @@ export interface PurgeDeps {
   readonly importsBucket: Pick<R2Bucket, "list" | "delete">;
   readonly report: Report;
   readonly now: number;
+  /**
+   * `CLOSED_ADDRESS_SECRET` (SA-L09): keys what is kept of a closed
+   * account's addresses. Absent: nothing is kept, and the digest says so.
+   */
+  readonly closedAddressSecret?: string | undefined;
 }
 
 function liveDeps(): PurgeDeps {
@@ -133,43 +149,89 @@ function liveDeps(): PurgeDeps {
     importsBucket: env.IMPORTS,
     report: captureException,
     now: nowSeconds(),
+    closedAddressSecret: env.CLOSED_ADDRESS_SECRET,
   };
 }
 
 /**
- * The daily firing's purge: claim what is due, purge each, and put what
- * could not finish into the digest (law 6).
+ * The daily firing's purge: claim what is due, a round at a time while the
+ * budget lasts, purge each, and put what could not finish into the digest
+ * (law 6). A claim that fails is held for the lease, so no round of this
+ * firing takes it again, and the rounds end when nothing is left to claim.
  */
 export async function purgeDueAccounts(
   anomalies: string[],
   deps: PurgeDeps = liveDeps(),
+  // Milliseconds, for the budget.
+  clock: () => number = Date.now,
 ): Promise<void> {
-  const claimed = await claimDue(deps.core, deps.now);
+  const startedAt = clock();
+  // The daily firing also lets go of closed addresses past their 3 years.
+  await forgetClosedAddresses(deps.core, deps.now);
   let failed = 0;
-  for (const userId of claimed) {
-    try {
-      await purgeAccount(deps, userId);
-    } catch (error) {
-      failed += 1;
-      deps.report(error, { surface: "account-purge", userId });
-    }
+  let unremembered = 0;
+  let claimed = await claimDue(deps.core, deps.now);
+  while (claimed.length > 0) {
+    const outcome = await purgeEach(deps, claimed);
+    failed += outcome.failed;
+    unremembered += outcome.unremembered;
+    claimed =
+      clock() - startedAt < PURGE_BUDGET_MS
+        ? await claimDue(deps.core, deps.now)
+        : [];
   }
   if (failed > 0) {
     anomalies.push(
       `${String(failed)} account deletion(s) stopped part way and are finished on the next firing`,
     );
   }
-  const waiting = await deps.core.$count(accountDeletions, due(deps.now));
+  if (unremembered > 0) {
+    anomalies.push(
+      `${String(unremembered)} closed account(s) were purged with their addresses unremembered: CLOSED_ADDRESS_SECRET is not set`,
+    );
+  }
+  const dueButHeld = and(due(deps.now), sql`EXISTS (${liveHold()})`);
+  const [waiting, held] = await Promise.all([
+    deps.core.$count(accountDeletions, claimable(deps.now)),
+    deps.core.$count(accountDeletions, dueButHeld),
+  ]);
   if (waiting > 0) {
     anomalies.push(
       `${String(waiting)} account deletion(s) past their date wait for the next firing`,
     );
   }
+  if (held > 0) {
+    anomalies.push(
+      `${String(held)} account deletion(s) wait for a copyright hold to settle`,
+    );
+  }
 }
 
 /**
- * A claim the firing may take: past its date, and not held by a purge
- * that is still running.
+ * How many of these purges failed, and how many closed accounts were
+ * purged with nothing kept of their addresses; each failure is reported,
+ * and the rest go on.
+ */
+async function purgeEach(
+  deps: PurgeDeps,
+  userIds: readonly string[],
+): Promise<{ failed: number; unremembered: number }> {
+  let failed = 0;
+  let unremembered = 0;
+  for (const userId of userIds) {
+    try {
+      const { isUnremembered } = await purgeAccount(deps, userId);
+      if (isUnremembered) unremembered += 1;
+    } catch (error) {
+      failed += 1;
+      deps.report(error, { surface: "account-purge", userId });
+    }
+  }
+  return { failed, unremembered };
+}
+
+/**
+ * Past its date, and not held by a purge that is still running.
  */
 function due(now: number) {
   return and(
@@ -179,6 +241,27 @@ function due(now: number) {
       lt(accountDeletions.purgeStartedAt, now - PURGE_LEASE_S),
     ),
   );
+}
+
+/**
+ * SA-L09: whether a live copyright hold names the account's material
+ * (`copyright_holds_owner`). While one does, the account is not purged:
+ * the hold's material is evidence until the Desk settles it, and the purge
+ * would delete it with the rest. The hold's own end lets the next firing in.
+ */
+function liveHold() {
+  const live = and(
+    eq(copyrightHolds.ownerId, accountDeletions.userId),
+    inArray(copyrightHolds.status, [...LIVE_HOLD]),
+  );
+  return sql`SELECT 1 FROM ${copyrightHolds} WHERE ${live}`;
+}
+
+/**
+A claim the firing may take: due, and no live hold on its account.
+*/
+function claimable(now: number) {
+  return and(due(now), sql`NOT EXISTS (${liveHold()})`);
 }
 
 /**
@@ -195,22 +278,28 @@ function due(now: number) {
  * started purge's runner is owed no session whichever firing holds it.
  */
 async function claimDue(db: Db, now: number): Promise<string[]> {
+  // Never tried first, oldest first: a claim a purge failed on (its lease
+  // ran out) goes behind every one not yet tried, so a purge that fails
+  // every firing cannot keep the others waiting.
   const oldest = db
     .select({ userId: accountDeletions.userId })
     .from(accountDeletions)
-    .where(due(now))
-    .orderBy(asc(accountDeletions.purgeAfter))
-    .limit(PURGE_PER_FIRING);
+    .where(claimable(now))
+    .orderBy(
+      sql`coalesce(${accountDeletions.purgeStartedAt}, 0)`,
+      asc(accountDeletions.purgeAfter),
+    )
+    .limit(PURGE_PER_ROUND);
   const started = db
     .select({ userId: accountDeletions.userId })
     .from(accountDeletions)
     .where(isNotNull(accountDeletions.purgeStartedAt));
-  const claimable = and(inArray(accountDeletions.userId, oldest), due(now));
+  const taken = and(inArray(accountDeletions.userId, oldest), claimable(now));
   const [rows] = await db.batch([
     db
       .update(accountDeletions)
       .set({ purgeStartedAt: now })
-      .where(claimable)
+      .where(taken)
       .returning({ userId: accountDeletions.userId }),
     db.delete(session).where(inArray(session.userId, started)),
   ]);
@@ -220,12 +309,13 @@ async function claimDue(db: Db, now: number): Promise<string[]> {
 /**
  * One account, step by step. Every step reads what is left, so running
  * it again from the top after a failure at any step does only what the
- * failure left undone.
+ * failure left undone. `isUnremembered` when the account was closed and
+ * nothing was kept of its addresses (`deleteAccountRows`).
  */
 export async function purgeAccount(
   deps: PurgeDeps,
   userId: string,
-): Promise<void> {
+): Promise<{ isUnremembered: boolean }> {
   const { core, report } = deps;
   await forgetManualConditions(deps, userId);
   // Revoked before anything else of theirs goes: a connection the request
@@ -237,7 +327,7 @@ export async function purgeAccount(
   await deleteRuns(core, userId, "all", report);
   await deleteCloset(core, userId);
   await deleteStoredFiles(deps.importsBucket, userId);
-  await deleteAccountRows(core, userId, deps.now);
+  return deleteAccountRows(core, userId, deps);
 }
 
 /**
@@ -431,14 +521,45 @@ function forgetAddress(db: Db, address: string) {
 }
 
 /**
+ * SA-L09: the follow rows on other runners' bells that name this runner —
+ * one they alone rang (it links to them), or a group whose words name them
+ * as its newest follower ("@ada and 3 others followed you."). A group that
+ * names someone else stays: it counts them, and names nobody gone. Found
+ * through their rings (`follow_notices_follower`), each bell's row by its
+ * runner, kind and group (`notifications_dedupe`).
+ */
+function followRowsNaming(db: Db, userId: string, handle: string | undefined) {
+  const theirRings = (column: SQLiteColumn) =>
+    db
+      .select({ id: column })
+      .from(followNotices)
+      .where(eq(followNotices.followerId, userId));
+  const opening = "@" + String(handle) + " ";
+  const named =
+    handle === undefined
+      ? eq(notifications.linkId, userId)
+      : or(
+          eq(notifications.linkId, userId),
+          sql`substr(${notifications.body}, 1, ${opening.length}) = ${opening}`,
+        );
+  return and(
+    inArray(notifications.userId, theirRings(followNotices.followeeId)),
+    eq(notifications.kind, "followed"),
+    inArray(notifications.subjectId, theirRings(followNotices.notificationId)),
+    named,
+  );
+}
+
+/**
  * Everything else, and the account itself — one batch, so the claim goes
  * only with the `user` row, and a purge that reaches here finishes whole.
  */
 async function deleteAccountRows(
   db: Db,
   userId: string,
-  now: number,
-): Promise<void> {
+  deps: Pick<PurgeDeps, "now" | "closedAddressSecret">,
+): Promise<{ isUnremembered: boolean }> {
+  const { now } = deps;
   const addresses = await addressesOf(db, userId);
   const profile = await firstRowWhere(
     db,
@@ -446,6 +567,10 @@ async function deleteAccountRows(
     eq(userProfiles.userId, userId),
   );
   const handle = profile?.username ?? undefined;
+  const isClosed = profile !== undefined && profile.bannedAt !== null;
+  const fingerprints = isClosed
+    ? await closedAddressRows(deps.closedAddressSecret, addresses, now)
+    : [];
   // Both directions. `follows` has no index led by the followee, so the
   // second clause scans it — once, for a deletion.
   const eitherFollow = involvingEither(
@@ -458,6 +583,7 @@ async function deleteAccountRows(
     blocks.blockedId,
     userId,
   );
+  const ringsNamingThem = followRowsNaming(db, userId, handle);
   // A follow's ring (R48·131e), on their bell or someone else's.
   const eitherRing = involvingEither(
     followNotices.followerId,
@@ -501,12 +627,18 @@ async function deleteAccountRows(
   await db.batch([
     db.delete(follows).where(eitherFollow),
     db.delete(blocks).where(eitherBlock),
+    // Before the rings, which are how these rows are found.
+    db.delete(notifications).where(ringsNamingThem),
     db.delete(followNotices).where(eitherRing),
     // Useful marks they gave others' entries (theirs went with the runs).
     ...byUserId.map((table) =>
       db.delete(table).where(eq(table.userId, userId)),
     ),
     ...addresses.flatMap((address) => forgetAddress(db, address)),
+    // What sign-up refuses for 3 years, in place of the addresses.
+    ...fingerprints.map((row) =>
+      db.insert(closedAddresses).values(row).onConflictDoNothing(),
+    ),
     forgetRateLimit(db, "change-runner", userId),
     forgetRunnerEnrichmentLimit(db, userId),
     // Reports they filed stay — what was said about someone else's post
@@ -541,4 +673,7 @@ async function deleteAccountRows(
       db.delete(table).where(eq(column, userId)),
     ),
   ]);
+  // SA-L09: a closed account's addresses are kept as fingerprints, so
+  // sign-up can refuse them; with no secret, none were.
+  return { isUnremembered: isClosed && fingerprints.length === 0 };
 }

@@ -1,3 +1,5 @@
+import { MARKETING_HOST } from "./marketing";
+
 /**
  * The domain of a product link, for the two places that need one: the
  * denylist check on the server, and the bare host a component renders
@@ -47,4 +49,26 @@ export function domainOf(url: string | undefined): string | undefined {
   if (parsed.protocol !== "https:") return undefined;
   const host = parsed.hostname.toLowerCase();
   return host.startsWith("www.") ? host.slice(4) : host;
+}
+
+/**
+ * SA-L14: whether a hostname is the app's own, `dialed.run` or any host
+ * under it (D-99 puts the app on a subdomain). A trailing dot names the
+ * same host, so it is dropped before comparing.
+ */
+export function isOwnHost(hostname: string): boolean {
+  let host = hostname.toLowerCase();
+  while (host.endsWith(".")) host = host.slice(0, -1);
+  return host === MARKETING_HOST || host.endsWith(`.${MARKETING_HOST}`);
+}
+
+/**
+ * The domain a product link is shown with, or `undefined` when it is not
+ * one to draw as a link: not a parseable https URL, or a page of the app's
+ * own, which the printed domain would vouch for rather than warn about.
+ * What a reader is shown; the denylist keeps reading `domainOf`.
+ */
+export function linkDomainOf(url: string | undefined): string | undefined {
+  const domain = domainOf(url);
+  return domain === undefined || isOwnHost(domain) ? undefined : domain;
 }

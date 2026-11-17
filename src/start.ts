@@ -12,17 +12,20 @@
  *
  * **A field refusal keeps its issues the same way** (R-176, design 171):
  * `lib/field-refusal`'s adapter, so a refusal the server lands on a field
- * (a denied product link) reaches `useFormSubmit` as one.
+ * (a denied product link) reaches `useFormSubmit` as one, and a control
+ * refusal keeps its sentence (`lib/control-refusal`).
  */
 import { createSerializationAdapter } from "@tanstack/react-router";
 import { createStart } from "@tanstack/react-start";
 
 import { signalAdapter } from "./lib/auth-signal";
+import { controlRefusalAdapter } from "./lib/control-refusal";
 import { fieldRefusalAdapter } from "./lib/field-refusal";
 
 export const startInstance = createStart(() => ({
   serializationAdapters: [
     createSerializationAdapter(signalAdapter),
     createSerializationAdapter(fieldRefusalAdapter),
+    createSerializationAdapter(controlRefusalAdapter),
   ],
 }));

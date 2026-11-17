@@ -5,6 +5,7 @@ import {
   EMAIL_UNCONFIRMED_CODE,
   TERMS_NOT_ACCEPTED_CODE,
 } from "../../src/lib/auth-signal";
+import { ControlRefusal } from "../../src/lib/control-refusal";
 import { classifyFailure } from "../../src/ui";
 
 /**
@@ -44,6 +45,19 @@ describe("classifyFailure", () => {
       kind: "session",
       message: "You were signed out.",
     });
+  });
+
+  it("reads a control refusal by its code, as its own sentence", () => {
+    expect(classifyFailure(new ControlRefusal("This kit is held."))).toStrictEqual(
+      { kind: "refused", message: "This kit is held." },
+    );
+    // Across the wire it is a plain object with the code.
+    expect(
+      classifyFailure({ code: "CONTROL_REFUSAL", message: "Held." }),
+    ).toStrictEqual({ kind: "refused", message: "Held." });
+    expect(classifyFailure({ code: "OTHER", message: "Held." }).kind).toBe(
+      "server",
+    );
   });
 
   it("reads a refusal for being behind on the terms from its code (ACC-6)", () => {

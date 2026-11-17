@@ -38,6 +38,8 @@ import { z } from "zod";
 import {
   ACCESS_CODES,
   ACCESS_HEADERS,
+  ADDRESS_CLOSED_CODE,
+  ADDRESS_CLOSED_COPY,
   INVITE_COPY,
   REGION_BLOCKED_CODE,
   REGION_BLOCKED_COPY,
@@ -93,6 +95,11 @@ export interface AccessGate {
   claim: (
     claim: Readonly<{ code: string; userId: string; email: string }>,
   ) => Promise<InviteClaim>;
+  /**
+   * Whether this address belonged to an account an operator closed, and is
+   * still refused (SA-L09): the account module's fingerprints.
+   */
+  isClosedAddress: (email: string) => Promise<boolean>;
   /**
    * The account now exists: a claim's use is spent for good, whatever
    * later happens to the account, and the terms it was made under are
@@ -184,6 +191,20 @@ function refuseRegion(): never {
   throw new APIError("FORBIDDEN", {
     code: REGION_BLOCKED_CODE,
     message: REGION_BLOCKED_COPY,
+  });
+}
+
+/**
+ * SA-L09: a closed address makes no account. A 403 from this hook is one
+ * Better Auth answers, on the email form, exactly as it answers a
+ * registered address (no account, no email, the same body), so the form
+ * tells nobody the address was closed. Google's callback brings the code
+ * back to Au2, to a runner who has shown they hold the address.
+ */
+function refuseClosedAddress(): never {
+  throw new APIError("FORBIDDEN", {
+    code: ADDRESS_CLOSED_CODE,
+    message: ADDRESS_CLOSED_COPY,
   });
 }
 
@@ -327,6 +348,8 @@ export function claimInvite(gate: AccessGate) {
     // Every account, before anything else: an email sign-up from a
     // blocked state never gets here, Google's callback is read here.
     if (isFromBlockedRegion(context?.request)) refuseRegion();
+    // Before the code is claimed, so a closed address spends none.
+    if (await gate.isClosedAddress(user.email)) refuseClosedAddress();
     if (gate.checksAge && !(await isAgeCheckedForCreate(context))) {
       refuseMissingAge();
     }

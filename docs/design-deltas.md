@@ -1508,6 +1508,35 @@ yet. Each is a guess at composition until Design draws it.
   Try again at {time}, or reset your password." on the device's clock,
   kicker NOT SIGNED IN and no Try again.
 
+## Built for the privacy lane (wave 12, design 228)
+
+Six surfaces built from the owner's words (2026-11-15 and 2026-11-16) on
+existing primitives, with no board yet. Each is a guess at composition
+until Design draws it.
+
+- **Guess · a held kit's delete is refused.** Deleting a kit, run or photo
+  a copyright hold names leaves it in place; the delete sheet's failure
+  band says NOT DELETED, "This kit is held while a copyright claim is
+  settled, so it can't be deleted yet." (run and photo alike), with Try
+  again.
+- **Guess · the rename cap.** A fourth handle in 30 days is refused on the
+  handle form, under the field: "You've changed your handle 3 times this
+  month. Try again in a few weeks."
+- **Guess · a product link to dialed.run.** F's product link field refuses
+  a link to the app's own host on leaving the box: "That's a dialed.run
+  page. Paste the address of the shop's page." A stored one is drawn as
+  plain text.
+- **Guess · the correction sheet's link.** The correction sheet quotes a
+  product link by its domain alone.
+- **Guess · the Desk's two state tags.** D8's STATE shows `[CLOSED]
+[PENDING DELETE]`, in that order, for a closed account in its deletion
+  week.
+- **Guess · a closed address on Google.** Continue with Google from Au2,
+  for an address whose closed account was purged, comes back with Google's
+  band: kicker NOT CREATED, no Try again, "This address can't be used to
+  make an account." The email form shows nothing: it answers as for a
+  registered address.
+
 ## Built from round 58's Desk rulings (wave 11, design 222)
 
 How the Desk's Round 58 rulings (#719–#725, #758, #759) were built, and

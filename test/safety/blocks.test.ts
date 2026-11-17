@@ -1,4 +1,8 @@
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
+
+import { follows, userProfiles } from "../../src/db/schema-core";
+import { coreDb } from "../../src/env";
 
 import {
   blockRunner,
@@ -166,5 +170,71 @@ describe("the W2 roster", () => {
 
   it("is empty for most people, which is the normal case", async () => {
     expect(await blockedRunners(await makeUser())).toEqual([]);
+  });
+
+  it("lists a runner who blocked me back without their handle (SA-M8)", async () => {
+    const me = await makeUser({ username: "me_runner" });
+    const them = await makeUser({ username: "old_name" });
+    const other = await makeUser({ username: "still_named" });
+    await blockRunner(them, me);
+    await blockRunner(me, them);
+    await blockRunner(me, other);
+    await coreDb()
+      .update(userProfiles)
+      .set({ username: "new_name" })
+      .where(eq(userProfiles.userId, them));
+
+    const roster = await blockedRunners(me);
+
+    expect(roster).toHaveLength(2);
+    const theirRow = roster.find((row) => row.userId === them);
+    expect(theirRow).toStrictEqual({
+      userId: them,
+      username: undefined,
+      blockedAt: theirRow?.blockedAt,
+    });
+    expect(typeof theirRow?.blockedAt).toBe("number");
+    expect(roster.find((row) => row.userId === other)?.username).toBe(
+      "still_named",
+    );
+    // Mutual: neither roster names the other.
+    const theirRoster = await blockedRunners(them);
+    expect(theirRoster).toStrictEqual([
+      { userId: me, username: undefined, blockedAt: theirRoster[0]?.blockedAt },
+    ]);
+    expect(typeof theirRoster[0]?.blockedAt).toBe("number");
+  });
+});
+
+describe("a block and the pair's follows (SA-L02)", () => {
+  beforeEach(resetSafetyTables);
+
+  it("ends follows in both directions and leaves others alone", async () => {
+    const me = await makeUser();
+    const them = await makeUser();
+    const bystander = await makeUser();
+    await coreDb().delete(follows);
+    await coreDb()
+      .insert(follows)
+      .values([
+        { followerId: me, followeeId: them, createdAt: 1 },
+        { followerId: them, followeeId: me, createdAt: 1 },
+        { followerId: bystander, followeeId: me, createdAt: 1 },
+        { followerId: me, followeeId: bystander, createdAt: 1 },
+      ]);
+
+    await blockRunner(me, them);
+
+    const left = await coreDb()
+      .select({ from: follows.followerId, to: follows.followeeId })
+      .from(follows);
+    expect(left).toHaveLength(2);
+    expect(left).toEqual(
+      expect.arrayContaining([
+        { from: bystander, to: me },
+        { from: me, to: bystander },
+      ]),
+    );
+    expect(await isBlocked(me, them)).toBe(true);
   });
 });

@@ -2,11 +2,11 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { env } from "../../src/env";
 
+import { CSP_REPORT_PATH } from "../../src/modules/ops/csp-report";
 import { secureResponse } from "../../src/modules/ops/secure-response";
 import {
   CSP_HEADER,
   contentSecurityPolicy,
-  sentryReportUri,
   withSecurityHeaders,
 } from "../../src/modules/ops/security-headers";
 
@@ -39,6 +39,7 @@ describe("withSecurityHeaders", () => {
       [CSP_HEADER.toLowerCase()]: contentSecurityPolicy(REPORT, {
         nonce: "n0nce",
       }),
+      "content-security-policy": "connect-src 'self'",
       "x-frame-options": "DENY",
       "x-content-type-options": "nosniff",
       "referrer-policy": "strict-origin-when-cross-origin",
@@ -52,10 +53,12 @@ describe("withSecurityHeaders", () => {
     expect(await secured.text()).toBe("<!doctype html><p>hi</p>");
   });
 
-  it("reports the CSP rather than enforcing it, for now", () => {
+  it("enforces connect-src while the rest of the policy only reports (SA-M40)", () => {
     const secured = withSecurityHeaders(new Response("x"), REPORT);
 
-    expect(secured.headers.has("Content-Security-Policy")).toBe(false);
+    expect(secured.headers.get("Content-Security-Policy")).toBe(
+      "connect-src 'self'",
+    );
     expect(secured.headers.has("Content-Security-Policy-Report-Only")).toBe(
       true,
     );
@@ -161,22 +164,6 @@ describe("contentSecurityPolicy", () => {
   });
 });
 
-describe("sentryReportUri", () => {
-  it("derives Sentry's security endpoint from a DSN", () => {
-    expect(sentryReportUri("https://abc@o1.ingest.sentry.io/42")).toBe(REPORT);
-  });
-
-  it.each([
-    ["unset", undefined],
-    ["empty", ""],
-    ["not a URL", "not a dsn"],
-    ["without a key", "https://o1.ingest.sentry.io/42"],
-    ["without a project", "https://abc@o1.ingest.sentry.io/"],
-  ])("has none for a DSN that is %s", (_label, dsn) => {
-    expect(sentryReportUri(dsn)).toBeUndefined();
-  });
-});
-
 describe("secureResponse, as server.ts calls it", () => {
   const ORIGINAL: unknown = env.SENTRY_DSN;
 
@@ -184,23 +171,16 @@ describe("secureResponse, as server.ts calls it", () => {
     Reflect.set(env, "SENTRY_DSN", ORIGINAL);
   });
 
-  it("reports CSP violations to the deployed DSN's project", async () => {
+  it("reports CSP violations to our own collector, never to Sentry (SA-L19)", async () => {
     Reflect.set(env, "SENTRY_DSN", "https://abc@o1.ingest.sentry.io/42");
 
     const secured = await secureResponse(new Response("<p>page</p>"), "n0nce");
 
     const policy = secured.headers.get(CSP_HEADER);
-    expect(policy).toBe(contentSecurityPolicy(REPORT, { nonce: "n0nce" }));
-  });
-
-  it("still secures every response when there is no DSN", async () => {
-    Reflect.deleteProperty(env, "SENTRY_DSN");
-
-    const secured = await secureResponse(new Response("<p>page</p>"), "n0nce");
-
-    expect(secured.headers.get(CSP_HEADER)).toBe(
-      contentSecurityPolicy(undefined, { nonce: "n0nce" }),
+    expect(policy).toBe(
+      contentSecurityPolicy("/api/csp-report", { nonce: "n0nce" }),
     );
+    expect(policy).not.toContain("sentry");
     expect(secured.headers.get("X-Frame-Options")).toBe("DENY");
   });
 
@@ -236,16 +216,29 @@ describe("secureResponse, for a page the edge may store (design 163)", () => {
     Reflect.set(env, "SENTRY_DSN", ORIGINAL);
   });
 
-  it("names the hashes of exactly its inline scripts, and no nonce, even when one was minted", async () => {
+  it("names the hashes of exactly its inline scripts, and no nonce, on an open-web path", async () => {
+    Reflect.set(env, "SENTRY_DSN", "https://abc@o1.ingest.sentry.io/42");
+
+    const secured = await secureResponse(page("public, max-age=60"), undefined);
+
+    expect(secured.headers.get(CSP_HEADER)).toBe(
+      contentSecurityPolicy(CSP_REPORT_PATH, { hashes: [ALERT, X] }),
+    );
+    expect(secured.headers.get(CSP_HEADER)).not.toContain("nonce");
+    expect(secured.headers.get("Cache-Control")).toBe("public, max-age=60");
+    expect(await secured.text()).toBe(PAGE);
+  });
+
+  it("never leaves a public page for the edge when a nonce was minted (SA-M15)", async () => {
     Reflect.set(env, "SENTRY_DSN", "https://abc@o1.ingest.sentry.io/42");
 
     const secured = await secureResponse(page("public, max-age=60"), "n0nce");
 
+    expect(secured.headers.get("Cache-Control")).toBe("private, no-store");
     expect(secured.headers.get(CSP_HEADER)).toBe(
-      contentSecurityPolicy(REPORT, { hashes: [ALERT, X] }),
+      contentSecurityPolicy(CSP_REPORT_PATH, { nonce: "n0nce" }),
     );
-    expect(secured.headers.get(CSP_HEADER)).not.toContain("nonce");
-    expect(secured.headers.get("Cache-Control")).toBe("public, max-age=60");
+    expect(secured.status).toBe(200);
     expect(await secured.text()).toBe(PAGE);
   });
 
@@ -273,6 +266,8 @@ describe("secureResponse, for a page the edge may store (design 163)", () => {
     expect(
       directives(secured.headers.get(CSP_HEADER) ?? "").get("script-src"),
     ).toBe("'self' 'wasm-unsafe-eval' https://challenges.cloudflare.com");
+    // Not HTML, so no root answer in it: it stays storable.
+    expect(secured.headers.get("Cache-Control")).toBe("public");
   });
 
   it("keeps the nonce for a page that is not stored", async () => {

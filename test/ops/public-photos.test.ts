@@ -571,7 +571,7 @@ describe("deleting", () => {
     ).toBe(0);
 
     expect(report.mock.calls).toStrictEqual([
-      [refusal, { photoId: owned.photoId }],
+      [refusal, { copies: "1" }],
     ]);
     const [kept] = await copies();
     expect(kept?.key).toBe("k1");
@@ -828,5 +828,151 @@ describe("the switch and the Worker's wiring", () => {
     expect(report.mock.calls).toStrictEqual([
       [failure, { scope: "public photos" }],
     ]);
+  });
+});
+
+/**
+Copies whose photos are gone: every one is stale.
+*/
+async function staleCopies(userId: string, count: number): Promise<void> {
+  const rows = Array.from({ length: count }, () => ({
+    key: newPublicPhotoKey(),
+    photoId: newUlid(),
+    entryId: newUlid(),
+    userId,
+    createdAt: 1,
+    publishedAt: 1,
+  }));
+  for (let at = 0; at < rows.length; at += 10) {
+    await core()
+      .insert(publicPhotos)
+      .values(rows.slice(at, at + 10));
+  }
+  for (const row of rows) {
+    await env.PUBLIC_PHOTOS.put(row.key, new Uint8Array([1]));
+  }
+}
+
+describe("a runner-wide withdrawal drains (SA-L09)", () => {
+  it("withdraws every stale copy of a runner's in the one pass, past a page", async () => {
+    const { userId } = await kit();
+    const bystander = await kit();
+    await staleCopies(userId, 170);
+    await staleCopies(bystander.userId, 3);
+
+    const deleted = await syncPublicPhotos(deps(), {
+      entryIds: [],
+      runnerIds: [userId],
+    });
+
+    expect(deleted).toBe(170);
+    const left = await copies();
+    expect(left.filter((copy) => copy.userId === userId)).toHaveLength(0);
+    expect(await bucketKeys()).toHaveLength(3);
+  });
+
+  it("drains in the hourly sweep too", async () => {
+    const { userId } = await kit();
+    await staleCopies(userId, 90);
+
+    const found = await sweepPublicPhotos(deps());
+    expect(found.stale).toBe(90);
+    expect(await copies()).toHaveLength(0);
+    expect(await bucketKeys()).toHaveLength(0);
+  });
+
+  it("makes no bucket call, and no further read, when nothing is stale", async () => {
+    const { userId } = await kit();
+    const report = vi.fn();
+    const remove = vi.fn().mockResolvedValue(undefined);
+    const bucket: PublicPhotoDeps["bucket"] = {
+      put: vi.fn(),
+      delete: remove,
+      list: vi.fn(),
+    };
+
+    expect(
+      await syncPublicPhotos(deps({ bucket, report, isPublishing: false }), {
+        entryIds: [],
+        runnerIds: [userId],
+      }),
+    ).toBe(0);
+    expect(remove).not.toHaveBeenCalled();
+    expect(report).not.toHaveBeenCalled();
+  });
+
+  it("reads a page more only when the last one was full", async () => {
+    const { userId } = await kit();
+    await staleCopies(userId, 90);
+    let reads = 0;
+    const counting = new Proxy(core(), {
+      get(target, property, receiver): unknown {
+        if (property === "select") reads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+
+    expect(
+      await syncPublicPhotos(deps({ db: counting, isPublishing: false }), {
+        entryIds: [],
+        runnerIds: [userId],
+      }),
+    ).toBe(90);
+    // A full page of 80, then a short one of 10: the short one ends it.
+    expect(reads).toBe(2);
+  });
+
+  it("withdraws at most twenty-five pages in one pass, leaving the rest for the next", async () => {
+    const { userId } = await kit();
+    const rows = Array.from({ length: 2100 }, () => ({
+      key: newPublicPhotoKey(),
+      photoId: newUlid(),
+      entryId: newUlid(),
+      userId,
+      createdAt: 1,
+      publishedAt: 1,
+    }));
+    for (let at = 0; at < rows.length; at += 10) {
+      await core()
+        .insert(publicPhotos)
+        .values(rows.slice(at, at + 10));
+    }
+    const bucket: PublicPhotoDeps["bucket"] = {
+      put: vi.fn(),
+      delete: vi.fn().mockResolvedValue(undefined),
+      list: vi.fn(),
+    };
+
+    expect(
+      await syncPublicPhotos(deps({ bucket, isPublishing: false }), {
+        entryIds: [],
+        runnerIds: [userId],
+      }),
+    ).toBe(2000);
+    expect(await copies()).toHaveLength(100);
+  });
+
+  it("stops at a page that fails, keeping its rows for the next pass", async () => {
+    const { userId } = await kit();
+    await staleCopies(userId, 90);
+    const report = vi.fn();
+    const refusal = new Error("R2 down");
+    const bucket: PublicPhotoDeps["bucket"] = {
+      put: vi.fn(),
+      delete: vi
+        .fn()
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(refusal),
+      list: vi.fn(),
+    };
+
+    expect(
+      await syncPublicPhotos(deps({ bucket, report }), {
+        entryIds: [],
+        runnerIds: [userId],
+      }),
+    ).toBe(80);
+    expect(await copies()).toHaveLength(10);
+    expect(report.mock.calls).toStrictEqual([[refusal, { copies: "10" }]]);
   });
 });

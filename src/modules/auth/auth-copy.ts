@@ -1,4 +1,6 @@
 import {
+  ADDRESS_CLOSED_CODE,
+  ADDRESS_CLOSED_COPY,
   ACCESS_CODES,
   INVITE_COPY,
   REGION_BLOCKED_CODE,
@@ -196,6 +198,14 @@ export const GOOGLE_REFUSALS: ReadonlyMap<string | undefined, AuthBand> =
     ],
     [AGE_CODES.refused, AGE_REFUSED_BAND],
     [REGION_BLOCKED_CODE, REGION_BLOCKED_BAND],
+    [
+      ADDRESS_CLOSED_CODE,
+      {
+        kicker: NOT_CREATED,
+        message: ADDRESS_CLOSED_COPY,
+        retry: false,
+      },
+    ],
     [
       SIGNUP_DISABLED,
       {

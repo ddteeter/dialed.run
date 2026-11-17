@@ -7,12 +7,12 @@ import {
   followingFeedStatement,
 } from "../../src/modules/feed/feed";
 import { follow } from "../../src/modules/feed/follows";
-import { makeEntry, makeRun, makeUser, NOW } from "./helpers";
+import { makeEntry, makeRun, makeUser, makeVerifiedUser, NOW } from "./helpers";
 
 describe("following feed (E1)", () => {
   it("shows a followee's public entries, self's own, and never a non-follow's", async () => {
     const viewer = await makeUser();
-    const followee = await makeUser();
+    const followee = await makeVerifiedUser();
     const stranger = await makeUser();
     await follow(viewer, followee);
 
@@ -89,7 +89,7 @@ describe("following feed (E1)", () => {
     const viewer = await makeUser();
     const followees: string[] = [];
     for (let index = 0; index < 150; index += 1) {
-      const followee = await makeUser();
+      const followee = await makeVerifiedUser();
       await follow(viewer, followee);
       followees.push(followee);
     }
@@ -140,8 +140,8 @@ describe("following feed (E1)", () => {
     // One prolific followee whose whole page is newer than the quiet one's
     // only entry, then the quiet one's entry must still lead page two.
     const viewer = await makeUser();
-    const prolific = await makeUser();
-    const quiet = await makeUser();
+    const prolific = await makeVerifiedUser();
+    const quiet = await makeVerifiedUser();
     await follow(viewer, prolific);
     await follow(viewer, quiet);
     const prolificEntries: string[] = [];

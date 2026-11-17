@@ -213,8 +213,23 @@ const STATE_TONE_CLASS: Readonly<Record<RunnerState, string>> = {
 };
 
 /**
+One state, in its tone.
+*/
+function StateTag({ state }: Readonly<{ state: RunnerState }>): JSX.Element {
+  return (
+    <Bracketed
+      step="sm"
+      className={`wide:whitespace-nowrap ${STATE_TONE_CLASS[state]}`}
+    >
+      {state}
+    </Bracketed>
+  );
+}
+
+/**
  * A runner's state, and a hi-viz FLAGGED beside it while a flag is open,
- * each kept whole on its line (168.3: MONO.sm brackets).
+ * each kept whole on its line (168.3: MONO.sm brackets). A closed account
+ * that is leaving shows PENDING DELETE after CLOSED: its purge still runs.
  */
 function StateTags({ runner }: Readonly<{ runner: DeskRunner }>): JSX.Element {
   return (
@@ -222,12 +237,10 @@ function StateTags({ runner }: Readonly<{ runner: DeskRunner }>): JSX.Element {
     // (R58·276), so one [PENDING DELETE] does not set the column's width
     // and cut every handle. From `wide` each tag is whole on one line.
     <span className="flex flex-wrap gap-x-2 wide:flex-nowrap">
-      <Bracketed
-        step="sm"
-        className={`wide:whitespace-nowrap ${STATE_TONE_CLASS[runner.state]}`}
-      >
-        {runner.state}
-      </Bracketed>
+      <StateTag state={runner.state} />
+      {runner.state === "CLOSED" && runner.isLeaving ? (
+        <StateTag state="PENDING DELETE" />
+      ) : undefined}
       {runner.flaggedAt === undefined ? undefined : (
         <Bracketed step="sm" className="whitespace-nowrap text-hiviz-text">
           Flagged

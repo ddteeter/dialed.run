@@ -600,7 +600,7 @@ describe("not public (round 41 #86f): one answer for every reason", () => {
         headers: [
           [
             {
-              "Cache-Control": "public, max-age=60",
+              "Cache-Control": "public, max-age=60, must-revalidate",
               "Cache-Tag": `handle:${HANDLE}`,
             },
           ],
@@ -612,7 +612,7 @@ describe("not public (round 41 #86f): one answer for every reason", () => {
   it("is nothing for a segment that is not a handle, without naming it in a tag", async () => {
     expect(await pageFor("not a handle!")).toStrictEqual({
       profile: undefined,
-      headers: [[{ "Cache-Control": "public, max-age=60" }]],
+      headers: [[{ "Cache-Control": "public, max-age=60, must-revalidate" }]],
     });
   });
 });
@@ -626,7 +626,7 @@ describe("publicProfileHeaders (design 163, D-154)", () => {
     expect(page.headers).toStrictEqual([
       [
         {
-          "Cache-Control": "public, max-age=60",
+          "Cache-Control": "public, max-age=60, must-revalidate",
           "Cache-Tag": `handle:${HANDLE},runner:${runner}`,
         },
       ],
@@ -635,7 +635,7 @@ describe("publicProfileHeaders (design 163, D-154)", () => {
 
   it("tags the handle as the runner holds it, whatever its case", () => {
     expect(publicProfileHeaders("Maya_Runs", undefined)).toStrictEqual({
-      "Cache-Control": "public, max-age=60",
+      "Cache-Control": "public, max-age=60, must-revalidate",
       "Cache-Tag": `handle:${HANDLE}`,
     });
   });

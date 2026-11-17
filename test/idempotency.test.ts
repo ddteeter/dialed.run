@@ -163,7 +163,8 @@ describe("natural keys: no column needed, property pinned", () => {
   });
 
   it("following twice is one row", async () => {
-    const [follower, followee] = [await makeUser(), await makeUser()];
+    // A followee the follower may see: only those can be followed (SA-L02).
+    const [follower, followee] = [await makeUser(), await makeVerifiedUser()];
     await follow(follower, followee);
     await follow(follower, followee);
     const rows = await db()

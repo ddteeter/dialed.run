@@ -18,6 +18,7 @@ import {
   makeObservation,
   makeRun,
   makeUser,
+  makeVerifiedUser,
   resetTables,
   NOW,
 } from "./helpers";
@@ -495,7 +496,7 @@ describe("follow", () => {
 
   it("stamps the follow in epoch seconds", async () => {
     const follower = await makeUser();
-    const followee = await makeUser();
+    const followee = await makeVerifiedUser();
     const before = nowSeconds();
 
     await follow(follower, followee);
