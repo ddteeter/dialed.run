@@ -35,6 +35,7 @@ import {
   classifierFromEnv,
   enqueueForReview,
   garmentPhotoForgotten,
+  withdrawnGarmentUnderReview,
   isHeldAsRemovedCopy,
   screenPhoto,
   type Classify,
@@ -187,10 +188,14 @@ export async function uploadItemPhoto(
       visibility: isCopyOfRemoved ? "hidden_pending_review" : "pending",
     })
     .where(ownedBy(wardrobeItems, { id: itemId, userId }));
+  // Read before the batch (design 232): a photo replaced under review
+  // keeps its fingerprint and its record.
+  const kept = await withdrawnGarmentUnderReview(db, userId, itemId);
   await db.batch([
     // The replaced photo's verdicts and open review go with it (design
     // 157), before the new photo's hold, if any, opens a review again.
     ...garmentPhotoForgotten(db, userId, itemId),
+    ...kept,
     pointAtNewVersion,
     ...(isCopyOfRemoved
       ? [
@@ -268,8 +273,11 @@ export async function removeItemPhoto(
     // and the photo is gone.
     .set({ photoKey: sql`NULL`, photoFingerprint: sql`NULL`, visibility: "ok" })
     .where(stillNamesAPhoto);
+  // Read before the batch (design 232).
+  const kept = await withdrawnGarmentUnderReview(db, userId, itemId);
   await db.batch([
     ...garmentPhotoForgotten(db, userId, itemId),
+    ...kept,
     clearPhoto,
     outboxInsert(db, debt),
   ]);

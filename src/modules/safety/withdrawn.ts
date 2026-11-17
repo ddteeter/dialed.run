@@ -10,7 +10,8 @@
  *
  * Only for a review a removal clock or a copy check opened: a report of
  * a reason that hides at once, a pending removal request, or a
- * fingerprint match. Any other delete keeps nothing.
+ * fingerprint match. Any other delete keeps nothing. A garment photo is
+ * never reported or requested, so only a fingerprint match counts there.
  */
 import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
@@ -21,13 +22,18 @@ import {
   outfitEntries,
   reviewQueue,
   takedownRequests,
+  wardrobeItems,
 } from "../../db/schema-core";
 import { newUlid } from "../../lib/ids";
+import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { qualified } from "../../lib/sql/qualified";
 import { reportHidingAtOnce } from "./at-once";
 import { removalStatements } from "./contracts";
 import { moderationActionInsert } from "./moderation-actions";
-import { keptFingerprints } from "./removed-fingerprints";
+import {
+  keptFingerprints,
+  keptGarmentFingerprint,
+} from "./removed-fingerprints";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -95,4 +101,36 @@ export async function withdrawnUnderReview(
       ...keptFingerprints(db, "intimate", eq(entryPhotos.id, photo.id), id),
     ];
   });
+}
+
+/**
+ * The garment-photo form, for an owner's replace, remove or garment
+ * delete: the same keep and record when the garment's photo is held as a
+ * copy of a removed image and still under review. Read before the batch.
+ */
+export async function withdrawnGarmentUnderReview(
+  db: Db,
+  ownerId: string,
+  itemId: string,
+): Promise<BatchItem<"sqlite">[]> {
+  const held = sql`exists (select 1 from ${reviewQueue} where ${inArray(reviewQueue.status, ["pending", "reviewing"])} and ${eq(reviewQueue.subjectType, "garment")} and ${eq(reviewQueue.subjectId, itemId)} and ${eq(reviewQueue.source, "fingerprint")})`;
+  const item = await firstRowWhere(
+    db,
+    wardrobeItems,
+    and(eq(wardrobeItems.id, itemId), eq(wardrobeItems.userId, ownerId), held),
+  );
+  if (item === undefined) return [];
+  const id = newUlid();
+  return [
+    moderationActionInsert(db, {
+      id,
+      actorId: ownerId,
+      action: "withdrawn",
+      subjectType: "garment",
+      subjectId: item.id,
+      subjectOwnerId: ownerId,
+      reason: removalStatements.intimate,
+    }),
+    ...keptGarmentFingerprint(db, "intimate", item, id),
+  ];
 }

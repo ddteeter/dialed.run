@@ -316,4 +316,4 @@ export {
 export { kitPiecesSelect } from "./kit-pieces";
 
 // Design 232: an owner's delete of a kit photo under review.
-export { withdrawnUnderReview } from "./withdrawn";
+export { withdrawnGarmentUnderReview, withdrawnUnderReview } from "./withdrawn";

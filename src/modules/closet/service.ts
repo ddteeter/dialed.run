@@ -63,7 +63,11 @@ import {
 } from "../products";
 import type { ProductAttributeDefaults, ProductComposition } from "../products";
 import { ownedBy } from "../../lib/sql/owned";
-import { garmentPhotoForgotten, isDeniedLink } from "../safety";
+import {
+  garmentPhotoForgotten,
+  isDeniedLink,
+  withdrawnGarmentUnderReview,
+} from "../safety";
 import { shouldIncludeByTempFilter } from "./filters";
 import { linkDetailOf, type LinkDetail } from "./garment-link";
 import { DENIED_LINK } from "./link-copy";
@@ -406,6 +410,8 @@ export async function deleteItem(
   );
   await db.batch([
     db.delete(outfitEntryItems).where(inOwnKits),
+    // Read before the batch (design 232): kept under review.
+    ...(await withdrawnGarmentUnderReview(db, userId, itemId)),
     ...garmentPhotoForgotten(db, userId, itemId),
     db.delete(wardrobeItems).where(ownedItemWhere(userId, itemId)),
     outboxInsert(db, debt),

@@ -1015,3 +1015,106 @@ describe("garmentLineOf (round 42 #88)", () => {
     ).toBe("Old black beanie · Headwear · Retired");
   });
 });
+
+/**
+A garment whose photo is held as a copy of an image kept as removed.
+*/
+async function heldGarment() {
+  const bytes = await sceneJpeg(3);
+  await core()
+    .insert(removedFingerprints)
+    .values({
+      id: newUlid(),
+      fingerprint: await fingerprintOfBytes(bytes),
+      moderationActionId: await anIntimateRemoval(),
+      createdAt: nowSeconds(),
+    });
+  const garment = await closetGarment();
+  await upload(garment, bytes, neverAsked());
+  return { ...garment, fingerprint: await fingerprintOfBytes(bytes) };
+}
+
+async function garmentWithdrawals(itemId: string) {
+  return core()
+    .select({
+      actorId: moderationActions.actorId,
+      subjectType: moderationActions.subjectType,
+      subjectId: moderationActions.subjectId,
+    })
+    .from(moderationActions)
+    .where(
+      and(
+        eq(moderationActions.action, "withdrawn"),
+        eq(moderationActions.subjectId, itemId),
+      ),
+    );
+}
+
+async function keptFor(itemId: string) {
+  return core()
+    .select({ fingerprint: removedFingerprints.fingerprint })
+    .from(removedFingerprints)
+    .where(eq(removedFingerprints.photoId, itemId));
+}
+
+describe("an owner's garment-photo delete under review (design 232)", () => {
+  it("keeps the fingerprint and writes the record when the owner removes a held photo", async () => {
+    const garment = await heldGarment();
+
+    await removeItemPhoto(core(), garment.userId, garment.itemId);
+
+    expect(await garmentWithdrawals(garment.itemId)).toStrictEqual([
+      {
+        actorId: garment.userId,
+        subjectType: "garment",
+        subjectId: garment.itemId,
+      },
+    ]);
+    expect(await keptFor(garment.itemId)).toStrictEqual([
+      { fingerprint: garment.fingerprint },
+    ]);
+  });
+
+  it("keeps it when the owner replaces the held photo", async () => {
+    const garment = await heldGarment();
+
+    await upload(garment, await sceneJpeg(4), neverAsked());
+
+    expect(await keptFor(garment.itemId)).toStrictEqual([
+      { fingerprint: garment.fingerprint },
+    ]);
+  });
+
+  it("keeps it when the owner deletes the garment", async () => {
+    const garment = await heldGarment();
+
+    await deleteItem(core(), garment.userId, garment.itemId);
+
+    expect(await garmentWithdrawals(garment.itemId)).toMatchObject([
+      { subjectId: garment.itemId },
+    ]);
+  });
+
+  it("keeps nothing for a garment photo that is not held", async () => {
+    const garment = await closetGarment();
+    const passing = vi.fn<Classify>(() =>
+      Promise.resolve({
+        flagged: false,
+        scores: {
+          sexual: 0,
+          violence: 0,
+          "violence/graphic": 0,
+          "self-harm": 0,
+          "self-harm/intent": 0,
+          "self-harm/instructions": 0,
+        },
+      }),
+    );
+    await upload(garment, await sceneJpeg(4), passing);
+
+    await removeItemPhoto(core(), garment.userId, garment.itemId);
+
+    expect(await garmentWithdrawals(garment.itemId)).toStrictEqual([]);
+    expect(await keptFor(garment.itemId)).toStrictEqual([]);
+  });
+});

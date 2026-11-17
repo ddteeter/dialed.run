@@ -34,7 +34,9 @@ model suggestions, and four sweeps.
   a review that a report hiding at once, a fingerprint match or a
   pending removal request opened are read. The delete's batch keeps each
   one's fingerprint and writes a `withdrawn` audit row, owner as actor,
-  which flags the account as a removal does.
+  which flags the account as a removal does. A garment photo the owner
+  removes, replaces or deletes while held as a fingerprint copy does the
+  same.
 - **SA-M33, operator mail.** The operators' alerts and reminders are
   their own outbox kind, `operator_email`: scheduled, no grace, drained
   ahead of `email` on its own cap. The hourly drain says what it left
@@ -95,7 +97,4 @@ or server boundary.
 
 ## Open questions
 
-- A garment photo deleted by its owner under review is not covered: a
-  garment photo is seen by nobody else, and a fingerprint hold on one has
-  kept its fingerprint already, so what is lost is the record. Raised with
-  the coordinator.
+None.
