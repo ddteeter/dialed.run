@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -10,6 +10,7 @@ import {
   addFromTapList,
   getOwnedItem,
   isTapListPlaceholder,
+  LINK_BATCH,
   linkTypedGarments,
   nameItem,
 } from "../../src/modules/closet";
@@ -659,5 +660,49 @@ describe("linkTypedGarments — the link a confirmation owes", () => {
         ),
       );
     expect(owned?.id).toBe(item.id);
+  });
+});
+
+async function typedGarments(userId: string, n: number): Promise<void> {
+  const brand = unique("Brand");
+  for (let index = 0; index < n; index += 1) {
+    await createItem(db(), userId, {
+      category: "top",
+      name: unique(`Tee ${String(index)} `),
+      brand,
+    });
+  }
+}
+
+async function unlinkedCount(userId: string): Promise<number> {
+  const rows = await db()
+    .select({ id: wardrobeItems.id })
+    .from(wardrobeItems)
+    .where(
+      and(eq(wardrobeItems.userId, userId), isNull(wardrobeItems.productId)),
+    );
+  return rows.length;
+}
+
+describe("a bounded link run (design 232)", () => {
+  it("links LINK_BATCH garments a run and says more are owed", async () => {
+    const userId = await runner(false);
+    await typedGarments(userId, LINK_BATCH + 2);
+    await confirm(userId);
+
+    expect(await linkTypedGarments(db(), userId)).toBe("more");
+    expect(await unlinkedCount(userId)).toBe(2);
+
+    expect(await linkTypedGarments(db(), userId)).toBe("linked");
+    expect(await unlinkedCount(userId)).toBe(0);
+  });
+
+  it("says linked when exactly LINK_BATCH were owed", async () => {
+    const userId = await runner(false);
+    await typedGarments(userId, LINK_BATCH);
+    await confirm(userId);
+
+    expect(await linkTypedGarments(db(), userId)).toBe("linked");
+    expect(await unlinkedCount(userId)).toBe(0);
   });
 });

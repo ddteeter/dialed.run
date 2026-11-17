@@ -27,18 +27,26 @@ type PayloadOf<K extends OutboxKind> = Extract<
   { kind: K }
 >["payload"];
 
+/**
+ * What a handler's run answers when it did part of the work and owes the
+ * rest (design 232). Anything else it resolves to means done.
+ */
+export const OWED_AGAIN = "again";
+
 export type OutboxHandlers = {
   readonly [K in OutboxKind]: {
     /**
      * Does the work; throws when it could not, and the row stays owed.
      * `rowId` is the row being worked, for a handler that must mark it
-     * before the delete (an email, once sent).
+     * before the delete (an email, once sent). `OWED_AGAIN` says the work is
+     * done in part and the rest is owed to the next drain (design 232): the
+     * row stays, with its attempts back at none, since nothing failed.
      */
     readonly run: (
       db: Db,
       payload: PayloadOf<K>,
       rowId: string,
-    ) => Promise<void>;
+    ) => Promise<unknown>;
     /**
     Sentry context for a failure (law 7): ids to act on, never secrets.
     */
@@ -58,7 +66,7 @@ export function boundHandler<K extends OutboxKind>(
   handlers: OutboxHandlers,
   message: { readonly kind: K; readonly payload: PayloadOf<K> },
 ): {
-  run: (db: Db, rowId: string) => Promise<void>;
+  run: (db: Db, rowId: string) => Promise<unknown>;
   context: () => Record<string, string>;
 } {
   const handler = handlers[message.kind];
@@ -274,7 +282,10 @@ const importFileDelete: OutboxHandlers["import_file_delete"] = {
  * `linkTypedGarments`, which `ops` cannot import — `closet` imports `ops`
  * — so the Worker entry hands it to the firings (`DailyUpkeep`).
  */
-export type ProductLinker = (db: Db, userId: string) => Promise<void>;
+export type ProductLinker = (
+  db: Db,
+  userId: string,
+) => Promise<"linked" | "more">;
 
 /**
  * The `product_link` handler, bound to the linker handed in. With none, it
@@ -289,7 +300,11 @@ export function productLinkHandler(
       if (link === undefined) {
         throw new Error("product_link drained with no linker handed in");
       }
-      await link(db, payload.userId);
+      // A bounded run that left garments unlinked owes the rest to the
+      // next drain (design 232): not a failure.
+      return (await link(db, payload.userId)) === "more"
+        ? OWED_AGAIN
+        : undefined;
     },
     context: (payload) => ({ userId: payload.userId }),
   };

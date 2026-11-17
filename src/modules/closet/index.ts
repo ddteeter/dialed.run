@@ -45,7 +45,7 @@ export {
   type PublicRotation,
   type RotationPiece,
 } from "./public-rotation";
-export { linkTypedGarments, nameItem } from "./product-link";
+export { LINK_BATCH, linkTypedGarments, nameItem } from "./product-link";
 export { typeWordOf } from "./type-labels";
 export type { PhotoSize, PhotoUploadResult } from "./photos";
 export { photoSizes } from "./photos";

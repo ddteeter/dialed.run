@@ -2000,7 +2000,7 @@ describe("the product link a confirmation owes (design 133, D-113 Q1)", () => {
       {
         linkProducts: (_db, owed) => {
           linked.push(owed);
-          return Promise.resolve();
+          return Promise.resolve("linked" as const);
         },
       },
     );
@@ -2027,7 +2027,7 @@ describe("the product link a confirmation owes (design 133, D-113 Q1)", () => {
 
   it("is left alone by the :30 and :15 firings", async () => {
     const id = await seedDueProductLink(newUlid());
-    const linkProducts = vi.fn(() => Promise.resolve());
+    const linkProducts = vi.fn(() => Promise.resolve("linked" as const));
 
     await handleScheduled(ENRICHMENT_RETRY, undefined, { linkProducts });
     await handleScheduled(
@@ -2043,7 +2043,7 @@ describe("the product link a confirmation owes (design 133, D-113 Q1)", () => {
   it("is drained by the daily firing with the same linker", async () => {
     const userId = newUlid();
     const id = await seedDueProductLink(userId);
-    const linkProducts = vi.fn(() => Promise.resolve());
+    const linkProducts = vi.fn(() => Promise.resolve("linked" as const));
 
     await handleScheduled(DIGEST, recordingReporter().reporter, {
       linkProducts,

@@ -20,6 +20,7 @@ import {
   drainOutbox,
   dueRowsOf,
   OUTBOX_DRAIN_CAP,
+  OUTBOX_DRAIN_CAPS,
   OUTBOX_FAST_PATH_GRACE_S,
   OUTBOX_TERMINAL_ATTEMPTS,
   outboxInsert,
@@ -899,7 +900,7 @@ describe("the import_file_delete handler (task 128)", () => {
 
 describe("the product link's handler (design 133, D-113 Q1)", () => {
   it("runs the linker it was handed, for the payload's runner", async () => {
-    const link = vi.fn(() => Promise.resolve());
+    const link = vi.fn(() => Promise.resolve("linked" as const));
     const userId = newUlid();
     const debt = oweOutbox({ kind: "product_link", payload: { userId } });
     await db()
@@ -935,5 +936,98 @@ describe("the product link's handler (design 133, D-113 Q1)", () => {
       }),
       expect.objectContaining({ kind: "product_link", userId }),
     );
+  });
+});
+
+/**
+A due `product_link` row for a fresh runner, as a confirmation owes it.
+*/
+async function owedLink(): Promise<string> {
+  const id = newUlid();
+  const userId = newUlid();
+  await db()
+    .insert(outbox)
+    .values({
+      id,
+      kind: "product_link",
+      dedupeKey: userId,
+      payload: JSON.stringify({ userId }),
+      nextAttemptAt: NOW,
+      createdAt: NOW,
+      attempts: 3,
+    });
+  return id;
+}
+
+function linking(answer: "linked" | "more") {
+  const link = vi.fn(() => Promise.resolve(answer));
+  return {
+    link,
+    handlers: {
+      ...outboxHandlers,
+      product_link: productLinkHandler(link),
+    } satisfies OutboxHandlers,
+  };
+}
+
+describe("a run that owes the rest (design 232)", () => {
+  it("keeps a product link whose run left garments for the next drain, its attempts back at none", async () => {
+    const id = await owedLink();
+    const anomalies: string[] = [];
+
+    await drainOutbox(db(), anomalies, {
+      now: NOW,
+      kinds: ["product_link"],
+      handlers: linking("more").handlers,
+    });
+
+    expect(await rowById(id)).toMatchObject({ attempts: 0 });
+    expect(anomalies).toStrictEqual([]);
+  });
+
+  it("deletes a product link whose run linked everything", async () => {
+    const id = await owedLink();
+
+    await drainOutbox(db(), [], {
+      now: NOW,
+      kinds: ["product_link"],
+      handlers: linking("linked").handlers,
+    });
+
+    expect(await rowById(id)).toBeUndefined();
+  });
+
+  it("keeps the row on the fast path too", async () => {
+    const userId = newUlid();
+    const debt = oweOutbox({ kind: "product_link", payload: { userId } });
+    await db()
+      .insert(outbox)
+      .values({
+        id: debt.id,
+        kind: "product_link",
+        dedupeKey: userId,
+        payload: JSON.stringify({ userId }),
+        nextAttemptAt: NOW,
+        createdAt: NOW,
+      });
+
+    await settleOutbox(db(), debt, vi.fn(), linking("more").handlers);
+
+    expect(await rowById(debt.id)).toMatchObject({ attempts: 0 });
+  });
+
+  it("drains OUTBOX_DRAIN_CAPS' product links a run, not OUTBOX_DRAIN_CAP", async () => {
+    const cap = OUTBOX_DRAIN_CAPS.product_link ?? OUTBOX_DRAIN_CAP;
+    for (let n = 0; n <= cap; n += 1) await owedLink();
+    const { link, handlers } = linking("linked");
+
+    await drainOutbox(db(), [], {
+      now: NOW,
+      kinds: ["product_link"],
+      handlers,
+    });
+
+    expect(cap).toBeLessThan(OUTBOX_DRAIN_CAP);
+    expect(link).toHaveBeenCalledTimes(cap);
   });
 });
