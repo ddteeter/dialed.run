@@ -167,7 +167,8 @@ you merge yourself. No automation reads the verdict.
 
 **What auto-merge does and doesn't change.** The real risk is a
 compromised release that survives the cooldown: it would merge, deploy,
-and run its install scripts in the deploy job. Honestly, merging by hand
+and run in the build (`ci.yml`'s `bundle` job, which holds no secret;
+the deploy job runs only Wrangler, SA-L10). Honestly, merging by hand
 would not catch it either; nobody reads a lockfile diff. What does:
 
 - the 7-day cooldown, which the classifier also applies to security

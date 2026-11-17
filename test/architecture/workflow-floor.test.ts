@@ -395,3 +395,42 @@ describe("a job that blocks egress (SA-L20)", () => {
     expect(unproven).toEqual([]);
   });
 });
+
+/**
+The `run:` values of a job, in order (a block scalar reads as `|`).
+*/
+function runsOf(section: string): string[] {
+  return section
+    .split("\n")
+    .filter((line) => /^\s+(?:- )?run: /u.test(line))
+    .map((line) => line.slice(line.indexOf("run: ") + 5));
+}
+
+describe("the deploy (SA-L10)", () => {
+  const ci =
+    Object.entries(workflows).find(([path]) => path.endsWith("/ci.yml"))?.[1] ??
+    "";
+  const job = (name: string): string => {
+    const start = ci.indexOf(`\n  ${name}:\n`);
+    const next = ci.slice(start + 1).search(/\n {2}[\w-]+:\n/u);
+    return next === -1 ? ci.slice(start) : ci.slice(start, start + 1 + next);
+  };
+
+  it("builds in a job that holds no secret", () => {
+    const bundle = job("bundle");
+    expect(runsOf(bundle)).toStrictEqual(["npm ci", "npm run build"]);
+    expect(bundle).not.toMatch(/environment:|secrets\./u);
+  });
+
+  it("deploys from that build, running no install script and no build", () => {
+    const deploy = job("deploy");
+    expect(deploy).toContain("needs: [bundle]");
+    expect(deploy).toContain("name: worker-bundle");
+    expect(runsOf(deploy)).toStrictEqual([
+      "npm ci --ignore-scripts",
+      "|",
+      "npx wrangler deploy",
+    ]);
+    expect(deploy).toContain("environment: production");
+  });
+});

@@ -367,9 +367,12 @@ needs its own Strava app, not a second subscription.
   its deployment branches to `main` only, and put the two Cloudflare
   secrets below **in the environment, not in the repository's secrets**, so
   no other job can read them. Dependency updates merge themselves
-  (`docs/dependencies.md`), and the deploy job installs and builds them, so
-  what this token can do is what a compromised package that survived the
-  cooldown could do.
+  (`docs/dependencies.md`). The build runs every package's code, so it
+  runs in `ci.yml`'s `bundle` job, which has no environment; the deploy
+  job downloads that build, installs with `--ignore-scripts`, and runs
+  only Wrangler with the token (SA-L10). A compromised package that
+  survived the cooldown can still change the bundle the Worker runs, but
+  the token never shares a job with its code.
 - **Secret `CLOUDFLARE_API_TOKEN`** (environment `production`) — the
   deploy job needs it to deploy and to apply migrations. Scope it to this
   account, with **Workers Scripts: Edit** and **D1: Edit**, and nothing
