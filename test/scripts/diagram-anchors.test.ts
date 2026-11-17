@@ -2,10 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   anchorProblems,
-  readStories,
   staleReport,
   staleStories,
-  stepCountProblems,
+  storyOf,
   type Story,
 } from "../../scripts/diagrams/anchors";
 
@@ -17,8 +16,8 @@ const TEXT = [
   "    include *",
   "  }",
   "  dynamic view aStory {",
-  "    title 'A } in a title'",
-  "    // a } in a comment",
+  "    title 'A story'",
+  "    // a comment that is not a source",
   "    // source: src/a.ts f, g (a note, with a comma; and a semicolon); wrangler.jsonc queues.consumers",
   "    runner -> cf.app.a 'asks' {",
   "      notes '''",
@@ -40,12 +39,18 @@ const TEXT = [
   "cf.app.a -> cf.db 'a relation, not a step'",
 ].join("\n");
 
-describe("readStories", () => {
-  const stories = readStories(FLOW, TEXT);
+/**
+The steps LikeC4 places at lines 9, 16 and 18, and 23.
+*/
+const STORIES = [
+  storyOf("aStory", FLOW, TEXT, [9, 16, 18]),
+  storyOf("bStory", FLOW, TEXT, [23]),
+];
 
-  it("finds each dynamic view and only its steps, past notes, frames, and braces in quotes and comments", () => {
+describe("storyOf", () => {
+  it("keeps the view, the file and each step's line", () => {
     expect(
-      stories.map((story) => ({
+      STORIES.map((story) => ({
         view: story.view,
         file: story.file,
         lines: story.steps.map((step) => step.line),
@@ -56,8 +61,8 @@ describe("readStories", () => {
     ]);
   });
 
-  it("reads each cite's path and symbols and drops the note", () => {
-    expect(stories[0]?.steps.map((step) => step.cites)).toStrictEqual([
+  it("reads each cite's path and symbols from the line above, and drops the note", () => {
+    expect(STORIES[0]?.steps.map((step) => step.cites)).toStrictEqual([
       [
         { path: "src/a.ts", symbols: ["f", "g"] },
         { path: "wrangler.jsonc", symbols: ["queues.consumers"] },
@@ -68,23 +73,25 @@ describe("readStories", () => {
   });
 
   it("takes only the line directly above as the step's comment", () => {
-    expect(stories[1]?.steps[0]?.cites).toBeUndefined();
+    expect(STORIES[1]?.steps[0]?.cites).toBeUndefined();
+  });
+
+  it("reads a step on the first line as having no comment", () => {
+    expect(storyOf("s", FLOW, "a -> b", [1]).steps[0]?.cites).toBeUndefined();
   });
 
   it("reads a cite with a note and no symbol as having none", () => {
-    const [story] = readStories(
-      FLOW,
-      "dynamic view c {\n  // source: src/a.ts (the give-up)\n  a -> b\n}",
-    );
-
-    expect(story?.steps[0]?.cites).toStrictEqual([
-      { path: "src/a.ts", symbols: [] },
-    ]);
+    expect(
+      oneStep("// source: src/a.ts (the give-up)")[0]?.steps[0]?.cites,
+    ).toStrictEqual([{ path: "src/a.ts", symbols: [] }]);
   });
 });
 
-function storyOf(source: string): Story[] {
-  return readStories(FLOW, `dynamic view s {\n  ${source}\n  a -> b\n}`);
+/**
+One story whose one step, on line 2, has `source` above it.
+*/
+function oneStep(source: string): Story[] {
+  return [storyOf("s", FLOW, `${source}\n  a -> b`, [2])];
 }
 
 const FILES = new Map([
@@ -96,7 +103,7 @@ describe("anchorProblems", () => {
   it("passes symbols the file holds, a $ name and each part of a dotted one", () => {
     expect(
       anchorProblems(
-        storyOf(
+        oneStep(
           "// source: src/a.ts didClaimImport, $limit; wrangler.jsonc queues.consumers",
         ),
         FILES,
@@ -105,50 +112,50 @@ describe("anchorProblems", () => {
   });
 
   it("names the file, line and view of a step with no comment", () => {
-    expect(anchorProblems(storyOf("// a comment"), FILES)).toStrictEqual([
-      `${FLOW}:3 (s): the step has no // source: comment above it`,
+    expect(anchorProblems(oneStep("// a comment"), FILES)).toStrictEqual([
+      `${FLOW}:2 (s): the step has no // source: comment above it`,
     ]);
   });
 
   it("fails a path that is not a file, and a cite with no symbol", () => {
     expect(
-      anchorProblems(storyOf("// source: a.ts f; src/a.ts (a note)"), FILES),
+      anchorProblems(oneStep("// source: a.ts f; src/a.ts (a note)"), FILES),
     ).toStrictEqual([
-      `${FLOW}:3 (s): a.ts is not a file`,
-      `${FLOW}:3 (s): src/a.ts names no symbol`,
+      `${FLOW}:2 (s): a.ts is not a file`,
+      `${FLOW}:2 (s): src/a.ts names no symbol`,
     ]);
   });
 
   it("matches whole words only, and every part of a dotted symbol", () => {
     expect(
       anchorProblems(
-        storyOf(
+        oneStep(
           "// source: src/a.ts didClaim, limit; wrangler.jsonc queues.producers",
         ),
         FILES,
       ),
     ).toStrictEqual([
-      `${FLOW}:3 (s): src/a.ts has no didClaim`,
-      `${FLOW}:3 (s): src/a.ts has no limit`,
-      `${FLOW}:3 (s): wrangler.jsonc has no queues.producers`,
+      `${FLOW}:2 (s): src/a.ts has no didClaim`,
+      `${FLOW}:2 (s): src/a.ts has no limit`,
+      `${FLOW}:2 (s): wrangler.jsonc has no queues.producers`,
     ]);
   });
 
   it("refuses a symbol that is not a name, even one the file holds as text", () => {
     expect(
       anchorProblems(
-        storyOf("// source: src/a.ts function didClaimImport, max_retries 3"),
+        oneStep("// source: src/a.ts function didClaimImport, max_retries 3"),
         FILES,
       ),
     ).toStrictEqual([
-      `${FLOW}:3 (s): "function didClaimImport" is not a symbol`,
-      `${FLOW}:3 (s): "max_retries 3" is not a symbol`,
+      `${FLOW}:2 (s): "function didClaimImport" is not a symbol`,
+      `${FLOW}:2 (s): "max_retries 3" is not a symbol`,
     ]);
   });
 });
 
 describe("staleStories", () => {
-  const stories = readStories(FLOW, TEXT);
+  const stories = STORIES;
 
   it("lists each view citing a changed file, each file once, in citing order", () => {
     expect(
@@ -191,44 +198,6 @@ describe("staleReport", () => {
         "- a (x.c4, edited on this branch): p, q",
         "- b (y.c4): p",
       ].join("\n"),
-    );
-  });
-});
-
-describe("stepCountProblems", () => {
-  const stories = readStories(FLOW, TEXT);
-
-  it("passes when every view's count matches LikeC4's", () => {
-    expect(
-      stepCountProblems(
-        stories,
-        new Map([
-          ["aStory", 3],
-          ["bStory", 1],
-        ]),
-      ),
-    ).toStrictEqual([]);
-  });
-
-  it("names each view whose count differs, or that only one side has, sorted", () => {
-    expect(
-      stepCountProblems(
-        stories,
-        new Map([
-          ["aaStory", 2],
-          ["aStory", 4],
-        ]),
-      ).map((problem) => problem.split(".", 1)[0]),
-    ).toStrictEqual([
-      "aaStory: LikeC4 draws 2 steps and scripts/diagrams/anchors",
-      "aStory: LikeC4 draws 4 steps and scripts/diagrams/anchors",
-      "bStory: LikeC4 draws 0 steps and scripts/diagrams/anchors",
-    ]);
-  });
-
-  it("says what to do", () => {
-    expect(stepCountProblems(stories, new Map([["aStory", 4]]))[0]).toBe(
-      "aStory: LikeC4 draws 4 steps and scripts/diagrams/anchors.ts read 3. Write each step on its own line, as likec4 format does, or teach the reader the new form.",
     );
   });
 });

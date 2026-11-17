@@ -10,10 +10,9 @@
  * the reader and is not checked, so a name that must keep resolving goes
  * before it, as a symbol.
  *
- * Pure: the files arrive as text. Steps are found line by line, which
- * leans on `likec4 format`'s layout (one step per line), so
- * `scripts/diagram-steps.ts`, in `npm run diagrams:check`, holds the count
- * per view equal to LikeC4's own.
+ * Pure: the files arrive as text, and where each step is comes from
+ * LikeC4's parse tree (`scripts/diagrams/model.ts`). Nothing here reads
+ * `.c4` syntax; it reads only the comment's own form.
  */
 
 export interface Cite {
@@ -36,10 +35,7 @@ export interface Story {
 }
 
 const SOURCE = /^\s*\/\/ source:(.*)$/u;
-const VIEW = /^\s*dynamic view (\w+) \{/u;
-const STEP = /^\s*[\w.]+ (?:->|<-|-\[[\w-]+\]->) [\w.]+/u;
 const SYMBOL = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/u;
-const QUOTED = /'(?:\\.|[^'\\])*'/gu;
 
 /**
  * Splits on `separator` where no parenthesis is open, so a note may hold
@@ -83,77 +79,28 @@ function citesOf(comment: string): Cite[] {
 }
 
 /**
- * The code on a line, outside `'''` notes, with quoted text and comments
- * removed, and whether a `'''` note is open after it.
+ * One story: the view's name, its file, and a step at each line in
+ * `stepLines` (1-based, as LikeC4's parse tree places them; see
+ * `scripts/diagrams/model.ts`), whose source is the line directly above.
  */
-function codeOf(
-  line: string,
-  isInNote: boolean,
-): { code: string; isInNote: boolean } {
-  const segments = line.split("'''");
-  const code = segments
-    .filter((_, index) => (index % 2 === 0) !== isInNote)
-    .join(" ")
-    .replaceAll(QUOTED, "''");
-  const comment = code.indexOf("//");
-  return {
-    code: comment === -1 ? code : code.slice(0, comment),
-    isInNote: (segments.length % 2 === 0) !== isInNote,
-  };
-}
-
-function braceBalance(code: string): number {
-  let balance = 0;
-  for (const char of code) {
-    if (char === "{") balance += 1;
-    else if (char === "}") balance -= 1;
-  }
-  return balance;
-}
-
-interface OpenStory {
-  view: string;
-  file: string;
-  steps: Step[];
-}
-
-/**
- * The step a line starts, with the comment line above it as its source.
- */
-function stepAt(lines: readonly string[], index: number): Step {
-  const comment = SOURCE.exec(lines[index - 1] ?? "")?.[1];
-  return {
-    line: index + 1,
-    cites: comment === undefined ? undefined : citesOf(comment),
-  };
-}
-
-/**
- * Every dynamic view in one `.c4` file, with its steps and their cites.
- */
-export function readStories(file: string, text: string): Story[] {
-  const stories: OpenStory[] = [];
+export function storyOf(
+  view: string,
+  file: string,
+  text: string,
+  stepLines: readonly number[],
+): Story {
   const lines = text.split("\n");
-  let open: OpenStory | undefined;
-  let viewDepth = 0;
-  let depth = 0;
-  let isInNote = false;
-  for (const [index, line] of lines.entries()) {
-    const wasInNote = isInNote;
-    const read = codeOf(line, isInNote);
-    isInNote = read.isInNote;
-    const view = wasInNote ? undefined : VIEW.exec(line)?.[1];
-    if (view !== undefined) {
-      open = { view, file, steps: [] };
-      stories.push(open);
-      viewDepth = depth;
-    } else if (!wasInNote && open !== undefined && STEP.test(line)) {
-      open.steps.push(stepAt(lines, index));
-    }
-    depth += braceBalance(read.code);
-    if (open !== undefined && depth <= viewDepth) open = undefined;
-  }
-  return stories;
+  return {
+    view,
+    file,
+    steps: stepLines.map((line) => {
+      const comment = SOURCE.exec(lines[line - 2] ?? "")?.[1];
+      return {
+        line,
+        cites: comment === undefined ? undefined : citesOf(comment),
+      };
+    }),
+  };
 }
 
 function escaped(word: string): string {
@@ -209,31 +156,6 @@ export function anchorProblems(
       return problems.map((problem) => `${where}: ${problem}`);
     }),
   );
-}
-
-/**
- * Where the reader's steps per view differ from `counted`, LikeC4's own
- * count, by view id.
- */
-export function stepCountProblems(
-  stories: readonly Story[],
-  counted: ReadonlyMap<string, number>,
-): string[] {
-  const read = new Map(
-    stories.map((story) => [story.view, story.steps.length]),
-  );
-  return [...new Set([...read.keys(), ...counted.keys()])]
-    .toSorted((a, b) => a.localeCompare(b))
-    .map((view) => ({
-      view,
-      mine: read.get(view) ?? 0,
-      theirs: counted.get(view) ?? 0,
-    }))
-    .filter(({ mine, theirs }) => mine !== theirs)
-    .map(
-      ({ view, mine, theirs }) =>
-        `${view}: LikeC4 draws ${String(theirs)} steps and scripts/diagrams/anchors.ts read ${String(mine)}. Write each step on its own line, as likec4 format does, or teach the reader the new form.`,
-    );
 }
 
 export interface StaleStory {

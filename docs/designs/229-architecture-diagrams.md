@@ -101,8 +101,9 @@ filesystem, so sources arrive as `?raw` imports, as
   (Moved into `npm run diagrams:check` after step 2; see the follow-up
   below.)
 - `diagram-sources.test.ts`: every step has a source comment; every path
-  exists and contains the symbol it names. (Its reader is held to
-  LikeC4's step count in `diagrams:check`; see step 3 as built.)
+  exists and contains the symbol it names. (Built as
+  `diagram-sources.dom.test.tsx`, in the `ui` project; see step 3 as
+  built.)
 - Unit tests for the generator, the view-hash diff and the stale-story
   mapping, which are pure functions.
 - `likec4 validate` cannot run in the pool; it runs in `diagrams:check`.
@@ -207,20 +208,26 @@ registries.
   gave a file name with no path (`import-polling.ts`,
   `run-conditions-copy.ts`), and nine cited a path with no name. Each
   now resolves.
+- **The steps come from LikeC4's parse tree, not from reading `.c4`
+  text** (owner, 2026-11-16). A first version found them line by line with
+  regexes and brace counting, and held its count to LikeC4's in
+  `diagrams:check`; it was replaced before it merged.
+  `scripts/diagrams/model.ts` walks LikeC4's own tree for every step
+  statement (frames and `a -> b -> c` chains included) and its line, and
+  `anchors.ts` reads only the comment on the line above. LikeC4 has no
+  public API for the tree: it is the `langium` member, read as `unknown`
+  and parsed node by node, so an upgrade that moves it fails by name. Each
+  view's arrows from the tree are held equal to LikeC4's computed view,
+  so a step form the walk does not know fails too.
+- **The anchor test is in the `ui` project**
+  (`test/architecture/diagram-sources.dom.test.tsx`). LikeC4 cannot load
+  in the workers pool, and `ui` runs in Node, so it stays in `npm test`.
+  It reads the cited files from disk, so a cite may name any file in the
+  repo.
 - **A name resolves when its file holds it as a whole word**; a dotted
   `wrangler.jsonc` key needs each part. That is a text check, not
   "defines it": a name left only in a comment would pass. It catches what
-  the step exists to catch, a move or a rename, and it runs in the worker
-  pool on `?raw` globs, so it stays in `npm test`
-  (`test/architecture/diagram-sources.test.ts`). It reads `src/**` and
-  `wrangler.jsonc`; a cite elsewhere fails as "not a file" until the glob
-  is widened.
-- **Steps are read line by line, and LikeC4 checks the reader.**
-  `scripts/diagrams/anchors.ts` finds steps on `likec4 format`'s layout.
-  The test cannot load LikeC4, so `scripts/diagram-steps.ts`, a new step
-  in `npm run diagrams:check`, holds the steps it reads per view equal to
-  LikeC4's own count. A step the reader cannot see fails there instead of
-  going unchecked.
+  the step exists to catch, a move or a rename.
 - **`npm run diagrams:stale` reports and never fails.** It diffs against
   the merge base with `origin/main`, untracked and uncommitted files
   included, and marks a story whose own file the branch edited. The git

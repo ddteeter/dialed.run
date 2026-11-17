@@ -6,11 +6,11 @@
 import { readFileSync } from "node:fs";
 
 import { staleReport, staleStories } from "./diagrams/anchors";
-import { readModelStories } from "./diagrams/model-files";
+import { readModelStories } from "./diagrams/model";
 
 const changed = readFileSync(0, "utf8")
   .split("\n")
   .filter((path) => path !== "");
 
-const stale = staleStories(readModelStories(), changed);
+const stale = staleStories(await readModelStories(), changed);
 console.log(staleReport(stale));
