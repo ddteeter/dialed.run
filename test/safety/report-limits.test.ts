@@ -18,6 +18,7 @@ import {
   AT_ONCE_HIDES_PER_DAY,
   claimForReview,
   fileReport,
+  reconcileUnhiddenReports,
   REPORTS_PER_DAY,
   resolveReview,
 } from "../../src/modules/safety";
@@ -480,5 +481,119 @@ describe("a repeat of a report (design 232)", () => {
       );
     expect(stored?.reason).toBe("spam");
     expect(await queueRowOf(subject)).toBeUndefined();
+  });
+});
+
+const UNEQUAL_BARS = JSON.stringify({
+  reports: {
+    explicit: 1,
+    intimate: 1,
+    harassment: 3,
+    spam: 3,
+    not_theirs: 3,
+    other: 2,
+  },
+  photos: {
+    sexual: 0.8,
+    violence: 0.8,
+    "violence/graphic": 0.7,
+    "self-harm": 0.7,
+    "self-harm/intent": 0.7,
+    "self-harm/instructions": 0.7,
+  },
+});
+
+/**
+Reports written straight to the table, as a crash before the hide leaves them.
+*/
+async function filedWithoutHide(
+  subjectId: string,
+  reasons: readonly ("spam" | "other")[],
+): Promise<void> {
+  for (const reason of reasons) {
+    await core()
+      .insert(reports)
+      .values({
+        id: newUlid(),
+        reporterId: await makeUser(),
+        subjectType: "entry",
+        subjectId,
+        reason,
+        createdAt: nowSeconds(),
+      });
+  }
+}
+
+describe("one bar for the request and the sweep (design 232)", () => {
+  let configured: unknown;
+  beforeEach(() => {
+    configured = Reflect.get(env, "MODERATION_THRESHOLDS");
+    Reflect.set(env, "MODERATION_THRESHOLDS", UNEQUAL_BARS);
+  });
+  afterEach(() => {
+    Reflect.set(env, "MODERATION_THRESHOLDS", configured);
+  });
+
+  it.each([
+    ["other", "spam"],
+    ["spam", "other"],
+  ] as const)(
+    "hides at the lowest bar among the reasons filed, %s then %s",
+    async (first, second) => {
+      const subject = await kit();
+
+      await report({
+        reporterId: await makeUser(),
+        subjectType: "entry",
+        subjectId: subject,
+        reason: first,
+      });
+      const last = await report({
+        reporterId: await makeUser(),
+        subjectType: "entry",
+        subjectId: subject,
+        reason: second,
+      });
+
+      expect(last).toMatchObject({ hiddenPendingReview: true });
+      expect(await statusOf(subject)).toBe("hidden_pending_review");
+    },
+  );
+
+  it("leaves a lone report under its own bar alone, though another reason's bar is lower", async () => {
+    const subject = await kit();
+    await report({
+      reporterId: await makeUser(),
+      subjectType: "entry",
+      subjectId: subject,
+      reason: "spam",
+    });
+
+    const outcome = await reconcileUnhiddenReports(oweInCore, noPurge);
+
+    expect(outcome.found).toBe(0);
+    expect(await statusOf(subject)).toBe("ok");
+  });
+
+  it("sweeps a subject over the lowest bar among its reasons, and not one under it", async () => {
+    const over = await kit();
+    const under = await kit();
+    await filedWithoutHide(over, ["spam", "other"]);
+    await filedWithoutHide(under, ["spam", "spam"]);
+
+    const outcome = await reconcileUnhiddenReports(oweInCore, noPurge);
+
+    expect(outcome.found).toBe(1);
+    expect(await statusOf(over)).toBe("hidden_pending_review");
+    expect(await statusOf(under)).toBe("ok");
+  });
+
+  it("sweeps a subject that reached its reason's bar", async () => {
+    const subject = await kit();
+    await filedWithoutHide(subject, ["spam", "spam", "spam"]);
+
+    const outcome = await reconcileUnhiddenReports(oweInCore, noPurge);
+
+    expect(outcome.found).toBe(1);
   });
 });

@@ -23,6 +23,7 @@ import {
   isNull,
   ne,
   or,
+  sql,
 } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
@@ -45,7 +46,7 @@ import {
   hiddenByReport,
   REMOVAL_DUE_SECONDS,
   reasonsOnTheClock,
-  reportReasons,
+  STORED_REPORT_REASONS,
   type ReportReason,
   type ReportSubjectType,
 } from "./contracts";
@@ -54,6 +55,7 @@ import {
   fewestReportersToHide,
   moderationThresholds,
   reportersToHide,
+  type ModerationThresholds,
 } from "./thresholds";
 import { blockRunner } from "./blocks";
 import { ceilingReading } from "./breakers";
@@ -209,18 +211,18 @@ export async function fileReport(
     await blockRunner(input.reporterId, input.subjectId);
   }
 
-  const reporterCount = await distinctReporterCount(
-    input.subjectType,
-    input.subjectId,
-  );
+  const filed = await filedReasonsOf(input.subjectType, input.subjectId);
+  const reporterCount = filed.length;
 
   // A repeat adds nobody, so it changes nothing (SA-M21): the hourly
   // sweep still finishes a hide a crash left undone, by its own marker.
-  // The reason sets the bar (design 136, D-117), and the bar is config
-  // (`./thresholds`), one person when it is missing.
+  // The reasons set the bar (design 136, D-117), and the bar is config
+  // (`./thresholds`), one person when it is missing: the lowest bar of
+  // the reasons filed, whatever order they came in (design 232), which is
+  // the sweep's rule too.
   if (
     added.length === 0 ||
-    reporterCount < reportersToHide(input.reason, moderationThresholds())
+    reporterCount < fewestReportersToHide(filed, moderationThresholds())
   ) {
     return { status: "filed", reporterCount, hiddenPendingReview: false };
   }
@@ -288,14 +290,12 @@ export async function reconcileUnhiddenReports(
   // when there is none: both the second way over the bar and the time the
   // removal's 48 hours started.
   const firstAtOnce = firstReportHidingAtOnce();
-  // Over by count: as many reporters as the least any reason off the
-  // clock needs. A reason on it is over at its first report, as above.
-  const offTheClock = reportReasons
-    .map((reason) => reason.value)
-    .filter((reason) => !reasonsOnTheClock.includes(reason));
+  // Over by count: as many reporters as the lowest bar among the reasons
+  // actually filed on the subject, as `fileReport` asks (design 232). A
+  // reason on the clock is over at its first report, as above.
   const enoughReporters = gte(
     countDistinct(reports.reporterId),
-    fewestReportersToHide(offTheClock, moderationThresholds()),
+    lowestFiledBar(moderationThresholds()),
   );
   const over = await database
     .select({
@@ -335,6 +335,41 @@ export async function reconcileUnhiddenReports(
     if (canHide) outcome.hidden += 1;
   }
   return outcome;
+}
+
+/**
+ * The lowest bar among a group's filed reasons, as SQL for a `HAVING`
+ * over `reports`: each stored reason's bar from the config, spelt into a
+ * `CASE` (they are integers the config parsed, not input).
+ */
+function lowestFiledBar(thresholds: ModerationThresholds | undefined): SQL {
+  const bars = STORED_REPORT_REASONS.map((reason) => {
+    const bar = sql.raw(String(reportersToHide(reason, thresholds)));
+    return sql`when ${reason} then ${bar}`;
+  });
+  const between = sql` `;
+  return sql`min(case ${reports.reason} ${sql.join(bars, between)} end)`;
+}
+
+/**
+ * The reasons filed on a subject, one a reporter (the UNIQUE index), so
+ * its length is the distinct reporter count.
+ */
+async function filedReasonsOf(
+  subjectType: ReportSubjectType,
+  subjectId: string,
+): Promise<ReportReason[]> {
+  return columnWhere(
+    db(),
+    reports,
+    reports.reason,
+    subjectMatches(
+      reports.subjectType,
+      reports.subjectId,
+      subjectType,
+      subjectId,
+    ),
+  );
 }
 
 /**
