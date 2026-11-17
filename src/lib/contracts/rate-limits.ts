@@ -83,6 +83,7 @@ export const VISITOR_KINDS = [
   "access",
   "takedown",
   "resend-visitor",
+  "csp-report",
 ] as const satisfies readonly (typeof RATE_LIMIT_KINDS)[number][];
 
 export type SendLimitKind = (typeof SEND_LIMIT_KINDS)[number];

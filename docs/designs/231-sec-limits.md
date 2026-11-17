@@ -105,8 +105,9 @@ until each is answered.
    > resets and email changes each address asked for in the last hour, how
    > many removal-request receipts each address was sent, and how many
    > wrong passwords you typed when changing your email or password.
-   > Requests for access, removal requests and requests to resend a
-   > confirmation link are counted per visitor IP address the same way.
+   > Requests for access, removal requests, requests to resend a
+   > confirmation link, and the reports a browser sends us when it blocks
+   > part of a page are counted per visitor IP address the same way.
    > Each of these counts is deleted a day after its window ends.
 
    Open: whether to add a sentence for the per-account counts (weather
