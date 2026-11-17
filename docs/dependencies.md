@@ -15,10 +15,13 @@ file explains them and does not restate them.
    stale open-source list. `oss-list.yml` rebuilds the list, read-only, and
    `oss-list-commit.yml` commits it to the PR as the automation App. CI
    then runs again on that commit by itself.
-3. **`dependabot-pr.yml` classifies it.** If every package in it is an npm
+3. **`dependabot-pr.yml` classifies it**, with `scripts/dependabot-classify.ts`
+   run from main (SA-M38, SA-L10). If every package it names is an npm
    update that semver calls compatible (a minor at 1.0 or above, or a patch
-   anywhere but 0.0.x) and was published by the same maintainers, auto-merge
-   is armed. GitHub merges it once every required check passes on the head
+   anywhere but 0.0.x), and every version it adds or moves in the lockfile,
+   named or not, is at least seven days old on the registry and was
+   published by an account that published that package before, auto-merge
+   is armed. A registry or lockfile it cannot read holds the PR. GitHub merges it once every required check passes on the head
    commit, with a merge commit, as the App, so main's deploy and its cold
    mutation run start as they would after any merge. If the checks have
    already passed (GitHub only arms auto-merge while one is pending), the
@@ -27,8 +30,9 @@ file explains them and does not restate them.
    while the job waits for a runner, and the run it starts doesn't
    classify again, so the job follows the head, but only past commits
    that are all the App's and change the list alone.
-4. **Anything else waits for you**: majors, 0.x minors, 0.0.x updates, new
-   maintainers, and every GitHub Actions bump (Actions run with this repo's
+4. **Anything else waits for you**: majors, 0.x minors, 0.0.x updates, a
+   version under seven days old (a security update skips Dependabot's
+   cooldown, not this one), a new publisher, and every GitHub Actions bump (Actions run with this repo's
    secrets). Claude posts an impact review on the PR: a verdict, the
    breaking changes, whether each touches this repo (with file and line),
    and its sources. It is advisory. Read the sources before trusting it.
@@ -163,13 +167,20 @@ compromised release that survives the cooldown: it would merge, deploy,
 and run its install scripts in the deploy job. Honestly, merging by hand
 would not catch it either; nobody reads a lockfile diff. What does:
 
-- the 7-day cooldown, and holding back versions with new maintainers;
-- `npm audit signatures`: registry signatures, and provenance where it
-  was published;
+- the 7-day cooldown, which the classifier also applies to security
+  updates and to every version the lockfile moves, and holding back
+  versions from a publisher new to the package (both read from the
+  registry);
+- `npm audit signatures`: the registry's signature on each installed
+  name and version's manifest, and provenance where it was published. It
+  does not compare that manifest with the tarball installed;
 - `lockfile-lint` in `npm run lint`: every entry from `registry.npmjs.org`
-  (or the guardrails-core release, by exact URL), over https, with an
-  integrity hash, its tarball named for its package. This guards every PR,
-  agents' included, not only Dependabot's;
+  (or the guardrails-core release, by exact URL), over https, with a full
+  sha512 integrity hash;
+- `test/architecture/lockfile-shape.test.ts` in `npm test` (SA-M18): every
+  entry resolves to exactly the tarball its install path and version
+  name, an alias's real name pinned in the test. These two guard every
+  PR, agents' included, not only Dependabot's;
 - the Cloudflare secrets in a `production` environment and a token scoped
   to what deploy needs (`docs/deployment.md` §7).
 

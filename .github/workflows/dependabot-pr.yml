@@ -62,6 +62,7 @@ jobs:
     outputs:
       merge: ${{ steps.decide.outputs.merge }}
       updates: ${{ steps.decide.outputs.updates }}
+      held: ${{ steps.decide.outputs.held }}
     steps:
       # Audit first (design 196): reports the hosts this job reaches and
       # blocks none. It moves to `block` once that list is known and short.
@@ -74,36 +75,45 @@ jobs:
         with:
           github-token: ${{ github.token }}
 
-      # Merges itself only when EVERY dependency in the PR is an npm minor or
-      # patch update that semver calls compatible, published by the same
-      # maintainers as the version it replaces: a minor at 1.0 or above, or
-      # a patch anywhere but 0.0.x. Under semver a 0.x minor is a breaking
-      # change and a 0.0.x anything is; a maintainer change is what an
-      # account takeover looks like from here. A minor or patch keeps the
-      # major (and a patch the minor), so the new version's leading digits
-      # are the old one's.
+      # The script and its rules are main's: under pull_request_target the
+      # checkout is the base branch, and nothing is installed, so no PR code
+      # and no package code runs. Node runs the TypeScript itself.
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          sparse-checkout: scripts/dependabot-classify.ts
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24
+
+      # Merges itself only when EVERY dependency in the PR is an npm minor
+      # at 1.0 or above, or a patch anywhere but 0.0.x (under semver a 0.x
+      # minor is a breaking change and a 0.0.x anything is), AND every
+      # version the PR adds or moves in package-lock.json, named in the
+      # metadata or not, is at least the cooldown old and was published by
+      # an account that published that package before (SA-M38, SA-L10). A
+      # new publisher is what an account takeover looks like from here. The
+      # lockfiles are read at both commits as data, the registry decides,
+      # and anything unreadable holds the PR for a person.
       - id: decide
         env:
           ECOSYSTEM: ${{ steps.metadata.outputs.package-ecosystem }}
           UPDATES: ${{ steps.metadata.outputs.updated-dependencies-json }}
+          REPO: ${{ github.repository }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          merge=$(jq -r --arg ecosystem "$ECOSYSTEM" '
-            $ecosystem == "npm_and_yarn" and length > 0 and all(.[];
-              (.newVersion // "") as $version
-              | (.maintainerChanges != true)
-              and ((.updateType == "version-update:semver-minor"
-                    and ($version | test("^[1-9]")))
-                or (.updateType == "version-update:semver-patch"
-                    and ($version | test("^([1-9]|0\\.[1-9])")))))
-          ' <<<"$UPDATES")
-          echo "merge=$merge" >>"$GITHUB_OUTPUT"
+          node scripts/dependabot-classify.ts
           {
             echo "updates<<END_OF_UPDATES"
-            jq -r '.[] | "- \(.dependencyName): \(.prevVersion // "?") -> \(.newVersion // "?") (\(.updateType), \(.dependencyType))\(if .maintainerChanges == true then " [new maintainer]" else "" end)"' <<<"$UPDATES"
+            jq -r '.[] | "- \(.dependencyName): \(.prevVersion // "?") -> \(.newVersion // "?") (\(.updateType), \(.dependencyType))"' <<<"$UPDATES"
             echo "END_OF_UPDATES"
           } >>"$GITHUB_OUTPUT"
-          echo "May merge itself: $merge"
 
   auto-merge:
     needs: classify
@@ -270,10 +280,15 @@ jobs:
           prompt: |
             You are reviewing a Dependabot pull request on this repository that is
             not allowed to merge itself: a major version, a minor on a 0.x version,
-            a 0.0.x version, a GitHub Actions update, or a version published by a
-            new maintainer. The updates:
+            a 0.0.x version, a GitHub Actions update, a version younger than the
+            seven-day cooldown, or a version published by an account new to its
+            package. The updates:
 
             ${{ needs.classify.outputs.updates }}
+
+            Why it was held:
+
+            ${{ needs.classify.outputs.held }}
 
             The workspace is this repository's main branch. The PR changes only the
             version pins for the packages above (package.json and package-lock.json,

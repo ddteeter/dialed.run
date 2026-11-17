@@ -322,3 +322,31 @@ describe("the Claude review jobs (SA-M19)", () => {
     expect(open).toEqual([]);
   });
 });
+
+describe("the Dependabot self-merge decision (SA-M38, SA-L10)", () => {
+  const source =
+    Object.entries(workflows).find(([path]) =>
+      path.endsWith("/dependabot-pr.yml"),
+    )?.[1] ?? "";
+  const classify = source.slice(
+    source.indexOf("\n  classify:"),
+    source.indexOf("\n  auto-merge:"),
+  );
+  const lines = classify
+    .split("\n")
+    .filter((line) => !line.trimStart().startsWith("#"));
+
+  it("is the classify job, found", () => {
+    expect(classify).toContain("- id: decide");
+  });
+
+  it("is the tested script's, run from main with nothing installed", () => {
+    expect(lines).toContain("          node scripts/dependabot-classify.ts");
+    expect(classify).not.toMatch(/\bnpm (?:ci|install|run|exec)\b|\bnpx\b/u);
+    expect(classify).not.toContain("ref:");
+  });
+
+  it("does not take the PR body's word on who published a version", () => {
+    expect(lines.join("\n")).not.toContain("maintainerChanges");
+  });
+});
