@@ -75,7 +75,7 @@ describe("saveCalibration", () => {
       username: "Ada",
       defaultAudience: "private",
     });
-    await completeOnboarding(coreDb(), userId);
+    await completeOnboarding(coreDb(), userId, new Headers());
 
     await saveCalibration(coreDb(), userId, { thermalLevel: -1 }, NO_ZONE);
 
@@ -328,18 +328,47 @@ describe("completeOnboarding and hasOnboarded", () => {
 
   it("reads true once, and stays true", async () => {
     const userId = await makeUser();
-    await completeOnboarding(coreDb(), userId);
-    await completeOnboarding(coreDb(), userId);
+    await completeOnboarding(coreDb(), userId, new Headers());
+    await completeOnboarding(coreDb(), userId, new Headers());
 
     expect(await hasOnboarded(coreDb(), userId)).toBe(true);
   });
 
   it("completes for an account with no row yet", async () => {
     const userId = newUlid();
-    await completeOnboarding(coreDb(), userId);
+    await completeOnboarding(coreDb(), userId, new Headers());
 
     expect(await hasOnboarded(coreDb(), userId)).toBe(true);
   });
+
+  // SA-L03 (design 230): only the runner's own arrival finishes it.
+  it.each(["same-origin", "none"])(
+    "completes on an arrival whose Sec-Fetch-Site is %s",
+    async (site) => {
+      const userId = await makeUser();
+      await completeOnboarding(
+        coreDb(),
+        userId,
+        new Headers({ "sec-fetch-site": site }),
+      );
+
+      expect(await hasOnboarded(coreDb(), userId)).toBe(true);
+    },
+  );
+
+  it.each(["cross-site", "same-site"])(
+    "does not complete on an arrival another site sent (%s)",
+    async (site) => {
+      const userId = await makeUser();
+      await completeOnboarding(
+        coreDb(),
+        userId,
+        new Headers({ "sec-fetch-site": site }),
+      );
+
+      expect(await hasOnboarded(coreDb(), userId)).toBe(false);
+    },
+  );
 });
 
 describe("calibrationInput", () => {
@@ -678,7 +707,7 @@ describe("requiresOnboarding", () => {
 
   it("stops once they reach P3", async () => {
     const userId = newUlid();
-    await completeOnboarding(coreDb(), userId);
+    await completeOnboarding(coreDb(), userId, new Headers());
 
     expect(await requiresOnboarding(coreDb(), userId)).toBe(false);
   });

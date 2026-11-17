@@ -7,6 +7,7 @@ import {
   SHARED_AUDIENCE,
   writableAudienceOf,
 } from "../../lib/contracts";
+import { isFirstPartyRequest } from "../../lib/fetch-site";
 import { orSqlNull } from "../../lib/sql/sql-null";
 import type {
   Calibration,
@@ -145,11 +146,18 @@ function placeWrite(
  * Set at P3 and nowhere earlier, so a runner who bails halfway keeps what
  * they answered and is offered the rest again. Recalibrating from settings
  * writes the calibration without touching this.
+ *
+ * Only the runner's own arrival sets it (SA-L03, design 230). P3's loader
+ * makes the write, so on a server render `requestHeaders` are the page's
+ * GET: a runner another site sent here is not finished by it
+ * (`lib/fetch-site`), and `/` still offers the rest.
  */
 export async function completeOnboarding(
   db: DrizzleD1Database,
   userId: string,
+  requestHeaders: Headers,
 ): Promise<void> {
+  if (!isFirstPartyRequest(requestHeaders)) return;
   await db
     .insert(userProfiles)
     .values({ userId, onboardingComplete: true })

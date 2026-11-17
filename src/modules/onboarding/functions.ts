@@ -75,7 +75,9 @@ export const starterListQuery = createServerFn({ method: "GET" }).handler(
 
 export const completeOnboardingFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => noInput.parse(data))
-  .handler(async () => completeOnboarding(db(), await requireUserId()));
+  .handler(async () =>
+    completeOnboarding(db(), await requireUserId(), getRequestHeaders()),
+  );
 
 export const settingsQuery = createServerFn({ method: "GET" }).handler(
   async () => currentSettings(db(), await requireUserId()),
