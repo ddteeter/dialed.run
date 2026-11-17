@@ -82,8 +82,7 @@ new server boundary.
 
 ## Open questions
 
-- The privacy policy's paragraph (below) is held until the owner has read
-  it.
+None. Every guess is answered (2026-11-16).
 
 ## Owner answers (2026-11-16, through the coordinator)
 
@@ -101,7 +100,7 @@ new server boundary.
   too long. Paste the shop page's address."
 - SA-M28: the Strava notice is not sent to an unconfirmed address.
 - SA-M36: the policy paragraph below, with a clause for the per-account
-  counts (held for the owner's read).
+  counts; the owner approved it as written.
 - SA-L07: the action check, no visible change (coordinator).
 - SA-L15: the follow half is 12d's; the verdict prompt checks the kit
   (coordinator). A run's title is not sent to other runners, and W1 names
@@ -110,7 +109,7 @@ new server boundary.
   stay unmetered.
 
 The policy paragraph (`docs/legal/privacy-policy.md`, Counts that stop
-abuse), as drafted:
+abuse), as the owner approved it:
 
 > We count sign-in and sign-up attempts per IP address; those counts are
 > deleted within a day. We count how many confirmation links, password
