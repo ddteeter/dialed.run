@@ -364,21 +364,25 @@ const SAVED_PAGE_MAX = 100;
 /**
  * `/account/terms`' search: where the runner was when a stale tab's call
  * was refused (`ui/terms-refusal`, decision D-96), for Accept to return
- * them to — a path on this site, or nothing, and Accept goes home — and,
- * when that call was a save, the page's name, for D-102's line. A name is
- * a heading's worth of words; anything longer, or empty, is dropped and
- * the line with it.
+ * them to — a path on this site, or nothing, and Accept goes home.
  */
 export const termsPromptSearch = z.object({
   from: returnPathSchema.optional().catch(undefined),
-  save: z
-    .string()
-    .trim()
-    .min(1)
-    .max(SAVED_PAGE_MAX)
-    .optional()
-    .catch(undefined),
 });
+
+/**
+ * The page a refused save left, by name, for D-102's line: from the
+ * navigation's history state (`useSavedPage`), never the URL (SA-L13,
+ * design 230). A name is a heading's worth of words; anything longer, or
+ * empty, is dropped and the line with it.
+ */
+export const savedPageSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(SAVED_PAGE_MAX)
+  .optional()
+  .catch(undefined);
 
 /**
  * Home, when the page has nothing to say: on `/account/leaving`, a runner

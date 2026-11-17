@@ -11,7 +11,7 @@ import {
 } from "../../../lib/contracts/measures";
 import { Bracketed, Mono, Spoken } from "../../../ui";
 import type { ClosetSearch } from "../inputs";
-import { useIsHydrated } from "./use-is-hydrated";
+import { useIsHydrated } from "../../../ui/use-is-hydrated";
 
 /**
  * Closet C's WORKS AT (R-94, design 174), in the two forms round 46 #109h

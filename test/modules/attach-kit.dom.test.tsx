@@ -1372,10 +1372,8 @@ describe("AttachKit: a failed attach (round 23, item 9)", () => {
     await user.click(primary());
 
     await screen.findByText("The prompt");
-    expect(router.state.location.search).toEqual({
-      from: "/",
-      save: "Attach the kit",
-    });
+    expect(router.state.location.search).toEqual({ from: "/" });
+    expect(router.state.location.state.savedPage).toBe("Attach the kit");
   });
 
   it("says nothing attached under the button, and tries again with the same kit", async () => {

@@ -232,7 +232,7 @@ describe("a refusal for being behind on the terms (D-96)", () => {
     expect(router.state.location.search).toEqual({
       from: "/closet?tab=shoes",
     });
-    expect(router.state.location.searchStr).not.toContain("save");
+    expect(router.state.location.state.savedPage).toBeUndefined();
     expect(screen.getByRole("status")).toHaveTextContent("");
     expect(screen.getByTestId("band")).toHaveTextContent("");
     expect(isRememberedForSession("has-handle")).toBe(false);
@@ -248,11 +248,12 @@ describe("a refusal for being behind on the terms (D-96)", () => {
 
     await screen.findByRole("heading", { name: "Accept the terms" });
     expect(router.state.location.pathname).toBe("/account/terms");
-    // A form's refusal is a save (D-102): `save` names the page it left.
+    // A form's refusal is a save (D-102): history state names the page it
+    // left, never the URL (SA-L13).
     expect(router.state.location.search).toEqual({
       from: "/closet?tab=shoes",
-      save: "Closet",
     });
+    expect(router.state.location.state.savedPage).toBe("Closet");
     expect(screen.getByRole("status")).toHaveTextContent("");
     expect(screen.getByTestId("band")).toHaveTextContent("");
   });
@@ -274,8 +275,8 @@ describe("a refusal for being behind on the terms (D-96)", () => {
       await screen.findByRole("heading", { name: "Accept the terms" });
       expect(router.state.location.search).toEqual({
         from: start,
-        save: name,
       });
+      expect(router.state.location.state.savedPage).toBe(name);
     },
   );
 
@@ -289,7 +290,7 @@ describe("a refusal for being behind on the terms (D-96)", () => {
 
     await screen.findByRole("heading", { name: "Accept the terms" });
     expect(router.state.location.search).toEqual({ from: "/blank" });
-    expect(router.state.location.searchStr).not.toContain("save");
+    expect(router.state.location.state.savedPage).toBeUndefined();
   });
 
   it("names the page from a control that saves, as Attach does", async () => {
@@ -301,8 +302,8 @@ describe("a refusal for being behind on the terms (D-96)", () => {
     await screen.findByRole("heading", { name: "Accept the terms" });
     expect(router.state.location.search).toEqual({
       from: "/closet?tab=shoes",
-      save: "Closet",
     });
+    expect(router.state.location.state.savedPage).toBe("Closet");
   });
 
   it("asks the gate again on the next in-app navigation, which comes back to the prompt", async () => {

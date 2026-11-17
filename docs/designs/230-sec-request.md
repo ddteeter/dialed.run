@@ -21,8 +21,9 @@ ties two GET-reachable effects to the runner's own navigation.
   framework's `$TSS/serverfn` key, listed first in `src/start.ts`. It never
   matches a value on the way out and throws on the way in, so no payload
   turns into a server function. The app never passes one as an argument.
-  *(Guess, Q2: the six POST functions that take no input also get a
-  validator that refuses `undefined`.)*
+  Every POST server function has a validator: the six that take no input
+  parse `lib/no-input`'s empty object, and their routes send
+  `{ data: {} }`.
 - **SA-M35.** Every cookie is `__Host-`: the browser keeps it only as this
   host set it (`Secure`, `Path=/`, no `Domain`).
   - Session: on https `createAuth` sets `useSecureCookies: false`,
@@ -49,22 +50,18 @@ ties two GET-reachable effects to the runner's own navigation.
 
 ## Test plan
 
-- `test/architecture/server-fn-request-check.test.ts` (vitest, text
-  scan): `src/start.ts` lists the CSRF middleware, its filter names
-  `serverFn`, and the refusing adapter comes first.
-- `test/architecture/loaders-do-not-write.test.ts` (vitest, text scan):
-  a route loader calls no POST server function. Three routes are on a
-  guarded list, each with its reason.
-- `test/lib/refuse-server-fn-argument.test.ts`, `test/lib/auth-signal.test.ts`
-  (vitest): the refusal, and parse-on-the-way-in.
-- `test/auth/create-auth.test.ts`, `test/lib/d1-session.test.ts`,
-  `test/auth/access-hook.test.ts` (vitest): the `__Host-` names, the
-  attributes on the emitted `Set-Cookie`, and readers that ignore the
-  old names.
-- Onboarding decision and terms prompt (vitest, unit and dom).
-- `e2e/auth/server-fn-origin.spec.ts` (edge case): only a real Worker
-  and browser show a foreign `Sec-Fetch-Site` refused with 403 on GET
-  and POST while the app's own calls still work.
+- Vitest, text scans of what no test can import:
+  `test/architecture/server-fn-request-check.test.ts` (the middleware and
+  the adapter's place), `post-functions-take-input.test.ts` (every POST
+  function has a validator), `loaders-do-not-write.test.ts` (a loader
+  calls no POST function; two guarded routes, each with its reason).
+- Vitest units: `test/lib/` (`fetch-site`, `no-input`,
+  `refuse-server-fn-argument`, `auth-signal`), the cookie names and the
+  emitted `Set-Cookie` (`test/auth/`, `test/lib/d1-session`), onboarding,
+  and `useSavedPage` (dom).
+- `e2e/auth/server-fn-origin.spec.ts` (edge case): only a running Worker
+  shows a foreign `Sec-Fetch-Site` answered 403 on GET and POST, and a
+  payload naming a server function refused.
 
 ## Issues
 
@@ -72,13 +69,13 @@ ties two GET-reachable effects to the runner's own navigation.
 
 ## Open questions (asked of coordinator-13, 2026-11-16)
 
-- Q1: one line in `modules/onboarding/functions.ts` for SA-L03.
-- Q2: validators on the six no-input POST functions (four `functions.ts`
-  files, their route call sites).
 - Q3 (owner): a cross-site arrival at `/onboarding/done` no longer
   finishes onboarding.
 - Q4 (owner): the terms prompt's page name from history state.
 
+Coordinator (2026-11-16): the validators, yes; `lib/fetch-site` is
+shared with 13b.
+
 ## Owner answers
 
-Pending.
+Pending (Q3, Q4).

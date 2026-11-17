@@ -21,9 +21,11 @@ import { forgetSession } from "../lib/browser/session-memo";
  * - **`from` is where the runner was**, so Accept returns them there
  *   (`/account/terms` parses it as a path on this site, and goes home
  *   without one).
- * - **`save` names that page when what was refused was a save** (D-102):
- *   the prompt then warns that Accept goes back to it and what was typed
- *   was not kept. Every form's refusal is a save (`useFormSubmit`), and so
+ * - **`savedPage` names that page when what was refused was a save**
+ *   (D-102): the prompt then warns that Accept goes back to it and what
+ *   was typed was not kept. It travels in history state, never the URL
+ *   (SA-L13, design 230): a link cannot carry history state, so the line
+ *   is only ever the app's own words. Every form's refusal is a save (`useFormSubmit`), and so
  *   is a control's that holds typed state (`useControlAction`'s `isSave`,
  *   Attach); a loader's or a plain control's lost nothing, and sends none.
  *
@@ -43,6 +45,13 @@ const TermsRefusal = createContext<AnswerTermsRefusal | undefined>(undefined);
 export type AnswerTermsRefusal = (isSave?: boolean) => void;
 
 declare module "@tanstack/react-router" {
+  interface HistoryState {
+    /**
+     * The page a refused save left, by name, for the terms prompt's
+     * D-102 line: set by `TermsRefusalAnswer`'s navigation alone.
+     */
+    savedPage?: string | undefined;
+  }
   interface StaticDataRouteOption {
     /**
      * What D-102's line calls this page, in the runner's words ("Log a
@@ -85,9 +94,9 @@ export function TermsRefusalAnswer({
     forgetSession();
     void navigate({
       to: "/account/terms",
-      search: {
-        from: router.state.location.href,
-        save: isSave ? savedPageName(router.state.matches) : undefined,
+      search: { from: router.state.location.href },
+      state: {
+        savedPage: isSave ? savedPageName(router.state.matches) : undefined,
       },
     });
   };
