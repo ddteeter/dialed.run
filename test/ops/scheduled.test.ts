@@ -31,7 +31,10 @@ import {
   digestKinds,
   digestReport,
   hourlyReport,
+  SPEED_EVENTS_PER_CHECK,
+  speedReports,
 } from "../../src/modules/ops/scheduled";
+import type { SpeedFinding } from "../../src/modules/ops/perf-checks";
 import {
   FINGERPRINT_HOLDS_PER_HOUR,
   QUIET_FEWEST_SCREENED,
@@ -650,6 +653,18 @@ async function seedAnomaly(
   }
 }
 
+function speedFinding(
+  check: SpeedFinding["check"],
+  index: number,
+): SpeedFinding {
+  return {
+    check,
+    route: `/r/${String(index)}`,
+    metric: "LCP",
+    line: `${check} ${String(index)}`,
+  };
+}
+
 function recordingReporter() {
   const checkIns: { slug: string; schedule: string; status: string }[] = [];
   const events: { error: unknown; report: SentryReport }[] = [];
@@ -864,6 +879,90 @@ describe("the digest reports each kind on its own (OPS-2)", () => {
         fingerprint: ["perf", "drift", "/closet/", "LCP", day],
       },
     ]);
+  });
+
+  it(`sends at most ${String(SPEED_EVENTS_PER_CHECK)} findings a check as their own events, the rest as one (SA-M34)`, async () => {
+    const { reporter, events } = recordingReporter();
+
+    await handleScheduled(ENRICHMENT_RETRY, reporter, {
+      speedHourly: (_now, report) => {
+        for (let index = 0; index < 500; index += 1) {
+          report(speedFinding("deploy-regression", index));
+        }
+        report(speedFinding("drift", 0));
+        return Promise.resolve();
+      },
+    });
+
+    const day = new Date(nowSeconds() * 1000).toISOString().slice(0, 10);
+    const speed = events.filter(
+      (event) => event.report.tags.speed_check !== undefined,
+    );
+    expect(speed.map((event) => event.report.fingerprint)).toStrictEqual([
+      ...[0, 1, 2, 3, 4].map((index) => [
+        "perf",
+        "deploy-regression",
+        `/r/${String(index)}`,
+        "LCP",
+        day,
+      ]),
+      ["perf", "deploy-regression", "more", day],
+      ["perf", "drift", "/r/0", "LCP", day],
+    ]);
+    expect(
+      speed.map((event) =>
+        event.error instanceof Error ? event.error.message : "",
+      ),
+    ).toStrictEqual([
+      ...Array.from({ length: 6 }, () => "speed: deploy-regression"),
+      "speed: drift",
+    ]);
+    expect(speed[5]?.report).toStrictEqual({
+      context: {
+        check: "deploy-regression",
+        more: "495",
+        anomalies: [
+          "495 more findings than the 5 sent",
+          ...[5, 6, 7, 8, 9].map((index) => `deploy-regression ${String(index)}`),
+        ].join("; "),
+      },
+      tags: {
+        digest: "hourly",
+        cron: "enrichment-retry",
+        speed_check: "deploy-regression",
+      },
+      fingerprint: ["perf", "deploy-regression", "more", day],
+    });
+  });
+
+  it("sends exactly the cap with no extra event", () => {
+    const findings = Array.from(
+      { length: SPEED_EVENTS_PER_CHECK },
+      (_, index): SpeedFinding => ({
+        check: "drift",
+        route: `/r/${String(index)}`,
+        metric: "LCP",
+        line: "x",
+      }),
+    );
+    expect(speedReports(findings, "2026-11-16")).toHaveLength(
+      SPEED_EVENTS_PER_CHECK,
+    );
+  });
+
+  it("still sends what one check found when the speed step throws", async () => {
+    const { reporter, events } = recordingReporter();
+    const failure = new Error("SQL API down");
+    const firing = handleScheduled(ENRICHMENT_RETRY, reporter, {
+      speedHourly: (_now, report) => {
+        report({ check: "drift", route: "/closet/", metric: "LCP", line: "slow" });
+        return Promise.reject(failure);
+      },
+    });
+    await expect(firing).rejects.toBe(failure);
+    expect(
+      events.filter((event) => event.report.tags.speed_check === "drift"),
+    ).toHaveLength(1);
   });
 
   it("does not run the hourly speed checks on the other firings", async () => {

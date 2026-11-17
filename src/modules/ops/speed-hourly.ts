@@ -22,6 +22,7 @@ import {
   versionRowSchema,
   windowQuery,
 } from "./vitals-queries";
+import type { RouteKnown } from "./timing";
 import { rollupDepsFromEnv, type RollupDeps } from "./vitals-rollup";
 
 const HOUR = 60 * 60;
@@ -48,11 +49,15 @@ export type SpeedQuery = NonNullable<RollupDeps["query"]>;
 export async function checkDeployRegressions(
   now: number,
   query: SpeedQuery,
+  known: RouteKnown,
 ): Promise<SpeedFinding[]> {
   const answer = answerSchema(versionRowSchema).parse(
     await query(versionQuery(now - VERSION_DAYS * 24 * HOUR)),
   );
-  return deployRegressions(answer.data, now - WINDOW_HOURS * HOUR);
+  return deployRegressions(
+    answer.data.filter((row) => known(row.route)),
+    now - WINDOW_HOURS * HOUR,
+  );
 }
 
 /**
@@ -63,6 +68,7 @@ async function windowWeeks(
   hour: number,
   hoursBack: number,
   query: SpeedQuery,
+  known: RouteKnown,
 ): Promise<WindowWeeks> {
   const start = hour - hoursBack * HOUR;
   return Promise.all(
@@ -71,7 +77,7 @@ async function windowWeeks(
       const answer = answerSchema(measuredRowSchema).parse(
         await query(windowQuery(from, from + WINDOW_HOURS * HOUR)),
       );
-      return answer.data;
+      return answer.data.filter((row) => known(row.route));
     }),
   );
 }
@@ -83,11 +89,12 @@ async function windowWeeks(
 export async function checkDrift(
   now: number,
   query: SpeedQuery,
+  known: RouteKnown,
 ): Promise<SpeedFinding[]> {
   const hour = Math.floor(now / HOUR) * HOUR;
   const [current, previous] = await Promise.all([
-    windowWeeks(hour, WINDOW_HOURS, query),
-    windowWeeks(hour, WINDOW_HOURS + 1, query),
+    windowWeeks(hour, WINDOW_HOURS, query, known),
+    windowWeeks(hour, WINDOW_HOURS + 1, query, known),
   ]);
   return drifts(current, previous);
 }
@@ -99,25 +106,29 @@ export async function checkDrift(
  */
 export interface HourlySpeedDeps {
   readonly query: RollupDeps["query"];
+  /**
+  Which route names the checks may judge (SA-M34).
+  */
+  readonly known: RouteKnown;
 }
 
 /**
- * The configured SQL API, or none.
+ * The configured SQL API, or none, judging the routes `known` keeps.
  */
-export function hourlySpeedDepsFromEnv(): HourlySpeedDeps {
-  return { query: rollupDepsFromEnv().query };
+export function hourlySpeedDepsFromEnv(known: RouteKnown): HourlySpeedDeps {
+  return { query: rollupDepsFromEnv(known).query, known };
 }
 
 export async function hourlySpeed(
   now: number,
   report: (finding: SpeedFinding) => void,
-  deps: HourlySpeedDeps = hourlySpeedDepsFromEnv(),
+  deps: HourlySpeedDeps,
 ): Promise<void> {
-  const { query } = deps;
+  const { query, known } = deps;
   if (query === undefined) return;
   const results = await Promise.allSettled([
-    checkDeployRegressions(now, query),
-    checkDrift(now, query),
+    checkDeployRegressions(now, query, known),
+    checkDrift(now, query, known),
   ]);
   for (const result of results) {
     if (result.status === "fulfilled") {

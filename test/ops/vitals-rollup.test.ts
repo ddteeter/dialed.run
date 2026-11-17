@@ -19,6 +19,13 @@ import {
 } from "../../src/modules/ops/vitals-rollup";
 
 /**
+Every route name kept, as before the known-route check.
+*/
+const isAnyRoute = (): boolean => true;
+
+const isRoot = (route: string): boolean => route === "/";
+
+/**
  * The daily speed rollup (design 165, step 6), against the real ops
  * database and a SQL API faked per test.
  */
@@ -58,7 +65,7 @@ function fakeApi(byDay: Record<string, unknown>) {
       ? Promise.reject(answer)
       : Promise.resolve(answer ?? { meta: [], data: [], rows: 0 });
   };
-  const deps: RollupDeps = { query, db: opsDb() };
+  const deps: RollupDeps = { query, db: opsDb(), known: isAnyRoute };
   return { deps, asked };
 }
 
@@ -95,6 +102,7 @@ describe("dailyRollupQuery", () => {
         "WHERE timestamp >= toDateTime('2026-10-30 00:00:00', 'Etc/UTC')",
         "AND timestamp < toDateTime('2026-10-31 00:00:00', 'Etc/UTC')",
         "GROUP BY index1, blob1, blob3",
+        "ORDER BY n DESC",
         "LIMIT 10000",
         "FORMAT JSON",
       ].join("\n"),
@@ -165,6 +173,17 @@ describe("rollupVitals", () => {
         ...apiRow("/feed/", { metric: "server", device: "2xx" }),
       },
     ]);
+  });
+
+  it("stores only the route names `known` keeps (SA-M34)", async () => {
+    const { deps } = fakeApi({
+      "2026-10-30": { data: [apiRow("/closet/"), apiRow("/x/0001")] },
+    });
+    await rollupVitals("2026-10-31", [], {
+      ...deps,
+      known: (route) => route === "/closet/",
+    });
+    expect(await storedColumn("route")).toStrictEqual(["/closet/"]);
   });
 
   it("takes numbers sent as strings", async () => {
@@ -326,6 +345,7 @@ describe("rollupVitals", () => {
     await rollupVitals("2026-10-31", anomalies, {
       query: undefined,
       db: opsDb(),
+      known: isAnyRoute,
     });
 
     expect(anomalies).toStrictEqual([
@@ -337,6 +357,7 @@ describe("rollupVitals", () => {
   it("names a thrown non-error as unknown", async () => {
     const anomalies: string[] = [];
     await rollupVitals("2026-10-31", anomalies, {
+      known: isAnyRoute,
       query: vi
         .fn<(sql: string) => Promise<unknown>>()
         .mockRejectedValue("nope"),
@@ -349,23 +370,27 @@ describe("rollupVitals", () => {
 });
 
 describe("rollupDepsFromEnv", () => {
+  it("judges with the route check it is given", () => {
+    expect(rollupDepsFromEnv(isRoot, {}).known).toBe(isRoot);
+  });
+
   it("is unconfigured without an account or a token", () => {
-    expect(rollupDepsFromEnv({}).query).toBeUndefined();
+    expect(rollupDepsFromEnv(isAnyRoute, {}).query).toBeUndefined();
     expect(
-      rollupDepsFromEnv({ CF_ACCOUNT_ID: "", ANALYTICS_SQL_TOKEN: "t" }).query,
+      rollupDepsFromEnv(isAnyRoute, { CF_ACCOUNT_ID: "", ANALYTICS_SQL_TOKEN: "t" }).query,
     ).toBeUndefined();
     expect(
-      rollupDepsFromEnv({ CF_ACCOUNT_ID: "a", ANALYTICS_SQL_TOKEN: "" }).query,
+      rollupDepsFromEnv(isAnyRoute, { CF_ACCOUNT_ID: "a", ANALYTICS_SQL_TOKEN: "" }).query,
     ).toBeUndefined();
-    expect(rollupDepsFromEnv({ CF_ACCOUNT_ID: "a" }).query).toBeUndefined();
+    expect(rollupDepsFromEnv(isAnyRoute, { CF_ACCOUNT_ID: "a" }).query).toBeUndefined();
     expect(
-      rollupDepsFromEnv({ ANALYTICS_SQL_TOKEN: "t" }).query,
+      rollupDepsFromEnv(isAnyRoute, { ANALYTICS_SQL_TOKEN: "t" }).query,
     ).toBeUndefined();
   });
 
   it("posts the SQL to the account's endpoint with the token, bounded", async () => {
     const fetchImpl = answering(200, { data: [] });
-    const { query } = rollupDepsFromEnv();
+    const { query } = rollupDepsFromEnv(isAnyRoute);
 
     await expect(query?.("SELECT 1")).resolves.toStrictEqual({ data: [] });
 
@@ -382,7 +407,7 @@ describe("rollupDepsFromEnv", () => {
 
   it("escapes the account into the path", async () => {
     const fetchImpl = answering(200, { data: [] });
-    await rollupDepsFromEnv({
+    await rollupDepsFromEnv(isAnyRoute, {
       CF_ACCOUNT_ID: "a/b",
       ANALYTICS_SQL_TOKEN: "t",
     }).query?.("SELECT 1");
@@ -393,7 +418,7 @@ describe("rollupDepsFromEnv", () => {
 
   it("refuses an error status by its number alone", async () => {
     answering(503, { errors: ["SELECT secret"] });
-    const query = rollupDepsFromEnv().query;
+    const query = rollupDepsFromEnv(isAnyRoute).query;
     const attempt = query?.("SELECT 1");
     await expect(attempt).rejects.toBeInstanceOf(Error);
     await expect(attempt).rejects.toHaveProperty(
@@ -403,6 +428,6 @@ describe("rollupDepsFromEnv", () => {
   });
 
   it("writes to the ops database", () => {
-    expect(rollupDepsFromEnv().db).toBeDefined();
+    expect(rollupDepsFromEnv(isAnyRoute).db).toBeDefined();
   });
 });

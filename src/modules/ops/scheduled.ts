@@ -266,13 +266,7 @@ async function runCron(
         // after.
         () => listAbandonedEnrichments(coreDb()),
         () => drainOwedEmail(anomalies),
-        () =>
-          upkeep.speedHourly?.(nowSeconds(), (finding) => {
-            reporter.report(
-              new Error(`speed: ${finding.check}`),
-              speedReport(finding, utcDay()),
-            );
-          }),
+        () => reportHourlySpeed(upkeep.speedHourly, reporter),
       ]);
     }
     case "screening-retry": {
@@ -341,6 +335,73 @@ export function hourlyReport(
     ["hourly", cronName, day],
     lines,
   );
+}
+
+/**
+ * How many of one check's findings a firing sends as their own events
+ * (SA-M34). A route name in the speed data is whatever a beacon said, so
+ * past this the rest are one event with their count: a firing's sends are
+ * bounded, and a real regression among the first few is still its own
+ * issue. A guess awaiting the owner's number.
+ */
+export const SPEED_EVENTS_PER_CHECK = 5;
+
+/**
+ * Runs the hourly speed checks and sends what they found, capped per
+ * check (`speedReports`). Sent in a `finally`, so the findings of a check
+ * that succeeded still go out when the other throws.
+ */
+async function reportHourlySpeed(
+  speedHourly: DailyUpkeep["speedHourly"],
+  reporter: CronReporter,
+): Promise<void> {
+  const findings: SpeedFinding[] = [];
+  try {
+    await speedHourly?.(nowSeconds(), (finding) => {
+      findings.push(finding);
+    });
+  } finally {
+    for (const [check, report] of speedReports(findings, utcDay())) {
+      reporter.report(new Error(`speed: ${check}`), report);
+    }
+  }
+}
+
+/**
+ * A firing's speed findings as events: each check's first
+ * `SPEED_EVENTS_PER_CHECK` as their own (`speedReport`), and any more as
+ * one event that counts them and quotes the first few, fingerprinted by
+ * check and day.
+ */
+export function speedReports(
+  findings: readonly SpeedFinding[],
+  day: string,
+): [string, SentryReport][] {
+  const checks = [...new Set(findings.map((finding) => finding.check))];
+  return checks.flatMap((check): [string, SentryReport][] => {
+    const own = findings.filter((finding) => finding.check === check);
+    const sent = own.slice(0, SPEED_EVENTS_PER_CHECK);
+    const rest = own.slice(SPEED_EVENTS_PER_CHECK);
+    const reports: [string, SentryReport][] = sent.map((finding) => [
+      check,
+      speedReport(finding, day),
+    ]);
+    if (rest.length > 0) {
+      reports.push([
+        check,
+        anomalyReport(
+          { check, more: String(rest.length) },
+          { digest: "hourly", cron: "enrichment-retry", speed_check: check },
+          ["perf", check, "more", day],
+          [
+            `${String(rest.length)} more findings than the ${String(SPEED_EVENTS_PER_CHECK)} sent`,
+            ...rest.slice(0, SPEED_EVENTS_PER_CHECK).map((finding) => finding.line),
+          ],
+        ),
+      ]);
+    }
+    return reports;
+  });
 }
 
 /**

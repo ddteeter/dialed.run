@@ -7,7 +7,9 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  knownRoutes,
   requestNamer,
+  timedName,
   timeRequest,
   timingDeps,
   type TimingDeps,
@@ -231,5 +233,83 @@ describe("timingDeps", () => {
   it("keeps the namer it was given", () => {
     const name = requestNamer(() => testRouter());
     expect(timingDeps(name).name).toBe(name);
+  });
+});
+
+describe("timedName (SA-L08)", () => {
+  it.each([200, 204, 299])("keeps a server function's id when it answered %i", (status) => {
+    expect(timedName("serverFn:abc", status)).toBe("serverFn:abc");
+  });
+
+  it.each([199, 300, 404, 500])(
+    "names a server function that answered %i alike",
+    (status) => {
+      expect(timedName("serverFn:abc", status)).toBe("serverFn:failed");
+    },
+  );
+
+  it("leaves a page's name alone whatever it answered", () => {
+    expect(timedName("/runs/$runId", 500)).toBe("/runs/$runId");
+    expect(timedName("unmatched", 404)).toBe("unmatched");
+  });
+
+  it("is the name timeRequest records", async () => {
+    const deps = fakeDeps();
+    await timeRequest(
+      new Request("https://dialed.run/_serverFn/never-registered"),
+      () => Promise.resolve(new Response("", { status: 500 })),
+      deps,
+    );
+    expect(deps.lines.map((line) => line.route)).toStrictEqual([
+      "serverFn:failed",
+    ]);
+  });
+});
+
+describe("knownRoutes (SA-M34)", () => {
+  it("knows the tree's routes, server functions and unmatched, and nothing else", () => {
+    const isKnown = knownRoutes(() => testRouter());
+    expect(isKnown("/runs/$runId")).toBe(true);
+    expect(isKnown("/desk/")).toBe(true);
+    expect(isKnown("serverFn:abc")).toBe(true);
+    expect(isKnown("unmatched")).toBe(true);
+    expect(isKnown("/x/0001")).toBe(false);
+    expect(isKnown("/runs/abc")).toBe(false);
+    expect(isKnown("toString")).toBe(false);
+  });
+
+  it("builds the router on the first question, and once", () => {
+    const makeRouter = vi.fn(() => testRouter());
+    const isKnown = knownRoutes(makeRouter);
+    expect(makeRouter).not.toHaveBeenCalled();
+    isKnown("/");
+    isKnown("/x");
+    expect(makeRouter).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps every name, and reports once, when the router will not build", () => {
+    const failure = new Error("no tree");
+    const report = vi.fn();
+    const isKnown = knownRoutes(() => {
+      throw failure;
+    }, report);
+    expect(isKnown("/x/0001")).toBe(true);
+    expect(isKnown("/y")).toBe(true);
+    expect(report).toHaveBeenCalledTimes(1);
+    expect(report).toHaveBeenCalledWith(failure);
+  });
+});
+
+describe("knownRoutes' default report", () => {
+  it("goes to Sentry, as the timing surface", () => {
+    const error = vi.spyOn(console, "error").mockImplementation(nothing);
+    knownRoutes(() => {
+      throw new Error("no tree");
+    })("/");
+    expect(error).toHaveBeenCalledWith(
+      "[sentry-disabled]",
+      { surface: "timing" },
+      expect.any(Error),
+    );
   });
 });

@@ -22,6 +22,7 @@ import {
   rollupVitals,
   type RollupDeps,
 } from "./vitals-rollup";
+import type { RouteKnown } from "./timing";
 
 export interface SpeedDigestDeps {
   readonly rollup: RollupDeps;
@@ -31,14 +32,14 @@ export interface SpeedDigestDeps {
 /**
  * The real SQL API and ops database.
  */
-export function speedDigestDepsFromEnv(): SpeedDigestDeps {
-  return { rollup: rollupDepsFromEnv(), db: opsDb() };
+export function speedDigestDepsFromEnv(known: RouteKnown): SpeedDigestDeps {
+  return { rollup: rollupDepsFromEnv(known), db: opsDb() };
 }
 
 export async function dailySpeed(
   today: string,
   anomalies: string[],
-  deps: SpeedDigestDeps = speedDigestDepsFromEnv(),
+  deps: SpeedDigestDeps,
 ): Promise<void> {
   await rollupVitals(today, anomalies, deps.rollup);
   const yesterday = dayBefore(today, 1);
