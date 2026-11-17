@@ -6,6 +6,7 @@ import {
   NO_TRACK_MESSAGE,
   PARSE_FAILURE_MESSAGE,
   UPLOAD_REFUSALS,
+  UPLOADS_PER_DAY,
   checkUpload,
   parseFailureSentence,
 } from "../../src/modules/runs/upload-limits";
@@ -48,6 +49,16 @@ describe("checkUpload", () => {
       checkUpload({ name: "run.tcx", size: MAX_IMPORT_BYTES + 1 }),
     ).toStrictEqual({ ok: false, problem: UPLOAD_REFUSALS.tooLarge });
     expect(UPLOAD_REFUSALS.tooLarge).toBe("That file is larger than 25 MB.");
+  });
+
+  it("says a day's uploads are used up in the owner's words (SA-M29)", () => {
+    expect(UPLOADS_PER_DAY).toBe(30);
+    expect(UPLOAD_REFUSALS.tooMany).toContain(
+      `That's ${String(UPLOADS_PER_DAY)} run files`,
+    );
+    expect(UPLOAD_REFUSALS.tooMany).toBe(
+      "That's 30 run files today. You can upload more tomorrow.",
+    );
   });
 });
 

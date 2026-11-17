@@ -14,8 +14,10 @@
  * own error type and its own words. That also keeps the two error classes
  * distinct, which matters because they are caught in different places.
  *
- * The size is checked against the **declared** size, before the bytes are
- * read, so an oversized upload is refused without being allocated.
+ * The size is checked against the **declared** size, before the file's
+ * bytes are copied out of the form. The form itself is already held by
+ * then: the request body is bounded before the framework reads it, in
+ * `modules/ops/body-cap.ts`.
  */
 export type FilePartProblem = "not-form-data" | "missing" | "too-large";
 

@@ -54,7 +54,7 @@ function a1(
 ) {
   return (
     <UploadForm
-      upload={() => Promise.resolve({ importId: "01UPLOAD" })}
+      upload={() => Promise.resolve({ isStarted: true, importId: "01UPLOAD" })}
       getOutcome={getOutcome}
       retime={() => Promise.resolve("moved")}
       units={{ temp: "f", distance: "mi" }}

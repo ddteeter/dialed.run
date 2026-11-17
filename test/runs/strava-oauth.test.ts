@@ -19,6 +19,7 @@ import {
   isStravaConnected,
   readStateCookie,
   STRAVA_STATE_COOKIE,
+  STRAVA_STATE_COOKIE_CLEAR,
   stravaAuthorizeUrl,
   stravaCallbackOutcome,
   stravaConnectRedirect,
@@ -104,6 +105,20 @@ describe("stravaAuthorizeUrl", () => {
   });
 });
 
+async function owedFor(token: string): Promise<number[]> {
+  const rows = await coreDb()
+    .select({ createdAt: stravaRevocations.createdAt })
+    .from(stravaRevocations)
+    .where(eq(stravaRevocations.refreshToken, token));
+  return rows.map((row) => row.createdAt);
+}
+
+function exchanging(athleteId: string, refreshToken: string): StravaApi {
+  return fakeApi({
+    exchangeCode: () => Promise.resolve({ athleteId, refreshToken }),
+  });
+}
+
 describe("completeStravaConnect (102 §6)", () => {
   it("inserts a connection row from the exchanged tokens", async () => {
     const db = coreDb();
@@ -150,6 +165,72 @@ describe("completeStravaConnect (102 §6)", () => {
     const connection = await getStravaConnection(db, userId);
     expect(connection?.athleteId).toBe("222");
     expect(connection?.refreshToken).toBe("refresh-new");
+  });
+
+  it("owes a revoke for the grant a different athlete replaces (SA-L17)", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    const first = newUlid();
+    const oldToken = `refresh-old-${first}`;
+    const newToken = `refresh-new-${first}`;
+    await completeStravaConnect(db, exchanging(first, oldToken), userId, "c1");
+    expect(await owedFor(oldToken)).toStrictEqual([]);
+
+    const before = nowSeconds();
+    await completeStravaConnect(
+      db,
+      exchanging(newUlid(), newToken),
+      userId,
+      "c2",
+    );
+
+    const owed = await owedFor(oldToken);
+    expect(owed).toHaveLength(1);
+    expect(owed[0]).toBeGreaterThanOrEqual(before);
+    expect(owed[0]).toBeLessThanOrEqual(nowSeconds());
+    expect(await owedFor(newToken)).toStrictEqual([]);
+    const connection = await getStravaConnection(db, userId);
+    expect(connection?.refreshToken).toBe(newToken);
+  });
+
+  it("owes none when the same athlete reconnects", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    const athleteId = newUlid();
+    const oldToken = `refresh-old-${athleteId}`;
+    await completeStravaConnect(
+      db,
+      exchanging(athleteId, oldToken),
+      userId,
+      "c1",
+    );
+    await completeStravaConnect(
+      db,
+      exchanging(athleteId, `refresh-new-${athleteId}`),
+      userId,
+      "c2",
+    );
+
+    expect(await owedFor(oldToken)).toStrictEqual([]);
+  });
+
+  it("owes none for another runner's connection", async () => {
+    const db = coreDb();
+    const otherToken = `refresh-other-${newUlid()}`;
+    await completeStravaConnect(
+      db,
+      exchanging(newUlid(), otherToken),
+      newUlid(),
+      "c1",
+    );
+    await completeStravaConnect(
+      db,
+      exchanging(newUlid(), `refresh-${newUlid()}`),
+      newUlid(),
+      "c2",
+    );
+
+    expect(await owedFor(otherToken)).toStrictEqual([]);
   });
 });
 
@@ -302,7 +383,8 @@ describe("stravaAuthorizeUrl carries every parameter Strava needs", () => {
     expect(url.searchParams.get("client_id")).toBe("client-1");
     expect(url.searchParams.get("redirect_uri")).toBe("https://dialed.run/cb");
     expect(url.searchParams.get("response_type")).toBe("code");
-    expect(url.searchParams.get("approval_prompt")).toBe("auto");
+    // Strava asks every time, a reconnect included (SA-L17).
+    expect(url.searchParams.get("approval_prompt")).toBe("force");
     expect(url.searchParams.get("scope")).toBe("activity:read");
     expect(url.searchParams.get("state")).toBe("state-1");
   });
@@ -664,7 +746,13 @@ describe("stravaConnectRedirect (STR-7: the official button is a link)", () => {
     expect(response.headers.get("set-cookie")).toBe(
       `${STRAVA_STATE_COOKIE}=nonce-1; Path=/; Max-Age=600; HttpOnly; Secure; SameSite=Lax`,
     );
-    expect(STRAVA_STATE_COOKIE).toBe("strava_oauth_state");
+    // Only this host can set it (SA-L17).
+    expect(STRAVA_STATE_COOKIE).toBe("__Host-strava_oauth_state");
+  });
+
+  it("clears the cookie as a __Host- cookie must be: Secure, at Path=/", () => {
+    // The serializer refuses to clear a __Host- cookie without both.
+    expect(STRAVA_STATE_COOKIE_CLEAR).toStrictEqual({ path: "/", secure: true });
   });
 
   it("sends a signed-out visitor to log in, coming back to T1, with no nonce", () => {

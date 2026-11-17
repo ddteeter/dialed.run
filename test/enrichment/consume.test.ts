@@ -257,6 +257,34 @@ describe("handleEnrichmentBatch: the happy path", () => {
     expect(await statusOf(productId)).toBe("done");
   });
 
+  it("keeps the page of a delivery that ended inside the ladder, and reads it again (SA-M32)", async () => {
+    const productId = await pendingProduct();
+    const fetchImpl = serving(PAGE);
+    const first = jobFor(productId);
+    await handleEnrichmentBatch(batchOf("dialed-enrichment", [first]), {
+      ...depsWith(fetchImpl),
+      ladder: () => {
+        throw new Error("ended part-way");
+      },
+    });
+
+    // The row was written before the ladder ran, rung not yet known.
+    expect(first.retry).toHaveBeenCalledTimes(1);
+    const [kept] = await snapshotsOf(productId);
+    expect(kept?.rung).toBe("none");
+    expect(await statusOf(productId)).toBe("pending");
+
+    const again = jobFor(productId, "m2");
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [again]),
+      depsWith(fetchImpl),
+    );
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(await snapshotsOf(productId)).toHaveLength(1);
+    expect(await statusOf(productId)).toBe("done");
+  });
+
   it("refetches when the only snapshot is older than the reuse window", async () => {
     // A stale snapshot is history, not a cache: a product asked for again
     // a day later gets the page as it is now, and keeps both (D-31).

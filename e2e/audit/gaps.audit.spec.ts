@@ -298,17 +298,21 @@ test.describe("as the dense runner", () => {
           }),
         ]);
       });
-      const posted = await page.request.post("/api/strava", {
-        data: {
-          object_type: "activity",
-          object_id: Number(athleteId) + 1,
-          aspect_type: "create",
-          owner_id: Number(athleteId),
-          subscription_id: 1,
-          event_time: nowSeconds(),
-          updates: { title: "Never read" },
+      // The placeholder key CI's `.dev.vars` carries (design 227).
+      const posted = await page.request.post(
+        "/api/strava/ci-placeholder-not-a-secret",
+        {
+          data: {
+            object_type: "activity",
+            object_id: Number(athleteId) + 1,
+            aspect_type: "create",
+            owner_id: Number(athleteId),
+            subscription_id: 1,
+            event_time: nowSeconds(),
+            updates: { title: "Never read" },
+          },
         },
-      });
+      );
       if (!posted.ok())
         note(`strava webhook answered ${String(posted.status())}`);
       await attempt("strava reminder landing", async () => {

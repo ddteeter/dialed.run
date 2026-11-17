@@ -40,6 +40,21 @@ describe("runLadder", () => {
     expect(extracted.imageUrl).toBe("https://cdn.example.com/rover.jpg");
   });
 
+  it("leaves a field a rung got wrong for the next rung to fill (SA-L17)", () => {
+    // Shopify's featured_image is often protocol-relative; it is not an
+    // image this can store, so og's is taken instead, and the name beside
+    // the bad image is kept.
+    const html = `<html><head>
+      ${ogBlock("og:image", "https://cdn.example.com/rover.jpg")}
+    </head><body>
+      ${shopifyBlock({ title: "Rover Half-Zip", featured_image: "//cdn.shopify.com/rover.jpg" })}
+    </body></html>`;
+
+    const { extracted } = runLadder(PAGE, html);
+    expect(extracted.name).toBe("Rover Half-Zip");
+    expect(extracted.imageUrl).toBe("https://cdn.example.com/rover.jpg");
+  });
+
   it("lets the earlier rung win a field both rungs have", () => {
     // Best-first: JSON-LD is a shop saying what the product is, Shopify's
     // blob is the platform saying it, and og is a preview card.

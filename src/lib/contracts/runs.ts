@@ -19,6 +19,13 @@ export const effortSources = ["watch", "runner"] as const;
 // The 1–10 perceived-effort rating a watch asks for after a run. FIT
 // stores it ×10 (`session.workout_rpe`); this is the rating itself.
 export const rpeSchema = z.number().int().min(1).max(10);
+/**
+ * The latest start any run can have, in seconds: the last instant a
+ * JavaScript `Date` holds, so every label can format it (SA-M31). A manual
+ * run or a retime is held to "not in the future" as well, by its input.
+ */
+export const MAX_RUN_START = 8_640_000_000_000;
+
 export const runDraftSchema = z.object({
   // Messages are here, not in the form (§Forms & failure, "Error copy lives
   // in the schema"). They name the fix, not the rule: the manual-entry form
@@ -29,7 +36,11 @@ export const runDraftSchema = z.object({
   // a blank date is NaN, which fails `number` before `positive` is asked
   // (zod's own text is "Invalid input: expected number, received NaN"),
   // and a zero fails `positive` with the same words.
-  startedAt: z.number({ error: "Pick when the run started." }).int().positive(),
+  startedAt: z
+    .number({ error: "Pick when the run started." })
+    .int()
+    .positive()
+    .max(MAX_RUN_START),
   durationS: z.number().int().positive("How many minutes did it take?"),
   distanceM: z.number().positive("How far did you go?"),
   lat: latitudeSchema.optional(),

@@ -123,22 +123,45 @@ function asciiAt(bytes: Uint8Array, at: number, length: number): string {
 const NOT_FRAMES: ReadonlySet<number> = new Set([0xc4, 0xc8, 0xcc]);
 
 function isStartOfFrame(marker: number): boolean {
-  return marker >= 0xc0 && marker <= 0xcf && !NOT_FRAMES.has(marker);
+  // Asked only of a marker `hasLength` took, which is C0 or above.
+  return marker <= 0xcf && !NOT_FRAMES.has(marker);
+}
+
+/**
+ * Whether a marker is followed by a two-byte length, as every segment
+ * before a frame is: C0 and up, except the standalone D0–D9 (restarts, the
+ * start and the end of the image). 00, 01 and 02–BF carry none, or are not
+ * markers at all.
+ */
+function hasLength(marker: number): boolean {
+  return marker >= 0xc0 && (marker < 0xd0 || marker > 0xd9);
 }
 
 /**
  * A JPEG's size: walk the segments from the start until the frame header.
  * Every segment before it declares its own length, so this reads a few
  * hundred bytes of a 10 MB file and never the image data.
+ *
+ * It reads a marker as a decoder does (SA-L05): any number of `FF` fill
+ * bytes may come before it (ITU T.81 B.1.1.2), and a marker it cannot
+ * step over by its length ends the walk with no size, so the bytes are
+ * refused rather than read from somewhere a decoder would not look.
  */
 function jpegDimensions(bytes: Uint8Array): Dimensions | undefined {
   let at = 2;
   while (byteAt(bytes, at) === 0xff) {
-    const marker = byteAt(bytes, at + 1);
+    let markerAt = at + 1;
+    while (byteAt(bytes, markerAt) === 0xff) markerAt += 1;
+    const marker = byteAt(bytes, markerAt);
+    // A frame carries a length too, so this asks it first.
+    if (!hasLength(marker)) return undefined;
     if (isStartOfFrame(marker)) {
-      return { height: u16be(bytes, at + 5), width: u16be(bytes, at + 7) };
+      return {
+        height: u16be(bytes, markerAt + 4),
+        width: u16be(bytes, markerAt + 6),
+      };
     }
-    at += 2 + u16be(bytes, at + 2);
+    at = markerAt + 1 + u16be(bytes, markerAt + 1);
   }
   return undefined;
 }

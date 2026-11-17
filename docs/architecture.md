@@ -448,9 +448,9 @@ exception, the human never polls dashboards.
 
 ```mermaid
 flowchart LR
-    Q[[dialed-imports\nmax_retries=3, backoff]] -->|exhausted| DLQ[[dialed-imports-dlq]]
+    Q[[dialed-imports\nmax_batch_size=1, max_retries=3]] -->|exhausted| DLQ[[dialed-imports-dlq]]
     DLQ --> DC[DLQ consumer:\nmark job failed,\nnotify affected user,\nSentry event]
-    QE[[dialed-enrichment\nmax_retries=3]] -->|exhausted| DLQE[[dialed-enrichment-dlq]]
+    QE[[dialed-enrichment\nmax_batch_size=1, max_retries=3]] -->|exhausted| DLQE[[dialed-enrichment-dlq]]
     DLQE --> DCE[DLQ consumer:\nproduct failed,\nSentry event]
     DC -->|same batch: giveUpEach| GU[(gave_up)]
     DCE -->|past the product's first day:\nsame batch, giveUpEach| GU
@@ -622,6 +622,10 @@ flowchart LR
   nosniff. Inline script runs on a per-request nonce (`lib/csp-nonce`:
   minted in `server.ts`, stamped on the framework's scripts through
   `router.tsx`'s `ssr.nonce`), never on `'unsafe-inline'`.
+- **A ceiling on every request body**, applied in `server.ts` before the
+  framework reads it (`modules/ops/body-cap.ts`, SA-L05): a multipart upload
+  up to the largest file any upload takes plus a megabyte, anything else a
+  megabyte. Over it, by `Content-Length` or by counting, the answer is 413.
 - **A size budget on the client entry chunk**: `npm run check:bundle`,
   which `postbuild` runs, fails a build whose entry chunk is over
   **280,000 bytes** (measured at 269,735 raw, 85.5 kB gzipped, on

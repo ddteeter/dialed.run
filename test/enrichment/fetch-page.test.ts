@@ -286,6 +286,22 @@ describe("isBlockedHost", () => {
     expect(isBlockedHost("metadata.google.internal")).toBe(true);
     expect(isBlockedHost("shop.example.com")).toBe(false);
   });
+
+  it("reads a name with the DNS root's dot as the name without it (SA-L04)", () => {
+    expect(isBlockedHost("localhost.")).toBe(true);
+    expect(isBlockedHost("router.local.")).toBe(true);
+    expect(isBlockedHost("metadata.google.internal.")).toBe(true);
+    expect(isBlockedHost(".")).toBe(true);
+    expect(isBlockedHost("shop.example.com.")).toBe(false);
+  });
+
+  it("refuses a URL naming loopback with the root's dot before fetching it", async () => {
+    const fetchImpl = vi.fn(htmlOnce(""));
+    await expect(
+      fetchProductPage("https://localhost./products/x", fetchImpl),
+    ).rejects.toMatchObject({ name: "PageFetchError" });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
 });
 
 describe("PageFetchError", () => {

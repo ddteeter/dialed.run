@@ -5,6 +5,7 @@
  * (ops, for the queue entry point) import from here.
  */
 export { handleImportsBatch, handleImportsDlqBatch } from "./consumer";
+export { MAX_IMPORT_BYTES } from "./upload-limits";
 export {
   reminderFromSubject,
   type ImportJob,

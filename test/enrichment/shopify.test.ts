@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { shopifyExtractor } from "../../src/modules/enrichment/rungs/shopify";
+import {
+  analyticsBlob,
+  shopifyExtractor,
+} from "../../src/modules/enrichment/rungs/shopify";
 
 const PAGE = new URL("https://shop.example.com/products/rover-half-zip");
 
@@ -146,5 +149,48 @@ describe("the Shopify rung", () => {
         `<html><script>${declaration}</script></html>`,
       )?.brand,
     ).toBe("Janji");
+  });
+});
+
+describe("analyticsBlob: the scan for the blob's end (SA-M32)", () => {
+  it("ends the blob at the first }; after its opening", () => {
+    expect(analyticsBlob('var meta = {"a":{"b":1}};x = {};')).toBe(
+      '{"a":{"b":1}}',
+    );
+    expect(analyticsBlob("var meta = {};")).toBe("{}");
+  });
+
+  it("does not take a }; from a later line", () => {
+    expect(analyticsBlob('var meta = {"a":1\n};')).toBeUndefined();
+  });
+
+  it("goes on past an opening whose line never closes", () => {
+    const body = 'var meta = {"broken"\nvar meta = {"product":{}};';
+    expect(analyticsBlob(body)).toBe('{"product":{}}');
+  });
+
+  it("reads one unclosed line once, however many openings it holds", () => {
+    // Fifty thousand openings on one half-megabyte line. Searched from each
+    // opening to the line's end, this is about 10^10 steps and runs for
+    // minutes; read once, it is instant.
+    const line = "var meta={".repeat(50_000);
+    expect(analyticsBlob(`${line}\nvar meta = {"product":{}};`)).toBe(
+      '{"product":{}}',
+    );
+    expect(analyticsBlob(line)).toBeUndefined();
+  });
+
+  it("finds an opening in any case, and none in var metadata", () => {
+    expect(analyticsBlob('VAR META = {"a":1};')).toBe('{"a":1}');
+    expect(analyticsBlob('var metadata = {"a":1};')).toBeUndefined();
+    expect(analyticsBlob("no blob here")).toBeUndefined();
+  });
+
+  it("reads each body from its start", () => {
+    // The opening pattern is global, so a scan must not carry its place
+    // from one body into the next.
+    const body = 'xxxxxxxxxxxxxxxx var meta = {"a":1};';
+    expect(analyticsBlob(body)).toBe('{"a":1}');
+    expect(analyticsBlob('var meta = {"b":2};')).toBe('{"b":2}');
   });
 });

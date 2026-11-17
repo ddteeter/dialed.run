@@ -6,6 +6,7 @@
  * real duration/distance — no separate code path needed.
  */
 import { Decoder, Stream, Utils } from "@garmin/fitsdk";
+import type { MesgDefinition } from "@garmin/fitsdk";
 
 import { rpeSchema, runDraftSchema } from "../../../lib/contracts";
 import type { RunDraft, RunSource } from "../../../lib/contracts";
@@ -37,6 +38,44 @@ export function rpeFrom(workoutRpe: unknown): number | undefined {
   return rating.success ? rating.data : undefined;
 }
 
+/**
+ * The most developer field descriptions a FIT file may register (SA-M29).
+ * A watch's own file registers a handful, one per app data field; each
+ * one is searched for every developer field of every message after it.
+ */
+export const MAX_FIELD_DESCRIPTIONS = 256;
+
+const FIELD_DESCRIPTION = 206;
+
+/**
+ * The decoder's listeners that keep a file inside its budget. A throw in
+ * either lands in `read()`'s `errors`, which the parse turns into a
+ * refusal. A definition may not declare a developer field of size zero,
+ * so every developer field a message carries costs it at least a byte.
+ */
+export function fitReadLimits(): {
+  mesgListener: (mesgNum: number) => void;
+  mesgDefinitionListener: (definition: MesgDefinition) => void;
+} {
+  let descriptions = 0;
+  return {
+    mesgListener: (mesgNum) => {
+      if (mesgNum !== FIELD_DESCRIPTION) return;
+      descriptions += 1;
+      if (descriptions > MAX_FIELD_DESCRIPTIONS) {
+        throw new Error("fit: too many field descriptions");
+      }
+    },
+    mesgDefinitionListener: (definition) => {
+      if (
+        definition.developerFieldDefinitions.some((field) => field.size === 0)
+      ) {
+        throw new Error("fit: a developer field of size zero");
+      }
+    },
+  };
+}
+
 export const fitSource: RunSource = {
   kind: "fit",
   async parse(bytes: ArrayBuffer): Promise<RunDraft> {
@@ -64,7 +103,7 @@ export const fitSource: RunSource = {
     // as an entry in `errors`, so that is the only branch to handle — a
     // try/catch here would be a guard against something structurally
     // impossible, and a mutant in it could never be killed.
-    const { messages, errors } = new Decoder(stream).read();
+    const { messages, errors } = new Decoder(stream).read(fitReadLimits());
     if (errors.length > 0) {
       throw new RunParseError(
         `fit: decoder reported ${String(errors.length)} error(s)`,

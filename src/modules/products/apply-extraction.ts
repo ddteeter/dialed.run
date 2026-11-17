@@ -6,6 +6,7 @@ import { products, type productSnapshots } from "../../db/schema-core";
 import {
   extractedProductSchema,
   garmentCategories,
+  validExtracted,
   type ExtractedProduct,
 } from "../../lib/contracts";
 
@@ -260,9 +261,12 @@ export function hasWrittenSpecs(extracted: string | null): boolean {
 export async function applyExtraction(
   db: Db,
   productId: string,
-  extracted: ExtractedProduct,
+  answer: ExtractedProduct,
   rung: Rung,
 ): Promise<ApplyReport> {
+  // Whoever calls, only fields that pass their own schema are written to a
+  // column or kept in the ledger, so the ledger always reads back (SA-L17).
+  const extracted = validExtracted(answer);
   const [row] = await db
     .select()
     .from(products)

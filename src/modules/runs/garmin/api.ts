@@ -16,6 +16,8 @@
  */
 import { z } from "zod";
 
+import { readCappedBytes } from "../../../lib/read-capped";
+import { MAX_IMPORT_BYTES } from "../upload-limits";
 import { onlyFileIn } from "./unzip";
 
 export const GARMIN_PERSONAL_ORIGIN = "https://personal.connectapi.garmin.com";
@@ -29,6 +31,13 @@ export const GARMIN_PATHS = {
   download: "/download-service/files/activity/",
 } as const;
 const TIMEOUT_MS = 10_000;
+
+/**
+ * The most of a download that is read (SA-L17): a zip holding one file of
+ * at most `MAX_IMPORT_BYTES`, with room for its headers and a stored
+ * (uncompressed) entry. Past it the read stops.
+ */
+export const MAX_DOWNLOAD_BYTES = MAX_IMPORT_BYTES + 1024 * 1024;
 
 export class GarminUnavailable extends Error {
   readonly reason: string;
@@ -164,7 +173,12 @@ export function createGarminApi(
         { headers: { Authorization: await bearer() } },
       );
       try {
-        return await onlyFileIn(await response.arrayBuffer());
+        const zip = await readCappedBytes(
+          response,
+          MAX_DOWNLOAD_BYTES,
+          (detail) => new Error(`download ${detail}`),
+        );
+        return await onlyFileIn(zip.buffer);
       } catch (error) {
         throw new GarminUnavailable("download: not one file", {
           cause: error,

@@ -127,6 +127,41 @@ describe("withResolvedProduct for an unconfirmed runner", () => {
   });
 });
 
+describe("withResolvedProduct: the product is the server's answer (SA-L04)", () => {
+  it.each([
+    ["no brand", { category: "top", name: "Tee" }],
+    ["a blank brand", { category: "top", name: "Tee", brand: "  " }],
+    ["a blank name", { category: "top", name: "  ", brand: "Janji" }],
+  ] as const)(
+    "drops a product id sent with %s, for a confirmed runner",
+    async (_, typed) => {
+      const resolved = await withResolvedProduct(
+        db(),
+        { ...typed, productId: newUlid() },
+        await runner(true),
+      );
+      expect(resolved.productId).toBeUndefined();
+      expect(resolved.name).toBe(typed.name);
+    },
+  );
+
+  it("links the product it resolves, not the one sent", async () => {
+    const sent = newUlid();
+    const resolved = await withResolvedProduct(
+      db(),
+      {
+        category: "top",
+        name: unique("Tee"),
+        brand: unique("Brand"),
+        productId: sent,
+      },
+      await runner(true),
+    );
+    expect(resolved.productId).toBeDefined();
+    expect(resolved.productId).not.toBe(sent);
+  });
+});
+
 describe("a link pasted for a product made without one (design 163, Q1)", () => {
   it("is read: the product takes the link and goes pending", async () => {
     const userId = await runner(true);

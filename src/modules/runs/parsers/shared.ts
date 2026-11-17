@@ -73,11 +73,42 @@ export class RunParseError extends Error {
  * which is its own small trap.
  */
 function xmlParser(): XMLParser {
-  return new XMLParser({
-    ignoreAttributes: false,
-    attributeNamePrefix: "@_",
-    processEntities: false,
-  });
+  return new XMLParser(XML_PARSER_OPTIONS);
+}
+
+/**
+ * The options, exported so a test pins them: each is a safety decision
+ * whose effect a parse of an ordinary file cannot show.
+ */
+export const XML_PARSER_OPTIONS = {
+  ignoreAttributes: false,
+  attributeNamePrefix: "@_",
+  processEntities: false,
+  // No callback here reads an element's path, so the parser need not
+  // build one per element (SA-M29). The tree is the same either way.
+  jPath: false,
+} as const;
+
+/**
+ * The most tags (`<`) a GPX or TCX may hold (SA-M29). A thirty-hour run
+ * recorded every second, with elevation, time and a few extensions on
+ * each point, is about 1.3 million; parsing two million empty elements
+ * measured about a second and a half and 24 MB of tree.
+ */
+export const MAX_XML_TAGS = 2_000_000;
+
+const TAG_OPEN = 0x3c; // "<"
+
+/**
+ * Whether the bytes hold more tags than the budget, counted before they
+ * are decoded or parsed.
+ */
+function hasTooManyTags(bytes: Uint8Array): boolean {
+  let tags = 0;
+  for (const byte of bytes) {
+    if (byte === TAG_OPEN) tags += 1;
+  }
+  return tags > MAX_XML_TAGS;
 }
 
 /**
@@ -86,6 +117,9 @@ function xmlParser(): XMLParser {
  * user reads the same sentence either way.
  */
 export function parseXmlDocument(bytes: ArrayBuffer, kind: string): unknown {
+  if (hasTooManyTags(new Uint8Array(bytes))) {
+    throw new RunParseError(`${kind}: more than ${String(MAX_XML_TAGS)} tags`);
+  }
   let text: string;
   try {
     text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);

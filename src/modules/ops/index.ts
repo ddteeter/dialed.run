@@ -15,6 +15,7 @@ export {
   syncPublicPhotosLater,
 } from "./public-photos";
 export { secureResponse } from "./secure-response";
+export { boundedRequest } from "./body-cap";
 export {
   publicPageHeaders,
   publicPageTags,

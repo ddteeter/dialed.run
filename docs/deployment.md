@@ -282,6 +282,7 @@ its first firing.
 | `STRAVA_CLIENT_ID`            | for Strava | The connect screen renders a "not configured" state                                                                                                                                                                                                                                               |
 | `STRAVA_CLIENT_SECRET`        | for Strava | As above                                                                                                                                                                                                                                                                                          |
 | `STRAVA_WEBHOOK_VERIFY_TOKEN` | for Strava | The subscription handshake rejects; pick any long random string and reuse it in step 6                                                                                                                                                                                                            |
+| `STRAVA_WEBHOOK_PATH_SECRET`  | for Strava | The webhook answers 404 to everything, Strava's handshake included; pick a different long random string (URL-safe: `openssl rand -hex 32`) and use it as the callback URL's last segment in step 6                                                                                                |
 | `GARMIN_API_KEY`              | optional   | "Import from Garmin" is not drawn (plan 160). The owner's Garmin Connect Personal API key, which is personal to them; it expires on a date they pick when they make it, so put a renewal in the calendar a week before                                                                            |
 | `GARMIN_OWNER_USER_ID`        | optional   | As above. The owner's dialed.run user id: the only account the import is for, because the key may be used only for its holder's own data                                                                                                                                                          |
 | `SENTRY_DSN`                  | strongly   | Errors go nowhere. This is the only place terminal failures surface for a solo operator                                                                                                                                                                                                           |
@@ -347,13 +348,15 @@ callback synchronously by calling it.
 curl -X POST https://www.strava.com/api/v3/push_subscriptions \
   -F client_id=$STRAVA_CLIENT_ID \
   -F client_secret=$STRAVA_CLIENT_SECRET \
-  -F callback_url=https://<deployed-host>/api/strava \
+  -F callback_url=https://<deployed-host>/api/strava/$STRAVA_WEBHOOK_PATH_SECRET \
   -F verify_token=$STRAVA_WEBHOOK_VERIFY_TOKEN
 ```
 
 Strava immediately GETs the callback with `hub.challenge`; `verifyStravaChallenge`
 echoes it only when mode and token match, so the `verify_token` here must be
-byte-identical to the secret in step 5.
+byte-identical to the secret in step 5. The callback URL's last segment must
+be `STRAVA_WEBHOOK_PATH_SECRET` from step 5, byte for byte: every other path
+answers 404, the handshake included.
 
 Strava allows **one subscription per application**. A staging environment
 needs its own Strava app, not a second subscription.
@@ -411,8 +414,8 @@ needs its own Strava app, not a second subscription.
   differently, and the audit's finding 0.4 was that a report which does not
   outlive its invocation can be cancelled in flight; OPS-1 hands every send
   to `waitUntil`, and this is where that is checked against the real thing.
-  - **Fetch**: `curl -X POST https://<host>/api/strava -d 'not json'`. The
-    webhook reports "invalid strava webhook payload" and still answers 200.
+  - **Fetch**: `curl -X POST https://<host>/api/strava/$STRAVA_WEBHOOK_PATH_SECRET -d 'not json'`.
+    The webhook reports "strava webhook body is not JSON" and still answers 200.
   - **Cron**: the first hourly firing after the deploy opens and closes a
     Sentry Crons check-in; seeing `weather-retry` go green under Crons is a
     send from the cron path. For an _error_ from a cron, run the Worker

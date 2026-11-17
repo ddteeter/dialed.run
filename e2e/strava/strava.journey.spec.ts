@@ -15,8 +15,9 @@
  * T3a says when the last run was seen -> disconnect through T3b -> T1 again
  * -> P3's slot carries the same consent and button.
  *
- * **It needs Strava configured**: `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`
- * and `STRAVA_SUBSCRIPTION_ID` in `.dev.vars` (placeholders are enough —
+ * **It needs Strava configured**: `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`,
+ * `STRAVA_SUBSCRIPTION_ID` and `STRAVA_WEBHOOK_PATH_SECRET` in `.dev.vars`
+ * (placeholders are enough —
  * nothing here reaches Strava). T1 draws nothing unconfigured, which is its
  * rule. CI gains the three placeholders with task 125's CI change (owner,
  * 2026-09-26).
@@ -46,6 +47,12 @@ test.use({ storageState: storageStateFor("run-logging") });
  * The `STRAVA_SUBSCRIPTION_ID` the placeholder `.dev.vars` carries.
  */
 const SUBSCRIPTION_ID = 1;
+
+/**
+ * The `STRAVA_WEBHOOK_PATH_SECRET` the placeholder `.dev.vars` carries:
+ * the webhook answers only at this key (design 227).
+ */
+const WEBHOOK_KEY = "ci-placeholder-not-a-secret";
 
 /**
  * Every paragraph of the consent, in order, above the Connect button.
@@ -155,7 +162,18 @@ test("Strava: connect with the official button, a reminder lands, disconnect", a
 
     // ---- A run lands on Strava ----------------------------------------
     await scene(page, "A run lands on Strava: the webhook, then the reminder");
-    const posted = await page.request.post("/api/strava", {
+    const strayed = await page.request.post("/api/strava/not-the-key", {
+      data: {
+        object_type: "activity",
+        object_id: Number(athleteId) + 2,
+        aspect_type: "create",
+        owner_id: Number(athleteId),
+        subscription_id: SUBSCRIPTION_ID,
+        event_time: nowSeconds(),
+      },
+    });
+    expect(strayed.status()).toBe(404);
+    const posted = await page.request.post(`/api/strava/${WEBHOOK_KEY}`, {
       data: {
         object_type: "activity",
         object_id: Number(athleteId) + 1,

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   parseJson,
+  MAX_DECODE_PASSES,
   readableText,
   readPage,
 } from "../../src/modules/enrichment/html";
@@ -199,6 +200,13 @@ describe("readableText", () => {
     expect(readableText("91% polyester &amp; 9% spandex")).toBe(
       "91% polyester & 9% spandex",
     );
+  });
+
+  it("decodes four levels deep and no further (SA-L04)", () => {
+    // Each pass reads the whole node, so the number of passes is fixed.
+    expect(MAX_DECODE_PASSES).toBe(4);
+    expect(readableText("a &amp;amp;amp;amp; b")).toBe("a & b");
+    expect(readableText("a &amp;amp;amp;amp;amp; b")).toBe("a &amp; b");
   });
 
   it("keeps decoding until it stops changing", () => {

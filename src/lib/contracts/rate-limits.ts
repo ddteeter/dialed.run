@@ -31,6 +31,8 @@ export const SEND_LIMIT_KINDS = [
  * - `change-runner` — one runner's email-change requests, whatever
  *   addresses they name; the subject is the runner's id;
  * - `enrich-runner` — one runner's enrichment requests; the runner's id;
+ * - `upload-runner` — one runner's run-file uploads (SA-M29); the
+ *   runner's id;
  * - `page-fetch` — enrichment's page fetches across everyone;
  *   `GLOBAL_SUBJECT`;
  * - `proxy-call` — enrichment's proxy calls across everyone;
@@ -45,6 +47,7 @@ export const RATE_LIMIT_KINDS = [
   ...SEND_LIMIT_KINDS,
   "change-runner",
   "enrich-runner",
+  "upload-runner",
   "page-fetch",
   "proxy-call",
   "sign-in",

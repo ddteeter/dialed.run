@@ -1,4 +1,5 @@
-import type { ExtractedProduct, PageExtractor } from "../../../lib/contracts";
+import type { PageExtractor } from "../../../lib/contracts";
+import { someExtracted } from "../extracted";
 import { readPage } from "../html";
 
 /**
@@ -57,11 +58,6 @@ export const openGraphExtractor: PageExtractor = {
     const brand = tags.get("site_name");
     const imageUrl = tags.get("image");
 
-    const extracted: ExtractedProduct = {
-      ...(name !== undefined && { name }),
-      ...(brand !== undefined && { brand }),
-      ...(imageUrl !== undefined && { imageUrl }),
-    };
-    return Object.keys(extracted).length > 0 ? extracted : undefined;
+    return someExtracted({ name, brand, imageUrl });
   },
 };

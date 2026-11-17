@@ -71,11 +71,34 @@ function onlyEntry(view: DataView): Entry {
   };
 }
 
-async function inflated(data: ArrayBuffer): Promise<ArrayBuffer> {
-  const stream = new Blob([data])
+/**
+ * Inflates exactly `size` bytes (SA-L17): written through the platform's
+ * `FixedLengthStream`, which refuses the first byte past the size the
+ * directory states, and a stream that ends short of it, so a deflate
+ * bomb stops where it passes the size rather than inflating whole.
+ *
+ * Platform streams, not a JS reader: in workerd a JS reader over a
+ * decompression that fails leaves a rejection nobody can handle.
+ */
+async function inflated(data: ArrayBuffer, size: number): Promise<ArrayBuffer> {
+  const exactly = new FixedLengthStream(size);
+  const piping = new Blob([data])
     .stream()
-    .pipeThrough(new DecompressionStream("deflate-raw"));
-  return new Response(stream).arrayBuffer();
+    .pipeThrough(new DecompressionStream("deflate-raw"))
+    .pipeTo(exactly.writable);
+  // The pipe is settled too, so its own rejection is handled, but only the
+  // read is consulted: it carries the length stream's refusal whether the
+  // inflate ran long or ended short, and any other refusal is the inflate's.
+  const [read] = await Promise.allSettled([
+    new Response(exactly.readable).arrayBuffer(),
+    piping,
+  ]);
+  if (read.status === "fulfilled") return read.value;
+  throw new UnzipError(
+    String(read.reason).includes("FixedLengthStream")
+      ? "wrong size"
+      : "does not inflate",
+  );
 }
 
 /**
@@ -101,11 +124,7 @@ export async function onlyFileIn(zip: ArrayBuffer): Promise<ArrayBuffer> {
   if (entry.method === STORED) {
     bytes = data;
   } else if (entry.method === DEFLATED) {
-    try {
-      bytes = await inflated(data);
-    } catch {
-      throw new UnzipError("does not inflate");
-    }
+    bytes = await inflated(data, entry.size);
   } else {
     throw new UnzipError("unsupported method");
   }

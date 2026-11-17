@@ -46,19 +46,21 @@ views {
         The upload screen polls the import\'s status from now on.
       '''
     }
-    // source: src/modules/ops/queues.ts handleQueueBatch; wrangler.jsonc queues.consumers, max_retries
+    // source: src/modules/ops/queues.ts handleQueueBatch; wrangler.jsonc queues.consumers, max_retries, max_batch_size
     cf.importsQueue -[async]-> cf.app.runs.consumer 'delivers ImportJob' {
       notes '''
         **Timing boundary: seconds later, in a queue consumer.**
 
         **At least once.** The same job can arrive twice. A failed attempt is retried up to 3 times, then dead-lettered.
+
+        **One job per batch**, so one file\'s parse has the invocation to itself.
       '''
       navigateTo importRecovery
     }
     // source: src/modules/runs/consumer.ts processImportJob, didClaimImport
     cf.app.runs.consumer -> cf.coreDb 'claims the row: pending to processing' {
       notes '''
-        **Guard: claim, then work.** The claim is an `UPDATE ... WHERE status IN (\'pending\', \'processing\')`.
+        **Guard: claim, then work.** The first delivery claims only a `pending` row. A redelivery also takes one left `processing` by a delivery that ended mid-parse; a parse that throws puts the row back to `pending` itself.
 
         A redelivery of an import that is already `done`, `failed` or `duplicate` claims nothing and stops here.
       '''
@@ -113,6 +115,12 @@ views {
       cf.importsQueue -[async]-> cf.app.runs.consumer 'delivers ImportJob'
       // source: src/modules/runs/consumer.ts processImportJob, didClaimImport
       cf.app.runs.consumer -> cf.coreDb 'claims the row, or stops'
+    }
+    opt 'the row is still processing after 2 deliveries' {
+      // source: src/modules/runs/consumer.ts processImportJob, MAX_PARSE_DELIVERIES, DEAD_IMPORT_REASON
+      cf.app.runs.consumer -[recovery]-> cf.coreDb 'marks the import failed instead of parsing it again' {
+        notes 'A file whose parse ends the invocation twice is not given a third.'
+      }
     }
     opt 'every retry failed' {
       // source: wrangler.jsonc queues.consumers, max_retries, dead_letter_queue (max_retries 3)

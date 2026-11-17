@@ -20,6 +20,12 @@
 export const MAX_IMPORT_BYTES = 25 * 1024 * 1024;
 
 /**
+ * How many run files one runner may upload in a day (SA-M29, the owner,
+ * 2026-11-15). A watch makes one a run; thirty is a backlog, not a day.
+ */
+export const UPLOADS_PER_DAY = 30;
+
+/**
  * Thrown for the things the upload step can reject outright — size, type,
  * an empty file. Never for a file that might still parse: those become an
  * `imports` row with a failure status, so the user can see what happened.
@@ -56,6 +62,10 @@ export const UPLOAD_REFUSALS = {
   wrongType: "That's not a GPX, TCX or FIT file.",
   empty: "That file is empty.",
   tooLarge: "That file is larger than 25 MB.",
+  // A literal, not a template over `UPLOADS_PER_DAY`: a template here moved
+  // every module's server-function stubs into the entry chunk (measured
+  // 2026-11-15, +33 kB). The test pins the number to the constant.
+  tooMany: "That's 30 run files today. You can upload more tomorrow.",
 } as const;
 
 /**

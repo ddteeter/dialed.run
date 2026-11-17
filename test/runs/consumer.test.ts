@@ -1,12 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import {
-  beforeEach,
-  describe,
-  expect,
-  it,
-  onTestFinished,
-  vi,
-} from "vitest";
+import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import {
   gaveUp,
@@ -21,13 +14,17 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { coreDb } from "../../src/modules/runs/core-db";
 import {
+  MAX_PARSE_DELIVERIES,
   handleImportsBatch,
   handleImportsDlqBatch,
   importFailureReason,
 } from "../../src/modules/runs/consumer";
 import type { ConsumerDeps } from "../../src/modules/runs/consumer";
 import type { StravaApi } from "../../src/modules/runs/strava/api";
-import { PARSE_FAILURE_MESSAGE } from "../../src/modules/runs/parsers";
+import {
+  NO_TRACK_MESSAGE,
+  PARSE_FAILURE_MESSAGE,
+} from "../../src/modules/runs/parsers";
 import { RunParseError } from "../../src/modules/runs/parsers/shared";
 import { createManualRun } from "../../src/modules/runs/service";
 import { unreadNotificationCount } from "../../src/modules/notifications";
@@ -52,7 +49,7 @@ import {
   seedAthleteGaveUp,
 } from "../gave-up-rows";
 
-function fakeMessage(body: unknown) {
+function fakeMessage(body: unknown, attempts = 1) {
   let wasAcked = false;
   let wasRetried = false;
   return {
@@ -60,7 +57,7 @@ function fakeMessage(body: unknown) {
       id: newUlid(),
       timestamp: new Date(),
       body,
-      attempts: 1,
+      attempts,
       ack: () => {
         wasAcked = true;
       },
@@ -85,8 +82,8 @@ const LOCATED_GPX = `<?xml version="1.0"?><gpx><trk><trkseg>
       <trkpt lat="44.91" lon="-93.21"><time>2026-08-16T08:30:00Z</time></trkpt>
     </trkseg></trk></gpx>`;
 
-function fakeBatch(messages: readonly { body: unknown }[]) {
-  const wrapped = messages.map((m) => fakeMessage(m.body));
+function fakeBatch(messages: readonly { body: unknown; attempts?: number }[]) {
+  const wrapped = messages.map((m) => fakeMessage(m.body, m.attempts));
   const batch: MessageBatch = {
     queue: "dialed-imports",
     metadata: { metrics: { backlogCount: 0, backlogBytes: 0 } },
@@ -366,12 +363,7 @@ describe("handleImportsBatch (102 §4, §8)", () => {
         return "attached";
       },
     });
-    const importId = await seedImport(
-      deps.db,
-      newUlid(),
-      LOCATED_GPX,
-      "gpx",
-    );
+    const importId = await seedImport(deps.db, newUlid(), LOCATED_GPX, "gpx");
 
     await handleImportsBatch(
       fakeBatch([{ body: { type: "import", importId } }]).batch,
@@ -398,12 +390,7 @@ describe("handleImportsBatch (102 §4, §8)", () => {
         return Promise.resolve("attached");
       },
     });
-    const importId = await seedImport(
-      deps.db,
-      newUlid(),
-      treadmillTcx,
-      "tcx",
-    );
+    const importId = await seedImport(deps.db, newUlid(), treadmillTcx, "tcx");
 
     await handleImportsBatch(
       fakeBatch([{ body: { type: "import", importId } }]).batch,
@@ -419,12 +406,7 @@ describe("handleImportsBatch (102 §4, §8)", () => {
       vi.restoreAllMocks();
     });
     const deps = makeDeps({ attachObservation });
-    const importId = await seedImport(
-      deps.db,
-      newUlid(),
-      LOCATED_GPX,
-      "gpx",
-    );
+    const importId = await seedImport(deps.db, newUlid(), LOCATED_GPX, "gpx");
 
     await handleImportsBatch(
       fakeBatch([{ body: { type: "import", importId } }]).batch,
@@ -660,7 +642,8 @@ describe("the import consumer's quieter paths", () => {
     await env.IMPORTS.delete(row?.r2Key ?? "");
 
     const { batch } = fakeBatch([{ body: { type: "import", importId } }]);
-    await handleImportsBatch(batch, makeDeps());
+    const deps = makeDeps();
+    await handleImportsBatch(batch, deps);
 
     const [after] = await db
       .select()
@@ -668,6 +651,8 @@ describe("the import consumer's quieter paths", () => {
       .where(eq(imports.id, importId));
     expect(after?.status).toBe("failed");
     expect(after?.failureReason).toMatch(/couldn't read this file/);
+    // A missing file is the runner's to act on, not a fault to report.
+    expect(deps.exceptions).toStrictEqual([]);
   });
 
   it("fails an import whose key names a format it cannot read", async () => {
@@ -892,14 +877,19 @@ describe("the Strava revoke job (the outbox's other half)", () => {
 });
 
 describe("importFailureReason", () => {
-  it("passes an Error's own sentence through", () => {
-    // Every parser throws RunParseError, whose message is already the
-    // sentence the runner reads.
+  it("passes a RunParseError's sentence through, and no other error's (SA-L17)", () => {
+    // A RunParseError's message is already the sentence the runner reads.
     expect(importFailureReason(new RunParseError("tcx: no laps"))).toBe(
       PARSE_FAILURE_MESSAGE,
     );
-    expect(importFailureReason(new Error("something specific"))).toBe(
-      "something specific",
+    expect(
+      importFailureReason(
+        new RunParseError("gpx: empty", { problem: "no-track" }),
+      ),
+    ).toBe(NO_TRACK_MESSAGE);
+    // Any other error was written for a developer.
+    expect(importFailureReason(new TypeError("Cannot mix BigInt"))).toBe(
+      PARSE_FAILURE_MESSAGE,
     );
   });
 
@@ -912,6 +902,47 @@ describe("importFailureReason", () => {
 });
 
 describe("what the consumer tells the runner", () => {
+  it("shows the generic sentence for an error that is not a parse error, and reports it (SA-L17)", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    const importId = await seedImport(db, userId, LOCATED_GPX, "gpx");
+    const engineError = new TypeError("engine words a runner never reads");
+    const importBucket: ConsumerDeps["importBucket"] = {
+      get: async (key) => {
+        const object = await env.IMPORTS.get(key);
+        // The read of the stored bytes is what fails here.
+        if (object !== null)
+          object.arrayBuffer = () => Promise.reject(engineError);
+        return object;
+      },
+    };
+    const deps = makeDeps({ importBucket });
+
+    const { batch } = fakeBatch([{ body: { type: "import", importId } }]);
+    await handleImportsBatch(batch, deps);
+
+    const [row] = await db
+      .select()
+      .from(imports)
+      .where(eq(imports.id, importId));
+    expect(row?.status).toBe("failed");
+    expect(row?.failureReason).toBe(PARSE_FAILURE_MESSAGE);
+    expect(deps.exceptions).toStrictEqual([
+      { error: engineError, context: { surface: "import-parse", importId } },
+    ]);
+  });
+
+  it("does not report a parse error, which is the file's, not ours", async () => {
+    const db = coreDb();
+    const importId = await seedImport(db, newUlid(), malformedTcx, "tcx");
+    const deps = makeDeps();
+
+    const { batch } = fakeBatch([{ body: { type: "import", importId } }]);
+    await handleImportsBatch(batch, deps);
+
+    expect(deps.exceptions).toStrictEqual([]);
+  });
+
   it("names the reason in the import-failed notification", async () => {
     // The reason is the parser's user-facing sentence, and it is the only
     // thing the runner has to act on.
@@ -976,6 +1007,36 @@ describe("what the consumer tells the runner", () => {
   });
 });
 
+async function leftProcessing(): Promise<string> {
+  const importId = await seedImport(coreDb(), newUlid(), validTcx, "tcx");
+  await coreDb()
+    .update(imports)
+    .set({ status: "processing" })
+    .where(eq(imports.id, importId));
+  return importId;
+}
+
+async function deliverAt(importId: string, attempts: number) {
+  const reads = { count: 0 };
+  const deps = makeDeps({
+    importBucket: {
+      get: (key) => {
+        reads.count += 1;
+        return env.IMPORTS.get(key);
+      },
+    },
+  });
+  const { batch, wrapped } = fakeBatch([
+    { body: { type: "import", importId }, attempts },
+  ]);
+  await handleImportsBatch(batch, deps);
+  const [row] = await coreDb()
+    .select()
+    .from(imports)
+    .where(eq(imports.id, importId));
+  return { row, reads: reads.count, acked: wrapped[0]?.wasAcked };
+}
+
 describe("claim, then work", () => {
   it("marks the row processing before it opens the file", async () => {
     // Law 2, in order: the claim is what stops an overlapping invocation
@@ -1008,25 +1069,68 @@ describe("claim, then work", () => {
     expect(statusWhenOpened).toStrictEqual(["processing"]);
   });
 
-  it("reclaims a row left in processing by a consumer that died", async () => {
-    // Law 2's other half: `processing` is claimable, because at-least-once
-    // delivery is the recovery path for a worker that crashed mid-job.
-    const db = coreDb();
-    const userId = newUlid();
-    const importId = await seedImport(db, userId, validTcx, "tcx");
-    await db
-      .update(imports)
-      .set({ status: "processing" })
-      .where(eq(imports.id, importId));
+  it("reclaims, on its redelivery, a row a delivery that was ended left processing (SA-M29)", async () => {
+    // Law 2's other half: at-least-once delivery is the recovery for a
+    // Worker the runtime ended mid-parse, once (owner, 2026-11-15).
+    const importId = await leftProcessing();
 
-    const { batch } = fakeBatch([{ body: { type: "import", importId } }]);
-    await handleImportsBatch(batch, makeDeps());
+    const { row, reads } = await deliverAt(importId, MAX_PARSE_DELIVERIES);
 
-    const [after] = await db
+    expect(row?.status).toBe("done");
+    expect(reads).toBe(1);
+  });
+
+  it("fails a row still processing after that, without reading the file", async () => {
+    const importId = await leftProcessing();
+
+    const { row, reads, acked } = await deliverAt(
+      importId,
+      MAX_PARSE_DELIVERIES + 1,
+    );
+
+    expect(row?.status).toBe("failed");
+    expect(row?.failureReason).toBe(
+      "We couldn't process this import after several tries. Try uploading it again.",
+    );
+    expect(reads).toBe(0);
+    expect(acked).toBe(true);
+  });
+
+  it("leaves a first delivery's processing row to the message at work on it", async () => {
+    // A second message for the same import (a Retry, the stalled sweep)
+    // arriving while the first still parses.
+    const importId = await leftProcessing();
+
+    const { row, reads, acked } = await deliverAt(importId, 1);
+
+    expect(row?.status).toBe("processing");
+    expect(reads).toBe(0);
+    expect(acked).toBe(true);
+  });
+
+  it("puts a claimed row back to pending when the work throws", async () => {
+    const importId = await seedImport(coreDb(), newUlid(), validTcx, "tcx");
+    const deps = makeDeps({
+      importBucket: {
+        get: () => Promise.reject(new Error("R2 is having a moment")),
+      },
+    });
+    const { batch, wrapped } = fakeBatch([
+      { body: { type: "import", importId }, attempts: 3 },
+    ]);
+
+    await handleImportsBatch(batch, deps);
+
+    const [row] = await coreDb()
       .select()
       .from(imports)
       .where(eq(imports.id, importId));
-    expect(after?.status).toBe("done");
+    expect(row?.status).toBe("pending");
+    expect(wrapped[0]?.wasRetried).toBe(true);
+  });
+
+  it("allows one recovery", () => {
+    expect(MAX_PARSE_DELIVERIES).toBe(2);
   });
 
   it("does not reclaim a row that already reached a conclusion", async () => {

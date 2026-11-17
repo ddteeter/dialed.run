@@ -19,7 +19,7 @@ import { requireUserId } from "../auth";
 import { deleteRun } from "../feed";
 import { attachObservation, recordManualObservation } from "../weather";
 import { coreDb } from "./core-db";
-import { getImportOutcome, startImport } from "./imports";
+import { getImportOutcome, startFileUpload } from "./imports";
 import {
   garminImportInput,
   importIdInput,
@@ -50,6 +50,7 @@ import {
   disconnectStravaAndTell,
   readStateCookie,
   STRAVA_STATE_COOKIE,
+  STRAVA_STATE_COOKIE_CLEAR,
   stravaStatusOf,
 } from "./strava/oauth";
 
@@ -77,7 +78,7 @@ export const startFileImport = createServerFn({ method: "POST" })
   .validator(importUploadFrom)
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return startImport(
+    return startFileUpload(
       coreDb(),
       env.IMPORTS,
       env.IMPORTS_QUEUE,
@@ -199,7 +200,7 @@ export const completeStravaConnectFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     const { nonce, from } = readStateCookie(getCookie(STRAVA_STATE_COOKIE));
-    deleteCookie(STRAVA_STATE_COOKIE);
+    deleteCookie(STRAVA_STATE_COOKIE, STRAVA_STATE_COOKIE_CLEAR);
     const result = await connectFromCallback(
       coreDb(),
       stravaApiFromEnv(),

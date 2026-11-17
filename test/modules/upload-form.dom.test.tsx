@@ -23,7 +23,10 @@ import {
   importPollIntervalMs,
   STALL_AFTER_MS,
 } from "../../src/modules/runs/import-polling";
-import type { ImportOutcome } from "../../src/modules/runs/imports";
+import type {
+  FileUpload,
+  ImportOutcome,
+} from "../../src/modules/runs/imports";
 import { UploadForm } from "../../src/modules/runs/components/UploadForm";
 import type { GarminImportActions } from "../../src/modules/runs/components/GarminImport";
 import type { Retime } from "../../src/modules/runs/components/ParsedCard";
@@ -145,7 +148,7 @@ function cardStatus(): HTMLElement {
   return within(grid).getByRole("status");
 }
 
-type Upload = (input: { data: FormData }) => Promise<{ importId: string }>;
+type Upload = (input: { data: FormData }) => Promise<FileUpload>;
 type GetOutcome = (input: {
   data: { importId: string };
 }) => Promise<ImportOutcome | undefined>;
@@ -174,7 +177,7 @@ function form(
   return (
     <UploadForm
       upload={
-        overrides.upload ?? (() => Promise.resolve({ importId: "01IMPORT" }))
+        overrides.upload ?? (() => Promise.resolve({ isStarted: true, importId: "01IMPORT" }))
       }
       getOutcome={overrides.getOutcome ?? (() => Promise.resolve(outcome()))}
       retime={overrides.retime ?? (() => Promise.resolve("moved"))}
@@ -387,6 +390,24 @@ describe("A1: a file refused before it is sent", () => {
     expect(upload).not.toHaveBeenCalled();
   });
 
+  it("marks the well when the server says the day's uploads are used up (SA-M29)", async () => {
+    const user = setupUser();
+    const sentence = "That's 30 run files today. You can upload more tomorrow.";
+    const getOutcome = vi.fn<GetOutcome>();
+    const upload = vi
+      .fn<Upload>()
+      .mockResolvedValue({ isStarted: false, refusal: sentence });
+    await renderWithRouter(form({ upload, getOutcome }));
+
+    await user.upload(dropInput(), gpx());
+
+    expect(await screen.findByText(sentence, ON_SCREEN)).toBeVisible();
+    expect(well()).toHaveAttribute("data-state", "error");
+    expect(told()).toHaveTextContent(sentence);
+    expect(screen.queryByText("Nothing saved")).toBeNull();
+    expect(getOutcome).not.toHaveBeenCalled();
+  });
+
   it("refuses a file over the cap by its size", async () => {
     const user = setupUser();
     await renderWithRouter(form());
@@ -448,7 +469,7 @@ describe("A1: a file refused before it is sent", () => {
 
   it("drops the last refusal the moment a good file starts sending", async () => {
     const user = setupUser({ applyAccept: false });
-    const pending = Promise.withResolvers<{ importId: string }>();
+    const pending = Promise.withResolvers<FileUpload>();
     await renderWithRouter(form({ upload: () => pending.promise }));
 
     await user.upload(dropInput(), new File(["x"], "run.csv"));
@@ -456,7 +477,7 @@ describe("A1: a file refused before it is sent", () => {
 
     expect(well()).toHaveAttribute("data-state", "uploading");
     expect(screen.queryByText("That's not a GPX, TCX or FIT file.")).toBeNull();
-    pending.resolve({ importId: "01IMPORT" });
+    pending.resolve({ isStarted: true, importId: "01IMPORT" });
   });
 
   it("drops a failed send's band when a refused file follows it", async () => {
@@ -497,7 +518,7 @@ describe("A1: a file refused before it is sent", () => {
 describe("A1: sending and reading", () => {
   it("sends the file under a fresh key, and breathes its name while it goes", async () => {
     const user = setupUser();
-    const pending = Promise.withResolvers<{ importId: string }>();
+    const pending = Promise.withResolvers<FileUpload>();
     const upload = vi.fn<Upload>(() => pending.promise);
     await renderWithRouter(form({ upload }));
 
@@ -515,7 +536,7 @@ describe("A1: sending and reading", () => {
     // A second file mid-send is not a second upload.
     await user.upload(dropInput(), gpx("other.gpx"));
     expect(upload).toHaveBeenCalledTimes(1);
-    pending.resolve({ importId: "01IMPORT" });
+    pending.resolve({ isStarted: true, importId: "01IMPORT" });
   });
 
   it("keeps breathing while the file is read, and never navigates", async () => {
@@ -563,7 +584,7 @@ describe("A1: sending and reading", () => {
     const upload = vi
       .fn<Upload>()
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
-      .mockResolvedValueOnce({ importId: "01IMPORT" });
+      .mockResolvedValueOnce({ isStarted: true, importId: "01IMPORT" });
     await renderWithRouter(form({ upload, getOutcome: neverAnswers }));
 
     await user.upload(dropInput(), gpx());
@@ -587,7 +608,7 @@ describe("A1: sending and reading", () => {
   it("calls a slow read slow after twenty seconds, and tries again under the same key", async () => {
     const user = setupUser();
     const upload = vi.fn<Upload>(() =>
-      Promise.resolve({ importId: "01IMPORT" }),
+      Promise.resolve({ isStarted: true, importId: "01IMPORT" }),
     );
     const getOutcome = vi.fn<GetOutcome>(() => Promise.resolve(outcome()));
     await renderWithRouter(form({ upload, getOutcome }));
@@ -670,7 +691,7 @@ describe("A1: sending and reading", () => {
     // to be reset by the send, not by a new import id.
     const user = setupUser();
     const upload = vi.fn<Upload>(() =>
-      Promise.resolve({ importId: "01IMPORT" }),
+      Promise.resolve({ isStarted: true, importId: "01IMPORT" }),
     );
     const getOutcome = vi.fn<GetOutcome>(neverAnswers);
     await renderWithRouter(form({ upload, getOutcome }));
@@ -737,7 +758,7 @@ describe("A1: sending and reading", () => {
 
   it("clears a failed send's band as soon as the next file starts", async () => {
     const user = setupUser();
-    const pending = Promise.withResolvers<{ importId: string }>();
+    const pending = Promise.withResolvers<FileUpload>();
     const upload = vi
       .fn<Upload>()
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
@@ -750,15 +771,15 @@ describe("A1: sending and reading", () => {
 
     expect(within(well()).getByText("Reading next.gpx")).toBeVisible();
     expect(screen.queryByText("Nothing saved")).toBeNull();
-    pending.resolve({ importId: "01IMPORT" });
+    pending.resolve({ isStarted: true, importId: "01IMPORT" });
   });
 
   it("leaves a failed read behind the moment another file is sent", async () => {
     const user = setupUser();
-    const pending = Promise.withResolvers<{ importId: string }>();
+    const pending = Promise.withResolvers<FileUpload>();
     const upload = vi
       .fn<Upload>()
-      .mockResolvedValueOnce({ importId: "01IMPORT" })
+      .mockResolvedValueOnce({ isStarted: true, importId: "01IMPORT" })
       .mockReturnValueOnce(pending.promise);
     await renderWithRouter(
       form({
@@ -773,7 +794,7 @@ describe("A1: sending and reading", () => {
 
     expect(within(well()).getByText("Reading better.gpx")).toBeVisible();
     expect(screen.queryByText(PARSE_FAILURE_MESSAGE)).toBeNull();
-    pending.resolve({ importId: "02IMPORT" });
+    pending.resolve({ isStarted: true, importId: "02IMPORT" });
   });
 
   it("never shows a new import the last one's answer", async () => {
@@ -785,8 +806,8 @@ describe("A1: sending and reading", () => {
     const user = setupUser();
     const upload = vi
       .fn<Upload>()
-      .mockResolvedValueOnce({ importId: "01IMPORT" })
-      .mockResolvedValueOnce({ importId: "02IMPORT" });
+      .mockResolvedValueOnce({ isStarted: true, importId: "01IMPORT" })
+      .mockResolvedValueOnce({ isStarted: true, importId: "02IMPORT" });
     const answers = parsed();
     const getOutcome = vi.fn<GetOutcome>(({ data }) =>
       data.importId === "01IMPORT" ? answers() : neverAnswers(),
@@ -868,7 +889,7 @@ describe("A1: a file that would not parse", () => {
   it("takes another file straight from the marked well", async () => {
     const user = setupUser();
     const upload = vi.fn<Upload>(() =>
-      Promise.resolve({ importId: "01IMPORT" }),
+      Promise.resolve({ isStarted: true, importId: "01IMPORT" }),
     );
     await renderWithRouter(
       form({

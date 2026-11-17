@@ -11,17 +11,34 @@ import { z } from "zod";
 
 import { manualSkySchema, runDraftSchema } from "../../lib/contracts";
 import { ulidSchema } from "../../lib/ids";
+import { nowSeconds } from "../../lib/now";
 import { SET_CONDITION_BANDS } from "./run-conditions";
 import { RUNS_LISTED } from "./run-months";
 import { ImportUploadError, MAX_IMPORT_BYTES } from "./upload-limits";
 import { filePartFrom } from "../../lib/file-part";
 import type { FilePartProblem } from "../../lib/file-part";
 
+/**
+ * How far past the clock a typed start may be: a day, so a runner whose
+ * device clock runs ahead is not refused (SA-M31, owner 2026-11-15).
+ */
+export const MAX_START_AHEAD_SECONDS = 86_400;
+
+/**
+ * A start a runner typed or moved: a run's start, and not in the future.
+ * The clock is read on each parse, in the form and again on the server.
+ */
+const typedStart = runDraftSchema.shape.startedAt.refine(
+  (startedAt) => startedAt <= nowSeconds() + MAX_START_AHEAD_SECONDS,
+  "Pick a start that isn't in the future.",
+);
+
 // A manual run has no file to read moving time or a climb from (D-111), so
 // the form may not send either: what the runner types is distance and time.
 export const manualRunInput = runDraftSchema
   .omit({ movingS: true, elevationGainM: true })
   .extend({
+    startedAt: typedStart,
     // Minted once when the form mounts, resent on every retry of that same
     // composed submission.
     idempotencyKey: ulidSchema.optional(),
@@ -80,7 +97,7 @@ export const retimeRunInput = z.object({
   // The new start, absolute, so a retry is the same request rather than a
   // second move. How far it may be from the old one is the service's rule,
   // because only the service knows the old one.
-  startedAt: z.number().int().nonnegative(),
+  startedAt: typedStart,
   // The zone the card read the time in — the run's own, or the device's
   // for a run with none — so the server holds the date fixed on the same
   // clock. Anything `Intl` will not accept reads as UTC (`lib/dates`).
@@ -122,8 +139,9 @@ const IMPORT_REFUSALS: Readonly<Record<FilePartProblem, string>> = {
  * The file out of a multipart import upload, or the reason it is not one,
  * and the key that makes a retry of it the same upload (law 8b).
  *
- * Size is checked here, before the bytes are read: an oversized upload is
- * refused without allocating it. `startImport` checks the cap again
+ * Size is checked here, against the declared size, before the file's bytes
+ * are copied out of the form (the request body was bounded before the
+ * framework read it, `modules/ops/body-cap.ts`). `startImport` checks the cap again
  * against the bytes it was actually handed — this is the early exit, not
  * the guarantee. The key is optional because a form that predates it still
  * sends a file and nothing else.

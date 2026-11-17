@@ -30,7 +30,6 @@ import { Route as AccountVerifyRouteImport } from './routes/account/verify'
 import { Route as ApiAccessRequestsRouteImport } from './routes/api/access-requests'
 import { Route as ApiCspReportRouteImport } from './routes/api/csp-report'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
-import { Route as ApiStravaRouteImport } from './routes/api/strava'
 import { Route as ApiVitalsRouteImport } from './routes/api/vitals'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthSignupRouteImport } from './routes/auth/signup'
@@ -69,6 +68,7 @@ import { Route as TakedownIndexRouteImport } from './routes/takedown/index'
 import { Route as TakedownConfirmRouteImport } from './routes/takedown/confirm'
 import { Route as AccountExportTokenRouteImport } from './routes/account/export.$token'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiStravaKeyRouteImport } from './routes/api/strava.$key'
 import { Route as ClosetEditItemIdRouteImport } from './routes/closet/edit.$itemId'
 import { Route as DeskKitEntryIdRouteImport } from './routes/desk/kit.$entryId'
 import { Route as DeskReviewPhotoSplatRouteImport } from './routes/desk/review-photo.$'
@@ -186,11 +186,6 @@ const ApiCspReportRoute = ApiCspReportRouteImport.update({
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiStravaRoute = ApiStravaRouteImport.update({
-  id: '/api/strava',
-  path: '/api/strava',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiVitalsRoute = ApiVitalsRouteImport.update({
@@ -383,6 +378,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiStravaKeyRoute = ApiStravaKeyRouteImport.update({
+  id: '/api/strava/$key',
+  path: '/api/strava/$key',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ClosetEditItemIdRoute = ClosetEditItemIdRouteImport.update({
   id: '/closet/edit/$itemId',
   path: '/closet/edit/$itemId',
@@ -472,7 +472,6 @@ export interface FileRoutesByFullPath {
   '/api/access-requests': typeof ApiAccessRequestsRoute
   '/api/csp-report': typeof ApiCspReportRoute
   '/api/health': typeof ApiHealthRoute
-  '/api/strava': typeof ApiStravaRoute
   '/api/vitals': typeof ApiVitalsRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
@@ -511,6 +510,7 @@ export interface FileRoutesByFullPath {
   '/takedown/': typeof TakedownIndexRoute
   '/account/export/$token': typeof AccountExportTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/strava/$key': typeof ApiStravaKeyRoute
   '/closet/edit/$itemId': typeof ClosetEditItemIdRoute
   '/desk/kit/$entryId': typeof DeskKitEntryIdRoute
   '/desk/review-photo/$': typeof DeskReviewPhotoSplatRoute
@@ -546,7 +546,6 @@ export interface FileRoutesByTo {
   '/api/access-requests': typeof ApiAccessRequestsRoute
   '/api/csp-report': typeof ApiCspReportRoute
   '/api/health': typeof ApiHealthRoute
-  '/api/strava': typeof ApiStravaRoute
   '/api/vitals': typeof ApiVitalsRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
@@ -585,6 +584,7 @@ export interface FileRoutesByTo {
   '/takedown': typeof TakedownIndexRoute
   '/account/export/$token': typeof AccountExportTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/strava/$key': typeof ApiStravaKeyRoute
   '/closet/edit/$itemId': typeof ClosetEditItemIdRoute
   '/desk/kit/$entryId': typeof DeskKitEntryIdRoute
   '/desk/review-photo/$': typeof DeskReviewPhotoSplatRoute
@@ -622,7 +622,6 @@ export interface FileRoutesById {
   '/api/access-requests': typeof ApiAccessRequestsRoute
   '/api/csp-report': typeof ApiCspReportRoute
   '/api/health': typeof ApiHealthRoute
-  '/api/strava': typeof ApiStravaRoute
   '/api/vitals': typeof ApiVitalsRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
@@ -661,6 +660,7 @@ export interface FileRoutesById {
   '/takedown/': typeof TakedownIndexRoute
   '/account/export/$token': typeof AccountExportTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/strava/$key': typeof ApiStravaKeyRoute
   '/closet/edit/$itemId': typeof ClosetEditItemIdRoute
   '/desk/kit/$entryId': typeof DeskKitEntryIdRoute
   '/desk/review-photo/$': typeof DeskReviewPhotoSplatRoute
@@ -699,7 +699,6 @@ export interface FileRouteTypes {
     | '/api/access-requests'
     | '/api/csp-report'
     | '/api/health'
-    | '/api/strava'
     | '/api/vitals'
     | '/auth/login'
     | '/auth/signup'
@@ -738,6 +737,7 @@ export interface FileRouteTypes {
     | '/takedown/'
     | '/account/export/$token'
     | '/api/auth/$'
+    | '/api/strava/$key'
     | '/closet/edit/$itemId'
     | '/desk/kit/$entryId'
     | '/desk/review-photo/$'
@@ -773,7 +773,6 @@ export interface FileRouteTypes {
     | '/api/access-requests'
     | '/api/csp-report'
     | '/api/health'
-    | '/api/strava'
     | '/api/vitals'
     | '/auth/login'
     | '/auth/signup'
@@ -812,6 +811,7 @@ export interface FileRouteTypes {
     | '/takedown'
     | '/account/export/$token'
     | '/api/auth/$'
+    | '/api/strava/$key'
     | '/closet/edit/$itemId'
     | '/desk/kit/$entryId'
     | '/desk/review-photo/$'
@@ -848,7 +848,6 @@ export interface FileRouteTypes {
     | '/api/access-requests'
     | '/api/csp-report'
     | '/api/health'
-    | '/api/strava'
     | '/api/vitals'
     | '/auth/login'
     | '/auth/signup'
@@ -887,6 +886,7 @@ export interface FileRouteTypes {
     | '/takedown/'
     | '/account/export/$token'
     | '/api/auth/$'
+    | '/api/strava/$key'
     | '/closet/edit/$itemId'
     | '/desk/kit/$entryId'
     | '/desk/review-photo/$'
@@ -924,7 +924,6 @@ export interface RootRouteChildren {
   ApiAccessRequestsRoute: typeof ApiAccessRequestsRoute
   ApiCspReportRoute: typeof ApiCspReportRoute
   ApiHealthRoute: typeof ApiHealthRoute
-  ApiStravaRoute: typeof ApiStravaRoute
   ApiVitalsRoute: typeof ApiVitalsRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthSignupRoute: typeof AuthSignupRoute
@@ -956,6 +955,7 @@ export interface RootRouteChildren {
   TakedownIndexRoute: typeof TakedownIndexRoute
   AccountExportTokenRoute: typeof AccountExportTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiStravaKeyRoute: typeof ApiStravaKeyRoute
   ClosetEditItemIdRoute: typeof ClosetEditItemIdRoute
   FeedAttachRunIdRoute: typeof FeedAttachRunIdRoute
   FeedEntryEntryIdRoute: typeof FeedEntryEntryIdRoute
@@ -1116,13 +1116,6 @@ declare module '@tanstack/react-router' {
       path: '/api/health'
       fullPath: '/api/health'
       preLoaderRoute: typeof ApiHealthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/strava': {
-      id: '/api/strava'
-      path: '/api/strava'
-      fullPath: '/api/strava'
-      preLoaderRoute: typeof ApiStravaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/vitals': {
@@ -1391,6 +1384,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/strava/$key': {
+      id: '/api/strava/$key'
+      path: '/api/strava/$key'
+      fullPath: '/api/strava/$key'
+      preLoaderRoute: typeof ApiStravaKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/closet/edit/$itemId': {
       id: '/closet/edit/$itemId'
       path: '/closet/edit/$itemId'
@@ -1535,7 +1535,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAccessRequestsRoute: ApiAccessRequestsRoute,
   ApiCspReportRoute: ApiCspReportRoute,
   ApiHealthRoute: ApiHealthRoute,
-  ApiStravaRoute: ApiStravaRoute,
   ApiVitalsRoute: ApiVitalsRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthSignupRoute: AuthSignupRoute,
@@ -1567,6 +1566,7 @@ const rootRouteChildren: RootRouteChildren = {
   TakedownIndexRoute: TakedownIndexRoute,
   AccountExportTokenRoute: AccountExportTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiStravaKeyRoute: ApiStravaKeyRoute,
   ClosetEditItemIdRoute: ClosetEditItemIdRoute,
   FeedAttachRunIdRoute: FeedAttachRunIdRoute,
   FeedEntryEntryIdRoute: FeedEntryEntryIdRoute,

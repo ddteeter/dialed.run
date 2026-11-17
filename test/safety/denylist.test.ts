@@ -64,6 +64,18 @@ describe("the denylist itself", () => {
     expect(await isDeniedLink("https://www.spam.example/x")).toBe(true);
   });
 
+  it("denies the same site written with the DNS root's dot (SA-L04)", async () => {
+    await denyDomain("spam.example", await makeUser());
+    expect(await isDeniedLink("https://spam.example./x")).toBe(true);
+    expect(await isDeniedLink("https://www.Spam.Example./x")).toBe(true);
+  });
+
+  it("stores a typed dotted host so it still matches (SA-L04)", async () => {
+    await denyDomain(" spam.example. ", await makeUser());
+    expect(await isDeniedLink("https://spam.example/x")).toBe(true);
+    expect(await isDeniedLink("https://spam.example./x")).toBe(true);
+  });
+
   it("stamps when a domain was denied, in seconds", async () => {
     const before = nowSeconds();
     await denyDomain("spam.example", await makeUser());

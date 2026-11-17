@@ -157,9 +157,11 @@ export function parseJson(json: string): unknown {
  *
  * The tokenizer decodes once. Real pages are encoded deeper than that — a
  * description round-tripped through JSON and then a template arrives as
- * `&amp;amp;`, three deep on the rabbit page — so this decodes until the
- * text stops changing. Every pass strictly shortens a string it changes,
- * which is why it terminates without a counter.
+ * `&amp;amp;`, three deep on the rabbit page — so this decodes
+ * `MAX_DECODE_PASSES` times. A fixed number, not "until it stops
+ * changing" (SA-L04): a node can be built to change on every pass, a few
+ * characters at a time, and each pass reads the whole node. Decoding text
+ * that is already plain changes nothing, so the extra passes are harmless.
  *
  * Decoded rather than stripped, and that is a change from the regex
  * version: `&mdash;` is a dash, `&#39;` is an apostrophe, and a model told
@@ -168,10 +170,14 @@ export function parseJson(json: string): unknown {
  */
 export function readableText(raw: string): string {
   let decoded = raw;
-  let next = decodeHTML(decoded);
-  while (next !== decoded) {
-    decoded = next;
-    next = decodeHTML(decoded);
+  for (let pass = 0; pass < MAX_DECODE_PASSES; pass += 1) {
+    decoded = decodeHTML(decoded);
   }
   return decoded.replaceAll(/\s+/gu, " ").trim();
 }
+
+/**
+ * How deep an entity is decoded: one more than the deepest the corpus
+ * holds (three, on the rabbit page).
+ */
+export const MAX_DECODE_PASSES = 4;
