@@ -39,7 +39,8 @@ describe("withSecurityHeaders", () => {
       [CSP_HEADER.toLowerCase()]: contentSecurityPolicy(REPORT, {
         nonce: "n0nce",
       }),
-      "content-security-policy": "connect-src 'self'",
+      "content-security-policy":
+        "connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'",
       "x-frame-options": "DENY",
       "x-content-type-options": "nosniff",
       "referrer-policy": "strict-origin-when-cross-origin",
@@ -53,11 +54,11 @@ describe("withSecurityHeaders", () => {
     expect(await secured.text()).toBe("<!doctype html><p>hi</p>");
   });
 
-  it("enforces connect-src while the rest of the policy only reports (SA-M40)", () => {
+  it("enforces connect-src and the baseline while the rest only reports (SA-M40, SA-L08)", () => {
     const secured = withSecurityHeaders(new Response("x"), REPORT);
 
     expect(secured.headers.get("Content-Security-Policy")).toBe(
-      "connect-src 'self'",
+      "connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'",
     );
     expect(secured.headers.has("Content-Security-Policy-Report-Only")).toBe(
       true,

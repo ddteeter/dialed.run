@@ -453,6 +453,14 @@ Everything in stage 1, plus:
 - Processor agreements executed; EU/UK representative decision made; DSA
   contact published; UK OSA assessments written.
 - WAF rate-limiting rules live.
+- **Enforce the Content-Security-Policy** (decision of 2026-10-11, recorded
+  in `docs/launch/before-public-plan.md`): once the friends stage's CSP
+  reports are clean, a one-line PR renames `CSP_HEADER` in
+  `modules/ops/security-headers.ts` to `Content-Security-Policy` and the
+  matching line in `public/_headers`, folding in the four directives
+  already enforced beside it. Until then the report-only policy reports to
+  `/api/csp-report`, so the friends stage needs `SENTRY_DSN` set to see
+  them.
 - The R-45 copy pass done with design (every placeholder string these lanes
   shipped has been read by a human).
 - The VoiceOver checklist run again, on the build going public.
