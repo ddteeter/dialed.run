@@ -84,7 +84,6 @@ export function feedItem(overrides: Partial<FeedItem> = {}): FeedItem {
     userId: "01USER",
     authorUsername: undefined,
     runId: "01RUN",
-    runTitle: "Evening run",
     distanceM: 8047,
     durationS: 1830,
     startedAt: NOW - 2 * 3600,

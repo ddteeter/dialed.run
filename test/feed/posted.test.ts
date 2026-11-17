@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { plainSpaces, postedLabel } from "../../src/modules/feed/posted";
+import {
+  entryReportLabel,
+  plainSpaces,
+  postedLabel,
+} from "../../src/modules/feed/posted";
 import { stripConditions } from "../../src/modules/feed/strip";
 import { pointConditions } from "./conditions-fixture";
 
@@ -133,5 +137,38 @@ describe("stripConditions", () => {
       kind: "indoor",
     });
     expect(stripConditions(undefined, false, miles)).toBeUndefined();
+  });
+});
+
+describe("entryReportLabel (SA-L15)", () => {
+  // Sat Aug 29 2026, 11:30 UTC: 06:30 in Chicago, the same day.
+  const startedAt = Date.UTC(2026, 7, 29, 11, 30) / 1000;
+
+  it("names a kit by its run's day and distance, in the viewer's unit", () => {
+    expect(
+      entryReportLabel(
+        { startedAt, distanceM: 10_000 },
+        "km",
+        "America/Chicago",
+      ),
+    ).toBe("Sat Aug 29 · 10.0km");
+    expect(
+      entryReportLabel(
+        { startedAt, distanceM: 1609.34 },
+        "mi",
+        "America/Chicago",
+      ),
+    ).toBe("Sat Aug 29 · 1.0mi");
+  });
+
+  it("reads the day in the run's zone", () => {
+    const lateUtc = Date.UTC(2026, 7, 30, 2, 0) / 1000;
+    expect(
+      entryReportLabel(
+        { startedAt: lateUtc, distanceM: 5000 },
+        "km",
+        "America/Chicago",
+      ),
+    ).toBe("Sat Aug 29 · 5.0km");
   });
 });

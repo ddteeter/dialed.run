@@ -62,7 +62,6 @@ describe("the status region on first paint", () => {
           userId: "01USER",
           authorUsername: "mark_t",
           runId: "01RUN",
-          runTitle: "Run",
           distanceM: 8047,
           durationS: 2600,
           startedAt: NOW,

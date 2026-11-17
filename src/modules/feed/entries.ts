@@ -612,7 +612,6 @@ entry: one shape, so the two cannot drift apart.
 export interface EntryRunFields {
   authorUsername: string | undefined;
   runId: string;
-  runTitle: string;
   distanceM: number;
   durationS: number;
   startedAt: number;
@@ -763,7 +762,6 @@ export async function getEntryDetail(
     userId: entry.userId,
     authorUsername: author?.username ?? undefined,
     runId: run.id,
-    runTitle: run.title,
     distanceM: run.distanceM,
     durationS: run.durationS,
     startedAt: run.startedAt,

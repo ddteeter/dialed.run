@@ -42,7 +42,6 @@ function entry(overrides: Partial<Entry> = {}): Entry {
     userId: OWNER,
     authorUsername: "mark_t",
     runId: "01RUN",
-    runTitle: "Evening run",
     distanceM: 5 * 1609.34,
     durationS: 2600,
     // Tue Aug 12 2025, 06:30 UTC.

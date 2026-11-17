@@ -196,7 +196,6 @@ function entry(isUnderReview: boolean): Entry {
     userId: "01USER",
     authorUsername: "mark_t",
     runId: "01RUN",
-    runTitle: "Evening run",
     distanceM: 8047,
     durationS: 2600,
     startedAt: 1_755_000_000,

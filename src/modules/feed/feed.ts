@@ -337,7 +337,6 @@ async function hydrateEntries(
       authorUsername: authorsById.get(entry.userId)?.username ?? undefined,
       // Stryker restore OptionalChaining
       runId: entry.runId,
-      runTitle: run?.title ?? "Run",
       distanceM: run?.distanceM ?? 0,
       durationS: run?.durationS ?? 0,
       startedAt: run?.startedAt ?? entry.createdAt,

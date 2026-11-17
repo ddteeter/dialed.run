@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { getSession } from "../../modules/auth/functions";
 import { EntryDetail } from "../../modules/feed/components/EntryDetail";
 import { RetractEntry } from "../../modules/feed/components/RetractEntry";
+import { entryReportLabel } from "../../modules/feed/posted";
 import { NoticeBand } from "../../modules/safety/components/NoticeBand";
 import { ReportAffordance } from "../../modules/safety/components/ReportAffordance";
 import { RunRemovals } from "../../modules/safety/components/RunRemovals";
@@ -76,7 +77,11 @@ function EntryDetailPage() {
             subject={{
               type: "entry",
               id: entryId,
-              label: entry.runTitle,
+              label: entryReportLabel(
+                entry,
+                units.distance,
+                entry.conditions?.timeZone,
+              ),
               authorId: entry.userId,
               authorName: entry.authorUsername,
             }}
