@@ -93,16 +93,21 @@ const WORDS: ReadonlySet<string> = new Set(
 );
 
 /**
- * Digits read back as the letters they stand in for. `1` reads as both
- * `i` and `l`, so a part yields two spellings.
+ * Digits read back as the letters they stand in for: every digit a handle
+ * can use for one (design 232 adds `2 6 8 9`). `1` reads as both `i` and
+ * `l`, so a part yields two spellings; `6` and `9` both read as `g`.
  */
 export function readBackDigits(text: string): [string, string] {
   const plain = text
     .replaceAll("0", "o")
+    .replaceAll("2", "z")
     .replaceAll("3", "e")
     .replaceAll("4", "a")
     .replaceAll("5", "s")
-    .replaceAll("7", "t");
+    .replaceAll("6", "g")
+    .replaceAll("7", "t")
+    .replaceAll("8", "b")
+    .replaceAll("9", "g");
   return [plain.replaceAll("1", "i"), plain.replaceAll("1", "l")];
 }
 

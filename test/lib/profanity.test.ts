@@ -113,9 +113,18 @@ describe("isProfaneHandle", () => {
   });
 });
 
+describe("digit spellings of a listed word (design 232)", () => {
+  it.each(["8itch", "ni99er", "ni66er"])("refuses %s", (handle) => {
+    expect(isProfaneHandle(handle)).toBe(true);
+  });
+});
+
 describe("readBackDigits", () => {
-  it("reads 0 3 4 5 7 as letters, 1 as both i and l, and leaves the rest", () => {
-    expect(readBackDigits("0345761")).toStrictEqual(["oeast6i", "oeast6l"]);
+  it("reads every digit as the letter it stands for, 1 as both i and l (design 232)", () => {
+    expect(readBackDigits("0234567891")).toStrictEqual([
+      "ozeasgtbgi",
+      "ozeasgtbgl",
+    ]);
     expect(readBackDigits("run")).toStrictEqual(["run", "run"]);
   });
 });
