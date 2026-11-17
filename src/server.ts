@@ -80,7 +80,7 @@ export default {
       const context = requestContext(new URL(request.url).pathname);
       const bounded = await boundedRequest(request);
       if (bounded instanceof Response) {
-        return await secureResponse(bounded, context.nonce);
+        return await secureResponse(bounded, context.nonce, context.marker);
       }
       const response = await timeRequest(
         bounded,
