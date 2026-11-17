@@ -86,8 +86,25 @@ the flow end to end first: the server function in the module's
 and `crons.ts` for what is bound, `src/modules/ops/scheduled.ts` for what a
 cron re-drives, and `wrangler.jsonc` for retries and dead-letter queues.
 
-- Put a `// source: <path> <symbol>` comment above every step, naming
-  where you read it. A step you cannot source does not go in.
+- Put a source comment on the line directly above every step, naming
+  where you read it. A step you cannot source does not go in:
+
+  ```
+  // source: src/modules/runs/consumer.ts processImportJob, didClaimImport; wrangler.jsonc queues.consumers, max_retries (3)
+  ```
+
+  Each cite is a repo-relative path, then one or more names in that file
+  (a function, a constant, a `wrangler.jsonc` key, dotted for a nested
+  one), then an optional note in parentheses. Separate cites with `;`.
+  `test/architecture/diagram-sources.test.ts` fails a step with no
+  comment, a path that is not a file and a name the file does not hold
+  as a whole word. The note is not checked, so a name that must keep
+  resolving goes before it, not inside it. A cite needs at least one name:
+  a bare path anchors nothing.
+
+- When a branch changes a file a story cites, `npm run diagrams:stale`
+  lists the story, and the PR body says whether it was updated or re-read
+  (skill `pr-ready`).
 - Never write a number (a grace window, a retry count, a timeout) you did
   not read in the code. Say where it is in the source comment.
 - Leave out how sign-in, sessions and the auth gates work inside. The repo

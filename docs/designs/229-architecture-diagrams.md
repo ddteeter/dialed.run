@@ -101,7 +101,8 @@ filesystem, so sources arrive as `?raw` imports, as
   (Moved into `npm run diagrams:check` after step 2; see the follow-up
   below.)
 - `diagram-sources.test.ts`: every step has a source comment; every path
-  exists and contains the symbol it names.
+  exists and contains the symbol it names. (Its reader is held to
+  LikeC4's step count in `diagrams:check`; see step 3 as built.)
 - Unit tests for the generator, the view-hash diff and the stale-story
   mapping, which are pure functions.
 - `likec4 validate` cannot run in the pool; it runs in `diagrams:check`.
@@ -194,6 +195,39 @@ registries.
   binding generates `cf.emailSending`, an `external`, with
   `cf.app.email`'s arrow to it in `model.c4`. A system we call and do not
   run, though it is bound.
+
+## Step 3 as built (#802)
+
+- **The comment has a form, so it can be checked.** `// source: <path>
+<name>, <name> (<note>); <path> …` on the line directly above the step.
+  The names are checked and the note is not, so a name that must keep
+  resolving goes before the note. A cite needs at least one name: a bare
+  path anchors nothing. The two flows' comments were rewritten to it.
+  Names that sat inside notes (`(didClaimImport)`) became names. Two cites
+  gave a file name with no path (`import-polling.ts`,
+  `run-conditions-copy.ts`), and nine cited a path with no name. Each
+  now resolves.
+- **A name resolves when its file holds it as a whole word**; a dotted
+  `wrangler.jsonc` key needs each part. That is a text check, not
+  "defines it": a name left only in a comment would pass. It catches what
+  the step exists to catch, a move or a rename, and it runs in the worker
+  pool on `?raw` globs, so it stays in `npm test`
+  (`test/architecture/diagram-sources.test.ts`). It reads `src/**` and
+  `wrangler.jsonc`; a cite elsewhere fails as "not a file" until the glob
+  is widened.
+- **Steps are read line by line, and LikeC4 checks the reader.**
+  `scripts/diagrams/anchors.ts` finds steps on `likec4 format`'s layout.
+  The test cannot load LikeC4, so `scripts/diagram-steps.ts`, a new step
+  in `npm run diagrams:check`, holds the steps it reads per view equal to
+  LikeC4's own count. A step the reader cannot see fails there instead of
+  going unchecked.
+- **`npm run diagrams:stale` reports and never fails.** It diffs against
+  the merge base with `origin/main`, untracked and uncommitted files
+  included, and marks a story whose own file the branch edited. The git
+  half is a shell script (`scripts/diagram-stale.sh`), as
+  `worktrees-prune.sh` is: the lint config forbids spawning git from
+  TypeScript. `pr-ready` runs it, and the PR body answers it under a
+  **Diagrams** heading.
 
 ## Open questions
 

@@ -32,7 +32,10 @@ description: Use before opening a pull request in dialed.run, before pushing a b
    import or a queue/cron/binding, run `npm run diagrams:generate` and
    commit the result; if you changed a drawn flow's steps, guards or
    timing, its story in `docs/diagrams/` changes in the same PR (skill
-   `architecture-diagrams`).
+   `architecture-diagrams`). Then run `npm run diagrams:stale`: it lists
+   the stories that cite a file the branch changed. For each, the PR body
+   says under **"Diagrams"** whether you updated it or re-read it and it
+   still holds, one line each. When it lists none, leave the heading out.
 8. **Run** `npm run verify && npm test && npm run diagrams:check && npm run build`. `build` is a gate:
    `postbuild` runs `check:bundle`. **A lane dispatched by a coordinator
    skips `verify`** (owner, 2026-10-24): it has no flag to drop its Stryker
