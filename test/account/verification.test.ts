@@ -1152,7 +1152,7 @@ describe("authMail", () => {
 });
 
 describe("requestEmailChange", () => {
-  it("owes the confirm link to the new address through the outbox, and sends it after the answer", async () => {
+  it("sends the confirm link to the new address after the answer, and owes nothing (SA-L18)", async () => {
     const mail = fakeMail();
     const later = owedTo(mail);
     const { userId, email } = await seedUser();
@@ -1166,11 +1166,8 @@ describe("requestEmailChange", () => {
         NOW,
       ),
     ).toStrictEqual({ status: "sent" });
-    // Answered with the email owed, not sent.
-    expect(mail.sent).toHaveLength(0);
-    expect(await db.select({ kind: outbox.kind }).from(outbox)).toStrictEqual([
-      { kind: "email" },
-    ]);
+    // No outbox row holds the link: it is sent, not owed.
+    expect(await db.select().from(outbox)).toHaveLength(0);
 
     await later.settled();
     expect(mail.sent[0]).toMatchObject({
@@ -1228,33 +1225,48 @@ describe("requestEmailChange", () => {
     expect(await db.select().from(emailVerifications)).toHaveLength(0);
   });
 
-  it("owes each request its own email, so a second request never sends the first one's link", async () => {
+  it("sends each request its own link, to the address it named", async () => {
     const mail = fakeMail();
     const later = owedTo(mail);
     const { userId } = await seedUser();
-    const held = owedTo(mail);
-    await requestEmailChange(
-      db,
-      change(userId, "first@example.com"),
-      mail,
-      held.owed,
-      NOW,
-    );
-    await requestEmailChange(
-      db,
-      change(userId, "second@example.com"),
-      mail,
-      later.owed,
-      NOW,
-    );
-    expect(await db.select().from(outbox)).toHaveLength(2);
+    for (const address of ["first@example.com", "second@example.com"]) {
+      await requestEmailChange(db, change(userId, address), mail, later.owed, NOW);
+    }
     await later.settled();
+    expect(await db.select().from(outbox)).toHaveLength(0);
     expect(mail.sent.map((message) => message.to)).toStrictEqual([
+      "first@example.com",
       "second@example.com",
     ]);
-    expect(await readEmailLink(db, tokenIn(mail.sent[0]))).toMatchObject({
+    expect(await readEmailLink(db, tokenIn(mail.sent[1]))).toMatchObject({
       email: "second@example.com",
     });
+  });
+
+  it("reports a link that would not send, and keeps the link's row (SA-L18)", async () => {
+    const mail = fakeMail();
+    mail.failing(true);
+    const reported: Record<string, string>[] = [];
+    const work: Promise<unknown>[] = [];
+    const { userId } = await seedUser();
+    await requestEmailChange(
+      db,
+      change(userId, "fresh@example.com"),
+      mail,
+      {
+        keepAlive: (promise) => {
+          work.push(promise);
+        },
+        report: (_error, context) => {
+          reported.push(context);
+        },
+        settle: () => Promise.resolve(),
+      },
+      NOW,
+    );
+    await Promise.all(work);
+    expect(reported).toStrictEqual([{ surface: "email-change-link" }]);
+    expect(await db.select().from(outbox)).toHaveLength(0);
   });
 
   it("asks for the current password, and does nothing else when it is wrong", async () => {
@@ -1331,7 +1343,7 @@ describe("requestEmailChange", () => {
     ).toStrictEqual({ status: "limited", until: NOW + 3600 });
   });
 
-  it("is limited per runner, across different new addresses, and owes nothing past it", async () => {
+  it("is limited per runner, across different new addresses, and sends nothing past it", async () => {
     const mail = fakeMail();
     const later = owedTo(mail);
     const { userId } = await seedUser();
@@ -1350,9 +1362,9 @@ describe("requestEmailChange", () => {
       status: "runner-limited",
       until: NOW + 3600,
     });
-    // Owed before the background settles: one row per request let through.
-    expect(await db.select().from(outbox)).toHaveLength(EMAIL_SENDS_PER_HOUR);
     await later.settled();
+    // One link per request let through, and none owed.
+    expect(await db.select().from(outbox)).toHaveLength(0);
     expect(mail.sent).toHaveLength(EMAIL_SENDS_PER_HOUR);
     // The refused address was not counted against its owner.
     expect(await countedKeys(db)).not.toContain(

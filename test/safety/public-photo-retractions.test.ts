@@ -42,6 +42,7 @@ import {
   confirmTakedownRequest,
   fileReport,
   fileTakedownRequest,
+  mintReceiptConfirmToken,
   pendingTakedownRequests,
 } from "../../src/modules/safety";
 import { noPurge } from "../purge-spy";
@@ -358,10 +359,11 @@ describe("every other retraction deletes the public copy", () => {
   });
 });
 
-const receipt = z.object({ confirmToken: z.string() }).loose();
+const receipt = z.object({ confirmRequestId: z.string() }).loose();
 
 /**
-The confirm link's token, from the receipt the request owed its requester.
+The confirm link's token: the receipt is owed with its request (SA-L18),
+and the token is minted as it is sent, which is what this does.
 */
 async function confirmTokenFor(requestId: string): Promise<string> {
   const rows = await core()
@@ -374,7 +376,12 @@ async function confirmTokenFor(requestId: string): Promise<string> {
     .object({ email: z.object({ template: receipt }) })
     .loose()
     .parse(read.message.payload);
-  return owed.email.template.confirmToken;
+  const token = await mintReceiptConfirmToken(
+    core(),
+    owed.email.template.confirmRequestId,
+  );
+  if (token === undefined) throw new Error("the request no longer waits");
+  return token;
 }
 
 async function photoStatus(photoId: string) {
