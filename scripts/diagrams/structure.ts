@@ -80,6 +80,7 @@ const WRANGLER_KEYS: Readonly<Record<string, string>> = {
   upload_source_maps: "a deploy setting",
   preview_urls: "a deploy setting: which hostnames answer",
   workers_dev: "a deploy setting: which hostnames answer",
+  routes: "a deploy setting: the app's host (D-99)",
   cache: "the edge cache, which architecture.md describes in prose",
   vars: "settings, not parts",
   version_metadata: "the deploy's own version id; no system behind it",

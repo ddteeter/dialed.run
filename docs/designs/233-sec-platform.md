@@ -59,8 +59,8 @@ one-time grant (2026-11-15).
     handler's error never reaches request middleware as a throw). Limit:
     the wiring test reads the registered list and drives the middleware's
     server half; no e2e makes a real statement fail.
-  - `wrangler.jsonc` sets `preview_urls: false` and `workers_dev: true`
-    until the sweep's route step, which now also turns it off (Q3, open).
+  - `wrangler.jsonc` answers on `app.dialed.run` alone: a Custom Domain
+    route, `workers_dev` and `preview_urls` off (Q3: the D-99 move).
   - An open-web request gets a per-request marker the router stamps where
     a nonce would go; the hasher hashes only inline scripts carrying it,
     then strips it and the `csp-nonce` meta, so the stored page names no
@@ -111,10 +111,17 @@ deploy's jobs), `scripts/dependabot-classify`, `bindings-conformance`,
 1. SA-M34: the cap, at 5 findings a check.
 2. SA-L08: yes to the three enforced directives, and to the
    deployment-plan row for the full flip at the public gate.
-3. SA-L08: open. The answer asked for a `dialed.run` custom-domain route
-   and `workers_dev: false`; D-99 puts the app on `app.dialed.run`, so
-   which host is asked again. Built meanwhile: `preview_urls: false`,
-   `workers_dev: true`.
+3. SA-L08: option A (re-asked with D-99's facts): the D-99 host move in
+   this PR, beyond SA-L08 by the owner's choice. `wrangler.jsonc` routes
+   `app.dialed.run` as a Custom Domain with `workers_dev` and
+   `preview_urls` off, `BETTER_AUTH_URL` and `PUBLIC_ORIGIN` are
+   `https://app.dialed.run` (bindings-conformance holds them equal), the
+   takedown receipt names the host it reads from the email origin, and the
+   deploy job is "Deploy to app.dialed.run". No route names `dialed.run`,
+   the marketing site. Owner rows in the deployment plan: no CNAME on
+   `app.dialed.run` before the first deploy; the token's zone scopes for
+   the Custom Domain (unverified, with both fallbacks); Google's redirect
+   URI and origin, Strava's callback domain, Turnstile's hostnames.
 4. SA-L10: yes to the deploy split and the install-script allowlist,
    with Node 24.20 as the floor.
 5. SA-M38, SA-L10: accepted.

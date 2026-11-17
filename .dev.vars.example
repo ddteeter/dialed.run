@@ -10,7 +10,7 @@ TAKEDOWN_SECRET=generate-a-third-long-random-string
 # without it a closed account is purged with nothing kept.
 CLOSED_ADDRESS_SECRET=generate-a-fourth-long-random-string
 # Required locally: wrangler.jsonc sets the production origin
-# (https://dialed.run). Without this override Better Auth refuses every
+# (https://app.dialed.run). Without this override Better Auth refuses every
 # sign-in and sign-up from localhost (403 INVALID_ORIGIN), and the https
 # posture turns its rate limiter on. Match the port the dev server runs on.
 BETTER_AUTH_URL=http://localhost:3000

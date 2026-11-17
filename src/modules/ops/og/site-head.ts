@@ -20,7 +20,7 @@
  * The same value as `wrangler.jsonc`'s `BETTER_AUTH_URL`, which a route
  * cannot read; `test/bindings-conformance.test.ts` fails if they differ.
  */
-export const PUBLIC_ORIGIN = "https://dialed.run";
+export const PUBLIC_ORIGIN = "https://app.dialed.run";
 
 const TITLE = "dialed.run";
 /**

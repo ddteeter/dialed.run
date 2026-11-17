@@ -312,7 +312,7 @@ jobs:
           retention-days: 1
 
   deploy:
-    name: Deploy to workers.dev
+    name: Deploy to app.dialed.run
     # Both gates, both e2e legs: a merge whose browser journeys fail, on
     # dev or on the build, does not ship.
     needs: [bundle]

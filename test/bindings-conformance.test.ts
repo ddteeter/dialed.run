@@ -191,9 +191,19 @@ function opsBinding(bound: unknown): unknown {
 describe("wrangler.jsonc matches the code that depends on it", () => {
   const config: unknown = JSON.parse(stripJsonc(wranglerJsonc));
 
-  it("answers on no version preview URL, and names workers.dev outright (SA-L08)", () => {
-    // Both written out, so neither is left to Cloudflare's default.
-    expect(config).toMatchObject({ preview_urls: false, workers_dev: true });
+  it("answers on the app's host alone (SA-L08, D-99)", () => {
+    // Written out, so nothing is left to Cloudflare's default, and only
+    // app.dialed.run: dialed.run is the marketing site's.
+    expect(config).toMatchObject({
+      preview_urls: false,
+      workers_dev: false,
+      routes: [{ pattern: "app.dialed.run", custom_domain: true }],
+    });
+    expect(
+      typeof config === "object" && config !== null && "routes" in config
+        ? config.routes
+        : undefined,
+    ).toStrictEqual([{ pattern: "app.dialed.run", custom_domain: true }]);
   });
 
   it("registers every cron the scheduled handler knows how to run", () => {

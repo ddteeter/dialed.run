@@ -21,7 +21,7 @@ function content(key: string): string | undefined {
 
 describe("SITE_META", () => {
   it("previews as the default card, absolute against the production origin", () => {
-    expect(content("og:image")).toBe("https://dialed.run/og/default");
+    expect(content("og:image")).toBe("https://app.dialed.run/og/default");
     expect(content("og:image:width")).toBe("1200");
     expect(content("og:image:height")).toBe("630");
     expect(content("twitter:card")).toBe("summary_large_image");

@@ -358,7 +358,9 @@ describe("cron check-ins (OPS-3)", () => {
 
 describe("environment", () => {
   it("is production only for the production origin", () => {
-    expect(sentryEnvironmentFor("https://dialed.run")).toBe("production");
+    expect(sentryEnvironmentFor("https://app.dialed.run")).toBe("production");
+    // The marketing site's origin is not the app's (D-99).
+    expect(sentryEnvironmentFor("https://dialed.run")).toBe("development");
     expect(sentryEnvironmentFor("http://localhost:3000")).toBe("development");
     expect(sentryEnvironmentFor("https://dialed.test")).toBe("development");
     // An unset var is a misconfigured deploy, and one that errs out of
