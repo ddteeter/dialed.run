@@ -64,7 +64,7 @@ import { setUsefulReaction } from "./reactions";
 import { searchRunners } from "./search";
 import { nowSeconds } from "../../lib/now";
 import { placeInput, savePlace } from "../onboarding";
-import { captureException } from "../ops";
+import { captureException, purgePublicPagesFor } from "../ops";
 import { timeZoneAtFor } from "../weather";
 
 export const attachKitAction = createServerFn({ method: "POST" })
@@ -102,7 +102,7 @@ export const submitVerdictAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => submitVerdictInput.parse(input))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    await submitVerdict({ userId, ...data });
+    await submitVerdict({ userId, ...data }, purgePublicPagesFor(userId));
   });
 
 // ---- The verdict backlog (DS2) ----------------------------------------------
@@ -363,14 +363,26 @@ export const retractEntryAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => entryIdInput.parse(input))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    await retractEntry(coreDb(), userId, data.entryId);
+    await retractEntry(
+      coreDb(),
+      userId,
+      data.entryId,
+      captureException,
+      purgePublicPagesFor(userId),
+    );
   });
 
 export const deleteEntryPhotoAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => photoIdInput.parse(input))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    await deleteEntryPhoto(coreDb(), userId, data.photoId);
+    await deleteEntryPhoto(
+      coreDb(),
+      userId,
+      data.photoId,
+      captureException,
+      purgePublicPagesFor(userId),
+    );
   });
 
 /**

@@ -15,7 +15,7 @@ import { noInput } from "../../lib/no-input";
 import { optionalUserId, requireUserId, verifiedUserId } from "../auth";
 import { nameItem } from "../closet";
 import { coverageLadder } from "../feed";
-import { captureException, purgePublicPages } from "../ops";
+import { captureException, purgePublicPagesFor } from "../ops";
 import { climateNormalsFor, resolvePlaceFor, timeZoneAtFor } from "../weather";
 import { countsInTotals, setCountInTotals } from "./aggregate-prefs";
 import {
@@ -140,9 +140,10 @@ export const saveSharingFn = createServerFn({ method: "POST" })
  */
 export const setPublicProfileFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => publicProfileInput.parse(data))
-  .handler(async ({ data }) =>
-    setPublicProfile(db(), await verifiedUserId(), data, purgePublicPages),
-  );
+  .handler(async ({ data }) => {
+    const userId = await verifiedUserId();
+    return setPublicProfile(db(), userId, data, purgePublicPagesFor(userId));
+  });
 
 /**
  * The runner's own totals setting alone, for A3's private line: the

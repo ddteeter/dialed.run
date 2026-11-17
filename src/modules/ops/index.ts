@@ -8,7 +8,7 @@ export {
 export type { OutboxDebt } from "./outbox";
 export { handleQueueBatch, oweInCore, type ExportConsumers } from "./queues";
 export { handleScheduled } from "./scheduled";
-export { purgePublicPages } from "./edge-purge";
+export { purgePublicPages, purgePublicPagesFor } from "./edge-purge";
 export {
   firstPublishedPhotos,
   publishedPhotoUrls,

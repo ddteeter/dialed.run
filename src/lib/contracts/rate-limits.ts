@@ -53,7 +53,9 @@ export const SEND_LIMIT_KINDS = [
  * - `weather-runner` — the weather-provider calls made for one runner in
  *   a day (SA-M13); the runner's id;
  * - `photo-runner` — one runner's photo uploads in a day, kit and garment
- *   (SA-M14); the runner's id.
+ *   (SA-M14); the runner's id;
+ * - `purge-runner` — the edge purges one runner's own writes make in a
+ *   minute (SA-L15); the runner's id.
  */
 export const RATE_LIMIT_KINDS = [
   ...SEND_LIMIT_KINDS,
@@ -70,6 +72,7 @@ export const RATE_LIMIT_KINDS = [
   "takedown-to",
   "weather-runner",
   "photo-runner",
+  "purge-runner",
 ] as const;
 
 /**

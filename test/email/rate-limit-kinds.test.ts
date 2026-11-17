@@ -13,6 +13,7 @@ import {
   claimLimit,
   claimRunnerChange,
   claimSignInTry,
+  isWithinRateLimit,
   countSend,
 } from "../../src/modules/email";
 import {
@@ -61,6 +62,7 @@ describe("the rate-limit kinds", () => {
     await claimLimit(db, "takedown-to", "someone@example.test", NOW);
     await runnerWeatherBudget(runner)();
     await claimLimit(db, "photo-runner", runner, NOW);
+    await isWithinRateLimit(db, "purge-runner", runner, 2, 60, NOW);
 
     const keys = await countedKeys(db);
     expect(keys).toStrictEqual(
@@ -79,6 +81,7 @@ describe("the rate-limit kinds", () => {
         "takedown-to:someone@example.test",
         `weather-runner:${runner}`,
         `photo-runner:${runner}`,
+        `purge-runner:${runner}`,
       ].toSorted((a, b) => a.localeCompare(b)),
     );
     const kinds = new Set(keys.map((key) => key.slice(0, key.indexOf(":"))));
