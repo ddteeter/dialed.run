@@ -85,7 +85,7 @@ export function productLinkProblem(value: string): string | undefined {
 export const MAX_PRODUCT_LINK_LENGTH = 2048;
 
 /**
-The sentence for a link past it. GUESS wording, held for the owner (design 231).
+The sentence for a link past it (owner, 2026-11-16).
 */
 export const PRODUCT_LINK_TOO_LONG =
   "That link is too long. Paste the shop page's address.";

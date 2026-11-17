@@ -210,6 +210,27 @@ export async function uploadPhoto(
 }
 
 /**
+ * `uploadPhoto` as the attach screen hears it: the key, or the sentence
+ * for a runner whose day's photo uploads are used up (SA-M14), which the
+ * photo row shows in place of "Not sent". Anything else still throws.
+ */
+export async function uploadPhotoAnswer(
+  input: UploadPhotoInput,
+): Promise<{ key: string } | { refusal: string }> {
+  try {
+    return { key: await uploadPhoto(input) };
+  } catch (error: unknown) {
+    if (
+      error instanceof InvalidPhotoError &&
+      error.message === PHOTO_LIMIT_REACHED
+    ) {
+      return { refusal: PHOTO_LIMIT_REACHED };
+    }
+    throw error;
+  }
+}
+
+/**
  * The photo's row, written only while the kit has room (SA-M14): the
  * count and the insert are one statement, so uploads racing for one kit
  * cannot all read three and all write a fifth. Its place is the count at

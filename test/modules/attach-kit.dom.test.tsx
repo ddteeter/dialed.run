@@ -170,7 +170,9 @@ interface Overrides {
   attachKit?: (input: {
     data: { runId: string; itemIds: string[] };
   }) => Promise<{ entryId: string }>;
-  uploadPhoto?: (input: { data: FormData }) => Promise<{ key: string }>;
+  uploadPhoto?: (input: {
+    data: FormData;
+  }) => Promise<{ key: string } | { refusal: string }>;
   renderPhotoStep?: PhotoStep;
   units?: { temp: "f" | "c"; distance: "mi" | "km" };
   bandRunsFor?: (input: {
@@ -1686,7 +1688,9 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
       return Promise.resolve({ entryId: "01NEW" });
     });
     const uploadPhoto = vi.fn<
-      (input: { data: FormData }) => Promise<{ key: string }>
+      (input: {
+        data: FormData;
+      }) => Promise<{ key: string } | { refusal: string }>
     >(() => {
       order.push("photo");
       return Promise.resolve({ key: "k" });
@@ -1717,7 +1721,11 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     const user = userEvent.setup();
     const attachKit = vi.fn(() => Promise.resolve({ entryId: "01NEW" }));
     const uploadPhoto = vi
-      .fn<(input: { data: FormData }) => Promise<{ key: string }>>()
+      .fn<
+        (input: {
+          data: FormData;
+        }) => Promise<{ key: string } | { refusal: string }>
+      >()
       .mockRejectedValueOnce(new Error("R2 hiccup"));
     const { router } = await renderWithRouter(
       attach({ attachKit, uploadPhoto }),
@@ -1745,7 +1753,11 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     const secondSend = Promise.withResolvers<{ key: string }>();
     const attachKit = vi.fn(() => Promise.resolve({ entryId: "01NEW" }));
     const uploadPhoto = vi
-      .fn<(input: { data: FormData }) => Promise<{ key: string }>>()
+      .fn<
+        (input: {
+          data: FormData;
+        }) => Promise<{ key: string } | { refusal: string }>
+      >()
       .mockRejectedValueOnce(new Error("R2 hiccup"))
       .mockReturnValueOnce(secondSend.promise);
     const { router } = await renderWithRouter(
@@ -1781,7 +1793,11 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     const user = userEvent.setup();
     const attachKit = vi.fn(() => Promise.resolve({ entryId: "01NEW" }));
     const uploadPhoto = vi
-      .fn<(input: { data: FormData }) => Promise<{ key: string }>>()
+      .fn<
+        (input: {
+          data: FormData;
+        }) => Promise<{ key: string } | { refusal: string }>
+      >()
       .mockRejectedValue(new Error("R2 down"));
     const { router } = await renderWithRouter(
       attach({ attachKit, uploadPhoto }),
@@ -1844,7 +1860,9 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     const user = userEvent.setup();
     namedPreviews();
     const uploadPhoto = vi.fn<
-      (input: { data: FormData }) => Promise<{ key: string }>
+      (input: {
+        data: FormData;
+      }) => Promise<{ key: string } | { refusal: string }>
     >(() => Promise.resolve({ key: "k" }));
     const { router } = await renderWithRouter(attach({ uploadPhoto }));
 
@@ -1872,7 +1890,11 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     namedPreviews();
     const attachKit = vi.fn(() => Promise.resolve({ entryId: "01NEW" }));
     const uploadPhoto = vi
-      .fn<(input: { data: FormData }) => Promise<{ key: string }>>()
+      .fn<
+        (input: {
+          data: FormData;
+        }) => Promise<{ key: string } | { refusal: string }>
+      >()
       .mockResolvedValueOnce({ key: "k1" })
       .mockRejectedValueOnce(new Error("R2 hiccup"))
       .mockResolvedValueOnce({ key: "k2" });
@@ -1910,12 +1932,42 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     expect(attachKit).toHaveBeenCalledTimes(1);
   });
 
+  it("says the day's photos are used up in the row, and keeps the photo held (SA-M14)", async () => {
+    const user = userEvent.setup();
+    namedPreviews();
+    const sentence = "That's 50 photos today. You can add more tomorrow.";
+    const uploadPhoto = vi
+      .fn<
+        (input: {
+          data: FormData;
+        }) => Promise<{ key: string } | { refusal: string }>
+      >()
+      .mockResolvedValue({ refusal: sentence });
+    const { router } = await renderWithRouter(attach({ uploadPhoto }));
+
+    await user.upload(photoInput(), jpeg("a.jpg"));
+    await user.upload(photoInput(), jpeg("b.jpg"));
+    await user.click(screen.getByRole("button", { name: "Patagonia Houdini" }));
+    await user.click(primary());
+
+    expect(await screen.findByText(sentence)).toBeVisible();
+    expect(screen.queryByText(/didn't upload/u)).toBeNull();
+    expect(thumbnails()).toHaveLength(2);
+    // The first refusal stops the row: the second photo is not sent.
+    expect(uploadPhoto).toHaveBeenCalledTimes(1);
+    expect(router.state.location.pathname).not.toBe("/feed/verdict/01NEW");
+  });
+
   it("counts the photos still held in the failure, and follows a Remove", async () => {
     // The owner, 2026-11-14 (#659): the count is the row's, not typed.
     const user = userEvent.setup();
     namedPreviews();
     const uploadPhoto = vi
-      .fn<(input: { data: FormData }) => Promise<{ key: string }>>()
+      .fn<
+        (input: {
+          data: FormData;
+        }) => Promise<{ key: string } | { refusal: string }>
+      >()
       .mockRejectedValue(new Error("R2 down"));
     await renderWithRouter(attach({ uploadPhoto }));
 

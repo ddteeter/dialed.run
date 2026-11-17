@@ -124,7 +124,7 @@ export const purgePublicPages: PurgeTags = purgeAndSync.bind(
 
 /**
  * How many edge purges one runner's own writes may make in a minute
- * (SA-L15). GUESS, held for the owner (design 231).
+ * (SA-L15; owner, 2026-11-16).
  */
 export const PURGES_PER_RUNNER_PER_MINUTE = 2;
 

@@ -42,7 +42,7 @@ import { bandSignalsForEntry } from "./band-signals";
 import { bandRunsInput, recentRunsInBand } from "./band-runs";
 import { followingFeed } from "./feed";
 import { follow, isFollowing, unfollow } from "./follows";
-import { photoUploadFrom, uploadPhoto } from "./photos";
+import { photoUploadFrom, uploadPhotoAnswer } from "./photos";
 import { deleteEntryPhoto, photoIdInput, retractEntry } from "./retract";
 import { garmentBandCountOrNone, garmentBandsInput } from "./garment-bands";
 import { decideReview, deleteAfterCase, moderateContent } from "./moderation";
@@ -347,14 +347,13 @@ export const uploadPhotoAction = createServerFn({ method: "POST" })
   .validator(photoUploadFrom)
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    const key = await uploadPhoto({
+    return uploadPhotoAnswer({
       userId,
       entryId: data.entryId,
       contentType: data.contentType,
       bytes: await data.file.arrayBuffer(),
       idempotencyKey: data.idempotencyKey,
     });
-    return { key };
   });
 
 // ---- Taking it back (task 128 · SAF-3) ---------------------------------------

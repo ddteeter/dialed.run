@@ -40,8 +40,7 @@ export function limitedMessage(
 
 /**
  * The band when this visitor's own Resends are used up this hour,
- * whatever addresses they named (SA-M12). GUESS wording, held for the
- * owner (design 231).
+ * whatever addresses they named (SA-M12; owner, 2026-11-16).
  */
 export function visitorLimitedMessage(
   until: number,

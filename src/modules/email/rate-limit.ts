@@ -21,6 +21,7 @@ import type {
   SendLimitKind,
 } from "../../lib/contracts/rate-limits";
 import { nowSeconds } from "../../lib/now";
+import { PHOTO_UPLOADS_PER_DAY } from "../../lib/photo-constraints";
 import { visitorAddress } from "../../lib/visitor-address";
 import {
   windowedCountSet,
@@ -282,22 +283,15 @@ export async function claimSignInTry(
 
 /**
  * How many times one visitor may press Resend in an hour, whatever
- * addresses they name (SA-M12). GUESS, held for the owner (design 231).
+ * addresses they name (SA-M12; owner, 2026-11-16).
  */
 export const RESENDS_PER_VISITOR_PER_HOUR = 10;
 
 /**
- * How many photos one runner may upload in a day, kit and garment alike
- * (SA-M14). GUESS, held for the owner (design 231).
- */
-export const PHOTO_UPLOADS_PER_DAY = 50;
-
-/**
  * How many `/takedown` receipts one address may be sent in an hour,
- * whoever files the requests (SA-M11). GUESS, held for the owner
- * (design 231).
+ * whoever files the requests (SA-M11; owner, 2026-11-16).
  */
-export const TAKEDOWN_RECEIPTS_PER_HOUR = 3;
+export const TAKEDOWN_RECEIPTS_PER_HOUR = 5;
 
 const DAY_S = 24 * 60 * 60;
 

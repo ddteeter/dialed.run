@@ -137,7 +137,7 @@ export function runWhenLabel(epochSeconds: number, timeZone?: string): string {
  * What W1's heading names an entry by (SA-L15): the run's day and
  * distance, which the detail page already shows, and never the title its
  * runner typed, which no screen shows back and which is not sent to other
- * runners. GUESS wording, held for the owner (design 231).
+ * runners (owner, 2026-11-16).
  */
 export function entryReportLabel(
   entry: Readonly<{ startedAt: number; distanceM: number }>,

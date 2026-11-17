@@ -13,7 +13,7 @@ import { coreDb } from "../../env";
 import { isWithinRateLimit } from "../email";
 
 /**
-How many provider calls one runner's requests may cause in a day. GUESS, held for the owner (design 231).
+How many provider calls one runner's requests may cause in a day (owner, 2026-11-16).
 */
 export const WEATHER_CALLS_PER_DAY = 60;
 

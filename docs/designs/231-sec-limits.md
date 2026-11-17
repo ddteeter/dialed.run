@@ -82,43 +82,50 @@ new server boundary.
 
 ## Open questions
 
-Every number, sentence and behaviour change below is a guess held for the
-owner (asked through the coordinator, 2026-11-16); this lane does not ship
-until each is answered.
+- The privacy policy's paragraph (below) is held until the owner has read
+  it.
 
-1. SA-M11: 3 `/takedown` receipts an hour per address; a fourth is refused
-   with the existing limited answer.
-2. SA-M12: 10 Resends an hour per visitor. Au4's band: "Too many links from
-   here this hour. You can send another at {time}." No Turnstile on Au4.
-3. SA-M13, SA-M27: 60 weather-provider calls a day per runner; past it, as
-   with the provider down. No global ceiling.
-4. SA-M14: 50 photo uploads a day per runner, kit and garment (the refusal
-   shows as the upload's failure band); no lifetime ceilings.
-5. SA-M17: a product link's ceiling of 2048 characters: "That link is too
-   long. Paste the shop page's address."
-6. SA-M28: the Strava notice is not sent to an unconfirmed address.
-7. SA-M36: the privacy policy's paragraph, as drafted in
-   `docs/legal/privacy-policy.md` (Counts that stop abuse):
+## Owner answers (2026-11-16, through the coordinator)
 
-   > We count sign-in and sign-up attempts per IP address; those counts are
-   > deleted within a day. We count how many confirmation links, password
-   > resets and email changes each address asked for in the last hour, how
-   > many removal-request receipts each address was sent, and how many
-   > wrong passwords you typed when changing your email or password.
-   > Requests for access, removal requests, requests to resend a
-   > confirmation link, and the reports a browser sends us when it blocks
-   > part of a page are counted per visitor IP address the same way.
-   > Each of these counts is deleted a day after its window ends.
+- SA-M11: 5 `/takedown` receipts an hour per address; the sixth is refused
+  with the existing limited answer. The /64 keying is technical
+  (coordinator).
+- SA-M12: 10 Resends an hour per visitor; Au4's band reads "Too many links
+  from here this hour. You can send another at {time}." No Turnstile.
+- SA-M13, SA-M27: 60 weather-provider calls a day per runner; no global
+  ceiling.
+- SA-M14: 50 photo uploads a day per runner, kit and garment, with the
+  sentence "That's 50 photos today. You can add more tomorrow." on the
+  kit's photo row and the garment's photo.
+- SA-M17: product links up to 2048 characters; past that, "That link is
+  too long. Paste the shop page's address."
+- SA-M28: the Strava notice is not sent to an unconfirmed address.
+- SA-M36: the policy paragraph below, with a clause for the per-account
+  counts (held for the owner's read).
+- SA-L07: the action check, no visible change (coordinator).
+- SA-L15: the follow half is 12d's; the verdict prompt checks the kit
+  (coordinator). A run's title is not sent to other runners, and W1 names
+  a kit by its day and distance ("Sat Aug 29 · 10.0km"). 2 edge purges a
+  minute per runner's own writes; a username change and account deletion
+  stay unmetered.
 
-   Open: whether to add a sentence for the per-account counts (weather
-   lookups, photo uploads, page refreshes), which name no address.
-8. SA-L15: a run's title is not sent to other runners; W1 names a kit by
-   its day and distance ("Sat Aug 29 · 10.0km"). 2 edge purges a minute
-   per runner's own writes.
+The policy paragraph (`docs/legal/privacy-policy.md`, Counts that stop
+abuse), as drafted:
 
-Decided by the coordinator (2026-11-16): the /64 keying, SA-L07's action
-check, SA-L15's follow half (12d's `follow`) and its verdict-prompt check.
+> We count sign-in and sign-up attempts per IP address; those counts are
+> deleted within a day. We count how many confirmation links, password
+> resets and email changes each address asked for in the last hour, how
+> many removal-request receipts each address was sent, and how many wrong
+> passwords you typed when changing your email or password. Requests for
+> access, removal requests, requests to resend a confirmation link, and the
+> reports a browser sends us when it blocks part of a page are counted per
+> visitor IP address the same way. Each of these counts is deleted a day
+> after its window ends. We also count, against your account, how many
+> weather lookups your runs and places cause each day, how many photos you
+> upload each day, and how often a minute your changes refresh public
+> pages; each of these counts is deleted within two days, and with your
+> account.
 
-## Owner answers
-
-Pending.
+"Within two days": the daily sweep deletes a count once its window started
+more than 25 hours ago, so a day's count goes between 25 and 49 hours after
+it started; the purge forgets a deleted runner's counts.

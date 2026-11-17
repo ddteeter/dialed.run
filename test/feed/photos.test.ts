@@ -17,8 +17,10 @@ import {
 } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { PHOTO_LIMIT_REACHED } from "../../src/lib/photo-constraints";
-import { PHOTO_UPLOADS_PER_DAY } from "../../src/modules/email/rate-limit";
+import {
+  PHOTO_LIMIT_REACHED,
+  PHOTO_UPLOADS_PER_DAY,
+} from "../../src/lib/photo-constraints";
 import { countRow } from "../rate-limit-rows";
 import { imageDimensions } from "../../src/lib/photo-pipeline";
 import {
@@ -30,6 +32,7 @@ import {
   photoResponse,
   photoUploadFrom,
   uploadPhoto,
+  uploadPhotoAnswer,
 } from "../../src/modules/feed/photos";
 import {
   imageCategories,
@@ -704,5 +707,47 @@ describe("bounds on what one runner stores (SA-M14)", () => {
       .from(rateLimits)
       .where(eq(rateLimits.subject, userId));
     expect(row).toStrictEqual({ kind: "photo-runner", count: 1 });
+  });
+
+  it("answers the attach screen with the day's sentence, and the key otherwise", async () => {
+    const userId = await makeUser();
+    const runId = await makeRun({ userId });
+    const entryId = await makeEntry({ userId, runId });
+    const upload = {
+      userId,
+      entryId,
+      contentType: "image/jpeg",
+      bytes: JPEG_BYTES,
+    };
+    const first = await uploadPhotoAnswer(upload);
+    expect("key" in first && first.key.includes(entryId)).toBe(true);
+
+    await drizzle(env.DIALED_CORE)
+      .update(rateLimits)
+      .set({ count: PHOTO_UPLOADS_PER_DAY })
+      .where(eq(rateLimits.subject, userId));
+    expect(await uploadPhotoAnswer(upload)).toStrictEqual({
+      refusal: "That's 50 photos today. You can add more tomorrow.",
+    });
+  });
+
+  it("still throws any other refusal", async () => {
+    const userId = await makeUser();
+    await expect(
+      uploadPhotoAnswer({
+        userId,
+        entryId: newUlid(),
+        contentType: "image/jpeg",
+        bytes: JPEG_BYTES,
+      }),
+    ).rejects.toThrow("entry not found");
+    await expect(
+      uploadPhotoAnswer({
+        userId,
+        entryId: newUlid(),
+        contentType: "image/gif",
+        bytes: JPEG_BYTES,
+      }),
+    ).rejects.toBeInstanceOf(InvalidPhotoError);
   });
 });

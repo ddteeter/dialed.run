@@ -20,9 +20,9 @@ import {
 import { outbox, rateLimits, wardrobeItems } from "../../src/db/schema-core";
 import {
   PHOTO_LIMIT_REACHED,
+  PHOTO_UPLOADS_PER_DAY,
   maxPhotoBytes,
 } from "../../src/lib/photo-constraints";
-import { PHOTO_UPLOADS_PER_DAY } from "../../src/modules/email/rate-limit";
 import { countRow } from "../rate-limit-rows";
 import {
   getItemPhotoObject,
@@ -1026,5 +1026,32 @@ describe("the runner's day's photo uploads (SA-M14)", () => {
       .from(rateLimits)
       .where(eq(rateLimits.subject, userId));
     expect(row).toStrictEqual({ kind: "photo-runner", count: 1 });
+  });
+
+  it("tells the garment's screen the day's sentence", async () => {
+    const client = db();
+    const userId = newUlid();
+    const item = await createItem(client, userId, {
+      category: "top",
+      name: "Sentence test shirt",
+    });
+    await client
+      .insert(rateLimits)
+      .values(
+        countRow("photo-runner", userId, PHOTO_UPLOADS_PER_DAY, nowSeconds()),
+      );
+    const form = new FormData();
+    form.set("itemId", item.id);
+    form.set(
+      "photo",
+      new File([new Uint8Array(samplePhotoBytes)], "a.jpg", {
+        type: "image/jpeg",
+      }),
+    );
+
+    expect(await uploadPhotoFromForm(client, userId, form)).toStrictEqual({
+      ok: false,
+      error: "That's 50 photos today. You can add more tomorrow.",
+    });
   });
 });

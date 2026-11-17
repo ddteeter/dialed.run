@@ -104,7 +104,11 @@ Questions about this policy or your data: hello@dialed.run.
   password. Requests for access, removal requests, requests to resend a
   confirmation link, and the reports a browser sends us when it blocks part
   of a page are counted per visitor IP address the same way. Each
-  of these counts is deleted a day after its window ends.
+  of these counts is deleted a day after its window ends. We also count,
+  against your account, how many weather lookups your runs and places
+  cause each day, how many photos you upload each day, and how often a
+  minute your changes refresh public pages; each of these counts is
+  deleted within two days, and with your account.
 - **Terms you accepted:** each version and when.
 - **Account email.** We send email from hello@dialed.run through
   **Cloudflare's** email service: confirming your address, a notice when
