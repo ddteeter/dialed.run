@@ -139,10 +139,12 @@ views {
 
     // source: src/modules/weather/attach.ts attachObservation
     cf.app.runs.consumer -> cf.app.weather 'attachObservation(runId)'
-    // source: src/modules/weather/attach.ts resolveAndAttach, settlesAt, SETTLE_MARGIN_SECONDS
+    // source: src/modules/weather/attach.ts resolveAndAttach, settlesAt, SETTLE_MARGIN_SECONDS; src/modules/weather/budget.ts runnerWeatherBudget, WEATHER_CALLS_PER_DAY
     cf.app.weather -> provider 'asks for the finished hours' {
       notes '''
         **Timing boundary: an hour is asked for once, two hours after it ends.** The cache is shared and never refreshed, so only settled hours are fetched.
+
+        **Each uncached hour spends one of the runner\'s 60 calls a day.** Past them the hour is not asked for, as if the provider were down, and the run stays pending.
       '''
     }
     parallel {
@@ -151,7 +153,7 @@ views {
       // source: src/modules/weather/attach.ts setStatus; src/modules/weather/run-conditions-copy.ts weatherHalfStatements
       cf.app.weather -> cf.coreDb 'writes weather_status and run_conditions'
     }
-    opt 'some hours had not settled, or the provider failed' {
+    opt 'some hours had not settled, the provider failed, or the runner\'s day of calls was spent' {
       // source: src/modules/ops/scheduled.ts retryPendingWeather (the weather-retry job); src/modules/weather/attach.ts retryPendingWeather, FAIL_AFTER_SECONDS (the give-up)
       cf.app.cronHourly00 -[recovery]-> cf.app.weather 'retries the runs still pending' {
         notes '''
