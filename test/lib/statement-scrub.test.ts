@@ -30,6 +30,13 @@ describe("the statement scrub (SA-L08)", () => {
     expect(options.functionMiddleware?.[0]).toBe(statementScrub);
   });
 
+  it("is a function middleware whose server half is the scrub", () => {
+    expect(statementScrub.options).toStrictEqual({
+      type: "function",
+      server: scrubNext,
+    });
+  });
+
   it("rethrows a failed statement without its bound values", async () => {
     const thrown = await thrownBy(() =>
       scrubbed(() => Promise.reject(failure)),

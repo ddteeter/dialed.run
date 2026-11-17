@@ -12,6 +12,7 @@ import {
   takedownRequests,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import { removalRequestReceived } from "../../src/lib/contracts/email-kinds";
 import { newUlid } from "../../src/lib/ids";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
 import { decideRemovalRequest } from "../../src/modules/feed/removal-requests";
@@ -887,6 +888,19 @@ describe("the receipt's confirm token (SA-L18)", () => {
     expect(LINKED_TOKEN.exec(JSON.stringify(mail.sent))?.[1]).toBe(token);
   });
 
+  it("still reads a receipt owed before it, whose token is the whole hex string (law 9)", () => {
+    const owed = {
+      kind: "removal_request_received",
+      dueAt: NOW,
+      isHidden: false,
+      confirmToken: "c".repeat(64),
+    };
+    expect(removalRequestReceived.parse(owed)).toStrictEqual(owed);
+    expect(
+      removalRequestReceived.safeParse({ ...owed, confirmToken: "" }).success,
+    ).toBe(false);
+  });
+
   it("leaves a receipt whose request is unset as it was", async () => {
     const mail = fakeMail();
     const token = "b".repeat(64);
@@ -911,7 +925,9 @@ describe("the receipt's confirm token (SA-L18)", () => {
   });
 
   it("is none for a request nobody filed", async () => {
-    expect(await mintReceiptConfirmToken(core(), "no-such-request")).toBeUndefined();
+    expect(
+      await mintReceiptConfirmToken(core(), "no-such-request"),
+    ).toBeUndefined();
   });
 
   it("works only as the last one minted", async () => {
@@ -932,12 +948,22 @@ describe("the receipt's confirm token (SA-L18)", () => {
     const late = await pastTheCap();
     const lateToken = await confirmTokenFor(late.request.id);
     expect(
-      await confirmTakedownRequest(core(), lateToken, effects, late.request.dueAt + 1),
+      await confirmTakedownRequest(
+        core(),
+        lateToken,
+        effects,
+        late.request.dueAt + 1,
+      ),
     ).toBe("not_found");
     const due = await pastTheCap();
     const dueToken = await confirmTokenFor(due.request.id);
     expect(
-      await confirmTakedownRequest(core(), dueToken, effects, due.request.dueAt),
+      await confirmTakedownRequest(
+        core(),
+        dueToken,
+        effects,
+        due.request.dueAt,
+      ),
     ).toBe("confirmed");
   });
 });
