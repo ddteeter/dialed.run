@@ -228,12 +228,27 @@ p { margin: 0; color: #f5f5f0; font: 500 ${String(fontPx)}px/1.4 "Caption Mono",
 }
 
 /**
- * A cue ready to mux: its caption already rendered to `caption`.
+ * A cue ready to mux: its caption already rendered to `caption`, and its
+ * spoken line, if it has one. A diagram recording (design 229, step 4) is
+ * captioned and silent.
  */
 export interface Scene {
   readonly startMs: number;
-  readonly audio: string;
+  readonly audio?: string;
   readonly caption: string;
+}
+
+/**
+ * The spoken lines, in order, each with when it starts.
+ */
+function voicedLines(
+  scenes: readonly Scene[],
+): { audio: string; startMs: number }[] {
+  const lines = [];
+  for (const { audio, startMs } of scenes) {
+    if (audio !== undefined) lines.push({ audio, startMs });
+  }
+  return lines;
 }
 
 function seconds(ms: number): string {
@@ -263,7 +278,7 @@ export interface Take {
  * The filter graph: hold the last frame, pad the frame with the strip
  * above it, overlay each caption while it is current, delay each line to
  * its start and mix them. Inputs are numbered video, then every caption,
- * then every audio file.
+ * then every spoken line.
  *
  * **The hold:** Playwright writes a frame only when the page paints, so
  * a page that sits still while a line is spoken ends the video stream
@@ -279,15 +294,16 @@ function filterGraph(take: Take, scenes: readonly Scene[]): string {
     (scene, index) =>
       `[v${String(index)}][${String(index + 1)}:v]overlay=0:0:enable='${shownWhile(scene, scenes.at(index + 1))}'[v${String(index + 1)}]`,
   );
-  const delays = scenes.map(
-    (scene, index) =>
-      `[${String(count + 1 + index)}:a]adelay=${String(scene.startMs)}:all=1[a${String(index)}]`,
+  const lines = voicedLines(scenes);
+  const delays = lines.map(
+    (line, index) =>
+      `[${String(count + 1 + index)}:a]adelay=${String(line.startMs)}:all=1[a${String(index)}]`,
   );
-  const labels = scenes.map((_scene, index) => `[a${String(index)}]`).join("");
+  const labels = lines.map((_line, index) => `[a${String(index)}]`).join("");
   const mix =
-    count === 0
+    lines.length === 0
       ? []
-      : [`${labels}amix=inputs=${String(count)}:normalize=0[aout]`];
+      : [`${labels}amix=inputs=${String(lines.length)}:normalize=0[aout]`];
   return [pad, ...overlays, ...delays, ...mix].join(";");
 }
 
@@ -302,10 +318,9 @@ export function muxArgs(
   scenes: readonly Scene[],
   out: string,
 ): string[] {
+  const lines = voicedLines(scenes);
   const audio =
-    scenes.length === 0
-      ? []
-      : ["-map", "[aout]", "-c:a", "aac", "-b:a", "128k"];
+    lines.length === 0 ? [] : ["-map", "[aout]", "-c:a", "aac", "-b:a", "128k"];
   return [
     "-y",
     "-loglevel",
@@ -313,7 +328,7 @@ export function muxArgs(
     "-i",
     video,
     ...scenes.flatMap((scene) => ["-i", scene.caption]),
-    ...scenes.flatMap((scene) => ["-i", scene.audio]),
+    ...lines.flatMap((line) => ["-i", line.audio]),
     "-filter_complex",
     filterGraph(take, scenes),
     "-map",

@@ -20,6 +20,7 @@ import { LikeC4 } from "likec4";
 import { z } from "zod";
 
 import { storyOf, type Story } from "./anchors";
+import type { ViewFacts } from "./record";
 
 const node = z.looseObject({ $type: z.string() });
 type Node = z.infer<typeof node>;
@@ -187,6 +188,61 @@ export async function storiesIn(
     );
   }
   return read.map(({ story }) => story);
+}
+
+/**
+ * A note or a description, which LikeC4 keeps as Markdown or as text.
+ */
+function textOf(value: { md: string } | { txt: string } | undefined): string {
+  if (value === undefined) return "";
+  return "md" in value ? value.md : value.txt;
+}
+
+/**
+ * Every view in `likec4`'s computed model, in its own order, as
+ * `scripts/diagrams/record.ts` compares them (design 229, step 4). The
+ * hash is LikeC4's, and a view is framed when its flow holds anything
+ * but a bare step.
+ */
+export async function viewFactsIn(likec4: LikeC4): Promise<ViewFacts[]> {
+  const model = await likec4.computedModel();
+  return [...model.views()].map((view) => {
+    const computed = view.$view;
+    const title = computed.title ?? computed.id;
+    if (computed._type !== "dynamic") {
+      return {
+        id: computed.id,
+        title,
+        hash: computed.hash,
+        dynamic: false,
+        framed: false,
+        steps: [],
+      };
+    }
+    return {
+      id: computed.id,
+      title,
+      hash: computed.hash,
+      dynamic: true,
+      framed:
+        computed.variant === "sequence" ||
+        computed.flow.some((entry) => typeof entry !== "string"),
+      steps: computed.edges.map((edge) => ({
+        source: edge.source,
+        target: edge.target,
+        kind: edge.kind ?? "",
+        label: edge.label ?? "",
+        notes: textOf(edge.notes),
+      })),
+    };
+  });
+}
+
+/**
+ * Every view in the LikeC4 workspace at `dir`.
+ */
+export async function readViewFacts(dir: string): Promise<ViewFacts[]> {
+  return viewFactsIn(await LikeC4.fromWorkspace(dir, { logger: false }));
 }
 
 /**

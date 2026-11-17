@@ -221,6 +221,19 @@ commands from `docs/diagrams/`; the npm scripts run from the repo root.
 Lay nothing out by hand. If a view is tangled, it has too many elements:
 split it.
 
+## The PR video
+
+A reviewer watches the change instead of reading `.c4`.
+`npm run diagrams:record` reads the model at the merge base and at head
+through LikeC4's API, and records every view that is new or differs:
+its hash (what it draws, labels and descriptions included) or its steps'
+notes, which the hash does not cover. Each view is shown whole, then a
+story is walked step by step: a changed step is held long enough to read,
+and an unchanged one for a beat. A view with a frame plays in the
+sequence layout, which is the only one that draws frames. The decisions
+are in `scripts/diagrams/record.ts`; skill `pr-ready` says when to run it
+and how to attach `diagrams.demo.mp4`.
+
 ## Report
 
 End with: the files you changed; each view's step count; every place the

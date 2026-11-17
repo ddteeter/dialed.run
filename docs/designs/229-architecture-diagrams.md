@@ -240,6 +240,50 @@ registries.
   TypeScript. `pr-ready` runs it, and the PR body answers it under a
   **Diagrams** heading.
 
+## Step 4 as built (#803)
+
+- **The models are read through LikeC4's API, not `export json`.**
+  `LikeC4.fromWorkspace` on the merge base (`git archive` into a scratch
+  folder) and on head; the computed model's per-view hash is the one
+  `export json` writes (checked view by view). Only the site goes through
+  the CLI: `likec4 build --output-single-file`, played from a `file:`
+  URL with no server. The git half is `scripts/diagram-record.sh`, as for
+  `diagrams:stale`.
+- **A changed view is a changed hash or changed notes.** LikeC4's hash
+  covers what a view draws, labels and element descriptions included,
+  but not a step's notes: with likec4 1.61.0, a note edited alone left
+  the view's hash as it was. The notes are where a story states its
+  guards, so the steps (source, target, kind, label, notes) are compared
+  as well.
+- **A step is matched by what it says, not by its number.** An inserted
+  step marks only itself changed; an edited one counts as new, so the
+  opening caption says "N of M steps new or changed", and "K fewer" when
+  the story got shorter. A changed step is held for a beat and 150 ms a
+  word of its label and note, at most 8 s; an unchanged one for 1 s; a
+  story's whole view for 3 s before its walkthrough, and a map of
+  structure for 5 s. Removed views are printed for the PR body, since
+  head cannot show them.
+- **A framed view plays in the sequence layout**, the only one that draws
+  frames: one whose computed `flow` holds anything but a bare step, or
+  that declares `variant sequence`.
+- **Captions, no voice.** The strip is the PR demo's
+  (`e2e/support/caption.ts`); `muxArgs` now takes a scene with no spoken
+  line. The frame is the demo's desk size, 1280×720.
+- **Beside the demo, not joined.** `ship --attach` is already repeatable,
+  so a PR with both carries two files, and a docs-only PR carries only
+  the diagrams. Joining would need matching frames and a concat step for
+  no gain to the reviewer.
+- **The output is `diagrams.demo.mp4` at the repo root**: gitignored by
+  `*.demo.mp4`, and out of reach of a Playwright run, which empties
+  `test-results/`. A run deletes the previous file first, so a stale video
+  is never attached.
+- **The recorder checks one thing on the page:** after the last step,
+  `Next` is disabled, so the viewer and the plan agree on the step count.
+  Everything shown comes from LikeC4 itself, so there is nothing else to
+  assert.
+- Tests: `test/scripts/diagram-record.test.ts` (the plan, worker project)
+  and `viewFactsIn` in `test/scripts/diagram-model.node.test.ts`.
+
 ## Open questions
 
 1. **Auth and trust boundaries are not drawn** while the security audit's

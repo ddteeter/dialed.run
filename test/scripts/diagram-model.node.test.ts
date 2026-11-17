@@ -5,7 +5,7 @@
 import { LikeC4 } from "likec4";
 import { describe, expect, it } from "vitest";
 
-import { storiesIn } from "../../scripts/diagrams/model";
+import { storiesIn, viewFactsIn } from "../../scripts/diagrams/model";
 
 const SOURCE = [
   "specification {",
@@ -128,5 +128,80 @@ describe("storiesIn", () => {
     await expect(storiesIn(likec4, (fsPath) => fsPath)).rejects.toThrow(
       "scripts/diagrams/model.ts read other steps than LikeC4 draws in second: a step form the walk does not know.",
     );
+  });
+});
+
+describe("viewFactsIn", () => {
+  it("reads every view in order, its steps as LikeC4 computes them", async () => {
+    const likec4 = await LikeC4.fromSource(SOURCE, { logger: false });
+
+    const views = await viewFactsIn(likec4);
+
+    expect(
+      views.map(({ id, title, dynamic, framed }) => ({
+        id,
+        title,
+        dynamic,
+        framed,
+      })),
+    ).toStrictEqual([
+      {
+        id: "index",
+        title: "Landscape view",
+        dynamic: false,
+        framed: false,
+      },
+      {
+        id: "first",
+        title: "Braces } and -> in a title",
+        dynamic: true,
+        framed: true,
+      },
+      { id: "second", title: "second", dynamic: true, framed: false },
+    ]);
+    expect(views[0]?.steps).toStrictEqual([]);
+    expect(views[1]?.steps.slice(0, 2)).toStrictEqual([
+      {
+        source: "a",
+        target: "b",
+        kind: "",
+        label: "asks",
+        notes: "b -> c is prose",
+      },
+      { source: "b", target: "c", kind: "async", label: "", notes: "" },
+    ]);
+    expect(views[2]?.steps.map((step) => [step.source, step.target])).toEqual([
+      ["a", "b"],
+      ["b", "c"],
+    ]);
+    for (const view of views) expect(view.hash).toMatch(/^[\w-]{20,}$/u);
+  });
+
+  it("takes a view that declares the sequence variant as framed", async () => {
+    const likec4 = await LikeC4.fromSource(
+      [
+        "specification {",
+        "  element e",
+        "}",
+        "model {",
+        "  a = e",
+        "  b = e",
+        "}",
+        "views {",
+        "  dynamic view s {",
+        "    variant sequence",
+        "    a -> b",
+        "  }",
+        "}",
+      ].join("\n"),
+      { logger: false },
+    );
+
+    const views = await viewFactsIn(likec4);
+
+    expect(views.map((view) => [view.id, view.framed])).toEqual([
+      ["index", false],
+      ["s", true],
+    ]);
   });
 });
