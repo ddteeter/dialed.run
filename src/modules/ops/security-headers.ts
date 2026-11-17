@@ -151,7 +151,7 @@ export function enforcedPolicy(): string {
   return contentSecurityPolicy(undefined)
     .split("; ")
     .filter((directive) =>
-      ENFORCED_DIRECTIVES.has(directive.split(" ", 1)[0] ?? ""),
+      ENFORCED_DIRECTIVES.has(directive.slice(0, directive.indexOf(" "))),
     )
     .join("; ");
 }

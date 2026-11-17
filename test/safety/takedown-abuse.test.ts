@@ -865,6 +865,28 @@ describe("the receipt's confirm token (SA-L18)", () => {
     expect(await mintReceiptConfirmToken(core(), request.id)).toBeUndefined();
   });
 
+  it("leaves a receipt owed before it, with its own token, as it was (law 9)", async () => {
+    const mail = fakeMail();
+    const token = "a".repeat(64);
+    await emailHandler(() => mail).run(
+      core(),
+      {
+        dedupeKey: "removal_request_received:old",
+        email: {
+          to: { address: "me@example.com" },
+          template: {
+            kind: "removal_request_received",
+            dueAt: NOW,
+            isHidden: false,
+            confirmToken: token,
+          },
+        },
+      },
+      "no-such-row",
+    );
+    expect(LINKED_TOKEN.exec(JSON.stringify(mail.sent))?.[1]).toBe(token);
+  });
+
   it("is none for a request nobody filed", async () => {
     expect(await mintReceiptConfirmToken(core(), "no-such-request")).toBeUndefined();
   });

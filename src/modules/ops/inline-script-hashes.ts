@@ -32,14 +32,19 @@ export async function withInlineScriptHashes(
   marker: string | undefined,
 ): Promise<{ page: Response; hashes: string[] }> {
   const type = String(response.headers.get("Content-Type"));
-  if (response.body === null || !type.includes("text/html")) {
+  // With no marker no script is the framework's, so none is admitted.
+  if (
+    marker === undefined ||
+    response.body === null ||
+    !type.includes("text/html")
+  ) {
     return { page: response, hashes: [] };
   }
   // Each marked inline script's text, as the chunks the rewriter hands over.
   const scripts: string[][] = [];
   let current: string[] | undefined;
   const isMarked = (element: Element): boolean =>
-    marker !== undefined && element.getAttribute("nonce") === marker;
+    element.getAttribute("nonce") === marker;
   const html = await new HTMLRewriter()
     .on("script", {
       element(element) {

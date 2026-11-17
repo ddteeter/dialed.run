@@ -23,8 +23,7 @@ interface StatementError {
 
 function isStatementError(error: unknown): error is StatementError {
   return (
-    typeof error === "object" &&
-    error !== null &&
+    error instanceof Error &&
     Object.hasOwn(error, "params") &&
     Object.hasOwn(error, "query") &&
     "query" in error &&

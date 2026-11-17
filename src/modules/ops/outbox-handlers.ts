@@ -220,19 +220,17 @@ async function withReceiptConfirmToken(
   email: OwedEmailMessage,
 ): Promise<OwedEmailMessage> {
   const { template } = email;
+  // Only a receipt has the field; one owed before SA-L18 carries its token
+  // instead, and goes as owed.
   if (
-    template.kind !== "removal_request_received" ||
+    !("confirmRequestId" in template) ||
     template.confirmRequestId === undefined
   ) {
     return email;
   }
   const { confirmRequestId, ...rest } = template;
   const confirmToken = await mintReceiptConfirmToken(db, confirmRequestId);
-  return {
-    ...email,
-    template:
-      confirmToken === undefined ? rest : { ...rest, confirmToken },
-  };
+  return { ...email, template: { ...rest, confirmToken } };
 }
 
 /**

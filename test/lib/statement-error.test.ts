@@ -19,7 +19,7 @@ function failedInsert(): DrizzleQueryError {
 /**
 An object that has `query` and `params` only through its prototype.
 */
-class Inherited {
+class Inherited extends Error {
   get query(): string {
     return QUERY;
   }

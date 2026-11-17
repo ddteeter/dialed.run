@@ -537,9 +537,8 @@ export interface OwedMail {
  * own row and never an older row carrying an older email.
  */
 type ChangeMail =
-  | { readonly kind: "owed"; readonly debt: OutboxDebt }
+  | { readonly debt: OutboxDebt }
   | {
-      readonly kind: "link";
       readonly write: Awaited<ReturnType<typeof emailLinkWrite>>["write"];
       readonly message: Parameters<typeof deliverEmail>[1];
     };
@@ -562,7 +561,7 @@ async function changeMail(
       { to: { userId: holder }, template: { kind: "existing_account" } },
       { dedupeKey: `email_change_taken:${userId}:${newUlid()}` },
     );
-    return { kind: "owed", debt: oweOutbox(notice) };
+    return { debt: oweOutbox(notice) };
   }
   const link = await emailLinkWrite(
     db,
@@ -570,7 +569,6 @@ async function changeMail(
     now,
   );
   return {
-    kind: "link",
     write: link.write,
     message: {
       to: { address: email },
@@ -624,7 +622,7 @@ export async function requestEmailChange(
   const mail = await changeMail(db, userId, email, deps.origin, now);
   // Both after the answer, so neither it nor its timing says whether the
   // address was taken.
-  if (mail.kind === "owed") {
+  if ("debt" in mail) {
     await outboxInsert(db, mail.debt, now);
     owed.keepAlive(owed.settle(db, mail.debt, owed.report));
   } else {

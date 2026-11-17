@@ -149,11 +149,10 @@ describe("withInlineScriptHashes", () => {
     );
   });
 
-  it("hashes nothing without a marker", async () => {
-    const { hashes } = await withInlineScriptHashes(
-      new Response(PAGE, { headers: HTML }),
-      undefined,
-    );
+  it("hashes nothing without a marker, and hands the page back as it came", async () => {
+    const original = new Response(PAGE, { headers: HTML });
+    const { page, hashes } = await withInlineScriptHashes(original, undefined);
     expect(hashes).toStrictEqual([]);
+    expect(page).toBe(original);
   });
 });
