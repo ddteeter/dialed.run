@@ -111,6 +111,38 @@ export function isLiveObject(key: string, live: string | undefined): boolean {
 }
 
 /**
+ * The most pages one listing reads (1,000 objects each) before it stops.
+ * A garment's photos are one page; the largest real listing is a runner's
+ * every entry photo when the account goes, about 70 pages for three kits a
+ * day for five years with four photos each in their sizes. A thousand
+ * pages is a million objects, far past any runner, and keeps a listing
+ * that never ends (a cursor that does not advance) from running forever.
+ */
+const MAX_LIST_PAGES = 1000;
+
+/**
+ * Hands each page of `MEDIA`'s listing to `handle`, following the cursor.
+ * Past `maxPages` it throws, so the outbox row stays owed and the drain
+ * reports it (its retry and Sentry) rather than looping on.
+ */
+async function forEachPage(
+  options: R2ListOptions,
+  maxPages: number,
+  handle: (page: R2Objects) => Promise<void>,
+): Promise<void> {
+  const listing: R2ListOptions = { ...options };
+  for (let pages = 0; pages < maxPages; pages += 1) {
+    const page = await env.MEDIA.list(listing);
+    await handle(page);
+    if (!page.truncated) return;
+    listing.cursor = page.cursor;
+  }
+  throw new Error(
+    `listed ${String(maxPages)} pages under one prefix without reaching its end`,
+  );
+}
+
+/**
  * Bring a garment's R2 prefix into line with its row: delete every object
  * there except the photo the row names. One operation for all three debts
  * — Remove (the row names nothing), Delete (there is no row), Replace (the
@@ -131,29 +163,25 @@ export function isLiveObject(key: string, live: string | undefined): boolean {
  * leave a photo the runner just removed in storage until the next drain.
  *
  * `pageSize` is R2's own cap by default; a test passes a small one so the
- * cursor is exercised without writing a thousand objects.
+ * cursor is exercised without writing a thousand objects, and a small
+ * `maxPages` to reach the cap (`forEachPage`).
  */
 export async function reconcileItemPhotos(
   db: Db,
   userId: string,
   itemId: string,
   pageSize = 1000,
+  maxPages = MAX_LIST_PAGES,
 ): Promise<void> {
-  const options: R2ListOptions = {
-    prefix: `${photoKeyFor(userId, itemId)}/`,
-    limit: pageSize,
-  };
-  for (;;) {
-    const page = await env.MEDIA.list(options);
+  const prefix = `${photoKeyFor(userId, itemId)}/`;
+  await forEachPage({ prefix, limit: pageSize }, maxPages, async (page) => {
     const live = await livePhotoKey(db, userId, itemId);
     await env.MEDIA.delete(
       page.objects
         .map((object) => object.key)
         .filter((key) => !isLiveObject(key, live)),
     );
-    if (!page.truncated) return;
-    options.cursor = page.cursor;
-  }
+  });
 }
 
 /**
@@ -248,19 +276,14 @@ export async function reconcileEntryPhotos(
   userId: string,
   entryId: string | undefined,
   pageSize = 1000,
+  maxPages = MAX_LIST_PAGES,
 ): Promise<void> {
-  const options: R2ListOptions = {
-    prefix: entryPhotoPrefix(userId, entryId),
-    limit: pageSize,
-  };
-  for (;;) {
-    const page = await env.MEDIA.list(options);
+  const prefix = entryPhotoPrefix(userId, entryId);
+  await forEachPage({ prefix, limit: pageSize }, maxPages, async (page) => {
     const keys = page.objects.map((object) => object.key);
     const live = await liveEntryPhotoKeys(db, keys);
     await env.MEDIA.delete(keys.filter((key) => !live.has(key)));
-    if (!page.truncated) return;
-    options.cursor = page.cursor;
-  }
+  });
 }
 
 /**

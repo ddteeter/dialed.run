@@ -783,6 +783,63 @@ async function namedPhoto(key: string): Promise<void> {
     });
 }
 
+/**
+`count` one-byte objects under `prefix`, each its own key.
+*/
+async function putUnder(prefix: string, count: number): Promise<void> {
+  for (let n = 0; n < count; n += 1) {
+    await env.MEDIA.put(`${prefix}${String(n)}.webp`, new Uint8Array([1]));
+  }
+}
+
+const PAST_THE_CAP = new Error(
+  "listed 2 pages under one prefix without reaching its end",
+);
+
+describe("a listing's page cap", () => {
+  it("stops a garment's listing past it, so the drain retries and reports it", async () => {
+    const userId = newUlid();
+    const itemId = newUlid();
+    const prefix = `${photoKeyFor(userId, itemId)}/01V1/`;
+    await putUnder(prefix, 3);
+    await expect(
+      reconcileItemPhotos(db(), userId, itemId, 1, 2),
+    ).rejects.toStrictEqual(PAST_THE_CAP);
+    // The pages it read were cleared; the rest wait for the retry.
+    expect(await stored(prefix)).toHaveLength(1);
+    await env.MEDIA.delete(await stored(prefix));
+  });
+
+  it("reads a garment's listing to its end when it ends on the cap", async () => {
+    const userId = newUlid();
+    const itemId = newUlid();
+    const prefix = `${photoKeyFor(userId, itemId)}/01V1/`;
+    await putUnder(prefix, 2);
+    await reconcileItemPhotos(db(), userId, itemId, 1, 2);
+    expect(await stored(prefix)).toStrictEqual([]);
+  });
+
+  it("stops an entry's listing past it", async () => {
+    const userId = newUlid();
+    const entryId = newUlid();
+    const prefix = entryPhotoPrefix(userId, entryId);
+    await putUnder(prefix, 3);
+    await expect(
+      reconcileEntryPhotos(db(), userId, entryId, 1, 2),
+    ).rejects.toStrictEqual(PAST_THE_CAP);
+    await env.MEDIA.delete(await stored(prefix));
+  });
+
+  it("reads an entry's listing to its end when it ends on the cap", async () => {
+    const userId = newUlid();
+    const entryId = newUlid();
+    const prefix = entryPhotoPrefix(userId, entryId);
+    await putUnder(prefix, 2);
+    await reconcileEntryPhotos(db(), userId, entryId, 1, 2);
+    expect(await stored(prefix)).toStrictEqual([]);
+  });
+});
+
 describe("reconcileEntryPhotos (task 128)", () => {
   it("clears every page of an entry with no rows left, and nothing beside it", async () => {
     const userId = newUlid();
