@@ -135,7 +135,7 @@ function inlineScriptSources(inline: InlineScripts | undefined): string {
  * face-blur model's among them) sends anything off the app. SA-L08: the
  * directives that cannot refuse one of the app's own scripts, so an
  * injected `<base>`, `<object>` or frame is refused from the first deploy
- * (a guess awaiting the owner). The report-only policy keeps reporting the
+ * (owner, 2026-11-16). The report-only policy keeps reporting the
  * rest until the flip at the public gate. Read from that policy, so the
  * two never disagree on a value.
  */

@@ -342,7 +342,7 @@ export function hourlyReport(
  * (SA-M34). A route name in the speed data is whatever a beacon said, so
  * past this the rest are one event with their count: a firing's sends are
  * bounded, and a real regression among the first few is still its own
- * issue. A guess awaiting the owner's number.
+ * issue. Five is the owner's number (2026-11-16).
  */
 export const SPEED_EVENTS_PER_CHECK = 5;
 

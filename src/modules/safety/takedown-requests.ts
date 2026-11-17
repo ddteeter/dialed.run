@@ -505,8 +505,8 @@ export async function confirmTakedownRequest(
   if (request === undefined) return "not_found";
   if (request.status !== "pending") return "decided";
   if (request.confirmedAt !== null) return "confirmed";
-  // SA-L18: a confirm link lasts as long as the request's 48 hours. A
-  // guess awaiting the owner: past them it answers as an unknown link.
+  // SA-L18: a confirm link lasts as long as the request's 48 hours, and
+  // past them answers as an unknown link (owner, 2026-11-16).
   if (now > request.dueAt) return "not_found";
   const subject = await requestSubjectOf(db, request);
   const isShut = await isValveShut(db, now);

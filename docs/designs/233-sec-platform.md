@@ -43,7 +43,7 @@ one-time grant (2026-11-15).
   and again before Claude: two hosts off the list must be unreachable and
   `sudo` gone, or the job stops.
 - **SA-M34.** The `:30` firing sends each check's first 5 findings as their
-  own events and the rest as one event with the count (guess Q1). The
+  own events and the rest as one event with the count (owner: 5). The
   hourly checks and the daily rollup keep only route names the router has,
   plus server functions and `unmatched` (`knownRoutes`); the queries order
   by sample count so the 10,000-row cut keeps the busiest.
@@ -60,17 +60,21 @@ one-time grant (2026-11-15).
     the wiring test reads the registered list and drives the middleware's
     server half; no e2e makes a real statement fail.
   - `wrangler.jsonc` sets `preview_urls: false` and `workers_dev: true`
-    until the sweep's route step, which now also turns it off (guess Q3).
-  - After 12d (#816) merges: open-web pages render with a per-request
-    marker the hasher keys on, so the policy hashes only scripts the
-    framework wrote; the enforced baseline (guess Q2); the deployment-plan
-    row for the CSP flip at the public gate (decision of 2026-10-11).
+    until the sweep's route step, which now also turns it off (Q3, open).
+  - An open-web request gets a per-request marker the router stamps where
+    a nonce would go; the hasher hashes only inline scripts carrying it,
+    then strips it and the `csp-nonce` meta, so the stored page names no
+    nonce. With no marker nothing is hashed.
+  - Enforced beside 12d's `connect-src 'self'`: `frame-ancestors`,
+    `object-src` and `base-uri`, read from the report-only policy (Q2,
+    yes). The deployment plan's public stage has the row for the full
+    flip (decision of 2026-10-11).
 - **SA-L18.** The change-email link is sent straight after the answer,
   like `verify_email`; the taken-address email still rides the outbox, so
   neither the answer nor its timing says which. The takedown receipt owes
   its request id, and the email handler mints the token as it sends,
   writing only the hash, only while the request still waits. A confirm
-  past `dueAt` answers `not_found` (guess Q7).
+  past `dueAt` answers `not_found` (Q7: the existing message).
   - **At-least-once** (coordinator-13, 2026-11-16): each send mints anew,
     and only the last token works. A send the provider took whose mark
     never landed goes twice (the handler's accepted case), and the second
@@ -102,17 +106,17 @@ deploy's jobs), `scripts/dependabot-classify`, `bindings-conformance`,
 
 - Refs #756. Opens: none.
 
-## Open questions (batched by coordinator-13 for the owner)
+## Owner answers (2026-11-16, through coordinator-13)
 
-1. SA-M34: the cap reverses design 165's "each finding its own event";
-   its number (guess 5).
-2. SA-L08: an enforced `object-src 'none'; base-uri 'self';
-   frame-ancestors 'none'` beside 12d's `connect-src 'self'` (guess yes).
-3. SA-L08: `workers_dev` before the route step (guess `true`).
-4. SA-L10: the deploy split and the install-script allowlist; Node 24
-   below 24.20 now fails `npm ci` (guess yes).
-5. SA-M38, SA-L10: holding a PR for any moved version under 7 days old or
-   from a new publisher (guess yes).
-6. lockfile-lint's config is changed (coordinator: not a forbidden zone).
-7. SA-L18: a confirm past `dueAt` says the link doesn't match a request
-   (guess: no new wording).
+1. SA-M34: the cap, at 5 findings a check.
+2. SA-L08: yes to the three enforced directives, and to the
+   deployment-plan row for the full flip at the public gate.
+3. SA-L08: open. The answer asked for a `dialed.run` custom-domain route
+   and `workers_dev: false`; D-99 puts the app on `app.dialed.run`, so
+   which host is asked again. Built meanwhile: `preview_urls: false`,
+   `workers_dev: true`.
+4. SA-L10: yes to the deploy split and the install-script allowlist,
+   with Node 24.20 as the floor.
+5. SA-M38, SA-L10: accepted.
+6. lockfile-lint's config: not a forbidden zone (coordinator-13).
+7. SA-L18: past `dueAt`, the existing `not_found` message.
