@@ -5,6 +5,7 @@ import {
   cityNotFound,
 } from "../../src/lib/contracts/city-lookup";
 import { lookUpCity } from "../../src/modules/onboarding/place";
+import { WeatherBudgetSpentError } from "../../src/modules/weather/budget";
 import type { PlaceResolver } from "../../src/modules/onboarding/place";
 
 /**
@@ -24,6 +25,12 @@ function lookUp(resolver: PlaceResolver) {
     }),
   };
 }
+
+/**
+A lookup refused because the runner's day's weather budget is spent.
+*/
+const spentBudget: PlaceResolver = () =>
+  Promise.reject(new WeatherBudgetSpentError());
 
 describe("lookUpCity", () => {
   it("answers found, with the provider's name for the place and where it is", async () => {
@@ -63,6 +70,19 @@ describe("lookUpCity", () => {
       surface: "onboarding.lookUpCity",
       userId: "u-1",
     });
+  });
+
+  it("answers unavailable for a spent weather budget, and reports nothing (SA-M13)", async () => {
+    const report = vi.fn();
+    expect(
+      await lookUpCity({
+        label: "Portland",
+        resolver: spentBudget,
+        report,
+        userId: "r",
+      }),
+    ).toStrictEqual({ kind: "unavailable" });
+    expect(report).not.toHaveBeenCalled();
   });
 });
 

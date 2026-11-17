@@ -157,6 +157,7 @@ model {
   cf.app.safety -[wiring]-> cf.app.products
   cf.app.safety -[imports]-> cf.app.runs
   cf.app.safety -[imports]-> cf.app.weather
+  cf.app.weather -[imports]-> cf.app.email
 }
 views {
   view accountImports of cf.app.account {

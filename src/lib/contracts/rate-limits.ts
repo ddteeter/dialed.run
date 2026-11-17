@@ -49,7 +49,9 @@ export const SEND_LIMIT_KINDS = [
  * - `resend-visitor` — Au4's Resend, per visitor, before the address is
  *   counted (SA-M12); the visitor's IP;
  * - `takedown-to` — `/takedown`'s receipts to one address, whoever asks
- *   (SA-M11); the address, lowercased.
+ *   (SA-M11); the address, lowercased;
+ * - `weather-runner` — the weather-provider calls made for one runner in
+ *   a day (SA-M13); the runner's id.
  */
 export const RATE_LIMIT_KINDS = [
   ...SEND_LIMIT_KINDS,
@@ -64,6 +66,7 @@ export const RATE_LIMIT_KINDS = [
   "report-at-once",
   "resend-visitor",
   "takedown-to",
+  "weather-runner",
 ] as const;
 
 /**

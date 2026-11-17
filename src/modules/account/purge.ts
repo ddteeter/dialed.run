@@ -641,6 +641,7 @@ async function deleteAccountRows(
     ),
     forgetRateLimit(db, "change-runner", userId),
     forgetRateLimit(db, "upload-runner", userId),
+    forgetRateLimit(db, "weather-runner", userId),
     forgetRunnerEnrichmentLimit(db, userId),
     ...forgetReportCounts(db, userId),
     // Reports they filed stay — what was said about someone else's post

@@ -20,11 +20,14 @@ export {
 export { forecast } from "./forecast";
 // Seasonal normals, for onboarding's starter list (O3). See ./normals for
 // why this one is not cached.
-export { climateNormals } from "./normals";
+export { climateNormalsFor } from "./normals";
 // A typed place, as coordinates — E2-lite's typed city. See ./place.
-export { resolvePlace } from "./place";
+export { resolvePlaceFor } from "./place";
 // The zone a place is in, for the profile's cached zone (design 142).
-export { timeZoneAt } from "./zone";
+export { timeZoneAt, timeZoneAtFor } from "./zone";
+// Each runner's day's budget of provider calls (SA-M13): whether a refusal
+// was the budget rather than the provider.
+export { isWeatherBudgetSpent } from "./budget";
 // The cache key itself, so no other module has to restate its rounding.
 export { cacheKeyFor, matchesKey, runHourKeys } from "./store";
 // A deleted run's band, for the outbox handler `feed`'s run delete owes

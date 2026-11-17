@@ -7,7 +7,10 @@ import type { ClimateNormals, ClimatePlace } from "../../src/lib/contracts";
 import { newUlid } from "../../src/lib/ids";
 import { TAP_LIST, TAP_LIST_FOLD } from "../../src/modules/closet";
 import { saveCalibration } from "../../src/modules/onboarding/profile";
-import { starterList } from "../../src/modules/onboarding/starter-list";
+import {
+  normalsForRequest,
+  starterList,
+} from "../../src/modules/onboarding/starter-list";
 import { resetTables } from "../feed/helpers";
 import { NO_ZONE } from "./zone-deps";
 
@@ -208,5 +211,26 @@ describe("starterList", () => {
 
     const expected: ClimatePlace = { kind: "coordinates", ...PHOENIX };
     expect(normalsFor).toHaveBeenCalledWith(expected);
+  });
+});
+
+describe("normalsForRequest (SA-M27)", () => {
+  const place: ClimatePlace = { kind: "coordinates", lat: 44.98, lng: -93.27 };
+  const normals: ClimateNormals = { winterLowC: -12, summerHighC: 28 };
+
+  it("reads normals on the runner's own request", async () => {
+    const normalsFor = vi.fn(() => Promise.resolve(normals));
+    await expect(normalsForRequest(true, normalsFor)(place)).resolves.toBe(
+      normals,
+    );
+    expect(normalsFor).toHaveBeenCalledWith(place);
+  });
+
+  it("refuses without asking on a request another site started", async () => {
+    const normalsFor = vi.fn(() => Promise.resolve(normals));
+    await expect(normalsForRequest(false, normalsFor)(place)).rejects.toThrow(
+      "Normals are read only on a first-party request",
+    );
+    expect(normalsFor).not.toHaveBeenCalled();
   });
 });

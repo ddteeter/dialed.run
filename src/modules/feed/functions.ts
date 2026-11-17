@@ -65,7 +65,7 @@ import { searchRunners } from "./search";
 import { nowSeconds } from "../../lib/now";
 import { placeInput, savePlace } from "../onboarding";
 import { captureException } from "../ops";
-import { timeZoneAt } from "../weather";
+import { timeZoneAtFor } from "../weather";
 
 export const attachKitAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => attachKitInput.parse(input))
@@ -271,13 +271,14 @@ export const feedConditionsQuery = createServerFn({ method: "GET" }).handler(
  */
 export const saveConditionsCityAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => placeInput.parse(input))
-  .handler(async ({ data }) =>
-    savePlace(coreDb(), await requireUserId(), data, {
-      zoneAt: timeZoneAt,
+  .handler(async ({ data }) => {
+    const userId = await requireUserId();
+    return savePlace(coreDb(), userId, data, {
+      zoneAt: timeZoneAtFor(userId),
       report: captureException,
       keepAlive: waitUntil,
-    }),
-  );
+    });
+  });
 
 // ---- Units (R-6) --------------------------------------------------------------
 

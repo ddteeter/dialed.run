@@ -19,6 +19,24 @@ export interface StarterList {
 }
 
 /**
+ * The normals read a request may make (SA-M27): `normalsFor` when the
+ * runner's own browsing caused the request (`isFirstPartyRequest`), and
+ * otherwise one that refuses without asking, so a page another site sent
+ * the runner to gets the latitude ordering and no provider call.
+ */
+export function normalsForRequest(
+  isFirstParty: boolean,
+  normalsFor: (place: ClimatePlace) => Promise<ClimateNormals>,
+): (place: ClimatePlace) => Promise<ClimateNormals> {
+  return isFirstParty
+    ? normalsFor
+    : () =>
+        Promise.reject(
+          new Error("Normals are read only on a first-party request"),
+        );
+}
+
+/**
  * What O3 is handed: one list, ordered for where this runner runs.
  *
  * **The band never removes a row** (design round 6 §AA), so everything

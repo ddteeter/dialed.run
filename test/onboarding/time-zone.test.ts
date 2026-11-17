@@ -267,25 +267,22 @@ describe("changing the place replaces or clears its zone", () => {
     ["a latitude with no longitude", { lat: 30.27 }],
     ["a longitude with no latitude", { lng: -97.74 }],
     ["a label with no coordinates", { cityLabel: "Austin, TX, United States" }],
-  ])(
-    "looks nothing up for %s, leaving the zone NULL",
-    async (_name, place) => {
-      const userId = newUlid();
-      await savedAt(userId, PORTLAND, zonesAnswering("America/Los_Angeles"));
-      const zones = zonesAnswering("America/Chicago");
+  ])("looks nothing up for %s, leaving the zone NULL", async (_name, place) => {
+    const userId = newUlid();
+    await savedAt(userId, PORTLAND, zonesAnswering("America/Los_Angeles"));
+    const zones = zonesAnswering("America/Chicago");
 
-      await saveCalibration(
-        coreDb(),
-        userId,
-        { thermalLevel: 0, ...place },
-        zones,
-      );
-      await zones.settled();
+    await saveCalibration(
+      coreDb(),
+      userId,
+      { thermalLevel: 0, ...place },
+      zones,
+    );
+    await zones.settled();
 
-      expect(zones.zoneAt).not.toHaveBeenCalled();
-      expect(await zoneOf(userId)).toBeNull();
-    },
-  );
+    expect(zones.zoneAt).not.toHaveBeenCalled();
+    expect(await zoneOf(userId)).toBeNull();
+  });
 
   it("asks for a place at zero, zero, which is a place", async () => {
     const userId = newUlid();

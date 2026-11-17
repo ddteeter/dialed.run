@@ -1,5 +1,6 @@
 import type { CityLookup } from "../../lib/contracts/city-lookup";
 import type { ResolvedPlace } from "../../lib/contracts";
+import { isWeatherBudgetSpent } from "../weather";
 
 /**
  * The typed city, found before it is used (round 26 #12).
@@ -52,8 +53,11 @@ export async function lookUpCity({
         };
   } catch (error: unknown) {
     // Context to act on, never the label: a typed place is the runner's
-    // own words about where they live.
-    report(error, { surface: "onboarding.lookUpCity", userId });
+    // own words about where they live. A spent budget (SA-M13) is the
+    // limit working, not a failure to hear about.
+    if (!isWeatherBudgetSpent(error)) {
+      report(error, { surface: "onboarding.lookUpCity", userId });
+    }
     return { kind: "unavailable" };
   }
 }
