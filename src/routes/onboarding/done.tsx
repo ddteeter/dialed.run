@@ -20,7 +20,7 @@ export const Route = createFileRoute("/onboarding/done")({
   validateSearch: tryAgainSearch,
   loader: async ({ location }) => {
     await requireSession(location);
-    await completeOnboardingFn();
+    await completeOnboardingFn({ data: {} });
   },
   component: DonePage,
 });

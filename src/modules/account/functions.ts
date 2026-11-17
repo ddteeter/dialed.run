@@ -24,6 +24,7 @@ import {
   verifiedUserId,
 } from "../auth";
 import { nowSeconds } from "../../lib/now";
+import { noInput } from "../../lib/no-input";
 import { emailDepsFromEnv } from "../email";
 import {
   captureException,
@@ -124,11 +125,11 @@ export const renameNoticeQuery = createServerFn({ method: "GET" }).handler(
 /**
  * "Keep @runner_4821 for now": the re-pick is no longer owed.
  */
-export const keepPlaceholderFn = createServerFn({ method: "POST" }).handler(
-  async () => {
+export const keepPlaceholderFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => noInput.parse(data))
+  .handler(async () => {
     await keepPlaceholder(db(), await requireUserId());
-  },
-);
+  });
 
 /**
  * Whether the root route should send this visitor to O0 before anything
@@ -390,9 +391,9 @@ export const requestDeletionFn = createServerFn({ method: "POST" })
  * "Keep your account?" · Keep my account (ACC-9): the one server function
  * a runner inside their deletion's week may call.
  */
-export const keepAccountFn = createServerFn({ method: "POST" }).handler(
-  async () => keepAccount(db(), await requireUserIdWhileLeaving()),
-);
+export const keepAccountFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => noInput.parse(data))
+  .handler(async () => keepAccount(db(), await requireUserIdWhileLeaving()));
 
 /**
  * What `/account/leaving` shows this visitor: a signed-in runner's

@@ -1,0 +1,38 @@
+document
+banner
+link, dialed.run
+dialed.run
+end of link, dialed.run
+navigation, Main
+list
+listitem, level 1, position 1, set size 4
+link, Feed
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+link, Closet
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+link, Call
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+link, You
+end of listitem, level 1, position 4, set size 4
+end of list
+end of navigation, Main
+link, Search runners
+link, Notifications, current page
+button, Log a run
+end of banner
+main
+heading, Notifications, level 1
+All read
+status
+heading, Quiet, level 2
+Quiet
+end of heading, Quiet, level 2
+paragraph
+Log a run and we’ll ask you one question about it. That’s most of what lands here.
+end of paragraph
+end of main
+status
+end of document

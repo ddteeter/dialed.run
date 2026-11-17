@@ -5,6 +5,7 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 
+import { noInput } from "../../lib/no-input";
 import { requireUserId, requireUserIdBeforeTerms } from "../auth";
 import { runnerVisibleToViewer } from "../feed";
 import { runsAwaitingVerdict } from "../runs";
@@ -35,12 +36,12 @@ export const viewerZoneFn = createServerFn({ method: "GET" }).handler(
   async () => viewerZone(notificationsDb(), await requireUserId()),
 );
 
-export const markAllNotificationsReadFn = createServerFn({
-  method: "POST",
-}).handler(async () => {
-  const userId = await requireUserId();
-  await markAllNotificationsRead(notificationsDb(), userId);
-});
+export const markAllNotificationsReadFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => noInput.parse(data))
+  .handler(async () => {
+    const userId = await requireUserId();
+    await markAllNotificationsRead(notificationsDb(), userId);
+  });
 
 /**
  * Everything the bell needs, for a route to spread into `BelledLayout`:

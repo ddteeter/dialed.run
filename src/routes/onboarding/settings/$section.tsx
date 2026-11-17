@@ -50,7 +50,7 @@ function SectionPage() {
         saveSharing={saveSharingFn}
         saveCountInTotals={setCountInTotalsFn}
         savePublicProfile={setPublicProfileFn}
-        markPrivacySeen={markPrivacySeenFn}
+        markPrivacySeen={() => markPrivacySeenFn({ data: {} })}
         pickUsername={(onClaimed) => (
           // Settings › Username's form and words, in Privacy's sheet
           // (round 42 #92).

@@ -41,6 +41,7 @@ import {
   listRunPage,
 } from "./service";
 import { env, waitUntil } from "../../env";
+import { noInput } from "../../lib/no-input";
 import { captureException, oweInCore } from "../ops";
 import { stravaApiFromEnv, stravaConfigFromEnv } from "./strava/api-from-env";
 import { garminConfigFor } from "./garmin/config";
@@ -212,8 +213,9 @@ export const completeStravaConnectFn = createServerFn({ method: "POST" })
     return { result, from };
   });
 
-export const disconnectStravaFn = createServerFn({ method: "POST" }).handler(
-  async () => {
+export const disconnectStravaFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => noInput.parse(data))
+  .handler(async () => {
     const userId = await requireUserId();
     // The revoke goes on the queue, so this returns as soon as the local
     // row is gone rather than waiting on Strava. The confirmation email is
@@ -225,8 +227,7 @@ export const disconnectStravaFn = createServerFn({ method: "POST" }).handler(
       captureException,
       oweInCore,
     );
-  },
-);
+  });
 
 /**
 Task 128 · SAF-3: the run, its entry, its photos and its upload.

@@ -10,6 +10,7 @@ import { getRequestHeaders } from "@tanstack/react-start/server";
 import { coreDb, waitUntil } from "../../env";
 import { cityLookupInput } from "../../lib/contracts/city-lookup";
 import { nowSeconds } from "../../lib/now";
+import { noInput } from "../../lib/no-input";
 import { optionalUserId, requireUserId, verifiedUserId } from "../auth";
 import { nameItem } from "../closet";
 import { coverageLadder } from "../feed";
@@ -72,9 +73,9 @@ export const starterListQuery = createServerFn({ method: "GET" }).handler(
   async () => starterList(db(), await requireUserId(), climateNormals),
 );
 
-export const completeOnboardingFn = createServerFn({ method: "POST" }).handler(
-  async () => completeOnboarding(db(), await requireUserId()),
-);
+export const completeOnboardingFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => noInput.parse(data))
+  .handler(async () => completeOnboarding(db(), await requireUserId()));
 
 export const settingsQuery = createServerFn({ method: "GET" }).handler(
   async () => currentSettings(db(), await requireUserId()),
@@ -151,17 +152,19 @@ export const setCountInTotalsFn = createServerFn({ method: "POST" })
  * U1's REVIEW tag on Privacy (R55·230): the runner's own state, seen by
  * nobody else, so `settingsQuery`'s class.
  */
-export const isPrivacyReviewDueQuery = createServerFn({ method: "GET" }).handler(
-  async () => isPrivacyReviewDue(db(), await requireUserId()),
-);
+export const isPrivacyReviewDueQuery = createServerFn({
+  method: "GET",
+}).handler(async () => isPrivacyReviewDue(db(), await requireUserId()));
 
 /**
  * Opening Privacy clears its REVIEW tag (R55·230). The runner's own
  * state, so an unconfirmed runner stamps it too.
  */
-export const markPrivacySeenFn = createServerFn({ method: "POST" }).handler(
-  async () => markPrivacySeen(db(), await requireUserId(), nowSeconds()),
-);
+export const markPrivacySeenFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => noInput.parse(data))
+  .handler(async () =>
+    markPrivacySeen(db(), await requireUserId(), nowSeconds()),
+  );
 
 /**
  * Find (round 26 #12): resolves a typed city once, when the runner presses
