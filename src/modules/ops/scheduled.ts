@@ -468,9 +468,12 @@ function throwAny(failures: readonly unknown[]): void {
  * firings never send one row twice.
  */
 async function drainOwedEmail(anomalies: string[]): Promise<void> {
+  // The operators' mail first, on its own cap (design 232), and a line
+  // for whatever either kind leaves due.
   await drainOutbox(coreDb(), anomalies, {
-    kinds: ["email"],
+    kinds: ["operator_email", "email"],
     lines: "unsettled",
+    backlog: true,
   });
 }
 

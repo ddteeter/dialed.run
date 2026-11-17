@@ -42,6 +42,7 @@ import type { PurgeTags } from "../../lib/cache-tags";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
+import { operatorEmailMessage } from "../../lib/sql/outbox";
 import { countSend, emailDebt, sendClaimOf } from "../email";
 import { adminUserIds } from "./admin";
 import { REMOVAL_DUE_SECONDS, removalDueLabel } from "./contracts";
@@ -240,14 +241,15 @@ function operatorAlerts(
   dueAt: number,
   isOurs: boolean,
 ): BatchItem<"sqlite">[] {
+  // An operator's mail, drained ahead of every other email (design 232).
   return adminUserIds().map((userId) =>
     owe(
-      emailDebt(
+      operatorEmailMessage(
         {
           to: { userId },
           template: { kind: "removal_requested", dueAt, isOurs },
         },
-        { dedupeKey: `removal_requested:${requestId}:${userId}` },
+        `removal_requested:${requestId}:${userId}`,
       ),
     ),
   );
@@ -262,7 +264,7 @@ function valveAlerts(owe: OweEmail, now: number): BatchItem<"sqlite">[] {
   const hour = String(valveHour(now));
   return adminUserIds().map((userId) =>
     owe(
-      emailDebt(
+      operatorEmailMessage(
         {
           to: { userId },
           template: {
@@ -270,7 +272,7 @@ function valveAlerts(owe: OweEmail, now: number): BatchItem<"sqlite">[] {
             perHour: TAKEDOWN_VALVE_PER_HOUR,
           },
         },
-        { dedupeKey: `takedown_valve:${hour}:${userId}` },
+        `takedown_valve:${hour}:${userId}`,
       ),
     ),
   );

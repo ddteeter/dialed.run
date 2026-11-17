@@ -28,6 +28,7 @@ import {
   settleOutbox,
   stillDueOf,
 } from "../../src/modules/ops/outbox";
+import { outboxKinds } from "../../src/lib/sql/outbox";
 import {
   boundHandler,
   isLiveObject,
@@ -40,6 +41,7 @@ import {
 
 const DIGEST = { cron: "0 12 * * *" } as ScheduledController;
 const NOW = 1_800_000_000;
+const LINK_CAP = OUTBOX_DRAIN_CAPS.get("product_link");
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -613,7 +615,7 @@ describe("checkOutboxBacklog", () => {
     expect(new Set(anomalies)).toStrictEqual(
       new Set([
         `1 photo_delete outbox row(s) still due after the drain, which takes ${String(OUTBOX_DRAIN_CAP)} a run; the oldest has waited 1h`,
-        `1 product_link outbox row(s) still due after the drain, which takes ${String(OUTBOX_DRAIN_CAP)} a run; the oldest has waited 0h`,
+        `1 product_link outbox row(s) still due after the drain, which takes ${String(LINK_CAP)} a run; the oldest has waited 0h`,
       ]),
     );
   });
@@ -1017,7 +1019,7 @@ describe("a run that owes the rest (design 232)", () => {
   });
 
   it("drains OUTBOX_DRAIN_CAPS' product links a run, not OUTBOX_DRAIN_CAP", async () => {
-    const cap = OUTBOX_DRAIN_CAPS.product_link ?? OUTBOX_DRAIN_CAP;
+    const cap = OUTBOX_DRAIN_CAPS.get("product_link") ?? OUTBOX_DRAIN_CAP;
     for (let n = 0; n <= cap; n += 1) await owedLink();
     const { link, handlers } = linking("linked");
 
@@ -1029,5 +1031,137 @@ describe("a run that owes the rest (design 232)", () => {
 
     expect(cap).toBeLessThan(OUTBOX_DRAIN_CAP);
     expect(link).toHaveBeenCalledTimes(cap);
+  });
+});
+
+/**
+`n` owed email rows of `kind`, due an hour ago and older.
+*/
+async function owedMail(
+  kind: "email" | "operator_email",
+  n: number,
+  now = NOW,
+): Promise<void> {
+  for (let index = 0; index < n; index += 1) {
+    const dedupeKey = `${kind}:${newUlid()}`;
+    await db()
+      .insert(outbox)
+      .values({
+        id: newUlid(),
+        kind,
+        dedupeKey,
+        payload: JSON.stringify({
+          dedupeKey,
+          email: {
+            to: { address: "someone@example.test" },
+            template: {
+              kind: "removal_request_received",
+              dueAt: NOW,
+              isHidden: false,
+            },
+          },
+        }),
+        nextAttemptAt: kind === "email" ? now - 3600 - index : now - 60,
+        createdAt: now - 7200,
+      });
+  }
+}
+
+/**
+Handlers that record which email kind each send was, and send nothing.
+*/
+function recordingMail(sent: string[]): OutboxHandlers {
+  return {
+    ...outboxHandlers,
+    email: {
+      run: () => {
+        sent.push("email");
+        return Promise.resolve();
+      },
+      context: outboxHandlers.email.context,
+    },
+    operator_email: {
+      run: () => {
+        sent.push("operator_email");
+        return Promise.resolve();
+      },
+      context: outboxHandlers.operator_email.context,
+    },
+  };
+}
+
+describe("the operators' mail (design 232)", () => {
+  it("is sent ahead of a backlog of other mail older than it", async () => {
+    await owedMail("email", OUTBOX_DRAIN_CAP + 10);
+    await owedMail("operator_email", 1);
+    const sent: string[] = [];
+
+    await drainOutbox(db(), [], {
+      now: NOW,
+      kinds: ["operator_email", "email"],
+      handlers: recordingMail(sent),
+    });
+
+    expect(sent[0]).toBe("operator_email");
+    expect(sent.filter((kind) => kind === "email")).toHaveLength(
+      OUTBOX_DRAIN_CAP,
+    );
+  });
+
+  it("is a kind the daily drain works before the other mail", () => {
+    expect(outboxKinds.indexOf("operator_email")).toBeLessThan(
+      outboxKinds.indexOf("email"),
+    );
+  });
+
+  it("says what a drain left due of its own kinds, when asked to", async () => {
+    await owedMail("email", OUTBOX_DRAIN_CAP + 2);
+    await owedRow({ nextAttemptAt: NOW - 3600 });
+    const anomalies: string[] = [];
+
+    await drainOutbox(db(), anomalies, {
+      now: NOW,
+      kinds: ["operator_email", "email"],
+      lines: "unsettled",
+      backlog: true,
+      handlers: recordingMail([]),
+    });
+
+    expect(anomalies).toStrictEqual([
+      `2 email outbox row(s) still due after the drain, which takes ${String(OUTBOX_DRAIN_CAP)} a run; the oldest has waited 1h`,
+    ]);
+  });
+
+  it("says nothing of what was left when not asked", async () => {
+    await owedMail("email", OUTBOX_DRAIN_CAP + 2);
+    const anomalies: string[] = [];
+
+    await drainOutbox(db(), anomalies, {
+      now: NOW,
+      kinds: ["email"],
+      lines: "unsettled",
+      handlers: recordingMail([]),
+    });
+
+    expect(anomalies).toStrictEqual([]);
+  });
+});
+
+describe("the hourly firings' email drain (design 232)", () => {
+  it("drains the operators' mail and says what it left due", async () => {
+    // The firing reads the real clock.
+    await owedMail("operator_email", 1, nowSeconds());
+    await owedMail("email", OUTBOX_DRAIN_CAP + 2, nowSeconds());
+
+    const outcome = await handleScheduled({
+      cron: "15 * * * *",
+    } as ScheduledController);
+
+    expect(
+      outcome.anomalies.filter((line) => line.includes("still due after")),
+    ).toHaveLength(1);
+    expect(
+      await db().select().from(outbox).where(eq(outbox.kind, "operator_email")),
+    ).toStrictEqual([]);
   });
 });

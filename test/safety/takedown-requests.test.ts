@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -61,11 +61,14 @@ const emailPayload = z.object({
 
 async function owedEmails() {
   const owed = await core()
-    .select({ payload: outbox.payload })
+    .select({ kind: outbox.kind, payload: outbox.payload })
     .from(outbox)
-    .where(eq(outbox.kind, "email"));
+    // A receipt is `email`, an operator's alert `operator_email` (design 232).
+    .where(inArray(outbox.kind, ["email", "operator_email"]))
+    // The operators' alerts, then the receipt.
+    .orderBy(desc(outbox.kind), outbox.dedupeKey);
   return owed.map((row) => {
-    const read = readOutboxRow("email", row.payload);
+    const read = readOutboxRow(row.kind, row.payload);
     if (!read.ok) throw new Error(read.problem);
     return emailPayload.parse(read.message.payload);
   });
@@ -148,6 +151,23 @@ describe("filing a request", () => {
           },
         },
       },
+    ]);
+  });
+
+  it("owes the operators' alerts as operator mail and the receipt as ordinary mail (design 232)", async () => {
+    Reflect.set(env, "ADMIN_USER_IDS", "op-one");
+    await fileTakedownRequest(core(), request(), deps, NOW);
+
+    const kinds = await core()
+      .select({ kind: outbox.kind, dedupeKey: outbox.dedupeKey })
+      .from(outbox)
+      .orderBy(outbox.dedupeKey);
+
+    expect(
+      kinds.map((row) => `${row.kind} ${row.dedupeKey.split(":", 1)[0] ?? ""}`),
+    ).toStrictEqual([
+      "email removal_request_received",
+      "operator_email removal_requested",
     ]);
   });
 

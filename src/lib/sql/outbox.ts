@@ -13,7 +13,7 @@
  */
 import { z } from "zod";
 
-import { emailPayloadSchema } from "../contracts/email";
+import { emailPayloadSchema, type EmailPayload } from "../contracts/email";
 import { importFilePrefix } from "../import-file-key";
 
 /**
@@ -130,13 +130,29 @@ export type ReminderEmailRef = z.infer<typeof reminderEmailRefSchema>;
  * and the day is marked sent in the batch that marks the row sent. Optional, so a row an earlier deploy wrote still
  * parses (law 9).
  */
+const emailFields = {
+  dedupeKey: z.string().min(1),
+  email: emailPayloadSchema,
+};
+
 const email = z.object({
   kind: z.literal("email"),
   payload: z.object({
-    dedupeKey: z.string().min(1),
-    email: emailPayloadSchema,
+    ...emailFields,
     reminder: reminderEmailRefSchema.optional(),
   }),
+});
+
+/**
+ * An email to the operators (design 232): a removal's 48-hour alert, its
+ * 40-hour reminder, a removal request's alert, the takedown valve's.
+ * Its own kind so that its own cap is drained first, ahead of every other
+ * email, and nothing a visitor can cause to be mailed waits in front of
+ * it. Sent as `email` is; scheduled, since no fast path sends it.
+ */
+const operatorEmail = z.object({
+  kind: z.literal("operator_email"),
+  payload: z.object(emailFields),
 });
 
 /**
@@ -170,6 +186,8 @@ const outboxMessageSchema = z.discriminatedUnion("kind", [
   entryMediaDelete,
   importFileDelete,
   importFileExpire,
+  // Before `email`: the daily drain works kinds in this order.
+  operatorEmail,
   email,
   productLink,
   manualConditionsDelete,
@@ -194,6 +212,8 @@ export const scheduledOutboxKinds: readonly OutboxKind[] = [
   "import_file_expire",
   // Never a fast path's (D-113 Q1): the drain is the only worker it has.
   "product_link",
+  // Never a fast path's either (design 232): due at once, for the next drain.
+  "operator_email",
 ];
 
 /**
@@ -205,8 +225,8 @@ export const scheduledOutboxKinds: readonly OutboxKind[] = [
  * per entry, and one `*` for "every entry of this runner's". One
  * `import_file_delete` or `import_file_expire` per object. One
  * `product_link` per runner, because one run links all of their garments.
- * One `manual_conditions_delete` per run. An email's is its writer's to
- * name.
+ * One `manual_conditions_delete` per run. An email's, an operator's
+ * included, is its writer's to name.
  */
 export function dedupeKeyFor(message: OutboxMessage): string {
   switch (message.kind) {
@@ -220,7 +240,8 @@ export function dedupeKeyFor(message: OutboxMessage): string {
     case "import_file_expire": {
       return `${message.payload.userId}:${message.payload.key}`;
     }
-    case "email": {
+    case "email":
+    case "operator_email": {
       return message.payload.dedupeKey;
     }
     case "product_link": {
@@ -258,4 +279,16 @@ export function readOutboxRow(kind: string, payload: string): ReadOutboxRow {
   return parsed.success
     ? { ok: true, message: parsed.data }
     : { ok: false, problem: "not a kind and payload this build knows" };
+}
+
+/**
+ * An email owed to an operator, as an outbox message (design 232): the
+ * `operator_email` kind, drained ahead of every other email. `dedupeKey`
+ * names "the same email", as `email`'s does.
+ */
+export function operatorEmailMessage(
+  email: EmailPayload,
+  dedupeKey: string,
+): OutboxMessage {
+  return { kind: "operator_email", payload: { dedupeKey, email } };
 }

@@ -118,15 +118,26 @@ export async function reportRefusalOf(
     report.subjectId,
   );
   if (!isSeen) return "not_found";
-  const isWithin = await isWithinRateLimit(
+  const isWithin = await isWithinReportLimit(db, report.reporterId, now);
+  return isWithin ? undefined : "limited";
+}
+
+/**
+Count one report, and say whether the reporter is within today's.
+*/
+export async function isWithinReportLimit(
+  db: Db,
+  reporterId: string,
+  now: number,
+): Promise<boolean> {
+  return isWithinRateLimit(
     db,
     "report-runner",
-    report.reporterId,
+    reporterId,
     REPORTS_PER_DAY,
     DAY_S,
     now,
   );
-  return isWithin ? undefined : "limited";
 }
 
 /**

@@ -41,7 +41,7 @@ import { columnWhere, hasRowWhere } from "../../lib/sql/keyed-read";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 
-import type { OutboxMessage } from "../../lib/sql/outbox";
+import { operatorEmailMessage, type OutboxMessage } from "../../lib/sql/outbox";
 import {
   hiddenByReport,
   REMOVAL_DUE_SECONDS,
@@ -87,12 +87,11 @@ function removalAlerts(
 ): BatchItem<"sqlite">[] {
   const subject = hiddenByReport[subjectType];
   if (subject === undefined) return [];
+  // An operator's mail, drained ahead of every other email (design 232).
   return adminUserIds().map((userId) =>
-    owe({
-      kind: "email",
-      payload: {
-        dedupeKey: `removal_due:${subjectType}:${subjectId}:${userId}`,
-        email: {
+    owe(
+      operatorEmailMessage(
+        {
           to: { userId },
           template: {
             kind: "removal_due",
@@ -100,8 +99,9 @@ function removalAlerts(
             dueAt: reportedAt + REMOVAL_DUE_SECONDS,
           },
         },
-      },
-    }),
+        `removal_due:${subjectType}:${subjectId}:${userId}`,
+      ),
+    ),
   );
 }
 

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import {
@@ -15,6 +15,7 @@ import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
 import { handleScheduled } from "../../src/modules/ops";
+import { addAccount } from "../feed/helpers";
 import {
   oweRemindersSince,
   oweRemovalReminders,
@@ -104,10 +105,10 @@ async function reminders() {
   const rows = await core()
     .select({ payload: outbox.payload })
     .from(outbox)
-    .where(eq(outbox.kind, "email"));
+    .where(eq(outbox.kind, "operator_email"));
   return rows
     .map((row) => {
-      const read = readOutboxRow("email", row.payload);
+      const read = readOutboxRow("operator_email", row.payload);
       if (!read.ok) throw new Error(read.problem);
       return owedEmail.parse(read.message.payload);
     })
@@ -138,6 +139,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   if (ADMINS === undefined) Reflect.deleteProperty(env, "ADMIN_USER_IDS");
   else Reflect.set(env, "ADMIN_USER_IDS", ADMINS);
 });
@@ -334,11 +336,26 @@ describe("the hourly firing", () => {
         idempotencyKey: newUlid(),
       });
 
+    // The firing's own drain sends operator mail at once (design 232); a
+    // sender that fails leaves the rows owed, so they can be read. Real
+    // operators, so the send is tried rather than skipped.
+    const operators = [newUlid(), newUlid()].toSorted((a, b) =>
+      a.localeCompare(b),
+    );
+    for (const operator of operators) await addAccount(operator, true);
+    Reflect.set(env, "ADMIN_USER_IDS", operators.join(","));
+    const send = vi
+      .spyOn(env.EMAIL, "send")
+      .mockRejectedValue(new Error("sender down"));
+    vi.spyOn(console, "error").mockImplementation(() => {
+      // The failed sends are reported; keep the output quiet.
+    });
+
     await handleScheduled({ cron: "0 * * * *" } as ScheduledController);
 
-    expect(await keys()).toStrictEqual([
-      `removal_reminder:request:${id}:op-one`,
-      `removal_reminder:request:${id}:op-two`,
-    ]);
+    expect(await keys()).toStrictEqual(
+      operators.map((operator) => `removal_reminder:request:${id}:${operator}`),
+    );
+    expect(send).toHaveBeenCalledTimes(2);
   });
 });

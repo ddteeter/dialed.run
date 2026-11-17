@@ -21,6 +21,10 @@ import {
 } from "../../src/modules/enrichment/spend-limit";
 import { cspReportDepsFromEnv } from "../../src/modules/ops/csp-report";
 import { isWithinUploadCap } from "../../src/modules/runs/imports";
+import {
+  isWithinAtOnceLimit,
+  isWithinReportLimit,
+} from "../../src/modules/safety/reportable";
 import { countedKeys } from "../rate-limit-rows";
 
 /**
@@ -49,6 +53,8 @@ describe("the rate-limit kinds", () => {
     await claimSignInTry(db, "Someone@Example.test", NOW);
     await cspReportDepsFromEnv().isWithinLimit("203.0.113.9");
     await isWithinUploadCap(db, runner, NOW);
+    await isWithinReportLimit(db, runner, NOW);
+    await isWithinAtOnceLimit(db, runner, NOW);
 
     const keys = await countedKeys(db);
     expect(keys).toStrictEqual(
@@ -61,6 +67,8 @@ describe("the rate-limit kinds", () => {
         `proxy-call:${GLOBAL_SUBJECT}`,
         "sign-in:someone@example.test",
         "csp-report:203.0.113.9",
+        `report-runner:${runner}`,
+        `report-at-once:${runner}`,
       ].toSorted((a, b) => a.localeCompare(b)),
     );
     const kinds = new Set(keys.map((key) => key.slice(0, key.indexOf(":"))));

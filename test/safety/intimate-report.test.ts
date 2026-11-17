@@ -88,9 +88,9 @@ async function owedEmails(): Promise<unknown[]> {
   const rows = await core()
     .select({ payload: outbox.payload })
     .from(outbox)
-    .where(eq(outbox.kind, "email"));
+    .where(eq(outbox.kind, "operator_email"));
   return rows.map((row) => {
-    const read = readOutboxRow("email", row.payload);
+    const read = readOutboxRow("operator_email", row.payload);
     if (!read.ok) throw new Error(read.problem);
     return read.message.payload;
   });

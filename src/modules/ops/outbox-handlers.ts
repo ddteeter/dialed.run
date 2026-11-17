@@ -333,6 +333,8 @@ export const outboxHandlers: OutboxHandlers = {
   import_file_expire: importFileDelete,
   // Task 126 (ACC-2): an owed email (`emailHandler`).
   email: emailHandler(emailDepsFromEnv),
+  // Design 232: the operators' mail, sent as any email is.
+  operator_email: emailHandler(emailDepsFromEnv),
   // Design 133 (D-113 Q1): unwired here, and wired by the firings that
   // are handed the linker (`scheduled.ts`).
   product_link: productLinkHandler(undefined),
