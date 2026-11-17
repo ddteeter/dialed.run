@@ -66,7 +66,11 @@ test("a server function answers only this app's own pages", async ({
 }) => {
   // A GET server function's address, from the app's own traffic: the
   // bell page's loader, run in the browser after a client-side navigation.
+  // Before hydration the link is a plain one and the page loads whole.
   await page.goto("/closet");
+  await page
+    .locator('html[data-hydrated="true"]')
+    .waitFor({ state: "attached" });
   const sent = page.waitForRequest(
     (request) =>
       request.url().includes("/_serverFn/") && request.method() === "GET",
