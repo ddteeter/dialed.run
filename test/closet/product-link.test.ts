@@ -706,3 +706,69 @@ describe("a bounded link run (design 232)", () => {
     expect(await unlinkedCount(userId)).toBe(0);
   });
 });
+
+describe("a listed word makes no shared row (design 232)", () => {
+  it("saves a confirmed runner's garment with a listed brand, and makes no brand or product", async () => {
+    const userId = await runner(true);
+    const brand = `Bitch ${newUlid()}`;
+    const name = unique("Tee");
+
+    const item = await createItem(db(), userId, {
+      category: "top",
+      name,
+      brand,
+    });
+
+    expect(item.productId).toBeNull();
+    expect(item.brand).toBe(brand);
+    expect(await brandRows(brand)).toHaveLength(0);
+    expect(await productRows(name)).toHaveLength(0);
+  });
+
+  it("saves a confirmed runner's garment with a listed name, and makes no product", async () => {
+    const userId = await runner(true);
+    const name = `Blue Waffle ${newUlid()}`;
+
+    const resolved = await withResolvedProduct(
+      db(),
+      { category: "top", name, brand: unique("Brand"), productId: newUlid() },
+      userId,
+    );
+
+    expect(resolved.productId).toBeUndefined();
+    expect(await productRows(name)).toHaveLength(0);
+  });
+
+  it("leaves a typed garment with a listed word unlinked once its runner confirms", async () => {
+    const userId = await runner(false);
+    const name = `Fuck ${newUlid()}`;
+    const item = await createItem(db(), userId, {
+      category: "top",
+      name,
+      brand: unique("Brand"),
+    });
+    await confirm(userId);
+
+    await linkTypedGarments(db(), userId);
+
+    const after = await getOwnedItem(db(), userId, item.id);
+    expect(after.productId).toBeNull();
+    expect(await productRows(name)).toHaveLength(0);
+  });
+
+  it.each([
+    ["brand", { brand: "Bitch Co", model: "Racer" }],
+    ["model", { brand: "Ordinary", model: "Blue Waffle" }],
+  ] as const)(
+    "names a garment with a listed %s and links nothing",
+    async (_which, identity) => {
+      const userId = await runner(true);
+      const itemId = await tapListRow(userId);
+
+      const named = await nameItem(db(), userId, itemId, identity);
+
+      expect(named.productId).toBeNull();
+      expect(named.brand).toBe(identity.brand);
+    },
+  );
+});

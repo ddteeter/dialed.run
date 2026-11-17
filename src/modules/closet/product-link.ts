@@ -30,6 +30,7 @@ import type { drizzle } from "drizzle-orm/d1";
 import type { SQLiteUpdateSetSource } from "drizzle-orm/sqlite-core";
 
 import { wardrobeItems } from "../../db/schema-core";
+import { isListedName } from "../../lib/contracts/profanity";
 import { normalizeIdentity } from "../../lib/normalize";
 import { ownedBy } from "../../lib/sql/owned";
 import { isUnconfirmed } from "../account";
@@ -125,7 +126,12 @@ export async function nameItem(
     name: model === "" ? row.name : model,
     origin: "manual" as const,
   };
-  if (await isUnconfirmed(db, userId)) {
+  // Unconfirmed, or a listed word (design 232): saved as typed, no shared row.
+  if (
+    isListedName(typed.brand) ||
+    isListedName(typed.name) ||
+    (await isUnconfirmed(db, userId))
+  ) {
     return updateOwnedItem(db, userId, itemId, typed);
   }
   const link = await linkedColumns(
@@ -147,7 +153,11 @@ export async function nameItem(
  */
 function isLinkable(row: TypedRow): boolean {
   return (
-    normalizeIdentity(row.brand) !== "" && normalizeIdentity(row.name) !== ""
+    normalizeIdentity(row.brand) !== "" &&
+    normalizeIdentity(row.name) !== "" &&
+    // A listed word makes no shared row (design 232).
+    !isListedName(row.brand) &&
+    !isListedName(row.name)
   );
 }
 

@@ -5,6 +5,7 @@ import {
   isProfaneHandle,
   parseWordList,
   PROFANE_WORDS,
+  isListedName,
   readBackDigits,
 } from "../../src/lib/contracts/profanity";
 
@@ -161,4 +162,22 @@ describe("the vendored list", () => {
     ]);
     expect(parseWordList("")).toStrictEqual([]);
   });
+});
+
+describe("isListedName (design 232)", () => {
+  it.each([
+    ["Fuck Runners", "a listed word among others"],
+    ["Bitch!", "a listed word with punctuation"],
+    ["Blue Waffle", "a listed phrase, its words run together"],
+    ["8itch Tee", "a digit spelling"],
+  ])("refuses %s (%s)", (name) => {
+    expect(isListedName(name)).toBe(true);
+  });
+
+  it.each(["Hoka Clifton", "Nike", "Scunthorpe Shorts", "ミズノ"])(
+    "takes %s",
+    (name) => {
+      expect(isListedName(name)).toBe(false);
+    },
+  );
 });

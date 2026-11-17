@@ -18,6 +18,7 @@
  * failure. A word run into others (`bigshitrunner`) is the moderation
  * check's to catch.
  */
+import { normalizeIdentity } from "../normalize";
 import wordList from "./profanity-words.txt?raw";
 
 /**
@@ -137,4 +138,15 @@ function partsOf(handle: string): string[] {
  */
 export function isProfaneHandle(handle: string): boolean {
   return partsOf(handle).some((part) => WORDS.has(part));
+}
+
+/**
+ * Whether a brand or model name holds a listed word (design 232): each of
+ * its words, and all of them run together (a listed phrase is kept
+ * compacted), read as a handle is. What makes no shared brand or product:
+ * a name another runner is offered as a suggestion.
+ */
+export function isListedName(name: string): boolean {
+  const words = normalizeIdentity(name).split(" ");
+  return [...words, words.join("")].some((word) => isProfaneHandle(word));
 }
