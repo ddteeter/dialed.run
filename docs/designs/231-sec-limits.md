@@ -82,8 +82,41 @@ new server boundary.
 
 ## Open questions
 
-Every number and sentence is a guess held for the owner (asked through
-the coordinator, 2026-11-16); this lane does not ship until answered.
+Every number, sentence and behaviour change below is a guess held for the
+owner (asked through the coordinator, 2026-11-16); this lane does not ship
+until each is answered.
+
+1. SA-M11: 3 `/takedown` receipts an hour per address; a fourth is refused
+   with the existing limited answer.
+2. SA-M12: 10 Resends an hour per visitor. Au4's band: "Too many links from
+   here this hour. You can send another at {time}." No Turnstile on Au4.
+3. SA-M13, SA-M27: 60 weather-provider calls a day per runner; past it, as
+   with the provider down. No global ceiling.
+4. SA-M14: 50 photo uploads a day per runner, kit and garment (the refusal
+   shows as the upload's failure band); no lifetime ceilings.
+5. SA-M17: a product link's ceiling of 2048 characters: "That link is too
+   long. Paste the shop page's address."
+6. SA-M28: the Strava notice is not sent to an unconfirmed address.
+7. SA-M36: the privacy policy's paragraph, as drafted in
+   `docs/legal/privacy-policy.md` (Counts that stop abuse):
+
+   > We count sign-in and sign-up attempts per IP address; those counts are
+   > deleted within a day. We count how many confirmation links, password
+   > resets and email changes each address asked for in the last hour, how
+   > many removal-request receipts each address was sent, and how many
+   > wrong passwords you typed when changing your email or password.
+   > Requests for access, removal requests and requests to resend a
+   > confirmation link are counted per visitor IP address the same way.
+   > Each of these counts is deleted a day after its window ends.
+
+   Open: whether to add a sentence for the per-account counts (weather
+   lookups, photo uploads, page refreshes), which name no address.
+8. SA-L15: a run's title is not sent to other runners; W1 names a kit by
+   its day and distance ("Sat Aug 29 · 10.0km"). 2 edge purges a minute
+   per runner's own writes.
+
+Decided by the coordinator (2026-11-16): the /64 keying, SA-L07's action
+check, SA-L15's follow half (12d's `follow`) and its verdict-prompt check.
 
 ## Owner answers
 
