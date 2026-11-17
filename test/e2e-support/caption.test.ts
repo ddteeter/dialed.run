@@ -288,6 +288,53 @@ describe("muxArgs", () => {
     ]);
   });
 
+  it("mixes only the scenes that speak, after every caption", () => {
+    const mixed = muxArgs(
+      "/r/video.webm",
+      take,
+      [
+        { startMs: 0, caption: "/r/caption-0.png" },
+        { startMs: 2000, audio: "/c/b.aiff", caption: "/r/caption-1.png" },
+        { startMs: 4000, caption: "/r/caption-2.png" },
+      ],
+      "/r/demo.mp4",
+    );
+    const inputs = mixed.filter((_arg, index) => mixed[index - 1] === "-i");
+    expect(inputs).toEqual([
+      "/r/video.webm",
+      "/r/caption-0.png",
+      "/r/caption-1.png",
+      "/r/caption-2.png",
+      "/c/b.aiff",
+    ]);
+    const mixedGraph = (
+      mixed.at(mixed.indexOf("-filter_complex") + 1) ?? ""
+    ).split(";");
+    expect(mixedGraph.slice(4)).toEqual([
+      "[4:a]adelay=2000:all=1[a0]",
+      "[a0]amix=inputs=1:normalize=0[aout]",
+    ]);
+    expect(mixed).toContain("[aout]");
+  });
+
+  it("with captions and no lines, overlays them and maps no audio", () => {
+    const captioned = muxArgs(
+      "/r/video.webm",
+      take,
+      [{ startMs: 0, caption: "/r/caption-0.png" }],
+      "/r/demo.mp4",
+    );
+    const captionedGraph = (
+      captioned.at(captioned.indexOf("-filter_complex") + 1) ?? ""
+    ).split(";");
+    expect(captionedGraph).toEqual([
+      graph[0],
+      "[v0][1:v]overlay=0:0:enable='gte(t,0.000)'[v1]",
+    ]);
+    expect(captioned).not.toContain("[aout]");
+    expect(captioned).not.toContain("-c:a");
+  });
+
   it("with no lines, pads and transcodes, and maps no audio", () => {
     const silent = muxArgs("/r/video.webm", take, [], "/r/demo.mp4");
     expect(silent.at(silent.indexOf("-filter_complex") + 1)).toBe(graph[0]);
