@@ -18,9 +18,9 @@ const HOOK_DEADLINE = "hookTimeout: TEST_TIMEOUT_MS,";
 const lines = config.split("\n").map((line) => line.trim());
 
 describe("the harness timeouts", () => {
-  it("sets a test deadline in each of the three projects", () => {
-    expect(lines.filter((line) => line.startsWith('name: "'))).toHaveLength(3);
-    expect(lines.filter((line) => line === TEST_DEADLINE)).toHaveLength(3);
+  it("sets a test deadline in each of the four projects", () => {
+    expect(lines.filter((line) => line.startsWith('name: "'))).toHaveLength(4);
+    expect(lines.filter((line) => line === TEST_DEADLINE)).toHaveLength(4);
   });
 
   it("gives every project's hooks the deadline its tests have", () => {
@@ -28,6 +28,7 @@ describe("the harness timeouts", () => {
       (_line, index) => index > 0 && lines[index - 1] === TEST_DEADLINE,
     );
     expect(afterEachTestDeadline).toStrictEqual([
+      HOOK_DEADLINE,
       HOOK_DEADLINE,
       HOOK_DEADLINE,
       HOOK_DEADLINE,
