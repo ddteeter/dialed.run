@@ -36,6 +36,16 @@ description: Use before opening a pull request in dialed.run, before pushing a b
    the stories that cite a file the branch changed. For each, the PR body
    says under **"Diagrams"** whether you updated it or re-read it and it
    still holds, one line each. When it lists none, leave the heading out.
+   **If `docs/diagrams/` changed** (by hand or by `diagrams:generate`),
+   run `npm run diagrams:record`. It records every view that differs
+   from the merge base, walking each story step by step with captions
+   that say which steps changed, and writes `diagrams.demo.mp4` at the
+   repo root. Watch it, then attach it
+   when you ship (§Pushing). It prints the views it recorded and any the
+   branch removed; a removed view cannot be shown, so name it under
+   **"Diagrams"**. It needs ffmpeg, as the demo does. When it says no
+   view changed (a comment or formatting edit), there is nothing to
+   attach.
 8. **Run** `npm run verify && npm test && npm run diagrams:check && npm run build`. `build` is a gate:
    `postbuild` runs `check:bundle`. **A lane dispatched by a coordinator
    skips `verify`** (owner, 2026-10-24): it has no flag to drop its Stryker
@@ -92,7 +102,15 @@ another lane yourself.
 - `ship` attaches demo videos itself: add `--attach=<file>` (repeatable,
   optionally `--attach=<file>#<alt text>`). It goes on a new PR as the PR
   opens, or on an open PR as one comment, posted again on each run
-  (pr-demo-video).
+  (pr-demo-video). A PR with a demo and changed diagrams attaches both,
+  as two files, not joined, so a reviewer can watch either alone (design
+  229, step 4):
+
+  ```bash
+  npm run ship -- --body-file=pr-body.md \
+    --attach=test-results/<dir>/demo.mp4 --attach=diagrams.demo.mp4
+  ```
+
 - On `gate-blocked` or `ci-red`, fix it and ship again. A lane dispatched by a
   coordinator messages it on `green`; the coordinator merges and cleans up.
 

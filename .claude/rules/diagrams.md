@@ -30,6 +30,8 @@ diagrams:format` fixes the formatting. `npm run diagrams` opens the
   stops resolving; the form is in skill `architecture-diagrams`.
   `npm run diagrams:stale` lists the stories that cite a file your branch
   changed.
+- **A PR that changes a view carries a video of it**:
+  `npm run diagrams:record` writes `diagrams.demo.mp4` (skill `pr-ready`).
 - **Nothing rendered is committed**: no PNG, no `dist/`, no exported
   Markdown. `likec4 export markdown` writes a `README.md` into this folder
   whatever `-o` says; delete it.
