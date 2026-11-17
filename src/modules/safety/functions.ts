@@ -53,7 +53,12 @@ import {
 import { deskKitFor } from "./desk-kit";
 import { duplicateProducts } from "./duplicates";
 import { duplicatesReport } from "./duplicates-report";
-import { blockRunner, blockedRunners, unblockRunner } from "./blocks";
+import {
+  blockRunner,
+  blockedCount,
+  blockedRunners,
+  unblockRunner,
+} from "./blocks";
 import { denyDomain } from "./denylist";
 import {
   banUserInput,
@@ -122,6 +127,16 @@ export const blockedRunnersQuery = createServerFn({ method: "GET" }).handler(
   async () => {
     const blockerId = await requireUserId();
     return { blocked: await blockedRunners(blockerId) };
+  },
+);
+
+/**
+Settings' "Blocked runners" count, without reading the roster.
+*/
+export const blockedCountQuery = createServerFn({ method: "GET" }).handler(
+  async () => {
+    const blockerId = await requireUserId();
+    return { blockedCount: await blockedCount(blockerId) };
   },
 );
 

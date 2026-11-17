@@ -21,7 +21,7 @@ import {
   isPrivacyReviewDueQuery,
   settingsQuery,
 } from "../../../modules/onboarding/functions";
-import { blockedRunnersQuery } from "../../../modules/safety/functions";
+import { blockedCountQuery } from "../../../modules/safety/functions";
 import { Page } from "../../../ui";
 import { ThemeSwitch } from "../../../ui/ThemeSwitch";
 
@@ -35,7 +35,7 @@ export const Route = createFileRoute("/onboarding/settings/")({
     await requireSession(location);
     const [
       current,
-      { blocked },
+      { blockedCount },
       bell,
       { username },
       notifications,
@@ -44,7 +44,7 @@ export const Route = createFileRoute("/onboarding/settings/")({
       strava,
     ] = await Promise.all([
       settingsQuery(),
-      blockedRunnersQuery(),
+      blockedCountQuery(),
       bellStateFn(),
       usernameQuery(),
       notificationSettingsQuery(),
@@ -54,7 +54,7 @@ export const Route = createFileRoute("/onboarding/settings/")({
     ]);
     return {
       current,
-      blockedCount: blocked.length,
+      blockedCount,
       bell,
       username,
       runReminderEmail: notifications.runReminder,

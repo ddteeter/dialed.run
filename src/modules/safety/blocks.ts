@@ -16,13 +16,14 @@
  *   is imported by the consensus path, and `blocks.test.ts` pins that from
  *   the outside so the carve-out cannot rot.
  */
-import { and, eq, or, sql } from "drizzle-orm";
+import { and, count, eq, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 
 import { blocks, follows, userProfiles } from "../../db/schema-core";
 import { coreDb } from "../../env";
 import { columnSetAmong } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
+import { counted } from "./takedown-limits";
 
 function db() {
   return coreDb();
@@ -35,9 +36,23 @@ export class SelfBlockError extends Error {
 }
 
 /**
+ * The most runners one runner may block (design 232, SA-L16). It also
+ * bounds the W2 roster, which is read whole. GUESS pending the owner's
+ * answer: 500.
+ */
+export const BLOCKS_MAX = 500;
+
+/**
  * Blocks `blockedId` for `blockerId`. Idempotent: blocking someone already
  * blocked is a no-op, not an error, because the UI offers no way to tell
  * and a retried submit must not fail (law 8b).
+ *
+ * **One conditional insert** (design 232): a row is written only for a
+ * runner who exists (has a profile, as anyone a runner can see does) and
+ * while the blocker holds fewer than `BLOCKS_MAX` blocks. One statement,
+ * so two at once cannot both pass the count; `blocks_pk` leads on
+ * `blocker_id`, so the count is an index range. Past either, nothing is
+ * written.
  */
 export async function blockRunner(
   blockerId: string,
@@ -51,19 +66,33 @@ export async function blockRunner(
     followBetween(blockerId, blockedId),
     followBetween(blockedId, blockerId),
   );
+  const runnerExists = sql`exists (select 1 from ${userProfiles} where ${userProfiles.userId} = ${blockedId})`;
+  const held = sql`(select count(*) from ${blocks} where ${blocks.blockerId} = ${blockerId})`;
+  const blockStands = sql`exists (select 1 from ${blocks} where ${blocks.blockerId} = ${blockerId} and ${blocks.blockedId} = ${blockedId})`;
   // SA-L02: a block ends the pair's follows, both ways, in the same batch,
-  // so a block never stands beside a follow it should have ended.
+  // so a block never stands beside a follow it should have ended; and only
+  // a block that stands, so one refused (design 232) ends nothing.
   await database.batch([
+    // Drizzle names every column of `blocks`, in the table's order.
     database
       .insert(blocks)
-      .values({
-        blockerId,
-        blockedId,
-        createdAt: nowSeconds(),
-      })
+      .select(
+        sql`select ${blockerId}, ${blockedId}, ${nowSeconds()} where ${runnerExists} and ${held} < ${BLOCKS_MAX}`,
+      )
       .onConflictDoNothing(),
-    database.delete(follows).where(pairFollows),
+    database.delete(follows).where(and(pairFollows, blockStands)),
   ]);
+}
+
+/**
+How many runners `blockerId` has blocked: Settings' line, without the roster.
+*/
+export async function blockedCount(blockerId: string): Promise<number> {
+  const rows = await db()
+    .select({ n: count() })
+    .from(blocks)
+    .where(eq(blocks.blockerId, blockerId));
+  return counted(rows);
 }
 
 // The follow row running from `followerId` to `followeeId`, if there is one.
@@ -165,10 +194,7 @@ export async function blockedRunners(
     .from(blocks)
     .leftJoin(
       userProfiles,
-      and(
-        eq(userProfiles.userId, blocks.blockedId),
-        notBlockedBack(blockerId),
-      ),
+      and(eq(userProfiles.userId, blocks.blockedId), notBlockedBack(blockerId)),
     )
     .where(eq(blocks.blockerId, blockerId));
 

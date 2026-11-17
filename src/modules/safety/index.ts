@@ -30,8 +30,10 @@ export {
 export { banGate } from "./ban-gate";
 
 export {
+  BLOCKS_MAX,
   blockRunner,
   blockedAmong,
+  blockedCount,
   blockedRunners,
   hiddenCounterpartIds,
   isBlocked,
