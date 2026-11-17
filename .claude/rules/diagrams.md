@@ -26,7 +26,7 @@ diagrams:format` fixes the formatting. `npm run diagrams` opens the
 - **A story is a claim about the code.** Every step carries a
   `// source: <path> <name>, …` comment on the line above it, and a number
   in a note is one you read in that source.
-  `test/architecture/diagram-sources.dom.test.tsx` fails when a path or a name
+  `test/architecture/diagram-sources.node.test.ts` fails when a path or a name
   stops resolving; the form is in skill `architecture-diagrams`.
   `npm run diagrams:stale` lists the stories that cite a file your branch
   changed.

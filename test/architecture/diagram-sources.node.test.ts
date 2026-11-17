@@ -4,9 +4,8 @@
  * each name. A move or a rename that leaves a story behind fails here.
  * The comment's form is in `scripts/diagrams/anchors.ts`.
  *
- * In the `ui` project because the steps come from LikeC4's parse tree,
- * which the workers pool cannot load; this project runs in Node. There is
- * no DOM in it.
+ * In the `node` project because the steps come from LikeC4's parse tree,
+ * which the workers pool cannot load.
  */
 import { existsSync, readFileSync, statSync } from "node:fs";
 

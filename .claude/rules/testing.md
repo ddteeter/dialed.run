@@ -14,7 +14,7 @@ Loaded when you touch a test, the vitest config or the stryker config. For
 working through surviving mutants, the `crushing-mutants` skill and
 `docs/guardrails/crushing-mutants.md` are the procedure.
 
-## Three vitest projects
+## Four vitest projects
 
 `vitest.config.ts` defines them; a test opts in by filename
 (`docs/designs/036-ui-unit-testing.md`):
@@ -33,6 +33,10 @@ working through surviving mutants, the `crushing-mutants` skill and
 - **`browser`** (`*.browser.test.ts`) — real Chromium, for code that fetches
   (MediaPipe's WASM and model). A fresh worktree needs `npm run build` (or
   `pretest`) to stage that WASM first.
+- **`node`** (`*.node.test.ts`) — plain Node, no DOM and no setup file, for
+  a test whose library needs Node or the disk and so cannot load in
+  workerd (the diagram generator's TypeScript reader, LikeC4's parser).
+  Not for a component: that is `ui`.
 
 `vitest run ""` runs the whole suite including Chromium — use `--project`
 and real paths.

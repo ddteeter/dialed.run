@@ -102,7 +102,7 @@ filesystem, so sources arrive as `?raw` imports, as
   below.)
 - `diagram-sources.test.ts`: every step has a source comment; every path
   exists and contains the symbol it names. (Built as
-  `diagram-sources.dom.test.tsx`, in the `ui` project; see step 3 as
+  `diagram-sources.node.test.ts`, in the `node` project; see step 3 as
   built.)
 - Unit tests for the generator, the view-hash diff and the stale-story
   mapping, which are pure functions.
@@ -191,7 +191,8 @@ registries.
   on a difference; `diagrams:check` is already in CI's required job, and
   `pr-ready`'s final checks now run it. `generateStructure` stays pure and
   is tested in the worker project on facts; `scripts/diagrams/syntax.ts`
-  is tested in the `ui` project, which runs in Node.
+  is tested in Node (the `ui` project at first; the `node` project since
+  step 3).
 - **Email sending is drawn** (owner, 2026-11-16): the `send_email`
   binding generates `cf.emailSending`, an `external`, with
   `cf.app.email`'s arrow to it in `model.c4`. A system we call and do not
@@ -219,9 +220,12 @@ registries.
   and parsed node by node, so an upgrade that moves it fails by name. Each
   view's arrows from the tree are held equal to LikeC4's computed view,
   so a step form the walk does not know fails too.
-- **The anchor test is in the `ui` project**
-  (`test/architecture/diagram-sources.dom.test.tsx`). LikeC4 cannot load
-  in the workers pool, and `ui` runs in Node, so it stays in `npm test`.
+- **The anchor test is in a new `node` vitest project**
+  (`test/architecture/diagram-sources.node.test.ts`; owner, 2026-11-16).
+  LikeC4 cannot load in the workers pool. The first version borrowed `ui`
+  for its Node runtime under a `.dom.test.tsx` name, with happy-dom and
+  `test/dom-setup.ts` it did not use; `node` is plain Node with no setup,
+  and the #812 syntax test moved there too. It stays in `npm test`.
   It reads the cited files from disk, so a cite may name any file in the
   repo.
 - **A name resolves when its file holds it as a whole word**; a dotted

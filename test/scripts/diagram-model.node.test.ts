@@ -1,7 +1,6 @@
 /**
  * `scripts/diagrams/model.ts` finds the steps in LikeC4's own parse tree,
- * which the workers pool cannot load; this project runs in Node. There is
- * no DOM in it.
+ * which the workers pool cannot load, so it runs in the `node` project.
  */
 import { LikeC4 } from "likec4";
 import { describe, expect, it } from "vitest";

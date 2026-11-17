@@ -96,7 +96,7 @@ cron re-drives, and `wrangler.jsonc` for retries and dead-letter queues.
   Each cite is a repo-relative path, then one or more names in that file
   (a function, a constant, a `wrangler.jsonc` key, dotted for a nested
   one), then an optional note in parentheses. Separate cites with `;`.
-  `test/architecture/diagram-sources.dom.test.tsx` fails a step with no
+  `test/architecture/diagram-sources.node.test.ts` fails a step with no
   comment, a path that is not a file and a name the file does not hold
   as a whole word. The note is not checked, so a name that must keep
   resolving goes before it, not inside it. A cite needs at least one name:

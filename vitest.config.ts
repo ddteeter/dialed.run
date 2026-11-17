@@ -4,7 +4,7 @@ import { defineConfig, defineProject } from "vitest/config";
 import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
 
 /**
- * Three projects, because three kinds of test need three runtimes.
+ * Four projects, because four kinds of test need four runtimes.
  *
  * **`worker`** is everything that touches the platform — D1, R2, queues,
  * bindings — and runs in workerd via `@cloudflare/vitest-pool-workers`.
@@ -35,19 +35,28 @@ import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
  * own vite server, so `/mediapipe/wasm` resolves exactly as it does in
  * production.
  *
+ * **`node`** is plain Node, with no DOM and no setup file, for a test
+ * whose library needs Node or the disk and so cannot load in workerd:
+ * the diagram generator's TypeScript reader and LikeC4's parser
+ * (design 229). Before it, such a test borrowed `ui` for its Node
+ * runtime, under a `.dom.test.tsx` name, and paid for happy-dom and
+ * `test/dom-setup.ts` it did not use (owner, 2026-11-16).
+ *
  * **It is vitest, which is the whole point.** Playwright's own runner is
  * invisible to stryker (`testRunner: "vitest"`), so an `e2e/` spec proves
  * the model works and kills zero mutants; 8 of the 16 survivors in
  * `detect.ts` live in code no non-browser test can reach. A vitest project
  * is mutated like any other.
  *
- * A test opts into a project by its name: `*.dom.test.tsx` for happy-dom
- * and `*.browser.test.ts` for Chromium, so files migrate one at a time
+ * A test opts into a project by its name: `*.dom.test.tsx` for happy-dom,
+ * `*.browser.test.ts` for Chromium and `*.node.test.ts` for Node, so files
+ * migrate one at a time
  * rather than in a big bang, and the split is visible in the filename
  * rather than in this config.
  */
 const DOM_TESTS = "test/**/*.dom.test.tsx";
 const BROWSER_TESTS = "test/**/*.browser.test.ts";
+const NODE_TESTS = "test/**/*.node.test.ts";
 
 /**
  * The per-test deadline: 20s for any ordinary run, a minute inside stryker.
@@ -171,7 +180,7 @@ export default defineConfig(async () => {
             testTimeout: TEST_TIMEOUT_MS,
             hookTimeout: TEST_TIMEOUT_MS,
             include: ["test/**/*.test.{ts,tsx}"],
-            exclude: [DOM_TESTS, BROWSER_TESTS],
+            exclude: [DOM_TESTS, BROWSER_TESTS, NODE_TESTS],
             setupFiles: ["test/apply-migrations.ts"],
           },
         }),
@@ -183,6 +192,15 @@ export default defineConfig(async () => {
             environment: "happy-dom",
             include: [DOM_TESTS],
             setupFiles: ["test/dom-setup.ts"],
+          },
+        }),
+        defineProject({
+          test: {
+            name: "node",
+            testTimeout: TEST_TIMEOUT_MS,
+            hookTimeout: TEST_TIMEOUT_MS,
+            environment: "node",
+            include: [NODE_TESTS],
           },
         }),
         defineProject({

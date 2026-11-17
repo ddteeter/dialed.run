@@ -12,7 +12,7 @@
  * step form the walk does not know fails too.
  *
  * Node: LikeC4 cannot load in the workers pool, so its tests are in the
- * `ui` project.
+ * `node` project.
  */
 import path from "node:path";
 
