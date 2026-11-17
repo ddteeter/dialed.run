@@ -54,10 +54,10 @@ views {
         **Timing boundary: the request ends here.** The runner waits for the save, never for the page.
       '''
     }
-    // source: src/modules/ops/queues.ts handleQueueBatch (dialed-enrichment); src/lib/sql/queue-batch.ts consumeEach; wrangler.jsonc queues.consumers, max_batch_timeout, max_retries (30 and 3)
+    // source: src/modules/ops/queues.ts handleQueueBatch (dialed-enrichment); src/lib/sql/queue-batch.ts consumeEach; wrangler.jsonc queues.consumers, max_batch_size, max_retries (1 and 3)
     cf.enrichmentQueue -[async]-> cf.app.enrichment.consumer 'delivers EnrichJob' {
       notes '''
-        **Timing boundary: up to 30 seconds later, in a queue consumer.** The queue waits up to 30 seconds to fill a batch.
+        **Timing boundary: seconds later, in a queue consumer.** A batch is one job, so the queue does not wait to fill one, and a job that ends its invocation takes no other job with it.
 
         **At least once.** The same job can arrive twice, and the sweep can send a second copy. A thrown error retries the message, up to 3 times, then it is dead-lettered.
       '''
@@ -126,8 +126,12 @@ views {
         **If the next step fails:** an object with no row is left behind. It is storage, not a wrong answer.
       '''
     }
-    // source: src/modules/enrichment/consume.ts fetchAndExtract, runLadder, recordSnapshot; src/modules/enrichment/snapshot.ts recordSnapshot
-    cf.app.enrichment.consumer -> cf.coreDb 'records the snapshot and the rung that read it'
+    // source: src/modules/enrichment/consume.ts fetchAndExtract, recordSnapshot; src/modules/enrichment/snapshot.ts recordSnapshot
+    cf.app.enrichment.consumer -> cf.coreDb 'records the snapshot before reading it' {
+      notes '''
+        **Before the ladder runs.** The row is written with no rung yet, so a read that throws leaves a page the retry finds and reads again instead of fetching it again. The rung that read it is set with the write-back.
+      '''
+    }
     // source: src/modules/enrichment/model/rung.ts modelPass; src/modules/enrichment/model/chat-completions.ts createChatCompletionsModel, TIMEOUT_MS; src/modules/enrichment/model/from-env.ts extractionModelFromEnv
     cf.app.enrichment.consumer -> openai 'asks the model for what the page left blank' {
       notes '''
@@ -136,8 +140,8 @@ views {
         With no model key, this step is skipped and the declared fields are the answer.
       '''
     }
-    // source: src/modules/enrichment/consume.ts extractFrom (the rung update); src/modules/products/apply-extraction.ts applyExtraction
-    cf.app.enrichment.consumer -> cf.coreDb 'writes the specs back: pending to done'
+    // source: src/modules/enrichment/consume.ts fetchAndExtract, runLadder, extractFrom (the rung update); src/modules/products/apply-extraction.ts applyExtraction
+    cf.app.enrichment.consumer -> cf.coreDb 'writes the rung and the specs back: pending to done'
     // source: src/modules/enrichment/consume.ts processEnrichJob, gaveUpClear (the batch after the write-back)
     cf.app.enrichment.consumer -> cf.coreDb 'clears any give-up left from earlier tries' {
       notes '''
