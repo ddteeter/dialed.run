@@ -44,6 +44,7 @@ import {
 import {
   boundHandler,
   outboxHandlers,
+  OWED_AGAIN,
   type OutboxHandlers,
 } from "./outbox-handlers";
 import { captureException } from "./sentry";
@@ -63,6 +64,22 @@ export const OUTBOX_TERMINAL_ATTEMPTS = 5;
  * backlog cannot starve the others of the run.
  */
 export const OUTBOX_DRAIN_CAP = 50;
+
+/**
+ * Kinds whose one row is many D1 calls, drained fewer a run (design 232):
+ * a `product_link` links up to `LINK_BATCH` garments, several calls each,
+ * inside a cron invocation the run's other steps share.
+ */
+export const OUTBOX_DRAIN_CAPS: ReadonlyMap<string, number> = new Map([
+  ["product_link", 5],
+]);
+
+/**
+A kind's rows a run.
+*/
+function drainCapOf(kind: string): number {
+  return OUTBOX_DRAIN_CAPS.get(kind) ?? OUTBOX_DRAIN_CAP;
+}
 
 /**
  * How long a fresh row waits before the drainer may take it: long enough
@@ -194,8 +211,7 @@ export async function settleOutbox(
 ): Promise<void> {
   const handler = boundHandler(handlers, debt.message);
   try {
-    await handler.run(db, debt.id);
-    await db.delete(outbox).where(eq(outbox.id, debt.id));
+    await runToSettle(db, handler, debt.id);
   } catch (error) {
     report(error, {
       surface: "outbox-fast-path",
@@ -225,6 +241,12 @@ export interface DrainOptions {
    * alert.
    */
   readonly lines?: "owed" | "unsettled";
+  /**
+   * Whether the drain then says what it left due of the kinds it drained
+   * (design 232): the hourly firings', so a backlog is a line the hour it
+   * forms, not at the next daily digest.
+   */
+  readonly backlog?: boolean;
 }
 
 type ClaimedRow = typeof outbox.$inferSelect;
@@ -257,7 +279,7 @@ export function dueRowsOf(db: Db, kind: OutboxKind, now: number) {
     .from(outbox)
     .where(and(eq(outbox.kind, kind), lte(outbox.nextAttemptAt, now)))
     .orderBy(asc(outbox.nextAttemptAt))
-    .limit(OUTBOX_DRAIN_CAP);
+    .limit(drainCapOf(kind));
 }
 
 async function claimDue(
@@ -281,6 +303,26 @@ async function claimDue(
   if (first === undefined) return [];
   const claimed = await db.batch([first, ...rest]);
   return claimed.flat();
+}
+
+/**
+ * Run a row's handler, then settle the row: delete it, by its own id, so
+ * a row taken over by a newer write since it was read is that writer's to
+ * settle. A handler that did part of the work and owes the rest (design
+ * 232) leaves the row, at the backoff its claim set, with its attempts
+ * back at none, so a long job done a run at a time never reads as
+ * failing. Throws what the handler throws.
+ */
+async function runToSettle(
+  db: Db,
+  handler: ReturnType<typeof boundHandler>,
+  rowId: string,
+): Promise<void> {
+  const ofRow = eq(outbox.id, rowId);
+  const outcome = await handler.run(db, rowId);
+  await (outcome === OWED_AGAIN
+    ? db.update(outbox).set({ attempts: 0 }).where(ofRow)
+    : db.delete(outbox).where(ofRow));
 }
 
 /**
@@ -316,10 +358,7 @@ async function didSettle(
   const { message } = read;
   const handler = boundHandler(handlers, message);
   try {
-    await handler.run(db, row.id);
-    // Its own id, as the fast path does: a row taken over by a newer
-    // write since this run claimed it is that writer's to settle.
-    await db.delete(outbox).where(eq(outbox.id, row.id));
+    await runToSettle(db, handler, row.id);
     return true;
   } catch (error) {
     report(error, { ...where, ...handler.context() });
@@ -358,6 +397,9 @@ export async function drainOutbox(
     const line = drainLine(kind, claimed.length, settled, options.lines);
     if (line !== undefined) anomalies.push(line);
   }
+  if (options.backlog !== true) return;
+  const left = await stillDueOf(db, now, kinds);
+  anomalies.push(...left.map((row) => stillDueLine(row, now)));
 }
 
 /**
@@ -389,7 +431,11 @@ function drainLine(
  * passes the digest's start as a subquery; exported for the test that
  * reads its plan.
  */
-export function stillDueOf(db: Db, now: number | SQL<number>) {
+export function stillDueOf(
+  db: Db,
+  now: number | SQL<number>,
+  kinds: readonly OutboxKind[] = outboxKinds,
+) {
   return db
     .select({
       kind: outbox.kind,
@@ -398,10 +444,7 @@ export function stillDueOf(db: Db, now: number | SQL<number>) {
     })
     .from(outbox)
     .where(
-      and(
-        inArray(outbox.kind, [...outboxKinds]),
-        lte(outbox.nextAttemptAt, now),
-      ),
+      and(inArray(outbox.kind, [...kinds]), lte(outbox.nextAttemptAt, now)),
     )
     .groupBy(outbox.kind);
 }
@@ -449,10 +492,17 @@ export async function checkOutboxBacklog(
     );
   }
   const stillDue = await stillDueOf(db, now);
-  for (const { kind, rows, oldest } of stillDue) {
-    const waited = Math.floor((now - (oldest ?? now)) / HOUR_S);
-    anomalies.push(
-      `${String(rows)} ${kind} outbox row(s) still due after the drain, which takes ${String(OUTBOX_DRAIN_CAP)} a run; the oldest has waited ${String(waited)}h`,
-    );
-  }
+  anomalies.push(...stillDue.map((row) => stillDueLine(row, now)));
+}
+
+/**
+ * One kind's rows still due after a drain, and how long the oldest has
+ * waited: the daily check's line, and the hourly drain's (design 232).
+ */
+function stillDueLine(
+  row: Readonly<{ kind: string; rows: number; oldest: number | null }>,
+  now: number,
+): string {
+  const waited = Math.floor((now - (row.oldest ?? now)) / HOUR_S);
+  return `${String(row.rows)} ${row.kind} outbox row(s) still due after the drain, which takes ${String(drainCapOf(row.kind))} a run; the oldest has waited ${String(waited)}h`;
 }

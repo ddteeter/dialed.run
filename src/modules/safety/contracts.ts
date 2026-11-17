@@ -384,3 +384,29 @@ export type RenameReason = (typeof renameReasons)[number];
 export const renameReasonSchema = z.enum(renameReasons, {
   message: "Pick why the name has to go.",
 });
+
+/**
+ * Reports one runner may file in a day (design 232, SA-M10). GUESS
+ * pending the owner's answer: 20.
+ */
+export const REPORTS_PER_DAY = 20;
+
+/**
+ * Reports a day, of a reason that hides at once, that may hide at once
+ * (design 232). Past it such a report is filed and queued and hides
+ * nothing until a person looks. GUESS pending the owner's answer: 3.
+ */
+export const AT_ONCE_HIDES_PER_DAY = 3;
+
+/**
+ * What the report sheet says when nothing was filed (design 232), by the
+ * answer's status: a status with no line here (`filed`) says nothing.
+ * GUESS pending the owner's answer.
+ */
+export const REPORT_REFUSED: ReadonlyMap<string | undefined, string> = new Map([
+  ["not_found", "We couldn't find that to report. It may have been deleted."],
+  [
+    "limited",
+    `That's ${String(REPORTS_PER_DAY)} reports today. You can report again tomorrow.`,
+  ],
+]);

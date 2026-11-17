@@ -27,18 +27,27 @@ type PayloadOf<K extends OutboxKind> = Extract<
   { kind: K }
 >["payload"];
 
+/**
+ * What a handler's run answers when it did part of the work and owes the
+ * rest (design 232). Anything else it resolves to means done. A symbol,
+ * so no other value a handler resolves to can be mistaken for it.
+ */
+export const OWED_AGAIN: unique symbol = Symbol();
+
 export type OutboxHandlers = {
   readonly [K in OutboxKind]: {
     /**
      * Does the work; throws when it could not, and the row stays owed.
      * `rowId` is the row being worked, for a handler that must mark it
-     * before the delete (an email, once sent).
+     * before the delete (an email, once sent). `OWED_AGAIN` says the work is
+     * done in part and the rest is owed to the next drain (design 232): the
+     * row stays, with its attempts back at none, since nothing failed.
      */
     readonly run: (
       db: Db,
       payload: PayloadOf<K>,
       rowId: string,
-    ) => Promise<void>;
+    ) => Promise<unknown>;
     /**
     Sentry context for a failure (law 7): ids to act on, never secrets.
     */
@@ -58,7 +67,7 @@ export function boundHandler<K extends OutboxKind>(
   handlers: OutboxHandlers,
   message: { readonly kind: K; readonly payload: PayloadOf<K> },
 ): {
-  run: (db: Db, rowId: string) => Promise<void>;
+  run: (db: Db, rowId: string) => Promise<unknown>;
   context: () => Record<string, string>;
 } {
   const handler = handlers[message.kind];
@@ -103,6 +112,38 @@ export function isLiveObject(key: string, live: string | undefined): boolean {
 }
 
 /**
+ * The most pages one listing reads (1,000 objects each) before it stops.
+ * A garment's photos are one page; the largest real listing is a runner's
+ * every entry photo when the account goes, about 70 pages for three kits a
+ * day for five years with four photos each in their sizes. A thousand
+ * pages is a million objects, far past any runner, and keeps a listing
+ * that never ends (a cursor that does not advance) from running forever.
+ */
+const MAX_LIST_PAGES = 1000;
+
+/**
+ * Hands each page of `MEDIA`'s listing to `handle`, following the cursor.
+ * Past `maxPages` it throws, so the outbox row stays owed and the drain
+ * reports it (its retry and Sentry) rather than looping on.
+ */
+async function forEachPage(
+  options: R2ListOptions,
+  maxPages: number,
+  handle: (page: R2Objects) => Promise<void>,
+): Promise<void> {
+  const listing: R2ListOptions = { ...options };
+  for (let pages = 0; pages < maxPages; pages += 1) {
+    const page = await env.MEDIA.list(listing);
+    await handle(page);
+    if (!page.truncated) return;
+    listing.cursor = page.cursor;
+  }
+  throw new Error(
+    `listed ${String(maxPages)} pages under one prefix without reaching its end`,
+  );
+}
+
+/**
  * Bring a garment's R2 prefix into line with its row: delete every object
  * there except the photo the row names. One operation for all three debts
  * — Remove (the row names nothing), Delete (there is no row), Replace (the
@@ -123,29 +164,25 @@ export function isLiveObject(key: string, live: string | undefined): boolean {
  * leave a photo the runner just removed in storage until the next drain.
  *
  * `pageSize` is R2's own cap by default; a test passes a small one so the
- * cursor is exercised without writing a thousand objects.
+ * cursor is exercised without writing a thousand objects, and a small
+ * `maxPages` to reach the cap (`forEachPage`).
  */
 export async function reconcileItemPhotos(
   db: Db,
   userId: string,
   itemId: string,
   pageSize = 1000,
+  maxPages = MAX_LIST_PAGES,
 ): Promise<void> {
-  const options: R2ListOptions = {
-    prefix: `${photoKeyFor(userId, itemId)}/`,
-    limit: pageSize,
-  };
-  for (;;) {
-    const page = await env.MEDIA.list(options);
+  const prefix = `${photoKeyFor(userId, itemId)}/`;
+  await forEachPage({ prefix, limit: pageSize }, maxPages, async (page) => {
     const live = await livePhotoKey(db, userId, itemId);
     await env.MEDIA.delete(
       page.objects
         .map((object) => object.key)
         .filter((key) => !isLiveObject(key, live)),
     );
-    if (!page.truncated) return;
-    options.cursor = page.cursor;
-  }
+  });
 }
 
 /**
@@ -240,19 +277,14 @@ export async function reconcileEntryPhotos(
   userId: string,
   entryId: string | undefined,
   pageSize = 1000,
+  maxPages = MAX_LIST_PAGES,
 ): Promise<void> {
-  const options: R2ListOptions = {
-    prefix: entryPhotoPrefix(userId, entryId),
-    limit: pageSize,
-  };
-  for (;;) {
-    const page = await env.MEDIA.list(options);
+  const prefix = entryPhotoPrefix(userId, entryId);
+  await forEachPage({ prefix, limit: pageSize }, maxPages, async (page) => {
     const keys = page.objects.map((object) => object.key);
     const live = await liveEntryPhotoKeys(db, keys);
     await env.MEDIA.delete(keys.filter((key) => !live.has(key)));
-    if (!page.truncated) return;
-    options.cursor = page.cursor;
-  }
+  });
 }
 
 /**
@@ -274,7 +306,10 @@ const importFileDelete: OutboxHandlers["import_file_delete"] = {
  * `linkTypedGarments`, which `ops` cannot import — `closet` imports `ops`
  * — so the Worker entry hands it to the firings (`DailyUpkeep`).
  */
-export type ProductLinker = (db: Db, userId: string) => Promise<void>;
+export type ProductLinker = (
+  db: Db,
+  userId: string,
+) => Promise<"linked" | "more">;
 
 /**
  * The `product_link` handler, bound to the linker handed in. With none, it
@@ -289,7 +324,11 @@ export function productLinkHandler(
       if (link === undefined) {
         throw new Error("product_link drained with no linker handed in");
       }
-      await link(db, payload.userId);
+      // A bounded run that left garments unlinked owes the rest to the
+      // next drain (design 232): not a failure.
+      return (await link(db, payload.userId)) === "more"
+        ? OWED_AGAIN
+        : undefined;
     },
     context: (payload) => ({ userId: payload.userId }),
   };
@@ -318,6 +357,8 @@ export const outboxHandlers: OutboxHandlers = {
   import_file_expire: importFileDelete,
   // Task 126 (ACC-2): an owed email (`emailHandler`).
   email: emailHandler(emailDepsFromEnv),
+  // Design 232: the operators' mail, sent as any email is.
+  operator_email: emailHandler(emailDepsFromEnv),
   // Design 133 (D-113 Q1): unwired here, and wired by the firings that
   // are handed the linker (`scheduled.ts`).
   product_link: productLinkHandler(undefined),

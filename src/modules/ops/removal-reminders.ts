@@ -23,7 +23,7 @@ import type { drizzle } from "drizzle-orm/d1";
 
 import { cronCheckpoints } from "../../db/schema-core";
 import { nowSeconds } from "../../lib/now";
-import { emailDebt } from "../email";
+import { operatorEmailMessage } from "../../lib/sql/outbox";
 import {
   adminUserIds,
   REMOVAL_REMINDER_LEAD_SECONDS,
@@ -70,13 +70,14 @@ export async function oweRemindersSince(
     adminUserIds().map((userId) =>
       outboxInsertWhere(
         db,
+        // An operator's mail, drained first (design 232).
         oweOutbox(
-          emailDebt(
+          operatorEmailMessage(
             {
               to: { userId },
               template: { kind: "removal_reminder", dueAt: removal.dueAt },
             },
-            { dedupeKey: `removal_reminder:${removal.key}:${userId}` },
+            `removal_reminder:${removal.key}:${userId}`,
           ),
         ),
         claimed,

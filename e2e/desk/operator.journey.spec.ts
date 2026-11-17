@@ -275,7 +275,9 @@ test("an operator opens the Desk and reads Today", async ({
   await expect(refused).toHaveCount(0);
 
   // Design 164: a bug holds five uploads as copies of a removed image in
-  // one hour, the fingerprint breaker's ceiling. Rows only, opened now.
+  // one hour, the fingerprint breaker's ceiling. Rows only, opened now,
+  // each from its own runner: the breaker counts uploaders (design 232),
+  // and a row whose subject is gone names its runner by `resolved_by`.
   const burst = Array.from({ length: 5 }, () => newUlid());
   await withLocalDb(async ({ core }) => {
     const now = nowSeconds();
@@ -288,6 +290,7 @@ test("an operator opens the Desk and reads Today", async ({
         status: "pending" as const,
         createdAt: now,
         openedAt: now,
+        resolvedBy: newUlid(),
       })),
     );
   });

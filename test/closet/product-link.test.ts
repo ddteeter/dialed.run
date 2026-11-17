@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -10,6 +10,7 @@ import {
   addFromTapList,
   getOwnedItem,
   isTapListPlaceholder,
+  LINK_BATCH,
   linkTypedGarments,
   nameItem,
 } from "../../src/modules/closet";
@@ -19,6 +20,7 @@ import {
 } from "../../src/modules/closet/service";
 import { resolveProduct } from "../../src/modules/products/service";
 import { addAccount } from "../feed/helpers";
+import { uniqueName } from "../unique-name";
 
 /**
  * Design 133, decision D-113 Q1: an unconfirmed runner's garments save
@@ -38,7 +40,7 @@ afterEach(() => {
  * catalogues that no reset clears.
  */
 function unique(prefix: string): string {
-  return `${prefix}${newUlid()}`;
+  return uniqueName(prefix);
 }
 
 async function runner(isConfirmed: boolean): Promise<string> {
@@ -425,7 +427,8 @@ describe("linkTypedGarments — the link a confirmation owes", () => {
       brand,
     });
 
-    await linkTypedGarments(db(), userId);
+    // Nothing more is owed by this run: the confirmation owes it again.
+    expect(await linkTypedGarments(db(), userId)).toBe("linked");
 
     const unlinked = await getOwnedItem(db(), userId, item.id);
     expect(unlinked.productId).toBeNull();
@@ -660,4 +663,114 @@ describe("linkTypedGarments — the link a confirmation owes", () => {
       );
     expect(owned?.id).toBe(item.id);
   });
+});
+
+async function typedGarments(userId: string, n: number): Promise<void> {
+  const brand = unique("Brand");
+  for (let index = 0; index < n; index += 1) {
+    await createItem(db(), userId, {
+      category: "top",
+      name: unique(`Tee ${String(index)} `),
+      brand,
+    });
+  }
+}
+
+async function unlinkedCount(userId: string): Promise<number> {
+  const rows = await db()
+    .select({ id: wardrobeItems.id })
+    .from(wardrobeItems)
+    .where(
+      and(eq(wardrobeItems.userId, userId), isNull(wardrobeItems.productId)),
+    );
+  return rows.length;
+}
+
+describe("a bounded link run (design 232)", () => {
+  it("links LINK_BATCH garments a run and says more are owed", async () => {
+    const userId = await runner(false);
+    await typedGarments(userId, LINK_BATCH + 2);
+    await confirm(userId);
+
+    expect(await linkTypedGarments(db(), userId)).toBe("more");
+    expect(await unlinkedCount(userId)).toBe(2);
+
+    expect(await linkTypedGarments(db(), userId)).toBe("linked");
+    expect(await unlinkedCount(userId)).toBe(0);
+  });
+
+  it("says linked when exactly LINK_BATCH were owed", async () => {
+    const userId = await runner(false);
+    await typedGarments(userId, LINK_BATCH);
+    await confirm(userId);
+
+    expect(await linkTypedGarments(db(), userId)).toBe("linked");
+    expect(await unlinkedCount(userId)).toBe(0);
+  });
+});
+
+describe("a listed word makes no shared row (design 232)", () => {
+  it("saves a confirmed runner's garment with a listed brand, and makes no brand or product", async () => {
+    const userId = await runner(true);
+    const brand = `Bitch ${newUlid()}`;
+    const name = unique("Tee");
+
+    const item = await createItem(db(), userId, {
+      category: "top",
+      name,
+      brand,
+    });
+
+    expect(item.productId).toBeNull();
+    expect(item.brand).toBe(brand);
+    expect(await brandRows(brand)).toHaveLength(0);
+    expect(await productRows(name)).toHaveLength(0);
+  });
+
+  it("saves a confirmed runner's garment with a listed name, and makes no product", async () => {
+    const userId = await runner(true);
+    const name = `Blue Waffle ${newUlid()}`;
+
+    const resolved = await withResolvedProduct(
+      db(),
+      { category: "top", name, brand: unique("Brand"), productId: newUlid() },
+      userId,
+    );
+
+    expect(resolved.productId).toBeUndefined();
+    expect(await productRows(name)).toHaveLength(0);
+  });
+
+  it("leaves a typed garment with a listed word unlinked once its runner confirms", async () => {
+    const userId = await runner(false);
+    const name = `Fuck ${newUlid()}`;
+    const item = await createItem(db(), userId, {
+      category: "top",
+      name,
+      brand: unique("Brand"),
+    });
+    await confirm(userId);
+
+    await linkTypedGarments(db(), userId);
+
+    const after = await getOwnedItem(db(), userId, item.id);
+    expect(after.productId).toBeNull();
+    expect(await productRows(name)).toHaveLength(0);
+  });
+
+  it.each([
+    ["brand", { brand: "Bitch Co", model: "Racer" }],
+    ["model", { brand: "Ordinary", model: "Blue Waffle" }],
+  ] as const)(
+    "names a garment with a listed %s and links nothing",
+    async (_which, identity) => {
+      const userId = await runner(true);
+      const itemId = await tapListRow(userId);
+
+      const named = await nameItem(db(), userId, itemId, identity);
+
+      expect(named.productId).toBeNull();
+      expect(named.brand).toBe(identity.brand);
+    },
+  );
 });

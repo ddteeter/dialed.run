@@ -101,6 +101,8 @@ const READERS: Readonly<Record<string, Reason>> = {
   "src/modules/safety/bans.ts": "operator",
   // The blocker's own list, of runners they found to block.
   "src/modules/safety/blocks.ts": "own",
+  // The breaker's count names no runner: it counts distinct uploaders.
+  "src/modules/safety/breakers.ts": "machinery",
   "src/modules/safety/copyright-holds.ts": "operator",
   "src/modules/safety/desk-kit.ts": "operator",
   "src/modules/safety/kit-cache-tags.ts": "machinery",
@@ -110,6 +112,10 @@ const READERS: Readonly<Record<string, Reason>> = {
   "src/modules/safety/other-photos.ts": "operator",
   "src/modules/safety/photo-matches.ts": "operator",
   "src/modules/safety/quarantine.ts": "operator",
+  // Answers whether a report may name a subject, and shows nothing.
+  "src/modules/safety/reportable.ts": "machinery",
+  // Writes the owner's own record of their delete, and shows nothing.
+  "src/modules/safety/withdrawn.ts": "own",
   "src/modules/safety/removed-fingerprints.ts": "operator",
   "src/modules/safety/reports.ts": "machinery",
   "src/modules/safety/review-audit.ts": "operator",

@@ -6,7 +6,8 @@
  *
  * **Derived, not stored.** The flag is what `moderation_actions` already
  * records: a Remove or takedown of the runner's kit, photo or garment
- * photo with the `intimate` statement, and no decision on their account
+ * photo with the `intimate` statement, or their own delete of one under
+ * such a review (`withdrawn`, design 232), and no decision on their account
  * since. A decision is a Close account, a Reopen, or a Keep account
  * (`keep`, written here). A later intimate removal flags the account
  * again. A flag column would be a second copy of a fact the audit rows
@@ -33,7 +34,7 @@ const INTIMATE = removalStatements.intimate;
 /**
 The actions that remove a thing, and the ones that decide an account.
 */
-const removing = ["remove", "takedown"] as const;
+const removing = ["remove", "takedown", "withdrawn"] as const;
 const deciding = ["ban", "unban", "keep"] as const;
 
 /**

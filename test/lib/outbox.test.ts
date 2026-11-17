@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   dedupeKeyFor,
+  operatorEmailMessage,
   outboxKinds,
   readOutboxRow,
   scheduledOutboxKinds,
@@ -14,6 +15,7 @@ describe("outboxKinds", () => {
       "entry_media_delete",
       "import_file_delete",
       "import_file_expire",
+      "operator_email",
       "email",
       "product_link",
       "manual_conditions_delete",
@@ -22,12 +24,41 @@ describe("outboxKinds", () => {
 });
 
 describe("scheduledOutboxKinds", () => {
-  it("is the failed import's file and the product link: every other kind is a fast path's debt", () => {
-    // The link a confirmation owes (D-113 Q1) has no fast path at all.
+  it("is the failed import's file, the product link and the operators' mail: every other kind is a fast path's debt", () => {
+    // The link a confirmation owes (D-113 Q1) has no fast path at all, and
+    // nor has an operator's email (design 232).
     expect(scheduledOutboxKinds).toStrictEqual([
       "import_file_expire",
       "product_link",
+      "operator_email",
     ]);
+  });
+});
+
+describe("operatorEmailMessage (design 232)", () => {
+  it("owes an operator's email as its own kind, keyed by its writer", () => {
+    const message = operatorEmailMessage(
+      {
+        to: { userId: "op-one" },
+        template: { kind: "takedown_valve", perHour: 10 },
+      },
+      "takedown_valve:1:op-one",
+    );
+
+    expect(message).toStrictEqual({
+      kind: "operator_email",
+      payload: {
+        dedupeKey: "takedown_valve:1:op-one",
+        email: {
+          to: { userId: "op-one" },
+          template: { kind: "takedown_valve", perHour: 10 },
+        },
+      },
+    });
+    expect(dedupeKeyFor(message)).toBe("takedown_valve:1:op-one");
+    expect(
+      readOutboxRow("operator_email", JSON.stringify(message.payload)),
+    ).toMatchObject({ ok: true });
   });
 });
 

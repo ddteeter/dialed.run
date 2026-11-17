@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -117,11 +117,12 @@ type OwedEmail = z.infer<typeof owedEmail>;
 
 async function owed() {
   const rows = await core()
-    .select({ payload: outbox.payload })
+    .select({ kind: outbox.kind, payload: outbox.payload })
     .from(outbox)
-    .where(eq(outbox.kind, "email"));
+    // A receipt is `email`, an operator's alert `operator_email` (design 232).
+    .where(inArray(outbox.kind, ["email", "operator_email"]));
   return rows.map((row) => {
-    const read = readOutboxRow("email", row.payload);
+    const read = readOutboxRow(row.kind, row.payload);
     if (!read.ok) throw new Error(read.problem);
     return owedEmail.parse(read.message.payload);
   });

@@ -23,6 +23,7 @@ import {
   isNull,
   ne,
   or,
+  sql,
 } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
@@ -40,12 +41,12 @@ import { columnWhere, hasRowWhere } from "../../lib/sql/keyed-read";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 
-import type { OutboxMessage } from "../../lib/sql/outbox";
+import { operatorEmailMessage, type OutboxMessage } from "../../lib/sql/outbox";
 import {
   hiddenByReport,
   REMOVAL_DUE_SECONDS,
   reasonsOnTheClock,
-  reportReasons,
+  STORED_REPORT_REASONS,
   type ReportReason,
   type ReportSubjectType,
 } from "./contracts";
@@ -54,6 +55,7 @@ import {
   fewestReportersToHide,
   moderationThresholds,
   reportersToHide,
+  type ModerationThresholds,
 } from "./thresholds";
 import { blockRunner } from "./blocks";
 import { ceilingReading } from "./breakers";
@@ -61,6 +63,7 @@ import { subjectCacheTagsOf } from "./kit-cache-tags";
 import { hiddenNotice, reporterIdsOf } from "./notices";
 import { enqueueForReview, firstReportHidingAtOnce } from "./review";
 import { heldPhotoStatus } from "./visibility";
+import { isWithinAtOnceLimit, reportRefusalOf } from "./reportable";
 
 /**
  * Owes an outbox row in the caller's batch — the operators' removal alert
@@ -84,12 +87,11 @@ function removalAlerts(
 ): BatchItem<"sqlite">[] {
   const subject = hiddenByReport[subjectType];
   if (subject === undefined) return [];
+  // An operator's mail, drained ahead of every other email (design 232).
   return adminUserIds().map((userId) =>
-    owe({
-      kind: "email",
-      payload: {
-        dedupeKey: `removal_due:${subjectType}:${subjectId}:${userId}`,
-        email: {
+    owe(
+      operatorEmailMessage(
+        {
           to: { userId },
           template: {
             kind: "removal_due",
@@ -97,8 +99,9 @@ function removalAlerts(
             dueAt: reportedAt + REMOVAL_DUE_SECONDS,
           },
         },
-      },
-    }),
+        `removal_due:${subjectType}:${subjectId}:${userId}`,
+      ),
+    ),
   );
 }
 
@@ -122,17 +125,26 @@ export interface FileReportInput {
   alsoBlock?: boolean | undefined;
 }
 
-export interface FileReportResult {
-  readonly status: "filed";
-  /**
-  Distinct people who have now reported this subject.
-  */
-  reporterCount: number;
-  /**
-  Whether this report is what crossed the threshold.
-  */
-  hiddenPendingReview: boolean;
-}
+/**
+ * What filing answered (design 232): `filed`, with where the subject
+ * stands; `not_found`, a subject that does not exist or the reporter
+ * cannot see, which writes nothing; `limited`, past the reporter's
+ * reports for the day, which writes nothing either.
+ */
+export type FileReportResult =
+  | {
+      readonly status: "filed";
+      /**
+      Distinct people who have now reported this subject.
+      */
+      reporterCount: number;
+      /**
+      Whether this report is what crossed the threshold.
+      */
+      hiddenPendingReview: boolean;
+    }
+  | { readonly status: "not_found" }
+  | { readonly status: "limited" };
 
 /**
  * Files a report, and hides the subject globally if this is the third
@@ -143,7 +155,16 @@ export interface FileReportResult {
  * genuine second submission, and W1 gives the reporter no feedback that
  * would let them tell either. `onConflictDoNothing` against the UNIQUE
  * index makes the second one a no-op that still returns the truth about
- * where the subject stands.
+ * where the subject stands: a call that added no reporter hides nothing,
+ * re-opens nothing and owes nothing (SA-M21), so a decision a person made
+ * on the subject stands against the same reporter's repeat.
+ *
+ * **It names something the reporter can see** (SA-M10): a subject that
+ * does not exist, or a kit that is neither theirs nor shared, is
+ * `not_found` and writes nothing. And it is counted: past
+ * `REPORTS_PER_DAY` a call is `limited`, and past `AT_ONCE_HIDES_PER_DAY`
+ * a reason that hides at once is filed and queued for a person (with its
+ * alert) but hides nothing.
  *
  * **It waits for a confirmed address** (round 26 #11; SAF-15, seam 7):
  * report is one of the things that "trusts the address". The
@@ -158,9 +179,11 @@ export async function fileReport(
   owe: OweEmail,
   purge: PurgeTags,
 ): Promise<FileReportResult> {
+  const refused = await reportRefusalOf(db(), input, nowSeconds());
+  if (refused !== undefined) return { status: refused };
   const database = db();
   const reportedAt = nowSeconds();
-  await database
+  const added = await database
     .insert(reports)
     .values({
       id: newUlid(),
@@ -177,24 +200,31 @@ export async function fileReport(
     // The UNIQUE index is on (reporter, subjectType, subjectId), so this
     // drops a second report of the same thing by the same person. That is
     // what makes the count below a count of people rather than of clicks.
-    .onConflictDoNothing();
+    .onConflictDoNothing()
+    .returning({ id: reports.id });
 
   // Only a profile can be blocked — a report against an entry names the
   // entry, and blocking its author would need a lookup the reporter never
   // asked for. W1 offers the checkbox only where there is somebody to
-  // block, and this is the same rule on the write side.
-  if (input.alsoBlock === true && input.subjectType === "profile") {
+  // block, and `blockRunner` is the same rule on the write side: it blocks
+  // only an id with a profile (design 232), so a kit's id blocks nothing.
+  if (input.alsoBlock === true) {
     await blockRunner(input.reporterId, input.subjectId);
   }
 
-  const reporterCount = await distinctReporterCount(
-    input.subjectType,
-    input.subjectId,
-  );
+  const filed = await filedReasonsOf(input.subjectType, input.subjectId);
+  const reporterCount = filed.length;
 
-  // The reason sets the bar (design 136, D-117), and the bar is config
-  // (`./thresholds`), one person when it is missing.
-  if (reporterCount < reportersToHide(input.reason, moderationThresholds())) {
+  // A repeat adds nobody, so it changes nothing (SA-M21): the hourly
+  // sweep still finishes a hide a crash left undone, by its own marker.
+  // The reasons set the bar (design 136, D-117), and the bar is config
+  // (`./thresholds`), one person when it is missing: the lowest bar of
+  // the reasons filed, whatever order they came in (design 232), which is
+  // the sweep's rule too.
+  if (
+    added.length === 0 ||
+    reporterCount < fewestReportersToHide(filed, moderationThresholds())
+  ) {
     return { status: "filed", reporterCount, hiddenPendingReview: false };
   }
 
@@ -202,7 +232,9 @@ export async function fileReport(
   const alerts = isAtOnce
     ? removalAlerts(owe, input.subjectType, input.subjectId, reportedAt)
     : [];
-  const canHide = await canHideNow(isAtOnce, reportedAt);
+  const canHide = isAtOnce
+    ? await isWithinAtOnceLimit(database, input.reporterId, reportedAt)
+    : await canHideNow(false, reportedAt);
   await hidePendingReview(
     input.subjectType,
     input.subjectId,
@@ -259,14 +291,12 @@ export async function reconcileUnhiddenReports(
   // when there is none: both the second way over the bar and the time the
   // removal's 48 hours started.
   const firstAtOnce = firstReportHidingAtOnce();
-  // Over by count: as many reporters as the least any reason off the
-  // clock needs. A reason on it is over at its first report, as above.
-  const offTheClock = reportReasons
-    .map((reason) => reason.value)
-    .filter((reason) => !reasonsOnTheClock.includes(reason));
+  // Over by count: as many reporters as the lowest bar among the reasons
+  // actually filed on the subject, as `fileReport` asks (design 232). A
+  // reason on the clock is over at its first report, as above.
   const enoughReporters = gte(
     countDistinct(reports.reporterId),
-    fewestReportersToHide(offTheClock, moderationThresholds()),
+    lowestFiledBar(moderationThresholds()),
   );
   const over = await database
     .select({
@@ -306,6 +336,41 @@ export async function reconcileUnhiddenReports(
     if (canHide) outcome.hidden += 1;
   }
   return outcome;
+}
+
+/**
+ * The lowest bar among a group's filed reasons, as SQL for a `HAVING`
+ * over `reports`: each stored reason's bar from the config, spelt into a
+ * `CASE` (they are integers the config parsed, not input).
+ */
+function lowestFiledBar(thresholds: ModerationThresholds | undefined): SQL {
+  const bars = STORED_REPORT_REASONS.map((reason) => {
+    const bar = sql.raw(String(reportersToHide(reason, thresholds)));
+    return sql`when ${reason} then ${bar}`;
+  });
+  const between = sql` `;
+  return sql`min(case ${reports.reason} ${sql.join(bars, between)} end)`;
+}
+
+/**
+ * The reasons filed on a subject, one a reporter (the UNIQUE index), so
+ * its length is the distinct reporter count.
+ */
+async function filedReasonsOf(
+  subjectType: ReportSubjectType,
+  subjectId: string,
+): Promise<ReportReason[]> {
+  return columnWhere(
+    db(),
+    reports,
+    reports.reason,
+    subjectMatches(
+      reports.subjectType,
+      reports.subjectId,
+      subjectType,
+      subjectId,
+    ),
+  );
 }
 
 /**
@@ -439,8 +504,10 @@ async function hidePendingReview(
     // What the reports breaker counts: an opening that hid (design 164).
     hid: canHide ? 1 : 0,
   });
+  // Queued only, it still owes its alerts (design 232): a person must
+  // still look within the 48 hours, and the alert is what says so.
   if (!canHide) {
-    await queueWrite;
+    await db().batch([queueWrite, ...alerts]);
     return;
   }
 

@@ -32,6 +32,7 @@ export { banGate } from "./ban-gate";
 export {
   blockRunner,
   blockedAmong,
+  blockedCount,
   blockedRunners,
   hiddenCounterpartIds,
   isBlocked,
@@ -60,6 +61,8 @@ export {
   type RenameReason,
   type ReportReason,
   type ReportSubjectType,
+  AT_ONCE_HIDES_PER_DAY,
+  REPORTS_PER_DAY,
 } from "./contracts";
 
 export {
@@ -137,6 +140,7 @@ export {
   type FileReportResult,
   type ReconcileReport,
 } from "./reports";
+export { forgetReportCounts } from "./reportable";
 
 // C8 (D-132, D-145): the notices a report's life owes.
 export {
@@ -310,3 +314,6 @@ export {
   type HoldCause,
 } from "./breakers";
 export { kitPiecesSelect } from "./kit-pieces";
+
+// Design 232: an owner's delete of a kit photo under review.
+export { withdrawnGarmentUnderReview, withdrawnUnderReview } from "./withdrawn";

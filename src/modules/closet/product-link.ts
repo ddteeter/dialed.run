@@ -30,6 +30,7 @@ import type { drizzle } from "drizzle-orm/d1";
 import type { SQLiteUpdateSetSource } from "drizzle-orm/sqlite-core";
 
 import { wardrobeItems } from "../../db/schema-core";
+import { isListedName } from "../../lib/contracts/profanity";
 import { normalizeIdentity } from "../../lib/normalize";
 import { ownedBy } from "../../lib/sql/owned";
 import { isUnconfirmed } from "../account";
@@ -125,7 +126,12 @@ export async function nameItem(
     name: model === "" ? row.name : model,
     origin: "manual" as const,
   };
-  if (await isUnconfirmed(db, userId)) {
+  // Unconfirmed, or a listed word (design 232): saved as typed, no shared row.
+  if (
+    isListedName(typed.brand) ||
+    isListedName(typed.name) ||
+    (await isUnconfirmed(db, userId))
+  ) {
     return updateOwnedItem(db, userId, itemId, typed);
   }
   const link = await linkedColumns(
@@ -147,9 +153,18 @@ export async function nameItem(
  */
 function isLinkable(row: TypedRow): boolean {
   return (
-    normalizeIdentity(row.brand) !== "" && normalizeIdentity(row.name) !== ""
+    normalizeIdentity(row.brand) !== "" &&
+    normalizeIdentity(row.name) !== "" &&
+    // A listed word makes no shared row (design 232).
+    !isListedName(row.brand) &&
+    !isListedName(row.name)
   );
 }
+
+/**
+Garments one `product_link` run links (design 232).
+*/
+export const LINK_BATCH = 25;
 
 /**
  * Link every garment of this runner's that carries a typed brand and no
@@ -163,13 +178,19 @@ function isLinkable(row: TypedRow): boolean {
  * loop: the outbox row stays owed and the drain retries, re-reading only
  * what is still unlinked, and a row that keeps failing reaches the digest
  * as a terminal outbox row (law 6).
+ *
+ * **Bounded** (design 232, SA-L16): at most `LINK_BATCH` garments a run,
+ * since each costs several D1 calls and the run shares a cron
+ * invocation's budget. Past it the answer is `more`, and the handler owes
+ * the link again for the next drain, which re-reads only what is still
+ * unlinked.
  */
 export async function linkTypedGarments(
   db: Db,
   userId: string,
   report: Report = captureException,
-): Promise<void> {
-  if (await isUnconfirmed(db, userId)) return;
+): Promise<"linked" | "more"> {
+  if (await isUnconfirmed(db, userId)) return "linked";
   // `wardrobe_user_category` leads on the runner, so this reads only
   // their rows.
   const rows = await db
@@ -189,9 +210,9 @@ export async function linkTypedGarments(
         sql`${typedBrand()} <> ''`,
       ),
     );
+  const linkable = rows.filter((row) => isLinkable(row));
   let failed = 0;
-  for (const row of rows) {
-    if (!isLinkable(row)) continue;
+  for (const row of linkable.slice(0, LINK_BATCH)) {
     try {
       const link = await linkedColumns(
         db,
@@ -211,4 +232,5 @@ export async function linkTypedGarments(
   if (failed > 0) {
     throw new Error(`${String(failed)} garment(s) did not link`);
   }
+  return linkable.length > LINK_BATCH ? "more" : "linked";
 }

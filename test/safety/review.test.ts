@@ -41,9 +41,9 @@ const autoHideReporterThreshold = reportersToHide(
 import { noPurge } from "../purge-spy";
 import {
   makeEntry,
+  makeProduct,
   makeRun,
   makeUser,
-  NOW,
   resetSafetyTables,
 } from "./helpers";
 import { nowSeconds } from "../../src/lib/now";
@@ -191,13 +191,13 @@ describe("resolving a decision", () => {
   it("approving leaves the runner's own sharing choice untouched", async () => {
     const author = await makeUser();
     const runId = await makeRun({ userId: author });
-    // A private entry that then gets reported. If the hide had written
-    // the audience (or the boolean kept in step with it until C1),
-    // approving would silently publish it.
+    // A shared entry that gets reported, then made private by its author
+    // while it waits. If the hide had written the audience (or the boolean
+    // kept in step with it until C1), approving would silently publish it.
     const entryId = await makeEntry({
       userId: author,
       runId,
-      audience: "private",
+      audience: "runners",
     });
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
       await fileReport(
@@ -211,6 +211,10 @@ describe("resolving a decision", () => {
         noPurge,
       );
     }
+    await core()
+      .update(outfitEntries)
+      .set({ audience: "private" })
+      .where(eq(outfitEntries.id, entryId));
     const [queued] = await pendingReviewQueue();
     if (!queued) throw new Error("nothing queued");
 
@@ -279,17 +283,7 @@ describe("resolving a decision", () => {
   });
 
   it("hides a removed product so it drops out of autocomplete", async () => {
-    const productId = newUlid();
-    await core()
-      .insert(products)
-      .values({
-        id: productId,
-        brandId: newUlid(),
-        name: "Some Shoe",
-        normalizedName: "some shoe",
-        createdBy: await makeUser(),
-        createdAt: NOW,
-      });
+    const productId = await makeProduct();
 
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
       await fileReport(
@@ -324,17 +318,7 @@ async function reportedProduct(): Promise<{
   productId: string;
   queueId: string;
 }> {
-  const productId = newUlid();
-  await core()
-    .insert(products)
-    .values({
-      id: productId,
-      brandId: newUlid(),
-      name: "Some Shoe",
-      normalizedName: "some shoe",
-      createdBy: await makeUser(),
-      createdAt: NOW,
-    });
+  const productId = await makeProduct();
   for (let n = 0; n < autoHideReporterThreshold; n += 1) {
     await fileReport(
       {
@@ -525,17 +509,7 @@ describe("what a decision writes", () => {
   });
 
   it("approving a product puts it back in autocomplete", async () => {
-    const productId = newUlid();
-    await core()
-      .insert(products)
-      .values({
-        id: productId,
-        brandId: newUlid(),
-        name: "Some Shoe",
-        normalizedName: "some shoe",
-        createdBy: await makeUser(),
-        createdAt: NOW,
-      });
+    const productId = await makeProduct();
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
       await fileReport(
         {
@@ -1016,17 +990,7 @@ describe("the queue itself", () => {
       .update(userProfiles)
       .set({ username: "mark_t" })
       .where(eq(userProfiles.userId, subject));
-    const productId = newUlid();
-    await core()
-      .insert(products)
-      .values({
-        id: productId,
-        brandId: newUlid(),
-        name: "Some Shoe",
-        normalizedName: "some shoe",
-        createdBy: await makeUser(),
-        createdAt: NOW,
-      });
+    const productId = await makeProduct();
     for (const [subjectType, subjectId] of [
       ["profile", subject],
       ["product", productId],
@@ -1068,16 +1032,7 @@ describe("the queue itself", () => {
       .update(userProfiles)
       .set({ username: "mark_t" })
       .where(eq(userProfiles.userId, subject));
-    await core()
-      .insert(products)
-      .values({
-        id: subject,
-        brandId: newUlid(),
-        name: "Some Shoe",
-        normalizedName: "some shoe",
-        createdBy: await makeUser(),
-        createdAt: NOW,
-      });
+    await makeProduct(subject);
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
       await fileReport(
         {

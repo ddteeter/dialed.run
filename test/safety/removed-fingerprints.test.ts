@@ -6,8 +6,10 @@ import {
   entryPhotos,
   moderationActions,
   notifications,
+  outfitEntries,
   removedFingerprints,
   reviewQueue,
+  takedownRequests,
   userProfiles,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
@@ -17,6 +19,14 @@ import { nowSeconds } from "../../src/lib/now";
 import { FINGERPRINT_HOLDS_PER_HOUR } from "../../src/modules/safety/breakers";
 import { moderateContent } from "../../src/modules/feed/moderation";
 import { uploadPhoto } from "../../src/modules/feed/photos";
+import {
+  deleteEntryPhoto,
+  deleteRuns,
+  retractEntries,
+} from "../../src/modules/feed/retract";
+import { fileReport } from "../../src/modules/safety/reports";
+import { flaggedAtOf } from "../../src/modules/safety/account-flags";
+import { oweInCore } from "../queue-fakes";
 import type { Classify } from "../../src/modules/safety";
 import {
   removedMatchOf,
@@ -36,6 +46,7 @@ import {
 
 import { queriesDuring } from "../d1-spy";
 import { makeEntry, makeRun, makeUser, resetTables } from "../feed/helpers";
+import { noPurge } from "../purge-spy";
 import { opened } from "./helpers";
 
 /**
@@ -135,6 +146,7 @@ async function queueRows() {
 
 beforeEach(resetTables);
 beforeEach(async () => {
+  await core().delete(takedownRequests);
   await core().delete(removedFingerprints);
   await core().delete(reviewQueue);
   await core().delete(moderationActions);
@@ -321,7 +333,14 @@ describe("a copy of a removed image is held for review (D-147)", () => {
     const bytes = await sceneJpeg(4);
     const first = await posted(bytes);
     await removed("photo", first.photoId);
-    await opened("fingerprint", FINGERPRINT_HOLDS_PER_HOUR, nowSeconds());
+    await opened(
+      "fingerprint",
+      FINGERPRINT_HOLDS_PER_HOUR,
+      nowSeconds(),
+      "photo",
+      undefined,
+      "each",
+    );
     const classify = vi.fn<Classify>(unscreened);
 
     const again = await posted(await copyOf(bytes), undefined, classify);
@@ -332,6 +351,96 @@ describe("a copy of a removed image is held for review (D-147)", () => {
     expect(classify).toHaveBeenCalledOnce();
     const queued = await queueRows();
     expect(queued.map((row) => row.subjectId)).not.toContain(again.photoId);
+  });
+
+  it("counts runners, not holds: one runner's five copies leave room for the next runner's (design 232)", async () => {
+    const bytes = await sceneJpeg(4);
+    const first = await posted(bytes);
+    await removed("photo", first.photoId);
+    // Four photos a kit, so the fifth copy goes on the runner's second kit.
+    const runner = await aKit();
+    const secondKit = {
+      userId: runner.userId,
+      entryId: await makeEntry({
+        userId: runner.userId,
+        runId: await makeRun({ userId: runner.userId }),
+      }),
+    };
+    for (let n = 0; n < FINGERPRINT_HOLDS_PER_HOUR; n += 1) {
+      await posted(await copyOf(bytes), n < 4 ? runner : secondKit);
+    }
+
+    const another = await posted(await copyOf(bytes));
+
+    expect(await photoRow(another.photoId)).toStrictEqual({
+      screenStatus: "hidden_pending_review",
+    });
+  });
+
+  it("still holds the runner who filled the hour, past the ceiling (design 232)", async () => {
+    const bytes = await sceneJpeg(4);
+    const first = await posted(bytes);
+    await removed("photo", first.photoId);
+    const runner = await aKit();
+    await posted(await copyOf(bytes), runner);
+    await opened(
+      "fingerprint",
+      FINGERPRINT_HOLDS_PER_HOUR,
+      nowSeconds(),
+      "photo",
+      undefined,
+      "each",
+    );
+
+    const again = await posted(await copyOf(bytes), runner);
+
+    expect(await photoRow(again.photoId)).toStrictEqual({
+      screenStatus: "hidden_pending_review",
+    });
+  });
+
+  it("still holds a runner whose held copy they deleted this hour (design 232)", async () => {
+    const bytes = await sceneJpeg(4);
+    const first = await posted(bytes);
+    await removed("photo", first.photoId);
+    const runner = await aKit();
+    const held = await posted(await copyOf(bytes), runner);
+    await deleteEntryPhoto(core(), runner.userId, held.photoId, quiet, noPurge);
+    await opened(
+      "fingerprint",
+      FINGERPRINT_HOLDS_PER_HOUR - 1,
+      nowSeconds(),
+      "photo",
+      undefined,
+      "each",
+    );
+
+    const again = await posted(await copyOf(bytes), runner);
+
+    expect(await photoRow(again.photoId)).toStrictEqual({
+      screenStatus: "hidden_pending_review",
+    });
+  });
+
+  it("does not hold a runner for another runner's hold this hour (design 232)", async () => {
+    const bytes = await sceneJpeg(4);
+    const first = await posted(bytes);
+    await removed("photo", first.photoId);
+    await posted(await copyOf(bytes));
+    await opened(
+      "fingerprint",
+      FINGERPRINT_HOLDS_PER_HOUR - 1,
+      nowSeconds(),
+      "photo",
+      undefined,
+      "each",
+    );
+
+    const again = await posted(await copyOf(bytes), undefined, unscreened);
+
+    expect(await photoRow(again.photoId)).toStrictEqual({
+      screenStatus: "pending",
+    });
   });
 
   it("never holds a plain picture, whatever was kept (design 164)", async () => {
@@ -594,5 +703,163 @@ describe("removedMatchOf", () => {
 
   it("refuses a value that is not a fingerprint, rather than spell it into SQL", async () => {
     await expect(removedMatchOf(core(), "'; drop table x")).rejects.toThrow();
+  });
+});
+
+/**
+The audit rows an owner's delete wrote, as action and subject.
+*/
+async function withdrawals() {
+  const rows = await core()
+    .select({
+      action: moderationActions.action,
+      actorId: moderationActions.actorId,
+      subjectType: moderationActions.subjectType,
+      subjectId: moderationActions.subjectId,
+      subjectOwnerId: moderationActions.subjectOwnerId,
+    })
+    .from(moderationActions)
+    .where(eq(moderationActions.action, "withdrawn"));
+  return rows;
+}
+
+async function reportedAs(
+  reason: "intimate" | "spam",
+  subjectType: "photo" | "entry",
+  subjectId: string,
+): Promise<void> {
+  await fileReport(
+    { reporterId: await makeUser(), subjectType, subjectId, reason },
+    oweInCore,
+    noPurge,
+  );
+}
+
+describe("an owner's delete under review (design 232)", () => {
+  it("keeps the fingerprint of a photo reported as intimate, writes its record and flags the account", async () => {
+    const bytes = await sceneJpeg(4);
+    const first = await posted(bytes);
+    await reportedAs("intimate", "photo", first.photoId);
+
+    await deleteEntryPhoto(core(), first.userId, first.photoId, quiet, noPurge);
+
+    expect(await keptRows()).toMatchObject([{ photoId: first.photoId }]);
+    expect(await withdrawals()).toStrictEqual([
+      {
+        action: "withdrawn",
+        actorId: first.userId,
+        subjectType: "photo",
+        subjectId: first.photoId,
+        subjectOwnerId: first.userId,
+      },
+    ]);
+    const flagged = await flaggedAtOf(core(), [first.userId]);
+    expect(flagged.has(first.userId)).toBe(true);
+    const again = await posted(await copyOf(bytes));
+    expect(await photoRow(again.photoId)).toStrictEqual({
+      screenStatus: "hidden_pending_review",
+    });
+  });
+
+  it("keeps every photo's when the owner deletes a kit an intimate report hid", async () => {
+    const first = await posted(await sceneJpeg(4));
+    await reportedAs("intimate", "entry", first.entryId);
+
+    await retractEntries(core(), first.userId, [first.entryId], quiet, noPurge);
+
+    expect(await keptRows()).toMatchObject([{ photoId: first.photoId }]);
+    expect(await withdrawals()).toHaveLength(1);
+  });
+
+  it("keeps it when the owner deletes the run", async () => {
+    const first = await posted(await sceneJpeg(4));
+    await reportedAs("intimate", "photo", first.photoId);
+    const [entry] = await core()
+      .select({ runId: outfitEntries.runId })
+      .from(outfitEntries)
+      .where(eq(outfitEntries.id, first.entryId));
+    if (entry === undefined) throw new Error("no kit");
+
+    await deleteRuns(core(), first.userId, [entry.runId], quiet, noPurge);
+
+    expect(await keptRows()).toMatchObject([{ photoId: first.photoId }]);
+  });
+
+  it("keeps a held copy's when its owner deletes it", async () => {
+    const bytes = await sceneJpeg(4);
+    const first = await posted(bytes);
+    await removed("photo", first.photoId);
+    const held = await posted(await copyOf(bytes));
+    await core().delete(moderationActions);
+
+    await deleteEntryPhoto(core(), held.userId, held.photoId, quiet, noPurge);
+
+    expect(await withdrawals()).toMatchObject([{ subjectId: held.photoId }]);
+  });
+
+  it("keeps it under a pending removal request, which opens no Review row", async () => {
+    const first = await posted(await sceneJpeg(4));
+    await core()
+      .insert(takedownRequests)
+      .values({
+        id: newUlid(),
+        requesterEmail: "sam@example.com",
+        signature: "Sam",
+        location: "https://dialed.run/x",
+        subjectType: "photo",
+        subjectId: first.photoId,
+        dueAt: nowSeconds() + 3600,
+        createdAt: nowSeconds(),
+        idempotencyKey: newUlid(),
+      });
+
+    await deleteEntryPhoto(core(), first.userId, first.photoId, quiet, noPurge);
+
+    expect(await withdrawals()).toMatchObject([{ subjectId: first.photoId }]);
+  });
+
+  it("keeps nothing for an ordinary delete, or one under a review no removal clock opened", async () => {
+    const plain = await posted(await sceneJpeg(4));
+    const spammed = await posted(await sceneJpeg(3));
+    await reportedAs("spam", "photo", spammed.photoId);
+    await reportedAs("spam", "photo", spammed.photoId);
+
+    await deleteEntryPhoto(core(), plain.userId, plain.photoId, quiet, noPurge);
+    await deleteEntryPhoto(
+      core(),
+      spammed.userId,
+      spammed.photoId,
+      quiet,
+      noPurge,
+    );
+
+    expect(await keptRows()).toStrictEqual([]);
+    expect(await withdrawals()).toStrictEqual([]);
+  });
+
+  it("keeps it while an operator has the review open", async () => {
+    const first = await posted(await sceneJpeg(4));
+    await reportedAs("intimate", "photo", first.photoId);
+    await core()
+      .update(reviewQueue)
+      .set({ status: "reviewing" })
+      .where(eq(reviewQueue.subjectId, first.photoId));
+
+    await deleteEntryPhoto(core(), first.userId, first.photoId, quiet, noPurge);
+
+    expect(await withdrawals()).toMatchObject([{ subjectId: first.photoId }]);
+  });
+
+  it("keeps nothing once the review is decided", async () => {
+    const first = await posted(await sceneJpeg(4));
+    await reportedAs("intimate", "photo", first.photoId);
+    await core()
+      .update(reviewQueue)
+      .set({ status: "approved" })
+      .where(eq(reviewQueue.subjectId, first.photoId));
+
+    await deleteEntryPhoto(core(), first.userId, first.photoId, quiet, noPurge);
+
+    expect(await withdrawals()).toStrictEqual([]);
   });
 });

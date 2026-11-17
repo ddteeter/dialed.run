@@ -17,7 +17,8 @@
  *
  * Each ceiling scales with what drives its cause:
  * - fingerprint: re-uploads of removed images, which do not grow with
- *   traffic, so a fixed number;
+ *   traffic, so a fixed number of runners (design 232, SA-M20: runners,
+ *   not rows, so one uploader cannot fill the hour for everyone);
  * - classifier: uploads, so a share of the hour's screenings;
  * - reports: people, so a multiple of the busiest hour of the last four
  *   weeks, never under a floor.
@@ -25,6 +26,7 @@
 import {
   and,
   count,
+  countDistinct,
   desc,
   eq,
   gte,
@@ -39,8 +41,16 @@ import {
 import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
-import { photoScreenings, reviewQueue } from "../../db/schema-core";
+import {
+  entryPhotos,
+  outfitEntries,
+  photoScreenings,
+  reviewQueue,
+  wardrobeItems,
+} from "../../db/schema-core";
 import { HOLD_CAUSES, type HoldCause } from "../../lib/contracts/hold-causes";
+import { hasRowWhere } from "../../lib/sql/keyed-read";
+import { qualified } from "../../lib/sql/qualified";
 import { noReportHidingAtOnce } from "./at-once";
 import { reportSubjectsThatHide } from "./contracts";
 import { counted } from "./takedown-limits";
@@ -52,8 +62,9 @@ export type { HoldCause } from "../../lib/contracts/hold-causes";
 const HOUR_S = 60 * 60;
 
 /**
-Fingerprint holds in an hour at which the next match is screened instead.
-*/
+ * Runners with a fingerprint hold in an hour at which the next match, by
+ * a runner with none, is screened instead (design 232).
+ */
 export const FINGERPRINT_HOLDS_PER_HOUR = 5;
 
 /**
@@ -419,7 +430,9 @@ async function openedSince(
   since: number,
 ): Promise<number> {
   const rows = await db
-    .select({ n: count() })
+    .select({
+      n: cause === "fingerprint" ? countDistinct(holdUploader()) : count(),
+    })
     .from(reviewQueue)
     .where(and(heldBy(cause), gte(reviewQueue.openedAt, since)));
   return counted(rows);
@@ -478,4 +491,39 @@ async function screenedIn(
     .where(screenedWithin(verdicts, since, until));
   const flagged = rows.reduce((total, row) => total + row.flagged, 0);
   return { flagged, screened: counted(rows) };
+}
+
+/**
+ * The runner a fingerprint hold's Review row is about (design 232): a kit
+ * photo's author, or a garment's owner. Once the owner deleted it the row
+ * names nobody but `resolved_by`, which the owner's delete stamps with
+ * their own id. NULL when nothing names a runner, which `countDistinct`
+ * leaves out: an unknown uploader never takes room from a known one.
+ */
+function holdUploader(): SQL {
+  const subjectType = qualified(reviewQueue, reviewQueue.subjectType);
+  const subjectId = qualified(reviewQueue, reviewQueue.subjectId);
+  const photoAuthor = sql`(select ${qualified(outfitEntries, outfitEntries.userId)} from ${entryPhotos} inner join ${outfitEntries} on ${qualified(outfitEntries, outfitEntries.id)} = ${qualified(entryPhotos, entryPhotos.entryId)} where ${subjectType} = 'photo' and ${qualified(entryPhotos, entryPhotos.id)} = ${subjectId})`;
+  const garmentOwner = sql`(select ${qualified(wardrobeItems, wardrobeItems.userId)} from ${wardrobeItems} where ${subjectType} = 'garment' and ${qualified(wardrobeItems, wardrobeItems.id)} = ${subjectId})`;
+  return sql`coalesce(${photoAuthor}, ${garmentOwner}, ${qualified(reviewQueue, reviewQueue.resolvedBy)})`;
+}
+
+/**
+ * Whether `uploaderId` already has a fingerprint hold opened this hour
+ * (design 232): such an uploader is held past the ceiling, so the runner
+ * filling the hour is the one it keeps holding.
+ */
+export async function hasFingerprintHoldThisHour(
+  db: Db,
+  uploaderId: string,
+  now: number,
+): Promise<boolean> {
+  const theirs = eq(holdUploader(), uploaderId);
+  const thisHour = gte(reviewQueue.openedAt, now - HOUR_S);
+  return hasRowWhere(
+    db,
+    reviewQueue,
+    reviewQueue.id,
+    and(heldBy("fingerprint"), thisHour, theirs),
+  );
 }

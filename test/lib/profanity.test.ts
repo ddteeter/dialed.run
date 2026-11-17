@@ -5,6 +5,7 @@ import {
   isProfaneHandle,
   parseWordList,
   PROFANE_WORDS,
+  isListedName,
   readBackDigits,
 } from "../../src/lib/contracts/profanity";
 
@@ -113,9 +114,18 @@ describe("isProfaneHandle", () => {
   });
 });
 
+describe("digit spellings of a listed word (design 232)", () => {
+  it.each(["8itch", "ni99er", "ni66er"])("refuses %s", (handle) => {
+    expect(isProfaneHandle(handle)).toBe(true);
+  });
+});
+
 describe("readBackDigits", () => {
-  it("reads 0 3 4 5 7 as letters, 1 as both i and l, and leaves the rest", () => {
-    expect(readBackDigits("0345761")).toStrictEqual(["oeast6i", "oeast6l"]);
+  it("reads every digit as the letter it stands for, 1 as both i and l (design 232)", () => {
+    expect(readBackDigits("0234567891")).toStrictEqual([
+      "ozeasgtbgi",
+      "ozeasgtbgl",
+    ]);
     expect(readBackDigits("run")).toStrictEqual(["run", "run"]);
   });
 });
@@ -152,4 +162,22 @@ describe("the vendored list", () => {
     ]);
     expect(parseWordList("")).toStrictEqual([]);
   });
+});
+
+describe("isListedName (design 232)", () => {
+  it.each([
+    ["Fuck Runners", "a listed word among others"],
+    ["Bitch!", "a listed word with punctuation"],
+    ["Blue Waffle", "a listed phrase, its words run together"],
+    ["8itch Tee", "a digit spelling"],
+  ])("refuses %s (%s)", (name) => {
+    expect(isListedName(name)).toBe(true);
+  });
+
+  it.each(["Hoka Clifton", "Nike", "Scunthorpe Shorts", "ミズノ"])(
+    "takes %s",
+    (name) => {
+      expect(isListedName(name)).toBe(false);
+    },
+  );
 });

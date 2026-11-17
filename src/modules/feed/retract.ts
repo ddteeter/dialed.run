@@ -57,13 +57,29 @@ import {
   purgePublicPages,
   settleOutbox,
 } from "../ops";
-import { screeningDeletes, settleOpenReviews } from "../safety";
+import {
+  screeningDeletes,
+  settleOpenReviews,
+  withdrawnUnderReview,
+} from "../safety";
 import { clearEntryHalves, deleteRunCopies } from "./run-conditions-entry";
 
 type Db = ReturnType<typeof drizzle>;
 export type Report = typeof captureException;
 type Debt = ReturnType<typeof oweOutbox>;
 export type Statements = [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
+
+/**
+ * `statements` with `kept` after the first, so ahead of every delete
+ * (design 232): the first of a photo's or a kit's statements is a review
+ * settle, which no keep depends on.
+ */
+function keeping(
+  [first, ...rest]: Statements,
+  kept: readonly BatchItem<"sqlite">[],
+): Statements {
+  return [first, ...kept, ...rest];
+}
 
 /**
 The one photo to delete, by the id its key ends in.
@@ -238,12 +254,20 @@ export async function retractEntries(
     userId,
     scope,
     { report, purge },
-    (entries) =>
-      Promise.resolve({
-        statements: entryStatements(db, userId, entries),
-        debts: mediaDebts(userId, scope),
-        tags: deletionCacheTags(userId, scope),
-      }),
+    async (entries) => ({
+      // A photo under review keeps its fingerprint and its record
+      // (design 232).
+      statements: keeping(
+        entryStatements(db, userId, entries),
+        await withdrawnUnderReview(
+          db,
+          userId,
+          inArray(entryPhotos.entryId, entries),
+        ),
+      ),
+      debts: mediaDebts(userId, scope),
+      tags: deletionCacheTags(userId, scope),
+    }),
   );
 }
 
@@ -423,9 +447,16 @@ export async function deleteEntryPhoto(
     entries: eq(copyrightHolds.entryId, photo.entryId),
     noun: "photo",
   });
+  // Read before the batch (design 232): a photo under review keeps its
+  // fingerprint and its record.
+  const kept = await withdrawnUnderReview(
+    db,
+    userId,
+    eq(entryPhotos.id, photoId),
+  );
   await commit(
     db,
-    photoDeletion(db, photoId, userId),
+    keeping(photoDeletion(db, photoId, userId), kept),
     mediaDebts(userId, [photo.entryId]),
     report,
   );
@@ -505,12 +536,16 @@ export async function deleteRuns(
     // anyone who has logged a hundred runs.
     const entryScope: Scope = scope === "all" ? "all" : entryIds;
     const bandRuns = scope === "all" ? [] : await ownedRuns;
+    const theirEntries = owned(db, outfitEntries, userId, entryScope);
     return {
       statements: [
-        ...entryStatements(
-          db,
-          userId,
-          owned(db, outfitEntries, userId, entryScope),
+        ...keeping(
+          entryStatements(db, userId, theirEntries),
+          await withdrawnUnderReview(
+            db,
+            userId,
+            inArray(entryPhotos.entryId, theirEntries),
+          ),
         ),
         deleteNotificationsAbout(db, userId, ownedRuns),
         db.delete(imports).where(ofTheseRuns),

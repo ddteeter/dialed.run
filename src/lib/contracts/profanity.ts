@@ -18,6 +18,7 @@
  * failure. A word run into others (`bigshitrunner`) is the moderation
  * check's to catch.
  */
+import { normalizeIdentity } from "../normalize";
 import wordList from "./profanity-words.txt?raw";
 
 /**
@@ -93,16 +94,21 @@ const WORDS: ReadonlySet<string> = new Set(
 );
 
 /**
- * Digits read back as the letters they stand in for. `1` reads as both
- * `i` and `l`, so a part yields two spellings.
+ * Digits read back as the letters they stand in for: every digit a handle
+ * can use for one (design 232 adds `2 6 8 9`). `1` reads as both `i` and
+ * `l`, so a part yields two spellings; `6` and `9` both read as `g`.
  */
 export function readBackDigits(text: string): [string, string] {
   const plain = text
     .replaceAll("0", "o")
+    .replaceAll("2", "z")
     .replaceAll("3", "e")
     .replaceAll("4", "a")
     .replaceAll("5", "s")
-    .replaceAll("7", "t");
+    .replaceAll("6", "g")
+    .replaceAll("7", "t")
+    .replaceAll("8", "b")
+    .replaceAll("9", "g");
   return [plain.replaceAll("1", "i"), plain.replaceAll("1", "l")];
 }
 
@@ -132,4 +138,15 @@ function partsOf(handle: string): string[] {
  */
 export function isProfaneHandle(handle: string): boolean {
   return partsOf(handle).some((part) => WORDS.has(part));
+}
+
+/**
+ * Whether a brand or model name holds a listed word (design 232): each of
+ * its words, and all of them run together (a listed phrase is kept
+ * compacted), read as a handle is. What makes no shared brand or product:
+ * a name another runner is offered as a suggestion.
+ */
+export function isListedName(name: string): boolean {
+  const words = normalizeIdentity(name).split(" ");
+  return [...words, words.join("")].some((word) => isProfaneHandle(word));
 }

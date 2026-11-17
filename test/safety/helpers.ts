@@ -32,6 +32,8 @@ import type { ReviewSubjectType } from "../../src/modules/safety/review";
 
 import {
   deleteAllFrom,
+  makeUser,
+  NOW,
   resetTables as resetSharedTables,
 } from "../feed/helpers";
 
@@ -99,6 +101,10 @@ export async function opened(
   openedAt: number,
   subjectType: ReviewSubjectType = "photo",
   hid?: number,
+  /**
+  A runner id, or "each" for a fresh one per row.
+  */
+  uploader?: string,
 ): Promise<void> {
   await times(n, (core) =>
     core.insert(reviewQueue).values({
@@ -110,6 +116,11 @@ export async function opened(
       createdAt: 1,
       openedAt,
       hid,
+      // Whom the fingerprint breaker counts it against (design 232): a
+      // subject this row names no longer exists, so its runner is the one
+      // who settled it, as an owner's delete records. "each" gives every
+      // row its own runner.
+      resolvedBy: uploader === "each" ? newUlid() : uploader,
     }),
   );
 }
@@ -134,4 +145,23 @@ export async function screened(
       createdAt,
     }),
   );
+}
+
+/**
+ * A shared product row, so a report can name one (design 232: a report
+ * names something that exists). `id` lets a test reuse another subject's
+ * id across types.
+ */
+export async function makeProduct(id: string = newUlid()): Promise<string> {
+  await drizzle(env.DIALED_CORE)
+    .insert(products)
+    .values({
+      id,
+      brandId: newUlid(),
+      name: "Some Shoe",
+      normalizedName: "some shoe",
+      createdBy: await makeUser(),
+      createdAt: NOW,
+    });
+  return id;
 }

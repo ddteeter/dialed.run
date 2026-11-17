@@ -38,10 +38,14 @@ export const SEND_LIMIT_KINDS = [
  * - `proxy-call` — enrichment's proxy calls across everyone;
  *   `GLOBAL_SUBJECT`;
  * - `sign-in` — email sign-in's tries for one typed address, lowercased,
- *   whether or not it has an account (`SIGN_IN_TRIES`).
+ *   whether or not it has an account (`SIGN_IN_TRIES`);
  * - `csp-report` — the CSP reports one visitor's browser posts, so a
  *   script cannot spend the error tracker's quota (SA-L19); the visitor's
- *   IP.
+ *   IP;
+ * - `report-runner` — one runner's reports in a day; the runner's id
+ *   (design 232);
+ * - `report-at-once` — one runner's reports a day that hide at once, of a
+ *   reason on the removal clock; the runner's id (design 232).
  */
 export const RATE_LIMIT_KINDS = [
   ...SEND_LIMIT_KINDS,
@@ -52,6 +56,8 @@ export const RATE_LIMIT_KINDS = [
   "proxy-call",
   "sign-in",
   "csp-report",
+  "report-runner",
+  "report-at-once",
 ] as const;
 
 export type SendLimitKind = (typeof SEND_LIMIT_KINDS)[number];

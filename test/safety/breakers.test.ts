@@ -1,7 +1,11 @@
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { photoScreenings, reviewQueue } from "../../src/db/schema-core";
+import {
+  entryPhotos,
+  photoScreenings,
+  reviewQueue,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import {
   ceilingReading,
@@ -9,6 +13,7 @@ import {
   dayHeadroom,
   quietScreenerWeek,
   FINGERPRINT_HOLDS_PER_HOUR,
+  hasFingerprintHoldThisHour,
   overCeilings,
   REPORT_BASELINE_S,
   REPORT_HIDES_FLOOR,
@@ -20,7 +25,10 @@ import {
 
 import { HOLD_CAUSES } from "../../src/lib/contracts/hold-causes";
 
+import { newUlid } from "../../src/lib/ids";
+
 import { opened, screened } from "./helpers";
+import { makeEntry, makeItem, makeRun, makeUser } from "../feed/helpers";
 
 /**
  * The hold breakers (design 164): each cause's last hour against its
@@ -65,7 +73,14 @@ describe("reportCeiling", () => {
 
 describe("the fingerprint breaker", () => {
   it("holds under its ceiling and stops at it", async () => {
-    await opened("fingerprint", FINGERPRINT_HOLDS_PER_HOUR - 1, NOW - 60);
+    await opened(
+      "fingerprint",
+      FINGERPRINT_HOLDS_PER_HOUR - 1,
+      NOW - 60,
+      "photo",
+      undefined,
+      "each",
+    );
     expect(await ceilingReading(core(), "fingerprint", NOW)).toStrictEqual({
       cause: "fingerprint",
       isOver: false,
@@ -73,7 +88,7 @@ describe("the fingerprint breaker", () => {
       ceiling: FINGERPRINT_HOLDS_PER_HOUR,
     });
 
-    await opened("fingerprint", 1, NOW - 60);
+    await opened("fingerprint", 1, NOW - 60, "photo", undefined, "each");
     const reading = await ceilingReading(core(), "fingerprint", NOW);
     expect(reading.isOver).toBe(true);
   });
@@ -84,6 +99,8 @@ describe("the fingerprint breaker", () => {
       FINGERPRINT_HOLDS_PER_HOUR,
       NOW - 60,
       "garment",
+      undefined,
+      "each",
     );
 
     const reading = await ceilingReading(core(), "fingerprint", NOW);
@@ -92,13 +109,114 @@ describe("the fingerprint breaker", () => {
   });
 
   it("counts the hour to the second, and only its own cause", async () => {
-    await opened("fingerprint", 4, NOW - HOUR);
-    await opened("fingerprint", 3, NOW - HOUR - 1);
+    await opened("fingerprint", 4, NOW - HOUR, "photo", undefined, "each");
+    await opened("fingerprint", 3, NOW - HOUR - 1, "photo", undefined, "each");
     await opened("classifier", 3, NOW - 60);
 
     const reading = await ceilingReading(core(), "fingerprint", NOW);
 
     expect(reading.count).toBe(4);
+  });
+});
+
+/**
+A fingerprint hold opened at `openedAt` on a subject that still exists.
+*/
+async function holdOn(
+  subjectType: "photo" | "garment",
+  subjectId: string,
+  openedAt: number,
+): Promise<void> {
+  await core().insert(reviewQueue).values({
+    id: newUlid(),
+    subjectType,
+    subjectId,
+    source: "fingerprint",
+    status: "pending",
+    createdAt: 1,
+    openedAt,
+  });
+}
+
+async function kitPhotoBy(userId: string): Promise<string> {
+  const entryId = await makeEntry({ userId, runId: await makeRun({ userId }) });
+  const id = newUlid();
+  await core()
+    .insert(entryPhotos)
+    .values({
+      id,
+      entryId,
+      photoKey: `entries/x/${entryId}/${id}.jpg`,
+      position: 0,
+      screenStatus: "hidden_pending_review",
+    });
+  return id;
+}
+
+describe("the fingerprint breaker counts runners (design 232)", () => {
+  it("counts one kit photo author's holds once", async () => {
+    const author = await makeUser();
+    for (let n = 0; n < FINGERPRINT_HOLDS_PER_HOUR; n += 1) {
+      await holdOn("photo", await kitPhotoBy(author), NOW - 60);
+    }
+
+    const reading = await ceilingReading(core(), "fingerprint", NOW);
+
+    expect(reading).toMatchObject({ isOver: false, count: 1 });
+  });
+
+  it("counts one garment owner's holds once", async () => {
+    const owner = await makeUser();
+    for (let n = 0; n < FINGERPRINT_HOLDS_PER_HOUR; n += 1) {
+      await holdOn("garment", await makeItem({ userId: owner }), NOW - 60);
+    }
+
+    const reading = await ceilingReading(core(), "fingerprint", NOW);
+
+    expect(reading).toMatchObject({ isOver: false, count: 1 });
+  });
+
+  it("counts different authors apart, and a kit photo's author apart from a garment's owner", async () => {
+    await holdOn("photo", await kitPhotoBy(await makeUser()), NOW - 60);
+    await holdOn("photo", await kitPhotoBy(await makeUser()), NOW - 60);
+    await holdOn(
+      "garment",
+      await makeItem({ userId: await makeUser() }),
+      NOW - 60,
+    );
+
+    const reading = await ceilingReading(core(), "fingerprint", NOW);
+
+    expect(reading.count).toBe(3);
+  });
+
+  it("counts a row whose subject is gone by who settled it, and leaves out one that names nobody", async () => {
+    await opened("fingerprint", 3, NOW - 60, "photo", undefined, "one-runner");
+    await opened("fingerprint", 3, NOW - 60);
+
+    const reading = await ceilingReading(core(), "fingerprint", NOW);
+
+    expect(reading.count).toBe(1);
+  });
+
+  it("knows a runner's own hold this hour, to the second", async () => {
+    const author = await makeUser();
+    const late = await makeUser();
+    const stranger = await makeUser();
+    await holdOn("photo", await kitPhotoBy(author), NOW - HOUR);
+    await holdOn("garment", await makeItem({ userId: late }), NOW - HOUR - 1);
+    await opened("classifier", 1, NOW - 60, "photo", undefined, stranger);
+
+    expect(await hasFingerprintHoldThisHour(core(), author, NOW)).toBe(true);
+    expect(await hasFingerprintHoldThisHour(core(), late, NOW)).toBe(false);
+    expect(await hasFingerprintHoldThisHour(core(), stranger, NOW)).toBe(false);
+  });
+
+  it("knows a garment owner's hold", async () => {
+    const owner = await makeUser();
+    await holdOn("garment", await makeItem({ userId: owner }), NOW - 60);
+
+    expect(await hasFingerprintHoldThisHour(core(), owner, NOW)).toBe(true);
   });
 });
 

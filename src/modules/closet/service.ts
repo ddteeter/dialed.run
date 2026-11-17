@@ -38,6 +38,7 @@ import { garmentSchema, uiGroupFor } from "../../lib/contracts";
 // Was private to this file until modules/safety needed the same helper.
 import { orSqlNull } from "../../lib/sql/sql-null";
 import { garmentTypesFor } from "../../lib/contracts/garment-fields";
+import { isListedName } from "../../lib/contracts/profanity";
 import {
   FIELD_REFUSAL_CODE,
   type FieldRefusalOnTheWire,
@@ -62,7 +63,11 @@ import {
 } from "../products";
 import type { ProductAttributeDefaults, ProductComposition } from "../products";
 import { ownedBy } from "../../lib/sql/owned";
-import { garmentPhotoForgotten, isDeniedLink } from "../safety";
+import {
+  garmentPhotoForgotten,
+  isDeniedLink,
+  withdrawnGarmentUnderReview,
+} from "../safety";
 import { shouldIncludeByTempFilter } from "./filters";
 import { linkDetailOf, type LinkDetail } from "./garment-link";
 import { DENIED_LINK } from "./link-copy";
@@ -405,6 +410,8 @@ export async function deleteItem(
   );
   await db.batch([
     db.delete(outfitEntryItems).where(inOwnKits),
+    // Read before the batch (design 232): kept under review.
+    ...(await withdrawnGarmentUnderReview(db, userId, itemId)),
     ...garmentPhotoForgotten(db, userId, itemId),
     db.delete(wardrobeItems).where(ownedItemWhere(userId, itemId)),
     outboxInsert(db, debt),
@@ -957,10 +964,12 @@ export async function withResolvedProduct(
   // No brand or no name links nothing. Products are shared rows (D-26), so
   // an unconfirmed runner makes none (design 133, decision D-113 Q1): the
   // garment saves with what was typed and no product, and confirming owes
-  // the link (`linkTypedGarments`).
+  // the link (`linkTypedGarments`). Nor does a listed word, ever (design 232).
   if (
     brand === "" ||
     garment.name.trim() === "" ||
+    isListedName(brand) ||
+    isListedName(garment.name) ||
     (await isUnconfirmed(db, createdBy))
   ) {
     return garment;

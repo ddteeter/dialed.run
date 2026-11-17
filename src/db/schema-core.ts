@@ -1810,7 +1810,10 @@ export const moderationActions = /*#__PURE__*/ sqliteTable(
     id: text("id").primaryKey(),
     actorId: text("actor_id").notNull(),
     // `keep`: the Desk kept an account flagged after an intimate-image
-    // removal (D-161). A text enum with no CHECK, so no migration.
+    // removal (D-161). `withdrawn`: the owner deleted a photo under an
+    // intimate-image review, which keeps its fingerprint and flags the
+    // account (design 232; owner, 2026-11-16). A text enum with no CHECK,
+    // so no migration.
     action: text("action", {
       enum: [
         "remove",
@@ -1820,6 +1823,7 @@ export const moderationActions = /*#__PURE__*/ sqliteTable(
         "unban",
         "rename",
         "keep",
+        "withdrawn",
       ],
     }).notNull(),
     // `garment`: a garment's photo, by the garment's id (design 157).

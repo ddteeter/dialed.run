@@ -3,10 +3,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { follows, userProfiles } from "../../src/db/schema-core";
 import { coreDb } from "../../src/env";
-
+import { newUlid } from "../../src/lib/ids";
 import {
   blockRunner,
   blockedAmong,
+  blockedCount,
   blockedRunners,
   hiddenCounterpartIds,
   isBlocked,
@@ -236,5 +237,40 @@ describe("a block and the pair's follows (SA-L02)", () => {
       ]),
     );
     expect(await isBlocked(me, them)).toBe(true);
+  });
+});
+
+describe("what a block may name (design 232)", () => {
+  beforeEach(resetSafetyTables);
+
+  it("writes nothing for an id that is not a runner", async () => {
+    const me = await makeUser();
+
+    await blockRunner(me, newUlid());
+
+    expect(await blockedCount(me)).toBe(0);
+  });
+
+  it("ends no follows for an id that is not a runner", async () => {
+    const me = await makeUser();
+    const nobody = newUlid();
+    await coreDb().delete(follows);
+    await coreDb()
+      .insert(follows)
+      .values([{ followerId: me, followeeId: nobody, createdAt: 1 }]);
+
+    await blockRunner(me, nobody);
+
+    expect(await isBlocked(me, nobody)).toBe(false);
+    expect(await coreDb().select().from(follows)).toHaveLength(1);
+  });
+
+  it("counts a runner's blocks for Settings", async () => {
+    const me = await makeUser();
+    await blockRunner(me, await makeUser());
+    await blockRunner(me, await makeUser());
+    await blockRunner(await makeUser(), me);
+
+    expect(await blockedCount(me)).toBe(2);
   });
 });

@@ -84,7 +84,7 @@ import { forgetRunnerEnrichmentLimit } from "../enrichment";
 import { deleteRuns, LIVE_HOLD } from "../feed";
 import { captureException, outboxInsert, oweOutbox } from "../ops";
 import { disconnectStrava } from "../runs";
-import { settleOpenReviews } from "../safety";
+import { forgetReportCounts, settleOpenReviews } from "../safety";
 import { forgetManualBands } from "../weather";
 import { closedAddressRows, forgetClosedAddresses } from "./closed-addresses";
 import { exportPrefixFor } from "./data-exports";
@@ -642,6 +642,7 @@ async function deleteAccountRows(
     forgetRateLimit(db, "change-runner", userId),
     forgetRateLimit(db, "upload-runner", userId),
     forgetRunnerEnrichmentLimit(db, userId),
+    ...forgetReportCounts(db, userId),
     // Reports they filed stay — what was said about someone else's post
     // is that runner's record too — but name nobody (the development
     // plan's default; an owner question). A per-report id keeps them
