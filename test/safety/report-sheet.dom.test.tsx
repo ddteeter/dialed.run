@@ -752,3 +752,53 @@ describe("ReportSheet on an entry keeps W1", () => {
     ).toBeNull();
   });
 });
+
+function refusing(status: "not_found" | "limited") {
+  const fileReport: SheetProps["fileReport"] = vi
+    .fn<SheetProps["fileReport"]>()
+    .mockResolvedValue({ status });
+  return renderSheet({ fileReport });
+}
+
+describe("when nothing was filed (design 232)", () => {
+  it.each([
+    [
+      "not_found",
+      "We couldn't find that to report. It may have been deleted.",
+    ] as const,
+    [
+      "limited",
+      "That's 20 reports today. You can report again tomorrow.",
+    ] as const,
+  ])(
+    "says why for %s, keeps the sheet open, and never says it was sent",
+    async (status, sentence) => {
+      const user = userEvent.setup();
+      const { onFiled, onClose } = refusing(status);
+
+      await user.click(screen.getByRole("radio", { name: "Something else" }));
+      await user.click(screen.getByRole("button", { name: "Send report" }));
+
+      await waitFor(() => {
+        expect(screen.getByText(sentence)).toBeInTheDocument();
+      });
+      expect(screen.getByText("Not sent")).toBeInTheDocument();
+      expect(screen.queryByText("Report sent.")).not.toBeInTheDocument();
+      expect(onFiled).not.toHaveBeenCalled();
+      expect(onClose).not.toHaveBeenCalled();
+    },
+  );
+
+  it("shows no refusal for a report that was filed", async () => {
+    const user = userEvent.setup();
+    renderSheet();
+
+    await user.click(screen.getByRole("radio", { name: "Something else" }));
+    await user.click(screen.getByRole("button", { name: "Send report" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Report sent.")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Not sent")).not.toBeInTheDocument();
+  });
+});

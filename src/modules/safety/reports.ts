@@ -61,6 +61,7 @@ import { subjectCacheTagsOf } from "./kit-cache-tags";
 import { hiddenNotice, reporterIdsOf } from "./notices";
 import { enqueueForReview, firstReportHidingAtOnce } from "./review";
 import { heldPhotoStatus } from "./visibility";
+import { isWithinAtOnceLimit, reportRefusalOf } from "./reportable";
 
 /**
  * Owes an outbox row in the caller's batch — the operators' removal alert
@@ -122,17 +123,26 @@ export interface FileReportInput {
   alsoBlock?: boolean | undefined;
 }
 
-export interface FileReportResult {
-  readonly status: "filed";
-  /**
-  Distinct people who have now reported this subject.
-  */
-  reporterCount: number;
-  /**
-  Whether this report is what crossed the threshold.
-  */
-  hiddenPendingReview: boolean;
-}
+/**
+ * What filing answered (design 232): `filed`, with where the subject
+ * stands; `not_found`, a subject that does not exist or the reporter
+ * cannot see, which writes nothing; `limited`, past the reporter's
+ * reports for the day, which writes nothing either.
+ */
+export type FileReportResult =
+  | {
+      readonly status: "filed";
+      /**
+      Distinct people who have now reported this subject.
+      */
+      reporterCount: number;
+      /**
+      Whether this report is what crossed the threshold.
+      */
+      hiddenPendingReview: boolean;
+    }
+  | { readonly status: "not_found" }
+  | { readonly status: "limited" };
 
 /**
  * Files a report, and hides the subject globally if this is the third
@@ -143,7 +153,16 @@ export interface FileReportResult {
  * genuine second submission, and W1 gives the reporter no feedback that
  * would let them tell either. `onConflictDoNothing` against the UNIQUE
  * index makes the second one a no-op that still returns the truth about
- * where the subject stands.
+ * where the subject stands: a call that added no reporter hides nothing,
+ * re-opens nothing and owes nothing (SA-M21), so a decision a person made
+ * on the subject stands against the same reporter's repeat.
+ *
+ * **It names something the reporter can see** (SA-M10): a subject that
+ * does not exist, or a kit that is neither theirs nor shared, is
+ * `not_found` and writes nothing. And it is counted: past
+ * `REPORTS_PER_DAY` a call is `limited`, and past `AT_ONCE_HIDES_PER_DAY`
+ * a reason that hides at once is filed and queued for a person (with its
+ * alert) but hides nothing.
  *
  * **It waits for a confirmed address** (round 26 #11; SAF-15, seam 7):
  * report is one of the things that "trusts the address". The
@@ -158,9 +177,11 @@ export async function fileReport(
   owe: OweEmail,
   purge: PurgeTags,
 ): Promise<FileReportResult> {
+  const refused = await reportRefusalOf(db(), input, nowSeconds());
+  if (refused !== undefined) return { status: refused };
   const database = db();
   const reportedAt = nowSeconds();
-  await database
+  const added = await database
     .insert(reports)
     .values({
       id: newUlid(),
@@ -177,7 +198,8 @@ export async function fileReport(
     // The UNIQUE index is on (reporter, subjectType, subjectId), so this
     // drops a second report of the same thing by the same person. That is
     // what makes the count below a count of people rather than of clicks.
-    .onConflictDoNothing();
+    .onConflictDoNothing()
+    .returning({ id: reports.id });
 
   // Only a profile can be blocked — a report against an entry names the
   // entry, and blocking its author would need a lookup the reporter never
@@ -192,9 +214,14 @@ export async function fileReport(
     input.subjectId,
   );
 
+  // A repeat adds nobody, so it changes nothing (SA-M21): the hourly
+  // sweep still finishes a hide a crash left undone, by its own marker.
   // The reason sets the bar (design 136, D-117), and the bar is config
   // (`./thresholds`), one person when it is missing.
-  if (reporterCount < reportersToHide(input.reason, moderationThresholds())) {
+  if (
+    added.length === 0 ||
+    reporterCount < reportersToHide(input.reason, moderationThresholds())
+  ) {
     return { status: "filed", reporterCount, hiddenPendingReview: false };
   }
 
@@ -202,7 +229,9 @@ export async function fileReport(
   const alerts = isAtOnce
     ? removalAlerts(owe, input.subjectType, input.subjectId, reportedAt)
     : [];
-  const canHide = await canHideNow(isAtOnce, reportedAt);
+  const canHide = isAtOnce
+    ? await isWithinAtOnceLimit(database, input.reporterId, reportedAt)
+    : await canHideNow(false, reportedAt);
   await hidePendingReview(
     input.subjectType,
     input.subjectId,
@@ -439,8 +468,10 @@ async function hidePendingReview(
     // What the reports breaker counts: an opening that hid (design 164).
     hid: canHide ? 1 : 0,
   });
+  // Queued only, it still owes its alerts (design 232): a person must
+  // still look within the 48 hours, and the alert is what says so.
   if (!canHide) {
-    await queueWrite;
+    await db().batch([queueWrite, ...alerts]);
     return;
   }
 

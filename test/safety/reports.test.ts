@@ -34,6 +34,7 @@ const autoHideReporterThreshold = reportersToHide(
 import { noPurge } from "../purge-spy";
 import {
   makeEntry,
+  makeProduct,
   makeRun,
   makeUser,
   opened,
@@ -231,6 +232,7 @@ describe("the distinct-reporter threshold", () => {
     // An entry id and a product id could collide in principle; the UNIQUE
     // index includes subject_type precisely so they do not share a count.
     const sharedId = await reportableEntry();
+    await makeProduct(sharedId);
     const reporter = await makeUser();
 
     await fileReport(
@@ -298,6 +300,7 @@ describe("the reporter's own hide (W1)", () => {
 
   it("separates subject types, so a feed filter gets only entries", async () => {
     const entryId = await reportableEntry();
+    const productId = await makeProduct();
     const me = await makeUser();
 
     await fileReport(
@@ -314,7 +317,7 @@ describe("the reporter's own hide (W1)", () => {
       {
         reporterId: me,
         subjectType: "product",
-        subjectId: "some-product",
+        subjectId: productId,
         reason: "spam",
       },
       oweInCore,
@@ -322,9 +325,7 @@ describe("the reporter's own hide (W1)", () => {
     );
 
     expect(await reportedSubjectIdsFor(me, "entry")).toEqual([entryId]);
-    expect(await reportedSubjectIdsFor(me, "product")).toEqual([
-      "some-product",
-    ]);
+    expect(await reportedSubjectIdsFor(me, "product")).toEqual([productId]);
   });
 });
 
@@ -453,7 +454,7 @@ describe("the report breaker (design 164)", () => {
 
     const last = await reportedToTheThreshold(entryId);
 
-    expect(last?.hiddenPendingReview).toBe(true);
+    expect(last).toMatchObject({ hiddenPendingReview: true });
     expect(await moderationStatusOf(entryId)).toBe("hidden_pending_review");
     expect(await hidOf(entryId)).toBe(1);
   });
@@ -464,7 +465,7 @@ describe("the report breaker (design 164)", () => {
 
     const last = await reportedToTheThreshold(entryId);
 
-    expect(last?.hiddenPendingReview).toBe(false);
+    expect(last).toMatchObject({ hiddenPendingReview: false });
     expect(await moderationStatusOf(entryId)).toBe("ok");
     expect(await isQueuedForReview("entry", entryId)).toBe(true);
     expect(await core().select().from(notifications)).toStrictEqual([]);
@@ -512,7 +513,7 @@ describe("the report breaker (design 164)", () => {
 
     const last = await reportedToTheThreshold(entryId);
 
-    expect(last?.hiddenPendingReview).toBe(true);
+    expect(last).toMatchObject({ hiddenPendingReview: true });
     expect(await moderationStatusOf(entryId)).toBe("hidden_pending_review");
   });
 });

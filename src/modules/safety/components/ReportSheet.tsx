@@ -5,6 +5,7 @@ import { useId, useState } from "react";
 import {
   ChoiceList,
   ConfirmLink,
+  FailureBand,
   FormErrorSummary,
   FormFailureBand,
   FormStatus,
@@ -22,6 +23,7 @@ import {
 import {
   profileReportReasonLabels,
   profileReportReasons,
+  REPORT_REFUSED,
   reportReasonLabels,
   reportReasons,
 } from "../contracts";
@@ -112,6 +114,24 @@ export interface ReportSubject {
   authorId?: string | undefined;
 }
 
+/**
+ * Design 232: the server filed nothing, because the subject is gone (or
+ * was never the reporter's to see) or the reporter is past today's
+ * reports. The form's refusal, and the sentence it leaves on the sheet.
+ */
+function useReportRefusal() {
+  const [status, setStatus] = useState<FileReportResult["status"]>();
+  return {
+    message: REPORT_REFUSED.get(status),
+    refusal: {
+      matches: (result: FileReportResult) => result.status !== "filed",
+      answer: (result: FileReportResult) => {
+        setStatus(result.status);
+      },
+    },
+  };
+}
+
 export function ReportSheet({
   open,
   onClose,
@@ -160,6 +180,7 @@ export function ReportSheet({
   // Round 42: an intimate-image report swaps the sheet for its receipt
   // rather than closing, so the other sites are said where it was sent.
   const [isReceipt, setIsReceipt] = useState(false);
+  const refused = useReportRefusal();
 
   function finish(): void {
     onFiled();
@@ -181,6 +202,7 @@ export function ReportSheet({
     // "Report sent." is never said and the sheet stays as it was — and not
     // a failure either: the root opens "Confirm your email first".
     confirmTrigger: "report",
+    refusal: refused.refusal,
   });
 
   if (isReceipt) {
@@ -216,7 +238,7 @@ export function ReportSheet({
   // below stopped using `them` (see `neverTold`), the fallback's only
   // remaining reader was this label — which never renders without a name —
   // so the mutation gate correctly reported `"them"` as unobservable.
-  const blockableName = canBlock ? subject.authorName : undefined;
+  const blockableName = blockableNameOf(canBlock, subject);
 
   // Round 26 #7 (SAF-15): the sheet names whose entry it is, by handle,
   // once there is a handle to name. A profile is the runner, not an entry
@@ -225,19 +247,21 @@ export function ReportSheet({
   const isProfile = subject.type === "profile";
   const kind = SHEET_KIND[isProfile ? "profile" : "entry"];
 
-  function send(isAlsoBlocking: boolean): void {
+  function send(which: "report" | "block"): void {
     // The submit guards itself, but the label would still move to the
     // other button mid-flight.
     if (form.pending) return;
-    setSentBy(isAlsoBlocking ? "block" : "report");
+    setSentBy(which);
     void form.submit({
       subjectType: subject.type,
       subjectId: subject.id,
       reason,
-      // A note typed under Other and left when another reason was
-      // picked is not sent: the runner can no longer see it.
-      note: note === "" || !kind.hasNote(reason) ? undefined : note,
-      alsoBlock: blockableName === undefined ? undefined : isAlsoBlocking,
+      ...sendOptions({
+        note,
+        noteShown: kind.hasNote(reason),
+        canBlock: blockableName !== undefined,
+        alsoBlock: which === "block",
+      }),
     });
   }
 
@@ -249,10 +273,11 @@ export function ReportSheet({
         className="flex flex-col gap-4"
         onSubmit={(event) => {
           event.preventDefault();
-          send(false);
+          send("report");
         }}
       >
         <FormStatus>{form.status}</FormStatus>
+        <RefusalBand message={refused.message} />
         <FormErrorSummary
           rows={form.summaryRows}
           summaryRef={form.summaryRef}
@@ -312,7 +337,7 @@ export function ReportSheet({
             name={blockableName}
             pending={form.pending && sentBy === "block"}
             onSendAndBlock={() => {
-              send(true);
+              send("block");
             }}
             blockOnly={blockOnlyAct(subject.authorId, blockRunner, finish)}
           />
@@ -320,6 +345,50 @@ export function ReportSheet({
       </form>
     </Sheet>
   );
+}
+
+/**
+ * The sentence a refusal leaves on the sheet, or nothing before one.
+ */
+function RefusalBand({
+  message,
+}: Readonly<{ message: string | undefined }>): JSX.Element | undefined {
+  return message === undefined ? undefined : (
+    <FailureBand kicker="Not sent" message={message} />
+  );
+}
+
+/**
+ * Whom a block would name: the author, and only where blocking is offered.
+ */
+function blockableNameOf(
+  canBlock: boolean,
+  subject: ReportSubject,
+): string | undefined {
+  return canBlock ? subject.authorName : undefined;
+}
+
+/**
+ * What a send carries beyond the reason and the subject. A note typed under
+ * Other and left when another reason was picked is not sent: the runner can
+ * no longer see it. "Also block" is sent only where there is someone to
+ * block.
+ */
+function sendOptions({
+  note,
+  noteShown,
+  canBlock,
+  alsoBlock,
+}: Readonly<{
+  note: string;
+  noteShown: boolean;
+  canBlock: boolean;
+  alsoBlock: boolean;
+}>): { note: string | undefined; alsoBlock: boolean | undefined } {
+  return {
+    note: note === "" || !noteShown ? undefined : note,
+    alsoBlock: canBlock ? alsoBlock : undefined,
+  };
 }
 
 /**
