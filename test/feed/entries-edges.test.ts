@@ -527,6 +527,52 @@ describe("the verdict prompt", () => {
     expect(rows).toHaveLength(1);
   });
 
+  it("records the prompt with its words, unread (SA-L15)", async () => {
+    const { userId, entryId } = await unratedEntry();
+
+    await recordVerdictPrompted(userId, entryId);
+
+    const rows = await db()
+      .select({
+        userId: notifications.userId,
+        kind: notifications.kind,
+        body: notifications.body,
+        read: notifications.read,
+      })
+      .from(notifications)
+      .where(eq(notifications.subjectId, entryId));
+    expect(rows).toStrictEqual([
+      {
+        userId,
+        kind: "verdict_prompt",
+        body: "You didn't log a verdict for this run.",
+        read: false,
+      },
+    ]);
+  });
+
+  it("records nothing for a kit that is not the runner's own unjudged one (SA-L15)", async () => {
+    const { userId, entryId } = await unratedEntry();
+    const other = await makeUser();
+    await recordVerdictPrompted(other, entryId);
+    await recordVerdictPrompted(userId, newUlid());
+    await submitVerdict({
+      userId,
+      entryId,
+      verdict: 0,
+      audience: "private",
+      tags: [],
+      itemFlags: [],
+    });
+    await recordVerdictPrompted(userId, entryId);
+
+    const rows = await db()
+      .select()
+      .from(notifications)
+      .where(eq(notifications.kind, "verdict_prompt"));
+    expect(rows).toStrictEqual([]);
+  });
+
   it("records the prompt once even when asked twice", async () => {
     const { userId, entryId } = await unratedEntry();
 

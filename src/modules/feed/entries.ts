@@ -566,23 +566,25 @@ export async function shouldPromptForVerdict(
 
 /**
  * Idempotent (UNIQUE dedupe key) — safe to call every time the prompt shows.
+ * Lands only for the runner's own kit with no verdict yet, read by the
+ * statement itself (SA-L15): the same test `shouldPromptForVerdict` makes.
  */
 export async function recordVerdictPrompted(
   userId: string,
   entryId: string,
 ): Promise<void> {
+  const ownUnjudged = sql`EXISTS (SELECT 1 FROM ${outfitEntries} WHERE ${outfitEntries.id} = ${entryId} AND ${outfitEntries.userId} = ${userId} AND ${outfitEntries.verdict} IS NULL)`;
+  // The table's columns in order, as one row; not a bell kind, so not
+  // `notificationInsertWhere`'s draft.
   await db()
     .insert(notifications)
-    .values({
-      id: newUlid(),
-      userId,
-      kind: "verdict_prompt",
-      subjectId: entryId,
-      body: "You didn't log a verdict for this run.",
-      createdAt: nowSeconds(),
-    })
+    .select(
+      sql`SELECT ${newUlid()}, ${userId}, 'verdict_prompt', ${entryId}, ${VERDICT_PROMPT_BODY}, NULL, 0, ${nowSeconds()} WHERE ${ownUnjudged}`,
+    )
     .onConflictDoNothing();
 }
+
+const VERDICT_PROMPT_BODY = "You didn't log a verdict for this run.";
 
 interface EntryDetailItem {
   itemId: string;
