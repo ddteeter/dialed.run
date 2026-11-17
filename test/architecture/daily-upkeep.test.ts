@@ -52,7 +52,11 @@ describe("the Worker entry hands the firings and the queue their upkeep", () => 
       /import \{[^}]*\bdailySpeed,\s*hourlySpeed,[^}]*\} from "\.\/modules\/ops";/u,
     );
     expect(code).toMatch(
-      /handleScheduled\(controller, undefined, \{\s*purgeAccounts: purgeDueAccounts,\s*sweepExports,\s*rescreenHandles: rescreenHandlesFromEnv,\s*linkProducts: linkTypedGarments,\s*sweepAuthRows: sweepExpiredAuthRows,\s*forgetAnsweredRequests,\s*sweepCopyrightHolds,\s*speed: dailySpeed,\s*speedHourly: hourlySpeed,\s*\}\)/u,
+      /handleScheduled\(controller, undefined, \{\s*purgeAccounts: purgeDueAccounts,\s*sweepExports,\s*rescreenHandles: rescreenHandlesFromEnv,\s*linkProducts: linkTypedGarments,\s*sweepAuthRows: sweepExpiredAuthRows,\s*forgetAnsweredRequests,\s*sweepCopyrightHolds,\s*speed: \(today, anomalies\) =>\s*dailySpeed\(today, anomalies, speedDigestDepsFromEnv\(isKnownRoute\)\),\s*speedHourly: \(now, report\) =>\s*hourlySpeed\(now, report, hourlySpeedDepsFromEnv\(isKnownRoute\)\),\s*\}\)/u,
+    );
+    // SA-M34: the speed checks judge only the route names this tree has.
+    expect(code).toContain(
+      "const isKnownRoute = knownRoutes(() => createRouter({ routeTree }));",
     );
   });
 
