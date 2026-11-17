@@ -44,10 +44,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Every package npm installed carries the registry's signature, and
-      # those published with provenance have it verified too. A tarball
-      # that did not come from the registry as published fails here. The
-      # lockfile's own shape is checked by `npm run lint` (lockfile-lint).
+      # The registry's signature on the manifest of each installed
+      # name@version is verified, and provenance where it was published
+      # with it. It does not compare that manifest with the tarball npm
+      # installed: that every lockfile entry resolves to the tarball its
+      # name and version give is test/architecture/lockfile-shape.test.ts
+      # (SA-M18), run by `npm test`; hosts and integrity are lockfile-lint's
+      # (`npm run lint`).
       - name: Verify registry signatures
         run: npm audit signatures
 
