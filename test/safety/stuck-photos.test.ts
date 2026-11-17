@@ -261,15 +261,12 @@ describe("a photo still pending a day after upload", () => {
 
     await retryPendingScreenings(unavailable, anomalies, now);
 
-    // Oldest first by garment id, as the sweep reads them.
-    const [first, second] = [old, missing].toSorted((one, other) =>
-      one.localeCompare(other),
-    );
-    const named = (id: string | undefined) =>
-      id === missing ? `garment ${id} (missing)` : `garment ${String(id)}`;
-    expect(anomalies[1]).toBe(
-      `2 photos still pending a day after upload went to the Desk: ${named(first)}, ${named(second)}`,
-    );
+    // In the order the sweep read them, which is random (design 232).
+    const named = (id: string) =>
+      id === missing ? `garment ${id} (missing)` : `garment ${id}`;
+    const line = (one: string, other: string) =>
+      `2 photos still pending a day after upload went to the Desk: ${named(one)}, ${named(other)}`;
+    expect([line(old, missing), line(missing, old)]).toContain(anomalies[1]);
     const rows = await queueRows();
     expect(rows).toHaveLength(2);
     expect(rows).toEqual(

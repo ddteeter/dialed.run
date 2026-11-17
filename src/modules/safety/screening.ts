@@ -455,8 +455,10 @@ export interface PendingPhoto {
 }
 
 /**
- * Entry photos still waiting on a verdict, oldest first — what the
- * `screening-retry` sweep works through.
+ * Entry photos still waiting on a verdict, in random order — what the
+ * `screening-retry` sweep works through. Random (design 232, as the
+ * time-zone fill reads), so photos that never get an answer cannot hold
+ * every firing's read and leave the newer ones unscreened.
  *
  * Bounded, because a cron firing should do a bounded amount of work and
  * the next one is fifteen minutes away. A backlog drains over several
@@ -468,7 +470,7 @@ export async function pendingEntryPhotos(limit = 50): Promise<PendingPhoto[]> {
     .select({ id: entryPhotos.id, photoKey: entryPhotos.photoKey })
     .from(entryPhotos)
     .where(eq(entryPhotos.screenStatus, "pending"))
-    .orderBy(entryPhotos.id)
+    .orderBy(sql`random()`)
     .limit(limit);
   return rows.map((row) => ({
     scope: "entry" as const,
@@ -479,7 +481,8 @@ export async function pendingEntryPhotos(limit = 50): Promise<PendingPhoto[]> {
 }
 
 /**
- * Garment photos still waiting. Separate from the entry read rather than
+ * Garment photos still waiting, in random order for the same reason.
+ * Separate from the entry read rather than
  * unioned: they are different tables, and `wardrobe_items` rows without a
  * photo at all must not be swept.
  */
@@ -499,7 +502,7 @@ export async function pendingGarmentPhotos(
         isNotNull(wardrobeItems.photoKey),
       ),
     )
-    .orderBy(wardrobeItems.id)
+    .orderBy(sql`random()`)
     .limit(limit);
   // The WHERE already excludes a null photo_key; the mapping below
   // narrows the type rather than re-deciding it.
