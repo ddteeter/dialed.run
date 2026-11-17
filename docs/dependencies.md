@@ -142,7 +142,10 @@ succeeds, and limits what one can do:
 - **No outbound network but a short list**: `harden-runner` blocks
   everything except the hosts the action installs from and Claude reads
   from (GitHub and the npm registry), none of which shows a stranger what
-  was requested.
+  was requested. `harden-runner` itself fails open, so the job proves the
+  fence before the key reaches any step, and again just before Claude
+  runs: two hosts off the list must be unreachable and `sudo` gone, or the
+  job stops (SA-L20).
 - **Narrow tools**: Read, Grep and Glob over the repo; web reads from
   GitHub and the npm registry only, releases included. No shell at all:
   a command runs with the process's environment, where the key is

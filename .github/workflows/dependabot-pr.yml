@@ -233,12 +233,40 @@ jobs:
             storage.googleapis.com:443
             bun.sh:443
 
+      # SA-L20: harden-runner fails open (its setup exits 0 when the agent
+      # is not installed, or reverts itself), so this proves the fence is
+      # up before the key reaches any step: two hosts off the list must be
+      # unreachable and sudo gone, or the job stops here.
+      - name: The fence is up
+        run: |
+          for url in https://example.com https://www.iana.org; do
+            if curl -sS --max-time 5 -o /dev/null "$url"; then
+              echo "::error::$url answered: egress is not blocked"; exit 1
+            fi
+          done
+          if sudo -n true 2>/dev/null; then
+            echo "::error::sudo is still available"; exit 1
+          fi
+
       # main, never the PR head. The PR changes only package.json and the
       # lockfile, and the versions are in the prompt.
       - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 1
           persist-credentials: false
+
+      # Again just before the key is handed over: the agent can revert the
+      # fence mid-job.
+      - name: The fence is still up
+        run: |
+          for url in https://example.com https://www.iana.org; do
+            if curl -sS --max-time 5 -o /dev/null "$url"; then
+              echo "::error::$url answered: egress is not blocked"; exit 1
+            fi
+          done
+          if sudo -n true 2>/dev/null; then
+            echo "::error::sudo is still available"; exit 1
+          fi
 
       # Read, Grep and Glob over the repo, and web reads only from GitHub
       # and the npm registry. No Bash at all (SA-M19): a command runs with

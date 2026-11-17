@@ -61,6 +61,21 @@ jobs:
             storage.googleapis.com:443
             bun.sh:443
 
+      # SA-L20: harden-runner fails open (its setup exits 0 when the agent
+      # is not installed, or reverts itself), so this proves the fence is
+      # up before the key reaches any step: two hosts off the list must be
+      # unreachable and sudo gone, or the job stops here.
+      - name: The fence is up
+        run: |
+          for url in https://example.com https://www.iana.org; do
+            if curl -sS --max-time 5 -o /dev/null "$url"; then
+              echo "::error::$url answered: egress is not blocked"; exit 1
+            fi
+          done
+          if sudo -n true 2>/dev/null; then
+            echo "::error::sudo is still available"; exit 1
+          fi
+
       - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
@@ -87,6 +102,19 @@ jobs:
           # A diff past ~200 KB is a regenerated suite, not a change to read.
           head -c 200000 "$RUNNER_TEMP/transcripts.diff" >transcripts.diff
           echo "reviewed=true" >>"$GITHUB_OUTPUT"
+
+      # Again just before the key is handed over: the agent can revert the
+      # fence mid-job.
+      - name: The fence is still up
+        run: |
+          for url in https://example.com https://www.iana.org; do
+            if curl -sS --max-time 5 -o /dev/null "$url"; then
+              echo "::error::$url answered: egress is not blocked"; exit 1
+            fi
+          done
+          if sudo -n true 2>/dev/null; then
+            echo "::error::sudo is still available"; exit 1
+          fi
 
       # Read, Grep and Glob over the checkout, nothing else: no Bash, no
       # web, no writes. No granted tool runs a command, so nothing inherits

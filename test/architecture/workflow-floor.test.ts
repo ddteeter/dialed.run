@@ -350,3 +350,48 @@ describe("the Dependabot self-merge decision (SA-M38, SA-L10)", () => {
     expect(lines.join("\n")).not.toContain("maintainerChanges");
   });
 });
+
+/**
+The `- ` step lines of a job's steps, in order, comments and blanks skipped.
+*/
+function stepLinesOf(section: string): string[] {
+  return section.split("\n").filter((line) => isStep(line));
+}
+
+describe("a job that blocks egress (SA-L20)", () => {
+  const blocking = Object.entries(workflows).flatMap(([path, source]) =>
+    source
+      .slice(source.indexOf("\njobs:\n") + 1)
+      .split(/\n(?= {2}[\w-]+:\s*\n)/u)
+      .slice(1)
+      .filter((section) => section.includes("egress-policy: block"))
+      .map((section) => ({
+        job: `${path.slice(path.lastIndexOf("/") + 1)}:${/^ {2}([\w-]+):/u.exec(section)?.[1] ?? ""}`,
+        steps: stepLinesOf(section),
+      })),
+  );
+
+  it("is found, so an empty result cannot pass for a clean one", () => {
+    expect(blocking.map(({ job }) => job).toSorted(byName)).toEqual([
+      "a11y-review.yml:review",
+      "dependabot-pr.yml:review",
+    ]);
+  });
+
+  it("proves the fence straight after harden-runner", () => {
+    const unproven = blocking
+      .filter(({ steps }) => steps[1] !== "      - name: The fence is up")
+      .map(({ job }) => job);
+    expect(unproven).toEqual([]);
+  });
+
+  it("proves it again on the step before Claude", () => {
+    const unproven = blocking
+      .filter(({ steps }) => {
+        const claude = steps.findIndex((line) => line.includes("- id: claude"));
+        return claude < 1 || steps[claude - 1] !== "      - name: The fence is still up";
+      })
+      .map(({ job }) => job);
+    expect(unproven).toEqual([]);
+  });
+});
