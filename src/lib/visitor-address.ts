@@ -13,20 +13,26 @@ const GROUPS = 8;
 const PREFIX_GROUPS = 4;
 
 /**
+The groups of one side of `::`; none for an empty side.
+*/
+function groupsOf(text: string): string[] {
+  return text === "" ? [] : text.split(":");
+}
+
+/**
 The eight groups of an IPv6 address, `::` filled in; `undefined` for text that is not one.
+A second `::` leaves an empty group in the tail, which no group matches.
 */
 function ipv6Groups(text: string): readonly string[] | undefined {
-  const halves = text.split("::");
-  if (halves.length > 2) return undefined;
-  const [head = [], tail] = halves.map((half) =>
-    half === "" ? [] : half.split(":"),
-  );
+  const at = text.indexOf("::");
+  const head = groupsOf(at === -1 ? text : text.slice(0, at));
+  const tail = at === -1 ? undefined : groupsOf(text.slice(at + 2));
   const given = [...head, ...(tail ?? [])];
   if (given.some((group) => !GROUP.test(group))) return undefined;
+  if (tail === undefined) return head.length === GROUPS ? head : undefined;
   const missing = GROUPS - given.length;
-  const isFits = tail === undefined ? missing === 0 : missing > 0;
-  return isFits
-    ? [...head, ...Array.from({ length: missing }, () => "0"), ...(tail ?? [])]
+  return missing > 0
+    ? [...head, ...Array.from({ length: missing }, () => "0"), ...tail]
     : undefined;
 }
 

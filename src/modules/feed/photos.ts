@@ -263,8 +263,8 @@ type PhotoRow = Readonly<{
  * removed as intimate (D-147, design 152) and the fingerprint breaker has
  * room (design 164): hidden from everyone but its owner, as a classifier
  * flag is, with a Review row and its uploader's notice (D-162) in the same
- * batch. Says whether it was stored, held, or refused because the kit was
- * full. The match is read first, since a batch cannot branch on its own
+ * batch. Says whether it was held or refused because the kit was full;
+ * `undefined` is a row stored for screening. The match is read first, since a batch cannot branch on its own
  * results; a held batch whose row was refused takes its Review row and
  * notice back, which name a photo nobody can reach.
  */
@@ -272,7 +272,7 @@ async function storeRow(
   database: ReturnType<typeof db>,
   uploaderId: string,
   row: PhotoRow,
-): Promise<"stored" | "held" | "full"> {
+): Promise<"held" | "full" | undefined> {
   // From the primary (design 143): what was kept is an operator's write,
   // not this runner's, so the session's bookmark does not promise a replica
   // has it. Read from one, a copy posted seconds after its takedown would
@@ -285,7 +285,7 @@ async function storeRow(
   );
   if (!isHeld) {
     const written = await insertWhileRoom(database, row, "pending");
-    return written.length === 0 ? "full" : "stored";
+    return written.length === 0 ? "full" : undefined;
   }
   const [written] = await database.batch([
     insertWhileRoom(database, row, "hidden_pending_review"),

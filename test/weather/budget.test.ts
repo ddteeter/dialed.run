@@ -69,6 +69,23 @@ describe("runnerWeatherBudget", () => {
     await expect(runnerWeatherBudget(userId)()).resolves.toBeUndefined();
   });
 
+  it("holds a count begun earlier in the day", async () => {
+    const userId = newUlid();
+    await db
+      .insert(rateLimits)
+      .values(
+        countRow(
+          "weather-runner",
+          userId,
+          WEATHER_CALLS_PER_DAY,
+          nowSeconds() - 2 * 60 * 60,
+        ),
+      );
+    await expect(runnerWeatherBudget(userId)()).rejects.toBeInstanceOf(
+      WeatherBudgetSpentError,
+    );
+  });
+
   it("names a spent budget apart from a provider failure", () => {
     const spent = new WeatherBudgetSpentError();
     expect(spent.name).toBe("WeatherBudgetSpentError");

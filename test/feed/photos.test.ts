@@ -47,6 +47,8 @@ import type { Audience } from "../../src/lib/contracts";
 // A real JPEG: every stored photo is decoded and re-encoded (task 128 ·
 // SAF-1), so three made-up bytes would be refused before they reached R2.
 const JPEG_BYTES = new Uint8Array(await tinyJpeg()).buffer;
+// Earlier the same day: inside the day's upload count.
+const TWO_HOURS_S = 2 * 60 * 60;
 
 describe("entry photos", () => {
   beforeEach(resetTables);
@@ -146,6 +148,12 @@ describe("entry photos", () => {
         bytes: JPEG_BYTES,
       }),
     ).rejects.toBeInstanceOf(InvalidPhotoError);
+    // A full kit refuses before the day's count: only the four stored count.
+    const [counted] = await drizzle(env.DIALED_CORE)
+      .select({ count: rateLimits.count })
+      .from(rateLimits)
+      .where(eq(rateLimits.subject, userId));
+    expect(counted?.count).toBe(MAX_PHOTOS_PER_ENTRY);
   });
 
   it("keeps a private entry's photo invisible to a stranger, visible to its owner", async () => {
@@ -671,7 +679,12 @@ describe("bounds on what one runner stores (SA-M14)", () => {
     await drizzle(env.DIALED_CORE)
       .insert(rateLimits)
       .values(
-        countRow("photo-runner", userId, PHOTO_UPLOADS_PER_DAY, nowSeconds()),
+        countRow(
+          "photo-runner",
+          userId,
+          PHOTO_UPLOADS_PER_DAY,
+          nowSeconds() - TWO_HOURS_S,
+        ),
       );
 
     await expect(

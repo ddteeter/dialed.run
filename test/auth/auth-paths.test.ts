@@ -80,6 +80,7 @@ describe("answerAuthRequest", () => {
     for (const url of [
       "https://app.test/api/auth/not-an-endpoint",
       "https://app.test/api/authok",
+      "https://app.test/api/autx/ok",
       "https://app.test/api/auth",
       "https://app.test/ok",
     ]) {
