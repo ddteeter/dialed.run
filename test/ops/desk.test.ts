@@ -538,11 +538,18 @@ describe("deskToday's breakers (design 164)", () => {
   });
 
   it("lists each cause at its ceiling this hour, and nothing on an ordinary hour", async () => {
-    await opened("fingerprint", FINGERPRINT_HOLDS_PER_HOUR - 1, nowSeconds());
+    await opened(
+      "fingerprint",
+      FINGERPRINT_HOLDS_PER_HOUR - 1,
+      nowSeconds(),
+      "photo",
+      undefined,
+      "each",
+    );
     const ordinary = await deskToday("op-viewer");
     expect(ordinary.breakers).toStrictEqual([]);
 
-    await opened("fingerprint", 1, nowSeconds());
+    await opened("fingerprint", 1, nowSeconds(), "photo", undefined, "each");
     const { breakers } = await deskToday("op-viewer");
     expect(breakers).toStrictEqual([
       {
