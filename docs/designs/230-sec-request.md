@@ -33,14 +33,14 @@ ties two GET-reachable effects to the runner's own navigation.
   - `d1b` and `dialed_age_refused` become `__Host-d1b` and
     `__Host-dialed_age_refused`, as 12c did for the Strava state.
 - **SA-L03.** `completeOnboardingFn` writes only for a request whose
-  `Sec-Fetch-Site` is `same-origin` or `none`, or absent. A decision in
-  `modules/onboarding` reads the header. *(Guess, Q3.)*
+  `Sec-Fetch-Site` is `same-origin` or `none`, or absent
+  (`lib/fetch-site`).
 - **SA-L13.**
   - `wireErrorAdapter` parses what arrives with the schema it already
     holds, and builds the `Error` from the parsed copy only.
   - The terms prompt's "you'll go back to …" name travels in the
     navigation's history state, set by `ui/terms-refusal.tsx`, not in
-    `?save=`. It shows after mount. *(Guess, Q4.)*
+    `?save=`. It shows after hydration.
 
 ## Contract touches
 
@@ -67,7 +67,7 @@ ties two GET-reachable effects to the runner's own navigation.
 
 - Refs #756 (ids SA-M1, SA-M25, SA-M35, SA-L03, SA-L13).
 
-## Open questions (asked of coordinator-13, 2026-11-16)
+## Open questions (asked of coordinator-13, 2026-11-16; answered)
 
 - Q3 (owner): a cross-site arrival at `/onboarding/done` no longer
   finishes onboarding.
@@ -78,4 +78,8 @@ shared with 13b.
 
 ## Owner answers
 
-Pending (Q3, Q4).
+Owner, 2026-11-16, through coordinator-13:
+
+- Q3: ship as built. A cross-site arrival at `/onboarding/done` does not
+  finish onboarding.
+- Q4: history state, as built.
