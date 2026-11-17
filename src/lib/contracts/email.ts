@@ -135,6 +135,43 @@ const PREFERENCE_OF: Readonly<
 };
 
 /**
+ * Whether an email to a runner waits for their address to be confirmed
+ * (SA-M28): a notice of something the runner did that an address they
+ * never proved is theirs has no need to hear. Mail to a typed address (an
+ * invite, a change link) is not a runner's, and is not held by this.
+ *
+ * A table over every kind, as `PREFERENCE_OF` is, so a lane adding a kind
+ * has to say. The link emails an unconfirmed runner must receive say no;
+ * the rest are as they were until the owner rules on each.
+ */
+const CONFIRMED_ADDRESS_REQUIRED: Readonly<Record<EmailKind, boolean>> = {
+  verify_email: false,
+  existing_account: false,
+  reset_password: false,
+  email_change: false,
+  email_changed: false,
+  run_reminder: false,
+  content_removed: false,
+  account_closed: false,
+  account_reopened: false,
+  invite: false,
+  strava_disconnected: true,
+  deletion_scheduled: false,
+  digest: false,
+  removal_due: false,
+  removal_requested: false,
+  removal_request_received: false,
+  removal_request_decided: false,
+  removal_reminder: false,
+  takedown_valve: false,
+  export_ready: false,
+};
+
+export function requiresConfirmedAddress(kind: EmailKind): boolean {
+  return CONFIRMED_ADDRESS_REQUIRED[kind];
+}
+
+/**
  * Settings › Notifications' one switch in v1 (ACC-11; round 26 #19): what
  * the switch saves, as the server function parses it. The switch saves as it
  * changes (R54·166.3), so no form reads it.
