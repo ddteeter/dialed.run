@@ -184,11 +184,19 @@ would not catch it either; nobody reads a lockfile diff. What does:
 - the Cloudflare secrets in a `production` environment and a token scoped
   to what deploy needs (`docs/deployment.md` §7).
 
-**Not done yet** (R-166): an install-script allowlist. npm 11.19 warns about
-packages whose install scripts aren't covered by `allowScripts`
-(workerd, esbuild, canvas, fsevents today). An allowlist would stop a new
-dependency's install script from running at all. It needs the npm that CI
-installs to enforce it, which has not been checked.
+**Install scripts** (R-166, SA-L10): `.npmrc` sets
+`strict-allow-scripts=true`, so an install runs a dependency's install
+script only when `allowScripts` in `package.json` names the package
+(workerd, esbuild, canvas, fsevents today), and any other script fails the
+install with `ESTRICTALLOWSCRIPTS`. Approve a new one with
+`npm approve-scripts <pkg> --no-allow-scripts-pin`. The entries are bare
+names, so any later version of a named package runs its script: a pinned
+entry would fail every esbuild or workerd bump until re-approved. Both
+settings are npm 11.19's; `engine-strict=true` and the `engines` floor
+(npm 11.19, Node 24.20) stop an older npm, which would ignore them, and
+every `setup-node` sets `check-latest` so CI's Node meets the floor.
+`test/architecture/install-scripts.test.ts` pins all of it. The allowlist
+does nothing about code the build loads.
 
 ## The CI floor
 

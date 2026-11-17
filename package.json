@@ -148,13 +148,11 @@
     "vitest": "^4.1.12",
     "wrangler": "^4.129.0"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "lightningcss",
-      "sharp",
-      "workerd"
-    ]
+  "allowScripts": {
+    "canvas": true,
+    "esbuild": true,
+    "fsevents": true,
+    "workerd": true
   },
   "license": "AGPL-3.0-only",
   "description": "A virtual wardrobe for runners: log what you wore, on which run, in which weather.",
@@ -163,7 +161,8 @@
     "url": "https://github.com/ddteeter/dialed.run.git"
   },
   "engines": {
-    "node": "^24 || >=26"
+    "node": "^24.20.0 || >=26",
+    "npm": ">=11.19.0"
   },
   "overrides": {
     "vite-plus": {

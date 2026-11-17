@@ -88,6 +88,7 @@ jobs:
       - uses: actions/setup-node@v7.1.0
         with:
           node-version: 24
+          check-latest: true
 
       # Merges itself only when EVERY dependency in the PR is an npm minor
       # at 1.0 or above, or a patch anywhere but 0.0.x (under semver a 0.x
