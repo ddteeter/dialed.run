@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #16161A; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+</style>
+</helmet>
+<div style="font-family: Archivo, Helvetica, sans-serif; background: #16161A; color: #F4F3EF; padding: 48px 40px 88px;">
+  <div style="max-width: 1420px; margin: 0 auto; display: flex; flex-direction: column; gap: 64px;">
+
+    <div style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 28px; border-bottom: 1px solid #2A2A31;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">
+        <span>Round 60 &nbsp;/&nbsp; 324–330 · 60a–60e · 2026-11-17</span>
+        <span style="color: #FF2D8A;">dialed.run</span>
+      </div>
+      <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; max-width: 1120px; text-transform: uppercase;">A refusal says when, not "try again".</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #8B8B93; max-width: 860px; text-wrap: pretty;">One ruling covers every new refusal (324, 328, 60a, 329, 60d, 60e): a refusal a retry can't fix drops Try again and, where there is one, says when it can work. A field error only where typing in the field fixes it. Drawn: the link landings' ask state and the runs row with a badge. A manual run's title stays the runner's own.</p>
+    </div>
+
+    <!-- REFUSAL RULE -->
+    <div style="display: flex; flex-direction: column; gap: 20px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">The refusal rule</span>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1px; background: #2A2A31; border: 1px solid #2A2A31;">
+        <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Fixable in the field</strong> → the field error, under the field (R29 #1). The runner's next keystroke is the fix. 329 #3, 60c.</div>
+        <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Fixable by retrying</strong> → the §4a band under the control, kicker naming the state still true, with Try again.</div>
+        <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">Not fixable now</strong> (limits, holds, refusals, gone) → the same band and slot, <strong style="color: #F4F3EF;">no Try again</strong>. A limit names its {time} or {date}; a refusal names the other way, if there is one.</div>
+      </div>
+    </div>
+
+    <!-- 324 -->
+    <div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">324 · /account/verify asks first</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <sc-for list="{{ verify }}" as="s" hint-placeholder-count="4">
+          <div style="flex: 0 0 320px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ s.label }}</span>
+            <div data-screen-label="{{ s.screen }}" style="width: 320px; min-height: 360px; background: #F4F3EF; color: #0B0B0E; padding: 32px 20px; display: flex; flex-direction: column; gap: 16px;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.03em;">dialed.run</span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 24px; line-height: 1.1; letter-spacing: -0.025em; padding-top: 16px;">{{ s.head }}</span>
+              <span style="font-size: 15px; line-height: 1.5; color: #4E4E44;">{{ s.body }}</span>
+              <span style="height: 48px; border-radius: 100px; background: #0B0B0E; color: #F4F3EF; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700;">{{ s.btn }}</span>
+              <sc-if value="{{ s.fail }}" hint-placeholder-val="{{ false }}">
+                <div style="background: #E6E5DC; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px;">
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em;">{{ s.kicker }}</span>
+                  <span style="font-size: 14px; line-height: 1.45;">That didn't go through.</span>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 860px; text-wrap: pretty;">The unsubscribe landing's composition (R27 #8). Pending is the button's breathing brackets, same width (§5). Failure: the band under the button, sentence "That didn't go through." with no Try again, since the button above it is the retry. Success replaces the page with R26 #11's landings. Change reads "Use this address?" with the new address in the body and NOT CHANGED on failure.</p>
+    </div>
+
+    <!-- 326 -->
+    <div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">326 · Runs row with a badge</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">326 · THREE ROWS · 390 LIGHT · MIDDLE ROW BADGED</span>
+          <div data-screen-label="326 runs row badge" style="width: 390px; background: #F4F3EF; color: #0B0B0E; padding: 0 20px;">
+            <div style="height: 64px; padding: 12px 0; border-bottom: 1px solid #DCDBD2; display: flex; justify-content: space-between; gap: 16px;">
+              <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 15px; font-weight: 600; line-height: 20px;">Thu Nov 12</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 16px; letter-spacing: 0.06em; color: #4E4E44;">41°F RAIN · 8.1 MI</span></div>
+              <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 16px; letter-spacing: 0.06em; padding-top: 2px;"><span style="color: #007A6C;">DIALED</span><span style="color: #4E4E44;">KIT</span></div>
+            </div>
+            <div style="position: relative; height: 104px; padding: 12px 0 16px; border-bottom: 1px solid #DCDBD2; display: flex; justify-content: space-between; gap: 16px;">
+              <div style="display: flex; flex-direction: column;">
+                <span style="font-size: 15px; font-weight: 600; line-height: 20px;">Mon Nov 9</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 16px; letter-spacing: 0.06em; color: #4E4E44; padding-top: 4px;">NO RECORD · 6.2 MI</span>
+                <span style="margin-top: 14px; align-self: flex-start; height: 22px; padding: 4px 8px; border: 1px solid #0B0B0E; font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 13px; letter-spacing: 0.08em; outline: 1px dashed #FF2D8A; outline-offset: 10px;">SET CONDITIONS ›</span>
+              </div>
+              <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 16px; letter-spacing: 0.06em; padding-top: 2px;"><span style="color: #4E4E44;">NO VERDICT</span></div>
+              <span style="position: absolute; right: 0; bottom: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #C21A6B;">104 · 44 TARGET INSIDE</span>
+            </div>
+            <div style="height: 64px; padding: 12px 0; display: flex; justify-content: space-between; gap: 16px;">
+              <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 15px; font-weight: 600; line-height: 20px;">Sat Nov 7</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 16px; letter-spacing: 0.06em; color: #4E4E44;">38°F WIND · 10.0 MI · COROS</span></div>
+              <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 16px; letter-spacing: 0.06em; padding-top: 2px;"><span style="color: #2F5BD3;">A BIT COLD</span><span style="color: #4E4E44;">KIT</span></div>
+            </div>
+          </div>
+        </div>
+        <p style="flex: 1 1 300px; max-width: 520px; margin: 0; padding-top: 24px; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">The badge gets its own line, under the mono line, at the row's start. Gaps: date to mono 4, mono to badge 14. Row padding 12 top, 16 bottom when badged. The badge's 44 target (11 past each edge) sits wholly in the row: 12 + 20 + 4 + 16 + 14 + 22 + 16 = 104. Rows without a badge stay 64. Verdict and kit marks keep their place at the top right; nothing sits beside the badge.</p>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 20px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">Rulings · Round 60</span>
+      <sc-for list="{{ groups }}" as="g" hint-placeholder-count="6">
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93; padding-top: 12px;">{{ g.h }}</span>
+          <div style="display: flex; flex-direction: column; border: 1px solid #2A2A31;">
+            <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="2">
+              <div style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 120px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;">
+                <span style="font-size: 15px; font-weight: 600;">{{ r.q }}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: {{ r.vc }};">{{ r.v }}</span>
+                <span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">{{ r.a }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const C = '#00E0C6', A = '#F5FF3D', D = '#FF2D8A';
+    const R = (q, v, a) => ({ q, v, a, vc: v.startsWith('CONFIRM') || v === 'NOTED' ? C : v.includes('DRAWN') ? D : A });
+    const verify = [
+      { label: 'SIGN-UP · ASK', screen: '324 verify ask', head: 'Confirm your email?', body: 'mara@hey.com', btn: 'Confirm email', fail: false },
+      { label: 'SIGN-UP · PENDING', screen: '324 verify pending', head: 'Confirm your email?', body: 'mara@hey.com', btn: '[ Confirming ]', fail: false },
+      { label: 'SIGN-UP · FAILED', screen: '324 verify failed', head: 'Confirm your email?', body: 'mara@hey.com', btn: 'Confirm email', fail: true, kicker: 'NOT CONFIRMED' },
+      { label: 'CHANGE · FAILED', screen: '324 change failed', head: 'Use this address?', body: 'mara.k@fastmail.com will be your login and where we write to you.', btn: 'Use this address', fail: true, kicker: 'NOT CHANGED' },
+    ];
+    const groups = [
+      { h: 'NOTICES', rows: [
+        R('Manual run titles', 'NOTED', `The title is the runner's own. See 330.`),
+        R('Blocking', 'NOTED', `No ceiling; Settings lists every blocked runner, unpaged. A block doesn't stop a report.`),
+      ]},
+      { h: 'AUTH AND ACCOUNT', rows: [
+        R('324 · Link landings ask', 'DRAWN', `As the board. One ink button; pending brackets; failure band under the button, kicker NOT CONFIRMED / NOT CHANGED, "That didn't go through." The "Try again?" goes: the button is the retry.`),
+        R('324 · Google, password account', 'CHANGED', `Kicker follows the page: NOT LOGGED IN on Au1, NOT CREATED on Au2. In Google's band, under the Google button. No Try again. Sentence as built.`),
+        R('324 · Au1 sign-in limit', 'CHANGED', `Kicker NOT LOGGED IN, the app's word (not "signed in"). Form failure slot, above Log in. No Try again. Sentence as built.`),
+        R('328 · Address can\'t make an account', 'CONFIRMED', `Google's band on Au2, NOT CREATED, no Try again, sentence as built. The email form shows nothing new. Covered by the refusal rule with 324's two bands.`),
+        R('60a · Resend limit', 'CONFIRMED', `The §4a band under Resend, wherever Resend sits, kicker NOT SENT, no Try again. Sentence as built.`),
+        R('60b · Terms return line', 'CONFIRMED', `Only when the app sent the runner from a page; no line otherwise. It appears with the page, not after, so nothing shifts: the line is in the first render or never.`),
+        R('329 #2 · Handle rename limit', 'CHANGED', `Not a field error: no edit to the field fixes it. The band above Save, NOT CHANGED, no Try again: "You've changed your handle 3 times in 30 days. You can change it again on {date}."`),
+      ]},
+      { h: 'CLOSET, KITS AND PHOTOS', rows: [
+        R('329 #1 · Held-item delete', 'CHANGED', `Sentence confirmed. Try again goes: a retry can't succeed until the claim settles. The sheet's other button becomes Close; Delete stays, so the band doesn't leave the runner with a dead end.`),
+        R('329 #3 · dialed.run as product link', 'CONFIRMED', `Field error on blur, sentence as built; the fix is in the field. A stored one renders as plain text.`),
+        R('60c · Link over 2,048', 'CONFIRMED', `Field error on blur, sentence as built.`),
+        R('329 #4 · Correction sheet quotes domain', 'CONFIRMED', `Domain alone.`),
+        R('60d · Daily photo limit', 'CONFIRMED', `Each surface's photo failure line, sentence as built, with no Try again.`),
+      ]},
+      { h: 'RUNS', rows: [
+        R('326 · Runs row with a badge', 'DRAWN', `The badge takes its own line under the mono line; the row grows to 104 when badged and stays 64 otherwise. Date–mono 4, mono–badge 14, padding 12 / 16. The 44 target sits inside the row.`),
+      ]},
+      { h: 'FEED AND KIT DETAIL', rows: [
+        R('330 · Manual run title to others', 'RULED', `No. Other runners keep the day and distance on feed cards, kit detail and W1. R1's title field gets the hint "Only you see the title." Nothing new to screen.`),
+        R('60e · Report sheet refusals', 'CONFIRMED', `Both in the "Not sent" band, sentences as built, with no Try again. The item-gone band's sheet offers Close only.`),
+      ]},
+      { h: 'DESK', rows: [
+        R('325 · Removal-request photo', 'CONFIRMED', `As built: above "Open its kit", 128 tall, natural width, hairline, at the row's start. It opens nothing; the kit is one press away and the Desk has no lightbox.`),
+        R('327 · Two state tags', 'CONFIRMED', `[CLOSED] [PENDING DELETE], that order, one line, 8 apart, the existing ink tag. Each tag keeps whole; below desk the second wraps under the first, start-aligned.`),
+      ]},
+    ];
+    return { verify, groups };
+  }
+}
+</script>
+</body>
+</html>
