@@ -1955,6 +1955,9 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     expect(thumbnails()).toHaveLength(2);
     // The first refusal stops the row: the second photo is not sent.
     expect(uploadPhoto).toHaveBeenCalledTimes(1);
+    // No Try again (R60·60d): today's uploads are used up, so a retry is
+    // refused again. The line is the row's.
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
     expect(router.state.location.pathname).not.toBe("/feed/verdict/01NEW");
   });
 

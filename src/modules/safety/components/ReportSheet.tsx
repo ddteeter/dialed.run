@@ -123,6 +123,10 @@ function useReportRefusal() {
   const [status, setStatus] = useState<FileReportResult["status"]>();
   return {
     message: REPORT_REFUSED.get(status),
+    /**
+    The subject is gone: there is nothing left to report (R60·60e).
+    */
+    isGone: status === "not_found",
     refusal: {
       matches: (result: FileReportResult) => result.status !== "filed",
       answer: (result: FileReportResult) => {
@@ -224,6 +228,17 @@ export function ReportSheet({
     );
   }
 
+  if (refused.isGone) {
+    return (
+      <GoneSheet
+        open={open}
+        onClose={onClose}
+        label={titleOf(subject)}
+        message={refused.message}
+      />
+    );
+  }
+
   // **The block offer needs a name, so it is gated on having one.**
   //
   // `canBlock` and `authorName` are two props that have always had to
@@ -276,7 +291,7 @@ export function ReportSheet({
           send("report");
         }}
       >
-        <FormStatus>{form.status}</FormStatus>
+        <RefusalStatus status={form.status} message={refused.message} />
         <RefusalBand message={refused.message} />
         <FormErrorSummary
           rows={form.summaryRows}
@@ -348,13 +363,68 @@ export function ReportSheet({
 }
 
 /**
+ * The sheet once the subject is gone (R60·60e): the refusal, and Close
+ * only. Reasons, Send report and the block ways would each be refused
+ * again, so none is offered.
+ */
+function GoneSheet({
+  open,
+  onClose,
+  label,
+  message,
+}: Readonly<{
+  open: boolean;
+  onClose: () => void;
+  label: string;
+  message: string | undefined;
+}>): JSX.Element {
+  return (
+    <Sheet open={open} onClose={onClose} label={label}>
+      <div className="flex flex-col gap-4">
+        <RefusalStatus status="" message={message} />
+        <RefusalBand message={message} />
+        <button
+          type="button"
+          onClick={onClose}
+          className={`target ${SECONDARY_PILL}`}
+        >
+          Close
+        </button>
+      </div>
+    </Sheet>
+  );
+}
+
+/**
+ * The sheet's one status region (rule 08), which says a refusal's band
+ * too: a refusal announces nothing of its own.
+ */
+function RefusalStatus({
+  status,
+  message,
+}: Readonly<{
+  status: string;
+  message: string | undefined;
+}>): JSX.Element {
+  return (
+    <FormStatus>
+      {message === undefined ? status : `${REFUSED_KICKER}. ${message}`}
+    </FormStatus>
+  );
+}
+
+const REFUSED_KICKER = "Not sent";
+
+/**
  * The sentence a refusal leaves on the sheet, or nothing before one.
+ * No Try again: today's limit and a subject that is gone are each refused
+ * again (R60·60e).
  */
 function RefusalBand({
   message,
 }: Readonly<{ message: string | undefined }>): JSX.Element | undefined {
   return message === undefined ? undefined : (
-    <FailureBand kicker="Not sent" message={message} />
+    <FailureBand kicker={REFUSED_KICKER} message={message} />
   );
 }
 
