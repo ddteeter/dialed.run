@@ -46,7 +46,7 @@ Runners
 end of link, Runners
 end of listitem, level 1, position 7, set size 7
 end of list
-Screening · OK
+Screening · :state
 Last digest
 Not yet
 end of navigation, Desk

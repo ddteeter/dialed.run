@@ -81,66 +81,75 @@ test("an operator reads the Desk's duplicates report", async ({ page }) => {
     }
   });
 
-  await signInAsOperator(page);
-  await page.goto("/desk");
-  await page
-    .locator('html[data-hydrated="true"]')
-    .waitFor({ state: "attached" });
+  try {
+    await signInAsOperator(page);
+    await page.goto("/desk");
+    await page
+      .locator('html[data-hydrated="true"]')
+      .waitFor({ state: "attached" });
 
-  await scene(page, "Duplicates is a Desk destination now, in D-87's order");
-  const rail = page.getByRole("navigation", { name: "Desk" });
-  await rail.getByRole("link", { name: "Duplicates" }).click();
-  await expect(page).toHaveURL(/\/desk\/duplicates$/u);
-  await page
-    .locator('html[data-hydrated="true"]')
-    .waitFor({ state: "attached" });
-  // One current page: Today's `/desk` is no longer lit beside it.
-  await expect(rail.getByRole("link", { name: "Duplicates" })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
-  await expect(rail.locator("[aria-current='page']")).toHaveCount(1);
+    await scene(page, "Duplicates is a Desk destination now, in D-87's order");
+    const rail = page.getByRole("navigation", { name: "Desk" });
+    await rail.getByRole("link", { name: "Duplicates" }).click();
+    await expect(page).toHaveURL(/\/desk\/duplicates$/u);
+    await page
+      .locator('html[data-hydrated="true"]')
+      .waitFor({ state: "attached" });
+    // One current page: Today's `/desk` is no longer lit beside it.
+    await expect(
+      rail.getByRole("link", { name: "Duplicates" }),
+    ).toHaveAttribute("aria-current", "page");
+    await expect(rail.locator("[aria-current='page']")).toHaveCount(1);
 
-  await scene(page, "How much dirt: names, probable products, pieces");
-  await expect(
-    page.getByRole("heading", { name: "Duplicates", level: 1 }),
-  ).toBeVisible();
-  await expect(
-    page.getByText(
-      /^\[\d+ names? → become \d+ probable products? · \d+ pieces? affected\]$/u,
-    ),
-  ).toBeVisible();
-  await expect(page.getByText(/^Nothing here does anything\./u)).toBeVisible();
+    await scene(page, "How much dirt: names, probable products, pieces");
+    await expect(
+      page.getByRole("heading", { name: "Duplicates", level: 1 }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        /^\[\d+ names? → become \d+ probable products? · \d+ pieces? affected\]$/u,
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/^Nothing here does anything\./u),
+    ).toBeVisible();
 
-  await scene(page, "Each group: the brand, the probable name, the rest");
-  const card = (brand: string) =>
-    page
-      .getByRole("listitem")
-      .filter({ has: page.getByRole("heading", { name: brand }) });
-  const tracksmith = card("Tracksmith");
-  await expect(tracksmith.getByRole("heading")).toHaveText(
-    "Tracksmith[7 pieces]",
-  );
-  await expect(tracksmith.locator("strong")).toHaveText("Harrier Long Sleeve");
-  await expect(tracksmith.getByRole("listitem").nth(1)).toHaveText(
-    "Harrier Long Sleeves2 pieces",
-  );
+    await scene(page, "Each group: the brand, the probable name, the rest");
+    const card = (brand: string) =>
+      page
+        .getByRole("listitem")
+        .filter({ has: page.getByRole("heading", { name: brand }) });
+    const tracksmith = card("Tracksmith");
+    await expect(tracksmith.getByRole("heading")).toHaveText(
+      "Tracksmith[7 pieces]",
+    );
+    await expect(tracksmith.locator("strong")).toHaveText(
+      "Harrier Long Sleeve",
+    );
+    await expect(tracksmith.getByRole("listitem").nth(1)).toHaveText(
+      "Harrier Long Sleeves2 pieces",
+    );
 
-  await scene(page, "Sorted by pieces affected: seven before four");
-  const headings = await page
-    .getByRole("heading", { level: 2 })
-    .allTextContents();
-  expect(headings.indexOf("Tracksmith[7 pieces]")).toBeLessThan(
-    headings.indexOf("Janji[4 pieces]"),
-  );
+    await scene(page, "Sorted by pieces affected: seven before four");
+    const headings = await page
+      .getByRole("heading", { level: 2 })
+      .allTextContents();
+    expect(headings.indexOf("Tracksmith[7 pieces]")).toBeLessThan(
+      headings.indexOf("Janji[4 pieces]"),
+    );
 
-  await scene(page, "Read-only: there is nothing to press");
-  await expect(page.getByRole("main").getByRole("button")).toHaveCount(0);
-  await expect(page.getByRole("main").getByRole("link")).toHaveCount(0);
-
-  await withLocalDb(async ({ core }) => {
-    await core.delete(wardrobeItems).where(inArray(wardrobeItems.id, pieceIds));
-    await core.delete(products).where(inArray(products.id, productIds));
-    await core.delete(brands).where(inArray(brands.id, brandIds));
-  });
+    await scene(page, "Read-only: there is nothing to press");
+    await expect(page.getByRole("main").getByRole("button")).toHaveCount(0);
+    await expect(page.getByRole("main").getByRole("link")).toHaveCount(0);
+  } finally {
+    // A walk that fails partway would leave these for every later spec's
+    // Desk (design 238), so they go whatever happens.
+    await withLocalDb(async ({ core }) => {
+      await core
+        .delete(wardrobeItems)
+        .where(inArray(wardrobeItems.id, pieceIds));
+      await core.delete(products).where(inArray(products.id, productIds));
+      await core.delete(brands).where(inArray(brands.id, brandIds));
+    });
+  }
 });

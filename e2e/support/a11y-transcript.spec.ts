@@ -115,6 +115,12 @@ test("what differs between runs is normalized, and structure is not", () => {
     "@trail_# :when · #:#, :day :month #",
   );
   expect(normalize("Yesterday · 6:04 AM; 15m ago")).toBe(":when · #:#; :when");
+  // The Desk rail's breaker state, which earlier specs decide (design 238).
+  expect(normalize("Screening · OK")).toBe("Screening · :state");
+  expect(normalize("Screening · Holding")).toBe("Screening · :state");
+  expect(normalize("Screening photos · OK to post")).toBe(
+    "Screening photos · OK to post",
+  );
   // Whole names only: a word that starts like one is a word.
   expect(normalize("IBM Plex Mono; Garmin may satisfy a marked notice")).toBe(
     "IBM Plex Mono; Garmin may satisfy a marked notice",

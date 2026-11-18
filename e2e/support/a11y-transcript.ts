@@ -59,9 +59,11 @@ const END = "end of document";
  * What differs between two runs of the same test, and between the dev
  * server and the build: ids (whole or short), seeded handles and every number (counts,
  * times, dates, temperatures), and a post's "2h ago" or "Yesterday",
- * which depends on the hour the test runs. A transcript is about what is said and
- * in what order; the values are other tests' business. Heading levels
- * and list positions stay.
+ * which depends on the hour the test runs, and the Desk rail's breaker
+ * state, which depends on what the suite's earlier specs left in the hour
+ * (design 238). A transcript is about what is said and in what order; the
+ * values are other tests' business. Heading levels and list positions
+ * stay.
  */
 export function normalize(phrase: string): string {
   return (
@@ -77,6 +79,9 @@ export function normalize(phrase: string): string {
       .replaceAll(/#:# ?[AP]M/gu, "#:#")
       // When a post's run was, against the clock (`feed/posted.ts`).
       .replaceAll(/# ?[mhd] ago\b|\b(?:Yesterday|Today)\b/gu, ":when")
+      // The rail's foot (`DeskShell.tsx`): a journey that sets the state
+      // up asserts it with `expect`.
+      .replaceAll(/\bScreening · (?:OK|Holding)\b/gu, "Screening · :state")
   );
 }
 
