@@ -104,7 +104,8 @@ cron re-drives, and `wrangler.jsonc` for retries and dead-letter queues.
 
 - When a branch changes a file a story cites, `npm run diagrams:stale`
   lists the story, and the PR body says whether it was updated or re-read
-  (skill `pr-ready`).
+  (skill `pr-ready`). A flow re-read in several PRs is due an audit, which
+  re-derives it from the code without the story (skill `diagram-audit`).
 - Never write a number (a grace window, a retry count, a timeout) you did
   not read in the code. Say where it is in the source comment.
 - Leave out how sign-in, sessions and the auth gates work inside. The repo

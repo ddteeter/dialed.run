@@ -61,10 +61,14 @@ describe("storyOf", () => {
     ]);
   });
 
-  it("reads each cite's path and symbols from the line above, and drops the note", () => {
+  it("reads each cite's path, symbols and note from the line above", () => {
     expect(STORIES[0]?.steps.map((step) => step.cites)).toStrictEqual([
       [
-        { path: "src/a.ts", symbols: ["f", "g"] },
+        {
+          path: "src/a.ts",
+          symbols: ["f", "g"],
+          note: "a note, with a comma; and a semicolon",
+        },
         { path: "wrangler.jsonc", symbols: ["queues.consumers"] },
       ],
       [{ path: "src/a.ts", symbols: ["f"] }],
@@ -82,8 +86,13 @@ describe("storyOf", () => {
 
   it("reads a cite with a note and no symbol as having none", () => {
     expect(
+      oneStep("// source: src/a.ts f (a (nested) note)")[0]?.steps[0]?.cites,
+    ).toStrictEqual([
+      { path: "src/a.ts", symbols: ["f"], note: "a (nested) note" },
+    ]);
+    expect(
       oneStep("// source: src/a.ts (the give-up)")[0]?.steps[0]?.cites,
-    ).toStrictEqual([{ path: "src/a.ts", symbols: [] }]);
+    ).toStrictEqual([{ path: "src/a.ts", symbols: [], note: "the give-up" }]);
   });
 });
 
@@ -194,7 +203,7 @@ describe("staleReport", () => {
       ]),
     ).toBe(
       [
-        'Stories that cite a file this branch changed. Under "Diagrams" in the PR body, say for each whether you updated it or re-read it and it still holds:',
+        'Stories that cite a file this branch changed. Under "## Diagrams" in the PR body, give each its own line, "- `<view>`: updated, <what changed>." or "- `<view>`: re-read, still holds." (skill diagram-audit counts the re-reads):',
         "- a (x.c4, edited on this branch): p, q",
         "- b (y.c4): p",
       ].join("\n"),

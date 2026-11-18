@@ -18,6 +18,10 @@
 export interface Cite {
   readonly path: string;
   readonly symbols: readonly string[];
+  /**
+  The note in parentheses, when there is one: prose, not checked.
+  */
+  readonly note?: string;
 }
 
 export interface Step {
@@ -60,7 +64,7 @@ function splitOutsideParens(text: string, separator: string): string[] {
 }
 
 /**
- * `src/a.ts f, g (a note)` → its path and its symbols. The note is dropped.
+ * `src/a.ts f, g (a note)` → its path, its symbols and its note.
  */
 function citeOf(text: string): Cite {
   const open = text.indexOf("(");
@@ -71,7 +75,9 @@ function citeOf(text: string): Cite {
     .split(",")
     .map((symbol) => symbol.trim())
     .filter((symbol) => symbol !== "");
-  return { path, symbols };
+  const note =
+    open === -1 ? "" : text.slice(open + 1, text.lastIndexOf(")")).trim();
+  return note === "" ? { path, symbols } : { path, symbols, note };
 }
 
 function citesOf(comment: string): Cite[] {
@@ -204,7 +210,7 @@ export function staleReport(stale: readonly StaleStory[]): string {
     return "No story cites a file this branch changed.";
   }
   return [
-    'Stories that cite a file this branch changed. Under "Diagrams" in the PR body, say for each whether you updated it or re-read it and it still holds:',
+    'Stories that cite a file this branch changed. Under "## Diagrams" in the PR body, give each its own line, "- `<view>`: updated, <what changed>." or "- `<view>`: re-read, still holds." (skill diagram-audit counts the re-reads):',
     ...stale.map(
       (story) =>
         `- ${story.view} (${story.file}${story.edited ? ", edited on this branch" : ""}): ${story.changed.join(", ")}`,

@@ -284,6 +284,60 @@ registries.
 - Tests: `test/scripts/diagram-record.test.ts` (the plan, worker project)
   and `viewFactsIn` in `test/scripts/diagram-model.node.test.ts`.
 
+## Step 5 as built (#804)
+
+- **The readers get what LikeC4 computes, not `.c4` text.**
+  `npm run diagrams:audit -- brief <flow>` is the deriving reader's whole
+  brief: each story's title, first step and that step's source comment
+  (recovery views left out), and every element's id, kind and title. No
+  step past a first, no note and no element's description, because a
+  description is a claim too (`technology 'off the queue: after 3 failed
+retries'`). `-- story <flow>` is the comparing reader's copy: every
+  arrow of every view in the file, numbered per view, with its frames,
+  notes, source comment (its note included) and the view it opens; the
+  words each view gives its elements, `include … with` overrides applied;
+  and the other flows' stories, where this one's scope ends. The arrows are
+  LikeC4's computed edges, joined to the parse tree's statements in source
+  order; a chain `a -> b -> c` gives both arrows the statement's comment. A
+  frame type or an arrow the join does not know throws.
+- **The deriving reader reads a copy of the code, not the repo.** The
+  auditor `git archive`s `src`, `test`, `wrangler.jsonc` and
+  `package.json` at the audited SHA into a scratch folder, so a search
+  cannot turn up the story's source comments, and both readers read one
+  commit. The story is written to the folder only after the deriving reader
+  is done.
+- **"Due" is counted from PR bodies and record issues.**
+  `npm run diagrams:audit -- due` reads the merged PRs whose bodies hold a
+  Diagrams section and the issues titled `Diagram audit: <flow file>
+(<date>)` (both through `gh`, in `scripts/diagram-audit.sh`, as
+  `diagrams:stale` does git). A flow is due when it has no record, or when
+  three merged PRs since its newest record name one of its views, as a
+  whole word, on a re-read line under **Diagrams** (a heading at any depth,
+  or a bold line). One PR counts once per flow. It prints each due flow's
+  record title, and any record title it cannot read. `diagrams:stale` and
+  `pr-ready` now give the line's form.
+- **Every audit files a record, even with nothing found**, so `due` has a
+  date to count from. The differences are sub-issues of it, and the record
+  closes once they are filed: it is history, and the differences are the
+  work.
+- **Two readers, then the auditor.** The deriving reader reads code only
+  (`derive.md`); the comparing reader walks the derived account first,
+  then the story, and rules on each difference against the code
+  (`compare.md`). The auditor re-runs a thin derivation once, opens every
+  cited line, skips what is already filed, and shows the owner the public
+  differences first. A security-bearing code bug goes to the private home
+  and the private Project (never-list item 3); a difference about auth
+  internals is asked about.
+- **The docs pass runs it** (skill `coordinating-a-wave`, §3). An audit
+  changes nothing in the repo; its issues are the next wave's work.
+- **Reviewed by Fable before shipping**, as planned: 28 findings, all but
+  one applied (the re-read trigger is checked only at a docs pass, not on
+  every PR; at the waves' pace that is when it would be acted on).
+- Tests: `test/scripts/diagram-audit.test.ts` (worker: frames, the join,
+  both texts, the re-read parse, due) and `auditViewsIn`, `elementsIn` and
+  `readAudit` over the real model in
+  `test/scripts/diagram-model.node.test.ts`.
+
 ## Open questions
 
 1. **Auth and trust boundaries are not drawn** while the security audit's

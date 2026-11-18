@@ -35,7 +35,9 @@ description: Use before opening a pull request in dialed.run, before pushing a b
    `architecture-diagrams`). Then run `npm run diagrams:stale`: it lists
    the stories that cite a file the branch changed. For each, the PR body
    says under **"Diagrams"** whether you updated it or re-read it and it
-   still holds, one line each. When it lists none, leave the heading out.
+   still holds, one line each, the view named in backticks and the line
+   saying `updated` or `re-read`: the re-reads are what make a flow due
+   an audit (skill `diagram-audit`). When it lists none, leave the heading out.
    **If `docs/diagrams/` changed** (by hand or by `diagrams:generate`),
    run `npm run diagrams:record`. It records every view that differs
    from the merge base, walking each story step by step with captions

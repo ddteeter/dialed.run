@@ -33,6 +33,7 @@ appeared yet:
 | skill `pr-demo-video`         | a user-visible change                                                   | recording the demo                                                                                               |
 | skill `styling-audit`         | a styling audit, or re-capturing a screen to confirm a styling finding  | the screenshot capture (`AUDIT_SHOTS`), the seeded captures, the finding format                                  |
 | skill `coordinating-a-wave`   | coordinating a wave of parallel lanes                                   | lane briefs, ownership, owner and Design rounds, merging, the record, traps                                      |
+| skill `diagram-audit`         | auditing a flow's story against the code, in a docs pass or when due    | choosing the flows, the deriving and comparing readers, the record, filing each difference                       |
 | skill `security-audit`        | a whole-app security audit, a round on its gaps, a re-check of findings | pinning code and libraries, the reviewer workflow and second pass, the private home, the index, tracking by id   |
 
 A skill's scripts sit beside its `SKILL.md` as files. ESLint ignores
