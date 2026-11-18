@@ -1,4 +1,4 @@
-# Design: 236 Round 59 layout rulings (316, 317, 319, 320)
+# Design: 236 Round 59 and 60 layout rulings (316, 317, 319, 320, 326, 330)
 
 ## Problem
 
@@ -36,6 +36,17 @@ drops its separator where the conditions wrap.
   card's copy is `desk:hidden`, so exactly one is in the accessibility tree
   at any width.
 
+- **326 (#791, R60, added mid-wave).** A runs-list row with a badge
+  puts it on its own line under the mono line (`data-part="run-badge"`,
+  `mt-2.5` on the column's `gap-1`, so 14), and the row takes `pt-3
+pb-4` and `items-start`, so the marks stay top right: 104. Unbadged
+  rows keep `items-center` at 64. The control's hit area becomes
+  `target-line` (11 proud, inside the row) instead of `target -my-3`.
+  `RunBadge` splits into `SetBadge` and `SetConditionsBadge`, chosen by
+  `badgeOf(run)`, which the row also reads for its shape.
+- **330 (#830, R60).** R1's title field takes the hint "Only you see the
+  title." (`TextField`'s `hint`, so it is the field's description).
+
 ## Contract touches
 
 - Schema changes needed: **none**
@@ -66,7 +77,7 @@ desk:table-cell`, and the card's copy reads as the desk's. The clip
 
 ## Issues
 
-- Closes: #771, #778, #780, #781.
+- Closes: #771, #778, #780, #781, #791, #830.
 - Opens: #833 (Design 333, filed by coordinator-14), deferred, not closed.
 
 ## Open questions

@@ -7136,7 +7136,8 @@ requires `name`, so generic saves default it to the category/tap-list label
 
 ## Built for the layout lane (wave 14, design 236)
 
-Round 59's 316, 317, 319 and 320, as ruled. Two notes on how:
+Round 59's 316, 317, 319 and 320, and Round 60's 326 and 330, as
+ruled. Notes on how:
 
 - **R59·320 · the dot drops by clipping.** CSS cannot see a wrap, so on
   a card the run and its conditions share one line that clips: the run
@@ -7149,3 +7150,7 @@ Round 59's 316, 317, 319 and 320, as ruled. Two notes on how:
   on the content edge. Below 720 the bands still meet the screen's edges
   (R55·205). The ask: confirm the list counts, or keep its bands
   edge to edge at wide.
+- **R60·326 · the badged runs-list row, as ruled.** Its 14 is the
+  column's 4 and 10 on the badge's line; the 44 target is a
+  `target-line`, eleven proud of the 22 pill inside the row's 14 and 16.
+- **R60·330 · R1's title hint, as ruled.** "Only you see the title."
