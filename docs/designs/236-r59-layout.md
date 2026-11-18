@@ -57,9 +57,12 @@ drops its separator where the conditions wrap.
 - VerdictBacklog (vitest ui): replace the R58·301 test: the line's
   wrapper clips, the spacer is invisible and unheard, the dot is
   `absolute right-full` and unheard, the desk cell is `hidden
-desk:table-cell`; a `*.browser.test.ts` (Chromium) that renders a narrow
-  card and asserts the dot is clipped once the conditions wrap and visible
-  when they share a line — the one claim only layout can check.
+desk:table-cell`, and the card's copy reads as the desk's. The clip
+  itself only layout shows; the browser project loads no Tailwind, so
+  the demo's phone spec measures it (dot outside the line once the
+  conditions wrap) rather than a committed test.
+- The safety pane tests that pinned `border-ink` on QUIET_PILL sites
+  follow 317.
 
 ## Issues
 
