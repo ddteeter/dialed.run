@@ -167,13 +167,7 @@ describe("Au2 · at rest", () => {
       [...(panel?.querySelectorAll<HTMLElement>("[data-part]") ?? [])].map(
         (element) => element.dataset.part,
       ),
-    ).toEqual([
-      "header",
-      "form",
-      "or-divider",
-      "google-button",
-      "cross-link",
-    ]);
+    ).toEqual(["header", "form", "or-divider", "google-button", "cross-link"]);
     // "A signed-out page never shows the tab bar."
     expect(document.querySelector("[data-slot='tab-bar']")).toBeNull();
     // The one signed-out frame (R55·176): on the log-in page the bar drops
@@ -582,6 +576,19 @@ describe("Au5 · Google pressed again after Log in cancelled it (#696)", () => {
 });
 
 describe("Au6 · a refusal Google's round trip brought back", () => {
+  it("says a password account's address as NOT LOGGED IN on Au1, with no retry (R60·324)", async () => {
+    await logIn({ returnedError: "account_not_linked" });
+    const band = part("control-failure");
+    expect(band).toHaveTextContent(
+      "Not logged inThat address already has an account. Log in with your password, or reset it.",
+    );
+    expect(
+      within(band ?? document.body).queryByRole("button", {
+        name: "Try again",
+      }),
+    ).toBeNull();
+  });
+
   it("shows the band for any code but the runner's own cancel", async () => {
     await logIn({ returnedError: "invalid_code" });
     const band = part("control-failure");

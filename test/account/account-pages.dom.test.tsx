@@ -641,7 +641,7 @@ describe("LinkLanding", () => {
     ["verify", "Confirm email", "Not confirmed", "Confirm your email"],
     ["change", "Use this address", "Not changed", "Use this address?"],
   ] as const)(
-    "keeps the %s question and its band when the button fails, and tries again",
+    "keeps the %s question and its band when the button fails, and the button is the retry (R60·324)",
     async (purpose, label, failureKicker, heading) => {
       const confirm = vi
         .fn<() => Promise<Landing>>()
@@ -656,11 +656,15 @@ describe("LinkLanding", () => {
       );
       expect(screen.queryByText(failureKicker)).toBeNull();
       await user.click(screen.getByRole("button", { name: label }));
-      const retry = await screen.findByRole("button", { name: "Try again" });
-      expect(screen.getByText(failureKicker)).toBeVisible();
-      expect(
-        screen.getByText("That didn't go through. Try again?"),
-      ).toBeVisible();
+      expect(await screen.findByText(failureKicker)).toBeVisible();
+      expect(screen.getByText("That didn't go through.")).toBeVisible();
+      // No Try again of its own: the question's button is the retry, and
+      // focus goes back to it.
+      expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+      const retry = screen.getByRole("button", { name: label });
+      await waitFor(() => {
+        expect(retry).toHaveFocus();
+      });
       expect(
         screen.getByRole("heading", { level: 1, name: heading }),
       ).toBeVisible();

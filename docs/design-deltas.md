@@ -1536,17 +1536,23 @@ yet. Each is a guess at composition until Design draws it.
   link: kicker "Change email", "Use this address?", "Your account's email
   changes to {address}. You'll log in with it from now on.", button "Use
   this address" ("Changing"). A failure keeps the question with the §4a
-  band NOT CONFIRMED or NOT CHANGED, "That didn't go through. Try again?".
-  The answer replaces the question with round 26 #11's landings, and the
-  status region says its heading.
+  band NOT CONFIRMED or NOT CHANGED, under the button. The answer replaces
+  the question with round 26 #11's landings, and the status region says
+  its heading. **Drawn by R60·324 (design 235):** the band says "That
+  didn't go through." with no "Try again?" and no button of its own,
+  because the question's button is the retry, and focus goes back to it.
 - **Guess · Google into an email account.** Continue with Google for an
   address whose account was made with a password is refused, on Au1 and
-  Au2: Google's band, kicker NOT LOGGED IN, no Try again, "That address
-  already has an account. Log in with your password, or reset it."
+  Au2: Google's band, no Try again, "That address already has an account.
+  Log in with your password, or reset it." **Changed by R60·324 (design
+  235):** the kicker follows the page, NOT LOGGED IN on Au1 and NOT
+  CREATED on Au2.
 - **Guess · the sign-in limit's band.** Past ten tries for one address in
   fifteen minutes, Au1's form band says "Too many tries for this address.
   Try again at {time}, or reset your password." on the device's clock,
-  kicker NOT SIGNED IN and no Try again.
+  with no Try again, in the form's slot above Log in. **Changed by
+  R60·324 (design 235):** kicker NOT LOGGED IN, the app's word, not NOT
+  SIGNED IN.
 
 ## Built for the privacy lane (wave 12, design 228)
 

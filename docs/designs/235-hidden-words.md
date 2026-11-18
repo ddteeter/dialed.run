@@ -39,6 +39,15 @@ journey's flaky shop-page check, shipped first as its own small PR.
   read whole without them. OwnerAudience's hidden "Seen by: " becomes a
   visible `MONO.xs` "SEEN BY", the first item on the tags' line.
   **Guess:** muted, as the off tags are (the ruling gives no colour).
+- **#814, R60·324, link landings and two sign-in bands** (added to the
+  lane by the owner). `LinkLanding`'s failure band says "That didn't go
+  through." with no Try again of its own: the question's button is the
+  retry and takes focus back (`retryRef`). The Google refusal for a
+  password account takes NOT CREATED on Au2 (`returnedFailure` knows the
+  page by its `admission`), NOT LOGGED IN on Au1 as before. Au1's
+  sign-in limit takes NOT LOGGED IN, in the form's slot above Log in,
+  where it already sat. Round 60's rule (a refusal a retry can't fix
+  drops Try again) is already how all three behave.
 - **#826.** The domain check is scoped to the span that holds the link
   (`filter({ has: shopPage })`), so the enrichment line's Site span,
   which shows the same host once enrichment lands, is never a second
@@ -49,7 +58,7 @@ journey's flaky shop-page check, shipped first as its own small PR.
 - Schema changes needed: **none**
 - New route files: **none**
 - New bindings/queues/crons: **none**
-- Screens: /open-source (C9), A1 parsed card, F already-in-closet, Z2a
+- Screens: /account/verify, Au1, Au2, /open-source (C9), A1 parsed card, F already-in-closet, Z2a
   garment detail's pairs-with, D owner meta. Design deltas: the two
   guesses above, if Design rules otherwise.
 
@@ -71,7 +80,7 @@ journey's flaky shop-page check, shipped first as its own small PR.
 
 ## Issues
 
-- Closes: #779, #782, #783, #784 (and #826 in its own PR).
+- Closes: #779, #782, #783, #784, #814 (and #826 in its own PR).
 - Opens: #831, #832 (filed by coordinator-14, Deferred in the PR).
 
 ## Open questions

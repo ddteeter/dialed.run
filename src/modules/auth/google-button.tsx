@@ -13,7 +13,9 @@ import {
   AUTH_COPY,
   AUTH_KICKER,
   AccessRefused,
+  GOOGLE_NOT_LINKED,
   GOOGLE_REFUSALS,
+  NOT_CREATED,
   type AuthBand,
 } from "./auth-copy";
 import { GoogleBand } from "./google-band";
@@ -62,8 +64,16 @@ const FAILED: AuthBand = {
  * accounts are made; and, from Au2, a new Google account with no code (or
  * one spent while the runner was at Google).
  */
-function returnedFailure(error: string | undefined): AuthBand {
-  return GOOGLE_REFUSALS.get(error) ?? FAILED;
+function returnedFailure(
+  error: string | undefined,
+  isSignUp: boolean,
+): AuthBand {
+  const band = GOOGLE_REFUSALS.get(error) ?? FAILED;
+  // R60·324: the password account's kicker follows the page, NOT CREATED
+  // on Au2, where the press was to make an account.
+  return isSignUp && error === GOOGLE_NOT_LINKED
+    ? { ...band, kicker: NOT_CREATED }
+    : band;
 }
 
 /**
@@ -149,7 +159,9 @@ export function useGoogleSignIn({
   const isClosed = showsReturned && returnedError === ACCOUNT_CLOSED_CODE;
   const failure =
     failed ??
-    (showsReturned && !isClosed ? returnedFailure(returnedError) : undefined);
+    (showsReturned && !isClosed
+      ? returnedFailure(returnedError, admission !== undefined)
+      : undefined);
 
   return {
     ...control,
