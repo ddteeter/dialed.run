@@ -148,14 +148,10 @@ export function ResendLink({
           <span className="font-semibold">Sent ✓</span> {SENT_SENTENCE}
         </p>
       ) : undefined}
+      {/* No Try again: pressing again inside the limit is refused again
+      (R60·60a). The sentence names when the next link can go. */}
       {limited === undefined ? undefined : (
-        <FailureBand
-          kicker={NOT_SENT}
-          message={limited}
-          onRetry={() => {
-            void control.run();
-          }}
-        />
+        <FailureBand kicker={NOT_SENT} message={limited} />
       )}
       <ControlFailureBand
         failure={control.failure}

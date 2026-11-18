@@ -31,6 +31,7 @@ import { profileCacheTags, type PurgeTags } from "../../lib/cache-tags";
 import { USERNAME_MAX_LENGTH, usernameSchema } from "../../lib/contracts";
 import { hasRowWhere } from "../../lib/sql/keyed-read";
 import { orSqlNull } from "../../lib/sql/sql-null";
+import { homeZoneOf, type ViewerZone } from "../../lib/dates";
 import { nowSeconds } from "../../lib/now";
 import { isProfaneHandle, readBackDigits } from "../../lib/contracts/profanity";
 import { purgePublicPages } from "../ops";
@@ -224,7 +225,15 @@ async function suggestionFor(
  */
 export type HandleClaim =
   | { readonly kind: "claimed"; readonly username: string }
-  | { readonly kind: "too_often" }
+  | {
+      readonly kind: "too_often";
+      /**
+       * When the next change is allowed: the moment enough of the counted
+       * renames leave the window (R60, #820). On the runner's own clock.
+       */
+      readonly until: number;
+      readonly viewer: ViewerZone;
+    }
   | {
       readonly kind: "taken";
       readonly username: string;
@@ -254,12 +263,18 @@ async function profileOf(
   db: Db,
   userId: string,
 ): Promise<
-  { username: string | null; usernameResetReason: string | null } | undefined
+  | {
+      username: string | null;
+      usernameResetReason: string | null;
+      timeZone: string | null;
+    }
+  | undefined
 > {
   const [row] = await db
     .select({
       username: userProfiles.username,
       usernameResetReason: userProfiles.usernameResetReason,
+      timeZone: userProfiles.timeZone,
     })
     .from(userProfiles)
     .where(eq(userProfiles.userId, userId))
@@ -293,26 +308,49 @@ function notRetiredByAnother(userId: string, handle: string): SQL {
 export const RENAME_CAP = 3;
 export const RENAME_WINDOW_S = 30 * 24 * 60 * 60;
 
+/**
+ * The history rows the cap counts against `typed`: the runner's own, not
+ * a moderator's lock, retired inside the window, neither `typed` nor the
+ * handle held now. One predicate for the cap and for the day it lifts
+ * (`renameStanding`), so the two cannot count differently. The held
+ * handle is read as a subquery: inside the claim's update it is the row
+ * being written, and with no profile it is NULL, so nothing counts.
+ */
+function countedRenames(userId: string, typed: string, now: number): SQL {
+  return sql`${usernameHistory.userId} = ${userId} AND ${usernameHistory.lockedAt} IS NULL AND ${usernameHistory.retiredAt} > ${now - RENAME_WINDOW_S} AND ${usernameHistory.username} <> ${typed} AND ${usernameHistory.username} <> (SELECT ${userProfiles.username} FROM ${userProfiles} WHERE ${userProfiles.userId} = ${userId})`;
+}
+
 function withinRenameCap(userId: string, typed: string, now: number): SQL {
-  return sql`(SELECT count(*) FROM ${usernameHistory} WHERE ${usernameHistory.userId} = ${userId} AND ${usernameHistory.lockedAt} IS NULL AND ${usernameHistory.retiredAt} > ${now - RENAME_WINDOW_S} AND ${usernameHistory.username} <> ${typed} AND ${usernameHistory.username} <> ${userProfiles.username}) < ${RENAME_CAP}`;
+  return sql`(SELECT count(*) FROM ${usernameHistory} WHERE ${countedRenames(userId, typed, now)}) < ${RENAME_CAP}`;
 }
 
 /**
- * Whether claiming `typed` now would pass the cap, read before the batch
- * so the refusal can say why; the batch asks the same in SQL, so parallel
- * claims cannot pass it together.
+ * Where claiming `typed` now stands against the cap, read before the
+ * batch so a refusal can say why; the batch asks the same in SQL, so
+ * parallel claims cannot pass it together.
+ *
+ * `allowedAt` is when the next change is (R60, #820): the
+ * `RENAME_CAP`-th newest counted rename leaves the window
+ * `RENAME_WINDOW_S` after it was retired, and from then on fewer than the
+ * cap remain. With fewer than the cap counted, or no profile row (one
+ * deleted mid-claim), it is now.
  */
-async function isWithinRenameCap(
+async function renameStanding(
   db: Db,
   userId: string,
   typed: string,
   now: number,
-): Promise<boolean> {
+): Promise<{ within: boolean; allowedAt: number }> {
   const [row] = await db
-    .select({ ok: sql<number>`${withinRenameCap(userId, typed, now)}` })
+    .select({
+      within: sql<number>`${withinRenameCap(userId, typed, now)}`,
+      allowedAt: sql<
+        number | null
+      >`(SELECT ${usernameHistory.retiredAt} FROM ${usernameHistory} WHERE ${countedRenames(userId, typed, now)} ORDER BY ${usernameHistory.retiredAt} DESC LIMIT 1 OFFSET ${RENAME_CAP - 1}) + ${RENAME_WINDOW_S}`,
+    })
     .from(userProfiles)
     .where(eq(userProfiles.userId, userId));
-  return row?.ok === 1;
+  return { within: row?.within === 1, allowedAt: row?.allowedAt ?? now };
 }
 
 /**
@@ -402,8 +440,14 @@ export async function claimUsername(
   const now = nowSeconds();
   // A first handle retires nothing, so only a change is capped.
   const isAChange = profile?.username != undefined;
-  if (isAChange && !(await isWithinRenameCap(db, userId, typed, now))) {
-    return { kind: "too_often" };
+  const tooOften = (allowedAt: number): HandleClaim => ({
+    kind: "too_often",
+    until: allowedAt,
+    viewer: homeZoneOf(profile?.timeZone),
+  });
+  if (isAChange) {
+    const standing = await renameStanding(db, userId, typed, now);
+    if (!standing.within) return tooOften(standing.allowedAt);
   }
 
   const ownHistoryRow = ownUnlocked(userId, typed);
@@ -438,9 +482,8 @@ export async function claimUsername(
     // handle up after the read above said it was free, or a parallel
     // change used the runner's last rename.
     if (held.length === 0) {
-      return (await isWithinRenameCap(db, userId, typed, now))
-        ? await taken()
-        : { kind: "too_often" };
+      const standing = await renameStanding(db, userId, typed, now);
+      return standing.within ? await taken() : tooOften(standing.allowedAt);
     }
     purge(profileCacheTags(userId, typed));
     return { kind: "claimed", username: typed };

@@ -170,17 +170,59 @@ describe("Next", () => {
     ).toBeVisible();
   });
 
-  it("lands the rename cap on the field (SA-L02)", async () => {
-    const { onClaimed, user } = renderForm(() => ({ kind: "too_often" }));
+  it("bands the rename cap above Save, naming the day, with no Try again (R60, #820)", async () => {
+    // Dec 14 2026 at noon UTC: still Dec 14 on a Chicago clock.
+    const until = Date.UTC(2026, 11, 14, 12) / 1000;
+    const { onClaimed, user } = renderForm(() => ({
+      kind: "too_often",
+      until,
+      viewer: { homeZone: "America/Chicago" },
+    }));
     await user.type(field(), "fifth_name");
     await user.click(next());
-    expect(
-      await screen.findByText(
-        "You've changed your handle 3 times this month. Try again in a few weeks.",
-      ),
-    ).toBeVisible();
-    expect(field()).toHaveAttribute("aria-invalid", "true");
+
+    const message =
+      "You've changed your handle 3 times in 30 days. You can change it again on Mon, Dec 14.";
+    const band = await screen.findByText(message);
+    const failure = band.closest("[data-part=failure-band]");
+    expect(failure).toHaveTextContent(/Not changed/u);
+    // Above Save: no edit to the field fixes it, so it is not the field's.
+    expect(failure?.compareDocumentPosition(next())).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      `Not changed. ${message}`,
+    );
+    expect(field()).not.toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(screen.queryByText("Handle saved.")).toBeNull();
     expect(onClaimed).not.toHaveBeenCalled();
+  });
+
+  it("clears the cap's band when the next save lands", async () => {
+    const claim = vi
+      .fn<(username: string) => HandleClaim>()
+      .mockReturnValueOnce({
+        kind: "too_often",
+        until: Date.UTC(2026, 11, 14, 12) / 1000,
+        viewer: { homeZone: "America/Chicago" },
+      })
+      .mockImplementation((username) => ({ kind: "claimed", username }));
+    const { onClaimed, user } = renderForm(claim);
+    await user.type(field(), "fifth_name");
+    await user.click(next());
+    // The band and the status region both say it.
+    expect(await screen.findAllByText(/You can change it again/u)).toHaveLength(
+      2,
+    );
+
+    await user.click(next());
+
+    await waitFor(() => {
+      expect(onClaimed).toHaveBeenCalledWith("fifth_name");
+    });
+    expect(screen.queryAllByText(/You can change it again/u)).toStrictEqual([]);
+    expect(screen.getByRole("status")).toHaveTextContent("Handle saved.");
   });
 
   it("gives a server fault the form's band, not the field", async () => {

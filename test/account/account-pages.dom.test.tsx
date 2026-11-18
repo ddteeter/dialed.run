@@ -233,8 +233,11 @@ describe("ResendLink", () => {
     expect(status()).toHaveTextContent(`Not sent. ${message}`);
     expect(screen.queryByText(/^Sent ✓/u)).toBeNull();
 
-    // The band's Try again is a resend; a sent one clears the band.
-    await user.click(screen.getByRole("button", { name: "Try again" }));
+    // No Try again: inside the limit a press is refused again (R60·60a).
+    // Resend itself still sends once the hour allows, and a sent one
+    // clears the band.
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    await user.click(resendButton());
     expect(resend).toHaveBeenCalledTimes(2);
     expect(await screen.findByText(/^Sent ✓/u)).toBeVisible();
     expect(screen.queryByText(message)).toBeNull();
@@ -260,7 +263,8 @@ describe("ResendLink", () => {
     expect(screen.queryByText(/^Sent ✓/u)).toBeNull();
 
     // The address's own limit after it reads its own sentence.
-    await user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    await user.click(resendButton());
     expect(
       await screen.findByText(
         "That's 5 links this hour. You can send another at 2:00 AM.",

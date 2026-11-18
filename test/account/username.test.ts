@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import {
   accountDeletions,
@@ -950,11 +950,45 @@ describe("the rename cap (SA-L02)", () => {
       });
     }
 
-    expect(await claimUsername(db, userId, "walk_four", CLEAR)).toStrictEqual({
+    expect(await claimUsername(db, userId, "walk_four", CLEAR)).toMatchObject({
       kind: "too_often",
     });
     expect(await handleOf(userId)).toBe("walk_three");
     expect(await historyOf(userId)).toHaveLength(3);
+  });
+
+  it("names when the next change is allowed, on the runner's clock (R60, #820)", async () => {
+    const now = 1_800_000_000;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    onTestFinished(() => {
+      clock.mockRestore();
+    });
+    const userId = newUlid();
+    await db.insert(userProfiles).values({
+      userId,
+      username: "when_current",
+      timeZone: "America/Chicago",
+    });
+    const DAY = 24 * 60 * 60;
+    await db.insert(usernameHistory).values([
+      // Counted, newest first: the third is the one whose expiry frees a
+      // change, so its day plus thirty is the answer.
+      { username: "when_a", userId, retiredAt: now - 1 * DAY },
+      { username: "when_b", userId, retiredAt: now - 2 * DAY },
+      { username: "when_c", userId, retiredAt: now - 5 * DAY },
+      { username: "when_d", userId, retiredAt: now - 9 * DAY },
+      // Not counted: a moderator's lock, one past the window, and the
+      // handle being typed, each newer than when_c.
+      { username: "when_lock", userId, retiredAt: now - 3, lockedAt: now },
+      { username: "when_old", userId, retiredAt: now - RENAME_WINDOW_S },
+      { username: "when_back", userId, retiredAt: now - 4 },
+    ]);
+
+    expect(await claimUsername(db, userId, "when_back", CLEAR)).toStrictEqual({
+      kind: "too_often",
+      until: now - 5 * DAY + RENAME_WINDOW_S,
+      viewer: { homeZone: "America/Chicago" },
+    });
   });
 
   it("holds against claims made in parallel", async () => {
@@ -983,7 +1017,7 @@ describe("the rename cap (SA-L02)", () => {
     expect(await claimUsername(db, userId, "fresh_one", CLEAR)).toMatchObject({
       kind: "claimed",
     });
-    expect(await claimUsername(db, userId, "fresh_two", CLEAR)).toStrictEqual({
+    expect(await claimUsername(db, userId, "fresh_two", CLEAR)).toMatchObject({
       kind: "too_often",
     });
   });
@@ -1000,7 +1034,7 @@ describe("the rename cap (SA-L02)", () => {
       })),
     );
 
-    expect(await claimUsername(db, userId, "window_new", CLEAR)).toStrictEqual({
+    expect(await claimUsername(db, userId, "window_new", CLEAR)).toMatchObject({
       kind: "too_often",
     });
   });
@@ -1019,7 +1053,7 @@ describe("the rename cap (SA-L02)", () => {
 
     expect(
       await claimUsername(tracked.db, userId, "gate_new", CLEAR),
-    ).toStrictEqual({ kind: "too_often" });
+    ).toMatchObject({ kind: "too_often" });
     // The write batch is five statements; a refusal ahead of it makes none.
     expect(tracked.sizes()).not.toContain(5);
   });
@@ -1040,9 +1074,15 @@ describe("the rename cap (SA-L02)", () => {
         .values({ username: "late_c", userId, retiredAt: now - 30 });
     });
 
-    expect(await claimUsername(racing, userId, "late_new", CLEAR)).toStrictEqual(
-      { kind: "too_often" },
-    );
+    // The newest three now are late_c, late_a and late_b: late_a's expiry
+    // frees the next change. No home zone yet, so no zone.
+    expect(
+      await claimUsername(racing, userId, "late_new", CLEAR),
+    ).toStrictEqual({
+      kind: "too_often",
+      until: now - 60 + RENAME_WINDOW_S,
+      viewer: { homeZone: undefined },
+    });
     expect(await handleOf(userId)).toBe("late_current");
   });
 
@@ -1053,8 +1093,15 @@ describe("the rename cap (SA-L02)", () => {
       return "clear";
     };
 
-    expect(await claimUsername(db, userId, "gone_new", vanishing)).toStrictEqual(
-      { kind: "too_often" },
+    const before = nowSeconds();
+    const claim = await claimUsername(db, userId, "gone_new", vanishing);
+    // Nothing counts without a profile, so the answer is now.
+    expect(claim).toMatchObject({ kind: "too_often" });
+    expect(claim.kind === "too_often" && claim.until).toBeGreaterThanOrEqual(
+      before,
+    );
+    expect(claim.kind === "too_often" && claim.until).toBeLessThanOrEqual(
+      nowSeconds(),
     );
   });
 
