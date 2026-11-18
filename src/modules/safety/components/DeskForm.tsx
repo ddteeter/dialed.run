@@ -4,6 +4,7 @@ import type { JSX, ReactNode } from "react";
 import type { z } from "zod";
 
 import {
+  Bracketed,
   ChoiceField,
   FormErrorSummary,
   FormFailureBand,
@@ -163,8 +164,9 @@ interface RecordNaming {
 }
 
 /**
- * `kind · id · @owner [tag]`, the id at its ends, as one line of words: what
- * a screen reader hears, in the words' own case.
+ * `kind · id · @owner tag`, the id at its ends, as one line of words: what
+ * a screen reader hears, in the words' own case. The tag's brackets are
+ * drawn, not said (D-150).
  */
 export function recordName({
   subjectType,
@@ -173,7 +175,7 @@ export function recordName({
   tag,
 }: RecordNaming): string {
   const whose = owner === undefined ? "" : ` · @${owner}`;
-  return `${subjectType} · ${shortId(subjectId)}${whose} [${tag}]`;
+  return `${subjectType} · ${shortId(subjectId)}${whose} ${tag}`;
 }
 
 /**
@@ -206,7 +208,7 @@ export function RecordHead({
           <span className="uppercase">{subjectType}</span>
           {` · ${shortId(subjectId)}`}
           {owner === undefined ? undefined : ` · @${owner}`}{" "}
-          <span className="uppercase">{`[${tag}]`}</span>
+          <Bracketed>{tag}</Bracketed>
         </span>
         <span className="sr-only">{recordName(naming)}</span>
       </span>

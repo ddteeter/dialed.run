@@ -174,14 +174,6 @@ Au2's refusal, as the server's hook and both bands say it.
 export const REGION_BLOCKED_COPY = REGION_COPY.signUp;
 
 /**
- * D7's tag on a request recorded from a state: its code in brackets, the
- * bracket notation measured values wear (`[TN]`).
- */
-export function regionTag(code: string): string {
-  return `[${code}]`;
-}
-
-/**
  * Why D7 has no Send invite on a request from a state that is blocked
  * now: the operator's reason, the state named.
  */

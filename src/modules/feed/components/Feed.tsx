@@ -3,13 +3,18 @@ import { useState } from "react";
 import type { ComponentProps, ReactNode } from "react";
 
 import type { Units } from "../../../lib/contracts";
-import { COLUMN, FormStatus, Mono, PhoneBell } from "../../../ui";
+import {
+  BracketHeadline,
+  COLUMN,
+  FormStatus,
+  Mono,
+  PhoneBell,
+} from "../../../ui";
 import { FlushBand } from "./FlushBand";
 import { isProvidersReading } from "../strip";
 import type { FeedItem } from "../feed";
 import { isBacklogWorthOpening } from "../route-decisions";
 import type { CompactConditions as CompactConditionsResult } from "../compact-conditions";
-import { BracketHeadline } from "./BracketHeadline";
 import { CompactConditions } from "./CompactConditions";
 import { ConditionsTab } from "./ConditionsTab";
 import { PostCard } from "./PostCard";

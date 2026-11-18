@@ -7,6 +7,7 @@ import {
   FailureBand,
   FormStatus,
   Mono,
+  PendingLabel,
   PhoneBell,
 } from "../../../ui";
 import { monthYearLabel } from "../../../lib/dates";
@@ -134,10 +135,13 @@ export function RunnerSearch({
             width, which held the input short of the field's edge (E2-05). */}
         {pending ? (
           <span aria-hidden="true">
-            <Mono step="xs" className="flex gap-1 text-label">
-              <span className="breathe">[</span>
-              Searching
-              <span className="breathe">]</span>
+            <Mono step="xs" className="text-label">
+              <PendingLabel
+                pending
+                isReserved={false}
+                label="Searching"
+                pendingLabel="Searching"
+              />
             </Mono>
           </span>
         ) : undefined}

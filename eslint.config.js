@@ -147,6 +147,90 @@ const crossLaneRestrictions = [
   },
 ];
 
+/**
+ * Shared primitives re-typed by hand (#793, #794; owner grant 2026-11-17).
+ * Fallow's `dupes` has a size floor that a three-line span passes under,
+ * so a copy of `Bracketed` or a pill constant had nothing to say no. One
+ * group per primitive, each landing at zero, each with its own files
+ * exempt by name below.
+ */
+const bracketMessage =
+  "Draw bracket notation with <Bracketed> (or <BracketHeadline>) — a typed [ or ] is read aloud (D-150), and a hand copy of Bracketed's markup drifts from it.";
+const bracketRestrictions = [
+  // `[` or `]` typed as JSX text: heard as "left bracket" (D-150), or a
+  // re-typed `Bracketed` (#790's GarminImport) if it is hidden.
+  {
+    selector: String.raw`JSXText[value=/[\[\]]/]`,
+    message: bracketMessage,
+  },
+  // `{`[${tag}]`}`: the Desk heads' form of the same thing (#792).
+  {
+    selector: String.raw`JSXExpressionContainer > TemplateLiteral > TemplateElement:first-child[value.raw=/^\[/]`,
+    message: bracketMessage,
+  },
+  {
+    selector: String.raw`JSXExpressionContainer > Literal[value=/^\[/]`,
+    message: bracketMessage,
+  },
+];
+
+/**
+ * The groups, by name, for `primitiveExemptions`.
+ */
+const primitiveGroups = {
+  brackets: bracketRestrictions,
+};
+
+/**
+ * Files exempt from a group, by literal path (not a glob), each with the
+ * groups it is exempt from and why. One block per file, generated: a file
+ * matched by two exemption blocks would keep only the later one's
+ * selectors, since `no-restricted-syntax` is replaced, not merged.
+ */
+const primitiveExemptions = {
+  // The primitives themselves: each is the one place its glyphs belong.
+  "src/ui/Bracketed.tsx": ["brackets"],
+  "src/ui/BracketHeadline.tsx": ["brackets"],
+  // The lockup's brackets are the brand's colour, not notation.
+  "src/ui/Wordmark.tsx": ["brackets"],
+  // `PendingWords`: the waiting device's breathing brackets.
+  "src/ui/form.tsx": ["brackets"],
+  // The verdict scale's brackets close on the chosen cell: a motion
+  // device of their own, hidden from a reader.
+  "src/modules/feed/components/VerdictForm.tsx": ["brackets"],
+  // react-email: inline styles only, no Tailwind and so no Bracketed.
+  "src/modules/email/EmailLayout.tsx": ["brackets"],
+  // A satori card is an image: nothing reads its brackets aloud.
+  "src/modules/ops/og/cards.tsx": ["brackets"],
+};
+
+/**
+ * Every primitive group but the ones named.
+ */
+function primitiveRestrictions(without = []) {
+  return Object.entries(primitiveGroups).flatMap(([group, restrictions]) =>
+    without.includes(group) ? [] : restrictions,
+  );
+}
+
+/**
+ * The whole set for one exempt file: what the blocks above give it, less
+ * its groups. The auth module takes no cross-lane rules (its block below).
+ */
+function exemptBlock(path, without) {
+  return {
+    files: [path],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...baseRestrictions,
+        ...(path.startsWith("src/modules/auth/") ? [] : crossLaneRestrictions),
+        ...primitiveRestrictions(without),
+      ],
+    },
+  };
+}
+
 export default tseslint.config(
   {
     ignores: [
@@ -236,6 +320,19 @@ export default tseslint.config(
         "error",
         ...baseRestrictions,
         ...crossLaneRestrictions,
+        ...primitiveRestrictions(),
+      ],
+    },
+  },
+  {
+    // The auth module skips the cross-lane rules (it is where the auth
+    // gate is defined), but not the primitives'.
+    files: ["src/modules/auth/**/*.ts", "src/modules/auth/**/*.tsx"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...baseRestrictions,
+        ...primitiveRestrictions(),
       ],
     },
   },
@@ -253,9 +350,13 @@ export default tseslint.config(
           (restriction) => restriction !== nowSecondsRestriction,
         ),
         ...crossLaneRestrictions,
+        ...primitiveRestrictions(),
       ],
     },
   },
+  ...Object.entries(primitiveExemptions).map(([path, without]) =>
+    exemptBlock(path, without),
+  ),
   {
     /**
      * Tailwind drops a class it does not know in silence — no error, an

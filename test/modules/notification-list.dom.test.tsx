@@ -111,7 +111,7 @@ describe("NotificationList · the rows", () => {
     // (axe's `p-as-heading`, #566).
     const quiet = screen.getByRole("heading", { level: 2, name: "Quiet" });
     expect(quiet).toBeVisible();
-    expect(quiet).toHaveTextContent(/^\[ Quiet \]$/u);
+    expect(quiet).toHaveTextContent(/^\[Quiet\]$/u);
     // Drawn, not said (D-150): both glyphs are hidden from a reader, so
     // the headline is heard as "Quiet".
     const glyphs = screen.getAllByText(/^[[\]]$/u);

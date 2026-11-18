@@ -27,12 +27,13 @@ type Props = Parameters<typeof ReviewQueue>[0];
 /**
  * A row's head strip, the button that opens it, by the name its head
  * starts with: the strip also carries the row's summary and age
- * (R55·197). The head ends at its source tag, so a name cannot match a
- * longer one by prefix.
+ * (R55·197). The head is heard without its brackets (D-150), so a name
+ * ends where the next word is not a further ` · ` part of the head, and
+ * cannot match a longer one by prefix.
  */
 function rowNamed(head: string): RegExp {
   const escaped = head.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`);
-  return new RegExp(String.raw`^${escaped} \[`, "u");
+  return new RegExp(`^${escaped} (?!· )`, "u");
 }
 
 function row(overrides: Partial<QueueRow> = {}): QueueRow {
@@ -1019,6 +1020,13 @@ describe("what a row tells the reviewer", () => {
     expect(head?.textContent).toBe(
       "photo · p-1 · @nightrun_nico_ferreira [classifier]",
     );
+    // Drawn, then said (D-150, #792): the drawn head is hidden, and the
+    // reader hears one spaced line, with no brackets, from its copy.
+    expect(head).toHaveAttribute("aria-hidden", "true");
+    expect(head?.nextElementSibling).toHaveClass("sr-only");
+    expect(head?.nextElementSibling?.textContent).toBe(
+      "photo · p-1 · @nightrun_nico_ferreira classifier",
+    );
     expect(head).toHaveClass("block", "wrap-anywhere", "desk:truncate");
     // One run of inline text: below desk a break drawn only there parts
     // the kind and id from the owner and the tag.
@@ -1105,7 +1113,7 @@ describe("what a row tells the reviewer", () => {
     renderQueue([row(), row({ id: "b", subjectId: "e-2" })]);
     const closed = screen.getByRole("button", { expanded: false });
     expect(closed).toHaveAccessibleName(
-      "entry · e-2 [reports] 3 people · The photo shows someone inappropriately 0m",
+      "entry · e-2 reports 3 people · The photo shows someone inappropriately 0m",
     );
     // The fold's mark is drawn, not said (R56·244.2): ▸ closed, ▾ open.
     const open = screen.getByRole("button", { expanded: true });
@@ -1299,7 +1307,7 @@ describe("the subject itself", () => {
 
     // Words are the whole content of these rows the way pixels are of a
     // photo. "product · 01HZZZ…" tells a reviewer nothing they can weigh.
-    expect(screen.getByText(/Some Shoe/)).toBeInTheDocument();
+    expect(heads()).toStrictEqual(["product · Some Shoe [reports]"]);
     expect(screen.queryByText(/01HZZZ/)).not.toBeInTheDocument();
   });
 
@@ -1309,7 +1317,7 @@ describe("the subject itself", () => {
     // A subject whose row has been deleted since the report. The id is
     // not useful, but it is honest — and it is what a reviewer would
     // quote when asking what happened.
-    expect(screen.getByText(/e-404/)).toBeInTheDocument();
+    expect(heads()).toStrictEqual(["entry · e-404 [reports]"]);
   });
 
   it("draws no frame at all when there is no photo", () => {

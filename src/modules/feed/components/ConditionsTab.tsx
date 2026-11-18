@@ -9,6 +9,7 @@ import { formatTemp } from "../../../lib/contracts/temperature";
 import type { PrecipClass } from "../../../lib/contracts/temperature";
 import {
   Bracketed,
+  BracketHeadline,
   CityFinder,
   classifyFailure,
   ControlFailureBand,
@@ -25,7 +26,6 @@ import type { BarShare } from "../bar-share";
 import { chipPlaceName } from "../../../lib/place-name";
 import { uiGroupLabels } from "../groups";
 import type { ConditionsHome } from "../home";
-import { BracketHeadline } from "./BracketHeadline";
 
 interface Coords {
   lat: number;
