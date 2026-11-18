@@ -1476,8 +1476,8 @@ primitive (#792, #793, #794). Values come from the contracts, so a hand
 copy's padding or height collapses onto its kind's constant (owner ruling
 on #793, 2026-11-17).
 
-- **Pills take their kind's constant.** 23 hand-typed ink and hairline
-  pills (CityFinder, the 404's ways out, Landing's Go to your feed, the
+- **Pills take their kind's constant.** 21 hand-typed ink and hairline
+  pills (the 404's ways out, Landing's Go to your feed, the
   empty feed's Find a runner, ResetPassword, ActionCard, LinkLanding,
   GarmentForm's and the sheets' Dones, RunList's Log a run, Strava's
   receipt, ConditionsTab's Open the Call, PickUsername, GarmentDetail's
@@ -1490,6 +1490,8 @@ on #793, 2026-11-17).
   and the pushed page's control-height. Only a test kept them apart, to
   kill a mutant on which branch rendered. PushDone's ruling makes both the
   hairline pill, so the sheet now renders PushDone too.
+- **Not moved, as ruled:** CityFinder's Find, the hairline pill at its
+  field's own height beside it (R58·308), and its Use this.
 - **Not moved, awaiting Design 334 (#834):** the bar's 44 pink pill and
   the other pink pills (Landing, PublicFrame, OwnProfile, ShadeSheet's
   Use this), Follow's states, onboarding's small pills and the round icon
