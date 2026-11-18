@@ -1,0 +1,91 @@
+document
+banner
+link, dialed.run
+dialed.run
+end of link, dialed.run
+navigation, Main
+list
+listitem, level 1, position 1, set size 4
+link, Feed
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+link, Closet
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+link, Call
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+link, You
+end of listitem, level 1, position 4, set size 4
+end of list
+end of navigation, Main
+link, Search runners
+link, Notifications, # new
+#
+end of link, Notifications, # new
+button, Log a run
+end of banner
+main
+link, Back
+heading, What did you wear?, level 1
+#.# miles, # degrees Fahrenheit, damp, # piece
+link, Weather data provided by Visual Crossing
+status
+Auto-blur found nothing to cover. Tap the photo or a cell to blur an area.
+end of status
+No usual kit at #° yet.
+Pick what you wore. After a few runs here, we’ll suggest it.
+region, From the closet
+heading, From the closet, level 2
+From the closet
+end of heading, From the closet, level 2
+button, #° damp, matches conditions, pressed
+#° damp
+end of button, #° damp, matches conditions, pressed
+Showing # of #
+Tops · # of # match
+button, All Tops
+All ›
+end of button, All Tops
+button, Photo limit top, pressed
+Photo limit top
+end of button, Photo limit top, pressed
+end of region, From the closet
+group, Photos · # of #
+Photos · # of #
+list
+listitem, level 1, position 1, set size 2
+button, Photo # of #
+end of listitem, level 1, position 1, set size 2
+listitem, level 1, position 2, set size 2
+Add photo
+Add photo, That's # photos today. You can add more tomorrow. Press a photo to see it whole or remove it.
+end of listitem, level 1, position 2, set size 2
+end of list
+paragraph
+Press a photo to see it whole or remove it.
+end of paragraph
+That's # photos today. You can add more tomorrow.
+end of group, Photos · # of #
+button, Next — did it work?
+Next — did it work?
+end of button, Next — did it work?
+paragraph
+Not now —
+link, leave it in the queue
+.
+end of paragraph
+heading, This run · :day :month # · #:#, level 2
+This run · :day :month # · #:#
+end of heading, This run · :day :month # · #:#, level 2
+#.# miles, # minutes # seconds
+# degrees Fahrenheit, damp, feels like # degrees
+heading, In # to # degrees, damp, level 2
+In # to # degrees, damp
+end of heading, In # to # degrees, damp, level 2
+paragraph
+No runs in this band yet.
+end of paragraph
+end of main
+status
+end of document

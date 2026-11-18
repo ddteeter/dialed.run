@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
-import { test as base } from "./a11y";
+import { test as base, wrapActions } from "./a11y";
 import type { A11y } from "./a11y";
 
 import {
@@ -340,6 +340,11 @@ const paced = base.extend({
       }, 100);
     });
 
+    // The a11y fixture's wrap goes on first: this fixture runs before it,
+    // and a `goto` bound before the wrap skips it. That was the worker's
+    // first demo test, which then counted none of the pages it left by a
+    // `goto` (the wrap takes each document's coverage before the next).
+    wrapActions(page);
     const rawGoto = page.goto.bind(page);
     page.goto = async (...args: Parameters<Page["goto"]>) => {
       const response = await rawGoto(...args);
