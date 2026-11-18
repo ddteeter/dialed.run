@@ -271,7 +271,6 @@ async function profileOf(
   | {
       username: string | null;
       usernameResetReason: string | null;
-      timeZone: string | null;
     }
   | undefined
 > {
@@ -279,7 +278,6 @@ async function profileOf(
     .select({
       username: userProfiles.username,
       usernameResetReason: userProfiles.usernameResetReason,
-      timeZone: userProfiles.timeZone,
     })
     .from(userProfiles)
     .where(eq(userProfiles.userId, userId))
@@ -328,6 +326,12 @@ function withinRenameCap(userId: string, typed: string, now: number): SQL {
   return sql`(SELECT count(*) FROM ${usernameHistory} WHERE ${countedRenames(userId, typed, now)}) < ${RENAME_CAP}`;
 }
 
+interface RenameStanding {
+  readonly within: boolean;
+  readonly allowedAt: number;
+  readonly viewer: ViewerZone;
+}
+
 /**
  * Where claiming `typed` now stands against the cap, read before the
  * batch so a refusal can say why; the batch asks the same in SQL, so
@@ -337,24 +341,30 @@ function withinRenameCap(userId: string, typed: string, now: number): SQL {
  * `RENAME_CAP`-th newest counted rename leaves the window
  * `RENAME_WINDOW_S` after it was retired, and from then on fewer than the
  * cap remain. With fewer than the cap counted, or no profile row (one
- * deleted mid-claim), it is now.
+ * deleted mid-claim), it is now. `viewer` is the runner's own clock, read
+ * from the same row, for the day the refusal names.
  */
 async function renameStanding(
   db: Db,
   userId: string,
   typed: string,
   now: number,
-): Promise<{ within: boolean; allowedAt: number }> {
+): Promise<RenameStanding> {
   const [row] = await db
     .select({
       within: sql<number>`${withinRenameCap(userId, typed, now)}`,
       allowedAt: sql<
         number | null
       >`(SELECT ${usernameHistory.retiredAt} FROM ${usernameHistory} WHERE ${countedRenames(userId, typed, now)} ORDER BY ${usernameHistory.retiredAt} DESC LIMIT 1 OFFSET ${RENAME_CAP - 1}) + ${RENAME_WINDOW_S}`,
+      timeZone: userProfiles.timeZone,
     })
     .from(userProfiles)
     .where(eq(userProfiles.userId, userId));
-  return { within: row?.within === 1, allowedAt: row?.allowedAt ?? now };
+  return {
+    within: row?.within === 1,
+    allowedAt: row?.allowedAt ?? now,
+    viewer: homeZoneOf(row?.timeZone),
+  };
 }
 
 /**
@@ -444,14 +454,14 @@ export async function claimUsername(
   const now = nowSeconds();
   // A first handle retires nothing, so only a change is capped.
   const isAChange = profile?.username != undefined;
-  const tooOften = (allowedAt: number): HandleClaim => ({
+  const tooOften = ({ allowedAt, viewer }: RenameStanding): HandleClaim => ({
     kind: "too_often",
     until: allowedAt,
-    viewer: homeZoneOf(profile?.timeZone),
+    viewer,
   });
   if (isAChange) {
     const standing = await renameStanding(db, userId, typed, now);
-    if (!standing.within) return tooOften(standing.allowedAt);
+    if (!standing.within) return tooOften(standing);
   }
 
   const ownHistoryRow = ownUnlocked(userId, typed);
@@ -487,7 +497,7 @@ export async function claimUsername(
     // change used the runner's last rename.
     if (held.length === 0) {
       const standing = await renameStanding(db, userId, typed, now);
-      return standing.within ? await taken() : tooOften(standing.allowedAt);
+      return standing.within ? await taken() : tooOften(standing);
     }
     purge(profileCacheTags(userId, typed));
     return { kind: "claimed", username: typed };
