@@ -354,6 +354,7 @@ describe("Feed: Following, empty", () => {
     const find = screen.getByRole("link", { name: "Find a runner" });
     expect(find).toHaveAttribute("href", "/feed/search");
     expect(find).toHaveAttribute("data-part", "primary-action");
+    expect(find).toHaveClass("target", "rounded-pill", "bg-ink", "no-underline");
     expect(screen.queryByRole("list")).toBeNull();
   });
 

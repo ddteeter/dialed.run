@@ -68,10 +68,9 @@ describe("R: the empty list", () => {
     expect(
       screen.getByText("Upload a file or enter one by hand."),
     ).toBeVisible();
-    expect(screen.getByRole("link", { name: "Log a run" })).toHaveAttribute(
-      "href",
-      "/runs/new",
-    );
+    const log = screen.getByRole("link", { name: "Log a run" });
+    expect(log).toHaveAttribute("href", "/runs/new");
+    expect(log).toHaveClass("target", "rounded-pill", "bg-ink", "no-underline");
     expect(rows()).toHaveLength(0);
   });
 });

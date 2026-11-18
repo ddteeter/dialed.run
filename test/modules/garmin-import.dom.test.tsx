@@ -122,6 +122,14 @@ describe("A1: Import from Garmin (G3)", () => {
     // and described by the row's title, in its spoken form.
     const button = within(row).getByRole("button", { name: "Import" });
     expect(button).toHaveTextContent("Import ›");
+    expect(button).toHaveClass(
+      "target",
+      "bg-transparent",
+      "font-mono",
+      "text-mono-sm",
+      "uppercase",
+      "text-ink",
+    );
     expect(button).toHaveAttribute("aria-describedby", title?.id);
     expect(button).toHaveAccessibleDescription(
       "Sat Aug 29 · 6.2 mi · 51 minutes 38 seconds",

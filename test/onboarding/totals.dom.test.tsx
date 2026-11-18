@@ -337,7 +337,9 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
     ).toBeVisible();
     expect(within(sheet).getByRole("switch")).toBeChecked();
 
-    await user.click(within(sheet).getByRole("button", { name: "Done" }));
+    const done = within(sheet).getByRole("button", { name: "Done" });
+    expect(done).toHaveClass("target", "rounded-pill", "border-hairline");
+    await user.click(done);
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 

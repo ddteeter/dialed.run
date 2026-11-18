@@ -501,9 +501,13 @@ describe("ConditionsTab: no matches", () => {
     expect(
       screen.getByText("Your own record in this band is on the Call."),
     ).toBeVisible();
-    expect(screen.getByRole("link", { name: "Open the Call" })).toHaveAttribute(
-      "href",
-      "/call",
+    const call = screen.getByRole("link", { name: "Open the Call" });
+    expect(call).toHaveAttribute("href", "/call");
+    expect(call).toHaveClass(
+      "target",
+      "rounded-pill",
+      "border-hairline",
+      "no-underline",
     );
     // Teal means matched, so an empty answer never wears it.
     expect(block()).not.toHaveClass("bg-teal");
