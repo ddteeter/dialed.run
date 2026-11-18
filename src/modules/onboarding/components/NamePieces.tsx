@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { useId, useState } from "react";
 
-import { Mono } from "../../../ui";
+import { ACTION_PRIMARY, Mono } from "../../../ui";
 import type { NameableItem, NamedResult, NamingOffer } from "../naming";
 import type { NameIdentity } from "../inputs";
 import { MoreDisclosure } from "./MoreDisclosure";
@@ -148,7 +148,7 @@ function NextAndSkip({
       <button
         type="button"
         onClick={onDone}
-        className="target grid min-h-13 cursor-pointer place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase text-accent-ink"
+        className={`target ${ACTION_PRIMARY}`}
       >
         Next
       </button>

@@ -8,6 +8,7 @@ import { RunDetail } from "../../src/modules/runs/components/RunDetail";
 import type { ConditionsActions } from "../../src/modules/runs/components/SetConditionsSheet";
 import type { Units } from "../../src/lib/contracts";
 import type { RunSummary } from "../../src/modules/runs/service";
+import { ACTION_PRIMARY } from "../../src/ui";
 import { expectBusy } from "../ui/unavailable";
 import {
   RUN_ID,
@@ -132,7 +133,13 @@ describe("R: a run before its kit", () => {
     );
     const primary = screen.getByRole("link", { name: "What did you wear?" });
     expect(primary).toHaveAttribute("href", `/feed/attach/${RUN_ID}`);
-    expect(primary).toHaveClass("bg-action");
+    // The shared pink caps, so it hugs its label from 720 (R54·167.2,
+    // #621) where the hand-written one spanned the column.
+    expect(primary).toHaveClass(
+      "target",
+      "no-underline",
+      ...ACTION_PRIMARY.split(" "),
+    );
   });
 
   it("has no input on it at all", async () => {

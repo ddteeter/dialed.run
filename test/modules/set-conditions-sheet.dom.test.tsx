@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { SetConditionsSheet } from "../../src/modules/runs/components/SetConditionsSheet";
 import type { ConditionsActions } from "../../src/modules/runs/components/SetConditionsSheet";
+import { INK_PILL, SECONDARY_PILL } from "../../src/ui";
 import { carriedSince } from "../ui/carry-spy";
 import { drawnText } from "./spoken-text";
 
@@ -45,6 +46,27 @@ async function openPicks(user: ReturnType<typeof userEvent.setup>) {
   );
   return screen.getByRole("dialog", { name: "Set conditions" });
 }
+
+describe("SetConditionsSheet: the first step's pair (R54·167.1)", () => {
+  it("draws the ink pill over the hairline pill, stacked at the sheet's width", async () => {
+    render(sheet());
+    const dialog = await screen.findByRole("dialog", {
+      name: "No weather saved",
+    });
+
+    const set = within(dialog).getByRole("button", { name: "Set conditions" });
+    const again = within(dialog).getByRole("button", { name: "Try again" });
+    // A sheet's act and its secondary (D-186), where both were
+    // field-radius rectangles (#621, D1-16).
+    expect(set).toHaveClass("target", ...INK_PILL.split(" "));
+    expect(again).toHaveClass("target", ...SECONDARY_PILL.split(" "));
+    expect(set).not.toHaveClass("rounded-field");
+    expect(again).not.toHaveClass("rounded-field", "border-ink");
+    // 167.2: in a sheet each is the sheet's width, stacked.
+    expect(set.parentElement).toHaveClass("flex", "w-full", "flex-col");
+    expect(set.nextElementSibling).toBe(again);
+  });
+});
 
 describe("SetConditionsSheet: the picks", () => {
   it("names the pick on the button only once both halves are picked", async () => {

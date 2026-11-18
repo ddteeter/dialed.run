@@ -6,7 +6,7 @@ import type { Units } from "../../../lib/contracts";
 import { dayLabel } from "../../../lib/dates";
 import { runClockLabel } from "../run-clock";
 import { distanceNumber, paceForms } from "../../../lib/contracts/measures";
-import { Mono, Spoken } from "../../../ui";
+import { ACTION_PRIMARY, Mono, Spoken } from "../../../ui";
 import type { RunSummary } from "../service";
 import { ConditionsRow } from "./ConditionsBlock";
 import { SetConditionsSheet } from "./SetConditionsSheet";
@@ -90,7 +90,7 @@ export function RunDetail({
         to="/feed/attach/$runId"
         params={{ runId: run.id }}
         data-slot="primary-action"
-        className="target flex items-center justify-center rounded-card bg-action px-6 py-4 font-display text-body uppercase text-accent-ink no-underline"
+        className={`target ${ACTION_PRIMARY} no-underline`}
       >
         What did you wear?
       </Link>

@@ -17,6 +17,7 @@ import {
 } from "../../src/modules/onboarding/components/CallLadder";
 import { ladderFrom } from "../../src/modules/onboarding/ladder";
 import { queryWeatherCredit, WEATHER_CREDIT } from "../ui/weather-credit";
+import { ACTION_PRIMARY } from "../../src/ui";
 
 /**
  * The Call tab's teaser — K, as round 22's item 24 rules it.
@@ -152,10 +153,14 @@ describe("zero verdicts (round 26 #15)", () => {
     // No bands, so nothing of Visual Crossing's to credit (D-144).
     expect(queryWeatherCredit(document.body)).toBeNull();
     expect(screen.queryByText("Log this next")).toBeNull();
-    // The one thing that moves the meter.
-    expect(screen.getByRole("link", { name: "Log a run" })).toHaveAttribute(
-      "href",
-      "/runs/new",
+    // The one thing that moves the meter: the product flow's primary,
+    // the shared one, so it hugs its label from 720 (R54·167.2, #621).
+    const log = screen.getByRole("link", { name: "Log a run" });
+    expect(log).toHaveAttribute("href", "/runs/new");
+    expect(log).toHaveClass(
+      "target",
+      "no-underline",
+      ...ACTION_PRIMARY.split(" "),
     );
   });
 

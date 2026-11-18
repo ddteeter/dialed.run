@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { NamePieces } from "../../src/modules/onboarding/components/NamePieces";
+import { ACTION_PRIMARY } from "../../src/ui";
 import type {
   NameableItem,
   NamedResult,
@@ -120,6 +121,12 @@ describe("NamePieces", () => {
     const { onDone } = renderScreen();
 
     expect(counter().textContent).toBe("0 of 6 named");
+    // The step's primary is the shared pink caps (R54·167.1), so it hugs
+    // from 720 with O1's and O3's (167.2, #621).
+    expect(screen.getByRole("button", { name: "Next" })).toHaveClass(
+      "target",
+      ...ACTION_PRIMARY.split(" "),
+    );
     await user.click(screen.getByRole("button", { name: "Next" }));
 
     expect(onDone).toHaveBeenCalledTimes(1);

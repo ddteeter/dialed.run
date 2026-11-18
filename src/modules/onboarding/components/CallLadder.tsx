@@ -3,6 +3,7 @@ import type { JSX } from "react";
 
 import { CALL_VERDICT_THRESHOLD } from "../../../lib/contracts";
 import {
+  ACTION_PRIMARY,
   Bracketed,
   CoverageMark,
   Mono,
@@ -78,7 +79,7 @@ export function CallLadder({
       {isCalling ? undefined : (
         <Link
           to="/runs/new"
-          className="target grid min-h-13 place-items-center rounded-card bg-action px-6 py-4 font-display text-body uppercase text-accent-ink no-underline"
+          className={`target ${ACTION_PRIMARY} no-underline`}
         >
           Log a run
         </Link>
