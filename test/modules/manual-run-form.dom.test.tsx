@@ -434,6 +434,16 @@ describe("ManualRunForm: what it refuses", () => {
     });
   });
 
+  it("says the title is the runner's own, heard with its field (R60·330)", async () => {
+    await renderWithRouter(
+      <ManualRunForm distanceUnit="km" submitRun={fakeSubmit()} />,
+    );
+
+    expect(screen.getByLabelText("Title")).toHaveAccessibleDescription(
+      "Only you see the title.",
+    );
+  });
+
   it("names every field the way the schema does", async () => {
     // The DOM name is the schema key, not the label, so `focusField` and
     // `fieldErrors[name]` can find it.

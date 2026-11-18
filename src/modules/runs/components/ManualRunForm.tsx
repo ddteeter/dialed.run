@@ -188,6 +188,9 @@ export function ManualRunForm({
           onChange={setTitle}
           field={form.field}
           error={form.fieldErrors.title}
+          // R60·330: the title stays the runner's own. Other runners see
+          // the run by its day and distance.
+          hint="Only you see the title."
         />
         <FormField
           name="startedAt"
