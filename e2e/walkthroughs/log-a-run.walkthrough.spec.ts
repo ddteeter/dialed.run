@@ -83,7 +83,7 @@ test("log a run: the file, its conditions, the kit, the verdict", async ({
     });
     await expect(card).toContainText(formatDuration((TRACK_POINTS - 1) * 60));
     await expect(
-      card.getByRole("button", { name: /, change start time$/u }),
+      card.getByRole("button", { name: /^[0-9:]+ [AP]M Change$/u }),
     ).toBeVisible();
     await expect(page).toHaveURL(/\/runs\/new$/u);
     await scene(page, "Read in place · distance, time, pace", {

@@ -19,20 +19,21 @@ journey's flaky shop-page check, shipped first as its own small PR.
   over two rows with no licence heading around it, but the page's rows
   live inside each licence group, whose heading is already an h2. So each
   group carries its own "Projects" heading as an **h3**, so the outline
-  stays licence > Projects (asked of coordinator-14).
+  stays licence > Projects. **Guess, #831** (Needs Design).
 - **#782, R59·321, the start-time button** (`ParsedCard.tsx`). The time,
   then a visible "Change" (TYPE.small 600, underlined, sans, own case),
   gap 8 inside the same 44 target. The `aria-label` goes, so the name is
   its visible words: "6:04 AM Change". As the board draws it, the time is
   no longer underlined: "Change" carries the affordance. **Guess:** after
   a move the button reads "6:07 AM · Changed Change". The board draws
-  only the resting state, and "Changed" is the existing after-state
-  (asked of coordinator-14).
+  only the resting state, and "Changed" is the existing after-state.
+  **Guess, #832** (Needs Design).
 - **#783, R59·322, no new tab.** `target="_blank"` goes from
   `ProductLink`, `ElsewhereHelp` and `WeatherAttribution` (the only three).
-  `rel` keeps `noopener` (harmless without a new tab) and the other
-  values, since they are about the link, not the tab. The comments that
-  give the new tab as the reason are rewritten.
+  With no new tab there is no `window.opener` to withhold, so `noopener`
+  goes too; `ugc nofollow` and `noreferrer` stay, since they are about the
+  link, not the tab. The comments that give the new tab as the reason are
+  rewritten.
 - **#784, R59·323, non-control text.** AlreadyInCloset's hidden ", works
   at" and GarmentDetail's hidden "… dialed together" go, and the lines
   read whole without them. OwnerAudience's hidden "Seen by: " becomes a
@@ -71,9 +72,10 @@ journey's flaky shop-page check, shipped first as its own small PR.
 ## Issues
 
 - Closes: #779, #782, #783, #784 (and #826 in its own PR).
-- Opens: none yet.
+- Opens: #831, #832 (filed by coordinator-14, Deferred in the PR).
 
 ## Open questions
 
-The two guesses above (318's heading level, 321's after-move words) are
-with coordinator-14.
+The two guesses above are filed for Design: #831 (318's heading level)
+and #832 (321's after-move words). They are listed as Deferred, not
+closed. SEEN BY's colour (muted) is a third, smaller guess.
