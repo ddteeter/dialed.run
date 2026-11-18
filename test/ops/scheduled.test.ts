@@ -18,6 +18,7 @@ import {
   userProfiles,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import { configuredDeployment } from "./configured-deployment";
 import type { RateLimitKind } from "../../src/lib/contracts/rate-limits";
 import { newUlid, type Ulid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
@@ -126,6 +127,8 @@ async function emptyTheTablesTheDigestReads(): Promise<void> {
   await db.delete(entryPhotos);
   await db.delete(outfitEntries);
 }
+
+configuredDeployment();
 
 beforeEach(async () => {
   await emptyTheTablesTheDigestReads();
@@ -768,6 +771,20 @@ describe("the digest reports each kind on its own (OPS-2)", () => {
     });
   });
 
+  it("names a missing deployment value as its own kind (design 237)", async () => {
+    const { reporter, events } = recordingReporter();
+    Reflect.deleteProperty(env, "TAKEDOWN_SECRET");
+
+    const outcome = await handleScheduled(DIGEST, reporter);
+
+    expect(outcome.anomalies).toStrictEqual([
+      "TAKEDOWN_SECRET is not set (deployment plan §2: before public)",
+    ]);
+    expect(events.map((event) => event.report.tags)).toStrictEqual([
+      { digest: "daily", digest_kind: "config" },
+    ]);
+  });
+
   it("names every kind it can raise, and no other", () => {
     expect(digestKinds).toStrictEqual([
       "weather-backlog",
@@ -782,6 +799,7 @@ describe("the digest reports each kind on its own (OPS-2)", () => {
       "account-deletion",
       "speed",
       "media-backup",
+      "config",
     ]);
   });
 

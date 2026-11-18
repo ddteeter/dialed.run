@@ -5,6 +5,10 @@
  * The shape refusals live in `usernameSchema`'s messages (error copy lives
  * in the schema). This is the one refusal only the server can make.
  */
+import { RENAME_CAP, RENAME_WINDOW_DAYS } from "../../lib/contracts";
+import { proseDayLabel, type ViewerZone } from "../../lib/dates";
+import type { HandleClaim } from "./username";
+
 export const HANDLE_COPY = {
   label: "Username",
   /**
@@ -26,12 +30,19 @@ export const HANDLE_COPY = {
    */
   changeLater: "You can change it in settings.",
   /**
-   * Past the rename cap (SA-L02, owner 2026-11-15): `RENAME_CAP` new
-   * handles in `RENAME_WINDOW_S`.
-   */
-  tooOften:
-    "You've changed your handle 3 times this month. Try again in a few weeks.",
+  The band's kicker past the rename cap (R60, #820): the handle is what did not change.
+  */
+  notChanged: "Not changed",
 } as const;
+
+/**
+ * Past the rename cap (SA-L02, owner 2026-11-15; R60, #820): `RENAME_CAP`
+ * new handles in `RENAME_WINDOW_DAYS`, and the day the next is allowed, on
+ * the runner's clock. A day alone is not marked UTC (owner, 2026-11-05).
+ */
+export function tooOftenMessage(until: number, viewer: ViewerZone): string {
+  return `You've changed your handle ${String(RENAME_CAP)} times in ${String(RENAME_WINDOW_DAYS)} days. You can change it again on ${proseDayLabel(until, viewer.homeZone)}.`;
+}
 
 /**
  * *"@maya_runs is taken. Try another, like @maya_runs_pdx."* — with one
@@ -46,4 +57,25 @@ export function takenMessage(
   return suggestion === undefined
     ? `@${handle} is taken. Try another.`
     : `@${handle} is taken. Try another, like @${suggestion}.`;
+}
+
+/**
+ * The cap's band sentence for a claim the cap refused, or nothing for any
+ * other answer: the band and the status region both read it.
+ */
+export function capRefusal(claim: HandleClaim): string | undefined {
+  return claim.kind === "too_often"
+    ? tooOftenMessage(claim.until, claim.viewer)
+    : undefined;
+}
+
+/**
+ * What the form's status region says for the cap's refusal (rule 08), or
+ * nothing for any other answer.
+ */
+export function capSaid(claim: HandleClaim): string | undefined {
+  const sentence = capRefusal(claim);
+  return sentence === undefined
+    ? undefined
+    : `${HANDLE_COPY.notChanged}. ${sentence}`;
 }

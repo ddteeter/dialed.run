@@ -169,6 +169,8 @@ describe("ResendLink", () => {
     );
     expect(sent.closest("[data-state]")).toHaveAttribute("data-state", "sent");
     expect(sent.closest("p")).toHaveTextContent(/^Sent ✓ A new link/u);
+    // The limit's band only after the limit's answer.
+    expect(screen.queryByText("Not sent")).toBeNull();
     expect(status()).toHaveTextContent(
       "Sent. A new link is on its way. The old one no longer works.",
     );
@@ -233,8 +235,11 @@ describe("ResendLink", () => {
     expect(status()).toHaveTextContent(`Not sent. ${message}`);
     expect(screen.queryByText(/^Sent ✓/u)).toBeNull();
 
-    // The band's Try again is a resend; a sent one clears the band.
-    await user.click(screen.getByRole("button", { name: "Try again" }));
+    // No Try again: inside the limit a press is refused again (R60·60a).
+    // Resend itself still sends once the hour allows, and a sent one
+    // clears the band.
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    await user.click(resendButton());
     expect(resend).toHaveBeenCalledTimes(2);
     expect(await screen.findByText(/^Sent ✓/u)).toBeVisible();
     expect(screen.queryByText(message)).toBeNull();
@@ -260,7 +265,8 @@ describe("ResendLink", () => {
     expect(screen.queryByText(/^Sent ✓/u)).toBeNull();
 
     // The address's own limit after it reads its own sentence.
-    await user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    await user.click(resendButton());
     expect(
       await screen.findByText(
         "That's 5 links this hour. You can send another at 2:00 AM.",
@@ -1095,6 +1101,8 @@ describe("ChangeEmail (ACC-8)", () => {
     ).toBeVisible();
     // Nothing went, so nothing says it did (task 126 PR B).
     expect(screen.queryByText("Link sent.")).toBeNull();
+    // A refusal with nothing of its own to say leaves the region empty.
+    expect(status().textContent).toBe("");
     // The confirm-first sheet never opens for the hour's limit.
     expect(
       screen.queryByRole("dialog", { name: "Confirm your email first" }),

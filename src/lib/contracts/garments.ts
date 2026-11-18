@@ -391,6 +391,15 @@ export const USERNAME_MIN_LENGTH = 3;
 export const USERNAME_MAX_LENGTH = 20;
 
 /**
+ * The rename cap (SA-L02, owner 2026-11-15): at most `RENAME_CAP` handles
+ * of a runner's own choosing in any `RENAME_WINDOW_DAYS`. Here, beside the
+ * handle's other rules, so the server's count and the band's sentence
+ * (R60, #820) read the same two numbers.
+ */
+export const RENAME_CAP = 3;
+export const RENAME_WINDOW_DAYS = 30;
+
+/**
  * What a runner typed, as it would be stored: lowercased, without the "@"
  * the field shows in front of it or any space around it. The field applies
  * this as they type ("The field lowercases as you type, so you see what's

@@ -758,6 +758,11 @@ export function FormFailureBand({
 export interface ControlFailure {
   kicker: string;
   message: string;
+  /**
+   * A refusal in the server's own words (`lib/control-refusal`), which
+   * pressing again cannot change: its band has no Try again (Round 60).
+   */
+  isRefused?: boolean | undefined;
 }
 
 /**
@@ -778,7 +783,7 @@ export function ControlFailureBand({
     <FailureBand
       kicker={failure.kicker}
       message={failure.message}
-      onRetry={onRetry}
+      onRetry={failure.isRefused === true ? undefined : onRetry}
       retryRef={retryRef}
     />
   );

@@ -5,6 +5,7 @@ import type { CarriedForm } from "../../../lib/carried-form";
 import { normalizeUsername, usernameInput } from "../../../lib/contracts";
 import {
   describedByFor,
+  FailureBand,
   FormField,
   FormFailureBand,
   FormStatus,
@@ -12,7 +13,7 @@ import {
   SubmitButton,
   useFormSubmit,
 } from "../../../ui";
-import { HANDLE_COPY, takenMessage } from "../handle-copy";
+import { capRefusal, capSaid, HANDLE_COPY, takenMessage } from "../handle-copy";
 import type { HandleClaim } from "../username";
 
 /**
@@ -107,20 +108,37 @@ export function HandleForm({
       // Settings › Username stays on its page: the status says it saved.
     });
   const [typed, setTyped] = useState(initial);
+  // The last refused claim; drawn only when it is the cap's.
+  const [limited, setLimited] = useState<HandleClaim | undefined>();
+  /**
+   * Where a claim's answer goes, for a save and the cap's refusal alike:
+   * a held handle moves on, and the cap's answer is kept for its band.
+   * One handler for both, so neither branch is one the hook never takes.
+   */
+  function settle(result: HandleClaim): void {
+    if (result.kind === "claimed") onSuccess(result.username);
+    else setLimited(result);
+  }
   const form = useFormSubmit({
     schema: usernameInput,
     action: async (values) => {
+      setLimited(undefined);
       const result = await claim({ data: values });
       if (result.kind === "taken") {
         throw new HandleTaken(takenMessage(result.username, result.suggestion));
       }
-      if (result.kind === "too_often") {
-        throw new HandleTaken(HANDLE_COPY.tooOften);
-      }
-      return result.username;
+      return result;
     },
     successMessage,
-    onSuccess,
+    onSuccess: settle,
+    // Past the rename cap no edit to the field fixes it, so it is the
+    // band above Save, not a field error (R60, #820), and nothing is
+    // announced as saved.
+    refusal: {
+      matches: (result) => result.kind === "too_often",
+      answer: settle,
+      said: capSaid,
+    },
     carry,
     // No summary labels: the summary appears only for two or more failing
     // fields, and this form has one (SharingForm's reasoning).
@@ -138,6 +156,7 @@ export function HandleForm({
   }
 
   const error = form.fieldErrors.username;
+  const capped = limited === undefined ? undefined : capRefusal(limited);
   const hint = (
     <HandleHint isRuleOnly={isRuleOnly} isSettings={carry === "settings"} />
   );
@@ -175,6 +194,10 @@ export function HandleForm({
           className="w-full border-none bg-transparent"
         />
       </FormField>
+      {/* No Try again: Save is refused again until the date (R60). */}
+      {capped === undefined ? undefined : (
+        <FailureBand kicker={HANDLE_COPY.notChanged} message={capped} />
+      )}
       <FormFailureBand
         failure={form.failure}
         onRetry={form.retry}

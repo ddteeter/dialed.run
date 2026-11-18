@@ -27,3 +27,20 @@ export function useHydrated(): void {
     document.documentElement.dataset.hydrated = "true";
   });
 }
+
+/**
+ * Whether the page had hydrated before this render: `true` in the first
+ * render of a screen reached by a client navigation, since the root
+ * stamped it long before; `false` on the server, and in the hydration
+ * render itself, whose effects have not run yet. A screen that draws
+ * something only a client navigation can know reads this once, at mount,
+ * so what it draws is in its first render or never, and nothing moves in
+ * after load (Round 60, #837 60b).
+ */
+export function wasHydrated(): boolean {
+  // No `document` on the server, where nothing has hydrated.
+  return (
+    typeof document !== "undefined" &&
+    document.documentElement.dataset.hydrated === "true"
+  );
+}

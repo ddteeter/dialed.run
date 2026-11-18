@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { entryPhotos, outbox, wardrobeItems } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import { configuredDeployment } from "./configured-deployment";
 import {
   entryPhotoKeyFor,
   entryPhotoPrefix,
@@ -97,6 +98,8 @@ function nothing(): void {
   console.error is expected on these paths; keep the output quiet
   */
 }
+
+configuredDeployment();
 
 beforeEach(async () => {
   await db().delete(outbox);

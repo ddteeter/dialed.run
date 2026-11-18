@@ -1548,20 +1548,43 @@ yet. Each is a guess at composition until Design draws it.
   Try again at {time}, or reset your password." on the device's clock,
   kicker NOT SIGNED IN and no Try again.
 
+## Built from Round 60's refusal rulings (wave 14, design 237)
+
+Round 60's rule: a refusal that a retry can't fix drops Try again. Built
+as ruled (#820, #837), on existing primitives.
+
+- **A control's refusal.** Any control failure that is a refusal in the
+  server's own words has no Try again, wherever it is drawn
+  (`ControlFailureBand`). On a confirm sheet the other button then reads
+  Close, and the verb stays. Today that is the held kit, run or photo
+  delete: NOT DELETED, "This kit is held while a copyright claim is
+  settled, so it can't be deleted yet.", Delete, Close.
+- **The rename cap.** The band above Save, kicker NOT CHANGED, no Try
+  again: "You've changed your handle 3 times in 30 days. You can change it
+  again on {date}.", the date as a sentence says it ("Mon, Dec 14") on the
+  runner's clock. It is not a field error, and the status region says it.
+- **Resend's limit.** The NOT SENT band under Resend has no Try again.
+  Resend itself still sends, and an ordinary failed send keeps its Try
+  again.
+- **The day's photo limit.** Each surface's photo line, as built, has no
+  Try again (the kit's photo row, the garment's photo).
+- **The report sheet's refusals.** Both sentences stay in the NOT SENT
+  band, with no Try again, and the status region says them. When the item
+  is gone, the sheet is the band and Close only.
+- **The terms prompt's return line.** Drawn in the prompt's first render
+  when a client navigation reached it, and never on a server-rendered
+  load.
+
 ## Built for the privacy lane (wave 12, design 228)
 
 Six surfaces built from the owner's words (2026-11-15 and 2026-11-16) on
 existing primitives, with no board yet. Each is a guess at composition
 until Design draws it.
 
-- **Guess · a held kit's delete is refused.** Deleting a kit, run or photo
-  a copyright hold names leaves it in place; the delete sheet's failure
-  band says NOT DELETED, "This kit is held while a copyright claim is
-  settled, so it can't be deleted yet." (run and photo alike), with Try
-  again.
-- **Guess · the rename cap.** A fourth handle in 30 days is refused on the
-  handle form, under the field: "You've changed your handle 3 times this
-  month. Try again in a few weeks."
+- **Ruled (R60, #820) · a held kit's delete is refused.** Built as ruled:
+  see "Built from Round 60's refusal rulings" below.
+- **Ruled (R60, #820) · the rename cap.** Built as ruled: see "Built from
+  Round 60's refusal rulings" below.
 - **Guess · a product link to dialed.run.** F's product link field refuses
   a link to the app's own host on leaving the box: "That's a dialed.run
   page. Paste the address of the shop's page." A stored one is drawn as

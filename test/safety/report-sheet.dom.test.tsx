@@ -789,6 +789,79 @@ describe("when nothing was filed (design 232)", () => {
     },
   );
 
+  it.each([
+    [
+      "not_found",
+      "We couldn't find that to report. It may have been deleted.",
+    ] as const,
+    [
+      "limited",
+      "That's 20 reports today. You can report again tomorrow.",
+    ] as const,
+  ])(
+    "bands %s with no Try again, and says it in the status region (R60·60e)",
+    async (status, sentence) => {
+      const user = userEvent.setup();
+      refusing(status);
+
+      await user.click(screen.getByRole("radio", { name: "Something else" }));
+      await user.click(screen.getByRole("button", { name: "Send report" }));
+
+      expect(await screen.findByText(sentence)).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Try again", hidden: true }),
+      ).toBeNull();
+      expect(screen.getByRole("status", { hidden: true })).toHaveTextContent(
+        `Not sent. ${sentence}`,
+      );
+    },
+  );
+
+  it("offers Close only once the subject is gone (R60·60e)", async () => {
+    const user = userEvent.setup();
+    const { onClose } = refusing("not_found");
+
+    await user.click(screen.getByRole("radio", { name: "Something else" }));
+    await user.click(screen.getByRole("button", { name: "Send report" }));
+    await screen.findByText(
+      "We couldn't find that to report. It may have been deleted.",
+    );
+
+    // Nothing left to report, so nothing to choose or send.
+    expect(screen.queryByRole("radio", { hidden: true })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Send report", hidden: true }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Send and block", hidden: true }),
+    ).toBeNull();
+    // The sheet's Close, beside the header's ✕, which closes it the same way.
+    const closes = screen.getAllByRole("button", {
+      name: "Close",
+      hidden: true,
+    });
+    expect(closes).toHaveLength(2);
+    const [, close] = closes;
+    expect(close).toHaveClass("target", "rounded-pill", "border-hairline");
+    if (close !== undefined) await user.click(close);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the form for today's limit: the subject is still there", async () => {
+    const user = userEvent.setup();
+    refusing("limited");
+
+    await user.click(screen.getByRole("radio", { name: "Something else" }));
+    await user.click(screen.getByRole("button", { name: "Send report" }));
+    await screen.findByText(
+      "That's 20 reports today. You can report again tomorrow.",
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Send report", hidden: true }),
+    ).toBeInTheDocument();
+  });
+
   it("shows no refusal for a report that was filed", async () => {
     const user = userEvent.setup();
     renderSheet();

@@ -206,7 +206,10 @@ export function ConfirmSheet({
           onClick={onClose}
           className={`target ${SECONDARY_PILL}`}
         >
-          Keep it
+          {/* Refused, nothing here can be kept or retried: the sheet's way
+          out is Close (Round 60, #820). Delete stays, so the band is no
+          dead end. */}
+          {action.failure?.isRefused === true ? "Close" : "Keep it"}
         </button>
       </div>
     </Sheet>

@@ -47,13 +47,7 @@ Field name -> the one sentence to show under it.
 export type FieldErrors = Record<string, string>;
 
 export interface FormFailure {
-  kind:
-    | "network"
-    | "server"
-    | "session"
-    | "terms"
-    | "unconfirmed"
-    | "refused";
+  kind: "network" | "server" | "session" | "terms" | "unconfirmed" | "refused";
   message: string;
 }
 
@@ -338,6 +332,12 @@ export interface UseFormSubmitOptions<TSchema extends z.ZodType, TResult> {
   refusal?: {
     matches: (result: TResult) => boolean;
     answer: (result: TResult) => void;
+    /**
+     * What the status region says for it, where the screen answers with a
+     * band of its own (the handle's rename cap, R60): the form's one
+     * region (rule 08) says the band too. Nothing, without it.
+     */
+    said?: ((result: TResult) => string | undefined) | undefined;
   };
   /**
    * Which control this form is, should the server refuse it for want of a
@@ -586,6 +586,8 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
         const result = await action(pre.data);
         if (refusal?.matches(result) === true) {
           refusal.answer(result);
+          // The status was emptied when the submit began.
+          setStatus(refusal.said?.(result) ?? "");
           return;
         }
         setFieldErrors({});

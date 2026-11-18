@@ -3,7 +3,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { cronCheckpoints } from "../../src/db/schema-core";
 import { env } from "../../src/env";
-import { checkHealth } from "../../src/modules/ops";
+import { healthResponse } from "../../src/modules/ops";
+import {
+  deploymentConfig,
+  isNamedByDigest,
+} from "../../src/modules/ops/deployment-config";
+import {
+  checkDeploymentConfig,
+  checkHealth,
+} from "../../src/modules/ops/health";
 import { cronPeriods } from "../../src/modules/ops/crons";
 import { nowSeconds } from "../../src/lib/now";
 
@@ -240,5 +248,215 @@ describe("crons that have stopped (design 162)", () => {
 
     expect(report.staleCrons).toStrictEqual([]);
     expect(report.checks.coreDb).toBe("failed");
+  });
+});
+
+/**
+ * Set one deployment value for a test, and put it back after.
+ */
+function withValue(name: string, value: string | undefined): () => void {
+  const original: unknown = Reflect.get(env, name);
+  if (value === undefined) Reflect.deleteProperty(env, name);
+  else Reflect.set(env, name, value);
+  return () => {
+    Reflect.set(env, name, original);
+  };
+}
+
+describe("every deployment value, set or missing (design 237)", () => {
+  it("names every value in the list, and only those", async () => {
+    const report = await checkHealth();
+
+    expect(Object.keys(report.config)).toStrictEqual(
+      deploymentConfig.map((value) => value.name),
+    );
+  });
+
+  it("says set or missing, never the value", async () => {
+    const restore = [
+      withValue("TAKEDOWN_SECRET", "a-value-health-must-not-print"),
+      withValue("CLOSED_ADDRESS_SECRET", undefined),
+      withValue("GOOGLE_CLIENT_ID", ""),
+    ];
+    try {
+      const report = await checkHealth();
+
+      expect(report.config.TAKEDOWN_SECRET).toBe("set");
+      expect(report.config.CLOSED_ADDRESS_SECRET).toBe("missing");
+      // Empty is missing, as `missing` has always read it.
+      expect(report.config.GOOGLE_CLIENT_ID).toBe("missing");
+      expect(JSON.stringify(report)).not.toContain(
+        "a-value-health-must-not-print",
+      );
+    } finally {
+      for (const undo of restore) undo();
+    }
+  });
+
+  it("stays healthy when a value that does not fail health is missing", async () => {
+    const restore = withValue("TAKEDOWN_SECRET", undefined);
+    try {
+      const report = await checkHealth();
+
+      expect(report.config.TAKEDOWN_SECRET).toBe("missing");
+      expect(report.missing).toStrictEqual([]);
+      expect(report.ok).toBe(true);
+    } finally {
+      restore();
+    }
+  });
+});
+
+describe("who is told why (owner, 2026-11-17)", () => {
+  const OPERATOR = "operator-health";
+  const AT = 1_800_000_000;
+
+  beforeEach(() => {
+    vi.spyOn(Date, "now").mockReturnValue(AT * 1000);
+  });
+
+  it("answers a stranger with ok, version and at, and nothing else", async () => {
+    const restore = withValue("ADMIN_USER_IDS", OPERATOR);
+    try {
+      const response = await healthResponse("someone-else");
+      const body: unknown = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body).toStrictEqual({
+        ok: true,
+        version: env.CF_VERSION_METADATA.id,
+        at: AT,
+      });
+    } finally {
+      restore();
+    }
+  });
+
+  it("answers a signed-out viewer as a stranger, even with no operators", async () => {
+    const restore = withValue("ADMIN_USER_IDS", undefined);
+    try {
+      const response = await healthResponse("");
+      const body: unknown = await response.json();
+
+      expect(body).toStrictEqual({
+        ok: true,
+        version: env.CF_VERSION_METADATA.id,
+        at: AT,
+      });
+    } finally {
+      restore();
+    }
+  });
+
+  it("answers a stranger 503 when unhealthy, without saying why", async () => {
+    const restore = [
+      withValue("ADMIN_USER_IDS", OPERATOR),
+      withValue("UNSUBSCRIBE_SECRET", undefined),
+    ];
+    try {
+      const response = await healthResponse("someone-else");
+      const body: unknown = await response.json();
+
+      expect(response.status).toBe(503);
+      expect(body).toMatchObject({ ok: false });
+      expect(JSON.stringify(body)).not.toContain("UNSUBSCRIBE_SECRET");
+    } finally {
+      for (const undo of restore) undo();
+    }
+  });
+
+  it("tells an operator everything", async () => {
+    const restore = [
+      withValue("ADMIN_USER_IDS", OPERATOR),
+      withValue("UNSUBSCRIBE_SECRET", undefined),
+    ];
+    try {
+      const response = await healthResponse(OPERATOR);
+      const body: unknown = await response.json();
+
+      expect(response.status).toBe(503);
+      expect(body).toMatchObject({
+        ok: false,
+        checks: { coreDb: "ok", weatherDb: "ok", media: "ok" },
+        missing: ["UNSUBSCRIBE_SECRET"],
+        staleCrons: [],
+        version: env.CF_VERSION_METADATA.id,
+        config: { UNSUBSCRIBE_SECRET: "missing", ADMIN_USER_IDS: "set" },
+      });
+    } finally {
+      for (const undo of restore) undo();
+    }
+  });
+});
+
+describe("the digest's config lines (design 237)", () => {
+  it("names a missing value the plan needs, with its level", () => {
+    const restore = withValue("CLOSED_ADDRESS_SECRET", undefined);
+    try {
+      const lines: string[] = [];
+
+      checkDeploymentConfig(lines);
+
+      expect(lines).toContain(
+        "CLOSED_ADDRESS_SECRET is not set (deployment plan §2: before friends)",
+      );
+    } finally {
+      restore();
+    }
+  });
+
+  it("leaves out a missing value that is optional, owner-only or for Strava", () => {
+    const restore = [
+      withValue("GOOGLE_CLIENT_ID", undefined),
+      withValue("GARMIN_API_KEY", undefined),
+      withValue("STRAVA_CLIENT_ID", undefined),
+    ];
+    try {
+      const lines: string[] = [];
+
+      checkDeploymentConfig(lines);
+
+      expect(lines.join("\n")).not.toMatch(
+        /GOOGLE_CLIENT_ID|GARMIN_API_KEY|STRAVA_CLIENT_ID/u,
+      );
+    } finally {
+      for (const undo of restore) undo();
+    }
+  });
+
+  it("never names SENTRY_DSN, which is how its lines would travel", () => {
+    const restore = withValue("SENTRY_DSN", undefined);
+    try {
+      const lines: string[] = [];
+
+      checkDeploymentConfig(lines);
+
+      expect(lines.join("\n")).not.toContain("SENTRY_DSN");
+    } finally {
+      restore();
+    }
+  });
+
+  it("names nothing for a set value", () => {
+    const restore = withValue("TAKEDOWN_SECRET", "set-here");
+    try {
+      const lines: string[] = [];
+
+      checkDeploymentConfig(lines);
+
+      expect(lines.join("\n")).not.toContain("TAKEDOWN_SECRET");
+    } finally {
+      restore();
+    }
+  });
+
+  it("reports by level exactly the four the owner chose", () => {
+    const named = deploymentConfig
+      .filter((value) => isNamedByDigest(value))
+      .map((value) => value.need);
+
+    expect(new Set(named)).toStrictEqual(
+      new Set(["yes", "strongly", "before friends", "before public"]),
+    );
   });
 });

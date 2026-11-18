@@ -406,6 +406,23 @@ describe("GarmentDetail: the photo", () => {
     expectAvailable(fileInput());
   });
 
+  it("says the day's photos are used up on the photo, with no Try again (R60·60d)", async () => {
+    const user = userEvent.setup();
+    const sentence = "That's 50 photos today. You can add more tomorrow.";
+    await renderWithRouter(
+      garment(photographed(), {
+        uploadPhoto: () =>
+          Promise.resolve({ ok: false as const, error: sentence }),
+      }),
+    );
+
+    await user.upload(fileInput(), jpeg());
+
+    expect(await screen.findByText(sentence)).toBeVisible();
+    // Pressing again today is refused again; the line is the photo's.
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  });
+
   it("clears the last refusal on the next attempt", async () => {
     const user = userEvent.setup();
     const pending = Promise.withResolvers<{ ok: true }>();

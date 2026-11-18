@@ -336,7 +336,7 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   // The marketing site's request-access form (design 187): no account
   // exists yet, and Turnstile and the visitor limit gate the write.
   "routes/api/access-requests.ts POST": "sessionless",
-  "routes/api/health.ts GET": "sessionless",
+  "routes/api/health.ts GET": "verified-viewer",
   // Strava's handshake and its webhook: a machine, verified by the
   // callback key and then the token or subscription id.
   "routes/api/strava.$key.ts GET": "sessionless",

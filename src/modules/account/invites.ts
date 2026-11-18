@@ -313,6 +313,7 @@ export async function accessDesk(db: Db): Promise<AccessDesk> {
         codeId: inviteRedemptions.codeId,
         username: userProfiles.username,
         email: user.email,
+        // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; accessDesk reads invite codes with their requests and redemptions with their accounts, for the owner's access desk
       })
       .from(inviteRedemptions)
       .innerJoin(user, eq(user.id, inviteRedemptions.userId))
@@ -373,7 +374,7 @@ export async function createInviteCode(
       })
       // Untargeted: a repeat of the form's key writes nothing, and so
       // does a fresh code that collides with an existing one (one in
-      // 32^4) — which the read then finds missing, and says so.
+      // 32^8) — which the read then finds missing, and says so.
       .onConflictDoNothing(),
     codeMadeBy(db, input.operatorId, input.idempotencyKey),
   ]);

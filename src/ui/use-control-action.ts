@@ -117,7 +117,7 @@ export function useControlAction<TArgs extends unknown[]>({
         return;
       }
       const message = causeLine(error);
-      setFailure({ kicker, message });
+      setFailure({ kicker, message, isRefused: kind === "refused" });
       setStatus(`${kicker}. ${message}`);
     } finally {
       setPending(false);

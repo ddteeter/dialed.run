@@ -4,6 +4,12 @@ import { cronCheckpoints } from "../../db/schema-core";
 import { coreDb, env } from "../../env";
 import { nowSeconds } from "../../lib/now";
 import { cronPeriods, type CronName } from "./crons";
+import { isOperator } from "./desk";
+import {
+  deploymentConfig,
+  isNamedByDigest,
+  type DeploymentValue,
+} from "./deployment-config";
 
 export interface HealthReport {
   ok: boolean;
@@ -28,31 +34,60 @@ export interface HealthReport {
    */
   version: string;
   at: number;
+  /**
+   * Every value `docs/launch/deployment-plan.md` §2 names, set or missing
+   * (design 237), by name and never by value.
+   */
+  config: Record<string, "set" | "missing">;
 }
 
 /**
- * Vars a production deployment cannot do without, which a binding check
- * would never notice. `BETTER_AUTH_URL` decides where Better Auth sends
- * callbacks and whether its cookies carry the `__Host-` prefix (audit
- * finding 0.7); unset, auth half-works, which is worse than not at all.
- * `UNSUBSCRIBE_SECRET` signs unsubscribe links; unset, no optional email
- * goes and every link is refused (task 126, fail closed).
- * `BETTER_AUTH_SECRET` signs every session; unset, auth refuses to build
- * (`createAuth`). While the instance is built at load that stops the
- * Worker before this can answer; named here so it still says why if the
- * instance is ever built on first use instead.
+ * What anyone may read (owner, 2026-11-17): the uptime monitor needs only
+ * the status, and the deploy smoke test `ok` and `version`.
  */
-const REQUIRED_CONFIG = [
-  "BETTER_AUTH_URL",
-  "UNSUBSCRIBE_SECRET",
-  "BETTER_AUTH_SECRET",
-] as const;
+export type PublicHealth = Pick<HealthReport, "ok" | "version" | "at">;
 
+function isSet(name: DeploymentValue["name"]): boolean {
+  const value: unknown = env[name];
+  return typeof value === "string" && value !== "";
+}
+
+/**
+ * Every deployment value, set or missing (design 237): the name only,
+ * never what it is set to.
+ */
+function configStatus(): Record<string, "set" | "missing"> {
+  return Object.fromEntries(
+    deploymentConfig.map((value) => [
+      value.name,
+      isSet(value.name) ? "set" : "missing",
+    ]),
+  );
+}
+
+/**
+ * The missing values a production deployment cannot do without, which a
+ * binding check would never notice (`failsHealth`, `deployment-config.ts`).
+ */
 function missingConfig(): string[] {
-  return REQUIRED_CONFIG.filter((name) => {
-    const value: unknown = env[name];
-    return typeof value !== "string" || value === "";
-  });
+  return deploymentConfig
+    .filter((value) => value.failsHealth && !isSet(value.name))
+    .map((value) => value.name);
+}
+
+/**
+ * The digest's `config` lines (design 237): each missing value whose
+ * level the digest reports, with that level, so the morning says which
+ * deploy step was missed.
+ */
+export function checkDeploymentConfig(anomalies: string[]): void {
+  for (const value of deploymentConfig) {
+    if (isNamedByDigest(value) && !isSet(value.name)) {
+      anomalies.push(
+        `${value.name} is not set (deployment plan §2: ${value.need})`,
+      );
+    }
+  }
 }
 
 /**
@@ -139,5 +174,24 @@ export async function checkHealth(): Promise<HealthReport> {
     staleCrons: stale,
     version: env.CF_VERSION_METADATA.id,
     at,
+    config: configStatus(),
   };
+}
+
+/**
+ * `/api/health`'s answer, 200 when healthy and 503 when not, for anyone.
+ * Only an operator (the Desk's question, `isOperator`) is told why: the
+ * checks, the missing configuration, the stopped crons and every
+ * deployment value's line. A stranger gets `ok`, `version` and `at`.
+ */
+export async function healthResponse(viewerId: string): Promise<Response> {
+  const report = await checkHealth();
+  const status = report.ok ? 200 : 503;
+  if (isOperator(viewerId)) return Response.json(report, { status });
+  const answer: PublicHealth = {
+    ok: report.ok,
+    version: report.version,
+    at: report.at,
+  };
+  return Response.json(answer, { status });
 }
