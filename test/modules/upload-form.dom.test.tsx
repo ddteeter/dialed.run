@@ -1546,6 +1546,12 @@ describe("A1: the parsed card", () => {
     expect(pace.closest("p")).toHaveTextContent(
       /^8:20 \/mi8 minutes 20 seconds per mile\|Sat Aug 29\|6:04 AM$/u,
     );
+    expect(pace.closest("p")).toHaveClass(
+      "font-mono",
+      "text-mono-sm",
+      "uppercase",
+      "text-label",
+    );
   });
 });
 

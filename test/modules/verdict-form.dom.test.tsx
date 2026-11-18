@@ -1094,7 +1094,9 @@ describe("VerdictForm: the generated chips (round 20)", () => {
     const cap = within(sheet).getByRole("group", { name: "Cap" });
     await user.click(within(cap).getByRole("radio", { name: "Not enough" }));
     await user.click(within(sheet).getByRole("button", { name: "hands cold" }));
-    await user.click(within(sheet).getByRole("button", { name: "Done" }));
+    const done = within(sheet).getByRole("button", { name: "Done" });
+    expect(done).toHaveClass("target", "rounded-pill", "border-hairline");
+    await user.click(done);
 
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).toBeNull();

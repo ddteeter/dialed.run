@@ -59,16 +59,10 @@ waiting
 end of heading, waiting, level 2
 list
 listitem, level 1, position 1, set size 1
-button, entry · :id · @safety_# [reports] Due in #h, expanded
-:id
-entry
-· :id
-·
-@safety_#
-[reports]
-end, :id
+button, entry · :id · @safety_# reports Due in #h, expanded
+entry · :id · @safety_# reports
 Due in #h
-end of button, entry · :id · @safety_# [reports] Due in #h, expanded
+end of button, entry · :id · @safety_# reports Due in #h, expanded
 # person
 It's an intimate image of someone, shared without their consent
 paragraph

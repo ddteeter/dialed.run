@@ -9,12 +9,14 @@ import { formatTemp } from "../../../lib/contracts/temperature";
 import type { PrecipClass } from "../../../lib/contracts/temperature";
 import {
   Bracketed,
+  BracketHeadline,
   CityFinder,
   classifyFailure,
   ControlFailureBand,
   FailureBand,
   FormStatus,
   Mono,
+  SECONDARY_PILL,
   useControlAction,
   WeatherAttribution,
 } from "../../../ui";
@@ -25,7 +27,6 @@ import type { BarShare } from "../bar-share";
 import { chipPlaceName } from "../../../lib/place-name";
 import { uiGroupLabels } from "../groups";
 import type { ConditionsHome } from "../home";
-import { BracketHeadline } from "./BracketHeadline";
 
 interface Coords {
   lat: number;
@@ -382,10 +383,7 @@ The Call, as the secondary way out of an empty block (hairline, not ink).
 */
 function OpenTheCall() {
   return (
-    <Link
-      to="/call"
-      className="target inline-flex items-center self-start rounded-pill border border-hairline px-5 py-3 text-body font-semibold text-ink no-underline"
-    >
+    <Link to="/call" className={`target ${SECONDARY_PILL} no-underline`}>
       Open the Call
     </Link>
   );

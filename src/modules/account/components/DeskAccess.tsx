@@ -5,9 +5,8 @@ import type { JSX } from "react";
 import {
   isBlockedRegion,
   regionInviteRefusal,
-  regionTag,
 } from "../../../lib/contracts/access";
-import { FormStatus, Mono } from "../../../ui";
+import { Bracketed, FormStatus, Mono } from "../../../ui";
 import type { AccessDesk, DeskRequest } from "../invites";
 import {
   ageLabel,
@@ -70,7 +69,8 @@ function RequestRow({
             {request.email}
           </span>
           {region === "" ? undefined : (
-            <Mono step="sm">{regionTag(region)}</Mono>
+            // D7's tag, its brackets drawn, not said (D-150): "TN".
+            <Bracketed>{region}</Bracketed>
           )}
         </span>
         <Mono step="sm" className="shrink-0 text-muted">

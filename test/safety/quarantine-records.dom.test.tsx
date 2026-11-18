@@ -114,7 +114,7 @@ describe("QuarantineRecords", () => {
       "photo · p1 [Quarantine]",
     );
     expect(name?.lastElementChild).toHaveClass("sr-only");
-    expect(name?.lastElementChild?.textContent).toBe("photo · p1 [Quarantine]");
+    expect(name?.lastElementChild?.textContent).toBe("photo · p1 Quarantine");
     expect(name).toHaveClass("font-mono", "text-mono-sm", "text-ink");
     expect(name).not.toHaveClass("text-hiviz-text");
     // A hairline above its form, as above a queue card's bar.

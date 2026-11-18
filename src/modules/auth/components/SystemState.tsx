@@ -12,13 +12,15 @@ import { z } from "zod";
 
 import { returnPathOf } from "../../../lib/return-path";
 import {
+  classifyFailure,
   FailureBand,
+  INK_PILL,
   Layout,
   Mono,
   Page,
   PhoneBell,
+  SECONDARY_PILL,
   TABS,
-  classifyFailure,
   tabToLight,
   useTermsRefusal,
 } from "../../../ui";
@@ -272,15 +274,13 @@ function WayOut({
  * Signed out, X1's Log in is the ink pill (R55·174): the page's one way
  * on, the phone's full width and its own width at the desk.
  */
-const SIGNED_OUT_WAY_OUT_CLASS =
-  "target inline-flex items-center justify-center self-stretch rounded-pill bg-ink px-6 font-bold text-ground no-underline wide:self-start";
+const SIGNED_OUT_WAY_OUT_CLASS = `target ${INK_PILL} no-underline`;
 
 /**
  * X1's way out is the hairline pill (#632 A-04): leaving a 404 is not the
  * screen's own action, so it is neither pink nor the filled ink pill.
  */
-const WAY_OUT_CLASS =
-  "target inline-flex items-center rounded-pill border border-hairline px-5 font-semibold text-ink no-underline";
+const WAY_OUT_CLASS = `target ${SECONDARY_PILL} no-underline`;
 
 /**
  * The router's not-found screen, framed by who is looking.

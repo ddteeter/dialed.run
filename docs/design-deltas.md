@@ -1469,6 +1469,46 @@ Design 315 (#761) asks again.
   date (250): "Aug 12". (259e) A notification row's name is the body text
   and time, with "Unread" voicing the dot (255b).
 
+## Built by wave 14's lint lane (design 234)
+
+Hand copies of the shared primitives moved onto them, with a lint per
+primitive (#792, #793, #794). Values come from the contracts, so a hand
+copy's padding or height collapses onto its kind's constant (owner ruling
+on #793, 2026-11-17).
+
+- **Pills take their kind's constant.** 21 hand-typed ink and hairline
+  pills (the 404's ways out, Landing's Go to your feed, the
+  empty feed's Find a runner, ResetPassword, ActionCard, LinkLanding,
+  GarmentForm's and the sheets' Dones, RunList's Log a run, Strava's
+  receipt, ConditionsTab's Open the Call, PickUsername, GarmentDetail's
+  Unretire, Edit and Retire, OpenSourcePage's Show all, ShadeSheet's
+  Clear) are now `INK_PILL` or `SECONDARY_PILL`. That means px-6,
+  `HEIGHT.control`, and 167.2's width: full width below 720, hugging
+  with a 200 minimum from 720. GarmentForm's Done drops from
+  `text-lead` to `text-body`.
+- **One Done for the kit picker (R58·302).** The sheet's Done was py-3
+  and the pushed page's control-height. Only a test kept them apart, to
+  kill a mutant on which branch rendered. PushDone's ruling makes both the
+  hairline pill, so the sheet now renders PushDone too.
+- **Not moved, as ruled (exempt by name):** CityFinder's Find, the
+  hairline pill at its field's own height beside it (R58·308), and its
+  Use this; AttachKit's A2 Change, ink-edged, and its pair on the hi-viz
+  card (R58·308); OwnerAudience's AF1 outline-to-filled toggle (R55·171);
+  and Google's button, to Google's spec.
+- **Not moved, awaiting Design 334 (#834):** the bar's 44 pink pill and
+  the other pink pills (Landing, PublicFrame, OwnProfile, ShadeSheet's
+  Use this), Follow's states, onboarding's small pills and the round icon
+  buttons. #835 moves them once Design rules.
+- **The bell's `[ QUIET ]`** is `BracketHeadline` at the title step. Its
+  brackets sit 8 from the word, as the display headline's do, where the
+  spaces drew them about 6 apart (GUESS).
+- **The Desk heads are heard without brackets (D-150).** The queue row,
+  the removal request and the record head say "photo · p-1 · @owner
+  classifier" from an `sr-only` copy. D7's region tag is `Bracketed`.
+- **GUESS · the runner row's tags (#818, #838).** 8 apart, wrapping
+  under each other until desk (R60·327). Below 720 a long tag may still
+  break inside its cell (R58·276) until Design 335 rules.
+
 ## Built on the Desk by wave 12's sec-desk lane (design 226)
 
 - **Guess · the photo a removal request names (Design 325, to be

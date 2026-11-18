@@ -94,9 +94,9 @@ export function PushTitle({
 }
 
 /**
- * Done on A2b's and A3b's pushed pages at the desk: the hairline pill, as
- * the phone's sheets draw it. A button that only closes is not a primary
- * (R58·302, D-186), so the desk's pink caps is withdrawn.
+ * Done on A2b's and A3b's pushed pages at the desk, and in the phone's
+ * sheets: the hairline pill, the same in both. A button that only closes
+ * is not a primary (R58·302, D-186), so the desk's pink caps is withdrawn.
  */
 export function PushDone({
   onDone,

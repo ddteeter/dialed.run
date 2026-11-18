@@ -1,6 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 
+import { MONO_CLASS } from "../../../ui";
+
 /**
  * "STRAVA REMINDERS · ON ›", on a line under the runs list's title (Round
  * 55 · 235c), where it was a muted link alone under the list that read
@@ -16,7 +18,7 @@ export function StravaRemindersLine({
   return (
     <Link
       to="/runs/strava"
-      className="target inline-flex items-center self-start font-mono text-mono-xs text-ink uppercase underline underline-offset-4"
+      className={`target inline-flex items-center self-start ${MONO_CLASS.xs} text-ink underline underline-offset-4`}
     >
       Strava reminders · {connected ? "On" : "Off"}
       {/* The › is drawn, not said. */}

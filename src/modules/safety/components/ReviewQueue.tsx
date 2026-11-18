@@ -2,7 +2,13 @@ import { useState } from "react";
 import type { JSX } from "react";
 
 import { spanLabel } from "../../../lib/dates";
-import { Bracketed, ListSection, Mono, useFormSubmit } from "../../../ui";
+import {
+  Bracketed,
+  ListSection,
+  Mono,
+  MONO_CASED_CLASS,
+  useFormSubmit,
+} from "../../../ui";
 import {
   renameReasonSchema,
   renameReasons,
@@ -446,6 +452,11 @@ function headName(row: QueueRow, label: string): string {
  * So the spaces sit in the id's and the owner's text, the dot before the
  * owner is a bare mark drawn only on the one desk line, and the tag keeps
  * its words together with no-break spaces. A handle has none to wrap at.
+ *
+ * **Drawn, then said** (D-150, #792). The drawn head is `aria-hidden`, and
+ * a screen reader hears `rowHeard`'s one line from the `sr-only` copy
+ * beside it, as `DeskForm`'s record head does: one text node, so no edge
+ * space is lost, and the tag's brackets are not read aloud.
  */
 function RowHead({
   row,
@@ -453,27 +464,41 @@ function RowHead({
 }: Readonly<{ row: QueueRow; label: string }>): JSX.Element {
   const { owner } = row.subject;
   return (
-    <span
-      data-part="row-head"
-      title={label}
-      className="block font-mono text-mono-sm wrap-anywhere desk:truncate"
-    >
-      <span className="uppercase">{rowKind(row)}</span>
-      {` · ${headName(row, label)} `}
-      <br data-part="head-break" className="desk:hidden" />
-      {owner === undefined ? undefined : (
-        <>
-          <span data-part="owner-dot" className="hidden desk:inline">
-            ·
-          </span>
-          {` @${owner} `}
-        </>
-      )}
-      <span data-part="source" className="uppercase">
-        {`[${wholeTag(SOURCE_TAGS[row.source])}]`}
+    <>
+      <span
+        aria-hidden="true"
+        data-part="row-head"
+        title={label}
+        className={`block ${MONO_CASED_CLASS.sm} wrap-anywhere desk:truncate`}
+      >
+        <span className="uppercase">{rowKind(row)}</span>
+        {` · ${headName(row, label)} `}
+        <br data-part="head-break" className="desk:hidden" />
+        {owner === undefined ? undefined : (
+          <>
+            <span data-part="owner-dot" className="hidden desk:inline">
+              ·
+            </span>
+            {` @${owner} `}
+          </>
+        )}
+        <span data-part="source" className="uppercase">
+          <Bracketed>{wholeTag(SOURCE_TAGS[row.source])}</Bracketed>
+        </span>
       </span>
-    </span>
+      <span className="sr-only">{rowHeard(row, label)}</span>
+    </>
   );
+}
+
+/**
+The row's head as a screen reader hears it: the drawn words, with no
+brackets and no break.
+*/
+function rowHeard(row: QueueRow, label: string): string {
+  const { owner } = row.subject;
+  const whose = owner === undefined ? "" : ` · @${owner}`;
+  return `${rowKind(row)} · ${headName(row, label)}${whose} ${SOURCE_TAGS[row.source]}`;
 }
 
 const NO_BREAK_SPACE = String.fromCodePoint(0xa0);

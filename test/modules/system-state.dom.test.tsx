@@ -106,13 +106,15 @@ describe("X1 · not found", () => {
     expect(state()?.parentElement?.parentElement).toBe(main);
     const logIn = within(main).getByRole("link", { name: "Log in" });
     expect(logIn).toHaveAttribute("href", "/auth/login");
+    // The ink pill: the phone's full width, its own width from 720.
     expect(logIn).toHaveClass(
       "target",
       "rounded-pill",
       "bg-ink",
       "text-ground",
-      "self-stretch",
-      "wide:self-start",
+      "w-full",
+      "wide:w-fit",
+      "no-underline",
     );
     expect(logIn).not.toHaveClass("border-hairline");
     // The phone's cross-link; at width the bar already offers it.

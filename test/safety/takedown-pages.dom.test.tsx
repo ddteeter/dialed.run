@@ -534,6 +534,74 @@ describe("Review · removal requests", () => {
     );
   });
 
+  it("draws the head in the cased mono step, truncating (R55·197)", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        asOf={0}
+        requests={[pending()]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    const head = part("request-head");
+    expect(head).toHaveClass(
+      "min-w-0",
+      "truncate",
+      "font-mono",
+      "text-mono-sm",
+    );
+    expect(head).not.toHaveClass("uppercase");
+  });
+
+  it.each([
+    {
+      name: "a subject, a poster and a hold",
+      overrides: { posterUsername: "tomasz_k", holdState: "held" as const },
+      heard: `entry · ${shortId(ENTRY)} · @tomasz_k via /takedown hidden`,
+    },
+    {
+      name: "a subject and a hold, no poster",
+      overrides: { holdState: "valve" as const },
+      heard: `entry · ${shortId(ENTRY)} via /takedown valve shut`,
+    },
+    {
+      name: "a subject and a poster, no hold",
+      overrides: { posterUsername: "tomasz_k", holdState: undefined },
+      heard: `entry · ${shortId(ENTRY)} · @tomasz_k via /takedown`,
+    },
+    {
+      name: "a subject alone",
+      overrides: { holdState: undefined },
+      heard: `entry · ${shortId(ENTRY)} via /takedown`,
+    },
+    {
+      name: "a link with a poster and a hold",
+      overrides: {
+        subject: undefined,
+        posterUsername: "a_b",
+        holdState: "blocked" as const,
+      },
+      heard: "link · @a_b via /takedown blocked",
+    },
+    {
+      name: "a link alone",
+      overrides: { subject: undefined, holdState: undefined },
+      heard: "link via /takedown",
+    },
+  ])("says the head in one line, as heard: $name", async ({ overrides, heard }) => {
+    await renderWithRouter(
+      <RemovalRequests
+        asOf={0}
+        requests={[pending(overrides)]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    const spoken = part("request-head")?.nextElementSibling;
+    expect(spoken).toHaveClass("sr-only");
+    expect(spoken?.textContent).toBe(heard);
+  });
+
   it("takes it down, says so, and only that request leaves the list", async () => {
     const decide = vi.fn<DecideFn>().mockResolvedValue({ outcome: "decided" });
     await renderWithRouter(

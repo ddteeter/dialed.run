@@ -617,7 +617,9 @@ describe("GarmentForm: a picked photo", () => {
     await user.upload(fileInput(), png());
     await user.click(screen.getByRole("button", { name: "Save" }));
     await screen.findByText("Photo not added");
-    await user.click(screen.getByRole("button", { name: "Done" }));
+    const done = screen.getByRole("button", { name: "Done" });
+    expect(done).toHaveClass("target", "rounded-pill", "bg-ink");
+    await user.click(done);
 
     expect(onSaved).toHaveBeenCalledExactlyOnceWith({ id: "01SAVED" });
   });

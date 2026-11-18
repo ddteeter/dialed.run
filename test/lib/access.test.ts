@@ -22,7 +22,6 @@ import {
   mintInviteCode,
   normalizeInviteCode,
   regionInviteRefusal,
-  regionTag,
   signInLimitedMessage,
 } from "../../src/lib/contracts/access";
 
@@ -178,7 +177,6 @@ describe("isFromBlockedRegion", () => {
   });
 
   it("tells D7 which state, and why there is no invite", () => {
-    expect(regionTag("TN")).toBe("[TN]");
     expect(regionInviteRefusal("TN")).toBe(
       "No invite while sign-up is closed in Tennessee.",
     );

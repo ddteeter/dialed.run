@@ -9,7 +9,7 @@ import {
   spanInUnit,
   worksAtForms,
 } from "../../../lib/contracts/measures";
-import { Bracketed, Mono, Spoken } from "../../../ui";
+import { Bracketed, Mono, MONO_CASED_CLASS, Spoken } from "../../../ui";
 import type { ClosetSearch } from "../inputs";
 import { useIsHydrated } from "../../../ui/use-is-hydrated";
 
@@ -82,7 +82,7 @@ function EndField({
         defaultValue={
           valueC === undefined ? undefined : tempInUnit(valueC, tempUnit)
         }
-        className="target w-16 rounded-field border border-hairline bg-panel px-2 py-1 font-mono text-mono-sm"
+        className={`target w-16 rounded-field border border-hairline bg-panel px-2 py-1 ${MONO_CASED_CLASS.sm}`}
       />
     </span>
   );

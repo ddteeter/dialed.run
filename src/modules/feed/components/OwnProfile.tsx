@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import {
   COLUMN,
+  BracketHeadline,
   Bracketed,
   Icon,
   ListSection,
@@ -20,7 +21,6 @@ import { bandVerdict } from "../coverage";
 import { counted } from "../counted";
 import { BOUND_SEPARATOR } from "../posted";
 import type { ownProfile } from "../profiles";
-import { BracketHeadline } from "./BracketHeadline";
 import { Avatar } from "./Avatar";
 import { Handle } from "./Handle";
 import { RunRow } from "./RunRow";

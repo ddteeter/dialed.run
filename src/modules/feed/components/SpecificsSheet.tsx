@@ -1,5 +1,5 @@
 import { entryTags, verdictScale } from "../../../lib/contracts";
-import { ChoiceList, Mono, Sheet } from "../../../ui";
+import { ChoiceList, Mono, SECONDARY_PILL, Sheet } from "../../../ui";
 import type { FieldProps } from "../../../ui";
 import { ITEM_FLAG_LABELS, ITEM_FLAG_OPTIONS, tagLabel } from "../chips";
 import type { EntryTag, ItemFlagChoice } from "../chips";
@@ -71,7 +71,7 @@ export function SpecificsSheet({
         <button
           type="button"
           onClick={onClose}
-          className="target cursor-pointer rounded-pill border border-hairline bg-transparent px-6 py-3 text-body font-semibold"
+          className={`target ${SECONDARY_PILL}`}
         >
           Done
         </button>

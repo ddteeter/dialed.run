@@ -4,6 +4,7 @@ import type { JSX, ReactNode } from "react";
 import { viewerDayTimeLabel } from "../../../lib/dates";
 import type { ViewerZone } from "../../../lib/dates";
 import {
+  BracketHeadline,
   ControlFailureBand,
   FormStatus,
   Icon,
@@ -179,16 +180,8 @@ function Quiet(): JSX.Element {
     >
       {/* A heading, as every other title-size line in the app is: a
           paragraph drawn as one is axe's `p-as-heading` (#566). */}
-      <h2 className="m-0 font-display text-title uppercase">
-        {/* Drawn, not said (D-150): a reader hears "Quiet". */}
-        <span aria-hidden="true" className="text-action">
-          [
-        </span>{" "}
-        Quiet{" "}
-        <span aria-hidden="true" className="text-action">
-          ]
-        </span>
-      </h2>
+      {/* Drawn, not said (D-150): a reader hears "Quiet". */}
+      <BracketHeadline step="title">Quiet</BracketHeadline>
       <p className="m-0 text-lead">
         Log a run and we&rsquo;ll ask you one question about it. That&rsquo;s
         most of what lands here.

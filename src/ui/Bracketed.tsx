@@ -30,21 +30,35 @@ import { Mono, type MonoStep } from "./Mono";
  * at `md` or `lg` renders the caller's own casing. That is right for the
  * data strip — `[38–46°]` at `lg` has no letters to shout — and wrong for
  * a word, which is why the default stays `sm`.
+ *
+ * `isBare` draws the brackets without a `Mono` of their own, for a value
+ * that already sits in one: `BandHistory`'s band shares its `Mono` with the
+ * counts after it, and a second `Mono` inside would restate the step. The
+ * brackets are still drawn, not said; `step` and `className` belong to the
+ * enclosing `Mono` and are not read.
  */
 export function Bracketed({
   step,
   children,
   className,
+  isBare = false,
 }: Readonly<{
   step?: MonoStep | undefined;
   children: ReactNode;
   className?: string | undefined;
+  isBare?: boolean | undefined;
 }>) {
-  return (
-    <Mono step={step} className={className}>
+  const drawn = (
+    <>
       <span aria-hidden="true">[</span>
       {children}
       <span aria-hidden="true">]</span>
+    </>
+  );
+  if (isBare) return drawn;
+  return (
+    <Mono step={step} className={className}>
+      {drawn}
     </Mono>
   );
 }

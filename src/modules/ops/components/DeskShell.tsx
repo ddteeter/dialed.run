@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 import { timeOfDay } from "../../../lib/dates";
-import { Mono, Page, Wordmark } from "../../../ui";
+import { Mono, MONO_CASED_CLASS, Page, Wordmark } from "../../../ui";
 import type { DeskToday } from "../desk";
 import { DeskSignOut } from "./DeskSignOut";
 
@@ -217,7 +217,7 @@ function DeskBar({ handle }: Readonly<{ handle: string | undefined }>) {
         <span className="flex items-center gap-2">
           <span
             data-part="operator"
-            className="hidden font-mono text-mono-xs text-muted wide:inline"
+            className={`hidden ${MONO_CASED_CLASS.xs} text-muted wide:inline`}
           >
             {handle === undefined ? undefined : `@${handle} · `}
             <span className="uppercase">Operator ·</span>

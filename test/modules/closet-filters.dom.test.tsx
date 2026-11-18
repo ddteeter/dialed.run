@@ -266,6 +266,16 @@ describe("ClosetFilters: WORKS AT before a script (#109h)", () => {
     expect(form).not.toHaveAttribute("action");
     expect(lowest).toHaveAttribute("placeholder", "34");
     expect(highest).toHaveAttribute("placeholder", "58");
+    for (const field of [lowest, highest]) {
+      expect(field).toHaveClass(
+        "target",
+        "w-16",
+        "rounded-field",
+        "font-mono",
+        "text-mono-sm",
+      );
+      expect(field).not.toHaveClass("uppercase");
+    }
     expect(lowest).toHaveDisplayValue("");
     // Its own names, which closetSearch reads in `unit` and never writes.
     expect(lowest).toHaveAttribute("name", "lowest");

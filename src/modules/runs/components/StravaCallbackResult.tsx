@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 
 import type { StravaOrigin } from "../../../lib/strava-origin";
-import { Mono, Page } from "../../../ui";
+import { INK_PILL, Mono, Page } from "../../../ui";
 
 /**
  * What the runner sees after Strava sends them back — a receipt in the
@@ -73,8 +73,7 @@ const RECEIPT = "flex flex-col gap-2 border border-ink p-4";
 /**
 R39's one action under the receipt: an ink pill, `HEIGHT.control` high.
 */
-const RECEIPT_PILL =
-  "target flex min-h-control w-full items-center justify-center rounded-pill bg-ink px-6 font-bold text-ground no-underline";
+const RECEIPT_PILL = `target ${INK_PILL} no-underline`;
 
 function Connected(): JSX.Element {
   return (

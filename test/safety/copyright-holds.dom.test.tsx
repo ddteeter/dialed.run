@@ -142,8 +142,9 @@ describe("CopyrightHolds", () => {
     // Heard as one line, in the words' own case.
     expect(drawn?.nextElementSibling).toHaveClass("sr-only");
     expect(drawn?.nextElementSibling?.childNodes).toHaveLength(1);
+    // Its brackets are drawn, not said (D-150).
     expect(drawn?.nextElementSibling?.textContent).toBe(
-      "photo · 01M7…JY46 · @owner_7734 [Copyright hold]",
+      "photo · 01M7…JY46 · @owner_7734 Copyright hold",
     );
     expect(name).toHaveClass(
       "min-w-0",
@@ -184,7 +185,7 @@ describe("CopyrightHolds", () => {
       "photo · p1 [Copyright hold]",
     );
     expect(part("record-name-drawn")?.nextElementSibling?.textContent).toBe(
-      "photo · p1 [Copyright hold]",
+      "photo · p1 Copyright hold",
     );
     expect(part("owner")?.textContent).toBe("Owner runner-1 · strikes 2");
   });

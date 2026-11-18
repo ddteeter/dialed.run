@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { BracketHeadline } from "../../src/modules/feed/components/BracketHeadline";
+import { BracketHeadline } from "../../src/ui/BracketHeadline";
 
 /**
  * `[ NOBODY YET ]` and its waiting twin: pink brackets, which breathe only
@@ -50,5 +50,12 @@ describe("BracketHeadline", () => {
     expect(opening).toHaveClass("breathe", "mr-2", "text-action");
     expect(closing).toHaveClass("breathe", "ml-2", "text-action");
     expect(screen.getByText("Finding weather")).not.toHaveClass("breathe");
+  });
+
+  it("takes the title step inside a panel, and stays a heading", () => {
+    render(<BracketHeadline step="title">Quiet</BracketHeadline>);
+    const heading = screen.getByRole("heading", { level: 2, name: "Quiet" });
+    expect(heading).toHaveClass("font-display", "text-title", "uppercase");
+    expect(heading).not.toHaveClass("text-display");
   });
 });

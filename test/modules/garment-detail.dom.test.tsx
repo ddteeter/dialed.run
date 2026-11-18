@@ -915,6 +915,14 @@ describe("GarmentDetail: actions", () => {
     expect(retire).toBeVisible();
     const remove = within(actions).getByRole("button", { name: "Delete" });
     expect(remove).toHaveClass("ml-auto", "underline");
+    for (const pill of [edit, retire]) {
+      expect(pill).toHaveClass(
+        "target",
+        "rounded-pill",
+        "border-hairline",
+        "no-underline",
+      );
+    }
     for (const action of [edit, retire, remove]) {
       expect(action).toHaveAttribute("aria-describedby", heading.id);
       expect(action).toHaveAccessibleDescription("Tracksmith Harrier");
@@ -933,6 +941,12 @@ describe("GarmentDetail: actions", () => {
     // the bare verb the eye gets.
     const unretire = within(actions).getByRole("button", { name: "Unretire" });
     expect(unretire).toBeVisible();
+    expect(unretire).toHaveClass(
+      "target",
+      "rounded-pill",
+      "border-hairline",
+      "no-underline",
+    );
     expect(unretire).toHaveAccessibleDescription("Long sleeve top");
     expect(actions.querySelector(".sr-only")).toBeNull();
     // No runs, so a real delete is still on offer.

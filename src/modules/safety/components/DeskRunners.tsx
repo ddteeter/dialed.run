@@ -233,10 +233,12 @@ function StateTag({ state }: Readonly<{ state: RunnerState }>): JSX.Element {
  */
 function StateTags({ runner }: Readonly<{ runner: DeskRunner }>): JSX.Element {
   return (
-    // On a phone the two may stack, and a long tag wraps inside the cell
-    // (R58·276), so one [PENDING DELETE] does not set the column's width
-    // and cut every handle. From `wide` each tag is whole on one line.
-    <span className="flex flex-wrap gap-x-2 wide:flex-nowrap">
+    // 8 apart (R60·327). Below desk the second tag wraps under the first,
+    // at the start, each tag whole from `wide`; below `wide` a long tag
+    // still wraps inside the cell (R58·276), so one [PENDING DELETE] does
+    // not set the column's width and cut every handle. A guess where the
+    // two rulings meet, held for Design (#838). From desk, one line.
+    <span className="flex flex-wrap gap-x-2 desk:flex-nowrap">
       <StateTag state={runner.state} />
       {runner.state === "CLOSED" && runner.isLeaving ? (
         <StateTag state="PENDING DELETE" />

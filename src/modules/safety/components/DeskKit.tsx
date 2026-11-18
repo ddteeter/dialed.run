@@ -8,7 +8,7 @@ import {
 } from "../../../lib/contracts";
 import { measuredLine } from "../../../lib/contracts/measures";
 import { clockLabel, monthDayLabel } from "../../../lib/dates";
-import { Bracketed, Icon, Mono, Spoken } from "../../../ui";
+import { Bracketed, Icon, Mono, MONO_CASED_CLASS, Spoken } from "../../../ui";
 import type { DeskKit as Kit, DeskKitPhoto } from "../desk-kit";
 import { kitBackLink, type KitOriginSearch } from "./kit-origin";
 import { PhotoSection } from "./OtherPhotos";
@@ -90,7 +90,7 @@ function KitBody({ kit }: Readonly<{ kit: Kit }>): JSX.Element {
       <div className="flex flex-col gap-2">
         <span
           data-part="kit-band"
-          className="flex flex-wrap items-center gap-x-2 border border-hairline px-3 py-2 font-mono text-mono-sm"
+          className={`flex flex-wrap items-center gap-x-2 border border-hairline px-3 py-2 ${MONO_CASED_CLASS.sm}`}
         >
           <Runner handle={kit.handle} runnerId={kit.runnerId} />
           <span className="uppercase">

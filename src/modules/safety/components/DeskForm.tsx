@@ -4,11 +4,13 @@ import type { JSX, ReactNode } from "react";
 import type { z } from "zod";
 
 import {
+  Bracketed,
   ChoiceField,
   FormErrorSummary,
   FormFailureBand,
   FormStatus,
   Mono,
+  MONO_CASED_CLASS,
   NO_CHOICE,
   SubmitButton,
 } from "../../../ui";
@@ -163,8 +165,9 @@ interface RecordNaming {
 }
 
 /**
- * `kind · id · @owner [tag]`, the id at its ends, as one line of words: what
- * a screen reader hears, in the words' own case.
+ * `kind · id · @owner tag`, the id at its ends, as one line of words: what
+ * a screen reader hears, in the words' own case. The tag's brackets are
+ * drawn, not said (D-150).
  */
 export function recordName({
   subjectType,
@@ -173,7 +176,7 @@ export function recordName({
   tag,
 }: RecordNaming): string {
   const whose = owner === undefined ? "" : ` · @${owner}`;
-  return `${subjectType} · ${shortId(subjectId)}${whose} [${tag}]`;
+  return `${subjectType} · ${shortId(subjectId)}${whose} ${tag}`;
 }
 
 /**
@@ -198,7 +201,7 @@ export function RecordHead({
       data-part="record-head"
       className="flex items-baseline justify-between gap-3 border-b border-hairline pb-3"
     >
-      <span className="min-w-0 truncate font-mono text-mono-sm text-ink">
+      <span className={`min-w-0 truncate ${MONO_CASED_CLASS.sm} text-ink`}>
         {/* Drawn with the kind and tag in capitals, which takes spans; heard
             as one line from the copy beside it, since spans split what a
             screen reader hears and drop the space at their edge. */}
@@ -206,7 +209,7 @@ export function RecordHead({
           <span className="uppercase">{subjectType}</span>
           {` · ${shortId(subjectId)}`}
           {owner === undefined ? undefined : ` · @${owner}`}{" "}
-          <span className="uppercase">{`[${tag}]`}</span>
+          <Bracketed>{tag}</Bracketed>
         </span>
         <span className="sr-only">{recordName(naming)}</span>
       </span>

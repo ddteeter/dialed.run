@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { JSX, ReactNode } from "react";
 
-import { Sheet } from "../../../ui";
+import { SECONDARY_PILL, Sheet } from "../../../ui";
 
 /**
  * Settings › Privacy's PUBLIC PROFILE group before the runner has a
@@ -46,7 +46,7 @@ export function NoHandleYet({
         onClick={() => {
           setIsOpen(true);
         }}
-        className="target cursor-pointer self-start rounded-pill border border-hairline bg-transparent px-5 text-body font-semibold text-ink"
+        className={`target ${SECONDARY_PILL}`}
       >
         Pick a username
       </button>

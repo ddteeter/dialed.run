@@ -281,7 +281,9 @@ describe("ShadeSheet (design round 11 §AH2)", () => {
     const onClear = vi.fn();
     render(<ShadeSheet {...props} value="#1f2a44" onClear={onClear} />);
 
-    await user.click(screen.getByRole("button", { name: "Clear" }));
+    const clear = screen.getByRole("button", { name: "Clear" });
+    expect(clear).toHaveClass("target", "rounded-pill", "border-hairline");
+    await user.click(clear);
     expect(onClear).toHaveBeenCalledTimes(1);
     expect(screen.getByLabelText("Hex")).toHaveValue("");
   });

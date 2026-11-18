@@ -5,10 +5,12 @@ import { z } from "zod";
 
 import { declineReasonField } from "../contracts";
 import {
+  Bracketed,
   FormElement,
   FormFailureBand,
   ListSection,
   Mono,
+  MONO_CASED_CLASS,
   QUIET_CANCEL,
   QUIET_PILL,
   SubmitButton,
@@ -198,25 +200,49 @@ function RequestHead({
 }: Readonly<{ request: PendingTakedownRequest }>): JSX.Element {
   const { subject, posterUsername, holdState } = request;
   return (
-    <span
-      data-part="request-head"
-      title={subject?.subjectId}
-      className="min-w-0 truncate font-mono text-mono-sm"
-    >
-      <span className="uppercase">{subject?.subjectType ?? "link"}</span>
-      {subject === undefined ? undefined : ` · ${shortId(subject.subjectId)}`}
-      {posterUsername === undefined ? undefined : ` · @${posterUsername}`}{" "}
-      <span className="uppercase">[via /takedown]</span>
-      {holdState === undefined ? undefined : (
-        <>
-          {" "}
-          <span data-part="hold-state" className="uppercase">
-            {`[${HOLD_WORDS[holdState]}]`}
-          </span>
-        </>
-      )}
-    </span>
+    <>
+      <span
+        aria-hidden="true"
+        data-part="request-head"
+        title={subject?.subjectId}
+        className={`min-w-0 truncate ${MONO_CASED_CLASS.sm}`}
+      >
+        <span className="uppercase">{subject?.subjectType ?? "link"}</span>
+        {subject === undefined ? undefined : ` · ${shortId(subject.subjectId)}`}
+        {posterUsername === undefined
+          ? undefined
+          : ` · @${posterUsername}`}{" "}
+        <Bracketed>via /takedown</Bracketed>
+        {holdState === undefined ? undefined : (
+          <>
+            {" "}
+            <span data-part="hold-state">
+              <Bracketed>{HOLD_WORDS[holdState]}</Bracketed>
+            </span>
+          </>
+        )}
+      </span>
+      <span className="sr-only">{requestHeard(request)}</span>
+    </>
   );
+}
+
+/**
+The request's head as a screen reader hears it (D-150, #792): the drawn
+words in one line, with no brackets, as the queue row's head is heard.
+*/
+function requestHeard({
+  subject,
+  posterUsername,
+  holdState,
+}: PendingTakedownRequest): string {
+  const named =
+    subject === undefined
+      ? "link"
+      : `${subject.subjectType} · ${shortId(subject.subjectId)}`;
+  const whose = posterUsername === undefined ? "" : ` · @${posterUsername}`;
+  const hold = holdState === undefined ? "" : ` ${HOLD_WORDS[holdState]}`;
+  return `${named}${whose} via /takedown${hold}`;
 }
 
 /**

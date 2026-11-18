@@ -11,6 +11,7 @@ import {
   classifyFailure,
   ControlFailureBand,
   Mono,
+  MONO_CLASS,
   PendingLabel,
   PhoneBell,
   Spoken,
@@ -56,8 +57,7 @@ import { actionForKey, rowAfterMove, verdictKeys } from "../backlog-keys";
  * step with `uppercase`, and the accessible name stays in normal case). Its *colour* is not DS2's to choose — see `ui/verdictHue`, which A3
  * reads too, so the two mirrored surfaces cannot drift apart (round 19).
  */
-const SLOT_BASE =
-  "inline-flex flex-col items-center justify-center rounded-none border px-0.5 text-center font-mono text-mono-xs uppercase desk:min-w-max desk:px-2";
+const SLOT_BASE = `inline-flex flex-col items-center justify-center rounded-none border px-0.5 text-center ${MONO_CLASS.xs} desk:min-w-max desk:px-2`;
 const SLOT_RESTING = `${SLOT_BASE} border-hairline-2 font-normal text-quiet`;
 
 /**
