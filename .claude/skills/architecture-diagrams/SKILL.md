@@ -235,6 +235,16 @@ sequence layout, which is the only one that draws frames. The decisions
 are in `scripts/diagrams/record.ts`; skill `pr-ready` says when to run it
 and how to attach `diagrams.demo.mp4`.
 
+## The published site
+
+`main`'s model is public at https://ddteeter.github.io/dialed.run/
+(`.github/workflows/diagrams-pages.yml`, `npm run diagrams:site`). A merge
+that changes `docs/diagrams/` republishes it; nothing else is needed. A
+view is linked as `https://ddteeter.github.io/dialed.run/#/view/<id>/`,
+so renaming a view breaks the links to it in `docs/architecture.md`:
+update them in the same PR. Being public is why auth internals are not
+drawn.
+
 ## Report
 
 End with: the files you changed; each view's step count; every place the

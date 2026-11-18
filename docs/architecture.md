@@ -2,8 +2,9 @@
 
 One Worker, SSR-first, everything on the Cloudflare $5 plan. This document is
 the shared map: humans review against it, agents build against it. Its
-diagrams are views of the model in `docs/diagrams/` (`npm run diagrams`
-opens them). **If your change alters a boundary shown here, update the
+diagrams are views of the model in `docs/diagrams/`, published at
+[ddteeter.github.io/dialed.run](https://ddteeter.github.io/dialed.run/) from
+`main` (`npm run diagrams` opens your branch's copy). **If your change alters a boundary shown here, update the
 model in the same PR** (skill `architecture-diagrams`).
 
 Supersedes `plan/docs/architecture.md` (htmx/Hono replaced by TanStack Start;
@@ -11,8 +12,8 @@ same backend shape).
 
 ## System context
 
-The picture is the `index` view of the model in `docs/diagrams/` (the
-people, the app and every system it calls), and `platform` is the same app
+The picture is the [`index`](https://ddteeter.github.io/dialed.run/#/view/index/) view of the model in `docs/diagrams/` (the
+people, the app and every system it calls), and [`platform`](https://ddteeter.github.io/dialed.run/#/view/platform/) is the same app
 opened up: the Worker with each database, bucket and queue bound to it.
 `npm run diagrams` opens both. The databases, buckets, queues and crons in
 them are generated from `wrangler.jsonc` and the cron registry
@@ -160,13 +161,13 @@ Key decisions embedded here:
 
 ## Module dependency graph (enforced by dependency-cruiser)
 
-The graph is the `modules` view of the model in `docs/diagrams/`: every
+The graph is the [`modules`](https://ddteeter.github.io/dialed.run/#/view/modules/) view of the model in `docs/diagrams/`: every
 module, and an arrow wherever one's service code imports from another. It
 is generated from the imports themselves, as dependency-cruiser resolves
 them (`npm run diagrams:generate`; `npm run diagrams:check` fails when it
 is stale), so it is the graph as it is, not as someone last drew it.
 
-Each module also has a view of its own (`runsImports`, `feedImports` and
+Each module also has a view of its own ([`runsImports`](https://ddteeter.github.io/dialed.run/#/view/runsImports/), [`feedImports`](https://ddteeter.github.io/dialed.run/#/view/feedImports/) and
 so on): the module, what it imports and what imports it. Click a module in
 `modules` to open it. Those views add the dotted arrows the map leaves
 out: a pair where only a module's wiring (its `functions.ts` and its
@@ -264,9 +265,10 @@ broke".
 
 ## Import pipeline (lane 102)
 
-The file path is the `importStory` view of the model in `docs/diagrams/`:
-the upload, the queue, the consumer and the weather attach, one step at a
-time, with what makes each step safe to repeat. `importRecovery` is what
+The file path is the [`importStory`](https://ddteeter.github.io/dialed.run/#/view/importStory/) view of the model in `docs/diagrams/`:
+the upload, the queue, the consumer and the weather attach
+([`weatherStory`](https://ddteeter.github.io/dialed.run/#/view/weatherStory/)), one step at a
+time, with what makes each step safe to repeat. [`importRecovery`](https://ddteeter.github.io/dialed.run/#/view/importRecovery/) is what
 happens when a step is lost.
 
 The Strava path is not drawn, because it carries no run. The webhook's
@@ -293,6 +295,10 @@ give-up window opens when the run's last sampled hour settles, not when
 the run started.
 
 ## Product enrichment pipeline (lane 107)
+
+The flow is the [`enrichmentStory`](https://ddteeter.github.io/dialed.run/#/view/enrichmentStory/) view of the model in
+`docs/diagrams/`, with [`enrichmentExtraction`](https://ddteeter.github.io/dialed.run/#/view/enrichmentExtraction/) for the
+fetch and the read, and [`enrichmentRecovery`](https://ddteeter.github.io/dialed.run/#/view/enrichmentRecovery/) for a lost step.
 
 Pasted product URL → server function validates https + resolves/creates the
 product row (garment saves immediately, never blocked) → enqueue EnrichJob on

@@ -36,4 +36,5 @@ diagrams:format` fixes the formatting. `npm run diagrams` opens the
   Markdown. `likec4 export markdown` writes a `README.md` into this folder
   whatever `-o` says; delete it.
 - **Do not draw how sign-in, sessions or the auth gates work inside**
-  (`.claude/rules/publishing.md`).
+  (`.claude/rules/publishing.md`). `main`'s model is published to a
+  public page (skill `architecture-diagrams`, "The published site").
