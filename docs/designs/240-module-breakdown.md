@@ -250,16 +250,27 @@ module boundary and the diagram reads imports through it; a test in
 },
 ```
 
-Measured against today's tree: **0 violations**, so it can land before any
-file moves. Two edits to existing rules go with it:
+Run from a scratch copy of the config against today's tree: **0
+violations**, so it can land before any file moves. With the components
+exemption taken out it fires three times, on `PhotoBlur.tsx` importing
+`safety/blur/`, which shows the two captured groups match as intended.
+Two edits to existing rules go with it:
 
-- `no-cross-module-deep-imports`: `pathNot` becomes
-  `^src/modules/[^/]+/(?:[^/]+/)?index\\.tsx?$`, so a sub-module's door is
-  importable from another module (rule 3 above).
+- `no-cross-module-deep-imports`: `pathNot` becomes the two patterns
+  `^src/modules/[^/]+/index\\.tsx?$` and
+  `^src/modules/[^/]+/[^/]+/index\\.ts$`, so a sub-module's door is
+  importable from another module (rule 3 above). As one pattern with an
+  optional group, dependency-cruiser refuses it as an unsafe regular
+  expression.
 - `lib-browser-is-client-only` names server entries by path
   (`ops/(queues|scheduled).ts`, `account/(export-queue|export-build|export-sweep|purge).ts`).
   Its list gains the new homes alongside the old before the moves, so no
   move PR edits the owner's file, and loses the old ones after.
+
+The gate's cruise does not follow type-only imports, so this rule does
+not see one. The ratchet's reader does: a type-only import around a
+module's door counts in "past the door". One between two sub-modules of
+the same module is seen by neither.
 
 ## The ratchet
 
@@ -284,7 +295,7 @@ budget moves freely. A number over it is pinned in
 `test/architecture/module-shape.json` and may only go down: the test
 fails when it rises, and also when it falls and the pin was not lowered,
 so a gain cannot be given back. `npm run modules:pin` rewrites the file
-from the imports and refuses to raise a pin. A unit that leaves the file
+from the imports and refuses to raise a pin or add one. A unit that leaves the file
 has reached its budget; the file ends empty. Proposed budgets, set where
 the nine modules that are not being split all pass: fan-out 7, door width
 45, past the door 0, files 50. Over budget today: fan-out `account` 9,
@@ -336,15 +347,35 @@ What B, C and D share, so the lanes expect it:
 ## Test plan
 
 - `test/scripts/module-shape.test.ts` (vitest, worker): the pure
-  measuring and comparing. Fan-out counts a module once however many of
-  its doors are imported; a route's import is not past the door; a rise
-  fails; a fall without a lowered pin fails; a number under budget is
-  free; a new unit over budget fails until pinned.
+  measuring and comparing. Fan-out counts a module once, from a
+  sub-module's files too; a route's import, a door and wiring are not
+  past the door; a rise fails; a fall without a lowered pin fails; a
+  number at budget is free; a number over budget with no pin fails; the
+  pin command lowers and refuses to raise or add.
+- `test/scripts/module-doors.node.test.ts` (vitest, node): a door's
+  names, and the two forms it refuses to count.
 - `test/architecture/module-shape.node.test.ts` (vitest, node): today's
   tree against `module-shape.json`.
-- The dependency-cruiser rule: a planted import across two sub-modules
-  fails the commit gate, and is removed (checked by hand, as design 143's
-  rule was).
+- The dependency-cruiser rule: run from a scratch config as above; once
+  granted, a planted import across two sub-modules fails the commit gate
+  and is removed (checked by hand, as design 143's rule was).
+
+## The guidance: proposed wording for `CLAUDE.md`
+
+Not committed to `CLAUDE.md` until the owner has seen it (#796 step 4).
+It would sit in "Architecture rules", after the module bullets, and it
+assumes questions 1 and 6 are answered as recommended.
+
+> - **Sub-modules.** A folder in a module with its own `index.ts` is a
+>   sub-module: the rest of the module, and other modules, reach its
+>   files only through that `index.ts`. Propose one in your design doc
+>   when your lane adds a concern with its own tables or vocabulary to a
+>   module that already holds several, when the module ratchet
+>   (`test/architecture/module-shape.node.test.ts`) would go over a
+>   budget or a pin, or when you are about to hand a dependency in
+>   through `src/server.ts` because a barrel cannot export it. A new
+>   top-level module is for code that belongs to no area: ask the owner.
+>   A pin is never raised to pass the test.
 
 ## Issues
 
