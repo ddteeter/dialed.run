@@ -853,30 +853,11 @@ describe("GarmentDetail: pairs with", () => {
         .getAllByRole("listitem")
         .map((chip) => chip.textContent),
     ).toStrictEqual([
-      "Bandit split · 6, 6 runs dialed together",
-      "Thin gloves · 4, 4 runs dialed together",
+      "Bandit split · 6",
+      "Thin gloves · 4",
     ]);
-    // The chip draws the count bare; a screen reader gets what it counts.
-    expect(within(pairs).getByText("· 6")).toHaveAttribute(
-      "aria-hidden",
-      "true",
-    );
-    expect(within(pairs).getByText(", 6 runs dialed together")).toHaveClass(
-      "sr-only",
-    );
-  });
-
-  it("says one run, not runs, of a pair dialed together once", async () => {
-    await renderWithRouter(
-      garment({
-        pairedItems: [
-          { item: wardrobeItem({ id: "01A", name: "Bandit split" }), count: 1 },
-        ],
-      }),
-    );
-    expect(within(part("pairs-with")).getByRole("listitem")).toHaveTextContent(
-      "Bandit split · 1, 1 run dialed together",
-    );
+    // Heard as drawn: no hidden words, nothing drawn kept from the ear.
+    expect(pairs.querySelector(".sr-only, [aria-hidden]")).toBeNull();
   });
 
   it("is absent when it pairs with nothing", async () => {

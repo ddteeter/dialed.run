@@ -189,7 +189,7 @@ describe("GarmentDetail: the shop page and its one line (round 43 #94-95)", () =
 
     const link = screen.getByRole("link", { name: "Shop page" });
     expect(link).toHaveAttribute("href", LINK);
-    expect(link).toHaveAttribute("rel", "ugc nofollow noopener");
+    expect(link).toHaveAttribute("rel", "ugc nofollow");
     expect(screen.getByText("janji.com")).toHaveClass("text-quiet");
     const heading = screen.getByRole("heading", { level: 1 });
     expect(

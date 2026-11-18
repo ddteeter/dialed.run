@@ -90,7 +90,7 @@ describe("GarmentDetail's first paint, against a real stored row", () => {
     const markup = await renderedMarkup();
 
     expect(markup).toContain('href="https://janji.com/p/rover-half-zip"');
-    expect(markup).toContain('rel="ugc nofollow noopener"');
+    expect(markup).toContain('rel="ugc nofollow"');
     expect(markup).toContain("Shop page");
     expect(markup).toContain("Not read");
     expect(markup).toContain("Add a brand and model");

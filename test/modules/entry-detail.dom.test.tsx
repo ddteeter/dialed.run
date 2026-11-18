@@ -475,7 +475,7 @@ describe("EntryDetail: the note, the kit and the tags", () => {
 
     const link = screen.getByRole("link", { name: "Patagonia Houdini" });
     expect(link).toHaveAttribute("href", "https://www.patagonia.com/houdini");
-    expect(link).toHaveAttribute("rel", "ugc nofollow noopener");
+    expect(link).toHaveAttribute("rel", "ugc nofollow");
     expect(screen.getByText("patagonia.com")).toBeInTheDocument();
     // A generic piece keeps its mark beside its link.
     expect(screen.getByRole("link", { name: "L/S crew" })).toBeInTheDocument();
@@ -732,18 +732,30 @@ describe("EntryDetail: Useful and report wait for a confirmed address (round 26 
   });
 });
 
+/**
+The tag line's items a screen reader hears: the label and the current tag.
+*/
+function heardTags(): (string | null)[] {
+  return [...(part("owner-meta")?.firstElementChild?.children ?? [])]
+    .filter((item) => !item.hasAttribute("aria-hidden"))
+    .map((item) => item.textContent);
+}
+
 describe("EntryDetail: the owner meta (round 41 #86a)", () => {
   it("says who the runner's own kit is for, bracketed in ink, and nothing more unless it is public", async () => {
     await renderFeedScreen(detail({}, { viewerId: OWNER }));
     const meta = part("owner-meta");
-    // All three tags, the board's order, the current one after its prefix
-    // in every state (R55·172).
-    expect(meta).toHaveTextContent(
-      /^\[Public\]Seen by: \[Shared\]\[Private\]$/u,
-    );
-    // A reader hears what the label is the state of; the eye sees it bare.
-    expect(screen.getByText("Seen by:")).toHaveClass("sr-only");
-    const [publicTag, current, privateTag] = [
+    // SEEN BY, then all three tags in the board's order, in every state
+    // (R55·172, R59·323).
+    expect(meta).toHaveTextContent(/^Seen by\[Public\]\[Shared\]\[Private\]$/u);
+    // Drawn, not hidden: it says what the line does not, to eye and ear.
+    const label = screen.getByText("Seen by");
+    expect(label).toHaveClass("text-mono-xs", "text-muted");
+    expect(label).not.toHaveClass("sr-only");
+    expect(label).not.toHaveAttribute("aria-hidden");
+    expect(meta?.querySelector(".sr-only")).toBeNull();
+    expect(heardTags()).toStrictEqual(["Seen by", "[Shared]"]);
+    const [, publicTag, current, privateTag] = [
       ...(meta?.firstElementChild?.children ?? []),
     ];
     expect(current?.lastElementChild).toHaveClass("text-ink", "text-mono-xs");
@@ -761,14 +773,10 @@ describe("EntryDetail: the owner meta (round 41 #86a)", () => {
     const { unmount } = await renderFeedScreen(
       detail({ audience: "private" }, { viewerId: OWNER }),
     );
-    expect(part("owner-meta")).toHaveTextContent(
-      /^\[Public\]\[Shared\]Seen by: \[Private\]$/u,
-    );
+    expect(heardTags()).toStrictEqual(["Seen by", "[Private]"]);
     unmount();
     await renderFeedScreen(detail({ audience: "groups" }, { viewerId: OWNER }));
-    expect(part("owner-meta")).toHaveTextContent(
-      /^\[Public\]\[Shared\]Seen by: \[Private\]$/u,
-    );
+    expect(heardTags()).toStrictEqual(["Seen by", "[Private]"]);
   });
 
   it("is not on anyone else's view of the kit", async () => {
@@ -781,7 +789,7 @@ describe("EntryDetail: the owner meta (round 41 #86a)", () => {
     await renderFeedScreen(detail({ audience: "world" }, { viewerId: OWNER }));
     const meta = part("owner-meta");
     expect(meta).toHaveTextContent(
-      "Seen by: [Public][Shared][Private]Public: anyone with the link can see it.Copy linkCopiedNot copiedChange",
+      "Seen by[Public][Shared][Private]Public: anyone with the link can see it.Copy linkCopiedNot copiedChange",
     );
     expect(screen.getByRole("link", { name: "Change" })).toHaveAttribute(
       "href",

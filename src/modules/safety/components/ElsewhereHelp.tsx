@@ -28,10 +28,10 @@ const SERVICES = [
  * comes first: TYPE.small, --quiet. On the `/takedown` receipt,
  * `/takedown/confirm`'s DONE, and W1's intimate-image receipt (round 42).
  * External, so anchors rather than the router's `Link`, in the inline-link
- * style (round 42), opened in a new tab so the receipt stays where it was.
- * Nothing on screen marks the new tab, so the name holds only the visible
- * service name (D-187, Round 57 · 255): hidden text may voice a visible
- * mark, never add words.
+ * style (round 42), in the same tab: nothing marks a new tab, so none
+ * opens, and Back returns the reader to the receipt (R59·322). The name
+ * is only the visible service name (D-187, Round 57 · 255). `noreferrer`
+ * keeps the receipt's address out of the service's logs.
  */
 export function ElsewhereHelp(): JSX.Element {
   const [adults, minors] = SERVICES;
@@ -56,8 +56,7 @@ function Service({
       <a
         data-target="inline"
         href={service.href}
-        target="_blank"
-        rel="noopener noreferrer"
+        rel="noreferrer"
         className="font-bold text-ink underline underline-offset-4"
       >
         {service.name}
