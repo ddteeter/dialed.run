@@ -14,7 +14,7 @@ is still wrong, and closes all three.
 A site that is wrong moves onto a shared constant in `src/ui/form.tsx`.
 No second hand-written class.
 
-**167, still wrong on main** (each to be confirmed in the capture first):
+**167, still wrong on main** (each seen in the capture of `418583f9`):
 
 - Pink caps primaries that write their class by hand and so miss the
   width rule take `ACTION_PRIMARY`: the Call's LOG A RUN (`CallLadder`),
@@ -27,8 +27,8 @@ No second hand-written class.
   `SECONDARY_PILL`: stacked in the sheet, a row from 720 on T1's page.
 - The photo-refused band's buttons take the failure band's own pill,
   which becomes a constant `FailureBand` and `PhotoRefused` share.
-- A2's "Not now" line and the duplicate's "Wrong file?" line sit left
-  under a hugging primary from 720 (R58·293), centred below it as drawn.
+- A2's "Not now" line sits left under the hugging NEXT from 720
+  (R58·293), and stays centred on a phone, as drawn.
 
 **167, dropped:** the pushes' DONE (R58·302), the Strava receipt's pill,
 OPEN THAT RUN's kind (R58·306), the five phone pills and the 404's
@@ -44,6 +44,9 @@ OPEN THAT RUN's kind (R58·306), the five phone pills and the 404's
 - The root crash is the last `Page width="panel"`. R55·185 gives a system
   state "the 620 column elsewhere", so it takes the column and `panel`
   leaves `Page`.
+- Found in the capture: A2 and A3's column keeps the phone's 20 inside
+  it from 720, so it starts at x=188 and holds 580. It drops that gutter
+  (R57·263) and starts at R58·307's x=168.
 
 **168, dropped:** A2, A3 and the pushes (R58·307 keeps the rail, built);
 the signed-in system states (#697, built).
@@ -82,4 +85,6 @@ Guesses I am building on, each sent to the coordinator:
 2. The photo band's "Pick another", when it is the band's only button,
    takes the ink band pill (167.1: a hairline pill is never alone).
 3. The root crash in the 620 column rather than the 390 panel.
-4. The two foot lines left-aligned only from 720, not on a phone.
+4. A2's "Not now" line left-aligned only from 720, not on a phone. A1's
+   foot lines ("Wrong file?", "No file?") stay centred: in the one
+   column they share an axis, which is what D1-06 asked.
