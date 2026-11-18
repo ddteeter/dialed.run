@@ -557,7 +557,12 @@ describe("a flagged account (D-161 1, R47·124) and PENDING DELETE (PR#126-1)", 
     expect(document.body.textContent).not.toMatch(/intimate/iu);
     expect(
       within(column).getByRole("button", { name: "Keep account" }),
-    ).toHaveClass("rounded-pill", "border-ink", "bg-transparent");
+    ).toHaveClass(
+      "rounded-pill",
+      "border-hairline",
+      "dark:border-hairline-2",
+      "bg-transparent",
+    );
   });
 
   it("keeps on Keep account, reloads, and hands focus to the runner's name", async () => {

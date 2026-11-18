@@ -730,7 +730,8 @@ describe("Review · removal requests", () => {
     expect(ask).toHaveClass(
       "rounded-pill",
       "border",
-      "border-ink",
+      "border-hairline",
+      "dark:border-hairline-2",
       "bg-transparent",
       "font-bold",
       "text-ink",
@@ -859,7 +860,8 @@ describe("Review · removal requests", () => {
     ).toHaveClass(
       "rounded-pill",
       "border",
-      "border-ink",
+      "border-hairline",
+      "dark:border-hairline-2",
       "bg-transparent",
       "font-bold",
       "text-ink",

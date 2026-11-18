@@ -221,7 +221,12 @@ describe("deciding", () => {
     ).toBeTruthy();
     expect(remove).toHaveClass("rounded-pill", "bg-ink", "text-ground");
     expect(remove).not.toHaveClass("bg-action");
-    expect(approve).toHaveClass("rounded-pill", "border-ink", "bg-transparent");
+    expect(approve).toHaveClass(
+      "rounded-pill",
+      "border-hairline",
+      "dark:border-hairline-2",
+      "bg-transparent",
+    );
   });
 
   const QUEUE_ID = "01HZZZZZZZZZZZZZZZZZZZZZZZ";
@@ -1587,7 +1592,8 @@ describe("a handle the re-ask flagged (D-97)", () => {
     expect(screen.getByRole("button", { name: "Keep" })).toHaveClass(
       "rounded-pill",
       "border",
-      "border-ink",
+      "border-hairline",
+      "dark:border-hairline-2",
       "bg-transparent",
       "font-bold",
       "text-ink",

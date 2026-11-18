@@ -455,11 +455,13 @@ describe("CopyrightHolds", () => {
       // Asked again, it confirms again: the pair is the same press.
       await user.click(screen.getByRole("button", { name: label }));
       expect(screen.getByRole("alertdialog", { name: question })).toBeVisible();
-      // The way out is an outline pill beside the chalk one (round 44 #105).
+      // The way out is the hairline pill beside the chalk one (round 44
+      // #105, R59·317).
       expect(screen.getByRole("button", { name: "Not yet" })).toHaveClass(
         "target",
         "rounded-pill",
-        "border-ink",
+        "border-hairline",
+        "dark:border-hairline-2",
         "bg-transparent",
       );
     },
@@ -487,7 +489,8 @@ describe("CopyrightHolds", () => {
     expect(remove).toHaveClass(
       "target",
       "rounded-pill",
-      "border-ink",
+      "border-hairline",
+      "dark:border-hairline-2",
       "bg-transparent",
     );
     expect(remove).not.toHaveClass("bg-ink");
