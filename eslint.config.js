@@ -261,6 +261,10 @@ const primitiveExemptions = {
   // pair on the hi-viz card (R58·308), and AF1's outline-to-filled
   // audience toggle (R55·171).
   "src/modules/feed/components/AttachKit.tsx": ["pills"],
+  // A field's action: Find, the hairline pill at the field's own height
+  // beside it (R58·308), and Use this under the place it found; neither
+  // is a column's button, so 167.2's width rule does not reach them.
+  "src/ui/CityFinder.tsx": ["pills"],
   "src/modules/feed/components/OwnerAudience.tsx": ["pills"],
 };
 

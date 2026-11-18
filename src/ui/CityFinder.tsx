@@ -5,14 +5,7 @@ import { cityLookupInput, cityNotFound } from "../lib/contracts/city-lookup";
 import type { CityLookup } from "../lib/contracts/city-lookup";
 import type { ResolvedPlace } from "../lib/contracts";
 import { chipPlaceName } from "../lib/place-name";
-import {
-  FailureBand,
-  inFlight,
-  INK_PILL,
-  PendingLabel,
-  SECONDARY_PILL,
-  TextField,
-} from "./form";
+import { FailureBand, PendingLabel, TextField, inFlight } from "./form";
 import type { FieldProps } from "./use-form-submit";
 
 /**
@@ -210,7 +203,7 @@ export function CityFinder({
               onClick={() => {
                 void find();
               }}
-              className={`target ${SECONDARY_PILL}`}
+              className="target cursor-pointer rounded-pill border border-hairline bg-transparent px-5 py-3 text-body font-semibold text-ink dark:border-hairline-2"
             >
               <PendingLabel
                 label="Find"
@@ -278,7 +271,7 @@ function ResolvedCard({
           onClick={() => {
             onUse(found);
           }}
-          className={`target ${INK_PILL}`}
+          className="target cursor-pointer rounded-pill border-none bg-ink px-5 py-3 text-body font-bold text-ground"
         >
           <PendingLabel
             label="Use this"

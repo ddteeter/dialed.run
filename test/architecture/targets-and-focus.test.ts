@@ -77,12 +77,15 @@ interface Element {
  * rule bending the code rather than the other way round.
  *
  * One level only, and no imports followed: a class list that needs two
- * hops to read is a class list nobody can review.
+ * hops to read is a class list nobody can review. A template counts by
+ * its literal text: `` `target ${INK_PILL} no-underline` `` writes its
+ * `target` at the site, which is what the shared pill constants ask of
+ * every site that wears them (`src/ui/form.tsx`).
  */
 function constantsIn(code: string): Map<string, string> {
   const found = new Map<string, string>();
   for (const match of code.matchAll(
-    /const (?<name>[A-Z]\w*)(?:: [^=]+)? =\s*"(?<value>[^"]*)"/gu,
+    /const (?<name>[A-Z]\w*)(?:: [^=]+)? =\s*(?<quote>["`])(?<value>(?:(?!\k<quote>)[^])*)\k<quote>/gu,
   )) {
     const { name, value } = match.groups ?? {};
     if (name !== undefined && value !== undefined) found.set(name, value);
