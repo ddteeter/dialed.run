@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { render, screen } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { useSavedPage } from "../../src/modules/account/use-saved-page";
 
@@ -48,7 +48,21 @@ function makeRouter() {
   });
 }
 
+/**
+ * What the root's `useHydrated` leaves on a page that has hydrated: a
+ * screen reached after it is a client navigation.
+ */
+function stampHydrated(): void {
+  document.documentElement.dataset.hydrated = "true";
+}
+
+afterEach(() => {
+  delete document.documentElement.dataset.hydrated;
+});
+
 describe("useSavedPage", () => {
+  beforeEach(stampHydrated);
+
   it("is the name the app's own navigation carried", async () => {
     await prompt((router) =>
       router.navigate({
@@ -77,6 +91,7 @@ describe("useSavedPage", () => {
   });
 
   it("is nothing before hydration, as the server drew it", async () => {
+    delete document.documentElement.dataset.hydrated;
     const router = makeRouter();
     await router.navigate({
       to: "/account/terms",
@@ -85,6 +100,38 @@ describe("useSavedPage", () => {
     await router.load();
     expect(renderToString(<RouterProvider router={router} />)).toContain(
       "(none)",
+    );
+  });
+
+  it("stays nothing on a server-rendered load, after hydration too (R60·60b)", async () => {
+    // The prompt is the first screen: nothing had hydrated when it
+    // mounted, so the line is never drawn, rather than moving in later.
+    delete document.documentElement.dataset.hydrated;
+    const router = makeRouter();
+    await router.navigate({
+      to: "/account/terms",
+      state: { savedPage: "Edit Harrier" },
+    });
+    await router.load();
+    render(<RouterProvider router={router} />);
+    expect(await screen.findByTestId("page")).toHaveTextContent("(none)");
+
+    stampHydrated();
+    await router.invalidate();
+
+    expect(screen.getByTestId("page")).toHaveTextContent("(none)");
+  });
+
+  it("is in the first render of a client navigation (R60·60b)", async () => {
+    const router = makeRouter();
+    await router.navigate({
+      to: "/account/terms",
+      state: { savedPage: "Edit Harrier" },
+    });
+    await router.load();
+    // A render with no effects run: what the first render draws.
+    expect(renderToString(<RouterProvider router={router} />)).toContain(
+      "Edit Harrier",
     );
   });
 });

@@ -1,6 +1,7 @@
 import { useLocation } from "@tanstack/react-router";
+import { useState } from "react";
 
-import { useIsHydrated } from "../../ui/use-is-hydrated";
+import { wasHydrated } from "../../ui/use-hydrated";
 import { savedPageSchema } from "./route-decisions";
 
 /**
@@ -9,14 +10,16 @@ import { savedPageSchema } from "./route-decisions";
  * history state, which a link cannot set. Parsed through
  * `savedPageSchema`, so only a heading's worth of words.
  *
- * Nothing until hydration: the server render has no history state, and a
- * reload of the prompt keeps it in the browser, so the first client
- * render must draw what the server drew.
+ * **In the first render or never** (R60·60b): read when the prompt is
+ * reached by a client navigation, whose first render already has the
+ * state. A server-rendered load leaves it out for good, rather than adding
+ * it once the page has loaded: the server has no history state, a reload
+ * keeps it in the browser, and the line arriving late would move the page.
  */
 export function useSavedPage(): string | undefined {
   const fromState = useLocation({
     select: (location) => location.state.savedPage,
   });
-  const isHydrated = useIsHydrated();
-  return isHydrated ? savedPageSchema.parse(fromState) : undefined;
+  const [isClientNavigation] = useState(wasHydrated);
+  return isClientNavigation ? savedPageSchema.parse(fromState) : undefined;
 }
