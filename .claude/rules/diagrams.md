@@ -29,7 +29,7 @@ diagrams:format` fixes the formatting. `npm run diagrams` opens the
   `test/architecture/diagram-sources.node.test.ts` fails when a path or a name
   stops resolving; the form is in skill `architecture-diagrams`.
   `npm run diagrams:stale` lists the stories that cite a file your branch
-  changed.
+  changed. The wording is audited, not tested (skill `diagram-audit`).
 - **A PR that changes a view carries a video of it**:
   `npm run diagrams:record` writes `diagrams.demo.mp4` (skill `pr-ready`).
 - **Nothing rendered is committed**: no PNG, no `dist/`, no exported

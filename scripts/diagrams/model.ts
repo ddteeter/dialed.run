@@ -20,7 +20,13 @@ import { LikeC4 } from "likec4";
 import { z } from "zod";
 
 import { storyOf, type Story } from "./anchors";
-import type { ViewFacts } from "./record";
+import {
+  framesOf,
+  joinSteps,
+  type AuditView,
+  type ElementFacts,
+} from "./audit";
+import type { StepFacts, ViewFacts } from "./record";
 
 const node = z.looseObject({ $type: z.string() });
 type Node = z.infer<typeof node>;
@@ -137,15 +143,18 @@ function documentsOf(likec4: LikeC4): Document[] {
   });
 }
 
-/**
- * Every dynamic view in `likec4`'s own documents (not its built-in
- * library), with each step statement's source comment. `fileOf` names
- * each of those documents in what a story reports.
- */
-export async function storiesIn(
+interface ReadStory {
+  readonly story: Story;
+  /**
+  How many arrows each of the story's statements draws, in order.
+  */
+  readonly arrows: readonly number[];
+}
+
+async function readStories(
   likec4: LikeC4,
   fileOf: (fsPath: string) => string,
-): Promise<Story[]> {
+): Promise<ReadStory[]> {
   const documents = documentsOf(likec4);
   const workspace = `${path.resolve(likec4.workspace)}${path.sep}`;
   const read = documents
@@ -163,7 +172,7 @@ export async function storiesIn(
               doc.text,
               statements.map((statement) => statement.line),
             ),
-            arrows: sum(statements.map((statement) => statement.arrows)),
+            arrows: statements.map((statement) => statement.arrows),
           };
         });
     });
@@ -179,7 +188,8 @@ export async function storiesIn(
   const misread = [...drawn]
     .filter(
       ([view, count]) =>
-        read.find(({ story }) => story.view === view)?.arrows !== count,
+        sum(read.find(({ story }) => story.view === view)?.arrows ?? []) !==
+        count,
     )
     .map(([view]) => view);
   if (misread.length > 0) {
@@ -187,15 +197,48 @@ export async function storiesIn(
       `scripts/diagrams/model.ts read other steps than LikeC4 draws in ${misread.join(", ")}: a step form the walk does not know.`,
     );
   }
+  return read;
+}
+
+/**
+ * Every dynamic view in `likec4`'s own documents (not its built-in
+ * library), with each step statement's source comment. `fileOf` names
+ * each of those documents in what a story reports.
+ */
+export async function storiesIn(
+  likec4: LikeC4,
+  fileOf: (fsPath: string) => string,
+): Promise<Story[]> {
+  const read = await readStories(likec4, fileOf);
   return read.map(({ story }) => story);
 }
 
 /**
  * A note or a description, which LikeC4 keeps as Markdown or as text.
  */
-function textOf(value: { md: string } | { txt: string } | undefined): string {
-  if (value === undefined) return "";
+function textOf(
+  value: { md: string } | { txt: string } | null | undefined,
+): string {
+  if (value === undefined || value === null) return "";
   return "md" in value ? value.md : value.txt;
+}
+
+interface ComputedEdge {
+  readonly source: string;
+  readonly target: string;
+  readonly kind?: string | null;
+  readonly label: string | null;
+  readonly notes?: { md: string } | { txt: string };
+}
+
+function stepFactsOf(edge: ComputedEdge): StepFacts {
+  return {
+    source: edge.source,
+    target: edge.target,
+    kind: edge.kind ?? "",
+    label: edge.label ?? "",
+    notes: textOf(edge.notes),
+  };
 }
 
 /**
@@ -227,13 +270,7 @@ export async function viewFactsIn(likec4: LikeC4): Promise<ViewFacts[]> {
       framed:
         computed.variant === "sequence" ||
         computed.flow.some((entry) => typeof entry !== "string"),
-      steps: computed.edges.map((edge) => ({
-        source: edge.source,
-        target: edge.target,
-        kind: edge.kind ?? "",
-        label: edge.label ?? "",
-        notes: textOf(edge.notes),
-      })),
+      steps: computed.edges.map((edge) => stepFactsOf(edge)),
     };
   });
 }
@@ -245,6 +282,10 @@ export async function readViewFacts(dir: string): Promise<ViewFacts[]> {
   return viewFactsIn(await LikeC4.fromWorkspace(dir, { logger: false }));
 }
 
+function repoRelative(fsPath: string): string {
+  return path.relative(process.cwd(), fsPath);
+}
+
 /**
  * Every story in `docs/diagrams`, each named by its repo-relative file.
  * Run from the repo root.
@@ -253,5 +294,74 @@ export async function readModelStories(): Promise<Story[]> {
   const likec4 = await LikeC4.fromWorkspace("docs/diagrams", {
     logger: false,
   });
-  return storiesIn(likec4, (fsPath) => path.relative(process.cwd(), fsPath));
+  return storiesIn(likec4, repoRelative);
+}
+
+/**
+ * Every story in `likec4`'s own documents as skill `diagram-audit` reads
+ * it (design 229, step 5): each arrow LikeC4 computed, with its frames and
+ * the source comment of the statement that draws it.
+ */
+export async function auditViewsIn(
+  likec4: LikeC4,
+  fileOf: (fsPath: string) => string,
+): Promise<AuditView[]> {
+  const read = await readStories(likec4, fileOf);
+  const model = await likec4.computedModel();
+  const views = [...model.views()];
+  return read.map(({ story, arrows }) => {
+    const view = views.find(({ id }) => id === story.view)?.$view;
+    if (view?._type !== "dynamic") {
+      throw new Error(`${story.view} is not a dynamic view LikeC4 computed.`);
+    }
+    const edges = view.edges.map((edge) => ({
+      id: edge.id,
+      navigateTo: edge.navigateTo ?? "",
+      ...stepFactsOf(edge),
+    }));
+    return {
+      view: story.view,
+      file: story.file,
+      title: view.title ?? view.id,
+      steps: joinSteps(story, arrows, edges, framesOf(view.flow)),
+      elements: view.nodes.map((node) => ({
+        id: node.id,
+        kind: node.kind,
+        title: node.title,
+        technology: node.technology ?? "",
+        description: textOf(node.description),
+      })),
+    };
+  });
+}
+
+/**
+ * Every element of `likec4`'s computed model, in its own order.
+ */
+export async function elementsIn(likec4: LikeC4): Promise<ElementFacts[]> {
+  const model = await likec4.computedModel();
+  return [...model.elements()].map((element) => ({
+    id: element.id,
+    kind: element.kind,
+    title: element.title,
+    technology: element.technology ?? "",
+    description: textOf(element.$element.description),
+  }));
+}
+
+/**
+ * The stories and the elements of `docs/diagrams`, each story named by its
+ * repo-relative file. Run from the repo root.
+ */
+export async function readAudit(): Promise<{
+  readonly views: AuditView[];
+  readonly elements: ElementFacts[];
+}> {
+  const likec4 = await LikeC4.fromWorkspace("docs/diagrams", {
+    logger: false,
+  });
+  return {
+    views: await auditViewsIn(likec4, repoRelative),
+    elements: await elementsIn(likec4),
+  };
 }

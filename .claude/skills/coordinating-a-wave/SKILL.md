@@ -67,6 +67,10 @@ Open work lives in GitHub Issues and the dialed.run Project; law and history liv
 
   Show the owner any decision wording before committing it.
 
+- **Diagram audits, in the same pass:** run `npm run diagrams:audit -- due`
+  and audit what it lists (skill `diagram-audit`). An audit files issues
+  and changes nothing in the repo; its issues are work for the next wave.
+
 - **The Plan vs. Build survey** reads the issues and milestones (skill `plan-survey`), so it needs no patching between runs.
 
 ## 4 · Closing a wave
