@@ -184,7 +184,23 @@ function ListEnd({
  * One 64 row (Round 55 · 235): the date, one mono line under it, and the
  * verdict and kit marks at the right, so the runs that still need
  * something stand out. A badge only for an exception.
+ *
+ * A badged row breathes (R60·326): the badge takes a line of its own
+ * under the mono line, at the row's start with nothing beside it, and the
+ * row pads 12 above and 16 below, so 12 + 20 + 4 + 16 + 14 + 22 + 16 =
+ * 104. The marks keep their place at the top right. A row with no badge
+ * stays 64, its lines centred in it.
  */
+const ROW =
+  "grid min-h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-hairline";
+const BADGED_ROW =
+  "grid min-h-16 grid-cols-[minmax(0,1fr)_auto] items-start gap-3 border-b border-hairline pt-3 pb-4";
+
+/**
+ * The badge's line: 14 under the mono line, the column's 4 and this 10.
+ */
+const BADGE_LINE = "mt-2.5 flex";
+
 function RunRow({
   run,
   units,
@@ -194,10 +210,12 @@ function RunRow({
   units: Units;
   onSet: () => void;
 }>): JSX.Element {
+  const badge = badgeOf(run);
   return (
     <li
       data-slot="run-row"
-      className="grid min-h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-hairline"
+      data-badged={badge === undefined ? undefined : "true"}
+      className={badge === undefined ? ROW : BADGED_ROW}
     >
       <div className="flex min-w-0 flex-col gap-1">
         <RunLink run={run} units={units} />
@@ -208,7 +226,6 @@ function RunRow({
             314 (#760) rules between 77 and 235's one line. */}
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
           <MetaLine run={run} units={units} />
-          <RunBadge run={run} units={units} onSet={onSet} />
           {/* Once per row: a header line would claim the whole of a
               mixed list (G1). Sentence case and sans, never the mono
               line's capitals, so it stays beside the line, not in it. */}
@@ -218,6 +235,15 @@ function RunRow({
             </div>
           )}
         </div>
+        {badge === undefined ? undefined : (
+          <div data-part="run-badge" className={BADGE_LINE}>
+            {badge.kind === "set" ? (
+              <SetBadge conditions={badge.conditions} units={units} />
+            ) : (
+              <SetConditionsBadge onSet={onSet} />
+            )}
+          </div>
+        )}
       </div>
       <Marks run={run} />
     </li>
@@ -338,39 +364,54 @@ const FACT_BADGE = `${BADGE} border-hairline text-label`;
 const CONTROL_BADGE = `${BADGE} border-ink text-ink`;
 
 /**
- * The row's badge, only for an exception: a band the runner set, or the
- * one control, "SET CONDITIONS ›", into R2b. Its 44 hit area hangs past
- * the line on both sides rather than making the row taller.
+ * Which badge a row draws, if any: a band the runner set, or the one
+ * control, "SET CONDITIONS ›", into R2b. Only for an exception.
  */
-function RunBadge({
-  run,
+type RunBadgeKind =
+  | { kind: "set"; conditions: NonNullable<RunSummary["conditions"]> }
+  | { kind: "control" };
+
+function badgeOf(run: RunSummary): RunBadgeKind | undefined {
+  const { conditions } = run;
+  if (conditions?.isSetByYou === true) return { kind: "set", conditions };
+  if (conditions !== undefined || !run.canSetConditions) return undefined;
+  return { kind: "control" };
+}
+
+/**
+ * The fact badge: a band the runner set, its range and sky.
+ */
+function SetBadge({
+  conditions,
   units,
-  onSet,
 }: Readonly<{
-  run: RunSummary;
+  conditions: NonNullable<RunSummary["conditions"]>;
   units: Units;
-  onSet: () => void;
-}>): JSX.Element | undefined {
-  if (run.conditions?.isSetByYou === true) {
-    return (
-      <Mono step="xs" className={FACT_BADGE}>
-        <Spoken
-          {...setConditionsForms(
-            run.conditions.tempC,
-            run.conditions.sky,
-            units.temp,
-          )}
-        />
-      </Mono>
-    );
-  }
-  if (run.conditions !== undefined || !run.canSetConditions) return undefined;
+}>): JSX.Element {
+  return (
+    <Mono step="xs" className={FACT_BADGE}>
+      <Spoken
+        {...setConditionsForms(conditions.tempC, conditions.sky, units.temp)}
+      />
+    </Mono>
+  );
+}
+
+/**
+ * The one control badge, into R2b. Its 44 hit area is a `target-line`,
+ * eleven proud of the 22 pill above and below, and it sits wholly inside
+ * the row (R60·326): the 14 above the badge and the row's 16 below hold
+ * it.
+ */
+function SetConditionsBadge({
+  onSet,
+}: Readonly<{ onSet: () => void }>): JSX.Element {
   return (
     <button
       type="button"
       aria-haspopup="dialog"
       onClick={onSet}
-      className="target -my-3 inline-flex shrink-0 items-center border-none bg-transparent p-0"
+      className="target-line inline-flex shrink-0 items-center border-none bg-transparent p-0"
     >
       {/* The › is drawn, not said: it reads as "right angle bracket". */}
       <Mono step="xs" className={CONTROL_BADGE}>
