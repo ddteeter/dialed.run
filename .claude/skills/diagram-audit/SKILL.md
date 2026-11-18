@@ -154,34 +154,42 @@ counts from. One issue per flow (`npm run track -- create`,
 - body: `**Trigger:** none. A record.`, the SHA audited, the views, and
   `**Links:** design 229 · skill diagram-audit`.
 
-**Each difference** is one issue with `--parent <record>`, its title led by
-its view (`importStory: …`), its body in the tracker's shape:
+**The story's differences are one issue per view** (owner, 2026-11-17):
+one audit can find thirty, and one lane fixes a view's together. Each has
+`--parent <record>`, the title `<view>: <n> differences with the code`,
+and a body in the tracker's shape, one checklist line per difference:
 
 ```md
 **Trigger:** none. Ready now.
 
-`<kind>`. The story says (<view>, step <n>): "<quote>".
-The code does: <what>, at `<path>:<line>` (`<name>`), at <SHA>.
+What the audit of <flow>.c4 at <SHA> found in `<view>`. Fix each in the
+story (skill `architecture-diagrams`), and tick it.
 
-**Fix:** <what the story, the comment or the code should say>
-**Where:** docs/diagrams/flows/<flow>.c4 · <the code path>
+- [ ] **D<n>** `<kind>` · step <n> · <sev>. The story says "<quote>"; the
+      code does <what>, at `<path>:<line>`. Fix: <what it should say>.
+
+**Where:** docs/diagrams/flows/<flow>.c4
 **Links:** #<record> · design 229
 ```
 
-A `code-suspect` also carries `**Why the story is the intent:** <the law,
-rule, D-row or test>`, from the comparing reader's ruling.
+An element's words go under the view that draws it first. Its labels are
+`area:docs`, `kind:build`, the highest severity in its list; status Ready.
 
-| kind                                         | labels                                                                                           | status      |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------- |
-| `story-wrong`, `story-missing`, `cite-wrong` | `area:docs`, `kind:build`, the severity as marked                                                | Ready       |
-| `code-suspect`                               | `kind:build`, the severity as marked, and the `area:` the module's other issues carry; none, ask | none: inbox |
+**Each `code-suspect` is an issue of its own**, under the record, titled by
+what the code gets wrong, with `**Why the story is the intent:** <the law,
+rule, D-row or test>` from the comparing reader's ruling and `The code
+does: … at <path>:<line>, at <SHA>`. Its labels are `kind:build`, the
+severity as marked, and the `area:` the module's other issues carry (none
+fits: ask); no status, so it lands in the owner's inbox. The view's story
+issue names it in one line, since the story cannot be fixed past it.
 
 No milestone: the stage is the owner's. Then close the record with a
 comment listing the issues it filed and how many the comparing reader
 counted as the deriving reader's misses, or "No differences."
 
-Done when every flow has a closed record and every passed difference is an
-issue under it, or a comment on the one it matched.
+Done when every flow has a closed record, every passed difference is a
+line in its view's issue or an issue of its own, or a comment on the one
+it matched.
 
 ## Report
 

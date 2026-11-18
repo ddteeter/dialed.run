@@ -319,7 +319,14 @@ retries'`). `-- story <flow>` is the comparing reader's copy: every
 - **Every audit files a record, even with nothing found**, so `due` has a
   date to count from. The differences are sub-issues of it, and the record
   closes once they are filed: it is history, and the differences are the
-  work.
+  work. **A view's story differences are one issue**, a checklist, and
+  each code bug is its own (owner, 2026-11-17): the trial found thirty in
+  one flow, which one lane fixes together.
+- **The trial** (`flows/import.c4` at `856198f7`, record #840): the
+  deriving reader found 40 steps against the story's 26 arrows; 8 arrows
+  agreed. 27 story differences went into #844–#846, and three code bugs in
+  the import consumer into #841–#843. The comparing reader counted one
+  difference as the deriving reader's own miss.
 - **Two readers, then the auditor.** The deriving reader reads code only
   (`derive.md`); the comparing reader walks the derived account first,
   then the story, and rules on each difference against the code
