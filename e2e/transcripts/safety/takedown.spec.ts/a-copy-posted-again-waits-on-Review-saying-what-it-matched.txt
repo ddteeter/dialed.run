@@ -59,16 +59,10 @@ waiting
 end of heading, waiting, level 2
 list
 listitem, level 1, position 1, set size 1
-button, photo · :id · @poster_# [held on upload] #m, expanded
-:id
-photo
-· :id
-·
-@poster_#
-[held on upload]
-end, :id
+button, photo · :id · @poster_# held on upload #m, expanded
+photo · :id · @poster_# held on upload
 #m
-end of button, photo · :id · @poster_# [held on upload] #m, expanded
+end of button, photo · :id · @poster_# held on upload #m, expanded
 image, Reported
 paragraph
 A close match to an image removed as intimate on

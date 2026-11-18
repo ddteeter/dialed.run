@@ -60,14 +60,10 @@ waiting
 end of heading, waiting, level 2
 list
 listitem, level 1, position 1, set size 3
-button, entry · :id [reports] #h, expanded
-:id
-entry
-· :id
-[reports]
-end, :id
+button, entry · :id reports #h, expanded
+entry · :id reports
 #h
-end of button, entry · :id [reports] #h, expanded
+end of button, entry · :id reports #h, expanded
 Nobody reported this.
 form
 status
@@ -90,26 +86,18 @@ button, Remove as suspected CSAM
 end of form
 end of listitem, level 1, position 1, set size 3
 listitem, level 1, position 2, set size 3
-button, profile · :id [reports] Nobody reported this. #h, not expanded
-:id
-profile
-· :id
-[reports]
-end, :id
+button, profile · :id reports Nobody reported this. #h, not expanded
+profile · :id reports
 Nobody reported this.
 #h
-end of button, profile · :id [reports] Nobody reported this. #h, not expanded
+end of button, profile · :id reports Nobody reported this. #h, not expanded
 end of listitem, level 1, position 2, set size 3
 listitem, level 1, position 3, set size 3
-button, photo · :id [classifier] Nobody reported this. #h, not expanded
-:id
-photo
-· :id
-[classifier]
-end, :id
+button, photo · :id classifier Nobody reported this. #h, not expanded
+photo · :id classifier
 Nobody reported this.
 #h
-end of button, photo · :id [classifier] Nobody reported this. #h, not expanded
+end of button, photo · :id classifier Nobody reported this. #h, not expanded
 end of listitem, level 1, position 3, set size 3
 end of list
 region, Takedown
