@@ -284,6 +284,8 @@ describe("OpenSourcePage", () => {
       "underline",
     );
     expect(name).not.toHaveAttribute("aria-label");
+    // The name and its version, a space apart.
+    expect(name.parentElement?.textContent).toBe("react 19.2.0");
     // R58·292: MONO.md, which keeps the version's own case.
     const version = within(react).getByText("19.2.0");
     expect(version).toHaveClass("text-mono-md");
@@ -296,7 +298,8 @@ describe("OpenSourcePage", () => {
       within(react).getByText("© Meta Platforms, Inc. and affiliates"),
     ).toHaveClass("text-small", "text-muted");
     // Nothing on record, nothing drawn: no project, no link.
-    expect(within(clsx).queryByRole("link")).toBeNull();
+    // An anchor with no href is not a link to the tree, so ask for any <a>.
+    expect(clsx.querySelector("a")).toBeNull();
     expect(within(clsx).getByText("clsx")).toHaveClass("font-semibold");
     expect(within(clsx).queryByText(/^©/u)).toBeNull();
     expect(clsx.querySelector("details")).toBeNull();
