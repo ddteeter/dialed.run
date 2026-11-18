@@ -3,7 +3,9 @@
  * by picking a band and a sky, never typing a number — round 26 item 2),
  * deleting a run from its own page (task 128 · SAF-3), the retired import
  * URL landing on A1, and A1 reading a Garmin TCX of many laps as the whole
- * run (R-130) and a paused TCX at its elapsed time (D-111).
+ * run (R-130) and a paused TCX at its elapsed time (D-111), and A2 once
+ * the day's photos are used up: the kit is logged, the photo row says so,
+ * and the photo stays held.
  *
  * Each test removes what it seeded, and what its uploads made, through the
  * conformance fixtures the journey uses too.
@@ -11,6 +13,15 @@
 import { readFileSync } from "node:fs";
 
 import type { Locator, Page } from "@playwright/test";
+import { and, eq } from "drizzle-orm";
+
+import { rateLimits } from "../../src/db/schema-core";
+import {
+  PHOTO_LIMIT_REACHED,
+  PHOTO_UPLOADS_PER_DAY,
+} from "../../src/lib/photo-constraints";
+import { PNG_1X1 } from "../closet/closet-support";
+import { withLocalDb } from "../support/local-db";
 
 import {
   distanceNumber,
@@ -22,6 +33,7 @@ import { nowSeconds } from "../../src/lib/now";
 import {
   gpx,
   hydrated,
+  seedItem,
   seedObservation,
   seedRun,
   unseed,
@@ -148,6 +160,80 @@ test("the old import page is gone: its URL lands on A1", async ({ page }) => {
   await page.goto(`/runs/import/${newUlid()}`);
   await hydrated(page);
   await expect(page).toHaveURL(/\/runs\/new$/u);
+});
+
+/**
+ * The runner's count of photo uploads for the day, set to the limit, so
+ * the next upload is refused (`photo-runner`, keyed by the runner's id).
+ */
+async function usePhotosUp(userId: string): Promise<void> {
+  await withLocalDb(async ({ core }) => {
+    await core
+      .insert(rateLimits)
+      .values({
+        kind: "photo-runner",
+        subject: userId,
+        windowStartedAt: nowSeconds(),
+        count: PHOTO_UPLOADS_PER_DAY,
+      })
+      .onConflictDoUpdate({
+        target: [rateLimits.kind, rateLimits.subject],
+        set: { windowStartedAt: nowSeconds(), count: PHOTO_UPLOADS_PER_DAY },
+      });
+  });
+}
+
+async function forgetPhotoCount(userId: string): Promise<void> {
+  await withLocalDb(async ({ core }) => {
+    await core
+      .delete(rateLimits)
+      .where(
+        and(
+          eq(rateLimits.kind, "photo-runner"),
+          eq(rateLimits.subject, userId),
+        ),
+      );
+  });
+}
+
+test("A2 · the day's photos are used up: the row says so, and the photo stays held", async ({
+  page,
+}) => {
+  const seeded = await seededFor();
+  try {
+    const runId = await seedRun(seeded, {
+      observed: true,
+      weatherStatus: "attached",
+    });
+    await seedItem(seeded, "Photo limit top", "top");
+    await usePhotosUp(seeded.userId);
+
+    await page.goto(`/feed/attach/${runId}`);
+    await hydrated(page);
+    await page.getByRole("button", { name: "Photo limit top" }).click();
+    await page.setInputFiles('[data-part="add-photo"] input[type="file"]', {
+      name: "kit.png",
+      mimeType: "image/png",
+      buffer: PNG_1X1,
+    });
+    const blurSheet = page.getByRole("dialog", { name: "Check the blur" });
+    await blurSheet
+      .getByRole("button", { name: "Use this photo" })
+      .click({ timeout: 20_000 });
+    await expect(blurSheet).toBeHidden();
+
+    await page.getByRole("button", { name: "Next — did it work?" }).click();
+    await expect(page.getByText(PHOTO_LIMIT_REACHED)).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page).toHaveURL(/\/feed\/attach\//u);
+    await expect(
+      page.getByRole("button", { name: "Photo 1 of 1" }),
+    ).toBeVisible();
+  } finally {
+    await forgetPhotoCount(seeded.userId);
+    await unseed(seeded);
+  }
 });
 
 test("A1 · a Garmin file writes a lap a mile, and A1 reads every lap (R-130)", async ({
