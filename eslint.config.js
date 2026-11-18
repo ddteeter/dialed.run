@@ -175,10 +175,30 @@ const bracketRestrictions = [
 ];
 
 /**
+ * `font-mono` spelled out in a class string (#794): the mono ramp is
+ * `Mono`, or `MONO_CLASS` / `MONO_CASED_CLASS` for a link, a button, a
+ * field or a paragraph, which a span cannot be. Not under `src/ui`, where
+ * the ramp is defined and its primitives compose it. A breakpoint's
+ * `desk:font-mono` is left alone: a switch of face at a width is not a
+ * step the constants can name (VerdictBacklog's slot word).
+ */
+const handTypedMono = String.raw`(?<![\w:-])font-mono(?![\w-])`;
+const monoMessage =
+  "Use <Mono>, or MONO_CLASS / MONO_CASED_CLASS from ui for a link, button or field — font-mono typed by hand drifts from the ramp.";
+const monoRestrictions = [
+  { selector: `Literal[value=/${handTypedMono}/]`, message: monoMessage },
+  {
+    selector: `TemplateElement[value.raw=/${handTypedMono}/]`,
+    message: monoMessage,
+  },
+];
+
+/**
  * The groups, by name, for `primitiveExemptions`.
  */
 const primitiveGroups = {
   brackets: bracketRestrictions,
+  mono: monoRestrictions,
 };
 
 /**
@@ -225,7 +245,9 @@ function exemptBlock(path, without) {
         "error",
         ...baseRestrictions,
         ...(path.startsWith("src/modules/auth/") ? [] : crossLaneRestrictions),
-        ...primitiveRestrictions(without),
+        ...primitiveRestrictions(
+          path.startsWith("src/ui/") ? [...without, "mono"] : without,
+        ),
       ],
     },
   };
@@ -321,6 +343,19 @@ export default tseslint.config(
         ...baseRestrictions,
         ...crossLaneRestrictions,
         ...primitiveRestrictions(),
+      ],
+    },
+  },
+  {
+    // Where the mono ramp is defined: `Mono` and the primitives that
+    // compose it spell `font-mono`.
+    files: ["src/ui/**/*.ts", "src/ui/**/*.tsx"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...baseRestrictions,
+        ...crossLaneRestrictions,
+        ...primitiveRestrictions(["mono"]),
       ],
     },
   },

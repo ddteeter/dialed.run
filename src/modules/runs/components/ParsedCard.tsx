@@ -14,21 +14,22 @@ import {
 } from "../../../lib/contracts/measures";
 import { precipClassOf } from "../../../lib/contracts/temperature";
 import {
-  GarminAttribution,
-  type ControlFailure,
   ControlFailureBand,
   describedByFor,
+  focusOnMount,
   FormFailureBand,
   FormField,
   FormStatus,
+  GarminAttribution,
   INK_PILL,
   Mono,
+  MONO_CLASS,
   PendingLabel,
   Spoken,
   SubmitButton,
+  type ControlFailure,
   useFormSubmit,
   WeatherAttribution,
-  focusOnMount,
 } from "../../../ui";
 import { runClockLabel } from "../run-clock";
 import { hasProvidersReading } from "../run-conditions";
@@ -143,7 +144,7 @@ function TimeButton({
       onClick={onPress}
       // A full 44 target with its box pulled back to the facts line, so the
       // row stays one mono line tall and the card is not bottom-heavy (D1-08).
-      className="target -my-3.5 border-none bg-transparent p-0 font-mono text-mono-sm uppercase text-ink underline underline-offset-4"
+      className={`target -my-3.5 border-none bg-transparent p-0 ${MONO_CLASS.sm} text-ink underline underline-offset-4`}
     >
       {shown}
     </button>
@@ -181,7 +182,9 @@ The mono facts line, cells split by a hairline bar as the board draws them.
 */
 function Facts({ children }: Readonly<{ children: ReactNode[] }>): JSX.Element {
   return (
-    <p className="m-0 flex flex-wrap items-center gap-x-2 font-mono text-mono-sm uppercase text-label">
+    <p
+      className={`m-0 flex flex-wrap items-center gap-x-2 ${MONO_CLASS.sm} text-label`}
+    >
       {/* A cell with nothing in it — a run with no distance has no pace —
           is no cell, so no rule stands before the first one drawn. */}
       {children

@@ -20,13 +20,34 @@ export type MonoStep = "xs" | "sm" | "md" | "lg";
  * Uppercase is legal at `xs` and `sm` only; `md` and `lg` are mixed case
  * because they sit inside prose and in the data strip, where a shouted
  * value would be the loudest thing on the screen.
+ *
+ * Exported for the mono that `Mono`, a span, cannot be: a link, a button,
+ * a field, a paragraph (#794). Outside `src/ui` a class string may not
+ * spell `font-mono` itself; it takes this, or `MONO_CASED_CLASS`.
  */
-const STEP_CLASS: Readonly<Record<MonoStep, string>> = {
+export const MONO_CLASS: Readonly<Record<MonoStep, string>> = {
   xs: "font-mono text-mono-xs uppercase",
   sm: "font-mono text-mono-sm uppercase",
   md: "font-mono text-mono-md",
   lg: "font-mono text-mono-lg",
 };
+
+/**
+ * The ramp in the text's own case, for a mono value that must not shout:
+ * a field a runner types into, a handle (never shouted, G-19), a Desk head
+ * whose kind and tag take `uppercase` in spans of their own. Read from
+ * `MONO_CLASS`, less its case, so the two cannot drift.
+ */
+export const MONO_CASED_CLASS: Readonly<Record<MonoStep, string>> = {
+  xs: casedOf(MONO_CLASS.xs),
+  sm: casedOf(MONO_CLASS.sm),
+  md: casedOf(MONO_CLASS.md),
+  lg: casedOf(MONO_CLASS.lg),
+};
+
+function casedOf(stepClass: string): string {
+  return stepClass.replace(" uppercase", "");
+}
 
 /**
  * IBM Plex Mono span for measured values (pace, distance, weather,
@@ -53,7 +74,7 @@ export function Mono({
   */
   id?: string | undefined;
 }>) {
-  const stepClass = STEP_CLASS[step];
+  const stepClass = MONO_CLASS[step];
   return (
     <span
       id={id}

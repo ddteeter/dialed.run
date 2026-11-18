@@ -2,7 +2,13 @@ import { useState } from "react";
 import type { JSX } from "react";
 
 import { spanLabel } from "../../../lib/dates";
-import { Bracketed, ListSection, Mono, useFormSubmit } from "../../../ui";
+import {
+  Bracketed,
+  ListSection,
+  Mono,
+  MONO_CASED_CLASS,
+  useFormSubmit,
+} from "../../../ui";
 import {
   renameReasonSchema,
   renameReasons,
@@ -463,7 +469,7 @@ function RowHead({
         aria-hidden="true"
         data-part="row-head"
         title={label}
-        className="block font-mono text-mono-sm wrap-anywhere desk:truncate"
+        className={`block ${MONO_CASED_CLASS.sm} wrap-anywhere desk:truncate`}
       >
         <span className="uppercase">{rowKind(row)}</span>
         {` · ${headName(row, label)} `}

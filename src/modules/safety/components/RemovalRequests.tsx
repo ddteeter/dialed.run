@@ -10,6 +10,7 @@ import {
   FormFailureBand,
   ListSection,
   Mono,
+  MONO_CASED_CLASS,
   QUIET_CANCEL,
   QUIET_PILL,
   SubmitButton,
@@ -204,7 +205,7 @@ function RequestHead({
         aria-hidden="true"
         data-part="request-head"
         title={subject?.subjectId}
-        className="min-w-0 truncate font-mono text-mono-sm"
+        className={`min-w-0 truncate ${MONO_CASED_CLASS.sm}`}
       >
         <span className="uppercase">{subject?.subjectType ?? "link"}</span>
         {subject === undefined ? undefined : ` · ${shortId(subject.subjectId)}`}

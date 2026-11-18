@@ -9,6 +9,7 @@ import {
   FormEnd,
   FormStatus,
   Mono,
+  MONO_CASED_CLASS,
   TextField,
   useFormSubmit,
   useIdempotencyKey,
@@ -223,7 +224,7 @@ function NotCopied({ url }: Readonly<{ url: string }>): JSX.Element {
         ref={(node) => {
           node?.select();
         }}
-        className="min-h-target w-full rounded-field border border-hairline bg-ground px-3 font-mono text-mono-sm"
+        className={`min-h-target w-full rounded-field border border-hairline bg-ground px-3 ${MONO_CASED_CLASS.sm}`}
       />
     </div>
   );

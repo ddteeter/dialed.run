@@ -178,9 +178,11 @@ describe("D8's table", () => {
     expect(runs).toHaveClass("text-right", "max-wide:hidden");
     expect(reports).toHaveClass("text-right");
     expect(reports).not.toHaveClass("max-wide:hidden");
+    // R60·327: 8 apart, the second wrapping under the first below desk.
     expect(state?.firstElementChild).toHaveClass(
       "flex-wrap",
-      "wide:flex-nowrap",
+      "gap-x-2",
+      "desk:flex-nowrap",
     );
     // R58·276: on a phone a long tag wraps inside its cell, so it does not
     // set the column's width; from `wide` it is whole.

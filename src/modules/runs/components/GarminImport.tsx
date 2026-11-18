@@ -16,6 +16,7 @@ import {
   ControlFailureBand,
   inFlight,
   Mono,
+  MONO_CLASS,
   Skeleton,
   Spoken,
 } from "../../../ui";
@@ -328,7 +329,7 @@ function PickerRow({
           aria-describedby={titleId}
           {...inFlight(isPending)}
           onClick={onImport}
-          className="target border-none bg-transparent p-0 font-mono text-mono-sm uppercase text-ink"
+          className={`target border-none bg-transparent p-0 ${MONO_CLASS.sm} text-ink`}
         >
           {isPending ? (
             "Importing"
@@ -343,7 +344,7 @@ function PickerRow({
           to="/runs/$runId"
           params={{ runId: row.runId }}
           aria-describedby={titleId}
-          className="target inline-flex items-center font-mono text-mono-sm uppercase text-muted no-underline"
+          className={`target inline-flex items-center ${MONO_CLASS.sm} text-muted no-underline`}
         >
           <Bracketed>Imported</Bracketed>
           <span aria-hidden="true"> ›</span>

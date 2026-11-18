@@ -10,6 +10,7 @@ import {
   FormFailureBand,
   FormStatus,
   Mono,
+  MONO_CASED_CLASS,
   NO_CHOICE,
   SubmitButton,
 } from "../../../ui";
@@ -200,7 +201,7 @@ export function RecordHead({
       data-part="record-head"
       className="flex items-baseline justify-between gap-3 border-b border-hairline pb-3"
     >
-      <span className="min-w-0 truncate font-mono text-mono-sm text-ink">
+      <span className={`min-w-0 truncate ${MONO_CASED_CLASS.sm} text-ink`}>
         {/* Drawn with the kind and tag in capitals, which takes spans; heard
             as one line from the copy beside it, since spans split what a
             screen reader hears and drop the space at their edge. */}

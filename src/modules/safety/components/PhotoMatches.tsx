@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { JSX } from "react";
 
 import { monthDayLabel } from "../../../lib/dates";
-import { Bracketed, Mono } from "../../../ui";
+import { Bracketed, Mono, MONO_CASED_CLASS } from "../../../ui";
 import {
   garmentMatchActionInput,
   type GarmentMatchActionValues,
@@ -398,9 +398,9 @@ function Owner({
       data-part="match-owner"
       to="/desk/runners"
       search={{ query: handle, filter: "all" }}
-      // A handle in its own case, underlined as a link (G-19): MONO.xs's
-      // classes written out, since `Mono`'s xs step is uppercase.
-      className="target -my-3 max-w-full self-start truncate py-3 font-mono text-mono-xs text-ink underline underline-offset-4"
+      // A handle in its own case, underlined as a link (G-19): MONO.xs in
+      // the text's own case, since `Mono`'s xs step is uppercase.
+      className={`target -my-3 max-w-full self-start truncate py-3 ${MONO_CASED_CLASS.xs} text-ink underline underline-offset-4`}
     >
       {`@${handle}`}
     </Link>

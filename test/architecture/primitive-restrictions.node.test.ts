@@ -57,6 +57,7 @@ const AUTH = "src/modules/auth/components/Landing.tsx";
 
 const BRACKETS = /Draw bracket notation with <Bracketed>/u;
 const ARBITRARY = /No arbitrary values/u;
+const MONO = /Use <Mono>, or MONO_CLASS/u;
 
 describe("the bracket selectors", () => {
   it.each([
@@ -98,5 +99,38 @@ describe("the bracket selectors", () => {
     expect(
       await messagesIn(form, 'const a = <span className="text-[11px]" />;'),
     ).toStrictEqual([expect.stringMatching(ARBITRARY)]);
+  });
+});
+
+describe("the mono selectors", () => {
+  it.each([
+    ["an attribute", 'const a = <a className="font-mono text-mono-xs" />;'],
+    ["a const", 'const LINK = "underline font-mono text-mono-sm";'],
+    ["a template", "const a = <a className={`${b} font-mono`} />;"],
+  ])("say no to font-mono typed in %s", async (_kind, code) => {
+    expect(await messagesIn(FEED, code)).toStrictEqual([
+      expect.stringMatching(MONO),
+    ]);
+  });
+
+  it.each([
+    [
+      "the constant",
+      "const a = <a className={`${MONO_CLASS.xs} underline`} />;",
+    ],
+    ["a breakpoint's switch", 'const a = <a className="desk:font-mono" />;'],
+    ["a longer name", 'const a = <a className="font-mono-ish" />;'],
+  ])("leave %s alone", async (_kind, code) => {
+    expect(await messagesIn(FEED, code)).toStrictEqual([]);
+  });
+
+  it("reach the auth module, and leave src/ui, where the ramp lives", async () => {
+    const code = 'const a = <a className="font-mono text-mono-xs" />;';
+    expect(await messagesIn(AUTH, code)).toStrictEqual([
+      expect.stringMatching(MONO),
+    ]);
+    expect(await messagesIn("src/ui/Sheet.tsx", code)).toStrictEqual([]);
+    // An exempt file under src/ui keeps its mono exemption too.
+    expect(await messagesIn("src/ui/form.tsx", code)).toStrictEqual([]);
   });
 });

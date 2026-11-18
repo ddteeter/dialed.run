@@ -19,7 +19,7 @@ export { ListSection } from "./ListSection";
 export { CoverageMark, VerdictMark } from "./Marks";
 export type { CoverageLevel, VerdictKind } from "./Marks";
 export { PagerArrows, pagerKeys } from "./PagerArrows";
-export { Mono } from "./Mono";
+export { Mono, MONO_CASED_CLASS, MONO_CLASS } from "./Mono";
 export { OnboardingProgress } from "./OnboardingProgress";
 export { OnboardingShell } from "./OnboardingShell";
 export { COLUMN, Page } from "./Page";

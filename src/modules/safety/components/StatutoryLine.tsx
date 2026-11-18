@@ -1,5 +1,6 @@
 import type { JSX } from "react";
 
+import { MONO_CASED_CLASS } from "../../../ui";
 import { STATUTORY_LINE } from "../contracts";
 
 /**
@@ -14,7 +15,7 @@ export function StatutoryLine(): JSX.Element {
   return (
     <p
       data-part="statutory-line"
-      className="m-0 font-mono text-mono-xs text-muted"
+      className={`m-0 ${MONO_CASED_CLASS.xs} text-muted`}
     >
       {STATUTORY_LINE}
     </p>

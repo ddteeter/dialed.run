@@ -1,7 +1,12 @@
 import { useId } from "react";
 import type { JSX } from "react";
 
-import { PendingLabel, inFlight, useControlAction } from "../../../ui";
+import {
+  inFlight,
+  MONO_CLASS,
+  PendingLabel,
+  useControlAction,
+} from "../../../ui";
 import { ControlFailureBand } from "../../../ui";
 import { signedInAs } from "../signed-in-as";
 
@@ -161,7 +166,7 @@ function DeskBarSignOut({
       onClick={() => {
         void control.run();
       }}
-      className="target cursor-pointer border-none bg-transparent px-1 font-mono text-mono-xs text-ink uppercase underline underline-offset-4"
+      className={`target cursor-pointer border-none bg-transparent px-1 ${MONO_CLASS.xs} text-ink underline underline-offset-4`}
     >
       <PendingLabel
         label="Sign out"

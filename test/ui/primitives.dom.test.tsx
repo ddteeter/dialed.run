@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { Bracketed } from "../../src/ui/Bracketed";
 import { Icon } from "../../src/ui/icons";
-import { Mono } from "../../src/ui/Mono";
+import { Mono, MONO_CASED_CLASS, MONO_CLASS } from "../../src/ui/Mono";
 import { Skeleton } from "../../src/ui/Skeleton";
 import { Wordmark } from "../../src/ui/Wordmark";
 
@@ -79,6 +79,26 @@ describe("Mono", () => {
   });
 });
 
+describe("the mono classes", () => {
+  it("are the ramp `Mono` draws, for what a span cannot be (#794)", () => {
+    // A link or a field takes the same pixels as the span would.
+    for (const step of ["xs", "sm", "md", "lg"] as const) {
+      const { unmount } = render(<Mono step={step}>4:52</Mono>);
+      expect(screen.getByText("4:52").className).toBe(MONO_CLASS[step]);
+      unmount();
+    }
+  });
+
+  it("keep the size and drop only the case, for a value in its own case", () => {
+    expect(MONO_CASED_CLASS).toStrictEqual({
+      xs: "font-mono text-mono-xs",
+      sm: "font-mono text-mono-sm",
+      md: "font-mono text-mono-md",
+      lg: "font-mono text-mono-lg",
+    });
+  });
+});
+
 describe("Bracketed", () => {
   it("renders the brackets around the value", () => {
     const { container } = render(<Bracketed>8 of 9</Bracketed>);
@@ -118,6 +138,22 @@ describe("Bracketed", () => {
     // data strip would be 11px with nothing failing.
     render(<Bracketed step="lg">38–46°</Bracketed>);
     expect(screen.getByText(/38–46°/)).toHaveClass("text-mono-lg");
+  });
+
+  it("draws bare brackets inside a Mono it shares, still unheard", () => {
+    // BandHistory's band shares one Mono with its counts: no second Mono,
+    // and the brackets still drawn, not said (D-150).
+    render(
+      <h2>
+        <Mono step="md">
+          <Bracketed isBare>38–46°</Bracketed> · 3 dialed
+        </Mono>
+      </h2>,
+    );
+    const heading = screen.getByRole("heading");
+    expect(heading).toHaveAccessibleName("38–46° · 3 dialed");
+    expect(heading).toHaveTextContent("[38–46°] · 3 dialed");
+    expect(heading.querySelectorAll(".font-mono")).toHaveLength(1);
   });
 
   it("keeps the uppercase when the caller adds a class of their own", () => {

@@ -30,9 +30,10 @@ that restates the other arrays (the replace trap at the top of the config).
 - **Desk heads** (#792). `RowHead` and `RequestHead` draw the head
   `aria-hidden` and say it in one `sr-only` line, as `DeskForm`'s record
   head does (#787's spacing holds because the heard line is one text
-  node). The tags render through `Bracketed`. `regionTag` renders inside
-  `Mono` as plain text in `DeskAccess`: checked, and it moves onto
-  `Bracketed`.
+  node). The tags render through `Bracketed`. The record head's own heard
+  line said `[tag]` too, so it loses its brackets. `regionTag`'s `[TN]`
+  was heard in `DeskAccess`, so `Bracketed` replaces it and the helper
+  goes.
 - **Pills → the pill constants** (#793.2, owner ruling on #793). Flags
   `rounded-pill` in a class string that is interactive (`target` or
   `cursor-pointer`), outside `form.tsx`. Chips, badges, avatars, dots and
@@ -48,8 +49,8 @@ that restates the other arrays (the replace trap at the top of the config).
 - **Mono** (#794). `Mono.tsx` exports `MONO_CLASS` (the ramp as it stands,
   uppercase at xs/sm) and `MONO_CASED_CLASS` (the same sizes without the
   uppercase, for fields and mixed-case heads). `STEP_CLASS` derives from
-  them. Spans become `<Mono>`. Links, buttons and inputs take the
-  constant. The selector is `font-mono` in a class string outside
+  them. Links, buttons, inputs, paragraphs and every mixed-case head take
+  a constant, since `Mono`'s xs and sm steps shout. The selector is `font-mono` in a class string outside
   `src/ui`, unprefixed only. A breakpoint switch (`desk:font-mono`, in
   `VerdictBacklog`) can't be a constant, so it stays.
 
@@ -77,11 +78,16 @@ that restates the other arrays (the replace trap at the top of the config).
 
 ## Issues
 
-- Closes: #792, #793, #794
+- Closes: #792, #793, #794, #818
 - Opens: #835 (remove the pill exemptions; blocked by #834). Deferred:
-  #834 (Design 334).
+  #834 (Design 334), #838 (Design 335).
 
 ## Open questions
+
+- GUESS (#818 / #838): the Desk runner row's tags are 8 apart and wrap as
+  wholes until desk (`desk:flex-nowrap`); below 720 a long tag may still
+  break inside itself, as R58·276 holds. Design 335 settles where R60·327
+  and 276 meet.
 
 - GUESS: `VerdictForm`'s animated brackets stay a file exemption rather
   than a `Bracketed` mode. They're a motion device, not notation.
