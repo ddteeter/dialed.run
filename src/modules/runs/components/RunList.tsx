@@ -237,10 +237,10 @@ function RunRow({
         </div>
         {badge === undefined ? undefined : (
           <div data-part="run-badge" className={BADGE_LINE}>
-            {badge.kind === "set" ? (
-              <SetBadge conditions={badge.conditions} units={units} />
-            ) : (
+            {badge.conditions === undefined ? (
               <SetConditionsBadge onSet={onSet} />
+            ) : (
+              <SetBadge conditions={badge.conditions} units={units} />
             )}
           </div>
         )}
@@ -367,15 +367,17 @@ const CONTROL_BADGE = `${BADGE} border-ink text-ink`;
  * Which badge a row draws, if any: a band the runner set, or the one
  * control, "SET CONDITIONS ›", into R2b. Only for an exception.
  */
-type RunBadgeKind =
-  | { kind: "set"; conditions: NonNullable<RunSummary["conditions"]> }
-  | { kind: "control" };
+type SetConditions = NonNullable<RunSummary["conditions"]>;
 
-function badgeOf(run: RunSummary): RunBadgeKind | undefined {
+/**
+ * The row's badge, or none: a fact badge carries the band the runner set,
+ * and the control carries nothing, since all it does is open R2b.
+ */
+function badgeOf(run: RunSummary): { conditions?: SetConditions } | undefined {
   const { conditions } = run;
-  if (conditions?.isSetByYou === true) return { kind: "set", conditions };
+  if (conditions?.isSetByYou === true) return { conditions };
   if (conditions !== undefined || !run.canSetConditions) return undefined;
-  return { kind: "control" };
+  return {};
 }
 
 /**
@@ -385,7 +387,7 @@ function SetBadge({
   conditions,
   units,
 }: Readonly<{
-  conditions: NonNullable<RunSummary["conditions"]>;
+  conditions: SetConditions;
   units: Units;
 }>): JSX.Element {
   return (
