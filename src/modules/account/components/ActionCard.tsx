@@ -5,9 +5,11 @@ import {
   ControlFailureBand,
   FailureBand,
   FormStatus,
+  inFlight,
+  INK_PILL,
   Mono,
   PendingLabel,
-  inFlight,
+  SECONDARY_PILL,
   useControlAction,
 } from "../../../ui";
 import type { ControlAction, ControlFailure } from "../../../ui";
@@ -18,14 +20,12 @@ import type { ControlAction, ControlFailure } from "../../../ui";
  * way out that changes nothing. `Leaving.tsx` and `TermsPrompt.tsx` differ
  * only in what the primary action is and what it asks the runner to read
  * first — everything else here is shared rather than carried twice. So are
- * the two pill styles: "Delete pending" draws them as links
- * (`LogInOrOpen` below), and one class list each serves every control that
- * wears it.
+ * the two pill styles, the ink pill and the hairline pill: "Delete pending"
+ * draws them as links (`LogInOrOpen` below), and one class list each serves
+ * every control that wears it.
  */
-const PRIMARY_PILL =
-  "target inline-flex cursor-pointer items-center justify-center rounded-pill border-none bg-ink px-5 font-bold text-ground no-underline";
-const SECONDARY_PILL =
-  "target inline-flex cursor-pointer items-center justify-center rounded-pill border border-hairline bg-transparent px-5 font-semibold text-ink no-underline";
+const PRIMARY_CLASS = `target ${INK_PILL} no-underline`;
+const SECONDARY_CLASS = `target ${SECONDARY_PILL} no-underline`;
 
 /**
  * Log out's `ControlAction`, the same on every page that offers it beside a
@@ -132,7 +132,7 @@ export function ActionPill({
     <button
       type="button"
       {...inFlight(action.pending)}
-      className={isSecondary ? SECONDARY_PILL : PRIMARY_PILL}
+      className={isSecondary ? SECONDARY_CLASS : PRIMARY_CLASS}
       onClick={() => {
         void action.run();
       }}
@@ -154,10 +154,10 @@ export function ActionPill({
 export function LogInOrOpen(): JSX.Element {
   return (
     <div className="flex flex-wrap items-center gap-4">
-      <Link to="/auth/login" className={PRIMARY_PILL}>
+      <Link to="/auth/login" className={PRIMARY_CLASS}>
         Log in
       </Link>
-      <Link to="/" className={SECONDARY_PILL}>
+      <Link to="/" className={SECONDARY_CLASS}>
         Open dialed.run
       </Link>
     </div>

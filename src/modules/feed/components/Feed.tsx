@@ -7,6 +7,7 @@ import {
   BracketHeadline,
   COLUMN,
   FormStatus,
+  INK_PILL,
   Mono,
   PhoneBell,
 } from "../../../ui";
@@ -280,7 +281,7 @@ function FollowingEmpty({
       <Link
         data-part="primary-action"
         to="/feed/search"
-        className="target inline-flex items-center rounded-pill bg-ink px-6 py-3 text-body font-bold text-ground no-underline"
+        className={`target ${INK_PILL} no-underline`}
       >
         Find a runner
       </Link>

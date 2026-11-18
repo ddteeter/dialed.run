@@ -14,9 +14,8 @@ import {
   worksAtForms,
 } from "../../../lib/contracts/measures";
 import {
-  COLUMN,
-  PHOTO_STILL_ON,
   Bracketed,
+  COLUMN,
   ControlFailureBand,
   FileWell,
   FormStatus,
@@ -24,6 +23,8 @@ import {
   Mono,
   PendingLabel,
   PhoneBell,
+  PHOTO_STILL_ON,
+  SECONDARY_PILL,
   Spoken,
   useControlAction,
   usePhotoPick,
@@ -949,7 +950,7 @@ export function GarmentDetail({
             onClick={() => {
               void bringBack.run();
             }}
-            className="target inline-flex cursor-pointer items-center rounded-pill border border-hairline bg-transparent px-5 py-3 text-body font-semibold text-ink no-underline"
+            className={`target ${SECONDARY_PILL} no-underline`}
           >
             <PendingLabel
               label="Unretire"
@@ -963,7 +964,7 @@ export function GarmentDetail({
               to="/closet/edit/$itemId"
               params={{ itemId }}
               aria-describedby={labelId}
-              className="target inline-flex cursor-pointer items-center rounded-pill border border-hairline bg-transparent px-5 py-3 text-body font-semibold text-ink no-underline"
+              className={`target ${SECONDARY_PILL} no-underline`}
             >
               Edit
             </Link>
@@ -973,7 +974,7 @@ export function GarmentDetail({
               onClick={() => {
                 setConfirming("retire");
               }}
-              className="target inline-flex cursor-pointer items-center rounded-pill border border-hairline bg-transparent px-5 py-3 text-body font-semibold text-ink no-underline"
+              className={`target ${SECONDARY_PILL} no-underline`}
             >
               Retire
             </button>

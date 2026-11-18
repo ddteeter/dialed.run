@@ -194,11 +194,33 @@ const monoRestrictions = [
 ];
 
 /**
+ * A pill control typed by hand (#793; owner, 2026-11-17): `rounded-pill`
+ * with a hit area (`target` or `cursor-pointer`) and a label's weight,
+ * which every ruled kind sets (R58·308) — the ink pill, the hairline pill,
+ * the Desk's chalk and quiet pills, all in `src/ui/form.tsx`. `rounded-pill`
+ * is also the only full-round radius, so chips, badges, avatars, dots and
+ * round icon buttons wear it too; they set no weight and are not pills.
+ * A template is read a quasi at a time, so the three marks have to meet
+ * in one stretch of literal text between `${…}`s to be seen.
+ */
+const handTypedPill = String.raw`^(?=.*(?<![\w-])rounded-pill(?![\w-]))(?=.*(?<![\w-])(?:target|cursor-pointer)(?![\w-]))(?=.*(?<![\w-])font-(?:bold|semibold)(?![\w-]))`;
+const pillMessage =
+  "Use the pill constants from ui (INK_PILL, SECONDARY_PILL, CHALK_PILL, QUIET_PILL) — a hand-typed pill drifts from its kind (R58·308).";
+const pillRestrictions = [
+  { selector: `Literal[value=/${handTypedPill}/]`, message: pillMessage },
+  {
+    selector: `TemplateElement[value.raw=/${handTypedPill}/]`,
+    message: pillMessage,
+  },
+];
+
+/**
  * The groups, by name, for `primitiveExemptions`.
  */
 const primitiveGroups = {
   brackets: bracketRestrictions,
   mono: monoRestrictions,
+  pills: pillRestrictions,
 };
 
 /**
@@ -213,8 +235,9 @@ const primitiveExemptions = {
   "src/ui/BracketHeadline.tsx": ["brackets"],
   // The lockup's brackets are the brand's colour, not notation.
   "src/ui/Wordmark.tsx": ["brackets"],
-  // `PendingWords`: the waiting device's breathing brackets.
-  "src/ui/form.tsx": ["brackets"],
+  // `PendingWords`: the waiting device's breathing brackets; and where the
+  // pill constants are defined.
+  "src/ui/form.tsx": ["brackets", "pills"],
   // The verdict scale's brackets close on the chosen cell: a motion
   // device of their own, hidden from a reader.
   "src/modules/feed/components/VerdictForm.tsx": ["brackets"],
@@ -222,6 +245,23 @@ const primitiveExemptions = {
   "src/modules/email/EmailLayout.tsx": ["brackets"],
   // A satori card is an image: nothing reads its brackets aloud.
   "src/modules/ops/og/cards.tsx": ["brackets"],
+  // Google's own button spec, not one of ours.
+  "src/modules/auth/google-button.tsx": ["pills"],
+  // Pills of no ruled kind yet, until Design 334 rules them (#834); #835
+  // takes these out. The bar's 44 pink pill and the other pink pills:
+  "src/ui/TopBar.tsx": ["pills"],
+  "src/ui/SignedOutFrame.tsx": ["pills"],
+  "src/modules/auth/components/Landing.tsx": ["pills"],
+  "src/modules/feed/components/PublicFrame.tsx": ["pills"],
+  "src/modules/feed/components/OwnProfile.tsx": ["pills"],
+  "src/modules/closet/components/ShadeSheet.tsx": ["pills"],
+  // Follow's three states:
+  "src/modules/feed/components/Follow.tsx": ["pills"],
+  // Ruled exceptions, drawn as their own: A2's ink-edged Change and its
+  // pair on the hi-viz card (R58·308), and AF1's outline-to-filled
+  // audience toggle (R55·171).
+  "src/modules/feed/components/AttachKit.tsx": ["pills"],
+  "src/modules/feed/components/OwnerAudience.tsx": ["pills"],
 };
 
 /**

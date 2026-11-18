@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { JSX } from "react";
 
-import { Sheet, useUnconfirmedRefusal } from "../../../ui";
+import { SECONDARY_PILL, Sheet, useUnconfirmedRefusal } from "../../../ui";
 import type { CountInTotalsChoice } from "../inputs";
 import { TotalsSwitch } from "./TotalsSwitch";
 
@@ -148,7 +148,7 @@ export function PrivateRunLine({
             onClick={() => {
               setIsSheetOpen(false);
             }}
-            className="target cursor-pointer rounded-pill border border-hairline bg-transparent px-6 py-3 text-body font-semibold"
+            className={`target ${SECONDARY_PILL}`}
           >
             Done
           </button>

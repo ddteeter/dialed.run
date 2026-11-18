@@ -5,10 +5,11 @@ import type { JSX } from "react";
 import {
   FailureBand,
   FormStatus,
+  INK_PILL,
   Mono,
   SubmitButton,
-  useFormSubmit,
   type FormShell,
+  useFormSubmit,
 } from "../../../ui";
 import { SignedOutPanel } from "../../../ui/SignedOutPanel";
 import { confirmLinkForm } from "../inputs";
@@ -81,8 +82,7 @@ const TONE_CLASS: Readonly<Record<LandingCopy["tone"], string>> = {
   expired: "text-cold-text",
 };
 
-const ACTION_CLASS =
-  "target inline-flex items-center self-start rounded-pill bg-ink px-5 font-bold text-ground no-underline";
+const ACTION_CLASS = `target ${INK_PILL} no-underline`;
 
 function LandingAction({
   action,

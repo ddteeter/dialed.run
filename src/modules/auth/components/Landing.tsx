@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX, ReactNode } from "react";
 
-import { Layout, Mono, PhoneBell } from "../../../ui";
+import { INK_PILL, Layout, Mono, PhoneBell } from "../../../ui";
 import { SignedOutFrame } from "../../../ui/SignedOutFrame";
 import { signedInAs } from "../signed-in-as";
 
@@ -123,8 +123,7 @@ function Hero({ children }: Readonly<{ children: ReactNode }>): JSX.Element {
  * Signed in, the way on is the ink pill: the bar's pink Log a run is the
  * product's verb, and this is not a second one.
  */
-const GO_TO_FEED_CLASS =
-  "target inline-flex items-center rounded-pill bg-ink px-5 font-bold text-ground no-underline";
+const GO_TO_FEED_CLASS = `target ${INK_PILL} no-underline`;
 
 /**
  * The phone's pink pill: below 720 the bar holds only Log in, so Request

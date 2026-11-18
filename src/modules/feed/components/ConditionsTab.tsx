@@ -16,6 +16,7 @@ import {
   FailureBand,
   FormStatus,
   Mono,
+  SECONDARY_PILL,
   useControlAction,
   WeatherAttribution,
 } from "../../../ui";
@@ -382,10 +383,7 @@ The Call, as the secondary way out of an empty block (hairline, not ink).
 */
 function OpenTheCall() {
   return (
-    <Link
-      to="/call"
-      className="target inline-flex items-center self-start rounded-pill border border-hairline px-5 py-3 text-body font-semibold text-ink no-underline"
-    >
+    <Link to="/call" className={`target ${SECONDARY_PILL} no-underline`}>
       Open the Call
     </Link>
   );

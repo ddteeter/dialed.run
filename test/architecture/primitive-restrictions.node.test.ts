@@ -134,3 +134,60 @@ describe("the mono selectors", () => {
     expect(await messagesIn("src/ui/form.tsx", code)).toStrictEqual([]);
   });
 });
+
+const PILL = /Use the pill constants from ui/u;
+
+describe("the pill selectors", () => {
+  it.each([
+    [
+      "an ink copy",
+      'const a = <button className="target rounded-pill bg-ink px-5 font-bold" />;',
+    ],
+    [
+      "a hairline copy in a const, in another order",
+      'const B = "font-semibold border rounded-pill cursor-pointer px-6";',
+    ],
+    [
+      "a template, in one of its quasis",
+      "const a = <a className={`target rounded-pill font-bold ${b}`} />;",
+    ],
+  ])("say no to %s", async (_kind, code) => {
+    expect(await messagesIn(FEED, code)).toStrictEqual([
+      expect.stringMatching(PILL),
+    ]);
+  });
+
+  it.each([
+    ["the constant", "const a = <button className={`target ${INK_PILL}`} />;"],
+    [
+      "a chip, which sets no weight",
+      'const a = <button className="target rounded-pill px-3 text-quiet" />;',
+    ],
+    [
+      "a badge, which is not a control",
+      'const a = <span className="rounded-pill px-2 font-bold" />;',
+    ],
+    [
+      "a seam's chip",
+      'const a = <a className="target-seam rounded-pill font-semibold" />;',
+    ],
+    [
+      "another radius",
+      'const a = <a className="target rounded-card font-bold" />;',
+    ],
+  ])("leave %s alone", async (_kind, code) => {
+    expect(await messagesIn(FEED, code)).toStrictEqual([]);
+  });
+
+  it("reach the auth module, and spare an exempt file", async () => {
+    const code =
+      'const a = <a className="target rounded-pill bg-ink font-bold" />;';
+    expect(await messagesIn(AUTH, code)).toStrictEqual([]);
+    expect(
+      await messagesIn("src/modules/auth/components/SystemState.tsx", code),
+    ).toStrictEqual([expect.stringMatching(PILL)]);
+    expect(
+      await messagesIn("src/modules/auth/google-button.tsx", code),
+    ).toStrictEqual([]);
+  });
+});

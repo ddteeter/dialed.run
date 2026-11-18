@@ -424,9 +424,6 @@ const PICK_LIST_CLASS: Readonly<Record<PickLayout, string>> = {
   push: "m-0 flex list-none flex-col gap-1 rounded-card border border-hairline bg-panel px-4 py-2",
 };
 
-const SHEET_DONE_CLASS =
-  "target cursor-pointer rounded-pill border border-hairline bg-transparent px-6 py-3 text-body font-semibold";
-
 /**
  * The sheet and the push are one body; what differs is the frame. In the
  * push the title is the page's heading, the checkboxes sit in one card,
@@ -529,13 +526,8 @@ function PickBody({
           Hidden by the filter · {group.hiddenByFilterCount}
         </Mono>
       ) : undefined}
-      {layout === "push" ? (
-        <PushDone onDone={onDone} />
-      ) : (
-        <button type="button" onClick={onDone} className={SHEET_DONE_CLASS}>
-          Done
-        </button>
-      )}
+      {/* The hairline pill in the sheet and on the pushed page alike. */}
+      <PushDone onDone={onDone} />
     </div>
   );
 }

@@ -3,14 +3,13 @@ import { useState } from "react";
 import type { JSX } from "react";
 
 import { newPasswordSchema } from "../../../lib/contracts";
-import { FormStatus, useFormSubmit } from "../../../ui";
+import { FormStatus, INK_PILL, useFormSubmit } from "../../../ui";
 import { SignedOutPanel, SignedOutReceipt } from "../../../ui/SignedOutPanel";
 import { NewPasswordField } from "../../../ui/PasswordField";
 import { ShellForm } from "./ShellForm";
 import { ResetLinkExpired } from "../credentials";
 
-const LINK_CLASS =
-  "target inline-flex items-center self-start rounded-pill bg-ink px-5 font-bold text-ground no-underline";
+const LINK_CLASS = `target ${INK_PILL} no-underline`;
 
 /**
 The run-out panel: a link with no token, or one the server refused.

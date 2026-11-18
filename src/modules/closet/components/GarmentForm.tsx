@@ -39,8 +39,10 @@ import {
   FormFailureBand,
   FormField,
   FormStatus,
+  INK_PILL,
   Mono,
   PhoneBell,
+  PHOTO_STILL_ON,
   Select,
   Spoken,
   SubmitButton,
@@ -48,7 +50,6 @@ import {
   ToggleField,
   useControlAction,
   useFormSubmit,
-  PHOTO_STILL_ON,
   usePhotoPick,
 } from "../../../ui";
 import { photoAcceptAttribute } from "../../../lib/photo-constraints";
@@ -1324,11 +1325,7 @@ function SavedPhotoRefused({
   return (
     <div data-part="saved" className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">{children}</div>
-      <button
-        type="button"
-        onClick={onDone}
-        className="target w-full cursor-pointer rounded-pill border-none bg-ink px-4 py-4 text-lead font-bold text-ground"
-      >
+      <button type="button" onClick={onDone} className={`target ${INK_PILL}`}>
         Done
       </button>
     </div>

@@ -1,6 +1,13 @@
 import { useRef, useState, type ComponentType, type JSX } from "react";
 
-import { FormField, FormStatus, focusOnMount, Icon, Mono } from "../../../ui";
+import {
+  focusOnMount,
+  FormField,
+  FormStatus,
+  Icon,
+  Mono,
+  SECONDARY_PILL,
+} from "../../../ui";
 import {
   plainText,
   sectionsOf,
@@ -304,7 +311,7 @@ function GroupSection({
             press();
             onOpen(group.id);
           }}
-          className="target w-full rounded-pill border border-hairline text-body font-semibold text-ink dark:border-hairline-2"
+          className={`target ${SECONDARY_PILL}`}
         >
           {`Show all ${count}`}
         </button>

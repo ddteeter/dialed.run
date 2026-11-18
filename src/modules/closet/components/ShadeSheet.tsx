@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { JSX } from "react";
 
 import { colorHexSchema } from "../../../lib/contracts";
-import { Mono, Sheet } from "../../../ui";
+import { Mono, SECONDARY_PILL, Sheet } from "../../../ui";
 
 /**
  * Level 2 of design round 11 §AH — the exact shade.
@@ -257,7 +257,7 @@ export function ShadeSheet({
               setHex("");
               onClear();
             }}
-            className="target cursor-pointer rounded-pill border border-hairline bg-transparent px-6 py-3 text-body font-semibold"
+            className={`target ${SECONDARY_PILL}`}
           >
             Clear
           </button>

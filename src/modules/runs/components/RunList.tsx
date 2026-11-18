@@ -11,6 +11,7 @@ import { precipClassOf } from "../../../lib/contracts/temperature";
 import {
   Bracketed,
   GarminAttribution,
+  INK_PILL,
   Mono,
   PendingLabel,
   Spoken,
@@ -65,10 +66,7 @@ export function RunList({
       >
         <Bracketed>No runs yet</Bracketed>
         <p className="m-0 text-body">Upload a file or enter one by hand.</p>
-        <Link
-          to="/runs/new"
-          className="target flex items-center justify-center self-start rounded-pill bg-ink px-5 py-3 font-semibold text-ground no-underline"
-        >
+        <Link to="/runs/new" className={`target ${INK_PILL} no-underline`}>
           Log a run
         </Link>
       </div>
