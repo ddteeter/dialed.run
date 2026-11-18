@@ -576,8 +576,10 @@ flowchart LR
   opening one, so a monitor creates itself (OPS-3). The digest cannot be its
   own dead-man switch — a digest that never runs reports nothing.
 - **Uptime**: free external ping (e.g. UptimeRobot) against `/api/health`,
-  which reports each binding by name, and the Worker version that
-  answered (`version`, from `CF_VERSION_METADATA`), which the deploy's
+  which answers 200 or 503 to anyone and says why only to an operator
+  (design 237): each binding by name, the missing configuration, stopped
+  crons and every deployment value as set or missing. Anyone also gets the
+  Worker version that answered (`version`, from `CF_VERSION_METADATA`), which the deploy's
   smoke test checks (design 186).
 - **Backups**: D1 Time Travel gives 30-day point-in-time restore with zero
   setup — the recovery story is "restore to timestamp", and the two

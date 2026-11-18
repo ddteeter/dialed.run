@@ -1,4 +1,4 @@
-export { checkHealth } from "./health";
+export { healthResponse } from "./health";
 export {
   oweOutbox,
   outboxInsert,

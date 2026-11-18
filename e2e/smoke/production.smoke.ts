@@ -37,7 +37,9 @@ test("the override reaches the uploaded version, and it is healthy", async ({
   // the old code.
   expect(body).toMatchObject({ version: target.versionId });
   expect(response.status()).toBe(200);
-  expect(body).toMatchObject({ ok: true, missing: [], staleCrons: [] });
+  // The smoke account is no operator, so it reads `ok` without the why
+  // (design 237); `ok` is false whenever anything is missing or stale.
+  expect(body).toMatchObject({ ok: true });
 });
 
 test("the signed-out landing renders and hydrates", async ({ page }) => {

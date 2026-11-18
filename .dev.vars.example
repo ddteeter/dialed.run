@@ -45,6 +45,18 @@ PUBLIC_PHOTOS_ORIGIN=
 # STRAVA_WEBHOOK_PATH_SECRET=ci-placeholder-not-a-secret
 # Optional locally; set in prod:
 # SENTRY_DSN=
+# Visual Crossing's weather key (103). Without it every run's weather
+# waits as pending and the runner is offered the manual fallback.
+# VISUAL_CROSSING_API_KEY=
+# Strava OAuth and its push subscription (102, 127). Without them T1 shows
+# "not configured" and every webhook event is dropped.
+# STRAVA_CLIENT_ID=
+# STRAVA_CLIENT_SECRET=
+# STRAVA_WEBHOOK_VERIFY_TOKEN=
+# STRAVA_SUBSCRIPTION_ID=
+# Enrichment's proxy fetch (107), for shops that refuse a Worker. Without
+# it a refusal is a failed fetch and nothing else.
+# FIRECRAWL_API_KEY=
 # Google OAuth (both or neither — the Google button 500s without them):
 # GOOGLE_CLIENT_ID=
 # GOOGLE_CLIENT_SECRET=

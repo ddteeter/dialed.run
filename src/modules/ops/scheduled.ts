@@ -25,6 +25,7 @@ import { retryPendingWeather, timeZoneAt } from "../weather";
 import { cronNameFor, type CronName } from "./crons";
 import type { SpeedFinding } from "./perf-checks";
 import { oweDigestEmail, type DigestMail } from "./digest-email";
+import { checkDeploymentConfig } from "./health";
 import { purgePublicPages } from "./edge-purge";
 import { backUpMedia } from "./media-backup";
 import { checkOutboxBacklog, drainOutbox } from "./outbox";
@@ -952,6 +953,7 @@ export const digestKinds = [
   "account-deletion",
   "speed",
   "media-backup",
+  "config",
 ] as const;
 
 export type DigestKind = (typeof digestKinds)[number];
@@ -1018,6 +1020,12 @@ async function runDailyDigest(
         anomalies,
         { now: nowSeconds() },
       );
+    },
+    // Each deployment value the plan needs that is not set (design 237):
+    // a missed deploy step is named every morning until it is done.
+    config: (anomalies) => {
+      checkDeploymentConfig(anomalies);
+      return Promise.resolve();
     },
   };
   // Threshold checks fill in as their features land:

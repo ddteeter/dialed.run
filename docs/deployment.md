@@ -264,9 +264,10 @@ takes the one slot. Make it `weather-retry`, because the hourly cron
 notices a Worker-wide stop within the hour: under Crons, activate
 `weather-retry` and deactivate whatever else took the slot.
 
-**`/api/health` covers the crons without a monitor** (design 162). It
-names any cron whose `cron_checkpoints` heartbeat is more than two periods
-old in `staleCrons`, and answers 503, so the uptime check pages. A cron
+**`/api/health` covers the crons without a monitor** (design 162). Any
+cron whose `cron_checkpoints` heartbeat is more than two periods old makes
+it answer 503, so the uptime check pages, and its operator report names
+the cron in `staleCrons`. A cron
 that has never run is not stale, so a fresh deployment is healthy before
 its first firing.
 
@@ -416,12 +417,15 @@ needs its own Strava app, not a second subscription.
 
 ## 8. After the first deploy
 
-- `GET /api/health` — reports per-binding status; expect every check `ok`
-  and `staleCrons` empty
-  and `missing` empty. A failure here names the binding, and `missing`
-  names any required var by its own name (today, `BETTER_AUTH_URL` and
-  `UNSUBSCRIBE_SECRET`), which
-  is faster than reading a stack. Either makes it answer 503.
+- `GET /api/health`, **signed in as an operator** (design 237): anyone
+  else gets only `ok`, `version` and `at`, with 200 or 503. Expect every
+  check `ok`, `staleCrons` empty and `missing` empty. A failure here
+  names the binding, and `missing` names a required var by its own name
+  (`BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, `UNSUBSCRIBE_SECRET`), which
+  is faster than reading a stack. Either makes it answer 503. `config`
+  shows every value in the deployment plan's §2 as `set` or `missing`;
+  read it against the stage you are deploying for. The daily digest names
+  the missing ones that are required or needed by a stage.
 - Confirm all four cron triggers are listed under Settings → Triggers.
 - Confirm the six queues show a consumer attached.
 - **Prove Sentry delivers, from a fetch and from a cron**, before relying on
