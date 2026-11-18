@@ -407,7 +407,7 @@ const INDEX_FILE = /\/index\.ts$/u;
  * modules, and the sub-modules inside them. Deepest first, so the first
  * one a path sits under is the unit that owns it.
  */
-function unitFolders(paths: readonly string[]): string[] {
+export function unitFolders(paths: readonly string[]): string[] {
   return paths
     .filter(
       (path) => path.startsWith(MODULES_ROOT) && path.endsWith("/index.ts"),
@@ -425,7 +425,7 @@ function isUnder(path: string, folder: string): boolean {
 /**
 The unit a path belongs to, if it is inside one.
 */
-function owningUnit(
+export function owningUnit(
   path: string,
   units: readonly string[],
 ): string | undefined {
@@ -449,7 +449,7 @@ const WIRING_FILE = /(?:\/functions\.ts|\.tsx)$/u;
  * less about how the modules depend on each other than one its service
  * code makes, so the two are drawn as different arrows.
  */
-function isWiring(path: string): boolean {
+export function isWiring(path: string): boolean {
   return WIRING_FILE.test(path);
 }
 

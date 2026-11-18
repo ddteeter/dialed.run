@@ -1,0 +1,23 @@
+{
+  "fanOut": {
+    "account": 9,
+    "feed": 10,
+    "ops": 8,
+    "safety": 8
+  },
+  "doorWidth": {
+    "safety": 224
+  },
+  "pastDoor": {
+    "account": 5,
+    "auth": 1,
+    "closet": 1,
+    "feed": 1,
+    "runs": 1
+  },
+  "files": {
+    "account": 60,
+    "feed": 96,
+    "safety": 86
+  }
+}
