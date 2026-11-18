@@ -1,0 +1,47 @@
+document
+banner
+link, dialed.run
+dialed.run
+end of link, dialed.run
+navigation, Main
+list
+listitem, level 1, position 1, set size 4
+link, Feed
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+link, Closet
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+link, Call
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+link, You, current item
+end of listitem, level 1, position 4, set size 4
+end of list
+end of navigation, Main
+link, Search runners
+link, Notifications
+button, Log a run
+end of banner
+main
+link, Settings
+Settings
+end of link, Settings
+heading, Username, level 1
+form
+status
+Not changed. You've changed your handle # times in # days. You can change it again on :day, :month #.
+end of status
+Username
+textbox, Username, cap_fourth, # to # letters, numbers or underscores. It's on everything you share.
+# to # letters, numbers or underscores.
+It's on everything you share.
+Not changed
+You've changed your handle # times in # days. You can change it again on :day, :month #.
+button, Save
+Save
+end of button, Save
+end of form
+end of main
+status
+end of document

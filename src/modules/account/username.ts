@@ -28,7 +28,12 @@ import {
   usernameHistory,
 } from "../../db/schema-core";
 import { profileCacheTags, type PurgeTags } from "../../lib/cache-tags";
-import { USERNAME_MAX_LENGTH, usernameSchema } from "../../lib/contracts";
+import {
+  RENAME_CAP,
+  RENAME_WINDOW_DAYS,
+  USERNAME_MAX_LENGTH,
+  usernameSchema,
+} from "../../lib/contracts";
 import { hasRowWhere } from "../../lib/sql/keyed-read";
 import { orSqlNull } from "../../lib/sql/sql-null";
 import { homeZoneOf, type ViewerZone } from "../../lib/dates";
@@ -305,8 +310,7 @@ function notRetiredByAnother(userId: string, handle: string): SQL {
  * claim retires: the batch writes that row into the history before it
  * moves the handle, and it is not one the cap has spent yet.
  */
-export const RENAME_CAP = 3;
-export const RENAME_WINDOW_S = 30 * 24 * 60 * 60;
+export const RENAME_WINDOW_S = RENAME_WINDOW_DAYS * 24 * 60 * 60;
 
 /**
  * The history rows the cap counts against `typed`: the runner's own, not

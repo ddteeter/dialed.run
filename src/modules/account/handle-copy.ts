@@ -5,6 +5,7 @@
  * The shape refusals live in `usernameSchema`'s messages (error copy lives
  * in the schema). This is the one refusal only the server can make.
  */
+import { RENAME_CAP, RENAME_WINDOW_DAYS } from "../../lib/contracts";
 import { proseDayLabel, type ViewerZone } from "../../lib/dates";
 import type { HandleClaim } from "./username";
 
@@ -36,11 +37,11 @@ export const HANDLE_COPY = {
 
 /**
  * Past the rename cap (SA-L02, owner 2026-11-15; R60, #820): `RENAME_CAP`
- * new handles in `RENAME_WINDOW_S`, and the day the next is allowed, on
+ * new handles in `RENAME_WINDOW_DAYS`, and the day the next is allowed, on
  * the runner's clock. A day alone is not marked UTC (owner, 2026-11-05).
  */
 export function tooOftenMessage(until: number, viewer: ViewerZone): string {
-  return `You've changed your handle 3 times in 30 days. You can change it again on ${proseDayLabel(until, viewer.homeZone)}.`;
+  return `You've changed your handle ${String(RENAME_CAP)} times in ${String(RENAME_WINDOW_DAYS)} days. You can change it again on ${proseDayLabel(until, viewer.homeZone)}.`;
 }
 
 /**
