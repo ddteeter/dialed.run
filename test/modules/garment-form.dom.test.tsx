@@ -730,9 +730,18 @@ describe("GarmentForm: no product link for v1 (round 22, item 17)", () => {
     await user.tab();
     expect(screen.queryByText(notALink)).toBeNull();
 
+    // An empty box is no link: leaving it checks nothing, rather than
+    // asking the check about a link that isn't there.
+    const thrown: unknown[] = [];
+    const onError = (event: ErrorEvent): void => {
+      thrown.push(event.error);
+    };
+    globalThis.addEventListener("error", onError);
     await user.clear(link);
     await user.tab();
+    globalThis.removeEventListener("error", onError);
     expect(link).not.toHaveAttribute("aria-invalid");
+    expect(thrown).toStrictEqual([]);
   });
 
   it("puts a denied link's refusal on the link field and keeps every other value", async () => {
