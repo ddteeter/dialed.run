@@ -1,0 +1,87 @@
+name: Diagrams site
+
+# Publishes the LikeC4 model in docs/diagrams/ to GitHub Pages (design 229,
+# step 6): the diagrams only, not the app and not the other docs. Built from
+# main with the likec4 the lockfile pins (`npm run diagrams:site`); nothing
+# rendered is committed.
+#
+# Runs when the model changes on main, when the lockfile does (a likec4
+# bump changes the site), when this file does, and by hand. Not a required
+# check: a failed publish leaves the last site up and blocks no merge.
+#
+# Two jobs, so the token that can publish never meets package code. `build`
+# runs npm ci and likec4 with a read-only token; `deploy` holds
+# `pages: write` and `id-token: write` and runs nothing but deploy-pages on
+# the artifact `build` uploaded.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/diagrams/**"
+      - "package-lock.json"
+      - ".github/workflows/diagrams-pages.yml"
+  workflow_dispatch:
+
+permissions: {}
+
+# One publish at a time, and a running one finishes: Pages does not take
+# two deployments at once, and cancelling one midway can leave it stuck.
+concurrency:
+  group: diagrams-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build the diagrams site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      # Audit first (design 196): reports the hosts this job reaches and
+      # blocks none. It moves to `block` once that list is known and short.
+      - uses: step-security/harden-runner@v2.22.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24
+          check-latest: true
+
+      - run: npm ci
+
+      # The site is served from /<repo>/, so the build is told its base.
+      # Hash routes (`#/view/<id>/`), because Pages serves no fallback page
+      # for a path it has no file for.
+      - name: Build the site
+        env:
+          BASE: /${{ github.event.repository.name }}/
+        run: npm run diagrams:site -- --base "$BASE" -o "$RUNNER_TEMP/site"
+
+      - uses: actions/upload-pages-artifact@v5.0.0
+        with:
+          path: ${{ runner.temp }}/site
+
+  deploy:
+    name: Publish to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: step-security/harden-runner@v2.22.4
+        with:
+          egress-policy: audit
+
+      - id: deployment
+        uses: actions/deploy-pages@v5.0.1

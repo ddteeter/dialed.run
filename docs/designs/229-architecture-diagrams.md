@@ -345,6 +345,38 @@ retries'`). `-- story <flow>` is the comparing reader's copy: every
   `readAudit` over the real model in
   `test/scripts/diagram-model.node.test.ts`.
 
+## Step 6 as built (#805)
+
+- **GitHub Pages from a workflow, not a branch** (owner's grant,
+  2026-11-17). `.github/workflows/diagrams-pages.yml` runs on a push to
+  `main` that touches `docs/diagrams/`, `package-lock.json` (a likec4 bump
+  changes the site) or the workflow itself, and by hand. A `gh-pages`
+  branch would commit rendered output and need `contents: write` and a
+  third-party action; Cloudflare would need a secret; a job in `ci.yml`
+  could not have its own path filter. Not a required check: a failed
+  publish leaves the last site up.
+- **Two jobs, so the publishing token never meets package code.** `build`
+  runs `npm ci` and `npm run diagrams:site` with `contents: read` and
+  uploads the Pages artifact; `deploy` holds `pages: write` and
+  `id-token: write` and runs only `actions/deploy-pages`. The three new
+  GitHub-owned actions are pinned through `actions.lock` (`gh
+actions-lock`). actionlint and zizmor pass. No `cache: npm`: the run is
+  short and a publishing workflow is where cache poisoning matters.
+- **Hash routes.** Pages serves no fallback page, so a path route
+  (`/view/importStory`) would 404 on reload; `--use-hash-history` gives
+  `#/view/<id>/`, which `docs/architecture.md` links. The base path is the
+  repo name. The web component bundle is left out (nothing embeds it).
+- **LikeC4's `robots.txt` disallows indexing**, left as it is: the page is
+  shown to people by link.
+- **Nothing drawn was held back.** The model shows the `auth` module as a
+  box, its import arrows, Google as its OAuth provider and Turnstile as
+  the bot check; nothing of how sign-in, sessions or the gates work. The
+  site shows only what the public `.c4` files already say.
+- **Pages is switched on in the repo's settings** (source: GitHub
+  Actions; the owner's change), which creates the `github-pages`
+  environment, deployable from `main` only. The first publish is a manual
+  run after merge.
+
 ## Open questions
 
 1. **Auth and trust boundaries are not drawn** while the security audit's
