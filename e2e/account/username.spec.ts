@@ -1,6 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 
-import { userProfiles } from "../../src/db/schema-core";
+import { userProfiles, usernameHistory } from "../../src/db/schema-core";
+import { nowSeconds } from "../../src/lib/now";
 import { expect, test } from "../support/a11y";
 import { storageStateFor } from "../support/accounts";
 import { PHONE } from "../support/bars";
@@ -48,5 +49,50 @@ test.describe("a runner with no handle yet", () => {
       "",
     );
     await expect(page.getByRole("button", { name: "Next" })).toBeVisible();
+  });
+});
+
+/**
+ * Past the rename cap (R60, #820): no edit to the field fixes it, so it is
+ * the band above Save, NOT CHANGED with the day, and no Try again.
+ */
+test.describe("a runner who has changed their handle three times this month", () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  const RENAMER = "e2e-rename-cap";
+
+  test("Save is refused in the band above it, naming the day", async ({
+    page,
+  }) => {
+    await signInAsKnownUser(page, RENAMER, "cap_current");
+    await withLocalDb(async ({ core }) => {
+      await core
+        .delete(usernameHistory)
+        .where(eq(usernameHistory.userId, RENAMER));
+      const now = nowSeconds();
+      await core.insert(usernameHistory).values(
+        ["cap_one", "cap_two", "cap_three"].map((username) => ({
+          username,
+          userId: RENAMER,
+          retiredAt: now - 60,
+        })),
+      );
+    });
+
+    await page.goto("/account/username");
+    await hydrated(page);
+    const field = page.getByRole("textbox", { name: "Username" });
+    await field.fill("cap_fourth");
+    await page.getByRole("button", { name: "Save" }).click();
+
+    const band = page.locator("[data-part=failure-band]");
+    await expect(band).toContainText("Not changed");
+    await expect(band).toContainText(
+      /You've changed your handle 3 times in 30 days\. You can change it again on /u,
+    );
+    await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(
+      0,
+    );
+    await expect(field).not.toHaveAttribute("aria-invalid", "true");
   });
 });

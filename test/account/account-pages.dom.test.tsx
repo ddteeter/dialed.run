@@ -1101,6 +1101,8 @@ describe("ChangeEmail (ACC-8)", () => {
     ).toBeVisible();
     // Nothing went, so nothing says it did (task 126 PR B).
     expect(screen.queryByText("Link sent.")).toBeNull();
+    // A refusal with nothing of its own to say leaves the region empty.
+    expect(status().textContent).toBe("");
     // The confirm-first sheet never opens for the hour's limit.
     expect(
       screen.queryByRole("dialog", { name: "Confirm your email first" }),

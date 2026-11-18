@@ -6,6 +6,7 @@
  * in the schema). This is the one refusal only the server can make.
  */
 import { proseDayLabel, type ViewerZone } from "../../lib/dates";
+import type { HandleClaim } from "./username";
 
 export const HANDLE_COPY = {
   label: "Username",
@@ -55,4 +56,25 @@ export function takenMessage(
   return suggestion === undefined
     ? `@${handle} is taken. Try another.`
     : `@${handle} is taken. Try another, like @${suggestion}.`;
+}
+
+/**
+ * The cap's band sentence for a claim the cap refused, or nothing for any
+ * other answer: the band and the status region both read it.
+ */
+export function capRefusal(claim: HandleClaim): string | undefined {
+  return claim.kind === "too_often"
+    ? tooOftenMessage(claim.until, claim.viewer)
+    : undefined;
+}
+
+/**
+ * What the form's status region says for the cap's refusal (rule 08), or
+ * nothing for any other answer.
+ */
+export function capSaid(claim: HandleClaim): string | undefined {
+  const sentence = capRefusal(claim);
+  return sentence === undefined
+    ? undefined
+    : `${HANDLE_COPY.notChanged}. ${sentence}`;
 }

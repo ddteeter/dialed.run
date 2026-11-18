@@ -192,7 +192,8 @@ describe("Next", () => {
     expect(failure?.compareDocumentPosition(next())).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
-    expect(screen.getByRole("status")).toHaveTextContent(
+    // Exactly the band's words: nothing announced as saved.
+    expect(screen.getByRole("status").textContent).toBe(
       `Not changed. ${message}`,
     );
     expect(field()).not.toHaveAttribute("aria-invalid", "true");

@@ -13,7 +13,7 @@ import {
   SubmitButton,
   useFormSubmit,
 } from "../../../ui";
-import { HANDLE_COPY, takenMessage, tooOftenMessage } from "../handle-copy";
+import { capRefusal, capSaid, HANDLE_COPY, takenMessage } from "../handle-copy";
 import type { HandleClaim } from "../username";
 
 /**
@@ -137,6 +137,7 @@ export function HandleForm({
     refusal: {
       matches: (result) => result.kind === "too_often",
       answer: settle,
+      said: capSaid,
     },
     carry,
     // No summary labels: the summary appears only for two or more failing
@@ -155,10 +156,7 @@ export function HandleForm({
   }
 
   const error = form.fieldErrors.username;
-  const capped =
-    limited?.kind === "too_often"
-      ? tooOftenMessage(limited.until, limited.viewer)
-      : undefined;
+  const capped = limited === undefined ? undefined : capRefusal(limited);
   const hint = (
     <HandleHint isRuleOnly={isRuleOnly} isSettings={carry === "settings"} />
   );
@@ -171,13 +169,7 @@ export function HandleForm({
       className="flex flex-col gap-6"
       onSubmit={submitTyped}
     >
-      {/* The screen's one region (rule 08) says the cap's band too: a
-      refusal announces nothing of its own. */}
-      <FormStatus>
-        {capped === undefined
-          ? form.status
-          : `${HANDLE_COPY.notChanged}. ${capped}`}
-      </FormStatus>
+      <FormStatus>{form.status}</FormStatus>
       <FormField
         name="username"
         label={HANDLE_COPY.label}
