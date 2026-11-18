@@ -259,7 +259,12 @@ function wrapExpect(prototype: object): void {
   );
 }
 
-function wrapActions(page: Page): void {
+/**
+ * Wraps the page, locator, keyboard and mouse prototypes, once per worker.
+ * A fixture that runs before this one and keeps a page method of its own
+ * (`demo.ts`'s `goto`) calls it first, so what it keeps is the wrapped one.
+ */
+export function wrapActions(page: Page): void {
   if (worker.isWrapped) return;
   worker.isWrapped = true;
   wrapExpect(Object.getPrototypeOf(page.locator("html")) as object);
