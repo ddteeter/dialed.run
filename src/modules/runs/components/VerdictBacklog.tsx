@@ -711,7 +711,7 @@ function BacklogTable({
                             {" · "}
                           </span>
                         </Mono>
-                        <span className="relative min-w-0 desk:hidden">
+                        <span className="relative flex min-w-0 desk:hidden">
                           {/* The board's dot, unheard, as a measured
                             line's own separators are. */}
                           <Mono step="sm" className={RUN_DOT}>

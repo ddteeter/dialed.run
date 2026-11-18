@@ -823,7 +823,14 @@ describe("VerdictBacklog: what each state is drawn as", () => {
     expect(spacer).toHaveClass("invisible", "whitespace-pre", "desk:hidden");
     // The conditions carry the seen dot just left of themselves, so a
     // wrap puts it outside the line, where the line clips it.
-    expect(conditions).toHaveClass("relative", "min-w-0", "desk:hidden");
+    // A flex box, so the mono line sets its height: an inline box took
+    // the body's taller line and sat the conditions low.
+    expect(conditions).toHaveClass(
+      "relative",
+      "flex",
+      "min-w-0",
+      "desk:hidden",
+    );
     const dot = conditions?.firstElementChild;
     expect(dot).toHaveClass(
       "text-mono-sm",
