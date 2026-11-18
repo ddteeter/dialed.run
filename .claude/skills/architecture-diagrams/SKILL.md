@@ -229,11 +229,17 @@ A reviewer watches the change instead of reading `.c4`.
 through LikeC4's API, and records every view that is new or differs:
 its hash (what it draws, labels and descriptions included) or its steps'
 notes, which the hash does not cover. Each view is shown whole, then a
-story is walked step by step: a changed step is held long enough to read,
-and an unchanged one for a beat. A view with a frame plays in the
-sequence layout, which is the only one that draws frames. The decisions
-are in `scripts/diagrams/record.ts`; skill `pr-ready` says when to run it
-and how to attach `diagrams.demo.mp4`.
+story is walked step by step. It is captioned and narrated with the PR
+demo's voice (`e2e/support/speech.ts`; `DEMO_VOICE` picks a hosted engine,
+as for a demo). The opening says the view's title and how many steps
+changed. A new or changed step speaks its label and its whole note, and is
+held until the line is said and long enough to read; an unchanged one is
+silent, a beat. **What a step says is its label and note**, so write them
+to be heard as well as read: a note's `**` and backticks are dropped and
+its paragraphs run together. A view with a frame plays in the sequence
+layout, which is the only one that draws frames. The decisions are in
+`scripts/diagrams/record.ts`; skill `pr-ready` says when to run it and
+how to attach `diagrams.demo.mp4`.
 
 ## The published site
 

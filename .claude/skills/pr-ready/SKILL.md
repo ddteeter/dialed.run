@@ -41,11 +41,13 @@ description: Use before opening a pull request in dialed.run, before pushing a b
    **If `docs/diagrams/` changed** (by hand or by `diagrams:generate`),
    run `npm run diagrams:record`. It records every view that differs
    from the merge base, walking each story step by step with captions
-   that say which steps changed, and writes `diagrams.demo.mp4` at the
-   repo root. Watch it, then attach it
+   that say which steps changed and a voice that reads each changed
+   step's label and note (the demo's voice, design 229 #851), and
+   writes `diagrams.demo.mp4` at the repo root. Watch it with the sound
+   on, then attach it
    when you ship (§Pushing). It prints the views it recorded and any the
    branch removed; a removed view cannot be shown, so name it under
-   **"Diagrams"**. It needs ffmpeg, as the demo does. When it says no
+   **"Diagrams"**. It needs ffmpeg and macOS, as the demo does. When it says no
    view changed (a comment or formatting edit), there is nothing to
    attach.
 8. **Run** `npm run verify && npm test && npm run diagrams:check && npm run build`. `build` is a gate:

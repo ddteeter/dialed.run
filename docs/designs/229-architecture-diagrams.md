@@ -266,7 +266,8 @@ registries.
 - **A framed view plays in the sequence layout**, the only one that draws
   frames: one whose computed `flow` holds anything but a bare step, or
   that declares `variant sequence`.
-- **Captions, no voice.** The strip is the PR demo's
+- **Captions, no voice** (superseded: the video is narrated since #851,
+  below). The strip is the PR demo's
   (`e2e/support/caption.ts`); `muxArgs` now takes a scene with no spoken
   line. The frame is the demo's desk size, 1280×720.
 - **Beside the demo, not joined.** `ship --attach` is already repeatable,
@@ -376,6 +377,49 @@ actions-lock`). actionlint and zizmor pass. No `cache: npm`: the run is
   Actions; the owner's change), which creates the `github-pages`
   environment, deployable from `main` only. The first publish is a manual
   run after merge.
+
+## #851 as built: the diagram video is narrated
+
+Supersedes step 4's "Captions, no voice". The owner wants these videos
+narrated the way PR demos are (2026-11-17), and the near-copy step 4 made
+of the demo's mux removed in the same change.
+
+- **What is spoken (owner, 2026-11-18): a changed step's label and its
+  whole note.** A note can be all that changed (the hash misses it), so a
+  label alone would speak the old words over a new note. The note's `**`
+  and backticks are dropped and its paragraphs run together; the label
+  becomes a sentence. The opening says "New view:" or "Changed:", the
+  view's title, and the step count or the change summary the caption
+  shows. An unchanged step is silent, a 1 s beat. Offered and declined:
+  the label only (17 s of speech for a new `importStory`, against 101 s),
+  and the label plus the note's bold lead-ins (38 s). A PR that edits a
+  step or two adds 10 to 25 s.
+- **Each shot holds until its line is said:** the longer of step 4's
+  planned hold and the line plus its tail. Every line is rendered before
+  filming (`spokenLines`, then `voicedPlan`), so a first rendering never
+  stalls the take, and the printed length is the voiced one. Review pace,
+  the demo's 280 wpm.
+- **One copy of the voice and the strip.** `e2e/support/speech.ts`
+  renders and caches a line (`speaker`, with `say`, `afinfo`, `security`
+  and the network passed in as `SpeechTools`), moved out of the demo
+  fixture `demo.ts`, which kept `voiced`, `hosted` and `keyFor` private.
+  `e2e/support/caption-strip.ts` renders the caption PNGs for both muxes
+  (the font's data URL and the caption loop), and `ffmpegPath` in
+  `caption.ts` is the one ffmpeg lookup. `Cue.audio` is optional and
+  `Scene` is derived from `Cue`, so the recorder has no `Cue` of its own,
+  and its frame is the demo's `DESK` (`e2e/support/bars.ts`).
+  `scripts/diagrams/record.ts` uses the speaker's `SpokenLine` type.
+- **The narration's shared code joined the mutation ratchet** (owner,
+  2026-11-18): one entry for `caption.ts`, `caption-strip.ts`,
+  `speech.ts`, `voice.ts` and `scripts/diagrams/record.ts`. Before this,
+  e2e/ and scripts/ were under no positive glob, so the push gate
+  mutated none of them. Tests: `test/e2e-support/speech.node.test.ts` and
+  `caption-strip.node.test.ts` (the `node` project: they write files),
+  `ffmpegPath` in `caption.test.ts`, and `stepLine`, `spokenLines` and
+  `voicedPlan` in `test/scripts/diagram-record.test.ts`. The glue
+  (`demo.ts`, `demo-mux.ts`, `scripts/diagram-record.ts`) stays outside it.
+- `playwright.config.ts` still writes the demo's 1280×720 out three times
+  rather than reading `DESK`; this change left it alone.
 
 ## Open questions
 

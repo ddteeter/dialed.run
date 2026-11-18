@@ -122,7 +122,10 @@ The voice is the Mac's system voice (System Settings → Accessibility →
 Spoken Content), through bare `say` at 280 wpm. Rendered lines are cached
 in `node_modules/.cache/demo-voice`, so the first recording of a new line
 holds a little longer before it and later ones do not. macOS only, and
-`ffmpeg` must be installed (Homebrew).
+`ffmpeg` must be installed (Homebrew). The rendering is
+`e2e/support/speech.ts`, which the diagram video (`npm run
+diagrams:record`) speaks through too, so a change to the voice changes
+both.
 
 ## Record
 
