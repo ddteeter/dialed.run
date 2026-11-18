@@ -262,7 +262,7 @@ describe("the public kit, signed out", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("gives THE KIT with a linked piece opening its product in a new tab, and no caption (D-167)", async () => {
+  it("gives THE KIT with a linked piece opening its product in the same tab, and no caption (D-167)", async () => {
     await show(kitPage(KIT));
 
     expect(document.querySelector('[data-part="caption"]')).toBeNull();
@@ -271,8 +271,8 @@ describe("the public kit, signed out", () => {
     ).toBeVisible();
     const linked = link("Tracksmith Brighton Base Layer");
     expect(linked).toHaveAttribute("href", "https://tracksmith.com/brighton");
-    expect(linked).toHaveAttribute("target", "_blank");
-    expect(linked).toHaveAttribute("rel", "ugc nofollow noopener");
+    expect(linked).not.toHaveAttribute("target");
+    expect(linked).toHaveAttribute("rel", "ugc nofollow");
     expect(screen.getByText("tracksmith.com")).toBeVisible();
     // Unlinked is plain, in ink.
     expect(screen.getByText("Old black beanie").tagName).toBe("SPAN");

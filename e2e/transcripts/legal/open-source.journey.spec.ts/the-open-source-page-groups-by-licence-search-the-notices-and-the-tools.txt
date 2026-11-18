@@ -135,26 +135,18 @@ paragraph
 DISCLAIMER THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM OTHER DEALINGS IN THE FONT SOFTWARE.
 end of paragraph
 end of group
+heading, Projects, level 3
 list
 listitem, level 1, position 1, set size 3
-Archivo
-link, Project: Archivo
-Project
-end of link, Project: Archivo
+link, Archivo
 © # The Archivo Project Authors
 end of listitem, level 1, position 1, set size 3
 listitem, level 1, position 2, set size 3
-Archivo Black
-link, Project: Archivo Black
-Project
-end of link, Project: Archivo Black
+link, Archivo Black
 © # The Archivo Black Project Authors
 end of listitem, level 1, position 2, set size 3
 listitem, level 1, position 3, set size 3
-IBM Plex Mono
-link, Project: IBM Plex Mono
-Project
-end of link, Project: IBM Plex Mono
+link, IBM Plex Mono
 © # IBM Corp. with Reserved Font Name "Plex"
 end of listitem, level 1, position 3, set size 3
 end of list
@@ -174,388 +166,245 @@ paragraph
 THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 end of paragraph
 end of group
+heading, Projects, level 3
 list
 listitem, level 1, position 1, set size 116
-@better-auth/core
+link, @better-auth/core
 #.#.#
-link, Project: @better-auth/core
-Project
-end of link, Project: @better-auth/core
 © # - present, Bereket Engida
 end of listitem, level 1, position 1, set size 116
 listitem, level 1, position 2, set size 116
-@better-auth/drizzle-adapter
+link, @better-auth/drizzle-adapter
 #.#.#
-link, Project: @better-auth/drizzle-adapter
-Project
-end of link, Project: @better-auth/drizzle-adapter
 © # - present, Bereket Engida
 end of listitem, level 1, position 2, set size 116
 listitem, level 1, position 3, set size 116
-@better-auth/kysely-adapter
+link, @better-auth/kysely-adapter
 #.#.#
-link, Project: @better-auth/kysely-adapter
-Project
-end of link, Project: @better-auth/kysely-adapter
 © # - present, Bereket Engida
 end of listitem, level 1, position 3, set size 116
 listitem, level 1, position 4, set size 116
-@better-auth/memory-adapter
+link, @better-auth/memory-adapter
 #.#.#
-link, Project: @better-auth/memory-adapter
-Project
-end of link, Project: @better-auth/memory-adapter
 © # - present, Bereket Engida
 end of listitem, level 1, position 4, set size 116
 listitem, level 1, position 5, set size 116
-@better-auth/telemetry
+link, @better-auth/telemetry
 #.#.#
-link, Project: @better-auth/telemetry
-Project
-end of link, Project: @better-auth/telemetry
 © # - present, Bereket Engida
 end of listitem, level 1, position 5, set size 116
 listitem, level 1, position 6, set size 116
-@better-auth/utils
+link, @better-auth/utils
 #.#.#
-link, Project: @better-auth/utils
-Project
-end of link, Project: @better-auth/utils
 © # - present, Bereket Engida
 end of listitem, level 1, position 6, set size 116
 listitem, level 1, position 7, set size 116
-@better-fetch/fetch
+link, @better-fetch/fetch
 #.#.#
-link, Project: @better-fetch/fetch
-Project
-end of link, Project: @better-fetch/fetch
 © Bereket Engida
 end of listitem, level 1, position 7, set size 116
 listitem, level 1, position 8, set size 116
-@cf-wasm/internals
+link, @cf-wasm/internals
 #.#.#
-link, Project: @cf-wasm/internals
-Project
-end of link, Project: @cf-wasm/internals
 © #-present Deo Kumar
 end of listitem, level 1, position 8, set size 116
 listitem, level 1, position 9, set size 116
-@cf-wasm/og
+link, @cf-wasm/og
 #.#.#
-link, Project: @cf-wasm/og
-Project
-end of link, Project: @cf-wasm/og
 © #-present Deo Kumar
 end of listitem, level 1, position 9, set size 116
 listitem, level 1, position 10, set size 116
-@cloudflare/unenv-preset
+link, @cloudflare/unenv-preset
 #.#.#
-link, Project: @cloudflare/unenv-preset
-Project
-end of link, Project: @cloudflare/unenv-preset
 end of listitem, level 1, position 10, set size 116
 listitem, level 1, position 11, set size 116
-@noble/ciphers
+link, @noble/ciphers
 #.#.#
-link, Project: @noble/ciphers
-Project
-end of link, Project: @noble/ciphers
 © # Paul Miller; # Thomas Pornin
 end of listitem, level 1, position 11, set size 116
 listitem, level 1, position 12, set size 116
-@noble/hashes
+link, @noble/hashes
 #.#.#
-link, Project: @noble/hashes
-Project
-end of link, Project: @noble/hashes
 © # Paul Miller
 end of listitem, level 1, position 12, set size 116
 listitem, level 1, position 13, set size 116
-@nodable/entities
+link, @nodable/entities
 #.#.#
-link, Project: @nodable/entities
-Project
-end of link, Project: @nodable/entities
 © Amit Gupta
 end of listitem, level 1, position 13, set size 116
 listitem, level 1, position 14, set size 116
-@react-email/body
+link, @react-email/body
 #.#.#
-link, Project: @react-email/body
-Project
-end of link, Project: @react-email/body
 © # Plus Five Five, Inc
 end of listitem, level 1, position 14, set size 116
 listitem, level 1, position 15, set size 116
-@react-email/button
+link, @react-email/button
 #.#.#
-link, Project: @react-email/button
-Project
-end of link, Project: @react-email/button
 © # Plus Five Five, Inc
 end of listitem, level 1, position 15, set size 116
 listitem, level 1, position 16, set size 116
-@react-email/container
+link, @react-email/container
 #.#.#
-link, Project: @react-email/container
-Project
-end of link, Project: @react-email/container
 © # Plus Five Five, Inc
 end of listitem, level 1, position 16, set size 116
 listitem, level 1, position 17, set size 116
-@react-email/head
+link, @react-email/head
 #.#.#
-link, Project: @react-email/head
-Project
-end of link, Project: @react-email/head
 © # Plus Five Five, Inc
 end of listitem, level 1, position 17, set size 116
 listitem, level 1, position 18, set size 116
-@react-email/hr
+link, @react-email/hr
 #.#.#
-link, Project: @react-email/hr
-Project
-end of link, Project: @react-email/hr
 © # Plus Five Five, Inc
 end of listitem, level 1, position 18, set size 116
 listitem, level 1, position 19, set size 116
-@react-email/html
+link, @react-email/html
 #.#.#
-link, Project: @react-email/html
-Project
-end of link, Project: @react-email/html
 © # Plus Five Five, Inc
 end of listitem, level 1, position 19, set size 116
 listitem, level 1, position 20, set size 116
-@react-email/link
+link, @react-email/link
 #.#.#
-link, Project: @react-email/link
-Project
-end of link, Project: @react-email/link
 © # Plus Five Five, Inc
 end of listitem, level 1, position 20, set size 116
 listitem, level 1, position 21, set size 116
-@react-email/preview
+link, @react-email/preview
 #.#.#
-link, Project: @react-email/preview
-Project
-end of link, Project: @react-email/preview
 © # Plus Five Five, Inc
 end of listitem, level 1, position 21, set size 116
 listitem, level 1, position 22, set size 116
-@react-email/text
+link, @react-email/text
 #.#.#
-link, Project: @react-email/text
-Project
-end of link, Project: @react-email/text
 © # Plus Five Five, Inc
 end of listitem, level 1, position 22, set size 116
 listitem, level 1, position 23, set size 116
-@selderee/plugin-htmlparser#
+link, @selderee/plugin-htmlparser#
 #.#.#
-link, Project: @selderee/plugin-htmlparser#
-Project
-end of link, Project: @selderee/plugin-htmlparser#
 © #-# KillyMXI
 end of listitem, level 1, position 23, set size 116
 listitem, level 1, position 24, set size 116
-@sentry/core
+link, @sentry/core
 #.#.#
-link, Project: @sentry/core
-Project
-end of link, Project: @sentry/core
 © #-# Functional Software, Inc. dba Sentry
 end of listitem, level 1, position 24, set size 116
 listitem, level 1, position 25, set size 116
-@sentry/utils
+link, @sentry/utils
 #.#.#
-link, Project: @sentry/utils
-Project
-end of link, Project: @sentry/utils
 © #-# Functional Software, Inc. dba Sentry
 end of listitem, level 1, position 25, set size 116
 listitem, level 1, position 26, set size 116
-@shuding/opentype.js
+link, @shuding/opentype.js
 #.#.#-beta.#
-link, Project: @shuding/opentype.js
-Project
-end of link, Project: @shuding/opentype.js
 © # Frederik De Bleser
 end of listitem, level 1, position 26, set size 116
 listitem, level 1, position 27, set size 116
-@tanstack/history
+link, @tanstack/history
 #.#.#
-link, Project: @tanstack/history
-Project
-end of link, Project: @tanstack/history
 © #-present Tanner Linsley
 end of listitem, level 1, position 27, set size 116
 listitem, level 1, position 28, set size 116
-@tanstack/query-core
+link, @tanstack/query-core
 #.#.#
-link, Project: @tanstack/query-core
-Project
-end of link, Project: @tanstack/query-core
 © #-present Tanner Linsley
 end of listitem, level 1, position 28, set size 116
 listitem, level 1, position 29, set size 116
-@tanstack/react-query
+link, @tanstack/react-query
 #.#.#
-link, Project: @tanstack/react-query
-Project
-end of link, Project: @tanstack/react-query
 © #-present Tanner Linsley
 end of listitem, level 1, position 29, set size 116
 listitem, level 1, position 30, set size 116
-@tanstack/react-router
+link, @tanstack/react-router
 #.#.#
-link, Project: @tanstack/react-router
-Project
-end of link, Project: @tanstack/react-router
 © #-present Tanner Linsley
 end of listitem, level 1, position 30, set size 116
 listitem, level 1, position 31, set size 116
-@tanstack/react-start
+link, @tanstack/react-start
 #.#.#
-link, Project: @tanstack/react-start
-Project
-end of link, Project: @tanstack/react-start
 © #-present Tanner Linsley
 end of listitem, level 1, position 31, set size 116
 listitem, level 1, position 32, set size 116
-@tanstack/react-start-client
+link, @tanstack/react-start-client
 #.#.#
-link, Project: @tanstack/react-start-client
-Project
-end of link, Project: @tanstack/react-start-client
 © #-present Tanner Linsley
 end of listitem, level 1, position 32, set size 116
 listitem, level 1, position 33, set size 116
-@tanstack/react-start-server
+link, @tanstack/react-start-server
 #.#.#
-link, Project: @tanstack/react-start-server
-Project
-end of link, Project: @tanstack/react-start-server
 © #-present Tanner Linsley
 end of listitem, level 1, position 33, set size 116
 listitem, level 1, position 34, set size 116
-@tanstack/react-store
+link, @tanstack/react-store
 #.#.#
-link, Project: @tanstack/react-store
-Project
-end of link, Project: @tanstack/react-store
 © # Tanner Linsley
 end of listitem, level 1, position 34, set size 116
 listitem, level 1, position 35, set size 116
-@tanstack/router-core
+link, @tanstack/router-core
 #.#.#
-link, Project: @tanstack/router-core
-Project
-end of link, Project: @tanstack/router-core
 © #-present Tanner Linsley
 end of listitem, level 1, position 35, set size 116
 listitem, level 1, position 36, set size 116
-@tanstack/start-client-core
+link, @tanstack/start-client-core
 #.#.#
-link, Project: @tanstack/start-client-core
-Project
-end of link, Project: @tanstack/start-client-core
 © #-present Tanner Linsley
 end of listitem, level 1, position 36, set size 116
 listitem, level 1, position 37, set size 116
-@tanstack/start-server-core
+link, @tanstack/start-server-core
 #.#.#
-link, Project: @tanstack/start-server-core
-Project
-end of link, Project: @tanstack/start-server-core
 © #-present Tanner Linsley
 end of listitem, level 1, position 37, set size 116
 listitem, level 1, position 38, set size 116
-@tanstack/start-storage-context
+link, @tanstack/start-storage-context
 #.#.#
-link, Project: @tanstack/start-storage-context
-Project
-end of link, Project: @tanstack/start-storage-context
 © #-present Tanner Linsley
 end of listitem, level 1, position 38, set size 116
 listitem, level 1, position 39, set size 116
-@tanstack/store
+link, @tanstack/store
 #.#.#
-link, Project: @tanstack/store
-Project
-end of link, Project: @tanstack/store
 © # Tanner Linsley
 end of listitem, level 1, position 39, set size 116
 listitem, level 1, position 40, set size 116
-anynum
+link, anynum
 #.#.#
-link, Project: anynum
-Project
-end of link, Project: anynum
 © # Natural Intelligence
 end of listitem, level 1, position 40, set size 116
 listitem, level 1, position 41, set size 116
-base#-js
+link, base#-js
 #.#.#
-link, Project: base#-js
-Project
-end of link, Project: base#-js
 © #
 end of listitem, level 1, position 41, set size 116
 listitem, level 1, position 42, set size 116
-better-auth
+link, better-auth
 #.#.#
-link, Project: better-auth
-Project
-end of link, Project: better-auth
 © # - present, Bereket Engida
 end of listitem, level 1, position 42, set size 116
 listitem, level 1, position 43, set size 116
-better-call
+link, better-call
 #.#.#
-link, Project: better-call
-Project
-end of link, Project: better-call
 © # Bereket Engida
 end of listitem, level 1, position 43, set size 116
 listitem, level 1, position 44, set size 116
-camelize
+link, camelize
 #.#.#
-link, Project: camelize
-Project
-end of link, Project: camelize
 © James Halliday
 end of listitem, level 1, position 44, set size 116
 listitem, level 1, position 45, set size 116
-character-entities
+link, character-entities
 #.#.#
-link, Project: character-entities
-Project
-end of link, Project: character-entities
 © # Titus Wormer
 end of listitem, level 1, position 45, set size 116
 listitem, level 1, position 46, set size 116
-client-zip
+link, client-zip
 #.#.#
-link, Project: client-zip
-Project
-end of link, Project: client-zip
 © # David Junger
 end of listitem, level 1, position 46, set size 116
 listitem, level 1, position 47, set size 116
-color-name
+link, color-name
 #.#.#
-link, Project: color-name
-Project
-end of link, Project: color-name
 © # Dmitry Ivanov
 end of listitem, level 1, position 47, set size 116
 listitem, level 1, position 48, set size 116
-cookie-es
+link, cookie-es
 #.#.#
-link, Project: cookie-es
-Project
-end of link, Project: cookie-es
 © #-# Roman Shtylman; # Douglas Christopher Wilson; # Nathan Friedly
 group
 Licence: cookie-es
@@ -582,11 +431,8 @@ end of paragraph
 end of group
 end of listitem, level 1, position 48, set size 116
 listitem, level 1, position 49, set size 116
-css-background-parser
+link, css-background-parser
 #.#.#
-link, Project: css-background-parser
-Project
-end of link, Project: css-background-parser
 © # Gilmore Davidson
 end of listitem, level 1, position 49, set size 116
 listitem, level 1, position 50, set size 116
@@ -600,75 +446,48 @@ css-gradient-parser
 © # Lynnnnnnxx
 end of listitem, level 1, position 51, set size 116
 listitem, level 1, position 52, set size 116
-css-to-react-native
+link, css-to-react-native
 #.#.#
-link, Project: css-to-react-native
-Project
-end of link, Project: css-to-react-native
 © # Jacob Parker and Maximilian Stoiber
 end of listitem, level 1, position 52, set size 116
 listitem, level 1, position 53, set size 116
-decode-named-character-reference
+link, decode-named-character-reference
 #.#.#
-link, Project: decode-named-character-reference
-Project
-end of link, Project: decode-named-character-reference
 © Titus Wormer
 end of listitem, level 1, position 53, set size 116
 listitem, level 1, position 54, set size 116
-defu
+link, defu
 #.#.#
-link, Project: defu
-Project
-end of link, Project: defu
 © Pooya Parsa
 end of listitem, level 1, position 54, set size 116
 listitem, level 1, position 55, set size 116
-devlop
+link, devlop
 #.#.#
-link, Project: devlop
-Project
-end of link, Project: devlop
 © # Titus Wormer
 end of listitem, level 1, position 55, set size 116
 listitem, level 1, position 56, set size 116
-dom-serializer
+link, dom-serializer
 #.#.#
-link, Project: dom-serializer
-Project
-end of link, Project: dom-serializer
 © # The cheeriojs contributors
 end of listitem, level 1, position 56, set size 116
 listitem, level 1, position 57, set size 116
-escape-html
+link, escape-html
 #.#.#
-link, Project: escape-html
-Project
-end of link, Project: escape-html
 © #-# TJ Holowaychuk; # Andreas Lubbe; # Tiancheng "Timothy" Gu
 end of listitem, level 1, position 57, set size 116
 listitem, level 1, position 58, set size 116
-fast-xml-parser
+link, fast-xml-parser
 #.#.#
-link, Project: fast-xml-parser
-Project
-end of link, Project: fast-xml-parser
 © # Amit Kumar Gupta
 end of listitem, level 1, position 58, set size 116
 listitem, level 1, position 59, set size 116
-hex-rgb
+link, hex-rgb
 #.#.#
-link, Project: hex-rgb
-Project
-end of link, Project: hex-rgb
 © Sindre Sorhus
 end of listitem, level 1, position 59, set size 116
 listitem, level 1, position 60, set size 116
-html-to-text
+link, html-to-text
 #.#.#
-link, Project: html-to-text
-Project
-end of link, Project: html-to-text
 © Malte Legenhausen
 group
 Licence: html-to-text
@@ -689,347 +508,218 @@ end of paragraph
 end of group
 end of listitem, level 1, position 60, set size 116
 listitem, level 1, position 61, set size 116
-htmlparser#
+link, htmlparser#
 #.#.#
-link, Project: htmlparser#
-Project
-end of link, Project: htmlparser#
 © #, #, Chris Winberry . All rights reserved
 end of listitem, level 1, position 61, set size 116
 listitem, level 1, position 62, set size 116
-htmlparser#
+link, htmlparser#
 #.#.#
-link, Project: htmlparser#
-Project
-end of link, Project: htmlparser#
 © #, #, Chris Winberry . All rights reserved
 end of listitem, level 1, position 62, set size 116
 listitem, level 1, position 63, set size 116
-ipaddr.js
+link, ipaddr.js
 #.#.#
-link, Project: ipaddr.js
-Project
-end of link, Project: ipaddr.js
 © #-# whitequark
 end of listitem, level 1, position 63, set size 116
 listitem, level 1, position 64, set size 116
-is-unsafe
+link, is-unsafe
 #.#.#
-link, Project: is-unsafe
-Project
-end of link, Project: is-unsafe
 © # Natural Intelligence
 end of listitem, level 1, position 64, set size 116
 listitem, level 1, position 65, set size 116
-jose
+link, jose
 #.#.#
-link, Project: jose
-Project
-end of link, Project: jose
 © # Filip Skokan
 end of listitem, level 1, position 65, set size 116
 listitem, level 1, position 66, set size 116
-kysely
+link, kysely
 #.#.#
-link, Project: kysely
-Project
-end of link, Project: kysely
 © # Sami Koskimäki
 end of listitem, level 1, position 66, set size 116
 listitem, level 1, position 67, set size 116
-layerr
+link, layerr
 #.#.#
-link, Project: layerr
-Project
-end of link, Project: layerr
 © # Perry Mitchell
 end of listitem, level 1, position 67, set size 116
 listitem, level 1, position 68, set size 116
-leac
+link, leac
 #.#.#
-link, Project: leac
-Project
-end of link, Project: leac
 © #-# KillyMXI
 end of listitem, level 1, position 68, set size 116
 listitem, level 1, position 69, set size 116
-linebreak
+link, linebreak
 #.#.#
-link, Project: linebreak
-Project
-end of link, Project: linebreak
 © #-present Devon Govett
 end of listitem, level 1, position 69, set size 116
 listitem, level 1, position 70, set size 116
-mdast-util-from-markdown
+link, mdast-util-from-markdown
 #.#.#
-link, Project: mdast-util-from-markdown
-Project
-end of link, Project: mdast-util-from-markdown
 © Titus Wormer
 end of listitem, level 1, position 70, set size 116
 listitem, level 1, position 71, set size 116
-mdast-util-gfm-table
+link, mdast-util-gfm-table
 #.#.#
-link, Project: mdast-util-gfm-table
-Project
-end of link, Project: mdast-util-gfm-table
 © Titus Wormer
 end of listitem, level 1, position 71, set size 116
 listitem, level 1, position 72, set size 116
-mdast-util-to-string
+link, mdast-util-to-string
 #.#.#
-link, Project: mdast-util-to-string
-Project
-end of link, Project: mdast-util-to-string
 © # Titus Wormer
 end of listitem, level 1, position 72, set size 116
 listitem, level 1, position 73, set size 116
-micromark
+link, micromark
 #.#.#
-link, Project: micromark
-Project
-end of link, Project: micromark
 © Titus Wormer
 end of listitem, level 1, position 73, set size 116
 listitem, level 1, position 74, set size 116
-micromark-core-commonmark
+link, micromark-core-commonmark
 #.#.#
-link, Project: micromark-core-commonmark
-Project
-end of link, Project: micromark-core-commonmark
 © Titus Wormer
 end of listitem, level 1, position 74, set size 116
 listitem, level 1, position 75, set size 116
-micromark-extension-gfm-table
+link, micromark-extension-gfm-table
 #.#.#
-link, Project: micromark-extension-gfm-table
-Project
-end of link, Project: micromark-extension-gfm-table
 © Titus Wormer
 end of listitem, level 1, position 75, set size 116
 listitem, level 1, position 76, set size 116
-micromark-factory-destination
+link, micromark-factory-destination
 #.#.#
-link, Project: micromark-factory-destination
-Project
-end of link, Project: micromark-factory-destination
 © Titus Wormer
 end of listitem, level 1, position 76, set size 116
 listitem, level 1, position 77, set size 116
-micromark-factory-label
+link, micromark-factory-label
 #.#.#
-link, Project: micromark-factory-label
-Project
-end of link, Project: micromark-factory-label
 © Titus Wormer
 end of listitem, level 1, position 77, set size 116
 listitem, level 1, position 78, set size 116
-micromark-factory-space
+link, micromark-factory-space
 #.#.#
-link, Project: micromark-factory-space
-Project
-end of link, Project: micromark-factory-space
 © Titus Wormer
 end of listitem, level 1, position 78, set size 116
 listitem, level 1, position 79, set size 116
-micromark-factory-title
+link, micromark-factory-title
 #.#.#
-link, Project: micromark-factory-title
-Project
-end of link, Project: micromark-factory-title
 © Titus Wormer
 end of listitem, level 1, position 79, set size 116
 listitem, level 1, position 80, set size 116
-micromark-factory-whitespace
+link, micromark-factory-whitespace
 #.#.#
-link, Project: micromark-factory-whitespace
-Project
-end of link, Project: micromark-factory-whitespace
 © Titus Wormer
 end of listitem, level 1, position 80, set size 116
 listitem, level 1, position 81, set size 116
-micromark-util-character
+link, micromark-util-character
 #.#.#
-link, Project: micromark-util-character
-Project
-end of link, Project: micromark-util-character
 © Titus Wormer
 end of listitem, level 1, position 81, set size 116
 listitem, level 1, position 82, set size 116
-micromark-util-chunked
+link, micromark-util-chunked
 #.#.#
-link, Project: micromark-util-chunked
-Project
-end of link, Project: micromark-util-chunked
 © Titus Wormer
 end of listitem, level 1, position 82, set size 116
 listitem, level 1, position 83, set size 116
-micromark-util-classify-character
+link, micromark-util-classify-character
 #.#.#
-link, Project: micromark-util-classify-character
-Project
-end of link, Project: micromark-util-classify-character
 © Titus Wormer
 end of listitem, level 1, position 83, set size 116
 listitem, level 1, position 84, set size 116
-micromark-util-combine-extensions
+link, micromark-util-combine-extensions
 #.#.#
-link, Project: micromark-util-combine-extensions
-Project
-end of link, Project: micromark-util-combine-extensions
 © Titus Wormer
 end of listitem, level 1, position 84, set size 116
 listitem, level 1, position 85, set size 116
-micromark-util-decode-numeric-character-reference
+link, micromark-util-decode-numeric-character-reference
 #.#.#
-link, Project: micromark-util-decode-numeric-character-reference
-Project
-end of link, Project: micromark-util-decode-numeric-character-reference
 © Titus Wormer
 end of listitem, level 1, position 85, set size 116
 listitem, level 1, position 86, set size 116
-micromark-util-decode-string
+link, micromark-util-decode-string
 #.#.#
-link, Project: micromark-util-decode-string
-Project
-end of link, Project: micromark-util-decode-string
 © Titus Wormer
 end of listitem, level 1, position 86, set size 116
 listitem, level 1, position 87, set size 116
-micromark-util-edit-map
+link, micromark-util-edit-map
 #.#.#
-link, Project: micromark-util-edit-map
-Project
-end of link, Project: micromark-util-edit-map
 © Titus Wormer
 end of listitem, level 1, position 87, set size 116
 listitem, level 1, position 88, set size 116
-micromark-util-html-tag-name
+link, micromark-util-html-tag-name
 #.#.#
-link, Project: micromark-util-html-tag-name
-Project
-end of link, Project: micromark-util-html-tag-name
 © Titus Wormer
 end of listitem, level 1, position 88, set size 116
 listitem, level 1, position 89, set size 116
-micromark-util-normalize-identifier
+link, micromark-util-normalize-identifier
 #.#.#
-link, Project: micromark-util-normalize-identifier
-Project
-end of link, Project: micromark-util-normalize-identifier
 © Titus Wormer
 end of listitem, level 1, position 89, set size 116
 listitem, level 1, position 90, set size 116
-micromark-util-resolve-all
+link, micromark-util-resolve-all
 #.#.#
-link, Project: micromark-util-resolve-all
-Project
-end of link, Project: micromark-util-resolve-all
 © Titus Wormer
 end of listitem, level 1, position 90, set size 116
 listitem, level 1, position 91, set size 116
-micromark-util-subtokenize
+link, micromark-util-subtokenize
 #.#.#
-link, Project: micromark-util-subtokenize
-Project
-end of link, Project: micromark-util-subtokenize
 © Titus Wormer
 end of listitem, level 1, position 91, set size 116
 listitem, level 1, position 92, set size 116
-nanostores
+link, nanostores
 #.#.#
-link, Project: nanostores
-Project
-end of link, Project: nanostores
 © # Andrey Sitnik
 end of listitem, level 1, position 92, set size 116
 listitem, level 1, position 93, set size 116
-parse-css-color
+link, parse-css-color
 #.#.#
-link, Project: parse-css-color
-Project
-end of link, Project: parse-css-color
 © Noel Delgado (pixelia.me)
 end of listitem, level 1, position 93, set size 116
 listitem, level 1, position 94, set size 116
-parseley
+link, parseley
 #.#.#
-link, Project: parseley
-Project
-end of link, Project: parseley
 © #-# KillyMXI
 end of listitem, level 1, position 94, set size 116
 listitem, level 1, position 95, set size 116
-path-expression-matcher
+link, path-expression-matcher
 #.#.#
-link, Project: path-expression-matcher
-Project
-end of link, Project: path-expression-matcher
 © #
 end of listitem, level 1, position 95, set size 116
 listitem, level 1, position 96, set size 116
-peberminta
+link, peberminta
 #.#.#
-link, Project: peberminta
-Project
-end of link, Project: peberminta
 © #-# KillyMXI
 end of listitem, level 1, position 96, set size 116
 listitem, level 1, position 97, set size 116
-postcss-value-parser
+link, postcss-value-parser
 #.#.#
-link, Project: postcss-value-parser
-Project
-end of link, Project: postcss-value-parser
 © Bogdan Chadkin
 end of listitem, level 1, position 97, set size 116
 listitem, level 1, position 98, set size 116
-react
+link, react
 #.#.#
-link, Project: react
-Project
-end of link, Project: react
 © Meta Platforms, Inc. and affiliates
 end of listitem, level 1, position 98, set size 116
 listitem, level 1, position 99, set size 116
-react-dom
+link, react-dom
 #.#.#
-link, Project: react-dom
-Project
-end of link, Project: react-dom
 © Meta Platforms, Inc. and affiliates
 end of listitem, level 1, position 99, set size 116
 listitem, level 1, position 100, set size 116
-rou#
+link, rou#
 #.#.#
-link, Project: rou#
-Project
-end of link, Project: rou#
 © Pooya Parsa
 end of listitem, level 1, position 100, set size 116
 listitem, level 1, position 101, set size 116
-scheduler
+link, scheduler
 #.#.#
-link, Project: scheduler
-Project
-end of link, Project: scheduler
 © Meta Platforms, Inc. and affiliates
 end of listitem, level 1, position 101, set size 116
 listitem, level 1, position 102, set size 116
-selderee
+link, selderee
 #.#.#
-link, Project: selderee
-Project
-end of link, Project: selderee
 © #-# KillyMXI
 end of listitem, level 1, position 102, set size 116
 listitem, level 1, position 103, set size 116
-seroval
+link, seroval
 #.#.#
-link, Project: seroval
-Project
-end of link, Project: seroval
 © # Alexis Munsayac
 group
 Licence: seroval
@@ -1047,11 +737,8 @@ end of paragraph
 end of group
 end of listitem, level 1, position 103, set size 116
 listitem, level 1, position 104, set size 116
-seroval-plugins
+link, seroval-plugins
 #.#.#
-link, Project: seroval-plugins
-Project
-end of link, Project: seroval-plugins
 © # Alexis Munsayac
 group
 Licence: seroval-plugins
@@ -1069,99 +756,63 @@ end of paragraph
 end of group
 end of listitem, level 1, position 104, set size 116
 listitem, level 1, position 105, set size 116
-strnum
+link, strnum
 #.#.#
-link, Project: strnum
-Project
-end of link, Project: strnum
 © # Natural Intelligence
 end of listitem, level 1, position 105, set size 116
 listitem, level 1, position 106, set size 116
-tailwindcss
+link, tailwindcss
 #.#.#
-link, Project: tailwindcss
-Project
-end of link, Project: tailwindcss
 © Tailwind Labs, Inc
 end of listitem, level 1, position 106, set size 116
 listitem, level 1, position 107, set size 116
-tiny-inflate
+link, tiny-inflate
 #.#.#
-link, Project: tiny-inflate
-Project
-end of link, Project: tiny-inflate
 © #-present Devon Govett
 end of listitem, level 1, position 107, set size 116
 listitem, level 1, position 108, set size 116
-toucan-js
+link, toucan-js
 #.#.#
-link, Project: toucan-js
-Project
-end of link, Project: toucan-js
 © # Robert Cepa
 end of listitem, level 1, position 108, set size 116
 listitem, level 1, position 109, set size 116
-ulidx
+link, ulidx
 #.#.#
-link, Project: ulidx
-Project
-end of link, Project: ulidx
 © # Perry Mitchell
 end of listitem, level 1, position 109, set size 116
 listitem, level 1, position 110, set size 116
-unenv
+link, unenv
 #.#.#-rc.#
-link, Project: unenv
-Project
-end of link, Project: unenv
 © Pooya Parsa
 end of listitem, level 1, position 110, set size 116
 listitem, level 1, position 111, set size 116
-unicode-trie
+link, unicode-trie
 #.#.#
-link, Project: unicode-trie
-Project
-end of link, Project: unicode-trie
 © #
 end of listitem, level 1, position 111, set size 116
 listitem, level 1, position 112, set size 116
-unist-util-stringify-position
+link, unist-util-stringify-position
 #.#.#
-link, Project: unist-util-stringify-position
-Project
-end of link, Project: unist-util-stringify-position
 © # Titus Wormer
 end of listitem, level 1, position 112, set size 116
 listitem, level 1, position 113, set size 116
-use-sync-external-store
+link, use-sync-external-store
 #.#.#
-link, Project: use-sync-external-store
-Project
-end of link, Project: use-sync-external-store
 © Meta Platforms, Inc. and affiliates
 end of listitem, level 1, position 113, set size 116
 listitem, level 1, position 114, set size 116
-validator
+link, validator
 #.#.#
-link, Project: validator
-Project
-end of link, Project: validator
 © # Chris O'Hara
 end of listitem, level 1, position 114, set size 116
 listitem, level 1, position 115, set size 116
-xml-naming
+link, xml-naming
 #.#.#
-link, Project: xml-naming
-Project
-end of link, Project: xml-naming
 © # Natural Intelligence
 end of listitem, level 1, position 115, set size 116
 listitem, level 1, position 116, set size 116
-zod
+link, zod
 #.#.#
-link, Project: zod
-Project
-end of link, Project: zod
 © # Colin McDonnell
 end of listitem, level 1, position 116, set size 116
 end of list
@@ -1187,29 +838,21 @@ paragraph
 THIS IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 end of paragraph
 end of group
+heading, Projects, level 3
 list
 listitem, level 1, position 1, set size 3
-domelementtype
+link, domelementtype
 #.#.#
-link, Project: domelementtype
-Project
-end of link, Project: domelementtype
 © Felix Böhm
 end of listitem, level 1, position 1, set size 3
 listitem, level 1, position 2, set size 3
-domhandler
+link, domhandler
 #.#.#
-link, Project: domhandler
-Project
-end of link, Project: domhandler
 © Felix Böhm
 end of listitem, level 1, position 2, set size 3
 listitem, level 1, position 3, set size 3
-entities
+link, entities
 #.#.#
-link, Project: entities
-Project
-end of link, Project: entities
 © Felix Böhm
 end of listitem, level 1, position 3, set size 3
 end of list
@@ -1317,13 +960,11 @@ paragraph
 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 end of paragraph
 end of group
+heading, Projects, level 3
 list
 listitem, level 1, position 1, set size 3
-@cf-wasm/photon
+link, @cf-wasm/photon
 #.#.#
-link, Project: @cf-wasm/photon
-Project
-end of link, Project: @cf-wasm/photon
 © #, Silvia O'Dwyer
 end of listitem, level 1, position 1, set size 3
 listitem, level 1, position 2, set size 3
@@ -1331,11 +972,8 @@ listitem, level 1, position 2, set size 3
 #.#.#
 end of listitem, level 1, position 2, set size 3
 listitem, level 1, position 3, set size 3
-drizzle-orm
+link, drizzle-orm
 #.#.#
-link, Project: drizzle-orm
-Project
-end of link, Project: drizzle-orm
 © Drizzle Team
 end of listitem, level 1, position 3, set size 3
 end of list
@@ -1499,3 +1137,365 @@ end of paragraph
 paragraph
 You may not remove or alter the substance of any license notices (including copyright notices, patent notices, disclaimers of warranty, or limitations of liability) contained within the Source Code Form of the Covered Software, except that You may alter any license notices to the extent required to remedy known factual inaccuracies.
 end of paragraph
+paragraph
+#.#. Application of Additional Terms
+end of paragraph
+paragraph
+You may choose to offer, and to charge a fee for, warranty, support, indemnity or liability obligations to one or more recipients of Covered Software. However, You may do so only on Your own behalf, and not on behalf of any Contributor. You must make it absolutely clear that any such warranty, support, indemnity, or liability obligation is offered by You alone, and You hereby agree to indemnify every Contributor for any liability incurred by such Contributor as a result of warranty, support, indemnity or liability terms You offer. You may include additional disclaimers of warranty and limitations of liability specific to any jurisdiction.
+end of paragraph
+paragraph
+#. Inability to Comply Due to Statute or Regulation
+end of paragraph
+paragraph
+If it is impossible for You to comply with any of the terms of this License with respect to some or all of the Covered Software due to statute, judicial order, or regulation then You must: (a) comply with the terms of this License to the maximum extent possible; and (b) describe the limitations and the code they affect. Such description must be placed in a text file included with all distributions of the Covered Software under this License. Except to the extent prohibited by statute or regulation, such description must be sufficiently detailed for a recipient of ordinary skill to be able to understand it.
+end of paragraph
+paragraph
+#. Termination
+end of paragraph
+paragraph
+#.#. The rights granted under this License will terminate automatically if You fail to comply with any of its terms. However, if You become compliant, then the rights granted under this License from a particular Contributor are reinstated (a) provisionally, unless and until such Contributor explicitly and finally terminates Your grants, and (b) on an ongoing basis, if such Contributor fails to notify You of the non-compliance by some reasonable means prior to # days after You have come back into compliance. Moreover, Your grants from a particular Contributor are reinstated on an ongoing basis if such Contributor notifies You of the non-compliance by some reasonable means, this is the first time You have received notice of non-compliance with this License from such Contributor, and You become compliant prior to # days after Your receipt of the notice.
+end of paragraph
+paragraph
+#.#. If You initiate litigation against any entity by asserting a patent infringement claim (excluding declaratory judgment actions, counter-claims, and cross-claims) alleging that a Contributor Version directly or indirectly infringes any patent, then the rights granted to You by any and all Contributors for the Covered Software under Section
+end of paragraph
+paragraph
+#.# of this License shall terminate.
+end of paragraph
+paragraph
+#.#. In the event of termination under Sections #.# or #.# above, all end user license agreements (excluding distributors and resellers) which have been validly granted by You or Your distributors under this License prior to termination shall survive termination.
+end of paragraph
+paragraph
+* *
+end of paragraph
+paragraph
+* #. Disclaimer of Warranty *
+end of paragraph
+paragraph
+* ------------------------- *
+end of paragraph
+paragraph
+* *
+end of paragraph
+paragraph
+* Covered Software is provided under this License on an "as is" *
+end of paragraph
+paragraph
+* basis, without warranty of any kind, either expressed, implied, or *
+end of paragraph
+paragraph
+* statutory, including, without limitation, warranties that the *
+end of paragraph
+paragraph
+* Covered Software is free of defects, merchantable, fit for a *
+end of paragraph
+paragraph
+* particular purpose or non-infringing. The entire risk as to the *
+end of paragraph
+paragraph
+* quality and performance of the Covered Software is with You. *
+end of paragraph
+paragraph
+* Should any Covered Software prove defective in any respect, You *
+end of paragraph
+paragraph
+* (not any Contributor) assume the cost of any necessary servicing, *
+end of paragraph
+paragraph
+* repair, or correction. This disclaimer of warranty constitutes an *
+end of paragraph
+paragraph
+* essential part of this License. No use of any Covered Software is *
+end of paragraph
+paragraph
+* authorized under this License except under this disclaimer. *
+end of paragraph
+paragraph
+* *
+end of paragraph
+paragraph
+* *
+end of paragraph
+paragraph
+* #. Limitation of Liability *
+end of paragraph
+paragraph
+* -------------------------- *
+end of paragraph
+paragraph
+* *
+end of paragraph
+paragraph
+* Under no circumstances and under no legal theory, whether tort *
+end of paragraph
+paragraph
+* (including negligence), contract, or otherwise, shall any *
+end of paragraph
+paragraph
+* Contributor, or anyone who distributes Covered Software as *
+end of paragraph
+paragraph
+* permitted above, be liable to You for any direct, indirect, *
+end of paragraph
+paragraph
+* special, incidental, or consequential damages of any character *
+end of paragraph
+paragraph
+* including, without limitation, damages for lost profits, loss of *
+end of paragraph
+paragraph
+* goodwill, work stoppage, computer failure or malfunction, or any *
+end of paragraph
+paragraph
+* and all other commercial damages or losses, even if such party *
+end of paragraph
+paragraph
+* shall have been informed of the possibility of such damages. This *
+end of paragraph
+paragraph
+* limitation of liability shall not apply to liability for death or *
+end of paragraph
+paragraph
+* personal injury resulting from such party's negligence to the *
+end of paragraph
+paragraph
+* extent applicable law prohibits such limitation. Some *
+end of paragraph
+paragraph
+* jurisdictions do not allow the exclusion or limitation of *
+end of paragraph
+paragraph
+* incidental or consequential damages, so this exclusion and *
+end of paragraph
+paragraph
+* limitation may not apply to You. *
+end of paragraph
+paragraph
+* *
+end of paragraph
+paragraph
+#. Litigation
+end of paragraph
+paragraph
+Any litigation relating to this License may be brought only in the courts of a jurisdiction where the defendant maintains its principal place of business and such litigation shall be governed by laws of that jurisdiction, without reference to its conflict-of-law provisions. Nothing in this Section shall prevent a party's ability to bring cross-claims or counter-claims.
+end of paragraph
+paragraph
+#. Miscellaneous
+end of paragraph
+paragraph
+This License represents the complete agreement concerning the subject matter hereof. If any provision of this License is held to be unenforceable, such provision shall be reformed only to the extent necessary to make it enforceable. Any law or regulation which provides that the language of a contract shall be construed against the drafter shall not be used to construe this License against a Contributor.
+end of paragraph
+paragraph
+#. Versions of the License
+end of paragraph
+paragraph
+#.#. New Versions
+end of paragraph
+paragraph
+Mozilla Foundation is the license steward. Except as provided in Section #.#, no one other than the license steward has the right to modify or publish new versions of this License. Each version will be given a distinguishing version number.
+end of paragraph
+paragraph
+#.#. Effect of New Versions
+end of paragraph
+paragraph
+You may distribute the Covered Software under the terms of the version of the License under which You originally received the Covered Software, or under the terms of any subsequent version published by the license steward.
+end of paragraph
+paragraph
+#.#. Modified Versions
+end of paragraph
+paragraph
+If you create software not governed by this License, and you want to create a new license for such software, you may create and use a modified version of this License if you rename the license and remove any references to the name of the license steward (except to note that such modified license differs from this License).
+end of paragraph
+paragraph
+#.#. Distributing Source Code Form that is Incompatible With Secondary Licenses
+end of paragraph
+paragraph
+If You choose to distribute Source Code Form that is Incompatible With Secondary Licenses under the terms of this version of the License, the notice described in Exhibit B of this License must be attached.
+end of paragraph
+paragraph
+Exhibit A - Source Code Form License Notice
+end of paragraph
+paragraph
+This Source Code Form is subject to the terms of the Mozilla Public License, v. #.#. If a copy of the MPL was not distributed with this file, You can obtain one at <http://mozilla.org/MPL/#.#/>.
+end of paragraph
+paragraph
+If it is not possible or desirable to put the notice in a particular file, then You may include the notice in a location (such as a LICENSE file in a relevant directory) where a recipient would be likely to look for such a notice.
+end of paragraph
+paragraph
+You may add additional accurate notices of copyright ownership.
+end of paragraph
+paragraph
+Exhibit B - "Incompatible With Secondary Licenses" Notice
+end of paragraph
+paragraph
+This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. #.#.
+end of paragraph
+end of group
+heading, Projects, level 3
+list
+listitem, level 1, position 1, set size 3
+link, @cf-wasm/resvg
+#.#.#
+© yisibl
+end of listitem, level 1, position 1, set size 3
+listitem, level 1, position 2, set size 3
+link, @cf-wasm/satori
+#.#.#
+© Shu Ding
+end of listitem, level 1, position 2, set size 3
+listitem, level 1, position 3, set size 3
+link, @resvg/resvg-wasm
+#.#.#
+end of listitem, level 1, position 3, set size 3
+end of list
+button, Show all #
+end of region, MPL-#.#
+region, @garmin/fitsdk licence
+heading, @garmin/fitsdk licence, level 2
+#
+group
+Read the licence text
+paragraph
+This Flexible and Interoperable Data Transfer (FIT) Protocol License Agreement (this "Agreement") is a binding agreement between Garmin International, Inc. and its affiliates (collectively, "Garmin") and the person or entity using the Licensed Technology (each, a "Licensee" or "you"). As used in this Agreement, the "Licensed Technology" means Garmin's Flexible and Interoperable Data Transfer ("FIT") software development kit ("SDK") that includes documentation describing the FIT protocol and related source code files.
+end of paragraph
+paragraph
+PLEASE READ THIS AGREEMENT CAREFULLY BEFORE USING THE LICENSED TECHNOLOGY. BY USING THE LICENSED TECHNOLOGY, YOU SIGNIFY YOUR AGREEMENT TO THESE TERMS AND REPRESENT AND WARRANT THAT: (A) YOU ARE OF LEGAL AGE TO ENTER INTO THIS AGREEMENT; AND (B), IF LICENSEE IS A CORPORATION, GOVERNMENTAL ORGANIZATION, OR OTHER LEGAL ENTITY, YOU HAVE THE RIGHT, POWER, AND AUTHORITY TO ENTER INTO THIS AGREEMENT ON BEHALF OF LICENSEE AND BIND LICENSEE TO ITS TERMS. IF YOU DO NOT AGREE TO THE TERMS OF THIS AGREEMENT, GARMIN WILL NOT AND DOES NOT LICENSE THE LICENSED TECHNOLOGY TO YOU, AND YOU MUST NOT USE THE LICENSED TECHNOLOGY AND MUST DELETE ALL COPIES OF THE LICENSED TECHNOLOGY.
+end of paragraph
+paragraph
+#. Grant and Scope.
+end of paragraph
+paragraph
+Subject to and conditioned upon Licensee's strict compliance with all terms and conditions set forth in this Agreement, Garmin hereby grants to Licensee a non-exclusive, royalty-free, non-transferable, non-sublicensable, limited license to use the Licensed Technology for Licensee's internal business purposes, including to use the FIT protocol in any software created by Licensee and to create modifications of the Licensed Technology ("Modifications") subject to the restrictions in Section #. The Licensed Technology is licensed, not sold, to Licensee by Garmin and Licensee does not have or obtain any ownership interest in the Licensed Technology, or in any related intellectual property rights. Garmin reserves all rights not expressly granted to Licensee in this Agreement.
+end of paragraph
+paragraph
+#. Use Restrictions.
+end of paragraph
+paragraph
+Licensee shall not, and shall not permit any third party to, directly or indirectly:
+end of paragraph
+paragraph
+a. remove, delete, efface, alter, obscure, translate, combine, supplement or otherwise change any trademarks or proprietary marks, notices, or symbols relating to the Licensed Technology;
+end of paragraph
+paragraph
+b. use the Licensed Technology in any manner or for any purpose that infringes, misappropriates, or otherwise violates any intellectual property right or other right of any person or entity;
+end of paragraph
+paragraph
+c. except as set forth herein, rent, lease, lend, sell, sublicense, assign, distribute, publish, transfer or otherwise make available the Licensed Technology, or any features or functionality of the Licensed Technology, to any third party for any reason;
+end of paragraph
+paragraph
+d. distribute the Licensed Technology or any derivatives thereof so that any part of it becomes subject to any license that requires that the Licensed Technology or any of Garmin's other intellectual property be disclosed or distributed in source code form, or that others have the right to modify it;
+end of paragraph
+paragraph
+e. use the Licensed Technology in violation of any law, regulation or rule;
+end of paragraph
+paragraph
+f. use the Licensed Technology for purposes of benchmarking or a competitive analysis of the Licensed Technology;
+end of paragraph
+paragraph
+g. use the Licensed Technology in or in connection with the design, construction, maintenance, operation, or use of any hazardous environments, systems or applications, any safety response systems or other safety-critical applications or any other use or application in which the use or failure of the Licensed Technology could lead to personal injury or physical or property damage; or
+end of paragraph
+paragraph
+h. fail to comply with all definitions and provisions in the FIT protocol or deviate from the standards as defined in the FIT protocol and related documentation.
+end of paragraph
+paragraph
+#. Interoperability and Compatibility.
+end of paragraph
+paragraph
+Licensee agrees to maintain the features within the Licensed Technology that provide for interoperability between systems and compatibility with previous and future release versions of the FIT protocol. Any Modifications are permissible only if the interoperability of the FIT protocol is maintained.
+end of paragraph
+paragraph
+#. Confidentiality.
+end of paragraph
+paragraph
+In connection with this Agreement, Garmin may disclose or make available Confidential Information to Licensee. "Confidential Information" means information in any form or medium (whether oral, written, electronic or other) that: (a) if disclosed in writing or other tangible form or medium, is marked "confidential" or "proprietary"; or (b) if disclosed orally or in another intangible form or medium, is identified by Garmin as confidential or proprietary when disclosed and later summarized and marked "confidential" or "proprietary" in writing by Garmin. Without limiting the foregoing, the Licensed Technology is Confidential Information of Garmin.
+end of paragraph
+paragraph
+Confidential Information does not include information that Licensee can demonstrate by written or other documentary records: (#) was rightfully known to Licensee without restriction on use or disclosure prior to such information being disclosed or made available to Licensee in connection with this Agreement;
+end of paragraph
+paragraph
+(#) was or becomes generally known by the public other than by Licensee's noncompliance with this Agreement; (#) was or is received by Licensee on a non-confidential basis from a third party that was not or is not under any obligation to maintain its confidentiality; or (#) was independently developed by Licensee without reference to or use of any Confidential Information.
+end of paragraph
+paragraph
+Licensee shall: (A) not access or use Confidential Information other than as necessary to exercise its rights or perform its obligations under and in accordance with this Agreement; (B) safeguard the Confidential Information from unauthorized use, access or disclosure using at least the degree of care it uses to protect its sensitive information and in no event less than a reasonable degree of care; and (C) promptly notify Garmin of any unauthorized use or disclosure of Confidential Information and take all reasonable steps to prevent further unauthorized use or disclosure. If Licensee is compelled by applicable law to disclose any Confidential Information then, to the extent permitted by applicable law, Licensee will: (i) promptly, and prior to such disclosure, notify Garmin in writing of such requirement so that Garmin can, at Garmin's option, seek a protective order or other remedy or waive its rights under this paragraph; and (ii), at Garmin's expense, provide reasonable assistance to Garmin in opposing such disclosure or seeking a protective order or other limitations on disclosure. Subject to the preceding sentence, Licensee will disclose only that portion of the Confidential Information that, on the advice of legal counsel, Licensee is legally required to disclose and, on Garmin's request, will use commercially reasonable efforts to obtain assurances from the applicable court or other presiding authority that such Confidential Information will be afforded confidential treatment.
+end of paragraph
+paragraph
+#. License to Feedback and Modifications. If you provide any Feedback to Garmin or if you create any Modifications: (a) you grant to Garmin a worldwide, non-exclusive, royalty-free, transferable, sublicensable, perpetual and irrevocable license to use and otherwise exploit such Feedback or Modifications in connection with any Garmin products, applications and services; (b) Garmin shall be free to use, disclose, reproduce, distribute and otherwise commercialize all Feedback that you provide or Modifications you create without obligation or restriction of any kind on account of intellectual property rights or otherwise; (c) you waive all rights to be compensated or seek compensation for your Feedback or Modifications; and
+end of paragraph
+paragraph
+(d) Feedback or Modifications, even if marked confidential, shall not create any confidentiality obligations on Garmin.
+end of paragraph
+paragraph
+#. No Warranties. LICENSEE AGREES THAT THE USE OF THE LICENSED TECHNOLOGY IS PROVIDED "AS IS", WITHOUT TECHNICAL SUPPORT FROM GARMIN AND WITH ALL FAULTS AND DEFECTS WITHOUT WARRANTY OF ANY KIND. GARMIN MAKES NO CONDITIONS, WARRANTIES OR REPRESENTATIONS ABOUT THE SUITABILITY, RELIABILITY, USABILITY, SECURITY, QUALITY, CAPACITY, PERFORMANCE, AVAILABILITY, TIMELINESS OR ACCURACY OF THE LICENSED TECHNOLOGY AND OR ANY OTHER PRODUCTS OR SERVICES OR INFORMATION SUPPLIED UNDER THIS AGREEMENT. GARMIN EXPRESSLY DISCLAIMS ALL CONDITIONS, WARRANTIES AND REPRESENTATIONS, EXPRESS, IMPLIED OR STATUTORY INCLUDING, BUT NOT LIMITED TO, IMPLIED CONDITIONS OR WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, DURABILITY, TITLE AND NON-INFRINGEMENT, WHETHER ARISING BY USAGE OF TRADE, COURSE OF DEALING, COURSE OF PERFORMANCE OR OTHERWISE. WITHOUT LIMITING THE FOREGOING, GARMIN MAKES NO WARRANTY OF ANY KIND THAT THE LICENSED TECHNOLOGY, OR ANY PRODUCTS OR RESULTS OF THE USE THEREOF, WILL MEET LICENSEE'S OR OTHER PERSONS' REQUIREMENTS, OPERATE WITHOUT INTERRUPTION, ACHIEVE ANY INTENDED RESULT, BE COMPATIBLE OR WORK WITH ANY SOFTWARE, SYSTEMS, OR OTHER SERVICES, OR BE SECURE, ACCURATE, COMPLETE, FREE OF HARMFUL CODE OR ERROR FREE.
+end of paragraph
+paragraph
+#. Indemnification; Licensee's Responsibility.
+end of paragraph
+paragraph
+Licensee agrees to indemnify and hold harmless Garmin and its officers, directors, shareholders, managers, members, partners, employees, agents, subcontractors, successors and assigns for all losses, damages, deficiencies, claims, actions, judgments, settlements, interest, awards, penalties, fines, costs or expenses of whatever kind, including reasonable attorneys' fees and the costs of enforcing any right to indemnification hereunder, arising out of or related to (a) Licensee's breach of this Agreement, (b) Licensee's use of the Licensed Technology or (c) Modifications or Licensee's services, designs and/or products that are related to the Licensee's use of the Licensed Technology. Licensee is responsible and liable for all uses of the Licensed Technology through access thereto provided or enabled by Licensee, directly or indirectly.
+end of paragraph
+paragraph
+#. Limitation of Liability.
+end of paragraph
+paragraph
+TO THE MAXIMUM EXTENT PERMITTED UNDER APPLICABLE LAW, IN NO EVENT WILL GARMIN, OR ANY OF ITS LICENSORS, SERVICE PROVIDERS OR SUPPLIERS, BE LIABLE UNDER OR IN CONNECTION WITH THIS AGREEMENT OR ITS SUBJECT MATTER UNDER ANY LEGAL OR EQUITABLE THEORY, INCLUDING BREACH OF CONTRACT, TORT (INCLUDING NEGLIGENCE), STRICT LIABILITY OR OTHERWISE, FOR ANY (A) INCREASED COSTS, DIMINUTION IN VALUE OR LOST BUSINESS, PRODUCTION, REVENUES OR PROFITS, (B) LOSS OF GOODWILL OR REPUTATION, (C) USE, INABILITY TO USE, LOSS, INTERRUPTION, DELAY OR RECOVERY OF ANY LICENSED TECHNOLOGY, (D) LOSS, DAMAGE, CORRUPTION OR RECOVERY OF DATA, OR BREACH OF DATA OR SYSTEM SECURITY, (E) COST OF REPLACEMENT GOODS OR SERVICES OR
+end of paragraph
+paragraph
+(F) CONSEQUENTIAL, INCIDENTAL, DIRECT, INDIRECT, EXEMPLARY, SPECIAL, ENHANCED OR PUNITIVE DAMAGES, IN EACH CASE, REGARDLESS OF WHETHER GARMIN WAS ADVISED OF THE POSSIBILITY OF SUCH LOSSES OR DAMAGES OR SUCH LOSSES OR DAMAGES WERE OTHERWISE FORESEEABLE. IN NO EVENT WILL THE AGGREGATE LIABILITY OF GARMIN TO LICENSEE ARISING OUT OF OR RELATED TO THIS AGREEMENT, WHETHER ARISING UNDER OR RELATED TO BREACH OF CONTRACT, TORT (INCLUDING NEGLIGENCE), STRICT LIABILITY OR ANY OTHER LEGAL OR EQUITABLE THEORY, EXCEED $#. THE FOREGOING LIMITATIONS APPLY EVEN IF ANY REMEDY FAILS OF ITS ESSENTIAL PURPOSE.
+end of paragraph
+paragraph
+#. Term and Termination.
+end of paragraph
+paragraph
+If Licensee breaches any of the terms of this Agreement, Garmin may immediately terminate this Agreement. In addition, Garmin or Licensee may terminate this Agreement with or without cause upon delivery of # days' written notice to the other party.
+end of paragraph
+paragraph
+Upon any such termination, (a) all rights of Licensee under this Agreement (including the license granted to Licensee hereunder) shall cease, (b) Licensee must immediately stop use of (including product development of devices relating to) the Licensed Technology and (c) Licensee shall delete all copies of the Licensed Technology and any Confidential Information; provided, however, Licensee shall not be required to delete electronic copies of Confidential Information generated automatically by archival or data backup systems, so long as such copies are not accessed or used in any manner that violates the terms or conditions of this Agreement. Any information retained pursuant to the preceding sentence will continue to receive the protections of Confidential Information hereunder. Upon request by Garmin, Licensee will certify to Garmin in writing that it has complied with the requirements of this paragraph.
+end of paragraph
+paragraph
+All rights, obligations or provisions under this Agreement that, by their nature, should survive termination or expiration of this Agreement will survive any expiration or termination of this Agreement, including Sections #, #, #, #, #, #, and #.
+end of paragraph
+paragraph
+#. No Support; Updates.
+end of paragraph
+paragraph
+This Agreement does not entitle Licensee to any support for the Licensed Technology. Licensee acknowledges that Garmin may update or modify the Licensed Technology from time to time and at Garmin's sole discretion (in each instance, an "Update"), and may require Licensee to obtain and use the most recent version of the Licensed Technology. Licensee is required to make any changes to Licensee's products, services, operating environment, equipment or other property that are required for integration as a result of such Update at Licensee's sole cost and expense. Licensee's continued use of the Licensed Technology following an Update constitutes Licensee's binding acceptance of the Update.
+end of paragraph
+paragraph
+#. Miscellaneous.
+end of paragraph
+paragraph
+a. Relationship of the Parties. The relationship between Garmin and Licensee is that of independent contractors. Nothing contained in this Agreement will be construed as creating any agency, partnership, joint venture or other form of joint enterprise, employment or fiduciary relationship between the parties, and neither party shall have authority to contract for or bind the other party in any manner whatsoever.
+end of paragraph
+paragraph
+b. Notices. Any notice, request, consent, claim, demand, waiver or other communication under this Agreement will only have legal effect if in writing. Licensee must send all such notices or other communications in writing to Garmin at the following address: # East #st Street, Olathe, Kansas #, Attention: Legal Department. All such notices will be deemed effectively given:
+end of paragraph
+paragraph
+(#) when received, if delivered by hand, with signed confirmation of receipt;
+end of paragraph
+paragraph
+(#) when received, if sent by a nationally recognized overnight courier, signature required; and (#) on the fifth day after the date mailed by certified or registered mail, return receipt requested, postage prepaid. Notwithstanding the foregoing, Licensee hereby consents to receiving electronic communications from Garmin. Licensee agrees that any notices, agreements, disclosures or other communications that Garmin sends to Licensee electronically will satisfy any legal communication requirements, including that such communications be in writing.
+end of paragraph
+paragraph
+c. Severability. Licensee agrees that if any part of this Agreement is found to be invalid, illegal or unenforceable, the remaining terms will remain in effect for the Licensee and for Garmin. On such determination that any term or other provision is invalid, illegal, or unenforceable, Garmin and Licensee shall negotiate in good faith to modify this Agreement so as to effect the original intent of the parties as closely as possible in a mutually acceptable manner in order that the transactions contemplated hereby be consummated as originally contemplated to the greatest extent possible.
+end of paragraph
+paragraph
+d. Governing Law and Forum Selection. This Agreement shall be governed by the laws of the state of Kansas, without regard to any conflicts of laws principles. The parties agree that any dispute arising out of this Agreement shall be litigated in the federal or state courts in the state of Kansas. The parties hereby agree to the exclusive jurisdiction and venue of such courts. THE PARTIES HEREBY WAIVE A TRIAL BY JURY WITH RESPECT TO ANY DISPUTE ARISING OUT OF THIS AGREEMENT.
+end of paragraph
+paragraph
+e. Entire Agreement. This Agreement constitutes the sole and entire agreement of the parties hereto with respect to the subject matter of this Agreement and supersedes all prior and contemporaneous understandings, agreements, representations and warranties, both written and oral, with respect to such subject matter.
+end of paragraph
+paragraph
+f. Assignment. Licensee shall not assign this Agreement, whether voluntarily, involuntarily, by operation of law, by merger or otherwise, without Garmin's prior written consent. For purposes of this Agreement, a change of control will be deemed an assignment. No assignment, delegation or transfer will relieve Licensee of any of its obligations or performance under this Agreement. Any purported assignment, delegation, or transfer in violation of this Section is void. This Agreement is binding on and inures to the benefit of the parties hereto and their respective successors and permitted assigns.
+end of paragraph
+paragraph
+g. Amendment. This Agreement may be amended from time to time by Garmin in its sole discretion. Licensee is responsible for reviewing and becoming familiar with any such amendment. Licensee's continued use of the Licensed Technology after such amendment signifies Licensee's agreement to and acceptance of this Agreement, as amended. Any other attempt to alter or amend these terms and conditions will be null and void, unless otherwise agreed to in a written agreement signed by both Licensee and Garmin.
+end of paragraph
+paragraph
+h. Force Majeure. In no event will Garmin be liable or responsible to Licensee, or be deemed to have defaulted under or breached this Agreement, for any failure or delay in fulfilling or performing any term of this Agreement when and to the extent such failure or delay is caused by any circumstances beyond Garmin's reasonable control, including acts of God, flood, fire, earthquake or explosion, war, terrorism, invasion, riot or other civil unrest, embargoes or blockades, national or regional emergency, epidemics, pandemics, diseases, strikes, labor stoppages or slowdowns or other industrial disturbances, passage or change of law or any other action taken by a governmental or public authority, including imposing an export or import restriction, quota, quarantine restrictions or other restriction or prohibition or any complete or partial government shutdown.
+end of paragraph
+paragraph
+i. No Third-Party Beneficiaries. Except as expressly set forth herein, this Agreement is for the sole benefit of the parties hereto and their respective successors and permitted assigns and nothing herein is intended to or will confer on any other person or entity any legal or equitable right, benefit or remedy of any nature whatsoever under or by reason of this Agreement.
+end of paragraph
+paragraph
+j. Waiver. No waiver by either party of any of the provisions hereof is effective unless explicitly set forth in writing and signed by the party so waiving. No failure to exercise, or delay in exercising, any rights, remedy, power or privilege arising from this Agreement will operate or be construed as a waiver thereof; nor will any single or partial exercise of any right, remedy, power or privilege hereunder preclude any other or further exercise thereof or the exercise of any other right, remedy, power or privilege.
+end of paragraph
+paragraph

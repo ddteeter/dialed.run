@@ -40,11 +40,10 @@ const CATEGORY_PLURALS = {
  * the range it works in. A retired piece says so once, as the tag at the
  * right (Round 55 · 193), so its line reads like every other row's.
  *
- * The line draws "8/9 dialed 3–8°", which a screen reader says as "eight
- * slash nine dialed three to eight degrees" with nothing to say what the
- * range is. The eye keeps the drawn line; a screen reader gets "8 of 9
- * runs dialed, works at 3–8°" — detail's own words for the range (a11y
- * judgment audit, 2026-11-04).
+ * The line draws "8/9 dialed 3–8°", which a screen reader would say as
+ * "eight slash nine dialed". The ratio is voiced as "8 of 9 runs dialed"
+ * and the range as "3 to 8 degrees"; nothing is added that the line does
+ * not draw (R59·323), so the range reads whole after the ratio.
  */
 function RecordLine({
   view,
@@ -78,7 +77,7 @@ function RecordLine({
       </span>
       {range === undefined ? undefined : (
         <>
-          <span className="sr-only">, works at</span>{" "}
+          {" "}
           {/* "40–58°" drawn, "40 to 58 degrees" said (round 53 · 162.3). */}
           <Spoken {...range} />
         </>

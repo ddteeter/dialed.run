@@ -5,7 +5,7 @@
  * was not: the denylist check, and the bare domain the UI renders next to
  * the link text so a runner can see where a link goes before following it.
  *
- * `rel="ugc nofollow noopener"` belongs to whichever component renders the
+ * `rel="ugc nofollow"` belongs to whichever component renders the
  * anchor, not here — a function that returns a domain has no business
  * knowing about HTML attributes.
  */

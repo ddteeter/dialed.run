@@ -4,7 +4,12 @@ import type { JSX } from "react";
 
 import { writableAudienceOf } from "../../../lib/contracts";
 import type { Audience, WritableAudience } from "../../../lib/contracts";
-import { AUDIENCE_LABELS, Bracketed, PICKED_AUDIENCES } from "../../../ui";
+import {
+  AUDIENCE_LABELS,
+  Bracketed,
+  Mono,
+  PICKED_AUDIENCES,
+} from "../../../ui";
 
 /**
  * D's owner meta (round 41 #86a): who the runner's own kit is for, as the
@@ -25,10 +30,6 @@ import { AUDIENCE_LABELS, Bracketed, PICKED_AUDIENCES } from "../../../ui";
  */
 export const PUBLIC_KIT_LINE = "Public: anyone with the link can see it.";
 export const LINK_COPIED = "Link copied.";
-/**
-Said before the bracketed audience, to a reader only.
-*/
-export const AUDIENCE_PREFIX = "Seen by: ";
 export const LINK_NOT_COPIED = "Link not copied.";
 
 /**
@@ -76,8 +77,11 @@ const CHANGE_CLASS =
  *
  * **The three tags show in every state**, in MONO.xs, the current one in
  * ink and the other two muted (R55·172). The board's order is PUBLIC,
- * SHARED, PRIVATE, the picker's reversed. Only the current one is heard,
- * after its prefix; the other two are drawn and not read.
+ * SHARED, PRIVATE, the picker's reversed. Only the current one is heard;
+ * the other two are drawn and not read. SEEN BY, MONO.xs, comes first on
+ * the same line, drawn rather than hidden (R59·323): it says what the line
+ * does not, so the eye gets it too. Muted, as the tags it labels are
+ * (a guess: the ruling gives no colour).
  */
 export function OwnerAudience({
   entryId,
@@ -92,10 +96,12 @@ export function OwnerAudience({
   return (
     <div data-part="owner-meta" className="flex flex-col gap-3">
       <span className="flex flex-wrap gap-x-2">
+        <Mono step="xs" className="text-muted">
+          Seen by
+        </Mono>
         {TAG_ORDER.map((tag) =>
           tag === shown ? (
             <span key={tag} className="flex">
-              <span className="sr-only">{AUDIENCE_PREFIX}</span>
               <Bracketed step="xs" className="text-ink">
                 {AUDIENCE_LABELS[tag]}
               </Bracketed>

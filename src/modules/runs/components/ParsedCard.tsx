@@ -128,10 +128,12 @@ function FileStrip({
 }
 
 /**
- * The start time on the stats line, as the button that changes it. Its
- * name starts with what it shows (WCAG 2.5.3): a voice user says what
- * they see, and "6:04 AM · Changed" was not in "Change start time,
- * 6:04 AM".
+ * The start time on the stats line, as the button that changes it: the
+ * time, then a drawn "Change" in the same 44 target (R59·321), TYPE.small
+ * 600 and underlined as the app's other text buttons are. Its name is its
+ * visible words, "6:04 AM Change" (WCAG 2.5.3, D-187), with nothing
+ * hidden added. After a move it reads "7:34 AM · Changed Change" (a
+ * guess, #832: the board draws only the resting state).
  */
 function TimeButton({
   shown,
@@ -140,13 +142,15 @@ function TimeButton({
   return (
     <button
       type="button"
-      aria-label={`${shown}, change start time`}
       onClick={onPress}
       // A full 44 target with its box pulled back to the facts line, so the
       // row stays one mono line tall and the card is not bottom-heavy (D1-08).
-      className={`target -my-3.5 border-none bg-transparent p-0 ${MONO_CLASS.sm} text-ink underline underline-offset-4`}
+      className="target -my-3.5 inline-flex items-center gap-2 border-none bg-transparent p-0 text-ink"
     >
-      {shown}
+      <Mono step="sm">{shown}</Mono>
+      <span className="font-sans text-small font-semibold normal-case underline underline-offset-4">
+        Change
+      </span>
     </button>
   );
 }
@@ -387,7 +391,7 @@ function useRetimeForm({
  * the file lands — one screen, no wizard step for weather."*
  *
  * **The start time is the one correction** (round 26, item 1). The time
- * on the stats line is a button, "6:04 AM, change start time"; it opens
+ * on the stats line is a button, "6:04 AM Change"; it opens
  * the START TIME row in its place. While the weather for the new time is
  * fetched the conditions block says so, with what it was. On success the
  * row closes and the line reads "{t} · CHANGED"; on failure a band under

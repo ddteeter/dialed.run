@@ -19,9 +19,9 @@ import {
   AUTH_COPY,
   AccessRefused,
   AccountClosedRefusal,
-  AUTH_KICKER,
   AuthRejected,
   GOOGLE_REFUSALS,
+  NOT_LOGGED_IN,
   ageRefused,
   regionRefused,
   turnstileRefused,
@@ -153,7 +153,8 @@ const limitedBody = z.object({ until: z.number() });
 /**
  * The typed address is past its sign-in tries: the band says when it may
  * try again, or to reset the password (owner, 2026-11-15). No Try again —
- * pressing it now is refused the same way. A 429 without its time is
+ * pressing it now is refused the same way. NOT LOGGED IN, the app's word
+ * (R60·324), in the form's slot above Log in. A 429 without its time is
  * Better Auth's own limit, which the band words as before.
  */
 function throwIfLimited(error: ClientError | null | undefined): void {
@@ -161,7 +162,7 @@ function throwIfLimited(error: ClientError | null | undefined): void {
   const body = limitedBody.safeParse(error);
   if (!body.success) return;
   throw new AccessRefused({
-    kicker: AUTH_KICKER,
+    kicker: NOT_LOGGED_IN,
     message: signInLimitedMessage(body.data.until),
     retry: false,
   });

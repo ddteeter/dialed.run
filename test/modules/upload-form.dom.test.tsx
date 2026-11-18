@@ -23,10 +23,7 @@ import {
   importPollIntervalMs,
   STALL_AFTER_MS,
 } from "../../src/modules/runs/import-polling";
-import type {
-  FileUpload,
-  ImportOutcome,
-} from "../../src/modules/runs/imports";
+import type { FileUpload, ImportOutcome } from "../../src/modules/runs/imports";
 import { UploadForm } from "../../src/modules/runs/components/UploadForm";
 import type { GarminImportActions } from "../../src/modules/runs/components/GarminImport";
 import type { Retime } from "../../src/modules/runs/components/ParsedCard";
@@ -177,7 +174,8 @@ function form(
   return (
     <UploadForm
       upload={
-        overrides.upload ?? (() => Promise.resolve({ isStarted: true, importId: "01IMPORT" }))
+        overrides.upload ??
+        (() => Promise.resolve({ isStarted: true, importId: "01IMPORT" }))
       }
       getOutcome={overrides.getOutcome ?? (() => Promise.resolve(outcome()))}
       retime={overrides.retime ?? (() => Promise.resolve("moved"))}
@@ -1039,14 +1037,20 @@ describe("A1: the parsed card", () => {
     expect(card.querySelector("[data-part='garmin-attribution']")).toBeNull();
     expect(within(card).getByText("8:20 /mi")).toBeVisible();
     expect(within(card).getByText("Sat Aug 29")).toBeVisible();
-    expect(
-      within(card).getByRole("button", {
-        name: "6:04 AM, change start time",
-      }),
-    ).toHaveTextContent("6:04 AM");
+    // R59·321: the time, then a drawn Change, and the name is those words.
+    const timeButton = within(card).getByRole("button", {
+      name: "6:04 AM Change",
+    });
+    expect(timeButton).not.toHaveAttribute("aria-label");
+    expect(within(timeButton).getByText("6:04 AM")).toHaveClass("text-mono-sm");
+    expect(within(timeButton).getByText("Change")).toHaveClass(
+      "text-small",
+      "font-semibold",
+      "underline",
+    );
     // D1-08: a full target whose box is pulled back to the facts line.
     expect(
-      within(card).getByRole("button", { name: "6:04 AM, change start time" }),
+      within(card).getByRole("button", { name: "6:04 AM Change" }),
     ).toHaveClass("target", "-my-3.5");
     expect(document.querySelector("[data-part='drop-zone']")).toBeNull();
 
@@ -1126,14 +1130,12 @@ describe("A1: the parsed card", () => {
     await user.upload(dropInput(), gpx());
 
     await user.click(
-      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
+      await screen.findByRole("button", { name: "6:04 AM Change" }),
     );
 
     // The row replaces the time on the stats line; the date stays.
     const card = parsedCard();
-    expect(
-      within(card).queryByRole("button", { name: /change start time/u }),
-    ).toBeNull();
+    expect(within(card).queryByRole("button", { name: /Change$/u })).toBeNull();
     expect(within(card).getByText("Sat Aug 29")).toBeVisible();
     expect(within(card).getByText("8:20 /mi").closest("p")).toHaveTextContent(
       /^8:20 \/mi8 minutes 20 seconds per mile\|Sat Aug 29$/u,
@@ -1164,7 +1166,7 @@ describe("A1: the parsed card", () => {
     await renderWithRouter(form({ getOutcome, retime }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
+      await screen.findByRole("button", { name: "6:04 AM Change" }),
     );
     const asked = getOutcome.mock.calls.length;
 
@@ -1183,7 +1185,7 @@ describe("A1: the parsed card", () => {
       });
     });
     const changed = await screen.findByRole("button", {
-      name: "7:34 AM · Changed, change start time",
+      name: "7:34 AM · Changed Change",
     });
     expect(changed).toHaveTextContent("7:34 AM · Changed");
     expect(screen.queryByLabelText("Start time")).toBeNull();
@@ -1199,7 +1201,7 @@ describe("A1: the parsed card", () => {
     await renderWithRouter(form({ getOutcome: parsed(), retime }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
+      await screen.findByRole("button", { name: "6:04 AM Change" }),
     );
     const field = screen.getByLabelText("Start time");
     await user.clear(field);
@@ -1246,7 +1248,7 @@ describe("A1: the parsed card", () => {
     await renderWithRouter(form({ getOutcome: parsed(), retime }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
+      await screen.findByRole("button", { name: "6:04 AM Change" }),
     );
     const field = screen.getByLabelText("Start time");
     await user.clear(field);
@@ -1290,7 +1292,7 @@ describe("A1: the parsed card", () => {
     await renderWithRouter(form({ getOutcome: parsed(), retime }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
+      await screen.findByRole("button", { name: "6:04 AM Change" }),
     );
 
     await user.clear(screen.getByLabelText("Start time"));
@@ -1320,7 +1322,7 @@ describe("A1: the parsed card", () => {
     await renderWithRouter(form({ getOutcome: parsed(), retime }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
+      await screen.findByRole("button", { name: "6:04 AM Change" }),
     );
 
     await user.click(screen.getByRole("button", { name: "Get weather" }));
@@ -1341,7 +1343,7 @@ describe("A1: the parsed card", () => {
       await user.upload(dropInput(), gpx());
       await user.click(
         await screen.findByRole("button", {
-          name: "6:04 AM, change start time",
+          name: "6:04 AM Change",
         }),
       );
 
@@ -1365,7 +1367,7 @@ describe("A1: the parsed card", () => {
     );
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
+      await screen.findByRole("button", { name: "6:04 AM Change" }),
     );
     await user.click(screen.getByRole("button", { name: "Get weather" }));
     await waitFor(() => {
@@ -1416,9 +1418,7 @@ describe("A1: the parsed card", () => {
       }),
     );
     await user.upload(dropInput(), gpx());
-    await user.click(
-      await screen.findByRole("button", { name: /change start time/u }),
-    );
+    await user.click(await screen.findByRole("button", { name: /Change$/u }));
     await user.click(screen.getByRole("button", { name: "Get weather" }));
 
     const block = await waitFor(() => {
@@ -1442,7 +1442,7 @@ describe("A1: the parsed card", () => {
     await renderWithRouter(form({ getOutcome: parsed() }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
+      await screen.findByRole("button", { name: "6:04 AM Change" }),
     );
     const status = cardStatus();
     const said: string[] = [];
@@ -1489,9 +1489,9 @@ describe("A1: the parsed card", () => {
     await user.upload(dropInput(), gpx());
 
     const time = await screen.findByRole("button", {
-      name: "4:04 AM, change start time",
+      name: "4:04 AM Change",
     });
-    expect(time).toHaveTextContent("4:04 AM");
+    expect(time).toHaveTextContent(/^4:04 AMChange$/u);
     await user.click(time);
     const field = screen.getByLabelText("Start time");
     expect(field).toHaveValue("04:04");
@@ -1521,7 +1521,7 @@ describe("A1: the parsed card", () => {
     await renderWithRouter(form({ getOutcome: parsed(), retime }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
+      await screen.findByRole("button", { name: "6:04 AM Change" }),
     );
     const field = screen.getByLabelText("Start time");
     await user.clear(field);
@@ -1544,7 +1544,7 @@ describe("A1: the parsed card", () => {
     const pace = await screen.findByText("8:20 /mi");
 
     expect(pace.closest("p")).toHaveTextContent(
-      /^8:20 \/mi8 minutes 20 seconds per mile\|Sat Aug 29\|6:04 AM$/u,
+      /^8:20 \/mi8 minutes 20 seconds per mile\|Sat Aug 29\|6:04 AMChange$/u,
     );
     expect(pace.closest("p")).toHaveClass(
       "font-mono",
@@ -1691,7 +1691,7 @@ describe("A1's parsed card: a lapsed session (Au7, D-155)", () => {
     await renderWithRouter(form({ getOutcome }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
+      await screen.findByRole("button", { name: "6:04 AM Change" }),
     );
 
     expect(carriedSince()).toEqual(["run"]);

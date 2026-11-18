@@ -440,10 +440,11 @@ describe("Au2 · Google in the invite stage", () => {
     );
   });
 
-  it("sends a Google address whose account has a password to that password, as NOT LOGGED IN", async () => {
+  it("sends a Google address whose account has a password to that password, as NOT CREATED on Au2 (R60·324)", async () => {
     await signUpPage({ returnedError: "account_not_linked" });
     const band = part("control-failure");
-    expect(band).toHaveTextContent("Not logged in");
+    // The kicker follows the page: the press was to make an account.
+    expect(band).toHaveTextContent(/^Not created/u);
     expect(band).toHaveTextContent(
       "That address already has an account. Log in with your password, or reset it.",
     );

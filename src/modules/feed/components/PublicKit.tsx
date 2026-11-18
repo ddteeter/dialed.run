@@ -187,7 +187,7 @@ function Said({
 
 /**
  * THE KIT · N: each piece by its closet name, a linked one opening its
- * product in a new tab through the one outbound product link (which shows
+ * product through the one outbound product link (which shows
  * the domain beside it), and what kind of piece it is. Absent with none.
  */
 function Pieces({ pieces }: Readonly<{ pieces: readonly PublicPiece[] }>) {

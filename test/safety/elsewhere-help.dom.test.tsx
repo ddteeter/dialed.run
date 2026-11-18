@@ -35,14 +35,14 @@ describe("ElsewhereHelp", () => {
     ["StopNCII.org", "https://stopncii.org/"],
     ["Take It Down", "https://takeitdown.ncmec.org/"],
   ])(
-    "links %s, named by its visible words, in a new tab that cannot reach back",
+    "links %s, named by its visible words, in the same tab, with no referrer",
     (name, href) => {
       render(<ElsewhereHelp />);
       const link = screen.getByRole("link", { name });
       expect(link).toHaveAccessibleName(name);
       expect(link).toHaveAttribute("href", href);
-      expect(link).toHaveAttribute("target", "_blank");
-      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+      expect(link).not.toHaveAttribute("target");
+      expect(link).toHaveAttribute("rel", "noreferrer");
       expect(link).toHaveClass("font-bold", "text-ink", "underline");
       expect(link.querySelector(".sr-only")).toBeNull();
     },

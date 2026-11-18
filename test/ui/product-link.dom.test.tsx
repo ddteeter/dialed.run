@@ -17,17 +17,15 @@ const INSECURE = ["http", "://example.com"].join("");
 const NO_LINK = z.null().parse(JSON.parse("null"));
 
 describe("a link a stranger typed", () => {
-  it("carries all three rel values", () => {
+  it("carries its two rel values, in the same tab (R59·322)", () => {
     render(<ProductLink url="https://janji.com/p/tee" label="Merino Tee" />);
 
     const link = screen.getByRole("link", { name: "Merino Tee" });
     const rel = link.getAttribute("rel")?.split(" ") ?? [];
     // ugc says a runner wrote it; nofollow stops a closet being an SEO
-    // donation; noopener is the security one — without it the opened page
-    // can navigate ours through window.opener.
-    expect(rel).toContain("ugc");
-    expect(rel).toContain("nofollow");
-    expect(rel).toContain("noopener");
+    // donation. No new tab, so no opener to withhold.
+    expect(rel).toStrictEqual(["ugc", "nofollow"]);
+    expect(link).not.toHaveAttribute("target");
   });
 
   it("shows the bare domain beside the text", () => {

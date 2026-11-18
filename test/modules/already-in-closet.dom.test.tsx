@@ -144,7 +144,7 @@ describe("AlreadyInCloset", () => {
   it("gives the record's range in the runner's unit", () => {
     card([harrier], NOTHING_TYPED, "f");
     expect(saidText(rows()[0])).toContain(
-      "41 runs · 8 of 9 runs dialed, works at 37 to 46 degrees",
+      "41 runs · 8 of 9 runs dialed 37 to 46 degrees",
     );
   });
 
@@ -154,11 +154,11 @@ describe("AlreadyInCloset", () => {
     const [first, second, third] = rows();
     expect(first).toHaveTextContent("Tracksmith Harrier");
     // The drawn line, then what a screen reader gets in its place: the
-    // ratio as words, and the range named as detail names it.
+    // ratio as words, and the range said as one.
     expect(drawnText(first)).toContain("41 runs · 8/9 dialed 3–8°");
     // Round 53 · 162.3: the range is said as one, "3 to 8 degrees".
     expect(saidText(first)).toContain(
-      "41 runs · 8 of 9 runs dialed, works at 3 to 8 degrees",
+      "41 runs · 8 of 9 runs dialed 3 to 8 degrees",
     );
     expect(
       within(first ?? document.body).getByText("8/9 dialed"),
@@ -166,9 +166,12 @@ describe("AlreadyInCloset", () => {
     expect(
       within(first ?? document.body).getByText("8 of 9 runs dialed"),
     ).toHaveClass("sr-only");
-    expect(within(first ?? document.body).getByText(", works at")).toHaveClass(
-      "sr-only",
-    );
+    // R59·323: hidden text voices what is drawn and adds nothing.
+    expect(
+      [...(first?.querySelectorAll(".sr-only") ?? [])].map(
+        (said) => said.textContent,
+      ),
+    ).toStrictEqual(["8 of 9 runs dialed", "3 to 8 degrees"]);
     expect(second).toHaveTextContent("Janji Rover Half-zip");
     // Round 55 · 193: RETIRED once, as the tag; the line is any piece's.
     expect(second).toHaveTextContent(
@@ -191,7 +194,6 @@ describe("AlreadyInCloset", () => {
       "Mystery1 run · 1/1 dialed1 of 1 run dialed",
     );
     expect(only?.textContent).toMatch(/dialed$/);
-    expect(screen.queryByText(", works at")).not.toBeInTheDocument();
   });
 
   it("counts a piece never worn as none", () => {

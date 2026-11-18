@@ -36,7 +36,7 @@ describe("WeatherAttribution (D-144)", () => {
       name: "Weather data provided by Visual Crossing",
     });
     expect(label).toHaveAttribute("href", href);
-    expect(label).toHaveAttribute("target", "_blank");
+    expect(label).not.toHaveAttribute("target");
     // The drawn words are the end of the name it is heard by (WCAG 2.5.3).
     expect(label).toHaveTextContent(/^Visual Crossing$/u);
     // MONO.xs, muted, underlined, never wrapped, in a 44 target.
@@ -60,14 +60,12 @@ describe("WeatherAttribution (D-144)", () => {
     expect(drawn).not.toHaveAttribute("aria-label");
   });
 
-  it("opens in a new tab without handing the page its opener", () => {
+  it("opens in the same tab and sends no referrer (R59·322)", () => {
     render(<WeatherAttribution />);
 
     const link = screen.getByRole("link");
-    expect(link).toHaveAttribute("target", "_blank");
-    const rel = link.getAttribute("rel")?.split(" ") ?? [];
-    expect(rel).toContain("noopener");
-    expect(rel).toContain("noreferrer");
+    expect(link).not.toHaveAttribute("target");
+    expect(link).toHaveAttribute("rel", "noreferrer");
   });
 
   it("is heard and reached by Tab unless it repeats one already said (R-179)", () => {

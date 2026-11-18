@@ -7,8 +7,9 @@
  * wording below (D-144); the link is the licence's own address.
  *
  * External, so a plain anchor rather than the router's `Link` (which only
- * takes the typed route tree), opened in a new tab so the conditions the
- * runner was reading stay where they were.
+ * takes the typed route tree), in the same tab: nothing marks a new tab,
+ * so none opens, and Back returns the runner to the conditions
+ * (R59·322).
  *
  * **In `ui/` rather than in `modules/weather/`, for a structural reason
  * rather than a taste one.** It imports nothing from that module — it is
@@ -58,8 +59,7 @@ export function WeatherAttribution({
 }>) {
   const link = {
     href: "https://www.visualcrossing.com/",
-    target: "_blank",
-    rel: "noopener noreferrer",
+    rel: "noreferrer",
     "aria-hidden": isRepeat ? true : undefined,
     tabIndex: isRepeat ? -1 : undefined,
   } as const;

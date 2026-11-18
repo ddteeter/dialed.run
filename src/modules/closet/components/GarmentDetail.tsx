@@ -439,12 +439,9 @@ function PairsWith({
             key={pair.item.id}
             className="rounded-pill border border-ink px-3 py-1"
           >
-            <Mono step="xs">
-              {pair.item.name}
-              {/* The chip draws the count bare; spoken, it says of what. */}
-              <span aria-hidden="true">{` · ${String(pair.count)}`}</span>
-              <span className="sr-only">{`, ${runsLabel(pair.count)} dialed together`}</span>
-            </Mono>
+            {/* Heard as drawn, the count bare: the heading says what it
+                counts (R59·323). */}
+            <Mono step="xs">{`${pair.item.name} · ${String(pair.count)}`}</Mono>
           </li>
         ))}
       </ul>

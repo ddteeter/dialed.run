@@ -6,7 +6,7 @@ heading, Your run, level 1
 link, Notifications, # new
 #
 end of link, Notifications, # new
-Seen by:
+Seen by
 Private
 :day :month # · #:#
 #.# miles

@@ -30,7 +30,7 @@ heading, Your run, level 1
 paragraph
 Garmin
 end of paragraph
-Seen by:
+Seen by
 Shared
 :day :month # · #:#
 #.# miles

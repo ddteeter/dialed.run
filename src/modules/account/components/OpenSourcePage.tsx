@@ -44,9 +44,10 @@ import {
  * - **A group** is headed by its licence, its count at the end of the
  *   heading's line (A-01a). "Read the MIT licence" opens the full text
  *   once, above the rows; the group shows its first three rows and the
- *   "Show all {N}" pill opens the rest. A row is the name and the shipped
- *   version, "Project" at its right, and the copyright line; "Notice"
- *   where the package ships an Apache NOTICE, and "Licence" where its own
+ *   "Show all {N}" pill opens the rest. The rows sit under a "Projects"
+ *   heading (R59·318). A row is the name, which is the link to its
+ *   project, the shipped version and the copyright line; "Notice" where
+ *   the package ships an Apache NOTICE, and "Licence" where its own
  *   licence text says something the group's does not (an undesigned
  *   addition: design deltas).
  * - **The third-party notices** follow the groups: R39's four rows, one
@@ -293,6 +294,10 @@ function GroupSection({
       {group.text === undefined ? undefined : (
         <TextDisclosure label={readLabel(group)} text={group.text} />
       )}
+      {/* R59·318: the rows sit under "Projects", so each link is named by
+          its package under a heading that says what it is. An h3, as the
+          group's licence is the h2 (a guess, #831). */}
+      <h3 className="m-0 font-display text-heading">Projects</h3>
       <ul className="m-0 flex list-none flex-col p-0 text-body">
         {rows.map((piece, index) => (
           <PieceRow
@@ -370,33 +375,19 @@ function PieceRow({
       tabIndex={rowRef === undefined ? undefined : -1}
       className="flex flex-col gap-1 border-t border-hairline py-3"
     >
-      {/* A-01b: Project at the row's right, wherever the name ends. */}
-      <div className="flex items-baseline justify-between gap-x-4">
-        <span className="min-w-0">
-          <span className="font-semibold wrap-anywhere">{piece.name}</span>
-          {piece.version === undefined ? undefined : (
-            <>
-              {" "}
-              {/* MONO.md, which keeps mixed case, so a version prints as
-                  written: "4.1.0-beta.2" (R58·292). */}
-              <Mono step="md" className="text-muted">
-                {piece.version}
-              </Mono>
-            </>
-          )}
-        </span>
-        {piece.project === undefined ? undefined : (
-          // A-02: a line target, so a row with a link is as tall as one
-          // without; the row's 12 padding holds its hit area.
-          <a
-            href={piece.project}
-            aria-label={`Project: ${piece.name}`}
-            className="target-line inline-block shrink-0 text-body text-ink underline underline-offset-4"
-          >
-            Project
-          </a>
+      <span className="min-w-0">
+        <PieceName piece={piece} />
+        {piece.version === undefined ? undefined : (
+          <>
+            {" "}
+            {/* MONO.md, which keeps mixed case, so a version prints as
+                written: "4.1.0-beta.2" (R58·292). */}
+            <Mono step="md" className="text-muted">
+              {piece.version}
+            </Mono>
+          </>
         )}
-      </div>
+      </span>
       {showsLicence && piece.licence !== undefined ? (
         // Round 40 #82: a tool's licence id sits in the copyright line's slot.
         <Mono step="xs" className="text-muted">
@@ -413,6 +404,26 @@ function PieceRow({
         <TextDisclosure label="Licence" of={piece.name} text={piece.text} />
       )}
     </li>
+  );
+}
+
+/**
+ * R59·318: the package name is the link to its project, 600 and
+ * underlined, named by the package alone under its group's Projects
+ * heading. A-02: a line target, so a row with a link is as tall as one
+ * without; the row's 12 padding holds its hit area. No project on
+ * record, no link.
+ */
+function PieceName({ piece }: Readonly<{ piece: OpenSourcePiece }>) {
+  return piece.project === undefined ? (
+    <span className="font-semibold wrap-anywhere">{piece.name}</span>
+  ) : (
+    <a
+      href={piece.project}
+      className="target-line inline-block font-semibold wrap-anywhere text-cold-text underline underline-offset-4"
+    >
+      {piece.name}
+    </a>
   );
 }
 

@@ -14,7 +14,7 @@ import {
 } from "../../src/lib/contracts/access";
 import {
   AUTH_COPY,
-  AUTH_KICKER,
+  NOT_LOGGED_IN,
   AccessRefused,
   AccountClosedRefusal,
   AuthRejected,
@@ -147,8 +147,9 @@ describe("signIn", () => {
     });
     const thrown = await caught(signIn(person));
     expect(thrown).toBeInstanceOf(AccessRefused);
+    // R60·324: NOT LOGGED IN, the app's word.
     expect(thrown).toMatchObject({
-      kicker: AUTH_KICKER,
+      kicker: NOT_LOGGED_IN,
       message: signInLimitedMessage(until),
       retry: false,
     });

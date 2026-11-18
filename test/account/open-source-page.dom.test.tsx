@@ -258,7 +258,9 @@ describe("OpenSourcePage", () => {
       "Permission is hereby granted, free of charge",
     );
     // Above the rows.
-    expect(details?.nextElementSibling?.tagName).toBe("UL");
+    // The licence text, then the Projects heading over the rows (R59·318).
+    expect(details?.nextElementSibling).toHaveTextContent("Projects");
+    expect(details?.nextElementSibling?.nextElementSibling?.tagName).toBe("UL");
     expect(
       within(section("SIL Open Font License 1.1")).getByText(
         "Read the licence text",
@@ -267,28 +269,38 @@ describe("OpenSourcePage", () => {
     expect(within(section("Apache 2.0")).queryByText(/^Read the/u)).toBeNull();
   });
 
-  it("draws a row as its name, version, Project link and copyright line", async () => {
+  it("draws a row as its name, the link to its project, version and copyright line", async () => {
     await renderPage();
     const [react, , clsx] = within(section("MIT")).getAllByRole("listitem");
     if (react === undefined || clsx === undefined) throw new Error("no rows");
-    expect(within(react).getByText("react")).toHaveClass("font-semibold");
+    // R59·318: the name is the link, named by the package alone.
+    const name = within(react).getByRole("link", { name: "react" });
+    expect(name).toHaveAttribute("href", "https://react.dev/");
+    expect(name).toHaveClass(
+      "target-line",
+      "inline-block",
+      "font-semibold",
+      "text-cold-text",
+      "underline",
+    );
+    expect(name).not.toHaveAttribute("aria-label");
+    // The name and its version, a space apart.
+    expect(name.parentElement?.textContent).toBe("react 19.2.0");
     // R58·292: MONO.md, which keeps the version's own case.
     const version = within(react).getByText("19.2.0");
     expect(version).toHaveClass("text-mono-md");
     expect(version).not.toHaveClass("uppercase");
     // Its group's heading names the licence; the row does not repeat it.
     expect(within(react).queryByText("MIT")).toBeNull();
-    // Drawn "Project", heard with the package's name: ~130 of them alone
-    // were a list of identical links.
-    const project = within(react).getByRole("link", { name: "Project: react" });
-    expect(project).toHaveAttribute("href", "https://react.dev/");
-    expect(project).toHaveClass("target-line", "text-body", "underline");
-    expect(project).toHaveTextContent(/^Project$/u);
+    // The right-hand "Project" is gone.
+    expect(within(react).queryByText("Project")).toBeNull();
     expect(
       within(react).getByText("© Meta Platforms, Inc. and affiliates"),
     ).toHaveClass("text-small", "text-muted");
-    // Nothing on record, nothing drawn.
-    expect(within(clsx).queryByText("Project")).toBeNull();
+    // Nothing on record, nothing drawn: no project, no link.
+    // An anchor with no href is not a link to the tree, so ask for any <a>.
+    expect(clsx.querySelector("a")).toBeNull();
+    expect(within(clsx).getByText("clsx")).toHaveClass("font-semibold");
     expect(within(clsx).queryByText(/^©/u)).toBeNull();
     expect(clsx.querySelector("details")).toBeNull();
     const plex = within(section("SIL Open Font License 1.1")).getAllByRole(
@@ -377,13 +389,12 @@ describe("OpenSourcePage", () => {
     if (vitest === undefined || drizzleKit === undefined) {
       throw new Error("no rows");
     }
-    expect(within(vitest).getByText("vitest")).toHaveClass("font-semibold");
     // The licence id sits where a copyright line would: under the name line.
     const licence = within(vitest).getByText("MIT");
     expect(licence).toHaveClass("text-mono-xs", "text-muted");
     expect(licence.parentElement).toBe(vitest);
     expect(
-      within(vitest).getByRole("link", { name: "Project: vitest" }),
+      within(vitest).getByRole("link", { name: "vitest" }),
     ).toHaveAttribute("href", "https://vitest.dev");
     expect(within(drizzleKit).getByText("MIT")).toBeInTheDocument();
     expect(within(tools).queryByText(/^Read the/u)).toBeNull();
@@ -615,18 +626,34 @@ describe("OpenSourcePage", () => {
     expect(section("MIT")).toHaveClass("flex", "flex-col", "gap-4", "pt-4");
   });
 
-  it("puts Project at the end of the row's first line", async () => {
+  it("puts each group's rows under a Projects heading, one level down (R59·318)", async () => {
     await renderPage();
-    const [react] = within(section("MIT")).getAllByRole("listitem");
-    const project = within(react ?? document.body).getByRole("link", {
-      name: "Project: react",
+    const mit = section("MIT");
+    const projects = within(mit).getByRole("heading", {
+      level: 3,
+      name: "Projects",
     });
-    expect(project.parentElement?.lastElementChild).toBe(project);
-    // The name and its version, a space apart.
-    expect(project.parentElement?.firstElementChild?.textContent).toBe(
-      "react 19.2.0",
-    );
-    expect(project.parentElement).toHaveClass("justify-between");
+    expect(projects).toHaveClass("font-display", "text-heading");
+    expect(projects).not.toHaveClass("uppercase");
+    // Over the rows, directly.
+    expect(projects.nextElementSibling?.tagName).toBe("UL");
+    // One per group: the type, MIT, Apache 2.0 and the tools.
+    for (const group of [
+      "SIL Open Font License 1.1",
+      "MIT",
+      "Apache 2.0",
+      "Tools we build with",
+    ]) {
+      expect(
+        within(section(group)).getAllByRole("heading", { name: "Projects" }),
+      ).toHaveLength(1);
+    }
+    // The notices have no rows of projects, so no heading.
+    expect(
+      within(section("Third-party notices")).queryByRole("heading", {
+        name: "Projects",
+      }),
+    ).toBeNull();
   });
 
   it("clears the search with the pack's ✕, shown only while there is text (R55·226)", async () => {

@@ -7,13 +7,13 @@ import { Mono } from "./Mono";
 /**
  * A product link a stranger typed (packet §3, link hygiene).
  *
- * **Three rel values, and each earns its place.** `ugc` says a runner
+ * **Two rel values, and each earns its place.** `ugc` says a runner
  * wrote this, not us. `nofollow` stops a closet being an SEO donation to
- * whoever pastes the most links. `noopener` is the security one: without
- * it the opened page gets a handle on ours through `window.opener` and
- * can navigate it somewhere else — a tab-jacking a runner would
- * experience as this app taking them to a login screen they should not
- * trust.
+ * whoever pastes the most links.
+ *
+ * **The same tab** (R59·322): nothing marks a new tab, so none opens, and
+ * Back returns the runner. With no new tab there is no `window.opener`
+ * to withhold, so `noopener` went with `target`.
  *
  * **The bare domain is shown, always.** A link whose text a stranger
  * chose tells a reader nothing about where it goes, and "check the status
@@ -67,8 +67,7 @@ export function ProductLink({
       <a
         data-target="inline"
         href={url}
-        rel="ugc nofollow noopener"
-        target="_blank"
+        rel="ugc nofollow"
         className="underline underline-offset-4"
       >
         {label}

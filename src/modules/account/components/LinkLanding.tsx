@@ -183,18 +183,19 @@ function AskPanel({
       >
         <FormStatus>{form.status}</FormStatus>
         <p className="m-0 text-lead">{copy.body}</p>
+        {/* R60·324: the button is the retry, so the band under it offers
+            none, and a failure puts focus back on it. */}
         <SubmitButton
           label={copy.label}
           pendingLabel={copy.pendingLabel}
           pending={form.pending}
           tone="ink"
+          ref={form.retryRef}
         />
         {form.failure === undefined ? undefined : (
           <FailureBand
             kicker={copy.failureKicker}
-            message="That didn't go through. Try again?"
-            onRetry={form.retry}
-            retryRef={form.retryRef}
+            message="That didn't go through."
           />
         )}
       </form>

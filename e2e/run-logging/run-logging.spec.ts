@@ -311,7 +311,9 @@ test.describe("A1 at the phone's width", () => {
         { timeout: 20_000 },
       );
 
-      await page.getByRole("button", { name: /, change start time$/u }).click();
+      await page
+        .getByRole("button", { name: /^[0-9:]+ [AP]M Change$/u })
+        .click();
       await expect(page.getByLabel("Start time")).toBeFocused();
     } finally {
       await unseed(seeded);
