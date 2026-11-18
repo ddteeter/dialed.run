@@ -393,6 +393,11 @@ const LOADER_FAILED_KICKER = "Didn't load";
  * beneath it to re-run: Reload loads the document again. Paper, no bars,
  * whoever is looking — the root's own answer about who that is is what
  * failed.
+ *
+ * In the 620 column, as every other system state is (R55·185: "the 620
+ * column elsewhere"). It was the last screen in the 390 panel at desk,
+ * which 168.1 withdrew (#622; GUESS, design 241: no ruling names the
+ * root crash).
  */
 export function RootCrashedState({
   message,
@@ -400,7 +405,7 @@ export function RootCrashedState({
 }: Readonly<{ message: string; onReload: () => void }>): JSX.Element {
   return (
     <main>
-      <Page width="panel">
+      <Page>
         <section data-part="system-state" data-state="root-crashed">
           <h1 className="sr-only">{LOADER_FAILED_KICKER}</h1>
           <FailureBand

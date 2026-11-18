@@ -1,7 +1,7 @@
 /**
  * Covers: A1 (upload, read in place — the parsed card, no import page;
- * at the desk in two columns with the conditions in the rail; the start-time
- * correction, round 26 item 1), A2 (the picker from the first frame, a kit
+ * at the desk in one column with the conditions under the card, R55·233;
+ * the start-time correction, round 26 item 1), A2 (the picker from the first frame, a kit
  * required, the outfit photo through W3's blur, and at the desk the rail's
  * band history, round 25, and A2b's push into the column, Round 54 ·
  * 164.3), S1 (the Strava reminder a matching upload
@@ -203,22 +203,23 @@ test("log a run: read a file in place, pick the kit, note it, enter one by hand"
     });
     await expect(page).toHaveURL(/\/runs\/new$/u);
 
-    // ---- A1 at the desk · two columns, and the start-time correction --
+    // ---- A1 at the desk · one column, and the start-time correction ---
     await page.setViewportSize(DESK);
     await scene(
       page,
-      "A1 at the desk · the card in the column, weather in the rail",
+      "A1 at the desk · one column, the weather under the card",
     );
+    // R55·233: no rail. The conditions sit under the card, in its column.
     const card = page.locator('[data-slot="parsed-card"]');
-    const rail = page.locator('[data-part="rail"]');
-    const cardBox = await card.boundingBox();
-    const railBox = await rail.boundingBox();
-    expect(railBox?.x ?? 0).toBeGreaterThan(
-      (cardBox?.x ?? 0) + (cardBox?.width ?? 0),
-    );
-    await expect(rail.locator("input, button, [role='radio']")).toHaveCount(0);
-    await scene(page, "Its conditions land with it, not an hour later");
     const conditions = page.locator('[data-slot="conditions"]');
+    await expect(page.locator('[data-part="rail"]')).toHaveCount(0);
+    const cardBox = await card.boundingBox();
+    const conditionsBox = await conditions.boundingBox();
+    expect(conditionsBox?.x).toBe(cardBox?.x);
+    expect(conditionsBox?.y ?? 0).toBeGreaterThanOrEqual(
+      (cardBox?.y ?? 0) + (cardBox?.height ?? 0),
+    );
+    await scene(page, "Its conditions land with it, not an hour later");
     await expect(conditions).toContainText("36°F", { timeout: 20_000 });
 
     await scene(
@@ -236,9 +237,8 @@ test("log a run: read a file in place, pick the kit, note it, enter one by hand"
       page,
       "No weather for that hour — the time and conditions go back",
     );
-    // The band holds Try again, so it is in the primary column, not the rail.
+    // The band holds Try again, under the block.
     const still = page.locator('[data-part="failure-band"]');
-    await expect(rail.locator('[data-part="failure-band"]')).toHaveCount(0);
     await expect(still).toContainText(`Still ${clockOf(fileStart)}`, {
       timeout: 20_000,
     });

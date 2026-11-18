@@ -515,7 +515,9 @@ export function VerdictForm({
           noValidate
           // `pb-8`, as A2's column has: at the desk the shell has no tab bar
           // to clear, and Log it sat flush on the page's bottom (D2-01).
-          className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6 pb-8 wide:max-w-column"
+          // `wide:px-0`, as A2's: from 720 the column is 620 of content
+          // (R57·263), so it starts at x=168 at 1280 (R58·307).
+          className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6 pb-8 wide:max-w-column wide:px-0"
           onSubmit={(event) => {
             event.preventDefault();
             void form.submit(payload());

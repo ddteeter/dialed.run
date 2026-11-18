@@ -14,6 +14,7 @@ import {
 } from "../../../lib/contracts/measures";
 import { precipClassOf } from "../../../lib/contracts/temperature";
 import {
+  ACTION_PRIMARY,
   ControlFailureBand,
   describedByFor,
   focusOnMount,
@@ -55,12 +56,11 @@ const retimeSchema = z.object({
 });
 
 /**
- * A duplicate's primary, in ink rather than the log verb's pink: *"opening
- * a run is navigation, not the log verb"* (round 22). One treatment for
- * both of its destinations.
+ * A1's primary, the product flow's (R54·167.1): the shared pink caps, so
+ * it takes 167.2's width with every other one. Hand-written, it hugged
+ * only from 1040 and spanned the column from 720 to 1039 (#621).
  */
-const PRIMARY_ACTION =
-  "target flex items-center justify-center rounded-card bg-action px-6 py-4 font-display text-body uppercase text-accent-ink desk:col-start-1 desk:row-start-3 desk:self-start desk:justify-self-start";
+const PRIMARY_ACTION = `target ${ACTION_PRIMARY}`;
 
 /**
  * Round 55 · 232: shorter, so the label never wraps. Moving on is what
@@ -70,7 +70,9 @@ const LOOKS_RIGHT = "What did you wear?";
 
 /**
  * A1's way on from a run already logged: the ink pill (R58·306), not an
- * ink display-caps card.
+ * ink display-caps card, and not the log verb's pink: *"opening a run is
+ * navigation, not the log verb"* (round 22). One treatment for both of
+ * its destinations.
  */
 const OPEN_THAT_RUN = `${INK_PILL} no-underline`;
 
@@ -235,7 +237,7 @@ function conditionsWords(
 /**
  * The conditions block while the weather for a corrected start is being
  * asked for (round 26, item 1): *"WEATHER FOR {t} · [ Getting it ] · WAS
- * {old} · AT {t0}"*. At the desk it is in the rail, where the block is.
+ * {old} · AT {t0}"*.
  */
 function WeatherFor({
   time,
@@ -399,9 +401,10 @@ function useRetimeForm({
  * conditions back. The date never changes. The primary action, pressed
  * mid-fetch, waits in brackets and then goes — never disabled.
  *
- * **At the desk the conditions block is the rail** (round 25): the card
- * and the primary action in the primary column, the block beside them,
- * read-only. Below 1040 it is where the phone has it, between the two.
+ * **One column at every width** (R55·233, with R54·168.1): the card,
+ * the conditions block and the primary action in the phone's order, in
+ * the page's centred 620. Round 25's desk rail for the block is
+ * withdrawn; A2 and A3 keep theirs (R58·307).
  */
 // fallow-ignore-next-line code-duplication -- a many-prop signature that matches feed/components/Feed.tsx FollowingTab only by destructuring one prop per line; one is a parsed run, the other the Following tab, and they share nothing to extract
 export function ParsedCard({
@@ -445,12 +448,12 @@ export function ParsedCard({
   const clock = runClockLabel(movedTo ?? run.startedAt, zone);
 
   return (
-    <div className="flex flex-col gap-3 desk:grid desk:grid-cols-[minmax(0,var(--container-column))_minmax(0,1fr)] desk:items-start desk:gap-x-6">
+    <div className="flex flex-col gap-3">
       <FormStatus>{form.status}</FormStatus>
       <div
         data-slot="parsed-card"
         data-state="parsed"
-        className="overflow-hidden rounded-card border border-hairline bg-panel desk:col-start-1 desk:row-start-1"
+        className="overflow-hidden rounded-card border border-hairline bg-panel"
       >
         <FileStrip label={`Parsed · ${filename}`} onReplace={onReplace} />
         <div className="flex flex-col gap-2 p-4">
@@ -485,21 +488,17 @@ export function ParsedCard({
           ) : undefined}
         </div>
       </div>
-      <div
-        data-part="rail"
-        className="flex flex-col gap-3 desk:col-start-2 desk:row-start-1 desk:row-span-3"
-      >
-        <RailConditions
-          run={run}
-          units={units}
-          zone={zone}
-          time={time}
-          pending={form.pending}
-        />
-      </div>
-      {/* The band says what is still true under the block, and holds Try
-          again — a control, so in the primary column and never the rail. */}
-      <div className="flex flex-col desk:col-start-1 desk:row-start-2">
+      <RunConditions
+        run={run}
+        units={units}
+        zone={zone}
+        time={time}
+        pending={form.pending}
+      />
+      {/* The band says what is still true, under the block. Its box is
+          always here, so the block and the action stay two gaps apart
+          whether or not it holds a band. */}
+      <div className="flex flex-col">
         <ControlFailureBand
           failure={noWeatherFailure(noWeatherFor, run.startedAt, zone)}
           onRetry={() => {
@@ -540,7 +539,7 @@ function LooksRightAction({
       onClick={() => {
         setIsWaitingToGo(true);
       }}
-      className={`border-none ${PRIMARY_ACTION}`}
+      className={PRIMARY_ACTION}
     >
       <PendingLabel
         label={LOOKS_RIGHT}
@@ -561,11 +560,11 @@ function LooksRightAction({
 }
 
 /**
- * The conditions block, in the rail at the desk: while the weather for a
+ * The conditions block: while the weather for a
  * new start is fetched it says so, with what it was; otherwise the run's
  * conditions, never typed by hand.
  */
-function RailConditions({
+function RunConditions({
   run,
   units,
   zone,

@@ -31,6 +31,7 @@ import {
   NO_TRACK_MESSAGE,
   PARSE_FAILURE_MESSAGE,
 } from "../../src/modules/runs/upload-limits";
+import { ACTION_PRIMARY } from "../../src/ui";
 import { DURATION } from "../../src/ui/motion";
 import { expectBusy } from "../ui/unavailable";
 import { queryWeatherCredit } from "../ui/weather-credit";
@@ -342,11 +343,16 @@ describe("A1 at rest", () => {
       "From your watch export or any tracking app.",
     );
     expect(dropInput()).toHaveAttribute("accept", ".fit,.gpx,.tcx");
-    // Round 25: before a file, the well keeps the primary column's measure
-    // at the desk, and nothing sits beside it.
-    expect(
-      well().closest(`.${CSS.escape("desk:max-w-column")}`),
-    ).not.toBeNull();
+    // R55·233: A1 has no rail and no measure of its own. The well fills
+    // the page's column, which is the 620 at every desk width.
+    // The well's own box, then the one that holds it and its bands.
+    const before = well().parentElement?.parentElement;
+    expect(before?.className).toBe("flex flex-col gap-3");
+    const around: string[] = [];
+    for (let box = well().parentElement; box; box = box.parentElement) {
+      around.push(box.className);
+    }
+    expect(around.join(" ")).not.toMatch(/desk:/u);
   });
 
   it("holds no file name in the reading label it keeps in reserve", async () => {
@@ -1229,8 +1235,13 @@ describe("A1: the parsed card", () => {
     );
     // WAS is still the provider's reading, so it keeps its credit (D-144).
     expect(queryWeatherCredit(block)).not.toBeNull();
-    // The block is read-only, and at the desk it is the rail.
-    expect(block.closest("[data-part='rail']")).not.toBeNull();
+    // R55·233: the block is in the column at every width, never a rail,
+    // between the card and the action as on a phone.
+    expect(block.closest("[data-part='rail']")).toBeNull();
+    const card = document.querySelector("[data-slot='parsed-card']");
+    expect(card?.parentElement?.className).toBe("flex flex-col gap-3");
+    expect(card?.className).not.toMatch(/desk:/u);
+    expect(card?.nextElementSibling?.contains(block)).toBe(true);
     expectBusy(screen.getByRole("button", { name: "Getting" }));
 
     pending.resolve("moved");
@@ -1262,8 +1273,9 @@ describe("A1: the parsed card", () => {
       if (found === null) throw new Error("no band yet");
       return found;
     });
-    // A control, so never in the read-only rail (round 25).
-    expect(band.closest("[data-part='rail']")).toBeNull();
+    // Under the block, in the box that keeps the action two gaps away.
+    expect(band.parentElement).toHaveClass("flex", "flex-col");
+    expect(band.parentElement?.className).not.toMatch(/desk:/u);
     expect(band).toHaveTextContent("Still 6:04 AM");
     expect(band).toHaveTextContent(
       "Couldn't get weather for 7:34 AM. Try again?",
@@ -1383,7 +1395,9 @@ describe("A1: the parsed card", () => {
     expect(router.state.location.pathname).toBe("/");
     expect(next).toHaveTextContent("[What did you wear?]");
     expect(next).not.toHaveAttribute("aria-disabled");
-    expect(next).toHaveClass("bg-action", "target");
+    // The shared pink caps, so 167.2's width reaches it (#621).
+    expect(next).toHaveClass("target", ...ACTION_PRIMARY.split(" "));
+    expect(next.className).not.toMatch(/desk:/u);
 
     pending.resolve("moved");
     await waitFor(() => {
@@ -1398,8 +1412,14 @@ describe("A1: the parsed card", () => {
     const next = await screen.findByRole("link", {
       name: "What did you wear?",
     });
-    // The log verb's pink, as a 44px target.
-    expect(next).toHaveClass("bg-action", "target");
+    // The log verb's pink, as a 44px target: the shared primary, which
+    // hugs from 720 and not only from 1040 (#621).
+    expect(next).toHaveClass(
+      "target",
+      "no-underline",
+      ...ACTION_PRIMARY.split(" "),
+    );
+    expect(next.className).not.toMatch(/desk:/u);
 
     await user.click(next);
 

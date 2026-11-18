@@ -37,13 +37,12 @@ import { useHydrated } from "./use-hydrated";
 export const COLUMN = "mx-auto w-full wide:max-w-column";
 
 /**
- * **`column`** is every signed-in screen. **`panel`** is *"the phone
- * screen, unchanged, centred at 390"* at every width, and is left for the
- * root crash and signed-out screens 168.1 does not name. **`page`** is the
- * closet list's MEASURE.page, for a system state that replaces it
- * (R55·185).
+ * **`column`** is every signed-in screen, and the root crash. **`page`**
+ * is the closet list's MEASURE.page, for a system state that replaces it
+ * (R55·185). There is no 390 panel: 168.1 withdrew it at width, and the
+ * signed-out screens draw their own (`SignedOutPanel`).
  */
-type PageWidth = "panel" | "column" | "page" | "step" | "close" | "table";
+type PageWidth = "column" | "page" | "step" | "close" | "table";
 
 /**
  * An onboarding step: the phone's own width below 720, fluid as DS4 has
@@ -60,13 +59,12 @@ const STEP = COLUMN;
  * Gutters belong to the page, never to a column (R57·263, tokens.js
  * MEASURE_RULES): a 620 column is 620 of content, centred on the page's
  * axis (x=330 at 1280). So from 720 a column drops the phone's 24, and
- * the measure alone sets its edge. The panel is the phone screen itself
- * and the page measure has its gutters inside it, so both keep theirs.
+ * the measure alone sets its edge. The page measure has its gutters
+ * inside it, so it keeps them.
  */
 const COLUMN_GUTTER_CLASS = "px-6 wide:px-0";
 
 const WIDTH_CLASS: Readonly<Record<PageWidth, string>> = {
-  panel: "mx-auto max-w-panel px-6",
   column: `${COLUMN} ${COLUMN_GUTTER_CLASS}`,
   page: "mx-auto w-full max-w-page px-6",
   step: `${STEP} ${COLUMN_GUTTER_CLASS}`,

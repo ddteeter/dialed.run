@@ -13,13 +13,15 @@ import {
   startFileImport,
 } from "../../modules/runs/functions";
 import { newRunSearch } from "../../modules/runs/inputs";
-import { AddRunShell } from "../../modules/runs/components/AddRunShell";
 import { ReminderDayLine } from "../../modules/runs/components/ReminderDayLine";
+import { Page } from "../../ui";
 
 /**
 Screen A1: upload & auto-conditions (docs/product.md). Every outcome — the
 parsed card, a duplicate's receipt, a parse failure, a stall — renders here,
-in place; nothing navigates while a file is read (round 22).
+in place; nothing navigates while a file is read (round 22). The page is
+the centred 620 column every runner screen is (R54·168.1), with no rail
+(R55·233): round 25's desk page for A1 is withdrawn.
 */
 export const Route = createFileRoute("/runs/new")({
   // D-102's name for the page, in round 30 #4b's words.
@@ -45,7 +47,7 @@ function NewRunPage() {
 
   return (
     <BelledLayout {...bell}>
-      <AddRunShell>
+      <Page title="Add a run">
         <UploadForm
           upload={startFileImport}
           getOutcome={getImportOutcomeFn}
@@ -60,7 +62,7 @@ function NewRunPage() {
               : undefined
           }
         />
-        <p className="text-center text-small text-muted desk:max-w-column">
+        <p className="text-center text-small text-muted">
           No file?{" "}
           <Link
             to="/runs/manual"
@@ -73,7 +75,7 @@ function NewRunPage() {
           instead.
         </p>
         <ReminderDayLine day={search.date} />
-      </AddRunShell>
+      </Page>
     </BelledLayout>
   );
 }
