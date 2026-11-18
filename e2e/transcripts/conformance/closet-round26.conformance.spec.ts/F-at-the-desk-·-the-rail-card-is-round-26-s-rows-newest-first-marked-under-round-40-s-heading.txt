@@ -161,7 +161,6 @@ listitem, level 1, position 1, set size 4
 Tracksmith Harrier
 # runs ·
 # of # runs dialed
-, works at
 # to # degrees
 end of listitem, level 1, position 1, set size 4
 listitem, level 1, position 2, set size 4

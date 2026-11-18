@@ -37,9 +37,10 @@ end of paragraph
 paragraph
 # minutes # seconds per mile
 :day :month #
-button, #:# UTC, change start time
+button, #:# UTC Change
 #:# UTC
-end of button, #:# UTC, change start time
+Change
+end of button, #:# UTC Change
 end of paragraph
 Fetching weather
 Usually under a minute. You can go on without it.

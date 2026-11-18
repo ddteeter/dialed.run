@@ -30,7 +30,7 @@ heading, Your run, level 1
 Hidden while we check
 Other runners can't see this while we look at it.
 You can still edit or delete it.
-Seen by:
+Seen by
 Shared
 group, Photos
 button, Next photo

@@ -152,26 +152,18 @@ paragraph
 DISCLAIMER THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM OTHER DEALINGS IN THE FONT SOFTWARE.
 end of paragraph
 end of group
+heading, Projects, level 3
 list
 listitem, level 1, position 1, set size 3
-Archivo
-link, Project: Archivo
-Project
-end of link, Project: Archivo
+link, Archivo
 © # The Archivo Project Authors
 end of listitem, level 1, position 1, set size 3
 listitem, level 1, position 2, set size 3
-Archivo Black
-link, Project: Archivo Black
-Project
-end of link, Project: Archivo Black
+link, Archivo Black
 © # The Archivo Black Project Authors
 end of listitem, level 1, position 2, set size 3
 listitem, level 1, position 3, set size 3
-IBM Plex Mono
-link, Project: IBM Plex Mono
-Project
-end of link, Project: IBM Plex Mono
+link, IBM Plex Mono
 © # IBM Corp. with Reserved Font Name "Plex"
 end of listitem, level 1, position 3, set size 3
 end of list
@@ -191,29 +183,21 @@ paragraph
 THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 end of paragraph
 end of group
+heading, Projects, level 3
 list
 listitem, level 1, position 1, set size 3
-@better-auth/core
+link, @better-auth/core
 #.#.#
-link, Project: @better-auth/core
-Project
-end of link, Project: @better-auth/core
 © # - present, Bereket Engida
 end of listitem, level 1, position 1, set size 3
 listitem, level 1, position 2, set size 3
-@better-auth/drizzle-adapter
+link, @better-auth/drizzle-adapter
 #.#.#
-link, Project: @better-auth/drizzle-adapter
-Project
-end of link, Project: @better-auth/drizzle-adapter
 © # - present, Bereket Engida
 end of listitem, level 1, position 2, set size 3
 listitem, level 1, position 3, set size 3
-@better-auth/kysely-adapter
+link, @better-auth/kysely-adapter
 #.#.#
-link, Project: @better-auth/kysely-adapter
-Project
-end of link, Project: @better-auth/kysely-adapter
 © # - present, Bereket Engida
 end of listitem, level 1, position 3, set size 3
 end of list
@@ -240,29 +224,21 @@ paragraph
 THIS IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 end of paragraph
 end of group
+heading, Projects, level 3
 list
 listitem, level 1, position 1, set size 3
-domelementtype
+link, domelementtype
 #.#.#
-link, Project: domelementtype
-Project
-end of link, Project: domelementtype
 © Felix Böhm
 end of listitem, level 1, position 1, set size 3
 listitem, level 1, position 2, set size 3
-domhandler
+link, domhandler
 #.#.#
-link, Project: domhandler
-Project
-end of link, Project: domhandler
 © Felix Böhm
 end of listitem, level 1, position 2, set size 3
 listitem, level 1, position 3, set size 3
-entities
+link, entities
 #.#.#
-link, Project: entities
-Project
-end of link, Project: entities
 © Felix Böhm
 end of listitem, level 1, position 3, set size 3
 end of list
@@ -370,13 +346,11 @@ paragraph
 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 end of paragraph
 end of group
+heading, Projects, level 3
 list
 listitem, level 1, position 1, set size 3
-@cf-wasm/photon
+link, @cf-wasm/photon
 #.#.#
-link, Project: @cf-wasm/photon
-Project
-end of link, Project: @cf-wasm/photon
 © #, Silvia O'Dwyer
 end of listitem, level 1, position 1, set size 3
 listitem, level 1, position 2, set size 3
@@ -384,11 +358,8 @@ listitem, level 1, position 2, set size 3
 #.#.#
 end of listitem, level 1, position 2, set size 3
 listitem, level 1, position 3, set size 3
-drizzle-orm
+link, drizzle-orm
 #.#.#
-link, Project: drizzle-orm
-Project
-end of link, Project: drizzle-orm
 © Drizzle Team
 end of listitem, level 1, position 3, set size 3
 end of list
@@ -745,29 +716,21 @@ paragraph
 This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. #.#.
 end of paragraph
 end of group
+heading, Projects, level 3
 list
 listitem, level 1, position 1, set size 3
-@cf-wasm/resvg
+link, @cf-wasm/resvg
 #.#.#
-link, Project: @cf-wasm/resvg
-Project
-end of link, Project: @cf-wasm/resvg
 © yisibl
 end of listitem, level 1, position 1, set size 3
 listitem, level 1, position 2, set size 3
-@cf-wasm/satori
+link, @cf-wasm/satori
 #.#.#
-link, Project: @cf-wasm/satori
-Project
-end of link, Project: @cf-wasm/satori
 © Shu Ding
 end of listitem, level 1, position 2, set size 3
 listitem, level 1, position 3, set size 3
-@resvg/resvg-wasm
+link, @resvg/resvg-wasm
 #.#.#
-link, Project: @resvg/resvg-wasm
-Project
-end of link, Project: @resvg/resvg-wasm
 end of listitem, level 1, position 3, set size 3
 end of list
 button, Show all #
@@ -928,13 +891,11 @@ paragraph
 Last updated: :month #, #
 end of paragraph
 end of group
+heading, Projects, level 3
 list
 listitem, level 1, position 1, set size 1
-@garmin/fitsdk
+link, @garmin/fitsdk
 #.#.#
-link, Project: @garmin/fitsdk
-Project
-end of link, Project: @garmin/fitsdk
 © Garmin International, Inc.
 end of listitem, level 1, position 1, set size 1
 end of list
@@ -963,13 +924,11 @@ paragraph
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 end of paragraph
 end of group
+heading, Projects, level 3
 list
 listitem, level 1, position 1, set size 1
-deepmerge-ts
+link, deepmerge-ts
 #.#.#
-link, Project: deepmerge-ts
-Project
-end of link, Project: deepmerge-ts
 © #, Rebecca Stevens
 end of listitem, level 1, position 1, set size 1
 end of list
@@ -986,13 +945,11 @@ paragraph
 THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 end of paragraph
 end of group
+heading, Projects, level 3
 list
 listitem, level 1, position 1, set size 1
-css-color-keywords
+link, css-color-keywords
 #.#.#
-link, Project: css-color-keywords
-Project
-end of link, Project: css-color-keywords
 © #, Jakob Krigovsky
 end of listitem, level 1, position 1, set size 1
 end of list
@@ -1018,13 +975,11 @@ paragraph
 For more information, please refer to <http://unlicense.org/>
 end of paragraph
 end of group
+heading, Projects, level 3
 list
 listitem, level 1, position 1, set size 1
-isbot
+link, isbot
 #.#.#
-link, Project: isbot
-Project
-end of link, Project: isbot
 end of listitem, level 1, position 1, set size 1
 end of list
 end of region, Unlicense
@@ -1421,29 +1376,21 @@ heading, Tools we build with, level 2
 paragraph
 We build and test dialed.run with these. None of them ships in the app, so each is credited by name and licence.
 end of paragraph
+heading, Projects, level 3
 list
 listitem, level 1, position 1, set size 3
-@cloudflare/vite-plugin
+link, @cloudflare/vite-plugin
 #.#.#
-link, Project: @cloudflare/vite-plugin
-Project
-end of link, Project: @cloudflare/vite-plugin
 MIT
 end of listitem, level 1, position 1, set size 3
 listitem, level 1, position 2, set size 3
-@cloudflare/vitest-pool-workers
+link, @cloudflare/vitest-pool-workers
 #.#.#
-link, Project: @cloudflare/vitest-pool-workers
-Project
-end of link, Project: @cloudflare/vitest-pool-workers
 MIT
 end of listitem, level 1, position 2, set size 3
 listitem, level 1, position 3, set size 3
-@eslint/js
+link, @eslint/js
 #.#.#
-link, Project: @eslint/js
-Project
-end of link, Project: @eslint/js
 MIT
 end of listitem, level 1, position 3, set size 3
 end of list
