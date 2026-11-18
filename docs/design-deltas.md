@@ -1490,8 +1490,11 @@ on #793, 2026-11-17).
   and the pushed page's control-height. Only a test kept them apart, to
   kill a mutant on which branch rendered. PushDone's ruling makes both the
   hairline pill, so the sheet now renders PushDone too.
-- **Not moved, as ruled:** CityFinder's Find, the hairline pill at its
-  field's own height beside it (R58·308), and its Use this.
+- **Not moved, as ruled (exempt by name):** CityFinder's Find, the
+  hairline pill at its field's own height beside it (R58·308), and its
+  Use this; AttachKit's A2 Change, ink-edged, and its pair on the hi-viz
+  card (R58·308); OwnerAudience's AF1 outline-to-filled toggle (R55·171);
+  and Google's button, to Google's spec.
 - **Not moved, awaiting Design 334 (#834):** the bar's 44 pink pill and
   the other pink pills (Landing, PublicFrame, OwnProfile, ShadeSheet's
   Use this), Follow's states, onboarding's small pills and the round icon
