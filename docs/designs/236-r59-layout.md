@@ -78,10 +78,15 @@ desk:table-cell`, and the card's copy reads as the desk's. The clip
 ## Issues
 
 - Closes: #771, #778, #780, #781, #791, #830.
-- Opens: #833 (Design 333, filed by coordinator-14), deferred, not closed.
+- Opens: #833 (Design 333) and #839 (Design 336), filed by
+  coordinator-14, deferred, not closed.
 
 ## Open questions
 
 - GUESS (319): the posts list counts under "nothing bleeds past its
   column", so its tint bands stop at the 620 from 720. Coordinator-14 did
   not veto it; Design confirms it in #833 (Design 333), which stays open.
+- GUESS (326): the ruling's 14 between the mono line and the badge is
+  not a SPACE step (tokens.js collapses 14 to 16). Built at 14, because
+  the ruling sums its 104 with it. Design settles it in #839 (Design
+  336), which stays open.

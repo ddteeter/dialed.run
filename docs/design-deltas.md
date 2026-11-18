@@ -7153,4 +7153,5 @@ ruled. Notes on how:
 - **R60·326 · the badged runs-list row, as ruled.** Its 14 is the
   column's 4 and 10 on the badge's line; the 44 target is a
   `target-line`, eleven proud of the 22 pill inside the row's 14 and 16.
+  Guess: the 14 is off the 4px scale (14 → 16); #839 (Design 336) asks.
 - **R60·330 · R1's title hint, as ruled.** "Only you see the title."
