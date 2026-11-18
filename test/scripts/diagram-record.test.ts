@@ -8,8 +8,11 @@ import {
   planReport,
   plannedMs,
   recordingPlan,
+  spokenLines,
   stepHoldMs,
+  stepLine,
   viewUrl,
+  voicedPlan,
   type StepFacts,
   type ViewFacts,
 } from "../../scripts/diagrams/record";
@@ -55,6 +58,10 @@ describe("stepHoldMs", () => {
     ).toBe(1500 + 150 * 7);
   });
 
+  it("holds a step that says nothing for the beat alone", () => {
+    expect(stepHoldMs(step(""), true)).toBe(1500);
+  });
+
   it("never holds a step longer than the cap", () => {
     const long = step("x", "word ".repeat(200));
     const justUnder = step("x", "word ".repeat(42));
@@ -75,11 +82,15 @@ describe("recordingPlan", () => {
       {
         id: "aStory",
         layout: "diagram",
-        opening: { caption: "New view · aStory · A story", holdMs: OPENING_MS },
+        opening: {
+          caption: "New view · aStory · A story",
+          spoken: "New view: A story. 3 steps.",
+          holdMs: OPENING_MS,
+        },
         steps: [
-          { caption: "aStory · step 1 of 3", holdMs: 1650 },
-          { caption: "aStory · step 2 of 3", holdMs: 1650 },
-          { caption: "aStory · step 3 of 3", holdMs: 1650 },
+          { caption: "aStory · step 1 of 3", spoken: "Asks.", holdMs: 1650 },
+          { caption: "aStory · step 2 of 3", spoken: "Stores.", holdMs: 1650 },
+          { caption: "aStory · step 3 of 3", spoken: "Answers.", holdMs: 1650 },
         ],
       },
     ]);
@@ -99,6 +110,7 @@ describe("recordingPlan", () => {
         layout: "diagram",
         opening: {
           caption: "Changed · platform · The modules",
+          spoken: "Changed: The modules.",
           holdMs: STILL_VIEW_MS,
         },
         steps: [],
@@ -108,6 +120,7 @@ describe("recordingPlan", () => {
         layout: "diagram",
         opening: {
           caption: "New view · index · The modules",
+          spoken: "New view: The modules.",
           holdMs: STILL_VIEW_MS,
         },
         steps: [],
@@ -123,8 +136,12 @@ describe("recordingPlan", () => {
       step("answers"),
     ];
     const plan = recordingPlan([story(THREE)], [story(edited)]);
-    expect(plan.views.map((view) => view.opening.caption)).toEqual([
-      "Changed · aStory · 1 of 3 steps new or changed",
+    expect(plan.views.map((view) => view.opening)).toEqual([
+      {
+        caption: "Changed · aStory · 1 of 3 steps new or changed",
+        spoken: "Changed: A story. 1 of 3 steps new or changed.",
+        holdMs: OPENING_MS,
+      },
     ]);
     expect(plan.views[0]?.steps).toEqual([
       {
@@ -133,6 +150,7 @@ describe("recordingPlan", () => {
       },
       {
         caption: "aStory · step 2 of 3 · changed",
+        spoken: "Stores. now with a guard",
         holdMs: stepHoldMs(step("stores", "now with a guard"), true),
       },
       {
@@ -168,6 +186,7 @@ describe("recordingPlan", () => {
     );
     expect(plan.views[0]?.opening).toEqual({
       caption: "Changed · aStory · no step changed, 1 fewer",
+      spoken: "Changed: A story. No step changed, 1 fewer.",
       holdMs: OPENING_MS,
     });
   });
@@ -219,6 +238,113 @@ describe("recordingPlan", () => {
       [story(THREE, { hash: "h2" }), { ...b, hash: "h3" }],
     );
     expect(plan.views.map((view) => view.id)).toEqual(["aStory", "bStory"]);
+  });
+});
+
+describe("stepLine", () => {
+  it("says the label as a sentence, then the whole note", () => {
+    expect(stepLine(step("stores the raw file"))).toBe("Stores the raw file.");
+    expect(stepLine(step("is it there?", "Then it stops."))).toBe(
+      "Is it there? Then it stops.",
+    );
+    expect(stepLine(step("asks for the conditions."))).toBe(
+      "Asks for the conditions.",
+    );
+    expect(stepLine(step("stops!"))).toBe("Stops!");
+    expect(stepLine(step("uploads a .FIT file"))).toBe("Uploads a .FIT file.");
+  });
+
+  it("drops the note's emphasis and code marks and joins its paragraphs", () => {
+    expect(
+      stepLine(
+        step(
+          "inserts the import row: pending",
+          "**This row is the marker.** From here on, `pending`\n\n  means *owed*.",
+        ),
+      ),
+    ).toBe(
+      "Inserts the import row: pending. This row is the marker. From here on, pending means owed.",
+    );
+  });
+
+  it("says only the label when the note is blank", () => {
+    expect(stepLine(step("asks", " \n "))).toBe("Asks.");
+  });
+});
+
+describe("spokenLines", () => {
+  it("lists every line the plan speaks once, in order, skipping silent shots", () => {
+    const edited = [
+      step("stores", "now"),
+      step("stores", "now"),
+      step("answers"),
+    ];
+    const plan = recordingPlan(
+      [story(THREE), MAP],
+      [story(edited), { ...MAP, hash: "m2" }],
+    );
+    expect(spokenLines(plan)).toEqual([
+      "Changed: A story. 2 of 3 steps new or changed.",
+      "Stores. now",
+      "Changed: The modules.",
+    ]);
+  });
+});
+
+describe("voicedPlan", () => {
+  const plan = recordingPlan(
+    [story(THREE)],
+    [story([step("asks"), step("waits")], { hash: "h2" })],
+  );
+  const lines = new Map([
+    [
+      "Changed: A story. 1 of 2 steps new or changed, 1 fewer.",
+      { audio: "open.aiff", holdMs: 500 },
+    ],
+    ["Waits.", { audio: "waits.aiff", holdMs: 9000 }],
+  ]);
+
+  it("attaches each line and holds its shot until the line is said", () => {
+    expect(voicedPlan(plan, lines)).toEqual({
+      removed: [],
+      views: [
+        {
+          id: "aStory",
+          layout: "diagram",
+          opening: {
+            caption: "Changed · aStory · 1 of 2 steps new or changed, 1 fewer",
+            spoken: "Changed: A story. 1 of 2 steps new or changed, 1 fewer.",
+            audio: "open.aiff",
+            holdMs: OPENING_MS,
+          },
+          steps: [
+            {
+              caption: "aStory · step 1 of 2 · unchanged",
+              holdMs: UNCHANGED_STEP_MS,
+            },
+            {
+              caption: "aStory · step 2 of 2 · changed",
+              spoken: "Waits.",
+              audio: "waits.aiff",
+              holdMs: 9000,
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it("keeps what the plan says is gone", () => {
+    const gone = recordingPlan([MAP], []);
+    expect(voicedPlan(gone, new Map()).removed).toEqual(["modules"]);
+  });
+
+  it("throws on a line nobody rendered", () => {
+    expect(() => voicedPlan(plan, new Map())).toThrow(
+      new Error(
+        "No rendered line for: Changed: A story. 1 of 2 steps new or changed, 1 fewer.",
+      ),
+    );
   });
 });
 

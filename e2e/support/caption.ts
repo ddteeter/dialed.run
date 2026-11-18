@@ -79,13 +79,15 @@ export function recordAt(
 }
 
 /**
- * One narrated line: the caption shown, when it began relative to the
- * start of the recording, and the rendered audio.
+ * One caption: what it says, when it began relative to the start of the
+ * recording, and the rendered line spoken over it. A PR demo speaks every
+ * caption; a diagram recording (design 229) leaves an unchanged step
+ * silent.
  */
 export interface Cue {
   readonly text: string;
   readonly startMs: number;
-  readonly audio: string;
+  readonly audio?: string;
 }
 
 /**
@@ -163,13 +165,24 @@ export const SAY = "/usr/bin/say";
 export const AFINFO = "/usr/bin/afinfo";
 
 /**
- * Where Homebrew puts ffmpeg, on Apple silicon and then Intel. The mux
- * step takes the first that exists.
+ * Where Homebrew puts ffmpeg, on Apple silicon and then Intel.
  */
 export const FFMPEG_CANDIDATES = [
   "/opt/homebrew/bin/ffmpeg",
   "/usr/local/bin/ffmpeg",
 ] as const;
+
+/**
+ * The ffmpeg both muxes spawn: the first candidate `isPresent` finds, else an
+ * error naming every place looked.
+ */
+export function ffmpegPath(isPresent: (file: string) => boolean): string {
+  const found = FFMPEG_CANDIDATES.find((candidate) => isPresent(candidate));
+  if (found === undefined) {
+    throw new Error(`ffmpeg not found at ${FFMPEG_CANDIDATES.join(" or ")}`);
+  }
+  return found;
+}
 
 /**
  * A rendered line's length, in whole milliseconds, from `afinfo`'s
@@ -229,14 +242,9 @@ p { margin: 0; color: #f5f5f0; font: 500 ${String(fontPx)}px/1.4 "Caption Mono",
 
 /**
  * A cue ready to mux: its caption already rendered to `caption`, and its
- * spoken line, if it has one. A diagram recording (design 229, step 4) is
- * captioned and silent.
+ * spoken line, if it has one.
  */
-export interface Scene {
-  readonly startMs: number;
-  readonly audio?: string;
-  readonly caption: string;
-}
+export type Scene = Omit<Cue, "text"> & { readonly caption: string };
 
 /**
  * The spoken lines, in order, each with when it starts.
