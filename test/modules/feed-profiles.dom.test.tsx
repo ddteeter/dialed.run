@@ -188,8 +188,9 @@ describe("OwnProfile (G): an unconfirmed runner (round 26 #11; FEED-11)", () => 
     const nag = screen.getByRole("complementary", {
       name: "Confirm your email",
     });
-    // Flush under the header, edge to edge (R55·211): the slot steps out
-    // of the column's gutter and top padding.
+    // Flush under the header (R55·211): the slot steps out of the top
+    // padding, and on a phone out of the gutter too. From 720 it sits on
+    // the content edge and pads its own text 16 (R59·319).
     const slot = nag.parentElement;
     expect(slot).toHaveAttribute("data-part", "flush-band");
     expect(slot).toHaveClass(
@@ -197,9 +198,10 @@ describe("OwnProfile (G): an unconfirmed runner (round 26 #11; FEED-11)", () => 
       "-mt-6",
       "px-5",
       "empty:hidden",
-      "wide:-mx-6",
-      "wide:px-6",
+      "wide:mx-0",
+      "wide:px-4",
     );
+    expect(slot).not.toHaveClass("wide:-mx-6");
     expect(slot?.parentElement?.firstElementChild).toBe(slot);
     expect(nag.compareDocumentPosition(part("header") ?? nag)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,

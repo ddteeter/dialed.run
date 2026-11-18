@@ -224,13 +224,14 @@ function FollowingTab({
       {compact === undefined ? undefined : (
         <CompactConditions result={compact} units={units} />
       )}
-      {/* R55·205: posts are split by an 8 --tint band from edge to edge,
-          stronger than any rule inside one. The list steps out of the
-          column's gutter and each post puts it back (PostCard's `px-5`),
-          so the band meets the screen's edges. */}
+      {/* R55·205: posts are split by an 8 --tint band, stronger than any
+          rule inside one. On a phone the list steps out of the column's
+          gutter and each post puts it back (PostCard's `px-5`), so the
+          band meets the screen's edges. From 720 nothing bleeds past the
+          620 (R59·319; #833 has Design confirm the list counts). */}
       <div
         data-part="posts"
-        className="-mx-5 flex flex-col divide-y-8 divide-tint wide:-mx-6"
+        className="-mx-5 flex flex-col divide-y-8 divide-tint wide:mx-0"
       >
         {items.map((item, index) => (
           <PostCard

@@ -22,16 +22,15 @@ import { Mono } from "./Mono";
  * is, so at 1280 the column starts at x=168. Both tracks are fixed so the
  * group's width never follows its content.
  *
- * GUESS: the rail's 300 is not a MEASURE (tokens.js: "Nothing pins a width
- * that isn't in MEASURE"). It is the board's number until Design 316
- * (#771) names one.
+ * The rail's 300 is MEASURE.aside (R59·316), the log flow's rail, and not
+ * MEASURE.rail, which is the Desk's 122.
  */
 export function DeskSplit({
   rail,
   children,
 }: Readonly<{ rail: ReactNode; children: ReactNode }>): JSX.Element {
   return (
-    <div className="mx-auto flex w-full flex-col wide:mx-0 desk:mx-auto desk:grid desk:w-fit desk:grid-cols-[var(--container-column)_300px] desk:items-start desk:gap-x-6">
+    <div className="mx-auto flex w-full flex-col wide:mx-0 desk:mx-auto desk:grid desk:w-fit desk:grid-cols-[var(--container-column)_var(--container-aside)] desk:items-start desk:gap-x-6">
       {children}
       <div
         data-part="rail"

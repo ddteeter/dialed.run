@@ -223,19 +223,20 @@ describe("Feed: Following", () => {
 
     const posts = document.querySelectorAll('[data-part="post"]');
     const list = document.querySelector('[data-part="posts"]');
-    // R55·205: the 8 --tint band is the list's, between posts, edge to
-    // edge: the list steps out of the column's gutter and each post puts
-    // it back.
+    // R55·205: the 8 --tint band is the list's, between posts. On a phone
+    // it runs edge to edge: the list steps out of the column's gutter and
+    // each post puts it back. From 720 it stops at the 620 (R59·319).
     expect(list).toHaveClass(
       "divide-y-8",
       "divide-tint",
       "-mx-5",
-      "wide:-mx-6",
+      "wide:mx-0",
     );
+    expect(list).not.toHaveClass("wide:-mx-6");
     expect(list).not.toHaveClass("divide-hairline", "gap-5");
     for (const post of posts) {
       expect(post.parentElement).toBe(list);
-      expect(post).toHaveClass("px-5", "py-4", "wide:px-6");
+      expect(post).toHaveClass("px-5", "py-4", "wide:px-0");
       expect(post).not.toHaveClass("border-b");
     }
   });
