@@ -1081,6 +1081,106 @@ _Nothing from 99 on is open: round 45 answered the last of it._
 
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
 
+## Answered in round 60 (imported 2026-11-18)
+
+Design answered as `Round 60 Rulings.dc.html`, items 324–330 and the
+wave-13 confirmations 60a–60e, every one in the table on the board. The
+board's text is the text of record; each ruling is also a comment on its
+issue. No guess stands, and no token changed. Wave 14 built every ruling
+that asked for work (designs 235, 236 and 237), so every item's issue is
+closed: #814, #813, #791, #818, #819, #820, #830 and #837.
+
+### The refusal rule
+
+One ruling covers every new refusal (324, 328, 329, 60a, 60d, 60e).
+
+- **Fixable in the field:** the field error under the field (R29 #1).
+  The runner's next keystroke is the fix.
+- **Fixable by retrying:** the §4a band under the control, its kicker
+  naming the state that is still true, with Try again.
+- **Not fixable now** (limits, holds, refusals, gone): the same band in
+  the same slot, with **no Try again**. A limit names its {time} or
+  {date}. A refusal names the other way, if there is one.
+
+### Notices
+
+- **R60 · Manual run titles. Noted.** The title is the runner's own
+  (330, D-197).
+- **R60 · Blocking. Noted.** No ceiling: Settings lists every blocked
+  runner, unpaged. A block doesn't stop a report (D-198).
+
+### Auth and account
+
+- **R60·324 · The link landings ask first (#814). Drawn.** The
+  unsubscribe landing's composition (R27 #8): one ink button, the
+  pending state is the button's breathing brackets at the same width,
+  and a failure is the band under the button, kicker NOT CONFIRMED or
+  NOT CHANGED, "That didn't go through.", with no Try again because the
+  button is the retry. Success replaces the page with R26 #11's
+  landings. The change landing reads "Use this address?" with the new
+  address in the body.
+- **R60·324 · Google, for a password account. Changed.** The kicker
+  follows the page: NOT LOGGED IN on Au1, NOT CREATED on Au2. It sits in
+  Google's band under the Google button, with no Try again. The sentence
+  is as built.
+- **R60·324 · Au1's sign-in limit. Changed.** Kicker NOT LOGGED IN, the
+  app's word, not "signed in". It goes in the form's failure slot above
+  Log in, with no Try again. The sentence is as built.
+- **R60·328 · An address that can't make an account (#819). Confirmed.**
+  Google's band on Au2, NOT CREATED, no Try again, the sentence as built.
+  The email form shows nothing new (D-195).
+- **R60·60a · The resend limit. Confirmed.** The §4a band under Resend,
+  wherever Resend sits, kicker NOT SENT, no Try again.
+- **R60·60b · The terms return line. Confirmed.** It shows only when the
+  app sent the runner from a page. It is in the first render or never, so
+  nothing shifts.
+- **R60·329 #2 · The handle rename limit (#820). Changed.** Not a field
+  error, because no edit to the field fixes it. The band above Save, NOT
+  CHANGED, no Try again: "You've changed your handle 3 times in 30 days.
+  You can change it again on {date}."
+
+### Closet, kits and photos
+
+- **R60·329 #1 · A held item's delete (#820). Changed.** The sentence is
+  confirmed. Try again goes, because a retry can't work until the claim
+  settles. The sheet's other button becomes Close, and Delete stays.
+- **R60·329 #3 · dialed.run as a product link. Confirmed.** A field error
+  on blur, the sentence as built. A stored one renders as plain text.
+- **R60·60c · A link over 2,048. Confirmed.** A field error on blur.
+- **R60·329 #4 · The correction sheet quotes the domain. Confirmed.** The
+  domain alone.
+- **R60·60d · The daily photo limit. Confirmed.** Each surface's photo
+  failure line, the sentence as built, with no Try again.
+
+### Runs
+
+- **R60·326 · The runs row with a badge (#791). Drawn.** The badge takes
+  its own line under the mono line, at the row's start. Gaps: date to
+  mono 4, mono to badge 14. Padding 12 top and 16 bottom when badged, so
+  the row is 104 and the badge's 44 target sits wholly inside it. Rows
+  without a badge stay 64. The verdict and kit marks keep their place at
+  the top right.
+
+### Feed and kit detail
+
+- **R60·330 · A manual run's title shown to others (#830). Ruled: no.**
+  Other runners keep the day and distance on feed cards, kit detail and
+  W1. R1's title field gets the hint "Only you see the title." Nothing
+  new to screen.
+- **R60·60e · The report sheet's refusals. Confirmed.** Both in the "Not
+  sent" band, the sentences as built, with no Try again. The item-gone
+  band's sheet offers Close only.
+
+### Desk
+
+- **R60·325 · The removal request's photo (#813). Confirmed; closed.** As
+  built: above "Open its kit", 128 tall, natural width, hairline, at the
+  row's start. It opens nothing.
+- **R60·327 · Two state tags (#818). Confirmed.** [CLOSED] [PENDING
+  DELETE], in that order, on one line, 8 apart, in the existing ink tag.
+  Each tag stays whole, and below desk the second wraps under the first,
+  start-aligned (D-196).
+
 ## Answered in round 59 (imported 2026-11-15)
 
 Design answered as `Round 59 Rulings.dc.html`, items 315–323, every one
