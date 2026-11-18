@@ -15,7 +15,7 @@
  * and parse tree in `scripts/diagrams/model.ts`; the PRs and the audit
  * records come from `gh` in `scripts/diagram-audit.sh`.
  */
-import type { Cite, Story } from "./anchors";
+import { wholeWord, type Cite, type Story } from "./anchors";
 import type { StepFacts } from "./record";
 
 /**
@@ -328,10 +328,6 @@ const HEADING = /^(#{1,6})\s/u;
 const DIAGRAMS = /^(?:(#{1,6})\s+Diagrams|\*\*Diagrams\*\*)\s*$/u;
 const REREAD = /\bre-?read/iu;
 
-function escaped(word: string): string {
-  return word.replaceAll("$", String.raw`\$`);
-}
-
 /**
  * How deep a heading line is (`##` is 2), or 0 for a line that is not one.
  */
@@ -352,7 +348,7 @@ export function rereadViews(
   const found = new Set<string>();
   const named = views.map((view) => ({
     view,
-    pattern: new RegExp(String.raw`(?<![\w$])${escaped(view)}(?![\w$])`, "u"),
+    pattern: wholeWord(view),
   }));
   let depth = 0;
   for (const line of body.split(/\r?\n/u)) {

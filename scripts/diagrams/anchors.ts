@@ -114,17 +114,19 @@ function escaped(word: string): string {
 }
 
 /**
+ * Matches `word` (an identifier) as a whole word: not inside a longer
+ * identifier.
+ */
+export function wholeWord(word: string): RegExp {
+  return new RegExp(String.raw`(?<![\w$])${escaped(word)}(?![\w$])`, "u");
+}
+
+/**
  * Whether `text` holds `symbol` as a whole word; a dotted symbol
  * (`queues.consumers`) needs each of its parts.
  */
 function hasSymbol(text: string, symbol: string): boolean {
-  return symbol
-    .split(".")
-    .every((part) =>
-      new RegExp(String.raw`(?<![\w$])${escaped(part)}(?![\w$])`, "u").test(
-        text,
-      ),
-    );
+  return symbol.split(".").every((part) => wholeWord(part).test(text));
 }
 
 function citeProblems(
