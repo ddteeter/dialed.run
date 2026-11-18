@@ -16,6 +16,7 @@ import type { drizzle } from "drizzle-orm/d1";
 
 import { session, user, verification } from "../../db/schema-auth";
 import { emailVerifications } from "../../db/schema-core";
+import { address } from "../../lib/contracts/email-kinds";
 import { newUlid } from "../../lib/ids";
 import {
   firstColumnWhere,
@@ -26,6 +27,7 @@ import { nowSeconds } from "../../lib/now";
 import {
   claimEmailSend,
   claimRunnerChange,
+  claimLimit,
   deliverEmail,
   emailDebt,
   maskedAddress,
@@ -151,13 +153,44 @@ async function sendReported(
   }
 }
 
+/**
+ * Resend's answer: the address's own, or the visitor's count used up
+ * (SA-M12) — every address they name, this hour.
+ */
+export type ResendAnswer =
+  ResendResult | { readonly status: "visitor-limited"; readonly until: number };
+
+/**
+ * Who pressed Resend: the visitor's IP (`undefined` with no request) and
+ * whether this deployment limits (`deploymentPosture`'s `rateLimited`).
+ */
+export interface ResendVisitor {
+  readonly ip: string | undefined;
+  readonly isLimited: boolean;
+}
+
+/**
+ * **The visitor is counted first** (SA-M12), and a visitor over the count
+ * writes nothing for the address. Text that is not an address is answered
+ * as one with no account, and counted against nothing but the visitor.
+ */
 export async function resendConfirmation(
   db: Db,
-  email: string,
+  input: Readonly<{ email: string; visitor: ResendVisitor }>,
   deps: EmailDeps,
   background: Background,
   now = nowSeconds(),
-): Promise<ResendResult> {
+): Promise<ResendAnswer> {
+  if (input.visitor.isLimited) {
+    const visitor = input.visitor.ip ?? "unknown";
+    const claim = await claimLimit(db, "resend-visitor", visitor, now);
+    if (!claim.isAllowed) {
+      return { status: "visitor-limited", until: claim.until };
+    }
+  }
+  const parsed = address.safeParse(input.email);
+  if (!parsed.success) return { status: "sent" };
+  const email = parsed.data;
   const claim = await claimEmailSend(db, "verify", email, now);
   if (!claim.isAllowed) return { status: "limited", until: claim.until };
   background.keepAlive(sendReported(db, email, deps, background.report));

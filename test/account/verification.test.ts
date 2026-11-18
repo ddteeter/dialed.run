@@ -6,6 +6,7 @@ import { session, user, verification } from "../../src/db/schema-auth";
 import { env } from "../../src/env";
 import { EMAIL_SENDS_PER_HOUR } from "../../src/lib/contracts/email";
 import { newUlid } from "../../src/lib/ids";
+import { RESENDS_PER_VISITOR_PER_HOUR } from "../../src/modules/email/rate-limit";
 import {
   rateLimits,
   emailVerifications,
@@ -755,6 +756,11 @@ describe("confirmEmail, moving the account (ACC-8)", () => {
   });
 });
 
+/**
+A deployment that does not limit (dev, CI): only the address is counted.
+*/
+const UNLIMITED = { ip: undefined, isLimited: false } as const;
+
 describe("resendConfirmation", () => {
   it("sends a new link to an unconfirmed account, and the old one stops working", async () => {
     const mail = fakeMail();
@@ -765,7 +771,7 @@ describe("resendConfirmation", () => {
     expect(
       await resendConfirmation(
         db,
-        email.toUpperCase(),
+        { email: email.toUpperCase(), visitor: UNLIMITED },
         mail,
         later.background,
         NOW,
@@ -795,14 +801,20 @@ describe("resendConfirmation", () => {
     const later = inBackground();
     const { email } = await seedUser();
     expect(
-      await resendConfirmation(db, email, mail, later.background, NOW),
+      await resendConfirmation(
+        db,
+        { email: email, visitor: UNLIMITED },
+        mail,
+        later.background,
+        NOW,
+      ),
     ).toStrictEqual({
       status: "sent",
     });
     expect(
       await resendConfirmation(
         db,
-        "nobody@example.com",
+        { email: "nobody@example.com", visitor: UNLIMITED },
         mail,
         later.background,
         NOW,
@@ -828,7 +840,13 @@ describe("resendConfirmation", () => {
       select.mockClear();
       insert.mockClear();
       expect(
-        await resendConfirmation(db, address, mail, later.background, NOW),
+        await resendConfirmation(
+          db,
+          { email: address, visitor: UNLIMITED },
+          mail,
+          later.background,
+          NOW,
+        ),
       ).toStrictEqual({ status: "sent" });
       work.push([select.mock.calls.length, insert.mock.calls.length]);
       // Let this address's background finish before counting the next.
@@ -849,7 +867,13 @@ describe("resendConfirmation", () => {
     const { email } = await seedUser({ isVerified: false });
 
     expect(
-      await resendConfirmation(db, email, mail, later.background, NOW),
+      await resendConfirmation(
+        db,
+        { email: email, visitor: UNLIMITED },
+        mail,
+        later.background,
+        NOW,
+      ),
     ).toStrictEqual({ status: "sent" });
     await later.settled();
 
@@ -862,10 +886,22 @@ describe("resendConfirmation", () => {
     const keepAlive = vi.fn(later.background.keepAlive);
     const background = { ...later.background, keepAlive };
     for (let n = 0; n < 5; n += 1) {
-      await resendConfirmation(db, "nobody@example.com", mail, background, NOW);
+      await resendConfirmation(
+        db,
+        { email: "nobody@example.com", visitor: UNLIMITED },
+        mail,
+        background,
+        NOW,
+      );
     }
     expect(keepAlive).toHaveBeenCalledTimes(5);
-    await resendConfirmation(db, "nobody@example.com", mail, background, NOW);
+    await resendConfirmation(
+      db,
+      { email: "nobody@example.com", visitor: UNLIMITED },
+      mail,
+      background,
+      NOW,
+    );
     expect(keepAlive).toHaveBeenCalledTimes(5);
     await later.settled();
   });
@@ -876,7 +912,7 @@ describe("resendConfirmation", () => {
     for (let n = 0; n < 5; n += 1) {
       await resendConfirmation(
         db,
-        "nobody@example.com",
+        { email: "nobody@example.com", visitor: UNLIMITED },
         mail,
         later.background,
         NOW,
@@ -885,7 +921,7 @@ describe("resendConfirmation", () => {
     expect(
       await resendConfirmation(
         db,
-        "nobody@example.com",
+        { email: "nobody@example.com", visitor: UNLIMITED },
         mail,
         later.background,
         NOW + 10,
@@ -905,7 +941,13 @@ describe("resendConfirmation", () => {
     const hooks = authMail(db, () => mail, quiet);
     const { userId, email } = await seedUser({ isVerified: false });
 
-    await resendConfirmation(db, email, mail, later.background, NOW);
+    await resendConfirmation(
+      db,
+      { email: email, visitor: UNLIMITED },
+      mail,
+      later.background,
+      NOW,
+    );
     await later.settled();
     await hooks.newAccount({ id: userId, email });
     await hooks.existingAccount({ id: userId, email });
@@ -915,6 +957,111 @@ describe("resendConfirmation", () => {
       `reset:${email}`,
       `verify:${email}`,
     ]);
+  });
+
+  it("counts the visitor before the address, whatever addresses they name (SA-M12)", async () => {
+    const mail = fakeMail();
+    const later = inBackground();
+    const visitor = { ip: "2001:db8:1:2::1", isLimited: true };
+    for (let n = 0; n < RESENDS_PER_VISITOR_PER_HOUR; n += 1) {
+      expect(
+        await resendConfirmation(
+          db,
+          {
+            email: `nobody-${String(n)}@example.org`,
+            visitor: {
+              ...visitor,
+              ip: `2001:db8:1:2::${(n + 1).toString(16)}`,
+            },
+          },
+          mail,
+          later.background,
+          NOW,
+        ),
+      ).toStrictEqual({ status: "sent" });
+    }
+    expect(
+      await resendConfirmation(
+        db,
+        { email: "one-more@example.org", visitor },
+        mail,
+        later.background,
+        NOW + 10,
+      ),
+    ).toStrictEqual({ status: "visitor-limited", until: NOW + 3600 });
+    await later.settled();
+    // One row per address it allowed and one for the visitor: none for the
+    // address it refused.
+    const keys = await countedKeys(db);
+    expect(keys).toHaveLength(RESENDS_PER_VISITOR_PER_HOUR + 1);
+    expect(keys).toContain("resend-visitor:2001:db8:1:2::/64");
+    expect(keys).not.toContain("verify:one-more@example.org");
+    // Another visitor is not held up.
+    expect(
+      await resendConfirmation(
+        db,
+        {
+          email: "one-more@example.org",
+          visitor: { ...visitor, ip: "203.0.113.9" },
+        },
+        mail,
+        later.background,
+        NOW + 10,
+      ),
+    ).toStrictEqual({ status: "sent" });
+    await later.settled();
+  });
+
+  it("counts a visitor with no address as one visitor", async () => {
+    const later = inBackground();
+    await resendConfirmation(
+      db,
+      {
+        email: "nobody@example.org",
+        visitor: { ip: undefined, isLimited: true },
+      },
+      fakeMail(),
+      later.background,
+      NOW,
+    );
+    await later.settled();
+    expect(await countedKeys(db)).toContain("resend-visitor:unknown");
+  });
+
+  it("answers text that is not an address as one with no account, counting no address", async () => {
+    const mail = fakeMail();
+    const later = inBackground();
+    const keepAlive = vi.fn(later.background.keepAlive);
+    expect(
+      await resendConfirmation(
+        db,
+        {
+          email: "not an address",
+          visitor: { ip: "203.0.113.9", isLimited: true },
+        },
+        mail,
+        { ...later.background, keepAlive },
+        NOW,
+      ),
+    ).toStrictEqual({ status: "sent" });
+    expect(keepAlive).not.toHaveBeenCalled();
+    expect(await countedKeys(db)).toStrictEqual(["resend-visitor:203.0.113.9"]);
+  });
+
+  it("counts no visitor where the deployment does not limit", async () => {
+    const later = inBackground();
+    await resendConfirmation(
+      db,
+      {
+        email: "nobody@example.org",
+        visitor: { ip: "203.0.113.9", isLimited: false },
+      },
+      fakeMail(),
+      later.background,
+      NOW,
+    );
+    await later.settled();
+    expect(await countedKeys(db)).toStrictEqual(["verify:nobody@example.org"]);
   });
 });
 

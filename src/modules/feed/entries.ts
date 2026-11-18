@@ -295,6 +295,11 @@ export async function submitVerdict(
   const applicableFlags = input.itemFlags.filter((itemFlag) =>
     entryItemIds.has(itemFlag.itemId),
   );
+  // One statement per item however often a flag repeats it (SA-M17): the
+  // last flag for an item wins, as the statements in order would have.
+  const flagOf = new Map(
+    applicableFlags.map((itemFlag) => [itemFlag.itemId, itemFlag.flag]),
+  );
 
   // Decision D-50: an unconfirmed runner's entry stays private whatever
   // the toggle said (task 126; `./share-default`).
@@ -326,14 +331,14 @@ export async function submitVerdict(
             .values(input.tags.map((tag) => ({ entryId: input.entryId, tag }))),
         ]
       : []),
-    ...applicableFlags.map((itemFlag) =>
+    ...[...flagOf].map(([itemId, flag]) =>
       database
         .update(outfitEntryItems)
-        .set({ flag: itemFlag.flag ?? sql`NULL` })
+        .set({ flag: flag ?? sql`NULL` })
         .where(
           and(
             eq(outfitEntryItems.entryId, input.entryId),
-            eq(outfitEntryItems.itemId, itemFlag.itemId),
+            eq(outfitEntryItems.itemId, itemId),
           ),
         ),
     ),
@@ -561,23 +566,25 @@ export async function shouldPromptForVerdict(
 
 /**
  * Idempotent (UNIQUE dedupe key) — safe to call every time the prompt shows.
+ * Lands only for the runner's own kit with no verdict yet, read by the
+ * statement itself (SA-L15): the same test `shouldPromptForVerdict` makes.
  */
 export async function recordVerdictPrompted(
   userId: string,
   entryId: string,
 ): Promise<void> {
+  const ownUnjudged = sql`EXISTS (SELECT 1 FROM ${outfitEntries} WHERE ${outfitEntries.id} = ${entryId} AND ${outfitEntries.userId} = ${userId} AND ${outfitEntries.verdict} IS NULL)`;
+  // The table's columns in order, as one row; not a bell kind, so not
+  // `notificationInsertWhere`'s draft.
   await db()
     .insert(notifications)
-    .values({
-      id: newUlid(),
-      userId,
-      kind: "verdict_prompt",
-      subjectId: entryId,
-      body: "You didn't log a verdict for this run.",
-      createdAt: nowSeconds(),
-    })
+    .select(
+      sql`SELECT ${newUlid()}, ${userId}, 'verdict_prompt', ${entryId}, ${VERDICT_PROMPT_BODY}, NULL, 0, ${nowSeconds()} WHERE ${ownUnjudged}`,
+    )
     .onConflictDoNothing();
 }
+
+const VERDICT_PROMPT_BODY = "You didn't log a verdict for this run.";
 
 interface EntryDetailItem {
   itemId: string;
@@ -605,7 +612,6 @@ entry: one shape, so the two cannot drift apart.
 export interface EntryRunFields {
   authorUsername: string | undefined;
   runId: string;
-  runTitle: string;
   distanceM: number;
   durationS: number;
   startedAt: number;
@@ -756,7 +762,6 @@ export async function getEntryDetail(
     userId: entry.userId,
     authorUsername: author?.username ?? undefined,
     runId: run.id,
-    runTitle: run.title,
     distanceM: run.distanceM,
     durationS: run.durationS,
     startedAt: run.startedAt,

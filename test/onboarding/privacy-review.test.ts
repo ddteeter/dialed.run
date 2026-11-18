@@ -63,9 +63,7 @@ describe("isReviewDueBy", () => {
 
   it("reads never opened as seen when the account was made", () => {
     expect(isReviewDueBy(undefined, BEFORE)).toBe(true);
-    expect(isReviewDueBy(undefined, PRIVACY_SETTINGS_CHANGED)).toBe(
-      false,
-    );
+    expect(isReviewDueBy(undefined, PRIVACY_SETTINGS_CHANGED)).toBe(false);
     expect(isReviewDueBy(undefined, AFTER)).toBe(false);
   });
 
@@ -77,9 +75,9 @@ describe("isReviewDueBy", () => {
 
 describe("isPrivacyReviewDue", () => {
   it("tags an account made before the change that has never opened Privacy, and has no profile row", async () => {
-    expect(await isPrivacyReviewDue(coreDb(), await accountMadeAt(BEFORE))).toBe(
-      true,
-    );
+    expect(
+      await isPrivacyReviewDue(coreDb(), await accountMadeAt(BEFORE)),
+    ).toBe(true);
   });
 
   it("leaves a new account untagged", async () => {

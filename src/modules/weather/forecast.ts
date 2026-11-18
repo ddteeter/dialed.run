@@ -4,6 +4,8 @@
  * that a later run lands in is reused rather than re-fetched.
  */
 import type { WeatherObservation } from "../../lib/contracts";
+import { spendNothing } from "./budget";
+import type { SpendWeatherCall } from "./budget";
 import { weatherProvider } from "./provider";
 import {
   cacheKeyFor,
@@ -14,18 +16,21 @@ import {
 
 /**
  * Public API: forecast conditions at a future time+place. Not tied to any
- * run, as no cache row is.
+ * run, as no cache row is. A call that reaches the provider is `spend`'s
+ * to count first (`./budget`); a cached hour costs nothing.
  */
 export async function forecast(
   lat: number,
   lng: number,
   at: Date,
+  spend: SpendWeatherCall = spendNothing,
 ): Promise<WeatherObservation> {
   const key = cacheKeyFor(lat, lng, at);
   const cached = await findObservationRow(key);
   if (cached) {
     return toWeatherObservation(cached);
   }
+  await spend();
   const provider = weatherProvider();
   const observation = await provider.forecast(lat, lng, at);
   const row = await upsertRealObservation(key, observation);

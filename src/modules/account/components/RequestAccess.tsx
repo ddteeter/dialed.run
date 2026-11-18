@@ -8,6 +8,7 @@ import {
   REGION_COPY,
 } from "../../../lib/contracts/access";
 import { requestAccessSchema } from "../../../lib/contracts";
+import { TURNSTILE_ACTIONS } from "../../../lib/turnstile-actions";
 import {
   FormElement,
   Icon,
@@ -231,7 +232,7 @@ export function RequestAccess({
             void form.submit({ email, note });
           }}
           siteKey={siteKey}
-          action="request-access"
+          action={TURNSTILE_ACTIONS.requestAccess}
           turnstile={turnstile}
           label="Send request"
           pendingLabel="Sending"

@@ -16,8 +16,14 @@ import {
   verdictSchema,
   writableAudienceSchema,
 } from "../../lib/contracts";
-import { ulidSchema } from "../../lib/ids";
+import { rowIdSchema, ulidSchema } from "../../lib/ids";
 import { allowedPhotoTypes } from "../../lib/photo-constraints";
+
+/**
+ * The most pieces a kit holds: the picker's cap, and so the most item
+ * flags a verdict can name (SA-M17).
+ */
+export const MAX_KIT_ITEMS = 40;
 
 /**
  * The picker's selection. Capped because it reaches an ownership read and
@@ -25,7 +31,7 @@ import { allowedPhotoTypes } from "../../lib/photo-constraints";
  */
 export const attachKitInput = z.object({
   runId: ulidSchema,
-  itemIds: z.array(ulidSchema).max(40),
+  itemIds: z.array(ulidSchema).max(MAX_KIT_ITEMS),
 });
 
 /**
@@ -72,7 +78,7 @@ export const submitVerdictInput = z.object({
   // No `caption`: the kit caption is cut for v1 (D-167). The column
   // stays, and an input that still sends one has it stripped here.
   tags: z.array(entryTagSchema).max(entryTagSchema.options.length),
-  itemFlags: z.array(itemFlagInput),
+  itemFlags: z.array(itemFlagInput).max(MAX_KIT_ITEMS),
   // Sent only when the runner tapped an effort (G5): the run already holds
   // the watch's prefill, so a tap is the only change there is to save.
   effort: effortSchema.optional(),
@@ -148,7 +154,7 @@ export const usefulInput = entryIdInput.extend({ useful: z.boolean() });
 export const userIdInput = z.object({ userId: ulidSchema });
 
 export const feedInput = z.object({
-  cursor: z.object({ createdAt: z.number().int(), id: z.string() }).optional(),
+  cursor: z.object({ createdAt: z.number().int(), id: rowIdSchema }).optional(),
 });
 
 export const searchInput = z.object({ prefix: z.string().max(60) });

@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 
-import type { ResendResult } from "../verification";
+import type { ResendAnswer } from "../verification";
 import type { ViewerZone } from "../../../lib/dates";
 import { ResendLink } from "./ResendLink";
 
@@ -19,7 +19,7 @@ export function ConfirmEmailBand({
 }: Readonly<{
   account:
     { email: string; isVerified: boolean; viewer: ViewerZone } | undefined;
-  resend: (input: { data: { email: string } }) => Promise<ResendResult>;
+  resend: (input: { data: { email: string } }) => Promise<ResendAnswer>;
 }>): JSX.Element | undefined {
   if (account === undefined || account.isVerified) return undefined;
   return (

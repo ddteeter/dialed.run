@@ -184,7 +184,9 @@ interface AttachKitProps {
   attachKit: (input: {
     data: { runId: string; itemIds: string[] };
   }) => Promise<{ entryId: string }>;
-  uploadPhoto: (input: { data: FormData }) => Promise<{ key: string }>;
+  uploadPhoto: (input: {
+    data: FormData;
+  }) => Promise<{ key: string } | { refusal: string }>;
   /**
    * W3's step between picking a photo and keeping it — a render slot,
    * because this module may not reach `modules/safety`. Absent, a picked
@@ -270,7 +272,13 @@ function useHeldPhoto({
         upload.append("entryId", entryId);
         upload.append("photo", photo.file);
         upload.append("idempotencyKey", photo.key);
-        await uploadPhoto({ data: upload });
+        const answer = await uploadPhoto({ data: upload });
+        // The day's photos are used up (SA-M14): the row says so, and the
+        // photos still held stay for tomorrow or a Remove.
+        if ("refusal" in answer) {
+          setPhotoError(answer.refusal);
+          return false;
+        }
         setPhotos((held) => held.filter((each) => each !== photo));
       }
       return true;

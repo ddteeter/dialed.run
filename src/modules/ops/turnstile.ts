@@ -12,6 +12,7 @@
  * The widget is `ui/Turnstile.tsx`. Placing both on sign-up and request
  * access is task 126's.
  */
+import type { TurnstileAction } from "../../lib/turnstile-actions";
 import { z } from "zod";
 
 import { env } from "../../env";
@@ -51,6 +52,11 @@ const siteverifySchema = z.object({
   metadata: z
     .object({ result_with_testing_key: z.boolean().optional() })
     .optional(),
+  /**
+   * The action the widget was rendered with (SA-L07): a token is proof
+   * for one form, and a token solved on another is not proof for this one.
+   */
+  action: z.string().optional(),
 });
 
 /**
@@ -63,7 +69,8 @@ export type TurnstileRefusal =
   | "malformed-answer"
   | "missing-token"
   | "rejected"
-  | "wrong-hostname";
+  | "wrong-hostname"
+  | "wrong-action";
 
 export type TurnstileVerdict =
   | { readonly ok: true }
@@ -85,13 +92,16 @@ function refuse(
 
 /**
  * What a server function knows about the attempt: the token, the
- * visitor's address when it has one, and the hostname the request came in
- * on, which the challenge must have been solved on too.
+ * visitor's address when it has one, the hostname the request came in
+ * on, which the challenge must have been solved on too, and the form's
+ * action, which it must have been solved for (`undefined`: a form whose
+ * action this repo does not name, the marketing site's).
  */
 export interface TurnstileAttempt {
   readonly token: string | undefined;
   readonly remoteIp: string | undefined;
   readonly hostname: string;
+  readonly action: TurnstileAction | undefined;
 }
 
 /**
@@ -100,7 +110,7 @@ export interface TurnstileAttempt {
  */
 export async function verifyTurnstile(
   secret: string | undefined,
-  { token, remoteIp, hostname }: TurnstileAttempt,
+  { token, remoteIp, hostname, action }: TurnstileAttempt,
   fetchImpl: typeof fetch = fetch,
 ): Promise<TurnstileVerdict> {
   if (secret === undefined || secret === "") return refuse("missing-secret");
@@ -128,10 +138,13 @@ export async function verifyTurnstile(
   if (!parsed.success) return refuse("malformed-answer");
   const answer = parsed.data;
   if (!answer.success) return refuse("rejected", answer["error-codes"]);
-  const isTestKey = answer.metadata?.result_with_testing_key === true;
-  return isTestKey || answer.hostname === hostname
+  // The test keys' answers name `example.com` and no form, so they skip
+  // both checks.
+  if (answer.metadata?.result_with_testing_key === true) return { ok: true };
+  if (answer.hostname !== hostname) return refuse("wrong-hostname");
+  return action === undefined || answer.action === action
     ? { ok: true }
-    : refuse("wrong-hostname");
+    : refuse("wrong-action");
 }
 
 /**

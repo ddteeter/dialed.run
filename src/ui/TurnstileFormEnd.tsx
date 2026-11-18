@@ -2,6 +2,7 @@ import type { JSX } from "react";
 
 import { refusalMessage } from "../lib/contracts/access";
 import type { FormRefusal } from "../lib/contracts/access";
+import type { TurnstileAction } from "../lib/turnstile-actions";
 import { FailureBand, FormFailureBand, SubmitButton } from "./form";
 import type { FormShell } from "./use-form-submit";
 import { Turnstile } from "./Turnstile";
@@ -22,9 +23,9 @@ export function TurnstileFormEnd(
     onRetryRefusal: () => void;
     siteKey: string | undefined;
     /**
-    Turnstile's action name, which the server checks.
+    Turnstile's action name (`TURNSTILE_ACTIONS`), which the server checks.
     */
-    action: string;
+    action: TurnstileAction;
     turnstile: Readonly<{
       widgetKey: number;
       onToken: (token: string | undefined) => void;

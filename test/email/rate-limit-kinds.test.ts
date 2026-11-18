@@ -10,8 +10,10 @@ import {
 } from "../../src/lib/contracts/rate-limits";
 import { newUlid } from "../../src/lib/ids";
 import {
+  claimLimit,
   claimRunnerChange,
   claimSignInTry,
+  isWithinRateLimit,
   countSend,
 } from "../../src/modules/email";
 import {
@@ -25,6 +27,7 @@ import {
   isWithinAtOnceLimit,
   isWithinReportLimit,
 } from "../../src/modules/safety/reportable";
+import { runnerWeatherBudget } from "../../src/modules/weather/budget";
 import { countedKeys } from "../rate-limit-rows";
 
 /**
@@ -55,6 +58,11 @@ describe("the rate-limit kinds", () => {
     await isWithinUploadCap(db, runner, NOW);
     await isWithinReportLimit(db, runner, NOW);
     await isWithinAtOnceLimit(db, runner, NOW);
+    await claimLimit(db, "resend-visitor", "2001:db8:1:2::7", NOW);
+    await claimLimit(db, "takedown-to", "someone@example.test", NOW);
+    await runnerWeatherBudget(runner)();
+    await claimLimit(db, "photo-runner", runner, NOW);
+    await isWithinRateLimit(db, "purge-runner", runner, 2, 60, NOW);
 
     const keys = await countedKeys(db);
     expect(keys).toStrictEqual(
@@ -69,6 +77,11 @@ describe("the rate-limit kinds", () => {
         "csp-report:203.0.113.9",
         `report-runner:${runner}`,
         `report-at-once:${runner}`,
+        "resend-visitor:2001:db8:1:2::/64",
+        "takedown-to:someone@example.test",
+        `weather-runner:${runner}`,
+        `photo-runner:${runner}`,
+        `purge-runner:${runner}`,
       ].toSorted((a, b) => a.localeCompare(b)),
     );
     const kinds = new Set(keys.map((key) => key.slice(0, key.indexOf(":"))));

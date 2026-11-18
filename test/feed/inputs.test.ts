@@ -17,6 +17,7 @@ import {
   feedInput,
   itemBandStatInput,
   searchInput,
+  MAX_KIT_ITEMS,
   submitVerdictInput,
   uploadPhotoFields,
   userIdInput,
@@ -78,7 +79,6 @@ describe("the coordinate inputs", () => {
   it("requires both coordinates where a conditions lookup needs them", () => {
     expect(coordinatesInput.safeParse({ lat: 44.98 }).success).toBe(false);
   });
-
 });
 
 describe("submitVerdictInput: the runner's effort (G5)", () => {
@@ -379,7 +379,9 @@ describe("saveBacklogRowInput", () => {
 describe("publicKitInput", () => {
   it("takes any path segment, since one that is not an id is a kit that never existed", () => {
     const id = newUlid();
-    expect(publicKitInput.parse({ entryId: id })).toStrictEqual({ entryId: id });
+    expect(publicKitInput.parse({ entryId: id })).toStrictEqual({
+      entryId: id,
+    });
     expect(publicKitInput.parse({ entryId: "not-an-id" })).toStrictEqual({
       entryId: "not-an-id",
     });
@@ -410,9 +412,61 @@ describe("publicProfileInput", () => {
     expect(
       publicProfileInput.parse({ handle: "x".repeat(61), all: "yes" }),
     ).toStrictEqual({ handle: "", all: undefined });
-    expect(publicProfileInput.parse({ handle: "x".repeat(60) })).toStrictEqual(
-      { handle: "x".repeat(60) },
-    );
+    expect(publicProfileInput.parse({ handle: "x".repeat(60) })).toStrictEqual({
+      handle: "x".repeat(60),
+    });
     expect(publicProfileInput.parse({})).toStrictEqual({ handle: "" });
+  });
+});
+
+/**
+A verdict naming these item flags, parsed.
+*/
+function verdict(itemFlags: unknown[]) {
+  return submitVerdictInput.safeParse({
+    entryId: newUlid(),
+    verdict: 0,
+    audience: "private",
+    tags: [],
+    itemFlags,
+  });
+}
+
+function isCursorAccepted(id: string): boolean {
+  return feedInput.safeParse({ cursor: { createdAt: 1, id } }).success;
+}
+
+describe("the bounds on a verdict and a page cursor (SA-M17)", () => {
+  it("takes as many item flags as a kit holds, and refuses one more", () => {
+    const flag = { itemId: newUlid(), flag: "too_much" };
+    expect(MAX_KIT_ITEMS).toBe(40);
+    expect(
+      verdict(Array.from({ length: MAX_KIT_ITEMS }, () => flag)).success,
+    ).toBe(true);
+    expect(
+      verdict(Array.from({ length: MAX_KIT_ITEMS + 1 }, () => flag)).success,
+    ).toBe(false);
+  });
+
+  it("holds a kit's picker to the same cap", () => {
+    const ids = (n: number) => Array.from({ length: n }, () => newUlid());
+    expect(
+      attachKitInput.safeParse({
+        runId: newUlid(),
+        itemIds: ids(MAX_KIT_ITEMS),
+      }).success,
+    ).toBe(true);
+    expect(
+      attachKitInput.safeParse({
+        runId: newUlid(),
+        itemIds: ids(MAX_KIT_ITEMS + 1),
+      }).success,
+    ).toBe(false);
+  });
+
+  it("bounds a cursor's id", () => {
+    expect(isCursorAccepted("x".repeat(64))).toBe(true);
+    expect(isCursorAccepted("x".repeat(65))).toBe(false);
+    expect(isCursorAccepted("")).toBe(false);
   });
 });

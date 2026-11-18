@@ -11,6 +11,7 @@ import { user } from "../../db/schema-auth";
 import { env } from "../../env";
 import { APPEAL_ADDRESS, CONTACT_ADDRESS } from "../../lib/contracts/contact";
 import {
+  requiresConfirmedAddress,
   preferenceFor,
   type EmailKind,
   type EmailPayload,
@@ -172,6 +173,12 @@ async function send(
 ): Promise<Sent> {
   const recipient = await recipientOf(db, payload.to);
   if (recipient === undefined) return { status: "skipped" };
+  // A runner's own notice waits for an address they proved (SA-M28); a
+  // typed address is never a runner's, so this reads the payload's `to`.
+  const isRunnersUnconfirmed = "userId" in payload.to && !recipient.isVerified;
+  if (isRunnersUnconfirmed && requiresConfirmedAddress(payload.template.kind)) {
+    return { status: "skipped" };
+  }
   const optional = await optionalMail(db, recipient, payload, deps);
   if (optional === "skip") return { status: "skipped" };
   const { unsubscribe } = optional;

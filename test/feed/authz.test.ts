@@ -90,6 +90,10 @@ describe("authorization", () => {
       id: entryId,
     });
     await expect(getEntryDetail(entryId, undefined)).resolves.toBeUndefined();
+    // The run's own title is its runner's, and is not sent (SA-L15).
+    await expect(getEntryDetail(entryId, owner)).resolves.not.toHaveProperty(
+      "runTitle",
+    );
   });
 
   it("never shows a private entry in a follower's feed", async () => {

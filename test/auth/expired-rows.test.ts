@@ -2,7 +2,7 @@ import { eq, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it } from "vitest";
 
-import { session, user } from "../../src/db/schema-auth";
+import { rateLimit, session, user } from "../../src/db/schema-auth";
 import { passwordAttempts } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
@@ -145,6 +145,54 @@ describe("sweepExpiredAuthRows: password-try counts", () => {
   });
 });
 
+/**
+A Better Auth rate-limit count whose last request was at `lastRequest`, in seconds.
+*/
+async function aLimit(lastRequest: number): Promise<string> {
+  const id = newUlid();
+  await db.insert(rateLimit).values({
+    id,
+    key: `203.0.113.7|/sign-in/email|${id}`,
+    count: 1,
+    lastRequest: lastRequest * 1000,
+  });
+  return id;
+}
+
+async function isLimitKept(id: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: rateLimit.id })
+    .from(rateLimit)
+    .where(eq(rateLimit.id, id));
+  return rows.length === 1;
+}
+
+describe("sweepExpiredAuthRows: Better Auth's rate-limit counts (SA-M36)", () => {
+  it("deletes a count a day past its last request, and keeps the rest", async () => {
+    const long = await aLimit(NOW - DAY - 1);
+    const edge = await aLimit(NOW - DAY);
+    const recent = await aLimit(NOW - 30);
+
+    await sweepExpiredAuthRows(db, NOW);
+
+    expect(await isLimitKept(long)).toBe(false);
+    // A day exactly is not more than a day; the cutoff is in milliseconds.
+    expect(await isLimitKept(edge)).toBe(true);
+    expect(await isLimitKept(recent)).toBe(true);
+  });
+
+  it("measures from the present when no time is given", async () => {
+    const now = nowSeconds();
+    const long = await aLimit(now - 2 * DAY);
+    const kept = await aLimit(now - DAY + 60);
+
+    await sweepExpiredAuthRows();
+
+    expect(await isLimitKept(long)).toBe(false);
+    expect(await isLimitKept(kept)).toBe(true);
+  });
+});
+
 async function planOf(sql: string, params: unknown[]): Promise<string> {
   const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
     .bind(...params)
@@ -163,7 +211,15 @@ describe("the sweep reads by index, not by scanning (D1 bills rows scanned)", ()
       .where(lt(passwordAttempts.windowStartedAt, NOW))
       .toSQL();
 
+    const limits = db
+      .delete(rateLimit)
+      .where(lt(rateLimit.lastRequest, NOW * 1000))
+      .toSQL();
+
     const sessionsPlan = await planOf(sessions.sql, sessions.params);
+    const limitsPlan = await planOf(limits.sql, limits.params);
+    expect(limitsPlan).toMatch(/rate_limit_last_request/u);
+    expect(limitsPlan).not.toMatch(/SCAN\s+rate_limit\b/iu);
     const countsPlan = await planOf(counts.sql, counts.params);
 
     expect(sessionsPlan).toMatch(/session_expires_at/u);

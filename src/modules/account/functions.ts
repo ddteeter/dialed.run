@@ -25,6 +25,7 @@ import {
 } from "../auth";
 import { nowSeconds } from "../../lib/now";
 import { noInput } from "../../lib/no-input";
+import { TURNSTILE_ACTIONS } from "../../lib/turnstile-actions";
 import { emailDepsFromEnv } from "../email";
 import {
   captureException,
@@ -168,15 +169,23 @@ export const ownAccountQuery = createServerFn({ method: "GET" }).handler(
 
 /**
  * Au4's Resend link (round 26 #11). No session needed: the page answers
- * the same for any address, and the limit is per address.
+ * the same for any address, and the limits are per visitor and per address.
  */
 export const resendConfirmationFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => resendInput.parse(data))
   .handler(async ({ data }) =>
-    resendConfirmation(db(), data.email, emailDepsFromEnv(), {
-      keepAlive: waitUntil,
-      report: captureException,
-    }),
+    resendConfirmation(
+      db(),
+      {
+        email: data.email,
+        visitor: {
+          ip: turnstileAttempt(undefined, getRequest(), undefined).remoteIp,
+          isLimited: deploymentPosture(env.BETTER_AUTH_URL).rateLimited,
+        },
+      },
+      emailDepsFromEnv(),
+      { keepAlive: waitUntil, report: captureException },
+    ),
   );
 
 /**
@@ -252,7 +261,11 @@ export const requestAccessFn = createServerFn({ method: "POST" })
       {
         email: data.email,
         note: data.note,
-        attempt: turnstileAttempt(data.turnstileToken, getRequest()),
+        attempt: turnstileAttempt(
+          data.turnstileToken,
+          getRequest(),
+          TURNSTILE_ACTIONS.requestAccess,
+        ),
         isLimited: deploymentPosture(env.BETTER_AUTH_URL).rateLimited,
         blockedRegion: blockedRegionOf(getRequest()),
       },

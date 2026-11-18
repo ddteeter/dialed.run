@@ -20,7 +20,8 @@
  * no `purge` when Workers Caching is not on, as under vitest's workerd and
  * `vite dev`; then there is nothing to purge and the call does nothing.
  */
-import { cache, waitUntil } from "../../env";
+import { cache, coreDb, waitUntil } from "../../env";
+import { isWithinRateLimit } from "../email";
 import {
   scopeOfTags,
   type PurgeTags,
@@ -120,3 +121,61 @@ export const purgePublicPages: PurgeTags = purgeAndSync.bind(
   workerPurge,
   syncPublicPhotosLater,
 );
+
+/**
+ * How many edge purges one runner's own writes may make in a minute
+ * (SA-L15; owner, 2026-11-16).
+ */
+export const PURGES_PER_RUNNER_PER_MINUTE = 2;
+
+const MINUTE_S = 60;
+
+/**
+ * `purgeAndSync`, with the edge purge held to `isAllowed` (SA-L15): the
+ * platform's purge allowance is one bucket for the whole account, so one
+ * runner's writes may spend only their own share of it. Past it, the
+ * page waits out its 60-second lifetime, which is the guarantee; the
+ * public photo reconcile always runs, since it is what takes a photo's
+ * copy back. A count that fails to answer purges, as before (fail open:
+ * the purge is the accelerator).
+ */
+export function purgeAndSyncWithin(
+  deps: PurgeDeps,
+  sync: (scope: TaggedScope) => void,
+  isAllowed: () => Promise<boolean>,
+  tags: readonly string[],
+): void {
+  sync(scopeOfTags(tags));
+  deps.keepAlive(purgeIfAllowed(deps, isAllowed, tags));
+}
+
+async function purgeIfAllowed(
+  deps: PurgeDeps,
+  isAllowed: () => Promise<boolean>,
+  tags: readonly string[],
+): Promise<void> {
+  let isWithin = true;
+  try {
+    isWithin = await isAllowed();
+  } catch {
+    // The count did not answer: purge, as before it existed.
+  }
+  if (isWithin) purgeTags(deps, tags);
+}
+
+/**
+The purge a runner's own write makes: `purgePublicPages`, counted per runner.
+*/
+export function purgePublicPagesFor(userId: string): PurgeTags {
+  const isAllowed = () =>
+    isWithinRateLimit(
+      coreDb(),
+      "purge-runner",
+      userId,
+      PURGES_PER_RUNNER_PER_MINUTE,
+      MINUTE_S,
+    );
+  return (tags) => {
+    purgeAndSyncWithin(workerPurge, syncPublicPhotosLater, isAllowed, tags);
+  };
+}

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { spendNothing } from "../../src/modules/weather/budget";
 import { climateNormals } from "../../src/modules/weather/normals";
 import {
   visualCrossingSummerStatsFixture,
@@ -35,7 +36,10 @@ describe("climateNormals", () => {
 
     try {
       expect(
-        await climateNormals({ kind: "coordinates", lat: 44.98, lng: -93.27 }),
+        await climateNormals(
+          { kind: "coordinates", lat: 44.98, lng: -93.27 },
+          spendNothing,
+        ),
       ).toStrictEqual({
         winterLowC: -12.1,
         summerHighC: 28.7,

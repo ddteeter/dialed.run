@@ -11,6 +11,7 @@ import {
   wardrobeItems,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import { queriesDuring } from "../d1-spy";
 import { newUlid } from "../../src/lib/ids";
 import {
   attachKit,
@@ -328,6 +329,31 @@ describe("submitVerdict writes the whole submission or none of it", () => {
     expect(cleared?.items[0]?.flag).toBeUndefined();
   });
 
+  it("sends one update per item however often a flag repeats it, the last winning (SA-M17)", async () => {
+    const { userId, entryId, itemId } = await ownEntry();
+    const verdict = {
+      userId,
+      entryId,
+      verdict: 0 as const,
+      audience: "runners" as const,
+      tags: [],
+      itemFlags: [
+        { itemId, flag: "not_enough" as const },
+        { itemId, flag: "too_much" as const },
+        { itemId, flag: "too_much" as const },
+      ],
+    };
+
+    const sent = await queriesDuring(() => submitVerdict(verdict));
+
+    const updates = sent.prepared.filter((query) =>
+      /^update "outfit_entry_items"/iu.test(query),
+    );
+    expect(updates).toHaveLength(1);
+    const detail = await getEntryDetail(entryId, userId);
+    expect(detail?.items[0]?.flag).toBe("too_much");
+  });
+
   it("ignores a flag for an item the entry does not contain", async () => {
     // The flags arrive from a form; which are legitimate depends on what
     // the entry holds, and a stale client must not be able to flag someone
@@ -499,6 +525,52 @@ describe("the verdict prompt", () => {
       .from(notifications)
       .where(eq(notifications.subjectId, entryId));
     expect(rows).toHaveLength(1);
+  });
+
+  it("records the prompt with its words, unread (SA-L15)", async () => {
+    const { userId, entryId } = await unratedEntry();
+
+    await recordVerdictPrompted(userId, entryId);
+
+    const rows = await db()
+      .select({
+        userId: notifications.userId,
+        kind: notifications.kind,
+        body: notifications.body,
+        read: notifications.read,
+      })
+      .from(notifications)
+      .where(eq(notifications.subjectId, entryId));
+    expect(rows).toStrictEqual([
+      {
+        userId,
+        kind: "verdict_prompt",
+        body: "You didn't log a verdict for this run.",
+        read: false,
+      },
+    ]);
+  });
+
+  it("records nothing for a kit that is not the runner's own unjudged one (SA-L15)", async () => {
+    const { userId, entryId } = await unratedEntry();
+    const other = await makeUser();
+    await recordVerdictPrompted(other, entryId);
+    await recordVerdictPrompted(userId, newUlid());
+    await submitVerdict({
+      userId,
+      entryId,
+      verdict: 0,
+      audience: "private",
+      tags: [],
+      itemFlags: [],
+    });
+    await recordVerdictPrompted(userId, entryId);
+
+    const rows = await db()
+      .select()
+      .from(notifications)
+      .where(eq(notifications.kind, "verdict_prompt"));
+    expect(rows).toStrictEqual([]);
   });
 
   it("records the prompt once even when asked twice", async () => {

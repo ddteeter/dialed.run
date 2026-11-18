@@ -70,6 +70,13 @@ describe("ipKey", () => {
     expect(await ipKey("203.0.113.9", "other")).not.toBe(base);
   });
 
+  it("keys every address in one IPv6 /64 the same, and two /64s apart (SA-M11)", async () => {
+    const one = await ipKey("2001:db8:1:2::1", "secret");
+    expect(await ipKey("2001:db8:1:2:ffff::9", "secret")).toBe(one);
+    expect(await ipKey("2001:db8:1:2::/64", "secret")).toBe(one);
+    expect(await ipKey("2001:db8:1:3::1", "secret")).not.toBe(one);
+  });
+
   it("signs with a key that cannot be read back out", async () => {
     const key = await ipSigningKey("secret");
     expect(key.extractable).toBe(false);

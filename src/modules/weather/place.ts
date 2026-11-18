@@ -7,10 +7,24 @@
  * a city, and a cache would be a table for one lookup per account.
  */
 import type { ResolvedPlace } from "../../lib/contracts";
+import type { SpendWeatherCall } from "./budget";
+import { runnerWeatherBudget } from "./budget";
 import { weatherProvider } from "./provider";
 
-export function resolvePlace(
+export async function resolvePlace(
   label: string,
+  spend: SpendWeatherCall,
 ): Promise<ResolvedPlace | undefined> {
+  await spend();
   return weatherProvider().resolvePlace(label);
+}
+
+/**
+A runner's lookup, counted against their day's budget (SA-M13).
+*/
+export function resolvePlaceFor(
+  userId: string,
+): (label: string) => Promise<ResolvedPlace | undefined> {
+  const spend = runnerWeatherBudget(userId);
+  return (label) => resolvePlace(label, spend);
 }

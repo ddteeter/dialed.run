@@ -2,13 +2,16 @@ import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { runs } from "../../src/db/schema-core";
+import { rateLimits, runs } from "../../src/db/schema-core";
 import {
   manualConditions,
   weatherObservations,
 } from "../../src/db/schema-weather";
 import { env } from "../../src/env";
 import { newUlid, type Ulid } from "../../src/lib/ids";
+import { nowSeconds } from "../../src/lib/now";
+import { WEATHER_CALLS_PER_DAY } from "../../src/modules/weather/budget";
+import { countRow } from "../rate-limit-rows";
 import { runInD1Scope, scopedDb } from "../../src/lib/sql/d1-session";
 import {
   attachObservation,
@@ -829,5 +832,80 @@ describe("only settled hours are fetched (D-156)", () => {
     expect(askedEpochs(fetchSpy)).toStrictEqual([
       OBSERVATION_HOUR_EPOCH + 3600,
     ]);
+  });
+});
+
+async function spendAll(userId: string): Promise<void> {
+  await coreDb()
+    .insert(rateLimits)
+    .values(
+      countRow("weather-runner", userId, WEATHER_CALLS_PER_DAY, nowSeconds()),
+    );
+}
+
+async function spentBy(userId: string): Promise<number | undefined> {
+  const [row] = await coreDb()
+    .select({ count: rateLimits.count })
+    .from(rateLimits)
+    .where(eq(rateLimits.subject, userId));
+  return row?.count;
+}
+
+describe("the runner's weather budget (SA-M13)", () => {
+  it("counts each hour fetched for the runner, and nothing for a cached one", async () => {
+    const userId = newUlid();
+    mockVisualCrossing();
+    const first = await insertRun({ userId, lat: 51.11, lng: -71.11 });
+    await attachObservation(first);
+    expect(await spentBy(userId)).toBe(1);
+
+    const again = await insertRun({ userId, lat: 51.11, lng: -71.11 });
+    await attachObservation(again);
+    expect(await statusOf(again)).toBe("attached");
+    expect(await spentBy(userId)).toBe(1);
+  });
+
+  it("asks the provider nothing once the runner's day's budget is spent, and leaves the run pending", async () => {
+    silenceWarn();
+    const userId = newUlid();
+    await spendAll(userId);
+    const fetchSpy = mockVisualCrossing();
+    const runId = await insertRun({ userId, lat: 51.22, lng: -71.22 });
+
+    expect(await attachObservation(runId)).toBe("pending");
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(await statusOf(runId)).toBe("pending");
+  });
+
+  it("holds the hourly retry to the same budget", async () => {
+    silenceWarn();
+    const userId = newUlid();
+    await spendAll(userId);
+    const fetchSpy = mockVisualCrossing();
+    const runId = await insertRun({
+      userId,
+      lat: 51.33,
+      lng: -71.33,
+      weatherStatus: "pending",
+    });
+
+    await retryPendingWeather();
+
+    const asked = fetchSpy.mock.calls.filter(([input]) =>
+      requestUrl(input).href.includes("51.33"),
+    );
+    expect(asked).toStrictEqual([]);
+    expect(await statusOf(runId)).not.toBe("attached");
+  });
+
+  it("leaves another runner's budget alone", async () => {
+    const spent = newUlid();
+    await spendAll(spent);
+    const fetchSpy = mockVisualCrossing();
+    const runId = await insertRun({ lat: 51.44, lng: -71.44 });
+
+    expect(await attachObservation(runId)).toBe("attached");
+    expect(fetchSpy).toHaveBeenCalled();
   });
 });

@@ -15,6 +15,7 @@ import {
   userProfiles,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import { EMAIL_SENDS_PER_HOUR } from "../../src/lib/contracts/email";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import {
@@ -163,7 +164,11 @@ describe("redeemInvite", () => {
   it("writes the claim against the account's id, address lowercased, with its hold", async () => {
     const codeId = await seedCode("DIAL-7K3P-2QXM");
     const now = 1_000_000;
-    const mine = { code: "DIAL-7K3P-2QXM", userId: newUlid(), email: "Maya@X.test" };
+    const mine = {
+      code: "DIAL-7K3P-2QXM",
+      userId: newUlid(),
+      email: "Maya@X.test",
+    };
     expect(await redeemInvite(db, mine, now)).toBe("redeemed");
     expect(await db.select().from(inviteRedemptions)).toStrictEqual([
       {
@@ -707,6 +712,7 @@ const ATTEMPT: TurnstileAttempt = {
   token: "t",
   remoteIp: "203.0.113.9",
   hostname: "dialed.run",
+  action: "request-access",
 };
 
 describe("requestAccess (Au5)", () => {
@@ -957,6 +963,39 @@ describe("requestAccess (Au5)", () => {
     ]);
   });
 
+  it("counts every address in one IPv6 /64 as one visitor, and keeps nothing past the limit (SA-M11)", async () => {
+    const { verify } = verifyAs(true);
+    const ask = (n: number, remoteIp: string) =>
+      requestAccess(
+        db,
+        {
+          email: `asker-${String(n)}@x.test`,
+          note: "",
+          attempt: { ...ATTEMPT, remoteIp },
+          isLimited: true,
+          blockedRegion: undefined,
+        },
+        verify,
+        1000,
+      );
+    const results = [];
+    for (let n = 0; n <= EMAIL_SENDS_PER_HOUR; n += 1) {
+      results.push(await ask(n, `2001:db8:1:2::${(n + 1).toString(16)}`));
+    }
+    expect(results.at(-1)).toStrictEqual({
+      status: "limited",
+      until: 1000 + 3600,
+    });
+    expect(await db.select().from(accessRequests)).toHaveLength(
+      EMAIL_SENDS_PER_HOUR,
+    );
+    expect(await countedKeys(db)).toStrictEqual(["access:2001:db8:1:2::/64"]);
+    expect(await ask(99, "2001:db8:1:3::1")).toStrictEqual({
+      status: "received",
+      isFromBlockedRegion: false,
+    });
+  });
+
   it("does not limit where the deployment does not", async () => {
     const { verify } = verifyAs(true);
     for (const n of [1, 2, 3, 4, 5, 6]) {
@@ -982,21 +1021,23 @@ describe("turnstileAttempt", () => {
     const request = new Request("https://dialed.run/api/auth/sign-up/email", {
       headers: { "cf-connecting-ip": "198.51.100.4" },
     });
-    expect(turnstileAttempt("t", request)).toStrictEqual({
+    expect(turnstileAttempt("t", request, "takedown")).toStrictEqual({
       token: "t",
       remoteIp: "198.51.100.4",
       hostname: "dialed.run",
+      action: "takedown",
     });
   });
 
   it("has no address and no host without a request", () => {
-    expect(turnstileAttempt(undefined, undefined)).toStrictEqual({
+    expect(turnstileAttempt(undefined, undefined, undefined)).toStrictEqual({
       token: undefined,
       remoteIp: undefined,
       hostname: "",
+      action: undefined,
     });
     expect(
-      turnstileAttempt("t", new Request("https://dialed.run/")),
+      turnstileAttempt("t", new Request("https://dialed.run/"), undefined),
     ).toMatchObject({ remoteIp: undefined });
   });
 });
@@ -1076,7 +1117,12 @@ describe("accessGate", () => {
       false,
     );
     expect(yes.seen).toStrictEqual([
-      { token: "t", remoteIp: undefined, hostname: "dialed.run" },
+      {
+        token: "t",
+        remoteIp: undefined,
+        hostname: "dialed.run",
+        action: "sign-up",
+      },
     ]);
   });
 });

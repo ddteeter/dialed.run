@@ -73,8 +73,22 @@ export const httpsUrlSchema = z.string().superRefine((value, context) => {
  * ask it directly rather than digging the first issue out of a parse.
  */
 export function productLinkProblem(value: string): string | undefined {
-  return linkProblem(value, WEB_SCHEMES);
+  return value.length > MAX_PRODUCT_LINK_LENGTH
+    ? PRODUCT_LINK_TOO_LONG
+    : linkProblem(value, WEB_SCHEMES);
 }
+
+/**
+ * The longest product link kept (SA-M17): longer than any shop's page
+ * address, and short enough that a link is never a store of text.
+ */
+export const MAX_PRODUCT_LINK_LENGTH = 2048;
+
+/**
+The sentence for a link past it (owner, 2026-11-16).
+*/
+export const PRODUCT_LINK_TOO_LONG =
+  "That link is too long. Paste the shop page's address.";
 
 /**
  * The same link on https. Only the scheme moves: the rest is the runner's

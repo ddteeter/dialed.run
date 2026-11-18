@@ -13,12 +13,26 @@
  * to degrade from. `undefined` when the provider answered without a zone
  * `Intl` accepts.
  */
+import { runnerWeatherBudget } from "./budget";
+import type { SpendWeatherCall } from "./budget";
 import { forecast } from "./forecast";
 
 export async function timeZoneAt(
   lat: number,
   lng: number,
+  spend?: SpendWeatherCall,
 ): Promise<string | undefined> {
-  const now = await forecast(lat, lng, new Date());
+  const now = await forecast(lat, lng, new Date(), spend);
   return now.timeZone;
+}
+
+/**
+ * A runner's zone lookup, as their place save asks it, counted against
+ * their day's budget when it reaches the provider (SA-M13).
+ */
+export function timeZoneAtFor(
+  userId: string,
+): (lat: number, lng: number) => Promise<string | undefined> {
+  const spend = runnerWeatherBudget(userId);
+  return (lat, lng) => timeZoneAt(lat, lng, spend);
 }

@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 
 import { SignedOutPanel } from "../../../ui/SignedOutPanel";
-import type { ResendResult } from "../verification";
+import type { ResendAnswer } from "../verification";
 import type { ViewerZone } from "../../../lib/dates";
 import { ResendLink } from "./ResendLink";
 
@@ -36,7 +36,7 @@ export function CheckEmail({
    * The runner's clock signed in; `undefined` signed out (R47·111).
    */
   viewer: ViewerZone | undefined;
-  resend: (input: { data: { email: string } }) => Promise<ResendResult>;
+  resend: (input: { data: { email: string } }) => Promise<ResendAnswer>;
 }>): JSX.Element {
   return (
     <SignedOutPanel heading="Check your email">

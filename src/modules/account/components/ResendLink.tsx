@@ -14,7 +14,7 @@ import {
   inFlight,
   useControlAction,
 } from "../../../ui";
-import type { ResendResult } from "../verification";
+import type { ResendAnswer } from "../verification";
 
 /**
 "Sent ✓" stays for a minute (round 26 #11, "SENT · FOR 60 S").
@@ -36,6 +36,29 @@ export function limitedMessage(
   viewer: ViewerZone | undefined,
 ): string {
   return `That's ${String(EMAIL_SENDS_PER_HOUR)} links this hour. You can send another at ${viewerClockLabel(until, viewer)}.`;
+}
+
+/**
+ * The band when this visitor's own Resends are used up this hour,
+ * whatever addresses they named (SA-M12; owner, 2026-11-16).
+ */
+export function visitorLimitedMessage(
+  until: number,
+  viewer: ViewerZone | undefined,
+): string {
+  return `Too many links from here this hour. You can send another at ${viewerClockLabel(until, viewer)}.`;
+}
+
+/**
+The band's sentence for a refused Resend.
+*/
+function refusalMessage(
+  refusal: Exclude<ResendAnswer, { status: "sent" }>,
+  viewer: ViewerZone | undefined,
+): string {
+  return refusal.status === "limited"
+    ? limitedMessage(refusal.until, viewer)
+    : visitorLimitedMessage(refusal.until, viewer);
 }
 
 /**
@@ -67,7 +90,7 @@ export function ResendLink({
    * The signed-in runner's clock, or `undefined` for a signed-out visitor.
    */
   viewer: ViewerZone | undefined;
-  resend: (input: { data: { email: string } }) => Promise<ResendResult>;
+  resend: (input: { data: { email: string } }) => Promise<ResendAnswer>;
   /**
    * Which of the three looks: the check-email page's ink link, the
    * confirm band's `--cold-text` link (R55·211, R29), or the sheet's pill.
@@ -75,14 +98,16 @@ export function ResendLink({
   look?: keyof typeof RESEND_LOOK | undefined;
 }>): JSX.Element {
   const [isSent, setIsSent] = useState(false);
-  const [limitedUntil, setLimitedUntil] = useState<number | undefined>();
+  const [refusal, setRefusal] = useState<
+    Exclude<ResendAnswer, { status: "sent" }> | undefined
+  >();
   const control = useControlAction<[]>({
     action: async () => {
       setIsSent(false);
-      setLimitedUntil(undefined);
+      setRefusal(undefined);
       const result = await resend({ data: { email } });
-      if (result.status === "limited") setLimitedUntil(result.until);
-      else setIsSent(true);
+      if (result.status === "sent") setIsSent(true);
+      else setRefusal(result);
     },
     kicker: NOT_SENT,
   });
@@ -98,9 +123,7 @@ export function ResendLink({
   }, [isSent]);
 
   const limited =
-    limitedUntil === undefined
-      ? undefined
-      : limitedMessage(limitedUntil, viewer);
+    refusal === undefined ? undefined : refusalMessage(refusal, viewer);
   const status = statusOf(control.status, isSent, limited);
 
   return (

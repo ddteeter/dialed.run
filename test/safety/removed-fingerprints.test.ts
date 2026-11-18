@@ -306,6 +306,39 @@ describe("a copy of a removed image is held for review (D-147)", () => {
     ]);
   });
 
+  it("holds a kit to four held copies when they race, taking back the rest's Review rows and notices (SA-M14)", async () => {
+    const bytes = await sceneJpeg(4);
+    const first = await posted(bytes);
+    await removed("photo", first.photoId);
+    const kit = await aKit();
+    const copy = await copyOf(bytes);
+
+    const attempts = await Promise.allSettled(
+      Array.from({ length: 6 }, () => posted(copy, kit)),
+    );
+
+    const rows = await core()
+      .select({ id: entryPhotos.id })
+      .from(entryPhotos)
+      .where(eq(entryPhotos.entryId, kit.entryId));
+    expect(rows).toHaveLength(4);
+    expect(attempts.filter((a) => a.status === "fulfilled")).toHaveLength(4);
+    const kept = rows.map((row) => row.id).toSorted(byText);
+    // Every copy was held; the two refused took their rows back.
+    const allQueued = await queueRows();
+    const queued = allQueued
+      .map((row) => row.subjectId)
+      .filter((id) => id !== first.photoId);
+    expect(queued.toSorted(byText)).toStrictEqual(kept);
+    const told = await core()
+      .select({ subjectId: notifications.subjectId })
+      .from(notifications)
+      .where(eq(notifications.userId, kit.userId));
+    expect(
+      told.map((row) => row.subjectId ?? "").toSorted(byText),
+    ).toStrictEqual(kept);
+  });
+
   it("tells nobody when nothing is held", async () => {
     const kit = await posted(await sceneJpeg(4));
 

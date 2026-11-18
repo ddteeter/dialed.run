@@ -1,8 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/d1";
+
+import { rateLimits } from "../../src/db/schema-core";
+import { env } from "../../src/env";
+import { newUlid } from "../../src/lib/ids";
 import {
+  PURGES_PER_RUNNER_PER_MINUTE,
   purgeAndSync,
+  purgeAndSyncWithin,
   purgePublicPages,
+  purgePublicPagesFor,
   purgeTags,
   type EdgeCache,
   type PurgeDeps,
@@ -159,5 +168,74 @@ describe("purgePublicPages", () => {
     expect(() => {
       purgePublicPages(["runner:u1"]);
     }).not.toThrow();
+  });
+});
+
+/**
+Everything a purge kept alive has settled, including what it kept alive in turn.
+*/
+async function allSettled(kept: Promise<unknown>[]): Promise<void> {
+  let seen = 0;
+  while (seen < kept.length) {
+    seen = kept.length;
+    await Promise.all(kept);
+  }
+}
+
+describe("purgeAndSyncWithin (SA-L15)", () => {
+  it("purges and syncs while the runner's share allows", async () => {
+    const purge = vi.fn(() => Promise.resolve(purged()));
+    const sync = vi.fn();
+    const { deps, kept } = harness({ purge });
+
+    purgeAndSyncWithin(deps, sync, () => Promise.resolve(true), ["entry:e1"]);
+    await allSettled(kept);
+
+    expect(purge.mock.calls).toStrictEqual([[{ tags: ["entry:e1"] }]]);
+    expect(sync).toHaveBeenCalledOnce();
+  });
+
+  it("past the share, syncs the photos and leaves the page to its lifetime", async () => {
+    const purge = vi.fn(() => Promise.resolve(purged()));
+    const sync = vi.fn();
+    const { deps, kept } = harness({ purge });
+
+    purgeAndSyncWithin(deps, sync, () => Promise.resolve(false), ["entry:e1"]);
+    await allSettled(kept);
+
+    expect(purge).not.toHaveBeenCalled();
+    expect(sync.mock.calls).toStrictEqual([
+      [{ entryIds: ["e1"], runnerIds: [] }],
+    ]);
+  });
+
+  it("purges when the count cannot answer", async () => {
+    const purge = vi.fn(() => Promise.resolve(purged()));
+    const { deps, kept } = harness({ purge });
+
+    purgeAndSyncWithin(deps, vi.fn(), () => Promise.reject(new Error("d1")), [
+      "entry:e1",
+    ]);
+    await allSettled(kept);
+
+    expect(purge).toHaveBeenCalledOnce();
+  });
+});
+
+describe("purgePublicPagesFor (SA-L15)", () => {
+  it("counts each of the runner's purges, a minute at a time", async () => {
+    const userId = newUlid();
+    const db = drizzle(env.DIALED_CORE);
+
+    purgePublicPagesFor(userId)([`runner:${userId}`]);
+
+    await vi.waitFor(async () => {
+      const [row] = await db
+        .select()
+        .from(rateLimits)
+        .where(eq(rateLimits.subject, userId));
+      expect(row).toMatchObject({ kind: "purge-runner", count: 1 });
+    });
+    expect(PURGES_PER_RUNNER_PER_MINUTE).toBe(2);
   });
 });

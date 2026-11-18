@@ -10,7 +10,7 @@
 import { z } from "zod";
 
 import { manualSkySchema, runDraftSchema } from "../../lib/contracts";
-import { ulidSchema } from "../../lib/ids";
+import { rowIdSchema, ulidSchema } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import { SET_CONDITION_BANDS } from "./run-conditions";
 import { RUNS_LISTED } from "./run-months";
@@ -55,7 +55,7 @@ export const newRunSearch = z
 
 export type NewRunSearch = z.infer<typeof newRunSearch>;
 
-export const importIdInput = z.object({ importId: z.string().min(1) });
+export const importIdInput = z.object({ importId: rowIdSchema });
 
 /**
 One tap on IMPORT › (G3): which Garmin activity, and the tap's own key, so
@@ -67,7 +67,7 @@ export const garminImportInput = z.object({
   idempotencyKey: ulidSchema,
 });
 
-export const runIdInput = z.object({ runId: z.string().min(1) });
+export const runIdInput = z.object({ runId: rowIdSchema });
 
 /**
  * R2b's pick: one of the bands it offers, never a typed number (round 22).
@@ -120,10 +120,16 @@ export const stravaCallbackSearch = z.object({
   error: z.string().optional(),
 });
 
+/**
+ * Each of Strava's callback values, bounded (SA-M17): a code, a state
+ * nonce or an error name is a few dozen characters.
+ */
+const CALLBACK_VALUE_MAX = 1024;
+
 export const stravaCallbackInput = z.object({
-  code: z.string().min(1).optional(),
-  state: z.string().min(1).optional(),
-  error: z.string().optional(),
+  code: z.string().min(1).max(CALLBACK_VALUE_MAX).optional(),
+  state: z.string().min(1).max(CALLBACK_VALUE_MAX).optional(),
+  error: z.string().max(CALLBACK_VALUE_MAX).optional(),
 });
 
 /**

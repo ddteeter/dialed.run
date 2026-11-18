@@ -10,6 +10,8 @@ import {
 } from "../../src/db/schema-core";
 import {
   emailPayloadSchema,
+  emailTemplateSchema,
+  requiresConfirmedAddress,
   preferenceFor,
   type EmailKind,
 } from "../../src/lib/contracts/email";
@@ -160,6 +162,53 @@ describe("deliverEmail", () => {
         {
           to: { userId },
           template: { kind: "verify_email", url: `${ORIGIN}/v` },
+        },
+        mail,
+      ),
+    ).toBe("sent");
+  });
+
+  it("does not send the Strava notice to a runner whose address is unconfirmed (SA-M28)", async () => {
+    const mail = fakeMail();
+    const { userId } = await seedUser({ isVerified: false });
+    expect(
+      await deliverEmail(
+        db,
+        { to: { userId }, template: { kind: "strava_disconnected" } },
+        mail,
+      ),
+    ).toBe("skipped");
+    expect(mail.sent).toHaveLength(0);
+  });
+
+  it("sends the Strava notice to a runner whose address is confirmed", async () => {
+    const mail = fakeMail();
+    const { userId } = await seedUser();
+    expect(
+      await deliverEmail(
+        db,
+        { to: { userId }, template: { kind: "strava_disconnected" } },
+        mail,
+      ),
+    ).toBe("sent");
+    expect(mail.sent).toHaveLength(1);
+  });
+
+  it("holds only the kinds that need a confirmed address", () => {
+    const held = emailTemplateSchema.options
+      .map((option) => option.shape.kind.value)
+      .filter((kind) => requiresConfirmedAddress(kind));
+    expect(held).toStrictEqual(["strava_disconnected"]);
+  });
+
+  it("sends mail to a typed address whatever its kind (an invite)", async () => {
+    const mail = fakeMail();
+    expect(
+      await deliverEmail(
+        db,
+        {
+          to: { address: "invitee@example.com" },
+          template: { kind: "strava_disconnected" },
         },
         mail,
       ),
@@ -794,6 +843,7 @@ describe("forgetSendLimits (ACC-9)", () => {
       countRow("verify", "gone@example.com", 1, 1),
       countRow("reset", "gone@example.com", 1, 1),
       countRow("change", "gone@example.com", 1, 1),
+      countRow("takedown-to", "gone@example.com", 1, 1),
       countRow("verify", "other@example.com", 1, 1),
       countRow("access", "unknown", 1, 1),
       // The same text under a kind not counted by address is not theirs.

@@ -228,11 +228,12 @@ describe("a feed card carries its own entry's detail", () => {
 
     expect(page.items[0]).toMatchObject({
       entryId,
-      runTitle: "Tempo",
       distanceM: 12_000,
       durationS: 3000,
       startedAt: NOW,
     });
+    // The run's own title is its runner's, and is not sent (SA-L15).
+    expect(page.items[0]).not.toHaveProperty("runTitle");
   });
 
   it("carries the conditions the run was logged in", async () => {
@@ -286,7 +287,6 @@ describe("a feed card copes with what is missing", () => {
     const page = await followingFeed(userId);
 
     expect(page.items[0]).toMatchObject({
-      runTitle: "Run",
       distanceM: 0,
       durationS: 0,
       startedAt: NOW,

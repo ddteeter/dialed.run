@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 
 import { PASSWORD_MIN_LENGTH, signUpSchema } from "../../lib/contracts";
+import { TURNSTILE_ACTIONS } from "../../lib/turnstile-actions";
 import {
   signUpPlaceQuery,
   turnstileSiteKeyQuery,
@@ -124,7 +125,7 @@ function SignupForm({ crossLink }: Readonly<{ crossLink: ReactNode }>) {
         <Turnstile
           key={turnstile.widgetKey}
           siteKey={siteKey}
-          action="sign-up"
+          action={TURNSTILE_ACTIONS.signUp}
           onToken={turnstile.onToken}
         />
       }

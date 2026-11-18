@@ -97,13 +97,20 @@ Questions about this policy or your data: hello@dialed.run.
   except as kept with
   [suspected child sexual abuse material](#moderation).
 - **Counts that stop abuse.** We count sign-in and sign-up attempts per IP
-  address; those counts are kept for about a minute and then deleted. We
-  count how many confirmation links, password resets and email changes each
-  address asked for in the last hour, and how many wrong passwords you
-  typed when changing your email or password. Requests for access, removal
-  requests, and the reports a browser sends us when it blocks part of a
-  page are counted per visitor IP address the same way. Each
-  of these counts is deleted a day after its window ends.
+  address; those counts are deleted within a day. We count how many
+  confirmation links, password resets and email changes each address asked
+  for in the last hour, how many removal-request receipts each address was
+  sent, and how many wrong passwords you typed when changing your email or
+  password. Requests for access, removal requests, requests to resend a
+  confirmation link, and the reports a browser sends us when it blocks part
+  of a page are counted per visitor IP address the same way. Each
+  of these counts is deleted a day after its window ends. We also count,
+  against your account, how many weather lookups your runs and places
+  cause each day, how many photos and how many run files you upload each
+  day, how many reports you file each day and how many of those hide what
+  you reported at once, and how often a minute your changes refresh public
+  pages; each of these counts is deleted within two days, and with your
+  account.
 - **Terms you accepted:** each version and when.
 - **Account email.** We send email from hello@dialed.run through
   **Cloudflare's** email service: confirming your address, a notice when

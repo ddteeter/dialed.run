@@ -101,7 +101,9 @@ export async function receiveAccessRequest(
       // The challenge is solved on the marketing site and posted here, so
       // the host it must name is the marketing site's, not this request's.
       attempt: {
-        ...turnstileAttempt(form["cf-turnstile-response"], request),
+        // The marketing form lives in another repo, and its action is not
+        // named here: no action is expected (SA-L07).
+        ...turnstileAttempt(form["cf-turnstile-response"], request, undefined),
         hostname: MARKETING_HOST,
       },
       isLimited: deps.isLimited,

@@ -43,7 +43,7 @@ import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { operatorEmailMessage } from "../../lib/sql/outbox";
-import { countSend, emailDebt, sendClaimOf } from "../email";
+import { claimLimit, countSend, emailDebt, sendClaimOf } from "../email";
 import { adminUserIds } from "./admin";
 import { REMOVAL_DUE_SECONDS, removalDueLabel } from "./contracts";
 import { subjectCacheTagsOf } from "./kit-cache-tags";
@@ -134,7 +134,7 @@ export async function fileTakedownRequest<Attempt>(
     ),
   );
   if (earlier !== undefined) return { status: "received" };
-  const until = await limitedUntil(db, input, now);
+  const until = await limitedUntil(db, input, email, now);
   if (until !== undefined) return { status: "limited", until };
   const id = newUlid();
   const dueAt = now + REMOVAL_DUE_SECONDS;
@@ -211,13 +211,16 @@ async function purgeHeld(
 }
 
 /**
- * When the visitor's hourly sends run out, the moment they return; nothing
- * when this deployment does not limit or the send is allowed. Counting is
- * the write that spends a send.
+ * When the visitor's hourly sends run out, or the typed address's
+ * receipts do (SA-M11), the moment they return; nothing when this
+ * deployment does not limit or the request may go. Counting is the write
+ * that spends a send; a visitor already over is not counted against the
+ * address.
  */
 async function limitedUntil(
   db: Db,
   input: { readonly isLimited: boolean; readonly remoteIp: string | undefined },
+  email: string,
   now: number,
 ): Promise<number | undefined> {
   if (!input.isLimited) return undefined;
@@ -228,7 +231,9 @@ async function limitedUntil(
     now,
   );
   const claim = sendClaimOf(counted);
-  return claim.isAllowed ? undefined : claim.until;
+  if (!claim.isAllowed) return claim.until;
+  const receipt = await claimLimit(db, "takedown-to", email, now);
+  return receipt.isAllowed ? undefined : receipt.until;
 }
 
 /**

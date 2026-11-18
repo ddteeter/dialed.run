@@ -9,13 +9,14 @@ import { getRequestHeaders } from "@tanstack/react-start/server";
 
 import { coreDb, waitUntil } from "../../env";
 import { cityLookupInput } from "../../lib/contracts/city-lookup";
+import { isFirstPartyRequest } from "../../lib/fetch-site";
 import { nowSeconds } from "../../lib/now";
 import { noInput } from "../../lib/no-input";
 import { optionalUserId, requireUserId, verifiedUserId } from "../auth";
 import { nameItem } from "../closet";
 import { coverageLadder } from "../feed";
-import { captureException, purgePublicPages } from "../ops";
-import { climateNormals, resolvePlace, timeZoneAt } from "../weather";
+import { captureException, purgePublicPagesFor } from "../ops";
+import { climateNormalsFor, resolvePlaceFor, timeZoneAtFor } from "../weather";
 import { countsInTotals, setCountInTotals } from "./aggregate-prefs";
 import {
   brandPrefixInput,
@@ -38,7 +39,7 @@ import {
 import { saveSharing, setPublicProfile } from "./public-profile";
 import { namedResult, namingOffer, namingSuggestions } from "./naming";
 import { isPrivacyReviewDue, markPrivacySeen } from "./privacy-review";
-import { starterList } from "./starter-list";
+import { normalsForRequest, starterList } from "./starter-list";
 import { unitsFromLocale } from "./units-from-locale";
 
 function db() {
@@ -46,14 +47,17 @@ function db() {
 }
 
 /**
-The place writer's zone lookup, where its failures go, and what keeps the
-Worker alive while it finishes after the answer (design 142).
+The place writer's zone lookup, counted against the runner's weather budget
+(SA-M13), where its failures go, and what keeps the Worker alive while it
+finishes after the answer (design 142).
 */
-const zones = {
-  zoneAt: timeZoneAt,
-  report: captureException,
-  keepAlive: waitUntil,
-};
+function zonesFor(userId: string) {
+  return {
+    zoneAt: timeZoneAtFor(userId),
+    report: captureException,
+    keepAlive: waitUntil,
+  };
+}
 
 export const callLadderQuery = createServerFn({ method: "GET" }).handler(
   async () => ladderFrom(await coverageLadder(await requireUserId())),
@@ -65,12 +69,22 @@ export const localeUnitsQuery = createServerFn({ method: "GET" }).handler(() =>
 
 export const saveCalibrationFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => calibrationInput.parse(data))
-  .handler(async ({ data }) =>
-    saveCalibration(db(), await requireUserId(), data, zones),
-  );
+  .handler(async ({ data }) => {
+    const userId = await requireUserId();
+    return saveCalibration(db(), userId, data, zonesFor(userId));
+  });
 
 export const starterListQuery = createServerFn({ method: "GET" }).handler(
-  async () => starterList(db(), await requireUserId(), climateNormals),
+  async () => {
+    const userId = await requireUserId();
+    const isFirstParty = isFirstPartyRequest(getRequestHeaders());
+    const normalsFor = climateNormalsFor(userId);
+    return starterList(
+      db(),
+      userId,
+      normalsForRequest(isFirstParty, normalsFor),
+    );
+  },
 );
 
 export const completeOnboardingFn = createServerFn({ method: "POST" })
@@ -126,9 +140,10 @@ export const saveSharingFn = createServerFn({ method: "POST" })
  */
 export const setPublicProfileFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => publicProfileInput.parse(data))
-  .handler(async ({ data }) =>
-    setPublicProfile(db(), await verifiedUserId(), data, purgePublicPages),
-  );
+  .handler(async ({ data }) => {
+    const userId = await verifiedUserId();
+    return setPublicProfile(db(), userId, data, purgePublicPagesFor(userId));
+  });
 
 /**
  * The runner's own totals setting alone, for A3's private line: the
@@ -177,14 +192,15 @@ export const markPrivacySeenFn = createServerFn({ method: "POST" })
  */
 export const lookUpCityFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => cityLookupInput.parse(data))
-  .handler(async ({ data }) =>
-    lookUpCity({
+  .handler(async ({ data }) => {
+    const userId = await requireUserId();
+    return lookUpCity({
       label: data.label,
-      resolver: resolvePlace,
+      resolver: resolvePlaceFor(userId),
       report: captureException,
-      userId: await requireUserId(),
-    }),
-  );
+      userId,
+    });
+  });
 
 export const requiresOnboardingQuery = createServerFn({
   method: "GET",

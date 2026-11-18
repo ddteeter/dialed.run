@@ -13,6 +13,8 @@ import { coreDb } from "../../env";
 import { pinPrimary } from "../../lib/sql/d1-session";
 import type { ManualSky } from "../../lib/contracts";
 import type { Ulid } from "../../lib/ids";
+import { runnerWeatherBudget } from "./budget";
+import type { SpendWeatherCall } from "./budget";
 import { weatherProvider } from "./provider";
 import {
   clearWeatherHalves,
@@ -212,7 +214,11 @@ async function resolveAndAttach(runId: Ulid): Promise<AttachOutcome> {
     // from started_at + duration_s. What was missing was resolving the
     // later hours at all. The run still links to its starting hour, so
     // every existing reader is unaffected.
-    await sampleRunHours(settled, run.lat, run.lng, run.startedAt);
+    await sampleRunHours(
+      settled,
+      { lat: run.lat, lng: run.lng, startedAt: run.startedAt },
+      runnerWeatherBudget(run.userId),
+    );
   } catch (error) {
     console.warn("[weather] attach: provider call failed, marking pending", {
       runId,
@@ -224,19 +230,25 @@ async function resolveAndAttach(runId: Ulid): Promise<AttachOutcome> {
   return outcome;
 }
 
+/**
+ * Fetch each hour not cached yet. Each fetch is counted against the run's
+ * runner's day's budget first (SA-M13), whether the runner or the hourly
+ * retry asks; a spent budget throws, and the run stays `pending` as it
+ * does when the provider is down.
+ */
 async function sampleRunHours(
   keys: readonly CacheKey[],
-  lat: number,
-  lng: number,
-  startedAt: number,
+  run: Readonly<{ lat: number; lng: number; startedAt: number }>,
+  spend: SpendWeatherCall,
 ): Promise<void> {
   const provider = weatherProvider();
   for (const [index, hourKey] of keys.entries()) {
     // An hour already cached — by this run's earlier attempt, or by
     // someone else's run at the same place — needs no upstream call.
     if ((await findObservationRow(hourKey)) !== undefined) continue;
-    const at = new Date((startedAt + index * HOUR_SECONDS) * 1000);
-    const observation = await provider.observation(lat, lng, at);
+    const at = new Date((run.startedAt + index * HOUR_SECONDS) * 1000);
+    await spend();
+    const observation = await provider.observation(run.lat, run.lng, at);
     // No hour names the run (C1): the row is a shared cache cell, found
     // by place and hour, and a run id on it would outlive the run.
     await upsertRealObservation(hourKey, observation);

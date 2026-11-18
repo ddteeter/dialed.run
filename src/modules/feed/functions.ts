@@ -42,7 +42,7 @@ import { bandSignalsForEntry } from "./band-signals";
 import { bandRunsInput, recentRunsInBand } from "./band-runs";
 import { followingFeed } from "./feed";
 import { follow, isFollowing, unfollow } from "./follows";
-import { photoUploadFrom, uploadPhoto } from "./photos";
+import { photoUploadFrom, uploadPhotoAnswer } from "./photos";
 import { deleteEntryPhoto, photoIdInput, retractEntry } from "./retract";
 import { garmentBandCountOrNone, garmentBandsInput } from "./garment-bands";
 import { decideReview, deleteAfterCase, moderateContent } from "./moderation";
@@ -64,8 +64,8 @@ import { setUsefulReaction } from "./reactions";
 import { searchRunners } from "./search";
 import { nowSeconds } from "../../lib/now";
 import { placeInput, savePlace } from "../onboarding";
-import { captureException } from "../ops";
-import { timeZoneAt } from "../weather";
+import { captureException, purgePublicPagesFor } from "../ops";
+import { timeZoneAtFor } from "../weather";
 
 export const attachKitAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => attachKitInput.parse(input))
@@ -102,7 +102,7 @@ export const submitVerdictAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => submitVerdictInput.parse(input))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    await submitVerdict({ userId, ...data });
+    await submitVerdict({ userId, ...data }, purgePublicPagesFor(userId));
   });
 
 // ---- The verdict backlog (DS2) ----------------------------------------------
@@ -271,13 +271,14 @@ export const feedConditionsQuery = createServerFn({ method: "GET" }).handler(
  */
 export const saveConditionsCityAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => placeInput.parse(input))
-  .handler(async ({ data }) =>
-    savePlace(coreDb(), await requireUserId(), data, {
-      zoneAt: timeZoneAt,
+  .handler(async ({ data }) => {
+    const userId = await requireUserId();
+    return savePlace(coreDb(), userId, data, {
+      zoneAt: timeZoneAtFor(userId),
       report: captureException,
       keepAlive: waitUntil,
-    }),
-  );
+    });
+  });
 
 // ---- Units (R-6) --------------------------------------------------------------
 
@@ -346,14 +347,13 @@ export const uploadPhotoAction = createServerFn({ method: "POST" })
   .validator(photoUploadFrom)
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    const key = await uploadPhoto({
+    return uploadPhotoAnswer({
       userId,
       entryId: data.entryId,
       contentType: data.contentType,
       bytes: await data.file.arrayBuffer(),
       idempotencyKey: data.idempotencyKey,
     });
-    return { key };
   });
 
 // ---- Taking it back (task 128 · SAF-3) ---------------------------------------
@@ -362,14 +362,26 @@ export const retractEntryAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => entryIdInput.parse(input))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    await retractEntry(coreDb(), userId, data.entryId);
+    await retractEntry(
+      coreDb(),
+      userId,
+      data.entryId,
+      captureException,
+      purgePublicPagesFor(userId),
+    );
   });
 
 export const deleteEntryPhotoAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => photoIdInput.parse(input))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    await deleteEntryPhoto(coreDb(), userId, data.photoId);
+    await deleteEntryPhoto(
+      coreDb(),
+      userId,
+      data.photoId,
+      captureException,
+      purgePublicPagesFor(userId),
+    );
   });
 
 /**

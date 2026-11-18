@@ -25,6 +25,7 @@ import {
 } from "./takedown-requests";
 
 import { coreDb, env, primaryCoreDb } from "../../env";
+import { TURNSTILE_ACTIONS } from "../../lib/turnstile-actions";
 import {
   outboxInsert,
   outboxInsertWhere,
@@ -179,7 +180,11 @@ export const reviewQueueQuery = createServerFn({ method: "GET" }).handler(
 export const takedownRequestFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => takedownRequestInput.parse(data))
   .handler(async ({ data }) => {
-    const attempt = turnstileAttempt(data.turnstileToken, getRequest());
+    const attempt = turnstileAttempt(
+      data.turnstileToken,
+      getRequest(),
+      TURNSTILE_ACTIONS.takedown,
+    );
     // Primary: the abuse limits and holds it checks gate the write
     // (D-123, design 143).
     return fileTakedownRequest(

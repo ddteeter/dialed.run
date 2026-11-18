@@ -4,7 +4,11 @@ import { ForbiddenError, getEntryDetail } from "../../src/modules/feed/entries";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
-import { entryPhotos, outfitEntries } from "../../src/db/schema-core";
+import {
+  entryPhotos,
+  outfitEntries,
+  rateLimits,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import {
   entryPhotoIdOf,
@@ -12,6 +16,12 @@ import {
   entryPhotoPrefix,
 } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
+import { nowSeconds } from "../../src/lib/now";
+import {
+  PHOTO_LIMIT_REACHED,
+  PHOTO_UPLOADS_PER_DAY,
+} from "../../src/lib/photo-constraints";
+import { countRow } from "../rate-limit-rows";
 import { imageDimensions } from "../../src/lib/photo-pipeline";
 import {
   InvalidPhotoError,
@@ -22,6 +32,7 @@ import {
   photoResponse,
   photoUploadFrom,
   uploadPhoto,
+  uploadPhotoAnswer,
 } from "../../src/modules/feed/photos";
 import {
   imageCategories,
@@ -36,6 +47,8 @@ import type { Audience } from "../../src/lib/contracts";
 // A real JPEG: every stored photo is decoded and re-encoded (task 128 ·
 // SAF-1), so three made-up bytes would be refused before they reached R2.
 const JPEG_BYTES = new Uint8Array(await tinyJpeg()).buffer;
+// Earlier the same day: inside the day's upload count.
+const TWO_HOURS_S = 2 * 60 * 60;
 
 describe("entry photos", () => {
   beforeEach(resetTables);
@@ -135,6 +148,12 @@ describe("entry photos", () => {
         bytes: JPEG_BYTES,
       }),
     ).rejects.toBeInstanceOf(InvalidPhotoError);
+    // A full kit refuses before the day's count: only the four stored count.
+    const [counted] = await drizzle(env.DIALED_CORE)
+      .select({ count: rateLimits.count })
+      .from(rateLimits)
+      .where(eq(rateLimits.subject, userId));
+    expect(counted?.count).toBe(MAX_PHOTOS_PER_ENTRY);
   });
 
   it("keeps a private entry's photo invisible to a stranger, visible to its owner", async () => {
@@ -613,5 +632,135 @@ describe("photoResponse: the whole cached GET, in one function", () => {
 
     const gone = await photoResponse(key, userId);
     expect(gone.status).toBe(404);
+  });
+});
+
+describe("bounds on what one runner stores (SA-M14)", () => {
+  it("holds a kit to four photos when uploads race, and keeps no object without a row", async () => {
+    const userId = await makeUser();
+    const runId = await makeRun({ userId });
+    const entryId = await makeEntry({ userId, runId });
+
+    const attempts = await Promise.allSettled(
+      Array.from({ length: 8 }, () =>
+        uploadPhoto({
+          userId,
+          entryId,
+          contentType: "image/jpeg",
+          bytes: JPEG_BYTES,
+        }),
+      ),
+    );
+
+    const rows = await drizzle(env.DIALED_CORE)
+      .select({ position: entryPhotos.position })
+      .from(entryPhotos)
+      .where(eq(entryPhotos.entryId, entryId));
+    expect(rows).toHaveLength(MAX_PHOTOS_PER_ENTRY);
+    expect(
+      rows.map((row) => row.position).toSorted((a, b) => a - b),
+    ).toStrictEqual([0, 1, 2, 3]);
+    const refused = attempts.filter((a) => a.status === "rejected");
+    expect(refused).toHaveLength(8 - MAX_PHOTOS_PER_ENTRY);
+    for (const attempt of refused) {
+      expect(attempt.reason).toBeInstanceOf(InvalidPhotoError);
+      expect(String(attempt.reason)).toContain("at most 4 photos per entry");
+    }
+    const listed = await env.MEDIA.list({
+      prefix: entryPhotoPrefix(userId, entryId),
+    });
+    expect(listed.objects).toHaveLength(MAX_PHOTOS_PER_ENTRY);
+  });
+
+  it("refuses a runner's photo past the day's uploads, before storing anything", async () => {
+    const userId = await makeUser();
+    const runId = await makeRun({ userId });
+    const entryId = await makeEntry({ userId, runId });
+    await drizzle(env.DIALED_CORE)
+      .insert(rateLimits)
+      .values(
+        countRow(
+          "photo-runner",
+          userId,
+          PHOTO_UPLOADS_PER_DAY,
+          nowSeconds() - TWO_HOURS_S,
+        ),
+      );
+
+    await expect(
+      uploadPhoto({
+        userId,
+        entryId,
+        contentType: "image/jpeg",
+        bytes: JPEG_BYTES,
+      }),
+    ).rejects.toThrow(new InvalidPhotoError(PHOTO_LIMIT_REACHED));
+    const listed = await env.MEDIA.list({
+      prefix: entryPhotoPrefix(userId, entryId),
+    });
+    expect(listed.objects).toHaveLength(0);
+  });
+
+  it("counts each upload once, and a repeat of one submission not again", async () => {
+    const userId = await makeUser();
+    const runId = await makeRun({ userId });
+    const entryId = await makeEntry({ userId, runId });
+    const upload = {
+      userId,
+      entryId,
+      contentType: "image/jpeg",
+      bytes: JPEG_BYTES,
+      idempotencyKey: newUlid(),
+    };
+    await uploadPhoto(upload);
+    await uploadPhoto(upload);
+
+    const [row] = await drizzle(env.DIALED_CORE)
+      .select({ kind: rateLimits.kind, count: rateLimits.count })
+      .from(rateLimits)
+      .where(eq(rateLimits.subject, userId));
+    expect(row).toStrictEqual({ kind: "photo-runner", count: 1 });
+  });
+
+  it("answers the attach screen with the day's sentence, and the key otherwise", async () => {
+    const userId = await makeUser();
+    const runId = await makeRun({ userId });
+    const entryId = await makeEntry({ userId, runId });
+    const upload = {
+      userId,
+      entryId,
+      contentType: "image/jpeg",
+      bytes: JPEG_BYTES,
+    };
+    const first = await uploadPhotoAnswer(upload);
+    expect("key" in first && first.key.includes(entryId)).toBe(true);
+
+    await drizzle(env.DIALED_CORE)
+      .update(rateLimits)
+      .set({ count: PHOTO_UPLOADS_PER_DAY })
+      .where(eq(rateLimits.subject, userId));
+    expect(await uploadPhotoAnswer(upload)).toStrictEqual({
+      refusal: "That's 50 photos today. You can add more tomorrow.",
+    });
+  });
+
+  it("still throws any other refusal", async () => {
+    const userId = await makeUser();
+    await expect(
+      uploadPhotoAnswer({
+        userId,
+        entryId: newUlid(),
+        contentType: "image/jpeg",
+        bytes: JPEG_BYTES,
+      }),
+    ).rejects.toThrow("entry not found");
+    await expect(
+      uploadPhotoAnswer({
+        userId,
+        entryId: newUlid(),
+        contentType: "image/gif",
+        bytes: JPEG_BYTES,
+      }),
+    ).rejects.toBeInstanceOf(InvalidPhotoError);
   });
 });

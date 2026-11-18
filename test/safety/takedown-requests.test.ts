@@ -9,6 +9,7 @@ import { env } from "../../src/env";
 import { EMAIL_SENDS_PER_HOUR } from "../../src/lib/contracts/email";
 import { newUlid } from "../../src/lib/ids";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
+import { TAKEDOWN_RECEIPTS_PER_HOUR } from "../../src/modules/email/rate-limit";
 import {
   fileTakedownRequest,
   pendingTakedownRequests,
@@ -48,6 +49,18 @@ function request(overrides: Record<string, unknown> = {}) {
     isLimited: false,
     ...overrides,
   };
+}
+
+/**
+A request filed on a deployment that limits.
+*/
+function fileLimited(overrides: Record<string, unknown>, at = NOW) {
+  return fileTakedownRequest(
+    core(),
+    request({ isLimited: true, ...overrides }),
+    deps,
+    at,
+  );
 }
 
 async function rows() {
@@ -228,23 +241,71 @@ describe("filing a request", () => {
 describe("the limit, on a real deployment", () => {
   it("lets a visitor send the hour's allowance and refuses the next, saying until when", async () => {
     for (let n = 0; n < EMAIL_SENDS_PER_HOUR; n += 1) {
-      expect(
-        await fileTakedownRequest(
-          core(),
-          request({ isLimited: true }),
-          deps,
-          NOW,
-        ),
-      ).toStrictEqual({ status: "received" });
+      const email = `sam-${String(n)}@example.com`;
+      expect(await fileLimited({ email })).toStrictEqual({
+        status: "received",
+      });
     }
     const refused = await fileTakedownRequest(
       core(),
-      request({ isLimited: true }),
+      request({ isLimited: true, email: "someone-else@example.com" }),
       deps,
       NOW,
     );
     expect(refused).toStrictEqual({ status: "limited", until: NOW + 3600 });
     expect(await rows()).toHaveLength(EMAIL_SENDS_PER_HOUR);
+  });
+
+  it("counts every address in one IPv6 /64 as one visitor (SA-M11)", async () => {
+    const results = [];
+    for (let n = 0; n <= EMAIL_SENDS_PER_HOUR; n += 1) {
+      const host = (n + 1).toString(16);
+      results.push(
+        await fileLimited({
+          email: `sam-${String(n)}@example.com`,
+          remoteIp: `2001:db8:1:2::${host}`,
+        }),
+      );
+    }
+    expect(results.at(-1)).toStrictEqual({
+      status: "limited",
+      until: NOW + 3600,
+    });
+    expect(await fileLimited({ remoteIp: "2001:db8:1:3::1" })).toStrictEqual({
+      status: "received",
+    });
+  });
+
+  it("sends one address at most TAKEDOWN_RECEIPTS_PER_HOUR receipts, whoever asks (SA-M11)", async () => {
+    for (let n = 0; n < TAKEDOWN_RECEIPTS_PER_HOUR; n += 1) {
+      const remoteIp = `203.0.113.${String(n)}`;
+      expect(await fileLimited({ remoteIp })).toStrictEqual({
+        status: "received",
+      });
+    }
+    const owed = await owedEmails();
+    expect(
+      await fileLimited(
+        { email: "SAM@example.com", remoteIp: "198.51.100.1" },
+        NOW + 10,
+      ),
+    ).toStrictEqual({ status: "limited", until: NOW + 3600 });
+    expect(await rows()).toHaveLength(TAKEDOWN_RECEIPTS_PER_HOUR);
+    expect(await owedEmails()).toHaveLength(owed.length);
+  });
+
+  it("does not count the address for a visitor already over their own limit", async () => {
+    for (let n = 0; n <= EMAIL_SENDS_PER_HOUR; n += 1) {
+      await fileLimited({ email: `sam-${String(n)}@example.com` });
+    }
+    const counted = await core()
+      .select({ subject: rateLimits.subject })
+      .from(rateLimits)
+      .where(eq(rateLimits.kind, "takedown-to"));
+    expect(counted).toHaveLength(EMAIL_SENDS_PER_HOUR);
+    expect(counted.map((row) => row.subject)).not.toContain(
+      `sam-${String(EMAIL_SENDS_PER_HOUR)}@example.com`,
+    );
   });
 
   it("counts by visitor address, and an unknown one as one visitor", async () => {
@@ -254,11 +315,10 @@ describe("the limit, on a real deployment", () => {
       deps,
       NOW,
     );
-    const [limit] = await core().select().from(rateLimits);
-    expect([limit?.kind, limit?.subject]).toStrictEqual([
-      "takedown",
-      "unknown",
-    ]);
+    const limits = await core()
+      .select({ kind: rateLimits.kind, subject: rateLimits.subject })
+      .from(rateLimits);
+    expect(limits).toContainEqual({ kind: "takedown", subject: "unknown" });
   });
 
   it("is not counted off a real deployment", async () => {

@@ -1,3 +1,5 @@
+import { formatDistance } from "../../lib/contracts/measures";
+import type { DistanceUnit } from "../../lib/contracts/profile";
 import { dayLabel, isTimeZone } from "../../lib/dates";
 
 /**
@@ -129,4 +131,18 @@ export function postedLabel(
 export function runWhenLabel(epochSeconds: number, timeZone?: string): string {
   const zone = zoneOf(timeZone);
   return `${dayLabel(epochSeconds, zone)} · ${clockIn(epochSeconds, zone)}`;
+}
+
+/**
+ * What W1's heading names an entry by (SA-L15): the run's day and
+ * distance, which the detail page already shows, and never the title its
+ * runner typed, which no screen shows back and which is not sent to other
+ * runners (owner, 2026-11-16).
+ */
+export function entryReportLabel(
+  entry: Readonly<{ startedAt: number; distanceM: number }>,
+  unit: DistanceUnit,
+  timeZone?: string,
+): string {
+  return `${dayLabel(entry.startedAt, zoneOf(timeZone))} · ${formatDistance(entry.distanceM, unit)}`;
 }

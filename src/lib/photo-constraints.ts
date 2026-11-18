@@ -79,3 +79,15 @@ export function photoProblem(file: File): string | undefined {
   }
   return undefined;
 }
+
+/**
+ * How many photos one runner may upload in a day, kit and garment alike
+ * (SA-M14; owner, 2026-11-16).
+ */
+export const PHOTO_UPLOADS_PER_DAY = 50;
+
+/**
+ * The sentence once a runner's day's photo uploads are used up (owner,
+ * 2026-11-16): the kit's photo row and the garment's photo both show it.
+ */
+export const PHOTO_LIMIT_REACHED = `That's ${String(PHOTO_UPLOADS_PER_DAY)} photos today. You can add more tomorrow.`;
