@@ -40,6 +40,19 @@ step goes unnoticed (#824). Separately, `invites.ts` miscounts its code space
   already granted in invites.ts. The fix is a fifth identical comment, and
   the owner approved raising that grant's count from 4 to 5 (2026-11-17).
 
+- **Round 60's refusals** (#820 items 1–2, #837), added to the lane
+  2026-11-17. The rule is that a refusal a retry can't fix drops Try
+  again. It is built as one seam: `useControlAction` marks a
+  `ControlRefusal` as refused, `ControlFailureBand` leaves out Try again
+  for it, and `ConfirmSheet`'s other button reads Close. Per surface:
+  the handle cap moves from the field to a NOT CHANGED band above Save,
+  naming the day (`claimUsername`'s `too_often` carries it, read in the
+  same query as the cap from one counted-renames predicate). Resend's
+  limit band loses Try again. The report sheet's gone item offers Close
+  only. The terms return line reads the root's hydration stamp at
+  mount, so it is in the first render or never. The photo lines already
+  had no Try again; tests pin that.
+
 ## Contract touches
 
 - Schema changes: **none**. New bindings, queues or crons: **none** (no new
@@ -47,7 +60,9 @@ step goes unnoticed (#824). Separately, `invites.ts` miscounts its code space
 - Routes: `src/routes/api/health.ts` changes its gate and gets a
   verification-class row `verified-viewer`.
 - `/api/health` body for a non-operator shrinks to `{ ok, version, at }`.
-- Screens: none.
+- Screens: the delete sheets, Settings › Username and O0, Resend, the
+  report sheet and the terms prompt, as `docs/design-deltas.md`'s "Built
+  from Round 60's refusal rulings" says.
 
 ## Test plan
 
@@ -67,7 +82,7 @@ step goes unnoticed (#824). Separately, `invites.ts` miscounts its code space
 
 ## Issues
 
-- Closes: #824, #815.
+- Closes: #824, #815, #820, #837.
 - Opens: none yet.
 
 ## Open questions
