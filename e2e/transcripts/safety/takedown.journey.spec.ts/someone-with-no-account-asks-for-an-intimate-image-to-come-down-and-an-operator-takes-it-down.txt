@@ -16,10 +16,9 @@ link, :when
 end of link, :when
 end of listitem, level 1, position 1, set size 7
 listitem, level 1, position 2, set size 7
-link, Review #, current page
+link, Review, current page
 Review
-#
-end of link, Review #, current page
+end of link, Review, current page
 end of listitem, level 1, position 2, set size 7
 listitem, level 1, position 3, set size 7
 link, Corrections
@@ -57,52 +56,9 @@ heading, Review, level 1
 heading, waiting, level 2
 waiting
 end of heading, waiting, level 2
-list
-listitem, level 1, position 1, set size 1
-button, entry · :id · @safety_# reports Due in #h, expanded
-entry · :id · @safety_# reports
-Due in #h
-end of button, entry · :id · @safety_# reports Due in #h, expanded
-# person
-It's an intimate image of someone, shared without their consent
 paragraph
-Intimate means nudity or sexual content (# U.S.C. § #). If it isn't, decline, and remove it under another rule if it breaks one.
+Nothing waiting. The daily digest says so too.
 end of paragraph
-button, Who reported · #, not expanded
-Who reported · #
-end of button, Who reported · #, not expanded
-paragraph
-Folded. Opening it is logged. Never shown to the author.
-end of paragraph
-heading, Their other photos, level 3
-Their other photos
-end of heading, Their other photos, level 3
-No other photos from this runner.
-heading, Matching photos · any runner, level 3
-Matching photos · any runner
-end of heading, Matching photos · any runner, level 3
-No fingerprint to match by: the photo is gone, or older than fingerprints.
-form
-status
-Why it comes down
-combobox, Why it comes down, has popup listbox, not expanded
-option, Not set, not selected, position 1, set size 8
-option, it shows where someone lives, home, not selected, position 2, set size 8
-option, it's sexual or explicit, explicit, not selected, position 3, set size 8
-option, it's an intimate image shared without consent, intimate, not selected, position 4, set size 8
-option, it harasses someone, harassment, not selected, position 5, set size 8
-option, it shows someone who didn't agree to it, othersPhotos, not selected, position 6, set size 8
-option, it's an ad or spam, spam, not selected, position 7, set size 8
-option, it uses someone else's work, copyright, not selected, position 8, set size 8
-end of combobox, Why it comes down, has popup listbox, not expanded
-button, Remove
-Remove
-end of button, Remove
-button, Approve
-button, Remove as suspected CSAM
-end of form
-end of listitem, level 1, position 1, set size 1
-end of list
 region, Takedown
 heading, Takedown, level 2
 Takedown
