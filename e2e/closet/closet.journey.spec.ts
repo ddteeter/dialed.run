@@ -191,8 +191,14 @@ test("add garments with product identity -> detail in round 22's order -> retire
     "href",
     "https://patagonia.com/houdini",
   );
+  // The domain beside the link, not the enrichment line's Site under it:
+  // that one says the same host once enrichment lands, and whether it has
+  // landed by now is a race (#826).
   await expect(
-    page.locator("[data-part='shop-page']").getByText("patagonia.com"),
+    page
+      .locator("[data-part='shop-page'] span")
+      .filter({ has: shopPage })
+      .getByText("patagonia.com", { exact: true }),
   ).toBeVisible();
   // Round 22's well: Remove takes the photo away — row and storage — and
   // with no photo, detail has no well at all.
