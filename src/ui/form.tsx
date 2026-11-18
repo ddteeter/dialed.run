@@ -648,6 +648,25 @@ export function FormErrorSummary({
 }
 
 /**
+ * A failure band's own button (Try again, Reload): a small ink pill that
+ * hugs its words at every width. The band is a notice inside the page,
+ * not its surface's primary, so 167.2's width rule does not reach it.
+ * A constant because the closet's photo band composes its own band and
+ * drew this as a field-radius rectangle (#621, D1-16). The site writes
+ * `target` beside it, as it does for the pills below.
+ */
+export const BAND_PILL =
+  "cursor-pointer rounded-pill border border-ink bg-ink px-4 py-3 text-body font-bold text-ground";
+
+/**
+ * The second way on beside a band's button (the photo band's Pick
+ * another): the same size with the secondary's hairline edge,
+ * `--hairline-2` in dark (R57·262).
+ */
+export const BAND_SECONDARY_PILL =
+  "cursor-pointer rounded-pill border border-hairline bg-transparent px-4 py-3 text-body font-semibold text-ink dark:border-hairline-2";
+
+/**
  * The band that says something failed and the fix is not in any field.
  *
  * One block, two callers, and the difference is only the first word:
@@ -719,7 +738,7 @@ export function FailureBand({
           ref={retryRef}
           type="button"
           onClick={onRetry}
-          className="target cursor-pointer rounded-pill border border-ink bg-ink px-4 py-3 text-body font-bold text-ground"
+          className={`target ${BAND_PILL}`}
         >
           {retryLabel}
         </button>
