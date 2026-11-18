@@ -1,7 +1,9 @@
 import { eq, sql } from "drizzle-orm";
 import type { Page } from "@playwright/test";
+import { z } from "zod";
 
 import { account, session, user } from "../../src/db/schema-auth";
+import { ACCESS_CODES } from "../../src/lib/contracts/access";
 import { termsAcceptances, userProfiles } from "../../src/db/schema-core";
 import { admissionHeaders, ensureInviteCode } from "./invites";
 import { withLocalDb } from "./local-db";
@@ -41,12 +43,7 @@ export async function signInAsKnownUser(
   // Sign-up is invite-only and Turnstile-guarded (task 126, ACC-5): the
   // harness's code, and the token Cloudflare's test secret accepts.
   await ensureInviteCode();
-  const signUp = await page.request.post("/api/auth/sign-up/email", {
-    headers: { origin, ...admissionHeaders() },
-    data: { name: "", ...credentials },
-  });
-  if (!signUp.ok())
-    throw new Error(`sign-up failed: ${String(signUp.status())}`);
+  await signUpThroughApi(page, origin, credentials);
   // Sign-up signs nobody in (task 126, ACC-3: every sign-up ends on Au4),
   // so the session is the log-in's.
   const signIn = await page.request.post("/api/auth/sign-in/email", {
@@ -106,4 +103,53 @@ export async function signInAsKnownUser(
         }),
     ]);
   });
+}
+
+/**
+How many times the API sign-up is sent while Turnstile refuses it.
+*/
+const SIGN_UP_TRIES = 3;
+
+/**
+Better Auth's refusal body, as far as the retry reads it.
+*/
+const refusalCode = z.object({ code: z.string() });
+
+/**
+ * The API sign-up, sent again while the refusal is Turnstile's. With the
+ * test secret the server still asks Cloudflare's siteverify over the
+ * network, and when a CI runner cannot reach it in time the server answers
+ * as it answers a failed challenge: a 403 with `ACCESS_CODES.turnstile`.
+ * That is the network, not the account, so it is sent again; any other
+ * refusal fails at once.
+ */
+async function signUpThroughApi(
+  page: Page,
+  origin: string,
+  credentials: Readonly<{ email: string; password: string }>,
+): Promise<void> {
+  let status = 0;
+  for (let tries = 0; tries < SIGN_UP_TRIES; tries += 1) {
+    const signUp = await page.request.post("/api/auth/sign-up/email", {
+      headers: { origin, ...admissionHeaders() },
+      data: { name: "", ...credentials },
+    });
+    if (signUp.ok()) return;
+    status = signUp.status();
+    if (!isTurnstileRefusal(await signUp.text())) break;
+  }
+  throw new Error(`sign-up failed: ${String(status)}`);
+}
+
+/**
+Whether a refusal's body names Turnstile's code; a body that is not JSON does not.
+*/
+function isTurnstileRefusal(text: string): boolean {
+  let body: unknown;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    return false;
+  }
+  return refusalCode.safeParse(body).data?.code === ACCESS_CODES.turnstile;
 }
