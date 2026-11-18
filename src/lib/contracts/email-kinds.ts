@@ -58,6 +58,7 @@ export const resetPassword = emailKind("reset_password", { url: link });
 /**
  * ACC-8: the link that moves the account to a new address, sent to that
  * new address — confirming it is how the runner proves they hold it.
+ * Sent now, like `verify_email`, never through the outbox (SA-L18).
  */
 export const emailChange = emailKind("email_change", {
   url: link,
@@ -253,6 +254,17 @@ export const removalReminder = emailKind("removal_reminder", {
 export const removalRequestReceived = emailKind("removal_request_received", {
   dueAt: z.int().min(0),
   isHidden: z.boolean(),
+  /**
+   * SA-L18: the request that waits on a confirm. What is owed carries this,
+   * never a token: the email handler mints the token when it sends
+   * (`mintReceiptConfirmToken`), so no live token rests in the outbox.
+   */
+  confirmRequestId: z.string().min(1).optional(),
+  /**
+   * What the email renders the link from. Filled in at send time; a row
+   * owed before SA-L18 still carries one, and is read until those drain
+   * (law 9).
+   */
   confirmToken: z.string().min(1).optional(),
 });
 

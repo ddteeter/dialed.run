@@ -18,6 +18,7 @@ import type { OutboxKind, OutboxMessage } from "../../lib/sql/outbox";
 import { nowSeconds } from "../../lib/now";
 import { deliverOwedEmail, emailDepsFromEnv, type EmailDeps } from "../email";
 import { isReminderStillOwed, reminderEmailSent } from "../runs";
+import { mintReceiptConfirmToken } from "../safety";
 import { forgetManualBand } from "../weather";
 
 type Db = ReturnType<typeof drizzle>;
@@ -206,6 +207,32 @@ async function liveEntryPhotoKeys(
   return new Set(rows.map((row) => row.photoKey));
 }
 
+type OwedEmailMessage = PayloadOf<"email">["email"];
+
+/**
+ * SA-L18: a removal request's receipt is owed with its request, not its
+ * confirm token, and the token is minted here, as it is sent
+ * (`mintReceiptConfirmToken`). A request no longer waiting on a confirm
+ * gets its receipt without the link. Any other email goes as owed.
+ */
+async function withReceiptConfirmToken(
+  db: Db,
+  email: OwedEmailMessage,
+): Promise<OwedEmailMessage> {
+  const { template } = email;
+  // Only a receipt has the field; one owed before SA-L18 carries its token
+  // instead, and goes as owed.
+  if (
+    !("confirmRequestId" in template) ||
+    template.confirmRequestId === undefined
+  ) {
+    return email;
+  }
+  const { confirmRequestId, ...rest } = template;
+  const confirmToken = await mintReceiptConfirmToken(db, confirmRequestId);
+  return { ...email, template: { ...rest, confirmToken } };
+}
+
 /**
  * An owed email (task 126, ACC-2). A send is at-least-once like every
  * handler here, and the sender has no idempotency key (and sets
@@ -236,7 +263,11 @@ export function emailHandler(deps: () => EmailDeps): OutboxHandlers["email"] {
       ) {
         return;
       }
-      const sent = await deliverOwedEmail(db, payload.email, deps());
+      const sent = await deliverOwedEmail(
+        db,
+        await withReceiptConfirmToken(db, payload.email),
+        deps(),
+      );
       if (sent.status === "skipped") return;
       const sentAt = nowSeconds();
       // Due at once, too: the drain's one index range then finds a row

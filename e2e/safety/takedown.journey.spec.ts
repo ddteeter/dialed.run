@@ -31,6 +31,7 @@ import {
 } from "../../src/db/schema-core";
 import { newUlid } from "../../src/lib/ids";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
+import { newConfirmToken } from "../../src/modules/safety/takedown-limits";
 import { nowSeconds } from "../../src/lib/now";
 import { signInAsOperator } from "../desk/operator";
 import { expect, hydrated, scene, test } from "../support/demo";
@@ -393,14 +394,18 @@ async function statusOf(id: string) {
 }
 
 const receiptTemplate = z
-  .object({ confirmToken: z.string().optional() })
+  .object({ confirmRequestId: z.string().optional() })
   .loose();
 const receiptPayload = z.object({
   email: z.object({ template: receiptTemplate }),
 });
 
 /**
-The confirm token the receipt of the request naming `entryId` carries.
+The confirm token the receipt of the request naming `entryId` carries. The
+receipt is owed with its request's id and no token (SA-L18); the email
+handler mints the token as it sends. Nothing drains the outbox here, so
+this stands in for that send: it mints a token for the request the receipt
+names and writes only its hash, as the handler does.
 */
 async function confirmTokenFor(entryId: string): Promise<string> {
   const rows = await withLocalDb(async ({ core }) =>
@@ -412,19 +417,28 @@ async function confirmTokenFor(entryId: string): Promise<string> {
   const ids = rows.map((row) => `removal_request_received:${row.id}`);
   const owed = await withLocalDb(async ({ core }) =>
     core
-      .select({ payload: outbox.payload, dedupeKey: outbox.dedupeKey })
+      .select({ payload: outbox.payload })
       .from(outbox)
       .where(inArray(outbox.dedupeKey, ids)),
   );
-  for (const row of owed) {
-    const read = readOutboxRow("email", row.payload);
-    const parsed = receiptPayload.safeParse(
-      read.ok ? read.message.payload : undefined,
-    );
-    const token = parsed.success
-      ? parsed.data.email.template.confirmToken
-      : undefined;
-    if (token !== undefined) return token;
-  }
-  throw new Error("no confirm token owed");
+  const requestId = owed
+    .map((row) => {
+      const read = readOutboxRow("email", row.payload);
+      const parsed = receiptPayload.safeParse(
+        read.ok ? read.message.payload : undefined,
+      );
+      return parsed.success
+        ? parsed.data.email.template.confirmRequestId
+        : undefined;
+    })
+    .find((id) => id !== undefined);
+  if (requestId === undefined) throw new Error("no confirm link owed");
+  const { token, hash } = await newConfirmToken();
+  await withLocalDb(async ({ core }) =>
+    core
+      .update(takedownRequests)
+      .set({ confirmTokenHash: hash })
+      .where(eq(takedownRequests.id, requestId)),
+  );
+  return token;
 }

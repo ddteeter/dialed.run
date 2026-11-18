@@ -27,6 +27,21 @@ export type RequestNamer = (pathname: string) => string;
 
 const UNMATCHED = "unmatched";
 
+const FAILED_SERVER_FN = `${SERVER_FN_ROUTE}failed`;
+
+/**
+ * The name a timing line records: a server function that did not answer
+ * `2xx` is `serverFn:failed`, since an id nobody registered answers 500 and
+ * would otherwise mint a name per request (SA-L08). The speed checks judge
+ * only `2xx` server rows, so nothing they read is lost.
+ */
+export function timedName(name: string, status: number): string {
+  const isAnswered = status >= 200 && status < 300;
+  return !isAnswered && name.startsWith(SERVER_FN_ROUTE)
+    ? FAILED_SERVER_FN
+    : name;
+}
+
 /**
  * The one thing the namer asks of TanStack's router: the route a pathname
  * ends on (`foundRoute`, the third of `getMatchedRoutes`' answer), matched
@@ -36,6 +51,47 @@ export interface RouteFinder {
   getMatchedRoutes(
     pathname: string,
   ): readonly [unknown, unknown, { readonly id: string } | undefined];
+  /**
+  Every route the tree holds, by id.
+  */
+  readonly routesById: object;
+}
+
+/**
+ * Whether a route name in the speed data is one this Worker could have
+ * written: a route of the tree, a server function's name, or `unmatched`.
+ * A beacon names its route itself, so the speed checks and the rollup keep
+ * only these (SA-M34).
+ */
+export type RouteKnown = (route: string) => boolean;
+
+/**
+ * `RouteKnown` over the router `makeRouter` builds, on the first question.
+ * A router that will not build is reported and every name is kept, as
+ * before this check (law 5).
+ */
+export function knownRoutes(
+  makeRouter: () => RouteFinder,
+  report: (error: unknown) => void = (error) => {
+    captureException(error, { surface: "timing" });
+  },
+): RouteKnown {
+  let known: RouteKnown | undefined;
+  return (route) => {
+    if (known === undefined) {
+      try {
+        const { routesById } = makeRouter();
+        known = (name) =>
+          name === UNMATCHED ||
+          name.startsWith(SERVER_FN_ROUTE) ||
+          Object.hasOwn(routesById, name);
+      } catch (error) {
+        report(error);
+        known = () => true;
+      }
+    }
+    return known(route);
+  };
 }
 
 /**
@@ -105,7 +161,7 @@ export async function timeRequest(
   const finish = (status: number): void => {
     const line: TimingLine = {
       kind: "timing",
-      route: deps.name(new URL(request.url).pathname),
+      route: timedName(deps.name(new URL(request.url).pathname), status),
       method: request.method,
       status,
       ms: deps.now() - started,

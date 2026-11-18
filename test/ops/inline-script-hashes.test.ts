@@ -16,6 +16,8 @@ const HASH = {
   // turned the CRLF and the lone CR into LF.
   lines: "VdchsQXMF4B+6HyWonTG3jDVuro98k0jCZ1GcYTVXu4=",
   split: "ziZc3HscjswFgnu8vjK9v44EL2luhD/qztOd9J7pR6I=",
+  // "ours()"
+  ours: "6Mlk+XjE57h/a6BK8UFDhIqhWicH5NYtbW9Bd0Z0HiI=",
 };
 
 const HTML = { "Content-Type": "text/html; charset=utf-8" };
@@ -34,25 +36,40 @@ function streamed(parts: readonly string[], init?: ResponseInit): Response {
   return new Response(body, { headers: HTML, ...init });
 }
 
+/**
+This render's marker, as `lib/csp-nonce` mints one.
+*/
+const MARKER = "cmVuZGVyLW1hcmtlcg==";
+
 const PAGE = [
   "<!doctype html><html><head>",
-  "<script>alert(1)</script>",
-  '<script type="module" src="/assets/app.js"></script>',
-  '<script src="/assets/b.js">never()</script>',
+  `<meta property="csp-nonce" content="${MARKER}">`,
+  `<script nonce="${MARKER}">alert(1)</script>`,
+  `<script type="module" nonce="${MARKER}" src="/assets/app.js"></script>`,
+  `<script src="/assets/b.js" nonce="${MARKER}">never()</script>`,
   "<!-- <script>commented()</script> -->",
   "</head><body>",
   '<p title="<script>attribute()</script>">hi</p>',
-  "<script>x()</script>",
-  "<script>alert(1)</script>",
-  "<script></script>",
-  "<script>a();\r\nb();\rc();</script>",
+  `<script nonce="${MARKER}">x()</script>`,
+  `<script nonce="${MARKER}">alert(1)</script>`,
+  `<script nonce="${MARKER}"></script>`,
+  `<script nonce="${MARKER}">a();\r\nb();\rc();</script>`,
   "</body></html>",
 ].join("");
+
+/**
+PAGE as it leaves: no marker anywhere, and no csp-nonce meta.
+*/
+const SERVED = PAGE.replace(
+  `<meta property="csp-nonce" content="${MARKER}">`,
+  "",
+).replaceAll(` nonce="${MARKER}"`, "");
 
 describe("withInlineScriptHashes", () => {
   it("hashes each distinct inline script, in document order, and nothing else", async () => {
     const { hashes } = await withInlineScriptHashes(
       new Response(PAGE, { headers: HTML }),
+      MARKER,
     );
 
     // Not the two files, nor the text inside one; not the script in a
@@ -62,21 +79,25 @@ describe("withInlineScriptHashes", () => {
 
   it("hashes a script that arrives across chunks as one script", async () => {
     const { hashes } = await withInlineScriptHashes(
-      streamed(["<html><body><script>firsthalf();", "secondhalf();</script>"]),
+      streamed([
+        `<html><body><script nonce="${MARKER}">firsthalf();`,
+        "secondhalf();</script>",
+      ]),
+      MARKER,
     );
 
     expect(hashes).toStrictEqual([HASH.split]);
   });
 
-  it("hands back the page byte for byte, with its status and headers", async () => {
+  it("hands back the page with the marker gone, and its status and headers", async () => {
     const original = new Response(PAGE, {
       status: 404,
       headers: { ...HTML, "Cache-Control": "public, max-age=60" },
     });
 
-    const { page } = await withInlineScriptHashes(original);
+    const { page } = await withInlineScriptHashes(original, MARKER);
 
-    expect(await page.text()).toBe(PAGE);
+    expect(await page.text()).toBe(SERVED);
     expect(page.status).toBe(404);
     expect(page.headers.get("Cache-Control")).toBe("public, max-age=60");
     expect(page.headers.get("Content-Type")).toBe(HTML["Content-Type"]);
@@ -87,7 +108,7 @@ describe("withInlineScriptHashes", () => {
       headers: { "Content-Type": "image/png" },
     });
 
-    const { page, hashes } = await withInlineScriptHashes(card);
+    const { page, hashes } = await withInlineScriptHashes(card, MARKER);
 
     expect(page).toBe(card);
     expect(hashes).toStrictEqual([]);
@@ -97,7 +118,7 @@ describe("withInlineScriptHashes", () => {
     const untyped = new Response("<script>alert(1)</script>");
     untyped.headers.delete("Content-Type");
 
-    const { page, hashes } = await withInlineScriptHashes(untyped);
+    const { page, hashes } = await withInlineScriptHashes(untyped, MARKER);
 
     expect(page).toBe(untyped);
     expect(hashes).toStrictEqual([]);
@@ -106,9 +127,32 @@ describe("withInlineScriptHashes", () => {
   it("leaves an HTML response with no body as it came", async () => {
     const empty = new Response(undefined, { status: 304, headers: HTML });
 
-    const { page, hashes } = await withInlineScriptHashes(empty);
+    const { page, hashes } = await withInlineScriptHashes(empty, MARKER);
 
     expect(page).toBe(empty);
     expect(hashes).toStrictEqual([]);
+  });
+
+  it("hashes no script that lacks this render's marker (SA-L08)", async () => {
+    const page = new Response(
+      `<html><body><script nonce="${MARKER}">ours()</script>` +
+        '<script>injected()</script><script nonce="guess">guessed()</script>' +
+        "</body></html>",
+      { headers: HTML },
+    );
+    const { page: served, hashes } = await withInlineScriptHashes(page, MARKER);
+    expect(hashes).toStrictEqual([HASH.ours]);
+    // A nonce that is not the marker is left alone; the policy names none.
+    expect(await served.text()).toBe(
+      "<html><body><script>ours()</script><script>injected()</script>" +
+        '<script nonce="guess">guessed()</script></body></html>',
+    );
+  });
+
+  it("hashes nothing without a marker, and hands the page back as it came", async () => {
+    const original = new Response(PAGE, { headers: HTML });
+    const { page, hashes } = await withInlineScriptHashes(original, undefined);
+    expect(hashes).toStrictEqual([]);
+    expect(page).toBe(original);
   });
 });

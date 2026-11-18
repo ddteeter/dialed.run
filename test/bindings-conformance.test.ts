@@ -191,6 +191,21 @@ function opsBinding(bound: unknown): unknown {
 describe("wrangler.jsonc matches the code that depends on it", () => {
   const config: unknown = JSON.parse(stripJsonc(wranglerJsonc));
 
+  it("answers on the app's host alone (SA-L08, D-99)", () => {
+    // Written out, so nothing is left to Cloudflare's default, and only
+    // app.dialed.run: dialed.run is the marketing site's.
+    expect(config).toMatchObject({
+      preview_urls: false,
+      workers_dev: false,
+      routes: [{ pattern: "app.dialed.run", custom_domain: true }],
+    });
+    expect(
+      typeof config === "object" && config !== null && "routes" in config
+        ? config.routes
+        : undefined,
+    ).toStrictEqual([{ pattern: "app.dialed.run", custom_domain: true }]);
+  });
+
   it("registers every cron the scheduled handler knows how to run", () => {
     // Sets, not sorted arrays: order is meaningless here and ES2022 has
     // no toSorted, which the lint config would otherwise demand.

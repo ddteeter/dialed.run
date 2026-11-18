@@ -471,7 +471,8 @@ const CONTENT: {
           href: `${origin}/takedown/confirm?token=${template.confirmToken}`,
         },
       }),
-      foot: "Sent because someone asked at dialed.run/takedown with this address.",
+      // The app's own host (D-99), read from the origin every link uses.
+      foot: `Sent because someone asked at ${new URL(origin).host}/takedown with this address.`,
     };
   },
   takedown_valve: (template, { origin }) => {

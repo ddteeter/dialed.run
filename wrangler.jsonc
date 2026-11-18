@@ -14,6 +14,17 @@
     "enabled": true,
   },
   "upload_source_maps": true,
+  // One origin, written out (SA-L08), never left to a default: the app's
+  // host, app.dialed.run (D-99; owner, 2026-11-16), as a Custom Domain,
+  // which Cloudflare gives its DNS record and certificate on deploy. No
+  // workers.dev host, and no version preview URLs, since each would serve
+  // an old version against the live bindings; the gradual-deploy smoke
+  // test uses the version-override header on the real host instead.
+  // dialed.run itself is the marketing site, served from elsewhere: no
+  // route here names it.
+  "routes": [{ "pattern": "app.dialed.run", "custom_domain": true }],
+  "preview_urls": false,
+  "workers_dev": false,
   // Workers Caching (owner-approved, 2026-10-28; design 163, D-154): the
   // open web's pages (/kit/<id>, /@handle, the kit's card) leave with
   // `Cache-Control: public, max-age=60` and a `Cache-Tag`, and the edge
@@ -37,10 +48,11 @@
   // BETTER_AUTH_URL is the production origin: Better Auth builds callbacks
   // from it, and its https scheme turns on secure cookies and rate
   // limiting, and Better Auth trusts only this origin. So:
-  // - attach dialed.run to this Worker (routes / custom_domain) BEFORE the
-  //   first deploy, or set this to the workers.dev origin until then: on
-  //   any other host, sign-in and sign-up are refused 403 INVALID_ORIGIN
-  //   and OAuth redirect_uris point at dialed.run (docs/deployment.md §5);
+  // - it is the host `routes` attaches above (D-99): on any other host,
+  //   sign-in and sign-up are refused 403 INVALID_ORIGIN, and OAuth
+  //   redirect_uris point here (docs/deployment.md §5); it must equal
+  //   modules/ops/og/site-head.ts's PUBLIC_ORIGIN, which
+  //   bindings-conformance holds;
   // - local dev and CI MUST override it in .dev.vars
   //   (BETTER_AUTH_URL=http://localhost:<port>), for the same origin check
   //   and so the rate limiter stays off.
@@ -55,7 +67,7 @@
   // PUBLIC_PHOTOS_ORIGIN, which the page's img-src admits; the conformance
   // test holds the two together.
   "vars": {
-    "BETTER_AUTH_URL": "https://dialed.run",
+    "BETTER_AUTH_URL": "https://app.dialed.run",
     "PUBLIC_PHOTOS_ORIGIN": "https://photos.dialed.run",
     "TURNSTILE_SITE_KEY": "",
     // Design 165: the account the speed rollup queries Analytics Engine's

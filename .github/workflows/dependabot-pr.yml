@@ -62,6 +62,7 @@ jobs:
     outputs:
       merge: ${{ steps.decide.outputs.merge }}
       updates: ${{ steps.decide.outputs.updates }}
+      held: ${{ steps.decide.outputs.held }}
     steps:
       # Audit first (design 196): reports the hosts this job reaches and
       # blocks none. It moves to `block` once that list is known and short.
@@ -74,36 +75,46 @@ jobs:
         with:
           github-token: ${{ github.token }}
 
-      # Merges itself only when EVERY dependency in the PR is an npm minor or
-      # patch update that semver calls compatible, published by the same
-      # maintainers as the version it replaces: a minor at 1.0 or above, or
-      # a patch anywhere but 0.0.x. Under semver a 0.x minor is a breaking
-      # change and a 0.0.x anything is; a maintainer change is what an
-      # account takeover looks like from here. A minor or patch keeps the
-      # major (and a patch the minor), so the new version's leading digits
-      # are the old one's.
+      # The script and its rules are main's: under pull_request_target the
+      # checkout is the base branch, and nothing is installed, so no PR code
+      # and no package code runs. Node runs the TypeScript itself.
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          sparse-checkout: scripts/dependabot-classify.ts
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24
+          check-latest: true
+
+      # Merges itself only when EVERY dependency in the PR is an npm minor
+      # at 1.0 or above, or a patch anywhere but 0.0.x (under semver a 0.x
+      # minor is a breaking change and a 0.0.x anything is), AND every
+      # version the PR adds or moves in package-lock.json, named in the
+      # metadata or not, is at least the cooldown old and was published by
+      # an account that published that package before (SA-M38, SA-L10). A
+      # new publisher is what an account takeover looks like from here. The
+      # lockfiles are read at both commits as data, the registry decides,
+      # and anything unreadable holds the PR for a person.
       - id: decide
         env:
           ECOSYSTEM: ${{ steps.metadata.outputs.package-ecosystem }}
           UPDATES: ${{ steps.metadata.outputs.updated-dependencies-json }}
+          REPO: ${{ github.repository }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          merge=$(jq -r --arg ecosystem "$ECOSYSTEM" '
-            $ecosystem == "npm_and_yarn" and length > 0 and all(.[];
-              (.newVersion // "") as $version
-              | (.maintainerChanges != true)
-              and ((.updateType == "version-update:semver-minor"
-                    and ($version | test("^[1-9]")))
-                or (.updateType == "version-update:semver-patch"
-                    and ($version | test("^([1-9]|0\\.[1-9])")))))
-          ' <<<"$UPDATES")
-          echo "merge=$merge" >>"$GITHUB_OUTPUT"
+          node scripts/dependabot-classify.ts
           {
             echo "updates<<END_OF_UPDATES"
-            jq -r '.[] | "- \(.dependencyName): \(.prevVersion // "?") -> \(.newVersion // "?") (\(.updateType), \(.dependencyType))\(if .maintainerChanges == true then " [new maintainer]" else "" end)"' <<<"$UPDATES"
+            jq -r '.[] | "- \(.dependencyName): \(.prevVersion // "?") -> \(.newVersion // "?") (\(.updateType), \(.dependencyType))"' <<<"$UPDATES"
             echo "END_OF_UPDATES"
           } >>"$GITHUB_OUTPUT"
-          echo "May merge itself: $merge"
 
   auto-merge:
     needs: classify
@@ -222,6 +233,21 @@ jobs:
             storage.googleapis.com:443
             bun.sh:443
 
+      # SA-L20: harden-runner fails open (its setup exits 0 when the agent
+      # is not installed, or reverts itself), so this proves the fence is
+      # up before the key reaches any step: two hosts off the list must be
+      # unreachable and sudo gone, or the job stops here.
+      - name: The fence is up
+        run: |
+          for url in https://example.com https://www.iana.org; do
+            if curl -sS --max-time 5 -o /dev/null "$url"; then
+              echo "::error::$url answered: egress is not blocked"; exit 1
+            fi
+          done
+          if sudo -n true 2>/dev/null; then
+            echo "::error::sudo is still available"; exit 1
+          fi
+
       # main, never the PR head. The PR changes only package.json and the
       # lockfile, and the versions are in the prompt.
       - uses: actions/checkout@v7.0.1
@@ -229,17 +255,29 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      # Read, Grep and Glob over the repo; web reads only from GitHub and
-      # the npm registry; `gh` only to read releases, with this job's
-      # read-only token. No Bash beyond that, no writes, no web search.
-      # Reads of process state and the runner's own files are denied, so
-      # the key in this process's environment is not in reach of a tool.
-      # The answer leaves as structured output, which `post` screens.
+      # Again just before the key is handed over: the agent can revert the
+      # fence mid-job.
+      - name: The fence is still up
+        run: |
+          for url in https://example.com https://www.iana.org; do
+            if curl -sS --max-time 5 -o /dev/null "$url"; then
+              echo "::error::$url answered: egress is not blocked"; exit 1
+            fi
+          done
+          if sudo -n true 2>/dev/null; then
+            echo "::error::sudo is still available"; exit 1
+          fi
+
+      # Read, Grep and Glob over the repo, and web reads only from GitHub
+      # and the npm registry. No Bash at all (SA-M19): a command runs with
+      # this process's environment, the key's included, so the only tools
+      # are ones that run nothing. No writes, no web search. The Read deny
+      # rules below cover the Read tool only. The answer leaves as
+      # structured output, which `post` screens.
       # `show_full_output` stays off: these logs are public.
       - id: claude
         uses: anthropics/claude-code-action@v1.0.269
         env:
-          GH_TOKEN: ${{ github.token }}
           CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -265,16 +303,21 @@ jobs:
           claude_args: |
             --model opus
             --max-turns 60
-            --allowedTools "Read,Grep,Glob,WebFetch(domain:github.com),WebFetch(domain:raw.githubusercontent.com),WebFetch(domain:registry.npmjs.org),Bash(gh release view *),Bash(gh release list *),Bash(gh api repos/*)"
-            --disallowedTools "Edit,Write,NotebookEdit,WebSearch,Task"
+            --allowedTools "Read,Grep,Glob,WebFetch(domain:github.com),WebFetch(domain:raw.githubusercontent.com),WebFetch(domain:registry.npmjs.org)"
+            --disallowedTools "Bash,Edit,Write,NotebookEdit,WebSearch,Task"
             --json-schema '{"type":"object","additionalProperties":false,"required":["verdict","summary","breaking_changes","sources"],"properties":{"verdict":{"enum":["safe to merge","merge with follow-up","hold"]},"summary":{"type":"string","maxLength":2000},"breaking_changes":{"type":"array","maxItems":40,"items":{"type":"object","additionalProperties":false,"required":["change","affects_this_repo","action"],"properties":{"change":{"type":"string","maxLength":500},"affects_this_repo":{"type":"string","maxLength":500},"action":{"type":"string","maxLength":500}}}},"sources":{"type":"array","maxItems":30,"items":{"type":"string","maxLength":500}}}}'
           prompt: |
             You are reviewing a Dependabot pull request on this repository that is
             not allowed to merge itself: a major version, a minor on a 0.x version,
-            a 0.0.x version, a GitHub Actions update, or a version published by a
-            new maintainer. The updates:
+            a 0.0.x version, a GitHub Actions update, a version younger than the
+            seven-day cooldown, or a version published by an account new to its
+            package. The updates:
 
             ${{ needs.classify.outputs.updates }}
+
+            Why it was held:
+
+            ${{ needs.classify.outputs.held }}
 
             The workspace is this repository's main branch. The PR changes only the
             version pins for the packages above (package.json and package-lock.json,
@@ -288,11 +331,12 @@ jobs:
 
             1. For each package, find the release notes and any migration guide
                for the whole version range, every intermediate major included.
-               Start from `gh release list -R <owner>/<repo>` and
-               `gh release view <tag> -R <owner>/<repo>`, find the repository
-               from https://registry.npmjs.org/<name>, and read CHANGELOG.md or
-               a migration guide in the package's repository through
-               raw.githubusercontent.com. Record every URL you rely on.
+               Find the repository from https://registry.npmjs.org/<name>,
+               then read its releases at
+               https://github.com/<owner>/<repo>/releases (and
+               /releases/tag/<tag>), and CHANGELOG.md or a migration guide
+               through raw.githubusercontent.com. You have no shell. Record
+               every URL you rely on.
             2. Keep only breaking changes: what changed, and what a user must do.
             3. For each one, check whether it applies here. Search the source,
                tests, configs, scripts and workflows, and cite file paths and

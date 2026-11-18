@@ -982,6 +982,12 @@ describe("the product link's handler (design 133, D-113 Q1)", () => {
     expect(await db().select().from(outbox)).toStrictEqual([]);
   });
 
+  it("names the runner for Sentry, whatever the linker", () => {
+    expect(productLinkHandler(undefined).context({ userId: "u1" })).toStrictEqual(
+      { userId: "u1" },
+    );
+  });
+
   it("fails loudly with no linker, naming the runner in the report", async () => {
     const report = vi.fn();
     const userId = newUlid();

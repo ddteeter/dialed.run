@@ -282,3 +282,155 @@ describe("the issue chooser", () => {
     );
   });
 });
+
+/**
+The `--allowedTools` and `--disallowedTools` lists of every Claude step.
+*/
+function claudeToolLists(flag: "--allowedTools" | "--disallowedTools") {
+  const pattern = new RegExp(`${flag} "([^"]+)"`, "g");
+  return Object.entries(workflows).flatMap(([path, source]) =>
+    Array.from(source.matchAll(pattern), (match) => ({
+      workflow: path.slice(path.lastIndexOf("/") + 1),
+      tools: (match[1] ?? "").split(","),
+    })),
+  );
+}
+
+describe("the Claude review jobs (SA-M19)", () => {
+  const allowed = claudeToolLists("--allowedTools");
+  const disallowed = claudeToolLists("--disallowedTools");
+
+  it("are found, so an empty result cannot pass for a clean one", () => {
+    expect(allowed.map(({ workflow }) => workflow).toSorted(byName)).toEqual([
+      "a11y-review.yml",
+      "dependabot-pr.yml",
+    ]);
+    expect(disallowed).toHaveLength(allowed.length);
+  });
+
+  it("grant no Bash command", () => {
+    const shells = allowed
+      .filter(({ tools }) => tools.some((tool) => /^Bash\b/u.test(tool)))
+      .map(({ workflow }) => workflow);
+    expect(shells).toEqual([]);
+  });
+
+  it("deny Bash outright", () => {
+    const open = disallowed
+      .filter(({ tools }) => !tools.includes("Bash"))
+      .map(({ workflow }) => workflow);
+    expect(open).toEqual([]);
+  });
+});
+
+describe("the Dependabot self-merge decision (SA-M38, SA-L10)", () => {
+  const source =
+    Object.entries(workflows).find(([path]) =>
+      path.endsWith("/dependabot-pr.yml"),
+    )?.[1] ?? "";
+  const classify = source.slice(
+    source.indexOf("\n  classify:"),
+    source.indexOf("\n  auto-merge:"),
+  );
+  const lines = classify
+    .split("\n")
+    .filter((line) => !line.trimStart().startsWith("#"));
+
+  it("is the classify job, found", () => {
+    expect(classify).toContain("- id: decide");
+  });
+
+  it("is the tested script's, run from main with nothing installed", () => {
+    expect(lines).toContain("          node scripts/dependabot-classify.ts");
+    expect(classify).not.toMatch(/\bnpm (?:ci|install|run|exec)\b|\bnpx\b/u);
+    expect(classify).not.toContain("ref:");
+  });
+
+  it("does not take the PR body's word on who published a version", () => {
+    expect(lines.join("\n")).not.toContain("maintainerChanges");
+  });
+});
+
+/**
+The `- ` step lines of a job's steps, in order, comments and blanks skipped.
+*/
+function stepLinesOf(section: string): string[] {
+  return section.split("\n").filter((line) => isStep(line));
+}
+
+describe("a job that blocks egress (SA-L20)", () => {
+  const blocking = Object.entries(workflows).flatMap(([path, source]) =>
+    source
+      .slice(source.indexOf("\njobs:\n") + 1)
+      .split(/\n(?= {2}[\w-]+:\s*\n)/u)
+      .slice(1)
+      .filter((section) => section.includes("egress-policy: block"))
+      .map((section) => ({
+        job: `${path.slice(path.lastIndexOf("/") + 1)}:${/^ {2}([\w-]+):/u.exec(section)?.[1] ?? ""}`,
+        steps: stepLinesOf(section),
+      })),
+  );
+
+  it("is found, so an empty result cannot pass for a clean one", () => {
+    expect(blocking.map(({ job }) => job).toSorted(byName)).toEqual([
+      "a11y-review.yml:review",
+      "dependabot-pr.yml:review",
+    ]);
+  });
+
+  it("proves the fence straight after harden-runner", () => {
+    const unproven = blocking
+      .filter(({ steps }) => steps[1] !== "      - name: The fence is up")
+      .map(({ job }) => job);
+    expect(unproven).toEqual([]);
+  });
+
+  it("proves it again on the step before Claude", () => {
+    const unproven = blocking
+      .filter(({ steps }) => {
+        const claude = steps.findIndex((line) => line.includes("- id: claude"));
+        return claude < 1 || steps[claude - 1] !== "      - name: The fence is still up";
+      })
+      .map(({ job }) => job);
+    expect(unproven).toEqual([]);
+  });
+});
+
+/**
+The `run:` values of a job, in order (a block scalar reads as `|`).
+*/
+function runsOf(section: string): string[] {
+  return section
+    .split("\n")
+    .filter((line) => /^\s+(?:- )?run: /u.test(line))
+    .map((line) => line.slice(line.indexOf("run: ") + 5));
+}
+
+describe("the deploy (SA-L10)", () => {
+  const ci =
+    Object.entries(workflows).find(([path]) => path.endsWith("/ci.yml"))?.[1] ??
+    "";
+  const job = (name: string): string => {
+    const start = ci.indexOf(`\n  ${name}:\n`);
+    const next = ci.slice(start + 1).search(/\n {2}[\w-]+:\n/u);
+    return next === -1 ? ci.slice(start) : ci.slice(start, start + 1 + next);
+  };
+
+  it("builds in a job that holds no secret", () => {
+    const bundle = job("bundle");
+    expect(runsOf(bundle)).toStrictEqual(["npm ci", "npm run build"]);
+    expect(bundle).not.toMatch(/environment:|secrets\./u);
+  });
+
+  it("deploys from that build, running no install script and no build", () => {
+    const deploy = job("deploy");
+    expect(deploy).toContain("needs: [bundle]");
+    expect(deploy).toContain("name: worker-bundle");
+    expect(runsOf(deploy)).toStrictEqual([
+      "npm ci --ignore-scripts",
+      "|",
+      "npx wrangler deploy",
+    ]);
+    expect(deploy).toContain("environment: production");
+  });
+});

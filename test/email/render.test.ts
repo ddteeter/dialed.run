@@ -319,7 +319,7 @@ describe("emailContent", () => {
       {
         subject: "We have your removal request",
         body: "The image is hidden while we look. We'll decide within 48 hours, by 2026-10-12 13:05 UTC, and email you either way.",
-        foot: "Sent because someone asked at dialed.run/takedown with this address.",
+        foot: "Sent because someone asked at dialed.test/takedown with this address.",
         footer: LEGAL,
       },
     ],
@@ -334,7 +334,7 @@ describe("emailContent", () => {
       {
         subject: "We have your removal request",
         body: "We'll decide within 48 hours, by 2026-10-12 13:05 UTC, and email you either way.",
-        foot: "Sent because someone asked at dialed.run/takedown with this address.",
+        foot: "Sent because someone asked at dialed.test/takedown with this address.",
         footer: LEGAL,
       },
     ],
@@ -354,7 +354,7 @@ describe("emailContent", () => {
           label: "Confirm the request",
           href: `${ORIGIN}/takedown/confirm?token=abc123`,
         },
-        foot: "Sent because someone asked at dialed.run/takedown with this address.",
+        foot: "Sent because someone asked at dialed.test/takedown with this address.",
         footer: LEGAL,
       },
     ],
@@ -557,6 +557,16 @@ describe("emailContent", () => {
     expect(
       emailContent(template, { origin: ORIGIN, unsubscribe: UNSUBSCRIBE }),
     ).toStrictEqual(expected);
+  });
+
+  it("names the app's own host in the takedown receipt's footer (D-99)", () => {
+    const receipt = emailContent(
+      { kind: "removal_request_received", dueAt: 1_791_810_300, isHidden: false },
+      { origin: "https://app.dialed.run" },
+    );
+    expect(receipt.foot).toBe(
+      "Sent because someone asked at app.dialed.run/takedown with this address.",
+    );
   });
 
   it("escapes the invite's code in its link", () => {

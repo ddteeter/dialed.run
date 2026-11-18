@@ -19,6 +19,11 @@ import {
 } from "../../src/modules/ops/speed-digest";
 
 /**
+Every route name kept, as before the known-route check.
+*/
+const isAnyRoute = (): boolean => true;
+
+/**
  * The daily speed checks (design 165, step 7).
  */
 
@@ -226,6 +231,7 @@ describe("runSpeedChecks", () => {
  */
 function rollupAnswering(yesterday: readonly PerfRow[]) {
   return {
+    known: isAnyRoute,
     query: (sql: string): Promise<unknown> =>
       Promise.resolve({
         data: sql.includes(`>= toDateTime('${DAY} 00:00:00'`)
@@ -312,8 +318,9 @@ describe("dailySpeed", () => {
 
 describe("speedDigestDepsFromEnv", () => {
   it("asks the configured SQL API and reads the ops database", async () => {
-    const deps = speedDigestDepsFromEnv();
+    const deps = speedDigestDepsFromEnv(isAnyRoute);
     expect(deps.rollup.query).toBeTypeOf("function");
+    expect(deps.rollup.known).toBe(isAnyRoute);
     await opsDb().delete(perfDaily);
     await seed([row()]);
     expect(await deps.db.select().from(perfDaily)).toHaveLength(1);

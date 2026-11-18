@@ -39,6 +39,13 @@ export function mintNonce(): string {
 export interface RequestContext {
   nonce?: string;
   hashedScripts?: true;
+  /**
+   * SA-L08: an open-web page's per-request marker. The router stamps it
+   * where it would stamp a nonce, so the hasher can tell the scripts the
+   * framework wrote from any other (`modules/ops/inline-script-hashes`),
+   * and the hasher strips it before the page leaves. Never in the policy.
+   */
+  marker?: string;
 }
 
 /**
@@ -46,13 +53,13 @@ export interface RequestContext {
  * stored at the edge and served to every visitor, so a nonce in it would
  * be one nonce for all of them for as long as the edge keeps it: it gets
  * none, its inline scripts are admitted by their hashes instead
- * (`modules/ops/inline-script-hashes`), and nothing in the page names a
- * nonce at all, because none was minted. Every other page gets a fresh
- * nonce.
+ * (`modules/ops/inline-script-hashes`): only those carrying this
+ * request's `marker`, which is then stripped, so nothing in the stored
+ * page names a nonce. Every other page gets a fresh nonce.
  */
 export function requestContext(pathname: string): RequestContext {
   return isOpenWebPath(pathname)
-    ? { hashedScripts: true }
+    ? { hashedScripts: true, marker: mintNonce() }
     : { nonce: mintNonce() };
 }
 
@@ -61,7 +68,7 @@ export function requestContext(pathname: string): RequestContext {
  */
 const nonceContext = z.union([
   z.object({ nonce: z.string().min(1) }),
-  z.object({ hashedScripts: z.literal(true) }),
+  z.object({ hashedScripts: z.literal(true), marker: z.string().min(1) }),
 ]);
 
 /**
@@ -113,7 +120,8 @@ export function routerSsr(
   }
   const parsed = nonceContext.safeParse(context);
   if (parsed.success) {
-    return "nonce" in parsed.data ? { nonce: parsed.data.nonce } : {};
+    // An open-web page's marker goes where a nonce would (SA-L08).
+    return ({ nonce: "nonce" in parsed.data ? parsed.data.nonce : parsed.data.marker });
   }
   if (side.DEV && side.SSR) {
     throw new Error(

@@ -12,6 +12,7 @@ import {
   takedownRequests,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import { removalRequestReceived } from "../../src/lib/contracts/email-kinds";
 import { newUlid } from "../../src/lib/ids";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
 import { decideRemovalRequest } from "../../src/modules/feed/removal-requests";
@@ -19,6 +20,7 @@ import {
   blockAndDeclineAll,
   confirmTakedownRequest,
   fileTakedownRequest,
+  mintReceiptConfirmToken,
   pendingTakedownRequests,
 } from "../../src/modules/safety";
 import { ipKey, requesterKey } from "../../src/modules/safety/requester-key";
@@ -28,6 +30,8 @@ import {
   TAKEDOWN_VALVE_PER_HOUR,
   valveHour,
 } from "../../src/modules/safety/takedown-limits";
+import { emailHandler } from "../../src/modules/ops/outbox-handlers";
+import { fakeMail } from "../email/helpers";
 import { noPurge, purgeSpy } from "../purge-spy";
 import { oweInCore } from "../queue-fakes";
 
@@ -157,14 +161,29 @@ async function pastTheCap() {
   return { entryId: c, request: third };
 }
 
-const tokenOf = z.object({ confirmToken: z.string() }).loose();
+const waitingOn = z.strictObject({
+  kind: z.literal("removal_request_received"),
+  dueAt: z.number(),
+  isHidden: z.boolean(),
+  confirmRequestId: z.string(),
+});
 
+/**
+ * The token the receipt's link will carry: the receipt is owed with the
+ * request and no token (SA-L18), and the token is minted as it is sent,
+ * which is what this does.
+ */
 async function confirmTokenFor(requestId: string): Promise<string> {
   const emails = await owed();
   const receipt = emails.find(
     (email) => email.dedupeKey === `removal_request_received:${requestId}`,
   );
-  return tokenOf.parse(receipt?.email.template).confirmToken;
+  expect(waitingOn.parse(receipt?.email.template).confirmRequestId).toBe(
+    requestId,
+  );
+  const token = await mintReceiptConfirmToken(core(), requestId);
+  if (token === undefined) throw new Error("the request no longer waits");
+  return token;
 }
 
 beforeEach(async () => {
@@ -208,7 +227,8 @@ describe("the requester cap", () => {
     ]);
     expect(third.requesterKey).toBe("me@gmail.com");
     expect(third.heldAt).toBeNull();
-    expect(third.confirmTokenHash).toMatch(/^[\da-f]{64}$/u);
+    // SA-L18: no token exists until the receipt is sent.
+    expect(third.confirmTokenHash).toBeNull();
     expect(await entryStatus(entries[2] ?? "")).toBe("ok");
     // The third alerts nobody until it is confirmed.
     expect(
@@ -352,6 +372,8 @@ describe("the confirm", () => {
         NOW,
       ),
     ).toBe("not_found");
+    // The receipt went before the decision.
+    const sent = await confirmTokenFor(request.id);
     await decideRemovalRequest(core(), "op-one", request.id, {
       outcome: "declined",
       reason: "shoes",
@@ -359,7 +381,7 @@ describe("the confirm", () => {
     expect(
       await confirmTakedownRequest(
         core(),
-        await confirmTokenFor(request.id),
+        sent,
         { owe: oweInCore, purge: noPurge },
         NOW,
       ),
@@ -776,5 +798,172 @@ describe("Block and decline all, for a link that is not ours", () => {
       .from(takedownRequests)
       .where(eq(takedownRequests.id, row.id));
     expect(after?.status).toBe("declined");
+  });
+});
+
+/**
+The receipt's outbox row: its id and its stored payload.
+*/
+async function receiptRow(requestId: string) {
+  const [row] = await core()
+    .select({ id: outbox.id, payload: outbox.payload })
+    .from(outbox)
+    .where(eq(outbox.dedupeKey, `removal_request_received:${requestId}`));
+  if (row === undefined) throw new Error("no receipt owed");
+  const read = readOutboxRow("email", row.payload);
+  if (!read.ok) throw new Error(read.problem);
+  return { id: row.id, text: row.payload, message: read.message };
+}
+
+/**
+The receipt, sent through the real email handler and a fake sender.
+*/
+async function sendReceipt(requestId: string): Promise<string> {
+  const mail = fakeMail();
+  const row = await receiptRow(requestId);
+  if (row.message.kind !== "email") throw new Error("not an email");
+  await emailHandler(() => mail).run(core(), row.message.payload, row.id);
+  return JSON.stringify(mail.sent);
+}
+
+const LINKED_TOKEN = /takedown\/confirm\?token=([\da-f]{64})/u;
+
+describe("the receipt's confirm token (SA-L18)", () => {
+  it("is in no outbox row: the receipt is owed with its request", async () => {
+    const { request } = await pastTheCap();
+    const row = await receiptRow(request.id);
+    expect(row.text).not.toContain("confirmToken");
+    expect(row.text).toContain(`"confirmRequestId":"${request.id}"`);
+  });
+
+  it("is minted as the receipt is sent, and only its hash is kept", async () => {
+    const { request } = await pastTheCap();
+    const sent = await sendReceipt(request.id);
+    const token = LINKED_TOKEN.exec(sent)?.[1] ?? "";
+    const [row] = await core()
+      .select({ hash: takedownRequests.confirmTokenHash })
+      .from(takedownRequests)
+      .where(eq(takedownRequests.id, request.id));
+    expect(row?.hash).toBe(await confirmTokenHash(token));
+    expect(
+      await confirmTakedownRequest(
+        core(),
+        token,
+        { owe: oweInCore, purge: noPurge },
+        NOW,
+      ),
+    ).toBe("confirmed");
+  });
+
+  it("is left off a receipt whose request no longer waits", async () => {
+    const { request } = await pastTheCap();
+    await decideRemovalRequest(core(), "op-one", request.id, {
+      outcome: "declined",
+      reason: "shoes",
+    });
+    const sent = await sendReceipt(request.id);
+    expect(sent).not.toMatch(LINKED_TOKEN);
+    expect(await mintReceiptConfirmToken(core(), request.id)).toBeUndefined();
+  });
+
+  it("leaves a receipt owed before it, with its own token, as it was (law 9)", async () => {
+    const mail = fakeMail();
+    const token = "a".repeat(64);
+    await emailHandler(() => mail).run(
+      core(),
+      {
+        dedupeKey: "removal_request_received:old",
+        email: {
+          to: { address: "me@example.com" },
+          template: {
+            kind: "removal_request_received",
+            dueAt: NOW,
+            isHidden: false,
+            confirmToken: token,
+          },
+        },
+      },
+      "no-such-row",
+    );
+    expect(LINKED_TOKEN.exec(JSON.stringify(mail.sent))?.[1]).toBe(token);
+  });
+
+  it("still reads a receipt owed before it, whose token is the whole hex string (law 9)", () => {
+    const owed = {
+      kind: "removal_request_received",
+      dueAt: NOW,
+      isHidden: false,
+      confirmToken: "c".repeat(64),
+    };
+    expect(removalRequestReceived.parse(owed)).toStrictEqual(owed);
+    expect(
+      removalRequestReceived.safeParse({ ...owed, confirmToken: "" }).success,
+    ).toBe(false);
+  });
+
+  it("leaves a receipt whose request is unset as it was", async () => {
+    const mail = fakeMail();
+    const token = "b".repeat(64);
+    await emailHandler(() => mail).run(
+      core(),
+      {
+        dedupeKey: "removal_request_received:unset",
+        email: {
+          to: { address: "me@example.com" },
+          template: {
+            kind: "removal_request_received",
+            dueAt: NOW,
+            isHidden: false,
+            confirmRequestId: undefined,
+            confirmToken: token,
+          },
+        },
+      },
+      "no-such-row",
+    );
+    expect(LINKED_TOKEN.exec(JSON.stringify(mail.sent))?.[1]).toBe(token);
+  });
+
+  it("is none for a request nobody filed", async () => {
+    expect(
+      await mintReceiptConfirmToken(core(), "no-such-request"),
+    ).toBeUndefined();
+  });
+
+  it("works only as the last one minted", async () => {
+    const { request } = await pastTheCap();
+    const first = await confirmTokenFor(request.id);
+    const second = await confirmTokenFor(request.id);
+    const effects = { owe: oweInCore, purge: noPurge };
+    expect(await confirmTakedownRequest(core(), first, effects, NOW)).toBe(
+      "not_found",
+    );
+    expect(await confirmTakedownRequest(core(), second, effects, NOW)).toBe(
+      "confirmed",
+    );
+  });
+
+  it("works until the request's due time and not after", async () => {
+    const effects = { owe: oweInCore, purge: noPurge };
+    const late = await pastTheCap();
+    const lateToken = await confirmTokenFor(late.request.id);
+    expect(
+      await confirmTakedownRequest(
+        core(),
+        lateToken,
+        effects,
+        late.request.dueAt + 1,
+      ),
+    ).toBe("not_found");
+    const due = await pastTheCap();
+    const dueToken = await confirmTokenFor(due.request.id);
+    expect(
+      await confirmTakedownRequest(
+        core(),
+        dueToken,
+        effects,
+        due.request.dueAt,
+      ),
+    ).toBe("confirmed");
   });
 });

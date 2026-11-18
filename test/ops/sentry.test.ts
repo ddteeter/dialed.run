@@ -1,3 +1,4 @@
+import { DrizzleQueryError } from "drizzle-orm/errors";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -357,7 +358,9 @@ describe("cron check-ins (OPS-3)", () => {
 
 describe("environment", () => {
   it("is production only for the production origin", () => {
-    expect(sentryEnvironmentFor("https://dialed.run")).toBe("production");
+    expect(sentryEnvironmentFor("https://app.dialed.run")).toBe("production");
+    // The marketing site's origin is not the app's (D-99).
+    expect(sentryEnvironmentFor("https://dialed.run")).toBe("development");
     expect(sentryEnvironmentFor("http://localhost:3000")).toBe("development");
     expect(sentryEnvironmentFor("https://dialed.test")).toBe("development");
     // An unset var is a misconfigured deploy, and one that errs out of
@@ -422,4 +425,46 @@ describe("environment", () => {
       ]);
     },
   );
+});
+
+function failure(): DrizzleQueryError {
+  return new DrizzleQueryError(
+    'insert into "runs" ("id", "start_lat", "title") values (?, ?, ?)',
+    ["01J", 44.9778, "Lunch run past the office"],
+    new Error("D1_ERROR: no such table: runs"),
+  );
+}
+
+describe("a failed statement (SA-L08)", () => {
+
+  it("reaches Sentry with its reason and none of its bound values", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("{}"));
+
+    reportException(TARGET, keep, failure(), { context: {}, tags: {} });
+    await vi.waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalled();
+    });
+
+    const sent = JSON.stringify(sentItems(fetchSpy));
+    expect(sent).toContain("D1_ERROR: no such table: runs");
+    expect(sent).toContain('failed statement insert into \\"runs\\"');
+    expect(sent).not.toContain("44.9778");
+    expect(sent).not.toContain("Lunch run past the office");
+  });
+
+  it("reaches the console with none of its bound values when there is no DSN", () => {
+    const error = vi.spyOn(console, "error").mockImplementation(nothing);
+
+    reportException({ dsn: undefined, environment: "development" }, keep, failure(), {
+      context: { runId: "r1" },
+      tags: {},
+    });
+
+    const logged: unknown = error.mock.calls[0]?.[2];
+    expect(logged).toBeInstanceOf(Error);
+    expect(String(logged)).toContain("D1_ERROR: no such table: runs");
+    expect(String(logged)).not.toContain("44.9778");
+  });
 });

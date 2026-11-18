@@ -34,6 +34,7 @@ import { signalAdapter } from "./lib/auth-signal";
 import { controlRefusalAdapter } from "./lib/control-refusal";
 import { fieldRefusalAdapter } from "./lib/field-refusal";
 import { refuseServerFnArgument } from "./lib/refuse-server-fn-argument";
+import { statementScrub } from "./lib/statement-scrub";
 
 const csrfMiddleware = createCsrfMiddleware({
   filter: (ctx) => ctx.handlerType === "serverFn",
@@ -41,6 +42,8 @@ const csrfMiddleware = createCsrfMiddleware({
 
 export const startInstance = createStart(() => ({
   requestMiddleware: [csrfMiddleware],
+  // SA-L08: first, so it wraps every handler's error (lib/statement-scrub).
+  functionMiddleware: [statementScrub],
   serializationAdapters: [
     createSerializationAdapter(refuseServerFnArgument),
     createSerializationAdapter(signalAdapter),

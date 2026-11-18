@@ -20,6 +20,9 @@ import {
   timingDeps,
   dailySpeed,
   hourlySpeed,
+  hourlySpeedDepsFromEnv,
+  knownRoutes,
+  speedDigestDepsFromEnv,
   withoutCookiesWhenPublic,
 } from "./modules/ops";
 import { forgetAnsweredRequests } from "./modules/account/answered-requests";
@@ -43,6 +46,10 @@ const startFetch = createStartHandler(defaultStreamHandler);
 // Design 165: requests are named by TanStack's own matcher, on a router
 // built at the first request and kept.
 const timing = timingDeps(requestNamer(() => createRouter({ routeTree })));
+
+// SA-M34: the speed checks and the rollup keep only route names this tree
+// could have written, read from a router built at the first firing.
+const isKnownRoute = knownRoutes(() => createRouter({ routeTree }));
 
 export default {
   async fetch(request): Promise<Response> {
@@ -73,7 +80,7 @@ export default {
       const context = requestContext(new URL(request.url).pathname);
       const bounded = await boundedRequest(request);
       if (bounded instanceof Response) {
-        return await secureResponse(bounded, context.nonce);
+        return await secureResponse(bounded, context.nonce, context.marker);
       }
       const response = await timeRequest(
         bounded,
@@ -88,6 +95,7 @@ export default {
       return await secureResponse(
         withoutCookiesWhenPublic(response),
         context.nonce,
+        context.marker,
       );
     } catch (error) {
       captureException(error, { surface: "fetch" });
@@ -124,8 +132,10 @@ export default {
         forgetAnsweredRequests,
         sweepCopyrightHolds,
         // Ops' own, handed in so a test can fake the SQL API (design 165).
-        speed: dailySpeed,
-        speedHourly: hourlySpeed,
+        speed: (today, anomalies) =>
+          dailySpeed(today, anomalies, speedDigestDepsFromEnv(isKnownRoute)),
+        speedHourly: (now, report) =>
+          hourlySpeed(now, report, hourlySpeedDepsFromEnv(isKnownRoute)),
       });
     } catch (error) {
       captureException(error, { surface: "scheduled", cron: controller.cron });

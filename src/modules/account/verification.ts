@@ -491,8 +491,9 @@ export async function confirmEmail(
  *
  * An address that already has an account runs the same flow (round 27
  * #11): its owner is sent round 26's existing-account email instead of a
- * link. Both are owed through the outbox and sent after the answer, so
- * neither the answer nor its timing says which happened.
+ * link. Both are sent after the answer (the link directly, the other
+ * through the outbox), so neither the answer nor its timing says which
+ * happened.
  */
 export type ChangeResult =
   | ResendResult
@@ -528,47 +529,72 @@ export interface OwedMail {
 }
 
 /**
- * The email a change owes, and the writes that go with it: a link to a
- * free address, or the existing-account email to the owner of a taken
- * one. A fresh key per request, so a second request's debt is its own row
- * and never an older row carrying an older link.
+ * What a change sends, and the writes that go with it: to the owner of a
+ * taken address, the existing-account email, owed through the outbox; to
+ * a free one, its link, written now and sent straight after the answer
+ * like `verify_email`, never owed (SA-L18: an outbox row would hold the
+ * live link). A fresh key per request, so a second request's debt is its
+ * own row and never an older row carrying an older email.
  */
+type ChangeMail =
+  | { readonly debt: OutboxDebt }
+  | {
+      readonly write: Awaited<ReturnType<typeof emailLinkWrite>>["write"];
+      readonly message: Parameters<typeof deliverEmail>[1];
+    };
+
 async function changeMail(
   db: Db,
   userId: string,
   email: string,
   origin: string,
   now: number,
-) {
+): Promise<ChangeMail> {
   const holder = await firstColumnWhere(
     db,
     user,
     user.id,
     eq(user.email, email),
   );
-  const key = `${userId}:${newUlid()}`;
   if (holder !== undefined) {
     const notice = emailDebt(
       { to: { userId: holder }, template: { kind: "existing_account" } },
-      { dedupeKey: `email_change_taken:${key}` },
+      { dedupeKey: `email_change_taken:${userId}:${newUlid()}` },
     );
-    return { writes: [], debt: oweOutbox(notice) };
+    return { debt: oweOutbox(notice) };
   }
   const link = await emailLinkWrite(
     db,
     { userId, purpose: "change", email },
     now,
   );
-  const template = {
-    kind: "email_change",
-    url: confirmLinkUrl(origin, link.token),
-    newEmail: email,
-  } as const;
-  const confirm = emailDebt(
-    { to: { address: email }, template },
-    { dedupeKey: `email_change:${key}` },
-  );
-  return { writes: [link.write], debt: oweOutbox(confirm) };
+  return {
+    write: link.write,
+    message: {
+      to: { address: email },
+      template: {
+        kind: "email_change",
+        url: confirmLinkUrl(origin, link.token),
+        newEmail: email,
+      },
+    },
+  };
+}
+
+/**
+ * Background work, after the answer: nothing awaits it, so a failure is
+ * reported here, by surface and never the address (law 7), or nowhere.
+ */
+async function reported(
+  work: () => Promise<unknown>,
+  report: Report,
+  surface: string,
+): Promise<void> {
+  try {
+    await work();
+  } catch (error) {
+    report(error, { surface });
+  }
 }
 
 export async function requestEmailChange(
@@ -593,14 +619,22 @@ export async function requestEmailChange(
   const email = request.newEmail.toLowerCase();
   const claim = await claimEmailSend(db, "change", email, now);
   if (!claim.isAllowed) return { status: "limited", until: claim.until };
-  const { writes, debt } = await changeMail(
-    db,
-    userId,
-    email,
-    deps.origin,
-    now,
-  );
-  await db.batch([outboxInsert(db, debt, now), ...writes]);
-  owed.keepAlive(owed.settle(db, debt, owed.report));
+  const mail = await changeMail(db, userId, email, deps.origin, now);
+  // Both after the answer, so neither it nor its timing says whether the
+  // address was taken.
+  if ("debt" in mail) {
+    await outboxInsert(db, mail.debt, now);
+    owed.keepAlive(owed.settle(db, mail.debt, owed.report));
+  } else {
+    await mail.write;
+    // The runner's next request is the retry of a link that did not go.
+    owed.keepAlive(
+      reported(
+        () => deliverEmail(db, mail.message, deps),
+        owed.report,
+        "email-change-link",
+      ),
+    );
+  }
   return { status: "sent" };
 }

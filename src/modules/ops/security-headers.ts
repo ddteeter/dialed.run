@@ -130,14 +130,31 @@ function inlineScriptSources(inline: InlineScripts | undefined): string {
  * geolocation for its own origin: onboarding offers "use my location".
  */
 /**
- * SA-M40: one directive enforced now, beside the report-only policy. A
- * browser applies both: this one refuses any fetch, beacon or socket to
- * another origin, so no library the page loads (the face-blur model's
- * among them) sends anything off the app; the report-only policy keeps
- * reporting the rest until it is enforced. It restricts nothing else.
+ * What is enforced now, beside the report-only policy; a browser applies
+ * both. SA-M40: `connect-src`, so no library the page loads (the
+ * face-blur model's among them) sends anything off the app. SA-L08: the
+ * directives that cannot refuse one of the app's own scripts, so an
+ * injected `<base>`, `<object>` or frame is refused from the first deploy
+ * (owner, 2026-11-16). The report-only policy keeps reporting the
+ * rest until the flip at the public gate. Read from that policy, so the
+ * two never disagree on a value.
  */
 const ENFORCED_CSP_HEADER = "Content-Security-Policy";
-const ENFORCED_CSP = "connect-src 'self'";
+const ENFORCED_DIRECTIVES: ReadonlySet<string> = new Set([
+  "connect-src",
+  "frame-ancestors",
+  "object-src",
+  "base-uri",
+]);
+
+export function enforcedPolicy(): string {
+  return contentSecurityPolicy(undefined)
+    .split("; ")
+    .filter((directive) =>
+      ENFORCED_DIRECTIVES.has(directive.slice(0, directive.indexOf(" "))),
+    )
+    .join("; ");
+}
 
 export function securityHeaders(
   reportUri: string | undefined,
@@ -146,7 +163,7 @@ export function securityHeaders(
   const csp = contentSecurityPolicy(reportUri, inline);
   return [
     [CSP_HEADER, csp],
-    [ENFORCED_CSP_HEADER, ENFORCED_CSP],
+    [ENFORCED_CSP_HEADER, enforcedPolicy()],
     ["X-Frame-Options", "DENY"],
     ["X-Content-Type-Options", "nosniff"],
     ["Referrer-Policy", "strict-origin-when-cross-origin"],

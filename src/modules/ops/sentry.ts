@@ -2,6 +2,7 @@ import { Toucan } from "toucan-js";
 
 import { env, waitUntil } from "../../env";
 import { PUBLIC_ORIGIN } from "./og/site-head";
+import { withoutBoundValues } from "../../lib/statement-error";
 
 /**
  * Keeps the invocation alive until a promise settles.
@@ -113,9 +114,12 @@ export function reportException(
   error: unknown,
   report: SentryReport,
 ): void {
+  // SA-L08: a failed statement's bound values go to neither Sentry nor
+  // the console (law 7); its first words and the database's reason do.
+  const sent = withoutBoundValues(error);
   const sentry = toucanFor(target, keepAlive);
   if (sentry === undefined) {
-    console.error("[sentry-disabled]", report.context, error);
+    console.error("[sentry-disabled]", report.context, sent);
     return;
   }
   sentry.setContext("dialed", report.context);
@@ -123,7 +127,7 @@ export function reportException(
   if (report.fingerprint !== undefined) {
     sentry.setFingerprint([...report.fingerprint]);
   }
-  sentry.captureException(error);
+  sentry.captureException(sent);
 }
 
 /**

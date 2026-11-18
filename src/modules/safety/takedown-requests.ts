@@ -25,7 +25,7 @@ import {
 } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
-import type { drizzle } from "drizzle-orm/d1";
+import type { drizzle, DrizzleD1Database } from "drizzle-orm/d1";
 
 import {
   entryPhotos,
@@ -146,7 +146,6 @@ export async function fileTakedownRequest<Attempt>(
   // Design 137: what this request may do, read before its batch.
   const state = await holdStateFor(db, keys, now);
   const isHeld = state === "held" && subject !== undefined;
-  const confirm = state === "confirm" ? await newConfirmToken() : undefined;
   const told = isHeld ? await holdNotice(db, subject) : [];
   await db.batch([
     db
@@ -167,7 +166,6 @@ export async function fileTakedownRequest<Attempt>(
         holdState:
           subject === undefined && state === "held" ? undefined : state,
         heldAt: isHeld ? now : undefined,
-        confirmTokenHash: confirm?.hash,
         posterUsername: input.posterUsername,
       })
       .onConflictDoNothing(),
@@ -185,7 +183,9 @@ export async function fileTakedownRequest<Attempt>(
             kind: "removal_request_received",
             dueAt,
             isHidden: isHeld,
-            confirmToken: confirm?.token,
+            // SA-L18: the request, not a token; the token is minted when
+            // the receipt is sent (`mintReceiptConfirmToken`).
+            confirmRequestId: state === "confirm" ? id : undefined,
           },
         },
         { dedupeKey: `removal_request_received:${id}` },
@@ -194,6 +194,34 @@ export async function fileTakedownRequest<Attempt>(
   ]);
   if (isHeld) await purgeHeld(db, subject, deps.purge);
   return { status: "received" };
+}
+
+/**
+ * SA-L18: the confirm token a receipt's link carries, minted when the
+ * receipt is sent rather than when the request is filed, so the outbox row
+ * that owes it never holds a live token. Only its hash is written, and
+ * only while the request still waits on a confirm: `undefined` once it was
+ * confirmed or decided, and the receipt then goes without the link. A
+ * second send mints again, and the last token sent is the one that works.
+ */
+export async function mintReceiptConfirmToken(
+  // Any dialed-core handle: the outbox's drain asks with its own.
+  db: DrizzleD1Database<Record<string, unknown>>,
+  requestId: string,
+): Promise<string | undefined> {
+  const { token, hash } = await newConfirmToken();
+  const minted = await db
+    .update(takedownRequests)
+    .set({ confirmTokenHash: hash })
+    .where(
+      and(
+        eq(takedownRequests.id, requestId),
+        eq(takedownRequests.status, "pending"),
+        isNull(takedownRequests.confirmedAt),
+      ),
+    )
+    .returning({ id: takedownRequests.id });
+  return minted.length === 0 ? undefined : token;
 }
 
 /**
@@ -477,6 +505,9 @@ export async function confirmTakedownRequest(
   if (request === undefined) return "not_found";
   if (request.status !== "pending") return "decided";
   if (request.confirmedAt !== null) return "confirmed";
+  // SA-L18: a confirm link lasts as long as the request's 48 hours, and
+  // past them answers as an unknown link (owner, 2026-11-16).
+  if (now > request.dueAt) return "not_found";
   const subject = await requestSubjectOf(db, request);
   const isShut = await isValveShut(db, now);
   const isHeld = !isShut && subject !== undefined;

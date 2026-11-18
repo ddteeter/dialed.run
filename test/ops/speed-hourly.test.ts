@@ -15,6 +15,7 @@ import {
   checkDeployRegressions,
   checkDrift,
   hourlySpeed,
+  hourlySpeedDepsFromEnv,
   VERSION_DAYS,
   WINDOW_HOURS,
 } from "../../src/modules/ops/speed-hourly";
@@ -22,6 +23,13 @@ import {
   versionQuery,
   windowQuery,
 } from "../../src/modules/ops/vitals-queries";
+
+/**
+Every route name kept, as before the known-route check.
+*/
+const isAnyRoute = (): boolean => true;
+
+const isNotTheCloset = (route: string): boolean => route !== "/closet/";
 
 /**
  * The hourly speed checks (design 165, step 8): synthetic series for a
@@ -304,7 +312,7 @@ describe("checkDrift", () => {
   it("asks for the last three whole hours and the three before, for five weeks", async () => {
     const { query, asked } = api(() => []);
 
-    await checkDrift(NOW, query);
+    await checkDrift(NOW, query, isAnyRoute);
 
     const thirteen = Date.UTC(2026, 9, 31, 13) / 1000;
     const expected = [3, 4].flatMap((back) =>
@@ -327,7 +335,23 @@ describe("checkDrift", () => {
         p95: "1",
       },
     ]);
-    expect(await checkDrift(NOW, query)).toHaveLength(1);
+    expect(await checkDrift(NOW, query, isAnyRoute)).toHaveLength(1);
+  });
+
+  it("judges only the route names `known` keeps (SA-M34)", async () => {
+    const { query } = api((sql) => [
+      {
+        ...measured({ p75: sql.includes("'2026-10-31 ") ? 900 : 100 }),
+        p95: "1",
+      },
+    ]);
+    const asked: string[] = [];
+    const isKnown = (route: string): boolean => {
+      asked.push(route);
+      return false;
+    };
+    expect(await checkDrift(NOW, query, isKnown)).toStrictEqual([]);
+    expect(new Set(asked)).toStrictEqual(new Set(["/closet/"]));
   });
 });
 
@@ -342,10 +366,24 @@ describe("checkDeployRegressions", () => {
       },
     ]);
 
-    const findings = await checkDeployRegressions(NOW, query);
+    const findings = await checkDeployRegressions(NOW, query, isAnyRoute);
 
     expect(asked).toStrictEqual([versionQuery(NOW - 7 * 24 * HOUR)]);
     expect(findings).toHaveLength(1);
+  });
+
+  it("judges only the route names `known` keeps (SA-M34)", async () => {
+    const { query } = api(() => [
+      { ...deploy("v1", 100, { p75: 1000 }), firstSeen: "100" },
+      {
+        ...deploy("v2", 200, { p75: 2000 }),
+        firstSeen: "200",
+        lastSeen: String(NOW - 3 * HOUR),
+      },
+    ]);
+    expect(
+      await checkDeployRegressions(NOW, query, isNotTheCloset),
+    ).toStrictEqual([]);
   });
 
   it("judges the newest only if it was measured in the last three hours", async () => {
@@ -356,12 +394,12 @@ describe("checkDeployRegressions", () => {
         lastSeen: NOW - 3 * HOUR - 1,
       },
     ]);
-    expect(await checkDeployRegressions(NOW, query)).toStrictEqual([]);
+    expect(await checkDeployRegressions(NOW, query, isAnyRoute)).toStrictEqual([]);
   });
 
   it("refuses an answer that does not parse", async () => {
     const { query } = api(() => [{ route: "/closet/" }]);
-    await expect(checkDeployRegressions(NOW, query)).rejects.toHaveProperty(
+    await expect(checkDeployRegressions(NOW, query, isAnyRoute)).rejects.toHaveProperty(
       "name",
       "ZodError",
     );
@@ -380,6 +418,7 @@ describe("the hourly queries", () => {
         "WHERE timestamp >= toDateTime('2026-10-31 13:00:00', 'Etc/UTC')",
         "AND timestamp < toDateTime('2026-10-31 14:00:00', 'Etc/UTC')",
         "GROUP BY index1, blob1, blob3",
+        "ORDER BY n DESC",
         "LIMIT 10000",
         "FORMAT JSON",
       ].join("\n"),
@@ -398,6 +437,7 @@ describe("the hourly queries", () => {
         "FROM dialed_vitals",
         "WHERE timestamp >= toDateTime('2026-10-31 13:30:00', 'Etc/UTC')",
         "GROUP BY index1, blob1, blob3, blob4",
+        "ORDER BY n DESC",
         "LIMIT 10000",
         "FORMAT JSON",
       ].join("\n"),
@@ -409,7 +449,7 @@ describe("hourlySpeed", () => {
   it("is silent when unconfigured", async () => {
     const report = vi.fn();
     await expect(
-      hourlySpeed(NOW, report, { query: undefined }),
+      hourlySpeed(NOW, report, { query: undefined, known: isAnyRoute }),
     ).resolves.toBeUndefined();
     expect(report).not.toHaveBeenCalled();
   });
@@ -422,7 +462,7 @@ describe("hourlySpeed", () => {
     );
     const report = vi.fn<(finding: SpeedFinding) => void>();
 
-    await hourlySpeed(NOW, report, { query });
+    await hourlySpeed(NOW, report, { query, known: isAnyRoute });
 
     expect(report.mock.calls.map(([finding]) => finding.check)).toStrictEqual([
       "deploy-regression",
@@ -440,8 +480,12 @@ describe("hourlySpeed", () => {
           });
     const report = vi.fn();
 
-    await expect(hourlySpeed(NOW, report, { query })).rejects.toBe(failure);
+    await expect(hourlySpeed(NOW, report, { query, known: isAnyRoute })).rejects.toBe(failure);
     expect(report).toHaveBeenCalledOnce();
+  });
+
+  it("judges with the route check it is given", () => {
+    expect(hourlySpeedDepsFromEnv(isNotTheCloset).known).toBe(isNotTheCloset);
   });
 
   it("asks the configured SQL API by default", async () => {
@@ -450,7 +494,7 @@ describe("hourlySpeed", () => {
     );
     vi.stubGlobal("fetch", fetchImpl);
 
-    await hourlySpeed(NOW, vi.fn());
+    await hourlySpeed(NOW, vi.fn(), hourlySpeedDepsFromEnv(isAnyRoute));
 
     expect(fetchImpl).toHaveBeenCalledTimes(11);
   });

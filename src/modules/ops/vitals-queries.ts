@@ -65,6 +65,8 @@ export function dailyRollupQuery(day: string): string {
     `WHERE timestamp >= toDateTime('${day} 00:00:00', 'Etc/UTC')`,
     `AND timestamp < toDateTime('${end} 00:00:00', 'Etc/UTC')`,
     "GROUP BY index1, blob1, blob3",
+    // The busiest first, so the cut keeps the routes people use (SA-M34).
+    "ORDER BY n DESC",
     `LIMIT ${String(MAX_ROLLUP_ROWS)}`,
     "FORMAT JSON",
   ].join("\n");
@@ -146,6 +148,8 @@ export function windowQuery(start: number, end: number): string {
     `WHERE ${since(start)}`,
     `AND timestamp < toDateTime('${sqlTime(end)}', 'Etc/UTC')`,
     "GROUP BY index1, blob1, blob3",
+    // The busiest first, so the cut keeps the routes people use (SA-M34).
+    "ORDER BY n DESC",
     `LIMIT ${String(MAX_ROLLUP_ROWS)}`,
     "FORMAT JSON",
   ].join("\n");
@@ -166,6 +170,8 @@ export function versionQuery(start: number): string {
     `FROM ${VITALS_DATASET}`,
     `WHERE ${since(start)}`,
     "GROUP BY index1, blob1, blob3, blob4",
+    // The busiest first, so the cut keeps the routes people use (SA-M34).
+    "ORDER BY n DESC",
     `LIMIT ${String(MAX_ROLLUP_ROWS)}`,
     "FORMAT JSON",
   ].join("\n");

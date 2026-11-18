@@ -17,6 +17,7 @@ import { z } from "zod";
 import { perfDaily } from "../../db/schema-ops";
 import { env, opsDb } from "../../env";
 import { chunked } from "../../lib/chunked";
+import type { RouteKnown } from "./timing";
 import {
   answerSchema,
   dailyRollupQuery,
@@ -51,6 +52,12 @@ export interface RollupDeps {
    */
   readonly query: ((sql: string) => Promise<unknown>) | undefined;
   readonly db: Pick<DrizzleD1Database, "batch" | "delete" | "insert">;
+  /**
+   * Which route names may be kept. A beacon names its route itself, so a
+   * name no route of the tree has is dropped before it reaches
+   * `perf_daily` (SA-M34).
+   */
+  readonly known: RouteKnown;
 }
 
 /**
@@ -58,6 +65,7 @@ export interface RollupDeps {
  * reading of each can be tested.
  */
 export function rollupDepsFromEnv(
+  known: RouteKnown,
   bindings: Readonly<{
     CF_ACCOUNT_ID?: string | undefined;
     ANALYTICS_SQL_TOKEN?: string | undefined;
@@ -90,6 +98,7 @@ export function rollupDepsFromEnv(
             return body;
           },
     db: opsDb(),
+    known,
   };
 }
 
@@ -145,7 +154,7 @@ function whyFailed(error: unknown): string {
 export async function rollupVitals(
   today: string,
   anomalies: string[],
-  deps: RollupDeps = rollupDepsFromEnv(),
+  deps: RollupDeps,
 ): Promise<void> {
   const { query } = deps;
   if (query === undefined) {
@@ -157,7 +166,8 @@ export async function rollupVitals(
   for (const day of daysBefore(today, ROLLUP_DAYS)) {
     try {
       const parsed = responseSchema.parse(await query(dailyRollupQuery(day)));
-      await replaceDay(deps.db, day, parsed.data);
+      const kept = parsed.data.filter((row) => deps.known(row.route));
+      await replaceDay(deps.db, day, kept);
     } catch (error) {
       anomalies.push(`speed rollup for ${day} failed: ${whyFailed(error)}`);
     }

@@ -304,7 +304,7 @@ which `test/bindings-conformance.test.ts` checks:
 
 | Var                    | Value                                                                                         | Without it                                                                                                                                                                                                             |
 | ---------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BETTER_AUTH_URL`      | `https://dialed.run` (set)                                                                    | Callbacks resolve against the wrong host; secure cookies and rate limiting are off (both follow its https scheme). `/api/health` names it when unset                                                                   |
+| `BETTER_AUTH_URL`      | `https://app.dialed.run` (set; D-99)                                                          | Callbacks resolve against the wrong host; secure cookies and rate limiting are off (both follow its https scheme). `/api/health` names it when unset                                                                   |
 | `TURNSTILE_SITE_KEY`   | empty until the widget exists — **set it**                                                    | The widget renders nothing, and verification refuses                                                                                                                                                                   |
 | `PUBLIC_PHOTOS_ORIGIN` | `https://photos.dialed.run` (set) — must equal `lib/public-photos.ts`'s, which the CSP admits | The switch for world photos (D-153): empty or unset, no photo is copied to `PUBLIC_PHOTOS` and `/k` shows none; copies already there are still deleted. Leave it set only once §2's public photo bucket steps are done |
 | `CF_ACCOUNT_ID`        | empty — **set it** to the account's id                                                        | The daily speed rollup (design 165) has no SQL API endpoint to ask, and the digest says so every day                                                                                                                   |
@@ -313,20 +313,24 @@ which `test/bindings-conformance.test.ts` checks:
 (`http://localhost:<port>`; CI's e2e job writes `http://localhost:3000`).
 Without the override, local sign-in fails on Better Auth's origin check —
 every cookie-bearing POST from `localhost` is refused 403
-`INVALID_ORIGIN`, since the configured origin is `https://dialed.run` —
+`INVALID_ORIGIN`, since the configured origin is `https://app.dialed.run` —
 and the https posture turns the rate limiter on, which e2e's many
 sign-ups from one address would trip. (Not the `__Secure-` cookie:
 Chromium accepts that on `localhost`.) **Every existing checkout needs the
 line added to its `.dev.vars`.**
 
-**Attach `dialed.run` to the Worker before the first deploy** (the
-`routes` / `custom_domain` step), or set `BETTER_AUTH_URL` to the
-workers.dev origin until it is. `wrangler.jsonc` ships
-`BETTER_AUTH_URL=https://dialed.run`, and with it set Better Auth trusts
-only that origin: on any other host every cookie-bearing POST (sign-in,
-sign-up, sign-out) is refused 403 `INVALID_ORIGIN`, and OAuth
-`redirect_uri`s point at `dialed.run`. The CI deploy job is named "Deploy
-to workers.dev"; its target changes with the domain step.
+**The app is `app.dialed.run`** (D-99; owner, 2026-11-16): `dialed.run`
+is the marketing site, served from elsewhere. `wrangler.jsonc` attaches
+`app.dialed.run` as a Custom Domain (`routes`, `custom_domain: true`), and
+Cloudflare creates its DNS record and certificate on the first deploy.
+There is no workers.dev host and no preview URL (`workers_dev` and
+`preview_urls` are `false`). `BETTER_AUTH_URL` is `https://app.dialed.run`:
+Better Auth trusts only that origin, so on any other host every
+cookie-bearing POST (sign-in, sign-up, sign-out) is refused 403
+`INVALID_ORIGIN`, and OAuth `redirect_uri`s point there. Before the first
+deploy, `app.dialed.run` must have no CNAME record (Cloudflare refuses a
+Custom Domain on one); a deploy from CI replaces any other record on that
+hostname without asking, so nothing else may live there.
 
 `NODE_ENV` is not needed: OPS-4 sets Better Auth's rate limiter and secure
 cookies explicitly from `BETTER_AUTH_URL`'s scheme (audit finding 0.7).
@@ -367,13 +371,24 @@ needs its own Strava app, not a second subscription.
   its deployment branches to `main` only, and put the two Cloudflare
   secrets below **in the environment, not in the repository's secrets**, so
   no other job can read them. Dependency updates merge themselves
-  (`docs/dependencies.md`), and the deploy job installs and builds them, so
-  what this token can do is what a compromised package that survived the
-  cooldown could do.
+  (`docs/dependencies.md`). The build runs every package's code, so it
+  runs in `ci.yml`'s `bundle` job, which has no environment; the deploy
+  job downloads that build, installs with `--ignore-scripts`, and runs
+  only Wrangler with the token (SA-L10). A compromised package that
+  survived the cooldown can still change the bundle the Worker runs, but
+  the token never shares a job with its code.
 - **Secret `CLOUDFLARE_API_TOKEN`** (environment `production`) — the
   deploy job needs it to deploy and to apply migrations. Scope it to this
   account, with **Workers Scripts: Edit** and **D1: Edit**, and nothing
-  else: no DNS, no zone settings, no other account. Deploy binds the R2
+  else: no DNS, no zone settings, no other account. The deploy also
+  attaches the `app.dialed.run` Custom Domain. Cloudflare's API reference
+  lists **Workers Scripts Write** for `PUT /workers/domains`; no page we
+  read states the zone-level scopes Wrangler's domain calls need, so they
+  are unverified. If the first deploy fails at the domain step with an
+  authentication error, either add **Zone: Read** and **Workers Routes:
+  Edit** for the `dialed.run` zone, or attach `app.dialed.run` once in the
+  dashboard (Workers → `dialed` → Settings → Domains & Routes) and deploy
+  again. Deploy binds the R2
   buckets but writes nothing to them, so try without R2 permissions first,
   and add **Workers R2 Storage: Read** only if `wrangler deploy` refuses
   without it. Set an expiry and rotate it when it lapses.
@@ -507,7 +522,7 @@ needs its own Strava app, not a second subscription.
     The site's request-access form posts to `/api/access-requests`, and
     the server only accepts a challenge solved on `dialed.run`. In
     Turnstile → the widget → Hostnames, add `dialed.run` beside the app's
-    host. Check: a request from the live form lands in D7 and the visitor
+    host, `app.dialed.run`. Check: a request from the live form lands in D7 and the visitor
     ends on `dialed.run/invite/sent`, not `?error=turnstile`.
 
 ## 9. Deploying, rolling back and restoring
@@ -610,13 +625,13 @@ To run the same check by hand against a version (find ids with
 `wrangler deployments status`):
 
 ```sh
-SMOKE_BASE_URL=https://dialed.run SMOKE_VERSION_ID=<id> \
+SMOKE_BASE_URL=https://app.dialed.run SMOKE_VERSION_ID=<id> \
   SMOKE_EMAIL=… SMOKE_PASSWORD=… \
   npx playwright test --config playwright.smoke.config.ts
 ```
 
 Any request can be sent to a deployed version the same way:
-`curl -H 'Cloudflare-Workers-Version-Overrides: dialed="<id>"' https://dialed.run/api/health`.
+`curl -H 'Cloudflare-Workers-Version-Overrides: dialed="<id>"' https://app.dialed.run/api/health`.
 
 ### Rolling back the Worker
 

@@ -288,6 +288,7 @@ export {
   blockAndDeclineAll,
   confirmTakedownRequest,
   fileTakedownRequest,
+  mintReceiptConfirmToken,
   pendingTakedownRequests,
   releaseHoldWrites,
   type PendingTakedownRequest,

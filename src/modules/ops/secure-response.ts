@@ -13,11 +13,13 @@ import { withSecurityHeaders } from "./security-headers";
  * the page, so the stored copy names no nonce. The same happens when no
  * nonce was minted (an open-web path), whatever the response
  * turned out to be — a not-found or an error page on that path has
- * scripts too, and no nonce on them.
+ * scripts too, and no nonce on them. Only the scripts carrying that
+ * request's `marker` are hashed (SA-L08).
  */
 export async function secureResponse(
   response: Response,
   nonce: string | undefined,
+  marker: string | undefined,
 ): Promise<Response> {
   // SA-L19: reports go to our own collector, never straight to Sentry.
   const reportUri = CSP_REPORT_PATH;
@@ -27,7 +29,7 @@ export async function secureResponse(
   if (nonce !== undefined && isHtml(response)) {
     return withSecurityHeaders(neverStored(response), reportUri, { nonce });
   }
-  const { page, hashes } = await withInlineScriptHashes(response);
+  const { page, hashes } = await withInlineScriptHashes(response, marker);
   return withSecurityHeaders(page, reportUri, { hashes });
 }
 

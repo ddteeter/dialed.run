@@ -83,7 +83,7 @@ queue message is a wire format between two deploys (law 9).
   # The override can take "up to a couple of seconds" to propagate.
   run: sleep 10 && npx playwright test --config playwright.smoke.config.ts
   env:
-    SMOKE_BASE_URL: https://dialed.run
+    SMOKE_BASE_URL: https://app.dialed.run
     SMOKE_VERSION_ID: ${{ steps.upload.outputs.new }}
     SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
     SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
@@ -122,8 +122,8 @@ Notes for the owner:
   across every word, so with `-c` the config's path was read as a command
   and the commit gate reported an unlisted binary. The two spellings are
   the same Playwright option.
-- `SMOKE_BASE_URL` is the production origin (`BETTER_AUTH_URL`). Before
-  the custom domain exists, use the `workers.dev` URL.
+- `SMOKE_BASE_URL` is the production origin (`BETTER_AUTH_URL`),
+  `https://app.dialed.run`. There is no workers.dev host (D-99).
 - **The smoke test is the only automatic check.** A bug it can't reach
   ships to everyone at once. Rolling back on error rate is #505, at
   public, and the 10% soak returns with it. Until then, the owner watches
