@@ -2757,7 +2757,9 @@ describe("the Desk's buttons (round 44 #104-#105)", () => {
     );
   });
 
-  it("draws the quiet decisions as outline pills, and Cancel as underlined text", () => {
+  it("draws the quiet decisions as hairline pills, and Cancel as underlined text", () => {
+    // R59·317: the hairline edge, `--hairline-2` on the Desk's night
+    // ground, never the ink edge; as high as CHALK_PILL beside it.
     expect(QUIET_PILL.split(" ")).toStrictEqual([
       "inline-flex",
       "min-h-11",
@@ -2767,12 +2769,13 @@ describe("the Desk's buttons (round 44 #104-#105)", () => {
       "self-start",
       "rounded-pill",
       "border",
-      "border-ink",
+      "border-hairline",
       "bg-transparent",
       "px-5",
       "text-body",
       "font-bold",
       "text-ink",
+      "dark:border-hairline-2",
     ]);
     expect(QUIET_CANCEL.split(" ")).toStrictEqual([
       "inline-flex",

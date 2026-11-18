@@ -109,8 +109,53 @@ describe("R: a row (Round 55 · 235)", () => {
 
     const row = onlyRow();
     expect(row).toHaveClass("grid", "min-h-16", "items-center", "border-b");
+    expect(row).not.toHaveClass("pt-3", "pb-4", "items-start");
+    expect(row).not.toHaveAttribute("data-badged");
+    expect(row.querySelector("[data-part='run-badge']")).toBeNull();
     expect(row.lastElementChild).toHaveAttribute("data-part", "run-marks");
   });
+
+  it.each([
+    [
+      "a band the runner set",
+      runSummary({ weatherStatus: "manual", conditions: SET_BY_YOU }),
+    ],
+    [
+      "the control",
+      runSummary({
+        weatherStatus: "failed",
+        conditions: undefined,
+        canSetConditions: true,
+      }),
+    ],
+  ])(
+    "gives %s's badge a line of its own, in a row that breathes (R60·326)",
+    async (_, run) => {
+      await renderWithRouter(list([run]));
+
+      const row = onlyRow();
+      // 12 above, 16 below, the marks at the top right: 104 with a badge.
+      expect(row).toHaveAttribute("data-badged", "true");
+      expect(row).toHaveClass(
+        "grid",
+        "min-h-16",
+        "items-start",
+        "border-b",
+        "pt-3",
+        "pb-4",
+      );
+      expect(row).not.toHaveClass("items-center");
+      expect(row.lastElementChild).toHaveAttribute("data-part", "run-marks");
+      // Under the mono line, at the row's start, with nothing beside it:
+      // the column's 4 and the line's 10 make the ruled 14.
+      const line = row.querySelector("[data-part='run-badge']");
+      expect(line).toHaveClass("mt-2.5", "flex");
+      expect(line?.parentElement).toHaveClass("flex-col", "gap-1");
+      expect(line?.previousElementSibling).toHaveTextContent("6.2 mi");
+      expect(line?.children).toHaveLength(1);
+      expect(line?.parentElement?.lastElementChild).toBe(line);
+    },
+  );
 
   it("credits Garmin once on each Garmin row, in sans beside the line, and on no other (G1)", async () => {
     await renderWithRouter(
@@ -509,8 +554,10 @@ describe("R: the one line, and badges only for exceptions", () => {
     const control = within(row).getByRole("button", {
       name: "Set conditions",
     });
-    // The 44 hit area hangs past the line; the pill is the badges' 22.
-    expect(control).toHaveClass("target", "-my-3", "bg-transparent", "p-0");
+    // The pill is the badges' 22, and its 44 hit area sits eleven proud
+    // above and below it, inside the row (R60·326): never a hang past it.
+    expect(control).toHaveClass("target-line", "bg-transparent", "p-0");
+    expect(control).not.toHaveClass("target", "-my-3");
     expect(control).toHaveAttribute("aria-haspopup", "dialog");
     expectBadge(control.firstElementChild, "border-ink", "text-ink");
     // The › is drawn and not said.

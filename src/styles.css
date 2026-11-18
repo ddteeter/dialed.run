@@ -224,7 +224,9 @@
   --breakpoint-desk: 1040px;
 
   /* ---- measures · tokens.js MEASURE ------------------------------- */
-  /* "Nothing pins a width that isn't in MEASURE." */
+  /* R59·316: "Rails and asides pin their width here or nowhere."
+   * `aside` is tokens.js's `--measure-aside`, the log flow's rail at desk
+   * (DeskSplit); `rail` is the Desk's. */
   --container-*: initial;
   --container-rail: 122px;
   --container-aside: 300px;

@@ -146,6 +146,22 @@ function ConditionsCell({
 }
 
 /**
+ * A row's conditions, or the words for none.
+ */
+function RowConditions({
+  row,
+  units,
+}: Readonly<{ row: BacklogRow; units: Units }>): JSX.Element {
+  return row.conditions === undefined ? (
+    <Mono step="sm" className="text-quiet">
+      No conditions
+    </Mono>
+  ) : (
+    <ConditionsCell conditions={row.conditions} units={units} />
+  );
+}
+
+/**
  * A kit as the row draws it: its pieces' names on one line, truncated at
  * the desk rather than stacking chips (Round 55 · 236), in full on a card.
  *
@@ -548,14 +564,29 @@ const CELL =
   "block basis-full desk:table-cell desk:px-2 desk:py-1 desk:align-middle desk:whitespace-nowrap";
 
 /**
+ * The conditions' own cell: the desk's column. On a card the run cell
+ * draws them instead (`RUN_LINE`), so one copy is ever in the tree.
+ */
+const CONDITIONS_CELL =
+  "hidden desk:table-cell desk:px-2 desk:py-1 desk:align-middle desk:whitespace-nowrap";
+
+/**
  * The run and its conditions on a card: one teal mono line at the card's
  * 8 rhythm (R58·301, as 236b draws it), and where both won't fit the
- * conditions wrap whole to a second line. A card is a wrapping row and
- * every other cell takes a line of its own; these two take only their
- * words.
+ * conditions wrap whole to a second line, and the " · " between them
+ * drops (R59·320): the break is the separator.
+ *
+ * CSS cannot see a wrap, so the line clips the dot instead. The run ends
+ * in an unseen " · " (`RUN_SPACER`) and the conditions carry the seen one
+ * just left of themselves (`RUN_DOT`), over that spacer. Wrapped, the
+ * conditions start the line and their dot falls outside it, where the
+ * line's `overflow-hidden` cuts it; the spacer left at line one's end
+ * shows nothing. From the desk up the line is the run alone.
  */
-const RUN_LINE_CELL =
-  "block desk:table-cell desk:px-2 desk:py-1 desk:align-middle desk:whitespace-nowrap";
+const RUN_LINE =
+  "flex flex-wrap gap-y-2 overflow-hidden desk:block desk:overflow-visible";
+const RUN_SPACER = "invisible whitespace-pre desk:hidden";
+const RUN_DOT = "absolute right-full whitespace-pre text-dialed-text";
 
 /**
  * The outfit cell takes what the others leave and truncates in it: at
@@ -646,49 +677,52 @@ function BacklogTable({
                         {day}
                       </span>
                     </td>
-                    <td className={RUN_LINE_CELL}>
-                      {/* At the desk `--quiet`, like the conditions beside
-                        it: the picked row is tinted, and `--muted` is
-                        4.0:1 on the tint. On a card, teal, one line with
-                        the conditions (R58·301). */}
-                      <Mono
-                        step="sm"
-                        className="text-dialed-text desk:text-quiet"
-                      >
-                        <Spoken
-                          {...measuredLine(
-                            [
-                              [{ kind: "duration", durationS: row.durationS }],
+                    <td className={CELL}>
+                      <span data-part="run-line" className={RUN_LINE}>
+                        {/* At the desk `--quiet`, like the conditions
+                          beside it: the picked row is tinted, and
+                          `--muted` is 4.0:1 on the tint. On a card, teal,
+                          one line with the conditions (R58·301). */}
+                        <Mono
+                          step="sm"
+                          className="text-dialed-text desk:text-quiet"
+                        >
+                          <Spoken
+                            {...measuredLine(
                               [
-                                {
-                                  kind: "distance",
-                                  distanceM: row.distanceM,
-                                  spaced: true,
-                                },
+                                [
+                                  {
+                                    kind: "duration",
+                                    durationS: row.durationS,
+                                  },
+                                ],
+                                [
+                                  {
+                                    kind: "distance",
+                                    distanceM: row.distanceM,
+                                    spaced: true,
+                                  },
+                                ],
                               ],
-                            ],
-                            units,
-                          )}
-                        />
-                        {/* The board's dot between the two, drawn only
-                          where they share a line's start; unheard, as a
-                          measured line's own separators are. */}
-                        <span aria-hidden="true" className="desk:hidden">
-                          {" ·"}
-                        </span>
-                      </Mono>
-                    </td>
-                    <td className={RUN_LINE_CELL}>
-                      {row.conditions === undefined ? (
-                        <Mono step="sm" className="text-quiet">
-                          No conditions
+                              units,
+                            )}
+                          />
+                          <span aria-hidden="true" className={RUN_SPACER}>
+                            {" · "}
+                          </span>
                         </Mono>
-                      ) : (
-                        <ConditionsCell
-                          conditions={row.conditions}
-                          units={units}
-                        />
-                      )}
+                        <span className="relative flex min-w-0 desk:hidden">
+                          {/* The board's dot, unheard, as a measured
+                            line's own separators are. */}
+                          <Mono step="sm" className={RUN_DOT}>
+                            <span aria-hidden="true">{" · "}</span>
+                          </Mono>
+                          <RowConditions row={row} units={units} />
+                        </span>
+                      </span>
+                    </td>
+                    <td className={CONDITIONS_CELL}>
+                      <RowConditions row={row} units={units} />
                     </td>
                     <td className={OUTFIT_CELL}>
                       <OutfitCell

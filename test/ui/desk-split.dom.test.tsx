@@ -25,14 +25,15 @@ describe("DeskSplit", () => {
     ).toBeTruthy();
     // The rail is the desk's alone.
     expect(rail).toHaveClass("hidden", "desk:flex");
-    // Two columns from 1040: the 620 measure, 24, and the rail's 300,
-    // centred as one group in the page (R58·307), never at its left.
+    // Two columns from 1040: the 620 measure, 24, and MEASURE.aside's 300
+    // (R59·316), centred as one group in the page (R58·307), never at its
+    // left. Both tracks read the measure; neither types a px.
     expect(step.parentElement).toHaveClass(
       "desk:grid",
       "desk:mx-auto",
       "desk:w-fit",
       "desk:gap-x-6",
-      "desk:grid-cols-[var(--container-column)_300px]",
+      "desk:grid-cols-[var(--container-column)_var(--container-aside)]",
     );
     expect(step.parentElement).not.toHaveClass("desk:max-w-page");
   });

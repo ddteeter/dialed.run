@@ -997,11 +997,14 @@ export const ACTION_PRIMARY = `cursor-pointer text-body ${SUBMIT_TONE.action}`;
 /**
  * A Desk decision that is not the bar's main one (Keep, Approve, Decline),
  * beside a literal `target` (the hit-area check reads each site's class):
- * an outline pill in the ground's ink, 44 high (round 44 #105). One chalk
- * pill per bar, at most; everything else beside it is this.
+ * the hairline pill, 44 high to match `CHALK_PILL` beside it (round 44
+ * #105). R59·317: R58·308's hairline secondary reaches the Desk, so its
+ * edge is the secondary's, `--hairline-2` on the Desk's night ground. One
+ * chalk pill per bar, at most; everything else beside it is this: two
+ * kinds, the ink pill and the hairline pill, as D-186 counts.
  */
 export const QUIET_PILL =
-  "inline-flex min-h-11 cursor-pointer items-center justify-center self-start rounded-pill border border-ink bg-transparent px-5 text-body font-bold text-ink";
+  "inline-flex min-h-11 cursor-pointer items-center justify-center self-start rounded-pill border border-hairline bg-transparent px-5 text-body font-bold text-ink dark:border-hairline-2";
 
 /**
  * Backing out of a question a Desk row asked (Cancel): underlined text,

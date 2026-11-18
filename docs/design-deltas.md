@@ -7133,3 +7133,25 @@ debt these created is tracked in `docs/deferred.md`, not here.
 Skipping the name in F/P2.5 files the garment as `[GENERIC]`; the contract
 requires `name`, so generic saves default it to the category/tap-list label
 (taplist rows already work this way). Noted in task 101.
+
+## Built for the layout lane (wave 14, design 236)
+
+Round 59's 316, 317, 319 and 320, and Round 60's 326 and 330, as
+ruled. Notes on how:
+
+- **R59·320 · the dot drops by clipping.** CSS cannot see a wrap, so on
+  a card the run and its conditions share one line that clips: the run
+  ends in an unseen " · ", the conditions draw the seen one just left of
+  themselves, and a wrap puts that dot outside the line, where it is
+  cut. The desk keeps the conditions' own column.
+- **Guess · Feed's posts at wide (#833, Design 333).** "Nothing bleeds
+  past its column" read as covering the posts list too: from 720 the 8
+  `--tint` band between posts stops at the 620, and the post's text sits
+  on the content edge. Below 720 the bands still meet the screen's edges
+  (R55·205). The ask: confirm the list counts, or keep its bands
+  edge to edge at wide.
+- **R60·326 · the badged runs-list row, as ruled.** Its 14 is the
+  column's 4 and 10 on the badge's line; the 44 target is a
+  `target-line`, eleven proud of the 22 pill inside the row's 14 and 16.
+  Guess: the 14 is off the 4px scale (14 → 16); #839 (Design 336) asks.
+- **R60·330 · R1's title hint, as ruled.** "Only you see the title."

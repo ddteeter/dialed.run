@@ -90,9 +90,10 @@ export function PostCard(props: Readonly<PostCardProps>) {
     <article
       data-part="post"
       data-state={photo === undefined ? "no-photo" : "with-photo"}
-      // R55·205: 16 above and below, and the column's gutter inside the
-      // post, so Feed's --tint band between posts runs edge to edge.
-      className="flex flex-col gap-3 px-5 py-4 wide:px-6"
+      // R55·205: 16 above and below, and on a phone the column's gutter
+      // inside the post, so Feed's --tint band runs edge to edge. From 720
+      // the post's text sits on the 620's content edge (R59·319).
+      className="flex flex-col gap-3 px-5 py-4 wide:px-0"
     >
       {/* The credit is a link of its own, so it cannot sit inside the
           card's: it lies over the strip's right end (Round 54 · 170), and
