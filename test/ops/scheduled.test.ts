@@ -18,6 +18,7 @@ import {
   userProfiles,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import { configuredDeployment } from "./configured-deployment";
 import type { RateLimitKind } from "../../src/lib/contracts/rate-limits";
 import { newUlid, type Ulid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
@@ -127,35 +128,14 @@ async function emptyTheTablesTheDigestReads(): Promise<void> {
   await db.delete(outfitEntries);
 }
 
-/**
- * The deployment values `test/wrangler.test.jsonc` leaves unset, set here,
- * so every digest below is a configured deployment's and its `config`
- * check (design 237) says nothing. Their own tests are in
- * `test/ops/health.test.ts`.
- */
-const CONFIGURED = {
-  TURNSTILE_SITE_KEY: "test-site-key",
-  TURNSTILE_SECRET_KEY: "test-secret-key",
-  ADMIN_USER_IDS: "digest-test-operator",
-  TAKEDOWN_SECRET: "test-takedown-secret",
-  CLOSED_ADDRESS_SECRET: "test-closed-address-secret",
-};
-const UNCONFIGURED: Record<string, unknown> = Object.fromEntries(
-  Object.keys(CONFIGURED).map((name) => [name, Reflect.get(env, name)]),
-);
+configuredDeployment();
 
 beforeEach(async () => {
   await emptyTheTablesTheDigestReads();
-  for (const [name, value] of Object.entries(CONFIGURED)) {
-    Reflect.set(env, name, value);
-  }
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
-  for (const [name, value] of Object.entries(UNCONFIGURED)) {
-    Reflect.set(env, name, value);
-  }
 });
 
 describe("the cron heartbeat", () => {

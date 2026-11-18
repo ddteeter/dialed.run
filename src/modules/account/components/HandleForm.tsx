@@ -110,6 +110,15 @@ export function HandleForm({
   const [typed, setTyped] = useState(initial);
   // The last refused claim; drawn only when it is the cap's.
   const [limited, setLimited] = useState<HandleClaim | undefined>();
+  /**
+   * Where a claim's answer goes, for a save and the cap's refusal alike:
+   * a held handle moves on, and the cap's answer is kept for its band.
+   * One handler for both, so neither branch is one the hook never takes.
+   */
+  function settle(result: HandleClaim): void {
+    if (result.kind === "claimed") onSuccess(result.username);
+    else setLimited(result);
+  }
   const form = useFormSubmit({
     schema: usernameInput,
     action: async (values) => {
@@ -121,15 +130,13 @@ export function HandleForm({
       return result;
     },
     successMessage,
-    onSuccess: (result) => {
-      if (result.kind === "claimed") onSuccess(result.username);
-    },
+    onSuccess: settle,
     // Past the rename cap no edit to the field fixes it, so it is the
     // band above Save, not a field error (R60, #820), and nothing is
     // announced as saved.
     refusal: {
       matches: (result) => result.kind === "too_often",
-      answer: setLimited,
+      answer: settle,
     },
     carry,
     // No summary labels: the summary appears only for two or more failing

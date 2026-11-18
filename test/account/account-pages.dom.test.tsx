@@ -169,6 +169,8 @@ describe("ResendLink", () => {
     );
     expect(sent.closest("[data-state]")).toHaveAttribute("data-state", "sent");
     expect(sent.closest("p")).toHaveTextContent(/^Sent ✓ A new link/u);
+    // The limit's band only after the limit's answer.
+    expect(screen.queryByText("Not sent")).toBeNull();
     expect(status()).toHaveTextContent(
       "Sent. A new link is on its way. The old one no longer works.",
     );

@@ -125,6 +125,8 @@ describe("Next", () => {
     });
     expect(claim).toHaveBeenCalledWith({ data: { username: "maya_runs" } });
     expect(screen.getByRole("status")).toHaveTextContent("Handle saved.");
+    // The cap's band only after the cap's answer.
+    expect(screen.queryByText("Not changed")).toBeNull();
   });
 
   it("stays put when there is nowhere to go (Settings › Username)", async () => {
