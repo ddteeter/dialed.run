@@ -282,9 +282,6 @@ Until #16 lands, these come from the same transcript and CI reading as §1.
 
 ## 7 · Experiment on wave 14
 
-> **Placeholder: results pending.** This section is filled in once
-> wave 14 has merged.
-
 Started 2026-11-17, with the owner's go-ahead. Its job is to test #1, #7
 and part of #8 before any of them goes into the skill:
 
@@ -307,26 +304,78 @@ with both open wave-13 branches and with each other (`git merge-tree`).
 **Baseline:** wave 13. It had four built lanes, about 7 h idle before the
 first push, and three ships per PR.
 
-**Questions to answer:**
+**The test, set before the experiment started:** the hold lift worked if
+the three lanes merge without extra re-ships and wave 13's remaining
+gates are not visibly slower. A re-ship caused by a later merge is
+evidence for #2, not against #1. A lock wait over an hour is the
+starvation in §2.4, and argues for doing #6's fair queue first. Four
+lanes are too few to conclude anything about pre-ship mutation (#8), so
+the results only record who ran it before shipping and how their first
+ship went.
 
-| question                                                           | answer |
-| ------------------------------------------------------------------ | ------ |
-| How long from "built" to merged for 14b, 14c and 14a?              | _tbd_  |
-| Did lifting the hold cause re-ships? If so, which file conflicted? | _tbd_  |
-| Did it slow wave 13's remaining gates?                             | _tbd_  |
-| Did any lock wait exceed about 60 min?                             | _tbd_  |
-| Were the gates seeded or cold, and why?                            | _tbd_  |
-| Does load explain gate time for gates of similar size?             | _tbd_  |
+### Results
 
-**The test:** the hold lift worked if the three lanes merge without extra
-re-ships and wave 13's remaining gates are not visibly slower. A re-ship
-caused by a later merge is evidence for #2, not against #1. A lock wait
-over an hour is the starvation in §2.4, and argues for doing #6's fair
-queue first. Four lanes are too few to conclude anything about
-pre-ship mutation (#8). The results only record who ran it before
-shipping and how their first ship went.
+Sources: the experiment's ship log (one row per ship and heavy local run,
+written by the lanes) [count]; PR open and merge times and commit author
+dates from GitHub [CI]. "Built" is the author time of a lane's last
+commit before its first ship attempt. The log has gaps. Many rows fold
+the lock wait into the run time, and the ship output does not say
+whether Stryker was seeded, so several cells below are inferred, and
+are marked as inferred.
 
-**Result:** _tbd_
+| question                                                           | answer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| How long from "built" to merged for 14b, 14c and 14a?              | 14c (#852): 1.9 h, one ship. 14a (#855): 5.0 h, two ships. 14b (#848): 9.5 h, four attempts. Built to first ship took 0.4 h for 14b, 0.5 h for 14c, and 1.7 h for 14a (waiting its turn), against about 7 h idle before the first push in wave 13. 14d (#858) was still held behind two security-fix lanes and took 7.0 h. All five wave-14 PRs, including 14b's second PR #856, merged within about 9 h of the lift.                                                                                                                                                                                                                                                                                                                 |
+| Did lifting the hold cause re-ships? If so, which file conflicted? | One did. 14b's second attempt went red on main's a11y coverage figure, which had dropped after an earlier merge; 14b's own code was not the cause. 14b waited about 3.4 h for main's fix. In that time 14a overtook it and merged, and 14b's next push conflicted with 14a in `ParsedCard`, on a `className` both lanes had changed after the start-state check. That is a real code overlap, not an append-only list, so it is not evidence for #2. #856 also re-shipped after a conflict (the file was not logged; its re-record changed only one transcript). The other re-ships were gate survivors in each lane's own code (14b, 14a, 14d) and main's red figure (14b). In total: 11 attempts over 5 PRs, 2.2 per PR, against 3. |
+| Did it slow wave 13's remaining gates?                             | Yes, one gate. 13d's final gate took 68 min including the lock wait, against 36 and 42 min for its two earlier gates; the log does not separate the wait from the run. It overlapped wave-14 pre-ship runs that held the lock, one of them for about 30 min under a single acquisition. `lockf` cannot give an earlier wave priority, so "wave 13 keeps priority" held for the ship order but not for the lock. 13b's last ship began before the lift.                                                                                                                                                                                                                                                                                |
+| Did any lock wait exceed about 60 min?                             | None recorded. The largest recorded waits were 30 min (twice), 28, 27, 19 and 13 min. But several ship rows include the wait in their run time (13d's 68-min gate, 14a's 90-min ship), so a long wait could be hidden there. The starvation of more than 3 h in §2.4 happened before the lift.                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Were the gates seeded or cold, and why?                            | Mostly unknown, because the ship output does not say. Known: 14b's first two gates were seeded from main's 38 shard reports, and one ran in about 12 min after a 13-min wait. 13d's earlier gates were cold because its branch edits `stryker.conf.json`. Inferred: once that branch merged, main's seed matched no branch until main's own Mutation run had refreshed it, so the gates after it (14a, 14d and one tooling PR) probably ran cold. This is §2.3 happening live.                                                                                                                                                                                                                                                        |
+| Does load explain gate time for gates of similar size?             | Not in this data. Gates started at load averages from 1.8 to 8.3. The gate at 8.3 was one of the shortest (18 min). Differences follow lock wait and survivors, not load. One aside for #6: the same CI-style e2e took 7.2 min at load 20.3 and 7 min at load 3.7. That is two runs, so not a finding.                                                                                                                                                                                                                                                                                                                                                                                                                                |
+
+**Pre-ship mutation (#8), recorded only:**
+
+- 14c ran Stryker over all its changed `.tsx` files before shipping,
+  fixed 2 survivors, and its first ship passed. Its first per-file loop
+  had cost about 40 min first: one dry run failed on tests that pinned
+  the old behaviour, and another stalled for 16 min.
+- 14a and 14b left mutation to the gate, as the experiment's rule said,
+  and both were blocked on their first ship: 14b on 2 survivors, 14a on 29.
+- 14d mutated the files it was working on, and was blocked on a
+  survivor in a file it had not run.
+
+**Per-wave numbers (§6), wave 14:** 2.2 ships per PR (against 3). First
+ships passed for 2 of 5 PRs (against 3 of 20). Push to green had a median
+of 49 min over 7 green pushes, ranging 21–100 (against 63).
+Brief-to-merge was not measured, because the dispatch time is not in the
+log.
+
+**Verdict.** By the test set beforehand, the result is not a clean pass.
+One re-ship came from lifting the hold, and wave 13's one remaining gate
+was about 30 min slower. Both have specific causes that a rule can
+absorb:
+
+- The conflict followed an order inversion: a lane sat red for a reason
+  outside its own diff, and the next lane overtook it.
+- The slower gate was lock contention from the later wave's pre-ship
+  runs, which nothing ranks below an earlier wave's push.
+
+Against the baseline, idle time before the first push fell from about
+7 h to 0.4–1.7 h, ships per PR from 3 to 2.2, and the whole wave merged
+within about 9 h of the lift. #1 goes into the coordinator skill with
+two amendments:
+
+- a lane that is red for a reason outside its diff gives up its place in
+  the push order;
+- while an earlier wave re-ships, later lanes pause their heavy pre-ship
+  runs, until #6's fair queue can rank them.
+
+Other findings from the experiment:
+
+- Main going red on its a11y figure cost a PR a CI run and about 3.4 h
+  (#4).
+- A GitHub re-run reuses the PR's original merge commit, so only a new
+  push picks up a fix on main (#10).
+- The ship output does not record seeded or cold (#16).
 
 ## 8 · Open questions for the owner
 
