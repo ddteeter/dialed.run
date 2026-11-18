@@ -111,6 +111,16 @@ async function renderTableWatching(
 
 const rowsOf = () => screen.getAllByRole("row").slice(1);
 /**
+ * The first row's conditions as the desk's column draws them. A card draws
+ * the same component inside the run's line instead (R59·320), so a query
+ * for the words alone finds both copies.
+ */
+function deskConditionsCell(): HTMLElement {
+  const cell = rowsOf()[0]?.querySelectorAll("td")[2];
+  if (cell === undefined) throw new Error("no conditions cell");
+  return cell;
+}
+/**
  * The selected row, where a key comes from: it is the one in the tab
  * order, and its key handler answers (plan 161 step 7 moved the handler
  * off the body).
@@ -160,15 +170,21 @@ describe("VerdictBacklog: what a row offers", () => {
     // One line per cell at the desk: dates and numbers never break.
     const cells = within(rowsOf()[0] ?? document.body).getAllByRole("cell");
     expect(cells).toHaveLength(5);
+    // The conditions' own column is the desk's; a card draws them in the
+    // run's line (R59·320).
+    expect(cells[2]).toHaveClass("hidden");
     for (const cell of cells) {
       expect(cell).toHaveClass(
-        "block",
         "desk:table-cell",
         "desk:px-2",
         "desk:py-1",
         "desk:align-middle",
         "desk:whitespace-nowrap",
       );
+    }
+    const [day, run, , outfit, verdict] = cells;
+    for (const cell of [day, run, outfit, verdict]) {
+      expect(cell).toHaveClass("block");
     }
     // The outfit takes what is left, and truncates in it.
     expect(cells[3]).toHaveClass("desk:w-full", "desk:max-w-0");
@@ -225,7 +241,9 @@ describe("VerdictBacklog: what a row offers", () => {
     // row is still judgeable — it just has nothing to be near.
     await renderTable([row({ conditions: undefined, suggestion: undefined })]);
 
-    expect(screen.getByText("No conditions")).toBeInTheDocument();
+    expect(
+      within(deskConditionsCell()).getByText("No conditions"),
+    ).toBeInTheDocument();
   });
 
   it("shows the kit once it is taken, in place of the offer", async () => {
@@ -676,7 +694,7 @@ describe("VerdictBacklog: what each state is drawn as", () => {
     // what caught it. 5°C is 41°F; 9 km/h is 6 mph.
     await renderTable([row()]);
 
-    const line = screen.getByText("41° · Clear · 6mph");
+    const line = within(deskConditionsCell()).getByText("41° · Clear · 6mph");
     expect(line).toHaveAttribute("aria-hidden", "true");
     expect(line.parentElement).toHaveClass("text-mono-sm", "text-dialed-text");
   });
@@ -698,13 +716,13 @@ describe("VerdictBacklog: what each state is drawn as", () => {
       }),
     ]);
 
-    const line = screen.getByText("Set · 47–56° · Dry");
+    const line = within(deskConditionsCell()).getByText("Set · 47–56° · Dry");
     expect(line).toHaveAttribute("aria-hidden", "true");
     expect(line.parentElement).toHaveClass("text-mono-sm", "text-label");
     expect(line.parentElement).not.toHaveClass("text-dialed-text");
-    expect(screen.getByText("Set, 47 to 56 degrees, dry")).toHaveClass(
-      "sr-only",
-    );
+    expect(
+      within(deskConditionsCell()).getByText("Set, 47 to 56 degrees, dry"),
+    ).toHaveClass("sr-only");
     expect(screen.queryByText(/manual|0mph|52°/i)).toBeNull();
   });
 
@@ -715,10 +733,9 @@ describe("VerdictBacklog: what each state is drawn as", () => {
       }),
     ]);
 
-    expect(screen.getByText("Set · 47–56°")).toHaveAttribute(
-      "aria-hidden",
-      "true",
-    );
+    expect(
+      within(deskConditionsCell()).getByText("Set · 47–56°"),
+    ).toHaveAttribute("aria-hidden", "true");
   });
 
   it("says how long and how far, in the viewer's own units", async () => {
@@ -767,34 +784,62 @@ describe("VerdictBacklog: what each state is drawn as", () => {
     );
   });
 
-  it("joins the run and its conditions in one teal line on a card, the conditions wrapping whole (R58·301)", async () => {
+  it("joins the run and its conditions in one teal line on a card, the dot dropping where the conditions wrap (R58·301, R59·320)", async () => {
     await renderTable([row()]);
 
     const [card] = rowsOf();
     if (card === undefined) throw new Error("no card");
-    const cells = [...card.querySelectorAll("td")];
-    const [dayCell, runCell, conditionsCell, ...rest] = cells;
-    // A wrapping row: every other cell a line of its own, these two only
-    // their words, so they share a line until it is full.
-    for (const cell of [dayCell, ...rest]) {
+    const [dayCell, runCell, conditionsCell, ...rest] = [
+      ...card.querySelectorAll("td"),
+    ];
+    // A wrapping row: every cell a line of its own. The run's holds the
+    // run and its conditions; the conditions' own cell is the desk's.
+    for (const cell of [dayCell, runCell, ...rest]) {
       expect(cell).toHaveClass("basis-full");
     }
-    for (const cell of [runCell, conditionsCell]) {
-      expect(cell).not.toHaveClass("basis-full");
-      expect(cell).toHaveClass("block", "desk:table-cell");
-    }
-    const run = runCell?.firstElementChild;
+    expect(conditionsCell).toHaveClass("hidden", "desk:table-cell");
+    const line = runCell?.firstElementChild;
+    expect(line).toHaveAttribute("data-part", "run-line");
+    // A line that wraps whole and clips what falls outside it, and only
+    // the run from the desk up.
+    expect(line).toHaveClass(
+      "flex",
+      "flex-wrap",
+      "gap-y-2",
+      "overflow-hidden",
+      "desk:block",
+      "desk:overflow-visible",
+    );
+    const [run, conditions] = [...(line?.children ?? [])];
     expect(run).toHaveClass(
       "text-mono-sm",
       "text-dialed-text",
       "desk:text-quiet",
     );
-    // The board's dot between them, drawn on a card only and never heard.
-    const dot = run?.lastElementChild;
-    expect(dot?.textContent).toBe(" ·");
-    expect(dot).toHaveAttribute("aria-hidden", "true");
-    expect(dot).toHaveClass("desk:hidden");
-    expect(conditionsCell?.firstElementChild).toHaveClass("text-dialed-text");
+    // The run ends in an unseen, unheard " · " that holds the dot's room.
+    const spacer = run?.lastElementChild;
+    expect(spacer?.textContent).toBe(" · ");
+    expect(spacer).toHaveAttribute("aria-hidden", "true");
+    expect(spacer).toHaveClass("invisible", "whitespace-pre", "desk:hidden");
+    // The conditions carry the seen dot just left of themselves, so a
+    // wrap puts it outside the line, where the line clips it.
+    expect(conditions).toHaveClass("relative", "min-w-0", "desk:hidden");
+    const dot = conditions?.firstElementChild;
+    expect(dot).toHaveClass(
+      "text-mono-sm",
+      "absolute",
+      "right-full",
+      "whitespace-pre",
+      "text-dialed-text",
+    );
+    expect(dot?.textContent).toBe(" · ");
+    expect(dot?.firstElementChild).toHaveAttribute("aria-hidden", "true");
+    // The same conditions as the desk's column.
+    expect(conditions?.lastElementChild).toHaveClass("text-dialed-text");
+    expect(conditions?.lastElementChild?.textContent).toBe(
+      conditionsCell?.textContent,
+    );
+    expect(conditionsCell?.textContent).toContain("41°");
   });
 
   it("spells out every key it claims, beside what it does", async () => {
@@ -923,7 +968,9 @@ describe("VerdictBacklog: no rail (Round 55 · 236)", () => {
   it("still takes a verdict on a run with no weather", async () => {
     await renderTable([row({ conditions: undefined, suggestion: undefined })]);
 
-    expect(screen.getByText("No conditions")).toHaveClass("text-quiet");
+    expect(within(deskConditionsCell()).getByText("No conditions")).toHaveClass(
+      "text-quiet",
+    );
     expect(screen.getByRole("button", { name: "Dialed" })).not.toHaveAttribute(
       "aria-disabled",
     );
