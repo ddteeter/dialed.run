@@ -57,6 +57,13 @@
       "when": 1794848387701,
       "tag": "0007_add_closed_addresses",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1795047930048,
+      "tag": "0008_add_import_claimed_by",
+      "breakpoints": true
     }
   ]
 }

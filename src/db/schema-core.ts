@@ -1451,6 +1451,12 @@ export const imports = /*#__PURE__*/ sqliteTable(
     // The Garmin activity this import fetched (plan 160). NULL for a file
     // the runner uploaded. The run it lands is `source = 'garmin'`.
     garminActivityId: text("garmin_activity_id"),
+    // The `claimId` of the queue message whose delivery last claimed this
+    // row (#841). A redelivery takes back a `processing` row only where
+    // this is its own, so it cannot take one another message is working.
+    // NULL until a message that carries one claims it; left as it is when
+    // the import concludes, since nothing reads it then.
+    claimedBy: text("claimed_by"),
   },
   (t) => [
     uniqueIndex("imports_idempotency").on(t.userId, t.idempotencyKey),
