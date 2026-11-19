@@ -54,17 +54,21 @@ module.exports = {
       comment:
         "Inside one module, a file in one folder reaches another folder only through " +
         "that folder's index.ts: a sub-module is a folder with its own index.ts, and " +
-        "that file is its door. Components are the exception as importers: they import " +
-        "files, never a door, because a door may reach env and a component is in the " +
-        "client bundle (the R-50 bug class). A file beside the module's own index.ts is " +
-        "not held by this rule, which is how functions.ts reaches the sub-modules it " +
-        "wires. Type-only imports are not seen, as with every rule here. Measured at 0 " +
-        "violations when added, and at 3 with the components exemption taken out " +
+        "that file is its door. Components are the exception as importers, in a " +
+        "module's components/ folder or a sub-module's: they import files, never a " +
+        "door, because a door may reach env and a component is in the client bundle " +
+        "(the R-50 bug class). A file beside the module's own index.ts is not held by " +
+        "this rule, which is how functions.ts reaches the sub-modules it wires. " +
+        "Type-only imports are not seen, as with every rule here. Measured at 0 " +
+        "violations when added, and at 3 with the components exemptions taken out " +
         "(safety/components/PhotoBlur.tsx into safety/blur/). Added with design 240 " +
         "(owner-approved, 2026-11-18).",
       from: {
         path: "^src/modules/([^/]+)/([^/]+)/",
-        pathNot: "^src/modules/[^/]+/components/",
+        pathNot: [
+          "^src/modules/[^/]+/components/",
+          "^src/modules/[^/]+/[^/]+/components/",
+        ],
       },
       to: {
         path: "^src/modules/$1/(?!$2/)[^/]+/",
