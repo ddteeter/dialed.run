@@ -90,25 +90,28 @@ export const XML_PARSER_OPTIONS = {
 } as const;
 
 /**
- * The most tags (`<`) a GPX or TCX may hold (SA-M29). A thirty-hour run
- * recorded every second, with elevation, time and a few extensions on
- * each point, is about 1.3 million; parsing two million empty elements
- * measured about a second and a half and 24 MB of tree.
+ * The most tags and attributes a GPX or TCX may hold (SA-M29, SA-L23): a
+ * tag (`<`) and an attribute (`=`) are each a node of the parsed tree. A
+ * thirty-hour run recorded every second, with elevation, time and a few
+ * extensions on each point, is about 1.3 million tags and two attributes
+ * a point more.
  */
-export const MAX_XML_TAGS = 2_000_000;
+export const MAX_XML_NODES = 2_000_000;
 
 const TAG_OPEN = 0x3c; // "<"
+const ATTRIBUTE_MARK = 0x3d; // "="
 
 /**
- * Whether the bytes hold more tags than the budget, counted before they
- * are decoded or parsed.
+ * Whether the bytes hold more tags and attributes than the budget,
+ * counted before they are decoded or parsed. Every `=` counts, so one in
+ * a text value counts too: the budget errs towards refusing.
  */
-function hasTooManyTags(bytes: Uint8Array): boolean {
-  let tags = 0;
+function hasTooManyNodes(bytes: Uint8Array): boolean {
+  let nodes = 0;
   for (const byte of bytes) {
-    if (byte === TAG_OPEN) tags += 1;
+    if (byte === TAG_OPEN || byte === ATTRIBUTE_MARK) nodes += 1;
   }
-  return tags > MAX_XML_TAGS;
+  return nodes > MAX_XML_NODES;
 }
 
 /**
@@ -117,8 +120,10 @@ function hasTooManyTags(bytes: Uint8Array): boolean {
  * user reads the same sentence either way.
  */
 export function parseXmlDocument(bytes: ArrayBuffer, kind: string): unknown {
-  if (hasTooManyTags(new Uint8Array(bytes))) {
-    throw new RunParseError(`${kind}: more than ${String(MAX_XML_TAGS)} tags`);
+  if (hasTooManyNodes(new Uint8Array(bytes))) {
+    throw new RunParseError(
+      `${kind}: more than ${String(MAX_XML_NODES)} tags and attributes`,
+    );
   }
   let text: string;
   try {

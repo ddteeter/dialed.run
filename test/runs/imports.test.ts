@@ -9,6 +9,7 @@ import {
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { coreDb } from "../../src/modules/runs/core-db";
+import { IMPORT_BYTE_CAPS } from "../../src/modules/runs/upload-limits";
 import {
   ImportUploadError,
   MAX_IMPORT_BYTES,
@@ -320,6 +321,29 @@ describe("startImport: the rules, in the words the user reads", () => {
         noReport,
       ),
     ).rejects.toThrow(/25 MB/);
+  });
+
+  it("holds a FIT file to the FIT cap, and stores nothing for one over it (SA-L23)", async () => {
+    const queue = fakeQueue();
+    const userId = newUlid();
+
+    await expect(
+      startImport(
+        coreDb(),
+        env.IMPORTS,
+        queue,
+        {
+          userId,
+          filename: "run.fit",
+          bytes: new ArrayBuffer(IMPORT_BYTE_CAPS.fit + 1),
+        },
+        noReport,
+      ),
+    ).rejects.toThrow("That FIT file is larger than 10 MB.");
+
+    expect(queue.sent).toStrictEqual([]);
+    const stored = await env.IMPORTS.list({ prefix: `imports/${userId}/` });
+    expect(stored.objects).toStrictEqual([]);
   });
 
   it("says an empty file is empty rather than that it is the wrong type", async () => {

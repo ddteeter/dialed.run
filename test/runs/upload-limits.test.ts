@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import {
+  IMPORT_BYTE_CAPS,
+  IMPORT_EXTENSIONS,
   MAX_IMPORT_BYTES,
   NO_TRACK_MESSAGE,
   PARSE_FAILURE_MESSAGE,
@@ -41,15 +43,54 @@ describe("checkUpload", () => {
     expect(checkUpload({ name: "run.fit", size: 1 }).ok).toBe(true);
   });
 
-  it("takes a file of exactly the cap, and refuses one byte over it", () => {
-    expect(checkUpload({ name: "run.tcx", size: MAX_IMPORT_BYTES }).ok).toBe(
-      true,
-    );
-    expect(
-      checkUpload({ name: "run.tcx", size: MAX_IMPORT_BYTES + 1 }),
-    ).toStrictEqual({ ok: false, problem: UPLOAD_REFUSALS.tooLarge });
-    expect(UPLOAD_REFUSALS.tooLarge).toBe("That file is larger than 25 MB.");
+  it.each(IMPORT_EXTENSIONS)(
+    "takes a .%s file of exactly its format's cap, and refuses one byte over it",
+    (extension) => {
+      const name = `run.${extension}`;
+      const cap = IMPORT_BYTE_CAPS[extension];
+      expect(checkUpload({ name, size: cap })).toStrictEqual({
+        ok: true,
+        extension,
+      });
+      expect(checkUpload({ name, size: cap + 1 })).toStrictEqual({
+        ok: false,
+        problem: UPLOAD_REFUSALS.tooLarge[extension],
+      });
+    },
+  );
+
+  it("caps each format on its own (SA-L23; the owner, 2026-11-18)", () => {
+    expect(IMPORT_BYTE_CAPS).toStrictEqual({
+      fit: 10 * 1024 * 1024,
+      gpx: 25 * 1024 * 1024,
+      tcx: 25 * 1024 * 1024,
+    });
   });
+
+  it("holds a request to the largest of them before its format is read", () => {
+    expect(MAX_IMPORT_BYTES).toBe(25 * 1024 * 1024);
+    expect(MAX_IMPORT_BYTES).toBe(Math.max(...Object.values(IMPORT_BYTE_CAPS)));
+  });
+
+  it("names the format and its cap, and tells a text file's runner to export a FIT", () => {
+    expect(UPLOAD_REFUSALS.tooLarge).toStrictEqual({
+      fit: "That FIT file is larger than 10 MB.",
+      gpx: "That GPX file is larger than 25 MB. Export the run as a FIT file instead.",
+      tcx: "That TCX file is larger than 25 MB. Export the run as a FIT file instead.",
+    });
+  });
+
+  it.each(IMPORT_EXTENSIONS)(
+    "says the .%s cap the table holds, in megabytes",
+    (extension) => {
+      // The sentences are literals (a template costs the entry chunk), so
+      // this is what keeps each number the table's.
+      const megabytes = IMPORT_BYTE_CAPS[extension] / (1024 * 1024);
+      expect(UPLOAD_REFUSALS.tooLarge[extension]).toContain(
+        `That ${extension.toUpperCase()} file is larger than ${String(megabytes)} MB.`,
+      );
+    },
+  );
 
   it("says a day's uploads are used up in the owner's words (SA-M29)", () => {
     expect(UPLOADS_PER_DAY).toBe(30);

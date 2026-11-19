@@ -45,36 +45,78 @@ export function rpeFrom(workoutRpe: unknown): number | undefined {
  */
 export const MAX_FIELD_DESCRIPTIONS = 256;
 
+/**
+ * The most description lookups a file's developer fields may cost
+ * (SA-L23). The decoder looks each developer field of each message up
+ * among the descriptions registered so far, so a file's cost is its
+ * messages times their developer fields times its descriptions, and no
+ * one of the three bounds the product. A watch's file with a few apps'
+ * fields on every record of a days-long run stays several times under.
+ */
+export const MAX_DEVELOPER_FIELD_LOOKUPS = 500_000_000;
+
 const FIELD_DESCRIPTION = 206;
 
 /**
- * The decoder's listeners that keep a file inside its budget. A throw in
+ * The decoder's listeners that keep a file inside its budgets. A throw in
  * either lands in `read()`'s `errors`, which the parse turns into a
  * refusal. A definition may not declare a developer field of size zero,
  * so every developer field a message carries costs it at least a byte.
+ *
+ * A message does not say which of its type's definitions it was written
+ * under, so it is counted at the most developer fields any definition of
+ * its type has declared: the count errs towards refusing.
  */
-export function fitReadLimits(): {
+export function fitReadLimits(lookupBudget = MAX_DEVELOPER_FIELD_LOOKUPS): {
   mesgListener: (mesgNum: number) => void;
   mesgDefinitionListener: (definition: MesgDefinition) => void;
 } {
   let descriptions = 0;
+  let lookups = 0;
+  const developerFieldsOf = new Map<number, number>();
   return {
     mesgListener: (mesgNum) => {
-      if (mesgNum !== FIELD_DESCRIPTION) return;
-      descriptions += 1;
-      if (descriptions > MAX_FIELD_DESCRIPTIONS) {
-        throw new Error("fit: too many field descriptions");
+      if (mesgNum === FIELD_DESCRIPTION) {
+        descriptions += 1;
+        if (descriptions > MAX_FIELD_DESCRIPTIONS) {
+          throw new Error("fit: too many field descriptions");
+        }
+      }
+      lookups += (developerFieldsOf.get(mesgNum) ?? 0) * descriptions;
+      if (lookups > lookupBudget) {
+        throw new Error("fit: too many developer field lookups");
       }
     },
     mesgDefinitionListener: (definition) => {
-      if (
-        definition.developerFieldDefinitions.some((field) => field.size === 0)
-      ) {
+      const fields = definition.developerFieldDefinitions;
+      if (fields.some((field) => field.size === 0)) {
         throw new Error("fit: a developer field of size zero");
       }
+      const type = definition.globalMessageNumber;
+      developerFieldsOf.set(
+        type,
+        Math.max(developerFieldsOf.get(type) ?? 0, fields.length),
+      );
     },
   };
 }
+
+/**
+ * What the decoder is asked to leave undone (SA-L23). The parser reads the
+ * session's own numbers and nothing else, so the conversions the decoder
+ * would make on every message of the file (sub-fields and components
+ * expanded, types named, timestamps made into `Date`s, heart rates merged
+ * into records) are work and memory nothing reads. `toDate` takes the raw
+ * timestamp this leaves. Exported so a test pins it: a parse of an
+ * ordinary file cannot show an option's effect.
+ */
+export const FIT_READ_OPTIONS = {
+  expandSubFields: false,
+  expandComponents: false,
+  convertTypesToStrings: false,
+  convertDateTimesToDates: false,
+  mergeHeartRates: false,
+} as const;
 
 export const fitSource: RunSource = {
   kind: "fit",
@@ -103,7 +145,10 @@ export const fitSource: RunSource = {
     // as an entry in `errors`, so that is the only branch to handle — a
     // try/catch here would be a guard against something structurally
     // impossible, and a mutant in it could never be killed.
-    const { messages, errors } = new Decoder(stream).read(fitReadLimits());
+    const { messages, errors } = new Decoder(stream).read({
+      ...FIT_READ_OPTIONS,
+      ...fitReadLimits(),
+    });
     if (errors.length > 0) {
       throw new RunParseError(
         `fit: decoder reported ${String(errors.length)} error(s)`,
