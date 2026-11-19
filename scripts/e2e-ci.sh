@@ -34,6 +34,8 @@ if [ "${E2E_CI_LOCK_HELD:-}" != 1 ]; then
     fi
   done
   export E2E_CI_LOCK_HELD=1
+  E2E_CI_QUEUED_AT=$(date +%s)
+  export E2E_CI_QUEUED_AT
   echo "e2e:ci: waiting for the gate lock ($lock)"
   if command -v lockf >/dev/null 2>&1; then
     exec lockf -k "$lock" sh "$0" "$@"
@@ -48,7 +50,8 @@ head=$(git rev-parse --short HEAD)
 work="${TMPDIR:-/tmp}/e2e-ci-$head-$$"
 keep="$root/.wrangler/e2e-ci-keep-$$"
 mkdir -p "$work/plan" "$work/logs" "$keep"
-echo "e2e:ci: lock held; checking $head (logs in $work/logs)"
+waited=$(($(date +%s) - ${E2E_CI_QUEUED_AT:-$(date +%s)}))
+echo "e2e:ci: lock held after $((waited / 60))m; checking $head (logs in $work/logs)"
 
 npx --no-install tsx scripts/e2e-ci-plan.ts "$work/plan"
 port=$(cat "$work/plan/port")
