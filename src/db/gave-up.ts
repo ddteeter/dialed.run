@@ -33,7 +33,7 @@ export {
  * orchestration of them) lives beside the schema it writes, where every
  * module that needs it can import it directly (`db` is foundation too,
  * and importable by any module — `modules/weather`, `modules/runs`,
- * `modules/enrichment`, `modules/ops/gave-up.ts` all already do). What
+ * `modules/enrichment`, `modules/ops/desk/gave-up.ts` all already do). What
  * stays genuinely table-agnostic (`GaveUpFact`, the DLQ wiring shapes,
  * `DEAD_LETTER_REASON`) stays in `lib/sql/gave-up.ts`, and this file
  * imports from there rather than the reverse.

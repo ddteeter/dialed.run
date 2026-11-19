@@ -5,7 +5,7 @@
  * deleted. Quarantined material keeps its own
  * clock (`retain_until`, `quarantine.ts`), which this never touches.
  *
- * Run by the daily firing (`ops/scheduled.ts`), beside the other sweeps.
+ * Run by the daily firing (`dispatch/scheduled.ts`), beside the other sweeps.
  */
 import {
   and,

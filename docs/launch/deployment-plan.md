@@ -77,7 +77,7 @@ Both are the owner's edits; the code that reads each is already written or
 is written by the named lane.
 
 **Every name here, and in a §2 table in `docs/launch/deployment-plan/`,
-is in `src/modules/ops/deployment-config.ts`** (design 237), with its kind
+is in `src/modules/ops/desk/deployment-config.ts`** (design 237), with its kind
 and its "required" level, and a test holds the two together: a row added
 here without an entry there fails, and so does the reverse. `/api/health` shows an operator every name as set or missing,
 never a value, and the daily digest names each missing one that is
@@ -503,7 +503,7 @@ Everything in stage 1, plus:
 - **Enforce the Content-Security-Policy** (decision of 2026-10-11, recorded
   in `docs/launch/before-public-plan.md`): once the friends stage's CSP
   reports are clean, a one-line PR renames `CSP_HEADER` in
-  `modules/ops/security-headers.ts` to `Content-Security-Policy` and the
+  `modules/ops/edge/security-headers.ts` to `Content-Security-Policy` and the
   matching line in `public/_headers`, folding in the four directives
   already enforced beside it. Until then the report-only policy reports to
   `/api/csp-report`, so the friends stage needs `SENTRY_DSN` set to see

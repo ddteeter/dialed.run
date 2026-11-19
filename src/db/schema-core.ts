@@ -203,7 +203,7 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     uniqueIndex("user_profiles_username_nocase").on(
       sql`${t.username} COLLATE NOCASE`,
     ),
-    // Desk Today's ban counts (`ops/desk.ts`) and D8's Closed filter read
+    // Desk Today's ban counts (`ops/desk/desk.ts`) and D8's Closed filter read
     // the banned accounts only (PR#112-1). Partial, so it holds the few
     // closed accounts rather than every runner.
     index("user_profiles_banned_at")
@@ -1156,7 +1156,7 @@ export const entryPhotos = /*#__PURE__*/ sqliteTable(
  * the Desk's Remove and quarantine, delete the photo rows in their own
  * batch, and a key held only there would be gone with them, leaving a
  * public object nothing names. Here the key survives, and the reconcile
- * (`ops/public-photos.ts`) deletes every copy whose photo is no longer a
+ * (`ops/public-web/public-photos.ts`) deletes every copy whose photo is no longer a
  * screened photo on a world-visible kit, the row last.
  *
  * Written before the object (claim, then work): a row whose

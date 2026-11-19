@@ -9,7 +9,7 @@
  * **No retries here, by law 3.** Every call is one attempt, and the retry
  * lives where the state does: an observation that fails leaves the run's
  * `weather_status` at `pending`, and the hourly `weather-retry` cron
- * (`ops/crons.ts`) re-drives it; a normals read that fails degrades to the
+ * (`ops/desk/crons.ts`) re-drives it; a normals read that fails degrades to the
  * latitude heuristic, because a starter list only orders rows and is not
  * worth a second ten-second wait on a signup.
  */

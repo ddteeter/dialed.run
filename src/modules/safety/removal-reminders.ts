@@ -1,6 +1,6 @@
 /**
  * The removals still undecided as their 48 hours run out (C6): what the
- * hourly reminder (`ops/removal-reminders.ts`) owes the operators an email
+ * hourly reminder (`ops/daily/removal-reminders.ts`) owes the operators an email
  * about, 8 hours before each is due.
  *
  * Two kinds of removal carry the TAKE IT DOWN Act's clock, and both are

@@ -3,7 +3,7 @@
  * PUBLIC kit's screened photos are served from, how long a copy may stay
  * at the edge, and the key a copy is stored under.
  *
- * Isomorphic and import-free, because the policy (`ops/security-headers`,
+ * Isomorphic and import-free, because the policy (`ops/edge/security-headers`,
  * which `public/_headers` copies) and the reconcile both read it.
  */
 

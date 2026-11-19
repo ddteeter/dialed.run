@@ -7,7 +7,7 @@
  * See that file's own note. `manualReadingsForRuns`/`observationsForRuns` are
  * added because lane 104's packet expects a conditions read API and this is the
  * only module allowed to touch `dialed-weather` (docs/architecture.md).
- * `retryPendingWeather` is exported solely so `modules/ops/scheduled.ts` —
+ * `retryPendingWeather` is exported solely so `modules/dispatch/scheduled.ts` —
  * a different module — can reach it through this barrel per
  * dependency-cruiser's index-only cross-module rule; it is an infra entry
  * point, not a domain one.

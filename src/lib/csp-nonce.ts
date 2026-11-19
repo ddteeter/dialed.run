@@ -42,7 +42,7 @@ export interface RequestContext {
   /**
    * SA-L08: an open-web page's per-request marker. The router stamps it
    * where it would stamp a nonce, so the hasher can tell the scripts the
-   * framework wrote from any other (`modules/ops/inline-script-hashes`),
+   * framework wrote from any other (`modules/ops/edge/inline-script-hashes`),
    * and the hasher strips it before the page leaves. Never in the policy.
    */
   marker?: string;
@@ -53,7 +53,7 @@ export interface RequestContext {
  * stored at the edge and served to every visitor, so a nonce in it would
  * be one nonce for all of them for as long as the edge keeps it: it gets
  * none, its inline scripts are admitted by their hashes instead
- * (`modules/ops/inline-script-hashes`): only those carrying this
+ * (`modules/ops/edge/inline-script-hashes`): only those carrying this
  * request's `marker`, which is then stripped, so nothing in the stored
  * page names a nonce. Every other page gets a fresh nonce.
  */

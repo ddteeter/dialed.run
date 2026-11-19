@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 /**
  * Cloudflare Turnstile's widget (OPS-5, audit §3.6), the client half of
  * the bot check on sign-up and request access. The server half is
- * `modules/ops/turnstile.ts`; placing this on the forms is task 126's.
+ * `modules/ops/edge/turnstile.ts`; placing this on the forms is task 126's.
  *
  * **Explicit rendering, `interaction-only`.** The script is loaded with
  * `render=explicit` so it never scans the page on its own, and the widget

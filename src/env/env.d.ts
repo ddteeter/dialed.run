@@ -10,7 +10,7 @@ declare namespace Cloudflare {
      * Account Analytics Read, and the account it reads, a var. Either
      * absent or empty: the rollup reports itself unconfigured in the daily
      * digest and nothing else changes (law 5). See
-     * `modules/ops/vitals-rollup.ts`. */
+     * `modules/ops/speed/vitals-rollup.ts`. */
     ANALYTICS_SQL_TOKEN?: string;
     CF_ACCOUNT_ID?: string;
     GOOGLE_CLIENT_ID?: string;
@@ -65,7 +65,7 @@ declare namespace Cloudflare {
      * `modules/safety/classifier/`. */
     OPENAI_API_KEY?: string;
     /** Turnstile's server secret (125, OPS-5). Absent: every verification
-     * refuses — the check fails closed, and `ops/turnstile.ts` reports the
+     * refuses — the check fails closed, and `ops/edge/turnstile.ts` reports the
      * misconfiguration to Sentry. Locally and in CI, Cloudflare's
      * always-pass test secret stands in. */
     TURNSTILE_SECRET_KEY?: string;
@@ -82,7 +82,7 @@ declare namespace Cloudflare {
      * `img-src` admits (`lib/public-photos.ts`). It is the switch: absent
      * or empty, no photo is copied to `PUBLIC_PHOTOS` and `/k` shows none,
      * while copies already there are still deleted. See
-     * `modules/ops/public-photos.ts`. */
+     * `modules/ops/public-web/public-photos.ts`. */
     PUBLIC_PHOTOS_ORIGIN?: string;
     /** Signs unsubscribe links (task 126; owner, 2026-09-27) — their own
      * secret, so rotating `BETTER_AUTH_SECRET` does not break every link in
