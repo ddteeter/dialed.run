@@ -15,7 +15,7 @@ Before any deploy sweep, this folder holds nothing but this README.
 ## What goes in a file
 
 - Name it `<design number>-<slug>.md`, after the lane's design doc
-  (`docs/designs/<number>-…`), e.g. `241-weather-retry.md`.
+  (`docs/designs/<number>-…`).
 - Head each addition with the plan heading it extends, word for word:
   `## 2. Vars and secrets`, `## 5. Third-party accounts`,
   `### Stage 1 — invited friends`, and so on. Under it, write the lines as

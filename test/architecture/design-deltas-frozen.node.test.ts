@@ -1,6 +1,6 @@
 /**
  * Design deltas are one file per entry (#875). `docs/design-deltas.md` is
- * the archive through wave 15, and every lane appending to it made each
+ * the archive through wave 14, and every lane appending to it made each
  * merge conflict the next PR. A section appended there fails here, with a
  * pointer to the folder it belongs in.
  *
@@ -18,7 +18,7 @@ import { describe, expect, it } from "vitest";
 const ARCHIVE = "docs/design-deltas.md";
 const FOLDER = "docs/design-deltas";
 const ARCHIVE_SHA256 =
-  "918722b7b9cefda1f65ac34ec6c21d763f84518a72ad75d6e844f7cc62f3ae91";
+  "f26a9b45a279822e9f3ac9428134c1894dd382adf1d303007a9e7dcfacd6c8f9";
 
 /**
  * `<design number>-<slug>.md` for a lane's section, `round-<N>.md` for a
