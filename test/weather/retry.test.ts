@@ -95,7 +95,7 @@ describe("retryPendingWeather (103, hourly cron)", () => {
     const runId = await insertPendingRun({ lat: 60.1, lng: 20.1 });
     mockVisualCrossing();
 
-    const result = await retryPendingWeather();
+    const result = await retryPendingWeather(nothing);
 
     expect(result.attached).toBeGreaterThanOrEqual(1);
     expect(await statusOf(runId)).toBe("attached");
@@ -110,7 +110,7 @@ describe("retryPendingWeather (103, hourly cron)", () => {
     });
     mockFetchJson({ unexpected: "shape" }); // provider keeps failing
 
-    const result = await retryPendingWeather();
+    const result = await retryPendingWeather(nothing);
 
     expect(result.failed).toBe(1);
     expect(await statusOf(runId)).toBe("failed");
@@ -125,7 +125,7 @@ describe("retryPendingWeather (103, hourly cron)", () => {
     });
     mockFetchJson({ unexpected: "shape" });
 
-    const result = await retryPendingWeather();
+    const result = await retryPendingWeather(nothing);
 
     expect(result.failed).toBe(0);
     expect(await statusOf(runId)).toBe("pending");
@@ -169,7 +169,7 @@ describe("retryPendingWeather counts what it actually did", () => {
     await clearPendingRuns();
     const fetchSpy = mockVisualCrossing();
 
-    expect(await retryPendingWeather()).toStrictEqual({
+    expect(await retryPendingWeather(nothing)).toStrictEqual({
       claimed: 0,
       attached: 0,
       failed: 0,
@@ -190,7 +190,7 @@ describe("retryPendingWeather counts what it actually did", () => {
 
     // Claimed one, attached none: the run is still pending and inside its
     // window, so nothing failed either.
-    expect(await retryPendingWeather()).toStrictEqual({
+    expect(await retryPendingWeather(nothing)).toStrictEqual({
       claimed: 1,
       attached: 0,
       failed: 0,
@@ -208,7 +208,7 @@ describe("retryPendingWeather counts what it actually did", () => {
     mockFetchJson({ unexpected: "shape" });
     const warn = silenceWarn();
 
-    await retryPendingWeather();
+    await retryPendingWeather(nothing);
 
     expect(warn).not.toHaveBeenCalledWith(
       expect.stringContaining("exhausted"),
@@ -226,7 +226,7 @@ describe("retryPendingWeather counts what it actually did", () => {
     mockFetchJson({ unexpected: "shape" });
     const warn = silenceWarn();
 
-    await retryPendingWeather();
+    await retryPendingWeather(nothing);
 
     // The only trace an operator gets that a run stopped retrying.
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("exhausted"), {
@@ -263,7 +263,7 @@ describe("retryPendingWeather counts what it actually did", () => {
       lng: 27.1,
       startedAt,
     });
-    const exhausted = await retryPendingWeather();
+    const exhausted = await retryPendingWeather(nothing);
     expect(exhausted.failed).toBe(1);
     expect(await statusOf(atTheLimit)).toBe("failed");
 
@@ -274,9 +274,65 @@ describe("retryPendingWeather counts what it actually did", () => {
       lng: 28.1,
       startedAt,
     });
-    const stillTrying = await retryPendingWeather();
+    const stillTrying = await retryPendingWeather(nothing);
     expect(stillTrying.failed).toBe(0);
     expect(await statusOf(justInside)).toBe("pending");
+  });
+});
+
+describe("one run whose attach throws (#892)", () => {
+  it("costs that run its turn: the runs after it are tried, and the give-up still runs", async () => {
+    silenceWarn();
+    await clearPendingRuns();
+    mockVisualCrossing();
+    // Oldest start first, so the one that throws is the second of three.
+    // A minute apart inside one hour, so all three windows opened together,
+    // five hours ago: the give-up has work to do.
+    const startedAt = startedForWindowAge(5);
+    const [first, second, third] = [
+      await insertPendingRun({ lat: 64.1, lng: 24.1, startedAt }),
+      await insertPendingRun({
+        lat: 65.1,
+        lng: 25.1,
+        startedAt: startedAt + 60,
+      }),
+      await insertPendingRun({
+        lat: 66.1,
+        lng: 26.1,
+        startedAt: startedAt + 120,
+      }),
+    ];
+    // Not a provider failure, which the attach absorbs: the write that
+    // would settle the second run fails in the database.
+    await env.DIALED_CORE.exec(
+      `CREATE TRIGGER weather_settle_lost BEFORE UPDATE ON runs WHEN NEW.id = '${second}' AND NEW.weather_status = 'attached' BEGIN SELECT RAISE(ABORT, 'weather_settle_lost'); END`,
+    );
+    const report =
+      vi.fn<(error: unknown, context: Record<string, string>) => void>();
+
+    let result;
+    try {
+      result = await retryPendingWeather(report);
+    } finally {
+      await env.DIALED_CORE.exec("DROP TRIGGER weather_settle_lost");
+    }
+
+    expect(await statusOf(first)).toBe("attached");
+    expect(await statusOf(third)).toBe("attached");
+    // Still `pending` after its failed attach, and past its window, so the
+    // pass's give-up fails it and lists it where an operator sees it.
+    expect(await statusOf(second)).toBe("failed");
+    expect(await gaveUpRow("weather", second)).toMatchObject({ tries: 5 });
+    expect(await gaveUpRow("weather", first)).toBeUndefined();
+    expect(await gaveUpRow("weather", third)).toBeUndefined();
+    expect(result).toStrictEqual({ claimed: 3, attached: 2, failed: 1 });
+    // Reported once, with the run and nothing of its contents (law 7).
+    expect(report).toHaveBeenCalledTimes(1);
+    expect(report.mock.calls[0]?.[0]).toBeInstanceOf(Error);
+    expect(report.mock.calls[0]?.[1]).toStrictEqual({
+      surface: "weather-retry",
+      runId: second,
+    });
   });
 });
 
@@ -290,7 +346,7 @@ describe("the Desk's Gave up (R-119)", () => {
     });
     mockFetchJson({ unexpected: "shape" });
 
-    await retryPendingWeather();
+    await retryPendingWeather(nothing);
 
     const row = await gaveUpRow("weather", runId);
     expect(row?.rawError).toBeNull();
@@ -310,7 +366,7 @@ describe("the Desk's Gave up (R-119)", () => {
     });
     mockFetchJson({ unexpected: "shape" });
 
-    await retryPendingWeather();
+    await retryPendingWeather(nothing);
 
     expect(await gaveUpRow("weather", runId)).toBeUndefined();
   });
@@ -331,7 +387,7 @@ describe("the Desk's Gave up (R-119)", () => {
     });
     mockVisualCrossing();
 
-    await retryPendingWeather();
+    await retryPendingWeather(nothing);
 
     expect(await statusOf(runId)).toBe("attached");
     expect(await gaveUpRow("weather", runId)).toBeUndefined();
@@ -352,7 +408,7 @@ describe("the Desk's Gave up (R-119)", () => {
     });
     mockFetchJson({ unexpected: "shape" });
 
-    await retryPendingWeather();
+    await retryPendingWeather(nothing);
 
     expect(await statusOf(runId)).toBe("pending");
     expect(await gaveUpRow("weather", runId)).toBeDefined();
@@ -374,7 +430,7 @@ describe("a give-up after the window (R-119): a Retry is one try, not five", () 
     });
     mockFetchJson({ unexpected: "shape" });
 
-    await retryPendingWeather();
+    await retryPendingWeather(nothing);
 
     expect(await gaveUpRow("weather", runId)).toMatchObject({
       reason: LATE_REASON,
@@ -398,7 +454,7 @@ describe("a give-up after the window (R-119): a Retry is one try, not five", () 
     });
     mockFetchJson({ unexpected: "shape" });
 
-    await retryPendingWeather();
+    await retryPendingWeather(nothing);
 
     expect(await gaveUpRow("weather", runId)).toMatchObject({
       reason: LATE_REASON,
@@ -419,7 +475,7 @@ describe("a give-up after the window (R-119): a Retry is one try, not five", () 
       lng: 31.1,
       startedAt,
     });
-    await retryPendingWeather();
+    await retryPendingWeather(nothing);
     const inside = await gaveUpRow("weather", justInside);
     expect(inside?.tries).toBe(5);
 
@@ -430,7 +486,7 @@ describe("a give-up after the window (R-119): a Retry is one try, not five", () 
       lng: 32.1,
       startedAt,
     });
-    await retryPendingWeather();
+    await retryPendingWeather(nothing);
     const atLine = await gaveUpRow("weather", atTheLine);
     expect(atLine?.tries).toBe(1);
   });
@@ -447,7 +503,7 @@ describe("the cap fails only what is still pending", () => {
     mockVisualCrossing();
     const warn = silenceWarn();
 
-    const result = await retryPendingWeather();
+    const result = await retryPendingWeather(nothing);
 
     expect(result.failed).toBe(0);
     expect(await statusOf(runId)).toBe("attached");
@@ -484,7 +540,7 @@ describe("the cap fails only what is still pending", () => {
     });
     silenceWarn();
 
-    const result = await retryPendingWeather();
+    const result = await retryPendingWeather(nothing);
 
     expect(result.failed).toBe(1);
     expect(await statusOf(banded)).toBe("manual");
@@ -501,7 +557,7 @@ describe("the cap fails only what is still pending", () => {
     });
     mockFetchJson({ unexpected: "shape" });
 
-    await retryPendingWeather();
+    await retryPendingWeather(nothing);
 
     expect(await statusOf(failing)).toBe("failed");
     expect(await gaveUpRow("weather", failing)).toBeDefined();
@@ -530,7 +586,7 @@ describe("the cron waits for a run's hours to settle (D-156)", () => {
       durationS: 2 * HOUR,
     });
 
-    expect(await retryPendingWeather()).toStrictEqual({
+    expect(await retryPendingWeather(nothing)).toStrictEqual({
       claimed: 1,
       attached: 0,
       failed: 0,
@@ -632,7 +688,7 @@ describe("the cron waits for a run's hours to settle (D-156)", () => {
 async function passCount(
   count: "claimed" | "attached" | "failed",
 ): Promise<number> {
-  const result = await retryPendingWeather();
+  const result = await retryPendingWeather(nothing);
   return result[count];
 }
 

@@ -610,7 +610,7 @@ describe("a run whose conditions are already settled is left alone", () => {
     await upsertManualBand(runId, -14);
     mockVisualCrossing();
 
-    const result = await retryPendingWeather();
+    const result = await retryPendingWeather(nothing);
 
     expect(await statusOf(runId)).toBe("manual");
     expect(result.attached).toBeGreaterThanOrEqual(1);
@@ -890,7 +890,7 @@ describe("the runner's weather budget (SA-M13)", () => {
       weatherStatus: "pending",
     });
 
-    await retryPendingWeather();
+    await retryPendingWeather(nothing);
 
     const asked = fetchSpy.mock.calls.filter(([input]) =>
       requestUrl(input).href.includes("51.33"),

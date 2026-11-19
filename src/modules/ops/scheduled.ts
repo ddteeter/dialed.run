@@ -242,7 +242,7 @@ async function runCron(
       return runHourly(cronName, reporter, (anomalies) => [
         // docs/tasks/103-weather.md requirement 4/5: the hourly
         // pending-observation retry, claim-then-work at the module level.
-        () => retryPendingWeather(),
+        () => retryPendingWeather(captureException),
         () => upkeep.sweepExports?.(anomalies),
         // C6's 40-hour reminder: hourly, so it lands before the deadline
         // the daily digest could miss (`removal-reminders.ts`).

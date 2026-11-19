@@ -343,6 +343,41 @@ interface RetryCronResult {
 }
 
 /**
+ * Sentry's `captureException`, handed in by the cron's entry: `ops`
+ * imports this module, so this module cannot import `ops`.
+ */
+type Report = (error: unknown, context: Record<string, string>) => void;
+
+/**
+ * One attach for each candidate, and how many settled.
+ *
+ * **The `try` is inside the loop on purpose and must stay there** (#892).
+ * A provider failure never reaches it: the attach absorbs that and leaves
+ * the run `pending`. What does is anything else, a write that fails for
+ * one run. Reported with the run's id and skipped, it costs that run its
+ * turn; thrown, it ended the pass for every run that started later and
+ * skipped the give-up, and did so again each hour, because the order is
+ * the same each hour.
+ */
+async function attachEach(
+  runIds: readonly string[],
+  report: Report,
+): Promise<number> {
+  let attached = 0;
+  for (const runId of runIds) {
+    try {
+      const outcome = await resolveAndAttach(runId as Ulid);
+      if (outcome === "attached" || outcome === "manual") {
+        attached += 1;
+      }
+    } catch (error) {
+      report(error, { surface: "weather-retry", runId });
+    }
+  }
+  return attached;
+}
+
+/**
  * The hourly retry cron body (docs/tasks/103-weather.md requirement 4/5).
  * `weather_status` has no `processing` state, so there is no literal
  * claim-then-work UPDATE here; overlap safety instead comes from
@@ -357,7 +392,9 @@ interface RetryCronResult {
  * reviewer may veto for a `runs.weather_attempts` column). See
  * `windowOpensAt` for when the five hours start.
  */
-export async function retryPendingWeather(): Promise<RetryCronResult> {
+export async function retryPendingWeather(
+  report: Report,
+): Promise<RetryCronResult> {
   const db = coreDb();
   // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; retryPendingWeather reads the runs still waiting for weather with when their import arrived
   const candidates = await db
@@ -376,17 +413,9 @@ export async function retryPendingWeather(): Promise<RetryCronResult> {
 
   // The copy's repair (law 8c): a run owed weather again keeps no half
   // until it settles, and settling it below writes a fresh one.
-  await clearWeatherHalves(
-    db,
-    candidates.map((candidate) => candidate.id),
-  );
-  let attached = 0;
-  for (const candidate of candidates) {
-    const outcome = await resolveAndAttach(candidate.id as Ulid);
-    if (outcome === "attached" || outcome === "manual") {
-      attached += 1;
-    }
-  }
+  const runIds = candidates.map((candidate) => candidate.id);
+  await clearWeatherHalves(db, runIds);
+  const attached = await attachEach(runIds, report);
 
   const now = nowSeconds();
   const toFail = candidates
