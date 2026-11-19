@@ -188,6 +188,10 @@ Do this when the owner asks, after they have seen the index.
 - A fix lands as an ordinary PR whose text describes the change, not the
   gap, with its test. Then its id is ticked, and a one-line description
   may be added.
+- Under D-204 the fix's design doc lives in the private home, its PR
+  body names no audit id beside an area, and once dialed.run is deployed
+  each security merge deploys straight away (`.claude/rules/publishing.md`,
+  §Security fixes).
 
 ### 9 · Report, and clean up
 

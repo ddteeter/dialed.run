@@ -206,13 +206,14 @@ request-access form is solved there and posted to the app (#367,
 
 ## 6. Spend caps
 
-| vendor          | action                                                                                                                                                                                          | cites      |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| OpenAI          | Monthly budget limit on the project. Moderation is free; extraction is not.                                                                                                                     | §3.7       |
-| Visual Crossing | Choose the plan. Free is 1,000 records a day. **Do not move to Metered until 125's OPS-6 has landed**; there is no documented daily spend cap, so the digest's backlog count is the only brake. | 0.6, §1.8  |
-| Firecrawl       | The plan's credit cap is the limit; pick the plan.                                                                                                                                              | §3.7       |
-| Cloudflare      | A **Workers spending limit of $25 overage a month** (below), plus usage notifications for what it doesn't cover (§1 above). Email Sending: 3,000 included a month, then $0.35 per 1,000.        | §3.7, §2.3 |
-| Anthropic       | Monthly spend limit on the workspace whose key reviews dependency majors (`docs/dependencies.md` §Setup). About $1–3 a review.                                                                  | design 156 |
+| vendor          | action                                                                                                                                                                                                                              | cites      |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| OpenAI          | Monthly budget limit on the project, set to block, not only alert. Moderation is free; extraction is not.                                                                                                                           | §3.7       |
+| Visual Crossing | Choose the plan. Free is 1,000 records a day. **Do not move to Metered until 125's OPS-6 has landed**; a metered plan cannot be capped and there is no documented daily spend cap, so the digest's backlog count is the only brake. | 0.6, §1.8  |
+| Firecrawl       | The plan's credit cap is the limit; pick the plan, and set the pay-as-you-go limit if the plan has one.                                                                                                                             | §3.7       |
+| Cloudflare      | A **Workers spending limit of $25 overage a month** (below), plus usage notifications for what it doesn't cover (§1 above). Email Sending: 3,000 included a month, then $0.35 per 1,000.                                            | §3.7, §2.3 |
+| OpenRouter      | A credit limit on the key enrichment uses.                                                                                                                                                                                          | design 239 |
+| Anthropic       | Monthly spend limit on the workspace whose key reviews dependency majors (`docs/dependencies.md` §Setup). About $1–3 a review.                                                                                                      | design 156 |
 
 ### Cloudflare Workers spending limit
 
@@ -390,6 +391,9 @@ Each gate is a checklist the owner runs. Everything in the development
 plan is merged before stage 0 (decision D-37); the markers there say which
 items each gate depends on if that ever slips.
 
+From the first deploy on, every merged security fix is deployed at once
+(D-204; `docs/deployment.md` §9, "Security fixes").
+
 ### Stage 0 — the owner alone
 
 - `app.dialed.run` serves the app; `/api/health` is all `ok`.
@@ -420,6 +424,40 @@ items each gate depends on if that ever slips.
   `npx wrangler d1 execute dialed-core --remote --command "INSERT INTO invite_codes (id, code, label, max_uses, created_at) VALUES ('owner-seed', 'DIAL-XXXX', 'owner', 1, unixepoch())"`.
   Sign up with it, then put the new account's id in `ADMIN_USER_IDS`;
   every later code comes from Desk D7.
+
+#### Platform checks at the first deploy
+
+Each reads one thing the local runtime cannot show, and is noted where the
+owner keeps the deploy record. Lane 15a listed them (2026-11-18).
+
+- **Secrets before the first upload.** Cloudflare runs the Worker's start-up
+  code on upload and rejects a failure with code 10021; the auth instance is
+  built at start-up and needs `BETTER_AUTH_SECRET`. Set §2's secrets first,
+  and on a 10021 read which value start-up found missing.
+- **Email sending quota.** Read the account's daily sending quota in the
+  Email Service dashboard; Cloudflare publishes no number.
+- **One cron firing.** In Workers Logs, the `:30` firing's subrequest count
+  and how many Sentry events it sent.
+- **Strava rate limits.** Whether token exchanges count toward the app's
+  rate limit, and whether a disconnected athlete still counts toward its
+  capacity.
+- **Desk Review's slowest query** at production size, against D1's
+  30-second limit.
+- **One email sign-in's CPU time** (one password hash), from its invocation
+  log.
+- **D1's stored-value limit.** Production refuses a value over 2 MB with the
+  same error local D1 gives (local's own limit is 2.2 MB).
+- **Weather with no data.** What the provider answers for a place or date it
+  has no data for.
+- **Sentry volume.** The plan's event volume and retention against a normal
+  day's events.
+- **The first Dependabot security PR.** Its body carries the phrase the
+  classify step reads, and the metadata step outputs the dependency group.
+- **One run of each review job.** The egress probe's result after
+  `harden-runner` starts.
+
+The owner's private deploy checklist holds the rest of the run-at-deploy
+checks; run it beside this list.
 
 ### Stage 1 — invited friends
 

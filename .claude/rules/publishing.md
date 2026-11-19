@@ -42,6 +42,16 @@ These aren't banned, just not approved yet. Examples:
 - unannounced dates;
 - moderation thresholds and signals not already in code.
 
+## Security fixes (D-204)
+
+A fix for a security finding, until the code is deployed:
+
+- Its design doc goes in the private home, not `docs/designs/`.
+- Its PR body, commits and comments describe the change and its test, never the gap, and name no audit id beside an area or a file.
+- It is deployed as soon as it merges (`docs/deployment.md` §9, "Security fixes"), so the window between a public diff and a fixed production is minutes.
+
+A private branch and deploy path is added only if the third audit round finds a high.
+
 ## How to ask
 
 Ask in the turn. Say what the content is, why it doesn't fit the list, and what you recommend. The owner answers one of three ways:
