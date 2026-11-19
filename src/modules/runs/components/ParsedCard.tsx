@@ -131,16 +131,22 @@ function FileStrip({
 
 /**
  * The start time on the stats line, as the button that changes it: the
- * time, then a drawn "Change" in the same 44 target (R59·321), TYPE.small
- * 600 and underlined as the app's other text buttons are. Its name is its
- * visible words, "6:04 AM Change" (WCAG 2.5.3, D-187), with nothing
- * hidden added. After a move it reads "7:34 AM · Changed Change" (a
- * guess, #832: the board draws only the resting state).
+ * time, then one drawn word in the same 44 target (R59·321), TYPE.small
+ * 600 and underlined as the app's other text buttons are. At rest the
+ * word is "Change"; after a move "Changed" takes its slot (R61·332), with
+ * no " ·" and no second word. Its name is its visible words, "6:04 AM
+ * Change" or "6:07 AM Changed" (WCAG 2.5.3, D-187), with nothing hidden
+ * added, and either opens the same picker.
  */
 function TimeButton({
-  shown,
+  clock,
+  isMoved,
   onPress,
-}: Readonly<{ shown: string; onPress: () => void }>): JSX.Element {
+}: Readonly<{
+  clock: string;
+  isMoved: boolean;
+  onPress: () => void;
+}>): JSX.Element {
   return (
     <button
       type="button"
@@ -149,9 +155,9 @@ function TimeButton({
       // row stays one mono line tall and the card is not bottom-heavy (D1-08).
       className="target -my-3.5 inline-flex items-center gap-2 border-none bg-transparent p-0 text-ink"
     >
-      <Mono step="sm">{shown}</Mono>
+      <Mono step="sm">{clock}</Mono>
       <span className="font-sans text-small font-semibold normal-case underline underline-offset-4">
-        Change
+        {isMoved ? "Changed" : "Change"}
       </span>
     </button>
   );
@@ -468,9 +474,8 @@ export function ParsedCard({
                 : [
                     <TimeButton
                       key="time"
-                      shown={
-                        movedTo === undefined ? clock : `${clock} · Changed`
-                      }
+                      clock={clock}
+                      isMoved={movedTo !== undefined}
                       onPress={() => {
                         setIsRetiming(true);
                       }}

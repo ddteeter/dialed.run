@@ -108,7 +108,7 @@ describe("R: a row (Round 55 · 235)", () => {
 
     const row = onlyRow();
     expect(row).toHaveClass("grid", "min-h-16", "items-center", "border-b");
-    expect(row).not.toHaveClass("pt-3", "pb-4", "items-start");
+    expect(row).not.toHaveClass("py-3", "items-start");
     expect(row).not.toHaveAttribute("data-badged");
     expect(row.querySelector("[data-part='run-badge']")).toBeNull();
     expect(row.lastElementChild).toHaveAttribute("data-part", "run-marks");
@@ -128,27 +128,27 @@ describe("R: a row (Round 55 · 235)", () => {
       }),
     ],
   ])(
-    "gives %s's badge a line of its own, in a row that breathes (R60·326)",
+    "gives %s's badge a line of its own, in a row that breathes (R60·326, R61·336)",
     async (_, run) => {
       await renderWithRouter(list([run]));
 
       const row = onlyRow();
-      // 12 above, 16 below, the marks at the top right: 104 with a badge.
+      // 12 above and below, the marks at the top right: 102 with a badge.
       expect(row).toHaveAttribute("data-badged", "true");
       expect(row).toHaveClass(
         "grid",
         "min-h-16",
         "items-start",
         "border-b",
-        "pt-3",
-        "pb-4",
+        "py-3",
       );
+      expect(row).not.toHaveClass("pb-4");
       expect(row).not.toHaveClass("items-center");
       expect(row.lastElementChild).toHaveAttribute("data-part", "run-marks");
       // Under the mono line, at the row's start, with nothing beside it:
-      // the column's 4 and the line's 10 make the ruled 14.
+      // the column's 4 and the line's 12 make the ruled 16, on the 4 step.
       const line = row.querySelector("[data-part='run-badge']");
-      expect(line).toHaveClass("mt-2.5", "flex");
+      expect(line).toHaveClass("mt-3", "flex");
       expect(line?.parentElement).toHaveClass("flex-col", "gap-1");
       expect(line?.previousElementSibling).toHaveTextContent("6.2 mi");
       expect(line?.children).toHaveLength(1);

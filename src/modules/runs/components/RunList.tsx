@@ -183,21 +183,23 @@ function ListEnd({
  * verdict and kit marks at the right, so the runs that still need
  * something stand out. A badge only for an exception.
  *
- * A badged row breathes (R60·326): the badge takes a line of its own
- * under the mono line, at the row's start with nothing beside it, and the
- * row pads 12 above and 16 below, so 12 + 20 + 4 + 16 + 14 + 22 + 16 =
- * 104. The marks keep their place at the top right. A row with no badge
- * stays 64, its lines centred in it.
+ * A badged row breathes (R60·326, its numbers from R61·336): the badge
+ * takes a line of its own under the mono line, at the row's start with
+ * nothing beside it, and the row pads 12 above and below as the unbadged
+ * row's lines sit, so 12 + 20 + 4 + 16 + 16 + 22 + 12 = 102. The marks
+ * keep their place at the top right. A row with no badge stays 64, its
+ * lines centred in it.
  */
 const ROW =
   "grid min-h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-hairline";
 const BADGED_ROW =
-  "grid min-h-16 grid-cols-[minmax(0,1fr)_auto] items-start gap-3 border-b border-hairline pt-3 pb-4";
+  "grid min-h-16 grid-cols-[minmax(0,1fr)_auto] items-start gap-3 border-b border-hairline py-3";
 
 /**
- * The badge's line: 14 under the mono line, the column's 4 and this 10.
+ * The badge's line: 16 under the mono line, the column's 4 and this 12
+ * (R61·336: 14 was a slip, not an exception to the 4 step).
  */
-const BADGE_LINE = "mt-2.5 flex";
+const BADGE_LINE = "mt-3 flex";
 
 function RunRow({
   run,
