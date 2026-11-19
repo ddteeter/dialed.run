@@ -24,7 +24,7 @@ Before any deploy sweep, this folder holds nothing but this README.
   (`| name | kind | required | read by / written by | without it |`) and
   the new rows. `test/ops/deployment-config.node.test.ts` reads it with
   the plan's own table, so the row and its entry in
-  `src/modules/ops/deployment-config.ts` still land in the same PR.
+  `src/modules/ops/desk/deployment-config.ts` still land in the same PR.
 
 An owner step that waits on the owner is also a `kind:owner-question`
 issue in Needs owner (`docs/agents/issue-tracker.md`).

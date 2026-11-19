@@ -2,7 +2,7 @@
  * An email's colours, as literal hex because an email client reads no CSS
  * custom property.
  *
- * **A copy, pinned**, as the share card's is (`ops/og/palette.ts`): each
+ * **A copy, pinned**, as the share card's is (`ops/public-web/og/palette.ts`): each
  * value is a light-column role from `src/ui/tokens.css`, and
  * `test/email/palette.dom.test.tsx` reads that file and fails if any value
  * here drifts from it. Emails are drawn on paper (round 26, "THE EMAILS").

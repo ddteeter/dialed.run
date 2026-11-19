@@ -493,7 +493,7 @@ Everything in stage 1, plus:
 - **Turn on the marketing site's `SITE_INDEXABLE`** (D-99, amending D-53):
   the marketing host, `dialed.run`, becomes indexable; the app,
   `app.dialed.run`, is never indexed, so its own `noindex` default
-  (`modules/ops/og/site-head.ts`) stays as it is.
+  (`modules/ops/public-web/og/site-head.ts`) stays as it is.
 - **Decide whether to flip the invite flag** (126 · ACC-5): leaving it on
   keeps public sign-up invite-only; flipping it removes the code field and
   the request link.

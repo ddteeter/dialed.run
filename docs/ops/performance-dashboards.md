@@ -13,7 +13,7 @@ server anywhere.
 
 Grafana Cloud's free tier is enough. The dashboard is generated, not drawn:
 `docs/ops/grafana-vitals.json`, from the panels in
-`src/modules/ops/vitals-queries.ts` (`npm run generate:grafana`).
+`src/modules/ops/speed/vitals-queries.ts` (`npm run generate:grafana`).
 `test/ops/dashboards.test.ts` fails if the two disagree.
 
 1. Make a second API token for Grafana: Account › Account Analytics ›
