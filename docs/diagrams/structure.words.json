@@ -1,6 +1,6 @@
 {
   "cf.coreDb": "Users, closet, runs, products, feed",
-  "cf.weatherDb": "The shared observation cache",
+  "cf.weatherDb": "The shared observation cache, and the bands runners set by hand",
   "cf.opsDb": "Data about the app, never about anyone: the daily speed rollup",
   "cf.vitalsDataset": "The speed beacon's readings",
   "cf.mediaBucket": "Garment and kit photos, and product page snapshots",

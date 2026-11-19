@@ -78,8 +78,12 @@ on today's code first.
 
 ## Issues
 
-- Closes: #841, #842, #843, #844, #845, #870; #859 in its own PR (#880).
-- Opens: #870, found here and fixed here (coordinator-15, 2026-11-18).
+- Closes: #841, #842, #843, #844, #845, #846 (`weatherStory`, taken on
+  with the coordinator's yes), #870; #859 in its own PR (#880).
+- Opens: #870, found here and fixed here (coordinator-15, 2026-11-18);
+  #891, a watch item on two overlapping deliveries of one message; #892,
+  the weather retry's missing per-run try, which #846's D28 left as a
+  code question.
 
 ## Open questions
 

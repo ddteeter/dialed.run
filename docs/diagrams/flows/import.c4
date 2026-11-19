@@ -226,33 +226,59 @@ views {
 
     // source: src/modules/weather/attach.ts attachObservation
     cf.app.runs.consumer -> cf.app.weather 'attachObservation(runId)'
-    // source: src/modules/weather/attach.ts resolveAndAttach, settlesAt, SETTLE_MARGIN_SECONDS; src/modules/weather/budget.ts runnerWeatherBudget, WEATHER_CALLS_PER_DAY
+    // source: src/modules/weather/attach.ts resolveAndAttach, isResolved; src/modules/weather/store.ts findManualBand
+    cf.app.weather -> cf.coreDb 'reads the run, and stops if nothing is owed' {
+      notes '''
+        **Guard: only a run still owed its weather.** The attach stops when the run is gone, is already settled, is indoor or has no place. Every re-drive relies on this, so asking twice is harmless.
+
+        A run whose runner already set a band settles as `manual` here, and nothing is fetched over it.
+      '''
+    }
+    // source: src/modules/weather/attach.ts resolveAndAttach, sampleRunHours, settlesAt, SETTLE_MARGIN_SECONDS; src/modules/weather/budget.ts runnerWeatherBudget, WEATHER_CALLS_PER_DAY; src/modules/weather/store.ts MAX_SAMPLED_HOURS; src/modules/weather/provider/visual-crossing.ts TIMEOUT_MS
     cf.app.weather -> provider 'asks for the finished hours' {
       notes '''
         **Timing boundary: an hour is asked for once, two hours after it ends.** The cache is shared and never refreshed, so only settled hours are fetched.
 
         **Each uncached hour spends one of the runner\'s 60 calls a day.** Past them the hour is not asked for, as if the provider were down, and the run stays pending.
+
+        **Bounded.** At most six hours of a run are sampled, and each call times out after 10 seconds.
+
+        **If a call fails:** the hours already cached stay, and the run stays `pending`.
       '''
     }
-    parallel {
-      // source: src/modules/weather/attach.ts sampleRunHours, upsertRealObservation
-      cf.app.weather -> cf.weatherDb 'caches the observation'
-      // source: src/modules/weather/attach.ts setStatus; src/modules/weather/run-conditions-copy.ts weatherHalfStatements
-      cf.app.weather -> cf.coreDb 'writes weather_status and run_conditions'
+    // source: src/modules/weather/attach.ts sampleRunHours; src/modules/weather/store.ts upsertRealObservation
+    cf.app.weather -> cf.weatherDb 'caches the observation'
+    // source: src/modules/weather/attach.ts resolveAndAttach, setStatus; src/modules/weather/run-conditions-copy.ts weatherHalfStatements
+    cf.app.weather -> cf.coreDb 'writes weather_status and run_conditions' {
+      notes '''
+        **Not atomic with the previous step.** They are two databases, written in order: this write comes after the cache write and is derived from it. `pending` is the marker between them, so a run whose status was lost is asked for again and finds its hours cached.
+
+        A write that settles the run is one batch: the status, the run\'s copy of its conditions, and the removal of its Gave up row. A `pending` write is the status alone.
+      '''
     }
     opt 'some hours had not settled, the provider failed, or the runner\'s day of calls was spent' {
-      // source: src/modules/ops/scheduled.ts retryPendingWeather (the weather-retry job); src/modules/weather/attach.ts retryPendingWeather, FAIL_AFTER_SECONDS (the give-up)
+      // source: src/modules/ops/scheduled.ts retryPendingWeather, runHourly (the weather-retry job); src/modules/weather/attach.ts retryPendingWeather, RETRY_BATCH_SIZE; src/modules/weather/run-conditions-copy.ts clearWeatherHalves
       cf.app.cronHourly00 -[recovery]-> cf.app.weather 'retries the runs still pending' {
         notes '''
           **The marker is `runs.weather_status = pending`.** The hourly cron re-drives it.
 
-          **It gives up** five hours after the run\'s last hour settles, and says so on the run.
+          **Bounded.** Each pass takes up to 50 pending runs, oldest start first, and clears each one\'s copy of its conditions before it asks again.
+
+          **If one run\'s attach throws:** nothing catches it for that run alone. The pass ends for the runs after it, and its give-up is skipped. The rest of the hourly upkeep still runs.
         '''
       }
       // source: src/modules/weather/attach.ts retryPendingWeather, resolveAndAttach
       cf.app.weather -> provider 'asks for the hours settled since'
       // source: src/modules/weather/attach.ts resolveAndAttach, setStatus
       cf.app.weather -> cf.coreDb 'the run is settled'
+      // source: src/modules/weather/attach.ts retryPendingWeather, windowOpensAt, FAIL_AFTER_SECONDS; src/db/gave-up.ts gaveUpUpsert
+      cf.app.weather -[recovery]-> cf.coreDb 'gives up on a run after five hours of tries' {
+        notes '''
+          The five hours count from the later of two moments: when the run entered (its import\'s creation, or else its start), and when its last sampled hour settles. The give-up comes on the first hourly pass after them.
+
+          One batch, and only for a run still `pending`: the run is marked `failed` and listed on the Desk\'s Gave up.
+        '''
+      }
     }
   }
 }

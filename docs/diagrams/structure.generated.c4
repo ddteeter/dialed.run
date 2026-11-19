@@ -8,7 +8,7 @@ model {
       description 'Users, closet, runs, products, feed'
     }
     weatherDb = database 'D1: dialed-weather' {
-      description 'The shared observation cache'
+      description 'The shared observation cache, and the bands runners set by hand'
     }
     opsDb = database 'D1: dialed-ops' {
       description 'Data about the app, never about anyone: the daily speed rollup'
