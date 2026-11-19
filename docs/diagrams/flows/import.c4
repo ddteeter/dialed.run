@@ -7,20 +7,25 @@ views {
         description 'The imports row is the durable marker'
       }
 
-    // source: src/modules/runs/imports.ts startImport (the idempotencyKey lookup)
-    runner -> cf.app.runs.upload 'uploads a .FIT file, with an idempotency key' {
+    // source: src/modules/runs/functions.ts startFileImport; src/modules/runs/imports.ts startFileUpload, repeatOf; src/modules/runs/components/UploadForm.tsx freshAttempt
+    runner -> cf.app.runs.upload 'uploads a run file, with an idempotency key' {
       notes '''
-        **Guard: the idempotency key.** The form mints a key when it mounts and resends it on every retry.
+        **Guard: the idempotency key.** The form mints a key for each file the runner picks, and resends it on every retry of that file.
 
-        A repeat (double click, replayed POST, flaky connection) finds the first import by that key and returns it. Nothing is uploaded or parsed twice.
+        A repeat (double click, replayed POST, flaky connection) finds the first import by that key and returns it. Nothing is counted, uploaded or parsed twice.
+
+        The request also counts the upload against the runner\'s day and checks the file before it stores anything. The upload\'s own view walks those guards.
       '''
+      navigateTo importUpload
     }
-    // source: src/modules/runs/imports.ts startImport (importBucket.put, and the delete on a failed insert)
+    // source: src/modules/runs/imports.ts startImport (importBucket.put, the delete on a failed insert and its report)
     cf.app.runs.upload -> cf.importsBucket 'stores the raw file' {
       notes '''
         **Not atomic with the next step.** R2 and D1 are two systems.
 
-        **If the insert then fails:** the upload takes its object back, one attempt, and the runner sees the error.
+        **If the insert then fails:** the upload takes its object back, one attempt, and the runner sees the error. A delete that fails too is reported.
+
+        An object left that way, or by a Worker that dies between the two writes, goes only when the account is purged.
       '''
     }
     // source: src/modules/runs/imports.ts startImport
@@ -29,24 +34,26 @@ views {
         **This row is the recovery marker.** From here on, `pending` means the work is still owed, whatever happens to the request, the queue or the Worker.
       '''
     }
-    // source: src/modules/runs/imports.ts startImport (queue.send); src/modules/ops/scheduled.ts redispatchStalledImports
+    // source: src/modules/runs/imports.ts startImport, startFileUpload, repeatOf; src/modules/runs/queue-messages.ts importJob; src/modules/ops/scheduled.ts redispatchStalledImports, IMPORT_STALL_GRACE_S
     cf.app.runs.upload -[async]-> cf.importsQueue 'enqueues ImportJob' {
       notes '''
         **Not atomic with the row.** The send can fail, or the Worker can die first.
 
-        **If it is lost:** the row stays `pending`, and the daily digest re-enqueues any import pending for more than 15 minutes. A lost send costs a delay, never the upload.
+        **If the send fails:** the request fails, and the runner reads "Nothing saved" although the import is stored. Try again sends the same key, which returns that import and enqueues nothing.
+
+        **If it is lost:** the row stays `pending`, and the daily sweep at 12:00 UTC enqueues any import pending for more than 15 minutes. A lost send costs up to a day, never the upload.
       '''
       navigateTo importRecovery
     }
-    // source: src/modules/runs/imports.ts startImport; src/modules/runs/import-polling.ts importPollIntervalMs
+    // source: src/modules/runs/imports.ts startImport; src/modules/runs/import-polling.ts importPollIntervalMs, POLL_INTERVAL_MS, POLL_BUDGET_MS, STALL_AFTER_MS
     runner <- cf.app.runs.upload 'answers with the import id' {
       notes '''
         **Timing boundary: the request ends here.** One attempt, no retries inside it.
 
-        The upload screen polls the import\'s status from now on.
+        The upload screen then asks for the import\'s status every 2 seconds, for at most two minutes, while the file is still being read or its run\'s weather is pending. After 20 seconds of reading it says the import is slow.
       '''
     }
-    // source: src/modules/ops/queues.ts handleQueueBatch; wrangler.jsonc queues.consumers, max_retries, max_batch_size
+    // source: src/modules/ops/queues.ts handleQueueBatch; wrangler.jsonc queues.consumers, max_retries, max_batch_size; src/lib/sql/queue-batch.ts consumeEach; src/modules/runs/consumer.ts processImportJob
     cf.importsQueue -[async]-> cf.app.runs.consumer 'delivers ImportJob' {
       notes '''
         **Timing boundary: seconds later, in a queue consumer.**
@@ -54,37 +61,93 @@ views {
         **At least once.** The same job can arrive twice. A failed attempt is retried up to 3 times, then dead-lettered.
 
         **One job per batch**, so one file\'s parse has the invocation to itself.
+
+        A message whose body does not parse, or whose import row is gone, is reported and acknowledged, never retried.
       '''
       navigateTo importRecovery
     }
-    // source: src/modules/runs/consumer.ts processImportJob, didClaimImport
+    // source: src/modules/runs/consumer.ts processImportJob, didClaimImport, isHolder, withPendingOnThrow; src/modules/runs/queue-messages.ts importJob
     cf.app.runs.consumer -> cf.coreDb 'claims the row: pending to processing' {
       notes '''
-        **Guard: claim, then work.** The first delivery claims only a `pending` row. A redelivery also takes one left `processing` by a delivery that ended mid-parse; a parse that throws puts the row back to `pending` itself.
+        **Guard: claim, then work.** Every message for an import carries a claim id of its own, and the claim writes it on the row. The first delivery claims only a `pending` row.
 
-        A redelivery of an import that is already `done`, `failed` or `duplicate` claims nothing and stops here.
+        A redelivery also takes back a `processing` row, but only one that carries its own claim id: the row its earlier delivery left when the runtime ended it mid-parse. A row another message holds is left to that message.
+
+        A parse that throws puts the row back to `pending` itself. A redelivery of an import that is already `done`, `failed` or `duplicate` claims nothing and stops here.
       '''
     }
-    // source: src/modules/runs/consumer.ts processImportJob, failImport
+    // source: src/modules/runs/consumer.ts parseAndSave, failImportWrites, importFailureReason, FAILED_IMPORT_FILE_DAYS
     cf.app.runs.consumer -> cf.importsBucket 'reads the file back and parses it' {
       notes '''
-        **If the file cannot be parsed:** the import is marked `failed` with a reason the runner sees. A terminal failure is never silent.
+        **If the file cannot be parsed:** one batch marks the import `failed` with a reason the runner reads, writes them an import-failed notification, and owes the file\'s deletion in 30 days. A stored file that is missing fails the same way.
+
+        An error that is not the parser\'s own gets a generic sentence, and is reported. A terminal failure is never silent.
       '''
     }
-    // source: src/modules/runs/consumer.ts processImportJob, findDuplicateRun
-    cf.app.runs.consumer -> cf.coreDb 'inserts the run, marks the import done' {
+    // source: src/modules/runs/consumer.ts parseAndSave, fileGoes; src/modules/runs/service.ts findDuplicateRun, DUPLICATE_WINDOW_S; src/modules/runs/strava/reminder-match.ts pairWithReminder, REMINDER_MATCH_WINDOW_S; src/modules/notifications/service.ts notificationInsert
+    cf.app.runs.consumer -> cf.coreDb 'writes the run and concludes the import, in one batch' {
       notes '''
-        **Guard: the duplicate check.** A run by this runner with the same start time is already in the log? The import becomes `duplicate` and points at that run.
+        **Guard: the duplicate check.** A run by this runner that starts within two minutes either side is already in the log? The import becomes `duplicate` and points at that run, and its file\'s deletion is owed now.
+
+        **Guard: one batch.** Otherwise the run\'s insert lands together with everything that follows from it: the import is `done` with its run id, the runner is sent a kit reminder, the file\'s deletion is owed now, and the run is paired with the runner\'s oldest unread Strava reminder from the 12 hours after it ended, which is marked read.
+
+        All of it lands or none does, so a redelivery never finds half of it.
       '''
     }
-    // source: src/modules/runs/consumer.ts processImportJob (the injected weather attach)
+    // source: src/modules/runs/consumer.ts parseAndSave (the injected weather attach); src/modules/runs/service.ts initialWeatherStatus
     cf.app.runs.consumer -> cf.app.weather 'asks for the conditions' {
       notes '''
+        **Guard: only a run that can have conditions.** An outdoor run with a place is asked for. An indoor run is born with weather `none`, and an outdoor run with no place is born `failed`.
+
         **Degrade, don\'t fail.** One attempt. The import is already `done`.
 
         **If it fails:** the run stays `pending` on its weather and the hourly cron picks it up.
       '''
       navigateTo weatherStory
+    }
+    // source: src/modules/ops/scheduled.ts runDailyDigest, drainOwedEmail, drainProductLinks; src/modules/ops/outbox-handlers.ts importFileDelete; src/modules/runs/consumer.ts fileGoes
+    cf.app.cronDaily1200 -> cf.importsBucket 'deletes the file that was read' {
+      notes '''
+        **Timing boundary: the next 12:00 UTC.** The concluding batch owed this deletion, and the daily firing\'s drain pays it. The hourly firings drain only email and product links, so a read file stays until then.
+
+        **Guard: a delete is safe to repeat.** Deleting a file that is already gone does nothing.
+      '''
+    }
+  }
+
+  dynamic view importUpload {
+    title 'Before a run file is stored'
+
+    // source: src/modules/runs/components/UploadForm.tsx freshAttempt, checkUpload; src/modules/runs/inputs.ts importUploadFrom; src/modules/runs/upload-limits.ts MAX_IMPORT_BYTES
+    runner -> cf.app.runs.upload 'sends the file and its key' {
+      notes '''
+        **Guard: the idempotency key.** Minted for each file the runner picks, and resent on every retry of that file.
+
+        **Bounded.** The form checks the file by the server\'s own rule and refuses a bad one before sending it. A request with no file in it, or with one over 25 MB, is refused before anything else happens.
+      '''
+    }
+    // source: src/modules/runs/imports.ts startFileUpload, repeatOf
+    cf.app.runs.upload -> cf.coreDb 'looks for an import with that key' {
+      notes '''
+        **Guard: the idempotency key.** A repeat returns the first import here. It is not counted again, and nothing is stored or enqueued.
+      '''
+    }
+    // source: src/modules/runs/imports.ts startFileUpload, isWithinUploadCap; src/modules/runs/upload-limits.ts UPLOADS_PER_DAY, UPLOAD_REFUSALS; src/modules/email/rate-limit.ts isWithinRateLimit
+    cf.app.runs.upload -> cf.coreDb 'counts the upload against the runner\'s day' {
+      notes '''
+        **Guard: 30 uploads a runner a day.** The count is a write. Past 30, the runner reads that they can upload more tomorrow, and nothing is stored.
+
+        A file the next step refuses has already used one of the 30.
+      '''
+    }
+    // source: src/modules/runs/imports.ts startImport; src/modules/runs/upload-limits.ts checkUpload, IMPORT_EXTENSIONS, MAX_IMPORT_BYTES, UPLOAD_REFUSALS
+    cf.app.runs.upload -> cf.importsBucket 'checks the file, then stores it' {
+      notes '''
+        **Guard: the file check.** A file that is not GPX, TCX or FIT, is empty, or is over 25 MB is refused with a sentence the runner reads, before anything is stored.
+
+        A Garmin import enters here, without the count: each activity imports once.
+      '''
+      navigateTo importStory
     }
   }
 
@@ -101,35 +164,59 @@ views {
       cf.app.runs.upload -[async]-> cf.importsQueue 'enqueues ImportJob'
     }
     catch 'the send fails, or the Worker dies first' {
-      // source: src/modules/ops/scheduled.ts redispatchStalledImports, IMPORT_STALL_GRACE_S
+      // source: src/modules/ops/scheduled.ts redispatchStalledImports, IMPORT_STALL_GRACE_S, stalledPending
       cf.app.cronDaily1200 -[recovery]-> cf.coreDb 'finds imports pending for 15+ minutes' {
-        notes 'Fifteen minutes of grace, so the sweep never races a dispatch still in flight.'
+        notes '''
+          Fifteen minutes of grace, so the sweep never races a dispatch still in flight.
+
+          **Bounded.** At most 100 imports a day.
+        '''
       }
-      // source: src/modules/ops/scheduled.ts redispatchStalledImports
+      // source: src/modules/ops/scheduled.ts redispatchStalledImports, redispatchEach; src/modules/runs/queue-messages.ts importJob; src/modules/runs/consumer.ts didClaimImport
       cf.app.cronDaily1200 -[recovery]-> cf.importsQueue 'enqueues them again' {
-        notes 'Safe to repeat: the consumer claims the row before it works, so a second copy of the job loses the race and stops.'
+        notes '''
+          **Guard: each message is its own claimant.** The sweep\'s message carries a claim id of its own. It claims the row only if it is `pending`, so it never works beside another message, and a copy of an import that already ended stops.
+
+          **If a send fails:** it is reported, the rest are still sent, and the next day\'s sweep finds the row again. The digest counts the imports found, sent or not.
+        '''
       }
     }
     loop 'at least once: up to 3 retries' {
       // source: src/modules/ops/queues.ts handleQueueBatch; wrangler.jsonc queues.consumers, max_retries
       cf.importsQueue -[async]-> cf.app.runs.consumer 'delivers ImportJob'
-      // source: src/modules/runs/consumer.ts processImportJob, didClaimImport
-      cf.app.runs.consumer -> cf.coreDb 'claims the row, or stops'
+      // source: src/modules/runs/consumer.ts processImportJob, didClaimImport, isHolder
+      cf.app.runs.consumer -> cf.coreDb 'claims the row, or stops' {
+        notes '''
+          **Guard: the claim id.** A redelivery takes back a `processing` row only when the row carries its own claim id. Otherwise it stops, and the message that holds the row finishes it.
+        '''
+      }
     }
-    opt 'the row is still processing after 2 deliveries' {
-      // source: src/modules/runs/consumer.ts processImportJob, MAX_PARSE_DELIVERIES, DEAD_IMPORT_REASON
-      cf.app.runs.consumer -[recovery]-> cf.coreDb 'marks the import failed instead of parsing it again' {
-        notes 'A file whose parse ends the invocation twice is not given a third.'
+    opt 'a third delivery finds the row still processing, and its own' {
+      // source: src/modules/runs/consumer.ts processImportJob, isHolder, MAX_PARSE_DELIVERIES, DEAD_IMPORT_REASON, failImportWrites, FAILED_IMPORT_FILE_DAYS
+      cf.app.runs.consumer -[recovery]-> cf.coreDb 'fails the import instead of parsing it again' {
+        notes '''
+          A file whose parse ends the invocation twice is not given a third. This is read before any claim, so this delivery claims nothing.
+
+          One batch: the import is `failed` with a sentence the runner reads, they get an import-failed notification, and the file\'s deletion is owed in 30 days.
+
+          It writes no Gave up row, so the Desk has no Retry for an import failed here.
+        '''
       }
     }
     opt 'every retry failed' {
       // source: wrangler.jsonc queues.consumers, max_retries, dead_letter_queue (max_retries 3)
       cf.importsQueue -[recovery]-> cf.importsDlq 'dead-letters the job'
-      // source: src/modules/ops/queues.ts handleQueueBatch (dialed-imports-dlq)
+      // source: src/modules/ops/queues.ts handleQueueBatch, deliveries (dialed-imports-dlq)
       cf.importsDlq -[async]-> cf.app.runs.deadLetter 'delivers it'
-      // source: src/modules/runs/consumer.ts handleImportsDlqBatch
-      cf.app.runs.deadLetter -[recovery]-> cf.coreDb 'marks the import failed, notifies the runner' {
-        notes 'No import ends in silence: the runner is told, and the job lands where an operator can retry it.'
+      // source: src/modules/runs/consumer.ts handleImportsDlqBatch, deadImportWrites, isHolder, failImportWrites; src/db/gave-up.ts giveUpEach, gaveUpUpsert; wrangler.jsonc queues.consumers, max_retries (1 for dialed-imports-dlq, and no dead_letter_queue)
+      cf.app.runs.deadLetter -[recovery]-> cf.coreDb 'fails the import, tells the runner, lists it on the Desk' {
+        notes '''
+          **Guard: only a row that is its own to fail.** An import that already ended is left alone, and so is a `processing` row another message holds: that message finishes it, or is dead-lettered for it.
+
+          One batch: the import is `failed`, the runner gets an import-failed notification, the file\'s deletion is owed in 30 days, and the Desk\'s Gave up lists it with its 4 tries, where an operator can retry it.
+
+          **If this batch fails:** it is tried once more, then the message is dropped with only an error report. A row left `processing` that way is re-driven by nothing: the sweep reads `pending` rows only.
+        '''
       }
     }
   }

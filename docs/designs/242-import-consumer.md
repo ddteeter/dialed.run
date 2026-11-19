@@ -23,9 +23,14 @@ All in `src/modules/runs/consumer.ts` unless named.
   Retry (`ops/gave-up.ts`). The claim writes it to a new
   `imports.claimed_by`. A redelivery takes back a `processing` row only
   where `claimed_by` is its own `claimId`; the parse-limit check fails a
-  row only on the same condition. A message with no `claimId` claims a
-  `pending` row and nothing else. `didClaim` (`lib/sql/claim.ts`) already
-  takes the extra condition, so it does not change.
+  row only on the same condition. A message with no `claimId` (law 9: one
+  in the queue at the deploy) writes NULL and holds only a row no claim id
+  is on, so its own redelivery still recovers it. `didClaim`
+  (`lib/sql/claim.ts`) already takes the extra condition, so it does not
+  change.
+- **#870, the dead-letter side.** The handler leaves a `processing` row
+  another message holds; that message concludes it or is dead-lettered
+  for it. Nothing the runner or the Desk reads changes.
 - **Not chosen:** the queue's own message id as the token (Cloudflare's
   docs do not say it is the same on a redelivery), and a claimed-at with a
   time limit (a redelivery arrives in seconds, so it needs delayed retries
@@ -58,9 +63,13 @@ on today's code first.
   and does not fail it past the parse limit; the interleaving (first
   delivery throws, a second message claims, the first's retry arrives
   mid-parse) ends with one run and `done`; a redelivery still takes back
-  its own row; a message with no `claimId` claims only `pending`.
-- #842: the concluding batch fails once; the redelivery ends `done` with
-  one run, the reminder paired and the file's deletion owed once.
+  its own row. With no `claimId`: its own NULL-held row is taken back, a
+  row a message with an id holds is not, and the reverse.
+- #870: a dead-lettered message leaves a row another holds, and still
+  fails its own and a `pending` one.
+- #842: the concluding batch fails once and nothing lands; the redelivery
+  ends `done` with one run, one kit reminder and the file's deletion owed
+  once. The pairing's place in the batch is `reminder-match.test.ts`'s.
 - #843: the kit reminder's insert fails once; the redelivery writes it.
 - `queue-messages`: the constructor mints a different `claimId` per
   message, and the old shape still parses. The senders' tests pin that
@@ -69,9 +78,8 @@ on today's code first.
 
 ## Issues
 
-- Closes: #841, #842, #843, #844, #845; #859 in its own PR.
-- Opens: the dead-letter handler fails an import another message is
-  working (the same crossing as #841, reached only after four throws).
+- Closes: #841, #842, #843, #844, #845, #870; #859 in its own PR (#880).
+- Opens: #870, found here and fixed here (coordinator-15, 2026-11-18).
 
 ## Open questions
 

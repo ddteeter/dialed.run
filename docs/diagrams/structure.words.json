@@ -7,7 +7,7 @@
   "cf.importsBucket": "Uploaded run files, and data exports",
   "cf.publicPhotosBucket": "Copies of screened photos on public kits",
   "cf.mediaBackupBucket": "The daily copy of garment and kit photos",
-  "cf.importsQueue": "ImportJob",
+  "cf.importsQueue": "ImportJob, and Strava's reminder, revoke and deauthorize jobs",
   "cf.importsDlq": "Import jobs that failed every retry",
   "cf.enrichmentQueue": "EnrichJob: a product id, not the work",
   "cf.enrichmentDlq": "Enrichment jobs that failed every retry",

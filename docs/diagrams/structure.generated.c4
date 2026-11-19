@@ -41,7 +41,7 @@ model {
       description 'Exports that failed every retry'
     }
     importsQueue = queue 'Queue: dialed-imports' {
-      description 'ImportJob'
+      description 'ImportJob, and Strava\'s reminder, revoke and deauthorize jobs'
     }
     importsDlq = queue 'Queue: dialed-imports-dlq' {
       description 'Import jobs that failed every retry'
