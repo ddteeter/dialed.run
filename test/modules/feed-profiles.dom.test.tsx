@@ -966,6 +966,11 @@ describe("Follow, on the control-failure pattern", () => {
       expect(hold).toHaveAttribute("aria-hidden", "true");
       expect(hold).toHaveClass("invisible", "font-bold", "[grid-area:1/1]");
       expect(hold?.parentElement).toHaveClass("grid", "justify-items-center");
+      // The ink pill has no edge, so it pads the hairline pill's 1 a side
+      // and the two are one width; the hairline pill pads nothing.
+      expect(hold?.parentElement?.classList.contains("px-px")).toBe(
+        !isFollowing,
+      );
       expect(hold?.previousElementSibling).toHaveClass("[grid-area:1/1]");
       expect(hold).toHaveTextContent("Following");
       expect(hold).toHaveTextContent("Unfollowing");

@@ -106,7 +106,11 @@ export function FollowPill({
       }}
       className={`target shrink-0 ${pillLook(where, isFollowing)}`}
     >
-      {where === "header" ? <HeldWidth>{label}</HeldWidth> : label}
+      {where === "header" ? (
+        <HeldWidth isEdged={isFollowing}>{label}</HeldWidth>
+      ) : (
+        label
+      )}
     </button>
   );
 }
@@ -116,10 +120,23 @@ export function FollowPill({
  * label shares a grid cell with an unseen copy of the widest words the
  * pill ever shows, in the heavier of its two weights, so Follow,
  * Following and each one's in-flight verb all sit in the same box.
+ *
+ * The hairline pill has a 1 edge and the ink pill has none, so the ink
+ * pill pads that 1 a side: without it Follow was 2 narrower than
+ * Following, which only a browser showed.
  */
-function HeldWidth({ children }: Readonly<{ children: ReactNode }>) {
+function HeldWidth({
+  isEdged,
+  children,
+}: Readonly<{ isEdged: boolean; children: ReactNode }>) {
   return (
-    <span className="grid justify-items-center">
+    <span
+      className={
+        isEdged
+          ? "grid justify-items-center"
+          : "grid justify-items-center px-px"
+      }
+    >
       <span className="[grid-area:1/1]">{children}</span>
       <span
         aria-hidden="true"
