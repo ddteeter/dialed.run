@@ -189,16 +189,6 @@
       "count": 1
     },
     {
-      "key": "src/modules/runs/parsers/gpx.ts|mutation-suppress|// Stryker disable next-line ArrayDeclaration,ConditionalExpression",
-      "reason": "Equivalent mutant: a non-record segment/track has no child elements to read, so the results below come back empty and the array is dropped anyway. The guard is what narrows `unknown`.",
-      "count": 2
-    },
-    {
-      "key": "src/modules/runs/parsers/gpx.ts|mutation-suppress|// Stryker disable next-line ArrayDeclaration",
-      "reason": "Equivalent mutant: a non-record document has no gpx element to read, so the result is empty and the array is dropped anyway. The guard is what narrows `unknown`.",
-      "count": 1
-    },
-    {
       "key": "src/modules/runs/parsers/gpx.ts|mutation-suppress|// Stryker disable next-line EqualityOperator",
       "reason": "Equivalent mutant: the bound and the undefined checks are the same fact said twice \u2014 the loop only visits indexes that exist, so neither element can be missing. They are here because `noUncheckedIndexedAccess` types every array access as possibly absent.",
       "count": 1
@@ -212,11 +202,6 @@
       "key": "src/modules/runs/parsers/shared.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Equivalent mutant on the null check alone: `typeof null` is \"object\", so dropping it lets null through \u2014 but every caller then reads a property off it and throws, and no XML document this parser accepts produces a bare null where an element is expected. The check is what makes the guard a guard rather than a typeof.",
       "count": 1
-    },
-    {
-      "key": "src/modules/runs/parsers/tcx.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
-      "reason": "Equivalent mutants: non-record inputs have no child elements to read, so loops/reads below find nothing and functions return undefined either way. The guards narrow `unknown` and state intent. Every one also appears across multiple locations with the same reasoning.",
-      "count": 3
     },
     {
       "key": "src/modules/runs/strava/api-from-env.ts|mutation-suppress|// Stryker disable next-line BlockStatement",

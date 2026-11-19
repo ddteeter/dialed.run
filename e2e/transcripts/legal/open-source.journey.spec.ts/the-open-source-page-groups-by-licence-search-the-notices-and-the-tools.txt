@@ -14,49 +14,53 @@ heading, Contents, level 2
 Contents
 end of heading, Contents, level 2
 list
-listitem, level 1, position 1, set size 11
+listitem, level 1, position 1, set size 12
 link, SIL Open Font License #.#
 #
-end of listitem, level 1, position 1, set size 11
-listitem, level 1, position 2, set size 11
+end of listitem, level 1, position 1, set size 12
+listitem, level 1, position 2, set size 12
 link, MIT
 #
-end of listitem, level 1, position 2, set size 11
-listitem, level 1, position 3, set size 11
+end of listitem, level 1, position 2, set size 12
+listitem, level 1, position 3, set size 12
 link, BSD-#-Clause
 #
-end of listitem, level 1, position 3, set size 11
-listitem, level 1, position 4, set size 11
+end of listitem, level 1, position 3, set size 12
+listitem, level 1, position 4, set size 12
 link, Apache #.#
 #
-end of listitem, level 1, position 4, set size 11
-listitem, level 1, position 5, set size 11
+end of listitem, level 1, position 4, set size 12
+listitem, level 1, position 5, set size 12
 link, MPL-#.#
 #
-end of listitem, level 1, position 5, set size 11
-listitem, level 1, position 6, set size 11
+end of listitem, level 1, position 5, set size 12
+listitem, level 1, position 6, set size 12
 link, @garmin/fitsdk licence
 #
-end of listitem, level 1, position 6, set size 11
-listitem, level 1, position 7, set size 11
+end of listitem, level 1, position 6, set size 12
+listitem, level 1, position 7, set size 12
+link, BlueOak-#.#.#
+#
+end of listitem, level 1, position 7, set size 12
+listitem, level 1, position 8, set size 12
 link, BSD-#-Clause
 #
-end of listitem, level 1, position 7, set size 11
-listitem, level 1, position 8, set size 11
+end of listitem, level 1, position 8, set size 12
+listitem, level 1, position 9, set size 12
 link, ISC
 #
-end of listitem, level 1, position 8, set size 11
-listitem, level 1, position 9, set size 11
+end of listitem, level 1, position 9, set size 12
+listitem, level 1, position 10, set size 12
 link, Unlicense
 #
-end of listitem, level 1, position 9, set size 11
-listitem, level 1, position 10, set size 11
+end of listitem, level 1, position 10, set size 12
+listitem, level 1, position 11, set size 12
 link, Third-party notices
-end of listitem, level 1, position 10, set size 11
-listitem, level 1, position 11, set size 11
+end of listitem, level 1, position 11, set size 12
+listitem, level 1, position 12, set size 12
 link, Tools we build with
 #
-end of listitem, level 1, position 11, set size 11
+end of listitem, level 1, position 12, set size 12
 end of list
 end of navigation, Contents
 article
@@ -166,241 +170,231 @@ THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR I
 end of paragraph
 end of group
 list
-listitem, level 1, position 1, set size 116
+listitem, level 1, position 1, set size 109
 link, @better-auth/core
 #.#.#
 © # - present, Bereket Engida
-end of listitem, level 1, position 1, set size 116
-listitem, level 1, position 2, set size 116
+end of listitem, level 1, position 1, set size 109
+listitem, level 1, position 2, set size 109
 link, @better-auth/drizzle-adapter
 #.#.#
 © # - present, Bereket Engida
-end of listitem, level 1, position 2, set size 116
-listitem, level 1, position 3, set size 116
+end of listitem, level 1, position 2, set size 109
+listitem, level 1, position 3, set size 109
 link, @better-auth/kysely-adapter
 #.#.#
 © # - present, Bereket Engida
-end of listitem, level 1, position 3, set size 116
-listitem, level 1, position 4, set size 116
+end of listitem, level 1, position 3, set size 109
+listitem, level 1, position 4, set size 109
 link, @better-auth/memory-adapter
 #.#.#
 © # - present, Bereket Engida
-end of listitem, level 1, position 4, set size 116
-listitem, level 1, position 5, set size 116
+end of listitem, level 1, position 4, set size 109
+listitem, level 1, position 5, set size 109
 link, @better-auth/telemetry
 #.#.#
 © # - present, Bereket Engida
-end of listitem, level 1, position 5, set size 116
-listitem, level 1, position 6, set size 116
+end of listitem, level 1, position 5, set size 109
+listitem, level 1, position 6, set size 109
 link, @better-auth/utils
 #.#.#
 © # - present, Bereket Engida
-end of listitem, level 1, position 6, set size 116
-listitem, level 1, position 7, set size 116
+end of listitem, level 1, position 6, set size 109
+listitem, level 1, position 7, set size 109
 link, @better-fetch/fetch
 #.#.#
 © Bereket Engida
-end of listitem, level 1, position 7, set size 116
-listitem, level 1, position 8, set size 116
+end of listitem, level 1, position 7, set size 109
+listitem, level 1, position 8, set size 109
 link, @cf-wasm/internals
 #.#.#
 © #-present Deo Kumar
-end of listitem, level 1, position 8, set size 116
-listitem, level 1, position 9, set size 116
+end of listitem, level 1, position 8, set size 109
+listitem, level 1, position 9, set size 109
 link, @cf-wasm/og
 #.#.#
 © #-present Deo Kumar
-end of listitem, level 1, position 9, set size 116
-listitem, level 1, position 10, set size 116
+end of listitem, level 1, position 9, set size 109
+listitem, level 1, position 10, set size 109
 link, @cloudflare/unenv-preset
 #.#.#
-end of listitem, level 1, position 10, set size 116
-listitem, level 1, position 11, set size 116
+end of listitem, level 1, position 10, set size 109
+listitem, level 1, position 11, set size 109
 link, @noble/ciphers
 #.#.#
 © # Paul Miller; # Thomas Pornin
-end of listitem, level 1, position 11, set size 116
-listitem, level 1, position 12, set size 116
+end of listitem, level 1, position 11, set size 109
+listitem, level 1, position 12, set size 109
 link, @noble/hashes
 #.#.#
 © # Paul Miller
-end of listitem, level 1, position 12, set size 116
-listitem, level 1, position 13, set size 116
-link, @nodable/entities
-#.#.#
-© Amit Gupta
-end of listitem, level 1, position 13, set size 116
-listitem, level 1, position 14, set size 116
+end of listitem, level 1, position 12, set size 109
+listitem, level 1, position 13, set size 109
 link, @react-email/body
 #.#.#
 © # Plus Five Five, Inc
-end of listitem, level 1, position 14, set size 116
-listitem, level 1, position 15, set size 116
+end of listitem, level 1, position 13, set size 109
+listitem, level 1, position 14, set size 109
 link, @react-email/button
 #.#.#
 © # Plus Five Five, Inc
-end of listitem, level 1, position 15, set size 116
-listitem, level 1, position 16, set size 116
+end of listitem, level 1, position 14, set size 109
+listitem, level 1, position 15, set size 109
 link, @react-email/container
 #.#.#
 © # Plus Five Five, Inc
-end of listitem, level 1, position 16, set size 116
-listitem, level 1, position 17, set size 116
+end of listitem, level 1, position 15, set size 109
+listitem, level 1, position 16, set size 109
 link, @react-email/head
 #.#.#
 © # Plus Five Five, Inc
-end of listitem, level 1, position 17, set size 116
-listitem, level 1, position 18, set size 116
+end of listitem, level 1, position 16, set size 109
+listitem, level 1, position 17, set size 109
 link, @react-email/hr
 #.#.#
 © # Plus Five Five, Inc
-end of listitem, level 1, position 18, set size 116
-listitem, level 1, position 19, set size 116
+end of listitem, level 1, position 17, set size 109
+listitem, level 1, position 18, set size 109
 link, @react-email/html
 #.#.#
 © # Plus Five Five, Inc
-end of listitem, level 1, position 19, set size 116
-listitem, level 1, position 20, set size 116
+end of listitem, level 1, position 18, set size 109
+listitem, level 1, position 19, set size 109
 link, @react-email/link
 #.#.#
 © # Plus Five Five, Inc
-end of listitem, level 1, position 20, set size 116
-listitem, level 1, position 21, set size 116
+end of listitem, level 1, position 19, set size 109
+listitem, level 1, position 20, set size 109
 link, @react-email/preview
 #.#.#
 © # Plus Five Five, Inc
-end of listitem, level 1, position 21, set size 116
-listitem, level 1, position 22, set size 116
+end of listitem, level 1, position 20, set size 109
+listitem, level 1, position 21, set size 109
 link, @react-email/text
 #.#.#
 © # Plus Five Five, Inc
-end of listitem, level 1, position 22, set size 116
-listitem, level 1, position 23, set size 116
+end of listitem, level 1, position 21, set size 109
+listitem, level 1, position 22, set size 109
 link, @selderee/plugin-htmlparser#
 #.#.#
 © #-# KillyMXI
-end of listitem, level 1, position 23, set size 116
-listitem, level 1, position 24, set size 116
+end of listitem, level 1, position 22, set size 109
+listitem, level 1, position 23, set size 109
 link, @sentry/core
 #.#.#
 © #-# Functional Software, Inc. dba Sentry
-end of listitem, level 1, position 24, set size 116
-listitem, level 1, position 25, set size 116
+end of listitem, level 1, position 23, set size 109
+listitem, level 1, position 24, set size 109
 link, @sentry/utils
 #.#.#
 © #-# Functional Software, Inc. dba Sentry
-end of listitem, level 1, position 25, set size 116
-listitem, level 1, position 26, set size 116
+end of listitem, level 1, position 24, set size 109
+listitem, level 1, position 25, set size 109
 link, @shuding/opentype.js
 #.#.#-beta.#
 © # Frederik De Bleser
-end of listitem, level 1, position 26, set size 116
-listitem, level 1, position 27, set size 116
+end of listitem, level 1, position 25, set size 109
+listitem, level 1, position 26, set size 109
 link, @tanstack/history
 #.#.#
 © #-present Tanner Linsley
-end of listitem, level 1, position 27, set size 116
-listitem, level 1, position 28, set size 116
+end of listitem, level 1, position 26, set size 109
+listitem, level 1, position 27, set size 109
 link, @tanstack/query-core
 #.#.#
 © #-present Tanner Linsley
-end of listitem, level 1, position 28, set size 116
-listitem, level 1, position 29, set size 116
+end of listitem, level 1, position 27, set size 109
+listitem, level 1, position 28, set size 109
 link, @tanstack/react-query
 #.#.#
 © #-present Tanner Linsley
-end of listitem, level 1, position 29, set size 116
-listitem, level 1, position 30, set size 116
+end of listitem, level 1, position 28, set size 109
+listitem, level 1, position 29, set size 109
 link, @tanstack/react-router
 #.#.#
 © #-present Tanner Linsley
-end of listitem, level 1, position 30, set size 116
-listitem, level 1, position 31, set size 116
+end of listitem, level 1, position 29, set size 109
+listitem, level 1, position 30, set size 109
 link, @tanstack/react-start
 #.#.#
 © #-present Tanner Linsley
-end of listitem, level 1, position 31, set size 116
-listitem, level 1, position 32, set size 116
+end of listitem, level 1, position 30, set size 109
+listitem, level 1, position 31, set size 109
 link, @tanstack/react-start-client
 #.#.#
 © #-present Tanner Linsley
-end of listitem, level 1, position 32, set size 116
-listitem, level 1, position 33, set size 116
+end of listitem, level 1, position 31, set size 109
+listitem, level 1, position 32, set size 109
 link, @tanstack/react-start-server
 #.#.#
 © #-present Tanner Linsley
-end of listitem, level 1, position 33, set size 116
-listitem, level 1, position 34, set size 116
+end of listitem, level 1, position 32, set size 109
+listitem, level 1, position 33, set size 109
 link, @tanstack/react-store
 #.#.#
 © # Tanner Linsley
-end of listitem, level 1, position 34, set size 116
-listitem, level 1, position 35, set size 116
+end of listitem, level 1, position 33, set size 109
+listitem, level 1, position 34, set size 109
 link, @tanstack/router-core
 #.#.#
 © #-present Tanner Linsley
-end of listitem, level 1, position 35, set size 116
-listitem, level 1, position 36, set size 116
+end of listitem, level 1, position 34, set size 109
+listitem, level 1, position 35, set size 109
 link, @tanstack/start-client-core
 #.#.#
 © #-present Tanner Linsley
-end of listitem, level 1, position 36, set size 116
-listitem, level 1, position 37, set size 116
+end of listitem, level 1, position 35, set size 109
+listitem, level 1, position 36, set size 109
 link, @tanstack/start-server-core
 #.#.#
 © #-present Tanner Linsley
-end of listitem, level 1, position 37, set size 116
-listitem, level 1, position 38, set size 116
+end of listitem, level 1, position 36, set size 109
+listitem, level 1, position 37, set size 109
 link, @tanstack/start-storage-context
 #.#.#
 © #-present Tanner Linsley
-end of listitem, level 1, position 38, set size 116
-listitem, level 1, position 39, set size 116
+end of listitem, level 1, position 37, set size 109
+listitem, level 1, position 38, set size 109
 link, @tanstack/store
 #.#.#
 © # Tanner Linsley
-end of listitem, level 1, position 39, set size 116
-listitem, level 1, position 40, set size 116
-link, anynum
-#.#.#
-© # Natural Intelligence
-end of listitem, level 1, position 40, set size 116
-listitem, level 1, position 41, set size 116
+end of listitem, level 1, position 38, set size 109
+listitem, level 1, position 39, set size 109
 link, base#-js
 #.#.#
 © #
-end of listitem, level 1, position 41, set size 116
-listitem, level 1, position 42, set size 116
+end of listitem, level 1, position 39, set size 109
+listitem, level 1, position 40, set size 109
 link, better-auth
 #.#.#
 © # - present, Bereket Engida
-end of listitem, level 1, position 42, set size 116
-listitem, level 1, position 43, set size 116
+end of listitem, level 1, position 40, set size 109
+listitem, level 1, position 41, set size 109
 link, better-call
 #.#.#
 © # Bereket Engida
-end of listitem, level 1, position 43, set size 116
-listitem, level 1, position 44, set size 116
+end of listitem, level 1, position 41, set size 109
+listitem, level 1, position 42, set size 109
 link, camelize
 #.#.#
 © James Halliday
-end of listitem, level 1, position 44, set size 116
-listitem, level 1, position 45, set size 116
+end of listitem, level 1, position 42, set size 109
+listitem, level 1, position 43, set size 109
 link, character-entities
 #.#.#
 © # Titus Wormer
-end of listitem, level 1, position 45, set size 116
-listitem, level 1, position 46, set size 116
+end of listitem, level 1, position 43, set size 109
+listitem, level 1, position 44, set size 109
 link, client-zip
 #.#.#
 © # David Junger
-end of listitem, level 1, position 46, set size 116
-listitem, level 1, position 47, set size 116
+end of listitem, level 1, position 44, set size 109
+listitem, level 1, position 45, set size 109
 link, color-name
 #.#.#
 © # Dmitry Ivanov
-end of listitem, level 1, position 47, set size 116
-listitem, level 1, position 48, set size 116
+end of listitem, level 1, position 45, set size 109
+listitem, level 1, position 46, set size 109
 link, cookie-es
 #.#.#
 © #-# Roman Shtylman; # Douglas Christopher Wilson; # Nathan Friedly
@@ -427,63 +421,58 @@ paragraph
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 end of paragraph
 end of group
-end of listitem, level 1, position 48, set size 116
-listitem, level 1, position 49, set size 116
+end of listitem, level 1, position 46, set size 109
+listitem, level 1, position 47, set size 109
 link, css-background-parser
 #.#.#
 © # Gilmore Davidson
-end of listitem, level 1, position 49, set size 116
-listitem, level 1, position 50, set size 116
+end of listitem, level 1, position 47, set size 109
+listitem, level 1, position 48, set size 109
 css-box-shadow
 #.#.#-#
 © Brent Jackson
-end of listitem, level 1, position 50, set size 116
-listitem, level 1, position 51, set size 116
+end of listitem, level 1, position 48, set size 109
+listitem, level 1, position 49, set size 109
 css-gradient-parser
 #.#.#
 © # Lynnnnnnxx
-end of listitem, level 1, position 51, set size 116
-listitem, level 1, position 52, set size 116
+end of listitem, level 1, position 49, set size 109
+listitem, level 1, position 50, set size 109
 link, css-to-react-native
 #.#.#
 © # Jacob Parker and Maximilian Stoiber
-end of listitem, level 1, position 52, set size 116
-listitem, level 1, position 53, set size 116
+end of listitem, level 1, position 50, set size 109
+listitem, level 1, position 51, set size 109
 link, decode-named-character-reference
 #.#.#
 © Titus Wormer
-end of listitem, level 1, position 53, set size 116
-listitem, level 1, position 54, set size 116
+end of listitem, level 1, position 51, set size 109
+listitem, level 1, position 52, set size 109
 link, defu
 #.#.#
 © Pooya Parsa
-end of listitem, level 1, position 54, set size 116
-listitem, level 1, position 55, set size 116
+end of listitem, level 1, position 52, set size 109
+listitem, level 1, position 53, set size 109
 link, devlop
 #.#.#
 © # Titus Wormer
-end of listitem, level 1, position 55, set size 116
-listitem, level 1, position 56, set size 116
+end of listitem, level 1, position 53, set size 109
+listitem, level 1, position 54, set size 109
 link, dom-serializer
 #.#.#
 © # The cheeriojs contributors
-end of listitem, level 1, position 56, set size 116
-listitem, level 1, position 57, set size 116
+end of listitem, level 1, position 54, set size 109
+listitem, level 1, position 55, set size 109
 link, escape-html
 #.#.#
 © #-# TJ Holowaychuk; # Andreas Lubbe; # Tiancheng "Timothy" Gu
-end of listitem, level 1, position 57, set size 116
-listitem, level 1, position 58, set size 116
-link, fast-xml-parser
-#.#.#
-© # Amit Kumar Gupta
-end of listitem, level 1, position 58, set size 116
-listitem, level 1, position 59, set size 116
+end of listitem, level 1, position 55, set size 109
+listitem, level 1, position 56, set size 109
 link, hex-rgb
 #.#.#
 © Sindre Sorhus
-end of listitem, level 1, position 59, set size 116
-listitem, level 1, position 60, set size 116
+end of listitem, level 1, position 56, set size 109
+listitem, level 1, position 57, set size 109
 link, html-to-text
 #.#.#
 © Malte Legenhausen
@@ -504,218 +493,208 @@ paragraph
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 end of paragraph
 end of group
-end of listitem, level 1, position 60, set size 116
-listitem, level 1, position 61, set size 116
+end of listitem, level 1, position 57, set size 109
+listitem, level 1, position 58, set size 109
 link, htmlparser#
 #.#.#
 © #, #, Chris Winberry . All rights reserved
-end of listitem, level 1, position 61, set size 116
-listitem, level 1, position 62, set size 116
+end of listitem, level 1, position 58, set size 109
+listitem, level 1, position 59, set size 109
 link, htmlparser#
 #.#.#
 © #, #, Chris Winberry . All rights reserved
-end of listitem, level 1, position 62, set size 116
-listitem, level 1, position 63, set size 116
+end of listitem, level 1, position 59, set size 109
+listitem, level 1, position 60, set size 109
 link, ipaddr.js
 #.#.#
 © #-# whitequark
-end of listitem, level 1, position 63, set size 116
-listitem, level 1, position 64, set size 116
-link, is-unsafe
-#.#.#
-© # Natural Intelligence
-end of listitem, level 1, position 64, set size 116
-listitem, level 1, position 65, set size 116
+end of listitem, level 1, position 60, set size 109
+listitem, level 1, position 61, set size 109
 link, jose
 #.#.#
 © # Filip Skokan
-end of listitem, level 1, position 65, set size 116
-listitem, level 1, position 66, set size 116
+end of listitem, level 1, position 61, set size 109
+listitem, level 1, position 62, set size 109
 link, kysely
 #.#.#
 © # Sami Koskimäki
-end of listitem, level 1, position 66, set size 116
-listitem, level 1, position 67, set size 116
+end of listitem, level 1, position 62, set size 109
+listitem, level 1, position 63, set size 109
 link, layerr
 #.#.#
 © # Perry Mitchell
-end of listitem, level 1, position 67, set size 116
-listitem, level 1, position 68, set size 116
+end of listitem, level 1, position 63, set size 109
+listitem, level 1, position 64, set size 109
 link, leac
 #.#.#
 © #-# KillyMXI
-end of listitem, level 1, position 68, set size 116
-listitem, level 1, position 69, set size 116
+end of listitem, level 1, position 64, set size 109
+listitem, level 1, position 65, set size 109
 link, linebreak
 #.#.#
 © #-present Devon Govett
-end of listitem, level 1, position 69, set size 116
-listitem, level 1, position 70, set size 116
+end of listitem, level 1, position 65, set size 109
+listitem, level 1, position 66, set size 109
 link, mdast-util-from-markdown
 #.#.#
 © Titus Wormer
-end of listitem, level 1, position 70, set size 116
-listitem, level 1, position 71, set size 116
+end of listitem, level 1, position 66, set size 109
+listitem, level 1, position 67, set size 109
 link, mdast-util-gfm-table
 #.#.#
 © Titus Wormer
-end of listitem, level 1, position 71, set size 116
-listitem, level 1, position 72, set size 116
+end of listitem, level 1, position 67, set size 109
+listitem, level 1, position 68, set size 109
 link, mdast-util-to-string
 #.#.#
 © # Titus Wormer
-end of listitem, level 1, position 72, set size 116
-listitem, level 1, position 73, set size 116
+end of listitem, level 1, position 68, set size 109
+listitem, level 1, position 69, set size 109
 link, micromark
 #.#.#
 © Titus Wormer
-end of listitem, level 1, position 73, set size 116
-listitem, level 1, position 74, set size 116
+end of listitem, level 1, position 69, set size 109
+listitem, level 1, position 70, set size 109
 link, micromark-core-commonmark
 #.#.#
 © Titus Wormer
-end of listitem, level 1, position 74, set size 116
-listitem, level 1, position 75, set size 116
+end of listitem, level 1, position 70, set size 109
+listitem, level 1, position 71, set size 109
 link, micromark-extension-gfm-table
 #.#.#
 © Titus Wormer
-end of listitem, level 1, position 75, set size 116
-listitem, level 1, position 76, set size 116
+end of listitem, level 1, position 71, set size 109
+listitem, level 1, position 72, set size 109
 link, micromark-factory-destination
 #.#.#
 © Titus Wormer
-end of listitem, level 1, position 76, set size 116
-listitem, level 1, position 77, set size 116
+end of listitem, level 1, position 72, set size 109
+listitem, level 1, position 73, set size 109
 link, micromark-factory-label
 #.#.#
 © Titus Wormer
-end of listitem, level 1, position 77, set size 116
-listitem, level 1, position 78, set size 116
+end of listitem, level 1, position 73, set size 109
+listitem, level 1, position 74, set size 109
 link, micromark-factory-space
 #.#.#
 © Titus Wormer
-end of listitem, level 1, position 78, set size 116
-listitem, level 1, position 79, set size 116
+end of listitem, level 1, position 74, set size 109
+listitem, level 1, position 75, set size 109
 link, micromark-factory-title
 #.#.#
 © Titus Wormer
-end of listitem, level 1, position 79, set size 116
-listitem, level 1, position 80, set size 116
+end of listitem, level 1, position 75, set size 109
+listitem, level 1, position 76, set size 109
 link, micromark-factory-whitespace
 #.#.#
 © Titus Wormer
-end of listitem, level 1, position 80, set size 116
-listitem, level 1, position 81, set size 116
+end of listitem, level 1, position 76, set size 109
+listitem, level 1, position 77, set size 109
 link, micromark-util-character
 #.#.#
 © Titus Wormer
-end of listitem, level 1, position 81, set size 116
-listitem, level 1, position 82, set size 116
+end of listitem, level 1, position 77, set size 109
+listitem, level 1, position 78, set size 109
 link, micromark-util-chunked
 #.#.#
 © Titus Wormer
-end of listitem, level 1, position 82, set size 116
-listitem, level 1, position 83, set size 116
+end of listitem, level 1, position 78, set size 109
+listitem, level 1, position 79, set size 109
 link, micromark-util-classify-character
 #.#.#
 © Titus Wormer
-end of listitem, level 1, position 83, set size 116
-listitem, level 1, position 84, set size 116
+end of listitem, level 1, position 79, set size 109
+listitem, level 1, position 80, set size 109
 link, micromark-util-combine-extensions
 #.#.#
 © Titus Wormer
-end of listitem, level 1, position 84, set size 116
-listitem, level 1, position 85, set size 116
+end of listitem, level 1, position 80, set size 109
+listitem, level 1, position 81, set size 109
 link, micromark-util-decode-numeric-character-reference
 #.#.#
 © Titus Wormer
-end of listitem, level 1, position 85, set size 116
-listitem, level 1, position 86, set size 116
+end of listitem, level 1, position 81, set size 109
+listitem, level 1, position 82, set size 109
 link, micromark-util-decode-string
 #.#.#
 © Titus Wormer
-end of listitem, level 1, position 86, set size 116
-listitem, level 1, position 87, set size 116
+end of listitem, level 1, position 82, set size 109
+listitem, level 1, position 83, set size 109
 link, micromark-util-edit-map
 #.#.#
 © Titus Wormer
-end of listitem, level 1, position 87, set size 116
-listitem, level 1, position 88, set size 116
+end of listitem, level 1, position 83, set size 109
+listitem, level 1, position 84, set size 109
 link, micromark-util-html-tag-name
 #.#.#
 © Titus Wormer
-end of listitem, level 1, position 88, set size 116
-listitem, level 1, position 89, set size 116
+end of listitem, level 1, position 84, set size 109
+listitem, level 1, position 85, set size 109
 link, micromark-util-normalize-identifier
 #.#.#
 © Titus Wormer
-end of listitem, level 1, position 89, set size 116
-listitem, level 1, position 90, set size 116
+end of listitem, level 1, position 85, set size 109
+listitem, level 1, position 86, set size 109
 link, micromark-util-resolve-all
 #.#.#
 © Titus Wormer
-end of listitem, level 1, position 90, set size 116
-listitem, level 1, position 91, set size 116
+end of listitem, level 1, position 86, set size 109
+listitem, level 1, position 87, set size 109
 link, micromark-util-subtokenize
 #.#.#
 © Titus Wormer
-end of listitem, level 1, position 91, set size 116
-listitem, level 1, position 92, set size 116
+end of listitem, level 1, position 87, set size 109
+listitem, level 1, position 88, set size 109
 link, nanostores
 #.#.#
 © # Andrey Sitnik
-end of listitem, level 1, position 92, set size 116
-listitem, level 1, position 93, set size 116
+end of listitem, level 1, position 88, set size 109
+listitem, level 1, position 89, set size 109
 link, parse-css-color
 #.#.#
 © Noel Delgado (pixelia.me)
-end of listitem, level 1, position 93, set size 116
-listitem, level 1, position 94, set size 116
+end of listitem, level 1, position 89, set size 109
+listitem, level 1, position 90, set size 109
 link, parseley
 #.#.#
 © #-# KillyMXI
-end of listitem, level 1, position 94, set size 116
-listitem, level 1, position 95, set size 116
-link, path-expression-matcher
-#.#.#
-© #
-end of listitem, level 1, position 95, set size 116
-listitem, level 1, position 96, set size 116
+end of listitem, level 1, position 90, set size 109
+listitem, level 1, position 91, set size 109
 link, peberminta
 #.#.#
 © #-# KillyMXI
-end of listitem, level 1, position 96, set size 116
-listitem, level 1, position 97, set size 116
+end of listitem, level 1, position 91, set size 109
+listitem, level 1, position 92, set size 109
 link, postcss-value-parser
 #.#.#
 © Bogdan Chadkin
-end of listitem, level 1, position 97, set size 116
-listitem, level 1, position 98, set size 116
+end of listitem, level 1, position 92, set size 109
+listitem, level 1, position 93, set size 109
 link, react
 #.#.#
 © Meta Platforms, Inc. and affiliates
-end of listitem, level 1, position 98, set size 116
-listitem, level 1, position 99, set size 116
+end of listitem, level 1, position 93, set size 109
+listitem, level 1, position 94, set size 109
 link, react-dom
 #.#.#
 © Meta Platforms, Inc. and affiliates
-end of listitem, level 1, position 99, set size 116
-listitem, level 1, position 100, set size 116
+end of listitem, level 1, position 94, set size 109
+listitem, level 1, position 95, set size 109
 link, rou#
 #.#.#
 © Pooya Parsa
-end of listitem, level 1, position 100, set size 116
-listitem, level 1, position 101, set size 116
+end of listitem, level 1, position 95, set size 109
+listitem, level 1, position 96, set size 109
 link, scheduler
 #.#.#
 © Meta Platforms, Inc. and affiliates
-end of listitem, level 1, position 101, set size 116
-listitem, level 1, position 102, set size 116
+end of listitem, level 1, position 96, set size 109
+listitem, level 1, position 97, set size 109
 link, selderee
 #.#.#
 © #-# KillyMXI
-end of listitem, level 1, position 102, set size 116
-listitem, level 1, position 103, set size 116
+end of listitem, level 1, position 97, set size 109
+listitem, level 1, position 98, set size 109
 link, seroval
 #.#.#
 © # Alexis Munsayac
@@ -733,8 +712,8 @@ paragraph
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 end of paragraph
 end of group
-end of listitem, level 1, position 103, set size 116
-listitem, level 1, position 104, set size 116
+end of listitem, level 1, position 98, set size 109
+listitem, level 1, position 99, set size 109
 link, seroval-plugins
 #.#.#
 © # Alexis Munsayac
@@ -752,67 +731,57 @@ paragraph
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 end of paragraph
 end of group
-end of listitem, level 1, position 104, set size 116
-listitem, level 1, position 105, set size 116
-link, strnum
-#.#.#
-© # Natural Intelligence
-end of listitem, level 1, position 105, set size 116
-listitem, level 1, position 106, set size 116
+end of listitem, level 1, position 99, set size 109
+listitem, level 1, position 100, set size 109
 link, tailwindcss
 #.#.#
 © Tailwind Labs, Inc
-end of listitem, level 1, position 106, set size 116
-listitem, level 1, position 107, set size 116
+end of listitem, level 1, position 100, set size 109
+listitem, level 1, position 101, set size 109
 link, tiny-inflate
 #.#.#
 © #-present Devon Govett
-end of listitem, level 1, position 107, set size 116
-listitem, level 1, position 108, set size 116
+end of listitem, level 1, position 101, set size 109
+listitem, level 1, position 102, set size 109
 link, toucan-js
 #.#.#
 © # Robert Cepa
-end of listitem, level 1, position 108, set size 116
-listitem, level 1, position 109, set size 116
+end of listitem, level 1, position 102, set size 109
+listitem, level 1, position 103, set size 109
 link, ulidx
 #.#.#
 © # Perry Mitchell
-end of listitem, level 1, position 109, set size 116
-listitem, level 1, position 110, set size 116
+end of listitem, level 1, position 103, set size 109
+listitem, level 1, position 104, set size 109
 link, unenv
 #.#.#-rc.#
 © Pooya Parsa
-end of listitem, level 1, position 110, set size 116
-listitem, level 1, position 111, set size 116
+end of listitem, level 1, position 104, set size 109
+listitem, level 1, position 105, set size 109
 link, unicode-trie
 #.#.#
 © #
-end of listitem, level 1, position 111, set size 116
-listitem, level 1, position 112, set size 116
+end of listitem, level 1, position 105, set size 109
+listitem, level 1, position 106, set size 109
 link, unist-util-stringify-position
 #.#.#
 © # Titus Wormer
-end of listitem, level 1, position 112, set size 116
-listitem, level 1, position 113, set size 116
+end of listitem, level 1, position 106, set size 109
+listitem, level 1, position 107, set size 109
 link, use-sync-external-store
 #.#.#
 © Meta Platforms, Inc. and affiliates
-end of listitem, level 1, position 113, set size 116
-listitem, level 1, position 114, set size 116
+end of listitem, level 1, position 107, set size 109
+listitem, level 1, position 108, set size 109
 link, validator
 #.#.#
 © # Chris O'Hara
-end of listitem, level 1, position 114, set size 116
-listitem, level 1, position 115, set size 116
-link, xml-naming
-#.#.#
-© # Natural Intelligence
-end of listitem, level 1, position 115, set size 116
-listitem, level 1, position 116, set size 116
+end of listitem, level 1, position 108, set size 109
+listitem, level 1, position 109, set size 109
 link, zod
 #.#.#
 © # Colin McDonnell
-end of listitem, level 1, position 116, set size 116
+end of listitem, level 1, position 109, set size 109
 end of list
 end of region, Projects under the MIT License
 region, Projects under the BSD #-Clause License
@@ -1499,3 +1468,34 @@ end of paragraph
 paragraph
 Last updated: :month #, #
 end of paragraph
+end of group
+list
+listitem, level 1, position 1, set size 1
+link, @garmin/fitsdk
+#.#.#
+© Garmin International, Inc.
+end of listitem, level 1, position 1, set size 1
+end of list
+end of region, Projects under the FIT Protocol License Agreement
+region, Projects under the Blue Oak Model License #.#.#
+heading, Projects under the Blue Oak Model License #.#.#, level 2
+#
+group
+Read the BlueOak-#.#.# licence
+paragraph
+Version #.#.#
+end of paragraph
+paragraph
+## Purpose
+end of paragraph
+paragraph
+This license gives everyone as much permission to work with this software as possible, while protecting contributors from liability.
+end of paragraph
+paragraph
+## Acceptance
+end of paragraph
+paragraph
+In order to receive this license, you must agree to its rules. The rules of this license are both obligations under that agreement and conditions to your license. You must not do anything with this software that triggers a rule that you cannot or will not follow.
+end of paragraph
+paragraph
+## Copyright

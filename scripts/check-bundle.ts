@@ -38,7 +38,7 @@ const ASSETS = path.join("dist", "client", "assets");
  */
 const serverOnly: readonly (readonly [RegExp, string])[] = [
   [/drizzle:entityKind/, "drizzle-orm"],
-  [/processEntities/, "fast-xml-parser"],
+  [/Max buffer length exceeded/, "sax"],
   [/wardrobe_items/, "db/schema-core"],
   [/FIT_EPOCH|fitsdk/, "@garmin/fitsdk"],
 ];

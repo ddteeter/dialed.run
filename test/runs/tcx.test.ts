@@ -343,7 +343,6 @@ describe("tcx: every way it refuses", () => {
       '<?xml version="1.0"?><TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"><Courses/></TrainingCenterDatabase>',
       '<?xml version="1.0"?><TrainingCenterDatabase><Activities/></TrainingCenterDatabase>',
       '<?xml version="1.0"?><TrainingCenterDatabase><Activities><Activity/></Activities></TrainingCenterDatabase>',
-      '<?xml version="1.0"?><TrainingCenterDatabase><Activities><Activity><Lap/></Activity></Activities></TrainingCenterDatabase>',
       '<?xml version="1.0"?><TrainingCenterDatabase>text</TrainingCenterDatabase>',
       '<?xml version="1.0"?><TrainingCenterDatabase><Activities>text</Activities></TrainingCenterDatabase>',
     ];
@@ -360,6 +359,17 @@ describe("tcx: every way it refuses", () => {
     const zero = "tcx: 1 lap(s) sum to zero TotalTimeSeconds or DistanceMeters";
     const cases: [string, string][] = [
       [lap({ seconds: 1800, metres: 5000 }), noStart],
+      // A lap with nothing in it is a lap, and has no start.
+      ["<Lap/>", noStart],
+      // Two of a total is not a total: neither is taken over the other.
+      [
+        `<Lap StartTime="${START}"><TotalTimeSeconds>1800</TotalTimeSeconds><TotalTimeSeconds>1800</TotalTimeSeconds><DistanceMeters>5000</DistanceMeters></Lap>`,
+        noTotal,
+      ],
+      [
+        `<Lap StartTime="${START}"><TotalTimeSeconds>1800</TotalTimeSeconds><DistanceMeters>5000</DistanceMeters><DistanceMeters>5000</DistanceMeters></Lap>`,
+        noTotal,
+      ],
       [lap({ startTime: "not a date", seconds: 1800, metres: 5000 }), noStart],
       [lap({ startTime: START, metres: 5000 }), noTotal],
       [lap({ startTime: START, seconds: 1800 }), noTotal],
@@ -395,13 +405,12 @@ describe("tcx: every way it refuses", () => {
     const failure = await failureFrom('<?xml version="1.0"?><other/>');
     expect(failure.reason.startsWith("tcx:")).toBe(true);
 
-    // Including the shared decode step, which takes the format as an
-    // argument — the one place the two parsers could report each other's.
-    const rejected = `<?xml version="1.0"?>
-<!DOCTYPE x [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
-<TrainingCenterDatabase/>`;
+    // Including the shared reader, which takes the format as an argument:
+    // the one place the two parsers could report each other's. An
+    // attribute value that outgrows the reader's buffer is its refusal.
+    const rejected = `<?xml version="1.0"?><TrainingCenterDatabase note="${"x".repeat(200_000)}"/>`;
     const shared = await failureFrom(rejected);
-    expect(shared.reason.startsWith("tcx:")).toBe(true);
+    expect(shared.reason).toBe("tcx: XML parser threw");
   });
 });
 
