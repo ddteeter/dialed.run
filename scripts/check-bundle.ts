@@ -70,6 +70,37 @@ if (leaks.length > 0) {
 }
 
 /**
+ * The devtools panel is for a developer's browser. `@tanstack/devtools-vite`
+ * takes it out of a build, and nothing else would say if an update to the
+ * plugin stopped doing that: the panel, and the router's state with it,
+ * would ship to every visitor (design 239).
+ *
+ * The marker is the name `ui/Devtools.tsx` gives its one plugin: a string
+ * of ours that exists nowhere but inside the component, so it is in a
+ * chunk exactly when the component's body is. It is checked against the
+ * source first, so renaming the plugin there fails here instead of
+ * leaving a marker that can never match.
+ */
+const DEVTOOLS_SOURCE = path.join("src", "ui", "Devtools.tsx");
+const DEVTOOLS_MARKER = 'name: "Tanstack Router"';
+const DEVTOOLS_IN_CHUNK = "Tanstack Router";
+
+if (!readFileSync(DEVTOOLS_SOURCE, "utf8").includes(DEVTOOLS_MARKER)) {
+  throw new Error(
+    `${DEVTOOLS_SOURCE} no longer names its plugin ${DEVTOOLS_IN_CHUNK}: update the marker in scripts/check-bundle.ts`,
+  );
+}
+
+const withDevtools = names.filter((name) =>
+  read(name).includes(DEVTOOLS_IN_CHUNK),
+);
+if (withDevtools.length > 0) {
+  throw new Error(
+    `the devtools panel is in the client bundle: ${withDevtools.join(", ")}`,
+  );
+}
+
+/**
  * MediaPipe is 11 MB of WASM loader behind a dynamic import, and the entry
  * chunk is what every visitor downloads before anything renders. If the
  * dynamic import is ever flattened — a stray top-level import, a bundler

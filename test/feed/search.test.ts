@@ -132,6 +132,25 @@ describe("searchRunners", () => {
       "USING INDEX user_profiles_username_nocase",
     );
   });
+
+  it.each([
+    ["the longest prefix the input takes", "a".repeat(60)],
+    ["one that is all escapes", "_".repeat(60)],
+    [
+      "one past D1's pattern limit beside a real handle",
+      `maya${"_".repeat(26)}`,
+    ],
+  ])("answers %s with nothing, not an error", async (_name, typed) => {
+    // D1 refuses to compare a row with a LIKE pattern over 50 bytes
+    // (`test/platform/d1-statement-limits.test.ts`), and the input takes
+    // 60 characters, each of which may be escaped to two. The index read
+    // is what keeps that from ever happening: no handle is long enough to
+    // fall in such a prefix's range, so no row is compared.
+    const viewer = await makeVerifiedUser();
+    await makeVerifiedUser({ username: "aaaaaaaaaaaaaaaaaaaa" });
+    await makeVerifiedUser({ username: "maya_" });
+    expect(await searchRunners(viewer, typed)).toStrictEqual([]);
+  });
 });
 
 describe("searchRunners: the second line (R55·217)", () => {

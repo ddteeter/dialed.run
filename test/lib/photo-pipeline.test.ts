@@ -408,6 +408,96 @@ function pngOf(width: number, height: number): Uint8Array {
   );
 }
 
+/**
+Where a Photon-written JPEG's frame header starts: its `FF C0` marker.
+*/
+function frameAt(jpeg: Uint8Array): number {
+  let at = 2;
+  while (at < jpeg.length && jpeg[at + 1] !== 0xc0) {
+    at += 2 + (jpeg[at + 2] ?? 0) * 256 + (jpeg[at + 3] ?? 0);
+  }
+  if (at >= jpeg.length) throw new Error("no baseline frame in this JPEG");
+  return at;
+}
+
+/**
+The bytes with `inserted` put in before offset `at`.
+*/
+function spliced(
+  bytes: Uint8Array,
+  at: number,
+  ...inserted: readonly number[]
+): Uint8Array {
+  return new Uint8Array([
+    ...bytes.subarray(0, at),
+    ...inserted,
+    ...bytes.subarray(at),
+  ]);
+}
+
+/**
+The size Photon's decoder gives the image it builds from these bytes.
+*/
+async function decodedSize(
+  bytes: Uint8Array,
+): Promise<{ width: number; height: number }> {
+  const { PhotonImage } = await photon();
+  const image = PhotonImage.new_from_byteslice(bytes);
+  try {
+    return { width: image.get_width(), height: image.get_height() };
+  } finally {
+    image.free();
+  }
+}
+
+/**
+ * The walk above is only a budget if it reads the frame the decoder will
+ * use (SA-L05). These ask the decoder itself, on real encoder output with
+ * bytes moved by hand, so a Photon update that reads a JPEG differently
+ * fails here rather than passing the hand-built headers unnoticed.
+ */
+describe("imageDimensions and Photon's decoder, on the same JPEG", () => {
+  it("both skip fill bytes before a marker and read the same frame", async () => {
+    const real = await encoded(321, 123, "jpeg");
+    const size = { width: 321, height: 123 };
+    const beforeFrame = spliced(real, frameAt(real), 0xff, 0xff, 0xff);
+    expect(await decodedSize(beforeFrame)).toStrictEqual(size);
+    expect(imageDimensions(beforeFrame)).toStrictEqual(size);
+    const beforeFirstSegment = spliced(real, 2, 0xff);
+    expect(await decodedSize(beforeFirstSegment)).toStrictEqual(size);
+    expect(imageDimensions(beforeFirstSegment)).toStrictEqual(size);
+  });
+
+  it("the decoder reads past a stuffed FF 00, and the walk refuses the file", async () => {
+    const real = await encoded(321, 123, "jpeg");
+    const stuffed = spliced(real, frameAt(real), 0xff, 0x00);
+    expect(await decodedSize(stuffed)).toStrictEqual({
+      width: 321,
+      height: 123,
+    });
+    expect(imageDimensions(stuffed)).toBeUndefined();
+    expect(photoRefusal(stuffed)).toBe(unreadablePhotoRefusal);
+  });
+
+  it("the decoder sizes its image from the frame header, which is what the walk reads", async () => {
+    // A 64 × 64 picture whose header says 1024 × 768: the decoder builds
+    // the size the header declares, whatever data follows it.
+    const real = await encoded(64, 64, "jpeg");
+    const at = frameAt(real);
+    const declared = new Uint8Array(real);
+    // FF C0, a two-byte length, the precision, then height and width.
+    declared.set([768 >>> 8, 768 & 0xff, 1024 >>> 8, 1024 & 0xff], at + 5);
+    expect(await decodedSize(declared)).toStrictEqual({
+      width: 1024,
+      height: 768,
+    });
+    expect(imageDimensions(declared)).toStrictEqual({
+      width: 1024,
+      height: 768,
+    });
+  });
+});
+
 describe("photoRefusal", () => {
   it("takes exactly the budget and refuses one pixel more", () => {
     expect(maxDecodedPixels).toBe(4096 * 4096);
