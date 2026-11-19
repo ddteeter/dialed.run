@@ -491,7 +491,8 @@ describe("sign-up's answer for a registered address", () => {
   function shape(user: Record<string, unknown>): Record<string, unknown> {
     const at = (key: string) => z.iso.datetime().parse(user[key]);
     return {
-      keys: Object.keys(user).toSorted((a, b) => a.localeCompare(b)),
+      // In the order the body carries them: a reader sees that too.
+      keys: Object.keys(user),
       name: user.name,
       id: ID_FORMS.find(([, form]) => form.test(String(user.id)))?.[0],
       createdAtMs: new Date(at("createdAt")).getUTCMilliseconds(),
