@@ -295,9 +295,6 @@ describe("03 · every tappable thing has a 44×44 hit area", () => {
       // The public pages' invite, "Have a code? Create an account" (Round
       // 55 · 176).
       "src/modules/feed/components/PublicFrame.tsx",
-      // The ban band's "Or write to desk@dialed.run.", whose address is a
-      // mailto link (round 38 #62a).
-      "src/modules/safety/runners/components/AccountClosed.tsx",
       // "…these free services can help stop it spreading: StopNCII.org if
       // the person in it was 18 or over…, Take It Down if they were under
       // 18." (D-147, round 41 #85): one anchor, rendered for each service
@@ -306,6 +303,9 @@ describe("03 · every tappable thing has a 44×44 hit area", () => {
       // W1's way out, "Rather not use your account? Report it without
       // signing in" (round 37 #58k).
       "src/modules/safety/reports/components/ReportSheet.tsx",
+      // The ban band's "Or write to desk@dialed.run.", whose address is a
+      // mailto link (round 38 #62a).
+      "src/modules/safety/runners/components/AccountClosed.tsx",
       // "Emails go to {address}. Change email" (round 26 #19).
       "src/routes/account/$section.tsx",
       "src/routes/runs/new.tsx",
