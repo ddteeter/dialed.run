@@ -4,6 +4,8 @@
  */
 import { z } from "zod";
 
+import { newUlid } from "../../lib/ids";
+
 /**
 Every job on this queue is `{ type: <literal>, ...its own fields }` wrapped
 the same way for `discriminatedUnion` to dispatch on. That wrapping is the
@@ -39,9 +41,15 @@ beside it. The only thing that differs between variants is the literal and
 its fields, and the array says exactly that.
 */
 export const importsQueueMessageSchema = z.discriminatedUnion("type", [
-  // A run file uploaded through the import flow (102 §4).
+  // A run file uploaded through the import flow (102 §4). `claimId` names
+  // this message among the several that can carry one import (the upload's,
+  // the daily sweep's, the Desk's Retry): the consumer writes it to the row
+  // it claims, and a redelivery takes back only a row that carries its own
+  // (#841). Optional (law 9): a message sent before messages carried one
+  // still parses, and its claim is the absence of one.
   jobSchema("import", {
     importId: z.string().min(1),
+    claimId: z.string().min(1).optional(),
   }),
 
   // Strava reminder (D-33): see `reminderJobSchema` above.
@@ -87,6 +95,15 @@ export type DeauthorizeJob = Extract<
   ImportsQueueMessage,
   { type: "strava_deauthorize" }
 >;
+
+/**
+ * The `import` message for one send. Every sender builds its message here,
+ * so each send carries a `claimId` of its own: two messages for one import
+ * are two claimants, and a redelivery of either is the same one.
+ */
+export function importJob(importId: string): ImportJob {
+  return { type: "import", importId, claimId: newUlid() };
+}
 
 /**
  * A dead-lettered reminder's key on the Desk's Gave up (R-119): the job's

@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { newUlid } from "../../src/lib/ids";
-import { importsQueueMessageSchema } from "../../src/modules/runs/queue-messages";
+import {
+  importJob,
+  importsQueueMessageSchema,
+} from "../../src/modules/runs/queue-messages";
+import { importMessageFor } from "../queue-fakes";
 
 /**
  * The wire format between two deploys (law 9).
@@ -14,11 +18,18 @@ import { importsQueueMessageSchema } from "../../src/modules/runs/queue-messages
  */
 
 describe("importsQueueMessageSchema", () => {
-  it("parses an import job", () => {
+  it("parses an import job sent before messages carried a claim id", () => {
+    // #841 added `claimId`. A message already in the queue at that deploy
+    // has none, and must parse as it always did.
     const importId = newUlid();
     expect(
       importsQueueMessageSchema.parse({ type: "import", importId }),
     ).toStrictEqual({ type: "import", importId });
+  });
+
+  it("parses an import job with its claim id", () => {
+    const job = { type: "import", importId: newUlid(), claimId: newUlid() };
+    expect(importsQueueMessageSchema.parse(job)).toStrictEqual(job);
   });
 
   it("parses a Strava reminder, ids and event time only", () => {
@@ -57,6 +68,7 @@ describe("importsQueueMessageSchema", () => {
     const incomplete = [
       { type: "import" },
       { type: "import", importId: "" },
+      { type: "import", importId: "1", claimId: "" },
       { type: "strava_reminder", athleteId: "1", objectId: "2" },
       {
         type: "strava_reminder",
@@ -93,5 +105,29 @@ describe("importsQueueMessageSchema", () => {
         revocationId: newUlid(),
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("importJob", () => {
+  it("builds the message its own schema parses, for the import it is given", () => {
+    const importId = newUlid();
+
+    const job = importJob(importId);
+
+    expect(importsQueueMessageSchema.parse(job)).toStrictEqual(job);
+    expect(job).toStrictEqual(importMessageFor(importId));
+  });
+
+  it("gives every send a claim id of its own", () => {
+    // Two messages for one import are two claimants (#841): the upload's
+    // and the sweep's re-send must never read as the same one.
+    const importId = newUlid();
+
+    const claimIds = [importJob(importId), importJob(importId)].map(
+      (job) => job.claimId,
+    );
+
+    expect(new Set(claimIds).size).toBe(2);
+    expect(claimIds.map((claimId) => claimId?.length)).toStrictEqual([26, 26]);
   });
 });

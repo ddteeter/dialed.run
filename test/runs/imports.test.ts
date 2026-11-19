@@ -22,6 +22,7 @@ import { newUlid } from "../../src/lib/ids";
 import { selectOwnedRow } from "../../src/lib/sql/owned";
 import type { ImportJob } from "../../src/modules/runs/queue-messages";
 import { nowSeconds } from "../../src/lib/now";
+import { importMessageFor } from "../queue-fakes";
 
 /**
 The stored row, read the way the module reads it — owner-scoped.
@@ -121,7 +122,7 @@ describe("startImport (102 §2)", () => {
       noReport,
     );
 
-    expect(queue.sent).toEqual([{ type: "import", importId }]);
+    expect(queue.sent).toEqual([importMessageFor(importId)]);
 
     const status = await importRow(userId, importId);
     expect(status?.status).toBe("pending");
@@ -479,7 +480,7 @@ describe("startImport: the rules, in the words the user reads", () => {
     expect(row?.status).toBe("pending");
     expect(row?.createdAt).toBeGreaterThanOrEqual(before - 5);
     expect(row?.createdAt).toBeLessThanOrEqual(before + 5);
-    expect(queue.sent).toStrictEqual([{ type: "import", importId }]);
+    expect(queue.sent).toStrictEqual([importMessageFor(importId)]);
   });
 });
 
@@ -600,7 +601,7 @@ describe("startFileUpload: a runner's day of uploads (SA-M29)", () => {
     const importId = started.isStarted ? started.importId : "";
     const row = await importRow(userId, importId);
     expect(row?.status).toBe("pending");
-    expect(queue.sent).toStrictEqual([{ type: "import", importId }]);
+    expect(queue.sent).toStrictEqual([importMessageFor(importId)]);
   });
 
   it("takes the day's last upload and refuses the one after, storing nothing", async () => {

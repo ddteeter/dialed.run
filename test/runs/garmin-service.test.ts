@@ -14,7 +14,12 @@ import {
 } from "../../src/modules/runs/garmin/service";
 import type { ImportJob } from "../../src/modules/runs/queue-messages";
 import { oweInCore } from "../../src/modules/ops";
-import { batchOf, fakeMessage, weatherLater } from "../queue-fakes";
+import {
+  batchOf,
+  fakeMessage,
+  importMessageFor,
+  weatherLater,
+} from "../queue-fakes";
 import { urlOf } from "./request-url";
 import { fitFile } from "./fit-file";
 import { zipOf } from "./zip-file";
@@ -295,7 +300,7 @@ describe("importGarminActivity", () => {
     expect(started).toMatchObject({ status: "started" });
     const importId = started?.status === "started" ? started.importId : "";
     expect(stub.downloads).toEqual(["/download-service/files/activity/20123"]);
-    expect(sent.sent).toEqual([{ type: "import", importId }]);
+    expect(sent.sent).toEqual([importMessageFor(importId)]);
     const [row] = await coreDb()
       .select()
       .from(imports)

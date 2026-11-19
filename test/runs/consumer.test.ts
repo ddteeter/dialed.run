@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import {
@@ -553,6 +553,84 @@ describe("handleImportsDlqBatch (102 §8 — DLQ ownership)", () => {
     });
   });
 
+  it("leaves a row another message is working to that message (#870)", async () => {
+    const deps = makeDeps();
+    const holder = newUlid();
+    const importId = await leftProcessing(holder);
+    const { batch, wrapped } = fakeBatch([
+      { body: { type: "import", importId, claimId: newUlid() } },
+    ]);
+
+    await handleImportsDlqBatch(batch, deps, 4);
+
+    const row = await importRowOf(importId);
+    expect(row?.status).toBe("processing");
+    expect(row?.failureReason).toBeNull();
+    expect(row?.claimedBy).toBe(holder);
+    expect(await unreadNotificationCount(deps.db, row?.userId ?? "")).toBe(0);
+    expect(await gaveUpRow("import", importId)).toBeUndefined();
+    // Still the end of the line for this message: reported, and acked.
+    expect(wrapped[0]?.wasAcked).toBe(true);
+    expect(deps.exceptions).toHaveLength(1);
+  });
+
+  it("fails a processing row its own message left, with or without a claim id", async () => {
+    const deps = makeDeps();
+    const claimId = newUlid();
+    const claimed = await leftProcessing(claimId);
+    const unclaimed = await leftProcessing();
+
+    await handleImportsDlqBatch(
+      fakeBatch([
+        { body: { type: "import", importId: claimed, claimId } },
+        { body: { type: "import", importId: unclaimed } },
+      ]).batch,
+      deps,
+      4,
+    );
+
+    expect(await statusOf(claimed)).toBe("failed");
+    expect(await statusOf(unclaimed)).toBe("failed");
+  });
+
+  it("leaves a held row to its holder whichever of the two carries no claim id", async () => {
+    const deps = makeDeps();
+    const heldByAnId = await leftProcessing(newUlid());
+    const heldByNone = await leftProcessing();
+
+    await handleImportsDlqBatch(
+      fakeBatch([
+        { body: { type: "import", importId: heldByAnId } },
+        { body: { type: "import", importId: heldByNone, claimId: newUlid() } },
+      ]).batch,
+      deps,
+      4,
+    );
+
+    expect(await statusOf(heldByAnId)).toBe("processing");
+    expect(await statusOf(heldByNone)).toBe("processing");
+  });
+
+  it("fails a pending row whoever claimed it last", async () => {
+    // A message that threw on every delivery put the row back each time;
+    // the row carries the last claimant's id and is nobody's now.
+    const deps = makeDeps();
+    const importId = await seedImport(deps.db, newUlid(), validTcx, "tcx");
+    await deps.db
+      .update(imports)
+      .set({ claimedBy: newUlid() })
+      .where(eq(imports.id, importId));
+
+    await handleImportsDlqBatch(
+      fakeBatch([{ body: { type: "import", importId, claimId: newUlid() } }])
+        .batch,
+      deps,
+      4,
+    );
+
+    expect(await statusOf(importId)).toBe("failed");
+  });
+
   it("reports a dead-lettered reminder without inventing an import to fail", async () => {
     // A reminder has no user-visible entity to mark, so the DLQ handler's
     // import branch must not run for it — there is nothing to look up.
@@ -1007,16 +1085,44 @@ describe("what the consumer tells the runner", () => {
   });
 });
 
-async function leftProcessing(): Promise<string> {
+/**
+An import a delivery left `processing`, claimed by the message whose
+`claimId` is `claimedBy`, or by one that carried none.
+*/
+async function leftProcessing(claimedBy?: string): Promise<string> {
   const importId = await seedImport(coreDb(), newUlid(), validTcx, "tcx");
   await coreDb()
     .update(imports)
-    .set({ status: "processing" })
+    .set({ status: "processing", claimedBy: claimedBy ?? sql`NULL` })
     .where(eq(imports.id, importId));
   return importId;
 }
 
-async function deliverAt(importId: string, attempts: number) {
+async function importRowOf(importId: string) {
+  const [row] = await coreDb()
+    .select()
+    .from(imports)
+    .where(eq(imports.id, importId));
+  return row;
+}
+
+async function statusOf(importId: string) {
+  const row = await importRowOf(importId);
+  return row?.status;
+}
+
+function runIdsOf(userId: string) {
+  return coreDb()
+    .select({ id: runs.id })
+    .from(runs)
+    .where(eq(runs.userId, userId));
+}
+
+/**
+One delivery of an import's message. `claimId` is the message's own, and
+absent for a message sent before messages carried one.
+*/
+async function deliverAt(importId: string, attempts: number, claimId?: string) {
   const reads = { count: 0 };
   const deps = makeDeps({
     importBucket: {
@@ -1027,13 +1133,10 @@ async function deliverAt(importId: string, attempts: number) {
     },
   });
   const { batch, wrapped } = fakeBatch([
-    { body: { type: "import", importId }, attempts },
+    { body: { type: "import", importId, claimId }, attempts },
   ]);
   await handleImportsBatch(batch, deps);
-  const [row] = await coreDb()
-    .select()
-    .from(imports)
-    .where(eq(imports.id, importId));
+  const row = await importRowOf(importId);
   return { row, reads: reads.count, acked: wrapped[0]?.wasAcked };
 }
 
@@ -1072,20 +1175,27 @@ describe("claim, then work", () => {
   it("reclaims, on its redelivery, a row a delivery that was ended left processing (SA-M29)", async () => {
     // Law 2's other half: at-least-once delivery is the recovery for a
     // Worker the runtime ended mid-parse, once (owner, 2026-11-15).
-    const importId = await leftProcessing();
+    const claimId = newUlid();
+    const importId = await leftProcessing(claimId);
 
-    const { row, reads } = await deliverAt(importId, MAX_PARSE_DELIVERIES);
+    const { row, reads } = await deliverAt(
+      importId,
+      MAX_PARSE_DELIVERIES,
+      claimId,
+    );
 
     expect(row?.status).toBe("done");
     expect(reads).toBe(1);
   });
 
   it("fails a row still processing after that, without reading the file", async () => {
-    const importId = await leftProcessing();
+    const claimId = newUlid();
+    const importId = await leftProcessing(claimId);
 
     const { row, reads, acked } = await deliverAt(
       importId,
       MAX_PARSE_DELIVERIES + 1,
+      claimId,
     );
 
     expect(row?.status).toBe("failed");
@@ -1099,13 +1209,176 @@ describe("claim, then work", () => {
   it("leaves a first delivery's processing row to the message at work on it", async () => {
     // A second message for the same import (a Retry, the stalled sweep)
     // arriving while the first still parses.
-    const importId = await leftProcessing();
+    const claimId = newUlid();
+    const importId = await leftProcessing(claimId);
 
-    const { row, reads, acked } = await deliverAt(importId, 1);
+    // Even its own row: a first delivery has no earlier one to have left it.
+    const { row, reads, acked } = await deliverAt(importId, 1, claimId);
 
     expect(row?.status).toBe("processing");
     expect(reads).toBe(0);
     expect(acked).toBe(true);
+  });
+
+  it("leaves, on a redelivery, a processing row another message claimed (#841)", async () => {
+    // The row is `processing` because another message for the same import
+    // (the sweep's re-send, the Desk's Retry) is at work on it, not because
+    // this message's earlier delivery was ended.
+    const holder = newUlid();
+    const importId = await leftProcessing(holder);
+
+    const { row, reads, acked } = await deliverAt(
+      importId,
+      MAX_PARSE_DELIVERIES,
+      newUlid(),
+    );
+
+    expect(row?.status).toBe("processing");
+    expect(row?.claimedBy).toBe(holder);
+    expect(reads).toBe(0);
+    expect(acked).toBe(true);
+  });
+
+  it("does not fail, past the parse limit, a row another message is working (#841)", async () => {
+    const importId = await leftProcessing(newUlid());
+
+    const { row, reads, acked } = await deliverAt(
+      importId,
+      MAX_PARSE_DELIVERIES + 1,
+      newUlid(),
+    );
+
+    expect(row?.status).toBe("processing");
+    expect(row?.failureReason).toBeNull();
+    expect(reads).toBe(0);
+    expect(acked).toBe(true);
+    expect(await unreadNotificationCount(coreDb(), row?.userId ?? "")).toBe(0);
+  });
+
+  it("does not parse beside the message that took its row over (#841)", async () => {
+    // The crossing itself. A message's first delivery throws, so its row
+    // goes back to `pending`; a second message for the same import claims
+    // it; and the first message's retry arrives while the second parses.
+    const userId = newUlid();
+    const importId = await seedImport(coreDb(), userId, validTcx, "tcx");
+    const first = { type: "import", importId, claimId: newUlid() };
+    const second = { type: "import", importId, claimId: newUlid() };
+    await handleImportsBatch(
+      fakeBatch([{ body: first }]).batch,
+      makeDeps({
+        importBucket: {
+          get: () => Promise.reject(new Error("R2 is having a moment")),
+        },
+      }),
+    );
+    const retryReads = { count: 0 };
+    const retry = makeDeps({
+      importBucket: {
+        get: (key) => {
+          retryReads.count += 1;
+          return env.IMPORTS.get(key);
+        },
+      },
+    });
+
+    await handleImportsBatch(
+      fakeBatch([{ body: second }]).batch,
+      makeDeps({
+        importBucket: {
+          get: async (key) => {
+            await handleImportsBatch(
+              fakeBatch([{ body: first, attempts: 2 }]).batch,
+              retry,
+            );
+            return env.IMPORTS.get(key);
+          },
+        },
+      }),
+    );
+
+    const row = await importRowOf(importId);
+    expect(retryReads.count).toBe(0);
+    expect(row?.status).toBe("done");
+    expect(row?.claimedBy).toBe(second.claimId);
+    expect(await runIdsOf(userId)).toStrictEqual([{ id: row?.runId }]);
+  });
+
+  it("writes the message's claim id as it claims, and none for a message without one", async () => {
+    const claimId = newUlid();
+    const importId = await seedImport(coreDb(), newUlid(), validTcx, "tcx");
+    await coreDb()
+      .update(imports)
+      .set({ claimedBy: newUlid() })
+      .where(eq(imports.id, importId));
+    const claimedByWhenOpened: string[] = [];
+    const deps = makeDeps({
+      importBucket: {
+        get: async () => {
+          const row = await importRowOf(importId);
+          claimedByWhenOpened.push(row?.claimedBy ?? "none");
+          throw new Error("R2 is having a moment");
+        },
+      },
+    });
+
+    // Each throws once it has looked, so the row is `pending` for the next.
+    await handleImportsBatch(
+      fakeBatch([{ body: { type: "import", importId, claimId } }]).batch,
+      deps,
+    );
+    await handleImportsBatch(
+      fakeBatch([{ body: { type: "import", importId } }]).batch,
+      deps,
+    );
+
+    expect(claimedByWhenOpened).toStrictEqual([claimId, "none"]);
+  });
+
+  it("lets a message without a claim id take back the row it left (law 9)", async () => {
+    // A message already in the queue when this deploys carries no claim
+    // id. Its claim is the absence of one, so its own redelivery still
+    // recovers a delivery that was ended, as it did before.
+    const importId = await leftProcessing();
+
+    const { row, reads } = await deliverAt(importId, MAX_PARSE_DELIVERIES);
+
+    expect(row?.status).toBe("done");
+    expect(reads).toBe(1);
+  });
+
+  it("fails that message's row past the parse limit, as before", async () => {
+    const importId = await leftProcessing();
+
+    const { row, reads } = await deliverAt(importId, MAX_PARSE_DELIVERIES + 1);
+
+    expect(row?.status).toBe("failed");
+    expect(reads).toBe(0);
+  });
+
+  it("never lets a message without a claim id take a row a message with one holds", async () => {
+    const importId = await leftProcessing(newUlid());
+
+    const retried = await deliverAt(importId, MAX_PARSE_DELIVERIES);
+    const pastTheLimit = await deliverAt(importId, MAX_PARSE_DELIVERIES + 1);
+
+    expect(retried.row?.status).toBe("processing");
+    expect(pastTheLimit.row?.status).toBe("processing");
+    expect(retried.reads + pastTheLimit.reads).toBe(0);
+  });
+
+  it("never lets a message with a claim id take a row a message without one holds", async () => {
+    const importId = await leftProcessing();
+
+    const retried = await deliverAt(importId, MAX_PARSE_DELIVERIES, newUlid());
+    const pastTheLimit = await deliverAt(
+      importId,
+      MAX_PARSE_DELIVERIES + 1,
+      newUlid(),
+    );
+
+    expect(retried.row?.status).toBe("processing");
+    expect(pastTheLimit.row?.status).toBe("processing");
+    expect(retried.reads + pastTheLimit.reads).toBe(0);
   });
 
   it("puts a claimed row back to pending when the work throws", async () => {
@@ -1151,6 +1424,113 @@ describe("claim, then work", () => {
       .where(eq(imports.id, importId));
     expect(after?.status).toBe("duplicate");
     expect(after?.runId).toBeNull();
+  });
+});
+
+/**
+Makes one kind of write fail in the core database while `work` runs: a
+trigger that aborts it, and with it the batch it is in.
+*/
+async function whileFailing(
+  name: string,
+  write: string,
+  work: () => Promise<void>,
+): Promise<void> {
+  await env.DIALED_CORE.exec(
+    `CREATE TRIGGER ${name} BEFORE ${write} BEGIN SELECT RAISE(ABORT, '${name}'); END`,
+  );
+  try {
+    await work();
+  } finally {
+    await env.DIALED_CORE.exec(`DROP TRIGGER ${name}`);
+  }
+}
+
+function kitRemindersOf(userId: string) {
+  return coreDb()
+    .select({ subjectId: notifications.subjectId })
+    .from(notifications)
+    .where(
+      and(
+        eq(notifications.userId, userId),
+        eq(notifications.kind, "kit_reminder"),
+      ),
+    );
+}
+
+/**
+An import whose first delivery fails on `write`, then is delivered again
+with nothing in its way.
+*/
+async function failOnceThenRedeliver(name: string, write: string) {
+  const userId = newUlid();
+  const importId = await seedImport(coreDb(), userId, validTcx, "tcx");
+  const job = { type: "import", importId, claimId: newUlid() };
+
+  const first = fakeBatch([{ body: job }]);
+  await whileFailing(name, write, () =>
+    handleImportsBatch(first.batch, makeDeps()),
+  );
+  const between = {
+    wasRetried: first.wrapped[0]?.wasRetried,
+    status: await statusOf(importId),
+    runs: await runIdsOf(userId),
+    kitReminders: await kitRemindersOf(userId),
+  };
+
+  await handleImportsBatch(
+    fakeBatch([{ body: job, attempts: 2 }]).batch,
+    makeDeps(),
+  );
+  const row = await importRowOf(importId);
+  return { userId, row, between };
+}
+
+describe("the batch that concludes an import", () => {
+  const NOTHING_LANDED = {
+    wasRetried: true,
+    status: "pending",
+    runs: [],
+    kitReminders: [],
+  };
+
+  it("holds the run's insert, so an import never ends a duplicate of its own run (#842)", async () => {
+    // Today's failure: the insert landed on its own, the batch after it
+    // failed, and the redelivery's duplicate check found the run the
+    // first delivery had just written.
+    const { userId, row, between } = await failOnceThenRedeliver(
+      "import_done_lost",
+      "UPDATE ON imports WHEN NEW.status = 'done'",
+    );
+
+    expect(between).toStrictEqual(NOTHING_LANDED);
+    expect(row?.status).toBe("done");
+    expect(await runIdsOf(userId)).toStrictEqual([{ id: row?.runId }]);
+    expect(await kitRemindersOf(userId)).toStrictEqual([
+      { subjectId: row?.runId },
+    ]);
+    expect(
+      await coreDb()
+        .select({ kind: outbox.kind })
+        .from(outbox)
+        .where(eq(outbox.dedupeKey, `${userId}:${row?.r2Key ?? ""}`)),
+    ).toStrictEqual([{ kind: "import_file_expire" }]);
+  });
+
+  it("holds the kit reminder, so a failed write of it is not lost for good (#843)", async () => {
+    // Today's failure: the reminder was written after the import was
+    // `done`, so the redelivery claimed nothing and never wrote it.
+    const { userId, row, between } = await failOnceThenRedeliver(
+      "kit_reminder_lost",
+      "INSERT ON notifications WHEN NEW.kind = 'kit_reminder'",
+    );
+
+    expect(between).toStrictEqual(NOTHING_LANDED);
+    expect(row?.status).toBe("done");
+    expect(await runIdsOf(userId)).toStrictEqual([{ id: row?.runId }]);
+    expect(await kitRemindersOf(userId)).toStrictEqual([
+      { subjectId: row?.runId },
+    ]);
   });
 });
 
