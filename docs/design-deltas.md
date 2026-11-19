@@ -1,5 +1,10 @@
 # dialed.run — Design Deltas (work order for Claude Design)
 
+> **Archive, frozen after wave 15 (#875).** New entries go in
+> `docs/design-deltas/`, one file each: a lane's "Built …" section as
+> `<design number>-<slug>.md`, a Design round's rulings as `round-<N>.md`.
+> Nothing is appended here; `docs/design-deltas/README.md` says why.
+
 This file is the queue of revisions to work back through the Claude Design
 project ("Runner Wardrobe App Brief"). It is a **work order, not a
 changelog** — an item leaves when design has answered it, and the answer

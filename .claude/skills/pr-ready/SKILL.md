@@ -22,7 +22,10 @@ description: Use before opening a pull request in dialed.run, before pushing a b
    an issue with `kind:design-ask` in status Needs Design
    (`docs/agents/issue-tracker.md`), listed by number under a
    **"Design deltas"** heading in the PR body (`.claude/rules/ui.md`,
-   placeholder protocol).
+   placeholder protocol). A design-deltas section you write, and any
+   deploy step you add, goes in a file of your own: `docs/design-deltas/`
+   and `docs/launch/deployment-plan/`, each named for your design doc,
+   never the shared documents (#875; each folder's README says how).
 5. **Issues.** The PR body says `Closes #N` for every issue the PR
    finishes, one per line. Merging closes them and the Project marks them
    Done.

@@ -10,7 +10,7 @@
  *
  * In the `node` project because it reads the files from disk.
  */
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
 
 import type { Nodes, Root, RootContent, Table, TableCell } from "mdast";
@@ -22,6 +22,8 @@ import { describe, expect, it } from "vitest";
 import { deploymentConfig } from "../../src/modules/ops/deployment-config";
 
 const SECTION = "2. Vars and secrets";
+const PLAN = "docs/launch/deployment-plan.md";
+const PENDING = "docs/launch/deployment-plan";
 
 /**
  * A node's text, bold and code spans read as their words.
@@ -33,24 +35,44 @@ function textOf(node: Nodes): string {
     : "";
 }
 
-function sectionTable(tree: Root): Table {
+/**
+ * The table under `## 2. Vars and secrets`, or `undefined` where there is
+ * none: a pending addition (`docs/launch/deployment-plan/`) may extend
+ * other sections only.
+ */
+function sectionTableIn(tree: Root): Table | undefined {
   const start = tree.children.findIndex(
     (node) =>
       node.type === "heading" && node.depth === 2 && textOf(node) === SECTION,
   );
+  if (start === -1) return undefined;
   const rest: RootContent[] = tree.children.slice(start + 1);
-  const table = rest.find((node): node is Table => node.type === "table");
   const nextHeading = rest.findIndex(
     (node) => node.type === "heading" && node.depth === 2,
   );
-  if (
-    start === -1 ||
-    table === undefined ||
-    rest.indexOf(table) > nextHeading
-  ) {
-    throw new Error(`no table under "## ${SECTION}"`);
-  }
-  return table;
+  const section = nextHeading === -1 ? rest : rest.slice(0, nextHeading);
+  return section.find((node): node is Table => node.type === "table");
+}
+
+function parsed(path: string): Root {
+  return fromMarkdown(readFileSync(path, "utf8"), {
+    extensions: [gfmTable()],
+    mdastExtensions: [gfmTableFromMarkdown()],
+  });
+}
+
+/**
+ * The plan's §2 table, then each pending addition's (#875): a lane's new
+ * value lands as a row in its own file until the docs pass folds it in.
+ */
+function sectionTables(): Table[] {
+  const plan = sectionTableIn(parsed(PLAN));
+  if (plan === undefined) throw new Error(`no table under "## ${SECTION}"`);
+  const pending = readdirSync(PENDING)
+    .filter((name) => name.endsWith(".md") && name !== "README.md")
+    .map((name) => sectionTableIn(parsed(`${PENDING}/${name}`)))
+    .filter((table) => table !== undefined);
+  return [plan, ...pending];
 }
 
 /**
@@ -69,12 +91,8 @@ interface PlanRow {
   readonly need: string;
 }
 
-function planRows(): PlanRow[] {
-  const tree = fromMarkdown(
-    readFileSync("docs/launch/deployment-plan.md", "utf8"),
-    { extensions: [gfmTable()], mdastExtensions: [gfmTableFromMarkdown()] },
-  );
-  const [header, ...rows] = sectionTable(tree).children;
+function rowsOf(table: Table): PlanRow[] {
+  const [header, ...rows] = table.children;
   expect(header?.children.map((cell) => textOf(cell))).toStrictEqual([
     "name",
     "kind",
@@ -93,6 +111,10 @@ function planRows(): PlanRow[] {
       need: textOf(need),
     }));
   });
+}
+
+function planRows(): PlanRow[] {
+  return sectionTables().flatMap((table) => rowsOf(table));
 }
 
 function byName(a: { name: string }, b: { name: string }): number {

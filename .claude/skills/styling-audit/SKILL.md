@@ -101,7 +101,7 @@ For each screen:
    - something invisible in dark;
    - the same component looking different on two screens.
 4. **Trace it to code** (file and line), then check it isn't already
-   ruled. Grep `docs/design-deltas.md` (grep it, don't read it whole), then
+   ruled. Grep `docs/design-deltas.md` and `docs/design-deltas/` (grep them, don't read them whole), then
    `docs/decisions.md`, then the comment at the site. A difference that's
    recorded as deliberate is not a finding.
 5. **Classify it.** `IMPL` means the design is clear (a board, a contract, a

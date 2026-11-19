@@ -4,7 +4,8 @@
 question and watch item is an issue on ddteeter/dialed.run, and its workflow
 state lives in one Project, [dialed.run](https://github.com/users/ddteeter/projects/2).
 Law and history stay in the repo: decisions in `docs/decisions.md`, the
-design record in `design/` and `docs/design-deltas.md`, procedures in the
+design record in `design/`, `docs/design-deltas.md` (the archive) and
+`docs/design-deltas/` (one file per entry since #875), procedures in the
 launch plans. `docs/deferred.md` is a frozen archive; its open rows point at
 their issues.
 

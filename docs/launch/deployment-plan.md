@@ -19,6 +19,10 @@ Sources: the production-readiness audit
 **Who** is the owner unless it says otherwise. Where a config change needs
 code, the lane that writes the code is named.
 
+**Pending additions** from lanes sit in `docs/launch/deployment-plan/`, one
+file per lane, until the next wave's docs pass folds them in here (#875).
+They are part of this plan until then: read that folder with this file.
+
 ---
 
 ## Order of operations
@@ -72,10 +76,10 @@ Vars go in `wrangler.jsonc` (`vars`), secrets with `wrangler secret put`.
 Both are the owner's edits; the code that reads each is already written or
 is written by the named lane.
 
-**Every name here is in `src/modules/ops/deployment-config.ts`** (design
-237), with its kind and its "required" level, and a test holds the two
-together: a row added here without an entry there fails, and so does the
-reverse. `/api/health` shows an operator every name as set or missing,
+**Every name here, and in a §2 table in `docs/launch/deployment-plan/`,
+is in `src/modules/ops/deployment-config.ts`** (design 237), with its kind
+and its "required" level, and a test holds the two together: a row added
+here without an entry there fails, and so does the reverse. `/api/health` shows an operator every name as set or missing,
 never a value, and the daily digest names each missing one that is
 required or needed by a stage. Write each name in full, one per backtick
 pair, so the test can read it.
