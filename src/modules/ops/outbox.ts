@@ -45,6 +45,7 @@ import {
   boundHandler,
   outboxHandlers,
   OWED_AGAIN,
+  Refused,
   type OutboxHandlers,
 } from "./outbox-handlers";
 import { captureException } from "./sentry";
@@ -58,6 +59,21 @@ type Report = typeof captureException;
  * is idempotent, and a debt like a runner's photo is worth finishing late.
  */
 export const OUTBOX_TERMINAL_ATTEMPTS = 5;
+
+/**
+ * Attempts after which a runner's email the sender keeps refusing is
+ * closed: deleted unsent and reported once (SA-L22, design 244). At the
+ * doubling backoff the eighth try comes a little over five days after the
+ * first.
+ *
+ * Not at the first refusal, and not `OUTBOX_TERMINAL_ATTEMPTS`: the codes
+ * that say "not this address" are also what a fault of ours earns for
+ * every address (a suppressed sender, a malformed message), and during
+ * one the operator's own mail fails too. The days are for that to be
+ * noticed and fixed before any owed mail is discarded. The owner set the
+ * number (2026-11-18).
+ */
+export const OUTBOX_REFUSED_ATTEMPTS = 8;
 
 /**
  * Rows drained per kind per run, so one kind with a large or failing
@@ -211,7 +227,10 @@ export async function settleOutbox(
 ): Promise<void> {
   const handler = boundHandler(handlers, debt.message);
   try {
-    await runToSettle(db, handler, debt.id);
+    // Refused (SA-L22) is reported like a failure and left for the drain,
+    // which is what counts a row's tries and closes it.
+    const refused = await runToSettle(db, handler, debt.id);
+    if (refused !== undefined) throw refusalOf(refused);
   } catch (error) {
     report(error, {
       surface: "outbox-fast-path",
@@ -317,25 +336,60 @@ async function runToSettle(
   db: Db,
   handler: ReturnType<typeof boundHandler>,
   rowId: string,
-): Promise<void> {
+): Promise<Refused | undefined> {
   const ofRow = eq(outbox.id, rowId);
   const outcome = await handler.run(db, rowId);
+  if (outcome instanceof Refused) return outcome;
   await (outcome === OWED_AGAIN
     ? db.update(outbox).set({ attempts: 0 }).where(ofRow)
     : db.delete(outbox).where(ofRow));
+  return undefined;
 }
 
 /**
- * Work one claimed row. `true` when it settled and its row is gone.
- * Anything else leaves the row owed at its new backoff, reported with the
+What a refused row is reported as: the far side's code and nothing else.
+*/
+function refusalOf(refused: Refused): Error {
+  return new Error(`the sender refused this address: ${refused.reason}`);
+}
+
+/**
+ * What became of a claimed row: `settled` and gone; `closed`, gone unsent
+ * because the far side kept refusing it; or nothing, and it is still owed.
+ */
+type Worked = "settled" | "closed" | undefined;
+
+/**
+ * A refused row (SA-L22): reported with the far side's code, and closed —
+ * deleted unsent — once a runner's email has been refused
+ * `OUTBOX_REFUSED_ATTEMPTS` times. `closed` on the report says which, so
+ * the one report that ends a debt reads apart from the tries before it,
+ * and a run of them under one code reads as a fault of ours.
+ */
+async function refusedRow(
+  db: Db,
+  row: ClaimedRow,
+  refused: Refused,
+  report: (error: Error, isClosed: boolean) => void,
+): Promise<Worked> {
+  const isClosed =
+    row.kind === "email" && row.attempts >= OUTBOX_REFUSED_ATTEMPTS;
+  if (isClosed) await db.delete(outbox).where(eq(outbox.id, row.id));
+  report(refusalOf(refused), isClosed);
+  return isClosed ? "closed" : undefined;
+}
+
+/**
+ * Work one claimed row. `settled` when it settled and its row is gone.
+ * No answer leaves the row owed at its new backoff, reported with the
  * row's ids and never its payload.
  */
-async function didSettle(
+async function workRow(
   db: Db,
   row: ClaimedRow,
   report: Report,
   handlers: OutboxHandlers,
-): Promise<boolean> {
+): Promise<Worked> {
   const where = {
     surface: "outbox-drain",
     kind: row.kind,
@@ -348,22 +402,48 @@ async function didSettle(
   // prevent. Only the delete is owed.
   if (row.sentAt !== null) {
     await db.delete(outbox).where(eq(outbox.id, row.id));
-    return true;
+    return "settled";
   }
   const read = readOutboxRow(row.kind, row.payload);
   if (!read.ok) {
     report(new Error(`outbox row unreadable: ${read.problem}`), where);
-    return false;
+    return undefined;
   }
   const { message } = read;
   const handler = boundHandler(handlers, message);
   try {
-    await runToSettle(db, handler, row.id);
-    return true;
+    const refused = await runToSettle(db, handler, row.id);
+    if (refused === undefined) return "settled";
+    return await refusedRow(db, row, refused, (error, isClosed) => {
+      report(error, {
+        ...where,
+        closed: String(isClosed),
+        ...handler.context(),
+      });
+    });
   } catch (error) {
     report(error, { ...where, ...handler.context() });
-    return false;
+    return undefined;
   }
+}
+
+/**
+ * Work a kind's claimed rows in turn, and count what became of them.
+ */
+async function workClaimed(
+  db: Db,
+  claimed: readonly ClaimedRow[],
+  report: Report,
+  handlers: OutboxHandlers,
+): Promise<{ settled: number; closed: number }> {
+  let settled = 0;
+  let closed = 0;
+  for (const row of claimed) {
+    const worked = await workRow(db, row, report, handlers);
+    if (worked === "settled") settled += 1;
+    else if (worked === "closed") closed += 1;
+  }
+  return { settled, closed };
 }
 
 /**
@@ -390,12 +470,21 @@ export async function drainOutbox(
   for (const kind of kinds) {
     const claimed = await claimDue(db, kind, now);
     if (claimed.length === 0) continue;
-    let settled = 0;
-    for (const row of claimed) {
-      if (await didSettle(db, row, report, handlers)) settled += 1;
-    }
+    const { settled, closed } = await workClaimed(
+      db,
+      claimed,
+      report,
+      handlers,
+    );
     const line = drainLine(kind, claimed.length, settled, options.lines);
     if (line !== undefined) anomalies.push(line);
+    // Whatever the run's lines, a closed debt is said once (law 6): the
+    // row is gone, so no later line can name it.
+    if (closed > 0) {
+      anomalies.push(
+        `${String(closed)} ${kind} outbox row(s) closed unsent: the sender refused the address ${String(OUTBOX_REFUSED_ATTEMPTS)} times`,
+      );
+    }
   }
   if (options.backlog !== true) return;
   const left = await stillDueOf(db, now, kinds);
