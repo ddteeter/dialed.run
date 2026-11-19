@@ -20,7 +20,7 @@ import {
 } from "./upload-limits";
 import { newUlid } from "../../lib/ids";
 import type { CoreDb } from "./core-db";
-import type { ImportJob } from "./queue-messages";
+import { importJob, type ImportJob } from "./queue-messages";
 import { summaryOfRun } from "./service";
 import type { RunSummary } from "./service";
 import { nowSeconds } from "../../lib/now";
@@ -125,7 +125,7 @@ export async function startImport(
     throw error;
   }
 
-  await queue.send({ type: "import", importId });
+  await queue.send(importJob(importId));
 
   return { importId };
 }

@@ -21,9 +21,9 @@ model {
 
   // Run import: an uploaded file becomes a run.
   extend cf.app.runs {
-    upload = inRequest 'startImport' {
+    upload = inRequest 'startFileImport / startFileUpload' {
       technology 'in the request: one attempt, the runner is waiting'
-      description 'The upload server function'
+      description 'The upload server function and what it calls. Its inner step, startImport, is where a Garmin import also enters'
     }
     consumer = offQueue 'import consumer' {
       technology 'off the queue: seconds later, at least once'
@@ -31,7 +31,7 @@ model {
     }
     deadLetter = offQueue 'import dead-letter consumer' {
       technology 'off the queue: after 3 failed retries'
-      description 'Makes sure no import ends in silence'
+      description 'Fails an import whose job ran out of retries, and tells its runner'
     }
   }
 
@@ -124,6 +124,7 @@ model {
   cf.app.runs.deadLetter -[recovery]-> cf.coreDb 'marks the import failed'
   cf.app.cronDaily1200 -[recovery]-> cf.coreDb 'finds imports pending past 15 minutes'
   cf.app.cronDaily1200 -[recovery]-> cf.importsQueue 'enqueues them again'
+  cf.app.cronDaily1200 -> cf.importsBucket 'deletes run files that were read, or failed 30 days ago'
   cf.app.cronHourly00 -[recovery]-> cf.app.weather 'retries runs still pending'
   cf.app.weather -> provider 'finished hours only'
   cf.app.weather -> cf.weatherDb 'caches the observation'

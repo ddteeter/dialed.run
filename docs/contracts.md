@@ -384,9 +384,11 @@ processed_webhook_events: UNIQUE(object_id, aspect_type, event_time),
 strava_revocations: id, refresh_token, created_at
                 -- the revoke outbox (law 8c); drained with the refresh token
 cron_checkpoints: cron_name PK, last_run_at
-imports:        id, user_id, r2_key, status ('pending'|'processing'|'done'|'failed'),
+imports:        id, user_id, r2_key,
+                status ('pending'|'processing'|'done'|'failed'|'duplicate'),
                 failure_reason, run_id NULLABLE, created_at,
-                garmin_activity_id NULLABLE  -- plan 160; UNIQUE(user_id, garmin_activity_id)
+                garmin_activity_id NULLABLE, -- plan 160; UNIQUE(user_id, garmin_activity_id)
+                claimed_by NULLABLE  -- #841; the claimId of the queue message that last claimed the row
 ```
 
 Task 106 added:

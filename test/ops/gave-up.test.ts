@@ -32,6 +32,7 @@ import {
 } from "../../src/modules/products";
 import { reminderSubject } from "../../src/modules/runs/queue-messages";
 import { gaveUpRow } from "../gave-up-rows";
+import { importMessageFor } from "../queue-fakes";
 
 /**
  * The Desk's Gave up (Operator Screens D6, a section of Today; R-119):
@@ -394,10 +395,7 @@ describe("retryGaveUp", () => {
 
     expect(await retryGaveUp({ id, step: "again" }, deps)).toBe("retried");
 
-    expect(importsQueue.send).toHaveBeenCalledWith({
-      type: "import",
-      importId: upload.id,
-    });
+    expect(importsQueue.send).toHaveBeenCalledWith(importMessageFor(upload.id));
     const [row] = await db()
       .select()
       .from(imports)

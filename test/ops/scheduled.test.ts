@@ -46,6 +46,7 @@ import {
   createOrGetBrand,
   createOrGetProduct,
 } from "../../src/modules/products";
+import { importMessageFor } from "../queue-fakes";
 
 /**
  * The daily digest is a cron whose entire product is a list of things a
@@ -422,7 +423,7 @@ describe("stalled imports are re-dispatched, and reported", () => {
 
     const outcome = await handleScheduled(DIGEST);
 
-    expect(send).toHaveBeenCalledWith({ type: "import", importId });
+    expect(send).toHaveBeenCalledWith(importMessageFor(importId));
     expect(outcome.anomalies).toContain(
       "1 import(s) stalled pending and were re-dispatched",
     );

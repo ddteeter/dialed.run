@@ -268,7 +268,8 @@ broke".
 The file path is the [`importStory`](https://ddteeter.github.io/dialed.run/#/view/importStory/) view of the model in `docs/diagrams/`:
 the upload, the queue, the consumer and the weather attach
 ([`weatherStory`](https://ddteeter.github.io/dialed.run/#/view/weatherStory/)), one step at a
-time, with what makes each step safe to repeat. [`importRecovery`](https://ddteeter.github.io/dialed.run/#/view/importRecovery/) is what
+time, with what makes each step safe to repeat. [`importUpload`](https://ddteeter.github.io/dialed.run/#/view/importUpload/) is the
+guards before a file is stored, and [`importRecovery`](https://ddteeter.github.io/dialed.run/#/view/importRecovery/) is what
 happens when a step is lost.
 
 The Strava path is not drawn, because it carries no run. The webhook's

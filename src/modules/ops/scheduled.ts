@@ -20,7 +20,7 @@ import {
 } from "../enrichment";
 import { sweepRateLimits } from "../email";
 import { fillMissingTimeZones } from "../onboarding";
-import { pruneStravaIds } from "../runs";
+import { importJob, pruneStravaIds } from "../runs";
 import { retryPendingWeather, timeZoneAt } from "../weather";
 import { cronNameFor, type CronName } from "./crons";
 import type { SpeedFinding } from "./perf-checks";
@@ -651,8 +651,9 @@ async function redispatchEach<TRow extends { id: string }>(
  * `imports.status` is already the durable "not finished" marker, so this
  * is reconciliation rather than an outbox (law 8c) — no new table, just
  * something that re-drives the marker. Re-enqueueing is safe because the
- * consumer claims the row (`pending` -> `processing`) before working, so a
- * duplicate delivery loses the race and stops.
+ * consumer claims the row (`pending` -> `processing`) before working, and
+ * each message is its own claimant (`importJob`): a second message for an
+ * import finds the row claimed, or concluded, and stops.
  *
  * Only imports older than the grace window, so this never races a normal
  * dispatch still in flight.
@@ -701,7 +702,7 @@ async function redispatchStalledImports(anomalies: string[]): Promise<void> {
   // fallow-ignore-next-line code-duplication -- both callers of redispatchEach -- the shared body is already extracted, and what rhymes now is the call
   await redispatchEach(anomalies, stalled, {
     queue: env.IMPORTS_QUEUE,
-    message: (row) => ({ type: "import", importId: row.id }),
+    message: (row) => importJob(row.id),
     errorContext: (row) => ({
       surface: "import-redispatch",
       importId: row.id,

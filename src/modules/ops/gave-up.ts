@@ -29,7 +29,12 @@ import { clockLabel, monthDayLabel } from "../../lib/dates";
 import { firstColumnWhere, firstRowWhere } from "../../lib/sql/keyed-read";
 import { dedupeKeyFor } from "../../lib/sql/outbox";
 import { reextract, retryFailedEnrichment } from "../enrichment";
-import { reminderFromSubject, type ImportJob, type ReminderJob } from "../runs";
+import {
+  importJob,
+  reminderFromSubject,
+  type ImportJob,
+  type ReminderJob,
+} from "../runs";
 import type { GaveUpRetry } from "./inputs";
 import { ownerHandles } from "./owner-handles";
 import { enrichmentDeps } from "./queues";
@@ -360,7 +365,7 @@ async function retryImport(row: Row, deps: RetryDeps): Promise<RetryOutcome> {
     gaveUpClear(db, "import", row.subjectId),
   ]);
   try {
-    await deps.importsQueue.send({ type: "import", importId: importRow.id });
+    await deps.importsQueue.send(importJob(importRow.id));
   } catch (error) {
     captureException(error, {
       surface: "desk-retry-import",

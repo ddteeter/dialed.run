@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { expect, vi } from "vitest";
 import type { Mock } from "vitest";
 
 import type { OutboxMessage } from "../src/lib/sql/outbox";
@@ -40,6 +40,16 @@ export function batchOf(queue: string, messages: SpiedMessage[]): MessageBatch {
     ackAll: nothing,
     retryAll: nothing,
   };
+}
+
+/**
+ * A sent `import` message, as an assertion sees it: the import it is for,
+ * and a claim id of that send's own (#841), whatever it is. That each send
+ * mints a different one is `importJob`'s test.
+ */
+export function importMessageFor(importId: string): unknown {
+  const claimId: unknown = expect.any(String);
+  return { type: "import", importId, claimId };
 }
 
 /**

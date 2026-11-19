@@ -7,6 +7,7 @@
 export { handleImportsBatch, handleImportsDlqBatch } from "./consumer";
 export { MAX_IMPORT_BYTES } from "./upload-limits";
 export {
+  importJob,
   reminderFromSubject,
   type ImportJob,
   type ReminderJob,

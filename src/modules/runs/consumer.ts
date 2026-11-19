@@ -10,7 +10,7 @@
  * (`attachObservation`, `modules/weather`'s own, handed in by the queue
  * entry) so a test can make it fail.
  */
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, or, sql } from "drizzle-orm";
 
 import { dlqBatchHandler } from "../../db/gave-up";
 import {
@@ -28,7 +28,7 @@ import { nowSeconds } from "../../lib/now";
 import { firstRowWhere, hasRowWhere } from "../../lib/sql/keyed-read";
 import { consumeEach } from "../../lib/sql/queue-batch";
 import type { CoreDb } from "./core-db";
-import { createNotification, notificationInsert } from "../notifications";
+import { notificationInsert } from "../notifications";
 import {
   PARSE_FAILURE_MESSAGE,
   RunParseError,
@@ -110,22 +110,44 @@ const IMPORT_TERMINAL_STATUSES = ["done", "failed", "duplicate"] as const;
 export const MAX_PARSE_DELIVERIES = 2;
 
 /**
+ * Whether `job`'s message is the one holding a row it reads `processing`
+ * (#841). Several messages can carry one import (the upload's, the daily
+ * sweep's, the Desk's Retry), each with a `claimId` of its own, and a
+ * claim writes the claimant's to `claimed_by`. A message that carries none
+ * (one sent before messages did, law 9) writes NULL, so its claim is the
+ * absence of one: it holds only a row no `claimId` is on.
+ */
+function isHolder(
+  importRow: { claimedBy: string | null },
+  job: ImportJob,
+): boolean {
+  return (importRow.claimedBy ?? undefined) === job.claimId;
+}
+
+/**
  * What a delivery may claim. The first only a `pending` row: one already
- * `processing` is another message's, still at work. A redelivery may also
- * take back the row its own earlier delivery left.
+ * `processing` is a message still at work. A redelivery may also take
+ * back the row its own earlier delivery left, and only that one: a row
+ * another message holds is that message's (`isHolder`, said in SQL so the
+ * claim decides it at write time).
  */
 async function didClaimImport(
   db: CoreDb,
-  importId: string,
+  job: ImportJob,
   attempts: number,
 ): Promise<boolean> {
+  const held =
+    job.claimId === undefined
+      ? isNull(imports.claimedBy)
+      : eq(imports.claimedBy, job.claimId);
   return await didClaim(
     db,
     imports,
     { id: imports.id, status: imports.status },
-    importId,
+    job.importId,
     attempts > 1 ? ["pending", "processing"] : ["pending"],
-    { status: "processing" },
+    { status: "processing", claimedBy: job.claimId ?? sql`NULL` },
+    or(eq(imports.status, "pending"), held),
   );
 }
 
@@ -261,11 +283,19 @@ async function processImportJob(
   // 'processing')` refuses exactly the same rows, and it refuses them at
   // write time rather than from a value that may already be stale. A
   // redelivery of completed work claims nothing and stops here.
-  if (importRow.status === "processing" && attempts > MAX_PARSE_DELIVERIES) {
+  //
+  // Past the parse limit, only the message holding the row fails it: one
+  // another message holds is that message's to conclude, and the claim
+  // below refuses it.
+  if (
+    importRow.status === "processing" &&
+    isHolder(importRow, job) &&
+    attempts > MAX_PARSE_DELIVERIES
+  ) {
     await failImport(deps, importRow, DEAD_IMPORT_REASON);
     return;
   }
-  const didClaim = await didClaimImport(deps.db, job.importId, attempts);
+  const didClaim = await didClaimImport(deps.db, job, attempts);
   if (!didClaim) return; // already concluded, in flight, or lost the race
 
   await withPendingOnThrow(deps.db, importRow.id, () =>
@@ -321,9 +351,24 @@ async function parseAndSave(
     return;
   }
 
+  // The run, the import's conclusion, and what follows from the run now
+  // being in the log, in one batch (#842, #843): the Strava reminder this
+  // file answers, if it had one, is answered (round 25; one upload clears
+  // one reminder), the file it was read from is owed its deletion (D-116),
+  // and the runner is asked for the kit. The insert is first because the
+  // pairing updates the row it writes. Were any of these to land without
+  // the others, the redelivery could not put it right: it would find its
+  // own run and end a duplicate of it, or find the import `done` and
+  // claim nothing.
   const weatherStatus = initialWeatherStatus(draft);
   const runId = newUlid();
-  await deps.db.insert(runs).values({
+  const pairing = pairWithReminder(
+    deps.db,
+    importRow.userId,
+    runId,
+    draft.startedAt + draft.durationS,
+  );
+  const run = deps.db.insert(runs).values({
     id: runId,
     userId: importRow.userId,
     // Fetched through Garmin's API, and so credited to it (G1); a file the
@@ -346,18 +391,8 @@ async function parseAndSave(
     // watch did not ask.
     ...effortFromWatch(draft.rpe),
   });
-
-  // The import is done, and the Strava reminder this file answers — if it
-  // had one — is answered (round 25; one upload clears one reminder), and
-  // the file it was read from is owed its deletion (D-116). One batch: all
-  // four follow from the same fact, that this run is now in the log.
-  const pairing = pairWithReminder(
-    deps.db,
-    importRow.userId,
-    runId,
-    draft.startedAt + draft.durationS,
-  );
   await deps.db.batch([
+    run,
     deps.db
       .update(imports)
       .set({ status: "done", runId })
@@ -365,14 +400,13 @@ async function parseAndSave(
     pairing.pairRun,
     pairing.markRead,
     fileGoes(deps, importRow),
+    notificationInsert(deps.db, {
+      userId: importRow.userId,
+      kind: "kit_reminder",
+      subjectId: runId,
+      body: "Add your kit for the run you just imported.",
+    }),
   ]);
-
-  await createNotification(deps.db, {
-    userId: importRow.userId,
-    kind: "kit_reminder",
-    subjectId: runId,
-    body: "Add your kit for the run you just imported.",
-  });
 
   // Last, once the import is done: the conditions are secondary to it, and
   // the upload screen keeps polling while the run's weather is pending. One
@@ -654,7 +688,7 @@ export async function handleImportsDlqBatch(
           onlyIf: sql`EXISTS (SELECT 1 FROM ${stravaConnections} WHERE ${stravaConnections.athleteId} = ${job.athleteId})`,
         };
       }
-      if (job.type === "import") return deadImportWrites(deps, job.importId);
+      if (job.type === "import") return deadImportWrites(deps, job);
       // A revoke: its `strava_revocations` row is its own record.
     },
   );
@@ -665,18 +699,23 @@ const DEAD_IMPORT_REASON =
 
 /**
  * A dead-lettered import's writes: failed, its runner told, its file's
- * deletion owed — unless it already ended, when there is nothing to mark.
+ * deletion owed — unless it already ended, when there is nothing to mark,
+ * or another message is at work on it (#870): that message concludes the
+ * row, or is dead-lettered for it in its turn.
  */
-async function deadImportWrites(deps: DeadLetterDeps, importId: string) {
-  const importRow = await importById(deps.db, importId);
+async function deadImportWrites(deps: DeadLetterDeps, job: ImportJob) {
+  const importRow = await importById(deps.db, job.importId);
   if (
     importRow === undefined ||
-    (IMPORT_TERMINAL_STATUSES as readonly string[]).includes(importRow.status)
+    (IMPORT_TERMINAL_STATUSES as readonly string[]).includes(
+      importRow.status,
+    ) ||
+    (importRow.status === "processing" && !isHolder(importRow, job))
   ) {
     return;
   }
   return {
-    subject: { kind: "import", subjectId: importId } as const,
+    subject: { kind: "import", subjectId: job.importId } as const,
     writes: failImportWrites(deps, importRow, DEAD_IMPORT_REASON),
   };
 }

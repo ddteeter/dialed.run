@@ -8,7 +8,7 @@ model {
       description 'Users, closet, runs, products, feed'
     }
     weatherDb = database 'D1: dialed-weather' {
-      description 'The shared observation cache'
+      description 'The shared observation cache, and the bands runners set by hand'
     }
     opsDb = database 'D1: dialed-ops' {
       description 'Data about the app, never about anyone: the daily speed rollup'
@@ -41,7 +41,7 @@ model {
       description 'Exports that failed every retry'
     }
     importsQueue = queue 'Queue: dialed-imports' {
-      description 'ImportJob'
+      description 'ImportJob, and Strava\'s reminder, revoke and deauthorize jobs'
     }
     importsDlq = queue 'Queue: dialed-imports-dlq' {
       description 'Import jobs that failed every retry'
