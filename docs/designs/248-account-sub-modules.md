@@ -50,9 +50,10 @@ How each kind of importer is rewritten:
   three suppression grants keyed by `account/export.ts`, `invites.ts` and
   `purge.ts` are re-keyed to the new path. Path prefix only; comment,
   reason and count unchanged. `eslint.config.js` names no account path.
-- Comments elsewhere that cite an old account path are updated in `lib/`
-  and `ui/`; `db/schema-core.ts` (forbidden) and `ops/digest-email.ts`
-  (lane A's) keep theirs, and an issue lists them.
+- Comments elsewhere that cite an old account path are updated in `lib/`,
+  `ui/` and `ops/daily/digest-email.ts` (no lane holds it after lane A).
+  `db/schema-core.ts` is forbidden: its two are noted on #670, whose
+  squash rewrites that file's comments.
 - `npm run modules:pin` lowers `account`'s pins; diagrams regenerate after
   every rebase, and `npm run diagrams:stale` finds the stories to re-point.
 
@@ -78,8 +79,7 @@ How each kind of importer is rewritten:
 ## Issues
 
 - Refs #796.
-- Opens: the stale path comments in `db/schema-core.ts` and
-  `ops/digest-email.ts`.
+- Opens: none. `db/schema-core.ts`' stale comments are on #670.
 
 ## Open questions
 
