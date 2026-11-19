@@ -2645,6 +2645,13 @@ describe("VerdictForm: the way back, the Garmin credit and the foot (Round 55 ·
     await renderWithRouter(form());
     const submit = screen.getByRole("button", { name: "Log it" });
     expect(submit.closest("form")).toHaveClass("pt-6", "pb-8");
+    // From 720 the column is 620 of content, with no gutter of its own
+    // (R57·263), so it starts at x=168 at 1280 (R58·307).
+    expect(submit.closest("form")).toHaveClass(
+      "px-5",
+      "wide:max-w-column",
+      "wide:px-0",
+    );
   });
 });
 

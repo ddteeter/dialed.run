@@ -10,9 +10,8 @@ import { BellProvider } from "../../src/ui/PhoneBell";
  * Three things are the props and everything else is fixed: how wide the
  * column is, what the heading says, and whether something sits opposite
  * the heading. The width classes are asserted by name because `width` is
- * a contract — `panel` is what an act gets, `column` what a reading
- * surface gets (Desktop Contract DS3) — not because a look is being
- * pinned.
+ * a contract (Round 54 · 168.1: one column for every runner screen),
+ * not because a look is being pinned.
  */
 describe("Page", () => {
   it("is the reading column by default", () => {
@@ -23,23 +22,11 @@ describe("Page", () => {
     expect(column).not.toHaveClass("max-w-panel");
   });
 
-  it("narrows to the panel for an act", () => {
-    const { container } = render(
-      <Page title="Log a run" width="panel">
-        body
-      </Page>,
-    );
-
-    const column = container.firstElementChild;
-    expect(column).toHaveClass("max-w-panel");
-    expect(column).not.toHaveClass("max-w-column");
-  });
-
   it("centres the column at every width, never left-aligned at 720 (168.1)", () => {
     // Round 54 · 168.1 replaces DS3's "left-aligned inside the page
     // measure": at >=720 every runner screen is one MEASURE.column,
     // centred. A `wide:mx-0` or `desk:mx-0` anywhere on it would undo that.
-    for (const width of ["panel", "column", "step", "close"] as const) {
+    for (const width of ["column", "step", "close"] as const) {
       const page = render(<Page width={width}>body</Page>).container
         .firstElementChild;
       expect(page).toHaveClass("mx-auto");
@@ -102,7 +89,7 @@ describe("Page", () => {
     );
   });
 
-  it("gives a column no gutter of its own from 720, and the panel and page measures theirs (R57·263)", () => {
+  it("gives a column no gutter of its own from 720, and the page measures theirs (R57·263)", () => {
     // Gutters belong to the page: a 620 column is 620 of content.
     for (const width of ["column", "step", "close"] as const) {
       const page = render(<Page width={width}>body</Page>).container
@@ -112,7 +99,7 @@ describe("Page", () => {
         expect.arrayContaining(["px-6", "wide:px-0"]),
       ]);
     }
-    for (const width of ["panel", "page", "table"] as const) {
+    for (const width of ["page", "table"] as const) {
       const page = render(<Page width={width}>body</Page>).container
         .firstElementChild;
       expect(page).toHaveClass("px-6");

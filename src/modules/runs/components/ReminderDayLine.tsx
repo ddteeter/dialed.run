@@ -27,7 +27,7 @@ export function ReminderDayLine({
   return (
     <p
       data-part="reminder-day"
-      className="m-0 text-center text-small text-quiet desk:max-w-column"
+      className="m-0 text-center text-small text-quiet"
     >
       {`It starts on ${reminderDayLabel(day)}, the day of your Strava reminder.`}
     </p>

@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 
 import { photoAcceptAttribute } from "../../../lib/photo-constraints";
-import { Mono } from "../../../ui";
+import { BAND_PILL, BAND_SECONDARY_PILL, Mono } from "../../../ui";
 
 /**
  * What the band says when the garment saved and its photo did not — the
@@ -33,6 +33,12 @@ export interface PhotoRefusal {
  * that moves — and its region name, so a harness finds either the same
  * way. Pick another is the file input inside its label, as the well's own
  * Replace is, so a new photo takes the same path as the first.
+ *
+ * **Its buttons are that band's too** (#621, D1-16): Try again is the
+ * band's ink pill and Pick another the hairline pill beside it, where
+ * both were field-radius rectangles. GUESS (design 241): with no Try
+ * again, Pick another is the band's only button and takes the ink pill,
+ * since a hairline pill is never alone (R54·167.1).
  */
 export function PhotoRefused({
   refusal,
@@ -57,12 +63,16 @@ export function PhotoRefused({
           <button
             type="button"
             onClick={onRetry}
-            className="target cursor-pointer rounded-field border border-ink bg-ink px-4 py-3 text-body font-bold text-ground"
+            className={`target ${BAND_PILL}`}
           >
             Try again
           </button>
         ) : undefined}
-        <label className="target inline-flex cursor-pointer items-center rounded-field border border-hairline px-4 py-3 text-body font-semibold text-ink has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink">
+        <label
+          className={`target inline-flex items-center has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink ${
+            refusal.canRetry ? BAND_SECONDARY_PILL : BAND_PILL
+          }`}
+        >
           Pick another
           <input
             type="file"

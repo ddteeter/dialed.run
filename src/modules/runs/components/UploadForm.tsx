@@ -181,11 +181,10 @@ export function UploadForm(props: Readonly<UploadFormProps>): JSX.Element {
 }
 
 /**
- * Before a file has become a run, the well is the whole screen: at the
- * desk it sits in the primary column's measure, and the rail is empty
- * (round 25: *"With no file yet, the rail is empty"*).
+ * Before a file has become a run, the well is the whole screen, in the
+ * page's one column (R55·233: A1 has no rail).
  */
-const BEFORE_THE_RUN = "flex flex-col gap-3 desk:max-w-column";
+const BEFORE_THE_RUN = "flex flex-col gap-3";
 
 /**
  * Focus back into the well, when it has just come back in place of what

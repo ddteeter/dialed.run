@@ -26,6 +26,8 @@ import {
   FormField,
   FormStatus,
   ACTION_PRIMARY,
+  BAND_PILL,
+  BAND_SECONDARY_PILL,
   INK_PILL,
   PendingLabel,
   QUIET_CANCEL,
@@ -702,7 +704,8 @@ describe("FailureBand's other endings", () => {
     // A filled action button is a pill (RADIUS_RULES; #632 A-07); only the
     // product-flow primary is not (R54·167.3).
     expect(screen.getByRole("button", { name: "Try again" })).toHaveClass(
-      "rounded-pill",
+      "target",
+      ...BAND_PILL.split(" "),
     );
     await userEvent
       .setup()
@@ -3246,6 +3249,45 @@ describe("the primary by surface, and its width (R54·167)", () => {
         "bg-ink",
         "min-h-control",
         ...HUG_AT_WIDE,
+      ]),
+    );
+  });
+
+  it("gives a failure band its own small pills, which hug at every width", () => {
+    // A band is a notice inside the page, not its surface's primary, so
+    // 167.2's width rule does not reach its buttons.
+    for (const pill of [BAND_PILL, BAND_SECONDARY_PILL]) {
+      const classes = pill.split(" ");
+      expect(classes).not.toContain("target");
+      expect(classes).toStrictEqual(
+        expect.arrayContaining([
+          "cursor-pointer",
+          "rounded-pill",
+          "border",
+          "px-4",
+          "py-3",
+          "text-body",
+        ]),
+      );
+      expect(classes).not.toContain("w-full");
+      expect(classes).not.toContain("wide:min-w-50");
+    }
+    expect(BAND_PILL.split(" ")).toStrictEqual(
+      expect.arrayContaining([
+        "border-ink",
+        "bg-ink",
+        "font-bold",
+        "text-ground",
+      ]),
+    );
+    // The secondary's hairline edge, `--hairline-2` in dark (R57·262).
+    expect(BAND_SECONDARY_PILL.split(" ")).toStrictEqual(
+      expect.arrayContaining([
+        "border-hairline",
+        "dark:border-hairline-2",
+        "bg-transparent",
+        "font-semibold",
+        "text-ink",
       ]),
     );
   });

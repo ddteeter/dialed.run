@@ -18,6 +18,7 @@ import {
 } from "../../../lib/contracts/temperature";
 import { toggledIn } from "../../../lib/toggled-in";
 import {
+  ACTION_PRIMARY,
   ControlFailureBand,
   DeskSplit,
   FlowStep,
@@ -435,7 +436,10 @@ export function AttachKit(props: Readonly<AttachKitProps>): JSX.Element {
           />
         }
       >
-        <div className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6 pb-8 wide:max-w-column">
+        {/* From 720 the column is 620 of content: gutters are the page's
+            (R57·263), so the group's column starts at x=168 at 1280 as
+            R58·307 draws it, not 20 inside it. */}
+        <div className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6 pb-8 wide:max-w-column wide:px-0">
           <PushFrame
             pushed={
               pushedGroup === undefined ? undefined : (
@@ -511,7 +515,7 @@ export function AttachKit(props: Readonly<AttachKitProps>): JSX.Element {
                 onClick={() => {
                   next([...selected]);
                 }}
-                className="target grid min-h-13 place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase text-accent-ink"
+                className={`target ${ACTION_PRIMARY}`}
               >
                 <PendingLabel
                   label="Next — did it work?"
@@ -524,7 +528,11 @@ export function AttachKit(props: Readonly<AttachKitProps>): JSX.Element {
                 onRetry={attach.retry}
                 retryRef={attach.retryRef}
               />
-              <p className="m-0 text-center text-small text-muted">
+              {/* Under a full-width NEXT on a phone it is centred, as drawn;
+                  from 720 NEXT hugs the column's left and this sits under
+                  it (R58·293; GUESS, design 241: the phone keeps its
+                  centre). */}
+              <p className="m-0 text-center text-small text-muted wide:text-left">
                 Not now —{" "}
                 <Link
                   to="/runs"

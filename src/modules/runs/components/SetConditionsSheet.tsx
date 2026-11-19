@@ -11,7 +11,9 @@ import {
   FormFailureBand,
   FormStatus,
   inFlight,
+  INK_PILL,
   PendingLabel,
+  SECONDARY_PILL,
   Sheet,
   Spoken,
   SubmitButton,
@@ -109,13 +111,16 @@ export function SetConditionsSheet({
               We have no record for that hour. Set the conditions yourself and
               the run still counts.
             </p>
-            <div className="flex flex-wrap gap-2">
+            {/* A sheet's pair (R54·167.1, D-186): the ink pill and the
+                hairline pill, each the sheet's width and stacked
+                (167.2). They were field-radius rectangles (D1-16). */}
+            <div className="flex w-full flex-col gap-3">
               <button
                 type="button"
                 onClick={() => {
                   setIsPicking(true);
                 }}
-                className="target rounded-field border-none bg-ink px-4 text-body font-bold text-ground"
+                className={`target ${INK_PILL}`}
               >
                 Set conditions
               </button>
@@ -125,7 +130,7 @@ export function SetConditionsSheet({
                 onClick={() => {
                   void retry.run();
                 }}
-                className="target rounded-field border border-ink bg-transparent px-4 text-body font-semibold"
+                className={`target ${SECONDARY_PILL}`}
               >
                 <PendingLabel
                   label="Try again"

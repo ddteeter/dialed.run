@@ -15,10 +15,12 @@ import {
 } from "./logging-fixtures";
 
 /**
- * Log a run at the desk (design round 25): from 1040, A1–A3 are DS1's two
- * columns — every input and the primary action in the primary column,
+ * Log a run at the desk (design round 25): from 1040, A2 and A3 are DS1's
+ * two columns — every input and the primary action in the primary column,
  * read-only context cards in `data-part="rail"` beside it. *"The harness
  * checks this: no input, button, [role=radio] inside data-part="rail"."*
+ * R58·307 keeps that rail as 168.2's third exception. A1 has none: its
+ * conditions block sits in the centred 620 column (R55·233, R54·168.1).
  *
  * Checked in a real browser because happy-dom lays nothing out: "beside"
  * is a question about boxes.
@@ -43,6 +45,31 @@ async function expectRailBeside(page: Page, primary: string): Promise<void> {
 }
 
 /**
+ * A1 at the desk (R55·233): no rail. The card, the conditions block and
+ * the primary action are one column in the phone's order, MEASURE.column
+ * wide and centred in the window, and the action hugs its label at the
+ * column's left (R54·167.2).
+ */
+async function expectOneColumn(page: Page): Promise<void> {
+  await expect(page.locator('[data-part="rail"]')).toHaveCount(0);
+  const card = await page.locator('[data-slot="parsed-card"]').boundingBox();
+  const block = await page.locator('[data-slot="conditions"]').boundingBox();
+  const action = await page
+    .locator('[data-slot="primary-action"]')
+    .boundingBox();
+  if (card === null || block === null || action === null) {
+    throw new Error("no boxes");
+  }
+  expect(card.width).toBe(620);
+  expect(card.x).toBe((DESK.width - 620) / 2);
+  expect([block.x, block.width]).toEqual([card.x, card.width]);
+  expect(block.y).toBeGreaterThanOrEqual(card.y + card.height);
+  expect(action.x).toBe(card.x);
+  expect(action.y).toBeGreaterThanOrEqual(block.y + block.height);
+  expect(action.width).toBeLessThan(card.width);
+}
+
+/**
 The `--ground` an element resolves, which is what `bg-ground` paints.
 */
 async function groundOf(page: Page, selector: string): Promise<string> {
@@ -54,7 +81,7 @@ async function groundOf(page: Page, selector: string): Promise<string> {
     );
 }
 
-test("A1, A2 and A3 at the desk: the step in the column, a read-only rail beside it", async ({
+test("the log flow at the desk: A1 in one column; A2 and A3 with a read-only rail beside the step", async ({
   page,
 }) => {
   const seeded: Seeded = {
@@ -78,7 +105,7 @@ test("A1, A2 and A3 at the desk: the step in the column, a read-only rail beside
   try {
     await page.setViewportSize(DESK);
 
-    // A1: the parsed card in the column, its conditions in the rail.
+    // A1: the parsed card, its conditions and the action in one column.
     await page.goto("/runs/new");
     await hydrated(page);
     await page.setInputFiles('[data-part="drop-zone"] input[type="file"]', {
@@ -89,7 +116,7 @@ test("A1, A2 and A3 at the desk: the step in the column, a read-only rail beside
     await expect(page.locator('[data-slot="parsed-card"]')).toBeVisible({
       timeout: 20_000,
     });
-    await expectRailBeside(page, '[data-slot="parsed-card"]');
+    await expectOneColumn(page);
 
     await page.goto(`/feed/attach/${kitless}`);
     await hydrated(page);

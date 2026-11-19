@@ -203,7 +203,11 @@ export function HandleForm({
         onRetry={form.retry}
         retryRef={form.retryRef}
       />
+      {/* Settings › Username saves as every settings form does, with the
+          ink pill; O0 is a step of the product flow and keeps the pink
+          caps (R54·167.1, D-186). `carry` already says which. */}
       <SubmitButton
+        tone={carry === "settings" ? "ink" : "action"}
         label={submitLabel}
         pendingLabel={pendingLabel}
         pending={form.pending}

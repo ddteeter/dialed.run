@@ -12,7 +12,7 @@ import { z } from "zod";
 
 import { GarmentForm } from "../../src/modules/closet/components/GarmentForm";
 import type { GarmentFormProps } from "../../src/modules/closet/components/GarmentForm";
-import { DURATION } from "../../src/ui";
+import { BAND_PILL, BAND_SECONDARY_PILL, DURATION } from "../../src/ui";
 
 /**
  * F's photo well (round 22, items 8 and 17): the last thing before the
@@ -453,6 +453,11 @@ describe("GarmentForm: a picked photo", () => {
       "type",
       "file",
     );
+    // Alone in the band it is the band's ink pill: a hairline pill is
+    // never alone (R54·167.1).
+    const alone = screen.getByText("Pick another");
+    expect(alone).toHaveClass("target", ...BAND_PILL.split(" "));
+    expect(alone).not.toHaveClass("rounded-field", "border-hairline");
     // The well is empty again, and marks nothing: the reason is the band's.
     expect(well()).toHaveAttribute("data-state", "empty");
     expect(onSaved).not.toHaveBeenCalled();
@@ -499,6 +504,19 @@ describe("GarmentForm: a picked photo", () => {
     expect(band.closest("[data-part='failure-band']")).toHaveTextContent(
       "Your connection dropped.",
     );
+    // The band's own pills (#621, D1-16): Try again the ink one, and
+    // Pick another the hairline one beside it, with the label's focus ring.
+    const again = screen.getByRole("button", { name: "Try again" });
+    const another = screen.getByText("Pick another");
+    expect(again).toHaveClass("target", ...BAND_PILL.split(" "));
+    expect(again).not.toHaveClass("rounded-field");
+    expect(another).toHaveClass(
+      "target",
+      "inline-flex",
+      "has-[:focus-visible]:outline-ink",
+      ...BAND_SECONDARY_PILL.split(" "),
+    );
+    expect(another).not.toHaveClass("rounded-field", "bg-ink");
 
     await user.click(screen.getByRole("button", { name: "Try again" }));
 

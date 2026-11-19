@@ -10,6 +10,7 @@ import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { StravaConnect } from "../../src/modules/runs/components/StravaConnect";
+import { INK_PILL, SECONDARY_PILL } from "../../src/ui";
 import { expectBusy } from "../ui/unavailable";
 import { expectConsentBeforeButton } from "../ui/strava-consent";
 
@@ -193,14 +194,24 @@ describe("StravaConnect: connected", () => {
       "text-dialed-text",
     );
     expect(within(confirm).getByText("Stops")).toHaveClass("text-cold-text");
-    // T3b's weight: the act is the ink fill, the way back is the outline —
-    // and both are full 44px targets.
-    expect(
-      within(confirm).getByRole("button", { name: "Disconnect" }),
-    ).toHaveClass("target", "bg-ink", "text-ground");
-    expect(
-      within(confirm).getByRole("button", { name: "Keep it" }),
-    ).toHaveClass("target", "border-ink", "bg-transparent");
+    // A confirm's pair (R54·167.1, D-186): the act is the ink pill, the
+    // way back the hairline pill, both full targets. They were
+    // field-radius rectangles (#621, D1-16).
+    const act = within(confirm).getByRole("button", { name: "Disconnect" });
+    const back = within(confirm).getByRole("button", { name: "Keep it" });
+    expect(act).toHaveClass("target", ...INK_PILL.split(" "));
+    expect(back).toHaveClass("target", ...SECONDARY_PILL.split(" "));
+    expect(act).not.toHaveClass("rounded-field");
+    expect(back).not.toHaveClass("rounded-field", "border-ink");
+    // 167.2: stacked below 720; from 720 a row, primary first, 12 apart.
+    expect(act.parentElement).toHaveClass(
+      "flex",
+      "flex-col",
+      "gap-3",
+      "wide:flex-row",
+      "wide:items-center",
+    );
+    expect(act.nextElementSibling).toBe(back);
   });
 
   it("keeps it on Keep it, changing nothing", async () => {

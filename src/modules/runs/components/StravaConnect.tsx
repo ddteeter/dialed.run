@@ -5,8 +5,10 @@ import {
   ControlFailureBand,
   FormStatus,
   inFlight,
+  INK_PILL,
   Mono,
   PendingLabel,
+  SECONDARY_PILL,
   StravaConsent,
   useControlAction,
 } from "../../../ui";
@@ -29,9 +31,6 @@ export interface StravaConnectProps {
   runCount: number;
   disconnect: () => Promise<unknown>;
 }
-
-const SECONDARY =
-  "target rounded-field border border-ink bg-transparent px-4 text-body font-semibold text-ink";
 
 /**
  * Disconnect, before it is confirmed: a text link that opens its confirm
@@ -116,14 +115,18 @@ export function StravaConnect({
             </KeptOrStops>
             <KeptOrStops word="Stops">The reminder after each run</KeptOrStops>
           </dl>
-          <div className="flex flex-wrap gap-2">
+          {/* A confirm's pair (R54·167.1, D-186): the ink pill, then the
+              hairline pill. Stacked at full width below 720; from 720 a
+              row, primary first, 12 apart (167.2). They were
+              field-radius rectangles (D1-16). */}
+          <div className="flex flex-col gap-3 wide:flex-row wide:items-center">
             <button
               type="button"
               {...inFlight(cut.pending)}
               onClick={() => {
                 void cut.run();
               }}
-              className="target rounded-field border-none bg-ink px-4 text-body font-bold text-ground"
+              className={`target ${INK_PILL}`}
             >
               <PendingLabel
                 label="Disconnect"
@@ -136,7 +139,7 @@ export function StravaConnect({
               onClick={() => {
                 setIsConfirming(false);
               }}
-              className={SECONDARY}
+              className={`target ${SECONDARY_PILL}`}
             >
               Keep it
             </button>

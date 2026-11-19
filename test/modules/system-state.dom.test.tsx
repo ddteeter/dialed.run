@@ -827,6 +827,10 @@ describe("X2 · root crash", () => {
 
     await screen.findByText("Our end failed.");
     expect(state()).toHaveAttribute("data-state", "root-crashed");
+    // The 620 column every system state takes (R55·185), not the 390
+    // panel 168.1 withdrew at width.
+    expect(state()?.parentElement).toHaveClass("mx-auto", "wide:max-w-column");
+    expect(state()?.parentElement).not.toHaveClass("max-w-panel");
     expect(
       screen.getByRole("heading", { level: 1, name: "Didn't load" }),
     ).toBeInTheDocument();

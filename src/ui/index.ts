@@ -41,6 +41,8 @@ export {
   ControlFailureBand,
   FailureBand,
   ACTION_PRIMARY,
+  BAND_PILL,
+  BAND_SECONDARY_PILL,
   CHALK_PILL,
   FieldMessage,
   FormElement,

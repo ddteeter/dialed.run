@@ -456,4 +456,25 @@ describe("the handle form: a lapsed session (Au7, D-155)", () => {
 
     expect(carriedSince()).toEqual(["settings"]);
   });
+
+  it("saves with the ink pill in settings and steps on with the pink caps in onboarding (R54·167.1)", () => {
+    // D-186: a settings Save is the ink pill; O0 is a product-flow step.
+    const settings = render(
+      <HandleForm
+        carry="settings"
+        claim={vi.fn()}
+        submitLabel="Save"
+        pendingLabel="Saving"
+        successMessage="Username saved."
+      />,
+    );
+    const save = screen.getByRole("button", { name: "Save" });
+    expect(save).toHaveClass("rounded-pill", "bg-ink", "text-ground");
+    expect(save).not.toHaveClass("bg-action", "rounded-card", "uppercase");
+    settings.unmount();
+
+    renderForm();
+    expect(next()).toHaveClass("rounded-card", "bg-action", "uppercase");
+    expect(next()).not.toHaveClass("rounded-pill", "bg-ink");
+  });
 });

@@ -28,7 +28,7 @@ import type { PrefillCandidate } from "../../src/modules/feed/prefill";
 import { TERMS_NOT_ACCEPTED_CODE } from "../../src/lib/auth-signal";
 import { maxPhotosPerEntry } from "../../src/lib/photo-constraints";
 import type { PhotoStep } from "../../src/ui";
-import { TermsRefusalAnswer } from "../../src/ui";
+import { ACTION_PRIMARY, TermsRefusalAnswer } from "../../src/ui";
 import { expectAvailable, expectBusy } from "../ui/unavailable";
 import { queryWeatherCredit, WEATHER_CREDIT } from "../ui/weather-credit";
 import { atWidth, expectBellEnding, withBell } from "./feed-fixtures";
@@ -1309,6 +1309,18 @@ describe("AttachKit: a kit is required", () => {
     expect(out).toHaveAttribute("href", "/runs");
     expect(out.closest("p")).toHaveTextContent(
       "Not now — leave it in the queue.",
+    );
+    // Centred under the phone's full-width NEXT; from 720 NEXT hugs the
+    // column's left and the line sits under it (R58·293).
+    expect(out.closest("p")).toHaveClass("text-center", "wide:text-left");
+    // NEXT is the shared pink caps, so 167.2's width reaches it (#621).
+    expect(primary()).toHaveClass("target", ...ACTION_PRIMARY.split(" "));
+    // From 720 the column is 620 of content, with no gutter of its own
+    // (R57·263): x=168 at 1280, as R58·307 draws the group.
+    expect(primary().closest(".max-w-panel")).toHaveClass(
+      "px-5",
+      "wide:max-w-column",
+      "wide:px-0",
     );
   });
 });
