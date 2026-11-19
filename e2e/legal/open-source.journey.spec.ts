@@ -34,7 +34,10 @@ test("the open-source page: groups by licence, search, the notices and the tools
 
   await scene(page, "Each licence's text is printed once, when asked for");
   const mit = page.locator("section", {
-    has: page.getByRole("heading", { level: 2, name: "MIT" }),
+    has: page.getByRole("heading", {
+      level: 2,
+      name: "Projects under the MIT License",
+    }),
   });
   await mit.getByText("Read the MIT licence").click();
   await expect(mit.locator("details p").first()).toContainText(
@@ -54,7 +57,10 @@ test("the open-source page: groups by licence, search, the notices and the tools
   await search.fill("zod");
   await expect(mit.getByText("zod", { exact: true })).toBeVisible();
   await expect(
-    page.getByRole("heading", { level: 2, name: "SIL Open Font License 1.1" }),
+    page.getByRole("heading", {
+      level: 2,
+      name: "Projects under the SIL Open Font License 1.1",
+    }),
   ).toHaveCount(0);
 
   await scene(page, "Nothing matches · it says so");

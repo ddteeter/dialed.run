@@ -34,17 +34,30 @@ export interface OpenSourcePiece {
 }
 
 /**
+The words a group goes by: its short name in the contents and controls, and
+its h2.
+*/
+interface GroupLabels {
+  /**
+  The licence's short name, as the contents and its controls say it: "MIT",
+  "Apache 2.0".
+  */
+  readonly name: string;
+  /**
+  The section's h2: "Projects under the MIT License" (R61·331), or the
+  tools' own heading.
+  */
+  readonly heading: string;
+}
+
+/**
 Every piece under one licence.
 */
-export interface LicenceGroup {
+export interface LicenceGroup extends GroupLabels {
   /**
   The section's id, which the contents link to.
   */
   readonly id: string;
-  /**
-  The licence as the heading names it: "MIT", "Apache 2.0".
-  */
-  readonly name: string;
   /**
    * `type`: the typefaces, which come first. `licence`: the packages that
    * ship under one licence. `tools`: "Tools we build with", the tools that build the

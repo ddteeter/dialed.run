@@ -52,14 +52,43 @@ export function openSourceList(source: string = listSource): OpenSourceList {
 }
 
 /**
- * How a heading names a licence. The SPDX id, where it reads well; the
- * board's words where it does not.
+ * A licence's short name: in the contents, in "Read the MIT licence" and
+ * in the section's id. The SPDX id, where it reads well; the board's
+ * words where it does not.
  */
 const LICENCE_NAMES: Readonly<Record<string, string>> = {
   "Apache-2.0": "Apache 2.0",
   "CC-BY-4.0": "CC BY 4.0",
   "OFL-1.1": "SIL Open Font License 1.1",
 };
+
+/**
+ * A licence's full name, as it reads after "Projects under the"
+ * (R61·331): the name SPDX publishes for the id, and for the FIT SDK's
+ * own licence, its agreement's title. Proper names keep their own
+ * spelling of "License".
+ */
+const LICENCE_FULL_NAMES: Readonly<Record<string, string>> = {
+  "@garmin/fitsdk licence": "FIT Protocol License Agreement",
+  "Apache-2.0": "Apache License 2.0",
+  "BSD-2-Clause": "BSD 2-Clause License",
+  "BSD-3-Clause": "BSD 3-Clause License",
+  ISC: "ISC License",
+  MIT: "MIT License",
+  "MPL-2.0": "Mozilla Public License 2.0",
+  "OFL-1.1": "SIL Open Font License 1.1",
+  Unlicense: "Unlicense",
+};
+
+/**
+ * A licence group's h2 (R61·331): there is no separate "Projects"
+ * heading, so the group's own says what its rows are. A licence the table
+ * does not name yet reads by its short name, "the {name} licence".
+ */
+function projectsUnder(licence: string, name: string): string {
+  const fullName = LICENCE_FULL_NAMES[licence] ?? `${name} licence`;
+  return `Projects under the ${fullName}`;
+}
 
 function groupsOf(
   pieces: readonly Piece[],
@@ -78,6 +107,7 @@ function groupsOf(
     return {
       id: headingId(name),
       name,
+      heading: projectsUnder(licence, name),
       kind,
       text: licences[licence],
       pieces: members,
@@ -105,6 +135,7 @@ export function toolsGroup(list: OpenSourceList): LicenceGroup {
   return {
     id: "tools-we-build-with",
     name: "Tools we build with",
+    heading: "Tools we build with",
     kind: "tools",
     text: undefined,
     pieces: list.tools,

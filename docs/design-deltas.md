@@ -7362,7 +7362,8 @@ later ruling or an earlier wave already covered.
 
 ## Built for Round 61 (wave 15, design 243)
 
-Round 61's rulings on what wave 14 built as guesses (#832, #835, #839).
+Round 61's rulings on what wave 14 built as guesses (#831, #832, #835,
+#839).
 The round's own import is the docs pass's.
 
 - **R61·336 · the badged runs row.** The badge line sits 16 under the
@@ -7370,6 +7371,12 @@ The round's own import is the docs pass's.
 - **R61·332 · a moved start time.** On A1's card "Changed" takes
   "Change"'s slot after a move, with no " ·" and no second word: "6:04 AM
   Change", then "6:07 AM Changed".
+- **R61·331 · /open-source's headings.** No "Projects" heading. Each
+  licence group's h2 reads "Projects under the MIT License", from a table
+  of the licences' full names (SPDX's, and the FIT SDK agreement's own
+  title); a licence the table does not name reads "the {id} licence". The
+  contents column, the section ids and "Read the MIT licence" keep the
+  short names, and the tools keep "Tools we build with".
 - **R61·334.1 · `ACTION_PILL`.** The bars' launcher and Request access,
   Landing's phone Request access, the invite card's pill, the profile's
   Log a run and the shade sheet's Use this are one pink pill, 44 high
