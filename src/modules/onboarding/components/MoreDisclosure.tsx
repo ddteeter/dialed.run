@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import { Mono } from "../../../ui";
+import { Icon } from "../../../ui";
 
 /**
  * "Everything else · N more" — the fold O3 and P2.5 both use.
@@ -18,6 +18,10 @@ import { Mono } from "../../../ui";
  * puts the revealed rows above it and the control at their end.
  * `aria-expanded` still carries the state, so the name change is the
  * label a sighted runner reads and not the only signal.
+ *
+ * **Not a pill** (R61·334.2): an underlined text button with the pack's
+ * `forward` glyph after its words, as /open-source's disclosures are
+ * (R58·290). The glyph turns down while the fold is open.
  */
 export function MoreDisclosure({
   remaining,
@@ -34,16 +38,14 @@ export function MoreDisclosure({
       type="button"
       aria-expanded={expanded}
       onClick={onToggle}
-      className="target cursor-pointer self-start rounded-pill border border-dashed border-hairline-2 bg-transparent px-4 py-2 text-quiet"
+      className="target inline-flex cursor-pointer items-center gap-1 self-start border-none bg-transparent p-0 text-small text-ink underline underline-offset-4"
     >
-      {expanded ? (
-        <Mono step="sm">Fewer</Mono>
-      ) : (
-        <>
-          <Mono step="sm">Everything else · {remaining} more</Mono>
-          <span aria-hidden="true"> ▾</span>
-        </>
-      )}
+      {expanded ? "Fewer" : `Everything else · ${String(remaining)} more`}
+      <Icon
+        name="forward"
+        size={16}
+        className={expanded ? "rotate-90" : "rotate-0"}
+      />
     </button>
   );
 }

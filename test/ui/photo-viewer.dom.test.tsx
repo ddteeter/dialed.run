@@ -200,8 +200,7 @@ describe("PhotoViewer", () => {
     renderViewer(1);
     for (const name of ["Previous photo", "Next photo"]) {
       expect(screen.getByRole("button", { name })).toHaveClass(
-        "hidden",
-        "wide:flex",
+        "max-wide:hidden",
       );
     }
   });

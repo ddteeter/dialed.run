@@ -4,7 +4,14 @@ import type { JSX, ReactNode } from "react";
 
 import { verdictLabel, type VerdictValue } from "../../../lib/contracts";
 import { MARKETING_INVITE_URL, MARKETING_ORIGIN } from "../../../lib/marketing";
-import { Icon, Mono, Page, verdictHue } from "../../../ui";
+import {
+  ACTION_PILL,
+  Icon,
+  INK_PILL_INLINE,
+  Mono,
+  Page,
+  verdictHue,
+} from "../../../ui";
 import { SignedOutFrame } from "../../../ui/SignedOutFrame";
 
 /**
@@ -50,16 +57,17 @@ export function useSignedInAfterLoad(ask: AskSignedIn): {
 }
 
 // The way into the app, for a signed-in viewer: the ink pill in the
-// frame's bar (R55·176), and the invite's primary. Written out whole so
-// it can be read as one class list (`targets-and-focus` reads the 44px
-// target off it).
-const INTO_APP_CLASS =
-  "target inline-flex items-center rounded-pill bg-ink px-5 text-small font-bold text-ground no-underline";
+// frame's bar (R55·176). It was a 44 pill at TYPE.small typed by hand;
+// it collapses onto the ink pill, 48 at TYPE.body, as the other
+// hand-typed pills did (a guess, Design 347: R61·334 ended the file's
+// exemption and names no kind for it).
+const INTO_APP_CLASS = `target ${INK_PILL_INLINE} no-underline`;
 const FOOT_LINK_CLASS =
   "target inline-flex items-center text-muted underline underline-offset-4";
-// The invite card's pill, full width (R41, R55·219).
-const INVITE_PILL_CLASS =
-  "target flex min-h-control w-full items-center justify-center rounded-pill bg-action text-body font-bold text-accent-ink no-underline";
+// The invite card's pill: `ACTION_PILL` (R61·334.1), 44 where it was 48,
+// at the card's full width (R41, R55·219; a guess, Design 347: the kind's
+// one size is read as its height and sides).
+const INVITE_PILL_CLASS = `target ${ACTION_PILL} w-full no-underline`;
 // The not-public page's way to the site: pink at 600 (R41 #86f, R55·219).
 const WHAT_IS_CLASS =
   "target inline-flex items-center self-start font-semibold text-cold-text underline underline-offset-4";

@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-router";
 import type { JSX, ReactNode } from "react";
 
+import { ACTION_PILL } from "./form";
 import { Icon } from "./icons";
 import { TabItem, TabLabel } from "./TabItem";
 import {
@@ -73,9 +74,9 @@ const RESTING_LINK_CLASS =
  * has room for (round 15). No `aria-label`: the visible text is the name,
  * which is the whole reason the two seats are two elements.
  *
- * `text-accent-ink`, not `text-ink`: inside this block `--ink` is chalk,
- * and T1's note on `--action` is *"text on it is always ink"* meaning the
- * fixed #0B0B0E. That is the one thing an accent inside an inverted block
+ * The pink pill, `ACTION_PILL` (R61·334.1). Its text is the fixed ink:
+ * inside this block `--ink` is chalk, and T1's note on `--action` is
+ * *"text on it is always ink"*, which an accent inside an inverted block
  * cannot say with a ground-relative role.
  */
 function BarLauncher({
@@ -87,7 +88,7 @@ function BarLauncher({
   return (
     <button
       type="button"
-      className="target inline-flex items-center justify-center rounded-pill bg-action px-4 text-body font-bold text-accent-ink"
+      className={`target ${ACTION_PILL}`}
       onClick={() => {
         void navigate({ to });
       }}

@@ -23,6 +23,7 @@ import {
   useSignedInAfterLoad,
 } from "../../src/modules/feed/components/PublicFrame";
 import type { PublicKit } from "../../src/modules/feed/public-kit-shape";
+import { ACTION_PILL, INK_PILL_INLINE } from "../../src/ui";
 
 /**
  * `/kit/<id>` and its not-public twin (round 41 #86c, #86f).
@@ -386,15 +387,14 @@ describe("the public kit, signed out", () => {
       "bg-ground",
       "p-5",
     );
+    // The pink pill (R61·334.1), 44 where it was 48, at the card's width.
     expect(ask).toHaveClass(
       "target",
       "w-full",
-      "min-h-control",
-      "rounded-pill",
-      "bg-action",
-      "text-accent-ink",
-      "font-bold",
+      "no-underline",
+      ...ACTION_PILL.split(" "),
     );
+    expect(ask).not.toHaveClass("min-h-control");
     // R55·176: the cross-link is quiet text with a bold ink underlined link.
     const create = invite.getByRole("link", { name: "Create an account" });
     expect(create).toHaveAttribute("href", "/join");
@@ -504,10 +504,11 @@ describe("the public kit, once the browser knows who is looking", () => {
     expect(
       await screen.findByRole("link", { name: "Open in the app" }),
     ).toHaveAttribute("href", `/feed/entry/${ID}`);
+    // The ink pill beside the wordmark, hugging its words.
     expect(link("Open in the app")).toHaveClass(
-      "rounded-pill",
-      "bg-ink",
-      "text-ground",
+      "target",
+      "no-underline",
+      ...INK_PILL_INLINE.split(" "),
     );
     // One slot, never both (round 42 #90).
     const bar = document.querySelector<HTMLElement>("[data-part='top-bar']");

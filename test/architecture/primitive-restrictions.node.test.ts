@@ -182,9 +182,21 @@ describe("the pill selectors", () => {
   it("reach the auth module, and spare an exempt file", async () => {
     const code =
       'const a = <a className="target rounded-pill bg-ink font-bold" />;';
-    expect(await messagesIn(AUTH, code)).toStrictEqual([]);
+    // Landing was exempt while its pink pill had no ruled kind. R61·334
+    // named it (`ACTION_PILL`), so the rule reaches Landing as it does
+    // any auth file (#835).
+    expect(await messagesIn(AUTH, code)).toStrictEqual([
+      expect.stringMatching(PILL),
+    ]);
     expect(
       await messagesIn("src/modules/auth/components/SystemState.tsx", code),
+    ).toStrictEqual([expect.stringMatching(PILL)]);
+    // And the pink pill itself, typed by hand there, is a copy now.
+    expect(
+      await messagesIn(
+        AUTH,
+        'const a = <a className="target rounded-pill bg-action px-6 font-bold text-accent-ink" />;',
+      ),
     ).toStrictEqual([expect.stringMatching(PILL)]);
     expect(
       await messagesIn("src/modules/auth/google-button.tsx", code),

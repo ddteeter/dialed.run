@@ -118,8 +118,26 @@ describe("TapListForm", () => {
       screen.getByRole("checkbox", { name: "Running gloves" }),
     ).toBeVisible();
     expect(screen.queryByRole("checkbox", { name: "Singlet" })).toBeNull();
-    expect(disclosure()).toHaveTextContent("Everything else · 2 more");
+    expect(disclosure()).toHaveTextContent(/^Everything else · 2 more$/u);
     expect(disclosure()).toHaveAttribute("aria-expanded", "false");
+    // R61·334.2: not a pill. An underlined text button, the pack's
+    // forward glyph after its words, pointing on while the fold is shut.
+    expect(disclosure()).toHaveClass(
+      "target",
+      "inline-flex",
+      "items-center",
+      "gap-1",
+      "self-start",
+      "text-small",
+      "underline",
+      "underline-offset-4",
+    );
+    expect(disclosure()).not.toHaveClass("rounded-pill", "border-dashed");
+    const glyph = disclosure().lastElementChild;
+    expect(glyph?.tagName.toLowerCase()).toBe("svg");
+    expect(glyph).toHaveAttribute("width", "16");
+    expect(glyph).toHaveClass("rotate-0");
+    expect(glyph).not.toHaveClass("rotate-90");
   });
 
   it("reveals the rest as the same rows continued, ending in Fewer", async () => {
@@ -134,6 +152,10 @@ describe("TapListForm", () => {
     // end" — the control after the last row, still carrying the state.
     const fewer = screen.getByRole("button", { name: "Fewer" });
     expect(fewer).toHaveAttribute("aria-expanded", "true");
+    expect(fewer).toHaveTextContent(/^Fewer$/u);
+    // Open, the glyph points down.
+    expect(fewer.lastElementChild).toHaveClass("rotate-90");
+    expect(fewer.lastElementChild).not.toHaveClass("rotate-0");
     const chips = screen.getAllByRole("checkbox");
     expect(chips.at(-1)?.compareDocumentPosition(fewer)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,

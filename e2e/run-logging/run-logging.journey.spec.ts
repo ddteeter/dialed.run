@@ -252,7 +252,7 @@ test("log a run: read a file in place, pick the kit, note it, enter one by hand"
     await scene(page, "A time with weather: the row closes and says CHANGED");
     await expect(
       page.getByRole("button", {
-        name: `${clockOf(movedStart)} · Changed Change`,
+        name: `${clockOf(movedStart)} Changed`,
       }),
     ).toContainText("Changed", { timeout: 20_000 });
     await expect(conditions).toContainText("46°F", { timeout: 20_000 });

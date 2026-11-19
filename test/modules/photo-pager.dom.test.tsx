@@ -150,7 +150,7 @@ describe("PhotoPager", () => {
       "-translate-x-1/2",
       "*:pointer-events-auto",
     );
-    expect(nextButton()).toHaveClass("desk:flex", "hidden");
+    expect(nextButton()).toHaveClass("max-desk:hidden");
   });
 
   it("has no arrows for a lone photo, nor a counter", () => {

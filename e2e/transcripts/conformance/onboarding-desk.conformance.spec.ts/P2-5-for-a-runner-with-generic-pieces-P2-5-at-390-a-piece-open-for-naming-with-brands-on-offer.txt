@@ -16,7 +16,7 @@ form
 status
 Brand
 textbox, Brand, Sm
-button, Smartwool
+button, Smartwool, not pressed
 Model
 textbox, Model
 button, Save

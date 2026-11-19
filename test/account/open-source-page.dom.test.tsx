@@ -31,6 +31,7 @@ async function renderWithRouter(element: ReactElement) {
 const TYPE: LicenceGroup = {
   id: "sil-open-font-license-11",
   name: "SIL Open Font License 1.1",
+  heading: "Projects under the SIL Open Font License 1.1",
   kind: "type",
   text: "SIL OPEN FONT LICENSE Version 1.1",
   pieces: [
@@ -46,6 +47,7 @@ const TYPE: LicenceGroup = {
 const MIT: LicenceGroup = {
   id: "mit",
   name: "MIT",
+  heading: "Projects under the MIT License",
   kind: "licence",
   text: "Permission is hereby granted, free of charge",
   pieces: [
@@ -70,6 +72,7 @@ const MIT: LicenceGroup = {
 const APACHE: LicenceGroup = {
   id: "apache-20",
   name: "Apache 2.0",
+  heading: "Projects under the Apache License 2.0",
   kind: "licence",
   text: undefined,
   pieces: [
@@ -82,6 +85,7 @@ const APACHE: LicenceGroup = {
 const TOOLS: LicenceGroup = {
   id: "tools-we-build-with",
   name: "Tools we build with",
+  heading: "Tools we build with",
   kind: "tools",
   text: undefined,
   pieces: [
@@ -135,8 +139,24 @@ function renderPage(
   );
 }
 
+/**
+The licence groups' headings, by the short name the tests ask with.
+*/
+const HEADINGS: Readonly<Record<string, string>> = {
+  [TYPE.name]: TYPE.heading,
+  [MIT.name]: MIT.heading,
+  [APACHE.name]: APACHE.heading,
+};
+
+/**
+ * A section by its group's short name, or by its heading where it has no
+ * group. A licence group's h2 is "Projects under the …" (R61·331).
+ */
 function section(name: string) {
-  const heading = screen.getByRole("heading", { level: 2, name });
+  const heading = screen.getByRole("heading", {
+    level: 2,
+    name: HEADINGS[name] ?? name,
+  });
   const found = heading.closest("section");
   if (found === null) throw new Error(`no section for ${name}`);
   return found;
@@ -221,14 +241,22 @@ describe("OpenSourcePage", () => {
     const headings = screen
       .getAllByRole("heading", { level: 2 })
       .map((heading) => heading.textContent);
+    // R61·331: each licence group's h2 says what its rows are. No
+    // separate "Projects" heading, so the outline stays one level.
     expect(headings).toEqual([
       "Contents",
-      "SIL Open Font License 1.1",
-      "MIT",
-      "Apache 2.0",
+      "Projects under the SIL Open Font License 1.1",
+      "Projects under the MIT License",
+      "Projects under the Apache License 2.0",
       "Third-party notices",
       "Tools we build with",
     ]);
+    expect(screen.queryByRole("heading", { name: "Projects" })).toBeNull();
+    expect(screen.queryAllByRole("heading", { level: 3 })).toEqual(
+      within(section("Third-party notices")).queryAllByRole("heading", {
+        level: 3,
+      }),
+    );
     const type = section("SIL Open Font License 1.1");
     expect(within(type).getByText("2 · Type")).toHaveClass("text-mono-sm");
     expect(
@@ -258,9 +286,8 @@ describe("OpenSourcePage", () => {
       "Permission is hereby granted, free of charge",
     );
     // Above the rows.
-    // The licence text, then the Projects heading over the rows (R59·318).
-    expect(details?.nextElementSibling).toHaveTextContent("Projects");
-    expect(details?.nextElementSibling?.nextElementSibling?.tagName).toBe("UL");
+    // The licence text, then the rows, with no heading between (R61·331).
+    expect(details?.nextElementSibling?.tagName).toBe("UL");
     expect(
       within(section("SIL Open Font License 1.1")).getByText(
         "Read the licence text",
@@ -415,7 +442,7 @@ describe("OpenSourcePage", () => {
       "vitest",
       "vite-unlicensed",
     ]);
-    expect(screen.queryByRole("heading", { name: "MIT" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: MIT.heading })).toBeNull();
     const [, bare] = within(section("Tools we build with")).getAllByRole(
       "listitem",
     );
@@ -435,10 +462,8 @@ describe("OpenSourcePage", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       /^2 packages match\.$/u,
     );
-    expect(screen.queryByRole("heading", { name: "Apache 2.0" })).toBeNull();
-    expect(
-      screen.queryByRole("heading", { name: "SIL Open Font License 1.1" }),
-    ).toBeNull();
+    expect(screen.queryByRole("heading", { name: APACHE.heading })).toBeNull();
+    expect(screen.queryByRole("heading", { name: TYPE.heading })).toBeNull();
     // No notice says "re", so the notices go too, and the contents with
     // them (R55·225).
     expect(
@@ -456,7 +481,7 @@ describe("OpenSourcePage", () => {
     await user.clear(field);
     expect(rowNames("MIT")).toEqual(["react", "zod", "clsx"]);
     expect(
-      screen.getByRole("heading", { level: 2, name: "Apache 2.0" }),
+      screen.getByRole("heading", { level: 2, name: APACHE.heading }),
     ).toBeInTheDocument();
   });
 
@@ -493,7 +518,9 @@ describe("OpenSourcePage", () => {
     ]);
     await user.click(screen.getByRole("button", { name: "Show all 5" }));
     await user.type(search(), "zzz");
-    expect(screen.queryByRole("heading", { level: 2, name: "MIT" })).toBeNull();
+    expect(
+      screen.queryByRole("heading", { level: 2, name: MIT.heading }),
+    ).toBeNull();
 
     // The group mounts afresh, open: nobody pressed its Show all.
     await user.clear(search());
@@ -518,7 +545,7 @@ describe("OpenSourcePage", () => {
       { selector: "p" },
     );
     expect(drawn).toHaveAttribute("aria-hidden", "true");
-    expect(screen.queryByRole("heading", { name: "MIT" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: MIT.heading })).toBeNull();
     // No "Contents" over an empty list, and no empty landmark (R2-LEGAL-02).
     expect(screen.queryByRole("navigation", { name: "Contents" })).toBeNull();
     expect(screen.queryByText("Contents")).toBeNull();
@@ -583,7 +610,7 @@ describe("OpenSourcePage", () => {
         .getAllByRole("heading", { level: 3 })
         .map((heading) => heading.textContent),
     ).toEqual(["Weather data"]);
-    expect(screen.queryByRole("heading", { name: "MIT" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: MIT.heading })).toBeNull();
     expect(contentsLinks()).toEqual(["Third-party notices"]);
     // Something matched, so the no-match line is not drawn.
     expect(screen.queryByText(/^Nothing we ship/u)).toBeNull();
@@ -616,7 +643,10 @@ describe("OpenSourcePage", () => {
 
   it("sets a group's count at the end of its heading's line", async () => {
     await renderPage();
-    const heading = screen.getByRole("heading", { level: 2, name: "MIT" });
+    const heading = screen.getByRole("heading", {
+      level: 2,
+      name: MIT.heading,
+    });
     expect(heading).toHaveClass("font-display", "text-title");
     const count = within(section("MIT")).getByText("5");
     expect(count.parentElement).toBe(heading.parentElement);
@@ -626,34 +656,25 @@ describe("OpenSourcePage", () => {
     expect(section("MIT")).toHaveClass("flex", "flex-col", "gap-4", "pt-4");
   });
 
-  it("puts each group's rows under a Projects heading, one level down (R59·318)", async () => {
+  it("says Projects in each licence group's own h2, with no heading under it (R61·331)", async () => {
     await renderPage();
-    const mit = section("MIT");
-    const projects = within(mit).getByRole("heading", {
-      level: 3,
-      name: "Projects",
-    });
-    expect(projects).toHaveClass("font-display", "text-heading");
-    expect(projects).not.toHaveClass("uppercase");
-    // Over the rows, directly.
-    expect(projects.nextElementSibling?.tagName).toBe("UL");
-    // One per group: the type, MIT, Apache 2.0 and the tools.
-    for (const group of [
-      "SIL Open Font License 1.1",
-      "MIT",
-      "Apache 2.0",
-      "Tools we build with",
-    ]) {
-      expect(
-        within(section(group)).getAllByRole("heading", { name: "Projects" }),
-      ).toHaveLength(1);
+    for (const group of [TYPE, MIT, APACHE]) {
+      const heading = screen.getByRole("heading", {
+        level: 2,
+        name: group.heading,
+      });
+      expect(heading).toHaveTextContent(/^Projects under the /u);
+      // TYPE.title, as every reading section's h2 is.
+      expect(heading).toHaveClass("font-display", "text-title");
+      // Nothing between the group's heading and its rows is a heading.
+      expect(within(section(group.name)).getAllByRole("heading")).toEqual([
+        heading,
+      ]);
     }
-    // The notices have no rows of projects, so no heading.
+    // The tools keep their own heading: each of their rows names its licence.
     expect(
-      within(section("Third-party notices")).queryByRole("heading", {
-        name: "Projects",
-      }),
-    ).toBeNull();
+      within(section("Tools we build with")).getAllByRole("heading"),
+    ).toHaveLength(1);
   });
 
   it("clears the search with the pack's ✕, shown only while there is text (R55·226)", async () => {

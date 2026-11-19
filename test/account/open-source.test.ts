@@ -172,6 +172,38 @@ describe("licenceGroups", () => {
     ]);
   });
 
+  it("heads each group Projects under the licence's full name (R61·331)", () => {
+    const groups = licenceGroups(LIST);
+    expect(groups.map((group) => group.heading)).toEqual([
+      "Projects under the SIL Open Font License 1.1",
+      "Projects under the MIT License",
+      "Projects under the Apache License 2.0",
+      // No full name on record: the short name, then "licence".
+      "Projects under the CC BY 4.0 licence",
+      "Projects under the Python-2.0 licence",
+      "Projects under the Unlicense",
+    ]);
+  });
+
+  it("has a full name for every licence the app ships under", () => {
+    // A new dependency under a licence the table does not name falls back
+    // to its id, which is not wording anyone chose: this fails first.
+    const headings = licenceGroups(openSourceList()).map(
+      (group) => group.heading,
+    );
+    expect(headings.toSorted((a, b) => a.localeCompare(b))).toEqual([
+      "Projects under the Apache License 2.0",
+      "Projects under the BSD 2-Clause License",
+      "Projects under the BSD 3-Clause License",
+      "Projects under the FIT Protocol License Agreement",
+      "Projects under the ISC License",
+      "Projects under the MIT License",
+      "Projects under the Mozilla Public License 2.0",
+      "Projects under the SIL Open Font License 1.1",
+      "Projects under the Unlicense",
+    ]);
+  });
+
   it("gives each group an id from its name, its licence's text, and its pieces in order", () => {
     const [type, mit, apache] = licenceGroups(LIST);
     expect(type).toMatchObject({
@@ -199,6 +231,7 @@ describe("toolsGroup", () => {
     expect(toolsGroup(LIST)).toEqual({
       id: "tools-we-build-with",
       name: "Tools we build with",
+      heading: "Tools we build with",
       kind: "tools",
       text: undefined,
       pieces: LIST.tools,
@@ -242,6 +275,7 @@ function group(
   return {
     id,
     name: id.toUpperCase(),
+    heading: `Projects under the ${id.toUpperCase()} licence`,
     kind: "licence",
     text: undefined,
     pieces: names.map((name) => ({ name })),
@@ -281,6 +315,7 @@ describe("matchingGroups", () => {
     expect(mit).toEqual({
       id: "mit",
       name: "MIT",
+      heading: "Projects under the MIT licence",
       kind: "type",
       text: "T",
       pieces: [{ name: "react" }],

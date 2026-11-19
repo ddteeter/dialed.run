@@ -10,6 +10,7 @@ import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { Landing } from "../../src/modules/auth/components/Landing";
+import { ACTION_PILL } from "../../src/ui";
 import { SignOutButton } from "../../src/modules/auth/components/SignOutButton";
 
 async function renderWithRouter(element: ReactElement) {
@@ -81,10 +82,9 @@ describe("Landing, signed out", () => {
     // From 720 the bar holds it, so it shows once per view.
     expect(ask).toHaveClass(
       "target",
-      "rounded-pill",
-      "bg-action",
-      "text-accent-ink",
+      ...ACTION_PILL.split(" "),
       "self-stretch",
+      "no-underline",
       "wide:hidden",
     );
     const create = hero.getByRole("link", { name: "Create an account" });

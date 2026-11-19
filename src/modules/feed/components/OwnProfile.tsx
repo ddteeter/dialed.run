@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 import {
+  ACTION_PILL,
   COLUMN,
   BracketHeadline,
   Bracketed,
@@ -236,7 +237,7 @@ function DayOne() {
       <Link
         data-part="primary-action"
         to="/runs/new"
-        className="target inline-flex items-center rounded-pill bg-action px-6 py-3 text-body font-bold text-accent-ink no-underline"
+        className={`target ${ACTION_PILL} no-underline`}
       >
         Log a run
       </Link>

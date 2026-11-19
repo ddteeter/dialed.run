@@ -66,8 +66,8 @@ end of paragraph
 Find a package
 searchbox, Find a package, placeholder Name, e.g. date-fns
 status
-region, SIL Open Font License #.#
-heading, SIL Open Font License #.#, level 2
+region, Projects under the SIL Open Font License #.#
+heading, Projects under the SIL Open Font License #.#, level 2
 # · Type
 paragraph
 The typefaces you read everything in.
@@ -135,7 +135,6 @@ paragraph
 DISCLAIMER THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM OTHER DEALINGS IN THE FONT SOFTWARE.
 end of paragraph
 end of group
-heading, Projects, level 3
 list
 listitem, level 1, position 1, set size 3
 link, Archivo
@@ -150,9 +149,9 @@ link, IBM Plex Mono
 © # IBM Corp. with Reserved Font Name "Plex"
 end of listitem, level 1, position 3, set size 3
 end of list
-end of region, SIL Open Font License #.#
-region, MIT
-heading, MIT, level 2
+end of region, Projects under the SIL Open Font License #.#
+region, Projects under the MIT License
+heading, Projects under the MIT License, level 2
 #
 group
 Read the MIT licence
@@ -166,7 +165,6 @@ paragraph
 THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 end of paragraph
 end of group
-heading, Projects, level 3
 list
 listitem, level 1, position 1, set size 116
 link, @better-auth/core
@@ -816,9 +814,9 @@ link, zod
 © # Colin McDonnell
 end of listitem, level 1, position 116, set size 116
 end of list
-end of region, MIT
-region, BSD-#-Clause
-heading, BSD-#-Clause, level 2
+end of region, Projects under the MIT License
+region, Projects under the BSD #-Clause License
+heading, Projects under the BSD #-Clause License, level 2
 #
 group
 Read the BSD-#-Clause licence
@@ -838,7 +836,6 @@ paragraph
 THIS IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 end of paragraph
 end of group
-heading, Projects, level 3
 list
 listitem, level 1, position 1, set size 3
 link, domelementtype
@@ -857,9 +854,9 @@ link, entities
 end of listitem, level 1, position 3, set size 3
 end of list
 button, Show all #
-end of region, BSD-#-Clause
-region, Apache #.#
-heading, Apache #.#, level 2
+end of region, Projects under the BSD #-Clause License
+region, Projects under the Apache License #.#
+heading, Projects under the Apache License #.#, level 2
 #
 group
 Read the Apache #.# licence
@@ -960,7 +957,6 @@ paragraph
 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 end of paragraph
 end of group
-heading, Projects, level 3
 list
 listitem, level 1, position 1, set size 3
 link, @cf-wasm/photon
@@ -978,9 +974,9 @@ link, drizzle-orm
 end of listitem, level 1, position 3, set size 3
 end of list
 button, Show all #
-end of region, Apache #.#
-region, MPL-#.#
-heading, MPL-#.#, level 2
+end of region, Projects under the Apache License #.#
+region, Projects under the Mozilla Public License #.#
+heading, Projects under the Mozilla Public License #.#, level 2
 #
 group
 Read the MPL-#.# licence
@@ -1330,7 +1326,6 @@ paragraph
 This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. #.#.
 end of paragraph
 end of group
-heading, Projects, level 3
 list
 listitem, level 1, position 1, set size 3
 link, @cf-wasm/resvg
@@ -1348,9 +1343,9 @@ link, @resvg/resvg-wasm
 end of listitem, level 1, position 3, set size 3
 end of list
 button, Show all #
-end of region, MPL-#.#
-region, @garmin/fitsdk licence
-heading, @garmin/fitsdk licence, level 2
+end of region, Projects under the Mozilla Public License #.#
+region, Projects under the FIT Protocol License Agreement
+heading, Projects under the FIT Protocol License Agreement, level 2
 #
 group
 Read the licence text
@@ -1499,3 +1494,8 @@ paragraph
 j. Waiver. No waiver by either party of any of the provisions hereof is effective unless explicitly set forth in writing and signed by the party so waiving. No failure to exercise, or delay in exercising, any rights, remedy, power or privilege arising from this Agreement will operate or be construed as a waiver thereof; nor will any single or partial exercise of any right, remedy, power or privilege hereunder preclude any other or further exercise thereof or the exercise of any other right, remedy, power or privilege.
 end of paragraph
 paragraph
+k. Equitable Relief. Licensee acknowledges and agrees that a breach or threatened breach by Licensee of any of its obligations under this Agreement would cause Garmin irreparable harm for which monetary damages may not be an adequate remedy and that, in the event of such breach or threatened breach, Garmin will be entitled to seek equitable relief, including a restraining order, an injunction, specific performance, and any other relief that may be available from any court of competent jurisdiction, without any requirement to post a bond or other security, or to prove actual damages or that monetary damages are not an adequate remedy. Such remedies are not exclusive and are in addition to all other remedies that may be available at law, in equity or otherwise.
+end of paragraph
+paragraph
+Last updated: :month #, #
+end of paragraph

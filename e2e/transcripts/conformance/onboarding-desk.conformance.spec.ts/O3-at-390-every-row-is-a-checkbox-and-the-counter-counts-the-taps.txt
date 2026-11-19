@@ -40,10 +40,6 @@ Buff
 checkbox, Long sleeve quarter-zip, not checked
 Long sleeve quarter-zip
 button, Everything else · # more, not expanded
-Everything else ·
-#
-more
-end of button, Everything else · # more, not expanded
 end of group, Common in your climate · tap to add
 Closet:
 #

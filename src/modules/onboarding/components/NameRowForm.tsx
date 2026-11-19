@@ -2,6 +2,7 @@ import type { JSX } from "react";
 import { useState } from "react";
 
 import {
+  CHIP,
   FormFailureBand,
   FormStatus,
   Mono,
@@ -111,6 +112,7 @@ export function NameRowForm({
       />
       <SuggestionChips
         options={brandOptions}
+        picked={brand}
         onPick={(option) => {
           setBrand(option);
           onBrandInput(option);
@@ -128,7 +130,11 @@ export function NameRowForm({
         error={form.fieldErrors.model}
         autoComplete="off"
       />
-      <SuggestionChips options={modelOptions} onPick={setModel} />
+      <SuggestionChips
+        options={modelOptions}
+        picked={model}
+        onPick={setModel}
+      />
 
       <FormFailureBand
         failure={form.failure}
@@ -157,12 +163,21 @@ export function NameRowForm({
  * Suggestions as chips under their field (AC2a, R55·229), where a
  * `<datalist>` drew the browser's own ▼ in the field. A tap fills the
  * field; anything else is still typed. None, nothing drawn.
+ *
+ * Each is a `CHIP` (R61·334.2), ink while the field holds its words (a
+ * guess, Design 347: the ruling says "ink when picked" and a suggestion
+ * had no picked state).
  */
 function SuggestionChips({
   options,
+  picked,
   onPick,
 }: Readonly<{
   options: readonly string[];
+  /**
+  What the field holds now.
+  */
+  picked: string;
   onPick: (option: string) => void;
 }>): JSX.Element | undefined {
   if (options.length === 0) return undefined;
@@ -172,10 +187,11 @@ function SuggestionChips({
         <button
           key={option}
           type="button"
+          aria-pressed={option === picked}
           onClick={() => {
             onPick(option);
           }}
-          className="target cursor-pointer rounded-pill border border-hairline bg-transparent px-3 py-2 text-quiet"
+          className={`target ${CHIP}`}
         >
           <Mono step="xs">{option}</Mono>
         </button>

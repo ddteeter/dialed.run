@@ -8,6 +8,7 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
 
+import { ACTION_PILL } from "../../src/ui/form";
 import { TopBar } from "../../src/ui/TopBar";
 
 /**
@@ -54,7 +55,11 @@ describe("TopBar", () => {
     // Full-bleed ground, then 1,180 with the 24 gutters inside it: at 1280
     // the wordmark starts at 74, where every page's content does.
     expect(bar()).not.toHaveClass("px-6");
-    expect(bar()?.firstElementChild).toHaveClass("mx-auto", "max-w-page", "px-6");
+    expect(bar()?.firstElementChild).toHaveClass(
+      "mx-auto",
+      "max-w-page",
+      "px-6",
+    );
   });
 
   it("carries the four destinations in order, as links", async () => {
@@ -153,7 +158,8 @@ describe("TopBar", () => {
     expect(launcher).not.toHaveAttribute("aria-current");
     // T1: "text on an accent is always ink" — the fixed colour. Inside
     // this block `--ink` is chalk, so `text-ink` would put chalk on pink.
-    expect(launcher).toHaveClass("bg-action", "text-accent-ink");
+    // The pink pill, one size (R61·334.1).
+    expect(launcher).toHaveClass("target", ...ACTION_PILL.split(" "));
   });
 
   it("opens the flow from the pill, which is not a link", async () => {

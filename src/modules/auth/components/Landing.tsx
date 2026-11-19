@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX, ReactNode } from "react";
 
-import { INK_PILL, Layout, Mono, PhoneBell } from "../../../ui";
+import { ACTION_PILL, INK_PILL, Layout, Mono, PhoneBell } from "../../../ui";
 import { SignedOutFrame } from "../../../ui/SignedOutFrame";
 import { signedInAs } from "../signed-in-as";
 
@@ -126,11 +126,12 @@ function Hero({ children }: Readonly<{ children: ReactNode }>): JSX.Element {
 const GO_TO_FEED_CLASS = `target ${INK_PILL} no-underline`;
 
 /**
- * The phone's pink pill: below 720 the bar holds only Log in, so Request
- * access moves into the hero, and shows once per view.
+ * The phone's pink pill (`ACTION_PILL`, R61·334.1): below 720 the bar
+ * holds only Log in, so Request access moves into the hero, and shows
+ * once per view. As wide as the hero's column (a guess, Design 347: the
+ * kind's one size is read as its height and sides).
  */
-const REQUEST_ACCESS_CLASS =
-  "target inline-flex items-center justify-center self-stretch rounded-pill bg-action px-5 font-bold text-accent-ink no-underline wide:hidden";
+const REQUEST_ACCESS_CLASS = `target ${ACTION_PILL} self-stretch no-underline wide:hidden`;
 
 /**
  * Request access on the phone (from 720 up the bar holds it), then the

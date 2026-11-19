@@ -1190,10 +1190,17 @@ describe("A1: the parsed card", () => {
         },
       });
     });
+    // R61·332: "Changed" takes the verb's slot, with no " ·" and no
+    // second word beside it.
     const changed = await screen.findByRole("button", {
-      name: "7:34 AM · Changed Change",
+      name: "7:34 AM Changed",
     });
-    expect(changed).toHaveTextContent("7:34 AM · Changed");
+    expect(changed).toHaveTextContent(/^7:34 AMChanged$/u);
+    expect(changed.lastElementChild).toHaveClass(
+      "text-small",
+      "font-semibold",
+      "underline",
+    );
     expect(screen.queryByLabelText("Start time")).toBeNull();
     expect(cardStatus()).toHaveTextContent("Start time changed to 7:34 AM.");
     // The run is asked for again, so the block fills in for the new hour.
