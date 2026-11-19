@@ -7379,7 +7379,9 @@ The round's own import is the docs pass's.
   of the licences' full names (SPDX's, and the FIT SDK agreement's own
   title); a licence the table does not name reads "the {id} licence". The
   contents column, the section ids and "Read the MIT licence" keep the
-  short names, and the tools keep "Tools we build with".
+  short names, and the tools keep "Tools we build with". **The owner's
+  call (2026-11-18, #831):** the names as listed there, the typefaces'
+  group included ("Projects under the SIL Open Font License 1.1").
 - **R61·334.1 · `ACTION_PILL`.** The bars' launcher and Request access,
   Landing's phone Request access, the invite card's pill, the profile's
   Log a run and the shade sheet's Use this are one pink pill, 44 high
