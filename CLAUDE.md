@@ -84,6 +84,16 @@ src/
 
 - A module may import `db`, `env`, `lib`, `ui`, and **other modules only via
   their `index.ts`**. Never deep-import another module's internals.
+- **Sub-modules.** A folder in a module with its own `index.ts` is a
+  sub-module: the rest of the module, and other modules, reach its files
+  only through that `index.ts`. Propose one in your design doc when your
+  lane adds a concern with its own tables or vocabulary to a module that
+  already holds several, when the module ratchet
+  (`test/architecture/module-shape.node.test.ts`) would go over a budget
+  or a pin, or when you are about to hand a dependency in through
+  `src/server.ts` because a barrel cannot export it. A new top-level
+  module is for code that belongs to no area: ask the owner. A pin is
+  never raised to pass the test.
 - **A component never imports a server function.** `modules/*/functions.ts`
   pulls TanStack Start's virtual entry, so anything that reaches it cannot be
   imported by a test. Routes wire server functions and pass them down as props.
