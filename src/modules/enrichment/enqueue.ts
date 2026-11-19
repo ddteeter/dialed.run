@@ -23,8 +23,9 @@ import { canSpendRunnerRequest } from "./spend-limit";
  * **Never throws** (law 5). `requestEnrichment` already swallows a failed
  * send, because the row is the durable half; this also swallows a failed
  * *claim*, which is the remaining way a D1 hiccup could take a garment save
- * down with it. Either way the row is left for the `enrichment-retry` cron
- * to find, or the next paste to ask again.
+ * down with it. A failed send leaves the row `pending` for the
+ * `enrichment-retry` cron to find; a failed claim leaves it as it was,
+ * which no cron reads, so the next save that links the product asks again.
  *
  * **Counted against the runner who asked** (`spend-limit.ts`): only a
  * request that could claim the product is counted, so re-saving a garment

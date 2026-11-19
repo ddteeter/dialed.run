@@ -11,10 +11,12 @@ views {
         description 'The products row is the durable marker'
       }
 
-    // source: src/modules/closet/functions.ts createItemFn, updateItemFn, withResolvedProduct (then createItem with data.idempotencyKey)
+    // source: src/modules/closet/functions.ts createItemFn, updateItemFn, withResolvedProduct (then createItem with data.idempotencyKey); src/modules/closet/service.ts withResolvedProduct, isListedName, isUnconfirmed; src/modules/closet/product-link.ts linkTypedGarments, productLinkFor
     runner -> cf.app.closet.saveGarment 'saves a garment with a brand, a model and a product link' {
       notes '''
         **Guard: the garment\'s idempotency key, on a create.** A repeat of the save also asks for enrichment again, which the claim below turns into nothing.
+
+        **Guard: only a nameable product.** An empty or listed brand or model, or an unconfirmed runner, makes no product and asks for nothing; the garment saves as typed. Confirming the account later links those garments the same way, and that asks for enrichment too.
       '''
     }
     // source: src/modules/products/service.ts resolveProduct, createOrGetProduct (onConflictDoUpdate, coalesce on source_url)
@@ -23,35 +25,39 @@ views {
         **Guard: create-if-missing on the normalized brand and name.** Products are shared rows. The first link a product gets stays its link; a later paste does not replace it.
       '''
     }
-    // source: src/modules/closet/service.ts productLinkFor; src/modules/enrichment/enqueue.ts enqueueEnrichment
+    // source: src/modules/closet/service.ts productLinkFor; src/modules/enrichment/enqueue.ts enqueueEnrichment, isClaimable; src/modules/enrichment/spend-limit.ts canSpendRunnerRequest, ENRICHMENT_REQUESTS_PER_RUNNER_PER_DAY (50)
     cf.app.closet.saveGarment -> cf.app.enrichment.request 'asks for enrichment' {
       notes '''
-        **Degrade, don\'t fail.** This never throws. A failed claim or a failed send is reported and swallowed, and the garment still saves.
+        **Bounded.** Only a product that could be claimed is counted, against the runner\'s 50 requests a day. Over that, nothing is asked and the garment saves unenriched.
 
-        It runs before the garment row is written, so a save that then fails has still asked. The product is shared, so the work is not wasted.
+        **Degrade, don\'t fail.** This never throws. A failed claim or a failed send is reported and swallowed, and the garment still saves. After a failed claim the product stays as it was: nothing re-drives it, and the next save that links it asks again.
+
+        It runs before the garment row is written and before the link is checked against the denylist, so a save that is then refused has still asked.
       '''
     }
-    // source: src/modules/enrichment/request.ts requestEnrichment (didClaim from none or failed, source_url not null)
+    // source: src/modules/enrichment/request.ts requestEnrichment, abandonedBefore (didClaim from none, or failed past the first day, source_url not null)
     cf.app.enrichment.request -> cf.coreDb 'claims the product: none or failed to pending' {
       notes '''
-        **Guard: the claim.** Only `none` and `failed` flip to `pending`, and only with a link. A second paste while a job is in flight, or of a product already `done`, claims nothing and sends nothing.
+        **Guard: the claim.** `none` flips to `pending`; `failed` only once the product\'s first day is over, because inside it the hourly sweep owns the retry. Only with a link. A second paste while a job is in flight, or of a product already `done`, claims nothing and sends nothing.
 
         **This column is the recovery marker.** `pending` means the product still owes an extraction.
       '''
     }
-    // source: src/modules/enrichment/request.ts requestEnrichment (queue.send); src/modules/dispatch/scheduled.ts redispatchStalledEnrichments
+    // source: src/modules/enrichment/request.ts requestEnrichment (queue.send); src/modules/dispatch/scheduled.ts redispatchStalledEnrichments, ENRICHMENT_STALL_GRACE_S (15 minutes); src/modules/ops/desk/crons.ts cronRegistry (30 * * * *)
     cf.app.enrichment.request -[async]-> cf.enrichmentQueue 'sends EnrichJob: the product id' {
       notes '''
         **Not atomic with the claim.** D1 and a queue are two systems.
 
-        **If it is lost:** the product stays `pending`, and the hourly enrichment-retry cron sends it again once it is 15 minutes old. A lost send costs up to an hour, never the save.
+        **If it is lost:** the product stays `pending`, and the hourly enrichment-retry cron sends it again once it is 15 minutes old. A lost send costs up to about an hour and a quarter (15 minutes\' grace, then the next :30), never the save.
       '''
       navigateTo enrichmentRecovery
     }
-    // source: src/modules/closet/functions.ts createItemFn (createItem after withResolvedProduct)
+    // source: src/modules/closet/functions.ts createItemFn (createItem after withResolvedProduct); src/modules/closet/service.ts createItem, updateItem, assertLinkAllowed
     runner <- cf.app.closet.saveGarment 'saves the garment and answers' {
       notes '''
         **Timing boundary: the request ends here.** The runner waits for the save, never for the page.
+
+        **If the link is denied:** the save is refused with a field error, after enrichment was asked for. The product is shared, so a later save that links it allowed is not wasted.
       '''
     }
     // source: src/modules/dispatch/queues.ts handleQueueBatch (dialed-enrichment); src/lib/sql/queue-batch.ts consumeEach; wrangler.jsonc queues.consumers, max_batch_size, max_retries (1 and 3)
@@ -69,12 +75,14 @@ views {
         **Guard: the status.** A job for a product that is `done` (a redelivery after success) or `none` (sent without the claim) is acked and ignored.
       '''
     }
-    // source: src/modules/enrichment/consume.ts extractPending, fetchAndExtract
+    // source: src/modules/enrichment/consume.ts extractPending, fetchAndExtract, canSpendPageFetch, markFailed; src/modules/enrichment/spend-limit.ts PAGE_FETCHES_PER_HOUR (200)
     cf.app.enrichment.consumer -> shop 'fetches, stores and reads the page' {
       notes '''
         **Guard: the stored page.** A page this product stored in the last hour is read again rather than fetched again, so a redelivery never pays for a second fetch.
 
-        **If the page refuses** (a 404, a private host, too large, a 403 with no proxy): the product is marked `failed`, the job is acked, and the queue does not retry it.
+        **Bounded.** A fresh fetch spends one of 200 page fetches an hour, shared by everyone. Over that, the job is acked and the product stays `pending` for the sweep.
+
+        **If the page refuses** (a 404, a private host, too large, a 403 with no proxy): the product is marked `failed`, the job is acked, and the queue does not retry it. Inside the product\'s first day the failure is parked with one try counted, for the sweep; past it, it goes on the Desk\'s Gave up in the same batch.
       '''
       navigateTo enrichmentExtraction
     }
@@ -96,25 +104,29 @@ views {
         description 'The products row is the durable marker'
       }
 
-    // source: src/modules/enrichment/fetch-page.ts fetchProductPage, TIMEOUT_MS, MAX_REDIRECTS, assertFetchable; src/modules/enrichment/bounds.ts MAX_BYTES
+    // source: src/modules/enrichment/fetch-page.ts fetchProductPage, TIMEOUT_MS, MAX_REDIRECTS, assertFetchable; src/modules/enrichment/meta-refresh.ts refreshTarget; src/modules/enrichment/bounds.ts MAX_BYTES
     cf.app.enrichment.consumer -> shop 'fetches the page, one hop at a time' {
       notes '''
-        **Bounded.** 10 seconds a hop, at most 5 redirects, at most 6 MB of page. Every hop is checked before it is fetched.
+        **Bounded.** 10 seconds a hop, at most 5 redirects (a meta refresh counts as one), at most 6 MB of page. Every hop is checked before it is fetched.
 
         **If it fails:** a refusal by the page is terminal (`failed`, acked). A network error or a timeout throws, and the queue retries.
       '''
     }
-    opt 'the shop refuses a Worker (401, 403, 429 or 503) and a proxy key is set' {
-      // source: src/modules/enrichment/fetch-page.ts refused, REFUSALS; src/modules/enrichment/firecrawl.ts scrapeThroughProxy, PROXY_TIMEOUT_MS
+    opt 'the shop refuses a Worker (401, 403, 429 or 503), a proxy key is set, and the day\'s proxy calls are not spent' {
+      // source: src/modules/enrichment/fetch-page.ts refused, REFUSALS, fetchProductPage (proxyApiKey); src/modules/enrichment/firecrawl.ts scrapeThroughProxy, PROXY_TIMEOUT_MS; src/modules/enrichment/consume.ts claimProxy; src/modules/enrichment/spend-limit.ts canSpendProxyCall, PROXY_CALLS_PER_DAY (150)
       cf.app.enrichment.consumer -> firecrawl 'fetches the page through the proxy' {
         notes '''
-          **Degrade, don\'t fail.** With no key, a refused page is a failed fetch. The proxy call has 30 seconds.
+          **Bounded.** 150 proxy calls a day, shared by everyone, and at most one a page. The proxy call has 30 seconds.
+
+          **Degrade, don\'t fail.** With no key, or past the day\'s calls, a refused page is a failed fetch.
         '''
       }
     }
-    // source: src/modules/enrichment/consume.ts fetchAndExtract, isLandingDenied, dropDeniedSource; src/modules/ops/desk/queues.ts enrichmentDeps
-    cf.app.enrichment.consumer -> cf.coreDb 'checks where the page landed against the denylist' {
+    // source: src/modules/enrichment/consume.ts fetchAndExtract, isLandingDenied, dropDeniedSource; src/modules/ops/desk/queues.ts enrichmentDeps; src/modules/safety/denylist.ts isDeniedOnLanding
+    cf.app.enrichment.consumer -> cf.coreDb 'records where the link landed and checks it against the denylist' {
       notes '''
+        **Guard: an upsert on the link.** A landing on another domain is recorded in `link_landings`. A landing with no readable domain counts as denied.
+
         **If the landing is denied:** nothing from the page is kept. The product lets go of the link and goes back to `none`, so the next runner\'s link can ask again.
       '''
     }
@@ -163,9 +175,13 @@ views {
       cf.app.enrichment.request -[async]-> cf.enrichmentQueue 'sends EnrichJob'
     }
     catch 'the send fails, or the Worker dies first' {
-      // source: src/modules/dispatch/scheduled.ts redispatchStalledEnrichments, stalledPending, ENRICHMENT_STALL_GRACE_S; src/modules/ops/desk/crons.ts cronRegistry (30 * * * *)
+      // source: src/modules/dispatch/scheduled.ts redispatchStalledEnrichments, stalledPending, ENRICHMENT_STALL_GRACE_S, runHourly, hourlyReport (limit 100); src/modules/ops/desk/crons.ts cronRegistry (30 * * * *)
       cf.app.cronHourly30 -[recovery]-> cf.coreDb 'finds products pending for 15+ minutes' {
-        notes 'Fifteen minutes of grace, counted from when the product was made, so the sweep rarely races a send still in flight.'
+        notes '''
+          Fifteen minutes of grace, counted from when the product was made, so the sweep rarely races a send still in flight. At most 100 a firing.
+
+          **No age or try ceiling on `pending`.** A product the consumer cannot finish (the page budget is spent, or the dead-letter mark throws) is sent again every hour, and each firing\'s report counts it, until the consumer runs. Then a failure past the first day goes straight to Gave up.
+        '''
       }
       // source: src/modules/dispatch/scheduled.ts redispatchStalledEnrichments, redispatchEach
       cf.app.cronHourly30 -[recovery]-> cf.enrichmentQueue 'sends them again' {
@@ -185,15 +201,23 @@ views {
       cf.enrichmentQueue -[recovery]-> cf.enrichmentDlq 'dead-letters the job'
       // source: src/modules/dispatch/queues.ts handleQueueBatch (dialed-enrichment-dlq)
       cf.enrichmentDlq -[async]-> cf.app.enrichment.deadLetter 'delivers it'
-      // source: src/modules/enrichment/consume.ts handleEnrichmentDlqBatch
+      // source: src/modules/enrichment/consume.ts handleEnrichmentDlqBatch; src/modules/dispatch/queues.ts deliveries; src/lib/sql/queue-batch.ts deadLetterEach; wrangler.jsonc queues.consumers, max_retries (1 on the DLQ, no dead-letter queue of its own)
       cf.app.enrichment.deadLetter -[recovery]-> cf.coreDb 'marks the product failed, if still pending' {
-        notes 'A retry that won before the dead letter arrived is never un-done. Inside the product\'s first day the failure is parked for the sweep; past it, it goes on the Desk\'s Gave up at once.'
+        notes '''
+          A retry that won before the dead letter arrived is never un-done. Inside the product\'s first day the failure is parked for the sweep, every delivery counted as a try; past it, it goes on the Desk\'s Gave up at once.
+
+          **If it fails:** a throw fails the dead-letter batch, which retries once. After that the product stays `pending`, and the hourly sweep sends it again.
+        '''
       }
     }
-    opt 'failed, and inside the product\'s first day' {
-      // source: src/modules/dispatch/scheduled.ts redispatchStalledEnrichments, failedAndOwed; src/modules/enrichment/abandon.ts ENRICHMENT_RETRY_WINDOW_S
+    opt 'failed, inside the product\'s first day, and under 6 tries' {
+      // source: src/modules/dispatch/scheduled.ts redispatchStalledEnrichments, failedAndOwed; src/modules/enrichment/abandon.ts sweepOwed, ENRICHMENT_RETRY_WINDOW_S, ENRICHMENT_SWEEP_TRIES (6)
       cf.app.cronHourly30 -[recovery]-> cf.coreDb 'claims failed products back to pending' {
-        notes 'A claim, not just a send: the consumer ignores a product that is not `pending`. Hourly, for the product\'s first 24 hours.'
+        notes '''
+          A claim, not just a send: the consumer ignores a product that is not `pending`. Hourly inside the product\'s first day, while it has fewer than 6 tries: a dead letter counts 4 (one for each delivery), a refused page 1. Past the cap it waits out its day `failed`.
+
+          The closet\'s link line says "retrying" by the same rule.
+        '''
       }
       // source: src/modules/dispatch/scheduled.ts redispatchStalledEnrichments, redispatchEach
       cf.app.cronHourly30 -[recovery]-> cf.enrichmentQueue 'sends them again'
@@ -205,7 +229,7 @@ views {
       }
       // source: src/modules/ops/desk/gave-up.ts retryEnrichment
       operator -> cf.app.ops.deskRetry 'presses Retry'
-      // source: src/modules/ops/desk/gave-up.ts retryEnrichment (requestEnrichment, gaveUpClear)
+      // source: src/modules/ops/desk/gave-up.ts retryEnrichment, retryFailedEnrichment (claims a failed product whatever its age); src/modules/enrichment/request.ts retryFailedEnrichment
       cf.app.ops.deskRetry -[recovery]-> cf.app.enrichment.request 'claims it and sends EnrichJob again' {
         notes 'The Desk can also re-run extraction over the stored page, with no fetch and no queue.'
       }
