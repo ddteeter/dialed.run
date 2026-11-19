@@ -414,9 +414,9 @@ ratchet, since it names the ratchet's test.
 ## Issues
 
 - Refs #796 (stays open for step 5).
-- Opens: `settleOutbox` takes its handler (the knot not cut); `runs`'
-  `strava/` and `garmin/` as sub-modules; a client-side door for the
-  helpers routes import past a barrel.
+- Opens: #886 (`settleOutbox` takes its own handler, the knot not cut),
+  #887 (`runs`' `strava/` and `garmin/` as sub-modules), #888 (a
+  client-safe door for the helpers routes import past a barrel).
 
 ## The owner's answers (2026-11-18)
 
