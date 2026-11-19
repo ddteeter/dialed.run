@@ -52,7 +52,7 @@ Pass specs by reference, never pasted. Each brief contains:
   - **Relay** each ruling: comment it on the item's issue, move the issue to Ready (or close it if nothing is left to build), and message the lane that owns it, in one message per lane. A ruling that asks for new build work becomes a new issue.
   - **Read a ruling against the code before relaying it.** Round 49 said "F's category words" and meant garment types; built literally, the sentence would have said nothing. If a ruling contradicts its own example or the schema, send a short follow-up instead.
 - **Merging.** When a lane reports `green`:
-  1. Check that `gh pr view N --json mergeStateStatus` is CLEAN.
+  1. Check that `gh pr view N --json mergeStateStatus` is CLEAN, and that no "Mutation is red on main" issue is open. `mutation.yml` opens that issue when main's run goes red and closes it when main is green again (#876). While it is open, a lane that is red only because of main's survivor gives up its place, as below.
   2. Run `gh pr merge N --merge`.
   3. In the primary checkout, run `git merge --ff-only origin/main`. Use `update-ref` only where main isn't checked out.
   4. Run `git worktree remove .claude/worktrees/wN-<slug>` and `git branch -D <branch>`. GitHub auto-deletes the remote branch; if not, use `gh api -X DELETE`, never `git push --delete`, which takes the gate lock.

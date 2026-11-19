@@ -185,6 +185,15 @@ jobs:
     needs: scopes
     if: needs.scopes.outputs.relevant == 'true'
     runs-on: ubuntu-latest
+    # A cap per shard, so a stuck one fails instead of holding a runner for
+    # GitHub's default six hours (#876). Cold runs on main, 2026-11: every
+    # shard finished within 231 min except `lib/copy (ts)`, which ran 145-358
+    # and was killed twice at 360. Its static mutants (module-scope code, so
+    # each runs the whole suite) were split across three entries in
+    # stryker.conf.json in the same change. A shard that hits the cap reports
+    # cancelled, the `Mutation` job counts that as a failure, and on main
+    # `main-status` below opens the alert.
+    timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix:
@@ -341,3 +350,39 @@ jobs:
             echo "::error::A mutation scope did not reach 100. See the shard that failed."
             exit 1
           fi
+
+  # Main's result where a coordinator will see it (#876, resilience law 6).
+  # Nothing told anyone when main went red: a survivor that reached main
+  # turned three PRs red before anyone noticed. On red this opens (or
+  # comments on) the "Mutation is red on main" issue; on green it closes it.
+  # scripts/mutation-main-alert.sh does the work and is re-runnable.
+  # Pushes to main only, and only for a run that finished: a cancelled run
+  # was replaced by a newer one, which reports instead.
+  main-status:
+    name: Report main's Mutation result
+    needs: [gate]
+    if: always() && github.event_name == 'push' && (needs.gate.result == 'success' || needs.gate.result == 'failure')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+    steps:
+      # Audit first (design 196): reports the hosts this job reaches and
+      # blocks none. It moves to `block` once that list is known and short.
+      - uses: step-security/harden-runner@v2.22.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - run: sh scripts/mutation-main-alert.sh "$RUN_ID" "$RESULT" "$COMMIT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RESULT: ${{ needs.gate.result }}
+          COMMIT: ${{ github.sha }}
