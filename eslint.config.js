@@ -247,16 +247,6 @@ const primitiveExemptions = {
   "src/modules/ops/og/cards.tsx": ["brackets"],
   // Google's own button spec, not one of ours.
   "src/modules/auth/google-button.tsx": ["pills"],
-  // Pills of no ruled kind yet, until Design 334 rules them (#834); #835
-  // takes these out. The bar's 44 pink pill and the other pink pills:
-  "src/ui/TopBar.tsx": ["pills"],
-  "src/ui/SignedOutFrame.tsx": ["pills"],
-  "src/modules/auth/components/Landing.tsx": ["pills"],
-  "src/modules/feed/components/PublicFrame.tsx": ["pills"],
-  "src/modules/feed/components/OwnProfile.tsx": ["pills"],
-  "src/modules/closet/components/ShadeSheet.tsx": ["pills"],
-  // Follow's three states:
-  "src/modules/feed/components/Follow.tsx": ["pills"],
   // Ruled exceptions, drawn as their own: A2's ink-edged Change and its
   // pair on the hi-viz card (R58·308), and AF1's outline-to-filled
   // audience toggle (R55·171).
