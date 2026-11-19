@@ -28,8 +28,11 @@ test("the open-source page: groups by licence, search, the notices and the tools
 
   await scene(page, "The type comes first, then the licences, largest first");
   const sections = page.locator("main section h2");
-  await expect(sections.first()).toHaveText("SIL Open Font License 1.1");
-  await expect(sections.nth(1)).toHaveText("MIT");
+  // R61·331: each licence group's h2 says what its rows are.
+  await expect(sections.first()).toHaveText(
+    "Projects under the SIL Open Font License 1.1",
+  );
+  await expect(sections.nth(1)).toHaveText("Projects under the MIT License");
   await expect(page.getByText("IBM Plex Mono")).toBeVisible();
 
   await scene(page, "Each licence's text is printed once, when asked for");
