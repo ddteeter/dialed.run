@@ -10,7 +10,7 @@
  */
 import ts from "typescript";
 
-function parse(path: string, text: string): ts.SourceFile {
+export function parse(path: string, text: string): ts.SourceFile {
   return ts.createSourceFile(
     path,
     text,
@@ -20,13 +20,23 @@ function parse(path: string, text: string): ts.SourceFile {
   );
 }
 
-function hasExport(statement: ts.Statement): boolean {
+/**
+Whether a statement carries a modifier: `export`, `default`.
+*/
+export function hasModifier(
+  statement: ts.Statement,
+  kind: ts.SyntaxKind,
+): boolean {
   return (
     ts.canHaveModifiers(statement) &&
     (ts.getModifiers(statement) ?? []).some(
-      (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
+      (modifier) => modifier.kind === kind,
     )
   );
+}
+
+function hasExport(statement: ts.Statement): boolean {
+  return hasModifier(statement, ts.SyntaxKind.ExportKeyword);
 }
 
 /**
