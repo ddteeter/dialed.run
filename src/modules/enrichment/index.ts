@@ -9,7 +9,9 @@ export {
   extractionDone,
   extractionFailed,
   extractionPending,
+  isSweepOwed,
   listAbandonedEnrichments,
+  sweepOwed,
 } from "./abandon";
 export {
   handleEnrichmentBatch,

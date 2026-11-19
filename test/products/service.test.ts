@@ -540,6 +540,7 @@ describe("products: what garment detail learns of enrichment (design 163)", () =
       .update(products)
       .set({
         extractionStatus: "done",
+        extractionTries: 2,
         extracted: JSON.stringify({
           rung: "jsonld",
           found: {},
@@ -554,6 +555,7 @@ describe("products: what garment detail learns of enrichment (design 163)", () =
       status: "done",
       hasSpecs: true,
       createdAt: product.createdAt,
+      tries: 2,
       sourceUrl: "https://janji.com/p/tee",
     });
   });
@@ -570,6 +572,7 @@ describe("products: what garment detail learns of enrichment (design 163)", () =
       status: "none",
       hasSpecs: false,
       createdAt: product.createdAt,
+      tries: undefined,
       sourceUrl: undefined,
     });
   });

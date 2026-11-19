@@ -8,7 +8,10 @@ import { linkDetailOf } from "../../src/modules/closet/garment-link";
 import { storedLinkErrors } from "../../src/modules/closet/form-mapping";
 import { DENIED_LINK } from "../../src/modules/closet/link-copy";
 import { createItem, DeniedLinkError } from "../../src/modules/closet/service";
-import { abandonedBefore } from "../../src/modules/enrichment";
+import {
+  abandonedBefore,
+  ENRICHMENT_SWEEP_TRIES,
+} from "../../src/modules/enrichment";
 import { newUlid } from "../../src/lib/ids";
 import { denyDomain, isDeniedOnLanding } from "../../src/modules/safety";
 
@@ -124,6 +127,7 @@ function extraction(
     status: "done",
     hasSpecs: true,
     createdAt: abandonedBefore() + 3600,
+    tries: undefined,
     sourceUrl: "https://www.rabbit.run/p/rover",
     ...overrides,
   };
@@ -184,6 +188,39 @@ describe("linkDetailOf: E's link and its one line (round 43 #94-95)", () => {
       isRetrying: true,
     });
     expect(old.outcome).toEqual({
+      kind: "unread",
+      source: "rabbit.run",
+      isRetrying: false,
+    });
+  });
+
+  it("has stopped trying again inside the day once the sweep's try cap is spent (#881)", async () => {
+    const userId = await runner(true);
+    const inDay = abandonedBefore() + 3600;
+    const underCap = await linkDetailOf(
+      core(),
+      garment(userId),
+      extraction({
+        status: "failed",
+        createdAt: inDay,
+        tries: ENRICHMENT_SWEEP_TRIES - 1,
+      }),
+    );
+    const atCap = await linkDetailOf(
+      core(),
+      garment(userId),
+      extraction({
+        status: "failed",
+        createdAt: inDay,
+        tries: ENRICHMENT_SWEEP_TRIES,
+      }),
+    );
+    expect(underCap.outcome).toEqual({
+      kind: "unread",
+      source: "rabbit.run",
+      isRetrying: true,
+    });
+    expect(atCap.outcome).toEqual({
       kind: "unread",
       source: "rabbit.run",
       isRetrying: false,
@@ -283,7 +320,7 @@ describe("linkDetailOf: E's link and its one line (round 43 #94-95)", () => {
 
     it("has stopped trying again, as the sweep has", async () => {
       // The sweep re-drives a failure while `created_at > abandonedBefore()`
-      // (enrichment's `markFailed`), so the line must agree at the boundary.
+      // (enrichment's `sweepOwed`), so the line must agree at the boundary.
       const userId = await runner(true);
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2026-10-31T12:00:00.000Z"));

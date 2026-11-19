@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, lt, sql, type SQL } from "drizzle-orm";
+import { and, eq, gt, isNotNull, lt, sql, type SQL } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import {
@@ -75,6 +75,36 @@ The instant (epoch seconds) before which a `failed` product is abandoned.
 */
 export function abandonedBefore(now = nowSeconds()): number {
   return now - ENRICHMENT_RETRY_WINDOW_S;
+}
+
+/**
+ * Whether the hourly sweep still owes a `failed` product a retry: inside
+ * its first day **and** under the try cap (#881). The closet's link line
+ * says "retrying" by this, and the sweep claims by `sweepOwed`, its SQL
+ * twin; `test/enrichment/sweep-owed.test.ts` holds the two to one answer
+ * for every row it tries. `tries` is absent until something fails, and
+ * again once the product has been listed on Gave up.
+ */
+export function isSweepOwed(
+  product: Readonly<{ createdAt: number; tries: number | undefined }>,
+  now = nowSeconds(),
+): boolean {
+  return (
+    product.createdAt > abandonedBefore(now) &&
+    (product.tries ?? 0) < ENRICHMENT_SWEEP_TRIES
+  );
+}
+
+/**
+`isSweepOwed` as a WHERE clause over `products`, for the sweep's claim.
+*/
+export function sweepOwed(now = nowSeconds()): SQL | undefined {
+  return and(
+    gt(products.createdAt, abandonedBefore(now)),
+    // A few tries, not one an hour all day: a page that keeps failing has
+    // answered, and each try may be a proxy credit.
+    sql`coalesce(${products.extractionTries}, 0) < ${ENRICHMENT_SWEEP_TRIES}`,
+  );
 }
 
 /**
