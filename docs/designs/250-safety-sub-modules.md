@@ -68,7 +68,8 @@ blur      -> (nothing)
   keys six `fallow-ignore` grants by path (`blocks.ts`,
   `copyright-holds.ts`, `duplicates.ts`, `quarantine.ts`, `review.ts`,
   `desk-kit.ts`). Each file moves, so each key needs its new path, text
-  and reason unchanged. Asked in this lane's session.
+  and reason unchanged. Granted one-time by the owner, 2026-11-19
+  (recorded on #796).
 - Comments outside the lane that cite a moved path (`src/env/env.d.ts`, `src/ui/photo-step.ts`,
   `src/lib/contracts/*`, `vitest.config.ts`): asked of the coordinator.
 
@@ -92,4 +93,4 @@ No new behaviour, so no new test. What proves the move:
 
 ## Open questions
 
-- The six grant re-keys above (owner).
+None open. The six grant re-keys were granted (owner, 2026-11-19).
