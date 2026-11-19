@@ -17,15 +17,15 @@ import { env } from "../../src/env";
 import type { GaveUpKind } from "../../src/lib/contracts/gave-up";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { oweOutbox, outboxInsert } from "../../src/modules/ops/outbox";
+import { oweOutbox, outboxInsert } from "../../src/modules/ops/outbox/outbox";
 import {
   GAVE_UP_LIST_LIMIT,
   dropGaveUp,
   gaveUpJobs,
   retryGaveUp,
   type RetryDeps,
-} from "../../src/modules/ops/gave-up";
-import { todayCounts } from "../../src/modules/ops/desk";
+} from "../../src/modules/ops/desk/gave-up";
+import { todayCounts } from "../../src/modules/ops/desk/desk";
 import {
   createOrGetBrand,
   createOrGetProduct,

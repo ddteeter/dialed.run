@@ -7,7 +7,10 @@ import {
   restoreInviteCodeFn,
   revokeInviteCodeFn,
 } from "../../modules/account/functions";
-import { DeskPage, useDeskToday } from "../../modules/ops/components/DeskPage";
+import {
+  DeskPage,
+  useDeskToday,
+} from "../../modules/ops/desk/components/DeskPage";
 
 /**
  * Desk D7 · Codes, its own destination since R55·194 (drawn in R55·200),

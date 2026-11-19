@@ -14,12 +14,12 @@ import {
   outboxInsert,
   oweOutbox,
   settleOutbox,
-} from "../../src/modules/ops/outbox";
+} from "../../src/modules/ops/outbox/outbox";
 import {
   emailHandler,
   outboxHandlers,
   type OutboxHandlers,
-} from "../../src/modules/ops/outbox-handlers";
+} from "../../src/modules/ops/outbox/outbox-handlers";
 import { core, fakeMail, seedUser } from "./helpers";
 
 /**

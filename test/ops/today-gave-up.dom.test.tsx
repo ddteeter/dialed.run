@@ -14,9 +14,9 @@ import {
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { Today, lastTryOf } from "../../src/modules/ops/components/Today";
-import type { DeskToday } from "../../src/modules/ops/desk";
-import type { GaveUpJob } from "../../src/modules/ops/gave-up";
+import { Today, lastTryOf } from "../../src/modules/ops/desk/components/Today";
+import type { DeskToday } from "../../src/modules/ops/desk/desk";
+import type { GaveUpJob } from "../../src/modules/ops/desk/gave-up";
 import { bracketed } from "../ui/bracketed";
 
 /**

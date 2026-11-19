@@ -16,7 +16,7 @@ import {
 import { gateOnHandle } from "../modules/account/route-decisions";
 import { withOwnTheme } from "../modules/account/theme-answer";
 import { signedInQuery } from "../modules/auth/functions";
-import { SITE_LINKS, SITE_META } from "../modules/ops/og/site-head";
+import { SITE_LINKS, SITE_META } from "../modules/ops/public-web/og/site-head";
 import { Devtools } from "../ui/Devtools";
 import { SessionLapseAnswer } from "../ui/session-lapse";
 import { TermsRefusalAnswer } from "../ui/terms-refusal";

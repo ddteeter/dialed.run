@@ -2,8 +2,8 @@ import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it } from "vitest";
 
 import { cronCheckpoints } from "../../src/db/schema-core";
-import { handleQueueBatch, handleScheduled } from "../../src/modules/ops";
-import { checkHealth } from "../../src/modules/ops/health";
+import { handleQueueBatch, handleScheduled } from "../../src/modules/dispatch";
+import { checkHealth } from "../../src/modules/ops/desk/health";
 
 function fakeBatch(queue: string): MessageBatch {
   return {

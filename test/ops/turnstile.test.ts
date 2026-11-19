@@ -8,7 +8,7 @@ import {
   verifyTurnstileToken,
   type TurnstileAttempt,
   type TurnstileVerdict,
-} from "../../src/modules/ops/turnstile";
+} from "../../src/modules/ops/edge/turnstile";
 import type { TurnstileAction } from "../../src/lib/turnstile-actions";
 
 /**

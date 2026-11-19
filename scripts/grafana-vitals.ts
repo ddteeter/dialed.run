@@ -1,7 +1,7 @@
 /**
  * Writes `docs/ops/grafana-vitals.json`, the Grafana dashboard over the
  * `VITALS` dataset (design 165), from the panels in
- * `src/modules/ops/vitals-queries.ts` and the beacon's own metric and
+ * `src/modules/ops/speed/vitals-queries.ts` and the beacon's own metric and
  * device lists. The JSON is committed and imported, never built by hand;
  * `test/ops/dashboards.test.ts` fails when it no longer matches.
  *
@@ -9,7 +9,7 @@
  */
 import { writeFileSync } from "node:fs";
 import { DEVICE_WIDTHS, VITAL_METRIC_NAMES } from "../src/lib/contracts/vitals";
-import { DASHBOARD_PANELS } from "../src/modules/ops/vitals-queries";
+import { DASHBOARD_PANELS } from "../src/modules/ops/speed/vitals-queries";
 
 const datasource = {
   type: "vertamedia-clickhouse-datasource",

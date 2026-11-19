@@ -30,7 +30,7 @@ import {
   TAKEDOWN_VALVE_PER_HOUR,
   valveHour,
 } from "../../src/modules/safety/takedown-limits";
-import { emailHandler } from "../../src/modules/ops/outbox-handlers";
+import { emailHandler } from "../../src/modules/ops/outbox/outbox-handlers";
 import { fakeMail } from "../email/helpers";
 import { noPurge, purgeSpy } from "../purge-spy";
 import { oweInCore } from "../queue-fakes";

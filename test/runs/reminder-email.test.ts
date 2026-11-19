@@ -19,11 +19,11 @@ import {
   drainOutbox,
   outboxInsert,
   oweOutbox,
-} from "../../src/modules/ops/outbox";
+} from "../../src/modules/ops/outbox/outbox";
 import {
   emailHandler,
   outboxHandlers,
-} from "../../src/modules/ops/outbox-handlers";
+} from "../../src/modules/ops/outbox/outbox-handlers";
 import { handleImportsBatch } from "../../src/modules/runs/consumer";
 import type { ConsumerDeps } from "../../src/modules/runs/consumer";
 import { coreDb } from "../../src/modules/runs/core-db";

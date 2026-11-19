@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { DeskPage } from "../../modules/ops/components/DeskPage";
+import { DeskPage } from "../../modules/ops/desk/components/DeskPage";
 import { DeskDuplicates } from "../../modules/safety/components/DeskDuplicates";
 import { deskDuplicatesQuery } from "../../modules/safety/functions";
 

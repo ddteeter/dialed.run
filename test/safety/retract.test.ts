@@ -33,7 +33,7 @@ import {
 // part of the feed barrel's public surface (its only other consumer is
 // `functions.ts`, which no test can import at all).
 import { photoIdInput } from "../../src/modules/feed/retract";
-import { drainOutbox } from "../../src/modules/ops/outbox";
+import { drainOutbox } from "../../src/modules/ops/outbox/outbox";
 import { fileReport, reconcileUnhiddenReports } from "../../src/modules/safety";
 
 import { noPurge } from "../purge-spy";

@@ -1,7 +1,10 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 
-import { DeskPage, useDeskToday } from "../../modules/ops/components/DeskPage";
-import { ReviewHeading } from "../../modules/ops/components/ReviewHeading";
+import {
+  DeskPage,
+  useDeskToday,
+} from "../../modules/ops/desk/components/DeskPage";
+import { ReviewHeading } from "../../modules/ops/desk/components/ReviewHeading";
 import { CopyrightHolds } from "../../modules/safety/components/CopyrightHolds";
 import { QuarantineRecords } from "../../modules/safety/components/QuarantineRecords";
 import { ReleaseHolds } from "../../modules/safety/components/ReleaseHolds";

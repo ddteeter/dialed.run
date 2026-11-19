@@ -35,7 +35,7 @@ import { decideRemovalRequest } from "../../src/modules/feed/removal-requests";
 import {
   syncPublicPhotos,
   type PublicPhotoDeps,
-} from "../../src/modules/ops/public-photos";
+} from "../../src/modules/ops/public-web/public-photos";
 import {
   banUser,
   blockAndDeclineAll,

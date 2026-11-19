@@ -9,7 +9,7 @@ import {
   profileOrNotFound,
   publicProfileHead,
 } from "../modules/feed/public-profile-shape";
-import { PUBLIC_ORIGIN } from "../modules/ops/og/site-head";
+import { PUBLIC_ORIGIN } from "../lib/public-origin";
 
 /**
  * `/@handle`: a runner's profile they made PUBLIC, for anyone (round 41

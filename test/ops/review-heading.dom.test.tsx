@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { ReviewHeading } from "../../src/modules/ops/components/ReviewHeading";
+import { ReviewHeading } from "../../src/modules/ops/desk/components/ReviewHeading";
 
 /**
  * Review's header on the Desk (round 44 #106): the rail's word, and D1's

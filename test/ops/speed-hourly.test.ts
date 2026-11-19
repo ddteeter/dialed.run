@@ -10,7 +10,7 @@ import {
   MIN_DRIFT_WEEKS,
   type Measured,
   type VersionRow,
-} from "../../src/modules/ops/perf-checks";
+} from "../../src/modules/ops/speed/perf-checks";
 import {
   checkDeployRegressions,
   checkDrift,
@@ -18,11 +18,11 @@ import {
   hourlySpeedDepsFromEnv,
   VERSION_DAYS,
   WINDOW_HOURS,
-} from "../../src/modules/ops/speed-hourly";
+} from "../../src/modules/ops/speed/speed-hourly";
 import {
   versionQuery,
   windowQuery,
-} from "../../src/modules/ops/vitals-queries";
+} from "../../src/modules/ops/speed/vitals-queries";
 
 /**
 Every route name kept, as before the known-route check.
@@ -394,15 +394,16 @@ describe("checkDeployRegressions", () => {
         lastSeen: NOW - 3 * HOUR - 1,
       },
     ]);
-    expect(await checkDeployRegressions(NOW, query, isAnyRoute)).toStrictEqual([]);
+    expect(await checkDeployRegressions(NOW, query, isAnyRoute)).toStrictEqual(
+      [],
+    );
   });
 
   it("refuses an answer that does not parse", async () => {
     const { query } = api(() => [{ route: "/closet/" }]);
-    await expect(checkDeployRegressions(NOW, query, isAnyRoute)).rejects.toHaveProperty(
-      "name",
-      "ZodError",
-    );
+    await expect(
+      checkDeployRegressions(NOW, query, isAnyRoute),
+    ).rejects.toHaveProperty("name", "ZodError");
   });
 });
 
@@ -480,7 +481,9 @@ describe("hourlySpeed", () => {
           });
     const report = vi.fn();
 
-    await expect(hourlySpeed(NOW, report, { query, known: isAnyRoute })).rejects.toBe(failure);
+    await expect(
+      hourlySpeed(NOW, report, { query, known: isAnyRoute }),
+    ).rejects.toBe(failure);
     expect(report).toHaveBeenCalledOnce();
   });
 

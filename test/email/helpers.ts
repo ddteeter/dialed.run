@@ -5,11 +5,11 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import type { OwedMail } from "../../src/modules/account/verification";
 import type { EmailDeps } from "../../src/modules/email";
-import { settleOutbox } from "../../src/modules/ops/outbox";
+import { settleOutbox } from "../../src/modules/ops/outbox/outbox";
 import {
   emailHandler,
   outboxHandlers,
-} from "../../src/modules/ops/outbox-handlers";
+} from "../../src/modules/ops/outbox/outbox-handlers";
 
 export const ORIGIN = "https://dialed.test";
 /**

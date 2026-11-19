@@ -39,7 +39,7 @@ views {
         **This column is the recovery marker.** `pending` means the product still owes an extraction.
       '''
     }
-    // source: src/modules/enrichment/request.ts requestEnrichment (queue.send); src/modules/ops/scheduled.ts redispatchStalledEnrichments
+    // source: src/modules/enrichment/request.ts requestEnrichment (queue.send); src/modules/dispatch/scheduled.ts redispatchStalledEnrichments
     cf.app.enrichment.request -[async]-> cf.enrichmentQueue 'sends EnrichJob: the product id' {
       notes '''
         **Not atomic with the claim.** D1 and a queue are two systems.
@@ -54,7 +54,7 @@ views {
         **Timing boundary: the request ends here.** The runner waits for the save, never for the page.
       '''
     }
-    // source: src/modules/ops/queues.ts handleQueueBatch (dialed-enrichment); src/lib/sql/queue-batch.ts consumeEach; wrangler.jsonc queues.consumers, max_batch_size, max_retries (1 and 3)
+    // source: src/modules/dispatch/queues.ts handleQueueBatch (dialed-enrichment); src/lib/sql/queue-batch.ts consumeEach; wrangler.jsonc queues.consumers, max_batch_size, max_retries (1 and 3)
     cf.enrichmentQueue -[async]-> cf.app.enrichment.consumer 'delivers EnrichJob' {
       notes '''
         **Timing boundary: seconds later, in a queue consumer.** A batch is one job, so the queue does not wait to fill one, and a job that ends its invocation takes no other job with it.
@@ -112,7 +112,7 @@ views {
         '''
       }
     }
-    // source: src/modules/enrichment/consume.ts fetchAndExtract, isLandingDenied, dropDeniedSource; src/modules/ops/queues.ts enrichmentDeps
+    // source: src/modules/enrichment/consume.ts fetchAndExtract, isLandingDenied, dropDeniedSource; src/modules/ops/desk/queues.ts enrichmentDeps
     cf.app.enrichment.consumer -> cf.coreDb 'checks where the page landed against the denylist' {
       notes '''
         **If the landing is denied:** nothing from the page is kept. The product lets go of the link and goes back to `none`, so the next runner\'s link can ask again.
@@ -163,17 +163,17 @@ views {
       cf.app.enrichment.request -[async]-> cf.enrichmentQueue 'sends EnrichJob'
     }
     catch 'the send fails, or the Worker dies first' {
-      // source: src/modules/ops/scheduled.ts redispatchStalledEnrichments, stalledPending, ENRICHMENT_STALL_GRACE_S; src/modules/ops/crons.ts cronRegistry (30 * * * *)
+      // source: src/modules/dispatch/scheduled.ts redispatchStalledEnrichments, stalledPending, ENRICHMENT_STALL_GRACE_S; src/modules/ops/desk/crons.ts cronRegistry (30 * * * *)
       cf.app.cronHourly30 -[recovery]-> cf.coreDb 'finds products pending for 15+ minutes' {
         notes 'Fifteen minutes of grace, counted from when the product was made, so the sweep rarely races a send still in flight.'
       }
-      // source: src/modules/ops/scheduled.ts redispatchStalledEnrichments, redispatchEach
+      // source: src/modules/dispatch/scheduled.ts redispatchStalledEnrichments, redispatchEach
       cf.app.cronHourly30 -[recovery]-> cf.enrichmentQueue 'sends them again' {
         notes 'Safe to repeat: the consumer works only a `pending` product, and reuses a page stored in the last hour.'
       }
     }
     loop 'at least once: up to 3 retries' {
-      // source: src/modules/ops/queues.ts handleQueueBatch; wrangler.jsonc queues.consumers, max_retries (3)
+      // source: src/modules/dispatch/queues.ts handleQueueBatch; wrangler.jsonc queues.consumers, max_retries (3)
       cf.enrichmentQueue -[async]-> cf.app.enrichment.consumer 'delivers EnrichJob'
       // source: src/modules/enrichment/consume.ts processEnrichJob
       cf.app.enrichment.consumer -> cf.coreDb 'reads the product, or stops'
@@ -183,7 +183,7 @@ views {
     opt 'every retry failed' {
       // source: wrangler.jsonc queues.consumers, max_retries, dead_letter_queue (3)
       cf.enrichmentQueue -[recovery]-> cf.enrichmentDlq 'dead-letters the job'
-      // source: src/modules/ops/queues.ts handleQueueBatch (dialed-enrichment-dlq)
+      // source: src/modules/dispatch/queues.ts handleQueueBatch (dialed-enrichment-dlq)
       cf.enrichmentDlq -[async]-> cf.app.enrichment.deadLetter 'delivers it'
       // source: src/modules/enrichment/consume.ts handleEnrichmentDlqBatch
       cf.app.enrichment.deadLetter -[recovery]-> cf.coreDb 'marks the product failed, if still pending' {
@@ -191,11 +191,11 @@ views {
       }
     }
     opt 'failed, and inside the product\'s first day' {
-      // source: src/modules/ops/scheduled.ts redispatchStalledEnrichments, failedAndOwed; src/modules/enrichment/abandon.ts ENRICHMENT_RETRY_WINDOW_S
+      // source: src/modules/dispatch/scheduled.ts redispatchStalledEnrichments, failedAndOwed; src/modules/enrichment/abandon.ts ENRICHMENT_RETRY_WINDOW_S
       cf.app.cronHourly30 -[recovery]-> cf.coreDb 'claims failed products back to pending' {
         notes 'A claim, not just a send: the consumer ignores a product that is not `pending`. Hourly, for the product\'s first 24 hours.'
       }
-      // source: src/modules/ops/scheduled.ts redispatchStalledEnrichments, redispatchEach
+      // source: src/modules/dispatch/scheduled.ts redispatchStalledEnrichments, redispatchEach
       cf.app.cronHourly30 -[recovery]-> cf.enrichmentQueue 'sends them again'
     }
     opt 'failed, and past the product\'s first day' {
@@ -203,9 +203,9 @@ views {
       cf.app.cronHourly30 -[recovery]-> cf.coreDb 'lists it on the Desk\'s Gave up' {
         notes 'The system has stopped retrying, so a person is told. The daily digest reports it too.'
       }
-      // source: src/modules/ops/gave-up.ts retryEnrichment
+      // source: src/modules/ops/desk/gave-up.ts retryEnrichment
       operator -> cf.app.ops.deskRetry 'presses Retry'
-      // source: src/modules/ops/gave-up.ts retryEnrichment (requestEnrichment, gaveUpClear)
+      // source: src/modules/ops/desk/gave-up.ts retryEnrichment (requestEnrichment, gaveUpClear)
       cf.app.ops.deskRetry -[recovery]-> cf.app.enrichment.request 'claims it and sends EnrichJob again' {
         notes 'The Desk can also re-run extraction over the stored page, with no fetch and no queue.'
       }

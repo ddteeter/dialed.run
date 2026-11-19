@@ -14,7 +14,7 @@ import {
   timingDeps,
   type TimingDeps,
   type TimingLine,
-} from "../../src/modules/ops/timing";
+} from "../../src/modules/ops/speed/timing";
 import { env } from "../../src/env";
 
 /**
@@ -237,9 +237,12 @@ describe("timingDeps", () => {
 });
 
 describe("timedName (SA-L08)", () => {
-  it.each([200, 204, 299])("keeps a server function's id when it answered %i", (status) => {
-    expect(timedName("serverFn:abc", status)).toBe("serverFn:abc");
-  });
+  it.each([200, 204, 299])(
+    "keeps a server function's id when it answered %i",
+    (status) => {
+      expect(timedName("serverFn:abc", status)).toBe("serverFn:abc");
+    },
+  );
 
   it.each([199, 300, 404, 500])(
     "names a server function that answered %i alike",

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { securityHeaders } from "../../src/modules/ops/security-headers";
+import { securityHeaders } from "../../src/modules/ops/edge/security-headers";
 
 /**
  * `public/_headers` is the static assets' copy of the Worker's security

@@ -43,13 +43,13 @@ import {
   oweOutbox,
   OUTBOX_FAST_PATH_GRACE_S,
   settleOutbox,
-} from "../../src/modules/ops/outbox";
+} from "../../src/modules/ops/outbox/outbox";
 import {
   emailHandler,
   outboxHandlers,
   type OutboxHandlers,
-} from "../../src/modules/ops/outbox-handlers";
-import { handleScheduled } from "../../src/modules/ops";
+} from "../../src/modules/ops/outbox/outbox-handlers";
+import { handleScheduled } from "../../src/modules/dispatch";
 import {
   CLOUDFLARE_DISALLOWED_HEADERS,
   core,

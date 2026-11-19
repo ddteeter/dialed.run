@@ -2,7 +2,7 @@ import { expect, vi } from "vitest";
 import type { Mock } from "vitest";
 
 import type { OutboxMessage } from "../src/lib/sql/outbox";
-import { outboxInsert, oweOutbox } from "../src/modules/ops/outbox";
+import { outboxInsert, oweOutbox } from "../src/modules/ops/outbox/outbox";
 import { coreDb } from "../src/modules/runs/core-db";
 
 /**

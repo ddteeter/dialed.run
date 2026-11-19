@@ -1,7 +1,7 @@
 /**
  * The deployment list is the plan's §2, both ways (#824, design 237): a
  * row added to `docs/launch/deployment-plan.md` without an entry in
- * `src/modules/ops/deployment-config.ts` fails here, and so does an entry
+ * `src/modules/ops/desk/deployment-config.ts` fails here, and so does an entry
  * the plan does not have, or one whose kind or level disagrees. The plan
  * is read with the markdown parser the legal pages use, not split by hand.
  *
@@ -19,7 +19,7 @@ import { gfmTableFromMarkdown } from "mdast-util-gfm-table";
 import { gfmTable } from "micromark-extension-gfm-table";
 import { describe, expect, it } from "vitest";
 
-import { deploymentConfig } from "../../src/modules/ops/deployment-config";
+import { deploymentConfig } from "../../src/modules/ops/desk/deployment-config";
 
 const SECTION = "2. Vars and secrets";
 const PLAN = "docs/launch/deployment-plan.md";

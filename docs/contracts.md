@@ -766,6 +766,14 @@ src/routes/
 
 - Shared primitives live in `src/ui/` (Layout, tab bar, sheet, `Mono`,
   `Bracketed`, verdict badge, garment chip — see `docs/product.md`).
-- Lane components live in `modules/<lane>/components/`, exported via
-  `index.ts` only where another lane genuinely consumes them (e.g. weather's
-  `WeatherAttribution`, runs' notification bell slot).
+- Lane components live with the code whose data they show: in
+  `modules/<lane>/<sub-module>/components/` when the module is split into
+  sub-modules (design 240 rule 5, e.g. `ops/desk/components/`), otherwise in
+  `modules/<lane>/components/`. Pieces with no data of their own that
+  several sub-modules' screens use stay in the parent's `components/`.
+- A component imports files directly, in its own sub-module or another's,
+  and never a sub-module's `index.ts`: a door may reach `env`, which would
+  put server code in the client bundle. A module's `index.ts` exports a
+  component only where another lane genuinely consumes it (e.g. weather's
+  `WeatherAttribution`, runs' notification bell slot), and a sub-module's
+  door never does.

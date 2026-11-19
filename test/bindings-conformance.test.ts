@@ -7,10 +7,13 @@ import wranglerJsonc from "../wrangler.jsonc?raw";
 import testWranglerJsonc from "./wrangler.test.jsonc?raw";
 
 import { PUBLIC_PHOTOS_ORIGIN } from "../src/lib/public-photos";
-import { cronSchedules } from "../src/modules/ops/crons";
-import { PUBLIC_ORIGIN } from "../src/modules/ops/og/site-head";
-import { consumedQueueNames, queueRegistry } from "../src/modules/ops/queues";
-import { VITALS_DATASET } from "../src/modules/ops/vitals-queries";
+import { cronSchedules } from "../src/modules/ops/desk/crons";
+import { PUBLIC_ORIGIN } from "../src/lib/public-origin";
+import {
+  consumedQueueNames,
+  queueRegistry,
+} from "../src/modules/ops/desk/queues";
+import { VITALS_DATASET } from "../src/modules/ops/speed/vitals-queries";
 
 /**
  * wrangler.jsonc is human-managed (CLAUDE.md forbidden zones) and the code
@@ -341,7 +344,7 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
 
   it("turns Workers Caching on, partitioned by version, for the purge to reach", () => {
     // Design 163 (D-154; owner, 2026-10-28): the open web's pages are kept
-    // at the edge and `ops/edge-purge.ts` purges them by tag. Exactly
+    // at the edge and `ops/public-web/edge-purge.ts` purges them by tag. Exactly
     // `enabled`: `cross_version_cache` would let a new deploy serve the
     // old version's pages.
     const cache =
@@ -358,7 +361,7 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
 
   it("binds the speed beacon's dataset and the deploy version, read only by the beacon and health", () => {
     // Design 165 (owner-approved 2026-10-31): `VITALS` and
-    // `CF_VERSION_METADATA`, read by `src/modules/ops/vitals.ts` and, for
+    // `CF_VERSION_METADATA`, read by `src/modules/ops/speed/vitals.ts` and, for
     // a deploy's smoke test (design 186), by `/api/health`. A dataset
     // renamed here alone would start an empty one, and every dashboard and
     // check reads the old name.

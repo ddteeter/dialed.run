@@ -10,7 +10,7 @@
  */
 import { readFileSync, writeFileSync } from "node:fs";
 
-import { cronNameFor, cronSchedules } from "../src/modules/ops/crons";
+import { cronNameFor, cronSchedules } from "../src/modules/ops/desk/crons";
 import { readSources } from "./diagrams/sources";
 import { generateStructure, mainOf } from "./diagrams/structure";
 

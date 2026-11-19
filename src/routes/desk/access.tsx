@@ -6,7 +6,10 @@ import {
   declineRequestFn,
   inviteFromRequestFn,
 } from "../../modules/account/functions";
-import { DeskPage, useDeskToday } from "../../modules/ops/components/DeskPage";
+import {
+  DeskPage,
+  useDeskToday,
+} from "../../modules/ops/desk/components/DeskPage";
 
 /**
  * Desk D7 · Access (task 126, ACC-5; round 26 #20): the requests, behind

@@ -15,7 +15,7 @@ import {
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { handleScheduled } from "../../src/modules/ops";
+import { handleScheduled } from "../../src/modules/dispatch";
 import { NotFoundError } from "../../src/lib/errors";
 import {
   banCountsOf,
@@ -23,11 +23,11 @@ import {
   isOperator,
   outboxBehindOf,
   todayCounts,
-} from "../../src/modules/ops/desk";
+} from "../../src/modules/ops/desk/desk";
 import { FINGERPRINT_HOLDS_PER_HOUR } from "../../src/modules/safety/breakers";
 import { removalStatements } from "../../src/modules/safety/contracts";
 import { opened } from "../safety/helpers";
-import { operatorOrNotFound } from "../../src/modules/ops/desk-gate";
+import { operatorOrNotFound } from "../../src/modules/ops/desk/desk-gate";
 
 /**
  * The Desk's Today (Operator Screens D0): three numbers, read by the page

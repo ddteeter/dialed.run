@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { DeskPage } from "../../modules/ops/components/DeskPage";
+import { DeskPage } from "../../modules/ops/desk/components/DeskPage";
 import { DeskKit } from "../../modules/safety/components/DeskKit";
 import { deskKitQuery } from "../../modules/safety/functions";
 import { kitOriginSchema } from "../../modules/safety/components/kit-origin";

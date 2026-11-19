@@ -7,14 +7,14 @@ import { cronCheckpoints, outbox } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { dayLabel } from "../../src/lib/dates";
 import { nowSeconds } from "../../src/lib/now";
-import { handleScheduled } from "../../src/modules/ops";
-import { deskToday, type TodayCounts } from "../../src/modules/ops/desk";
+import { handleScheduled } from "../../src/modules/dispatch";
+import { deskToday, type TodayCounts } from "../../src/modules/ops/desk/desk";
 import {
   digestTemplate,
   oweDigestEmail,
   type DigestMail,
-} from "../../src/modules/ops/digest-email";
-import type { OutboxDebt } from "../../src/modules/ops/outbox";
+} from "../../src/modules/ops/daily/digest-email";
+import type { OutboxDebt } from "../../src/modules/ops/outbox/outbox";
 import { fakeMail, owedTo, seedUser } from "../email/helpers";
 
 /**

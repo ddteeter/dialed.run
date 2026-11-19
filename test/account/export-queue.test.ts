@@ -5,8 +5,8 @@ import {
   exportsQueueMessageSchema,
   type ExportWork,
 } from "../../src/modules/account/export-queue";
-import { handleQueueBatch, handleScheduled } from "../../src/modules/ops";
-import type { CronReporter } from "../../src/modules/ops/sentry";
+import { handleQueueBatch, handleScheduled } from "../../src/modules/dispatch";
+import type { CronReporter } from "../../src/modules/ops/sentry/sentry";
 import { importsQueueMessageSchema } from "../../src/modules/runs/queue-messages";
 import { batchOf, fakeMessage } from "../queue-fakes";
 
