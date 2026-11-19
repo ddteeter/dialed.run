@@ -52,9 +52,10 @@ blur      -> (nothing)
    file. No importer outside `safety` changes: today nothing in another
    module's `src` imports past `safety/index.ts` (measured).
 5. **Shared files**, per 240 §"Order of the moves": `stryker.conf.json`'s
-   four safety `.ts` entries become one glob per sub-module plus one for
-   the parent (`inputs.ts`, `index.ts`, `components/**/*.ts`), rebased onto
-   lane A's edit; `targets-and-focus`' three safety component paths;
+   four safety `.ts` entries become five entries of sub-module globs, as
+   lane A grouped `ops`': the parent (`inputs.ts`, `index.ts`,
+   `components/**/*.ts`); rules, limits and notices; screening; blur and
+   review; reports, takedowns and runners; `targets-and-focus`' three safety component paths;
    `test/architecture/system-account` and `one-link-rule`'s safety paths;
    routes' component imports; `npm run modules:pin` (safety's `doorWidth`
    224 to 96, `files` 86 to the parent's 11, `fanOut` unchanged at 8);
