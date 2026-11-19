@@ -161,7 +161,7 @@ describe("only the open web's responses are public", () => {
     expect(callers).toStrictEqual([
       "src/modules/feed/public-kit.ts",
       "src/modules/feed/public-profile.ts",
-      "src/modules/ops/og/respond.ts",
+      "src/modules/ops/public-web/og/respond.ts",
       "src/modules/ops/public-web/public-cache.ts",
     ]);
   });

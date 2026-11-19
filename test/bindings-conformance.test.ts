@@ -356,7 +356,9 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
     const readers = Object.entries(sources)
       .filter(([, source]) => /\bcache\.purge\b|\bedge\.purge\b/u.test(source))
       .map(([path]) => path);
-    expect(readers).toStrictEqual(["../src/modules/ops/edge-purge.ts"]);
+    expect(readers).toStrictEqual([
+      "../src/modules/ops/public-web/edge-purge.ts",
+    ]);
   });
 
   it("binds the speed beacon's dataset and the deploy version, read only by the beacon and health", () => {
@@ -388,8 +390,8 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
       )
       .map(([path]) => path);
     expect(readers).toStrictEqual([
-      "../src/modules/ops/health.ts",
-      "../src/modules/ops/vitals.ts",
+      "../src/modules/ops/desk/health.ts",
+      "../src/modules/ops/speed/vitals.ts",
     ]);
   });
 

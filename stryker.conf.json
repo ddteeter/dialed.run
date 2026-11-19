@@ -37,7 +37,7 @@
     "src/lib/dates.ts,src/lib/no-input.ts,src/lib/fetch-site.ts,src/lib/marketing.ts,src/lib/query-report.ts,src/lib/open-web.ts,src/lib/cache-tags.ts,src/lib/public-photos.ts,src/lib/return-path.ts,src/lib/chunked.ts,src/lib/toggled-in.ts,src/lib/coords.ts,src/lib/hmac-key.ts",
     "src/lib/photo-pipeline.ts,src/lib/photo-fingerprint.ts,src/lib/auth-signal.ts,src/lib/field-refusal.ts,src/lib/refuse-server-fn-argument.ts,src/lib/control-refusal.ts,src/lib/carried-form.ts,src/lib/errors.ts,src/lib/top-by-count.ts,src/lib/now.ts,src/lib/import-file-key.ts,src/lib/garment-photo-key.ts,src/lib/garment-label.ts,src/lib/for-ids.ts,src/lib/runs-label.ts,src/lib/garment-words.ts,src/lib/correction-words.ts",
     "src/lib/wire-error.ts,src/lib/statement-error.ts,src/lib/statement-scrub.ts",
-    "src/lib/copy.ts,src/lib/strava-origin.ts,src/lib/ids.ts",
+    "src/lib/copy.ts,src/lib/strava-origin.ts,src/lib/public-origin.ts,src/lib/ids.ts",
     "src/lib/place-name.ts",
     "src/lib/visitor-address.ts,src/lib/turnstile-actions.ts",
     "src/ui/**/*.tsx",
