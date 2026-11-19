@@ -274,7 +274,7 @@ describe("the hourly cron's repair", () => {
       });
     }
 
-    await retryPendingWeather();
+    await retryPendingWeather(nothing);
 
     const row = await expectNoWeather(runId);
     expect(row?.verdict).toBe(1);
@@ -285,7 +285,7 @@ describe("the hourly cron's repair", () => {
   it("writes a fresh half for a pending run that settles on this pass", async () => {
     const runId = await insertRun({ weatherStatus: "pending" });
     await cache(0, reading(-3));
-    await retryPendingWeather();
+    await retryPendingWeather(nothing);
     expect(await copied(runId, "feelsLikeC")).toBe(-3);
   });
 });
