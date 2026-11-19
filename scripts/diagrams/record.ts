@@ -1,13 +1,14 @@
 /**
  * What `npm run diagrams:record` records (design 229, step 4): the views
  * whose hash changed between the merge base and head, how each is played,
- * and the caption and the hold of every shot.
+ * and the caption, the spoken line (#851) and the hold of every shot.
  *
  * **Decisions only.** The views are read from LikeC4 in
  * `scripts/diagrams/model.ts` (`readViewFacts`); Playwright and ffmpeg are
  * in `scripts/diagram-record.ts`, which follows this plan and decides
  * nothing.
  */
+import type { SpokenLine } from "../../e2e/support/speech";
 
 /**
  * One step of a dynamic view, as LikeC4 computes it: who, to whom, the
@@ -43,11 +44,15 @@ export interface ViewFacts {
 export type Layout = "diagram" | "sequence";
 
 /**
- * What the caption strip says while a shot is on screen, and for how long.
+ * What the caption strip says while a shot is on screen, what the voice
+ * says over it (nothing over an unchanged step), and for how long. `audio`
+ * is the rendered line, once `voicedPlan` has attached it.
  */
 export interface Shot {
   readonly caption: string;
   readonly holdMs: number;
+  readonly spoken?: string;
+  readonly audio?: string;
 }
 
 /**
@@ -98,7 +103,7 @@ const MS_PER_WORD = 150;
 export const STEP_MAX_MS = 8000;
 
 function wordCount(text: string): number {
-  return text.split(/\s+/u).filter((word) => word !== "").length;
+  return text.match(/\S+/gu)?.length ?? 0;
 }
 
 /**
@@ -135,17 +140,52 @@ function plural(count: number, noun: string): string {
   return `${String(count)} ${noun}${count === 1 ? "" : "s"}`;
 }
 
+/**
+ * Text as one spoken sentence: a capital first, a stop last, so the voice
+ * pauses between a label and what follows it.
+ */
+function sentence(text: string): string {
+  const capital = `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
+  return /[.!?]$/u.test(capital) ? capital : `${capital}.`;
+}
+
+/**
+ * A note as the voice reads it: its Markdown's emphasis and code marks
+ * dropped (the voice would read them, or stumble), its paragraphs run
+ * together.
+ */
+function unmarked(notes: string): string {
+  return (notes.replaceAll(/[*`]/gu, "").match(/\S+/gu) ?? []).join(" ");
+}
+
+/**
+ * What the voice says over a new or changed step: its label and its whole
+ * note (owner, 2026-11-18), since a note can be all that changed.
+ */
+export function stepLine(step: StepFacts): string {
+  const notes = unmarked(step.notes);
+  return notes === ""
+    ? sentence(step.label)
+    : `${sentence(step.label)} ${notes}`;
+}
+
 function newTake(view: ViewFacts): ViewTake {
   const total = view.steps.length;
+  const caption = `New view · ${view.id} · ${view.title}`;
+  const spoken = `New view: ${sentence(view.title)}`;
   return {
     id: view.id,
     layout: layoutOf(view),
-    opening: {
-      caption: `New view · ${view.id} · ${view.title}`,
-      holdMs: view.dynamic ? OPENING_MS : STILL_VIEW_MS,
-    },
+    opening: view.dynamic
+      ? {
+          caption,
+          spoken: `${spoken} ${sentence(plural(total, "step"))}`,
+          holdMs: OPENING_MS,
+        }
+      : { caption, spoken, holdMs: STILL_VIEW_MS },
     steps: view.steps.map((step, index) => ({
       caption: `${view.id} · step ${String(index + 1)} of ${String(total)}`,
+      spoken: stepLine(step),
       holdMs: stepHoldMs(step, true),
     })),
   };
@@ -172,24 +212,30 @@ function changedTake(view: ViewFacts, before: ViewFacts): ViewTake {
   const changedAt = view.steps.map((step) => !had.has(stepKey(step)));
   const changed = changedAt.filter(Boolean).length;
   const total = view.steps.length;
+  const summary = changeSummary(changed, total, before.steps.length);
   return {
     id: view.id,
     layout: layoutOf(view),
     opening: view.dynamic
       ? {
-          caption: `Changed · ${view.id} · ${changeSummary(changed, total, before.steps.length)}`,
+          caption: `Changed · ${view.id} · ${summary}`,
+          spoken: `Changed: ${sentence(view.title)} ${sentence(summary)}`,
           holdMs: OPENING_MS,
         }
       : {
           caption: `Changed · ${view.id} · ${view.title}`,
+          spoken: `Changed: ${sentence(view.title)}`,
           holdMs: STILL_VIEW_MS,
         },
     steps: view.steps.map((step, index) => {
-      const isStepChanged = changedAt.at(index) === true;
-      return {
-        caption: `${view.id} · step ${String(index + 1)} of ${String(total)} · ${isStepChanged ? "changed" : "unchanged"}`,
-        holdMs: stepHoldMs(step, isStepChanged),
-      };
+      const caption = `${view.id} · step ${String(index + 1)} of ${String(total)}`;
+      return changedAt.at(index) === true
+        ? {
+            caption: `${caption} · changed`,
+            spoken: stepLine(step),
+            holdMs: stepHoldMs(step, true),
+          }
+        : { caption: `${caption} · unchanged`, holdMs: UNCHANGED_STEP_MS };
     }),
   };
 }
@@ -229,6 +275,50 @@ export function recordingPlan(
     .filter((view) => !kept.has(view.id))
     .map((view) => view.id);
   return { views, removed };
+}
+
+/**
+ * Every line the plan speaks, once each, in the order spoken: what to
+ * render before filming.
+ */
+export function spokenLines(plan: RecordingPlan): string[] {
+  const lines = plan.views.flatMap((view) =>
+    [view.opening, ...view.steps].flatMap((shot) => shot.spoken ?? []),
+  );
+  return [...new Set(lines)];
+}
+
+function voicedShot(shot: Shot, lines: ReadonlyMap<string, SpokenLine>): Shot {
+  if (shot.spoken === undefined) return shot;
+  const line = lines.get(shot.spoken);
+  if (line === undefined) {
+    throw new Error(`No rendered line for: ${shot.spoken}`);
+  }
+  return {
+    ...shot,
+    audio: line.audio,
+    holdMs: Math.max(shot.holdMs, line.holdMs),
+  };
+}
+
+/**
+ * The plan with each spoken line attached to its shot, and each shot held
+ * until its line has been said: the longer of the planned hold and the
+ * line. `lines` maps every line in `spokenLines(plan)` to its rendering;
+ * a missing one is a bug in the recorder, so it throws.
+ */
+export function voicedPlan(
+  plan: RecordingPlan,
+  lines: ReadonlyMap<string, SpokenLine>,
+): RecordingPlan {
+  return {
+    ...plan,
+    views: plan.views.map((view) => ({
+      ...view,
+      opening: voicedShot(view.opening, lines),
+      steps: view.steps.map((step) => voicedShot(step, lines)),
+    })),
+  };
 }
 
 /**

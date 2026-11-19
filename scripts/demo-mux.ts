@@ -9,7 +9,8 @@
  * start, and write `demo.mp4` next to the recording.
  *
  * **Wiring only.** Every decision (the graph, the timings, the caption's
- * look) is in `e2e/support/caption.ts`, which is tested. This file spawns
+ * look) is in `e2e/support/caption.ts`, and the caption PNGs are rendered
+ * by `e2e/support/caption-strip.ts`; both are tested. This file spawns
  * Chromium and ffmpeg and is negated in `stryker.conf.json` (owner's call,
  * 2026-11-06). macOS only, like the voice; ffmpeg must be on the PATH.
  */
@@ -19,27 +20,17 @@ import path from "node:path";
 
 import { chromium } from "@playwright/test";
 
-import {
-  FFMPEG_CANDIDATES,
-  STRIP_HEIGHT,
-  captionPage,
-  muxArgs,
-  recordingSchema,
-} from "../e2e/support/caption";
+import { ffmpegPath, muxArgs, recordingSchema } from "../e2e/support/caption";
+import { captionScenes } from "../e2e/support/caption-strip";
 
-const ffmpeg = FFMPEG_CANDIDATES.find((candidate) => existsSync(candidate));
-if (ffmpeg === undefined) {
-  throw new Error(`ffmpeg not found at ${FFMPEG_CANDIDATES.join(" or ")}`);
-}
+const ffmpeg = ffmpegPath(existsSync);
 
 const RESULTS = "test-results";
-const FONT = "public/fonts/ibm-plex-mono-500-latin.woff2";
 
 const cueFiles = readdirSync(RESULTS, { recursive: true, encoding: "utf8" })
   .filter((entry) => path.basename(entry) === "cues.json")
   .map((entry) => path.join(RESULTS, entry));
 
-const fontUrl = `data:font/woff2;base64,${readFileSync(FONT).toString("base64")}`;
 const browser = await chromium.launch();
 const page = await browser.newPage();
 
@@ -54,17 +45,7 @@ try {
     const take = recordingSchema.parse(
       JSON.parse(readFileSync(cueFile, "utf8")),
     );
-    await page.setViewportSize({
-      width: take.frame.width,
-      height: STRIP_HEIGHT,
-    });
-    const scenes = [];
-    for (const [index, cue] of take.cues.entries()) {
-      const caption = path.join(dir, `caption-${String(index)}.png`);
-      await page.setContent(captionPage(cue.text, fontUrl, take.frame.width));
-      await page.screenshot({ path: caption });
-      scenes.push({ startMs: cue.startMs, audio: cue.audio, caption });
-    }
+    const scenes = await captionScenes(page, take.cues, take.frame.width, dir);
     const out = path.join(dir, "demo.mp4");
     execFileSync(ffmpeg, muxArgs(video, take, scenes, out), {
       stdio: "inherit",

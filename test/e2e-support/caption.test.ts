@@ -7,6 +7,7 @@ import {
   STRIP_HEIGHT,
   captionPage,
   durationMs,
+  ffmpegPath,
   forSpeech,
   muxArgs,
   paceOf,
@@ -101,6 +102,23 @@ describe("the tools' paths", () => {
       "/opt/homebrew/bin/ffmpeg",
       "/usr/local/bin/ffmpeg",
     ]);
+  });
+});
+
+describe("ffmpegPath", () => {
+  it("takes the first candidate that is present", () => {
+    expect(ffmpegPath(() => true)).toBe("/opt/homebrew/bin/ffmpeg");
+    expect(ffmpegPath((file) => file === "/usr/local/bin/ffmpeg")).toBe(
+      "/usr/local/bin/ffmpeg",
+    );
+  });
+
+  it("names every place it looked when none is", () => {
+    expect(() => ffmpegPath(() => false)).toThrow(
+      new Error(
+        "ffmpeg not found at /opt/homebrew/bin/ffmpeg or /usr/local/bin/ffmpeg",
+      ),
+    );
   });
 });
 
