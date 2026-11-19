@@ -245,7 +245,19 @@ test("Review · a handle the hourly re-check flagged, and its Keep", async ({
     await expect(
       handleRow.getByRole("button", { name: "Approve" }),
     ).toHaveCount(0);
+    // The row leaves when Keep's answer arrives, not when the list is read
+    // again, so wait for the answer itself (#859): on a slow server the
+    // five seconds `toHaveCount` allows ran out before it came, and the
+    // failure read as a row that stayed. Keep is the page's only POST; the
+    // list's refresh after it is a GET.
+    const kept = page.waitForResponse(
+      (response) =>
+        response.url().includes("/_serverFn/") &&
+        response.request().method() === "POST",
+    );
     await handleRow.getByRole("button", { name: "Keep" }).click();
+    const answer = await kept;
+    expect(answer.ok()).toBe(true);
     await expect(
       page.getByRole("listitem").filter({ hasText: flaggedHandle }),
     ).toHaveCount(0);
