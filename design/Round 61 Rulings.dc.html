@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #16161A; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+</style>
+</helmet>
+<div style="font-family: Archivo, Helvetica, sans-serif; background: #16161A; color: #F4F3EF; padding: 48px 40px 88px;">
+  <div style="max-width: 1420px; margin: 0 auto; display: flex; flex-direction: column; gap: 64px;">
+
+    <div style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 28px; border-bottom: 1px solid #2A2A31;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">
+        <span>Round 61 &nbsp;/&nbsp; 331–336 · 2026-11-18</span>
+        <span style="color: #FF2D8A;">dialed.run</span>
+      </div>
+      <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; max-width: 1120px; text-transform: uppercase;">The pill set closes. The step holds.</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #8B8B93; max-width: 860px; text-wrap: pretty;">Six items. 334 adds one pill kind, ACTION_PILL, for pink; the rest of its groups collapse onto ruled kinds or leave the pill set. 336's 14 was a slip and goes to 16. Drawn: the pill set, the moved start time and the badged row at 16.</p>
+    </div>
+
+    <!-- 334 -->
+    <div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">334 · Every pill control, one kind each</span>
+      <div data-screen-label="334 pill kinds" style="background: #F4F3EF; color: #0B0B0E; padding: 28px 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 28px 24px;">
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">1 · ACTION_PILL · NEW · 44</span>
+          <span style="align-self: flex-start; height: 44px; padding: 0 24px; border-radius: 999px; background: #FF2D8A; color: #0B0B0E; display: flex; align-items: center; font-size: 15px; font-weight: 700;">Request access</span>
+          <span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">Pink fill, ink text, Archivo 700 at TYPE.body, 44 high, SPACE[6] each side, RADIUS.pill. One size. Top bar, Landing, invite, "Log a run", "Use this". At most one per screen.</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">2 · CHIP · NOT A BUTTON PILL</span>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            <span style="min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid #0B0B0E; background: #0B0B0E; color: #F4F3EF; display: flex; align-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em;">MARA</span>
+            <span style="min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid #BDBCB2; display: flex; align-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em;">KOWALSKI</span>
+          </div>
+          <span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">The name row and pieces are choices, so chips: MONO.xs, hairline, ink when picked, 44 high (the 8 padding grows). "More" is a disclosure, not a pill: underlined text with ▸, as 290's.</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">3 · FOLLOW · INK PILL / SECONDARY_PILL</span>
+          <div style="display: flex; gap: 8px;">
+            <span style="height: 44px; padding: 0 24px; border-radius: 999px; background: #0B0B0E; color: #F4F3EF; display: flex; align-items: center; font-size: 15px; font-weight: 700;">Follow</span>
+            <span style="height: 44px; padding: 0 24px; border-radius: 999px; border: 1px solid #BDBCB2; display: flex; align-items: center; font-size: 15px; font-weight: 700;">Following</span>
+          </div>
+          <span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">Ruled kinds. Not following: the ink pill. Following: SECONDARY_PILL. Same width in both states, so the row doesn't shift.</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">4 · ICON_BUTTON · NEW · 44 ROUND</span>
+          <div style="display: flex; gap: 8px;">
+            <span style="width: 44px; height: 44px; border-radius: 999px; border: 1px solid #BDBCB2; display: flex; align-items: center; justify-content: center; font-size: 18px;">‹</span>
+            <span style="width: 44px; height: 44px; border-radius: 999px; border: 1px solid #BDBCB2; display: flex; align-items: center; justify-content: center; font-size: 18px;">›</span>
+          </div>
+          <span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">Not a pill: a round button. 44 square, hairline edge, Icon Pack glyph at 20, no fill. Pager arrows, retract entry. Disabled: --hairline edge, glyph --quiet.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 332 / 336 -->
+    <div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">332 · 336 · Runs</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">332 · START TIME · RESTING / MOVED</span>
+          <div data-screen-label="332 start time states" style="width: 390px; background: #F4F3EF; color: #0B0B0E; padding: 16px 20px; display: flex; flex-direction: column; gap: 8px;">
+            <sc-for list="{{ times }}" as="t" hint-placeholder-count="2">
+              <div style="display: flex; align-items: center; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em;">
+                <span>SAT NOV 14 ·</span>
+                <span style="min-height: 44px; display: flex; align-items: center; gap: 8px; outline: 1px dashed #FF2D8A; outline-offset: -1px; padding: 0 4px;"><span>{{ t.time }}</span><span style="font-family: Archivo, Helvetica, sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0; text-decoration: underline;">{{ t.verb }}</span></span>
+              </div>
+            </sc-for>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">One slot after the time. Resting: "Change". Moved: "Changed" takes its place, same type, same target; the " ·" goes. Names: "6:04 AM Change", "6:07 AM Changed". Pressing "Changed" opens the same picker.</p>
+        </div>
+        <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">336 · BADGED ROW AT 16 · 102</span>
+          <div data-screen-label="336 badged row" style="width: 390px; background: #F4F3EF; color: #0B0B0E; padding: 0 20px;">
+            <div style="position: relative; height: 102px; padding: 12px 0; border-bottom: 1px solid #DCDBD2; display: flex; justify-content: space-between; gap: 16px;">
+              <div style="display: flex; flex-direction: column;">
+                <span style="font-size: 15px; font-weight: 600; line-height: 20px;">Mon Nov 9</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 16px; letter-spacing: 0.06em; color: #4E4E44; padding-top: 4px;">NO RECORD · 6.2 MI</span>
+                <span style="margin-top: 16px; align-self: flex-start; height: 22px; padding: 4px 8px; border: 1px solid #0B0B0E; font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 13px; letter-spacing: 0.08em; outline: 1px dashed #FF2D8A; outline-offset: 10px;">SET CONDITIONS ›</span>
+              </div>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 16px; letter-spacing: 0.06em; color: #4E4E44; padding-top: 2px;">NO VERDICT</span>
+              <span style="position: absolute; right: 0; bottom: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #C21A6B;">102</span>
+            </div>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">14 was a slip, not an exception: 16. The 2 come out of the bottom padding, which returns to 12, the unbadged row's. The badge's 44 target still sits inside (11 below the badge, 12 of padding). Row 102.</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 20px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">Rulings · Round 61</span>
+      <sc-for list="{{ groups }}" as="g" hint-placeholder-count="5">
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93; padding-top: 12px;">{{ g.h }}</span>
+          <div style="display: flex; flex-direction: column; border: 1px solid #2A2A31;">
+            <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="1">
+              <div style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 120px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;">
+                <span style="font-size: 15px; font-weight: 600;">{{ r.q }}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: {{ r.vc }};">{{ r.v }}</span>
+                <span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">{{ r.a }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const C = '#00E0C6', A = '#F5FF3D', D = '#FF2D8A';
+    const R = (q, v, a) => ({ q, v, a, vc: v.startsWith('CONFIRM') || v === 'NOTED' ? C : v.includes('DRAWN') ? D : A });
+    const times = [{ time: '6:04 AM', verb: 'Change' }, { time: '6:07 AM', verb: 'Changed' }];
+    const groups = [
+      { h: 'NOTICES', rows: [
+        R('Pill exemptions', 'NOTED', `The ~25 collapses stand. 334 below ends the pink exemption: those pills move to ACTION_PILL.`),
+      ]},
+      { h: 'DESK · RUNNERS', rows: [
+        R('335 · State cell below 720', 'CHANGED', `276 holds below 720: a long tag may break inside itself, so no tag sets the column. 327's "each tag stays whole" applies from 720. 327 is amended to read "from 720 to desk" for the second tag wrapping under the first.`),
+      ]},
+      { h: 'RUNS', rows: [
+        R('336 · The 14 gap', 'CHANGED · DRAWN', `16. Not an exception. The 2 come out of the bottom padding, back to 12 like the unbadged row: 12 + 20 + 4 + 16 + 16 + 22 + 12 = 102. The 44 target stays inside the row. Supersedes R60·326's numbers.`),
+        R('332 · "Change" after a move', 'CHANGED · DRAWN', `"Changed" takes the verb's slot; "Change" doesn't show beside it, and the " ·" goes. Names "6:04 AM Change" / "6:07 AM Changed". Same type, same target, same picker.`),
+      ]},
+      { h: 'FEED · WIDE', rows: [
+        R('333 · Post list bleed', 'CONFIRMED', `319's rule reaches the list. From 720 the 8 tint bands stop at the 620; post text on the content edge. Below 720 unchanged.`),
+      ]},
+      { h: '/OPEN-SOURCE', rows: [
+        R('331 · Projects heading', 'CHANGED', `Neither. No separate "Projects" heading. Each licence group's h2 says it: "Projects under the MIT License", at TYPE.title, as built. The outline stays one level; nothing small sits over something large. Supersedes R59·318's heading; its package-name links stand.`),
+      ]},
+      { h: 'EVERY SCREEN · PILL KINDS', rows: [
+        R('334.1 · Pink pills', 'DRAWN', `A new kind, ACTION_PILL: pink fill, ink text, Archivo 700 TYPE.body, 44 high, SPACE[6] sides, RADIUS.pill, one size. All five move to it. M4's 52 pill collapses to 44. ACTION_PRIMARY (the caps card) is unchanged.`),
+        R('334.2 · Onboarding small pills', 'RULED', `Name row and pieces are chips: MONO.xs, hairline, ink when picked, 44 high, SPACE[4] sides. "More" isn't a pill: underlined text button with ▸.`),
+        R('334.3 · Follow', 'RULED', `Ruled kinds. Follow is the ink pill; Following is SECONDARY_PILL. Width held across both.`),
+        R('334.4 · Round icon buttons', 'DRAWN', `Not pills. A new kind, ICON_BUTTON: 44 round, hairline edge, no fill, Icon Pack glyph at 20. Disabled: --hairline edge, --quiet glyph. Pager arrows and retract entry.`),
+      ]},
+    ];
+    return { times, groups };
+  }
+}
+</script>
+</body>
+</html>

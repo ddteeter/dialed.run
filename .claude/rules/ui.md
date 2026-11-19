@@ -52,6 +52,12 @@ scale is a COLLAPSE entry — move it to the nearest step — not a token and no
 drift. **Never measure a board. Read the contract.** For a screen that is
 already built, a difference from its board is drift unless it is recorded.
 
+A Design ruling changes only what it names. The contracts and earlier
+rulings still hold everywhere else, unless the ruling names the exception
+(for example, "this row overrides R49·140"). While a minor Design ask waits
+for its round, build to the contract or the earlier ruling; if the ruling
+then changes the build, that change is a new build issue (D-203).
+
 ## Undesigned surfaces (placeholder protocol)
 
 UI with no artboard or `docs/product.md` screen ID is fine to build —

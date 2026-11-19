@@ -637,6 +637,17 @@ SMOKE_BASE_URL=https://app.dialed.run SMOKE_VERSION_ID=<id> \
 Any request can be sent to a deployed version the same way:
 `curl -H 'Cloudflare-Workers-Version-Overrides: dialed="<id>"' https://app.dialed.run/api/health`.
 
+### Security fixes (D-204)
+
+Once dialed.run is deployed, a PR that fixes a security finding is deployed
+as soon as it merges: `ci.yml`'s deploy job runs on that push to `main`,
+and nothing holds it for a batch (`DEPLOY_ENABLED` stays on). The owner
+checks that the version reached 100%.
+Its diff is public from the moment the PR opens, so keep the PR open only
+as long as its checks take; the time from merge to 100% is the window.
+The fix's design doc is in the private home (`.claude/rules/publishing.md`,
+§Security fixes).
+
 ### Rolling back the Worker
 
 ```sh
