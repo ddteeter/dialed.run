@@ -166,6 +166,27 @@ type Sent =
   | { readonly status: "sent"; readonly messageId: string | undefined }
   | { readonly status: "skipped" };
 
+/**
+ * What the sender throws when it will not send to this address (SA-L22,
+ * design 244). Cloudflare's send throws an `Error` with a `code`; these two
+ * are the codes one address can earn on its own: it is on the suppression
+ * list (it bounced, or its owner marked our mail as spam), or validation
+ * refuses the message to it. An owed email refused this way has an end
+ * (`ops/outbox`). Every other code is the deployment's or the moment's (a
+ * binding or plan that allows no such recipient, a limit, a failed
+ * delivery) and is thrown on, to be retried.
+ * https://developers.cloudflare.com/email-service/api/send-emails/workers-api/
+ * (read 2026-11-18)
+ */
+const refusedSendSchema = z.object({
+  code: z.enum(["E_RECIPIENT_SUPPRESSED", "E_VALIDATION_ERROR"]),
+});
+
+interface RefusedSend {
+  readonly status: "refused";
+  readonly code: string;
+}
+
 async function send(
   db: Db,
   payload: EmailPayload,
@@ -244,6 +265,12 @@ export async function deliverOwedEmail(
   db: Db,
   payload: EmailPayload,
   deps: EmailDeps = emailDepsFromEnv(),
-): Promise<Sent> {
-  return send(db, payload, deps);
+): Promise<Sent | RefusedSend> {
+  try {
+    return await send(db, payload, deps);
+  } catch (error) {
+    const refused = refusedSendSchema.safeParse(error);
+    if (!refused.success) throw error;
+    return { status: "refused", code: refused.data.code };
+  }
 }

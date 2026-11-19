@@ -12,6 +12,7 @@
   "main": "src/server.ts",
   "observability": {
     "enabled": true,
+    "redact_query_string": true,
   },
   "upload_source_maps": true,
   // One origin, written out (SA-L08), never left to a default: the app's

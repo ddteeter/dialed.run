@@ -35,6 +35,18 @@ type PayloadOf<K extends OutboxKind> = Extract<
  */
 export const OWED_AGAIN: unique symbol = Symbol();
 
+/**
+ * What a handler's run answers when the far side refused the work for a
+ * reason this row carries with it, so no retry of the same row is likely
+ * to go differently (SA-L22, design 244): an email whose address the
+ * sender will not send to. The row is not settled and nothing failed in
+ * the app; the drain decides how long such a row is kept. `reason` is the
+ * far side's own code, never anything of the payload's (law 7).
+ */
+export class Refused {
+  constructor(readonly reason: string) {}
+}
+
 export type OutboxHandlers = {
   readonly [K in OutboxKind]: {
     /**
@@ -43,6 +55,7 @@ export type OutboxHandlers = {
      * before the delete (an email, once sent). `OWED_AGAIN` says the work is
      * done in part and the rest is owed to the next drain (design 232): the
      * row stays, with its attempts back at none, since nothing failed.
+     * A `Refused` says the far side will not take this row's work.
      */
     readonly run: (
       db: Db,
@@ -268,6 +281,7 @@ export function emailHandler(deps: () => EmailDeps): OutboxHandlers["email"] {
         await withReceiptConfirmToken(db, payload.email),
         deps(),
       );
+      if (sent.status === "refused") return new Refused(sent.code);
       if (sent.status === "skipped") return;
       const sentAt = nowSeconds();
       // Due at once, too: the drain's one index range then finds a row

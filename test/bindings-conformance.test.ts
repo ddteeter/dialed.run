@@ -206,6 +206,14 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
     ).toStrictEqual([{ pattern: "app.dialed.run", custom_domain: true }]);
   });
 
+  it("keeps request query strings out of the Worker's logs and traces (SA-L21)", () => {
+    // The logs stay on, and a request's URL is stored without its query
+    // string: a link that carries a token carries it there.
+    expect(config).toMatchObject({
+      observability: { enabled: true, redact_query_string: true },
+    });
+  });
+
   it("registers every cron the scheduled handler knows how to run", () => {
     // Sets, not sorted arrays: order is meaningless here and ES2022 has
     // no toSorted, which the lint config would otherwise demand.

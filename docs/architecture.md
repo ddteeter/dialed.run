@@ -511,6 +511,11 @@ flowchart LR
   compare-and-swap on `next_attempt_at`, dispatched by `kind` to an
   idempotent handler, backed off on failure, and named in the digest once
   they pass five attempts or carry a kind the running build cannot read.
+  One debt has an end: a runner's email the sender refuses for its address
+  (a suppressed address, a message its validation refuses) is retried
+  eight times, a little over five days, then deleted unsent and reported
+  once, with its ids and the sender's code (SA-L22, design 244). An
+  operator's email is never closed.
   The first kind is `photo_delete` (Remove, Replace and Delete on a
   garment); `strava_revocations` predates it and keeps its own table. The
   second is `email` (task 126): anything a runner did not just ask for — an
