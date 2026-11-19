@@ -26,7 +26,7 @@ import { isWithinUploadCap } from "../../src/modules/runs/imports";
 import {
   isWithinAtOnceLimit,
   isWithinReportLimit,
-} from "../../src/modules/safety/reportable";
+} from "../../src/modules/safety/reports/reportable";
 import { runnerWeatherBudget } from "../../src/modules/weather/budget";
 import { countedKeys } from "../rate-limit-rows";
 

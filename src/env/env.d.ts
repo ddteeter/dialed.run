@@ -56,13 +56,13 @@ declare namespace Cloudflare {
      * `modules/enrichment/model/from-env.ts`. */
     /** Admin user ids (106), comma-separated. Absent or empty means NO
      * admins, which fails closed: the review queue becomes unreachable
-     * rather than open to everyone. See `modules/safety/admin.ts`. */
+     * rather than open to everyone. See `modules/safety/rules/admin.ts`. */
     ADMIN_USER_IDS?: string;
     /** OpenAI key (106) — the photo screening classifier
      * (`omni-moderation-latest`). Absent: a photo stays `pending`, so its
      * owner sees it and the public does not, and the screening-retry cron
      * re-drives it once the key exists (law 5). See
-     * `modules/safety/classifier/`. */
+     * `modules/safety/screening/classifier/`. */
     OPENAI_API_KEY?: string;
     /** Turnstile's server secret (125, OPS-5). Absent: every verification
      * refuses — the check fails closed, and `ops/edge/turnstile.ts` reports the
@@ -101,7 +101,7 @@ declare namespace Cloudflare {
      * forgets every closed address. Absent: a closed account is purged
      * with nothing kept, and no sign-up is refused for one. */
     CLOSED_ADDRESS_SECRET?: string;
-    /** The moderation thresholds, as JSON (`safety/thresholds.ts`): read
+    /** The moderation thresholds, as JSON (`safety/screening/thresholds.ts`): read
      * from config rather than source, its value kept with the deploy
      * checklist's private notes. Absent or malformed: moderation fails
      * closed, and the hourly sweep tells Sentry. */

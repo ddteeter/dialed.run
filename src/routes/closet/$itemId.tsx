@@ -19,8 +19,8 @@ import {
   correctionContextFn,
   fileCorrectionFn,
 } from "../../modules/products/functions";
-import { PhotoBeingChecked } from "../../modules/safety/components/NoticeBand";
-import { photoBlurStep } from "../../modules/safety/components/PhotoBlur";
+import { PhotoBeingChecked } from "../../modules/safety/notices/components/NoticeBand";
+import { photoBlurStep } from "../../modules/safety/blur/components/PhotoBlur";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";
 import { PieceNotFoundPage } from "../../named-not-found";

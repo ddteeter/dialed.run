@@ -8,7 +8,7 @@ import { newUlid } from "../../src/lib/ids";
 import {
   pendingEntryPhotos,
   pendingGarmentPhotos,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/screening/screening";
 
 import {
   makeEntry,

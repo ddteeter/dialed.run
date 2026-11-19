@@ -8,313 +8,116 @@
  */
 
 export {
-  AdminRequiredError,
-  adminUserIds,
-  isAdmin,
-  isAdminRequired,
-  requireAdmin,
-} from "./admin";
-
+  type HandleReviewValues,
+  type ReviewActionValues,
+  copyrightHoldInput,
+  garmentMatchActionInput,
+  removalDecisionInput,
+  reviewActionInput,
+  takedownInput,
+} from "./inputs";
 export {
-  banStateOf,
-  banEmail,
-  reopenEmail,
-  reopenEmailFor,
-  banUser,
-  unbanUser,
-  type BanInput,
-  type BanState,
-  type Reopening,
-} from "./bans";
-
-export { banGate } from "./ban-gate";
-
-export {
-  blockRunner,
-  blockedAmong,
-  blockedCount,
-  blockedRunners,
-  hiddenCounterpartIds,
-  isBlocked,
-  SelfBlockError,
-  unblockRunner,
-  type BlockedRunner,
-} from "./blocks";
-
-export {
-  garmentRemovalNotice,
-  isCopyrightTakedown,
-  removalNotice,
-  removalReasons,
-  removalReasonSchema,
-  removalRuleOf,
-  removalSentence,
-  removalStatements,
-  renameReasons,
-  renameReasonSchema,
-  reportReasonLabels,
-  reportReasonSchema,
-  reportReasons,
-  reportSubjectTypeSchema,
-  reportSubjectTypes,
-  type RemovalReason,
-  type RenameReason,
-  type ReportReason,
-  type ReportSubjectType,
-  AT_ONCE_HIDES_PER_DAY,
-  REPORTS_PER_DAY,
-} from "./contracts";
-
-export {
-  QUARANTINE_PAGE,
-  QUARANTINE_RETENTION_SECONDS,
-  quarantinedContentFor,
-  quarantineInsert,
-  uploaderContextOf,
-  type QuarantineRecord,
-  // The year-end purge (D-70), which rides the daily digest's firing.
-  purgeExpiredQuarantine,
-} from "./quarantine";
-
-// D-131: the 3-year sweep, which rides the daily digest's firing too.
-export { sweepModerationRecords } from "./retention";
-export {
-  keptFingerprints,
-  keptGarmentFingerprint,
-  isHeldAsRemovedCopy,
-} from "./removed-fingerprints";
-
-// D-130: a copyright takedown's 30-day hide, its restore and its purge.
-export {
-  claimDuePurges,
-  claimPurgeAfterCase,
-  copyrightHoldWrites,
-  isCopyrightHeld,
-  purgedWrite,
-  restoreDueHolds,
-  type CaseOverOutcome,
-  type ClaimedPurge,
-} from "./copyright-holds";
-
-export {
-  moderationActionInsert,
-  wasModerated,
-  type ModerationAction,
-  type ModerationRecord,
-} from "./moderation-actions";
-
-export {
-  deskRunners,
-  runnerCounts,
-  runnersWhere,
-  type DeskRunner,
-  type RunnerCounts,
-  type ListedAccount,
-  type RunnerState,
-  type RunnersFilter,
-} from "./runners";
-export { flaggedCountOf } from "./account-flags";
-
-export {
-  isPlaceholderHandle,
-  placeholderHandle,
-  renameRecord,
-  type RenameOutcome,
-  type RenameRecordInput,
-} from "./rename";
-
-export {
-  deniedLinksOf,
-  denyDomain,
-  isDeniedLink,
-  isDeniedOnLanding,
-} from "./denylist";
-
-export {
-  distinctReporterCount,
-  fileReport,
-  isQueuedForReview,
-  reconcileUnhiddenReports,
-  reportedSubjectIdsFor,
-  type FileReportInput,
-  type FileReportResult,
-  type ReconcileReport,
-} from "./reports";
-export { forgetReportCounts } from "./reportable";
-
-// C8 (D-132, D-145): the notices a report's life owes.
+  type CeilingReading,
+  HEADROOM_WARN_SHARE,
+  type HoldCause,
+  TRIP_LOOKBACK_S,
+  dayHeadroom,
+  overCeilings,
+  quietScreenerWeek,
+  tripsSince,
+} from "./limits";
 export {
   photoReporterNotices,
   reporterNotices,
   screeningHoldNotice,
 } from "./notices";
-
+export { NoticeBand } from "./notices/components/NoticeBand";
 export {
-  claimForReview,
-  claimLeaseSeconds,
+  REMOVAL_REMINDER_LEAD_SECONDS,
+  forgetReportCounts,
+  reconcileUnhiddenReports,
+  sweepModerationRecords,
+  undecidedRemovalsDue,
+} from "./reports";
+export {
+  type HandleReview,
+  type ResolveOutcome,
+  type ReviewSubjectType,
   enqueueForReview,
+  isHeldAsRemovedCopy,
+  keptFingerprints,
+  keptGarmentFingerprint,
   openRow as openReviewRow,
   openSubject,
   pendingReviewCount,
-  pendingReviewQueue,
-  reasonsFrom,
   releaseStaleClaims,
   resolveReview,
   reviewResolution,
-  settledHere,
   settleOpenReviews,
+  settledHere,
   wasFlaggedAutomatically,
-  type ClaimOutcome,
-  type HandleReview,
-  type HandleReviewOutcome,
-  type QueueRow,
-  type ReleaseReport,
-  type ResolveOutcome,
-  type ReviewDecision,
-  type ReviewSubjectType,
+  withdrawnGarmentUnderReview,
+  withdrawnUnderReview,
 } from "./review";
-
 export {
+  type RemovalReason,
+  adminUserIds,
+  deniedLinksOf,
   entryVisibleTo,
+  garmentRemovalNotice,
+  heldPhotoStatus,
+  isAdmin,
+  isCopyrightTakedown,
+  isDeniedLink,
+  isDeniedOnLanding,
   isUnderReviewForAuthor,
+  kitPiecesSelect,
+  moderationActionInsert,
   notBlockedEitherWay,
   profileNotReportedBy,
-  heldPhotoStatus,
   publicPhotoStatus,
   publiclyVisibleEntry,
-  worldVisibleEntry,
+  removalNotice,
+  removalRuleOf,
+  removalStatements,
+  requireAdmin,
   runnerNotLeaving,
-} from "./visibility";
-
-export { classifierFromEnv } from "./classifier/from-env";
-
-// The moderation thresholds, read from config.
+  wasModerated,
+  worldVisibleEntry,
+} from "./rules";
 export {
-  moderationThresholds,
-  parseThresholds,
-  photoThresholds,
-  reportersToHide,
-  thresholdsAnomaly,
-  type ModerationThresholds,
-} from "./thresholds";
-
-// D-157: whether a photo has waited the day out, for the Desk's Clear photo.
-export { isStuck } from "./stuck";
-
+  banGate,
+  flaggedCountOf,
+  isPlaceholderHandle,
+  placeholderHandle,
+  renameRecord,
+} from "./runners";
 export {
-  decide,
-  imageCategories,
-  MODERATION_MODEL,
-  reviewFloorsOf,
-  type CategoryScores,
-  type ImageCategory,
-  type ModerationResult,
-  type ScreenDecision,
-} from "./classifier/moderation";
-
-export {
-  pendingEntryPhotos,
-  pendingGarmentFrom,
-  pendingGarmentPhotos,
-  garmentPhotoForgotten,
-  screeningDeletes,
-  screenPhoto,
-  stuckSources,
   type Classify,
-  type PendingPhoto,
-  type PhotoScope,
-  type PhotoToScreen,
-  type ScreenOutcome,
-} from "./screening";
-
-export {
-  contentTypeOf,
+  MODERATION_MODEL,
+  classifierFromEnv,
+  garmentPhotoForgotten,
+  isStuck,
+  moderationThresholds,
   retryPendingScreenings,
-  type RetryReport,
-} from "./retry";
-
-export { AccountClosed } from "./components/AccountClosed";
+  screenPhoto,
+  screeningDeletes,
+  stuckSources,
+  thresholdsAnomaly,
+} from "./screening";
 export {
-  ContentRemoved,
-  NoticeBand,
-  PhotoBeingChecked,
-} from "./components/NoticeBand";
-export { BlockedRunners } from "./components/BlockedRunners";
-export { ReportAffordance } from "./components/ReportAffordance";
-export { ReportSheet, type ReportSubject } from "./components/ReportSheet";
-export { ReviewQueue } from "./components/ReviewQueue";
-export { RunRemovals } from "./components/RunRemovals";
-export { removalsOnRun, type RunRemoval } from "./run-removals";
-
-export {
-  banUserInput,
-  blockRunnerInput,
-  copyrightHoldInput,
-  counterNoticeInput,
-  counterNoticeInputFor,
-  RECEIVED_ON_COPY,
-  denyDomainInput,
-  fileReportInput,
-  forceRenameInput,
-  garmentMatchActionInput,
-  handleReviewInput,
-  reviewActionInput,
-  runnersFilterInput,
-  takedownInput,
-  removalDecisionInput,
-  takedownRequestInput,
-  blockRequesterInput,
-  takedownConfirmInput,
-  takedownConfirmSearch,
-  unbanUserInput,
-  type FileReportValues,
-  type HandleReviewValues,
-  type ReviewActionValues,
-} from "./inputs";
-
-export {
-  clustersIn,
-  duplicateProducts,
-  type DuplicateCandidate,
-  type DuplicateVariant,
-} from "./duplicates";
-export {
-  duplicatesReport,
-  type DuplicateGroup,
-  type DuplicatesReport,
-} from "./duplicates-report";
-
-export {
-  blockAndDeclineAll,
-  confirmTakedownRequest,
-  fileTakedownRequest,
+  type CaseOverOutcome,
+  type ClaimedPurge,
+  claimDuePurges,
+  claimPurgeAfterCase,
+  copyrightHoldWrites,
+  isCopyrightHeld,
   mintReceiptConfirmToken,
-  pendingTakedownRequests,
+  purgeExpiredQuarantine,
+  purgedWrite,
+  quarantineInsert,
   releaseHoldWrites,
-  type PendingTakedownRequest,
-  type TakedownRequestResult,
-} from "./takedown-requests";
-
-export { requestSubjectOf } from "./request-subject";
-
-export {
-  REMOVAL_REMINDER_LEAD_SECONDS,
-  undecidedRemovalsDue,
-} from "./removal-reminders";
-
-// Design 164: the hold breakers, read by the hourly alert (R-172: since
-// the last firing) and Today (now).
-export {
-  dayHeadroom,
-  HEADROOM_WARN_SHARE,
-  overCeilings,
-  quietScreenerWeek,
-  TRIP_LOOKBACK_S,
-  tripsSince,
-  type CeilingReading,
-  type HoldCause,
-} from "./breakers";
-export { kitPiecesSelect } from "./kit-pieces";
-
-// Design 232: an owner's delete of a kit photo under review.
-export { withdrawnGarmentUnderReview, withdrawnUnderReview } from "./withdrawn";
+  requestSubjectOf,
+  restoreDueHolds,
+  uploaderContextOf,
+} from "./takedowns";

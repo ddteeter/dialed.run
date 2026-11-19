@@ -11,7 +11,7 @@ import {
   observationsForRuns,
 } from "../../src/modules/feed/conditions";
 import { follow, followerCount } from "../../src/modules/feed/follows";
-import { pointConditions } from "../feed/conditions-fixture";
+import { pointConditions } from "./conditions-fixture";
 import {
   makeEntry,
   makeManualBand,

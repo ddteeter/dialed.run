@@ -7,15 +7,17 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import {
-  claimForReview,
-  claimLeaseSeconds,
-  fileReport,
-  pendingReviewQueue,
   reconcileUnhiddenReports,
   releaseStaleClaims,
   moderationThresholds,
-  reportersToHide,
 } from "../../src/modules/safety";
+import {
+  claimForReview,
+  claimLeaseSeconds,
+  pendingReviewQueue,
+} from "../../src/modules/safety/review/review";
+import { fileReport } from "../../src/modules/safety/reports/reports";
+import { reportersToHide } from "../../src/modules/safety/screening/thresholds";
 
 /**
  * How many distinct reporters hide a subject for a reason off the clock,
@@ -35,7 +37,7 @@ import {
   opened,
   resetSafetyTables,
 } from "./helpers";
-import { REPORT_HIDES_FLOOR } from "../../src/modules/safety/breakers";
+import { REPORT_HIDES_FLOOR } from "../../src/modules/safety/limits/breakers";
 import { oweInCore } from "../queue-fakes";
 
 function core() {

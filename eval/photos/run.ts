@@ -6,7 +6,7 @@ import { secret } from "../secrets";
 import { writeReport } from "../write-report";
 
 import { validatedCorpus } from "./corpus";
-import { classifyImage } from "../../src/modules/safety/classifier/moderation";
+import { classifyImage } from "../../src/modules/safety/screening/classifier/moderation";
 import { reportFor, type Scored } from "./report";
 
 /**

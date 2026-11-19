@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { DeskPage } from "../../modules/ops/desk/components/DeskPage";
-import { DeskRunners } from "../../modules/safety/components/DeskRunners";
+import { DeskRunners } from "../../modules/safety/runners/components/DeskRunners";
 import {
   banUserAction,
   deskRunnersQuery,

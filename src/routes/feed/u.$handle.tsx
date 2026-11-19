@@ -19,7 +19,7 @@ import {
 } from "../../modules/feed/route-decisions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";
-import { ReportAffordance } from "../../modules/safety/components/ReportAffordance";
+import { ReportAffordance } from "../../modules/safety/reports/components/ReportAffordance";
 import {
   blockRunnerAction,
   fileReportAction,

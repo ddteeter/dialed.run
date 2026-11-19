@@ -21,7 +21,7 @@ import {
   TRIP_LOOKBACK_S,
   tripsSince,
   type HoldCause,
-} from "../../src/modules/safety/breakers";
+} from "../../src/modules/safety/limits/breakers";
 
 import { HOLD_CAUSES } from "../../src/lib/contracts/hold-causes";
 

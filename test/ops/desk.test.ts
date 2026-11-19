@@ -24,8 +24,8 @@ import {
   outboxBehindOf,
   todayCounts,
 } from "../../src/modules/ops/desk/desk";
-import { FINGERPRINT_HOLDS_PER_HOUR } from "../../src/modules/safety/breakers";
-import { removalStatements } from "../../src/modules/safety/contracts";
+import { FINGERPRINT_HOLDS_PER_HOUR } from "../../src/modules/safety/limits/breakers";
+import { removalStatements } from "../../src/modules/safety/rules/contracts";
 import { opened } from "../safety/helpers";
 import { operatorOrNotFound } from "../../src/modules/ops/desk/desk-gate";
 

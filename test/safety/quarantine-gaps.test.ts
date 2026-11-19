@@ -23,7 +23,7 @@ import { entryPhotoKeyFor } from "../../src/lib/entry-photo-key";
 import { newUlid, ulidSchema, type Ulid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { purgeAccount } from "../../src/modules/account/purge";
-import { FINGERPRINT_HOLDS_PER_HOUR } from "../../src/modules/safety/breakers";
+import { FINGERPRINT_HOLDS_PER_HOUR } from "../../src/modules/safety/limits/breakers";
 import { sweepExpiredAuthRows } from "../../src/modules/auth/expired-rows";
 import {
   removeItemPhoto,
@@ -36,19 +36,19 @@ import {
   moderateContent,
 } from "../../src/modules/feed/moderation";
 import { deleteEntryPhoto, retractEntry } from "../../src/modules/feed/retract";
-import { garmentLineOf } from "../../src/modules/safety/review";
+import { garmentLineOf } from "../../src/modules/safety/review/review";
 import {
-  banUser,
   enqueueForReview,
   garmentPhotoForgotten,
-  pendingReviewQueue,
   purgeExpiredQuarantine,
-  QUARANTINE_RETENTION_SECONDS,
   screenPhoto,
-  type CategoryScores,
   type Classify,
-  type PhotoScope,
 } from "../../src/modules/safety";
+import { banUser } from "../../src/modules/safety/runners/bans";
+import { pendingReviewQueue } from "../../src/modules/safety/review/review";
+import { QUARANTINE_RETENTION_SECONDS } from "../../src/modules/safety/takedowns/quarantine";
+import { type CategoryScores } from "../../src/modules/safety/screening/classifier/moderation";
+import { type PhotoScope } from "../../src/modules/safety/screening/screening";
 
 import { noPurge } from "../purge-spy";
 import { addAccount } from "../feed/helpers";

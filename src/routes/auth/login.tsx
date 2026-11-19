@@ -16,7 +16,7 @@ import {
 } from "../../modules/auth/auth-page";
 import { signIn } from "../../modules/auth/credentials";
 import { useGoogleSignIn } from "../../modules/auth/google-button";
-import { AccountClosed } from "../../modules/safety/components/AccountClosed";
+import { AccountClosed } from "../../modules/safety/runners/components/AccountClosed";
 import { useCarriedEmail } from "../../modules/auth/carried-email";
 import {
   googleReturn,

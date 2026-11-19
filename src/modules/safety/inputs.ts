@@ -27,7 +27,7 @@ import {
   entryReportReasonSchema,
   profileReportReasonSchema,
   reportSubjectTypeSchema,
-} from "./contracts";
+} from "./rules/contracts";
 
 /**
  * Free text on a report. Optional by design — W1's own copy is "One or two

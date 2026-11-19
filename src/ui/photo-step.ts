@@ -20,7 +20,7 @@ import type { ReactNode } from "react";
  * only once the runner presses "Use this photo", and `cancel` when they
  * press Cancel or Esc. Either way the host closes the step; on `cancel` it
  * keeps nothing, and a photo already on the form stays. Pick another is
- * the step's own business. See `modules/safety/components/PhotoBlur`.
+ * the step's own business. See `modules/safety/blur/components/PhotoBlur`.
  */
 export type PhotoStep = (
   file: File,

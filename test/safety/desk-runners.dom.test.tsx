@@ -19,12 +19,12 @@ import {
   DeskRunners,
   metaLine,
   renameMessage,
-} from "../../src/modules/safety/components/DeskRunners";
+} from "../../src/modules/safety/runners/components/DeskRunners";
 import {
   Takedown,
   takedownMessage,
-} from "../../src/modules/safety/components/Takedown";
-import type { DeskRunner } from "../../src/modules/safety/runners";
+} from "../../src/modules/safety/takedowns/components/Takedown";
+import type { DeskRunner } from "../../src/modules/safety/runners/runners";
 import { bracketed } from "../ui/bracketed";
 import { carriedSince } from "../ui/carry-spy";
 import { atWidth } from "../ui/desk-width";

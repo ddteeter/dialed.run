@@ -1,20 +1,22 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  imageCategories,
   moderationThresholds,
+  screenPhoto,
+  thresholdsAnomaly,
+} from "../../src/modules/safety";
+import { imageCategories } from "../../src/modules/safety/screening/classifier/moderation";
+import {
   parseThresholds,
   photoThresholds,
   reportersToHide,
-  screenPhoto,
-  thresholdsAnomaly,
   type ModerationThresholds,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/screening/thresholds";
 import {
   fewestReportersToHide,
   moderationThresholdsSchema,
-} from "../../src/modules/safety/thresholds";
-import { reportReasons } from "../../src/modules/safety/contracts";
+} from "../../src/modules/safety/screening/thresholds";
+import { reportReasons } from "../../src/modules/safety/rules/contracts";
 
 const byName = (a: string, b: string) => a.localeCompare(b);
 

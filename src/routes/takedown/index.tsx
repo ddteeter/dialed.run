@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { takedownSearchSchema } from "../../lib/contracts/takedown";
 import { turnstileSiteKeyQuery } from "../../modules/account/functions";
-import { TakedownRequest } from "../../modules/safety/components/TakedownRequest";
+import { TakedownRequest } from "../../modules/safety/takedowns/components/TakedownRequest";
 import { takedownRequestFn } from "../../modules/safety/functions";
 
 /**

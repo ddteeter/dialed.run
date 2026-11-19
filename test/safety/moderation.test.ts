@@ -5,7 +5,7 @@ import {
   imageCategories,
   reviewFloorsOf,
   type CategoryScores,
-} from "../../src/modules/safety/classifier/moderation";
+} from "../../src/modules/safety/screening/classifier/moderation";
 
 /**
  * Invented hold scores, not production's (which are config, design 183):

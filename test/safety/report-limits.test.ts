@@ -15,14 +15,16 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import {
-  AT_ONCE_HIDES_PER_DAY,
-  claimForReview,
-  fileReport,
   reconcileUnhiddenReports,
-  REPORTS_PER_DAY,
   resolveReview,
 } from "../../src/modules/safety";
-import type { FileReportInput } from "../../src/modules/safety/reports";
+import {
+  AT_ONCE_HIDES_PER_DAY,
+  REPORTS_PER_DAY,
+} from "../../src/modules/safety/rules/contracts";
+import { claimForReview } from "../../src/modules/safety/review/review";
+import { fileReport } from "../../src/modules/safety/reports/reports";
+import type { FileReportInput } from "../../src/modules/safety/reports/reports";
 
 import { noPurge } from "../purge-spy";
 import { oweInCore } from "../queue-fakes";

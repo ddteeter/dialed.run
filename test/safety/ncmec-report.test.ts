@@ -6,13 +6,13 @@ import { quarantinedContent } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { AdminRequiredError } from "../../src/modules/safety/admin";
+import { AdminRequiredError } from "../../src/modules/safety/rules/admin";
 import {
   purgeExpiredQuarantine,
   QUARANTINE_RETENTION_SECONDS,
   quarantinedContentFor,
   recordNcmecReport,
-} from "../../src/modules/safety/quarantine";
+} from "../../src/modules/safety/takedowns/quarantine";
 
 /**
  * C12: a completed CyberTipline report is a request to preserve its

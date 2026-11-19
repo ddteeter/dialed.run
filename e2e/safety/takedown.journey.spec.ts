@@ -31,7 +31,7 @@ import {
 } from "../../src/db/schema-core";
 import { newUlid } from "../../src/lib/ids";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
-import { newConfirmToken } from "../../src/modules/safety/takedown-limits";
+import { newConfirmToken } from "../../src/modules/safety/limits/takedown-limits";
 import { nowSeconds } from "../../src/lib/now";
 import { signInAsOperator } from "../desk/operator";
 import { expect, hydrated, scene, test } from "../support/demo";

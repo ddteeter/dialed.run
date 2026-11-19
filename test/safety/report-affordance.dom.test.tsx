@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { EMAIL_UNCONFIRMED_CODE } from "../../src/lib/auth-signal";
-import { ReportAffordance } from "../../src/modules/safety/components/ReportAffordance";
+import { ReportAffordance } from "../../src/modules/safety/reports/components/ReportAffordance";
 import type { ConfirmGate } from "../../src/ui";
 import { UnconfirmedRefusalAnswer } from "../../src/ui/unconfirmed-refusal";
 

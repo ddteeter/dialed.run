@@ -15,7 +15,7 @@ import { photoAcceptAttribute } from "../../src/lib/photo-constraints";
 import {
   PhotoBlur,
   photoBlurStep,
-} from "../../src/modules/safety/components/PhotoBlur";
+} from "../../src/modules/safety/blur/components/PhotoBlur";
 import type {
   BlurPipeline,
   LoadedImage,

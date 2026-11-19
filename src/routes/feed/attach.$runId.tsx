@@ -16,7 +16,7 @@ import { orBackToFeed, requireSignedIn } from "../../modules/feed/redirect";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";
 import { getRunSummaryFn } from "../../modules/runs/functions";
-import { photoBlurStep } from "../../modules/safety/components/PhotoBlur";
+import { photoBlurStep } from "../../modules/safety/blur/components/PhotoBlur";
 
 // fallow-ignore-next-line code-duplication -- two signed-in feed routes are the same route shape by mandate: createFileRoute + beforeLoad gate + a one-call loader + shell is what server-functions-are-glue requires of a route
 export const Route = createFileRoute("/feed/attach/$runId")({

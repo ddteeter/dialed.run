@@ -24,7 +24,7 @@ import {
   banUser,
   unbanUser,
   type Reopening,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/runners/bans";
 
 import { noPurge } from "../purge-spy";
 import { makeUser, NOW, resetSafetyTables } from "./helpers";

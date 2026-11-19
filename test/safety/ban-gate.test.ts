@@ -14,7 +14,8 @@ import { createAuth } from "../../src/modules/auth/create-auth";
 import { noPurge } from "../purge-spy";
 import { recordingMail } from "../auth/mail-recorder";
 import { OPEN_ACCESS } from "../auth/open-access";
-import { banGate, banUser, unbanUser } from "../../src/modules/safety";
+import { banGate } from "../../src/modules/safety";
+import { banUser, unbanUser } from "../../src/modules/safety/runners/bans";
 
 /**
  * SAF-4's sign-in block, through Better Auth itself on real D1: the gate

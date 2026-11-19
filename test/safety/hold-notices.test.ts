@@ -12,21 +12,21 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import {
   enqueueForReview,
-  imageCategories,
   resolveReview,
   screenPhoto,
-  type CategoryScores,
   type Classify,
 } from "../../src/modules/safety";
 import {
+  imageCategories,
+  type CategoryScores,
+} from "../../src/modules/safety/screening/classifier/moderation";
+import {
   SCREENING_HIDDEN_NOTICE,
   SCREENING_KEPT_NOTICE,
-} from "../../src/modules/safety/notice-copy";
-import {
-  moderationThresholds,
-  photoThresholds,
-  reviewFloorsOf,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/notices/notice-copy";
+import { moderationThresholds } from "../../src/modules/safety";
+import { photoThresholds } from "../../src/modules/safety/screening/thresholds";
+import { reviewFloorsOf } from "../../src/modules/safety/screening/classifier/moderation";
 
 /**
  * The test config's invented hold scores (design 183), read back as the

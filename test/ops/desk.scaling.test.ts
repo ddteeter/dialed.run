@@ -15,7 +15,7 @@ import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { deskToday } from "../../src/modules/ops/desk/desk";
 import { gaveUpJobs } from "../../src/modules/ops/desk/gave-up";
-import { REPORT_HIDES_FLOOR } from "../../src/modules/safety/breakers";
+import { REPORT_HIDES_FLOOR } from "../../src/modules/safety/limits/breakers";
 
 import { queryCounts, type QueryCounts } from "../d1-spy";
 import { makeRun, makeUser } from "../feed/helpers";
@@ -136,9 +136,9 @@ describe("deskToday", () => {
   });
 
   // A step, not a slope: once the last hour holds `REPORT_HIDES_FLOOR`
-  // (10, src/modules/safety/breakers.ts:69) report holds, the reports
+  // (10, src/modules/safety/limits/breakers.ts:69) report holds, the reports
   // breaker reads its baseline's busiest hour too (`reportsCeilingFor`,
-  // src/modules/safety/breakers.ts:359) — one statement more, however many
+  // src/modules/safety/limits/breakers.ts:359) — one statement more, however many
   // rows are past the floor.
   it("asks one more once this hour's report holds pass the breaker's floor", async () => {
     const one = await seededToday(1, nowSeconds());

@@ -11,7 +11,7 @@ import {
   PUBLIC_KIT_LINE,
   publicKitUrl,
 } from "../../src/modules/feed/components/OwnerAudience";
-import { NoticeBand } from "../../src/modules/safety/components/NoticeBand";
+import { NoticeBand } from "../../src/modules/safety/notices/components/NoticeBand";
 import type { SetUsefulFn } from "../../src/modules/feed/components/useful-reaction";
 import type { entryDetailForViewer } from "../../src/modules/feed/entries";
 import { pointConditions } from "../feed/conditions-fixture";

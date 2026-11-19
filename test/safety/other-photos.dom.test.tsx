@@ -2,15 +2,15 @@ import { screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { shortId } from "../../src/modules/safety/components/short-id";
-import { OtherPhotos } from "../../src/modules/safety/components/OtherPhotos";
-import { RemovalRequests } from "../../src/modules/safety/components/RemovalRequests";
-import { ReviewQueue } from "../../src/modules/safety/components/ReviewQueue";
+import { OtherPhotos } from "../../src/modules/safety/review/components/OtherPhotos";
+import { RemovalRequests } from "../../src/modules/safety/takedowns/components/RemovalRequests";
+import { ReviewQueue } from "../../src/modules/safety/review/components/ReviewQueue";
 import type {
   OtherPhoto,
   OtherPhotos as Others,
-} from "../../src/modules/safety/other-photos";
-import type { QueueRow } from "../../src/modules/safety/review";
-import type { PendingTakedownRequest } from "../../src/modules/safety/takedown-requests";
+} from "../../src/modules/safety/review/other-photos";
+import type { QueueRow } from "../../src/modules/safety/review/review";
+import type { PendingTakedownRequest } from "../../src/modules/safety/takedowns/takedown-requests";
 import { renderWithRouter } from "../modules/run-fixtures";
 
 /**

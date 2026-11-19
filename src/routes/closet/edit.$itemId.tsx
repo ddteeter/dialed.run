@@ -18,7 +18,7 @@ import {
 } from "../../modules/closet/functions";
 import { garmentLoader } from "../../modules/closet/garment-page";
 import { viewerUnitsQuery } from "../../modules/feed/functions";
-import { photoBlurStep } from "../../modules/safety/components/PhotoBlur";
+import { photoBlurStep } from "../../modules/safety/blur/components/PhotoBlur";
 import { searchBrandsFn } from "../../modules/products/functions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";

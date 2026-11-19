@@ -17,7 +17,8 @@ import {
   claimUsername,
   renameNoticeOf,
 } from "../../src/modules/account/username";
-import { enqueueForReview, pendingReviewQueue } from "../../src/modules/safety";
+import { enqueueForReview } from "../../src/modules/safety";
+import { pendingReviewQueue } from "../../src/modules/safety/review/review";
 
 /**
  * D-97: a handle the re-ask flagged gets Keep or Rename on its Desk

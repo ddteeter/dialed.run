@@ -7,12 +7,14 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { uploadItemPhoto } from "../../src/modules/closet/photos";
 import {
-  contentTypeOf,
-  imageCategories,
   retryPendingScreenings,
-  type CategoryScores,
   type Classify,
 } from "../../src/modules/safety";
+import { contentTypeOf } from "../../src/modules/safety/screening/retry";
+import {
+  imageCategories,
+  type CategoryScores,
+} from "../../src/modules/safety/screening/classifier/moderation";
 
 import { nowSeconds } from "../../src/lib/now";
 import { tinyJpeg } from "../feed/photos-fixture";

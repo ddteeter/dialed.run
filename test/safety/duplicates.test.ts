@@ -16,9 +16,9 @@ import {
   DUPLICATES_PRODUCT_CAP,
   duplicateProducts,
   type DuplicateCandidate,
-} from "../../src/modules/safety/duplicates";
-import { DeskDuplicates } from "../../src/modules/safety/components/DeskDuplicates";
-import { duplicatesReport } from "../../src/modules/safety/duplicates-report";
+} from "../../src/modules/safety/review/duplicates";
+import { DeskDuplicates } from "../../src/modules/safety/review/components/DeskDuplicates";
+import { duplicatesReport } from "../../src/modules/safety/review/duplicates-report";
 
 import { NOW, resetSafetyTables } from "./helpers";
 

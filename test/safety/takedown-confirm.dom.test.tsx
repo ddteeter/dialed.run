@@ -9,7 +9,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { TakedownConfirm } from "../../src/modules/safety/components/TakedownConfirm";
+import { TakedownConfirm } from "../../src/modules/safety/takedowns/components/TakedownConfirm";
 import { takedownConfirmSearch } from "../../src/modules/safety/inputs";
 import { carriedSince } from "../ui/carry-spy";
 

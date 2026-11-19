@@ -1,7 +1,7 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { RunRemovals } from "../../src/modules/safety/components/RunRemovals";
+import { RunRemovals } from "../../src/modules/safety/takedowns/components/RunRemovals";
 
 /**
 R-140: the band on the author's run, one per removal, newest first.

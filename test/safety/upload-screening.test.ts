@@ -20,13 +20,15 @@ import {
   uploadPhoto,
 } from "../../src/modules/feed/photos";
 import { putSnapshot } from "../../src/modules/enrichment/snapshot";
+import { type Classify } from "../../src/modules/safety";
 import {
   imageCategories,
+  type CategoryScores,
+} from "../../src/modules/safety/screening/classifier/moderation";
+import {
   pendingEntryPhotos,
   pendingGarmentPhotos,
-  type CategoryScores,
-  type Classify,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/screening/screening";
 
 import {
   makeEntry,

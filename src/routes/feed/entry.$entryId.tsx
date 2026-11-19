@@ -4,9 +4,9 @@ import { getSession } from "../../modules/auth/functions";
 import { EntryDetail } from "../../modules/feed/components/EntryDetail";
 import { RetractEntry } from "../../modules/feed/components/RetractEntry";
 import { entryReportLabel } from "../../modules/feed/posted";
-import { NoticeBand } from "../../modules/safety/components/NoticeBand";
-import { ReportAffordance } from "../../modules/safety/components/ReportAffordance";
-import { RunRemovals } from "../../modules/safety/components/RunRemovals";
+import { NoticeBand } from "../../modules/safety/notices/components/NoticeBand";
+import { ReportAffordance } from "../../modules/safety/reports/components/ReportAffordance";
+import { RunRemovals } from "../../modules/safety/takedowns/components/RunRemovals";
 import {
   fileReportAction,
   runRemovalsQuery,

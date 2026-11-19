@@ -11,18 +11,22 @@ import {
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import {
-  pendingGarmentFrom,
-  imageCategories,
-  isQueuedForReview,
-  pendingEntryPhotos,
-  pendingReviewQueue,
   moderationThresholds,
-  photoThresholds,
-  reviewFloorsOf,
   screenPhoto,
-  type CategoryScores,
   type Classify,
 } from "../../src/modules/safety";
+import {
+  pendingGarmentFrom,
+  pendingEntryPhotos,
+} from "../../src/modules/safety/screening/screening";
+import {
+  imageCategories,
+  reviewFloorsOf,
+  type CategoryScores,
+} from "../../src/modules/safety/screening/classifier/moderation";
+import { isQueuedForReview } from "../../src/modules/safety/reports/reports";
+import { pendingReviewQueue } from "../../src/modules/safety/review/review";
+import { photoThresholds } from "../../src/modules/safety/screening/thresholds";
 
 /**
  * The test config's invented hold scores (design 183), read back as the

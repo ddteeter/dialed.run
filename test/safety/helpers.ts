@@ -28,7 +28,7 @@ import {
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import type { ReviewSubjectType } from "../../src/modules/safety/review";
+import type { ReviewSubjectType } from "../../src/modules/safety/review/review";
 
 import {
   deleteAllFrom,

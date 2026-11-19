@@ -69,7 +69,7 @@ What a user can do that matters here, from the code:
 | Following                                               | Yes                                                                      | `feed/follows.ts`                                                     |
 | Posting images (up to 4 per kit)                        | Yes                                                                      | `feed/photos.ts` `MAX_PHOTOS_PER_ENTRY`                               |
 | Posting text: caption (280 chars), tags, product names  | Yes                                                                      | `feed/inputs.ts`; products are a shared catalogue                     |
-| Posting links                                           | Product links only, https, with a domain denylist                        | `safety/denylist.ts`                                                  |
+| Posting links                                           | Product links only, https, with a domain denylist                        | `safety/rules/denylist.ts`                                            |
 | Reactions ("useful")                                    | Yes                                                                      | `feed/reactions.ts`                                                   |
 | Feed                                                    | Kits from runners you follow, newest first. No recommender ranks content | `feed/feed.ts` `followingFeed`                                        |
 | Direct messages, comments, groups, live streaming       | **No**                                                                   | No table holds them (`src/db/schema-core.ts`)                         |
@@ -80,22 +80,22 @@ What a user can do that matters here, from the code:
 Controls already in place:
 
 - Every photo screened by OpenAI's moderation model before others see it;
-  high scores hidden and queued (`safety/screening.ts`). It covers sexual,
+  high scores hidden and queued (`safety/screening/screening.ts`). It covers sexual,
   violent and self-harm images, and **not** sexual content involving
   minors, which is text-only in that model (`classifier/moderation.ts`).
 - Usernames screened by a word list and OpenAI (`account/handle-screen.ts`).
   Captions, tags and product names are **not** screened.
 - Reports on kits, photos, profiles and product names, by confirmed
   runners; three reporters hide a kit or photo; one `intimate` report
-  hides it at once (`safety/contracts.ts`).
+  hides it at once (`safety/rules/contracts.ts`).
 - `/takedown` for intimate images, open to non-users (D-117, D-118).
-- Blocks, both ways (`safety/visibility.ts`).
+- Blocks, both ways (`safety/rules/visibility.ts`).
 - A review queue, a person decides every removal and ban
-  (`safety/review.ts`); a statement of reasons on removal
-  (`safety/contracts.ts` `removalStatements`).
+  (`safety/review/review.ts`); a statement of reasons on removal
+  (`safety/rules/contracts.ts` `removalStatements`).
 - Suspected-CSAM quarantine and the NCMEC procedure
   ([procedure](ncmec-and-take-it-down-procedures.md)).
-- Bans (`safety/bans.ts`) and moderator renames (`safety/rename.ts`).
+- Bans (`safety/runners/bans.ts`) and moderator renames (`safety/runners/rename.ts`).
 - Invite-only sign-up today; Mississippi and Tennessee refused (D-141).
 
 Evidence used: the code above; no incidents, reports or complaints yet,
@@ -151,15 +151,15 @@ user-to-user service, whatever its size or risk, and more for larger or
 riskier ones. [CHECK: the exact list and numbering in the current Codes.]
 Mapped against what exists:
 
-| Measure (as this draft understands the Codes)                                                    | Status                                                                                                                                 |
-| ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| A named person accountable for illegal-content duties                                            | The owner (above)                                                                                                                      |
-| A content moderation function that reviews and swiftly takes down illegal content it is aware of | Review queue, Remove, quarantine, takedown (`safety/review.ts`, `feed/moderation.ts`). One person, no deputy (an accepted risk, D-148) |
-| Terms that say how users are protected, clear and accessible                                     | `docs/legal/terms.md` "The rules", "Screening, reports and moderation", "Suspected illegal content"                                    |
-| Easy reporting of illegal content, including by non-users                                        | In-app reports; `/takedown`; desk@dialed.run (terms "Suspected illegal content")                                                       |
-| A complaints procedure, including appeals                                                        | desk@dialed.run; reply to the notice; no deadline (D-73; terms "Appeals")                                                              |
-| Act on complaints and tell the complainant                                                       | Removal and closure notices exist; reporter outcome notice is C8 (D-132), before public                                                |
-| Remove accounts of proscribed organisations                                                      | Bans exist; no list check. Negligible terrorism risk                                                                                   |
+| Measure (as this draft understands the Codes)                                                    | Status                                                                                                                                        |
+| ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| A named person accountable for illegal-content duties                                            | The owner (above)                                                                                                                             |
+| A content moderation function that reviews and swiftly takes down illegal content it is aware of | Review queue, Remove, quarantine, takedown (`safety/review/review.ts`, `feed/moderation.ts`). One person, no deputy (an accepted risk, D-148) |
+| Terms that say how users are protected, clear and accessible                                     | `docs/legal/terms.md` "The rules", "Screening, reports and moderation", "Suspected illegal content"                                           |
+| Easy reporting of illegal content, including by non-users                                        | In-app reports; `/takedown`; desk@dialed.run (terms "Suspected illegal content")                                                              |
+| A complaints procedure, including appeals                                                        | desk@dialed.run; reply to the notice; no deadline (D-73; terms "Appeals")                                                                     |
+| Act on complaints and tell the complainant                                                       | Removal and closure notices exist; reporter outcome notice is C8 (D-132), before public                                                       |
+| Remove accounts of proscribed organisations                                                      | Bans exist; no list check. Negligible terrorism risk                                                                                          |
 
 Measures not taken, and why:
 

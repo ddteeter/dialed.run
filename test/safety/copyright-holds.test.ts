@@ -34,7 +34,8 @@ import {
 } from "../../src/modules/feed/retract";
 import { ControlRefusal } from "../../src/lib/control-refusal";
 import { oweInCore } from "../../src/modules/ops";
-import { fileReport, resolveReview } from "../../src/modules/safety";
+import { resolveReview } from "../../src/modules/safety";
+import { fileReport } from "../../src/modules/safety/reports/reports";
 import {
   COPYRIGHT_HOLD_PAGE,
   COPYRIGHT_HOLD_SECONDS,
@@ -43,8 +44,8 @@ import {
   recordCourtAction,
   restoreAfterCase,
   restoreDayAfter,
-} from "../../src/modules/safety/copyright-holds";
-import { removalsOnRun } from "../../src/modules/safety/run-removals";
+} from "../../src/modules/safety/takedowns/copyright-holds";
+import { removalsOnRun } from "../../src/modules/safety/takedowns/run-removals";
 
 import { noPurge } from "../purge-spy";
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";

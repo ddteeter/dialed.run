@@ -1,9 +1,9 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { DeskDuplicates } from "../../src/modules/safety/components/DeskDuplicates";
-import type { DuplicateCandidate } from "../../src/modules/safety/duplicates";
-import { duplicatesReport } from "../../src/modules/safety/duplicates-report";
+import { DeskDuplicates } from "../../src/modules/safety/review/components/DeskDuplicates";
+import type { DuplicateCandidate } from "../../src/modules/safety/review/duplicates";
+import { duplicatesReport } from "../../src/modules/safety/review/duplicates-report";
 import { bracketed } from "../ui/bracketed";
 
 /**

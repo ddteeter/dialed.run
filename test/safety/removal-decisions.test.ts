@@ -17,14 +17,14 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
 import { decideRemovalRequest } from "../../src/modules/feed/removal-requests";
+import { resolveReview } from "../../src/modules/safety";
 import {
   fileTakedownRequest,
   pendingTakedownRequests,
-  resolveReview,
-} from "../../src/modules/safety";
-import { releaseHolds } from "../../src/modules/safety/release";
+} from "../../src/modules/safety/takedowns/takedown-requests";
+import { releaseHolds } from "../../src/modules/safety/review/release";
 import { nowSeconds } from "../../src/lib/now";
-import { HIDDEN_NOTICE } from "../../src/modules/safety/notice-copy";
+import { HIDDEN_NOTICE } from "../../src/modules/safety/notices/notice-copy";
 import { noPurge } from "../purge-spy";
 import { oweInCore } from "../queue-fakes";
 

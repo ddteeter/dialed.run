@@ -4,8 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
   ReleaseHolds,
   type ReleaseHoldsFn,
-} from "../../src/modules/safety/components/ReleaseHolds";
-import type { ReleaseOutcome } from "../../src/modules/safety/release";
+} from "../../src/modules/safety/review/components/ReleaseHolds";
+import type { ReleaseOutcome } from "../../src/modules/safety/review/release";
 import { INK_PILL, SECONDARY_PILL } from "../../src/ui";
 import { renderWithRouter } from "../modules/run-fixtures";
 

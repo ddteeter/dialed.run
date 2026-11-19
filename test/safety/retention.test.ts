@@ -19,7 +19,7 @@ import {
   MODERATION_RECORD_KEPT_SECONDS,
   moderationRecordDeletes,
   sweepModerationRecords,
-} from "../../src/modules/safety/retention";
+} from "../../src/modules/safety/reports/retention";
 
 /**
  * D-131's 3 years (design 150): takedown requests, reports and the records

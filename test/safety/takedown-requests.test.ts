@@ -13,7 +13,7 @@ import { TAKEDOWN_RECEIPTS_PER_HOUR } from "../../src/modules/email/rate-limit";
 import {
   fileTakedownRequest,
   pendingTakedownRequests,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/takedowns/takedown-requests";
 import { queriesDuring } from "../d1-spy";
 import { noPurge } from "../purge-spy";
 import { oweInCore } from "../queue-fakes";

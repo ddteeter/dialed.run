@@ -12,10 +12,10 @@ import {
 } from "../../src/modules/closet/service";
 import {
   deniedLinksOf,
-  denyDomain,
   isDeniedLink,
   isDeniedOnLanding,
 } from "../../src/modules/safety";
+import { denyDomain } from "../../src/modules/safety/rules/denylist";
 
 import { makeUser, resetSafetyTables } from "./helpers";
 import { nowSeconds } from "../../src/lib/now";

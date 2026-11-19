@@ -7,7 +7,7 @@ import { isInstrumented, repoPath } from "./source-text";
  * 193, #533; owner, 2026-11-09).
  *
  * Two floors hide it: `runnerInStanding` (search, H, the open web) and
- * the entry rules' author clause in `safety/visibility.ts`
+ * the entry rules' author clause in `safety/rules/visibility.ts`
  * (`publiclyVisibleEntry`, `worldVisibleEntry`, `entryVisibleTo`). A third
  * gate, `confirmedUserId`, refuses its writes that other runners see.
  * This file keeps a new surface from going round them:
@@ -98,31 +98,31 @@ const READERS: Readonly<Record<string, Reason>> = {
   "src/modules/products/correction-queue.ts": "operator",
   "src/modules/runs/awaiting-verdict.ts": "own",
   "src/modules/runs/service.ts": "own",
-  "src/modules/safety/bans.ts": "operator",
+  "src/modules/safety/runners/bans.ts": "operator",
   // The blocker's own list, of runners they found to block.
-  "src/modules/safety/blocks.ts": "own",
+  "src/modules/safety/reports/blocks.ts": "own",
   // The breaker's count names no runner: it counts distinct uploaders.
-  "src/modules/safety/breakers.ts": "machinery",
-  "src/modules/safety/copyright-holds.ts": "operator",
-  "src/modules/safety/desk-kit.ts": "operator",
-  "src/modules/safety/kit-cache-tags.ts": "machinery",
+  "src/modules/safety/limits/breakers.ts": "machinery",
+  "src/modules/safety/takedowns/copyright-holds.ts": "operator",
+  "src/modules/safety/review/desk-kit.ts": "operator",
+  "src/modules/safety/rules/kit-cache-tags.ts": "machinery",
   // A notice tells a runner about their own kit, or a reporter about
   // their own report.
-  "src/modules/safety/notices.ts": "own",
-  "src/modules/safety/other-photos.ts": "operator",
-  "src/modules/safety/photo-matches.ts": "operator",
-  "src/modules/safety/quarantine.ts": "operator",
+  "src/modules/safety/notices/notices.ts": "own",
+  "src/modules/safety/review/other-photos.ts": "operator",
+  "src/modules/safety/review/photo-matches.ts": "operator",
+  "src/modules/safety/takedowns/quarantine.ts": "operator",
   // Answers whether a report may name a subject, and shows nothing.
-  "src/modules/safety/reportable.ts": "machinery",
+  "src/modules/safety/reports/reportable.ts": "machinery",
   // Writes the owner's own record of their delete, and shows nothing.
-  "src/modules/safety/withdrawn.ts": "own",
-  "src/modules/safety/removed-fingerprints.ts": "operator",
-  "src/modules/safety/reports.ts": "machinery",
-  "src/modules/safety/review-audit.ts": "operator",
-  "src/modules/safety/review.ts": "operator",
-  "src/modules/safety/runners.ts": "operator",
-  "src/modules/safety/takedown-requests.ts": "operator",
-  "src/modules/safety/visibility.ts": "floor",
+  "src/modules/safety/review/withdrawn.ts": "own",
+  "src/modules/safety/review/removed-fingerprints.ts": "operator",
+  "src/modules/safety/reports/reports.ts": "machinery",
+  "src/modules/safety/review/review-audit.ts": "operator",
+  "src/modules/safety/review/review.ts": "operator",
+  "src/modules/safety/runners/runners.ts": "operator",
+  "src/modules/safety/takedowns/takedown-requests.ts": "operator",
+  "src/modules/safety/rules/visibility.ts": "floor",
 };
 
 const RUNNER_TABLES = new Set([
@@ -170,7 +170,7 @@ const MARK_READERS = [
   "src/db/schema-core.ts",
   "src/modules/auth/system-account.ts",
   "src/modules/feed/runner-visibility.ts",
-  "src/modules/safety/visibility.ts",
+  "src/modules/safety/rules/visibility.ts",
 ];
 
 describe("the system-account mark", () => {

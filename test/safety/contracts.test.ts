@@ -19,7 +19,7 @@ import {
   reportSubjectTypeSchema,
   reportSubjectTypes,
   reportSubjectsThatHide,
-} from "../../src/modules/safety/contracts";
+} from "../../src/modules/safety/rules/contracts";
 import { reports } from "../../src/db/schema-core";
 
 /**
@@ -186,7 +186,7 @@ describe("what a report can hide (design 164)", () => {
 describe("the TAKE IT DOWN Act's clock (design 136, D-117)", () => {
   it("runs for an intimate image and no other reason", () => {
     // A statute's line, not a tunable count: how many reporters hide a
-    // subject is config (`safety/thresholds`), and failing closed there
+    // subject is config (`safety/screening/thresholds`), and failing closed there
     // must never put spam on a 48-hour clock.
     expect(reasonsOnTheClock).toStrictEqual(["intimate"]);
   });

@@ -29,7 +29,7 @@ describe("the denylist and its landings", () => {
   it("are read only by modules/safety", () => {
     // The glob reached safety's reader, so an empty answer is not an empty scan.
     expect(Object.keys(production).map((path) => repoPath(path))).toContain(
-      "src/modules/safety/denylist.ts",
+      "src/modules/safety/rules/denylist.ts",
     );
     const offenders = Object.entries(production)
       .filter(

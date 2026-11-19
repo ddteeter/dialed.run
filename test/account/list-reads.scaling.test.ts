@@ -17,7 +17,10 @@ import { newUlid } from "../../src/lib/ids";
 import { accountCount, listAccounts } from "../../src/modules/account/accounts";
 import { exportData } from "../../src/modules/account/export";
 import { accessDesk } from "../../src/modules/account/invites";
-import { deskRunners, runnersWhere } from "../../src/modules/safety";
+import {
+  deskRunners,
+  runnersWhere,
+} from "../../src/modules/safety/runners/runners";
 import { cacheKeyFor } from "../../src/modules/weather";
 
 import { queryCounts, type QueryCounts } from "../d1-spy";

@@ -13,7 +13,7 @@ import {
   isBlocked,
   SelfBlockError,
   unblockRunner,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/reports/blocks";
 
 import { makeUser, resetSafetyTables } from "./helpers";
 import { nowSeconds } from "../../src/lib/now";

@@ -5,12 +5,12 @@ import {
   useDeskToday,
 } from "../../modules/ops/desk/components/DeskPage";
 import { ReviewHeading } from "../../modules/ops/desk/components/ReviewHeading";
-import { CopyrightHolds } from "../../modules/safety/components/CopyrightHolds";
-import { QuarantineRecords } from "../../modules/safety/components/QuarantineRecords";
-import { ReleaseHolds } from "../../modules/safety/components/ReleaseHolds";
-import { RemovalRequests } from "../../modules/safety/components/RemovalRequests";
-import { ReviewQueue } from "../../modules/safety/components/ReviewQueue";
-import { Takedown } from "../../modules/safety/components/Takedown";
+import { CopyrightHolds } from "../../modules/safety/takedowns/components/CopyrightHolds";
+import { QuarantineRecords } from "../../modules/safety/takedowns/components/QuarantineRecords";
+import { ReleaseHolds } from "../../modules/safety/review/components/ReleaseHolds";
+import { RemovalRequests } from "../../modules/safety/takedowns/components/RemovalRequests";
+import { ReviewQueue } from "../../modules/safety/review/components/ReviewQueue";
+import { Takedown } from "../../modules/safety/takedowns/components/Takedown";
 import {
   caseOverDeleteAction,
   decideGarmentMatchAction,

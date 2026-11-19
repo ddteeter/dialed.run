@@ -43,11 +43,11 @@ import {
   OUTBOX_FAST_PATH_GRACE_S,
 } from "../../src/modules/ops/outbox/outbox";
 import { fitWithin, withReleased } from "../../src/lib/photo-pipeline";
+import { type Classify } from "../../src/modules/safety";
 import {
   imageCategories,
   type CategoryScores,
-  type Classify,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/screening/classifier/moderation";
 
 function db() {
   return drizzle(env.DIALED_CORE);

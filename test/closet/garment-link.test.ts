@@ -10,7 +10,8 @@ import { DENIED_LINK } from "../../src/modules/closet/link-copy";
 import { createItem, DeniedLinkError } from "../../src/modules/closet/service";
 import { abandonedBefore } from "../../src/modules/enrichment";
 import { newUlid } from "../../src/lib/ids";
-import { denyDomain, isDeniedOnLanding } from "../../src/modules/safety";
+import { isDeniedOnLanding } from "../../src/modules/safety";
+import { denyDomain } from "../../src/modules/safety/rules/denylist";
 
 import { addAccount } from "../feed/helpers";
 import { makeUser, resetSafetyTables } from "../safety/helpers";

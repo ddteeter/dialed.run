@@ -11,8 +11,8 @@ import {
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import { AdminRequiredError } from "../../src/modules/safety";
-import { deskKitFor } from "../../src/modules/safety/desk-kit";
+import { AdminRequiredError } from "../../src/modules/safety/rules/admin";
+import { deskKitFor } from "../../src/modules/safety/review/desk-kit";
 import { deskKitInput } from "../../src/modules/safety/inputs";
 
 import { makeObservation } from "../feed/helpers";

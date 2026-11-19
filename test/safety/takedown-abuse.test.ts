@@ -16,20 +16,23 @@ import { removalRequestReceived } from "../../src/lib/contracts/email-kinds";
 import { newUlid } from "../../src/lib/ids";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
 import { decideRemovalRequest } from "../../src/modules/feed/removal-requests";
+import { mintReceiptConfirmToken } from "../../src/modules/safety";
 import {
   blockAndDeclineAll,
   confirmTakedownRequest,
   fileTakedownRequest,
-  mintReceiptConfirmToken,
   pendingTakedownRequests,
-} from "../../src/modules/safety";
-import { ipKey, requesterKey } from "../../src/modules/safety/requester-key";
+} from "../../src/modules/safety/takedowns/takedown-requests";
+import {
+  ipKey,
+  requesterKey,
+} from "../../src/modules/safety/takedowns/requester-key";
 import {
   confirmTokenHash,
   TAKEDOWN_CAP,
   TAKEDOWN_VALVE_PER_HOUR,
   valveHour,
-} from "../../src/modules/safety/takedown-limits";
+} from "../../src/modules/safety/limits/takedown-limits";
 import { emailHandler } from "../../src/modules/ops/outbox/outbox-handlers";
 import { fakeMail } from "../email/helpers";
 import { noPurge, purgeSpy } from "../purge-spy";

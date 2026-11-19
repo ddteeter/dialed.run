@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type KitOrigin,
   useReturnToRow,
-} from "../../src/modules/safety/components/kit-origin";
+} from "../../src/modules/safety/review/components/kit-origin";
 
 /**
  * Round 52 #155.5: back from a kit, the row its back link names takes

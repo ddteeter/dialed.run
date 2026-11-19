@@ -40,7 +40,7 @@ import {
 } from "../../src/modules/auth/auth-page";
 import { signUp } from "../../src/modules/auth/credentials";
 import { useGoogleSignIn } from "../../src/modules/auth/google-button";
-import { AccountClosed } from "../../src/modules/safety/components/AccountClosed";
+import { AccountClosed } from "../../src/modules/safety/runners/components/AccountClosed";
 
 /**
  * Au2 in the invite stage (task 126, ACC-5; round 26 #20, round 27 #12),

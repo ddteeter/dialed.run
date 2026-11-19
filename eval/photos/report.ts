@@ -2,7 +2,7 @@
  * The report the photo eval writes.
  *
  * The request, the parse and the threshold rule all live in
- * `src/modules/safety/classifier/moderation.ts`, which this imports — so a
+ * `src/modules/safety/screening/classifier/moderation.ts`, which this imports — so a
  * threshold read off this report is enforced by the same code that
  * produced it, rather than by a second implementation that looks the same.
  *
@@ -15,8 +15,8 @@
  * forgets that would read a clean table as "the classifier works".
  */
 import type { CorpusEntry } from "./corpus";
-import { imageCategories } from "../../src/modules/safety/classifier/moderation";
-import type { ModerationResult } from "../../src/modules/safety/classifier/moderation";
+import { imageCategories } from "../../src/modules/safety/screening/classifier/moderation";
+import type { ModerationResult } from "../../src/modules/safety/screening/classifier/moderation";
 
 export interface Scored {
   entry: CorpusEntry;

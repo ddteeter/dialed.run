@@ -6,8 +6,8 @@ import { entryPhotos, moderationActions } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { moderateContent } from "../../src/modules/feed/moderation";
-import { removalsOnRun } from "../../src/modules/safety";
-import { runRemovalsSelect } from "../../src/modules/safety/run-removals";
+import { removalsOnRun } from "../../src/modules/safety/takedowns/run-removals";
+import { runRemovalsSelect } from "../../src/modules/safety/takedowns/run-removals";
 
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 

@@ -16,14 +16,14 @@ import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import {
   fileTakedownRequest,
-  pendingReviewQueue,
   pendingTakedownRequests,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/takedowns/takedown-requests";
+import { pendingReviewQueue } from "../../src/modules/safety/review/review";
 import {
   OTHER_PHOTOS_LIMIT,
   otherPhotosOf,
   otherPhotosQuery,
-} from "../../src/modules/safety/other-photos";
+} from "../../src/modules/safety/review/other-photos";
 
 import { queriesDuring } from "../d1-spy";
 import { noPurge } from "../purge-spy";

@@ -192,7 +192,7 @@ schema change)
    conditional on the handle the read saw, and the history row is written
    only when it matched, in the same batch. Plus the comment saying why the
    history lookups are `COLLATE NOCASE`. In `account/username.ts` and
-   `safety/rename.ts`, clear of the takedown stack.
+   `safety/runners/rename.ts`, clear of the takedown stack.
    _Test:_ two renames racing from the same previous handle leave one
    history row and the first rename intact.
 

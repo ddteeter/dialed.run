@@ -24,7 +24,7 @@ import { newUlid, type Ulid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { ENRICHMENT_SWEEP_TRIES } from "../../src/modules/enrichment";
 import { handleScheduled } from "../../src/modules/dispatch";
-import { MODERATION_RECORD_KEPT_SECONDS } from "../../src/modules/safety/retention";
+import { MODERATION_RECORD_KEPT_SECONDS } from "../../src/modules/safety/reports/retention";
 import { gaveUpRow } from "../gave-up-rows";
 import { mockVisualCrossing } from "../weather/fixtures/visual-crossing-observation";
 import {
@@ -39,7 +39,7 @@ import type { SpeedFinding } from "../../src/modules/ops/speed/perf-checks";
 import {
   FINGERPRINT_HOLDS_PER_HOUR,
   QUIET_FEWEST_SCREENED,
-} from "../../src/modules/safety/breakers";
+} from "../../src/modules/safety/limits/breakers";
 import { opened, screened } from "../safety/helpers";
 import type {
   CronReporter,
@@ -260,7 +260,7 @@ describe("the cron heartbeat", () => {
 
   it("says every hour that moderation fails closed until its config is right", async () => {
     // Without MODERATION_THRESHOLDS every report hides at once and photo
-    // screening pauses (safety/thresholds). Nothing else would tell an
+    // screening pauses (safety/screening/thresholds). Nothing else would tell an
     // operator, so the screening sweep's firing says it.
     const configured: unknown = Reflect.get(env, "MODERATION_THRESHOLDS");
     Reflect.set(env, "MODERATION_THRESHOLDS", undefined);

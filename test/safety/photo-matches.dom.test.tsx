@@ -6,13 +6,13 @@ import {
   PhotoMatches,
   RemovedMatchLine,
   type DecideMatch,
-} from "../../src/modules/safety/components/PhotoMatches";
-import { RemovalRequests } from "../../src/modules/safety/components/RemovalRequests";
-import { ReviewQueue } from "../../src/modules/safety/components/ReviewQueue";
-import type { PhotoMatch } from "../../src/modules/safety/photo-matches";
-import type { RemovedImage } from "../../src/modules/safety/removed-fingerprints";
-import type { QueueRow } from "../../src/modules/safety/review";
-import type { PendingTakedownRequest } from "../../src/modules/safety/takedown-requests";
+} from "../../src/modules/safety/review/components/PhotoMatches";
+import { RemovalRequests } from "../../src/modules/safety/takedowns/components/RemovalRequests";
+import { ReviewQueue } from "../../src/modules/safety/review/components/ReviewQueue";
+import type { PhotoMatch } from "../../src/modules/safety/review/photo-matches";
+import type { RemovedImage } from "../../src/modules/safety/review/removed-fingerprints";
+import type { QueueRow } from "../../src/modules/safety/review/review";
+import type { PendingTakedownRequest } from "../../src/modules/safety/takedowns/takedown-requests";
 import { renderWithRouter } from "../modules/run-fixtures";
 import { sourceTag } from "../ui/bracketed";
 

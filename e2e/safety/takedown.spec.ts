@@ -20,7 +20,7 @@ import {
 } from "../../src/db/schema-core";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { removalStatements } from "../../src/modules/safety/contracts";
+import { removalStatements } from "../../src/modules/safety/rules/contracts";
 import { OPERATOR_ID, signInAsOperator } from "../desk/operator";
 import { expect, test } from "../support/a11y";
 import { hydrated } from "../support/demo";

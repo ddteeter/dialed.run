@@ -4,7 +4,7 @@ import {
   kitBackLink,
   kitOriginSchema,
   rowFromHash,
-} from "../../src/modules/safety/components/kit-origin";
+} from "../../src/modules/safety/review/components/kit-origin";
 
 /**
  * Round 51 · 153 (#527): the row an operator opened a kit from, as the

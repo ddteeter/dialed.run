@@ -2,8 +2,8 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { BlockedRunners } from "../../src/modules/safety/components/BlockedRunners";
-import type { BlockedRunner } from "../../src/modules/safety/blocks";
+import { BlockedRunners } from "../../src/modules/safety/reports/components/BlockedRunners";
+import type { BlockedRunner } from "../../src/modules/safety/reports/blocks";
 import { bracketed } from "../ui/bracketed";
 
 function runner(overrides: Partial<BlockedRunner> = {}): BlockedRunner {

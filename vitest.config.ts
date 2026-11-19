@@ -98,7 +98,7 @@ export default defineConfig(async () => {
       // covered by test/auth.test.ts). Ignore ONLY that shape. It sits at
       // the root because vitest resolves unhandled errors against the root
       // config, not the project that raised them. The second code is the
-      // ban gate's refusal (task 128, `safety/ban-gate.ts`), which reaches
+      // ban gate's refusal (task 128, `safety/runners/ban-gate.ts`), which reaches
       // the same dispatch the same way. The third is the OAuth callback's
       // own redirect: every `throw c.redirect(…)` in better-auth 1.7.2's
       // `/callback/:id` floats the same duplicate after answering 302 —

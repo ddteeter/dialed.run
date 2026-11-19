@@ -12,7 +12,7 @@ import { SettingsSubPage } from "../../modules/onboarding/components/SettingsSub
 // and a route is in the client bundle: importing it here failed the build
 // outright (CLAUDE.md's worked example) and put drizzle in the browser
 // chunk. Every other route deep-imports its component for the same reason.
-import { BlockedRunners } from "../../modules/safety/components/BlockedRunners";
+import { BlockedRunners } from "../../modules/safety/reports/components/BlockedRunners";
 import {
   blockedRunnersQuery,
   unblockRunnerAction,
