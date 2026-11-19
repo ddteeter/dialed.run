@@ -45,7 +45,7 @@ import {
   listAccounts,
   prefixPattern,
 } from "../../src/modules/account";
-import type { ScreenHandle } from "../../src/modules/account/handle-screen";
+import type { ScreenHandle } from "../../src/modules/account/handles/handle-screen";
 import {
   isPlaceholderHandle,
   placeholderHandle,

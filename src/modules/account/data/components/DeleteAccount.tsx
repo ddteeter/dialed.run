@@ -1,0 +1,291 @@
+import { useEffect, useId, useState } from "react";
+import type { JSX, ReactNode } from "react";
+
+import {
+  CURRENT_PASSWORD_WRONG,
+  DELETION_GRACE_S,
+  DELETION_NEEDS_GOOGLE,
+  currentPasswordLimited,
+  accountDeletionInput,
+  accountDeletionSchema,
+} from "../../../../lib/contracts";
+import { proseDayLabel, viewerClockLabel } from "../../../../lib/dates";
+import type { ViewerZone } from "../../../../lib/dates";
+import { nowSeconds } from "../../../../lib/now";
+import {
+  FieldMessage,
+  FormFailureBand,
+  FormStatus,
+  Mono,
+  SECONDARY_PILL,
+  Sheet,
+  SubmitButton,
+  useFormSubmit,
+} from "../../../../ui";
+import { PasswordField } from "../../../../ui/PasswordField";
+import type { DeletionResult } from "../deletion";
+
+/**
+ * What `DeleteAccount` and its `DeleteSheet` both take: the sheet is the
+ * confirm step, so every seam that reaches the server or the reauth flow is
+ * theirs in common — only how the sheet opens and closes differs.
+ */
+interface DeleteAccountSeams {
+  hasPassword: boolean;
+  request: (input: {
+    data: { currentPassword?: string | undefined };
+  }) => Promise<DeletionResult>;
+  /**
+  "Continue with Google", for an account with no password (route-wired).
+  */
+  reauth: ReactNode;
+  /**
+  Where a scheduled deletion goes: signed out, to its date.
+  */
+  onScheduled: (purgeAfter: number) => Promise<void>;
+  /**
+   * The runner's clock: the deletion day and the limit's time are said on
+   * their home zone (R-96 (3); round 46, 107b).
+   */
+  viewer: ViewerZone;
+}
+
+/**
+ * U1's last row, "Delete account" (ACC-9; round 27 #14): set apart by a
+ * 2px rule, its verb in the action colour, and a sheet that asks once
+ * more — with the current password, or, for an account made with Google,
+ * a fresh Google sign-in.
+ */
+export function DeleteAccount({
+  hasPassword,
+  request,
+  reauth,
+  isReturningFromGoogle,
+  onScheduled,
+  viewer,
+}: Readonly<
+  DeleteAccountSeams & {
+    /**
+    Back from that sign-in: the sheet opens again, ready to confirm.
+    */
+    isReturningFromGoogle: boolean;
+  }
+>): JSX.Element {
+  const [isOpen, setIsOpen] = useState(isReturningFromGoogle);
+  // Back from Google focuses a different button (round 40 C1) — but only
+  // the first time: closed and opened again from the row, it is the
+  // ordinary confirm.
+  const [hasClosed, setHasClosed] = useState(false);
+  const titleId = useId();
+  const sentenceId = useId();
+  return (
+    <section
+      data-part="delete-account"
+      className="flex flex-col border-t-2 border-ink pt-3"
+    >
+      {/* LEAVE, in the settings groups' heading style under the 2px rule,
+          so headings reach it as they reach SIGN-IN (R57·257, #675). */}
+      <h2 className="m-0 text-muted">
+        <Mono step="xs">Leave</Mono>
+      </h2>
+      {/* Round 52 #160: one button, named by its title and described by
+          its sentence, and the word at the right edge is for the eye
+          only. The button lies over the row and holds no text of its own:
+          with the sentence inside it, its visible text was more than its
+          name, which is WCAG 2.5.3's failure (axe,
+          label-content-name-mismatch). The row's words are hidden from
+          the reading order so they are heard once, through the button. */}
+      <div className="relative flex items-center justify-between gap-3 py-3">
+        <button
+          type="button"
+          aria-labelledby={titleId}
+          aria-describedby={sentenceId}
+          onClick={() => {
+            setIsOpen(true);
+          }}
+          className="target absolute inset-0 cursor-pointer border-none bg-transparent p-0"
+        />
+        <span aria-hidden="true" className="flex flex-col gap-1">
+          <span id={titleId} className="text-body font-semibold">
+            Delete account
+          </span>
+          <span id={sentenceId} className="text-small text-muted">
+            Deleted after 7 days. Log in before then to keep it.
+          </span>
+        </span>
+        {/* R55·182.1: the label is ink, and the verb carries the danger. */}
+        <span
+          aria-hidden="true"
+          className="shrink-0 text-body font-bold text-cold-text"
+        >
+          Delete
+        </span>
+      </div>
+      {isOpen ? (
+        <DeleteSheet
+          hasPassword={hasPassword}
+          request={request}
+          reauth={reauth}
+          onScheduled={onScheduled}
+          viewer={viewer}
+          isReturningFromGoogle={isReturningFromGoogle && !hasClosed}
+          onClose={() => {
+            setIsOpen(false);
+            setHasClosed(true);
+          }}
+        />
+      ) : undefined}
+    </section>
+  );
+}
+
+/**
+ * A refusal the server gave, where `useFormSubmit` lands a field's issue
+ * — as ChangeEmail does. Two fields can be refused: the current password,
+ * and for an account with none the Google sign-in that stands in for it
+ * (`REAUTH`). Either way the submission is over and nothing was
+ * scheduled, so the status says "Nothing saved", never "scheduled".
+ */
+class Refused extends Error {
+  readonly issues: readonly { path: string[]; message: string }[];
+  constructor(field: string, message: string) {
+    super(message);
+    this.issues = [{ path: [field], message }];
+  }
+}
+
+/**
+ * The "field" a Google-only account proves itself with: the group that
+ * holds "Continue with Google" (round 27 #14: "the field is replaced by
+ * 'Continue with Google'"). Named, so the refusal focuses it.
+ */
+const REAUTH = "reauth";
+
+function DeleteSheet({
+  hasPassword,
+  request,
+  reauth,
+  onScheduled,
+  isReturningFromGoogle,
+  onClose,
+  viewer,
+}: Readonly<
+  DeleteAccountSeams & {
+    isReturningFromGoogle: boolean;
+    onClose: () => void;
+  }
+>): JSX.Element {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [keep, setKeep] = useState<HTMLButtonElement | undefined>();
+  const [confirm, setConfirm] = useState<HTMLButtonElement | undefined>();
+  // On the home zone, as every other place that names this day does
+  // (`deletion.ts`' `deletionDay`): the sheet and the email must not name
+  // different days.
+  const day = proseDayLabel(nowSeconds() + DELETION_GRACE_S, viewer.homeZone);
+  const form = useFormSubmit({
+    carry: "settings",
+    // An account with no password sends none; the field is asked for
+    // only of one that has one.
+    schema: hasPassword ? accountDeletionSchema : accountDeletionInput,
+    action: async (values) => {
+      const result = await request({ data: values });
+      if (result.status === "wrong-password") {
+        throw new Refused("currentPassword", CURRENT_PASSWORD_WRONG);
+      }
+      if (result.status === "password-limited") {
+        const clock = viewerClockLabel(result.until, viewer);
+        throw new Refused("currentPassword", currentPasswordLimited(clock));
+      }
+      if (result.status === "reauth") {
+        throw new Refused(REAUTH, DELETION_NEEDS_GOOGLE);
+      }
+      return result;
+    },
+    successMessage: "Deletion scheduled.",
+    onSuccess: async (result) => {
+      await onScheduled(result.purgeAfter);
+    },
+  });
+
+  // "Keep it" is focused, as every destructive confirm's safe answer is
+  // (ConfirmSheet's pattern: state, so this runs once the button exists).
+  // Except back from Google (round 40 C1): the runner pressed Delete my
+  // account, was sent to sign in again, and came back to finish — so the
+  // focus is on the press they came back to make, with no message, and
+  // nothing is sent until they make it.
+  useEffect(() => {
+    (isReturningFromGoogle ? confirm : keep)?.focus();
+  }, [confirm, keep, isReturningFromGoogle]);
+
+  return (
+    <Sheet open onClose={onClose} label="Delete your account?">
+      <form
+        ref={form.formRef}
+        noValidate
+        data-part="sheet"
+        className="flex flex-col gap-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void form.submit(hasPassword ? { currentPassword } : {});
+        }}
+      >
+        <FormStatus>{form.status}</FormStatus>
+        <p className="m-0 text-body text-quiet">
+          Your runs, closet, entries and photos go in 7 days. Shared runs leave
+          the feed now. Log in before {day} to keep everything.
+        </p>
+        {hasPassword ? (
+          <PasswordField
+            name="currentPassword"
+            label="Current password"
+            autoComplete="current-password"
+            value={currentPassword}
+            onChange={setCurrentPassword}
+            field={form.field}
+            error={form.fieldErrors.currentPassword}
+          />
+        ) : undefined}
+        {form.fieldErrors[REAUTH] === undefined ? undefined : (
+          // A group, not a control: `tabIndex` lets the refusal's focus
+          // land on it, with its message and the Google button inside.
+          <fieldset
+            name={REAUTH}
+            tabIndex={-1}
+            data-state="reauth"
+            aria-describedby={`${REAUTH}-message`}
+            className="m-0 flex flex-col gap-3 border-0 p-0"
+          >
+            <FieldMessage name={REAUTH} error={form.fieldErrors[REAUTH]} />
+            {reauth}
+          </fieldset>
+        )}
+        <FormFailureBand
+          failure={form.failure}
+          onRetry={form.retry}
+          retryRef={form.retryRef}
+        />
+        <SubmitButton
+          label="Delete my account"
+          pendingLabel="Deleting"
+          pending={form.pending}
+          tone="ink"
+          ref={(node) => {
+            setConfirm(node ?? undefined);
+          }}
+        />
+        <button
+          type="button"
+          ref={(node) => {
+            setKeep(node ?? undefined);
+          }}
+          onClick={onClose}
+          // The secondary beside the ink pill, the same 48 (R54·164a, 167;
+          // #697 R2-SHELL-05).
+          className={`target ${SECONDARY_PILL}`}
+        >
+          Keep it
+        </button>
+      </form>
+    </Sheet>
+  );
+}

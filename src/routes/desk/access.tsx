@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { DeskAccess } from "../../modules/account/components/DeskAccess";
+import { DeskAccess } from "../../modules/account/access/components/DeskAccess";
 import {
   accessDeskQuery,
   declineRequestFn,

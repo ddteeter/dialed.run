@@ -69,7 +69,7 @@ export const REDRESS_FOOT =
 
 /**
  * Where the rules are read: the terms' "## The rules", by the id the
- * terms page gives that heading (GitHub's, `account/legal-markdown.ts`).
+ * terms page gives that heading (GitHub's, `account/terms/legal-markdown.ts`).
  * The removal email's button opens it (round 40 C3); a test pins the id
  * to `terms.md`.
  */

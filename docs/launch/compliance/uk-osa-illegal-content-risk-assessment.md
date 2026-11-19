@@ -83,7 +83,7 @@ Controls already in place:
   high scores hidden and queued (`safety/screening/screening.ts`). It covers sexual,
   violent and self-harm images, and **not** sexual content involving
   minors, which is text-only in that model (`classifier/moderation.ts`).
-- Usernames screened by a word list and OpenAI (`account/handle-screen.ts`).
+- Usernames screened by a word list and OpenAI (`account/handles/handle-screen.ts`).
   Captions, tags and product names are **not** screened.
 - Reports on kits, photos, profiles and product names, by confirmed
   runners; three reporters hide a kit or photo; one `intimate` report

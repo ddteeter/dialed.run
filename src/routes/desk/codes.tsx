@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { DeskCodes } from "../../modules/account/components/DeskCodes";
+import { DeskCodes } from "../../modules/account/access/components/DeskCodes";
 import {
   accessDeskQuery,
   createInviteCodeFn,

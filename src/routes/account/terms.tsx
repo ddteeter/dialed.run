@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { TermsPrompt } from "../../modules/account/components/TermsPrompt";
+import { TermsPrompt } from "../../modules/account/terms/components/TermsPrompt";
 import {
   acceptTermsFn,
   termsPromptLoader,

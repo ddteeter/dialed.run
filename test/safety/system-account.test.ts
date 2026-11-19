@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { outfitEntries, userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import { acceptanceOf } from "../../src/modules/account/terms-acceptance";
+import { acceptanceOf } from "../../src/modules/account/terms/terms-acceptance";
 import {
   confirmedUserId,
   confirmedViewerId,

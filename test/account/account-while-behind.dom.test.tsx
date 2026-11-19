@@ -11,7 +11,7 @@ import { describe, expect, it } from "vitest";
 import {
   AccountUnlessBehindOnTerms,
   AccountWhileBehind,
-} from "../../src/modules/account/components/AccountWhileBehind";
+} from "../../src/modules/account/terms/components/AccountWhileBehind";
 
 /**
  * Settings › Account while the runner is behind on the terms (round 30

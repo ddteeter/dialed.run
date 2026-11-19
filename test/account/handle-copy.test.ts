@@ -4,7 +4,7 @@ import {
   capRefusal,
   capSaid,
   tooOftenMessage,
-} from "../../src/modules/account/handle-copy";
+} from "../../src/modules/account/handles/handle-copy";
 
 /**
  * The rename cap's words (R60, #820): the band's sentence names the day

@@ -64,6 +64,6 @@ describe("dialed-weather", () => {
     expect(isAllowed("src/env/d1.ts")).toBe(true);
     expect(isAllowed("src/lib/sql/d1-session.ts")).toBe(true);
     expect(isAllowed("src/modules/feed/conditions.ts")).toBe(false);
-    expect(isAllowed("src/modules/account/purge.ts")).toBe(false);
+    expect(isAllowed("src/modules/account/purge/purge.ts")).toBe(false);
   });
 });

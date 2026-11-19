@@ -18,8 +18,8 @@ import {
   accountPage,
   accountView,
   ownAddressView,
-} from "../../src/modules/account/account-view";
-import { acceptanceOf } from "../../src/modules/account/terms-acceptance";
+} from "../../src/modules/account/data/account-view";
+import { acceptanceOf } from "../../src/modules/account/terms/terms-acceptance";
 import { newUlid } from "../../src/lib/ids";
 import { core, ORIGIN, SECRET, seedUser } from "./helpers";
 

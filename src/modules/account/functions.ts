@@ -34,15 +34,15 @@ import {
   verifyTurnstileToken,
 } from "../ops";
 import { requireAdmin } from "../safety";
-import { requestAccess, turnstileAttempt } from "./access";
-import { accountPage, accountView, ownAddressView } from "./account-view";
-import { requestExport } from "./data-exports";
+import { requestAccess, turnstileAttempt } from "./access/access";
+import { accountPage, accountView, ownAddressView } from "./data/account-view";
+import { requestExport } from "./data/data-exports";
 import {
   deletionEffectsFromEnv,
   keepAccount,
   leavingView,
   requestAccountDeletion,
-} from "./deletion";
+} from "./data/deletion";
 import {
   acceptTermsInput,
   changeEmailInput,
@@ -62,17 +62,17 @@ import {
   inviteFromRequest,
   restoreInviteCode,
   revokeInviteCode,
-} from "./invites";
-import { handleScreenFromEnv } from "./handle-screen";
+} from "./access/invites";
+import { handleScreenFromEnv } from "./handles/handle-screen";
 import type { LegalSlug } from "./inputs";
-import { legalPage } from "./legal";
-import { openSourcePage } from "./open-source";
+import { legalPage } from "./terms/legal";
+import { openSourcePage } from "./terms/open-source";
 import {
   homeIfNothingToSay,
   legalDocOrNotFound,
   leavingSearch,
 } from "./route-decisions";
-import { acceptTerms, termsPromptView } from "./terms-acceptance";
+import { acceptTerms, termsPromptView } from "./terms/terms-acceptance";
 import { ownTheme, setOwnTheme } from "./theme";
 import {
   claimUsername,
@@ -80,13 +80,13 @@ import {
   keepPlaceholder,
   renameNoticeOf,
   usernameOf,
-} from "./username";
+} from "./handles/username";
 import {
   confirmEmail,
   readEmailLanding,
   requestEmailChange,
   resendConfirmation,
-} from "./verification";
+} from "./verification/verification";
 
 function db() {
   return coreDb();

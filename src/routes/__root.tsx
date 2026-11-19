@@ -6,7 +6,7 @@ import appCss from "../styles.css?url";
 import { THEME_HEAD_SCRIPT } from "../lib/browser/theme";
 import { ZOD_JITLESS_SCRIPT } from "../lib/browser/zod-jitless";
 import { signedInOffTheOpenWeb } from "../lib/open-web";
-import { confirmEmailOnRefusal } from "../modules/account/components/ConfirmEmailSheet";
+import { confirmEmailOnRefusal } from "../modules/account/verification/components/ConfirmEmailSheet";
 import {
   handleGateQuery,
   ownAccountQuery,

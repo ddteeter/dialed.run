@@ -9,9 +9,9 @@ import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { OpenSourcePage } from "../../src/modules/account/components/OpenSourcePage";
-import { parseLegalDoc } from "../../src/modules/account/legal-markdown";
-import type { LicenceGroup } from "../../src/modules/account/open-source-search";
+import { OpenSourcePage } from "../../src/modules/account/terms/components/OpenSourcePage";
+import { parseLegalDoc } from "../../src/modules/account/terms/legal-markdown";
+import type { LicenceGroup } from "../../src/modules/account/terms/open-source-search";
 
 /**
  * `/open-source` (plan C9; round 29 #9): the thank-you, the groups with the

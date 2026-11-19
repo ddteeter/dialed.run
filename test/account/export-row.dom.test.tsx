@@ -11,7 +11,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ExportRowState } from "../../src/lib/contracts/data-export";
 import type { ViewerZone } from "../../src/lib/dates";
-import { ExportRow } from "../../src/modules/account/components/ExportRow";
+import { ExportRow } from "../../src/modules/account/data/components/ExportRow";
 
 /**
  * U1's "Export your data" row (ACC-10; round 27 #13): Get a copy, the

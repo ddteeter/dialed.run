@@ -5,11 +5,11 @@ import { describe, expect, it } from "vitest";
 import { accountDeletions, termsAcceptances } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import { accessGate } from "../../src/modules/account/access";
+import { accessGate } from "../../src/modules/account/access/access";
 import {
   acceptTerms,
   acceptanceOf,
-} from "../../src/modules/account/terms-acceptance";
+} from "../../src/modules/account/terms/terms-acceptance";
 import { createAuth } from "../../src/modules/auth/create-auth";
 import {
   activeUserId,

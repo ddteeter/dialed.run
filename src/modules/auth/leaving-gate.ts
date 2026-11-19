@@ -17,7 +17,7 @@
  *   (`keepableUserId`), so the week's one way back still works.
  * - **Session creation** refuses a runner whose purge has started
  *   (`deletionGate`), and the purge's claim deletes their sessions in the
- *   same batch that starts it (`account/purge.ts`). So once
+ *   same batch that starts it (`account/purge/purge.ts`). So once
  *   `purge_started_at` is set there is no session to act with and no way
  *   to get one: everything is refused, sign-in included.
  *

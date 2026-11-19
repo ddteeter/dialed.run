@@ -4,7 +4,7 @@ import { env } from "../../src/env";
 import {
   handleScreenFromEnv,
   screenHandle,
-} from "../../src/modules/account/handle-screen";
+} from "../../src/modules/account/handles/handle-screen";
 import { MODERATION_MODEL } from "../../src/modules/safety";
 
 /**

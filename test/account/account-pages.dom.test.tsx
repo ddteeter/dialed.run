@@ -20,29 +20,29 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { EMAIL_UNCONFIRMED_CODE } from "../../src/lib/auth-signal";
 import { currentPasswordLimited } from "../../src/lib/contracts";
 import type { ViewerZone } from "../../src/lib/dates";
-import { ChangeEmail } from "../../src/modules/account/components/ChangeEmail";
-import { CheckEmail } from "../../src/modules/account/components/CheckEmail";
-import { ConfirmEmailBand } from "../../src/modules/account/components/ConfirmEmailBand";
+import { ChangeEmail } from "../../src/modules/account/verification/components/ChangeEmail";
+import { CheckEmail } from "../../src/modules/account/verification/components/CheckEmail";
+import { ConfirmEmailBand } from "../../src/modules/account/verification/components/ConfirmEmailBand";
 import {
   ConfirmEmailSheet,
   confirmEmailOnRefusal,
-} from "../../src/modules/account/components/ConfirmEmailSheet";
+} from "../../src/modules/account/verification/components/ConfirmEmailSheet";
 import {
   LinkLanding,
   landingCopy,
-} from "../../src/modules/account/components/LinkLanding";
+} from "../../src/modules/account/verification/components/LinkLanding";
 import {
   RESEND_BAND_LINK,
   RESEND_LINK,
   RESEND_PILL,
   ResendLink,
   SENT_FOR_MS,
-} from "../../src/modules/account/components/ResendLink";
+} from "../../src/modules/account/verification/components/ResendLink";
 import type {
   ChangeResult,
   Landing,
   ResendAnswer,
-} from "../../src/modules/account/verification";
+} from "../../src/modules/account/verification/verification";
 import { SECONDARY_PILL } from "../../src/ui";
 import { UnconfirmedRefusalAnswer } from "../../src/ui/unconfirmed-refusal";
 import { carriedSince } from "../ui/carry-spy";

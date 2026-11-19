@@ -713,7 +713,7 @@ export type ReviewDecision = "approve" | "remove" | "quarantine";
 export type ResolveOutcome = "resolved" | "already_resolved" | "not_found";
 
 /**
- * A decision on a flagged handle (D-97, made in `account/handle-review`):
+ * A decision on a flagged handle (D-97, made in `account/handles/handle-review`):
  * the queue's own outcomes; `taken`, where the placeholder Rename drew is
  * held by someone, and the operator presses Rename again; or `moved`,
  * where the handle changed before the rename landed, so nothing was done

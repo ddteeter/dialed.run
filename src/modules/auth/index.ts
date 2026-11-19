@@ -35,7 +35,6 @@ export {
   requireUserIdWhileLeaving,
   verifiedUserId,
 } from "./require-user";
-export type { PasswordCheck } from "./password-check";
 export { deploymentPosture } from "./create-auth";
 export { sessionFromRequest } from "./session";
 export { d1RequestDepsFromEnv, respondInD1Scope } from "./d1-request";

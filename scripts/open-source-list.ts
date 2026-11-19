@@ -9,7 +9,7 @@
  * the browser's and the Worker's. `npm query` (npm's own tree) adds what
  * Vite leaves out, read through npm's `normalize-package-data`: each
  * package's homepage, author and directory, where a NOTICE file is read. The text work — copyright
- * holders, each licence's wording once — is `account/licence-text.ts`,
+ * holders, each licence's wording once — is `account/terms/licence-text.ts`,
  * where it is tested; this file only reads and writes.
  *
  * **"Built with"** is every direct dependency no bundle holds — the
@@ -41,7 +41,7 @@ import {
   toolList,
   type Bundled,
   type ListedPiece,
-} from "../src/modules/account/licence-text";
+} from "../src/modules/account/terms/licence-text";
 
 const OUT = path.join("src", "modules", "account", "open-source-list.json");
 const REPORTS = ["client", "server"].map((environment) =>

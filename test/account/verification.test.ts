@@ -24,12 +24,12 @@ import {
   EMAIL_LINK_TTL_S,
   issueEmailLink,
   readEmailLink,
-} from "../../src/modules/account/email-links";
+} from "../../src/modules/account/verification/email-links";
 import {
   confirmLinkUrl,
   type Background,
   type EmailChangeRequest,
-} from "../../src/modules/account/verification";
+} from "../../src/modules/account/verification/verification";
 import {
   core,
   fakeMail,
@@ -1230,7 +1230,13 @@ describe("requestEmailChange", () => {
     const later = owedTo(mail);
     const { userId } = await seedUser();
     for (const address of ["first@example.com", "second@example.com"]) {
-      await requestEmailChange(db, change(userId, address), mail, later.owed, NOW);
+      await requestEmailChange(
+        db,
+        change(userId, address),
+        mail,
+        later.owed,
+        NOW,
+      );
     }
     await later.settled();
     expect(await db.select().from(outbox)).toHaveLength(0);

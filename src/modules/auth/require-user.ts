@@ -21,7 +21,8 @@ import { primaryCoreDb } from "../../env";
 import { auth } from "./instance";
 import { activeUserId, keepableUserId } from "./leaving-gate";
 import { changeOwnPassword, type PasswordChange } from "./change-password";
-import { checkOwnPassword, type PasswordCheck } from "./password-check";
+import type { PasswordCheck } from "../account/verification";
+import { checkOwnPassword } from "./password-check";
 import {
   optionalUserIdFrom,
   sessionIdFrom,

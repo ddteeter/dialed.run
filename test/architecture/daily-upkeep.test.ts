@@ -24,10 +24,10 @@ describe("the Worker entry hands the firings and the queue their upkeep", () => 
       'import { purgeDueAccounts } from "./modules/account/purge";',
     );
     expect(code).toContain(
-      'import { sweepExports } from "./modules/account/export-sweep";',
+      'import { sweepExports } from "./modules/account/export-build";',
     );
     expect(code).toContain(
-      'import { rescreenHandlesFromEnv } from "./modules/account/handle-rescreen";',
+      'import { rescreenHandlesFromEnv } from "./modules/account/handles";',
     );
     // The link a confirmation owes (design 133, D-113 Q1): `closet`'s.
     expect(code).toContain(
@@ -37,7 +37,7 @@ describe("the Worker entry hands the firings and the queue their upkeep", () => 
     // (`auth`'s) and of answered access requests (`account`'s): both
     // modules import `ops`.
     expect(code).toContain(
-      'import { forgetAnsweredRequests } from "./modules/account/answered-requests";',
+      'import { forgetAnsweredRequests } from "./modules/account/access";',
     );
     expect(code).toContain(
       'import { sweepExpiredAuthRows } from "./modules/auth/expired-rows";',

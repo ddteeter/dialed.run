@@ -8,10 +8,10 @@ import {
   noteSessionOwner,
   rememberForSession,
 } from "../../lib/browser/session-memo";
-import type { LeavingView } from "./deletion";
-import type { TermsPromptView } from "./terms-acceptance";
-import type { LegalDoc } from "./legal-markdown";
-import type { HandleGateAnswer } from "./username";
+import type { LeavingView } from "./data/deletion";
+import type { TermsPromptView } from "./terms/terms-acceptance";
+import type { LegalDoc } from "./terms/legal-markdown";
+import type { HandleGateAnswer } from "./handles/username";
 import type { ViewerZone } from "../../lib/dates";
 
 /**

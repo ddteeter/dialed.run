@@ -8,14 +8,14 @@ import { newUlid } from "../../src/lib/ids";
 import {
   exportKeyFor,
   newLinkToken,
-} from "../../src/modules/account/data-exports";
+} from "../../src/modules/account/data/data-exports";
 import {
   EXPORT_LEASE_S,
   EXPORT_STALL_S,
   EXPORT_SWEEP_CAP,
   sweepExports,
   type SweepDeps,
-} from "../../src/modules/account/export-sweep";
+} from "../../src/modules/account/export-build/export-sweep";
 import { core } from "../email/helpers";
 
 /**

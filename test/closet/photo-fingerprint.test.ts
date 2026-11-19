@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { wardrobeItems } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import { purgeAccount } from "../../src/modules/account/purge";
+import { purgeAccount } from "../../src/modules/account/purge/purge";
 import {
   removeItemPhoto,
   uploadItemPhoto,

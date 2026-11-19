@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { CheckEmail } from "../../modules/account/components/CheckEmail";
+import { CheckEmail } from "../../modules/account/verification/components/CheckEmail";
 import {
   optionalAccountQuery,
   resendConfirmationFn,

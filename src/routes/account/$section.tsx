@@ -8,11 +8,11 @@ import {
 import {
   AccountUnlessBehindOnTerms,
   AccountWhileBehind,
-} from "../../modules/account/components/AccountWhileBehind";
-import { ChangeEmail } from "../../modules/account/components/ChangeEmail";
-import { DeleteAccount } from "../../modules/account/components/DeleteAccount";
-import { ConfirmEmailBand } from "../../modules/account/components/ConfirmEmailBand";
-import { ExportRow } from "../../modules/account/components/ExportRow";
+} from "../../modules/account/terms/components/AccountWhileBehind";
+import { ChangeEmail } from "../../modules/account/verification/components/ChangeEmail";
+import { DeleteAccount } from "../../modules/account/data/components/DeleteAccount";
+import { ConfirmEmailBand } from "../../modules/account/verification/components/ConfirmEmailBand";
+import { ExportRow } from "../../modules/account/data/components/ExportRow";
 import {
   accountPageQuery,
   requestDeletionFn,

@@ -7,7 +7,7 @@ import {
   noteSessionOwner,
 } from "../../src/lib/browser/session-memo";
 
-import { takenMessage } from "../../src/modules/account/handle-copy";
+import { takenMessage } from "../../src/modules/account/handles/handle-copy";
 import {
   ACCOUNT_SECTION_TITLES,
   accountSectionOrNotFound,
@@ -26,7 +26,7 @@ import {
   tokenSearch,
   unsubscribeSearch,
 } from "../../src/modules/account/route-decisions";
-import type { HandleGate } from "../../src/modules/account/username";
+import type { HandleGate } from "../../src/modules/account/handles/username";
 
 /**
  * What `startHandleIfNeeded` threw for `pathname`, or `undefined`.
@@ -560,9 +560,11 @@ describe("Au4's search keeps an address and nothing else (SA-L14)", () => {
 
 describe("the link searches", () => {
   it("keep a string and drop anything else, so a mangled link still lands", () => {
-    expect(checkEmailSearch.parse({ email: "maya@example.com" })).toStrictEqual({
-      email: "maya@example.com",
-    });
+    expect(checkEmailSearch.parse({ email: "maya@example.com" })).toStrictEqual(
+      {
+        email: "maya@example.com",
+      },
+    );
     expect(checkEmailSearch.parse({ email: ["a", "b"] }).email).toBeUndefined();
     expect(tokenSearch.parse({ token: "verify.u.s" })).toStrictEqual({
       token: "verify.u.s",

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { accountDeletions } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import { acceptanceOf } from "../../src/modules/account/terms-acceptance";
+import { acceptanceOf } from "../../src/modules/account/terms/terms-acceptance";
 import { sessionFromRequest } from "../../src/modules/auth/session";
 import {
   confirmedUserId,

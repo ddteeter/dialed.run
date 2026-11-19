@@ -51,7 +51,15 @@ model {
     }
   }
   extend cf.app {
-    account = module 'account'
+    account = module 'account' {
+      access = module 'account/access'
+      data = module 'account/data'
+      exportBuild = module 'account/export-build'
+      handles = module 'account/handles'
+      purge = module 'account/purge'
+      terms = module 'account/terms'
+      verification = module 'account/verification'
+    }
     auth = module 'auth'
     closet = module 'closet'
     dispatch = module 'dispatch'
@@ -109,16 +117,43 @@ model {
   cf.importsQueue -[recovery]-> cf.importsDlq 'dead-letters after 3 retries'
   cf.enrichmentQueue -[recovery]-> cf.enrichmentDlq 'dead-letters after 3 retries'
   cf.exportsQueue -[recovery]-> cf.exportsDlq 'dead-letters after 3 retries'
-  cf.app.account -[imports]-> cf.app.auth
-  cf.app.account -[imports]-> cf.app.email
-  cf.app.account -[imports]-> cf.app.enrichment
-  cf.app.account -[imports]-> cf.app.feed
-  cf.app.account -[imports]-> cf.app.notifications
-  cf.app.account -[imports]-> cf.app.ops
-  cf.app.account -[imports]-> cf.app.runs
-  cf.app.account -[imports]-> cf.app.safety
-  cf.app.account -[imports]-> cf.app.weather
+  cf.app.account -[wiring]-> cf.app.auth
+  cf.app.account -[wiring]-> cf.app.email
+  cf.app.account -[wiring]-> cf.app.ops
+  cf.app.account -[wiring]-> cf.app.safety
+  cf.app.account.access -[imports]-> cf.app.account.terms
+  cf.app.account.access -[imports]-> cf.app.account.verification
+  cf.app.account.access -[imports]-> cf.app.email
+  cf.app.account.access -[imports]-> cf.app.ops
+  cf.app.account.data -[imports]-> cf.app.account.handles
+  cf.app.account.data -[imports]-> cf.app.account.terms
+  cf.app.account.data -[imports]-> cf.app.account.verification
+  cf.app.account.data -[imports]-> cf.app.email
+  cf.app.account.data -[imports]-> cf.app.notifications
+  cf.app.account.data -[imports]-> cf.app.ops
+  cf.app.account.data -[imports]-> cf.app.runs
+  cf.app.account.exportBuild -[imports]-> cf.app.account.data
+  cf.app.account.exportBuild -[imports]-> cf.app.email
+  cf.app.account.exportBuild -[imports]-> cf.app.ops
+  cf.app.account.exportBuild -[imports]-> cf.app.weather
+  cf.app.account.handles -[imports]-> cf.app.account.terms
+  cf.app.account.handles -[imports]-> cf.app.ops
+  cf.app.account.handles -[imports]-> cf.app.safety
+  cf.app.account.purge -[imports]-> cf.app.account.access
+  cf.app.account.purge -[imports]-> cf.app.account.data
+  cf.app.account.purge -[imports]-> cf.app.email
+  cf.app.account.purge -[imports]-> cf.app.enrichment
+  cf.app.account.purge -[imports]-> cf.app.feed
+  cf.app.account.purge -[imports]-> cf.app.ops
+  cf.app.account.purge -[imports]-> cf.app.runs
+  cf.app.account.purge -[imports]-> cf.app.safety
+  cf.app.account.purge -[imports]-> cf.app.weather
+  cf.app.account.terms -[imports]-> cf.app.notifications
+  cf.app.account.terms -[imports]-> cf.app.runs
+  cf.app.account.verification -[imports]-> cf.app.email
+  cf.app.account.verification -[imports]-> cf.app.ops
   cf.app.auth -[imports]-> cf.app.account
+  cf.app.auth -[imports]-> cf.app.account.verification
   cf.app.auth -[imports]-> cf.app.email
   cf.app.auth -[imports]-> cf.app.ops
   cf.app.auth -[imports]-> cf.app.safety
@@ -241,6 +276,48 @@ views {
     include cf.app.account
     include cf.app.account -> cf.app.** where kind is imports or kind is wiring
     include cf.app.** -> cf.app.account where kind is imports or kind is wiring
+  }
+  view accountAccessImports of cf.app.account.access {
+    title 'account/access: what it imports, and what imports it'
+    include cf.app.account.access
+    include cf.app.account.access -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.account.access where kind is imports or kind is wiring
+  }
+  view accountDataImports of cf.app.account.data {
+    title 'account/data: what it imports, and what imports it'
+    include cf.app.account.data
+    include cf.app.account.data -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.account.data where kind is imports or kind is wiring
+  }
+  view accountExportBuildImports of cf.app.account.exportBuild {
+    title 'account/exportBuild: what it imports, and what imports it'
+    include cf.app.account.exportBuild
+    include cf.app.account.exportBuild -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.account.exportBuild where kind is imports or kind is wiring
+  }
+  view accountHandlesImports of cf.app.account.handles {
+    title 'account/handles: what it imports, and what imports it'
+    include cf.app.account.handles
+    include cf.app.account.handles -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.account.handles where kind is imports or kind is wiring
+  }
+  view accountPurgeImports of cf.app.account.purge {
+    title 'account/purge: what it imports, and what imports it'
+    include cf.app.account.purge
+    include cf.app.account.purge -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.account.purge where kind is imports or kind is wiring
+  }
+  view accountTermsImports of cf.app.account.terms {
+    title 'account/terms: what it imports, and what imports it'
+    include cf.app.account.terms
+    include cf.app.account.terms -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.account.terms where kind is imports or kind is wiring
+  }
+  view accountVerificationImports of cf.app.account.verification {
+    title 'account/verification: what it imports, and what imports it'
+    include cf.app.account.verification
+    include cf.app.account.verification -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.account.verification where kind is imports or kind is wiring
   }
   view authImports of cf.app.auth {
     title 'auth: what it imports, and what imports it'

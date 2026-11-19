@@ -139,8 +139,9 @@ module.exports = {
         "entry' is spelled out by path — the Worker entry (src/server.ts), every server-" +
         "function module (src/modules/*/functions.ts), and the queue consumers and cron " +
         "handlers src/server.ts wires (the whole dispatch/ module, runs/consumer.ts, " +
-        "enrichment/consume.ts, account/export-queue.ts, export-build.ts, export-sweep.ts, " +
-        "purge.ts). A new consumer or cron handler joins this list by name. 'Module files " +
+        "enrichment/consume.ts, account/data/export-queue.ts, and the whole account/export-build/ " +
+        "and account/purge/ sub-modules, which hold no components (owner-approved edit for the " +
+        "account move, 2026-11-19, #796). A new consumer or cron handler joins this list by name. 'Module files " +
         "that are not .tsx' was measured and rejected as the approximation: auth/credentials.ts " +
         "and account/route-decisions.ts are plain .ts that run in the browser and legitimately " +
         "import lib/browser/session-memo. The rule checks direct imports only: a server-function " +
@@ -154,7 +155,8 @@ module.exports = {
           "|^src/modules/dispatch/" +
           "|^src/modules/runs/consumer\\.ts$" +
           "|^src/modules/enrichment/consume\\.ts$" +
-          "|^src/modules/account/(export-queue|export-build|export-sweep|purge)\\.ts$",
+          "|^src/modules/account/(export-build|purge)/" +
+          "|^src/modules/account/data/export-queue\\.ts$",
       },
       to: { path: "^src/lib/browser/" },
     },

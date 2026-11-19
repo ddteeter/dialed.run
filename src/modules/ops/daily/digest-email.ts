@@ -71,7 +71,7 @@ export interface DigestMail {
   readonly admins: () => readonly string[];
   readonly counts: () => Promise<TodayCounts>;
   /**
-   * Matches `OwedMail["settle"]` (`modules/account/verification.ts`) rather
+   * Matches `OwedMail["settle"]` (`modules/account/verification/verification.ts`) rather
    * than `typeof settleOutbox` itself: the digest never passes `handlers`,
    * and the shared test double (`test/email/helpers.ts`'s `owedTo`) is
    * built to that narrower shape so both callers can hand it the same

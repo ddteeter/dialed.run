@@ -8,14 +8,12 @@
     "safety": 96
   },
   "pastDoor": {
-    "account": 5,
     "auth": 1,
     "closet": 1,
     "feed": 1,
     "runs": 1
   },
   "files": {
-    "account": 60,
     "feed": 96
   }
 }

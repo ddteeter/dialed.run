@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { RequestAccess } from "../../modules/account/components/RequestAccess";
+import { RequestAccess } from "../../modules/account/access/components/RequestAccess";
 import {
   requestAccessFn,
   turnstileSiteKeyQuery,

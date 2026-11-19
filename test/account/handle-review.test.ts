@@ -10,13 +10,13 @@ import {
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid, ulidSchema } from "../../src/lib/ids";
-import { rescreenHandles } from "../../src/modules/account/handle-rescreen";
-import { reviewFlaggedHandle } from "../../src/modules/account/handle-review";
-import type { ScreenHandle } from "../../src/modules/account/handle-screen";
+import { rescreenHandles } from "../../src/modules/account/handles/handle-rescreen";
+import { reviewFlaggedHandle } from "../../src/modules/account/handles/handle-review";
+import type { ScreenHandle } from "../../src/modules/account/handles/handle-screen";
 import {
   claimUsername,
   renameNoticeOf,
-} from "../../src/modules/account/username";
+} from "../../src/modules/account/handles/username";
 import { enqueueForReview } from "../../src/modules/safety";
 import { pendingReviewQueue } from "../../src/modules/safety/review/review";
 

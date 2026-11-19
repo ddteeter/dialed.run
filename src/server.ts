@@ -23,12 +23,12 @@ import {
   timeRequest,
   timingDeps,
 } from "./modules/ops/speed";
-import { forgetAnsweredRequests } from "./modules/account/answered-requests";
+import { forgetAnsweredRequests } from "./modules/account/access";
 import { exportConsumersFromEnv } from "./modules/account/export-build";
 import { d1RequestDepsFromEnv, respondInD1Scope } from "./modules/auth";
 import { sweepExpiredAuthRows } from "./modules/auth/expired-rows";
-import { rescreenHandlesFromEnv } from "./modules/account/handle-rescreen";
-import { sweepExports } from "./modules/account/export-sweep";
+import { rescreenHandlesFromEnv } from "./modules/account/handles";
+import { sweepExports } from "./modules/account/export-build";
 import { purgeDueAccounts } from "./modules/account/purge";
 import { linkTypedGarments } from "./modules/closet";
 import { sweepCopyrightHolds } from "./modules/feed/moderation";

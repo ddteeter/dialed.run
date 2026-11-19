@@ -13,11 +13,11 @@ import {
   STALE,
   TermsPrompt,
   returnNote,
-} from "../../src/modules/account/components/TermsPrompt";
+} from "../../src/modules/account/terms/components/TermsPrompt";
 import type {
   AcceptResult,
   TermsPromptView,
-} from "../../src/modules/account/terms-acceptance";
+} from "../../src/modules/account/terms/terms-acceptance";
 
 /**
  * ACC-6's terms prompt, as round 29 #6 and round 30 #4 draw it: the

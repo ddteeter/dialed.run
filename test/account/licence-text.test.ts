@@ -11,7 +11,7 @@ import {
   sameWords,
   shippedList,
   toolList,
-} from "../../src/modules/account/licence-text";
+} from "../../src/modules/account/terms/licence-text";
 
 /**
  * The text work behind `/open-source` (design 151), against the shapes

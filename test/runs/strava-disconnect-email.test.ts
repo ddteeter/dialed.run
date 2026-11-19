@@ -15,7 +15,7 @@ import {
 } from "../../src/db/schema-core";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { deletionEffectsFromEnv } from "../../src/modules/account/deletion";
+import { deletionEffectsFromEnv } from "../../src/modules/account/data/deletion";
 import { coreDb } from "../../src/modules/runs/core-db";
 import { deauthorizeAthlete } from "../../src/modules/runs/strava/deauthorize";
 import {

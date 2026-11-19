@@ -52,12 +52,12 @@ import {
   PURGE_PER_ROUND,
   purgeAccount,
   purgeDueAccounts,
-} from "../../src/modules/account/purge";
-import type { PurgeDeps } from "../../src/modules/account/purge";
+} from "../../src/modules/account/purge/purge";
+import type { PurgeDeps } from "../../src/modules/account/purge/purge";
 import {
   CLOSED_ADDRESS_KEPT_S,
   closedAddressHash,
-} from "../../src/modules/account/closed-addresses";
+} from "../../src/modules/account/access/closed-addresses";
 import { forgetManualBands } from "../../src/modules/weather";
 import { drainOutbox } from "../../src/modules/ops/outbox/outbox";
 import { ONLY_THEIRS_GONE, seedAthleteGaveUp } from "../gave-up-rows";

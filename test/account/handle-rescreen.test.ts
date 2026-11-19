@@ -20,9 +20,12 @@ import {
   rescreenHandlesFromEnv,
   rescreenWithKey,
   type Rescreen,
-} from "../../src/modules/account/handle-rescreen";
-import type { ScreenHandle } from "../../src/modules/account/handle-screen";
-import { claimUsername, forceRename } from "../../src/modules/account/username";
+} from "../../src/modules/account/handles/handle-rescreen";
+import type { ScreenHandle } from "../../src/modules/account/handles/handle-screen";
+import {
+  claimUsername,
+  forceRename,
+} from "../../src/modules/account/handles/username";
 
 /**
  * The handle re-ask (task 126 PR B): a claim moderation could not answer

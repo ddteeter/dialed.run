@@ -19,7 +19,7 @@ import {
   isRememberedForSession,
 } from "../../src/lib/browser/session-memo";
 import { gateOnHandle } from "../../src/modules/account/route-decisions";
-import type { HandleGateAnswer } from "../../src/modules/account/username";
+import type { HandleGateAnswer } from "../../src/modules/account/handles/username";
 import {
   FormStatus,
   TermsRefusalAnswer,
