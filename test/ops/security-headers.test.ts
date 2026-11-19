@@ -2,13 +2,13 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { env } from "../../src/env";
 
-import { CSP_REPORT_PATH } from "../../src/modules/ops/csp-report";
-import { secureResponse } from "../../src/modules/ops/secure-response";
+import { CSP_REPORT_PATH } from "../../src/modules/ops/edge/csp-report";
+import { secureResponse } from "../../src/modules/ops/edge/secure-response";
 import {
   CSP_HEADER,
   contentSecurityPolicy,
   withSecurityHeaders,
-} from "../../src/modules/ops/security-headers";
+} from "../../src/modules/ops/edge/security-headers";
 
 /**
  * The headers every response leaves with (OPS-8, audit §3.9).
@@ -175,7 +175,11 @@ describe("secureResponse, as server.ts calls it", () => {
   it("reports CSP violations to our own collector, never to Sentry (SA-L19)", async () => {
     Reflect.set(env, "SENTRY_DSN", "https://abc@o1.ingest.sentry.io/42");
 
-    const secured = await secureResponse(new Response("<p>page</p>"), "n0nce", undefined);
+    const secured = await secureResponse(
+      new Response("<p>page</p>"),
+      "n0nce",
+      undefined,
+    );
 
     const policy = secured.headers.get(CSP_HEADER);
     expect(policy).toBe(
@@ -224,7 +228,11 @@ describe("secureResponse, for a page the edge may store (design 163)", () => {
   it("names the hashes of exactly its inline scripts, and no nonce, on an open-web path", async () => {
     Reflect.set(env, "SENTRY_DSN", "https://abc@o1.ingest.sentry.io/42");
 
-    const secured = await secureResponse(page("public, max-age=60"), undefined, MARKER);
+    const secured = await secureResponse(
+      page("public, max-age=60"),
+      undefined,
+      MARKER,
+    );
 
     expect(secured.headers.get(CSP_HEADER)).toBe(
       contentSecurityPolicy(CSP_REPORT_PATH, { hashes: [ALERT, X] }),
@@ -237,7 +245,11 @@ describe("secureResponse, for a page the edge may store (design 163)", () => {
   it("never leaves a public page for the edge when a nonce was minted (SA-M15)", async () => {
     Reflect.set(env, "SENTRY_DSN", "https://abc@o1.ingest.sentry.io/42");
 
-    const secured = await secureResponse(page("public, max-age=60"), "n0nce", undefined);
+    const secured = await secureResponse(
+      page("public, max-age=60"),
+      "n0nce",
+      undefined,
+    );
 
     expect(secured.headers.get("Cache-Control")).toBe("private, no-store");
     expect(secured.headers.get(CSP_HEADER)).toBe(
@@ -250,7 +262,11 @@ describe("secureResponse, for a page the edge may store (design 163)", () => {
   it("hashes an open-web page that turned out not to be public, and stores none of it", async () => {
     // No nonce was minted for the path, so a not-found or error page
     // rendered there has scripts with no nonce on them.
-    const secured = await secureResponse(page(undefined, 500), undefined, MARKER);
+    const secured = await secureResponse(
+      page(undefined, 500),
+      undefined,
+      MARKER,
+    );
 
     expect(
       directives(secured.headers.get(CSP_HEADER) ?? "").get("script-src"),

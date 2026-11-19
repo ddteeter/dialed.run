@@ -9,14 +9,14 @@ import {
   MAX_ROLLUP_ROWS,
   nextDay,
   VITALS_DATASET,
-} from "../../src/modules/ops/vitals-queries";
+} from "../../src/modules/ops/speed/vitals-queries";
 import {
   daysBefore,
   ROLLUP_DAYS,
   rollupDepsFromEnv,
   rollupVitals,
   type RollupDeps,
-} from "../../src/modules/ops/vitals-rollup";
+} from "../../src/modules/ops/speed/vitals-rollup";
 
 /**
 Every route name kept, as before the known-route check.
@@ -377,12 +377,20 @@ describe("rollupDepsFromEnv", () => {
   it("is unconfigured without an account or a token", () => {
     expect(rollupDepsFromEnv(isAnyRoute, {}).query).toBeUndefined();
     expect(
-      rollupDepsFromEnv(isAnyRoute, { CF_ACCOUNT_ID: "", ANALYTICS_SQL_TOKEN: "t" }).query,
+      rollupDepsFromEnv(isAnyRoute, {
+        CF_ACCOUNT_ID: "",
+        ANALYTICS_SQL_TOKEN: "t",
+      }).query,
     ).toBeUndefined();
     expect(
-      rollupDepsFromEnv(isAnyRoute, { CF_ACCOUNT_ID: "a", ANALYTICS_SQL_TOKEN: "" }).query,
+      rollupDepsFromEnv(isAnyRoute, {
+        CF_ACCOUNT_ID: "a",
+        ANALYTICS_SQL_TOKEN: "",
+      }).query,
     ).toBeUndefined();
-    expect(rollupDepsFromEnv(isAnyRoute, { CF_ACCOUNT_ID: "a" }).query).toBeUndefined();
+    expect(
+      rollupDepsFromEnv(isAnyRoute, { CF_ACCOUNT_ID: "a" }).query,
+    ).toBeUndefined();
     expect(
       rollupDepsFromEnv(isAnyRoute, { ANALYTICS_SQL_TOKEN: "t" }).query,
     ).toBeUndefined();

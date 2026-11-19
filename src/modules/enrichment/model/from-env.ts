@@ -31,7 +31,7 @@ const MODEL = "gpt-5.6-luna";
 /**
  * The decision, with the key handed in rather than read.
  *
- * Split for the reason `modules/ops/sentry.ts` gives for the same split: a
+ * Split for the reason `modules/ops/sentry/sentry.ts` gives for the same split: a
  * secret comes from the Worker's bindings, which a test cannot change from
  * inside the isolate, so the configured path could never be exercised
  * through the env-reading shell. With the key as a parameter, "no key, no
@@ -42,7 +42,7 @@ export function extractionModelFor(
   fetchImpl?: typeof fetch,
 ): ExtractionModel | undefined {
   // An unset secret arrives as an empty string as often as it does
-  // undefined — `modules/ops/sentry.ts` records the same trap for the DSN,
+  // undefined — `modules/ops/sentry/sentry.ts` records the same trap for the DSN,
   // where an empty value made the reporter throw on construction.
   if (apiKey === undefined || apiKey === "") return undefined;
   return createChatCompletionsModel(apiKey, {

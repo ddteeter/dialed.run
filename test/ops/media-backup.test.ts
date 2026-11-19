@@ -10,7 +10,7 @@ import {
   GONE_PREFIX,
   GONE_RETENTION_S,
   MAX_COPIES_PER_FIRING,
-} from "../../src/modules/ops/media-backup";
+} from "../../src/modules/ops/daily/media-backup";
 
 /**
  * The daily photo backup (D-172, #420, design 186), against the test

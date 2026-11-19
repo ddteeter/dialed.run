@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { SITE_META } from "../../src/modules/ops/og/site-head";
+import { SITE_META } from "../../src/modules/ops/public-web/og/site-head";
 
 /**
  * The browser-chrome colour, written where a CSS variable cannot reach: a

@@ -72,7 +72,7 @@ describe("entry photos", () => {
 
   it("writes a key the drainer's reading of it finds the row by", async () => {
     // The upload writes with `lib/entry-photo-key` and the outbox drainer
-    // reads with it (`ops/outbox-handlers.ts`): one spelling, so the id
+    // reads with it (`ops/outbox/outbox-handlers.ts`): one spelling, so the id
     // the reader takes from the key is the row the writer made.
     const userId = await makeUser();
     const runId = await makeRun({ userId });

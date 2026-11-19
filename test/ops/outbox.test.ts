@@ -14,7 +14,7 @@ import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import type { OutboxMessage } from "../../src/lib/sql/outbox";
 import { createItem } from "../../src/modules/closet";
-import { handleScheduled } from "../../src/modules/ops";
+import { handleScheduled } from "../../src/modules/dispatch";
 import {
   backoffSeconds,
   checkOutboxBacklog,
@@ -28,7 +28,7 @@ import {
   oweOutbox,
   settleOutbox,
   stillDueOf,
-} from "../../src/modules/ops/outbox";
+} from "../../src/modules/ops/outbox/outbox";
 import { outboxKinds } from "../../src/lib/sql/outbox";
 import {
   boundHandler,
@@ -38,7 +38,7 @@ import {
   reconcileEntryPhotos,
   reconcileItemPhotos,
   type OutboxHandlers,
-} from "../../src/modules/ops/outbox-handlers";
+} from "../../src/modules/ops/outbox/outbox-handlers";
 
 const DIGEST = { cron: "0 12 * * *" } as ScheduledController;
 const NOW = 1_800_000_000;
@@ -986,9 +986,9 @@ describe("the product link's handler (design 133, D-113 Q1)", () => {
   });
 
   it("names the runner for Sentry, whatever the linker", () => {
-    expect(productLinkHandler(undefined).context({ userId: "u1" })).toStrictEqual(
-      { userId: "u1" },
-    );
+    expect(
+      productLinkHandler(undefined).context({ userId: "u1" }),
+    ).toStrictEqual({ userId: "u1" });
   });
 
   it("fails loudly with no linker, naming the runner in the report", async () => {

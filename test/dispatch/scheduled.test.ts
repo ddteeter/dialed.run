@@ -1,0 +1,2333 @@
+import { and, eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/d1";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import {
+  cronCheckpoints,
+  rateLimits,
+  entryPhotos,
+  photoScreenings,
+  imports,
+  outbox,
+  outfitEntries,
+  products,
+  reports,
+  reviewQueue,
+  runs,
+  stravaRevocations,
+  userProfiles,
+} from "../../src/db/schema-core";
+import { env } from "../../src/env";
+import { configuredDeployment } from "../ops/configured-deployment";
+import type { RateLimitKind } from "../../src/lib/contracts/rate-limits";
+import { newUlid, type Ulid } from "../../src/lib/ids";
+import { nowSeconds } from "../../src/lib/now";
+import { ENRICHMENT_SWEEP_TRIES } from "../../src/modules/enrichment";
+import { handleScheduled } from "../../src/modules/dispatch";
+import { MODERATION_RECORD_KEPT_SECONDS } from "../../src/modules/safety/retention";
+import { gaveUpRow } from "../gave-up-rows";
+import { mockVisualCrossing } from "../weather/fixtures/visual-crossing-observation";
+import {
+  breakerReport,
+  digestKinds,
+  digestReport,
+  hourlyReport,
+  SPEED_EVENTS_PER_CHECK,
+  speedReports,
+} from "../../src/modules/dispatch/scheduled";
+import type { SpeedFinding } from "../../src/modules/ops/speed/perf-checks";
+import {
+  FINGERPRINT_HOLDS_PER_HOUR,
+  QUIET_FEWEST_SCREENED,
+} from "../../src/modules/safety/breakers";
+import { opened, screened } from "../safety/helpers";
+import type {
+  CronReporter,
+  SentryReport,
+} from "../../src/modules/ops/sentry/sentry";
+import {
+  createOrGetBrand,
+  createOrGetProduct,
+} from "../../src/modules/products";
+import { importMessageFor } from "../queue-fakes";
+
+/**
+ * The daily digest is a cron whose entire product is a list of things a
+ * human should look at, and none of that list was asserted. Sixty-one
+ * mutants survived here: every threshold could be inverted, every window
+ * could point into the future instead of the past, and every anomaly
+ * sentence could be emptied, because the only observable was a
+ * `captureException` nothing watched.
+ *
+ * `handleScheduled` now returns what it found, so these read the answer
+ * instead of inferring it.
+ */
+
+const HOUR = 3600;
+const DIGEST = { cron: "0 12 * * *" } as ScheduledController;
+const ENRICHMENT_RETRY = { cron: "30 * * * *" } as ScheduledController;
+
+function coreDb() {
+  return drizzle(env.DIALED_CORE);
+}
+
+async function insertImport(
+  overrides: Partial<typeof imports.$inferInsert>,
+): Promise<Ulid> {
+  const id = newUlid();
+  await coreDb()
+    .insert(imports)
+    .values({
+      id,
+      userId: newUlid(),
+      r2Key: `imports/${id}.fit`,
+      status: "pending",
+      createdAt: nowSeconds(),
+      ...overrides,
+    });
+  return id;
+}
+
+async function insertRun(
+  overrides: Partial<typeof runs.$inferInsert>,
+): Promise<Ulid> {
+  const id = newUlid();
+  await coreDb()
+    .insert(runs)
+    .values({
+      id,
+      userId: newUlid(),
+      source: "manual",
+      startedAt: nowSeconds(),
+      durationS: 1800,
+      distanceM: 5000,
+      indoor: false,
+      title: "Digest test run",
+      ...overrides,
+    });
+  return id;
+}
+
+/**
+ * The digest reads three tables and reports on anything it finds, so a row
+ * another test left behind is an anomaly this one did not cause.
+ */
+async function emptyTheTablesTheDigestReads(): Promise<void> {
+  const db = coreDb();
+  await db.delete(imports);
+  await db.delete(stravaRevocations);
+  await db.delete(outbox);
+  await db.delete(products);
+  await db.delete(runs);
+  // The moderation tables belong on this list too: the digest counts the
+  // review queue's depth, so a row left behind by one test appears as
+  // "2 item(s) awaiting moderation review" in the next one's anomalies —
+  // which fails every assertion in the file that expects a quiet digest,
+  // and points at the digest rather than at the leak.
+  await db.delete(reviewQueue);
+  await db.delete(reports);
+  // The screener's week, which design 164's quiet line reads.
+  await db.delete(photoScreenings);
+  await db.delete(entryPhotos);
+  await db.delete(outfitEntries);
+}
+
+configuredDeployment();
+
+beforeEach(async () => {
+  await emptyTheTablesTheDigestReads();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe("the cron heartbeat", () => {
+  it("stamps last_run_at in epoch seconds, not milliseconds", async () => {
+    // A millisecond value here reads as the year 57000 to anyone reading
+    // the row to see when a cron last ran.
+    const before = nowSeconds();
+
+    await handleScheduled(DIGEST);
+
+    const [row] = await coreDb()
+      .select()
+      .from(cronCheckpoints)
+      .where(eq(cronCheckpoints.cronName, "daily-digest"));
+    expect(row?.lastRunAt).toBeGreaterThanOrEqual(before - 5);
+    expect(row?.lastRunAt).toBeLessThanOrEqual(nowSeconds() + 5);
+  });
+
+  it("restamps the same row on a second run rather than adding another", async () => {
+    // Law 1: crons re-fire. The conflict arm is a second copy of the same
+    // timestamp expression, and only the insert half was ever executed —
+    // so a millisecond value could live there indefinitely.
+    await handleScheduled(DIGEST);
+    const before = nowSeconds();
+    await handleScheduled(DIGEST);
+
+    const rows = await coreDb()
+      .select()
+      .from(cronCheckpoints)
+      .where(eq(cronCheckpoints.cronName, "daily-digest"));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.lastRunAt).toBeGreaterThanOrEqual(before - 5);
+    expect(rows[0]?.lastRunAt).toBeLessThanOrEqual(nowSeconds() + 5);
+  });
+
+  it("runs the weather retry on its own schedule and finds nothing to say", async () => {
+    // The hourly cron reports through `runs.weather_status`, not through
+    // the digest, so its outcome carries no anomalies — which is a claim
+    // worth pinning, because "anomalies" is the field a pager reads.
+    const outcome = await handleScheduled({
+      cron: "0 * * * *",
+    } as ScheduledController);
+
+    expect(outcome).toStrictEqual({ cronName: "weather-retry", anomalies: [] });
+  });
+
+  it("drains only the 'email' outbox kind on the hourly retry, leaving other kinds for the daily digest", async () => {
+    // A due row of the *other* kind this build knows. If the hourly retry
+    // drained every kind rather than just `email`, this row would be
+    // claimed too — its `attempts` counter is the tell, since claiming
+    // happens whether or not the handler itself succeeds.
+    const id = newUlid();
+    await coreDb()
+      .insert(outbox)
+      .values({
+        id,
+        kind: "photo_delete",
+        dedupeKey: newUlid(),
+        payload: JSON.stringify({ userId: newUlid(), itemId: newUlid() }),
+        nextAttemptAt: nowSeconds() - 60,
+        createdAt: nowSeconds() - HOUR,
+      });
+
+    await handleScheduled({ cron: "0 * * * *" } as ScheduledController);
+
+    const [row] = await coreDb()
+      .select({ attempts: outbox.attempts })
+      .from(outbox)
+      .where(eq(outbox.id, id));
+    expect(row?.attempts).toBe(0);
+  });
+
+  it("dispatches the screening-retry schedule to the screening sweep", async () => {
+    // The case label is the whole wiring: `wrangler.jsonc` fires a cron
+    // expression, `crons.ts` maps it to a name, and this switch turns the
+    // name into work. A wrong label here means the sweep silently never
+    // runs and every flagged photo stays pending forever — which looks
+    // exactly like a classifier that is simply slow.
+    // A photo waiting to be screened, so the sweep has something to say.
+    const userId = newUlid();
+    const runId = await insertRun({ userId });
+    const entryId = newUlid();
+    await coreDb().insert(outfitEntries).values({
+      id: entryId,
+      userId,
+      runId,
+      verdict: 0,
+      audience: "runners",
+      createdAt: nowSeconds(),
+    });
+    await coreDb()
+      .insert(entryPhotos)
+      .values({
+        id: newUlid(),
+        entryId,
+        photoKey: `entries/${userId}/${entryId}/p`,
+        position: 0,
+      });
+
+    const outcome = await handleScheduled({
+      cron: "15 * * * *",
+    } as ScheduledController);
+
+    // **The name is not the assertion.** `cronName` comes from the
+    // registry lookup, not from the case label, so it reads
+    // "screening-retry" whether or not this switch does anything — which
+    // is what the sweep silently never running would look like. The
+    // anomaly is the proof that work happened.
+    expect(outcome.cronName).toBe("screening-retry");
+    // Matched loosely on purpose. Which sentence comes back depends on
+    // whether a classifier key is configured — "photos await screening;
+    // OPENAI_API_KEY is not set" without one, "still pending after a
+    // screening sweep" with one that cannot answer — and both prove the
+    // same thing here: the sweep ran. The exact wording is pinned in
+    // `test/safety/retry.test.ts`, which owns it.
+    expect(outcome.anomalies).toEqual([expect.stringContaining("screening")]);
+  });
+
+  it("says every hour that moderation fails closed until its config is right", async () => {
+    // Without MODERATION_THRESHOLDS every report hides at once and photo
+    // screening pauses (safety/thresholds). Nothing else would tell an
+    // operator, so the screening sweep's firing says it.
+    const configured: unknown = Reflect.get(env, "MODERATION_THRESHOLDS");
+    Reflect.set(env, "MODERATION_THRESHOLDS", undefined);
+    try {
+      const outcome = await handleScheduled({
+        cron: "15 * * * *",
+      } as ScheduledController);
+      expect(outcome.anomalies).toContain(
+        "MODERATION_THRESHOLDS is unset or malformed: every report hides at once and photo screening is paused",
+      );
+    } finally {
+      Reflect.set(env, "MODERATION_THRESHOLDS", configured);
+    }
+    // Configured, the firing says nothing about it.
+    const outcome = await handleScheduled({
+      cron: "15 * * * *",
+    } as ScheduledController);
+    expect(outcome.anomalies).not.toContainEqual(
+      expect.stringContaining("MODERATION_THRESHOLDS"),
+    );
+  });
+
+  it("says so when the sweep finds reports that were never acted on", async () => {
+    // The gap this covers is a crash between `fileReport`'s insert and its
+    // hide. Reproduced by writing the reports directly, which is what that
+    // half-finished state looks like on disk.
+    const author = newUlid();
+    const runId = await insertRun({ userId: author });
+    const entryId = newUlid();
+    await coreDb().insert(outfitEntries).values({
+      id: entryId,
+      userId: author,
+      runId,
+      verdict: 0,
+      audience: "runners",
+      createdAt: nowSeconds(),
+    });
+    for (let n = 0; n < 3; n += 1) {
+      await coreDb().insert(reports).values({
+        id: newUlid(),
+        reporterId: newUlid(),
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "explicit",
+        createdAt: nowSeconds(),
+      });
+    }
+
+    const outcome = await handleScheduled({
+      cron: "15 * * * *",
+    } as ScheduledController);
+
+    // The digest is the only place a solo operator would ever learn this
+    // happened, so the line has to be there and has to say what it was.
+    expect(outcome.anomalies).toContainEqual(
+      expect.stringContaining("had not been hidden"),
+    );
+    const [row] = await coreDb()
+      .select({ status: outfitEntries.moderationStatus })
+      .from(outfitEntries)
+      .where(eq(outfitEntries.id, entryId));
+    expect(row?.status).toBe("hidden_pending_review");
+  });
+
+  it("sweeps the public photo bucket on the same firing (design 163 step 8)", async () => {
+    // An object no row names: a copy whose Worker died before its row
+    // went. The sweep is the only thing that would ever find it.
+    const orphan = `orphan-${newUlid().toLowerCase()}`;
+    await env.PUBLIC_PHOTOS.put(orphan, new Uint8Array([1]));
+
+    const outcome = await handleScheduled({
+      cron: "15 * * * *",
+    } as ScheduledController);
+
+    expect(outcome.anomalies).toContainEqual(
+      expect.stringContaining("public photo objects had no row naming them"),
+    );
+    expect(await env.PUBLIC_PHOTOS.head(orphan)).toBeNull();
+  });
+
+  it("says so when it takes a stale review claim back", async () => {
+    // A claim stamped long enough ago that its lease has run out. Written
+    // directly because the only other way to reach this state is to wait
+    // half an hour.
+    const queueId = newUlid();
+    await coreDb()
+      .insert(reviewQueue)
+      .values({
+        id: queueId,
+        subjectType: "entry",
+        subjectId: newUlid(),
+        source: "reports",
+        status: "reviewing",
+        resolvedBy: newUlid(),
+        claimedAt: nowSeconds() - 3600,
+        createdAt: nowSeconds() - 3600,
+      });
+
+    const outcome = await handleScheduled({
+      cron: "15 * * * *",
+    } as ScheduledController);
+
+    expect(outcome.anomalies).toContainEqual(
+      expect.stringContaining("went stale"),
+    );
+    const [row] = await coreDb()
+      .select({ status: reviewQueue.status })
+      .from(reviewQueue)
+      .where(eq(reviewQueue.id, queueId));
+    expect(row?.status).toBe("pending");
+  });
+
+  it("files a cron it does not recognise under `unknown`, and says so", async () => {
+    // Config/code skew: wrangler fired a schedule the registry has never
+    // heard of. The row still gets written — losing the heartbeat as well
+    // would hide the skew twice.
+    const error = vi.spyOn(console, "error").mockImplementation(nothing);
+
+    const outcome = await handleScheduled({
+      cron: "*/7 * * * *",
+    } as ScheduledController);
+
+    expect(outcome).toStrictEqual({ cronName: "unknown", anomalies: [] });
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining("sentry-disabled"),
+      { cron: "*/7 * * * *" },
+      expect.objectContaining({ message: "unrecognized cron fired" }),
+    );
+    const [row] = await coreDb()
+      .select()
+      .from(cronCheckpoints)
+      .where(eq(cronCheckpoints.cronName, "unknown"));
+    expect(row).toBeDefined();
+  });
+});
+
+function nothing(): void {
+  /*
+   * The point is to do nothing.
+   */
+}
+
+describe("the digest reports nothing when there is nothing", () => {
+  it("finds no anomalies against empty tables, and raises nothing", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(nothing);
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome).toStrictEqual({ cronName: "daily-digest", anomalies: [] });
+    // The threshold, not just the list: reporting an empty digest every
+    // day is how an alert channel gets muted.
+    expect(error).not.toHaveBeenCalled();
+  });
+});
+
+describe("stalled imports are re-dispatched, and reported", () => {
+  it("re-enqueues an import that has sat pending past the grace window", async () => {
+    const send = vi.spyOn(env.IMPORTS_QUEUE, "send");
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    const importId = await insertImport({
+      createdAt: nowSeconds() - 20 * 60,
+    });
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(send).toHaveBeenCalledWith(importMessageFor(importId));
+    expect(outcome.anomalies).toContain(
+      "1 import(s) stalled pending and were re-dispatched",
+    );
+  });
+
+  it("leaves an import inside the grace window alone", async () => {
+    // The window points backwards. Flipped, this re-dispatches everything
+    // that has *not* had time to run yet and races the real dispatch.
+    const send = vi.spyOn(env.IMPORTS_QUEUE, "send");
+    await insertImport({ createdAt: nowSeconds() - 5 * 60 });
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(send).not.toHaveBeenCalled();
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+
+  it("gives up on an import at fifteen minutes, not before", async () => {
+    const send = vi.spyOn(env.IMPORTS_QUEUE, "send");
+    await insertImport({ createdAt: nowSeconds() - 15 * 60 - 2 });
+
+    await handleScheduled(DIGEST);
+
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("only re-dispatches imports that are still pending", async () => {
+    // `processing` is claimed by a consumer; `done`, `failed` and
+    // `duplicate` are terminal. Re-enqueueing any of them is work the
+    // system already did.
+    const send = vi.spyOn(env.IMPORTS_QUEUE, "send");
+    const old = nowSeconds() - HOUR;
+    for (const status of [
+      "processing",
+      "done",
+      "failed",
+      "duplicate",
+    ] as const) {
+      await insertImport({ status, createdAt: old });
+    }
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(send).not.toHaveBeenCalled();
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+
+  it("still reports the backlog when the queue send itself fails", async () => {
+    // Law 6: the re-dispatch is the recovery, and a recovery that fails
+    // silently is worse than one that never ran.
+    const error = vi.spyOn(console, "error").mockImplementation(nothing);
+    vi.spyOn(env.IMPORTS_QUEUE, "send").mockRejectedValue(
+      new Error("queue unavailable"),
+    );
+    await insertImport({ createdAt: nowSeconds() - HOUR });
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toContain(
+      "1 import(s) stalled pending and were re-dispatched",
+    );
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining("sentry-disabled"),
+      expect.objectContaining({ surface: "import-redispatch" }),
+      expect.anything(),
+    );
+  });
+});
+
+async function insertRevocation(): Promise<Ulid> {
+  const id = newUlid();
+  await coreDb().insert(stravaRevocations).values({
+    id,
+    refreshToken: "token",
+    createdAt: nowSeconds(),
+  });
+  return id;
+}
+
+describe("stranded Strava revocations are re-dispatched, and reported", () => {
+  it("re-enqueues every row the outbox still holds", async () => {
+    const send = vi.spyOn(env.IMPORTS_QUEUE, "send");
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    const revocationId = await insertRevocation();
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(send).toHaveBeenCalledWith({
+      type: "strava_revoke",
+      revocationId,
+    });
+    expect(outcome.anomalies).toContain(
+      "1 Strava revocation(s) awaited re-dispatch",
+    );
+  });
+
+  it("still reports the backlog when the queue send itself fails", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(nothing);
+    vi.spyOn(env.IMPORTS_QUEUE, "send").mockRejectedValue(
+      new Error("queue unavailable"),
+    );
+    await insertRevocation();
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toContain(
+      "1 Strava revocation(s) awaited re-dispatch",
+    );
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining("sentry-disabled"),
+      expect.objectContaining({ surface: "revocation-redispatch" }),
+      expect.anything(),
+    );
+  });
+});
+
+describe("the weather backlog check", () => {
+  it("reports a run whose weather gave up", async () => {
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    await insertRun({ weatherStatus: "failed" });
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toContain(
+      "weather backlog: 1 run(s) failed/stuck pending",
+    );
+  });
+
+  it("reports a run still pending after a day", async () => {
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    await insertRun({
+      weatherStatus: "pending",
+      startedAt: nowSeconds() - 25 * HOUR,
+    });
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toContain(
+      "weather backlog: 1 run(s) failed/stuck pending",
+    );
+  });
+
+  it("leaves a run pending inside the retry cron's own window alone", async () => {
+    // The hourly retry still owns anything younger than a day. Flagging it
+    // here would report every run logged this morning.
+    await insertRun({
+      weatherStatus: "pending",
+      startedAt: nowSeconds() - 2 * HOUR,
+    });
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+
+  it("ignores runs whose weather is settled", async () => {
+    for (const weatherStatus of ["attached", "manual", "none"] as const) {
+      await insertRun({ weatherStatus, startedAt: nowSeconds() - 30 * HOUR });
+    }
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+});
+
+/**
+ * A reporter that records instead of sending: what each firing checked in
+ * and which digest events it raised. The real one is silent here, because
+ * the test bindings carry no DSN.
+ */
+/**
+ * One row that makes the digest speak under the given kind.
+ */
+async function seedAnomaly(
+  kind:
+    | "extraction-yield"
+    | "abandoned-enrichment"
+    | "strava-revocation"
+    | "outbox"
+    | "review-queue"
+    | "breaker-headroom"
+    | "screener-quiet",
+): Promise<void> {
+  const db = coreDb();
+  switch (kind) {
+    case "extraction-yield": {
+      await db.delete(products);
+      await insertProduct("done", HOUR);
+      return;
+    }
+    case "abandoned-enrichment": {
+      await db.delete(products);
+      await insertProduct("failed", 2 * 24 * HOUR);
+      return;
+    }
+    case "strava-revocation": {
+      await db.insert(stravaRevocations).values({
+        id: newUlid(),
+        refreshToken: "token",
+        createdAt: nowSeconds(),
+      });
+      return;
+    }
+    case "outbox": {
+      // A kind this build cannot drain: the backlog check says so.
+      await db.insert(outbox).values({
+        id: newUlid(),
+        kind: "retired-kind",
+        dedupeKey: newUlid(),
+        payload: "{}",
+        nextAttemptAt: nowSeconds() + HOUR,
+        createdAt: nowSeconds(),
+      });
+      return;
+    }
+    case "review-queue": {
+      await queueItem();
+      return;
+    }
+    // Resolved, so the review-queue kind stays quiet beside it.
+    case "breaker-headroom": {
+      await opened("fingerprint", 3, nowSeconds() - HOUR);
+      await db.update(reviewQueue).set({ status: "approved" });
+      return;
+    }
+    case "screener-quiet": {
+      await screened("pass", QUIET_FEWEST_SCREENED, nowSeconds() - HOUR);
+      return;
+    }
+  }
+}
+
+function speedFinding(
+  check: SpeedFinding["check"],
+  index: number,
+): SpeedFinding {
+  return {
+    check,
+    route: `/r/${String(index)}`,
+    metric: "LCP",
+    line: `${check} ${String(index)}`,
+  };
+}
+
+function recordingReporter() {
+  const checkIns: { slug: string; schedule: string; status: string }[] = [];
+  const events: { error: unknown; report: SentryReport }[] = [];
+  const reporter: CronReporter = {
+    checkIn: (monitor) => {
+      checkIns.push({ ...monitor, status: "in_progress" });
+      return {
+        finish: (status) => {
+          checkIns.push({ ...monitor, status });
+        },
+      };
+    },
+    report: (error, report) => {
+      events.push({ error, report });
+    },
+  };
+  return { reporter, checkIns, events };
+}
+
+describe("the digest reports each kind on its own (OPS-2)", () => {
+  it("raises one event per kind, fingerprinted by kind and day and tagged", async () => {
+    await insertRun({ weatherStatus: "failed" });
+    await insertImport({ createdAt: nowSeconds() - HOUR });
+    const { reporter, events } = recordingReporter();
+
+    const outcome = await handleScheduled(DIGEST, reporter);
+
+    const day = new Date(nowSeconds() * 1000).toISOString().slice(0, 10);
+    expect(outcome.anomalies).toHaveLength(2);
+    expect(events.map((event) => event.report)).toStrictEqual([
+      {
+        context: { kind: "weather-backlog", anomalies: outcome.anomalies[0] },
+        tags: { digest: "daily", digest_kind: "weather-backlog" },
+        fingerprint: ["daily-digest", "weather-backlog", day],
+      },
+      {
+        context: { kind: "stalled-import", anomalies: outcome.anomalies[1] },
+        tags: { digest: "daily", digest_kind: "stalled-import" },
+        fingerprint: ["daily-digest", "stalled-import", day],
+      },
+    ]);
+    // The title too: one "daily digest anomalies" for every kind is the
+    // same issue under a different fingerprint, and reads as one.
+    expect(events.map((event) => event.error)).toStrictEqual([
+      expect.objectContaining({ message: "daily digest: weather-backlog" }),
+      expect.objectContaining({ message: "daily digest: stalled-import" }),
+    ]);
+  });
+
+  it("joins a kind's lines into one event rather than one event a line", () => {
+    expect(
+      digestReport("outbox", ["2 rows owed", "1 row gave up"], "2026-09-25"),
+    ).toStrictEqual({
+      context: { kind: "outbox", anomalies: "2 rows owed; 1 row gave up" },
+      tags: { digest: "daily", digest_kind: "outbox" },
+      fingerprint: ["daily-digest", "outbox", "2026-09-25"],
+    });
+  });
+
+  it("raises nothing on a quiet day", async () => {
+    const { reporter, events } = recordingReporter();
+
+    await handleScheduled(DIGEST, reporter);
+
+    expect(events).toStrictEqual([]);
+  });
+
+  it("hands each kind to Sentry by default, which logs it without a DSN", async () => {
+    // The production reporter, not the recording one: nothing else shows
+    // that the digest's events reach `reportException` at all.
+    const error = vi.spyOn(console, "error").mockImplementation(nothing);
+    await insertRun({ weatherStatus: "failed" });
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining("sentry-disabled"),
+      { kind: "weather-backlog", anomalies: outcome.anomalies[0] },
+      expect.objectContaining({ message: "daily digest: weather-backlog" }),
+    );
+  });
+
+  it.each([
+    "extraction-yield",
+    "abandoned-enrichment",
+    "strava-revocation",
+    "outbox",
+    "review-queue",
+    "breaker-headroom",
+    "screener-quiet",
+  ] as const)("reports %s under its own kind", async (kind) => {
+    await seedAnomaly(kind);
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    const { reporter, events } = recordingReporter();
+
+    await handleScheduled(DIGEST, reporter);
+
+    expect(events.map((event) => event.report.tags)).toContainEqual({
+      digest: "daily",
+      digest_kind: kind,
+    });
+  });
+
+  it("names a missing deployment value as its own kind (design 237)", async () => {
+    const { reporter, events } = recordingReporter();
+    Reflect.deleteProperty(env, "TAKEDOWN_SECRET");
+
+    const outcome = await handleScheduled(DIGEST, reporter);
+
+    expect(outcome.anomalies).toStrictEqual([
+      "TAKEDOWN_SECRET is not set (deployment plan §2: before public)",
+    ]);
+    expect(events.map((event) => event.report.tags)).toStrictEqual([
+      { digest: "daily", digest_kind: "config" },
+    ]);
+  });
+
+  it("names every kind it can raise, and no other", () => {
+    expect(digestKinds).toStrictEqual([
+      "weather-backlog",
+      "extraction-yield",
+      "abandoned-enrichment",
+      "strava-revocation",
+      "outbox",
+      "stalled-import",
+      "review-queue",
+      "breaker-headroom",
+      "screener-quiet",
+      "account-deletion",
+      "speed",
+      "media-backup",
+      "config",
+    ]);
+  });
+
+  it("hands the speed digest today's UTC day and reports what it could not do (design 165)", async () => {
+    const { reporter, events } = recordingReporter();
+    const asked: string[] = [];
+
+    const outcome = await handleScheduled(DIGEST, reporter, {
+      speed: (today, anomalies) => {
+        asked.push(today);
+        anomalies.push("speed rollup for 2026-10-30 failed: answered 503");
+        return Promise.resolve();
+      },
+    });
+
+    expect(asked).toStrictEqual([
+      new Date(nowSeconds() * 1000).toISOString().slice(0, 10),
+    ]);
+    expect(outcome.anomalies).toStrictEqual([
+      "speed rollup for 2026-10-30 failed: answered 503",
+    ]);
+    expect(events.map((event) => event.report.tags)).toStrictEqual([
+      { digest: "daily", digest_kind: "speed" },
+    ]);
+  });
+
+  it("backs up a new photo into MEDIA_BACKUP on the daily firing (D-172, design 186)", async () => {
+    const key = `items/${newUlid()}/${newUlid()}/original.jpg`;
+    await env.MEDIA.put(key, "photo bytes");
+
+    await handleScheduled(DIGEST, recordingReporter().reporter, {});
+
+    const copy = await env.MEDIA_BACKUP.get(key);
+    expect(await copy?.text()).toBe("photo bytes");
+  });
+
+  it("expires a deleted photo's backup copy by the firing's own clock (#529)", async () => {
+    const key = `gone/items/${newUlid()}/${newUlid()}`;
+    // R2 stamps the upload with the real clock; the firing reads Date,
+    // moved past the 30 days.
+    await env.MEDIA_BACKUP.put(key, "deleted photo");
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.now() + 31 * 24 * 60 * 60 * 1000);
+    try {
+      await handleScheduled(DIGEST, recordingReporter().reporter, {});
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(await env.MEDIA_BACKUP.head(key)).toBeNull();
+  });
+
+  it("reports each hourly speed finding as its own event on the :30 firing (design 165)", async () => {
+    const { reporter, events } = recordingReporter();
+    const asked: number[] = [];
+    // Bracketed, not compared with a second read of the clock: a second
+    // can tick between the handler's read and the test's, and under
+    // Stryker's slower dry run it did (#303).
+    const before = nowSeconds();
+
+    await handleScheduled(ENRICHMENT_RETRY, reporter, {
+      speedHourly: (now, report) => {
+        asked.push(now);
+        report({
+          check: "drift",
+          route: "/closet/",
+          metric: "LCP",
+          line: "LCP p75 on /closet/ (narrow) has been slow",
+        });
+        return Promise.resolve();
+      },
+    });
+
+    const after = nowSeconds();
+    expect(asked).toHaveLength(1);
+    expect(asked[0]).toBeGreaterThanOrEqual(before);
+    expect(asked[0]).toBeLessThanOrEqual(after);
+    const day = new Date(nowSeconds() * 1000).toISOString().slice(0, 10);
+    expect(events.map((event) => event.error)).toStrictEqual([
+      expect.objectContaining({ message: "speed: drift" }),
+    ]);
+    expect(events.map((event) => event.report)).toStrictEqual([
+      {
+        context: {
+          check: "drift",
+          route: "/closet/",
+          metric: "LCP",
+          anomalies: "LCP p75 on /closet/ (narrow) has been slow",
+        },
+        tags: {
+          digest: "hourly",
+          cron: "enrichment-retry",
+          speed_check: "drift",
+        },
+        fingerprint: ["perf", "drift", "/closet/", "LCP", day],
+      },
+    ]);
+  });
+
+  it(`sends at most ${String(SPEED_EVENTS_PER_CHECK)} findings a check as their own events, the rest as one (SA-M34)`, async () => {
+    const { reporter, events } = recordingReporter();
+
+    await handleScheduled(ENRICHMENT_RETRY, reporter, {
+      speedHourly: (_now, report) => {
+        for (let index = 0; index < 500; index += 1) {
+          report(speedFinding("deploy-regression", index));
+        }
+        report(speedFinding("drift", 0));
+        return Promise.resolve();
+      },
+    });
+
+    const day = new Date(nowSeconds() * 1000).toISOString().slice(0, 10);
+    const speed = events.filter(
+      (event) => event.report.tags.speed_check !== undefined,
+    );
+    expect(speed.map((event) => event.report.fingerprint)).toStrictEqual([
+      ...[0, 1, 2, 3, 4].map((index) => [
+        "perf",
+        "deploy-regression",
+        `/r/${String(index)}`,
+        "LCP",
+        day,
+      ]),
+      ["perf", "deploy-regression", "more", day],
+      ["perf", "drift", "/r/0", "LCP", day],
+    ]);
+    expect(
+      speed.map((event) =>
+        event.error instanceof Error ? event.error.message : "",
+      ),
+    ).toStrictEqual([
+      ...Array.from({ length: 6 }, () => "speed: deploy-regression"),
+      "speed: drift",
+    ]);
+    expect(speed[5]?.report).toStrictEqual({
+      context: {
+        check: "deploy-regression",
+        more: "495",
+        anomalies: [
+          "495 more findings than the 5 sent",
+          ...[5, 6, 7, 8, 9].map(
+            (index) => `deploy-regression ${String(index)}`,
+          ),
+        ].join("; "),
+      },
+      tags: {
+        digest: "hourly",
+        cron: "enrichment-retry",
+        speed_check: "deploy-regression",
+      },
+      fingerprint: ["perf", "deploy-regression", "more", day],
+    });
+  });
+
+  it("sends exactly the cap with no extra event", () => {
+    const findings = Array.from(
+      { length: SPEED_EVENTS_PER_CHECK },
+      (_, index): SpeedFinding => ({
+        check: "drift",
+        route: `/r/${String(index)}`,
+        metric: "LCP",
+        line: "x",
+      }),
+    );
+    expect(speedReports(findings, "2026-11-16")).toHaveLength(
+      SPEED_EVENTS_PER_CHECK,
+    );
+  });
+
+  it("still sends what one check found when the speed step throws", async () => {
+    const { reporter, events } = recordingReporter();
+    const failure = new Error("SQL API down");
+    const firing = handleScheduled(ENRICHMENT_RETRY, reporter, {
+      speedHourly: (_now, report) => {
+        report({
+          check: "drift",
+          route: "/closet/",
+          metric: "LCP",
+          line: "slow",
+        });
+        return Promise.reject(failure);
+      },
+    });
+    await expect(firing).rejects.toBe(failure);
+    expect(
+      events.filter((event) => event.report.tags.speed_check === "drift"),
+    ).toHaveLength(1);
+  });
+
+  it("does not run the hourly speed checks on the other firings", async () => {
+    const speedHourly = vi.fn(() => Promise.resolve());
+    await handleScheduled(DIGEST, recordingReporter().reporter, {
+      speedHourly,
+    });
+    expect(speedHourly).not.toHaveBeenCalled();
+  });
+
+  it("runs the other checks when the speed digest throws, then fails the firing", async () => {
+    await insertRun({ weatherStatus: "failed" });
+    const { reporter, events, checkIns } = recordingReporter();
+    const failure = new Error("ops database unavailable");
+
+    const firing = handleScheduled(DIGEST, reporter, {
+      speed: () => Promise.reject(failure),
+    });
+
+    await expect(firing).rejects.toBe(failure);
+    expect(events.map((event) => event.report.tags)).toContainEqual({
+      digest: "daily",
+      digest_kind: "weather-backlog",
+    });
+    expect(checkIns.at(-1)?.status).toBe("error");
+  });
+
+  it("runs the purge it is handed and reports what it could not finish (ACC-9)", async () => {
+    const { reporter, events } = recordingReporter();
+    const purged: string[][] = [];
+
+    const outcome = await handleScheduled(DIGEST, reporter, {
+      purgeAccounts: (anomalies) => {
+        purged.push(anomalies);
+        anomalies.push("1 account deletion failed and is retried tomorrow");
+        return Promise.resolve();
+      },
+    });
+
+    expect(purged).toHaveLength(1);
+    expect(outcome.anomalies).toStrictEqual([
+      "1 account deletion failed and is retried tomorrow",
+    ]);
+    expect(events.map((event) => event.report.tags)).toStrictEqual([
+      { digest: "daily", digest_kind: "account-deletion" },
+    ]);
+  });
+
+  it("purges only on the daily firing", async () => {
+    let calls = 0;
+    await handleScheduled(ENRICHMENT_RETRY, undefined, {
+      purgeAccounts: () => {
+        calls += 1;
+        return Promise.resolve();
+      },
+    });
+    expect(calls).toBe(0);
+  });
+});
+
+/**
+An email debt already due, which any drain claims (its attempts go up).
+*/
+async function seedDueEmail(): Promise<string> {
+  const id = newUlid();
+  await coreDb()
+    .insert(outbox)
+    .values({
+      id,
+      kind: "email",
+      dedupeKey: newUlid(),
+      payload: "{}",
+      nextAttemptAt: nowSeconds() - 60,
+      createdAt: nowSeconds() - HOUR,
+    });
+  return id;
+}
+
+async function attemptsOf(id: string) {
+  const [row] = await coreDb()
+    .select({ attempts: outbox.attempts })
+    .from(outbox)
+    .where(eq(outbox.id, id));
+  return row?.attempts;
+}
+
+function today(): string {
+  return new Date(nowSeconds() * 1000).toISOString().slice(0, 10);
+}
+
+describe("hourly firings report what they find (design 162)", () => {
+  const WEATHER_RETRY = { cron: "0 * * * *" } as ScheduledController;
+
+  it("sends a firing's lines as one event, fingerprinted by cron and day", async () => {
+    const { reporter, events } = recordingReporter();
+
+    const outcome = await handleScheduled(WEATHER_RETRY, reporter, {
+      sweepExports: (anomalies) => {
+        anomalies.push(
+          "2 data export(s) stalled and were re-sent",
+          "1 failed data export(s) could not be deleted",
+        );
+        return Promise.resolve();
+      },
+    });
+
+    expect(outcome.anomalies).toStrictEqual([
+      "2 data export(s) stalled and were re-sent",
+      "1 failed data export(s) could not be deleted",
+    ]);
+    expect(events.map((event) => event.report)).toStrictEqual([
+      {
+        context: {
+          cron: "weather-retry",
+          anomalies:
+            "2 data export(s) stalled and were re-sent; 1 failed data export(s) could not be deleted",
+        },
+        tags: { digest: "hourly", cron: "weather-retry" },
+        fingerprint: ["hourly", "weather-retry", today()],
+      },
+    ]);
+    expect(events.map((event) => event.error)).toStrictEqual([
+      expect.objectContaining({ message: "hourly: weather-retry" }),
+    ]);
+  });
+
+  it.each([
+    ["0 * * * *", "weather-retry"],
+    ["30 * * * *", "enrichment-retry"],
+    ["15 * * * *", "screening-retry"],
+  ] as const)(
+    "%s names owed email its drain could not send",
+    async (cron, cronName) => {
+      vi.spyOn(console, "error").mockImplementation(nothing);
+      await seedDueEmail();
+      const { reporter, events } = recordingReporter();
+
+      const outcome = await handleScheduled(
+        { cron } as ScheduledController,
+        reporter,
+      );
+
+      expect(outcome.anomalies).toContain(
+        "1 of 1 email outbox row(s) did not settle",
+      );
+      expect(events.map((event) => event.report.fingerprint)).toStrictEqual([
+        ["hourly", cronName, today()],
+      ]);
+    },
+  );
+
+  it("raises nothing for an hour with nothing to say", async () => {
+    const { reporter, events } = recordingReporter();
+
+    await handleScheduled(WEATHER_RETRY, reporter);
+
+    expect(events).toStrictEqual([]);
+  });
+
+  it("reports what the steps found when one of them throws", async () => {
+    const boom = new Error("sweep fell over");
+    const { reporter, events } = recordingReporter();
+
+    await expect(
+      handleScheduled(WEATHER_RETRY, reporter, {
+        sweepExports: (anomalies) => {
+          anomalies.push("1 expired data export(s) could not be deleted");
+          return Promise.reject(boom);
+        },
+      }),
+    ).rejects.toBe(boom);
+
+    expect(events.map((event) => event.report.context)).toStrictEqual([
+      {
+        cron: "weather-retry",
+        anomalies: "1 expired data export(s) could not be deleted",
+      },
+    ]);
+  });
+
+  it("is never tagged as the daily digest, whose rule pages on every event", () => {
+    expect(
+      hourlyReport("screening-retry", ["a", "b"], "2026-10-29"),
+    ).toStrictEqual({
+      context: { cron: "screening-retry", anomalies: "a; b" },
+      tags: { digest: "hourly", cron: "screening-retry" },
+      fingerprint: ["hourly", "screening-retry", "2026-10-29"],
+    });
+  });
+});
+
+describe("a hold breaker at its ceiling (design 164)", () => {
+  it("raises its own event from the screening sweep, one issue a cause a day", async () => {
+    await opened("fingerprint", FINGERPRINT_HOLDS_PER_HOUR, nowSeconds() - 60);
+    const { reporter, events } = recordingReporter();
+
+    await handleScheduled(
+      { cron: "15 * * * *" } as ScheduledController,
+      reporter,
+    );
+
+    const breakers = events.filter((event) =>
+      event.report.fingerprint?.includes("breaker"),
+    );
+    expect(breakers.map((event) => event.report)).toStrictEqual([
+      breakerReport(
+        {
+          cause: "fingerprint",
+          isOver: true,
+          count: FINGERPRINT_HOLDS_PER_HOUR,
+          ceiling: FINGERPRINT_HOLDS_PER_HOUR,
+        },
+        today(),
+      ),
+    ]);
+    expect(breakers.map((event) => event.error)).toStrictEqual([
+      expect.objectContaining({ message: "breaker: fingerprint" }),
+    ]);
+  });
+
+  it("raises a burst split across the hour before, which neither hour holds alone (R-172)", async () => {
+    await opened("fingerprint", 3, nowSeconds() - HOUR - 60);
+    await opened("fingerprint", 2, nowSeconds() - HOUR + 60);
+    const { reporter, events } = recordingReporter();
+
+    await handleScheduled(
+      { cron: "15 * * * *" } as ScheduledController,
+      reporter,
+    );
+
+    expect(
+      events
+        .filter((event) => event.report.fingerprint?.includes("breaker"))
+        .map((event) => event.report.context.anomalies),
+    ).toStrictEqual([
+      "fingerprint holds reached 5 of 5 within an hour; past the ceiling they stop",
+    ]);
+  });
+
+  it("looks back two hours and no further", async () => {
+    await opened("fingerprint", 5, nowSeconds() - 2 * HOUR - 60);
+    const { reporter, events } = recordingReporter();
+
+    await handleScheduled(
+      { cron: "15 * * * *" } as ScheduledController,
+      reporter,
+    );
+    expect(
+      events.filter((event) => event.report.fingerprint?.includes("breaker")),
+    ).toStrictEqual([]);
+
+    await opened("fingerprint", 5, nowSeconds() - 2 * HOUR + 60);
+    const later = recordingReporter();
+    await handleScheduled(
+      { cron: "15 * * * *" } as ScheduledController,
+      later.reporter,
+    );
+    expect(
+      later.events.filter((event) =>
+        event.report.fingerprint?.includes("breaker"),
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("raises nothing on an hour under every ceiling", async () => {
+    await opened("fingerprint", FINGERPRINT_HOLDS_PER_HOUR - 1, nowSeconds());
+    const { reporter, events } = recordingReporter();
+
+    await handleScheduled(
+      { cron: "15 * * * *" } as ScheduledController,
+      reporter,
+    );
+
+    expect(
+      events.filter((event) => event.report.fingerprint?.includes("breaker")),
+    ).toStrictEqual([]);
+  });
+
+  it("names the cause, the count and the ceiling, grouped by cause and day", () => {
+    expect(
+      breakerReport(
+        { cause: "reports", isOver: true, count: 12, ceiling: 12 },
+        "2026-10-31",
+      ),
+    ).toStrictEqual({
+      context: {
+        breaker: "reports",
+        anomalies:
+          "reports holds reached 12 of 12 within an hour; past the ceiling they stop",
+      },
+      tags: { breaker: "reports" },
+      fingerprint: ["breaker", "reports", "2026-10-31"],
+    });
+  });
+});
+
+describe("the digest's breaker lines (design 164)", () => {
+  it("names a breaker whose busiest hour came within half its ceiling", async () => {
+    await opened("fingerprint", 3, nowSeconds() - HOUR);
+    await opened("reports", 4, nowSeconds() - HOUR);
+    await coreDb().update(reviewQueue).set({ status: "approved" });
+
+    const outcome = await handleScheduled(DIGEST, recordingReporter().reporter);
+
+    expect(outcome.anomalies).toContain(
+      "fingerprint breaker's busiest hour in the last day reached 60% of its ceiling",
+    );
+    expect(outcome.anomalies.join("; ")).not.toContain("reports breaker");
+  });
+
+  it("names one at exactly half its ceiling", async () => {
+    await opened("reports", 5, nowSeconds() - HOUR);
+    await coreDb().update(reviewQueue).set({ status: "approved" });
+
+    const outcome = await handleScheduled(DIGEST, recordingReporter().reporter);
+
+    expect(outcome.anomalies).toContain(
+      "reports breaker's busiest hour in the last day reached 50% of its ceiling",
+    );
+  });
+
+  it("says a week of screenings flagged and queued nothing", async () => {
+    await screened("pass", QUIET_FEWEST_SCREENED, nowSeconds() - HOUR);
+
+    const outcome = await handleScheduled(DIGEST, recordingReporter().reporter);
+
+    expect(outcome.anomalies).toContain(
+      "The classifier flagged or queued none of 50 photos screened this week; check its model has not changed",
+    );
+  });
+});
+
+describe("the digest runs every check, whichever throw (design 162)", () => {
+  it("drains the outbox after a check before it throws, then throws", async () => {
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    const id = await seedDueEmail();
+    const key = await staleCount();
+    const boom = new Error("weather read fell over");
+    // Fail only the weather backlog's read: the first check in the list.
+    const prepare = env.DIALED_CORE.prepare.bind(env.DIALED_CORE);
+    vi.spyOn(env.DIALED_CORE, "prepare").mockImplementation((query) => {
+      if (query.includes('"weather_status"')) throw boom;
+      return prepare(query);
+    });
+    const { reporter, events, checkIns } = recordingReporter();
+
+    await expect(handleScheduled(DIGEST, reporter)).rejects.toBe(boom);
+
+    expect(await attemptsOf(id)).toBe(1);
+    expect(events.map((event) => event.report.tags)).toStrictEqual([
+      { digest: "daily", digest_kind: "outbox" },
+    ]);
+    // The upkeep after the checks ran too.
+    expect(await isCountKept(key)).toBe(false);
+    expect(checkIns.map((checkIn) => checkIn.status)).toStrictEqual([
+      "in_progress",
+      "error",
+    ]);
+  });
+
+  it("reports what a check found before it threw", async () => {
+    const boom = new Error("purge fell over");
+    const { reporter, events } = recordingReporter();
+
+    await expect(
+      handleScheduled(DIGEST, reporter, {
+        purgeAccounts: (anomalies) => {
+          anomalies.push("1 account deletion failed and is retried tomorrow");
+          return Promise.reject(boom);
+        },
+      }),
+    ).rejects.toBe(boom);
+
+    expect(events.map((event) => event.report.context)).toStrictEqual([
+      {
+        kind: "account-deletion",
+        anomalies: "1 account deletion failed and is retried tomorrow",
+      },
+    ]);
+  });
+
+  it("throws every failure together when more than one check throws", async () => {
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    const weather = new Error("weather read fell over");
+    const purge = new Error("purge fell over");
+    const prepare = env.DIALED_CORE.prepare.bind(env.DIALED_CORE);
+    vi.spyOn(env.DIALED_CORE, "prepare").mockImplementation((query) => {
+      if (query.includes('"weather_status"')) throw weather;
+      return prepare(query);
+    });
+
+    const firing = handleScheduled(DIGEST, recordingReporter().reporter, {
+      purgeAccounts: () => Promise.reject(purge),
+    });
+
+    await expect(firing).rejects.toMatchObject({
+      message: "several upkeep steps failed",
+      errors: [weather, purge],
+    });
+  });
+});
+
+describe("every hourly step runs, whichever fail (law 5)", () => {
+  it.each(["0 * * * *", "30 * * * *", "15 * * * *"])(
+    "%s drains the email owed",
+    async (cron) => {
+      vi.spyOn(console, "error").mockImplementation(nothing);
+      const id = await seedDueEmail();
+
+      await handleScheduled({ cron } as ScheduledController);
+
+      expect(await attemptsOf(id)).toBe(1);
+    },
+  );
+
+  it("re-asks about handles on the :15 firing alone, with that firing's anomalies", async () => {
+    const asked: string[] = [];
+    const rescreenHandles = (anomalies: string[]) => {
+      asked.push("asked");
+      anomalies.push("1 handle(s) still unscreened");
+      return Promise.resolve();
+    };
+
+    const quarter = await handleScheduled(
+      { cron: "15 * * * *" } as ScheduledController,
+      undefined,
+      { rescreenHandles },
+    );
+    await handleScheduled(
+      { cron: "0 * * * *" } as ScheduledController,
+      undefined,
+      {
+        rescreenHandles,
+      },
+    );
+    await handleScheduled(ENRICHMENT_RETRY, undefined, { rescreenHandles });
+
+    expect(asked).toStrictEqual(["asked"]);
+    expect(quarter.anomalies).toContain("1 handle(s) still unscreened");
+  });
+
+  it("drains the :15 firing's email before the handle re-ask starts waiting on moderation", async () => {
+    const id = await seedDueEmail();
+    const attemptsWhenAsked: (number | undefined)[] = [];
+    const rescreenHandles = async () => {
+      attemptsWhenAsked.push(await attemptsOf(id));
+    };
+
+    await handleScheduled(
+      { cron: "15 * * * *" } as ScheduledController,
+      undefined,
+      { rescreenHandles },
+    );
+
+    expect(attemptsWhenAsked).toStrictEqual([1]);
+  });
+
+  it("drains the hour's email after a sweep that throws, then throws what the sweep did", async () => {
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    const id = await seedDueEmail();
+    const boom = new Error("sweep fell over");
+    const { reporter, checkIns } = recordingReporter();
+
+    await expect(
+      handleScheduled({ cron: "0 * * * *" } as ScheduledController, reporter, {
+        sweepExports: () => Promise.reject(boom),
+      }),
+    ).rejects.toBe(boom);
+
+    expect(await attemptsOf(id)).toBe(1);
+    expect(checkIns.map((checkIn) => checkIn.status)).toStrictEqual([
+      "in_progress",
+      "error",
+    ]);
+  });
+
+  it("throws every failure together when more than one step fails", async () => {
+    const boom = new Error("database gone");
+    const sweep = new Error("sweep fell over");
+    // The heartbeat lands; every core statement after it fails, so the
+    // weather retry and the drain both throw around the sweep.
+    const prepare = env.DIALED_CORE.prepare.bind(env.DIALED_CORE);
+    let statements = 0;
+    vi.spyOn(env.DIALED_CORE, "prepare").mockImplementation((query) => {
+      statements += 1;
+      if (statements > 1) throw boom;
+      return prepare(query);
+    });
+    let swept = 0;
+
+    const firing = handleScheduled(
+      { cron: "0 * * * *" } as ScheduledController,
+      recordingReporter().reporter,
+      {
+        sweepExports: () => {
+          swept += 1;
+          return Promise.reject(sweep);
+        },
+      },
+    );
+
+    await expect(firing).rejects.toBeInstanceOf(AggregateError);
+    // The weather retry, the sweep, the removal reminders (C6), the email
+    // drain, the product-link drain (D-113 Q1) and the zone fill (design
+    // 142), in that order.
+    await expect(firing).rejects.toMatchObject({
+      message: "several upkeep steps failed",
+      errors: [boom, sweep, boom, boom, boom, boom],
+    });
+    expect(swept).toBe(1);
+  });
+});
+
+describe("every cron checks in (OPS-3)", () => {
+  it.each([
+    ["0 12 * * *", "daily-digest"],
+    ["0 * * * *", "weather-retry"],
+    ["30 * * * *", "enrichment-retry"],
+    ["15 * * * *", "screening-retry"],
+  ])("%s opens and closes one firing of %s", async (cron, slug) => {
+    const { reporter, checkIns } = recordingReporter();
+
+    await handleScheduled({ cron } as ScheduledController, reporter);
+
+    expect(checkIns).toStrictEqual([
+      { slug, schedule: cron, status: "in_progress" },
+      { slug, schedule: cron, status: "ok" },
+    ]);
+  });
+
+  it("closes a firing that throws as an error, and still throws", async () => {
+    const { reporter, checkIns } = recordingReporter();
+    const boom = new Error("database gone");
+    // Let the heartbeat row land, then fail the cron's own first query, so
+    // the throw comes from inside the work the check-in brackets. Only that
+    // one: the digest now runs on past a failed check (design 162), and a
+    // `prepare` that throws synchronously inside drizzle's `batch()`
+    // leaves an unhandled rejection behind, which real D1 never does.
+    const prepare = env.DIALED_CORE.prepare.bind(env.DIALED_CORE);
+    let statements = 0;
+    vi.spyOn(env.DIALED_CORE, "prepare").mockImplementation((query) => {
+      statements += 1;
+      if (statements === 2) throw boom;
+      return prepare(query);
+    });
+
+    await expect(handleScheduled(DIGEST, reporter)).rejects.toBe(boom);
+
+    // Rethrown, so the platform records the failed invocation as well.
+    expect(checkIns.map((checkIn) => checkIn.status)).toStrictEqual([
+      "in_progress",
+      "error",
+    ]);
+  });
+
+  it("does not check in for a schedule it does not know", async () => {
+    const { reporter, checkIns } = recordingReporter();
+    vi.spyOn(console, "error").mockImplementation(nothing);
+
+    await handleScheduled(
+      { cron: "*/7 * * * *" } as ScheduledController,
+      reporter,
+    );
+
+    expect(checkIns).toStrictEqual([]);
+  });
+});
+
+/**
+A product in the given extraction state, created `ageSeconds` ago.
+*/
+async function insertProduct(
+  status: typeof products.$inferInsert.extractionStatus,
+  ageSeconds: number,
+): Promise<string> {
+  const db = coreDb();
+  const brand = await createOrGetBrand(db, `Sweep ${newUlid()}`);
+  const product = await createOrGetProduct(db, {
+    brandId: brand.id,
+    name: `Tee ${newUlid()}`,
+    sourceUrl: "https://shop.example.com/p",
+    createdBy: newUlid(),
+  });
+  await db
+    .update(products)
+    .set({ extractionStatus: status, createdAt: nowSeconds() - ageSeconds })
+    .where(eq(products.id, product.id));
+  return product.id;
+}
+
+describe("stalled enrichments are re-dispatched on their own hourly sweep", () => {
+  beforeEach(async () => {
+    await coreDb().delete(products);
+  });
+
+  it("claims a day of failures longer than D1 binds in one statement", async () => {
+    // A day's failures are unbounded, and D1 refuses more than 100 bound
+    // parameters in one statement — which failed the whole claim, and the
+    // re-dispatch with it, on exactly the day an outage made the most.
+    for (let index = 0; index < 150; index += 1) {
+      await insertProduct("failed", HOUR);
+    }
+
+    await handleScheduled(ENRICHMENT_RETRY);
+
+    const statuses = await coreDb()
+      .select({ status: products.extractionStatus })
+      .from(products);
+    expect(statuses).toHaveLength(150);
+    expect(statuses.every((row) => row.status === "pending")).toBe(true);
+  });
+
+  it("re-enqueues a product that has sat pending past the grace window", async () => {
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    const productId = await insertProduct("pending", 20 * 60);
+
+    const outcome = await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(outcome.cronName).toBe("enrichment-retry");
+    expect(send).toHaveBeenCalledWith({ type: "enrich", productId });
+    expect(outcome.anomalies).toStrictEqual([
+      "1 product(s) unfinished by enrichment and were re-dispatched",
+    ]);
+  });
+
+  it("leaves a product inside the grace window alone", async () => {
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    await insertProduct("pending", 5 * 60);
+
+    const outcome = await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).not.toHaveBeenCalled();
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+
+  it("gives up on a product at fifteen minutes, not before", async () => {
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    await insertProduct("pending", 15 * 60 + 2);
+
+    await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-drives a failed product too, so an outage heals itself", async () => {
+    // **Composition comes only from the model now**, so a job that
+    // exhausted its retries while OpenAI was unreachable dead-lettered
+    // and marked the product `failed` — and `requestEnrichment` only claims
+    // `failed` on a *new paste*, so nothing would look at it again. The row
+    // cannot tell "this page states no composition" from "the model was
+    // down", and the costs are asymmetric: re-fetching a page that has
+    // nothing is cheap, abandoning a product is forever.
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    const productId = await insertProduct("failed", HOUR);
+
+    const outcome = await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).toHaveBeenCalledWith({ type: "enrich", productId });
+    expect(outcome.anomalies).toStrictEqual([
+      "1 product(s) unfinished by enrichment and were re-dispatched",
+    ]);
+    // And claimed: the consumer treats only `pending` as work, so a
+    // re-dispatch that left the row `failed` was a message it acked and
+    // ignored. The flip is what makes the re-drive real (PR #72 review).
+    const [row] = await coreDb()
+      .select({ status: products.extractionStatus })
+      .from(products)
+      .where(eq(products.id, productId));
+    expect(row?.status).toBe("pending");
+  });
+
+  it("re-drives a failed product until its tries reach the cap, then leaves it failed", async () => {
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    const below = await insertProduct("failed", HOUR);
+    const atCap = await insertProduct("failed", HOUR);
+    await coreDb()
+      .update(products)
+      .set({ extractionTries: ENRICHMENT_SWEEP_TRIES - 1 })
+      .where(eq(products.id, below));
+    await coreDb()
+      .update(products)
+      .set({ extractionTries: ENRICHMENT_SWEEP_TRIES })
+      .where(eq(products.id, atCap));
+
+    await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledWith({ type: "enrich", productId: below });
+    const [row] = await coreDb()
+      .select({ status: products.extractionStatus })
+      .from(products)
+      .where(eq(products.id, atCap));
+    expect(row?.status).toBe("failed");
+  });
+
+  it("claims the row even when the send then fails, so the next sweep owns it", async () => {
+    vi.spyOn(env.ENRICHMENT_QUEUE, "send").mockRejectedValue(
+      new Error("queue down"),
+    );
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    const productId = await insertProduct("failed", HOUR);
+
+    await handleScheduled(ENRICHMENT_RETRY);
+
+    const [row] = await coreDb()
+      .select({ status: products.extractionStatus })
+      .from(products)
+      .where(eq(products.id, productId));
+    expect(row?.status).toBe("pending");
+  });
+
+  it("leaves a failed product inside the grace window alone, like a pending one", async () => {
+    // The consumer may still be on it: a job that failed a minute ago is
+    // being retried by the queue, and a sweep that flipped it back to
+    // pending would race that retry.
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    await insertProduct("failed", 5 * 60);
+
+    const outcome = await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).not.toHaveBeenCalled();
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+
+  it("gives up on a failed product at fifteen minutes, not before", async () => {
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    await insertProduct("failed", 15 * 60 + 2);
+
+    await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops re-driving a failed product after its first day", async () => {
+    // Unbounded, a page that 404s — or 403s even through the proxy, at a
+    // credit a try — is re-fetched every hour for the life of the row.
+    // Past a day it is abandoned, which the digest reports instead.
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    const productId = await insertProduct("failed", 25 * HOUR);
+
+    const outcome = await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).not.toHaveBeenCalled();
+    expect(outcome.anomalies).toStrictEqual([]);
+    const [row] = await coreDb()
+      .select({ status: products.extractionStatus })
+      .from(products)
+      .where(eq(products.id, productId));
+    expect(row?.status).toBe("failed");
+  });
+
+  it("lists a product on the Desk's Gave up the hour the sweep stops re-driving it", async () => {
+    // D6 is the jobs the system stopped retrying (R-119): a failure inside
+    // the day is parked on the product, and listed when the day runs out.
+    const productId = await insertProduct("failed", 25 * HOUR);
+    await coreDb()
+      .update(products)
+      .set({ extractionError: "Page returned 404", extractionTries: 9 })
+      .where(eq(products.id, productId));
+
+    await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(await gaveUpRow("enrichment", productId)).toMatchObject({
+      reason: "The shop returned 404.",
+      tries: 9,
+    });
+  });
+
+  it("re-drives a failed product right up to the day, not one second past it", async () => {
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    await insertProduct("failed", 24 * HOUR - 2);
+
+    await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps re-driving a pending product past the day, because pending is a claim", async () => {
+    // `pending` means the row owes an extraction and nothing has said
+    // otherwise; only `failed` has a verdict to stop on.
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    await insertProduct("pending", 3 * 24 * HOUR);
+
+    await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves alone the states that are not enrichment's to finish", async () => {
+    // `none` was never asked for, and `done` succeeded. Re-driving either
+    // would be work the system already did, or never owed.
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    for (const status of ["none", "done"] as const) {
+      await insertProduct(status, HOUR);
+    }
+
+    const outcome = await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(send).not.toHaveBeenCalled();
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+
+  it("still reports the backlog when the queue send itself fails", async () => {
+    vi.spyOn(env.ENRICHMENT_QUEUE, "send").mockRejectedValue(
+      new Error("queue down"),
+    );
+    const error = vi.spyOn(console, "error").mockImplementation(nothing);
+    await insertProduct("pending", HOUR);
+
+    const outcome = await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(outcome.anomalies).toStrictEqual([
+      "1 product(s) unfinished by enrichment and were re-dispatched",
+    ]);
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining("sentry-disabled"),
+      expect.objectContaining({ surface: "enrichment-redispatch" }),
+      expect.objectContaining({ message: "queue down" }),
+    );
+  });
+});
+
+async function enriched(
+  composition: string | undefined,
+  ageSeconds = HOUR,
+): Promise<void> {
+  const id = await insertProduct("done", ageSeconds);
+  if (composition === undefined) return;
+  await coreDb()
+    .update(products)
+    .set({ fabricComposition: composition })
+    .where(eq(products.id, id));
+}
+
+describe("the abandoned-enrichment check", () => {
+  beforeEach(async () => {
+    await coreDb().delete(products);
+  });
+
+  it("reports a failed product the sweep has stopped re-driving", async () => {
+    // Law 6: a terminal failure lands somewhere a human sees. Until there
+    // is an admin surface for dead-lettered work, this line is it.
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    await insertProduct("failed", 25 * HOUR);
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([
+      "1 product(s) abandoned by enrichment: failed, and past the sweep's day of retries",
+    ]);
+  });
+
+  it("says nothing about a failed product the sweep still owns", async () => {
+    await insertProduct("failed", 2 * HOUR);
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+
+  it("says nothing about an old product that finished", async () => {
+    const id = await insertProduct("done", 3 * 24 * HOUR);
+    // With a composition, so the yield check has nothing to say either.
+    await coreDb()
+      .update(products)
+      .set({ fabricComposition: "100% merino wool" })
+      .where(eq(products.id, id));
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+});
+
+describe("the extraction-yield check", () => {
+  beforeEach(async () => {
+    await coreDb().delete(products);
+  });
+
+  it("says nothing while most enriched products have a composition", async () => {
+    // The digest surfaces anomalies and nothing else. A line that appears
+    // every day is a metric, and a metric in an alert channel is how an
+    // alert channel gets ignored.
+    await enriched("100% merino wool");
+    await enriched("88% polyester, 12% elastane");
+    await enriched(undefined);
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+
+  it("speaks up when most of them do not", async () => {
+    // Some pages state no composition — one in twenty-two on the eval
+    // corpus. *Most* of them meaning it is the shape of a budget that
+    // stopped reaching the spec, or a model that got worse.
+    await enriched("100% merino wool");
+    await enriched(undefined);
+    await enriched(undefined);
+    vi.spyOn(console, "error").mockImplementation(nothing);
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([
+      "2 of 3 enriched product(s) have no composition (67%)",
+    ]);
+  });
+
+  it("speaks at exactly the threshold, not one past it", async () => {
+    // Half is the bound, and half is loud enough to say so: `<` and `<=`
+    // differ on exactly this input and on no other.
+    await enriched("100% merino wool");
+    await enriched("88% polyester");
+    await enriched(undefined);
+    await enriched(undefined);
+    vi.spyOn(console, "error").mockImplementation(nothing);
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([
+      "2 of 4 enriched product(s) have no composition (50%)",
+    ]);
+  });
+
+  it("says nothing at all before anything has been enriched", async () => {
+    // Nought of nought is not a hundred per cent.
+    await insertProduct("pending", HOUR);
+    const outcome = await handleScheduled(DIGEST);
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+
+  it("measures the most recent 1000, not the first 1000 it finds", async () => {
+    // The slope is the point of this metric, so it has to read the newest
+    // enrichments. Unordered it read the oldest — first in rowid order,
+    // and first in the index's ascending order too — and once there were
+    // more than 1000 the share froze. One old product with a composition,
+    // written first, then 1000 newer ones without: only the newest 1000
+    // leave the old one out.
+    await enriched("100% merino wool", 30 * 24 * HOUR);
+    await seedEnrichedWithoutComposition(1000, HOUR);
+    vi.spyOn(console, "error").mockImplementation(nothing);
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([
+      "1000 of 1000 enriched product(s) have no composition (100%)",
+    ]);
+  });
+});
+
+/**
+ * `count` products already `done` with no composition, all `ageSeconds`
+ * old, in one statement: past the yield check's limit is the only way to
+ * see which rows it picked, and a thousand awaited inserts would be most
+ * of the suite's time.
+ */
+async function seedEnrichedWithoutComposition(
+  count: number,
+  ageSeconds: number,
+): Promise<void> {
+  const brand = await createOrGetBrand(coreDb(), `Yield ${newUlid()}`);
+  await env.DIALED_CORE.prepare(
+    `WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < ?1)
+     INSERT INTO products
+       (id, brand_id, name, normalized_name, extraction_status, status, created_by, created_at)
+     SELECT 'yield-' || i, ?2, 'Tee ' || i, 'tee ' || i, 'done', 'active', 'seed', ?3 FROM n`,
+  )
+    .bind(count, brand.id, nowSeconds() - ageSeconds)
+    .run();
+}
+
+/**
+ * The product sweeps run against every product, and D1 bills rows
+ * scanned. Each reads through a partial index, which the planner uses only
+ * when the query states the index's own predicate — results are identical
+ * either way, so the plan of the statement each actually issues is the
+ * assertion.
+ */
+describe("the product sweeps read through their partial indexes", () => {
+  it("finds stalled pending products through products_extraction_pending", async () => {
+    const plans = await plansIssuedBy(ENRICHMENT_RETRY, `= 'pending'`);
+
+    expect(plans).toStrictEqual([
+      [
+        "SEARCH products USING INDEX products_extraction_pending (created_at<?)",
+      ],
+    ]);
+  });
+
+  it("walks the newest end of products_extraction_done for the yield", async () => {
+    // A SCAN of the index, not the table: the ORDER BY is the index's own
+    // order, so there is no sort step, and the LIMIT stops the walk after
+    // 1000 entries.
+    const plans = await plansIssuedBy(DIGEST, `= 'done'`);
+
+    expect(plans).toStrictEqual([
+      ["SCAN products USING INDEX products_extraction_done"],
+    ]);
+  });
+});
+
+/**
+ * The plan of every `products` read a firing issues whose WHERE contains
+ * `predicate`. Placeholders are bound to the current time, which stands in
+ * for the age cutoff and the limit, whose values do not change a plan's
+ * shape. A status bound as a parameter would get the same stand-in and
+ * miss the index, and that is deliberate: the index's own literal in the
+ * SQL is the contract (`extractionFailed` in `modules/enrichment/abandon.ts`
+ * says why).
+ */
+async function plansIssuedBy(
+  controller: ScheduledController,
+  predicate: string,
+): Promise<string[][]> {
+  const prepare = vi.spyOn(env.DIALED_CORE, "prepare");
+  await handleScheduled(controller);
+  const statements = prepare.mock.calls
+    .map(([sql]) => sql)
+    .filter(
+      (sql) =>
+        sql.startsWith("select") &&
+        sql.includes(`from "products"`) &&
+        sql.includes(predicate),
+    );
+  prepare.mockRestore();
+  return Promise.all(
+    statements.map(async (sql) => {
+      const placeholders = sql.split("?").length - 1;
+      const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
+        .bind(...Array.from({ length: placeholders }, () => nowSeconds()))
+        .all<{ detail: string }>();
+      return plan.results.map((row) => row.detail);
+    }),
+  );
+}
+
+describe("the digest reports what is waiting on a person (106 §2)", () => {
+  beforeEach(async () => {
+    await coreDb().delete(reviewQueue);
+  });
+
+  it("says nothing on a day with an empty queue", async () => {
+    const result = await handleScheduled(DIGEST);
+
+    // A digest that speaks every day is one nobody reads. Zero waiting is
+    // the ordinary case and gets no line.
+    expect(result.anomalies).not.toContainEqual(
+      expect.stringContaining("awaiting moderation"),
+    );
+  });
+
+  it("reports a single waiting item, not just a backlog", async () => {
+    await queueItem();
+
+    const result = await handleScheduled(DIGEST);
+
+    // Deliberately unlike the other digest checks, which fire past a
+    // threshold. This queue's promise is "a person reads it within a day",
+    // so the failure is a queue nobody opened rather than one that grew —
+    // and a threshold would hide exactly that.
+    expect(result.anomalies).toContainEqual(
+      expect.stringContaining("1 item(s) awaiting moderation review"),
+    );
+  });
+
+  it("counts the queue, not the reports behind it", async () => {
+    await queueItem();
+    await queueItem();
+
+    const result = await handleScheduled(DIGEST);
+
+    expect(result.anomalies).toContainEqual(
+      expect.stringContaining("2 item(s)"),
+    );
+  });
+
+  it("ignores decisions already made", async () => {
+    await queueItem("approved");
+    await queueItem("removed");
+
+    const result = await handleScheduled(DIGEST);
+
+    // Resolved rows stay in the table for the record; counting them would
+    // make the digest louder every day forever.
+    expect(result.anomalies).not.toContainEqual(
+      expect.stringContaining("awaiting moderation"),
+    );
+  });
+});
+
+/**
+One row in front of a reviewer, in the given state.
+*/
+async function queueItem(
+  status: "pending" | "approved" | "removed" = "pending",
+): Promise<void> {
+  await coreDb().insert(reviewQueue).values({
+    id: newUlid(),
+    subjectType: "entry",
+    subjectId: newUlid(),
+    source: "reports",
+    status,
+    createdAt: nowSeconds(),
+  });
+}
+
+/**
+A product link a confirmation owes (D-113 Q1), already due.
+*/
+async function seedDueProductLink(userId: string): Promise<string> {
+  const id = newUlid();
+  await coreDb()
+    .insert(outbox)
+    .values({
+      id,
+      kind: "product_link",
+      dedupeKey: userId,
+      payload: JSON.stringify({ userId }),
+      nextAttemptAt: nowSeconds() - 60,
+      createdAt: nowSeconds() - HOUR,
+    });
+  return id;
+}
+
+describe("the product link a confirmation owes (design 133, D-113 Q1)", () => {
+  it("is drained on the :00 firing with the linker handed in, and settles quietly", async () => {
+    const userId = newUlid();
+    const id = await seedDueProductLink(userId);
+    const linked: string[] = [];
+
+    const outcome = await handleScheduled(
+      { cron: "0 * * * *" } as ScheduledController,
+      undefined,
+      {
+        linkProducts: (_db, owed) => {
+          linked.push(owed);
+          return Promise.resolve("linked" as const);
+        },
+      },
+    );
+
+    expect(linked).toStrictEqual([userId]);
+    expect(await attemptsOf(id)).toBeUndefined();
+    // Owed on a schedule rather than by a failure: no digest line.
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+
+  it("stays owed, and says so, when no linker was handed in", async () => {
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    const id = await seedDueProductLink(newUlid());
+
+    const outcome = await handleScheduled({
+      cron: "0 * * * *",
+    } as ScheduledController);
+
+    expect(await attemptsOf(id)).toBe(1);
+    expect(outcome.anomalies).toContain(
+      "1 of 1 product_link outbox row(s) did not settle",
+    );
+  });
+
+  it("is left alone by the :30 and :15 firings", async () => {
+    const id = await seedDueProductLink(newUlid());
+    const linkProducts = vi.fn(() => Promise.resolve("linked" as const));
+
+    await handleScheduled(ENRICHMENT_RETRY, undefined, { linkProducts });
+    await handleScheduled(
+      { cron: "15 * * * *" } as ScheduledController,
+      undefined,
+      { linkProducts },
+    );
+
+    expect(linkProducts).not.toHaveBeenCalled();
+    expect(await attemptsOf(id)).toBe(0);
+  });
+
+  it("is drained by the daily firing with the same linker", async () => {
+    const userId = newUlid();
+    const id = await seedDueProductLink(userId);
+    const linkProducts = vi.fn(() => Promise.resolve("linked" as const));
+
+    await handleScheduled(DIGEST, recordingReporter().reporter, {
+      linkProducts,
+    });
+
+    expect(linkProducts).toHaveBeenCalledWith(expect.anything(), userId);
+    expect(await attemptsOf(id)).toBeUndefined();
+  });
+});
+
+/**
+ * The production call sites of the expired-row sweeps: the daily firing
+ * sweeps the rate limits itself and runs the auth sweep it is handed
+ * (`src/server.ts` hands `sweepExpiredAuthRows`), each whether the other
+ * fails.
+ */
+type CountId = Readonly<{ kind: RateLimitKind; subject: string }>;
+
+/**
+A rate-limit count whose window ended days ago.
+*/
+async function staleCount(kind: RateLimitKind = "access"): Promise<CountId> {
+  const id = { kind, subject: newUlid() };
+  await coreDb()
+    .insert(rateLimits)
+    .values({ ...id, windowStartedAt: nowSeconds() - 72 * HOUR, count: 9 });
+  return id;
+}
+
+async function isCountKept(id: CountId): Promise<boolean> {
+  const rows = await coreDb()
+    .select({ subject: rateLimits.subject })
+    .from(rateLimits)
+    .where(
+      and(eq(rateLimits.kind, id.kind), eq(rateLimits.subject, id.subject)),
+    );
+  return rows.length === 1;
+}
+
+/**
+A report filed more than D-131's 3 years ago, about nothing anyone decided.
+*/
+async function expiredReport(): Promise<string> {
+  const id = newUlid();
+  await coreDb()
+    .insert(reports)
+    .values({
+      id,
+      reporterId: newUlid(),
+      subjectType: "entry",
+      subjectId: newUlid(),
+      reason: "spam",
+      createdAt: nowSeconds() - MODERATION_RECORD_KEPT_SECONDS - HOUR,
+    });
+  return id;
+}
+
+async function isReportKept(id: string): Promise<boolean> {
+  const rows = await coreDb()
+    .select({ id: reports.id })
+    .from(reports)
+    .where(eq(reports.id, id));
+  return rows.length === 1;
+}
+
+describe("the daily firing sweeps rows kept past any use", () => {
+  it("sweeps the rate limits and runs each sweep it is handed, once", async () => {
+    const key = await staleCount();
+    const enrichmentKey = await staleCount("enrich-runner");
+    const report = await expiredReport();
+    const swept: string[] = [];
+
+    await handleScheduled(DIGEST, recordingReporter().reporter, {
+      sweepAuthRows: () => {
+        swept.push("auth");
+        return Promise.resolve();
+      },
+      forgetAnsweredRequests: () => {
+        swept.push("requests");
+        return Promise.resolve();
+      },
+      sweepCopyrightHolds: () => {
+        swept.push("copyright holds");
+        return Promise.resolve();
+      },
+    });
+
+    expect(await isCountKept(key)).toBe(false);
+    expect(await isCountKept(enrichmentKey)).toBe(false);
+    // The 3-year sweep is safety's own, imported rather than handed in.
+    expect(await isReportKept(report)).toBe(false);
+    expect(swept).toStrictEqual(["auth", "requests", "copyright holds"]);
+  });
+
+  it("sweeps only on the daily firing", async () => {
+    const key = await staleCount();
+    const report = await expiredReport();
+    let swept = 0;
+    const sweep = () => {
+      swept += 1;
+      return Promise.resolve();
+    };
+
+    await handleScheduled(
+      { cron: "0 * * * *" } as ScheduledController,
+      recordingReporter().reporter,
+      { sweepAuthRows: sweep, forgetAnsweredRequests: sweep },
+    );
+
+    expect(await isCountKept(key)).toBe(true);
+    expect(await isReportKept(report)).toBe(true);
+    expect(swept).toBe(0);
+  });
+
+  it("runs every sweep when one throws, then throws what it did", async () => {
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    const key = await staleCount();
+    const report = await expiredReport();
+    const boom = new Error("auth sweep fell over");
+    const { reporter, checkIns } = recordingReporter();
+    let forgot = 0;
+
+    await expect(
+      handleScheduled(DIGEST, reporter, {
+        sweepAuthRows: () => Promise.reject(boom),
+        forgetAnsweredRequests: () => {
+          forgot += 1;
+          return Promise.resolve();
+        },
+      }),
+    ).rejects.toBe(boom);
+
+    expect(await isCountKept(key)).toBe(false);
+    expect(await isReportKept(report)).toBe(false);
+    expect(forgot).toBe(1);
+    expect(checkIns.map((checkIn) => checkIn.status)).toStrictEqual([
+      "in_progress",
+      "error",
+    ]);
+  });
+});
+
+describe("the profile zones a failed lookup owes (design 142)", () => {
+  it("are filled on the :00 firing, through the weather module's lookup", async () => {
+    mockVisualCrossing();
+    const userId = newUlid();
+    await coreDb()
+      .insert(userProfiles)
+      .values({ userId, cityLabel: "Minneapolis", lat: 44.98, lng: -93.27 });
+
+    await handleScheduled({ cron: "0 * * * *" } as ScheduledController);
+
+    const [row] = await coreDb()
+      .select({ timeZone: userProfiles.timeZone })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, userId));
+    expect(row?.timeZone).toBe("America/Chicago");
+  });
+});

@@ -2,7 +2,6 @@
   "fanOut": {
     "account": 9,
     "feed": 10,
-    "ops": 8,
     "safety": 8
   },
   "doorWidth": {

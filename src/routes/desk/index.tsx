@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { useDeskToday } from "../../modules/ops/components/DeskPage";
+import { useDeskToday } from "../../modules/ops/desk/components/DeskPage";
 
-import { DeskTodayPage } from "../../modules/ops/components/Today";
+import { DeskTodayPage } from "../../modules/ops/desk/components/Today";
 import {
   deskGaveUpQuery,
   dropGaveUpAction,

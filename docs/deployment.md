@@ -248,7 +248,7 @@ the daily digest and the weather retry silently never ran.
 | `15 * * * *` | screening retry, report reconciliation, stale-claim sweep |
 
 `test/bindings-conformance.test.ts` fails CI if this list and
-`src/modules/ops/crons.ts` disagree. After deploying, confirm all four
+`src/modules/ops/desk/crons.ts` disagree. After deploying, confirm all four
 appear under Workers → dialed → Settings → Triggers.
 
 **Each cron checks in with Sentry Crons** (OPS-3): `in_progress` when it
@@ -518,8 +518,8 @@ needs its own Strava app, not a second subscription.
   GROUP BY route, deploy ORDER BY route
   ```
 
-  The layout (which blob is what) is `src/modules/ops/vitals.ts`'s header;
-  the queries the code runs are `src/modules/ops/vitals-queries.ts`.
+  The layout (which blob is what) is `src/modules/ops/speed/vitals.ts`'s header;
+  the queries the code runs are `src/modules/ops/speed/vitals-queries.ts`.
 
 - **One-time steps (design 187).** Each runs once, at the first deploy.
   - **Owner: let the marketing site solve Turnstile** (round 31, #367).
@@ -723,7 +723,7 @@ R2 keeps no versions and has no Time Travel. An object deleted or
 overwritten is gone, and so is a bucket someone deletes. So the daily
 digest copies the photos only a runner could replace into a second
 bucket, `dialed-media-backup` (D-172, #420, design 186; the code is
-`src/modules/ops/media-backup.ts`).
+`src/modules/ops/daily/media-backup.ts`).
 
 **How it works.** Each daily firing lists `MEDIA` and `MEDIA_BACKUP` under
 `items/` and `entries/` and compares them. It copies any object the backup

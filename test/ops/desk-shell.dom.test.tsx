@@ -18,14 +18,14 @@ import { describe, expect, it, vi } from "vitest";
 import {
   DeskPage,
   useDeskToday,
-} from "../../src/modules/ops/components/DeskPage";
-import { DeskShell } from "../../src/modules/ops/components/DeskShell";
+} from "../../src/modules/ops/desk/components/DeskPage";
+import { DeskShell } from "../../src/modules/ops/desk/components/DeskShell";
 import {
   DeskTodayPage,
   Today,
   flaggedNote,
-} from "../../src/modules/ops/components/Today";
-import type { DeskToday, TodayCounts } from "../../src/modules/ops/desk";
+} from "../../src/modules/ops/desk/components/Today";
+import type { DeskToday, TodayCounts } from "../../src/modules/ops/desk/desk";
 
 /**
  * The Desk's shell and Today (Operator Screens D0).

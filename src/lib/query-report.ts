@@ -17,7 +17,7 @@ export const QUERY_HEADER = "x-d1-queries";
 
 /**
  * How design 165's request names mark a server function call:
- * `serverFn:<id>`. `modules/ops/timing.ts` names requests with it.
+ * `serverFn:<id>`. `modules/ops/speed/timing.ts` names requests with it.
  */
 export const SERVER_FN_ROUTE = "serverFn:";
 

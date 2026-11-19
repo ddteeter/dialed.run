@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { enforcedPolicy } from "../../src/modules/ops/security-headers";
+import { enforcedPolicy } from "../../src/modules/ops/edge/security-headers";
 
 /**
  * What Chromium does with the policy the app enforces (SA-M40, design

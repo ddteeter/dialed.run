@@ -49,7 +49,7 @@ describe("the Worker entry hands the firings and the queue their upkeep", () => 
     // The speed checks (design 165): `ops`'s own, but they read the ops
     // database and the SQL API, so they come in as upkeep too.
     expect(code).toMatch(
-      /import \{[^}]*\bdailySpeed,\s*hourlySpeed,[^}]*\} from "\.\/modules\/ops";/u,
+      /import \{[^}]*\bdailySpeed,\s*hourlySpeed,[^}]*\} from "\.\/modules\/ops\/speed";/u,
     );
     expect(code).toMatch(
       /handleScheduled\(controller, undefined, \{\s*purgeAccounts: purgeDueAccounts,\s*sweepExports,\s*rescreenHandles: rescreenHandlesFromEnv,\s*linkProducts: linkTypedGarments,\s*sweepAuthRows: sweepExpiredAuthRows,\s*forgetAnsweredRequests,\s*sweepCopyrightHolds,\s*speed: \(today, anomalies\) =>\s*dailySpeed\(today, anomalies, speedDigestDepsFromEnv\(isKnownRoute\)\),\s*speedHourly: \(now, report\) =>\s*hourlySpeed\(now, report, hourlySpeedDepsFromEnv\(isKnownRoute\)\),\s*\}\)/u,

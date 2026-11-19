@@ -7,7 +7,7 @@ import {
   OTHER_BODY_LIMIT,
   bodyLimitFor,
   boundedRequest,
-} from "../../src/modules/ops/body-cap";
+} from "../../src/modules/ops/edge/body-cap";
 import { MAX_IMPORT_BYTES } from "../../src/modules/runs";
 import { withoutComments } from "../architecture/source-text";
 

@@ -12,11 +12,11 @@ import {
   publicPageTags,
   isPubliclyStorable,
   withoutCookiesWhenPublic,
-} from "../../src/modules/ops/public-cache";
+} from "../../src/modules/ops/public-web/public-cache";
 import {
   UNSTORED,
   withSecurityHeaders,
-} from "../../src/modules/ops/security-headers";
+} from "../../src/modules/ops/edge/security-headers";
 
 /**
  * The open web's cache headers (design 163, D-154).
@@ -161,8 +161,8 @@ describe("only the open web's responses are public", () => {
     expect(callers).toStrictEqual([
       "src/modules/feed/public-kit.ts",
       "src/modules/feed/public-profile.ts",
-      "src/modules/ops/og/respond.ts",
-      "src/modules/ops/public-cache.ts",
+      "src/modules/ops/public-web/og/respond.ts",
+      "src/modules/ops/public-web/public-cache.ts",
     ]);
   });
 });

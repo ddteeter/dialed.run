@@ -9,7 +9,7 @@ import { createHash } from "node:crypto";
 import type { Page } from "@playwright/test";
 import { z } from "zod";
 
-import { CSP_HEADER } from "../../src/modules/ops/security-headers";
+import { CSP_HEADER } from "../../src/modules/ops/edge/security-headers";
 import { storageStateFor } from "../support/accounts";
 import { expect, test } from "../support/a11y";
 
@@ -256,7 +256,9 @@ test.describe("security headers (OPS-8)", () => {
       const html = await response.text();
 
       expect(response.status()).toBe(404);
-      expect(headers["cache-control"]).toBe("public, max-age=60, must-revalidate");
+      expect(headers["cache-control"]).toBe(
+        "public, max-age=60, must-revalidate",
+      );
       const policy = headers[CSP_HEADER.toLowerCase()] ?? "";
       expect(policy).not.toContain("nonce");
       expect(html).not.toMatch(/\snonce=/);

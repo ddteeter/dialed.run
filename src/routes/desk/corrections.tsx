@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { DeskPage } from "../../modules/ops/components/DeskPage";
+import { DeskPage } from "../../modules/ops/desk/components/DeskPage";
 import { DeskCorrections } from "../../modules/safety/components/DeskCorrections";
 import {
   applyCorrectionFn,

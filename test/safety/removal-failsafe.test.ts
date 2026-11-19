@@ -10,8 +10,8 @@ import {
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { cronSchedules } from "../../src/modules/ops/crons";
-import { handleScheduled } from "../../src/modules/ops";
+import { cronSchedules } from "../../src/modules/ops/desk/crons";
+import { handleScheduled } from "../../src/modules/dispatch";
 import {
   fileReport,
   fileTakedownRequest,

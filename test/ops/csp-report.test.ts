@@ -11,7 +11,7 @@ import {
   receiveCspReport,
   reportTooLarge,
   type ForwardedReport,
-} from "../../src/modules/ops/csp-report";
+} from "../../src/modules/ops/edge/csp-report";
 import { countedKeys, countRow } from "../rate-limit-rows";
 
 function nothing(): void {

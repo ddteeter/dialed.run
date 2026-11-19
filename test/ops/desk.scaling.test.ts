@@ -13,8 +13,8 @@ import {
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { deskToday } from "../../src/modules/ops/desk";
-import { gaveUpJobs } from "../../src/modules/ops/gave-up";
+import { deskToday } from "../../src/modules/ops/desk/desk";
+import { gaveUpJobs } from "../../src/modules/ops/desk/gave-up";
 import { REPORT_HIDES_FLOOR } from "../../src/modules/safety/breakers";
 
 import { queryCounts, type QueryCounts } from "../d1-spy";
@@ -154,7 +154,7 @@ describe("deskToday", () => {
 
 describe("gaveUpJobs", () => {
   // The list, then one batch of five lookups over the page's subjects
-  // (`subjectFacts`, src/modules/ops/gave-up.ts:133).
+  // (`subjectFacts`, src/modules/ops/desk/gave-up.ts:133).
   it("asks 1 + 5 for 1 row and for 25", async () => {
     const one = await seededGaveUp(1);
     const many = await seededGaveUp(25);

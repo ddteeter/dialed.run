@@ -193,7 +193,7 @@ covers the quarantine; this keeps the ban from tipping off the uploader.
 
 - The daily firing purges a record and its copies once `retain_until`
   passes (`safety/quarantine.ts:287` `purgeExpiredQuarantine`, from
-  `ops/scheduled.ts`). It claims each record first, so overlapping firings
+  `dispatch/scheduled.ts`). It claims each record first, so overlapping firings
   cannot double-delete.
 - **A legal hold is manual.** No code holds a record past `retain_until`.
   If law enforcement asks you to keep it (for example a preservation
@@ -261,7 +261,7 @@ the same 48-hour clock. Keep doing so.
 
 1. The operator alert gives the deadline. At 40 of the 48 hours, an
    undecided removal sends a reminder (`safety/removal-reminders.ts`
-   `REMOVAL_REMINDER_LEAD_SECONDS`, hourly from `ops/removal-reminders.ts`;
+   `REMOVAL_REMINDER_LEAD_SECONDS`, hourly from `ops/daily/removal-reminders.ts`;
    C6).
 2. Open Review. Check the request names something we host, and that it is
    plausibly what it says. You do not need to establish who is depicted

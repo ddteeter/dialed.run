@@ -8,7 +8,7 @@ import {
   kitOrNotFound,
   publicKitHead,
 } from "../../modules/feed/public-kit-shape";
-import { PUBLIC_ORIGIN } from "../../modules/ops/og/site-head";
+import { PUBLIC_ORIGIN } from "../../lib/public-origin";
 
 /**
  * `/kit/<id>`: a kit its runner made PUBLIC, for anyone (round 41 #86c,

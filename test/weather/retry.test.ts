@@ -6,7 +6,7 @@ import { cronCheckpoints, imports, runs } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid, type Ulid } from "../../src/lib/ids";
 import { retryPendingWeather } from "../../src/modules/weather";
-import { handleScheduled } from "../../src/modules/ops";
+import { handleScheduled } from "../../src/modules/dispatch";
 import {
   askedEpochs,
   mockVisualCrossing,

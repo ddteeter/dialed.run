@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { withInlineScriptHashes } from "../../src/modules/ops/inline-script-hashes";
+import { withInlineScriptHashes } from "../../src/modules/ops/edge/inline-script-hashes";
 
 /**
  * The hashes a stored page's policy admits its inline scripts by (design

@@ -3,16 +3,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { cronCheckpoints } from "../../src/db/schema-core";
 import { env } from "../../src/env";
-import { healthResponse } from "../../src/modules/ops";
+import { healthResponse } from "../../src/modules/ops/desk";
 import {
   deploymentConfig,
   isNamedByDigest,
-} from "../../src/modules/ops/deployment-config";
+} from "../../src/modules/ops/desk/deployment-config";
 import {
   checkDeploymentConfig,
   checkHealth,
-} from "../../src/modules/ops/health";
-import { cronPeriods } from "../../src/modules/ops/crons";
+} from "../../src/modules/ops/desk/health";
+import { cronPeriods } from "../../src/modules/ops/desk/crons";
 import { nowSeconds } from "../../src/lib/now";
 
 /**

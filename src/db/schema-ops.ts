@@ -18,7 +18,7 @@ import {
 
 /**
  * One UTC day of speed, per route, metric and device, rolled up from the
- * `VITALS` dataset by the daily firing (`modules/ops/vitals-rollup.ts`).
+ * `VITALS` dataset by the daily firing (`modules/ops/speed/vitals-rollup.ts`).
  * Analytics Engine keeps about three months; this keeps the shape of every
  * day after that. A re-run of a day overwrites its rows (law 1).
  *

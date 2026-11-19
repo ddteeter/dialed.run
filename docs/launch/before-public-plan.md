@@ -45,13 +45,13 @@ public once Microsoft approves, and the CSP flip at the public gate. The
 | R-142             | done (C2, #184)                  | Deletes on disconnect, deauthorize and purge were already built; C2 made the 7-day prune count from the first failure.                                             |
 | R-140             | done (#188)                      | Takedown wording: the barrel export, the `content_removed` email variant, and `notice` passing `input.action`.                                                     |
 | R-145 (c) / D-117 | done (#188)                      | The Review row should list the runner's other photos. (a) and (d) ride #169.                                                                                       |
-| OPS-8             | report-only; flip drafted (#186) | Enforcing it means flipping `CSP_HEADER` in `ops/security-headers.ts` and the copy in `public/_headers`.                                                           |
+| OPS-8             | report-only; flip drafted (#186) | Enforcing it means flipping `CSP_HEADER` in `ops/edge/security-headers.ts` and the copy in `public/_headers`.                                                      |
 
 Drift worth folding in while a lane is in the file (all three fixed in
 #186 and #187):
 
 - STR-13: three private Intl date formatters remain (`AccountClosed.tsx:12`,
-  `ops/components/Today.tsx:48`, `closet/retired-label.ts:17`).
+  `ops/desk/components/Today.tsx:48`, `closet/retired-label.ts:17`).
 - OPS-11: the digest is sent without checking that the owner's address is
   verified.
 - OPS-16: `entryCardResponse` has no caller under D-107 and is dead code.
@@ -246,7 +246,7 @@ step 1 proves it needs one)
 the binding is approved (decision 1).
 
 1. The binding and the cron, in `wrangler.jsonc` (owner-approved),
-   `src/env`, `ops/crons.ts` and `bindings-conformance.test.ts`.
+   `src/env`, `ops/desk/crons.ts` and `bindings-conformance.test.ts`.
 2. **A reader of only the counted fields**: feels-like band, sky, month,
    garment type and catalogue model, verdict, and region if set. It sits in
    a module whose query selects nothing else, and a test pins the selected

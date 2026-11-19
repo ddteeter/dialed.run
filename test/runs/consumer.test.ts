@@ -36,7 +36,7 @@ import malformedTcx from "./fixtures/malformed.tcx?raw";
 import treadmillTcx from "./fixtures/treadmill.tcx?raw";
 import pausedClimbGpx from "./fixtures/paused-climb.gpx?raw";
 import { nowSeconds } from "../../src/lib/now";
-import { drainOutbox } from "../../src/modules/ops/outbox";
+import { drainOutbox } from "../../src/modules/ops/outbox/outbox";
 import { oweInCore, weatherLater } from "../queue-fakes";
 import { DEAD_LETTER_REASON } from "../../src/db/gave-up";
 import {

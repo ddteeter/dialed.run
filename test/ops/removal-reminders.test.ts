@@ -14,12 +14,12 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
-import { handleScheduled } from "../../src/modules/ops";
+import { handleScheduled } from "../../src/modules/dispatch";
 import { addAccount } from "../feed/helpers";
 import {
   oweRemindersSince,
   oweRemovalReminders,
-} from "../../src/modules/ops/removal-reminders";
+} from "../../src/modules/ops/daily/removal-reminders";
 
 /**
  * C6's 40-hour reminder: an undecided removal is emailed to every

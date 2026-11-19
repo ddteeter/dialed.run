@@ -12,11 +12,11 @@ import {
   runSpeedChecks,
   SPEED_LIMITS,
   type PerfRow,
-} from "../../src/modules/ops/perf-checks";
+} from "../../src/modules/ops/speed/perf-checks";
 import {
   dailySpeed,
   speedDigestDepsFromEnv,
-} from "../../src/modules/ops/speed-digest";
+} from "../../src/modules/ops/speed/speed-digest";
 
 /**
 Every route name kept, as before the known-route check.

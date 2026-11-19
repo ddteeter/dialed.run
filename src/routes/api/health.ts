@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { optionalVerifiedUserId } from "../../modules/auth";
-import { healthResponse } from "../../modules/ops";
+import { healthResponse } from "../../modules/ops/desk";
 
 /**
  * The uptime check's URL. Anyone gets the status and `{ ok, version, at }`;

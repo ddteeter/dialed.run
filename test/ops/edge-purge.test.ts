@@ -15,7 +15,7 @@ import {
   purgeTags,
   type EdgeCache,
   type PurgeDeps,
-} from "../../src/modules/ops/edge-purge";
+} from "../../src/modules/ops/public-web/edge-purge";
 
 /**
  * The edge purge (design 163): one call per retraction, in the

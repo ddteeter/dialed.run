@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { OG_PALETTE } from "../../src/modules/ops/og/palette";
+import { OG_PALETTE } from "../../src/modules/ops/public-web/og/palette";
 
 /**
  * The share card's literal colours, pinned to the tokens they copy.

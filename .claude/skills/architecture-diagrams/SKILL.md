@@ -82,8 +82,8 @@ and is named `cf.app.runs.upload` everywhere after.
 
 A story is a claim about the code, and nothing checks its wording. Read
 the flow end to end first: the server function in the module's
-`functions.ts` and what it calls, the queue consumer, `src/modules/ops/queues.ts`
-and `crons.ts` for what is bound, `src/modules/ops/scheduled.ts` for what a
+`functions.ts` and what it calls, the queue consumer, `src/modules/ops/desk/queues.ts`
+and `crons.ts` for what is bound, `src/modules/dispatch/scheduled.ts` for what a
 cron re-drives, and `wrangler.jsonc` for retries and dead-letter queues.
 
 - Put a source comment on the line directly above every step, naming

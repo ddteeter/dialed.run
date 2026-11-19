@@ -7,18 +7,18 @@ import {
   cardFor,
   kitLine,
   type EntryCardData,
-} from "../../src/modules/ops/og/cards";
-import { OG_PALETTE } from "../../src/modules/ops/og/palette";
+} from "../../src/modules/ops/public-web/og/cards";
+import { OG_PALETTE } from "../../src/modules/ops/public-web/og/palette";
 import {
   defaultCardResponse,
   kitCardResponse,
-} from "../../src/modules/ops/og/respond";
+} from "../../src/modules/ops/public-web/og/respond";
 import {
   cachedCard,
   cardCacheKey,
   renderCard,
   renderCardSvg,
-} from "../../src/modules/ops/og/render";
+} from "../../src/modules/ops/public-web/og/render";
 
 /**
  * The share cards (OPS-16; round 26 #22; decision D-51).
@@ -309,7 +309,9 @@ describe("kitCardResponse", () => {
     expect(response.headers.get("Content-Type")).toBe("image/png");
     // A minute, not the day it is rendered for: the edge keeps what this
     // says, in front of the check that the kit is still public.
-    expect(response.headers.get("Cache-Control")).toBe("public, max-age=60, must-revalidate");
+    expect(response.headers.get("Cache-Control")).toBe(
+      "public, max-age=60, must-revalidate",
+    );
     expect(response.headers.get("Cache-Tag")).toBe(
       `entry:${ENTRY_ID},runner:u1`,
     );
@@ -361,7 +363,9 @@ describe("kitCardResponse", () => {
     );
 
     expect(await sha256(response)).toBe(await sha256(fallback));
-    expect(response.headers.get("Cache-Control")).toBe("public, max-age=60, must-revalidate");
+    expect(response.headers.get("Cache-Control")).toBe(
+      "public, max-age=60, must-revalidate",
+    );
     expect(response.headers.get("Cache-Tag")).toBe(`entry:${ENTRY_ID}`);
   });
 });

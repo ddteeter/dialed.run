@@ -138,7 +138,7 @@ module.exports = {
         "APPROXIMATION: dependency-cruiser has no notion of an entry point, so 'server-side " +
         "entry' is spelled out by path — the Worker entry (src/server.ts), every server-" +
         "function module (src/modules/*/functions.ts), and the queue consumers and cron " +
-        "handlers src/server.ts wires (ops/queues.ts, ops/scheduled.ts, runs/consumer.ts, " +
+        "handlers src/server.ts wires (the whole dispatch/ module, runs/consumer.ts, " +
         "enrichment/consume.ts, account/export-queue.ts, export-build.ts, export-sweep.ts, " +
         "purge.ts). A new consumer or cron handler joins this list by name. 'Module files " +
         "that are not .tsx' was measured and rejected as the approximation: auth/credentials.ts " +
@@ -151,7 +151,7 @@ module.exports = {
         path:
           "^src/server\\.ts$" +
           "|^src/modules/[^/]+/functions\\.ts$" +
-          "|^src/modules/ops/(queues|scheduled)\\.ts$" +
+          "|^src/modules/dispatch/" +
           "|^src/modules/runs/consumer\\.ts$" +
           "|^src/modules/enrichment/consume\\.ts$" +
           "|^src/modules/account/(export-queue|export-build|export-sweep|purge)\\.ts$",

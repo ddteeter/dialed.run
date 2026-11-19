@@ -21,7 +21,7 @@ import {
   canSpendProxyCall,
   canSpendRunnerRequest,
 } from "../../src/modules/enrichment/spend-limit";
-import { cspReportDepsFromEnv } from "../../src/modules/ops/csp-report";
+import { cspReportDepsFromEnv } from "../../src/modules/ops/edge/csp-report";
 import { isWithinUploadCap } from "../../src/modules/runs/imports";
 import {
   isWithinAtOnceLimit,

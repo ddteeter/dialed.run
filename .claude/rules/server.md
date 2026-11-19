@@ -142,6 +142,6 @@ systems disagreeing _with nobody able to tell_.
    are optional; a field stops being _written_ one deploy before it stops
    being _read_. Deleting a `type` is a two-deploy operation.
 10. **Anything the platform binds, a test asserts.** Cron schedules and queue
-    names live in `modules/ops/crons.ts` and `modules/ops/queues.ts`, and
+    names live in `modules/ops/desk/crons.ts` and `modules/ops/desk/queues.ts`, and
     `test/bindings-conformance.test.ts` fails CI when `wrangler.jsonc`
     disagrees. Add to those registries, not a literal at the use site.

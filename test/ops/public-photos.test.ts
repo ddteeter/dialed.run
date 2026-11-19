@@ -19,7 +19,7 @@ import {
   publicPhotoKeyOf,
   publicPhotoUrl,
 } from "../../src/lib/public-photos";
-import { captureException } from "../../src/modules/ops/sentry";
+import { captureException } from "../../src/modules/ops/sentry/sentry";
 import {
   firstPublishedPhotos,
   publicPhotosOrigin,
@@ -29,8 +29,8 @@ import {
   syncPublicPhotosLater,
   workerPublicPhotos,
   type PublicPhotoDeps,
-} from "../../src/modules/ops/public-photos";
-import { sweepPublicPhotoCopies } from "../../src/modules/ops/scheduled";
+} from "../../src/modules/ops/public-web/public-photos";
+import { sweepPublicPhotoCopies } from "../../src/modules/dispatch/scheduled";
 import {
   makeEntry,
   makeRun,
@@ -570,9 +570,7 @@ describe("deleting", () => {
       await syncPublicPhotos(deps({ bucket, report }), only(owned.entryId)),
     ).toBe(0);
 
-    expect(report.mock.calls).toStrictEqual([
-      [refusal, { copies: "1" }],
-    ]);
+    expect(report.mock.calls).toStrictEqual([[refusal, { copies: "1" }]]);
     const [kept] = await copies();
     expect(kept?.key).toBe("k1");
   });

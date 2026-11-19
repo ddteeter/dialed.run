@@ -259,7 +259,7 @@ test("a server function answers only this app's own pages", async ({
 
   // An address no server function has is never answered as a call that
   // worked, which is what its timing line is named by (SA-L08,
-  // `ops/timing`'s `timedName`).
+  // `ops/speed/timing`'s `timedName`).
   const unregistered = new URL(`/_serverFn/${"a".repeat(64)}`, own);
   expect(await statusOfGet(page.request, unregistered.href, sameOrigin)).toBe(
     500,

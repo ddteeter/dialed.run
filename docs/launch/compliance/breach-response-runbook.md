@@ -73,8 +73,8 @@ past expiry). Use them, record how you decided, and when unsure, notify.
 Ways a breach reaches the owner today:
 
 - **Sentry** alerts on exceptions and failed cron check-ins
-  (`src/modules/ops/sentry.ts`). Not built to spot an intruder.
-- **The daily digest email** to the admins (`ops/scheduled.ts`
+  (`src/modules/ops/sentry/sentry.ts`). Not built to spot an intruder.
+- **The daily digest email** to the admins (`dispatch/scheduled.ts`
   `runDailyDigest`): backlogs and anomalies, not access.
 - **Cloudflare**: the account audit log, and any notification the owner
   turns on. [OWNER: turn on Cloudflare notifications for API token
@@ -172,7 +172,7 @@ id. Rotate the client secret if it leaked.
 
 Events carry internal ids (account, run, import, product), never tokens,
 request bodies or file contents (privacy policy processor table;
-`ops/sentry.ts`). A Sentry-side breach is Sentry's to notify us of. If an
+`ops/sentry/sentry.ts`). A Sentry-side breach is Sentry's to notify us of. If an
 event did carry personal data, delete the issue in Sentry and fix the call
 site.
 

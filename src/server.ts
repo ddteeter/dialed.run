@@ -9,22 +9,20 @@ import {
   defaultStreamHandler,
 } from "@tanstack/react-start/server";
 
+import { handleQueueBatch, handleScheduled } from "./modules/dispatch";
+import { captureException } from "./modules/ops";
+import { boundedRequest, secureResponse } from "./modules/ops/edge";
+import { withoutCookiesWhenPublic } from "./modules/ops/public-web";
 import {
-  boundedRequest,
-  captureException,
-  handleQueueBatch,
-  handleScheduled,
-  requestNamer,
-  secureResponse,
-  timeRequest,
-  timingDeps,
   dailySpeed,
   hourlySpeed,
   hourlySpeedDepsFromEnv,
   knownRoutes,
+  requestNamer,
   speedDigestDepsFromEnv,
-  withoutCookiesWhenPublic,
-} from "./modules/ops";
+  timeRequest,
+  timingDeps,
+} from "./modules/ops/speed";
 import { forgetAnsweredRequests } from "./modules/account/answered-requests";
 import { exportConsumersFromEnv } from "./modules/account/export-build";
 import { d1RequestDepsFromEnv, respondInD1Scope } from "./modules/auth";

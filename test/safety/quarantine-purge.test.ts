@@ -10,7 +10,7 @@ import {
 } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { handleScheduled } from "../../src/modules/ops";
+import { handleScheduled } from "../../src/modules/dispatch";
 import {
   claimQuarantine,
   dueQuarantine,

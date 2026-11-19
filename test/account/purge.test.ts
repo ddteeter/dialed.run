@@ -59,7 +59,7 @@ import {
   closedAddressHash,
 } from "../../src/modules/account/closed-addresses";
 import { forgetManualBands } from "../../src/modules/weather";
-import { drainOutbox } from "../../src/modules/ops/outbox";
+import { drainOutbox } from "../../src/modules/ops/outbox/outbox";
 import { ONLY_THEIRS_GONE, seedAthleteGaveUp } from "../gave-up-rows";
 
 /**

@@ -6,7 +6,7 @@ import {
   reportException,
   sentryEnvironmentFor,
   workerTarget,
-} from "../../src/modules/ops/sentry";
+} from "../../src/modules/ops/sentry/sentry";
 
 /**
  * The error reporter, which is the one thing that must not fail.
@@ -436,7 +436,6 @@ function failure(): DrizzleQueryError {
 }
 
 describe("a failed statement (SA-L08)", () => {
-
   it("reaches Sentry with its reason and none of its bound values", async () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
@@ -457,10 +456,15 @@ describe("a failed statement (SA-L08)", () => {
   it("reaches the console with none of its bound values when there is no DSN", () => {
     const error = vi.spyOn(console, "error").mockImplementation(nothing);
 
-    reportException({ dsn: undefined, environment: "development" }, keep, failure(), {
-      context: { runId: "r1" },
-      tags: {},
-    });
+    reportException(
+      { dsn: undefined, environment: "development" },
+      keep,
+      failure(),
+      {
+        context: { runId: "r1" },
+        tags: {},
+      },
+    );
 
     const logged: unknown = error.mock.calls[0]?.[2];
     expect(logged).toBeInstanceOf(Error);

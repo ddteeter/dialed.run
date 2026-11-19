@@ -41,7 +41,7 @@ import { nowSeconds } from "../../src/lib/now";
 import {
   drainOutbox,
   OUTBOX_FAST_PATH_GRACE_S,
-} from "../../src/modules/ops/outbox";
+} from "../../src/modules/ops/outbox/outbox";
 import { fitWithin, withReleased } from "../../src/lib/photo-pipeline";
 import {
   imageCategories,

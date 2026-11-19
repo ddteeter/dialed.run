@@ -7,8 +7,8 @@ import {
 
 import { SignOutButton } from "../../modules/auth/components/SignOutButton";
 import { signOut } from "../../modules/auth/credentials";
-import { DeskSignOutProvider } from "../../modules/ops/components/DeskSignOut";
-import { operatorOrNotFound } from "../../modules/ops/desk-gate";
+import { DeskSignOutProvider } from "../../modules/ops/desk/components/DeskSignOut";
+import { operatorOrNotFound } from "../../modules/ops/desk/desk-gate";
 import { deskAccessQuery, deskTodayQuery } from "../../modules/ops/functions";
 
 /**

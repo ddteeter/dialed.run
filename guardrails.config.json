@@ -89,7 +89,7 @@
       "count": 1
     },
     {
-      "key": "src/modules/ops/health.ts|mutation-suppress|// Stryker disable next-line StringLiteral",
+      "key": "src/modules/ops/desk/health.ts|mutation-suppress|// Stryker disable next-line StringLiteral",
       "reason": "Equivalent mutant, proof at the site: the probe key is arbitrary. The check asks R2 whether an object exists, and a miss is a successful round trip \u2014 which is the whole point. Any string, empty included, proves the same reachability, so no assertion can tell them apart.",
       "count": 1
     },
@@ -334,12 +334,12 @@
       "count": 1
     },
     {
-      "key": "src/modules/ops/scheduled.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- both callers of redispatchEach -- the shared body is already extracted, and what rhymes now is the call",
+      "key": "src/modules/dispatch/scheduled.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- both callers of redispatchEach -- the shared body is already extracted, and what rhymes now is the call",
       "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: both callers of redispatchEach -- the shared body is already extracted, and what rhymes now is the call.",
       "count": 1
     },
     {
-      "key": "src/modules/ops/scheduled.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the third caller of redispatchEach, beside imports and revocations: the loop is extracted, and what rhymes is the call, which names a different table, queue and sentence",
+      "key": "src/modules/dispatch/scheduled.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the third caller of redispatchEach, beside imports and revocations: the loop is extracted, and what rhymes is the call, which names a different table, queue and sentence",
       "reason": "The enrichment sweep is the third stalled-marker reconciliation beside imports and Strava revocations, and the third caller of redispatchEach. The loop body and the stalled-row query (stalledPending) are both extracted; what remains at each site is the 13-line call naming a queue, a message shape, a Sentry context and a sentence, which fallow's identifier matching reads as a clone of the imports call. This is the well-factored-pair case CLAUDE.md records: extraction leaves call sites that are skeletally identical, and the price of the flip is a suppression per caller. Three other shapes were tried (a query helper alone, sweeps as data run by one function, a call-site helper) and each moved the clone rather than removed it. Owner's call, 2026-09-13.",
       "count": 1
     },
@@ -584,7 +584,7 @@
       "count": 1
     },
     {
-      "key": "src/modules/ops/gave-up.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectFacts reads one fact per kind of gave-up subject (product name, stored page, run, import, athlete) from its own table; the two identical handle reads are already ownerHandles",
+      "key": "src/modules/ops/desk/gave-up.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectFacts reads one fact per kind of gave-up subject (product name, stored page, run, import, athlete) from its own table; the two identical handle reads are already ownerHandles",
       "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
       "count": 6
     },

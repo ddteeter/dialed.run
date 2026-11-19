@@ -16,7 +16,7 @@ import {
   vitalsDepsFromEnv,
   type VitalsDeps,
   type VitalsRefusalLine,
-} from "../../src/modules/ops/vitals";
+} from "../../src/modules/ops/speed/vitals";
 
 /**
  * Design 165's beacon: the payload the endpoint accepts, and the data

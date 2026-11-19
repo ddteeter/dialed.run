@@ -109,7 +109,7 @@ Key decisions embedded here:
   design 189). The derivation of a run's conditions from the cache lives in
   weather (`run-conditions.ts`) for that reason; other modules reach cached
   conditions only through weather's `index.ts` reads.
-  The hourly retry cron is dispatched from `modules/ops/scheduled.ts`.
+  The hourly retry cron is dispatched from `modules/dispatch/scheduled.ts`.
 
   **Its attribution line is not in the module** (moved by task 115).
   `WeatherAttribution` is an anchor and a sentence, imports nothing from
@@ -197,7 +197,7 @@ Task 126 (ACC-9) added account deletion's purge, `modules/account/purge.ts`,
 which is **not** in `account`'s barrel and is imported by nothing but the
 Worker entry. It calls `feed`'s delete primitives, and both `feed` and
 `ops` import `account`'s barrel, so a barrel export — or an import from
-`ops/scheduled.ts` — would be a cycle. `handleScheduled` takes it as
+`dispatch/scheduled.ts` — would be a cycle. `handleScheduled` takes it as
 daily upkeep instead, and `src/server.ts` hands it over
 (`test/architecture/daily-upkeep.test.ts` reads that wiring). For the same
 reason the imports consumer takes an injected `owe` for the Strava
@@ -354,7 +354,7 @@ step 8): each of its screened photos is copied to `dialed-public-photos`
 `Cache-Control: public, max-age=60`, and `/kit/<id>` shows it from
 `photos.dialed.run`, where Cloudflare's cache and its CSAM Scanning Tool
 front the bucket. `public_photos` records every object there.
-`ops/public-photos.ts` reconciles the bucket against the open web's rule
+`ops/public-web/public-photos.ts` reconciles the bucket against the open web's rule
 (a `pass` photo on a kit `worldVisibleEntry()` admits): the edge purge that
 every retraction already sends syncs the kits and runners it names, and
 the `:15` firing sweeps everything and deletes objects no row names.
@@ -507,7 +507,7 @@ flowchart LR
   system records the debt in the generic `outbox` table in the same
   `db.batch()` as the change, runs the work as a fast path, and deletes the
   row on success. The daily digest drains what is left
-  (`modules/ops/outbox.ts`): due rows per kind, capped, claimed by a
+  (`modules/ops/outbox/outbox.ts`): due rows per kind, capped, claimed by a
   compare-and-swap on `next_attempt_at`, dispatched by `kind` to an
   idempotent handler, backed off on failure, and named in the digest once
   they pass five attempts or carry a kind the running build cannot read.
@@ -598,7 +598,7 @@ flowchart LR
   databases restore independently; the steps are `docs/deployment.md` §9.
   R2 originals are the photo source of truth; derived sizes are
   regenerable. The daily digest copies garment and entry photos into
-  `dialed-media-backup` (`ops/media-backup.ts`, D-172, design 186), and a
+  `dialed-media-backup` (`ops/daily/media-backup.ts`, D-172, design 186), and a
   deleted photo's copy leaves 30 days later; `docs/deployment.md` §10.
 - **Deploys**: on a push to `main` with `DEPLOY_ENABLED`, after the unit
   job and both e2e legs, the deploy job applies both databases' migrations
@@ -611,7 +611,7 @@ flowchart LR
   migrations stay expand→contract and queue messages stay a wire format
   (laws 8 and 9); `docs/deployment.md` §9.
 - **Abuse without moderators**, built and not:
-  - **Built**: Turnstile's verification (`ops/turnstile.ts`, fail closed) and
+  - **Built**: Turnstile's verification (`ops/edge/turnstile.ts`, fail closed) and
     widget (`ui/Turnstile.tsx`), which task 126 places on sign-up and request
     access; hard size and type caps on every upload.
   - **Built (OPS-4)**: Better Auth's own rate limiter, on for an https
@@ -637,7 +637,7 @@ flowchart LR
   minted in `server.ts`, stamped on the framework's scripts through
   `router.tsx`'s `ssr.nonce`), never on `'unsafe-inline'`.
 - **A ceiling on every request body**, applied in `server.ts` before the
-  framework reads it (`modules/ops/body-cap.ts`, SA-L05): a multipart upload
+  framework reads it (`modules/ops/edge/body-cap.ts`, SA-L05): a multipart upload
   up to the largest file any upload takes plus a megabyte, anything else a
   megabyte. Over it, by `Content-Length` or by counting, the answer is 413.
 - **A size budget on the client entry chunk**: `npm run check:bundle`,

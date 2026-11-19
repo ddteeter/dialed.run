@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   DeskSignOut,
   DeskSignOutProvider,
-} from "../../src/modules/ops/components/DeskSignOut";
+} from "../../src/modules/ops/desk/components/DeskSignOut";
 
 /**
  * The Desk's top bar's Sign out (R55·194), seated by the `/desk` layout

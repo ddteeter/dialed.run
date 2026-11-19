@@ -23,7 +23,7 @@ describe("extractionModelFor", () => {
   });
 
   it("builds nothing for an empty key, which is how an unset secret arrives", () => {
-    // The same trap `modules/ops/sentry.ts` records for the Sentry DSN: an
+    // The same trap `modules/ops/sentry/sentry.ts` records for the Sentry DSN: an
     // empty value is not a value, and treating it as one made the reporter
     // throw on construction.
     expect(extractionModelFor("")).toBeUndefined();

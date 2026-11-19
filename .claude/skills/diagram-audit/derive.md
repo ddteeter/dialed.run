@@ -28,7 +28,7 @@ re-drives.
 Then the failures. For every write, send and hand-off: what happens when
 it fails or is lost, what the user sees, and what re-drives it. Look at
 the queue's retries and dead-letter queue in `wrangler.jsonc`, the crons
-in `src/modules/ops/crons.ts` and what `src/modules/ops/scheduled.ts` runs
+in `src/modules/ops/desk/crons.ts` and what `src/modules/dispatch/scheduled.ts` runs
 on each, a dead-letter consumer, and anything a person can retry.
 
 Where a step passes sign-in, a session or an auth gate, name the gate

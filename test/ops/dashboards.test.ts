@@ -6,12 +6,15 @@ import {
   DEVICE_WIDTHS,
   VITAL_METRIC_NAMES,
 } from "../../src/lib/contracts/vitals";
-import { serverDataPoint, toDataPoints } from "../../src/modules/ops/vitals";
+import {
+  serverDataPoint,
+  toDataPoints,
+} from "../../src/modules/ops/speed/vitals";
 import {
   DASHBOARD_PANELS,
   dailyRollupQuery,
   versionQuery,
-} from "../../src/modules/ops/vitals-queries";
+} from "../../src/modules/ops/speed/vitals-queries";
 
 /**
  * The Grafana dashboard (design 165, step 9) is generated from

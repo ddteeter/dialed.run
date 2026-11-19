@@ -6,7 +6,7 @@ import { EMAIL_PALETTE } from "../../src/modules/email/palette";
 
 /**
  * An email's literal colours, pinned to the light-column tokens they copy
- * (`ops/og/palette`'s pattern). In the ui project because it reads
+ * (`ops/public-web/og/palette`'s pattern). In the ui project because it reads
  * `tokens.css` off disk, which the workers pool cannot.
  */
 const tokens = readFileSync("src/ui/tokens.css", "utf8");

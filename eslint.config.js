@@ -244,7 +244,7 @@ const primitiveExemptions = {
   // react-email: inline styles only, no Tailwind and so no Bracketed.
   "src/modules/email/EmailLayout.tsx": ["brackets"],
   // A satori card is an image: nothing reads its brackets aloud.
-  "src/modules/ops/og/cards.tsx": ["brackets"],
+  "src/modules/ops/public-web/og/cards.tsx": ["brackets"],
   // Google's own button spec, not one of ours.
   "src/modules/auth/google-button.tsx": ["pills"],
   // Ruled exceptions, drawn as their own: A2's ink-edged Change and its

@@ -20,7 +20,7 @@ import { codeOnly, isInstrumented, repoPath } from "./source-text";
 const ALLOWED = new Set([
   "src/env/d1.ts",
   "src/lib/sql/d1-session.ts",
-  "src/modules/ops/health.ts",
+  "src/modules/ops/desk/health.ts",
 ]);
 
 const BYPASS = /\benv\.DIALED_(?:CORE|WEATHER|OPS)\b|\.withSession\(/u;

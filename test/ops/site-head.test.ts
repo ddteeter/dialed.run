@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import { PUBLIC_ORIGIN } from "../../src/lib/public-origin";
 import {
-  PUBLIC_ORIGIN,
   SITE_LINKS,
   SITE_META,
-} from "../../src/modules/ops/og/site-head";
+} from "../../src/modules/ops/public-web/og/site-head";
 
 /**
  * The head every page starts from (OPS-9).

@@ -34,7 +34,7 @@ views {
         **This row is the recovery marker.** From here on, `pending` means the work is still owed, whatever happens to the request, the queue or the Worker.
       '''
     }
-    // source: src/modules/runs/imports.ts startImport, startFileUpload, repeatOf; src/modules/runs/queue-messages.ts importJob; src/modules/ops/scheduled.ts redispatchStalledImports, IMPORT_STALL_GRACE_S
+    // source: src/modules/runs/imports.ts startImport, startFileUpload, repeatOf; src/modules/runs/queue-messages.ts importJob; src/modules/dispatch/scheduled.ts redispatchStalledImports, IMPORT_STALL_GRACE_S
     cf.app.runs.upload -[async]-> cf.importsQueue 'enqueues ImportJob' {
       notes '''
         **Not atomic with the row.** The send can fail, or the Worker can die first.
@@ -53,7 +53,7 @@ views {
         The upload screen then asks for the import\'s status every 2 seconds, for at most two minutes, while the file is still being read or its run\'s weather is pending. After 20 seconds of reading it says the import is slow.
       '''
     }
-    // source: src/modules/ops/queues.ts handleQueueBatch; wrangler.jsonc queues.consumers, max_retries, max_batch_size; src/lib/sql/queue-batch.ts consumeEach; src/modules/runs/consumer.ts processImportJob
+    // source: src/modules/dispatch/queues.ts handleQueueBatch; wrangler.jsonc queues.consumers, max_retries, max_batch_size; src/lib/sql/queue-batch.ts consumeEach; src/modules/runs/consumer.ts processImportJob
     cf.importsQueue -[async]-> cf.app.runs.consumer 'delivers ImportJob' {
       notes '''
         **Timing boundary: seconds later, in a queue consumer.**
@@ -105,7 +105,7 @@ views {
       '''
       navigateTo weatherStory
     }
-    // source: src/modules/ops/scheduled.ts runDailyDigest, drainOwedEmail, drainProductLinks; src/modules/ops/outbox-handlers.ts importFileDelete; src/modules/runs/consumer.ts fileGoes
+    // source: src/modules/dispatch/scheduled.ts runDailyDigest, drainOwedEmail, drainProductLinks; src/modules/ops/outbox/outbox-handlers.ts importFileDelete; src/modules/runs/consumer.ts fileGoes
     cf.app.cronDaily1200 -> cf.importsBucket 'deletes the file that was read' {
       notes '''
         **Timing boundary: the next 12:00 UTC.** The concluding batch owed this deletion, and the daily firing\'s drain pays it. The hourly firings drain only email and product links, so a read file stays until then.
@@ -160,11 +160,11 @@ views {
       }
 
     try {
-      // source: src/modules/runs/imports.ts startImport (queue.send); src/modules/ops/scheduled.ts redispatchStalledImports
+      // source: src/modules/runs/imports.ts startImport (queue.send); src/modules/dispatch/scheduled.ts redispatchStalledImports
       cf.app.runs.upload -[async]-> cf.importsQueue 'enqueues ImportJob'
     }
     catch 'the send fails, or the Worker dies first' {
-      // source: src/modules/ops/scheduled.ts redispatchStalledImports, IMPORT_STALL_GRACE_S, stalledPending
+      // source: src/modules/dispatch/scheduled.ts redispatchStalledImports, IMPORT_STALL_GRACE_S, stalledPending
       cf.app.cronDaily1200 -[recovery]-> cf.coreDb 'finds imports pending for 15+ minutes' {
         notes '''
           Fifteen minutes of grace, so the sweep never races a dispatch still in flight.
@@ -172,7 +172,7 @@ views {
           **Bounded.** At most 100 imports a day.
         '''
       }
-      // source: src/modules/ops/scheduled.ts redispatchStalledImports, redispatchEach; src/modules/runs/queue-messages.ts importJob; src/modules/runs/consumer.ts didClaimImport
+      // source: src/modules/dispatch/scheduled.ts redispatchStalledImports, redispatchEach; src/modules/runs/queue-messages.ts importJob; src/modules/runs/consumer.ts didClaimImport
       cf.app.cronDaily1200 -[recovery]-> cf.importsQueue 'enqueues them again' {
         notes '''
           **Guard: each message is its own claimant.** The sweep\'s message carries a claim id of its own. It claims the row only if it is `pending`, so it never works beside another message, and a copy of an import that already ended stops.
@@ -182,7 +182,7 @@ views {
       }
     }
     loop 'at least once: up to 3 retries' {
-      // source: src/modules/ops/queues.ts handleQueueBatch; wrangler.jsonc queues.consumers, max_retries
+      // source: src/modules/dispatch/queues.ts handleQueueBatch; wrangler.jsonc queues.consumers, max_retries
       cf.importsQueue -[async]-> cf.app.runs.consumer 'delivers ImportJob'
       // source: src/modules/runs/consumer.ts processImportJob, didClaimImport, isHolder
       cf.app.runs.consumer -> cf.coreDb 'claims the row, or stops' {
@@ -206,7 +206,7 @@ views {
     opt 'every retry failed' {
       // source: wrangler.jsonc queues.consumers, max_retries, dead_letter_queue (max_retries 3)
       cf.importsQueue -[recovery]-> cf.importsDlq 'dead-letters the job'
-      // source: src/modules/ops/queues.ts handleQueueBatch, deliveries (dialed-imports-dlq)
+      // source: src/modules/dispatch/queues.ts handleQueueBatch, deliveries (dialed-imports-dlq)
       cf.importsDlq -[async]-> cf.app.runs.deadLetter 'delivers it'
       // source: src/modules/runs/consumer.ts handleImportsDlqBatch, deadImportWrites, isHolder, failImportWrites; src/db/gave-up.ts giveUpEach, gaveUpUpsert; wrangler.jsonc queues.consumers, max_retries (1 for dialed-imports-dlq, and no dead_letter_queue)
       cf.app.runs.deadLetter -[recovery]-> cf.coreDb 'fails the import, tells the runner, lists it on the Desk' {
@@ -257,7 +257,7 @@ views {
       '''
     }
     opt 'some hours had not settled, the provider failed, or the runner\'s day of calls was spent' {
-      // source: src/modules/ops/scheduled.ts retryPendingWeather, runHourly (the weather-retry job); src/modules/weather/attach.ts retryPendingWeather, attachEach, RETRY_BATCH_SIZE; src/modules/weather/run-conditions-copy.ts clearWeatherHalves
+      // source: src/modules/dispatch/scheduled.ts retryPendingWeather, runHourly (the weather-retry job); src/modules/weather/attach.ts retryPendingWeather, attachEach, RETRY_BATCH_SIZE; src/modules/weather/run-conditions-copy.ts clearWeatherHalves
       cf.app.cronHourly00 -[recovery]-> cf.app.weather 'retries the runs still pending' {
         notes '''
           **The marker is `runs.weather_status = pending`.** The hourly cron re-drives it.
