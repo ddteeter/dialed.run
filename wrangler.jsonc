@@ -30,7 +30,7 @@
   // open web's pages (/kit/<id>, /@handle, the kit's card) leave with
   // `Cache-Control: public, max-age=60` and a `Cache-Tag`, and the edge
   // serves them without running the Worker; a retraction purges by tag
-  // (src/modules/ops/edge-purge.ts). The minute is the guarantee.
+  // (src/modules/ops/public-web/edge-purge.ts). The minute is the guarantee.
   //
   // No `cross_version_cache`: by default the cache is partitioned by
   // Worker version, so a deploy starts cold and never serves the previous
@@ -52,7 +52,7 @@
   // - it is the host `routes` attaches above (D-99): on any other host,
   //   sign-in and sign-up are refused 403 INVALID_ORIGIN, and OAuth
   //   redirect_uris point here (docs/deployment.md §5); it must equal
-  //   modules/ops/og/site-head.ts's PUBLIC_ORIGIN, which
+  //   lib/public-origin.ts's PUBLIC_ORIGIN, which
   //   bindings-conformance holds;
   // - local dev and CI MUST override it in .dev.vars
   //   (BETTER_AUTH_URL=http://localhost:<port>), for the same origin check
@@ -129,7 +129,7 @@
     // PUBLIC kit, under an unguessable key, each with
     // `Cache-Control: public, max-age=60`, and nothing else; the deletion
     // paths and the hourly sweep remove every copy whose kit stops being
-    // public (src/modules/ops/public-photos.ts). No lifecycle rule. Create
+    // public (src/modules/ops/public-web/public-photos.ts). No lifecycle rule. Create
     // it, connect the domain and turn on the CSAM Scanning Tool before the
     // deploy that binds it (docs/deployment.md §2).
     {
@@ -138,7 +138,7 @@
     },
     // MEDIA_BACKUP (owner-approved, 2026-11-08; D-172, #420, design 186):
     // the daily digest's copy of MEDIA's garment and entry photos
-    // (src/modules/ops/media-backup.ts). quarantine/ is never copied
+    // (src/modules/ops/daily/media-backup.ts). quarantine/ is never copied
     // (#530); a deleted photo's copy is kept 30 days, then deleted (#529).
     // Create it (enam) before the deploy that binds it
     // (docs/deployment.md §2).
@@ -159,7 +159,7 @@
     // the DLQ are the retry mechanism resilience law 3 defers to, so they
     // are part of the binding, not something a handler re-implements.
     // test/bindings-conformance.test.ts keeps this list and
-    // src/modules/ops/queues.ts in step.
+    // src/modules/ops/desk/queues.ts in step.
     "consumers": [
       {
         "queue": "dialed-imports",
@@ -217,7 +217,7 @@
   // The running deploy's version id, stamped on each beacon so a
   // regression can be pinned to the deploy that caused it (design 165).
   "version_metadata": { "binding": "CF_VERSION_METADATA" },
-  // Matched against src/modules/ops/crons.ts by the conformance test. A
+  // Matched against src/modules/ops/desk/crons.ts by the conformance test. A
   // schedule changed here and not there sends every firing to the `unknown`
   // branch, which is a cron that quietly stops working.
   "triggers": {
