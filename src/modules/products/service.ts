@@ -393,13 +393,15 @@ export interface ProductForDetail {
   /**
    * What enrichment has made of the product, for E's outcome line (design
    * 163, round 43 #94): its status, whether it wrote anything, when the
-   * product was made (the sweep retries a failure for its first day), and
-   * the page it read, whose domain E names once the denylist allows it.
+   * product was made and how many tries have failed (the sweep retries a
+   * failure inside its first day and under a cap, #881), and the page it
+   * read, whose domain E names once the denylist allows it.
    */
   readonly extraction: Readonly<{
     status: ProductRow["extractionStatus"];
     hasSpecs: boolean;
     createdAt: number;
+    tries: number | undefined;
     sourceUrl: string | undefined;
   }>;
 }
@@ -427,6 +429,7 @@ export async function getProductForDetail(
       status: row.extractionStatus,
       hasSpecs: hasWrittenSpecs(row.extracted),
       createdAt: row.createdAt,
+      tries: row.extractionTries ?? undefined,
       sourceUrl: row.sourceUrl ?? undefined,
     },
   };

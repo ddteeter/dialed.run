@@ -16,7 +16,7 @@ import type { drizzle } from "drizzle-orm/d1";
 
 import { domainOf, linkDomainOf } from "../../lib/domain";
 import { isUnconfirmed } from "../account";
-import { abandonedBefore } from "../enrichment";
+import { isSweepOwed } from "../enrichment";
 import type { ProductForDetail } from "../products";
 import { deniedLinksOf } from "../safety";
 import { isTapListPlaceholder } from "./tap-list-placeholder";
@@ -86,13 +86,9 @@ function linkedOutcome(
       return { kind: extraction.hasSpecs ? "found" : "nothing", source };
     }
     case "failed": {
-      // The sweep re-drives a failure for the product's first day, so the
-      // line says it is trying again until the sweep stops.
-      return {
-        kind: "unread",
-        source,
-        isRetrying: extraction.createdAt > abandonedBefore(),
-      };
+      // The line says it is trying again exactly while the sweep owes it
+      // a retry: inside its first day and under the try cap (#881).
+      return { kind: "unread", source, isRetrying: isSweepOwed(extraction) };
     }
     default: {
       return { kind: "reading" };

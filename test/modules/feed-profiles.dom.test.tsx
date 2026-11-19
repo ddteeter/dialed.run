@@ -1442,9 +1442,14 @@ describe("RunnerSearch", () => {
     const row = screen.getByRole("listitem");
     expect(row).toContainElement(band);
     expect(row.lastElementChild).toContainElement(band);
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Not following. Your connection dropped.",
-    );
+    // `Follow` reports its sentence from an effect, so it reaches the one
+    // region a render after the band: the count is heard, then the
+    // failure (#897). Wait for it rather than read the region at once.
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Not following. Your connection dropped.",
+      );
+    });
   });
 });
 

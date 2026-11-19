@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, inArray, lt, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, or, type SQL } from "drizzle-orm";
 
 import {
   cronCheckpoints,
@@ -15,8 +15,8 @@ import {
   extractionDone,
   extractionFailed,
   extractionPending,
-  ENRICHMENT_SWEEP_TRIES,
   listAbandonedEnrichments,
+  sweepOwed,
 } from "../enrichment";
 import { sweepRateLimits } from "../email";
 import { fillMissingTimeZones } from "../onboarding";
@@ -796,8 +796,9 @@ const ENRICHMENT_STALL_GRACE_S = 15 * 60;
  * send (law 2): a send that then fails leaves the row `pending`, which the
  * next sweep picks up on its own.
  *
- * So: `failed` past the grace window and inside the product's first day,
- * the rows the sweep still owes a retry. The day itself is enrichment's
+ * So: `failed` past the grace window, and owed a retry (`sweepOwed`:
+ * inside the product's first day and under the try cap), the rule the
+ * closet's link line reads too (#881). The day itself is enrichment's
  * (`abandonedBefore`), because the consumer reads it too, to know whether a
  * failure is one the sweep will retry or one to list on the Desk's Gave up
  * (R-119).
@@ -807,10 +808,7 @@ function failedAndOwed(): SQL | undefined {
   return and(
     extractionFailed(),
     lt(products.createdAt, staleBefore),
-    gt(products.createdAt, abandonedBefore()),
-    // A few tries, not one an hour all day: a page that keeps failing has
-    // answered, and each try may be a proxy credit.
-    sql`coalesce(${products.extractionTries}, 0) < ${ENRICHMENT_SWEEP_TRIES}`,
+    sweepOwed(),
   );
 }
 
