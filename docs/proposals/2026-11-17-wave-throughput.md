@@ -1,8 +1,8 @@
 # Wave throughput — proposal
 
-**Status:** draft for the owner's review, 2026-11-17. Nothing in it is
-approved yet. The batches (§6) set the shape; each item is its own issue
-and needs its own decision. It spans this repo (the coordinator skill,
+**Status:** triaged by the owner on 2026-11-18 (§4, "Triage"). Batch A
+is approved and is in this PR. The other items are issues, and each one
+still needs its own decision: a forbidden-zone change needs its own grant. It spans this repo (the coordinator skill,
 `pr-ready`, CI workflows, the e2e scripts) and
 `agentic-guardrails-scaffolding` (guardrails-core).
 
@@ -208,8 +208,8 @@ Notes on the items:
 - **#3 and #9** both change what makes a gate cold or makes it re-run.
   #3 matters most: today an unrelated dependency bump, or a ratchet entry
   in another module, makes every lane's next gate cold.
-- **#4 and #5** both rely on main's run as the backstop. Do them both,
-  and leave #11, which takes that backstop away.
+- **#4 and #5** both rely on main's run as the backstop, which is why
+  #11, which takes that backstop away, is not recommended.
 - **#8** reverses a ruling from 2026-11-13. It only pays off once seeds
   survive (#3), and it is a trade-off, so it is an owner question.
 - **#12:** the coverage band is already set from main's spread (§3), so
@@ -233,6 +233,51 @@ afford more concurrency.
 
 **Keep as they are:** the 100% mutation ratchet, the local e2e (it caught
 10 of the 16 real defects) and the commit-gate rules.
+
+### Triage (owner, 2026-11-18)
+
+The table ranks by estimated saving. Not every item there is worth
+doing, so each one was sorted before any issue was opened.
+
+**Do.** One issue each. Guardrails-core items are in
+`agentic-guardrails-scaffolding`:
+
+| item                                                                                                        | issue                              | batch |
+| ----------------------------------------------------------------------------------------------------------- | ---------------------------------- | ----- |
+| #1 hold pushes, not builds                                                                                  | #872 (this PR)                     | A     |
+| #7 no turn ends on an owner question while ready work is queued                                             | #873 (this PR)                     | A     |
+| #12 the flake rule                                                                                          | #874 (this PR)                     | A     |
+| #2 for design-deltas and the deployment plan only                                                           | #875                               | B     |
+| #4 the red-main alert and the shard cap, and the baseline rule only if the alert is not enough              | #876                               | B     |
+| #13 one preship script                                                                                      | #877                               | B     |
+| #17 (new) why the Guardrails CI job runs the gate and Stryker again (median 23 min, 90th percentile 87; §1) | #878                               | B     |
+| #16 the gate and ship log, with #14's JSON reporter folded in as the log's Stryker source                   | agentic-guardrails-scaffolding#176 | C     |
+| #3 narrow the seed fingerprint                                                                              | agentic-guardrails-scaffolding#177 | C     |
+| #10 `ship` reports the first failed check and refuses a branch that is behind                               | agentic-guardrails-scaffolding#178 | C     |
+| #9a diff from the merge-base                                                                                | agentic-guardrails-scaffolding#179 | C     |
+| settle whether the push gate scores timeouts as survivors (§3)                                              | agentic-guardrails-scaffolding#180 | C     |
+
+**Decide with data.** These are parked in one owner question, #879,
+until two waves have run with #16's log:
+
+- #5, affected shards only;
+- #8, mutation before the first ship;
+- #6a, the fair lock queue (see agentic-guardrails-scaffolding#147);
+- #6b, local e2e on its own lock;
+- #15, the stop gate on lane worktrees.
+
+**Not recommended.** No issue was opened for these:
+
+- **#11, main's cold run nightly.** #4 and #5 both rely on main's run as
+  the backstop, and this takes it away.
+- **#9b, reuse the gate pass on a conflict-only rebase.** A conflict
+  resolution can change behaviour, so "conflict-only" is hard to define
+  safely.
+- **Mutation at the CI rung only.** It removes the local loop that
+  produced most of the 27 episodes where tests got stronger.
+- **#2 for `stryker.conf.json` and the rate-limit kinds test.**
+  guardrails-core reads the `mutate` array's negations, which makes this
+  L effort for a few conflicts.
 
 ## 5 · Local capacity [reader]
 
@@ -260,12 +305,12 @@ Batches are timed by wave boundaries. Nothing that changes gates, CI or
 `stryker.conf.json` lands while lanes are shipping, because doing that
 is one of the causes in §2.
 
-| batch                       | when                                                             | items                                                                                                                                 |
-| --------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| A · rules                   | now, in effect from wave 15's dispatch                           | #1, #7, #12's flake rule: edits to `.claude/skills/coordinating-a-wave/SKILL.md` and the brief template. Can share this proposal's PR |
-| B · repo tooling            | the gap after wave 14 merges                                     | #2 for design-deltas and deployment-plan, #4's alert and shard cap, #14, #13. Each forbidden-zone edit gets its own grant request     |
-| C · guardrails-core release | start now in that repo, adopt in the first gap after it is ready | #16, #3, #10, #9's merge-base diff, #15, and #6's fair queue (pending the owner's decision)                                           |
-| D · decide with data        | after two waves have run with batch C's log                      | #5, #6's e2e lock split, #8, #9's gate reuse, #11, and running mutation at the CI rung only                                           |
+| batch                       | when                                                             | items                                                                                                       |
+| --------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| A · rules                   | this PR. Waves 14 and 15 tried parts of it already               | #1, #7, #12's flake rule: edits to `.claude/skills/coordinating-a-wave/SKILL.md` and the brief template     |
+| B · repo tooling            | the next gap between waves                                       | #2 for design-deltas and deployment-plan, #4, #13, #17. Each forbidden-zone edit gets its own grant request |
+| C · guardrails-core release | start now in that repo, adopt in the first gap after it is ready | #16 (with #14), #3, #10, #9a, and the timeout question                                                      |
+| D · decide with data        | after two waves have run with batch C's log                      | #879: #5, #8, #6a, #6b, #15                                                                                 |
 
 Batches B and C belong to a dedicated tooling session, not to wave lanes.
 
@@ -379,10 +424,11 @@ Other findings from the experiment:
 
 ## 8 · Open questions for the owner
 
-- Move #6's fair lock queue into batch C. Recommended, because of the
-  starvation in §2.4.
-- One grant for each forbidden-zone edit in batch B.
-- The trade-offs in batch D, once the log has data: #5, #8, #11, and
-  mutation at the CI rung only.
-- Whether the push gate scores Stryker timeouts as survivors (§3). It
-  should be settled before lanes harden any more code around the belief.
+- One grant for each forbidden-zone edit in batch B (#876, and #878 if
+  it leads to a workflow change), asked when the work starts.
+- Batch D's trade-offs, once the log has data (#879). The fair lock
+  queue moved there: wave 14 showed no wait over 30 min, so it waits for
+  the data like the rest.
+- Whether the push gate scores Stryker timeouts as survivors (§3) is now
+  an investigation (agentic-guardrails-scaffolding#180), not a question
+  for the owner.
