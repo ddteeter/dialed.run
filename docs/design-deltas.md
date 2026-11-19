@@ -7367,7 +7367,10 @@ Round 61's rulings on what wave 14 built as guesses (#831, #832, #835,
 The round's own import is the docs pass's.
 
 - **R61·336 · the badged runs row.** The badge line sits 16 under the
-  mono line and the row pads 12 below, so the row is 102, not 104.
+  mono line and the row pads 12 below, each 2 less than it was. The
+  ruling's 102 is a sum on the board's line boxes (20, 16, 22); the
+  type's own are about 22.4, 15.4 and 23, so a browser draws the row near
+  106 (it was near 108).
 - **R61·332 · a moved start time.** On A1's card "Changed" takes
   "Change"'s slot after a move, with no " ·" and no second word: "6:04 AM
   Change", then "6:07 AM Changed".

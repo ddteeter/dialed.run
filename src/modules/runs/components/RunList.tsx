@@ -185,10 +185,12 @@ function ListEnd({
  *
  * A badged row breathes (R60·326, its numbers from R61·336): the badge
  * takes a line of its own under the mono line, at the row's start with
- * nothing beside it, and the row pads 12 above and below as the unbadged
- * row's lines sit, so 12 + 20 + 4 + 16 + 16 + 22 + 12 = 102. The marks
- * keep their place at the top right. A row with no badge stays 64, its
- * lines centred in it.
+ * nothing beside it, and the row pads 12 above and 12 below. The ruling
+ * adds it up as 12 + 20 + 4 + 16 + 16 + 22 + 12 = 102 on the board's line
+ * boxes; the type's own (TYPE.body's line, MONO.sm's, the badge's) are a
+ * little different, so a browser draws the row near 106. The spaces are
+ * the ruled ones. The marks keep their place at the top right. A row
+ * with no badge stays 64, its lines centred in it.
  */
 const ROW =
   "grid min-h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-hairline";

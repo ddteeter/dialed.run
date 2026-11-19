@@ -133,7 +133,8 @@ describe("R: a row (Round 55 · 235)", () => {
       await renderWithRouter(list([run]));
 
       const row = onlyRow();
-      // 12 above and below, the marks at the top right: 102 with a badge.
+      // 12 above and below, the marks at the top right (R61·336's 102 is
+      // on the board's line boxes; the spaces are what is pinned here).
       expect(row).toHaveAttribute("data-badged", "true");
       expect(row).toHaveClass(
         "grid",
