@@ -5,11 +5,11 @@ import { ruleLine } from "../../src/lib/contracts/community-rules";
 import {
   ContentRemoved,
   PhotoBeingChecked,
-} from "../../src/modules/safety/components/NoticeBand";
+} from "../../src/modules/safety/notices/components/NoticeBand";
 import {
   removalReasons,
   removalRule,
-} from "../../src/modules/safety/contracts";
+} from "../../src/modules/safety/rules/contracts";
 
 /**
  * Round 27 #20 and #21: the bands that stand where a photo or an entry

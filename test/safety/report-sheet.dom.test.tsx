@@ -12,8 +12,8 @@ import { EMAIL_UNCONFIRMED_CODE } from "../../src/lib/auth-signal";
 import {
   profileReportReasons,
   reportReasons,
-} from "../../src/modules/safety/contracts";
-import { ReportSheet } from "../../src/modules/safety/components/ReportSheet";
+} from "../../src/modules/safety/rules/contracts";
+import { ReportSheet } from "../../src/modules/safety/reports/components/ReportSheet";
 import type { ConfirmGate } from "../../src/ui";
 import { UnconfirmedRefusalAnswer } from "../../src/ui/unconfirmed-refusal";
 import { carriedSince } from "../ui/carry-spy";

@@ -5,13 +5,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { reviewAudit } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import {
-  fileReport,
-  moderationThresholds,
-  pendingReviewQueue,
-  reportersToHide,
-} from "../../src/modules/safety";
-import { reportersFor } from "../../src/modules/safety/review-audit";
+import { moderationThresholds } from "../../src/modules/safety";
+import { fileReport } from "../../src/modules/safety/reports/reports";
+import { pendingReviewQueue } from "../../src/modules/safety/review/review";
+import { reportersToHide } from "../../src/modules/safety/screening/thresholds";
+import { reportersFor } from "../../src/modules/safety/review/review-audit";
 import { noPurge } from "../purge-spy";
 import { oweInCore } from "../queue-fakes";
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";

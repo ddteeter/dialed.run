@@ -16,17 +16,19 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { orSqlNull } from "../../src/lib/sql/sql-null";
 import {
-  claimForReview,
-  fileReport,
-  pendingEntryPhotos,
   pendingReviewCount,
-  pendingReviewQueue,
-  reasonsFrom,
   resolveReview,
   reviewResolution,
   moderationThresholds,
-  reportersToHide,
 } from "../../src/modules/safety";
+import {
+  claimForReview,
+  pendingReviewQueue,
+  reasonsFrom,
+} from "../../src/modules/safety/review/review";
+import { fileReport } from "../../src/modules/safety/reports/reports";
+import { pendingEntryPhotos } from "../../src/modules/safety/screening/screening";
+import { reportersToHide } from "../../src/modules/safety/screening/thresholds";
 
 /**
  * How many distinct reporters hide a subject for a reason off the clock,

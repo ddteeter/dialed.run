@@ -21,15 +21,16 @@ import { visibleRunnerHandle } from "../../src/modules/feed/profiles";
 import { setUsefulReaction } from "../../src/modules/feed/reactions";
 import { searchRunners } from "../../src/modules/feed/search";
 import {
-  banUser,
-  blockRunner,
-  fileReport,
   isUnderReviewForAuthor,
   publiclyVisibleEntry,
-  unbanUser,
-  unblockRunner,
   worldVisibleEntry,
 } from "../../src/modules/safety";
+import { banUser, unbanUser } from "../../src/modules/safety/runners/bans";
+import {
+  blockRunner,
+  unblockRunner,
+} from "../../src/modules/safety/reports/blocks";
+import { fileReport } from "../../src/modules/safety/reports/reports";
 
 import { noPurge } from "../purge-spy";
 import {

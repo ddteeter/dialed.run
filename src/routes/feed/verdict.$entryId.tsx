@@ -25,7 +25,7 @@ import {
   countInTotalsQuery,
   setCountInTotalsFn,
 } from "../../modules/onboarding/functions";
-import { RunRemovals } from "../../modules/safety/components/RunRemovals";
+import { RunRemovals } from "../../modules/safety/takedowns/components/RunRemovals";
 import { runRemovalsQuery } from "../../modules/safety/functions";
 
 export const Route = createFileRoute("/feed/verdict/$entryId")({

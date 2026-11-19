@@ -12,8 +12,8 @@ import { z } from "zod";
 import {
   CopyrightHolds,
   holdState,
-} from "../../src/modules/safety/components/CopyrightHolds";
-import type { CopyrightHoldSummary } from "../../src/modules/safety/copyright-holds";
+} from "../../src/modules/safety/takedowns/components/CopyrightHolds";
+import type { CopyrightHoldSummary } from "../../src/modules/safety/takedowns/copyright-holds";
 import { isoDayOf } from "../../src/lib/contracts/age";
 import { nowSeconds } from "../../src/lib/now";
 import { carriedSince } from "../ui/carry-spy";

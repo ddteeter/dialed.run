@@ -16,7 +16,7 @@ import { env } from "../../src/env";
 import { entryPhotoIdOf } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { FINGERPRINT_HOLDS_PER_HOUR } from "../../src/modules/safety/breakers";
+import { FINGERPRINT_HOLDS_PER_HOUR } from "../../src/modules/safety/limits/breakers";
 import { moderateContent } from "../../src/modules/feed/moderation";
 import { uploadPhoto } from "../../src/modules/feed/photos";
 import {
@@ -24,17 +24,17 @@ import {
   deleteRuns,
   retractEntries,
 } from "../../src/modules/feed/retract";
-import { fileReport } from "../../src/modules/safety/reports";
-import { flaggedAtOf } from "../../src/modules/safety/account-flags";
+import { fileReport } from "../../src/modules/safety/reports/reports";
+import { flaggedAtOf } from "../../src/modules/safety/runners/account-flags";
 import { oweInCore } from "../queue-fakes";
 import type { Classify } from "../../src/modules/safety";
 import {
   removedMatchOf,
   removedMatchesOf,
-} from "../../src/modules/safety/removed-fingerprints";
-import { pendingReviewQueue } from "../../src/modules/safety/review";
-import type { RemovalReason } from "../../src/modules/safety/contracts";
-import { SCREENING_HIDDEN_NOTICE } from "../../src/modules/safety/notice-copy";
+} from "../../src/modules/safety/review/removed-fingerprints";
+import { pendingReviewQueue } from "../../src/modules/safety/review/review";
+import type { RemovalReason } from "../../src/modules/safety/rules/contracts";
+import { SCREENING_HIDDEN_NOTICE } from "../../src/modules/safety/notices/notice-copy";
 import {
   copyOf,
   fingerprintOfBytes,

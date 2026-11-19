@@ -569,7 +569,7 @@ export async function sweepPublicPhotoCopies(
 }
 
 async function runScreeningRetry(anomalies: string[]): Promise<void> {
-  // Moderation fails closed without its config (`safety/thresholds`), and
+  // Moderation fails closed without its config (`safety/screening/thresholds`), and
   // says so here every hour until the secret is right.
   const unconfigured = thresholdsAnomaly(moderationThresholds());
   if (unconfigured !== undefined) anomalies.push(unconfigured);

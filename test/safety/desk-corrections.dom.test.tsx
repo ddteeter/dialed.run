@@ -7,7 +7,7 @@ import { z } from "zod";
 import {
   DeskCorrections,
   type DeskCorrectionsProps,
-} from "../../src/modules/safety/components/DeskCorrections";
+} from "../../src/modules/safety/review/components/DeskCorrections";
 import type { CorrectionGroup } from "../../src/modules/products";
 import { QUIET_CANCEL } from "../../src/ui";
 import { renderWithRouter } from "../modules/run-fixtures";

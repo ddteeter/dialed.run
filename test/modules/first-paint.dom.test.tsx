@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { EntryDetail } from "../../src/modules/feed/components/EntryDetail";
-import { NoticeBand } from "../../src/modules/safety/components/NoticeBand";
+import { NoticeBand } from "../../src/modules/safety/notices/components/NoticeBand";
 import { Feed } from "../../src/modules/feed/components/Feed";
 import { OtherProfile } from "../../src/modules/feed/components/OtherProfile";
 import { feedItem, firstPaintOf, MILES, NOW } from "./feed-fixtures";

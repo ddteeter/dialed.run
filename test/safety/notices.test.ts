@@ -17,18 +17,20 @@ import { nowSeconds } from "../../src/lib/now";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
 import { decideReview } from "../../src/modules/feed/moderation";
 import {
-  fileReport,
   moderationThresholds,
   reconcileUnhiddenReports,
-  reportersToHide,
+} from "../../src/modules/safety";
+import { fileReport } from "../../src/modules/safety/reports/reports";
+import { reportersToHide } from "../../src/modules/safety/screening/thresholds";
+import {
   type ReportReason,
   type ReportSubjectType,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/rules/contracts";
 import {
   HIDDEN_NOTICE,
   REPORT_OUTCOME,
-} from "../../src/modules/safety/notice-copy";
-import type { ReviewSource } from "../../src/modules/safety/review";
+} from "../../src/modules/safety/notices/notice-copy";
+import type { ReviewSource } from "../../src/modules/safety/review/review";
 
 import { noPurge } from "../purge-spy";
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";

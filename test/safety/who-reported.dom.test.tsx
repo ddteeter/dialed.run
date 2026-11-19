@@ -6,7 +6,7 @@ import { z } from "zod";
 import {
   WhoReported,
   type LoadReporters,
-} from "../../src/modules/safety/components/WhoReported";
+} from "../../src/modules/safety/review/components/WhoReported";
 
 const NOTHING = z.null().parse(JSON.parse("null"));
 const QUEUE = "01HZZZZZZZZZZZZZZZZZZZZZZQ";

@@ -24,7 +24,7 @@ import {
   usefulCount,
 } from "../../src/modules/feed/reactions";
 import { searchRunners } from "../../src/modules/feed/search";
-import { blockRunner } from "../../src/modules/safety";
+import { blockRunner } from "../../src/modules/safety/reports/blocks";
 import {
   makeEntry,
   makeRun,

@@ -17,7 +17,7 @@ Sign-off: [OWNER: name, and the date this procedure was adopted]
 ## Who does this
 
 [dialed.run] has one operator: the owner, the only id in `ADMIN_USER_IDS`
-(`src/env/env.d.ts`; `src/modules/safety/admin.ts` `requireAdmin`). Every
+(`src/env/env.d.ts`; `src/modules/safety/rules/admin.ts` `requireAdmin`). Every
 step below is theirs. There is no deputy. When the owner is away, nothing
 is decided, and the 48-hour clock still runs (see
 [When the owner is away](#when-the-owner-is-away)).
@@ -67,13 +67,13 @@ is decided, and the 48-hour clock still runs (see
 Actual knowledge that an image or kit on [dialed.run] is apparent CSAM.
 Today that knowledge can only come from a person looking at it:
 
-| Route in                                       | What the code does                                                                                                                                                                                           | Where                                                                        |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| A runner reports a kit or photo                | Queued for review. Three distinct reporters hide it from everyone but its owner; one `intimate` report hides it at once.                                                                                     | `safety/reports.ts`; `safety/contracts.ts` `reportersToHide`                 |
-| The photo classifier flags a kit photo         | Hidden and queued (`flag`), or queued and left visible (`review` band). **The classifier does not detect CSAM**: OpenAI's `sexual/minors` category is text-only, so an image scores 0 on it by construction. | `safety/screening.ts` `queueWritesFor`; `classifier/moderation.ts`           |
-| A `/takedown` request whose link is ours       | Hidden at once (within the limits of D-118) and queued.                                                                                                                                                      | `safety/takedown-requests.ts` `fileTakedownRequest`                          |
-| Email to desk@ or hello@, or a law-enforcement | Nothing automatic. The operator finds the content by hand.                                                                                                                                                   | —                                                                            |
-| A garment (closet) photo                       | Screened like a kit photo: hidden and queued on `flag`, queued on `review`, and held and queued when it copies a removed intimate image (D-147). It reaches Review as a `garment photo` row (design 157).    | `safety/screening.ts` `queueWritesFor`; `closet/photos.ts` `uploadItemPhoto` |
+| Route in                                       | What the code does                                                                                                                                                                                           | Where                                                                                  |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| A runner reports a kit or photo                | Queued for review. Three distinct reporters hide it from everyone but its owner; one `intimate` report hides it at once.                                                                                     | `safety/reports/reports.ts`; `safety/rules/contracts.ts` `reportersToHide`             |
+| The photo classifier flags a kit photo         | Hidden and queued (`flag`), or queued and left visible (`review` band). **The classifier does not detect CSAM**: OpenAI's `sexual/minors` category is text-only, so an image scores 0 on it by construction. | `safety/screening/screening.ts` `queueWritesFor`; `classifier/moderation.ts`           |
+| A `/takedown` request whose link is ours       | Hidden at once (within the limits of D-118) and queued.                                                                                                                                                      | `safety/takedowns/takedown-requests.ts` `fileTakedownRequest`                          |
+| Email to desk@ or hello@, or a law-enforcement | Nothing automatic. The operator finds the content by hand.                                                                                                                                                   | —                                                                                      |
+| A garment (closet) photo                       | Screened like a kit photo: hidden and queued on `flag`, queued on `review`, and held and queued when it copies a removed intimate image (D-147). It reaches Review as a `garment photo` row (design 157).    | `safety/screening/screening.ts` `queueWritesFor`; `closet/photos.ts` `uploadItemPhoto` |
 
 **What changes when C11 (PhotoDNA, D-129) lands:** every upload is also
 matched against known-CSAM hashes beside the classifier. A match is a
@@ -90,7 +90,7 @@ only cached responses and none of ours are cached (D-69).
    keep no copy (`Cache-Control: private, no-store`). Do not save,
    screenshot, forward or download it.
 2. Choose **Remove as suspected CSAM** and confirm (the row asks again;
-   `safety/components/ReviewQueue.tsx` `Decision`).
+   `safety/review/components/ReviewQueue.tsx` `Decision`).
 3. What the code does, in this order (`feed/moderation.ts`
    `moderateContent`, action `quarantine`):
    - copies each photo's bytes to `quarantine/…` in the `MEDIA` bucket
@@ -101,11 +101,11 @@ only cached responses and none of ours are cached (D-69).
      `quarantined_content` row with the entry snapshot, the photo snapshot
      (each photo's preserved key and R2 upload time), the uploader's id,
      `quarantined_at`, and `retain_until` = quarantine time + 1 year
-     (`safety/quarantine.ts` `quarantineInsert`);
+     (`safety/takedowns/quarantine.ts` `quarantineInsert`);
    - in the same row, `uploader_snapshot`: the uploader's email, account
      creation time, username, and every `session` row's times, IP address
      and browser as they stood (never the token), read just before the
-     batch (`safety/quarantine.ts` `uploaderContextOf`, design 157). It has
+     batch (`safety/takedowns/quarantine.ts` `uploaderContextOf`, design 157). It has
      the record's clock, so a ban, the session sweep or the account purge
      cannot take it;
    - sends the uploader nothing: no bell row, no email (D-70).
@@ -164,8 +164,8 @@ So, before anything else:
    `wrangler r2 object get` into a temporary encrypted location, upload it, and delete the
    local copy at once.
 4. **Record the report in the app.** In Review's Quarantine list
-   (`safety/components/QuarantineRecords.tsx`), record the report and paste
-   CyberTipline's report id. The code (`safety/quarantine.ts:116-143`
+   (`safety/takedowns/components/QuarantineRecords.tsx`), record the report and paste
+   CyberTipline's report id. The code (`safety/takedowns/quarantine.ts:116-143`
    `recordNcmecReport`):
    - sets `ncmec_reported_at` to the moment you record it, once (a second
      recording keeps the first time);
@@ -178,7 +178,7 @@ So, before anything else:
 
 ### Step 3: the account
 
-Decide whether to close the uploader's account (`safety/bans.ts`
+Decide whether to close the uploader's account (`safety/runners/bans.ts`
 `banUser`: records the reason, deletes every session, refuses sign-in,
 hides their content, sends `account_closed`). **Close it only after Step 2's
 capture**: the ban deletes the session rows, and while the record keeps
@@ -192,7 +192,7 @@ covers the quarantine; this keeps the ban from tipping off the uploader.
 ### Step 4: keep, hold, delete
 
 - The daily firing purges a record and its copies once `retain_until`
-  passes (`safety/quarantine.ts:287` `purgeExpiredQuarantine`, from
+  passes (`safety/takedowns/quarantine.ts:287` `purgeExpiredQuarantine`, from
   `dispatch/scheduled.ts`). It claims each record first, so overlapping firings
   cannot double-delete.
 - **A legal hold is manual.** No code holds a record past `retain_until`.
@@ -239,7 +239,7 @@ For each report, two places:
 - **Notice.** Clear and conspicuous plain-language notice of the process
   (§3(a)(2)). [dialed.run] links `/takedown` from the footer
   (`src/ui/Layout.tsx:139`) and from the report sheet
-  (`safety/components/ReportSheet.tsx:223`).
+  (`safety/reports/components/ReportSheet.tsx:223`).
 - **Good-faith removal is protected** from liability (§3(a)(4)).
 - **Enforcement** is by the FTC as an unfair or deceptive practice (§3(b))
   ([Inside Privacy](https://www.insideprivacy.com/united-states/federal-trade-commission/the-take-it-down-acts-notice-and-removal-requirements-enter-into-effect/)).
@@ -247,11 +247,11 @@ For each report, two places:
 
 ### How a request arrives
 
-| Route                                | What the code does                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/takedown`, with or without account | Turnstile, a per-IP count, then one batch: the request row (email, signature name, location, statement, `dueAt` = filing + 48 h), an alert email to each operator, a receipt to the requester (`safety/takedown-requests.ts:105` `fileTakedownRequest`). If the link is a kit or photo on [dialed.run] (`lib/contracts/takedown.ts` `takedownSubjectOf`), it is hidden at once, except under D-118's limits (`safety/takedown-limits.ts` `holdStateFor`). |
-| In-app report, reason `intimate`     | Hidden from everyone but its owner on the first report, queued, each operator emailed `removal_due` with the deadline (`safety/reports.ts` `removalAlerts`; `safety/contracts.ts` `REMOVAL_DUE_SECONDS`). The 48 hours run from the first report.                                                                                                                                                                                                         |
-| Email to desk@ or hello@             | Nothing automatic. Treat it as a request from the time it arrived; ask the sender to use `/takedown` only if a required element is missing, and never let that delay a removal that is clear.                                                                                                                                                                                                                                                             |
+| Route                                | What the code does                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/takedown`, with or without account | Turnstile, a per-IP count, then one batch: the request row (email, signature name, location, statement, `dueAt` = filing + 48 h), an alert email to each operator, a receipt to the requester (`safety/takedowns/takedown-requests.ts:105` `fileTakedownRequest`). If the link is a kit or photo on [dialed.run] (`lib/contracts/takedown.ts` `takedownSubjectOf`), it is hidden at once, except under D-118's limits (`safety/limits/takedown-limits.ts` `holdStateFor`). |
+| In-app report, reason `intimate`     | Hidden from everyone but its owner on the first report, queued, each operator emailed `removal_due` with the deadline (`safety/reports/reports.ts` `removalAlerts`; `safety/rules/contracts.ts` `REMOVAL_DUE_SECONDS`). The 48 hours run from the first report.                                                                                                                                                                                                            |
+| Email to desk@ or hello@             | Nothing automatic. Treat it as a request from the time it arrived; ask the sender to use `/takedown` only if a required element is missing, and never let that delay a removal that is clear.                                                                                                                                                                                                                                                                              |
 
 An in-app report has no signature or good-faith statement, so it may not
 be a "valid request" under the Act. The app treats it as one anyway, with
@@ -260,7 +260,7 @@ the same 48-hour clock. Keep doing so.
 ### Step 1: within 48 hours, decide
 
 1. The operator alert gives the deadline. At 40 of the 48 hours, an
-   undecided removal sends a reminder (`safety/removal-reminders.ts`
+   undecided removal sends a reminder (`safety/reports/removal-reminders.ts`
    `REMOVAL_REMINDER_LEAD_SECONDS`, hourly from `ops/daily/removal-reminders.ts`;
    C6).
 2. Open Review. Check the request names something we host, and that it is
@@ -275,7 +275,7 @@ the same 48-hour clock. Keep doing so.
    - Decline gives the subject back (`releaseHoldWrites`) and emails the
      requester the reason.
 4. **An undecided request is never put back by itself.** A held photo stays
-   hidden past `dueAt` until a person decides (C6: `safety/screening.ts`
+   hidden past `dueAt` until a person decides (C6: `safety/screening/screening.ts`
    writes a classifier verdict only over `pending`).
 5. If the image is also apparent CSAM, use Part 1 instead: quarantine, do
    not remove.
@@ -288,7 +288,7 @@ The Act asks for reasonable efforts on **known identical copies**.
 
 1. The Review row for an intimate report, or a request whose link is ours,
    lists the same runner's 12 most recent other photos
-   (`safety/other-photos.ts` `otherPhotosOf`, `OTHER_PHOTOS_LIMIT = 12`).
+   (`safety/review/other-photos.ts` `otherPhotosOf`, `OTHER_PHOTOS_LIMIT = 12`).
    Look through them, and take down any copy from the row's form.
 2. If the requester gave other links on [dialed.run], each is its own
    subject: take each down.

@@ -19,16 +19,14 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { normalizeIdentity } from "../../src/lib/normalize";
-import {
-  blockedRunners,
-  pendingReviewQueue,
-  pendingTakedownRequests,
-  removalsOnRun,
-} from "../../src/modules/safety";
-import { heldCopyrightContent } from "../../src/modules/safety/copyright-holds";
-import { duplicateProducts } from "../../src/modules/safety/duplicates";
-import { quarantinedContentFor } from "../../src/modules/safety/quarantine";
-import { burstsToRelease } from "../../src/modules/safety/release";
+import { blockedRunners } from "../../src/modules/safety/reports/blocks";
+import { pendingReviewQueue } from "../../src/modules/safety/review/review";
+import { pendingTakedownRequests } from "../../src/modules/safety/takedowns/takedown-requests";
+import { removalsOnRun } from "../../src/modules/safety/takedowns/run-removals";
+import { heldCopyrightContent } from "../../src/modules/safety/takedowns/copyright-holds";
+import { duplicateProducts } from "../../src/modules/safety/review/duplicates";
+import { quarantinedContentFor } from "../../src/modules/safety/takedowns/quarantine";
+import { burstsToRelease } from "../../src/modules/safety/review/release";
 
 import { queriesDuring, queryCounts, type QueryCounts } from "../d1-spy";
 import {

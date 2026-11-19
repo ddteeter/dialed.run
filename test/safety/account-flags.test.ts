@@ -17,15 +17,15 @@ import {
   flaggedAtOf,
   flaggedCountOf,
   keepAccount,
-} from "../../src/modules/safety/account-flags";
-import { banUser, unbanUser } from "../../src/modules/safety/bans";
-import { removalStatements } from "../../src/modules/safety/contracts";
-import type { ModerationAction } from "../../src/modules/safety/moderation-actions";
+} from "../../src/modules/safety/runners/account-flags";
+import { banUser, unbanUser } from "../../src/modules/safety/runners/bans";
+import { removalStatements } from "../../src/modules/safety/rules/contracts";
+import type { ModerationAction } from "../../src/modules/safety/rules/moderation-actions";
 import {
   deskRunners,
   runnersWhere,
   type RunnersFilter,
-} from "../../src/modules/safety/runners";
+} from "../../src/modules/safety/runners/runners";
 import { noPurge } from "../purge-spy";
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 

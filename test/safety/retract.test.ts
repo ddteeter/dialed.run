@@ -34,7 +34,8 @@ import {
 // `functions.ts`, which no test can import at all).
 import { photoIdInput } from "../../src/modules/feed/retract";
 import { drainOutbox } from "../../src/modules/ops/outbox/outbox";
-import { fileReport, reconcileUnhiddenReports } from "../../src/modules/safety";
+import { reconcileUnhiddenReports } from "../../src/modules/safety";
+import { fileReport } from "../../src/modules/safety/reports/reports";
 
 import { noPurge } from "../purge-spy";
 import {

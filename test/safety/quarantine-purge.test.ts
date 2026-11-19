@@ -18,7 +18,7 @@ import {
   purgeExpiredQuarantine,
   QUARANTINE_PURGE_CAP,
   QUARANTINE_PURGE_LEASE_SECONDS,
-} from "../../src/modules/safety/quarantine";
+} from "../../src/modules/safety/takedowns/quarantine";
 
 /**
  * The quarantine's year (decision D-70): silent, everything kept a year,

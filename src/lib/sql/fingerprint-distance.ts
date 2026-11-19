@@ -2,7 +2,7 @@
  * How many bits a stored photo fingerprint is from one or more given ones,
  * as SQL (D-142, design 146): what lets a `WHERE` and a `LIMIT` apply to a
  * Hamming distance SQLite has no operator for. Shared by the takedown
- * review's copy search (`safety/photo-matches.ts`) and the upload's check
+ * review's copy search (`safety/review/photo-matches.ts`) and the upload's check
  * against removed images (`feed/photos.ts`, D-147).
  *
  * Every fingerprint given here is spelt into the SQL, so each caller

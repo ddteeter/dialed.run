@@ -16,13 +16,13 @@ import { turnstileAttempt } from "../account";
 import { deploymentPosture, requireUserId, verifiedUserId } from "../auth";
 
 import { oweInCore, verifyTurnstileToken } from "../ops";
-import { requireAdmin } from "./admin";
+import { requireAdmin } from "./rules/admin";
 import {
   blockAndDeclineAll,
   confirmTakedownRequest,
   fileTakedownRequest,
   pendingTakedownRequests,
-} from "./takedown-requests";
+} from "./takedowns/takedown-requests";
 
 import { coreDb, env, primaryCoreDb } from "../../env";
 import { TURNSTILE_ACTIONS } from "../../lib/turnstile-actions";
@@ -34,16 +34,16 @@ import {
   settleOutbox,
 } from "../ops";
 
-import { keepAccount } from "./account-flags";
-import { banEmail, banUser, reopenEmailFor, unbanUser } from "./bans";
+import { keepAccount } from "./runners/account-flags";
+import { banEmail, banUser, reopenEmailFor, unbanUser } from "./runners/bans";
 import {
   accountCount,
   forceRename,
   listAccounts,
   reviewFlaggedHandle,
 } from "../account";
-import { placeholderHandle, renameRecord } from "./rename";
-import { deskRunners, runnerCounts, runnersWhere } from "./runners";
+import { placeholderHandle, renameRecord } from "./runners/rename";
+import { deskRunners, runnerCounts, runnersWhere } from "./runners/runners";
 import {
   applyCorrection,
   correctionKeyInput,
@@ -51,16 +51,16 @@ import {
   declineCorrection,
   declineCorrectionInput,
 } from "../products";
-import { deskKitFor } from "./desk-kit";
-import { duplicateProducts } from "./duplicates";
-import { duplicatesReport } from "./duplicates-report";
+import { deskKitFor } from "./review/desk-kit";
+import { duplicateProducts } from "./review/duplicates";
+import { duplicatesReport } from "./review/duplicates-report";
 import {
   blockRunner,
   blockedCount,
   blockedRunners,
   unblockRunner,
-} from "./blocks";
-import { denyDomain } from "./denylist";
+} from "./reports/blocks";
+import { denyDomain } from "./rules/denylist";
 import {
   banUserInput,
   blockRunnerInput,
@@ -82,18 +82,21 @@ import {
   keepAccountInput,
   reportersInput,
 } from "./inputs";
-import { reportersFor } from "./review-audit";
-import { removalsOnRun } from "./run-removals";
-import { burstsToRelease, releaseHolds } from "./release";
-import { fileReport } from "./reports";
-import { pendingReviewQueue } from "./review";
-import { quarantinedContentFor, recordNcmecReport } from "./quarantine";
+import { reportersFor } from "./review/review-audit";
+import { removalsOnRun } from "./takedowns/run-removals";
+import { burstsToRelease, releaseHolds } from "./review/release";
+import { fileReport } from "./reports/reports";
+import { pendingReviewQueue } from "./review/review";
+import {
+  quarantinedContentFor,
+  recordNcmecReport,
+} from "./takedowns/quarantine";
 import {
   heldCopyrightContent,
   recordCounterNotice,
   recordCourtAction,
   restoreAfterCase,
-} from "./copyright-holds";
+} from "./takedowns/copyright-holds";
 
 export const fileReportAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => fileReportInput.parse(input))

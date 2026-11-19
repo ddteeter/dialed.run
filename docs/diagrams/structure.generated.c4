@@ -73,7 +73,17 @@ model {
     runs = module 'runs' {
       parsers = module 'runs/parsers'
     }
-    safety = module 'safety'
+    safety = module 'safety' {
+      blur = module 'safety/blur'
+      limits = module 'safety/limits'
+      notices = module 'safety/notices'
+      reports = module 'safety/reports'
+      review = module 'safety/review'
+      rules = module 'safety/rules'
+      runners = module 'safety/runners'
+      screening = module 'safety/screening'
+      takedowns = module 'safety/takedowns'
+    }
     weather = module 'weather' {
       description 'Attaches observed conditions to a run'
       provider = module 'weather/provider'
@@ -192,12 +202,37 @@ model {
   cf.app.runs -[imports]-> cf.app.weather
   cf.app.safety -[wiring]-> cf.app.account
   cf.app.safety -[wiring]-> cf.app.auth
-  cf.app.safety -[imports]-> cf.app.email
-  cf.app.safety -[imports]-> cf.app.notifications
   cf.app.safety -[wiring]-> cf.app.ops
   cf.app.safety -[wiring]-> cf.app.products
-  cf.app.safety -[imports]-> cf.app.runs
-  cf.app.safety -[imports]-> cf.app.weather
+  cf.app.safety.limits -[imports]-> cf.app.safety.rules
+  cf.app.safety.notices -[imports]-> cf.app.notifications
+  cf.app.safety.notices -[imports]-> cf.app.safety.rules
+  cf.app.safety.reports -[imports]-> cf.app.email
+  cf.app.safety.reports -[imports]-> cf.app.safety.limits
+  cf.app.safety.reports -[imports]-> cf.app.safety.notices
+  cf.app.safety.reports -[imports]-> cf.app.safety.review
+  cf.app.safety.reports -[imports]-> cf.app.safety.rules
+  cf.app.safety.reports -[imports]-> cf.app.safety.screening
+  cf.app.safety.review -[wiring]-> cf.app.products
+  cf.app.safety.review -[imports]-> cf.app.safety.limits
+  cf.app.safety.review -[imports]-> cf.app.safety.notices
+  cf.app.safety.review -[imports]-> cf.app.safety.rules
+  cf.app.safety.review -[wiring]-> cf.app.safety.runners
+  cf.app.safety.review -[imports]-> cf.app.weather
+  cf.app.safety.runners -[imports]-> cf.app.email
+  cf.app.safety.runners -[imports]-> cf.app.runs
+  cf.app.safety.runners -[imports]-> cf.app.safety.notices
+  cf.app.safety.runners -[imports]-> cf.app.safety.rules
+  cf.app.safety.screening -[imports]-> cf.app.safety.limits
+  cf.app.safety.screening -[imports]-> cf.app.safety.notices
+  cf.app.safety.screening -[imports]-> cf.app.safety.review
+  cf.app.safety.screening -[imports]-> cf.app.safety.rules
+  cf.app.safety.takedowns -[imports]-> cf.app.email
+  cf.app.safety.takedowns -[imports]-> cf.app.safety.limits
+  cf.app.safety.takedowns -[imports]-> cf.app.safety.notices
+  cf.app.safety.takedowns -[imports]-> cf.app.safety.reports
+  cf.app.safety.takedowns -[imports]-> cf.app.safety.review
+  cf.app.safety.takedowns -[imports]-> cf.app.safety.rules
   cf.app.weather -[imports]-> cf.app.email
 }
 views {
@@ -320,6 +355,54 @@ views {
     include cf.app.safety
     include cf.app.safety -> cf.app.** where kind is imports or kind is wiring
     include cf.app.** -> cf.app.safety where kind is imports or kind is wiring
+  }
+  view safetyLimitsImports of cf.app.safety.limits {
+    title 'safety/limits: what it imports, and what imports it'
+    include cf.app.safety.limits
+    include cf.app.safety.limits -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.safety.limits where kind is imports or kind is wiring
+  }
+  view safetyNoticesImports of cf.app.safety.notices {
+    title 'safety/notices: what it imports, and what imports it'
+    include cf.app.safety.notices
+    include cf.app.safety.notices -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.safety.notices where kind is imports or kind is wiring
+  }
+  view safetyReportsImports of cf.app.safety.reports {
+    title 'safety/reports: what it imports, and what imports it'
+    include cf.app.safety.reports
+    include cf.app.safety.reports -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.safety.reports where kind is imports or kind is wiring
+  }
+  view safetyReviewImports of cf.app.safety.review {
+    title 'safety/review: what it imports, and what imports it'
+    include cf.app.safety.review
+    include cf.app.safety.review -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.safety.review where kind is imports or kind is wiring
+  }
+  view safetyRulesImports of cf.app.safety.rules {
+    title 'safety/rules: what it imports, and what imports it'
+    include cf.app.safety.rules
+    include cf.app.safety.rules -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.safety.rules where kind is imports or kind is wiring
+  }
+  view safetyRunnersImports of cf.app.safety.runners {
+    title 'safety/runners: what it imports, and what imports it'
+    include cf.app.safety.runners
+    include cf.app.safety.runners -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.safety.runners where kind is imports or kind is wiring
+  }
+  view safetyScreeningImports of cf.app.safety.screening {
+    title 'safety/screening: what it imports, and what imports it'
+    include cf.app.safety.screening
+    include cf.app.safety.screening -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.safety.screening where kind is imports or kind is wiring
+  }
+  view safetyTakedownsImports of cf.app.safety.takedowns {
+    title 'safety/takedowns: what it imports, and what imports it'
+    include cf.app.safety.takedowns
+    include cf.app.safety.takedowns -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.safety.takedowns where kind is imports or kind is wiring
   }
   view weatherImports of cf.app.weather {
     title 'weather: what it imports, and what imports it'

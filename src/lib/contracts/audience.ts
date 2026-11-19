@@ -51,7 +51,7 @@ export const SHARED_AUDIENCE = "runners" satisfies WritableAudience;
 
 /**
  * PUBLIC on screen: anyone with the link, no sign-in (D-151). Only
- * `safety/visibility.ts`'s `worldVisibleEntry` shows it to a signed-out
+ * `safety/rules/visibility.ts`'s `worldVisibleEntry` shows it to a signed-out
  * visitor.
  */
 export const WORLD_AUDIENCE = "world" satisfies WritableAudience;
@@ -60,7 +60,7 @@ export const WORLD_AUDIENCE = "world" satisfies WritableAudience;
  * The audiences a signed-in stranger sees: a public kit is shared too, so
  * it counts in the feed, consensus and "worn by N" like a SHARED one.
  * Every read that shows an entry to someone other than its author tests
- * for these and nothing else (`safety/visibility.ts`'s one rule,
+ * for these and nothing else (`safety/rules/visibility.ts`'s one rule,
  * `feed/feed.ts`'s index seek), so a `groups` row is hidden from strangers
  * without anyone having to remember it.
  */

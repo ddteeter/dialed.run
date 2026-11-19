@@ -5,7 +5,7 @@
     "safety": 8
   },
   "doorWidth": {
-    "safety": 224
+    "safety": 96
   },
   "pastDoor": {
     "account": 5,
@@ -16,7 +16,6 @@
   },
   "files": {
     "account": 60,
-    "feed": 96,
-    "safety": 86
+    "feed": 96
   }
 }

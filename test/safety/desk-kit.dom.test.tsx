@@ -1,8 +1,8 @@
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { DeskKit } from "../../src/modules/safety/components/DeskKit";
-import type { DeskKit as Kit } from "../../src/modules/safety/desk-kit";
+import { DeskKit } from "../../src/modules/safety/review/components/DeskKit";
+import type { DeskKit as Kit } from "../../src/modules/safety/review/desk-kit";
 import { renderWithRouter } from "../modules/run-fixtures";
 
 /**

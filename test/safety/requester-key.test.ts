@@ -4,7 +4,7 @@ import {
   ipKey,
   ipSigningKey,
   requesterKey,
-} from "../../src/modules/safety/requester-key";
+} from "../../src/modules/safety/takedowns/requester-key";
 
 /**
  * Design 137: two addresses that reach one inbox are one requester.

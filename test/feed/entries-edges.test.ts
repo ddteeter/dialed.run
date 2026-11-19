@@ -25,7 +25,7 @@ import {
   verdictBandCounts,
 } from "../../src/modules/feed/entries";
 import { setUsefulReaction } from "../../src/modules/feed/reactions";
-import { denyDomain } from "../../src/modules/safety";
+import { denyDomain } from "../../src/modules/safety/rules/denylist";
 import {
   makeEntry,
   makeItem,

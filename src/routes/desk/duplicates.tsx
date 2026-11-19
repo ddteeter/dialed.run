@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { DeskPage } from "../../modules/ops/desk/components/DeskPage";
-import { DeskDuplicates } from "../../modules/safety/components/DeskDuplicates";
+import { DeskDuplicates } from "../../modules/safety/review/components/DeskDuplicates";
 import { deskDuplicatesQuery } from "../../modules/safety/functions";
 
 /**

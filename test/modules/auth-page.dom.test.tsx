@@ -32,7 +32,7 @@ import { useGoogleSignIn } from "../../src/modules/auth/google-button";
 import { CARRIED_EMAIL_KEY } from "../../src/lib/browser/carried-email";
 import { useCarriedEmail } from "../../src/modules/auth/carried-email";
 import type { CarriedForm } from "../../src/lib/carried-form";
-import { AccountClosed } from "../../src/modules/safety/components/AccountClosed";
+import { AccountClosed } from "../../src/modules/safety/runners/components/AccountClosed";
 import { carriedSince } from "../ui/carry-spy";
 
 vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {

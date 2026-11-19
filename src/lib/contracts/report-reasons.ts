@@ -6,7 +6,7 @@
  * In `lib/` rather than `modules/safety` because the schema reads it:
  * `src/db/` may import `src/lib/` and nothing else (R-77, #413), and a
  * hand-written enum on the column would be the rival copy CLAUDE.md
- * forbids. `modules/safety/contracts` re-exports it.
+ * forbids. `modules/safety/rules/contracts` re-exports it.
  *
  * **These sentences are the design's, not paraphrases of policy
  * categories.** W1's note is explicit: "Reasons are written as sentences a
@@ -18,7 +18,7 @@
 /**
  * W1: what an entry, a photo or a product name can be reported for. These
  * are the reasons that can hide a subject, so the moderation thresholds'
- * config is keyed by exactly these (`modules/safety/thresholds`).
+ * config is keyed by exactly these (`modules/safety/screening/thresholds`).
  */
 export const reportReasons = [
   { value: "explicit", label: "The photo shows someone inappropriately" },

@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { DeskPage } from "../../modules/ops/desk/components/DeskPage";
-import { DeskKit } from "../../modules/safety/components/DeskKit";
+import { DeskKit } from "../../modules/safety/review/components/DeskKit";
 import { deskKitQuery } from "../../modules/safety/functions";
-import { kitOriginSchema } from "../../modules/safety/components/kit-origin";
+import { kitOriginSchema } from "../../modules/safety/review/components/kit-origin";
 
 /**
  * The Desk's view of a kit (R-154, #388): where Review's other photos and

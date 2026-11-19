@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 
 import { MONO_CASED_CLASS } from "../../../ui";
-import { STATUTORY_LINE } from "../contracts";
+import { STATUTORY_LINE } from "../rules/contracts";
 
 /**
  * What "intimate" means, said to the operator on a row an intimate-image

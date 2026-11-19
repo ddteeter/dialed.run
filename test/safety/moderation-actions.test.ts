@@ -47,32 +47,39 @@ import {
 } from "../../src/modules/account";
 import type { ScreenHandle } from "../../src/modules/account/handle-screen";
 import {
-  AdminRequiredError,
-  banUser,
-  deskRunners,
   isPlaceholderHandle,
   placeholderHandle,
+  isCopyrightTakedown,
+  removalNotice,
+  removalStatements,
+  renameRecord,
+  takedownInput,
+} from "../../src/modules/safety";
+import { AdminRequiredError } from "../../src/modules/safety/rules/admin";
+import { banUser, unbanUser } from "../../src/modules/safety/runners/bans";
+import {
+  deskRunners,
+  runnerCounts,
+  runnersWhere,
+  type RunnersFilter,
+} from "../../src/modules/safety/runners/runners";
+import {
   QUARANTINE_PAGE,
   QUARANTINE_RETENTION_SECONDS,
   quarantinedContentFor,
-  isCopyrightTakedown,
-  removalNotice,
+} from "../../src/modules/safety/takedowns/quarantine";
+import {
   removalReasons,
   removalReasonSchema,
   removalSentence,
-  removalStatements,
   renameReasonSchema,
-  renameRecord,
-  runnerCounts,
+} from "../../src/modules/safety/rules/contracts";
+import {
   runnersFilterInput,
-  runnersWhere,
-  type RunnersFilter,
-  takedownInput,
-  unbanUser,
   unbanUserInput,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/inputs";
 
-import { moderationActionInsertWhere } from "../../src/modules/safety/moderation-actions";
+import { moderationActionInsertWhere } from "../../src/modules/safety/rules/moderation-actions";
 import { noPurge } from "../purge-spy";
 import { makeObservation, NOW } from "../feed/helpers";
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";

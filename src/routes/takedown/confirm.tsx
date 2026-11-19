@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { takedownConfirmSearch } from "../../modules/safety/inputs";
-import { TakedownConfirm } from "../../modules/safety/components/TakedownConfirm";
+import { TakedownConfirm } from "../../modules/safety/takedowns/components/TakedownConfirm";
 import { confirmTakedownFn } from "../../modules/safety/functions";
 
 /**

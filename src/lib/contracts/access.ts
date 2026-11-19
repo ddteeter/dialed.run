@@ -292,7 +292,7 @@ export function signInLimitedMessage(until: number): string {
 }
 
 /**
- * The ban gate's refusal (task 128 · SAF-4, `safety/ban-gate.ts`): the
+ * The ban gate's refusal (task 128 · SAF-4, `safety/runners/ban-gate.ts`): the
  * code a refused sign-in carries, here rather than beside the gate so the
  * sign-in forms can read it without importing the server's auth plugin.
  * Google's round trip brings it back as `?error=ACCOUNT_CLOSED`.

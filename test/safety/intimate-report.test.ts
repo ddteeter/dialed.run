@@ -14,12 +14,12 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
+import { reconcileUnhiddenReports } from "../../src/modules/safety";
 import {
   fileReport,
   isQueuedForReview,
-  pendingReviewQueue,
-  reconcileUnhiddenReports,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/reports/reports";
+import { pendingReviewQueue } from "../../src/modules/safety/review/review";
 
 import { noPurge } from "../purge-spy";
 import {
@@ -29,7 +29,7 @@ import {
   opened,
   resetSafetyTables,
 } from "./helpers";
-import { REPORT_HIDES_FLOOR } from "../../src/modules/safety/breakers";
+import { REPORT_HIDES_FLOOR } from "../../src/modules/safety/limits/breakers";
 import { oweInCore } from "../queue-fakes";
 
 /**

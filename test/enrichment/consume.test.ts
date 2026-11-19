@@ -29,11 +29,8 @@ import {
   PAGE_FETCHES_PER_HOUR,
   PROXY_CALLS_PER_DAY,
 } from "../../src/modules/enrichment/spend-limit";
-import {
-  denyDomain,
-  isDeniedLink,
-  isDeniedOnLanding,
-} from "../../src/modules/safety";
+import { isDeniedLink, isDeniedOnLanding } from "../../src/modules/safety";
+import { denyDomain } from "../../src/modules/safety/rules/denylist";
 import { nowSeconds } from "../../src/lib/now";
 import { gaveUpRow } from "../gave-up-rows";
 import { batchOf, fakeMessage } from "../queue-fakes";

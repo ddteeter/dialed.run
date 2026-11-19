@@ -12,13 +12,13 @@ import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { cronSchedules } from "../../src/modules/ops/desk/crons";
 import { handleScheduled } from "../../src/modules/dispatch";
+import { screenPhoto } from "../../src/modules/safety";
+import { fileReport } from "../../src/modules/safety/reports/reports";
+import { fileTakedownRequest } from "../../src/modules/safety/takedowns/takedown-requests";
 import {
-  fileReport,
-  fileTakedownRequest,
   imageCategories,
-  screenPhoto,
   type CategoryScores,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/screening/classifier/moderation";
 import { noPurge } from "../purge-spy";
 import { oweInCore } from "../queue-fakes";
 

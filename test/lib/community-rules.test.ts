@@ -24,7 +24,7 @@ import {
   removalRule,
   removalRuleLine,
   removalRuleOf,
-} from "../../src/modules/safety/contracts";
+} from "../../src/modules/safety/rules/contracts";
 
 /**
  * C8 (D-145): the rules a statement of reasons names are the terms' own,

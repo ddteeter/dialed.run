@@ -6,8 +6,8 @@ import {
   classifyImage,
   MODERATION_MODEL,
   ModerationError,
-} from "../../src/modules/safety/classifier/moderation";
-import type { ModerationResult } from "../../src/modules/safety/classifier/moderation";
+} from "../../src/modules/safety/screening/classifier/moderation";
+import type { ModerationResult } from "../../src/modules/safety/screening/classifier/moderation";
 
 /**
  * The call itself: what we send, what we accept back, and what we do when

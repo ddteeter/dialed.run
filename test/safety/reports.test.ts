@@ -9,17 +9,19 @@ import {
   reviewQueue,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import { moderationThresholds } from "../../src/modules/safety";
 import {
   claimForReview,
+  pendingReviewQueue,
+} from "../../src/modules/safety/review/review";
+import {
   distinctReporterCount,
   fileReport,
-  isBlocked,
   isQueuedForReview,
-  pendingReviewQueue,
   reportedSubjectIdsFor,
-  moderationThresholds,
-  reportersToHide,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/reports/reports";
+import { isBlocked } from "../../src/modules/safety/reports/blocks";
+import { reportersToHide } from "../../src/modules/safety/screening/thresholds";
 
 /**
  * How many distinct reporters hide a subject for a reason off the clock,
@@ -40,7 +42,7 @@ import {
   opened,
   resetSafetyTables,
 } from "./helpers";
-import { REPORT_HIDES_FLOOR } from "../../src/modules/safety/breakers";
+import { REPORT_HIDES_FLOOR } from "../../src/modules/safety/limits/breakers";
 import { nowSeconds } from "../../src/lib/now";
 import { oweInCore } from "../queue-fakes";
 

@@ -6,7 +6,7 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { follow } from "../../src/modules/feed/follows";
 import { searchRunners } from "../../src/modules/feed/search";
-import { blockRunner } from "../../src/modules/safety/blocks";
+import { blockRunner } from "../../src/modules/safety/reports/blocks";
 import {
   makeEntry,
   makeRun,

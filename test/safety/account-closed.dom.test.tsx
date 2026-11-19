@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { AccountClosed } from "../../src/modules/safety/components/AccountClosed";
+import { AccountClosed } from "../../src/modules/safety/runners/components/AccountClosed";
 
 /**
  * Operator Screens D4 as design-deltas item 23 redrew it: a notice band on

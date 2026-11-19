@@ -20,7 +20,9 @@ import {
   visibleRunnerStatement,
 } from "../../src/modules/feed/profiles";
 import { searchRunners, searchStatement } from "../../src/modules/feed/search";
-import { banUser, blockRunner, fileReport } from "../../src/modules/safety";
+import { banUser } from "../../src/modules/safety/runners/bans";
+import { blockRunner } from "../../src/modules/safety/reports/blocks";
+import { fileReport } from "../../src/modules/safety/reports/reports";
 import { noPurge } from "../purge-spy";
 import {
   addAccount,

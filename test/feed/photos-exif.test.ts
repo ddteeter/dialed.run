@@ -13,11 +13,11 @@ import {
   uploadItemPhoto,
 } from "../../src/modules/closet/photos";
 import { photoResponse, uploadPhoto } from "../../src/modules/feed/photos";
+import { type Classify } from "../../src/modules/safety";
 import {
   imageCategories,
   type CategoryScores,
-  type Classify,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/screening/classifier/moderation";
 
 import { makeEntry, makeRun, makeUser, resetTables } from "./helpers";
 import {

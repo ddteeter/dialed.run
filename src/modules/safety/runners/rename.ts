@@ -1,0 +1,110 @@
+/**
+ * A moderator's force-rename (round 27 #16): the handle becomes
+ * `@runner_NNNN`, the old one is locked for everyone — its former holder
+ * included — and the runner owes a re-pick: O0's "USERNAME CHANGED BY A
+ * MODERATOR" field, which is 126's screen, reads `username_reset_reason`
+ * and clears it.
+ *
+ * **The write is account's** (`forceRename` in `modules/account`), the one
+ * writer of `user_profiles.username`, so the rename runs under the claim's
+ * own rules: `usernameSchema`, the reserved list (D-57) and D-56. What is
+ * safety's is the placeholder and the audit row, which rides in account's
+ * batch. The server function wires the two, because account reaches `ops`,
+ * which reaches safety — an import from here would be a cycle.
+ */
+import type { SQL } from "drizzle-orm";
+import type { drizzle } from "drizzle-orm/d1";
+
+import type { RenameReason } from "../rules";
+import { moderationActionInsertWhere } from "../rules";
+
+type Db = ReturnType<typeof drizzle>;
+
+/**
+ * What a rename came to, as the Desk reads it — account's `ForcedRename`.
+ * `taken` is a placeholder somebody holds, or held: rare at six digits,
+ * which only a moderator's rename hands out, and the operator presses
+ * Rename again (a request handler does one
+ * attempt, law 3). `moved` is a handle that changed before the rename
+ * landed (another rename, or the runner's own pick), so nothing was done
+ * (R-121); it carries the handle as it is now (round 38 #60).
+ */
+export type RenameOutcome =
+  | { kind: "renamed"; username: string }
+  | { kind: "not_found" }
+  | { kind: "taken" }
+  | { kind: "moved"; username: string };
+
+/**
+ * The placeholder handle: `runner_` and six digits (owner, 2026-11-15).
+ * `digits` is a parameter so a test can choose them; production draws
+ * them at random.
+ */
+export function placeholderHandle(digits: number = randomDigits()): string {
+  return `runner_${String(digits).padStart(PLACEHOLDER_DIGITS, "0")}`;
+}
+
+const PLACEHOLDER_DIGITS = 6;
+
+/**
+ * Whether a handle has the placeholder's shape, `runner_` and digits, of
+ * any length (the four-digit ones handed out before are this shape too).
+ * Only a moderator's rename gives one (SA-L12): a runner's claim refuses
+ * it, so no runner can use the Desk's placeholders up.
+ */
+export function isPlaceholderHandle(handle: string): boolean {
+  return /^runner_\d+$/u.test(handle);
+}
+
+/**
+How many six-digit numbers there are.
+*/
+const PLACEHOLDER_SPACE = 1_000_000;
+
+/**
+ * The draws that are kept: below the largest multiple of a million a
+ * 32-bit draw reaches, so reducing them leaves every six-digit number
+ * equally likely.
+ */
+const DRAW_LIMIT = Math.floor(2 ** 32 / PLACEHOLDER_SPACE) * PLACEHOLDER_SPACE;
+
+/**
+ * Six digits from the platform's CSPRNG, each as likely as any other: a
+ * draw at or past `DRAW_LIMIT` is drawn again (about one in 4,300). A
+ * handle is not a secret, but the lint is right that `Math.random` should
+ * not be reached for.
+ */
+function randomDigits(): number {
+  const draw = new Uint32Array(1);
+  for (;;) {
+    const [value = 0] = crypto.getRandomValues(draw);
+    if (value < DRAW_LIMIT) return value % PLACEHOLDER_SPACE;
+  }
+}
+
+export interface RenameRecordInput {
+  userId: string;
+  actorId: string;
+  reason: RenameReason;
+}
+
+/**
+ * The audit row for account's batch, given the handle that was taken away
+ * and account's condition that the rename still happens (R-121): a rename
+ * that lost a race records nothing.
+ */
+export function renameRecord(db: Db, input: RenameRecordInput) {
+  return (previous: string, onlyIf: SQL) =>
+    moderationActionInsertWhere(
+      db,
+      {
+        actorId: input.actorId,
+        action: "rename",
+        subjectType: "profile",
+        subjectId: input.userId,
+        subjectOwnerId: input.userId,
+        reason: `${input.reason} (was @${previous})`,
+      },
+      onlyIf,
+    );
+}

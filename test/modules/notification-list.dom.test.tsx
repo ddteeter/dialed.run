@@ -15,7 +15,7 @@ import { NotificationList } from "../../src/modules/notifications/components/Not
 import {
   HIDDEN_NOTICE,
   REPORT_OUTCOME,
-} from "../../src/modules/safety/notice-copy";
+} from "../../src/modules/safety/notices/notice-copy";
 
 /**
  * Screen M, redrawn to S2c (round 22, item 13), with Mark all read on the

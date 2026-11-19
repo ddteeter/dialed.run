@@ -16,15 +16,13 @@ import {
 import { submitVerdict } from "../../src/modules/feed/entries";
 import { moderateContent } from "../../src/modules/feed/moderation";
 import { setPublicProfile } from "../../src/modules/onboarding/public-profile";
-import {
-  banUser,
-  fileReport,
-  fileTakedownRequest,
-} from "../../src/modules/safety";
+import { banUser } from "../../src/modules/safety/runners/bans";
+import { fileReport } from "../../src/modules/safety/reports/reports";
+import { fileTakedownRequest } from "../../src/modules/safety/takedowns/takedown-requests";
 import {
   kitCacheTagsOf,
   subjectCacheTagsOf,
-} from "../../src/modules/safety/kit-cache-tags";
+} from "../../src/modules/safety/rules/kit-cache-tags";
 import { purgeSpy } from "../purge-spy";
 import { oweInCore } from "../queue-fakes";
 

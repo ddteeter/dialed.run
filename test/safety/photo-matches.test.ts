@@ -16,12 +16,12 @@ import type { Audience } from "../../src/lib/contracts";
 import {
   PHOTO_MATCHES_LIMIT,
   photoMatchesOf,
-} from "../../src/modules/safety/photo-matches";
+} from "../../src/modules/safety/review/photo-matches";
 import {
   fileTakedownRequest,
-  pendingReviewQueue,
   pendingTakedownRequests,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/takedowns/takedown-requests";
+import { pendingReviewQueue } from "../../src/modules/safety/review/review";
 import { queriesDuring } from "../d1-spy";
 import { noPurge } from "../purge-spy";
 import { oweInCore } from "../queue-fakes";

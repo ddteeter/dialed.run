@@ -5,7 +5,7 @@ import { BelledLayout } from "../../modules/notifications/components/BelledLayou
 import { bellStateFn } from "../../modules/notifications/functions";
 import { RunNotFoundPage } from "../../named-not-found";
 import { DeleteRun } from "../../modules/runs/components/DeleteRun";
-import { RunRemovals } from "../../modules/safety/components/RunRemovals";
+import { RunRemovals } from "../../modules/safety/takedowns/components/RunRemovals";
 import { runRemovalsQuery } from "../../modules/safety/functions";
 import { RunDetail } from "../../modules/runs/components/RunDetail";
 import {

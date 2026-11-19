@@ -12,7 +12,7 @@ import {
   RELEASE_WINDOW_S,
   releaseHolds,
   waitingHoldsSince,
-} from "../../src/modules/safety/release";
+} from "../../src/modules/safety/review/release";
 
 import {
   makeEntry,

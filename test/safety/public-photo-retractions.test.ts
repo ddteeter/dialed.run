@@ -36,15 +36,15 @@ import {
   syncPublicPhotos,
   type PublicPhotoDeps,
 } from "../../src/modules/ops/public-web/public-photos";
+import { mintReceiptConfirmToken } from "../../src/modules/safety";
+import { banUser } from "../../src/modules/safety/runners/bans";
 import {
-  banUser,
   blockAndDeclineAll,
   confirmTakedownRequest,
-  fileReport,
   fileTakedownRequest,
-  mintReceiptConfirmToken,
   pendingTakedownRequests,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/takedowns/takedown-requests";
+import { fileReport } from "../../src/modules/safety/reports/reports";
 import { noPurge } from "../purge-spy";
 import { oweInCore } from "../queue-fakes";
 

@@ -8,12 +8,12 @@ import {
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { ReviewQueue } from "../../src/modules/safety/components/ReviewQueue";
+import { ReviewQueue } from "../../src/modules/safety/review/components/ReviewQueue";
 import type {
   HandleReview,
   QueueRow,
   ResolveOutcome,
-} from "../../src/modules/safety/review";
+} from "../../src/modules/safety/review/review";
 import { bracketed, sourceTag } from "../ui/bracketed";
 import { carriedSince } from "../ui/carry-spy";
 

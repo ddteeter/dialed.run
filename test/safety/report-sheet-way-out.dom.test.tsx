@@ -8,8 +8,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { reportReasonLabels } from "../../src/modules/safety/contracts";
-import { ReportSheet } from "../../src/modules/safety/components/ReportSheet";
+import { reportReasonLabels } from "../../src/modules/safety/rules/contracts";
+import { ReportSheet } from "../../src/modules/safety/reports/components/ReportSheet";
 
 /**
  * W1's way out (round 37 #58k): under the intimate-image reason, once it

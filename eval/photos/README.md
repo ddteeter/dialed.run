@@ -23,7 +23,7 @@ none of them has been checked against the model.
 ## What that means for the thresholds
 
 `thresholds` and `reviewFloors` in
-`src/modules/safety/classifier/moderation.ts` are **unmeasured**. Their
+`src/modules/safety/screening/classifier/moderation.ts` are **unmeasured**. Their
 doc comments say "provisional until `npm run eval:photos` has run", and
 that remains literally true. They are argued-for starting points: set high
 because the documented failure of this model is over-sensitivity on

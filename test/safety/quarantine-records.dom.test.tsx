@@ -3,8 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { QuarantineRecords } from "../../src/modules/safety/components/QuarantineRecords";
-import type { QuarantineSummary } from "../../src/modules/safety/quarantine";
+import { QuarantineRecords } from "../../src/modules/safety/takedowns/components/QuarantineRecords";
+import type { QuarantineSummary } from "../../src/modules/safety/takedowns/quarantine";
 import { carriedSince } from "../ui/carry-spy";
 
 vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {

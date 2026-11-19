@@ -1,0 +1,211 @@
+/**
+ * What "visible to the public" means for an entry, in one place.
+ *
+ * Before 106 this was a single condition — the entry was shared — and every read
+ * that needed it simply wrote it. A second condition turns that into five
+ * copies of a rule, and CLAUDE.md is explicit about what happens next: a
+ * hand-written second copy is not a duplicate of the truth, it is a rival
+ * truth, and the compiler stays silent while they drift. The one that
+ * matters most is the consensus aggregate, where a missed clause does not
+ * hide anything visibly — it just quietly counts a removed entry in the
+ * numbers everyone reads.
+ *
+ * So the predicate lives here, and the places that show entries to
+ * strangers import it.
+ */
+import { and, eq, or, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
+import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
+
+import {
+  accountDeletions,
+  blocks,
+  outfitEntries,
+  reports,
+  sharedAudience,
+  userProfiles,
+  worldAudience,
+} from "../../../db/schema-core";
+
+/**
+ * The entry is shared by its author, nothing is pending or settled against
+ * it, and its author is neither banned nor leaving — and, when a viewer is named, the
+ * viewer and the author have not blocked each other and the viewer has not
+ * reported it.
+ *
+ * **One rule, two forms, and the difference is who is asking.** Without a
+ * viewer this is the anonymous rule: what may count in a number everyone
+ * reads. The consensus aggregate uses that form on purpose, because a block
+ * and a reporter's own hide are the viewer's business and must not move a
+ * count anybody else sees (`docs/contracts.md`) — while a banned author's
+ * entries stop counting for everybody. Every read that shows entries to a
+ * person names them, and gets the rest.
+ *
+ * **All of it in SQL** (R-107, R-108). Each clause is a `NOT EXISTS` on an
+ * index the table already has, so a `LIMIT` after it returns the first N
+ * survivors, not the survivors of the first N — the failure CLAUDE.md's D1
+ * discipline names, and the one a post-query filter would have walked
+ * straight into.
+ *
+ * **Shared means `runners` or `world`** (D-109, D-151): a public kit is
+ * shared with signed-in runners too. `private` and `groups` alike are
+ * hidden from strangers, so a groups entry needs no clause of its own here.
+ *
+ * The audience clause is `sharedAudience`, the expression
+ * `entries_shared_created` is partial on, and the index's columns are
+ * (moderation_status, created_at), so a caller that adds a `created_at`
+ * range gets an equality then a range — an index seek rather than a
+ * scan. The subqueries run per surviving row, each a primary-key or
+ * unique-index probe.
+ */
+export function publiclyVisibleEntry(viewerId?: string): SQL | undefined {
+  return and(
+    sharedAudience(outfitEntries.audience),
+    ...inStanding(),
+    ...(viewerId === undefined
+      ? []
+      : [
+          notBlockedEitherWay(viewerId, outfitEntries.userId),
+          notReportedBy(viewerId),
+        ]),
+  );
+}
+
+/**
+ * What a signed-out visitor may see (D-151): a PUBLIC kit, under the same
+ * moderation, ban and leaving clauses as the anonymous rule above. The one
+ * predicate every open-web read uses; a signed-in stranger's reads use
+ * `publiclyVisibleEntry`, which admits SHARED kits too.
+ */
+export function worldVisibleEntry(): SQL | undefined {
+  return and(worldAudience(outfitEntries.audience), ...inStanding());
+}
+
+/**
+ * What both rules ask beyond the audience, in the index's column order
+ * after it: nothing pending or settled against the entry, and its author
+ * neither banned nor leaving.
+ */
+function inStanding(): SQL[] {
+  return [
+    eq(outfitEntries.moderationStatus, "ok"),
+    authorNotBanned(),
+    runnerNotLeaving(outfitEntries.userId),
+  ];
+}
+
+/**
+ * What a signed-in viewer may open: their own entry whatever its state —
+ * "fail open for the owner" — and anyone else's by the rule above.
+ *
+ * The owner half is why this is a second export rather than an argument:
+ * a feed of strangers must never pick it up, and a read of one entry
+ * (detail, a photo, a Useful) always needs it.
+ */
+export function entryVisibleTo(viewerId: string): SQL | undefined {
+  return or(eq(outfitEntries.userId, viewerId), publiclyVisibleEntry(viewerId));
+}
+
+/**
+ * A ban hides everything its runner posted (packet 106 §4, audit 0.3), and
+ * so does being a system account (design 193, #533): the smoke account
+ * never shares a kit, and if one ever were shared nobody would see it or
+ * count it. The profile's primary key answers both, and a runner with no
+ * profile row is neither — the same default `banStateOf` keeps.
+ */
+function authorNotBanned(): SQL {
+  return sql`not exists (select 1 from ${userProfiles} where ${userProfiles.userId} = ${outfitEntries.userId} and (${userProfiles.bannedAt} is not null or ${userProfiles.systemAccount} = 1))`;
+}
+
+/**
+ * A runner who asked to delete their account is gone from everyone else
+ * at once (task 126, ACC-9; round 27 #14: "Shared runs leave the feed at
+ * once and stop counting toward anyone's Call"), for the week before the
+ * purge. The claim row is the hide, as a ban's column is: nothing about
+ * the entries is written, so "Keep my account" brings them back as they
+ * were. A primary-key probe per candidate.
+ *
+ * `runnerId` is the column naming the runner — an entry's author here, a
+ * profile row's user in the feed's search and H (seam 6: one rule).
+ */
+export function runnerNotLeaving(runnerId: SQLiteColumn): SQL {
+  return sql`not exists (select 1 from ${accountDeletions} where ${accountDeletions.userId} = ${runnerId})`;
+}
+
+/**
+ * W2 promises both directions: "They can't see your entries" and "You
+ * won't see them in the feed" — and, for a runner, "They can't … find you
+ * in search" (FEED-7, R-107). One row, read from both ends — `blocks_pk`
+ * leads on `blocker_id`, `blocks_blocked` on `blocked_id` — so the
+ * `NOT EXISTS` per candidate is two index probes and never a scan.
+ *
+ * `runnerId` is the column naming the other runner: an entry's author
+ * here, a profile row's user in the feed's search and H. One gate, so a
+ * block means the same thing wherever the subject is a person.
+ */
+export function notBlockedEitherWay(
+  viewerId: string,
+  runnerId: SQLiteColumn,
+): SQL {
+  return sql`not exists (select 1 from ${blocks} where (${blocks.blockerId} = ${viewerId} and ${blocks.blockedId} = ${runnerId}) or (${blocks.blockerId} = ${runnerId} and ${blocks.blockedId} = ${viewerId}))`;
+}
+
+/**
+ * W1: "The entry is hidden from your feed straight away, whatever we
+ * decide." The report row is the hide, and only for the person who filed
+ * it — `reports_one_per_reporter` is (reporter, type, subject), exactly
+ * this probe.
+ */
+function notReportedBy(viewerId: string): SQL {
+  return sql`not exists (select 1 from ${reports} where ${reports.reporterId} = ${viewerId} and ${reports.subjectType} = 'entry' and ${reports.subjectId} = ${outfitEntries.id})`;
+}
+
+/**
+ * D-68: a runner whose profile the viewer reported is gone from that
+ * viewer's search and H straight away — W1's promise for an entry, kept
+ * for a person. Only for the reporter, like `notReportedBy`: the report
+ * row is the hide, and `reports_one_per_reporter` (reporter, type,
+ * subject) is exactly this probe. A profile report's subject is the
+ * runner's user id.
+ */
+export function profileNotReportedBy(
+  viewerId: string,
+  runnerId: SQLiteColumn,
+): SQL {
+  return sql`not exists (select 1 from ${reports} where ${reports.reporterId} = ${viewerId} and ${reports.subjectType} = 'profile' and ${reports.subjectId} = ${runnerId})`;
+}
+
+/**
+ * R-62, the safety half (SAF-9): the entry is hidden pending review **and**
+ * the viewer is its author — the one person who still sees it, and so the
+ * one person who needs telling why nobody else does. The feed renders the
+ * marker (129, FEED-6); this is what it asks.
+ *
+ * `removed` is not "under review": a person has decided, and the author
+ * learns that through the content-removed notice instead.
+ */
+export function isUnderReviewForAuthor(
+  entry: { userId: string; moderationStatus: string },
+  viewerId: string | undefined,
+): boolean {
+  return (
+    entry.moderationStatus === "hidden_pending_review" &&
+    entry.userId === viewerId
+  );
+}
+
+/**
+ * The one `screen_status` a photo may be public with.
+ *
+ * Named rather than written as a bare `"pass"` at each site, because
+ * three reads and one SQL predicate have to agree and a fourth reader
+ * with its own spelling is how a gate stops gating.
+ */
+export const publicPhotoStatus = "pass";
+
+/**
+ * The `screen_status` of a photo a copyright takedown is holding (D-130):
+ * the one state its owner's reads skip too, since the owner was told it
+ * was removed. The Desk's own route still serves it.
+ */
+export const heldPhotoStatus = "removed";

@@ -94,7 +94,7 @@ export async function keepableUserId(db: Db, userId: string): Promise<string> {
 
 /**
  * The session-creation half, as a Better Auth plugin (the ban gate's
- * shape, `safety/ban-gate.ts`): every way of signing in — email, Google,
+ * shape, `safety/runners/ban-gate.ts`): every way of signing in — email, Google,
  * any provider added later — makes a session, so this is the one place a
  * purge in progress can refuse them all.
  *

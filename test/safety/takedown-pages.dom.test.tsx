@@ -17,15 +17,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TURNSTILE_REFUSED } from "../../src/lib/contracts/access";
 import { shortId } from "../../src/modules/safety/components/short-id";
-import { RemovalRequests } from "../../src/modules/safety/components/RemovalRequests";
+import { RemovalRequests } from "../../src/modules/safety/takedowns/components/RemovalRequests";
 import {
   ATTESTATION,
   TakedownRequest,
-} from "../../src/modules/safety/components/TakedownRequest";
+} from "../../src/modules/safety/takedowns/components/TakedownRequest";
 import type {
   PendingTakedownRequest,
   TakedownRequestResult,
-} from "../../src/modules/safety/takedown-requests";
+} from "../../src/modules/safety/takedowns/takedown-requests";
 import type { TurnstileApi } from "../../src/ui/Turnstile";
 import { carriedSince } from "../ui/carry-spy";
 
@@ -588,19 +588,22 @@ describe("Review · removal requests", () => {
       overrides: { subject: undefined, holdState: undefined },
       heard: "link via /takedown",
     },
-  ])("says the head in one line, as heard: $name", async ({ overrides, heard }) => {
-    await renderWithRouter(
-      <RemovalRequests
-        asOf={0}
-        requests={[pending(overrides)]}
-        decide={vi.fn<DecideFn>()}
-        block={vi.fn<BlockFn>()}
-      />,
-    );
-    const spoken = part("request-head")?.nextElementSibling;
-    expect(spoken).toHaveClass("sr-only");
-    expect(spoken?.textContent).toBe(heard);
-  });
+  ])(
+    "says the head in one line, as heard: $name",
+    async ({ overrides, heard }) => {
+      await renderWithRouter(
+        <RemovalRequests
+          asOf={0}
+          requests={[pending(overrides)]}
+          decide={vi.fn<DecideFn>()}
+          block={vi.fn<BlockFn>()}
+        />,
+      );
+      const spoken = part("request-head")?.nextElementSibling;
+      expect(spoken).toHaveClass("sr-only");
+      expect(spoken?.textContent).toBe(heard);
+    },
+  );
 
   it("takes it down, says so, and only that request leaves the list", async () => {
     const decide = vi.fn<DecideFn>().mockResolvedValue({ outcome: "decided" });

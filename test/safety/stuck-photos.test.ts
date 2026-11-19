@@ -30,12 +30,17 @@ import {
 import { decideReview } from "../../src/modules/feed/moderation";
 import { nowSeconds } from "../../src/lib/now";
 import {
-  imageCategories,
   retryPendingScreenings,
-  type CategoryScores,
   type Classify,
 } from "../../src/modules/safety";
-import { isStuck, STUCK_AFTER_SECONDS } from "../../src/modules/safety/stuck";
+import {
+  imageCategories,
+  type CategoryScores,
+} from "../../src/modules/safety/screening/classifier/moderation";
+import {
+  isStuck,
+  STUCK_AFTER_SECONDS,
+} from "../../src/modules/safety/screening/stuck";
 
 import {
   makeEntry,

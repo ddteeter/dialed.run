@@ -2,14 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import { newUlid } from "../../src/lib/ids";
 import {
+  garmentMatchActionInput,
+  removalDecisionInput,
+} from "../../src/modules/safety";
+import {
   banUserInput,
   blockRunnerInput,
   denyDomainInput,
   fileReportInput,
-  garmentMatchActionInput,
-  removalDecisionInput,
   takedownRequestInput,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/inputs";
 import {
   counterNoticeInput,
   counterNoticeInputFor,
@@ -20,7 +22,7 @@ import {
 } from "../../src/modules/safety/inputs";
 import { isoDayOf } from "../../src/lib/contracts/age";
 import { nowSeconds } from "../../src/lib/now";
-import { declineReasonField } from "../../src/modules/safety/contracts";
+import { declineReasonField } from "../../src/modules/safety/rules/contracts";
 
 /**
  * The trust boundary, and the place this app's error copy lives.
