@@ -123,7 +123,7 @@ views {
       notes '''
         **Guard: the idempotency key.** Minted for each file the runner picks, and resent on every retry of that file.
 
-        **Bounded.** The form checks the file by the server\'s own rule and refuses a bad one before sending it. A request with no file in it, or with one over 25 MB, is refused before anything else happens.
+        **Bounded.** The form checks the file by the server\'s own rule and refuses a bad one before sending it. A request with no file in it, or with one over 25 MB, the largest format\'s cap, is refused before anything else happens.
       '''
     }
     // source: src/modules/runs/imports.ts startFileUpload, repeatOf
@@ -140,10 +140,10 @@ views {
         A file the next step refuses has already used one of the 30.
       '''
     }
-    // source: src/modules/runs/imports.ts startImport; src/modules/runs/upload-limits.ts checkUpload, IMPORT_EXTENSIONS, MAX_IMPORT_BYTES, UPLOAD_REFUSALS
+    // source: src/modules/runs/imports.ts startImport; src/modules/runs/upload-limits.ts checkUpload, IMPORT_EXTENSIONS, IMPORT_BYTE_CAPS, UPLOAD_REFUSALS
     cf.app.runs.upload -> cf.importsBucket 'checks the file, then stores it' {
       notes '''
-        **Guard: the file check.** A file that is not GPX, TCX or FIT, is empty, or is over 25 MB is refused with a sentence the runner reads, before anything is stored.
+        **Guard: the file check.** A file that is not GPX, TCX or FIT, is empty, or is over its format\'s cap is refused with a sentence the runner reads, before anything is stored. The cap is 10 MB for a FIT file and 25 MB for a GPX or a TCX.
 
         A Garmin import enters here, without the count: each activity imports once.
       '''

@@ -14,12 +14,6 @@
  */
 
 /**
- * 25 MB. A `.fit` from a watch is kilobytes; a multi-hour `.gpx` with
- * per-second track points is the case this is sized for.
- */
-export const MAX_IMPORT_BYTES = 25 * 1024 * 1024;
-
-/**
  * How many run files one runner may upload in a day (SA-M29, the owner,
  * 2026-11-15). A watch makes one a run; thirty is a backlog, not a day.
  */
@@ -40,6 +34,34 @@ export class ImportUploadError extends Error {}
 export const IMPORT_EXTENSIONS = ["fit", "gpx", "tcx"] as const;
 export type ImportExtension = (typeof IMPORT_EXTENSIONS)[number];
 
+const MEGABYTE = 1024 * 1024;
+
+/**
+ * The most bytes a run file of each format may be (SA-L23; the owner,
+ * 2026-11-18). A cap for each, because the formats are not the same size
+ * for the same run: a `.fit` is the watch's own compact record, and ten
+ * megabytes of one is days of running, where a `.gpx` or `.tcx` is text
+ * and a long run recorded every second is tens of megabytes.
+ */
+export const IMPORT_BYTE_CAPS = {
+  fit: 10 * MEGABYTE,
+  gpx: 25 * MEGABYTE,
+  tcx: 25 * MEGABYTE,
+} as const satisfies Record<ImportExtension, number>;
+
+/**
+ * The most any run file may be: the largest format's cap. What a request
+ * is held to before its file's format is read (the upload's validator, the
+ * request body's cap, a Garmin download). `checkUpload` then holds the
+ * file to its own format's.
+ *
+ * Written out, not computed from the table: a call at this module's scope
+ * moved every module's server-function stubs into the entry chunk, as a
+ * template in the sentences below does (measured 2026-11-18, +33 kB). A
+ * test pins it to the table's largest.
+ */
+export const MAX_IMPORT_BYTES = 25 * MEGABYTE;
+
 /**
  * The extension of a path, if it is one we can import — the last one, in
  * any case, so `RUN.GPX` reads and `run.gpx.zip` does not.
@@ -55,16 +77,24 @@ export function importExtensionOf(path: string): ImportExtension | undefined {
 
 /**
  * A1's sentences for a file refused before it is read (round 22, "A1 Parse
- * failed": *"wrong type → 'That's not a GPX, TCX or FIT file.'"*). The other
- * two are the ones the upload step always refused with.
+ * failed": *"wrong type → 'That's not a GPX, TCX or FIT file.'"*). `empty`
+ * is the one the upload step always refused with. `tooLarge` names the
+ * format and its cap, and for a text format says what to do instead (the
+ * owner, 2026-11-18): the watch's own FIT file of the same run is far
+ * smaller.
  */
 export const UPLOAD_REFUSALS = {
   wrongType: "That's not a GPX, TCX or FIT file.",
   empty: "That file is empty.",
-  tooLarge: "That file is larger than 25 MB.",
-  // A literal, not a template over `UPLOADS_PER_DAY`: a template here moved
-  // every module's server-function stubs into the entry chunk (measured
-  // 2026-11-15, +33 kB). The test pins the number to the constant.
+  // Literals, not templates over the caps or `UPLOADS_PER_DAY`: a template
+  // here moved every module's server-function stubs into the entry chunk
+  // (measured 2026-11-15, +33 kB). The tests pin each number to its
+  // constant.
+  tooLarge: {
+    fit: "That FIT file is larger than 10 MB.",
+    gpx: "That GPX file is larger than 25 MB. Export the run as a FIT file instead.",
+    tcx: "That TCX file is larger than 25 MB. Export the run as a FIT file instead.",
+  },
   tooMany: "That's 30 run files today. You can upload more tomorrow.",
 } as const;
 
@@ -87,8 +117,8 @@ export function checkUpload(file: { name: string; size: number }): UploadCheck {
     return { ok: false, problem: UPLOAD_REFUSALS.wrongType };
   }
   if (file.size === 0) return { ok: false, problem: UPLOAD_REFUSALS.empty };
-  if (file.size > MAX_IMPORT_BYTES) {
-    return { ok: false, problem: UPLOAD_REFUSALS.tooLarge };
+  if (file.size > IMPORT_BYTE_CAPS[extension]) {
+    return { ok: false, problem: UPLOAD_REFUSALS.tooLarge[extension] };
   }
   return { ok: true, extension };
 }

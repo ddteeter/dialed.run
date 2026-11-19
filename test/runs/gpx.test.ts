@@ -8,7 +8,7 @@ import {
 } from "../../src/modules/runs/parsers/gpx";
 import {
   ELEVATION_HYSTERESIS_M,
-  MAX_XML_TAGS,
+  MAX_XML_NODES,
   NO_TRACK_MESSAGE,
   XML_PARSER_OPTIONS,
   PARSE_FAILURE_MESSAGE,
@@ -427,35 +427,58 @@ describe("gpx: the climb (D-111)", () => {
   });
 });
 
-function tagsIn(text: string): number {
-  return text.split("<").length - 1;
+/**
+The tags and attributes a text holds, as the budget counts them.
+*/
+function nodesIn(text: string): number {
+  return text.split("<").length - 1 + (text.split("=").length - 1);
 }
 
 const EMPTY_TRACK = gpxWith("<trkseg></trkseg>");
+const OVER_THE_BUDGET = `gpx: more than ${String(MAX_XML_NODES)} tags and attributes`;
 
 /**
- * A file of exactly `tags` tags: the wrapper's, then empty elements.
+ * A file of exactly `nodes` tags and attributes: the wrapper's, then as
+ * many of `each` as fit, then empty elements for what is left.
  */
-function fileOfTags(tags: number): string {
+function fileOfNodes(nodes: number, each = "<a/>"): string {
+  const rest = nodes - nodesIn(EMPTY_TRACK);
+  const whole = Math.floor(rest / nodesIn(each));
+  const left = rest - whole * nodesIn(each);
   return gpxWith(
-    `<trkseg>${"<a/>".repeat(tags - tagsIn(EMPTY_TRACK))}</trkseg>`,
+    `<trkseg>${each.repeat(whole)}${"<a/>".repeat(left)}</trkseg>`,
   );
 }
 
-describe("gpx: the tag budget (SA-M29)", () => {
-  it("builds a file of the tags it is asked for", () => {
-    expect(tagsIn(fileOfTags(20))).toBe(20);
+describe("gpx: the tag and attribute budget (SA-M29, SA-L23)", () => {
+  it("builds a file of the tags and attributes it is asked for", () => {
+    expect(nodesIn(fileOfNodes(20))).toBe(20);
+    expect(nodesIn(fileOfNodes(26, '<a b="1"/>'))).toBe(26);
   });
 
-  it("refuses a file over the budget before parsing it", async () => {
-    expect(await reasonFor(fileOfTags(MAX_XML_TAGS + 1))).toBe(
-      `gpx: more than ${String(MAX_XML_TAGS)} tags`,
+  it("refuses a file of tags over the budget before parsing it", async () => {
+    expect(await reasonFor(fileOfNodes(MAX_XML_NODES + 1))).toBe(
+      OVER_THE_BUDGET,
     );
   });
 
   it("parses a file at the budget", async () => {
     // At the budget the file is parsed and fails on its content instead.
-    expect(await reasonFor(fileOfTags(MAX_XML_TAGS))).not.toMatch(/tags$/u);
+    expect(await reasonFor(fileOfNodes(MAX_XML_NODES))).not.toBe(
+      OVER_THE_BUDGET,
+    );
+  });
+
+  it("counts an attribute as it counts a tag", async () => {
+    // Half the budget in tags, and an attribute on each: at the budget
+    // with the two counted together, and over it by one more.
+    const each = '<a b="1"/>';
+    expect(await reasonFor(fileOfNodes(MAX_XML_NODES, each))).not.toBe(
+      OVER_THE_BUDGET,
+    );
+    expect(await reasonFor(fileOfNodes(MAX_XML_NODES + 1, each))).toBe(
+      OVER_THE_BUDGET,
+    );
   });
 
   it("reads a ten-hour run, a point a second, with time and elevation", async () => {
@@ -479,6 +502,6 @@ describe("gpx: the tag budget (SA-M29)", () => {
   });
 
   it("is two million", () => {
-    expect(MAX_XML_TAGS).toBe(2_000_000);
+    expect(MAX_XML_NODES).toBe(2_000_000);
   });
 });

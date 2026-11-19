@@ -412,7 +412,7 @@ describe("A1: a file refused before it is sent", () => {
     expect(getOutcome).not.toHaveBeenCalled();
   });
 
-  it("refuses a file over the cap by its size", async () => {
+  it("refuses a file over its format's cap by its size, and says which", async () => {
     const user = setupUser();
     await renderWithRouter(form());
 
@@ -420,7 +420,22 @@ describe("A1: a file refused before it is sent", () => {
     await user.upload(dropInput(), big);
 
     expect(
-      screen.getByText("That file is larger than 25 MB.", ON_SCREEN),
+      screen.getByText(
+        "That GPX file is larger than 25 MB. Export the run as a FIT file instead.",
+        ON_SCREEN,
+      ),
+    ).toBeVisible();
+  });
+
+  it("refuses a FIT file over the FIT cap, which is its own", async () => {
+    const user = setupUser();
+    await renderWithRouter(form());
+
+    const big = new File([new Uint8Array(10 * 1024 * 1024 + 1)], "long.fit");
+    await user.upload(dropInput(), big);
+
+    expect(
+      screen.getByText("That FIT file is larger than 10 MB.", ON_SCREEN),
     ).toBeVisible();
   });
 

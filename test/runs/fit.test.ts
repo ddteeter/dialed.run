@@ -3,6 +3,8 @@ import type { MesgDefinition } from "@garmin/fitsdk";
 import { describe, expect, it } from "vitest";
 
 import {
+  FIT_READ_OPTIONS,
+  MAX_DEVELOPER_FIELD_LOOKUPS,
   MAX_FIELD_DESCRIPTIONS,
   fitReadLimits,
   fitSource,
@@ -17,6 +19,7 @@ import {
 import {
   START,
   fitFile,
+  fitFileOfDeveloperFields,
   fitFileWithFieldDescriptions,
   fitFileWithoutSession,
 } from "./fit-file";
@@ -327,14 +330,17 @@ describe("rpeFrom", () => {
   });
 });
 
-function definition(sizes: readonly number[]): MesgDefinition {
+function definition(
+  sizes: readonly number[],
+  globalMessageNumber = 20,
+): MesgDefinition {
   return {
     recordHeader: 0x40,
     reserved: 0,
     endianness: true,
     numFields: 0,
     architecture: 0,
-    globalMessageNumber: 20,
+    globalMessageNumber,
     localMesgNum: 0,
     messageSize: 0,
     developerDataSize: 0,
@@ -397,5 +403,113 @@ describe("fit: the decode budget (SA-M29)", () => {
 
   it("is 256", () => {
     expect(MAX_FIELD_DESCRIPTIONS).toBe(256);
+  });
+});
+
+describe("fit: the developer field lookup budget (SA-L23)", () => {
+  // Each record: 255 developer fields looked up among 256 descriptions.
+  const LOOKUPS_A_RECORD = 255 * 256;
+  const AT_THE_BUDGET = Math.floor(
+    MAX_DEVELOPER_FIELD_LOOKUPS / LOOKUPS_A_RECORD,
+  );
+
+  it("reads a file whose developer fields cost the budget and no more", async () => {
+    const draft = await fitSource.parse(
+      fitFileOfDeveloperFields({
+        descriptions: 256,
+        fields: 255,
+        messages: AT_THE_BUDGET,
+      }),
+    );
+    expect(draft).toMatchObject({ durationS: 1800, distanceM: 5000 });
+  });
+
+  it("refuses a file whose developer fields cost one record more", async () => {
+    const failure = await failureFrom(
+      fitFileOfDeveloperFields({
+        descriptions: 256,
+        fields: 255,
+        messages: AT_THE_BUDGET + 1,
+      }),
+    );
+    expect(failure.message).toBe(PARSE_FAILURE_MESSAGE);
+    expect(failure.cause).toStrictEqual(
+      new Error("fit: too many developer field lookups"),
+    );
+  });
+
+  it("counts a message at its developer fields times the descriptions so far", () => {
+    // Three fields a record. One description: 3 a record. Two: 6.
+    const limits = fitReadLimits(3 + 3 + 6);
+    limits.mesgDefinitionListener(definition([1, 1, 1]));
+    limits.mesgListener(206);
+    limits.mesgListener(20);
+    limits.mesgListener(20);
+    limits.mesgListener(206);
+    expect(() => {
+      limits.mesgListener(20);
+    }).not.toThrow();
+    expect(() => {
+      limits.mesgListener(20);
+    }).toThrow("fit: too many developer field lookups");
+  });
+
+  it("counts nothing for a message with no developer fields, or before any description", () => {
+    const limits = fitReadLimits(0);
+    limits.mesgDefinitionListener(definition([1, 1]));
+    expect(() => {
+      // Developer fields, and no description to look them up in.
+      limits.mesgListener(20);
+      limits.mesgListener(206);
+      // A description, and a type that declared no developer fields.
+      limits.mesgListener(18);
+    }).not.toThrow();
+    expect(() => {
+      limits.mesgListener(20);
+    }).toThrow("fit: too many developer field lookups");
+  });
+
+  it("counts a type at the most developer fields any of its definitions declared", () => {
+    const limits = fitReadLimits(4);
+    limits.mesgDefinitionListener(definition([1, 1], 20));
+    limits.mesgDefinitionListener(definition([1], 20));
+    limits.mesgDefinitionListener(definition([1, 1, 1], 18));
+    limits.mesgListener(206);
+    // Two for a record, not the one its later definition declares, and
+    // not the three another type's does.
+    limits.mesgListener(20);
+    limits.mesgListener(20);
+    expect(() => {
+      limits.mesgListener(20);
+    }).toThrow("fit: too many developer field lookups");
+  });
+
+  it("counts per file", () => {
+    const first = fitReadLimits(1);
+    first.mesgDefinitionListener(definition([1]));
+    first.mesgListener(206);
+    first.mesgListener(20);
+    const second = fitReadLimits(1);
+    second.mesgDefinitionListener(definition([1]));
+    second.mesgListener(206);
+    expect(() => {
+      second.mesgListener(20);
+    }).not.toThrow();
+  });
+
+  it("is five hundred million", () => {
+    expect(MAX_DEVELOPER_FIELD_LOOKUPS).toBe(500_000_000);
+  });
+});
+
+describe("fit: what the decoder is asked to leave undone (SA-L23)", () => {
+  it("skips the conversions nothing reads", () => {
+    expect(FIT_READ_OPTIONS).toStrictEqual({
+      expandSubFields: false,
+      expandComponents: false,
+      convertTypesToStrings: false,
+      convertDateTimesToDates: false,
+      mergeHeartRates: false,
+    });
   });
 });

@@ -3,7 +3,7 @@
  * tests and the import consumer's. Synthetic on purpose: no real watch's
  * file is ever committed (plan 160).
  */
-import { Encoder } from "@garmin/fitsdk";
+import { CrcCalculator, Encoder } from "@garmin/fitsdk";
 import type {
   ActivityMesg,
   DeveloperDataIdMesg,
@@ -120,4 +120,114 @@ export function fitFileWithFieldDescriptions(count: number): ArrayBuffer {
   };
   encoder.writeMesg(session);
   return new Uint8Array(encoder.close()).buffer;
+}
+
+const FIT_EPOCH_S = 631_065_600;
+const UINT8 = 0x02;
+const UINT32 = 0x86;
+
+/**
+ * A FIT activity file written byte by byte, for what the SDK's encoder
+ * does not write: `descriptions` developer field descriptions, then
+ * `messages` records that each carry `fields` one-byte developer fields,
+ * then a session. A record costs the decoder a description lookup for each
+ * of its developer fields.
+ */
+export function fitFileOfDeveloperFields(shape: {
+  descriptions: number;
+  fields: number;
+  messages: number;
+}): ArrayBuffer {
+  const startS = Math.floor(START.getTime() / 1000) - FIT_EPOCH_S;
+  const body: number[] = [
+    // developer_data_id (207), local type 0: developer_data_index.
+    0x40,
+    0,
+    0,
+    207,
+    0,
+    1,
+    3,
+    1,
+    UINT8,
+    0x00,
+    0,
+    // field_description (206), local type 1: index, number, base type.
+    0x41,
+    0,
+    0,
+    206,
+    0,
+    3,
+    0,
+    1,
+    UINT8,
+    1,
+    1,
+    UINT8,
+    2,
+    1,
+    UINT8,
+  ];
+  for (let index = 0; index < shape.descriptions; index += 1) {
+    body.push(0x01, 0, index % 256, UINT8);
+  }
+  // record (20), local type 2, developer data flagged: no fields of its
+  // own, `fields` developer fields of one byte each.
+  body.push(0x62, 0, 0, 20, 0, 0, shape.fields);
+  for (let index = 0; index < shape.fields; index += 1) body.push(index, 1, 0);
+  // session (18), local type 3: start_time, total_elapsed_time,
+  // total_timer_time, total_distance. Thirty minutes, five kilometres.
+  const session = [
+    0x43,
+    0,
+    0,
+    18,
+    0,
+    4,
+    2,
+    4,
+    UINT32,
+    7,
+    4,
+    UINT32,
+    8,
+    4,
+    UINT32,
+    9,
+    4,
+    UINT32,
+  ];
+  const sessionData = new Uint8Array(1 + 16);
+  sessionData[0] = 0x03;
+  const sessionView = new DataView(sessionData.buffer);
+  sessionView.setUint32(1, startS, true);
+  sessionView.setUint32(5, 1800 * 1000, true);
+  sessionView.setUint32(9, 1800 * 1000, true);
+  sessionView.setUint32(13, 5000 * 100, true);
+
+  const recordSize = 1 + shape.fields;
+  const dataSize =
+    body.length +
+    shape.messages * recordSize +
+    session.length +
+    sessionData.length;
+  const out = new Uint8Array(14 + dataSize + 2);
+  const view = new DataView(out.buffer);
+  out.set([14, 0x20], 0);
+  view.setUint16(2, 21_218, true);
+  view.setUint32(4, dataSize, true);
+  out.set([0x2e, 0x46, 0x49, 0x54], 8);
+  view.setUint16(12, CrcCalculator.calculateCRC(out, 0, 12), true);
+  out.set(body, 14);
+  let at = 14 + body.length;
+  for (let index = 0; index < shape.messages; index += 1) {
+    out[at] = 0x02;
+    at += recordSize;
+  }
+  out.set(session, at);
+  out.set(sessionData, at + session.length);
+  const end = 14 + dataSize;
+  view.setUint16(end, CrcCalculator.calculateCRC(out, 0, end), true);
+  return out.buffer;
 }
