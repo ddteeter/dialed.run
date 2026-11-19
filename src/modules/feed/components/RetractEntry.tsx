@@ -10,6 +10,7 @@ import {
   ConfirmSheet,
   FormStatus,
   Icon,
+  ICON_BUTTON,
   Mono,
   useControlAction,
 } from "../../../ui";
@@ -82,9 +83,9 @@ export interface DeletePhotoProps {
 }
 
 /**
- * One photo's delete, on the photo (round 27 #26; round 28 #14): a 44×44
- * icon button, top right, drawing the pack's `remove` and named "Delete
- * photo 2". It opens round 27's photo sheet; a failure keeps the sheet
+ * One photo's delete, on the photo (round 27 #26; round 28 #14): the
+ * round icon button (`ICON_BUTTON`, R61·334.4), top right, drawing the
+ * pack's `remove` and named "Delete photo 2". It opens round 27's photo sheet; a failure keeps the sheet
  * open over `PHOTO STILL ON` (round 28 #13).
  *
  * The host decides who sees it — D shows it on the owner's photos only.
@@ -100,7 +101,7 @@ export function DeletePhoto(props: Readonly<DeletePhotoProps>): JSX.Element {
         onClick={() => {
           setIsAsking(true);
         }}
-        className="target absolute top-2 right-2 grid size-11 cursor-pointer place-items-center rounded-pill border-none bg-ground p-0 text-ink"
+        className={`target absolute top-2 right-2 ${ICON_BUTTON}`}
       >
         <Icon name="remove" size={20} />
       </button>

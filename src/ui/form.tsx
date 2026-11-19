@@ -968,11 +968,21 @@ const PENDING_ALIGN: Readonly<Record<PendingAlign, string>> = {
 const HUG_WIDE_CLASS =
   "w-full wide:w-fit wide:min-w-50 wide:in-data-[slot=sheet]:w-full wide:in-data-[slot=signed-out-panel]:w-full";
 
+/**
+ * The ink pill and the hairline pill as looks, with no width rule: what
+ * each is wherever it is drawn. A column's button adds 167.2's width
+ * (`SUBMIT_TONE`); a pill beside a name does not (`INK_PILL_INLINE`).
+ */
+const INK_LOOK =
+  "min-h-control items-center justify-center rounded-pill border-none bg-ink px-6 font-bold text-ground";
+const SECONDARY_LOOK =
+  "min-h-control items-center justify-center rounded-pill border border-hairline bg-transparent px-6 font-semibold text-ink dark:border-hairline-2";
+
 const SUBMIT_TONE = {
   action: `grid min-h-13 place-items-center rounded-card border-none bg-action px-6 font-display uppercase text-accent-ink ${HUG_WIDE_CLASS}`,
   chalk:
     "inline-flex min-h-11 items-center justify-center self-start rounded-pill border-none bg-ink px-5 font-bold text-ground",
-  ink: `flex min-h-control items-center justify-center rounded-pill border-none bg-ink px-6 font-bold text-ground ${HUG_WIDE_CLASS}`,
+  ink: `flex ${INK_LOOK} ${HUG_WIDE_CLASS}`,
   /**
    * The secondary, on every surface (R54·167.1): a hairline pill, 48 high,
    * the same width rule as the primary beside it. Never alone — a lone
@@ -982,13 +992,13 @@ const SUBMIT_TONE = {
    * ground, panel or page, as a field's is (R57·262, #707): `--hairline`
    * on `--panel` was close to invisible.
    */
-  secondary: `flex min-h-control items-center justify-center rounded-pill border border-hairline bg-transparent px-6 font-semibold text-ink dark:border-hairline-2 ${HUG_WIDE_CLASS}`,
+  secondary: `flex ${SECONDARY_LOOK} ${HUG_WIDE_CLASS}`,
   /**
    * The secondary that hugs its label at every width (AC2a, R58·295):
    * P2.5's Save, with "Brand alone is enough." beside it on a phone too.
    * From 720 it is the secondary as above.
    */
-  hugging: `flex w-fit min-h-control items-center justify-center rounded-pill border border-hairline bg-transparent px-6 font-semibold text-ink dark:border-hairline-2 wide:min-w-50`,
+  hugging: `flex w-fit ${SECONDARY_LOOK} wide:min-w-50`,
 } as const;
 
 /**
@@ -1019,16 +1029,69 @@ export const INK_PILL = `cursor-pointer text-body ${SUBMIT_TONE.ink}`;
 export const ACTION_PRIMARY = `cursor-pointer text-body ${SUBMIT_TONE.action}`;
 
 /**
+ * The ink pill and its secondary where they are not a column's buttons
+ * (R61·334.3): Follow and Following beside a runner's name, the public
+ * frame's way into the app. The same two looks without 167.2's width
+ * rule, so each hugs its words at every width; a site that must not shift
+ * holds its own width. The site writes `target` beside it.
+ */
+export const INK_PILL_INLINE = `inline-flex cursor-pointer text-body ${INK_LOOK}`;
+export const SECONDARY_PILL_INLINE = `inline-flex cursor-pointer text-body ${SECONDARY_LOOK}`;
+
+/**
+ * The pink pill (R61·334.1): the shell's and marketing's one ask. Pink
+ * fill, ink text, Archivo 700 at TYPE.body, 44 high, SPACE[6] a side, one
+ * size: the bars' launcher and Request access, Landing's, the invite
+ * card's, the profile's Log a run and the shade sheet's Use this. Not the
+ * product flow's primary, which is `ACTION_PRIMARY`'s caps card.
+ * `text-accent-ink`, not `text-ink`: text on `--action` is always the
+ * fixed ink, on every ground. The site writes `target` beside it.
+ */
+export const ACTION_PILL =
+  "inline-flex min-h-11 cursor-pointer items-center justify-center rounded-pill border-none bg-action px-6 text-body font-bold text-accent-ink";
+
+/**
+ * A round button that is its glyph (R61·334.4): 44 round, a hairline
+ * edge, the pack's glyph at 20. Not a pill, so no label weight.
+ * `aria-disabled` keeps the edge and quiets the glyph. The pager's arrows
+ * and a photo's delete. The site writes `target` beside it, and the name.
+ *
+ * The ruling draws it with no fill. Both of its sites sit on a photo,
+ * where an ink glyph has nothing to read against, so it keeps the ground
+ * under it (a guess, Design 345).
+ */
+export const ICON_BUTTON =
+  "grid size-11 cursor-pointer place-items-center rounded-pill border border-hairline bg-ground p-0 text-ink aria-disabled:text-quiet dark:border-hairline-2";
+
+/**
+ * A chip that is pressed, not a radio's label (R61·334.2): onboarding's
+ * name suggestions and a piece's "Name it". A hairline edge, 44 high,
+ * SPACE[4] a side, its words in MONO.xs (a `Mono` inside); ink when
+ * picked, which the site says with `aria-pressed`. Ink, never hue, as
+ * `OPTION_CHIP_CLASS` below. The site writes `target` beside it.
+ */
+export const CHIP =
+  "inline-flex min-h-11 cursor-pointer items-center justify-center rounded-pill border border-hairline bg-transparent px-4 text-ink aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-ground";
+
+/**
+ * The 44 hairline pill, where a row holds a press that must stay quiet: a
+ * list row's Follow (R55·217), and the Desk's decisions below. Bold, the
+ * secondary's edge, `--hairline-2` in dark (R57·262). The site writes
+ * `target` beside it.
+ */
+export const LIST_PILL =
+  "inline-flex min-h-11 cursor-pointer items-center justify-center rounded-pill border border-hairline bg-transparent px-5 text-body font-bold text-ink dark:border-hairline-2";
+
+/**
  * A Desk decision that is not the bar's main one (Keep, Approve, Decline),
  * beside a literal `target` (the hit-area check reads each site's class):
  * the hairline pill, 44 high to match `CHALK_PILL` beside it (round 44
- * #105). R59·317: R58·308's hairline secondary reaches the Desk, so its
- * edge is the secondary's, `--hairline-2` on the Desk's night ground. One
- * chalk pill per bar, at most; everything else beside it is this: two
- * kinds, the ink pill and the hairline pill, as D-186 counts.
+ * #105), at its row's start. R59·317: R58·308's hairline secondary reaches
+ * the Desk, so its edge is the secondary's, `--hairline-2` on the Desk's
+ * night ground. One chalk pill per bar, at most; everything else beside it
+ * is this: two kinds, the ink pill and the hairline pill, as D-186 counts.
  */
-export const QUIET_PILL =
-  "inline-flex min-h-11 cursor-pointer items-center justify-center self-start rounded-pill border border-hairline bg-transparent px-5 text-body font-bold text-ink dark:border-hairline-2";
+export const QUIET_PILL = `${LIST_PILL} self-start`;
 
 /**
  * Backing out of a question a Desk row asked (Cancel): underlined text,

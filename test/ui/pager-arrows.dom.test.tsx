@@ -2,6 +2,7 @@ import { useState } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import { ICON_BUTTON } from "../../src/ui/form";
 import { PagerArrows, pagerKeys } from "../../src/ui/PagerArrows";
 
 const LABELS = { previous: "Previous photo", next: "Next photo" };
@@ -126,27 +127,23 @@ describe("PagerArrows (R55·207, Design 249.1)", () => {
     expect(next()).toBeNull();
   });
 
-  it("draws the 44 round ground buttons with a hairline inside each edge", () => {
+  it("draws the round icon button inside each edge, its glyph at 20 (R61·334.4)", () => {
     render(<Pager count={3} start={1} />);
     for (const button of [previous(), next()]) {
+      // One kind for both pagers: 44 round, the hairline edge
+      // (--hairline-2 in dark, R57·262), on the ground since it sits on
+      // a photo.
       expect(button).toHaveClass(
         "target",
         "absolute",
         "top-1/2",
         "-translate-y-1/2",
-        "size-11",
-        "rounded-pill",
-        "border",
-        "border-hairline",
-        // One fill for both pagers; the dark edge is --hairline-2
-        // (R57·261, 262).
-        "dark:border-hairline-2",
-        "bg-ground",
-        "text-ink",
-        "items-center",
-        "justify-center",
+        ...ICON_BUTTON.split(" "),
       );
       expect(button).toHaveAttribute("type", "button");
+      const glyph = button?.querySelector("svg");
+      expect(glyph).toHaveAttribute("width", "20");
+      expect(glyph).toHaveAttribute("height", "20");
     }
     expect(previous()).toHaveClass("left-3");
     expect(previous()).not.toHaveClass("right-3");
@@ -155,13 +152,15 @@ describe("PagerArrows (R55·207, Design 249.1)", () => {
   });
 
   it("shows from desk for D and from wide for the viewer, hidden below", () => {
+    // Hidden below the width and no display of its own from it: the
+    // button's display is the icon button's.
     const { unmount } = render(<Pager count={2} />);
-    expect(next()).toHaveClass("hidden", "desk:flex");
-    expect(next()).not.toHaveClass("wide:flex");
+    expect(next()).toHaveClass("max-desk:hidden");
+    expect(next()).not.toHaveClass("max-wide:hidden", "hidden");
     unmount();
     render(<Pager count={2} from="wide" />);
-    expect(next()).toHaveClass("hidden", "wide:flex");
-    expect(next()).not.toHaveClass("desk:flex");
+    expect(next()).toHaveClass("max-wide:hidden");
+    expect(next()).not.toHaveClass("max-desk:hidden", "hidden");
   });
 
   it("names its buttons with the caller's words", () => {

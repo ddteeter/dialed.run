@@ -25,14 +25,20 @@ import {
   FormFailureBand,
   FormField,
   FormStatus,
+  ACTION_PILL,
   ACTION_PRIMARY,
   BAND_PILL,
   BAND_SECONDARY_PILL,
+  CHIP,
+  ICON_BUTTON,
   INK_PILL,
+  INK_PILL_INLINE,
+  LIST_PILL,
   PendingLabel,
   QUIET_CANCEL,
   QUIET_PILL,
   SECONDARY_PILL,
+  SECONDARY_PILL_INLINE,
   Select,
   SubmitButton,
   TextField,
@@ -2763,13 +2769,12 @@ describe("the Desk's buttons (round 44 #104-#105)", () => {
   it("draws the quiet decisions as hairline pills, and Cancel as underlined text", () => {
     // R59·317: the hairline edge, `--hairline-2` on the Desk's night
     // ground, never the ink edge; as high as CHALK_PILL beside it.
-    expect(QUIET_PILL.split(" ")).toStrictEqual([
+    const hairline44 = [
       "inline-flex",
       "min-h-11",
       "cursor-pointer",
       "items-center",
       "justify-center",
-      "self-start",
       "rounded-pill",
       "border",
       "border-hairline",
@@ -2779,7 +2784,12 @@ describe("the Desk's buttons (round 44 #104-#105)", () => {
       "font-bold",
       "text-ink",
       "dark:border-hairline-2",
-    ]);
+    ];
+    // The Desk's is the list's 44 hairline pill, at its row's start.
+    expect(QUIET_PILL.split(" ")).toStrictEqual([...hairline44, "self-start"]);
+    // A list row's Follow (R55·217) centres in its row, so it has no
+    // alignment of its own.
+    expect(LIST_PILL.split(" ")).toStrictEqual(hairline44);
     expect(QUIET_CANCEL.split(" ")).toStrictEqual([
       "inline-flex",
       "min-h-11",
@@ -3326,6 +3336,102 @@ describe("the primary by surface, and its width (R54·167)", () => {
         ...HUG_AT_WIDE,
       ]),
     );
+  });
+
+  it("gives a pill beside a name the same two looks, with no column width (R61·334.3)", () => {
+    for (const pill of [INK_PILL_INLINE, SECONDARY_PILL_INLINE]) {
+      const classes = pill.split(" ");
+      expect(classes).not.toContain("target");
+      expect(classes).toStrictEqual(
+        expect.arrayContaining([
+          "inline-flex",
+          "cursor-pointer",
+          "text-body",
+          "min-h-control",
+          "items-center",
+          "justify-center",
+          "rounded-pill",
+          "px-6",
+        ]),
+      );
+      // 167.2's rule is a column's: nothing here fills or sets a minimum.
+      for (const width of HUG_AT_WIDE) expect(classes).not.toContain(width);
+      expect(classes).not.toContain("w-full");
+      expect(classes).not.toContain("flex");
+    }
+    expect(INK_PILL_INLINE.split(" ")).toStrictEqual(
+      expect.arrayContaining([
+        "border-none",
+        "bg-ink",
+        "font-bold",
+        "text-ground",
+      ]),
+    );
+    expect(SECONDARY_PILL_INLINE.split(" ")).toStrictEqual(
+      expect.arrayContaining([
+        "border",
+        "border-hairline",
+        "dark:border-hairline-2",
+        "bg-transparent",
+        "font-semibold",
+        "text-ink",
+      ]),
+    );
+  });
+
+  it("draws the pink pill in one size: 44 high, 24 a side, ink on pink (R61·334.1)", () => {
+    expect(ACTION_PILL.split(" ")).toStrictEqual([
+      "inline-flex",
+      "min-h-11",
+      "cursor-pointer",
+      "items-center",
+      "justify-center",
+      "rounded-pill",
+      "border-none",
+      "bg-action",
+      "px-6",
+      "text-body",
+      "font-bold",
+      "text-accent-ink",
+    ]);
+  });
+
+  it("draws a round icon button with a hairline edge, on the ground (R61·334.4)", () => {
+    expect(ICON_BUTTON.split(" ")).toStrictEqual([
+      "grid",
+      "size-11",
+      "cursor-pointer",
+      "place-items-center",
+      "rounded-pill",
+      "border",
+      "border-hairline",
+      // On a photo at both sites, so it carries its ground (Design 345).
+      "bg-ground",
+      "p-0",
+      "text-ink",
+      // Disabled keeps the edge and quiets the glyph.
+      "aria-disabled:text-quiet",
+      "dark:border-hairline-2",
+    ]);
+  });
+
+  it("draws a pressed chip at 44 with 16 a side, ink when picked (R61·334.2)", () => {
+    expect(CHIP.split(" ")).toStrictEqual([
+      "inline-flex",
+      "min-h-11",
+      "cursor-pointer",
+      "items-center",
+      "justify-center",
+      "rounded-pill",
+      "border",
+      "border-hairline",
+      "bg-transparent",
+      "px-4",
+      "text-ink",
+      "aria-pressed:border-ink",
+      "aria-pressed:bg-ink",
+      "aria-pressed:text-ground",
+    ]);
   });
 
   it("lets FormEnd take the ink pill", () => {

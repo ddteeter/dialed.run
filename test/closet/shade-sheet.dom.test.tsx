@@ -15,6 +15,7 @@ import {
   sampleFromTarget,
   ShadeSheet,
 } from "../../src/modules/closet/components/ShadeSheet";
+import { ACTION_PILL } from "../../src/ui";
 
 /**
  * The shared real context, to restore when this file is done with it.
@@ -198,7 +199,12 @@ describe("ShadeSheet (design round 11 §AH2)", () => {
     const field = container.querySelector("[data-part='hex-field']");
     expect(field?.firstElementChild).toBe(swatch);
     expect(field?.lastElementChild).toBe(container.querySelector("#colorHex"));
-    expect(field).toHaveClass("flex", "items-center", "rounded-field", "border");
+    expect(field).toHaveClass(
+      "flex",
+      "items-center",
+      "rounded-field",
+      "border",
+    );
     expect(swatch).toHaveClass("border-hairline-2");
   });
 
@@ -216,9 +222,11 @@ describe("ShadeSheet (design round 11 §AH2)", () => {
     // The field takes a paste as readily as a sample, and a copied swatch
     // value often brings whitespace with it.
     render(<ShadeSheet {...props} value="  #1F2A44  " />);
-    expect(
-      screen.getByRole("button", { name: "Use this" }),
-    ).not.toHaveAttribute("aria-disabled");
+    const use = screen.getByRole("button", { name: "Use this" });
+    expect(use).not.toHaveAttribute("aria-disabled");
+    // The pink pill, in its own case: no display caps (R61·334.1).
+    expect(use).toHaveClass("target", ...ACTION_PILL.split(" "));
+    expect(use).not.toHaveClass("uppercase", "font-display");
     expect(screen.queryByText(/six-digit hex/)).toBeNull();
   });
 

@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { useId, useState } from "react";
 
-import { ACTION_PRIMARY, Mono } from "../../../ui";
+import { ACTION_PRIMARY, CHIP, Mono } from "../../../ui";
 import type { NameableItem, NamedResult, NamingOffer } from "../naming";
 import type { NameIdentity } from "../inputs";
 import { MoreDisclosure } from "./MoreDisclosure";
@@ -240,7 +240,7 @@ function PieceRow({
             // by the row's own name, as garment detail's Edit and Retire
             // are; the name stays the visible words (D-187).
             aria-describedby={labelId}
-            className="target shrink-0 cursor-pointer rounded-pill border border-hairline bg-transparent px-4 py-2"
+            className={`target shrink-0 ${CHIP}`}
           >
             <Mono step="xs">Name it</Mono>
           </button>

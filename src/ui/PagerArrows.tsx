@@ -1,5 +1,6 @@
 import { useRef, type JSX } from "react";
 
+import { ICON_BUTTON } from "./form";
 import { Icon } from "./icons";
 
 /**
@@ -36,13 +37,16 @@ export interface PagerArrowsProps {
 }
 
 // Whole strings, so the unknown-class lint and Tailwind both see them.
+// Hidden below the width, never `hidden` and a display from it: the
+// button's display is `ICON_BUTTON`'s, and two display classes on one
+// element are settled by the stylesheet's order, not the class list's.
 const SHOWN_FROM: Readonly<Record<PagerArrowsProps["from"], string>> = {
-  wide: "hidden wide:flex",
-  desk: "hidden desk:flex",
+  wide: "max-wide:hidden",
+  desk: "max-desk:hidden",
 };
 
-const ARROW_CLASS =
-  "target absolute top-1/2 size-11 -translate-y-1/2 items-center justify-center rounded-pill border border-hairline bg-ground text-ink dark:border-hairline-2";
+// The round icon button (R61·334.4), centred on the photo's edge.
+const ARROW_CLASS = `target absolute top-1/2 -translate-y-1/2 ${ICON_BUTTON}`;
 
 /**
  * The index one step from `index` in `direction`, held inside the pages.
@@ -95,7 +99,7 @@ export function PagerArrows({
             turn(-1);
           }}
         >
-          <Icon name="back" size={16} />
+          <Icon name="back" size={20} />
         </button>
       )}
       {isLast ? undefined : (
@@ -109,7 +113,7 @@ export function PagerArrows({
             turn(1);
           }}
         >
-          <Icon name="forward" size={16} />
+          <Icon name="forward" size={20} />
         </button>
       )}
     </>

@@ -13,6 +13,7 @@ import {
   RetractEntry,
 } from "../../src/modules/feed/components/RetractEntry";
 import { DeleteRun } from "../../src/modules/runs/components/DeleteRun";
+import { ICON_BUTTON } from "../../src/ui/form";
 import { ICONS } from "../../src/ui/icons";
 import { expectTheColumn } from "../ui/the-column";
 
@@ -172,6 +173,15 @@ describe("DeletePhoto: on the photo (round 27 #26, round 28 #13–14)", () => {
     expect(button.querySelector("path")?.getAttribute("d")).toBe(
       ICONS.remove.d,
     );
+    // The round icon button, at the photo's top right (R61·334.4).
+    expect(button).toHaveClass(
+      "target",
+      "absolute",
+      "top-2",
+      "right-2",
+      ...ICON_BUTTON.split(" "),
+    );
+    expect(button.querySelector("svg")).toHaveAttribute("width", "20");
   });
 
   it("deletes the photo it was opened for, by the id its key ends in, in the board's words", async () => {
@@ -289,7 +299,9 @@ describe("DeleteRun", () => {
     fireEvent.click(screen.getByRole("button", { name: "Delete this run" }));
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
     await waitFor(() => {
-      expect(screen.getAllByText(/held while a copyright claim/u).length).toBeGreaterThan(0);
+      expect(
+        screen.getAllByText(/held while a copyright claim/u).length,
+      ).toBeGreaterThan(0);
     });
     expect(screen.queryByText(/Our end failed/)).toBeNull();
     expect(onDeleted).not.toHaveBeenCalled();

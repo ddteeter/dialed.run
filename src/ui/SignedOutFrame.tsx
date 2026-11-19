@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import type { JSX, ReactNode } from "react";
 
+import { ACTION_PILL } from "./form";
 import { useHydrated } from "./use-hydrated";
 import { Wordmark } from "./Wordmark";
 
@@ -72,13 +73,15 @@ export function SignedOutFrame({
 }
 
 /**
- * Log in as text; the pink pill only from 720 up (below it, the page
+ * Log in as text; the pink pill (`ACTION_PILL`, R61·334.1) only from 720 up (below it, the page
  * carries the ask itself — the landing hero, the 404's cross-link).
  */
 const LOG_IN_CLASS =
   "target inline-flex items-center text-body font-bold text-ink no-underline";
-const REQUEST_ACCESS_CLASS =
-  "target hidden items-center rounded-pill bg-action px-4 text-body font-bold text-accent-ink no-underline wide:inline-flex";
+// `max-wide:hidden`, not `hidden wide:inline-flex`: the pill's own display
+// is `ACTION_PILL`'s, and two display classes on one element are settled
+// by the stylesheet's order, not the class list's.
+const REQUEST_ACCESS_CLASS = `target ${ACTION_PILL} no-underline max-wide:hidden`;
 
 const LOG_IN_PATH = "/auth/login";
 const REQUEST_ACCESS_PATH = "/account/request-access";

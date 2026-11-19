@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { JSX } from "react";
 
 import { colorHexSchema } from "../../../lib/contracts";
-import { Mono, SECONDARY_PILL, Sheet } from "../../../ui";
+import { ACTION_PILL, Mono, SECONDARY_PILL, Sheet } from "../../../ui";
 
 /**
  * Level 2 of design round 11 §AH — the exact shade.
@@ -247,7 +247,7 @@ export function ShadeSheet({
             onClick={() => {
               if (parsed.success) onUse(parsed.data);
             }}
-            className="target cursor-pointer rounded-pill border-none bg-action px-6 py-3 font-display text-body uppercase text-accent-ink"
+            className={`target ${ACTION_PILL}`}
           >
             Use this
           </button>

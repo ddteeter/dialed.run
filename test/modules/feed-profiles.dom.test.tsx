@@ -15,6 +15,12 @@ import type {
 } from "../../src/modules/feed/profiles";
 import type { SearchResult } from "../../src/modules/feed/search";
 import { expectBellEnding, renderFeedScreen, withBell } from "./feed-fixtures";
+import {
+  ACTION_PILL,
+  INK_PILL_INLINE,
+  LIST_PILL,
+  SECONDARY_PILL_INLINE,
+} from "../../src/ui";
 import { queryWeatherCredit } from "../ui/weather-credit";
 import { pointConditions } from "../feed/conditions-fixture";
 import { expectTheColumn } from "../ui/the-column";
@@ -273,7 +279,12 @@ describe("OwnProfile (G): day one", () => {
     ).toBeVisible();
     const log = screen.getByRole("link", { name: "Log a run" });
     expect(log).toHaveAttribute("href", "/runs/new");
-    expect(log).toHaveClass("bg-action");
+    // The pink pill, 44 (R61·334.1).
+    expect(log).toHaveClass(
+      "target",
+      "no-underline",
+      ...ACTION_PILL.split(" "),
+    );
     // Round 26 #18: the icon button in every state, and day one keeps its
     // inline link as well.
     const settings = screen.getAllByRole("link", { name: "Settings" });
@@ -892,13 +903,31 @@ describe("OtherProfile (H)", () => {
   });
 });
 
+/**
+ * The words the pill shows, not the unseen copy that holds its width.
+ */
+function shownWords(button: HTMLElement, words: string): HTMLElement {
+  const [shown, ...others] = within(button)
+    .getAllByText(words)
+    .filter((found) => found.closest("[data-part='held-width']") === null);
+  if (shown === undefined || others.length > 0) {
+    throw new Error(`expected "${words}" shown once`);
+  }
+  return shown;
+}
+
 describe("Follow, on the control-failure pattern", () => {
-  it("is the pink primary until followed, then a hairline", async () => {
+  it("is the ink pill until followed, then the hairline secondary (R61·334.3)", async () => {
     const user = userEvent.setup();
     const follow = vi.fn(done);
     await renderFeedScreen(followScreen({ follow }));
     const button = screen.getByRole("button", { name: "Follow" });
-    expect(button).toHaveClass("bg-action");
+    expect(button).toHaveClass(
+      "target",
+      "shrink-0",
+      ...INK_PILL_INLINE.split(" "),
+    );
+    expect(button).not.toHaveClass("bg-action");
     expect(button.querySelector(".sr-only")).toBeNull();
     // H's h1 names the runner, so the header's pill has no description.
     expect(button).not.toHaveAttribute("aria-describedby");
@@ -911,10 +940,45 @@ describe("Follow, on the control-failure pattern", () => {
     });
     // The hairline pill, as every secondary is (R58·308), its edge
     // --hairline-2 in dark, where --hairline all but vanished (E1-16b).
-    expect(button).toHaveClass("border-hairline", "dark:border-hairline-2");
-    expect(button).not.toHaveClass("border-ink");
+    expect(button).toHaveClass(
+      "target",
+      "shrink-0",
+      ...SECONDARY_PILL_INLINE.split(" "),
+    );
+    expect(button).not.toHaveClass("bg-ink");
     expect(button).not.toHaveClass("bg-action");
   });
+
+  it.each([
+    ["not following", false],
+    ["following", true],
+  ])(
+    "holds the header pill's width while %s, on the widest words it shows",
+    async (_, isFollowing) => {
+      await renderFeedScreen(followScreen({ isFollowing }));
+      const button = screen.getByRole("button", {
+        name: isFollowing ? "Following" : "Follow",
+      });
+
+      // One grid cell: the label, and an unseen bold copy of the widest
+      // resting word and the widest in-flight verb.
+      const hold = button.querySelector("[data-part='held-width']");
+      expect(hold).toHaveAttribute("aria-hidden", "true");
+      expect(hold).toHaveClass("invisible", "font-bold", "[grid-area:1/1]");
+      expect(hold?.parentElement).toHaveClass("grid", "justify-items-center");
+      expect(hold?.previousElementSibling).toHaveClass("[grid-area:1/1]");
+      expect(hold).toHaveTextContent("Following");
+      expect(hold).toHaveTextContent("Unfollowing");
+      // At rest inside the copy: its resting word is the one laid out
+      // visible, as the label's is.
+      const [resting, inFlight] = [
+        ...(hold?.firstElementChild?.children ?? []),
+      ] as HTMLElement[];
+      expect(resting).toHaveTextContent(/^Following$/u);
+      expect(resting?.style.visibility).toBe("");
+      expect(inFlight?.style.visibility).toBe("hidden");
+    },
+  );
 
   it("keeps the handle as a row's pill's description in all four states", async () => {
     // Round 52 #157, D-187: all four states on a row, the name the
@@ -934,6 +998,11 @@ describe("Follow, on the control-failure pattern", () => {
     await user.type(screen.getByLabelText("Search by name"), "A");
     const pill = await screen.findByRole("button", { name: "Follow" });
     expect(pill).toHaveAccessibleDescription("@ana");
+    // A list row keeps R55·217, which R61·334.3 does not withdraw: the 44
+    // hairline pill, and no held width.
+    expect(pill).toHaveClass("target", "shrink-0", ...LIST_PILL.split(" "));
+    expect(pill).not.toHaveClass("bg-ink");
+    expect(pill.querySelector("[data-part='held-width']")).toBeNull();
 
     await user.click(pill);
     expect(pill).toHaveAttribute("aria-busy", "true");
@@ -945,6 +1014,9 @@ describe("Follow, on the control-failure pattern", () => {
     });
     expect(pill).toHaveAccessibleName("Following");
     expect(pill).toHaveAccessibleDescription("@ana");
+    // Following, on a row, is muted text and no pill.
+    expect(pill).toHaveClass("target", "shrink-0", "text-muted", "px-2");
+    expect(pill).not.toHaveClass("rounded-pill");
 
     await user.click(pill);
     expect(pill).toHaveAccessibleName("Unfollowing");
@@ -965,8 +1037,8 @@ describe("Follow, on the control-failure pattern", () => {
     await user.click(button);
 
     expect(button).toHaveAttribute("aria-busy", "true");
-    expect(button).toHaveClass("bg-action");
-    expect(within(button).getByText("Following")).toBeVisible();
+    expect(button).toHaveClass("bg-ink");
+    expect(shownWords(button, "Following")).toBeVisible();
     pending.resolve(undefined);
     await waitFor(() => {
       expect(button).not.toHaveAttribute("aria-busy");
@@ -983,7 +1055,7 @@ describe("Follow, on the control-failure pattern", () => {
 
     await user.click(button);
 
-    expect(within(button).getByText("Unfollowing")).toBeVisible();
+    expect(shownWords(button, "Unfollowing")).toBeVisible();
     pending.resolve(undefined);
     await waitFor(() => {
       expect(button).not.toHaveAttribute("aria-busy");

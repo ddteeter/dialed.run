@@ -17,6 +17,7 @@ import {
 import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
 
+import { ACTION_PILL } from "../../src/ui/form";
 import { Layout, SignedOutLayout } from "../../src/ui/Layout";
 import { SLOW_ROUTE_MS, activeTabIndex } from "../../src/ui/tabs";
 import { SignedOutFrame } from "../../src/ui/SignedOutFrame";
@@ -99,14 +100,15 @@ describe("SignedOutFrame (Round 55 · 176)", () => {
     expect(logIn).not.toHaveClass("rounded-pill");
     const ask = screen.getByRole("link", { name: "Request access" });
     expect(ask).toBe(barLink("/account/request-access"));
+    // The pink pill (R61·334.1), hidden below 720 and never by a second
+    // display class.
     expect(ask).toHaveClass(
       "target",
-      "rounded-pill",
-      "bg-action",
-      "text-accent-ink",
-      "hidden",
-      "wide:inline-flex",
+      ...ACTION_PILL.split(" "),
+      "no-underline",
+      "max-wide:hidden",
     );
+    expect(ask).not.toHaveClass("hidden");
     expect(logIn.parentElement).toHaveAttribute("data-part", "bar-actions");
     // Never the tab bar, the product bar or a nav.
     expect(document.querySelector("[data-slot='tab-bar']")).toBeNull();
@@ -168,7 +170,11 @@ describe("SignedOutFrame (Round 55 · 176)", () => {
     expect(footer).toHaveClass("border-t", "border-hairline", "text-small");
     // The footer's gutter is inside the measure too (R57·263).
     expect(footer).not.toHaveClass("px-5");
-    expect(footer?.firstElementChild).toHaveClass("max-w-page", "px-5", "wide:px-6");
+    expect(footer?.firstElementChild).toHaveClass(
+      "max-w-page",
+      "px-5",
+      "wide:px-6",
+    );
     expect(footer?.parentElement?.lastElementChild).toBe(footer);
     expect(screen.getByText("page")).toBeInTheDocument();
     const links = [...(footer?.querySelectorAll("a") ?? [])];

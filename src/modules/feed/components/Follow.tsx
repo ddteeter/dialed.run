@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 
 import {
   ControlFailureBand,
   inFlight,
+  INK_PILL_INLINE,
+  LIST_PILL,
   PendingLabel,
+  SECONDARY_PILL_INLINE,
   useControlAction,
 } from "../../../ui";
 import type { ControlAction } from "../../../ui";
@@ -69,9 +73,9 @@ export function useFollowToggle({
 }
 
 /**
- * The pill. On H's header Follow is the primary, in the action pink, and
- * Following drops to a hairline, because following again is not the thing
- * to do next; on a list row both are quieter (`PILL_LOOK`).
+ * The pill. On H's header Follow is the ink pill and Following the
+ * hairline secondary (R61·334.3), because following again is not the
+ * thing to do next; on a list row both are quieter (`PILL_LOOK`).
  *
  * **On a list row it is described by the handle** (round 52 #157,
  * D-187): heard alone, a row's pill said "Follow" and not whose. The name
@@ -84,6 +88,14 @@ export function FollowPill({
   describedBy,
 }: Readonly<{ toggle: FollowToggle; describedBy?: string | undefined }>) {
   const { isFollowing, control } = toggle;
+  const where = describedBy === undefined ? "header" : "row";
+  const label = (
+    <PendingLabel
+      label={isFollowing ? "Following" : "Follow"}
+      pendingLabel={isFollowing ? "Unfollowing" : "Following"}
+      pending={control.pending}
+    />
+  );
   return (
     <button
       type="button"
@@ -92,36 +104,56 @@ export function FollowPill({
       onClick={() => {
         void control.run();
       }}
-      className={`target ${pillLook(describedBy === undefined ? "header" : "row", isFollowing)}`}
+      className={`target shrink-0 ${pillLook(where, isFollowing)}`}
     >
-      <PendingLabel
-        label={isFollowing ? "Following" : "Follow"}
-        pendingLabel={isFollowing ? "Unfollowing" : "Following"}
-        pending={control.pending}
-      />
+      {where === "header" ? <HeldWidth>{label}</HeldWidth> : label}
     </button>
   );
 }
 
 /**
- * The pill's look. On H's header, Follow is the primary in the action
- * pink and Following the hairline pill, as every secondary is (R58·308).
- * On a list row (R55·217), nine pink pills
- * stacked outweighed the page, so Follow is the 44 hairline pill and
- * Following is `--muted` text: the only pink left is Log a run.
+ * One width in both states (R61·334.3: "so the row doesn't shift"). The
+ * label shares a grid cell with an unseen copy of the widest words the
+ * pill ever shows, in the heavier of its two weights, so Follow,
+ * Following and each one's in-flight verb all sit in the same box.
+ */
+function HeldWidth({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <span className="grid justify-items-center">
+      <span className="[grid-area:1/1]">{children}</span>
+      <span
+        aria-hidden="true"
+        data-part="held-width"
+        className="invisible font-bold [grid-area:1/1]"
+      >
+        <PendingLabel
+          label="Following"
+          pendingLabel="Unfollowing"
+          pending={false}
+        />
+      </span>
+    </span>
+  );
+}
+
+/**
+ * The pill's look. On H's header, Follow is the ink pill and Following
+ * `SECONDARY_PILL`'s hairline (R61·334.3), each without a column's width
+ * rule, since the pill sits beside a name; 48 high, the ink pill's own
+ * height (the board draws 44: a guess, Design 346). On a list row
+ * (R55·217, which 334.3 does not withdraw), nine filled pills stacked
+ * outweighed the page, so Follow is the 44 hairline pill and Following is
+ * `--muted` text.
  */
 const PILL_LOOK = {
   header: {
-    follow:
-      "shrink-0 cursor-pointer rounded-pill border-none bg-action px-5 py-2 text-body font-bold text-accent-ink",
-    following:
-      "shrink-0 cursor-pointer rounded-pill border border-hairline bg-transparent px-5 py-2 text-body font-bold text-ink dark:border-hairline-2",
+    follow: INK_PILL_INLINE,
+    following: SECONDARY_PILL_INLINE,
   },
   row: {
-    follow:
-      "shrink-0 cursor-pointer rounded-pill border border-hairline bg-transparent px-5 py-2 text-body font-bold text-ink",
+    follow: LIST_PILL,
     following:
-      "shrink-0 cursor-pointer border-none bg-transparent px-2 py-2 text-body text-muted",
+      "cursor-pointer border-none bg-transparent px-2 py-2 text-body text-muted",
   },
 } as const;
 

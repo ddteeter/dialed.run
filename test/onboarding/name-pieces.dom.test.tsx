@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { NamePieces } from "../../src/modules/onboarding/components/NamePieces";
-import { ACTION_PRIMARY } from "../../src/ui";
+import { ACTION_PRIMARY, CHIP } from "../../src/ui";
 import type {
   NameableItem,
   NamedResult,
@@ -90,6 +90,9 @@ function pieceRows(): Element[] {
 
 async function nameFirst(user: ReturnType<typeof userEvent.setup>) {
   const [first] = screen.getAllByRole("button", { name: "Name it" });
+  // R61·334.2: a chip, never picked, since pressing it opens the row.
+  expect(first).toHaveClass("target", "shrink-0", ...CHIP.split(" "));
+  expect(first).not.toHaveAttribute("aria-pressed");
   await user.click(first ?? screen.getByRole("button", { name: "Next" }));
 }
 
@@ -372,8 +375,11 @@ describe("NamePieces", () => {
     const modelChips = models?.querySelectorAll("button") ?? [];
     for (const chip of modelChips) {
       expect(chip).toHaveAttribute("type", "button");
-      expect(chip).toHaveClass("rounded-pill", "border-hairline", "target");
+      // R61·334.2: a chip, 44 high with 16 a side, its words in MONO.xs.
+      expect(chip).toHaveClass("target", ...CHIP.split(" "));
       expect(chip.firstElementChild).toHaveClass("font-mono", "uppercase");
+      // Nothing typed matches a suggestion yet, so none is picked.
+      expect(chip).toHaveAttribute("aria-pressed", "false");
     }
     // Each row of chips sits under its own field.
     expect(
@@ -391,8 +397,25 @@ describe("NamePieces", () => {
     await user.click(screen.getByRole("button", { name: "Smartwool" }));
     expect(screen.getByLabelText("Brand")).toHaveValue("Smartwool");
     expect(onBrandInput).toHaveBeenLastCalledWith("Smartwool");
+    // A chip is ink while the field holds its words, and only that one.
+    expect(screen.getByRole("button", { name: "Smartwool" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "Smartwater" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(screen.getByRole("button", { name: "Classic 150" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
     await user.click(screen.getByRole("button", { name: "Classic 150" }));
     expect(screen.getByLabelText("Model")).toHaveValue("Classic 150");
+    expect(screen.getByRole("button", { name: "Classic 150" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     expect(nameGarment).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Save" }));
