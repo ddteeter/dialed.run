@@ -257,14 +257,14 @@ views {
       '''
     }
     opt 'some hours had not settled, the provider failed, or the runner\'s day of calls was spent' {
-      // source: src/modules/ops/scheduled.ts retryPendingWeather, runHourly (the weather-retry job); src/modules/weather/attach.ts retryPendingWeather, RETRY_BATCH_SIZE; src/modules/weather/run-conditions-copy.ts clearWeatherHalves
+      // source: src/modules/ops/scheduled.ts retryPendingWeather, runHourly (the weather-retry job); src/modules/weather/attach.ts retryPendingWeather, attachEach, RETRY_BATCH_SIZE; src/modules/weather/run-conditions-copy.ts clearWeatherHalves
       cf.app.cronHourly00 -[recovery]-> cf.app.weather 'retries the runs still pending' {
         notes '''
           **The marker is `runs.weather_status = pending`.** The hourly cron re-drives it.
 
           **Bounded.** Each pass takes up to 50 pending runs, oldest start first, and clears each one\'s copy of its conditions before it asks again.
 
-          **If one run\'s attach throws:** nothing catches it for that run alone. The pass ends for the runs after it, and its give-up is skipped. The rest of the hourly upkeep still runs.
+          **If one run\'s attach throws:** it is reported with the run\'s id, and that run loses this hour\'s turn. The pass goes on to the runs after it, and its give-up still runs.
         '''
       }
       // source: src/modules/weather/attach.ts retryPendingWeather, resolveAndAttach
