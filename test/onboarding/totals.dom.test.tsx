@@ -53,7 +53,7 @@ describe("TotalsSwitch (round 32, frames 1a and 1b)", () => {
       "Shared and private runs add their temperature, kit and verdict to the guides and reports. Shared runs also count in Same conditions, which other runners see. Never your name, notes, photos, when you ran, or anywhere more precise than a broad climate zone.",
     );
     expect(TOTALS_OFF).toBe(
-      "Off. Your runs leave the guides at tonight's update. They leave Same conditions now, and it still works for you. Reports already published stay as they are.",
+      "Off. Your runs leave the guides at the next rebuild, within a month. They leave Same conditions now, and it still works for you. Reports already published stay as they are.",
     );
   });
 

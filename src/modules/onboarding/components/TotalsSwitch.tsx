@@ -21,13 +21,13 @@ export const TOTALS_LABEL = "Count my runs in anonymous totals";
 export const TOTALS_ON =
   "Shared and private runs add their temperature, kit and verdict to the guides and reports. Shared runs also count in Same conditions, which other runners see. Never your name, notes, photos, when you ran, or anywhere more precise than a broad climate zone.";
 export const TOTALS_OFF =
-  "Off. Your runs leave the guides at tonight's update. They leave Same conditions now, and it still works for you. Reports already published stay as they are.";
+  "Off. Your runs leave the guides at the next rebuild, within a month. They leave Same conditions now, and it still works for you. Reports already published stay as they are.";
 
 /**
  * An unconfirmed runner's lines (round 38 #61d). D-108 C counts confirmed
  * accounts only, so the confirmed ON line's claim would be untrue: the
  * same sentence, led by the condition, and an OFF with nothing leaving,
- * so no "tonight" or "now". They may still turn totals off, with no
+ * so no "next rebuild" or "now". They may still turn totals off, with no
  * confirm sheet (owner, 2026-10-11).
  */
 export const TOTALS_ON_UNCONFIRMED =

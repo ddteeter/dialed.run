@@ -296,7 +296,7 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   await totals.click();
   await expect(totals).not.toBeChecked();
   await expect(totals).toHaveAccessibleDescription(
-    /^Off\. Your runs leave the guides at tonight's update\. They leave Same conditions now/u,
+    /^Off\. Your runs leave the guides at the next rebuild, within a month\. They leave Same conditions now/u,
   );
   await page.getByRole("link", { name: "Settings" }).first().click();
   await expect(
