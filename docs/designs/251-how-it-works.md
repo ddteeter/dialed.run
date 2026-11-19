@@ -29,9 +29,10 @@ drew it (#611). This lane builds it before the friends freeze (#850).
     below 1040, with "Have an account? Log in" under it below 720. The top
     bar is `SignedOutFrame`'s, unchanged.
   - 163e: no verdict-scale component.
-- **Where the page lives:** the coordinator places it, because
-  `ReadingFrame` moves into `account/terms` (doc 240) in lane 16b. See the
-  open questions.
+- **Where the page lives:** `account/terms/components/HowItWorksPage.tsx`,
+  beside `LegalPage`, exported through `account/terms`' `index.ts`, so
+  `ReadingFrame` stays internal to the sub-module (coordinator, 2026-11-19).
+  It is built on top of lane 16b's move.
 - **Route:** `src/routes/how-it-works.tsx`, which is public. A signed-in
   reader gets the signed-in shell, as `/privacy` does.
 - **TotalsSwitch** links to `/how-it-works` with `hash: "totals"`.
@@ -69,9 +70,9 @@ drew it (#611). This lane builds it before the friends freeze (#850).
 
 ## Open questions
 
-1. **Where the component lives.** I recommend
-   `account/terms/components/HowItWorksPage.tsx`, built on top of 16b's move.
-   This is waiting on the coordinator.
+1. **Settings › Privacy's off line** said the guides drop a runner "at
+   tonight's update"; the policy and this page say "the next rebuild, within
+   a month". It now says the latter (owner, 2026-11-19, on #523).
 2. **FAQPage JSON-LD.** 163c names rich results as the reason the answers
    are always shown. My guess is to emit a JSON-LD `<script>` in the route's
    `head`, built from the same question array the page renders. The
