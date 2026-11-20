@@ -65,7 +65,7 @@ drew it (#611). This lane builds it before the friends freeze (#850).
 ## Issues
 
 - Closes: #523, #611.
-- Opens: a watch item to rewrite the Garmin answer from the privacy
+- Opens: #921, to rewrite the Garmin answer from the privacy
   policy's Garmin section once #441 ships.
 
 ## Open questions
