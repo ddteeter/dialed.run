@@ -59,7 +59,7 @@ name a moved component (`failure-path-is-static`,
 
 - Schema: **none**. Routes: none new; four change a component path.
   Bindings, queues, crons: **none**.
-- **Forbidden zone, asked of the owner:** `guardrails.config.json` keys
+- **Forbidden zone, granted by the owner (one-time, 2026-11-19, on #887):** `guardrails.config.json` keys
   two `fallow-ignore` grants by path (`runs/imports.ts`,
   `runs/components/ParsedCard.tsx`), and both files move. Path only.
 - Waits for #909 (15d, in `runs/parsers/`), which this PR does not touch.
@@ -78,4 +78,3 @@ default-deny), `diagrams:check`, the commit gate's dependency-cruiser,
 
 - The name `runs/imports` (the issue says "the upload path"); a guess the
   reviewer may veto.
-- The two grant re-keys above (owner).
