@@ -29,6 +29,13 @@ function bell(): ReactElement {
   return <span data-testid="bell" />;
 }
 
+/**
+ * The lockup's text: the drawn `[dialed.run]` (hidden from a reader) and the
+ * one "dialed.run" it says. Prose that leaves `[dialed.run]` undrawn reads
+ * as the bare token instead.
+ */
+const LOCKUP = "[dialed.run]dialed.run";
+
 async function renderPage() {
   return renderWithRouter(<HowItWorksPage bellState={undefined} bell={bell} />);
 }
@@ -63,9 +70,9 @@ describe("HowItWorksPage", () => {
   it("leads with the wordmark sentence", async () => {
     await renderPage();
     expect(
-      screen.getByText(/keeps what you wore on each run/u),
-    ).toHaveTextContent(
-      "dialed.run keeps what you wore on each run next to the weather and how it felt. Log enough runs and you stop guessing at the closet.",
+      screen.getByText(/keeps what you wore on each run/u).textContent,
+    ).toBe(
+      `${LOCKUP} keeps what you wore on each run next to the weather and how it felt. Log enough runs and you stop guessing at the closet.`,
     );
   });
 
@@ -93,14 +100,9 @@ describe("HowItWorksPage", () => {
       "border-b",
       "border-hairline",
     );
-    // The wordmark draws its brackets and says "dialed.run" once, so the
-    // sentence is checked either side of it.
     const comingNext = container.querySelector('[data-part="coming-next"]');
-    expect(comingNext).toHaveTextContent(
-      /^Coming next: once you have logged enough runs, /u,
-    );
-    expect(comingNext).toHaveTextContent(
-      /dialed\.run will tell you what to wear before you head out\.$/u,
+    expect(comingNext?.textContent).toBe(
+      `Coming next: once you have logged enough runs, ${LOCKUP} will tell you what to wear before you head out.`,
     );
     expect(container.querySelector('[data-part="coming-next"]')).toHaveClass(
       "bg-panel",
@@ -145,8 +147,8 @@ describe("HowItWorksPage", () => {
     const answers = screen
       .getAllByRole("heading", { level: 3 })
       .map((question) => question.nextElementSibling?.textContent);
-    expect(answers[0]).toMatch(
-      /^A private run is seen by you alone\. A shared run is seen by runners signed in to .*dialed\.run\. A kit you make public can be seen by anyone, even people without an account, and it never shows when or where you ran\. Where you ran is never shown to anyone\.$/u,
+    expect(answers[0]).toBe(
+      `A private run is seen by you alone. A shared run is seen by runners signed in to ${LOCKUP}. A kit you make public can be seen by anyone, even people without an account, and it never shows when or where you ran. Where you ran is never shown to anyone.`,
     );
     expect(answers[1]).toBe(
       "Only to remind you to log your kit after a run. Strava's API agreement limits what apps like ours may keep, so we never store the activity: not your route, your pace or anything else about it. Disconnect in Settings.",
@@ -189,5 +191,6 @@ describe("HowItWorksPage", () => {
     const logIn = within(closing).getByRole("link", { name: "Log in" });
     expect(logIn).toHaveAttribute("href", "/auth/login");
     expect(logIn.closest("p")).toHaveClass("wide:hidden");
+    expect(logIn.closest("p")?.textContent).toBe("Have an account? Log in");
   });
 });

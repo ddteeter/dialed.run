@@ -8,20 +8,21 @@
  */
 
 /**
-A run of an answer: plain text, an underlined ink link, or the wordmark.
-*/
-export type Inline =
-  | string
-  | { readonly text: string; readonly href: string }
-  | { readonly wordmark: true };
+ * The wordmark as the copy writes it. The page draws each one as the
+ * bracketed lockup (R53·163: a wordmark in prose takes the bracket
+ * notation inline).
+ */
+export const WORDMARK = "[dialed.run]";
 
-export const WORDMARK: Inline = { wordmark: true };
+/**
+A run of an answer: text, or an underlined ink link.
+*/
+export type Inline = string | { readonly text: string; readonly href: string };
 
 export const PAGE_TITLE = "How it works";
 
 export const LEAD: readonly Inline[] = [
-  WORDMARK,
-  " keeps what you wore on each run next to the weather and how it felt. Log enough runs and you stop guessing at the closet.",
+  "[dialed.run] keeps what you wore on each run next to the weather and how it felt. Log enough runs and you stop guessing at the closet.",
 ];
 
 export const SECTIONS = [
@@ -60,9 +61,7 @@ export const LOOP_CLOSE =
   "Over time, each piece in your closet shows the range it works in for you.";
 
 export const COMING_NEXT: readonly Inline[] = [
-  "once you have logged enough runs, ",
-  WORDMARK,
-  " will tell you what to wear before you head out.",
+  "once you have logged enough runs, [dialed.run] will tell you what to wear before you head out.",
 ];
 
 export const OTHERS =
@@ -100,21 +99,16 @@ export const GUIDES: readonly { term: string; definition: string }[] = [
 export const STRAVA_API_AGREEMENT = "https://www.strava.com/legal/api";
 
 export const QUESTIONS: readonly {
-  id: string;
   question: string;
   answer: readonly Inline[];
 }[] = [
   {
-    id: "who-sees",
     question: "Who sees my runs?",
     answer: [
-      "A private run is seen by you alone. A shared run is seen by runners signed in to ",
-      WORDMARK,
-      ". A kit you make public can be seen by anyone, even people without an account, and it never shows when or where you ran. Where you ran is never shown to anyone.",
+      "A private run is seen by you alone. A shared run is seen by runners signed in to [dialed.run]. A kit you make public can be seen by anyone, even people without an account, and it never shows when or where you ran. Where you ran is never shown to anyone.",
     ],
   },
   {
-    id: "strava",
     question: "Does it connect to Strava?",
     answer: [
       "Only to remind you to log your kit after a run. ",
@@ -123,14 +117,12 @@ export const QUESTIONS: readonly {
     ],
   },
   {
-    id: "garmin",
     question: "And Garmin?",
     answer: [
       "Not yet. Connecting Garmin is coming. Until then, export the run from Garmin Connect and upload the file.",
     ],
   },
   {
-    id: "delete",
     question: "How do I delete my account?",
     answer: [
       "Settings › Account › Delete account. You have 7 days to change your mind, then it is gone, and from our backups within 30 days. You can export your data first, from the same screen. The ",

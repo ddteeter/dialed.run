@@ -16,6 +16,7 @@ import {
   QUESTIONS,
   SECTIONS,
   STEPS,
+  WORDMARK,
 } from "../how-it-works-copy";
 import type { Inline } from "../how-it-works-copy";
 import { ReadingFrame, ReadingSection, ReadingShell } from "./ReadingFrame";
@@ -139,10 +140,8 @@ function Questions(): JSX.Element {
   return (
     <>
       {QUESTIONS.map((entry) => (
-        <div key={entry.id} className="flex flex-col gap-2">
-          <h3 id={entry.id} className="m-0 font-display text-heading">
-            {entry.question}
-          </h3>
+        <div key={entry.question} className="flex flex-col gap-2">
+          <h3 className="m-0 font-display text-heading">{entry.question}</h3>
           <p className="m-0">
             <Inlines inlines={entry.answer} />
           </p>
@@ -180,29 +179,43 @@ function ClosingAsk(): JSX.Element {
 const CLOSING_PILL_CLASS = `target ${ACTION_PILL} self-stretch no-underline desk:self-start`;
 
 /**
-A run of copy: text, an underlined ink link, or the inline wordmark.
+A run of copy: text, with its wordmarks drawn, or an underlined ink link.
 */
 function Inlines({
   inlines,
 }: Readonly<{ inlines: readonly Inline[] }>): JSX.Element {
   return (
     <>
-      {inlines.map((inline, index) => {
-        if (typeof inline === "string")
-          return <Fragment key={index}>{inline}</Fragment>;
-        if ("text" in inline)
-          return (
-            <a
-              key={index}
-              href={inline.href}
-              data-target="inline"
-              className="text-ink underline underline-offset-4"
-            >
-              {inline.text}
-            </a>
-          );
-        return <Wordmark key={index} />;
-      })}
+      {inlines.map((inline, index) =>
+        typeof inline === "string" ? (
+          <WithWordmarks key={index} text={inline} />
+        ) : (
+          <a
+            key={index}
+            href={inline.href}
+            data-target="inline"
+            className="text-ink underline underline-offset-4"
+          >
+            {inline.text}
+          </a>
+        ),
+      )}
+    </>
+  );
+}
+
+/**
+Text with each written `[dialed.run]` drawn as the bracketed lockup.
+*/
+function WithWordmarks({ text }: Readonly<{ text: string }>): JSX.Element {
+  return (
+    <>
+      {text.split(WORDMARK).map((part, index) => (
+        <Fragment key={index}>
+          {index > 0 && <Wordmark />}
+          {part}
+        </Fragment>
+      ))}
     </>
   );
 }
