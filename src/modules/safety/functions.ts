@@ -310,7 +310,7 @@ export const keepAccountAction = createServerFn({ method: "POST" })
 /**
  * A review row about a handle the re-ask flagged (D-97): Keep, which
  * clears the flag, or Rename, the force-rename below with its reasons.
- * Admin-only; the decision lives in `account/handle-review.ts`.
+ * Admin-only; the decision lives in `account/handles/handle-review.ts`.
  */
 export const reviewHandleAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => handleReviewInput.parse(input))

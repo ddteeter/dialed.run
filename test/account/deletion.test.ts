@@ -13,7 +13,7 @@ import { waitUntil } from "../../src/env";
 import { DELETION_GRACE_S } from "../../src/lib/contracts";
 import { proseDayLabel } from "../../src/lib/dates";
 import { newUlid } from "../../src/lib/ids";
-import type { PasswordCheck } from "../../src/modules/auth";
+import type { PasswordCheck } from "../../src/modules/account/verification";
 import {
   deletionEffectsFromEnv,
   FRESH_SIGN_IN_S,
@@ -22,7 +22,7 @@ import {
   pendingDeletionOf,
   requestAccountDeletion,
   type DeletionEffects,
-} from "../../src/modules/account/deletion";
+} from "../../src/modules/account/data/deletion";
 import { captureException, settleOutbox } from "../../src/modules/ops";
 import { purgeSpy } from "../purge-spy";
 import { core, fakeMail, owedTo, seedUser } from "../email/helpers";

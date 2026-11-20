@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { LinkLanding } from "../../modules/account/components/LinkLanding";
+import { LinkLanding } from "../../modules/account/verification/components/LinkLanding";
 import {
   confirmEmailFn,
   readEmailLinkFn,

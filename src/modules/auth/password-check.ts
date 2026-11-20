@@ -18,6 +18,7 @@ import {
   windowedCountSet,
   windowedCountUntil,
 } from "../../lib/sql/window-count";
+import type { PasswordCheck } from "../account/verification";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -111,17 +112,6 @@ async function claimAttempt(
     PASSWORD_ATTEMPT_WINDOW_S,
   );
 }
-
-export type PasswordCheck =
-  | { readonly status: "own" }
-  | { readonly status: "wrong" }
-  | {
-      readonly status: "limited";
-      /**
-      When the next try may go, in epoch seconds.
-      */
-      readonly until: number;
-    };
 
 /**
  * `isOwnPassword`, limited per runner: past the limit the password is not

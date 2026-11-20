@@ -22,7 +22,7 @@ import {
   PUBLIC_PHOTOS_ORIGIN,
   publicPhotoUrl,
 } from "../../src/lib/public-photos";
-import { requestAccountDeletion } from "../../src/modules/account/deletion";
+import { requestAccountDeletion } from "../../src/modules/account/data/deletion";
 import {
   deleteEntryPhoto,
   deleteRun,

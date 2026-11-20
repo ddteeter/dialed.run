@@ -4,7 +4,7 @@ import terms from "../../docs/legal/terms.md?raw";
 import {
   parseLegalDoc,
   withoutSourceComments,
-} from "../../src/modules/account/legal-markdown";
+} from "../../src/modules/account/terms/legal-markdown";
 import {
   COMMUNITY_RULES_PATH,
   communityRuleKeys,

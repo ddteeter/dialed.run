@@ -158,7 +158,7 @@ export async function handleScheduled(
  *
  * **The handle re-ask** (task 126 PR B) rides the `:15` firing beside
  * photo screening, its sibling: handles claimed while moderation could
- * not answer are asked about again (`account/handle-rescreen.ts`). It
+ * not answer are asked about again (`account/handles/handle-rescreen.ts`). It
  * runs last, after that firing's email drain, because its calls wait on
  * moderation and the mail should not.
  *
@@ -171,7 +171,7 @@ export async function handleScheduled(
  * sessions and spent password-try counts, deleted on the daily firing
  * beside the send limits' own sweep (`auth/expired-rows.ts`). **The
  * answered access requests' sweep** is `account`'s, for the same reason:
- * requests invited or declined 90 days ago (`account/answered-requests.ts`).
+ * requests invited or declined 90 days ago (`account/access/answered-requests.ts`).
  * **The copyright holds' sweep** (D-130) is `feed`'s, which imports `ops`:
  * it restores what a counter-notice saved on its 12th weekday and deletes
  * what was held 30 days with none pending (`feed/moderation.ts`).

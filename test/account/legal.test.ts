@@ -5,7 +5,7 @@ import { notifications, runs } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { legalDoc, legalPage } from "../../src/modules/account/legal";
+import { legalDoc, legalPage } from "../../src/modules/account/terms/legal";
 
 /**
  * The legal pages' texts (ACC-13): only a finished text is published, and

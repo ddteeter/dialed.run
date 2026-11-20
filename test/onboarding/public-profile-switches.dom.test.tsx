@@ -9,8 +9,8 @@ import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { HandleForm } from "../../src/modules/account/components/HandleForm";
-import type { HandleClaim } from "../../src/modules/account/username";
+import { HandleForm } from "../../src/modules/account/handles/components/HandleForm";
+import type { HandleClaim } from "../../src/modules/account/handles/username";
 import {
   NO_HANDLE_LINE,
   type PickUsernameForm,

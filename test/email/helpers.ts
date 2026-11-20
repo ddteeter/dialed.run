@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { user } from "../../src/db/schema-auth";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import type { OwedMail } from "../../src/modules/account/verification";
+import type { OwedMail } from "../../src/modules/account/verification/verification";
 import type { EmailDeps } from "../../src/modules/email";
 import { settleOutbox } from "../../src/modules/ops/outbox/outbox";
 import {

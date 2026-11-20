@@ -11,7 +11,7 @@ import {
   sectionsOf,
   sectionText,
   withoutSourceComments,
-} from "../../src/modules/account/legal-markdown";
+} from "../../src/modules/account/terms/legal-markdown";
 
 /**
  * The owner's published mark, written out rather than imported: the test

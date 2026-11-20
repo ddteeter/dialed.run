@@ -14,9 +14,12 @@ import {
 import { weatherObservations } from "../../src/db/schema-weather";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import { accountCount, listAccounts } from "../../src/modules/account/accounts";
-import { exportData } from "../../src/modules/account/export";
-import { accessDesk } from "../../src/modules/account/invites";
+import {
+  accountCount,
+  listAccounts,
+} from "../../src/modules/account/access/accounts";
+import { exportData } from "../../src/modules/account/export-build/export";
+import { accessDesk } from "../../src/modules/account/access/invites";
 import {
   deskRunners,
   runnersWhere,
@@ -115,7 +118,7 @@ describe("the Desk's runner list (listAccounts + deskRunners + accountCount)", (
   // A legitimate formula: 1 list + 5 reads per `IN_LIST_CHUNK` (80,
   // src/lib/chunked.ts) of listed accounts (`deskRunners`: runs, profile
   // reports, profiles, pending deletions, open flags) + 1 count. A page is
-  // at most `ACCOUNTS_PAGE` (100, src/modules/account/accounts.ts), so
+  // at most `ACCOUNTS_PAGE` (100, src/modules/account/access/accounts.ts), so
   // 1 + 5×2 + 1 at most; 1 and 25 accounts are both one chunk.
   it("asks 1 + 5 + 1 for 1 account and for 25", async () => {
     const one = await seededDesk(1);

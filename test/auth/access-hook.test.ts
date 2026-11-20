@@ -26,7 +26,7 @@ import {
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { accessGate } from "../../src/modules/account";
-import { closedAddressRows } from "../../src/modules/account/closed-addresses";
+import { closedAddressRows } from "../../src/modules/account/access/closed-addresses";
 import {
   admitSignUp,
   claimInvite,

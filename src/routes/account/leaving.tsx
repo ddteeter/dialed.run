@@ -4,7 +4,7 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 
-import { Leaving } from "../../modules/account/components/Leaving";
+import { Leaving } from "../../modules/account/data/components/Leaving";
 import { keepAccountFn, leavingQuery } from "../../modules/account/functions";
 import {
   homeIfNothingToSay,

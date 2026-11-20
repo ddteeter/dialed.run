@@ -22,7 +22,7 @@ import {
   accessGate,
   requestAccess,
   turnstileAttempt,
-} from "../../src/modules/account/access";
+} from "../../src/modules/account/access/access";
 import {
   CLAIM_HOLD_S,
   DESK_LIST_LIMIT,
@@ -35,8 +35,8 @@ import {
   redeemInvite,
   restoreInviteCode,
   revokeInviteCode,
-} from "../../src/modules/account/invites";
-import type { InviteAnswer } from "../../src/modules/account/invites";
+} from "../../src/modules/account/access/invites";
+import type { InviteAnswer } from "../../src/modules/account/access/invites";
 import type { TurnstileAttempt } from "../../src/modules/ops";
 import { fakeMail, owedTo } from "../email/helpers";
 

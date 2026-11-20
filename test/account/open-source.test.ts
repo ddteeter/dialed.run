@@ -10,7 +10,7 @@ import {
   openSourcePage,
   toolsGroup,
   type OpenSourceList,
-} from "../../src/modules/account/open-source";
+} from "../../src/modules/account/terms/open-source";
 import {
   COLLAPSED_ROWS,
   matchingGroups,
@@ -18,7 +18,7 @@ import {
   pieceCount,
   readLabel,
   type LicenceGroup,
-} from "../../src/modules/account/open-source-search";
+} from "../../src/modules/account/terms/open-source-search";
 
 /**
  * `/open-source` (plan C9; round 29 #9): the generated list, read and

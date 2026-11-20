@@ -252,25 +252,25 @@ describe("03 · every tappable thing has a 44×44 hit area", () => {
         .map((element) => element.path)
         .toSorted((a, b) => a.localeCompare(b)),
     ).toEqual([
-      // The read-only account's hint, "Accept the Terms to change this.
-      // Accept" (round 30 #4a), once per row.
-      "src/modules/account/components/AccountWhileBehind.tsx",
-      // Au4's three foot lines: "Wrong address? Start over", "Carry on
-      // without confirming? Log in", "You're signed in. Carry on to your
-      // closet ›" (round 26 #11).
-      "src/modules/account/components/CheckEmail.tsx",
-      "src/modules/account/components/CheckEmail.tsx",
-      "src/modules/account/components/CheckEmail.tsx",
-      // A link inside a legal text's sentence (ACC-13).
-      "src/modules/account/components/LegalPage.tsx",
       // Au5's one (round 26 #20): "Have a code after all? Create an
       // account" on the receipt. The way back to Au2 is a standalone back
       // link with a full target since round 28 #9.
-      "src/modules/account/components/RequestAccess.tsx",
+      "src/modules/account/access/components/RequestAccess.tsx",
+      // The read-only account's hint, "Accept the Terms to change this.
+      // Accept" (round 30 #4a), once per row.
+      "src/modules/account/terms/components/AccountWhileBehind.tsx",
+      // A link inside a legal text's sentence (ACC-13).
+      "src/modules/account/terms/components/LegalPage.tsx",
       // The terms prompt's escape line, "…or go to your account to export
       // or delete it." (ACC-6; round 30 #4). Its Log out is a button, so it
       // keeps a full target, and "Read the Terms" has a line of its own.
-      "src/modules/account/components/TermsPrompt.tsx",
+      "src/modules/account/terms/components/TermsPrompt.tsx",
+      // Au4's three foot lines: "Wrong address? Start over", "Carry on
+      // without confirming? Log in", "You're signed in. Carry on to your
+      // closet ›" (round 26 #11).
+      "src/modules/account/verification/components/CheckEmail.tsx",
+      "src/modules/account/verification/components/CheckEmail.tsx",
+      "src/modules/account/verification/components/CheckEmail.tsx",
       "src/modules/auth/auth-page.tsx",
       // Au2's "No code? Request access" (round 26 #20).
       "src/modules/auth/auth-page.tsx",

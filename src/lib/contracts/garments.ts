@@ -414,7 +414,7 @@ export function normalizeUsername(typed: string): string {
  * A handle (round 26 #7). The two refusals are the board's, one at a time:
  * the shape first, and "can't start with _" only for a handle whose shape
  * is otherwise fine — so `_x` reads the first, not both. Uniqueness and the
- * reserved list are the server's (`modules/account/username.ts`), because
+ * reserved list are the server's (`modules/account/handles/username.ts`), because
  * only it can know them.
  *
  * No `u` flag: the class is pure ASCII and the pattern has no `.`, `\p{}`

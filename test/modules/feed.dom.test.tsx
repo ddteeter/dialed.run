@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { ConfirmEmailBand } from "../../src/modules/account/components/ConfirmEmailBand";
+import { ConfirmEmailBand } from "../../src/modules/account/verification/components/ConfirmEmailBand";
 import type { CompactConditions as CompactConditionsResult } from "../../src/modules/feed/compact-conditions";
 import { defaultFeedTab, Feed } from "../../src/modules/feed/components/Feed";
 import type { SetUsefulFn } from "../../src/modules/feed/components/useful-reaction";
@@ -226,12 +226,7 @@ describe("Feed: Following", () => {
     // R55·205: the 8 --tint band is the list's, between posts. On a phone
     // it runs edge to edge: the list steps out of the column's gutter and
     // each post puts it back. From 720 it stops at the 620 (R59·319).
-    expect(list).toHaveClass(
-      "divide-y-8",
-      "divide-tint",
-      "-mx-5",
-      "wide:mx-0",
-    );
+    expect(list).toHaveClass("divide-y-8", "divide-tint", "-mx-5", "wide:mx-0");
     expect(list).not.toHaveClass("wide:-mx-6");
     expect(list).not.toHaveClass("divide-hairline", "gap-5");
     for (const post of posts) {
@@ -355,7 +350,12 @@ describe("Feed: Following, empty", () => {
     const find = screen.getByRole("link", { name: "Find a runner" });
     expect(find).toHaveAttribute("href", "/feed/search");
     expect(find).toHaveAttribute("data-part", "primary-action");
-    expect(find).toHaveClass("target", "rounded-pill", "bg-ink", "no-underline");
+    expect(find).toHaveClass(
+      "target",
+      "rounded-pill",
+      "bg-ink",
+      "no-underline",
+    );
     expect(screen.queryByRole("list")).toBeNull();
   });
 

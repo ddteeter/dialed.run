@@ -48,14 +48,14 @@ function sources(): [string, string][] {
 type Reason = "floor" | "own" | "actor" | "operator" | "machinery";
 
 const READERS: Readonly<Record<string, Reason>> = {
-  "src/modules/account/accounts.ts": "operator",
-  "src/modules/account/export.ts": "own",
-  "src/modules/account/handle-rescreen.ts": "machinery",
-  "src/modules/account/handle-review.ts": "operator",
-  "src/modules/account/invites.ts": "operator",
-  "src/modules/account/purge.ts": "machinery",
+  "src/modules/account/access/accounts.ts": "operator",
+  "src/modules/account/export-build/export.ts": "own",
+  "src/modules/account/handles/handle-rescreen.ts": "machinery",
+  "src/modules/account/handles/handle-review.ts": "operator",
+  "src/modules/account/access/invites.ts": "operator",
+  "src/modules/account/purge/purge.ts": "machinery",
   "src/modules/account/theme.ts": "own",
-  "src/modules/account/username.ts": "own",
+  "src/modules/account/handles/username.ts": "own",
   "src/modules/auth/d1-bookmark.ts": "own",
   "src/modules/auth/system-account.ts": "own",
   "src/modules/closet/service.ts": "own",

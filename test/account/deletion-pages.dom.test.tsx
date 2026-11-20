@@ -24,15 +24,15 @@ import {
 import { proseDayLabel } from "../../src/lib/dates";
 import type { ViewerZone } from "../../src/lib/dates";
 import { nowSeconds } from "../../src/lib/now";
-import { DeleteAccount } from "../../src/modules/account/components/DeleteAccount";
+import { DeleteAccount } from "../../src/modules/account/data/components/DeleteAccount";
 import {
   Leaving,
   TOO_LATE,
-} from "../../src/modules/account/components/Leaving";
+} from "../../src/modules/account/data/components/Leaving";
 import type {
   DeletionResult,
   KeepResult,
-} from "../../src/modules/account/deletion";
+} from "../../src/modules/account/data/deletion";
 import { SECONDARY_PILL } from "../../src/ui";
 import { carriedSince } from "../ui/carry-spy";
 

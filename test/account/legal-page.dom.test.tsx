@@ -8,8 +8,8 @@ import { render, screen, within } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
 
-import { LegalPage } from "../../src/modules/account/components/LegalPage";
-import { parseLegalDoc } from "../../src/modules/account/legal-markdown";
+import { LegalPage } from "../../src/modules/account/terms/components/LegalPage";
+import { parseLegalDoc } from "../../src/modules/account/terms/legal-markdown";
 
 /**
  * The reading page (ACC-13; round 26 #14, round 27 #5): contract type,

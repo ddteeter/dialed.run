@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
-import { OnboardingHandle } from "../../modules/account/components/OnboardingHandle";
+import { OnboardingHandle } from "../../modules/account/handles/components/OnboardingHandle";
 import {
   claimUsernameFn,
   keepPlaceholderFn,

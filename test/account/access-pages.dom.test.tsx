@@ -18,8 +18,8 @@ import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { z } from "zod";
 
 import { REGION_COPY, TURNSTILE_REFUSED } from "../../src/lib/contracts/access";
-import type { AccessRequestResult } from "../../src/modules/account/access";
-import { DeskAccess } from "../../src/modules/account/components/DeskAccess";
+import type { AccessRequestResult } from "../../src/modules/account/access/access";
+import { DeskAccess } from "../../src/modules/account/access/components/DeskAccess";
 import {
   DeskCodes,
   UNDO_WINDOW_MS,
@@ -28,16 +28,19 @@ import {
   orderedCodes,
   usedLine,
   usesLine,
-} from "../../src/modules/account/components/DeskCodes";
-import { ageLabel } from "../../src/modules/account/components/desk-rows";
+} from "../../src/modules/account/access/components/DeskCodes";
+import { ageLabel } from "../../src/modules/account/access/components/desk-rows";
 import {
   NOTE_COUNTER_ID,
   RequestAccess,
   noteAnnouncement,
   withCounter,
-} from "../../src/modules/account/components/RequestAccess";
+} from "../../src/modules/account/access/components/RequestAccess";
 import { refusalMessage } from "../../src/lib/contracts/access";
-import type { AccessDesk, DeskCode } from "../../src/modules/account/invites";
+import type {
+  AccessDesk,
+  DeskCode,
+} from "../../src/modules/account/access/invites";
 import type { TurnstileApi } from "../../src/ui/Turnstile";
 import { bracketed } from "../ui/bracketed";
 import { carriedSince } from "../ui/carry-spy";
@@ -1152,7 +1155,9 @@ describe("D7 · Access", () => {
     expect(statusOf("codes")).toHaveTextContent(
       "Still revoked. Undo didn't go through. Try again?",
     );
-    expect(within(rowOf("DIAL-7K3P-2QXM")).queryByText("Still revoked")).toBeNull();
+    expect(
+      within(rowOf("DIAL-7K3P-2QXM")).queryByText("Still revoked"),
+    ).toBeNull();
     // Nothing optimistic: the row is still held, Undo and all, and its ten
     // seconds do not take it away while the band is up.
     await act(async () => {
@@ -1270,7 +1275,9 @@ describe("D7 · Access", () => {
     });
     // The band's condition is `code.id === holding`, not "some revoke
     // failed" — a sibling row with no revoke of its own must not wear it.
-    expect(within(rowOf("DIAL-7K3P-2QXM")).queryByText("Still active")).toBeNull();
+    expect(
+      within(rowOf("DIAL-7K3P-2QXM")).queryByText("Still active"),
+    ).toBeNull();
     expect(within(rowOf("DIAL-H2XN")).queryByText("Still active")).toBeNull();
   });
 

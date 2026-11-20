@@ -122,7 +122,7 @@ views {
         '''
       }
     }
-    // source: src/modules/enrichment/consume.ts fetchAndExtract, isLandingDenied, dropDeniedSource; src/modules/ops/desk/queues.ts enrichmentDeps; src/modules/safety/denylist.ts isDeniedOnLanding
+    // source: src/modules/enrichment/consume.ts fetchAndExtract, isLandingDenied, dropDeniedSource; src/modules/ops/desk/queues.ts enrichmentDeps; src/modules/safety/rules/denylist.ts isDeniedOnLanding
     cf.app.enrichment.consumer -> cf.coreDb 'records where the link landed and checks it against the denylist' {
       notes '''
         **Guard: an upsert on the link.** A landing on another domain is recorded in `link_landings`. A landing with no readable domain counts as denied.

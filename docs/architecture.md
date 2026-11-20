@@ -193,9 +193,9 @@ jitless head script, the theme's device cache and head script) is **client-only*
 keeps it out of `src/server.ts`, every `functions.ts`, and the queue
 consumers and cron handlers the Worker entry wires.
 
-Task 126 (ACC-9) added account deletion's purge, `modules/account/purge.ts`,
-which is **not** in `account`'s barrel and is imported by nothing but the
-Worker entry. It calls `feed`'s delete primitives, and both `feed` and
+Task 126 (ACC-9) added account deletion's purge, now the sub-module
+`modules/account/purge/`, whose door is **not** re-exported by `account`'s
+barrel and is imported by nothing but the Worker entry. It calls `feed`'s delete primitives, and both `feed` and
 `ops` import `account`'s barrel, so a barrel export — or an import from
 `dispatch/scheduled.ts` — would be a cycle. `handleScheduled` takes it as
 daily upkeep instead, and `src/server.ts` hands it over
@@ -207,11 +207,11 @@ deauthorization's email: `ops` imports `runs`, so `runs` cannot import
 The emailed data export (task 126 PR 2b-3, ACC-10) is wired the same way.
 Its job, `account_export`, rides its own queue, `dialed-exports` (decision
 D-86), whose wire format and consumers are `account`'s
-(`account/export-queue.ts`) — and `ops` may not import `account`: so
+(`account/data/export-queue.ts`) — and `ops` may not import `account`: so
 `handleQueueBatch` takes `ExportConsumers` (the batch consumer and the
 DLQ's) for the two `dialed-exports` queues, and `handleScheduled`'s upkeep
 takes `sweepExports` for the hourly `0 * * * *` firing. Both come from
-`account/export-build.ts` and `export-sweep.ts`, outside the barrel,
+the sub-module `account/export-build/`, whose door the barrel does not re-export,
 imported only by `src/server.ts` — the build also keeps the zip library
 out of every route's reach, and so out of the client bundle.
 

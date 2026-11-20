@@ -20,9 +20,9 @@ import {
   handleGate,
   renameNoticeOf,
   usernameOf,
-} from "../../src/modules/account/username";
-import type { ScreenHandle } from "../../src/modules/account/handle-screen";
-import { acceptanceOf } from "../../src/modules/account/terms-acceptance";
+} from "../../src/modules/account/handles/username";
+import type { ScreenHandle } from "../../src/modules/account/handles/handle-screen";
+import { acceptanceOf } from "../../src/modules/account/terms/terms-acceptance";
 
 /**
  * The handle (task 126, ACC-1; round 26 #7), through the one writer on

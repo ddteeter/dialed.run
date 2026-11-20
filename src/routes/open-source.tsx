@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { OpenSourcePage } from "../modules/account/components/OpenSourcePage";
+import { OpenSourcePage } from "../modules/account/terms/components/OpenSourcePage";
 import { openSourcePageLoader } from "../modules/account/functions";
 import { NotificationBell } from "../modules/notifications/components/NotificationBell";
 

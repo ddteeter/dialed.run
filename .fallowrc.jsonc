@@ -131,7 +131,7 @@
       // ignore covers the table and not the photo resolution and row
       // building beside it; every column here only reads a field of a row
       // `export-files.ts` built (PR #132 review), and must stay that way.
-      "src/modules/account/export-sheets.ts", // column table: every value is a plain field read
+      "src/modules/account/export-build/export-sheets.ts", // column table: every value is a plain field read
     ],
   },
 }

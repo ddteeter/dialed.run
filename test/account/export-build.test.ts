@@ -21,12 +21,12 @@ import {
   exportPrefixFor,
   failExport,
   newLinkToken,
-} from "../../src/modules/account/data-exports";
+} from "../../src/modules/account/data/data-exports";
 import {
   buildExport,
   exportConsumersFromEnv,
   type BuildDeps,
-} from "../../src/modules/account/export-build";
+} from "../../src/modules/account/export-build/export-build";
 import { batchOf, fakeMessage } from "../queue-fakes";
 import { core } from "../email/helpers";
 import { readZip, textOf } from "./zip-reader";

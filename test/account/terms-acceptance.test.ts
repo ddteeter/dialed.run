@@ -16,7 +16,7 @@ import {
   termsStanding,
   termsStandingOf,
   termsVersionOf,
-} from "../../src/modules/account/terms-acceptance";
+} from "../../src/modules/account/terms/terms-acceptance";
 
 /**
  * ACC-6: the terms' version is read from the published terms, an

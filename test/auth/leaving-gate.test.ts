@@ -6,7 +6,7 @@ import { session } from "../../src/db/schema-auth";
 import { accountDeletions, userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import { keepAccount } from "../../src/modules/account/deletion";
+import { keepAccount } from "../../src/modules/account/data/deletion";
 import { AUTH_REQUIRED_CODE } from "../../src/modules/auth/auth-error";
 import { createAuth } from "../../src/modules/auth/create-auth";
 import {

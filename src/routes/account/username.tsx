@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { HandleForm } from "../../modules/account/components/HandleForm";
+import { HandleForm } from "../../modules/account/handles/components/HandleForm";
 import {
   claimUsernameFn,
   usernameQuery,

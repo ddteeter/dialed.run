@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildSheets } from "../../src/modules/account/export-sheets";
+import { buildSheets } from "../../src/modules/account/export-build/export-sheets";
 
 /**
  * The export ZIP's six column tables (task 126, ACC-10; round 27 #13),

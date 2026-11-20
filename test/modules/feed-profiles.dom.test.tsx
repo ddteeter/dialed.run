@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { ConfirmEmailBand } from "../../src/modules/account/components/ConfirmEmailBand";
+import { ConfirmEmailBand } from "../../src/modules/account/verification/components/ConfirmEmailBand";
 import { Avatar, initialOf } from "../../src/modules/feed/components/Avatar";
 import { OtherProfile } from "../../src/modules/feed/components/OtherProfile";
 import { OwnProfile } from "../../src/modules/feed/components/OwnProfile";

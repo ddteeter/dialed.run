@@ -10,35 +10,35 @@ export {
   forceRename,
   lookUpHandle,
   usernameOf,
-} from "./username";
-export { reviewFlaggedHandle } from "./handle-review";
+} from "./handles";
+export { reviewFlaggedHandle } from "./handles";
 export type {
   ForcedRename,
   ForceRenameRequest,
   HandleClaim,
   HandleLookup,
-} from "./username";
+} from "./handles";
 export {
   accountCount,
   ACCOUNTS_PAGE,
   listAccounts,
   prefixPattern,
-} from "./accounts";
-export type { AccountRow, AccountsQuery } from "./accounts";
+} from "./access";
+export type { AccountRow, AccountsQuery } from "./access";
 export {
   changeLinkWithdrawal,
   emailConfirmationRead,
   runnerConfirmed,
   isUnconfirmed,
   isVerified,
-} from "./email-links";
+} from "./verification";
 export { accessGate, turnstileAttempt } from "./access";
-export { receiveAccessRequest } from "./access-endpoint";
+export { receiveAccessRequest } from "./access";
 export {
   currentTermsVersion,
   latestAcceptanceOf,
   termsStandingOf,
-} from "./terms-acceptance";
+} from "./terms";
 export {
   authMail,
   confirmEmail,

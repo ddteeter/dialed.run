@@ -19,7 +19,7 @@ import {
   newLinkToken,
   requestExport,
   rowState,
-} from "../../src/modules/account/data-exports";
+} from "../../src/modules/account/data/data-exports";
 import { core } from "../email/helpers";
 
 /**

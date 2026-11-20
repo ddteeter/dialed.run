@@ -7,16 +7,12 @@ import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { session, user, verification } from "../../src/db/schema-auth";
-import {
-  outbox,
-  passwordAttempts,
-  rateLimits,
-} from "../../src/db/schema-core";
+import { outbox, passwordAttempts, rateLimits } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { createAuth } from "../../src/modules/auth/create-auth";
 import { confirmEmail } from "../../src/modules/account";
-import { issueEmailLink } from "../../src/modules/account/email-links";
+import { issueEmailLink } from "../../src/modules/account/verification/email-links";
 import { changeOwnPassword } from "../../src/modules/auth/change-password";
 import {
   checkOwnPassword,
@@ -471,7 +467,6 @@ async function triesOf(email: string): Promise<number | undefined> {
 }
 
 describe("email sign-in's tries per typed address", () => {
-
   it("refuses even the right password once the wrong ones reach the limit", async () => {
     const { auth } = instance();
     const { email, userId } = await signUp(auth);

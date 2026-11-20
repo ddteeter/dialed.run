@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { HandleForm } from "../../../modules/account/components/HandleForm";
+import { HandleForm } from "../../../modules/account/handles/components/HandleForm";
 import { claimUsernameFn } from "../../../modules/account/functions";
 import { requireSession } from "../../../modules/auth/functions";
 import { BelledLayout } from "../../../modules/notifications/components/BelledLayout";

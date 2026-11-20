@@ -6,7 +6,7 @@ import { accessRequests } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { forgetAnsweredRequests } from "../../src/modules/account/answered-requests";
+import { forgetAnsweredRequests } from "../../src/modules/account/access/answered-requests";
 
 /**
  * The daily sweep of the waitlist: a request answered (invited or

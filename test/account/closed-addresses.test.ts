@@ -9,7 +9,7 @@ import {
   closedAddressRows,
   forgetClosedAddresses,
   isClosedAddress,
-} from "../../src/modules/account/closed-addresses";
+} from "../../src/modules/account/access/closed-addresses";
 
 /**
  * SA-L09: what is kept of a closed account's addresses, and what sign-up

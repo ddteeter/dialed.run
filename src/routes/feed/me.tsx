@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { ConfirmEmailBand } from "../../modules/account/components/ConfirmEmailBand";
+import { ConfirmEmailBand } from "../../modules/account/verification/components/ConfirmEmailBand";
 import {
   ownAccountQuery,
   resendConfirmationFn,

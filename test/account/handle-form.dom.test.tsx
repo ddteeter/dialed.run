@@ -8,13 +8,13 @@ import {
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { HandleForm } from "../../src/modules/account/components/HandleForm";
+import { HandleForm } from "../../src/modules/account/handles/components/HandleForm";
 import {
   HandleStep,
   renamedLine,
-} from "../../src/modules/account/components/HandleStep";
-import { OnboardingHandle } from "../../src/modules/account/components/OnboardingHandle";
-import type { HandleClaim } from "../../src/modules/account/username";
+} from "../../src/modules/account/handles/components/HandleStep";
+import { OnboardingHandle } from "../../src/modules/account/handles/components/OnboardingHandle";
+import type { HandleClaim } from "../../src/modules/account/handles/username";
 import { carriedSince } from "../ui/carry-spy";
 
 vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {

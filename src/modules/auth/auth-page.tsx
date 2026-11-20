@@ -373,7 +373,7 @@ export function LoginCrossLink({
  * muted, above the cross-link — the terms line, linking the Terms and the
  * policy, and the age line. Never under Au1 (D-52). No checkbox: creating
  * the account is the acceptance, and the server records the terms'
- * version and when as the account is made (`account/terms-acceptance`).
+ * version and when as the account is made (`account/terms/terms-acceptance`).
  *
  * The terms line ends with D-108 E's disclosure (round 32, frame 2b): one
  * sentence, no checkbox and no onboarding step. "Settings" is not a link

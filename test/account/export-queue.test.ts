@@ -4,7 +4,7 @@ import {
   exportConsumers,
   exportsQueueMessageSchema,
   type ExportWork,
-} from "../../src/modules/account/export-queue";
+} from "../../src/modules/account/data/export-queue";
 import { handleQueueBatch, handleScheduled } from "../../src/modules/dispatch";
 import type { CronReporter } from "../../src/modules/ops/sentry/sentry";
 import { importsQueueMessageSchema } from "../../src/modules/runs/queue-messages";
