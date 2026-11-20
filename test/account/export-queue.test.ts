@@ -157,16 +157,17 @@ describe("the account_export job", () => {
   });
 
   it.each(["dialed-exports", "dialed-exports-dlq"])(
-    "throws a %s batch back for the queue to redeliver when no consumers were wired",
+    "hands a %s batch to account's own consumers when none are handed in",
     async (queue) => {
       const message = fakeMessage("m7", {
         type: "account_export",
         exportId: "e7",
       });
-      await expect(handleQueueBatch(batchOf(queue, [message]))).rejects.toThrow(
-        "dialed-exports batch with no export consumers wired",
-      );
-      expect(message.ack).not.toHaveBeenCalled();
+      await handleQueueBatch(batchOf(queue, [message]));
+      // No export e7 exists, so the live consumer settles the message
+      // rather than throwing it back unread.
+      expect(message.ack).toHaveBeenCalledTimes(1);
+      expect(message.retry).not.toHaveBeenCalled();
     },
   );
 });

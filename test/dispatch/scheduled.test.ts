@@ -2139,18 +2139,34 @@ describe("the product link a confirmation owes (design 133, D-113 Q1)", () => {
     expect(outcome.anomalies).toStrictEqual([]);
   });
 
-  it("stays owed, and says so, when no linker was handed in", async () => {
+  it("stays owed, and says so, when the firing has no linker", async () => {
     vi.spyOn(console, "error").mockImplementation(nothing);
+    const id = await seedDueProductLink(newUlid());
+
+    const outcome = await handleScheduled(
+      { cron: "0 * * * *" } as ScheduledController,
+      undefined,
+      { linkProducts: undefined },
+    );
+
+    expect(await attemptsOf(id)).toBe(1);
+    expect(outcome.anomalies).toContain(
+      "1 of 1 product_link outbox row(s) did not settle",
+    );
+  });
+
+  it("is settled by closet's own linker when a firing is handed nothing", async () => {
+    // A runner with no typed garments: `linkTypedGarments` has nothing to
+    // link, so the row settles. Without the live default it would stay
+    // owed, as the test above shows.
     const id = await seedDueProductLink(newUlid());
 
     const outcome = await handleScheduled({
       cron: "0 * * * *",
     } as ScheduledController);
 
-    expect(await attemptsOf(id)).toBe(1);
-    expect(outcome.anomalies).toContain(
-      "1 of 1 product_link outbox row(s) did not settle",
-    );
+    expect(await attemptsOf(id)).toBeUndefined();
+    expect(outcome.anomalies).toStrictEqual([]);
   });
 
   it("is left alone by the :30 and :15 firings", async () => {

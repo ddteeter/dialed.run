@@ -7,8 +7,8 @@
  * and an address nobody has confirmed must not add to them. When the
  * runner confirms, `account`'s `confirmEmail` owes this as an outbox row
  * in the same batch as the confirmation (law 8c), and the hourly drain
- * runs it with the Worker entry's wiring (`ops` cannot import this
- * module).
+ * runs it through the dispatch, which binds this linker to the outbox's
+ * handler (`ops` cannot import this module).
  *
  * **One link, whenever it happens.** `nameItem` for a confirmed runner and
  * `linkTypedGarments` after a confirmation both write `linkedColumns`, so

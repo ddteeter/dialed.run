@@ -6,7 +6,6 @@ export {
   settleOutbox,
   type OutboxDebt,
 } from "./outbox";
-export { type ExportConsumers } from "./desk";
 export {
   firstPublishedPhotos,
   kitCardResponse,

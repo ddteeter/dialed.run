@@ -60,7 +60,9 @@ model {
       terms = module 'account/terms'
       verification = module 'account/verification'
     }
-    auth = module 'auth'
+    auth = module 'auth' {
+      expiredRows = module 'auth/expired-rows'
+    }
     closet = module 'closet'
     dispatch = module 'dispatch'
     email = module 'email'
@@ -175,8 +177,15 @@ model {
   cf.app.closet -[imports]-> cf.app.ops
   cf.app.closet -[imports]-> cf.app.products
   cf.app.closet -[imports]-> cf.app.safety
+  cf.app.dispatch -[imports]-> cf.app.account.access
+  cf.app.dispatch -[imports]-> cf.app.account.exportBuild
+  cf.app.dispatch -[imports]-> cf.app.account.handles
+  cf.app.dispatch -[imports]-> cf.app.account.purge
+  cf.app.dispatch -[imports]-> cf.app.auth.expiredRows
+  cf.app.dispatch -[imports]-> cf.app.closet
   cf.app.dispatch -[imports]-> cf.app.email
   cf.app.dispatch -[imports]-> cf.app.enrichment
+  cf.app.dispatch -[imports]-> cf.app.feed.moderation
   cf.app.dispatch -[imports]-> cf.app.onboarding
   cf.app.dispatch -[imports]-> cf.app.ops.daily
   cf.app.dispatch -[imports]-> cf.app.ops.desk
@@ -375,6 +384,12 @@ views {
     include cf.app.auth
     include cf.app.auth -> cf.app.** where kind is imports or kind is wiring
     include cf.app.** -> cf.app.auth where kind is imports or kind is wiring
+  }
+  view authExpiredRowsImports of cf.app.auth.expiredRows {
+    title 'auth/expiredRows: what it imports, and what imports it'
+    include cf.app.auth.expiredRows
+    include cf.app.auth.expiredRows -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.auth.expiredRows where kind is imports or kind is wiring
   }
   view closetImports of cf.app.closet {
     title 'closet: what it imports, and what imports it'

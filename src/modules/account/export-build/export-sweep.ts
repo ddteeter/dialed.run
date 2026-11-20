@@ -4,8 +4,8 @@
  * queue send was lost sent again.
  *
  * Re-runnable from any point (law 1) and claim-then-work (law 2). Not in
- * this module's barrel, and called by nothing in `ops` (the cycle the
- * purge documents): the Worker entry hands it to `handleScheduled`.
+ * the account barrel, and called by nothing in `ops` (the cycle the
+ * purge documents): the dispatch runs it on the hourly firing.
  */
 import { and, asc, eq, inArray, lt, lte, or } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";

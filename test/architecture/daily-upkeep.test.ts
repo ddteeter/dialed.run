@@ -1,70 +1,74 @@
 import { describe, expect, it } from "vitest";
 
+import queuesSource from "../../src/modules/dispatch/queues.ts?raw";
+import scheduledSource from "../../src/modules/dispatch/scheduled.ts?raw";
 import serverSource from "../../src/server.ts?raw";
 import { withoutComments } from "./source-text";
 
 /**
- * Account deletion's purge (task 126, ACC-9) reaches the daily firing only
- * through the Worker entry: `ops` cannot import it without a cycle, so
- * `handleScheduled` takes it as upkeep, and `src/server.ts` is the one
- * place that hands it over. That file cannot be imported by a test — it
- * pulls TanStack Start's server entry — so the wiring is read from its
- * source, as `routes-stamp-hydration` reads routes. Without this, a purge
- * nobody passes in never runs, and every test of it still passes.
+ * The firings' jobs from other modules are the dispatch's own imports
+ * (design 253): account deletion's purge (task 126, ACC-9), the data
+ * export's sweep (ACC-10), the handle re-ask (task 126 PR B), the product
+ * link a confirmation owes (design 133), the auth rows' and the answered
+ * access requests' sweeps, and the copyright holds' (D-130).
+ * `handleScheduled` spreads what a test hands it over them, so every test
+ * of a firing can replace one. What no test of a firing can see is the
+ * wiring of the real ones, so it is read from the source here. Without it,
+ * a job dropped from `liveUpkeep` never runs, and every test that hands in
+ * a fake still passes.
  *
- * The data export (ACC-10) is wired the same way twice over: its sweep to
- * the hourly firing, and its consumers to `dialed-exports` (decision D-86).
- * The handle re-ask (task 126 PR B) is the third firing upkeep, and the
- * product link a confirmation owes (design 133) the fourth.
+ * `src/server.ts` cannot be imported by a test (it pulls TanStack Start's
+ * server entry), so it is read the same way: it hands in only the two speed
+ * checks, which read the route names this tree could have written.
  */
-describe("the Worker entry hands the firings and the queue their upkeep", () => {
-  it("passes account deletion's purge, the export sweep, the handle re-ask, the product link, the expired-row sweeps and the speed checks to handleScheduled", () => {
+describe("the firings and the queue get their jobs from the dispatch", () => {
+  it("imports each module's job through its door and runs it unless a test replaces it", () => {
+    const code = withoutComments(scheduledSource);
+    for (const line of [
+      'import { forgetAnsweredRequests } from "../account/access";',
+      'import { sweepExports } from "../account/export-build";',
+      'import { rescreenHandlesFromEnv } from "../account/handles";',
+      'import { purgeDueAccounts } from "../account/purge";',
+      'import { sweepExpiredAuthRows } from "../auth/expired-rows";',
+      'import { linkTypedGarments } from "../closet";',
+      'import { sweepCopyrightHolds } from "../feed/moderation";',
+    ]) {
+      expect(code).toContain(line);
+    }
+    expect(code).toMatch(
+      /const liveUpkeep: DailyUpkeep = \{\s*purgeAccounts: purgeDueAccounts,\s*sweepExports,\s*rescreenHandles: rescreenHandlesFromEnv,\s*linkProducts: linkTypedGarments,\s*sweepAuthRows: sweepExpiredAuthRows,\s*forgetAnsweredRequests,\s*sweepCopyrightHolds,\s*\};/u,
+    );
+    expect(code).toContain(
+      "const upkeep: DailyUpkeep = { ...liveUpkeep, ...handedIn };",
+    );
+  });
+
+  it("runs the export's consumers unless a test hands in its own", () => {
+    const code = withoutComments(queuesSource);
+    expect(code).toMatch(
+      /import \{\s*exportConsumersFromEnv,\s*type ExportConsumers,\s*\} from "\.\.\/account\/export-build";/u,
+    );
+    expect(code).toContain(
+      "await (exports ?? exportConsumersFromEnv()).batch(batch);",
+    );
+    expect(code).toContain(
+      "await (exports ?? exportConsumersFromEnv()).deadLetters(batch);",
+    );
+  });
+
+  it("has the Worker entry hand in the speed checks and nothing else", () => {
     const code = withoutComments(serverSource);
-    expect(code).toContain(
-      'import { purgeDueAccounts } from "./modules/account/purge";',
-    );
-    expect(code).toContain(
-      'import { sweepExports } from "./modules/account/export-build";',
-    );
-    expect(code).toContain(
-      'import { rescreenHandlesFromEnv } from "./modules/account/handles";',
-    );
-    // The link a confirmation owes (design 133, D-113 Q1): `closet`'s.
-    expect(code).toContain(
-      'import { linkTypedGarments } from "./modules/closet";',
-    );
-    // The daily sweeps of expired sessions and password-try counts
-    // (`auth`'s) and of answered access requests (`account`'s): both
-    // modules import `ops`.
-    expect(code).toContain(
-      'import { forgetAnsweredRequests } from "./modules/account/access";',
-    );
-    expect(code).toContain(
-      'import { sweepExpiredAuthRows } from "./modules/auth/expired-rows";',
-    );
-    // The copyright holds' restore and purge (D-130): `feed`'s.
-    expect(code).toContain(
-      'import { sweepCopyrightHolds } from "./modules/feed/moderation";',
-    );
-    // The speed checks (design 165): `ops`'s own, but they read the ops
-    // database and the SQL API, so they come in as upkeep too.
+    // The speed checks (design 165): `ops`'s own, handed in because they
+    // judge only the route names this tree has (SA-M34).
     expect(code).toMatch(
       /import \{[^}]*\bdailySpeed,\s*hourlySpeed,[^}]*\} from "\.\/modules\/ops\/speed";/u,
     );
     expect(code).toMatch(
-      /handleScheduled\(controller, undefined, \{\s*purgeAccounts: purgeDueAccounts,\s*sweepExports,\s*rescreenHandles: rescreenHandlesFromEnv,\s*linkProducts: linkTypedGarments,\s*sweepAuthRows: sweepExpiredAuthRows,\s*forgetAnsweredRequests,\s*sweepCopyrightHolds,\s*speed: \(today, anomalies\) =>\s*dailySpeed\(today, anomalies, speedDigestDepsFromEnv\(isKnownRoute\)\),\s*speedHourly: \(now, report\) =>\s*hourlySpeed\(now, report, hourlySpeedDepsFromEnv\(isKnownRoute\)\),\s*\}\)/u,
+      /handleScheduled\(controller, undefined, \{\s*speed: \(today, anomalies\) =>\s*dailySpeed\(today, anomalies, speedDigestDepsFromEnv\(isKnownRoute\)\),\s*speedHourly: \(now, report\) =>\s*hourlySpeed\(now, report, hourlySpeedDepsFromEnv\(isKnownRoute\)\),\s*\}\)/u,
     );
-    // SA-M34: the speed checks judge only the route names this tree has.
     expect(code).toContain(
       "const isKnownRoute = knownRoutes(() => createRouter({ routeTree }));",
     );
-  });
-
-  it("passes the export's consumers to handleQueueBatch", () => {
-    const code = withoutComments(serverSource);
-    expect(code).toContain(
-      'import { exportConsumersFromEnv } from "./modules/account/export-build";',
-    );
-    expect(code).toContain("handleQueueBatch(batch, exportConsumersFromEnv())");
+    expect(code).toContain("await handleQueueBatch(batch);");
   });
 });

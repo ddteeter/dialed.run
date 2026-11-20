@@ -24,7 +24,7 @@ import { newUlid, ulidSchema, type Ulid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { purgeAccount } from "../../src/modules/account/purge/purge";
 import { FINGERPRINT_HOLDS_PER_HOUR } from "../../src/modules/safety/limits/breakers";
-import { sweepExpiredAuthRows } from "../../src/modules/auth/expired-rows";
+import { sweepExpiredAuthRows } from "../../src/modules/auth/expired-rows/expired-rows";
 import {
   removeItemPhoto,
   uploadItemPhoto,

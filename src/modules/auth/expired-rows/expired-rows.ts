@@ -3,18 +3,18 @@
  * at the current password whose window is long over, and Better Auth's
  * rate-limit counts (SA-M36).
  *
- * Handed to the daily firing by the Worker entry (`src/server.ts`), as
- * account deletion's purge is: `ops` cannot import `auth` without a cycle
- * (`create-auth.ts` imports `ops`).
+ * Run by the daily firing: the dispatch imports it through this
+ * sub-module's door, because `auth/index.ts` pulls the framework and no
+ * test could import the dispatch through it (design 253).
  */
 import { lt } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
-import { rateLimit, session } from "../../db/schema-auth";
-import { passwordAttempts } from "../../db/schema-core";
-import { coreDb } from "../../env";
-import { nowSeconds } from "../../lib/now";
-import { PASSWORD_ATTEMPT_WINDOW_S } from "./password-check";
+import { rateLimit, session } from "../../../db/schema-auth";
+import { passwordAttempts } from "../../../db/schema-core";
+import { coreDb } from "../../../env";
+import { nowSeconds } from "../../../lib/now";
+import { PASSWORD_ATTEMPT_WINDOW_S } from "../password-check";
 
 type Db = ReturnType<typeof drizzle>;
 

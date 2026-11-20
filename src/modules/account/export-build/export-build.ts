@@ -32,7 +32,6 @@ import {
   outboxInsertWhere,
   oweOutbox,
   settleOutbox,
-  type ExportConsumers,
   type OutboxDebt,
 } from "../../ops";
 import { exportKeyFor, failExport, IN_FLIGHT } from "../data";
@@ -42,7 +41,7 @@ import {
   type ExportObject,
   type ExportText,
 } from "./export-files";
-import { exportConsumers } from "../data";
+import { exportConsumers, type ExportConsumers } from "../data";
 
 type Db = ReturnType<typeof drizzle>;
 type Report = (error: unknown, context: Record<string, string>) => void;
@@ -270,7 +269,7 @@ function liveBuildDeps(): BuildDeps {
 
 /**
  * `dialed-exports`' consumer and dead-letter consumer, on the live
- * bindings. The Worker entry passes them to `handleQueueBatch`.
+ * bindings. The dispatch's `handleQueueBatch` runs them.
  */
 export function exportConsumersFromEnv(): ExportConsumers {
   return exportConsumers(

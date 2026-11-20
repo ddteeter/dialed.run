@@ -1,6 +1,7 @@
 {
   "fanOut": {
     "account": 9,
+    "dispatch": 11,
     "feed": 10,
     "safety": 8
   },
@@ -8,7 +9,6 @@
     "safety": 96
   },
   "pastDoor": {
-    "auth": 1,
     "closet": 1,
     "runs": 1
   },

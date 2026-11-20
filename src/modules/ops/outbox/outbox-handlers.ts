@@ -353,7 +353,7 @@ const importFileDelete: OutboxHandlers["import_file_delete"] = {
  * What links a newly confirmed runner's typed garments to the shared
  * products (design 133, decision D-113 Q1): `closet`'s
  * `linkTypedGarments`, which `ops` cannot import — `closet` imports `ops`
- * — so the Worker entry hands it to the firings (`DailyUpkeep`).
+ * — so the dispatch, which can, binds it for the firings (`DailyUpkeep`).
  */
 export type ProductLinker = (
   db: Db,
@@ -361,7 +361,7 @@ export type ProductLinker = (
 ) => Promise<"linked" | "more">;
 
 /**
- * The `product_link` handler, bound to the linker handed in. With none, it
+ * The `product_link` handler, bound to the linker it is given. With none, it
  * fails loudly, so the row stays owed and the drain reports it, rather
  * than settling a runner's link into nothing.
  */

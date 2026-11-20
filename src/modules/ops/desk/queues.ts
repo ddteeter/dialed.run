@@ -49,13 +49,3 @@ export function enrichmentDeps() {
     isLandingDenied: isDeniedOnLanding,
   };
 }
-
-/**
- * The `dialed-exports` consumer and its DLQ's (task 126, ACC-10). Both are
- * `account`'s, which the dispatch does not import yet, so the Worker
- * entry hands them in, as it hands the purge to `handleScheduled`.
- */
-export interface ExportConsumers {
-  readonly batch: (batch: MessageBatch) => Promise<void>;
-  readonly deadLetters: (batch: MessageBatch) => Promise<void>;
-}

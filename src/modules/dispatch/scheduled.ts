@@ -18,7 +18,14 @@ import {
   listAbandonedEnrichments,
   sweepOwed,
 } from "../enrichment";
+import { forgetAnsweredRequests } from "../account/access";
+import { sweepExports } from "../account/export-build";
+import { rescreenHandlesFromEnv } from "../account/handles";
+import { purgeDueAccounts } from "../account/purge";
+import { sweepExpiredAuthRows } from "../auth/expired-rows";
+import { linkTypedGarments } from "../closet";
 import { sweepRateLimits } from "../email";
+import { sweepCopyrightHolds } from "../feed/moderation";
 import { fillMissingTimeZones } from "../onboarding";
 import { importJob, pruneStravaIds } from "../runs";
 import { retryPendingWeather, timeZoneAt } from "../weather";
@@ -95,14 +102,16 @@ export interface ScheduledOutcome {
  *
  * `reporter` is a parameter so a test can read the check-ins and digest
  * events a firing produced. Production passes nothing and gets Sentry.
- * `upkeep` is the daily work `ops` cannot import (`DailyUpkeep`), which
- * the Worker entry hands in.
+ * `upkeep` is spread over `liveUpkeep` (`DailyUpkeep`): production hands
+ * in only the two speed fields, which read the route tree the Worker entry
+ * builds, and a test replaces any job, or names it `undefined` to skip it.
  */
 export async function handleScheduled(
   controller: ScheduledController,
   reporter: CronReporter = sentryCronReporter,
-  upkeep: DailyUpkeep = {},
+  handedIn: DailyUpkeep = {},
 ): Promise<ScheduledOutcome> {
+  const upkeep: DailyUpkeep = { ...liveUpkeep, ...handedIn };
   const db = coreDb();
   const cronName = cronNameFor(controller.cron);
   await db
@@ -139,56 +148,52 @@ export async function handleScheduled(
 }
 
 /**
- * What the daily firing does beyond `ops`'s own checks, handed in by the
- * Worker entry (`src/server.ts`).
+ * The firings' work that belongs to other modules, and the two speed
+ * checks. Every field is a seam: `liveUpkeep` holds the real jobs, and
+ * `handleScheduled` spreads what it is handed over it, so a test replaces
+ * one job or names it `undefined` to leave it out.
  *
- * **Account deletion's purge** (task 126, ACC-9) cannot be imported here:
- * it lives in `modules/account` and calls feed's delete primitives, and
- * both of those import `ops` — so `ops` importing them back is a cycle.
- * It reports what it could not finish into the digest's
- * `account-deletion` lines (law 6).
+ * **Account deletion's purge** (task 126, ACC-9, `account/purge`) reports
+ * what it could not finish into the digest's `account-deletion` lines
+ * (law 6).
  *
- * **The digest's email** (OPS-11) is ops' own; it is a field here so a
- * test can name the operators it goes to.
+ * **The digest's email** (OPS-11) is ops' own; it is a field so a test
+ * can name the operators it goes to. Unset, it mails the live way
+ * (`oweDigestEmail`'s default).
  *
- * **The data export's sweep** (task 126, ACC-10) is the one hourly field:
- * it deletes expired ZIPs and re-sends exports whose queue send was lost,
- * and rides the `:00` firing so a lost send costs a runner an hour, not a
- * day. `account` again, so handed in for the same reason as the purge.
+ * **The data export's sweep** (task 126, ACC-10, `account/export-build`)
+ * is the one hourly job here: it deletes expired ZIPs and re-sends
+ * exports whose queue send was lost, and rides the `:00` firing so a lost
+ * send costs a runner an hour, not a day.
  *
- * **The handle re-ask** (task 126 PR B) rides the `:15` firing beside
- * photo screening, its sibling: handles claimed while moderation could
- * not answer are asked about again (`account/handles/handle-rescreen.ts`). It
- * runs last, after that firing's email drain, because its calls wait on
- * moderation and the mail should not.
+ * **The handle re-ask** (task 126 PR B, `account/handles`) rides the `:15`
+ * firing beside photo screening, its sibling: handles claimed while
+ * moderation could not answer are asked about again. It runs last, after
+ * that firing's email drain, because its calls wait on moderation and the
+ * mail should not.
  *
- * **The product link** (design 133, D-113 Q1) is `closet`'s, which
- * imports `ops`: the outbox rows a confirmation owes are drained on the
- * `:00` firing with it, so a newly confirmed runner's garments link within
- * the hour, and on the daily firing's full drain.
+ * **The product link** (design 133, D-113 Q1, `closet`): the outbox rows a
+ * confirmation owes are drained on the `:00` firing with it, so a newly
+ * confirmed runner's garments link within the hour, and on the daily
+ * firing's full drain. A product link drained with no linker stays owed
+ * and is reported.
  *
- * **The auth rows' sweep** is `auth`'s, which imports `ops`: expired
- * sessions and spent password-try counts, deleted on the daily firing
- * beside the send limits' own sweep (`auth/expired-rows.ts`). **The
- * answered access requests' sweep** is `account`'s, for the same reason:
- * requests invited or declined 90 days ago (`account/access/answered-requests.ts`).
- * **The copyright holds' sweep** (D-130) is `feed`'s, which imports `ops`:
- * it restores what a counter-notice saved on its 12th weekday and deletes
- * what was held 30 days with none pending (`feed/moderation/moderation.ts`).
+ * **The auth rows' sweep** (`auth/expired-rows`): expired sessions and
+ * spent password-try counts, deleted on the daily firing beside the send
+ * limits' own sweep. **The answered access requests' sweep**
+ * (`account/access`): requests invited or declined 90 days ago. **The
+ * copyright holds' sweep** (D-130, `feed/moderation`): it restores what a
+ * counter-notice saved on its 12th weekday and deletes what was held 30
+ * days with none pending.
  *
- * **The speed digest** (design 165) is ops' own, and a field for the
- * digest email's reason: so a test hands in a fake rather than reach the
- * Analytics Engine SQL API, which the test bindings configure. It is
- * handed today's UTC day, rolls up the days before it into the ops
- * database and judges yesterday (`speed-digest.ts`).
- *
- * **The hourly speed checks** (design 165) ride the `:30` firing for the
- * same reason, a field so a test fakes the SQL API: deploy regression and
- * drift, each finding its own event (`speedReport`).
- *
- * All are optional: a firing handed none purges and sweeps nothing and
- * mails the digest the live way (`oweDigestEmail`'s default). A product
- * link drained with no linker stays owed and is reported.
+ * **The speed digest** (design 165) and **the hourly speed checks** are
+ * ops' own, and the two fields the Worker entry still hands in: each reads
+ * the route names the tree could have written, and only the Worker entry
+ * builds the router. They are fields too so a test fakes the Analytics
+ * Engine SQL API rather than reach it. The digest is handed today's UTC
+ * day, rolls up the days before it into the ops database and judges
+ * yesterday (`speed-digest.ts`); the hourly checks ride the `:30` firing,
+ * each finding its own event (`speedReport`).
  */
 export interface DailyUpkeep {
   readonly purgeAccounts?: ((anomalies: string[]) => Promise<void>) | undefined;
@@ -206,6 +211,19 @@ export interface DailyUpkeep {
     | ((now: number, report: (finding: SpeedFinding) => void) => Promise<void>)
     | undefined;
 }
+
+/**
+The jobs a firing runs when a test does not replace them.
+*/
+const liveUpkeep: DailyUpkeep = {
+  purgeAccounts: purgeDueAccounts,
+  sweepExports,
+  rescreenHandles: rescreenHandlesFromEnv,
+  linkProducts: linkTypedGarments,
+  sweepAuthRows: sweepExpiredAuthRows,
+  forgetAnsweredRequests,
+  sweepCopyrightHolds,
+};
 
 /**
 The outbox's handlers, with the product link bound to the one handed in.

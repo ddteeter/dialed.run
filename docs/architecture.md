@@ -79,8 +79,8 @@ Key decisions embedded here:
 - **Handle screening asks the same endpoint, and re-asks the same way**
   (task 126 PR B). A claim it cannot answer is stored
   `user_profiles.username_screen = 'unknown'`, and the `screening-retry`
-  firing re-drives it through `DailyUpkeep.rescreenHandles`, handed in by
-  `src/server.ts` because `ops` cannot import `account`. No new cron.
+  firing re-drives it through the dispatch's `DailyUpkeep.rescreenHandles`.
+  No new cron.
 - **The runner's time zone is cached on the profile and derived, never
   typed** (design 142). `user_profiles.time_zone` has two writers, both in
   onboarding and both from weather's `timeZoneAt`: the place writer, which
@@ -195,24 +195,25 @@ consumers and cron handlers the Worker entry wires.
 
 Task 126 (ACC-9) added account deletion's purge, now the sub-module
 `modules/account/purge/`, whose door is **not** re-exported by `account`'s
-barrel and is imported by nothing but the Worker entry. It calls `feed`'s delete primitives, and both `feed` and
-`ops` import `account`'s barrel, so a barrel export — or an import from
-`dispatch/scheduled.ts` — would be a cycle. `handleScheduled` takes it as
-daily upkeep instead, and `src/server.ts` hands it over
-(`test/architecture/daily-upkeep.test.ts` reads that wiring). For the same
-reason the imports consumer takes an injected `owe` for the Strava
-deauthorization's email: `ops` imports `runs`, so `runs` cannot import
-`ops`'s outbox.
+barrel and is imported by nothing but the dispatch. It calls `feed`'s
+delete primitives, and both `feed` and `ops` import `account`'s barrel, so
+a barrel export, or an import from `ops`, would be a cycle. The dispatch
+(`modules/dispatch/`, design 253) is the one module nothing imports but the
+Worker entry, so it imports the purge's door and runs it on the daily
+firing (`liveUpkeep`; `test/architecture/daily-upkeep.test.ts` reads that
+wiring). The imports consumer still takes an injected `owe` for the Strava
+deauthorization's email, for an older reason: `ops`' outbox imports
+`runs`, so `runs` cannot import the outbox (#886).
 
 The emailed data export (task 126 PR 2b-3, ACC-10) is wired the same way.
 Its job, `account_export`, rides its own queue, `dialed-exports` (decision
 D-86), whose wire format and consumers are `account`'s
-(`account/data/export-queue.ts`) — and `ops` may not import `account`: so
-`handleQueueBatch` takes `ExportConsumers` (the batch consumer and the
-DLQ's) for the two `dialed-exports` queues, and `handleScheduled`'s upkeep
-takes `sweepExports` for the hourly `0 * * * *` firing. Both come from
-the sub-module `account/export-build/`, whose door the barrel does not re-export,
-imported only by `src/server.ts` — the build also keeps the zip library
+(`account/data/export-queue.ts`). The dispatch runs them: `handleQueueBatch`
+calls `exportConsumersFromEnv()` for the two `dialed-exports` queues (a
+test hands in its own `ExportConsumers`), and `liveUpkeep` runs
+`sweepExports` on the hourly `0 * * * *` firing. Both come from the
+sub-module `account/export-build/`, whose door the barrel does not
+re-export and only the dispatch imports — which also keeps the zip library
 out of every route's reach, and so out of the client bundle.
 
 Lane 101 added `CLOSET/PROD -->|index.ts only| AUTH`: every `closet.*` /
@@ -475,7 +476,7 @@ flowchart LR
     REQ -->|fast path failed| OB[(outbox table)]
     CRON2 -->|drain: claim, work, back off| OB
     HOURLY[The three hourly crons] -->|drain kind email only| OB
-    HOUR00[The :00 cron and the digest] -->|drain kind product_link,\ncloset's linker handed in| OB
+    HOUR00[The :00 cron and the digest] -->|drain kind product_link,\nwith closet's linker| OB
     OB -->|kind email: deliverEmail| MAILER[[EMAIL send_email binding]]
     W[Worker] -->|exceptions, kept alive by waitUntil| SENTRY[Sentry]
     PING[External uptime ping] --> HEALTH["/api/health: D1 SELECT 1\non both, R2 head"]
@@ -526,12 +527,12 @@ flowchart LR
   third is `product_link` (design 133, D-113 Q1): confirming an address
   owes the link of the runner's typed garments to the shared products,
   in the confirmation's batch. It has no fast path — the link is
-  `closet`'s, which `ops` cannot import — so the Worker entry hands
-  `linkTypedGarments` to the `:00` firing and the digest (`DailyUpkeep`),
+  `closet`'s, which `ops` cannot import — so the dispatch binds
+  `linkTypedGarments` for the `:00` firing and the digest (`DailyUpkeep`),
   which drain it as a scheduled kind.
 - **A copyright hold** (D-130, design 149) is **reconciliation**: the
   `copyright_holds` row is the marker. A takedown hides and writes it in
-  one batch; the daily firing (`DailyUpkeep.sweepCopyrightHolds`, `feed`'s)
+  one batch; the daily firing (the dispatch's `DailyUpkeep.sweepCopyrightHolds`, `feed`'s)
   restores on its day, or claims it `purging` and deletes it with the R2
   debt and `purged` in one batch — a claim whose batch failed is taken
   over by the next sweep. A court action holds it from both (D-146) until

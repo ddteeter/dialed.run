@@ -23,15 +23,7 @@ import {
   timeRequest,
   timingDeps,
 } from "./modules/ops/speed";
-import { forgetAnsweredRequests } from "./modules/account/access";
-import { exportConsumersFromEnv } from "./modules/account/export-build";
 import { d1RequestDepsFromEnv, respondInD1Scope } from "./modules/auth";
-import { sweepExpiredAuthRows } from "./modules/auth/expired-rows";
-import { rescreenHandlesFromEnv } from "./modules/account/handles";
-import { sweepExports } from "./modules/account/export-build";
-import { purgeDueAccounts } from "./modules/account/purge";
-import { linkTypedGarments } from "./modules/closet";
-import { sweepCopyrightHolds } from "./modules/feed/moderation";
 import { requestContext } from "./lib/csp-nonce";
 import { routeTree } from "./routeTree.gen";
 
@@ -102,9 +94,7 @@ export default {
   },
   async queue(batch): Promise<void> {
     try {
-      // The data export's consumers (task 126, ACC-10; dialed-exports),
-      // handed in because `ops` cannot import `account`.
-      await handleQueueBatch(batch, exportConsumersFromEnv());
+      await handleQueueBatch(batch);
     } catch (error) {
       captureException(error, { surface: "queue", queue: batch.queue });
       throw error; // rethrow so queue retry machinery owns it (law 3)
@@ -112,24 +102,11 @@ export default {
   },
   async scheduled(controller): Promise<void> {
     try {
-      // Account deletion's purge rides the daily firing (task 126, ACC-9),
-      // and the data export's sweep the hourly `:00` one (ACC-10): handed
-      // in here because `ops` cannot import either without a cycle. So
-      // does the handle re-ask, on the `:15` one (task 126 PR B), and the
-      // product link a confirmation owes (design 133, D-113 Q1), which is
-      // `closet`'s, on the `:00` one and the daily drain. And the daily
-      // sweep of expired sessions and password-try counts, `auth`'s, and
-      // of answered access requests, `account`'s; and the copyright holds'
-      // restore and purge (D-130), `feed`'s.
+      // The other modules' jobs are the dispatch's own imports (design
+      // 253). The speed checks are handed in because they read the route
+      // names this tree could have written, and only this file builds the
+      // router (design 165).
       await handleScheduled(controller, undefined, {
-        purgeAccounts: purgeDueAccounts,
-        sweepExports,
-        rescreenHandles: rescreenHandlesFromEnv,
-        linkProducts: linkTypedGarments,
-        sweepAuthRows: sweepExpiredAuthRows,
-        forgetAnsweredRequests,
-        sweepCopyrightHolds,
-        // Ops' own, handed in so a test can fake the SQL API (design 165).
         speed: (today, anomalies) =>
           dailySpeed(today, anomalies, speedDigestDepsFromEnv(isKnownRoute)),
         speedHourly: (now, report) =>
