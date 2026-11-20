@@ -3,7 +3,10 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { entryTags } from "../../src/db/schema-core";
 import { env } from "../../src/env";
-import { bandSignals, bandSignalsForEntry } from "../../src/modules/feed/band-signals";
+import {
+  bandSignals,
+  bandSignalsForEntry,
+} from "../../src/modules/feed/entries/band-signals";
 import {
   makeEntry,
   makeItem,
@@ -37,9 +40,19 @@ async function tag(entryId: string, ...tags: string[]): Promise<void> {
 /**
 A run at its own place, observed at `feelsLikeC`.
 */
-async function runAt(userId: string, lat: number, feelsLikeC: number): Promise<string> {
+async function runAt(
+  userId: string,
+  lat: number,
+  feelsLikeC: number,
+): Promise<string> {
   const runId = await makeRun({ userId, lat, lng: -87.6 });
-  await makeObservation({ lat, lng: -87.6, startedAt: NOW, tempC: feelsLikeC, feelsLikeC });
+  await makeObservation({
+    lat,
+    lng: -87.6,
+    startedAt: NOW,
+    tempC: feelsLikeC,
+    feelsLikeC,
+  });
   return runId;
 }
 
@@ -54,27 +67,78 @@ describe("bandSignals", () => {
     const gloves = await makeItem({ userId, name: "Gloves" });
     const cap = await makeItem({ userId, name: "Cap" });
 
-    await makeEntry({ userId, runId: await runAt(userId, 41.1, IN_BAND), verdict: -1, itemIds: [shell, gloves] });
-    await makeEntry({ userId, runId: await runAt(userId, 41.2, IN_BAND), verdict: 0, itemIds: [shell] });
-    await makeEntry({ userId, runId: await runAt(userId, 41.3, IN_BAND), verdict: 2, itemIds: [gloves] });
+    await makeEntry({
+      userId,
+      runId: await runAt(userId, 41.1, IN_BAND),
+      verdict: -1,
+      itemIds: [shell, gloves],
+    });
+    await makeEntry({
+      userId,
+      runId: await runAt(userId, 41.2, IN_BAND),
+      verdict: 0,
+      itemIds: [shell],
+    });
+    await makeEntry({
+      userId,
+      runId: await runAt(userId, 41.3, IN_BAND),
+      verdict: 2,
+      itemIds: [gloves],
+    });
     // Another band, and an unrated run — neither is this band's record.
-    await makeEntry({ userId, runId: await runAt(userId, 41.4, 20), verdict: -2, itemIds: [shell] });
-    await makeEntry({ userId, runId: await runAt(userId, 41.5, IN_BAND), itemIds: [shell] });
+    await makeEntry({
+      userId,
+      runId: await runAt(userId, 41.4, 20),
+      verdict: -2,
+      itemIds: [shell],
+    });
+    await makeEntry({
+      userId,
+      runId: await runAt(userId, 41.5, IN_BAND),
+      itemIds: [shell],
+    });
 
     const signals = await bandSignals(userId, BAND, [shell, gloves, cap]);
 
-    expect(signals.garments[shell]).toEqual({ total: 2, dialed: 1, colder: 1, warmer: 0 });
-    expect(signals.garments[gloves]).toEqual({ total: 2, dialed: 0, colder: 1, warmer: 1 });
+    expect(signals.garments[shell]).toEqual({
+      total: 2,
+      dialed: 1,
+      colder: 1,
+      warmer: 0,
+    });
+    expect(signals.garments[gloves]).toEqual({
+      total: 2,
+      dialed: 0,
+      colder: 1,
+      warmer: 1,
+    });
     // Never worn here is a record of nothing, not a missing garment — the
     // chip rules need to tell the two apart.
-    expect(signals.garments[cap]).toEqual({ total: 0, dialed: 0, colder: 0, warmer: 0 });
+    expect(signals.garments[cap]).toEqual({
+      total: 0,
+      dialed: 0,
+      colder: 0,
+      warmer: 0,
+    });
   });
 
   it("counts this runner's tag use in the band, once per entry that used it", async () => {
     const userId = await makeUser();
-    const first = await makeEntry({ userId, runId: await runAt(userId, 42.1, IN_BAND), verdict: -1 });
-    const second = await makeEntry({ userId, runId: await runAt(userId, 42.2, IN_BAND), verdict: 0 });
-    const elsewhere = await makeEntry({ userId, runId: await runAt(userId, 42.3, 20), verdict: 0 });
+    const first = await makeEntry({
+      userId,
+      runId: await runAt(userId, 42.1, IN_BAND),
+      verdict: -1,
+    });
+    const second = await makeEntry({
+      userId,
+      runId: await runAt(userId, 42.2, IN_BAND),
+      verdict: 0,
+    });
+    const elsewhere = await makeEntry({
+      userId,
+      runId: await runAt(userId, 42.3, 20),
+      verdict: 0,
+    });
     await tag(first, "chafed");
     await tag(second, "chafed", "perfect_warmup");
     await tag(elsewhere, "chafed", "hands_cold");
@@ -87,13 +151,28 @@ describe("bandSignals", () => {
   it("leaves the entry being judged out of its own record", async () => {
     const userId = await makeUser();
     const shell = await makeItem({ userId, name: "Shell" });
-    const mine = await makeEntry({ userId, runId: await runAt(userId, 43.1, IN_BAND), verdict: 1, itemIds: [shell] });
-    await makeEntry({ userId, runId: await runAt(userId, 43.2, IN_BAND), verdict: 0, itemIds: [shell] });
+    const mine = await makeEntry({
+      userId,
+      runId: await runAt(userId, 43.1, IN_BAND),
+      verdict: 1,
+      itemIds: [shell],
+    });
+    await makeEntry({
+      userId,
+      runId: await runAt(userId, 43.2, IN_BAND),
+      verdict: 0,
+      itemIds: [shell],
+    });
     await tag(mine, "chafed");
 
     const signals = await bandSignals(userId, BAND, [shell], mine);
 
-    expect(signals.garments[shell]).toEqual({ total: 1, dialed: 1, colder: 0, warmer: 0 });
+    expect(signals.garments[shell]).toEqual({
+      total: 1,
+      dialed: 1,
+      colder: 0,
+      warmer: 0,
+    });
     expect(signals.tagUse).toEqual({});
   });
 
@@ -101,7 +180,12 @@ describe("bandSignals", () => {
     const userId = await makeUser();
     const other = await makeUser();
     const shell = await makeItem({ userId: other, name: "Shell" });
-    const theirs = await makeEntry({ userId: other, runId: await runAt(other, 44.1, IN_BAND), verdict: 0, itemIds: [shell] });
+    const theirs = await makeEntry({
+      userId: other,
+      runId: await runAt(other, 44.1, IN_BAND),
+      verdict: 0,
+      itemIds: [shell],
+    });
     await tag(theirs, "chafed");
 
     const signals = await bandSignals(userId, BAND, [shell]);
@@ -117,16 +201,33 @@ describe("bandSignals", () => {
     const userId = await makeUser();
     const shell = await makeItem({ userId, name: "Shell" });
     // One place and hour: one observation serves every run.
-    await makeObservation({ lat: 45.1, lng: -87.6, startedAt: NOW, tempC: IN_BAND, feelsLikeC: IN_BAND });
+    await makeObservation({
+      lat: 45.1,
+      lng: -87.6,
+      startedAt: NOW,
+      tempC: IN_BAND,
+      feelsLikeC: IN_BAND,
+    });
     for (let index = 0; index < 90; index += 1) {
       const runId = await makeRun({ userId, lat: 45.1, lng: -87.6 });
-      const entryId = await makeEntry({ userId, runId, verdict: 0, itemIds: [shell], createdAt: NOW + index });
+      const entryId = await makeEntry({
+        userId,
+        runId,
+        verdict: 0,
+        itemIds: [shell],
+        createdAt: NOW + index,
+      });
       await tag(entryId, "chafed");
     }
 
     const signals = await bandSignals(userId, BAND, [shell]);
 
-    expect(signals.garments[shell]).toEqual({ total: 90, dialed: 90, colder: 0, warmer: 0 });
+    expect(signals.garments[shell]).toEqual({
+      total: 90,
+      dialed: 90,
+      colder: 0,
+      warmer: 0,
+    });
     expect(signals.tagUse).toEqual({ chafed: 90 });
   });
 });
@@ -137,8 +238,18 @@ describe("bandSignalsForEntry", () => {
     const shell = await makeItem({ userId, name: "Shell" });
     const cap = await makeItem({ userId, name: "Cap" });
     const unworn = await makeItem({ userId, name: "Not in this kit" });
-    const mine = await makeEntry({ userId, runId: await runAt(userId, 46.1, IN_BAND), verdict: 1, itemIds: [shell, cap] });
-    await makeEntry({ userId, runId: await runAt(userId, 46.2, IN_BAND), verdict: -1, itemIds: [shell, unworn] });
+    const mine = await makeEntry({
+      userId,
+      runId: await runAt(userId, 46.1, IN_BAND),
+      verdict: 1,
+      itemIds: [shell, cap],
+    });
+    await makeEntry({
+      userId,
+      runId: await runAt(userId, 46.2, IN_BAND),
+      verdict: -1,
+      itemIds: [shell, unworn],
+    });
     await tag(mine, "chafed");
 
     const signals = await bandSignalsForEntry(userId, mine, BAND);
@@ -156,7 +267,12 @@ describe("bandSignalsForEntry", () => {
     const userId = await makeUser();
     const other = await makeUser();
     const shell = await makeItem({ userId: other, name: "Shell" });
-    const theirs = await makeEntry({ userId: other, runId: await runAt(other, 47.1, IN_BAND), verdict: 0, itemIds: [shell] });
+    const theirs = await makeEntry({
+      userId: other,
+      runId: await runAt(other, 47.1, IN_BAND),
+      verdict: 0,
+      itemIds: [shell],
+    });
 
     const signals = await bandSignalsForEntry(userId, theirs, BAND);
 

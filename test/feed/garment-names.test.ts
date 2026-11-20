@@ -4,7 +4,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { wardrobeItems } from "../../src/db/schema-core";
 import { env } from "../../src/env";
-import { garmentNamesByIds } from "../../src/modules/feed/garment-names";
+import { garmentNamesByIds } from "../../src/modules/feed/conditions/garment-names";
 import { makeItem, makeUser, resetTables } from "./helpers";
 
 beforeEach(async () => {

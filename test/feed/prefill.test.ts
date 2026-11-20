@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { nearestPriorEntry } from "../../src/modules/feed/prefill";
-import type { Conditions } from "../../src/modules/feed/conditions";
+import { nearestPriorEntry } from "../../src/modules/feed/attach/prefill";
+import type { Conditions } from "../../src/modules/feed/conditions/conditions";
 import {
   makeEntry,
   makeItem,

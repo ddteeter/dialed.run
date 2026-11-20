@@ -1,7 +1,7 @@
 import { isRedirect } from "@tanstack/react-router";
 import { describe, expect, it } from "vitest";
 
-import type { AttachContext } from "../../src/modules/feed/attach-context";
+import type { AttachContext } from "../../src/modules/feed/attach/attach-context";
 import {
   kitChoice,
   orOnToVerdict,

@@ -13,8 +13,8 @@ import {
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid, ulidSchema } from "../../src/lib/ids";
-import { moderateGarmentPhoto } from "../../src/modules/feed/garment-moderation";
-import { decideReview } from "../../src/modules/feed/moderation";
+import { moderateGarmentPhoto } from "../../src/modules/feed/moderation/garment-moderation";
+import { decideReview } from "../../src/modules/feed/moderation/moderation";
 import { enqueueForReview, resolveReview } from "../../src/modules/safety";
 import { addAccount } from "../feed/helpers";
 import { makeItem, makeUser, resetSafetyTables } from "./helpers";

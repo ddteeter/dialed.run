@@ -12,14 +12,17 @@ import { audiences } from "../../src/lib/contracts";
 import type { Audience } from "../../src/lib/contracts";
 import { entryPhotoKeyFor } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
-import { recentPublicEntriesStatement } from "../../src/modules/feed/consensus";
-import { entryDetailForViewer } from "../../src/modules/feed/entries";
-import { followingFeed } from "../../src/modules/feed/feed";
-import { follow } from "../../src/modules/feed/follows";
-import { isPhotoVisible, photoResponse } from "../../src/modules/feed/photos";
-import { visibleRunnerHandle } from "../../src/modules/feed/profiles";
-import { setUsefulReaction } from "../../src/modules/feed/reactions";
-import { searchRunners } from "../../src/modules/feed/search";
+import { recentPublicEntriesStatement } from "../../src/modules/feed/consensus/consensus";
+import { entryDetailForViewer } from "../../src/modules/feed/entries/entries";
+import { followingFeed } from "../../src/modules/feed/following/feed";
+import { follow } from "../../src/modules/feed/following/follows";
+import {
+  isPhotoVisible,
+  photoResponse,
+} from "../../src/modules/feed/entries/photos";
+import { visibleRunnerHandle } from "../../src/modules/feed/following/profiles";
+import { setUsefulReaction } from "../../src/modules/feed/entries/reactions";
+import { searchRunners } from "../../src/modules/feed/following/search";
 import {
   isUnderReviewForAuthor,
   publiclyVisibleEntry,

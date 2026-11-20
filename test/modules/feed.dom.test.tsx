@@ -5,10 +5,13 @@ import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ConfirmEmailBand } from "../../src/modules/account/verification/components/ConfirmEmailBand";
-import type { CompactConditions as CompactConditionsResult } from "../../src/modules/feed/compact-conditions";
-import { defaultFeedTab, Feed } from "../../src/modules/feed/components/Feed";
-import type { SetUsefulFn } from "../../src/modules/feed/components/useful-reaction";
-import type { FeedItem } from "../../src/modules/feed/feed";
+import type { CompactConditions as CompactConditionsResult } from "../../src/modules/feed/consensus/compact-conditions";
+import {
+  defaultFeedTab,
+  Feed,
+} from "../../src/modules/feed/following/components/Feed";
+import type { SetUsefulFn } from "../../src/modules/feed/entries/components/useful-reaction";
+import type { FeedItem } from "../../src/modules/feed/following/feed";
 import {
   feedItem,
   MILES,

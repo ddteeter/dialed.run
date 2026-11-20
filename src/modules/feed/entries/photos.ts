@@ -1,0 +1,574 @@
+/**
+ * Entry photos in R2 (design doc "Photos"): ≤4/entry, jpeg/png/webp
+ * ≤10MB, key convention `entries/{userId}/{entryId}/{photoId}` — copies
+ * lane 101's convention, doesn't import it (that module doesn't exist on
+ * this branch yet). Originals only for now; derived sizes follow 101's
+ * photon-wasm benchmark rather than duplicating a wasm pipeline here.
+ */
+import { and, eq, ne, or, sql } from "drizzle-orm";
+
+import {
+  entryPhotos,
+  notifications,
+  outfitEntries,
+  reviewQueue,
+} from "../../../db/schema-core";
+import { coreDb, env, primaryCoreDb } from "../../../env";
+import { firstColumnWhere } from "../../../lib/sql/keyed-read";
+import { orSqlNull } from "../../../lib/sql/sql-null";
+import { newUlid } from "../../../lib/ids";
+import { nowSeconds } from "../../../lib/now";
+import {
+  PHOTO_LIMIT_REACHED,
+  isAllowedPhotoType,
+} from "../../../lib/photo-constraints";
+import { photoRefusal, withReleased } from "../../../lib/photo-pipeline";
+import { fingerprintOf } from "../../../lib/photo-fingerprint";
+import type { z } from "zod";
+
+import { uploadPhotoFields } from "../inputs";
+import {
+  ENTRY_PHOTO_ROOT,
+  QUARANTINE_ROOT,
+  entryPhotoIdOf,
+  entryPhotoKeyFor,
+} from "../../../lib/entry-photo-key";
+import { GARMENT_PHOTO_ROOT } from "../../../lib/garment-photo-key";
+import { requireOwned } from "../../../lib/sql/owned";
+import type { TaggedScope } from "../../../lib/cache-tags";
+import { claimLimit } from "../../email";
+import { syncPublicPhotosLater } from "../../ops";
+import { filePartFrom } from "../../../lib/file-part";
+import type { FilePartProblem } from "../../../lib/file-part";
+import {
+  heldPhotoStatus,
+  isAdmin,
+  publicPhotoStatus,
+  publiclyVisibleEntry,
+} from "../../safety";
+import {
+  classifierFromEnv,
+  enqueueForReview,
+  isHeldAsRemovedCopy,
+  screenPhoto,
+  screeningHoldNotice,
+  type Classify,
+} from "../../safety";
+
+export const MAX_PHOTOS_PER_ENTRY = 4;
+export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
+
+function db() {
+  return coreDb();
+}
+
+export class InvalidPhotoError extends Error {}
+
+function kitIsFull(): InvalidPhotoError {
+  return new InvalidPhotoError(
+    `at most ${String(MAX_PHOTOS_PER_ENTRY)} photos per entry`,
+  );
+}
+
+export interface UploadPhotoInput {
+  userId: string;
+  entryId: string;
+  contentType: string;
+  bytes: ArrayBuffer;
+  idempotencyKey?: string | undefined;
+}
+
+/**
+ * The classifier, injectable so a test can make the upstream fail on
+ * demand. Production passes nothing and gets `classifierFromEnv()`.
+ */
+export interface UploadPhotoOptions {
+  classify?: Classify | undefined;
+  /**
+  The public photo reconcile; production's is `syncPublicPhotosLater`.
+  */
+  publish?: ((scope: TaggedScope) => void) | undefined;
+}
+
+export async function uploadPhoto(
+  input: UploadPhotoInput,
+  { classify, publish }: UploadPhotoOptions = {},
+): Promise<string> {
+  if (!isAllowedPhotoType(input.contentType)) {
+    throw new InvalidPhotoError("unsupported photo type");
+  }
+  if (input.bytes.byteLength > MAX_PHOTO_BYTES) {
+    throw new InvalidPhotoError("photo too large");
+  }
+  // Read from the header, before anything decodes it (task 128 · SAF-2,
+  // register R-3): a 10 MB file can decode to ~96 MB, and the isolate has
+  // 128.
+  const uploaded = new Uint8Array(input.bytes);
+  const refusal = photoRefusal(uploaded);
+  if (refusal !== undefined) throw new InvalidPhotoError(refusal);
+
+  const database = db();
+  const [entry] = await database
+    .select({ userId: outfitEntries.userId })
+    .from(outfitEntries)
+    .where(eq(outfitEntries.id, input.entryId))
+    .limit(1);
+  requireOwned(entry, input.userId, {
+    missing: "entry not found",
+    forbidden: "cannot add photos to another user's entry",
+    // fallow-ignore-next-line code-duplication -- both are law 8b's idempotency check through firstColumnWhere; the scope column and the UNIQUE index behind it differ
+  });
+
+  // A repeat of a submission we already stored returns the key it made
+  // (law 8b). Worth more here than on a plain row insert: without it a
+  // double-submit costs an R2 put as well as a duplicate row, and burns
+  // one of the four photo slots on the same image.
+  //
+  // Matched in SQL against the UNIQUE (entry_id, idempotency_key) index
+  // rather than by scanning the rows fetched below — the index makes it a
+  // seek, and an in-memory `.find` over a capped list is the habit that
+  // breaks the moment the cap moves.
+  if (input.idempotencyKey !== undefined) {
+    const already = await firstColumnWhere(
+      database,
+      entryPhotos,
+      entryPhotos.photoKey,
+      and(
+        eq(entryPhotos.entryId, input.entryId),
+        eq(entryPhotos.idempotencyKey, input.idempotencyKey),
+      ),
+    );
+    if (already !== undefined) return already;
+  }
+
+  const existing = await database
+    .select({ id: entryPhotos.id })
+    .from(entryPhotos)
+    .where(eq(entryPhotos.entryId, input.entryId));
+  if (existing.length >= MAX_PHOTOS_PER_ENTRY) throw kitIsFull();
+  // One of the runner's day's photo uploads (SA-M14): after the repeat
+  // check, so a retry of one submission is not counted again, and before
+  // anything is decoded or stored.
+  const claim = await claimLimit(database, "photo-runner", input.userId);
+  if (!claim.isAllowed) throw new InvalidPhotoError(PHOTO_LIMIT_REACHED);
+
+  // R2 then the row, which cannot be atomic (law 8c). Deliberately left as
+  // two writes: a failure between them is visible — the upload errors and
+  // the user retries — and the only residue is an orphaned object under a
+  // random key. Recorded as R-27 rather than swept, because MEDIA has no
+  // expiry so orphans are permanent, but the failure needs D1 to fail
+  // between two calls and the cost is storage, not correctness.
+  const photoId = newUlid();
+  const key = entryPhotoKeyFor(input.userId, input.entryId, photoId);
+  const { stored, fingerprint } = await reencoded(uploaded);
+  await env.MEDIA.put(key, stored, {
+    httpMetadata: { contentType: "image/jpeg" },
+  });
+  const outcome = await storeRow(database, input.userId, {
+    id: photoId,
+    entryId: input.entryId,
+    photoKey: key,
+    idempotencyKey: input.idempotencyKey,
+    fingerprint,
+  });
+  // Another upload to this kit took its last place while this one was
+  // being encoded (SA-M14): its object goes too, and the kit stays at four.
+  if (outcome === "full") {
+    await env.MEDIA.delete(key);
+    throw kitIsFull();
+  }
+  // A held photo waits for a person, not the classifier: Approve sends it
+  // back to `pending`, and the screening-retry sweep screens it then.
+  if (outcome === "held") return key;
+
+  // Screened inline rather than after responding, because the packet's
+  // common path is "pass -> visible immediately" and a photo that appears
+  // then vanishes for its own author is worse than one that takes a beat
+  // to upload. The call is bounded by law 4's timeout, and `screenPhoto`
+  // never throws: with no key, a slow upstream or a dead one, the row
+  // simply stays `pending` and the screening-retry cron owns it from
+  // there. So this can delay a save but can never fail one.
+  await screenPhoto(
+    {
+      scope: "entry",
+      photoId,
+      bytes: stored,
+      contentType: "image/jpeg",
+    },
+    classify ?? classifierFromEnv(),
+  );
+  // A photo that passed on a PUBLIC kit is copied to the public bucket now
+  // rather than at the sweep (design 163 step 8). The reconcile reads the
+  // rule itself, so a photo still pending, held or on a kit that is not
+  // PUBLIC is left alone; in the background, so it never delays the save.
+  (publish ?? syncPublicPhotosLater)({
+    entryIds: [input.entryId],
+    runnerIds: [],
+  });
+
+  return key;
+}
+
+/**
+ * `uploadPhoto` as the attach screen hears it: the key, or the sentence
+ * for a runner whose day's photo uploads are used up (SA-M14), which the
+ * photo row shows in place of "Not sent". Anything else still throws.
+ */
+export async function uploadPhotoAnswer(
+  input: UploadPhotoInput,
+): Promise<{ key: string } | { refusal: string }> {
+  try {
+    return { key: await uploadPhoto(input) };
+  } catch (error: unknown) {
+    if (
+      error instanceof InvalidPhotoError &&
+      error.message === PHOTO_LIMIT_REACHED
+    ) {
+      return { refusal: PHOTO_LIMIT_REACHED };
+    }
+    throw error;
+  }
+}
+
+/**
+ * The photo's row, written only while the kit has room (SA-M14): the
+ * count and the insert are one statement, so uploads racing for one kit
+ * cannot all read three and all write a fifth. Its place is the count at
+ * that moment. Returns the id it wrote, or nothing when the kit was full.
+ */
+function insertWhileRoom(
+  database: ReturnType<typeof db>,
+  row: PhotoRow,
+  screenStatus: (typeof entryPhotos.$inferInsert)["screenStatus"],
+) {
+  const inKit = sql`(SELECT count(*) FROM ${entryPhotos} WHERE ${entryPhotos.entryId} = ${row.entryId})`;
+  return database
+    .insert(entryPhotos)
+    .select(
+      sql`SELECT ${row.id}, ${row.entryId}, ${row.photoKey}, ${inKit}, ${orSqlNull(row.idempotencyKey)}, ${row.fingerprint}, ${screenStatus} WHERE ${inKit} < ${MAX_PHOTOS_PER_ENTRY}`,
+    )
+    .returning({ id: entryPhotos.id });
+}
+
+type PhotoRow = Readonly<{
+  id: string;
+  entryId: string;
+  photoKey: string;
+  idempotencyKey: string | undefined;
+  fingerprint: string;
+}>;
+
+/**
+ * Writes the photo's row, held for review when it is a copy of an image
+ * removed as intimate (D-147, design 152) and the fingerprint breaker has
+ * room (design 164): hidden from everyone but its owner, as a classifier
+ * flag is, with a Review row and its uploader's notice (D-162) in the same
+ * batch. Says whether it was held or refused because the kit was full;
+ * `undefined` is a row stored for screening. The match is read first, since a batch cannot branch on its own
+ * results; a held batch whose row was refused takes its Review row and
+ * notice back, which name a photo nobody can reach.
+ */
+async function storeRow(
+  database: ReturnType<typeof db>,
+  uploaderId: string,
+  row: PhotoRow,
+): Promise<"held" | "full" | undefined> {
+  // From the primary (design 143): what was kept is an operator's write,
+  // not this runner's, so the session's bookmark does not promise a replica
+  // has it. Read from one, a copy posted seconds after its takedown would
+  // miss the check and go to the classifier as any photo does.
+  const isHeld = await isHeldAsRemovedCopy(
+    primaryCoreDb(),
+    row.fingerprint,
+    uploaderId,
+    nowSeconds(),
+  );
+  if (!isHeld) {
+    const written = await insertWhileRoom(database, row, "pending");
+    return written.length === 0 ? "full" : undefined;
+  }
+  const [written] = await database.batch([
+    insertWhileRoom(database, row, "hidden_pending_review"),
+    enqueueForReview(database, {
+      subjectType: "photo",
+      subjectId: row.id,
+      source: "fingerprint",
+    }),
+    screeningHoldNotice(database, uploaderId, row.id),
+  ]);
+  if (written.length > 0) return "held";
+  const queuedRow = and(
+    eq(reviewQueue.subjectType, "photo"),
+    eq(reviewQueue.subjectId, row.id),
+  );
+  const toldRow = and(
+    eq(notifications.userId, uploaderId),
+    eq(notifications.subjectId, row.id),
+  );
+  await database.batch([
+    database.delete(reviewQueue).where(queuedRow),
+    database.delete(notifications).where(toldRow),
+  ]);
+  return "full";
+}
+
+/**
+ * The photo as it is stored: decoded and encoded again as a JPEG (task 128
+ * · SAF-1, audit 0.8). Nothing the runner's device wrote survives — the
+ * EXIF block a phone puts in every frame carries where it was taken, and
+ * on a public entry that was the runner's front door. With W3's blur on
+ * the browser has already redrawn the photo; this is what makes it true
+ * with blur off, from an old client, or from anything that is not our
+ * client at all.
+ *
+ * Screening classifies these bytes, not the upload's: they are the ones a
+ * stranger will be served. The fingerprint is the other way round, taken
+ * from the decoded upload (D-142, design 146).
+ */
+async function reencoded(
+  bytes: Uint8Array,
+): Promise<{ stored: Uint8Array; fingerprint: string }> {
+  // Lazily, as the closet does: a static import would instantiate the WASM
+  // at worker startup, for every request, photo or not.
+  const photon = await import("@cf-wasm/photon/workerd");
+  return withReleased(
+    photon.PhotonImage.new_from_byteslice(bytes),
+    async (image) => ({
+      // From the upload as decoded, before the encode below (D-142): the
+      // hash describes what the runner sent, not our copy of it.
+      fingerprint: await fingerprintOf(image, photon),
+      stored: image.get_bytes_jpeg(ENTRY_PHOTO_QUALITY),
+    }),
+  );
+}
+
+/**
+ * The stored JPEG's quality — the canvas step uploads at 0.92, and one
+ * more generation at 88 is invisible at the sizes an entry shows.
+ */
+const ENTRY_PHOTO_QUALITY = 88;
+
+/**
+ * Visibility check for the GET route: whether `viewerId` may fetch this
+ * photo.
+ *
+ * The owner may, whatever is pending against the photo or its entry —
+ * fail open for the owner, closed for everyone else. Anyone else needs
+ * both halves: the entry passes the one visibility rule **as this viewer
+ * sees it** (task 128: a banned author, a blocked pair or an entry the
+ * viewer reported all refuse), and the photo passed screening. A photo the
+ * classifier flagged on a public entry was once served with HTTP 200,
+ * because nothing read the column `screenPhoto` writes.
+ *
+ * **Signed out is refused** (SAF-14, R-109): the pages that show these
+ * photos require a session, so the bytes do too.
+ *
+ * One read, joined, and found by primary key: the photo's id is the key's
+ * last segment (`entryPhotoKeyFor`), and `entry_photos` has no index on
+ * `photo_key` — looking it up by key alone scanned the table on every
+ * image a feed page drew. The key is still compared, so a well-formed id
+ * under somebody else's prefix finds nothing.
+ */
+export async function isPhotoVisible(
+  photoKey: string,
+  viewerId: string | undefined,
+): Promise<boolean> {
+  if (viewerId === undefined) return false;
+  const thisPhoto = and(
+    eq(entryPhotos.id, entryPhotoIdOf(photoKey)),
+    eq(entryPhotos.photoKey, photoKey),
+  );
+  const shownToOthers = and(
+    publiclyVisibleEntry(viewerId),
+    eq(entryPhotos.screenStatus, publicPhotoStatus),
+  );
+  // The author's own, but not one a copyright takedown holds (D-130).
+  const ownedByViewer = and(
+    eq(outfitEntries.userId, viewerId),
+    ne(entryPhotos.screenStatus, heldPhotoStatus),
+  );
+  const allowed = or(ownedByViewer, shownToOthers);
+  const rows = await db()
+    .select({ id: entryPhotos.id })
+    .from(entryPhotos)
+    .innerJoin(outfitEntries, eq(outfitEntries.id, entryPhotos.entryId))
+    .where(and(thisPhoto, allowed))
+    .limit(1);
+  return rows.length > 0;
+}
+
+export async function getPhotoObject(
+  photoKey: string,
+): Promise<R2ObjectBody | null> {
+  return env.MEDIA.get(photoKey);
+}
+
+/**
+The sentences this screen uses for each refusal.
+*/
+const PHOTO_REFUSALS: Readonly<Record<FilePartProblem, string>> = {
+  "not-form-data": "expected multipart form data",
+  missing: "no photo in upload",
+  "too-large": "photo too large",
+};
+
+/**
+ * Pulls a photo upload out of a multipart body, refusing anything the
+ * pipeline cannot store.
+ *
+ * The size is checked against the *declared* size, before the bytes are
+ * copied out of the form, so an oversized upload is refused without that
+ * copy. All
+ * three refusals are decisions, which is why they are here rather than in
+ * the server function's validator (R-41).
+ */
+export function photoUploadFrom(
+  input: unknown,
+): z.infer<typeof uploadPhotoFields> & { file: File } {
+  const part = filePartFrom(input, "photo", MAX_PHOTO_BYTES);
+  if (!part.ok) throw new InvalidPhotoError(PHOTO_REFUSALS[part.problem]);
+  const { file, form } = part;
+  const fields = uploadPhotoFields.parse({
+    entryId: form.get("entryId"),
+    contentType: file.type,
+    idempotencyKey: form.get("idempotencyKey") ?? undefined,
+  });
+  return { ...fields, file };
+}
+
+/**
+ * The cached GET for an entry photo, as one function.
+ *
+ * It was the body of `routes/feed/photo.$.tsx` — three refusals and a set
+ * of headers, in the one kind of file no test can import. The visibility
+ * rule it enforces is the same one entry detail uses: a private entry's
+ * photos are never fetchable by anyone but its owner, and a photo that is
+ * not visible is *not found* rather than forbidden, because "403" tells a
+ * stranger the photo exists.
+ */
+export async function photoResponse(
+  key: string | undefined,
+  viewerId: string | undefined,
+): Promise<Response> {
+  // Absent and blank in one check: the splat is `""` for `/feed/photo/`
+  // itself, and neither is a photo. Written as one because an explicit
+  // `=== ""` arm would be indistinguishable from letting it fall through
+  // to the visibility check, which refuses it too — at the cost of a
+  // query.
+  return key && (await isPhotoVisible(key, viewerId))
+    ? bytesResponse(key, RUNNER_CACHE)
+    : notFound();
+}
+
+/**
+ * The bytes of a photo a reviewer is being asked about.
+ *
+ * **A different rule, not a missing one.** The review queue shows photos
+ * that are hidden *because* they were reported, so `isPhotoVisible` would
+ * refuse every one of them — being unable to see the thing is what made
+ * the queue unusable. `requireAdmin` replaces the check rather than
+ * skipping it.
+ *
+ * It lives here rather than in `modules/safety` because photos live here,
+ * and because the arrow runs feed → safety: feed already imports safety's
+ * visibility rules, and safety imports nothing from feed
+ * (`docs/architecture.md`).
+ */
+export async function reviewerPhotoResponse(
+  key: string,
+  viewerId: string,
+): Promise<Response> {
+  // Both are parameters, as they are for `photoResponse`, and for the same
+  // reason: a function that reads the session or the params itself cannot
+  // be called by a test.
+  //
+  // **The route hands both across already normalised**, and that is what
+  // keeps this to one rule. A bare URL gives an empty key, which misses in
+  // R2 and answers 404 on its own; a signed-out viewer gives an empty id,
+  // which is never in the admin list (`adminUserIds` drops empties). Both
+  // guards that used to sit here were conditions with no second outcome —
+  // `viewerId === undefined ||` in front of a membership test that already
+  // says no, and `if (!key)` in front of a lookup that already misses.
+  //
+  // **404, not 403, and not a thrown `AdminRequiredError`.** The rest of
+  // this route answers "you may not see this" as "there is nothing here",
+  // deliberately — a 403 tells a stranger the photo exists, which is most
+  // of what they wanted to know. A throw would also surface as a 500 on a
+  // media URL, which says the same thing louder.
+  //
+  // **Only a photo's key** (SA-M7): Review asks for kit photos, garment
+  // photos and quarantined copies, so a key under any other root is not
+  // found, whatever the bucket holds there.
+  return isAdmin(viewerId) && isReviewablePhotoKey(key)
+    ? bytesResponse(key, REVIEW_CACHE)
+    : notFound();
+}
+
+/**
+The roots of every key Review shows a reviewer.
+*/
+const REVIEWABLE_ROOTS = [
+  ENTRY_PHOTO_ROOT,
+  GARMENT_PHOTO_ROOT,
+  QUARANTINE_ROOT,
+];
+
+function isReviewablePhotoKey(key: string): boolean {
+  return REVIEWABLE_ROOTS.some((root) => key.startsWith(root));
+}
+
+/**
+ * A runner's photo: private, because it is only ever visible to people
+ * the entry is shared with, so a shared cache must not hold it.
+ */
+const RUNNER_CACHE = "private, max-age=3600";
+
+/**
+ * What a reviewer is shown (design 157): held, reported or quarantined
+ * material — suspected CSAM among it — which no cache may keep, the
+ * operator's own browser included. Every request asks R2 again.
+ */
+export const REVIEW_CACHE = "private, no-store";
+
+/**
+The bytes and their headers, once, for both rules above.
+*/
+async function bytesResponse(
+  key: string,
+  cacheControl: string,
+): Promise<Response> {
+  const object = await getPhotoObject(key);
+  if (object === null) return notFound();
+
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  // The stored type, checked rather than trusted (SA-M7): the photo
+  // pipeline stores only these, so an object typed as anything else, or
+  // not at all, is not found, and these routes only ever answer an image.
+  if (!SERVED_PHOTO_TYPES.has(headers.get("content-type"))) {
+    return notFound();
+  }
+  headers.set("etag", object.httpEtag);
+  headers.set("cache-control", cacheControl);
+  headers.set("content-security-policy", MEDIA_POLICY);
+  return new Response(object.body, { headers });
+}
+
+/**
+ * The types the photo pipeline stores: a re-encoded kit photo is JPEG, a
+ * garment photo's versions JPEG and WebP (`modules/closet/photos.ts`).
+ */
+const SERVED_PHOTO_TYPES: ReadonlySet<string | null> = new Set([
+  "image/jpeg",
+  "image/webp",
+]);
+
+/**
+ * An enforced policy on the bytes themselves: an image needs no script,
+ * no subresource and no origin, so a media response gets none.
+ */
+const MEDIA_POLICY = "sandbox; default-src 'none'";
+
+function notFound(): Response {
+  return new Response("not found", { status: 404 });
+}

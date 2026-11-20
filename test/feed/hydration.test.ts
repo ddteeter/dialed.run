@@ -15,7 +15,7 @@ import {
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import { followingFeed } from "../../src/modules/feed/feed";
+import { followingFeed } from "../../src/modules/feed/following/feed";
 import {
   makeEntry,
   makeItem,

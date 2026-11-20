@@ -38,12 +38,9 @@ holds at the doors.
   sub-module** (rule 2's rule does not match parent files):
   - `redirect.ts` → `profiles` and `attach-rules.ts` → `attach-context`
     are type-only. They become `import type` from the door.
-  - `kit-push.ts` imports `uiGroups` by value from `conditions/groups.ts`.
-    `kit-push` is a client helper that routes import, and the
-    `conditions` door reaches `env`, so it keeps a direct file import,
-    as a component would. **Guess:** this is the case #888 (a
-    client-safe door) is about; if that issue rules otherwise, it
-    changes there, not here.
+  - `kit-push.ts` imports `uiGroups` by value from `groups.ts`, which
+    the tree puts in `conditions`. See the delta below: `groups.ts` stays
+    beside the parent's `index.ts`, so this import is unchanged.
   - `route-decisions.ts` imports a component's helper (`handleText`):
     unchanged, components are imported by file.
 - **`src/server.ts`**: `./modules/feed/moderation` now resolves to the
@@ -90,6 +87,21 @@ holds at the doors.
 - Opens: none expected. Anything found along the way becomes an issue,
   not a commit.
 
+## Delta from design 240's tree
+
+**`groups.ts` and `judged-conditions.ts` stay beside `feed/index.ts`,
+not in `conditions`.** Both are pure, with no data and no `env`, and five
+sub-modules use them. Client-side files import them by value: `bar-share.ts`
+and `coverage.ts`, which components import, and `kit-push.ts`, which
+routes import. Through the `conditions` door, those imports pulled
+`conditions.ts`, then `weather`, then `env` into the client. Six `ui`
+tests failed to load on `cloudflare:workers`, the same failure a client
+bundle would hit. Rule 5 already places "the few pieces with no data of
+their own that several sub-modules' screens use" in the parent. 240's
+simulation counted only service imports, so it could not see this. The
+other sub-modules' doors have no client-reachable importer (checked
+from every component and route).
+
 ## Open questions
 
-- The `kit-push.ts` direct import above is a guess, deferred to #888.
+None.

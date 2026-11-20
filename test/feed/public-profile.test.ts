@@ -24,7 +24,7 @@ import {
   publicProfileForPage,
   publicProfileHeaders,
   publicProfileRead,
-} from "../../src/modules/feed/public-profile";
+} from "../../src/modules/feed/public-web/public-profile";
 
 import {
   addAccount,
@@ -667,7 +667,7 @@ describe("the read's cost", () => {
 });
 
 const publicProfileSource: Record<string, string> = import.meta.glob(
-  "../../src/modules/feed/public-profile.ts",
+  "../../src/modules/feed/public-web/public-profile.ts",
   { query: "?raw", import: "default", eager: true },
 );
 

@@ -4,16 +4,19 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { EntryDetail } from "../../src/modules/feed/components/EntryDetail";
+import { EntryDetail } from "../../src/modules/feed/entries/components/EntryDetail";
 import { NoticeBand } from "../../src/modules/safety/notices/components/NoticeBand";
-import { Handle, handleText } from "../../src/modules/feed/components/Handle";
-import { OwnProfile } from "../../src/modules/feed/components/OwnProfile";
-import { RunnerAtHandle } from "../../src/modules/feed/components/RunnerAtHandle";
-import type { entryDetailForViewer } from "../../src/modules/feed/entries";
+import {
+  Handle,
+  handleText,
+} from "../../src/modules/feed/following/components/Handle";
+import { OwnProfile } from "../../src/modules/feed/following/components/OwnProfile";
+import { RunnerAtHandle } from "../../src/modules/feed/following/components/RunnerAtHandle";
+import type { entryDetailForViewer } from "../../src/modules/feed/entries/entries";
 import type {
   OtherProfile,
   OwnProfile as OwnProfileData,
-} from "../../src/modules/feed/profiles";
+} from "../../src/modules/feed/following/profiles";
 import {
   expectBellEnding,
   MILES,

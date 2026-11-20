@@ -15,7 +15,7 @@ import { env } from "../../src/env";
 import { newUlid, ulidSchema, type Ulid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
-import { decideReview } from "../../src/modules/feed/moderation";
+import { decideReview } from "../../src/modules/feed/moderation/moderation";
 import {
   moderationThresholds,
   reconcileUnhiddenReports,

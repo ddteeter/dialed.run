@@ -16,7 +16,7 @@ import {
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
-import { decideRemovalRequest } from "../../src/modules/feed/removal-requests";
+import { decideRemovalRequest } from "../../src/modules/feed/moderation/removal-requests";
 import { resolveReview } from "../../src/modules/safety";
 import {
   fileTakedownRequest,

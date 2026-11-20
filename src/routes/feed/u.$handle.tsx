@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { getSession } from "../../modules/auth/functions";
-import { RunnerAtHandle } from "../../modules/feed/components/RunnerAtHandle";
+import { RunnerAtHandle } from "../../modules/feed/following/components/RunnerAtHandle";
 import {
   followAction,
   profileAtHandleQuery,

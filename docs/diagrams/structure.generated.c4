@@ -65,7 +65,15 @@ model {
     dispatch = module 'dispatch'
     email = module 'email'
     enrichment = module 'enrichment'
-    feed = module 'feed'
+    feed = module 'feed' {
+      attach = module 'feed/attach'
+      conditions = module 'feed/conditions'
+      consensus = module 'feed/consensus'
+      entries = module 'feed/entries'
+      following = module 'feed/following'
+      moderation = module 'feed/moderation'
+      publicWeb = module 'feed/public-web'
+    }
     notifications = module 'notifications'
     onboarding = module 'onboarding'
     ops = module 'ops' {
@@ -179,16 +187,52 @@ model {
   cf.app.email -[wiring]-> cf.app.auth
   cf.app.enrichment -[imports]-> cf.app.email
   cf.app.enrichment -[imports]-> cf.app.products
-  cf.app.feed -[imports]-> cf.app.account
   cf.app.feed -[wiring]-> cf.app.auth
-  cf.app.feed -[imports]-> cf.app.closet
-  cf.app.feed -[imports]-> cf.app.email
-  cf.app.feed -[imports]-> cf.app.notifications
   cf.app.feed -[wiring]-> cf.app.onboarding
-  cf.app.feed -[imports]-> cf.app.ops
-  cf.app.feed -[imports]-> cf.app.runs
-  cf.app.feed -[imports]-> cf.app.safety
-  cf.app.feed -[imports]-> cf.app.weather
+  cf.app.feed -[wiring]-> cf.app.ops
+  cf.app.feed -[wiring]-> cf.app.safety
+  cf.app.feed -[wiring]-> cf.app.weather
+  cf.app.feed.attach -[imports]-> cf.app.closet
+  cf.app.feed.attach -[imports]-> cf.app.feed.conditions
+  cf.app.feed.attach -[imports]-> cf.app.feed.entries
+  cf.app.feed.attach -[imports]-> cf.app.runs
+  cf.app.feed.conditions -[imports]-> cf.app.account
+  cf.app.feed.conditions -[imports]-> cf.app.safety
+  cf.app.feed.conditions -[imports]-> cf.app.weather
+  cf.app.feed.consensus -[imports]-> cf.app.feed.conditions
+  cf.app.feed.consensus -[wiring]-> cf.app.onboarding
+  cf.app.feed.consensus -[imports]-> cf.app.ops
+  cf.app.feed.consensus -[imports]-> cf.app.safety
+  cf.app.feed.entries -[imports]-> cf.app.account
+  cf.app.feed.entries -[imports]-> cf.app.closet
+  cf.app.feed.entries -[imports]-> cf.app.email
+  cf.app.feed.entries -[wiring]-> cf.app.feed.attach
+  cf.app.feed.entries -[imports]-> cf.app.feed.conditions
+  cf.app.feed.entries -[wiring]-> cf.app.feed.following
+  cf.app.feed.entries -[imports]-> cf.app.feed.publicWeb
+  cf.app.feed.entries -[imports]-> cf.app.notifications
+  cf.app.feed.entries -[imports]-> cf.app.ops
+  cf.app.feed.entries -[imports]-> cf.app.safety
+  cf.app.feed.following -[imports]-> cf.app.account
+  cf.app.feed.following -[imports]-> cf.app.feed.conditions
+  cf.app.feed.following -[imports]-> cf.app.feed.consensus
+  cf.app.feed.following -[imports]-> cf.app.feed.entries
+  cf.app.feed.following -[imports]-> cf.app.feed.publicWeb
+  cf.app.feed.following -[imports]-> cf.app.notifications
+  cf.app.feed.following -[imports]-> cf.app.ops
+  cf.app.feed.following -[imports]-> cf.app.safety
+  cf.app.feed.moderation -[imports]-> cf.app.email
+  cf.app.feed.moderation -[imports]-> cf.app.feed.conditions
+  cf.app.feed.moderation -[imports]-> cf.app.feed.entries
+  cf.app.feed.moderation -[imports]-> cf.app.notifications
+  cf.app.feed.moderation -[imports]-> cf.app.ops
+  cf.app.feed.moderation -[imports]-> cf.app.safety
+  cf.app.feed.publicWeb -[imports]-> cf.app.account
+  cf.app.feed.publicWeb -[imports]-> cf.app.closet
+  cf.app.feed.publicWeb -[imports]-> cf.app.feed.conditions
+  cf.app.feed.publicWeb -[wiring]-> cf.app.feed.entries
+  cf.app.feed.publicWeb -[imports]-> cf.app.ops
+  cf.app.feed.publicWeb -[imports]-> cf.app.safety
   cf.app.notifications -[wiring]-> cf.app.auth
   cf.app.notifications -[wiring]-> cf.app.feed
   cf.app.notifications -[wiring]-> cf.app.runs
@@ -354,6 +398,48 @@ views {
     include cf.app.feed
     include cf.app.feed -> cf.app.** where kind is imports or kind is wiring
     include cf.app.** -> cf.app.feed where kind is imports or kind is wiring
+  }
+  view feedAttachImports of cf.app.feed.attach {
+    title 'feed/attach: what it imports, and what imports it'
+    include cf.app.feed.attach
+    include cf.app.feed.attach -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.feed.attach where kind is imports or kind is wiring
+  }
+  view feedConditionsImports of cf.app.feed.conditions {
+    title 'feed/conditions: what it imports, and what imports it'
+    include cf.app.feed.conditions
+    include cf.app.feed.conditions -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.feed.conditions where kind is imports or kind is wiring
+  }
+  view feedConsensusImports of cf.app.feed.consensus {
+    title 'feed/consensus: what it imports, and what imports it'
+    include cf.app.feed.consensus
+    include cf.app.feed.consensus -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.feed.consensus where kind is imports or kind is wiring
+  }
+  view feedEntriesImports of cf.app.feed.entries {
+    title 'feed/entries: what it imports, and what imports it'
+    include cf.app.feed.entries
+    include cf.app.feed.entries -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.feed.entries where kind is imports or kind is wiring
+  }
+  view feedFollowingImports of cf.app.feed.following {
+    title 'feed/following: what it imports, and what imports it'
+    include cf.app.feed.following
+    include cf.app.feed.following -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.feed.following where kind is imports or kind is wiring
+  }
+  view feedModerationImports of cf.app.feed.moderation {
+    title 'feed/moderation: what it imports, and what imports it'
+    include cf.app.feed.moderation
+    include cf.app.feed.moderation -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.feed.moderation where kind is imports or kind is wiring
+  }
+  view feedPublicWebImports of cf.app.feed.publicWeb {
+    title 'feed/publicWeb: what it imports, and what imports it'
+    include cf.app.feed.publicWeb
+    include cf.app.feed.publicWeb -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.feed.publicWeb where kind is imports or kind is wiring
   }
   view notificationsImports of cf.app.notifications {
     title 'notifications: what it imports, and what imports it'

@@ -158,7 +158,7 @@ export async function firstRowWhere<TTable extends SQLiteTable>(
  * written, and mutation testing showed it unobservable: an empty `inArray`
  * matches nothing, so every caller gets the same empty Set either way and
  * no input distinguishes the two. What a guard would buy is skipping the
- * query on a page with nobody on it. `src/modules/feed/conditions.ts`
+ * query on a page with nobody on it. `src/modules/feed/conditions/conditions.ts`
  * keeps exactly that guard under an owner-approved grant, so the trade is
  * a live question rather than a settled one — but a guard no test can
  * reach does not belong in a file held at 100%, and adding one back is a

@@ -11,7 +11,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   DeletePhoto,
   RetractEntry,
-} from "../../src/modules/feed/components/RetractEntry";
+} from "../../src/modules/feed/entries/components/RetractEntry";
 import { DeleteRun } from "../../src/modules/runs/components/DeleteRun";
 import { ICON_BUTTON } from "../../src/ui/form";
 import { ICONS } from "../../src/ui/icons";

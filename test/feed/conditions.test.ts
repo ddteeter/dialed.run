@@ -9,8 +9,11 @@ import {
   currentConditions,
   observationsForEntries,
   observationsForRuns,
-} from "../../src/modules/feed/conditions";
-import { follow, followerCount } from "../../src/modules/feed/follows";
+} from "../../src/modules/feed/conditions/conditions";
+import {
+  follow,
+  followerCount,
+} from "../../src/modules/feed/following/follows";
 import { pointConditions } from "./conditions-fixture";
 import {
   makeEntry,

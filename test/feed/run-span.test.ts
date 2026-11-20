@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { observationsForRuns } from "../../src/modules/feed/conditions";
+import { observationsForRuns } from "../../src/modules/feed/conditions/conditions";
 import { matchTally } from "./synced-consensus";
-import { ownProfile } from "../../src/modules/feed/profiles";
+import { ownProfile } from "../../src/modules/feed/following/profiles";
 import {
   NOW,
   makeEntry,

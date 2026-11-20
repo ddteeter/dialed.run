@@ -2,8 +2,8 @@ import { screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { OtherProfile } from "../../src/modules/feed/components/OtherProfile";
-import { PostCard } from "../../src/modules/feed/components/PostCard";
+import { OtherProfile } from "../../src/modules/feed/following/components/OtherProfile";
+import { PostCard } from "../../src/modules/feed/following/components/PostCard";
 import {
   ONLY_TIMERS,
   renderWithSlowRoute,

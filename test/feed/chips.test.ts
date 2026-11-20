@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import type { GarmentRecord } from "../../src/modules/feed/band-signals";
+import type { GarmentRecord } from "../../src/modules/feed/entries/band-signals";
 import {
   CHIP_COUNT,
   chipLabel,
   suggestChips,
   tagLabel,
-} from "../../src/modules/feed/chips";
-import type { Chip } from "../../src/modules/feed/chips";
+} from "../../src/modules/feed/entries/chips";
+import type { Chip } from "../../src/modules/feed/entries/chips";
 
 /**
  * A3's generated chips (design round 20). Each of the ruling's own rules,

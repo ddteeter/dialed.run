@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { optionalUserId } from "../../modules/auth";
-import { photoResponse } from "../../modules/feed/photos";
+import { photoResponse } from "../../modules/feed/entries/photos";
 
 /**
  * Cached GET for entry photos (design doc "Photos"): the R2 key is the

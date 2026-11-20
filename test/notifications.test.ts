@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { userProfiles } from "../src/db/schema-core";
 import { runnerVisibleToViewer } from "../src/modules/feed";
-import { follow } from "../src/modules/feed/follows";
+import { follow } from "../src/modules/feed/following/follows";
 import { blockRunner } from "../src/modules/safety/reports/blocks";
 
 import { newUlid } from "../src/lib/ids";

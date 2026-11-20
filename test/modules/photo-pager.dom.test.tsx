@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { PhotoPager } from "../../src/modules/feed/components/PhotoPager";
+import { PhotoPager } from "../../src/modules/feed/entries/components/PhotoPager";
 
 /**
  * D's pager (R55·207): each photo at 4:5 with its counter bottom right;

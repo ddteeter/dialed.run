@@ -5,7 +5,7 @@
  * `route-decisions.ts` gives: the component that uses these ships to the
  * browser, and `entries.ts` and `photos.ts` reach `env`.
  */
-import type { AttachContext } from "./attach-context";
+import type { AttachContext } from "./attach";
 import { attachKitInput } from "./inputs";
 import { redirectTo } from "./redirect";
 

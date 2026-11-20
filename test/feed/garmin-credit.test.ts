@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { runs } from "../../src/db/schema-core";
 import { coreDb } from "../../src/env";
-import { getEntryDetail } from "../../src/modules/feed/entries";
-import { followingFeed } from "../../src/modules/feed/feed";
+import { getEntryDetail } from "../../src/modules/feed/entries/entries";
+import { followingFeed } from "../../src/modules/feed/following/feed";
 import { listRunSummaries } from "../../src/modules/runs/service";
 import { NOW, makeEntry, makeRun, makeUser, resetTables } from "./helpers";
 

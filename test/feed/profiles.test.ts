@@ -10,8 +10,11 @@ import {
   wardrobeItems,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
-import { follow } from "../../src/modules/feed/follows";
-import { otherProfile, ownProfile } from "../../src/modules/feed/profiles";
+import { follow } from "../../src/modules/feed/following/follows";
+import {
+  otherProfile,
+  ownProfile,
+} from "../../src/modules/feed/following/profiles";
 import {
   makeEntry,
   makeItem,

@@ -1,0 +1,217 @@
+import type { JSX } from "react";
+
+import { Mono, Spoken, WeatherAttribution } from "../../../../ui";
+import { ProductLink } from "../../../../ui/ProductLink";
+import type { PublicKit, PublicPiece } from "../public-kit-shape";
+
+import { PhotoPager } from "../../entries/components/PhotoPager";
+import {
+  Invite,
+  PieceSection,
+  RunnerFrame,
+  type OpenWebPageProps,
+  VerdictChip,
+} from "./PublicFrame";
+
+/**
+ * The open web's kit (round 41 #86c) and its not-public twin (#86f):
+ * `/kit/<id>`, for anyone, signed in or not, in the frame every public page
+ * wears (`PublicFrame`). No Useful, follow or comment, signed in or not.
+ */
+
+/**
+ * `/kit/<id>` for a public kit (round 41 #86c). Order: who and which day,
+ * the photo when it has one, conditions and verdict, the four stats, the
+ * caption, the kit, the credit, the pitch, the foot. The photos are D's
+ * pager, served from the public bucket (D-153, design 163 step 8), with
+ * no delete: nobody owns anything on the open web's page.
+ *
+ * `origin` is where the page lives, for the link Report this kit hands
+ * `/takedown`: the route's, so the server's page and the browser's agree.
+ */
+export function PublicKitPage({
+  kit,
+  ...frame
+}: OpenWebPageProps<{ kit: PublicKit }>): JSX.Element {
+  return (
+    <RunnerFrame
+      {...frame}
+      page={{ entryId: kit.entryId }}
+      handle={kit.handle}
+      headingClassName="m-0 text-body font-semibold wrap-anywhere"
+      beside={
+        <Mono step="xs" className="text-muted">
+          {kit.day}
+        </Mono>
+      }
+    >
+      {(isSignedIn) => (
+        <>
+          <PhotoPager
+            photoKeys={kit.photos ?? []}
+            deletePhoto={undefined}
+            srcOf={servedAsIs}
+          />
+          <Conditions kit={kit} />
+          <Stats kit={kit} />
+          <Pieces pieces={kit.pieces} />
+          {kit.conditions?.isProviders === true ? (
+            <WeatherAttribution />
+          ) : undefined}
+          {isSignedIn ? undefined : <Invite />}
+        </>
+      )}
+    </RunnerFrame>
+  );
+}
+
+/**
+A public photo's URL is already where it is served.
+*/
+function servedAsIs(url: string): string {
+  return url;
+}
+
+/**
+ * Feels-like and sky in TYPE.display — the measured word teal, as teal
+ * always means measured conditions — beside the verdict's chip in its T2
+ * hue, captioned FEELS LIKE · SKY. A kit with no conditions shows the chip
+ * alone; one with neither shows nothing.
+ */
+function Conditions({ kit }: Readonly<{ kit: PublicKit }>) {
+  const { conditions, verdict } = kit;
+  if (conditions === undefined && verdict === undefined) return;
+  return (
+    <div data-part="conditions" className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-3">
+        {conditions === undefined ? undefined : (
+          <span className="font-display text-display uppercase">
+            {/* Drawn for the eye, said in words (round 52 #158). */}
+            <span aria-hidden="true">
+              {conditions.feelsLike}{" "}
+              <span className="text-dialed-text">{conditions.sky}</span>
+            </span>
+            <span className="sr-only normal-case">{conditions.said}</span>
+          </span>
+        )}
+        <VerdictChip verdict={verdict} />
+      </div>
+      {conditions === undefined ? undefined : (
+        <Mono step="xs" className="text-muted">
+          Feels like · Sky
+        </Mono>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The four stats as round 41 draws them: the number in MONO.lg, its word
+ * under it in MONO.xs. Moving time is named for what it is: "moving" when
+ * the file measured it, "time" when the run's own clock is all there is.
+ */
+/**
+ * A track per stat: distance and time always, pace and gain when known.
+ */
+function statTracks(count: number): string {
+  if (count >= 4) return "grid-cols-4";
+  if (count === 3) return "grid-cols-3";
+  return "grid-cols-2";
+}
+
+function Stats({ kit }: Readonly<{ kit: PublicKit }>) {
+  const stats: readonly StatWords[] = [
+    kit.distance,
+    {
+      value: kit.time.value,
+      unit: kit.time.isMoving ? "moving" : "time",
+      said: { value: kit.time.said },
+    },
+    ...(kit.pace === undefined ? [] : [kit.pace]),
+    ...(kit.gain === undefined
+      ? []
+      : [{ value: kit.gain.value, unit: `${kit.gain.unit} gain` }]),
+  ];
+  return (
+    // R55·219, R41: ruled above and below, the label tight under its
+    // number, and as many tracks as there are stats, so three fill the
+    // row. The board's 15px number is not on the mono ramp; MONO.md is
+    // the nearest step.
+    <dl
+      data-part="stats"
+      className={`m-0 grid gap-2 border-y border-hairline py-3 ${statTracks(stats.length)}`}
+    >
+      {stats.map((stat) => (
+        <div key={stat.unit} className="flex flex-col-reverse gap-0.5">
+          {/* Flex boxes, so each line sets at its mono step's leading
+              and the label sits tight under its number (R2-FEED-05). */}
+          <dt className="flex">
+            <Mono step="xs" className="text-muted">
+              <Said shown={stat.unit} said={stat.said?.unit} />
+            </Mono>
+          </dt>
+          <dd className="m-0 flex">
+            <Mono step="md">
+              <Said shown={stat.value} said={stat.said?.value} />
+            </Mono>
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/**
+ * A stat as drawn, and its halves as a screen reader should say them
+ * where the drawn form misreads — the time and the pace.
+ */
+interface StatWords {
+  readonly value: string;
+  readonly unit: string;
+  readonly said?: { readonly value?: string; readonly unit?: string };
+}
+
+/**
+The drawn words, or `Spoken` when they are said some other way.
+*/
+function Said({
+  shown,
+  said,
+}: Readonly<{ shown: string; said: string | undefined }>): JSX.Element {
+  return said === undefined ? (
+    <>{shown}</>
+  ) : (
+    <Spoken shown={shown} said={said} />
+  );
+}
+
+/**
+ * THE KIT · N: each piece by its closet name, a linked one opening its
+ * product through the one outbound product link (which shows
+ * the domain beside it), and what kind of piece it is. Absent with none.
+ */
+function Pieces({ pieces }: Readonly<{ pieces: readonly PublicPiece[] }>) {
+  return (
+    <PieceSection
+      title="The kit"
+      level={2}
+      pieces={pieces}
+      // R55·219, R41: ruled top and bottom (PieceSection), names in 600.
+      itemClassName="flex min-h-target items-center justify-between gap-3 border-b border-hairline py-2 text-body font-semibold"
+      row={(piece) => (
+        <>
+          {piece.url === undefined ? (
+            <span className="min-w-0 text-ink">{piece.name}</span>
+          ) : (
+            <span className="min-w-0">
+              <ProductLink url={piece.url} label={piece.name} />
+            </span>
+          )}
+          <Mono step="xs" className="shrink-0 text-muted">
+            {piece.kind}
+          </Mono>
+        </>
+      )}
+    />
+  );
+}

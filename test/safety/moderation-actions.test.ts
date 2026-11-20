@@ -30,13 +30,13 @@ import { nowSeconds } from "../../src/lib/now";
 import {
   decideReview,
   moderateContent,
-} from "../../src/modules/feed/moderation";
-import type { Report } from "../../src/modules/feed/retract";
-import { runDayOf } from "../../src/modules/feed/run-day";
+} from "../../src/modules/feed/moderation/moderation";
+import type { Report } from "../../src/modules/feed/entries/retract";
+import { runDayOf } from "../../src/modules/feed/moderation/run-day";
 import {
   photoResponse,
   reviewerPhotoResponse,
-} from "../../src/modules/feed/photos";
+} from "../../src/modules/feed/entries/photos";
 import {
   accountCount,
   ACCOUNTS_PAGE,

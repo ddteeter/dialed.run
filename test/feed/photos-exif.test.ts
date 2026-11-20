@@ -12,7 +12,10 @@ import {
   PhotoValidationError,
   uploadItemPhoto,
 } from "../../src/modules/closet/photos";
-import { photoResponse, uploadPhoto } from "../../src/modules/feed/photos";
+import {
+  photoResponse,
+  uploadPhoto,
+} from "../../src/modules/feed/entries/photos";
 import { type Classify } from "../../src/modules/safety";
 import {
   imageCategories,

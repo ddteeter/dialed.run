@@ -86,12 +86,12 @@ only cached responses and none of ours are cached (D-69).
 
 1. Open **Review** (`/desk/review`, operators only). Look at the item only
    through the review photo route (`src/routes/desk/review-photo.$.tsx`
-   → `feed/photos.ts` `reviewerPhotoResponse`), which tells the browser to
+   → `feed/entries/photos.ts` `reviewerPhotoResponse`), which tells the browser to
    keep no copy (`Cache-Control: private, no-store`). Do not save,
    screenshot, forward or download it.
 2. Choose **Remove as suspected CSAM** and confirm (the row asks again;
    `safety/review/components/ReviewQueue.tsx` `Decision`).
-3. What the code does, in this order (`feed/moderation.ts`
+3. What the code does, in this order (`feed/moderation/moderation.ts`
    `moderateContent`, action `quarantine`):
    - copies each photo's bytes to `quarantine/…` in the `MEDIA` bucket
      (`lib/entry-photo-key.ts` `quarantineKeyFor`), before anything is
@@ -111,7 +111,7 @@ only cached responses and none of ours are cached (D-69).
    - sends the uploader nothing: no bell row, no email (D-70).
 
    **A garment photo** (a `garment photo` row) quarantines the same way
-   (`feed/garment-moderation.ts` `moderateGarmentPhoto`): every size of
+   (`feed/moderation/garment-moderation.ts` `moderateGarmentPhoto`): every size of
    the photo is copied to `quarantine/items/…`, the photo is taken off the
    garment (the garment stays), and the record holds the garment row, its
    screenings, the copies and the uploader snapshot, with no entry id.
@@ -266,7 +266,7 @@ the same 48-hour clock. Keep doing so.
 2. Open Review. Check the request names something we host, and that it is
    plausibly what it says. You do not need to establish who is depicted
    beyond the requester's statement.
-3. Decide with **Remove** or **Decline** (`feed/removal-requests.ts:40`
+3. Decide with **Remove** or **Decline** (`feed/moderation/removal-requests.ts:40`
    `decideRemovalRequest`):
    - Remove runs `moderateContent` with action `takedown` and reason
      `intimate`: the rows and files are deleted, the audit row records
@@ -341,7 +341,7 @@ photo (the garment stays) and tells its owner, in the bell and by email,
 as a kit photo's Remove does; suspected CSAM is still a silent quarantine.
 A garment found by copy search carries the same Remove and Remove as
 suspected CSAM on its Matching photos tile
-(`feed/garment-moderation.ts` `moderateGarmentPhoto`).
+(`feed/moderation/garment-moderation.ts` `moderateGarmentPhoto`).
 
 1. **No automated CSAM detection** until C11.
 2. **Copy search covers only the same runner's 12 newest photos** until C16.

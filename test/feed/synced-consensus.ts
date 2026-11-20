@@ -4,8 +4,8 @@
  * consensus answers reads it as the real write paths would have left it.
  * The scaling tests sync outside what they count instead.
  */
-import * as compact from "../../src/modules/feed/compact-conditions";
-import * as consensus from "../../src/modules/feed/consensus";
+import * as compact from "../../src/modules/feed/consensus/compact-conditions";
+import * as consensus from "../../src/modules/feed/consensus/consensus";
 import { syncRunConditions } from "./helpers";
 
 /**

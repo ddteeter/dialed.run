@@ -11,7 +11,7 @@ import { renderToString } from "react-dom/server";
 import { expect, vi } from "vitest";
 
 import { EMAIL_UNCONFIRMED_CODE } from "../../src/lib/auth-signal";
-import type { FeedItem } from "../../src/modules/feed/feed";
+import type { FeedItem } from "../../src/modules/feed/following/feed";
 import type { ConfirmGate } from "../../src/ui";
 import { BellProvider } from "../../src/ui/PhoneBell";
 import { UnconfirmedRefusalAnswer } from "../../src/ui/unconfirmed-refusal";

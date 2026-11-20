@@ -5,8 +5,8 @@ import { env } from "../../src/env";
 import {
   followingFeed,
   followingFeedStatement,
-} from "../../src/modules/feed/feed";
-import { follow } from "../../src/modules/feed/follows";
+} from "../../src/modules/feed/following/feed";
+import { follow } from "../../src/modules/feed/following/follows";
 import { makeEntry, makeRun, makeUser, makeVerifiedUser, NOW } from "./helpers";
 
 describe("following feed (E1)", () => {

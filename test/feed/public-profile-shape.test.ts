@@ -8,7 +8,7 @@ import {
   profileOrNotFound,
   publicProfileHead,
   type PublicProfile,
-} from "../../src/modules/feed/public-profile-shape";
+} from "../../src/modules/feed/public-web/public-profile-shape";
 
 /**
  * The public profile's shape (round 41 #86d, #86f): what the route and the
@@ -43,10 +43,7 @@ describe("moreKits", () => {
 describe("publicProfileHead", () => {
   it("is noindex and the handle for a public profile, with the site's default card", () => {
     expect(publicProfileHead(PROFILE)).toStrictEqual({
-      meta: [
-        { name: "robots", content: "noindex" },
-        { title: "@maya_runs" },
-      ],
+      meta: [{ name: "robots", content: "noindex" }, { title: "@maya_runs" }],
     });
   });
 

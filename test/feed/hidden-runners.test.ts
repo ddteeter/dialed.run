@@ -9,17 +9,20 @@ import {
   usernameHistory,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
-import { entryDetailForViewer } from "../../src/modules/feed/entries";
-import { followingFeed } from "../../src/modules/feed/feed";
-import { follow } from "../../src/modules/feed/follows";
+import { entryDetailForViewer } from "../../src/modules/feed/entries/entries";
+import { followingFeed } from "../../src/modules/feed/following/feed";
+import { follow } from "../../src/modules/feed/following/follows";
 import {
   otherProfile,
   profileAtHandle,
   recentPublicEntriesStatement,
   visibleRunnerHandle,
   visibleRunnerStatement,
-} from "../../src/modules/feed/profiles";
-import { searchRunners, searchStatement } from "../../src/modules/feed/search";
+} from "../../src/modules/feed/following/profiles";
+import {
+  searchRunners,
+  searchStatement,
+} from "../../src/modules/feed/following/search";
 import { banUser } from "../../src/modules/safety/runners/bans";
 import { blockRunner } from "../../src/modules/safety/reports/blocks";
 import { fileReport } from "../../src/modules/safety/reports/reports";

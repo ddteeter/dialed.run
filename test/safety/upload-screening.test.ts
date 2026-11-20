@@ -11,14 +11,14 @@ import {
 import { env } from "../../src/env";
 import { tinyJpeg } from "../feed/photos-fixture";
 import { uploadItemPhoto } from "../../src/modules/closet/photos";
-import { getEntryDetail } from "../../src/modules/feed/entries";
-import { followingFeed } from "../../src/modules/feed/feed";
-import { follow } from "../../src/modules/feed/follows";
+import { getEntryDetail } from "../../src/modules/feed/entries/entries";
+import { followingFeed } from "../../src/modules/feed/following/feed";
+import { follow } from "../../src/modules/feed/following/follows";
 import {
   photoResponse,
   reviewerPhotoResponse,
   uploadPhoto,
-} from "../../src/modules/feed/photos";
+} from "../../src/modules/feed/entries/photos";
 import { putSnapshot } from "../../src/modules/enrichment/snapshot";
 import { type Classify } from "../../src/modules/safety";
 import {

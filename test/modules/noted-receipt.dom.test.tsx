@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   NotedReceipt,
   notedAnnouncement,
-} from "../../src/modules/feed/components/NotedReceipt";
+} from "../../src/modules/feed/entries/components/NotedReceipt";
 import { drawnText, saidText } from "./spoken-text";
 
 const HOUDINI = {

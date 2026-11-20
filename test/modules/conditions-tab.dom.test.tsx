@@ -4,9 +4,9 @@ import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { CityLookup } from "../../src/lib/contracts/city-lookup";
-import { ConditionsTab } from "../../src/modules/feed/components/ConditionsTab";
-import type { ConsensusResult } from "../../src/modules/feed/consensus";
-import type { ConditionsHome } from "../../src/modules/feed/home";
+import { ConditionsTab } from "../../src/modules/feed/consensus/components/ConditionsTab";
+import type { ConsensusResult } from "../../src/modules/feed/consensus/consensus";
+import type { ConditionsHome } from "../../src/modules/feed/consensus/home";
 import type { Place } from "../../src/modules/onboarding";
 import { CITY_HINT } from "../../src/ui";
 import { MILES, renderFeedScreen } from "./feed-fixtures";

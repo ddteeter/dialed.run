@@ -7,7 +7,7 @@ import {
   garmentBandCount,
   garmentBandCountOrNone,
   garmentBandsInput,
-} from "../../src/modules/feed/garment-bands";
+} from "../../src/modules/feed/consensus/garment-bands";
 import {
   makeEntry,
   makeItem,

@@ -13,11 +13,11 @@ import {
   saveBacklogRow,
   unjudgedRunCount,
   verdictBacklog,
-} from "../../src/modules/feed/backlog";
+} from "../../src/modules/feed/attach/backlog";
 import {
   attachKit,
   shouldPromptForVerdict,
-} from "../../src/modules/feed/entries";
+} from "../../src/modules/feed/entries/entries";
 import {
   makeEntry,
   makeItem,

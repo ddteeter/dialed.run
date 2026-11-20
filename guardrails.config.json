@@ -144,42 +144,42 @@
       "count": 1
     },
     {
-      "key": "src/modules/feed/consensus.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "key": "src/modules/feed/consensus/consensus.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Equivalent mutant: every item row's garment is in the batch that fetched it, so the group lookup in `wornByRunner` only misses if a garment was deleted between the two reads \u2014 which is the race the guard exists for. (Was two guards; #409 removed the empty-window return with the cross-database walk it saved.)",
       "count": 1
     },
     {
-      "key": "src/modules/feed/entries.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "key": "src/modules/feed/entries/entries.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Five equivalent guards, each with its proof at the site: with no items the ownership read matches nothing; the batch's first two statements always exist; the SQL already filters `isNotNull(verdict)`, so the type guard and the empty-list return cannot change an answer; and no entries means no observations. Every one saves a query or narrows a type the runtime has already settled.",
       "count": 5
     },
     {
-      "key": "src/modules/feed/entries.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,EqualityOperator",
+      "key": "src/modules/feed/entries/entries.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,EqualityOperator",
       "reason": "Equivalent mutant: an empty `inArray` matches nothing, so the garment map comes out empty either way. The guard saves the query for an entry with a bare kit.",
       "count": 1
     },
     {
-      "key": "src/modules/feed/entries.ts|mutation-suppress|// Stryker disable next-line MethodExpression",
+      "key": "src/modules/feed/entries/entries.ts|mutation-suppress|// Stryker disable next-line MethodExpression",
       "reason": "Two equivalent filters: each per-item update is also scoped by `entryId` in SQL, so a flag for an item the entry does not contain matches no row; and the verdict filter cannot drop a row the query already excluded. Both keep the batch and the loop the size of the real work.",
       "count": 2
     },
     {
-      "key": "src/modules/feed/feed.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "key": "src/modules/feed/following/feed.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Equivalent mutant: an empty page produces empty reads and an empty map either way. What the return saves is six queries and a batch on every empty feed \u2014 which is what a new account sees.",
       "count": 1
     },
     {
-      "key": "src/modules/feed/prefill.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "key": "src/modules/feed/attach/prefill.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Equivalent mutant: an empty `inArray` matches nothing, so the loop below would find no best and answer undefined anyway. The return saves two queries on every attach by a runner with no history.",
       "count": 1
     },
     {
-      "key": "src/modules/feed/search.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "key": "src/modules/feed/following/search.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Equivalent mutant: a `LIKE` never matches NULL, so the predicate cannot drop a row. It is here because the column is nullable and the result type promises a name.",
       "count": 1
     },
     {
-      "key": "src/modules/feed/conditions.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,LogicalOperator",
+      "key": "src/modules/feed/conditions/conditions.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression,LogicalOperator",
       "reason": "Equivalent mutant, with the reason worth writing down: `roundCoord(undefined)` is NaN rather than 0, so a half-located lookup keys to a cell nothing can match and answers undefined anyway. The guard states the intent \u2014 we do not know where you are \u2014 and saves the query.",
       "count": 1
     },
@@ -229,7 +229,7 @@
       "count": 1
     },
     {
-      "key": "src/modules/feed/components/VerdictForm.tsx|mutation-suppress|// Stryker disable next-line StringLiteral",
+      "key": "src/modules/feed/entries/components/VerdictForm.tsx|mutation-suppress|// Stryker disable next-line StringLiteral",
       "reason": "Equivalent mutant, proof at the site: `flags` is seeded from every entry item, so the lookup always finds one and the `??` fallback is unreachable. It is `noUncheckedIndexedAccess`'s requirement rather than the runtime's, and it is hoisted to a named function because a directive does not attach inside a JSX expression container.",
       "count": 1
     },
@@ -284,7 +284,7 @@
       "count": 1
     },
     {
-      "key": "src/modules/feed/components/AttachKit.tsx|mutation-suppress|// Stryker disable next-line ArrayDeclaration",
+      "key": "src/modules/feed/attach/components/AttachKit.tsx|mutation-suppress|// Stryker disable next-line ArrayDeclaration",
       "reason": "Equivalent mutant \u2014 stryker's replacement for useReleasedPreviews' empty dependency array is a constant array, exactly as stable as `[]`, so the previews are still released on unmount only. Owner-approved 2026-11-14 (#659).",
       "count": 1
     },
@@ -329,37 +329,37 @@
       "count": 1
     },
     {
-      "key": "src/modules/feed/follows.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- isFollowing and hasReacted both delegate to hasRowWhere; following someone and finding an entry useful are different facts over different tables",
+      "key": "src/modules/feed/following/follows.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- isFollowing and hasReacted both delegate to hasRowWhere; following someone and finding an entry useful are different facts over different tables",
       "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: isFollowing and hasReacted both delegate to hasRowWhere; following someone and finding an entry useful are different facts over different tables.",
       "count": 1
     },
     {
-      "key": "src/modules/feed/entries.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two owner-scoped reads in one function, over runs and over entries; see the note on the second",
+      "key": "src/modules/feed/entries/entries.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two owner-scoped reads in one function, over runs and over entries; see the note on the second",
       "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: two owner-scoped reads in one function, over runs and over entries; see the note on the second.",
       "count": 1
     },
     {
-      "key": "src/modules/feed/entries.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- read-a-row-then-guard over two tables; these read by id and check the owner in code on purpose, so 404 and 403 stay distinct -- selectOwnedRow scopes in SQL and would collapse them",
+      "key": "src/modules/feed/entries/entries.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- read-a-row-then-guard over two tables; these read by id and check the owner in code on purpose, so 404 and 403 stay distinct -- selectOwnedRow scopes in SQL and would collapse them",
       "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: read-a-row-then-guard over two tables; these read by id and check the owner in code on purpose, so 404 and 403 stay distinct -- selectOwnedRow scopes in SQL and would collapse them.",
       "count": 1
     },
     {
-      "key": "src/modules/feed/entries.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- read-a-row-then-guard; owned.ts records why each call site keeps its own columns and predicate -- one of those choices is a covering index",
+      "key": "src/modules/feed/entries/entries.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- read-a-row-then-guard; owned.ts records why each call site keeps its own columns and predicate -- one of those choices is a covering index",
       "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: read-a-row-then-guard; owned.ts records why each call site keeps its own columns and predicate -- one of those choices is a covering index.",
       "count": 1
     },
     {
-      "key": "src/modules/feed/entries.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- same read shape, different question: one asks whether to prompt for a verdict, the other whether a viewer may react at all",
+      "key": "src/modules/feed/entries/entries.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- same read shape, different question: one asks whether to prompt for a verdict, the other whether a viewer may react at all",
       "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: same read shape, different question: one asks whether to prompt for a verdict, the other whether a viewer may react at all.",
       "count": 1
     },
     {
-      "key": "src/modules/feed/entries.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the same four-line read of two different entities; merging would couple an entry's detail to a profile's",
+      "key": "src/modules/feed/entries/entries.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the same four-line read of two different entities; merging would couple an entry's detail to a profile's",
       "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: the same four-line read of two different entities; merging would couple an entry's detail to a profile's.",
       "count": 1
     },
     {
-      "key": "src/modules/feed/photos.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- both are law 8b's idempotency check through firstColumnWhere; the scope column and the UNIQUE index behind it differ",
+      "key": "src/modules/feed/entries/photos.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- both are law 8b's idempotency check through firstColumnWhere; the scope column and the UNIQUE index behind it differ",
       "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: both are law 8b's idempotency check through firstColumnWhere; the scope column and the UNIQUE index behind it differ.",
       "count": 1
     },
@@ -389,7 +389,7 @@
       "count": 1
     },
     {
-      "key": "src/modules/feed/entries.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two different reads of outfit_entries that happen to select three columns each: this one gates ownership of a single entry by id, the other scans the user's last 200 for a band statistic",
+      "key": "src/modules/feed/entries/entries.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two different reads of outfit_entries that happen to select three columns each: this one gates ownership of a single entry by id, the other scans the user's last 200 for a band statistic",
       "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. This one: two different reads of outfit_entries that happen to select three columns each: this one gates ownership of a single entry by id, the other scans the user's last 200 for a band statistic.",
       "count": 1
     },
@@ -409,7 +409,7 @@
       "count": 1
     },
     {
-      "key": "src/modules/feed/ladder-read.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "key": "src/modules/feed/consensus/ladder-read.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Equivalent mutant: with no entries the walk answers an empty ladder anyway (observationsForEntries guards its own empty case, and a tally with no range spans no floors). The return saves two cross-database reads on every Call-tab open by a runner who has logged nothing, which is every runner first visit.",
       "count": 1
     },
@@ -424,22 +424,22 @@
       "count": 1
     },
     {
-      "key": "src/modules/feed/feed.ts|mutation-suppress|// Stryker disable OptionalChaining",
+      "key": "src/modules/feed/following/feed.ts|mutation-suppress|// Stryker disable OptionalChaining",
       "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line \u2014 immune to rewrapping by construction. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed in the same commit. Verified after the change: 164 mutants across the three converted files, 100%, none survived. Owner approved the six keys on PR #73.",
       "count": 1
     },
     {
-      "key": "src/modules/feed/feed.ts|mutation-suppress|// Stryker restore OptionalChaining",
+      "key": "src/modules/feed/following/feed.ts|mutation-suppress|// Stryker restore OptionalChaining",
       "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line \u2014 immune to rewrapping by construction. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed in the same commit. Verified after the change: 164 mutants across the three converted files, 100%, none survived. Owner approved the six keys on PR #73.",
       "count": 1
     },
     {
-      "key": "src/modules/feed/search.ts|mutation-suppress|// Stryker disable ConditionalExpression,MethodExpression",
+      "key": "src/modules/feed/following/search.ts|mutation-suppress|// Stryker disable ConditionalExpression,MethodExpression",
       "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line \u2014 immune to rewrapping by construction. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed in the same commit. Verified after the change: 164 mutants across the three converted files, 100%, none survived. Owner approved the six keys on PR #73.",
       "count": 1
     },
     {
-      "key": "src/modules/feed/search.ts|mutation-suppress|// Stryker restore ConditionalExpression,MethodExpression",
+      "key": "src/modules/feed/following/search.ts|mutation-suppress|// Stryker restore ConditionalExpression,MethodExpression",
       "reason": "Prettier rewrapped the line this directive pointed at (repo-wide format pass, PR #73), so `next-line` covered only the first physical line and the mutant it was written for sat on a continuation line, uncovered. Converted to the block `disable`/`restore` pair CLAUDE.md prescribes for a target that is not reliably one line \u2014 immune to rewrapping by construction. NOT a new suppression: same file, same mutator names, same equivalent mutant, a range instead of a line; the superseded `next-line` grant is removed in the same commit. Verified after the change: 164 mutants across the three converted files, 100%, none survived. Owner approved the six keys on PR #73.",
       "count": 1
     },
@@ -474,12 +474,12 @@
       "count": 1
     },
     {
-      "key": "src/modules/feed/share-default.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- rhymes with onboarding/profile.ts's hasOnboarded: same select-by-userId-with-limit-1-then-??-default shape, but a different column with a different default (public-by-default vs not-yet-onboarded) that will evolve on its own product timeline",
+      "key": "src/modules/feed/entries/share-default.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- rhymes with onboarding/profile.ts's hasOnboarded: same select-by-userId-with-limit-1-then-??-default shape, but a different column with a different default (public-by-default vs not-yet-onboarded) that will evolve on its own product timeline",
       "reason": "Pair A, both sides. Two modules reading one column each out of `user_profiles` for two unrelated product facts \u2014 \"entries are public unless you say otherwise\" and \"this runner has finished onboarding\" \u2014 which happen to share a six-line skeleton. Different defaults, different product lifecycles, and nowhere a shared helper could live that both could import: cross-module imports go through a barrel and `modules/onboarding` has none. Merging them would couple sharing policy to onboarding state. Owner's call, 2026-09-21 (task 115).",
       "count": 1
     },
     {
-      "key": "src/modules/feed/band-runs.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; shownRunsAndKits reads each shown band run's start and its pieces' names for the A2/A3 desk rails",
+      "key": "src/modules/feed/entries/band-runs.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; shownRunsAndKits reads each shown band run's start and its pieces' names for the A2/A3 desk rails",
       "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline. Lane 178 (design 178, owner 2026-11-06): band-runs.ts's one read for the A2/A3 desk rails matched safety/removed-fingerprints.ts's.",
       "count": 1
     },
@@ -494,12 +494,12 @@
       "count": 1
     },
     {
-      "key": "src/modules/feed/components/KitPicker.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- a ten-prop signature that matches closet/components/GarmentForm.tsx only by destructuring one prop per line; one picks a kit, the other edits a garment, and they share nothing to extract",
+      "key": "src/modules/feed/attach/components/KitPicker.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- a ten-prop signature that matches closet/components/GarmentForm.tsx only by destructuring one prop per line; one picks a kit, the other edits a garment, and they share nothing to extract",
       "reason": "Owner's call, 2026-09-25: a destructured-props signature, not a clone. Semantic mode matches any two components that destructure ten-plus props one per line, whatever the names and types, so two unrelated components rhyme. The alternative, reading props through `props.` in one of them to break the skeleton, was put to the owner and declined as code written only to dodge the detector.",
       "count": 1
     },
     {
-      "key": "src/modules/feed/components/Feed.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- a many-prop signature that matches runs/components/ParsedCard.tsx only by destructuring one prop per line; one is the Following tab, the other a parsed run, and they share nothing to extract",
+      "key": "src/modules/feed/following/components/Feed.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- a many-prop signature that matches runs/components/ParsedCard.tsx only by destructuring one prop per line; one is the Following tab, the other a parsed run, and they share nothing to extract",
       "reason": "Owner's call, 2026-09-25: a destructured-props signature, not a clone. Semantic mode matches any two components that destructure ten-plus props one per line, whatever the names and types, so two unrelated components rhyme. The alternative, reading props through `props.` in one of them to break the skeleton, was put to the owner and declined as code written only to dodge the detector.",
       "count": 1
     },
@@ -544,22 +544,22 @@
       "count": 3
     },
     {
-      "key": "src/modules/feed/backlog.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; ownHistory is the same window as own-history.ts's recentOwnEntries plus each run's start (wornAt), which needs the join to runs that recentOwnEntries does not make",
+      "key": "src/modules/feed/attach/backlog.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; ownHistory is the same window as own-history.ts's recentOwnEntries plus each run's start (wornAt), which needs the join to runs that recentOwnEntries does not make",
       "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
       "count": 1
     },
     {
-      "key": "src/modules/feed/consensus.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; groupsByRunner reads which runner wore each item in a chunk of entries for the conditions consensus",
+      "key": "src/modules/feed/consensus/consensus.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; groupsByRunner reads which runner wore each item in a chunk of entries for the conditions consensus",
       "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
       "count": 1
     },
     {
-      "key": "src/modules/feed/garment-bands.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; garmentBandCount reads one garment's verdicted runs for its band counts",
+      "key": "src/modules/feed/consensus/garment-bands.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; garmentBandCount reads one garment's verdicted runs for its band counts",
       "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
       "count": 1
     },
     {
-      "key": "src/modules/feed/own-history.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; recentOwnEntries is the one read of a runner's last HISTORY_LIMIT entries; prefill.ts and entries.ts call it rather than copying it",
+      "key": "src/modules/feed/conditions/own-history.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; recentOwnEntries is the one read of a runner's last HISTORY_LIMIT entries; prefill.ts and entries.ts call it rather than copying it",
       "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
       "count": 3
     },

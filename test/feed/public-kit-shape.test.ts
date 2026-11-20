@@ -8,7 +8,7 @@ import {
   publicKitHead,
   publicKitTitle,
   type PublicKit,
-} from "../../src/modules/feed/public-kit-shape";
+} from "../../src/modules/feed/public-web/public-kit-shape";
 
 /**
  * The public kit's head (round 41 #86c, #86f).

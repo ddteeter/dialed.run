@@ -4,12 +4,12 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
-import { feedConditions } from "../../src/modules/feed/compact-conditions";
+import { feedConditions } from "../../src/modules/feed/consensus/compact-conditions";
 import {
   consensusAt,
   matchTally,
   yourConditionsConsensus,
-} from "../../src/modules/feed/consensus";
+} from "../../src/modules/feed/consensus/consensus";
 import { IN_LIST_CHUNK } from "../../src/lib/chunked";
 import { queryCounts } from "../d1-spy";
 import { pointConditions } from "./conditions-fixture";

@@ -318,7 +318,7 @@ describe("neverListHits", () => {
 
   it.each([
     "Decided 2026-11-06 (D-158), see R-74 and #412.",
-    "src/modules/feed/feed.ts:1204 and docs/deferred.md:56",
+    "src/modules/feed/following/feed.ts:1204 and docs/deferred.md:56",
     "@ddteeter owns it; [OWNER] markers stand in",
     "a 2026-11-06T12:00:00Z timestamp and version 1.2.3",
     "sk-short and ghp_short are not tokens",

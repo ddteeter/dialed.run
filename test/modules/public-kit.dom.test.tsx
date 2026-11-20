@@ -16,13 +16,13 @@ import type { ReactElement } from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-import { PublicKitPage } from "../../src/modules/feed/components/PublicKit";
+import { PublicKitPage } from "../../src/modules/feed/public-web/components/PublicKit";
 import {
   NotPublicPage,
   type AskSignedIn,
   useSignedInAfterLoad,
-} from "../../src/modules/feed/components/PublicFrame";
-import type { PublicKit } from "../../src/modules/feed/public-kit-shape";
+} from "../../src/modules/feed/public-web/components/PublicFrame";
+import type { PublicKit } from "../../src/modules/feed/public-web/public-kit-shape";
 import { ACTION_PILL, INK_PILL_INLINE } from "../../src/ui";
 
 /**

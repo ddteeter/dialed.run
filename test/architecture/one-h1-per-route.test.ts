@@ -134,7 +134,7 @@ function countOf(source: string, pattern: RegExp): number {
  * while pushed.
  */
 const STANDS_IN_FOR_THE_SCREEN = new Set([
-  "src/modules/feed/components/PushPage.tsx",
+  "src/modules/feed/attach/components/PushPage.tsx",
 ]);
 
 function headings(path: string, seen = new Set<string>()): string[] {

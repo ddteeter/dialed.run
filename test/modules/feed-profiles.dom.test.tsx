@@ -5,15 +5,18 @@ import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { ConfirmEmailBand } from "../../src/modules/account/verification/components/ConfirmEmailBand";
-import { Avatar, initialOf } from "../../src/modules/feed/components/Avatar";
-import { OtherProfile } from "../../src/modules/feed/components/OtherProfile";
-import { OwnProfile } from "../../src/modules/feed/components/OwnProfile";
-import { RunnerSearch } from "../../src/modules/feed/components/RunnerSearch";
+import {
+  Avatar,
+  initialOf,
+} from "../../src/modules/feed/following/components/Avatar";
+import { OtherProfile } from "../../src/modules/feed/following/components/OtherProfile";
+import { OwnProfile } from "../../src/modules/feed/following/components/OwnProfile";
+import { RunnerSearch } from "../../src/modules/feed/following/components/RunnerSearch";
 import type {
   OtherProfile as OtherProfileData,
   OwnProfile as OwnProfileData,
-} from "../../src/modules/feed/profiles";
-import type { SearchResult } from "../../src/modules/feed/search";
+} from "../../src/modules/feed/following/profiles";
+import type { SearchResult } from "../../src/modules/feed/following/search";
 import { expectBellEnding, renderFeedScreen, withBell } from "./feed-fixtures";
 import {
   ACTION_PILL,

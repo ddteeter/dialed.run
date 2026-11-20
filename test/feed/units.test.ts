@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { env } from "../../src/env";
 import { defaultUnits } from "../../src/lib/contracts";
 import { newUlid } from "../../src/lib/ids";
-import { unitsFor } from "../../src/modules/feed/units";
+import { unitsFor } from "../../src/modules/feed/conditions/units";
 import { makeUser, resetTables } from "./helpers";
 
 /**

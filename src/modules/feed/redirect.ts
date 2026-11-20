@@ -19,7 +19,7 @@ import { redirect } from "@tanstack/react-router";
 import { ulidSchema } from "../../lib/ids";
 import { returnPathOf } from "../../lib/return-path";
 
-import type { ProfileAtHandle } from "./profiles";
+import type { ProfileAtHandle } from "./following";
 
 export function redirectTo<
   TRouter extends AnyRouter = RegisteredRouter,
@@ -122,7 +122,9 @@ export function toHandlePage(
  */
 export async function toHandleWhenId(
   segment: string,
-  handleOf: (userId: string) => Promise<{ username: string | null } | undefined>,
+  handleOf: (
+    userId: string,
+  ) => Promise<{ username: string | null } | undefined>,
 ): Promise<void> {
   const id = ulidSchema.safeParse(segment);
   if (id.success) toHandlePage(await handleOf(id.data));

@@ -291,10 +291,10 @@ describe("03 · every tappable thing has a 44×44 hit area", () => {
       "src/modules/email/components/UnsubscribeLanding.tsx",
       "src/modules/email/components/UnsubscribeLanding.tsx",
       // "Not now — leave it in the queue." (Product Screens A2).
-      "src/modules/feed/components/AttachKit.tsx",
+      "src/modules/feed/attach/components/AttachKit.tsx",
       // The public pages' invite, "Have a code? Create an account" (Round
       // 55 · 176).
-      "src/modules/feed/components/PublicFrame.tsx",
+      "src/modules/feed/public-web/components/PublicFrame.tsx",
       // "…these free services can help stop it spreading: StopNCII.org if
       // the person in it was 18 or over…, Take It Down if they were under
       // 18." (D-147, round 41 #85): one anchor, rendered for each service

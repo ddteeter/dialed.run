@@ -2,7 +2,7 @@ import { isRedirect } from "@tanstack/react-router";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import type { ProfileAtHandle } from "../../src/modules/feed/profiles";
+import type { ProfileAtHandle } from "../../src/modules/feed/following/profiles";
 import {
   orBackToFeed,
   orHandlePage,

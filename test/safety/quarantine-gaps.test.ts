@@ -30,12 +30,15 @@ import {
   uploadItemPhoto,
 } from "../../src/modules/closet/photos";
 import { createItem, deleteItem } from "../../src/modules/closet/service";
-import { moderateGarmentPhoto } from "../../src/modules/feed/garment-moderation";
+import { moderateGarmentPhoto } from "../../src/modules/feed/moderation/garment-moderation";
 import {
   decideReview,
   moderateContent,
-} from "../../src/modules/feed/moderation";
-import { deleteEntryPhoto, retractEntry } from "../../src/modules/feed/retract";
+} from "../../src/modules/feed/moderation/moderation";
+import {
+  deleteEntryPhoto,
+  retractEntry,
+} from "../../src/modules/feed/entries/retract";
 import { garmentLineOf } from "../../src/modules/safety/review/review";
 import {
   enqueueForReview,

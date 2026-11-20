@@ -6,9 +6,9 @@ import { follows, outfitEntries } from "../src/db/schema-core";
 import { env } from "../src/env";
 import { newUlid } from "../src/lib/ids";
 import { createItem } from "../src/modules/closet/service";
-import { attachKit } from "../src/modules/feed/entries";
-import { follow } from "../src/modules/feed/follows";
-import { setUsefulReaction } from "../src/modules/feed/reactions";
+import { attachKit } from "../src/modules/feed/entries/entries";
+import { follow } from "../src/modules/feed/following/follows";
+import { setUsefulReaction } from "../src/modules/feed/entries/reactions";
 import {
   createOrGetBrand,
   createOrGetProduct,

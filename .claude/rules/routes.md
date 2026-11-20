@@ -25,7 +25,7 @@ it may import, wire and delegate, and may not branch, loop, throw, declare a
 schema, `.map(`, or choose markup with a ternary or an `&&`. Input schemas go
 in `inputs.ts` next door, decisions in a plain sibling, and anything a route
 used to render in a component under `modules/*/components/`.
-`auth/session-user.ts` and `feed/photos.ts`'s `photoResponse` are the worked
+`auth/session-user.ts` and `feed/entries/photos.ts`'s `photoResponse` are the worked
 examples.
 
 **The three JSX patterns are the ones people push back on.** `{items.map(…)}`

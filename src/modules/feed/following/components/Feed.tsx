@@ -1,0 +1,301 @@
+import { Link } from "@tanstack/react-router";
+import { useState } from "react";
+import type { ComponentProps, ReactNode } from "react";
+
+import type { Units } from "../../../../lib/contracts";
+import {
+  BracketHeadline,
+  COLUMN,
+  FormStatus,
+  INK_PILL,
+  Mono,
+  PhoneBell,
+} from "../../../../ui";
+import { FlushBand } from "./FlushBand";
+import { isProvidersReading } from "../../conditions/strip";
+import type { FeedItem } from "../feed";
+import { isBacklogWorthOpening } from "../../route-decisions";
+import type { CompactConditions as CompactConditionsResult } from "../../consensus/compact-conditions";
+import { CompactConditions } from "../../consensus/components/CompactConditions";
+import { ConditionsTab } from "../../consensus/components/ConditionsTab";
+import { PostCard } from "./PostCard";
+import type { SetUsefulFn } from "../../entries/components/useful-reaction";
+
+type FeedTab = "following" | "conditions";
+
+/**
+ * Which tab the feed opens on (round 22): *"Zero follows lands on Your
+ * conditions."* It is the one social surface that works on day one. Once
+ * a runner follows anyone, Following is the default — even when it is
+ * quiet, because an empty Following is a state they chose to be in.
+ */
+export function defaultFeedTab(followeeCount: number): FeedTab {
+  return followeeCount === 0 ? "conditions" : "following";
+}
+
+/**
+ * The tab's own mark when chosen: Following wears the action pink, Your
+ * conditions the teal that means "matched" (round 22's E1/E2 frames).
+ */
+const ACTIVE_TAB: Readonly<Record<FeedTab, string>> = {
+  following: "border-action",
+  conditions: "border-teal",
+};
+
+const TAB_LABEL: Readonly<Record<FeedTab, string>> = {
+  following: "Following",
+  conditions: "Your conditions",
+};
+
+/**
+ * The feed (screens E1 and E2-lite), and the two tabs it switches between.
+ */
+export interface FeedProps {
+  items: FeedItem[];
+  followeeCount: number;
+  /**
+  The loader's clock, so the server and the browser say the same "2h ago".
+  */
+  now: number;
+  /**
+  The viewer's own units — every number on this screen is theirs.
+  */
+  units: Units;
+  /**
+  How many runs are waiting on a verdict, which is what decides whether
+  the queue is worth a link at all.
+  */
+  unjudgedCount: number;
+  setUseful: SetUsefulFn;
+  /**
+  Everything Your conditions needs, handed through untouched — its own
+  props, read off it, less the units this screen already passes.
+  */
+  conditions: Omit<ComponentProps<typeof ConditionsTab>, "units">;
+  /**
+  Round 26 #11's nag, composed by the route: `account`'s band, which draws
+  nothing once the address is confirmed. It sits at the top of the screen.
+  */
+  confirmBand: ReactNode;
+  /**
+  E1's compact line (FEED-9): the viewer's conditions matched, from the
+  loader, or nothing — no saved place, no reading there, too few runners.
+  */
+  compact: CompactConditionsResult | undefined;
+}
+
+export function Feed(props: Readonly<FeedProps>) {
+  const {
+    items,
+    followeeCount,
+    now,
+    units,
+    unjudgedCount,
+    setUseful,
+    conditions,
+    confirmBand,
+  } = props;
+  // The runner's own choice wins; until they make one, the default follows
+  // the data. Held as a choice rather than as the tab, because a loader
+  // can refresh under a mounted screen — a stale page first, the fresh one
+  // after — and a tab fixed at first render would keep the stale answer.
+  const [chosen, setTab] = useState<FeedTab | undefined>();
+  const tab = chosen ?? defaultFeedTab(followeeCount);
+
+  return (
+    // `mx-auto` below 720 only, for DS3's reason: a reflowed column is
+    // "left-aligned inside the page measure, not centred, so it lines up
+    // with the wide screens' primary column".
+    <div className={`${COLUMN} flex flex-col gap-6 px-5 pt-6 wide:px-0`}>
+      <FlushBand>{confirmBand}</FlushBand>
+      <div className="flex items-center gap-3">
+        {/* TYPE.title in the page's own case (R58·286). */}
+        <h1 className="mr-auto font-display text-title">Feed</h1>
+        <Link
+          to="/feed/search"
+          className="target inline-flex items-center text-body font-semibold text-cold-text"
+        >
+          Find runners
+        </Link>
+        <PhoneBell />
+      </div>
+      {isBacklogWorthOpening(unjudgedCount) ? (
+        // DS2's own entry point — "reached from 'Clear the queue ›' on X".
+        // Below two runs there is no queue to clear: the S1 prompt opens
+        // A3 in the panel, like the phone.
+        <Link
+          to="/runs/backlog"
+          className="target flex items-center justify-between gap-3 rounded-none bg-notice inset-ring-1 inset-ring-notice-rule px-4 py-3 text-body text-ink no-underline"
+        >
+          <span>
+            <Mono step="sm">{unjudgedCount}</Mono> runs still need a verdict
+          </span>
+          <span className="font-semibold text-cold-text">
+            Clear the queue <span aria-hidden="true">&rsaquo;</span>
+          </span>
+        </Link>
+      ) : undefined}
+      {/* `gap-2`, not `gap-1`: rule 03's other half is 8px between
+          adjacent hit areas, and these two are now 44 tall and touching. */}
+      <div
+        data-part="feed-tabs"
+        className="flex gap-2 border-b border-hairline"
+      >
+        {(["following", "conditions"] as const).map((value) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => {
+              setTab(value);
+            }}
+            // A view switch, not a page: `aria-pressed` says which one is
+            // showing, where `aria-current="page"` claimed a navigation.
+            aria-pressed={tab === value}
+            // The 90ms colour flip is the tab switch's other half
+            // (design/motion.js). The indicator itself does not slide
+            // here: these two labels are different widths, so a sliding
+            // rule needs either equal columns or a runtime measurement,
+            // and the first is a composition change — queued as a design
+            // delta rather than invented.
+            className={
+              tab === value
+                ? `tab-label target border-b-2 ${ACTIVE_TAB[value]} px-3 py-2 font-semibold`
+                : "tab-label target border-b-2 border-transparent px-3 py-2 text-label"
+            }
+          >
+            {TAB_LABEL[value]}
+          </button>
+        ))}
+      </div>
+      {tab === "following" ? (
+        <FollowingTab
+          compact={props.compact}
+          items={items}
+          followeeCount={followeeCount}
+          now={now}
+          units={units}
+          setUseful={setUseful}
+          onConditions={() => {
+            setTab("conditions");
+          }}
+        />
+      ) : (
+        <ConditionsTab {...conditions} units={units} />
+      )}
+    </div>
+  );
+}
+
+// fallow-ignore-next-line code-duplication -- a many-prop signature that matches runs/components/ParsedCard.tsx only by destructuring one prop per line; one is the Following tab, the other a parsed run, and they share nothing to extract
+function FollowingTab({
+  compact,
+  items,
+  followeeCount,
+  now,
+  units,
+  setUseful,
+  onConditions,
+}: Readonly<{
+  compact: CompactConditionsResult | undefined;
+  items: FeedItem[];
+  followeeCount: number;
+  now: number;
+  units: Units;
+  setUseful: SetUsefulFn;
+  onConditions: () => void;
+}>) {
+  // One status region for the screen, however many cards (Accessibility
+  // Contract rule 08) — each card's Useful reports its sentence here.
+  const [status, setStatus] = useState("");
+  // Visual Crossing's credit is heard once per feed (R-179): on the compact
+  // line when it shows (it always draws one, above every card), otherwise on
+  // the first card with a provider's reading. Every later card draws it,
+  // unheard. -1 makes every card a repeat.
+  const firstCredited =
+    compact === undefined
+      ? items.findIndex((item) => isProvidersReading(item.conditions))
+      : -1;
+
+  if (items.length === 0) {
+    return (
+      <FollowingEmpty
+        followsAnyone={followeeCount > 0}
+        onConditions={onConditions}
+      />
+    );
+  }
+  return (
+    <div data-part="feed" className="flex flex-col gap-5">
+      <FormStatus>{status}</FormStatus>
+      {compact === undefined ? undefined : (
+        <CompactConditions result={compact} units={units} />
+      )}
+      {/* R55·205: posts are split by an 8 --tint band, stronger than any
+          rule inside one. On a phone the list steps out of the column's
+          gutter and each post puts it back (PostCard's `px-5`), so the
+          band meets the screen's edges. From 720 nothing bleeds past the
+          620 (R59·319; #833 has Design confirm the list counts). */}
+      <div
+        data-part="posts"
+        className="-mx-5 flex flex-col divide-y-8 divide-tint wide:mx-0"
+      >
+        {items.map((item, index) => (
+          <PostCard
+            key={item.entryId}
+            item={item}
+            units={units}
+            now={now}
+            setUseful={setUseful}
+            onStatus={setStatus}
+            isCreditRepeated={index > firstCredited}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Following with nothing on it (round 22, "E1v1 Following empty").
+ *
+ * Reached by switching tabs with no follows, or when follows exist and
+ * none has shared: then the second line says so and *Find a runner* stays.
+ * The foot link switches tabs; it is not a second primary.
+ */
+function FollowingEmpty({
+  followsAnyone,
+  onConditions,
+}: Readonly<{ followsAnyone: boolean; onConditions: () => void }>) {
+  return (
+    <div
+      data-part="feed"
+      data-state="empty"
+      className="flex flex-col items-start gap-4 pt-8"
+    >
+      <BracketHeadline>Nobody yet</BracketHeadline>
+      <p className="m-0 text-lead">Nobody you follow has posted yet.</p>
+      <p className="m-0 text-body text-quiet">
+        {followsAnyone
+          ? "The runners you follow haven’t shared a run yet."
+          : "Follow runners you already know by their username."}
+      </p>
+      <Link
+        data-part="primary-action"
+        to="/feed/search"
+        className={`target ${INK_PILL} no-underline`}
+      >
+        Find a runner
+      </Link>
+      <p className="m-0 w-full border-t border-hairline pt-4 text-body text-quiet">
+        Meanwhile:{" "}
+        <button
+          type="button"
+          onClick={onConditions}
+          className="target cursor-pointer border-none bg-transparent p-0 text-left text-body font-bold text-ink underline underline-offset-4"
+        >
+          what people wore in your conditions
+        </button>
+      </p>
+    </div>
+  );
+}

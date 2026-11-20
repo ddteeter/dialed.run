@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import { conditionsHome } from "../../src/modules/feed/home";
+import { conditionsHome } from "../../src/modules/feed/consensus/home";
 import { savePlace } from "../../src/modules/onboarding";
 import { makeUser } from "./helpers";
 import { NO_ZONE } from "../onboarding/zone-deps";

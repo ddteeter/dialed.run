@@ -5,18 +5,18 @@ import { env } from "../../src/env";
 import {
   attachContext,
   prefillForRun,
-} from "../../src/modules/feed/attach-context";
+} from "../../src/modules/feed/attach/attach-context";
 import {
   bandRunsInput,
   recentRunsInBand,
-} from "../../src/modules/feed/band-runs";
-import { bandSignalsForEntry } from "../../src/modules/feed/band-signals";
+} from "../../src/modules/feed/entries/band-runs";
+import { bandSignalsForEntry } from "../../src/modules/feed/entries/band-signals";
 import {
   itemBandWearStat,
   verdictBandCounts,
-} from "../../src/modules/feed/entries";
-import { garmentBandCountOrNone } from "../../src/modules/feed/garment-bands";
-import { coverageLadder } from "../../src/modules/feed/ladder-read";
+} from "../../src/modules/feed/entries/entries";
+import { garmentBandCountOrNone } from "../../src/modules/feed/consensus/garment-bands";
+import { coverageLadder } from "../../src/modules/feed/consensus/ladder-read";
 import { queryCounts } from "../d1-spy";
 import type { QueryCounts } from "../d1-spy";
 import { makeItem, makeRun, makeUser, NOW, resetTables } from "./helpers";
