@@ -1,7 +1,7 @@
 # Design: 255 a client-safe door
 
-> A decision doc for #888: no code lands until the owner rules on the
-> questions at the end.
+> A decision doc for #888. The owner ruled on 2026-11-20; the answers
+> are in the last section, and the approach below is the approved one.
 
 ## Problem
 
@@ -112,4 +112,17 @@ Not chosen:
 4. **`components/` folders under the same rule**: recommended yes. Today
    it fails nothing and it closes the trap only `npm run build` sees now.
 5. **The grant for `.dependency-cruiser.cjs`**, for the two rules.
-6. **When**: as its own lane after the `feed` move and #887, recommended.
+6. **When**: as its own lane after the `feed` move and #887, recommended (the owner chose now: see below).
+
+## The owner's answers (2026-11-20)
+
+Asked in lane 16b's session and recorded on #888.
+
+1. **A second door**: yes, named `client.ts`.
+2. **Server-route imports go through a door**: yes, and the ratchet counts
+   routes' past-the-door imports at budget 0.
+3. **`components/` folders under the same rule**: yes.
+4. **The grant for `.dependency-cruiser.cjs`**: given, for
+   `client-side-reaches-no-server` and `routes-enter-through-doors`.
+5. **When**: built now, by lane 16b, rebased onto the `feed` move, rather
+   than in a later lane.
