@@ -1,0 +1,165 @@
+document
+banner
+link, dialed.run
+dialed.run
+end of link, dialed.run
+link, Log in
+link, Request access
+end of banner
+main
+heading, How it works, level 1
+navigation, Contents
+heading, Contents, level 2
+Contents
+end of heading, Contents, level 2
+list
+listitem, level 1, position 1, set size 5
+link, The loop
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, See what other runners wore
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+link, Why invite-only?
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, How the guides are made
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, Questions
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Contents
+article
+paragraph
+dialed.run
+keeps what you wore on each run next to the weather and how it felt. Log enough runs and you stop guessing at the closet.
+end of paragraph
+region, The loop
+heading, The loop, level 2
+list
+listitem, level 1, position 1, set size 4
+paragraph
+strong
+Fill your closet.
+end of strong
+Add what you actually run in. Three pieces is enough to start.
+end of paragraph
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+paragraph
+strong
+Log a run.
+end of strong
+Upload the file from your watch, or enter it by hand. We fill in the weather.
+end of paragraph
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+paragraph
+strong
+Say what you wore and how it felt.
+end of strong
+One tap: way cold, a bit cold, dialed, a bit warm or way warm.
+end of paragraph
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+paragraph
+strong
+Share it, or keep it private.
+end of strong
+You choose for each run.
+end of paragraph
+end of listitem, level 1, position 4, set size 4
+end of list
+paragraph
+Over time, each piece in your closet shows the range it works in for you.
+end of paragraph
+paragraph
+strong
+Coming next:
+end of strong
+once you have logged enough runs,
+dialed.run
+will tell you what to wear before you head out.
+end of paragraph
+end of region, The loop
+region, See what other runners wore
+heading, See what other runners wore, level 2
+paragraph
+Follow runners and see what they wore and how it worked. The feed also shows what runners wore in weather like yours. When someone's kit helps you decide, mark it useful.
+end of paragraph
+end of region, See what other runners wore
+region, Why invite-only?
+heading, Why invite-only?, level 2
+paragraph
+We're opening in small batches so we can fix what breaks before more runners rely on it.
+end of paragraph
+end of region, Why invite-only?
+region, How the guides are made
+heading, How the guides are made, level 2
+paragraph
+We will publish guides to what runners wear at each temperature. They count private runs too, without names. That keeps them honest: shared runs alone would make it look as if runners get it right more often than they do.
+end of paragraph
+term
+Counted
+end of term
+definition
+the temperature band, the sky, the month, the broad climate zone, the gear worn and how it felt.
+end of definition
+term
+Never counted
+end of term
+definition
+your name, notes or photos, when your run started, or where it was beyond the climate zone.
+end of definition
+term
+The floor
+end of term
+definition
+a figure needs at least # runners, or # if it names a brand. Counts are rounded to the nearest #, and only confirmed accounts count.
+end of definition
+term
+Turning it off
+end of term
+definition
+Settings › Privacy › "Count my runs in anonymous totals". Your runs leave the guides at the next rebuild, within a month.
+end of definition
+end of region, How the guides are made
+region, Questions
+heading, Questions, level 2
+heading, Who sees my runs?, level 3
+paragraph
+A private run is seen by you alone. A shared run is seen by runners signed in to
+dialed.run
+. A kit you make public can be seen by anyone, even people without an account, and it never shows when or where you ran. Where you ran is never shown to anyone.
+end of paragraph
+heading, Does it connect to Strava?, level 3
+paragraph
+Only to remind you to log your kit after a run.
+link, Strava's API agreement
+limits what apps like ours may keep, so we never store the activity: not your route, your pace or anything else about it. Disconnect in Settings.
+end of paragraph
+heading, And Garmin?, level 3
+paragraph
+Not yet. Connecting Garmin is coming. Until then, export the run from Garmin Connect and upload the file.
+end of paragraph
+heading, How do I delete my account?, level 3
+paragraph
+Settings › Account › Delete account. You have # days to change your mind, then it is gone, and from our backups within # days. You can export your data first, from the same screen. The
+link, privacy policy
+has the details.
+end of paragraph
+end of region, Questions
+link, Request access
+end of article
+end of main
+contentinfo
+paragraph
+link, Privacy
+link, Terms
+link, Copyright
+link, Open source
+link, Report an intimate image
+end of paragraph
+end of contentinfo
+end of document
