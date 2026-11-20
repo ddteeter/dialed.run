@@ -65,7 +65,7 @@ import {
 } from "./access/invites";
 import { handleScreenFromEnv } from "./handles/handle-screen";
 import type { LegalSlug } from "./inputs";
-import { legalPage } from "./terms/legal";
+import { legalPage, readerBellState } from "./terms/legal";
 import { openSourcePage } from "./terms/open-source";
 import {
   homeIfNothingToSay,
@@ -433,6 +433,23 @@ export const acceptTermsFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) =>
     acceptTerms(db(), await requireUserIdBeforeTerms(), data.version),
   );
+
+/**
+ * `/how-it-works` (#523): a page of fixed words, so all it reads is the
+ * bell for a signed-in reader. No session needed, as for the legal texts.
+ */
+const howItWorksPageQuery = createServerFn({ method: "GET" }).handler(
+  async () => ({
+    bellState: await readerBellState(db(), await optionalUserId()),
+  }),
+);
+
+/**
+`/how-it-works`' loader.
+*/
+export async function howItWorksPageLoader() {
+  return howItWorksPageQuery();
+}
 
 /**
 `/open-source`'s loader.

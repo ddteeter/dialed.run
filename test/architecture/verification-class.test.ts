@@ -135,6 +135,8 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "account/functions.ts legalPageQuery": "sessionless",
   // Plan C9: `/open-source` is for anyone, as the legal texts are.
   "account/functions.ts openSourcePageQuery": "sessionless",
+  // #523: `/how-it-works` is for anyone; it reads only the reader's bell.
+  "account/functions.ts howItWorksPageQuery": "sessionless",
   "account/functions.ts restoreInviteCodeFn": "admin",
   // Q6 (D-95): portability and leaving never wait.
   "account/functions.ts requestExportFn": "unconfirmed",

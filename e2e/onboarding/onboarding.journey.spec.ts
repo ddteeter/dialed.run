@@ -298,6 +298,15 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   await expect(totals).toHaveAccessibleDescription(
     /^Off\. Your runs leave the guides at the next rebuild, within a month\. They leave Same conditions now/u,
   );
+  // #523: the guides' own section of /how-it-works, then back.
+  await page.getByRole("link", { name: "How the guides are made" }).click();
+  await expect(page).toHaveURL(/\/how-it-works#totals$/u);
+  await expect(
+    page.getByRole("heading", { level: 2, name: "How the guides are made" }),
+  ).toBeInViewport();
+  await scene(page, "How the guides are made, on How it works");
+  await page.goBack();
+  await expect(totals).not.toBeChecked();
   await page.getByRole("link", { name: "Settings" }).first().click();
   await expect(
     page.getByRole("link", { name: /^Privacy New runs/u }),

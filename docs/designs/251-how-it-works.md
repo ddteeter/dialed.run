@@ -73,7 +73,7 @@ drew it (#611). This lane builds it before the friends freeze (#850).
 1. **Settings › Privacy's off line** said the guides drop a runner "at
    tonight's update"; the policy and this page say "the next rebuild, within
    a month". It now says the latter (owner, 2026-11-19, on #523).
-2. **FAQPage JSON-LD.** 163c names rich results as the reason the answers
-   are always shown. My guess is to emit a JSON-LD `<script>` in the route's
-   `head`, built from the same question array the page renders. The
-   reviewer can veto it.
+2. **No FAQPage JSON-LD yet.** 163c gives rich results as the reason the
+   answers are always shown, but the whole site is `noindex` until the
+   owner's indexing decision (`site-head.ts`), so structured data would do
+   nothing. The answers are open as drawn; the data waits for that decision.

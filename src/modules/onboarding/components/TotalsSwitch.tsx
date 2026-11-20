@@ -66,9 +66,8 @@ type TotalsSwitchProps = Readonly<{
  * save lands: into Privacy's one status region through `onAnnounce`, or
  * its own region in A3's sheet, where nothing else speaks.
  *
- * "How the guides are made" belongs to the marketing site
- * (`dialed.run/how-it-works#totals`), which is not live, so it opens the
- * privacy policy until it is (design-deltas open queue item 61).
+ * "How the guides are made" opens `/how-it-works#totals` (#523; the
+ * design-deltas open queue's item 61).
  */
 export function TotalsSwitch(props: TotalsSwitchProps): JSX.Element {
   const hintId = useId();
@@ -90,7 +89,8 @@ export function TotalsSwitch(props: TotalsSwitchProps): JSX.Element {
         )}
       </SavedSwitchRow>
       <Link
-        to="/privacy"
+        to="/how-it-works"
+        hash="totals"
         className="target self-start text-small text-ink underline underline-offset-4"
       >
         How the guides are made

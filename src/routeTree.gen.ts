@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AtChar123handleChar125RouteImport } from './routes/@{$handle}'
 import { Route as CopyrightRouteImport } from './routes/copyright'
 import { Route as DeskRouteRouteImport } from './routes/desk/route'
+import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as JoinRouteImport } from './routes/join'
 import { Route as OpenSourceRouteImport } from './routes/open-source'
 import { Route as PrivacyRouteImport } from './routes/privacy'
@@ -101,6 +102,11 @@ const CopyrightRoute = CopyrightRouteImport.update({
 const DeskRouteRoute = DeskRouteRouteImport.update({
   id: '/desk',
   path: '/desk',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HowItWorksRoute = HowItWorksRouteImport.update({
+  id: '/how-it-works',
+  path: '/how-it-works',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JoinRoute = JoinRouteImport.update({
@@ -455,6 +461,7 @@ export interface FileRoutesByFullPath {
   '/desk': typeof DeskRouteRouteWithChildren
   '/@{$handle}': typeof AtChar123handleChar125Route
   '/copyright': typeof CopyrightRoute
+  '/how-it-works': typeof HowItWorksRoute
   '/join': typeof JoinRoute
   '/open-source': typeof OpenSourceRoute
   '/privacy': typeof PrivacyRoute
@@ -529,6 +536,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/@{$handle}': typeof AtChar123handleChar125Route
   '/copyright': typeof CopyrightRoute
+  '/how-it-works': typeof HowItWorksRoute
   '/join': typeof JoinRoute
   '/open-source': typeof OpenSourceRoute
   '/privacy': typeof PrivacyRoute
@@ -605,6 +613,7 @@ export interface FileRoutesById {
   '/desk': typeof DeskRouteRouteWithChildren
   '/@{$handle}': typeof AtChar123handleChar125Route
   '/copyright': typeof CopyrightRoute
+  '/how-it-works': typeof HowItWorksRoute
   '/join': typeof JoinRoute
   '/open-source': typeof OpenSourceRoute
   '/privacy': typeof PrivacyRoute
@@ -682,6 +691,7 @@ export interface FileRouteTypes {
     | '/desk'
     | '/@{$handle}'
     | '/copyright'
+    | '/how-it-works'
     | '/join'
     | '/open-source'
     | '/privacy'
@@ -756,6 +766,7 @@ export interface FileRouteTypes {
     | '/'
     | '/@{$handle}'
     | '/copyright'
+    | '/how-it-works'
     | '/join'
     | '/open-source'
     | '/privacy'
@@ -831,6 +842,7 @@ export interface FileRouteTypes {
     | '/desk'
     | '/@{$handle}'
     | '/copyright'
+    | '/how-it-works'
     | '/join'
     | '/open-source'
     | '/privacy'
@@ -907,6 +919,7 @@ export interface RootRouteChildren {
   DeskRouteRoute: typeof DeskRouteRouteWithChildren
   AtChar123handleChar125Route: typeof AtChar123handleChar125Route
   CopyrightRoute: typeof CopyrightRoute
+  HowItWorksRoute: typeof HowItWorksRoute
   JoinRoute: typeof JoinRoute
   OpenSourceRoute: typeof OpenSourceRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -997,6 +1010,13 @@ declare module '@tanstack/react-router' {
       path: '/desk'
       fullPath: '/desk'
       preLoaderRoute: typeof DeskRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/how-it-works': {
+      id: '/how-it-works'
+      path: '/how-it-works'
+      fullPath: '/how-it-works'
+      preLoaderRoute: typeof HowItWorksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/join': {
@@ -1518,6 +1538,7 @@ const rootRouteChildren: RootRouteChildren = {
   DeskRouteRoute: DeskRouteRouteWithChildren,
   AtChar123handleChar125Route: AtChar123handleChar125Route,
   CopyrightRoute: CopyrightRoute,
+  HowItWorksRoute: HowItWorksRoute,
   JoinRoute: JoinRoute,
   OpenSourceRoute: OpenSourceRoute,
   PrivacyRoute: PrivacyRoute,

@@ -259,6 +259,11 @@ describe("03 · every tappable thing has a 44×44 hit area", () => {
       // The read-only account's hint, "Accept the Terms to change this.
       // Accept" (round 30 #4a), once per row.
       "src/modules/account/terms/components/AccountWhileBehind.tsx",
+      // /how-it-works (#523): a link inside an answer's sentence (the
+      // Strava agreement, the privacy policy), and "Have an account? Log
+      // in" under the closing pill, as Landing's cross-link.
+      "src/modules/account/terms/components/HowItWorksPage.tsx",
+      "src/modules/account/terms/components/HowItWorksPage.tsx",
       // A link inside a legal text's sentence (ACC-13).
       "src/modules/account/terms/components/LegalPage.tsx",
       // The terms prompt's escape line, "…or go to your account to export

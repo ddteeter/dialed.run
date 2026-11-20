@@ -67,11 +67,10 @@ describe("TotalsSwitch (round 32, frames 1a and 1b)", () => {
     );
     expect(totalsBox()).toBeChecked();
     expect(totalsBox()).toHaveAccessibleDescription(TOTALS_ON);
-    // A placeholder target until the marketing site owns
-    // /how-it-works#totals (design-deltas item 61).
+    // The guides section of /how-it-works (#523).
     expect(
       screen.getByRole("link", { name: "How the guides are made" }),
-    ).toHaveAttribute("href", "/privacy");
+    ).toHaveAttribute("href", "/how-it-works#totals");
   });
 
   it("saves off on toggle, with no confirm, and swaps to the off line", async () => {
