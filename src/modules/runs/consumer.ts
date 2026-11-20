@@ -21,7 +21,7 @@ import {
   stravaRevocations,
 } from "../../db/schema-core";
 import { effortFromWatch } from "../../lib/contracts";
-import { GARMIN_DEVICE_NAME } from "./garmin/config";
+import { GARMIN_DEVICE_NAME } from "./garmin";
 import { didClaim } from "../../lib/sql/claim";
 import { newUlid, type Ulid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
@@ -43,14 +43,10 @@ import {
   type ReminderJob,
   type RevokeJob,
 } from "./queue-messages";
-import type { StravaApi } from "./strava/api";
-import { deauthorizeAthlete, type Owe } from "./strava/deauthorize";
-import { owedReminderEmail, reminderHistory } from "./strava/reminder-email";
-import {
-  pairRunWith,
-  pairWithReminder,
-  unpairedUploadFor,
-} from "./strava/reminder-match";
+import type { StravaApi } from "./strava";
+import { deauthorizeAthlete, type Owe } from "./strava";
+import { owedReminderEmail, reminderHistory } from "./strava";
+import { pairRunWith, pairWithReminder, unpairedUploadFor } from "./strava";
 import { findDuplicateRun, initialWeatherStatus, storedStart } from "./service";
 
 export interface ConsumerDeps {

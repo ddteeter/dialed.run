@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   ReminderDayLine,
   reminderDayLabel,
-} from "../../src/modules/runs/components/ReminderDayLine";
+} from "../../src/modules/runs/strava/components/ReminderDayLine";
 
 /**
  * Round 56 · 250: A1 names the day a Strava reminder carried, under

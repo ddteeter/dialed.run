@@ -8,12 +8,14 @@
  *
  * `captureException` is injected into `connectFromCallback` and
  * `disconnectStrava` for the same reason `StravaApi` is: importing it from
- * `modules/ops` here would pull in `ops/queues.ts` and `ops/scheduled.ts`
- * through the barrel, both of which import this module's own barrel
- * (`../runs`) to reach the imports consumer and `pruneStravaIds` —
- * `runs -> strava/oauth -> ops -> queues.ts -> runs`, a cycle
- * dependency-cruiser's `no-circular` rejects. `functions.ts` supplies the
- * real `captureException` from `modules/ops`, which is not on that path.
+ * `modules/ops` here would pull in `ops/outbox/outbox-handlers.ts`
+ * through the barrel, which imports this module's own barrel (`../runs`)
+ * for the Strava reminder handlers —
+ * `runs -> strava/oauth -> ops -> outbox/outbox-handlers.ts -> runs`, a
+ * cycle dependency-cruiser's `no-circular` rejects. (The cron and queue
+ * handlers that once closed it, `ops/queues.ts` and `ops/scheduled.ts`,
+ * are `dispatch/` now, design 247.) `functions.ts` supplies the real
+ * `captureException` from `modules/ops`, which is not on that path.
  *
  * **There is no token refresh here, on purpose** (task 127, STR-1). The
  * app never reads activity data, so a stored grant is used for exactly one

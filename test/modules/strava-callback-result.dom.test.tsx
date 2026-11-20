@@ -1,7 +1,7 @@
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { StravaCallbackResult } from "../../src/modules/runs/components/StravaCallbackResult";
+import { StravaCallbackResult } from "../../src/modules/runs/strava/components/StravaCallbackResult";
 import { renderWithRouter } from "./run-fixtures";
 
 /**
@@ -68,10 +68,9 @@ describe("StravaCallbackResult", () => {
     expect(
       [...(receipt?.children ?? [])].map((line) => line.textContent),
     ).toEqual(["Not connected", "Strava isn’t connected. Nothing changed."]);
-    expect(within(receipt as HTMLElement).getByText("Not connected")).toHaveClass(
-      "font-mono",
-      "uppercase",
-    );
+    expect(
+      within(receipt as HTMLElement).getByText("Not connected"),
+    ).toHaveClass("font-mono", "uppercase");
     // The reason is the server's diagnostic, not the runner's sentence.
     expect(screen.queryByText("The user declined.")).toBeNull();
     // Try again goes back to T1, where the Strava consent is read before

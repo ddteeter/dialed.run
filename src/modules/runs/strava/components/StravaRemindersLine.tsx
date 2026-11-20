@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 
-import { MONO_CLASS } from "../../../ui";
+import { MONO_CLASS } from "../../../../ui";
 
 /**
  * "STRAVA REMINDERS · ON ›", on a line under the runs list's title (Round

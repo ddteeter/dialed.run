@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";
-import { StravaCallbackResult } from "../../modules/runs/components/StravaCallbackResult";
+import { StravaCallbackResult } from "../../modules/runs/strava/components/StravaCallbackResult";
 import {
   completeStravaConnectFn,
   getStravaStatusFn,

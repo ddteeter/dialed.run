@@ -166,7 +166,7 @@ describe("every screen stamps the hydration signal", () => {
     // a working scan from one that returns true for everything. This is
     // the negative case: `StravaCallbackResult` was the one real gap this
     // test found, and before it wore `Page` it looked exactly like this.
-    const bare = "src/modules/runs/components/StravaCallbackResult.tsx";
+    const bare = "src/modules/runs/strava/components/StravaCallbackResult.tsx";
     expect(byPath.has(bare)).toBe(true);
     expect(WEARS_A_SHELL.test('<div className="mx-auto flex">')).toBe(false);
     expect(WEARS_A_SHELL.test("<PageHeader title={x} />")).toBe(false);

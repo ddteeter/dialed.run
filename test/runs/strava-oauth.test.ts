@@ -31,7 +31,7 @@ import { nowSeconds } from "../../src/lib/now";
  * `captureException` is injected (the same seam as `StravaApi` and the
  * revoke queue) rather than imported from `modules/ops`, so this module has
  * no edge back into ops at all — importing it would reintroduce the cycle
- * `runs -> strava/oauth -> ops -> queues/scheduled -> runs`
+ * `runs -> strava/oauth -> ops -> outbox/outbox-handlers.ts -> runs`
  * (dependency-cruiser's `no-circular`). `functions.ts` wires the real
  * `captureException`; this stands in for it and records every call.
  */
@@ -752,7 +752,10 @@ describe("stravaConnectRedirect (STR-7: the official button is a link)", () => {
 
   it("clears the cookie as a __Host- cookie must be: Secure, at Path=/", () => {
     // The serializer refuses to clear a __Host- cookie without both.
-    expect(STRAVA_STATE_COOKIE_CLEAR).toStrictEqual({ path: "/", secure: true });
+    expect(STRAVA_STATE_COOKIE_CLEAR).toStrictEqual({
+      path: "/",
+      secure: true,
+    });
   });
 
   it("sends a signed-out visitor to log in, coming back to T1, with no nonce", () => {

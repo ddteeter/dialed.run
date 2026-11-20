@@ -43,9 +43,9 @@ import {
 import { env, waitUntil } from "../../env";
 import { noInput } from "../../lib/no-input";
 import { captureException, oweInCore } from "../ops";
-import { stravaApiFromEnv, stravaConfigFromEnv } from "./strava/api-from-env";
-import { garminConfigFor } from "./garmin/config";
-import { garminPicker, importGarminActivity } from "./garmin/service";
+import { stravaApiFromEnv, stravaConfigFromEnv } from "./strava";
+import { garminConfigFor } from "./garmin";
+import { garminPicker, importGarminActivity } from "./garmin";
 import {
   connectFromCallback,
   disconnectStravaAndTell,
@@ -53,7 +53,7 @@ import {
   STRAVA_STATE_COOKIE,
   STRAVA_STATE_COOKIE_CLEAR,
   stravaStatusOf,
-} from "./strava/oauth";
+} from "./strava";
 
 /**
 The weather module's two writes, as the run rules take them.

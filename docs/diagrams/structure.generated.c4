@@ -87,7 +87,10 @@ model {
     }
     products = module 'products'
     runs = module 'runs' {
+      garmin = module 'runs/garmin'
+      imports = module 'runs/imports'
       parsers = module 'runs/parsers'
+      strava = module 'runs/strava'
     }
     safety = module 'safety' {
       blur = module 'safety/blur'
@@ -274,11 +277,15 @@ model {
   cf.app.products -[imports]-> cf.app.notifications
   cf.app.products -[imports]-> cf.app.safety
   cf.app.runs -[wiring]-> cf.app.auth
-  cf.app.runs -[imports]-> cf.app.email
   cf.app.runs -[wiring]-> cf.app.feed
   cf.app.runs -[imports]-> cf.app.notifications
   cf.app.runs -[wiring]-> cf.app.ops
   cf.app.runs -[imports]-> cf.app.weather
+  cf.app.runs.garmin -[imports]-> cf.app.runs.imports
+  cf.app.runs.imports -[imports]-> cf.app.email
+  cf.app.runs.imports -[wiring]-> cf.app.runs.garmin
+  cf.app.runs.strava -[imports]-> cf.app.email
+  cf.app.runs.strava -[imports]-> cf.app.notifications
   cf.app.safety -[wiring]-> cf.app.account
   cf.app.safety -[wiring]-> cf.app.auth
   cf.app.safety -[wiring]-> cf.app.ops
@@ -512,6 +519,24 @@ views {
     include cf.app.runs
     include cf.app.runs -> cf.app.** where kind is imports or kind is wiring
     include cf.app.** -> cf.app.runs where kind is imports or kind is wiring
+  }
+  view runsGarminImports of cf.app.runs.garmin {
+    title 'runs/garmin: what it imports, and what imports it'
+    include cf.app.runs.garmin
+    include cf.app.runs.garmin -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.runs.garmin where kind is imports or kind is wiring
+  }
+  view runsImportsImports of cf.app.runs.imports {
+    title 'runs/imports: what it imports, and what imports it'
+    include cf.app.runs.imports
+    include cf.app.runs.imports -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.runs.imports where kind is imports or kind is wiring
+  }
+  view runsStravaImports of cf.app.runs.strava {
+    title 'runs/strava: what it imports, and what imports it'
+    include cf.app.runs.strava
+    include cf.app.runs.strava -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.runs.strava where kind is imports or kind is wiring
   }
   view safetyImports of cf.app.safety {
     title 'safety: what it imports, and what imports it'

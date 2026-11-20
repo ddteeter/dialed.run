@@ -1,7 +1,7 @@
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { StravaRemindersLine } from "../../src/modules/runs/components/StravaRemindersLine";
+import { StravaRemindersLine } from "../../src/modules/runs/strava/components/StravaRemindersLine";
 import { renderWithRouter } from "./run-fixtures";
 
 /**

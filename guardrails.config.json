@@ -499,12 +499,12 @@
       "count": 1
     },
     {
-      "key": "src/modules/feed/following/components/Feed.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- a many-prop signature that matches runs/components/ParsedCard.tsx only by destructuring one prop per line; one is the Following tab, the other a parsed run, and they share nothing to extract",
+      "key": "src/modules/feed/following/components/Feed.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- a many-prop signature that matches runs/imports/components/ParsedCard.tsx only by destructuring one prop per line; one is the Following tab, the other a parsed run, and they share nothing to extract",
       "reason": "Owner's call, 2026-09-25: a destructured-props signature, not a clone. Semantic mode matches any two components that destructure ten-plus props one per line, whatever the names and types, so two unrelated components rhyme. The alternative, reading props through `props.` in one of them to break the skeleton, was put to the owner and declined as code written only to dodge the detector.",
       "count": 1
     },
     {
-      "key": "src/modules/runs/components/ParsedCard.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- a many-prop signature that matches feed/components/Feed.tsx FollowingTab only by destructuring one prop per line; one is a parsed run, the other the Following tab, and they share nothing to extract",
+      "key": "src/modules/runs/imports/components/ParsedCard.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- a many-prop signature that matches feed/components/Feed.tsx FollowingTab only by destructuring one prop per line; one is a parsed run, the other the Following tab, and they share nothing to extract",
       "reason": "Owner's call, 2026-09-25: a destructured-props signature, not a clone. Semantic mode matches any two components that destructure ten-plus props one per line, whatever the names and types, so two unrelated components rhyme. The alternative, reading props through `props.` in one of them to break the skeleton, was put to the owner and declined as code written only to dodge the detector.",
       "count": 1
     },
@@ -579,7 +579,7 @@
       "count": 1
     },
     {
-      "key": "src/modules/runs/imports.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; getImportOutcome reads one import with the run it made, scoped to its runner",
+      "key": "src/modules/runs/imports/imports.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; getImportOutcome reads one import with the run it made, scoped to its runner",
       "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
       "count": 1
     },

@@ -67,8 +67,8 @@ const FAILURE_SURFACES = [
   "src/ui/form.tsx",
   // A1 reports its failures in place since round 22 retired the import
   // status page.
-  "src/modules/runs/components/UploadForm.tsx",
-  "src/modules/runs/components/StravaCallbackResult.tsx",
+  "src/modules/runs/imports/components/UploadForm.tsx",
+  "src/modules/runs/strava/components/StravaCallbackResult.tsx",
   "src/modules/notifications/components/NotificationList.tsx",
 ];
 

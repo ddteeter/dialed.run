@@ -1,8 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 
-import type { StravaOrigin } from "../../../lib/strava-origin";
-import { INK_PILL, Mono, Page } from "../../../ui";
+import type { StravaOrigin } from "../../../../lib/strava-origin";
+import { INK_PILL, Mono, Page } from "../../../../ui";
 
 /**
  * What the runner sees after Strava sends them back — a receipt in the

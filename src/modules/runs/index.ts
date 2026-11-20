@@ -12,17 +12,14 @@ export {
   type ImportJob,
   type ReminderJob,
 } from "./queue-messages";
-export { stravaApiFromEnv } from "./strava/api-from-env";
+export { stravaApiFromEnv } from "./strava";
 export { runsAwaitingVerdict, runsWithEntry } from "./awaiting-verdict";
 export { runCountsOf } from "./counts";
-export { pruneStravaIds } from "./strava/prune";
-export {
-  isReminderStillOwed,
-  reminderEmailSent,
-} from "./strava/reminder-email";
+export { pruneStravaIds } from "./strava";
+export { isReminderStillOwed, reminderEmailSent } from "./strava";
 // Seam 5 (docs/tasks/125-129): account deletion (task 126, ACC-9) revokes
 // a runner's Strava grant through this, never a second copy of it.
-export { disconnectStrava } from "./strava/oauth";
+export { disconnectStrava } from "./strava";
 // The read-only account page (round 30 #4a) shows whether Strava is
 // connected while the runner is behind on the terms.
-export { isStravaConnected } from "./strava/oauth";
+export { isStravaConnected } from "./strava";

@@ -42,7 +42,7 @@ door that reaches `env` between `parsers` and a number.
 `consumer.ts`, `functions.ts`), as the CLAUDE.md paragraph says the rest
 of a module does. Safety's parent files import files instead, only
 because its `rules` door would otherwise have been 50 names. Here the
-widths are small: `strava` about 22 names, `imports` 5, `garmin` 4.
+widths are small: `strava` 21 names, `imports` 5, `garmin` 4.
 Components import files, as always. Routes keep their imports of
 `strava/oauth.ts`, `strava/api-from-env.ts` and `strava/webhook.ts`: those
 paths do not change.

@@ -22,11 +22,14 @@ import { z } from "zod";
 import {
   importPollIntervalMs,
   STALL_AFTER_MS,
-} from "../../src/modules/runs/import-polling";
-import type { FileUpload, ImportOutcome } from "../../src/modules/runs/imports";
-import { UploadForm } from "../../src/modules/runs/components/UploadForm";
-import type { GarminImportActions } from "../../src/modules/runs/components/GarminImport";
-import type { Retime } from "../../src/modules/runs/components/ParsedCard";
+} from "../../src/modules/runs/imports/import-polling";
+import type {
+  FileUpload,
+  ImportOutcome,
+} from "../../src/modules/runs/imports/imports";
+import { UploadForm } from "../../src/modules/runs/imports/components/UploadForm";
+import type { GarminImportActions } from "../../src/modules/runs/garmin/components/GarminImport";
+import type { Retime } from "../../src/modules/runs/imports/components/ParsedCard";
 import {
   NO_TRACK_MESSAGE,
   PARSE_FAILURE_MESSAGE,
