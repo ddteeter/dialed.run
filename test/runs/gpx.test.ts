@@ -8,12 +8,11 @@ import {
 } from "../../src/modules/runs/parsers/gpx";
 import {
   ELEVATION_HYSTERESIS_M,
-  MAX_XML_NODES,
   NO_TRACK_MESSAGE,
-  XML_PARSER_OPTIONS,
   PARSE_FAILURE_MESSAGE,
   RunParseError,
 } from "../../src/modules/runs/parsers/shared";
+import { MAX_XML_NODES } from "../../src/modules/runs/parsers/xml-events";
 import pausedClimbGpx from "./fixtures/paused-climb.gpx?raw";
 
 /**
@@ -199,9 +198,9 @@ describe("gpx: every way it refuses", () => {
   });
 
   it("expands no entities, however the file asks", async () => {
-    // `processEntities: false` is the XXE guard, and an *internal* entity
-    // is how to see it working: with expansion on, `&later;` becomes a
-    // valid timestamp and this file parses. With it off the text stays
+    // The reader reads no DTD, which is the XXE guard, and an *internal*
+    // entity is how to see it working: with expansion, `&later;` becomes
+    // a valid timestamp and this file parses. Without it the text stays
     // literal, the point has no readable time, and the run is refused.
     const withEntity = `<?xml version="1.0"?>
 <!DOCTYPE gpx [<!ENTITY later "${LATER}">]>
@@ -213,9 +212,10 @@ describe("gpx: every way it refuses", () => {
   it("keeps the underlying failure as the cause", async () => {
     // The reason says which of the ways this was; the cause is what the
     // library actually complained about.
-    const rejected = `<?xml version="1.0"?>
-<!DOCTYPE gpx [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
-<gpx><trk><trkseg>${point(44.98, START)}</trkseg></trk></gpx>`;
+    // An attribute value that outgrows the reader's buffer.
+    const rejected = gpxWith(
+      `<trkseg><trkpt lat="${"4".repeat(200_000)}" lon="-93.27"/></trkseg>`,
+    );
     const xmlFailure = await failureFrom(() => parse(rejected));
     expect(xmlFailure.reason).toContain("XML parser threw");
     expect(xmlFailure.cause).toBeDefined();
@@ -492,13 +492,14 @@ describe("gpx: the tag and attribute budget (SA-M29, SA-L23)", () => {
     expect(draft.durationS).toBe(35_999);
   });
 
-  it("builds no element paths, and expands no entities", () => {
-    expect(XML_PARSER_OPTIONS).toStrictEqual({
-      ignoreAttributes: false,
-      attributeNamePrefix: "@_",
-      processEntities: false,
-      jPath: false,
-    });
+  it("never reads an external entity a file declares", async () => {
+    // Declared, used as a point's time, and left as the text it was
+    // written as: nothing is fetched and nothing is put in its place.
+    const external = `<?xml version="1.0"?>
+<!DOCTYPE gpx [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
+<gpx><trk><trkseg>${point(44.98, START)}<trkpt lat="45" lon="-93.27"><time>&xxe;</time></trkpt></trkseg></trk></gpx>`;
+
+    expect(await reasonFor(external)).toContain("fewer than 2 track points");
   });
 
   it("is two million", () => {

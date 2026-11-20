@@ -4,8 +4,6 @@
  * 500, per the packet — so the queue consumer can surface it verbatim on
  * the import row, and A1 can say which of round 22's sentences applies.
  */
-import { XMLParser } from "fast-xml-parser";
-
 import type { RunDraft } from "../../../lib/contracts";
 import { NO_TRACK_MESSAGE, PARSE_FAILURE_MESSAGE } from "../upload-limits";
 
@@ -49,100 +47,6 @@ export class RunParseError extends Error {
     this.name = "RunParseError";
     this.reason = reason;
   }
-}
-
-/**
- * The one XXE-safe XML parser, shared by GPX and TCX.
- *
- * `processEntities: false` disables DOCTYPE and entity expansion entirely,
- * so a hostile upload cannot smuggle an external-entity or billion-laughs
- * payload through. It was configured identically in both parsers — which
- * is one place for that decision to be changed and another to be forgotten.
- *
- * **Built per call, not at module scope, and that is a bundle decision
- * rather than a performance one (R-50).** `new XMLParser(…)` is a call
- * rollup cannot prove pure, so a module-scope one is a side effect it must
- * keep — and keeping it kept `fast-xml-parser` and its four dependencies,
- * ~63 kB, in the *client* entry chunk that every visitor downloads.
- * Nothing else in this file survived tree-shaking; that one constant did.
- *
- * Per call rather than memoised because the constructor only stores
- * options — the work is all in `parse` — and the caller is a queue
- * consumer handling one file per message. A cache here would buy nothing
- * and would mean assigning to a module binding from inside a function,
- * which is its own small trap.
- */
-function xmlParser(): XMLParser {
-  return new XMLParser(XML_PARSER_OPTIONS);
-}
-
-/**
- * The options, exported so a test pins them: each is a safety decision
- * whose effect a parse of an ordinary file cannot show.
- */
-export const XML_PARSER_OPTIONS = {
-  ignoreAttributes: false,
-  attributeNamePrefix: "@_",
-  processEntities: false,
-  // No callback here reads an element's path, so the parser need not
-  // build one per element (SA-M29). The tree is the same either way.
-  jPath: false,
-} as const;
-
-/**
- * The most tags and attributes a GPX or TCX may hold (SA-M29, SA-L23): a
- * tag (`<`) and an attribute (`=`) are each a node of the parsed tree. A
- * thirty-hour run recorded every second, with elevation, time and a few
- * extensions on each point, is about 1.3 million tags and two attributes
- * a point more.
- */
-export const MAX_XML_NODES = 2_000_000;
-
-const TAG_OPEN = 0x3c; // "<"
-const ATTRIBUTE_MARK = 0x3d; // "="
-
-/**
- * Whether the bytes hold more tags and attributes than the budget,
- * counted before they are decoded or parsed. Every `=` counts, so one in
- * a text value counts too: the budget errs towards refusing.
- */
-function hasTooManyNodes(bytes: Uint8Array): boolean {
-  let nodes = 0;
-  for (const byte of bytes) {
-    if (byte === TAG_OPEN || byte === ATTRIBUTE_MARK) nodes += 1;
-  }
-  return nodes > MAX_XML_NODES;
-}
-
-/**
- * Decodes and parses an uploaded XML document, or fails with the reason it
- * could not. `kind` names the format in the maintainer-facing reason; the
- * user reads the same sentence either way.
- */
-export function parseXmlDocument(bytes: ArrayBuffer, kind: string): unknown {
-  if (hasTooManyNodes(new Uint8Array(bytes))) {
-    throw new RunParseError(
-      `${kind}: more than ${String(MAX_XML_NODES)} tags and attributes`,
-    );
-  }
-  let text: string;
-  try {
-    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-  } catch (error) {
-    throw new RunParseError(`${kind}: bytes are not valid UTF-8`, {
-      cause: error,
-    });
-  }
-  try {
-    return xmlParser().parse(text);
-  } catch (error) {
-    throw new RunParseError(`${kind}: XML parser threw`, { cause: error });
-  }
-}
-
-export function toArray<T>(value: T | T[] | undefined): T[] {
-  if (value === undefined) return [];
-  return Array.isArray(value) ? value : [value];
 }
 
 /**

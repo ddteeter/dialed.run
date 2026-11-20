@@ -15,7 +15,6 @@ import {
   readNumber,
   RunParseError,
   smoothedAltitudes,
-  toArray,
 } from "../../src/modules/runs/parsers/shared";
 
 /**
@@ -52,23 +51,6 @@ describe("RunParseError", () => {
   it("carries the underlying failure where there was one", () => {
     const cause = new Error("unexpected end of input");
     expect(new RunParseError("gpx: xml", { cause }).cause).toBe(cause);
-  });
-});
-
-describe("toArray", () => {
-  it("treats a missing element as no elements", () => {
-    // XML gives one object for a single element and an array for several;
-    // absent is neither, and must not become `[undefined]`.
-    expect(toArray(undefined)).toStrictEqual([]);
-  });
-
-  it("wraps a single element and passes a list through", () => {
-    expect(toArray("one")).toStrictEqual(["one"]);
-    expect(toArray(["one", "two"])).toStrictEqual(["one", "two"]);
-  });
-
-  it("keeps an empty list empty", () => {
-    expect(toArray([])).toStrictEqual([]);
   });
 });
 

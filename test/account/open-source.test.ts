@@ -193,6 +193,7 @@ describe("licenceGroups", () => {
     );
     expect(headings.toSorted((a, b) => a.localeCompare(b))).toEqual([
       "Projects under the Apache License 2.0",
+      "Projects under the Blue Oak Model License 1.0.0",
       "Projects under the BSD 2-Clause License",
       "Projects under the BSD 3-Clause License",
       "Projects under the FIT Protocol License Agreement",

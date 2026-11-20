@@ -71,6 +71,7 @@ const LICENCE_NAMES: Readonly<Record<string, string>> = {
 const LICENCE_FULL_NAMES: Readonly<Record<string, string>> = {
   "@garmin/fitsdk licence": "FIT Protocol License Agreement",
   "Apache-2.0": "Apache License 2.0",
+  "BlueOak-1.0.0": "Blue Oak Model License 1.0.0",
   "BSD-2-Clause": "BSD 2-Clause License",
   "BSD-3-Clause": "BSD 3-Clause License",
   ISC: "ISC License",

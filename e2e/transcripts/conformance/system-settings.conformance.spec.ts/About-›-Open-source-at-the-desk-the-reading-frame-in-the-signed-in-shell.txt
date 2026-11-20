@@ -31,49 +31,53 @@ heading, Contents, level 2
 Contents
 end of heading, Contents, level 2
 list
-listitem, level 1, position 1, set size 11
+listitem, level 1, position 1, set size 12
 link, SIL Open Font License #.#
 #
-end of listitem, level 1, position 1, set size 11
-listitem, level 1, position 2, set size 11
+end of listitem, level 1, position 1, set size 12
+listitem, level 1, position 2, set size 12
 link, MIT
 #
-end of listitem, level 1, position 2, set size 11
-listitem, level 1, position 3, set size 11
+end of listitem, level 1, position 2, set size 12
+listitem, level 1, position 3, set size 12
 link, BSD-#-Clause
 #
-end of listitem, level 1, position 3, set size 11
-listitem, level 1, position 4, set size 11
+end of listitem, level 1, position 3, set size 12
+listitem, level 1, position 4, set size 12
 link, Apache #.#
 #
-end of listitem, level 1, position 4, set size 11
-listitem, level 1, position 5, set size 11
+end of listitem, level 1, position 4, set size 12
+listitem, level 1, position 5, set size 12
 link, MPL-#.#
 #
-end of listitem, level 1, position 5, set size 11
-listitem, level 1, position 6, set size 11
+end of listitem, level 1, position 5, set size 12
+listitem, level 1, position 6, set size 12
 link, @garmin/fitsdk licence
 #
-end of listitem, level 1, position 6, set size 11
-listitem, level 1, position 7, set size 11
+end of listitem, level 1, position 6, set size 12
+listitem, level 1, position 7, set size 12
+link, BlueOak-#.#.#
+#
+end of listitem, level 1, position 7, set size 12
+listitem, level 1, position 8, set size 12
 link, BSD-#-Clause
 #
-end of listitem, level 1, position 7, set size 11
-listitem, level 1, position 8, set size 11
+end of listitem, level 1, position 8, set size 12
+listitem, level 1, position 9, set size 12
 link, ISC
 #
-end of listitem, level 1, position 8, set size 11
-listitem, level 1, position 9, set size 11
+end of listitem, level 1, position 9, set size 12
+listitem, level 1, position 10, set size 12
 link, Unlicense
 #
-end of listitem, level 1, position 9, set size 11
-listitem, level 1, position 10, set size 11
+end of listitem, level 1, position 10, set size 12
+listitem, level 1, position 11, set size 12
 link, Third-party notices
-end of listitem, level 1, position 10, set size 11
-listitem, level 1, position 11, set size 11
+end of listitem, level 1, position 11, set size 12
+listitem, level 1, position 12, set size 12
 link, Tools we build with
 #
-end of listitem, level 1, position 11, set size 11
+end of listitem, level 1, position 12, set size 12
 end of list
 end of navigation, Contents
 article
@@ -894,6 +898,71 @@ link, @garmin/fitsdk
 end of listitem, level 1, position 1, set size 1
 end of list
 end of region, Projects under the FIT Protocol License Agreement
+region, Projects under the Blue Oak Model License #.#.#
+heading, Projects under the Blue Oak Model License #.#.#, level 2
+#
+group
+Read the BlueOak-#.#.# licence
+paragraph
+Version #.#.#
+end of paragraph
+paragraph
+## Purpose
+end of paragraph
+paragraph
+This license gives everyone as much permission to work with this software as possible, while protecting contributors from liability.
+end of paragraph
+paragraph
+## Acceptance
+end of paragraph
+paragraph
+In order to receive this license, you must agree to its rules. The rules of this license are both obligations under that agreement and conditions to your license. You must not do anything with this software that triggers a rule that you cannot or will not follow.
+end of paragraph
+paragraph
+## Copyright
+end of paragraph
+paragraph
+Each contributor licenses you to do everything with this software that would otherwise infringe that contributor's copyright in it.
+end of paragraph
+paragraph
+## Notices
+end of paragraph
+paragraph
+You must ensure that everyone who gets a copy of any part of this software from you, with or without changes, also gets the text of this license or a link to <https://blueoakcouncil.org/license/#.#.#>.
+end of paragraph
+paragraph
+## Excuse
+end of paragraph
+paragraph
+If anyone notifies you in writing that you have not complied with [Notices](#notices), you can keep your license by taking all practical steps to comply within # days after the notice. If you do not do so, your license ends immediately.
+end of paragraph
+paragraph
+## Patent
+end of paragraph
+paragraph
+Each contributor licenses you to do everything with this software that would otherwise infringe any patent claims they can license or become able to license.
+end of paragraph
+paragraph
+## Reliability
+end of paragraph
+paragraph
+No contributor can revoke this license.
+end of paragraph
+paragraph
+## No Liability
+end of paragraph
+paragraph
+***As far as the law allows, this software comes as is, without any warranty or condition, and no contributor will be liable to anyone for any damages related to this software or this license, under any kind of legal claim.***
+end of paragraph
+end of group
+list
+listitem, level 1, position 1, set size 1
+link, sax
+#.#.#
+© Isaac Z. Schlueter
+end of listitem, level 1, position 1, set size 1
+end of list
+end of region, Projects under the Blue Oak Model License #.#.#
 region, Projects under the BSD #-Clause License
 heading, Projects under the BSD #-Clause License, level 2
 #

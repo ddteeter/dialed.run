@@ -1,7 +1,8 @@
 /**
- * GPX parser (102 §3), XXE-safe: `processEntities: false` disables
- * DOCTYPE/entity expansion entirely so a hostile upload can't smuggle an
- * external-entity or billion-laughs payload through the parser.
+ * GPX parser (102 §3), XXE-safe: the reader (`xml-events.ts`) reads no
+ * DTD and expands no entity, so a hostile upload can't smuggle an
+ * external-entity or billion-laughs payload through the parser. The file
+ * is read as a stream: only its track points are kept (design 246).
  *
  * GPX has no lap-level distance/duration total — every value is derived
  * from trackpoints — so unlike FIT/TCX there is no meaningful "no GPS
@@ -12,7 +13,6 @@ import { runDraftSchema } from "../../../lib/contracts";
 import type { RunDraft, RunSource } from "../../../lib/contracts";
 import {
   RunParseError,
-  parseXmlDocument,
   elevationGainMeters,
   fileMetrics,
   haversineMeters,
@@ -21,8 +21,8 @@ import {
   readDate,
   readNumber,
   sum,
-  toArray,
 } from "./shared";
+import { isAt, readXml } from "./xml-events";
 
 interface TrackPoint {
   lat: number;
@@ -64,33 +64,36 @@ function parseTrackPoint(node: unknown): TrackPoint | undefined {
     : { lat, lon, time, ele: readNumber(node.ele) };
 }
 
-function pointsInSegment(seg: unknown): TrackPoint[] {
-  // Same shape as above: a non-record segment has no `trkpt` to read.
-  // Stryker disable next-line ArrayDeclaration,ConditionalExpression
-  if (!isRecord(seg)) return [];
-  const points: TrackPoint[] = [];
-  for (const pt of toArray(seg.trkpt)) {
-    const point = parseTrackPoint(pt);
-    if (point !== undefined) points.push(point);
-  }
-  return points;
-}
+const SEGMENT = ["gpx", "trk", "trkseg"] as const;
+const TRACK_POINT = [...SEGMENT, "trkpt"] as const;
 
 /**
-Each `<trkseg>` kept apart: a segment break is where the receiver was off
-or lost its fix (GPX 1.1), so the time across one is not moving time.
-*/
-function segmentsInTrack(trk: unknown): TrackPoint[][] {
-  // Same shape again: a non-record track has no `trkseg` to read.
-  // Stryker disable next-line ArrayDeclaration,ConditionalExpression
-  const segs = isRecord(trk) ? toArray(trk.trkseg) : [];
-  return segs.map((seg: unknown) => pointsInSegment(seg));
-}
-
-function extractSegments(doc: unknown): TrackPoint[][] {
-  // Stryker disable next-line ArrayDeclaration
-  const trks = isRecord(doc) && isRecord(doc.gpx) ? toArray(doc.gpx.trk) : [];
-  return trks.flatMap((trk: unknown) => segmentsInTrack(trk));
+ * The track points of every `gpx > trk > trkseg`, a list a segment.
+ *
+ * Each `<trkseg>` kept apart: a segment break is where the receiver was
+ * off or lost its fix (GPX 1.1), so the time across one is not moving
+ * time. A point is built whole and read by `parseTrackPoint`, then let
+ * go; nothing else in the file is kept.
+ */
+function segmentsIn(bytes: ArrayBuffer): TrackPoint[][] {
+  const segments: TrackPoint[][] = [];
+  // The segment being read. A track point's path runs through its
+  // segment's, so one is always open by the time a point arrives.
+  let segment: TrackPoint[];
+  readXml(bytes, "gpx", {
+    open(path) {
+      if (isAt(path, SEGMENT)) {
+        segment = [];
+        segments.push(segment);
+      }
+      return isAt(path, TRACK_POINT);
+    },
+    value(_path, node) {
+      const point = parseTrackPoint(node);
+      if (point !== undefined) segment.push(point);
+    },
+  });
+  return segments;
 }
 
 /**
@@ -159,13 +162,11 @@ function totalDistanceMeters(points: readonly TrackPoint[]): number {
 export const gpxSource: RunSource = {
   kind: "gpx",
   async parse(bytes: ArrayBuffer): Promise<RunDraft> {
-    // fast-xml-parser is synchronous; the await keeps this a genuine
-    // async fn matching the RunSource contract shared with FIT (which does
-    // await internally) rather than a sync function wearing a Promise.
+    // The reader is synchronous; the await keeps this a genuine async fn
+    // matching the RunSource contract shared with FIT (which does await
+    // internally) rather than a sync function wearing a Promise.
     await Promise.resolve();
-    const doc = parseXmlDocument(bytes, "gpx");
-
-    const segments = extractSegments(doc);
+    const segments = segmentsIn(bytes);
     const points = segments.flat();
     if (points.length < 2)
       throw new RunParseError("gpx: fewer than 2 track points with time", {

@@ -1,5 +1,7 @@
 /**
- * TCX parser (102 §3), XXE-safe (`processEntities: false`, see gpx.ts).
+ * TCX parser (102 §3), XXE-safe and read as a stream (see gpx.ts and
+ * `xml-events.ts`): only each lap's totals, first position and altitudes
+ * are kept (design 246).
  * Unlike GPX, TCX carries lap-level `TotalTimeSeconds`/`DistanceMeters`
  * independent of GPS fix — a treadmill export naturally has laps with no
  * `<Position>` on any trackpoint, which is exactly the "no GPS track"
@@ -27,14 +29,13 @@ import {
   child,
   elevationGainMeters,
   fileMetrics,
-  parseXmlDocument,
   isRecord,
   present,
   readDate,
   readNumber,
   sum,
-  toArray,
 } from "./shared";
+import { isAt, readXml } from "./xml-events";
 
 interface Position {
   lat: number;
@@ -46,50 +47,6 @@ function positionOf(point: unknown): Position | undefined {
   const lat = readNumber(point.Position.LatitudeDegrees);
   const lon = readNumber(point.Position.LongitudeDegrees);
   return lat === undefined || lon === undefined ? undefined : { lat, lon };
-}
-
-function firstPositionInTrack(track: unknown): Position | undefined {
-  // Equivalent mutant on this guard alone: a non-record track has no
-  // `Trackpoint` to read, so the loop below finds nothing and the function
-  // returns undefined anyway. The guard is what narrows `unknown`.
-  // Stryker disable next-line ConditionalExpression
-  if (!isRecord(track)) return undefined;
-  for (const point of toArray(track.Trackpoint)) {
-    const position = positionOf(point);
-    if (position !== undefined) return position;
-  }
-  return undefined;
-}
-
-function firstPosition(lap: Record<string, unknown>): Position | undefined {
-  for (const track of toArray(lap.Track)) {
-    const position = firstPositionInTrack(track);
-    if (position !== undefined) return position;
-  }
-  return undefined;
-}
-
-function firstOf(value: unknown): Record<string, unknown> | undefined {
-  const first = toArray(value)[0];
-  return isRecord(first) ? first : undefined;
-}
-
-/**
-Navigates TrainingCenterDatabase > Activities > Activity[0]. Only the first
-activity is read: v1 imports one run per file, and a multi-activity export
-(a multisport session, say) is out of scope rather than summed.
-*/
-function findActivity(doc: unknown): Record<string, unknown> | undefined {
-  // Equivalent: `parseXmlDocument` always hands back an object for a
-  // document it accepted. The guard is what narrows `unknown`.
-  // Stryker disable next-line ConditionalExpression
-  if (!isRecord(doc)) return undefined;
-  const root = doc.TrainingCenterDatabase;
-  if (!isRecord(root)) return undefined;
-  const activities = root.Activities;
-  // A course file has no `Activities` at all, and reading `.Activity` off
-  // undefined would throw a TypeError instead of refusing the file.
-  return isRecord(activities) ? firstOf(activities.Activity) : undefined;
 }
 
 /**
@@ -116,28 +73,88 @@ interface LapReading {
   altitudes: number[];
 }
 
-function trackpointsOf(lap: Record<string, unknown>): unknown[] {
-  return toArray(lap.Track).flatMap((track: unknown) =>
-    toArray(child(track, "Trackpoint")),
-  );
+/**
+ * A lap as the file gave it, before its totals are judged.
+ */
+interface LapFound {
+  // The lap's `StartTime` attribute.
+  startTime: string | undefined;
+  // Every `TotalTimeSeconds` and `DistanceMeters` directly under the lap.
+  // One of each is a total; none, or more than one, is not.
+  seconds: unknown[];
+  metres: unknown[];
+  // The first trackpoint position in the lap, and every altitude.
+  position: Position | undefined;
+  altitudes: number[];
 }
 
-function readLap(lap: unknown): LapReading {
-  // Equivalent: a non-record lap (`<Lap/>` parses to "") has no children,
-  // so every read below answers undefined — NaN totals, no position —
-  // whether or not it is swapped for an empty object. The guard is what
-  // narrows `unknown`.
-  // Stryker disable next-line ConditionalExpression
-  const fields: Record<string, unknown> = isRecord(lap) ? lap : {};
-  const points = trackpointsOf(fields);
+const ACTIVITY = ["TrainingCenterDatabase", "Activities", "Activity"] as const;
+const LAP = [...ACTIVITY, "Lap"] as const;
+const LAP_SECONDS = [...LAP, "TotalTimeSeconds"] as const;
+const LAP_METRES = [...LAP, "DistanceMeters"] as const;
+const TRACKPOINT = [...LAP, "Track", "Trackpoint"] as const;
+
+/**
+ * The laps of the file's first activity, in order. Only the first
+ * activity is read: v1 imports one run per file, and a multi-activity
+ * export (a multisport session, say) is out of scope rather than summed.
+ *
+ * A lap's two totals and each of its trackpoints are built whole, read,
+ * and let go; nothing else in the file is kept.
+ */
+function lapsIn(bytes: ArrayBuffer): LapFound[] {
+  const laps: LapFound[] = [];
+  let activities = 0;
+  // The lap being read. A total's path and a trackpoint's run through
+  // their lap's, so one is always open by the time either arrives.
+  let lap: LapFound;
+  readXml(bytes, "tcx", {
+    open(path, attributes) {
+      if (isAt(path, ACTIVITY)) activities += 1;
+      if (activities !== 1) return false;
+      if (isAt(path, LAP)) {
+        lap = {
+          startTime: attributes.StartTime,
+          seconds: [],
+          metres: [],
+          position: undefined,
+          altitudes: [],
+        };
+        laps.push(lap);
+      }
+      return (
+        isAt(path, TRACKPOINT) ||
+        isAt(path, LAP_SECONDS) ||
+        isAt(path, LAP_METRES)
+      );
+    },
+    value(path, node) {
+      if (isAt(path, LAP_SECONDS)) lap.seconds.push(node);
+      else if (isAt(path, LAP_METRES)) lap.metres.push(node);
+      else {
+        lap.position ??= positionOf(node);
+        const altitude = readNumber(child(node, "AltitudeMeters"));
+        lap.altitudes.push(...present(altitude));
+      }
+    },
+  });
+  return laps;
+}
+
+/**
+ * The one value of a list, or nothing when it holds none or several.
+ */
+function only(values: readonly unknown[]): unknown {
+  return values.length === 1 ? values[0] : undefined;
+}
+
+function readLap(lap: LapFound): LapReading {
   return {
-    seconds: lapTotal(fields.TotalTimeSeconds),
-    metres: lapTotal(fields.DistanceMeters),
-    position: firstPosition(fields),
-    startMs: readDate(fields["@_StartTime"])?.getTime(),
-    altitudes: points.flatMap((point) =>
-      present(readNumber(child(point, "AltitudeMeters"))),
-    ),
+    seconds: lapTotal(only(lap.seconds)),
+    metres: lapTotal(only(lap.metres)),
+    position: lap.position,
+    startMs: readDate(lap.startTime)?.getTime(),
+    altitudes: lap.altitudes,
   };
 }
 
@@ -177,13 +194,11 @@ function elapsedSeconds(
 export const tcxSource: RunSource = {
   kind: "tcx",
   async parse(bytes: ArrayBuffer): Promise<RunDraft> {
-    // fast-xml-parser is synchronous; see gpx.ts for why this stays async.
+    // The reader is synchronous; see gpx.ts for why this stays async.
     await Promise.resolve();
-    const doc = parseXmlDocument(bytes, "tcx");
-
-    const laps = toArray(findActivity(doc)?.Lap);
+    const laps = lapsIn(bytes);
     const firstLap = laps[0];
-    if (!isRecord(firstLap)) {
+    if (firstLap === undefined) {
       throw new RunParseError("tcx: no Lap element found", {
         problem: "no-track",
       });
@@ -192,7 +207,7 @@ export const tcxSource: RunSource = {
     // Every refusal below names the lap, or the laps, it found wrong: the
     // reason is how a maintainer tells one bad file from another.
     const count = String(laps.length);
-    const startedAtDate = readDate(firstLap["@_StartTime"]);
+    const startedAtDate = readDate(firstLap.startTime);
     if (startedAtDate === undefined)
       throw new RunParseError(
         `tcx: lap 1 of ${count} has no readable StartTime`,
