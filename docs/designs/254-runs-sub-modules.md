@@ -68,11 +68,14 @@ name a moved component (`failure-path-is-static`,
 
 No new behaviour. Full `npm test` (the architecture tests are
 default-deny), `diagrams:check`, the commit gate's dependency-cruiser,
-`npm run build`, and `npm run e2e:ci` on both legs.
+`npm run build`, and `npm run e2e:ci` on both legs. After the `import.c4` edits,
+`test/architecture/diagram-sources.node.test.ts` (every story's
+`// source:` resolves) and `npm run diagrams:stale`.
 
 ## Issues
 
-- Closes #887. Opens: none expected.
+- Closes #887, and #908 (four comments in `runs` that cite `ops` paths
+  moved by design 247; coordinator, 2026-11-19). Opens: none expected.
 
 ## Open questions
 
