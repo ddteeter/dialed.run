@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-router";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -46,6 +47,30 @@ function totalsBox() {
   return screen.getByRole("switch", { name: TOTALS_LABEL });
 }
 
+/**
+A totals switch whose saved value a button replaces, as a route reload does.
+*/
+function Reloaded(): ReactElement {
+  const [initial, setInitial] = useState(true);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setInitial(false);
+        }}
+      >
+        Reload
+      </button>
+      <TotalsSwitch
+        isVerified
+        initial={initial}
+        save={vi.fn().mockResolvedValue(undefined)}
+      />
+    </>
+  );
+}
+
 describe("TotalsSwitch (round 32, frames 1a and 1b)", () => {
   it("says the drawn copy, verbatim", () => {
     expect(TOTALS_LABEL).toBe("Count my runs in anonymous totals");
@@ -53,7 +78,7 @@ describe("TotalsSwitch (round 32, frames 1a and 1b)", () => {
       "Shared and private runs add their temperature, kit and verdict to the guides and reports. Shared runs also count in Same conditions, which other runners see. Never your name, notes, photos, when you ran, or anywhere more precise than a broad climate zone.",
     );
     expect(TOTALS_OFF).toBe(
-      "Off. Your runs leave the guides at tonight's update. They leave Same conditions now, and it still works for you. Reports already published stay as they are.",
+      "Off. Your runs leave the guides at the next rebuild, within a month. They leave Same conditions now, and it still works for you. Reports already published stay as they are.",
     );
   });
 
@@ -67,11 +92,23 @@ describe("TotalsSwitch (round 32, frames 1a and 1b)", () => {
     );
     expect(totalsBox()).toBeChecked();
     expect(totalsBox()).toHaveAccessibleDescription(TOTALS_ON);
-    // A placeholder target until the marketing site owns
-    // /how-it-works#totals (design-deltas item 61).
+    // The guides section of /how-it-works (#523).
     expect(
       screen.getByRole("link", { name: "How the guides are made" }),
-    ).toHaveAttribute("href", "/privacy");
+    ).toHaveAttribute("href", "/how-it-works#totals");
+  });
+
+  it("follows a newer saved value, as Back's reload brings (#523)", async () => {
+    // Back to Settings › Privacy draws the route's cached data (on) and
+    // then its reload (off, as saved): the switch must take the second.
+    const user = userEvent.setup();
+    await renderWithRouter(<Reloaded />);
+    expect(totalsBox()).toBeChecked();
+
+    await user.click(screen.getByRole("button", { name: "Reload" }));
+
+    expect(totalsBox()).not.toBeChecked();
+    expect(totalsBox()).toHaveAccessibleDescription(TOTALS_OFF);
   });
 
   it("saves off on toggle, with no confirm, and swaps to the off line", async () => {

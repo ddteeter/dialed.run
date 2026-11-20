@@ -244,6 +244,8 @@ describe("which type an edge resolves to", () => {
       ["/onboarding/settings", "/copyright"],
       // Plan C9 (round 29 #9): the open-source page, from Settings › About.
       ["/onboarding/settings", "/open-source"],
+      // #523: How it works, from Settings › Privacy's guides link.
+      ["/onboarding/settings/$section", "/how-it-works"],
       // Design 136: the removal request, from the signed-out footer.
       ["/auth/login", "/takedown"],
       ["/", "/account/terms"],

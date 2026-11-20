@@ -125,6 +125,14 @@ type SavedSwitchRowProps = Readonly<{
  */
 export function SavedSwitchRow(props: SavedSwitchRowProps): JSX.Element {
   const [isOn, setIsOn] = useState(props.initial);
+  // The saved value can arrive after the first render: Back to a settings
+  // page draws the route's cached data, then its reload. The switch
+  // follows the newer saved value rather than keeping the first one.
+  const [savedInitial, setSavedInitial] = useState(props.initial);
+  if (props.initial !== savedInitial) {
+    setSavedInitial(props.initial);
+    setIsOn(props.initial);
+  }
   const control = useSavedSwitch<[boolean]>({
     action: props.save,
     onSuccess: (next) => {

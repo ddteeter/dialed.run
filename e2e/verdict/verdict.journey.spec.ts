@@ -283,7 +283,9 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
   await totals.click();
   await expect(totals).not.toBeChecked();
   await expect(
-    sharing.getByText("Off. Your runs leave the guides at tonight's update."),
+    sharing.getByText(
+      "Off. Your runs leave the guides at the next rebuild, within a month.",
+    ),
   ).toBeVisible();
   await expect(
     page.getByText("Other runners won't see this run.", { exact: true }),

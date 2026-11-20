@@ -21,13 +21,13 @@ export const TOTALS_LABEL = "Count my runs in anonymous totals";
 export const TOTALS_ON =
   "Shared and private runs add their temperature, kit and verdict to the guides and reports. Shared runs also count in Same conditions, which other runners see. Never your name, notes, photos, when you ran, or anywhere more precise than a broad climate zone.";
 export const TOTALS_OFF =
-  "Off. Your runs leave the guides at tonight's update. They leave Same conditions now, and it still works for you. Reports already published stay as they are.";
+  "Off. Your runs leave the guides at the next rebuild, within a month. They leave Same conditions now, and it still works for you. Reports already published stay as they are.";
 
 /**
  * An unconfirmed runner's lines (round 38 #61d). D-108 C counts confirmed
  * accounts only, so the confirmed ON line's claim would be untrue: the
  * same sentence, led by the condition, and an OFF with nothing leaving,
- * so no "tonight" or "now". They may still turn totals off, with no
+ * so no "next rebuild" or "now". They may still turn totals off, with no
  * confirm sheet (owner, 2026-10-11).
  */
 export const TOTALS_ON_UNCONFIRMED =
@@ -66,9 +66,8 @@ type TotalsSwitchProps = Readonly<{
  * save lands: into Privacy's one status region through `onAnnounce`, or
  * its own region in A3's sheet, where nothing else speaks.
  *
- * "How the guides are made" belongs to the marketing site
- * (`dialed.run/how-it-works#totals`), which is not live, so it opens the
- * privacy policy until it is (design-deltas open queue item 61).
+ * "How the guides are made" opens `/how-it-works#totals` (#523; the
+ * design-deltas open queue's item 61).
  */
 export function TotalsSwitch(props: TotalsSwitchProps): JSX.Element {
   const hintId = useId();
@@ -90,7 +89,8 @@ export function TotalsSwitch(props: TotalsSwitchProps): JSX.Element {
         )}
       </SavedSwitchRow>
       <Link
-        to="/privacy"
+        to="/how-it-works"
+        hash="totals"
         className="target self-start text-small text-ink underline underline-offset-4"
       >
         How the guides are made
