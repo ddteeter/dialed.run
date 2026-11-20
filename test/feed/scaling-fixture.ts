@@ -21,11 +21,11 @@ The 5 °C band `FEELS_LIKE_C` falls in (`bandFloorC`).
 export const BAND_FLOOR_C = 5;
 
 /**
- * What `observationsForEntries` (src/modules/feed/conditions.ts:86) asks
+ * What `observationsForEntries` (src/modules/feed/conditions/conditions.ts:86) asks
  * for `entries` located one-hour runs: their runs in `IN_LIST_CHUNK`
  * chunks on core; on weather, the cache cells in chunks of
  * `CELLS_PER_ROW_READ` (one cell per run, not de-duplicated:
- * src/modules/feed/conditions.ts:142) and the runs' own bands in
+ * src/modules/feed/conditions/conditions.ts:142) and the runs' own bands in
  * `IN_LIST_CHUNK` chunks (`manualBandsFor`, src/modules/weather/store.ts:279).
  * The weather side legitimately scales with the window; it is chunked,
  * not per row.

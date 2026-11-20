@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { bandVerdict } from "../../src/modules/feed/coverage";
-import type { CoverageBand } from "../../src/modules/feed/coverage";
+import { bandVerdict } from "../../src/modules/feed/consensus/coverage";
+import type { CoverageBand } from "../../src/modules/feed/consensus/coverage";
 
 /**
  * How a band reads in one word (design §AB3), and the tie-break that

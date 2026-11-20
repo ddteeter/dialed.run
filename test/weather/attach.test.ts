@@ -30,7 +30,7 @@ import {
   requestUrl,
 } from "./fixtures/visual-crossing-observation";
 import { spiedBinding } from "../d1-spy";
-import { observationsForRuns } from "../../src/modules/feed/conditions";
+import { observationsForRuns } from "../../src/modules/feed/conditions/conditions";
 
 const OBSERVATION_HOUR_EPOCH = 1_768_485_600; // 07:00 fixture hour
 

@@ -25,7 +25,7 @@ import {
   weatherObservations,
 } from "../../src/db/schema-weather";
 import { env } from "../../src/env";
-import { entryHalfStatement } from "../../src/modules/feed/run-conditions-entry";
+import { entryHalfStatement } from "../../src/modules/feed/conditions/run-conditions-entry";
 import { cacheKeyFor } from "../../src/modules/weather";
 import { weatherHalfStatements } from "../../src/modules/weather/run-conditions-copy";
 import type { Audience, ManualSky } from "../../src/lib/contracts";

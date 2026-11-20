@@ -5,7 +5,7 @@ import {
   plainSpaces,
   postedLabel,
 } from "../../src/modules/feed/posted";
-import { stripConditions } from "../../src/modules/feed/strip";
+import { stripConditions } from "../../src/modules/feed/conditions/strip";
 import { pointConditions } from "./conditions-fixture";
 
 /**

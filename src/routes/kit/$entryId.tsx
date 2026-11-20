@@ -1,13 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { signedInQuery } from "../../modules/auth/functions";
-import { PublicKitPage } from "../../modules/feed/components/PublicKit";
-import { NotPublicPage } from "../../modules/feed/components/PublicFrame";
+import { PublicKitPage } from "../../modules/feed/public-web/components/PublicKit";
+import { NotPublicPage } from "../../modules/feed/public-web/components/PublicFrame";
 import { publicKitQuery } from "../../modules/feed/functions";
 import {
   kitOrNotFound,
   publicKitHead,
-} from "../../modules/feed/public-kit-shape";
+} from "../../modules/feed/public-web/public-kit-shape";
 import { PUBLIC_ORIGIN } from "../../lib/public-origin";
 
 /**

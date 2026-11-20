@@ -3,17 +3,17 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { EntryDetail } from "../../src/modules/feed/components/EntryDetail";
+import { EntryDetail } from "../../src/modules/feed/entries/components/EntryDetail";
 import {
   COPY_HOLD_MS,
   LINK_COPIED,
   LINK_NOT_COPIED,
   PUBLIC_KIT_LINE,
   publicKitUrl,
-} from "../../src/modules/feed/components/OwnerAudience";
+} from "../../src/modules/feed/entries/components/OwnerAudience";
 import { NoticeBand } from "../../src/modules/safety/notices/components/NoticeBand";
-import type { SetUsefulFn } from "../../src/modules/feed/components/useful-reaction";
-import type { entryDetailForViewer } from "../../src/modules/feed/entries";
+import type { SetUsefulFn } from "../../src/modules/feed/entries/components/useful-reaction";
+import type { entryDetailForViewer } from "../../src/modules/feed/entries/entries";
 import { pointConditions } from "../feed/conditions-fixture";
 import {
   expectBellEnding,

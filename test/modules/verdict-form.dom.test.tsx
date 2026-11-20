@@ -14,13 +14,13 @@ import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { entryTags, verdictScale } from "../../src/lib/contracts";
-import type { BandRun } from "../../src/modules/feed/band-runs";
-import type { BandSignals } from "../../src/modules/feed/band-signals";
+import type { BandRun } from "../../src/modules/feed/entries/band-runs";
+import type { BandSignals } from "../../src/modules/feed/entries/band-signals";
 import type { Units } from "../../src/lib/contracts";
 import { PUBLIC_PREVIEW_LINE } from "../../src/ui/audience";
 import { verdictHue } from "../../src/ui/verdict-hue";
-import { VerdictForm } from "../../src/modules/feed/components/VerdictForm";
-import type { entryDetailForViewer } from "../../src/modules/feed/entries";
+import { VerdictForm } from "../../src/modules/feed/entries/components/VerdictForm";
+import type { entryDetailForViewer } from "../../src/modules/feed/entries/entries";
 import { PrivateRunLine } from "../../src/modules/onboarding/components/PrivateRunLine";
 import { UnconfirmedRefusalAnswer } from "../../src/ui/unconfirmed-refusal";
 import type { ConfirmGate } from "../../src/ui/unconfirmed-refusal";

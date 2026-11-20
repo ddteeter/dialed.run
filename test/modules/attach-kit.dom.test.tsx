@@ -19,12 +19,12 @@ import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import type { AttachContext } from "../../src/modules/feed/attach-context";
-import { AttachKit } from "../../src/modules/feed/components/AttachKit";
+import type { AttachContext } from "../../src/modules/feed/attach/attach-context";
+import { AttachKit } from "../../src/modules/feed/attach/components/AttachKit";
 import type { UiGroup } from "../../src/modules/feed/groups";
-import type { PickerGroup } from "../../src/modules/feed/picker";
-import type { BandRun } from "../../src/modules/feed/band-runs";
-import type { PrefillCandidate } from "../../src/modules/feed/prefill";
+import type { PickerGroup } from "../../src/modules/feed/attach/picker";
+import type { BandRun } from "../../src/modules/feed/entries/band-runs";
+import type { PrefillCandidate } from "../../src/modules/feed/attach/prefill";
 import { TERMS_NOT_ACCEPTED_CODE } from "../../src/lib/auth-signal";
 import { maxPhotosPerEntry } from "../../src/lib/photo-constraints";
 import type { PhotoStep } from "../../src/ui";

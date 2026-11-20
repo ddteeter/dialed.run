@@ -7,7 +7,7 @@ import { coreDb } from "../../src/env";
 import {
   bandRunsInput,
   recentRunsInBand,
-} from "../../src/modules/feed/band-runs";
+} from "../../src/modules/feed/entries/band-runs";
 import {
   makeEntry,
   makeItem,

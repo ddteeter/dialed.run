@@ -10,13 +10,13 @@ import {
   confirmedUserId,
   confirmedViewerId,
 } from "../../src/modules/auth/terms-gate";
-import { recentPublicEntriesStatement } from "../../src/modules/feed/consensus";
-import { entryDetailForViewer } from "../../src/modules/feed/entries";
-import { followingFeed } from "../../src/modules/feed/feed";
-import { follow } from "../../src/modules/feed/follows";
-import { visibleRunnerHandle } from "../../src/modules/feed/profiles";
-import { publicProfileRead } from "../../src/modules/feed/public-profile";
-import { searchRunners } from "../../src/modules/feed/search";
+import { recentPublicEntriesStatement } from "../../src/modules/feed/consensus/consensus";
+import { entryDetailForViewer } from "../../src/modules/feed/entries/entries";
+import { followingFeed } from "../../src/modules/feed/following/feed";
+import { follow } from "../../src/modules/feed/following/follows";
+import { visibleRunnerHandle } from "../../src/modules/feed/following/profiles";
+import { publicProfileRead } from "../../src/modules/feed/public-web/public-profile";
+import { searchRunners } from "../../src/modules/feed/following/search";
 import { worldVisibleEntry } from "../../src/modules/safety";
 
 import { addAccount } from "../feed/helpers";

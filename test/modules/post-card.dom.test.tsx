@@ -2,10 +2,10 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { PostCard } from "../../src/modules/feed/components/PostCard";
-import { VerdictBadge } from "../../src/modules/feed/components/VerdictBadge";
-import type { SetUsefulFn } from "../../src/modules/feed/components/useful-reaction";
-import type { FeedItem } from "../../src/modules/feed/feed";
+import { PostCard } from "../../src/modules/feed/following/components/PostCard";
+import { VerdictBadge } from "../../src/modules/feed/entries/components/VerdictBadge";
+import type { SetUsefulFn } from "../../src/modules/feed/entries/components/useful-reaction";
+import type { FeedItem } from "../../src/modules/feed/following/feed";
 import { pointConditions } from "../feed/conditions-fixture";
 import { WEATHER_CREDIT } from "../ui/weather-credit";
 import {

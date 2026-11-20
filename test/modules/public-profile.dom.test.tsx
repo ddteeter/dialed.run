@@ -13,9 +13,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   NotPublicPage,
   type AskSignedIn,
-} from "../../src/modules/feed/components/PublicFrame";
-import { PublicProfilePage } from "../../src/modules/feed/components/PublicProfile";
-import type { PublicProfile } from "../../src/modules/feed/public-profile-shape";
+} from "../../src/modules/feed/public-web/components/PublicFrame";
+import { PublicProfilePage } from "../../src/modules/feed/public-web/components/PublicProfile";
+import type { PublicProfile } from "../../src/modules/feed/public-web/public-profile-shape";
 
 /**
  * `/@handle` and its not-public twin (round 41 #86d, #86f).

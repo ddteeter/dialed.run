@@ -26,8 +26,8 @@ import { newUlid, type Ulid, ulidSchema, ulidSeconds } from "../../src/lib/ids";
 import {
   clearMissingPhoto,
   MISSING_PHOTO_NOTICE,
-} from "../../src/modules/feed/missing-photo";
-import { decideReview } from "../../src/modules/feed/moderation";
+} from "../../src/modules/feed/moderation/missing-photo";
+import { decideReview } from "../../src/modules/feed/moderation/moderation";
 import { nowSeconds } from "../../src/lib/now";
 import {
   retryPendingScreenings,

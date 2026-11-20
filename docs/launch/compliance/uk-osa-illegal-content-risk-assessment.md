@@ -60,22 +60,22 @@ assumes it is in scope; this record follows that.]
 
 What a user can do that matters here, from the code:
 
-| Feature                                                 | Present                                                                  | Where                                                                 |
-| ------------------------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------- |
-| Accounts; email confirmed before sharing                | Yes                                                                      | Unconfirmed runners' kits are saved private (`feed/share-default.ts`) |
-| Age gate (18+, self-declared date of birth)             | Yes                                                                      | `src/lib/contracts/age.ts` `MINIMUM_AGE = 18`; D-114                  |
-| User profiles: username, the place you run, recent kits | Yes                                                                      | `feed/profiles.ts`                                                    |
-| Search for runners by username                          | Yes                                                                      | `feed/search.ts`                                                      |
-| Following                                               | Yes                                                                      | `feed/follows.ts`                                                     |
-| Posting images (up to 4 per kit)                        | Yes                                                                      | `feed/photos.ts` `MAX_PHOTOS_PER_ENTRY`                               |
-| Posting text: caption (280 chars), tags, product names  | Yes                                                                      | `feed/inputs.ts`; products are a shared catalogue                     |
-| Posting links                                           | Product links only, https, with a domain denylist                        | `safety/rules/denylist.ts`                                            |
-| Reactions ("useful")                                    | Yes                                                                      | `feed/reactions.ts`                                                   |
-| Feed                                                    | Kits from runners you follow, newest first. No recommender ranks content | `feed/feed.ts` `followingFeed`                                        |
-| Direct messages, comments, groups, live streaming       | **No**                                                                   | No table holds them (`src/db/schema-core.ts`)                         |
-| Visible to signed-out visitors or search engines        | **No**                                                                   | D-58, D-53                                                            |
-| Shows a run's location                                  | **No**                                                                   | Coordinates never shown (privacy policy "Weather and location")       |
-| Shows when a run started                                | Yes, on a shared kit                                                     | `feed/entries.ts` `EntryDetail`                                       |
+| Feature                                                 | Present                                                                  | Where                                                                         |
+| ------------------------------------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| Accounts; email confirmed before sharing                | Yes                                                                      | Unconfirmed runners' kits are saved private (`feed/entries/share-default.ts`) |
+| Age gate (18+, self-declared date of birth)             | Yes                                                                      | `src/lib/contracts/age.ts` `MINIMUM_AGE = 18`; D-114                          |
+| User profiles: username, the place you run, recent kits | Yes                                                                      | `feed/following/profiles.ts`                                                  |
+| Search for runners by username                          | Yes                                                                      | `feed/following/search.ts`                                                    |
+| Following                                               | Yes                                                                      | `feed/following/follows.ts`                                                   |
+| Posting images (up to 4 per kit)                        | Yes                                                                      | `feed/entries/photos.ts` `MAX_PHOTOS_PER_ENTRY`                               |
+| Posting text: caption (280 chars), tags, product names  | Yes                                                                      | `feed/inputs.ts`; products are a shared catalogue                             |
+| Posting links                                           | Product links only, https, with a domain denylist                        | `safety/rules/denylist.ts`                                                    |
+| Reactions ("useful")                                    | Yes                                                                      | `feed/entries/reactions.ts`                                                   |
+| Feed                                                    | Kits from runners you follow, newest first. No recommender ranks content | `feed/following/feed.ts` `followingFeed`                                      |
+| Direct messages, comments, groups, live streaming       | **No**                                                                   | No table holds them (`src/db/schema-core.ts`)                                 |
+| Visible to signed-out visitors or search engines        | **No**                                                                   | D-58, D-53                                                                    |
+| Shows a run's location                                  | **No**                                                                   | Coordinates never shown (privacy policy "Weather and location")               |
+| Shows when a run started                                | Yes, on a shared kit                                                     | `feed/entries/entries.ts` `EntryDetail`                                       |
 
 Controls already in place:
 
@@ -151,15 +151,15 @@ user-to-user service, whatever its size or risk, and more for larger or
 riskier ones. [CHECK: the exact list and numbering in the current Codes.]
 Mapped against what exists:
 
-| Measure (as this draft understands the Codes)                                                    | Status                                                                                                                                        |
-| ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| A named person accountable for illegal-content duties                                            | The owner (above)                                                                                                                             |
-| A content moderation function that reviews and swiftly takes down illegal content it is aware of | Review queue, Remove, quarantine, takedown (`safety/review/review.ts`, `feed/moderation.ts`). One person, no deputy (an accepted risk, D-148) |
-| Terms that say how users are protected, clear and accessible                                     | `docs/legal/terms.md` "The rules", "Screening, reports and moderation", "Suspected illegal content"                                           |
-| Easy reporting of illegal content, including by non-users                                        | In-app reports; `/takedown`; desk@dialed.run (terms "Suspected illegal content")                                                              |
-| A complaints procedure, including appeals                                                        | desk@dialed.run; reply to the notice; no deadline (D-73; terms "Appeals")                                                                     |
-| Act on complaints and tell the complainant                                                       | Removal and closure notices exist; reporter outcome notice is C8 (D-132), before public                                                       |
-| Remove accounts of proscribed organisations                                                      | Bans exist; no list check. Negligible terrorism risk                                                                                          |
+| Measure (as this draft understands the Codes)                                                    | Status                                                                                                                                                   |
+| ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A named person accountable for illegal-content duties                                            | The owner (above)                                                                                                                                        |
+| A content moderation function that reviews and swiftly takes down illegal content it is aware of | Review queue, Remove, quarantine, takedown (`safety/review/review.ts`, `feed/moderation/moderation.ts`). One person, no deputy (an accepted risk, D-148) |
+| Terms that say how users are protected, clear and accessible                                     | `docs/legal/terms.md` "The rules", "Screening, reports and moderation", "Suspected illegal content"                                                      |
+| Easy reporting of illegal content, including by non-users                                        | In-app reports; `/takedown`; desk@dialed.run (terms "Suspected illegal content")                                                                         |
+| A complaints procedure, including appeals                                                        | desk@dialed.run; reply to the notice; no deadline (D-73; terms "Appeals")                                                                                |
+| Act on complaints and tell the complainant                                                       | Removal and closure notices exist; reporter outcome notice is C8 (D-132), before public                                                                  |
+| Remove accounts of proscribed organisations                                                      | Bans exist; no list check. Negligible terrorism risk                                                                                                     |
 
 Measures not taken, and why:
 

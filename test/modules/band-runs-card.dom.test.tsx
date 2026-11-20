@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { BandRunsCard } from "../../src/modules/feed/components/BandRunsCard";
+import { BandRunsCard } from "../../src/modules/feed/entries/components/BandRunsCard";
 
 /**
  * The band history card's heading (round 25), drawn as a range and said

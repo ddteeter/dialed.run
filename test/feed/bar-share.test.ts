@@ -4,8 +4,8 @@ import {
   SHARE_WORDS,
   summarySentence,
   withShares,
-} from "../../src/modules/feed/bar-share";
-import type { DialedType } from "../../src/modules/feed/bar-share";
+} from "../../src/modules/feed/consensus/bar-share";
+import type { DialedType } from "../../src/modules/feed/consensus/bar-share";
 
 /**
 The words alone, for rows of these runner counts out of `matched`.

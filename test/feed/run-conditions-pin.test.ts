@@ -11,7 +11,7 @@ import { newUlid } from "../../src/lib/ids";
 import {
   bandBuckets,
   matchingEntriesStatement,
-} from "../../src/modules/feed/consensus";
+} from "../../src/modules/feed/consensus/consensus";
 import { judgedFeelsLikeC } from "../../src/modules/feed/judged-conditions";
 import { pointConditions } from "./conditions-fixture";
 import {

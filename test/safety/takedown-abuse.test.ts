@@ -15,7 +15,7 @@ import { env } from "../../src/env";
 import { removalRequestReceived } from "../../src/lib/contracts/email-kinds";
 import { newUlid } from "../../src/lib/ids";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
-import { decideRemovalRequest } from "../../src/modules/feed/removal-requests";
+import { decideRemovalRequest } from "../../src/modules/feed/moderation/removal-requests";
 import { mintReceiptConfirmToken } from "../../src/modules/safety";
 import {
   blockAndDeclineAll,

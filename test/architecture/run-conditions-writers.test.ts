@@ -67,7 +67,7 @@ describe("writes of an entry's audience or verdict", () => {
     // PR that adds it, beside its `entryHalfStatement`.
     // Three: the kit's insert, the replayed verdict and the save.
     expect(copiedWrites()).toStrictEqual(
-      new Map([["src/modules/feed/entries.ts", 3]]),
+      new Map([["src/modules/feed/entries/entries.ts", 3]]),
     );
   });
 

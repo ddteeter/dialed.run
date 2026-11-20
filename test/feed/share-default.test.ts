@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
-import { defaultAudienceFor } from "../../src/modules/feed/share-default";
+import { defaultAudienceFor } from "../../src/modules/feed/entries/share-default";
 import { addAccount, makeUser, resetTables } from "./helpers";
 
 /**

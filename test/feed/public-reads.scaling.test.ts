@@ -9,9 +9,9 @@ import {
   wardrobeItems,
 } from "../../src/db/schema-core";
 import { newUlid } from "../../src/lib/ids";
-import { entryDetailForViewer } from "../../src/modules/feed/entries";
-import { publicKitRead } from "../../src/modules/feed/public-kit";
-import { publicProfileRead } from "../../src/modules/feed/public-profile";
+import { entryDetailForViewer } from "../../src/modules/feed/entries/entries";
+import { publicKitRead } from "../../src/modules/feed/public-web/public-kit";
+import { publicProfileRead } from "../../src/modules/feed/public-web/public-profile";
 import { core, expectFlat, locatedEntry, measured } from "./feed-scaling";
 import {
   addAccount,

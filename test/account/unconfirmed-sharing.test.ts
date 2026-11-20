@@ -5,11 +5,14 @@ import { user } from "../../src/db/schema-auth";
 import { outfitEntries } from "../../src/db/schema-core";
 import { isUnconfirmed, isVerified } from "../../src/modules/account";
 import { emailConfirmationOf } from "../../src/modules/account/verification/email-links";
-import { attachKit, submitVerdict } from "../../src/modules/feed/entries";
+import {
+  attachKit,
+  submitVerdict,
+} from "../../src/modules/feed/entries/entries";
 import {
   audienceAsChosen,
   defaultAudienceFor,
-} from "../../src/modules/feed/share-default";
+} from "../../src/modules/feed/entries/share-default";
 import { core } from "../email/helpers";
 import { makeRun, makeUser, resetTables } from "../feed/helpers";
 import type { Audience } from "../../src/lib/contracts";

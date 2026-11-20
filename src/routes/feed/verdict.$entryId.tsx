@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { bandFloorC } from "../../lib/contracts/temperature";
 import { getSession } from "../../modules/auth/functions";
-import { VerdictForm } from "../../modules/feed/components/VerdictForm";
+import { VerdictForm } from "../../modules/feed/entries/components/VerdictForm";
 import { verdictSearch } from "../../modules/feed/kit-push";
 import { bandContextFor } from "../../modules/feed/route-decisions";
 import {

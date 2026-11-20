@@ -17,13 +17,13 @@ import { entryPhotoIdOf } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { FINGERPRINT_HOLDS_PER_HOUR } from "../../src/modules/safety/limits/breakers";
-import { moderateContent } from "../../src/modules/feed/moderation";
-import { uploadPhoto } from "../../src/modules/feed/photos";
+import { moderateContent } from "../../src/modules/feed/moderation/moderation";
+import { uploadPhoto } from "../../src/modules/feed/entries/photos";
 import {
   deleteEntryPhoto,
   deleteRuns,
   retractEntries,
-} from "../../src/modules/feed/retract";
+} from "../../src/modules/feed/entries/retract";
 import { fileReport } from "../../src/modules/safety/reports/reports";
 import { flaggedAtOf } from "../../src/modules/safety/runners/account-flags";
 import { oweInCore } from "../queue-fakes";

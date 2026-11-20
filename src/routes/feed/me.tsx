@@ -6,7 +6,7 @@ import {
   resendConfirmationFn,
 } from "../../modules/account/functions";
 import { getSession } from "../../modules/auth/functions";
-import { OwnProfile } from "../../modules/feed/components/OwnProfile";
+import { OwnProfile } from "../../modules/feed/following/components/OwnProfile";
 import { ownProfileQuery } from "../../modules/feed/functions";
 import { requireSignedIn } from "../../modules/feed/redirect";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";

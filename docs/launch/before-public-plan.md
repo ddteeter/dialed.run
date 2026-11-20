@@ -274,7 +274,7 @@ the binding is approved (decision 1).
 own `email/content.ts`, the safety barrel and `ReviewQueue.tsx`.
 
 1. **R-140**: export `takedownSentence`, add the takedown `content_removed`
-   variant, pass `input.action` through `feed/moderation.ts`'s `notice`, and
+   variant, pass `input.action` through `feed/moderation/moderation.ts`'s `notice`, and
    mount `ContentRemoved`.
 2. **R-145 (c)**: the Review row lists the runner's other photos. Read them
    behind an index, and re-record the safety demo.

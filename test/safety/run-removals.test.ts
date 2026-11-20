@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { entryPhotos, moderationActions } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import { moderateContent } from "../../src/modules/feed/moderation";
+import { moderateContent } from "../../src/modules/feed/moderation/moderation";
 import { removalsOnRun } from "../../src/modules/safety/takedowns/run-removals";
 import { runRemovalsSelect } from "../../src/modules/safety/takedowns/run-removals";
 

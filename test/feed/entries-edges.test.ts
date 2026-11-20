@@ -23,8 +23,8 @@ import {
   shouldPromptForVerdict,
   submitVerdict,
   verdictBandCounts,
-} from "../../src/modules/feed/entries";
-import { setUsefulReaction } from "../../src/modules/feed/reactions";
+} from "../../src/modules/feed/entries/entries";
+import { setUsefulReaction } from "../../src/modules/feed/entries/reactions";
 import { denyDomain } from "../../src/modules/safety/rules/denylist";
 import {
   makeEntry,

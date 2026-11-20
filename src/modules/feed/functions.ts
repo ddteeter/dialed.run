@@ -25,10 +25,20 @@ import {
   usefulInput,
   userIdInput,
 } from "./inputs";
-import { attachContext, attachRunInput, prefillForRun } from "./attach-context";
-import { saveBacklogRow, unjudgedRunCount, verdictBacklog } from "./backlog";
-import { feedConditions } from "./compact-conditions";
-import { consensusAt } from "./consensus";
+import {
+  attachContext,
+  attachRunInput,
+  prefillForRun,
+  saveBacklogRow,
+  unjudgedRunCount,
+  verdictBacklog,
+} from "./attach";
+import {
+  feedConditions,
+  consensusAt,
+  garmentBandCountOrNone,
+  garmentBandsInput,
+} from "./consensus";
 import {
   attachKit,
   entryDetailForViewer,
@@ -37,16 +47,33 @@ import {
   shouldPromptForVerdict,
   submitVerdict,
   verdictBandCounts,
+  bandSignalsForEntry,
+  bandRunsInput,
+  recentRunsInBand,
+  photoUploadFrom,
+  uploadPhotoAnswer,
+  deleteEntryPhoto,
+  photoIdInput,
+  retractEntry,
+  setUsefulReaction,
 } from "./entries";
-import { bandSignalsForEntry } from "./band-signals";
-import { bandRunsInput, recentRunsInBand } from "./band-runs";
-import { followingFeed } from "./feed";
-import { follow, isFollowing, unfollow } from "./follows";
-import { photoUploadFrom, uploadPhotoAnswer } from "./photos";
-import { deleteEntryPhoto, photoIdInput, retractEntry } from "./retract";
-import { garmentBandCountOrNone, garmentBandsInput } from "./garment-bands";
-import { decideReview, deleteAfterCase, moderateContent } from "./moderation";
-import { moderateGarmentPhoto } from "./garment-moderation";
+import {
+  followingFeed,
+  follow,
+  isFollowing,
+  unfollow,
+  ownProfile,
+  profileAtHandle,
+  visibleRunnerHandle,
+  searchRunners,
+} from "./following";
+import {
+  decideReview,
+  deleteAfterCase,
+  moderateContent,
+  moderateGarmentPhoto,
+  decideRemovalRequest,
+} from "./moderation";
 import {
   copyrightHoldInput,
   garmentMatchActionInput,
@@ -55,13 +82,8 @@ import {
   reviewActionInput,
   takedownInput,
 } from "../safety";
-import { decideRemovalRequest } from "./removal-requests";
-import { ownProfile, profileAtHandle, visibleRunnerHandle } from "./profiles";
-import { unitsFor } from "./units";
-import { publicKitForPage } from "./public-kit";
-import { publicProfileForPage } from "./public-profile";
-import { setUsefulReaction } from "./reactions";
-import { searchRunners } from "./search";
+import { unitsFor } from "./conditions";
+import { publicKitForPage, publicProfileForPage } from "./public-web";
 import { nowSeconds } from "../../lib/now";
 import { placeInput, savePlace } from "../onboarding";
 import { captureException, purgePublicPagesFor } from "../ops";

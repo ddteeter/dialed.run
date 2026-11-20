@@ -5,11 +5,14 @@ import { newUlid } from "../../src/lib/ids";
 import {
   unjudgedRunCount,
   verdictBacklog,
-} from "../../src/modules/feed/backlog";
-import { followingFeed } from "../../src/modules/feed/feed";
-import { follow } from "../../src/modules/feed/follows";
-import { ownProfile, profileAtHandle } from "../../src/modules/feed/profiles";
-import { searchRunners } from "../../src/modules/feed/search";
+} from "../../src/modules/feed/attach/backlog";
+import { followingFeed } from "../../src/modules/feed/following/feed";
+import { follow } from "../../src/modules/feed/following/follows";
+import {
+  ownProfile,
+  profileAtHandle,
+} from "../../src/modules/feed/following/profiles";
+import { searchRunners } from "../../src/modules/feed/following/search";
 import {
   core,
   expectFlat,

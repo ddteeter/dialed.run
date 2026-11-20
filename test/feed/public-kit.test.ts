@@ -24,7 +24,7 @@ import {
   publicKitForPage,
   publicKitHeaders,
   publicKitRead,
-} from "../../src/modules/feed/public-kit";
+} from "../../src/modules/feed/public-web/public-kit";
 
 import {
   makeEntry,
@@ -659,7 +659,9 @@ describe("the card (round 41 #86e)", () => {
     );
 
     expect(response.headers.get("Content-Type")).toBe("image/png");
-    expect(response.headers.get("Cache-Control")).toBe("public, max-age=60, must-revalidate");
+    expect(response.headers.get("Cache-Control")).toBe(
+      "public, max-age=60, must-revalidate",
+    );
     // The kit's own card, not the default one.
     const fallback = await publicKitCardResponse(
       new Request(`https://dialed.test/og/kit/${newUlid()}`),
@@ -679,13 +681,15 @@ describe("the card (round 41 #86e)", () => {
       entryId,
     );
 
-    expect(response.headers.get("Cache-Control")).toBe("public, max-age=60, must-revalidate");
+    expect(response.headers.get("Cache-Control")).toBe(
+      "public, max-age=60, must-revalidate",
+    );
     expect(response.headers.get("Cache-Tag")).toBe(`entry:${entryId}`);
   });
 });
 
 const publicKitSource: Record<string, string> = import.meta.glob(
-  "../../src/modules/feed/public-kit.ts",
+  "../../src/modules/feed/public-web/public-kit.ts",
   { query: "?raw", import: "default", eager: true },
 );
 

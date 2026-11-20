@@ -4,8 +4,8 @@ import { eq } from "drizzle-orm";
 
 import { wardrobeItems } from "../../src/db/schema-core";
 import { env } from "../../src/env";
-import { pickerGroups } from "../../src/modules/feed/picker";
-import type { Conditions } from "../../src/modules/feed/conditions";
+import { pickerGroups } from "../../src/modules/feed/attach/picker";
+import type { Conditions } from "../../src/modules/feed/conditions/conditions";
 import { makeItem, makeUser, resetTables } from "./helpers";
 
 /**

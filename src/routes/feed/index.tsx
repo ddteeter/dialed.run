@@ -6,7 +6,7 @@ import {
   resendConfirmationFn,
 } from "../../modules/account/functions";
 import { getSession } from "../../modules/auth/functions";
-import { Feed } from "../../modules/feed/components/Feed";
+import { Feed } from "../../modules/feed/following/components/Feed";
 import {
   feedConditionsQuery,
   followingFeedQuery,

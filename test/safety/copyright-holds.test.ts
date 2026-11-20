@@ -19,19 +19,19 @@ import { isoDayOf } from "../../src/lib/contracts/age";
 import { entryPhotoKeyFor } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { getEntryDetail } from "../../src/modules/feed/entries";
+import { getEntryDetail } from "../../src/modules/feed/entries/entries";
 import {
   deleteAfterCase,
   moderateContent,
   sweepCopyrightHolds,
-} from "../../src/modules/feed/moderation";
-import { isPhotoVisible } from "../../src/modules/feed/photos";
+} from "../../src/modules/feed/moderation/moderation";
+import { isPhotoVisible } from "../../src/modules/feed/entries/photos";
 import {
   deleteEntryPhoto,
   deleteRun,
   retractEntries,
   retractEntry,
-} from "../../src/modules/feed/retract";
+} from "../../src/modules/feed/entries/retract";
 import { ControlRefusal } from "../../src/lib/control-refusal";
 import { oweInCore } from "../../src/modules/ops";
 import { resolveReview } from "../../src/modules/safety";

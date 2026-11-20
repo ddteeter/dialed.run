@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { BandHistory } from "../../src/modules/feed/components/BandHistory";
+import { BandHistory } from "../../src/modules/feed/entries/components/BandHistory";
 import { drawnText, saidText } from "./spoken-text";
 
 /**

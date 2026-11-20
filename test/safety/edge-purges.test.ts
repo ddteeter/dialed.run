@@ -13,8 +13,8 @@ import {
   retractEntries,
   retractEntry,
 } from "../../src/modules/feed";
-import { submitVerdict } from "../../src/modules/feed/entries";
-import { moderateContent } from "../../src/modules/feed/moderation";
+import { submitVerdict } from "../../src/modules/feed/entries/entries";
+import { moderateContent } from "../../src/modules/feed/moderation/moderation";
 import { setPublicProfile } from "../../src/modules/onboarding/public-profile";
 import { banUser } from "../../src/modules/safety/runners/bans";
 import { fileReport } from "../../src/modules/safety/reports/reports";

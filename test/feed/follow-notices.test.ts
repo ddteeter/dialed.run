@@ -10,13 +10,13 @@ import {
   userProfiles,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
-import { follow, unfollow } from "../../src/modules/feed/follows";
+import { follow, unfollow } from "../../src/modules/feed/following/follows";
 import {
   followBody,
   RING_QUIET_SECONDS,
   ringFollow,
   ringFollowQuietly,
-} from "../../src/modules/feed/follow-notices";
+} from "../../src/modules/feed/following/follow-notices";
 import { nowSeconds } from "../../src/lib/now";
 import {
   deleteAllFrom,

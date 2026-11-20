@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { getSession } from "../../modules/auth/functions";
-import { AttachKit } from "../../modules/feed/components/AttachKit";
+import { AttachKit } from "../../modules/feed/attach/components/AttachKit";
 import { orOnToVerdict } from "../../modules/feed/attach-rules";
 import { attachSearch } from "../../modules/feed/kit-push";
 import {

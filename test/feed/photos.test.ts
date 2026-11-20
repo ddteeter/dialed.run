@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ForbiddenError, getEntryDetail } from "../../src/modules/feed/entries";
+import {
+  ForbiddenError,
+  getEntryDetail,
+} from "../../src/modules/feed/entries/entries";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
@@ -33,7 +36,7 @@ import {
   photoUploadFrom,
   uploadPhoto,
   uploadPhotoAnswer,
-} from "../../src/modules/feed/photos";
+} from "../../src/modules/feed/entries/photos";
 import { type Classify } from "../../src/modules/safety";
 import {
   imageCategories,

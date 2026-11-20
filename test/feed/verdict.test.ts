@@ -7,7 +7,7 @@ import {
   shouldPromptForVerdict,
   submitVerdict,
   verdictBandCounts,
-} from "../../src/modules/feed/entries";
+} from "../../src/modules/feed/entries/entries";
 import {
   makeItem,
   makeObservation,

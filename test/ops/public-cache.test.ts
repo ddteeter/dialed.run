@@ -159,8 +159,8 @@ describe("only the open web's responses are public", () => {
       .toSorted((left, right) => left.localeCompare(right));
 
     expect(callers).toStrictEqual([
-      "src/modules/feed/public-kit.ts",
-      "src/modules/feed/public-profile.ts",
+      "src/modules/feed/public-web/public-kit.ts",
+      "src/modules/feed/public-web/public-profile.ts",
       "src/modules/ops/public-web/og/respond.ts",
       "src/modules/ops/public-web/public-cache.ts",
     ]);

@@ -9,8 +9,14 @@ import {
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { isStrangerAudience } from "../../src/lib/contracts";
-import { attachKit, submitVerdict } from "../../src/modules/feed/entries";
-import { deleteRuns, retractEntries } from "../../src/modules/feed/retract";
+import {
+  attachKit,
+  submitVerdict,
+} from "../../src/modules/feed/entries/entries";
+import {
+  deleteRuns,
+  retractEntries,
+} from "../../src/modules/feed/entries/retract";
 import { makeRun, makeVerifiedUser, resetTables } from "./helpers";
 
 /**

@@ -29,9 +29,9 @@ import {
   deleteRuns,
   retractEntry,
 } from "../../src/modules/feed";
-import { submitVerdict } from "../../src/modules/feed/entries";
-import { moderateContent } from "../../src/modules/feed/moderation";
-import { decideRemovalRequest } from "../../src/modules/feed/removal-requests";
+import { submitVerdict } from "../../src/modules/feed/entries/entries";
+import { moderateContent } from "../../src/modules/feed/moderation/moderation";
+import { decideRemovalRequest } from "../../src/modules/feed/moderation/removal-requests";
 import {
   syncPublicPhotos,
   type PublicPhotoDeps,

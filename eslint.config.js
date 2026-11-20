@@ -240,7 +240,7 @@ const primitiveExemptions = {
   "src/ui/form.tsx": ["brackets", "pills"],
   // The verdict scale's brackets close on the chosen cell: a motion
   // device of their own, hidden from a reader.
-  "src/modules/feed/components/VerdictForm.tsx": ["brackets"],
+  "src/modules/feed/entries/components/VerdictForm.tsx": ["brackets"],
   // react-email: inline styles only, no Tailwind and so no Bracketed.
   "src/modules/email/EmailLayout.tsx": ["brackets"],
   // A satori card is an image: nothing reads its brackets aloud.
@@ -250,12 +250,12 @@ const primitiveExemptions = {
   // Ruled exceptions, drawn as their own: A2's ink-edged Change and its
   // pair on the hi-viz card (R58·308), and AF1's outline-to-filled
   // audience toggle (R55·171).
-  "src/modules/feed/components/AttachKit.tsx": ["pills"],
+  "src/modules/feed/attach/components/AttachKit.tsx": ["pills"],
   // A field's action: Find, the hairline pill at the field's own height
   // beside it (R58·308), and Use this under the place it found; neither
   // is a column's button, so 167.2's width rule does not reach them.
   "src/ui/CityFinder.tsx": ["pills"],
-  "src/modules/feed/components/OwnerAudience.tsx": ["pills"],
+  "src/modules/feed/entries/components/OwnerAudience.tsx": ["pills"],
 };
 
 /**

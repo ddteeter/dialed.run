@@ -4,7 +4,7 @@ import {
   attachContext,
   attachRunInput,
   prefillForRun,
-} from "../../src/modules/feed/attach-context";
+} from "../../src/modules/feed/attach/attach-context";
 import {
   makeEntry,
   makeItem,

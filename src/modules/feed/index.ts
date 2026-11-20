@@ -22,15 +22,14 @@
  * this barrel remains loadable in the vitest workers pool — the same split
  * `modules/auth` and `modules/closet` make.
  */
-export type { CoverageBand } from "./coverage";
-export { coverageLadder } from "./ladder-read";
-export { runnerVisibleToViewer } from "./runner-visibility";
+export { type CoverageBand, coverageLadder } from "./consensus";
+export { runnerVisibleToViewer } from "./conditions";
 export type {
   Backlog,
   BacklogKit,
   BacklogRow,
   BacklogSuggestion,
-} from "./backlog";
+} from "./attach";
 export type { Conditions } from "../../lib/contracts";
 
 // Task 128 · SAF-3: the delete primitives account deletion (126 · ACC-9)
@@ -43,4 +42,4 @@ export {
   retractEntries,
   retractEntry,
   type Scope,
-} from "./retract";
+} from "./entries";

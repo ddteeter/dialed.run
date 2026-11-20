@@ -52,7 +52,7 @@ async function messagesIn(path: string, code: string): Promise<string[]> {
     .map((message) => message.message);
 }
 
-const FEED = "src/modules/feed/components/Feed.tsx";
+const FEED = "src/modules/feed/following/components/Feed.tsx";
 const AUTH = "src/modules/auth/components/Landing.tsx";
 
 const BRACKETS = /Draw bracket notation with <Bracketed>/u;

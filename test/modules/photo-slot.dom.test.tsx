@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   PhotoCounter,
   PhotoSlot,
-} from "../../src/modules/feed/components/PhotoSlot";
+} from "../../src/modules/feed/entries/components/PhotoSlot";
 
 /**
  * R55·206–207: a photo's slot is `--photo` at its ratio while it loads,

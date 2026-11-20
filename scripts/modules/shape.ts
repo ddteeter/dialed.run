@@ -94,7 +94,7 @@ export interface ShapeFacts {
 }
 
 /**
-`src/modules/feed/entries.ts` is in `feed`; a path elsewhere is in none.
+`src/modules/feed/entries/entries.ts` is in `feed`; a path elsewhere is in none.
 */
 function moduleOf(path: string): string | undefined {
   return path.startsWith(MODULES_ROOT)

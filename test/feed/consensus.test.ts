@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
-import { compactConditions } from "../../src/modules/feed/compact-conditions";
-import { conditionsHomeStatement } from "../../src/modules/feed/home";
+import { compactConditions } from "../../src/modules/feed/consensus/compact-conditions";
+import { conditionsHomeStatement } from "../../src/modules/feed/consensus/home";
 import { setCountInTotals } from "../../src/modules/onboarding/aggregate-prefs";
 import { newUlid } from "../../src/lib/ids";
 import { pointConditions } from "./conditions-fixture";
@@ -16,7 +16,7 @@ import {
   recentPublicEntriesStatement,
   shownGroups,
   WINDOW_DAYS,
-} from "../../src/modules/feed/consensus";
+} from "../../src/modules/feed/consensus/consensus";
 import {
   consensusAt,
   feedConditions,

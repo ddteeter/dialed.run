@@ -32,7 +32,7 @@ import {
 // A deep import on purpose: `photoIdInput` is a trust-boundary schema, not
 // part of the feed barrel's public surface (its only other consumer is
 // `functions.ts`, which no test can import at all).
-import { photoIdInput } from "../../src/modules/feed/retract";
+import { photoIdInput } from "../../src/modules/feed/entries/retract";
 import { drainOutbox } from "../../src/modules/ops/outbox/outbox";
 import { reconcileUnhiddenReports } from "../../src/modules/safety";
 import { fileReport } from "../../src/modules/safety/reports/reports";

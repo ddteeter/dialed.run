@@ -10,10 +10,10 @@ import {
   ForbiddenError,
   getEntryDetail,
   submitVerdict,
-} from "../../src/modules/feed/entries";
-import { followingFeed } from "../../src/modules/feed/feed";
-import { follow } from "../../src/modules/feed/follows";
-import { otherProfile } from "../../src/modules/feed/profiles";
+} from "../../src/modules/feed/entries/entries";
+import { followingFeed } from "../../src/modules/feed/following/feed";
+import { follow } from "../../src/modules/feed/following/follows";
+import { otherProfile } from "../../src/modules/feed/following/profiles";
 import { matchTally } from "./synced-consensus";
 import { pointConditions } from "./conditions-fixture";
 import {

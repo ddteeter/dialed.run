@@ -6,13 +6,13 @@ import { entryPhotos } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { entryPhotoIdOf } from "../../src/lib/entry-photo-key";
 import { FINGERPRINT_MATCH_DISTANCE } from "../../src/lib/photo-fingerprint";
-import { moderateContent } from "../../src/modules/feed/moderation";
-import { uploadPhoto } from "../../src/modules/feed/photos";
+import { moderateContent } from "../../src/modules/feed/moderation/moderation";
+import { uploadPhoto } from "../../src/modules/feed/entries/photos";
 import {
   deleteEntryPhoto,
   deleteRuns,
   retractEntry,
-} from "../../src/modules/feed/retract";
+} from "../../src/modules/feed/entries/retract";
 import type { Classify } from "../../src/modules/safety";
 import {
   bitsApart,

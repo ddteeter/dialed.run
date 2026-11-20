@@ -17,13 +17,13 @@ import {
   followingCount,
   isFollowing,
   unfollow,
-} from "../../src/modules/feed/follows";
+} from "../../src/modules/feed/following/follows";
 import {
   hasReacted,
   setUsefulReaction,
   usefulCount,
-} from "../../src/modules/feed/reactions";
-import { searchRunners } from "../../src/modules/feed/search";
+} from "../../src/modules/feed/entries/reactions";
+import { searchRunners } from "../../src/modules/feed/following/search";
 import { blockRunner } from "../../src/modules/safety/reports/blocks";
 import {
   makeEntry,

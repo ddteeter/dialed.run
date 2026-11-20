@@ -7,7 +7,7 @@ import {
   attachKit,
   getEntryDetail,
   submitVerdict,
-} from "../../src/modules/feed/entries";
+} from "../../src/modules/feed/entries/entries";
 import { makeRun, makeUser, resetTables } from "./helpers";
 
 /**

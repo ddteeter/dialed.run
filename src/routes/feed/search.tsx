@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { getSession } from "../../modules/auth/functions";
-import { RunnerSearch } from "../../modules/feed/components/RunnerSearch";
+import { RunnerSearch } from "../../modules/feed/following/components/RunnerSearch";
 import {
   followAction,
   searchQuery,

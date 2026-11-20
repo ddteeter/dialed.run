@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import { follow } from "../../src/modules/feed/follows";
-import { searchRunners } from "../../src/modules/feed/search";
+import { follow } from "../../src/modules/feed/following/follows";
+import { searchRunners } from "../../src/modules/feed/following/search";
 import { blockRunner } from "../../src/modules/safety/reports/blocks";
 import {
   makeEntry,
