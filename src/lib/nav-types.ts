@@ -243,6 +243,9 @@ const NAV: readonly Edge[] = [
       "/terms",
       "/copyright",
       "/open-source",
+      // #523: How it works, from Settings › Privacy's "How the guides are
+      // made", read forward as the legal texts are.
+      "/how-it-works",
       // Design 136: the removal request, from the signed-out footer.
       "/takedown",
       "/onboarding/calibrate",
