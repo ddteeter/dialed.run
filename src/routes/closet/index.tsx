@@ -3,7 +3,7 @@ import { createFileRoute, useLocation } from "@tanstack/react-router";
 import { requireSession } from "../../modules/auth/functions";
 import { ClosetGrid } from "../../modules/closet/components/ClosetGrid";
 import { listItemsFn } from "../../modules/closet/functions";
-import { closetSearch } from "../../modules/closet/inputs";
+import { closetSearch } from "../../modules/closet/client";
 import { viewerUnitsQuery } from "../../modules/feed/functions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";

@@ -4,13 +4,14 @@ paths:
   - "src/routeTree.gen.ts"
   - "src/router.tsx"
   - "src/modules/*/index.ts"
+  - "src/modules/*/client.ts"
   - "src/modules/*/route-decisions.ts"
 ---
 
 # Routes and the client bundle
 
-Loaded when you touch a route, the route tree, or a module's public
-`index.ts` (which routes import).
+Loaded when you touch a route, the route tree, or a module's doors
+(`index.ts` and `client.ts`, which routes import).
 
 ## Routes are glue
 
@@ -39,6 +40,24 @@ Navigation uses TanStack's typed `Link`/`navigate`. A raw string URL in
 `href`, `action`, `fetch` or `window.location` is a lint error. Server functions are imported and
 called, never addressed by URL.
 
+## How a route reaches a module
+
+Through four entries only (design 255, `routes-enter-through-doors`):
+the module's `functions.ts`, a file in a `components/` folder, its
+`client.ts`, or a door (an `index.ts`, the module's or a sub-module's).
+
+- **`client.ts` is the client-safe door**: it re-exports what a route uses
+  at module scope (search schemas, gates, redirects, hooks), from files
+  that reach no server code. `client-side-reaches-no-server` checks that,
+  for it and for every `components/` folder, at commit. A new helper a
+  route needs goes in a plain file and joins its module's `client.ts`.
+- **A door (`index.ts`) is for what a route calls inside
+  `server.handlers` or a server function**, whose body the Start plugin
+  strips. Used anywhere else, it puts server code in the bundle, and only
+  `check:bundle` sees that: the rules cannot tell where an import is used.
+- The module ratchet counts a route's import past these four as past the
+  door (budget 0).
+
 ## What a route imports must be reachable without `env`
 
 A route is in the client bundle. Server functions and `server.handlers` have
@@ -54,13 +73,16 @@ two of those were a quarter of the client entry chunk). So **construct on
 first use, not at module scope**, and annotate a pure-but-unprovable
 constructor `/*#__PURE__*/`.
 
-**Nothing but the production build sees this** — not tsc, eslint,
+**Until design 255, nothing but the production build saw this** — not tsc, eslint,
 dependency-cruiser or the suite. A binding import breaks `npm run build`
 (`cloudflare:workers` is externalised); anything else is silent, which is why
 `postbuild` runs `check:bundle` and `test/architecture/client-bundle.test.ts`
 pins the fixes. A decision a route needs goes in a sibling that imports
-nothing server-side (`feed/route-decisions.ts`, `runs/not-found.ts`), and the
-queries stay behind callbacks the caller owns.
+nothing server-side (`feed/route-decisions.ts`, `runs/not-found.ts`),
+re-exported by the module's `client.ts`, and the queries stay behind
+callbacks the caller owns. For a helper or a component, dependency-cruiser
+now sees it first (above); the build remains the only check for where an
+import is used.
 
 ## `routeTree.gen.ts` has two generators, and they disagree
 

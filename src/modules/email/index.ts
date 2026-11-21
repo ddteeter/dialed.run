@@ -33,3 +33,4 @@ export {
 export type { SendClaim } from "./rate-limit";
 export { notificationSettings } from "./settings";
 export type { NotificationSettings } from "./settings";
+export { oneClickUnsubscribeResponse } from "./one-click";

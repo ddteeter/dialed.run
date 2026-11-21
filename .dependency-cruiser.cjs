@@ -76,6 +76,61 @@ module.exports = {
       },
     },
     {
+      name: "client-side-reaches-no-server",
+      severity: "error",
+      comment:
+        "A module's client.ts and its components are in the client bundle, so nothing " +
+        "they import, however indirectly, may reach server code: env, lib/sql, db, " +
+        "drizzle-orm or a cloudflare: module. Until this rule only `npm run build` " +
+        "(check:bundle) saw it, after the fact (the R-50 bug class). Reachability over " +
+        "value imports: the cruise does not follow type-only ones, so a type from a " +
+        "server file stays allowed. It cannot see where an import is used, so a route " +
+        "calling a door's export in client code is still check:bundle's to catch. " +
+        "Measured at 0 violations when added. Added with design 255 (owner-approved, " +
+        "2026-11-20, #888).",
+      from: {
+        path: [
+          "^src/modules/[^/]+/client\\.ts$",
+          "^src/modules/[^/]+/components/",
+          "^src/modules/[^/]+/[^/]+/components/",
+        ],
+      },
+      to: {
+        reachable: true,
+        path: [
+          "^src/env/",
+          "^src/lib/sql/",
+          "^src/db/",
+          "^cloudflare:",
+          "drizzle-orm",
+        ],
+      },
+    },
+    {
+      name: "routes-enter-through-doors",
+      severity: "error",
+      comment:
+        "A route reaches a module through four entries only: its functions.ts, a file " +
+        "in a components/ folder (the module's or a sub-module's), its client.ts, or a " +
+        "door (the module's index.ts or a sub-module's). client.ts is for what a route " +
+        "uses at module scope; a door is for what it calls inside server.handlers or a " +
+        "server function, whose body the Start plugin strips. Anything else is a " +
+        "service file reached past its door. Measured at 0 violations when added. " +
+        "Added with design 255 (owner-approved, 2026-11-20, #888).",
+      from: { path: "^src/routes/" },
+      to: {
+        path: "^src/modules/",
+        pathNot: [
+          "^src/modules/[^/]+/functions\\.ts$",
+          "^src/modules/[^/]+/components/",
+          "^src/modules/[^/]+/[^/]+/components/",
+          "^src/modules/[^/]+/client\\.ts$",
+          "^src/modules/[^/]+/index\\.tsx?$",
+          "^src/modules/[^/]+/[^/]+/index\\.ts$",
+        ],
+      },
+    },
+    {
       name: "no-importing-routes",
       severity: "error",
       comment:

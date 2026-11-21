@@ -2,8 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { getSession } from "../../modules/auth/functions";
 import { AttachKit } from "../../modules/feed/attach/components/AttachKit";
-import { orOnToVerdict } from "../../modules/feed/attach-rules";
-import { attachSearch } from "../../modules/feed/kit-push";
+import {
+  attachSearch,
+  orBackToFeed,
+  orOnToVerdict,
+  requireSignedIn,
+} from "../../modules/feed/client";
 import {
   attachContextQuery,
   attachKitAction,
@@ -12,7 +16,6 @@ import {
   uploadPhotoAction,
   viewerUnitsQuery,
 } from "../../modules/feed/functions";
-import { orBackToFeed, requireSignedIn } from "../../modules/feed/redirect";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";
 import { getRunSummaryFn } from "../../modules/runs/functions";

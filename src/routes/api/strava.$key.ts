@@ -5,7 +5,7 @@ import { captureException } from "../../modules/ops";
 import {
   stravaDeliveryResponse,
   stravaHandshakeResponse,
-} from "../../modules/runs/strava/webhook";
+} from "../../modules/runs/strava";
 
 /**
 Strava reminder webhook (102 §6), at the callback URL the subscription was

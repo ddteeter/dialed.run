@@ -13,15 +13,15 @@ import {
   LoginCrossLink,
   SessionNotice,
   useAuthForm,
-} from "../../modules/auth/auth-page";
-import { signIn } from "../../modules/auth/credentials";
-import { useGoogleSignIn } from "../../modules/auth/google-button";
-import { AccountClosed } from "../../modules/safety/runners/components/AccountClosed";
-import { useCarriedEmail } from "../../modules/auth/carried-email";
+} from "../../modules/auth/components/auth-page";
 import {
   googleReturn,
   parseSignInSearch,
-} from "../../modules/auth/sign-in-search";
+  signIn,
+  useCarriedEmail,
+} from "../../modules/auth/client";
+import { useGoogleSignIn } from "../../modules/auth/components/google-button";
+import { AccountClosed } from "../../modules/safety/runners/components/AccountClosed";
 
 /**
  * Au2 — and Au7 when a form was carried here by an expired session. The

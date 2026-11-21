@@ -11,7 +11,7 @@ import { mainOf } from "../diagrams/structure";
 import { doorNames } from "./doors";
 import type { ShapeFacts } from "./shape";
 
-const DOOR = /^src\/modules\/.*\/index\.ts$/u;
+const DOOR = /^src\/modules\/(?:.*\/index|[^/]+\/client)\.ts$/u;
 
 /**
 The facts about the working tree. Run from the repo root.

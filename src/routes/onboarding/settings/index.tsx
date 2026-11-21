@@ -11,7 +11,7 @@ import {
 } from "../../../modules/account/functions";
 import { notificationSettingsQuery } from "../../../modules/email/functions";
 import { SignOutButton } from "../../../modules/auth/components/SignOutButton";
-import { signOut } from "../../../modules/auth/credentials";
+import { signOut } from "../../../modules/auth/client";
 import { requireSession } from "../../../modules/auth/functions";
 import { getStravaStatusFn } from "../../../modules/runs/functions";
 import { BelledLayout } from "../../../modules/notifications/components/BelledLayout";

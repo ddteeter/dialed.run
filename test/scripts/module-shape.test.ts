@@ -49,6 +49,30 @@ function facts(
   };
 }
 
+const CLIENT = `${M}/feed/client.ts`;
+const NESTED_CLIENT = `${M}/feed/entries/client.ts`;
+
+/**
+ * `facts`, with `feed`'s client-safe door (design 255), a `client.ts` in
+ * a sub-module that is no door, and a component's `.ts` helper.
+ */
+function withClientDoor(
+  imports: readonly (readonly [string, string])[],
+  clientNames: readonly string[] = [],
+): ShapeFacts {
+  const base = facts(imports);
+  return {
+    ...base,
+    paths: [
+      ...base.paths,
+      CLIENT,
+      NESTED_CLIENT,
+      `${M}/feed/components/feed-rows.ts`,
+    ],
+    doorNames: new Map([...base.doorNames, [CLIENT, clientNames]]),
+  };
+}
+
 const NO_PINS: Pins = { fanOut: {}, doorWidth: {}, pastDoor: {}, files: {} };
 
 function shapeWith(overrides: Partial<Shape>): Shape {
@@ -95,6 +119,18 @@ describe("measureShape: door width", () => {
     });
   });
 
+  it("counts a module's client.ts as a door of its own, by its path", () => {
+    const shape = measureShape(withClientDoor([], ["x", "y", "z"]));
+
+    expect(shape.doorWidth).toStrictEqual({
+      feed: 0,
+      "feed/client.ts": 3,
+      "feed/entries": 0,
+      ops: 0,
+      safety: 0,
+    });
+  });
+
   it("refuses a door nobody read, rather than counting it as empty", () => {
     const unread = { ...facts([]), doorNames: new Map<string, string[]>() };
 
@@ -129,10 +165,40 @@ describe("measureShape: past the door", () => {
     expect(shape.pastDoor.feed).toBe(0);
   });
 
-  it("does not count a route's import, nor wiring, nor the module's own", () => {
+  it("counts a route's import of a file that is no door (design 255)", () => {
     const shape = measureShape(
       facts([
         ["src/routes/feed/index.tsx", `${M}/feed/redirect.ts`],
+        ["src/routes/feed/index.tsx", `${M}/feed/entries/retract.ts`],
+      ]),
+    );
+
+    expect(shape.pastDoor.feed).toBe(2);
+  });
+
+  it("does not count a module's client.ts, nor a helper in a components/ folder", () => {
+    const shape = measureShape(
+      withClientDoor([
+        ["src/routes/feed/index.tsx", CLIENT],
+        ["src/routes/feed/index.tsx", `${M}/feed/components/feed-rows.ts`],
+        [`${M}/safety/visibility.ts`, CLIENT],
+      ]),
+    );
+
+    expect(shape.pastDoor.feed).toBe(0);
+  });
+
+  it("counts a client.ts deeper than a module's own folder as a plain file", () => {
+    const shape = measureShape(
+      withClientDoor([["src/routes/feed/index.tsx", NESTED_CLIENT]]),
+    );
+
+    expect(shape.pastDoor.feed).toBe(1);
+  });
+
+  it("does not count wiring, nor the module's own", () => {
+    const shape = measureShape(
+      facts([
         ["src/server.ts", `${M}/feed/functions.ts`],
         ["src/server.ts", `${M}/feed/components/Feed.tsx`],
         [`${M}/feed/functions.ts`, `${M}/feed/entries/retract.ts`],
@@ -235,7 +301,7 @@ describe("shapeProblems", () => {
     expect(
       shapeProblems(shape, { ...NO_PINS, doorWidth: { safety: 224 } }),
     ).toStrictEqual([
-      `safety: the names its index.ts exports (doorWidth) rose from 224 to 225. ${REMEDY}`,
+      `safety: the names its door exports (doorWidth) rose from 224 to 225. ${REMEDY}`,
     ]);
   });
 

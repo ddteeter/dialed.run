@@ -9,13 +9,14 @@
  *
  * - **fan-out**, of a module: the other modules its files import,
  *   sub-modules included.
- * - **door width**, of a door (a module's `index.ts`, or a sub-module's):
- *   the names it exports.
+ * - **door width**, of a door (a module's `index.ts`, a sub-module's, or a
+ *   module's client-safe `client.ts`, design 255): the names it exports.
  * - **past the door**, of a module: the imports of its files from outside
- *   it that go around its doors. A route's import is not counted, and nor
- *   is one of `functions.ts` or a component: that is how a route reaches
- *   a module (docs/architecture.md), and a count with no remedy would
- *   only block.
+ *   it that go around its doors, routes' included. An import of
+ *   `functions.ts` or of a file in a `components/` folder is not counted: that is how a route
+ *   reaches a module (docs/architecture.md). Until design 255 gave routes
+ *   `client.ts`, a route's import was not counted either, because a count
+ *   with no remedy would only block.
  * - **files**, of a unit (a module, or a sub-module): the files in its
  *   folder, a sub-module's own files not counted in its module's.
  *
@@ -34,8 +35,12 @@ import {
 } from "../diagrams/structure";
 
 const MODULES_ROOT = "src/modules/";
-const ROUTES_ROOT = "src/routes/";
 const DOOR_FILE = "/index.ts";
+const CLIENT_DOOR_FILE = "/client.ts";
+/**
+A `.ts` file in a `components/` folder is a component's helper: a route may import it.
+*/
+const COMPONENTS_FOLDER = "/components/";
 
 export const shapeKinds = ["fanOut", "doorWidth", "pastDoor", "files"] as const;
 export type ShapeKind = (typeof shapeKinds)[number];
@@ -60,7 +65,7 @@ export const BUDGETS: Readonly<Record<ShapeKind, number>> = {
 
 const WORDS: Readonly<Record<ShapeKind, string>> = {
   fanOut: "the modules it imports",
-  doorWidth: "the names its index.ts exports",
+  doorWidth: "the names its door exports",
   pastDoor: "the imports that go around its doors",
   files: "the files in its folder",
 };
@@ -88,7 +93,8 @@ export interface ShapeFacts {
   */
   readonly imports: readonly ImportEdge[];
   /**
-  Each `index.ts` under `src/modules`, and the names it exports.
+  Each door under `src/modules` (every `index.ts`, and each module's
+  `client.ts`), and the names it exports.
   */
   readonly doorNames: ReadonlyMap<string, readonly string[]>;
 }
@@ -121,15 +127,27 @@ function fanOut(facts: ShapeFacts, modules: readonly string[]): Numbers {
 }
 
 /**
- * An import that goes around a module's doors: from outside the module
- * and outside the routes, to a file that is neither a door nor wiring.
+`src/modules/feed/client.ts` is `feed`'s client-safe door; a `client.ts` deeper down is not one.
+*/
+function isClientDoor(path: string): boolean {
+  const module = moduleOf(path);
+  return (
+    module !== undefined &&
+    path === `${MODULES_ROOT}${module}${CLIENT_DOOR_FILE}`
+  );
+}
+
+/**
+ * An import that goes around a module's doors: from outside the module,
+ * a route included, to a file that is neither a door nor wiring.
  */
 function isPastDoor(edge: ImportEdge): boolean {
   return (
     moduleOf(edge.from) !== moduleOf(edge.to) &&
-    !edge.from.startsWith(ROUTES_ROOT) &&
     !edge.to.endsWith(DOOR_FILE) &&
-    !isWiring(edge.to)
+    !isClientDoor(edge.to) &&
+    !isWiring(edge.to) &&
+    !edge.to.includes(COMPONENTS_FOLDER)
   );
 }
 
@@ -151,18 +169,22 @@ function unitName(folder: string): string {
   return folder.slice(MODULES_ROOT.length);
 }
 
+/**
+ * Each unit's `index.ts`, under the unit's name, and each module's
+ * `client.ts`, under `feed/client.ts`: a unit name never ends in `.ts`.
+ */
 function doorWidth(facts: ShapeFacts, folders: readonly string[]): Numbers {
-  return sorted(
-    new Map(
-      folders.map((folder) => {
-        const names = facts.doorNames.get(`${folder}${DOOR_FILE}`);
-        if (names === undefined) {
-          throw new Error(`${folder}${DOOR_FILE} was not read`);
-        }
-        return [unitName(folder), names.length];
-      }),
-    ),
-  );
+  const doors = folders.map((folder): [string, number] => {
+    const names = facts.doorNames.get(`${folder}${DOOR_FILE}`);
+    if (names === undefined) {
+      throw new Error(`${folder}${DOOR_FILE} was not read`);
+    }
+    return [unitName(folder), names.length];
+  });
+  const clientDoors = [...facts.doorNames]
+    .filter(([path]) => isClientDoor(path))
+    .map(([path, names]): [string, number] => [unitName(path), names.length]);
+  return sorted(new Map([...doors, ...clientDoors]));
 }
 
 function files(

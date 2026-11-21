@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { ForgotPassword } from "../../modules/auth/components/ForgotPassword";
-import { requestPasswordReset } from "../../modules/auth/credentials";
+import { requestPasswordReset } from "../../modules/auth/client";
 
 /**
 ACC-4: "Forgot it?" — the address a reset link goes to.

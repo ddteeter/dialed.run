@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { backToUpload } from "../../modules/runs/not-found";
+import { backToUpload } from "../../modules/runs/client";
 
 /**
  * The import status page is gone (round 22: *"`/runs/import/$id` goes. A1

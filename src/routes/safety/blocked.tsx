@@ -17,7 +17,7 @@ import {
   blockedRunnersQuery,
   unblockRunnerAction,
 } from "../../modules/safety/functions";
-import { requireSignedIn } from "../../modules/feed/redirect";
+import { requireSignedIn } from "../../modules/feed/client";
 
 export const Route = createFileRoute("/safety/blocked")({
   beforeLoad: async ({ location }) => {

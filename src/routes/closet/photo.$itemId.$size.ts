@@ -2,8 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { coreDb } from "../../env";
 import { sessionFromRequest } from "../../modules/auth";
-import { getItemPhotoObject } from "../../modules/closet/photos";
-import { NotFoundError } from "../../modules/closet/service";
+import { NotFoundError, getItemPhotoObject } from "../../modules/closet";
 
 /**
  * Owner-scoped cached photo GET (packet §5 + design doc open question #3:

@@ -4,11 +4,11 @@ import { signedInQuery } from "../modules/auth/functions";
 import { NotPublicPage } from "../modules/feed/public-web/components/PublicFrame";
 import { PublicProfilePage } from "../modules/feed/public-web/components/PublicProfile";
 import { publicProfileQuery } from "../modules/feed/functions";
-import { publicProfileSearch } from "../modules/feed/inputs";
 import {
   profileOrNotFound,
   publicProfileHead,
-} from "../modules/feed/public-web/public-profile-shape";
+  publicProfileSearch,
+} from "../modules/feed/client";
 import { PUBLIC_ORIGIN } from "../lib/public-origin";
 
 /**

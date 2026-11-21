@@ -12,20 +12,20 @@ import {
   SubmitButton,
   TextField,
   useFormSubmit,
-} from "../../ui";
-import { SignedOutPanel } from "../../ui/SignedOutPanel";
-import type { ControlFailure, FormShell } from "../../ui";
+} from "../../../ui";
+import { SignedOutPanel } from "../../../ui/SignedOutPanel";
+import type { ControlFailure, FormShell } from "../../../ui";
 import {
   ACCOUNT_CLOSED_COPY,
   IS_INVITE_ONLY,
   REGION_BLOCKED_COPY,
-} from "../../lib/contracts/access";
-import { AGE_LINE } from "../../lib/contracts/age";
-import { authFailure, authStatus, isAccountClosed } from "./auth-copy";
-import type { AuthBand } from "./auth-copy";
+} from "../../../lib/contracts/access";
+import { AGE_LINE } from "../../../lib/contracts/age";
+import { authFailure, authStatus, isAccountClosed } from "../auth-copy";
+import type { AuthBand } from "../auth-copy";
 import { GoogleButton, type GoogleSignIn } from "./google-button";
-import { PasswordField } from "../../ui/PasswordField";
-import type { CarriedForm } from "../../lib/carried-form";
+import { PasswordField } from "../../../ui/PasswordField";
+import type { CarriedForm } from "../../../lib/carried-form";
 
 /**
  * The shell both auth screens wear — Au1 and Au2, and every state drawn

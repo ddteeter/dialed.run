@@ -3,8 +3,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { bandFloorC } from "../../lib/contracts/temperature";
 import { getSession } from "../../modules/auth/functions";
 import { VerdictForm } from "../../modules/feed/entries/components/VerdictForm";
-import { verdictSearch } from "../../modules/feed/kit-push";
-import { bandContextFor } from "../../modules/feed/route-decisions";
+import {
+  bandContextFor,
+  orBackToFeed,
+  requireSignedIn,
+  verdictSearch,
+} from "../../modules/feed/client";
 import {
   bandRunsQuery,
   bandSignalsQuery,
@@ -14,7 +18,6 @@ import {
   verdictBandCountsQuery,
   viewerUnitsQuery,
 } from "../../modules/feed/functions";
-import { orBackToFeed, requireSignedIn } from "../../modules/feed/redirect";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import {
   bellStateFn,

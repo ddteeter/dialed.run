@@ -5,10 +5,12 @@ import {
   acceptTermsFn,
   termsPromptLoader,
 } from "../../modules/account/functions";
-import { termsPromptSearch } from "../../modules/account/route-decisions";
-import { useTermsPromptWiring } from "../../modules/account/use-go-home";
-import { useSavedPage } from "../../modules/account/use-saved-page";
-import { signOut } from "../../modules/auth/credentials";
+import {
+  termsPromptSearch,
+  useSavedPage,
+  useTermsPromptWiring,
+} from "../../modules/account/client";
+import { signOut } from "../../modules/auth/client";
 
 /**
  * The terms prompt (ACC-6): the root's gate sends a runner behind on the

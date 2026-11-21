@@ -7,7 +7,7 @@ import {
   completeStravaConnectFn,
   getStravaStatusFn,
 } from "../../modules/runs/functions";
-import { stravaCallbackSearch } from "../../modules/runs/inputs";
+import { stravaCallbackSearch } from "../../modules/runs/client";
 
 /**
 Strava redirects here after the user approves (or denies) the connection.

@@ -7,7 +7,7 @@ import {
   saveCalibrationFn,
   lookUpCityFn,
 } from "../../modules/onboarding/functions";
-import { geolocate } from "../../modules/onboarding/geolocate";
+import { geolocate } from "../../modules/onboarding/client";
 import { OnboardingProgress, OnboardingShell, Page } from "../../ui";
 
 /**

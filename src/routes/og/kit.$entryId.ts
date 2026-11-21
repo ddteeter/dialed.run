@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { publicKitCardResponse } from "../../modules/feed/public-web/public-kit";
+import { publicKitCardResponse } from "../../modules/feed/public-web";
 
 /**
  * A public kit's share card (round 41 #86e, D-152): the kit's own while it

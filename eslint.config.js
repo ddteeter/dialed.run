@@ -246,7 +246,7 @@ const primitiveExemptions = {
   // A satori card is an image: nothing reads its brackets aloud.
   "src/modules/ops/public-web/og/cards.tsx": ["brackets"],
   // Google's own button spec, not one of ours.
-  "src/modules/auth/google-button.tsx": ["pills"],
+  "src/modules/auth/components/google-button.tsx": ["pills"],
   // Ruled exceptions, drawn as their own: A2's ink-edged Change and its
   // pair on the hi-viz card (R58·308), and AF1's outline-to-filled
   // audience toggle (R55·171).

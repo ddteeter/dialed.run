@@ -37,9 +37,9 @@ import {
   SIGN_UP_LABELS,
   SignUpClosedHere,
   useAuthForm,
-} from "../../src/modules/auth/auth-page";
+} from "../../src/modules/auth/components/auth-page";
 import { signUp } from "../../src/modules/auth/credentials";
-import { useGoogleSignIn } from "../../src/modules/auth/google-button";
+import { useGoogleSignIn } from "../../src/modules/auth/components/google-button";
 import { AccountClosed } from "../../src/modules/safety/runners/components/AccountClosed";
 
 /**
@@ -49,7 +49,7 @@ import { AccountClosed } from "../../src/modules/safety/runners/components/Accou
  * that has already answered.
  */
 const client = vi.hoisted(() => ({ social: vi.fn(), signUp: vi.fn() }));
-vi.mock("../../src/modules/auth/client", () => ({
+vi.mock("../../src/modules/auth/auth-client", () => ({
   authClient: {
     signIn: { social: client.social },
     signUp: { email: client.signUp },

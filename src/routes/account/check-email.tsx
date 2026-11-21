@@ -9,7 +9,7 @@ import {
   checkEmailSearch,
   checkEmailView,
   startOverIfNoAddress,
-} from "../../modules/account/route-decisions";
+} from "../../modules/account/client";
 
 /**
  * Au4 · "Check your email" (round 26 #11): where every email sign-up ends,

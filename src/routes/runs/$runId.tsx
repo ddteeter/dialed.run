@@ -14,7 +14,7 @@ import {
   didRetryRunWeatherFn,
   didSetRunConditionsFn,
 } from "../../modules/runs/functions";
-import { beforeItsEntry, runOrNotFound } from "../../modules/runs/not-found";
+import { beforeItsEntry, runOrNotFound } from "../../modules/runs/client";
 import { Page } from "../../ui";
 
 export const Route = createFileRoute("/runs/$runId")({

@@ -3,7 +3,13 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { getSession } from "../../modules/auth/functions";
 import { EntryDetail } from "../../modules/feed/entries/components/EntryDetail";
 import { RetractEntry } from "../../modules/feed/entries/components/RetractEntry";
-import { entryReportLabel } from "../../modules/feed/posted";
+import {
+  entryReportLabel,
+  noindexHead,
+  orBackToFeed,
+  shouldAskForVerdict,
+  viewerContext,
+} from "../../modules/feed/client";
 import { NoticeBand } from "../../modules/safety/notices/components/NoticeBand";
 import { ReportAffordance } from "../../modules/safety/reports/components/ReportAffordance";
 import { RunRemovals } from "../../modules/safety/takedowns/components/RunRemovals";
@@ -11,10 +17,6 @@ import {
   fileReportAction,
   runRemovalsQuery,
 } from "../../modules/safety/functions";
-import {
-  noindexHead,
-  shouldAskForVerdict,
-} from "../../modules/feed/route-decisions";
 import {
   deleteEntryPhotoAction,
   entryDetailQuery,
@@ -24,7 +26,6 @@ import {
   shouldPromptForVerdictQuery,
   viewerUnitsQuery,
 } from "../../modules/feed/functions";
-import { orBackToFeed, viewerContext } from "../../modules/feed/redirect";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";
 

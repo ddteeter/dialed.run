@@ -6,9 +6,9 @@
 import { useRef, useState } from "react";
 import type { JSX } from "react";
 
-import { ACCOUNT_CLOSED_CODE } from "../../lib/contracts/access";
-import { PendingLabel, inFlight, useControlAction } from "../../ui";
-import type { ControlAction } from "../../ui";
+import { ACCOUNT_CLOSED_CODE } from "../../../lib/contracts/access";
+import { PendingLabel, inFlight, useControlAction } from "../../../ui";
+import type { ControlAction } from "../../../ui";
 import {
   AUTH_COPY,
   AUTH_KICKER,
@@ -17,10 +17,10 @@ import {
   GOOGLE_REFUSALS,
   NOT_CREATED,
   type AuthBand,
-} from "./auth-copy";
-import { GoogleBand } from "./google-band";
-import { googleConsentUrl, type Admission } from "./credentials";
-import { didGoogleFail } from "./sign-in-search";
+} from "../auth-copy";
+import { GoogleBand } from "../google-band";
+import { googleConsentUrl, type Admission } from "../credentials";
+import { didGoogleFail } from "../sign-in-search";
 
 /**
  * The Google attempt: `useControlAction`'s state, plus a way to abandon it.

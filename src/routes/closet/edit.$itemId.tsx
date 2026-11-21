@@ -5,10 +5,11 @@ import { BackToCloset } from "../../modules/closet/components/BackToCloset";
 import { GarmentForm } from "../../modules/closet/components/GarmentForm";
 import {
   formValuesFromItem,
+  garmentLoader,
+  photoUrlFor,
   productPlaceholders,
   storedLinkErrors,
-} from "../../modules/closet/form-mapping";
-import { photoUrlFor } from "../../modules/closet/photo-url";
+} from "../../modules/closet/client";
 import {
   closetNearbyFn,
   getItemFn,
@@ -16,7 +17,6 @@ import {
   updateItemFn,
   uploadPhotoFn,
 } from "../../modules/closet/functions";
-import { garmentLoader } from "../../modules/closet/garment-page";
 import { viewerUnitsQuery } from "../../modules/feed/functions";
 import { photoBlurStep } from "../../modules/safety/blur/components/PhotoBlur";
 import { searchBrandsFn } from "../../modules/products/functions";
