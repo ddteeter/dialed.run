@@ -56,17 +56,31 @@ import {
   oweOutbox,
   purgePublicPages,
   settleOutbox,
+  storageHandlers,
+  type OutboxDebtOf,
 } from "../../ops";
+import { owedEmailHandlers } from "../../ops/owed-email";
 import {
   screeningDeletes,
   settleOpenReviews,
   withdrawnUnderReview,
 } from "../../safety";
+import { manualConditionsHandler } from "../../weather";
 import { clearEntryHalves, deleteRunCopies } from "../conditions";
 
 type Db = ReturnType<typeof drizzle>;
 export type Report = typeof captureException;
-type Debt = ReturnType<typeof oweOutbox>;
+/**
+ * What a retraction's fast path settles, keyed by kind (design 256): an
+ * entry's media and a garment's photo, a run file, a run's band, and the
+ * email a moderation decision sends.
+ */
+const settledHere = {
+  ...storageHandlers,
+  ...owedEmailHandlers,
+  manual_conditions_delete: manualConditionsHandler,
+};
+type Debt = OutboxDebtOf<keyof typeof settledHere>;
 export type Statements = [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
 
 /**
@@ -191,7 +205,7 @@ export async function commit(
   report: Report,
 ): Promise<void> {
   await db.batch([...statements, ...debts.map((d) => outboxInsert(db, d))]);
-  for (const debt of debts) await settleOutbox(db, debt, report);
+  for (const debt of debts) await settleOutbox(db, debt, settledHere, report);
 }
 
 /**

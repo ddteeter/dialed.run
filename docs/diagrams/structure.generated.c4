@@ -60,7 +60,9 @@ model {
       terms = module 'account/terms'
       verification = module 'account/verification'
     }
-    auth = module 'auth'
+    auth = module 'auth' {
+      expiredRows = module 'auth/expired-rows'
+    }
     closet = module 'closet'
     dispatch = module 'dispatch'
     email = module 'email'
@@ -81,6 +83,7 @@ model {
       desk = module 'ops/desk'
       edge = module 'ops/edge'
       outbox = module 'ops/outbox'
+      owedEmail = module 'ops/owed-email'
       publicWeb = module 'ops/public-web'
       sentry = module 'ops/sentry'
       speed = module 'ops/speed'
@@ -131,6 +134,7 @@ model {
   cf.app.account -[wiring]-> cf.app.auth
   cf.app.account -[wiring]-> cf.app.email
   cf.app.account -[wiring]-> cf.app.ops
+  cf.app.account -[wiring]-> cf.app.ops.owedEmail
   cf.app.account -[wiring]-> cf.app.safety
   cf.app.account.access -[imports]-> cf.app.account.terms
   cf.app.account.access -[imports]-> cf.app.account.verification
@@ -142,10 +146,12 @@ model {
   cf.app.account.data -[imports]-> cf.app.email
   cf.app.account.data -[imports]-> cf.app.notifications
   cf.app.account.data -[imports]-> cf.app.ops
+  cf.app.account.data -[imports]-> cf.app.ops.owedEmail
   cf.app.account.data -[imports]-> cf.app.runs
   cf.app.account.exportBuild -[imports]-> cf.app.account.data
   cf.app.account.exportBuild -[imports]-> cf.app.email
   cf.app.account.exportBuild -[imports]-> cf.app.ops
+  cf.app.account.exportBuild -[imports]-> cf.app.ops.owedEmail
   cf.app.account.exportBuild -[imports]-> cf.app.weather
   cf.app.account.handles -[imports]-> cf.app.account.terms
   cf.app.account.handles -[imports]-> cf.app.ops
@@ -163,6 +169,7 @@ model {
   cf.app.account.terms -[imports]-> cf.app.runs
   cf.app.account.verification -[imports]-> cf.app.email
   cf.app.account.verification -[imports]-> cf.app.ops
+  cf.app.account.verification -[imports]-> cf.app.ops.owedEmail
   cf.app.auth -[imports]-> cf.app.account
   cf.app.auth -[imports]-> cf.app.account.verification
   cf.app.auth -[imports]-> cf.app.email
@@ -173,14 +180,23 @@ model {
   cf.app.closet -[imports]-> cf.app.email
   cf.app.closet -[imports]-> cf.app.enrichment
   cf.app.closet -[imports]-> cf.app.ops
+  cf.app.closet -[imports]-> cf.app.ops.outbox
   cf.app.closet -[imports]-> cf.app.products
   cf.app.closet -[imports]-> cf.app.safety
+  cf.app.dispatch -[imports]-> cf.app.account.access
+  cf.app.dispatch -[imports]-> cf.app.account.exportBuild
+  cf.app.dispatch -[imports]-> cf.app.account.handles
+  cf.app.dispatch -[imports]-> cf.app.account.purge
+  cf.app.dispatch -[imports]-> cf.app.auth.expiredRows
+  cf.app.dispatch -[imports]-> cf.app.closet
   cf.app.dispatch -[imports]-> cf.app.email
   cf.app.dispatch -[imports]-> cf.app.enrichment
+  cf.app.dispatch -[imports]-> cf.app.feed.moderation
   cf.app.dispatch -[imports]-> cf.app.onboarding
   cf.app.dispatch -[imports]-> cf.app.ops.daily
   cf.app.dispatch -[imports]-> cf.app.ops.desk
   cf.app.dispatch -[imports]-> cf.app.ops.outbox
+  cf.app.dispatch -[imports]-> cf.app.ops.owedEmail
   cf.app.dispatch -[imports]-> cf.app.ops.publicWeb
   cf.app.dispatch -[imports]-> cf.app.ops.sentry
   cf.app.dispatch -[imports]-> cf.app.ops.speed
@@ -215,7 +231,9 @@ model {
   cf.app.feed.entries -[imports]-> cf.app.feed.publicWeb
   cf.app.feed.entries -[imports]-> cf.app.notifications
   cf.app.feed.entries -[imports]-> cf.app.ops
+  cf.app.feed.entries -[imports]-> cf.app.ops.owedEmail
   cf.app.feed.entries -[imports]-> cf.app.safety
+  cf.app.feed.entries -[imports]-> cf.app.weather
   cf.app.feed.following -[imports]-> cf.app.account
   cf.app.feed.following -[imports]-> cf.app.feed.conditions
   cf.app.feed.following -[imports]-> cf.app.feed.consensus
@@ -251,6 +269,7 @@ model {
   cf.app.ops.daily -[imports]-> cf.app.email
   cf.app.ops.daily -[imports]-> cf.app.ops.desk
   cf.app.ops.daily -[imports]-> cf.app.ops.outbox
+  cf.app.ops.daily -[imports]-> cf.app.ops.owedEmail
   cf.app.ops.daily -[imports]-> cf.app.ops.sentry
   cf.app.ops.daily -[imports]-> cf.app.safety
   cf.app.ops.desk -[imports]-> cf.app.email
@@ -264,11 +283,12 @@ model {
   cf.app.ops.edge -[imports]-> cf.app.ops.publicWeb
   cf.app.ops.edge -[imports]-> cf.app.ops.sentry
   cf.app.ops.edge -[imports]-> cf.app.runs
-  cf.app.ops.outbox -[imports]-> cf.app.email
   cf.app.ops.outbox -[imports]-> cf.app.ops.sentry
-  cf.app.ops.outbox -[imports]-> cf.app.runs
-  cf.app.ops.outbox -[imports]-> cf.app.safety
-  cf.app.ops.outbox -[imports]-> cf.app.weather
+  cf.app.ops.owedEmail -[imports]-> cf.app.email
+  cf.app.ops.owedEmail -[imports]-> cf.app.ops.outbox
+  cf.app.ops.owedEmail -[imports]-> cf.app.ops.sentry
+  cf.app.ops.owedEmail -[imports]-> cf.app.runs
+  cf.app.ops.owedEmail -[imports]-> cf.app.safety
   cf.app.ops.publicWeb -[imports]-> cf.app.email
   cf.app.ops.publicWeb -[imports]-> cf.app.ops.sentry
   cf.app.ops.publicWeb -[imports]-> cf.app.safety
@@ -289,6 +309,7 @@ model {
   cf.app.safety -[wiring]-> cf.app.account
   cf.app.safety -[wiring]-> cf.app.auth
   cf.app.safety -[wiring]-> cf.app.ops
+  cf.app.safety -[wiring]-> cf.app.ops.owedEmail
   cf.app.safety -[wiring]-> cf.app.products
   cf.app.safety.limits -[imports]-> cf.app.safety.rules
   cf.app.safety.notices -[imports]-> cf.app.notifications
@@ -320,6 +341,7 @@ model {
   cf.app.safety.takedowns -[imports]-> cf.app.safety.review
   cf.app.safety.takedowns -[imports]-> cf.app.safety.rules
   cf.app.weather -[imports]-> cf.app.email
+  cf.app.weather -[imports]-> cf.app.ops.outbox
 }
 views {
   view accountImports of cf.app.account {
@@ -375,6 +397,12 @@ views {
     include cf.app.auth
     include cf.app.auth -> cf.app.** where kind is imports or kind is wiring
     include cf.app.** -> cf.app.auth where kind is imports or kind is wiring
+  }
+  view authExpiredRowsImports of cf.app.auth.expiredRows {
+    title 'auth/expiredRows: what it imports, and what imports it'
+    include cf.app.auth.expiredRows
+    include cf.app.auth.expiredRows -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.auth.expiredRows where kind is imports or kind is wiring
   }
   view closetImports of cf.app.closet {
     title 'closet: what it imports, and what imports it'
@@ -489,6 +517,12 @@ views {
     include cf.app.ops.outbox
     include cf.app.ops.outbox -> cf.app.** where kind is imports or kind is wiring
     include cf.app.** -> cf.app.ops.outbox where kind is imports or kind is wiring
+  }
+  view opsOwedEmailImports of cf.app.ops.owedEmail {
+    title 'ops/owedEmail: what it imports, and what imports it'
+    include cf.app.ops.owedEmail
+    include cf.app.ops.owedEmail -> cf.app.** where kind is imports or kind is wiring
+    include cf.app.** -> cf.app.ops.owedEmail where kind is imports or kind is wiring
   }
   view opsPublicWebImports of cf.app.ops.publicWeb {
     title 'ops/publicWeb: what it imports, and what imports it'

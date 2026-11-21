@@ -20,10 +20,10 @@
  * reporter replaced (below); the invite's use, with the address replaced;
  * and the handle, which is never released (D-56, D-72).
  *
- * Not in `./index.ts`, and called by nothing in `ops`: it calls feed's
- * delete primitives, and `feed` and `ops` both import this module's
- * barrel, so either importing this would be a cycle. The Worker entry
- * hands it to the daily firing (`handleScheduled`'s upkeep).
+ * Not in `account/index.ts`, and called by nothing in `ops` or `feed`: it
+ * calls feed's delete primitives, and both import this module's barrel,
+ * so either importing this would be a cycle. The dispatch, which nothing
+ * imports, runs it on the daily firing (`liveUpkeep`, design 253).
  */
 import {
   and,

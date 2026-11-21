@@ -1,7 +1,7 @@
 /**
  * The `dialed-exports` queue (task 126, ACC-10; decision D-86): its wire
- * format, and the consumer and dead-letter consumer the Worker entry hands
- * to ops' queue router.
+ * format, and the consumer and dead-letter consumer the dispatch's queue
+ * router runs.
  *
  * Its own queue, not a variant on `dialed-imports`: one ZIP build is a
  * delivery of its own (`max_batch_size: 1`), and a long one never holds up
@@ -11,9 +11,17 @@
 import { z } from "zod";
 
 import { consumeEach, deadLetterEach } from "../../../lib/sql/queue-batch";
-import type { ExportConsumers } from "../../ops";
 
 type Report = (error: unknown, context: Record<string, string>) => void;
+
+/**
+ * The `dialed-exports` consumer and its DLQ's (task 126, ACC-10), as the
+ * dispatch's `handleQueueBatch` runs them.
+ */
+export interface ExportConsumers {
+  readonly batch: (batch: MessageBatch) => Promise<void>;
+  readonly deadLetters: (batch: MessageBatch) => Promise<void>;
+}
 
 /**
  * Every job on `dialed-exports`. One variant today: a pointer to the

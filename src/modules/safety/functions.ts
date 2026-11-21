@@ -31,8 +31,8 @@ import {
   outboxInsertWhere,
   oweOutbox,
   purgePublicPages,
-  settleOutbox,
 } from "../ops";
+import { settleOwedEmail } from "../ops/owed-email";
 
 import { keepAccount } from "./runners/account-flags";
 import { banEmail, banUser, reopenEmailFor, unbanUser } from "./runners/bans";
@@ -266,7 +266,7 @@ export const banUserAction = createServerFn({ method: "POST" })
     await banUser(ban, purgePublicPages, (database) => [
       outboxInsert(database, debt),
     ]);
-    await settleOutbox(coreDb(), debt);
+    await settleOwedEmail(coreDb(), debt);
     return { banned: true };
   });
 
@@ -289,7 +289,7 @@ export const unbanUserAction = createServerFn({ method: "POST" })
     await unbanUser(data.userId, unbannedBy, {
       owe: (database, stillBanned) =>
         outboxInsertWhere(database, debt, stillBanned),
-      settle: () => settleOutbox(coreDb(), debt),
+      settle: () => settleOwedEmail(coreDb(), debt),
     });
     return { banned: false };
   });

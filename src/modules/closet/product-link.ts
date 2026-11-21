@@ -7,8 +7,8 @@
  * and an address nobody has confirmed must not add to them. When the
  * runner confirms, `account`'s `confirmEmail` owes this as an outbox row
  * in the same batch as the confirmation (law 8c), and the hourly drain
- * runs it with the Worker entry's wiring (`ops` cannot import this
- * module).
+ * runs it through the dispatch, whose registry takes this module's
+ * `productLinkHandler` (design 256).
  *
  * **One link, whenever it happens.** `nameItem` for a confirmed runner and
  * `linkTypedGarments` after a confirmation both write `linkedColumns`, so
@@ -35,6 +35,7 @@ import { normalizeIdentity } from "../../lib/normalize";
 import { ownedBy } from "../../lib/sql/owned";
 import { isUnconfirmed } from "../account";
 import { captureException } from "../ops";
+import { OWED_AGAIN, type OutboxHandler } from "../ops/outbox";
 import { createOrGetBrand } from "../products";
 import {
   getOwnedItem,
@@ -233,4 +234,36 @@ export async function linkTypedGarments(
     throw new Error(`${String(failed)} garment(s) did not link`);
   }
   return linkable.length > LINK_BATCH ? "more" : "linked";
+}
+
+/**
+ * What links a newly confirmed runner's typed garments: `linkTypedGarments`
+ * in production, and a test's own where it hands the firing one.
+ */
+type ProductLinker = (
+  db: Db,
+  userId: string,
+) => Promise<"linked" | "more">;
+
+/**
+ * The `product_link` handler, bound to the linker it is given. With none, it
+ * fails loudly, so the row stays owed and the drain reports it, rather
+ * than settling a runner's link into nothing.
+ */
+export function productLinkHandler(
+  link: ProductLinker | undefined,
+): OutboxHandler<"product_link"> {
+  return {
+    run: async (db, payload) => {
+      if (link === undefined) {
+        throw new Error("product_link drained with no linker handed in");
+      }
+      // A bounded run that left garments unlinked owes the rest to the
+      // next drain (design 232): not a failure.
+      return (await link(db, payload.userId)) === "more"
+        ? OWED_AGAIN
+        : undefined;
+    },
+    context: (payload) => ({ userId: payload.userId }),
+  };
 }

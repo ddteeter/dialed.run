@@ -61,6 +61,12 @@ import {
 import { forgetManualBands } from "../../src/modules/weather";
 import { drainOutbox } from "../../src/modules/ops/outbox/outbox";
 import { ONLY_THEIRS_GONE, seedAthleteGaveUp } from "../gave-up-rows";
+import { outboxHandlers as registryWith } from "../../src/modules/dispatch/outbox-handlers";
+
+/**
+The drains' registry, as production assembles it (no linker).
+*/
+const outboxHandlers = registryWith(undefined);
 
 /**
  * ACC-9: the purge at the end of a deletion's week. Every assertion is
@@ -533,6 +539,7 @@ function addressesOf(email: string): string[] {
  */
 async function r2Left(userId: string): Promise<string[]> {
   await drainOutbox(core, [], {
+    handlers: outboxHandlers,
     now: nowSeconds() + 86_400,
     kinds: ["photo_delete", "entry_media_delete", "import_file_delete"],
     report: () => {

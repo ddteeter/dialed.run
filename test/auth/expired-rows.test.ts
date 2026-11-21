@@ -7,7 +7,7 @@ import { passwordAttempts } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { sweepExpiredAuthRows } from "../../src/modules/auth/expired-rows";
+import { sweepExpiredAuthRows } from "../../src/modules/auth/expired-rows/expired-rows";
 import { PASSWORD_ATTEMPT_WINDOW_S } from "../../src/modules/auth/password-check";
 
 /**

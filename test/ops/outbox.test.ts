@@ -30,15 +30,22 @@ import {
   stillDueOf,
 } from "../../src/modules/ops/outbox/outbox";
 import { outboxKinds } from "../../src/lib/sql/outbox";
+import { outboxHandlers as registryWith } from "../../src/modules/dispatch/outbox-handlers";
+import { productLinkHandler } from "../../src/modules/closet/product-link";
 import {
   boundHandler,
+  type OutboxHandlers,
+} from "../../src/modules/ops/outbox/handler";
+import {
   isLiveObject,
-  outboxHandlers,
-  productLinkHandler,
   reconcileEntryPhotos,
   reconcileItemPhotos,
-  type OutboxHandlers,
-} from "../../src/modules/ops/outbox/outbox-handlers";
+} from "../../src/modules/ops/outbox/storage-handlers";
+
+/**
+The drains' registry, as production assembles it (no linker).
+*/
+const outboxHandlers = registryWith(undefined);
 
 const DIGEST = { cron: "0 12 * * *" } as ScheduledController;
 const NOW = 1_800_000_000;
@@ -186,7 +193,7 @@ describe("settleOutbox (the fast path)", () => {
     await outboxInsert(db(), debt);
     const run = vi.fn().mockResolvedValue(undefined);
 
-    await settleOutbox(db(), debt, vi.fn(), handlersRunning(run));
+    await settleOutbox(db(), debt, handlersRunning(run), vi.fn());
 
     // With the row it works, so a handler can mark it before the delete.
     expect(run).toHaveBeenCalledWith(
@@ -205,7 +212,7 @@ describe("settleOutbox (the fast path)", () => {
       await outboxInsert(db(), newer);
     });
 
-    await settleOutbox(db(), debt, vi.fn(), handlersRunning(run));
+    await settleOutbox(db(), debt, handlersRunning(run), vi.fn());
 
     expect(await rowById(newer.id)).toBeDefined();
   });
@@ -219,8 +226,8 @@ describe("settleOutbox (the fast path)", () => {
     await settleOutbox(
       db(),
       debt,
-      report,
       handlersRunning(vi.fn().mockRejectedValue(failure)),
+      report,
     );
 
     expect(report).toHaveBeenCalledWith(failure, {
@@ -976,10 +983,15 @@ describe("the product link's handler (design 133, D-113 Q1)", () => {
         createdAt: NOW,
       });
 
-    await settleOutbox(db(), debt, vi.fn(), {
-      ...outboxHandlers,
-      product_link: productLinkHandler(link),
-    });
+    await settleOutbox(
+      db(),
+      debt,
+      {
+        ...outboxHandlers,
+        product_link: productLinkHandler(link),
+      },
+      vi.fn(),
+    );
 
     expect(link).toHaveBeenCalledWith(expect.anything(), userId);
     expect(await db().select().from(outbox)).toStrictEqual([]);
@@ -996,7 +1008,7 @@ describe("the product link's handler (design 133, D-113 Q1)", () => {
     const userId = newUlid();
     const debt = oweOutbox({ kind: "product_link", payload: { userId } });
 
-    await settleOutbox(db(), debt, report, outboxHandlers);
+    await settleOutbox(db(), debt, outboxHandlers, report);
 
     expect(report).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -1079,7 +1091,7 @@ describe("a run that owes the rest (design 232)", () => {
         createdAt: NOW,
       });
 
-    await settleOutbox(db(), debt, vi.fn(), linking("more").handlers);
+    await settleOutbox(db(), debt, linking("more").handlers, vi.fn());
 
     expect(await rowById(debt.id)).toMatchObject({ attempts: 0 });
   });

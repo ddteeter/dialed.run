@@ -6,10 +6,13 @@ import { newUlid } from "../../src/lib/ids";
 import type { OwedMail } from "../../src/modules/account/verification/verification";
 import type { EmailDeps } from "../../src/modules/email";
 import { settleOutbox } from "../../src/modules/ops/outbox/outbox";
-import {
-  emailHandler,
-  outboxHandlers,
-} from "../../src/modules/ops/outbox/outbox-handlers";
+import { outboxHandlers as registryWith } from "../../src/modules/dispatch/outbox-handlers";
+import { emailHandler } from "../../src/modules/ops/owed-email/owed-email";
+
+/**
+The drains' registry, as production assembles it (no linker).
+*/
+const outboxHandlers = registryWith(undefined);
 
 export const ORIGIN = "https://dialed.test";
 /**
@@ -153,7 +156,7 @@ export function owedTo(mail: ReturnType<typeof fakeMail>): {
       report: quiet,
       settle: async (database, debt, report) => {
         await gate;
-        await settleOutbox(database, debt, report, handlers);
+        await settleOutbox(database, debt, handlers, report);
       },
     },
     settled: async () => {

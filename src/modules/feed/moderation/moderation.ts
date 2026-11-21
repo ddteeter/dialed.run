@@ -554,9 +554,8 @@ async function wasTakenDown(
 }
 
 /**
- * The copyright holds' daily sweep (D-130, design 149), handed to the
- * daily firing (`DailyUpkeep.sweepCopyrightHolds`) because `ops` cannot
- * import feed. Restores first — a hold due both ways is one a
+ * The copyright holds' daily sweep (D-130, design 149), run by the daily
+ * firing (the dispatch's `DailyUpkeep.sweepCopyrightHolds`). Restores first — a hold due both ways is one a
  * counter-notice saved, and the purge's claim skips it — then deletes
  * each hold the purge claimed with the same statements a Remove uses,
  * marking it `purged` in the same batch. A purge whose batch fails stays

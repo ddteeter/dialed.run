@@ -2,8 +2,8 @@
  * The daily firing's `speed` digest kind (design 165): roll up the last
  * days of `VITALS` into `perf_daily`, then judge yesterday against its
  * limits and its own recent median. Handed to the digest by the Worker
- * entry (`DailyUpkeep.speed`), so a digest test fakes it rather than reach
- * the SQL API.
+ * entry (`DailyUpkeep.speed`), which builds the router whose route names
+ * it judges, and so a digest test fakes it rather than reach the SQL API.
  */
 import { and, gte, lte } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";

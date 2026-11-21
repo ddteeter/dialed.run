@@ -9,4 +9,4 @@ export {
 } from "./digest-marks";
 export { dropGaveUp, gaveUpJobs, retryGaveUp } from "./gave-up";
 export { checkDeploymentConfig, healthResponse } from "./health";
-export { enrichmentDeps, queueRegistry, type ExportConsumers } from "./queues";
+export { enrichmentDeps, queueRegistry } from "./queues";

@@ -31,10 +31,9 @@ import {
   captureException,
   outboxInsertWhere,
   oweOutbox,
-  settleOutbox,
-  type ExportConsumers,
-  type OutboxDebt,
+  type OutboxDebtOf,
 } from "../../ops";
+import { settleOwedEmail } from "../../ops/owed-email";
 import { exportKeyFor, failExport, IN_FLIGHT } from "../data";
 import { exportData } from "./export";
 import {
@@ -42,7 +41,7 @@ import {
   type ExportObject,
   type ExportText,
 } from "./export-files";
-import { exportConsumers } from "../data";
+import { exportConsumers, type ExportConsumers } from "../data";
 
 type Db = ReturnType<typeof drizzle>;
 type Report = (error: unknown, context: Record<string, string>) => void;
@@ -53,9 +52,9 @@ export interface BuildDeps {
   readonly imports: Pick<R2Bucket, "get" | "list" | "put" | "delete">;
   readonly report: Report;
   /**
-  The email's fast path (ops' `settleOutbox`); the drain is its net.
+  The email's fast path (ops' `settleOwedEmail`); the drain is its net.
   */
-  readonly settle: (db: Db, debt: OutboxDebt) => Promise<void>;
+  readonly settle: (db: Db, debt: OutboxDebtOf<"email">) => Promise<void>;
   readonly now: number;
 }
 
@@ -263,14 +262,14 @@ function liveBuildDeps(): BuildDeps {
     media: env.MEDIA,
     imports: env.IMPORTS,
     report: captureException,
-    settle: (db, debt) => settleOutbox(db, debt),
+    settle: (db, debt) => settleOwedEmail(db, debt),
     now: nowSeconds(),
   };
 }
 
 /**
  * `dialed-exports`' consumer and dead-letter consumer, on the live
- * bindings. The Worker entry passes them to `handleQueueBatch`.
+ * bindings. The dispatch's `handleQueueBatch` runs them.
  */
 export function exportConsumersFromEnv(): ExportConsumers {
   return exportConsumers(

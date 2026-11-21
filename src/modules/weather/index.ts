@@ -30,9 +30,9 @@ export { timeZoneAt, timeZoneAtFor } from "./zone";
 export { isWeatherBudgetSpent } from "./budget";
 // The cache key itself, so no other module has to restate its rounding.
 export { cacheKeyFor, matchesKey, runHourKeys } from "./store";
-// A deleted run's band, for the outbox handler `feed`'s run delete owes
-// (C1): this module is the only one that writes `dialed-weather`.
-export { forgetManualBand } from "./store";
+// The outbox handler for a deleted run's band, which `feed`'s run delete
+// owes (C1): this module is the only one that writes `dialed-weather`.
+export { manualConditionsHandler } from "./store";
 // The account purge's band step (ACC-9), so `account` touches no weather
 // table (design 173).
 export { forgetManualBands } from "./store";

@@ -29,10 +29,10 @@ import { TURNSTILE_ACTIONS } from "../../lib/turnstile-actions";
 import { emailDepsFromEnv } from "../email";
 import {
   captureException,
-  settleOutbox,
   turnstileSiteKey,
   verifyTurnstileToken,
 } from "../ops";
+import { settleOwedEmail } from "../ops/owed-email";
 import { requireAdmin } from "../safety";
 import { requestAccess, turnstileAttempt } from "./access/access";
 import { accountPage, accountView, ownAddressView } from "./data/account-view";
@@ -227,7 +227,11 @@ export const requestEmailChangeFn = createServerFn({ method: "POST" })
         checkPassword: checkCurrentPassword,
       },
       emailDepsFromEnv(),
-      { keepAlive: waitUntil, report: captureException, settle: settleOutbox },
+      {
+        keepAlive: waitUntil,
+        report: captureException,
+        settle: settleOwedEmail,
+      },
     ),
   );
 
@@ -309,7 +313,11 @@ export const inviteFromRequestFn = createServerFn({ method: "POST" })
         operatorId: requireAdmin(await verifiedUserId()),
         requestId: data.id,
       },
-      { keepAlive: waitUntil, report: captureException, settle: settleOutbox },
+      {
+        keepAlive: waitUntil,
+        report: captureException,
+        settle: settleOwedEmail,
+      },
     ),
   );
 

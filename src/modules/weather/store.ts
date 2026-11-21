@@ -18,6 +18,7 @@ import { manualConditions, weatherObservations } from "../../db/schema-weather";
 import { weatherDb } from "../../env";
 import type { Ulid } from "../../lib/ids";
 import { newUlid } from "../../lib/ids";
+import type { OutboxHandler } from "../ops/outbox";
 import type { ManualSky, WeatherObservation } from "../../lib/contracts";
 import { chunked, IN_LIST_CHUNK, readInChunks } from "../../lib/chunked";
 import { isTimeZone } from "../../lib/dates";
@@ -165,11 +166,22 @@ export async function upsertManualBand(
  * Only a run's delete calls it, and a deleted run cannot be given a band
  * again — `recordManualObservation` reads the run first.
  */
-export async function forgetManualBand(runId: string): Promise<void> {
+async function forgetManualBand(runId: string): Promise<void> {
   await weatherDb()
     .delete(manualConditions)
     .where(eq(manualConditions.runId, runId));
 }
+
+/**
+ * The `manual_conditions_delete` handler (C1), here beside the band it
+ * forgets (design 256). It ignores the core `db` the drain hands in:
+ * the band is in the weather database, whose connection is this module's.
+ */
+export const manualConditionsHandler: OutboxHandler<"manual_conditions_delete"> =
+  {
+    run: (_db, payload) => forgetManualBand(payload.runId),
+    context: (payload) => ({ userId: payload.userId, runId: payload.runId }),
+  };
 
 /**
  * Every band these runs carry, gone — the account purge's step (ACC-9),

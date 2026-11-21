@@ -32,12 +32,8 @@ import {
   todayCounts,
   type TodayCounts,
 } from "../desk";
-import {
-  outboxInsert,
-  oweOutbox,
-  settleOutbox,
-  type OutboxDebt,
-} from "../outbox";
+import { outboxInsert, oweOutbox, type OutboxDebtOf } from "../outbox";
+import { settleOwedEmail } from "../owed-email";
 import { captureException } from "../sentry";
 
 type Db = ReturnType<typeof drizzle>;
@@ -71,15 +67,14 @@ export interface DigestMail {
   readonly admins: () => readonly string[];
   readonly counts: () => Promise<TodayCounts>;
   /**
-   * Matches `OwedMail["settle"]` (`modules/account/verification/verification.ts`) rather
-   * than `typeof settleOutbox` itself: the digest never passes `handlers`,
-   * and the shared test double (`test/email/helpers.ts`'s `owedTo`) is
-   * built to that narrower shape so both callers can hand it the same
-   * `owed.settle`.
+   * The digest email's fast path, `settleOwedEmail` live. The shape of
+   * `OwedMail["settle"]` (`modules/account/verification/verification.ts`),
+   * so the shared test double (`test/email/helpers.ts`'s `owedTo`) serves
+   * both.
    */
   readonly settle: (
     db: Db,
-    debt: OutboxDebt,
+    debt: OutboxDebtOf<"email">,
     report: typeof captureException,
   ) => Promise<void>;
 }
@@ -87,7 +82,7 @@ export interface DigestMail {
 const LIVE: DigestMail = {
   admins: adminUserIds,
   counts: todayCounts,
-  settle: settleOutbox,
+  settle: settleOwedEmail,
 };
 
 /**

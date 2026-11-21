@@ -3,5 +3,6 @@
  * (design 240). Its own door, never re-exported by `account/index.ts`: the
  * build's zip library must stay out of every route's reach.
  */
+export type { ExportConsumers } from "../data";
 export { exportConsumersFromEnv } from "./export-build";
 export { sweepExports } from "./export-sweep";

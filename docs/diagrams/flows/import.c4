@@ -105,7 +105,7 @@ views {
       '''
       navigateTo weatherStory
     }
-    // source: src/modules/dispatch/scheduled.ts runDailyDigest, drainOwedEmail, drainProductLinks; src/modules/ops/outbox/outbox-handlers.ts importFileDelete; src/modules/runs/consumer.ts fileGoes
+    // source: src/modules/dispatch/scheduled.ts runDailyDigest, drainOwedEmail, drainProductLinks; src/modules/ops/outbox/storage-handlers.ts importFileDeleteHandler; src/modules/runs/consumer.ts fileGoes
     cf.app.cronDaily1200 -> cf.importsBucket 'deletes the file that was read' {
       notes '''
         **Timing boundary: the next 12:00 UTC.** The concluding batch owed this deletion, and the daily firing\'s drain pays it. The hourly firings drain only email and product links, so a read file stays until then.

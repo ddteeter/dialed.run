@@ -5,8 +5,7 @@
  *
  * **Reconciliation, not a queue** (law 8c): `unknown` is the durable
  * marker, and the `:15` firing — which already re-drives photo screening
- * — re-drives this through `DailyUpkeep.rescreenHandles`, handed in by the
- * Worker entry because `ops` cannot import `account`.
+ * — re-drives this through the dispatch's `DailyUpkeep.rescreenHandles`.
  *
  * **Claim, then work** (law 2): one statement moves up to `RESCREEN_CAP`
  * rows to `checking`, so overlapping firings ask about disjoint handles,

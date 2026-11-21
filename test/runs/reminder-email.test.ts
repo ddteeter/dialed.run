@@ -20,10 +20,8 @@ import {
   outboxInsert,
   oweOutbox,
 } from "../../src/modules/ops/outbox/outbox";
-import {
-  emailHandler,
-  outboxHandlers,
-} from "../../src/modules/ops/outbox/outbox-handlers";
+import { outboxHandlers as registryWith } from "../../src/modules/dispatch/outbox-handlers";
+import { emailHandler } from "../../src/modules/ops/owed-email/owed-email";
 import { handleImportsBatch } from "../../src/modules/runs/consumer";
 import type { ConsumerDeps } from "../../src/modules/runs/consumer";
 import { coreDb } from "../../src/modules/runs/core-db";
@@ -40,6 +38,11 @@ import {
 import { pairWithReminder } from "../../src/modules/runs/strava/reminder-match";
 import { fakeMail, seedUser } from "../email/helpers";
 import { batchOf, fakeMessage, oweInCore, weatherLater } from "../queue-fakes";
+
+/**
+The drains' registry, as production assembles it (no linker).
+*/
+const outboxHandlers = registryWith(undefined);
 
 /**
  * STR-9 (design 140): a run landing on Strava owes one reminder email, 20

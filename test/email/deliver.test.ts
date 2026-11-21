@@ -44,11 +44,9 @@ import {
   OUTBOX_FAST_PATH_GRACE_S,
   settleOutbox,
 } from "../../src/modules/ops/outbox/outbox";
-import {
-  emailHandler,
-  outboxHandlers,
-  type OutboxHandlers,
-} from "../../src/modules/ops/outbox/outbox-handlers";
+import { outboxHandlers as registryWith } from "../../src/modules/dispatch/outbox-handlers";
+import type { OutboxHandlers } from "../../src/modules/ops/outbox/handler";
+import { emailHandler } from "../../src/modules/ops/owed-email/owed-email";
 import { handleScheduled } from "../../src/modules/dispatch";
 import {
   CLOUDFLARE_DISALLOWED_HEADERS,
@@ -59,6 +57,11 @@ import {
   SECRET,
   seedUser,
 } from "./helpers";
+
+/**
+The drains' registry, as production assembles it (no linker).
+*/
+const outboxHandlers = registryWith(undefined);
 
 /**
  * The one sender (ACC-2), on real D1: who it writes to, what it will not
@@ -495,7 +498,7 @@ describe("the email outbox kind", () => {
       ),
     );
     await outboxInsert(db, debt, NOW);
-    await settleOutbox(db, debt, quiet, handlersSendingTo(mail));
+    await settleOutbox(db, debt, handlersSendingTo(mail), quiet);
     expect(mail.sent).toHaveLength(1);
     expect(await db.select().from(outbox)).toHaveLength(0);
   });
@@ -515,7 +518,7 @@ describe("the email outbox kind", () => {
     const remove = vi.spyOn(db, "delete").mockImplementationOnce(() => {
       throw new Error("worker gone");
     });
-    await settleOutbox(db, debt, quiet, handlersSendingTo(mail));
+    await settleOutbox(db, debt, handlersSendingTo(mail), quiet);
     remove.mockRestore();
 
     expect(mail.sent).toHaveLength(1);
@@ -595,7 +598,7 @@ describe("the email outbox kind", () => {
     );
     await outboxInsert(db, debt, NOW);
     const update = vi.spyOn(db, "update");
-    await settleOutbox(db, debt, quiet, handlersSendingTo(fakeMail()));
+    await settleOutbox(db, debt, handlersSendingTo(fakeMail()), quiet);
     expect(update).not.toHaveBeenCalled();
     update.mockRestore();
     expect(await db.select().from(outbox)).toHaveLength(0);
@@ -613,14 +616,9 @@ describe("the email outbox kind", () => {
       ),
     );
     await outboxInsert(db, debt, NOW);
-    await settleOutbox(
-      db,
-      debt,
-      (_error, context) => {
-        reports.push(context);
-      },
-      handlersSendingTo(mail),
-    );
+    await settleOutbox(db, debt, handlersSendingTo(mail), (_error, context) => {
+      reports.push(context);
+    });
     expect(await db.select().from(outbox)).toHaveLength(1);
     expect(reports).toStrictEqual([
       {
@@ -686,6 +684,7 @@ describe("the email outbox kind", () => {
     await outboxInsert(db, debt, NOW);
     const anomalies: string[] = [];
     await drainOutbox(db, anomalies, {
+      handlers: outboxHandlers,
       now: NOW + OUTBOX_FAST_PATH_GRACE_S,
       kinds: ["email"],
     });

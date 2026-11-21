@@ -35,6 +35,7 @@ import {
   oweOutbox,
   outboxInsert,
   settleOutbox,
+  storageHandlers,
 } from "../ops";
 import {
   classifierFromEnv,
@@ -217,7 +218,7 @@ export async function uploadItemPhoto(
       : []),
     outboxInsert(db, debt),
   ]);
-  await settleOutbox(db, debt, report);
+  await settleOutbox(db, debt, storageHandlers, report);
   // A held photo waits for a person, not the classifier.
   if (isCopyOfRemoved) return { photoKey: keyPrefix };
 
@@ -290,7 +291,7 @@ export async function removeItemPhoto(
     clearPhoto,
     outboxInsert(db, debt),
   ]);
-  await settleOutbox(db, debt, report);
+  await settleOutbox(db, debt, storageHandlers, report);
 }
 
 /**

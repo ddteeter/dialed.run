@@ -9,5 +9,5 @@ export {
   IN_FLIGHT,
 } from "./data-exports";
 export type { ExportQueue } from "./data-exports";
-export { exportConsumers } from "./export-queue";
+export { exportConsumers, type ExportConsumers } from "./export-queue";
 export { exportFileResponse } from "./data-exports";

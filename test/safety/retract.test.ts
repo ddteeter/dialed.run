@@ -47,6 +47,12 @@ import {
   resetSafetyTables,
 } from "./helpers";
 import { oweInCore } from "../queue-fakes";
+import { outboxHandlers as registryWith } from "../../src/modules/dispatch/outbox-handlers";
+
+/**
+The drains' registry, as production assembles it (no linker).
+*/
+const outboxHandlers = registryWith(undefined);
 
 /**
  * SAF-3: a runner deleting what they posted. Every assertion is about what
@@ -229,7 +235,7 @@ describe("deleting an entry", () => {
     expect(await stored(entryPhotoPrefix(userId, entryId))).toHaveLength(2);
     expect(await core().select().from(outbox)).toHaveLength(1);
 
-    await drainOutbox(core(), [], { now: NOW * 10 });
+    await drainOutbox(core(), [], { handlers: outboxHandlers, now: NOW * 10 });
 
     expect(await stored(entryPhotoPrefix(userId, entryId))).toStrictEqual([]);
     expect(await core().select().from(outbox)).toStrictEqual([]);
@@ -480,7 +486,7 @@ describe("deleting a run", () => {
       { kind: "import_file_delete", dedupeKey: `${userId}:${key}` },
     ]);
 
-    await drainOutbox(core(), [], { now: NOW * 10 });
+    await drainOutbox(core(), [], { handlers: outboxHandlers, now: NOW * 10 });
 
     expect(await env.IMPORTS.head(key)).toBeNull();
     expect(await core().select().from(outbox)).toStrictEqual([]);
@@ -651,7 +657,7 @@ describe("a deleted run's band (C1)", () => {
       { kind: "manual_conditions_delete", dedupeKey: `${userId}:${runId}` },
     ]);
 
-    await drainOutbox(core(), [], { now: NOW * 10 });
+    await drainOutbox(core(), [], { handlers: outboxHandlers, now: NOW * 10 });
 
     expect(await bandsOf(runId)).toStrictEqual([]);
     expect(await core().select().from(outbox)).toStrictEqual([]);
@@ -669,7 +675,11 @@ describe("a deleted run's band (C1)", () => {
     const report = vi.fn(quiet);
     const anomalies: string[] = [];
 
-    await drainOutbox(core(), anomalies, { now: NOW * 10, report });
+    await drainOutbox(core(), anomalies, {
+      handlers: outboxHandlers,
+      now: NOW * 10,
+      report,
+    });
 
     expect(report).not.toHaveBeenCalled();
     expect(anomalies).toStrictEqual([

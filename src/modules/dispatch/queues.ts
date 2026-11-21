@@ -1,4 +1,8 @@
 import { coreDb, env } from "../../env";
+import {
+  exportConsumersFromEnv,
+  type ExportConsumers,
+} from "../account/export-build";
 import { handleEnrichmentBatch, handleEnrichmentDlqBatch } from "../enrichment";
 import { runnerTimeZone } from "../onboarding";
 import {
@@ -7,11 +11,7 @@ import {
   stravaApiFromEnv,
 } from "../runs";
 import { attachObservation } from "../weather";
-import {
-  enrichmentDeps,
-  queueRegistry,
-  type ExportConsumers,
-} from "../ops/desk";
+import { enrichmentDeps, queueRegistry } from "../ops/desk";
 import { oweInCore } from "../ops/outbox";
 import { captureException } from "../ops/sentry";
 
@@ -28,22 +28,11 @@ function deliveries(entry: { readonly maxRetries: number }): number {
 const [IMPORTS, ENRICHMENT] = queueRegistry;
 
 /**
- * The export consumers the Worker entry handed in, or a loud failure: a
- * batch retried is reported and redelivered, and a wiring slip dead-letters
- * where a human sees it rather than acking a runner's export into nothing.
- */
-function exportConsumers(exports: ExportConsumers | undefined) {
-  if (exports === undefined) {
-    throw new Error("dialed-exports batch with no export consumers wired");
-  }
-  return exports;
-}
-
-/**
  * Queue consumer entry (000 §10): lane 102 owns the dialed-imports consumer
  * + DLQ user-notification; lane 107 owns dialed-enrichment; lane 126 owns
- * dialed-exports, handed in as `exports`. Every consumer acks or retries
- * per message, so one bad message never blocks a batch.
+ * dialed-exports (`account/export-build`'s consumers; a test hands in
+ * fakes as `exports`). Every consumer acks or retries per message, so one
+ * bad message never blocks a batch.
  */
 export async function handleQueueBatch(
   batch: MessageBatch,
@@ -88,11 +77,11 @@ export async function handleQueueBatch(
       break;
     }
     case "dialed-exports": {
-      await exportConsumers(exports).batch(batch);
+      await (exports ?? exportConsumersFromEnv()).batch(batch);
       break;
     }
     case "dialed-exports-dlq": {
-      await exportConsumers(exports).deadLetters(batch);
+      await (exports ?? exportConsumersFromEnv()).deadLetters(batch);
       break;
     }
     default: {

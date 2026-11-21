@@ -195,6 +195,13 @@ const outboxMessageSchema = z.discriminatedUnion("kind", [
 
 export type OutboxMessage = z.infer<typeof outboxMessageSchema>;
 export type OutboxKind = OutboxMessage["kind"];
+/**
+One kind's message: what that kind's debt carries, and its handler reads.
+*/
+export type OutboxMessageOf<K extends OutboxKind> = Extract<
+  OutboxMessage,
+  { kind: K }
+>;
 
 /**
 Every kind this build can drain, read from the union rather than listed.

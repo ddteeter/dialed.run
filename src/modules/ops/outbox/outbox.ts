@@ -40,14 +40,16 @@ import {
   scheduledOutboxKinds,
   type OutboxKind,
   type OutboxMessage,
+  type OutboxMessageOf,
 } from "../../../lib/sql/outbox";
 import {
   boundHandler,
-  outboxHandlers,
   OWED_AGAIN,
   Refused,
+  type BoundHandler,
   type OutboxHandlers,
-} from "./outbox-handlers";
+  type PayloadOf,
+} from "./handler";
 import { captureException } from "../sentry";
 
 type Db = ReturnType<typeof drizzle>;
@@ -133,10 +135,21 @@ export interface OutboxDebt {
   readonly notBefore?: number | undefined;
 }
 
-export function oweOutbox(
-  message: OutboxMessage,
+/**
+One kind's debt: what a fast path for that kind settles.
+*/
+export type OutboxDebtOf<K extends OutboxKind> = OutboxDebt & {
+  readonly message: OutboxMessageOf<K>;
+};
+
+/**
+ * A debt for `message`, typed by the message, so the fast path that
+ * settles it is checked against its kind's handler (design 256).
+ */
+export function oweOutbox<M extends OutboxMessage>(
+  message: M,
   notBefore?: number,
-): OutboxDebt {
+): OutboxDebt & { readonly message: M } {
   return { id: newUlid(), message, notBefore };
 }
 
@@ -214,18 +227,24 @@ function takeOver(row: ReturnType<typeof outboxRow>) {
 
 /**
  * The fast path: do the work now, and delete the row when it is done.
+ * `handlers` holds the debt's own kind's handler, keyed by the kind, so
+ * a module imports only the handlers of what it owes (design 256), and a
+ * map missing the debt's kind does not compile.
  *
  * Never throws. The caller's D1 change has already committed, so a
  * failure here is not the runner's failure — it is reported, and the row
  * stays for the drainer.
  */
-export async function settleOutbox(
+export async function settleOutbox<K extends OutboxKind>(
   db: Db,
-  debt: OutboxDebt,
+  debt: OutboxDebt & {
+    readonly message: { readonly kind: K; readonly payload: PayloadOf<K> };
+  },
+  // Not inferred from: the kinds are the debt's, and the map must hold them.
+  handlers: Pick<OutboxHandlers, NoInfer<K>>,
   report: Report = captureException,
-  handlers: OutboxHandlers = outboxHandlers,
 ): Promise<void> {
-  const handler = boundHandler(handlers, debt.message);
+  const handler = boundHandler<K>(handlers, debt.message);
   try {
     // Refused (SA-L22) is reported like a failure and left for the drain,
     // which is what counts a row's tries and closes it.
@@ -243,7 +262,12 @@ export async function settleOutbox(
 
 export interface DrainOptions {
   readonly report?: Report;
-  readonly handlers?: OutboxHandlers;
+  /**
+   * Every kind's handler. Required: the registry is the dispatch's to
+   * assemble (`dispatch/outbox-handlers.ts`), since each handler lives with
+   * what it touches and the outbox imports none of them (design 256).
+   */
+  readonly handlers: OutboxHandlers;
   readonly now?: number;
   /**
    * The kinds to drain, every kind this build knows by default. The hourly
@@ -334,7 +358,7 @@ async function claimDue(
  */
 async function runToSettle(
   db: Db,
-  handler: ReturnType<typeof boundHandler>,
+  handler: BoundHandler,
   rowId: string,
 ): Promise<Refused | undefined> {
   const ofRow = eq(outbox.id, rowId);
@@ -461,10 +485,10 @@ async function workClaimed(
 export async function drainOutbox(
   db: Db,
   anomalies: string[],
-  options: DrainOptions = {},
+  options: DrainOptions,
 ): Promise<void> {
   const report = options.report ?? captureException;
-  const handlers = options.handlers ?? outboxHandlers;
+  const { handlers } = options;
   const now = options.now ?? nowSeconds();
   const kinds = options.kinds ?? outboxKinds;
   for (const kind of kinds) {

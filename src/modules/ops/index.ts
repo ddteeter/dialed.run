@@ -4,9 +4,10 @@ export {
   outboxInsert,
   outboxInsertWhere,
   settleOutbox,
+  storageHandlers,
   type OutboxDebt,
+  type OutboxDebtOf,
 } from "./outbox";
-export { type ExportConsumers } from "./desk";
 export {
   firstPublishedPhotos,
   kitCardResponse,

@@ -55,6 +55,7 @@ import {
   oweOutbox,
   outboxInsert,
   settleOutbox,
+  storageHandlers,
 } from "../ops";
 import {
   getProductAttributeDefaultsBulk,
@@ -416,7 +417,7 @@ export async function deleteItem(
     db.delete(wardrobeItems).where(ownedItemWhere(userId, itemId)),
     outboxInsert(db, debt),
   ]);
-  await settleOutbox(db, debt);
+  await settleOutbox(db, debt, storageHandlers);
 }
 
 // ---- UI groups -----------------------------------------------------------
