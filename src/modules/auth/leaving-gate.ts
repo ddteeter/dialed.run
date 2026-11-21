@@ -17,7 +17,10 @@
  *   (`keepableUserId`), so the week's one way back still works.
  * - **Session creation** refuses a runner whose purge has started
  *   (`deletionGate`), and the purge's claim deletes their sessions in the
- *   same batch that starts it (`account/purge/purge.ts`). So once
+ *   same batch that starts it (`account/purge/purge.ts`). The gate reads
+ *   again once the session exists, and deletes it if the purge has
+ *   started: either the purge's batch runs after the insert and deletes
+ *   it, or that second read sees the purge. So once
  *   `purge_started_at` is set there is no session to act with and no way
  *   to get one: everything is refused, sign-in included.
  *
@@ -31,6 +34,7 @@ import { APIError } from "better-auth/api";
 import { eq } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
+import { session as sessions } from "../../db/schema-auth";
 import { accountDeletions } from "../../db/schema-core";
 import { AccountLeavingError, AuthRequiredError } from "./auth-error";
 
@@ -103,6 +107,13 @@ export async function keepableUserId(db: Db, userId: string): Promise<string> {
  * (decision D-82), and a sign-in that said "being deleted" would tell whoever typed
  * the address what the page will not.
  */
+function signInRefused(): APIError {
+  return APIError.from(
+    "UNAUTHORIZED",
+    BASE_ERROR_CODES.INVALID_EMAIL_OR_PASSWORD,
+  );
+}
+
 export function deletionGate(db: Db): BetterAuthPlugin {
   return {
     id: "deletion-gate",
@@ -115,10 +126,14 @@ export function deletionGate(db: Db): BetterAuthPlugin {
                 if ((await standingOf(db, session.userId)) !== "purging") {
                   return;
                 }
-                throw APIError.from(
-                  "UNAUTHORIZED",
-                  BASE_ERROR_CODES.INVALID_EMAIL_OR_PASSWORD,
-                );
+                throw signInRefused();
+              },
+              after: async (session: { id: string; userId: string }) => {
+                if ((await standingOf(db, session.userId)) !== "purging") {
+                  return;
+                }
+                await db.delete(sessions).where(eq(sessions.id, session.id));
+                throw signInRefused();
               },
             },
           },
