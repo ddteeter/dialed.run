@@ -643,7 +643,9 @@ async function wasTakenDown(
  * counter-notice saved, and the purge's claim skips it — then deletes
  * each hold the purge claimed with the same statements a Remove uses,
  * marking it `purged` in the same batch. A purge whose batch fails stays
- * `purging`, and the next sweep takes it over.
+ * `purging`, and the next sweep takes it over. Last, it deletes what was
+ * taken down while a hold kept it, once no live hold keeps its kit
+ * (`deleteTakenDown`); one whose batch fails is listed again tomorrow.
  */
 export async function sweepCopyrightHolds(
   db: Db = coreDb(),
