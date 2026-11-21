@@ -100,16 +100,19 @@ export interface ScheduledOutcome {
  *
  * `reporter` is a parameter so a test can read the check-ins and digest
  * events a firing produced. Production passes nothing and gets Sentry.
- * `upkeep` is spread over `liveUpkeep` (`DailyUpkeep`): production hands
- * in only the two speed fields, which read the route tree the Worker entry
- * builds, and a test replaces any job, or names it `undefined` to skip it.
+ * `upkeep` (`DailyUpkeep`) is spread over `liveUpkeep` (`Upkeep`):
+ * production hands in only the two speed fields, which read the route tree
+ * the Worker entry builds, and a test replaces any job. The jobs
+ * `liveUpkeep` sets cannot be named `undefined`, so every firing runs them;
+ * only the product link, the digest's mail and the speed checks can be
+ * left out.
  */
 export async function handleScheduled(
   controller: ScheduledController,
   reporter: CronReporter = sentryCronReporter,
   handedIn: DailyUpkeep = {},
 ): Promise<ScheduledOutcome> {
-  const upkeep: DailyUpkeep = { ...liveUpkeep, ...handedIn };
+  const upkeep: Upkeep = { ...liveUpkeep, ...handedIn };
   const db = coreDb();
   const cronName = cronNameFor(controller.cron);
   await db
@@ -148,8 +151,11 @@ export async function handleScheduled(
 /**
  * The firings' work that belongs to other modules, and the two speed
  * checks. Every field is a seam: `liveUpkeep` holds the real jobs, and
- * `handleScheduled` spreads what it is handed over it, so a test replaces
- * one job or names it `undefined` to leave it out.
+ * `handleScheduled` spreads what it is handed (`DailyUpkeep`, every field
+ * optional) over it, so a test replaces one job. The six jobs `liveUpkeep`
+ * sets are required here, so none can be handed in as `undefined`; the
+ * product link, the digest's mail and the speed checks can, and a firing
+ * without one goes on without it.
  *
  * **Account deletion's purge** (task 126, ACC-9, `account/purge`) reports
  * what it could not finish into the digest's `account-deletion` lines
@@ -193,16 +199,15 @@ export async function handleScheduled(
  * yesterday (`speed-digest.ts`); the hourly checks ride the `:30` firing,
  * each finding its own event (`speedReport`).
  */
-export interface DailyUpkeep {
-  readonly purgeAccounts?: ((anomalies: string[]) => Promise<void>) | undefined;
+interface Upkeep {
+  readonly purgeAccounts: (anomalies: string[]) => Promise<void>;
   readonly digestMail?: DigestMail | undefined;
-  readonly sweepExports?: ((anomalies: string[]) => Promise<void>) | undefined;
-  readonly rescreenHandles?:
-    ((anomalies: string[]) => Promise<void>) | undefined;
+  readonly sweepExports: (anomalies: string[]) => Promise<void>;
+  readonly rescreenHandles: (anomalies: string[]) => Promise<void>;
   readonly linkProducts?: ProductLinker | undefined;
-  readonly sweepAuthRows?: (() => Promise<void>) | undefined;
-  readonly forgetAnsweredRequests?: (() => Promise<void>) | undefined;
-  readonly sweepCopyrightHolds?: (() => Promise<void>) | undefined;
+  readonly sweepAuthRows: () => Promise<void>;
+  readonly forgetAnsweredRequests: () => Promise<void>;
+  readonly sweepCopyrightHolds: () => Promise<void>;
   readonly speed?:
     ((today: string, anomalies: string[]) => Promise<void>) | undefined;
   readonly speedHourly?:
@@ -211,9 +216,15 @@ export interface DailyUpkeep {
 }
 
 /**
+What a firing is handed: any of `Upkeep`'s jobs, each in place of the live
+one.
+*/
+export type DailyUpkeep = Partial<Upkeep>;
+
+/**
 The jobs a firing runs when a test does not replace them.
 */
-const liveUpkeep: DailyUpkeep = {
+const liveUpkeep: Upkeep = {
   purgeAccounts: purgeDueAccounts,
   sweepExports,
   rescreenHandles: rescreenHandlesFromEnv,
@@ -226,7 +237,7 @@ const liveUpkeep: DailyUpkeep = {
 /**
 The outbox's handlers, with the product link bound to the one handed in.
 */
-function handlersFor(upkeep: DailyUpkeep): OutboxHandlers {
+function handlersFor(upkeep: Upkeep): OutboxHandlers {
   return outboxHandlers(upkeep.linkProducts);
 }
 
@@ -236,7 +247,7 @@ function handlersFor(upkeep: DailyUpkeep): OutboxHandlers {
  */
 async function drainProductLinks(
   anomalies: string[],
-  upkeep: DailyUpkeep,
+  upkeep: Upkeep,
 ): Promise<void> {
   await drainOutbox(coreDb(), anomalies, {
     kinds: ["product_link"],
@@ -248,7 +259,7 @@ async function drainProductLinks(
 async function runCron(
   cronName: CronName,
   reporter: CronReporter,
-  upkeep: DailyUpkeep,
+  upkeep: Upkeep,
 ): Promise<readonly string[]> {
   switch (cronName) {
     case "daily-digest": {
@@ -259,7 +270,7 @@ async function runCron(
         // docs/tasks/103-weather.md requirement 4/5: the hourly
         // pending-observation retry, claim-then-work at the module level.
         () => retryPendingWeather(captureException),
-        () => upkeep.sweepExports?.(anomalies),
+        () => upkeep.sweepExports(anomalies),
         // C6's 40-hour reminder: hourly, so it lands before the deadline
         // the daily digest could miss (`removal-reminders.ts`).
         () => oweRemovalReminders(coreDb()),
@@ -295,7 +306,7 @@ async function runCron(
         // Email before the re-ask: each handle may wait its full five
         // seconds on moderation, and owed mail should not wait behind it.
         () => drainOwedEmail(anomalies),
-        () => upkeep.rescreenHandles?.(anomalies),
+        () => upkeep.rescreenHandles(anomalies),
         () => reportBreakerTrips(reporter),
       ]);
     }
@@ -369,7 +380,7 @@ export const SPEED_EVENTS_PER_CHECK = 5;
  * that succeeded still go out when the other throws.
  */
 async function reportHourlySpeed(
-  speedHourly: DailyUpkeep["speedHourly"],
+  speedHourly: Upkeep["speedHourly"],
   reporter: CronReporter,
 ): Promise<void> {
   const findings: SpeedFinding[] = [];
@@ -1000,7 +1011,7 @@ export function digestReport(
  */
 async function runDailyDigest(
   reporter: CronReporter,
-  upkeep: DailyUpkeep,
+  upkeep: Upkeep,
 ): Promise<string[]> {
   const db = coreDb();
   // The generic outbox rides the same firing as the Strava one: drain
@@ -1026,7 +1037,7 @@ async function runDailyDigest(
     "breaker-headroom": checkBreakerHeadroom,
     "screener-quiet": checkQuietScreener,
     "account-deletion": async (anomalies) => {
-      await upkeep.purgeAccounts?.(anomalies);
+      await upkeep.purgeAccounts(anomalies);
     },
     speed: async (anomalies) => {
       await upkeep.speed?.(utcDay(), anomalies);
@@ -1097,9 +1108,9 @@ async function runDailyDigest(
   // them.
   const sweeps = await failuresOf([
     () => sweepRateLimits(db),
-    () => upkeep.sweepAuthRows?.(),
-    () => upkeep.forgetAnsweredRequests?.(),
-    () => upkeep.sweepCopyrightHolds?.(),
+    () => upkeep.sweepAuthRows(),
+    () => upkeep.forgetAnsweredRequests(),
+    () => upkeep.sweepCopyrightHolds(),
     // After the holds' own sweep, so a hold it settles today is not
     // judged on yesterday's status.
     () => sweepModerationRecords(db),
