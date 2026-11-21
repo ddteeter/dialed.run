@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, like } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 
 import { account, session } from "../../src/db/schema-auth";
@@ -367,6 +367,54 @@ describe("requestAccountDeletion", () => {
       subject,
       subject,
     ]);
+  });
+
+  it("owes three delete-scheduled emails a day at most, scheduling every request, and owes one again the next day", async () => {
+    const mail = fakeMail();
+    const { userId } = await seedUser();
+    await withPassword(userId);
+    const request = {
+      userId,
+      currentPassword: "hunter22",
+      checkPassword: checks({ status: "own" }),
+      signedInAt: NOW + 2 * 86_400,
+    };
+    const owedNow = () =>
+      db
+        .select({ key: outbox.dedupeKey })
+        .from(outbox)
+        .where(like(outbox.dedupeKey, `deletion_scheduled:${userId}:%`));
+    const ask = async (at: number) => {
+      const fx = effectsFor(mail);
+      const result = await requestAccountDeletion(db, request, fx.effects, at);
+      const owed = await owedNow();
+      await fx.settled();
+      expect(await keepAccount(db, userId)).toBe("kept");
+      return { result, owed, keptAlive: fx.keepAlive.mock.calls.length };
+    };
+
+    for (const pass of [0, 1, 2]) {
+      const at = NOW + pass;
+      expect(await ask(at)).toStrictEqual({
+        result: { status: "scheduled", purgeAfter: at + DELETION_GRACE_S },
+        owed: [
+          {
+            key: `deletion_scheduled:${userId}:${String(at + DELETION_GRACE_S)}`,
+          },
+        ],
+        keptAlive: 1,
+      });
+    }
+    expect(await ask(NOW + 3)).toStrictEqual({
+      result: { status: "scheduled", purgeAfter: NOW + 3 + DELETION_GRACE_S },
+      owed: [],
+      keptAlive: 0,
+    });
+    expect(mail.sent).toHaveLength(3);
+
+    const nextDay = NOW + 86_400;
+    expect(await ask(nextDay)).toMatchObject({ keptAlive: 1 });
+    expect(mail.sent).toHaveLength(4);
   });
 
   it("names the email's day on the runner's home zone (R-96 (3))", async () => {

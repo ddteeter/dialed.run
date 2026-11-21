@@ -55,7 +55,11 @@ export const SEND_LIMIT_KINDS = [
  * - `photo-runner` — one runner's photo uploads in a day, kit and garment
  *   (SA-M14); the runner's id;
  * - `purge-runner` — the edge purges one runner's own writes make in a
- *   minute (SA-L15); the runner's id.
+ *   minute (SA-L15); the runner's id;
+ * - `deletion-notice` — the "delete scheduled" emails one runner is owed
+ *   in a day; the runner's id;
+ * - `access-to` — Au5's asks for one address in a day, whoever asks; the
+ *   address, lowercased.
  */
 export const RATE_LIMIT_KINDS = [
   ...SEND_LIMIT_KINDS,
@@ -73,6 +77,8 @@ export const RATE_LIMIT_KINDS = [
   "weather-runner",
   "photo-runner",
   "purge-runner",
+  "deletion-notice",
+  "access-to",
 ] as const;
 
 /**

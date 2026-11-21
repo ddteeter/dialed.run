@@ -35,8 +35,8 @@ export const SENDS_PER_WINDOW = EMAIL_SENDS_PER_HOUR;
 export const SEND_WINDOW_S = 60 * 60;
 
 /**
- * The counts kept by email address: the three sends, sign-in's tries and
- * `/takedown`'s receipts. `access`, `takedown` and `resend-visitor` are
+ * The counts kept by email address: the three sends, sign-in's tries,
+ * `/takedown`'s receipts and Au5's asks per address. `access`, `takedown` and `resend-visitor` are
  * counted by IP.
  */
 const ADDRESS_COUNTS = [
@@ -45,6 +45,7 @@ const ADDRESS_COUNTS = [
   "change",
   "sign-in",
   "takedown-to",
+  "access-to",
 ] as const satisfies readonly RateLimitKind[];
 
 export type SendClaim =
@@ -293,13 +294,28 @@ export const RESENDS_PER_VISITOR_PER_HOUR = 10;
  */
 export const TAKEDOWN_RECEIPTS_PER_HOUR = 5;
 
+/**
+ * How many "delete scheduled" emails one runner may be owed in a day;
+ * past it a deletion is still scheduled, with no email (owner,
+ * 2026-11-21).
+ */
+export const DELETION_NOTICES_PER_DAY = 3;
+
+/**
+ * How many times one address may be asked for on Au5 in a day, whoever
+ * asks; past it the ask writes nothing and answers the same receipt
+ * (owner, 2026-11-21).
+ */
+export const ACCESS_ASKS_PER_ADDRESS_PER_DAY = 3;
+
 const DAY_S = 24 * 60 * 60;
 
 /**
  * The counts a caller claims by kind alone, each with its limit and its
  * window: Resend per visitor (its IP), a runner's photo uploads (their
- * id), and `/takedown`'s receipts per address (lowercased, as the
- * request is).
+ * id), `/takedown`'s receipts per address (lowercased, as the request
+ * is), a runner's "delete scheduled" emails (their id), and Au5's asks
+ * per address (lowercased).
  */
 const LIMIT_OF = {
   "resend-visitor": {
@@ -308,6 +324,8 @@ const LIMIT_OF = {
   },
   "photo-runner": { limit: PHOTO_UPLOADS_PER_DAY, windowS: DAY_S },
   "takedown-to": { limit: TAKEDOWN_RECEIPTS_PER_HOUR, windowS: SEND_WINDOW_S },
+  "deletion-notice": { limit: DELETION_NOTICES_PER_DAY, windowS: DAY_S },
+  "access-to": { limit: ACCESS_ASKS_PER_ADDRESS_PER_DAY, windowS: DAY_S },
 } as const satisfies Partial<
   Record<RateLimitKind, Readonly<{ limit: number; windowS: number }>>
 >;
@@ -325,6 +343,36 @@ export async function claimLimit(
 ): Promise<SendClaim> {
   const { limit, windowS } = LIMIT_OF[kind];
   return claimRateLimit(db, kind, subject, limit, windowS, now);
+}
+
+/**
+ * Count one of `kind` for `subject` — the statement, unsent, for a
+ * `db.batch()` with the write it allows (`limitAllowed`); `limitClaimOf`
+ * reads its answer.
+ */
+export function countLimit(
+  db: Db,
+  kind: LimitedKind,
+  subject: string,
+  now = nowSeconds(),
+) {
+  return countRate(db, kind, subject, LIMIT_OF[kind].windowS, now);
+}
+
+/**
+What `countLimit` returned, as the answer.
+*/
+export function limitClaimOf(kind: LimitedKind, rows: CountRows): SendClaim {
+  const { limit, windowS } = LIMIT_OF[kind];
+  return claimOf(rows, limit, windowS);
+}
+
+/**
+ * `limitClaimOf`'s verdict as SQL, for a write in the batch after
+ * `countLimit`: true while the count it just made is within the limit.
+ */
+export function limitAllowed(kind: LimitedKind, subject: string): SQL {
+  return sql`EXISTS (SELECT 1 FROM ${rateLimits} WHERE ${rateLimits.kind} = ${kind} AND ${rateLimits.subject} = ${keyOf(kind, subject)} AND ${windowedCountWithin(rateLimits.count, LIMIT_OF[kind].limit)})`;
 }
 
 /**
