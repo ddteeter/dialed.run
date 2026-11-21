@@ -24,7 +24,7 @@ import {
 import { pendingReviewQueue } from "../../src/modules/safety/review/review";
 import { queriesDuring } from "../d1-spy";
 import { noPurge } from "../purge-spy";
-import { oweInCoreWhere } from "../queue-fakes";
+import { oweInCoreWhere } from "../../src/modules/ops/outbox/owe-in-core";
 import {
   deleteAllFrom,
   makeEntry,

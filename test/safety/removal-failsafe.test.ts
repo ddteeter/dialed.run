@@ -20,7 +20,8 @@ import {
   type CategoryScores,
 } from "../../src/modules/safety/screening/classifier/moderation";
 import { noPurge } from "../purge-spy";
-import { oweInCore, oweInCoreWhere } from "../queue-fakes";
+import { oweInCore } from "../queue-fakes";
+import { oweInCoreWhere } from "../../src/modules/ops/outbox/owe-in-core";
 
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 

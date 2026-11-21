@@ -369,6 +369,7 @@ function pending(
     location: `https://dialed.run/feed/entry/${ENTRY}`,
     description: undefined,
     posterUsername: undefined,
+    owner: undefined,
     subject: { subjectType: "entry", subjectId: ENTRY, entryId: ENTRY },
     createdAt: 1,
     dueAt: 2,
@@ -513,13 +514,13 @@ describe("Review · removal requests", () => {
     expect(outside).toHaveTextContent("somewhere");
   });
 
-  it("draws an overdue request's clock as the filled tag, and names the poster (R55·197)", async () => {
+  it("draws an overdue request's clock as the filled tag, and names the owner (R55·197)", async () => {
     await renderWithRouter(
       <RemovalRequests
         asOf={5}
         requests={[
           // Due at this very second: out, so the filled tag.
-          pending({ due: "Overdue", dueAt: 5, posterUsername: "tomasz_k" }),
+          pending({ due: "Overdue", dueAt: 5, owner: "tomasz_k" }),
         ]}
         decide={vi.fn<DecideFn>()}
         block={vi.fn<BlockFn>()}
@@ -531,6 +532,54 @@ describe("Review · removal requests", () => {
     );
     expect(part("request-head")).toHaveTextContent(
       `entry · ${shortId(ENTRY)} · @tomasz_k [via /takedown]`,
+    );
+  });
+
+  it("draws the real owner in the head and the requester's handle in the body, as their word", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        asOf={0}
+        requests={[
+          pending({ owner: "real_owner", posterUsername: "someone_else" }),
+        ]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    expect(part("request-head")).toHaveTextContent(
+      `entry · ${shortId(ENTRY)} · @real_owner [via /takedown]`,
+    );
+    expect(part("request-head")?.textContent).not.toContain("someone_else");
+    expect(part("poster-claim")).toHaveTextContent(
+      "They name @someone_else (not checked)",
+    );
+    expect(part("poster-claim")).toHaveClass("text-body");
+  });
+
+  it("says nothing of a handle the requester did not type", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        asOf={0}
+        requests={[pending({ owner: "real_owner" })]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    expect(part("poster-claim")).toBeNull();
+  });
+
+  it("keeps a typed handle out of a link-not-ours head, and says it below", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        asOf={0}
+        requests={[pending({ subject: undefined, posterUsername: "a_b" })]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    expect(part("request-head")?.textContent).not.toContain("a_b");
+    expect(part("poster-claim")).toHaveTextContent(
+      "They name @a_b (not checked)",
     );
   });
 
@@ -555,19 +604,24 @@ describe("Review · removal requests", () => {
 
   it.each([
     {
-      name: "a subject, a poster and a hold",
-      overrides: { posterUsername: "tomasz_k", holdState: "held" as const },
+      name: "a subject, an owner and a hold",
+      overrides: { owner: "tomasz_k", holdState: "held" as const },
       heard: `entry · ${shortId(ENTRY)} · @tomasz_k via /takedown hidden`,
     },
     {
-      name: "a subject and a hold, no poster",
+      name: "a subject and a hold, no owner",
       overrides: { holdState: "valve" as const },
       heard: `entry · ${shortId(ENTRY)} via /takedown valve shut`,
     },
     {
-      name: "a subject and a poster, no hold",
-      overrides: { posterUsername: "tomasz_k", holdState: undefined },
+      name: "a subject and an owner, no hold",
+      overrides: { owner: "tomasz_k", holdState: undefined },
       heard: `entry · ${shortId(ENTRY)} · @tomasz_k via /takedown`,
+    },
+    {
+      name: "a subject whose requester typed a handle, which the head never says",
+      overrides: { posterUsername: "someone_else", holdState: undefined },
+      heard: `entry · ${shortId(ENTRY)} via /takedown`,
     },
     {
       name: "a subject alone",
@@ -575,13 +629,13 @@ describe("Review · removal requests", () => {
       heard: `entry · ${shortId(ENTRY)} via /takedown`,
     },
     {
-      name: "a link with a poster and a hold",
+      name: "a link with a typed handle and a hold",
       overrides: {
         subject: undefined,
         posterUsername: "a_b",
         holdState: "blocked" as const,
       },
-      heard: "link · @a_b via /takedown blocked",
+      heard: "link via /takedown blocked",
     },
     {
       name: "a link alone",

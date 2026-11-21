@@ -34,6 +34,7 @@ import {
   reviewQueue,
   takedownBlocks,
   takedownRequests,
+  userProfiles,
 } from "../../../db/schema-core";
 import type {
   TakedownRequestValues,
@@ -41,9 +42,11 @@ import type {
 } from "../../../lib/contracts/takedown";
 import type { OutboxMessage } from "../../../lib/sql/outbox";
 import type { PurgeTags } from "../../../lib/cache-tags";
+import { readInChunks } from "../../../lib/chunked";
 import { newUlid } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
 import { firstRowWhere } from "../../../lib/sql/keyed-read";
+import { qualified } from "../../../lib/sql/qualified";
 import { operatorEmailMessage } from "../../../lib/sql/outbox";
 import { claimLimit, countSend, emailDebt, sendClaimOf } from "../../email";
 import { adminUserIds } from "../rules";
@@ -172,10 +175,8 @@ export async function fileTakedownRequest<Attempt>(
   const dueAt = now + REMOVAL_DUE_SECONDS;
   const subject = await filedSubjectOf(db, input.location);
   const row = rowOf(id);
-  const told =
-    subject === undefined
-      ? []
-      : await holdNotice(db, subject, holds(row.hid(now)));
+  const hid = holds(row.hid(now));
+  const told = subject === undefined ? [] : await holdNotice(db, subject, hid);
   await db.batch([
     db
       .insert(takedownRequests)
@@ -197,7 +198,7 @@ export async function fileTakedownRequest<Attempt>(
       })
       .onConflictDoNothing(),
     ...decisionWrites(db, row.written, subject, now),
-    ...holdWrites(db, subject, holds(row.hid(now))),
+    ...holdWrites(db, subject, hid),
     ...told,
     ...operatorAlerts(deps.oweWhere, { id, dueAt, subject }, row.alerts(now)),
     ...valveAlerts(deps.oweWhere, now, row.is("valve")),
@@ -324,9 +325,7 @@ function owedWhere(
  * subject that does not exist and a removal all answer false.
  */
 function subjectHoldable(subject: TakedownSubject): SQL {
-  const { table, where } = holdable[subject.subjectType](subject.subjectId, {
-    orInReview: true,
-  });
+  const { table, where } = holdable(subject, HOLD_OR_REVIEW);
   return sql`exists (select 1 from ${table} where ${where})`;
 }
 
@@ -568,7 +567,7 @@ async function holdNotice(
   subject: TakedownSubject,
   onlyIf: SQL,
 ): Promise<BatchItem<"sqlite">[]> {
-  const { table, where } = holdable[subject.subjectType](subject.subjectId);
+  const { table, where } = holdable(subject);
   const [row] = await db
     .select({ one: sql`1` })
     .from(table)
@@ -579,47 +578,28 @@ async function holdNotice(
 }
 
 /**
- * A subject a hold would move: public, and the row it names. The hold's
- * own `where` (`visibilityWrites`), so the notice and the hide cannot
- * disagree about what "public" is. `orInReview` adds a subject a report
- * already hid, which a request still pins.
+ * A subject in one of `states`, and the row it names: by default those a
+ * hold moves from (the hold's own `where`, `visibilityWrites`, so the
+ * notice and the hide cannot disagree about what "public" is), or
+ * `HOLD_OR_REVIEW`, which adds a subject a report already hid.
  */
-const holdable: Record<
-  TakedownSubject["subjectType"],
-  (
-    subjectId: string,
-    options?: { readonly orInReview: boolean },
-  ) => {
-    readonly table: typeof outfitEntries | typeof entryPhotos;
-    readonly where: SQL | undefined;
-  }
-> = {
-  entry: (subjectId, options) => ({
-    table: outfitEntries,
-    where: and(
-      eq(outfitEntries.id, subjectId),
-      options?.orInReview === true
-        ? or(HOLD_FROM.entry, IN_REVIEW.entry)
-        : HOLD_FROM.entry,
-    ),
-  }),
-  photo: (subjectId, options) => ({
-    table: entryPhotos,
-    where: and(
-      eq(entryPhotos.id, subjectId),
-      options?.orInReview === true
-        ? or(HOLD_FROM.photo, IN_REVIEW.photo)
-        : HOLD_FROM.photo,
-    ),
-  }),
-};
+function holdable(
+  subject: TakedownSubject,
+  states: Readonly<Record<TakedownSubject["subjectType"], SQL>> = HOLD_FROM,
+) {
+  const { table, id } = SUBJECT_ROWS[subject.subjectType];
+  return {
+    table,
+    where: and(eq(id, subject.subjectId), states[subject.subjectType]),
+  };
+}
 
 /**
-What a report's hide or a request's hold leaves: not public, a person will look.
+Each subject type's table, and its id.
 */
-const IN_REVIEW = {
-  entry: eq(outfitEntries.moderationStatus, "hidden_pending_review"),
-  photo: eq(entryPhotos.screenStatus, "hidden_pending_review"),
+const SUBJECT_ROWS = {
+  entry: { table: outfitEntries, id: outfitEntries.id },
+  photo: { table: entryPhotos, id: entryPhotos.id },
 } as const;
 
 /**
@@ -688,6 +668,23 @@ const HOLD_FROM_STATUS = { entry: "ok" } as const;
 const HOLD_FROM = {
   entry: eq(outfitEntries.moderationStatus, HOLD_FROM_STATUS.entry),
   photo: inArray(entryPhotos.screenStatus, ["pending", "pass"]),
+} as const;
+
+/**
+ * The states a request still pins: those a hold moves from, and the one
+ * a report's hide or a request's hold leaves (not public, a person will
+ * look).
+ */
+const HOLD_OR_REVIEW = {
+  entry: inArray(outfitEntries.moderationStatus, [
+    "ok",
+    "hidden_pending_review",
+  ]),
+  photo: inArray(entryPhotos.screenStatus, [
+    "pending",
+    "pass",
+    "hidden_pending_review",
+  ]),
 } as const;
 
 /**
@@ -761,10 +758,8 @@ export async function confirmTakedownRequest(
   const subject = await requestSubjectOf(db, request);
   const state = sql<HoldState>`(case when ${valveShutSql(now)} then 'valve' else 'held' end)`;
   const row = rowOf(request.id, eq(takedownRequests.confirmedAt, now));
-  const told =
-    subject === undefined
-      ? []
-      : await holdNotice(db, subject, holds(row.hid(now)));
+  const hid = holds(row.hid(now));
+  const told = subject === undefined ? [] : await holdNotice(db, subject, hid);
   const claim = and(
     eq(takedownRequests.id, request.id),
     isNull(takedownRequests.confirmedAt),
@@ -776,7 +771,7 @@ export async function confirmTakedownRequest(
       .set({ confirmedAt: now, holdState: state })
       .where(claim),
     ...decisionWrites(db, row.written, subject, now),
-    ...holdWrites(db, subject, holds(row.hid(now))),
+    ...holdWrites(db, subject, hid),
     ...told,
     ...operatorAlerts(
       effects.oweWhere,
@@ -802,9 +797,15 @@ export interface PendingTakedownRequest {
   readonly location: string;
   readonly description: string | undefined;
   /**
-  Who posted it, as the requester gave it (round 37 #59g).
+  Who posted it, as the requester gave it (round 37 #59g): their word, never checked.
   */
   readonly posterUsername: string | undefined;
+  /**
+   * Whose it is: the handle of the runner whose kit the link names, read
+   * from that kit, as every other Desk row's owner is; `undefined` for a
+   * link that is not ours, a kit gone since, or an owner with no handle.
+   */
+  readonly owner: string | undefined;
   readonly subject: TakedownSubject | undefined;
   readonly createdAt: number;
   readonly dueAt: number;
@@ -857,6 +858,7 @@ export async function pendingTakedownRequests(
   const subjects = await requestSubjectsOf(db, rows);
   const photoKeys = await subjectPhotoKeysOf(db, subjects);
   const listed = rows.map((row, index) => ({ row, subject: subjects[index] }));
+  const owners = await ownersOf(db, subjects);
   const others = await otherPhotosOf(
     db,
     listed.flatMap(({ subject }) => subject ?? []),
@@ -872,6 +874,7 @@ export async function pendingTakedownRequests(
     location: row.location,
     description: row.description ?? undefined,
     posterUsername: row.posterUsername ?? undefined,
+    owner: subject && owners.get(subject.entryId),
     subject,
     otherPhotos:
       subject && others.get(`${subject.subjectType}:${subject.subjectId}`),
@@ -891,6 +894,33 @@ export async function pendingTakedownRequests(
       )
       .map((other) => other.id),
   }));
+}
+
+/**
+ * The handle of each named kit's author, by kit id, an `IN` list at a
+ * time; a kit gone, or an author with no handle yet, is not in it.
+ */
+async function ownersOf(
+  db: Db,
+  subjects: readonly (TakedownSubject | undefined)[],
+): Promise<Map<string, string>> {
+  const entryIds = subjects.flatMap((subject) => subject?.entryId ?? []);
+  // The author's handle as a column of the kit's own row, by
+  // `user_profiles`' primary key.
+  const handle = sql<
+    string | null
+  >`(select ${userProfiles.username} from ${userProfiles} where ${qualified(userProfiles, userProfiles.userId)} = ${qualified(outfitEntries, outfitEntries.userId)})`;
+  const kits = await readInChunks(entryIds, (chunk) =>
+    db
+      .select({ entryId: outfitEntries.id, handle })
+      .from(outfitEntries)
+      .where(inArray(outfitEntries.id, chunk)),
+  );
+  return new Map(
+    kits.flatMap((kit) =>
+      kit.handle === null ? [] : [[kit.entryId, kit.handle]],
+    ),
+  );
 }
 
 export type BlockResult =

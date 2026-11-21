@@ -11,6 +11,7 @@ import {
   outfitEntries,
   takedownBlocks,
   takedownRequests,
+  userProfiles,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { removalRequestReceived } from "../../src/lib/contracts/email-kinds";
@@ -40,7 +41,7 @@ import {
 import { emailHandler } from "../../src/modules/ops/owed-email/owed-email";
 import { fakeMail } from "../email/helpers";
 import { noPurge, purgeSpy } from "../purge-spy";
-import { oweInCoreWhere } from "../queue-fakes";
+import { oweInCoreWhere } from "../../src/modules/ops/outbox/owe-in-core";
 
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 
@@ -51,6 +52,10 @@ import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
  */
 const NOW = 1_800_000_000;
 const ADMINS = env.ADMIN_USER_IDS;
+/**
+A column D1 left empty, as drizzle reads it back.
+*/
+const NOT_SET = z.null().parse(JSON.parse("null"));
 const SECRET = "test-takedown-secret";
 
 function core() {
@@ -604,6 +609,65 @@ describe("the poster's username (round 37 #59g)", () => {
     const [listed] = await pendingTakedownRequests(core(), NOW);
     expect(listed?.posterUsername).toBeUndefined();
   });
+
+  it("is listed beside the kit's real owner, read from the kit", async () => {
+    // Another runner first, so a read that ignored whose kit it is would
+    // find them.
+    await makeUser({ username: "first_runner" });
+    const author = await makeUser({ username: "real_owner" });
+    const entryId = await makeEntry({
+      userId: author,
+      runId: await makeRun({ userId: author }),
+      audience: "runners",
+    });
+    await fileTakedownRequest(
+      core(),
+      {
+        email: "me@example.com",
+        signature: "Sam Runner",
+        location: entryLink(entryId),
+        description: "",
+        posterUsername: "someone_else",
+        isAttested: true,
+        idempotencyKey: newUlid(),
+        attempt: "token",
+        remoteIp: "203.0.113.9",
+        isLimited: false,
+      },
+      deps,
+      NOW,
+    );
+    await file("you@example.com", "https://elsewhere.example/x", {
+      ip: "198.51.100.3",
+    });
+
+    const listed = await pendingTakedownRequests(core(), NOW);
+
+    expect(
+      listed.map((request) => [request.owner, request.posterUsername]),
+    ).toStrictEqual([
+      ["real_owner", "someone_else"],
+      [undefined, undefined],
+    ]);
+  });
+
+  it("names no owner for a kit whose author has no handle yet", async () => {
+    const author = await makeUser();
+    await core()
+      .update(userProfiles)
+      .set({ username: NOT_SET })
+      .where(eq(userProfiles.userId, author));
+    const entryId = await makeEntry({
+      userId: author,
+      runId: await makeRun({ userId: author }),
+      audience: "runners",
+    });
+    await file("me@example.com", entryLink(entryId));
+
+    const [listed] = await pendingTakedownRequests(core(), NOW);
+
+    expect(listed?.owner).toBeUndefined();
+  });
 });
 
 describe("Review's list", () => {
@@ -980,7 +1044,7 @@ describe("the receipt's confirm token (SA-L18)", () => {
 /**
 A request filed from its own address and inbox, as a burst's members are.
 */
-function fileAlone(index: number, location: string, now = NOW) {
+function fileAlone(index: number, location: string) {
   return fileTakedownRequest(
     core(),
     {
@@ -995,8 +1059,15 @@ function fileAlone(index: number, location: string, now = NOW) {
       isLimited: false,
     },
     deps,
-    now,
+    NOW,
   );
+}
+
+/**
+A link that is not ours, one per request.
+*/
+function elsewhere(index: number): string {
+  return `https://elsewhere.example/${String(index)}`;
 }
 
 async function hiddenKits(): Promise<number> {
@@ -1035,9 +1106,8 @@ describe("the limits, for requests sent together", () => {
     await file("me@example.com", entryLink(await sharedEntry()));
     const waiting = [];
     for (let index = 0; index < 12; index += 1) {
-      waiting.push(
-        await file("me@example.com", entryLink(await sharedEntry())),
-      );
+      const entryId = await sharedEntry();
+      waiting.push(await file("me@example.com", entryLink(entryId)));
     }
     const tokens = [];
     for (const row of waiting) tokens.push(await confirmTokenFor(row.id));
@@ -1124,8 +1194,6 @@ describe("a request that names nothing a hold moves", () => {
   });
 
   it("alerts one by one for ten an hour, then owes the valve's alert", async () => {
-    const elsewhere = (index: number) =>
-      `https://elsewhere.example/${String(index)}`;
     for (let index = 0; index <= TAKEDOWN_VALVE_PER_HOUR; index += 1) {
       await fileAlone(index, elsewhere(index));
     }
@@ -1133,12 +1201,12 @@ describe("a request that names nothing a hold moves", () => {
     const rows = await core().select().from(takedownRequests);
     const rowAt = (index: number) =>
       rows.find((row) => row.location === elsewhere(index));
-    expect(rowAt(0)).toMatchObject({ holdState: null, alertedAt: NOW });
+    expect(rowAt(0)).toMatchObject({ holdState: NOT_SET, alertedAt: NOW });
     expect(rowAt(TAKEDOWN_VALVE_PER_HOUR - 1)?.alertedAt).toBe(NOW);
     expect(rowAt(TAKEDOWN_VALVE_PER_HOUR)).toMatchObject({
       holdState: "valve",
-      alertedAt: null,
-      heldAt: null,
+      alertedAt: NOT_SET,
+      heldAt: NOT_SET,
     });
     const alerted = await owedWhere(
       (email) => email.email.template.kind === "removal_requested",
@@ -1152,7 +1220,7 @@ describe("a request that names nothing a hold moves", () => {
 
   it("alerts one by one again once the hour has passed", async () => {
     for (let index = 0; index < TAKEDOWN_VALVE_PER_HOUR; index += 1) {
-      await fileAlone(index, `https://elsewhere.example/${String(index)}`);
+      await fileAlone(index, elsewhere(index));
     }
     const later = await file(
       "later@example.com",
@@ -1173,7 +1241,7 @@ describe("a request that names nothing a hold moves", () => {
 
     expect(row).toMatchObject({
       holdState: "held",
-      heldAt: null,
+      heldAt: NOT_SET,
       alertedAt: NOW,
       subjectId: entryId,
     });
@@ -1206,20 +1274,16 @@ describe("a request that names nothing a hold moves", () => {
  */
 function landingFirst(before: () => Promise<unknown>) {
   const db = core();
-  let isPending = true;
-  return new Proxy(db, {
-    get(target, property) {
-      const value: unknown = Reflect.get(target, property);
-      if (property !== "batch" || !isPending) {
-        return typeof value === "function" ? value.bind(target) : value;
-      }
-      return async (...statements: Parameters<typeof db.batch>) => {
-        isPending = false;
-        await before();
-        return target.batch(...statements);
-      };
+  const batch = db.batch.bind(db);
+  Reflect.set(
+    db,
+    "batch",
+    async (...statements: Parameters<typeof db.batch>) => {
+      await before();
+      return batch(...statements);
     },
-  });
+  );
+  return db;
 }
 
 describe("a confirm that lands after a decision", () => {
@@ -1252,8 +1316,8 @@ describe("a confirm that lands after a decision", () => {
       .where(eq(takedownRequests.id, request.id));
     expect(row).toMatchObject({
       status: "declined",
-      confirmedAt: null,
-      heldAt: null,
+      confirmedAt: NOT_SET,
+      heldAt: NOT_SET,
     });
     expect(
       await owedWhere(

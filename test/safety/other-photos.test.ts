@@ -28,7 +28,7 @@ import {
 import { queriesDuring } from "../d1-spy";
 import { noPurge } from "../purge-spy";
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
-import { oweInCoreWhere } from "../queue-fakes";
+import { oweInCoreWhere } from "../../src/modules/ops/outbox/owe-in-core";
 
 /**
  * D-117 (R-145 c): a Review row about an intimate image lists the same

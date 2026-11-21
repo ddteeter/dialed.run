@@ -24,7 +24,8 @@ import {
   subjectCacheTagsOf,
 } from "../../src/modules/safety/rules/kit-cache-tags";
 import { purgeSpy } from "../purge-spy";
-import { oweInCore, oweInCoreWhere } from "../queue-fakes";
+import { oweInCore } from "../queue-fakes";
+import { oweInCoreWhere } from "../../src/modules/ops/outbox/owe-in-core";
 
 import {
   makeEntry,

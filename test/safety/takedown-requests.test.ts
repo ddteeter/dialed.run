@@ -16,7 +16,7 @@ import {
 } from "../../src/modules/safety/takedowns/takedown-requests";
 import { queriesDuring } from "../d1-spy";
 import { noPurge } from "../purge-spy";
-import { oweInCoreWhere } from "../queue-fakes";
+import { oweInCoreWhere } from "../../src/modules/ops/outbox/owe-in-core";
 
 /**
  * `/takedown`'s request (design 136, D-117): it hides what our link names
