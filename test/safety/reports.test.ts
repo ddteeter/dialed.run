@@ -9,7 +9,7 @@ import {
   reviewQueue,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
-import { moderationThresholds } from "../../src/modules/safety";
+import { moderationThresholds, resolveReview } from "../../src/modules/safety";
 import {
   claimForReview,
   pendingReviewQueue,
@@ -43,6 +43,7 @@ import {
   resetSafetyTables,
 } from "./helpers";
 import { REPORT_HIDES_FLOOR } from "../../src/modules/safety/limits/breakers";
+import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { oweInCore } from "../queue-fakes";
 
@@ -260,6 +261,141 @@ describe("the distinct-reporter threshold", () => {
 
     expect(asProduct).toMatchObject({ status: "filed", reporterCount: 1 });
     expect(await distinctReporterCount("entry", sharedId)).toBe(1);
+  });
+});
+
+/**
+An entry report, as W1 files it.
+*/
+function report(
+  entryId: string,
+  reporterId: string,
+  reason: "explicit" | "intimate",
+) {
+  return fileReport(
+    { reporterId, subjectType: "entry", subjectId: entryId, reason },
+    oweInCore,
+    noPurge,
+  );
+}
+
+/**
+ * An entry reported to the bar, approved, with its reports and the
+ * Approve moved into the past so a report now is filed after both.
+ */
+async function approvedEntry(): Promise<string> {
+  const entryId = await reportableEntry();
+  for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+    await report(entryId, await makeUser(), "explicit");
+  }
+  const [row] = await pendingReviewQueue();
+  if (row === undefined) throw new Error("nothing queued");
+  await resolveReview(row.id, await makeUser(), "approve");
+  const now = nowSeconds();
+  await core()
+    .update(reports)
+    .set({ createdAt: now - 100 });
+  await core()
+    .update(reviewQueue)
+    .set({ approvedAt: now - 50 });
+  return entryId;
+}
+
+describe("after a person approved it", () => {
+  beforeEach(resetSafetyTables);
+
+  it("records when it was approved, and keeps it when the row is opened again", async () => {
+    const entryId = await reportableEntry();
+    for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+      await report(entryId, await makeUser(), "explicit");
+    }
+    const [row] = await pendingReviewQueue();
+    if (row === undefined) throw new Error("nothing queued");
+    const before = nowSeconds();
+    await resolveReview(row.id, await makeUser(), "approve");
+    const [approved] = await core()
+      .select({ approvedAt: reviewQueue.approvedAt })
+      .from(reviewQueue);
+    expect(approved?.approvedAt).toBeGreaterThanOrEqual(before);
+    expect(approved?.approvedAt).toBeLessThanOrEqual(before + 5);
+
+    await core().update(reviewQueue).set({ approvedAt: 7 });
+    await report(entryId, await makeUser(), "intimate");
+
+    const [reopened] = await core()
+      .select({
+        status: reviewQueue.status,
+        approvedAt: reviewQueue.approvedAt,
+      })
+      .from(reviewQueue);
+    expect(reopened).toStrictEqual({ status: "pending", approvedAt: 7 });
+  });
+
+  it("does not hide it again for one new reporter under the bar", async () => {
+    const entryId = await approvedEntry();
+
+    const filed = await report(entryId, await makeUser(), "explicit");
+
+    expect(filed).toStrictEqual({
+      status: "filed",
+      reporterCount: 1,
+      hiddenPendingReview: false,
+    });
+    expect(await moderationStatusOf(entryId)).toBe("ok");
+    expect(await pendingReviewQueue()).toStrictEqual([]);
+  });
+
+  it("hides it again once enough new people report it", async () => {
+    const entryId = await approvedEntry();
+
+    for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+      await report(entryId, await makeUser(), "explicit");
+    }
+
+    expect(await moderationStatusOf(entryId)).toBe("hidden_pending_review");
+  });
+
+  it("still hides it on one report of a reason that hides at once", async () => {
+    const entryId = await approvedEntry();
+
+    const filed = await report(entryId, await makeUser(), "intimate");
+
+    expect(filed).toMatchObject({
+      reporterCount: 1,
+      hiddenPendingReview: true,
+    });
+    expect(await moderationStatusOf(entryId)).toBe("hidden_pending_review");
+  });
+
+  it("counts a report filed in the Approve's own second, and none before it", async () => {
+    const entryId = await approvedEntry();
+    const approvedAt = nowSeconds() + 60;
+    await core().update(reviewQueue).set({ approvedAt });
+    for (const createdAt of [approvedAt, approvedAt - 1]) {
+      await core()
+        .insert(reports)
+        .values({
+          id: newUlid(),
+          reporterId: await makeUser(),
+          subjectType: "entry",
+          subjectId: entryId,
+          reason: "explicit",
+          createdAt,
+        });
+    }
+
+    const filed = await fileReport(
+      {
+        reporterId: await makeUser(),
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "explicit",
+      },
+      oweInCore,
+      noPurge,
+    );
+
+    expect(filed).toMatchObject({ reporterCount: 1 });
   });
 });
 

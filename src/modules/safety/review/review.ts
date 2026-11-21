@@ -1068,6 +1068,10 @@ export function reviewResolution(
       status,
       resolvedBy: reviewerId,
       resolvedAt: at,
+      // The last Approve, which a re-open keeps: only the reports filed
+      // after it count toward hiding the subject again. A Remove leaves
+      // it as it was.
+      ...(status === "approved" && { approvedAt: at }),
       // Settled rows carry no claim. Left set, a resolved row would still
       // look claimed to anything reading the lease.
       claimedAt: orSqlNull(undefined),
