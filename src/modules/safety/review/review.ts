@@ -124,8 +124,11 @@ export function enqueueForReview<TSchema extends Record<string, unknown>>(
           // breakers count this as a hold (design 164).
           openedAt: now,
           // This opening's own: whether it hid, or null when the caller
-          // does not say (only a report's opening does).
-          hid: orSqlNull(input.hid),
+          // does not say (only a report's opening does) — except that a
+          // row still open on a hide the reports breaker counted keeps it
+          // (`hid` 1), so a later report can bring a row into its count
+          // and never take one out.
+          hid: sql`(case when ${reviewQueue.status} in ('pending', 'reviewing') and ${reviewQueue.hid} = 1 then 1 else ${orSqlNull(input.hid)} end)`,
           // Cleared, not left alone: this row is being re-opened, and a
           // stale reviewer stamped on a pending decision would read as
           // "someone already looked at this". An `undefined` here would

@@ -13,7 +13,13 @@
  * and bytes stay, a `copyright_holds` row is written with the hide, and
  * the author is told exactly as before. `sweepCopyrightHolds` puts it
  * back after a counter-notice, or deletes it here 30 days on, with the
- * statements a Remove uses. A removal request's takedown still deletes.
+ * statements a Remove uses.
+ *
+ * **Held material is never deleted early** (owner, 2026-11-21): a Remove
+ * or a removal request's takedown of a subject a live copyright or
+ * litigation hold keeps marks the hold instead (`takenDownWrite`), so no
+ * hold's end can restore it, and leaves the bytes as the hold keeps them.
+ * The sweep deletes it once no live hold keeps it (`sweepCopyrightHolds`).
  *
  * **Quarantine is silent and keeps everything** (decision D-70). Before
  * the batch, each photo's bytes are copied to `quarantine/…`
@@ -55,13 +61,12 @@ import { notificationInsert } from "../../notifications";
 import { captureException, oweOutbox, purgePublicPages } from "../../ops";
 import {
   moderationActionInsert,
-  claimDuePurges,
   claimPurgeAfterCase,
-  copyrightHoldWrites,
-  isCopyrightHeld,
   openSubject,
   purgedWrite,
   restoreDueHolds,
+  sweepClaims,
+  takeDownHoldOf,
   isCopyrightTakedown,
   keptFingerprints,
   photoReporterNotices,
@@ -289,6 +294,40 @@ async function preservation(
 }
 
 /**
+ * How a take-down goes: its statements for the batch, given the audit
+ * row's id, and whether the bytes stay. `undefined` for a repeat.
+ */
+interface TakeDownPlan {
+  readonly keepsBytes: boolean;
+  readonly statements: (actionId: string) => Statements;
+}
+
+/**
+ * How a take-down goes, from what the holds say (`takeDownHoldOf`): a
+ * copyright takedown hides, a take-down of material a live hold keeps
+ * marks the hold, and everything else deletes, a quarantine included.
+ */
+async function takeDownPlanOf(
+  db: Db,
+  input: ModerateInput,
+  target: Target,
+): Promise<TakeDownPlan | undefined> {
+  const hold = await takeDownHoldOf(db, input, target);
+  // A repeat answers nothing, and so does a kind this does not know.
+  switch (hold?.kind) {
+    case "none": {
+      return {
+        keepsBytes: false,
+        statements: () => deletions(db, input, target),
+      };
+    }
+    case "keep": {
+      return { keepsBytes: true, statements: hold.statements };
+    }
+  }
+}
+
+/**
  * The row statements for the subject: the photo and its open review, or
  * the entry and everything hung on it — settled by the moderator.
  */
@@ -385,15 +424,8 @@ export async function moderateContent(
       : "not_found";
   }
   const { action } = input;
-  // D-130: a copyright takedown hides for 30 days rather than deleting,
-  // and one already hidden is answered as a repeat.
-  const isHold = isCopyrightTakedown(action, input.reason);
-  if (
-    isHold &&
-    (await isCopyrightHeld(db, input.subjectType, input.subjectId))
-  ) {
-    return "already_removed";
-  }
+  const plan = await takeDownPlanOf(db, input, target);
+  if (plan === undefined) return "already_removed";
   const actionId = newUlid();
   const kept =
     action === "quarantine"
@@ -420,15 +452,7 @@ export async function moderateContent(
           ],
         };
   const words = removalStatements[input.reason];
-  const takenDown: Statements = isHold
-    ? copyrightHoldWrites(db, {
-        moderationActionId: actionId,
-        subjectType: input.subjectType,
-        subjectId: input.subjectId,
-        ownerId: target.ownerId,
-        entryId: target.entryId,
-      })
-    : deletions(db, input, target);
+  const takenDown = plan.statements(actionId);
   await commit(
     db,
     [
@@ -455,7 +479,7 @@ export async function moderateContent(
     [
       // A hold keeps the bytes, and with them the photo's fingerprint
       // (C16), until its purge owes them.
-      ...(isHold ? [] : mediaDebts(target.ownerId, [target.entryId])),
+      ...(plan.keepsBytes ? [] : mediaDebts(target.ownerId, [target.entryId])),
       ...(told === undefined ? [] : [told.debt]),
     ],
     report,
@@ -559,7 +583,9 @@ async function wasTakenDown(
  * counter-notice saved, and the purge's claim skips it — then deletes
  * each hold the purge claimed with the same statements a Remove uses,
  * marking it `purged` in the same batch. A purge whose batch fails stays
- * `purging`, and the next sweep takes it over.
+ * `purging`, and the next sweep takes it over. Last, it deletes what was
+ * taken down while a hold kept it, once no live hold keeps its kit
+ * (`deleteTakenDown`); one whose batch fails is listed again tomorrow.
  */
 export async function sweepCopyrightHolds(
   db: Db = coreDb(),
@@ -567,8 +593,28 @@ export async function sweepCopyrightHolds(
   report: Report = captureException,
 ): Promise<void> {
   await restoreDueHolds(db, now);
-  const claimed = await claimDuePurges(db, now);
-  for (const hold of claimed) await purgeHeld(db, hold, now, report);
+  const { purges, takenDown } = await sweepClaims(db, now);
+  for (const hold of purges) await purgeHeld(db, hold, now, report);
+  for (const due of takenDown) await deleteTakenDown(db, due, report);
+}
+
+/**
+ * A subject taken down under a hold, deleted once no live hold keeps it,
+ * with the statements a Remove uses and in the take-down's name. The
+ * statements match nothing once it is gone, so a repeat deletes nothing.
+ */
+async function deleteTakenDown(
+  db: Db,
+  due: Pick<ModerateInput, "actorId" | "subjectType" | "subjectId"> &
+    Pick<Target, "ownerId" | "entryId">,
+  report: Report,
+): Promise<void> {
+  await commit(
+    db,
+    deletions(db, due, due),
+    mediaDebts(due.ownerId, [due.entryId]),
+    report,
+  );
 }
 
 /**

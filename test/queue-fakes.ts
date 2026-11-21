@@ -1,9 +1,11 @@
 import { expect, vi } from "vitest";
 import type { Mock } from "vitest";
 
-import type { OutboxMessage } from "../src/lib/sql/outbox";
-import { outboxInsert, oweOutbox } from "../src/modules/ops/outbox/outbox";
-import { coreDb } from "../src/modules/runs/core-db";
+/**
+ * The imports consumer's `owe`, as the queue entry wires it: an outbox
+ * row in the core database, for the caller's batch.
+ */
+export { oweInCore } from "../src/modules/ops/outbox/owe-in-core";
 
 /**
  * A real `Message`, with `ack`/`retry` replaced by spies. A consumer's only
@@ -50,14 +52,6 @@ export function batchOf(queue: string, messages: SpiedMessage[]): MessageBatch {
 export function importMessageFor(importId: string): unknown {
   const claimId: unknown = expect.any(String);
   return { type: "import", importId, claimId };
-}
-
-/**
- * The imports consumer's `owe`, as the queue entry wires it: an outbox
- * row in the core database, for the caller's batch.
- */
-export function oweInCore(message: OutboxMessage, notBefore?: number) {
-  return outboxInsert(coreDb(), oweOutbox(message, notBefore));
 }
 
 /**

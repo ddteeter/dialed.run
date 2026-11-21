@@ -15,13 +15,14 @@ import { getRequest } from "@tanstack/react-start/server";
 import { turnstileAttempt } from "../account";
 import { deploymentPosture, requireUserId, verifiedUserId } from "../auth";
 
-import { oweInCore, verifyTurnstileToken } from "../ops";
+import { oweInCore, oweInCoreWhere, verifyTurnstileToken } from "../ops";
 import { requireAdmin } from "./rules/admin";
 import {
   blockAndDeclineAll,
   confirmTakedownRequest,
   fileTakedownRequest,
   pendingTakedownRequests,
+  REMOVAL_REQUESTS_PURGE_KEY,
 } from "./takedowns/takedown-requests";
 
 import { coreDb, env, primaryCoreDb } from "../../env";
@@ -31,6 +32,7 @@ import {
   outboxInsertWhere,
   oweOutbox,
   purgePublicPages,
+  purgePublicPagesFor,
 } from "../ops";
 import { settleOwedEmail } from "../ops/owed-email";
 
@@ -108,7 +110,11 @@ export const fileReportAction = createServerFn({ method: "POST" })
     // decision, because a route may not branch.
     // `oweInCore` owes the removal alert in the report's batch (design
     // 136); handed in because `ops` imports this module.
-    return fileReport({ reporterId, ...data }, oweInCore, purgePublicPages);
+    return fileReport(
+      { reporterId, ...data },
+      oweInCore,
+      purgePublicPagesFor(reporterId),
+    );
   });
 
 export const blockRunnerAction = createServerFn({ method: "POST" })
@@ -200,9 +206,9 @@ export const takedownRequestFn = createServerFn({ method: "POST" })
       },
       {
         verify: verifyTurnstileToken,
-        owe: oweInCore,
+        oweWhere: oweInCoreWhere,
         secret: env.TAKEDOWN_SECRET,
-        purge: purgePublicPages,
+        purge: purgePublicPagesFor(REMOVAL_REQUESTS_PURGE_KEY),
       },
     );
   });
@@ -216,8 +222,8 @@ export const confirmTakedownFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => takedownConfirmInput.parse(data))
   .handler(async ({ data }) => ({
     outcome: await confirmTakedownRequest(primaryCoreDb(), data.token, {
-      owe: oweInCore,
-      purge: purgePublicPages,
+      oweWhere: oweInCoreWhere,
+      purge: purgePublicPagesFor(REMOVAL_REQUESTS_PURGE_KEY),
     }),
   }));
 

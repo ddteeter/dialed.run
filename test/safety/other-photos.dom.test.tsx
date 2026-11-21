@@ -183,6 +183,7 @@ describe("on Review's rows", () => {
       location: `https://dialed.run/feed/entry/${KIT}`,
       description: undefined,
       posterUsername: undefined,
+      owner: undefined,
       subject: { subjectType: "entry", subjectId: KIT, entryId: KIT },
       createdAt: 1,
       dueAt: 2,

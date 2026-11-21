@@ -1,12 +1,11 @@
 export {
   type CaseOverOutcome,
-  claimDuePurges,
   type ClaimedPurge,
   claimPurgeAfterCase,
-  copyrightHoldWrites,
-  isCopyrightHeld,
   purgedWrite,
   restoreDueHolds,
+  sweepClaims,
+  takeDownHoldOf,
 } from "./copyright-holds";
 export {
   purgeExpiredQuarantine,

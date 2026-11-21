@@ -107,11 +107,13 @@ const ALWAYS = sql`1`;
 /**
  * The author's notice that a report hid their kit or photo (D-145).
  * Nothing for a profile or a product, which a report never hides.
+ * `onlyIf` is the batch's condition for the hide, when it has one.
  */
 export function hiddenNotice(
   db: Db,
   subjectType: ReportSubjectType,
   subjectId: string,
+  onlyIf: SQL = ALWAYS,
 ): Promise<BatchItem<"sqlite">[]> {
   return authorNotice(
     db,
@@ -119,7 +121,31 @@ export function hiddenNotice(
     HIDDEN_NOTICE,
     subjectType,
     subjectId,
-    ALWAYS,
+    onlyIf,
+  );
+}
+
+/**
+ * The hide notice to a named author, raised only where `onlyIf` holds in
+ * its batch: for a writer that knows the author from its own row and
+ * cannot read them from the subject, as a copyright restore that hands
+ * a kit to review cannot while the kit still reads as removed.
+ */
+export function hiddenNoticeTo(
+  db: Db,
+  author: { readonly userId: string },
+  subject: { readonly subjectType: Authored; readonly subjectId: string },
+  onlyIf: SQL,
+): BatchItem<"sqlite"> {
+  return notificationRaiseWhere(
+    db,
+    {
+      userId: author.userId,
+      kind: "content_hidden",
+      subjectId: subject.subjectId,
+      body: HIDDEN_NOTICE[subject.subjectType],
+    },
+    onlyIf,
   );
 }
 

@@ -363,7 +363,7 @@ describe("emailContent", () => {
       { kind: "takedown_valve", perHour: 10 },
       {
         subject: "Removal requests paused: possible abuse",
-        body: "10 removal requests hid something in the last hour, so new requests hide nothing until the hour clears. They still wait in Review with their 48 hours.",
+        body: "More removal requests than usual in the last hour. Past 10 that hide something, new requests hide nothing; past 10 that hide nothing, they stop emailing one by one. Every one still waits in Review with its 48 hours.",
         button: { label: "Open Review", href: `${ORIGIN}/desk/review` },
         foot: "Sent to every operator, once an hour while it lasts.",
         footer: LEGAL,

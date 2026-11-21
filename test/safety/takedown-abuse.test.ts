@@ -5,23 +5,29 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import {
+  entryPhotos,
   notifications,
   outbox,
   outfitEntries,
   takedownBlocks,
   takedownRequests,
+  userProfiles,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { removalRequestReceived } from "../../src/lib/contracts/email-kinds";
-import { newUlid } from "../../src/lib/ids";
+import { newUlid, ulidSchema } from "../../src/lib/ids";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
 import { decideRemovalRequest } from "../../src/modules/feed/moderation/removal-requests";
-import { mintReceiptConfirmToken } from "../../src/modules/safety";
+import {
+  mintReceiptConfirmToken,
+  requestSubjectOf,
+} from "../../src/modules/safety";
 import {
   blockAndDeclineAll,
   confirmTakedownRequest,
   fileTakedownRequest,
   pendingTakedownRequests,
+  REMOVAL_REQUESTS_PURGE_KEY,
 } from "../../src/modules/safety/takedowns/takedown-requests";
 import {
   ipKey,
@@ -34,9 +40,10 @@ import {
   valveHour,
 } from "../../src/modules/safety/limits/takedown-limits";
 import { emailHandler } from "../../src/modules/ops/owed-email/owed-email";
+import { queriesDuring } from "../d1-spy";
 import { fakeMail } from "../email/helpers";
 import { noPurge, purgeSpy } from "../purge-spy";
-import { oweInCore } from "../queue-fakes";
+import { oweInCoreWhere } from "../../src/modules/ops/outbox/owe-in-core";
 
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 
@@ -47,6 +54,10 @@ import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
  */
 const NOW = 1_800_000_000;
 const ADMINS = env.ADMIN_USER_IDS;
+/**
+A column D1 left empty, as drizzle reads it back.
+*/
+const NOT_SET = z.null().parse(JSON.parse("null"));
 const SECRET = "test-takedown-secret";
 
 function core() {
@@ -55,7 +66,7 @@ function core() {
 
 const deps = {
   verify: () => Promise.resolve({ ok: true }),
-  owe: oweInCore,
+  oweWhere: oweInCoreWhere,
   purge: noPurge,
   secret: SECRET,
 };
@@ -301,7 +312,7 @@ describe("the confirm", () => {
       await confirmTakedownRequest(
         core(),
         token,
-        { owe: oweInCore, purge: spy.purge },
+        { oweWhere: oweInCoreWhere, purge: spy.purge },
         NOW + 60,
       ),
     ).toBe("confirmed");
@@ -338,7 +349,7 @@ describe("the confirm", () => {
       await confirmTakedownRequest(
         core(),
         token,
-        { owe: oweInCore, purge: noPurge },
+        { oweWhere: oweInCoreWhere, purge: noPurge },
         NOW + 120,
       ),
     ).toBe("confirmed");
@@ -358,7 +369,7 @@ describe("the confirm", () => {
     await confirmTakedownRequest(
       core(),
       await confirmTokenFor(request.id),
-      { owe: oweInCore, purge: noPurge },
+      { oweWhere: oweInCoreWhere, purge: noPurge },
       NOW + 60,
     );
 
@@ -371,7 +382,7 @@ describe("the confirm", () => {
       await confirmTakedownRequest(
         core(),
         "f".repeat(64),
-        { owe: oweInCore, purge: noPurge },
+        { oweWhere: oweInCoreWhere, purge: noPurge },
         NOW,
       ),
     ).toBe("not_found");
@@ -385,7 +396,7 @@ describe("the confirm", () => {
       await confirmTakedownRequest(
         core(),
         sent,
-        { owe: oweInCore, purge: noPurge },
+        { oweWhere: oweInCoreWhere, purge: noPurge },
         NOW,
       ),
     ).toBe("decided");
@@ -400,7 +411,7 @@ describe("the confirm", () => {
     await confirmTakedownRequest(
       core(),
       await confirmTokenFor(request.id),
-      { owe: oweInCore, purge: spy.purge },
+      { oweWhere: oweInCoreWhere, purge: spy.purge },
       NOW + 60,
     );
     expect(await entryStatus(entryId)).toBe("ok");
@@ -600,6 +611,65 @@ describe("the poster's username (round 37 #59g)", () => {
     const [listed] = await pendingTakedownRequests(core(), NOW);
     expect(listed?.posterUsername).toBeUndefined();
   });
+
+  it("is listed beside the kit's real owner, read from the kit", async () => {
+    // Another runner first, so a read that ignored whose kit it is would
+    // find them.
+    await makeUser({ username: "first_runner" });
+    const author = await makeUser({ username: "real_owner" });
+    const entryId = await makeEntry({
+      userId: author,
+      runId: await makeRun({ userId: author }),
+      audience: "runners",
+    });
+    await fileTakedownRequest(
+      core(),
+      {
+        email: "me@example.com",
+        signature: "Sam Runner",
+        location: entryLink(entryId),
+        description: "",
+        posterUsername: "someone_else",
+        isAttested: true,
+        idempotencyKey: newUlid(),
+        attempt: "token",
+        remoteIp: "203.0.113.9",
+        isLimited: false,
+      },
+      deps,
+      NOW,
+    );
+    await file("you@example.com", "https://elsewhere.example/x", {
+      ip: "198.51.100.3",
+    });
+
+    const listed = await pendingTakedownRequests(core(), NOW);
+
+    expect(
+      listed.map((request) => [request.owner, request.posterUsername]),
+    ).toStrictEqual([
+      ["real_owner", "someone_else"],
+      [undefined, undefined],
+    ]);
+  });
+
+  it("names no owner for a kit whose author has no handle yet", async () => {
+    const author = await makeUser();
+    await core()
+      .update(userProfiles)
+      .set({ username: NOT_SET })
+      .where(eq(userProfiles.userId, author));
+    const entryId = await makeEntry({
+      userId: author,
+      runId: await makeRun({ userId: author }),
+      audience: "runners",
+    });
+    await file("me@example.com", entryLink(entryId));
+
+    const [listed] = await pendingTakedownRequests(core(), NOW);
+
+    expect(listed?.owner).toBeUndefined();
+  });
 });
 
 describe("Review's list", () => {
@@ -725,14 +795,16 @@ describe("the confirm, at its edges", () => {
     await confirmTakedownRequest(
       core(),
       await confirmTokenFor(third.id),
-      { owe: oweInCore, purge: noPurge },
+      { oweWhere: oweInCoreWhere, purge: noPurge },
       NOW + 60,
     );
     const [row] = await core()
       .select()
       .from(takedownRequests)
       .where(eq(takedownRequests.id, third.id));
-    expect(row?.holdState).toBe("held");
+    // As at filing: a link that is not ours records no state of "held".
+    expect(row?.holdState).toBeNull();
+    expect(row?.confirmedAt).toBe(NOW + 60);
     expect(row?.heldAt).toBeNull();
     const alerts = await owedWhere((email) =>
       email.dedupeKey.startsWith(`removal_requested:${third.id}`),
@@ -749,7 +821,7 @@ describe("the confirm, at its edges", () => {
     await confirmTakedownRequest(
       core(),
       token,
-      { owe: oweInCore, purge: noPurge },
+      { oweWhere: oweInCoreWhere, purge: noPurge },
       NOW + 60,
     );
     await heldThisHour(TAKEDOWN_VALVE_PER_HOUR, NOW + 120);
@@ -757,7 +829,7 @@ describe("the confirm, at its edges", () => {
       await confirmTakedownRequest(
         core(),
         token,
-        { owe: oweInCore, purge: noPurge },
+        { oweWhere: oweInCoreWhere, purge: noPurge },
         NOW + 120,
       ),
     ).toBe("confirmed");
@@ -852,7 +924,7 @@ describe("the receipt's confirm token (SA-L18)", () => {
       await confirmTakedownRequest(
         core(),
         token,
-        { owe: oweInCore, purge: noPurge },
+        { oweWhere: oweInCoreWhere, purge: noPurge },
         NOW,
       ),
     ).toBe("confirmed");
@@ -937,7 +1009,7 @@ describe("the receipt's confirm token (SA-L18)", () => {
     const { request } = await pastTheCap();
     const first = await confirmTokenFor(request.id);
     const second = await confirmTokenFor(request.id);
-    const effects = { owe: oweInCore, purge: noPurge };
+    const effects = { oweWhere: oweInCoreWhere, purge: noPurge };
     expect(await confirmTakedownRequest(core(), first, effects, NOW)).toBe(
       "not_found",
     );
@@ -947,7 +1019,7 @@ describe("the receipt's confirm token (SA-L18)", () => {
   });
 
   it("works until the request's due time and not after", async () => {
-    const effects = { owe: oweInCore, purge: noPurge };
+    const effects = { oweWhere: oweInCoreWhere, purge: noPurge };
     const late = await pastTheCap();
     const lateToken = await confirmTokenFor(late.request.id);
     expect(
@@ -968,5 +1040,463 @@ describe("the receipt's confirm token (SA-L18)", () => {
         due.request.dueAt,
       ),
     ).toBe("confirmed");
+  });
+});
+
+/**
+A request filed from its own address and inbox, as a burst's members are.
+*/
+function fileAlone(index: number, location: string) {
+  return fileTakedownRequest(
+    core(),
+    {
+      email: `burst${String(index)}@example.com`,
+      signature: "Sam Runner",
+      location,
+      description: "",
+      isAttested: true,
+      idempotencyKey: newUlid(),
+      attempt: "token",
+      remoteIp: `203.0.113.${String(index)}`,
+      isLimited: false,
+    },
+    deps,
+    NOW,
+  );
+}
+
+/**
+A link that is not ours, one per request.
+*/
+function elsewhere(index: number): string {
+  return `https://elsewhere.example/${String(index)}`;
+}
+
+async function hiddenKits(): Promise<number> {
+  const rows = await core()
+    .select({ id: outfitEntries.id })
+    .from(outfitEntries)
+    .where(eq(outfitEntries.moderationStatus, "hidden_pending_review"));
+  return rows.length;
+}
+
+async function heldRows(): Promise<number> {
+  const rows = await core().select().from(takedownRequests);
+  return rows.filter((row) => row.heldAt !== null).length;
+}
+
+describe("the limits, for requests sent together", () => {
+  it("hide ten however many filings arrive at once", async () => {
+    const entries = await Promise.all(
+      Array.from({ length: 15 }, () => sharedEntry()),
+    );
+
+    await Promise.all(
+      entries.map((entryId, index) => fileAlone(index, entryLink(entryId))),
+    );
+
+    expect(await hiddenKits()).toBe(TAKEDOWN_VALVE_PER_HOUR);
+    expect(await heldRows()).toBe(TAKEDOWN_VALVE_PER_HOUR);
+    const states = await core()
+      .select({ holdState: takedownRequests.holdState })
+      .from(takedownRequests);
+    expect(states.filter((row) => row.holdState === "valve")).toHaveLength(5);
+  });
+
+  it("hide ten however many confirms arrive at once", async () => {
+    await file("me@example.com", entryLink(await sharedEntry()));
+    await file("me@example.com", entryLink(await sharedEntry()));
+    const waiting = [];
+    for (let index = 0; index < 12; index += 1) {
+      const entryId = await sharedEntry();
+      waiting.push(await file("me@example.com", entryLink(entryId)));
+    }
+    const tokens = [];
+    for (const row of waiting) tokens.push(await confirmTokenFor(row.id));
+
+    await Promise.all(
+      tokens.map((token) =>
+        confirmTakedownRequest(
+          core(),
+          token,
+          { oweWhere: oweInCoreWhere, purge: noPurge },
+          NOW + 60,
+        ),
+      ),
+    );
+
+    expect(await heldRows()).toBe(TAKEDOWN_VALVE_PER_HOUR);
+    expect(await hiddenKits()).toBe(TAKEDOWN_VALVE_PER_HOUR);
+  });
+
+  it("hold the requester to the cap however many of theirs arrive at once", async () => {
+    const entries = await Promise.all(
+      Array.from({ length: 5 }, () => sharedEntry()),
+    );
+
+    await Promise.all(
+      entries.map((entryId) =>
+        fileTakedownRequest(
+          core(),
+          {
+            email: "me@example.com",
+            signature: "Sam Runner",
+            location: entryLink(entryId),
+            description: "",
+            isAttested: true,
+            idempotencyKey: newUlid(),
+            attempt: "token",
+            remoteIp: "203.0.113.9",
+            isLimited: false,
+          },
+          deps,
+          NOW,
+        ),
+      ),
+    );
+
+    expect(await heldRows()).toBe(TAKEDOWN_CAP);
+  });
+});
+
+describe("a request that names nothing a hold moves", () => {
+  it("is not counted by the valve, purges nothing and says it hid nothing", async () => {
+    const spy = purgeSpy();
+    for (let index = 0; index < TAKEDOWN_VALVE_PER_HOUR; index += 1) {
+      await fileTakedownRequest(
+        core(),
+        {
+          email: `nobody${String(index)}@example.com`,
+          signature: "Sam Runner",
+          location: entryLink(newUlid()),
+          description: "",
+          isAttested: true,
+          idempotencyKey: newUlid(),
+          attempt: "token",
+          remoteIp: `203.0.113.${String(index)}`,
+          isLimited: false,
+        },
+        { ...deps, purge: spy.purge },
+        NOW,
+      );
+    }
+    expect(spy.calls).toStrictEqual([]);
+    expect(await heldRows()).toBe(0);
+    const receipts = await owedWhere(
+      (email) => email.email.template.kind === "removal_request_received",
+    );
+    expect(
+      receipts.every((email) => email.email.template.isHidden === false),
+    ).toBe(true);
+
+    const real = await sharedEntry();
+    await file("someone@example.com", entryLink(real), { ip: "198.51.100.7" });
+
+    expect(await entryStatus(real)).toBe("hidden_pending_review");
+  });
+
+  it("alerts one by one for ten an hour, then owes the valve's alert", async () => {
+    for (let index = 0; index <= TAKEDOWN_VALVE_PER_HOUR; index += 1) {
+      await fileAlone(index, elsewhere(index));
+    }
+
+    const rows = await core().select().from(takedownRequests);
+    const rowAt = (index: number) =>
+      rows.find((row) => row.location === elsewhere(index));
+    expect(rowAt(0)).toMatchObject({ holdState: NOT_SET, alertedAt: NOW });
+    expect(rowAt(TAKEDOWN_VALVE_PER_HOUR - 1)?.alertedAt).toBe(NOW);
+    expect(rowAt(TAKEDOWN_VALVE_PER_HOUR)).toMatchObject({
+      holdState: "valve",
+      alertedAt: NOT_SET,
+      heldAt: NOT_SET,
+    });
+    const alerted = await owedWhere(
+      (email) => email.email.template.kind === "removal_requested",
+    );
+    expect(alerted).toHaveLength(2 * TAKEDOWN_VALVE_PER_HOUR);
+    const valve = await owedWhere(
+      (email) => email.email.template.kind === "takedown_valve",
+    );
+    expect(valve).toHaveLength(2);
+  });
+
+  it("alerts one by one again once the hour has passed", async () => {
+    for (let index = 0; index < TAKEDOWN_VALVE_PER_HOUR; index += 1) {
+      await fileAlone(index, elsewhere(index));
+    }
+    const later = await file(
+      "later@example.com",
+      "https://elsewhere.example/later",
+      { now: NOW + 3660, ip: "198.51.100.40" },
+    );
+    expect(later.alertedAt).toBe(NOW + 3660);
+  });
+
+  it("records no hide for a kit a copyright hold has removed, but still names it", async () => {
+    const entryId = await sharedEntry();
+    await core()
+      .update(outfitEntries)
+      .set({ moderationStatus: "removed" })
+      .where(eq(outfitEntries.id, entryId));
+
+    const row = await file("me@example.com", entryLink(entryId));
+
+    expect(row).toMatchObject({
+      holdState: "held",
+      heldAt: NOT_SET,
+      alertedAt: NOW,
+      subjectId: entryId,
+    });
+    const [receipt] = await owedWhere(
+      (email) => email.dedupeKey === `removal_request_received:${row.id}`,
+    );
+    expect(receipt?.email.template.isHidden).toBe(false);
+  });
+
+  it("records a hide for a kit a report already hid, which it pins", async () => {
+    const entryId = await sharedEntry();
+    await core()
+      .update(outfitEntries)
+      .set({ moderationStatus: "hidden_pending_review" })
+      .where(eq(outfitEntries.id, entryId));
+    await core().delete(notifications);
+
+    const row = await file("me@example.com", entryLink(entryId));
+
+    expect(row.heldAt).toBe(NOW);
+    expect(row.alertedAt).toBeNull();
+    // A report already told the author; the request does not again.
+    expect(await core().select().from(notifications)).toStrictEqual([]);
+  });
+});
+
+/**
+ * A handle on the core database whose next batch first lets `before` run:
+ * the moment between a confirm's reads and its batch.
+ */
+function landingFirst(before: () => Promise<unknown>) {
+  const db = core();
+  const batch = db.batch.bind(db);
+  Reflect.set(
+    db,
+    "batch",
+    async (...statements: Parameters<typeof db.batch>) => {
+      await before();
+      return batch(...statements);
+    },
+  );
+  return db;
+}
+
+describe("a confirm that lands after a decision", () => {
+  it("hides nothing and alerts no one once the request was declined", async () => {
+    const { entryId, request } = await pastTheCap();
+    const token = await confirmTokenFor(request.id);
+    const before = await owedWhere(
+      (email) => email.email.template.kind === "removal_requested",
+    );
+
+    await confirmTakedownRequest(
+      landingFirst(() =>
+        decideRemovalRequest(
+          core(),
+          "op-one",
+          request.id,
+          { outcome: "declined", reason: "Not what it says." },
+          NOW + 30,
+        ),
+      ),
+      token,
+      { oweWhere: oweInCoreWhere, purge: noPurge },
+      NOW + 60,
+    );
+
+    expect(await entryStatus(entryId)).toBe("ok");
+    const [row] = await core()
+      .select()
+      .from(takedownRequests)
+      .where(eq(takedownRequests.id, request.id));
+    expect(row).toMatchObject({
+      status: "declined",
+      confirmedAt: NOT_SET,
+      heldAt: NOT_SET,
+    });
+    expect(
+      await owedWhere(
+        (email) => email.email.template.kind === "removal_requested",
+      ),
+    ).toHaveLength(before.length);
+  });
+});
+
+describe("Block and decline all, on a shared address", () => {
+  it("declines only the requester's own, and still blocks the address", async () => {
+    const a = await sharedEntry();
+    const b = await sharedEntry();
+    const theirs = await file("me@example.com", entryLink(a));
+    const neighbour = await file("you@example.com", entryLink(b));
+    expect(neighbour.ipKey).toBe(theirs.ipKey);
+
+    expect(
+      await blockAndDeclineAll(core(), "op-one", theirs.id, NOW + 10),
+    ).toStrictEqual({ status: "blocked", declined: 1 });
+
+    const [still] = await core()
+      .select({ status: takedownRequests.status })
+      .from(takedownRequests)
+      .where(eq(takedownRequests.id, neighbour.id));
+    expect(still?.status).toBe("pending");
+    expect(await entryStatus(b)).toBe("hidden_pending_review");
+    const later = await file(
+      "someone@example.com",
+      entryLink(await sharedEntry()),
+    );
+    expect(later.holdState).toBe("blocked");
+  });
+});
+
+describe("what a filed request names", () => {
+  it("reads a kit's link as the kit, even when its id is a photo's", async () => {
+    const entryId = await sharedEntry();
+    const photoId = newUlid();
+    await core()
+      .insert(entryPhotos)
+      .values({
+        id: photoId,
+        entryId,
+        photoKey: `entries/x/${entryId}/${photoId}.jpg`,
+        position: 0,
+        screenStatus: "pass",
+      });
+
+    const row = await file(
+      "me@example.com",
+      `https://dialed.run/kit/${photoId}`,
+    );
+
+    expect(await requestSubjectOf(core(), row)).toStrictEqual({
+      subjectType: "entry",
+      subjectId: photoId,
+      entryId: photoId,
+    });
+  });
+});
+
+/**
+The reads of one request's own row by its id, outside any batch.
+*/
+function readsById(statements: readonly string[]): string[] {
+  return statements.filter((sql) =>
+    /^select .* from "takedown_requests" where "takedown_requests"\."id" = \?/u.test(
+      sql,
+    ),
+  );
+}
+
+function requestFor(email: string, location: string, key = newUlid()) {
+  return {
+    email,
+    signature: "Sam Runner",
+    location,
+    description: "",
+    isAttested: true as const,
+    idempotencyKey: key,
+    attempt: "token",
+    remoteIp: "203.0.113.9",
+    isLimited: false,
+  };
+}
+
+describe("what a request reads back, and its receipt's words", () => {
+  it("reads its row back to purge only for a link of ours", async () => {
+    const elsewhereReads = await queriesDuring(() =>
+      fileTakedownRequest(
+        core(),
+        requestFor("me@example.com", "https://elsewhere.example/x"),
+        deps,
+        NOW,
+      ),
+    );
+    const ours = await sharedEntry();
+    const oursReads = await queriesDuring(() =>
+      fileTakedownRequest(
+        core(),
+        requestFor("you@example.com", entryLink(ours)),
+        deps,
+        NOW,
+      ),
+    );
+
+    expect(readsById(elsewhereReads.statements)).toStrictEqual([]);
+    expect(readsById(oursReads.statements)).toHaveLength(1);
+  });
+
+  it("answers a second confirm from the one read of its token", async () => {
+    const { request } = await pastTheCap();
+    const token = await confirmTokenFor(request.id);
+    const effects = { oweWhere: oweInCoreWhere, purge: noPurge };
+    await confirmTakedownRequest(core(), token, effects, NOW + 60);
+
+    let answer = "";
+    const { statements } = await queriesDuring(async () => {
+      answer = await confirmTakedownRequest(core(), token, effects, NOW + 120);
+    });
+
+    expect(answer).toBe("confirmed");
+    expect(statements).toHaveLength(1);
+  });
+
+  it("files once when the same request is sent twice at once", async () => {
+    const entryId = await sharedEntry();
+    const key = newUlid();
+
+    const same = requestFor("me@example.com", entryLink(entryId), key);
+    const answers = await Promise.all([
+      fileTakedownRequest(core(), same, deps, NOW),
+      fileTakedownRequest(core(), same, deps, NOW),
+    ]);
+
+    expect(answers).toStrictEqual([
+      { status: "received" },
+      { status: "received" },
+    ]);
+    expect(await core().select().from(takedownRequests)).toHaveLength(1);
+  });
+
+  it("tells a requester whose request hid something exactly that", async () => {
+    const entryId = await sharedEntry();
+    const row = await file("me@example.com", entryLink(entryId));
+
+    const [receipt] = await owedWhere(
+      (email) => email.dedupeKey === `removal_request_received:${row.id}`,
+    );
+    expect(receipt?.email.template).toStrictEqual({
+      kind: "removal_request_received",
+      dueAt: row.dueAt,
+      isHidden: true,
+    });
+  });
+
+  it("tells a requester who must confirm that nothing is hidden yet", async () => {
+    const { request } = await pastTheCap();
+
+    const [receipt] = await owedWhere(
+      (email) => email.dedupeKey === `removal_request_received:${request.id}`,
+    );
+    expect(receipt?.email.template).toStrictEqual({
+      kind: "removal_request_received",
+      dueAt: request.dueAt,
+      isHidden: false,
+      confirmRequestId: request.id,
+    });
+  });
+});
+
+describe("the removal requests' purge count", () => {
+  it("is kept under a key of its own, which no runner's id can be", () => {
+    expect(REMOVAL_REQUESTS_PURGE_KEY).toMatch(/^[a-z-]+$/u);
+    expect(ulidSchema.safeParse(REMOVAL_REQUESTS_PURGE_KEY).success).toBe(
+      false,
+    );
   });
 });

@@ -1,5 +1,6 @@
 export {
   hiddenNotice,
+  hiddenNoticeTo,
   keptNotice,
   photoReporterNotices,
   reporterIdsOf,

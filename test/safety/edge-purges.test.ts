@@ -25,6 +25,7 @@ import {
 } from "../../src/modules/safety/rules/kit-cache-tags";
 import { purgeSpy } from "../purge-spy";
 import { oweInCore } from "../queue-fakes";
+import { oweInCoreWhere } from "../../src/modules/ops/outbox/owe-in-core";
 
 import {
   makeEntry,
@@ -290,7 +291,7 @@ describe("the Desk, reports and requests", () => {
       },
       {
         verify: () => Promise.resolve({ ok: true }),
-        owe: oweInCore,
+        oweWhere: oweInCoreWhere,
         purge: spy.purge,
       },
     );
@@ -318,7 +319,7 @@ describe("the Desk, reports and requests", () => {
       },
       {
         verify: () => Promise.resolve({ ok: true }),
-        owe: oweInCore,
+        oweWhere: oweInCoreWhere,
         purge: spy.purge,
       },
     );

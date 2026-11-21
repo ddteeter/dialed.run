@@ -24,7 +24,7 @@ import {
 import { pendingReviewQueue } from "../../src/modules/safety/review/review";
 import { queriesDuring } from "../d1-spy";
 import { noPurge } from "../purge-spy";
-import { oweInCore } from "../queue-fakes";
+import { oweInCoreWhere } from "../../src/modules/ops/outbox/owe-in-core";
 import {
   deleteAllFrom,
   makeEntry,
@@ -467,7 +467,7 @@ describe("the Review rows that carry them", () => {
     };
     const deps = {
       verify: () => Promise.resolve({ ok: true }),
-      owe: oweInCore,
+      oweWhere: oweInCoreWhere,
       purge: noPurge,
     };
     await fileTakedownRequest(

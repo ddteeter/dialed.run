@@ -194,14 +194,16 @@ type RowProps = Readonly<{
 
 /**
  * A request's head (R55·197), the queue row's: `ENTRY · id · @owner [VIA
- * /TAKEDOWN]` in MONO.sm, with what filing decided after it. A link that
- * names nothing of ours is a LINK, with no id or owner. The kind and the
- * tags in capitals; the id and the handle in their own case (G-19).
+ * /TAKEDOWN]` in MONO.sm, with what filing decided after it. The owner is
+ * read from the kit, as on every Desk row; the handle the requester typed
+ * is their word, and goes in the body (`PosterClaim`). A link that names
+ * nothing of ours is a LINK, with no id or owner. The kind and the tags
+ * in capitals; the id and the handle in their own case (G-19).
  */
 function RequestHead({
   request,
 }: Readonly<{ request: PendingTakedownRequest }>): JSX.Element {
-  const { subject, posterUsername, holdState } = request;
+  const { subject, owner, holdState } = request;
   return (
     <>
       <span
@@ -212,9 +214,7 @@ function RequestHead({
       >
         <span className="uppercase">{subject?.subjectType ?? "link"}</span>
         {subject === undefined ? undefined : ` · ${shortId(subject.subjectId)}`}
-        {posterUsername === undefined
-          ? undefined
-          : ` · @${posterUsername}`}{" "}
+        {owner === undefined ? undefined : ` · @${owner}`}{" "}
         <Bracketed>via /takedown</Bracketed>
         {holdState === undefined ? undefined : (
           <>
@@ -236,16 +236,31 @@ words in one line, with no brackets, as the queue row's head is heard.
 */
 function requestHeard({
   subject,
-  posterUsername,
+  owner,
   holdState,
 }: PendingTakedownRequest): string {
   const named =
     subject === undefined
       ? "link"
       : `${subject.subjectType} · ${shortId(subject.subjectId)}`;
-  const whose = posterUsername === undefined ? "" : ` · @${posterUsername}`;
+  const whose = owner === undefined ? "" : ` · @${owner}`;
   const hold = holdState === undefined ? "" : ` ${HOLD_WORDS[holdState]}`;
   return `${named}${whose} via /takedown${hold}`;
+}
+
+/**
+ * Who the requester says posted it (round 37 #59g), as their word: the
+ * handle is never checked against anyone, so it is said so beside it
+ * (owner, 2026-11-21; placeholder words for Design).
+ */
+function PosterClaim({
+  posterUsername,
+}: Readonly<{ posterUsername: string | undefined }>): JSX.Element | undefined {
+  return posterUsername === undefined ? undefined : (
+    <span data-part="poster-claim" className="text-body">
+      They name @{posterUsername} (not checked)
+    </span>
+  );
 }
 
 /**
@@ -300,6 +315,7 @@ function RemovalRequestRow(props: RowProps): JSX.Element {
             {request.description === undefined ? undefined : (
               <q className="text-body">{request.description}</q>
             )}
+            <PosterClaim posterUsername={request.posterUsername} />
             {/* The only way to tell who filed: wrapped, never cut (P3-05). */}
             <span
               data-part="requester"

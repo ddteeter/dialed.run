@@ -16,7 +16,7 @@ import {
 } from "../../src/modules/safety/takedowns/takedown-requests";
 import { queriesDuring } from "../d1-spy";
 import { noPurge } from "../purge-spy";
-import { oweInCore } from "../queue-fakes";
+import { oweInCoreWhere } from "../../src/modules/ops/outbox/owe-in-core";
 
 /**
  * `/takedown`'s request (design 136, D-117): it hides what our link names
@@ -34,7 +34,7 @@ function core() {
 }
 
 const pass = () => Promise.resolve({ ok: true });
-const deps = { verify: pass, owe: oweInCore, purge: noPurge };
+const deps = { verify: pass, oweWhere: oweInCoreWhere, purge: noPurge };
 
 function request(overrides: Record<string, unknown> = {}) {
   return {
@@ -160,7 +160,9 @@ describe("filing a request", () => {
           template: {
             kind: "removal_request_received",
             dueAt: DUE,
-            isHidden: true,
+            // `ENTRY` names no kit in this file's database, so the
+            // request hid nothing (`removal-decisions.test.ts` hides one).
+            isHidden: false,
           },
         },
       },
@@ -212,7 +214,7 @@ describe("filing a request", () => {
       request(),
       {
         verify: () => Promise.resolve({ ok: false }),
-        owe: oweInCore,
+        oweWhere: oweInCoreWhere,
         purge: noPurge,
       },
       NOW,
@@ -292,6 +294,28 @@ describe("the limit, on a real deployment", () => {
     ).toStrictEqual({ status: "limited", until: NOW + 3600 });
     expect(await rows()).toHaveLength(TAKEDOWN_RECEIPTS_PER_HOUR);
     expect(await owedEmails()).toHaveLength(owed.length);
+  });
+
+  it("shares one allowance among every address that reaches one inbox", async () => {
+    for (let n = 0; n < TAKEDOWN_RECEIPTS_PER_HOUR; n += 1) {
+      await fileLimited({
+        email: `sam+${String(n)}@example.com`,
+        remoteIp: `203.0.113.${String(n)}`,
+      });
+    }
+    expect(
+      await fileLimited({
+        email: "Sam+another@example.com",
+        remoteIp: "198.51.100.1",
+      }),
+    ).toStrictEqual({ status: "limited", until: NOW + 3600 });
+    const counted = await core()
+      .select({ subject: rateLimits.subject })
+      .from(rateLimits)
+      .where(eq(rateLimits.kind, "takedown-to"));
+    expect(counted.map((row) => row.subject)).toStrictEqual([
+      "sam@example.com",
+    ]);
   });
 
   it("does not count the address for a visitor already over their own limit", async () => {

@@ -21,6 +21,7 @@ import {
 } from "../../src/modules/safety/screening/classifier/moderation";
 import { noPurge } from "../purge-spy";
 import { oweInCore } from "../queue-fakes";
+import { oweInCoreWhere } from "../../src/modules/ops/outbox/owe-in-core";
 
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 
@@ -38,7 +39,7 @@ function core() {
 
 const deps = {
   verify: () => Promise.resolve({ ok: true }),
-  owe: oweInCore,
+  oweWhere: oweInCoreWhere,
   purge: noPurge,
 };
 

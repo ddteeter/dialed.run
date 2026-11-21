@@ -31,7 +31,7 @@ import {
   captureException,
   outboxInsertWhere,
   oweOutbox,
-  purgePublicPages,
+  purgePublicPagesFor,
 } from "../../ops";
 import { settleOwedEmail } from "../../ops/owed-email";
 import { disconnectStrava } from "../../runs";
@@ -77,9 +77,10 @@ export interface DeletionEffects extends OwedMail {
   readonly disconnectStrava: (userId: string) => Promise<void>;
   /**
    * `ops`' edge purge (design 163): a runner leaving is gone from the open
-   * web at once, as from everywhere else.
+   * web at once, as from everywhere else. Counted against that runner's
+   * own share of the purge allowance (`purgePublicPagesFor`).
    */
-  readonly purge: PurgeTags;
+  readonly purgeFor: (userId: string) => PurgeTags;
 }
 
 /**
@@ -94,7 +95,7 @@ export function deletionEffectsFromEnv(): DeletionEffects {
     settle: settleOwedEmail,
     disconnectStrava: (userId) =>
       disconnectStrava(coreDb(), env.IMPORTS_QUEUE, userId, captureException),
-    purge: purgePublicPages,
+    purgeFor: purgePublicPagesFor,
   };
 }
 
@@ -184,7 +185,7 @@ export async function requestAccountDeletion(
     effects.keepAlive(effects.settle(db, debt, effects.report));
   }
   // Everything public of the runner's carries their tag: one purge.
-  effects.purge([runnerCacheTag(userId)]);
+  effects.purgeFor(userId)([runnerCacheTag(userId)]);
   // Secondary to the request (law 5): a failure here is reported, and the
   // purge disconnects whatever is still connected.
   try {

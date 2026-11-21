@@ -54,7 +54,6 @@ import {
 } from "../../../lib/contracts/hold-causes";
 import { hasRowWhere } from "../../../lib/sql/keyed-read";
 import { qualified } from "../../../lib/sql/qualified";
-import { noReportHidingAtOnce } from "./at-once";
 import { reportSubjectsThatHide } from "../rules";
 import { counted } from "./takedown-limits";
 
@@ -384,21 +383,48 @@ async function reportsCeilingFor(
 }
 
 /**
-The reports' ceiling from the baseline weeks before `until`.
-*/
+ * The reports' ceiling from the baseline weeks before `until`: four
+ * times their busiest honest hour (`honestBusiest`), so the hours the
+ * breaker itself spent at its ceiling never raise it.
+ */
 async function reportsCeilingBefore(db: Db, until: number): Promise<number> {
   const from = until - REPORT_BASELINE_S;
-  return reportCeiling(await busiestHourIn(db, "reports", from, until));
+  const opened = reviewQueue.openedAt;
+  const hour = sql`${opened} / ${HOUR_S}`;
+  const hours = await db
+    .select({ n: count() })
+    .from(reviewQueue)
+    .where(openedIn("reports", from, until))
+    .groupBy(hour)
+    .orderBy(hour);
+  return reportCeiling(honestBusiest(hours));
+}
+
+/**
+ * The busiest of these hours, oldest first, leaving out every hour whose
+ * count reached the ceiling in force then — the ceiling the hours kept
+ * before it set (owner, 2026-11-21). An hour at the ceiling is one the
+ * breaker held back, not a measure of how busy the site honestly is.
+ * Hours before the baseline's first are not read, so an early hour's
+ * ceiling errs low, which only leaves more hours out.
+ */
+export function honestBusiest(hours: readonly { n: number }[]): number {
+  let busiest = 0;
+  for (const { n } of hours) {
+    if (n < reportCeiling(busiest)) busiest = Math.max(busiest, n);
+  }
+  return busiest;
 }
 
 /**
  * The Review rows a cause's breaker counts: every row it opened, except
  * that reports count only on the subjects a report can hide (owner,
  * 2026-10-31), so a pile-on of profile reports cannot pause post hides,
- * and not on a subject with a report that hides at once (SA-L12): that
- * report never asked the breaker, so its row must not pause the rest.
- * Nor an opening that only queued its subject (`hid` 0): the breaker
- * counts hides. A row from before `hid` (null) counts as it did.
+ * and only openings the breaker let hide (`hid` 1): not one that only
+ * queued its subject (0), nor one a reason that hides at once hid (2),
+ * which never asked the breaker. The opening records which, and a later
+ * report re-opening the row keeps a counted hide (`enqueueForReview`).
+ * A row from before `hid` (null) counts as it did.
  */
 function heldBy(cause: HoldCause): SQL | undefined {
   const opened = eq(reviewQueue.source, cause);
@@ -406,7 +432,6 @@ function heldBy(cause: HoldCause): SQL | undefined {
     ? and(
         opened,
         inArray(reviewQueue.subjectType, reportSubjectsThatHide),
-        noReportHidingAtOnce(),
         or(isNull(reviewQueue.hid), eq(reviewQueue.hid, 1)),
       )
     : opened;

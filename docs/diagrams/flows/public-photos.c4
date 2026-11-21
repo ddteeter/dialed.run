@@ -93,14 +93,18 @@ views {
         description 'Each copy\'s row is the durable marker'
       }
 
-    // source: src/modules/feed/entries/entries.ts submitVerdict, WORLD_AUDIENCE; src/modules/feed/entries/retract.ts retractEntries, deletionCacheTags
+    // source: src/modules/feed/entries/entries.ts submitVerdict, WORLD_AUDIENCE; src/modules/feed/entries/retract.ts retractEntries, deletionCacheTags; src/modules/feed/moderation/moderation.ts takeDownPlanOf; src/modules/safety/takedowns/copyright-holds.ts takeDownHoldOf
     runner -> cf.app.feed.verdict 'makes the kit private again' {
       notes '''
-        One of several ways a kit stops being public: it is made private or deleted, it is hidden or removed by moderation, its runner is banned or is leaving. Each writer calls the same purge.
+        One of several ways a kit stops being public: it is made private or deleted, it is hidden or removed by moderation (a kit a copyright hold keeps is hidden, and deleted when the hold ends), its runner is banned or is leaving. Each writer calls the same purge.
       '''
     }
-    // source: src/modules/feed/entries/entries.ts submitVerdict (database.batch, purge); src/modules/feed/moderation/moderation.ts purgePublicPages; src/modules/account/data/deletion.ts purgePublicPages
-    cf.app.feed.verdict -> cf.app.ops.publicWeb.purge 'purges the kit\'s page, and asks for its photos'
+    // source: src/modules/feed/entries/entries.ts submitVerdict (database.batch, purge); src/modules/feed/moderation/moderation.ts purgePublicPages; src/modules/account/data/deletion.ts purgePublicPagesFor; src/modules/safety/functions.ts fileReportAction, takedownRequestFn, REMOVAL_REQUESTS_PURGE_KEY; src/modules/ops/public-web/edge-purge.ts PURGES_PER_RUNNER_PER_MINUTE (2)
+    cf.app.feed.verdict -> cf.app.ops.publicWeb.purge 'purges the kit\'s page, and asks for its photos' {
+      notes '''
+        **Bounded.** A runner\'s own writes, a deletion request, a report\'s hide and the removal requests (one count for them all, since a requester may have no account) each get 2 edge purges a minute; a moderator\'s do not count. Past that the page waits out its 60 second lifetime. The photo sync always runs.
+      '''
+    }
     // source: src/modules/ops/public-web/edge-purge.ts purgeAndSyncWithin; src/modules/ops/public-web/public-photos.ts syncPublicPhotosLater
     cf.app.ops.publicWeb.purge -[async]-> cf.app.ops.publicWeb.sync 'syncs the kit\'s photos, after the response' {
       notes '''
