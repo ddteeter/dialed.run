@@ -16,8 +16,16 @@ This file is the repo's, not guardrails'. `init` does not write it.
   not the merge would write anything.
 - A warning that `core.hooksPath` is already set. The hooks are active.
 
-Checked on 0.14.0, 0.14.1 and 0.14.2. A different list is not expected:
+Checked on 0.14.0, 0.14.1, 0.14.2 and 0.15.0. A different list is not expected:
 stop and ask the owner.
+
+One exception is known. In a release that changes the crushing-mutants
+template, the plan also reports **`drift`** on
+`docs/guardrails/crushing-mutants.md`. The file matches the old template,
+but `.guardrails/scaffold.json` holds a hash recorded before a hand edit
+at 0.12.0, so `init` cannot tell that the file is unmodified. Take the
+template's new text by hand (it only adds; 0.15.0 added two paragraphs),
+and the plan reports the file as unchanged again.
 
 ## Why each drifted file must stay as it is
 

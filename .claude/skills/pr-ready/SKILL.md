@@ -97,12 +97,15 @@ Ship with `npm run ship -- --body-file=<pr-body.md>` under
 `run_in_background`, then end the turn. It pushes the branch
 (`git push -u origin HEAD`, so it lands on the branch's own name even when
 it tracks `origin/main`), finds or opens its PR, waits for CI, and writes one
-status: `green`, `gate-blocked`, `lock-timeout`, `ci-red` or `error`. You
-are woken once. The machine-wide gate lock queues pushes; you never wait for
-another lane yourself.
+status: `green`, `gate-blocked`, `lock-timeout`, `ci-red`, `behind`,
+`conflicting` or `error`. You are woken once. The machine-wide gate lock
+queues pushes; you never wait for another lane yourself.
 
-- Rebase onto `origin/main` and fast-forward local `main` first: the gate
-  diffs against local `main`.
+- `ship` fetches `origin/main` and refuses a branch that is behind it,
+  before the push and the gate lock: `behind` when the rebase would be
+  clean, `conflicting` (with the files in `failing`) when it would not.
+  Both mean: rebase onto `origin/main`, then ship again. The gate measures
+  from the merge-base, so local `main` does not need to be current.
 - `ship` force-pushes only when asked. A branch you rebased after its first
   push ships with `npm run ship -- --body-file=<f> --force-with-lease`;
   without the flag, git's rejection comes back as `error`.
