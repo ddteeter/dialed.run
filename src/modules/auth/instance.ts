@@ -6,7 +6,7 @@ import { emailDepsFromEnv } from "../email";
 import { captureException, verifyTurnstileToken } from "../ops";
 import { banGate } from "../safety";
 import { breachVerdict } from "./breached-password";
-import { createAuth, googleCredentials } from "./create-auth";
+import { createAuth, deploymentOrigin, googleCredentials } from "./create-auth";
 import { deletionGate } from "./leaving-gate";
 
 /**
@@ -17,7 +17,7 @@ export const auth = createAuth({
   secret: env.BETTER_AUTH_SECRET,
   // The deployment's own origin (OPS-4): callbacks are built from it, and
   // its scheme decides secure cookies and rate limiting (createAuth).
-  baseUrl: env.BETTER_AUTH_URL,
+  baseUrl: deploymentOrigin(env.BETTER_AUTH_URL),
   google: googleCredentials(env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET),
   // The ban gate (task 128 · SAF-4): a banned runner's session is refused
   // wherever one is made — email, Google, any provider added later.

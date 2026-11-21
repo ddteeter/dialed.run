@@ -62,6 +62,9 @@ describe("the app auth instance", () => {
     expect(auth.options.databaseHooks).toStrictEqual({
       // `before`: no name kept, and the invite code spent (ACC-5).
       user: { create: { before: A_FUNCTION, after: A_FUNCTION } },
+      // A User-Agent cut to length, and the account's oldest sessions
+      // ended past the cap.
+      session: { create: { before: A_FUNCTION, after: A_FUNCTION } },
       // No OAuth token is ever written to an account row (legal C4).
       account: {
         create: { before: A_FUNCTION },

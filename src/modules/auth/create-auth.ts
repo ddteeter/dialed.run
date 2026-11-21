@@ -170,6 +170,22 @@ export function deploymentPosture(baseUrl: string | undefined): {
 }
 
 /**
+ * The deployment's origin, or no auth instance at all.
+ *
+ * An origin decides the posture (`deploymentPosture`): with none, the
+ * limiter and the `__Host-` cookies are off and Better Auth takes its base
+ * URL from each request. So an unset or blank `BETTER_AUTH_URL` stops the
+ * deployed instance being built, as an unset secret does. Local dev and CI
+ * set an `http://localhost` origin, which is a posture of its own.
+ */
+export function deploymentOrigin(origin: string | undefined): string {
+  if (origin === undefined || origin.trim() === "") {
+    throw new Error("BETTER_AUTH_URL is not set: auth will not start");
+  }
+  return origin;
+}
+
+/**
  * The secret every token and cookie Better Auth signs is signed with, or
  * no auth instance at all.
  *

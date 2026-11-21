@@ -14,6 +14,7 @@ import {
   deploymentPosture,
   googleCredentials,
   RESET_LINK_TTL_S,
+  deploymentOrigin,
 } from "../../src/modules/auth/create-auth";
 import { recordingMail } from "./mail-recorder";
 import { OPEN_ACCESS } from "./open-access";
@@ -182,6 +183,21 @@ function screened(verdict: "breached" | "clean" | "unknown") {
  * §3.1.1.2; owner, PR #104), through Better Auth's real endpoint on a real
  * D1 — only the range API is stubbed, by handing in its answer.
  */
+describe("the deployment's origin", () => {
+  it("refuses an unset, empty or blank one", () => {
+    for (const origin of [undefined, "", " ".repeat(3)]) {
+      expect(() => deploymentOrigin(origin)).toThrow(
+        /^BETTER_AUTH_URL is not set: auth will not start$/u,
+      );
+    }
+  });
+
+  it("passes any other one as it is, an http one included", () => {
+    expect(deploymentOrigin("https://dialed.run")).toBe("https://dialed.run");
+    expect(deploymentOrigin("http://localhost")).toBe("http://localhost");
+  });
+});
+
 describe("the signing secret", () => {
   it("refuses to build without one", () => {
     expect(() => auth({ ...BASE, secret: undefined })).toThrow(
