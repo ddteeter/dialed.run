@@ -180,6 +180,48 @@ describe("deletionGate — signing in", () => {
     ).rejects.toMatchObject({ body: { code: "INVALID_EMAIL_OR_PASSWORD" } });
   });
 
+  it("writes no session at all once the purge has started, so nothing that follows a session's making runs", async () => {
+    const made: string[] = [];
+    const afterMade: BetterAuthPlugin = {
+      id: "after-made",
+      init: () => ({
+        options: {
+          databaseHooks: {
+            session: {
+              create: {
+                after: (row: { userId: string }) => {
+                  made.push(row.userId);
+                  return Promise.resolve();
+                },
+              },
+            },
+          },
+        },
+      }),
+    };
+    const watched = createAuth({
+      db,
+      secret: "test-secret-not-for-production",
+      baseUrl: "http://localhost",
+      passwordScreen: CLEAN_SCREEN,
+      mail: recordingMail(),
+      access: OPEN_ACCESS,
+      plugins: [afterMade, deletionGate(db)],
+    });
+    const { userId, email } = await runner();
+    await leaving(userId, 3);
+    const other = await runner();
+
+    const refused = await signIn(email, watched);
+    expect(refused.status).toBe(401);
+    expect(made).toStrictEqual([]);
+
+    // The watcher does see a session that is made.
+    const signedIn = await signIn(other.email, watched);
+    expect(signedIn.status).toBe(200);
+    expect(made).toStrictEqual([other.userId]);
+  });
+
   it("deletes the session when the purge starts while it is being made", async () => {
     const { userId, email } = await runner();
     // Starts the purge after the gate's first read and before the insert.

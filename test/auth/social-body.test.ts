@@ -135,6 +135,10 @@ describe("a Google press's body", () => {
 });
 
 describe("holdSocialBody", () => {
+  it("says the request is not one the app sends", () => {
+    expect(SOCIAL_BODY_REFUSED).toBe("Unexpected sign-in request");
+  });
+
   it("lets any other path's body pass", () => {
     expect(() => {
       holdSocialBody({ path: "/sign-in/email", body: { anything: 1 } });
