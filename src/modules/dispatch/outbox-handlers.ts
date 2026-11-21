@@ -5,10 +5,18 @@
  * Typed as every kind's, so a kind added to the outbox and not given a
  * handler here does not compile.
  */
-import { productLinkHandler, type ProductLinker } from "../closet";
+import { productLinkHandler } from "../closet";
 import { storageHandlers, type OutboxHandlers } from "../ops/outbox";
 import { owedEmailHandlers } from "../ops/owed-email";
 import { manualConditionsHandler } from "../weather";
+
+/**
+ * What links a runner's typed garments to products: `closet`'s
+ * `linkTypedGarments` in production, read from the handler that runs it.
+ */
+export type ProductLinker = NonNullable<
+  Parameters<typeof productLinkHandler>[0]
+>;
 
 /**
  * Every kind's handler, with the product link bound to `link` (the

@@ -30,7 +30,7 @@ describe("the firings and the queue get their jobs from the dispatch", () => {
       'import { rescreenHandlesFromEnv } from "../account/handles";',
       'import { purgeDueAccounts } from "../account/purge";',
       'import { sweepExpiredAuthRows } from "../auth/expired-rows";',
-      'import { linkTypedGarments, type ProductLinker } from "../closet";',
+      'import { linkTypedGarments } from "../closet";',
       'import { sweepCopyrightHolds } from "../feed/moderation";',
     ]) {
       expect(code).toContain(line);

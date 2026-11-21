@@ -50,7 +50,6 @@ export {
   linkTypedGarments,
   nameItem,
   productLinkHandler,
-  type ProductLinker,
 } from "./product-link";
 export { typeWordOf } from "./type-labels";
 export type { PhotoSize, PhotoUploadResult } from "./photos";

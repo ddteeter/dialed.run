@@ -23,7 +23,7 @@ import { sweepExports } from "../account/export-build";
 import { rescreenHandlesFromEnv } from "../account/handles";
 import { purgeDueAccounts } from "../account/purge";
 import { sweepExpiredAuthRows } from "../auth/expired-rows";
-import { linkTypedGarments, type ProductLinker } from "../closet";
+import { linkTypedGarments } from "../closet";
 import { sweepRateLimits } from "../email";
 import { sweepCopyrightHolds } from "../feed/moderation";
 import { fillMissingTimeZones } from "../onboarding";
@@ -42,7 +42,7 @@ import {
   oweInCore,
   type OutboxHandlers,
 } from "../ops/outbox";
-import { outboxHandlers } from "./outbox-handlers";
+import { outboxHandlers, type ProductLinker } from "./outbox-handlers";
 import {
   purgePublicPages,
   sweepPublicPhotos,

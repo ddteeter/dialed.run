@@ -240,7 +240,7 @@ export async function linkTypedGarments(
  * What links a newly confirmed runner's typed garments: `linkTypedGarments`
  * in production, and a test's own where it hands the firing one.
  */
-export type ProductLinker = (
+type ProductLinker = (
   db: Db,
   userId: string,
 ) => Promise<"linked" | "more">;
