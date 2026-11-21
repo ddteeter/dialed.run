@@ -9,6 +9,7 @@ import {
   notifications,
   outfitEntries,
   products,
+  reports,
   reviewQueue,
   userProfiles,
 } from "../../src/db/schema-core";
@@ -642,8 +643,85 @@ describe("what a decision writes", () => {
   });
 });
 
+/**
+ * A pending row created at `createdAt`, and, when `intimateAt` is given,
+ * an intimate-image report on its subject filed then.
+ */
+async function rowAt(createdAt: number, intimateAt?: number) {
+  const id = newUlid();
+  const subjectId = newUlid();
+  await core().insert(reviewQueue).values({
+    id,
+    subjectType: "entry",
+    subjectId,
+    source: intimateAt === undefined ? "classifier" : "reports",
+    status: "pending",
+    createdAt,
+    openedAt: createdAt,
+  });
+  if (intimateAt !== undefined) {
+    await core().insert(reports).values({
+      id: newUlid(),
+      reporterId: newUlid(),
+      subjectType: "entry",
+      subjectId,
+      reason: "intimate",
+      createdAt: intimateAt,
+    });
+  }
+  return id;
+}
+
 describe("the queue itself", () => {
   beforeEach(resetSafetyTables);
+
+  it("lists a row on the removal clock that the page's limit cut, once", async () => {
+    const first = await rowAt(100);
+    const second = await rowAt(200);
+    const onTheClock = await rowAt(300, 300);
+
+    const page = await pendingReviewQueue(2);
+    const ids = page.map((row) => row.id);
+
+    expect(ids).toStrictEqual([first, second, onTheClock]);
+  });
+
+  it("does not list a row on the clock twice when the page has it", async () => {
+    const onTheClock = await rowAt(100, 100);
+    const later = await rowAt(200);
+
+    const page = await pendingReviewQueue(2);
+    const ids = page.map((row) => row.id);
+
+    expect(ids).toStrictEqual([onTheClock, later]);
+  });
+
+  it("takes the most pressing rows on the clock first, and only pending ones", async () => {
+    await rowAt(100);
+    const lessPressing = await rowAt(200, 500);
+    const morePressing = await rowAt(300, 400);
+    const decided = await rowAt(50, 50);
+    await core()
+      .update(reviewQueue)
+      .set({ status: "approved" })
+      .where(eq(reviewQueue.id, decided));
+
+    const page = await pendingReviewQueue(1);
+    const ids = page.map((row) => row.id);
+
+    expect(ids).toHaveLength(2);
+    expect(ids[1]).toBe(morePressing);
+    expect(ids).not.toContain(lessPressing);
+  });
+
+  it("gives each row the time it last went in front of a person", async () => {
+    await rowAt(100);
+    await core().update(reviewQueue).set({ openedAt: 900 });
+
+    const [row] = await pendingReviewQueue();
+
+    expect(row?.openedAt).toBe(900);
+  });
 
   it("is one row per subject, however many people reported it", async () => {
     const { entryId } = await queuedEntry();

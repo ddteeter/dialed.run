@@ -43,6 +43,7 @@ function row(overrides: Partial<QueueRow> = {}): QueueRow {
     subjectId: "e-1",
     source: "reports",
     createdAt: 1_755_000_000,
+    openedAt: 1_755_000_000,
     reporterCount: 3,
     reasons: ["explicit"],
     subject: { photoKeys: [] },

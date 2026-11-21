@@ -251,6 +251,12 @@ export interface QueueRow {
   source: ReviewSource;
   createdAt: number;
   /**
+   * When the row last went in front of a person. A decision sends it back
+   * with its source, and is held to both, so a row re-opened since the
+   * page was read is left for the page that shows why.
+   */
+  openedAt: number | null;
+  /**
    * How many distinct people reported this subject, and what they said was
    * wrong with it.
    *
@@ -306,46 +312,27 @@ export function firstReportHidingAtOnce(): SQL<number | null> {
 }
 
 /**
- * What is waiting, oldest first — the review page's only read, served by
- * `review_queue_status_created`.
+ * What is waiting, oldest first, served by `review_queue_status_created`;
+ * then any row on the removal clock the page's `limit` cut, so a deadline
+ * is never behind the limit.
  *
  * `limit` is a real bound rather than a courtesy: the page renders rows and
  * a solo operator reads them, so an unbounded read would be billing D1 for
- * rows nobody looks at.
+ * rows nobody looks at. The clock's read takes the same bound, most
+ * pressing first.
  */
 export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
-  // **One joined, grouped read rather than a second pass over the ids.**
-  // The reports are what the reviewer is being asked about, so they are
-  // not a detail to fetch afterwards — and fetching them afterwards needs
-  // an `if (rows.length === 0)` in front of the second query, which is a
-  // branch nothing can observe (see `blockedRunners`, which had one).
-  //
-  // LEFT, because a classifier-sourced row has no reports at all and must
-  // still appear. `group_concat` is SQLite's only way to bring a set back
-  // in one column; it is parsed rather than trusted on the way out.
-  const rows = await db()
-    .select({
-      id: reviewQueue.id,
-      subjectType: reviewQueue.subjectType,
-      subjectId: reviewQueue.subjectId,
-      source: reviewQueue.source,
-      createdAt: reviewQueue.createdAt,
-      reporterCount: sql<number>`count(distinct ${reports.reporterId})`,
-      reasons: sql<string | null>`group_concat(distinct ${reports.reason})`,
-      firstAtOnce: firstReportHidingAtOnce(),
-    })
-    .from(reviewQueue)
-    .leftJoin(
-      reports,
-      and(
-        eq(reports.subjectType, reviewQueue.subjectType),
-        eq(reports.subjectId, reviewQueue.subjectId),
-      ),
-    )
-    .where(eq(reviewQueue.status, "pending"))
-    .groupBy(reviewQueue.id)
-    .orderBy(asc(reviewQueue.createdAt))
-    .limit(limit);
+  const oldestFirst = asc(reviewQueue.createdAt);
+  const mostPressingFirst = asc(firstReportHidingAtOnce());
+  const [page, onTheClock] = await Promise.all([
+    pendingRows().orderBy(oldestFirst).limit(limit),
+    pendingRows(reportOnTheClock()).orderBy(mostPressingFirst).limit(limit),
+  ]);
+  const onThePage = new Set(page.map((row) => row.id));
+  const rows = [
+    ...page,
+    ...onTheClock.filter((row) => !onThePage.has(row.id)),
+  ];
 
   // No read needs another's answer, so they go together.
   const [subjects, others, matches, removed] = await Promise.all([
@@ -372,6 +359,7 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
     subjectId: row.subjectId,
     source: row.source,
     createdAt: row.createdAt,
+    openedAt: row.openedAt,
     reporterCount: row.reporterCount,
     reasons: reasonsFrom(row.reasons),
     ...removalClock(row.firstAtOnce, now),
@@ -382,6 +370,48 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
       photoKeys: [],
     },
   }));
+}
+
+/**
+ * Pending rows with their reports, ordered and bounded by the caller.
+ *
+ * **One joined, grouped read rather than a second pass over the ids.**
+ * The reports are what the reviewer is being asked about, so they are not
+ * a detail to fetch afterwards. LEFT, because a classifier-sourced row has
+ * no reports at all and must still appear. `group_concat` is SQLite's only
+ * way to bring a set back in one column; it is parsed rather than trusted
+ * on the way out.
+ */
+function pendingRows(also?: SQL) {
+  return db()
+    .select({
+      id: reviewQueue.id,
+      subjectType: reviewQueue.subjectType,
+      subjectId: reviewQueue.subjectId,
+      source: reviewQueue.source,
+      createdAt: reviewQueue.createdAt,
+      openedAt: reviewQueue.openedAt,
+      reporterCount: sql<number>`count(distinct ${reports.reporterId})`,
+      reasons: sql<string | null>`group_concat(distinct ${reports.reason})`,
+      firstAtOnce: firstReportHidingAtOnce(),
+    })
+    .from(reviewQueue)
+    .leftJoin(
+      reports,
+      and(
+        eq(reports.subjectType, reviewQueue.subjectType),
+        eq(reports.subjectId, reviewQueue.subjectId),
+      ),
+    )
+    .where(and(eq(reviewQueue.status, "pending"), also))
+    .groupBy(reviewQueue.id);
+}
+
+/**
+A row whose subject has a report of a reason that hides at once.
+*/
+function reportOnTheClock(): SQL {
+  return sql`exists (select 1 from ${reports} where ${reports.subjectType} = ${reviewQueue.subjectType} and ${reports.subjectId} = ${reviewQueue.subjectId} and ${inArray(reports.reason, [...reasonsOnTheClock])})`;
 }
 
 /**
