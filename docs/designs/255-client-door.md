@@ -75,6 +75,20 @@ Not chosen:
   vocabulary (a gate's answer, a search schema), and `lib/` may not import
   modules.
 
+## What the build found
+
+- `auth/client.ts` already existed: Better Auth's browser client. It is
+  now `auth/auth-client.ts`, so the door can take the name.
+- Two `auth` components sat outside `components/` (`auth-page.tsx`,
+  `google-button.tsx`). They move in, so the routes rule stays as
+  approved, and `eslint.config.js`' exemption for the button is re-keyed
+  (owner, 2026-11-20, on #888).
+- A route imports `safety/review/components/kit-origin.ts`, a plain `.ts`
+  helper in a `components/` folder. The rule allows anything under
+  `components/`, so the ratchet's past-the-door count does too.
+- `closet` already exported `NotFoundError`, so its barrel grows by one
+  name, not two.
+
 ## Contract touches
 
 - Schema changes needed: **none**
