@@ -53,7 +53,8 @@ import { nowSeconds } from "../../../lib/now";
 import { qualified } from "../../../lib/sql/qualified";
 
 import { hiddenNoticeTo } from "../notices";
-import { heldPhotoStatus } from "../rules";
+import { settleOpenReviews } from "../review";
+import { heldPhotoStatus, isCopyrightTakedown } from "../rules";
 
 type Db = ReturnType<typeof drizzle<Record<string, never>>>;
 
@@ -98,7 +99,7 @@ export interface CopyrightHoldRecord {
  * The takedown's hide, as statements for its batch: the hold, and the
  * subject moved to `removed` from whatever it was.
  */
-export function copyrightHoldWrites(
+function copyrightHoldWrites(
   db: Db,
   record: CopyrightHoldRecord,
   now = nowSeconds(),
@@ -120,7 +121,7 @@ export function copyrightHoldWrites(
  * `removed`, from whatever it was. A take-down of material a hold keeps
  * moves it the same way, since that hold may be on its kit or a photo.
  */
-export function heldOutOfSight(
+function heldOutOfSight(
   db: Db,
   subjectType: HeldSubjectType,
   subjectId: string,
@@ -153,10 +154,116 @@ Statuses a hold is still holding in: hidden, or its delete owed.
 const LIVE = ["hidden", "purging"] as const;
 
 /**
+ * How a takedown goes, as the holds see it (D-130; owner, 2026-11-21):
+ *
+ * - `repeat` — a copyright takedown of what a live hold already holds,
+ *   or a take-down of material every covering hold already records;
+ * - `copyright` — a copyright takedown, which hides for 30 days: its
+ *   statements write the hold and the hide;
+ * - `kept` — a Remove or a removal request's takedown of material a live
+ *   hold keeps: its statements record the take-down on the holds
+ *   (`takenDownWrite`), hide the subject, and settle its open Review
+ *   rows, a kit's photos' too, by the moderator; nothing is deleted;
+ * - `none` — nothing holds it, so the caller deletes it. A quarantine is
+ *   always `none`: it keeps its own copy (D-70).
+ *
+ * `statements` take the audit row's id, which the caller mints.
+ */
+export type TakeDownHold =
+  | { readonly kind: "repeat" }
+  | { readonly kind: "none" }
+  | {
+      readonly kind: "copyright" | "kept";
+      readonly statements: (
+        actionId: string,
+      ) => [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
+    };
+
+interface TakeDownRequest {
+  readonly actorId: string;
+  readonly action: "remove" | "quarantine" | "takedown";
+  readonly reason: Parameters<typeof isCopyrightTakedown>[1];
+  readonly subjectType: HeldSubjectType;
+  readonly subjectId: string;
+}
+
+export async function takeDownHoldOf(
+  db: Db,
+  input: TakeDownRequest,
+  target: { readonly ownerId: string; readonly entryId: string },
+): Promise<TakeDownHold> {
+  const subject = { ...input, entryId: target.entryId };
+  if (isCopyrightTakedown(input.action, input.reason)) {
+    if (await isCopyrightHeld(db, input.subjectType, input.subjectId)) {
+      return { kind: "repeat" };
+    }
+    return {
+      kind: "copyright",
+      statements: (moderationActionId) =>
+        copyrightHoldWrites(db, {
+          moderationActionId,
+          subjectType: input.subjectType,
+          subjectId: input.subjectId,
+          ownerId: target.ownerId,
+          entryId: target.entryId,
+        }),
+    };
+  }
+  const keeping =
+    input.action === "quarantine" ? "none" : await holdKeepingOf(db, subject);
+  if (keeping === "none") return { kind: "none" };
+  if (keeping === "taken_down") return { kind: "repeat" };
+  return {
+    kind: "kept",
+    statements: (actionId) => [
+      takenDownWrite(db, subject, actionId),
+      heldOutOfSight(db, input.subjectType, input.subjectId),
+      settleOpenReviews(
+        db,
+        input.subjectType,
+        [input.subjectId],
+        input.actorId,
+      ),
+      ...(input.subjectType === "entry"
+        ? [
+            settleOpenReviews(
+              db,
+              "photo",
+              db
+                .select({ id: entryPhotos.id })
+                .from(entryPhotos)
+                .where(eq(entryPhotos.entryId, target.entryId)),
+              input.actorId,
+            ),
+          ]
+        : []),
+    ],
+  };
+}
+
+/**
+ * What the daily sweep owes after its restore (`restoreDueHolds`): the
+ * holds its purge claims (`claimDuePurges`), and what was taken down
+ * under a hold whose kit no live hold keeps any more
+ * (`takenDownSubjectsDue`) — read after the claim, so a kit whose hold
+ * is purging now waits for the next sweep.
+ */
+export async function sweepClaims(
+  db: Db,
+  now = nowSeconds(),
+): Promise<{
+  readonly purges: ClaimedPurge[];
+  readonly takenDown: TakenDownSubject[];
+}> {
+  const purges = await claimDuePurges(db, now);
+  return { purges, takenDown: await takenDownSubjectsDue(db) };
+}
+
+/**
  * Whether a live hold already covers this subject, so a second takedown
  * answers "already removed" (`copyright_holds_live_subject`).
  */
-export async function isCopyrightHeld(
+async function isCopyrightHeld(
   db: Db,
   subjectType: HeldSubjectType,
   subjectId: string,
@@ -189,12 +296,12 @@ export function notRestored(actionId: SQLiteColumn): SQL {
  * sees it: `none` when no live hold covers it, `held` when one does, and
  * `taken_down` when every covering hold already carries a take-down.
  */
-export type HoldKeeping = "none" | "held" | "taken_down";
+type HoldKeeping = "none" | "held" | "taken_down";
 
 /**
  * A subject a take-down names: the kit, or a photo with the kit it is on.
  */
-export interface KeptSubject {
+interface KeptSubject {
   readonly subjectType: HeldSubjectType;
   readonly subjectId: string;
   readonly entryId: string;
@@ -224,7 +331,7 @@ function covering(subject: KeptSubject): SQL | undefined {
 /**
 Whether a live hold keeps `subject`'s material, and whether it is already taken down.
 */
-export async function holdKeepingOf(
+async function holdKeepingOf(
   db: Db,
   subject: KeptSubject,
 ): Promise<HoldKeeping> {
@@ -244,7 +351,7 @@ export async function holdKeepingOf(
  * end restores the subject, and the material stays as the hold keeps it
  * until the last covering hold ends (`takenDownSubjectsDue`).
  */
-export function takenDownWrite(
+function takenDownWrite(
   db: Db,
   subject: KeptSubject,
   actionId: string,
@@ -261,7 +368,7 @@ export function takenDownWrite(
  * Only while the subject is still there, so each is listed until its
  * delete lands, and never again.
  */
-export interface TakenDownSubject {
+interface TakenDownSubject {
   readonly actionId: string;
   readonly actorId: string;
   readonly subjectType: HeldSubjectType;
@@ -271,9 +378,9 @@ export interface TakenDownSubject {
 /**
 The most take-downs one sweep deletes; the rest wait for the next.
 */
-export const TAKEN_DOWN_PER_SWEEP = 50;
+const TAKEN_DOWN_PER_SWEEP = 50;
 
-export async function takenDownSubjectsDue(
+async function takenDownSubjectsDue(
   db: Db,
 ): Promise<TakenDownSubject[]> {
   const action = moderationActions;
@@ -640,7 +747,7 @@ export interface ClaimedPurge {
  * the same hold; the claim's moment is `settled_at`, which is how a stale
  * one is told apart.
  */
-export async function claimDuePurges(
+async function claimDuePurges(
   db: Db,
   now = nowSeconds(),
 ): Promise<ClaimedPurge[]> {

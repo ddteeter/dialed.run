@@ -61,18 +61,12 @@ import { notificationInsert } from "../../notifications";
 import { captureException, oweOutbox, purgePublicPages } from "../../ops";
 import {
   moderationActionInsert,
-  claimDuePurges,
   claimPurgeAfterCase,
-  copyrightHoldWrites,
-  heldOutOfSight,
-  holdKeepingOf,
-  isCopyrightHeld,
   openSubject,
   purgedWrite,
   restoreDueHolds,
-  settleOpenReviews,
-  takenDownSubjectsDue,
-  takenDownWrite,
+  sweepClaims,
+  takeDownHoldOf,
   isCopyrightTakedown,
   keptFingerprints,
   photoReporterNotices,
@@ -91,7 +85,6 @@ import {
   type ResolveOutcome,
   type ReviewActionValues,
   type ReviewSubjectType,
-  type TakenDownSubject,
 } from "../../safety";
 
 import { moderateGarmentPhoto, preserveObject } from "./garment-moderation";
@@ -310,79 +303,20 @@ interface TakeDownPlan {
 }
 
 /**
- * - **A copyright takedown hides for 30 days** rather than deleting
- *   (D-130), and one already hidden is answered as a repeat.
- * - **A Remove or a removal request's takedown of material a live hold
- *   keeps** marks the hold and deletes nothing (owner, 2026-11-21); once
- *   every covering hold is marked, it is a repeat.
- * - **Everything else deletes**, a quarantine included: it keeps its own
- *   copy (D-70).
+ * How a take-down goes, from what the holds say (`takeDownHoldOf`): a
+ * copyright takedown hides, a take-down of material a live hold keeps
+ * marks the hold, and everything else deletes, a quarantine included.
  */
 async function takeDownPlanOf(
   db: Db,
   input: ModerateInput,
   target: Target,
 ): Promise<TakeDownPlan | undefined> {
-  if (isCopyrightTakedown(input.action, input.reason)) {
-    if (await isCopyrightHeld(db, input.subjectType, input.subjectId)) return;
-    return {
-      keepsBytes: true,
-      statements: (actionId) =>
-        copyrightHoldWrites(db, {
-          moderationActionId: actionId,
-          subjectType: input.subjectType,
-          subjectId: input.subjectId,
-          ownerId: target.ownerId,
-          entryId: target.entryId,
-        }),
-    };
-  }
-  const keeping =
-    input.action === "quarantine"
-      ? "none"
-      : await holdKeepingOf(db, {
-          subjectType: input.subjectType,
-          subjectId: input.subjectId,
-          entryId: target.entryId,
-        });
-  if (keeping === "taken_down") return;
-  return keeping === "held"
-    ? {
-        keepsBytes: true,
-        statements: (actionId) => heldTakeDown(db, input, target, actionId),
-      }
-    : { keepsBytes: false, statements: () => deletions(db, input, target) };
-}
-
-/**
- * A take-down of held material (owner, 2026-11-21): the holds keeping it
- * record this action, and its open Review rows — a kit's photos' too —
- * are settled by the moderator, as a delete settles them. Nothing is
- * deleted until no live hold keeps it.
- */
-function heldTakeDown(
-  db: Db,
-  input: Pick<ModerateInput, "actorId" | "subjectType" | "subjectId">,
-  target: Pick<Target, "entryId">,
-  actionId: string,
-): Statements {
-  const subject = {
-    subjectType: input.subjectType,
-    subjectId: input.subjectId,
-    entryId: target.entryId,
-  };
-  const photos = db
-    .select({ id: entryPhotos.id })
-    .from(entryPhotos)
-    .where(eq(entryPhotos.entryId, target.entryId));
-  return [
-    takenDownWrite(db, subject, actionId),
-    heldOutOfSight(db, input.subjectType, input.subjectId),
-    settleOpenReviews(db, input.subjectType, [input.subjectId], input.actorId),
-    ...(input.subjectType === "entry"
-      ? [settleOpenReviews(db, "photo", photos, input.actorId)]
-      : []),
-  ];
+  const hold = await takeDownHoldOf(db, input, target);
+  if (hold.kind === "repeat") return;
+  return hold.kind === "none"
+    ? { keepsBytes: false, statements: () => deletions(db, input, target) }
+    : { keepsBytes: true, statements: hold.statements };
 }
 
 /**
@@ -537,9 +471,7 @@ export async function moderateContent(
     [
       // A hold keeps the bytes, and with them the photo's fingerprint
       // (C16), until its purge owes them.
-      ...(plan.keepsBytes
-        ? []
-        : mediaDebts(target.ownerId, [target.entryId])),
+      ...(plan.keepsBytes ? [] : mediaDebts(target.ownerId, [target.entryId])),
       ...(told === undefined ? [] : [told.debt]),
     ],
     report,
@@ -653,9 +585,8 @@ export async function sweepCopyrightHolds(
   report: Report = captureException,
 ): Promise<void> {
   await restoreDueHolds(db, now);
-  const claimed = await claimDuePurges(db, now);
-  for (const hold of claimed) await purgeHeld(db, hold, now, report);
-  const takenDown = await takenDownSubjectsDue(db);
+  const { purges, takenDown } = await sweepClaims(db, now);
+  for (const hold of purges) await purgeHeld(db, hold, now, report);
   for (const due of takenDown) await deleteTakenDown(db, due, report);
 }
 
@@ -666,7 +597,7 @@ export async function sweepCopyrightHolds(
  */
 async function deleteTakenDown(
   db: Db,
-  due: TakenDownSubject,
+  due: Pick<ModerateInput, "actorId" | "subjectType" | "subjectId">,
   report: Report,
 ): Promise<void> {
   const target = await targetOf(db, due.subjectType, due.subjectId);

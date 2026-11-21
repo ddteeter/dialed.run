@@ -108,12 +108,7 @@ export {
 export {
   type CaseOverOutcome,
   type ClaimedPurge,
-  claimDuePurges,
   claimPurgeAfterCase,
-  copyrightHoldWrites,
-  heldOutOfSight,
-  holdKeepingOf,
-  isCopyrightHeld,
   mintReceiptConfirmToken,
   purgeExpiredQuarantine,
   purgedWrite,
@@ -121,8 +116,7 @@ export {
   releaseHoldWrites,
   requestSubjectOf,
   restoreDueHolds,
-  takenDownSubjectsDue,
-  takenDownWrite,
-  type TakenDownSubject,
+  sweepClaims,
+  takeDownHoldOf,
   uploaderContextOf,
 } from "./takedowns";
