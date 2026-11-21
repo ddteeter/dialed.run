@@ -81,7 +81,15 @@ const byQueueRow = [
   productCorrections.value,
 ] as const;
 
-const waitingNow = eq(productCorrections.status, "waiting");
+/**
+ * Waiting, from a filer whose account is not closed: a closed account's
+ * corrections leave the queue, and come back if it is reopened. Both
+ * sides of the join are named by table, as `filersOf`'s handle is.
+ */
+const waitingNow = and(
+  eq(productCorrections.status, "waiting"),
+  sql`not exists (select 1 from ${userProfiles} where ${userProfiles}.${sql.identifier(userProfiles.userId.name)} = ${productCorrections}.${sql.identifier(productCorrections.userId.name)} and ${userProfiles}.${sql.identifier(userProfiles.bannedAt.name)} is not null)`,
+);
 
 /**
  * The rail's count, in D1's style: rows on the queue, one `1` per row for
@@ -166,7 +174,7 @@ export async function correctionsQueue(): Promise<CorrectionsQueue> {
 async function filersOf(productIds: readonly string[]) {
   const distinctIds = [...new Set(productIds)];
   const waitingOnPage = and(
-    eq(productCorrections.status, "waiting"),
+    waitingNow,
     // One parameter for the whole list (SA-M37): a page of a hundred
     // products would otherwise bind more than D1 takes in one statement.
     inJsonList(productCorrections.productId, distinctIds),

@@ -59,7 +59,9 @@ export const SEND_LIMIT_KINDS = [
  * - `deletion-notice` — the "delete scheduled" emails one runner is owed
  *   in a day; the runner's id;
  * - `access-to` — Au5's asks for one address in a day, whoever asks; the
- *   address, lowercased.
+ *   address, lowercased;
+ * - `correction-runner` — one runner's product corrections in a day; the
+ *   runner's id.
  */
 export const RATE_LIMIT_KINDS = [
   ...SEND_LIMIT_KINDS,
@@ -79,6 +81,7 @@ export const RATE_LIMIT_KINDS = [
   "purge-runner",
   "deletion-notice",
   "access-to",
+  "correction-runner",
 ] as const;
 
 /**
