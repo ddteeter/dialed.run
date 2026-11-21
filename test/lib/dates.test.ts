@@ -19,6 +19,7 @@ import {
   viewerClockLabel,
   viewerDayTimeLabel,
   spanLabel,
+  runZoneOf,
 } from "../../src/lib/dates";
 
 /**
@@ -155,6 +156,25 @@ describe("the run's own zone (R-96)", () => {
       "Tue Sep 22",
     );
     expect(dayTimeLabel(AFTER_UTC_MIDNIGHT, "")).toBe("Tue Sep 22, 03:30");
+  });
+});
+
+describe("runZoneOf (#925)", () => {
+  it("reads a run where it was observed, whatever its runner's zone", () => {
+    expect(runZoneOf("Asia/Tokyo", "America/Chicago")).toBe("Asia/Tokyo");
+  });
+
+  it("falls back to its runner's saved place when nothing was observed", () => {
+    expect(runZoneOf(undefined, "America/Chicago")).toBe("America/Chicago");
+  });
+
+  it("skips a zone Intl does not accept, on either side", () => {
+    expect(runZoneOf("Not/AZone", "America/Chicago")).toBe("America/Chicago");
+    expect(runZoneOf(undefined, "Not/AZone")).toBeUndefined();
+  });
+
+  it("is none, which reads as UTC, when neither is known", () => {
+    expect(runZoneOf(undefined, undefined)).toBeUndefined();
   });
 });
 

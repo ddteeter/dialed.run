@@ -393,6 +393,21 @@ export function viewerClockLabel(
 }
 
 /**
+ * The zone a run is read in: where it was observed (R-96), else its
+ * runner's saved place, else none, which reads as UTC (owner, 2026-11-20,
+ * #925). Each is kept only if `Intl` accepts it, since both are written
+ * from a third party's answer. A run happened where its runner is, so the
+ * fallback is the runner's zone, never the viewer's.
+ */
+export function runZoneOf(
+  observed: string | null | undefined,
+  runnerZone: string | null | undefined,
+): string | undefined {
+  if (isTimeZone(observed)) return observed;
+  return isTimeZone(runnerZone) ? runnerZone : undefined;
+}
+
+/**
  * A stored home zone, kept only if `Intl` accepts it — the column is
  * written from a third party's answer, so it is checked again on the way
  * out (see `isTimeZone`).

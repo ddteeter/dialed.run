@@ -614,6 +614,11 @@ entry: one shape, so the two cannot drift apart.
 */
 export interface EntryRunFields {
   authorUsername: string | undefined;
+  /**
+  The author's saved-place zone: a run with no observed zone reads its
+  day and clock in it (`runZoneOf`; owner, 2026-11-20, #925).
+  */
+  runnerZone: string | undefined;
   runId: string;
   distanceM: number;
   durationS: number;
@@ -701,7 +706,10 @@ export async function getEntryDetail(
   if (!run) return undefined;
 
   const [author] = await database
-    .select({ username: userProfiles.username })
+    .select({
+      username: userProfiles.username,
+      timeZone: userProfiles.timeZone,
+    })
     .from(userProfiles)
     .where(eq(userProfiles.userId, entry.userId))
     .limit(1);
@@ -764,6 +772,7 @@ export async function getEntryDetail(
     id: entry.id,
     userId: entry.userId,
     authorUsername: author?.username ?? undefined,
+    runnerZone: author?.timeZone ?? undefined,
     runId: run.id,
     distanceM: run.distanceM,
     durationS: run.durationS,

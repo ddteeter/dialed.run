@@ -646,3 +646,30 @@ describe("PostCard: Useful waits for a confirmed address (round 26 #11; seam 7)"
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
+
+describe("PostCard: a run with no zone of its own (#925)", () => {
+  // NOW is 12:00 UTC. A run 13 hours back is yesterday in UTC and the
+  // same morning in Tokyo.
+  const thirteenHoursBack = NOW - 13 * 3600;
+
+  it("reads its day in its runner's saved zone", async () => {
+    const post = await card({
+      startedAt: thirteenHoursBack,
+      indoor: true,
+      conditions: undefined,
+      runnerZone: "Asia/Tokyo",
+    });
+    expect(post).toHaveTextContent("13h ago");
+    expect(post).not.toHaveTextContent("Yesterday");
+  });
+
+  it("reads it in UTC when its runner has no zone either", async () => {
+    const post = await card({
+      startedAt: thirteenHoursBack,
+      indoor: true,
+      conditions: undefined,
+      runnerZone: undefined,
+    });
+    expect(post).toHaveTextContent("Yesterday · 11:00 PM");
+  });
+});

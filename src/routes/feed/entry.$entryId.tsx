@@ -27,6 +27,7 @@ import {
 import { orBackToFeed, viewerContext } from "../../modules/feed/redirect";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";
+import { runZoneOf } from "../../lib/dates";
 
 export const Route = createFileRoute("/feed/entry/$entryId")({
   head: noindexHead,
@@ -80,7 +81,7 @@ function EntryDetailPage() {
               label: entryReportLabel(
                 entry,
                 units.distance,
-                entry.conditions?.timeZone,
+                runZoneOf(entry.conditions?.timeZone, entry.runnerZone),
               ),
               authorId: entry.userId,
               authorName: entry.authorUsername,

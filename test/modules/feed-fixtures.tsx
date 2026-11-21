@@ -83,6 +83,7 @@ export function feedItem(overrides: Partial<FeedItem> = {}): FeedItem {
     entryId: "01ENTRY",
     userId: "01USER",
     authorUsername: undefined,
+    runnerZone: undefined,
     runId: "01RUN",
     distanceM: 8047,
     durationS: 1830,
