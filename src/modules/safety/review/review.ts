@@ -1093,11 +1093,13 @@ const subjectWriters: Record<
   // report it. Owner's call, 2026-09-15; the reasoning is in
   // docs/designs/106-trust-safety.md.
   //
-  // The one exception is a photo the classifier never answered for a day
-  // after upload (D-157, design 167): the row exists because nothing will
-  // screen it, so back to `pending` would only bring it back tomorrow. A
-  // person has looked at it now, and their Approve publishes it (owner,
-  // 2026-10-31).
+  // Two sources publish instead. A photo the classifier never answered for
+  // a day after upload (D-157, design 167): the row exists because nothing
+  // will screen it, so back to `pending` would only bring it back tomorrow
+  // (owner, 2026-10-31). And a photo the classifier did answer for: its
+  // row is the classifier's answer, so screening it again gives the same
+  // answer and the same row. A person has looked at either now, and their
+  // Approve publishes it (owner, 2026-11-21).
   photo: (subjectId, decision, source, here) => [
     unlessRequestHolds(
       { table: entryPhotos, subjectType: "photo", subjectId },
@@ -1163,15 +1165,23 @@ function notHeldByRequest(
 }
 
 /**
- * Where Approve leaves an entry photo: `pass` when a person is the only
- * screening it will get (an `unscreened` row, D-157), `pending` for every
- * other source, so the screener still sees it.
+ * Where Approve leaves an entry photo: `pass` when the classifier already
+ * answered for it or never will (a `classifier` or an `unscreened` row),
+ * `pending` for every other source, so the screener still sees it.
  */
 function approvedPhotoStatus(
   source: ReviewSource,
 ): typeof publicPhotoStatus | "pending" {
-  return source === "unscreened" ? publicPhotoStatus : "pending";
+  return publishedOnApprove.has(source) ? publicPhotoStatus : "pending";
 }
+
+/**
+The sources whose Approve publishes a kit photo.
+*/
+const publishedOnApprove: ReadonlySet<ReviewSource> = new Set([
+  "classifier",
+  "unscreened",
+]);
 
 /**
  * One column set on the row a report named.

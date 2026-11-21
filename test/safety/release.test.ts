@@ -117,6 +117,28 @@ describe("releaseHolds", () => {
     ]);
   });
 
+  it("leaves a runner's row for a person, whatever its cause, and counts only the holds", async () => {
+    await opened("classifier", 1, SINCE, "profile");
+    await opened("reports", 1, SINCE, "profile");
+    await opened("classifier", 1, SINCE, "garment");
+    await opened("classifier", 1, SINCE, "entry");
+
+    expect(await waitingHoldsSince(SINCE)).toStrictEqual([
+      { cause: "classifier", waiting: 2 },
+    ]);
+    const outcome = await releaseHolds("classifier", SINCE, "op");
+
+    expect(outcome).toStrictEqual({ released: 2, hasMore: false });
+    const profileRows = await core()
+      .select({ status: reviewQueue.status })
+      .from(reviewQueue)
+      .where(eq(reviewQueue.subjectType, "profile"));
+    expect(profileRows).toStrictEqual([
+      { status: "pending" },
+      { status: "pending" },
+    ]);
+  });
+
   it("says nothing more waits at exactly a batch", async () => {
     await opened("fingerprint", RELEASE_BATCH, SINCE);
 

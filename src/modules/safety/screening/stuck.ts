@@ -87,9 +87,8 @@ export async function escalateStuck(
 /**
  * Why a stuck photo is in Review. The classifier's, when it flagged the
  * photo and the breaker held the flag back (design 164): "the classifier
- * has not answered for it" would be false, and an Approve on an
- * `unscreened` row publishes the photo, where one on a `classifier` row
- * sends it back to be screened.
+ * has not answered for it" would be false. An Approve on either row
+ * publishes the photo.
  */
 function sourceOf(
   photo: StuckPhoto,

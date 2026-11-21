@@ -580,6 +580,41 @@ describe("what a decision writes", () => {
     expect(stillPending?.photoId).toBe(photoId);
   });
 
+  it("publishes a photo the classifier sent here, so screening does not send it back", async () => {
+    const author = await makeUser();
+    const entryId = await makeEntry({
+      userId: author,
+      runId: await makeRun({ userId: author }),
+      audience: "runners",
+    });
+    const photoId = newUlid();
+    await core()
+      .insert(entryPhotos)
+      .values({
+        id: photoId,
+        entryId,
+        photoKey: `entries/${author}/${entryId}/${photoId}`,
+        position: 0,
+        screenStatus: "hidden_pending_review",
+      });
+    const queueId = newUlid();
+    await core().insert(reviewQueue).values({
+      id: queueId,
+      subjectType: "photo",
+      subjectId: photoId,
+      source: "classifier",
+      status: "pending",
+      createdAt: nowSeconds(),
+    });
+
+    expect(await resolveReview(queueId, await makeUser(), "approve")).toBe(
+      "resolved",
+    );
+
+    expect(await photoStatusOf(photoId)).toBe("pass");
+    expect(await pendingEntryPhotos()).toStrictEqual([]);
+  });
+
   it("leaves a reported profile's own rows alone", async () => {
     // `subjectWriters` has no profile branch on purpose: removing a
     // person is a ban, with its own path and its own notice. A resolve
