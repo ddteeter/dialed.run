@@ -124,6 +124,30 @@ export function hiddenNotice(
 }
 
 /**
+ * The hide notice to a named author, raised only where `onlyIf` holds in
+ * its batch: for a writer that knows the author from its own row and
+ * cannot read them from the subject, as a copyright restore that hands
+ * a kit to review cannot while the kit still reads as removed.
+ */
+export function hiddenNoticeTo(
+  db: Db,
+  author: { readonly userId: string },
+  subject: { readonly subjectType: Authored; readonly subjectId: string },
+  onlyIf: SQL,
+): BatchItem<"sqlite"> {
+  return notificationRaiseWhere(
+    db,
+    {
+      userId: author.userId,
+      kind: "content_hidden",
+      subjectId: subject.subjectId,
+      body: HIDDEN_NOTICE[subject.subjectType],
+    },
+    onlyIf,
+  );
+}
+
+/**
  * The notices an automatic hold of a kit photo owes its author (D-162):
  * the hide, while the photo is still `pending` (one a report already hid
  * was told then), and the "left it up" on an Approve, while it is still

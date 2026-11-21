@@ -44,14 +44,18 @@ import {
   entryPhotos,
   moderationActions,
   outfitEntries,
+  reviewQueue,
+  takedownRequests,
   userProfiles,
 } from "../../../db/schema-core";
 import { newUlid } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
+import { qualified } from "../../../lib/sql/qualified";
 
+import { hiddenNoticeTo } from "../notices";
 import { heldPhotoStatus } from "../rules";
 
-type Db = ReturnType<typeof drizzle>;
+type Db = ReturnType<typeof drizzle<Record<string, never>>>;
 
 export type HeldSubjectType =
   (typeof copyrightHolds.$inferSelect)["subjectType"];
@@ -107,8 +111,21 @@ export function copyrightHoldWrites(
       hiddenAt: now,
       purgeAt: now + COPYRIGHT_HOLD_SECONDS,
     }),
-    hideWriters[record.subjectType](db, record.subjectId),
+    heldOutOfSight(db, record.subjectType, record.subjectId),
   ];
+}
+
+/**
+ * A held subject out of every reader's sight: its own column moved to
+ * `removed`, from whatever it was. A take-down of material a hold keeps
+ * moves it the same way, since that hold may be on its kit or a photo.
+ */
+export function heldOutOfSight(
+  db: Db,
+  subjectType: HeldSubjectType,
+  subjectId: string,
+): BatchItem<"sqlite"> {
+  return hideWriters[subjectType](db, subjectId);
 }
 
 /**
@@ -165,6 +182,116 @@ export async function isCopyrightHeld(
  */
 export function notRestored(actionId: SQLiteColumn): SQL {
   return sql`not exists (select 1 from ${copyrightHolds} where ${copyrightHolds.moderationActionId} = ${actionId} and ${copyrightHolds.status} = 'restored')`;
+}
+
+/**
+ * What a hold leaves a subject's material in, as a Remove or Take it down
+ * sees it: `none` when no live hold covers it, `held` when one does, and
+ * `taken_down` when every covering hold already carries a take-down.
+ */
+export type HoldKeeping = "none" | "held" | "taken_down";
+
+/**
+ * A subject a take-down names: the kit, or a photo with the kit it is on.
+ */
+export interface KeptSubject {
+  readonly subjectType: HeldSubjectType;
+  readonly subjectId: string;
+  readonly entryId: string;
+}
+
+/**
+ * The live holds whose material a take-down of `subject` would delete: a
+ * hold on the subject itself, a hold on the kit a photo is on, and, for a
+ * kit, a hold on any of its photos. Every such hold names the same kit.
+ */
+function covering(subject: KeptSubject): SQL | undefined {
+  const onTheKit = and(
+    inArray(copyrightHolds.status, [...LIVE]),
+    eq(copyrightHolds.entryId, subject.entryId),
+  );
+  return subject.subjectType === "entry"
+    ? onTheKit
+    : and(
+        onTheKit,
+        or(
+          eq(copyrightHolds.subjectType, "entry"),
+          eq(copyrightHolds.subjectId, subject.subjectId),
+        ),
+      );
+}
+
+/**
+Whether a live hold keeps `subject`'s material, and whether it is already taken down.
+*/
+export async function holdKeepingOf(
+  db: Db,
+  subject: KeptSubject,
+): Promise<HoldKeeping> {
+  const holds = await db
+    .select({ takenDownBy: copyrightHolds.takenDownBy })
+    .from(copyrightHolds)
+    .where(covering(subject));
+  if (holds.length === 0) return "none";
+  return holds.some((hold) => hold.takenDownBy === null)
+    ? "held"
+    : "taken_down";
+}
+
+/**
+ * A take-down of held material, for its batch (owner, 2026-11-21): every
+ * covering hold records the take-down's moderation action, so no hold's
+ * end restores the subject, and the material stays as the hold keeps it
+ * until the last covering hold ends (`takenDownSubjectsDue`).
+ */
+export function takenDownWrite(
+  db: Db,
+  subject: KeptSubject,
+  actionId: string,
+): BatchItem<"sqlite"> {
+  return db
+    .update(copyrightHolds)
+    .set({ takenDownBy: actionId })
+    .where(and(covering(subject), isNull(copyrightHolds.takenDownBy)));
+}
+
+/**
+ * What a take-down made under a hold is owed once no live hold keeps the
+ * kit: the action's subject, deleted with the statements a Remove uses.
+ * Only while the subject is still there, so each is listed until its
+ * delete lands, and never again.
+ */
+export interface TakenDownSubject {
+  readonly actionId: string;
+  readonly actorId: string;
+  readonly subjectType: HeldSubjectType;
+  readonly subjectId: string;
+}
+
+/**
+The most take-downs one sweep deletes; the rest wait for the next.
+*/
+export const TAKEN_DOWN_PER_SWEEP = 50;
+
+export async function takenDownSubjectsDue(
+  db: Db,
+): Promise<TakenDownSubject[]> {
+  const action = moderationActions;
+  const stillLive = sql`exists (select 1 from ${copyrightHolds} as "live" where "live"."entry_id" = ${qualified(copyrightHolds, copyrightHolds.entryId)} and "live"."status" in ('hidden', 'purging'))`;
+  const stillThere = sql`(case ${qualified(action, action.subjectType)} when 'entry' then exists (select 1 from ${outfitEntries} where ${qualified(outfitEntries, outfitEntries.id)} = ${qualified(action, action.subjectId)}) else exists (select 1 from ${entryPhotos} where ${qualified(entryPhotos, entryPhotos.id)} = ${qualified(action, action.subjectId)}) end)`;
+  return db
+    .selectDistinct({
+      actionId: action.id,
+      actorId: action.actorId,
+      // Only `takenDownWrite` names an action here, and only for a kit
+      // or a photo.
+      subjectType: sql<HeldSubjectType>`${action.subjectType}`,
+      subjectId: action.subjectId,
+    })
+    .from(copyrightHolds)
+    .innerJoin(action, eq(action.id, copyrightHolds.takenDownBy))
+    .where(and(sql`not ${stillLive}`, stillThere))
+    .limit(TAKEN_DOWN_PER_SWEEP);
 }
 
 export type CounterNoticeOutcome =
@@ -263,13 +390,11 @@ async function hiddenHold(db: Db, holdId: string) {
 }
 
 /**
- * The sweep's restore, one batch with no read before it: every hidden
- * hold whose day has come and has no court action is claimed `restored`
- * with this firing's moment as `settled_at`, then the subjects those
- * claims name — and only those — go back from `removed`: an entry as
- * `ok`, a photo as `pending`, never `pass`, so screening looks at it
- * again as after every give-back (`releaseHoldWrites`). A sweep that runs
- * twice claims nothing the second time, so it gives nothing back.
+ * The sweep's restore: every hidden hold whose day has come and has no
+ * court action is claimed `restored` with this firing's moment as
+ * `settled_at`, then the subjects those claims name — and only those —
+ * go back from `removed` (`restoreBatch`). A sweep that runs twice claims
+ * nothing the second time, so it gives nothing back.
  */
 export async function restoreDueHolds(
   db: Db,
@@ -280,43 +405,123 @@ export async function restoreDueHolds(
     isNull(copyrightHolds.courtActionAt),
     lte(copyrightHolds.restoreAt, now),
   );
-  await db.batch(restoreWrites(db, due, { settledAt: now }));
+  await restoreBatch(db, due, { settledAt: now });
 }
 
 /**
- * A restore's three statements: the claim `where` names, then the give-
- * back of what a claim at this moment restored.
+ * A restore, in one batch after one read: the claim `where` names, then
+ * the give-back of what a claim at this moment restored.
+ *
+ * - **A subject something else still holds goes to review, not public.**
+ *   Where a Review row is open on it, or a pending removal request that
+ *   may hide names it, an entry or photo goes back to
+ *   `hidden_pending_review`, and its author gets the hide notice in the
+ *   same batch; the decision on that row or request gives it back.
+ * - **The rest go back as public**: an entry as `ok`, a photo as
+ *   `pending`, never `pass`, so screening looks at it again as after
+ *   every give-back (`releaseHoldWrites`).
+ * - **A hold whose subject was taken down while held gives nothing
+ *   back** (`taken_down_by`): the claim ends the hold, and the sweep
+ *   deletes the subject once no live hold covers it
+ *   (`takenDownSubjectsDue`).
+ *
+ * The read names each hold's owner for the notice; the claim, not the
+ * read, decides what is restored.
  */
-function restoreWrites(
+async function restoreBatch(
   db: Db,
   where: SQL | undefined,
   settle: { readonly settledAt: number; readonly caseClosedBy?: string },
 ) {
+  const due = await db
+    .select({
+      id: copyrightHolds.id,
+      subjectType: copyrightHolds.subjectType,
+      subjectId: copyrightHolds.subjectId,
+      ownerId: copyrightHolds.ownerId,
+    })
+    .from(copyrightHolds)
+    .where(and(where, isNull(copyrightHolds.takenDownBy)));
   const thisClaim = and(
     eq(copyrightHolds.status, "restored"),
     eq(copyrightHolds.settledAt, settle.settledAt),
   );
-  const entriesBack = and(
-    eq(outfitEntries.moderationStatus, "removed"),
-    inArray(outfitEntries.id, restoredBy(db, "entry", thisClaim)),
-  );
-  const photosBack = and(
-    eq(entryPhotos.screenStatus, heldPhotoStatus),
-    inArray(entryPhotos.id, restoredBy(db, "photo", thisClaim)),
-  );
-  return [
+  return db.batch([
     db
       .update(copyrightHolds)
       .set({ status: "restored", ...settle })
       .where(where)
       .returning({ id: copyrightHolds.id }),
+    ...giveBacks(db, thisClaim),
+    ...due.map((hold) =>
+      hiddenNoticeTo(
+        db,
+        { userId: hold.ownerId },
+        hold,
+        sql`${restoredHere(hold.id, thisClaim)} and ${inReview[hold.subjectType](hold.subjectId)}`,
+      ),
+    ),
+  ]);
+}
+
+/**
+ * The give-back of what a claim restored, per subject type: to review
+ * first where something still holds it, then the rest to public. The
+ * first moves its rows off `removed`, so the second cannot touch them.
+ */
+function giveBacks(db: Db, claim: SQL | undefined) {
+  const entriesBack = and(
+    eq(outfitEntries.moderationStatus, "removed"),
+    inArray(outfitEntries.id, restoredBy(db, "entry", claim)),
+  );
+  const photosBack = and(
+    eq(entryPhotos.screenStatus, heldPhotoStatus),
+    inArray(entryPhotos.id, restoredBy(db, "photo", claim)),
+  );
+  const entryHeld = stillHeld("entry", qualified(outfitEntries, outfitEntries.id));
+  const photoHeld = stillHeld("photo", qualified(entryPhotos, entryPhotos.id));
+  return [
+    db
+      .update(outfitEntries)
+      .set({ moderationStatus: "hidden_pending_review" })
+      .where(and(entriesBack, entryHeld)),
     db.update(outfitEntries).set({ moderationStatus: "ok" }).where(entriesBack),
+    db
+      .update(entryPhotos)
+      .set({ screenStatus: "hidden_pending_review" })
+      .where(and(photosBack, photoHeld)),
     db.update(entryPhotos).set({ screenStatus: "pending" }).where(photosBack),
   ] as const;
 }
 
 /**
-The subjects of one type a restore's claim restored.
+ * Whether something other than the hold still keeps a subject from
+ * public: an open Review row on it, or a pending removal request naming
+ * it that may hide (`hold_state = 'held'`, whether or not it hid then).
+ */
+function stillHeld(subjectType: HeldSubjectType, subjectId: SQL): SQL {
+  return sql`(exists (select 1 from ${reviewQueue} where ${qualified(reviewQueue, reviewQueue.subjectType)} = ${subjectType} and ${qualified(reviewQueue, reviewQueue.subjectId)} = ${subjectId} and ${qualified(reviewQueue, reviewQueue.status)} in ('pending', 'reviewing')) or exists (select 1 from ${takedownRequests} where ${qualified(takedownRequests, takedownRequests.subjectType)} = ${subjectType} and ${qualified(takedownRequests, takedownRequests.subjectId)} = ${subjectId} and ${qualified(takedownRequests, takedownRequests.status)} = 'pending' and ${qualified(takedownRequests, takedownRequests.holdState)} = 'held'))`;
+}
+
+/**
+Whether this hold is one the batch's claim restored.
+*/
+function restoredHere(holdId: string, claim: SQL | undefined) {
+  return sql`exists (select 1 from ${copyrightHolds} where ${and(eq(copyrightHolds.id, holdId), claim)})`;
+}
+
+/**
+Whether the subject now waits in review, as the guarded give-back leaves it.
+*/
+const inReview: Record<HeldSubjectType, (subjectId: string) => SQL> = {
+  entry: (subjectId) =>
+    sql`exists (select 1 from ${outfitEntries} where ${and(eq(outfitEntries.id, subjectId), eq(outfitEntries.moderationStatus, "hidden_pending_review"))})`,
+  photo: (subjectId) =>
+    sql`exists (select 1 from ${entryPhotos} where ${and(eq(entryPhotos.id, subjectId), eq(entryPhotos.screenStatus, "hidden_pending_review"))})`,
+};
+
+/**
+The subjects of one type a restore's claim restored, and may give back.
 */
 function restoredBy(
   db: Db,
@@ -326,7 +531,13 @@ function restoredBy(
   return db
     .select({ id: copyrightHolds.subjectId })
     .from(copyrightHolds)
-    .where(and(eq(copyrightHolds.subjectType, subjectType), claim));
+    .where(
+      and(
+        eq(copyrightHolds.subjectType, subjectType),
+        isNull(copyrightHolds.takenDownBy),
+        claim,
+      ),
+    );
 }
 
 interface NotHeld {
@@ -367,12 +578,10 @@ export async function restoreAfterCase(
   holdId: string,
   now = nowSeconds(),
 ): Promise<CaseOverOutcome> {
-  const [claimed] = await db.batch(
-    restoreWrites(db, heldForCase(holdId), {
-      settledAt: now,
-      caseClosedBy: actorId,
-    }),
-  );
+  const [claimed] = await restoreBatch(db, heldForCase(holdId), {
+    settledAt: now,
+    caseClosedBy: actorId,
+  });
   return claimed.length > 0 ? { outcome: "recorded" } : whyNotHeld(db, holdId);
 }
 
