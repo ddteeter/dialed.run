@@ -69,7 +69,7 @@ const files = Object.entries(sources)
 
 function rawColoursIn(path: string, source: string): string[] {
   const code = withoutComments(source);
-  const scanned = path.endsWith("auth/google-button.tsx")
+  const scanned = path.endsWith("auth/components/google-button.tsx")
     ? code.replace(GOOGLE_BUTTON, "")
     : code;
   const inClasses = scanned
@@ -85,7 +85,9 @@ describe("every colour is a T1 role", () => {
   it("found the source, so nothing below is vacuous", () => {
     expect(files.length).toBeGreaterThan(40);
     expect(
-      files.some(([path]) => path.endsWith("auth/google-button.tsx")),
+      files.some(([path]) =>
+        path.endsWith("auth/components/google-button.tsx"),
+      ),
     ).toBe(true);
   });
 
@@ -104,10 +106,12 @@ describe("every colour is a T1 role", () => {
     ).toEqual(["src/ui/X.tsx: hover:text-[rgb(0_0_0)]"]);
     expect(
       rawColoursIn(
-        "src/modules/auth/google-button.tsx",
+        "src/modules/auth/components/google-button.tsx",
         'const other = "border-[#747775]";',
       ),
-    ).toEqual(["src/modules/auth/google-button.tsx: border-[#747775]"]);
+    ).toEqual([
+      "src/modules/auth/components/google-button.tsx: border-[#747775]",
+    ]);
   });
 
   it("would catch one in an inline style, and leaves a colourless style alone", () => {
@@ -127,7 +131,9 @@ describe("every colour is a T1 role", () => {
 
   it("exempts the Google button's constant, and it really holds Google's colours", () => {
     const [, source] =
-      files.find(([path]) => path.endsWith("auth/google-button.tsx")) ?? [];
+      files.find(([path]) =>
+        path.endsWith("auth/components/google-button.tsx"),
+      ) ?? [];
     expect(source).toMatch(GOOGLE_BUTTON);
     const constant = GOOGLE_BUTTON.exec(source ?? "")?.[0] ?? "";
     for (const colour of [

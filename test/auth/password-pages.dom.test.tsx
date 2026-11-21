@@ -9,7 +9,7 @@ import userEvent from "@testing-library/user-event";
 import type { ComponentProps, ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { CredentialFields } from "../../src/modules/auth/auth-page";
+import { CredentialFields } from "../../src/modules/auth/components/auth-page";
 import type { FieldProps } from "../../src/ui";
 import type { ViewerZone } from "../../src/lib/dates";
 import { AUTH_COPY } from "../../src/modules/auth/auth-copy";

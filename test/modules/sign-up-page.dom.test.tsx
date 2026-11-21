@@ -37,9 +37,9 @@ import {
   SIGN_UP_LABELS,
   SignUpClosedHere,
   useAuthForm,
-} from "../../src/modules/auth/auth-page";
+} from "../../src/modules/auth/components/auth-page";
 import { signUp } from "../../src/modules/auth/credentials";
-import { useGoogleSignIn } from "../../src/modules/auth/google-button";
+import { useGoogleSignIn } from "../../src/modules/auth/components/google-button";
 import { AccountClosed } from "../../src/modules/safety/runners/components/AccountClosed";
 
 /**

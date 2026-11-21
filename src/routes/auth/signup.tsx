@@ -20,9 +20,9 @@ import {
   SIGN_UP_LABELS,
   SignUpClosedHere,
   useAuthForm,
-} from "../../modules/auth/auth-page";
+} from "../../modules/auth/components/auth-page";
 import { signUp } from "../../modules/auth/credentials";
-import { useGoogleSignIn } from "../../modules/auth/google-button";
+import { useGoogleSignIn } from "../../modules/auth/components/google-button";
 import { AccountClosed } from "../../modules/safety/runners/components/AccountClosed";
 import {
   googleReturn,

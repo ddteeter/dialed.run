@@ -42,8 +42,8 @@ function isOwned(path: string): boolean {
     path.startsWith("src/ui/") ||
     path.startsWith("src/routes/") ||
     path.includes("/components/") ||
-    path.endsWith("auth/auth-page.tsx") ||
-    path.endsWith("auth/google-button.tsx")
+    path.endsWith("auth/components/auth-page.tsx") ||
+    path.endsWith("auth/components/google-button.tsx")
   );
 }
 
@@ -276,13 +276,13 @@ describe("03 · every tappable thing has a 44×44 hit area", () => {
       "src/modules/account/verification/components/CheckEmail.tsx",
       "src/modules/account/verification/components/CheckEmail.tsx",
       "src/modules/account/verification/components/CheckEmail.tsx",
-      "src/modules/auth/auth-page.tsx",
+      "src/modules/auth/components/auth-page.tsx",
       // Au2's "No code? Request access" (round 26 #20).
-      "src/modules/auth/auth-page.tsx",
+      "src/modules/auth/components/auth-page.tsx",
       // Au2's "By creating an account you agree to the Terms and have
       // read the Privacy policy." (ACC-6, ACC-13; round 27 #12).
-      "src/modules/auth/auth-page.tsx",
-      "src/modules/auth/auth-page.tsx",
+      "src/modules/auth/components/auth-page.tsx",
+      "src/modules/auth/components/auth-page.tsx",
       // "Remembered it? Log in" (ACC-4).
       "src/modules/auth/components/ForgotPassword.tsx",
       // The landing's "Have a code? Create an account" (Round 55 · 175,

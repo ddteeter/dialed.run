@@ -199,7 +199,7 @@ describe("the pill selectors", () => {
       ),
     ).toStrictEqual([expect.stringMatching(PILL)]);
     expect(
-      await messagesIn("src/modules/auth/google-button.tsx", code),
+      await messagesIn("src/modules/auth/components/google-button.tsx", code),
     ).toStrictEqual([]);
   });
 });

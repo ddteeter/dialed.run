@@ -36,7 +36,7 @@ import {
 import {
   GoogleButton,
   useGoogleSignIn,
-} from "../../modules/auth/google-button";
+} from "../../modules/auth/components/google-button";
 import { saveNotificationSettingsFn } from "../../modules/email/functions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";

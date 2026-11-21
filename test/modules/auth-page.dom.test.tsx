@@ -25,10 +25,10 @@ import {
   SessionNotice,
   TOTALS_LINE,
   useAuthForm,
-} from "../../src/modules/auth/auth-page";
+} from "../../src/modules/auth/components/auth-page";
 import { PasswordField } from "../../src/ui/PasswordField";
 import { signIn } from "../../src/modules/auth/credentials";
-import { useGoogleSignIn } from "../../src/modules/auth/google-button";
+import { useGoogleSignIn } from "../../src/modules/auth/components/google-button";
 import { CARRIED_EMAIL_KEY } from "../../src/lib/browser/carried-email";
 import { useCarriedEmail } from "../../src/modules/auth/carried-email";
 import type { CarriedForm } from "../../src/lib/carried-form";
