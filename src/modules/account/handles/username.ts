@@ -24,6 +24,7 @@ import type { drizzle } from "drizzle-orm/d1";
 
 import {
   accountDeletions,
+  notifications,
   userProfiles,
   usernameHistory,
 } from "../../../db/schema-core";
@@ -42,6 +43,7 @@ import {
   isProfaneHandle,
   readBackDigits,
 } from "../../../lib/contracts/profanity";
+import { followRowsNaming } from "../../notifications";
 import { purgePublicPages } from "../../ops";
 import { isPlaceholderHandle } from "../../safety";
 import type { ScreenHandle } from "./handle-screen";
@@ -636,6 +638,7 @@ export async function forceRename(
   const now = nowSeconds();
   const held = stillHolds(userId, previous);
   const ownUnlockedWhile = and(ownUnlocked(userId, username), held);
+  const ringsNaming = and(followRowsNaming(db, userId, previous), held);
   const holdingPrevious = and(
     eq(userProfiles.userId, userId),
     eq(userProfiles.username, previous),
@@ -653,6 +656,8 @@ export async function forceRename(
         }),
       db.delete(usernameHistory).where(ownUnlockedWhile),
       request.recordedAs(previous, held),
+      // The follow rows on others' bells that name the handle taken away.
+      db.delete(notifications).where(ringsNaming),
       ...(request.also?.(held) ?? []),
       // Last, so every statement above reads the handle before it changes.
       db

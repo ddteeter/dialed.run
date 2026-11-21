@@ -18,6 +18,9 @@ import {
   ringFollowQuietly,
 } from "../../src/modules/feed/following/follow-notices";
 import { nowSeconds } from "../../src/lib/now";
+import { forceRename } from "../../src/modules/account/handles/username";
+import { banUser } from "../../src/modules/safety/runners/bans";
+import { noPurge } from "../purge-spy";
 import {
   deleteAllFrom,
   makeUser,
@@ -282,5 +285,82 @@ describe("a ring never fails the follow (law 5)", () => {
       },
     );
     expect(seen).toHaveLength(0);
+  });
+});
+
+/**
+ * A moderator's rename of `userId` to a placeholder; nothing recorded.
+ */
+function renamed(userId: string) {
+  return forceRename(core(), {
+    userId,
+    typed: "runner_4821",
+    reason: "Offensive or sexual",
+    recordedAs: () => core().select().from(userProfiles).limit(0),
+  });
+}
+
+describe("a handle taken away leaves the bells it rang", () => {
+  it("deletes a moderator-renamed runner's rows, and one naming them newest, and leaves the rest", async () => {
+    const you = await makeVerifiedUser();
+    const them = await makeVerifiedUser();
+    const ada = await makeUser({ username: "ada" });
+    const bo = await makeUser({ username: "bo" });
+    await follow(ada, you);
+    await follow(bo, them);
+    await follow(ada, them);
+
+    expect(await renamed(ada)).toMatchObject({ kind: "renamed" });
+
+    expect(await bellOf(you)).toStrictEqual([]);
+    expect(await bellOf(them)).toStrictEqual([]);
+  });
+
+  it("leaves a group row that names another follower newest", async () => {
+    const you = await makeVerifiedUser();
+    const ada = await makeUser({ username: "ada" });
+    const bo = await makeUser({ username: "bo" });
+    await follow(ada, you);
+    await follow(bo, you);
+
+    await renamed(ada);
+
+    const rows = await bellOf(you);
+    expect(rows.map((row) => row.body)).toStrictEqual([
+      "@bo and 1 other followed you.",
+    ]);
+  });
+
+  it("deletes nothing when the rename did not land", async () => {
+    const you = await makeVerifiedUser();
+    const ada = await makeUser({ username: "ada" });
+    await follow(ada, you);
+
+    await Promise.all([
+      renamed(ada),
+      core()
+        .update(userProfiles)
+        .set({ username: "ada_now" })
+        .where(eq(userProfiles.userId, ada)),
+    ]);
+
+    expect(await bellOf(you)).toHaveLength(1);
+  });
+
+  it("deletes a closed account's rows on the bells they rang", async () => {
+    const you = await makeVerifiedUser();
+    const them = await makeVerifiedUser();
+    const ada = await makeUser({ username: "ada" });
+    const bo = await makeUser({ username: "bo" });
+    await follow(ada, you);
+    await follow(bo, them);
+
+    await banUser(
+      { userId: ada, reason: "Spam", rule: "spam", bannedBy: "op" },
+      noPurge,
+    );
+
+    expect(await bellOf(you)).toStrictEqual([]);
+    expect(await bellOf(them)).toHaveLength(1);
   });
 });

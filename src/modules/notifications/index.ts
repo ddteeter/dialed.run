@@ -24,5 +24,7 @@ export {
   type NotificationKind,
 } from "./service";
 export type { BellState } from "./bell-state";
+// The follow rows naming a runner, for the writes that take a handle away.
+export { followRowsNaming } from "./follow-rows";
 // The viewer's own clock, for account and this module (design 173).
 export { viewerZone } from "./viewer-zone";

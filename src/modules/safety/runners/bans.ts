@@ -20,7 +20,7 @@ import type { BatchItem } from "drizzle-orm/batch";
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 
 import { session } from "../../../db/schema-auth";
-import { userProfiles } from "../../../db/schema-core";
+import { notifications, userProfiles } from "../../../db/schema-core";
 import { coreDb } from "../../../env";
 import { runnerCacheTag, type PurgeTags } from "../../../lib/cache-tags";
 import { firstRowWhere } from "../../../lib/sql/keyed-read";
@@ -28,6 +28,7 @@ import type { OutboxMessageOf } from "../../../lib/sql/outbox";
 import { orSqlNull } from "../../../lib/sql/sql-null";
 import { nowSeconds } from "../../../lib/now";
 import { emailDebt } from "../../email";
+import { followRowsNaming } from "../../notifications";
 
 import { closureRuleOf, type ClosureRule } from "../rules";
 import { moderationActionInsert } from "../rules";
@@ -71,6 +72,18 @@ export async function banUser(
     closureRuleOf(input.rule) === undefined
       ? []
       : await reporterNotices(db(), "profile", input.userId, "removed");
+  // The follow rows on others' bells that name them go with the ban: the
+  // handle is out of everyone's sight from now on.
+  const profile = await firstRowWhere(
+    db(),
+    userProfiles,
+    eq(userProfiles.userId, input.userId),
+  );
+  const ringsNaming = followRowsNaming(
+    db(),
+    input.userId,
+    profile?.username ?? undefined,
+  );
   await db().batch([
     // An upsert: the ban is the profile row's, inserted or updated.
     db()
@@ -96,6 +109,7 @@ export async function banUser(
       subjectOwnerId: input.userId,
       reason: input.reason,
     }),
+    db().delete(notifications).where(ringsNaming),
     ...also(db()),
     ...told,
   ]);
