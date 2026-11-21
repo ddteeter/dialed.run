@@ -13,6 +13,7 @@
  * **An address with no account is counted the same way**, and refused the
  * same way, so the limit says nothing about which addresses have one.
  */
+import { BASE_ERROR_CODES } from "better-auth";
 import { APIError, type createAuthMiddleware } from "better-auth/api";
 import type { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
@@ -41,12 +42,26 @@ function typedAddress(ctx: HookContext): string | undefined {
 }
 
 /**
+The longest address there is (RFC 5321's path limit, less its brackets).
+*/
+export const ADDRESS_MAX = 254;
+
+const addressShape = z.email().max(ADDRESS_MAX);
+
+/**
  * Count the try, or refuse it: 429 with `SIGN_IN_LIMITED_CODE` and
  * `until`, which the log-in band turns into the owner's sentence.
+ *
+ * Only an address is counted: a typed string that is not one, or is
+ * longer than `ADDRESS_MAX`, is answered 400 `INVALID_EMAIL` here, as
+ * Better Auth answers a malformed one, and counts nothing.
  */
 export async function countSignInTry(db: Db, ctx: HookContext): Promise<void> {
   const address = typedAddress(ctx);
   if (address === undefined) return;
+  if (!addressShape.safeParse(address).success) {
+    throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.INVALID_EMAIL);
+  }
   const claim = await claimSignInTry(db, address);
   if (claim.isAllowed) return;
   throw new APIError("TOO_MANY_REQUESTS", {

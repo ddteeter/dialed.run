@@ -26,6 +26,7 @@ import {
   SIGN_IN_WINDOW_S,
 } from "../../src/lib/contracts/access";
 import { nowSeconds } from "../../src/lib/now";
+import { ADDRESS_MAX } from "../../src/modules/auth/sign-in-limit";
 import { recordingMail } from "./mail-recorder";
 import { OPEN_ACCESS } from "./open-access";
 
@@ -538,6 +539,33 @@ describe("email sign-in's tries per typed address", () => {
     await tryPassword(auth, email, wrong);
     await tryPassword(auth, email, wrong);
     expect(await triesOf(email)).toBe(2);
+  });
+
+  it("answers a typed string that is not an address 400, and counts nothing", async () => {
+    const { auth } = instance();
+    const typed = "a".repeat(5000);
+    const refused = await auth.handler(
+      post("sign-in/email", { email: typed, password }),
+    );
+    expect(refused.status).toBe(400);
+    expect(await refused.json()).toMatchObject({ code: "INVALID_EMAIL" });
+    expect(await triesOf(typed)).toBeUndefined();
+  });
+
+  it(`counts an address of ${String(ADDRESS_MAX)} characters, and refuses a longer one`, async () => {
+    const { auth } = instance();
+    const domain = `@${newUlid().toLowerCase()}.example.com`;
+    const longest = `${"a".repeat(ADDRESS_MAX - domain.length)}${domain}`;
+    const tooLong = `b${longest}`;
+    expect(longest).toHaveLength(ADDRESS_MAX);
+
+    const counted = await tryPassword(auth, longest, wrong);
+    expect(counted.status).toBe(401);
+    expect(await triesOf(longest)).toBe(1);
+
+    const refused = await tryPassword(auth, tooLong, wrong);
+    expect(refused.status).toBe(400);
+    expect(await triesOf(tooLong)).toBeUndefined();
   });
 
   it("counts nothing for a body with no address", async () => {

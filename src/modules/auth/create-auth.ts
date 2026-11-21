@@ -27,6 +27,7 @@ import {
 import { AUTH_COPY } from "./auth-copy";
 import { CLOSED_AUTH_PATHS } from "./closed-paths";
 import { clearSignInTries, countSignInTry } from "./sign-in-limit";
+import { holdSocialBody } from "./social-body";
 import {
   BREACHED_CODE,
   newPasswordIn,
@@ -429,6 +430,8 @@ export function createAuth({
     }),
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
+        // A Google press carries only what the app's own press sends.
+        holdSocialBody(ctx);
         // The password first: a breached one is the form's to fix
         // whatever the code says. Then the way in.
         await screenPassword(passwordScreen, ctx);
