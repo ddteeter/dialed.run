@@ -1,7 +1,7 @@
 /**
  * A run's conditions, derived from the weather cache and the runner's own
  * band: the starting hour's reading and the span over every hour it
- * touched. Moved here from `feed/conditions.ts` (design 189) so the
+ * touched. Moved here from `feed/conditions/conditions.ts` (design 189) so the
  * weather module can build the copy of a run's conditions it writes to
  * core (`run_conditions`, D-175) from the same derivation the feed reads,
  * rather than a second copy of it. `feed` imports `weather`, never the

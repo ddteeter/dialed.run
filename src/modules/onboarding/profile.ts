@@ -174,7 +174,7 @@ export async function completeOnboarding(
  * account that has never reached O1 — and the common one, since the row is
  * created by O1 itself.
  */
-// fallow-ignore-next-line code-duplication -- rhymes with feed/share-default.ts's defaultAudienceFor: same select-by-userId-with-limit-1-then-??-default shape, but a different column with a different default (not-yet-onboarded vs public-by-default) that will evolve on its own product timeline
+// fallow-ignore-next-line code-duplication -- rhymes with feed/entries/share-default.ts's defaultAudienceFor: same select-by-userId-with-limit-1-then-??-default shape, but a different column with a different default (not-yet-onboarded vs public-by-default) that will evolve on its own product timeline
 export async function hasOnboarded(
   db: DrizzleD1Database,
   userId: string,
@@ -246,7 +246,7 @@ export interface CurrentSettings extends Preferences {
  * nullable — a profile predates the question, or the row does not exist at
  * all — and a `<select>` cannot render "no answer" for a required choice.
  * `defaultUnits` is what the rest of the app already falls back to
- * (`feed/units.ts` does the same), so settings shows the same Fahrenheit
+ * (`feed/conditions/units.ts` does the same), so settings shows the same Fahrenheit
  * and miles a feed reader is already seeing rather than a blank the save
  * would then have to invent a value for.
  *

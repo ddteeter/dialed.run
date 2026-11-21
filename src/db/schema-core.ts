@@ -49,7 +49,7 @@ import {
  * `strangerAudiences` (SHARED or PUBLIC, D-151). The two shared-entry
  * indexes are partial on exactly this expression, and SQLite uses a
  * partial index only for a query whose WHERE carries the same expression,
- * so the stranger rule (`safety/visibility.ts`) and the feed's seek call
+ * so the stranger rule (`safety/rules/visibility.ts`) and the feed's seek call
  * this rather than writing their own. The values are literals, not bound
  * parameters, for the same reason: a parameter cannot prove the index's
  * condition. They are the contract's own constants, never input.
@@ -76,7 +76,7 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     userId: text("user_id").primaryKey(),
     // The runner's handle (task 126, ACC-1; decision D-41 replaced
     // `display_name` with it). Stored lowercased, as the rule types it;
-    // null until O0. `modules/account/username.ts` is the one writer.
+    // null until O0. `modules/account/handles/username.ts` is the one writer.
     username: text("username"),
     cityLabel: text("city_label"),
     lat: real("lat"),
@@ -136,7 +136,7 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     // On by default: published totals count shared and private runs, and
     // an opted-out runner leaves them at the next nightly build. It is also
     // U2's conditions pool (owner, 2026-10-12): off leaves their shared runs
-    // out of the in-app Same conditions block at once (`feed/consensus.ts`),
+    // out of the in-app Same conditions block at once (`feed/consensus/consensus.ts`),
     // while the block still works for them. The guide job and consensus read
     // it; `onboarding/aggregate-prefs.ts` is the one writer.
     countInTotals: integer("count_in_totals", { mode: "boolean" })
@@ -508,7 +508,7 @@ export const inviteCodes = /*#__PURE__*/ sqliteTable(
  * two sign-ups racing for a single-use code from both getting it: a row
  * counts against the code while its account exists *or* its hold is live,
  * so a sign-up that died between the claim and the account frees the
- * code when the hold runs out (`modules/account/invites.ts`).
+ * code when the hold runs out (`modules/account/access/invites.ts`).
  *
  * **A use is an address, and once made it is permanent.** Uses are
  * counted by distinct `email`, so a retried sign-up's second claim is the
@@ -847,7 +847,7 @@ export const wardrobeItems = /*#__PURE__*/ sqliteTable(
     // dHash, taken from the upload before it is re-encoded. Written and
     // cleared in the same statement as `photo_key`, so it never outlives
     // the photo it describes. Read only by the takedown review's copy
-    // search (`safety/photo-matches.ts`). NULL for a photo uploaded before
+    // search (`safety/review/photo-matches.ts`). NULL for a photo uploaded before
     // it existed, which then matches nothing.
     photoFingerprint: text("photo_fingerprint"),
     productUrl: text("product_url"),
@@ -972,7 +972,7 @@ export const runs = /*#__PURE__*/ sqliteTable(
  *   cron clears it on a run that is `pending` again.
  * - **Feed's half** (`verdict`, `entry_created_at`, `entry_shared`):
  *   written in the batch that creates the entry or saves its verdict and
- *   audience (`feed/entries.ts`), and cleared when the entry is retracted.
+ *   audience (`feed/entries/entries.ts`), and cleared when the entry is retracted.
  *
  * `judged_feels_like_c` is `judgedFeelsLikeC` in SQL: the coldest hour if
  * the run felt cold, the warmest if it felt warm, else the start. A test

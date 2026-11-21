@@ -14,7 +14,7 @@
  * already hold.
  *
  * The removal's `reason` holds the statement word for word, with the
- * Desk's notice after it when one was given (`feed/moderation.ts`), so
+ * Desk's notice after it when one was given (`feed/moderation/moderation.ts`), so
  * the read matches the statement as a prefix.
  */
 import { and, inArray, sql } from "drizzle-orm";

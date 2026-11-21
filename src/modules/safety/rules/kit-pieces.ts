@@ -5,7 +5,7 @@ import { outfitEntryItems, wardrobeItems } from "../../../db/schema-core";
 
 /**
  * A kit's pieces, in the order they were put on it: the kit's open page
- * (`feed/public-kit.ts`) and the Desk's view of it (`desk-kit.ts`, #388)
+ * (`feed/public-web/public-kit.ts`) and the Desk's view of it (`desk-kit.ts`, #388)
  * read them alike, each taking what it shows. Here because feed and closet
  * both import safety, so this is the one module both callers reach
  * without a cycle.

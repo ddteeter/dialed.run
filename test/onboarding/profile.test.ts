@@ -624,7 +624,7 @@ describe("savePreferences and currentSettings", () => {
 
   it("answers with the app defaults for an account with no row", async () => {
     // Not a throw and not blanks: settings shows the same Fahrenheit and
-    // miles a feed reader is already being shown, because `feed/units.ts`
+    // miles a feed reader is already being shown, because `feed/conditions/units.ts`
     // falls back to exactly these.
     expect(await currentSettings(coreDb(), newUlid())).toEqual({
       thermalLevel: undefined,

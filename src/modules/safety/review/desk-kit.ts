@@ -123,7 +123,7 @@ export async function deskKitFor(
         id: outfitEntries.id,
         runnerId: outfitEntries.userId,
         handle: userProfiles.username,
-        // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; deskKitFor is the one read of a kit for the Desk, and its pieces already come from kitPiecesSelect, which feed/public-kit.ts shares
+        // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; deskKitFor is the one read of a kit for the Desk, and its pieces already come from kitPiecesSelect, which feed/public-web/public-kit.ts shares
         audience: outfitEntries.audience,
         moderationStatus: outfitEntries.moderationStatus,
         verdict: outfitEntries.verdict,
@@ -143,7 +143,7 @@ export async function deskKitFor(
         feelsLikeC: runConditions.judgedFeelsLikeC,
         moisture: runConditions.precipClass,
         runnerZone: userProfiles.timeZone,
-        // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; deskKitFor is the one read of a kit for the Desk, and its pieces already come from kitPiecesSelect, which feed/public-kit.ts shares
+        // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; deskKitFor is the one read of a kit for the Desk, and its pieces already come from kitPiecesSelect, which feed/public-web/public-kit.ts shares
       })
       .from(outfitEntries)
       .leftJoin(runs, eq(runs.id, outfitEntries.runId))
@@ -152,7 +152,7 @@ export async function deskKitFor(
       .where(eq(outfitEntries.id, entryId)),
     db
       .select({
-        // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; deskKitFor is the one read of a kit for the Desk, and its pieces already come from kitPiecesSelect, which feed/public-kit.ts shares
+        // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; deskKitFor is the one read of a kit for the Desk, and its pieces already come from kitPiecesSelect, which feed/public-web/public-kit.ts shares
         id: entryPhotos.id,
         photoKey: entryPhotos.photoKey,
         screenStatus: entryPhotos.screenStatus,

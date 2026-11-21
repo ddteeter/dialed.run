@@ -1,7 +1,7 @@
 /**
  * Split a list into runs of at most `size`, in order.
  *
- * Pulled out of `feed/conditions.ts`, where the same index loop carried
+ * Pulled out of `feed/conditions/conditions.ts`, where the same index loop carried
  * three `Stryker disable` directives — the mutants were unkillable *there*
  * because chunking only changes what a query **scans**, and the answer is
  * assembled by matching keys afterwards. Scanned rows are what D1 bills,

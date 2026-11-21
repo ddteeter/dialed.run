@@ -174,7 +174,7 @@ export async function handleScheduled(
  * requests invited or declined 90 days ago (`account/access/answered-requests.ts`).
  * **The copyright holds' sweep** (D-130) is `feed`'s, which imports `ops`:
  * it restores what a counter-notice saved on its 12th weekday and deletes
- * what was held 30 days with none pending (`feed/moderation.ts`).
+ * what was held 30 days with none pending (`feed/moderation/moderation.ts`).
  *
  * **The speed digest** (design 165) is ops' own, and a field for the
  * digest email's reason: so a test hands in a fake rather than reach the
