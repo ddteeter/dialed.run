@@ -158,12 +158,11 @@ const LIVE = ["hidden", "purging"] as const;
  *
  * - `repeat` — a copyright takedown of what a live hold already holds,
  *   or a take-down of material every covering hold already records;
- * - `copyright` — a copyright takedown, which hides for 30 days: its
- *   statements write the hold and the hide;
- * - `kept` — a Remove or a removal request's takedown of material a live
- *   hold keeps: its statements record the take-down on the holds
- *   (`takenDownWrite`), hide the subject, and settle its open Review
- *   rows, a kit's photos' too, by the moderator; nothing is deleted;
+ * - `keep` — the bytes stay, and its statements say how: a copyright
+ *   takedown writes the hold and the hide, for 30 days; a Remove or a
+ *   removal request's takedown of material a live hold keeps records the
+ *   take-down on the holds (`takenDownWrite`), hides the subject, and
+ *   settles its open Review rows, a kit's photos' too, by the moderator;
  * - `none` — nothing holds it, so the caller deletes it. A quarantine is
  *   always `none`: it keeps its own copy (D-70).
  *
@@ -173,7 +172,7 @@ export type TakeDownHold =
   | { readonly kind: "repeat" }
   | { readonly kind: "none" }
   | {
-      readonly kind: "copyright" | "kept";
+      readonly kind: "keep";
       readonly statements: (
         actionId: string,
       ) => [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
@@ -198,7 +197,7 @@ export async function takeDownHoldOf(
       return { kind: "repeat" };
     }
     return {
-      kind: "copyright",
+      kind: "keep",
       statements: (moderationActionId) =>
         copyrightHoldWrites(db, {
           moderationActionId,
@@ -209,12 +208,14 @@ export async function takeDownHoldOf(
         }),
     };
   }
-  const keeping =
-    input.action === "quarantine" ? "none" : await holdKeepingOf(db, subject);
-  if (keeping === "none") return { kind: "none" };
-  if (keeping === "taken_down") return { kind: "repeat" };
+  if (input.action === "quarantine") return { kind: "none" };
+  const holds = await coveringHoldsOf(db, subject);
+  if (holds.length === 0) return { kind: "none" };
+  if (holds.every((hold) => hold.takenDownBy !== null)) {
+    return { kind: "repeat" };
+  }
   return {
-    kind: "kept",
+    kind: "keep",
     statements: (actionId) => [
       takenDownWrite(db, subject, actionId),
       heldOutOfSight(db, input.subjectType, input.subjectId),
@@ -292,13 +293,6 @@ export function notRestored(actionId: SQLiteColumn): SQL {
 }
 
 /**
- * What a hold leaves a subject's material in, as a Remove or Take it down
- * sees it: `none` when no live hold covers it, `held` when one does, and
- * `taken_down` when every covering hold already carries a take-down.
- */
-type HoldKeeping = "none" | "held" | "taken_down";
-
-/**
  * A subject a take-down names: the kit, or a photo with the kit it is on.
  */
 interface KeptSubject {
@@ -329,20 +323,13 @@ function covering(subject: KeptSubject): SQL | undefined {
 }
 
 /**
-Whether a live hold keeps `subject`'s material, and whether it is already taken down.
+The live holds that keep `subject`'s material, with the take-down each records.
 */
-async function holdKeepingOf(
-  db: Db,
-  subject: KeptSubject,
-): Promise<HoldKeeping> {
-  const holds = await db
+function coveringHoldsOf(db: Db, subject: KeptSubject) {
+  return db
     .select({ takenDownBy: copyrightHolds.takenDownBy })
     .from(copyrightHolds)
     .where(covering(subject));
-  if (holds.length === 0) return "none";
-  return holds.some((hold) => hold.takenDownBy === null)
-    ? "held"
-    : "taken_down";
 }
 
 /**
@@ -373,6 +360,11 @@ interface TakenDownSubject {
   readonly actorId: string;
   readonly subjectType: HeldSubjectType;
   readonly subjectId: string;
+  /**
+  The kit's runner and the kit, from the hold: what the delete owes R2 for.
+  */
+  readonly ownerId: string;
+  readonly entryId: string;
 }
 
 /**
@@ -380,9 +372,7 @@ The most take-downs one sweep deletes; the rest wait for the next.
 */
 const TAKEN_DOWN_PER_SWEEP = 50;
 
-async function takenDownSubjectsDue(
-  db: Db,
-): Promise<TakenDownSubject[]> {
+async function takenDownSubjectsDue(db: Db): Promise<TakenDownSubject[]> {
   const action = moderationActions;
   const stillLive = sql`exists (select 1 from ${copyrightHolds} as "live" where "live"."entry_id" = ${qualified(copyrightHolds, copyrightHolds.entryId)} and "live"."status" in ('hidden', 'purging'))`;
   const stillThere = sql`(case ${qualified(action, action.subjectType)} when 'entry' then exists (select 1 from ${outfitEntries} where ${qualified(outfitEntries, outfitEntries.id)} = ${qualified(action, action.subjectId)}) else exists (select 1 from ${entryPhotos} where ${qualified(entryPhotos, entryPhotos.id)} = ${qualified(action, action.subjectId)}) end)`;
@@ -394,6 +384,8 @@ async function takenDownSubjectsDue(
       // or a photo.
       subjectType: sql<HeldSubjectType>`${action.subjectType}`,
       subjectId: action.subjectId,
+      ownerId: copyrightHolds.ownerId,
+      entryId: copyrightHolds.entryId,
     })
     .from(copyrightHolds)
     .innerJoin(action, eq(action.id, copyrightHolds.takenDownBy))

@@ -354,7 +354,9 @@ async function purgeIfHeld(
 /**
  * The requester's receipt, in the words the row as written earns: hidden
  * where it hid, the confirm link where it waits on one, and otherwise
- * received. One dedupe key, and exactly one of the three conditions holds.
+ * received. One dedupe key, and exactly one of the three conditions holds;
+ * the plain receipt is owed first, so a second debt on the key (which
+ * takes over the row's id and keeps its words) could never carry it.
  */
 function receipts(
   oweWhere: OweEmailWhere,
@@ -389,12 +391,12 @@ function receipts(
       condition,
     );
   return [
-    receipt({ isHidden: true, waits: false }, row.hid(now)),
-    receipt({ isHidden: false, waits: true }, row.is("confirm")),
     receipt(
       { isHidden: false, waits: false },
       sql`${row.hidNothing(now)} and ${row.isNot("confirm")}`,
     ),
+    receipt({ isHidden: true, waits: false }, row.hid(now)),
+    receipt({ isHidden: false, waits: true }, row.is("confirm")),
   ];
 }
 

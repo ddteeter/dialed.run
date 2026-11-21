@@ -1261,3 +1261,90 @@ describe("a take-down of held material (owner, 2026-11-21)", () => {
     expect(await mediaDebts()).toBe(debts);
   });
 });
+
+/**
+A second screened photo on the kit, with its bytes.
+*/
+async function secondPhoto(author: string, entryId: string) {
+  const photoId = newUlid();
+  const key = entryPhotoKeyFor(author, entryId, photoId);
+  await env.MEDIA.put(key, new Uint8Array([4, 5, 6]));
+  await core().insert(entryPhotos).values({
+    id: photoId,
+    entryId,
+    photoKey: key,
+    position: 1,
+    screenStatus: "pass",
+  });
+  return { photoId, key };
+}
+
+describe("which holds a take-down reads (owner, 2026-11-21)", () => {
+  it("owes R2 nothing while a hold keeps the kit: an unnamed object stays", async () => {
+    const { author, entryId, photoId } = await posted();
+    const stray = entryPhotoKeyFor(author, entryId, newUlid());
+    await env.MEDIA.put(stray, new Uint8Array([9]));
+
+    await takeDown("photo", photoId);
+    await takeDown("photo", photoId, "intimate");
+
+    expect(await isStored(stray)).toBe(true);
+  });
+
+  it("deletes a held photo a moderator quarantines, which keeps its own copy", async () => {
+    const { photoId } = await posted();
+    await takeDown("photo", photoId);
+
+    const outcome = await moderateContent(
+      core(),
+      {
+        actorId: "desk",
+        action: "quarantine",
+        subjectType: "photo",
+        subjectId: photoId,
+        reason: "intimate",
+      },
+      quiet,
+    );
+
+    expect(outcome).toBe("removed");
+    expect(await photoRow(photoId)).toBeUndefined();
+  });
+
+  it("leaves another photo's hold alone, and deletes the photo taken down", async () => {
+    const { author, entryId, photoId } = await posted();
+    const other = await secondPhoto(author, entryId);
+    await takeDown("photo", photoId);
+
+    expect(await takeDown("photo", other.photoId, "intimate")).toBe("removed");
+
+    expect(await photoRow(other.photoId)).toBeUndefined();
+    expect(await isStored(other.key)).toBe(false);
+    expect(await takenDownBy(photoId)).toBe(NOT_SET);
+  });
+
+  it("settles only the taken-down photo's review, not its kit's other photos'", async () => {
+    const { author, entryId, photoId } = await posted();
+    const other = await secondPhoto(author, entryId);
+    await takeDown("entry", entryId);
+    await reported("photo", other.photoId);
+
+    await takeDown("photo", photoId, "intimate");
+
+    expect(await openRows()).toStrictEqual([{ status: "pending" }]);
+  });
+
+  it("takes down a kit whose photo's hold is already taken down but whose own is not", async () => {
+    const { entryId, photoId } = await posted();
+    await takeDown("photo", photoId);
+    await takeDown("photo", photoId, "intimate");
+    await takeDown("entry", entryId);
+
+    expect(await takeDown("entry", entryId, "intimate")).toBe("removed");
+
+    expect(await takenDownBy(entryId)).toStrictEqual(expect.any(String));
+    expect(await takeDown("entry", entryId, "intimate")).toBe(
+      "already_removed",
+    );
+  });
+});

@@ -15,7 +15,7 @@ import {
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { removalRequestReceived } from "../../src/lib/contracts/email-kinds";
-import { newUlid } from "../../src/lib/ids";
+import { newUlid, ulidSchema } from "../../src/lib/ids";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
 import { decideRemovalRequest } from "../../src/modules/feed/moderation/removal-requests";
 import {
@@ -27,6 +27,7 @@ import {
   confirmTakedownRequest,
   fileTakedownRequest,
   pendingTakedownRequests,
+  REMOVAL_REQUESTS_PURGE_KEY,
 } from "../../src/modules/safety/takedowns/takedown-requests";
 import {
   ipKey,
@@ -39,6 +40,7 @@ import {
   valveHour,
 } from "../../src/modules/safety/limits/takedown-limits";
 import { emailHandler } from "../../src/modules/ops/owed-email/owed-email";
+import { queriesDuring } from "../d1-spy";
 import { fakeMail } from "../email/helpers";
 import { noPurge, purgeSpy } from "../purge-spy";
 import { oweInCoreWhere } from "../../src/modules/ops/outbox/owe-in-core";
@@ -1377,5 +1379,124 @@ describe("what a filed request names", () => {
       subjectId: photoId,
       entryId: photoId,
     });
+  });
+});
+
+/**
+The reads of one request's own row by its id, outside any batch.
+*/
+function readsById(statements: readonly string[]): string[] {
+  return statements.filter((sql) =>
+    /^select .* from "takedown_requests" where "takedown_requests"\."id" = \?/u.test(
+      sql,
+    ),
+  );
+}
+
+function requestFor(email: string, location: string, key = newUlid()) {
+  return {
+    email,
+    signature: "Sam Runner",
+    location,
+    description: "",
+    isAttested: true as const,
+    idempotencyKey: key,
+    attempt: "token",
+    remoteIp: "203.0.113.9",
+    isLimited: false,
+  };
+}
+
+describe("what a request reads back, and its receipt's words", () => {
+  it("reads its row back to purge only for a link of ours", async () => {
+    const elsewhereReads = await queriesDuring(() =>
+      fileTakedownRequest(
+        core(),
+        requestFor("me@example.com", "https://elsewhere.example/x"),
+        deps,
+        NOW,
+      ),
+    );
+    const ours = await sharedEntry();
+    const oursReads = await queriesDuring(() =>
+      fileTakedownRequest(
+        core(),
+        requestFor("you@example.com", entryLink(ours)),
+        deps,
+        NOW,
+      ),
+    );
+
+    expect(readsById(elsewhereReads.statements)).toStrictEqual([]);
+    expect(readsById(oursReads.statements)).toHaveLength(1);
+  });
+
+  it("answers a second confirm from the one read of its token", async () => {
+    const { request } = await pastTheCap();
+    const token = await confirmTokenFor(request.id);
+    const effects = { oweWhere: oweInCoreWhere, purge: noPurge };
+    await confirmTakedownRequest(core(), token, effects, NOW + 60);
+
+    let answer = "";
+    const { statements } = await queriesDuring(async () => {
+      answer = await confirmTakedownRequest(core(), token, effects, NOW + 120);
+    });
+
+    expect(answer).toBe("confirmed");
+    expect(statements).toHaveLength(1);
+  });
+
+  it("files once when the same request is sent twice at once", async () => {
+    const entryId = await sharedEntry();
+    const key = newUlid();
+
+    const same = requestFor("me@example.com", entryLink(entryId), key);
+    const answers = await Promise.all([
+      fileTakedownRequest(core(), same, deps, NOW),
+      fileTakedownRequest(core(), same, deps, NOW),
+    ]);
+
+    expect(answers).toStrictEqual([
+      { status: "received" },
+      { status: "received" },
+    ]);
+    expect(await core().select().from(takedownRequests)).toHaveLength(1);
+  });
+
+  it("tells a requester whose request hid something exactly that", async () => {
+    const entryId = await sharedEntry();
+    const row = await file("me@example.com", entryLink(entryId));
+
+    const [receipt] = await owedWhere(
+      (email) => email.dedupeKey === `removal_request_received:${row.id}`,
+    );
+    expect(receipt?.email.template).toStrictEqual({
+      kind: "removal_request_received",
+      dueAt: row.dueAt,
+      isHidden: true,
+    });
+  });
+
+  it("tells a requester who must confirm that nothing is hidden yet", async () => {
+    const { request } = await pastTheCap();
+
+    const [receipt] = await owedWhere(
+      (email) => email.dedupeKey === `removal_request_received:${request.id}`,
+    );
+    expect(receipt?.email.template).toStrictEqual({
+      kind: "removal_request_received",
+      dueAt: request.dueAt,
+      isHidden: false,
+      confirmRequestId: request.id,
+    });
+  });
+});
+
+describe("the removal requests' purge count", () => {
+  it("is kept under a key of its own, which no runner's id can be", () => {
+    expect(REMOVAL_REQUESTS_PURGE_KEY).toMatch(/^[a-z-]+$/u);
+    expect(ulidSchema.safeParse(REMOVAL_REQUESTS_PURGE_KEY).success).toBe(
+      false,
+    );
   });
 });

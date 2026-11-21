@@ -313,10 +313,20 @@ async function takeDownPlanOf(
   target: Target,
 ): Promise<TakeDownPlan | undefined> {
   const hold = await takeDownHoldOf(db, input, target);
-  if (hold.kind === "repeat") return;
-  return hold.kind === "none"
-    ? { keepsBytes: false, statements: () => deletions(db, input, target) }
-    : { keepsBytes: true, statements: hold.statements };
+  switch (hold.kind) {
+    case "repeat": {
+      return undefined;
+    }
+    case "none": {
+      return {
+        keepsBytes: false,
+        statements: () => deletions(db, input, target),
+      };
+    }
+    case "keep": {
+      return { keepsBytes: true, statements: hold.statements };
+    }
+  }
 }
 
 /**
@@ -592,20 +602,19 @@ export async function sweepCopyrightHolds(
 
 /**
  * A subject taken down under a hold, deleted once no live hold keeps it,
- * with the statements a Remove uses and in the take-down's name. One that
- * is gone since answers no target and is left alone.
+ * with the statements a Remove uses and in the take-down's name. The
+ * statements match nothing once it is gone, so a repeat deletes nothing.
  */
 async function deleteTakenDown(
   db: Db,
-  due: Pick<ModerateInput, "actorId" | "subjectType" | "subjectId">,
+  due: Pick<ModerateInput, "actorId" | "subjectType" | "subjectId"> &
+    Pick<Target, "ownerId" | "entryId">,
   report: Report,
 ): Promise<void> {
-  const target = await targetOf(db, due.subjectType, due.subjectId);
-  if (target === undefined) return;
   await commit(
     db,
-    deletions(db, due, target),
-    mediaDebts(target.ownerId, [target.entryId]),
+    deletions(db, due, due),
+    mediaDebts(due.ownerId, [due.entryId]),
     report,
   );
 }
