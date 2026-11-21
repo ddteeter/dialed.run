@@ -6,8 +6,8 @@ import {
 import type { JSX } from "react";
 import { useEffect, useRef, useState } from "react";
 
-import type { Units } from "../../../lib/contracts";
-import { newUlid } from "../../../lib/ids";
+import type { Units } from "../../../../lib/contracts";
+import { newUlid } from "../../../../lib/ids";
 import {
   classifyFailure,
   FileWell,
@@ -15,18 +15,18 @@ import {
   FormFailureBand,
   FormStatus,
   LOG_FLOW,
-} from "../../../ui";
-import type { FormFailure } from "../../../ui";
+} from "../../../../ui";
+import type { FormFailure } from "../../../../ui";
 import {
   STALL_AFTER_MS,
   importPollIntervalMs,
   isReading,
 } from "../import-polling";
 import type { FileUpload, ImportOutcome } from "../imports";
-import { checkUpload, parseFailureSentence } from "../upload-limits";
-import { GarminImport } from "./GarminImport";
-import type { GarminImportActions } from "./GarminImport";
-import { weatherSaid } from "./ConditionsBlock";
+import { checkUpload, parseFailureSentence } from "../../upload-limits";
+import { GarminImport } from "../../garmin/components/GarminImport";
+import type { GarminImportActions } from "../../garmin/components/GarminImport";
+import { weatherSaid } from "../../components/ConditionsBlock";
 import { DuplicateCard, focusIfLost, ParsedCard } from "./ParsedCard";
 import type { Retime } from "./ParsedCard";
 

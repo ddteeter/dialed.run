@@ -3,14 +3,14 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { GarminImport } from "../../src/modules/runs/components/GarminImport";
-import type { GarminImportActions } from "../../src/modules/runs/components/GarminImport";
-import { UploadForm } from "../../src/modules/runs/components/UploadForm";
+import { GarminImport } from "../../src/modules/runs/garmin/components/GarminImport";
+import type { GarminImportActions } from "../../src/modules/runs/garmin/components/GarminImport";
+import { UploadForm } from "../../src/modules/runs/imports/components/UploadForm";
 import type {
   GarminPicker,
   GarminPickerRow,
 } from "../../src/modules/runs/garmin/service";
-import type { ImportOutcome } from "../../src/modules/runs/imports";
+import type { ImportOutcome } from "../../src/modules/runs/imports/imports";
 import { SAT_MORNING, renderWithRouter, runSummary } from "./run-fixtures";
 
 /**

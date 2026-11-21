@@ -9,7 +9,7 @@ import {
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { StravaConnect } from "../../src/modules/runs/components/StravaConnect";
+import { StravaConnect } from "../../src/modules/runs/strava/components/StravaConnect";
 import { INK_PILL, SECONDARY_PILL } from "../../src/ui";
 import { expectBusy } from "../ui/unavailable";
 import { expectConsentBeforeButton } from "../ui/strava-consent";

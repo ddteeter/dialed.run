@@ -7,7 +7,7 @@ views {
         description 'The imports row is the durable marker'
       }
 
-    // source: src/modules/runs/functions.ts startFileImport; src/modules/runs/imports.ts startFileUpload, repeatOf; src/modules/runs/components/UploadForm.tsx freshAttempt
+    // source: src/modules/runs/functions.ts startFileImport; src/modules/runs/imports/imports.ts startFileUpload, repeatOf; src/modules/runs/imports/components/UploadForm.tsx freshAttempt
     runner -> cf.app.runs.upload 'uploads a run file, with an idempotency key' {
       notes '''
         **Guard: the idempotency key.** The form mints a key for each file the runner picks, and resends it on every retry of that file.
@@ -18,7 +18,7 @@ views {
       '''
       navigateTo importUpload
     }
-    // source: src/modules/runs/imports.ts startImport (importBucket.put, the delete on a failed insert and its report)
+    // source: src/modules/runs/imports/imports.ts startImport (importBucket.put, the delete on a failed insert and its report)
     cf.app.runs.upload -> cf.importsBucket 'stores the raw file' {
       notes '''
         **Not atomic with the next step.** R2 and D1 are two systems.
@@ -28,13 +28,13 @@ views {
         An object left that way, or by a Worker that dies between the two writes, goes only when the account is purged.
       '''
     }
-    // source: src/modules/runs/imports.ts startImport
+    // source: src/modules/runs/imports/imports.ts startImport
     cf.app.runs.upload -> cf.coreDb 'inserts the import row: pending' {
       notes '''
         **This row is the recovery marker.** From here on, `pending` means the work is still owed, whatever happens to the request, the queue or the Worker.
       '''
     }
-    // source: src/modules/runs/imports.ts startImport, startFileUpload, repeatOf; src/modules/runs/queue-messages.ts importJob; src/modules/dispatch/scheduled.ts redispatchStalledImports, IMPORT_STALL_GRACE_S
+    // source: src/modules/runs/imports/imports.ts startImport, startFileUpload, repeatOf; src/modules/runs/queue-messages.ts importJob; src/modules/dispatch/scheduled.ts redispatchStalledImports, IMPORT_STALL_GRACE_S
     cf.app.runs.upload -[async]-> cf.importsQueue 'enqueues ImportJob' {
       notes '''
         **Not atomic with the row.** The send can fail, or the Worker can die first.
@@ -45,7 +45,7 @@ views {
       '''
       navigateTo importRecovery
     }
-    // source: src/modules/runs/imports.ts startImport; src/modules/runs/import-polling.ts importPollIntervalMs, POLL_INTERVAL_MS, POLL_BUDGET_MS, STALL_AFTER_MS
+    // source: src/modules/runs/imports/imports.ts startImport; src/modules/runs/imports/import-polling.ts importPollIntervalMs, POLL_INTERVAL_MS, POLL_BUDGET_MS, STALL_AFTER_MS
     runner <- cf.app.runs.upload 'answers with the import id' {
       notes '''
         **Timing boundary: the request ends here.** One attempt, no retries inside it.
@@ -118,7 +118,7 @@ views {
   dynamic view importUpload {
     title 'Before a run file is stored'
 
-    // source: src/modules/runs/components/UploadForm.tsx freshAttempt, checkUpload; src/modules/runs/inputs.ts importUploadFrom; src/modules/runs/upload-limits.ts MAX_IMPORT_BYTES
+    // source: src/modules/runs/imports/components/UploadForm.tsx freshAttempt, checkUpload; src/modules/runs/inputs.ts importUploadFrom; src/modules/runs/upload-limits.ts MAX_IMPORT_BYTES
     runner -> cf.app.runs.upload 'sends the file and its key' {
       notes '''
         **Guard: the idempotency key.** Minted for each file the runner picks, and resent on every retry of that file.
@@ -126,13 +126,13 @@ views {
         **Bounded.** The form checks the file by the server\'s own rule and refuses a bad one before sending it. A request with no file in it, or with one over 25 MB, the largest format\'s cap, is refused before anything else happens.
       '''
     }
-    // source: src/modules/runs/imports.ts startFileUpload, repeatOf
+    // source: src/modules/runs/imports/imports.ts startFileUpload, repeatOf
     cf.app.runs.upload -> cf.coreDb 'looks for an import with that key' {
       notes '''
         **Guard: the idempotency key.** A repeat returns the first import here. It is not counted again, and nothing is stored or enqueued.
       '''
     }
-    // source: src/modules/runs/imports.ts startFileUpload, isWithinUploadCap; src/modules/runs/upload-limits.ts UPLOADS_PER_DAY, UPLOAD_REFUSALS; src/modules/email/rate-limit.ts isWithinRateLimit
+    // source: src/modules/runs/imports/imports.ts startFileUpload, isWithinUploadCap; src/modules/runs/upload-limits.ts UPLOADS_PER_DAY, UPLOAD_REFUSALS; src/modules/email/rate-limit.ts isWithinRateLimit
     cf.app.runs.upload -> cf.coreDb 'counts the upload against the runner\'s day' {
       notes '''
         **Guard: 30 uploads a runner a day.** The count is a write. Past 30, the runner reads that they can upload more tomorrow, and nothing is stored.
@@ -140,7 +140,7 @@ views {
         A file the next step refuses has already used one of the 30.
       '''
     }
-    // source: src/modules/runs/imports.ts startImport; src/modules/runs/upload-limits.ts checkUpload, IMPORT_EXTENSIONS, IMPORT_BYTE_CAPS, UPLOAD_REFUSALS
+    // source: src/modules/runs/imports/imports.ts startImport; src/modules/runs/upload-limits.ts checkUpload, IMPORT_EXTENSIONS, IMPORT_BYTE_CAPS, UPLOAD_REFUSALS
     cf.app.runs.upload -> cf.importsBucket 'checks the file, then stores it' {
       notes '''
         **Guard: the file check.** A file that is not GPX, TCX or FIT, is empty, or is over its format\'s cap is refused with a sentence the runner reads, before anything is stored. The cap is 10 MB for a FIT file and 25 MB for a GPX or a TCX.
@@ -160,7 +160,7 @@ views {
       }
 
     try {
-      // source: src/modules/runs/imports.ts startImport (queue.send); src/modules/dispatch/scheduled.ts redispatchStalledImports
+      // source: src/modules/runs/imports/imports.ts startImport (queue.send); src/modules/dispatch/scheduled.ts redispatchStalledImports
       cf.app.runs.upload -[async]-> cf.importsQueue 'enqueues ImportJob'
     }
     catch 'the send fails, or the Worker dies first' {

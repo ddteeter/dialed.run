@@ -4,7 +4,7 @@ import {
   STALL_AFTER_MS,
   importPollIntervalMs,
   isReading,
-} from "../../src/modules/runs/import-polling";
+} from "../../src/modules/runs/imports/import-polling";
 
 /**
  * When A1 asks again, and when it stops.

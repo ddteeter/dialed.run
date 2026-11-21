@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";
 import { withBell } from "../../modules/notifications/with-bell";
-import { StravaConnect } from "../../modules/runs/components/StravaConnect";
+import { StravaConnect } from "../../modules/runs/strava/components/StravaConnect";
 import {
   disconnectStravaFn,
   getStravaStatusFn,

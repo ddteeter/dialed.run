@@ -2,14 +2,14 @@ import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 import { useEffect, useId, useState } from "react";
 
-import type { Units } from "../../../lib/contracts";
+import type { Units } from "../../../../lib/contracts";
 import {
   distanceNumber,
   formatDuration,
   spokenDuration,
-} from "../../../lib/contracts/measures";
-import { dayLabel } from "../../../lib/dates";
-import { newUlid } from "../../../lib/ids";
+} from "../../../../lib/contracts/measures";
+import { dayLabel } from "../../../../lib/dates";
+import { newUlid } from "../../../../lib/ids";
 import {
   Bracketed,
   classifyFailure,
@@ -19,13 +19,13 @@ import {
   MONO_CLASS,
   Skeleton,
   Spoken,
-} from "../../../ui";
-import type { ControlFailure } from "../../../ui";
+} from "../../../../ui";
+import type { ControlFailure } from "../../../../ui";
 import type {
   GarminImport as GarminImportResult,
   GarminPicker,
   GarminPickerRow,
-} from "../garmin/service";
+} from "../service";
 
 /**
  * The two server functions, handed in by the route, in their own shapes.

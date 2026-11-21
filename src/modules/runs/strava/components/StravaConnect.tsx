@@ -11,7 +11,7 @@ import {
   SECONDARY_PILL,
   StravaConsent,
   useControlAction,
-} from "../../../ui";
+} from "../../../../ui";
 
 /**
  * The server functions, handed in rather than imported.

@@ -3,7 +3,7 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import { viewerUnitsQuery } from "../../modules/feed/functions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";
-import { UploadForm } from "../../modules/runs/components/UploadForm";
+import { UploadForm } from "../../modules/runs/imports/components/UploadForm";
 import {
   getGarminPickerFn,
   getImportOutcomeFn,
@@ -13,7 +13,7 @@ import {
   startFileImport,
 } from "../../modules/runs/functions";
 import { newRunSearch } from "../../modules/runs/inputs";
-import { ReminderDayLine } from "../../modules/runs/components/ReminderDayLine";
+import { ReminderDayLine } from "../../modules/runs/strava/components/ReminderDayLine";
 import { Page } from "../../ui";
 
 /**

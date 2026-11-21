@@ -4,7 +4,7 @@ import { viewerUnitsQuery } from "../../modules/feed/functions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";
 import { RunList } from "../../modules/runs/components/RunList";
-import { StravaRemindersLine } from "../../modules/runs/components/StravaRemindersLine";
+import { StravaRemindersLine } from "../../modules/runs/strava/components/StravaRemindersLine";
 import {
   getStravaStatusFn,
   listRunSummariesFn,

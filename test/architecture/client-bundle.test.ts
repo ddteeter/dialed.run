@@ -18,7 +18,7 @@ import { describe, expect, it } from "vitest";
  *   which kept `fast-xml-parser` and its four dependencies (~63 kB);
  * - the 23 `sqliteTable(…)` calls across `src/db/schema-*.ts`, which kept
  *   drizzle's column builders and the schema itself (~7 kB), and through
- *   `runs/inputs.ts` → `runs/imports.ts` the Garmin FIT SDK with them
+ *   `runs/inputs.ts` → `runs/imports/imports.ts` the Garmin FIT SDK with them
  *   (~19 kB more once that edge was cut).
  *
  * **Nothing failed while that was true**, which is why it went unnoticed

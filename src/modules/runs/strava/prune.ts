@@ -15,7 +15,7 @@
  * event. So a key only has to outlive the retries, and seven days is
  * orders of magnitude more than that.
  *
- * Runs from the daily digest's firing (`modules/ops/scheduled.ts`) — no
+ * Runs from the daily digest's firing (`modules/dispatch/scheduled.ts`) — no
  * cron of its own. Every statement is re-runnable (law 1): a second pass
  * finds nothing older than the cutoff left to change.
  */

@@ -4,7 +4,7 @@ import { newUlid } from "../../src/lib/ids";
 import {
   ImportUploadError,
   MAX_IMPORT_BYTES,
-} from "../../src/modules/runs/imports";
+} from "../../src/modules/runs/imports/imports";
 import {
   newRunSearch,
   conditionsBandInput,

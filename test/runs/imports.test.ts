@@ -16,7 +16,7 @@ import {
   getImportOutcome,
   startFileUpload,
   startImport,
-} from "../../src/modules/runs/imports";
+} from "../../src/modules/runs/imports/imports";
 import { UPLOADS_PER_DAY } from "../../src/modules/runs/upload-limits";
 import { countRow } from "../rate-limit-rows";
 import { newUlid } from "../../src/lib/ids";

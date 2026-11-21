@@ -3,16 +3,16 @@ import type { JSX, ReactNode } from "react";
 import { useEffect, useId, useState } from "react";
 import { z } from "zod";
 
-import type { Units } from "../../../lib/contracts";
-import { dayLabel, startAtTimeOfDay, timeOfDay } from "../../../lib/dates";
+import type { Units } from "../../../../lib/contracts";
+import { dayLabel, startAtTimeOfDay, timeOfDay } from "../../../../lib/dates";
 import {
   distanceNumber,
   formatDuration,
   measuredLine,
   paceForms,
   spokenDuration,
-} from "../../../lib/contracts/measures";
-import { precipClassOf } from "../../../lib/contracts/temperature";
+} from "../../../../lib/contracts/measures";
+import { precipClassOf } from "../../../../lib/contracts/temperature";
 import {
   ACTION_PRIMARY,
   ControlFailureBand,
@@ -31,11 +31,11 @@ import {
   type ControlFailure,
   useFormSubmit,
   WeatherAttribution,
-} from "../../../ui";
-import { runClockLabel } from "../run-clock";
-import { hasProvidersReading } from "../run-conditions";
-import type { RunSummary } from "../service";
-import { ConditionsRow } from "./ConditionsBlock";
+} from "../../../../ui";
+import { runClockLabel } from "../../run-clock";
+import { hasProvidersReading } from "../../run-conditions";
+import type { RunSummary } from "../../service";
+import { ConditionsRow } from "../../components/ConditionsBlock";
 
 /**
  * The server function that moves a run's start, in its own shape.

@@ -147,7 +147,7 @@ const IMPORT_REFUSALS: Readonly<Record<FilePartProblem, string>> = {
  *
  * Size is checked here, against the declared size, before the file's bytes
  * are copied out of the form (the request body was bounded before the
- * framework read it, `modules/ops/body-cap.ts`). `startImport` checks the cap again
+ * framework read it, `modules/ops/edge/body-cap.ts`). `startImport` checks the cap again
  * against the bytes it was actually handed — this is the early exit, not
  * the guarantee. The key is optional because a form that predates it still
  * sends a file and nothing else.
