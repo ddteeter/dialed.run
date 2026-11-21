@@ -313,10 +313,8 @@ async function takeDownPlanOf(
   target: Target,
 ): Promise<TakeDownPlan | undefined> {
   const hold = await takeDownHoldOf(db, input, target);
-  switch (hold.kind) {
-    case "repeat": {
-      return undefined;
-    }
+  // A repeat answers nothing, and so does a kind this does not know.
+  switch (hold?.kind) {
     case "none": {
       return {
         keepsBytes: false,

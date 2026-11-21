@@ -57,6 +57,7 @@ import { otherPhotosOf, type OtherPhotos } from "../review";
 import { photoMatchesOf, type PhotoMatches } from "../review";
 import {
   filedSubjectOf,
+  namedIds,
   requestSubjectOf,
   requestSubjectsOf,
   subjectPhotoKeysOf,
@@ -906,7 +907,7 @@ async function ownersOf(
   db: Db,
   subjects: readonly (TakedownSubject | undefined)[],
 ): Promise<Map<string, string>> {
-  const entryIds = subjects.flatMap((subject) => subject?.entryId ?? []);
+  const entryIds = namedIds(subjects, (subject) => subject.entryId);
   // The author's handle as a column of the kit's own row, by
   // `user_profiles`' primary key.
   const handle = sql<

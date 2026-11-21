@@ -156,8 +156,9 @@ const LIVE = ["hidden", "purging"] as const;
 /**
  * How a takedown goes, as the holds see it (D-130; owner, 2026-11-21):
  *
- * - `repeat` — a copyright takedown of what a live hold already holds,
- *   or a take-down of material every covering hold already records;
+ * - nothing, for a repeat — a copyright takedown of what a live hold
+ *   already holds, or a take-down of material every covering hold
+ *   already records;
  * - `keep` — the bytes stay, and its statements say how: a copyright
  *   takedown writes the hold and the hide, for 30 days; a Remove or a
  *   removal request's takedown of material a live hold keeps records the
@@ -169,7 +170,6 @@ const LIVE = ["hidden", "purging"] as const;
  * `statements` take the audit row's id, which the caller mints.
  */
 export type TakeDownHold =
-  | { readonly kind: "repeat" }
   | { readonly kind: "none" }
   | {
       readonly kind: "keep";
@@ -190,12 +190,10 @@ export async function takeDownHoldOf(
   db: Db,
   input: TakeDownRequest,
   target: { readonly ownerId: string; readonly entryId: string },
-): Promise<TakeDownHold> {
+): Promise<TakeDownHold | undefined> {
   const subject = { ...input, entryId: target.entryId };
   if (isCopyrightTakedown(input.action, input.reason)) {
-    if (await isCopyrightHeld(db, input.subjectType, input.subjectId)) {
-      return { kind: "repeat" };
-    }
+    if (await isCopyrightHeld(db, input.subjectType, input.subjectId)) return;
     return {
       kind: "keep",
       statements: (moderationActionId) =>
@@ -211,9 +209,7 @@ export async function takeDownHoldOf(
   if (input.action === "quarantine") return { kind: "none" };
   const holds = await coveringHoldsOf(db, subject);
   if (holds.length === 0) return { kind: "none" };
-  if (holds.every((hold) => hold.takenDownBy !== null)) {
-    return { kind: "repeat" };
-  }
+  if (holds.every((hold) => hold.takenDownBy !== null)) return;
   return {
     kind: "keep",
     statements: (actionId) => [
