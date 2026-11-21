@@ -1575,6 +1575,9 @@ export const takedownRequests = /*#__PURE__*/ sqliteTable(
     // to a handle's shape. Not checked against anyone: it is a lead for
     // the operator, not a subject.
     posterUsername: text("poster_username"),
+    // When a request that hid nothing alerted every operator one by one:
+    // the hour's allowance of such alerts counts these.
+    alertedAt: integer("alerted_at"),
   },
   (t) => [
     uniqueIndex("takedown_requests_idempotency").on(
@@ -1588,6 +1591,8 @@ export const takedownRequests = /*#__PURE__*/ sqliteTable(
     index("takedown_requests_ip_status").on(t.ipKey, t.status),
     // The valve: what hid something in the last hour.
     index("takedown_requests_held_at").on(t.heldAt),
+    // The alerts of requests that hid nothing, in the last hour.
+    index("takedown_requests_alerted_at").on(t.alertedAt),
     // The confirm link's lookup.
     uniqueIndex("takedown_requests_confirm_token").on(t.confirmTokenHash),
     // The 3-year sweep (D-131, design 150): requests decided before its
@@ -1932,6 +1937,10 @@ export const copyrightHolds = /*#__PURE__*/ sqliteTable(
     caseClosedBy: text("case_closed_by"),
     // When the sweep restored or purged it.
     settledAt: integer("settled_at"),
+    // The Remove or Take it down (its moderation action) made while this
+    // hold kept the material: the hold's end then deletes the subject
+    // rather than restoring it.
+    takenDownBy: text("taken_down_by"),
   },
   (t) => [
     uniqueIndex("copyright_holds_action").on(t.moderationActionId),
