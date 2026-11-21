@@ -27,6 +27,7 @@ import {
 import { AUTH_COPY } from "./auth-copy";
 import { CLOSED_AUTH_PATHS } from "./closed-paths";
 import { clearSignInTries, countSignInTry } from "./sign-in-limit";
+import { cutUserAgent, endOldestSessions } from "./session-cap";
 import { holdSocialBody } from "./social-body";
 import {
   BREACHED_CODE,
@@ -401,6 +402,12 @@ export function createAuth({
             await access.confirm(user.id);
             if (!user.emailVerified) await later(mail.newAccount(user));
           },
+        },
+      },
+      session: {
+        create: {
+          before: (row) => Promise.resolve(cutUserAgent(row)),
+          after: (row) => endOldestSessions(db, row),
         },
       },
       account: {

@@ -46,6 +46,9 @@ export const session = /*#__PURE__*/ sqliteTable(
     // Better Auth deletes an expired row only when someone presents it;
     // the daily sweep of the rest (`sweepExpiredAuthRows`) reads by this.
     index("session_expires_at").on(t.expiresAt),
+    // A runner's sessions, newest first: the live-session cap reads them
+    // on every sign-in, and a ban's or deletion's delete by `user_id`.
+    index("session_user_id").on(t.userId, t.createdAt),
   ],
 );
 
