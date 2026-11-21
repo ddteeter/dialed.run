@@ -47,6 +47,7 @@ import {
   makeProduct,
   makeRun,
   makeUser,
+  makeVerifiedUser,
   resetSafetyTables,
 } from "./helpers";
 import { nowSeconds } from "../../src/lib/now";
@@ -680,7 +681,7 @@ describe("what a decision writes", () => {
     // `subjectWriters` has no profile branch on purpose: removing a
     // person is a ban, with its own path and its own notice. A resolve
     // here must settle the queue row and touch nothing else.
-    const subject = await makeUser();
+    const subject = await makeVerifiedUser();
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
       await fileReport(
         {
@@ -1162,7 +1163,7 @@ describe("the queue itself", () => {
   });
 
   it("names a reported runner and a reported product", async () => {
-    const subject = await makeUser();
+    const subject = await makeVerifiedUser();
     await core()
       .update(userProfiles)
       .set({ username: "mark_t" })
@@ -1204,7 +1205,7 @@ describe("the queue itself", () => {
     // and product ids are different namespaces that happen to share a
     // column type — and a lookup keyed on the id alone would label the
     // reported runner with the product's name.
-    const subject = await makeUser();
+    const subject = await makeVerifiedUser();
     await core()
       .update(userProfiles)
       .set({ username: "mark_t" })

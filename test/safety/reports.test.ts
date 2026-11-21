@@ -39,6 +39,7 @@ import {
   makeProduct,
   makeRun,
   makeUser,
+  makeVerifiedUser,
   opened,
   resetSafetyTables,
 } from "./helpers";
@@ -472,7 +473,7 @@ describe("W1's block-with-report checkbox", () => {
 
   it("blocks the reported runner in the same call", async () => {
     const reporter = await makeUser();
-    const subject = await makeUser();
+    const subject = await makeVerifiedUser();
 
     await fileReport(
       {
@@ -494,7 +495,7 @@ describe("W1's block-with-report checkbox", () => {
 
   it("does not block when the box was not ticked", async () => {
     const reporter = await makeUser();
-    const subject = await makeUser();
+    const subject = await makeVerifiedUser();
 
     await fileReport(
       {
@@ -538,7 +539,7 @@ describe("subjects with no moderation column of their own", () => {
   beforeEach(resetSafetyTables);
 
   it("queues a reported profile without hiding anything", async () => {
-    const subject = await makeUser();
+    const subject = await makeVerifiedUser();
 
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
       const reporter = await makeUser();

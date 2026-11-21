@@ -3,7 +3,8 @@
  * SA-M10).
  *
  * A report names a subject the reporter can see: a kit or kit photo that
- * is theirs or shared with runners, or a profile or product that exists.
+ * is theirs or shared with runners, a runner in standing who is in no
+ * block with them, or a product that exists.
  * The read has no moderation clause and no reported-by clause on purpose:
  * a kit already hidden for one reason may still be reported for another
  * (an intimate image's 48 hours start at its own report), and a repeat of
@@ -24,11 +25,13 @@ import {
   userProfiles,
 } from "../../../db/schema-core";
 import { hasRowWhere } from "../../../lib/sql/keyed-read";
+import { runnerInStanding } from "../../../db/runner-standing";
 import { forgetRateLimit, isWithinRateLimit } from "../../email";
 import {
   AT_ONCE_HIDES_PER_DAY,
   REPORTS_PER_DAY,
   type ReportSubjectType,
+  notBlockedEitherWay,
 } from "../rules";
 
 type Db = ReturnType<typeof drizzle>;
@@ -90,13 +93,18 @@ const reportableReads: Record<
 > = {
   entry: isKitSeen,
   photo: isKitPhotoSeen,
-  // A profile a reporter can see has a handle, so a profile row.
-  profile: (db, _reporterId, subjectId) =>
+  // A profile the reporter could see: a runner in standing (not closed,
+  // leaving or unconfirmed) and in no block with the reporter either way.
+  profile: (db, reporterId, subjectId) =>
     hasRowWhere(
       db,
       userProfiles,
       userProfiles.userId,
-      eq(userProfiles.userId, subjectId),
+      and(
+        eq(userProfiles.userId, subjectId),
+        runnerInStanding(),
+        notBlockedEitherWay(reporterId, userProfiles.userId),
+      ),
     ),
   product: (db, _reporterId, subjectId) =>
     hasRowWhere(db, products, products.id, eq(products.id, subjectId)),

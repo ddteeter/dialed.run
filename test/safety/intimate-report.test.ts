@@ -26,6 +26,7 @@ import {
   makeEntry,
   makeRun,
   makeUser,
+  makeVerifiedUser,
   opened,
   resetSafetyTables,
 } from "./helpers";
@@ -196,7 +197,7 @@ describe("one report of an intimate image", () => {
 
   it("queues a profile for a person without an alert, since it hides nothing", async () => {
     Reflect.set(env, "ADMIN_USER_IDS", "op-one");
-    const profile = await makeUser();
+    const profile = await makeVerifiedUser();
 
     const result = await fileReport(
       {
