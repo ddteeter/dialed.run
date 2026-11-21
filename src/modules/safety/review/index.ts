@@ -20,8 +20,6 @@ export {
   type ReviewSubjectType,
   settledHere,
   settleOpenReviews,
-  type ShownRow,
-  stillAsShown,
   wasFlaggedAutomatically,
 } from "./review";
 export { withdrawnGarmentUnderReview, withdrawnUnderReview } from "./withdrawn";

@@ -55,8 +55,6 @@ export {
   reviewResolution,
   settleOpenReviews,
   settledHere,
-  type ShownRow,
-  stillAsShown,
   wasFlaggedAutomatically,
   withdrawnGarmentUnderReview,
   withdrawnUnderReview,

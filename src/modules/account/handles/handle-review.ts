@@ -11,6 +11,7 @@
  * import safety's barrel, and safety may not import account's.
  */
 import { and, eq } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { drizzle } from "drizzle-orm/d1";
 
@@ -24,10 +25,8 @@ import {
   reporterNotices,
   reviewResolution,
   settledHere,
-  stillAsShown,
   type HandleReview,
   type HandleReviewValues,
-  type ShownRow,
 } from "../../safety";
 import { forceRename } from "./username";
 
@@ -37,7 +36,14 @@ type Db = ReturnType<typeof drizzle>;
  * The row a decision here is on: its id, the runner it is about, and the
  * row as the page showed it.
  */
-type HandleRow = Readonly<{ queueId: string; userId: string; shown: ShownRow }>;
+type HandleRow = Readonly<{
+  queueId: string;
+  userId: string;
+  /**
+  The row still as the page showed it, which the settle holds to.
+  */
+  unchanged: SQL;
+}>;
 
 /**
  * Keep: the verdict becomes `clear`, over the flag it answers only — a
@@ -80,7 +86,7 @@ async function keep(
       queueId,
       reviewerId,
       settled.status,
-      stillAsShown(row.shown),
+      row.unchanged,
       settled.at,
     ).returning({ id: reviewQueue.id }),
     cleared,
@@ -119,7 +125,7 @@ async function rename(
         row.queueId,
         input.reviewerId,
         "removed",
-        and(onlyIf, stillAsShown(row.shown)),
+        and(onlyIf, row.unchanged),
       ),
     ],
   });
@@ -150,7 +156,11 @@ export async function reviewFlaggedHandle(
   const subject = await openReviewRow(queueId, shown);
   if (typeof subject === "string") return { outcome: subject };
   if (subject.subjectType !== "profile") return { outcome: "not_found" };
-  const row = { queueId, userId: subject.subjectId, shown };
+  const row = {
+    queueId,
+    userId: subject.subjectId,
+    unchanged: subject.unchanged,
+  };
   return decision.action === "keep"
     ? keep(db, row, reviewerId)
     : rename(db, row, { reviewerId, decision });

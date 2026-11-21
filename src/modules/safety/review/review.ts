@@ -794,6 +794,11 @@ type OpenRow =
        * decision made on the row as read lands only while it is unchanged.
        */
       openedAt: number | null;
+      /**
+       * The row still as read: what a decision's settle holds to
+       * (`stillAsShown`), handed to account's Keep and Rename with it.
+       */
+      unchanged: SQL;
     };
 
 /**
@@ -835,6 +840,7 @@ export async function openRow(
     subjectId: row.subjectId,
     source: row.source,
     openedAt: row.openedAt,
+    unchanged: stillAsShown(row),
   };
 }
 
@@ -842,9 +848,9 @@ export async function openRow(
  * The row not re-opened since it was read or shown (SA-L11): what a
  * decision's settle also holds to, so a report that re-opened the row in
  * between is left for a person rather than settled on what was read
- * before it. Exported for account's Keep and Rename on a flagged handle.
+ * before it. Account's Keep and Rename get it on the row they read.
  */
-export function stillAsShown(row: ShownRow): SQL {
+function stillAsShown(row: ShownRow): SQL {
   return sql`${reviewQueue.openedAt} is ${row.openedAt} and ${reviewQueue.source} = ${row.source}`;
 }
 
@@ -948,7 +954,7 @@ export async function resolveReview(
       queueId,
       reviewerId,
       settled.status,
-      stillAsShown(row),
+      row.unchanged,
       settled.at,
     ).returning({ id: reviewQueue.id }),
     ...subjectWritesFor(row, decision, here),
