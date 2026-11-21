@@ -337,7 +337,6 @@ model {
   cf.app.safety.takedowns -[imports]-> cf.app.email
   cf.app.safety.takedowns -[imports]-> cf.app.safety.limits
   cf.app.safety.takedowns -[imports]-> cf.app.safety.notices
-  cf.app.safety.takedowns -[imports]-> cf.app.safety.reports
   cf.app.safety.takedowns -[imports]-> cf.app.safety.review
   cf.app.safety.takedowns -[imports]-> cf.app.safety.rules
   cf.app.weather -[imports]-> cf.app.email
