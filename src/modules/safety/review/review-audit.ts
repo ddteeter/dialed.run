@@ -25,12 +25,14 @@ import type { ReportReason } from "../rules";
 
 /**
  * One reporter, oldest first: the handle they go by now (a closed
- * account's is gone), what they picked, and when.
+ * account's is gone), what they picked, when, and what they wrote in
+ * "Anything else", if anything.
  */
 export interface Reporter {
   handle: string | null;
   reason: ReportReason;
   createdAt: number;
+  note: string | null;
 }
 
 export async function reportersFor(
@@ -66,6 +68,7 @@ export async function reportersFor(
         handle: userProfiles.username,
         reason: reports.reason,
         createdAt: reports.createdAt,
+        note: reports.note,
       })
       .from(reviewQueue)
       .innerJoin(reports, sameSubject)

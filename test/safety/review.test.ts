@@ -1072,14 +1072,21 @@ describe("the queue itself", () => {
 
     // "@n8's account stays open": the author, not a reporter, and on an
     // entry with no photo as much as on one with.
-    expect(subjectOf(bare)).toStrictEqual({ photoKeys: [], owner: "n8" });
+    // Each names the kit it opens, the photo's being its kit.
+    expect(subjectOf(bare)).toStrictEqual({
+      photoKeys: [],
+      owner: "n8",
+      kitId: bare,
+    });
     expect(subjectOf(pictured)).toStrictEqual({
       photoKeys: [`entries/${author}/${pictured}/0`],
       owner: "n8",
+      kitId: pictured,
     });
     expect(subjectOf(photoId)).toStrictEqual({
       photoKeys: [`entries/${author}/${pictured}/0`],
       owner: "n8",
+      kitId: pictured,
     });
   });
 
@@ -1156,9 +1163,11 @@ describe("the queue itself", () => {
 
     // The image is what is being judged; the author is a line of text.
     // An inner join to the entry dropped both.
+    // And no kit to open.
     expect(queued?.subject).toStrictEqual({
       photoKeys: [orphanKey],
       owner: undefined,
+      kitId: undefined,
     });
   });
 

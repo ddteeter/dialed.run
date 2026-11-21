@@ -223,6 +223,12 @@ export interface QueueSubject {
    * · Shoes · In use". Absent on every other row.
    */
   garmentLine?: string | undefined;
+  /**
+   * The kit a reported kit's or kit photo's row is about, which the row
+   * opens on the Desk (`/desk/kit/$entryId`), where its garments' names
+   * are. Absent on every other row, and on a photo whose kit is gone.
+   */
+  kitId?: string | undefined;
 }
 
 /**
@@ -329,10 +335,7 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
     pendingRows(reportOnTheClock()).orderBy(mostPressingFirst).limit(limit),
   ]);
   const onThePage = new Set(page.map((row) => row.id));
-  const rows = [
-    ...page,
-    ...onTheClock.filter((row) => !onThePage.has(row.id)),
-  ];
+  const rows = [...page, ...onTheClock.filter((row) => !onThePage.has(row.id))];
 
   // No read needs another's answer, so they go together.
   const [subjects, others, matches, removed] = await Promise.all([
@@ -502,6 +505,13 @@ async function subjectsFor(
         // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectsFor reads each kind of reported subject from its own table; the entry-owner read matches ops/desk/owner-handles.ts but safety cannot import ops without a cycle (ops/desk/desk.ts imports safety)
         photoKey: entryPhotos.photoKey,
         owner: userProfiles.username,
+        // The photo's kit, when it still exists: under its own name, as
+        // D1 keys a row by column name and the kit's is also `id`.
+        kitId: sql<
+          string | null
+        >`case when ${outfitEntries.id} is null then null else ${entryPhotos.entryId} end`.as(
+          "kit_id",
+        ),
       })
       // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectsFor reads each kind of reported subject from its own table; the entry-owner read matches ops/desk/owner-handles.ts but safety cannot import ops without a cycle (ops/desk/desk.ts imports safety)
       .from(entryPhotos)
@@ -566,6 +576,7 @@ async function subjectsFor(
     found.set(`photo:${row.id}`, {
       photoKeys: [row.photoKey],
       owner: row.owner ?? undefined,
+      kitId: row.kitId ?? undefined,
     });
   }
   // An entry's photos, grouped before its subject is written, so every
@@ -577,6 +588,7 @@ async function subjectsFor(
     found.set(`entry:${row.id}`, {
       photoKeys: (photosOf.get(row.id) ?? []).map((photo) => photo.photoKey),
       owner: row.owner ?? undefined,
+      kitId: row.id,
     });
   }
   for (const row of profileRows) {

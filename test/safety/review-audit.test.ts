@@ -45,6 +45,9 @@ async function reported(): Promise<{ entryId: string; queueId: string }> {
         subjectType: "entry",
         subjectId: entryId,
         reason: handle === "bo" ? "harassment" : "spam",
+        ...(handle === "bo" && {
+          note: "The jacket's name is about my sister.",
+        }),
       },
       oweInCore,
       noPurge,
@@ -68,6 +71,9 @@ describe("opening WHO REPORTED (D-164, R-66)", () => {
     expect(reporters.map((reporter) => reporter.handle)).toStrictEqual(HANDLES);
     expect(reporters[1]?.reason).toBe("harassment");
     expect(reporters[0]?.createdAt).toBeTypeOf("number");
+    // What each wrote in "Anything else", or nothing.
+    expect(reporters[1]?.note).toBe("The jacket's name is about my sister.");
+    expect(reporters[0]?.note).toBeNull();
   });
 
   it("records the look: who, which row and which subject", async () => {

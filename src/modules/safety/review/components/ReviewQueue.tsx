@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import type { JSX } from "react";
 
@@ -434,12 +435,40 @@ function WhyHere({ row }: Readonly<{ row: QueueRow }>): JSX.Element {
       ? HANDLE_FLAGGED_LINE
       : STUCK_LINES[row.source];
   if (line === undefined) return <ReportedFor row={row} />;
+  // A flagged handle's row that runners also reported says both: the
+  // handle's sentence, then what the reporters said (owner, 2026-11-21).
   return (
-    // The same step and tone as what reporters said, its neighbour's
-    // line of the same kind (N3-13).
-    <p data-part="why-here" className="m-0 text-small text-quiet">
-      {line}
-    </p>
+    <>
+      {/* The same step and tone as what reporters said, its neighbour's
+          line of the same kind (N3-13). */}
+      <p data-part="why-here" className="m-0 text-small text-quiet">
+        {line}
+      </p>
+      {row.reporterCount === 0 ? undefined : <ReportedFor row={row} />}
+    </>
+  );
+}
+
+/**
+ * A reported kit's or kit photo's way to the Desk's own view of the kit,
+ * where its garments' names are: the row shows its photos only. Worded as
+ * a removal request's (`RemovalRequests`). Nothing on any other row, or
+ * on a photo whose kit is gone.
+ */
+function OpenTheKit({
+  row,
+}: Readonly<{ row: QueueRow }>): JSX.Element | undefined {
+  const { kitId } = row.subject;
+  if (kitId === undefined) return undefined;
+  return (
+    <Link
+      to="/desk/kit/$entryId"
+      params={{ entryId: kitId }}
+      search={{ from: "report", row: row.id }}
+      className="target self-start font-bold text-ink underline underline-offset-4"
+    >
+      {row.subjectType === "entry" ? "Open the kit" : "Open its kit"}
+    </Link>
   );
 }
 
@@ -732,6 +761,7 @@ function OpenRow({
             leaving the first one blank (R2-DESK-07). */}
         <div className="flex flex-col gap-3 desk:col-start-2 desk:[[data-part=row-photos]:empty+&]:col-span-full">
           <WhyHere row={row} />
+          <OpenTheKit row={row} />
           {row.due === undefined ? undefined : <StatutoryLine />}
           {/* D1: who reported, folded; opening it is logged (D-164). */}
           <ReportersFold row={row} reporters={reporters} />

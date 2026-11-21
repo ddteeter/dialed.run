@@ -16,6 +16,7 @@ import type {
 } from "../../src/modules/safety/review/review";
 import { bracketed, sourceTag } from "../ui/bracketed";
 import { carriedSince } from "../ui/carry-spy";
+import { renderWithRouter } from "../modules/run-fixtures";
 
 vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
   const { spyOnCarry } = await import("../ui/carry-spy");
@@ -240,7 +241,11 @@ describe("deciding", () => {
     await user.click(screen.getByRole("button", { name: "Approve" }));
 
     expect(resolve).toHaveBeenCalledWith({
-      data: { queueId: QUEUE_ID, shown: { openedAt: 1_755_000_000, source: "reports" }, action: "approve" },
+      data: {
+        queueId: QUEUE_ID,
+        shown: { openedAt: 1_755_000_000, source: "reports" },
+        action: "approve",
+      },
     });
     await waitFor(() => {
       expect(waitingRows()).toBe(0);
@@ -1654,7 +1659,11 @@ describe("a handle the re-ask flagged (D-97)", () => {
     await user.click(screen.getByRole("button", { name: "Keep" }));
 
     expect(reviewHandle).toHaveBeenCalledWith({
-      data: { queueId: QUEUE_ID, shown: { openedAt: 1_755_000_000, source: "classifier" }, action: "keep" },
+      data: {
+        queueId: QUEUE_ID,
+        shown: { openedAt: 1_755_000_000, source: "classifier" },
+        action: "keep",
+      },
     });
     await waitFor(() => {
       expect(waitingRows()).toBe(0);
@@ -1919,5 +1928,65 @@ describe("the WHO REPORTED fold on a row (D-164)", () => {
   it("is not there without the read to open it", () => {
     renderQueue([row()]);
     expect(screen.queryByRole("button", { name: /Who reported/u })).toBeNull();
+  });
+});
+
+function renderRouted(queue: readonly QueueRow[]) {
+  return renderWithRouter(
+    <ReviewQueue
+      asOf={0}
+      queue={queue}
+      resolve={vi.fn<Props["resolve"]>()}
+      reviewHandle={vi.fn<Props["reviewHandle"]>()}
+      onDecided={vi.fn<() => void>()}
+    />,
+  );
+}
+
+describe("a reported kit's way to the kit", () => {
+  it("opens a reported kit on the Desk, from its row", async () => {
+    await renderRouted([row({ subject: { photoKeys: [], kitId: "e-1" } })]);
+
+    const link = screen.getByRole("link", { name: "Open the kit" });
+    expect(link).toHaveAttribute(
+      "href",
+      `/desk/kit/e-1?from=report&row=01HZZZZZZZZZZZZZZZZZZZZZZZ`,
+    );
+    expect(link).toHaveClass("target", "font-bold", "underline");
+  });
+
+  it("opens a reported photo's kit", async () => {
+    await renderRouted([
+      row({ subjectType: "photo", subject: { photoKeys: [], kitId: "e-9" } }),
+    ]);
+
+    expect(screen.getByRole("link", { name: "Open its kit" })).toHaveAttribute(
+      "href",
+      `/desk/kit/e-9?from=report&row=01HZZZZZZZZZZZZZZZZZZZZZZZ`,
+    );
+  });
+
+  it("offers no kit where the row has none", async () => {
+    await renderRouted([row({ subjectType: "photo" })]);
+
+    expect(screen.queryByRole("link", { name: /kit/u })).toBeNull();
+  });
+});
+
+describe("a flagged handle runners also reported", () => {
+  it("says what the reporters said under the handle's sentence", () => {
+    renderQueue([flagged({ reporterCount: 2, reasons: ["impersonation"] })]);
+
+    expect(
+      screen.getByText(/The hourly re-check flagged a handle/u),
+    ).toBeVisible();
+    expect(screen.getByText(bracketed("2 people"))).toBeVisible();
+  });
+
+  it("says only the handle's sentence when nobody reported it", () => {
+    renderQueue([flagged()]);
+
+    expect(screen.queryByText(bracketed("1 person"))).toBeNull();
+    expect(screen.queryByText(/people/u)).toBeNull();
   });
 });

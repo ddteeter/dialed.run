@@ -30,8 +30,13 @@ describe("WHO REPORTED (D-164, R-66)", () => {
   it("reads the reporters when opened, by the row, and lists them", async () => {
     const user = userEvent.setup();
     const load = vi.fn<LoadReporters>().mockResolvedValue([
-      { handle: "ada", reason: "spam", createdAt: NOV_6 },
-      { handle: NOTHING, reason: "harassment", createdAt: NOV_6 },
+      { handle: "ada", reason: "spam", createdAt: NOV_6, note: NOTHING },
+      {
+        handle: NOTHING,
+        reason: "harassment",
+        createdAt: NOV_6,
+        note: "The jacket's name is about my sister.",
+      },
     ]);
     render(<WhoReported queueId={QUEUE} count={2} load={load} />);
     await user.click(screen.getByRole("button", { name: /Who reported/u }));
@@ -45,8 +50,11 @@ describe("WHO REPORTED (D-164, R-66)", () => {
       screen.getAllByRole("listitem").map((item) => item.textContent),
     ).toStrictEqual([
       "@ada · It's an ad, or it's spam · Nov 6",
-      "A closed account · Harassment aimed at someone · Nov 6",
+      "A closed account · Harassment aimed at someone · Nov 6The jacket's name is about my sister.",
     ]);
+    const note = screen.getByText("The jacket's name is about my sister.");
+    expect(note).toHaveAttribute("data-part", "reporter-note");
+    expect(note).toHaveClass("block", "whitespace-pre-wrap");
     expect(screen.queryByText(/Folded\./u)).toBeNull();
   });
 
@@ -70,7 +78,7 @@ describe("WHO REPORTED (D-164, R-66)", () => {
       .fn<LoadReporters>()
       .mockRejectedValueOnce(new Error("down"))
       .mockResolvedValueOnce([
-        { handle: "ada", reason: "spam", createdAt: NOV_6 },
+        { handle: "ada", reason: "spam", createdAt: NOV_6, note: NOTHING },
       ]);
     render(<WhoReported queueId={QUEUE} count={2} load={load} />);
     await user.click(screen.getByRole("button", { name: /Who reported/u }));
