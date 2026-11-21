@@ -210,8 +210,9 @@ export interface DeskRequest {
   readonly email: string;
   readonly note: string | null;
   /**
-  The blocked state its latest ask came from (`BLOCKED_US_REGIONS`), or `""`.
-  */
+   * The blocked state the ask that made or re-opened it came from
+   * (`BLOCKED_US_REGIONS`), or `""`.
+   */
   readonly blockedRegion: string;
   readonly createdAt: number;
 }

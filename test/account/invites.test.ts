@@ -715,6 +715,14 @@ const ATTEMPT: TurnstileAttempt = {
   action: "request-access",
 };
 
+/**
+The `access` counts kept, by visitor; the per-address counts left out.
+*/
+async function visitorKeys(): Promise<string[]> {
+  const keys = await countedKeys(db);
+  return keys.filter((key) => key.startsWith("access:"));
+}
+
 describe("requestAccess (Au5)", () => {
   it("keeps the request, address lowercased, and answers with the one receipt", async () => {
     const { verify } = verifyAs(true);
@@ -743,9 +751,9 @@ describe("requestAccess (Au5)", () => {
     ]);
   });
 
-  it("updates the note on a repeat, clearing it when the repeat has none", async () => {
+  it("keeps a pending request's first note, place and time on a repeat", async () => {
     const { verify } = verifyAs(true);
-    const ask = (note: string, now: number) =>
+    const ask = (note: string, blockedRegion: "MS" | undefined, now: number) =>
       requestAccess(
         db,
         {
@@ -753,60 +761,106 @@ describe("requestAccess (Au5)", () => {
           note,
           attempt: ATTEMPT,
           isLimited: false,
-          blockedRegion: undefined,
+          blockedRegion,
         },
         verify,
         now,
       );
-    await ask("First.", 1);
-    await ask("Second.", 2);
+    expect(await ask("First.", undefined, 1)).toStrictEqual({
+      status: "received",
+      isFromBlockedRegion: false,
+    });
+    expect(await ask("Second.", "MS", 2)).toStrictEqual({
+      status: "received",
+      isFromBlockedRegion: true,
+    });
+    await ask("", undefined, 3);
     expect(await db.select().from(accessRequests)).toMatchObject([
-      { note: "Second.", createdAt: 1, updatedAt: 2 },
-    ]);
-    await ask("", 3);
-    expect(await db.select().from(accessRequests)).toMatchObject([
-      { note: NOTHING, updatedAt: 3 },
+      {
+        note: "First.",
+        blockedRegion: NOTHING,
+        status: "pending",
+        createdAt: 1,
+        updatedAt: 1,
+      },
     ]);
   });
 
-  it("puts a declined address back on the list when it asks again, and leaves an invited one invited", async () => {
+  it("puts a declined address back on the list with the new ask's note, place and time, and leaves an invited one as it was", async () => {
     const { verify } = verifyAs(true);
     await db.insert(accessRequests).values([
       {
         id: newUlid(),
         email: "no@x.test",
+        note: "Old.",
         status: "declined",
+        blockedRegion: "MS",
         createdAt: 1,
         updatedAt: 1,
       },
       {
         id: newUlid(),
         email: "yes@x.test",
+        note: "Old.",
         status: "invited",
         createdAt: 1,
         updatedAt: 1,
       },
+      {
+        id: newUlid(),
+        email: "quiet@x.test",
+        note: "Old.",
+        status: "declined",
+        createdAt: 1,
+        updatedAt: 1,
+      },
     ]);
-    for (const email of ["no@x.test", "yes@x.test"]) {
-      await requestAccess(
+    const ask = (
+      email: string,
+      note: string,
+      blockedRegion: "TN" | undefined,
+    ) =>
+      requestAccess(
         db,
-        {
-          email,
-          note: "",
-          attempt: ATTEMPT,
-          isLimited: false,
-          blockedRegion: undefined,
-        },
+        { email, note, attempt: ATTEMPT, isLimited: false, blockedRegion },
         verify,
+        9,
       );
-    }
+    await ask("no@x.test", "New.", undefined);
+    await ask("yes@x.test", "New.", "TN");
+    await ask("quiet@x.test", "", "TN");
     const rows = await db
-      .select({ email: accessRequests.email, status: accessRequests.status })
+      .select({
+        email: accessRequests.email,
+        note: accessRequests.note,
+        status: accessRequests.status,
+        blockedRegion: accessRequests.blockedRegion,
+        updatedAt: accessRequests.updatedAt,
+      })
       .from(accessRequests)
       .orderBy(accessRequests.email);
     expect(rows).toStrictEqual([
-      { email: "no@x.test", status: "pending" },
-      { email: "yes@x.test", status: "invited" },
+      {
+        email: "no@x.test",
+        note: "New.",
+        status: "pending",
+        blockedRegion: NOTHING,
+        updatedAt: 9,
+      },
+      {
+        email: "quiet@x.test",
+        note: NOTHING,
+        status: "pending",
+        blockedRegion: "TN",
+        updatedAt: 9,
+      },
+      {
+        email: "yes@x.test",
+        note: "Old.",
+        status: "invited",
+        blockedRegion: NOTHING,
+        updatedAt: 1,
+      },
     ]);
   });
 
@@ -833,31 +887,6 @@ describe("requestAccess (Au5)", () => {
       ]);
     },
   );
-
-  it("keeps the latest ask's place: a repeat from elsewhere clears the tag", async () => {
-    const { verify } = verifyAs(true);
-    const ask = (blockedRegion: "MS" | undefined) =>
-      requestAccess(
-        db,
-        {
-          email: "sam@x.test",
-          note: "",
-          attempt: ATTEMPT,
-          isLimited: false,
-          blockedRegion,
-        },
-        verify,
-      );
-    await ask(undefined);
-    await ask("MS");
-    expect(await db.select().from(accessRequests)).toMatchObject([
-      { blockedRegion: "MS" },
-    ]);
-    await ask(undefined);
-    expect(await db.select().from(accessRequests)).toMatchObject([
-      { blockedRegion: NOTHING },
-    ]);
-  });
 
   it("shows D7 the tag, and refuses Send invite for it, minting and sending nothing", async () => {
     const requestId = newUlid();
@@ -907,6 +936,36 @@ describe("requestAccess (Au5)", () => {
     expect(codeOf(answer)).toMatch(/^DIAL-/u);
   });
 
+  it("reports a failed invite email by its key's kind and its template", async () => {
+    const requestId = newUlid();
+    await db.insert(accessRequests).values({
+      id: requestId,
+      email: "sam@x.test",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    const mail = fakeMail();
+    mail.failing(true);
+    const later = owedTo(mail);
+    const reports: Record<string, string>[] = [];
+    const answer = await inviteFromRequest(
+      db,
+      { operatorId: "op", requestId },
+      {
+        ...later.owed,
+        report: (_error, context) => {
+          reports.push(context);
+        },
+      },
+    );
+    await later.settled();
+    const code = codeOf(answer);
+    expect(reports).toStrictEqual([
+      expect.objectContaining({ dedupeKey: "invite", template: "invite" }),
+    ]);
+    expect(JSON.stringify(reports)).not.toContain(code);
+  });
+
   it("refuses what Turnstile refuses, keeping nothing", async () => {
     const { seen, verify } = verifyAs(false);
     expect(
@@ -952,12 +1011,12 @@ describe("requestAccess (Au5)", () => {
       until: 1000 + 3600,
     });
     expect(await db.select().from(accessRequests)).toHaveLength(5);
-    expect(await countedKeys(db)).toStrictEqual(["access:203.0.113.9"]);
+    expect(await visitorKeys()).toStrictEqual(["access:203.0.113.9"]);
     // Another visitor is not held up by the first.
     expect(
       await ask("7@x.test", { ...ATTEMPT, remoteIp: undefined }),
     ).toStrictEqual({ status: "received", isFromBlockedRegion: false });
-    expect(await countedKeys(db)).toStrictEqual([
+    expect(await visitorKeys()).toStrictEqual([
       "access:203.0.113.9",
       "access:unknown",
     ]);
@@ -989,11 +1048,44 @@ describe("requestAccess (Au5)", () => {
     expect(await db.select().from(accessRequests)).toHaveLength(
       EMAIL_SENDS_PER_HOUR,
     );
-    expect(await countedKeys(db)).toStrictEqual(["access:2001:db8:1:2::/64"]);
+    expect(await visitorKeys()).toStrictEqual(["access:2001:db8:1:2::/64"]);
     expect(await ask(99, "2001:db8:1:3::1")).toStrictEqual({
       status: "received",
       isFromBlockedRegion: false,
     });
+  });
+
+  it("takes three asks a day for one address on a real deployment, whoever asks, and answers the same receipt past them", async () => {
+    const { verify } = verifyAs(true);
+    const ask = (n: number, now: number) =>
+      requestAccess(
+        db,
+        {
+          email: "Sam@X.test",
+          note: `Ask ${String(n)}.`,
+          attempt: { ...ATTEMPT, remoteIp: `198.51.100.${String(n)}` },
+          isLimited: true,
+          blockedRegion: undefined,
+        },
+        verify,
+        now,
+      );
+    for (const n of [1, 2, 3]) await ask(n, 1000);
+    await db.update(accessRequests).set({ status: "declined" });
+    expect(await ask(4, 1000)).toStrictEqual({
+      status: "received",
+      isFromBlockedRegion: false,
+    });
+    expect(await db.select().from(accessRequests)).toMatchObject([
+      { note: "Ask 1.", status: "declined", updatedAt: 1000 },
+    ]);
+    expect(await ask(5, 1000 + 86_400)).toStrictEqual({
+      status: "received",
+      isFromBlockedRegion: false,
+    });
+    expect(await db.select().from(accessRequests)).toMatchObject([
+      { note: "Ask 5.", status: "pending", updatedAt: 1000 + 86_400 },
+    ]);
   });
 
   it("does not limit where the deployment does not", async () => {

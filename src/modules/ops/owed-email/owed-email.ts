@@ -33,6 +33,14 @@ type Db = ReturnType<typeof drizzle>;
 type OwedEmailMessage = OutboxMessageOf<"email">["payload"]["email"];
 
 /**
+The dedupe key's kind: its text before the first `:`, or all of it.
+*/
+function dedupeKindOf(dedupeKey: string): string {
+  const end = dedupeKey.indexOf(":");
+  return end === -1 ? dedupeKey : dedupeKey.slice(0, end);
+}
+
+/**
  * SA-L18: a removal request's receipt is owed with its request, not its
  * confirm token, and the token is minted here, as it is sent
  * (`mintReceiptConfirmToken`). A request no longer waiting on a confirm
@@ -106,9 +114,11 @@ export function emailHandler(deps: () => EmailDeps): OutboxHandler<"email"> {
       ]);
     },
     // Ids only (law 7): never the address, which is what a report would
-    // otherwise carry.
+    // otherwise carry, and of the dedupe key only its kind (the text
+    // before the first `:`), never the rest. The report's `outboxId`
+    // names the row.
     context: (payload) => ({
-      dedupeKey: payload.dedupeKey,
+      dedupeKey: dedupeKindOf(payload.dedupeKey),
       template: payload.email.template.kind,
     }),
   };

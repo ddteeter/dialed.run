@@ -4,7 +4,8 @@
  * The purge that ends the week is `./purge.ts`.
  *
  * **At request, one batch**: the claim in `account_deletions`, every
- * session gone, and the "delete scheduled" email owed (law 8c). Nothing
+ * session gone, and the "delete scheduled" email owed (law 8c) while the
+ * runner's count of them is within `DELETION_NOTICES_PER_DAY`. Nothing
  * about the runner's entries is written: they leave the feed, profiles,
  * search and the Call through safety's one visibility rule, which reads
  * the claim — so keeping the account brings everything back exactly as
@@ -12,7 +13,7 @@
  * `disconnectStrava` (seam 5); the purge repeats it for a connection
  * that outlived a failure here.
  */
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { session } from "../../../db/schema-auth";
@@ -24,11 +25,11 @@ import { homeZoneOf, proseDayLabel } from "../../../lib/dates";
 import type { ViewerZone } from "../../../lib/dates";
 import { firstRowWhere } from "../../../lib/sql/keyed-read";
 import { nowSeconds } from "../../../lib/now";
-import { emailDebt } from "../../email";
+import { countLimit, emailDebt, limitAllowed, limitClaimOf } from "../../email";
 import { viewerZone } from "../../notifications";
 import {
   captureException,
-  outboxInsert,
+  outboxInsertWhere,
   oweOutbox,
   purgePublicPages,
 } from "../../ops";
@@ -132,7 +133,9 @@ async function refusal(
 /**
  * Ask for the account to be deleted. A second request keeps the first
  * one's date: the claim is written once, and the email says the date the
- * claim holds.
+ * claim holds. Each request counts one "delete scheduled" email; past
+ * `DELETION_NOTICES_PER_DAY` the deletion is scheduled all the same and
+ * no email is owed or sent.
  */
 export async function requestAccountDeletion(
   db: Db,
@@ -152,7 +155,8 @@ export async function requestAccountDeletion(
       { dedupeKey: `deletion_scheduled:${userId}:${String(purgeAfter)}` },
     ),
   );
-  await db.batch([
+  const mine = eq(accountDeletions.userId, userId);
+  const written = await db.batch([
     db
       .insert(accountDeletions)
       .values({ userId, requestedAt: now, purgeAfter })
@@ -162,9 +166,23 @@ export async function requestAccountDeletion(
     // "You're signed out on every device" — deleted rather than expired,
     // as a ban does: a deleted session cannot be got wrong by anybody.
     db.delete(session).where(eq(session.userId, userId)),
-    outboxInsert(db, debt, now),
+    countLimit(db, "deletion-notice", userId, now),
+    // Owed beside the claim, only while the count just made allows it.
+    outboxInsertWhere(
+      db,
+      debt,
+      {
+        table: accountDeletions,
+        where: sql`${mine} AND ${limitAllowed("deletion-notice", userId)}`,
+      },
+      now,
+    ),
   ]);
-  effects.keepAlive(effects.settle(db, debt, effects.report));
+  // The fast path sends from the debt in hand, so the count's verdict
+  // decides it as well as the row.
+  if (limitClaimOf("deletion-notice", written[2]).isAllowed) {
+    effects.keepAlive(effects.settle(db, debt, effects.report));
+  }
   // Everything public of the runner's carries their tag: one purge.
   effects.purge([runnerCacheTag(userId)]);
   // Secondary to the request (law 5): a failure here is reported, and the

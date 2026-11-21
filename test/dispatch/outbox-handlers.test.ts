@@ -48,6 +48,23 @@ describe("the outbox registry", () => {
     expect(link).toHaveBeenCalledWith(expect.anything(), "u1");
   });
 
+  it("names an owed email by its key's kind and its template", () => {
+    const email = {
+      to: { address: "a@x.test" },
+      template: { kind: "invite", code: "DIAL-AAAA-BBBB" },
+    } as const;
+
+    expect(
+      owedEmailHandlers.email.context({
+        dedupeKey: "invite:DIAL-AAAA-BBBB:x",
+        email,
+      }),
+    ).toStrictEqual({ dedupeKey: "invite", template: "invite" });
+    expect(
+      owedEmailHandlers.email.context({ dedupeKey: "invite", email }),
+    ).toStrictEqual({ dedupeKey: "invite", template: "invite" });
+  });
+
   it("names a deleted run's band by its runner and run (C1)", () => {
     expect(
       manualConditionsHandler.context({ userId: "u1", runId: "r1" }),
