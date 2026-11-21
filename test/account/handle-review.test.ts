@@ -1,9 +1,12 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import { anyShownRow, shownRowOf } from "../safety/helpers";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   moderationActions,
+  notifications,
+  reports,
   reviewQueue,
   userProfiles,
   usernameHistory,
@@ -106,7 +109,11 @@ describe("Keep", () => {
     const { userId, queueId } = await flaggedRunner();
 
     expect(
-      await reviewFlaggedHandle(db, REVIEWER, { queueId, action: "keep" }),
+      await reviewFlaggedHandle(db, REVIEWER, {
+        queueId,
+        shown: await shownRowOf(queueId),
+        action: "keep",
+      }),
     ).toStrictEqual({ outcome: "resolved" });
 
     expect(await profileOf(userId)).toMatchObject({
@@ -124,7 +131,11 @@ describe("Keep", () => {
     const { userId, queueId } = await flaggedRunner();
     await claimUsername(db, userId, "second_pick", UNKNOWN);
 
-    await reviewFlaggedHandle(db, REVIEWER, { queueId, action: "keep" });
+    await reviewFlaggedHandle(db, REVIEWER, {
+      queueId,
+      shown: await shownRowOf(queueId),
+      action: "keep",
+    });
 
     expect(await profileOf(userId)).toMatchObject({
       username: "second_pick",
@@ -137,8 +148,9 @@ describe("Keep racing another decision on the row (SA-L11)", () => {
   it("clears nothing once the row was settled between its read and its batch", async () => {
     const { userId, queueId } = await flaggedRunner();
 
+    const shown = await shownRowOf(queueId);
     const [kept] = await Promise.all([
-      reviewFlaggedHandle(db, REVIEWER, { queueId, action: "keep" }),
+      reviewFlaggedHandle(db, REVIEWER, { queueId, shown, action: "keep" }),
       db
         .update(reviewQueue)
         .set({ status: "removed", resolvedBy: "another-operator" })
@@ -161,6 +173,8 @@ describe("Rename", () => {
     expect(
       await reviewFlaggedHandle(db, REVIEWER, {
         queueId,
+        shown: await shownRowOf(queueId),
+        handle: "quadzilla_69",
         action: "rename",
         nameReason: "Offensive or sexual",
       }),
@@ -214,6 +228,8 @@ describe("Rename", () => {
     expect(
       await reviewFlaggedHandle(db, REVIEWER, {
         queueId,
+        shown: await shownRowOf(queueId),
+        handle: "quadzilla_69",
         action: "rename",
         nameReason: "Advertising",
       }),
@@ -253,6 +269,8 @@ describe("Rename racing the runner's own pick (R-121)", () => {
     expect(
       await reviewFlaggedHandle(raced, REVIEWER, {
         queueId,
+        shown: await shownRowOf(queueId),
+        handle: "quadzilla_69",
         action: "rename",
         nameReason: "Advertising",
       }),
@@ -274,11 +292,17 @@ describe("Rename racing the runner's own pick (R-121)", () => {
 describe("a row there is nothing to decide on", () => {
   it("answers a settled row as settled, and writes nothing", async () => {
     const { userId, queueId } = await flaggedRunner();
-    await reviewFlaggedHandle(db, REVIEWER, { queueId, action: "keep" });
+    await reviewFlaggedHandle(db, REVIEWER, {
+      queueId,
+      shown: await shownRowOf(queueId),
+      action: "keep",
+    });
 
     expect(
       await reviewFlaggedHandle(db, "someone-else", {
         queueId,
+        shown: await shownRowOf(queueId),
+        handle: "quadzilla_69",
         action: "rename",
         nameReason: "Advertising",
       }),
@@ -291,6 +315,7 @@ describe("a row there is nothing to decide on", () => {
     expect(
       await reviewFlaggedHandle(db, REVIEWER, {
         queueId: newUlid(),
+        shown: anyShownRow,
         action: "keep",
       }),
     ).toStrictEqual({ outcome: "not_found" });
@@ -312,6 +337,8 @@ describe("a row there is nothing to decide on", () => {
     expect(
       await reviewFlaggedHandle(db, REVIEWER, {
         queueId,
+        shown: await shownRowOf(queueId),
+        handle: "quadzilla_69",
         action: "rename",
         nameReason: "Advertising",
       }),
@@ -331,8 +358,166 @@ describe("a row there is nothing to decide on", () => {
     });
 
     expect(
-      await reviewFlaggedHandle(db, REVIEWER, { queueId, action: "keep" }),
+      await reviewFlaggedHandle(db, REVIEWER, {
+        queueId,
+        shown: await shownRowOf(queueId),
+        action: "keep",
+      }),
     ).toStrictEqual({ outcome: "not_found" });
     expect(await queueRow(queueId)).toMatchObject({ status: "pending" });
+  });
+});
+
+describe("a decision on the row as the page showed it", () => {
+  it("tells whoever reported the runner that Keep left it up", async () => {
+    const { userId, queueId } = await flaggedRunner();
+    const reporter = newUlid();
+    await db.insert(reports).values({
+      id: newUlid(),
+      reporterId: reporter,
+      subjectType: "profile",
+      subjectId: userId,
+      reason: "impersonation",
+      createdAt: 1,
+    });
+
+    await reviewFlaggedHandle(db, REVIEWER, {
+      queueId,
+      shown: await shownRowOf(queueId),
+      action: "keep",
+    });
+
+    const told = await db
+      .select({ kind: notifications.kind })
+      .from(notifications)
+      .where(eq(notifications.userId, reporter));
+    expect(told).toStrictEqual([{ kind: "report_kept" }]);
+  });
+
+  it("keeps nothing on a row re-opened since the page showed it", async () => {
+    const { userId, queueId } = await flaggedRunner();
+    const shown = await shownRowOf(queueId);
+
+    expect(
+      await reviewFlaggedHandle(db, REVIEWER, {
+        queueId,
+        shown: { ...shown, source: "reports" },
+        action: "keep",
+      }),
+    ).toStrictEqual({ outcome: "already_resolved" });
+
+    expect(await profileOf(userId)).toMatchObject({ screen: "flagged" });
+    const row = await queueRow(queueId);
+    expect(row?.status).toBe("pending");
+  });
+
+  it("keeps nothing when the row's source changes between its read and its batch", async () => {
+    const { userId, queueId } = await flaggedRunner();
+    const shown = await shownRowOf(queueId);
+
+    const [kept] = await Promise.all([
+      reviewFlaggedHandle(db, REVIEWER, { queueId, shown, action: "keep" }),
+      db
+        .update(reviewQueue)
+        .set({ source: "reports" })
+        .where(eq(reviewQueue.id, queueId)),
+    ]);
+
+    expect(kept).toStrictEqual({ outcome: "already_resolved" });
+    expect(await profileOf(userId)).toMatchObject({ screen: "flagged" });
+  });
+
+  it("renames nothing on a row re-opened since the page showed it", async () => {
+    const { userId, queueId } = await flaggedRunner();
+    const shown = await shownRowOf(queueId);
+
+    expect(
+      await reviewFlaggedHandle(db, REVIEWER, {
+        queueId,
+        shown: { ...shown, openedAt: 1 },
+        handle: "quadzilla_69",
+        action: "rename",
+        nameReason: "Advertising",
+      }),
+    ).toStrictEqual({ outcome: "already_resolved" });
+
+    expect(await profileOf(userId)).toMatchObject({
+      username: "quadzilla_69",
+    });
+  });
+
+  it("settles no row when its source changes between the rename's read and its batch", async () => {
+    const { queueId } = await flaggedRunner();
+    const shown = await shownRowOf(queueId);
+
+    await Promise.all([
+      reviewFlaggedHandle(db, REVIEWER, {
+        queueId,
+        shown,
+        handle: "quadzilla_69",
+        action: "rename",
+        nameReason: "Advertising",
+      }),
+      db
+        .update(reviewQueue)
+        .set({ source: "reports" })
+        .where(eq(reviewQueue.id, queueId)),
+    ]);
+
+    const row = await queueRow(queueId);
+    expect(row?.status).toBe("pending");
+  });
+
+  it("takes away only the handle shown: one the runner left since is locked, and nothing is renamed", async () => {
+    const { userId, queueId } = await flaggedRunner();
+    await claimUsername(db, userId, "fine_one", UNKNOWN);
+
+    expect(
+      await reviewFlaggedHandle(db, REVIEWER, {
+        queueId,
+        shown: await shownRowOf(queueId),
+        handle: "quadzilla_69",
+        action: "rename",
+        nameReason: "Advertising",
+      }),
+    ).toStrictEqual({ outcome: "moved", username: "fine_one" });
+
+    expect(await profileOf(userId)).toMatchObject({ username: "fine_one" });
+    const own = and(
+      eq(usernameHistory.username, "quadzilla_69"),
+      eq(usernameHistory.userId, userId),
+    );
+    const [locked] = await db
+      .select({ lockedAt: usernameHistory.lockedAt })
+      .from(usernameHistory)
+      .where(own);
+    expect(locked?.lockedAt).toEqual(expect.any(Number));
+    const back = await claimUsername(db, userId, "quadzilla_69", UNKNOWN);
+    expect(back).not.toMatchObject({ kind: "claimed" });
+    expect(await profileOf(userId)).toMatchObject({ username: "fine_one" });
+  });
+
+  it("locks no handle another runner gave up", async () => {
+    const { userId, queueId } = await flaggedRunner();
+    const other = newUlid();
+    await claimUsername(db, other, "old_name", UNKNOWN);
+    await claimUsername(db, other, "new_name", UNKNOWN);
+
+    await reviewFlaggedHandle(db, REVIEWER, {
+      queueId,
+      shown: await shownRowOf(queueId),
+      handle: "old_name",
+      action: "rename",
+      nameReason: "Advertising",
+    });
+
+    const [row] = await db
+      .select({ lockedAt: usernameHistory.lockedAt })
+      .from(usernameHistory)
+      .where(eq(usernameHistory.username, "old_name"));
+    expect(row?.lockedAt).toBeNull();
+    expect(await profileOf(userId)).toMatchObject({
+      username: "quadzilla_69",
+    });
   });
 });

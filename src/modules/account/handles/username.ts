@@ -530,6 +530,12 @@ export type ForcedRename =
 export interface ForceRenameRequest {
   readonly userId: string;
   /**
+   * The handle the moderator was shown, when a page showed one. A runner
+   * who has changed handle since is renamed nothing: the handle shown is
+   * locked where it sits in their own history, and the answer is `moved`.
+   */
+  readonly shown?: string | undefined;
+  /**
   The new handle, as drawn or typed; parsed here like any other.
   */
   readonly typed: string;
@@ -565,11 +571,26 @@ function stillHolds(userId: string, previous: string): SQL {
  * The runner's own history row for `handle`, unless a moderator locked it.
  */
 function ownUnlocked(userId: string, handle: string) {
-  return and(
+  const own = and(
     eq(usernameHistory.username, handle),
     eq(usernameHistory.userId, userId),
-    isNull(usernameHistory.lockedAt),
   );
+  return and(own, isNull(usernameHistory.lockedAt));
+}
+
+/**
+ * Locks a handle the runner gave up themselves, so neither they nor anyone
+ * may take it. Nothing when it is not in their own history, unlocked.
+ */
+async function lockOwnHistoryHandle(
+  db: Db,
+  userId: string,
+  handle: string,
+): Promise<void> {
+  await db
+    .update(usernameHistory)
+    .set({ lockedAt: nowSeconds() })
+    .where(ownUnlocked(userId, handle));
 }
 
 /**
@@ -602,6 +623,10 @@ export async function forceRename(
   const profile = await profileOf(db, userId);
   const previous = profile?.username ?? undefined;
   if (previous === undefined) return { kind: "not_found" };
+  if (request.shown !== undefined && request.shown !== previous) {
+    await lockOwnHistoryHandle(db, userId, request.shown);
+    return { kind: "moved", username: previous };
+  }
   const parsed = usernameSchema.safeParse(request.typed);
   if (!parsed.success) return { kind: "taken" };
   const username = parsed.data;

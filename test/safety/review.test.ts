@@ -418,6 +418,66 @@ describe("two decisions on one row (SA-L11)", () => {
     expect(await noticesOfKind("report_kept")).toBe(0);
   });
 
+  it("settles nothing on a row whose source changed since it was read", async () => {
+    const { entryId, queueId } = await queuedEntry();
+
+    const reviewer = await makeUser();
+    const [outcome] = await Promise.all([
+      resolveReview(queueId, reviewer, "approve"),
+      core()
+        .update(reviewQueue)
+        .set({ source: "classifier" })
+        .where(eq(reviewQueue.id, queueId)),
+    ]);
+
+    expect(outcome).toBe("already_resolved");
+    const row = await queueRow(queueId);
+    expect(row?.status).toBe("pending");
+    expect(await statusOf(entryId)).toBe("hidden_pending_review");
+  });
+
+  it("settles nothing on a row re-opened for another reason since the page showed it", async () => {
+    const { entryId, queueId } = await queuedEntry();
+    const shown = { openedAt: 1, source: "classifier" } as const;
+
+    expect(
+      await resolveReview(queueId, await makeUser(), "approve", shown),
+    ).toBe("already_resolved");
+
+    const row = await queueRow(queueId);
+    expect(row?.status).toBe("pending");
+    expect(await statusOf(entryId)).toBe("hidden_pending_review");
+    expect(await noticesOfKind("report_kept")).toBe(0);
+  });
+
+  it("tells a re-open in the same second apart by its source", async () => {
+    const { queueId } = await queuedEntry();
+    const [row] = await core()
+      .select({ openedAt: reviewQueue.openedAt })
+      .from(reviewQueue)
+      .where(eq(reviewQueue.id, queueId));
+    const sameSecond = row?.openedAt ?? 0;
+
+    expect(
+      await resolveReview(queueId, await makeUser(), "approve", {
+        openedAt: sameSecond,
+        source: "classifier",
+      }),
+    ).toBe("already_resolved");
+    expect(
+      await resolveReview(queueId, await makeUser(), "approve", {
+        openedAt: sameSecond - 1,
+        source: "reports",
+      }),
+    ).toBe("already_resolved");
+    expect(
+      await resolveReview(queueId, await makeUser(), "approve", {
+        openedAt: sameSecond,
+        source: "reports",
+      }),
+    ).toBe("resolved");
+  });
+
   it("never settles a row already settled", async () => {
     const { queueId } = await reportedProduct();
     const first = await makeUser();
@@ -650,15 +710,17 @@ describe("what a decision writes", () => {
 async function rowAt(createdAt: number, intimateAt?: number) {
   const id = newUlid();
   const subjectId = newUlid();
-  await core().insert(reviewQueue).values({
-    id,
-    subjectType: "entry",
-    subjectId,
-    source: intimateAt === undefined ? "classifier" : "reports",
-    status: "pending",
-    createdAt,
-    openedAt: createdAt,
-  });
+  await core()
+    .insert(reviewQueue)
+    .values({
+      id,
+      subjectType: "entry",
+      subjectId,
+      source: intimateAt === undefined ? "classifier" : "reports",
+      status: "pending",
+      createdAt,
+      openedAt: createdAt,
+    });
   if (intimateAt !== undefined) {
     await core().insert(reports).values({
       id: newUlid(),

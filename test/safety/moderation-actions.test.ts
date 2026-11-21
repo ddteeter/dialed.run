@@ -1,4 +1,5 @@
 import { eq, sql } from "drizzle-orm";
+import { anyShownRow, shownRowOf } from "./helpers";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -1127,6 +1128,7 @@ describe("decideReview: the queue's Remove really deletes", () => {
 
     const outcome = await decideReview(core(), "rev", {
       queueId: queueId,
+      shown: await shownRowOf(queueId),
       action: "approve",
     });
 
@@ -1135,6 +1137,45 @@ describe("decideReview: the queue's Remove really deletes", () => {
       status: "approved",
       resolvedBy: "rev",
     });
+  });
+
+  it("takes nothing down from a row re-opened since the page showed it", async () => {
+    const { photoId } = await postedPhoto();
+    const queueId = await queued("photo", photoId);
+    const shown = await shownRowOf(queueId);
+
+    const outcome = await decideReview(core(), "rev", {
+      queueId,
+      shown: { ...shown, source: "fingerprint" },
+      action: "remove",
+      reason: "home",
+    });
+
+    expect(outcome).toBe("already_resolved");
+    expect(
+      await core()
+        .select({ id: entryPhotos.id })
+        .from(entryPhotos)
+        .where(eq(entryPhotos.id, photoId)),
+    ).toStrictEqual([{ id: photoId }]);
+    const row = await queueStatus(queueId);
+    expect(row?.status).toBe("reviewing");
+  });
+
+  it("approves nothing on a row re-opened since the page showed it", async () => {
+    const { entryId } = await postedPhoto();
+    const queueId = await queued("entry", entryId);
+    const shown = await shownRowOf(queueId);
+
+    const outcome = await decideReview(core(), "rev", {
+      queueId,
+      shown: { ...shown, source: "fingerprint" },
+      action: "approve",
+    });
+
+    expect(outcome).toBe("already_resolved");
+    const row = await queueStatus(queueId);
+    expect(row?.status).toBe("reviewing");
   });
 
   it("removes a reported photo for real, and quarantines on request", async () => {
@@ -1146,6 +1187,7 @@ describe("decideReview: the queue's Remove really deletes", () => {
     expect(
       await decideReview(core(), "rev", {
         queueId: removalRow,
+        shown: await shownRowOf(removalRow),
         action: "remove",
         reason: "home",
       }),
@@ -1153,6 +1195,7 @@ describe("decideReview: the queue's Remove really deletes", () => {
     expect(
       await decideReview(core(), "rev", {
         queueId: quarantineId,
+        shown: await shownRowOf(quarantineId),
         action: "quarantine",
         reason: "explicit",
       }),
@@ -1182,6 +1225,7 @@ describe("decideReview: the queue's Remove really deletes", () => {
     expect(
       await decideReview(core(), "rev", {
         queueId: productRow,
+        shown: await shownRowOf(productRow),
         action: "remove",
         reason: "spam",
       }),
@@ -1189,6 +1233,7 @@ describe("decideReview: the queue's Remove really deletes", () => {
     expect(
       await decideReview(core(), "rev", {
         queueId: goneRow,
+        shown: await shownRowOf(goneRow),
         action: "remove",
         reason: "spam",
       }),
@@ -1218,6 +1263,7 @@ describe("decideReview: the queue's Remove really deletes", () => {
 
     await decideReview(core(), "rev", {
       queueId,
+      shown: await shownRowOf(queueId),
       action: "remove",
       reason: "spam",
     });
@@ -1233,11 +1279,16 @@ describe("decideReview: the queue's Remove really deletes", () => {
   it("never takes down what a reviewer already approved", async () => {
     const { entryId } = await postedPhoto();
     const queueId = await queued("entry", entryId);
-    await decideReview(core(), "rev", { queueId, action: "approve" });
+    await decideReview(core(), "rev", {
+      queueId,
+      shown: await shownRowOf(queueId),
+      action: "approve",
+    });
 
     expect(
       await decideReview(core(), "rev", {
         queueId,
+        shown: await shownRowOf(queueId),
         action: "remove",
         reason: "spam",
       }),
@@ -1255,6 +1306,7 @@ describe("decideReview: the queue's Remove really deletes", () => {
     const queueId = await queued("entry", entryId);
     await decideReview(core(), "rev", {
       queueId: queueId,
+      shown: await shownRowOf(queueId),
       action: "remove",
       reason: "spam",
     });
@@ -1268,6 +1320,7 @@ describe("decideReview: the queue's Remove really deletes", () => {
     expect(
       await decideReview(core(), "rev", {
         queueId: queueId,
+        shown: await shownRowOf(queueId),
         action: "remove",
         reason: "spam",
       }),
@@ -1275,6 +1328,7 @@ describe("decideReview: the queue's Remove really deletes", () => {
     expect(
       await decideReview(core(), "rev", {
         queueId: newUlid(),
+        shown: anyShownRow,
         action: "quarantine",
         reason: "spam",
       }),

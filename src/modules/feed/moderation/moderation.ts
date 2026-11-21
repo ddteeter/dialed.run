@@ -62,7 +62,7 @@ import { captureException, oweOutbox, purgePublicPages } from "../../ops";
 import {
   moderationActionInsert,
   claimPurgeAfterCase,
-  openSubject,
+  openReviewRow,
   purgedWrite,
   restoreDueHolds,
   sweepClaims,
@@ -523,26 +523,26 @@ export async function decideReview(
   reviewerId: string,
   decision: ReviewActionValues,
 ): Promise<ResolveOutcome> {
-  const { queueId } = decision;
+  const { queueId, shown } = decision;
   if (decision.action === "approve") {
-    return resolveReview(queueId, reviewerId, "approve");
+    return resolveReview(queueId, reviewerId, "approve", shown);
   }
   // A missing file's Clear photo (D-157): no verdict, so not safety's.
   if (decision.action === "clear") {
     return clearMissingPhoto(db, reviewerId, queueId);
   }
-  // Only a row still open is acted on; a settled or missing one is
-  // answered by safety's own writer below, which says which it was.
-  const subject = await openSubject(queueId);
+  // Only a row still open, and as the page showed it, is acted on; any
+  // other is answered by safety's own writer below, which says why.
+  const row = await openReviewRow(queueId, shown);
   const isTakenDown =
-    subject !== undefined &&
-    (await wasTakenDown(db, reviewerId, decision, subject));
+    typeof row !== "string" &&
+    (await wasTakenDown(db, reviewerId, decision, row));
   // Anything not taken down here — a product, a profile, or an entry or
   // garment photo already gone — is settled by safety's own writer, so
   // the row never stays open on a subject nobody can act on.
   return isTakenDown
     ? "resolved"
-    : resolveReview(queueId, reviewerId, decision.action);
+    : resolveReview(queueId, reviewerId, decision.action, shown);
 }
 
 /**

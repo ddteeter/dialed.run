@@ -14,7 +14,11 @@
 import { z } from "zod";
 
 import { isoDayOf } from "../../lib/contracts/age";
-import { HOLD_CAUSES } from "../../lib/contracts/hold-causes";
+import {
+  HOLD_CAUSES,
+  REVIEW_SOURCES,
+} from "../../lib/contracts/hold-causes";
+import { usernameSchema } from "../../lib/contracts/garments";
 import { takedownRequestSchema } from "../../lib/contracts/takedown";
 import { rowIdSchema, ulidSchema } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
@@ -101,16 +105,36 @@ export const releaseHoldsInput = z.object({
  * `clear` takes a photo whose file is missing off its kit or garment
  * (D-157, design 167): no reason, because it is no verdict on the runner.
  */
+/**
+ * A Review row as the page showed it: when it last went in front of a
+ * person, and why. A decision is held to it, and one on a row re-opened
+ * since is answered as already decided.
+ */
+export const shownRowSchema = z.object({
+  openedAt: z.number().int().nullable(),
+  source: z.enum(REVIEW_SOURCES),
+});
+
 export const reviewActionInput = z.discriminatedUnion("action", [
-  z.object({ queueId: ulidSchema, action: z.literal("approve") }),
-  z.object({ queueId: ulidSchema, action: z.literal("clear") }),
   z.object({
     queueId: ulidSchema,
+    shown: shownRowSchema,
+    action: z.literal("approve"),
+  }),
+  z.object({
+    queueId: ulidSchema,
+    shown: shownRowSchema,
+    action: z.literal("clear"),
+  }),
+  z.object({
+    queueId: ulidSchema,
+    shown: shownRowSchema,
     action: z.literal("remove"),
     reason: removalReasonSchema,
   }),
   z.object({
     queueId: ulidSchema,
+    shown: shownRowSchema,
     action: z.literal("quarantine"),
     reason: removalReasonSchema,
   }),
@@ -138,9 +162,16 @@ export type GarmentMatchActionValues = z.infer<typeof garmentMatchActionInput>;
  * CHANGED BY A MODERATOR" quotes to the runner. Never Remove.
  */
 export const handleReviewInput = z.discriminatedUnion("action", [
-  z.object({ queueId: ulidSchema, action: z.literal("keep") }),
   z.object({
     queueId: ulidSchema,
+    shown: shownRowSchema,
+    action: z.literal("keep"),
+  }),
+  z.object({
+    queueId: ulidSchema,
+    shown: shownRowSchema,
+    // The handle the row showed: a Rename takes away only that one.
+    handle: usernameSchema,
     action: z.literal("rename"),
     nameReason: renameReasonSchema,
   }),
@@ -214,6 +245,9 @@ A moderator's force-rename (round 27 #16).
 */
 export const forceRenameInput = z.object({
   userId: rowIdSchema,
+  // The handle the page showed, when it showed one: a Rename takes away
+  // only that one.
+  shown: usernameSchema.optional(),
   // Not `reason`: D8 draws Rename beside Close account, whose field is
   // `reason`, and a field's name is its id.
   nameReason: renameReasonSchema,

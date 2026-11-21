@@ -419,6 +419,7 @@ function RenamePanel({
       onSubmit={() => {
         void form.submit({
           userId: runner.userId,
+          shown: runner.username,
           nameReason: reason,
         });
       }}

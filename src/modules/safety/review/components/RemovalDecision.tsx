@@ -144,7 +144,7 @@ const REASONLESS_LABELS: Readonly<Record<Reasonless, string>> = {
 export function RemovalDecision<TSchema extends z.ZodType, TResult>(
   props: Readonly<{
     schema: TSchema;
-    subject: Readonly<Record<string, string>>;
+    subject: Readonly<Record<string, unknown>>;
     act: (values: z.output<TSchema>) => Promise<TResult>;
     refused?:
       { matches: (result: TResult) => boolean; line: string } | undefined;

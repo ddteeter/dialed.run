@@ -798,7 +798,10 @@ type OpenRow =
  * Exported for account's flagged-handle decision (D-97), which answers
  * the same three ways.
  */
-export async function openRow(queueId: string): Promise<OpenRow> {
+export async function openRow(
+  queueId: string,
+  shown?: ShownRow,
+): Promise<OpenRow> {
   const row = await firstRowWhere(
     db(),
     reviewQueue,
@@ -807,6 +810,12 @@ export async function openRow(queueId: string): Promise<OpenRow> {
 
   if (!row) return "not_found";
   if (row.status === "approved" || row.status === "removed") {
+    return "already_resolved";
+  }
+  // Re-opened since the page that sends the decision was read: that
+  // decision was made on another reason for the row, so it is answered as
+  // settled and the reloaded page shows the row as it is now.
+  if (shown !== undefined && !isAsShown(row, shown)) {
     return "already_resolved";
   }
   return {
@@ -818,12 +827,30 @@ export async function openRow(queueId: string): Promise<OpenRow> {
 }
 
 /**
- * The row not re-opened since it was read (SA-L11): what a decision's
- * settle also holds to, so a report that re-opened the row in between is
- * left for a person rather than settled on what was read before it.
+ * The row not re-opened since it was read or shown (SA-L11): what a
+ * decision's settle also holds to, so a report that re-opened the row in
+ * between is left for a person rather than settled on what was read
+ * before it. Exported for account's Keep and Rename on a flagged handle.
  */
-function unchangedSinceRead(row: Exclude<OpenRow, string>): SQL {
-  return sql`${reviewQueue.openedAt} is ${row.openedAt}`;
+export function stillAsShown(row: ShownRow): SQL {
+  return sql`${reviewQueue.openedAt} is ${row.openedAt} and ${reviewQueue.source} = ${row.source}`;
+}
+
+/**
+ * A row as a Desk page showed it: when it last went in front of a person,
+ * and why. A decision sends both back. `openedAt` is in whole seconds, so
+ * the source is what tells a re-open in the same second apart.
+ */
+export interface ShownRow {
+  readonly openedAt: number | null;
+  readonly source: ReviewSource;
+}
+
+/**
+Whether a row is still the one a page showed.
+*/
+function isAsShown(row: ShownRow, shown: ShownRow): boolean {
+  return row.openedAt === shown.openedAt && row.source === shown.source;
 }
 
 /**
@@ -879,8 +906,13 @@ export async function resolveReview(
   queueId: string,
   reviewerId: string,
   decision: ReviewDecision,
+  /**
+   * The row as the deciding page showed it; nothing for a decision no page
+   * showed (a burst release), which holds to the row as read here.
+   */
+  shown?: ShownRow,
 ): Promise<ResolveOutcome> {
-  const row = await openRow(queueId);
+  const row = await openRow(queueId, shown);
   if (typeof row === "string") return row;
 
   // A read that decides what to write goes before the batch, not inside
@@ -904,7 +936,7 @@ export async function resolveReview(
       queueId,
       reviewerId,
       settled.status,
-      unchangedSinceRead(row),
+      stillAsShown(row),
       settled.at,
     ).returning({ id: reviewQueue.id }),
     ...subjectWritesFor(row, decision, here),

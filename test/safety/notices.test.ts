@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { shownRowOf } from "./helpers";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -141,6 +142,7 @@ async function queued(
     source,
     status: "pending",
     createdAt: nowSeconds(),
+    openedAt: 1,
   });
   return id;
 }
@@ -280,6 +282,7 @@ describe("the author's notice when a report hides their thing (D-145)", () => {
     await core().update(notifications).set({ read: true });
     await decideReview(core(), "op", {
       queueId: await queueRowOf(entryId),
+      shown: await shownRowOf(await queueRowOf(entryId)),
       action: "approve",
     });
 
@@ -314,10 +317,18 @@ describe("what a decision tells (D-132)", () => {
     const queueId = await queueRowOf(entryId);
 
     expect(
-      await decideReview(core(), "op", { queueId, action: "approve" }),
+      await decideReview(core(), "op", {
+        queueId,
+        shown: await shownRowOf(queueId),
+        action: "approve",
+      }),
     ).toBe("resolved");
     expect(
-      await decideReview(core(), "op", { queueId, action: "approve" }),
+      await decideReview(core(), "op", {
+        queueId,
+        shown: await shownRowOf(queueId),
+        action: "approve",
+      }),
     ).toBe("already_resolved");
 
     for (const reporter of [first, second, third]) {
@@ -347,6 +358,7 @@ describe("what a decision tells (D-132)", () => {
 
     await decideReview(core(), "op", {
       queueId: await queueRowOf(photoId),
+      shown: await shownRowOf(await queueRowOf(photoId)),
       action: "approve",
     });
 
@@ -365,7 +377,11 @@ describe("what a decision tells (D-132)", () => {
     const photoId = await photoOn(await entryOf(author));
     const queueId = await queued("photo", photoId, "classifier");
 
-    await decideReview(core(), "op", { queueId, action: "approve" });
+    await decideReview(core(), "op", {
+      queueId,
+      shown: await shownRowOf(queueId),
+      action: "approve",
+    });
 
     expect(await told(author)).toStrictEqual([]);
   });
@@ -377,6 +393,7 @@ describe("what a decision tells (D-132)", () => {
 
     await decideReview(core(), "op", {
       queueId: await queueRowOf(entryId),
+      shown: await shownRowOf(await queueRowOf(entryId)),
       action: "remove",
       reason: "spam",
     });
@@ -405,6 +422,7 @@ describe("what a decision tells (D-132)", () => {
 
     await decideReview(core(), "op", {
       queueId,
+      shown: await shownRowOf(queueId),
       action: "remove",
       reason: "explicit",
     });
@@ -422,6 +440,7 @@ describe("what a decision tells (D-132)", () => {
 
     await decideReview(core(), "op", {
       queueId,
+      shown: await shownRowOf(queueId),
       action: "remove",
       reason: "intimate",
     });
@@ -437,6 +456,7 @@ describe("what a decision tells (D-132)", () => {
 
     await decideReview(core(), "op", {
       queueId,
+      shown: await shownRowOf(queueId),
       action: "remove",
       reason: "explicit",
     });
@@ -452,6 +472,7 @@ describe("what a decision tells (D-132)", () => {
 
     await decideReview(core(), "op", {
       queueId: await queueRowOf(entryId),
+      shown: await shownRowOf(await queueRowOf(entryId)),
       action: "quarantine",
       reason: "explicit",
     });
@@ -468,11 +489,13 @@ describe("what a decision tells (D-132)", () => {
 
     await decideReview(core(), "op", {
       queueId: await queued("product", removed, "reports"),
+      shown: { openedAt: 1, source: "reports" },
       action: "remove",
       reason: "spam",
     });
     await decideReview(core(), "op", {
       queueId: await queued("product", kept, "reports"),
+      shown: { openedAt: 1, source: "reports" },
       action: "approve",
     });
 
@@ -486,6 +509,7 @@ describe("what a decision tells (D-132)", () => {
 
     await decideReview(core(), "op", {
       queueId: await queued("profile", runner, "reports"),
+      shown: { openedAt: 1, source: "reports" },
       action: "remove",
       reason: "harassment",
     });
@@ -499,6 +523,7 @@ describe("what a decision tells (D-132)", () => {
 
     await decideReview(core(), "op", {
       queueId: await queued("product", product, "reports"),
+      shown: { openedAt: 1, source: "reports" },
       action: "quarantine",
       reason: "explicit",
     });

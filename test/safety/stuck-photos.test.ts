@@ -3,6 +3,7 @@
  * goes to the Desk's review queue, once, saying whether its file is
  * missing or the classifier never answered.
  */
+import { shownRowOf } from "./helpers";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { ulid } from "ulidx";
@@ -559,6 +560,7 @@ describe("Approve on a stuck photo (owner, 2026-10-31)", () => {
 
     const outcome = await decideReview(core(), "op", {
       queueId: await queueIdOf(photoId),
+      shown: await shownRowOf(await queueIdOf(photoId)),
       action: "approve",
     });
 
@@ -576,6 +578,7 @@ describe("Approve on a stuck photo (owner, 2026-10-31)", () => {
 
     await decideReview(core(), "op", {
       queueId: await queueIdOf(photoId),
+      shown: await shownRowOf(await queueIdOf(photoId)),
       action: "approve",
     });
 
@@ -603,6 +606,7 @@ describe("Clear photo on a missing file (owner, 2026-10-31)", () => {
 
     const outcome = await decideReview(core(), "op", {
       queueId: await queueIdOf(photoId),
+      shown: await shownRowOf(await queueIdOf(photoId)),
       action: "clear",
     });
 
@@ -632,6 +636,7 @@ describe("Clear photo on a missing file (owner, 2026-10-31)", () => {
 
     const outcome = await decideReview(core(), "op", {
       queueId: await queueIdOf(itemId),
+      shown: await shownRowOf(await queueIdOf(itemId)),
       action: "clear",
     });
 
@@ -664,6 +669,7 @@ describe("Clear photo on a missing file (owner, 2026-10-31)", () => {
 
     await decideReview(core(), "op", {
       queueId: await queueIdOf(photoId),
+      shown: await shownRowOf(await queueIdOf(photoId)),
       action: "clear",
     });
 
@@ -680,6 +686,7 @@ describe("Clear photo on a missing file (owner, 2026-10-31)", () => {
 
     await decideReview(core(), "op", {
       queueId: await queueIdOf(itemId),
+      shown: await shownRowOf(await queueIdOf(itemId)),
       action: "clear",
     });
 
@@ -717,6 +724,7 @@ describe("Clear photo on a missing file (owner, 2026-10-31)", () => {
 
     const outcome = await decideReview(core(), "op", {
       queueId: await queueIdOf(photoId),
+      shown: await shownRowOf(await queueIdOf(photoId)),
       action: "clear",
     });
 
@@ -738,6 +746,7 @@ describe("Clear photo on a missing file (owner, 2026-10-31)", () => {
 
     const outcome = await decideReview(core(), "op", {
       queueId: await queueIdOf(photoId),
+      shown: await shownRowOf(await queueIdOf(photoId)),
       action: "clear",
     });
 
@@ -757,6 +766,7 @@ describe("Clear photo on a missing file (owner, 2026-10-31)", () => {
 
     const outcome = await decideReview(core(), "op", {
       queueId: await queueIdOf(itemId),
+      shown: await shownRowOf(await queueIdOf(itemId)),
       action: "clear",
     });
 
@@ -776,9 +786,13 @@ describe("Clear photo on a missing file (owner, 2026-10-31)", () => {
       createdAt: nowSeconds(),
     });
 
-    expect(await decideReview(core(), "op", { queueId, action: "clear" })).toBe(
-      "not_found",
-    );
+    expect(
+      await decideReview(core(), "op", {
+        queueId,
+        shown: await shownRowOf(queueId),
+        action: "clear",
+      }),
+    ).toBe("not_found");
   });
 
   it("answers a second Clear as already settled", async () => {
@@ -786,10 +800,18 @@ describe("Clear photo on a missing file (owner, 2026-10-31)", () => {
     const photoId = await entryPhoto(now, 2 * DAY, false);
     await retryPendingScreenings(clean, [], now);
     const queueId = await queueIdOf(photoId);
-    await decideReview(core(), "op", { queueId, action: "clear" });
+    await decideReview(core(), "op", {
+      queueId,
+      shown: await shownRowOf(queueId),
+      action: "clear",
+    });
 
-    expect(await decideReview(core(), "op", { queueId, action: "clear" })).toBe(
-      "already_resolved",
-    );
+    expect(
+      await decideReview(core(), "op", {
+        queueId,
+        shown: await shownRowOf(queueId),
+        action: "clear",
+      }),
+    ).toBe("already_resolved");
   });
 });

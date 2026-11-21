@@ -703,7 +703,11 @@ describe("Rename (round 27 #16)", () => {
     await user.click(screen.getByRole("button", { name: "Rename" }));
 
     expect(rename).toHaveBeenCalledWith({
-      data: { userId: "u-ada", nameReason: "Pretends to be someone else" },
+      data: {
+        userId: "u-ada",
+        shown: "ada",
+        nameReason: "Pretends to be someone else",
+      },
     });
     expect(
       await screen.findByText("Renamed to @runner_4821."),

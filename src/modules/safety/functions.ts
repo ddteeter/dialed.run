@@ -335,6 +335,7 @@ export const forceRenameAction = createServerFn({ method: "POST" })
     const db = coreDb();
     return forceRename(db, {
       userId: data.userId,
+      shown: data.shown,
       typed: placeholderHandle(),
       reason: data.nameReason,
       recordedAs: renameRecord(db, {

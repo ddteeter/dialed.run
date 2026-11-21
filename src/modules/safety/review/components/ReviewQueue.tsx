@@ -26,6 +26,7 @@ import type {
   QueueRow,
   ResolveOutcome,
   ReviewSource,
+  ShownRow,
 } from "../review";
 import { PickOne } from "../../components/DeskForm";
 import { DueClock } from "../../components/DueClock";
@@ -277,6 +278,12 @@ A flagged handle's rename lost a race: the handle as it is now.
 type Moved = (username: string) => void;
 
 /**
+ * The handle a flagged handle's row shows, and what to do when a Rename
+ * finds the runner holds another now.
+ */
+type ShownHandle = Readonly<{ handle: string; onMoved: Moved }>;
+
+/**
  * A content row's decision: Approve, Remove, or Remove as suspected CSAM
  * (`RemovalDecision`), sent by the queue row's id. A missing file has
  * nothing to approve, so it offers Clear photo instead (D-157).
@@ -296,7 +303,7 @@ function Decision({
   return (
     <RemovalDecision
       schema={reviewActionInput}
-      subject={{ queueId: row.id }}
+      subject={{ queueId: row.id, shown: shownOf(row) }}
       act={async (values) => {
         const decided = await decide({ data: values });
         return { action: values.action, outcome: decided.outcome };
@@ -316,6 +323,13 @@ function Decision({
   );
 }
 
+/**
+A row as this page shows it, which a decision on it sends back.
+*/
+function shownOf(row: QueueRow): ShownRow {
+  return { openedAt: row.openedAt, source: row.source };
+}
+
 export type ReviewHandle = (input: {
   data: HandleReviewValues;
 }) => Promise<HandleReview>;
@@ -332,9 +346,10 @@ function HandleDecision({
   row,
   reviewHandle,
   onSettled,
-  onMoved,
+  shown,
 }: RowSettleProps &
-  Readonly<{ reviewHandle: ReviewHandle; onMoved: Moved }>): JSX.Element {
+  Readonly<{ reviewHandle: ReviewHandle; shown: ShownHandle }>): JSX.Element {
+  const { handle, onMoved } = shown;
   const [reason, setReason] = useState<RenameReason | undefined>();
   const [said, setSaid] = useState("");
   const form = useFormSubmit({
@@ -365,6 +380,8 @@ function HandleDecision({
       onSubmit={() => {
         void form.submit({
           queueId: row.id,
+          shown: shownOf(row),
+          handle,
           action: "rename",
           nameReason: reason,
         });
@@ -373,7 +390,11 @@ function HandleDecision({
         <QuietAction
           label="Keep"
           onPress={() => {
-            void form.submit({ queueId: row.id, action: "keep" });
+            void form.submit({
+              queueId: row.id,
+              shown: shownOf(row),
+              action: "keep",
+            });
           }}
         />
       }
@@ -664,7 +685,7 @@ function ReviewRow({
                 decide={decide}
                 reviewHandle={reviewHandle}
                 onSettled={onSettled}
-                onMoved={setLabel}
+                shown={{ handle: label, onMoved: setLabel }}
               />
             }
           />
@@ -735,7 +756,11 @@ function OpenRow({
  */
 function RowDecision(
   props: RowSettleProps &
-    Readonly<{ decide: Decide; reviewHandle: ReviewHandle; onMoved: Moved }>,
+    Readonly<{
+      decide: Decide;
+      reviewHandle: ReviewHandle;
+      shown: ShownHandle;
+    }>,
 ): JSX.Element {
   const { row, onSettled } = props;
   if (row.subject.handleFlagged === true) {
@@ -744,7 +769,7 @@ function RowDecision(
         row={row}
         reviewHandle={props.reviewHandle}
         onSettled={onSettled}
-        onMoved={props.onMoved}
+        shown={props.shown}
       />
     );
   }

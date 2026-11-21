@@ -7,6 +7,7 @@
  * knows how to build. What lives here is only the part feed has no reason
  * to know about: clearing task 106's own tables.
  */
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import {
@@ -28,7 +29,10 @@ import {
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import type { ReviewSubjectType } from "../../src/modules/safety/review/review";
+import type {
+  ReviewSubjectType,
+  ShownRow,
+} from "../../src/modules/safety/review/review";
 
 import {
   deleteAllFrom,
@@ -164,4 +168,22 @@ export async function makeProduct(id: string = newUlid()): Promise<string> {
       createdAt: NOW,
     });
   return id;
+}
+
+/**
+ * What a decision on a row that does not exist sends as shown: anything,
+ * since the decision is answered as not found either way.
+ */
+export const anyShownRow: ShownRow = { openedAt: 0, source: "reports" };
+
+/**
+ * A Review row as a page that read it now would show it, which a decision
+ * sends back.
+ */
+export async function shownRowOf(queueId: string): Promise<ShownRow> {
+  const [row] = await drizzle(env.DIALED_CORE)
+    .select({ openedAt: reviewQueue.openedAt, source: reviewQueue.source })
+    .from(reviewQueue)
+    .where(eq(reviewQueue.id, queueId));
+  return row ?? anyShownRow;
 }
