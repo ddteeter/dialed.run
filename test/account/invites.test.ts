@@ -907,6 +907,36 @@ describe("requestAccess (Au5)", () => {
     expect(codeOf(answer)).toMatch(/^DIAL-/u);
   });
 
+  it("reports a failed invite email by its key's kind and its template", async () => {
+    const requestId = newUlid();
+    await db.insert(accessRequests).values({
+      id: requestId,
+      email: "sam@x.test",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    const mail = fakeMail();
+    mail.failing(true);
+    const later = owedTo(mail);
+    const reports: Record<string, string>[] = [];
+    const answer = await inviteFromRequest(
+      db,
+      { operatorId: "op", requestId },
+      {
+        ...later.owed,
+        report: (_error, context) => {
+          reports.push(context);
+        },
+      },
+    );
+    await later.settled();
+    const code = codeOf(answer);
+    expect(reports).toStrictEqual([
+      expect.objectContaining({ dedupeKey: "invite", template: "invite" }),
+    ]);
+    expect(JSON.stringify(reports)).not.toContain(code);
+  });
+
   it("refuses what Turnstile refuses, keeping nothing", async () => {
     const { seen, verify } = verifyAs(false);
     expect(
