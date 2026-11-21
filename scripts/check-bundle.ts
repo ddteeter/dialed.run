@@ -4,7 +4,7 @@
  * **Why this check exists at all.** A route is in the client bundle, so what
  * it imports at module scope has to be reachable without `env` — and when
  * it is not, almost nothing says so. Pulling one decision out of
- * `feed/entries.ts` into a route loader dragged `cloudflare:workers` into
+ * `feed/entries/entries.ts` into a route loader dragged `cloudflare:workers` into
  * the browser bundle and broke `npm run build`; a second did the same with
  * the whole drizzle schema, 23 kB of it, and that one did not fail at all.
  * Neither is visible to tsc, to eslint, to dependency-cruiser or to the

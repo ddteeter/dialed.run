@@ -4,7 +4,7 @@
  *
  * These live in lib/ specifically so a component can import them. Lane 104
  * re-declared them inside routes/feed/verdict.$entryId.tsx with a comment
- * explaining that importing modules/feed/photos.ts would drag D1- and
+ * explaining that importing modules/feed/entries/photos.ts would drag D1- and
  * env-touching code into the client bundle. That reason was correct; the
  * conclusion was not. Pure constants belong in lib/, where both sides can
  * reach them and neither owns them.

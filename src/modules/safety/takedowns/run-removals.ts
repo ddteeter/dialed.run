@@ -4,7 +4,7 @@
  * its photos.
  *
  * **Read from the audit row, because the thing itself is gone.** A Remove
- * deletes (`feed/moderation.ts`), so only `moderation_actions` still knows
+ * deletes (`feed/moderation/moderation.ts`), so only `moderation_actions` still knows
  * it happened; its `run_id`, read before the delete, says which run. A
  * copyright takedown hides instead (D-130), and its band goes once a
  * counter-notice puts the thing back (`notRestored`). Rows

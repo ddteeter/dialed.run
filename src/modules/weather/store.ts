@@ -226,7 +226,7 @@ export function toWeatherObservation(row: ObservationRow): WeatherObservation {
  * start hour.
  *
  * **The write and the read share this walk, and must.** `attach.ts` calls it
- * to decide which hours to resolve, and `feed/conditions.ts` calls it to
+ * to decide which hours to resolve, and `feed/conditions/conditions.ts` calls it to
  * decide which to read back. A second copy of the rounding or the cap would
  * let the two disagree silently: the reader would look for an hour the
  * writer never fetched, or stop before an hour it did. Capped: a plausible long run is a handful of hours, and the

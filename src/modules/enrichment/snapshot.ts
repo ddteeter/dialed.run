@@ -55,7 +55,7 @@ export async function putSnapshot(
  * R2 and D1 (law 8c). The order is the one that fails safely: an object with
  * no row is invisible but recoverable, where a row pointing at an object
  * that was never written is a snapshot that lies about existing, and
- * `reextract` would break on it. `feed/photos.ts` makes the same trade for
+ * `reextract` would break on it. `feed/entries/photos.ts` makes the same trade for
  * the same reason.
  *
  * The residue is an orphaned object when D1 fails between the two. `MEDIA`

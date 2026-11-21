@@ -14,7 +14,7 @@ import { SavedSwitchRow } from "./saved-switch";
  * - **The switch is U2's conditions pool too** (owner, 2026-10-12: fold U2
  *   into `count_in_totals`; round 38 retires U2's card). Off also leaves a
  *   runner's shared runs out of the in-app Same conditions block
- *   (`feed/consensus.ts`), at once, while the block still works for them —
+ *   (`feed/consensus/consensus.ts`), at once, while the block still works for them —
  *   so both lines say so. One switch, one writer (`setCountInTotals`).
  */
 export const TOTALS_LABEL = "Count my runs in anonymous totals";

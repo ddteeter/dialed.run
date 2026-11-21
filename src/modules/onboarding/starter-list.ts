@@ -93,7 +93,7 @@ async function bandFor(
   // wrapping `createServerFn`: the concrete version compiles and the
   // generic one cannot.
   //
-  // fallow-ignore-next-line code-duplication -- the query is the same read as feed/units.ts's, and the extraction that would merge them does not typecheck (see above); what differs after it is the part that matters, since "no location" and "no unit preference" are different facts with different right answers
+  // fallow-ignore-next-line code-duplication -- the query is the same read as feed/conditions/units.ts's, and the extraction that would merge them does not typecheck (see above); what differs after it is the part that matters, since "no location" and "no unit preference" are different facts with different right answers
   const [row] = await db
     .select({
       lat: userProfiles.lat,

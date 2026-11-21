@@ -7,7 +7,7 @@
  * sweep restores on the 12th weekday after it — inside the window even
  * with two federal holidays in it — unless the Desk records that the
  * sender has gone to court. With no counter-notice recorded, the sweep
- * deletes the material 30 days after the takedown (`feed/moderation.ts`,
+ * deletes the material 30 days after the takedown (`feed/moderation/moderation.ts`,
  * whose delete statements those are).
  *
  * **A court action is a litigation hold** (D-146): the material stays

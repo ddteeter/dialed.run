@@ -61,7 +61,7 @@ export const WORLD_AUDIENCE = "world" satisfies WritableAudience;
  * it counts in the feed, consensus and "worn by N" like a SHARED one.
  * Every read that shows an entry to someone other than its author tests
  * for these and nothing else (`safety/rules/visibility.ts`'s one rule,
- * `feed/feed.ts`'s index seek), so a `groups` row is hidden from strangers
+ * `feed/following/feed.ts`'s index seek), so a `groups` row is hidden from strangers
  * without anyone having to remember it.
  */
 export const strangerAudiences = [

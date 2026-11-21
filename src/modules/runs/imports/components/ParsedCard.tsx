@@ -412,7 +412,7 @@ function useRetimeForm({
  * the page's centred 620. Round 25's desk rail for the block is
  * withdrawn; A2 and A3 keep theirs (R58·307).
  */
-// fallow-ignore-next-line code-duplication -- a many-prop signature that matches feed/components/Feed.tsx FollowingTab only by destructuring one prop per line; one is a parsed run, the other the Following tab, and they share nothing to extract
+// fallow-ignore-next-line code-duplication -- a many-prop signature that matches feed/following/components/Feed.tsx FollowingTab only by destructuring one prop per line; one is a parsed run, the other the Following tab, and they share nothing to extract
 export function ParsedCard({
   filename,
   run,

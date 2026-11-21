@@ -73,7 +73,7 @@ async function signedInUser(sessions = 2): Promise<string> {
  * Asked here rather than exported from the module: this is a fact only a
  * test wants, and a production export nothing in production calls is the
  * kind of code that looks load-bearing to the next reader. (It also made
- * `bans.ts` a clone of `feed/reactions.ts`'s count — a shape that shows up
+ * `bans.ts` a clone of `feed/entries/reactions.ts`'s count — a shape that shows up
  * whenever a query exists only to be counted.)
  */
 async function sessionCountOf(userId: string): Promise<number> {

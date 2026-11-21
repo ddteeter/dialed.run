@@ -54,8 +54,8 @@
       "count": 1
     },
     {
-      "key": "src/modules/onboarding/starter-list.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the query is the same read as feed/units.ts's, and the extraction that would merge them does not typecheck (see above); what differs after it is the part that matters, since \"no location\" and \"no unit preference\" are different facts with different right answers",
-      "reason": "Same two-column read of user_profiles as feed/units.ts's unitsFor, and the extraction into lib/keyed-read provably does not compile: drizzle infers a row type for a literal column map and stops for a generic one, widening select().from().where() to a union that includes the query builder, so the awaited value is neither iterable nor indexable. Four shapes were tried (annotated result, .all(), .execute(), a generic table param) \u2014 the same class of failure CLAUDE.md already records for wrapping createServerFn. What differs after the query is the part that matters: \u201cno location\u201d and \u201cno unit preference\u201d are different facts with different right answers.",
+      "key": "src/modules/onboarding/starter-list.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the query is the same read as feed/conditions/units.ts's, and the extraction that would merge them does not typecheck (see above); what differs after it is the part that matters, since \"no location\" and \"no unit preference\" are different facts with different right answers",
+      "reason": "Same two-column read of user_profiles as feed/conditions/units.ts's unitsFor, and the extraction into lib/keyed-read provably does not compile: drizzle infers a row type for a literal column map and stops for a generic one, widening select().from().where() to a union that includes the query builder, so the awaited value is neither iterable nor indexable. Four shapes were tried (annotated result, .all(), .execute(), a generic table param) \u2014 the same class of failure CLAUDE.md already records for wrapping createServerFn. What differs after the query is the part that matters: \u201cno location\u201d and \u201cno unit preference\u201d are different facts with different right answers.",
       "count": 1
     },
     {
@@ -484,12 +484,12 @@
       "count": 1
     },
     {
-      "key": "src/modules/onboarding/profile.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- rhymes with feed/share-default.ts's defaultAudienceFor: same select-by-userId-with-limit-1-then-??-default shape, but a different column with a different default (not-yet-onboarded vs public-by-default) that will evolve on its own product timeline",
-      "reason": "Pair A, both sides. See the matching grant on `modules/feed/share-default.ts`: same skeleton, different column, different default, different module, no shared home. Owner's call, 2026-09-21 (task 115).",
+      "key": "src/modules/onboarding/profile.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- rhymes with feed/entries/share-default.ts's defaultAudienceFor: same select-by-userId-with-limit-1-then-??-default shape, but a different column with a different default (not-yet-onboarded vs public-by-default) that will evolve on its own product timeline",
+      "reason": "Pair A, both sides. See the matching grant on `modules/feed/entries/share-default.ts`: same skeleton, different column, different default, different module, no shared home. Owner's call, 2026-09-21 (task 115).",
       "count": 1
     },
     {
-      "key": "src/modules/closet/components/GarmentForm.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- a ten-prop signature that matches feed/components/KitPicker.tsx KitList only by destructuring one prop per line; one edits a garment, the other picks a kit, and they share nothing to extract",
+      "key": "src/modules/closet/components/GarmentForm.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- a ten-prop signature that matches feed/attach/components/KitPicker.tsx KitList only by destructuring one prop per line; one edits a garment, the other picks a kit, and they share nothing to extract",
       "reason": "Owner's call, 2026-09-25: a destructured-props signature, not a clone. Semantic mode matches any two components that destructure ten-plus props one per line, whatever the names and types, so two unrelated components rhyme. The alternative, reading props through `props.` in one of them to break the skeleton, was put to the owner and declined as code written only to dodge the detector.",
       "count": 1
     },
@@ -504,7 +504,7 @@
       "count": 1
     },
     {
-      "key": "src/modules/runs/imports/components/ParsedCard.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- a many-prop signature that matches feed/components/Feed.tsx FollowingTab only by destructuring one prop per line; one is a parsed run, the other the Following tab, and they share nothing to extract",
+      "key": "src/modules/runs/imports/components/ParsedCard.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- a many-prop signature that matches feed/following/components/Feed.tsx FollowingTab only by destructuring one prop per line; one is a parsed run, the other the Following tab, and they share nothing to extract",
       "reason": "Owner's call, 2026-09-25: a destructured-props signature, not a clone. Semantic mode matches any two components that destructure ten-plus props one per line, whatever the names and types, so two unrelated components rhyme. The alternative, reading props through `props.` in one of them to break the skeleton, was put to the owner and declined as code written only to dodge the detector.",
       "count": 1
     },
@@ -614,8 +614,8 @@
       "count": 2
     },
     {
-      "key": "src/modules/safety/review/desk-kit.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; deskKitFor is the one read of a kit for the Desk, and its pieces already come from kitPiecesSelect, which feed/public-kit.ts shares",
-      "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline. Owner's call 2026-11-09 (#388): the kit's garment read was extracted (kitPiecesSelect, shared with feed/public-kit.ts); these three are the query grammar.",
+      "key": "src/modules/safety/review/desk-kit.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; deskKitFor is the one read of a kit for the Desk, and its pieces already come from kitPiecesSelect, which feed/public-web/public-kit.ts shares",
+      "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline. Owner's call 2026-11-09 (#388): the kit's garment read was extracted (kitPiecesSelect, shared with feed/public-web/public-kit.ts); these three are the query grammar.",
       "count": 3
     }
   ]

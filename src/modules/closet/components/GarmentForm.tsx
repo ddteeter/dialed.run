@@ -545,7 +545,7 @@ type UpdateValue = <K extends keyof GarmentFormValues>(
  * sentence or the failure band — so the schema is the single gate and
  * `useFormSubmit` renders what it says.
  */
-// fallow-ignore-next-line code-duplication -- a ten-prop signature that matches feed/components/KitPicker.tsx KitList only by destructuring one prop per line; one edits a garment, the other picks a kit, and they share nothing to extract
+// fallow-ignore-next-line code-duplication -- a ten-prop signature that matches feed/attach/components/KitPicker.tsx KitList only by destructuring one prop per line; one edits a garment, the other picks a kit, and they share nothing to extract
 export function GarmentForm({
   heading,
   back,

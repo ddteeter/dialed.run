@@ -2,7 +2,7 @@
  * Pure temperature/precipitation classification and display helpers —
  * no D1, no env, no bindings. This split exists specifically so route
  * *components* (which ship to the browser) can use these without pulling
- * in modules/feed/conditions.ts's `env`/drizzle-orm imports into the
+ * in modules/feed/conditions/conditions.ts's `env`/drizzle-orm imports into the
  * client bundle: Vite/Rolldown must resolve every static import in a
  * file's module graph before it can tree-shake unused bindings, and
  * `cloudflare:workers` (imported by src/env/index.ts) has no client-side
