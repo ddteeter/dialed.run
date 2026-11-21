@@ -4,9 +4,10 @@
  * multipart body into a `FormData` before its validator or its sign-in
  * check runs, so a size check on the `File` comes after the bytes are held.
  *
- * Two ceilings, by content type: a multipart upload may carry the largest
- * file any upload takes (a run file) with room for its form; anything
- * else is far smaller. `Content-Length` is a claim, so it is only the
+ * Three ceilings. Auth's endpoints (`/api/auth/*`) take small forms only,
+ * so their bodies have the smallest, whatever they say they carry. Elsewhere
+ * a multipart upload may carry the largest file any upload takes (a run
+ * file) with room for its form, and anything else is far smaller. `Content-Length` is a claim, so it is only the
  * early refusal; the body is also counted as it is read
  * (`readCappedBytes`), and either way the answer is a 413.
  */
@@ -21,12 +22,27 @@ export const MULTIPART_BODY_LIMIT =
 
 export const OTHER_BODY_LIMIT = MEGABYTE;
 
+/**
+ * Auth's ceiling (owner, 2026-11-21): 8 KiB, several times the largest
+ * form the app posts there (sign-up's).
+ */
+export const AUTH_BODY_LIMIT = 8 * 1024;
+
+/**
+Where Better Auth is mounted: every path under it takes auth's ceiling.
+*/
+const AUTH_PREFIX = "/api/auth/";
+
 class BodyTooLarge extends Error {}
 
 /**
- * The ceiling for a request, by what it says it carries.
+ * The ceiling for a request: auth's by its path, otherwise by what it says
+ * it carries.
  */
 export function bodyLimitFor(request: Request): number {
+  if (new URL(request.url).pathname.startsWith(AUTH_PREFIX)) {
+    return AUTH_BODY_LIMIT;
+  }
   // `String(null)` is "null", which is not multipart: no header needs no
   // branch of its own.
   const type = String(request.headers.get("content-type"));
