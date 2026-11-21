@@ -36,10 +36,10 @@ describe("the firings and the queue get their jobs from the dispatch", () => {
       expect(code).toContain(line);
     }
     expect(code).toMatch(
-      /const liveUpkeep: DailyUpkeep = \{\s*purgeAccounts: purgeDueAccounts,\s*sweepExports,\s*rescreenHandles: rescreenHandlesFromEnv,\s*linkProducts: linkTypedGarments,\s*sweepAuthRows: sweepExpiredAuthRows,\s*forgetAnsweredRequests,\s*sweepCopyrightHolds,\s*\};/u,
+      /const liveUpkeep: Upkeep = \{\s*purgeAccounts: purgeDueAccounts,\s*sweepExports,\s*rescreenHandles: rescreenHandlesFromEnv,\s*linkProducts: linkTypedGarments,\s*sweepAuthRows: sweepExpiredAuthRows,\s*forgetAnsweredRequests,\s*sweepCopyrightHolds,\s*\};/u,
     );
     expect(code).toContain(
-      "const upkeep: DailyUpkeep = { ...liveUpkeep, ...handedIn };",
+      "const upkeep: Upkeep = { ...liveUpkeep, ...handedIn };",
     );
   });
 
