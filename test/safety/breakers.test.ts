@@ -14,6 +14,7 @@ import {
   quietScreenerWeek,
   FINGERPRINT_HOLDS_PER_HOUR,
   hasFingerprintHoldThisHour,
+  honestBusiest,
   overCeilings,
   REPORT_BASELINE_S,
   REPORT_HIDES_FLOOR,
@@ -26,6 +27,8 @@ import {
 import { HOLD_CAUSES } from "../../src/lib/contracts/hold-causes";
 
 import { newUlid } from "../../src/lib/ids";
+import { nowSeconds } from "../../src/lib/now";
+import { enqueueForReview } from "../../src/modules/safety/review/review";
 
 import { opened, screened } from "./helpers";
 import { makeEntry, makeItem, makeRun, makeUser } from "../feed/helpers";
@@ -386,6 +389,126 @@ describe("the report breaker", () => {
     await opened("reports", 3, NOW - HOUR - REPORT_BASELINE_S);
     const reading = await ceilingReading(core(), "reports", NOW);
     expect(reading).toMatchObject({ ceiling: 12 });
+  });
+});
+
+describe("the report breaker's count, as later reports land", () => {
+  it("leaves out an opening a reason that hides at once hid", async () => {
+    await opened("reports", REPORT_HIDES_FLOOR, NOW - 60, "entry", 2);
+
+    expect(await ceilingReading(core(), "reports", NOW)).toMatchObject({
+      isOver: false,
+      count: 0,
+    });
+  });
+
+  it("keeps a counted hide when a later report re-opens its row", async () => {
+    await opened("reports", REPORT_HIDES_FLOOR, NOW - 60, "entry", 1);
+    const rows = await core().select().from(reviewQueue);
+
+    for (const [index, row] of rows.entries()) {
+      await core().batch([
+        enqueueForReview(core(), {
+          subjectType: "entry",
+          subjectId: row.subjectId,
+          source: "reports",
+          // Past the ceiling, or a reason that hides at once.
+          hid: index % 2 === 0 ? 0 : 2,
+        }),
+      ]);
+    }
+
+    const after = await core()
+      .select({ hid: reviewQueue.hid })
+      .from(reviewQueue);
+    expect(after.every((row) => row.hid === 1)).toBe(true);
+    const reading = await ceilingReading(core(), "reports", nowSeconds());
+    expect(reading.isOver).toBe(true);
+  });
+
+  it("takes a re-open's own hide once the row was decided", async () => {
+    await opened("reports", 1, NOW - 60, "entry", 1);
+    const [row] = await core().select().from(reviewQueue);
+    if (row === undefined) throw new Error("no row");
+    await core().update(reviewQueue).set({ status: "approved" });
+
+    await core().batch([
+      enqueueForReview(core(), {
+        subjectType: "entry",
+        subjectId: row.subjectId,
+        source: "reports",
+        hid: 0,
+      }),
+    ]);
+
+    const [after] = await core()
+      .select({ hid: reviewQueue.hid })
+      .from(reviewQueue);
+    expect(after?.hid).toBe(0);
+  });
+
+  it("lets a re-open bring an open row into the count", async () => {
+    await opened("reports", 1, NOW - 60, "entry", 0);
+    const [row] = await core().select().from(reviewQueue);
+    if (row === undefined) throw new Error("no row");
+
+    await core().batch([
+      enqueueForReview(core(), {
+        subjectType: "entry",
+        subjectId: row.subjectId,
+        source: "reports",
+        hid: 1,
+      }),
+    ]);
+
+    const [after] = await core()
+      .select({ hid: reviewQueue.hid })
+      .from(reviewQueue);
+    expect(after?.hid).toBe(1);
+  });
+});
+
+describe("the report breaker's baseline leaves out its own tripped hours", () => {
+  it("keeps the floor when the only busy hour was one at the ceiling", async () => {
+    await opened("reports", REPORT_HIDES_FLOOR, NOW - 2 * HOUR);
+    await opened("reports", REPORT_HIDES_FLOOR, NOW - 60);
+
+    expect(await ceilingReading(core(), "reports", NOW)).toMatchObject({
+      isOver: true,
+      ceiling: REPORT_HIDES_FLOOR,
+    });
+  });
+
+  it("counts a busy hour that stayed under the ceiling then in force", async () => {
+    await opened("reports", 9, NOW - 3 * HOUR);
+    await opened("reports", REPORT_HIDES_FLOOR, NOW - 2 * HOUR);
+    await opened("reports", REPORT_HIDES_FLOOR, NOW - 60);
+
+    // Nine set a ceiling of 36, so the ten after them were honest.
+    expect(await ceilingReading(core(), "reports", NOW)).toMatchObject({
+      isOver: false,
+      ceiling: 40,
+    });
+  });
+});
+
+describe("honestBusiest", () => {
+  it("is zero for no hours", () => {
+    expect(honestBusiest([])).toBe(0);
+  });
+
+  it("skips an hour that reached the ceiling of the hours before it", () => {
+    // 3 sets 12; 12 reached it; 5 is under it.
+    expect(honestBusiest([{ n: 3 }, { n: 12 }, { n: 5 }])).toBe(5);
+  });
+
+  it("keeps an hour just under that ceiling", () => {
+    expect(honestBusiest([{ n: 3 }, { n: 11 }])).toBe(11);
+  });
+
+  it("keeps the busier of two honest hours, in either order", () => {
+    expect(honestBusiest([{ n: 8 }, { n: 2 }])).toBe(8);
+    expect(honestBusiest([{ n: 2 }, { n: 8 }])).toBe(8);
   });
 });
 

@@ -238,13 +238,10 @@ export async function fileReport(
   const canHide = isAtOnce
     ? await isWithinAtOnceLimit(database, input.reporterId, reportedAt)
     : await canHideNow(false, reportedAt);
-  await hidePendingReview(
-    input.subjectType,
-    input.subjectId,
-    alerts,
-    purge,
+  await hidePendingReview(input.subjectType, input.subjectId, alerts, purge, {
     canHide,
-  );
+    isAtOnce,
+  });
   return { status: "filed", reporterCount, hiddenPendingReview: canHide };
 }
 
@@ -326,14 +323,12 @@ export async function reconcileUnhiddenReports(
       row.firstAtOnce === null
         ? []
         : removalAlerts(owe, row.subjectType, row.subjectId, row.firstAtOnce);
-    const canHide = await canHideNow(row.firstAtOnce !== null, now);
-    await hidePendingReview(
-      row.subjectType,
-      row.subjectId,
-      alerts,
-      purge,
+    const isAtOnce = row.firstAtOnce !== null;
+    const canHide = await canHideNow(isAtOnce, now);
+    await hidePendingReview(row.subjectType, row.subjectId, alerts, purge, {
       canHide,
-    );
+      isAtOnce,
+    });
     // Queued is reconciled either way: its row is the marker, so the
     // sweep never comes back to hide what the breaker held back.
     if (canHide) outcome.hidden += 1;
@@ -498,14 +493,17 @@ async function hidePendingReview(
   subjectId: string,
   alerts: BatchItem<"sqlite">[],
   purge: PurgeTags,
-  canHide: boolean,
+  opening: { readonly canHide: boolean; readonly isAtOnce: boolean },
 ): Promise<void> {
+  const { canHide } = opening;
   const queueWrite = enqueueForReview(db(), {
     subjectType,
     subjectId,
     source: "reports",
-    // What the reports breaker counts: an opening that hid (design 164).
-    hid: canHide ? 1 : 0,
+    // What the reports breaker counts: an opening it let hide (design
+    // 164), 1; one a reason that hides at once hid without asking it, 2;
+    // one that only queued, 0.
+    hid: hidAs(opening),
   });
   // Queued only, it still owes its alerts (design 232): a person must
   // still look within the 48 hours, and the alert is what says so.
@@ -533,6 +531,19 @@ async function hidePendingReview(
   // the photo's public copy too (step 8). A profile and a product hide
   // nothing there (a profile is a ban's to take down).
   purge(await subjectCacheTagsOf(db(), subjectType, subjectId));
+}
+
+/**
+ * How an opening records its hide for the reports breaker: 1 where the
+ * breaker let it hide, 2 where a reason that hides at once hid it without
+ * asking, 0 where it only queued.
+ */
+function hidAs(opening: {
+  readonly canHide: boolean;
+  readonly isAtOnce: boolean;
+}): 0 | 1 | 2 {
+  if (!opening.canHide) return 0;
+  return opening.isAtOnce ? 2 : 1;
 }
 
 /**
