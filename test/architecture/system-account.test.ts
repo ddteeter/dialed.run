@@ -164,12 +164,17 @@ function countOf(pattern: RegExp, source: string): number {
 }
 
 /**
+Where the column is declared, the one reader allowed to write its name as a key.
+*/
+const SCHEMA = "src/db/schema-core.ts";
+
+/**
 Where the mark may be named: its column, the two floors and the write gate.
 */
 const MARK_READERS = [
+  "src/db/runner-standing.ts",
   "src/db/schema-core.ts",
   "src/modules/auth/system-account.ts",
-  "src/modules/feed/conditions/runner-visibility.ts",
   "src/modules/safety/rules/visibility.ts",
 ];
 
@@ -187,7 +192,7 @@ describe("the system-account mark", () => {
     // `.values({…})`, so outside the schema every mention must be a read
     // of the column.
     const gates = sources().filter(
-      ([path]) => MARK_READERS.includes(path) && path !== MARK_READERS[0],
+      ([path]) => MARK_READERS.includes(path) && path !== SCHEMA,
     );
     expect(gates).toHaveLength(MARK_READERS.length - 1);
     for (const [path, source] of gates) {
