@@ -22,7 +22,7 @@ import { forgetAnsweredRequests } from "../account/access";
 import { sweepExports } from "../account/export-build";
 import { rescreenHandlesFromEnv } from "../account/handles";
 import { purgeDueAccounts } from "../account/purge";
-import { sweepExpiredAuthRows } from "../auth/expired-rows";
+import { sweepExpiredAuthRows, sweepExpiredStates } from "../auth/expired-rows";
 import { linkTypedGarments } from "../closet";
 import { sweepRateLimits } from "../email";
 import { sweepCopyrightHolds } from "../feed/moderation";
@@ -276,6 +276,9 @@ async function runCron(
         () => oweRemovalReminders(coreDb()),
         () => drainOwedEmail(anomalies),
         () => drainProductLinks(anomalies, upkeep),
+        // Better Auth's expired sign-in states and reset links, every
+        // hour (owner, 2026-11-21).
+        () => sweepExpiredStates(),
         // Profiles whose zone lookup failed when the place was saved
         // (design 142): a NULL zone beside coordinates is the marker.
         // Last, because its lookups can wait on Visual Crossing.
