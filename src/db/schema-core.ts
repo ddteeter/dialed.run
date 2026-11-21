@@ -536,7 +536,9 @@ export const inviteRedemptions = /*#__PURE__*/ sqliteTable(
 
 /**
  * Au5 · Request access (task 126, ACC-5; round 26 #20): one row per
- * address, lowercased. A repeat updates the note; the receipt is the same
+ * address, lowercased. The first ask's note and place stand while the
+ * request is pending or invited; a declined address that asks again is
+ * pending again with the new ask's note and place. The receipt is the same
  * whether the row is new, repeated, or the address already has an
  * account. D7 lists the pending ones oldest first.
  */
@@ -550,8 +552,9 @@ export const accessRequests = /*#__PURE__*/ sqliteTable(
       .notNull()
       .default("pending"),
     // The blocked US state the request came from (`BLOCKED_US_REGIONS`:
-    // "MS", "TN"), as its latest ask was placed; null anywhere else. D7
-    // shows it and will not invite while the state is still listed.
+    // "MS", "TN"), as the ask that made or re-opened it was placed; null
+    // anywhere else. D7 shows it and will not invite while the state is
+    // still listed.
     blockedRegion: text("blocked_region"),
     createdAt: integer("created_at").notNull(),
     updatedAt: integer("updated_at").notNull(),

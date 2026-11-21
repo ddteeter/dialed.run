@@ -15,7 +15,13 @@ import { nowSeconds } from "../../../lib/now";
 import { orSqlNull } from "../../../lib/sql/sql-null";
 import { TURNSTILE_ACTIONS } from "../../../lib/turnstile-actions";
 import type { TurnstileAction } from "../../../lib/turnstile-actions";
-import { countSend, sendAllowed, sendClaimOf } from "../../email";
+import {
+  countLimit,
+  countSend,
+  limitAllowed,
+  sendAllowed,
+  sendClaimOf,
+} from "../../email";
 import type { TurnstileAttempt, TurnstileVerdict } from "../../ops";
 import { isClosedAddress } from "./closed-addresses";
 import { confirmRedemption, inviteStanding, redeemInvite } from "./invites";
@@ -107,15 +113,18 @@ export type AccessRequestResult =
 /**
  * Au5 · Request access. Turnstile first; then, on a real deployment, a
  * limit per visitor address (`rate_limits`, kind `access`), so a script
- * cannot fill D7 even with a solved challenge, in one batch
- * with one conditional upsert — a repeat updates the note and leaves the
- * request where it was in the queue. A declined address that asks again
- * is pending again.
+ * cannot fill D7 even with a solved challenge, and a limit per address
+ * asked for (`access-to`, `ACCESS_ASKS_PER_ADDRESS_PER_DAY`), in one
+ * batch with one conditional upsert. The first ask's note and place stand
+ * while the request is pending or invited: a repeat changes nothing. A
+ * declined address that asks again is pending again, with the new ask's
+ * note and place. An ask past the address's limit writes nothing and is
+ * answered the same receipt.
  *
  * `blockedRegion` is the gate's answer for the request
  * (`blockedRegionOf`), read by the caller and required here, so no caller
- * can leave it out. It is recorded on the request, the latest ask's
- * place, for D7.
+ * can leave it out. It is recorded on the request, as the ask that made
+ * it or re-opened it was placed, for D7.
  *
  * Idempotent without a key (law 8b): the address is the row's identity,
  * so a double submit is the same upsert twice.
@@ -147,18 +156,20 @@ export async function requestAccess(
   // and the request land together, and the request only if the count it
   // sits beside allowed it.
   const visitor = input.attempt.remoteIp ?? "unknown";
+  const allowed = sql`${sendAllowed("access", visitor)} AND ${limitAllowed("access-to", email)}`;
   const [counted] = await db.batch([
     countSend(db, "access", visitor, now),
-    upsertRequest(db, { ...input, email }, sendAllowed("access", visitor), now),
+    countLimit(db, "access-to", email, now),
+    upsertRequest(db, { ...input, email }, allowed, now),
   ]);
   const claim = sendClaimOf(counted);
   return claim.isAllowed ? received : { status: "limited", until: claim.until };
 }
 
 /**
- * The request's upsert, written only where `allowed` holds: a repeat
- * updates the note and the place, and a declined address is pending
- * again.
+ * The request's upsert, written only where `allowed` holds: a repeat of a
+ * pending or invited request changes nothing, and a declined one is
+ * pending again with this ask's note, place and time.
  */
 function upsertRequest(
   db: Db,
@@ -170,11 +181,11 @@ function upsertRequest(
   allowed: SQL,
   now: number,
 ) {
-  // `orSqlNull`: drizzle drops an undefined value from the update's SET,
-  // and a repeat with no note must clear the old one, not keep it — and a
-  // repeat from elsewhere must clear an old state the same way.
+  // `orSqlNull`: a re-opening ask with no note, or from no blocked
+  // state, clears the old one rather than keeping it.
   const note = orSqlNull(input.note === "" ? undefined : input.note);
   const blockedRegion = orSqlNull(input.blockedRegion);
+  const declinedBefore = sql`${accessRequests.status} = 'declined'`;
   return db
     .insert(accessRequests)
     .select(
@@ -183,10 +194,10 @@ function upsertRequest(
     .onConflictDoUpdate({
       target: accessRequests.email,
       set: {
-        note,
-        blockedRegion,
-        updatedAt: now,
-        status: sql`CASE WHEN ${accessRequests.status} = 'declined' THEN 'pending' ELSE ${accessRequests.status} END`,
+        note: sql`CASE WHEN ${declinedBefore} THEN ${note} ELSE ${accessRequests.note} END`,
+        blockedRegion: sql`CASE WHEN ${declinedBefore} THEN ${blockedRegion} ELSE ${accessRequests.blockedRegion} END`,
+        updatedAt: sql`CASE WHEN ${declinedBefore} THEN ${now} ELSE ${accessRequests.updatedAt} END`,
+        status: sql`CASE WHEN ${declinedBefore} THEN 'pending' ELSE ${accessRequests.status} END`,
       },
     });
 }
