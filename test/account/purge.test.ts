@@ -479,7 +479,7 @@ function byText(a: string, b: string): number {
 Every count whose subject is one of the runner's addresses.
 */
 function addressCounts(email: string) {
-  return inArray(rateLimits.subject, addressesOf(email));
+  return inArray(rateLimits.subject, provedOf(email));
 }
 
 /**
@@ -507,6 +507,7 @@ const ADDRESS_SENDS = [
   "change",
   "sign-in",
   "takedown-to",
+  "access-to",
 ] as const;
 
 /**
@@ -527,9 +528,46 @@ function firstAddress(email: string): string {
 Every address a seeded runner is known by, lower-cased.
 */
 function addressesOf(email: string): string[] {
-  return [email, firstAddress(email), movingTo(email)].map((address) =>
-    address.toLowerCase(),
-  );
+  return [...provedOf(email), movingTo(email).toLowerCase()];
+}
+
+/**
+ * The addresses a seeded runner proved theirs, lower-cased: the account's
+ * (confirmed) and the one they redeemed their invite with. The address of
+ * their open email change is only named.
+ */
+function provedOf(email: string): string[] {
+  return [email.toLowerCase(), firstAddress(email)];
+}
+
+/**
+ * What is left under the address a seeded runner only named (their open
+ * email change): its access request and its counts.
+ */
+async function namedLeft(seeded: Seeded) {
+  const address = movingTo(seeded.email).toLowerCase();
+  const [requests, counts] = await core.batch([
+    core
+      .select({ email: accessRequests.email })
+      .from(accessRequests)
+      .where(eq(accessRequests.email, address)),
+    core
+      .select({ kind: rateLimits.kind })
+      .from(rateLimits)
+      .where(eq(rateLimits.subject, address))
+      .orderBy(rateLimits.kind),
+  ]);
+  return { requests, counts: counts.map((row) => row.kind) };
+}
+
+/**
+Everything `namedLeft` reads, as the seed wrote it.
+*/
+function namedAsSeeded(seeded: Seeded) {
+  return {
+    requests: [{ email: movingTo(seeded.email).toLowerCase() }],
+    counts: ADDRESS_SENDS.toSorted((a, b) => a.localeCompare(b)),
+  };
 }
 
 /**
@@ -677,13 +715,13 @@ async function footprint(seeded: Seeded) {
     accessRequests: await core
       .select()
       .from(accessRequests)
-      .where(inArray(accessRequests.email, addressesOf(seeded.email))),
+      .where(inArray(accessRequests.email, provedOf(seeded.email))),
     inviteLabels: await core
       .select({ label: inviteCodes.label })
       .from(inviteCodes)
       .where(
         or(
-          ...addressesOf(seeded.email).map(
+          ...provedOf(seeded.email).map(
             (address) =>
               sql`instr(lower(${inviteCodes.label}), ${address}) > 0`,
           ),
@@ -1001,6 +1039,7 @@ describe("purgeDueAccounts — a full purge", () => {
     await purge(anomalies, deps);
 
     expect(await footprint(runner)).toStrictEqual(GONE);
+    expect(await namedLeft(runner)).toStrictEqual(namedAsSeeded(runner));
     expect(await footprint(other)).toStrictEqual(otherBefore);
     expect(revoked).toStrictEqual([runner.userId]);
     expect(reported).toStrictEqual([]);
@@ -1726,8 +1765,8 @@ const STEPS: readonly {
   {
     step: "6 · the account itself",
     stop: () => {
-      // Its last batch: the fifth reads the runner's addresses.
-      failBatch(6);
+      // Its last batch, after the closet's.
+      failBatch(5);
       return depsAt(NOW);
     },
     stoppedAt: (partial) => {
@@ -1932,7 +1971,7 @@ describe("purgeDueAccounts — a closed account's addresses", () => {
 
     expect(await footprint(runner)).toStrictEqual(GONE);
     const hashes = await Promise.all(
-      addressesOf(runner.email).map((address) =>
+      provedOf(runner.email).map((address) =>
         closedAddressHash(CLOSED_KEY, address),
       ),
     );
@@ -1940,6 +1979,53 @@ describe("purgeDueAccounts — a closed account's addresses", () => {
       hashes.toSorted(byText).map((hash) => ({ hash, closedAt: NOW })),
     );
     expect(anomalies).toStrictEqual([]);
+  });
+
+  it("keeps and forgets nothing by address for a closed account that never confirmed its address", async () => {
+    const runner = await dueRunner(true);
+    await core
+      .update(user)
+      .set({ emailVerified: false })
+      .where(eq(user.id, runner.userId));
+    const anomalies: string[] = [];
+
+    await purge(anomalies, {
+      ...depsAt(NOW).deps,
+      closedAddressSecret: CLOSED_KEY,
+    });
+
+    expect(await closedKept()).toStrictEqual([]);
+    expect(anomalies).toStrictEqual([]);
+    const own = await core
+      .select({ email: accessRequests.email })
+      .from(accessRequests)
+      .where(inArray(accessRequests.email, addressesOf(runner.email)))
+      .orderBy(accessRequests.email);
+    expect(own.map((row) => row.email)).toStrictEqual(
+      addressesOf(runner.email).toSorted(byText),
+    );
+    expect(
+      await core.select().from(user).where(eq(user.id, runner.userId)),
+    ).toStrictEqual([]);
+  });
+
+  it("fingerprints only the account's own address when it has no invite on record", async () => {
+    const runner = await dueRunner(true);
+    await core
+      .delete(inviteRedemptions)
+      .where(eq(inviteRedemptions.userId, runner.userId));
+
+    await purge([], {
+      ...depsAt(NOW).deps,
+      closedAddressSecret: CLOSED_KEY,
+    });
+
+    expect(await closedKept()).toStrictEqual([
+      {
+        hash: await closedAddressHash(CLOSED_KEY, runner.email.toLowerCase()),
+        closedAt: NOW,
+      },
+    ]);
   });
 
   it("keeps nothing of an account that was not closed", async () => {

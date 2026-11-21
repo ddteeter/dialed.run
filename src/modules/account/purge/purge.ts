@@ -313,8 +313,8 @@ async function claimDue(db: Db, now: number): Promise<string[]> {
 /**
  * One account, step by step. Every step reads what is left, so running
  * it again from the top after a failure at any step does only what the
- * failure left undone. `isUnremembered` when the account was closed and
- * nothing was kept of its addresses (`deleteAccountRows`).
+ * failure left undone. `isUnremembered` when the account was closed, had
+ * proved addresses, and nothing was kept of them (`deleteAccountRows`).
  */
 export async function purgeAccount(
   deps: PurgeDeps,
@@ -482,27 +482,30 @@ function involvingEither(
 }
 
 /**
- * Every address this runner is known by, lower-cased: the account's (none
- * once the `user` row is gone), the one they redeemed their invite with,
- * and any they were moving to. Each is kept somewhere by address rather
- * than by id, so each is forgotten by address (`forgetAddress`).
+ * The addresses this runner proved theirs, lower-cased: while the account's
+ * address is confirmed, that address and the one they redeemed their
+ * invite with (an email change needs a confirmed address, so the first
+ * was proved before any change). An unconfirmed account has proved none.
+ * An address only named — an email change nobody opened — is not one:
+ * its row goes by the runner's id with the rest. Each proved address is
+ * kept somewhere by address rather than by id, so each is forgotten by
+ * address (`forgetAddress`) and, for a closed account, fingerprinted.
  */
-async function addressesOf(db: Db, userId: string): Promise<string[]> {
-  // One round trip: each read is by the runner's id, on its own index.
-  const found = await db.batch([
-    // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; addressesOf reads every email address a runner left in each table that holds one, so purge can scrub them all
-    db.select({ address: user.email }).from(user).where(eq(user.id, userId)),
-    db
-      .select({ address: inviteRedemptions.email })
-      .from(inviteRedemptions)
-      .where(eq(inviteRedemptions.userId, userId)),
-    db
-      .select({ address: emailVerifications.email })
-      .from(emailVerifications)
-      .where(eq(emailVerifications.userId, userId)),
+async function provedAddressesOf(db: Db, userId: string): Promise<string[]> {
+  const confirmedAccount = and(eq(user.id, userId), eq(user.emailVerified, true));
+  const redeemed = eq(inviteRedemptions.userId, userId);
+  const [confirmed, redemption] = await Promise.all([
+    firstRowWhere(db, user, confirmedAccount),
+    firstRowWhere(db, inviteRedemptions, redeemed),
   ]);
-  const known = found.flat().map((row) => row.address.toLowerCase());
-  return [...new Set(known)];
+  if (confirmed === undefined) return [];
+  // A repeat is harmless: forgetting is by address, and the fingerprints
+  // are kept as a set (`closedAddressRows`).
+  const known =
+    redemption === undefined
+      ? [confirmed.email]
+      : [confirmed.email, redemption.email];
+  return known.map((address) => address.toLowerCase());
 }
 
 /**
@@ -564,7 +567,7 @@ async function deleteAccountRows(
   deps: Pick<PurgeDeps, "now" | "closedAddressSecret">,
 ): Promise<{ isUnremembered: boolean }> {
   const { now } = deps;
-  const addresses = await addressesOf(db, userId);
+  const addresses = await provedAddressesOf(db, userId);
   const profile = await firstRowWhere(
     db,
     userProfiles,
@@ -684,5 +687,8 @@ async function deleteAccountRows(
   ]);
   // SA-L09: a closed account's addresses are kept as fingerprints, so
   // sign-up can refuse them; with no secret, none were.
-  return { isUnremembered: isClosed && fingerprints.length === 0 };
+  return {
+    isUnremembered:
+      isClosed && addresses.length > 0 && fingerprints.length === 0,
+  };
 }
