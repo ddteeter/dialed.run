@@ -44,6 +44,16 @@ fix: do not retry the commit to force a run, and do not wait for the lock. Only
 the push rung waits, and it blocks with `gave up waiting for the gate lock` if
 the wait runs out; re-run the push to re-queue, and never use `--no-verify`.
 
+**A `Timeout` is a kill, at every rung.** Stryker counts a mutant that hangs as
+detected, and the gate reports only `Survived` and `NoCoverage`. That holds for
+a cold run and for one seeded through `mutationCache.seedFrom`
+(`test/drift/stryker-timeout.test.ts` runs both through real stryker). Do not
+harden a loop because it timed out. If the gate reports a survivor on a line
+your own run showed as `Timeout`, the two runs measured different mutants or
+different outcomes, not the same one scored differently: a mutant that only
+slows the code down can time out on a loaded machine and finish, unasserted, on
+another. Treat that survivor like any other.
+
 ## When stryker will not start at all
 
 `guardrails/stryker-dry-run-failed` is not a mutation finding and not a
@@ -126,6 +136,12 @@ Families that recur (all genuinely equivalent):
 ## The trap: assertions that pass for the wrong reason
 
 This is the most common reason a mutant survives a test that _looks_ thorough.
+
+**Work done at describe level.** A value computed in a `describe` body runs
+while the file is collected, not inside a test. If the mutant makes it throw,
+vitest reports a file error, and stryker's runner counts no failed test: the
+mutant survives though the suite is red. Compute it inside each `it`, or in a
+`beforeEach`, so the throw fails a test.
 
 **Guards that fail open.** If a parser returns `[]` for malformed input, then
 `expect(parse(garbage)).toEqual([])` passes even when the guard is entirely
