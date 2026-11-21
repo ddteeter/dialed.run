@@ -476,10 +476,11 @@ const CONTENT: {
     };
   },
   takedown_valve: (template, { origin }) => {
-    // Design 137: placeholder words (design deltas).
+    // Design 137: placeholder words (design deltas). Sent past the hour's
+    // hides, and past its one-by-one alerts for requests that hid nothing.
     return {
       subject: "Removal requests paused: possible abuse",
-      body: `${String(template.perHour)} removal requests hid something in the last hour, so new requests hide nothing until the hour clears. They still wait in Review with their 48 hours.`,
+      body: `More removal requests than usual in the last hour. Past ${String(template.perHour)} that hide something, new requests hide nothing; past ${String(template.perHour)} that hide nothing, they stop emailing one by one. Every one still waits in Review with its 48 hours.`,
       button: { label: "Open Review", href: `${origin}/desk/review` },
       foot: "Sent to every operator, once an hour while it lasts.",
     };

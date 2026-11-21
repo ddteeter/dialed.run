@@ -42,9 +42,11 @@ Hides in an hour, site-wide, past which new requests hide nothing.
 export const TAKEDOWN_VALVE_PER_HOUR = 10;
 
 /**
-One-by-one alerts in an hour, site-wide, for requests that hid nothing.
-*/
-export const TAKEDOWN_ALERTS_PER_HOUR = 10;
+ * One-by-one alerts in an hour, site-wide, for requests that hid nothing:
+ * the valve's own number (owner, 2026-11-21), which is the one its
+ * hourly alert names.
+ */
+const TAKEDOWN_ALERTS_PER_HOUR = TAKEDOWN_VALVE_PER_HOUR;
 
 const HOUR_S = 60 * 60;
 
