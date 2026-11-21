@@ -338,6 +338,13 @@ a late result.
 
 ## Feed read paths (lane 104)
 
+The reads are the [`followingStory`](https://ddteeter.github.io/dialed.run/#/view/followingStory/) and
+[`consensusStory`](https://ddteeter.github.io/dialed.run/#/view/consensusStory/) views of the model in
+`docs/diagrams/`. A public kit's photos are
+[`publicPhotosStory`](https://ddteeter.github.io/dialed.run/#/view/publicPhotosStory/), with
+[`publicPhotosWithdraw`](https://ddteeter.github.io/dialed.run/#/view/publicPhotosWithdraw/) for a kit taken back and
+[`publicPhotosRecovery`](https://ddteeter.github.io/dialed.run/#/view/publicPhotosRecovery/) for a lost step.
+
 **Following feed** — fanout-on-read, one indexed query driven from the
 authors: the viewer's followees (`follows(follower_id, followee_id)`) plus
 the viewer, `CROSS JOIN`ed to each author's newest page of shared entries
@@ -456,33 +463,11 @@ review (`docs/dependencies.md`, design 156).
 Design target: **weeks of unattended operation**; the system reports by
 exception, the human never polls dashboards.
 
-```mermaid
-flowchart LR
-    Q[[dialed-imports\nmax_batch_size=1, max_retries=3]] -->|exhausted| DLQ[[dialed-imports-dlq]]
-    DLQ --> DC[DLQ consumer:\nmark job failed,\nnotify affected user,\nSentry event]
-    QE[[dialed-enrichment\nmax_batch_size=1, max_retries=3]] -->|exhausted| DLQE[[dialed-enrichment-dlq]]
-    DLQE --> DCE[DLQ consumer:\nproduct failed,\nSentry event]
-    DC -->|same batch: giveUpEach| GU[(gave_up)]
-    DCE -->|past the product's first day:\nsame batch, giveUpEach| GU
-    ESWEEP[Hourly enrichment sweep:\nday of retries over] -->|parked failure,\nsame batch as clear| GU
-    WCRON[Hourly weather cron:\nfive-hour cap] -->|same batch as failed| GU
-    GU -->|count, rows| DESK[Desk · Today · Gave up\nRetry re-arms + re-sends,\nDrop deletes]
-    GU -->|one line when above zero| ADMIN
-    QX[[dialed-exports\nmax_batch_size=1, max_retries=3]] -->|exhausted| DLQX[[dialed-exports-dlq]]
-    DLQX --> DCX[DLQ consumer:\nexport failed,\nshown on Settings,\nSentry event]
-    CRON2[Daily digest cron] -->|only if anomalies:\none event per kind| SENTRY
-    CRON2 -->|every day, confirmed\naddresses only (OPS-11)| ADMIN[Admin digest email]
-    CRON2 -->|operator unconfirmed:\nmark, same batch| DESK
-    CRONS[Every cron] -->|check-in: in_progress, ok / error| CRONMON[Sentry Crons]
-    REQ[Request: D1 change +\noutbox row, one batch] -->|fast path| R2[(R2)]
-    REQ -->|fast path failed| OB[(outbox table)]
-    CRON2 -->|drain: claim, work, back off| OB
-    HOURLY[The three hourly crons] -->|drain kind email only| OB
-    HOUR00[The :00 cron and the digest] -->|drain kind product_link,\nwith closet's linker| OB
-    OB -->|kind email: deliverEmail| MAILER[[EMAIL send_email binding]]
-    W[Worker] -->|exceptions, kept alive by waitUntil| SENTRY[Sentry]
-    PING[External uptime ping] --> HEALTH["/api/health: D1 SELECT 1\non both, R2 head"]
-```
+What picks up a lost step is drawn per flow in the model in
+`docs/diagrams/`: [`importRecovery`](https://ddteeter.github.io/dialed.run/#/view/importRecovery/),
+[`enrichmentRecovery`](https://ddteeter.github.io/dialed.run/#/view/enrichmentRecovery/) and
+[`publicPhotosRecovery`](https://ddteeter.github.io/dialed.run/#/view/publicPhotosRecovery/). The rest is below, in
+words.
 
 - **Queues**: `max_retries: 3` with delayed retry; DLQ bound and consumed —
   a dead-lettered job becomes a user-visible failure + Sentry event, never

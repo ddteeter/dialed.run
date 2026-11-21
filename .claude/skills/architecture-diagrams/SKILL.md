@@ -126,6 +126,12 @@ boundary. Its `technology` line says it in words.
 | `database`, `bucket`, `queue` | slate  | a D1 database, an R2 bucket, a queue. Generated        | (none)                                               |
 | `external`                    | muted  | a system we call and do not run                        | (none)                                               |
 
+Work a request leaves running under `waitUntil`, after it answers, has
+no kind of its own: draw it as a `module`, reached by an `-[async]->`
+arrow whose note opens `**Timing boundary: the save has answered.**`
+(naming the request),
+and draw what sweeps it in the recovery view (`flows/public-photos.c4`).
+
 An entry point is one element per way in: the server function or the
 consumer. A cron's entry point is its generated firing. Two entry points in one module are two
 elements, because they run at different times. Two server functions that

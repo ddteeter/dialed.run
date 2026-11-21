@@ -1,0 +1,115 @@
+views {
+  dynamic view followingStory {
+    title 'The Following feed is read'
+
+    include
+      runner with {
+        description 'Opens the feed'
+      }
+    include
+      cf.coreDb with {
+        description 'Entries, runs, follows and the rows a card shows'
+      }
+
+    // source: src/routes/feed/index.tsx Route (loader, followingFeedQuery); src/modules/feed/functions.ts followingFeedQuery; src/modules/feed/following/feed.ts followingFeed, followingCount, PAGE_SIZE (20); src/modules/feed/following/components/Feed.tsx defaultFeedTab
+    runner -> cf.app.feed.followingQuery 'opens the Following feed' {
+      notes '''
+        **Guard: it is a read.** Opening it again reads it again, and nothing is written.
+
+        A page is 20 entries. The same request counts how many runners the reader follows: a reader who follows nobody opens on Conditions instead.
+      '''
+    }
+    // source: src/modules/feed/following/feed.ts followingFeed, feedCursorPredicate
+    cf.app.feed.followingQuery -> cf.app.feed.following 'asks for a page after the cursor'
+    // source: src/modules/feed/following/feed.ts followingFeedStatement, feedCursorPredicate; src/modules/safety/rules/visibility.ts publiclyVisibleEntry
+    cf.app.feed.following -> cf.coreDb 'reads each author\'s newest shared entries, then the newest page across them' {
+      notes '''
+        The authors are the runners the reader follows, and the reader. Each author\'s entries pass safety\'s visibility rule, told who is looking, inside the query and before the limit, so the page holds the first twenty that may be shown, not what survives of the first twenty.
+
+        The reader\'s own entries that are under review are in it too, for the reader alone.
+
+        Fanout on read: there is no feed table, and at most a page is read for each author. One row more than the page is read, to know whether there is a next one.
+      '''
+    }
+    // source: src/modules/feed/following/feed.ts hydrateEntries, garmentNamesByIds; src/modules/safety/rules/visibility.ts publicPhotoStatus
+    cf.app.feed.following -> cf.coreDb 'reads the page\'s runs, authors, kits, photos, tags and Useful counts, in one batch' {
+      notes '''
+        A photo that has not passed screening is shown to its author only.
+      '''
+    }
+    // source: src/modules/weather/read.ts observationsForRuns; src/modules/feed/following/feed.ts hydrateEntries (observationsForRuns)
+    cf.app.feed.following -> cf.app.weather 'reads each run\'s observation' {
+      notes '''
+        The weather is in its own database, so the two are joined in code, by each run\'s place and hour.
+      '''
+    }
+    // source: src/modules/feed/following/feed.ts followingFeed (nextCursor); src/router.tsx defaultErrorComponent, RouteFailedPage
+    runner <- cf.app.feed.followingQuery 'answers with the page and the next cursor' {
+      notes '''
+        **Timing boundary: the request ends here.**
+
+        **If it fails:** the route\'s error page is shown, and a reload reads the page again.
+      '''
+    }
+  }
+
+  dynamic view consensusStory {
+    title 'What other runners wore in these conditions'
+
+    include
+      runner with {
+        description 'Opens Conditions'
+      }
+    include
+      cf.coreDb with {
+        description 'Entries, and the copy of each run\'s conditions'
+      }
+
+    // source: src/routes/feed/index.tsx FeedPage (yourConditionsQuery); src/modules/feed/functions.ts yourConditionsQuery
+    runner -> cf.app.feed.conditionsQuery 'opens Conditions at a place' {
+      notes '''
+        **Guard: it is a read.** The place is a saved one or where the device is.
+      '''
+    }
+    // source: src/modules/feed/consensus/consensus.ts consensusAt
+    cf.app.feed.conditionsQuery -> cf.app.feed.consensus 'asks for the consensus there'
+    // source: src/modules/feed/consensus/consensus.ts consensusAt (conditionsAt); src/modules/feed/conditions/conditions.ts conditionsAt, currentConditions
+    cf.app.feed.consensus -> cf.app.feed.conditions 'asks for the conditions now'
+    // source: src/modules/feed/conditions/conditions.ts currentConditions, FRESH_BUCKETS (2); src/modules/weather/read.ts newestObservationAt
+    cf.app.feed.conditions -> cf.app.weather 'reads the newest cached observation, from this hour or the last' {
+      notes '''
+        It never calls the weather provider: it reads only the cache.
+
+        **Degrade, don\'t fail.** With no observation, there is no block at all, rather than an error or an empty block, which would say that nobody ran in these conditions.
+      '''
+    }
+    // source: src/modules/feed/consensus/consensus.ts matchingEntriesStatement, bandBuckets, BAND_HALF_WIDTH_C (3), countableEntry, countsInTotals, WINDOW_DAYS (3 first); src/modules/safety/rules/visibility.ts publiclyVisibleEntry
+    cf.app.feed.consensus -> cf.coreDb 'reads the shared entries from the last 3 days in these conditions' {
+      notes '''
+        These conditions means a run judged within 3 degrees of the feels-like now, with the same kind of precipitation. It finds them through the copy of each run\'s conditions in core, by its band index, so the read follows the matches. Conditions a runner typed in are left out.
+
+        Each entry and its runner are read live: shared and in standing by safety\'s visibility rule, not the reader\'s own, and not from a runner who turned off counting in totals.
+
+        **Bounded by the band and the window, not a limit**, on purpose: a limit once hid every match behind a busy afternoon somewhere else.
+      '''
+    }
+    // source: src/modules/feed/consensus/consensus.ts wornByRunner, garmentKinds, readInChunks
+    cf.app.feed.consensus -> cf.coreDb 'reads what each matched runner wore'
+    opt 'fewer than 5 runners matched in 3 days' {
+      // source: src/modules/feed/consensus/consensus.ts yourConditionsConsensus, WINDOW_DAYS (14 second), MIN_RUNNERS (5)
+      cf.app.feed.consensus -> cf.coreDb 'reads the same again over 14 days' {
+        notes '''
+          Only the window widens, once. The temperature band never does: a wider band would answer a different question.
+        '''
+      }
+    }
+    // source: src/modules/feed/consensus/consensus.ts yourConditionsConsensus, MIN_RUNNERS (5), shownGroups, MIN_GROUP_RUNNERS (2)
+    runner <- cf.app.feed.conditionsQuery 'answers with the block, or not enough runs yet' {
+      notes '''
+        **Timing boundary: the request ends here.**
+
+        Five runners or no block, and a row of what was worn needs two runners: a privacy floor, so no one runner can be read out of it. Five entries by one runner are one runner.
+      '''
+    }
+  }
+}

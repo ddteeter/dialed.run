@@ -421,6 +421,45 @@ of the demo's mux removed in the same change.
 - `playwright.config.ts` still writes the demo's 1280×720 out three times
   rather than reading `DESK`; this change left it alone.
 
+## #797 as built: the feed reads and a public kit's photos
+
+Drawn after #796's moves (A to D) merged, as the code stood at the
+friends freeze (`bf62c7c7`; owner, 2026-11-21: draw things as they are
+now). The moves had already regenerated the structure, so this PR has no
+`diagrams:generate` commit.
+
+- **`flows/feed.c4`**: `followingStory` (6 steps) and `consensusStory`
+  (8, with one `opt` for the widening to 14 days). Neither has a recovery
+  view: both are reads in one request, with no asynchronous hop.
+- **`flows/public-photos.c4`**: `publicPhotosStory` (9),
+  `publicPhotosWithdraw` (6) and `publicPhotosRecovery` (a `try` for the
+  background sync and two `opt`s: publications no purge saw, and an edge
+  purge refused).
+- **New entry points** in `model.c4`: `cf.app.feed.followingQuery`,
+  `conditionsQuery` and `verdict` (`inRequest`), and
+  `cf.app.ops.publicWeb.purge` and `sync` (`module`). The hand-drawn
+  `cf.app.ops -> cf.publicPhotosBucket` arrow gave way to `sync`'s.
+- **Work kept alive past the response is a `module`, reached by an
+  `-[async]->` arrow.** The sync runs under `waitUntil` after the save
+  answers: not in the request, not off a queue, not on a cron, so no kind
+  fits it exactly. Rather than add one, the arrow carries the timing
+  boundary and the note says the save has answered; the hourly sweep is
+  its recovery. The skill now says so.
+- **Privacy (owner, 2026-11-21).** The stories name safety's visibility
+  rule, told who is looking, without listing its clauses, and state the
+  consensus floor (5 runners, 2 to a row), which is a product rule in the
+  code. No sign-in or gate internals are drawn.
+- **Not drawn:** the signed-out read of `/kit/<id>`. It would need a
+  visitor actor for one step; the last step's note says the page lists
+  only landed copies. The edge cache stays prose, as step 2 decided.
+- **The resilience flowchart left `architecture.md`** (owner,
+  2026-11-21), the last Mermaid block. Its bullets already said each part
+  in words, and nothing checked the flowchart against the code. The
+  section links the recovery views that exist.
+- **Scope (owner, 2026-11-21).** #797 closes with two of its five flows.
+  The data export, account deletion's purge, photo screening and the
+  outbox moved to #932, under #799.
+
 ## Open questions
 
 1. **Auth and trust boundaries are not drawn** while the security audit's

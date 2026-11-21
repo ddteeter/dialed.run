@@ -1,0 +1,189 @@
+views {
+  dynamic view publicPhotosStory {
+    title 'A public kit\'s photos are copied to the open web'
+
+    include
+      runner with {
+        description 'Logs a verdict with the kit PUBLIC'
+      }
+    include
+      cf.coreDb with {
+        description 'Each copy\'s row is the durable marker'
+      }
+
+    // source: src/modules/feed/functions.ts submitVerdictAction; src/modules/feed/entries/entries.ts submitVerdict, audienceAsChosen
+    runner -> cf.app.feed.verdict 'logs the verdict with the kit PUBLIC' {
+      notes '''
+        A runner who has not confirmed their email keeps the kit private, whatever they chose.
+      '''
+    }
+    // source: src/modules/feed/entries/entries.ts submitVerdict (database.batch)
+    cf.app.feed.verdict -> cf.coreDb 'writes the verdict, the audience, the tags and the flags, in one batch' {
+      notes '''
+        **Guard: the same values.** A repeat writes what the first one wrote.
+      '''
+    }
+    // source: src/modules/feed/entries/entries.ts submitVerdict, kitCacheTags, WORLD_AUDIENCE; src/modules/feed/entries/photos.ts uploadPhoto (syncPublicPhotosLater); src/modules/ops/public-web/edge-purge.ts purgePublicPagesFor, purgeAndSyncWithin, PURGES_PER_RUNNER_PER_MINUTE (2); src/modules/ops/public-web/public-cache.ts PUBLIC_PAGE_TTL_SECONDS (60)
+    cf.app.feed.verdict -> cf.app.ops.publicWeb.purge 'purges the kit\'s page from the edge, and asks for its photos' {
+      notes '''
+        Only for a kit that is PUBLIC now or was before. A photo screened on upload to a PUBLIC kit asks for the same sync.
+
+        **Degrade, don\'t fail.** It runs after the batch and in the background, and it never fails the save.
+
+        **Bounded.** Each runner gets 2 edge purges a minute. Past that, the page waits out its 60 second lifetime, which is the guarantee. The photo sync always runs.
+      '''
+    }
+    // source: src/modules/feed/entries/entries.ts submitVerdict
+    runner <- cf.app.feed.verdict 'saves and answers' {
+      notes '''
+        **Timing boundary: the request ends here.** The runner never waits for a photo copy.
+      '''
+    }
+    // source: src/modules/ops/public-web/edge-purge.ts purgeAndSyncWithin (sync); src/modules/ops/public-web/public-photos.ts syncPublicPhotosLater, syncReported
+    cf.app.ops.publicWeb.purge -[async]-> cf.app.ops.publicWeb.sync 'syncs the kit\'s photos, after the response' {
+      notes '''
+        **Timing boundary: the save has answered.** The sync goes on under waitUntil.
+
+        **If it is lost:** the Worker can stop before it finishes. The hourly sweep finds the photos still owed.
+      '''
+      navigateTo publicPhotosRecovery
+    }
+    // source: src/modules/ops/public-web/public-photos.ts copyOwed, claim, COPIES_PER_PASS (50), publicPhotosOrigin; src/db/schema-core.ts publicPhotos, public_photos_photo; src/lib/public-photos.ts newPublicPhotoKey
+    cf.app.ops.publicWeb.sync -> cf.coreDb 'claims a random key for each screened photo on the kit with no copy yet' {
+      notes '''
+        **Guard: one row a photo**, by a unique index on the photo. A second pass gets the first pass\'s key back, and puts the same bytes under it.
+
+        **Bounded.** At most 50 copies a pass. Nothing is copied until the public photo origin is set; deleting goes on regardless.
+      '''
+    }
+    // source: src/modules/ops/public-web/public-photos.ts copy (media.get, photo object missing), settle
+    cf.app.ops.publicWeb.sync -> cf.mediaBucket 'reads the private photo' {
+      notes '''
+        **If it fails:** the failure is reported with the photo\'s id, and the pass goes on to the next photo. The hourly sweep tries it again.
+      '''
+    }
+    // source: src/modules/ops/public-web/public-photos.ts copy (bucket.put); src/lib/public-photos.ts PUBLIC_PHOTO_CACHE_CONTROL (60 seconds)
+    cf.app.ops.publicWeb.sync -> cf.publicPhotosBucket 'puts the bytes under the key, cached for 60 seconds' {
+      notes '''
+        **Not atomic with the claim, or with the next step.** The bucket and the database are two systems.
+
+        **Guard: the key.** A repeat puts the same bytes in the same place.
+      '''
+      navigateTo publicPhotosRecovery
+    }
+    // source: src/modules/ops/public-web/public-photos.ts copy, stillPublic, withdraw; src/modules/feed/public-web/public-kit.ts publicKitRead, publishedPhotoUrls
+    cf.app.ops.publicWeb.sync -> cf.coreDb 'marks the copy landed, only while the kit is still public' {
+      notes '''
+        **Guard: the rule, read again.** If the kit was taken back while the bytes were in flight, no row is marked, and the copy is deleted at once.
+
+        Only a landed copy is shown: the kit\'s public page lists landed copies of screened photos, and nothing else.
+      '''
+    }
+  }
+
+  dynamic view publicPhotosWithdraw {
+    title 'A kit stops being public, and its copies go'
+
+    include
+      runner with {
+        description 'Takes a PUBLIC kit back'
+      }
+    include
+      cf.coreDb with {
+        description 'Each copy\'s row is the durable marker'
+      }
+
+    // source: src/modules/feed/entries/entries.ts submitVerdict, WORLD_AUDIENCE; src/modules/feed/entries/retract.ts retractEntries, deletionCacheTags
+    runner -> cf.app.feed.verdict 'makes the kit private again' {
+      notes '''
+        One of several ways a kit stops being public: it is made private or deleted, it is hidden or removed by moderation, its runner is banned or is leaving. Each writer calls the same purge.
+      '''
+    }
+    // source: src/modules/feed/entries/entries.ts submitVerdict (database.batch, purge); src/modules/feed/moderation/moderation.ts purgePublicPages; src/modules/account/data/deletion.ts purgePublicPages
+    cf.app.feed.verdict -> cf.app.ops.publicWeb.purge 'purges the kit\'s page, and asks for its photos'
+    // source: src/modules/ops/public-web/edge-purge.ts purgeAndSyncWithin; src/modules/ops/public-web/public-photos.ts syncPublicPhotosLater
+    cf.app.ops.publicWeb.purge -[async]-> cf.app.ops.publicWeb.sync 'syncs the kit\'s photos, after the response' {
+      notes '''
+        **Timing boundary: the save has answered.** The sync goes on under waitUntil, and the hourly sweep finds whatever it did not finish.
+      '''
+      navigateTo publicPhotosRecovery
+    }
+    // source: src/modules/ops/public-web/public-photos.ts reconcile, deleteStale, IN_LIST_CHUNK, STALE_PAGES (25); src/lib/chunked.ts IN_LIST_CHUNK (80)
+    cf.app.ops.publicWeb.sync -> cf.coreDb 'finds the copies the rule no longer admits, 80 at a time' {
+      notes '''
+        Deleting comes before copying, in every pass. **Bounded.** Up to 25 pages of 80 a pass, so a ban takes every copy of the runner\'s in one go.
+      '''
+    }
+    // source: src/modules/ops/public-web/public-photos.ts didWithdraw (bucket.delete)
+    cf.app.ops.publicWeb.sync -> cf.publicPhotosBucket 'deletes the objects first' {
+      notes '''
+        **Not atomic with the next step.** The objects go before their rows, so every object still up has a row naming it.
+      '''
+    }
+    // source: src/modules/ops/public-web/public-photos.ts didWithdraw (delete publicPhotos), deleteStale
+    cf.app.ops.publicWeb.sync -> cf.coreDb 'then deletes their rows' {
+      notes '''
+        **If it fails:** a row is left naming nothing. The failure is reported, the drain stops, and the next pass deletes the row again.
+      '''
+      navigateTo publicPhotosRecovery
+    }
+  }
+
+  dynamic view publicPhotosRecovery {
+    title 'When a public photo copy or delete is lost'
+
+    include
+      cf.coreDb with {
+        description 'Each copy\'s row is the durable marker'
+      }
+
+    try {
+      // source: src/modules/ops/public-web/public-photos.ts syncPublicPhotosLater, syncReported, settle
+      cf.app.ops.publicWeb.purge -[async]-> cf.app.ops.publicWeb.sync 'syncs a kit\'s photos, after the response'
+    }
+    catch 'the Worker stops first, or a copy or a delete fails' {
+      // source: src/modules/ops/public-web/public-photos.ts settle, didWithdraw, syncReported
+      cf.app.ops.publicWeb.sync -> sentry 'reports the failure, with the photo id or the count'
+      // source: src/modules/dispatch/scheduled.ts sweepPublicPhotoCopies, runScreeningRetry (the screening-retry case); src/modules/ops/desk/crons.ts cronRegistry (15 * * * *)
+      cf.app.cronHourly15 -[recovery]-> cf.app.ops.publicWeb.sync 'sweeps every kit, after the screening retry' {
+        notes '''
+          Every hour at quarter past, after the photo screening retry, so a photo it just passed on a PUBLIC kit is copied the same hour.
+        '''
+      }
+      // source: src/modules/ops/public-web/public-photos.ts sweepPublicPhotos, reconcile, deleteStale, copyOwed, COPIES_PER_PASS (50)
+      cf.app.ops.publicWeb.sync -[recovery]-> cf.coreDb 'deletes the stale copies, then claims up to 50 owed' {
+        notes '''
+          The same reconcile as the fast path, over every kit. **Bounded.** At most 50 copies a firing; more wait for the next hour.
+        '''
+      }
+      // source: src/modules/ops/public-web/public-photos.ts sweepPublicPhotos, deleteUnnamed, deleteUnnamedOf
+      cf.app.ops.publicWeb.sync -[recovery]-> cf.publicPhotosBucket 'lists the bucket, and deletes every object no row names' {
+        notes '''
+          An object no row names is a copy whose Worker stopped between the put and the row, or whose claim lost a race.
+        '''
+      }
+      // source: src/modules/dispatch/scheduled.ts sweepPublicPhotoCopies, runHourly, hourlyReport
+      cf.app.cronHourly15 -> sentry 'counts what it fixed in the firing\'s report' {
+        notes '''
+          A stale copy found here stayed public longer than it should have, so the count is named, along with any unnamed objects deleted.
+        '''
+      }
+    }
+    opt 'a kit became public with no purge to say so' {
+      // source: src/modules/dispatch/scheduled.ts sweepPublicPhotoCopies (a review's Approve, an unban, a photo screened late)
+      cf.app.cronHourly15 -[recovery]-> cf.app.ops.publicWeb.sync 'copies its photos within the hour' {
+        notes '''
+          An approval after review, an unban, or a photo screened late. Only the sweep sees these.
+        '''
+      }
+    }
+    opt 'the edge refuses the purge' {
+      // source: src/modules/ops/public-web/edge-purge.ts purgeTags, settle (edge purge refused); src/modules/ops/public-web/public-cache.ts PUBLIC_PAGE_TTL_SECONDS (60)
+      cf.app.ops.publicWeb.purge -> sentry 'reports the refusal, with the tags it named' {
+        notes '''
+          The purge only makes it sooner. The page\'s 60 second lifetime is the guarantee.
+        '''
+      }
+    }
+  }
+}
