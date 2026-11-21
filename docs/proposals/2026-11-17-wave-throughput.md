@@ -160,7 +160,8 @@ In this repo:
 
 **Not verified:**
 
-- That the push gate scores Stryker timeouts as survivors. `pr-ready`
+- That the push gate scores Stryker timeouts as survivors. Since settled:
+  it does not (§8). `pr-ready`
   and the lanes say it does, but the cache code treats `Timeout` as a
   kept status. Lanes spent about 1.5 h [reader] hardening loops they
   had not touched because of this belief. It has to be settled before
@@ -316,14 +317,21 @@ Batches B and C belong to a dedicated tooling session, not to wave lanes.
 
 ### Numbers to track per wave
 
-| number                        | waves 9–13 |
-| ----------------------------- | ---------- |
-| brief-to-merge hours per lane | 16         |
-| ships per PR                  | 3          |
-| first-ship pass rate          | 3 of 20    |
-| push-to-green median          | 63 min     |
+| number                                   | waves 9–13 | wave 14           | wave 15 |
+| ---------------------------------------- | ---------- | ----------------- | ------- |
+| **built-to-merged hours per PR, median** | —          | 5.0 (three lanes) | 2.5     |
+| built to first ship, median              | about 7 h  | 0.4–1.7 h (range) | 1.1 h   |
+| ships per PR                             | 3          | 2.2               | 1.3     |
+| first-ship pass rate                     | 3 of 20    | 2 of 5            | 9 of 11 |
+| push-to-green median                     | 63 min     | 49 min            | 57 min  |
+| brief-to-merge hours per lane            | 16         | not measured      | 15.5    |
 
-Until #16 lands, these come from the same transcript and CI reading as §1.
+From wave 15 on, **built-to-merged per PR** is the primary number.
+Lanes now ship several PRs each (wave 15: 11 PRs from 4 lanes), so
+brief-to-merge per lane mostly measures how much work a lane was given.
+"Built" is the author time of a PR's last commit before its first ship.
+Until #16's log is adopted, these numbers come from the experiment's
+ship log and GitHub's PR and commit times.
 
 ## 7 · Experiment on wave 14
 
@@ -422,6 +430,78 @@ Other findings from the experiment:
   push picks up a fix on main (#10).
 - The ship output does not record seeded or cold (#16).
 
+## 7b · Wave 15, the first wave under batch A
+
+Wave 15 had 4 lanes and 11 PRs, and ran under the rules from #866.
+Sources: the lanes' ship-log rows [count], GitHub's PR and commit times
+[CI], and the coordinator's notes on what the log cannot show (slots
+given up, directed stops, holds).
+
+**What held:**
+
+- No PR conflicted on a rebase or a re-ship, and no lane had to give up
+  its slot.
+- Ships per PR fell to 1.3 (14 attempts over 11 PRs, one of them a stop
+  the coordinator directed), and 9 of 11 first ships passed.
+- Nine of the 11 PRs merged within about 5.5 h of the wave's first ship.
+- Every hold the coordinator set was on an owner answer or on PR
+  ordering. Wave 16 was dispatched while wave 15 was still shipping, as
+  "hold pushes, not builds" allows.
+- The flake rule fired: the first PR to ship was the fix for the flake
+  that wave 14 had filed.
+
+**The mid-wave rule change was the clearest finding.** The wave's brief
+first asked each lane to run a touched-file Stryker pass and both e2e
+legs before every ship. That is four lock acquisitions per PR, and it
+put six jobs in the gate lock's queue at once. Partway through, the
+coordinator dropped the local Stryker pass (back to `pr-ready` step 8),
+and the owner kept local e2e for any PR that changes `src/`, run in one
+lock acquisition with the build and `sanctions-check`. Lock waits
+before the change were 17, 18, 46 and 106 min. After it, they were 0,
+0, 0 and 22 min. Heavy pre-ship runs, not ships, are what crowd the
+lock. That bears on #879's pre-ship mutation (#8) and the separate e2e
+lock (#6b).
+
+**Why brief-to-merge per lane barely moved (15.5 h against 16):**
+
+1. One lane's first PR sat about 9 h between being built and the wave's
+   first ship. The log does not say why. If it was a hold, it is the
+   kind #1 forbids.
+2. One lane carried five PRs, shipped one after another, and its last
+   was stacked on the one before it.
+3. The machine slept mid-chain for about 6.7 h. The trap is in the
+   coordinator skill; this time it cost a lane's chain and a merge.
+4. A PR that changed the lockfile ran both its gates and every CI
+   Mutation shard cold, for 4 h 20 min of CI. CI's cold run was correct:
+   a runtime dependency changed. Two security-fix PRs then sat green for
+   6.2 h and 9.7 h before they merged.
+
+Per PR, built to merged has a median of 2.5 h, which is why §6 now leads
+with it.
+
+**Pre-ship mutation (#8), recorded only:** the two PRs that ran local
+Stryker first both passed their first ship. Of the five that left it to
+the gate, four passed. The fifth was blocked on 6 survivors in new code,
+with a cold seed.
+
+**Local e2e:** no PR had a CI e2e failure. One tooling PR changed
+`src/lib` and shipped without a local e2e run: its session's prompt did
+not carry the rule. CI was green.
+
+**Batch A's "tooling between waves" bent once.** Two batch B PRs (#875,
+#876) merged while the wave's last PR was in CI. Nothing visibly broke,
+but it doesn't follow the rule as written.
+
+**For batches B and C:**
+
+- The Guardrails CI job took 2.5 min on one PR and 60 min on another
+  (#878).
+- CI Mutation was the slowest check on most PRs.
+- The new shards from #876's split ran cold for up to 88 min on their
+  first run.
+- Seeded or cold is still mostly unknown until dialed.run adopts #16's
+  log.
+
 ## 8 · Open questions for the owner
 
 - One grant for each forbidden-zone edit in batch B (#876, and #878 if
@@ -429,6 +509,9 @@ Other findings from the experiment:
 - Batch D's trade-offs, once the log has data (#879). The fair lock
   queue moved there: wave 14 showed no wait over 30 min, so it waits for
   the data like the rest.
-- Whether the push gate scores Stryker timeouts as survivors (§3) is now
-  an investigation (agentic-guardrails-scaffolding#180), not a question
-  for the owner.
+- Whether the push gate scores Stryker timeouts as survivors (§3) is
+  settled: it does not, cold or seeded (agentic-guardrails-scaffolding#180,
+  pinned by a test against real Stryker in #181 there). What remains true is
+  that a mutant which times out locally can survive in the gate's run,
+  where it does not time out. So a local timeout counts as "not yet
+  known", not as "killed".
