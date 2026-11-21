@@ -62,6 +62,31 @@ model {
     }
   }
 
+  // Feed reads: the Following feed and the conditions consensus.
+  extend cf.app.feed {
+    followingQuery = inRequest 'followingFeedQuery' {
+      technology 'in the request: one attempt, the runner is waiting'
+      description 'Reads one page of the Following feed'
+    }
+    conditionsQuery = inRequest 'yourConditionsQuery' {
+      technology 'in the request: one attempt, the runner is waiting'
+      description 'Reads what other runners wore in the conditions at a place'
+    }
+    // A public kit's photos: a verdict on a PUBLIC kit copies its photos out.
+    verdict = inRequest 'submitVerdictAction' {
+      technology 'in the request: one attempt, the runner is waiting'
+      description 'Logs a run\'s verdict, its kit\'s audience, tags and flags'
+    }
+  }
+  extend cf.app.ops.publicWeb {
+    purge = module 'purgePublicPages' {
+      description 'What every writer that changes a public page calls: purges its tags from the edge, and asks for its photos to be synced'
+    }
+    sync = module 'syncPublicPhotos' {
+      description 'Makes the public photo bucket match the rule: runs after the response, kept alive by waitUntil, and hourly over everything'
+    }
+  }
+
   // The systems we call and do not run.
   provider = external 'Visual Crossing' {
     description 'Weather provider, behind an adapter'
@@ -105,7 +130,6 @@ model {
   cf.app.ops -> turnstile 'verifies the bot check'
   cf.app.ops -> cf.vitalsDataset 'writes the speed beacon, reads the daily rollup'
   cf.app.ops -> cf.opsDb 'writes the daily speed rollup'
-  cf.app.ops -> cf.publicPhotosBucket 'copies a public kit\'s screened photos'
   cf.app.ops -> cf.mediaBackupBucket 'copies new and changed photos daily'
   cf.app.safety -> openai 'screens photos'
   cf.app.email -> cf.emailSending 'sends every message'
@@ -147,4 +171,25 @@ model {
   cf.app.cronHourly30 -[recovery]-> cf.enrichmentQueue 'sends them again'
   operator -> cf.app.ops.deskRetry 'presses Retry on a given-up product'
   cf.app.ops.deskRetry -[recovery]-> cf.app.enrichment.request 'asks for enrichment again'
+
+  runner -> cf.app.feed.followingQuery 'opens the Following feed'
+  cf.app.feed.followingQuery -> cf.app.feed.following 'asks for a page'
+  cf.app.feed.following -> cf.coreDb 'reads the page and what it shows'
+  cf.app.feed.following -> cf.app.weather 'reads each run\'s observation'
+
+  runner -> cf.app.feed.conditionsQuery 'opens Conditions at a place'
+  cf.app.feed.conditionsQuery -> cf.app.feed.consensus 'asks for the consensus'
+  cf.app.feed.consensus -> cf.app.feed.conditions 'asks for the conditions now'
+  cf.app.feed.conditions -> cf.app.weather 'reads the newest cached observation'
+  cf.app.feed.consensus -> cf.coreDb 'reads matching entries and what was worn'
+
+  runner -> cf.app.feed.verdict 'logs a verdict'
+  cf.app.feed.verdict -> cf.coreDb 'writes the verdict and audience'
+  cf.app.feed.verdict -> cf.app.ops.publicWeb.purge 'purges a public kit\'s pages'
+  cf.app.ops.publicWeb.purge -[async]-> cf.app.ops.publicWeb.sync 'syncs its photos after the response'
+  cf.app.ops.publicWeb.sync -> cf.coreDb 'claims, marks and deletes copies'
+  cf.app.ops.publicWeb.sync -> cf.mediaBucket 'reads the private photo'
+  cf.app.ops.publicWeb.sync -> cf.publicPhotosBucket 'puts and deletes the copies'
+  cf.app.cronHourly15 -[recovery]-> cf.app.ops.publicWeb.sync 'reconciles every kit, and deletes unnamed objects'
+  cf.app.ops.publicWeb.sync -> sentry 'reports a failed copy or delete'
 }
