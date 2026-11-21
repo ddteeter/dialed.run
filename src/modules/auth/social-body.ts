@@ -38,6 +38,10 @@ export const SOCIAL_BODY_REFUSED = "Unexpected sign-in request";
  * press. Any other path passes.
  */
 export function holdSocialBody(ctx: { path: string; body?: unknown }): void {
-  if ((ctx.path !== SOCIAL_SIGN_IN_PATH) || socialBody.safeParse(ctx.body).success) return;
+  if (
+    ctx.path !== SOCIAL_SIGN_IN_PATH ||
+    socialBody.safeParse(ctx.body).success
+  )
+    return;
   throw new APIError("BAD_REQUEST", { message: SOCIAL_BODY_REFUSED });
 }
