@@ -31,8 +31,8 @@ import {
   outboxInsert,
   oweOutbox,
   purgePublicPages,
-  settleOutbox,
 } from "../../ops";
+import { settleOwedEmail } from "../../ops/owed-email";
 import { disconnectStrava } from "../../runs";
 import { ownAccountView } from "./account-view";
 import type { OwedMail, PasswordCheck } from "../verification";
@@ -90,7 +90,7 @@ export function deletionEffectsFromEnv(): DeletionEffects {
   return {
     keepAlive: waitUntil,
     report: captureException,
-    settle: settleOutbox,
+    settle: settleOwedEmail,
     disconnectStrava: (userId) =>
       disconnectStrava(coreDb(), env.IMPORTS_QUEUE, userId, captureException),
     purge: purgePublicPages,

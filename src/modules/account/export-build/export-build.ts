@@ -31,9 +31,9 @@ import {
   captureException,
   outboxInsertWhere,
   oweOutbox,
-  settleOutbox,
-  type OutboxDebt,
+  type OutboxDebtOf,
 } from "../../ops";
+import { settleOwedEmail } from "../../ops/owed-email";
 import { exportKeyFor, failExport, IN_FLIGHT } from "../data";
 import { exportData } from "./export";
 import {
@@ -52,9 +52,9 @@ export interface BuildDeps {
   readonly imports: Pick<R2Bucket, "get" | "list" | "put" | "delete">;
   readonly report: Report;
   /**
-  The email's fast path (ops' `settleOutbox`); the drain is its net.
+  The email's fast path (ops' `settleOwedEmail`); the drain is its net.
   */
-  readonly settle: (db: Db, debt: OutboxDebt) => Promise<void>;
+  readonly settle: (db: Db, debt: OutboxDebtOf<"email">) => Promise<void>;
   readonly now: number;
 }
 
@@ -262,7 +262,7 @@ function liveBuildDeps(): BuildDeps {
     media: env.MEDIA,
     imports: env.IMPORTS,
     report: captureException,
-    settle: (db, debt) => settleOutbox(db, debt),
+    settle: (db, debt) => settleOwedEmail(db, debt),
     now: nowSeconds(),
   };
 }

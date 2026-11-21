@@ -48,6 +48,12 @@ import {
   imageCategories,
   type CategoryScores,
 } from "../../src/modules/safety/screening/classifier/moderation";
+import { outboxHandlers as registryWith } from "../../src/modules/dispatch/outbox-handlers";
+
+/**
+The drains' registry, as production assembles it (no linker).
+*/
+const outboxHandlers = registryWith(undefined);
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -581,6 +587,7 @@ async function owedFor(userId: string, itemId: string) {
 async function drainLater(): Promise<string[]> {
   const anomalies: string[] = [];
   await drainOutbox(db(), anomalies, {
+    handlers: outboxHandlers,
     now: nowSeconds() + OUTBOX_FAST_PATH_GRACE_S,
   });
   return anomalies;

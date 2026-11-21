@@ -48,6 +48,12 @@ import {
   ONLY_THEIRS_GONE,
   seedAthleteGaveUp,
 } from "../gave-up-rows";
+import { outboxHandlers as registryWith } from "../../src/modules/dispatch/outbox-handlers";
+
+/**
+The drains' registry, as production assembles it (no linker).
+*/
+const outboxHandlers = registryWith(undefined);
 
 function fakeMessage(body: unknown, attempts = 1) {
   let wasAcked = false;
@@ -1828,6 +1834,7 @@ async function expiryOf(userId: string, key: string) {
 
 function drainExpiries(anomalies: string[], now: number) {
   return drainOutbox(coreDb(), anomalies, {
+    handlers: outboxHandlers,
     now,
     kinds: ["import_file_expire"],
   });

@@ -1,5 +1,5 @@
 import type { EmailPayload } from "../../lib/contracts/email";
-import type { OutboxMessage, ReminderEmailRef } from "../../lib/sql/outbox";
+import type { OutboxMessageOf, ReminderEmailRef } from "../../lib/sql/outbox";
 
 /**
  * An email owed, as an outbox message (law 8c): pass it to ops'
@@ -18,7 +18,7 @@ import type { OutboxMessage, ReminderEmailRef } from "../../lib/sql/outbox";
 export function emailDebt(
   payload: EmailPayload,
   options: Readonly<{ dedupeKey: string; reminder?: ReminderEmailRef }>,
-): OutboxMessage {
+): OutboxMessageOf<"email"> {
   return {
     kind: "email",
     payload: {

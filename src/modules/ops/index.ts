@@ -4,7 +4,9 @@ export {
   outboxInsert,
   outboxInsertWhere,
   settleOutbox,
+  storageHandlers,
   type OutboxDebt,
+  type OutboxDebtOf,
 } from "./outbox";
 export {
   firstPublishedPhotos,

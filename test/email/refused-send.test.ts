@@ -15,12 +15,15 @@ import {
   oweOutbox,
   settleOutbox,
 } from "../../src/modules/ops/outbox/outbox";
-import {
-  emailHandler,
-  outboxHandlers,
-  type OutboxHandlers,
-} from "../../src/modules/ops/outbox/outbox-handlers";
+import { outboxHandlers as registryWith } from "../../src/modules/dispatch/outbox-handlers";
+import type { OutboxHandlers } from "../../src/modules/ops/outbox/handler";
+import { emailHandler } from "../../src/modules/ops/owed-email/owed-email";
 import { core, fakeMail, seedUser } from "./helpers";
+
+/**
+The drains' registry, as production assembles it (no linker).
+*/
+const outboxHandlers = registryWith(undefined);
 
 /**
  * An owed email whose address the sender refuses (SA-L22, design 244).
@@ -289,7 +292,7 @@ describe("a refused email in the outbox", () => {
       .where(eq(outbox.id, debt.id));
     const report = vi.fn();
 
-    await settleOutbox(db, debt, report, refusing());
+    await settleOutbox(db, debt, refusing(), report);
 
     const row = await rowById(debt.id);
     expect(row?.attempts).toBe(OUTBOX_REFUSED_ATTEMPTS + 3);

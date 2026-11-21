@@ -23,7 +23,7 @@ import { sweepExports } from "../account/export-build";
 import { rescreenHandlesFromEnv } from "../account/handles";
 import { purgeDueAccounts } from "../account/purge";
 import { sweepExpiredAuthRows } from "../auth/expired-rows";
-import { linkTypedGarments } from "../closet";
+import { linkTypedGarments, type ProductLinker } from "../closet";
 import { sweepRateLimits } from "../email";
 import { sweepCopyrightHolds } from "../feed/moderation";
 import { fillMissingTimeZones } from "../onboarding";
@@ -39,12 +39,10 @@ import { checkDeploymentConfig, cronNameFor, type CronName } from "../ops/desk";
 import {
   checkOutboxBacklog,
   drainOutbox,
-  outboxHandlers,
   oweInCore,
-  productLinkHandler,
   type OutboxHandlers,
-  type ProductLinker,
 } from "../ops/outbox";
+import { outboxHandlers } from "./outbox-handlers";
 import {
   purgePublicPages,
   sweepPublicPhotos,
@@ -229,10 +227,7 @@ const liveUpkeep: DailyUpkeep = {
 The outbox's handlers, with the product link bound to the one handed in.
 */
 function handlersFor(upkeep: DailyUpkeep): OutboxHandlers {
-  return {
-    ...outboxHandlers,
-    product_link: productLinkHandler(upkeep.linkProducts),
-  };
+  return outboxHandlers(upkeep.linkProducts);
 }
 
 /**
@@ -557,6 +552,8 @@ async function drainOwedEmail(anomalies: string[]): Promise<void> {
   // for whatever either kind leaves due.
   await drainOutbox(coreDb(), anomalies, {
     kinds: ["operator_email", "email"],
+    // No linker: this drain takes no `product_link` row.
+    handlers: outboxHandlers(undefined),
     lines: "unsettled",
     backlog: true,
   });

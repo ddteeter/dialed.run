@@ -36,9 +36,9 @@ import {
 import {
   outboxInsert,
   oweOutbox,
-  settleOutbox,
-  type OutboxDebt,
+  type OutboxDebtOf,
 } from "../../ops";
+import { settleOwedEmail } from "../../ops/owed-email";
 import {
   didClaimEmailLink,
   emailLinkWrite,
@@ -480,7 +480,7 @@ export async function confirmEmail(
       outboxInsert(db, notice, now),
     ]),
   );
-  await settleOutbox(db, notice, options.report);
+  await settleOwedEmail(db, notice, options.report);
   return confirmed;
 }
 
@@ -540,13 +540,17 @@ export interface EmailChangeRequest {
 
 /**
  * Where the owed email goes after the answer: `keepAlive` holds the
- * Worker for it, `settle` is ops' `settleOutbox` (a test hands in one
+ * Worker for it, `settle` is ops' `settleOwedEmail` (a test hands in one
  * that sends through a fake), and the drain retries whatever it misses.
  */
 export interface OwedMail {
   readonly keepAlive: (work: Promise<unknown>) => void;
   readonly report: Report;
-  readonly settle: (db: Db, debt: OutboxDebt, report: Report) => Promise<void>;
+  readonly settle: (
+    db: Db,
+    debt: OutboxDebtOf<"email">,
+    report: Report,
+  ) => Promise<void>;
 }
 
 /**
@@ -558,7 +562,7 @@ export interface OwedMail {
  * own row and never an older row carrying an older email.
  */
 type ChangeMail =
-  | { readonly debt: OutboxDebt }
+  | { readonly debt: OutboxDebtOf<"email"> }
   | {
       readonly write: Awaited<ReturnType<typeof emailLinkWrite>>["write"];
       readonly message: Parameters<typeof deliverEmail>[1];

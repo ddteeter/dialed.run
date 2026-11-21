@@ -24,7 +24,7 @@ import { userProfiles } from "../../../db/schema-core";
 import { coreDb } from "../../../env";
 import { runnerCacheTag, type PurgeTags } from "../../../lib/cache-tags";
 import { firstRowWhere } from "../../../lib/sql/keyed-read";
-import type { OutboxMessage } from "../../../lib/sql/outbox";
+import type { OutboxMessageOf } from "../../../lib/sql/outbox";
 import { orSqlNull } from "../../../lib/sql/sql-null";
 import { nowSeconds } from "../../../lib/now";
 import { emailDebt } from "../../email";
@@ -111,7 +111,7 @@ export async function banUser(
  * itself — `ops` imports safety. Keyed by the runner, so a second click
  * on Close account replaces the debt rather than sending twice.
  */
-export function banEmail(input: BanInput): OutboxMessage {
+export function banEmail(input: BanInput): OutboxMessageOf<"email"> {
   // The rule it broke, unless suspected CSAM, whose email names no rule
   // and no reason either (C8; owner, 2026-10-24).
   const rule = closureRuleOf(input.rule);
@@ -222,7 +222,7 @@ export async function unbanUser(
 export function reopenEmail(
   userId: string,
   handle: string | undefined,
-): OutboxMessage {
+): OutboxMessageOf<"email"> {
   return emailDebt(
     {
       to: { userId },
@@ -238,7 +238,9 @@ export function reopenEmail(
 /**
  * The reopen email for this runner, naming the handle they hold now.
  */
-export async function reopenEmailFor(userId: string): Promise<OutboxMessage> {
+export async function reopenEmailFor(
+  userId: string,
+): Promise<OutboxMessageOf<"email">> {
   const row = await firstRowWhere(
     db(),
     userProfiles,

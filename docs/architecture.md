@@ -202,8 +202,9 @@ a barrel export, or an import from `ops`, would be a cycle. The dispatch
 Worker entry, so it imports the purge's door and runs it on the daily
 firing (`liveUpkeep`; `test/architecture/daily-upkeep.test.ts` reads that
 wiring). The imports consumer still takes an injected `owe` for the Strava
-deauthorization's email, for an older reason: `ops`' outbox imports
-`runs`, so `runs` cannot import the outbox (#886).
+deauthorization's email. Its reason, `ops`' outbox importing `runs`, is
+gone since design 256 (#886): `ops/outbox` imports no feature module, and
+dropping the injection is #923.
 
 The emailed data export (task 126 PR 2b-3, ACC-10) is wired the same way.
 Its job, `account_export`, rides its own queue, `dialed-exports` (decision
@@ -425,11 +426,12 @@ sheet and threaded a guard to every control, and a refusal reached a
 sheet only where a screen had remembered to wire one.
 
 **A server-side check owned by another module is a required argument.**
-`safety`'s ban lift owes the reopen email through `ops`, which it cannot
-import (`ops` imports safety), and an optional step is a door nobody has
-to close. So the owing is a required parameter (`Reopening`), and
-`safety/functions.ts` wires `ops`'s own outbox into it — glue, which is
-all a server-function file may be. (Report's address check used to be
+`safety`'s ban lift owes the reopen email through `ops`, which it could
+not import while the outbox imported `safety` (until design 256), and an
+optional step is a door nobody has to close. So the owing is a required
+parameter (`Reopening`), and `safety/functions.ts` wires `ops`'s own
+outbox into it — glue, which is all a server-function file may be.
+`safety` may import `ops/outbox` now; whether `Reopening` goes is #924. (Report's address check used to be
 the example; it is the verification gate's now.)
 
 Raised as a question on PR #73 ("do we need to adjust the rules?"), and
@@ -526,10 +528,16 @@ flowchart LR
   digest, so a held reminder goes within the half hour it falls due. The
   third is `product_link` (design 133, D-113 Q1): confirming an address
   owes the link of the runner's typed garments to the shared products,
-  in the confirmation's batch. It has no fast path — the link is
-  `closet`'s, which `ops` cannot import — so the dispatch binds
-  `linkTypedGarments` for the `:00` firing and the digest (`DailyUpkeep`),
-  which drain it as a scheduled kind.
+  in the confirmation's batch. It has no fast path: the dispatch binds
+  `closet`'s `productLinkHandler` to `linkTypedGarments` for the `:00`
+  firing and the digest (`DailyUpkeep`), which drain it as a scheduled kind.
+  **Each handler lives with what it touches** (design 256): the R2-only
+  ones beside the outbox (`ops/outbox/storage-handlers.ts`), the email's in
+  `ops/owed-email`, the product link in `closet` and a run's band in
+  `weather`. `ops/outbox` imports none of them, so any module may owe and
+  settle. A fast path passes a map of its own kinds' handlers to
+  `settleOutbox`, and the dispatch assembles the full registry for the
+  drains (`dispatch/outbox-handlers.ts`).
 - **A copyright hold** (D-130, design 149) is **reconciliation**: the
   `copyright_holds` row is the marker. A takedown hides and writes it in
   one batch; the daily firing (the dispatch's `DailyUpkeep.sweepCopyrightHolds`, `feed`'s)
