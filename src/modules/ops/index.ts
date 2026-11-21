@@ -1,5 +1,6 @@
 export {
   oweInCore,
+  oweInCoreWhere,
   oweOutbox,
   outboxInsert,
   outboxInsertWhere,

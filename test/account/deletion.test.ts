@@ -133,7 +133,7 @@ function effectsFor(mail: ReturnType<typeof fakeMail>) {
     keepAlive,
     report,
     disconnectStrava,
-    purge: purge.purge,
+    purgeFor: () => purge.purge,
   };
   return {
     purged: purge.calls,

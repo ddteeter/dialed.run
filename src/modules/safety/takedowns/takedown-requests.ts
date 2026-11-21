@@ -26,6 +26,7 @@ import {
 import type { SQL } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { drizzle, DrizzleD1Database } from "drizzle-orm/d1";
+import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 
 import {
   entryPhotos,
@@ -38,6 +39,7 @@ import type {
   TakedownRequestValues,
   TakedownSubject,
 } from "../../../lib/contracts/takedown";
+import type { OutboxMessage } from "../../../lib/sql/outbox";
 import type { PurgeTags } from "../../../lib/cache-tags";
 import { newUlid } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
@@ -56,20 +58,38 @@ import {
   requestSubjectsOf,
   subjectPhotoKeysOf,
 } from "./request-subject";
-import type { OweEmail } from "../reports";
 import { ipKey, requesterKey } from "./requester-key";
 import type { HoldState } from "../limits";
 import {
+  alertRoomSql,
   confirmTokenHash,
-  holdStateFor,
-  requesterMatches,
-  isValveShut,
+  holdStateSql,
   newConfirmToken,
   TAKEDOWN_VALVE_PER_HOUR,
   valveHour,
+  valveShutSql,
 } from "../limits";
 
 type Db = ReturnType<typeof drizzle<Record<string, never>>>;
+
+/**
+ * An email owed once for each row of `from.table` that `from.where`
+ * matches as the statement runs: `ops`' `outboxInsertWhere`, handed in
+ * as `oweInCore` is, since `ops` imports this module. Every condition
+ * here is one request's own row, so a debt is owed once or not at all.
+ */
+export type OweEmailWhere = (
+  message: OutboxMessage,
+  from: { readonly table: SQLiteTable; readonly where: SQL },
+) => BatchItem<"sqlite">;
+
+/**
+ * The key the edge purges of removal requests are counted under
+ * (`purgePublicPagesFor`), site-wide: a requester may have no account, so
+ * there is no runner to count them against. Past its share a held page
+ * waits out its 60-second lifetime, which is the guarantee.
+ */
+export const REMOVAL_REQUESTS_PURGE_KEY = "removal-requests";
 
 export type TakedownRequestResult =
   | { readonly status: "received" }
@@ -90,7 +110,7 @@ export interface TakedownRequestInput<Attempt> extends TakedownRequestValues {
 
 export interface TakedownRequestDeps<Attempt> {
   readonly verify: (attempt: Attempt) => Promise<{ readonly ok: boolean }>;
-  readonly owe: OweEmail;
+  readonly oweWhere: OweEmailWhere;
   /**
   `TAKEDOWN_SECRET`, which keys the visitor's IP (design 137); absent, the
   limits match requesters by email alone.
@@ -111,10 +131,18 @@ export interface TakedownRequestDeps<Attempt> {
  * **A repeat is the first request** (law 8b): the form's key, scoped to
  * the address, finds it, and nothing is written or sent again.
  *
- * **The limit's count is its own write**, before the batch: Au5 can make
- * the request conditional on the count in one statement, but here three
- * emails would each need the same condition. A count whose batch then
- * fails costs the visitor one of their hourly sends and nothing else.
+ * **The row decides what the request does** (design 137): its insert
+ * writes `hold_state` from the limits as they stand when it runs, and
+ * `held_at` only where that state may hide and the link names something
+ * a hold moves or a report already hid. Every other statement in the
+ * batch — the hide, the author's notice, the alerts and the receipt's
+ * words — is conditional on the row as written, so what requests sent
+ * together do is counted one after another.
+ *
+ * **The visitor's count is its own write**, before the batch: one email
+ * address per request would need its condition three times. A count
+ * whose batch then fails costs the visitor one of their hourly sends and
+ * nothing else.
  */
 export async function fileTakedownRequest<Attempt>(
   db: Db,
@@ -134,19 +162,20 @@ export async function fileTakedownRequest<Attempt>(
     ),
   );
   if (earlier !== undefined) return { status: "received" };
-  const until = await limitedUntil(db, input, email, now);
-  if (until !== undefined) return { status: "limited", until };
-  const id = newUlid();
-  const dueAt = now + REMOVAL_DUE_SECONDS;
-  const subject = await filedSubjectOf(db, input.location);
   const keys = {
     requesterKey: requesterKey(email),
     ipKey: await ipKey(input.remoteIp, deps.secret),
   };
-  // Design 137: what this request may do, read before its batch.
-  const state = await holdStateFor(db, keys, now);
-  const isHeld = state === "held" && subject !== undefined;
-  const told = isHeld ? await holdNotice(db, subject) : [];
+  const until = await limitedUntil(db, input, keys.requesterKey, now);
+  if (until !== undefined) return { status: "limited", until };
+  const id = newUlid();
+  const dueAt = now + REMOVAL_DUE_SECONDS;
+  const subject = await filedSubjectOf(db, input.location);
+  const row = rowOf(id);
+  const told =
+    subject === undefined
+      ? []
+      : await holdNotice(db, subject, holds(row.hid(now)));
   await db.batch([
     db
       .insert(takedownRequests)
@@ -163,37 +192,211 @@ export async function fileTakedownRequest<Attempt>(
         idempotencyKey: input.idempotencyKey,
         requesterKey: keys.requesterKey,
         ipKey: keys.ipKey,
-        holdState:
-          subject === undefined && state === "held" ? undefined : state,
-        heldAt: isHeld ? now : undefined,
+        holdState: sql`${holdStateSql(keys, now)}`,
         posterUsername: input.posterUsername,
       })
       .onConflictDoNothing(),
-    ...(isHeld ? holdWrites(db, subject) : []),
+    ...decisionWrites(db, row.written, subject, now),
+    ...holdWrites(db, subject, holds(row.hid(now))),
     ...told,
-    ...(state === "held"
-      ? operatorAlerts(deps.owe, id, dueAt, subject !== undefined)
+    ...operatorAlerts(deps.oweWhere, { id, dueAt, subject }, row.alerts(now)),
+    ...valveAlerts(deps.oweWhere, now, row.is("valve")),
+    ...receipts(deps.oweWhere, { id, email, dueAt }, row, now),
+  ]);
+  await purgeIfHeld(db, { id, subject }, now, deps.purge);
+  return { status: "received" };
+}
+
+/**
+ * What a request does, written on its own row (`row`) right after the
+ * insert or the confirm's claim has recorded the limits' state, in the
+ * same batch (design 137):
+ *
+ * 1. `held_at`, where that state may hide and the subject is one a hold
+ *    moves or a report already hid;
+ * 2. `alerted_at`, where it may act but hid nothing and the hour's
+ *    one-by-one alerts have room;
+ * 3. the state `valve` for one that hid nothing past that room — the
+ *    valve's hourly alert is what it owes;
+ * 4. no state for a link that is not ours, which holds nothing.
+ *
+ * One statement each, so each counts what the one before it wrote.
+ */
+function decisionWrites(
+  db: Db,
+  row: SQL,
+  subject: TakedownSubject | undefined,
+  now: number,
+): BatchItem<"sqlite">[] {
+  const mayAct = and(row, eq(takedownRequests.holdState, "held"));
+  const hidNothing = and(mayAct, isNull(takedownRequests.heldAt));
+  return [
+    ...(subject === undefined
+      ? []
+      : [
+          db
+            .update(takedownRequests)
+            .set({ heldAt: now })
+            .where(and(mayAct, subjectHoldable(subject))),
+        ]),
+    db
+      .update(takedownRequests)
+      .set({ alertedAt: now })
+      .where(and(hidNothing, alertRoomSql(now))),
+    db
+      .update(takedownRequests)
+      .set({ holdState: "valve" })
+      .where(and(hidNothing, isNull(takedownRequests.alertedAt))),
+    ...(subject === undefined
+      ? [
+          db
+            .update(takedownRequests)
+            .set({ holdState: sql`null` })
+            .where(mayAct),
+        ]
       : []),
-    ...(state === "valve" ? valveAlerts(deps.owe, now) : []),
-    deps.owe(
+  ];
+}
+
+/**
+ * What a batch asks of the request it wrote, as predicates on that one
+ * row (its id), so every statement after the insert or the confirm's
+ * claim acts on the row as that statement left it. `also` narrows each
+ * to the batch's own write (the confirm's moment); filing needs none,
+ * since its row is new.
+ */
+function rowOf(id: string, also: SQL = sql`1`) {
+  const row = (condition: SQL) =>
+    sql`(${takedownRequests.id} = ${id} and ${also} and ${condition})`;
+  return {
+    /**
+    The batch wrote it: an insert a repeat's key refused wrote nothing.
+    */
+    written: row(sql`1`),
+    /**
+    It hid its subject at `now`.
+    */
+    hid: (now: number) => row(sql`${takedownRequests.heldAt} = ${now}`),
+    /**
+    It hid nothing at `now` (`is not`, so an unset `held_at` answers true).
+    */
+    hidNothing: (now: number) =>
+      row(sql`${takedownRequests.heldAt} is not ${now}`),
+    /**
+    It alerts every operator one by one: it hid, or it may alert though it hid nothing.
+    */
+    alerts: (now: number) =>
+      row(
+        sql`(${takedownRequests.heldAt} = ${now} or ${takedownRequests.alertedAt} = ${now})`,
+      ),
+    /**
+    Its recorded state is `state`; `isNot` answers true of an unset one.
+    */
+    is: (state: HoldState) =>
+      row(sql`${takedownRequests.holdState} = ${state}`),
+    isNot: (state: HoldState) =>
+      row(sql`${takedownRequests.holdState} is not ${state}`),
+  };
+}
+
+/**
+A row condition as one for any statement: true while that row exists so.
+*/
+function holds(condition: SQL): SQL {
+  return sql`exists (select 1 from ${takedownRequests} where ${condition})`;
+}
+
+/**
+An email owed where the request's own row meets `condition`.
+*/
+function owedWhere(
+  oweWhere: OweEmailWhere,
+  message: OutboxMessage,
+  condition: SQL,
+): BatchItem<"sqlite"> {
+  return oweWhere(message, { table: takedownRequests, where: condition });
+}
+
+/**
+ * Whether the request's subject is one a hold moves, or one a report
+ * already hid, so a request about a kit already in review still pins it
+ * there (`review.ts`'s `notHeldByRequest`). A link that is not ours, a
+ * subject that does not exist and a removal all answer false.
+ */
+function subjectHoldable(subject: TakedownSubject): SQL {
+  const { table, where } = holdable[subject.subjectType](subject.subjectId, {
+    orInReview: true,
+  });
+  return sql`exists (select 1 from ${table} where ${where})`;
+}
+
+/**
+ * The edge purge, for a request whose row says it hid at `now`: read
+ * back once the batch has landed, since only the row knows (design 163).
+ */
+async function purgeIfHeld(
+  db: Db,
+  request: {
+    readonly id: string;
+    readonly subject: TakedownSubject | undefined;
+  },
+  now: number,
+  purge: PurgeTags,
+): Promise<void> {
+  if (request.subject === undefined) return;
+  const written = await firstRowWhere(
+    db,
+    takedownRequests,
+    eq(takedownRequests.id, request.id),
+  );
+  if (written?.heldAt === now) await purgeHeld(db, request.subject, purge);
+}
+
+/**
+ * The requester's receipt, in the words the row as written earns: hidden
+ * where it hid, the confirm link where it waits on one, and otherwise
+ * received. One dedupe key, and exactly one of the three conditions holds.
+ */
+function receipts(
+  oweWhere: OweEmailWhere,
+  request: {
+    readonly id: string;
+    readonly email: string;
+    readonly dueAt: number;
+  },
+  row: ReturnType<typeof rowOf>,
+  now: number,
+): BatchItem<"sqlite">[] {
+  const receipt = (
+    words: { readonly isHidden: boolean; readonly waits: boolean },
+    condition: SQL,
+  ) =>
+    owedWhere(
+      oweWhere,
       emailDebt(
         {
-          to: { address: email },
+          to: { address: request.email },
           template: {
             kind: "removal_request_received",
-            dueAt,
-            isHidden: isHeld,
+            dueAt: request.dueAt,
+            isHidden: words.isHidden,
             // SA-L18: the request, not a token; the token is minted when
             // the receipt is sent (`mintReceiptConfirmToken`).
-            confirmRequestId: state === "confirm" ? id : undefined,
+            confirmRequestId: words.waits ? request.id : undefined,
           },
         },
-        { dedupeKey: `removal_request_received:${id}` },
+        { dedupeKey: `removal_request_received:${request.id}` },
       ),
+      condition,
+    );
+  return [
+    receipt({ isHidden: true, waits: false }, row.hid(now)),
+    receipt({ isHidden: false, waits: true }, row.is("confirm")),
+    receipt(
+      { isHidden: false, waits: false },
+      sql`${row.hidNothing(now)} and ${row.isNot("confirm")}`,
     ),
-  ]);
-  if (isHeld) await purgeHeld(db, subject, deps.purge);
-  return { status: "received" };
+  ];
 }
 
 /**
@@ -239,16 +442,17 @@ async function purgeHeld(
 }
 
 /**
- * When the visitor's hourly sends run out, or the typed address's
- * receipts do (SA-M11), the moment they return; nothing when this
- * deployment does not limit or the request may go. Counting is the write
- * that spends a send; a visitor already over is not counted against the
- * address.
+ * When the visitor's hourly sends run out, or the requester's receipts
+ * do, the moment they return; nothing when this deployment does not limit
+ * or the request may go. The receipts are counted by `requesterKey`, so
+ * every address that reaches one inbox shares one allowance. Counting is
+ * the write that spends a send; a visitor already over is not counted
+ * against the requester.
  */
 async function limitedUntil(
   db: Db,
   input: { readonly isLimited: boolean; readonly remoteIp: string | undefined },
-  email: string,
+  requester: string,
   now: number,
 ): Promise<number | undefined> {
   if (!input.isLimited) return undefined;
@@ -260,43 +464,57 @@ async function limitedUntil(
   );
   const claim = sendClaimOf(counted);
   if (!claim.isAllowed) return claim.until;
-  const receipt = await claimLimit(db, "takedown-to", email, now);
+  const receipt = await claimLimit(db, "takedown-to", requester, now);
   return receipt.isAllowed ? undefined : receipt.until;
 }
 
 /**
- * One "Removal request, due by …" per operator: owed when a request may
- * alert — at filing, or at its confirm (design 137).
+ * One "Removal request, due by …" per operator, where the request alerts
+ * one by one (`onlyIf`): at filing, or at its confirm (design 137).
  */
 function operatorAlerts(
-  owe: OweEmail,
-  requestId: string,
-  dueAt: number,
-  isOurs: boolean,
+  oweWhere: OweEmailWhere,
+  request: {
+    readonly id: string;
+    readonly dueAt: number;
+    readonly subject: TakedownSubject | undefined;
+  },
+  onlyIf: SQL,
 ): BatchItem<"sqlite">[] {
   // An operator's mail, drained ahead of every other email (design 232).
   return adminUserIds().map((userId) =>
-    owe(
+    owedWhere(
+      oweWhere,
       operatorEmailMessage(
         {
           to: { userId },
-          template: { kind: "removal_requested", dueAt, isOurs },
+          template: {
+            kind: "removal_requested",
+            dueAt: request.dueAt,
+            isOurs: request.subject !== undefined,
+          },
         },
-        `removal_requested:${requestId}:${userId}`,
+        `removal_requested:${request.id}:${userId}`,
       ),
+      onlyIf,
     ),
   );
 }
 
 /**
- * The valve's one alert per operator per hour (design 137): the dedupe
- * key is the hour, so every request the shut valve quiets owes the same
- * row and only the first is sent.
+ * The valve's one alert per operator per hour (design 137), where the
+ * request was quieted (`onlyIf`): the dedupe key is the hour, so every
+ * request the valve quiets owes the same row and only the first is sent.
  */
-function valveAlerts(owe: OweEmail, now: number): BatchItem<"sqlite">[] {
+function valveAlerts(
+  oweWhere: OweEmailWhere,
+  now: number,
+  onlyIf: SQL,
+): BatchItem<"sqlite">[] {
   const hour = String(valveHour(now));
   return adminUserIds().map((userId) =>
-    owe(
+    owedWhere(
+      oweWhere,
       operatorEmailMessage(
         {
           to: { userId },
@@ -307,6 +525,7 @@ function valveAlerts(owe: OweEmail, now: number): BatchItem<"sqlite">[] {
         },
         `takedown_valve:${hour}:${userId}`,
       ),
+      onlyIf,
     ),
   );
 }
@@ -316,29 +535,38 @@ function valveAlerts(owe: OweEmail, now: number): BatchItem<"sqlite">[] {
  * state a report's hide uses: `hidden_pending_review`, "not public, a
  * person will look". Only from a public state — never over a removal,
  * and never over a photo the classifier flagged — so a request can take
- * a subject out of sight and never bring one back.
+ * a subject out of sight and never bring one back; and only where the
+ * row as written says it hid (`onlyIf`).
  */
-function holdWrites(db: Db, subject: TakedownSubject): BatchItem<"sqlite">[] {
-  return [
-    visibilityWrites[subject.subjectType](db, subject.subjectId, {
-      hold: true,
-      when: undefined,
-    }),
-  ];
+function holdWrites(
+  db: Db,
+  subject: TakedownSubject | undefined,
+  onlyIf: SQL,
+): BatchItem<"sqlite">[] {
+  return subject === undefined
+    ? []
+    : [
+        visibilityWrites[subject.subjectType](db, subject.subjectId, {
+          hold: true,
+          when: onlyIf,
+        }),
+      ];
 }
 
 /**
  * The author's notice that a request hid their kit or photo (R-163; owner,
- * 2026-10-24): the hide notice a report's hide sends (D-145), unchanged.
- * Read before the batch, which cannot branch, and only while the subject
- * is in a state the hold moves — so a subject a report already hid, or a
- * removal already took, is not told it was hidden again. Suspected CSAM
- * is not known yet when a request lands; the quarantine that may follow
- * tells nobody anything more (D-70).
+ * 2026-10-24): the hide notice a report's hide sends (D-145), unchanged,
+ * raised where the row says it hid (`onlyIf`). The author is read before
+ * the batch, which cannot branch, and only while the subject is in a
+ * state the hold moves — so a subject a report already hid, or a removal
+ * already took, is not told it was hidden again. Suspected CSAM is not
+ * known yet when a request lands; the quarantine that may follow tells
+ * nobody anything more (D-70).
  */
 async function holdNotice(
   db: Db,
   subject: TakedownSubject,
+  onlyIf: SQL,
 ): Promise<BatchItem<"sqlite">[]> {
   const { table, where } = holdable[subject.subjectType](subject.subjectId);
   const [row] = await db
@@ -347,30 +575,52 @@ async function holdNotice(
     .where(where);
   return row === undefined
     ? []
-    : hiddenNotice(db, subject.subjectType, subject.subjectId);
+    : hiddenNotice(db, subject.subjectType, subject.subjectId, onlyIf);
 }
 
 /**
  * A subject a hold would move: public, and the row it names. The hold's
  * own `where` (`visibilityWrites`), so the notice and the hide cannot
- * disagree about what "public" is.
+ * disagree about what "public" is. `orInReview` adds a subject a report
+ * already hid, which a request still pins.
  */
 const holdable: Record<
   TakedownSubject["subjectType"],
-  (subjectId: string) => {
+  (
+    subjectId: string,
+    options?: { readonly orInReview: boolean },
+  ) => {
     readonly table: typeof outfitEntries | typeof entryPhotos;
     readonly where: SQL | undefined;
   }
 > = {
-  entry: (subjectId) => ({
+  entry: (subjectId, options) => ({
     table: outfitEntries,
-    where: and(eq(outfitEntries.id, subjectId), HOLD_FROM.entry),
+    where: and(
+      eq(outfitEntries.id, subjectId),
+      options?.orInReview === true
+        ? or(HOLD_FROM.entry, IN_REVIEW.entry)
+        : HOLD_FROM.entry,
+    ),
   }),
-  photo: (subjectId) => ({
+  photo: (subjectId, options) => ({
     table: entryPhotos,
-    where: and(eq(entryPhotos.id, subjectId), HOLD_FROM.photo),
+    where: and(
+      eq(entryPhotos.id, subjectId),
+      options?.orInReview === true
+        ? or(HOLD_FROM.photo, IN_REVIEW.photo)
+        : HOLD_FROM.photo,
+    ),
   }),
 };
+
+/**
+What a report's hide or a request's hold leaves: not public, a person will look.
+*/
+const IN_REVIEW = {
+  entry: eq(outfitEntries.moderationStatus, "hidden_pending_review"),
+  photo: eq(entryPhotos.screenStatus, "hidden_pending_review"),
+} as const;
 
 /**
  * A Decline's give-back, for the decision's batch: the subject the
@@ -485,18 +735,18 @@ export type TakedownConfirmResult = "confirmed" | "decided" | "not_found";
  * owes the valve's alert instead. A repeat is the first confirm; a
  * request already decided stays decided.
  *
- * The claim (`confirmed_at` still NULL) is in the batch with the hold and
- * the alerts. The hold is safe to repeat (it moves only a public
- * subject), and every alert's dedupe key is the request's or the hour's,
- * so a confirm that races itself sends each once.
+ * The claim (`confirmed_at` still NULL, the request still pending)
+ * writes what the confirm does, from the valve as it stands when the
+ * claim runs, and every other statement in the batch acts only where
+ * this claim landed — so a confirm that races itself sends each alert
+ * once, and one that races a decision does nothing.
  */
 export async function confirmTakedownRequest(
   db: Db,
   token: string,
-  effects: { readonly owe: OweEmail; readonly purge: PurgeTags },
+  effects: { readonly oweWhere: OweEmailWhere; readonly purge: PurgeTags },
   now = nowSeconds(),
 ): Promise<TakedownConfirmResult> {
-  const { owe } = effects;
   const request = await firstRowWhere(
     db,
     takedownRequests,
@@ -509,29 +759,33 @@ export async function confirmTakedownRequest(
   // past them answers as an unknown link (owner, 2026-11-16).
   if (now > request.dueAt) return "not_found";
   const subject = await requestSubjectOf(db, request);
-  const isShut = await isValveShut(db, now);
-  const isHeld = !isShut && subject !== undefined;
-  const told = isHeld ? await holdNotice(db, subject) : [];
-  const unconfirmed = and(
+  const state = sql<HoldState>`(case when ${valveShutSql(now)} then 'valve' else 'held' end)`;
+  const row = rowOf(request.id, eq(takedownRequests.confirmedAt, now));
+  const told =
+    subject === undefined
+      ? []
+      : await holdNotice(db, subject, holds(row.hid(now)));
+  const claim = and(
     eq(takedownRequests.id, request.id),
     isNull(takedownRequests.confirmedAt),
+    eq(takedownRequests.status, "pending"),
   );
   await db.batch([
     db
       .update(takedownRequests)
-      .set({
-        confirmedAt: now,
-        holdState: isShut ? "valve" : "held",
-        heldAt: isHeld ? now : undefined,
-      })
-      .where(unconfirmed),
-    ...(isHeld ? holdWrites(db, subject) : []),
+      .set({ confirmedAt: now, holdState: state })
+      .where(claim),
+    ...decisionWrites(db, row.written, subject, now),
+    ...holdWrites(db, subject, holds(row.hid(now))),
     ...told,
-    ...(isShut
-      ? valveAlerts(owe, now)
-      : operatorAlerts(owe, request.id, request.dueAt, subject !== undefined)),
+    ...operatorAlerts(
+      effects.oweWhere,
+      { id: request.id, dueAt: request.dueAt, subject },
+      row.alerts(now),
+    ),
+    ...valveAlerts(effects.oweWhere, now, row.is("valve")),
   ]);
-  if (isHeld) await purgeHeld(db, subject, effects.purge);
+  await purgeIfHeld(db, { id: request.id, subject }, now, effects.purge);
   return "confirmed";
 }
 
@@ -667,10 +921,13 @@ export async function blockAndDeclineAll(
     requesterKey: request.requesterKey ?? requesterKey(request.requesterEmail),
     ipKey: request.ipKey ?? undefined,
   };
-  // The request itself by its id, as well as by its keys.
+  // The request itself by its id, and the requester's others by their
+  // email key only: an address many people share may have filed some of
+  // them, and those wait for a person. Both keys are still blocked, so
+  // what that address files next hides nothing.
   const theirs = or(
     eq(takedownRequests.id, request.id),
-    requesterMatches(keys),
+    eq(takedownRequests.requesterKey, keys.requesterKey),
   );
   const pending = await db
     .select()

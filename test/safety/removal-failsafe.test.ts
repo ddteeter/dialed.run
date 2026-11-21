@@ -20,7 +20,7 @@ import {
   type CategoryScores,
 } from "../../src/modules/safety/screening/classifier/moderation";
 import { noPurge } from "../purge-spy";
-import { oweInCore } from "../queue-fakes";
+import { oweInCore, oweInCoreWhere } from "../queue-fakes";
 
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 
@@ -38,7 +38,7 @@ function core() {
 
 const deps = {
   verify: () => Promise.resolve({ ok: true }),
-  owe: oweInCore,
+  oweWhere: oweInCoreWhere,
   purge: noPurge,
 };
 

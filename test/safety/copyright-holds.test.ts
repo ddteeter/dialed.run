@@ -958,7 +958,12 @@ A report on a subject from a new runner, for a reason that hides at once.
 */
 async function reported(subjectType: "entry" | "photo", subjectId: string) {
   await fileReport(
-    { reporterId: await makeUser(), subjectType, subjectId, reason: "intimate" },
+    {
+      reporterId: await makeUser(),
+      subjectType,
+      subjectId,
+      reason: "intimate",
+    },
     oweInCore,
     noPurge,
   );
@@ -985,9 +990,7 @@ async function requested(subjectId: string, holdState: "held" | "confirm") {
 }
 
 async function openRows() {
-  return core()
-    .select({ status: reviewQueue.status })
-    .from(reviewQueue);
+  return core().select({ status: reviewQueue.status }).from(reviewQueue);
 }
 
 describe("a restore of what something else still holds", () => {
@@ -1005,7 +1008,10 @@ describe("a restore of what something else still holds", () => {
     expect(await entryStatus(entryId)).toBe("hidden_pending_review");
     expect(await holdStatus(entryId)).toBe("restored");
     const hidden = await core()
-      .select({ userId: notifications.userId, subjectId: notifications.subjectId })
+      .select({
+        userId: notifications.userId,
+        subjectId: notifications.subjectId,
+      })
       .from(notifications)
       .where(eq(notifications.kind, "content_hidden"));
     expect(hidden).toStrictEqual([{ userId: author, subjectId: entryId }]);

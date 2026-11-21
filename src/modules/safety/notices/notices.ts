@@ -107,11 +107,13 @@ const ALWAYS = sql`1`;
 /**
  * The author's notice that a report hid their kit or photo (D-145).
  * Nothing for a profile or a product, which a report never hides.
+ * `onlyIf` is the batch's condition for the hide, when it has one.
  */
 export function hiddenNotice(
   db: Db,
   subjectType: ReportSubjectType,
   subjectId: string,
+  onlyIf: SQL = ALWAYS,
 ): Promise<BatchItem<"sqlite">[]> {
   return authorNotice(
     db,
@@ -119,7 +121,7 @@ export function hiddenNotice(
     HIDDEN_NOTICE,
     subjectType,
     subjectId,
-    ALWAYS,
+    onlyIf,
   );
 }
 

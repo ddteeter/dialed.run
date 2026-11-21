@@ -46,7 +46,7 @@ import {
 } from "../../src/modules/safety/takedowns/takedown-requests";
 import { fileReport } from "../../src/modules/safety/reports/reports";
 import { noPurge } from "../purge-spy";
-import { oweInCore } from "../queue-fakes";
+import { oweInCore, oweInCoreWhere } from "../queue-fakes";
 
 import {
   makeEntry,
@@ -176,7 +176,7 @@ function requestRemoval(
     },
     {
       verify: () => Promise.resolve({ ok: true }),
-      owe: oweInCore,
+      oweWhere: oweInCoreWhere,
       purge,
     },
   );
@@ -339,7 +339,7 @@ describe("every other retraction deletes the public copy", () => {
             report: quiet,
             settle: () => Promise.resolve(),
             disconnectStrava: () => Promise.resolve(),
-            purge,
+            purgeFor: () => purge,
           },
         ),
     ],
@@ -532,7 +532,7 @@ describe("a removal request naming a public copy's URL", () => {
 
     expect(
       await confirmTakedownRequest(core(), await confirmTokenFor(request.id), {
-        owe: oweInCore,
+        oweWhere: oweInCoreWhere,
         purge: wired.purge,
       }),
     ).toBe("confirmed");

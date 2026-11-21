@@ -1,8 +1,14 @@
+import type { SQL } from "drizzle-orm";
+import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 import { expect, vi } from "vitest";
 import type { Mock } from "vitest";
 
 import type { OutboxMessage } from "../src/lib/sql/outbox";
-import { outboxInsert, oweOutbox } from "../src/modules/ops/outbox/outbox";
+import {
+  outboxInsert,
+  outboxInsertWhere,
+  oweOutbox,
+} from "../src/modules/ops/outbox/outbox";
 import { coreDb } from "../src/modules/runs/core-db";
 
 /**
@@ -58,6 +64,17 @@ export function importMessageFor(importId: string): unknown {
  */
 export function oweInCore(message: OutboxMessage, notBefore?: number) {
   return outboxInsert(coreDb(), oweOutbox(message, notBefore));
+}
+
+/**
+ * Safety's removal requests' `oweWhere`, as their server functions wire
+ * it: the outbox row only where the request's own row matches.
+ */
+export function oweInCoreWhere(
+  message: OutboxMessage,
+  from: Readonly<{ table: SQLiteTable; where: SQL }>,
+) {
+  return outboxInsertWhere(coreDb(), oweOutbox(message), from);
 }
 
 /**

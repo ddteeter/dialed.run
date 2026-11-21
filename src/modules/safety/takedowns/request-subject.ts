@@ -12,7 +12,7 @@
  * otherwise the link's path. An unknown key names nothing, as an unknown
  * path does.
  */
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import {
@@ -69,7 +69,7 @@ export type FiledRequest = Pick<
  * Each request's subject, in order: the photo filing recorded on it, read
  * with the kit it is really on, else its link's path. The recorded photo
  * comes first (SA-M24): a photo's path names a kit as well, and that kit
- * is only the link's word for it. A recorded subject that is no photo, or
+ * is only the link's word for it. A recorded subject of another type, or
  * a photo gone since, joins no row, and the path answers as it did when
  * the request was filed. Read by the requests' own ids, an `IN` list at a
  * time.
@@ -104,7 +104,13 @@ async function recordedPhotos(
     db
       .select(columns)
       .from(requests)
-      .innerJoin(entryPhotos, eq(entryPhotos.id, requests.subjectId))
+      .innerJoin(
+        entryPhotos,
+        and(
+          eq(requests.subjectType, "photo"),
+          eq(entryPhotos.id, requests.subjectId),
+        ),
+      )
       .where(inArray(requests.id, chunk)),
   );
   return new Map(

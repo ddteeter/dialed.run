@@ -1,6 +1,7 @@
 /**
  * `/takedown`'s abuse limits (design 137; owner, 2026-10-10): what a new
- * request is allowed to do, decided before its batch from three reads.
+ * request is allowed to do, decided by the request's own insert from
+ * three counts it makes as it is written.
  *
  * - **Blocked** — either of the requester's keys is in `takedown_blocks`.
  *   Recorded, with the ordinary receipt, and nothing more: no hide, no
@@ -14,16 +15,21 @@
  * - Otherwise it does what design drew: hides a link of ours at once and
  *   alerts every operator.
  *
- * The reads are not a lock: two requests landing together can both pass
- * a limit at its edge. That costs one request past the cap, which a
- * person reviews within 48 hours anyway.
+ * **Decided as written, not before.** Each limit is SQL in the statement
+ * that records the request (or its confirm), and a batch is one
+ * transaction run after the one before it, so requests sent together are
+ * counted one after another: the eleventh sees the ten before it.
+ *
+ * **Alerts have their own allowance.** A request that hid nothing — a
+ * link that is not ours, or one naming nothing a hold could move —
+ * alerts every operator one by one only while fewer than
+ * `TAKEDOWN_ALERTS_PER_HOUR` such alerts went out in the hour, site-wide;
+ * past that it owes the valve's hourly alert. Such requests never count
+ * toward the valve, which counts hides.
  */
-import { and, count, eq, gte, inArray, or } from "drizzle-orm";
-import type { drizzle } from "drizzle-orm/d1";
+import { and, eq, gte, inArray, or, sql, type SQL } from "drizzle-orm";
 
 import { takedownBlocks, takedownRequests } from "../../../db/schema-core";
-
-type Db = ReturnType<typeof drizzle>;
 
 /**
 Open requests one requester may have before a new one waits for a confirm.
@@ -34,6 +40,11 @@ export const TAKEDOWN_CAP = 2;
 Hides in an hour, site-wide, past which new requests hide nothing.
 */
 export const TAKEDOWN_VALVE_PER_HOUR = 10;
+
+/**
+One-by-one alerts in an hour, site-wide, for requests that hid nothing.
+*/
+export const TAKEDOWN_ALERTS_PER_HOUR = 10;
 
 const HOUR_S = 60 * 60;
 
@@ -67,35 +78,6 @@ export function requesterMatches(keys: RequesterKeys) {
 }
 
 /**
- * What a new request from `keys` may do. `held` means it may hide and
- * alert; the caller hides only when its link is ours.
- */
-export async function holdStateFor(
-  db: Db,
-  keys: RequesterKeys,
-  now: number,
-): Promise<HoldState> {
-  const blockedWhere = inArray(takedownBlocks.key, keysOf(keys));
-  const openWhere = and(
-    requesterMatches(keys),
-    eq(takedownRequests.status, "pending"),
-  );
-  const [blocked, heldThisHour, open] = await db.batch([
-    db
-      .select({ key: takedownBlocks.key })
-      .from(takedownBlocks)
-      .where(blockedWhere)
-      .limit(1),
-    heldInTheHour(db, now),
-    db.select({ n: count() }).from(takedownRequests).where(openWhere),
-  ]);
-  if (blocked.length > 0) return "blocked";
-  if (counted(heldThisHour) >= TAKEDOWN_VALVE_PER_HOUR) return "valve";
-  if (counted(open) >= TAKEDOWN_CAP) return "confirm";
-  return "held";
-}
-
-/**
  * What a `count()` answered. It always answers with one row; summing the
  * rows says that without indexing `[0]`, whose fallback no input reaches.
  * A grouped count with no groups answers none, which sums to zero (the
@@ -106,19 +88,31 @@ export function counted(rows: readonly { n: number }[]): number {
 }
 
 /**
- * Whether the valve is shut now — read again at a confirm, which may come
- * long after its request was filed.
+ * What a new request from `keys` may do, as the CASE its insert writes to
+ * `hold_state`: `held` means it may hide and alert; the caller hides only
+ * when its link names something a hold moves.
  */
-export async function isValveShut(db: Db, now: number): Promise<boolean> {
-  return counted(await heldInTheHour(db, now)) >= TAKEDOWN_VALVE_PER_HOUR;
+export function holdStateSql(keys: RequesterKeys, now: number): SQL {
+  const blocked = sql`exists (select 1 from ${takedownBlocks} where ${inArray(takedownBlocks.key, keysOf(keys))})`;
+  const open = sql`(select count(*) from ${takedownRequests} where ${and(requesterMatches(keys), eq(takedownRequests.status, "pending"))})`;
+  return sql`(case when ${blocked} then 'blocked' when ${valveShutSql(now)} then 'valve' when ${open} >= ${TAKEDOWN_CAP} then 'confirm' else 'held' end)`;
 }
 
 /**
-How many requests hid something in the hour before `now`, by `held_at`'s index.
-*/
-function heldInTheHour(db: Db, now: number) {
-  const since = gte(takedownRequests.heldAt, now - HOUR_S);
-  return db.select({ n: count() }).from(takedownRequests).where(since);
+ * Whether the valve is shut as this statement runs: as many requests hid
+ * something in the hour before `now` as the valve allows, by `held_at`'s
+ * index.
+ */
+export function valveShutSql(now: number): SQL {
+  return sql`(select count(*) from ${takedownRequests} where ${gte(takedownRequests.heldAt, now - HOUR_S)}) >= ${TAKEDOWN_VALVE_PER_HOUR}`;
+}
+
+/**
+ * Whether a request that hid nothing may still alert one by one this
+ * hour, by `alerted_at`'s index.
+ */
+export function alertRoomSql(now: number): SQL {
+  return sql`(select count(*) from ${takedownRequests} where ${gte(takedownRequests.alertedAt, now - HOUR_S)}) < ${TAKEDOWN_ALERTS_PER_HOUR}`;
 }
 
 /**

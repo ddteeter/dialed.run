@@ -478,7 +478,10 @@ function giveBacks(db: Db, claim: SQL | undefined) {
     eq(entryPhotos.screenStatus, heldPhotoStatus),
     inArray(entryPhotos.id, restoredBy(db, "photo", claim)),
   );
-  const entryHeld = stillHeld("entry", qualified(outfitEntries, outfitEntries.id));
+  const entryHeld = stillHeld(
+    "entry",
+    qualified(outfitEntries, outfitEntries.id),
+  );
   const photoHeld = stillHeld("photo", qualified(entryPhotos, entryPhotos.id));
   return [
     db

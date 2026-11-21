@@ -26,7 +26,7 @@ import { releaseHolds } from "../../src/modules/safety/review/release";
 import { nowSeconds } from "../../src/lib/now";
 import { HIDDEN_NOTICE } from "../../src/modules/safety/notices/notice-copy";
 import { noPurge } from "../purge-spy";
-import { oweInCore } from "../queue-fakes";
+import { oweInCoreWhere } from "../queue-fakes";
 
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 
@@ -277,7 +277,7 @@ describe("a request already decided, or never made", () => {
  */
 const deps = {
   verify: () => Promise.resolve({ ok: true }),
-  owe: oweInCore,
+  oweWhere: oweInCoreWhere,
   purge: noPurge,
 };
 

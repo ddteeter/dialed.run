@@ -28,7 +28,7 @@ import {
 import { queriesDuring } from "../d1-spy";
 import { noPurge } from "../purge-spy";
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
-import { oweInCore } from "../queue-fakes";
+import { oweInCoreWhere } from "../queue-fakes";
 
 /**
  * D-117 (R-145 c): a Review row about an intimate image lists the same
@@ -463,7 +463,7 @@ describe("Review's rows", () => {
     };
     const deps = {
       verify: () => Promise.resolve({ ok: true }),
-      owe: oweInCore,
+      oweWhere: oweInCoreWhere,
       purge: noPurge,
     };
     await fileTakedownRequest(
