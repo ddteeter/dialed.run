@@ -107,6 +107,30 @@ module.exports = {
       },
     },
     {
+      name: "routes-enter-through-doors",
+      severity: "error",
+      comment:
+        "A route reaches a module through four entries only: its functions.ts, a file " +
+        "in a components/ folder (the module's or a sub-module's), its client.ts, or a " +
+        "door (the module's index.ts or a sub-module's). client.ts is for what a route " +
+        "uses at module scope; a door is for what it calls inside server.handlers or a " +
+        "server function, whose body the Start plugin strips. Anything else is a " +
+        "service file reached past its door. Measured at 0 violations when added. " +
+        "Added with design 255 (owner-approved, 2026-11-20, #888).",
+      from: { path: "^src/routes/" },
+      to: {
+        path: "^src/modules/",
+        pathNot: [
+          "^src/modules/[^/]+/functions\\.ts$",
+          "^src/modules/[^/]+/components/",
+          "^src/modules/[^/]+/[^/]+/components/",
+          "^src/modules/[^/]+/client\\.ts$",
+          "^src/modules/[^/]+/index\\.tsx?$",
+          "^src/modules/[^/]+/[^/]+/index\\.ts$",
+        ],
+      },
+    },
+    {
       name: "no-importing-routes",
       severity: "error",
       comment:

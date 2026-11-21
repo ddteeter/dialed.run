@@ -12,7 +12,7 @@ import {
   retimeRunFn,
   startFileImport,
 } from "../../modules/runs/functions";
-import { newRunSearch } from "../../modules/runs/inputs";
+import { newRunSearch } from "../../modules/runs/client";
 import { ReminderDayLine } from "../../modules/runs/strava/components/ReminderDayLine";
 import { Page } from "../../ui";
 

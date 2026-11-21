@@ -11,7 +11,7 @@ import {
   didRetryRunWeatherFn,
   didSetRunConditionsFn,
 } from "../../modules/runs/functions";
-import { runListDeps, runListSearch } from "../../modules/runs/inputs";
+import { runListDeps, runListSearch } from "../../modules/runs/client";
 import { Page } from "../../ui";
 
 export const Route = createFileRoute("/runs/")({

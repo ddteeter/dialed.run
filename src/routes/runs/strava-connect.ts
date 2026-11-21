@@ -3,8 +3,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { optionalUserId } from "../../modules/auth";
 import { newUlid } from "../../lib/ids";
 import { stravaConnectSearch } from "../../lib/strava-origin";
-import { stravaConfigFromEnv } from "../../modules/runs/strava/api-from-env";
-import { stravaConnectRedirect } from "../../modules/runs/strava/oauth";
+import {
+  stravaConfigFromEnv,
+  stravaConnectRedirect,
+} from "../../modules/runs/strava";
 
 /**
  * Where Strava's official Connect button points (task 127, STR-7): mints

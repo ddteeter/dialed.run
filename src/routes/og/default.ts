@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { defaultCardResponse } from "../../modules/ops/client";
+import { defaultCardResponse } from "../../modules/ops/public-web";
 
 /**
  * The default share card (OPS-16; round 26 #22): what every page previews

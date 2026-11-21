@@ -9,6 +9,7 @@ export {
   readStateCookie,
   STRAVA_STATE_COOKIE,
   STRAVA_STATE_COOKIE_CLEAR,
+  stravaConnectRedirect,
   stravaStatusOf,
 } from "./oauth";
 export { pruneStravaIds } from "./prune";
@@ -23,3 +24,4 @@ export {
   pairWithReminder,
   unpairedUploadFor,
 } from "./reminder-match";
+export { stravaDeliveryResponse, stravaHandshakeResponse } from "./webhook";

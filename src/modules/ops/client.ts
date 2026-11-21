@@ -6,5 +6,4 @@
  * commit. A component imports these files directly, never this door.
  */
 export { operatorOrNotFound } from "./desk/desk-gate";
-export { defaultCardResponse } from "./public-web/og/respond";
 export { SITE_LINKS, SITE_META } from "./public-web/og/site-head";

@@ -1,6 +1,10 @@
 export { purgePublicPages, purgePublicPagesFor } from "./edge-purge";
 export type { EntryCardData } from "./og/cards";
-export { kitCardResponse, type KitCardAnswer } from "./og/respond";
+export {
+  defaultCardResponse,
+  kitCardResponse,
+  type KitCardAnswer,
+} from "./og/respond";
 export {
   isPubliclyStorable,
   publicPageHeaders,

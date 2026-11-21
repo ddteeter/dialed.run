@@ -88,6 +88,15 @@ Not chosen:
   `components/`, so the ratchet's past-the-door count does too.
 - `closet` already exported `NotFoundError`, so its barrel grows by one
   name, not two.
+- `runs/strava/webhook.ts` imports `node:crypto`, so it is server-route
+  code, not a helper: the webhook route reaches it through `runs/strava`'s
+  door, with `oauth.ts`' `stravaConnectRedirect`.
+- `ops`' `defaultCardResponse` (the default OG card) reaches no `env`, so the
+  rule passed it into `client.ts`, but it imports the card fonts as
+  `.woff.bin`, which only the worker build can load: `npm run build`
+  failed. It is server-route code and goes through `ops/public-web`'s door.
+  The rule's list is what reaches server code by import; a file the client
+  build cannot load at all is still the build's to see.
 
 ## Contract touches
 
