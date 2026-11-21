@@ -14,7 +14,7 @@ import {
   setPublicProfileFn,
   settingsSubPageData,
 } from "../../../modules/onboarding/functions";
-import { settingsSectionOrNotFound } from "../../../modules/onboarding/route-decisions";
+import { settingsSectionOrNotFound } from "../../../modules/onboarding/client";
 
 /**
  * A settings sub-page — Units or Privacy — each its own small form with

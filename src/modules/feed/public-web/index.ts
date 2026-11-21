@@ -4,3 +4,4 @@
  */
 export { publicKitForPage, runDayOf } from "./public-kit";
 export { publicProfileForPage } from "./public-profile";
+export { publicKitCardResponse } from "./public-kit";

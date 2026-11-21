@@ -8,7 +8,7 @@ import {
 import { getSession } from "../../modules/auth/functions";
 import { OwnProfile } from "../../modules/feed/following/components/OwnProfile";
 import { ownProfileQuery } from "../../modules/feed/functions";
-import { requireSignedIn } from "../../modules/feed/redirect";
+import { requireSignedIn } from "../../modules/feed/client";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";
 

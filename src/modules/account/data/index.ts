@@ -10,3 +10,4 @@ export {
 } from "./data-exports";
 export type { ExportQueue } from "./data-exports";
 export { exportConsumers } from "./export-queue";
+export { exportFileResponse } from "./data-exports";

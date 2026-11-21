@@ -13,10 +13,9 @@ import {
   ownThemeQuery,
   resendConfirmationFn,
 } from "../modules/account/functions";
-import { gateOnHandle } from "../modules/account/route-decisions";
-import { withOwnTheme } from "../modules/account/theme-answer";
+import { gateOnHandle, withOwnTheme } from "../modules/account/client";
+import { SITE_LINKS, SITE_META } from "../modules/ops/client";
 import { signedInQuery } from "../modules/auth/functions";
-import { SITE_LINKS, SITE_META } from "../modules/ops/public-web/og/site-head";
 import { Devtools } from "../ui/Devtools";
 import { SessionLapseAnswer } from "../ui/session-lapse";
 import { TermsRefusalAnswer } from "../ui/terms-refusal";

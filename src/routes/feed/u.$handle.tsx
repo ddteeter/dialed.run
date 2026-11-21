@@ -9,14 +9,12 @@ import {
   unfollowAction,
 } from "../../modules/feed/functions";
 import {
+  noindexHead,
   orHandlePage,
+  profileReportSubject,
   toHandleWhenId,
   viewerContext,
-} from "../../modules/feed/redirect";
-import {
-  noindexHead,
-  profileReportSubject,
-} from "../../modules/feed/route-decisions";
+} from "../../modules/feed/client";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";
 import { ReportAffordance } from "../../modules/safety/reports/components/ReportAffordance";

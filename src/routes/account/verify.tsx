@@ -5,7 +5,7 @@ import {
   confirmEmailFn,
   readEmailLinkFn,
 } from "../../modules/account/functions";
-import { tokenSearch } from "../../modules/account/route-decisions";
+import { tokenSearch } from "../../modules/account/client";
 
 /**
  * Where a confirm or change link lands (round 26 #11). Opening it changes

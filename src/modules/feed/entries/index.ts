@@ -34,3 +34,4 @@ export {
   type Scope,
   type Statements,
 } from "./retract";
+export { photoResponse, reviewerPhotoResponse } from "./photos";

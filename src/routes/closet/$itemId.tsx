@@ -10,7 +10,7 @@ import {
   unretireItemFn,
   uploadPhotoFn,
 } from "../../modules/closet/functions";
-import { garmentLoader } from "../../modules/closet/garment-page";
+import { garmentLoader } from "../../modules/closet/client";
 import {
   garmentBandCountQuery,
   viewerUnitsQuery,

@@ -9,8 +9,8 @@ import { keepAccountFn, leavingQuery } from "../../modules/account/functions";
 import {
   homeIfNothingToSay,
   leavingSearch,
-} from "../../modules/account/route-decisions";
-import { signOut } from "../../modules/auth/credentials";
+} from "../../modules/account/client";
+import { signOut } from "../../modules/auth/client";
 
 /**
  * Round 27 #14's deletion pages (ACC-9): "Your account goes on …" once a

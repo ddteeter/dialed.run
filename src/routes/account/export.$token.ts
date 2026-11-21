@@ -2,9 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { coreDb, env } from "../../env";
 import { nowSeconds } from "../../lib/now";
-import { exportFileResponse } from "../../modules/account/data/data-exports";
+import { exportFileResponse } from "../../modules/account/data";
+import { optionalUserIdFrom } from "../../modules/auth/client";
 import { sessionFromRequest } from "../../modules/auth";
-import { optionalUserIdFrom } from "../../modules/auth/session-user";
 
 /**
  * The export email's "Download export" (task 126, ACC-10; round 27 #13):

@@ -4,10 +4,7 @@ import { signedInQuery } from "../../modules/auth/functions";
 import { PublicKitPage } from "../../modules/feed/public-web/components/PublicKit";
 import { NotPublicPage } from "../../modules/feed/public-web/components/PublicFrame";
 import { publicKitQuery } from "../../modules/feed/functions";
-import {
-  kitOrNotFound,
-  publicKitHead,
-} from "../../modules/feed/public-web/public-kit-shape";
+import { kitOrNotFound, publicKitHead } from "../../modules/feed/client";
 import { PUBLIC_ORIGIN } from "../../lib/public-origin";
 
 /**

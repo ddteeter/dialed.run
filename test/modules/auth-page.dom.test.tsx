@@ -50,7 +50,7 @@ const client = vi.hoisted(() => ({
   social: vi.fn(),
   signUp: vi.fn(),
 }));
-vi.mock("../../src/modules/auth/client", () => ({
+vi.mock("../../src/modules/auth/auth-client", () => ({
   authClient: {
     signIn: { email: client.email, social: client.social },
     signUp: { email: client.signUp },

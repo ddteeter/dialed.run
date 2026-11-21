@@ -49,3 +49,4 @@ export { LINK_BATCH, linkTypedGarments, nameItem } from "./product-link";
 export { typeWordOf } from "./type-labels";
 export type { PhotoSize, PhotoUploadResult } from "./photos";
 export { photoSizes } from "./photos";
+export { getItemPhotoObject } from "./photos";

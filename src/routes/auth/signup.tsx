@@ -21,13 +21,13 @@ import {
   SignUpClosedHere,
   useAuthForm,
 } from "../../modules/auth/components/auth-page";
-import { signUp } from "../../modules/auth/credentials";
-import { useGoogleSignIn } from "../../modules/auth/components/google-button";
-import { AccountClosed } from "../../modules/safety/runners/components/AccountClosed";
 import {
   googleReturn,
   parseSignInSearch,
-} from "../../modules/auth/sign-in-search";
+  signUp,
+} from "../../modules/auth/client";
+import { useGoogleSignIn } from "../../modules/auth/components/google-button";
+import { AccountClosed } from "../../modules/safety/runners/components/AccountClosed";
 import { Turnstile, useTurnstileToken } from "../../ui";
 
 /**

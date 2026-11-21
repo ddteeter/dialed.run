@@ -7,7 +7,7 @@ import {
   searchQuery,
   unfollowAction,
 } from "../../modules/feed/functions";
-import { requireSignedIn } from "../../modules/feed/redirect";
+import { requireSignedIn } from "../../modules/feed/client";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";
 

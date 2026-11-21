@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { tokenSearch } from "../../modules/account/route-decisions";
+import { tokenSearch } from "../../modules/account/client";
+import { resetPassword } from "../../modules/auth/client";
 import { ResetPassword } from "../../modules/auth/components/ResetPassword";
-import { resetPassword } from "../../modules/auth/credentials";
 
 /**
 ACC-4: the reset link's page, where the new password is set.

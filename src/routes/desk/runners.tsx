@@ -9,7 +9,7 @@ import {
   keepAccountAction,
   unbanUserAction,
 } from "../../modules/safety/functions";
-import { runnersFilterInput } from "../../modules/safety/inputs";
+import { runnersFilterInput } from "../../modules/safety/client";
 
 /**
  * Desk · Runners, "D8" (round 27 #22): every account, a search, and the

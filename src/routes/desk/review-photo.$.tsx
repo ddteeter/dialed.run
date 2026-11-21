@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { optionalVerifiedUserId } from "../../modules/auth";
-import { reviewerPhotoResponse } from "../../modules/feed/entries/photos";
+import { reviewerPhotoResponse } from "../../modules/feed/entries";
 
 /**
  * The bytes behind a reported photo, for the review queue.

@@ -76,6 +76,37 @@ module.exports = {
       },
     },
     {
+      name: "client-side-reaches-no-server",
+      severity: "error",
+      comment:
+        "A module's client.ts and its components are in the client bundle, so nothing " +
+        "they import, however indirectly, may reach server code: env, lib/sql, db, " +
+        "drizzle-orm or a cloudflare: module. Until this rule only `npm run build` " +
+        "(check:bundle) saw it, after the fact (the R-50 bug class). Reachability over " +
+        "value imports: the cruise does not follow type-only ones, so a type from a " +
+        "server file stays allowed. It cannot see where an import is used, so a route " +
+        "calling a door's export in client code is still check:bundle's to catch. " +
+        "Measured at 0 violations when added. Added with design 255 (owner-approved, " +
+        "2026-11-20, #888).",
+      from: {
+        path: [
+          "^src/modules/[^/]+/client\\.ts$",
+          "^src/modules/[^/]+/components/",
+          "^src/modules/[^/]+/[^/]+/components/",
+        ],
+      },
+      to: {
+        reachable: true,
+        path: [
+          "^src/env/",
+          "^src/lib/sql/",
+          "^src/db/",
+          "^cloudflare:",
+          "drizzle-orm",
+        ],
+      },
+    },
+    {
       name: "no-importing-routes",
       severity: "error",
       comment:

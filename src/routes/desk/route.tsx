@@ -6,9 +6,9 @@ import {
 } from "@tanstack/react-router";
 
 import { SignOutButton } from "../../modules/auth/components/SignOutButton";
-import { signOut } from "../../modules/auth/credentials";
+import { signOut } from "../../modules/auth/client";
+import { operatorOrNotFound } from "../../modules/ops/client";
 import { DeskSignOutProvider } from "../../modules/ops/desk/components/DeskSignOut";
-import { operatorOrNotFound } from "../../modules/ops/desk/desk-gate";
 import { deskAccessQuery, deskTodayQuery } from "../../modules/ops/functions";
 
 /**

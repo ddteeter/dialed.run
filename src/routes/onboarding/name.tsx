@@ -8,7 +8,7 @@ import {
   namingOfferQuery,
   namingSuggestionsQuery,
 } from "../../modules/onboarding/functions";
-import { skipNamingIfNothingToName } from "../../modules/onboarding/route-decisions";
+import { skipNamingIfNothingToName } from "../../modules/onboarding/client";
 import { OnboardingProgress, OnboardingShell, Page } from "../../ui";
 
 /**

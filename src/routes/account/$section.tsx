@@ -22,13 +22,13 @@ import {
 } from "../../modules/account/functions";
 import {
   ACCOUNT_SECTION_TITLES,
+  DELETE_REAUTH_RETURN,
   accountSectionOrNotFound,
   accountSectionSearch,
-  DELETE_REAUTH_RETURN,
-} from "../../modules/account/route-decisions";
+} from "../../modules/account/client";
+import { signOutEverywhere } from "../../modules/auth/client";
 import { ChangePassword } from "../../modules/auth/components/ChangePassword";
 import { SignOutButton } from "../../modules/auth/components/SignOutButton";
-import { signOutEverywhere } from "../../modules/auth/credentials";
 import {
   changeCredentialFn,
   requireSession,

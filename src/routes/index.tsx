@@ -3,11 +3,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { usernameQuery } from "../modules/account/functions";
 import { Landing } from "../modules/auth/components/Landing";
 import { getSession } from "../modules/auth/functions";
-import { signedInOnly } from "../modules/auth/signed-in-only";
+import { signedInOnly } from "../modules/auth/client";
+import { startOnboardingIfNeeded } from "../modules/onboarding/client";
 import { NotificationBell } from "../modules/notifications/components/NotificationBell";
 import { bellStateFn } from "../modules/notifications/functions";
 import { requiresOnboardingQuery } from "../modules/onboarding/functions";
-import { startOnboardingIfNeeded } from "../modules/onboarding/route-decisions";
 
 /**
  * The marketing page, and the door into onboarding (R-52).

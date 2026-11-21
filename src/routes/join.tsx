@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { joinSearch, onToSignUp } from "../modules/auth/sign-in-search";
+import { joinSearch, onToSignUp } from "../modules/auth/client";
 
 /**
  * `/join?code=` (task 126, ACC-5; round 26 #20): the invite email's

@@ -1,13 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { unsubscribeSearch } from "../../modules/account/route-decisions";
+import { unsubscribeSearch } from "../../modules/account/client";
+import { oneClickUnsubscribeResponse } from "../../modules/email";
 import { UnsubscribeLanding } from "../../modules/email/components/UnsubscribeLanding";
 import {
   resubscribeFn,
   unsubscribeFn,
   unsubscribeLinkQuery,
 } from "../../modules/email/functions";
-import { oneClickUnsubscribeResponse } from "../../modules/email/one-click";
 
 /**
  * The unsubscribe link (round 26 #19, D-64): opening it asks, and its one

@@ -27,7 +27,7 @@ import {
   turnstileRefused,
 } from "./auth-copy";
 import { BREACHED_CODE } from "./breached-password";
-import { authClient } from "./client";
+import { authClient } from "./auth-client";
 
 /**
  * Signing in and signing up, as promises that reject.
