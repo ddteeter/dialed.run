@@ -1,0 +1,1 @@
+ALTER TABLE `review_queue` ADD `approved_at` integer;

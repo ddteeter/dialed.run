@@ -13,3 +13,16 @@
 export const HOLD_CAUSES = ["reports", "classifier", "fingerprint"] as const;
 
 export type HoldCause = (typeof HOLD_CAUSES)[number];
+
+/**
+ * Every source a Review row can have: the holds, and a photo still pending
+ * screening a day after upload (D-157, design 167), whether the classifier
+ * never answered (`unscreened`) or storage has no object (`missing_file`).
+ * Those two are not hold causes: no breaker counts them and no burst
+ * release approves them.
+ */
+export const REVIEW_SOURCES = [
+  ...HOLD_CAUSES,
+  "unscreened",
+  "missing_file",
+] as const;
