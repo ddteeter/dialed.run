@@ -504,7 +504,7 @@
       "count": 1
     },
     {
-      "key": "src/modules/runs/imports/components/ParsedCard.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- a many-prop signature that matches feed/components/Feed.tsx FollowingTab only by destructuring one prop per line; one is a parsed run, the other the Following tab, and they share nothing to extract",
+      "key": "src/modules/runs/imports/components/ParsedCard.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- a many-prop signature that matches feed/following/components/Feed.tsx FollowingTab only by destructuring one prop per line; one is a parsed run, the other the Following tab, and they share nothing to extract",
       "reason": "Owner's call, 2026-09-25: a destructured-props signature, not a clone. Semantic mode matches any two components that destructure ten-plus props one per line, whatever the names and types, so two unrelated components rhyme. The alternative, reading props through `props.` in one of them to break the skeleton, was put to the owner and declined as code written only to dodge the detector.",
       "count": 1
     },
