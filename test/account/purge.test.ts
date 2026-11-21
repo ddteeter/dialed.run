@@ -372,6 +372,7 @@ async function seedAccount(): Promise<Seeded> {
         countRow("weather-runner", userId, 1, NOW),
         countRow("photo-runner", userId, 1, NOW),
         countRow("purge-runner", userId, 1, NOW),
+        countRow("deletion-notice", userId, 1, NOW),
         ...addressesOf(email).flatMap((address) =>
           ADDRESS_SENDS.map((kind) => countRow(kind, address, 1, NOW)),
         ),
@@ -492,7 +493,8 @@ function runnersCount(
     | "upload-runner"
     | "weather-runner"
     | "photo-runner"
-    | "purge-runner",
+    | "purge-runner"
+    | "deletion-notice",
   userId: string,
 ) {
   return and(eq(rateLimits.kind, kind), eq(rateLimits.subject, userId));
@@ -737,6 +739,7 @@ async function footprint(seeded: Seeded) {
           runnersCount("weather-runner", userId),
           runnersCount("photo-runner", userId),
           runnersCount("purge-runner", userId),
+          runnersCount("deletion-notice", userId),
         ),
       ),
     spendLimits: await core

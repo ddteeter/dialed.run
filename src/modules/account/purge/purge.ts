@@ -492,7 +492,10 @@ function involvingEither(
  * address (`forgetAddress`) and, for a closed account, fingerprinted.
  */
 async function provedAddressesOf(db: Db, userId: string): Promise<string[]> {
-  const confirmedAccount = and(eq(user.id, userId), eq(user.emailVerified, true));
+  const confirmedAccount = and(
+    eq(user.id, userId),
+    eq(user.emailVerified, true),
+  );
   const redeemed = eq(inviteRedemptions.userId, userId);
   const [confirmed, redemption] = await Promise.all([
     firstRowWhere(db, user, confirmedAccount),
@@ -651,6 +654,7 @@ async function deleteAccountRows(
     forgetRateLimit(db, "weather-runner", userId),
     forgetRateLimit(db, "photo-runner", userId),
     forgetRateLimit(db, "purge-runner", userId),
+    forgetRateLimit(db, "deletion-notice", userId),
     forgetRunnerEnrichmentLimit(db, userId),
     ...forgetReportCounts(db, userId),
     // Reports they filed stay — what was said about someone else's post
