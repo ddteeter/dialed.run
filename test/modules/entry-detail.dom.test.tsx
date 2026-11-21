@@ -41,6 +41,7 @@ function entry(overrides: Partial<Entry> = {}): Entry {
     id: "01ENTRY",
     userId: OWNER,
     authorUsername: "mark_t",
+    runnerZone: undefined,
     runId: "01RUN",
     distanceM: 5 * 1609.34,
     durationS: 2600,
@@ -246,6 +247,31 @@ describe("EntryDetail: the run strip", () => {
     expect(screen.getByText("8 minutes 40 seconds per mile")).toHaveClass(
       "sr-only",
     );
+  });
+
+  it("reads a run with no zone of its own in its runner's (#925)", async () => {
+    // 6:30 UTC on Tue Aug 12 is 1:30 AM there in Chicago.
+    await renderFeedScreen(
+      detail({
+        indoor: true,
+        conditions: undefined,
+        runnerZone: "America/Chicago",
+      }),
+    );
+    expect(part("run-strip")).toHaveTextContent(/^Tue Aug 12 · 1:30 AM/u);
+  });
+
+  it("reads it in its observed zone over its runner's", async () => {
+    await renderFeedScreen(
+      detail({
+        conditions: {
+          ...pointConditions({ tempC: 8, feelsLikeC: 6, condition: "Wind" }),
+          timeZone: "Asia/Tokyo",
+        },
+        runnerZone: "America/Chicago",
+      }),
+    );
+    expect(part("run-strip")).toHaveTextContent(/^Tue Aug 12 · 3:30 PM/u);
   });
 
   it("leaves pace out of a run with no distance — no empty cell for it", async () => {

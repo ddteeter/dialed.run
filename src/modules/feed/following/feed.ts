@@ -247,6 +247,7 @@ async function hydrateEntries(
     .select({
       userId: userProfiles.userId,
       username: userProfiles.username,
+      timeZone: userProfiles.timeZone,
     })
     .from(userProfiles)
     .where(inArray(userProfiles.userId, userIds));
@@ -336,6 +337,7 @@ async function hydrateEntries(
       // pointing at the key and covering nothing.
       // Stryker disable OptionalChaining
       authorUsername: authorsById.get(entry.userId)?.username ?? undefined,
+      runnerZone: authorsById.get(entry.userId)?.timeZone ?? undefined,
       // Stryker restore OptionalChaining
       runId: entry.runId,
       distanceM: run?.distanceM ?? 0,

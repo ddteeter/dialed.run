@@ -22,6 +22,7 @@ import { UsefulButton } from "../../entries/components/UsefulButton";
 import type { SetUsefulFn } from "../../entries/components/useful-reaction";
 import { SpokenDistance } from "./SpokenDistance";
 import { VerdictBadge } from "../../entries/components/VerdictBadge";
+import { runZoneOf } from "../../../../lib/dates";
 
 /**
  * One post on Following — the v1 card (round 22, "E1v1 Following").
@@ -122,7 +123,7 @@ export function PostCard(props: Readonly<PostCardProps>) {
                   label={postedLabel(
                     item.startedAt,
                     now,
-                    item.conditions?.timeZone,
+                    runZoneOf(item.conditions?.timeZone, item.runnerZone),
                   )}
                   isWaiting={isWaiting}
                 />

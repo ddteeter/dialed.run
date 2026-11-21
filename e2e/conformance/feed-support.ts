@@ -339,6 +339,7 @@ export async function seedPhoto(rows: Seeded, entryId: string): Promise<void> {
 export async function seedRunner(
   rows: Seeded,
   username: string,
+  timeZone?: string,
 ): Promise<string> {
   const userId = minted(rows.runners);
   const joined = new Date(nowSeconds() * 1000);
@@ -350,7 +351,9 @@ export async function seedRunner(
     createdAt: joined,
     updatedAt: joined,
   });
-  await insertRow(userProfiles, { userId, username });
+  // A saved place's zone, which a run with none of its own is read in
+  // (#925); none by default, as a runner who saved no place.
+  await insertRow(userProfiles, { userId, username, timeZone });
   return userId;
 }
 

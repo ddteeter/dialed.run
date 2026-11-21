@@ -69,6 +69,15 @@ async function spoken(
   return folded(leaves.map((leaf) => leaf.text.toUpperCase())).join(" ");
 }
 
+/**
+ * A zone where `now` is between 06:00 and 18:00: UTC through the day, and
+ * twelve hours ahead (Etc/GMT-12) through the UTC night.
+ */
+function zoneAwayFromMidnight(nowS: number): string {
+  const hour = new Date(nowS * 1000).getUTCHours();
+  return hour >= 6 && hour < 18 ? "UTC" : "Etc/GMT-12";
+}
+
 test("E1's v1 card is composed as the board draws it, with a photo, without, and indoors", async ({
   page,
   baseURL,
@@ -105,14 +114,16 @@ test("E1's v1 card is composed as the board draws it, with a photo, without, and
 
   // ---- What we built --------------------------------------------------
   const rows = seeded();
+  // Minutes back, not hours: today's run says only how long ago
+  // (R55·204). The seeded runs have no zone of their own, so each card
+  // reads in its runner's saved place (#925): a zone where now is at least
+  // six hours from midnight, so the runs are today whatever the clock.
+  const startedAt = nowSeconds() - 10 * 60;
   const runner = await seedRunner(
     rows,
     `e1_runner_${String(Date.now()).slice(-8)}`,
+    zoneAwayFromMidnight(nowSeconds()),
   );
-  // Minutes back, not hours: today's run says only how long ago
-  // (R55·204), and two hours back crossed midnight in the evening, when
-  // the card added the clock and the transcript moved with the hour.
-  const startedAt = nowSeconds() - 10 * 60;
   const withPhoto = await seedEntry(rows, {
     userId: runner,
     place: { lat: 61.37, lng: 12.41 },

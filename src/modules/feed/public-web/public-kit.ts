@@ -40,7 +40,7 @@ import {
 } from "../../../lib/contracts/measures";
 import { precipClassOf } from "../../../lib/contracts/temperature";
 import { entryCacheTag } from "../../../lib/cache-tags";
-import { dayLabel, isTimeZone } from "../../../lib/dates";
+import { dayLabel, runZoneOf } from "../../../lib/dates";
 import { ulidSchema } from "../../../lib/ids";
 import { firstRowWhere } from "../../../lib/sql/keyed-read";
 import {
@@ -136,8 +136,7 @@ export function runDayOf(
   runnerZone: string | null | undefined,
   format: (epochSeconds: number, timeZone?: string) => string = dayLabel,
 ): string {
-  const zone = conditions?.timeZone ?? runnerZone ?? undefined;
-  return format(startedAt, isTimeZone(zone) ? zone : undefined);
+  return format(startedAt, runZoneOf(conditions?.timeZone, runnerZone));
 }
 
 /**

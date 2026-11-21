@@ -35,6 +35,7 @@ import { UsefulButton } from "./UsefulButton";
 import type { SetUsefulFn } from "./useful-reaction";
 import { VerdictBadge } from "./VerdictBadge";
 import { BackToFeed } from "../../following/components/BackToFeed";
+import { runZoneOf } from "../../../../lib/dates";
 
 type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
 
@@ -235,7 +236,10 @@ function RunStrip({
       className="flex flex-col gap-2 border-b border-hairline pb-4"
     >
       <Mono step="xs" className="text-muted">
-        {runWhenLabel(entry.startedAt, entry.conditions?.timeZone)}
+        {runWhenLabel(
+          entry.startedAt,
+          runZoneOf(entry.conditions?.timeZone, entry.runnerZone),
+        )}
       </Mono>
       <div className="flex flex-wrap items-baseline gap-3">
         {/* Drawn as "8.2mi", said "8.2 miles" (round 52 #158). */}

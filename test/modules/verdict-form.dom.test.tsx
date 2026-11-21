@@ -67,6 +67,7 @@ function entry(overrides: Partial<Entry> = {}): Entry {
     id: "01JENTRY000000000000000000",
     userId: "01JSER00000000000000000000",
     authorUsername: undefined,
+    runnerZone: undefined,
     runId: "01JRAN00000000000000000000",
     distanceM: 8047,
     durationS: 1830,
